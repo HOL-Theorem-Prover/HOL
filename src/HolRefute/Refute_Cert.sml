@@ -50,6 +50,7 @@ structure Refute_Cert = struct
 
   fun replace (cex : Refute_Core.counterexample) certainty evals cert =
     { backend = #backend cex,
+      substrate = #substrate cex,
       certainty = certainty,
       bindings = #bindings cex,
       evals = evals,

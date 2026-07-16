@@ -5,6 +5,8 @@ open realTheory
 open Refute_Core
 open Refute_Gen
 open Refute_Cert
+open Refute_Eval
+open Refute_EvalCompute
 open Refute_QC
 
 val erc = ref 0
@@ -107,6 +109,7 @@ val _ = tprint "Refute core silent report"
 
 val report_cex : counterexample =
   { backend = "selftest",
+    substrate = "compute",
     certainty = Genuine,
     bindings = [(``x : num``, ``0``)],
     evals = [],
@@ -534,13 +537,37 @@ val _ = check_plan plan_has_abstract_guard
 
 val _ = tprint "Refute QC exhaustive backend"
 
-fun compute_is_only_substrate () =
-  case !substrates of
-      [substrate] => #name substrate = "compute"
-    | _ => false
+fun compute_is_first_substrate () =
+  case get_substrates () of
+      substrate :: _ =>
+        #name substrate = "compute" andalso #priority substrate = 30
+    | [] => false
 
-val _ = require_msg (check_result compute_is_only_substrate) (fn () =>
-  "the M2 substrate seam did not contain exactly the compute substrate")
+val _ = require_msg (check_result compute_is_first_substrate) (fn () =>
+  "the compute substrate was not registered at priority 30")
+  (fn () => ()) ()
+
+fun dummy_compile _ _ _ = Inapplicable ["dummy substrate"]
+
+val seam_alpha : substrate =
+  {name = "refute-seam-alpha", priority = 50, compile = dummy_compile}
+val seam_beta : substrate =
+  {name = "refute-seam-beta", priority = 40, compile = dummy_compile}
+val seam_alpha_replacement : substrate =
+  {name = "refute-seam-alpha", priority = 35, compile = dummy_compile}
+
+val _ = register_substrate seam_alpha
+val _ = register_substrate seam_beta
+val _ = register_substrate seam_alpha_replacement
+
+fun seam_registry_order () =
+  map #name (List.filter (fn substrate =>
+    #name substrate = "refute-seam-alpha" orelse
+    #name substrate = "refute-seam-beta") (get_substrates ())) =
+  ["refute-seam-alpha", "refute-seam-beta"]
+
+val _ = require_msg (check_result seam_registry_order) (fn () =>
+  "substrate registry replacement or priority ordering failed")
   (fn () => ()) ()
 
 fun qc_problem goal : problem = {goal = goal, assumptions = [], evals = []}
@@ -553,7 +580,7 @@ fun qc_instances config goal =
 fun exhaustive config goal =
   case preprocess config (qc_problem goal) of
       NotExecutable reasons => Unknown reasons
-    | Preprocessed instances => exhaustive_run config instances
+    | Preprocessed instances => strategy_run Exhaustive config instances
 
 fun has_binding predicate (Counterexample (cex :: _)) =
       List.exists predicate (#bindings cex)
@@ -564,6 +591,9 @@ fun reverse_counterexample () =
     val config = upd_size 3 (upd_max_counterexamples 1 default_config)
     val result = exhaustive config ``REVERSE (xs : num list) = xs``
   in
+    (case result of
+         Counterexample (cex :: _) => #substrate cex = "compute"
+       | _ => false) andalso
     has_binding (fn (_, value) =>
       case Lib.total listSyntax.dest_list value of
           SOME (values, _) => length values >= 2 andalso
@@ -593,10 +623,14 @@ fun stuck_split_counts_failure () =
     val result = exhaustive config goal
     val instances = qc_instances config goal
     val plans = List.map (fn i => compile_plan config (#goal i)) instances
-    val compiled = compute_compile config plans
+    val compiled =
+      case Refute_EvalCompute.compile config Exhaustive plans of
+          Compiled test => test
+        | Inapplicable reasons => raise Fail (String.concatWith "; " reasons)
     val _ = List.app (fn (card, size) =>
       ignore (#run compiled
-        {genuine_only = false, card = card, size = size, ignored = []}))
+        {genuine_only = false, card = card, size = size, draws = 0,
+         ignored = []}))
       (schedule instances (#size (#qc config)))
   in
     (case result of Unknown _ => true | _ => false) andalso
@@ -607,6 +641,68 @@ fun stuck_split_counts_failure () =
 
 val _ = require_msg (check_result stuck_split_counts_failure) (fn () =>
   "a stuck Split scrutinee did not increment match_failures")
+  (fn () => ()) ()
+
+fun no_generator_is_compile_inapplicable () =
+  let
+    val variable = Term.mk_var ("r", ``:real``)
+  in
+    case Refute_EvalCompute.compile default_config Exhaustive
+      [Gen (variable, Test boolSyntax.T)] of
+        Inapplicable reasons =>
+          List.exists (fn reason =>
+            String.isSubstring "no generator for :real" reason andalso
+            String.isSubstring "quotient type" reason) reasons
+      | Compiled _ => false
+  end
+
+val _ = require_msg
+  (check_result no_generator_is_compile_inapplicable) (fn () =>
+  "NoGenerator was not converted to compile-time Inapplicable")
+  (fn () => ()) ()
+
+fun explicit_unavailable_is_unknown strategy =
+  let
+    val config = upd_substrate Cv default_config
+    val instances = qc_instances config ``T``
+  in
+    case strategy_run strategy config instances of
+        Unknown reasons =>
+          List.exists (String.isSubstring "unavailable") reasons
+      | _ => false
+  end
+
+val _ = require_msg (check_result (fn () =>
+  explicit_unavailable_is_unknown Exhaustive andalso
+  explicit_unavailable_is_unknown (Random {seed = 1}))) (fn () =>
+  "an explicit unavailable substrate did not produce Unknown")
+  (fn () => ()) ()
+
+fun gave_up_reason_is_plumbed () =
+  let
+    val original = valOf (List.find (fn substrate =>
+      #name substrate = "compute") (get_substrates ()))
+    val last_stats = ref []
+    val test : compiled_test =
+      {run = fn _ => GaveUp "selftest gave up", last_stats = last_stats}
+    val replacement : substrate =
+      {name = "compute", priority = 30,
+       compile = fn _ => fn _ => fn _ => Compiled test}
+    val config = upd_substrate Compute default_config
+    val instances = qc_instances config ``T``
+    val _ = register_substrate replacement
+    val result = strategy_run Exhaustive config instances
+      handle e => (register_substrate original; raise e)
+    val _ = register_substrate original
+  in
+    case result of
+        Unknown reasons => List.exists (fn reason =>
+          reason = "selftest gave up") reasons
+      | _ => false
+  end
+
+val _ = require_msg (check_result gave_up_reason_is_plumbed) (fn () =>
+  "a substrate GaveUp reason was not merged into Unknown")
   (fn () => ()) ()
 
 fun smart_pruning_works () =
@@ -644,7 +740,8 @@ val _ = tprint "Refute QC random backend"
 fun random config goal =
   case preprocess config (qc_problem goal) of
       NotExecutable reasons => Unknown reasons
-    | Preprocessed instances => random_run config instances
+    | Preprocessed instances =>
+        strategy_run (Random {seed = strategy_seed config}) config instances
 
 fun same_bindings [] [] = true
   | same_bindings ((variable1, value1) :: rest1)
@@ -655,9 +752,12 @@ fun same_bindings [] [] = true
 
 fun same_random_outcome (Counterexample (left :: _))
       (Counterexample (right :: _)) =
-      #backend left = #backend right andalso #certainty left = #certainty right
-      andalso same_bindings (#bindings left) (#bindings right)
-      andalso #stats left = #stats right
+      #backend left = #backend right andalso
+      #substrate left = #substrate right andalso
+      #certainty left = #certainty right andalso
+      same_bindings (#bindings left) (#bindings right) andalso
+      List.filter (fn (name, _) => name <> "msec") (#stats left) =
+      List.filter (fn (name, _) => name <> "msec") (#stats right)
   | same_random_outcome NoCounterexample NoCounterexample = true
   | same_random_outcome (Unknown left) (Unknown right) = left = right
   | same_random_outcome _ _ = false
@@ -672,7 +772,9 @@ fun random_is_registered () =
 
 fun random_reverse_counterexample () =
   case random random_config ``REVERSE (xs : num list) = xs`` of
-      Counterexample _ => true
+      Counterexample (cex :: _) =>
+        #substrate cex = "compute" andalso
+        Option.isSome (lookup_stat "msec" (#stats cex))
     | _ => false
 
 fun random_arithmetic_counterexample () =
@@ -1088,6 +1190,7 @@ val _ = require_msg (check_result certified_reverse) (fn () =>
 
 fun make_cex genuine : counterexample =
   { backend = "selftest",
+    substrate = "compute",
     certainty = Refute_Core.Potential [],
     bindings = [],
     evals = [],

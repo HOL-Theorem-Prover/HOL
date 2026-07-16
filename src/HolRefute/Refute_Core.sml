@@ -19,6 +19,7 @@ structure Refute_Core = struct
 
   type counterexample =
     { backend : string,
+      substrate : string,
       certainty : certainty,
       bindings : (term * term) list,
       evals : (term * term) list,
@@ -752,9 +753,10 @@ structure Refute_Core = struct
 
   fun format_counterexample (cex : counterexample) =
     let
-      val {backend, certainty, bindings, evals, cert, stats, ...} = cex
+      val {backend, substrate, certainty, bindings, evals, cert, stats, ...} =
+        cex
       val header = "Refute found a counterexample (backend: " ^ backend ^
-        ")" ^ format_stats stats ^ ":"
+        ", substrate: " ^ substrate ^ ")" ^ format_stats stats ^ ":"
       val binding_text =
         if null bindings then "" else "\n" ^ format_bindings bindings
       val eval_text =

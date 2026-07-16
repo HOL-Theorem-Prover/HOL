@@ -1,14 +1,6 @@
 structure Refute_QC = struct
   type term = Term.term
-  open Refute_Cert
-
-  datatype plan =
-      Test of term
-    | Gen of term * plan
-    | Bind of term * term * plan option * plan
-    | Split of term * (term * term list * plan) list
-    | Guard of term * plan
-    | Prune
+  open Refute_Cert Refute_Eval
 
   fun member tm = List.exists (fn other => Term.aconv tm other)
 
@@ -190,258 +182,6 @@ structure Refute_QC = struct
       show 0 plan
     end
 
-  type candidate = {env : (term * term) list, genuine : bool}
-
-  datatype verdict = Continue | Found of candidate
-
-  datatype run_result =
-      CexFound of candidate
-    | Exhausted of {complete : bool}
-    | GaveUp of string
-
-  type compiled_test =
-    { run : {genuine_only : bool,
-             card : int,
-             size : int,
-             ignored : candidate list} -> run_result,
-      last_stats : (string * int) list ref }
-
-  type substrate =
-    { name : string,
-      compile : Refute_Core.config -> plan list -> compiled_test }
-
-  fun same_env [] [] = true
-    | same_env ((variable1, value1) :: rest1)
-        ((variable2, value2) :: rest2) =
-        Term.aconv variable1 variable2 andalso
-        Term.aconv value1 value2 andalso same_env rest1 rest2
-    | same_env _ _ = false
-
-  fun ignored_candidate env ignored =
-    List.exists (fn candidate => same_env env (#env candidate)) ignored
-
-  fun eval_rhs env tm =
-    SOME (rhs_of (eval (instantiate env tm)))
-    handle Interrupt => raise Interrupt | _ => NONE
-
-  datatype boolean_value = IsTrue | IsFalse | IsStuck
-
-  fun eval_boolean env tm =
-    case eval_rhs env tm of
-        SOME value =>
-          if Term.aconv value boolSyntax.T then IsTrue
-          else if Term.aconv value boolSyntax.F then IsFalse
-          else IsStuck
-      | NONE => IsStuck
-
-  fun numeric_terms Refute_Gen.Num size =
-        List.tabulate (Int.max (0, size) + 1, numSyntax.term_of_int)
-    | numeric_terms Refute_Gen.Int size =
-        List.tabulate (2 * Int.max (0, size) + 1,
-          fn index => intSyntax.term_of_int
-            (Arbint.fromInt (index - Int.max (0, size))))
-    | numeric_terms Refute_Gen.Char _ =
-        List.tabulate (Refute_Gen.enum_cap,
-          fn index => stringSyntax.mk_chr (numSyntax.term_of_int index))
-    | numeric_terms (Refute_Gen.Word width) size =
-        List.tabulate (Int.min (Int.max (0, size),
-          Int.max (0, Refute_Gen.int_power 2 width - 1)) + 1,
-          fn index => wordsSyntax.mk_wordii (index, width))
-
-  fun enum_args [] _ continuation = continuation []
-    | enum_args (spec :: rest) size continuation =
-        exhaustive_values spec size (fn value =>
-          case enum_args rest size
-            (fn values => continuation (value :: values)) of
-              Continue => Continue
-            | found => found)
-
-  and exhaustive_function dom rng size continuation =
-    case Refute_Gen.enumerate (Type.mk_type ("fun", [dom, rng])) of
-        SOME graphs =>
-          List.foldl (fn (graph, result) =>
-            case result of Continue => continuation graph | found => found)
-            Continue graphs
-      | NONE =>
-          let
-            val variable = Term.mk_var ("x", dom)
-            fun constants () =
-              exhaustive_values (Refute_Gen.spec_of rng) size (fn value =>
-                continuation (Term.mk_abs (variable, value)))
-            fun layers 0 = Continue
-              | layers remaining =
-                  exhaustive_values (Refute_Gen.spec_of dom) size (fn point =>
-                    exhaustive_values (Refute_Gen.spec_of rng) size
-                      (fn value =>
-                      let
-                        fun one base = continuation
-                          (Term.mk_comb
-                            (combinSyntax.mk_update (point, value), base))
-                      in
-                        case exhaustive_function dom rng (remaining - 1) one of
-                            Continue => Continue
-                          | found => found
-                      end))
-          in
-            case constants () of Continue => layers size | found => found
-          end
-
-  and exhaustive_values spec size continuation =
-    case spec of
-        Refute_Gen.GenEnum values =>
-          List.foldl (fn (value, result) =>
-            case result of Continue => continuation value | found => found)
-            Continue values
-      | Refute_Gen.GenNum kind =>
-          List.foldl (fn (value, result) =>
-            case result of Continue => continuation value | found => found)
-            Continue (numeric_terms kind size)
-      | Refute_Gen.GenCustom {enumerate = SOME enum, ...} =>
-          List.foldl (fn (value, result) =>
-            case result of Continue => continuation value | found => found)
-            Continue (enum size)
-      | Refute_Gen.GenCustom _ => Continue
-      | Refute_Gen.GenDatatype {constrs, ...} =>
-          if size <= 0 then Continue
-          else
-            List.foldl (fn ((constructor, args), result) =>
-              case result of
-                  Found _ => result
-                | Continue =>
-                    enum_args (List.map Refute_Gen.spec_of args) (size - 1)
-                      (fn values => continuation
-                        (Term.list_mk_comb (constructor, values))))
-              Continue constrs
-      | Refute_Gen.GenFun (dom, rng) =>
-          exhaustive_function dom rng size continuation
-
-  (* Shared plan traversal for both backends.  Every plan node is handled
-     identically; the two backends differ only in how they instantiate a
-     Gen binder, which is supplied as the [gen] callback.  Returns the
-     search verdict together with the stats gathered for this run. *)
-  fun traverse gen genuine_only ignored plan =
-    let
-      val complete = ref true
-      val match_failures = ref 0
-      val tests = ref 0
-
-      fun candidate env genuine =
-        if ignored_candidate env ignored then Continue
-        else Found {env = env, genuine = genuine}
-
-      fun visit env genuine current =
-        case current of
-            Prune => Continue
-          | Test tm =>
-              (tests := !tests + 1;
-               case eval_boolean env tm of
-                   IsTrue => Continue
-                 | IsFalse =>
-                     if genuine orelse not genuine_only then
-                       candidate env genuine
-                     else Continue
-                 | IsStuck =>
-                     (complete := false;
-                      if genuine_only then Continue
-                      else candidate env false))
-          | Guard (tm, next) =>
-              (case eval_boolean env tm of
-                   IsTrue => visit env genuine next
-                 | IsFalse => Continue
-                 | IsStuck =>
-                     (complete := false;
-                      if genuine_only then Continue
-                      else visit env false next))
-          | Bind (variable, tm, fallback, next) =>
-              (case eval_rhs env tm of
-                   SOME value =>
-                     visit ((variable, value) :: env) genuine next
-                 | NONE =>
-                     (complete := false;
-                      case fallback of
-                          NONE => Continue
-                        | SOME alternative =>
-                            if genuine_only then Continue
-                            else visit env false alternative))
-          | Split (tm, branches) =>
-              (case eval_rhs env tm of
-                   SOME value =>
-                     (case fully_applied_constructor value of
-                          NONE =>
-                            (complete := false;
-                             match_failures := !match_failures + 1;
-                             Continue)
-                        | SOME (constructor, args) =>
-                            (case List.find (fn (expected, variables, _) =>
-                              Term.same_const expected constructor andalso
-                              length variables = length args) branches of
-                                 NONE =>
-                                   (complete := false;
-                                    match_failures := !match_failures + 1;
-                                    Continue)
-                               | SOME (_, variables, next) =>
-                                   visit
-                                     (ListPair.zip (variables, args) @ env)
-                                     genuine next))
-                 | NONE =>
-                     (complete := false;
-                      match_failures := !match_failures + 1;
-                      Continue))
-          | Gen (variable, next) =>
-              gen visit complete env genuine variable next
-      val result = visit [] true plan
-    in
-      { result = result,
-        complete = !complete,
-        stats = [("tests", !tests),
-          ("match_failures", !match_failures)] }
-    end
-
-  fun compute_compile (config : Refute_Core.config) plans =
-    let
-      val last_stats = ref []
-      fun run {genuine_only, card, size, ignored} =
-        let
-          val plan = List.nth (plans, card - 1)
-          fun gen visit complete env genuine variable next =
-            let
-              val ty = Term.type_of variable
-              fun try value =
-                visit ((variable, value) :: env) genuine next
-            in
-              case Refute_Gen.enumerate ty of
-                  SOME values =>
-                    List.foldl (fn (value, result) =>
-                      case result of
-                          Continue => try value
-                        | found => found)
-                      Continue values
-                | NONE =>
-                    (complete := false;
-                     exhaustive_values (Refute_Gen.spec_of ty) size try)
-            end
-          val {result, complete, stats} =
-            traverse gen genuine_only ignored plan
-          val _ = last_stats := stats
-        in
-          case result of
-              Found candidate => CexFound candidate
-            | Continue => Exhausted {complete = complete}
-        end
-    in
-      {run = run, last_stats = last_stats}
-    end
-
-  val compute_substrate : substrate =
-    { name = "compute",
-      compile = compute_compile }
-
-  val substrates : substrate list ref = ref [compute_substrate]
-
-  fun selected_substrate Refute_Core.Auto = SOME compute_substrate
-    | selected_substrate Refute_Core.Compute = SOME compute_substrate
-    | selected_substrate _ = NONE
-
   fun schedule instances size =
     let
       val cards = List.map #card instances
@@ -463,14 +203,10 @@ structure Refute_QC = struct
     LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
     handle _ => 0
 
-  (* Shared certify + retry policy for both QC backends.  Given a witness
-     the compiled search reported, build the counterexample record, run it
-     through Refute_Cert.certify, and apply the Certified/Discarded/
-     Potential policy.  `retry go ig` re-runs the backend's own search with
-     the extended ignore-set (each backend passes its own continuation). *)
   fun record_candidate
         {config : Refute_Core.config,
          backend : string,
+         substrate : string,
          instance : Refute_Core.instance,
          stats : (string * int) list,
          counterexamples : Refute_Core.counterexample list ref,
@@ -485,6 +221,7 @@ structure Refute_QC = struct
         env
       val cex : Refute_Core.counterexample =
         { backend = backend,
+          substrate = substrate,
           certainty = if genuine then Refute_Core.Potential []
             else Refute_Core.Potential ["evaluation stuck during testing"],
           bindings = rev bindings,
@@ -509,308 +246,187 @@ structure Refute_QC = struct
                retry true next)
     end
 
-  val session_rng = ref (Random.newgenseed 42.0)
-
-  fun bounded_size size = Int.max (0, size)
-
-  fun random_number Refute_Gen.Num size rng =
-        numSyntax.term_of_int (Random.range (0, bounded_size size + 1) rng)
-    | random_number Refute_Gen.Int size rng =
-        intSyntax.term_of_int (Arbint.fromInt
-          (Random.range (~(bounded_size size), bounded_size size + 1) rng))
-    | random_number Refute_Gen.Char _ rng =
-        stringSyntax.mk_chr (numSyntax.term_of_int (Random.range (0, 256) rng))
-    | random_number (Refute_Gen.Word width) _ rng =
-        wordsSyntax.mk_wordii (Random.range
-          (0, Refute_Gen.int_power 2 width) rng, width)
-
-  fun random_entry spec size rng =
-    let
-      val floor = Refute_Gen.own_floor spec
-    in
-      random_value spec {budget = Int.max (floor, bounded_size size),
-        size = bounded_size size} rng
-    end
-
-  and random_args [] [] _ _ rng = ([], rng)
-    | random_args (ty :: tys) (is_recursive :: recursive) budget size rng =
-        let
-          val (value, rng') =
-            if is_recursive then
-              random_value (Refute_Gen.spec_of ty)
-                {budget = Int.max (0, budget - 1), size = size} rng
-            else
-              random_entry (Refute_Gen.spec_of ty) size rng
-          val (values, rng'') = random_args tys recursive budget size rng'
-        in
-          (value :: values, rng'')
-        end
-    | random_args _ _ _ _ _ =
-        raise Fail "Refute_QC.random_args: malformed datatype generator"
-
-  and random_function dom rng_ty size rng =
-    let
-      val variable = Term.mk_var ("x", dom)
-      val (default, rng') = random_entry (Refute_Gen.spec_of rng_ty) size rng
-      fun draw_points 0 current_rng = ([], current_rng)
-        | draw_points count current_rng =
-            let
-              val (point, next_rng) =
-                random_entry (Refute_Gen.spec_of dom) size current_rng
-              val (points, final_rng) = draw_points (count - 1) next_rng
-            in
-              (point :: points, final_rng)
-            end
-      val (points, rng'') =
-        case Refute_Gen.enumerate dom of
-            SOME values => (values, rng')
-          | NONE => draw_points (bounded_size size) rng'
-      fun add (point, (base, current_rng)) =
-        let
-          val (value, next_rng) =
-            random_entry (Refute_Gen.spec_of rng_ty) size current_rng
-        in
-          (Term.mk_comb (combinSyntax.mk_update (point, value), base),
-           next_rng)
-        end
-      val (result, rng''') = List.foldl add
-        (Term.mk_abs (variable, default), rng'') points
-    in
-      (result, rng''')
-    end
-
-  and random_value spec {budget, size} rng =
-    case spec of
-        Refute_Gen.GenEnum values =>
-          if null values then
-            raise Fail "Refute_QC.random_value: empty enumeration"
-          else (List.nth (values, Random.range (0, length values) rng), rng)
-      | Refute_Gen.GenNum kind => (random_number kind size rng, rng)
-      | Refute_Gen.GenCustom {random = SOME generate, ...} =>
-          (generate size rng, rng)
-      | Refute_Gen.GenCustom _ =>
-          raise Fail "Refute_QC.random_value: no random generator"
-      | Refute_Gen.GenFun (dom, rng_ty) => random_function dom rng_ty size rng
-      | Refute_Gen.GenDatatype {constrs, recursive, min_size, ...} =>
-          let
-            fun weight (flags, floors) =
-              if not (List.exists (fn flag => flag) flags) then 1
-              else
-                let
-                  fun depth (true, floor) = Int.max (0, floor - 1)
-                    | depth (false, _) = 0
-                  val minimum = List.foldl Int.max 0
-                    (ListPair.mapEq depth (flags, floors))
-                in
-                  if minimum = 0 then budget
-                  else if budget > minimum then budget else 0
-                end
-            fun entries [] [] [] = []
-              | entries (constr :: rest) (flags :: more_flags)
-                  (floors :: more_floors) =
-                  let val entry = (constr, flags, weight (flags, floors))
-                  in entry :: entries rest more_flags more_floors end
-              | entries _ _ _ =
-                  raise Fail "Refute_QC.random_value: malformed datatype"
-            val choices = entries constrs recursive min_size
-            val total = List.foldl (fn ((_, _, value), sum) => sum + value)
-              0 choices
-            val choice = Random.range (0, total) rng
-            fun select _ [] =
-                  raise Fail "Refute_QC.random_value: no constructor"
-              | select remaining ((constructor, flags, weight) :: rest) =
-                  if remaining < weight then (constructor, flags)
-                  else select (remaining - weight) rest
-            val ((constructor, arg_types), flags) = select choice choices
-            val (arguments, rng') =
-              random_args arg_types flags budget size rng
-          in
-            (Term.list_mk_comb (constructor, arguments), rng')
-          end
-
-  fun random_term ty size rng = random_entry (Refute_Gen.spec_of ty) size rng
-
   fun plan_has_gen current =
     case current of
         Test _ => false
       | Gen _ => true
       | Bind (_, _, fallback, next) =>
           plan_has_gen next orelse
-          (case fallback of NONE => false | SOME alternative =>
-             plan_has_gen alternative)
+          (case fallback of
+               NONE => false
+             | SOME alternative => plan_has_gen alternative)
       | Split (_, branches) =>
           List.exists (fn (_, _, next) => plan_has_gen next) branches
       | Guard (_, next) => plan_has_gen next
       | Prune => false
 
-  fun exhaustive_run (config : Refute_Core.config)
-      (instances : Refute_Core.instance list) =
-          let
-            val plans = List.map
-              (fn instance => compile_plan config (#goal instance))
-              instances
-          in
-            case selected_substrate (#substrate (#qc config)) of
-                NONE =>
-                  Refute_Core.Unknown ["requested substrate is unavailable"]
-              | SOME substrate =>
-                    let
-                      val compiled = #compile substrate config plans
-                      val entries = schedule instances (#size (#qc config))
-                      val complete = ref (not (null entries))
-                      val counterexamples = ref []
-                      val discarded = ref 0
-                      fun instance_for card =
-                        List.nth (instances, card - 1)
-                      fun stats_for size card msec =
-                        !(#last_stats compiled) @
-                        (if !discarded = 0 then []
-                         else [("discarded", !discarded)]) @
-                        [("size", size), ("card", card), ("msec", msec)]
-                      fun one (card, size) genuine_only ignored =
-                        let
-                          val start = Time.now ()
-                          val result = #run compiled
-                            {genuine_only = genuine_only,
-                             card = card, size = size, ignored = ignored}
-                          val msec = elapsed_msec start
-                        in
-                          case result of
-                              Exhausted {complete = entry_complete} =>
-                                complete := (!complete andalso entry_complete)
-                            | GaveUp reason => complete := false
-                            | CexFound {env, genuine} =>
-                                record_candidate
-                                  {config = config,
-                                   backend = "exhaustive",
-                                   instance = instance_for card,
-                                   stats = stats_for size card msec,
-                                   counterexamples = counterexamples,
-                                   discarded = discarded,
-                                   retry = fn go => fn ig =>
-                                     one (card, size) go ig}
-                                  {env = env, genuine = genuine,
-                                   genuine_only = genuine_only,
-                                   ignored = ignored}
-                        end
-                      fun search [] = ()
-                        | search (entry :: rest) =
-                            if length (!counterexamples) >=
-                              Int.max (1, #max_counterexamples config)
-                            then ()
-                            else (one entry (#genuine_only config) [];
-                                  search rest)
-                      val _ = search entries
-                    in
-                      if not (null (!counterexamples)) then
-                        Refute_Core.Counterexample (rev (!counterexamples))
-                      else if !complete then Refute_Core.NoCounterexample
-                      else Refute_Core.Unknown ["search space not exhausted"]
-                    end
-          end
+  fun substrate_name Refute_Core.Compute = SOME "compute"
+    | substrate_name Refute_Core.Cv = SOME "cv"
+    | substrate_name Refute_Core.NativeSML = SOME "native"
+    | substrate_name Refute_Core.Auto = NONE
 
-  val exhaustive_backend : Refute_Core.backend =
-    { name = "exhaustive", weight = 20, configured = fn () => true,
-      run = exhaustive_run }
+  fun add_reason reason reasons =
+    if List.exists (fn old => old = reason) (!reasons) then ()
+    else reasons := !reasons @ [reason]
 
-  fun random_compile plans rng =
+  datatype selected_compile =
+      Selected of string * compiled_test
+    | SelectionFailed of string list
+
+  fun compile_auto config strategy plans =
     let
-      val last_stats = ref []
-      fun run {genuine_only, card, size, ignored} =
-        let
-          val plan = List.nth (plans, card - 1)
-          fun gen visit _ env genuine variable next =
-            let
-              val (value, _) =
-                random_term (Term.type_of variable) size rng
-            in
-              visit ((variable, value) :: env) genuine next
-            end
-          val {result, complete, stats} =
-            traverse gen genuine_only ignored plan
-          val _ = last_stats := stats
-        in
-          case result of
-              Found candidate => CexFound candidate
-            | Continue => Exhausted {complete = complete}
-        end
-        handle Refute_Gen.NoGenerator (_, reason) => GaveUp reason
-             | Fail reason => GaveUp reason
+      fun try [] reasons =
+            SelectionFailed
+              (if null reasons then ["no substrate is registered"]
+               else reasons)
+        | try (substrate :: rest) reasons =
+            (case #compile substrate config strategy plans of
+                 Compiled test => Selected (#name substrate, test)
+               | Inapplicable why =>
+                   let
+                     val _ = Refute_Core.Private.say 2
+                       ("Refute substrate " ^ #name substrate ^
+                        " is inapplicable: " ^
+                        String.concatWith "; " why ^ "\n")
+                   in
+                     try rest (reasons @ map (fn reason =>
+                       #name substrate ^ ": " ^ reason) why)
+                   end)
     in
-      {run = run, last_stats = last_stats}
+      try (get_substrates ()) []
     end
 
-  fun random_run (config : Refute_Core.config)
+  fun compile_explicit config choice strategy plans =
+    let
+      val name = valOf (substrate_name choice)
+    in
+      case List.find (fn substrate => #name substrate = name)
+        (get_substrates ()) of
+          NONE => SelectionFailed
+            ["requested substrate " ^ name ^ " is unavailable"]
+        | SOME substrate =>
+            (case #compile substrate config strategy plans of
+                 Compiled test => Selected (name, test)
+               | Inapplicable reasons => SelectionFailed reasons)
+    end
+
+  fun compile_selected config strategy plans =
+    case #substrate (#qc config) of
+        Refute_Core.Auto => compile_auto config strategy plans
+      | choice => compile_explicit config choice strategy plans
+
+  fun bounded_size size = Int.max (0, size)
+
+  fun strategy_seed (config : Refute_Core.config) =
+    IntInf.fromInt
+      (case #seed (#qc config) of SOME seed => seed | NONE => 42)
+
+  fun is_random (Random _) = true
+    | is_random Exhaustive = false
+
+  fun strategy_run strategy (config : Refute_Core.config)
       (instances : Refute_Core.instance list) =
-          let
-            val plans = List.map
-              (fn instance => compile_plan config (#goal instance))
-              instances
-            val rng =
-              case #seed (#qc config) of
-                  SOME seed => Random.newgenseed (Real.fromInt seed)
-                | NONE => !session_rng
-            val compiled = random_compile plans rng
-            val entries = schedule instances (#size (#qc config))
-            val complete = ref (List.all (fn plan => not (plan_has_gen plan))
-              plans)
-            val counterexamples = ref []
-            val discarded = ref 0
-            fun instance_for card = List.nth (instances, card - 1)
-            fun stats_for size card =
-              !(#last_stats compiled) @
-              (if !discarded = 0 then [] else [("discarded", !discarded)]) @
-              [("size", size), ("card", card)]
-            fun draw card size genuine_only ignored =
-              case #run compiled
-                { genuine_only = genuine_only,
-                  card = card, size = size, ignored = ignored } of
-                  Exhausted {complete = entry_complete} =>
-                    complete := (!complete andalso entry_complete)
-                | GaveUp _ => complete := false
-                | CexFound {env, genuine} =>
-                    record_candidate
-                      {config = config, backend = "random",
-                       instance = instance_for card,
-                       stats = stats_for size card,
-                       counterexamples = counterexamples,
-                       discarded = discarded,
-                       retry = fn go => fn ig => draw card size go ig}
-                      {env = env, genuine = genuine,
-                       genuine_only = genuine_only, ignored = ignored}
-            fun draws 0 _ _ = ()
-              | draws remaining card size =
-                  if length (!counterexamples) >=
-                    Int.max (1, #max_counterexamples config)
-                  then ()
-                  else (draw card size (#genuine_only config) [];
-                        draws (remaining - 1) card size)
-            fun search [] = ()
-              | search ((card, size) :: rest) =
-                  if length (!counterexamples) >=
-                    Int.max (1, #max_counterexamples config)
-                  then ()
-                  else (draws (bounded_size (#iterations (#qc config)))
-                    card size; search rest)
-            val _ = search entries
-          in
-            if not (null (!counterexamples)) then
-              Refute_Core.Counterexample (rev (!counterexamples))
-            else if !complete then Refute_Core.NoCounterexample
-            else Refute_Core.Unknown ["random search exhausted"]
-          end
+    let
+      val plans = List.map
+        (fn instance => compile_plan config (#goal instance)) instances
+    in
+      case compile_selected config strategy plans of
+          SelectionFailed reasons => Refute_Core.Unknown reasons
+        | Selected (substrate, compiled) =>
+            let
+              val entries = schedule instances (#size (#qc config))
+              val complete = ref
+                (case strategy of
+                     Exhaustive => not (null entries)
+                   | Random _ => List.all (not o plan_has_gen) plans)
+              val counterexamples = ref []
+              val discarded = ref 0
+              val gave_up = ref []
+              fun instance_for card = List.nth (instances, card - 1)
+              fun stats_for size card msec =
+                !(#last_stats compiled) @
+                (if !discarded = 0 then []
+                 else [("discarded", !discarded)]) @
+                [("size", size), ("card", card), ("msec", msec)]
+              fun one (card, size) genuine_only ignored =
+                let
+                  val start = Time.now ()
+                  val draws =
+                    if is_random strategy then
+                      bounded_size (#iterations (#qc config))
+                    else 0
+                  val result = #run compiled
+                    { genuine_only = genuine_only,
+                      card = card,
+                      size = size,
+                      draws = draws,
+                      ignored = ignored }
+                  val msec = elapsed_msec start
+                in
+                  case result of
+                      Exhausted {complete = entry_complete} =>
+                        complete := (!complete andalso entry_complete)
+                    | GaveUp reason =>
+                        (complete := false; add_reason reason gave_up)
+                    | CexFound {env, genuine} =>
+                        record_candidate
+                          { config = config,
+                            backend = if is_random strategy then "random"
+                              else "exhaustive",
+                            substrate = substrate,
+                            instance = instance_for card,
+                            stats = stats_for size card msec,
+                            counterexamples = counterexamples,
+                            discarded = discarded,
+                            retry = fn go => fn ig =>
+                              one (card, size) go ig }
+                          { env = env,
+                            genuine = genuine,
+                            genuine_only = genuine_only,
+                            ignored = ignored }
+                end
+              fun search [] = ()
+                | search (entry :: rest) =
+                    if length (!counterexamples) >=
+                      Int.max (1, #max_counterexamples config)
+                    then ()
+                    else
+                      let
+                        val draws = #iterations (#qc config)
+                        val _ =
+                          if is_random strategy andalso draws <= 0 then ()
+                          else one entry (#genuine_only config) []
+                      in
+                        search rest
+                      end
+              val _ = search entries
+              val generic_reason =
+                if is_random strategy then "random search exhausted"
+                else "search space not exhausted"
+            in
+              if not (null (!counterexamples)) then
+                Refute_Core.Counterexample (rev (!counterexamples))
+              else if !complete then Refute_Core.NoCounterexample
+              else Refute_Core.Unknown (generic_reason :: !gave_up)
+            end
+    end
+
+  val exhaustive_backend : Refute_Core.backend =
+    { name = "exhaustive",
+      weight = 20,
+      configured = fn () => true,
+      run = strategy_run Exhaustive }
 
   val random_backend : Refute_Core.backend =
-    { name = "random", weight = 30, configured = fn () => true,
-      run = random_run }
+    { name = "random",
+      weight = 30,
+      configured = fn () => true,
+      run = fn config =>
+        strategy_run (Random {seed = strategy_seed config}) config }
 
-  (* Register the built-in backends.  register_backend de-duplicates by
-     name, so calling this more than once is idempotent.  Refute.sml calls
-     it as well, so the backends are registered through the public entry
-     point and not only when Refute_QC is opened directly (e.g. in
-     selftest). *)
   fun register_backends () =
-    (Refute_Core.register_backend exhaustive_backend;
+    (Refute_EvalCompute.register_substrate ();
+     Refute_Core.register_backend exhaustive_backend;
      Refute_Core.register_backend random_backend)
 
   val _ = register_backends ()

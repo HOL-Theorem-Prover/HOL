@@ -8,6 +8,7 @@ signature Refute = sig
                      | Potential of string list
   type counterexample =
     { backend : string,
+      substrate : string,
       certainty : certainty,
       bindings : (term * term) list,
       evals : (term * term) list,
