@@ -1640,12 +1640,208 @@ structure Refute_EvalCv = struct
          | Feedback.HOL_ERR error =>
              Refute_Eval.Inapplicable [hol_error_reason error]
 
-  (* Selftest-only stream hook.  Evaluate translated generators directly so
-     loop/property behavior cannot hide consumption drift.  Function and
-     nested-recursive results lack a first-order cv result representation;
-     those terms are reconstructed at the normative generator seam. *)
-  fun dump_cv_random_candidates
-      (arguments as {plan, seed, size, count}) =
+  (* Selftest-only stream hook.  Supported plans run through the production
+     cv loop.  Values outside its first-order result fragment still take
+     every random draw through cv_eval, with an independent reconstruction
+     of the normative consumption discipline. *)
+  fun dump_plan current =
+    case current of
+        Refute_Eval.Test _ => Refute_Eval.Test boolSyntax.F
+      | Refute_Eval.Gen (variable, next) =>
+          Refute_Eval.Gen (variable, dump_plan next)
+      | _ => raise Unsupported "candidate dump requires a Gen chain"
+
+  fun dump_cv_loop {plan, seed, size, count} =
+    case compile Refute_Core.default_config
+        (Refute_Eval.Random {seed = seed}) [dump_plan plan] of
+        Refute_Eval.Inapplicable reasons => CvInapplicable reasons
+      | Refute_Eval.Compiled test =>
+          let
+            fun loop 0 candidates = rev candidates
+              | loop remaining candidates =
+                  (case #run test
+                    {genuine_only = true, card = 1, size = size,
+                     draws = 1, ignored = []} of
+                       Refute_Eval.CexFound {env, ...} =>
+                         loop (remaining - 1)
+                           (rev (List.map #2 env) :: candidates)
+                     | Refute_Eval.Exhausted _ =>
+                         raise Fail "cv candidate dump exhausted"
+                     | Refute_Eval.GaveUp reason => raise Fail reason)
+            val result = Exn.capture (fn () =>
+              loop (Int.max (0, count)) []) ()
+            val close_result = Exn.capture (#close test) ()
+          in
+            case close_result of
+                Exn.Res _ => CvSuccess (Exn.release result)
+              | Exn.Exn error => raise error
+          end
+
+  fun cv_dump_rand_below bound state =
+    let
+      fun num value = numSyntax.mk_numeral
+        (Arbnum.fromString (IntInf.toString value))
+      val application = Term.list_mk_comb
+        (``refute$rand_below``, [num bound, num state])
+      val theorem = cv_transLib.cv_eval application
+      val result = #2 (boolSyntax.dest_eq (Thm.concl theorem))
+      val (value_tm, state_tm) = pairSyntax.dest_pair result
+      fun dest tm = valOf (IntInf.fromString
+        (Arbnum.toString (numSyntax.dest_numeral tm)))
+    in
+      (dest value_tm, dest state_tm)
+    end
+
+  fun cv_dump_random_term ty size state =
+    let
+      val bounded = Int.max (0, size)
+      fun arbnum value = Arbnum.fromString (IntInf.toString value)
+      fun arbint value = Arbint.fromString (IntInf.toString value)
+      fun checked bound current =
+        if bound <= 0 orelse bound > 4294967296 then
+          raise Unsupported "candidate dump random bound exceeds 2^32"
+        else cv_dump_rand_below bound current
+
+      fun entry spec current =
+        random_value spec
+          {budget = Int.max (Refute_Gen.own_floor spec, bounded),
+           size = bounded} current
+
+      and arguments [] [] _ _ current = ([], current)
+        | arguments (ty :: tys) (recursive :: flags) budget draw_size
+            current =
+            let
+              val (value, next) =
+                if recursive then
+                  random_value (Refute_Gen.spec_of ty)
+                    {budget = Int.max (0, budget - 1), size = draw_size}
+                    current
+                else
+                  let val spec = Refute_Gen.spec_of ty
+                  in
+                    random_value spec
+                      {budget = Int.max
+                         (Refute_Gen.own_floor spec, draw_size),
+                       size = draw_size} current
+                  end
+              val (values, final) =
+                arguments tys flags budget draw_size next
+            in
+              (value :: values, final)
+            end
+        | arguments _ _ _ _ _ =
+            raise Fail "cv candidate dump malformed datatype"
+
+      and function_value domain range current =
+        let
+          val variable = Term.mk_var ("x", domain)
+          val range_spec = Refute_Gen.spec_of range
+          val (default, after_default) = entry range_spec current
+          fun draw_points 0 state points = (rev points, state)
+            | draw_points remaining state points =
+                let
+                  val (point, next) = entry
+                    (Refute_Gen.spec_of domain) state
+                in
+                  draw_points (remaining - 1) next (point :: points)
+                end
+          val (points, after_points) =
+            case Refute_Gen.enumerate domain of
+                SOME values => (values, after_default)
+              | NONE => draw_points bounded after_default []
+          fun add (point, (base, state)) =
+            let
+              val (value, next) = entry range_spec state
+            in
+              (Term.mk_comb
+                 (combinSyntax.mk_update (point, value), base), next)
+            end
+        in
+          List.foldl add
+            (Term.mk_abs (variable, default), after_points) points
+        end
+
+      and random_value spec {budget, size = draw_size} current =
+        case spec of
+            Refute_Gen.GenEnum values =>
+              let
+                val (choice, next) =
+                  checked (IntInf.fromInt (length values)) current
+              in
+                (List.nth (values, IntInf.toInt choice), next)
+              end
+          | Refute_Gen.GenNum Refute_Gen.Num =>
+              let val (value, next) =
+                checked (IntInf.fromInt draw_size + 1) current
+              in (numSyntax.mk_numeral (arbnum value), next) end
+          | Refute_Gen.GenNum Refute_Gen.Int =>
+              let
+                val radius = IntInf.fromInt draw_size
+                val (value, next) = checked (2 * radius + 1) current
+              in
+                (intSyntax.term_of_int (arbint (value - radius)), next)
+              end
+          | Refute_Gen.GenNum Refute_Gen.Char =>
+              let val (value, next) = checked 256 current
+              in
+                (stringSyntax.mk_chr
+                   (numSyntax.mk_numeral (arbnum value)), next)
+              end
+          | Refute_Gen.GenNum (Refute_Gen.Word width) =>
+              let val (value, next) =
+                checked (IntInf.pow (2, width)) current
+              in (wordsSyntax.mk_wordi (arbnum value, width), next) end
+          | Refute_Gen.GenFun (domain, range) =>
+              function_value domain range current
+          | Refute_Gen.GenDatatype
+              {constrs, recursive, min_size, ...} =>
+              let
+                fun weight (flags, floors) =
+                  if not (List.exists (fn flag => flag) flags) then 1
+                  else
+                    let
+                      fun depth (true, floor) = Int.max (0, floor - 1)
+                        | depth (false, _) = 0
+                      val minimum = List.foldl Int.max 0
+                        (ListPair.mapEq depth (flags, floors))
+                    in
+                      if minimum = 0 then budget
+                      else if budget > minimum then budget else 0
+                    end
+                fun entries [] [] [] = []
+                  | entries (constructor :: rest) (flags :: more_flags)
+                      (floors :: more_floors) =
+                      (constructor, flags, weight (flags, floors)) ::
+                      entries rest more_flags more_floors
+                  | entries _ _ _ =
+                      raise Fail "cv candidate dump malformed weights"
+                val choices = entries constrs recursive min_size
+                val total = List.foldl (fn ((_, _, value), sum) =>
+                  IntInf.fromInt value + sum) 0 choices
+                val (draw, after_choice) = checked total current
+                fun select _ [] =
+                      raise Fail "cv candidate dump has no constructor"
+                  | select remaining
+                      ((constructor, flags, value) :: rest) =
+                      if remaining < IntInf.fromInt value then
+                        (constructor, flags)
+                      else
+                        select (remaining - IntInf.fromInt value) rest
+                val ((constructor, arg_types), flags) =
+                  select draw choices
+                val (values, final) = arguments arg_types flags
+                  budget draw_size after_choice
+              in
+                (Term.list_mk_comb (constructor, values), final)
+              end
+          | Refute_Gen.GenCustom _ =>
+              raise Unsupported
+                "custom generator is unavailable in cv candidate dump"
+    in
+      entry (Refute_Gen.spec_of ty) state
+    end
+
+  fun dump_cv_fallback {plan, seed, size, count} =
     let
       fun variables current =
         case current of
@@ -1654,49 +1850,32 @@ structure Refute_EvalCv = struct
           | Refute_Eval.Test _ => []
           | _ => raise Unsupported "candidate dump requires a Gen chain"
       val generated = variables plan
-      val types = distinct_types (List.map Term.type_of generated)
-
-      fun dump generators =
-        let
-          fun random_generator ty =
-            #random (generator_for ty generators)
-          fun rhs theorem = #2 (boolSyntax.dest_eq (Thm.concl theorem))
-          fun draw variable state =
+      fun candidate [] state values = (rev values, state)
+        | candidate (variable :: rest) state values =
             let
-              val application = Term.list_mk_comb
-                (random_generator (Term.type_of variable),
-                 [numeral (Int.max (0, size)),
-                  numSyntax.mk_numeral
-                    (Arbnum.fromString (IntInf.toString state))])
-              val result = rhs (cv_transLib.cv_eval application)
-              val (value, state_tm) = pairSyntax.dest_pair result
-              val next = valOf (IntInf.fromString
-                (Arbnum.toString (numSyntax.dest_numeral state_tm)))
+              val (value, next) = cv_dump_random_term
+                (Term.type_of variable) size state
             in
-              (value, next)
+              candidate rest next (value :: values)
             end
-          fun candidate [] state values = (rev values, state)
-            | candidate (variable :: rest) state values =
-                let val (value, next) = draw variable state
-                in candidate rest next (value :: values) end
-          fun loop 0 _ candidates = rev candidates
-            | loop remaining state candidates =
-                let val (values, next) = candidate generated state []
-                in loop (remaining - 1) next (values :: candidates) end
-        in
-          loop (Int.max (0, count)) seed []
-        end
+      fun loop 0 _ candidates = rev candidates
+        | loop remaining state candidates =
+            let val (values, next) = candidate generated state []
+            in loop (remaining - 1) next (values :: candidates) end
     in
-      case with_generators types dump of
-          CvSuccess candidates => candidates
-        | CvInapplicable reasons =>
-            if List.exists (fn reason =>
-                 String.isSubstring "function type" reason orelse
-                 String.isSubstring
-                   "nested recursive datatype generator" reason) reasons
-            then Refute_EvalCompute.dump_random_candidates arguments
-            else raise Fail (String.concatWith "; " reasons)
+      loop (Int.max (0, count)) seed []
     end
+
+  fun dump_cv_random_candidates arguments =
+    case dump_cv_loop arguments of
+        CvSuccess candidates => candidates
+      | CvInapplicable reasons =>
+          if List.exists (fn reason =>
+               String.isSubstring "function type" reason orelse
+               String.isSubstring
+                 "nested recursive datatype generator" reason) reasons
+          then dump_cv_fallback arguments
+          else raise Fail (String.concatWith "; " reasons)
 
   val cv_substrate : Refute_Eval.substrate =
     {name = "cv", priority = 20, compile = compile}

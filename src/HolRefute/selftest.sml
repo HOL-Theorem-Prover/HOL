@@ -355,6 +355,8 @@ val _ = Datatype.Datatype `rg_record = <| rg_field : num |>`
 val _ = Datatype.Datatype
   `rg_stream_record = <| rg_stream_field : num; rg_stream_flag : bool |>`
 val _ = Datatype.Datatype `rg_enum = RGRed | RGGreen | RGBlue`
+val _ = Datatype.Datatype
+  `rg_custom_matrix = RGCustomA | RGCustomB`
 
 val rx_sum_def = TotalDefn.Define
   `rx_sum ([] : num list) = 0 /\
@@ -940,6 +942,14 @@ fun rejects_empty_custom () =
 val _ = require_msg (check_result rejects_empty_custom) (fn () =>
   "an empty custom generator was accepted") (fn () => ()) ()
 val _ = register_generator ``:ind`` finite_custom
+val matrix_custom : custom_gen =
+  {enumerate = SOME (fn _ => [``RGCustomA``, ``RGCustomB``]),
+   random = SOME (fn _ => fn state =>
+     let val (choice, next) = rand_below 2 state
+     in
+       (if choice = 0 then ``RGCustomA`` else ``RGCustomB``, next)
+     end)}
+val _ = register_generator ``:rg_custom_matrix`` matrix_custom
 val _ = require_msg (check_result (fn () =>
   case spec_of ``:ind`` of GenCustom _ => true | _ => false))
   (fn () => "custom generator was not registered") (fn () => ()) ()
@@ -2766,7 +2776,8 @@ fun same_conformance_outcome (left, right) =
                same_bindings left_bindings right_bindings
            | _ => false)
     | (Refute.NoCounterexample, Refute.NoCounterexample) => true
-    | (Refute.Unknown _, Refute.Unknown _) => true
+    | (Refute.Unknown left_reasons, Refute.Unknown right_reasons) =>
+        left_reasons = right_reasons
     | _ => false
 
 fun certified_conformance_cex
@@ -2858,6 +2869,7 @@ fun conformance_config expectation =
 
 val conform_cex_config = conformance_config ExpectCex
 val conform_none_config = conformance_config ExpectNone
+val conform_unknown_config = conformance_config ExpectUnknown
 
 val conformance_smoke_cases : conformance_case list =
   [{name = "boolean counterexample", cfg = conform_cex_config,
@@ -2868,12 +2880,64 @@ val conformance_smoke_cases : conformance_case list =
 val conformance_full_cases : conformance_case list =
   [{name = "reverse", cfg = conform_cex_config,
     tm = ``REVERSE (xs : num list) = xs``, inapplicable = []},
-   {name = "MAP/FILTER specialization", cfg = conform_cex_config,
-    tm = ``MAP SUC (xs : num list) = xs /\
-           FILTER ($= 0) (ys : num list) = ys``,
+   {name = "natural subtraction", cfg = conform_cex_config,
+    tm = ``(x : num) - y + y = x``, inapplicable = []},
+   {name = "reverse append", cfg = conform_cex_config,
+    tm = ``REVERSE (xs : num list ++ ys) = REVERSE xs ++ REVERSE ys``,
     inapplicable = []},
+   {name = "ALL_DISTINCT append", cfg = conform_cex_config,
+    tm = ``ALL_DISTINCT (xs : num list ++ ys) <=>
+           ALL_DISTINCT xs /\ ALL_DISTINCT ys``,
+    inapplicable = []},
+   {name = "nub append", cfg = conform_cex_config,
+    tm = ``nub (xs : num list ++ ys) = nub xs ++ nub ys``,
+    inapplicable =
+      [(NativeSML, "non-constructor pattern: GSPEC f")]},
+   {name = "integer equality", cfg = conform_cex_config,
+    tm = ``~((x : int) = x)``, inapplicable = []},
+   {name = "sorted insert", cfg = conform_cex_config,
+    tm = ``SORTED $= (xs : num list) ==> SORTED $= (x :: xs)``,
+    inapplicable = []},
+   {name = "finite-map lookup", cfg = conform_cex_config,
+    tm = ``(m : num -> num option) k = SOME (v : num) ==>
+           m k = NONE``,
+    inapplicable =
+      [(Cv, "cv: :num -> num option - function type in data position"),
+       (NativeSML,
+        "function equality has non-enumerable domain :num")]},
+   {name = "polymorphic lists", cfg = conform_cex_config,
+    tm = ``(xs : 'a list) = ys``, inapplicable = []},
+   {name = "polymorphic card schedule", cfg = conform_cex_config,
+    tm = ``(x : 'a) = y``, inapplicable = []},
+   {name = "polymorphic num fallback",
+    cfg = upd_finite_types false conform_cex_config,
+    tm = ``(x : 'a) = y``, inapplicable = []},
+   {name = "function UPDATE", cfg = conform_cex_config,
+    tm = ``(f : refute$rf2 -> refute$rf2) rf2_1 = rf2_1 /\
+           f rf2_2 = rf2_2 ==> F``,
+    inapplicable =
+      [(Cv, "cv: :rf2 -> rf2 - function type in data position")]},
+   {name = "finite boolean", cfg = conform_cex_config,
+    tm = ``(b : bool)``, inapplicable = []},
+   {name = "word addition", cfg = conform_cex_config,
+    tm = ``w2n ((a : word8) + b) = w2n a + w2n b``,
+    inapplicable = []},
+   {name = "numeral literal", cfg = conform_cex_config,
+    tm = ``!n : num. n <> 2``, inapplicable = []},
+   {name = "character literal", cfg = conform_cex_config,
+    tm = ``!c : char. c <> #"a"``, inapplicable = []},
+   {name = "string literal", cfg = conform_cex_config,
+    tm = ``!s : string. s <> "x"``, inapplicable = []},
+   {name = "MAP specialization", cfg = conform_cex_config,
+    tm = ``MAP SUC (xs : num list) = xs``, inapplicable = []},
+   {name = "FILTER specialization", cfg = conform_cex_config,
+    tm = ``FILTER ($= 0) (xs : num list) = xs``, inapplicable = []},
    {name = "higher-order MAP", cfg = conform_cex_config,
     tm = ``MAP (f : refute$rf2 -> bool) [rf2_1; rf2_2] = [T; T]``,
+    inapplicable =
+      [(Cv, "cv: :rf2 -> bool - function type in data position")]},
+   {name = "higher-order FILTER", cfg = conform_cex_config,
+    tm = ``FILTER (p : refute$rf2 -> bool) [rf2_1; rf2_2] = []``,
     inapplicable =
       [(Cv, "cv: :rf2 -> bool - function type in data position")]},
    {name = "word-heavy", cfg = conform_cex_config,
@@ -2887,11 +2951,25 @@ val conformance_full_cases : conformance_case list =
    {name = "partial HD", cfg = conform_cex_config,
     tm = ``HD (xs : num list) = 0``,
     inapplicable = [(Cv, "cv: precondition for HD")]},
-   {name = "custom generator", cfg = conform_cex_config,
+   {name = "abstract generator", cfg = conform_cex_config,
     tm = ``(r : rg_record) = s``,
     inapplicable =
       [(Cv, "cv: :rg_record - abstract generator registered"),
        (NativeSML, "custom generator registered for :rg_record")]},
+   {name = "custom generator", cfg = conform_cex_config,
+    tm = ``(x : rg_custom_matrix) = RGCustomA``,
+    inapplicable =
+      [(Cv, "cv: :rg_custom_matrix - custom generator registered"),
+       (NativeSML,
+        "custom generator registered for :rg_custom_matrix")]},
+   {name = "infinite quantifier", cfg = conform_unknown_config,
+    tm = ``(!n : num. n <= n)``, inapplicable = []},
+   {name = "quotient", cfg = conform_unknown_config,
+    tm = ``(x : real) = y``,
+    inapplicable =
+      [(Compute, "no generator for :real"),
+       (Cv, "cv: :real - quotient type"),
+       (NativeSML, "no generator for :real")]},
    {name = "closed soundness", cfg = conform_none_config,
     tm = ``T``, inapplicable = []},
    {name = "reverse soundness", cfg = conform_none_config,
