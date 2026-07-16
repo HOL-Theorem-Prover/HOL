@@ -43,6 +43,11 @@ signature Refute_Eval = sig
       compile : Refute_Core.config -> strategy -> plan list ->
         compile_result }
 
+  val rand_next : IntInf.int -> IntInf.int
+  val rand_out : IntInf.int -> IntInf.int
+  val rand_below : IntInf.int -> IntInf.int -> IntInf.int * IntInf.int
+  val session_seed : IntInf.int ref
+
   val register_substrate : substrate -> unit
   val get_substrates : unit -> substrate list
 end

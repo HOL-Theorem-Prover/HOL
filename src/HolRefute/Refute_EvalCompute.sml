@@ -235,88 +235,127 @@ structure Refute_EvalCompute = struct
       {run = run, last_stats = last_stats}
     end
 
-  val session_rng = ref (Random.newgenseed 42.0)
-
   fun bounded_size size = Int.max (0, size)
 
-  fun random_number Refute_Gen.Num size rng =
-        numSyntax.term_of_int (Random.range (0, bounded_size size + 1) rng)
-    | random_number Refute_Gen.Int size rng =
-        intSyntax.term_of_int (Arbint.fromInt
-          (Random.range (~(bounded_size size), bounded_size size + 1) rng))
-    | random_number Refute_Gen.Char _ rng =
-        stringSyntax.mk_chr (numSyntax.term_of_int (Random.range (0, 256) rng))
-    | random_number (Refute_Gen.Word width) _ rng =
-        wordsSyntax.mk_wordii (Random.range
-          (0, Refute_Gen.int_power 2 width) rng, width)
+  fun arbnum_of_intinf value = Arbnum.fromString (IntInf.toString value)
+  fun arbint_of_intinf value = Arbint.fromString (IntInf.toString value)
 
-  fun random_entry spec size rng =
+  val rand_below_limit : IntInf.int = 4294967296
+
+  fun checked_rand_below bound state =
+    if bound <= 0 orelse bound > rand_below_limit then
+      raise Fail "Refute_EvalCompute: rand_below bound exceeds 2^32"
+    else
+      rand_below bound state
+
+  fun random_number Refute_Gen.Num size state =
+        let
+          val radius = IntInf.fromInt (bounded_size size)
+          val bound = radius + 1
+          val (value, next) = checked_rand_below bound state
+        in
+          (numSyntax.mk_numeral (arbnum_of_intinf value), next)
+        end
+    | random_number Refute_Gen.Int size state =
+        let
+          val radius = IntInf.fromInt (bounded_size size)
+          val bound = 2 * radius + 1
+          val (value, next) = checked_rand_below bound state
+          val signed = value - radius
+        in
+          (intSyntax.term_of_int (arbint_of_intinf signed), next)
+        end
+    | random_number Refute_Gen.Char _ state =
+        let
+          val (value, next) = checked_rand_below 256 state
+        in
+          (stringSyntax.mk_chr
+             (numSyntax.mk_numeral (arbnum_of_intinf value)), next)
+        end
+    | random_number (Refute_Gen.Word width) _ state =
+        let
+          val bound = IntInf.pow (2, width)
+          val (value, next) = checked_rand_below bound state
+        in
+          (wordsSyntax.mk_wordi (arbnum_of_intinf value, width), next)
+        end
+
+  fun random_entry spec size state =
     let
       val floor = Refute_Gen.own_floor spec
     in
       random_value spec {budget = Int.max (floor, bounded_size size),
-        size = bounded_size size} rng
+        size = bounded_size size} state
     end
 
-  and random_args [] [] _ _ rng = ([], rng)
-    | random_args (ty :: tys) (is_recursive :: recursive) budget size rng =
+  and random_args [] [] _ _ state = ([], state)
+    | random_args (ty :: tys) (is_recursive :: recursive) budget size
+        state =
         let
-          val (value, rng') =
+          val (value, next) =
             if is_recursive then
               random_value (Refute_Gen.spec_of ty)
-                {budget = Int.max (0, budget - 1), size = size} rng
+                {budget = Int.max (0, budget - 1), size = size} state
             else
-              random_entry (Refute_Gen.spec_of ty) size rng
-          val (values, rng'') = random_args tys recursive budget size rng'
+              random_entry (Refute_Gen.spec_of ty) size state
+          val (values, final) =
+            random_args tys recursive budget size next
         in
-          (value :: values, rng'')
+          (value :: values, final)
         end
     | random_args _ _ _ _ _ =
         raise Fail "Refute_QC.random_args: malformed datatype"
 
-  and random_function dom rng_ty size rng =
+  and random_function dom rng_ty size state =
     let
       val variable = Term.mk_var ("x", dom)
-      val (default, rng') = random_entry (Refute_Gen.spec_of rng_ty) size rng
-      fun draw_points 0 current_rng = ([], current_rng)
-        | draw_points count current_rng =
+      val (default, after_default) =
+        random_entry (Refute_Gen.spec_of rng_ty) size state
+      fun draw_points 0 current = ([], current)
+        | draw_points count current =
             let
-              val (point, next_rng) =
-                random_entry (Refute_Gen.spec_of dom) size current_rng
-              val (points, final_rng) = draw_points (count - 1) next_rng
+              val (point, next) =
+                random_entry (Refute_Gen.spec_of dom) size current
+              val (points, final) = draw_points (count - 1) next
             in
-              (point :: points, final_rng)
+              (point :: points, final)
             end
-      val (points, rng'') =
+      val (points, after_points) =
         case Refute_Gen.enumerate dom of
-            SOME values => (values, rng')
-          | NONE => draw_points (bounded_size size) rng'
-      fun add (point, (base, current_rng)) =
+            SOME values => (values, after_default)
+          | NONE => draw_points (bounded_size size) after_default
+      fun add (point, (base, current)) =
         let
-          val (value, next_rng) =
-            random_entry (Refute_Gen.spec_of rng_ty) size current_rng
+          val (value, next) =
+            random_entry (Refute_Gen.spec_of rng_ty) size current
         in
-          (Term.mk_comb (combinSyntax.mk_update (point, value), base),
-           next_rng)
+          (Term.mk_comb (combinSyntax.mk_update (point, value), base), next)
         end
-      val (result, rng''') = List.foldl add
-        (Term.mk_abs (variable, default), rng'') points
+      val (result, final) = List.foldl add
+        (Term.mk_abs (variable, default), after_points) points
     in
-      (result, rng''')
+      (result, final)
     end
 
-  and random_value spec {budget, size} rng =
+  and random_value spec {budget, size} state =
     case spec of
         Refute_Gen.GenEnum values =>
           if null values then
             raise Fail "Refute_QC.random_value: empty enumeration"
-          else (List.nth (values, Random.range (0, length values) rng), rng)
-      | Refute_Gen.GenNum kind => (random_number kind size rng, rng)
+          else
+            let
+              val (choice, next) =
+                checked_rand_below (IntInf.fromInt (length values)) state
+            in
+              (List.nth (values, IntInf.toInt choice), next)
+            end
+      | Refute_Gen.GenNum kind => random_number kind size state
       | Refute_Gen.GenCustom {random = SOME generate, ...} =>
-          (generate size rng, rng)
+          generate size state
       | Refute_Gen.GenCustom _ =>
           raise Fail "Refute_QC.random_value: no random generator"
-      | Refute_Gen.GenFun (dom, rng_ty) => random_function dom rng_ty size rng
+      | Refute_Gen.GenFun (dom, rng_ty) =>
+          random_function dom rng_ty size state
       | Refute_Gen.GenDatatype {constrs, recursive, min_size, ...} =>
           let
             fun weight (flags, floors) =
@@ -340,30 +379,43 @@ structure Refute_EvalCompute = struct
                   raise Fail
                     "Refute_QC.random_value: malformed datatype"
             val choices = entries constrs recursive min_size
-            val total = List.foldl (fn ((_, _, value), sum) => sum + value)
-              0 choices
-            val choice = Random.range (0, total) rng
+            val total = List.foldl (fn ((_, _, value), sum) =>
+              IntInf.fromInt value + sum) 0 choices
+            val (draw, after_choice) = checked_rand_below total state
             fun select _ [] =
                   raise Fail
                     "Refute_QC.random_value: no constructor"
-              | select remaining ((constructor, flags, weight) :: rest) =
-                  if remaining < weight then (constructor, flags)
-                  else select (remaining - weight) rest
-            val ((constructor, arg_types), flags) = select choice choices
-            val (arguments, rng') =
-              random_args arg_types flags budget size rng
+              | select remaining ((constructor, flags, value) :: rest) =
+                  let val weight = IntInf.fromInt value
+                  in
+                    if remaining < weight then (constructor, flags)
+                    else select (remaining - weight) rest
+                  end
+            val ((constructor, arg_types), flags) = select draw choices
+            val (arguments, final) =
+              random_args arg_types flags budget size after_choice
           in
-            (Term.list_mk_comb (constructor, arguments), rng')
+            (Term.list_mk_comb (constructor, arguments), final)
           end
 
-  fun random_term ty size rng = random_entry (Refute_Gen.spec_of ty) size rng
+  fun random_term ty size state =
+    random_entry (Refute_Gen.spec_of ty) size state
 
   fun stat name stats =
     case List.find (fn (key, _) => key = name) stats of
         NONE => 0
       | SOME (_, value) => value
 
-  fun random_compile plans rng =
+  fun random_gen state size visit _ env genuine variable next =
+    let
+      val (value, after_draw) =
+        random_term (Term.type_of variable) size (!state)
+      val _ = state := after_draw
+    in
+      visit ((variable, value) :: env) genuine next
+    end
+
+  fun random_compile plans state =
     let
       val last_stats = ref []
       fun run {genuine_only, card, size, draws, ignored} =
@@ -373,19 +425,11 @@ structure Refute_EvalCompute = struct
           val match_failures = ref 0
           val all_complete = ref true
 
-          fun gen visit _ env genuine variable next =
-            let
-              val (value, _) =
-                random_term (Term.type_of variable) size rng
-            in
-              visit ((variable, value) :: env) genuine next
-            end
-
           fun attempt 0 = Exhausted {complete = !all_complete}
             | attempt remaining =
                 let
                   val {result, complete, stats} =
-                    traverse gen genuine_only ignored plan
+                    traverse (random_gen state size) genuine_only ignored plan
                   val _ = tests := !tests + stat "tests" stats
                   val _ = match_failures := !match_failures +
                     stat "match_failures" stats
@@ -408,6 +452,36 @@ structure Refute_EvalCompute = struct
         end
     in
       {run = run, last_stats = last_stats}
+    end
+
+  (* Compute-only scaffolding for the cross-substrate stream tests.  One
+     result records, in order, every Gen draw made by one plan attempt. *)
+  fun dump_random_candidates {plan, seed, size, count} =
+    let
+      val state = ref seed
+
+      fun one () =
+        let
+          val generated = ref []
+          fun gen visit _ env genuine variable next =
+            let
+              val (value, after_draw) =
+                random_term (Term.type_of variable) size (!state)
+              val _ = state := after_draw
+              val _ = generated := value :: !generated
+            in
+              visit ((variable, value) :: env) genuine next
+            end
+          val _ = traverse gen false [] plan
+        in
+          rev (!generated)
+        end
+
+      fun loop 0 candidates = rev candidates
+        | loop remaining candidates =
+            loop (remaining - 1) (one () :: candidates)
+    in
+      loop (bounded_size count) []
     end
 
   fun same_type ty1 ty2 = Type.compare (ty1, ty2) = EQUAL
@@ -433,6 +507,13 @@ structure Refute_EvalCompute = struct
           in
             case spec of
                 Refute_Gen.GenEnum _ => ()
+              | Refute_Gen.GenNum (Refute_Gen.Word width) =>
+                  (case strategy of
+                     Random _ =>
+                       if width <= 32 then ()
+                       else add (no_generator_reason ty
+                         "word width exceeds rand_below's 32-bit bound")
+                   | Exhaustive => ())
               | Refute_Gen.GenNum _ => ()
               | Refute_Gen.GenFun (dom, rng) =>
                   (validate_type dom; validate_type rng)
@@ -472,19 +553,13 @@ structure Refute_EvalCompute = struct
       rev (!reasons)
     end
 
-  fun random_generator (config : Refute_Core.config) seed =
-    case #seed (#qc config) of
-        SOME _ => Random.newgenseed (Real.fromLargeInt seed)
-      | NONE => !session_rng
-
   fun compile (config : Refute_Core.config) strategy plans =
     case validation_reasons strategy plans of
         [] =>
           Compiled
             (case strategy of
                Exhaustive => exhaustive_compile plans
-             | Random {seed} =>
-                 random_compile plans (random_generator config seed))
+             | Random {seed} => random_compile plans (ref seed))
       | reasons => Inapplicable reasons
 
   val compute_substrate : substrate =

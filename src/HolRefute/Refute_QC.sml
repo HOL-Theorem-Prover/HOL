@@ -318,8 +318,15 @@ structure Refute_QC = struct
   fun bounded_size size = Int.max (0, size)
 
   fun strategy_seed (config : Refute_Core.config) =
-    IntInf.fromInt
-      (case #seed (#qc config) of SOME seed => seed | NONE => 42)
+    case #seed (#qc config) of
+        SOME seed => IntInf.fromInt seed
+      | NONE =>
+          let
+            val seed = !session_seed
+            val _ = session_seed := rand_next seed
+          in
+            seed
+          end
 
   fun is_random (Random _) = true
     | is_random Exhaustive = false

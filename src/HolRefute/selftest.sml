@@ -42,6 +42,50 @@ val _ = check_empty "refute_simp"
 val _ = check_empty "refute_psimp"
 val _ = check_empty "refute_unfold"
 
+val _ = tprint "Refute unified PRNG"
+
+val pinned_rand_stream = [423, 509, 648, 382, 795]
+
+fun sml_rand_stream count bound seed =
+  let
+    fun loop 0 _ values = rev values
+      | loop remaining state values =
+          let
+            val (value, next) = rand_below (IntInf.fromInt bound) state
+          in
+            loop (remaining - 1) next (IntInf.toInt value :: values)
+          end
+  in
+    loop count seed []
+  end
+
+fun hol_rand_stream count bound seed =
+  let
+    val bound_tm = numSyntax.term_of_int bound
+    fun loop 0 _ values = rev values
+      | loop remaining state values =
+          let
+            val application = Term.list_mk_comb
+              (``rand_below``, [bound_tm, state])
+            val (value, next) =
+              pairSyntax.dest_pair
+                (rhs_of (computeLib.EVAL_CONV application))
+            val value_int = Arbnum.toInt (numSyntax.dest_numeral value)
+          in
+            loop (remaining - 1) next (value_int :: values)
+          end
+  in
+    loop count (numSyntax.term_of_int seed) []
+  end
+
+fun prng_pin_works () =
+  sml_rand_stream 5 1000 1 = pinned_rand_stream andalso
+  hol_rand_stream 5 1000 1 = pinned_rand_stream
+
+val _ = require_msg (check_result prng_pin_works) (fn () =>
+  "HOL and SML PRNG streams did not match the pinned MMIX stream")
+  (fn () => ()) ()
+
 val _ = tprint "Refute core configuration"
 
 fun size_update_is_local () =
@@ -268,8 +312,13 @@ val _ = require_msg (check_result function_graphs_work) (fn () =>
   "function graphs did not EVAL on both boolean inputs") (fn () => ()) ()
 
 val empty_custom : custom_gen = {enumerate = NONE, random = NONE}
+fun custom_zero_random _ state =
+  let val (_, next) = rand_below 1 state
+  in (``0``, next) end
+
 val finite_custom : custom_gen =
-  {enumerate = SOME (fn _ => [``0``]), random = NONE}
+  {enumerate = SOME (fn _ => [``0``]),
+   random = SOME custom_zero_random}
 
 fun rejects_empty_custom () =
   ((register_generator ``:ind`` empty_custom; false)
@@ -281,6 +330,18 @@ val _ = register_generator ``:ind`` finite_custom
 val _ = require_msg (check_result (fn () =>
   case spec_of ``:ind`` of GenCustom _ => true | _ => false))
   (fn () => "custom generator was not registered") (fn () => ()) ()
+
+fun custom_random_threads_state () =
+  let
+    val (_, final) = random_value (GenCustom finite_custom)
+      {budget = 1, size = 1} 7
+  in
+    final = rand_next 7
+  end
+
+val _ = require_msg (check_result custom_random_threads_state) (fn () =>
+  "a custom random generator did not return its successor state")
+  (fn () => ()) ()
 
 val abstract_ty = ``:rg_record``
 val abstract_predicate = ``\x : rg_record. T``
@@ -785,29 +846,47 @@ fun random_arithmetic_counterexample () =
 fun random_seed_is_reproducible () =
   let
     val goal = ``REVERSE (xs : num list) = xs``
+    val prior_seed = !session_seed
+    val left = random random_config goal
+    val right = random random_config goal
   in
-    same_random_outcome (random random_config goal) (random random_config goal)
+    same_random_outcome left right andalso !session_seed = prior_seed
   end
 
 fun session_random_completes () =
   let
     val config = upd_iterations 2 (upd_size 2 default_config)
+    val prior_seed = !session_seed
+    val result = random config ``(x : num) = 0``
   in
-    case random config ``(x : num) = x`` of
-        Counterexample _ => true
-      | NoCounterexample => true
-      | Unknown _ => true
+    !session_seed = rand_next prior_seed andalso
+    (case result of
+         Counterexample _ => true
+       | NoCounterexample => true
+       | Unknown _ => true)
   end
 
 fun list_draws_respect_floors () =
   let
-    val rng = Random.newgenseed 1.0
-    fun draw 0 = true
-      | draw remaining =
-          let val _ = random_term ``:num list`` 0 rng
-          in draw (remaining - 1) end
+    fun draw 0 _ = true
+      | draw remaining state =
+          let val (_, next) = random_term ``:num list`` 0 state
+          in draw (remaining - 1) next end
   in
-    draw 100
+    draw 100 1
+  end
+
+fun compute_stream_dump_is_pinned () =
+  let
+    val first = Term.mk_var ("m", ``:num``)
+    val second = Term.mk_var ("n", ``:num``)
+    val candidates = dump_random_candidates
+      {plan = Gen (first, Gen (second, Test boolSyntax.T)),
+       seed = 1, size = 999, count = 2}
+    fun values terms = List.map
+      (Arbnum.toInt o numSyntax.dest_numeral) terms
+  in
+    List.map values candidates = [[423, 509], [648, 382]]
   end
 
 val _ = require_msg (check_result random_reverse_counterexample) (fn () =>
@@ -828,6 +907,10 @@ val _ = require_msg (check_result session_random_completes) (fn () =>
 
 val _ = require_msg (check_result list_draws_respect_floors) (fn () =>
   "small-budget recursive list draws raised an exception") (fn () => ()) ()
+
+val _ = require_msg (check_result compute_stream_dump_is_pinned) (fn () =>
+  "the compute candidate-dump hook did not preserve the pinned stream")
+  (fn () => ()) ()
 
 (* The public corpus precedes the potential-path tests below.  Those tests
    replace the ordinary list generator with tiny adversarial generators. *)

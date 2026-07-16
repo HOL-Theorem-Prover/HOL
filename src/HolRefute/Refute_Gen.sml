@@ -6,11 +6,11 @@ structure Refute_Gen = struct
 
   datatype numkind = Num | Int | Char | Word of int
 
-  type rng = Random.generator
+  type rng = IntInf.int
 
   type custom_gen =
     { enumerate : (int -> term list) option,
-      random : (int -> rng -> term) option }
+      random : (int -> rng -> term * rng) option }
 
   datatype genspec =
       GenDatatype of

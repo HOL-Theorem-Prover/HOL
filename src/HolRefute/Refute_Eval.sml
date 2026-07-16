@@ -43,6 +43,26 @@ structure Refute_Eval :> Refute_Eval = struct
       compile : Refute_Core.config -> strategy -> plan list ->
         compile_result }
 
+  val rand_modulus : IntInf.int = 18446744073709551616
+  val rand_output_divisor : IntInf.int = 4294967296
+
+  fun rand_next state =
+    IntInf.mod
+      (6364136223846793005 * state + 1442695040888963407,
+       rand_modulus)
+
+  fun rand_out state = IntInf.div (state, rand_output_divisor)
+
+  fun rand_below bound state =
+    let
+      val next = rand_next state
+      val value = IntInf.div (rand_out next * bound, rand_output_divisor)
+    in
+      (value, next)
+    end
+
+  val session_seed : IntInf.int ref = ref 42
+
   val substrate_registry : substrate list ref = ref []
 
   fun substrate_before (left : substrate) (right : substrate) =

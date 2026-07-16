@@ -17,3 +17,22 @@ val _ = TypeBase.export [
 val _ = ThmSetData.export_list {settype = "refute_simp", initial = []}
 val _ = ThmSetData.export_list {settype = "refute_psimp", initial = []}
 val _ = ThmSetData.export_list {settype = "refute_unfold", initial = []}
+
+(* Part 2: the substrate-independent pseudo-random stream.  rand_below's
+   caller must ensure n <= 2^32.  Multiply-shift has a bias of at most
+   2^-32 per draw, which is immaterial for counterexample generation. *)
+Definition rand_next_def:
+  rand_next s =
+    (6364136223846793005 * s + 1442695040888963407) MOD
+      18446744073709551616
+End
+
+Definition rand_out_def:
+  rand_out s = s DIV 4294967296
+End
+
+Definition rand_below_def:
+  rand_below n s =
+    let s' = rand_next s
+    in ((rand_out s' * n) DIV 4294967296, s')
+End
