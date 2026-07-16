@@ -352,6 +352,8 @@ val _ = Datatype.Datatype
 val _ = Datatype.Datatype `rg_left = RGLeft | RGToRight rg_right;
                            rg_right = RGRight rg_left`
 val _ = Datatype.Datatype `rg_record = <| rg_field : num |>`
+val _ = Datatype.Datatype
+  `rg_stream_record = <| rg_stream_field : num; rg_stream_flag : bool |>`
 val _ = Datatype.Datatype `rg_enum = RGRed | RGGreen | RGBlue`
 
 val rx_sum_def = TotalDefn.Define
@@ -2735,6 +2737,230 @@ fun corpus_parlist () =
     check_corpus "Refute corpus: parallel sound outcome" (fn () =>
       same sound_goal)
   end
+
+type conformance_case =
+  {name : string, cfg : config, tm : term,
+   inapplicable : (substrate_choice * string) list}
+
+val conformance_substrates =
+  [(Compute, "compute"), (Cv, "cv"), (NativeSML, "native")]
+
+fun conformance_reason choice expected =
+  Option.map #2 (List.find (fn (old_choice, _) => old_choice = choice)
+    expected)
+
+fun public_substrate Compute = Refute.Compute
+  | public_substrate Cv = Refute.Cv
+  | public_substrate NativeSML = Refute.NativeSML
+  | public_substrate Auto = Refute.Auto
+
+fun conformance_bindings (Refute.Counterexample (cex :: _)) =
+      SOME (#bindings cex)
+  | conformance_bindings _ = NONE
+
+fun same_conformance_outcome (left, right) =
+  case (left, right) of
+      (Refute.Counterexample _, Refute.Counterexample _) =>
+        (case (conformance_bindings left, conformance_bindings right) of
+             (SOME left_bindings, SOME right_bindings) =>
+               same_bindings left_bindings right_bindings
+           | _ => false)
+    | (Refute.NoCounterexample, Refute.NoCounterexample) => true
+    | (Refute.Unknown _, Refute.Unknown _) => true
+    | _ => false
+
+fun certified_conformance_cex
+      (Refute.Counterexample ({cert = SOME _, ...} :: _)) = true
+  | certified_conformance_cex _ = false
+
+fun conformance_outcome_name (Refute.Counterexample _) = "Counterexample"
+  | conformance_outcome_name Refute.NoCounterexample = "NoCounterexample"
+  | conformance_outcome_name (Refute.Unknown reasons) =
+      "Unknown (" ^ String.concatWith "; " reasons ^ ")"
+
+fun expectation_holds expectation outcome =
+  case expectation of
+      ExpectCex => certified_conformance_cex outcome
+    | ExpectNone =>
+        (case outcome of Refute.Counterexample _ => false | _ => true)
+    | ExpectUnknown =>
+        (case outcome of Refute.Unknown _ => true | _ => false)
+    | NoExpectation => true
+
+fun quiet_refute config tm =
+  Feedback.with_traces [("Refute", 0)]
+    (fn () => Refute.refute config tm) ()
+
+fun conform ({name, cfg, tm, inapplicable} : conformance_case) =
+  let
+    val expectation = #expect cfg
+    val base = Refute.upd_expect Refute.NoExpectation
+      (Refute.upd_sequential true cfg)
+    val strategies =
+      [("exhaustive", NONE), ("random", SOME 1),
+       ("random", SOME 2), ("random", SOME 3)]
+
+    fun run strategy seed choice =
+      let
+        val selected = Refute.upd_substrate (public_substrate choice) base
+        val configured =
+          case seed of
+              NONE => Refute.upd_backends (SOME ["exhaustive"]) selected
+            | SOME value => Refute.upd_seed (SOME value)
+                (Refute.upd_backends (SOME ["random"]) selected)
+      in
+        quiet_refute configured tm
+      end
+
+    fun reason_matches backend prefix (Refute.Unknown reasons) =
+          List.exists (String.isPrefix
+            (backend ^ ": " ^ prefix)) reasons
+      | reason_matches _ _ _ = false
+
+    fun check_strategy (strategy, seed) =
+      let
+        val results = List.map (fn (choice, substrate) =>
+          (choice, substrate, run strategy seed choice))
+          conformance_substrates
+        val baseline = #3 (hd results)
+        val _ =
+          if expectation_holds expectation baseline then ()
+          else raise Fail (name ^ ": compute violated the expectation on " ^
+            strategy ^ ": " ^ conformance_outcome_name baseline)
+
+        fun check (choice, substrate, outcome) =
+          case conformance_reason choice inapplicable of
+              SOME prefix =>
+                if reason_matches strategy prefix outcome then ()
+                else raise Fail (name ^ ": " ^ substrate ^
+                  " did not report expected inapplicability on " ^ strategy ^
+                  ": " ^ conformance_outcome_name outcome)
+            | NONE =>
+                if not (same_conformance_outcome (baseline, outcome)) then
+                  raise Fail (name ^ ": " ^ substrate ^
+                    " disagreed with compute on " ^ strategy)
+                else if expectation_holds expectation outcome then ()
+                else raise Fail (name ^ ": " ^ substrate ^
+                  " produced an uncertified or unsound result on " ^ strategy)
+      in
+        List.app check results
+      end
+  in
+    List.app check_strategy strategies
+  end
+
+fun conformance_config expectation =
+  upd_expect expectation
+    (upd_timeout 10.0
+      (upd_iterations 100
+        (upd_size 4
+          (upd_max_counterexamples 1 default_config))))
+
+val conform_cex_config = conformance_config ExpectCex
+val conform_none_config = conformance_config ExpectNone
+
+val conformance_smoke_cases : conformance_case list =
+  [{name = "boolean counterexample", cfg = conform_cex_config,
+    tm = ``(b : bool)``, inapplicable = []},
+   {name = "boolean soundness", cfg = conform_none_config,
+    tm = ``(b : bool) \/ ~b``, inapplicable = []}]
+
+val conformance_full_cases : conformance_case list =
+  [{name = "reverse", cfg = conform_cex_config,
+    tm = ``REVERSE (xs : num list) = xs``, inapplicable = []},
+   {name = "MAP/FILTER specialization", cfg = conform_cex_config,
+    tm = ``MAP SUC (xs : num list) = xs /\
+           FILTER ($= 0) (ys : num list) = ys``,
+    inapplicable = []},
+   {name = "higher-order MAP", cfg = conform_cex_config,
+    tm = ``MAP (f : refute$rf2 -> bool) [rf2_1; rf2_2] = [T; T]``,
+    inapplicable =
+      [(Cv, "cv: :rf2 -> bool - function type in data position")]},
+   {name = "word-heavy", cfg = conform_cex_config,
+    tm = ``word_xor (a : word8) b = a``, inapplicable = []},
+   {name = "record", cfg = conform_cex_config,
+    tm = ``(r : rg_stream_record) = s``, inapplicable = []},
+   {name = "deep rose", cfg = conform_cex_config,
+    tm = ``rx_rose (t : rg_rose) = 0``,
+    inapplicable =
+      [(Cv, "cv: :rg_rose - nested recursive datatype generator")]},
+   {name = "partial HD", cfg = conform_cex_config,
+    tm = ``HD (xs : num list) = 0``,
+    inapplicable = [(Cv, "cv: precondition for HD")]},
+   {name = "custom generator", cfg = conform_cex_config,
+    tm = ``(r : rg_record) = s``,
+    inapplicable =
+      [(Cv, "cv: :rg_record - abstract generator registered"),
+       (NativeSML, "custom generator registered for :rg_record")]},
+   {name = "closed soundness", cfg = conform_none_config,
+    tm = ``T``, inapplicable = []},
+   {name = "reverse soundness", cfg = conform_none_config,
+    tm = ``REVERSE (REVERSE [T; F; T]) = [T; F; T]``,
+    inapplicable = []},
+   {name = "boolean soundness", cfg = conform_none_config,
+    tm = ``(b : bool) \/ ~b``, inapplicable = []},
+   {name = "finite-enum soundness", cfg = conform_none_config,
+    tm = ``(x : refute$rf2) = rf2_1 \/ x = rf2_2``,
+    inapplicable = []}]
+
+fun run_conformance cases = List.app conform cases
+
+fun same_candidate_stream left right =
+  length left = length right andalso
+  ListPair.allEq (fn (left_candidate, right_candidate) =>
+    same_terms left_candidate right_candidate) (left, right)
+
+fun stream_conformance () =
+  let
+    val types =
+      [("num", ``:num``), ("int", ``:int``), ("char", ``:char``),
+       ("word8", ``:word8``), ("num list", ``:num list``),
+       ("record", ``:rg_stream_record``), ("rose", ``:rg_rose``),
+       ("function", ``:refute$rf2 -> bool``)]
+
+    fun check seed (name, ty) =
+      let
+        val variable = Term.mk_var ("stream_" ^ name, ty)
+        val plan = Gen (variable, Test boolSyntax.T)
+        val arguments =
+          {plan = plan, seed = IntInf.fromInt seed, size = 2, count = 5}
+        val compute = Refute_EvalCompute.dump_random_candidates arguments
+        val native = Refute_EvalSML.dump_native_random_candidates arguments
+        val cv = Refute_EvalCv.dump_cv_random_candidates arguments
+      in
+        if same_candidate_stream compute native andalso
+           same_candidate_stream compute cv
+        then ()
+        else raise Fail ("candidate stream disagreement for " ^ name ^
+          " at seed " ^ Int.toString seed)
+      end
+  in
+    List.app (fn seed => List.app (check seed) types) [1, 2, 3]
+  end
+
+val _ =
+  if selftest_level < 2 then
+    (tprint "Refute substrate conformance smoke";
+     require_msg
+       (check_result (fn () =>
+         (run_conformance conformance_smoke_cases; true)))
+       (fn () => "the substrate smoke matrix disagreed")
+       (fn () => ()) ())
+  else ()
+
+val _ =
+  if selftest_level >= 2 then
+    (tprint "Refute full substrate conformance matrix";
+     require_msg (check_result (fn () =>
+       (run_conformance conformance_full_cases; true))) (fn () =>
+         "the full substrate conformance matrix disagreed")
+       (fn () => ()) ();
+     tprint "Refute substrate candidate-stream conformance";
+     require_msg (check_result (fn () =>
+       (stream_conformance (); true))) (fn () =>
+       "candidate streams differed across substrates")
+       (fn () => ()) ())
+  else ()
 
 val _ =
   if selftest_level >= 2 then

@@ -432,6 +432,50 @@ structure Refute_EvalSML = struct
           Exn.release result
         end) ()
 
+  (* Selftest-only stream hook.  Replacing tests by failure exposes each
+     generated environment without changing the generator or its state. *)
+  fun dump_plan current =
+    case current of
+        Refute_Eval.Test _ => Refute_Eval.Test boolSyntax.F
+      | Refute_Eval.Gen (variable, next) =>
+          Refute_Eval.Gen (variable, dump_plan next)
+      | Refute_Eval.Bind (variable, tm, fallback, next) =>
+          Refute_Eval.Bind
+            (variable, tm, Option.map dump_plan fallback, dump_plan next)
+      | Refute_Eval.Split (tm, branches) =>
+          Refute_Eval.Split (tm, List.map (fn (constructor, variables, next) =>
+            (constructor, variables, dump_plan next)) branches)
+      | Refute_Eval.Guard (tm, next) =>
+          Refute_Eval.Guard (tm, dump_plan next)
+      | Refute_Eval.Prune => Refute_Eval.Test boolSyntax.F
+
+  fun dump_native_random_candidates {plan, seed, size, count} =
+    case compile Refute_Core.default_config
+        (Refute_Eval.Random {seed = seed}) [dump_plan plan] of
+        Refute_Eval.Inapplicable reasons =>
+          raise Fail (String.concatWith "; " reasons)
+      | Refute_Eval.Compiled test =>
+          let
+            fun loop 0 candidates = rev candidates
+              | loop remaining candidates =
+                  (case #run test
+                    {genuine_only = true, card = 1, size = size,
+                     draws = 1, ignored = []} of
+                       Refute_Eval.CexFound {env, ...} =>
+                         loop (remaining - 1)
+                           (rev (List.map #2 env) :: candidates)
+                     | Refute_Eval.Exhausted _ =>
+                         raise Fail "native candidate dump exhausted"
+                     | Refute_Eval.GaveUp reason => raise Fail reason)
+            val result = Exn.capture (fn () =>
+              loop (Int.max (0, count)) []) ()
+            val close_result = Exn.capture (#close test) ()
+          in
+            case close_result of
+                Exn.Res _ => Exn.release result
+              | Exn.Exn error => raise error
+          end
+
   val native_substrate : Refute_Eval.substrate =
     {name = "native", priority = 10, compile = compile}
 

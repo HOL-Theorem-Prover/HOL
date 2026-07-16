@@ -213,8 +213,23 @@ structure Refute_EvalCv = struct
             if Option.isSome (table_generator ty) then ()
             else
               case Refute_Gen.spec_of ty of
-                  Refute_Gen.GenDatatype {constrs, ...} =>
-                    List.app visit (List.concat (List.map #2 constrs))
+                  Refute_Gen.GenDatatype
+                    {constrs, recursive, family, ...} =>
+                    let
+                      fun nested ((_, arguments), flags) =
+                        List.exists (fn (argument, is_recursive) =>
+                          is_recursive andalso
+                          not (List.exists (same_type argument) family))
+                          (ListPair.zip (arguments, flags))
+                      val _ =
+                        if List.exists nested
+                          (ListPair.zip (constrs, recursive)) then
+                          unsupported ty
+                            "nested recursive datatype generator"
+                        else ()
+                    in
+                      List.app visit (List.concat (List.map #2 constrs))
+                    end
                 | Refute_Gen.GenFun _ =>
                     unsupported ty "function type in data position"
                 | Refute_Gen.GenCustom _ =>
@@ -1624,6 +1639,64 @@ structure Refute_EvalCv = struct
              Refute_Eval.Inapplicable ["cv: " ^ reason]
          | Feedback.HOL_ERR error =>
              Refute_Eval.Inapplicable [hol_error_reason error]
+
+  (* Selftest-only stream hook.  Evaluate translated generators directly so
+     loop/property behavior cannot hide consumption drift.  Function and
+     nested-recursive results lack a first-order cv result representation;
+     those terms are reconstructed at the normative generator seam. *)
+  fun dump_cv_random_candidates
+      (arguments as {plan, seed, size, count}) =
+    let
+      fun variables current =
+        case current of
+            Refute_Eval.Gen (variable, next) =>
+              variable :: variables next
+          | Refute_Eval.Test _ => []
+          | _ => raise Unsupported "candidate dump requires a Gen chain"
+      val generated = variables plan
+      val types = distinct_types (List.map Term.type_of generated)
+
+      fun dump generators =
+        let
+          fun random_generator ty =
+            #random (generator_for ty generators)
+          fun rhs theorem = #2 (boolSyntax.dest_eq (Thm.concl theorem))
+          fun draw variable state =
+            let
+              val application = Term.list_mk_comb
+                (random_generator (Term.type_of variable),
+                 [numeral (Int.max (0, size)),
+                  numSyntax.mk_numeral
+                    (Arbnum.fromString (IntInf.toString state))])
+              val result = rhs (cv_transLib.cv_eval application)
+              val (value, state_tm) = pairSyntax.dest_pair result
+              val next = valOf (IntInf.fromString
+                (Arbnum.toString (numSyntax.dest_numeral state_tm)))
+            in
+              (value, next)
+            end
+          fun candidate [] state values = (rev values, state)
+            | candidate (variable :: rest) state values =
+                let val (value, next) = draw variable state
+                in candidate rest next (value :: values) end
+          fun loop 0 _ candidates = rev candidates
+            | loop remaining state candidates =
+                let val (values, next) = candidate generated state []
+                in loop (remaining - 1) next (values :: candidates) end
+        in
+          loop (Int.max (0, count)) seed []
+        end
+    in
+      case with_generators types dump of
+          CvSuccess candidates => candidates
+        | CvInapplicable reasons =>
+            if List.exists (fn reason =>
+                 String.isSubstring "function type" reason orelse
+                 String.isSubstring
+                   "nested recursive datatype generator" reason) reasons
+            then Refute_EvalCompute.dump_random_candidates arguments
+            else raise Fail (String.concatWith "; " reasons)
+    end
 
   val cv_substrate : Refute_Eval.substrate =
     {name = "cv", priority = 20, compile = compile}
