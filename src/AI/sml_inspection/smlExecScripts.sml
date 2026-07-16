@@ -18,6 +18,9 @@ val ERR = mk_HOL_ERR "smlExecScripts"
 
 fun bare file = OS.Path.base (OS.Path.file file)
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
+fun current_dir_if_empty dir =
+  if dir = "" then OS.FileSys.getDir () else dir
+fun script_dir file = current_dir_if_empty (OS.Path.dir file)
 
 (* -------------------------------------------------------------------------
    Find the right heap for running a script
@@ -32,6 +35,7 @@ fun script_arg file = if OS.Path.isAbsolute file then file else OS.Path.file fil
 fun find_heapname_in_dir dir file =
   if !use_state0 then HOLDIR ^ "/bin/hol.state0" else
   let
+    val dir = current_dir_if_empty dir
     val _ = mkDir_err (heapname_dir ())
     val fileout = heapname_dir () ^ "/heapname_" ^ bare file
     val cmd = String.concatWith " "
@@ -42,7 +46,7 @@ fun find_heapname_in_dir dir file =
   end
   handle Interrupt => raise Interrupt | _ => raise ERR "find_heapname" file
 
-fun find_heapname file = find_heapname_in_dir (OS.Path.dir file) file
+fun find_heapname file = find_heapname_in_dir (script_dir file) file
 
 val core_scripts = map (fn x => x ^ "Script_ttt")
   ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
@@ -71,6 +75,7 @@ fun genscriptdep_env_prefix () =
 
 fun find_genscriptdep_in_dir dir file =
   let
+    val dir = current_dir_if_empty dir
     val _ = mkDir_err (genscriptdep_dir ())
     val genscriptdep_bin = HOLDIR ^ "/bin/genscriptdep"
     val fileout = genscriptdep_dir () ^ "/genscriptdep_" ^ bare file
@@ -85,7 +90,7 @@ fun find_genscriptdep_in_dir dir file =
   handle Interrupt => raise Interrupt
     | _ => raise ERR "find_genscriptdep" file
 
-fun find_genscriptdep file = find_genscriptdep_in_dir (OS.Path.dir file) file
+fun find_genscriptdep file = find_genscriptdep_in_dir (script_dir file) file
 
 (* -------------------------------------------------------------------------
    Execute the script (for its side effects)
@@ -115,7 +120,7 @@ fun run_with_pid private_group started finished dir cmd =
       ((if private_group
         then ((ignore (Posix.ProcEnv.setsid ())) handle _ => ())
         else ());
-       (OS.FileSys.chDir dir;
+       (OS.FileSys.chDir (current_dir_if_empty dir);
         Posix.Process.exec ("/bin/sh", ["sh", "-c", "exec " ^ cmd]))
        handle _ => Posix.Process.exit 0w127)
   | SOME pid =>
@@ -175,14 +180,14 @@ fun exec_scriptb_in_dir_with_pid private_group started finished b dir script =
 
 fun exec_script_with_pid started finished script =
   exec_scriptb_in_dir_with_pid true started finished false
-    (OS.Path.dir script) script
+    (script_dir script) script
 
 fun exec_scriptb_in_dir b dir script =
   exec_scriptb_in_dir_with_pid false (fn _ => ()) (fn _ => ()) b dir script
 
 fun exec_script_in_dir dir script = exec_scriptb_in_dir false dir script
 
-fun exec_script script = exec_script_in_dir (OS.Path.dir script) script
+fun exec_script script = exec_script_in_dir (script_dir script) script
 
 (* -------------------------------------------------------------------------
    Execute tactictoe scripts.
@@ -196,7 +201,7 @@ fun exec_tttrecord_in_dir dir script =
          | e => (cleanup (); raise e))
   end
 
-fun exec_tttrecord script = exec_tttrecord_in_dir (OS.Path.dir script) script
+fun exec_tttrecord script = exec_tttrecord_in_dir (script_dir script) script
 
 fun exec_ttteval dirout script =
   let
@@ -209,7 +214,7 @@ fun exec_ttteval dirout script =
        ["run","--holstate=" ^ shell_quote heap,
         shell_quote (script_arg script),">",shell_quote fileout])
   in
-    cmd_in_dir (OS.Path.dir script) cmd
+    cmd_in_dir (script_dir script) cmd
   end
 
 
