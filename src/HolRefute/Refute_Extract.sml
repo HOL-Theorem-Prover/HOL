@@ -95,6 +95,7 @@ structure Refute_Extract = struct
     { datatypes : datatype_desc list ref,
       types : (hol_type * ml_ty * string) list ref,
       definitions : (term * string * Thm.thm) list ref,
+      definition_groups : term list list ref,
       pending : term list ref,
       next_type : int ref,
       next_const : int ref }
@@ -103,6 +104,7 @@ structure Refute_Extract = struct
     { datatypes = ref [],
       types = ref [],
       definitions = ref [],
+      definition_groups = ref [],
       pending = ref [],
       next_type = ref 0,
       next_const = ref 0 }
@@ -686,6 +688,19 @@ structure Refute_Extract = struct
                   reject ("no extractable equations for constant " ^
                           kname_text (kname constant))))
 
+  fun mutual_constants constant =
+    case (DefnBase.lookup_userdef constant,
+          DefnBase.lookup_indn constant) of
+      (SOME {const = generic, ...}, SOME (_, names)) =>
+        let
+          val theta = Type.match_type (Term.type_of generic)
+            (Term.type_of constant)
+          fun instantiate name = Term.inst theta (Term.prim_mk_const name)
+        in
+          List.map instantiate names
+        end
+    | _ => [constant]
+
   fun ensure_definition context constant =
     case lookup_definition context constant of
       SOME (_, name, _) => name
@@ -701,14 +716,32 @@ structure Refute_Extract = struct
           end
         else
           let
-            val (_, base) = kname constant
-            val name = fresh_const context base
-            val theorem = definition_theorem constant
-            val _ = #definitions context :=
-              (constant, name, theorem) :: !(#definitions context)
-            val _ = #pending context := constant :: !(#pending context)
+            val group = mutual_constants constant
+            fun register member =
+              case lookup_definition context member of
+                SOME item => item
+              | NONE =>
+                  let
+                    val (_, base) = kname member
+                    val item = (member, fresh_const context base,
+                                definition_theorem member)
+                    val _ = #definitions context :=
+                      item :: !(#definitions context)
+                    val _ = #pending context :=
+                      member :: !(#pending context)
+                  in
+                    item
+                  end
+            val registered = List.map register group
+            val registered_constants = List.map #1 registered
+            val _ = #definition_groups context :=
+              registered_constants :: !(#definition_groups context)
           in
-            name
+            case lookup_definition context constant of
+              SOME (_, name, _) => name
+            | NONE =>
+                reject ("mutual definition group omitted " ^
+                        kname_text (kname constant))
           end
 
   fun variable_name variable = clean_name (#1 (Term.dest_var variable))
@@ -1359,35 +1392,109 @@ structure Refute_Extract = struct
             (expression context head) arguments
       end
 
-  fun check_pattern context pattern_term =
-    (ignore (pattern context pattern_term); ())
-
-  fun definition_clauses context (constant, name, theorem) =
+  fun definition_clause context (constant, name, theorem) =
     let
-      fun clause equation =
+      val next_pattern = ref 0
+      fun fresh_pattern () =
+        let val number = !next_pattern
+            val _ = next_pattern := number + 1
+        in "refute_pattern_" ^ Int.toString number end
+      fun strip_suc count tm =
+        let val (head, arguments) = boolSyntax.strip_comb tm
+        in
+          if Term.is_const head andalso kname head = ("num", "SUC") then
+            case arguments of
+              [argument] => strip_suc (count + 1) argument
+            | _ => reject "malformed SUC pattern"
+          else
+            (count, tm)
+        end
+      fun compiled_pattern tm =
+        let val (successors, base) = strip_suc 0 tm
+        in
+          if successors = 0 then (pattern context tm, [], [])
+          else
+            let
+              val variable = fresh_pattern ()
+              val predecessor = parens (variable ^ " - " ^
+                Int.toString successors)
+              val lower_bound = variable ^ " >= " ^
+                Int.toString successors
+            in
+              if Term.is_var base then
+                let val base_name = variable_name base
+                    val bindings = if base_name = "_" then [] else
+                      ["val " ^ base_name ^ " = " ^ predecessor]
+                in (variable, [lower_bound], bindings) end
+              else if Literal.is_numeral base then
+                let val number = Literal.relaxed_dest_numeral base
+                in
+                  (variable,
+                   [lower_bound, predecessor ^ " = " ^
+                    Arbnum.toString number], [])
+                end
+              else
+                reject ("unsupported successor pattern: " ^
+                        Parse.term_to_string tm)
+            end
+        end
+      fun equation_info equation =
         let
           val (left, right) = boolSyntax.dest_eq equation
             handle Feedback.HOL_ERR _ =>
-              reject ("non-equational rule for " ^ kname_text (kname constant))
+              reject ("non-equational rule for " ^
+                      kname_text (kname constant))
           val (head, arguments) = boolSyntax.strip_comb left
           val _ =
             if Term.is_const head andalso Term.same_const head constant then ()
             else reject ("rule has the wrong head for " ^
                          kname_text (kname constant))
-          val _ = List.app (check_pattern context) arguments
-          val rhs = expression context right
-          val lhs = if null arguments then name ^ " ()"
-                    else name ^ " " ^
-                      join " " (List.map (parens o pattern context) arguments)
+          val patterns = List.map compiled_pattern arguments
         in
-          lhs ^ " = " ^ rhs
+          { patterns = List.map #1 patterns,
+            guards = List.concat (List.map #2 patterns),
+            bindings = List.concat (List.map #3 patterns),
+            rhs = expression context right }
         end
-      val clauses = List.map clause (equations_of theorem)
+      val equations = equations_of theorem
+      val infos = List.map equation_info equations
       val _ =
-        if null clauses then reject ("definition has no clauses for " ^
+        if null infos then reject ("definition has no clauses for " ^
           kname_text (kname constant)) else ()
+      val arity = length (#patterns (hd infos))
+      val _ =
+        if List.all (fn info => length (#patterns info) = arity) infos then ()
+        else reject ("definition has inconsistent arities for " ^
+                     kname_text (kname constant))
+      val arguments = List.tabulate (arity, fn index =>
+        "refute_argument_" ^ Int.toString index)
+      fun tuple [] = "()"
+        | tuple [item] = item
+        | tuple items = parens (join ", " items)
+      fun guarded {guards, bindings, rhs, ...} fallback =
+        let
+          val body = if null bindings then rhs else
+            parens ("let " ^ join " " bindings ^ " in " ^ rhs ^ " end")
+        in
+          if null guards then body
+          else parens ("if " ^ join " andalso " guards ^ " then " ^
+                       body ^ " else " ^ fallback)
+        end
+      fun dispatch [] = "(raise Match)"
+        | dispatch (info :: rest) =
+            let
+              val fallback = "refute_next ()"
+              val next = dispatch rest
+            in
+              parens ("let fun refute_next () = " ^ next ^ " in case " ^
+                tuple arguments ^ " of " ^ tuple (#patterns info) ^
+                " => " ^ guarded info fallback ^ " | _ => " ^
+                fallback ^ " end")
+            end
+      val lhs = if null arguments then name ^ " ()"
+                else name ^ " " ^ join " " arguments
     in
-      clauses
+      lhs ^ " = " ^ dispatch infos
     end
 
   fun drain_definitions context =
@@ -1398,7 +1505,7 @@ structure Refute_Extract = struct
           (rev (!(#definitions context))) of
           NONE => ()
         | SOME (item as (constant, _, _)) =>
-            (ignore (definition_clauses context item);
+            (ignore (definition_clause context item);
              loop (constant :: processed))
     in
       loop []
@@ -1407,17 +1514,59 @@ structure Refute_Extract = struct
   fun definition_declarations context =
     let
       val definitions = rev (!(#definitions context))
-      fun one keyword item =
-        let val clauses = definition_clauses context item
-        in keyword ^ " " ^ hd clauses ^
-           String.concat (List.map (fn clause => "\n  | " ^ clause)
-             (tl clauses))
+      val groups = rev (!(#definition_groups context))
+      fun item_for constant =
+        case List.find (fn (other, _, _) => same_term other constant)
+          definitions of
+          SOME item => item
+        | NONE => raise Fail "Refute_Extract: missing definition"
+      fun group_for constant =
+        List.find (List.exists (same_term constant)) groups
+      fun constants_in (_, _, theorem) =
+        find_terms Term.is_const (Thm.concl theorem)
+      fun same_group left right =
+        List.all (fn constant => List.exists (same_term constant) right)
+          left andalso
+        List.all (fn constant => List.exists (same_term constant) left)
+          right
+      fun add_group group groups =
+        if List.exists (same_group group) groups then groups
+        else group :: groups
+      fun dependencies group =
+        let
+          fun add (dependency, result) =
+            if List.exists (same_term dependency) group then result
+            else
+              case group_for dependency of
+                NONE => result
+              | SOME found => add_group found result
+        in
+          List.foldl add []
+            (List.concat (List.map (constants_in o item_for) group))
         end
+      fun group_done emitted group =
+        List.exists (fn done =>
+          List.all (fn constant => List.exists (same_term constant) done)
+            group) emitted
+      fun ready emitted group =
+        List.all (group_done emitted) (dependencies group)
+      fun order emitted [] = rev emitted
+        | order emitted remaining =
+            (case List.partition (ready emitted) remaining of
+               ([], _) =>
+                 reject "definition dependency cycle outside a mutual group"
+             | (now, later) => order (rev now @ emitted) later)
+      fun one keyword item =
+        keyword ^ " " ^ definition_clause context item
+      fun declaration group =
+        case List.map item_for group of
+          [] => ""
+        | first :: rest =>
+            join "\n" (one "fun" first :: List.map (one "and") rest)
     in
-      case definitions of
+      case groups of
         [] => ""
-      | first :: rest =>
-          join "\n" (one "fun" first :: List.map (one "and") rest) ^ "\n"
+      | _ => join "\n" (List.map declaration (order [] groups)) ^ "\n"
     end
 
   fun source_prefix context =

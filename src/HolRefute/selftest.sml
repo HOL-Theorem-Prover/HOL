@@ -347,6 +347,9 @@ val rx_sum_def = TotalDefn.Define
   `rx_sum ([] : num list) = 0 /\
    rx_sum (x :: xs) = x + rx_sum xs`
 
+val rx_sum_plus_one_def = TotalDefn.Define
+  `rx_sum_plus_one xs = SUC (rx_sum xs)`
+
 val rx_rose_def = TotalDefn.Define
   `rx_rose RGLeaf = 0 /\
    rx_rose (RGNode []) = 1 /\
@@ -364,6 +367,12 @@ val rx_record_def = TotalDefn.Define
 
 val rx_partial_def = TotalDefn.Define
   `rx_partial RGLeaf = 10`
+
+val rx_even_odd_def = TotalDefn.Define
+  `rx_even 0 = T /\
+   rx_even (SUC n) = rx_odd n /\
+   rx_odd 0 = F /\
+   rx_odd (SUC n) = rx_even n`
 
 val _ = Theory.new_constant ("rx_unmapped", ``:num -> num``)
 
@@ -422,10 +431,13 @@ val extraction_goldens =
    ``REVERSE [1; 2; 3] = [3; 2; 1]``,
    ``MAP (\n : num. n + 1) [0; 2; 5] = [1; 3; 6]``,
    ``rx_sum [1; 2; 3; 4] = 10``,
+   ``rx_sum_plus_one [1; 2; 3; 4] = 11``,
    ``rx_rose (RGNode [RGNode [RGLeaf]; RGLeaf]) = 2``,
    ``rx_pair_case ([4; 9], 3) = 7``,
    ``rx_pair_case ([], 3) = 3``,
    ``rx_record <|rg_field := 8|> = 9``,
+   ``rx_even 10 /\ rx_odd 7``,
+   ``~rx_even 9 /\ ~rx_odd 8``,
    ``(2 : num) - 5 = 0``,
    ``17 DIV 5 = 3 /\ 17 MOD 5 = 2``,
    ``((17 : int) / 5 = 3)``,
@@ -456,6 +468,14 @@ fun all_extraction_goldens () =
 
 val _ = require_msg (check_result all_extraction_goldens) (fn () =>
   "an extracted golden function disagreed with EVAL") (fn () => ()) ()
+
+fun mutual_definition_group_is_emitted () =
+  let val {source, ...} = Refute_Extract.extract_term ``rx_even 4``
+  in String.isSubstring "and f_rx_odd_" source end
+
+val _ = require_msg (check_result mutual_definition_group_is_emitted)
+  (fn () => "a mutual definition was not emitted with fun/and")
+  (fn () => ()) ()
 
 fun extracted_div_zero_is_stuck () =
   compile_extracted_with ``1 DIV 0 = 0`` (fn entry =>
