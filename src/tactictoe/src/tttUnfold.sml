@@ -2003,13 +2003,23 @@ fun ttt_record_opts opts =
 
 fun ttt_record () = ttt_record_cfg default_record_config
 
+(* The manifest tracks tactic data only.  Other recording outputs are
+   invocation side effects, so they must not be skipped based on tactic-data
+   freshness. *)
+fun tactic_data_only () =
+  !record_flag andalso
+  not (!record_savestate_flag) andalso
+  not (!export_thmdata_flag)
+
 fun ttt_record_thy thy =
   if mem thy ["min","bool"] then () else
-  (ttt_record_opts [Scope (Theories [thy])];
-   let val plan = compute_record_plan false (Theories [thy]) in
-     if mem thy (#up_to_date plan) then ()
-     else raise ERR "ttt_record_thy" thy
-   end)
+  if tactic_data_only () then
+    (ttt_record_opts [Scope (Theories [thy])];
+     let val plan = compute_record_plan false (Theories [thy]) in
+       if mem thy (#up_to_date plan) then ()
+       else raise ERR "ttt_record_thy" thy
+     end)
+  else record_thy_raw thy
 
 
 end (* struct *)

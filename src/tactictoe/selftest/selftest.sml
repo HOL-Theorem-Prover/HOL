@@ -376,6 +376,52 @@ val _ = check "ConseqConv tactic data exists"
 val _ = check "ConseqConv tactic data is non-empty"
   (Position.toInt (OS.FileSys.fileSize (datafile ())) > 0)
 
+val conseqconv_recording_script =
+  tactictoe_dir_of () ^ "/log/scripts/ConseqConv"
+
+val _ = check "one-theory tactic recording keeps the up-to-date fast path"
+  (let
+     val saved = (!record_flag, !record_savestate_flag,
+       !export_thmdata_flag)
+     fun restore () =
+       (record_flag := #1 saved;
+        record_savestate_flag := #2 saved;
+        export_thmdata_flag := #3 saved)
+     val result =
+       ((record_flag := true;
+         record_savestate_flag := false;
+         export_thmdata_flag := false;
+         aiLib.remove_file conseqconv_recording_script;
+         ttt_record_thy "ConseqConv";
+         not (OS.FileSys.access (conseqconv_recording_script, [])))
+        handle e => (restore (); raise e))
+   in
+     result before restore ()
+   end)
+
+val _ = check "one-theory theorem-data export bypasses tactic freshness"
+  (let
+     val saved = (!record_flag, !record_savestate_flag,
+       !export_thmdata_flag)
+     val thmdata_dir = tactictoe_dir_of () ^ "/thmdata"
+     fun restore () =
+       (record_flag := #1 saved;
+        record_savestate_flag := #2 saved;
+        export_thmdata_flag := #3 saved;
+        aiLib.clean_dir thmdata_dir)
+     val result =
+       ((aiLib.clean_dir thmdata_dir;
+         record_flag := false;
+         record_savestate_flag := false;
+         export_thmdata_flag := true;
+         ttt_record_thy "ConseqConv";
+         List.exists (String.isPrefix "ConseqConv_")
+           (aiLib.listDir thmdata_dir))
+        handle e => (restore (); raise e))
+   in
+     result before restore ()
+   end)
+
 val _ = check "batch tactic-data resolution preserves per-theory results"
   (case tttManifest.tacdata_files_for_thys_in
       (tttManifest.read_manifest ()) ["ConseqConv","no_such_theory_for_ttt"] of
