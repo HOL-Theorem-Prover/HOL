@@ -1,5 +1,6 @@
 open testutils
 open refuteTheory
+open refute_cvTheory
 open sortingTheory
 open realTheory
 open Refute_Core
@@ -10,6 +11,11 @@ open Refute_EvalCompute
 open Refute_EvalSML
 open Refute_Extract
 open Refute_QC
+open cv_transLib
+
+(* cv_std loads ratTheory, whose parser preference would otherwise make
+   unannotated selftest numerals rationals. *)
+val _ = numLib.prefer_num ()
 
 val erc = ref 0
 val _ = diemode := Remember erc
@@ -44,6 +50,22 @@ val _ = check_empty "refute_simp"
 val _ = check_empty "refute_psimp"
 val _ = check_empty "refute_unfold"
 
+fun same_string_set left right =
+  length left = length right andalso
+  List.all (fn item => Lib.mem item right) left
+
+fun cv_ancestry_is_separate () =
+  same_string_set (Theory.parents "refute")
+    ["real", "sorting", "words"] andalso
+  same_string_set (Theory.parents "refute_cv") ["refute", "cv_std"] andalso
+  not (Lib.mem "cv_std" (Theory.ancestry "refute"))
+
+val _ = require_msg (check_result cv_ancestry_is_separate) (fn () =>
+  "refute parents: " ^ String.concatWith ", " (Theory.parents "refute") ^
+  "; refute_cv parents: " ^
+  String.concatWith ", " (Theory.parents "refute_cv"))
+  (fn () => ()) ()
+
 val _ = tprint "Refute unified PRNG"
 
 val pinned_rand_stream = [423, 509, 648, 382, 795]
@@ -61,7 +83,7 @@ fun sml_rand_stream count bound seed =
     loop count seed []
   end
 
-fun hol_rand_stream count bound seed =
+fun evaluated_rand_stream conversion count bound seed =
   let
     val bound_tm = numSyntax.term_of_int bound
     fun loop 0 _ values = rev values
@@ -70,8 +92,7 @@ fun hol_rand_stream count bound seed =
             val application = Term.list_mk_comb
               (``rand_below``, [bound_tm, state])
             val (value, next) =
-              pairSyntax.dest_pair
-                (rhs_of (computeLib.EVAL_CONV application))
+              pairSyntax.dest_pair (rhs_of (conversion application))
             val value_int = Arbnum.toInt (numSyntax.dest_numeral value)
           in
             loop (remaining - 1) next (value_int :: values)
@@ -80,12 +101,104 @@ fun hol_rand_stream count bound seed =
     loop count (numSyntax.term_of_int seed) []
   end
 
+fun hol_rand_stream count bound seed =
+  evaluated_rand_stream computeLib.EVAL_CONV count bound seed
+
+fun cv_pinned_rand_stream () =
+  let
+    val term =
+      ``let (x1, s1) = rand_below 1000 1;
+             (x2, s2) = rand_below 1000 s1;
+             (x3, s3) = rand_below 1000 s2;
+             (x4, s4) = rand_below 1000 s3;
+             (x5, s5) = rand_below 1000 s4
+        in [x1; x2; x3; x4; x5]``
+    val (values, _) = listSyntax.dest_list (rhs_of (cv_eval term))
+  in
+    List.map (Arbnum.toInt o numSyntax.dest_numeral) values
+  end
+
 fun prng_pin_works () =
   sml_rand_stream 5 1000 1 = pinned_rand_stream andalso
-  hol_rand_stream 5 1000 1 = pinned_rand_stream
+  hol_rand_stream 5 1000 1 = pinned_rand_stream andalso
+  cv_pinned_rand_stream () = pinned_rand_stream
 
 val _ = require_msg (check_result prng_pin_works) (fn () =>
-  "HOL and SML PRNG streams did not match the pinned MMIX stream")
+  "HOL, SML, and cv PRNG streams did not match the pinned MMIX stream")
+  (fn () => ()) ()
+
+val _ = tprint "Refute cv build-time generators"
+
+fun cv_rhs tm = rhs_of (cv_eval tm)
+
+fun same_terms left right =
+  length left = length right andalso
+  ListPair.allEq (fn (left, right) => Term.aconv left right) (left, right)
+
+fun compute_exhaustive ty size =
+  case enumerate ty of
+      SOME values => values
+    | NONE =>
+        let
+          val values = ref []
+          val _ = exhaustive_values (spec_of ty) size (fn value =>
+            (values := value :: !values; Continue))
+        in
+          rev (!values)
+        end
+
+fun cv_exhaustive_agrees ty size application =
+  let
+    val (actual, _) = listSyntax.dest_list (cv_rhs application)
+  in
+    same_terms (compute_exhaustive ty size) actual
+  end
+
+fun num_term_of_intinf value =
+  numSyntax.mk_numeral (Arbnum.fromString (IntInf.toString value))
+
+fun cv_random_agrees ty size seed application =
+  let
+    val (expected_value, expected_state) = random_term ty size seed
+    val (actual_value, actual_state) =
+      pairSyntax.dest_pair (cv_rhs application)
+  in
+    Term.aconv expected_value actual_value andalso
+    Term.aconv (num_term_of_intinf expected_state) actual_state
+  end
+
+fun cv_word64_draw_uses_two_halves () =
+  let
+    val (hi, state1) = rand_below 4294967296 1
+    val (lo, state2) = rand_below 4294967296 state1
+    val joined = hi * 4294967296 + lo
+    val expected = wordsSyntax.mk_wordi
+      (Arbnum.fromString (IntInf.toString joined), 64)
+    val (actual, actual_state) =
+      pairSyntax.dest_pair (cv_rhs ``refute_cv_rnd_word64 3 1``)
+  in
+    Term.aconv expected actual andalso
+    Term.aconv (num_term_of_intinf state2) actual_state
+  end
+
+fun cv_generators_agree () =
+  cv_exhaustive_agrees ``:bool`` 0 ``refute_cv_exh_bool 0`` andalso
+  cv_exhaustive_agrees ``:word16`` 3 ``refute_cv_exh_word16 3`` andalso
+  cv_exhaustive_agrees ``:num # num`` 2
+    ``refute_cv_exh_num_pair 2`` andalso
+  cv_exhaustive_agrees ``:num list`` 3
+    ``refute_cv_exh_num_list 3`` andalso
+  cv_random_agrees ``:refute$rf3`` 3 1 ``refute_cv_rnd_rf3 3 1`` andalso
+  cv_random_agrees ``:word32`` 3 1 ``refute_cv_rnd_word32 3 1`` andalso
+  cv_word64_draw_uses_two_halves () andalso
+  cv_random_agrees ``:num # num`` 3 1
+    ``refute_cv_rnd_num_pair 3 1`` andalso
+  cv_random_agrees ``:num list`` 3 1
+    ``refute_cv_rnd_num_list 3 1`` andalso
+  cv_random_agrees ``:string`` 2 1 ``refute_cv_rnd_string 2 1``
+
+val _ = require_msg (check_result cv_generators_agree) (fn () =>
+  "a build-time cv generator disagreed with the compute substrate")
   (fn () => ()) ()
 
 val _ = tprint "Refute core configuration"

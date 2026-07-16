@@ -1,10 +1,21 @@
-INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit ../sort ../real
+INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit ../sort \
+           ../real $(HOLDIR)/src/num/theories/cv_compute \
+           $(HOLDIR)/src/num/theories/cv_compute/automation
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
-selftest.exe: selftest.uo refuteTheory.uo
+ifdef POLY
+selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo refuteheap
+	@printf '%s\n' '#!/bin/sh' 'set -e' \
+	  '$(HOLDIR)/bin/hol --gcthreads=1 run \
+	  --holstate=$(HOLDIR)/src/HolRefute/refuteheap selftest' \
+	  'exit 0' > $@
+	@chmod +x $@
+else
+selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo
 	$(HOLMOSMLC) -o $@ $<
+endif
 
 ifdef HOLSELFTESTLEVEL
 all: holrefute-selftest.log
@@ -23,16 +34,21 @@ link-to-sigobj: $(DEFAULT_TARGETS)
 endif
 
 ifdef POLY
-HOLHEAP = refuteheap
-EXTRA_CLEANS += $(HOLHEAP)
+# Keep refuteTheory's ancestry cv-free.  The selftest wrapper above runs
+# refuteheap after the base and cv theories have been built separately.
+HOLHEAP = $(HOLDIR)/bin/hol.state
+EXTRA_CLEANS += refuteheap
 
-REFUTE_DEPS = boss/bossLib n-bit/wordsLib sort/sortingTheory real/realTheory
+REFUTE_DEPS = boss/bossLib n-bit/wordsLib sort/sortingTheory \
+              real/realTheory \
+              num/theories/cv_compute/automation/cv_transLib \
+              num/theories/cv_compute/automation/cv_stdTheory
 BARE_DEPS = $(patsubst %,../%,$(REFUTE_DEPS))
 DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
 
-all: $(HOLHEAP) selftest.exe
+all: refuteheap selftest.exe
 
-$(HOLHEAP): $(DEPS)
+refuteheap: $(DEPS) refuteTheory.uo
 	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) -F -o $@ \
-		-b $(dprot $(HOLDIR)/bin/hol.state) $(BARE_DEPS)
+		-b $(dprot $(HOLDIR)/bin/hol.state) $(BARE_DEPS) refuteTheory
 endif
