@@ -2780,8 +2780,13 @@ fun same_conformance_outcome (left, right) =
         left_reasons = right_reasons
     | _ => false
 
+fun certificate_tag_clean theorem =
+  Tag.isEmpty (Thm.tag theorem) orelse Tag.isDisk (Thm.tag theorem)
+
 fun certified_conformance_cex
-      (Refute.Counterexample ({cert = SOME _, ...} :: _)) = true
+      (Refute.Counterexample ({certainty = Refute.Genuine,
+                               cert = SOME theorem, ...} :: _)) =
+        certificate_tag_clean theorem
   | certified_conformance_cex _ = false
 
 fun conformance_outcome_name (Refute.Counterexample _) = "Counterexample"
@@ -3065,7 +3070,7 @@ fun certified_reverse () =
       Counterexample ({certainty = Genuine, cert = SOME theorem, ...} :: _) =>
         Term.aconv (Thm.concl theorem)
           ``~(!xs : num list. REVERSE xs = xs)`` andalso
-        null (Tag.axioms_of (Thm.tag theorem))
+        certificate_tag_clean theorem
     | _ => false
 
 val _ = require_msg (check_result certified_reverse) (fn () =>

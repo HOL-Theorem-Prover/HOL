@@ -1,14 +1,50 @@
-HolRefute provides counterexample generation for HOL4.  M1 supplies the
-Quickcheck (QC) backend; the model-finding (MF) backend is planned for
-M3--M4.
+HolRefute provides certified counterexample generation for HOL4.  Its
+Quickcheck (QC) backend supports exhaustive and random strategies over
+three interchangeable execution substrates:
+
+* Compute interprets test plans with computeLib.  It is the compatibility
+  substrate and supports registered custom and abstract generators.
+* Cv compiles a fuel-bounded HOL test loop and executes it with
+  Thm.compute.  Goals outside its first-order fragment are inapplicable.
+* NativeSML extracts the executable fragment to SML and compiles the test
+  loop in process.  It is the preferred fast substrate on Poly/ML.
+
+Set a substrate with `Refute.upd_substrate`.  The default, `Auto`, tries
+NativeSML, Cv, and Compute in that order and falls through when a substrate
+is inapplicable.  An explicitly selected inapplicable substrate reports
+`Unknown`; it never silently changes substrate.  Selection applies to both
+exhaustive and random QC backends.  At Refute trace level 2 or higher, Auto
+reports selection and fallthrough reasons.  Every counterexample also
+records the selected substrate in its `substrate` field.
+
+Random testing uses one specified 64-bit generator and consumption order on
+all substrates.  `Refute.upd_seed (SOME n)` therefore reproduces the same
+candidate stream independently of substrate.  Runs without an explicit
+seed use a deterministic session stream which advances between runs.
+
+Execution substrates are untrusted accelerators.  A candidate becomes
+`Genuine` only after Refute_Cert re-evaluates its instantiated proposition
+with computeLib and constructs a theorem certifying its negation.  Refute
+uses no oracle tags.  Cv performs all per-call definitions and translations
+inside a full theory snapshot/revert bracket.  Success, failure, timeout,
+and interruption paths leave no Refute-created type, constant, theorem, or
+binding in the user's theory; if safe cleanup is unavailable, Cv reports
+that the goal is inapplicable instead.
 
 Module layout:
 
 * Refute_Core: shared types, configuration, registry, and orchestration.
 * Refute_Gen: generator derivation and enumeration support.
+* Refute_Eval: the substrate seam, registry, and common random generator.
+* Refute_EvalCompute, Refute_EvalCv, and Refute_EvalSML: substrates.
+* Refute_Extract: in-memory HOL-to-SML extraction for NativeSML.
 * Refute_QC: QC test planning and random/exhaustive execution.
 * Refute_Cert: EVAL-based counterexample certification.
 * Refute.sig and Refute.sml: the public API facade.
 
-The refute_simp, refute_psimp, and refute_unfold theorem sets are defined
-by the support theory and consumed by the M3 MF backend.
+HolRefute is included in the normal tree build only on Poly/ML; non-Poly
+builds skip the directory.  Its level-2 selftests include cross-substrate
+outcome and candidate-stream conformance plus Cv export-cleanliness checks.
+
+The refute_simp, refute_psimp, and refute_unfold theorem sets are defined by
+the support theory and are reserved for the future model-finding backend.
