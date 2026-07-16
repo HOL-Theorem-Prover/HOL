@@ -450,7 +450,7 @@ structure Refute_Extract = struct
             val eq_range = equality_name context range_ty
           in
             "List.all (fn z => " ^ eq_range ^ " (" ^ left ^ " z) (" ^
-            right ^ " z)) " ^ enum_expression context domain_ty
+            right ^ " z)) " ^ parens (enum_expression context domain_ty)
           end
       | MLDatatype _ => datatype_equality context ty left right
       | MLVar _ =>
@@ -1041,6 +1041,19 @@ structure Refute_Extract = struct
       | ("combin", "o") => SOME (with_arity arguments 3 (fn values =>
           case values of [f, g, x] => parens (f ^ " " ^ parens
             (g ^ " " ^ parens x)) | _ => raise Fail "o"))
+      | ("combin", "UPDATE") =>
+          let
+            val domain = hd (#1 (boolSyntax.strip_fun
+              (Term.type_of head)))
+            val equality = equality_name context domain
+          in
+            SOME (with_arity arguments 3 (fn values =>
+              case values of [point, value, base] =>
+                parens ("fn refute_update_x => if " ^ equality ^
+                  " refute_update_x " ^ point ^ " then " ^ value ^
+                  " else " ^ base ^ " refute_update_x")
+              | _ => raise Fail "UPDATE"))
+          end
       | ("pair", "FST") => SOME (call "#1" 1 arguments)
       | ("pair", "SND") => SOME (call "#2" 1 arguments)
       | ("pair", "CURRY") => SOME (with_arity arguments 3 (fn values =>
@@ -1611,8 +1624,896 @@ structure Refute_Extract = struct
   val compile_term = extract_term
   val extract_constant = extract_term
 
-  fun extract_tests (_ : Refute_Core.config) (_ : Refute_Eval.strategy)
-      (_ : Refute_Eval.plan list) : extraction =
-    raise NotExtractable
-      ["native generator and plan extraction is implemented by TASK_04"]
+  fun extract_tests (_ : Refute_Core.config) strategy plans : extraction =
+    let
+      open Refute_Eval
+
+      val context = new_context ()
+      val constructor_terms = ref ([] : term list)
+      val raw_terms = ref ([] : term list)
+      val next_bound = ref 0
+      val original_variables = ref ([] : (term * term) list)
+
+      fun fresh_bound original =
+        let
+          val serial = !next_bound
+          val _ = next_bound := serial + 1
+          val safe = Term.mk_var
+            ("refute_bound_" ^ Int.toString serial, Term.type_of original)
+          val _ = original_variables :=
+            (safe, original) :: !original_variables
+        in
+          safe
+        end
+
+      fun original_variable safe =
+        case List.find (fn (renamed, _) => Term.aconv renamed safe)
+          (!original_variables) of
+          SOME (_, original) => original
+        | NONE => safe
+
+      fun substitute_variables environment tm =
+        Term.subst (List.map (fn (original, renamed) =>
+          {redex = original, residue = renamed}) environment) tm
+
+      fun rename_plan current environment =
+        case current of
+          Test tm => Test (substitute_variables environment tm)
+        | Gen (variable, next) =>
+            let val safe = fresh_bound variable
+            in Gen (safe, rename_plan next ((variable, safe) :: environment))
+            end
+        | Bind (variable, tm, fallback, next) =>
+            let
+              val safe = fresh_bound variable
+              val renamed_tm = substitute_variables environment tm
+              val renamed_fallback =
+                Option.map (fn other => rename_plan other environment) fallback
+              val renamed_next = rename_plan next
+                ((variable, safe) :: environment)
+            in
+              Bind (safe, renamed_tm, renamed_fallback, renamed_next)
+            end
+        | Split (tm, branches) =>
+            let
+              fun branch (constructor, variables, next) =
+                let
+                  val safe = List.map fresh_bound variables
+                  val additions = ListPair.zip (variables, safe)
+                in
+                  (constructor, safe,
+                   rename_plan next (additions @ environment))
+                end
+            in
+              Split (substitute_variables environment tm,
+                List.map branch branches)
+            end
+        | Guard (tm, next) =>
+            Guard (substitute_variables environment tm,
+              rename_plan next environment)
+        | Prune => Prune
+
+      val plans = List.map (fn plan => rename_plan plan []) plans
+
+      fun index_term terms tm =
+        case List.find (fn (_, other) => Term.aconv other tm)
+          (Lib.enumerate 0 (!terms)) of
+          SOME (index, _) => index
+        | NONE =>
+            let val index = length (!terms)
+                val _ = terms := !terms @ [tm]
+            in index end
+
+      fun constructor_index tm = index_term constructor_terms tm
+      fun raw_index tm = index_term raw_terms tm
+      fun integer value = Int.toString value
+      fun intinf value =
+        "(valOf (IntInf.fromString " ^ quote (IntInf.toString value) ^ ") " ^
+        ": IntInf.int)"
+      fun pair value thunk = parens (value ^ ", " ^ thunk)
+      fun thunk body = "(fn () => " ^ body ^ ")"
+      fun term_list items = "[" ^ join ", " items ^ "]"
+      fun maximum values = List.foldl Int.max 0 values
+
+      fun custom_type ty =
+        Option.isSome (Refute_Gen.generator_of ty) orelse
+        List.exists (fn (other, _) => same_type other ty)
+          (!(Refute_Gen.abstract_specs))
+
+      val validated = ref ([] : hol_type list)
+
+      fun validate_type root ty =
+        if List.exists (same_type ty) (!validated) then ()
+        else
+          let
+            val _ = validated := ty :: !validated
+            val _ =
+              if custom_type ty then
+                reject ("custom generator registered for " ^ type_name root)
+              else ()
+          in
+            case Refute_Gen.spec_of ty of
+              Refute_Gen.GenDatatype {constrs, ...} =>
+                List.app (validate_type root)
+                  (List.concat (List.map #2 constrs))
+            | Refute_Gen.GenFun (domain, range) =>
+                (validate_type root domain; validate_type root range)
+            | Refute_Gen.GenCustom _ =>
+                reject ("custom generator registered for " ^ type_name root)
+            | Refute_Gen.GenNum (Refute_Gen.Word width) =>
+                (case strategy of
+                   Random _ =>
+                     if width <= 32 then ()
+                     else reject ("word width exceeds rand_below's " ^
+                       "32-bit bound for " ^ type_name root)
+                 | Exhaustive => ())
+            | _ => ()
+          end
+          handle Refute_Gen.NoGenerator (missing, why) =>
+            reject ("no generator for " ^ type_name missing ^ " — " ^ why)
+
+      fun plan_gen_types current =
+        case current of
+          Test _ => []
+        | Gen (variable, next) =>
+            Term.type_of variable :: plan_gen_types next
+        | Bind (_, _, fallback, next) =>
+            plan_gen_types next @
+            (case fallback of NONE => [] | SOME other => plan_gen_types other)
+        | Split (_, branches) =>
+            List.concat (List.map (plan_gen_types o #3) branches)
+        | Guard (_, next) => plan_gen_types next
+        | Prune => []
+
+      val root_types = Lib.mk_set (List.concat (List.map plan_gen_types plans))
+      val _ = List.app (fn ty => validate_type ty ty) root_types
+
+      fun dependencies ty =
+        case Refute_Gen.spec_of ty of
+          Refute_Gen.GenDatatype {constrs, ...} =>
+            List.concat (List.map #2 constrs)
+        | Refute_Gen.GenFun (domain, range) => [domain, range]
+        | _ => []
+
+      fun close_types [] seen = rev seen
+        | close_types (ty :: rest) seen =
+            if List.exists (same_type ty) seen then close_types rest seen
+            else close_types (dependencies ty @ rest) (ty :: seen)
+
+      val generator_types = close_types root_types []
+      val _ = List.app (fn ty => ignore (ensure_type context ty))
+        generator_types
+
+      fun generator_name prefix ty =
+        let
+          val index = Lib.index (same_type ty) generator_types
+        in prefix ^ Int.toString index end
+
+      fun raw_reconstruction tm =
+        thunk ("Refute_EvalSML.raw_term " ^ integer (raw_index tm))
+
+      fun reconstruction tm =
+        if Literal.is_numeral tm then
+          thunk ("Refute_EvalSML.num_term " ^
+            num_literal (Literal.relaxed_dest_numeral tm))
+        else if intSyntax.is_int_literal tm then
+          thunk ("Refute_EvalSML.int_term " ^
+            int_literal (intSyntax.int_of_term tm))
+        else if Literal.is_char_lit tm then
+          thunk ("Refute_EvalSML.char_term #" ^
+            quote (String.str (Literal.dest_char_lit tm)))
+        else if Literal.is_string_lit tm then
+          thunk ("Refute_EvalSML.string_term " ^
+            quote (Literal.relaxed_dest_string_lit tm))
+        else if wordsSyntax.is_word_literal tm then
+          thunk ("Refute_EvalSML.word_term " ^
+            integer (word_width (Term.type_of tm)) ^ " " ^
+            num_literal (wordsSyntax.dest_word_literal tm))
+        else
+          let val (head, arguments) = boolSyntax.strip_comb tm
+          in
+            if Term.is_const head andalso TypeBase.is_constructor head then
+              let
+                val index = constructor_index head
+                val children = List.map reconstruction arguments
+                val forced = List.map (fn child => parens child ^ " ()")
+                  children
+              in
+                thunk ("Refute_EvalSML.con_term " ^ integer index ^ " " ^
+                  term_list forced)
+              end
+            else raw_reconstruction tm
+          end
+
+      fun generated_value tm =
+        pair (expression context tm) (reconstruction tm)
+
+      fun enum_source ty =
+        case Refute_Gen.enumerate ty of
+          SOME values => term_list (List.map generated_value values)
+        | NONE => raise Fail "Refute_Extract: enum_source"
+
+      val generator_runtime =
+        "datatype refute_attempt =\n" ^
+        "    RefuteContinue\n" ^
+        "  | RefuteHit of Refute_EvalSML.generated_hit\n" ^
+        "fun refute_each [] continuation = RefuteContinue\n" ^
+        "  | refute_each (value :: values) continuation =\n" ^
+        "      (case continuation value of\n" ^
+        "         RefuteContinue => refute_each values continuation\n" ^
+        "       | answer => answer)\n" ^
+        "fun refute_range first last make =\n" ^
+        "  if first > last then []\n" ^
+        "  else make first :: refute_range (first + 1) last make\n" ^
+        "fun refute_rand_below bound state =\n" ^
+        "  if bound <= 0 orelse bound > 4294967296 then\n" ^
+        "    raise Fail \"Refute generated rand_below bound\"\n" ^
+        "  else Refute_Eval.rand_below bound state\n"
+
+      fun constructor_value constructor values =
+        constructor_expression context constructor (List.map #1 values)
+
+      fun constructor_thunk constructor values =
+        let
+          val index = constructor_index constructor
+          val forced = List.map (fn (_, term) => parens term ^ " ()") values
+        in
+          thunk ("Refute_EvalSML.con_term " ^ integer index ^ " " ^
+            term_list forced)
+        end
+
+      fun exhaustive_num kind =
+        case kind of
+          Refute_Gen.Num =>
+            "refute_range 0 (Int.max (0, size)) (fn n => " ^
+            pair ("IntInf.fromInt n")
+              (thunk "Refute_EvalSML.num_term (IntInf.fromInt n)") ^ ")"
+        | Refute_Gen.Int =>
+            "refute_range (~(Int.max (0, size))) (Int.max (0, size)) " ^
+            "(fn n => " ^ pair ("IntInf.fromInt n")
+              (thunk "Refute_EvalSML.int_term (IntInf.fromInt n)") ^ ")"
+        | Refute_Gen.Char =>
+            "refute_range 0 255 (fn n => " ^
+            pair ("Char.chr n")
+              (thunk "Refute_EvalSML.char_term (Char.chr n)") ^ ")"
+        | Refute_Gen.Word width =>
+            "refute_range 0 (IntInf.toInt (IntInf.min " ^
+            "(IntInf.fromInt (Int.max (0, size)), " ^
+            "IntInf.pow (2, " ^ integer width ^ ") - 1))) (fn n => " ^
+            pair ("IntInf.fromInt n")
+              (thunk ("Refute_EvalSML.word_term " ^ integer width ^
+                " (IntInf.fromInt n)")) ^ ")"
+
+      fun exhaustive_arguments [] _ continuation = continuation []
+        | exhaustive_arguments (ty :: tys) size continuation =
+            let
+              val value = "refute_value_" ^ integer (length tys)
+              val term = "refute_term_" ^ integer (length tys)
+              val call = generator_name "exh_" ty
+            in
+              call ^ " (fn (" ^ value ^ ", " ^ term ^ ") => " ^
+              exhaustive_arguments tys size (fn values =>
+                continuation ((value, term) :: values)) ^ ") " ^ size ^
+              " complete"
+            end
+
+      fun exhaustive_constructor (constructor, argument_types) =
+        exhaustive_arguments argument_types "(size - 1)" (fn reversed =>
+          let
+            val values = reversed
+          in
+            "continuation " ^ pair
+              (constructor_value constructor values)
+              (constructor_thunk constructor values)
+          end)
+
+      fun exhaustive_datatype constrs =
+        let
+          fun choices [] = "RefuteContinue"
+            | choices (constructor :: rest) =
+                "(case " ^ exhaustive_constructor constructor ^ " of " ^
+                "RefuteContinue => " ^ choices rest ^ " | answer => answer)"
+        in
+          "if size <= 0 then RefuteContinue else " ^ choices constrs
+        end
+
+      fun exhaustive_function domain range =
+        let
+          val domain_gen = generator_name "exh_" domain
+          val range_gen = generator_name "exh_" range
+          val equality = equality_name context domain
+          val variable = Term.mk_var
+            ("refute_function_argument", domain)
+          val variable_index = raw_index variable
+          val update_value =
+            pair
+              (parens ("fn x => if " ^ equality ^ " x point then value " ^
+                "else base x"))
+              (thunk ("Refute_EvalSML.update_term (point_term ()) " ^
+                "(value_term ()) (base_term ())"))
+        in
+          "let\n" ^
+          "  fun constants () =\n" ^
+          "    " ^ range_gen ^ " (fn (default, default_term) =>\n" ^
+          "      continuation " ^ pair
+            (parens "fn _ => default")
+            (thunk ("Refute_EvalSML.fun_term " ^
+              "(Refute_EvalSML.raw_term " ^ integer variable_index ^ ") " ^
+              "(default_term ()) []")) ^ ") size complete\n" ^
+          "  fun layers 0 = RefuteContinue\n" ^
+          "    | layers remaining =\n" ^
+          "      " ^ domain_gen ^ " (fn (point, point_term) =>\n" ^
+          "        " ^ range_gen ^ " (fn (value, value_term) =>\n" ^
+          "          " ^ generator_name "exh_"
+            (Type.mk_type ("fun", [domain, range])) ^
+          " (fn (base, base_term) => continuation " ^ update_value ^ ") " ^
+          "(remaining - 1) complete) size complete) size complete\n" ^
+          "in case constants () of\n" ^
+          "     RefuteContinue => layers size\n" ^
+          "   | answer => answer\n" ^
+          "end"
+        end
+
+      fun exhaustive_body ty =
+        case Refute_Gen.spec_of ty of
+          Refute_Gen.GenEnum _ =>
+            "refute_each " ^ enum_source ty ^ " continuation"
+        | Refute_Gen.GenNum kind =>
+            "refute_each (" ^ exhaustive_num kind ^ ") continuation"
+        | Refute_Gen.GenDatatype {constrs, ...} =>
+            exhaustive_datatype constrs
+        | Refute_Gen.GenFun (domain, range) =>
+            (case Refute_Gen.enumerate ty of
+               SOME _ => "refute_each " ^ enum_source ty ^ " continuation"
+             | NONE => exhaustive_function domain range)
+        | Refute_Gen.GenCustom _ => raise Fail "validated custom generator"
+
+      fun exhaustive_declaration (index, ty) =
+        (if index = 0 then "fun " else "and ") ^
+        generator_name "exh_" ty ^ " continuation size complete =\n  " ^
+        exhaustive_body ty
+
+      val exhaustive_generators =
+        if null generator_types then ""
+        else join "\n" (List.map exhaustive_declaration
+          (Lib.enumerate 0 generator_types)) ^ "\n"
+
+      fun floor_for ty = Refute_Gen.own_floor (Refute_Gen.spec_of ty)
+
+      fun random_num kind =
+        case kind of
+          Refute_Gen.Num =>
+            "let val (draw, next) = refute_rand_below " ^
+            "(IntInf.fromInt (Int.max (0, size) + 1)) state\n" ^
+            "in (" ^ pair "draw"
+              (thunk "Refute_EvalSML.num_term draw") ^ ", next) end"
+        | Refute_Gen.Int =>
+            "let val radius = Int.max (0, size)\n" ^
+            "    val (draw, next) = refute_rand_below " ^
+            "(IntInf.fromInt (2 * radius + 1)) state\n" ^
+            "    val value = draw - IntInf.fromInt radius\n" ^
+            "in (" ^ pair "value"
+              (thunk "Refute_EvalSML.int_term value") ^ ", next) end"
+        | Refute_Gen.Char =>
+            "let val (draw, next) = refute_rand_below 256 state\n" ^
+            "    val value = Char.chr (IntInf.toInt draw)\n" ^
+            "in (" ^ pair "value"
+              (thunk "Refute_EvalSML.char_term value") ^ ", next) end"
+        | Refute_Gen.Word width =>
+            "let val (draw, next) = refute_rand_below " ^
+            "(IntInf.pow (2, " ^ integer width ^ ")) state\n" ^
+            "in (" ^ pair "draw"
+              (thunk ("Refute_EvalSML.word_term " ^ integer width ^
+                " draw")) ^ ", next) end"
+
+      fun random_arguments [] [] _ _ state continuation =
+            continuation ([], state)
+        | random_arguments (ty :: tys) (flag :: flags) budget size state
+            continuation =
+            let
+              val number = length tys
+              val generated = "generated_" ^ integer number
+              val next = "state_" ^ integer number
+              val call = if flag then generator_name "rnd_aux_" ty ^ " " ^
+                "(Int.max (0, " ^ budget ^ " - 1)) " ^ size ^ " " ^ state
+                else generator_name "rnd_" ty ^ " " ^ size ^ " " ^ state
+            in
+              "let val (" ^ generated ^ ", " ^ next ^ ") = " ^ call ^
+              " in " ^ random_arguments tys flags budget size next
+                (fn (values, final) =>
+                  continuation (generated :: values, final)) ^ " end"
+            end
+        | random_arguments _ _ _ _ _ _ =
+            raise Fail "Refute_Extract: random argument shape"
+
+      fun random_constructor (constructor, argument_types) flags =
+        random_arguments argument_types flags "budget" "size" "next_state"
+          (fn (reversed, final) =>
+            let
+              val names = reversed
+              val values = List.map (fn name =>
+                ("#1 " ^ name, "#2 " ^ name)) names
+            in
+              parens (pair
+                (pair (constructor_value constructor values)
+                  (constructor_thunk constructor values)) final)
+            end)
+
+      fun random_datatype constrs recursive min_size =
+        let
+          fun weight flags floors =
+            if not (List.exists (fn flag => flag) flags) then "1"
+            else
+              let
+                val minimum = maximum (ListPair.mapEq
+                  (fn (flag, floor) =>
+                    if flag then Int.max (0, floor - 1) else 0)
+                  (flags, floors))
+              in
+                if minimum = 0 then "budget"
+                else "(if budget > " ^ integer minimum ^
+                  " then budget else 0)"
+              end
+          val rows = ListPair.zip
+            (ListPair.zip (constrs, recursive), min_size)
+          val weights = List.map (fn ((_, flags), floors) =>
+            weight flags floors) rows
+          val total = join " + " weights
+          fun select _ [] =
+                "(raise Fail \"Refute generated constructor choice\")"
+            | select offset (((constructor, flags), _) :: rest) =
+                let val current = List.nth (weights, offset)
+                    val body = random_constructor constructor flags
+                in
+                  "if choice < IntInf.fromInt (" ^ current ^ ") then " ^
+                  body ^ " else let val choice = choice - " ^
+                  "IntInf.fromInt (" ^ current ^ ") in " ^
+                  select (offset + 1) rest ^ " end"
+                end
+        in
+          "let val total = " ^ total ^ "\n" ^
+          "    val (choice, next_state) =\n" ^
+          "      refute_rand_below (IntInf.fromInt total) state\n" ^
+          "in " ^ select 0 rows ^ " end"
+        end
+
+      fun random_function domain range =
+        let
+          val domain_random = generator_name "rnd_" domain
+          val range_random = generator_name "rnd_" range
+          val equality = equality_name context domain
+          val variable = Term.mk_var
+            ("refute_function_argument", domain)
+          val variable_index = raw_index variable
+          val enum = Refute_Gen.enumerate domain
+          val points = case enum of
+              SOME _ => enum_source domain
+            | NONE => "draw_points (Int.max (0, size)) after_default []"
+          val point_state = case enum of
+              SOME _ => "after_default"
+            | NONE => "#2 points_result"
+          val point_values = case enum of
+              SOME _ => points
+            | NONE => "rev (#1 points_result)"
+        in
+          "let\n" ^
+          "  val (default_generated, after_default) =\n" ^
+          "    " ^ range_random ^ " size state\n" ^
+          "  fun draw_points 0 current points = (points, current)\n" ^
+          "    | draw_points count current points =\n" ^
+          "      let val (point, next) = " ^ domain_random ^
+          " size current\n" ^
+          "      in draw_points (count - 1) next (point :: points) end\n" ^
+          (case enum of
+             SOME _ => "  val points_result = ([], after_default)\n"
+           | NONE => "  val points_result = " ^ points ^ "\n") ^
+          "  val points = " ^ point_values ^ "\n" ^
+          "  fun values [] current graph updates =\n" ^
+          "        ((graph, fn () => Refute_EvalSML.fun_term\n" ^
+          "           (Refute_EvalSML.raw_term " ^ integer variable_index ^
+          ") ((#2 default_generated) ())\n" ^
+          "           (List.map (fn (point, value) =>\n" ^
+          "              (point (), value ())) (rev updates))), current)\n" ^
+          "    | values ((point, point_term) :: rest) current graph " ^
+          "updates =\n" ^
+          "      let val ((value, value_term), next) =\n" ^
+          "            " ^ range_random ^ " size current\n" ^
+          "          val graph' = fn x => if " ^ equality ^
+          " x point then value else graph x\n" ^
+          "      in values rest next graph'\n" ^
+          "           ((point_term, value_term) :: updates) end\n" ^
+          "  val graph = fn _ => #1 default_generated\n" ^
+          "in values points " ^ point_state ^ " graph [] end"
+        end
+
+      fun random_body ty =
+        case Refute_Gen.spec_of ty of
+          Refute_Gen.GenEnum values =>
+            "let val values = " ^ enum_source ty ^ "\n" ^
+            "    val (choice, next) =\n" ^
+            "      refute_rand_below " ^ integer (length values) ^
+            " state\n" ^
+            "in (List.nth (values, IntInf.toInt choice), next) end"
+        | Refute_Gen.GenNum kind => random_num kind
+        | Refute_Gen.GenDatatype {constrs, recursive, min_size, ...} =>
+            random_datatype constrs recursive min_size
+        | Refute_Gen.GenFun (domain, range) => random_function domain range
+        | Refute_Gen.GenCustom _ => raise Fail "validated custom generator"
+
+      fun random_declarations (index, ty) =
+        let
+          val separator = if index = 0 then "fun " else "and "
+          val wrapper = generator_name "rnd_" ty
+          val auxiliary = generator_name "rnd_aux_" ty
+        in
+          separator ^ wrapper ^ " size state =\n" ^
+          "  " ^ auxiliary ^ " (Int.max (" ^ integer (floor_for ty) ^
+          ", Int.max (0, size))) (Int.max (0, size)) state\n" ^
+          "and " ^ auxiliary ^ " budget size state =\n  " ^ random_body ty
+        end
+
+      val random_generators =
+        if null generator_types then ""
+        else join "\n" (List.map random_declarations
+          (Lib.enumerate 0 generator_types)) ^ "\n"
+
+      fun environment_source environment =
+        term_list (List.map (fn (variable, _, term) =>
+          parens (integer (raw_index (original_variable variable)) ^
+            ", " ^ term)) environment)
+
+      fun substitution_source environment =
+        term_list (List.map (fn (variable, _, term) =>
+          parens (integer (raw_index variable) ^ ", " ^ term)) environment)
+
+      fun evaluation_thunk tm environment =
+        let
+          val index = raw_index tm
+          val substitutions = substitution_source environment
+        in
+          thunk ("Refute_EvalSML.eval_term " ^ integer index ^ " " ^
+            substitutions)
+        end
+
+      fun recovery complete genuine_only fallback =
+        parens ("complete := false; if " ^ genuine_only ^
+          " then RefuteContinue else " ^ fallback)
+
+      fun random_recovery state fallback =
+        parens ("complete := false; if genuine_only then " ^
+          parens ("RefuteContinue, " ^ state) ^ " else " ^ fallback)
+
+      fun safe_value expression failure =
+        "(case ((SOME (" ^ expression ^ "))\n" ^
+        "       handle Match => NONE\n" ^
+        "            | Refute_EvalSML.Stuck _ => NONE) of\n" ^
+        "   NONE => " ^ failure ^ "\n" ^
+        " | SOME refute_value => "
+
+      fun compile_exhaustive_plan current environment genuine_only =
+        case current of
+          Prune => "RefuteContinue"
+        | Test tm =>
+            let
+              val hit = "RefuteHit (" ^ environment_source environment ^
+                ", " ^ genuine_only ^ ")"
+              val stuck = recovery "complete" "genuine_only"
+                ("RefuteHit (" ^ environment_source environment ^
+                  ", false)")
+            in
+              parens ("tests := !tests + 1; " ^
+                safe_value (expression context tm) stuck ^
+                "if refute_value then RefuteContinue else " ^ hit ^ ")")
+            end
+        | Guard (tm, next) =>
+            let
+              val continued = compile_exhaustive_plan next environment
+                genuine_only
+              val tainted = compile_exhaustive_plan next environment "false"
+              val stuck = recovery "complete" "genuine_only" tainted
+            in
+              safe_value (expression context tm) stuck ^
+              "if refute_value then " ^ continued ^
+              " else RefuteContinue)"
+            end
+        | Bind (variable, tm, fallback, next) =>
+            let
+              val value = variable_name variable
+              val term = evaluation_thunk tm environment
+              val next_environment = (variable, value, term) :: environment
+              val continued = compile_exhaustive_plan next next_environment
+                genuine_only
+              val alternative = case fallback of
+                  NONE => "RefuteContinue"
+                | SOME other =>
+                    compile_exhaustive_plan other environment "false"
+              val stuck = recovery "complete" "genuine_only" alternative
+            in
+              safe_value (expression context tm) stuck ^
+              "let val " ^ value ^ " = refute_value\n" ^
+              "in " ^ continued ^ " end)"
+            end
+        | Split (tm, branches) =>
+            let
+              val expression_index = raw_index tm
+              val prior_environment = environment
+              fun branch_body (constructor, variables, next) =
+                let
+                  val constructor_number = constructor_index constructor
+                  val additions = List.map (fn (index, variable) =>
+                    let
+                      val term = thunk ("Refute_EvalSML.split_term " ^
+                        integer constructor_number ^ " " ^ integer index ^
+                        " " ^ integer expression_index ^ " " ^
+                        substitution_source prior_environment)
+                    in (variable, variable_name variable, term) end)
+                    (Lib.enumerate 0 variables)
+                in
+                  compile_exhaustive_plan next (additions @ environment)
+                    genuine_only
+                end
+              fun branch (entry as (constructor, variables, _)) =
+                constructor_expression context constructor
+                  (List.map variable_name variables) ^ " => " ^
+                branch_body entry
+              val failed =
+                parens ("complete := false; match_failures := " ^
+                  "!match_failures + 1; RefuteContinue")
+              fun string_entry name =
+                List.find (fn (constructor, _, _) =>
+                  kname constructor = ("list", name)) branches
+              fun string_body () =
+                let
+                  val nil_body = case string_entry "NIL" of
+                      NONE => failed
+                    | SOME entry => branch_body entry
+                  val cons_body = case string_entry "CONS" of
+                      NONE => failed
+                    | SOME (entry as (_, variables, _)) =>
+                        (case List.map variable_name variables of
+                           [head, tail] =>
+                             "let val " ^ head ^
+                             " = String.sub (refute_value, 0)\n" ^
+                             "    val " ^ tail ^
+                             " = String.extract " ^
+                             "(refute_value, 1, NONE)\n" ^
+                             "in " ^ branch_body entry ^ " end"
+                         | _ => reject "malformed string split")
+                in
+                  "if String.size refute_value = 0 then " ^ nil_body ^
+                  " else " ^ cons_body
+                end
+              val split_body =
+                if is_char_list (Term.type_of tm) then string_body ()
+                else "case refute_value of\n" ^
+                  join "\n | " (List.map branch branches) ^
+                  "\n | _ => " ^ failed
+            in
+              safe_value (expression context tm) failed ^ split_body ^ ")"
+            end
+        | Gen (variable, next) =>
+            let
+              val value = variable_name variable
+              val term = "term_" ^ clean_name value
+              val ty = Term.type_of variable
+              val body = compile_exhaustive_plan next
+                ((variable, value, term) :: environment) genuine_only
+            in
+              case Refute_Gen.enumerate ty of
+                SOME _ => "refute_each " ^ enum_source ty ^ " (fn (" ^
+                  value ^ ", " ^ term ^ ") => " ^ body ^ ")"
+              | NONE =>
+                  parens ("complete := false; " ^
+                    generator_name "exh_" ty ^ " (fn (" ^ value ^ ", " ^
+                    term ^ ") => " ^ body ^ ") size complete")
+            end
+
+      fun compile_random_plan current environment genuine state =
+        case current of
+          Prune => parens ("RefuteContinue, " ^ state)
+        | Test tm =>
+            let
+              val hit = "RefuteHit (" ^ environment_source environment ^
+                ", " ^ genuine ^ ")"
+              val stuck = recovery "complete" "genuine_only"
+                ("RefuteHit (" ^ environment_source environment ^
+                  ", false)")
+            in
+              parens ("tests := !tests + 1; " ^
+                safe_value (expression context tm) stuck ^
+                parens ("if refute_value then RefuteContinue else " ^ hit) ^
+                ", " ^ state ^ ")")
+            end
+        | Guard (tm, next) =>
+            let
+              val continued =
+                compile_random_plan next environment genuine state
+              val tainted = compile_random_plan next environment "false" state
+              val stuck = random_recovery state tainted
+            in
+              safe_value (expression context tm) stuck ^
+              "if refute_value then " ^ continued ^ " else " ^
+              parens ("RefuteContinue, " ^ state) ^ ")"
+            end
+        | Bind (variable, tm, fallback, next) =>
+            let
+              val value = variable_name variable
+              val term = evaluation_thunk tm environment
+              val continued = compile_random_plan next
+                ((variable, value, term) :: environment) genuine state
+              val alternative = case fallback of
+                  NONE => parens ("RefuteContinue, " ^ state)
+                | SOME other =>
+                    compile_random_plan other environment "false" state
+              val failed = random_recovery state alternative
+            in
+              safe_value (expression context tm) failed ^
+              "let val " ^ value ^ " = refute_value in " ^ continued ^
+              " end)"
+            end
+        | Split (tm, branches) =>
+            let
+              val expression_index = raw_index tm
+              val prior_environment = environment
+              fun branch_body (constructor, variables, next) =
+                let
+                  val constructor_number = constructor_index constructor
+                  val additions = List.map (fn (index, variable) =>
+                    (variable, variable_name variable,
+                     thunk ("Refute_EvalSML.split_term " ^
+                       integer constructor_number ^ " " ^ integer index ^
+                       " " ^ integer expression_index ^ " " ^
+                       substitution_source prior_environment)))
+                    (Lib.enumerate 0 variables)
+                in
+                  compile_random_plan next (additions @ environment)
+                    genuine state
+                end
+              fun branch (entry as (constructor, variables, _)) =
+                constructor_expression context constructor
+                  (List.map variable_name variables) ^ " => " ^
+                branch_body entry
+              val failure = parens
+                ("complete := false; match_failures := !match_failures + 1; " ^
+                 parens ("RefuteContinue, " ^ state))
+              fun string_entry name =
+                List.find (fn (constructor, _, _) =>
+                  kname constructor = ("list", name)) branches
+              fun string_body () =
+                let
+                  val nil_body = case string_entry "NIL" of
+                      NONE => failure
+                    | SOME entry => branch_body entry
+                  val cons_body = case string_entry "CONS" of
+                      NONE => failure
+                    | SOME (entry as (_, variables, _)) =>
+                        (case List.map variable_name variables of
+                           [head, tail] =>
+                             "let val " ^ head ^
+                             " = String.sub (refute_value, 0)\n" ^
+                             "    val " ^ tail ^
+                             " = String.extract " ^
+                             "(refute_value, 1, NONE)\n" ^
+                             "in " ^ branch_body entry ^ " end"
+                         | _ => reject "malformed string split")
+                in
+                  "if String.size refute_value = 0 then " ^ nil_body ^
+                  " else " ^ cons_body
+                end
+              val split_body =
+                if is_char_list (Term.type_of tm) then string_body ()
+                else "case refute_value of\n" ^
+                  join "\n | " (List.map branch branches) ^
+                  "\n | _ => " ^ failure
+            in
+              safe_value (expression context tm) failure ^ split_body ^ ")"
+            end
+        | Gen (variable, next) =>
+            let
+              val value = variable_name variable
+              val term = "term_" ^ clean_name value
+              val next_state = "state_" ^ clean_name value
+              val draw = generator_name "rnd_" (Term.type_of variable) ^
+                " size " ^ state
+              val body = compile_random_plan next
+                ((variable, value, term) :: environment) genuine next_state
+            in
+              "let val ((" ^ value ^ ", " ^ term ^ "), " ^ next_state ^
+              ") = " ^ draw ^ "\nin " ^ body ^ " end"
+            end
+
+      fun card_declaration (index, plan) =
+        let
+          val number = index + 1
+          val name = "card_" ^ integer number
+        in
+          case strategy of
+            Exhaustive =>
+              "fun " ^ name ^ " genuine_only size draws state =\n" ^
+              "  let val complete = ref true\n" ^
+              "      val tests = ref 0\n" ^
+              "      val match_failures = ref 0\n" ^
+              "      val answer = " ^
+                compile_exhaustive_plan plan [] "true" ^ "\n" ^
+              "      val hit = case answer of RefuteContinue => NONE\n" ^
+              "        | RefuteHit found => SOME found\n" ^
+              "  in {hit = hit, complete = !complete,\n" ^
+              "      table = refute_table_id, state = state, " ^
+              "tests = !tests,\n" ^
+              "      match_failures = !match_failures}\n" ^
+              "  end\n"
+          | Random _ =>
+              "fun " ^ name ^ " genuine_only size draws state =\n" ^
+              "  let val complete = ref true\n" ^
+              "      val tests = ref 0\n" ^
+              "      val match_failures = ref 0\n" ^
+              "      fun loop 0 current = (NONE, current)\n" ^
+              "        | loop remaining current =\n" ^
+              "          (case " ^ compile_random_plan plan [] "true"
+                "current" ^ " of\n" ^
+              "             (RefuteContinue, next) =>\n" ^
+              "               loop (remaining - 1) next\n" ^
+              "           | (RefuteHit found, next) => (SOME found, next))\n" ^
+              "      val (hit, final_state) =\n" ^
+              "        loop (Int.max (0, draws)) state\n" ^
+              "  in {hit = hit, complete = !complete,\n" ^
+              "      table = refute_table_id, state = final_state,\n" ^
+              "      tests = !tests, match_failures = !match_failures}\n" ^
+              "  end\n"
+        end
+
+      val _ = List.app (fn plan =>
+        let
+          fun payload current =
+            case current of
+              Test tm => ignore (expression context tm)
+            | Gen (_, next) => payload next
+            | Bind (_, tm, fallback, next) =>
+                (ignore (expression context tm);
+                 Option.app payload fallback; payload next)
+            | Split (tm, branches) =>
+                (ignore (expression context tm);
+                 List.app (payload o #3) branches)
+            | Guard (tm, next) =>
+                (ignore (expression context tm); payload next)
+            | Prune => ()
+        in payload plan end) plans
+      val cards = String.concat
+        (List.map card_declaration (Lib.enumerate 0 plans))
+      val table_id = Refute_EvalSML.register_term_tables
+        (!constructor_terms) (!raw_terms)
+      val table_declaration =
+        "val refute_table_id = " ^ integer table_id ^ "\n"
+      val card_names = List.map (fn index =>
+        "card_" ^ integer (index + 1))
+        (List.tabulate (length plans, fn x => x))
+      val dispatch =
+        "val test_cards = Vector.fromList [" ^
+        join ", " card_names ^ "]\n" ^
+        "fun dispatch card genuine_only size draws state =\n" ^
+        "  Vector.sub (test_cards, card - 1)\n" ^
+        "    genuine_only size draws state\n" ^
+        "fun protected_dispatch card genuine_only size draws state =\n" ^
+        "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
+        "    let val answer = dispatch card genuine_only size draws state\n" ^
+        "        val hit = Option.map (fn (environment, genuine) =>\n" ^
+        "          (List.map (fn (index, rebuild) =>\n" ^
+        "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
+        "               refute_table_id rebuild)) environment, genuine))\n" ^
+        "          (#hit answer)\n" ^
+        "    in {hit = hit, complete = #complete answer,\n" ^
+        "        table = refute_table_id, state = #state answer,\n" ^
+        "        tests = #tests answer,\n" ^
+        "        match_failures = #match_failures answer}\n" ^
+        "    end)\n" ^
+        "fun install () =\n" ^
+        "  Refute_EvalSML.installed_dispatch := SOME protected_dispatch\n"
+      val _ = drain_definitions context
+      val source = source_prefix context ^
+        definition_declarations context ^ "\n" ^ generator_runtime ^ "\n" ^
+        exhaustive_generators ^ random_generators ^ table_declaration ^
+        cards ^ dispatch
+    in
+      {source = source, entry = "install ()"}
+    end
 end

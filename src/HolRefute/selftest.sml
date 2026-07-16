@@ -512,6 +512,302 @@ val _ = require_msg
   (check_result infinite_function_equality_is_rejected) (fn () =>
   "function equality over num was extractable") (fn () => ()) ()
 
+fun compile_extracted_tests strategy plans =
+  let
+    val {source, entry} =
+      Refute_Extract.extract_tests default_config strategy plans
+    val serial = !extract_compile_counter
+    val _ = extract_compile_counter := serial + 1
+    val structure_name = "RefuteExtractPlan_" ^ Int.toString serial
+    val program =
+      "structure " ^ structure_name ^ " = struct\n" ^ source ^ "end\n" ^
+      "val _ = " ^ structure_name ^ "." ^ entry ^ "\n"
+    val stream = TextIO.openString program
+    fun input () = TextIO.input1 stream
+    fun compile () =
+      if TextIO.endOfStream stream then ()
+      else
+        (PolyML.compiler
+           (input, [PolyML.Compiler.CPOutStream (fn _ => ())]) ();
+         compile ())
+    val _ = installed_dispatch := NONE
+    val _ = compile ()
+    val _ = TextIO.closeIn stream
+  in
+    valOf (!installed_dispatch)
+  end
+
+fun generated_result strategy plan size draws seed =
+  compile_extracted_tests strategy [plan] 1 false size draws seed
+
+fun generated_env ({hit = SOME (environment, genuine), table, ...} :
+    generated_answer) =
+      SOME (List.map (fn (index, rebuild) =>
+        (table_term table index, rebuild ())) environment, genuine)
+  | generated_env _ = NONE
+
+fun compute_plan_result strategy plan size draws seed =
+  let
+    val compiled =
+      case Refute_EvalCompute.compile default_config strategy [plan] of
+        Compiled test => test
+      | Inapplicable reasons =>
+          raise Fail (String.concatWith "; " reasons)
+  in
+    #run compiled
+      {genuine_only = false, card = 1, size = size, draws = draws,
+       ignored = []}
+  end
+
+fun same_generated_env [] [] = true
+  | same_generated_env ((variable1, value1) :: rest1)
+      ((variable2, value2) :: rest2) =
+      Term.aconv variable1 variable2 andalso
+      Term.aconv value1 value2 andalso
+      same_generated_env rest1 rest2
+  | same_generated_env _ _ = false
+
+fun generated_compute_agree strategy plan size draws seed =
+  case (generated_env (generated_result strategy plan size draws seed),
+        compute_plan_result strategy plan size draws seed) of
+      (SOME (generated, generated_genuine),
+       CexFound {env = computed, genuine = computed_genuine}) =>
+        generated_genuine = computed_genuine andalso
+        same_generated_env generated computed
+    | (NONE, Exhausted _) => true
+    | _ => false
+
+fun extraction_plan_checks () =
+  let
+    val list_plan = compile_plan default_config
+      ``REVERSE (xs : num list) = xs``
+    val tree_plan = compile_plan default_config
+      ``(tree : rg_tree) = RGTip 0``
+    val word_plan = compile_plan default_config
+      ``(word : bool[8]) = 0w``
+    val function_plan = compile_plan default_config
+      ``(function : refute$rf2 -> refute$rf2) rf2_2 = rf2_1``
+    fun both plan size =
+      generated_compute_agree Exhaustive plan size 0 1 andalso
+      List.all (fn seed => generated_compute_agree
+        (Random {seed = IntInf.fromInt seed}) plan size 30
+        (IntInf.fromInt seed)) [1, 2, 3]
+  in
+    both list_plan 3 andalso both tree_plan 3 andalso both word_plan 3 andalso
+    both function_plan 3
+  end
+
+fun generated_stream seed count =
+  let
+    val first = Term.mk_var ("stream_first", ``:num``)
+    val second = Term.mk_var ("stream_second", ``:num``)
+    val plan = Gen (first, Gen (second, Test boolSyntax.F))
+    val dispatch = compile_extracted_tests (Random {seed = seed}) [plan]
+    fun loop 0 _ candidates = rev candidates
+      | loop remaining state candidates =
+          let
+            val answer = dispatch 1 false 999 1 state
+            val (environment, _) = valOf (#hit answer)
+            val values = rev (List.map (fn (_, rebuild) => rebuild ())
+              environment)
+          in
+            loop (remaining - 1) (#state answer) (values :: candidates)
+          end
+  in
+    loop count seed []
+  end
+
+fun generated_type_stream ty size seed count =
+  let
+    val variable = Term.mk_var ("stream_value", ty)
+    val plan = Gen (variable, Test boolSyntax.F)
+    val dispatch = compile_extracted_tests (Random {seed = seed}) [plan]
+    fun loop 0 _ candidates = rev candidates
+      | loop remaining state candidates =
+          let
+            val answer = dispatch 1 false size 1 state
+            val (environment, _) = valOf (#hit answer)
+            val value = #2 (hd environment) ()
+          in
+            loop (remaining - 1) (#state answer) ([value] :: candidates)
+          end
+  in
+    loop count seed []
+  end
+
+fun generated_stream_checks () =
+  let
+    val first = Term.mk_var ("stream_first", ``:num``)
+    val second = Term.mk_var ("stream_second", ``:num``)
+    val plan = Gen (first, Gen (second, Test boolSyntax.F))
+    fun number_check seed =
+      let val expected = dump_random_candidates
+            {plan = plan, seed = seed, size = 999, count = 8}
+      in
+        ListPair.allEq (fn (left, right) => same_terms left right)
+          (generated_stream seed 8, expected)
+      end
+    fun type_check ty size seed =
+      let
+        val variable = Term.mk_var ("stream_value", ty)
+        val one_plan = Gen (variable, Test boolSyntax.F)
+        val expected = dump_random_candidates
+          {plan = one_plan, seed = seed, size = size, count = 6}
+      in
+        ListPair.allEq (fn (left, right) => same_terms left right)
+          (generated_type_stream ty size seed 6, expected)
+      end
+    fun seed_checks seed =
+      number_check seed andalso
+      type_check ``:num list`` 4 seed andalso
+      type_check ``:rg_tree`` 4 seed andalso
+      type_check ``:bool[8]`` 4 seed
+  in
+    List.all (seed_checks o IntInf.fromInt) [1, 2, 3]
+  end
+
+fun partial_plan_checks () =
+  let
+    val variable = Term.mk_var ("bound", ``:num``)
+    val stuck_num = ``THE (NONE : num option)``
+    val stuck_bool = ``THE (NONE : bool option)``
+    val bind = Bind
+      (variable, stuck_num, SOME (Test boolSyntax.F), Test boolSyntax.T)
+    val guard = Guard (stuck_bool, Test boolSyntax.F)
+    val test = Test stuck_bool
+    val some_num = #1 (boolSyntax.strip_comb ``SOME (x : num)``)
+    val split = Split (``THE (NONE : num option)``,
+      [(some_num, [variable], Test boolSyntax.F)])
+    val generated = Term.mk_var ("generated", ``:num``)
+    val bound = Term.mk_var ("bound_value", ``:num``)
+    val successful_bind = Gen
+      (generated, Bind (bound, ``generated + 1``, NONE,
+        Test ``bound_value = 0``))
+    val option = Term.mk_var ("option", ``:num option``)
+    val selected = Term.mk_var ("selected", ``:num``)
+    val successful_split = Gen
+      (option, Split (option,
+        [(some_num, [selected], Test boolSyntax.F)]))
+    val list = Term.mk_var ("split_list", ``:num list``)
+    val list_head = Term.mk_var ("list_head", ``:num``)
+    val list_tail = Term.mk_var ("list_tail", ``:num list``)
+    val cons_num = #1
+      (boolSyntax.strip_comb ``(1 : num) :: (rest : num list)``)
+    val successful_list_split = Gen
+      (list, Split (list,
+        [(cons_num, [list_head, list_tail], Test boolSyntax.F)]))
+    fun exhaustive plan =
+      generated_compute_agree Exhaustive plan 2 0 1
+    fun random plan =
+      generated_compute_agree (Random {seed = 1}) plan 2 1 1
+    fun check plan = exhaustive plan andalso random plan
+    fun potential answer =
+      case generated_env answer of
+          SOME ([], false) => true
+        | _ => false
+    val split_answer = generated_result Exhaustive split 2 0 1
+  in
+    potential (generated_result Exhaustive bind 2 0 1) andalso
+    potential (generated_result (Random {seed = 1}) bind 2 1 1) andalso
+    check guard andalso check test andalso exhaustive split andalso
+    #match_failures split_answer = 1 andalso
+    exhaustive successful_bind andalso exhaustive successful_split andalso
+    exhaustive successful_list_split
+  end
+
+fun generated_completeness_checks () =
+  let
+    val boolean = Term.mk_var ("complete_bool", ``:bool``)
+    val list = Term.mk_var ("incomplete_list", ``:num list``)
+    val finite = generated_result Exhaustive
+      (Gen (boolean, Test boolSyntax.T)) 2 0 1
+    val bounded = generated_result Exhaustive
+      (Gen (list, Test boolSyntax.T)) 2 0 1
+  in
+    #complete finite andalso not (#complete bounded)
+  end
+
+fun wide_word_extraction_checks () =
+  let
+    val wide = Term.mk_var ("wide", ``:word64``)
+    val plan = Gen (wide, Test boolSyntax.T)
+    val exhaustive_ok =
+      let val {source, ...} = extract_tests default_config Exhaustive [plan]
+      in String.isSubstring "IntInf.pow (2, 64)" source end
+    val random_rejected =
+      ((ignore (extract_tests default_config (Random {seed = 1}) [plan]);
+        false)
+       handle NotExtractable reasons =>
+         List.exists (String.isSubstring "32-bit bound") reasons)
+  in
+    exhaustive_ok andalso random_rejected
+  end
+
+fun generated_hygiene_and_retention_checks () =
+  let
+    val size = Term.mk_var ("size", ``:num``)
+    val state = Term.mk_var ("state", ``:num``)
+    val collision_plan = Gen
+      (size, Gen (state, Test boolSyntax.F))
+    val string = Term.mk_var ("string", ``:string``)
+    val head = Term.mk_var ("head", ``:char``)
+    val tail = Term.mk_var ("tail", ``:string``)
+    val cons = #1 (boolSyntax.strip_comb ``#"a" :: (s : string)``)
+    val string_plan = Gen
+      (string, Split (string, [(cons, [head, tail], Test boolSyntax.F)]))
+    val first_dispatch = compile_extracted_tests Exhaustive [collision_plan]
+    val other = Term.mk_var ("other", ``:bool[8]``)
+    val _ = compile_extracted_tests Exhaustive
+      [Gen (other, Test boolSyntax.F)]
+    val retained = first_dispatch 1 false 2 0 1
+  in
+    generated_compute_agree Exhaustive collision_plan 2 0 1 andalso
+    generated_compute_agree Exhaustive string_plan 3 0 1 andalso
+    (case generated_env retained of
+       SOME (environment, true) => length environment = 2
+     | _ => false)
+  end
+
+fun reconstruction_is_lazy () =
+  let
+    val variable = Term.mk_var ("lazy_x", ``:num list``)
+    val miss = Gen (variable, Test boolSyntax.T)
+    val hit = Gen (variable, Test boolSyntax.F)
+    val _ = reset_reconstruction_forces ()
+    val _ = generated_result Exhaustive miss 3 0 1
+    val miss_forces = !reconstruction_forces
+    val _ = reset_reconstruction_forces ()
+    val answer = generated_result Exhaustive hit 3 0 1
+    val before_force = !reconstruction_forces
+    val environment = #1 (valOf (#hit answer))
+    val _ = List.app (fn (_, rebuild) => ignore (rebuild ())) environment
+  in
+    miss_forces = 0 andalso before_force = 0 andalso
+    !reconstruction_forces > 0
+  end
+
+val _ = tprint "Refute extraction generators and plans"
+val _ = require_msg (check_result extraction_plan_checks) (fn () =>
+  "an extracted plan outcome disagreed with compute") (fn () => ()) ()
+val _ = require_msg (check_result generated_stream_checks) (fn () =>
+  "an extracted random stream disagreed with compute") (fn () => ()) ()
+val _ = require_msg (check_result partial_plan_checks) (fn () =>
+  "an extracted plan handled partiality differently from compute")
+  (fn () => ()) ()
+val _ = require_msg (check_result generated_completeness_checks) (fn () =>
+  "an extracted enumerator reported the wrong completeness")
+  (fn () => ()) ()
+val _ = require_msg (check_result wide_word_extraction_checks) (fn () =>
+  "wide-word extraction overflowed or ignored the random bound")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result generated_hygiene_and_retention_checks) (fn () =>
+  "generated names, string splitting, or retained term tables failed")
+  (fn () => ()) ()
+val _ = require_msg (check_result reconstruction_is_lazy) (fn () =>
+  "an extracted reconstruction thunk was forced before a hit")
+  (fn () => ()) ()
+
 val _ = require_msg (check_result (fn () =>
   let val {ml_type, source, ...} =
         Refute_Extract.compile_type ``:bool[8]``
@@ -667,6 +963,26 @@ fun abstract_generator_works () =
 
 val _ = require_msg (check_result abstract_generator_works) (fn () =>
   "abstract generator or predicate registry was not populated")
+  (fn () => ()) ()
+
+fun custom_generators_are_not_extracted () =
+  let
+    fun rejected ty =
+      let val variable = Term.mk_var ("custom_value", ty)
+      in
+        ((ignore (extract_tests default_config Exhaustive
+            [Gen (variable, Test boolSyntax.T)]); false)
+         handle NotExtractable reasons =>
+           List.exists (String.isPrefix
+             ("custom generator registered for " ^
+              Hol_pp.type_to_string ty)) reasons)
+      end
+  in
+    rejected ``:rg_record`` andalso rejected ``:ind list``
+  end
+
+val _ = require_msg (check_result custom_generators_are_not_extracted)
+  (fn () => "a custom generator escaped native closure validation")
   (fn () => ()) ()
 
 val _ = tprint "Refute preprocessing and executability"
