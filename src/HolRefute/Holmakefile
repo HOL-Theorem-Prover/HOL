@@ -22,6 +22,18 @@ all: holrefute-selftest.log
 
 holrefute-selftest.log: selftest.exe
 	$(tee ./selftest.exe 2>&1,$@)
+
+ifdef POLY
+ifneq ($(HOLSELFTESTLEVEL),0)
+ifneq ($(HOLSELFTESTLEVEL),1)
+all: theory-tests
+.PHONY: theory-tests
+
+theory-tests: selftest.exe
+	$(HOLDIR)/bin/Holmake -C theory_tests --no_prereqs
+endif
+endif
+endif
 endif
 
 EXTRA_CLEANS = selftest.exe holrefute-selftest.log

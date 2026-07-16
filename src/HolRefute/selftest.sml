@@ -2067,23 +2067,183 @@ fun cv_partial_is_clean () =
     rejected andalso same_snapshot baseline (snapshot ())
   end
 
-fun cv_racing_is_clean () =
+fun cv_revert_under_translation_failure () =
   let
     val baseline = snapshot ()
-    val config = upd_substrate Cv
-      (upd_iterations 20
-        (upd_size 2
-          (upd_sequential false
-            (upd_backends (SOME ["exhaustive", "random"])
-              default_config))))
-    val result = Refute.refute config ``(b : bool)``
-    val certified =
+    val definitions_landed = ref false
+    val attempt = with_generators [``:rg_tree``] (fn _ =>
+      let
+        val _ = definitions_landed :=
+          not (same_snapshot baseline (snapshot ()))
+        val xs = Term.mk_var
+          (fresh_prefix () ^ "bad_xs", ``:num list``)
+        val bad = Term.mk_var
+          (fresh_prefix () ^ "bad",
+           Type.mk_type
+             ("fun", [listSyntax.mk_list_type numSyntax.num,
+                       numSyntax.num]))
+        val equation = boolSyntax.mk_eq
+          (Term.mk_comb (bad, xs), listSyntax.mk_hd xs)
+        val definition = TotalDefn.Define
+          [HOLPP.ANTIQUOTE equation]
+        val _ = cv_transLib.cv_auto_trans definition
+      in
+        false
+      end)
+    val helper_rejected =
+      case attempt of
+          CvInapplicable reasons => not (null reasons)
+        | CvSuccess _ => false
+    val variable = Term.mk_var ("cv_bad_tree", ``:rg_tree``)
+    val plan = Gen
+      (variable, Test ``rx_unmapped 0 = 0``)
+    val production_clean =
+      case Refute_EvalCv.compile default_config Exhaustive [plan] of
+          Inapplicable reasons => not (null reasons)
+        | Compiled test =>
+            let
+              val result = #run test
+                {genuine_only = true, card = 1, size = 2, draws = 0,
+                 ignored = []}
+              val production_landed =
+                not (same_snapshot baseline (snapshot ()))
+              val _ = #close test ()
+            in
+              production_landed andalso
+              (case result of
+                   GaveUp reason => String.isPrefix "cv: " reason
+                 | _ => false)
+            end
+  in
+    !definitions_landed andalso helper_rejected andalso
+    production_clean andalso same_snapshot baseline (snapshot ())
+  end
+
+fun cv_timeout_is_healthy () =
+  let
+    val baseline = snapshot ()
+    val original = valOf (List.find (fn substrate =>
+      #name substrate = "cv") (get_substrates ()))
+    val config = upd_timeout 0.2
+      (upd_iterations 1
+        (upd_size 1
+          (upd_sequential true
+            (upd_backends (SOME ["random"])
+              (upd_substrate Cv default_config)))))
+    val compiled =
+      case Refute_EvalCv.compile config (Random {seed = 1})
+          [Test boolSyntax.T] of
+          Inapplicable reasons =>
+            raise Fail (String.concatWith "; " reasons)
+        | Compiled test => test
+    val warm = #run compiled
+      {genuine_only = true, card = 1, size = 1, draws = 0,
+       ignored = []}
+    val _ =
+      case warm of
+          Exhausted _ => ()
+        | _ => raise Fail "cv timeout runner did not warm up"
+    fun huge_run (input : run_input) = #run compiled
+      {genuine_only = #genuine_only input, card = #card input,
+       size = #size input, draws = 1000000000000,
+       ignored = #ignored input}
+    val replacement_test : compiled_test =
+      {run = huge_run, close = #close compiled,
+       last_stats = #last_stats compiled}
+    val replacement : substrate =
+      {name = "cv", priority = #priority original,
+       compile = fn _ => fn _ => fn _ => Compiled replacement_test}
+    val _ = register_substrate replacement
+    val started = Time.now ()
+    val result = Refute.refute config ``T``
+      handle error =>
+        (register_substrate original; #close compiled (); raise error)
+    val elapsed = Time.toReal (Time.- (Time.now (), started))
+    val _ = register_substrate original
+    val _ = #close compiled ()
+    val timed_out =
       case result of
+          Refute.Unknown reasons =>
+            List.exists (String.isSubstring "timed out") reasons
+        | _ => false
+    val clean_after_timeout = same_snapshot baseline (snapshot ())
+    val healthy_config = upd_timeout 5.0
+      (upd_size 2
+        (upd_sequential true
+          (upd_backends (SOME ["exhaustive"])
+            (upd_substrate Cv default_config))))
+    val healthy =
+      case Refute.refute healthy_config ``(b : bool)`` of
           Refute.Counterexample ({cert = SOME _, ...} :: _) => true
         | _ => false
   in
-    certified andalso same_snapshot baseline (snapshot ())
+    timed_out andalso elapsed < 1.0 andalso clean_after_timeout andalso
+    healthy andalso same_snapshot baseline (snapshot ())
   end
+
+fun cv_dual_run_is_clean sequential goal sound =
+  let
+    val baseline = snapshot ()
+    val original = valOf (List.find (fn substrate =>
+      #name substrate = "cv") (get_substrates ()))
+    val results = ref ([] : (strategy * run_result) list)
+    val closes = ref 0
+    val result_mutex = Mutex.mutex ()
+    fun record entry = Multithreading.synchronized
+      "Refute cv racing result" result_mutex
+      (fn () => results := entry :: !results)
+    fun wrap strategy test : compiled_test =
+      {run = fn input =>
+         let
+           val result = #run test input
+           val _ = record (strategy, result)
+         in
+           result
+         end,
+       close = fn () =>
+         (Multithreading.synchronized "Refute cv racing close"
+            result_mutex (fn () => closes := !closes + 1);
+          #close test ()),
+       last_stats = #last_stats test}
+    val replacement : substrate =
+      {name = "cv", priority = #priority original,
+       compile = fn config => fn strategy => fn plans =>
+         case #compile original config strategy plans of
+             Inapplicable reasons => Inapplicable reasons
+           | Compiled test => Compiled (wrap strategy test)}
+    val config = upd_timeout 10.0
+      (upd_iterations 20
+        (upd_size 2
+          (upd_sequential sequential
+            (upd_backends (SOME ["exhaustive", "random"])
+              (upd_substrate Cv default_config)))))
+    val _ = register_substrate replacement
+    val outcome = Refute.refute config goal
+      handle error => (register_substrate original; raise error)
+    val _ = register_substrate original
+    fun exhaustive_result (Exhaustive, Exhausted _) = true
+      | exhaustive_result _ = false
+    fun random_result (Random _, Exhausted _) = true
+      | random_result _ = false
+    val both_exhausted =
+      List.exists exhaustive_result (!results) andalso
+      List.exists random_result (!results) andalso !closes = 2
+    val accepted =
+      if sound then
+        (case outcome of Refute.NoCounterexample => both_exhausted
+         | _ => false)
+      else
+        (case outcome of
+             Refute.Counterexample ({cert = SOME _, ...} :: _) => true
+           | _ => false)
+  in
+    accepted andalso same_snapshot baseline (snapshot ())
+  end
+
+fun cv_racing_is_clean () =
+  cv_dual_run_is_clean false ``(b : bool)`` false andalso
+  cv_dual_run_is_clean false ``T`` true andalso
+  cv_dual_run_is_clean true ``T`` true
 
 val _ =
   if selftest_level >= 2 then
@@ -2097,8 +2257,14 @@ val _ =
      require_msg (check_result cv_partial_is_clean) (fn () =>
        "cv accepted a partial property or leaked theory state")
        (fn () => ()) ();
+     require_msg (check_result cv_revert_under_translation_failure) (fn () =>
+       "cv translation failure was not inapplicable and residue-free")
+       (fn () => ()) ();
+     require_msg (check_result cv_timeout_is_healthy) (fn () =>
+       "a cv chunk timeout missed its deadline, leaked, or broke cv")
+       (fn () => ()) ();
      require_msg (check_result cv_racing_is_clean) (fn () =>
-       "the racing cv run failed or leaked theory state")
+       "a parallel or sequential dual-cv run failed or leaked")
        (fn () => ()) ())
   else ()
 
