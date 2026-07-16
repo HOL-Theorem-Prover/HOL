@@ -7,6 +7,8 @@ open Refute_Gen
 open Refute_Cert
 open Refute_Eval
 open Refute_EvalCompute
+open Refute_EvalSML
+open Refute_Extract
 open Refute_QC
 
 val erc = ref 0
@@ -224,6 +226,172 @@ val _ = Datatype.Datatype `rg_left = RGLeft | RGToRight rg_right;
                            rg_right = RGRight rg_left`
 val _ = Datatype.Datatype `rg_record = <| rg_field : num |>`
 val _ = Datatype.Datatype `rg_enum = RGRed | RGGreen | RGBlue`
+
+val rx_sum_def = TotalDefn.Define
+  `rx_sum ([] : num list) = 0 /\
+   rx_sum (x :: xs) = x + rx_sum xs`
+
+val rx_rose_def = TotalDefn.Define
+  `rx_rose RGLeaf = 0 /\
+   rx_rose (RGNode []) = 1 /\
+   rx_rose (RGNode (child :: children)) = SUC (rx_rose child)`
+
+val rx_pair_case_def = TotalDefn.Define
+  `rx_pair_case pair =
+     let (xs : num list, n) = pair
+     in case xs of [] => n | h :: t => h + n`
+
+val rx_record_def = TotalDefn.Define
+  `rx_record r =
+     let updated = r with rg_field := r.rg_field + 1
+     in updated.rg_field`
+
+val rx_partial_def = TotalDefn.Define
+  `rx_partial RGLeaf = 10`
+
+val _ = Theory.new_constant ("rx_unmapped", ``:num -> num``)
+
+structure RefuteExtractSelftest = struct
+  val result : bool option ref = ref NONE
+end
+
+val extract_compile_counter = ref 0
+
+fun compile_extracted_with term finish =
+  let
+    val {source, entry} = Refute_Extract.extract_term term
+    val serial = !extract_compile_counter
+    val _ = extract_compile_counter := serial + 1
+    val structure_name = "RefuteExtractGolden_" ^ Int.toString serial
+    val program =
+      "structure " ^ structure_name ^ " = struct\n" ^ source ^ "end\n" ^
+      "val _ = RefuteExtractSelftest.result := SOME (" ^
+      finish (structure_name ^ "." ^ entry) ^ ")\n"
+    val stream = TextIO.openString program
+    fun input () = TextIO.input1 stream
+    fun compile () =
+      if TextIO.endOfStream stream then ()
+      else
+        (PolyML.compiler
+           (input, [PolyML.Compiler.CPOutStream (fn _ => ())]) ();
+         compile ())
+    val _ = RefuteExtractSelftest.result := NONE
+    val _ = compile ()
+    val _ = TextIO.closeIn stream
+  in
+    valOf (!RefuteExtractSelftest.result)
+  end
+
+fun compile_extracted term = compile_extracted_with term (fn entry => entry)
+
+fun evaluated_bool term =
+  let
+    fun result_of conversion =
+      #2 (boolSyntax.dest_eq (Thm.concl (conversion term)))
+    val evaluated = result_of computeLib.EVAL_CONV
+    val result =
+      if Term.aconv evaluated boolSyntax.T orelse
+         Term.aconv evaluated boolSyntax.F then evaluated
+      else result_of intLib.REDUCE_CONV
+  in
+    Term.aconv result boolSyntax.T
+  end
+
+fun extraction_agrees term = compile_extracted term = evaluated_bool term
+
+val _ = tprint "Refute extraction type and constant layers"
+
+val extraction_goldens =
+  [``APPEND [1; 2] [3; 4] = [1; 2; 3; 4]``,
+   ``REVERSE [1; 2; 3] = [3; 2; 1]``,
+   ``MAP (\n : num. n + 1) [0; 2; 5] = [1; 3; 6]``,
+   ``rx_sum [1; 2; 3; 4] = 10``,
+   ``rx_rose (RGNode [RGNode [RGLeaf]; RGLeaf]) = 2``,
+   ``rx_pair_case ([4; 9], 3) = 7``,
+   ``rx_pair_case ([], 3) = 3``,
+   ``rx_record <|rg_field := 8|> = 9``,
+   ``(2 : num) - 5 = 0``,
+   ``17 DIV 5 = 3 /\ 17 MOD 5 = 2``,
+   ``((17 : int) / 5 = 3)``,
+   ``((17 : int) % 5 = 2)``,
+   ``((~5 : int) / 2 = ~3)``,
+   ``((~5 : int) % 2 = 1)``,
+   ``((~5 : int) - 2 = ~7)``,
+   ``Num (~5) = 5``,
+   ``((n2w 250 : bool[8]) + n2w 10) = n2w 4``,
+   ``word_xor (n2w 3 : bool[8]) (n2w 5) = n2w 6``,
+   ``ORD #"A" = 65``,
+   ``IMPLODE (EXPLODE "ab") = "ab"``,
+   ``STRCAT "ab" "c" = "abc"``,
+   ``HD "ab" = #"a"``,
+   ``TL "ab" = "b"``,
+   ``(I (\n : num. n + 1)) 2 = 3``,
+   ``(\b : bool. b) = (\b. b)``]
+
+fun all_extraction_goldens () =
+  let
+    fun check [] = true
+      | check (term :: terms) =
+          if extraction_agrees term then check terms
+          else raise Fail ("extraction mismatch: " ^ Parse.term_to_string term)
+  in
+    check extraction_goldens
+  end
+
+val _ = require_msg (check_result all_extraction_goldens) (fn () =>
+  "an extracted golden function disagreed with EVAL") (fn () => ()) ()
+
+fun extracted_div_zero_is_stuck () =
+  compile_extracted_with ``1 DIV 0 = 0`` (fn entry =>
+    "(" ^ entry ^ "; false) handle Refute_EvalSML.Stuck _ => true")
+
+val _ = require_msg (check_result extracted_div_zero_is_stuck) (fn () =>
+  "extracted DIV 0 did not raise Refute_EvalSML.Stuck")
+  (fn () => ()) ()
+
+fun extracted_missing_clause_is_match () =
+  compile_extracted_with ``rx_partial (RGNode []) = 0`` (fn entry =>
+    "(" ^ entry ^ "; false) handle Match => true")
+
+val _ = require_msg (check_result extracted_missing_clause_is_match) (fn () =>
+  "an extracted inexhaustive function did not raise Match")
+  (fn () => ()) ()
+
+fun unmapped_is_not_extractable () =
+  ((ignore (Refute_Extract.extract_term ``rx_unmapped 0 = 0``); false)
+   handle Refute_Extract.NotExtractable reasons =>
+     List.exists (String.isSubstring "rx_unmapped") reasons)
+
+val _ = require_msg (check_result unmapped_is_not_extractable) (fn () =>
+  "an unmapped constant lacked a useful NotExtractable reason")
+  (fn () => ()) ()
+
+fun infinite_function_equality_is_rejected () =
+  ((ignore (Refute_Extract.extract_term
+      ``(f : num -> bool) = (g : num -> bool)``); false)
+   handle Refute_Extract.NotExtractable reasons =>
+     List.exists (String.isSubstring "non-enumerable") reasons)
+
+val _ = require_msg
+  (check_result infinite_function_equality_is_rejected) (fn () =>
+  "function equality over num was extractable") (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  let val {ml_type, source, ...} =
+        Refute_Extract.compile_type ``:bool[8]``
+  in ml_type = "IntInf.int" andalso
+     String.isSubstring "refute_norm" source end)) (fn () =>
+  "word type extraction did not use IntInf and modular helpers")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  let val {source, ...} = Refute_Extract.compile_types
+        [``:rg_left``, ``:rg_right``]
+  in String.isSubstring "datatype" source andalso
+     String.isSubstring "and refute_ty_" source andalso
+     String.isSubstring "eq_refute_" source end)) (fn () =>
+  "mutual datatype or structural equality declarations were not emitted")
+  (fn () => ()) ()
 
 val _ = require_msg (check_result (fn () =>
   case cached_spec ``:refute$rf3`` of NONE => true | SOME _ => false))

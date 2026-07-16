@@ -1,0 +1,1460 @@
+structure Refute_Extract = struct
+  type term = Term.term
+  type hol_type = Type.hol_type
+
+  exception NotExtractable of string list
+
+  type extraction =
+    { source : string,
+      entry : string }
+
+  datatype ml_ty =
+      MLVar of string
+    | MLBool
+    | MLIntInf
+    | MLChar
+    | MLString
+    | MLUnit
+    | MLTuple of ml_ty list
+    | MLOption of ml_ty
+    | MLList of ml_ty
+    | MLArrow of ml_ty * ml_ty
+    | MLWord of int
+    | MLDatatype of string
+
+  type type_compilation =
+    { source : string,
+      ml_type : string,
+      equality : string }
+
+  val reserved =
+    ["abstype", "and", "andalso", "as", "case", "datatype", "do",
+     "else", "end", "eqtype", "exception", "fn", "fun", "functor",
+     "handle", "if", "in", "include", "infix", "infixr", "let",
+     "local", "nonfix", "of", "op", "open", "orelse", "raise",
+     "rec", "sharing", "sig", "signature", "struct", "structure",
+     "then", "type", "val", "where", "while", "withtype"]
+
+  fun fix_reserved name =
+    if Lib.mem name reserved then name ^ "_" else name
+
+  fun clean_name name =
+    let
+      fun clean character =
+        if Char.isAlphaNum character orelse character = #"_" orelse
+           character = #"'" then character
+        else #"_"
+      val cleaned = String.map clean name
+    in
+      if cleaned = "" then "x"
+      else if Char.isDigit (String.sub (cleaned, 0)) then "x_" ^ cleaned
+      else fix_reserved cleaned
+    end
+
+  fun upper_name name = "C_" ^ clean_name name
+  fun lower_name name = "f_" ^ clean_name name
+
+  fun same_type left right = Type.compare (left, right) = EQUAL
+  fun same_term left right = Term.compare (left, right) = EQUAL
+
+  fun kname tm =
+    let val {Thy, Name, ...} = Term.dest_thy_const tm
+    in (Thy, Name) end
+
+  fun kname_text (thy, name) = thy ^ "$" ^ name
+
+  fun quote text = Portable.mlquote text
+
+  fun join _ [] = ""
+    | join _ [item] = item
+    | join separator (item :: items) =
+        item ^ separator ^ join separator items
+
+  fun parens text = "(" ^ text ^ ")"
+
+  fun intinf_literal text =
+    "(valOf (IntInf.fromString " ^ quote text ^ ") : IntInf.int)"
+
+  fun num_literal number = intinf_literal (Arbnum.toString number)
+  fun int_literal integer =
+    let val text = Arbint.toString integer
+    in intinf_literal (String.substring (text, 0, String.size text - 1)) end
+
+  fun type_name ty =
+    Hol_pp.type_to_string ty
+    handle _ => "<unknown type>"
+
+  fun reject message = raise NotExtractable [message]
+
+  type datatype_desc =
+    { hol_ty : hol_type,
+      ml_name : string,
+      constructors : (term * hol_type list * string) list }
+
+  type context =
+    { datatypes : datatype_desc list ref,
+      types : (hol_type * ml_ty * string) list ref,
+      definitions : (term * string * Thm.thm) list ref,
+      pending : term list ref,
+      next_type : int ref,
+      next_const : int ref }
+
+  fun new_context () : context =
+    { datatypes = ref [],
+      types = ref [],
+      definitions = ref [],
+      pending = ref [],
+      next_type = ref 0,
+      next_const = ref 0 }
+
+  fun lookup_type ({types, ...} : context) ty =
+    case List.find (fn (other, _, _) => same_type other ty) (!types) of
+      SOME (_, mlty, equality) => SOME (mlty, equality)
+    | NONE => NONE
+
+  fun lookup_datatype ({datatypes, ...} : context) ty =
+    List.find (fn info => same_type (#hol_ty info) ty) (!datatypes)
+
+  fun fresh_type ({next_type, ...} : context) =
+    let val number = !next_type
+        val _ = next_type := number + 1
+    in "refute_ty_" ^ Int.toString number end
+
+  fun fresh_const ({next_const, ...} : context) base =
+    let val number = !next_const
+        val _ = next_const := number + 1
+    in lower_name base ^ "_" ^ Int.toString number end
+
+  fun word_width ty =
+    let
+      val index = wordsSyntax.dest_word_type ty
+    in
+      Arbnum.toInt (fcpLib.index_to_num index)
+    end
+    handle Feedback.HOL_ERR _ =>
+      reject ("word type has no concrete dimindex: " ^ type_name ty)
+         | Overflow =>
+      reject ("word width is too large: " ^ type_name ty)
+
+  fun is_char_list ty = same_type ty stringSyntax.string_ty
+
+  fun classify_primitive context ty =
+    if Type.is_vartype ty then
+      SOME (MLVar (clean_name (Type.dest_vartype ty)))
+    else if same_type ty Type.bool then SOME MLBool
+    else if same_type ty numSyntax.num then SOME MLIntInf
+    else if same_type ty intSyntax.int_ty then SOME MLIntInf
+    else if same_type ty stringSyntax.char_ty then SOME MLChar
+    else if is_char_list ty then SOME MLString
+    else if same_type ty oneSyntax.one_ty then SOME MLUnit
+    else if wordsSyntax.is_word_type ty then SOME (MLWord (word_width ty))
+    else
+      case Lib.total Type.dom_rng ty of
+        SOME (domain, range) =>
+          SOME (MLArrow (ensure_type context domain,
+                         ensure_type context range))
+      | NONE =>
+          (case Lib.total pairSyntax.dest_prod ty of
+             SOME (left, right) =>
+               SOME (MLTuple
+                 [ensure_type context left, ensure_type context right])
+           | NONE =>
+               (case Lib.total listSyntax.dest_list_type ty of
+                  SOME element => SOME (MLList (ensure_type context element))
+                | NONE =>
+                    (case Lib.total optionSyntax.dest_option ty of
+                       SOME element =>
+                         SOME (MLOption (ensure_type context element))
+                     | NONE => NONE)))
+
+  and ensure_type context ty =
+    case lookup_type context ty of
+      SOME (mlty, _) => mlty
+    | NONE =>
+        let
+          val number = !(#next_type context)
+          val _ = #next_type context := number + 1
+          val equality = "eq_refute_" ^ Int.toString number
+          val primitive = classify_primitive context ty
+        in
+          case primitive of
+            SOME mlty =>
+              (#types context := (ty, mlty, equality) :: !(#types context);
+               mlty)
+          | NONE =>
+              let
+                val info =
+                  case TypeBase.fetch ty of
+                    SOME found => found
+                  | NONE =>
+                      reject ("no TypeBase information for " ^ type_name ty)
+                val generic_ty = TypeBasePure.ty_of info
+                val theta = Type.match_type generic_ty ty
+                  handle Feedback.HOL_ERR _ =>
+                    reject ("cannot instantiate TypeBase information for " ^
+                            type_name ty)
+                val constructors = List.map (TypeBasePure.cinst ty)
+                  (TypeBasePure.constructors_of info)
+                val _ =
+                  if null constructors then
+                    reject ("abstract or generated type is not extractable: " ^
+                            type_name ty)
+                  else ()
+                val ml_name = fresh_type context
+                val mlty = MLDatatype ml_name
+                val _ = #types context :=
+                  (ty, mlty, equality) :: !(#types context)
+                fun constructor_info constructor =
+                  let
+                    val (arguments, result) =
+                      boolSyntax.strip_fun (Term.type_of constructor)
+                    val _ =
+                      if same_type result ty then ()
+                      else reject ("ill-instantiated constructor " ^
+                                   kname_text (kname constructor))
+                    val (_, name) = kname constructor
+                    val cname = upper_name (name ^ "_" ^ ml_name)
+                    val _ = List.app (fn arg =>
+                      ignore (ensure_type context arg)) arguments
+                  in
+                    (constructor, arguments, cname)
+                  end
+                val description =
+                  {hol_ty = ty, ml_name = ml_name,
+                   constructors = List.map constructor_info constructors}
+                val _ = #datatypes context :=
+                  description :: !(#datatypes context)
+              in
+                mlty
+              end
+        end
+
+  fun ml_ty_text mlty =
+    case mlty of
+      MLVar name => name
+    | MLBool => "bool"
+    | MLIntInf => "IntInf.int"
+    | MLChar => "Char.char"
+    | MLString => "String.string"
+    | MLUnit => "unit"
+    | MLTuple types => parens (join " * " (List.map ml_ty_text types))
+    | MLOption ty => parens (ml_ty_text ty) ^ " option"
+    | MLList ty => parens (ml_ty_text ty) ^ " list"
+    | MLArrow (domain, range) =>
+        parens (ml_ty_text domain ^ " -> " ^ ml_ty_text range)
+    | MLWord _ => "IntInf.int"
+    | MLDatatype name => name
+
+  fun equality_name context ty =
+    (ignore (ensure_type context ty);
+     case lookup_type context ty of
+       SOME (_, name) => name
+     | NONE => raise Fail "Refute_Extract: missing equality name")
+
+  fun datatype_dependencies context ({hol_ty, constructors, ...} :
+      datatype_desc) =
+    let
+      fun collect ty =
+        case lookup_datatype context ty of
+          SOME info =>
+            if same_type hol_ty (#hol_ty info) then [] else [#hol_ty info]
+        | NONE =>
+            if Type.is_vartype ty then []
+            else
+              List.concat (List.map collect (#2 (Type.dest_type ty)))
+    in
+      Lib.mk_set (List.concat
+        (List.map (fn (_, arguments, _) =>
+          List.concat (List.map collect arguments)) constructors))
+    end
+
+  fun reachable context source target =
+    let
+      fun visit seen ty =
+        if List.exists (same_type ty) seen then false
+        else if same_type ty target then true
+        else
+          case lookup_datatype context ty of
+            NONE => false
+          | SOME info =>
+              List.exists (visit (ty :: seen))
+                (datatype_dependencies context info)
+    in
+      visit [] source
+    end
+
+  fun datatype_groups context =
+    let
+      val datatypes = rev (!(#datatypes context))
+      fun equivalent left right =
+        reachable context (#hol_ty left) (#hol_ty right) andalso
+        reachable context (#hol_ty right) (#hol_ty left)
+      fun groups [] = []
+        | groups (info :: rest) =
+            let val (same, other) = List.partition (equivalent info) rest
+            in (info :: same) :: groups other end
+      val raw = groups datatypes
+      fun group_has group ty =
+        List.exists (fn info => same_type (#hol_ty info) ty) group
+      fun dependencies group = Lib.mk_set
+        (List.concat (List.map (datatype_dependencies context) group))
+      fun ready emitted group =
+        List.all (fn dependency =>
+          group_has group dependency orelse
+          List.exists (fn done => group_has done dependency) emitted)
+          (dependencies group)
+      fun order emitted [] = rev emitted
+        | order emitted remaining =
+            (case List.partition (ready emitted) remaining of
+               ([], _) => rev emitted @ remaining
+             | (now, later) => order (rev now @ emitted) later)
+    in
+      order [] raw
+    end
+
+  fun constructor_declaration context (_, arguments, name) =
+    case arguments of
+      [] => name
+    | [argument] => name ^ " of " ^ ml_ty_text (ensure_type context argument)
+    | _ => name ^ " of " ^
+        ml_ty_text (MLTuple (List.map (ensure_type context) arguments))
+
+  fun datatype_declaration context group =
+    let
+      fun one keyword ({ml_name, constructors, ...} : datatype_desc) =
+        keyword ^ " " ^ ml_name ^ " =\n    " ^
+        join "\n  | " (List.map (constructor_declaration context)
+          constructors)
+      val first = one "datatype" (hd group)
+      val rest = List.map (one "and") (tl group)
+    in
+      join "\n" (first :: rest) ^ "\n"
+    end
+
+  fun constructor_for context constructor =
+    let
+      val result = #2 (boolSyntax.strip_fun (Term.type_of constructor))
+      val _ = ignore (ensure_type context result)
+    in
+      case lookup_datatype context result of
+        NONE => NONE
+      | SOME {constructors, ...} =>
+          (case List.find (fn (other, _, _) =>
+                    Term.same_const other constructor) constructors of
+             SOME item => SOME item
+           | NONE => NONE)
+    end
+
+  fun enum_expression context ty =
+    let
+      fun nonenumerable () =
+        reject ("function equality has non-enumerable domain " ^ type_name ty)
+      fun constructor_values (_, arguments, name) =
+        let
+          fun build [] variables =
+                let val value = case variables of
+                      [] => name
+                    | [variable] => name ^ " " ^ variable
+                    | _ => name ^ " (" ^ join ", " variables ^ ")"
+                in "[" ^ value ^ "]" end
+            | build (argument :: rest) variables =
+                let val variable = "enum_" ^ Int.toString (length variables)
+                in
+                  "List.concat (List.map (fn " ^ variable ^ " => " ^
+                  build rest (variables @ [variable]) ^ ") " ^
+                  enum_expression context argument ^ ")"
+                end
+        in
+          build arguments []
+        end
+    in
+      if same_type ty Type.bool then "[false, true]"
+      else if same_type ty oneSyntax.one_ty then "[()]"
+      else if same_type ty stringSyntax.char_ty then
+        "List.tabulate (256, Char.chr)"
+      else if wordsSyntax.is_word_type ty andalso word_width ty <= 8 then
+        let val count = IntInf.toInt (IntInf.pow (2, word_width ty))
+        in
+          "List.tabulate (" ^ Int.toString count ^
+          ", fn n => IntInf.fromInt n)"
+        end
+      else
+        case Lib.total optionSyntax.dest_option ty of
+          SOME element =>
+            "NONE :: List.map SOME " ^ parens (enum_expression context element)
+        | NONE =>
+            (case Lib.total pairSyntax.dest_prod ty of
+               SOME (left, right) =>
+                 "List.concat (List.map (fn a => List.map (fn b => " ^
+                 "(a, b)) " ^ parens (enum_expression context right) ^
+                 ") " ^ parens (enum_expression context left) ^ ")"
+             | NONE =>
+                 case lookup_datatype context ty of
+                   SOME {constructors, ...} =>
+                     (case Refute_Gen.cardinality ty of
+                        NONE => nonenumerable ()
+                      | SOME _ =>
+                          "List.concat [" ^ join ", "
+                            (List.map constructor_values constructors) ^ "]")
+                 | NONE => nonenumerable ())
+    end
+
+  fun equality_body context ty left right =
+    let val mlty = ensure_type context ty
+    in
+      case mlty of
+        MLBool =>
+          parens ("(" ^ left ^ " andalso " ^ right ^ ") orelse " ^
+                  "(not " ^ left ^ " andalso not " ^ right ^ ")")
+      | MLIntInf =>
+          "IntInf.compare (" ^ left ^ ", " ^ right ^ ") = EQUAL"
+      | MLChar => "Char.compare (" ^ left ^ ", " ^ right ^ ") = EQUAL"
+      | MLString =>
+          "String.compare (" ^ left ^ ", " ^ right ^ ") = EQUAL"
+      | MLUnit => "true"
+      | MLWord _ =>
+          "IntInf.compare (" ^ left ^ ", " ^ right ^ ") = EQUAL"
+      | MLTuple [left_ty, right_ty] =>
+          let
+            val (hol_left, hol_right) = pairSyntax.dest_prod ty
+            val eq_left = equality_name context hol_left
+            val eq_right = equality_name context hol_right
+          in
+            "(case (" ^ left ^ ", " ^ right ^ ") of " ^
+            "((a1, a2), (b1, b2)) => " ^ eq_left ^ " a1 b1 andalso " ^
+            eq_right ^ " a2 b2)"
+          end
+      | MLList _ =>
+          let
+            val element = listSyntax.dest_list_type ty
+            val eq_element = equality_name context element
+          in
+            "let fun loop [] [] = true | loop (a :: as') (b :: bs') = " ^
+            eq_element ^ " a b andalso loop as' bs' | loop _ _ = false " ^
+            "in loop " ^ left ^ " " ^ right ^ " end"
+          end
+      | MLOption _ =>
+          let
+            val element = optionSyntax.dest_option ty
+            val eq_element = equality_name context element
+          in
+            "(case (" ^ left ^ ", " ^ right ^ ") of " ^
+            "(NONE, NONE) => true | (SOME a, SOME b) => " ^
+            eq_element ^ " a b | _ => false)"
+          end
+      | MLArrow (domain, _) =>
+          let
+            val (domain_ty, range_ty) = Type.dom_rng ty
+            val eq_range = equality_name context range_ty
+          in
+            "List.all (fn z => " ^ eq_range ^ " (" ^ left ^ " z) (" ^
+            right ^ " z)) " ^ enum_expression context domain_ty
+          end
+      | MLDatatype _ => datatype_equality context ty left right
+      | MLVar _ =>
+          reject ("cannot generate structural equality for type variable " ^
+                  type_name ty)
+      | MLTuple _ => raise Fail "Refute_Extract: malformed tuple type"
+    end
+
+  and datatype_equality context ty left right =
+    let
+      val info =
+        case lookup_datatype context ty of
+          SOME found => found
+        | NONE => raise Fail "Refute_Extract: missing datatype"
+      fun variables prefix count =
+        List.tabulate (count, fn index =>
+          prefix ^ Int.toString (index + 1))
+      fun payload name [] = name
+        | payload name [variable] = name ^ " " ^ variable
+        | payload name vars = name ^ " (" ^ join ", " vars ^ ")"
+      fun clause (_, arguments, name) =
+        let
+          val avars = variables "a" (length arguments)
+          val bvars = variables "b" (length arguments)
+          val comparisons = ListPair.mapEq (fn (arg_ty, (a, b)) =>
+            equality_name context arg_ty ^ " " ^ a ^ " " ^ b)
+            (arguments, ListPair.zip (avars, bvars))
+          val body = if null comparisons then "true"
+                     else join " andalso " comparisons
+        in
+          "(" ^ payload name avars ^ ", " ^ payload name bvars ^
+          ") => " ^ body
+        end
+    in
+      "(case (" ^ left ^ ", " ^ right ^ ") of " ^
+      join " | " (List.map clause (#constructors info)) ^
+      " | _ => false)"
+    end
+
+  fun equality_declarations context =
+    let
+      val types = rev (!(#types context))
+      fun one keyword (ty, mlty, name) =
+        keyword ^ " " ^ name ^ " (x : " ^ ml_ty_text mlty ^ ") " ^
+        "(y : " ^ ml_ty_text mlty ^ ") =\n  " ^
+        equality_body context ty "x" "y"
+    in
+      case types of
+        [] => ""
+      | first :: rest =>
+          join "\n" (one "fun" first :: List.map (one "and") rest) ^ "\n"
+    end
+
+  val prelude =
+    "fun refute_num_sub a b = if a < b then 0 else a - b\n" ^
+    "fun refute_nonzero who b =\n" ^
+    "  if b = 0 then raise Refute_EvalSML.Stuck who else b\n" ^
+    "fun refute_num_div a b = IntInf.div (a, refute_nonzero \"DIV 0\" b)\n" ^
+    "fun refute_num_mod a b = IntInf.mod (a, refute_nonzero \"MOD 0\" b)\n" ^
+    "fun refute_int_div a b =\n" ^
+    "  IntInf.div (a, refute_nonzero \"int_div 0\" b)\n" ^
+    "fun refute_int_mod a b =\n" ^
+    "  IntInf.mod (a, refute_nonzero \"int_mod 0\" b)\n" ^
+    "fun refute_int_quot a b =\n" ^
+    "  IntInf.quot (a, refute_nonzero \"int_quot 0\" b)\n" ^
+    "fun refute_int_rem a b =\n" ^
+    "  IntInf.rem (a, refute_nonzero \"int_rem 0\" b)\n" ^
+    "fun refute_pow a n =\n" ^
+    "  if n = 0 then 1 else if IntInf.mod (n, 2) = 0 then\n" ^
+    "    let val p = refute_pow a (IntInf.div (n, 2)) in p * p end\n" ^
+    "  else a * refute_pow a (n - 1)\n" ^
+    "fun refute_norm width value =\n" ^
+    "  IntInf.mod (value, IntInf.pow (2, width))\n" ^
+    "fun refute_signed width value =\n" ^
+    "  let val modulus = IntInf.pow (2, width)\n" ^
+    "      val normalized = IntInf.mod (value, modulus)\n" ^
+    "  in if normalized < IntInf.div (modulus, 2) then normalized\n" ^
+    "     else normalized - modulus end\n" ^
+    "fun refute_hd [] = raise Refute_EvalSML.Stuck \"HD []\"\n" ^
+    "  | refute_hd (x :: _) = x\n" ^
+    "fun refute_tl [] = raise Refute_EvalSML.Stuck \"TL []\"\n" ^
+    "  | refute_tl (_ :: xs) = xs\n" ^
+    "fun refute_the NONE = raise Refute_EvalSML.Stuck \"THE NONE\"\n" ^
+    "  | refute_the (SOME x) = x\n" ^
+    "fun refute_chr n =\n" ^
+    "  if n < 0 orelse n >= 256 then\n" ^
+    "    raise Refute_EvalSML.Stuck \"CHR out of range\"\n" ^
+    "  else Char.chr (IntInf.toInt n)\n" ^
+    "fun refute_nth xs n =\n" ^
+    "  (List.nth (xs, IntInf.toInt n)\n" ^
+    "   handle _ => raise Refute_EvalSML.Stuck \"EL\")\n" ^
+    "fun refute_foldr f z [] = z\n" ^
+    "  | refute_foldr f z (x :: xs) = f x (refute_foldr f z xs)\n" ^
+    "fun refute_foldl f z [] = z\n" ^
+    "  | refute_foldl f z (x :: xs) = refute_foldl f (f z x) xs\n" ^
+    "fun refute_all_distinct eq xs =\n" ^
+    "  let fun member x = List.exists (fn y => eq x y)\n" ^
+    "      fun loop [] = true\n" ^
+    "        | loop (x :: rest) = not (member x rest) andalso loop rest\n" ^
+    "  in loop xs end\n" ^
+    "fun refute_word_div width a b =\n" ^
+    "  refute_norm width (refute_num_div a b)\n" ^
+    "fun refute_word_mod width a b =\n" ^
+    "  refute_norm width (refute_num_mod a b)\n" ^
+    "fun refute_word_quot width a b =\n" ^
+    "  refute_norm width\n" ^
+    "    (refute_int_quot (refute_signed width a)\n" ^
+    "      (refute_signed width b))\n" ^
+    "fun refute_word_rem width a b =\n" ^
+    "  refute_norm width\n" ^
+    "    (refute_int_rem (refute_signed width a)\n" ^
+    "      (refute_signed width b))\n" ^
+    "fun refute_shift amount =\n" ^
+    "  (Word.fromInt (IntInf.toInt amount)\n" ^
+    "   handle _ => raise Refute_EvalSML.Stuck \"word shift\")\n" ^
+    "fun refute_word_lsl width value amount =\n" ^
+    "  refute_norm width (IntInf.<< (value, refute_shift amount))\n" ^
+    "fun refute_word_lsr width value amount =\n" ^
+    "  IntInf.~>> (refute_norm width value, refute_shift amount)\n" ^
+    "fun refute_word_asr width value amount =\n" ^
+    "  refute_norm width\n" ^
+    "    (IntInf.~>> (refute_signed width value, refute_shift amount))\n" ^
+    "fun refute_last [] = raise Refute_EvalSML.Stuck \"LAST []\"\n" ^
+    "  | refute_last [x] = x\n" ^
+    "  | refute_last (_ :: xs) = refute_last xs\n" ^
+    "fun refute_front [] = raise Refute_EvalSML.Stuck \"FRONT []\"\n" ^
+    "  | refute_front [_] = []\n" ^
+    "  | refute_front (x :: xs) = x :: refute_front xs\n"
+
+  fun lookup_definition ({definitions, ...} : context) constant =
+    List.find (fn (other, _, _) => same_term other constant) (!definitions)
+
+  fun lookup_pending ({pending, ...} : context) constant =
+    List.exists (same_term constant) (!pending)
+
+  fun equations_of theorem =
+    let
+      fun split tm =
+        let val (_, body) = boolSyntax.strip_forall tm
+        in
+          case Lib.total boolSyntax.dest_conj body of
+            SOME (left, right) => split left @ split right
+          | NONE => [body]
+        end
+    in
+      split (Thm.concl theorem)
+    end
+
+  fun theorem_for_typebase constant =
+    let
+      fun has_head theorem = List.exists (fn equation =>
+        case Lib.total boolSyntax.dest_eq equation of
+          SOME (left, _) =>
+            let val (head, _) = boolSyntax.strip_comb left
+            in Term.is_const head andalso Term.same_const head constant end
+        | NONE => false) (equations_of theorem)
+      fun from_info info =
+        let
+          val theorems =
+            (TypeBasePure.accessors_of info @ TypeBasePure.updates_of info @
+             [TypeBasePure.case_def_of info])
+            handle Feedback.HOL_ERR _ =>
+              TypeBasePure.accessors_of info @ TypeBasePure.updates_of info
+        in
+          List.find has_head theorems
+        end
+    in
+      case List.mapPartial from_info (TypeBase.elts ()) of
+        theorem :: _ => SOME theorem
+      | [] => NONE
+    end
+
+  fun theorem_for_compset constant =
+    let
+      val (thy, name) = kname constant
+      val item = List.find (fn ((entry_name, entry_thy), _) =>
+        entry_name = name andalso entry_thy = thy)
+        (computeLib.listItems (!computeLib.the_compset))
+    in
+      case item of
+        NONE => NONE
+      | SOME (_, transforms) =>
+          let
+            val rules = List.concat (List.map (fn transform =>
+              case transform of
+                clauses.RRules theorems => theorems
+              | clauses.Conversion _ => []) transforms)
+            val has_conversion = List.exists (fn transform =>
+              case transform of clauses.Conversion _ => true | _ => false)
+              transforms
+          in
+            if has_conversion then
+              reject ("compset conversion is not extractable for " ^
+                      kname_text (kname constant))
+            else if List.exists (not o null o Thm.hyp) rules then
+              reject ("conditional compset rule for " ^
+                      kname_text (kname constant))
+            else
+              case rules of
+                [] => NONE
+              | first :: rest =>
+                  SOME (List.foldl (fn (theorem, result) =>
+                    Thm.CONJ result theorem) first rest)
+          end
+    end
+
+  fun definition_theorem constant =
+    case DefnBase.lookup_userdef constant of
+      SOME {const, thm = DefnBase.STDEQNS theorem, ...} =>
+        let
+          val theta = Type.match_type (Term.type_of const)
+            (Term.type_of constant)
+        in
+          Thm.INST_TYPE theta theorem
+        end
+    | SOME {thm = DefnBase.OTHER _, ...} =>
+        reject ("non-equational definition for " ^
+                kname_text (kname constant))
+    | NONE =>
+        (case theorem_for_typebase constant of
+           SOME theorem => theorem
+         | NONE =>
+             (case theorem_for_compset constant of
+                SOME theorem => theorem
+              | NONE =>
+                  reject ("no extractable equations for constant " ^
+                          kname_text (kname constant))))
+
+  fun ensure_definition context constant =
+    case lookup_definition context constant of
+      SOME (_, name, _) => name
+    | NONE =>
+        if lookup_pending context constant then
+          let val (_, name) = kname constant
+          in
+            case List.find (fn (other, _, _) =>
+              Term.same_const other constant)
+              (!(#definitions context)) of
+              SOME (_, mlname, _) => mlname
+            | NONE => lower_name name
+          end
+        else
+          let
+            val (_, base) = kname constant
+            val name = fresh_const context base
+            val theorem = definition_theorem constant
+            val _ = #definitions context :=
+              (constant, name, theorem) :: !(#definitions context)
+            val _ = #pending context := constant :: !(#pending context)
+          in
+            name
+          end
+
+  fun variable_name variable = clean_name (#1 (Term.dest_var variable))
+
+  fun with_arity arguments arity build =
+    let
+      val supplied = length arguments
+      val used = Int.min (supplied, arity)
+      val initial = List.take (arguments, used)
+      val extra = List.drop (arguments, used)
+      val missing = arity - used
+      val variables = List.tabulate (missing, fn index =>
+        "refute_arg_" ^ Int.toString index)
+      val body = build (initial @ variables)
+      val abstraction = List.foldr (fn (variable, result) =>
+        "fn " ^ variable ^ " => " ^ result) body variables
+    in
+      List.foldl (fn (argument, result) =>
+        parens (result ^ " " ^ parens argument)) abstraction extra
+    end
+
+  fun constructor_expression context constructor arguments =
+    let
+      val (argument_types, _) =
+        boolSyntax.strip_fun (Term.type_of constructor)
+      val arity = length argument_types
+      fun custom name values =
+        case values of
+          [] => name
+        | [argument] => name ^ " " ^ parens argument
+        | _ => name ^ " " ^ parens (join ", " values)
+      fun build_custom name = with_arity arguments arity (custom name)
+    in
+      case kname constructor of
+        ("list", "NIL") =>
+          if is_char_list (#2 (boolSyntax.strip_fun
+            (Term.type_of constructor))) then quote "" else "[]"
+      | ("list", "CONS") => with_arity arguments 2 (fn values =>
+          case values of
+            [head, tail] =>
+              if is_char_list (#2 (boolSyntax.strip_fun
+                (Term.type_of constructor))) then
+                parens ("String.str " ^ parens head ^ " ^ " ^ tail)
+              else parens (head ^ " :: " ^ tail)
+          | _ => raise Fail "CONS")
+      | ("option", "NONE") => "NONE"
+      | ("option", "SOME") => with_arity arguments 1 (fn values =>
+          case values of [argument] => "SOME " ^ parens argument
+          | _ => raise Fail "SOME")
+      | ("pair", ",") => with_arity arguments 2 (fn values =>
+          parens (join ", " values))
+      | _ =>
+          (case constructor_for context constructor of
+             SOME (_, _, name) => build_custom name
+           | NONE => reject ("unknown constructor " ^
+                             kname_text (kname constructor)))
+    end
+
+  fun pattern context term =
+    if Term.is_var term then variable_name term
+    else if Literal.is_numeral term then
+      parens (Arbnum.toString (Literal.relaxed_dest_numeral term) ^
+              " : IntInf.int")
+    else if intSyntax.is_int_literal term then
+      let
+        val text = Arbint.toString (intSyntax.int_of_term term)
+        val decimal = String.substring (text, 0, String.size text - 1)
+        val sml_decimal = if String.isPrefix "-" decimal then
+          "~" ^ String.extract (decimal, 1, NONE) else decimal
+      in parens (sml_decimal ^ " : IntInf.int") end
+    else if Term.aconv term boolSyntax.T then "true"
+    else if Term.aconv term boolSyntax.F then "false"
+    else if Literal.is_char_lit term then
+      "#" ^ quote (String.str (Literal.dest_char_lit term))
+    else if Literal.is_string_lit term then
+      quote (Literal.relaxed_dest_string_lit term)
+    else if oneSyntax.is_one term then "()"
+    else
+      let
+        val (head, arguments) = boolSyntax.strip_comb term
+      in
+        if Term.is_const head andalso TypeBase.is_constructor head then
+          constructor_expression context head (List.map (pattern context)
+            arguments)
+        else
+          reject ("non-constructor pattern: " ^
+                  Parse.term_to_string term)
+      end
+
+  fun binary operator arguments = with_arity arguments 2 (fn values =>
+    case values of [left, right] => parens (left ^ " " ^ operator ^ " " ^
+      right) | _ => raise Fail "binary")
+
+  fun call name arity arguments = with_arity arguments arity (fn values =>
+    parens (name ^ " " ^ join " " (List.map parens values)))
+
+  fun record_primitive context head arguments =
+    let
+      fun find_field info =
+        let
+          val fields = TypeBasePure.fields_of info
+          fun matching (index, (_, {accessor, fupd, ...})) =
+            if Term.same_const accessor head then SOME (false, index)
+            else if Term.same_const fupd head then SOME (true, index)
+            else NONE
+        in
+          case List.mapPartial matching (Lib.enumerate 0 fields) of
+            match :: _ => SOME (info, fields, match)
+          | [] => NONE
+        end
+      val found = List.mapPartial find_field (TypeBase.elts ())
+    in
+      case found of
+        [] => NONE
+      | (info, fields, (is_update, selected)) :: _ =>
+          let
+            val generic_ty = TypeBasePure.ty_of info
+            val generic_head = if is_update then
+              #fupd (#2 (List.nth (fields, selected)))
+              else #accessor (#2 (List.nth (fields, selected)))
+            val theta = Type.match_type (Term.type_of generic_head)
+              (Term.type_of head)
+            val record_ty = Type.type_subst theta generic_ty
+            val _ = ignore (ensure_type context record_ty)
+            val datatype_info = valOf (lookup_datatype context record_ty)
+            val (_, field_types, constructor_name) =
+              hd (#constructors datatype_info)
+            val variables = List.tabulate (length field_types, fn index =>
+              "field_" ^ Int.toString index)
+            fun payload values =
+              case values of
+                [value] => value
+              | _ => parens (join ", " values)
+            fun record_pattern name =
+              constructor_name ^ " " ^ payload variables ^ " => " ^ name
+            fun accessor values =
+              case values of
+                [record] =>
+                  parens ("case " ^ record ^ " of " ^
+                    record_pattern (List.nth (variables, selected)))
+              | _ => raise Fail "record accessor"
+            fun updater values =
+              case values of
+                [update, record] =>
+                  let
+                    val new_fields = List.map (fn (index, variable) =>
+                      if index = selected then
+                        parens (parens update ^ " " ^ variable)
+                      else variable) (Lib.enumerate 0 variables)
+                    val rebuilt = constructor_name ^ " " ^
+                      payload new_fields
+                  in
+                    parens ("case " ^ record ^ " of " ^
+                      record_pattern rebuilt)
+                  end
+              | _ => raise Fail "record updater"
+          in
+            SOME (if is_update then with_arity arguments 2 updater
+                  else with_arity arguments 1 accessor)
+          end
+    end
+
+  fun word_result_width head arguments =
+    let
+      val result = #2 (boolSyntax.strip_fun (Term.type_of head))
+    in
+      if wordsSyntax.is_word_type result then word_width result
+      else
+        case arguments of
+          argument :: _ => word_width (Term.type_of argument)
+        | [] => reject ("word primitive has no concrete width: " ^
+                        kname_text (kname head))
+    end
+
+  fun primitive context head argument_terms arguments =
+    let
+      val key = kname head
+      fun num_binary operator = binary operator arguments
+      fun norm_binary operator =
+        let val width = word_result_width head argument_terms
+        in
+          with_arity arguments 2 (fn values =>
+            case values of
+              [left, right] =>
+                "refute_norm " ^ Int.toString width ^ " " ^
+                parens (left ^ " " ^ operator ^ " " ^ right)
+            | _ => raise Fail "norm_binary")
+        end
+      fun compare signed operator =
+        let val width = word_result_width head argument_terms
+            fun side value = if signed then
+              "refute_signed " ^ Int.toString width ^ " " ^ parens value
+              else value
+        in
+          with_arity arguments 2 (fn values =>
+            case values of [left, right] =>
+              parens (side left ^ " " ^ operator ^ " " ^ side right)
+            | _ => raise Fail "compare")
+        end
+      fun argument_types () = #1 (boolSyntax.strip_fun (Term.type_of head))
+      fun list_domain () = #1 (Type.dom_rng (Term.type_of head))
+      fun string_list () = is_char_list (list_domain ())
+      fun string_argument index =
+        is_char_list (List.nth (argument_types (), index))
+      fun list_eq_argument () =
+        let val element = listSyntax.dest_list_type (list_domain ())
+        in equality_name context element end
+    in
+      case record_primitive context head arguments of
+        SOME result => SOME result
+      | NONE =>
+      case key of
+        ("bool", "T") => SOME "true"
+      | ("bool", "ARB") =>
+          SOME "(raise Refute_EvalSML.Stuck \"ARB\")"
+      | ("bool", "F") => SOME "false"
+      | ("bool", "~") => SOME (call "not" 1 arguments)
+      | ("bool", "/\\") => SOME (binary "andalso" arguments)
+      | ("bool", "\\/") => SOME (binary "orelse" arguments)
+      | ("min", "==>") => SOME (with_arity arguments 2 (fn values =>
+          case values of [left, right] =>
+            parens ("not " ^ parens left ^ " orelse " ^ right)
+          | _ => raise Fail "implication"))
+      | ("min", "=") =>
+          let val compared = #1 (Type.dom_rng (Term.type_of head))
+          in SOME (call (equality_name context compared) 2 arguments) end
+      | ("num", "0") => SOME (num_literal Arbnum.zero)
+      | ("arithmetic", "ZERO") => SOME (num_literal Arbnum.zero)
+      | ("arithmetic", "NUMERAL") => SOME (call "(fn x => x)" 1 arguments)
+      | ("arithmetic", "BIT1") => SOME (with_arity arguments 1 (fn values =>
+          case values of [value] => parens ("2 * " ^ value ^ " + 1")
+          | _ => raise Fail "BIT1"))
+      | ("arithmetic", "BIT2") => SOME (with_arity arguments 1 (fn values =>
+          case values of [value] => parens ("2 * " ^ value ^ " + 2")
+          | _ => raise Fail "BIT2"))
+      | ("num", "SUC") => SOME (with_arity arguments 1 (fn values =>
+          case values of [value] => parens (value ^ " + 1")
+          | _ => raise Fail "SUC"))
+      | ("prim_rec", "PRE") => SOME (with_arity arguments 1 (fn values =>
+          case values of [value] =>
+            parens ("if " ^ value ^ " = 0 then 0 else " ^ value ^ " - 1")
+          | _ => raise Fail "PRE"))
+      | ("arithmetic", "+") => SOME (num_binary "+")
+      | ("arithmetic", "-") => SOME (call "refute_num_sub" 2 arguments)
+      | ("arithmetic", "*") => SOME (num_binary "*")
+      | ("arithmetic", "DIV") => SOME (call "refute_num_div" 2 arguments)
+      | ("arithmetic", "MOD") => SOME (call "refute_num_mod" 2 arguments)
+      | ("arithmetic", "EXP") => SOME (call "refute_pow" 2 arguments)
+      | ("prim_rec", "<") => SOME (num_binary "<")
+      | ("arithmetic", "<=") => SOME (num_binary "<=")
+      | ("arithmetic", ">") => SOME (num_binary ">")
+      | ("arithmetic", ">=") => SOME (num_binary ">=")
+      | ("arithmetic", "MIN") => SOME (with_arity arguments 2 (fn values =>
+          case values of [a, b] => parens ("if " ^ a ^ " < " ^ b ^
+            " then " ^ a ^ " else " ^ b)
+          | _ => raise Fail "MIN"))
+      | ("arithmetic", "MAX") => SOME (with_arity arguments 2 (fn values =>
+          case values of [a, b] => parens ("if " ^ a ^ " < " ^ b ^
+            " then " ^ b ^ " else " ^ a)
+          | _ => raise Fail "MAX"))
+      | ("arithmetic", "EVEN") => SOME (with_arity arguments 1 (fn values =>
+          case values of [a] => "IntInf.mod (" ^ a ^ ", 2) = 0"
+          | _ => raise Fail "EVEN"))
+      | ("arithmetic", "ODD") => SOME (with_arity arguments 1 (fn values =>
+          case values of [a] => "IntInf.mod (" ^ a ^ ", 2) = 1"
+          | _ => raise Fail "ODD"))
+      | ("arithmetic", "DIV2") => SOME (with_arity arguments 1 (fn values =>
+          case values of [a] => "IntInf.div (" ^ a ^ ", 2)"
+          | _ => raise Fail "DIV2"))
+      | ("integer", "int_neg") => SOME (with_arity arguments 1 (fn values =>
+          case values of [a] => parens ("~" ^ parens a)
+          | _ => raise Fail "int_neg"))
+      | ("integer", "int_add") => SOME (binary "+" arguments)
+      | ("integer", "int_sub") => SOME (binary "-" arguments)
+      | ("integer", "int_mul") => SOME (binary "*" arguments)
+      | ("integer", "int_exp") => SOME (call "refute_pow" 2 arguments)
+      | ("integer", "int_div") => SOME (call "refute_int_div" 2 arguments)
+      | ("integer", "int_mod") => SOME (call "refute_int_mod" 2 arguments)
+      | ("integer", "int_quot") => SOME (call "refute_int_quot" 2 arguments)
+      | ("integer", "int_rem") => SOME (call "refute_int_rem" 2 arguments)
+      | ("integer", "int_lt") => SOME (binary "<" arguments)
+      | ("integer", "int_le") => SOME (binary "<=" arguments)
+      | ("integer", "int_gt") => SOME (binary ">" arguments)
+      | ("integer", "int_ge") => SOME (binary ">=" arguments)
+      | ("integer", "ABS") => SOME (call "IntInf.abs" 1 arguments)
+      | ("integer", "int_min") => SOME (with_arity arguments 2 (fn values =>
+          case values of [a, b] => parens ("if " ^ a ^ " < " ^ b ^
+            " then " ^ a ^ " else " ^ b) | _ => raise Fail "int_min"))
+      | ("integer", "int_max") => SOME (with_arity arguments 2 (fn values =>
+          case values of [a, b] => parens ("if " ^ a ^ " < " ^ b ^
+            " then " ^ b ^ " else " ^ a) | _ => raise Fail "int_max"))
+      | ("integer", "int_of_num") => SOME (call "(fn x => x)" 1 arguments)
+      | ("integer", "Num") => SOME (call "IntInf.abs" 1 arguments)
+      | ("combin", "I") => SOME (call "(fn x => x)" 1 arguments)
+      | ("combin", "K") => SOME (with_arity arguments 2 (fn values =>
+          case values of [left, _] => left | _ => raise Fail "K"))
+      | ("combin", "o") => SOME (with_arity arguments 3 (fn values =>
+          case values of [f, g, x] => parens (f ^ " " ^ parens
+            (g ^ " " ^ parens x)) | _ => raise Fail "o"))
+      | ("pair", "FST") => SOME (call "#1" 1 arguments)
+      | ("pair", "SND") => SOME (call "#2" 1 arguments)
+      | ("pair", "CURRY") => SOME (with_arity arguments 3 (fn values =>
+          case values of [f, a, b] => f ^ " " ^ parens (a ^ ", " ^ b)
+          | _ => raise Fail "CURRY"))
+      | ("pair", "UNCURRY") => SOME (with_arity arguments 2 (fn values =>
+          case values of [f, pair] => f ^ " " ^ parens pair
+          | _ => raise Fail "UNCURRY"))
+      | ("list", "NULL") => SOME (with_arity arguments 1 (fn values =>
+          case values of [a] =>
+            if string_list () then "String.size " ^ parens a ^ " = 0"
+            else parens ("case " ^ a ^ " of [] => true | _ => false")
+          | _ => raise Fail "NULL"))
+      | ("list", "HD") => SOME (with_arity arguments 1 (fn values =>
+          case values of [a] =>
+            if string_list () then parens ("if String.size " ^ parens a ^
+              " = 0 then raise Refute_EvalSML.Stuck \"HD []\" " ^
+              "else String.sub (" ^ a ^ ", 0)")
+            else "refute_hd " ^ parens a
+          | _ => raise Fail "HD"))
+      | ("list", "TL") => SOME (with_arity arguments 1 (fn values =>
+          case values of [a] =>
+            if string_list () then parens ("if String.size " ^ parens a ^
+              " = 0 then raise Refute_EvalSML.Stuck \"TL []\" " ^
+              "else String.extract (" ^ a ^ ", 1, NONE)")
+            else "refute_tl " ^ parens a
+          | _ => raise Fail "TL"))
+      | ("list", "APPEND") =>
+          SOME (binary (if string_list () then "^" else "@") arguments)
+      | ("list", "FLAT") => SOME (call "List.concat" 1 arguments)
+      | ("list", "LENGTH") => SOME (with_arity arguments 1 (fn values =>
+          case values of [a] =>
+            "IntInf.fromInt (" ^
+            (if string_list () then "String.size " else "List.length ") ^
+            parens a ^ ")"
+          | _ => raise Fail "LENGTH"))
+      | ("list", "MAP") => SOME (with_arity arguments 2 (fn values =>
+          case values of [f, xs] =>
+            let
+              val input = if string_argument 1 then
+                "String.explode " ^ parens xs else xs
+              val mapped = "List.map " ^ parens f ^ " " ^ parens input
+              val result_ty = #2 (boolSyntax.strip_fun (Term.type_of head))
+            in
+              if is_char_list result_ty then
+                "String.implode " ^ parens mapped else mapped
+            end
+          | _ => raise Fail "MAP"))
+      | ("list", "FILTER") => SOME (with_arity arguments 2 (fn values =>
+          case values of [f, xs] =>
+            if string_argument 1 then
+              "String.implode (List.filter " ^ parens f ^
+              " (String.explode " ^ parens xs ^ "))"
+            else "List.filter " ^ parens f ^ " " ^ parens xs
+          | _ => raise Fail "FILTER"))
+      | ("list", "EVERY") => SOME (with_arity arguments 2 (fn values =>
+          case values of [f, xs] => "List.all " ^ parens f ^ " " ^
+            parens (if string_argument 1 then
+              "String.explode " ^ parens xs else xs)
+          | _ => raise Fail "EVERY"))
+      | ("list", "EXISTS") => SOME (with_arity arguments 2 (fn values =>
+          case values of [f, xs] => "List.exists " ^ parens f ^ " " ^
+            parens (if string_argument 1 then
+              "String.explode " ^ parens xs else xs)
+          | _ => raise Fail "EXISTS"))
+      | ("list", "FOLDR") => SOME (call "refute_foldr" 3 arguments)
+      | ("list", "FOLDL") => SOME (call "refute_foldl" 3 arguments)
+      | ("list", "REVERSE") =>
+          SOME (call (if string_list () then
+            "(String.implode o List.rev o String.explode)" else "List.rev")
+            1 arguments)
+      | ("list", "EL") => SOME (with_arity arguments 2 (fn values =>
+          case values of [n, xs] =>
+            if string_argument 1 then
+              "(String.sub (" ^ xs ^ ", IntInf.toInt " ^ n ^ ") " ^
+              "handle _ => raise Refute_EvalSML.Stuck \"EL\")"
+            else "refute_nth " ^ xs ^ " " ^ n
+          | _ => raise Fail "EL"))
+      | ("list", "LAST") => SOME (call "refute_last" 1 arguments)
+      | ("list", "FRONT") => SOME (call "refute_front" 1 arguments)
+      | ("list", "SNOC") => SOME (with_arity arguments 2 (fn values =>
+          case values of [x, xs] => xs ^ " @ [" ^ x ^ "]"
+          | _ => raise Fail "SNOC"))
+      | ("list", "ALL_DISTINCT") =>
+          SOME (call ("refute_all_distinct " ^ list_eq_argument ())
+            1 arguments)
+      | ("option", "THE") => SOME (call "refute_the" 1 arguments)
+      | ("option", "IS_SOME") => SOME (with_arity arguments 1 (fn values =>
+          case values of [a] => parens ("case " ^ a ^
+            " of SOME _ => true | NONE => false")
+          | _ => raise Fail "IS_SOME"))
+      | ("option", "IS_NONE") => SOME (with_arity arguments 1 (fn values =>
+          case values of [a] => parens ("case " ^ a ^
+            " of NONE => true | SOME _ => false")
+          | _ => raise Fail "IS_NONE"))
+      | ("option", "OPTION_MAP") => SOME (call "Option.map" 2 arguments)
+      | ("option", "OPTION_JOIN") => SOME (with_arity arguments 1 (fn values =>
+          case values of [value] => parens ("case " ^ value ^
+            " of NONE => NONE | SOME x => x")
+          | _ => raise Fail "OPTION_JOIN"))
+      | ("string", "CHR") => SOME (call "refute_chr" 1 arguments)
+      | ("string", "ORD") => SOME (with_arity arguments 1 (fn values =>
+          case values of [a] => "IntInf.fromInt (Char.ord " ^ parens a ^
+            ")" | _ => raise Fail "ORD"))
+      | ("string", "EXPLODE") => SOME (call "(fn x => x)" 1 arguments)
+      | ("string", "IMPLODE") => SOME (call "(fn x => x)" 1 arguments)
+      | ("string", "DEST_STRING") =>
+          SOME (with_arity arguments 1 (fn values =>
+            case values of [value] => parens ("if String.size " ^
+              parens value ^ " = 0 then NONE else SOME (String.sub (" ^
+              value ^ ", 0), String.extract (" ^ value ^ ", 1, NONE))")
+            | _ => raise Fail "DEST_STRING"))
+      | ("string", "string_lt") => SOME (binary "<" arguments)
+      | ("string", "string_le") => SOME (binary "<=" arguments)
+      | ("string", "string_gt") => SOME (binary ">" arguments)
+      | ("string", "string_ge") => SOME (binary ">=" arguments)
+      | ("string", "char_lt") => SOME (binary "<" arguments)
+      | ("string", "char_le") => SOME (binary "<=" arguments)
+      | ("string", "char_gt") => SOME (binary ">" arguments)
+      | ("string", "char_ge") => SOME (binary ">=" arguments)
+      | ("words", "n2w") =>
+          let val width = word_result_width head argument_terms
+          in SOME (call ("refute_norm " ^ Int.toString width) 1 arguments) end
+      | ("words", "w2n") => SOME (call "(fn x => x)" 1 arguments)
+      | ("words", "word_add") => SOME (norm_binary "+")
+      | ("words", "word_sub") => SOME (norm_binary "-")
+      | ("words", "word_mul") => SOME (norm_binary "*")
+      | ("words", "word_exp") =>
+          let val width = word_result_width head argument_terms
+          in SOME (with_arity arguments 2 (fn values =>
+            case values of [a, b] => "refute_norm " ^ Int.toString width ^
+              " (refute_pow " ^ a ^ " " ^ b ^ ")"
+            | _ => raise Fail "word_exp")) end
+      | ("words", "word_1comp") =>
+          let val width = word_result_width head argument_terms
+          in SOME (with_arity arguments 1 (fn values =>
+            case values of [a] => "refute_norm " ^ Int.toString width ^
+              " (IntInf.notb " ^ a ^ ")"
+            | _ => raise Fail "word_1comp")) end
+      | ("words", "word_2comp") =>
+          let val width = word_result_width head argument_terms
+          in SOME (with_arity arguments 1 (fn values =>
+            case values of [a] => "refute_norm " ^ Int.toString width ^
+              " (~" ^ parens a ^ ")"
+            | _ => raise Fail "word_2comp")) end
+      | ("words", "word_and") => SOME (with_arity arguments 2 (fn values =>
+          case values of [a, b] => "IntInf.andb (" ^ a ^ ", " ^ b ^ ")"
+          | _ => raise Fail "word_and"))
+      | ("words", "word_or") => SOME (with_arity arguments 2 (fn values =>
+          case values of [a, b] => "IntInf.orb (" ^ a ^ ", " ^ b ^ ")"
+          | _ => raise Fail "word_or"))
+      | ("words", "word_xor") => SOME (with_arity arguments 2 (fn values =>
+          case values of [a, b] => "IntInf.xorb (" ^ a ^ ", " ^ b ^ ")"
+          | _ => raise Fail "word_xor"))
+      | ("words", "word_div") =>
+          let val width = word_result_width head argument_terms
+          in SOME (call ("refute_word_div " ^ Int.toString width)
+            2 arguments) end
+      | ("words", "word_mod") =>
+          let val width = word_result_width head argument_terms
+          in SOME (call ("refute_word_mod " ^ Int.toString width)
+            2 arguments) end
+      | ("words", "word_quot") =>
+          let val width = word_result_width head argument_terms
+          in SOME (call ("refute_word_quot " ^ Int.toString width)
+            2 arguments) end
+      | ("words", "word_rem") =>
+          let val width = word_result_width head argument_terms
+          in SOME (call ("refute_word_rem " ^ Int.toString width)
+            2 arguments) end
+      | ("words", "word_lsl") =>
+          let val width = word_result_width head argument_terms
+          in SOME (call ("refute_word_lsl " ^ Int.toString width)
+            2 arguments) end
+      | ("words", "word_lsr") =>
+          let val width = word_result_width head argument_terms
+          in SOME (call ("refute_word_lsr " ^ Int.toString width)
+            2 arguments) end
+      | ("words", "word_asr") =>
+          let val width = word_result_width head argument_terms
+          in SOME (call ("refute_word_asr " ^ Int.toString width)
+            2 arguments) end
+      | ("words", "word_lsb") => SOME (with_arity arguments 1 (fn values =>
+          case values of [value] => "IntInf.mod (" ^ value ^ ", 2) = 1"
+          | _ => raise Fail "word_lsb"))
+      | ("words", "word_msb") =>
+          let val width = word_result_width head argument_terms
+          in SOME (with_arity arguments 1 (fn values =>
+            case values of [value] => "refute_signed " ^
+              Int.toString width ^ " " ^ value ^ " < 0"
+            | _ => raise Fail "word_msb")) end
+      | ("words", "word_lt") => SOME (compare true "<")
+      | ("words", "word_le") => SOME (compare true "<=")
+      | ("words", "word_gt") => SOME (compare true ">")
+      | ("words", "word_ge") => SOME (compare true ">=")
+      | ("words", "word_lo") => SOME (compare false "<")
+      | ("words", "word_ls") => SOME (compare false "<=")
+      | ("words", "word_hi") => SOME (compare false ">")
+      | ("words", "word_hs") => SOME (compare false ">=")
+      | ("words", "w2w") =>
+          let val width = word_result_width head argument_terms
+          in SOME (call ("refute_norm " ^ Int.toString width)
+            1 arguments) end
+      | ("words", "sw2sw") =>
+          let
+            val output_width = word_result_width head argument_terms
+            val input_width = case argument_terms of
+              argument :: _ => word_width (Term.type_of argument)
+            | [] => output_width
+          in
+            SOME (with_arity arguments 1 (fn values =>
+              case values of [value] => "refute_norm " ^
+                Int.toString output_width ^ " (refute_signed " ^
+                Int.toString input_width ^ " " ^ value ^ ")"
+              | _ => raise Fail "sw2sw"))
+          end
+      | ("integer_word", "i2w") =>
+          let val width = word_result_width head argument_terms
+          in SOME (call ("refute_norm " ^ Int.toString width)
+            1 arguments) end
+      | ("integer_word", "w2i") =>
+          let val width = case argument_terms of
+                argument :: _ => word_width (Term.type_of argument)
+              | [] => reject "w2i has no word argument"
+          in SOME (call ("refute_signed " ^ Int.toString width)
+            1 arguments) end
+      | _ => NONE
+    end
+
+  fun expression context term =
+    if Term.is_var term then variable_name term
+    else if boolSyntax.is_cond term then
+      let val (condition, left, right) = boolSyntax.dest_cond term
+      in
+        parens ("if " ^ expression context condition ^ " then " ^
+          expression context left ^ " else " ^ expression context right)
+      end
+    else if boolSyntax.is_let term then
+      let
+        val (groups, body) = pairSyntax.strip_anylet term
+        fun binding (left, right) =
+          "val " ^ pattern context left ^ " = " ^ expression context right
+        fun group bindings = join "\n" (List.map binding bindings)
+      in
+        parens ("let\n" ^ join "\n" (List.map group groups) ^ "\nin " ^
+                expression context body ^ "\nend")
+      end
+    else if Literal.is_numeral term then
+      num_literal (Literal.relaxed_dest_numeral term)
+    else if intSyntax.is_int_literal term then
+      int_literal (intSyntax.int_of_term term)
+    else if Literal.is_char_lit term then
+      "#" ^ quote (String.str (Literal.dest_char_lit term))
+    else if Literal.is_string_lit term then
+      quote (Literal.relaxed_dest_string_lit term)
+    else if wordsSyntax.is_word_literal term then
+      num_literal (wordsSyntax.dest_word_literal term)
+    else if pairSyntax.is_pair term then
+      let val (left, right) = pairSyntax.dest_pair term
+      in parens (expression context left ^ ", " ^ expression context right)
+      end
+    else if listSyntax.is_list term andalso not (is_char_list
+      (Term.type_of term)) then
+      let val (elements, _) = listSyntax.dest_list term
+      in "[" ^ join ", " (List.map (expression context) elements) ^ "]" end
+    else if pairSyntax.is_pabs term then
+      let val (argument, body) = pairSyntax.dest_pabs term
+      in parens ("fn " ^ pattern context argument ^ " => " ^
+                 expression context body)
+      end
+    else if Term.is_abs term then
+      let val (argument, body) = Term.dest_abs term
+      in parens ("fn " ^ variable_name argument ^ " => " ^
+                 expression context body)
+      end
+    else if oneSyntax.is_one term then "()"
+    else if TypeBase.is_record term then
+      let
+        val (record_ty, fields) = TypeBase.dest_record term
+        val constructor = hd (TypeBase.constructors_of record_ty)
+      in
+        constructor_expression context constructor
+          (List.map (expression context o #2) fields)
+      end
+    else if TypeBase.is_case term then
+      let
+        val (scrutinee, rows) = TypeBase.strip_case term
+        fun row (pat, rhs) = pattern context pat ^ " => " ^
+          expression context rhs
+        fun string_rows () =
+          let
+            fun classify (pat, rhs) =
+              let val (head, arguments) = boolSyntax.strip_comb pat
+              in
+                case kname head of
+                  ("list", "NIL") => SOME (true, arguments, rhs)
+                | ("list", "CONS") => SOME (false, arguments, rhs)
+                | _ => NONE
+              end
+            val classified = List.mapPartial classify rows
+            val nil_row = List.find #1 classified
+            val cons_row = List.find (not o #1) classified
+          in
+            case (nil_row, cons_row) of
+              (SOME (_, _, nil_rhs), SOME (_, variables, cons_rhs)) =>
+                (case variables of
+                   [head, tail] =>
+                     parens ("if String.size " ^
+                       parens (expression context scrutinee) ^
+                       " = 0 then " ^ expression context nil_rhs ^
+                       " else let val " ^ pattern context head ^
+                       " = String.sub (" ^ expression context scrutinee ^
+                       ", 0) val " ^ pattern context tail ^
+                       " = String.extract (" ^
+                       expression context scrutinee ^
+                       ", 1, NONE) in " ^ expression context cons_rhs ^
+                       " end")
+                 | _ => reject "malformed string case")
+            | _ => reject "malformed string case"
+          end
+      in
+        if is_char_list (Term.type_of scrutinee) then string_rows ()
+        else parens ("case " ^ expression context scrutinee ^ " of " ^
+          join " | " (List.map row rows))
+      end
+    else
+      let
+        val (head, argument_terms) = boolSyntax.strip_comb term
+        val arguments = List.map (expression context) argument_terms
+      in
+        if Term.is_const head then
+          (case primitive context head argument_terms arguments of
+             SOME result => result
+           | NONE =>
+               if TypeBase.is_constructor head then
+                 constructor_expression context head arguments
+               else
+                 let
+                   val name = ensure_definition context head
+                   val (domains, _) = boolSyntax.strip_fun (Term.type_of head)
+                   val base = if null domains then name ^ " ()" else name
+                 in
+                   List.foldl (fn (argument, result) =>
+                     parens (result ^ " " ^ parens argument)) base arguments
+                 end)
+        else
+          List.foldl (fn (argument, result) =>
+            parens (result ^ " " ^ parens argument))
+            (expression context head) arguments
+      end
+
+  fun check_pattern context pattern_term =
+    (ignore (pattern context pattern_term); ())
+
+  fun definition_clauses context (constant, name, theorem) =
+    let
+      fun clause equation =
+        let
+          val (left, right) = boolSyntax.dest_eq equation
+            handle Feedback.HOL_ERR _ =>
+              reject ("non-equational rule for " ^ kname_text (kname constant))
+          val (head, arguments) = boolSyntax.strip_comb left
+          val _ =
+            if Term.is_const head andalso Term.same_const head constant then ()
+            else reject ("rule has the wrong head for " ^
+                         kname_text (kname constant))
+          val _ = List.app (check_pattern context) arguments
+          val rhs = expression context right
+          val lhs = if null arguments then name ^ " ()"
+                    else name ^ " " ^
+                      join " " (List.map (parens o pattern context) arguments)
+        in
+          lhs ^ " = " ^ rhs
+        end
+      val clauses = List.map clause (equations_of theorem)
+      val _ =
+        if null clauses then reject ("definition has no clauses for " ^
+          kname_text (kname constant)) else ()
+    in
+      clauses
+    end
+
+  fun drain_definitions context =
+    let
+      fun loop processed =
+        case List.find (fn (constant, _, _) =>
+          not (List.exists (same_term constant) processed))
+          (rev (!(#definitions context))) of
+          NONE => ()
+        | SOME (item as (constant, _, _)) =>
+            (ignore (definition_clauses context item);
+             loop (constant :: processed))
+    in
+      loop []
+    end
+
+  fun definition_declarations context =
+    let
+      val definitions = rev (!(#definitions context))
+      fun one keyword item =
+        let val clauses = definition_clauses context item
+        in keyword ^ " " ^ hd clauses ^
+           String.concat (List.map (fn clause => "\n  | " ^ clause)
+             (tl clauses))
+        end
+    in
+      case definitions of
+        [] => ""
+      | first :: rest =>
+          join "\n" (one "fun" first :: List.map (one "and") rest) ^ "\n"
+    end
+
+  fun source_prefix context =
+    prelude ^ "\n" ^
+    String.concat (List.map (datatype_declaration context)
+      (datatype_groups context)) ^ "\n" ^
+    equality_declarations context ^ "\n"
+
+  fun compile_types types =
+    let
+      val context = new_context ()
+      val mltypes = List.map (ensure_type context) types
+      val _ = List.app (fn ty => ignore (equality_name context ty)) types
+      val source = source_prefix context
+      val ml_type =
+        case mltypes of
+          [mlty] => ml_ty_text mlty
+        | _ => ml_ty_text (MLTuple mltypes)
+      val equality =
+        case types of
+          [ty] => equality_name context ty
+        | _ => ""
+    in
+      {source = source, ml_type = ml_type, equality = equality}
+    end
+
+  fun compile_type ty = compile_types [ty]
+
+  fun extract_term term =
+    let
+      val context = new_context ()
+      val _ = ignore (ensure_type context (Term.type_of term))
+      val entry_expression = expression context term
+      val _ = drain_definitions context
+      val source = source_prefix context ^
+        definition_declarations context ^ "\nfun entry () = " ^
+        entry_expression ^ "\n"
+    in
+      {source = source, entry = "entry ()"}
+    end
+
+  val compile_term = extract_term
+  val extract_constant = extract_term
+
+  fun extract_tests (_ : Refute_Core.config) (_ : Refute_Eval.strategy)
+      (_ : Refute_Eval.plan list) : extraction =
+    raise NotExtractable
+      ["native generator and plan extraction is implemented by TASK_04"]
+end
