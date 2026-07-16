@@ -2011,6 +2011,21 @@ fun tactic_data_only () =
   not (!record_savestate_flag) andalso
   not (!export_thmdata_flag)
 
+(* Side-effectful recording must run even when tactic data is fresh.  Force
+   just the requested theory through record_one so that replacing its tactic
+   data and publishing the corresponding manifest hash remain atomic. *)
+fun record_thy_with_side_effects thy =
+  let
+    val scope = Theories [thy]
+    val plan = compute_record_plan true scope
+    val cfg = apply_record_option (Force true)
+      (apply_record_option (Scope scope) default_record_config)
+    val (ok,msg) = record_one cfg (#provenance plan)
+      (#source_hashes plan) [] thy
+  in
+    if ok then () else raise ERR "ttt_record_thy" msg
+  end
+
 fun ttt_record_thy thy =
   if mem thy ["min","bool"] then () else
   if tactic_data_only () then
@@ -2019,6 +2034,7 @@ fun ttt_record_thy thy =
        if mem thy (#up_to_date plan) then ()
        else raise ERR "ttt_record_thy" thy
      end)
+  else if !record_flag then record_thy_with_side_effects thy
   else record_thy_raw thy
 
 

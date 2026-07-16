@@ -399,6 +399,37 @@ val _ = check "one-theory tactic recording keeps the up-to-date fast path"
      result before restore ()
    end)
 
+val _ = check "one-theory side-effect recording updates the manifest"
+  (let
+     val saved = (!record_flag, !record_prove_flag,
+       !record_savestate_flag, !export_thmdata_flag)
+     val thmdata_dir = tactictoe_dir_of () ^ "/thmdata"
+     fun restore_flags () =
+       (record_flag := #1 saved;
+        record_prove_flag := #2 saved;
+        record_savestate_flag := #3 saved;
+        export_thmdata_flag := #4 saved)
+     fun restore_recording () =
+       (record_flag := true;
+        record_prove_flag := #2 saved;
+        record_savestate_flag := false;
+        export_thmdata_flag := true;
+        ttt_record_thy "ConseqConv";
+        restore_flags ();
+        aiLib.clean_dir thmdata_dir)
+     val result =
+       ((aiLib.clean_dir thmdata_dir;
+         record_flag := true;
+         record_prove_flag := false;
+         record_savestate_flag := false;
+         export_thmdata_flag := true;
+         ttt_record_thy "ConseqConv";
+         mlTacticData.exists_tacdata_thy "ConseqConv")
+        handle e => (restore_recording (); raise e))
+   in
+     result before restore_recording ()
+   end)
+
 val _ = check "one-theory theorem-data export bypasses tactic freshness"
   (let
      val saved = (!record_flag, !record_savestate_flag,
