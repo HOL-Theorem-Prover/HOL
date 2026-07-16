@@ -31,6 +31,7 @@ signature Refute_Eval = sig
 
   type compiled_test =
     { run : run_input -> run_result,
+      close : unit -> unit,
       last_stats : (string * int) list ref }
 
   datatype compile_result =

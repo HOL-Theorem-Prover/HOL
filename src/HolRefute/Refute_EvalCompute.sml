@@ -232,7 +232,7 @@ structure Refute_EvalCompute = struct
             | Continue => Exhausted {complete = complete}
         end
     in
-      {run = run, last_stats = last_stats}
+      {run = run, close = fn () => (), last_stats = last_stats}
     end
 
   fun bounded_size size = Int.max (0, size)
@@ -451,7 +451,7 @@ structure Refute_EvalCompute = struct
           result
         end
     in
-      {run = run, last_stats = last_stats}
+      {run = run, close = fn () => (), last_stats = last_stats}
     end
 
   (* Compute-only scaffolding for the cross-substrate stream tests.  One

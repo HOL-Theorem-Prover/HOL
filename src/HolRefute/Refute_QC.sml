@@ -341,7 +341,9 @@ structure Refute_QC = struct
           SelectionFailed reasons => Refute_Core.Unknown reasons
         | Selected (substrate, compiled) =>
             let
-              val entries = schedule instances (#size (#qc config))
+              fun selected_body () =
+                let
+                  val entries = schedule instances (#size (#qc config))
               val complete = ref
                 (case strategy of
                      Exhaustive => not (null entries)
@@ -355,13 +357,9 @@ structure Refute_QC = struct
                 (if !discarded = 0 then []
                  else [("discarded", !discarded)]) @
                 [("size", size), ("card", card), ("msec", msec)]
-              fun one (card, size) genuine_only ignored =
+              fun one (card, size) draws genuine_only ignored =
                 let
                   val start = Time.now ()
-                  val draws =
-                    if is_random strategy then
-                      bounded_size (#iterations (#qc config))
-                    else 0
                   val result = #run compiled
                     { genuine_only = genuine_only,
                       card = card,
@@ -386,35 +384,57 @@ structure Refute_QC = struct
                             counterexamples = counterexamples,
                             discarded = discarded,
                             retry = fn go => fn ig =>
-                              one (card, size) go ig }
+                              one (card, size) draws go ig }
                           { env = env,
                             genuine = genuine,
                             genuine_only = genuine_only,
                             ignored = ignored }
+                end
+              fun run_entry entry =
+                let
+                  val total = bounded_size (#iterations (#qc config))
+                  fun chunks 0 = ()
+                    | chunks remaining =
+                        if not (null (!counterexamples)) then ()
+                        else
+                          let
+                            val draws = Int.min (1024, remaining)
+                            val reasons_before = length (!gave_up)
+                            val _ = one entry draws
+                              (#genuine_only config) []
+                          in
+                            if length (!gave_up) > reasons_before then ()
+                            else chunks (remaining - draws)
+                          end
+                in
+                  if is_random strategy then
+                    if total = 0 then ()
+                    else if substrate = "cv" then chunks total
+                    else one entry total (#genuine_only config) []
+                  else one entry 0 (#genuine_only config) []
                 end
               fun search [] = ()
                 | search (entry :: rest) =
                     if length (!counterexamples) >=
                       Int.max (1, #max_counterexamples config)
                     then ()
-                    else
-                      let
-                        val draws = #iterations (#qc config)
-                        val _ =
-                          if is_random strategy andalso draws <= 0 then ()
-                          else one entry (#genuine_only config) []
-                      in
-                        search rest
-                      end
+                    else (run_entry entry; search rest)
               val _ = search entries
               val generic_reason =
                 if is_random strategy then "random search exhausted"
                 else "search space not exhausted"
             in
-              if not (null (!counterexamples)) then
-                Refute_Core.Counterexample (rev (!counterexamples))
-              else if !complete then Refute_Core.NoCounterexample
-              else Refute_Core.Unknown (generic_reason :: !gave_up)
+                  if not (null (!counterexamples)) then
+                    Refute_Core.Counterexample (rev (!counterexamples))
+                  else if !complete then Refute_Core.NoCounterexample
+                  else Refute_Core.Unknown (generic_reason :: !gave_up)
+                end
+              val body_result = Exn.capture selected_body ()
+              val close_result = Exn.capture (#close compiled) ()
+            in
+              case close_result of
+                  Exn.Res _ => Exn.release body_result
+                | Exn.Exn error => raise error
             end
     end
 
@@ -433,6 +453,7 @@ structure Refute_QC = struct
 
   fun register_backends () =
     (Refute_EvalCompute.register_substrate ();
+     Refute_EvalCv.register_substrate ();
      Refute_Core.register_backend exhaustive_backend;
      Refute_Core.register_backend random_backend)
 

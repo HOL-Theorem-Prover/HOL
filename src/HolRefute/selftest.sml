@@ -882,14 +882,15 @@ val _ = check_plan plan_has_abstract_guard
 
 val _ = tprint "Refute QC exhaustive backend"
 
-fun compute_is_first_substrate () =
+fun cv_precedes_compute () =
   case get_substrates () of
-      substrate :: _ =>
-        #name substrate = "compute" andalso #priority substrate = 30
-    | [] => false
+      cv :: compute :: _ =>
+        #name cv = "cv" andalso #priority cv = 20 andalso
+        #name compute = "compute" andalso #priority compute = 30
+    | _ => false
 
-val _ = require_msg (check_result compute_is_first_substrate) (fn () =>
-  "the compute substrate was not registered at priority 30")
+val _ = require_msg (check_result cv_precedes_compute) (fn () =>
+  "the cv and compute substrates had the wrong registry order")
   (fn () => ()) ()
 
 fun dummy_compile _ _ _ = Inapplicable ["dummy substrate"]
@@ -937,7 +938,7 @@ fun reverse_counterexample () =
     val result = exhaustive config ``REVERSE (xs : num list) = xs``
   in
     (case result of
-         Counterexample (cex :: _) => #substrate cex = "compute"
+         Counterexample (cex :: _) => #substrate cex = "cv"
        | _ => false) andalso
     has_binding (fn (_, value) =>
       case Lib.total listSyntax.dest_list value of
@@ -1006,21 +1007,20 @@ val _ = require_msg
   "NoGenerator was not converted to compile-time Inapplicable")
   (fn () => ()) ()
 
-fun explicit_unavailable_is_unknown strategy =
+fun explicit_cv_is_available strategy =
   let
     val config = upd_substrate Cv default_config
     val instances = qc_instances config ``T``
   in
     case strategy_run strategy config instances of
-        Unknown reasons =>
-          List.exists (String.isSubstring "unavailable") reasons
+        NoCounterexample => true
       | _ => false
   end
 
 val _ = require_msg (check_result (fn () =>
-  explicit_unavailable_is_unknown Exhaustive andalso
-  explicit_unavailable_is_unknown (Random {seed = 1}))) (fn () =>
-  "an explicit unavailable substrate did not produce Unknown")
+  explicit_cv_is_available Exhaustive andalso
+  explicit_cv_is_available (Random {seed = 1}))) (fn () =>
+  "the explicit cv substrate was unavailable for a backend")
   (fn () => ()) ()
 
 fun gave_up_reason_is_plumbed () =
@@ -1029,7 +1029,8 @@ fun gave_up_reason_is_plumbed () =
       #name substrate = "compute") (get_substrates ()))
     val last_stats = ref []
     val test : compiled_test =
-      {run = fn _ => GaveUp "selftest gave up", last_stats = last_stats}
+      {run = fn _ => GaveUp "selftest gave up", close = fn () => (),
+       last_stats = last_stats}
     val replacement : substrate =
       {name = "compute", priority = 30,
        compile = fn _ => fn _ => fn _ => Compiled test}
@@ -1118,7 +1119,7 @@ fun random_is_registered () =
 fun random_reverse_counterexample () =
   case random random_config ``REVERSE (xs : num list) = xs`` of
       Counterexample (cex :: _) =>
-        #substrate cex = "compute" andalso
+        #substrate cex = "cv" andalso
         Option.isSome (lookup_stat "msec" (#stats cex))
     | _ => false
 
@@ -1405,6 +1406,156 @@ val _ =
        (fn () => ()) ();
      require_msg (check_result out_of_fragment_is_clean) (fn () =>
        "cv accepted an out-of-fragment type or leaked an artifact")
+       (fn () => ()) ())
+  else ()
+
+fun first_cex_bindings (Counterexample (cex :: _)) =
+      SOME (#bindings cex)
+  | first_cex_bindings _ = NONE
+
+fun cv_result strategy choice goal =
+  let
+    val config = upd_substrate choice
+      (upd_iterations 100 (upd_size 3 default_config))
+  in
+    case preprocess config (qc_problem goal) of
+        Preprocessed instances => strategy_run strategy config instances
+      | NotExecutable reasons => Unknown reasons
+  end
+
+fun cv_agrees strategy goal =
+  let
+    val baseline = snapshot ()
+    val compute = cv_result strategy Compute goal
+    val cv = cv_result strategy Cv goal
+  in
+    (case (first_cex_bindings compute, first_cex_bindings cv) of
+         (SOME left, SOME right) => same_bindings left right
+       | (NONE, NONE) =>
+           (case (compute, cv) of
+                (NoCounterexample, NoCounterexample) => true
+              | (Unknown _, Unknown _) => true
+              | _ => false)
+       | _ => false) andalso same_snapshot baseline (snapshot ())
+  end
+
+fun explicit_cv_smoke () =
+  let
+    val goal = ``REVERSE (xs : num list) = xs``
+  in
+    cv_agrees Exhaustive goal andalso
+    cv_agrees (Random {seed = 1}) goal
+  end
+
+val _ = tprint "Refute cv substrate smoke"
+val _ = require_msg (check_result explicit_cv_smoke) (fn () =>
+  "the cv substrate disagreed with compute or leaked theory state")
+  (fn () => ()) ()
+
+fun cv_matrix_agrees () =
+  let
+    val goals =
+      [("list", ``REVERSE (xs : num list) = xs``),
+       ("table", ``(x : refute$rf3) = rf3_1``),
+       ("synthesised", ``(t : rg_tree) = RGTip n ==> F``)]
+    fun check (_, goal) strategy = cv_agrees strategy goal
+    fun strategies goal =
+      check goal Exhaustive andalso
+      List.all (fn seed => check goal (Random {seed = seed}))
+        [1, 2, 3]
+  in
+    List.all strategies goals
+  end
+
+fun cv_stream_resumes () =
+  let
+    val variable = Term.mk_var ("x", ``:num``)
+    val plan = Gen
+      (variable, Test (boolSyntax.mk_neg
+        (boolSyntax.mk_eq (variable, ``2803 : num``))))
+    fun run compile =
+      case compile default_config (Random {seed = 1}) [plan] of
+          Inapplicable reasons =>
+            raise Fail (String.concatWith "; " reasons)
+        | Compiled test =>
+            let
+              val first = #run test
+                {genuine_only = true, card = 1, size = 5000,
+                 draws = 1024, ignored = []}
+              val middle = #run test
+                {genuine_only = true, card = 1, size = 5000,
+                 draws = 75, ignored = []}
+              val last = #run test
+                {genuine_only = true, card = 1, size = 5000,
+                 draws = 1, ignored = []}
+              val _ = #close test ()
+            in
+              (first, middle, last)
+            end
+    val baseline = snapshot ()
+    val (compute_first, compute_middle, compute_last) =
+      run Refute_EvalCompute.compile
+    val (cv_first, cv_middle, cv_last) = run Refute_EvalCv.compile
+    fun is_empty (Exhausted _) = true | is_empty _ = false
+    fun value (CexFound {env = [(_, tm)], ...}) = SOME tm
+      | value _ = NONE
+  in
+    is_empty compute_first andalso is_empty cv_first andalso
+    is_empty compute_middle andalso is_empty cv_middle andalso
+    (case (value compute_last, value cv_last) of
+         (SOME left, SOME right) =>
+           Term.aconv left ``2803 : num`` andalso Term.aconv left right
+       | _ => false) andalso same_snapshot baseline (snapshot ())
+  end
+
+fun cv_partial_is_clean () =
+  let
+    val baseline = snapshot ()
+    val variable = Term.mk_var ("xs", ``:num list``)
+    val plan = Gen
+      (variable, Test ``HD (xs : num list) = HD xs``)
+    val rejected =
+      case Refute_EvalCv.compile default_config Exhaustive [plan] of
+          Inapplicable reasons =>
+            List.exists (fn reason =>
+              String.isSubstring "cv: precondition for HD" reason) reasons
+        | Compiled test => (#close test (); false)
+  in
+    rejected andalso same_snapshot baseline (snapshot ())
+  end
+
+fun cv_racing_is_clean () =
+  let
+    val baseline = snapshot ()
+    val config = upd_substrate Cv
+      (upd_iterations 20
+        (upd_size 2
+          (upd_sequential false
+            (upd_backends (SOME ["exhaustive", "random"])
+              default_config))))
+    val result = Refute.refute config ``(b : bool)``
+    val certified =
+      case result of
+          Refute.Counterexample ({cert = SOME _, ...} :: _) => true
+        | _ => false
+  in
+    certified andalso same_snapshot baseline (snapshot ())
+  end
+
+val _ =
+  if selftest_level >= 2 then
+    (tprint "Refute cv substrate conformance";
+     require_msg (check_result cv_matrix_agrees) (fn () =>
+       "cv disagreed with compute on the corpus slice")
+       (fn () => ()) ();
+     require_msg (check_result cv_stream_resumes) (fn () =>
+       "the cv random stream did not resume across chunks")
+       (fn () => ()) ();
+     require_msg (check_result cv_partial_is_clean) (fn () =>
+       "cv accepted a partial property or leaked theory state")
+       (fn () => ()) ();
+     require_msg (check_result cv_racing_is_clean) (fn () =>
+       "the racing cv run failed or leaked theory state")
        (fn () => ()) ())
   else ()
 

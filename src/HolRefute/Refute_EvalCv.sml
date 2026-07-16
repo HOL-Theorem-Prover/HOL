@@ -964,4 +964,660 @@ structure Refute_EvalCv = struct
     handle Unsupported reason => CvInapplicable ["cv: " ^ reason]
          | Feedback.HOL_ERR error =>
              CvInapplicable [hol_error_reason error]
+
+  exception Precondition of string
+
+  fun term_member tm = List.exists (fn other => Term.aconv tm other)
+
+  fun distinct_terms terms =
+    rev (List.foldl (fn (tm, result) =>
+      if term_member tm result then result else tm :: result) [] terms)
+
+  fun distinct_types types =
+    rev (List.foldl (fn (ty, result) =>
+      if List.exists (same_type ty) result then result else ty :: result)
+      [] types)
+
+  fun plan_variables plan =
+    let
+      fun collect current variables =
+        case current of
+            Refute_Eval.Test _ => variables
+          | Refute_Eval.Gen (variable, next) =>
+              collect next (variable :: variables)
+          | Refute_Eval.Bind (variable, _, fallback, next) =>
+              collect next
+                (case fallback of
+                     NONE => variable :: variables
+                   | SOME alternative =>
+                       collect alternative (variable :: variables))
+          | Refute_Eval.Split (_, branches) =>
+              List.foldl (fn ((_, _, next), result) =>
+                collect next result) variables branches
+          | Refute_Eval.Guard (_, next) => collect next variables
+          | Refute_Eval.Prune => variables
+    in
+      distinct_terms (collect plan [])
+    end
+
+  fun plan_generator_types plan =
+    let
+      fun collect current types =
+        case current of
+            Refute_Eval.Test _ => types
+          | Refute_Eval.Gen (variable, next) =>
+              collect next (Term.type_of variable :: types)
+          | Refute_Eval.Bind (_, _, fallback, next) =>
+              collect next
+                (case fallback of
+                     NONE => types
+                   | SOME alternative => collect alternative types)
+          | Refute_Eval.Split (_, branches) =>
+              List.foldl (fn ((_, _, next), result) =>
+                collect next result) types branches
+          | Refute_Eval.Guard (_, next) => collect next types
+          | Refute_Eval.Prune => types
+    in
+      distinct_types (rev (collect plan []))
+    end
+
+  fun validate_plan_shapes plan =
+    let
+      fun check current =
+        case current of
+            Refute_Eval.Test _ => ()
+          | Refute_Eval.Gen (_, next) => check next
+          | Refute_Eval.Bind (_, _, fallback, next) =>
+              ((case fallback of NONE => () | SOME other => check other);
+               check next)
+          | Refute_Eval.Split (_, branches) =>
+              List.app (check o #3) branches
+          | Refute_Eval.Guard (_, next) => check next
+          | Refute_Eval.Prune => ()
+    in
+      check plan
+    end
+
+  fun plan_payloads plan =
+    let
+      fun collect current terms =
+        case current of
+            Refute_Eval.Test tm => tm :: terms
+          | Refute_Eval.Gen (_, next) => collect next terms
+          | Refute_Eval.Bind (_, tm, fallback, next) =>
+              collect next
+                (tm :: (case fallback of
+                    NONE => terms
+                  | SOME alternative => collect alternative terms))
+          | Refute_Eval.Split (tm, branches) =>
+              List.foldl (fn ((_, _, next), result) =>
+                collect next result) (tm :: terms) branches
+          | Refute_Eval.Guard (tm, next) => collect next (tm :: terms)
+          | Refute_Eval.Prune => terms
+    in
+      collect plan []
+    end
+
+  fun constants_in tm =
+    if Term.is_const tm then [tm]
+    else if Term.is_comb tm then
+      let val (function, argument) = Term.dest_comb tm
+      in constants_in function @ constants_in argument end
+    else if Term.is_abs tm then constants_in (#2 (Term.dest_abs tm))
+    else []
+
+  val partial_names =
+    ["HD", "TL", "EL", "THE", "OUTL", "OUTR", "LAST", "FRONT"]
+
+  fun partial_constant plans =
+    let
+      val constants = List.concat
+        (List.map (List.concat o List.map constants_in o plan_payloads)
+          plans)
+      fun is_partial tm =
+        List.exists (fn name => #1 (Term.dest_const tm) = name)
+          partial_names
+    in
+      Option.map (fn tm => #1 (Term.dest_const tm))
+        (List.find is_partial constants)
+    end
+
+  fun env_type [] = Term.type_of boolSyntax.T
+    | env_type [variable] = Term.type_of variable
+    | env_type (variable :: rest) =
+        pairSyntax.mk_prod (Term.type_of variable, env_type rest)
+
+  fun lookup_env variable env =
+    case List.find (fn (old, _) => Term.aconv old variable) env of
+        SOME (_, value) => value
+      | NONE => raise Unsupported
+          ("unbound result variable " ^ Parse.term_to_string variable)
+
+  fun env_term [] _ = boolSyntax.T
+    | env_term [variable] env = lookup_env variable env
+    | env_term (variable :: rest) env =
+        pairSyntax.mk_pair (lookup_env variable env, env_term rest env)
+
+  fun decode_env [] _ = []
+    | decode_env [variable] value = [(variable, value)]
+    | decode_env (variable :: rest) value =
+        let val (head, tail) = pairSyntax.dest_pair value
+        in (variable, head) :: decode_env rest tail end
+
+  fun substitute env tm =
+    Term.subst (List.map (fn (redex, residue) =>
+      {redex = redex, residue = residue}) env) tm
+
+  fun env_parameters env =
+    distinct_terms (List.map #2 (rev env))
+
+  fun result_type variables =
+    pairSyntax.mk_prod
+      (numSyntax.num, optionSyntax.mk_option (env_type variables))
+
+  fun no_hit variables counter =
+    pairSyntax.mk_pair
+      (counter, optionSyntax.mk_none (env_type variables))
+
+  fun hit variables counter env =
+    pairSyntax.mk_pair
+      (counter, optionSyntax.mk_some (env_term variables env))
+
+  fun named_variable name ty = Term.mk_var (name, ty)
+
+  fun definition_head definition =
+    let
+      val equation = hd (CONJUNCTS definition)
+      val (left, _) = boolSyntax.dest_eq (Thm.concl (SPEC_ALL equation))
+    in
+      #1 (boolSyntax.strip_comb left)
+    end
+
+  fun translate_checked prefix payloads definition =
+    (cv_transLib.cv_auto_trans definition
+     handle Feedback.HOL_ERR error =>
+       if String.isSubstring "Precondition generated"
+            (Feedback.message_of error)
+       then
+         let
+           val fallback =
+             case partial_constant
+               [List.foldr Refute_Eval.Guard Refute_Eval.Prune payloads] of
+                 SOME name => name
+               | NONE => prefix
+         in
+           raise Precondition fallback
+         end
+       else raise Feedback.HOL_ERR error)
+
+  fun generator_for ty generators =
+    case List.find (fn generator => same_type (#ty generator) ty)
+        generators of
+        SOME generator => generator
+      | NONE => raise Fail "Refute cv generator lookup failed"
+
+  fun make_option_case option_tm none_body some_variable some_body =
+    TypeBase.mk_case
+      (option_tm,
+       [(optionSyntax.mk_none (Term.type_of some_variable), none_body),
+        (optionSyntax.mk_some some_variable, some_body)])
+
+  fun make_split scrutinee branches env miss build =
+    let
+      val scrutinee' = substitute env scrutinee
+      val ty = Term.type_of scrutinee'
+      val constructors = TypeBase.constructors_of ty
+      val raw_case_constant = TypeBase.case_const_of ty
+      val raw_scrutinee_ty = hd (#1 (boolSyntax.strip_fun
+        (Term.type_of raw_case_constant)))
+      val case_constant = Term.inst
+        (Type.match_type raw_scrutinee_ty ty) raw_case_constant
+      val (case_domains, _) = boolSyntax.strip_fun
+        (Term.type_of case_constant)
+      val branch_types = List.take
+        (tl case_domains, length constructors)
+      fun branch_function (constructor, branch_ty) =
+        let
+          val stem = fresh_prefix ()
+          val (argument_types, _) = boolSyntax.strip_fun branch_ty
+          val arguments = map_index (fn (index, arg_ty) =>
+            named_variable
+              (stem ^ "case_" ^ Int.toString index) arg_ty)
+            argument_types
+          val matching = List.find (fn (expected, variables, _) =>
+            Term.same_const expected constructor andalso
+            length variables = length arguments) branches
+          val body =
+            case matching of
+                NONE => miss
+              | SOME (_, variables, next) =>
+                  build next
+                    (ListPair.zip (variables, arguments) @ env)
+        in
+          Term.list_mk_abs (arguments, body)
+        end
+      val functions = ListPair.mapEq branch_function
+        (constructors, branch_types)
+    in
+      HolKernel.list_mk_icomb case_constant
+        (scrutinee' :: functions)
+    end
+
+  type loop_program =
+    {variables : term list, result_ty : hol_type,
+     application : int -> int -> term}
+
+  fun define_exhaustive prefix payloads plan generators =
+    let
+      val variables = plan_variables plan
+      val result_ty = optionSyntax.mk_option (env_type variables)
+      val size = named_variable (prefix ^ "size") numSyntax.num
+
+      fun build current env skip =
+        case current of
+            Refute_Eval.Prune => no_hit variables skip
+          | Refute_Eval.Test tm =>
+              boolSyntax.mk_cond
+                (substitute env tm, no_hit variables skip,
+                 boolSyntax.mk_cond
+                   (boolSyntax.mk_eq (skip, numeral 0),
+                    hit variables (numeral 0) env,
+                    no_hit variables
+                      (numSyntax.mk_minus (skip, numeral 1))))
+          | Refute_Eval.Guard (tm, next) =>
+              boolSyntax.mk_cond
+                (substitute env tm, build next env skip,
+                 no_hit variables skip)
+          | Refute_Eval.Bind (variable, tm, _, next) =>
+              let
+                val value = named_variable
+                  (fresh_prefix () ^ "bound") (Term.type_of variable)
+              in
+                boolSyntax.mk_let
+                  (Term.mk_abs
+                    (value, build next ((variable, value) :: env) skip),
+                   substitute env tm)
+              end
+          | Refute_Eval.Split (scrutinee, branches) =>
+              make_split scrutinee branches env (no_hit variables skip)
+                (fn next => fn branch_env =>
+                  build next branch_env skip)
+          | Refute_Eval.Gen (variable, next) =>
+              let
+                val stem = fresh_prefix ()
+                val ty = Term.type_of variable
+                val list_ty = listSyntax.mk_list_type ty
+                val head = named_variable (stem ^ "head") ty
+                val tail = named_variable (stem ^ "tail") list_ty
+                val current_parameters = env_parameters env
+                val helper_ty = function_type
+                  (list_ty :: numSyntax.num ::
+                   List.map Term.type_of current_parameters @
+                   [numSyntax.num], result_type variables)
+                val helper = named_variable (stem ^ "find") helper_ty
+                fun helper_call list counter =
+                  Term.list_mk_comb
+                    (helper, list :: size ::
+                     current_parameters @ [counter])
+                val nil_lhs = helper_call
+                  (listSyntax.mk_list ([], ty)) skip
+                val nil_eq = boolSyntax.mk_eq
+                  (nil_lhs, no_hit variables skip)
+                val attempt = build next ((variable, head) :: env) skip
+                val remaining = named_variable
+                  (stem ^ "remaining") numSyntax.num
+                val found = named_variable
+                  (stem ^ "found") (env_type variables)
+                val recurse = helper_call tail remaining
+                val return_found = pairSyntax.mk_pair
+                  (remaining, optionSyntax.mk_some found)
+                val after_attempt = pairSyntax.mk_plet
+                  (pairSyntax.mk_pair
+                    (remaining,
+                     named_variable (stem ^ "answer")
+                       (optionSyntax.mk_option (env_type variables))),
+                   attempt,
+                   let
+                     val answer = named_variable
+                       (stem ^ "answer")
+                       (optionSyntax.mk_option (env_type variables))
+                   in
+                     make_option_case answer recurse found return_found
+                   end)
+                val cons_lhs = helper_call
+                  (listSyntax.mk_cons (head, tail)) skip
+                val definition = TotalDefn.Define
+                  [HOLPP.ANTIQUOTE
+                    (boolSyntax.mk_conj
+                      (nil_eq, boolSyntax.mk_eq (cons_lhs, after_attempt)))]
+                val _ = translate_checked prefix payloads definition
+                val helper_constant = definition_head definition
+                val exhaustive = #exhaustive
+                  (generator_for ty generators)
+              in
+                Term.list_mk_comb
+                  (helper_constant,
+                   Term.mk_comb (exhaustive, size) :: size ::
+                   current_parameters @ [skip])
+              end
+
+      val skip = named_variable (prefix ^ "skip") numSyntax.num
+      val loop_var = named_variable (prefix ^ "loop")
+        (function_type
+          ([numSyntax.num, numSyntax.num], result_ty))
+      val body = pairSyntax.mk_snd (build plan [] skip)
+      val loop_definition = TotalDefn.Define
+        [HOLPP.ANTIQUOTE
+          (boolSyntax.mk_eq
+            (Term.list_mk_comb (loop_var, [size, skip]), body))]
+      val _ = translate_checked prefix payloads loop_definition
+      val loop = definition_head loop_definition
+      fun application size_value skip_value =
+        Term.list_mk_comb
+          (loop, [numeral size_value, numeral skip_value])
+    in
+      {variables = variables, result_ty = result_ty,
+       application = application}
+    end
+
+  fun define_random prefix payloads plan generators =
+    let
+      val variables = plan_variables plan
+      val value_ty = env_type variables
+      val option_ty = optionSyntax.mk_option value_ty
+      val final_ty = sumSyntax.mk_sum
+        (numSyntax.num, pairSyntax.mk_prod (numSyntax.num, value_ty))
+      val size = named_variable (prefix ^ "size") numSyntax.num
+      val loop_var = named_variable (prefix ^ "loop")
+        (function_type
+          ([numSyntax.num, numSyntax.num, numSyntax.num], final_ty))
+
+      fun build current env state =
+        case current of
+            Refute_Eval.Prune => no_hit variables state
+          | Refute_Eval.Test tm =>
+              boolSyntax.mk_cond
+                (substitute env tm, no_hit variables state,
+                 hit variables state env)
+          | Refute_Eval.Guard (tm, next) =>
+              boolSyntax.mk_cond
+                (substitute env tm, build next env state,
+                 no_hit variables state)
+          | Refute_Eval.Bind (variable, tm, _, next) =>
+              let
+                val value = named_variable
+                  (fresh_prefix () ^ "bound") (Term.type_of variable)
+              in
+                boolSyntax.mk_let
+                  (Term.mk_abs
+                    (value, build next ((variable, value) :: env) state),
+                   substitute env tm)
+              end
+          | Refute_Eval.Split (scrutinee, branches) =>
+              make_split scrutinee branches env (no_hit variables state)
+                (fn next => fn branch_env =>
+                  build next branch_env state)
+          | Refute_Eval.Gen (variable, next) =>
+              let
+                val stem = fresh_prefix ()
+                val ty = Term.type_of variable
+                val value = named_variable (stem ^ "draw") ty
+                val next_state = named_variable
+                  (stem ^ "next_state") numSyntax.num
+                val draw = Term.list_mk_comb
+                  (#random (generator_for ty generators), [size, state])
+              in
+                pairSyntax.mk_plet
+                  (pairSyntax.mk_pair (value, next_state), draw,
+                   build next ((variable, value) :: env) next_state)
+              end
+
+      val state = named_variable (prefix ^ "state") numSyntax.num
+      val n = named_variable (prefix ^ "n") numSyntax.num
+      val next_state = named_variable
+        (prefix ^ "next_state") numSyntax.num
+      val answer = named_variable (prefix ^ "answer") option_ty
+      val found = named_variable (prefix ^ "found") value_ty
+      val zero_lhs = Term.list_mk_comb
+        (loop_var, [numeral 0, size, state])
+      val zero_rhs = sumSyntax.mk_inl (state,
+        pairSyntax.mk_prod (numSyntax.num, value_ty))
+      val suc_lhs = Term.list_mk_comb
+        (loop_var, [numSyntax.mk_suc n, size, state])
+      val recurse = Term.list_mk_comb
+        (loop_var, [n, size, next_state])
+      val found_result = sumSyntax.mk_inr
+        (pairSyntax.mk_pair (next_state, found), numSyntax.num)
+      val choose = make_option_case answer recurse found found_result
+      val suc_rhs = pairSyntax.mk_plet
+        (pairSyntax.mk_pair (next_state, answer), build plan [] state,
+         choose)
+      val loop_definition = TotalDefn.Define
+        [HOLPP.ANTIQUOTE
+          (boolSyntax.mk_conj
+            (boolSyntax.mk_eq (zero_lhs, zero_rhs),
+             boolSyntax.mk_eq (suc_lhs, suc_rhs)))]
+      val _ = translate_checked prefix payloads loop_definition
+      val loop = definition_head loop_definition
+      fun application draws size_value state_value =
+        Term.list_mk_comb
+          (loop,
+           [numeral draws, numeral size_value,
+            numSyntax.mk_numeral
+              (Arbnum.fromString (IntInf.toString state_value))])
+    in
+      {variables = variables, result_ty = final_ty,
+       application = application}
+    end
+
+  fun cv_term_for application =
+    let
+      val representation = cv_repLib.cv_rep_for [] application
+      val precondition = cv_miscLib.cv_rep_pre (Thm.concl representation)
+      val _ =
+        if Term.aconv precondition boolSyntax.T then ()
+        else raise Precondition "translated loop"
+    in
+      cv_miscLib.cv_rep_cv_tm (Thm.concl representation)
+    end
+
+  type card_runner = Refute_Eval.run_input -> Refute_Eval.run_result
+
+  fun evaluator_for application result_ty =
+    let
+      val sample = application ()
+      val cv_sample = cv_term_for sample
+      val evaluator = cv_computeLib.cv_compute
+        (cv_transLib.cv_eqs_for cv_sample)
+      val decoder = cv_typeLib.to_term_for result_ty
+      fun theorem_rhs theorem =
+        #2 (boolSyntax.dest_eq (Thm.concl theorem))
+      fun evaluate tm =
+        let
+          val cv_application = cv_term_for tm
+          val literal = theorem_rhs (evaluator cv_application)
+          val decoded = theorem_rhs
+            (computeLib.EVAL_CONV (Term.mk_comb (decoder, literal)))
+        in
+          decoded
+        end
+    in
+      evaluate
+    end
+
+  fun compile_card strategy plan generators state_ref =
+    let
+      val prefix = fresh_prefix ()
+      val payloads = plan_payloads plan
+    in
+      case strategy of
+          Refute_Eval.Exhaustive =>
+            let
+              val program = define_exhaustive prefix payloads plan generators
+              val evaluate = evaluator_for
+                (fn () => #application program 0 0) (#result_ty program)
+              val complete = List.all (Option.isSome o Refute_Gen.enumerate)
+                (plan_generator_types plan)
+              fun run {size, ignored, ...} =
+                let
+                  val decoded = evaluate
+                    (#application program (Int.max (0, size))
+                      (length ignored))
+                in
+                  if optionSyntax.is_none decoded then
+                    Refute_Eval.Exhausted {complete = complete}
+                  else
+                    Refute_Eval.CexFound
+                      {env = decode_env (#variables program)
+                         (optionSyntax.dest_some decoded),
+                       genuine = true}
+                end
+            in
+              run
+            end
+        | Refute_Eval.Random _ =>
+            let
+              val program = define_random prefix payloads plan generators
+              val evaluate = evaluator_for
+                (fn () => #application program 0 0 (!state_ref))
+                (#result_ty program)
+              val complete = null (plan_generator_types plan)
+              fun run {size, draws, ...} =
+                let
+                  val decoded = evaluate
+                    (#application program (Int.max (0, draws))
+                      (Int.max (0, size)) (!state_ref))
+                in
+                  if sumSyntax.is_inl decoded then
+                    let
+                      val (state_tm, _) = sumSyntax.dest_inl decoded
+                      val _ = state_ref := valOf (IntInf.fromString
+                        (Arbnum.toString
+                          (numSyntax.dest_numeral state_tm)))
+                    in
+                      Refute_Eval.Exhausted {complete = complete}
+                    end
+                  else
+                    let
+                      val (result, _) = sumSyntax.dest_inr decoded
+                      val (state_tm, value) = pairSyntax.dest_pair result
+                      val _ = state_ref := valOf (IntInf.fromString
+                        (Arbnum.toString
+                          (numSyntax.dest_numeral state_tm)))
+                    in
+                      Refute_Eval.CexFound
+                        {env = decode_env (#variables program) value,
+                         genuine = true}
+                    end
+                end
+            in
+              run
+            end
+    end
+
+  fun compile (config : Refute_Core.config) strategy plans =
+    let
+      val _ = config
+      val all_types = distinct_types
+        (List.concat (List.map plan_generator_types plans))
+      val _ = List.app validate_supported all_types
+      val _ = List.app validate_plan_shapes plans
+      val _ =
+        case partial_constant plans of
+            NONE => ()
+          | SOME name => raise Precondition name
+      val last_stats = ref []
+      val state_ref = ref
+        (case strategy of
+             Refute_Eval.Exhaustive => 0
+           | Refute_Eval.Random {seed} => seed)
+      val active = ref (NONE : (snapshot * cv_memLib.verbosity) option)
+      val runners = ref ([] : (int * card_runner) list)
+
+      fun close () =
+        case !active of
+            NONE => ()
+          | SOME (baseline, old_verbosity) =>
+              Thread_Attributes.uninterruptible
+                (fn _ => fn () =>
+                  let
+                    val cleanup_result = Exn.capture revert baseline
+                    val _ = cv_memLib.verbosity_level := old_verbosity
+                    val _ = runners := []
+                    val _ = active := NONE
+                    val _ = Mutex.unlock theory_mutex
+                  in
+                    case cleanup_result of
+                        Exn.Res _ => ()
+                      | Exn.Exn error => raise CleanupFailed error
+                  end) ()
+
+      fun start () =
+        case !active of
+            SOME _ => ()
+          | NONE =>
+              Thread_Attributes.uninterruptible
+                (fn _ => fn () =>
+                  let
+                    val _ = Mutex.lock theory_mutex
+                    val baseline = snapshot ()
+                    val old_verbosity = !cv_memLib.verbosity_level
+                    val _ = active := SOME (baseline, old_verbosity)
+                    val _ = cv_memLib.verbosity_level := cv_memLib.Silent
+                  in
+                    ()
+                  end) ()
+
+      fun runner card =
+        case List.find (fn (old_card, _) => old_card = card) (!runners) of
+            SOME (_, run) => run
+          | NONE =>
+              let
+                val plan = List.nth (plans, card - 1)
+                val types = plan_generator_types plan
+                val generators = synthesise_generators types
+                val run = compile_card strategy plan generators state_ref
+                val _ = runners := (card, run) :: !runners
+              in
+                run
+              end
+
+      fun run input =
+        let
+          val _ = start ()
+          val result = runner (#card input) input
+          val tests =
+            case strategy of
+                Refute_Eval.Exhaustive => 0
+              | Refute_Eval.Random _ => Int.max (0, #draws input)
+          val _ = last_stats := [("tests", tests), ("match_failures", 0)]
+        in
+          result
+        end
+        handle Precondition name =>
+                 Refute_Eval.GaveUp ("cv: precondition for " ^ name)
+             | Unsupported reason =>
+                 Refute_Eval.GaveUp ("cv: " ^ reason)
+             | Feedback.HOL_ERR error =>
+                 Refute_Eval.GaveUp (hol_error_reason error)
+             | Timeout.TIMEOUT _ =>
+                 Refute_Eval.GaveUp "cv: chunk timed out"
+    in
+      Refute_Eval.Compiled
+        {run = run, close = close, last_stats = last_stats}
+    end
+    handle Precondition name =>
+             Refute_Eval.Inapplicable ["cv: precondition for " ^ name]
+         | Unsupported reason =>
+             Refute_Eval.Inapplicable ["cv: " ^ reason]
+         | Feedback.HOL_ERR error =>
+             Refute_Eval.Inapplicable [hol_error_reason error]
+
+  val cv_substrate : Refute_Eval.substrate =
+    {name = "cv", priority = 20, compile = compile}
+
+  fun register_substrate () =
+    Refute_Eval.register_substrate cv_substrate
+
+  val _ = register_substrate ()
 end
