@@ -646,6 +646,15 @@ structure Refute_Extract = struct
             else if List.exists (not o null o Thm.hyp) rules then
               reject ("conditional compset rule for " ^
                       kname_text (kname constant))
+            else if List.exists (fn theorem =>
+              List.exists (fn equation =>
+                case Lib.total boolSyntax.dest_eq equation of
+                  SOME (left, _) =>
+                    Option.isSome (Lib.total Type.dom_rng
+                      (Term.type_of left))
+                | NONE => true) (equations_of theorem)) rules then
+              reject ("lazy or non-equational compset rule for " ^
+                      kname_text (kname constant))
             else
               case rules of
                 [] => NONE
