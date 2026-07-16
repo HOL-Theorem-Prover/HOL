@@ -9,6 +9,7 @@ open Refute_Cert
 open Refute_Eval
 open Refute_EvalCompute
 open Refute_EvalSML
+open Refute_EvalCv
 open Refute_Extract
 open Refute_QC
 open cv_transLib
@@ -335,6 +336,8 @@ val _ = require_msg (check_result option_shape) (fn () =>
   "option generator has an unexpected recursive shape") (fn () => ()) ()
 
 val _ = Datatype.Datatype `rg_rose = RGLeaf | RGNode ((rg_rose) list)`
+val _ = Datatype.Datatype
+  `rg_tree = RGTip num | RGBin rg_tree rg_tree`
 val _ = Datatype.Datatype `rg_left = RGLeft | RGToRight rg_right;
                            rg_right = RGRight rg_left`
 val _ = Datatype.Datatype `rg_record = <| rg_field : num |>`
@@ -1202,6 +1205,208 @@ val selftest_level =
         (case Int.fromString text of
             NONE => 1
           | SOME level => level)
+
+fun same_snapshot (left : Refute_EvalCv.snapshot)
+    (right : Refute_EvalCv.snapshot) =
+  #theory left = #theory right andalso
+  same_string_set (#types left) (#types right) andalso
+  same_string_set (#constants left) (#constants right) andalso
+  same_string_set (#bindings left) (#bindings right)
+
+fun make_bracket_artifacts suffix =
+  let
+    val prefix = fresh_prefix () ^ suffix
+    val _ = Theory.new_type (prefix ^ "_type", 0)
+    val _ = Theory.new_constant (prefix ^ "_const", ``:num``)
+    val _ = Theory.save_thm (prefix ^ "_binding", boolTheory.TRUTH)
+  in
+    ()
+  end
+
+fun clean_bracket_success () =
+  let
+    val baseline = snapshot ()
+    val _ = with_clean_theory (fn () => make_bracket_artifacts "success")
+  in
+    same_snapshot baseline (snapshot ())
+  end
+
+fun clean_bracket_exception () =
+  let
+    val baseline = snapshot ()
+    val raised =
+      ((with_clean_theory (fn () =>
+          (make_bracket_artifacts "exception";
+           raise Fail "forced cv bracket failure")); false)
+       handle Fail "forced cv bracket failure" => true)
+  in
+    raised andalso same_snapshot baseline (snapshot ())
+  end
+
+fun clean_bracket_interrupt () =
+  let
+    val baseline = snapshot ()
+    val raised =
+      ((with_clean_theory (fn () =>
+          (make_bracket_artifacts "interrupt"; raise Interrupt)); false)
+       handle Interrupt => true)
+  in
+    raised andalso same_snapshot baseline (snapshot ())
+  end
+
+fun translation_error_is_clean () =
+  let
+    val baseline = snapshot ()
+    val attempt = with_generators [``:bool``] (fn _ =>
+      (make_bracket_artifacts "hol_error";
+       raise (Feedback.mk_HOL_ERR
+         "RefuteCvSelftest" "translate" "forced translation error")))
+  in
+    (case attempt of
+         CvInapplicable [reason] =>
+           String.isPrefix "cv: RefuteCvSelftest.translate" reason
+       | _ => false) andalso
+    same_snapshot baseline (snapshot ())
+  end
+
+val _ = tprint "Refute cv clean-theory bracket"
+val _ = require_msg (check_result (fn () =>
+  clean_bracket_success () andalso clean_bracket_exception () andalso
+  clean_bracket_interrupt () andalso translation_error_is_clean ()))
+  (fn () =>
+    "cv bracket left a theory artifact on a return or exception")
+  (fn () => ()) ()
+
+fun generated_tree_agrees () =
+  let
+    val baseline = snapshot ()
+    val attempt = with_generators [``:rg_tree``] (fn generators =>
+      case generators of
+          [{exhaustive, random, ...}] =>
+            let
+              fun exhaustive_agrees size =
+                let
+                  val application = Term.mk_comb
+                    (exhaustive, numSyntax.term_of_int size)
+                  val (actual, _) = listSyntax.dest_list
+                    (cv_rhs application)
+                in
+                  same_terms (compute_exhaustive ``:rg_tree`` size) actual
+                end
+              fun random_agrees size seed =
+                let
+                  val application = Term.list_mk_comb
+                    (random,
+                     [numSyntax.term_of_int size,
+                      numSyntax.term_of_int seed])
+                  val (actual_value, actual_state) =
+                    pairSyntax.dest_pair (cv_rhs application)
+                  val (expected_value, expected_state) =
+                    random_term ``:rg_tree`` size (IntInf.fromInt seed)
+                in
+                  Term.aconv actual_value expected_value andalso
+                  Term.aconv actual_state
+                    (num_term_of_intinf expected_state)
+                end
+            in
+              List.all exhaustive_agrees [0, 1, 2] andalso
+              List.all (fn seed => random_agrees 3 seed) [1, 2, 3]
+            end
+        | _ => false)
+  in
+    (case attempt of CvSuccess result => result
+     | CvInapplicable _ => false) andalso
+    same_snapshot baseline (snapshot ())
+  end
+
+fun generated_finite_agrees ty =
+  let
+    val baseline = snapshot ()
+    val attempt = with_generators [ty] (fn generators =>
+      case generators of
+          [{exhaustive, random, ...}] =>
+            let
+              fun exhaustive_agrees size =
+                let
+                  val application = Term.mk_comb
+                    (exhaustive, numSyntax.term_of_int size)
+                  val (actual, _) = listSyntax.dest_list
+                    (cv_rhs application)
+                in
+                  same_terms (compute_exhaustive ty size) actual
+                end
+              fun random_agrees seed =
+                let
+                  val application = Term.list_mk_comb
+                    (random,
+                     [numSyntax.term_of_int 3,
+                      numSyntax.term_of_int seed])
+                  val (actual_value, actual_state) =
+                    pairSyntax.dest_pair (cv_rhs application)
+                  val (expected_value, expected_state) =
+                    random_term ty 3 (IntInf.fromInt seed)
+                in
+                  Term.aconv actual_value expected_value andalso
+                  Term.aconv actual_state
+                    (num_term_of_intinf expected_state)
+                end
+            in
+              List.all exhaustive_agrees [0, 2] andalso
+              List.all random_agrees [1, 2, 3]
+            end
+        | _ => false)
+  in
+    (case attempt of CvSuccess result => result
+     | CvInapplicable _ => false) andalso
+    same_snapshot baseline (snapshot ())
+  end
+
+fun generated_tree_repeats_and_caches () =
+  let
+    val baseline = snapshot ()
+    val stats0 = synthesis_stats ()
+    val first = generated_tree_agrees ()
+    val stats1 = synthesis_stats ()
+    val second = generated_tree_agrees ()
+    val stats2 = synthesis_stats ()
+  in
+    first andalso second andalso
+    #misses stats1 = #misses stats0 + 1 andalso
+    #misses stats2 = #misses stats1 andalso
+    #hits stats2 = #hits stats1 + 1 andalso
+    same_snapshot baseline (snapshot ())
+  end
+
+fun out_of_fragment_is_clean () =
+  let
+    val baseline = snapshot ()
+    fun rejected ty =
+      case with_generators [ty]
+          (fn _ => raise Fail "out-of-fragment continuation ran") of
+          CvInapplicable reasons =>
+            not (null reasons) andalso
+            List.all (String.isPrefix "cv: ") reasons
+        | CvSuccess _ => false
+  in
+    rejected ``:real`` andalso rejected ``:num -> bool`` andalso
+    same_snapshot baseline (snapshot ())
+  end
+
+val _ =
+  if selftest_level >= 2 then
+    (tprint "Refute cv per-goal generator synthesis";
+     require_msg (check_result generated_tree_repeats_and_caches) (fn () =>
+       "cv generator synthesis disagreed, leaked, or missed its cache")
+       (fn () => ()) ();
+     require_msg (check_result (fn () =>
+       generated_finite_agrees ``:rg_enum`` andalso
+       generated_finite_agrees ``:bool option``)) (fn () =>
+         "cv finite generator synthesis disagreed or leaked an artifact")
+       (fn () => ()) ();
+     require_msg (check_result out_of_fragment_is_clean) (fn () =>
+       "cv accepted an out-of-fragment type or leaked an artifact")
+       (fn () => ()) ())
+  else ()
 
 val corpus_config =
   upd_timeout 5.0
