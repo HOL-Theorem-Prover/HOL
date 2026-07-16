@@ -452,7 +452,8 @@ structure Refute_QC = struct
         strategy_run (Random {seed = strategy_seed config}) config }
 
   fun register_backends () =
-    (Refute_EvalCompute.register_substrate ();
+    (Refute_EvalSML.register_substrate ();
+     Refute_EvalCompute.register_substrate ();
      Refute_EvalCv.register_substrate ();
      Refute_Core.register_backend exhaustive_backend;
      Refute_Core.register_backend random_backend)

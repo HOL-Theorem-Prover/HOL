@@ -1837,6 +1837,10 @@ structure Refute_Extract = struct
         "datatype refute_attempt =\n" ^
         "    RefuteContinue\n" ^
         "  | RefuteHit of Refute_EvalSML.generated_hit\n" ^
+        "fun refute_hit found =\n" ^
+        "  if (!Refute_EvalSML.ignored_filter) found then\n" ^
+        "    RefuteContinue\n" ^
+        "  else RefuteHit found\n" ^
         "fun refute_each [] continuation = RefuteContinue\n" ^
         "  | refute_each (value :: values) continuation =\n" ^
         "      (case continuation value of\n" ^
@@ -2195,13 +2199,15 @@ structure Refute_Extract = struct
           Prune => "RefuteContinue"
         | Test tm =>
             let
-              val hit = "RefuteHit (" ^ environment_source environment ^
+              val hit = "refute_hit (" ^ environment_source environment ^
                 ", " ^ genuine_only ^ ")"
               val stuck = recovery "complete" "genuine_only"
-                ("RefuteHit (" ^ environment_source environment ^
+                ("refute_hit (" ^ environment_source environment ^
                   ", false)")
             in
               parens ("tests := !tests + 1; " ^
+                "if !tests mod 4096 = 0 then " ^
+                "Refute_EvalSML.check_deadline () else (); " ^
                 safe_value (expression context tm) stuck ^
                 "if refute_value then RefuteContinue else " ^ hit ^ ")")
             end
@@ -2313,13 +2319,15 @@ structure Refute_Extract = struct
           Prune => parens ("RefuteContinue, " ^ state)
         | Test tm =>
             let
-              val hit = "RefuteHit (" ^ environment_source environment ^
+              val hit = "refute_hit (" ^ environment_source environment ^
                 ", " ^ genuine ^ ")"
               val stuck = recovery "complete" "genuine_only"
-                ("RefuteHit (" ^ environment_source environment ^
+                ("refute_hit (" ^ environment_source environment ^
                   ", false)")
             in
               parens ("tests := !tests + 1; " ^
+                "if !tests mod 4096 = 0 then " ^
+                "Refute_EvalSML.check_deadline () else (); " ^
                 safe_value (expression context tm) stuck ^
                 parens ("if refute_value then RefuteContinue else " ^ hit) ^
                 ", " ^ state ^ ")")
@@ -2516,4 +2524,24 @@ structure Refute_Extract = struct
     in
       {source = source, entry = "install ()"}
     end
+
+  val _ = Refute_EvalSML.extract_tests_hook :=
+    (fn config => fn strategy => fn plans =>
+      let
+        val table = !Refute_EvalSML.table_serial
+        fun cleanup () =
+          if !Refute_EvalSML.table_serial = table then ()
+          else Refute_EvalSML.unregister_term_tables table
+      in
+        let val {source, entry} = extract_tests config strategy plans
+        in
+          Refute_EvalSML.Extracted
+            {source = source, entry = entry, table = table}
+        end
+        handle NotExtractable reasons =>
+                 (cleanup ();
+                  Refute_EvalSML.ExtractionFailed reasons)
+             | Interrupt => (cleanup (); raise Interrupt)
+             | error => (cleanup (); raise error)
+      end)
 end

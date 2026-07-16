@@ -1218,15 +1218,17 @@ val _ = check_plan plan_has_abstract_guard
 
 val _ = tprint "Refute QC exhaustive backend"
 
-fun cv_precedes_compute () =
+fun fast_substrates_precede_compute () =
   case get_substrates () of
-      cv :: compute :: _ =>
+      native :: cv :: compute :: _ =>
+        #name native = "native" andalso #priority native = 10 andalso
         #name cv = "cv" andalso #priority cv = 20 andalso
         #name compute = "compute" andalso #priority compute = 30
     | _ => false
 
-val _ = require_msg (check_result cv_precedes_compute) (fn () =>
-  "the cv and compute substrates had the wrong registry order")
+val _ = require_msg
+  (check_result fast_substrates_precede_compute) (fn () =>
+  "the native, cv, and compute substrates had the wrong registry order")
   (fn () => ()) ()
 
 fun dummy_compile _ _ _ = Inapplicable ["dummy substrate"]
@@ -1274,7 +1276,7 @@ fun reverse_counterexample () =
     val result = exhaustive config ``REVERSE (xs : num list) = xs``
   in
     (case result of
-         Counterexample (cex :: _) => #substrate cex = "cv"
+         Counterexample (cex :: _) => #substrate cex = "native"
        | _ => false) andalso
     has_binding (fn (_, value) =>
       case Lib.total listSyntax.dest_list value of
@@ -1455,7 +1457,7 @@ fun random_is_registered () =
 fun random_reverse_counterexample () =
   case random random_config ``REVERSE (xs : num list) = xs`` of
       Counterexample (cex :: _) =>
-        #substrate cex = "cv" andalso
+        #substrate cex = "native" andalso
         Option.isSome (lookup_stat "msec" (#stats cex))
     | _ => false
 
@@ -1787,6 +1789,211 @@ val _ = tprint "Refute cv substrate smoke"
 val _ = require_msg (check_result explicit_cv_smoke) (fn () =>
   "the cv substrate disagreed with compute or leaked theory state")
   (fn () => ()) ()
+
+fun native_agrees strategy goal =
+  let
+    val compute = cv_result strategy Compute goal
+    val native = cv_result strategy NativeSML goal
+  in
+    case (compute, native) of
+        (Counterexample (left :: _), Counterexample (right :: _)) =>
+          #backend left = #backend right andalso
+          #substrate left = "compute" andalso
+          #substrate right = "native" andalso
+          Option.isSome (#cert left) andalso
+          Option.isSome (#cert right) andalso
+          same_bindings (#bindings left) (#bindings right)
+      | (NoCounterexample, NoCounterexample) => true
+      | _ => false
+  end
+
+fun native_smoke () =
+  let
+    val goals =
+      [``REVERSE (xs : num list) = xs``,
+       ``(x : num) - y + y = x``,
+       ``(x : refute$rf3) = rf3_1``]
+    fun strategies goal =
+      native_agrees Exhaustive goal andalso
+      List.all (fn seed => native_agrees (Random {seed = seed}) goal)
+        [1, 2, 3]
+  in
+    List.all strategies goals
+  end
+
+fun native_custom_is_inapplicable () =
+  let
+    val variable = Term.mk_var ("native_custom", ``:rg_record``)
+    val plan = Gen (variable, Test boolSyntax.T)
+    fun rejected strategy =
+      case Refute_EvalSML.compile default_config strategy [plan] of
+          Inapplicable reasons =>
+            List.exists (String.isPrefix
+              "custom generator registered for :rg_record") reasons
+        | Compiled test => (#close test (); false)
+  in
+    rejected Exhaustive andalso rejected (Random {seed = 1})
+  end
+
+fun native_compile_error_is_reason () =
+  let
+    val original = !extract_tests_hook
+    val table_count_before = term_table_count ()
+    fun broken _ _ _ =
+      let val table = register_term_tables [] []
+      in
+        Extracted
+          {source = "val refute_broken =", entry = "()", table = table}
+      end
+    val _ = extract_tests_hook := broken
+    val captured = Exn.capture (fn () =>
+      Refute_EvalSML.compile default_config Exhaustive []) ()
+    val _ = extract_tests_hook := original
+  in
+    case captured of
+        Exn.Res (Inapplicable [reason]) =>
+          String.isPrefix "native: internal: " reason andalso
+          size reason > size "native: internal: " andalso
+          term_table_count () = table_count_before
+      | _ => false
+  end
+
+fun native_ignored_filter_resumes () =
+  let
+    val variable = Term.mk_var ("native_ignored", ``:bool``)
+    val plan = Gen (variable, Test boolSyntax.F)
+    fun exhaustive () =
+      case Refute_EvalSML.compile default_config Exhaustive [plan] of
+          Inapplicable _ => false
+        | Compiled test =>
+            let
+              val first = #run test
+                {genuine_only = true, card = 1, size = 2, draws = 0,
+                 ignored = []}
+              val second =
+                case first of
+                    CexFound candidate => #run test
+                      {genuine_only = true, card = 1, size = 2, draws = 0,
+                       ignored = [candidate]}
+                  | _ => Exhausted {complete = false}
+              val _ = #close test ()
+            in
+              case (first, second) of
+                  (CexFound {env = [(_, left)], ...},
+                   CexFound {env = [(_, right)], ...}) =>
+                    not (Term.aconv left right)
+                | _ => false
+            end
+    val number = Term.mk_var ("native_random_ignored", ``:num``)
+    val random_plan = Gen (number, Test boolSyntax.F)
+    fun random () =
+      case Refute_EvalSML.compile default_config (Random {seed = 1})
+          [random_plan] of
+          Inapplicable _ => false
+        | Compiled test =>
+            let
+              val first = #run test
+                {genuine_only = true, card = 1, size = 0, draws = 1,
+                 ignored = []}
+              val second =
+                case first of
+                    CexFound candidate => #run test
+                      {genuine_only = true, card = 1, size = 0, draws = 5,
+                       ignored = [candidate]}
+                  | _ => CexFound {env = [], genuine = false}
+              val _ = #close test ()
+            in
+              case second of Exhausted _ => true | _ => false
+            end
+  in
+    exhaustive () andalso random ()
+  end
+
+val _ = tprint "Refute native substrate smoke"
+val _ = require_msg (check_result (fn () =>
+  native_smoke () andalso native_custom_is_inapplicable () andalso
+  native_compile_error_is_reason () andalso
+  native_ignored_filter_resumes ())) (fn () =>
+  "the native harness disagreed, accepted a custom generator, or crashed")
+  (fn () => ()) ()
+
+fun native_timeout_is_healthy () =
+  let
+    val variable = Term.mk_var ("native_huge", ``:num list``)
+    val huge = Gen (variable, Test boolSyntax.T)
+    val short = upd_timeout 0.05 default_config
+    val started = Time.now ()
+    val timed =
+      case Refute_EvalSML.compile short Exhaustive [huge] of
+          Inapplicable _ => false
+        | Compiled test =>
+            let
+              val result = #run test
+                {genuine_only = true, card = 1, size = 100, draws = 0,
+                 ignored = []}
+              val _ = #close test ()
+            in
+              case result of GaveUp "deadline" => true | _ => false
+            end
+    val elapsed = Time.toReal (Time.- (Time.now (), started))
+    val healthy =
+      case Refute_EvalSML.compile default_config Exhaustive
+          [Test boolSyntax.F] of
+          Inapplicable _ => false
+        | Compiled test =>
+            let
+              val result = #run test
+                {genuine_only = true, card = 1, size = 1, draws = 0,
+                 ignored = []}
+              val _ = #close test ()
+            in
+              case result of CexFound _ => true | _ => false
+            end
+  in
+    timed andalso elapsed < 2.0 andalso healthy
+  end
+
+fun native_benchmark () =
+  let
+    val plan = compile_plan default_config
+      ``REVERSE (REVERSE (xs : num list)) = xs``
+  in
+    case Refute_EvalSML.compile default_config Exhaustive [plan] of
+        Inapplicable _ => false
+      | Compiled test =>
+          let
+            val started = Time.now ()
+            val result = #run test
+              {genuine_only = true, card = 1, size = 9, draws = 0,
+               ignored = []}
+            val elapsed = Time.toReal (Time.- (Time.now (), started))
+            val tests =
+              case lookup_stat "tests" (!(#last_stats test)) of
+                  SOME count => count
+                | NONE => 0
+            val rate = if elapsed <= 0.0 then 0.0
+              else Real.fromInt tests / elapsed
+            val _ = TextIO.print
+              ("Refute native benchmark: " ^
+               Int.toString (Real.round rate) ^ " tests/sec\n")
+            val _ = #close test ()
+          in
+            tests > 0 andalso
+            (case result of Exhausted _ => true | _ => false)
+          end
+  end
+
+val _ =
+  if selftest_level >= 2 then
+    (tprint "Refute native timeout smoke";
+     require_msg (check_result native_timeout_is_healthy) (fn () =>
+       "a native deadline failed or left the session unhealthy")
+       (fn () => ()) ();
+     tprint "Refute native substrate benchmark";
+     require_msg (check_result native_benchmark) (fn () =>
+       "the native list/nat benchmark did not exhaust its search")
+       (fn () => ()) ())
+  else ()
 
 fun cv_matrix_agrees () =
   let
