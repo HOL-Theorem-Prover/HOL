@@ -12,6 +12,7 @@ structure Refute :> Refute = struct
   type qc_config = Refute_Core.qc_config
   type config = Refute_Core.config
   type backend = Refute_Core.backend
+  type substrate = Refute_Eval.substrate
   type custom_gen = Refute_Gen.custom_gen
   type rng = Refute_Gen.rng
 
@@ -44,6 +45,7 @@ structure Refute :> Refute = struct
       | _ => Tactical.ALL_TAC goal
 
   val register_backend = Refute_Core.register_backend
+  val register_substrate = Refute_Eval.register_substrate
   val register_generator = Refute_Gen.register_generator
   val abstract_generator = Refute_Gen.abstract_generator
 

@@ -347,6 +347,13 @@ structure Refute_EvalSML = struct
       case extracted of
           ExtractionFailed reasons => Refute_Eval.Inapplicable reasons
         | Extracted {source, entry, table} =>
+          let
+            val _ =
+              if Refute_Core.Private.enabled 3 then
+                Refute_Core.Private.say 3
+                  ("Refute generated SML:\n" ^ source ^ "\n")
+              else ()
+          in
           case Exn.capture (fn () => compile_install source entry) () of
           Exn.Exn error =>
             (unregister_term_tables table; raise error)
@@ -402,6 +409,7 @@ structure Refute_EvalSML = struct
               Refute_Eval.Compiled
                 {run = run, close = close, last_stats = last_stats}
             end
+          end
     end
     handle Interrupt => raise Interrupt
          | error =>

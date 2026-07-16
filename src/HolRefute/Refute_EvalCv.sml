@@ -1310,6 +1310,12 @@ structure Refute_EvalCv = struct
         [HOLPP.ANTIQUOTE
           (boolSyntax.mk_eq
             (Term.list_mk_comb (loop_var, [size, skip]), body))]
+      val _ =
+        if Refute_Core.Private.enabled 3 then
+          Refute_Core.Private.say 3
+            ("Refute synthesized HOL loop:\n" ^
+             Parse.thm_to_string loop_definition ^ "\n")
+        else ()
       val _ = translate_checked prefix payloads loop_definition
       val loop = definition_head loop_definition
       fun application size_value skip_value =
@@ -1397,6 +1403,12 @@ structure Refute_EvalCv = struct
           (boolSyntax.mk_conj
             (boolSyntax.mk_eq (zero_lhs, zero_rhs),
              boolSyntax.mk_eq (suc_lhs, suc_rhs)))]
+      val _ =
+        if Refute_Core.Private.enabled 3 then
+          Refute_Core.Private.say 3
+            ("Refute synthesized HOL loop:\n" ^
+             Parse.thm_to_string loop_definition ^ "\n")
+        else ()
       val _ = translate_checked prefix payloads loop_definition
       val loop = definition_head loop_definition
       fun application draws size_value state_value =

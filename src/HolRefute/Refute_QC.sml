@@ -281,13 +281,19 @@ structure Refute_QC = struct
                else reasons)
         | try (substrate :: rest) reasons =
             (case #compile substrate config strategy plans of
-                 Compiled test => Selected (#name substrate, test)
+                 Compiled test =>
+                   (Refute_Core.Private.say 2
+                      ("Refute substrate selection: selected " ^
+                       #name substrate ^ "\n");
+                    Selected (#name substrate, test))
                | Inapplicable why =>
                    let
+                     val detail =
+                       if null why then "no reason supplied"
+                       else String.concatWith "; " why
                      val _ = Refute_Core.Private.say 2
-                       ("Refute substrate " ^ #name substrate ^
-                        " is inapplicable: " ^
-                        String.concatWith "; " why ^ "\n")
+                       ("Refute substrate selection: " ^ #name substrate ^
+                        " is inapplicable: " ^ detail ^ "\n")
                    in
                      try rest (reasons @ map (fn reason =>
                        #name substrate ^ ": " ^ reason) why)
@@ -306,8 +312,18 @@ structure Refute_QC = struct
             ["requested substrate " ^ name ^ " is unavailable"]
         | SOME substrate =>
             (case #compile substrate config strategy plans of
-                 Compiled test => Selected (name, test)
-               | Inapplicable reasons => SelectionFailed reasons)
+                 Compiled test =>
+                   (Refute_Core.Private.say 2
+                      ("Refute substrate selection: selected " ^ name ^
+                       " (explicit)\n");
+                    Selected (name, test))
+               | Inapplicable reasons =>
+                   (Refute_Core.Private.say 2
+                      ("Refute substrate selection: " ^ name ^
+                       " is inapplicable: " ^
+                       (if null reasons then "no reason supplied"
+                        else String.concatWith "; " reasons) ^ "\n");
+                    SelectionFailed reasons))
     end
 
   fun compile_selected config strategy plans =
@@ -336,6 +352,13 @@ structure Refute_QC = struct
     let
       val plans = List.map
         (fn instance => compile_plan config (#goal instance)) instances
+      val _ =
+        if not (Refute_Core.Private.enabled 3) then ()
+        else List.app (fn (instance, plan) =>
+          Refute_Core.Private.say 3
+            ("Refute plan (card " ^ Int.toString (#card instance) ^
+             "):\n" ^ pp_plan plan ^ "\n"))
+          (ListPair.zip (instances, plans))
     in
       case compile_selected config strategy plans of
           SelectionFailed reasons => Refute_Core.Unknown reasons
@@ -392,6 +415,7 @@ structure Refute_QC = struct
                 end
               fun run_entry entry =
                 let
+                  val started = Time.now ()
                   val total = bounded_size (#iterations (#qc config))
                   fun chunks 0 = ()
                     | chunks remaining =
@@ -406,12 +430,23 @@ structure Refute_QC = struct
                             if length (!gave_up) > reasons_before then ()
                             else chunks (remaining - draws)
                           end
+                  val _ =
+                    if is_random strategy then
+                      if total = 0 then ()
+                      else if substrate = "cv" then chunks total
+                      else one entry total (#genuine_only config) []
+                    else one entry 0 (#genuine_only config) []
+                  val (card, size) = entry
+                  val backend =
+                    if is_random strategy then "random" else "exhaustive"
+                  val elapsed = elapsed_msec started
+                  val _ = Refute_Core.Private.say 2
+                    ("Refute schedule entry (backend: " ^ backend ^
+                     ", substrate: " ^ substrate ^ ", card " ^
+                     Int.toString card ^ ", size " ^ Int.toString size ^
+                     "): " ^ Int.toString elapsed ^ "ms\n")
                 in
-                  if is_random strategy then
-                    if total = 0 then ()
-                    else if substrate = "cv" then chunks total
-                    else one entry total (#genuine_only config) []
-                  else one entry 0 (#genuine_only config) []
+                  ()
                 end
               fun search [] = ()
                 | search (entry :: rest) =

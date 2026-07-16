@@ -606,8 +606,10 @@ structure Refute_Core = struct
     val trace = ref 1
     val _ = Feedback.register_trace ("Refute", trace, 4)
 
+    fun enabled level = !trace >= level
+
     fun say level message =
-      if !trace >= level then Feedback.HOL_MESG message else ()
+      if enabled level then Feedback.HOL_MESG message else ()
 
     fun expectation_to_string ExpectCex = "ExpectCex"
       | expectation_to_string ExpectNone = "ExpectNone"
@@ -710,11 +712,6 @@ structure Refute_Core = struct
 
   fun format_stats stats =
     let
-      fun ordinary (key, suffix) =
-        case lookup_stat key stats of
-            NONE => NONE
-          | SOME value => SOME (Int.toString value ^ suffix)
-      fun named (key, value) = key ^ " " ^ Int.toString value
       val msec =
         case lookup_stat "msec" stats of
             NONE => NONE
@@ -723,17 +720,10 @@ structure Refute_Core = struct
       val fields =
         [ Option.map (fn value => "size " ^ Int.toString value)
             (lookup_stat "size" stats),
-          Option.map (fn value => "card " ^ Int.toString value)
-            (lookup_stat "card" stats),
-          ordinary ("tests", " tests"),
           msec ]
-      val fallback =
-        map named (List.filter (fn (key, _) =>
-          key <> "size" andalso key <> "card" andalso key <> "tests" andalso
-          key <> "msec") stats)
-      val present = List.mapPartial (fn value => value) fields @ fallback
+      val present = List.mapPartial (fn value => value) fields
     in
-      if null present then "" else " (" ^ String.concatWith ", " present ^ ")"
+      if null present then "" else ", " ^ String.concatWith ", " present
     end
 
   fun format_bindings bindings =
@@ -756,7 +746,7 @@ structure Refute_Core = struct
       val {backend, substrate, certainty, bindings, evals, cert, stats, ...} =
         cex
       val header = "Refute found a counterexample (backend: " ^ backend ^
-        ", substrate: " ^ substrate ^ ")" ^ format_stats stats ^ ":"
+        ", substrate: " ^ substrate ^ format_stats stats ^ "):"
       val binding_text =
         if null bindings then "" else "\n" ^ format_bindings bindings
       val eval_text =

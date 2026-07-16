@@ -290,6 +290,17 @@ fun silent_report () =
 val _ = require_msg (check_result silent_report) (fn () =>
   "reporting failed at trace level zero") (fn () => ()) ()
 
+fun counterexample_report_has_one_header () =
+  String.isPrefix
+    ("Refute found a counterexample (backend: selftest, substrate: " ^
+     "compute, size 3, 0.4s):")
+    (format_outcome default_config (Counterexample [report_cex]))
+
+val _ = require_msg
+  (check_result counterexample_report_has_one_header) (fn () =>
+  "counterexample reporting did not use the substrate line format")
+  (fn () => ()) ()
+
 val _ = tprint "Refute generator derivation"
 
 fun check_gen name predicate ty =
@@ -1254,6 +1265,16 @@ val _ = require_msg (check_result seam_registry_order) (fn () =>
   "substrate registry replacement or priority ordering failed")
   (fn () => ()) ()
 
+val public_seam : Refute.substrate =
+  {name = "refute-public-seam", priority = 45, compile = dummy_compile}
+val _ = Refute.register_substrate public_seam
+
+val _ = require_msg (check_result (fn () =>
+  List.exists (fn substrate => #name substrate = "refute-public-seam")
+    (get_substrates ()))) (fn () =>
+  "the public register_substrate re-export did not register a substrate")
+  (fn () => ()) ()
+
 fun qc_problem goal : problem = {goal = goal, assumptions = [], evals = []}
 
 fun qc_instances config goal =
@@ -1360,6 +1381,136 @@ val _ = require_msg (check_result (fn () =>
   explicit_cv_is_available (Random {seed = 1}))) (fn () =>
   "the explicit cv substrate was unavailable for a backend")
   (fn () => ()) ()
+
+fun run_with_strategy strategy config goal =
+  strategy_run strategy config (qc_instances config goal)
+
+fun selected_substrate expected result =
+  case result of
+      Counterexample (cex :: _) => #substrate cex = expected
+    | _ => false
+
+val auto_ho_custom : custom_gen =
+  {enumerate = SOME (fn _ =>
+     [``\x : rg_enum. T``, ``\x : rg_enum. F``]),
+   random = SOME (fn _ => fn state =>
+     let val (choice, next) = rand_below 2 state
+     in
+       (if choice = 0 then ``\x : rg_enum. T``
+        else ``\x : rg_enum. F``, next)
+     end)}
+val _ = register_generator ``:rg_enum -> bool`` auto_ho_custom
+
+val auto_native_goal = ``REVERSE (xs : num list) = xs``
+val auto_custom_goal = ``(r : rg_record) = s``
+val auto_cv_goal = ``(w : word64) = 0w``
+val auto_ho_goal = ``(f : rg_enum -> bool) RGRed``
+
+fun auto_selection_works () =
+  let
+    val config = upd_size 3 (upd_iterations 30 default_config)
+    fun runs expected goal strategy =
+      selected_substrate expected
+        (run_with_strategy strategy config goal)
+  in
+    runs "native" auto_native_goal Exhaustive andalso
+    runs "native" auto_native_goal (Random {seed = 1}) andalso
+    runs "compute" auto_custom_goal Exhaustive andalso
+    runs "compute" auto_custom_goal (Random {seed = 1}) andalso
+    runs "cv" auto_cv_goal (Random {seed = 1}) andalso
+    runs "compute" auto_ho_goal Exhaustive andalso
+    runs "compute" auto_ho_goal (Random {seed = 1})
+  end
+
+val _ = require_msg (check_result auto_selection_works) (fn () =>
+  "Auto did not select native, cv, and compute by applicability")
+  (fn () => ()) ()
+
+fun reason_contains fragment (Unknown reasons) =
+      List.exists (String.isSubstring fragment) reasons
+  | reason_contains _ _ = false
+
+fun explicit_inapplicable_is_unknown () =
+  let
+    fun rejected choice fragment strategy =
+      let val config = upd_substrate choice default_config
+      in
+        reason_contains fragment
+          (run_with_strategy strategy config auto_custom_goal)
+      end
+    fun both choice fragment =
+      rejected choice fragment Exhaustive andalso
+      rejected choice fragment (Random {seed = 1})
+  in
+    both NativeSML "custom generator registered" andalso
+    both Cv "abstract generator registered"
+  end
+
+val _ = require_msg
+  (check_result explicit_inapplicable_is_unknown) (fn () =>
+  "an explicit inapplicable substrate fell back or lost its reason")
+  (fn () => ()) ()
+
+fun capture_refute_messages level action =
+  let
+    val chunks = ref ([] : string list)
+    fun output text = chunks := text :: !chunks
+    val result = Lib.with_flag (Feedback.MESG_outstream, output)
+      (Feedback.with_traces [("Refute", level)] action) ()
+  in
+    (result, String.concat (rev (!chunks)))
+  end
+
+fun trace_level_two_reports_selection () =
+  let
+    val config = upd_size 2 default_config
+    val (_, output) = capture_refute_messages 2 (fn () =>
+      ignore (run_with_strategy Exhaustive config auto_custom_goal))
+  in
+    String.isSubstring
+      "native is inapplicable: custom generator registered" output andalso
+    String.isSubstring
+      "cv is inapplicable: cv: :rg_record - abstract generator" output andalso
+    String.isSubstring "selected compute" output andalso
+    String.isSubstring "Refute schedule entry" output
+  end
+
+val _ = require_msg
+  (check_result trace_level_two_reports_selection) (fn () =>
+  "trace level 2 omitted substrate skip reasons or entry timing")
+  (fn () => ()) ()
+
+fun trace_level_three_dumps_generated_programs () =
+  let
+    val native_config = upd_size 2 default_config
+    val (_, native_output) = capture_refute_messages 3 (fn () =>
+      ignore (run_with_strategy Exhaustive native_config
+        auto_native_goal))
+    val cv_config = upd_substrate Cv (upd_size 1 default_config)
+    val (_, cv_output) = capture_refute_messages 3 (fn () =>
+      ignore (run_with_strategy Exhaustive cv_config ``(b : bool)``))
+  in
+    String.isSubstring "Refute plan (card" native_output andalso
+    String.isSubstring "Refute generated SML" native_output andalso
+    String.isSubstring "Refute synthesized HOL loop" cv_output
+  end
+
+val _ = require_msg
+  (check_result trace_level_three_dumps_generated_programs) (fn () =>
+  "trace level 3 omitted a generated plan or program dump")
+  (fn () => ()) ()
+
+fun trace_level_four_is_compute_only () =
+  let
+    val compute_config = upd_substrate Compute (upd_size 1 default_config)
+    val (_, output) = capture_refute_messages 4 (fn () =>
+      ignore (run_with_strategy Exhaustive compute_config ``(b : bool)``))
+  in
+    String.isSubstring "Refute compute candidate:" output
+  end
+
+val _ = require_msg (check_result trace_level_four_is_compute_only) (fn () =>
+  "trace level 4 omitted compute candidates") (fn () => ()) ()
 
 fun gave_up_reason_is_plumbed () =
   let

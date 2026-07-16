@@ -118,6 +118,24 @@ structure Refute_EvalCompute = struct
       | Refute_Gen.GenFun (dom, rng) =>
           exhaustive_function dom rng size continuation
 
+  fun boolean_value_to_string IsTrue = "true"
+    | boolean_value_to_string IsFalse = "false"
+    | boolean_value_to_string IsStuck = "stuck"
+
+  fun trace_candidate env result =
+    if not (Refute_Core.Private.enabled 4) then ()
+    else
+      let
+        fun binding (variable, value) =
+          Parse.term_to_string variable ^ " = " ^ Parse.term_to_string value
+        val bindings = String.concatWith ", " (List.map binding (rev env))
+        val shown = if bindings = "" then "<closed>" else bindings
+      in
+        Refute_Core.Private.say 4
+          ("Refute compute candidate: " ^ shown ^ " => " ^
+           boolean_value_to_string result ^ "\n")
+      end
+
   (* Filtering ignored candidates belongs here rather than in a driver:
      other substrates use different retry protocols. *)
   fun traverse gen genuine_only ignored plan =
@@ -134,17 +152,22 @@ structure Refute_EvalCompute = struct
         case current of
             Prune => Continue
           | Test tm =>
-              (tests := !tests + 1;
-               case eval_boolean env tm of
-                   IsTrue => Continue
-                 | IsFalse =>
-                     if genuine orelse not genuine_only then
-                       candidate env genuine
-                     else Continue
-                 | IsStuck =>
-                     (complete := false;
-                      if genuine_only then Continue
-                      else candidate env false))
+              let
+                val _ = tests := !tests + 1
+                val result = eval_boolean env tm
+                val _ = trace_candidate env result
+              in
+                case result of
+                    IsTrue => Continue
+                  | IsFalse =>
+                      if genuine orelse not genuine_only then
+                        candidate env genuine
+                      else Continue
+                  | IsStuck =>
+                      (complete := false;
+                       if genuine_only then Continue
+                       else candidate env false)
+              end
           | Guard (tm, next) =>
               (case eval_boolean env tm of
                    IsTrue => visit env genuine next

@@ -24,6 +24,7 @@ signature Refute = sig
   type qc_config = Refute_Core.qc_config
   type config = Refute_Core.config
   type backend = Refute_Core.backend
+  type substrate = Refute_Eval.substrate
   type custom_gen = Refute_Gen.custom_gen
   type rng = Refute_Gen.rng
 
@@ -35,6 +36,7 @@ signature Refute = sig
   val REFUTE_TAC    : Abbrev.tactic
 
   val register_backend : backend -> unit
+  val register_substrate : substrate -> unit
   val register_generator : hol_type -> custom_gen -> unit
   val abstract_generator :
     {ty : hol_type, constructors : term list, pred : term option} -> unit
