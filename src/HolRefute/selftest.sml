@@ -934,7 +934,7 @@ fun corpus_quantifiers () =
     val finite =
       ``(p : bool) /\ (!x : bool. x) /\
         (?y : refute$rf2. y = y)``
-    val infinite = ``(!n : num. n = n)``
+    val infinite = ``(!n : num. n <= n)``
   in
     check_corpus "Refute corpus: finite quantifier expansion" (fn () =>
       case preprocess corpus_config (preprocessing_problem finite) of
@@ -962,6 +962,20 @@ fun corpus_hol4_specific () =
     check_corpus "Refute corpus: quotient explanation" (fn () =>
       is_unknown_with "quotient" (Refute.refute corpus_config quotient_goal))
   end
+
+(* Numeral/string/char literals in a goal must not be mistaken for
+   non-executable constants (their internal NUMERAL/BIT1/STRING/CHR
+   tags reduce natively under EVAL), so goals mentioning them stay
+   testable and their counterexamples are found and certified. *)
+fun corpus_literals () =
+  (tc {name = "Refute corpus: numeral literal counterexample",
+       cfg = corpus_config, tm = ``!n : num. n <> 2``, expect = ExpectCex};
+   tc {name = "Refute corpus: character literal counterexample",
+       cfg = corpus_config, tm = ``!c : char. c <> #"a"``,
+       expect = ExpectCex};
+   tc {name = "Refute corpus: string literal counterexample",
+       cfg = corpus_config, tm = ``!s : string. s <> "x"``,
+       expect = ExpectCex})
 
 fun corpus_soundness () =
   (tc {name = "Refute corpus: sound reverse involution",
@@ -1050,6 +1064,7 @@ val _ =
      corpus_functions ();
      corpus_quantifiers ();
      corpus_hol4_specific ();
+     corpus_literals ();
      corpus_soundness ();
      corpus_registries ();
      corpus_parlist ())

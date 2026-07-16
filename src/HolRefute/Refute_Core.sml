@@ -469,7 +469,12 @@ structure Refute_Core = struct
   fun term_constants tm =
     let
       fun collect seen tm =
-        if Term.is_const tm then
+        if Literal.is_literal tm then
+          (* Numeral/string/char literals are closed values that EVAL
+             reduces natively; their internal constants (NUMERAL, BIT1,
+             STRING, CHR, ...) never leave the evaluator stuck. *)
+          seen
+        else if Term.is_const tm then
           if List.exists (fn old => Term.same_const old tm) seen then seen
           else tm :: seen
         else if Term.is_comb tm then

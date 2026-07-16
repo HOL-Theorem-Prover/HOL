@@ -113,15 +113,16 @@ structure Refute_Gen = struct
     end
     handle Feedback.HOL_ERR _ => []
 
-  fun is_named_quotient ty =
-    case Type.dest_type ty of
-        ("real", []) => true
-      | ("rat", []) => true
-      | _ => false
-    handle Feedback.HOL_ERR _ => false
+  (* Quotient types that quotient_types () does not surface because their
+     QUOTIENT theorems are not exported into the "quotient" ThmSetData
+     set; recognised by name. *)
+  val named_quotient_types = ["real", "rat"]
 
   fun is_quotient_type ty =
-    is_named_quotient ty orelse
+    (case Lib.total Type.dest_type ty of
+       SOME (name, []) => Lib.mem name named_quotient_types
+     | _ => false)
+    orelse
     List.exists (fn quotient_ty => same_type (quotient_ty, ty))
       (quotient_types ())
 
