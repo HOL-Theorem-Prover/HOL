@@ -12,6 +12,15 @@ Datatype:
   zoo_record = <| zoo_num : num; zoo_bit : bool |>
 End
 
+Datatype:
+  zoo_poly_record = <| zoo_poly : 'a; zoo_poly_bit : bool |>
+End
+
+Datatype:
+  zoo_even_tree = ZooEvenLeaf num | ZooEvenNode zoo_odd_tree ;
+  zoo_odd_tree = ZooOddNode zoo_even_tree
+End
+
 val zoo_total_def = TotalDefn.qDefine "zoo_total_def" `
   zoo_total (n : num) =
     if n = 0 then 0 else SUC (zoo_total (n - 1))

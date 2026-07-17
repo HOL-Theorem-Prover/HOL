@@ -325,6 +325,255 @@ val _ = require_msg (check_result mf_constructor_recognizers) (fn () =>
   "model-finder TypeBase recognizers/constructor enumeration failed")
   (fn () => ()) ()
 
+val _ = tprint "Refute model-finder HOL synthesis"
+
+fun mf_selector_discriminator_roundtrips () =
+  let
+    val list_constructors =
+      MFH.data_type_constrs mf_hol_context ``:num list``
+    val nil_constructor = List.nth (list_constructors, 0)
+    val cons = List.nth (list_constructors, 1)
+    val list_value = ``[3; 4] : num list``
+    val list_variable = ``xs : num list``
+    val list_args = [
+      MFH.select_nth_constr_arg mf_hol_context cons list_variable 0
+        ``:num``,
+      MFH.select_nth_constr_arg mf_hol_context cons list_variable 1
+        ``:num list``]
+    val tree_constructors =
+      MFH.data_type_constrs mf_hol_context ``:zoo_tree``
+    val leaf = List.nth (tree_constructors, 0)
+    val node = List.nth (tree_constructors, 1)
+    val tree_variable = ``tr : zoo_tree``
+    val tree_args = List.tabulate (2, fn index =>
+      MFH.select_nth_constr_arg mf_hol_context node tree_variable index
+        ``:zoo_tree``)
+    val record_constructor = hd
+      (MFH.data_type_constrs mf_hol_context ``:zoo_record``)
+    val record_variable = ``r : zoo_record``
+    val expanded_record = MFH.constr_expand mf_hol_context
+      ``:zoo_record`` record_variable
+    val (expanded_record_head, expanded_record_args) =
+      HolKernel.strip_comb expanded_record
+    val mutual_constructor = List.nth
+      (MFH.data_type_constrs mf_hol_context ``:zoo_even_tree``, 1)
+    val mutual_value = ``ZooEvenNode (ZooOddNode (ZooEvenLeaf 2))``
+    val mutual_variable = ``even : zoo_even_tree``
+    val mutual_arg = MFH.select_nth_constr_arg mf_hol_context
+      mutual_constructor mutual_variable 0 ``:zoo_odd_tree``
+    val pair_constructor = hd
+      (MFH.constructors_for mf_hol_context ``:num # bool``)
+    val pair_variable = ``p : num # bool``
+    val pair_tys = MFH.constructor_arg_types pair_constructor
+    val pair_args = List.tabulate (2, fn index =>
+      MFH.select_nth_constr_arg mf_hol_context pair_constructor
+        pair_variable index (List.nth (pair_tys, index)))
+  in
+    Term.aconv
+      (MFH.discriminate_value mf_hol_context cons list_value)
+      boolSyntax.T andalso
+    Term.aconv
+      (MFH.discriminate_value mf_hol_context nil_constructor list_value)
+      boolSyntax.F andalso
+    Term.aconv
+      (MFH.select_nth_constr_arg mf_hol_context cons list_value 0
+        ``:num``) ``3`` andalso
+    Term.aconv
+      (MFH.construct_value mf_hol_context cons list_args) list_variable andalso
+    Term.aconv
+      (MFH.select_nth_constr_arg mf_hol_context leaf ``ZooLeaf 8`` 0
+        ``:num``) ``8`` andalso
+    Term.aconv (MFH.construct_value mf_hol_context node tree_args)
+      tree_variable andalso
+    Term.same_const record_constructor expanded_record_head andalso
+    length expanded_record_args = 2 andalso
+    Term.aconv
+      (MFH.discriminate_value mf_hol_context mutual_constructor
+        mutual_value) boolSyntax.T andalso
+    Term.aconv (MFH.construct_value mf_hol_context mutual_constructor
+      [mutual_arg]) mutual_variable andalso
+    Term.aconv
+      (MFH.construct_value mf_hol_context pair_constructor pair_args)
+      pair_variable andalso
+    length (MFH.constructor_arg_types record_constructor) = 2
+  end
+
+val _ = require_msg
+  (check_result mf_selector_discriminator_roundtrips) (fn () =>
+    "model-finder selector/discriminator synthesis did not round-trip")
+  (fn () => ()) ()
+
+fun mf_record_optimizations () =
+  let
+    val constructor = hd
+      (MFH.data_type_constrs mf_hol_context ``:zoo_record``)
+    val record = Term.list_mk_comb
+      (constructor, [``4 : num``, boolSyntax.T])
+    val expected = Term.list_mk_comb
+      (constructor, [``4 + 1 : num``, boolSyntax.T])
+    val {accessor, fupd, ...} = #2
+      (hd (TypeBase.fields_of ``:zoo_record``))
+    val get = MFH.optimized_record_get mf_hol_context accessor record
+    val update_function = ``\n : num. n + 1``
+    val update = MFH.optimized_record_update mf_hol_context fupd
+      update_function record
+    val unfolded_get = MFH.unfold_defs_in_term mf_hol_context
+      (Term.mk_comb (accessor, record))
+    val unfolded_update = MFH.unfold_defs_in_term mf_hol_context
+      (Term.list_mk_comb (fupd, [update_function, record]))
+    val polymorphic_update =
+      ``zoo_poly_fupd (\n : num. n = 0)
+          <|zoo_poly := 1; zoo_poly_bit := T|>``
+    val (polymorphic_fupd, polymorphic_arguments) =
+      HolKernel.strip_comb polymorphic_update
+    val polymorphic_constructor = hd
+      (MFH.data_type_constrs mf_hol_context
+        ``:num zoo_poly_record``)
+    val polymorphic_record = Term.list_mk_comb
+      (polymorphic_constructor, [``1 : num``, boolSyntax.T])
+    val changed_type = MFH.optimized_record_update mf_hol_context
+      polymorphic_fupd (hd polymorphic_arguments) polymorphic_record
+    val output_constructor = hd
+      (MFH.data_type_constrs mf_hol_context
+        ``:bool zoo_poly_record``)
+    val expected_changed = Term.list_mk_comb
+      (output_constructor, [``1 = 0``, boolSyntax.T])
+  in
+    Term.aconv get ``4`` andalso
+    Term.aconv update expected andalso
+    Term.aconv unfolded_get ``4`` andalso
+    Term.aconv unfolded_update expected andalso
+    Term.aconv changed_type expected_changed
+  end
+
+val _ = require_msg (check_result mf_record_optimizations) (fn () =>
+  "model-finder record get/update optimization failed")
+  (fn () => ()) ()
+
+fun contains_constant key term =
+  List.exists (fn constant => MFH.same_key (MFH.const_key constant) key)
+    (HolKernel.find_terms Term.is_const term)
+
+fun mf_case_order_conformance () =
+  let
+    val nested =
+      ``list_CASE [SOME 2] 0
+          (\h t. option_CASE h 1 (\n : num. n))``
+    val partial = ``list_CASE (xs : num list)``
+    val capture_candidate =
+      ``rf3_CASE (r : refute$rf3) (x0 : num)``
+    val unfolded_nested = MFH.unfold_defs_in_term mf_hol_context nested
+    val unfolded_partial = MFH.unfold_defs_in_term mf_hol_context partial
+    val unfolded_capture = MFH.unfold_defs_in_term mf_hol_context
+      capture_candidate
+    val list_case_key = {Thy = "list", Name = "list_CASE"}
+    val option_case_key = {Thy = "option", Name = "option_CASE"}
+  in
+    Term.aconv unfolded_nested ``2`` andalso
+    Term.type_of unfolded_partial = Term.type_of partial andalso
+    Term.free_in ``x0 : num`` unfolded_capture andalso
+    Term.free_in ``r : refute$rf3`` unfolded_capture andalso
+    not (contains_constant list_case_key unfolded_partial) andalso
+    not (contains_constant list_case_key unfolded_nested) andalso
+    not (contains_constant option_case_key unfolded_nested)
+  end
+
+val _ = require_msg (check_result mf_case_order_conformance) (fn () =>
+  "model-finder case unfolding violated scrutinee-first HOL4 order")
+  (fn () => ()) ()
+
+fun mf_builtins_numerals_sets_and_ersatz () =
+  let
+    val numeral = ``37 : num``
+    val integer = ``~12 : int``
+    val literal = ``literal_case (\n : num. n + 1) 4``
+    val set_builder = ``GSPEC (\n : num. (n + 1, n < 3))``
+    val open_set_builder =
+      ``GSPEC (\n : num. (x : num, n = 0))``
+    val card = ``CARD ({T; F} : bool set)``
+    val unfolded_set = MFH.unfold_defs_in_term mf_hol_context set_builder
+    val unfolded_open_set = MFH.unfold_defs_in_term mf_hol_context
+      open_set_builder
+    val unfolded_card = MFH.unfold_defs_in_term mf_hol_context card
+    val numeral_keys =
+      [{Thy = "arithmetic", Name = "NUMERAL"},
+       {Thy = "arithmetic", Name = "BIT1"},
+       {Thy = "arithmetic", Name = "BIT2"},
+       {Thy = "arithmetic", Name = "ZERO"}]
+    fun built_in key = MFH.is_never_unfold_const
+      (Term.prim_mk_const key)
+    fun typed_built_in (({Thy, Name}, ty), _) =
+      MFH.is_never_unfold_const
+        (Term.mk_thy_const {Thy = Thy, Name = Name, Ty = ty})
+  in
+    MFH.is_built_in_const boolSyntax.IN_tm andalso
+    length MFH.built_in_consts = 26 andalso
+    length MFH.built_in_typed_consts = 17 andalso
+    List.all (built_in o #1) MFH.built_in_consts andalso
+    List.all typed_built_in MFH.built_in_typed_consts andalso
+    List.all built_in numeral_keys andalso
+    not (MFH.is_built_in_const
+      (Term.prim_mk_const {Thy = "relation", Name = "TC"})) andalso
+    (case MFH.numeral_value numeral of
+         SOME value => Arbint.compare (value, Arbint.fromInt 37) = EQUAL
+       | NONE => false) andalso
+    (case MFH.numeral_value integer of
+         SOME value => Arbint.compare (value, Arbint.fromInt ~12) = EQUAL
+       | NONE => false) andalso
+    not (Option.isSome (MFH.def_of_const mf_hol_context
+      ``$~ : bool -> bool``)) andalso
+    not (MFH.is_built_in_const
+      ``COND : bool -> bool -> bool -> bool``) andalso
+    Term.aconv (MFH.unfold_defs_in_term mf_hol_context literal)
+      ``4 + 1`` andalso
+    Term.type_of unfolded_set = ``:num set`` andalso
+    Term.free_in ``x : num`` unfolded_open_set andalso
+    not (contains_constant {Thy = "pred_set", Name = "GSPEC"}
+      unfolded_set) andalso
+    contains_constant {Thy = "refute", Name = "card'"} unfolded_card andalso
+    not (contains_constant {Thy = "pred_set", Name = "CARD"}
+      unfolded_card)
+  end
+
+val _ = require_msg
+  (check_result mf_builtins_numerals_sets_and_ersatz) (fn () =>
+    "model-finder built-in/numeral/set/ersatz mapping failed")
+  (fn () => ()) ()
+
+fun mf_cardinality_arithmetic () =
+  let
+    val missing_card_raises =
+      ((MFH.bounded_card_of_type 100 ~1 [] ``:zoo_tree``; false)
+       handle HOL_ERR _ => true)
+    val product_overflow_is_normalized =
+      ((MFH.card_of_type [] ``:word32 # word32``; false)
+       handle Refute_ModelFinder_Util.TOO_LARGE _ => true)
+  in
+    MFH.card_of_type [] ``:bool`` = 2 andalso
+    MFH.card_of_type [] ``:bool -> bool`` = 4 andalso
+    MFH.card_of_type [] ``:word8`` = 256 andalso
+    MFH.bounded_card_of_type 100 4 [] ``:word32 # word32`` = 100 andalso
+    MFH.bounded_exact_card_of_type mf_hol_context [] 100 4 []
+      ``:refute$rf3`` = 3 andalso
+    MFH.bounded_exact_card_of_type mf_hol_context [] 100 4 []
+      ``:bool -> refute$rf3`` = 9 andalso
+    MFH.bounded_exact_card_of_type mf_hol_context [] 100 4 []
+      ``:refute$rf3[2]`` = 9 andalso
+    MFH.bounded_exact_card_of_type mf_hol_context [] 100 4 []
+      ``:zoo_tree`` = 0 andalso
+    MFH.bounded_exact_card_of_type mf_hol_context [] 100 4 []
+      ``:zoo_even_tree`` = 0 andalso
+    MFH.is_finite_type mf_hol_context ``:word8`` andalso
+    MFH.is_finite_type mf_hol_context ``:refute$rf3`` andalso
+    not (MFH.is_finite_type mf_hol_context ``:zoo_tree``) andalso
+    not (MFH.is_finite_type mf_hol_context ``:num -> bool``) andalso
+    missing_card_raises andalso product_overflow_is_normalized
+  end
+
+val _ = require_msg (check_result mf_cardinality_arithmetic) (fn () =>
+  "model-finder exact/bounded cardinality arithmetic failed")
+  (fn () => ()) ()
+
 val _ = tprint "Refute model-finder utility"
 
 local
