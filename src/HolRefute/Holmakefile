@@ -5,6 +5,8 @@ INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit ../sort \
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
+selftest.uo: Refute_ModelFinder_HOL.uo
+
 ifdef POLY
 selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo refuteheap
 	@printf '%s\n' '#!/bin/sh' 'set -e' \

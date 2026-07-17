@@ -38,3 +38,41 @@ Definition rand_below_def:
     let s' = rand_next s
     in ((rand_out s' * n) DIV 4294967296, s')
 End
+
+(* Part 3: static model-finder support.  These constants intentionally have
+   no defining equations: the nut translation gives them their model-finder
+   meaning.  In particular, asserting is_unknown unknown would add logical
+   content that the source Nitpick theory does not have. *)
+val _ = new_constant ("unknown", ``:'a``)
+val _ = new_constant ("is_unknown", ``:'a -> bool``)
+val _ = new_constant ("safe_The", ``:('a -> bool) -> 'a``)
+
+Definition card'_def:
+  card' (s : 'a set) = if FINITE s then CARD s else 0
+End
+
+Theorem Eps_psimp[refute_psimp]:
+  P x ==> ~P y ==> ($@ P = y) ==> ($@ P = x)
+Proof
+  metis_tac [boolTheory.SELECT_AX]
+QED
+
+Theorem one_case_unfold[refute_unfold]:
+  one_CASE (u : unit) (x : 'a) = x
+Proof
+  simp [oneTheory.one_case_def]
+QED
+
+Theorem num_case_unfold[refute_unfold]:
+  num_CASE n (z : 'a) f = if n = 0 then z else f (n - 1)
+Proof
+  Cases_on `n` >> simp [arithmeticTheory.num_case_compute]
+QED
+
+Theorem list_size_simp[refute_simp]:
+  list_size f xs =
+    if xs = [] then 0
+    else SUC (f (HD xs) + list_size f (TL xs))
+Proof
+  Cases_on `xs` >> simp [listTheory.list_size_thm]
+QED

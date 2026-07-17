@@ -42,14 +42,25 @@ val _ = check_type (``:refute$rf4``, 4)
 val _ = check_type (``:refute$rf5``, 5)
 val _ = check_type (``:refute$rf6``, 6)
 
-fun check_empty settype =
-  require_msg (check_result
-    (fn () => null (ThmSetData.current_data {settype = settype})))
-    (fn () => "theorem set is not empty") (fn () => ()) ()
+fun same_conclusion left right =
+  Term.aconv (Thm.concl left) (Thm.concl right)
 
-val _ = check_empty "refute_simp"
-val _ = check_empty "refute_psimp"
-val _ = check_empty "refute_unfold"
+fun check_theorem_set settype expected =
+  let
+    val actual = ThmSetData.added_thms
+      (ThmSetData.theory_data {settype = settype, thy = "refute"})
+    fun contains theorem = List.exists (same_conclusion theorem) actual
+  in
+    require_msg (check_result (fn () =>
+      length actual = length expected andalso List.all contains expected))
+      (fn () => "unexpected contents in " ^ settype)
+      (fn () => ()) ()
+  end
+
+val _ = check_theorem_set "refute_simp" [list_size_simp]
+val _ = check_theorem_set "refute_psimp" [Eps_psimp]
+val _ = check_theorem_set "refute_unfold"
+  [one_case_unfold, num_case_unfold]
 
 val same_string_set : string list -> string list -> bool = Lib.set_eq
 
@@ -63,6 +74,96 @@ val _ = require_msg (check_result cv_ancestry_is_separate) (fn () =>
   "refute parents: " ^ String.concatWith ", " (Theory.parents "refute") ^
   "; refute_cv parents: " ^
   String.concatWith ", " (Theory.parents "refute_cv"))
+  (fn () => ()) ()
+
+val _ = tprint "Refute model-finder names"
+
+structure MFN = Refute_ModelFinder_Names
+
+fun var_name variable = #1 (Term.dest_var variable)
+
+fun mf_name_round_trips () =
+  let
+    val ty = ``:num``
+    val selector = MFN.mk_selector 2 "list$CONS" ty
+    val discriminator = MFN.mk_discriminator "list$CONS" ty
+    val skolem = MFN.mk_skolem 1 7 "witness" ty
+    val nested = MFN.sel_prefix_for 0 ^ var_name skolem
+  in
+    var_name selector = "refute$sel2$list$CONS" andalso
+    MFN.is_sel (var_name selector) andalso
+    MFN.sel_no_from_name (var_name selector) = 2 andalso
+    MFN.original_name (var_name selector) = "list$CONS" andalso
+    var_name discriminator = "refute$is$list$CONS" andalso
+    MFN.is_sel (var_name discriminator) andalso
+    MFN.sel_no_from_name (var_name discriminator) = ~1 andalso
+    MFN.original_name (var_name discriminator) = "list$CONS" andalso
+    var_name skolem = "refute$sk1@7$witness" andalso
+    MFN.is_skolem_name (var_name skolem) andalso
+    MFN.is_skolem_name nested andalso
+    MFN.original_name (var_name skolem) = "witness" andalso
+    var_name (MFN.mk_numeral 3 ty) = "refute$num$3" andalso
+    var_name (MFN.mk_eval 4 ty) = "refute$eval4" andalso
+    var_name (MFN.unknown_marker ty) = "?" andalso
+    var_name (MFN.unrepresented_marker ty) = "…" andalso
+    var_name (MFN.unrepresented_marker_ascii ty) = "..." andalso
+    var_name (MFN.irrelevant_marker ty) = "_" andalso
+    Parse.term_to_string (MFN.irrelevant_marker ty) = "_" andalso
+    var_name (MFN.fake_atom 1 ty) = "a1"
+  end
+
+val _ = require_msg (check_result mf_name_round_trips) (fn () =>
+  "model-finder fabricated names did not round-trip")
+  (fn () => ()) ()
+
+fun mf_variant_renames_goal_first () =
+  let
+    val ty = ``:num``
+    val question = Term.mk_var ("?", ty)
+    val atom = Term.mk_var ("a1", ty)
+    val goal = boolSyntax.mk_eq (question, atom)
+    val fabricated = [MFN.unknown_marker ty, MFN.fake_atom 1 ty]
+    val (renamed, renaming) =
+      MFN.rename_colliding_goal_vars fabricated goal
+  in
+    map var_name (Term.free_vars_lr renamed) = ["?'", "a1'"] andalso
+    map (fn (old, fresh) => (var_name old, var_name fresh)) renaming =
+      [("?", "?'"), ("a1", "a1'")] andalso
+    map var_name fabricated = ["?", "a1"]
+  end
+
+val _ = require_msg (check_result mf_variant_renames_goal_first) (fn () =>
+  "model-finder collision handling did not rename the user goal first")
+  (fn () => ()) ()
+
+fun mf_reserved_name_guards () =
+  let
+    val clean = Term.mk_var ("x", ``:num``)
+    val reserved = MFN.mk_selector 0 "C" ``:num``
+    val entry_rejected =
+      ((MFN.assert_user_goal (boolSyntax.mk_eq (reserved, reserved)); false)
+       handle HOL_ERR _ => true)
+    val bound_entry_rejected =
+      ((MFN.assert_user_goal
+          (boolSyntax.mk_forall
+            (reserved, boolSyntax.mk_eq (reserved, reserved))); false)
+       handle HOL_ERR _ => true)
+    val escape_rejected =
+      ((MFN.assert_no_reserved_in_theorem "selftest"
+          (Thm.REFL reserved); false)
+       handle HOL_ERR _ => true)
+    val clean_accepted =
+      ((MFN.assert_user_goal (boolSyntax.mk_eq (clean, clean));
+        MFN.assert_no_reserved_in_theorem "selftest" (Thm.REFL clean);
+        true)
+       handle HOL_ERR _ => false)
+  in
+    entry_rejected andalso bound_entry_rejected andalso
+    escape_rejected andalso clean_accepted
+  end
+
+val _ = require_msg (check_result mf_reserved_name_guards) (fn () =>
+  "model-finder reserved-name entry/no-escape guards failed")
   (fn () => ()) ()
 
 val _ = tprint "Refute model-finder utility"
