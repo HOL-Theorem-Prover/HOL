@@ -24,6 +24,7 @@ signature Refute = sig
   datatype substrate_choice = Auto | Compute | Cv | NativeSML
   datatype requirement = datatype Refute_Core.requirement
   type qc_config = Refute_Core.qc_config
+  type mf_config = Refute_Core.mf_config
   type config = Refute_Core.config
   type backend = Refute_Core.backend
   type substrate = Refute_Eval.substrate
@@ -47,6 +48,7 @@ signature Refute = sig
   val export_refute_unfold : string -> unit
 
   val default_qc_config : qc_config
+  val default_mf_config : mf_config
   val default_config : config
   val the_config : config ref
   val show_config : unit -> unit
@@ -73,4 +75,43 @@ signature Refute = sig
   val upd_seed : int option -> config -> config
   val upd_smart_quantifier : bool -> config -> config
   val upd_optimise_equality : bool -> config -> config
+  val upd_mf : mf_config -> config -> config
+  val upd_card : (hol_type option * int list) list -> config -> config
+  val upd_max : (term option * int list) list -> config -> config
+  val upd_mono :
+    (hol_type option * bool option) list -> config -> config
+  val upd_wf : (term option * bool option) list -> config -> config
+  val upd_sat_solver : string -> config -> config
+  val upd_batch_size : int -> config -> config
+  val upd_falsify : bool -> config -> config
+  val upd_user_axioms : bool option -> config -> config
+  val upd_destroy_constrs : bool -> config -> config
+  val upd_total_consts : bool option -> config -> config
+  val upd_peephole_optim : bool -> config -> config
+  val upd_datatype_sym_break : int -> config -> config
+  val upd_kodkod_sym_break : int -> config -> config
+  val upd_max_potential : int -> config -> config
+  val upd_max_genuine : int -> config -> config
+  val upd_atoms :
+    (hol_type option * string list) list -> config -> config
+  val upd_format : (term option * int list) list -> config -> config
+  val upd_show_types : bool -> config -> config
+  val upd_show_skolems : bool -> config -> config
+  val upd_show_consts : bool -> config -> config
+  val upd_debug : bool -> config -> config
+  val upd_overlord : bool -> config -> config
+  val upd_max_threads : int -> config -> config
+  val upd_tac_timeout : real -> config -> config
+  val upd_specialize : bool -> config -> config
+  val upd_box :
+    (hol_type option * bool option) list -> config -> config
+  val upd_binary_ints : bool option -> config -> config
+  val upd_bits : int list -> config -> config
+  val upd_star_linear_preds : bool -> config -> config
+  val upd_iter : (term option * int list) list -> config -> config
+  val upd_bisim_depth : int list -> config -> config
+  val upd_finitize :
+    (hol_type option * bool option) list -> config -> config
+  val upd_whack : term list -> config -> config
+  val upd_need : term list option -> config -> config
 end

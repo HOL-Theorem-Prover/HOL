@@ -62,6 +62,42 @@ structure Refute_Core = struct
       smart_quantifier : bool,
       optimise_equality : bool }
 
+  type mf_config =
+    { card : (hol_type option * int list) list,
+      max : (term option * int list) list,
+      mono : (hol_type option * bool option) list,
+      wf : (term option * bool option) list,
+      sat_solver : string,
+      batch_size : int,
+      falsify : bool,
+      user_axioms : bool option,
+      destroy_constrs : bool,
+      total_consts : bool option,
+      peephole_optim : bool,
+      datatype_sym_break : int,
+      kodkod_sym_break : int,
+      max_potential : int,
+      max_genuine : int,
+      atoms : (hol_type option * string list) list,
+      format : (term option * int list) list,
+      show_types : bool,
+      show_skolems : bool,
+      show_consts : bool,
+      debug : bool,
+      overlord : bool,
+      max_threads : int,
+      tac_timeout : real,
+      specialize : bool,
+      box : (hol_type option * bool option) list,
+      binary_ints : bool option,
+      bits : int list,
+      star_linear_preds : bool,
+      iter : (term option * int list) list,
+      bisim_depth : int list,
+      finitize : (hol_type option * bool option) list,
+      whack : term list,
+      need : term list option }
+
   type config =
     { timeout : real,
       backends : string list option,
@@ -73,7 +109,8 @@ structure Refute_Core = struct
       expect : expectation,
       max_counterexamples : int,
       tag : string,
-      qc : qc_config }
+      qc : qc_config,
+      mf : mf_config }
 
   type instance =
     { original : term,
@@ -106,6 +143,42 @@ structure Refute_Core = struct
       smart_quantifier = true,
       optimise_equality = true }
 
+  val default_mf_config : mf_config =
+    { card = [(NONE, List.tabulate (10, fn n => n + 1))],
+      max = [(NONE, [~1])],
+      mono = [(NONE, NONE)],
+      wf = [(NONE, NONE)],
+      sat_solver = "smart",
+      batch_size = 50,
+      falsify = true,
+      user_axioms = NONE,
+      destroy_constrs = true,
+      total_consts = NONE,
+      peephole_optim = true,
+      datatype_sym_break = 5,
+      kodkod_sym_break = 15,
+      max_potential = 1,
+      max_genuine = 1,
+      atoms = [(NONE, [])],
+      format = [(NONE, [1])],
+      show_types = false,
+      show_skolems = true,
+      show_consts = false,
+      debug = false,
+      overlord = false,
+      max_threads = 0,
+      tac_timeout = 0.5,
+      specialize = false,
+      box = [(NONE, SOME false)],
+      binary_ints = SOME false,
+      bits = [0],
+      star_linear_preds = false,
+      iter = [(NONE, [0])],
+      bisim_depth = [~1],
+      finitize = [],
+      whack = [],
+      need = NONE }
+
   val default_config : config =
     { timeout = 30.0,
       backends = NONE,
@@ -117,14 +190,15 @@ structure Refute_Core = struct
       expect = NoExpectation,
       max_counterexamples = 1,
       tag = "",
-      qc = default_qc_config }
+      qc = default_qc_config,
+      mf = default_mf_config }
 
   val the_config = ref default_config
 
   fun map_qc f (cfg : config) =
     let
       val {timeout, backends, sequential, genuine_only, abort_potential,
-           no_assms, evals, expect, max_counterexamples, tag, qc} = cfg
+           no_assms, evals, expect, max_counterexamples, tag, qc, mf} = cfg
     in
       { timeout = timeout,
         backends = backends,
@@ -136,19 +210,42 @@ structure Refute_Core = struct
         expect = expect,
         max_counterexamples = max_counterexamples,
         tag = tag,
-        qc = f qc }
+        qc = f qc,
+        mf = mf }
+    end
+
+  fun map_mf f (cfg : config) =
+    let
+      val {timeout, backends, sequential, genuine_only, abort_potential,
+           no_assms, evals, expect, max_counterexamples, tag, qc, mf} = cfg
+    in
+      { timeout = timeout,
+        backends = backends,
+        sequential = sequential,
+        genuine_only = genuine_only,
+        abort_potential = abort_potential,
+        no_assms = no_assms,
+        evals = evals,
+        expect = expect,
+        max_counterexamples = max_counterexamples,
+        tag = tag,
+        qc = qc,
+        mf = f mf }
     end
 
   fun upd_timeout value (cfg : config) =
-    let
-      val {backends, sequential, genuine_only, abort_potential, no_assms,
-           evals, expect, max_counterexamples, tag, qc, ...} = cfg
-    in
-      { timeout = value, backends = backends, sequential = sequential,
-        genuine_only = genuine_only, abort_potential = abort_potential,
-        no_assms = no_assms, evals = evals, expect = expect,
-        max_counterexamples = max_counterexamples, tag = tag, qc = qc }
-    end
+    { timeout = value,
+      backends = #backends cfg,
+      sequential = #sequential cfg,
+      genuine_only = #genuine_only cfg,
+      abort_potential = #abort_potential cfg,
+      no_assms = #no_assms cfg,
+      evals = #evals cfg,
+      expect = #expect cfg,
+      max_counterexamples = #max_counterexamples cfg,
+      tag = #tag cfg,
+      qc = #qc cfg,
+      mf = #mf cfg }
 
   fun upd_backends value (cfg : config) =
     { timeout = #timeout cfg,
@@ -161,7 +258,8 @@ structure Refute_Core = struct
       expect = #expect cfg,
       max_counterexamples = #max_counterexamples cfg,
       tag = #tag cfg,
-      qc = #qc cfg }
+      qc = #qc cfg,
+      mf = #mf cfg }
 
   fun upd_sequential value (cfg : config) =
     { timeout = #timeout cfg,
@@ -174,7 +272,8 @@ structure Refute_Core = struct
       expect = #expect cfg,
       max_counterexamples = #max_counterexamples cfg,
       tag = #tag cfg,
-      qc = #qc cfg }
+      qc = #qc cfg,
+      mf = #mf cfg }
 
   fun upd_genuine_only value (cfg : config) =
     { timeout = #timeout cfg,
@@ -187,7 +286,8 @@ structure Refute_Core = struct
       expect = #expect cfg,
       max_counterexamples = #max_counterexamples cfg,
       tag = #tag cfg,
-      qc = #qc cfg }
+      qc = #qc cfg,
+      mf = #mf cfg }
 
   fun upd_abort_potential value (cfg : config) =
     { timeout = #timeout cfg,
@@ -200,7 +300,8 @@ structure Refute_Core = struct
       expect = #expect cfg,
       max_counterexamples = #max_counterexamples cfg,
       tag = #tag cfg,
-      qc = #qc cfg }
+      qc = #qc cfg,
+      mf = #mf cfg }
 
   fun upd_no_assms value (cfg : config) =
     { timeout = #timeout cfg,
@@ -213,7 +314,8 @@ structure Refute_Core = struct
       expect = #expect cfg,
       max_counterexamples = #max_counterexamples cfg,
       tag = #tag cfg,
-      qc = #qc cfg }
+      qc = #qc cfg,
+      mf = #mf cfg }
 
   fun upd_evals value (cfg : config) =
     { timeout = #timeout cfg,
@@ -226,7 +328,8 @@ structure Refute_Core = struct
       expect = #expect cfg,
       max_counterexamples = #max_counterexamples cfg,
       tag = #tag cfg,
-      qc = #qc cfg }
+      qc = #qc cfg,
+      mf = #mf cfg }
 
   fun upd_expect value (cfg : config) =
     { timeout = #timeout cfg,
@@ -239,7 +342,8 @@ structure Refute_Core = struct
       expect = value,
       max_counterexamples = #max_counterexamples cfg,
       tag = #tag cfg,
-      qc = #qc cfg }
+      qc = #qc cfg,
+      mf = #mf cfg }
 
   fun upd_max_counterexamples value (cfg : config) =
     { timeout = #timeout cfg,
@@ -252,7 +356,8 @@ structure Refute_Core = struct
       expect = #expect cfg,
       max_counterexamples = value,
       tag = #tag cfg,
-      qc = #qc cfg }
+      qc = #qc cfg,
+      mf = #mf cfg }
 
   fun upd_tag value (cfg : config) =
     { timeout = #timeout cfg,
@@ -265,7 +370,8 @@ structure Refute_Core = struct
       expect = #expect cfg,
       max_counterexamples = #max_counterexamples cfg,
       tag = value,
-      qc = #qc cfg }
+      qc = #qc cfg,
+      mf = #mf cfg }
 
   fun upd_qc value (cfg : config) = map_qc (fn _ => value) cfg
 
@@ -384,6 +490,174 @@ structure Refute_Core = struct
       allow_function_inversion = #allow_function_inversion qc,
       use_subtype = #use_subtype qc, seed = #seed qc,
       smart_quantifier = #smart_quantifier qc, optimise_equality = value })
+
+  fun m4_error field =
+    raise Feedback.mk_HOL_ERR "Refute_Core" "validate_mf_config"
+      (field ^ ": not implemented until M4")
+
+  fun validate_mf_config (mf : mf_config) =
+    let
+      fun unchanged field same = if same then () else m4_error field
+      val _ = unchanged "specialize"
+        (#specialize mf = #specialize default_mf_config)
+      val _ = unchanged "box" (#box mf = #box default_mf_config)
+      val _ = unchanged "binary_ints"
+        (#binary_ints mf = #binary_ints default_mf_config)
+      val _ = unchanged "bits" (#bits mf = #bits default_mf_config)
+      val _ = unchanged "star_linear_preds"
+        (#star_linear_preds mf = #star_linear_preds default_mf_config)
+      val _ = (case #iter mf of
+                   [(NONE, [0])] => ()
+                 | _ => m4_error "iter")
+      val _ = unchanged "bisim_depth"
+        (#bisim_depth mf = #bisim_depth default_mf_config)
+      val _ = unchanged "finitize"
+        (#finitize mf = #finitize default_mf_config)
+      val _ = if null (#whack mf) then () else m4_error "whack"
+      val _ = (case #need mf of NONE => () | SOME _ => m4_error "need")
+      val _ = if #max_potential mf > 1 then m4_error "max_potential"
+              else ()
+      val _ = if #max_genuine mf > 1 then m4_error "max_genuine"
+              else ()
+    in
+      mf
+    end
+
+  datatype mf_update =
+      MfCard of (hol_type option * int list) list
+    | MfMax of (term option * int list) list
+    | MfMono of (hol_type option * bool option) list
+    | MfWf of (term option * bool option) list
+    | MfSatSolver of string
+    | MfBatchSize of int
+    | MfFalsify of bool
+    | MfUserAxioms of bool option
+    | MfDestroyConstrs of bool
+    | MfTotalConsts of bool option
+    | MfPeepholeOptim of bool
+    | MfDatatypeSymBreak of int
+    | MfKodkodSymBreak of int
+    | MfMaxPotential of int
+    | MfMaxGenuine of int
+    | MfAtoms of (hol_type option * string list) list
+    | MfFormat of (term option * int list) list
+    | MfShowTypes of bool
+    | MfShowSkolems of bool
+    | MfShowConsts of bool
+    | MfDebug of bool
+    | MfOverlord of bool
+    | MfMaxThreads of int
+    | MfTacTimeout of real
+    | MfSpecialize of bool
+    | MfBox of (hol_type option * bool option) list
+    | MfBinaryInts of bool option
+    | MfBits of int list
+    | MfStarLinearPreds of bool
+    | MfIter of (term option * int list) list
+    | MfBisimDepth of int list
+    | MfFinitize of (hol_type option * bool option) list
+    | MfWhack of term list
+    | MfNeed of term list option
+
+  fun change_mf update (mf : mf_config) =
+    { card = (case update of MfCard value => value | _ => #card mf),
+      max = (case update of MfMax value => value | _ => #max mf),
+      mono = (case update of MfMono value => value | _ => #mono mf),
+      wf = (case update of MfWf value => value | _ => #wf mf),
+      sat_solver = (case update of MfSatSolver value => value
+                    | _ => #sat_solver mf),
+      batch_size = (case update of MfBatchSize value => value
+                    | _ => #batch_size mf),
+      falsify = (case update of MfFalsify value => value
+                 | _ => #falsify mf),
+      user_axioms = (case update of MfUserAxioms value => value
+                     | _ => #user_axioms mf),
+      destroy_constrs = (case update of MfDestroyConstrs value => value
+                         | _ => #destroy_constrs mf),
+      total_consts = (case update of MfTotalConsts value => value
+                      | _ => #total_consts mf),
+      peephole_optim = (case update of MfPeepholeOptim value => value
+                        | _ => #peephole_optim mf),
+      datatype_sym_break =
+        (case update of MfDatatypeSymBreak value => value
+         | _ => #datatype_sym_break mf),
+      kodkod_sym_break =
+        (case update of MfKodkodSymBreak value => value
+         | _ => #kodkod_sym_break mf),
+      max_potential = (case update of MfMaxPotential value => value
+                       | _ => #max_potential mf),
+      max_genuine = (case update of MfMaxGenuine value => value
+                     | _ => #max_genuine mf),
+      atoms = (case update of MfAtoms value => value | _ => #atoms mf),
+      format = (case update of MfFormat value => value | _ => #format mf),
+      show_types = (case update of MfShowTypes value => value
+                    | _ => #show_types mf),
+      show_skolems = (case update of MfShowSkolems value => value
+                      | _ => #show_skolems mf),
+      show_consts = (case update of MfShowConsts value => value
+                     | _ => #show_consts mf),
+      debug = (case update of MfDebug value => value | _ => #debug mf),
+      overlord = (case update of MfOverlord value => value
+                  | _ => #overlord mf),
+      max_threads = (case update of MfMaxThreads value => value
+                     | _ => #max_threads mf),
+      tac_timeout = (case update of MfTacTimeout value => value
+                     | _ => #tac_timeout mf),
+      specialize = (case update of MfSpecialize value => value
+                    | _ => #specialize mf),
+      box = (case update of MfBox value => value | _ => #box mf),
+      binary_ints = (case update of MfBinaryInts value => value
+                     | _ => #binary_ints mf),
+      bits = (case update of MfBits value => value | _ => #bits mf),
+      star_linear_preds =
+        (case update of MfStarLinearPreds value => value
+         | _ => #star_linear_preds mf),
+      iter = (case update of MfIter value => value | _ => #iter mf),
+      bisim_depth = (case update of MfBisimDepth value => value
+                     | _ => #bisim_depth mf),
+      finitize = (case update of MfFinitize value => value
+                  | _ => #finitize mf),
+      whack = (case update of MfWhack value => value | _ => #whack mf),
+      need = (case update of MfNeed value => value | _ => #need mf) }
+
+  fun upd_mf value = map_mf (fn _ => validate_mf_config value)
+
+  fun update_mf update = map_mf (validate_mf_config o change_mf update)
+
+  fun upd_card value = update_mf (MfCard value)
+  fun upd_max value = update_mf (MfMax value)
+  fun upd_mono value = update_mf (MfMono value)
+  fun upd_wf value = update_mf (MfWf value)
+  fun upd_sat_solver value = update_mf (MfSatSolver value)
+  fun upd_batch_size value = update_mf (MfBatchSize value)
+  fun upd_falsify value = update_mf (MfFalsify value)
+  fun upd_user_axioms value = update_mf (MfUserAxioms value)
+  fun upd_destroy_constrs value = update_mf (MfDestroyConstrs value)
+  fun upd_total_consts value = update_mf (MfTotalConsts value)
+  fun upd_peephole_optim value = update_mf (MfPeepholeOptim value)
+  fun upd_datatype_sym_break value = update_mf (MfDatatypeSymBreak value)
+  fun upd_kodkod_sym_break value = update_mf (MfKodkodSymBreak value)
+  fun upd_max_potential value = update_mf (MfMaxPotential value)
+  fun upd_max_genuine value = update_mf (MfMaxGenuine value)
+  fun upd_atoms value = update_mf (MfAtoms value)
+  fun upd_format value = update_mf (MfFormat value)
+  fun upd_show_types value = update_mf (MfShowTypes value)
+  fun upd_show_skolems value = update_mf (MfShowSkolems value)
+  fun upd_show_consts value = update_mf (MfShowConsts value)
+  fun upd_debug value = update_mf (MfDebug value)
+  fun upd_overlord value = update_mf (MfOverlord value)
+  fun upd_max_threads value = update_mf (MfMaxThreads value)
+  fun upd_tac_timeout value = update_mf (MfTacTimeout value)
+  fun upd_specialize value = update_mf (MfSpecialize value)
+  fun upd_box value = update_mf (MfBox value)
+  fun upd_binary_ints value = update_mf (MfBinaryInts value)
+  fun upd_bits value = update_mf (MfBits value)
+  fun upd_star_linear_preds value = update_mf (MfStarLinearPreds value)
+  fun upd_iter value = update_mf (MfIter value)
+  fun upd_bisim_depth value = update_mf (MfBisimDepth value)
+  fun upd_finitize value = update_mf (MfFinitize value)
+  fun upd_whack value = update_mf (MfWhack value)
+  fun upd_need value = update_mf (MfNeed value)
 
   fun strip_outer_forall tm = boolSyntax.strip_forall tm
 
@@ -632,12 +906,33 @@ structure Refute_Core = struct
   fun show_config () =
     let
       val {timeout, backends, sequential, genuine_only, abort_potential,
-           no_assms, evals, expect, max_counterexamples, tag, qc} =
+           no_assms, evals, expect, max_counterexamples, tag, qc, mf} =
         !the_config
       val q = qc
+      val m = mf
       val show = Private.say 1
       val types = String.concatWith ", " (map Parse.type_to_string
         (#default_type q))
+      fun list_to_string f values =
+        "[" ^ String.concatWith ", " (map f values) ^ "]"
+      val ints = list_to_string Int.toString
+      val strings = list_to_string (fn value => "\"" ^ value ^ "\"")
+      val terms = list_to_string Parse.term_to_string
+      fun assignments key_to_string value_to_string rows =
+        list_to_string
+          (fn (key, value) =>
+            Private.option_to_string key_to_string key ^ " => " ^
+              value_to_string value)
+          rows
+      val type_ints = assignments Parse.type_to_string ints
+      val term_ints = assignments Parse.term_to_string ints
+      val type_bools = assignments Parse.type_to_string
+        (Private.option_to_string Bool.toString)
+      val term_bools = assignments Parse.term_to_string
+        (Private.option_to_string Bool.toString)
+      val type_strings = assignments Parse.type_to_string strings
+      fun optional_terms NONE = "NONE"
+        | optional_terms (SOME values) = "SOME " ^ terms values
     in
       List.app show
         [ "timeout = " ^ Real.toString timeout ^ "\n",
@@ -670,7 +965,49 @@ structure Refute_Core = struct
           "smart_quantifier = " ^
             Bool.toString (#smart_quantifier q) ^ "\n",
           "optimise_equality = " ^
-            Bool.toString (#optimise_equality q) ^ "\n" ]
+            Bool.toString (#optimise_equality q) ^ "\n",
+          "mf.card = " ^ type_ints (#card m) ^ "\n",
+          "mf.max = " ^ term_ints (#max m) ^ "\n",
+          "mf.mono = " ^ type_bools (#mono m) ^ "\n",
+          "mf.wf = " ^ term_bools (#wf m) ^ "\n",
+          "mf.sat_solver = " ^ #sat_solver m ^ "\n",
+          "mf.batch_size = " ^ Int.toString (#batch_size m) ^ "\n",
+          "mf.falsify = " ^ Bool.toString (#falsify m) ^ "\n",
+          "mf.user_axioms = " ^ Private.option_to_string Bool.toString
+            (#user_axioms m) ^ "\n",
+          "mf.destroy_constrs = " ^ Bool.toString (#destroy_constrs m) ^
+            "\n",
+          "mf.total_consts = " ^ Private.option_to_string Bool.toString
+            (#total_consts m) ^ "\n",
+          "mf.peephole_optim = " ^ Bool.toString (#peephole_optim m) ^
+            "\n",
+          "mf.datatype_sym_break = " ^
+            Int.toString (#datatype_sym_break m) ^ "\n",
+          "mf.kodkod_sym_break = " ^
+            Int.toString (#kodkod_sym_break m) ^ "\n",
+          "mf.max_potential = " ^ Int.toString (#max_potential m) ^ "\n",
+          "mf.max_genuine = " ^ Int.toString (#max_genuine m) ^ "\n",
+          "mf.atoms = " ^ type_strings (#atoms m) ^ "\n",
+          "mf.format = " ^ term_ints (#format m) ^ "\n",
+          "mf.show_types = " ^ Bool.toString (#show_types m) ^ "\n",
+          "mf.show_skolems = " ^ Bool.toString (#show_skolems m) ^ "\n",
+          "mf.show_consts = " ^ Bool.toString (#show_consts m) ^ "\n",
+          "mf.debug = " ^ Bool.toString (#debug m) ^ "\n",
+          "mf.overlord = " ^ Bool.toString (#overlord m) ^ "\n",
+          "mf.max_threads = " ^ Int.toString (#max_threads m) ^ "\n",
+          "mf.tac_timeout = " ^ Real.toString (#tac_timeout m) ^ "\n",
+          "mf.specialize = " ^ Bool.toString (#specialize m) ^ "\n",
+          "mf.box = " ^ type_bools (#box m) ^ "\n",
+          "mf.binary_ints = " ^ Private.option_to_string Bool.toString
+            (#binary_ints m) ^ "\n",
+          "mf.bits = " ^ ints (#bits m) ^ "\n",
+          "mf.star_linear_preds = " ^
+            Bool.toString (#star_linear_preds m) ^ "\n",
+          "mf.iter = " ^ term_ints (#iter m) ^ "\n",
+          "mf.bisim_depth = " ^ ints (#bisim_depth m) ^ "\n",
+          "mf.finitize = " ^ type_bools (#finitize m) ^ "\n",
+          "mf.whack = " ^ terms (#whack m) ^ "\n",
+          "mf.need = " ^ optional_terms (#need m) ^ "\n" ]
     end
 
   val backend_registry : (string * backend) list ref = ref []

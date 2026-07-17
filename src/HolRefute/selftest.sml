@@ -200,6 +200,66 @@ val _ = require_msg (check_result cv_generators_agree) (fn () =>
 
 val _ = tprint "Refute core configuration"
 
+fun same_term_option NONE NONE = true
+  | same_term_option (SOME left) (SOME right) = Term.aconv left right
+  | same_term_option _ _ = false
+
+fun same_term_assignments left right =
+  Lib.list_eq
+    (fn (left_term, left_values) => fn (right_term, right_values) =>
+      same_term_option left_term right_term andalso
+      left_values = right_values)
+    left right
+
+fun same_bool_term_assignments left right =
+  Lib.list_eq
+    (fn (left_term, left_value) => fn (right_term, right_value) =>
+      same_term_option left_term right_term andalso
+      left_value = right_value)
+    left right
+
+fun same_terms left right = Lib.list_eq Term.aconv left right
+
+fun same_optional_terms NONE NONE = true
+  | same_optional_terms (SOME left) (SOME right) = same_terms left right
+  | same_optional_terms _ _ = false
+
+fun same_mf (left : mf_config) (right : mf_config) =
+  #card left = #card right andalso
+  same_term_assignments (#max left) (#max right) andalso
+  #mono left = #mono right andalso
+  same_bool_term_assignments (#wf left) (#wf right) andalso
+  #sat_solver left = #sat_solver right andalso
+  #batch_size left = #batch_size right andalso
+  #falsify left = #falsify right andalso
+  #user_axioms left = #user_axioms right andalso
+  #destroy_constrs left = #destroy_constrs right andalso
+  #total_consts left = #total_consts right andalso
+  #peephole_optim left = #peephole_optim right andalso
+  #datatype_sym_break left = #datatype_sym_break right andalso
+  #kodkod_sym_break left = #kodkod_sym_break right andalso
+  #max_potential left = #max_potential right andalso
+  #max_genuine left = #max_genuine right andalso
+  #atoms left = #atoms right andalso
+  same_term_assignments (#format left) (#format right) andalso
+  #show_types left = #show_types right andalso
+  #show_skolems left = #show_skolems right andalso
+  #show_consts left = #show_consts right andalso
+  #debug left = #debug right andalso
+  #overlord left = #overlord right andalso
+  #max_threads left = #max_threads right andalso
+  Real.== (#tac_timeout left, #tac_timeout right) andalso
+  #specialize left = #specialize right andalso
+  #box left = #box right andalso
+  #binary_ints left = #binary_ints right andalso
+  #bits left = #bits right andalso
+  #star_linear_preds left = #star_linear_preds right andalso
+  same_term_assignments (#iter left) (#iter right) andalso
+  #bisim_depth left = #bisim_depth right andalso
+  #finitize left = #finitize right andalso
+  same_terms (#whack left) (#whack right) andalso
+  same_optional_terms (#need left) (#need right)
+
 fun size_update_is_local () =
   let
     val updated = upd_size 5 default_config
@@ -228,11 +288,55 @@ fun size_update_is_local () =
     null (#evals updated) andalso
     #expect updated = #expect default_config andalso
     #max_counterexamples updated = #max_counterexamples default_config andalso
-    #tag updated = #tag default_config
+    #tag updated = #tag default_config andalso
+    same_mf (#mf updated) (#mf default_config)
   end
 
 val _ = require_msg (check_result size_update_is_local) (fn () =>
   "upd_size changed a field other than qc.size") (fn () => ()) ()
+
+fun mf_update_is_local () =
+  let
+    val base = upd_show_types true
+      (upd_size 6 (upd_timeout 7.0 default_config))
+    val updated = upd_sat_solver "selftest-solver" base
+    val restored = upd_sat_solver (#sat_solver (#mf base)) updated
+  in
+    #sat_solver (#mf updated) = "selftest-solver" andalso
+    same_mf (#mf restored) (#mf base) andalso
+    Real.== (#timeout updated, #timeout base) andalso
+    #backends updated = #backends base andalso
+    #sequential updated = #sequential base andalso
+    #genuine_only updated = #genuine_only base andalso
+    #abort_potential updated = #abort_potential base andalso
+    #no_assms updated = #no_assms base andalso
+    same_terms (#evals updated) (#evals base) andalso
+    #expect updated = #expect base andalso
+    #max_counterexamples updated = #max_counterexamples base andalso
+    #tag updated = #tag base andalso
+    #qc updated = #qc base
+  end
+
+val _ = require_msg (check_result mf_update_is_local) (fn () =>
+  "upd_sat_solver changed a field other than mf.sat_solver")
+  (fn () => ()) ()
+
+fun m4_guard_is_pinned (field, testfn) = shouldfail {
+  checkexn = check_HOL_ERRexn
+    (fn (_, _, message) =>
+      message = field ^ ": not implemented until M4"),
+  printarg = K (field ^ " M4 guard"),
+  printresult = K "<config>",
+  testfn = testfn
+} ()
+
+val _ = List.app m4_guard_is_pinned
+  [("specialize", fn () =>
+      Refute.upd_specialize true Refute.default_config),
+   ("max_potential", fn () =>
+      Refute.upd_max_potential 2 Refute.default_config),
+   ("max_genuine", fn () =>
+      Refute.upd_max_genuine 2 Refute.default_config)]
 
 val _ = tprint "Refute core backend registry"
 
