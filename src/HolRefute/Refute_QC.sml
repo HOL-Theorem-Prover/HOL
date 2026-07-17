@@ -467,12 +467,14 @@ structure Refute_QC = struct
     { name = "exhaustive",
       weight = 20,
       configured = fn () => true,
+      requires = Refute_Core.ExecutableGoal,
       run = strategy_run Exhaustive }
 
   val random_backend : Refute_Core.backend =
     { name = "random",
       weight = 30,
       configured = fn () => true,
+      requires = Refute_Core.ExecutableGoal,
       run = fn config =>
         strategy_run (Random {seed = strategy_seed config}) config }
 

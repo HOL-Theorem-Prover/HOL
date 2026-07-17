@@ -21,6 +21,7 @@ signature Refute = sig
   datatype expectation = ExpectCex | ExpectNone | ExpectUnknown
                         | NoExpectation
   datatype substrate_choice = Auto | Compute | Cv | NativeSML
+  datatype requirement = datatype Refute_Core.requirement
   type qc_config = Refute_Core.qc_config
   type config = Refute_Core.config
   type backend = Refute_Core.backend

@@ -240,11 +240,19 @@ fun dummy_backend name weight : backend =
   { name = name,
     weight = weight,
     configured = fn () => true,
+    requires = ExecutableGoal,
     run = fn _ => fn _ => Unknown [] }
 
 val registry_alpha = dummy_backend "refute-core-alpha" (~97)
 val registry_beta = dummy_backend "refute-core-beta" (~98)
 val registry_alpha_replacement = dummy_backend "refute-core-alpha" (~96)
+
+val public_any_goal_backend : Refute.backend =
+  { name = "refute-public-any-goal",
+    weight = ~95,
+    configured = fn () => false,
+    requires = Refute.AnyGoal,
+    run = fn _ => fn _ => Unknown [] }
 
 val _ = register_backend registry_alpha
 val _ = register_backend registry_beta
@@ -1024,10 +1032,7 @@ val _ = tprint "Refute preprocessing and executability"
 fun preprocessing_problem goal : problem =
   { goal = goal, assumptions = [], evals = [] }
 
-fun preprocessed_instances result =
-  case result of
-      Preprocessed instances => SOME instances
-    | NotExecutable _ => NONE
+fun preprocessed_instances instances = SOME instances
 
 fun has_conjunction tm =
   case Lib.total boolSyntax.dest_conj tm of
@@ -1084,10 +1089,9 @@ val _ = require_msg (check_result rf2_exists_expands) (fn () =>
   (fn () => ()) ()
 
 fun num_binder_is_not_executable () =
-  case preprocess default_config
-    (preprocessing_problem ``q (!n : num. n = 0)``) of
-      NotExecutable _ => true
-    | Preprocessed _ => false
+  not (null (instance_gate_reasons
+    (preprocess default_config
+      (preprocessing_problem ``q (!n : num. n = 0)``))))
 
 val _ = require_msg (check_result num_binder_is_not_executable) (fn () =>
   "a universal over num was accepted as executable")
@@ -1164,13 +1168,87 @@ val _ = Theory.new_constant ("refute_task07_unmapped", ``:bool``)
 fun unmapped_constant_is_not_executable () =
   case preprocess default_config
     (preprocessing_problem ``refute_task07_unmapped``) of
-      NotExecutable [reason] =>
+      [{qc_gate = SOME [reason], ...}] =>
         String.isSubstring "refute_task07_unmapped" reason
     | _ => false
 
 val _ = require_msg
   (check_result unmapped_constant_is_not_executable) (fn () =>
   "a constant without a compute-set entry was accepted")
+  (fn () => ()) ()
+
+val nonexecutable_goal = ``q (!n : num. n = 0)``
+
+fun qc_gate_reason_is_merged () =
+  case refute_problem
+    (upd_backends (SOME ["exhaustive"]) default_config)
+    (preprocessing_problem nonexecutable_goal) of
+      Unknown reasons =>
+        reasons = ["not executable: unexpanded binder"]
+    | _ => false
+
+val _ = require_msg (check_result qc_gate_reason_is_merged) (fn () =>
+  "an executability-gate reason was not preserved for QC")
+  (fn () => ()) ()
+
+val any_goal_stub_enabled = ref false
+val any_goal_stub_received = ref false
+
+val any_goal_stub : backend =
+  { name = "refute-any-goal-stub",
+    weight = ~99,
+    configured = fn () => !any_goal_stub_enabled,
+    requires = AnyGoal,
+    run = fn _ => fn instances =>
+      (any_goal_stub_received :=
+         (not (null instances) andalso
+          List.all (Option.isSome o #qc_gate) instances);
+       Unknown ["received non-executable instance"]) }
+
+val _ = register_backend any_goal_stub
+
+fun any_goal_backend_receives_nonexecutable_instance () =
+  let
+    val _ = any_goal_stub_received := false
+    val _ = any_goal_stub_enabled := true
+    val captured = Exn.capture (fn () => refute_problem
+      (upd_backends (SOME ["refute-any-goal-stub"]) default_config)
+      (preprocessing_problem nonexecutable_goal)) ()
+    val _ = any_goal_stub_enabled := false
+  in
+    case Exn.release captured of
+        Unknown [reason] =>
+          !any_goal_stub_received andalso
+          reason = "refute-any-goal-stub: received non-executable instance"
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result any_goal_backend_receives_nonexecutable_instance) (fn () =>
+  "an AnyGoal backend did not receive a non-executable instance")
+  (fn () => ()) ()
+
+fun qc_gate_reason_merges_with_any_goal_unknown () =
+  let
+    val _ = any_goal_stub_enabled := true
+    val captured = Exn.capture (fn () => refute_problem
+      (upd_backends
+        (SOME ["exhaustive", "refute-any-goal-stub"])
+        default_config)
+      (preprocessing_problem nonexecutable_goal)) ()
+    val _ = any_goal_stub_enabled := false
+  in
+    case Exn.release captured of
+        Unknown reasons =>
+          reasons =
+            ["not executable: unexpanded binder",
+             "refute-any-goal-stub: received non-executable instance"]
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result qc_gate_reason_merges_with_any_goal_unknown) (fn () =>
+  "a QC gate reason was not merged with an AnyGoal Unknown")
   (fn () => ()) ()
 
 val _ = tprint "Refute QC plan compiler"
@@ -1300,15 +1378,16 @@ val _ = require_msg (check_result (fn () =>
 
 fun qc_problem goal : problem = {goal = goal, assumptions = [], evals = []}
 
-fun qc_instances config goal =
-  case preprocess config (qc_problem goal) of
-      Preprocessed instances => instances
-    | NotExecutable _ => []
+fun qc_instances config goal = preprocess config (qc_problem goal)
 
 fun exhaustive config goal =
-  case preprocess config (qc_problem goal) of
-      NotExecutable reasons => Unknown reasons
-    | Preprocessed instances => strategy_run Exhaustive config instances
+  let
+    val instances = qc_instances config goal
+    val reasons = instance_gate_reasons instances
+  in
+    if null reasons then strategy_run Exhaustive config instances
+    else Unknown reasons
+  end
 
 fun has_binding predicate (Counterexample (cex :: _)) =
       List.exists predicate (#bindings cex)
@@ -1484,6 +1563,22 @@ fun capture_refute_messages level action =
     (result, String.concat (rev (!chunks)))
   end
 
+fun trace_level_two_reports_qc_gate () =
+  let
+    val config = upd_backends (SOME ["exhaustive"]) default_config
+    val (_, output) = capture_refute_messages 2 (fn () =>
+      ignore (refute_problem config
+        (preprocessing_problem nonexecutable_goal)))
+  in
+    String.isSubstring
+      "QC backends excluded: not executable: unexpanded binder" output
+  end
+
+val _ = require_msg
+  (check_result trace_level_two_reports_qc_gate) (fn () =>
+  "trace level 2 omitted the executability-gate reason")
+  (fn () => ()) ()
+
 fun trace_level_two_reports_selection () =
   let
     val config = upd_size 2 default_config
@@ -1596,10 +1691,14 @@ val _ = require_msg (check_result update_witness) (fn () =>
 val _ = tprint "Refute QC random backend"
 
 fun random config goal =
-  case preprocess config (qc_problem goal) of
-      NotExecutable reasons => Unknown reasons
-    | Preprocessed instances =>
-        strategy_run (Random {seed = strategy_seed config}) config instances
+  let
+    val instances = qc_instances config goal
+    val reasons = instance_gate_reasons instances
+  in
+    if null reasons then
+      strategy_run (Random {seed = strategy_seed config}) config instances
+    else Unknown reasons
+  end
 
 val same_bindings = same_env
 
@@ -1969,9 +2068,13 @@ fun cv_result strategy choice goal =
     val config = upd_substrate choice
       (upd_iterations 100 (upd_size 3 default_config))
   in
-    case preprocess config (qc_problem goal) of
-        Preprocessed instances => strategy_run strategy config instances
-      | NotExecutable reasons => Unknown reasons
+    let
+      val instances = qc_instances config goal
+      val reasons = instance_gate_reasons instances
+    in
+      if null reasons then strategy_run strategy config instances
+      else Unknown reasons
+    end
   end
 
 fun cv_agrees strategy goal =
@@ -2684,7 +2787,7 @@ fun corpus_quantifiers () =
   in
     check_corpus "Refute corpus: finite quantifier expansion" (fn () =>
       case preprocess corpus_config (preprocessing_problem finite) of
-          Preprocessed [instance] => has_conjunction (#goal instance)
+          [instance] => has_conjunction (#goal instance)
         | _ => false);
     tc {name = "Refute corpus: finite check counterexample",
         cfg = corpus_config, tm = ``(b : bool)``, expect = ExpectCex};

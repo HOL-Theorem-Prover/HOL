@@ -73,16 +73,20 @@ structure Refute_Core = struct
       qc : qc_config }
 
   type instance =
-    { goal : term,
-      original : term,
+    { original : term,
+      goal : term,
+      qc_gate : string list option,
       evals : term list,
       card : int,
       size_matters : bool }
+
+  datatype requirement = ExecutableGoal | AnyGoal
 
   type backend =
     { name : string,
       weight : int,
       configured : unit -> bool,
+      requires : requirement,
       run : config -> instance list -> outcome }
 
   val default_qc_config : qc_config =
@@ -378,10 +382,6 @@ structure Refute_Core = struct
       use_subtype = #use_subtype qc, seed = #seed qc,
       smart_quantifier = #smart_quantifier qc, optimise_equality = value })
 
-  datatype preprocess_result =
-      Preprocessed of instance list
-    | NotExecutable of string list
-
   fun strip_outer_forall tm = boolSyntax.strip_forall tm
 
   fun strip_outer_forall_body tm = #2 (strip_outer_forall tm)
@@ -557,49 +557,46 @@ structure Refute_Core = struct
       val assumptions =
         if #no_assms cfg then [] else #assumptions problem
       val original_goal = boolSyntax.list_mk_imp (assumptions, #goal problem)
-      val initial_goal = strip_outer_forall_body original_goal
-      val normalized_goal = strip_outer_forall_body (normalize initial_goal)
-      val expanded_goal = expand_quantifiers normalized_goal
       val input_evals = #evals problem @ #evals cfg
       val types = monomorphic_types (#qc cfg)
       val tyvars = Lib.U
-        (map Term.type_vars_in_term (expanded_goal :: input_evals))
+        (map Term.type_vars_in_term (original_goal :: input_evals))
       fun make_instance (card, replacement) =
         let
           val theta = map (fn tyvar =>
             {redex = tyvar, residue = replacement}) tyvars
-          val goal = Term.inst theta expanded_goal
           val original = Term.inst theta original_goal
+          val initial_goal = strip_outer_forall_body original
+          val normalized_goal =
+            strip_outer_forall_body (normalize initial_goal)
+          val goal = expand_quantifiers normalized_goal
           val evals = map (Term.inst theta) input_evals
           val evals = add_equation_eval_terms goal evals
+          val binders_remain = has_unexpanded_binder goal
+          val constants =
+            if binders_remain then []
+            else nonexecutable_constants (goal :: evals)
+          val qc_gate =
+            if binders_remain then
+              SOME ["not executable: unexpanded binder"]
+            else if null constants then NONE
+            else SOME ["not executable: " ^ show_constants constants]
         in
-          { goal = goal,
-            original = original,
+          { original = original,
+            goal = goal,
+            qc_gate = qc_gate,
             evals = evals,
             card = card,
             size_matters = instance_size_matters goal }
         end
-      val instances =
-        if null tyvars then
-          [make_instance (1, Type.bool)]
-        else
-          List.map (fn (card, replacement) =>
-            make_instance (card, replacement))
-            (ListPair.zip (List.tabulate (length types, fn index => index + 1),
-              types))
-      val binders_remain = has_unexpanded_binder expanded_goal
-      val constants =
-        if binders_remain then []
-        else nonexecutable_constants
-          (List.concat (map (fn instance =>
-            #goal instance :: #evals instance) instances))
     in
-      if binders_remain then
-        NotExecutable ["not executable: unexpanded binder"]
-      else if null constants then
-        Preprocessed instances
+      if null tyvars then
+        [make_instance (1, Type.bool)]
       else
-        NotExecutable ["not executable: " ^ show_constants constants]
+        List.map (fn (card, replacement) =>
+          make_instance (card, replacement))
+          (ListPair.zip (List.tabulate (length types, fn index => index + 1),
+            types))
     end
 
   structure Private = struct
@@ -829,6 +826,28 @@ structure Refute_Core = struct
       List.concat (map one jobs)
     end
 
+  fun instance_gate_reasons instances =
+    let
+      fun add_reason (reason, reasons) =
+        if List.exists (fn old => old = reason) reasons then reasons
+        else reasons @ [reason]
+      fun add_instance (instance : instance, reasons) =
+        case #qc_gate instance of
+            NONE => reasons
+          | SOME more => List.foldl add_reason reasons more
+    in
+      List.foldl add_instance [] instances
+    end
+
+  fun instances_are_executable instances =
+    List.all (fn (instance : instance) =>
+      not (Option.isSome (#qc_gate instance))) instances
+
+  fun meets_requirement executable (backend : backend) =
+    case #requires backend of
+        AnyGoal => true
+      | ExecutableGoal => executable
+
   fun actual_name (Counterexample _) = "ExpectCex"
     | actual_name NoCounterexample = "ExpectNone"
     | actual_name (Unknown _) = "ExpectUnknown"
@@ -846,40 +865,51 @@ structure Refute_Core = struct
 
   fun refute_problem (cfg : config) (problem : problem) =
     let
-      val selected = selected_backends (#backends cfg)
       fun finish result =
         (report_outcome cfg result; check_expect cfg result; result)
       fun execute () =
-        case preprocess cfg problem of
-            NotExecutable reasons => Unknown reasons
-          | Preprocessed instances =>
-              if null selected then Unknown ["no configured backend"]
-              else
-                let
-                  val jobs = map (fn backend =>
-                    (backend, ref NONE : outcome option ref)) selected
-                  val winner =
-                    if #sequential cfg then
-                      ParList.get_first
-                        (run_backend cfg instances) jobs
+        let
+          val configured = selected_backends (#backends cfg)
+          val instances = preprocess cfg problem
+          val gate_reasons = instance_gate_reasons instances
+          val executable = instances_are_executable instances
+          val selected =
+            List.filter (meets_requirement executable) configured
+          val excluded =
+            List.filter (not o meets_requirement executable) configured
+          val excluded_reasons =
+            if null excluded then [] else gate_reasons
+          val _ = List.app (fn reason => Private.say 2
+            ("Refute: QC backends excluded: " ^ reason ^ "\n"))
+            excluded_reasons
+        in
+          if null configured then Unknown ["no configured backend"]
+          else if null selected then Unknown excluded_reasons
+          else
+            let
+              val jobs = map (fn backend =>
+                (backend, ref NONE : outcome option ref)) selected
+              val winner =
+                if #sequential cfg then
+                  ParList.get_first (run_backend cfg instances) jobs
+                else
+                  ParList.get_some (run_backend cfg instances) jobs
+            in
+              case winner of
+                  SOME result => result
+                | NONE =>
+                    if has_no_counterexample jobs then NoCounterexample
                     else
-                      ParList.get_some
-                        (run_backend cfg instances) jobs
-                in
-                  case winner of
-                      SOME result => result
-                    | NONE =>
-                        if has_no_counterexample jobs then NoCounterexample
-                        else
-                          let
-                            val reasons = unknown_results jobs
-                          in
-                            if null reasons then
-                              Unknown
-                                ["all selected backends returned no result"]
-                            else Unknown reasons
-                          end
-                end
+                      let
+                        val reasons =
+                          excluded_reasons @ unknown_results jobs
+                      in
+                        if null reasons then
+                          Unknown ["all selected backends returned no result"]
+                        else Unknown reasons
+                      end
+            end
+        end
       val result =
         (execute ()
          handle Refute_Gen.NoGenerator pair =>
