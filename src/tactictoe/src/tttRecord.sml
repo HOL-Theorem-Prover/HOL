@@ -9,7 +9,7 @@ structure tttRecord :> tttRecord =
 struct
 
 open HolKernel boolLib aiLib
-  smlLexer smlTimeout smlExecute smlParser smlRedirect
+  smlLexer smlExecute smlParser smlRedirect
   mlFeature mlThmData mlTacticData mlNearestNeighbor
   tttSetup tttLearn
 
@@ -26,8 +26,6 @@ fun add_local_tag s = "( tttRecord.local_tag " ^ s ^ ")"
 val tacdata_glob = ref empty_tacdata
 val thmdata_glob = ref empty_thmdata
 val pbl_glob = ref []
-val record_tactic_time = ref 2.0
-val record_proof_time = ref 20.0
 val record_proof_string_size = ref 50000
 val name_glob = ref ""
 
@@ -109,7 +107,7 @@ fun write_info thy =
    ------------------------------------------------------------------------- *)
 
 fun record_tactic (tac,stac) g =
-  let val ((gl,v),t) = add_time (timeout (!record_tactic_time) tac) g in
+  let val ((gl,v),t) = add_time tac g in
     incr n_tactic_replayed;
     if op_mem goal_eq g gl then () else
     calls_glob := (stac,g,gl) :: !calls_glob;
@@ -144,7 +142,7 @@ fun wrap_proof ostac =
     val _  = debug ("#tactics (total): " ^ its (!n_tactic_parsed))
     val wstac = string_of_proofexp (wrap_proofexp proofexp)
   in
-    (wstac, tactic_of_sml (!record_proof_time) wstac)
+    (wstac, tactic_of_sml_no_timeout wstac)
   end
 
 fun app_wrap_proof name ostac =
@@ -158,8 +156,7 @@ fun app_wrap_proof name ostac =
         val (wstac,wtac) = total_time parse_time wrap_proof ostac
         val _ = incr n_proof_parsed
       in
-        let val (gl,v) = total_time replay_time
-          (timeout (!record_proof_time) wtac) goal
+        let val (gl,v) = total_time replay_time wtac goal
         in
           if null gl
           then (incr n_proof_replayed; (gl,v))
@@ -221,18 +218,14 @@ fun end_record_proof name =
       {stac= stac, ogl = find_parents gl, fea = fea_of_goal true g}
       ))
     val icalls1 = map init_call precalls
-    (* precompute symweight *)
-    val feal1 = List.concat (map (#fea o snd o snd) icalls1)
-    val feal2 = mk_fast_set Int.compare feal1
-    val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
-    val calld = #calld tacdata
-    val tacfea = total_time tacfea_time
-      (map (fn (_,x) => (#stac x, #fea x))) (dlist calld)
-    val tacsymweight = total_time learn_tfidf_time
-      (learn_tfidf_symfreq (dlength calld) feal2) (#symfreq tacdata)
-    val icalls2 = if not (!record_ortho_flag) then map snd icalls1 else
-      map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) icalls1
-    val newtacdata = foldl ttt_update_tacdata tacdata icalls2
+    (* Record the calls that the source proof actually made.  The former
+       orthogonalization pass speculatively executed unrelated predicted
+       tactics under very short Poly/ML thread timeouts.  Those workers can
+       survive interruption and wedge a valid theory, and substituting a
+       predicted tactic also makes the recording cease to describe the
+       source proof. *)
+    val icalls2 = map snd icalls1
+    val newtacdata = foldl ttt_update_tacdata (!tacdata_glob) icalls2
   in
     debug ("saving " ^ int_to_string (length icalls2) ^ " calls");
     tacdata_glob := newtacdata

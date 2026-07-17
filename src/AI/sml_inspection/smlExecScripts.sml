@@ -99,6 +99,13 @@ fun find_genscriptdep file = find_genscriptdep_in_dir (script_dir file) file
 val buildheap_options = ref ""
 fun buildheap_dir () = scratch_dir_of () ^ "/sml_inspection/buildheap"
 
+(* Tactic recording replays arbitrary tactics.  Its fine-grained timeouts
+   use Poly/ML threads, and a worker may occasionally fail to stop after an
+   interrupt.  Each theory is already evaluated in a private OS process, so
+   retain an OS-level escape hatch for that case.  Ten minutes is well above
+   the normal per-theory times observed in a complete standard-library run. *)
+val tttrecord_time_limit = ref 600
+
 fun with_deferred_interrupts f =
   let
     val attributes = Thread.getAttributes ()
@@ -156,7 +163,8 @@ fun run_with_pid private_group started finished dir cmd =
         | _ => raise ERR "run_with_pid" "external command failed"
       end
 
-fun exec_scriptb_in_dir_with_pid private_group started finished b dir script =
+fun exec_scriptb_in_dir_with_pid private_group started finished time_limit
+    b dir script =
   let
     val _ = mkDir_err (buildheap_dir ())
     val fileout = buildheap_dir () ^ "/buildheap_" ^ bare script
@@ -164,8 +172,11 @@ fun exec_scriptb_in_dir_with_pid private_group started finished b dir script =
     val heap = if b then find_tttheapname_in_dir dir script
                else find_heapname_in_dir dir script
     (* Poly/ML runtime options must come before subcommand *)
+    val watchdog = case time_limit of
+        NONE => []
+      | SOME seconds => ["timeout", "--signal=KILL", Int.toString seconds]
     val cmd = String.concatWith " "
-      ([shell_quote hol_bin,"--gcthreads=1"] @ [!buildheap_options] @
+      (watchdog @ [shell_quote hol_bin,"--gcthreads=1"] @ [!buildheap_options] @
        ["run","--holstate=" ^ shell_quote heap] @
        map shell_quote depl @
        [shell_quote (script_arg script), ">", shell_quote fileout])
@@ -179,11 +190,11 @@ fun exec_scriptb_in_dir_with_pid private_group started finished b dir script =
             exnMessage e)
 
 fun exec_script_with_pid started finished script =
-  exec_scriptb_in_dir_with_pid true started finished false
+  exec_scriptb_in_dir_with_pid true started finished NONE false
     (script_dir script) script
 
 fun exec_scriptb_in_dir b dir script =
-  exec_scriptb_in_dir_with_pid false (fn _ => ()) (fn _ => ()) b dir script
+  exec_scriptb_in_dir_with_pid false (fn _ => ()) (fn _ => ()) NONE b dir script
 
 fun exec_script_in_dir dir script = exec_scriptb_in_dir false dir script
 
@@ -196,7 +207,8 @@ fun exec_script script = exec_script_in_dir (script_dir script) script
 
 fun exec_tttrecord_in_dir dir script =
   let fun cleanup () = remove_err script in
-    ((exec_scriptb_in_dir true dir script; cleanup ())
+    ((exec_scriptb_in_dir_with_pid true (fn _ => ()) (fn _ => ())
+        (SOME (!tttrecord_time_limit)) true dir script; cleanup ())
     handle Interrupt => (cleanup (); raise Interrupt)
          | e => (cleanup (); raise e))
   end

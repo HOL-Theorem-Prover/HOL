@@ -8,6 +8,11 @@ sig
   val find_genscriptdep : string -> string list
 
   val buildheap_options : string ref (* see buildheap --help *)
+  (* Hard wall-clock limit, in seconds, for one rewritten TacticToe theory.  The
+     recording itself uses in-process tactic timeouts, but those cannot
+     always stop a Poly/ML worker; this process-level guard keeps such a
+     worker from wedging the whole recording run. *)
+  val tttrecord_time_limit : int ref
   val exec_script_with_pid :
     (Posix.Process.pid -> unit) ->
     (Posix.Process.pid -> unit) -> string -> unit
