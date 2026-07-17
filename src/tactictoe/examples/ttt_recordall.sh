@@ -297,9 +297,10 @@ function duration(seconds, hours, minutes, remainder, result) {
   if (minutes > 0 || hours > 0) result = result minutes "m "
   return result remainder "s"
 }
-/^ttt_record(_thy)? time: [0-9]+(\.[0-9]+)?$/ {
+/^ttt_(record(_thy)?|rewrite_thy) time: [0-9]+(\.[0-9]+)?$/ {
   prefix = "ttt_record time: "
   if ($0 ~ /^ttt_record_thy/) prefix = "ttt_record_thy time: "
+  if ($0 ~ /^ttt_rewrite_thy/) prefix = "ttt_rewrite_thy time: "
   sub(/^.*: /, "")
   print prefix duration($0)
   next
