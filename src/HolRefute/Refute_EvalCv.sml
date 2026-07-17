@@ -1149,21 +1149,14 @@ structure Refute_EvalCv = struct
     end
 
   fun translate_checked prefix payloads definition =
-    (cv_transLib.cv_auto_trans definition
-     handle Feedback.HOL_ERR error =>
-       if String.isSubstring "Precondition generated"
-            (Feedback.message_of error)
-       then
-         let
-           val fallback =
-             case partial_constant
-               [List.foldr Refute_Eval.Guard Refute_Eval.Prune payloads] of
-                 SOME name => name
-               | NONE => prefix
-         in
-           raise Precondition fallback
-         end
-       else raise Feedback.HOL_ERR error)
+    case cv_transLib.cv_auto_trans_opt_pre definition of
+      NONE => ()
+    | SOME _ =>
+        raise Precondition
+          (case partial_constant
+             [List.foldr Refute_Eval.Guard Refute_Eval.Prune payloads] of
+               SOME name => name
+             | NONE => prefix)
 
   fun generator_for ty generators =
     case List.find (fn generator => same_type (#ty generator) ty)
