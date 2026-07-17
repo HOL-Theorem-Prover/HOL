@@ -40,7 +40,29 @@ Module layout:
 * Refute_Extract: in-memory HOL-to-SML extraction for NativeSML.
 * Refute_QC: QC test planning and random/exhaustive execution.
 * Refute_Cert: EVAL-based counterexample certification.
+* Refute_Forl and Refute_ForlSat: the FORL/Kodkodi process bridge and SAT
+  solver configuration.
 * Refute.sig and Refute.sml: the public API facade.
+
+Kodkodi support is Unix-only.  Set `HOL4_KODKODI` to a Kodkodi 1.5.7
+component directory containing the four jars in `jar/`.  Java is selected
+from `HOL4_JAVA_EXECUTABLE`, then `JAVA_HOME/bin/java`, then `java` on
+`PATH`.  Alternatively, `HOL4_KODKODI_EXEC` can provide a standalone
+launcher command; it is passed to the shell verbatim.  Configuration checks
+are lazy and never start a JVM while modules are loaded or built.
+
+`SAT4J` is the portable default.  JNI solvers are advertised only when their
+individual shared libraries are present under `jni/<platform>`: MiniSat,
+CryptoMiniSat, and Lingeling require `libminisat`, `libcryptominisat`, and
+`liblingeling`, respectively.  External solver settings retain Isabelle's
+environment variables, including `MINISAT_HOME`, `CRYPTOMINISAT_HOME`,
+`ZCHAFF_HOME`, `RSAT_HOME`, `RISS3G_HOME`, `BERKMIN_HOME`, and
+`BERKMINALLOY_HOME`.
+
+The prepared development host uses
+`$HOME/.local/opt/Isabelle2025-2/contrib/kodkodi-1.5.7` and
+`$HOME/.local/bin/java`; other machines need a local Kodkodi 1.5.7 component
+and a Java runtime.  No network access is needed at run time.
 
 HolRefute is included in the normal tree build only on Poly/ML; non-Poly
 builds skip the directory.  Its level-2 selftests include cross-substrate

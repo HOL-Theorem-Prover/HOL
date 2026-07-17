@@ -1,0 +1,179 @@
+signature REFUTE_FORL_SAT = sig
+  val configured_sat_solvers : bool -> string list
+  val smart_sat_solver_name : bool -> string
+  val sat_solver_spec : Time.time -> string -> string * string list
+end
+
+structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
+  datatype sink = ToStdout | ToFile
+  datatype availability = Java | JNI of string
+  datatype mode = Batch | Incremental
+
+  datatype sat_solver_info =
+    Internal of availability * mode * string list
+  | External of string * string * string list
+  | ExternalV2 of
+      sink * string * string * string * string * string *
+      (Time.time -> string list)
+
+  fun getenv name = Option.getOpt (OS.Process.getEnv name, "")
+
+  fun to_seconds minimum time =
+    Int.max
+      (minimum,
+       LargeInt.toInt ((Time.toMilliseconds time + 999) div 1000))
+
+  val berkmin_executable = getenv "BERKMIN_EXE"
+
+  val static_list =
+    [("CryptoMiniSat",
+      External ("CRYPTOMINISAT_HOME", "cryptominisat", [])),
+     ("MiniSat",
+      ExternalV2
+        (ToFile, "MINISAT_HOME", "minisat", "SAT", "", "UNSAT",
+         fn timeout =>
+           ["-cpu-lim=" ^ Int.toString (to_seconds 1 timeout)])),
+     ("zChaff",
+      ExternalV2
+        (ToStdout, "ZCHAFF_HOME", "zchaff", "Instance Satisfiable", "",
+         "Instance Unsatisfiable", fn _ => [])),
+     ("RSat",
+      ExternalV2
+        (ToStdout, "RSAT_HOME", "rsat", "s SATISFIABLE", "v ",
+         "s UNSATISFIABLE", fn _ => ["-s"])),
+     ("Riss3g", External ("RISS3G_HOME", "riss3g", [])),
+     ("BerkMin",
+      ExternalV2
+        (ToStdout, "BERKMIN_HOME",
+         if berkmin_executable = "" then "BerkMin561"
+         else berkmin_executable,
+         "Satisfiable          !!", "solution =",
+         "UNSATISFIABLE          !!", fn _ => [])),
+     ("BerkMin_Alloy",
+      External ("BERKMINALLOY_HOME", "berkmin", [])),
+     ("SAT4J", Internal (Java, Incremental, ["DefaultSAT4J"])),
+     ("SAT4J_Light", Internal (Java, Incremental, ["LightSAT4J"])),
+     ("Lingeling_JNI",
+      Internal (JNI "liblingeling", Batch, ["Lingeling"])),
+     ("CryptoMiniSat_JNI",
+      Internal (JNI "libcryptominisat", Batch, ["CryptoMiniSat"])),
+     ("MiniSat_JNI",
+      Internal (JNI "libminisat", Incremental, ["MiniSat"]))]
+
+  fun uname field =
+    case List.find (fn (name, _) => name = field) (Posix.ProcEnv.uname ()) of
+        SOME (_, value) => value
+      | NONE => ""
+
+  fun platform () =
+    let
+      val machine = uname "machine"
+      val system = uname "sysname"
+      val architecture =
+        if machine = "aarch64" orelse machine = "arm64" then "arm64"
+        else if machine = "amd64" then "x86_64"
+        else machine
+      val operating_system =
+        if system = "Linux" then "linux"
+        else if system = "Darwin" then "darwin"
+        else String.map Char.toLower system
+    in
+      architecture ^ "-" ^ operating_system
+    end
+
+  fun library_suffix () =
+    if uname "sysname" = "Darwin" then ".dylib" else ".so"
+
+  fun jni_library_exists stem =
+    let
+      val component = getenv "HOL4_KODKODI"
+      val directory = OS.Path.concat
+        (OS.Path.concat (component, "jni"), platform ())
+      val path = OS.Path.concat (directory, stem ^ library_suffix ())
+    in
+      component <> "" andalso
+      Posix.FileSys.ST.isReg (Posix.FileSys.stat path) andalso
+      OS.FileSys.access (path, [OS.FileSys.A_READ])
+        handle _ => false
+    end
+
+  val external_counter = Portable.make_counter {init = 0, inc = 1}
+
+  fun external_executable (home, executable) =
+    OS.Path.concat
+      (getenv home,
+       if Systeml.OS = "winNT" then executable ^ ".exe" else executable)
+
+  fun external_entry name device home executable arguments markers =
+    if getenv home = "" then NONE
+    else
+      let
+        fun make_arguments () =
+          let
+            val input =
+              name ^ Portable.unique_tmp_suffix () ^ "_" ^
+              Int.toString (external_counter ()) ^ ".cnf"
+          in
+            [if null markers then "External" else "ExternalV2",
+             external_executable (home, executable), input] @
+            (if null markers then []
+             else [if device = ToFile then "out" else ""]) @
+            markers @ arguments
+          end
+      in
+        SOME (name, make_arguments)
+      end
+
+  fun dynamic_entry _ incremental
+      (name, Internal (Java, mode, solver)) =
+        if incremental andalso mode = Batch then NONE
+        else SOME (name, fn () => solver)
+    | dynamic_entry _ incremental
+        (name, Internal (JNI library, mode, solver)) =
+        if not Systeml.isUnix orelse
+           (incremental andalso mode = Batch) orelse
+           not (jni_library_exists library)
+        then NONE
+        else SOME (name, fn () => solver)
+    | dynamic_entry _ true (_, External _) = NONE
+    | dynamic_entry timeout false
+        (name, External (home, executable, arguments)) =
+        external_entry name ToStdout home executable arguments []
+    | dynamic_entry _ true (_, ExternalV2 _) = NONE
+    | dynamic_entry timeout false
+        (name, ExternalV2
+          (device, home, executable, sat, instance, unsat, arguments)) =
+        external_entry name device home executable (arguments timeout)
+          [sat, instance, unsat]
+
+  fun dynamic_list timeout incremental =
+    List.mapPartial (dynamic_entry timeout incremental) static_list
+
+  fun configured_sat_solvers incremental =
+    List.map #1 (dynamic_list Time.zeroTime incremental)
+
+  fun smart_sat_solver_name _ = "SAT4J"
+
+  fun quote text = "\"" ^ text ^ "\""
+
+  fun solver_names entries =
+    String.concatWith ", " (List.map (quote o #1) entries)
+
+  fun fail function message =
+    raise Feedback.mk_HOL_ERR "Refute_ForlSat" function message
+
+  fun sat_solver_spec timeout name =
+    case List.find (fn (candidate, _) => candidate = name)
+        (dynamic_list timeout false) of
+        SOME (_, arguments) => (name, arguments ())
+      | NONE =>
+          if List.exists (fn (candidate, _) => candidate = name) static_list
+          then fail "sat_solver_spec"
+            ("The SAT solver " ^ quote name ^
+             " is not configured. The following solvers are configured:\n" ^
+             solver_names (dynamic_list timeout false))
+          else fail "sat_solver_spec"
+            ("Unknown SAT solver " ^ quote name ^
+             "\nThe following solvers are supported:\n" ^
+             solver_names static_list)
+end

@@ -404,6 +404,342 @@ in
     "an ill-formed Kodkodi instance was accepted") (fn () => ()) ()
 end
 
+val _ = tprint "Refute live Kodkodi bridge"
+
+local
+  open Refute_Forl
+
+  fun quoted text = "\"" ^ text ^ "\""
+
+  fun solver_settings timeout name =
+    let val (_, arguments) = Refute_ForlSat.sat_solver_spec timeout name
+    in
+      [("solver", String.concatWith ", " (List.map quoted arguments))]
+    end
+
+  fun deadline seconds = Time.now () + Time.fromSeconds seconds
+
+  fun unary_bound index count =
+    ([((1, index), "")],
+     [TupleSet [], TupleAtomSeq (count, 0)])
+
+  val bridge_configured = is_configured ()
+
+  fun problem comment settings count bounds formula : problem =
+    {comment = comment, settings = settings, univ_card = count,
+     tuple_assigns = [], bounds = bounds, int_bounds = [],
+     expr_assigns = [], formula = formula}
+
+  val mini_settings =
+    if Lib.mem "MiniSat_JNI"
+         (Refute_ForlSat.configured_sat_solvers false)
+    then solver_settings (Time.fromSeconds 30) "MiniSat_JNI" @
+      [("symmetry_breaking", "0")]
+    else []
+
+  val sat_problem =
+    problem "MiniSat JNI SAT" mini_settings 1
+      [unary_bound 0 1, unary_bound 1 1]
+      (And
+        (Or (Some (Rel (1, 0)), Some (Rel (1, 1))),
+         Not (And (Some (Rel (1, 0)), Some (Rel (1, 1))))))
+
+  val unsat_problem =
+    let
+      val x = Some (Rel (1, 0))
+      val y = Some (Rel (1, 1))
+    in
+      problem "MiniSat JNI nontrivial UNSAT" mini_settings 1
+        [unary_bound 0 1, unary_bound 1 1]
+        (And
+          (Or (x, y),
+           And
+             (Or (Not x, y),
+              And (Or (x, Not y), Or (Not x, Not y)))))
+    end
+
+  val incremental_problem =
+    problem "MiniSat JNI three solutions" mini_settings 2
+      [unary_bound 0 2] (Lone (Rel (1, 0)))
+
+  val false_problem = problem "false" mini_settings 1 [] False
+  val true_problem = problem "true" mini_settings 1 [] True
+
+  fun with_delay comment delay ({settings, univ_card, tuple_assigns,
+      bounds, int_bounds, expr_assigns, formula, ...} : problem) : problem =
+    {comment = comment, settings = settings @ [("delay", delay)],
+     univ_card = univ_card, tuple_assigns = tuple_assigns,
+     bounds = bounds, int_bounds = int_bounds, expr_assigns = expr_assigns,
+     formula = formula}
+
+  fun solver_surface_is_correct () =
+    let val solvers = Refute_ForlSat.configured_sat_solvers false
+    in
+      Lib.mem "MiniSat_JNI" solvers andalso
+      not (Lib.mem "Lingeling_JNI" solvers) andalso
+      not (Lib.mem "CryptoMiniSat_JNI" solvers) andalso
+      Refute_ForlSat.smart_sat_solver_name false = "SAT4J"
+    end
+
+  fun native_preflight () =
+    let
+      val sat = solve_any_problem true false (deadline 30) 1 1
+        [sat_problem]
+      val unsat = solve_any_problem true false (deadline 30) 1 1
+        [unsat_problem]
+    in
+      (case sat of
+           Normal ([(0, _)], [], "") => true
+         | _ => false) andalso
+      (case unsat of
+           Normal ([], [0], "") => true
+         | _ => false)
+    end
+
+  fun incremental_preflight () =
+    case solve_any_problem true false (deadline 30) 1 3
+        [incremental_problem] of
+        Normal (solutions, unsat, "") =>
+          length solutions = 3 andalso
+          List.all (fn (index, _) => index = 0) solutions andalso
+          null unsat
+      | _ => false
+
+  fun batching_short_circuits_and_cache () =
+    let
+      val first =
+        [false_problem, with_delay "first" "1" sat_problem,
+         false_problem]
+      val equivalent =
+        [false_problem, with_delay "cached" "999" sat_problem,
+         false_problem]
+      val solved = solve_any_problem false false (deadline 30) 1 1 first
+      val cached = solve_any_problem false false
+        (Time.now () - Time.fromSeconds 1) 1 1 equivalent
+      val true_short_circuit = solve_any_problem true false (deadline 30)
+        1 1 [false_problem, true_problem, sat_problem]
+      fun expected (Normal ([(1, _)], [0, 2], "")) = true
+        | expected _ = false
+    in
+      expected solved andalso expected cached andalso
+      expected true_short_circuit
+    end
+
+  datatype test_rep =
+    TestFormula
+  | TestAtom of int
+  | TestStruct of test_rep list
+  | TestVect of int * test_rep
+  | TestFunc of test_rep * test_rep
+
+  fun rep_shape TestFormula = [2]
+    | rep_shape (TestAtom cardinality) = [cardinality]
+    | rep_shape (TestStruct reps) = List.concat (List.map rep_shape reps)
+    | rep_shape (TestVect (count, rep)) =
+        List.concat (List.tabulate (count, fn _ => rep_shape rep))
+    | rep_shape (TestFunc (domain, range)) =
+        List.concat
+          (List.tabulate
+            (List.foldl op* 1 (rep_shape domain), fn _ => rep_shape range))
+
+  val a1 = TestAtom 1
+  val a2 = TestAtom 2
+  val a3 = TestAtom 3
+  val a4 = TestAtom 4
+  val a6 = TestAtom 6
+  val a16 = TestAtom 16
+
+  (* The first two upstream conversions simplify to False before launch.
+     The remaining 22 are represented directly as finite Kodkod
+     bijections between the Formula/Atom/Struct/Vect/Func layouts. *)
+  val conversion_tests =
+    [("rep_conversion_formula_formula", NONE),
+     ("rep_conversion_atom_atom", NONE),
+     ("rep_conversion_struct_struct_1",
+      SOME (TestStruct [a4, a6], TestStruct [a4, a6])),
+     ("rep_conversion_struct_struct_2",
+      SOME (TestStruct [a4, a6], TestStruct [a4, TestStruct [a2, a3]])),
+     ("rep_conversion_struct_struct_3",
+      SOME (TestStruct [a4, TestStruct [a2, a3]], TestStruct [a4, a6])),
+     ("rep_conversion_vect_vect_1",
+      SOME (TestVect (2, TestStruct [a2, a2]), TestVect (2, a4))),
+     ("rep_conversion_vect_vect_2",
+      SOME (TestVect (2, a4), TestVect (2, TestStruct [a2, a2]))),
+     ("rep_conversion_vect_vect_3",
+      SOME (TestVect (2, TestVect (2, a2)), TestVect (2, a4))),
+     ("rep_conversion_vect_vect_4",
+      SOME (TestVect (2, a4), TestVect (2, TestVect (2, a2)))),
+     ("rep_conversion_func_func_1",
+      SOME (TestFunc (a2, a6), TestFunc (a2, TestStruct [a2, a3]))),
+     ("rep_conversion_func_func_2",
+      SOME (TestFunc (a2, TestStruct [a2, a3]), TestFunc (a2, a6))),
+     ("rep_conversion_atom_formula_atom", SOME (a2, TestFormula)),
+     ("rep_conversion_atom_struct_atom1",
+      SOME (a6, TestStruct [a3, a2])),
+     ("rep_conversion_atom_struct_atom_2",
+      SOME (TestAtom 24, TestStruct [TestStruct [a3, a4], a2])),
+     ("rep_conversion_atom_vect_func_atom_1",
+      SOME (TestFunc (a4, a2), TestVect (4, a2))),
+     ("rep_conversion_atom_vect_func_atom_2",
+      SOME (TestFunc (a4, a2), TestVect (4, a2))),
+     ("rep_conversion_atom_vect_func_atom_3",
+      SOME (TestFunc (a4, TestFormula), TestVect (4, a2))),
+     ("rep_conversion_atom_func_vect_atom_1",
+      SOME (TestVect (4, a2), TestFunc (a4, a2))),
+     ("rep_conversion_atom_func_vect_atom_2",
+      SOME (TestVect (4, a2), TestFunc (a4, a2))),
+     ("rep_conversion_atom_func_vect_atom_3",
+      SOME (TestVect (4, a2), TestFunc (a4, TestFormula))),
+     ("rep_conversion_atom_func_vect_atom_5",
+      SOME (TestVect (1, a16), TestFunc (a1, a16))),
+     ("rep_conversion_atom_vect_atom",
+      SOME (TestAtom 36, TestVect (2, TestStruct [a2, a3]))),
+     ("rep_conversion_atom_func_atom",
+      SOME (TestAtom 36, TestFunc (a2, TestStruct [a2, a3]))),
+     ("rep_conversion_struct_atom1_1",
+      SOME (a1, TestStruct [a1, a1]))]
+
+  fun tuple_set_product [] = raise Fail "empty representation shape"
+    | tuple_set_product [cardinality] = TupleAtomSeq (cardinality, 0)
+    | tuple_set_product (cardinality :: cardinalities) =
+        TupleProduct
+          (TupleAtomSeq (cardinality, 0),
+           tuple_set_product cardinalities)
+
+  fun digits radices number =
+    let
+      fun calculate [] _ values = values
+        | calculate (radix :: rest) value values =
+            calculate rest (value div radix) ((value mod radix) :: values)
+    in
+      calculate (rev radices) number []
+    end
+
+  fun variable_tuple start shape =
+    let
+      val (relation, _) = List.foldl (fn (_, (prior, index)) =>
+        (case prior of
+             NONE => (SOME (Var (1, index)), index - 1)
+           | SOME value =>
+               (SOME (Product (value, Var (1, index))), index - 1)))
+        (NONE, start) shape
+    in
+      valOf relation
+    end
+
+  fun declarations start shape =
+    List.map (fn (offset, cardinality) =>
+      DeclOne ((1, start - offset), AtomSeq (cardinality, 0)))
+      (ListPair.zip (Portable.upto 0 (length shape - 1), shape))
+
+  fun mapping_tuples shape =
+    let val cardinality = List.foldl op* 1 shape
+    in
+      List.tabulate (cardinality, fn index =>
+        Tuple (digits shape index @ [index]))
+    end
+
+  val sat4j_settings =
+    solver_settings (Time.fromSeconds 60)
+      (Refute_ForlSat.smart_sat_solver_name false)
+
+  fun conversion_problem (name, NONE) =
+        problem name sat4j_settings 2 [] False
+    | conversion_problem (name, SOME (old_rep, new_rep)) =
+        let
+          val old_shape = rep_shape old_rep
+          val new_shape = rep_shape new_rep
+          val cardinality = List.foldl op* 1 old_shape
+          val _ =
+            if cardinality = List.foldl op* 1 new_shape then ()
+            else raise Fail (name ^ ": representation cardinality mismatch")
+          val old_arity = length old_shape
+          val new_arity = length new_shape
+          val source = Rel (old_arity, 0)
+          val old_mapping = Rel (old_arity + 1, 1)
+          val new_mapping = Rel (new_arity + 1, 2)
+          val old_result_start = ~1
+          val old_source_start = old_result_start - old_arity
+          val new_start = old_source_start - old_arity
+          val index = new_start - new_arity
+          val old_result = variable_tuple old_result_start old_shape
+          val old_source = variable_tuple old_source_start old_shape
+          val new_value = variable_tuple new_start new_shape
+          val index_value = Var (1, index)
+          val body =
+            And
+              (RelEq (old_source, source),
+               And
+                 (Subset (Product (old_source, index_value), old_mapping),
+                  And
+                    (Subset (Product (new_value, index_value), new_mapping),
+                     Subset
+                       (Product (old_result, index_value), old_mapping))))
+          val round_trip =
+            Comprehension
+              (declarations old_result_start old_shape,
+               Exist
+                 (declarations old_source_start old_shape @
+                  declarations new_start new_shape @
+                  [DeclOne ((1, index), AtomSeq (cardinality, 0))],
+                  body))
+          val bounds =
+            [([((old_arity, 0), "source representation")],
+              [TupleSet [], tuple_set_product old_shape]),
+             ([((old_arity + 1, 1), "old representation index")],
+              [TupleSet (mapping_tuples old_shape)]),
+             ([((new_arity + 1, 2), "new representation index")],
+              [TupleSet (mapping_tuples new_shape)])]
+        in
+          problem name sat4j_settings cardinality bounds
+            (And (One source, Not (RelEq (round_trip, source))))
+        end
+
+  val conversion_problems = List.map conversion_problem conversion_tests
+
+  fun conversion_round_trips () =
+    case solve_any_problem true false (deadline 60) 1 1
+        conversion_problems of
+        Normal ([], unsat, "") =>
+          unsat = Portable.upto 0 (length conversion_tests - 1)
+      | _ => false
+
+  val _ =
+    if bridge_configured then ()
+    else print "(Kodkodi not configured, live bridge tests skipped.)\n"
+in
+  val _ =
+    if bridge_configured then
+      require_msg (check_result solver_surface_is_correct) (fn () =>
+        "Kodkodi SAT solver availability did not match native artifacts")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result native_preflight) (fn () =>
+        "MiniSat JNI failed the SAT/nontrivial-UNSAT preflight")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result incremental_preflight) (fn () =>
+        "MiniSat JNI failed three-solution incremental solving")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result batching_short_circuits_and_cache) (fn () =>
+        "Kodkodi batching, short-circuiting, reindexing, or cache failed")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result conversion_round_trips) (fn () =>
+        "Kodkodi accepted a negated representation-conversion identity")
+        (fn () => ()) ()
+    else ()
+end
+
 val _ = tprint "Refute unified PRNG"
 
 val pinned_rand_stream = [423, 509, 648, 382, 795]
