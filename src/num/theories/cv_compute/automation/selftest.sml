@@ -69,6 +69,14 @@ fun test_for_failure f x =
     NONE => ()
   | SOME _ => failwith "unexpected success";
 
+fun expect_legacy_precondition f x =
+  (f x; failwith "expected a generated precondition")
+  handle Feedback.HOL_ERR error =>
+    if Feedback.message_of error =
+         "Precondition generated! Use `cv_trans_pre` instead of `cv_trans`."
+    then ()
+    else raise Feedback.HOL_ERR error;
+
 val _ = Datatype `
   xx_yy = XX xx_yy | YY (xx_yy list)
 `
@@ -137,6 +145,46 @@ val fac_def = Define `
 val inc_def = Define `
   inc n = n + 1:num
 `
+
+val opt_pre_total_def = Define `
+  opt_pre_total n = n + 7:num
+`
+
+val _ =
+  case cv_auto_trans_opt_pre opt_pre_total_def of
+    NONE => ()
+  | SOME _ => failwith "unexpected precondition for opt_pre_total";
+
+val _ =
+  aconv (concl (cv_eval “opt_pre_total 5”)) “opt_pre_total 5 = 12” orelse
+  failwith "cv_auto_trans_opt_pre did not store its total result";
+
+val opt_pre_partial_def = Define `
+  opt_pre_partial (n:num) k i =
+    if n = 0 then k + i + 1:num else
+    if 500 < n then ARB else n * opt_pre_partial (n - 1) i k
+`
+
+val opt_pre_partial_pre =
+  case cv_trans_opt_pre opt_pre_partial_def of
+    NONE => failwith "expected a precondition for opt_pre_partial"
+  | SOME pre => pre;
+
+val opt_pre_partial_pre_concl = concl (SPEC_ALL opt_pre_partial_pre);
+val _ = is_eq opt_pre_partial_pre_concl orelse
+        failwith "opt_pre_partial precondition is not a definition";
+val opt_pre_partial_pre_head =
+  opt_pre_partial_pre_concl |> lhs |> strip_comb |> fst |> dest_const |> fst;
+val _ = opt_pre_partial_pre_head = "opt_pre_partial_pre" orelse
+        failwith "opt_pre_partial precondition has the wrong name";
+
+val legacy_pre_partial_def = Define `
+  legacy_pre_partial (n:num) k i =
+    if n = 0 then k + i + 1:num else
+    if 500 < n then ARB else n * legacy_pre_partial (n - 1) i k
+`
+
+val _ = expect_legacy_precondition cv_trans legacy_pre_partial_def;
 
 val risky_def = Define `
   risky n = if n = 0 then ARB else n+1:num

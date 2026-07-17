@@ -3,11 +3,16 @@ sig
   include Abbrev
 
   val cv_trans          : thm -> unit
+  (* Like cv_trans / cv_auto_trans, but report a generated precondition as
+     SOME <pre definition> instead of failing.  On SOME, the guarded
+     [cv_rep] results and the <name>_pre constants have already been defined. *)
+  val cv_trans_opt_pre  : thm -> thm option
   val cv_trans_pre      : (* pre name *) string -> thm -> thm
   val cv_trans_pre_rec  : (* pre name *) string -> thm -> tactic -> thm
   val cv_trans_rec      : thm -> tactic -> unit
 
   val cv_auto_trans          : thm -> unit
+  val cv_auto_trans_opt_pre  : thm -> thm option
   val cv_auto_trans_pre      : (* pre name *) string -> thm -> thm
   val cv_auto_trans_pre_rec  : (* pre name *) string -> thm -> tactic -> thm
   val cv_auto_trans_rec      : thm -> tactic -> unit

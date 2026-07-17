@@ -295,7 +295,7 @@ fun lookup_ind_for_const hd_const =
 
 fun is_SOME (SOME _) = true | is_SOME _ = false;
 
-fun make_ind_thm allow_pre hd_const defs pre_def_tms =
+fun make_ind_thm report_pre allow_pre hd_const defs pre_def_tms =
   if is_SOME (allow_pre: string option) then let
     val pre_def_tm = list_mk_conj pre_def_tms
     val (pre_rules,pre_ind,pre_def) = Hol_reln [ANTIQUOTE pre_def_tm]
@@ -327,14 +327,21 @@ fun make_ind_thm allow_pre hd_const defs pre_def_tms =
       \\ match_mp_tac other_ind \\ rpt strip_tac
       \\ last_x_assum irule \\ rpt strip_tac
       \\ gvs [])
-    val pre_ind = (tac ([], ind_tm) |> snd) []
-    handle HOL_ERR _ => let
+    val pre_ind = SOME ((tac ([], ind_tm) |> snd) [])
+                  handle HOL_ERR _ => NONE
+    in
+      case pre_ind of
+        SOME th => (th,TRUTH)
+      | NONE =>
+        if report_pre then
+          make_ind_thm false (SOME "") hd_const defs pre_def_tms
+        else let
         val _ = cv_print Silent "\nERROR: failed to prove precondition.\n"
         val _ = indent_print_term Silent "\n" "\n\n" ind_tm
         val _ = cv_print Silent
                 "Stopping. Use cv_trans_pre instead (or one of its variants).\n"
-      in failwith "Could not prove a precondition." end
-    in (pre_ind,TRUTH) end
+        in failwith "Could not prove a precondition." end
+    end
 
 fun find_def_for const_tm =
   case lookup_userdef const_tm of
@@ -540,7 +547,7 @@ fun print_pre_goal name pre_def orig_names_list thy_name =
   val allow_pre = (NONE :string option)
 *)
 
-fun cv_trans_any allow_pre term_opt def = let
+fun cv_trans_any report_pre allow_pre term_opt def = let
   val (defs,measure_opt) = preprocess_def def
   (* make hyps *)
   val assums = defs |> map mk_assum_for
@@ -616,7 +623,8 @@ fun cv_trans_any allow_pre term_opt def = let
       val all_pats = zip pats pre_vars
       val pre_def_tms = map (make_pre_imp all_pats) expand_cv_reps
       val hd_const = raw_cv_reps |> hd |> concl |> rand |> strip_comb |> fst
-      val (pre_ind,pre_def) = make_ind_thm allow_pre hd_const defs pre_def_tms
+      val (pre_ind,pre_def) =
+        make_ind_thm report_pre allow_pre hd_const defs pre_def_tms
       (* instantiate pre_ind *)
       val is = map make_ind_abs expand_cv_reps
       val ind_thm = pre_ind |> SPECL is |> CONV_RULE (DEPTH_CONV BETA_CONV)
@@ -635,8 +643,8 @@ fun cv_trans_any allow_pre term_opt def = let
    non-recursive version of cv_trans
  *--------------------------------------------------------------------------*)
 
-fun cv_trans_no_loop (allow_pre:string option) term_opt def =
-  cv_trans_any allow_pre term_opt def
+fun cv_trans_no_loop report_pre (allow_pre:string option) term_opt def =
+  cv_trans_any report_pre allow_pre term_opt def
   handle NeedsTranslation (stack, tm) => let
     val target_c = def |> SPEC_ALL |> CONJUNCTS |> hd |> SPEC_ALL |> concl
                        |> dest_eq |> fst |> strip_comb |> fst
@@ -658,24 +666,29 @@ fun cv_trans_no_loop (allow_pre:string option) term_opt def =
     val _ = cv_print Silent "Stopping.\n"
     in failwith ("Unable to translate " ^ term_to_string needs_c) end
 
-fun cv_trans def = let
-  val res = cv_trans_no_loop NONE NONE def
-  in if aconv (concl res) T then () else
-       failwith ("Precondition generated! " ^
-                 "Use `cv_trans_pre` instead of `cv_trans`.") end
+fun cv_trans_opt_pre def = let
+  val res = cv_trans_no_loop true NONE NONE def
+  in if aconv (concl res) T then NONE else SOME res end
+
+fun cv_trans def =
+  case cv_trans_opt_pre def of
+    NONE => ()
+  | SOME _ =>
+      failwith ("Precondition generated! " ^
+                "Use `cv_trans_pre` instead of `cv_trans`.")
 
 fun cv_trans_pre pre_name def = let
-  val res = cv_trans_no_loop (SOME pre_name) NONE def
+  val res = cv_trans_no_loop false (SOME pre_name) NONE def
   in if aconv (concl res) T then
        failwith ("No precondition generated! " ^
                  "Use `cv_trans` instead of `cv_trans_pre`.")
      else res end;
 
 fun cv_trans_rec def tac =
-  (cv_trans_no_loop NONE (SOME tac) def; ());
+  (cv_trans_no_loop false NONE (SOME tac) def; ());
 
 fun cv_trans_pre_rec pre_name def tac =
-  cv_trans_no_loop (SOME pre_name) (SOME tac) def;
+  cv_trans_no_loop false (SOME pre_name) (SOME tac) def;
 
 (*--------------------------------------------------------------------------*
    recursive version of cv_auto_trans
@@ -708,10 +721,10 @@ datatype res = Res of thm | Needs of term;
 
 datatype task = Def of thm | Abbr of thm;
 
-fun total_cv_trans allow_pre term_opt def is_last =
-  (if is_last then (Res (cv_trans_any allow_pre term_opt def))
+fun total_cv_trans report_pre allow_pre term_opt def is_last =
+  (if is_last then (Res (cv_trans_any report_pre allow_pre term_opt def))
               else (Res (case cv_trans_simple_constant def of
-                      NONE => cv_trans_any NONE NONE def
+                      NONE => cv_trans_any false NONE NONE def
                     | SOME res => res)))
   handle NeedsTranslation (_, tm) => Needs tm;
 
@@ -820,28 +833,28 @@ fun get_start_msg_for def = let
      " from " ^ thy ^ "Theory.\n"
   end
 
-fun cv_trans_loop allow_pre term_opt [] =
+fun cv_trans_loop report_pre allow_pre term_opt [] =
       failwith "nothing to do"  (* cannot happen *)
-  | cv_trans_loop allow_pre term_opt (Abbr th::defs) = let
+  | cv_trans_loop report_pre allow_pre term_opt (Abbr th::defs) = let
       val tm = th |> concl |> dest_eq |> fst
       val th1 = cv_rep_for [] tm
       val th2 = th1 |> CONV_RULE (cv_rep_hol_tm_conv (REWR_CONV th)
                                   THENC REWR_CONV cv_rep_def)
       val c = tm |> strip_comb |> fst |> dest_const |> fst
       val th3 = save_thm(c ^ "_ho[cv_rep]",th2)
-      in cv_trans_loop allow_pre term_opt defs end
-  | cv_trans_loop allow_pre term_opt (Def def::defs) =
+      in cv_trans_loop report_pre allow_pre term_opt defs end
+  | cv_trans_loop report_pre allow_pre term_opt (Def def::defs) =
      (cv_print Quiet (get_start_msg_for def);
-      case total_cv_trans allow_pre term_opt def (null defs) of
+      case total_cv_trans report_pre allow_pre term_opt def (null defs) of
         Res th => if null defs then th
-                  else cv_trans_loop allow_pre term_opt defs
+                  else cv_trans_loop report_pre allow_pre term_opt defs
       | Needs tm => let
          val _ = check_for_dups tm defs
          val needs_c = strip_comb tm |> fst
          val new_def = find_inst_def_for needs_c
          val new_tasks = quiet_warnings (inst_ho_args tm) new_def
          val defs = new_tasks @ Def def::defs
-         in cv_trans_loop allow_pre term_opt defs end);
+         in cv_trans_loop report_pre allow_pre term_opt defs end);
 
 (*
 val allow_pre = false
@@ -853,24 +866,29 @@ val (Abbr def::defs) = defs
 val (Def def::defs) = defs
 *)
 
-fun cv_auto_trans def = let
-  val res = cv_trans_loop NONE NONE [Def def]
-  in if aconv (concl res) T then () else
-       failwith ("Precondition generated! " ^
-                 "Use `cv_trans_pre` instead of `cv_trans`.") end
+fun cv_auto_trans_opt_pre def = let
+  val res = cv_trans_loop true NONE NONE [Def def]
+  in if aconv (concl res) T then NONE else SOME res end
+
+fun cv_auto_trans def =
+  case cv_auto_trans_opt_pre def of
+    NONE => ()
+  | SOME _ =>
+      failwith ("Precondition generated! " ^
+                "Use `cv_trans_pre` instead of `cv_trans`.")
 
 fun cv_auto_trans_pre pre_name def = let
-  val res = cv_trans_loop (SOME pre_name) NONE [Def def]
+  val res = cv_trans_loop false (SOME pre_name) NONE [Def def]
   in if aconv (concl res) T then
        failwith ("No precondition generated! " ^
                  "Use `cv_trans` instead of `cv_trans_pre`.")
      else res end;
 
 fun cv_auto_trans_rec def tac =
-  (cv_trans_loop NONE (SOME tac) [Def def]; ());
+  (cv_trans_loop false NONE (SOME tac) [Def def]; ());
 
 fun cv_auto_trans_pre_rec pre_name def tac =
-  cv_trans_loop (SOME pre_name) (SOME tac) [Def def];
+  cv_trans_loop false (SOME pre_name) (SOME tac) [Def def];
 
 (*--------------------------------------------------------------------------*
    translate deep embedding constants of the form:
