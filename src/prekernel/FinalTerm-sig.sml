@@ -7,6 +7,8 @@ sig
   type 'a set       = 'a HOLset.set
 
   val equality      : term
+  val term_epoch    : unit -> int
+  val display_name_of_id : KernelSig.kernelid -> string
 
   val type_of       : term -> hol_type
   val free_vars     : term -> term list
@@ -42,7 +44,9 @@ sig
   val list_mk_abs   : term list * term -> term
   val dest_var      : term -> string * hol_type
   val dest_const    : term -> string * hol_type
-  val dest_thy_const : term -> {Thy:string, Name:string, Ty:hol_type}
+  val dest_thy_const: term -> {Thy:string, Name:string, Ty:hol_type}
+  val dest_thy_constid
+                    : term -> {Thy:string, Name:KernelSig.kernelid, Ty:hol_type}
   val dest_comb     : term -> term * term
   val strip_binder  : term option -> term -> term list * term
   val strip_abs     : term -> term list * term

@@ -12,7 +12,7 @@
 structure Term :> Term =
 struct
 
-open Feedback Lib Subst KernelTypes
+open Feedback Lib Subst Type_dtype KernelTypes
 
 val kernelid = "stdknl"
 
@@ -29,16 +29,24 @@ infix |-> ##;
                Create the signature for HOL terms
  ---------------------------------------------------------------------------*)
 
+fun termsig() = Context.termsig (Context.snapshot())
+fun upd_termsig f = Context.update (Context.map_termsig f)
+fun genupd_termsig f =
+    Context.gen_update (fn c =>
+      let val (new, r) = f (Context.termsig c)
+      in (Context.map_termsig (fn _ => new) c, r) end)
 
-val termsig = KernelSig.new_table()
-fun prim_delete_const kn = ignore (KernelSig.retire_name(termsig, kn))
+fun term_epoch () = KernelSig.symtab_epoch (termsig())
+fun display_name_of_id id = KernelSig.display_name_of_id (termsig()) id
+
+fun prim_delete_const kn = upd_termsig (#1 o KernelSig.retire_name kn)
 fun prim_new_const (k as {Thy,Name}) ty = let
   val hty = if Type.polymorphic ty then POLY ty else GRND ty
-  val id = KernelSig.insert(termsig, k, hty)
+  val id = genupd_termsig (KernelSig.insert(k, hty))
 in
   Const(id, hty)
 end
-fun del_segment s = KernelSig.del_segment(termsig, s)
+fun del_segment s = upd_termsig (KernelSig.del_segment s)
 
 (*---------------------------------------------------------------------------*
  * Builtin constants. These are in every HOL signature, and it is            *
@@ -51,9 +59,9 @@ local
   val hil_ty = POLY ((alpha --> bool) --> alpha)
   val imp_ty = GRND (bool --> bool --> bool)
 in
-  val eq_id = insert(termsig,{Name = "=", Thy = "min"}, eq_ty)
-  val hil_id = insert(termsig,{Name = "@", Thy = "min"}, hil_ty)
-  val imp_id = insert(termsig,{Name = "==>", Thy = "min"}, imp_ty)
+  val eq_id = genupd_termsig (insert({Name = "=", Thy = "min"}, eq_ty))
+  val hil_id = genupd_termsig(insert({Name = "@", Thy = "min"}, hil_ty))
+  val imp_id = genupd_termsig(insert({Name = "==>", Thy = "min"}, imp_ty))
 
   val eqc = Const (eq_id,eq_ty)
   val equality = eqc
@@ -303,7 +311,7 @@ fun var_occurs M =
 
 val mk_var = Fv
 
-fun inST s = KernelSig.nameExists termsig s
+fun inST s = KernelSig.nameExists (termsig()) s
 
 (*---------------------------------------------------------------------------*
  *   "genvars" are a Lisp-style "gensym" for HOL variables.                  *
@@ -391,11 +399,11 @@ fun decls nm =
             Const info :: A
           else A
     in
-      KernelSig.foldl f [] termsig
+      KernelSig.foldl f [] (termsig())
     end
 
 fun prim_mk_const (knm as {Name,Thy}) =
- case KernelSig.peek(termsig, knm) of
+ case KernelSig.peek(termsig(), knm) of
      KernelSig.Success c => Const c
    | KernelSig.Failure (KernelSig.NoSuchThy _) =>
      raise ERR "prim_mk_const"
@@ -422,14 +430,14 @@ fun mk_thy_const {Thy,Name,Ty} = let
   val knm = {Thy=Thy,Name=Name}
   open KernelSig
 in
-  case peek(termsig, knm) of
+  case peek(termsig(), knm) of
       Failure(NoSuchThy _) =>raise ERR "mk_thy_const" ("No such theory: " ^ Thy)
     | Success c => create_const "mk_thy_const" c Ty
     | _ => raise ERR "mk_thy_const" (KernelSig.name_toString knm^" not found")
 end
 
 fun first_decl fname Name =
-  case KernelSig.listName termsig Name
+  case KernelSig.listName (termsig()) Name
    of []             => raise ERR fname (Name^" not found")
     | [(_, const)]  => const
     | (_, const) :: _ =>
@@ -444,7 +452,7 @@ fun all_consts() =
       fun buildAll (_, cinfo as (_,v), A) =
           if Type.uptodate_type (to_hol_type v) then Const cinfo :: A else A
     in
-      KernelSig.foldl buildAll [] termsig
+      KernelSig.foldl buildAll [] (termsig())
     end
 fun thy_consts s =
     let
@@ -453,7 +461,7 @@ fun thy_consts s =
             Const cinfo :: A
           else A
     in
-      KernelSig.foldl buildthy [] termsig
+      KernelSig.foldl buildthy [] (termsig())
     end
 
 fun same_const (Const(id1,_)) (Const(id2,_)) = id1 = id2
@@ -840,9 +848,18 @@ fun break_abs(Abs(_,Body)) = Body
   | break_abs(t as Clos _) = break_abs (push_clos t)
   | break_abs _ = raise ERR "break_abs" "not an abstraction";
 
+(* Deliberately skips the uptodate/display check: dest_thy_const is on
+   HOL's hot path (BloomApprox term hashing, sdest_monop / sdest_binop,
+   Term.dest_const, is_zero and friends).  Retired same-named constants
+   are returned with the plain Name here; the pretty-printer applies the
+   Globals.oldify decoration via display_name_of_id when it matters. *)
 fun dest_thy_const (Const(id,ty)) =
-      {Thy = seg_of id, Name = display_name_of_id id, Ty = to_hol_type ty}
+      {Thy = seg_of id, Name = name_of id, Ty = to_hol_type ty}
   | dest_thy_const _ = raise ERR"dest_thy_const" "not a const"
+
+fun dest_thy_constid (Const(id,ty)) =
+      {Thy = seg_of id, Name = id, Ty = to_hol_type ty}
+  | dest_thy_constid _ = raise ERR"dest_thy_constid" "not a const"
 
 fun break_const (Const p) = (I##to_hol_type) p
   | break_const _ = raise ERR "break_const" "not a const"
@@ -1158,7 +1175,7 @@ fun uptodate_term t = let
         in
           case t of
             Fv(_, ty) => Type.uptodate_type ty andalso recurse rest
-          | Const(info, ty) => KernelSig.uptodate_id info andalso
+          | Const(info, ty) => KernelSig.uptodate_id (termsig()) info andalso
                                uptodate_type (to_hol_type ty) andalso
                                recurse rest
           | Comb(f,x) => recurse (f::x::rest)

@@ -1066,7 +1066,7 @@ in
             |> add_conv (is_ptree_tm,     1, PTREE_IS_PTREE_CONV)
             |> add_conv (ptree_of_numset_tm, 2, PTREE_OF_NUMSET_CONV)
             |> add_thms [PEEK_TRANSFORM]
-   val () = the_compset := add_ptree_core (!the_compset)
+   val () = upd_compset add_ptree_core
 end
 
 

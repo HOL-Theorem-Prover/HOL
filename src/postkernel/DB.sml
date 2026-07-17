@@ -107,8 +107,13 @@ fun allnamemap cthy d =
 val empty_dbmap = DB {namemap = Symtab.empty,
                       localmap = Symtab.empty, revmap = Termtab.empty}
 
-local val DBref = ref empty_dbmap
-      fun lemmas() = !DBref
+local val db_slot : dbmap Context.Data.slot =
+          Context.Data.new {name = "postkernel.DB",
+                            empty = empty_dbmap,
+                            pp = fn _ => "<DB>"}
+      fun lemmas() = Context.Data.get db_slot (Context.snapshot())
+      val put_db = Context.Data.write db_slot
+      val upd_db = Context.Data.modify db_slot
       fun functional_bindl_names thy blist namemap =
           (* used when a theory is loaded from disk *)
           let val submap =
@@ -146,12 +151,11 @@ local val DBref = ref empty_dbmap
                       if uptodate_term t then Termtab.update (t,d) A else A)
                   ttab Termtab.empty
           in
-            DBref :=
-            ((!DBref)
-               |> updnamemap
-                    (updexisting thyname
-                       (fn sm => Symtab.fold foldthis sm empty_sdata_map))
-               |> updrevmap purge_stale)
+            upd_db (fn db =>
+              db |> updnamemap
+                      (updexisting thyname
+                         (fn sm => Symtab.fold foldthis sm empty_sdata_map))
+                 |> updrevmap purge_stale)
           end
 
       fun delete_binding bnm =
@@ -165,7 +169,7 @@ local val DBref = ref empty_dbmap
                       (toLower bnm,
                        List.filter(not o dataNameEq bnm) datas) sm
           in
-            DBref := updnamemap (updexisting ct (smdelbinding bnm)) (!DBref)
+            upd_db (updnamemap (updexisting ct (smdelbinding bnm)))
           end
 
       fun hook thydelta =
@@ -178,32 +182,33 @@ local val DBref = ref empty_dbmap
                 (
                   if Theory.is_temp_binding (#1 nb) then ()
                   else
-                    DBref := functional_bindl (!DBref) (current_theory())
-                                              [flat nb]
+                    upd_db (fn db =>
+                              functional_bindl db (current_theory()) [flat nb])
                 )
               | DelBinding s => delete_binding s
               | UpdBinding(s,{old,new,thm}) =>
                 if Theory.is_temp_binding s then ()
-                else DBref := functional_bindl (!DBref)
-                                               (current_theory())
-                                               [(s,thm,new)]
+                else upd_db (fn db =>
+                               functional_bindl db (current_theory())
+                                                [(s,thm,new)])
               | ExportTheory s => purge_stale_bindings s
               | _ => ()
           end
       val _ = Theory.register_hook("DB", hook)
 in
-fun bindl thy blist = DBref := functional_bindl (lemmas()) thy blist
-fun revlookup th = Termtab.lookup_list (revmap (!DBref)) (concl th)
+fun bindl thy blist = upd_db (fn db => functional_bindl db thy blist)
+fun revlookup th = Termtab.lookup_list (revmap (lemmas())) (concl th)
 (*---------------------------------------------------------------------------
     To the database representing all ancestor theories, add the
     entries in the current theory segment.
  ---------------------------------------------------------------------------*)
-fun CT() = !DBref
+fun CT() = lemmas()
 
 fun store_local private s th =
-    DBref := (!DBref |> updlocalmap (Symtab.update(s,(th,private)))
-                     |> updrevmap (Termtab.cons_list(concl th, Local s)))
-fun local_thm s = case Symtab.lookup (localmap (!DBref)) s of
+    upd_db (fn db =>
+              db |> updlocalmap (Symtab.update(s,(th,private)))
+                 |> updrevmap (Termtab.cons_list(concl th, Local s)))
+fun local_thm s = case Symtab.lookup (localmap (lemmas())) s of
                       NONE => NONE
                     | SOME (th,{private,...}:thminfo) =>
                       if private then NONE else SOME th

@@ -12,6 +12,21 @@ datatype single_rule = IR of int * associativity * string
 
 val ERR = mk_HOL_ERR "type_pp" "pp_type";
 
+(* Pretty-printer variant of Type.dest_thy_type: applies Globals.oldify
+   to the Tyop if the underlying type operator has been retired, so
+   retired type operators don't match the special-syntax hooks and print
+   with their "old"-tagged name.  Type.dest_thy_type now skips this
+   check because it sits on the hot path (TypeBase, datatype-package,
+   is-a-specific-type predicates, etc.).
+
+   Uses Type.display_name_of_id (exposed in FinalType) rather than
+   Context.typesig's baked field so this works under both --stdknl and
+   --expk (whose typesig lives in its own Context.Data slot). *)
+fun dest_thy_type ty =
+    let val {Thy, Tyop = id, Args} = Type.dest_thy_typeid ty
+    in {Thy = Thy, Tyop = Type.display_name_of_id id, Args = Args}
+    end
+
 val avoid_unicode = ref (Systeml.OS = "winNT")
 local
   open Globals

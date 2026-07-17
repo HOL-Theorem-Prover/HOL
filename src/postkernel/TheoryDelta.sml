@@ -14,15 +14,28 @@ struct
  | UpdBinding of string * {thm:Thm.thm, old: thminfo, new:thminfo}
  | DelBinding of string
 
-(* Events whose effect on a downstream "is this stored delta still
-   up-to-date?" scan is wholly explained by KernelSig.retire_epoch.
-   Listeners that only care about retire-state can skip a scan on such
-   an event when the epoch is unchanged since their last scan. *)
+(* Consumers gate their scans on retire_epoch. The two predicates
+   below carve out which events they can trust that gate on.
+
+   retire_memoable: events whose scan-need is entirely a function of
+   retire_epoch.  ThmSetData uses this — its NewBinding hook
+   (neqbinding) does real work on additive events, so those aren't
+   captured here.
+
+   retire_captured: additionally includes NewBinding / NewTheory,
+   whose only effect on a pure retire-state predicate is additive.
+   DelBinding retires a DB entry without bumping retire_epoch and is
+   never captured; UpdBinding / ExportTheory are excluded
+   conservatively. *)
 fun retire_memoable (NewConstant _) = true
   | retire_memoable (NewTypeOp _) = true
   | retire_memoable (DelConstant _) = true
   | retire_memoable (DelTypeOp _) = true
   | retire_memoable _ = false
+
+fun retire_captured (NewBinding _) = true
+  | retire_captured (NewTheory _) = true
+  | retire_captured e = retire_memoable e
 
 local
   fun ksOp opnm ks = opnm ^ "(" ^ KernelSig.name_toString ks ^ ")"

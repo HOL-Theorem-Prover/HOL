@@ -1164,10 +1164,12 @@ fun opt_partition f g ls =
 
 (* stale-ness is important for derived values. Derived values will get
    re-calculated if their flag is true when the value is requested.
-*)
-val stale_flags = Sref.new ([] : bool Sref.t list)
-fun notify () =
-    List.app (fn br => Sref.update br (K true)) (Sref.value stale_flags)
+   The registry holds one invalidator closure per derived value; each
+   closure flips its own Context slot to `true`.  The registry itself
+   is module-static — grows only at module init when derived values
+   register — and doesn't need to travel with Context snapshots. *)
+val stale_flags = Sref.new ([] : (unit -> unit) list)
+fun notify () = List.app (fn f => f ()) (Sref.value stale_flags)
 
 fun apply_to_global d (st as (sset,initp,upds):srw_state) : srw_state =
     if not initp then
@@ -1263,12 +1265,22 @@ fun with_simpset_updates f g x = (
   before notify()
 )
 
-val update_log =
-    Sref.new (Symtab.empty : (simpset -> simpset) list Symtab.table)
+local
+  val update_log_slot :
+        (simpset -> simpset) list Symtab.table Context.Data.slot =
+      Context.Data.new
+        {name = "BasicProvers.update_log",
+         empty = Symtab.empty,
+         pp = fn _ => "<BasicProvers.update_log>"}
+in
+  fun update_log () =
+      Context.Data.get update_log_slot (Context.snapshot())
+  val upd_update_log = Context.Data.modify update_log_slot
+end
 fun ap13 f (x,y,z) = (f x, y, z)
 fun logged_update {thyname} f =
     (updnote_global_value (ap13 f);
-     Sref.update update_log (Symtab.cons_list (thyname,f)))
+     upd_update_log (Symtab.cons_list (thyname,f)))
 
 fun logged_addfrags thy fgs =
     List.app (fn f => logged_update thy (fn s => s ++ f)) fgs
@@ -1284,7 +1296,7 @@ fun apply_logged_updates {theories} simpset =
                                  (Binaryset.listItems allancs))
       val sorted_thys = List.rev (SymGraph.topological_order G)
       fun app1 thy simpset =
-          case Symtab.lookup (Sref.value update_log) thy of
+          case Symtab.lookup (update_log ()) thy of
               NONE => simpset
             | SOME fs => List.foldr (fn (f,ss) => f ss) simpset fs
     in
@@ -1361,21 +1373,32 @@ fun recreate_sset_at_parentage ps =
        |> temp_setsimpset
 
 
-fun make_simpset_derived_value (deriver : simpset -> 'a -> 'a) init =
+fun make_simpset_derived_value name (deriver : simpset -> 'a -> 'a) init =
     let
       val _ = update_global_value init_state
-      val vref = Sref.new (deriver (srw_ss()) init)
-      val stale_flag = Sref.new false
-      val _ = Sref.update stale_flags (cons stale_flag)
-      fun get() =
-          (if Sref.value stale_flag then
-             (Sref.update vref (deriver (srw_ss()));
-              Sref.update stale_flag (K false))
+      val vslot : 'a Context.Data.slot =
+          Context.Data.new
+            {name = name ^ ".value",
+             empty = deriver (srw_ss()) init,
+             pp = fn _ => "<" ^ name ^ ".value>"}
+      val staleslot : bool Context.Data.slot =
+          Context.Data.new
+            {name = name ^ ".stale",
+             empty = false,
+             pp = Bool.toString}
+      val () = Sref.update stale_flags
+                           (cons (fn () => Context.Data.write staleslot true))
+      fun get () =
+          (if Context.Data.get staleslot (Context.snapshot()) then
+             (Context.Data.modify vslot (deriver (srw_ss()));
+              Context.Data.write staleslot false)
            else ();
-           Sref.value vref)
-      fun set v = (Sref.update vref (K v); Sref.update stale_flag (K false))
+           Context.Data.get vslot (Context.snapshot()))
+      fun set v =
+          (Context.Data.write vslot v;
+           Context.Data.write staleslot false)
     in
-      {get=get,set=set}
+      {get=get, set=set}
     end
 
 fun mk_tacmod s =

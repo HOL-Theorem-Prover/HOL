@@ -11,14 +11,9 @@ sig
   val id_compare : kernelid * kernelid -> order
   val name_of_id : kernelid -> kernelname
   val id_toString : kernelid -> string
-  val new_id : kernelname -> kernelid
-  val uptodate_id : kernelid -> bool
-  val retire_id : kernelid -> unit
-  val retire_epoch : unit -> int
   val name_of : kernelid -> string
   val seg_of : kernelid -> string
   val epoch_of : kernelid -> int
-  val display_name_of_id : kernelid -> string  (* oldified iff retired *)
 
   type 'a symboltable
   datatype 'a symtab_error = Success of 'a
@@ -26,10 +21,11 @@ sig
   val isSuccess : 'a symtab_error -> bool
   exception NoSuchThy of string
   exception NotPresent of kernelname
-  val new_table : unit -> 'a symboltable
-  val insert : 'a symboltable * kernelname * 'a -> kernelid
+  val empty_table : 'a symboltable
+  val insert : kernelname * 'a -> 'a symboltable -> 'a symboltable * kernelid
   val find : 'a symboltable * kernelname -> kernelid * 'a
   val peek : 'a symboltable * kernelname -> (kernelid * 'a) symtab_error
+  val symtab_epoch : 'a symboltable -> int
 
   val numItems : 'a symboltable -> int
   val listItems : 'a symboltable -> (kernelname * (kernelid * 'a)) list
@@ -41,8 +37,12 @@ sig
   val app : (kernelname * (kernelid * 'a) -> unit) -> 'a symboltable -> unit
   val foldl : (kernelname * (kernelid * 'a) * 'b -> 'b) -> 'b ->
               'a symboltable -> 'b
-  val retire_name : 'a symboltable * kernelname -> unit
-  val uptodate_name : 'a symboltable * kernelname -> bool
-  val del_segment : 'a symboltable * string -> unit
+  val del_segment : string -> 'a symboltable -> 'a symboltable
+
+  val uptodate_id : 'a symboltable -> kernelid -> bool
+  val display_name_of_id : 'a symboltable -> kernelid -> string
+    (* oldified iff retired *)
+  val retire_name : kernelname -> 'a symboltable ->
+                    'a symboltable * (kernelid * 'a) symtab_error
 
 end

@@ -243,8 +243,7 @@ l1: ldr  r2, [r0, #4]  ; load data
     cmp  r0, r3        ; test if done
     blt  l1            ; loop if not done`
 
-val () = computeLib.the_compset :=
-           utilsLib.add_datatypes [``:RName``] (!computeLib.the_compset)
+val () = computeLib.upd_compset (utilsLib.add_datatypes [``:RName``])
 val () = computeLib.add_funs
            [test_def, alignmentTheory.aligned_def, alignmentTheory.align_def]
 val eval =

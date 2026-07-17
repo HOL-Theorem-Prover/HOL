@@ -309,18 +309,28 @@ val bool_compset =
      branches before the guard is fully true or false *)
   seal (set_skip (from_list bool_redns) boolSyntax.conditional NONE);
 
-val the_compset = ref (copy bool_compset);
+local
+  val compset_slot : compset Context.Data.slot =
+      Context.Data.new
+        {name = "computeLib.compset",
+         empty = copy bool_compset,
+         pp = fn _ => "<compset>"}
+in
+  fun the_compset () = Context.Data.get compset_slot (Context.snapshot())
+  val put_compset = Context.Data.write compset_slot
+  val upd_compset = Context.Data.modify compset_slot
+end
 
-fun add_funs thms = the_compset := add_thms thms (!the_compset);
+fun add_funs thms = upd_compset (add_thms thms)
 fun add_convs convs =
-  the_compset := foldl (fn (c, cs) => add_conv c cs) (!the_compset) convs;
+    upd_compset (fn cs => foldl (fn (c, cs) => add_conv c cs) cs convs)
 
 fun del_consts cs =
-  the_compset := foldl (fn (c, cset) => scrub_const cset c) (!the_compset) cs;
-fun del_funs thms = the_compset := scrub_thms thms (!the_compset);
+    upd_compset (fn cset => foldl (fn (c, cset) => scrub_const cset c) cset cs)
+fun del_funs thms = upd_compset (scrub_thms thms)
 
-fun EVAL_CONV t = CBV_CONV (!the_compset) t;
-fun EVALn_CONV n t = CBVn_CONV n (!the_compset) t
+fun EVAL_CONV t = CBV_CONV (the_compset()) t;
+fun EVALn_CONV n t = CBVn_CONV n (the_compset()) t
 val EVAL_RULE = Conv.CONV_RULE EVAL_CONV;
 val EVAL_TAC  = Tactic.CONV_TAC EVAL_CONV;
 
@@ -379,7 +389,7 @@ in
         add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs'
     end
     fun write_datatype_info tyi =
-        the_compset := add_datatype_info (!the_compset) tyi
+        upd_compset (fn cs => add_datatype_info cs tyi)
 end
 
 val _ = TypeBase.register_update_fn (fn tyi => (write_datatype_info tyi; tyi))
@@ -427,7 +437,7 @@ fun decdelta d =
 fun apply_delta cld () =
     case cld of
         CLD_set_skip (t, iopt) =>
-          the_compset := set_skip (!the_compset) t iopt
+          upd_compset (fn cs => set_skip cs t iopt)
       | CLD_delconst t => del_consts [t]
 
 val {record_delta,get_deltas=thy_updates,...} =
@@ -444,7 +454,7 @@ val {record_delta,get_deltas=thy_updates,...} =
 
 fun set_EVAL_skip t i = record_delta (CLD_set_skip(t,i))
 fun temp_set_EVAL_skip t i =
-    the_compset := set_skip (!the_compset) t i
+    upd_compset (fn cs => set_skip cs t i)
 fun del_persistent_consts cs = app (fn c => record_delta(CLD_delconst c)) cs
 
 (* ----------------------------------------------------------------------

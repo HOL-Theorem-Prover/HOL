@@ -21,24 +21,46 @@ struct
   (* abbrevs are a subset of reserved_words; changes to abbrevs
      changes reserved_words list as well
   *)
-  val funstore = Sref.new (Map.empty : attrfuns Map.table)
-  val abbrevs = Sref.new (Map.empty : (string * string list) list Map.table)
-  val reserved_words = Sref.new ["induction"]
+  local
+    val funstore_slot : attrfuns Map.table Context.Data.slot =
+        Context.Data.new
+          {name = "ThmAttribute.funstore", empty = Map.empty,
+           pp = fn _ => "<ThmAttribute.funstore>"}
+    val abbrevs_slot :
+          (string * string list) list Map.table Context.Data.slot =
+        Context.Data.new
+          {name = "ThmAttribute.abbrevs", empty = Map.empty,
+           pp = fn _ => "<ThmAttribute.abbrevs>"}
+    val reserved_words_slot : string list Context.Data.slot =
+        Context.Data.new
+          {name = "ThmAttribute.reserved_words", empty = ["induction"],
+           pp = fn _ => "<ThmAttribute.reserved_words>"}
+  in
+    fun funstore () =
+        Context.Data.get funstore_slot (Context.snapshot())
+    val upd_funstore = Context.Data.modify funstore_slot
+    fun abbrevs () =
+        Context.Data.get abbrevs_slot (Context.snapshot())
+    val upd_abbrevs = Context.Data.modify abbrevs_slot
+    fun reserved_words () =
+        Context.Data.get reserved_words_slot (Context.snapshot())
+    val upd_reserved_words = Context.Data.modify reserved_words_slot
+  end
   type abbrevinfo = {abbrev:string, expansion:(string * string list) list}
 
   fun define_abbreviation ({abbrev,expansion}:abbrevinfo) =
       let
         fun define_it() = (
-          Sref.update abbrevs (Symtab.update(abbrev,expansion));
-          Sref.update reserved_words (cons abbrev)
+          upd_abbrevs (Symtab.update(abbrev,expansion));
+          upd_reserved_words (cons abbrev)
         )
       in
-        if Map.defined (Sref.value funstore) abbrev then
+        if Map.defined (funstore ()) abbrev then
           raise ERR
                 "define_abbreviation"
                 ("Already a defined attribute: " ^ abbrev)
-        else if mem abbrev (Sref.value reserved_words) then
-          if !Globals.interactive andalso Map.defined (Sref.value abbrevs) abbrev
+        else if mem abbrev (reserved_words ()) then
+          if !Globals.interactive andalso Map.defined (abbrevs ()) abbrev
           then
             (* if both interactive and an existing abbrev, allow redefinition *)
             define_it()
@@ -50,22 +72,22 @@ struct
       end
 
   fun remove_abbreviation s = (
-    Sref.update abbrevs (Symtab.delete_safe s);
-    Sref.update reserved_words (op_set_diff equal [s])
+    upd_abbrevs (Symtab.delete_safe s);
+    upd_reserved_words (op_set_diff equal [s])
   )
 
   fun current_abbreviations () =
       Symtab.fold (fn (k,v) => fn A => {abbrev=k,expansion=v} :: A)
-                  (Sref.value abbrevs)
+                  (abbrevs ())
                   []
 
-  fun all_attributes () = Map.keys (Sref.value funstore)
-  fun is_attribute a = Map.defined (Sref.value funstore) a
+  fun all_attributes () = Map.keys (funstore ())
+  fun is_attribute a = Map.defined (funstore ()) a
 
    (* "induction=name" is handled by tools/Holmake/HOLSource, and so is basically
       invisible to all later code *)
   fun reserve_word s =
-      if Lib.mem s (Sref.value reserved_words) then
+      if Lib.mem s (reserved_words ()) then
         if !Globals.interactive then
           Feedback.HOL_WARNING "ThmAttribute" "reserve_word"
                                ("Word \"" ^ s ^ "\" already reserved")
@@ -76,7 +98,7 @@ struct
         raise Feedback.mk_HOL_ERR "ThmAttribute" "reserve_word"
               ("Word \"" ^ s ^ "\" already a standard attribute")
       else
-        Sref.update reserved_words (Lib.cons s)
+        upd_reserved_words (Lib.cons s)
 
 (*
  "unlisted", "nocompute", "schematic",
@@ -94,7 +116,7 @@ struct
         val _ = legal_attrsyntax s orelse
                 raise Feedback.mk_HOL_ERR "ThmAttribute" "register_attribute"
                       ("Illegal attribute name: \""^s^"\"")
-        val _ = not (Lib.mem s (Sref.value reserved_words)) orelse
+        val _ = not (Lib.mem s (reserved_words ())) orelse
                 raise Feedback.mk_HOL_ERR "ThmAttribute" "register_attribute"
                       ("Name \""^s^"\" already reserved for other uses")
 
@@ -108,11 +130,11 @@ struct
                   Map.update kv oldm
                 )
       in
-        Sref.update funstore upd
+        upd_funstore upd
       end
 
   fun at_attribute nm sel (arg as {name,attrname,args,thm}) =
-      case Map.lookup (Sref.value funstore) attrname of
+      case Map.lookup (funstore ()) attrname of
           NONE => raise Feedback.mk_HOL_ERR "ThmAttribute"
                         nm ("No such attribute: " ^ attrname)
         | SOME a => sel a arg
@@ -163,10 +185,10 @@ struct
                 | (a as (k,vs)) :: rest =>
                   if is_attribute k then categorise(U,R,a::A) rest
                   else
-                    case Map.lookup (Sref.value abbrevs) k of
+                    case Map.lookup (abbrevs ()) k of
                         SOME kvs => categorise (U,R,A) (kvs @ rest)
                       | NONE =>
-                        if Lib.mem k (Sref.value reserved_words) then
+                        if Lib.mem k (reserved_words ()) then
                           categorise(U,a::R,A) rest
                         else categorise (a::U,R,A) rest
       in

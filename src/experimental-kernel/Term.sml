@@ -34,14 +34,35 @@ val compare_cinfo = KernelSig.id_compare
 val c2string = KernelSig.id_toString
 val id2string  = KernelSig.name_toString
 
-val const_table = KernelSig.new_table()
+(* Expk's term-const table has payload hol_type (no holty wrapper), so
+   it doesn't fit Context.termsig's baked shape.  Register a slot with
+   the shared name "kernel.termsig" instead. *)
+local
+  val const_table_slot : hol_type KernelSig.symboltable Context.Data.slot =
+      Context.Data.new {name = "kernel.termsig",
+                        empty = KernelSig.empty_table,
+                        pp = fn _ => "<expk const_table>"}
+in
+  fun const_table () =
+      Context.Data.get const_table_slot (Context.snapshot())
+  val upd_const_table = Context.Data.modify const_table_slot
+  fun genupd_const_table f =
+      Context.gen_update (fn c =>
+        let val (new, r) = f (Context.Data.get const_table_slot c)
+        in (Context.Data.put const_table_slot new c, r) end)
+end
 
-fun prim_delete_const kn = ignore (KernelSig.retire_name(const_table, kn))
+fun term_epoch () = KernelSig.symtab_epoch (const_table ())
+fun display_name_of_id id =
+    KernelSig.display_name_of_id (const_table ()) id
 
-fun inST s = KernelSig.nameExists const_table s
+fun prim_delete_const kn =
+    upd_const_table (#1 o KernelSig.retire_name kn)
+
+fun inST s = KernelSig.nameExists (const_table ()) s
 
 fun prim_new_const (k as {Thy,Name}) ty = let
-  val id = KernelSig.insert(const_table, k, ty)
+  val id = genupd_const_table (KernelSig.insert (k, ty))
 in
   Const(id, ty)
 end
@@ -54,9 +75,10 @@ fun uptodate_term tm = let
         in
           case tm of
             Var(s, ty) => uptodate_type ty andalso recurse rest
-          | Const(info, ty) => KernelSig.uptodate_id info andalso
-                               uptodate_type ty andalso
-                               recurse rest
+          | Const(info, ty) =>
+              KernelSig.uptodate_id (const_table ()) info andalso
+              uptodate_type ty andalso
+              recurse rest
           | App(f, x) => recurse (f::x::rest)
           | Abs(v, body) => recurse (v::body::rest)
         end
@@ -69,25 +91,25 @@ fun thy_consts s = let
       if #Thy k = s andalso Type.uptodate_type ty then Const info :: acc
       else acc
 in
-  KernelSig.foldl f [] const_table
+  KernelSig.foldl f [] (const_table ())
 end
 
-fun del_segment s = KernelSig.del_segment(const_table, s)
+fun del_segment s = upd_const_table (KernelSig.del_segment s)
 
-fun prim_decls s = KernelSig.listName const_table s
+fun prim_decls s = KernelSig.listName (const_table ()) s
 
 fun decls s = let
   fun foldthis (k,cinfo as (_, v),acc) =
       if #Name k = s andalso Type.uptodate_type v then Const cinfo::acc else acc
 in
-  KernelSig.foldl foldthis  [] const_table
+  KernelSig.foldl foldthis  [] (const_table ())
 end
 
 fun all_consts () = let
   fun foldthis (_,cinfo as (_, v),acc) =
       if Type.uptodate_type v then Const cinfo :: acc else acc
 in
-  KernelSig.foldl foldthis [] const_table
+  KernelSig.foldl foldthis [] (const_table ())
 end
 
 
@@ -150,7 +172,7 @@ fun prim_mk_const (k as {Thy, Name}) =
     let
       open KernelSig
     in
-      case peek(const_table, k) of
+      case peek(const_table (), k) of
           Failure (NoSuchThy _) =>
           raise ERR "prim_mk_const"
                 ("Theory segment " ^ Lib.quote Thy ^ " not in ancestry")
@@ -164,7 +186,7 @@ fun mk_thy_const {Thy,Name,Ty} = let
   open KernelSig
   val k = {Thy = Thy, Name = Name}
 in
-  case peek(const_table, k) of
+  case peek(const_table (), k) of
     Failure(NoSuchThy _) =>
       raise ERR "mk_thy_const" ("No such theory: " ^ Thy)
    | Failure _ =>
@@ -210,11 +232,18 @@ fun mk_abs(v, body) =
 fun dest_var (Var p) = p
   | dest_var _ = raise ERR "dest_var" "Term not a variable"
 
+(* Deliberately skips the uptodate/display check — see the corresponding
+   note on dest_thy_const in src/0/Term.sml.  Pretty-printers that want
+   Globals.oldify decoration should call display_name_of_id directly. *)
 fun dest_thy_const (Const(id,ty)) =
       let open KernelSig in
-        {Thy = seg_of id, Name = display_name_of_id id, Ty = ty}
+        {Thy = seg_of id, Name = name_of id, Ty = ty}
       end
   | dest_thy_const _ = raise ERR"dest_thy_const" "not a const"
+
+fun dest_thy_constid (Const(id,ty)) =
+      {Thy = KernelSig.seg_of id, Name = id, Ty = ty}
+  | dest_thy_constid _ = raise ERR"dest_thy_constid" "not a const"
 
 fun dest_const (c as Const _) =
     let val {Name,Ty,...} = dest_thy_const c

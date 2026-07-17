@@ -15,6 +15,9 @@ stubs.sml
 ../Lexis.sml
 ../KernelSig.sig
 ../KernelSig.sml
+../Type_dtype.sml
+../Context.sig
+../Context.sml
 ../Dep.sig
 ../Dep.sml
 ../Tag.sig

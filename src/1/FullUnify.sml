@@ -86,8 +86,8 @@ fun unify_types ctys (ty1, ty2) : unit Env.EM =
               else if is_vartype ty2 then fail
               else
                 let
-                  val {Args=a1,Tyop=op1,Thy=thy1} = dest_thy_type ty1
-                  val {Args=a2,Tyop=op2,Thy=thy2} = dest_thy_type ty2
+                  val {Args=a1,Tyop=op1,Thy=thy1} = dest_thy_typeid ty1
+                  val {Args=a2,Tyop=op2,Thy=thy2} = dest_thy_typeid ty2
                 in
                   if thy1 <> thy2 orelse op1 <> op2 then fail
                   else

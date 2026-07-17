@@ -462,7 +462,7 @@ fun mk_case0 ty_info ty_match FV range_ty rows =
 let
   fun run_heu heu = mk_case0_heu heu ty_info ty_match FV range_ty rows
 
-  val (min_fun0, heu_fun) = (!pmatch_heuristic) ()
+  val (min_fun0, heu_fun) = pmatch_heuristic () ()
   fun min_fun ((pL1, dt1), (pL2, dt2)) =
     min_fun0 ((map (fn (x, _, _) => x) pL1, dt1), (map (fn (x, _, _) => x) pL2, dt2))
 

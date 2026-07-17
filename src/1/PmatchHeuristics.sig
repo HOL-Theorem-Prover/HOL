@@ -94,7 +94,7 @@ sig
 
    (* The pmatch_heuristic_fun to be used by default and various functions
       to set it *)
-   val pmatch_heuristic : pmatch_heuristic_fun ref
+   val pmatch_heuristic : unit -> pmatch_heuristic_fun
 
    val set_heuristic : pmatch_heuristic -> unit
    val set_heuristic_fun : pmatch_heuristic_fun -> unit

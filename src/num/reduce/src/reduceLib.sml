@@ -67,7 +67,7 @@ local
     end
 in
   val num_compset = computeLib.seal (add_compset computeLib.bool_compset)
-  val () = computeLib.the_compset := add_compset (!computeLib.the_compset)
+  val () = computeLib.upd_compset add_compset
 end
 
 (*-----------------------------------------------------------------------*)

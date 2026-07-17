@@ -158,30 +158,40 @@ fun thyname_assoc x [] = raise ERR "thyname_assoc" "not found"
  ---------------------------------------------------------------------------*)
 
 structure Graph = struct type graph = (thyid * thyid list) list
-local val theGraph = ref [(min_thyid,[])]
+local
+  val graph_slot : (thyid * thyid list) list Context.Data.slot =
+      Context.Data.new
+        {name = "theory.graph",
+         empty = [(min_thyid,[])],
+         pp = fn _ => "<theory.graph>"}
+  fun read () = Context.Data.get graph_slot (Context.snapshot())
 in
-   fun add p = theGraph := (p :: !theGraph)
+   fun add p = Context.Data.modify graph_slot (fn g => p :: g)
    fun add_parent (n,newp) =
      let fun same (node,_) = thyid_eq node n
          fun addp(node,parents) = (node, op_union thyid_eq [newp] parents)
          fun ins (a::rst) = if same a then addp a::rst else a::ins rst
            | ins [] = raise ERR "Graph.add_parent.ins" "not found"
-     in theGraph := ins (!theGraph)
+     in Context.Data.modify graph_slot ins
      end
-   fun isin n = Lib.can (thyid_assoc n) (!theGraph);
-   fun parents_of n = thyid_assoc n (!theGraph);
+   fun isin n = Lib.can (thyid_assoc n) (read ());
+   fun parents_of n = thyid_assoc n (read ());
    fun ancestryl L =
-    let fun Anc P Q = rev_itlist
+    let val g = read ()
+        fun local_parents_of n = thyid_assoc n g
+        fun Anc P Q = rev_itlist
            (fn nde => fn A => if op_mem thyid_eq nde A then A
-             else Anc (parents_of nde handle HOL_ERR _ => []) (nde::A)) P Q
+             else Anc (local_parents_of nde handle HOL_ERR _ => []) (nde::A))
+           P Q
     in Anc L []
     end;
    fun fringe () =
-     let val all_parents = List.map #2 (!theGraph)
+     let val g = read ()
+         val all_parents = List.map #2 g
          fun is_parent y = Lib.exists (Lib.op_mem thyid_eq y) all_parents
-     in List.filter (not o is_parent) (List.map #1 (!theGraph))
+     in List.filter (not o is_parent) (List.map #1 g)
      end;
-   fun first P = Lib.first P (!theGraph)
+   fun first P = Lib.first P (read ())
 end
 end; (* structure Graph *)
 
@@ -241,10 +251,19 @@ in
 end (* local *)
 
 type metadata = {path: string, timestamp: Time.time}
-val metadata : metadata Symtab.table ref = ref Symtab.empty
-fun record_metadata thy md =
-  metadata := Symtab.update (thy, md) (!metadata)
-fun thy_timestamp thy = #timestamp (valOf (Symtab.lookup (!metadata) thy))
+local
+  val metadata_slot : metadata Symtab.table Context.Data.slot =
+      Context.Data.new
+        {name = "theory.metadata",
+         empty = Symtab.empty,
+         pp = fn _ => "<theory.metadata>"}
+in
+  fun metadata_lookup thy =
+      Symtab.lookup (Context.Data.get metadata_slot (Context.snapshot())) thy
+  fun record_metadata thy md =
+      Context.Data.modify metadata_slot (Symtab.update (thy, md))
+end
+fun thy_timestamp thy = #timestamp (valOf (metadata_lookup thy))
 
 
 (*---------------------------------------------------------------------------*
@@ -257,10 +276,14 @@ fun empty_segment_value name =
 
 fun fresh_segment s :segment = empty_segment_value s
 
-local val CT = ref (fresh_segment "scratch")
+local
+  val segment_slot : segment Context.Data.slot =
+      Context.Data.new {name = "theory.segment",
+                        empty = fresh_segment "scratch",
+                        pp = fn s => "<segment " ^ #name s ^ ">"}
 in
-  fun theCT() = !CT
-  fun makeCT seg = CT := seg
+  fun theCT() = Context.Data.get segment_slot (Context.snapshot())
+  val makeCT = Context.Data.write segment_slot
 end;
 
 val CTname = #name o theCT;
@@ -503,16 +526,27 @@ fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
    proof trace replay (--thmsrc=tr), axiom theorems retain their nonces in
    tags (unlike disk_thm which strips them). This registry allows
    uptodate_axioms to find those axioms even though they're not in theCT(). *)
-val replayed_axioms : (string Nonce.t * term) list ref = ref []
+local
+  val replayed_axioms_slot :
+        (string Nonce.t * term) list Context.Data.slot =
+      Context.Data.new
+        {name = "theory.replayed_axioms",
+         empty = [],
+         pp = fn _ => "<theory.replayed_axioms>"}
+in
+  fun replayed_axioms () =
+      Context.Data.get replayed_axioms_slot (Context.snapshot())
+  val upd_replayed_axioms = Context.Data.modify replayed_axioms_slot
+end
 
 fun register_replayed_axiom th =
     case Tag.axioms_of (Thm.tag th) of
         [nonce] =>
           if not (HOLset.isEmpty (Thm.hypset th))
           then raise ERR "register_replayed_axiom" "theorem has hypotheses"
-          else if Lib.mem nonce (map #1 (!replayed_axioms))
+          else if Lib.mem nonce (map #1 (replayed_axioms ()))
           then raise ERR "register_replayed_axiom" "nonce already registered"
-          else replayed_axioms := (nonce, Thm.concl th) :: !replayed_axioms
+          else upd_replayed_axioms (fn xs => (nonce, Thm.concl th) :: xs)
       | [] => raise ERR "register_replayed_axiom" "no axiom nonce in tag"
       | _ => raise ERR "register_replayed_axiom" "multiple axiom nonces in tag"
 
@@ -522,7 +556,7 @@ fun uptodate_axioms [] = true
       fun get_axtag th = hd (Tag.axioms_of (tag th))
       val axs = map (fn (_,(th,_)) => (get_axtag th,concl th))
                     (thy_axioms(theCT()))
-      val all_axs = axs @ !replayed_axioms
+      val all_axs = axs @ replayed_axioms ()
     in
       (* tempting to call uptodate_thm here, but this would put us into a loop
          because axioms have themselves as tags, also unnecessary because
@@ -703,8 +737,23 @@ struct
                   read : shared_readmaps -> HOLsexp.t -> t option,
                   write : shared_writemaps -> t -> HOLsexp.t,
                   terms : t -> term list, strings : t -> string list}
-  val allthydata : ThyDataMap Symtab.table ref = ref Symtab.empty
-  val dataops : DataOps Symtab.table ref = ref Symtab.empty
+  local
+    val allthydata_slot : ThyDataMap Symtab.table Context.Data.slot =
+        Context.Data.new {name = "theory.allthydata",
+                          empty = Symtab.empty,
+                          pp = fn _ => "<allthydata>"}
+    val dataops_slot : DataOps Symtab.table Context.Data.slot =
+        Context.Data.new {name = "theory.dataops",
+                          empty = Symtab.empty,
+                          pp = fn _ => "<dataops>"}
+  in
+    fun allthydata () =
+        Context.Data.get allthydata_slot (Context.snapshot())
+    val upd_allthydata = Context.Data.modify allthydata_slot
+    fun dataops () =
+        Context.Data.get dataops_slot (Context.snapshot())
+    val upd_dataops = Context.Data.modify dataops_slot
+  end
 
   fun segment_data {thy,thydataty} = let
     val {thydata,name,...} = theCT()
@@ -721,19 +770,19 @@ struct
                   " coming from current_theory\n");
        check_map thydata)
     else
-      case Symtab.lookup (!allthydata) thy of
+      case Symtab.lookup (allthydata()) thy of
         NONE => NONE
       | SOME dmap => check_map dmap
   end
 
   fun segment_data_string (arg as {thy,thydataty}) =
-      case Symtab.lookup (!dataops) thydataty of
+      case Symtab.lookup (dataops()) thydataty of
           SOME {pp,...} => Option.map pp (segment_data arg)
         | NONE => raise Fail ("No pp-fn for "^thydataty)
   val sexp_string_dbg = HOLPP.pp_to_string 75 HOLsexp.printer
 
   fun write_data_update {thydataty,data} =
-      case Symtab.lookup (!dataops) thydataty of
+      case Symtab.lookup (dataops()) thydataty of
         NONE => raise ERR "write_data_update"
                           ("No operations defined for "^thydataty)
       | SOME {merge,pp,...} => let
@@ -768,7 +817,7 @@ struct
         end
 
   fun set_theory_data {thydataty,data} =
-      case Symtab.lookup (!dataops) thydataty of
+      case Symtab.lookup (dataops()) thydataty of
         NONE => raise ERR "set_theory_data"
                           ("No operations defined for "^thydataty)
       | SOME{pp,...} => let
@@ -792,7 +841,7 @@ struct
                            sexp_string_dbg data ^ ")" )
           val newdata =
               case (Symtab.lookup inmap thydataty,
-                    Symtab.lookup (!dataops) thydataty) of
+                    Symtab.lookup (dataops()) thydataty) of
                   (NONE, NONE) => Pending [(data,shared_readmaps)]
                 | (NONE, SOME {read,...}) =>
                   Loaded (valOf (read shared_readmaps data)
@@ -814,11 +863,11 @@ struct
       makeCT (update_seg s (U #thydata (updatemap thydata)) $$)
     else let
       val newsubmap =
-          case Symtab.lookup (!allthydata) thy of
+          case Symtab.lookup (allthydata()) thy of
               NONE => updatemap empty_datamap
             | SOME dm => updatemap dm
     in
-      allthydata := Symtab.update (thy, newsubmap) (!allthydata)
+      upd_allthydata (Symtab.update (thy, newsubmap))
     end
   end
 
@@ -841,7 +890,7 @@ fun update_pending (m,r) thydataty = let
                                    (valOf (r tmrd1 d1)) (tl ds'))) inmap
         end
   fun foldthis (k,v) acc = Symtab.update (k, update1 v) acc
-  val _ = allthydata := Symtab.fold foldthis (!allthydata) Symtab.empty
+  val _ = upd_allthydata (fn m => Symtab.fold foldthis m Symtab.empty)
   val (seg as {thydata,...}) = theCT()
 in
   makeCT (update_seg seg (U #thydata (update1 thydata)) $$)
@@ -858,10 +907,10 @@ fun 'a new {thydataty, merge, read, write, terms, strings, pp} = let
   fun pp' t = pp (vdest t)
 in
   update_pending (merge',read') thydataty;
-  dataops := Symtab.update
-                (thydataty,
-                 {merge=merge', read=read', write=write',
-                  terms=terms', pp=pp', strings=strings'}) (!dataops);
+  upd_dataops (Symtab.update
+                 (thydataty,
+                  {merge=merge', read=read', write=write',
+                   terms=terms', pp=pp', strings=strings'}));
   (mk,dest)
 end
 
@@ -993,7 +1042,7 @@ fun export_theory_return_hash () = let
                  parents = parent_names,
                  all_thms = all_thms}
   fun parent_doc_url pname =
-      case Symtab.lookup (!metadata) pname of
+      case metadata_lookup pname of
           NONE => NONE
         | SOME {path = parent_dat, ...} =>
           let val parent_src = OS.Path.dir parent_dat
@@ -1023,7 +1072,7 @@ fun export_theory_return_hash () = let
           Loaded t =>
           let
             val {write,terms,strings,...} =
-                case Symtab.lookup (!LoadableThyData.dataops) k of
+                case Symtab.lookup (LoadableThyData.dataops()) k of
                     SOME ops => ops
                   | NONE => raise ERR "export_theory"
                               ("Couldn't find thydata ops for "^k)

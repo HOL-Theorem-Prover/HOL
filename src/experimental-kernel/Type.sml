@@ -12,15 +12,27 @@ val ERR = mk_HOL_ERR "Type"
 type type_key = {Thy : string, Tyop : string }
 type type_info = KernelSig.kernelid * int
 
-val operator_table = KernelSig.new_table()
+(* Route the type-operator table through the shared prover Context.  The
+   int-payload shape matches Context.typesig exactly, so no slot needed. *)
+fun operator_table () = Context.typesig (Context.snapshot())
+fun upd_operator_table f = Context.update (Context.map_typesig f)
+fun genupd_operator_table f =
+    Context.gen_update (fn c =>
+      let val (new, r) = f (Context.typesig c)
+      in (Context.map_typesig (fn _ => new) c, r) end)
+
+fun type_epoch () = KernelSig.symtab_epoch (operator_table ())
+fun display_name_of_id id =
+    KernelSig.display_name_of_id (operator_table ()) id
 
 fun prim_delete_type (k as {Thy, Tyop}) =
-    ignore (KernelSig.retire_name(operator_table, {Thy = Thy, Name = Tyop}))
+    upd_operator_table
+      (#1 o KernelSig.retire_name {Thy = Thy, Name = Tyop})
 
 fun prim_new_type {Thy,Tyop} n = let
   val _ = n >= 0 orelse failwith "invalid arity"
 in
-  ignore (KernelSig.insert(operator_table,{Thy=Thy,Name=Tyop},n))
+  upd_operator_table (#1 o KernelSig.insert ({Thy=Thy,Name=Tyop}, n))
 end
 
 fun thy_types s = let
@@ -28,23 +40,25 @@ fun thy_types s = let
       if #Thy kn = s then (#Name kn, arity) :: acc
       else acc
 in
-  KernelSig.foldl foldthis [] operator_table
+  KernelSig.foldl foldthis [] (operator_table ())
 end
 
-fun del_segment s = KernelSig.del_segment(operator_table, s)
+fun del_segment s = upd_operator_table (KernelSig.del_segment s)
 
 fun minseg s = {Thy = "min", Tyop = s}
 val _ = prim_new_type (minseg "fun") 2
 val _ = prim_new_type (minseg "bool") 0
 val _ = prim_new_type (minseg "ind") 0
 
-val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
+val funref =
+    #1 (KernelSig.find(operator_table (), {Thy="min", Name = "fun"}))
 
 fun uptodate_kname knm =
-    KernelSig.isSuccess(KernelSig.peek(operator_table, knm))
+    KernelSig.isSuccess(KernelSig.peek(operator_table (), knm))
 fun uptodate_type (Tyv s) = true
-  | uptodate_type (Tyapp(info, args)) = KernelSig.uptodate_id info andalso
-                                        List.all uptodate_type args
+  | uptodate_type (Tyapp(info, args)) =
+    KernelSig.uptodate_id (operator_table ()) info andalso
+    List.all uptodate_type args
 
 fun dest_vartype (Tyv s) = s
   | dest_vartype _ = raise ERR "dest_vartype" "Type not a vartype"
@@ -63,7 +77,7 @@ fun is_gen_tyvar (Tyv name) = String.isPrefix gen_tyvar_prefix name
   | is_gen_tyvar _ = false;
 
 fun first_decl caller s = let
-  val possibilities = KernelSig.listName operator_table s
+  val possibilities = KernelSig.listName (operator_table ()) s
 in
   case possibilities of
     [] => raise ERR caller ("No such type: "^s)
@@ -90,7 +104,7 @@ fun mk_thy_type {Thy, Tyop, Args} =
     let
       open KernelSig
     in
-      case peek(operator_table, {Thy = Thy, Name = Tyop}) of
+      case peek(operator_table (), {Thy = Thy, Name = Tyop}) of
           Failure (NoSuchThy _) =>
           raise ERR "mk_thy_type" ("theory " ^ Thy ^ " is not in ancestry")
         | Failure _ =>
@@ -103,10 +117,17 @@ fun mk_thy_type {Thy, Tyop, Args} =
                                         " arguments for "^Tyop)
     end
 
+fun dest_thy_typeid (Tyv _) =
+    raise ERR "dest_thy_typeid" "Type a variable"
+  | dest_thy_typeid (Tyapp(id, args)) =
+    {Thy = KernelSig.seg_of id, Tyop = id, Args = args}
+
+(* Skips the uptodate/display check — see the corresponding note in
+   src/0/Type.sml. *)
 fun dest_thy_type (Tyv _) = raise ERR "dest_thy_type" "Type a variable"
   | dest_thy_type (Tyapp(id, args)) =
     let open KernelSig in
-      {Thy = seg_of id, Tyop = display_name_of_id id, Args = args}
+      {Thy = seg_of id, Tyop = name_of id, Args = args}
     end
 
 fun dest_type (ty as Tyapp _) =
@@ -120,11 +141,11 @@ fun decls s = let
   fun foldthis ({Thy,Name},v,acc) = if Name = s then {Thy=Thy,Tyop=Name}::acc
                                     else acc
 in
-  KernelSig.foldl foldthis [] operator_table
+  KernelSig.foldl foldthis [] (operator_table ())
 end
 
 fun op_arity {Thy,Tyop} =
-    case KernelSig.peek(operator_table, {Thy=Thy,Name=Tyop}) of
+    case KernelSig.peek(operator_table (), {Thy=Thy,Name=Tyop}) of
         KernelSig.Success(_,i) => SOME i
       | _ => NONE
 

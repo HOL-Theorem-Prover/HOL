@@ -355,7 +355,7 @@ fun check_gdelta (TMD tmd) = check_delta tmd
    uptodate_type).  If retire_epoch is unchanged since the last successful
    scan, every stored grammar delta remains as valid as it was then. *)
 local
-  val last_scan_epoch = ref ~1
+  val last_scan_epoch = ref [~1,~1]
   fun scan t =
       case list_decode gdelta_decode t of
           NONE => raise Fail ("GrammarDelta: encoding failure: t = \n  " ^
@@ -371,9 +371,10 @@ local
           end
 in
   fun other_tds (t, _) =
-    case KernelSig.retire_epoch () of cur =>
-    if !last_scan_epoch = cur then NONE
-    else scan t before last_scan_epoch := cur
+    let val cur = [Type.type_epoch (), Term.term_epoch()] in
+      if !last_scan_epoch = cur then NONE
+      else scan t before last_scan_epoch := cur
+    end
 end
 
 val {export, segment_data, set} = ThyDataSexp.new {
