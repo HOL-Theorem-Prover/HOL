@@ -318,23 +318,29 @@ fun make_ind_thm report_pre allow_pre hd_const defs pre_def_tms =
     val cs = list_mk_conj (map snd xs)
     val bs = list_mk_conj pre_def_tms
     val ind_tm = list_mk_forall(map fst xs, mk_imp(bs,cs))
-    val other_ind = lookup_ind_for_const hd_const
-    (*
-    set_goal([],ind_tm)
-    *)
-    val tac = (
-      rpt gen_tac \\ rpt (disch_then strip_assume_tac)
-      \\ match_mp_tac other_ind \\ rpt strip_tac
-      \\ last_x_assum irule \\ rpt strip_tac
-      \\ gvs [])
-    val pre_ind = SOME ((tac ([], ind_tm) |> snd) [])
-                  handle HOL_ERR _ => NONE
+    val other_ind = DefnBase.lookup_indn hd_const
+    val pre_ind =
+      case other_ind of
+        NONE => NONE
+      | SOME (ind,_) => let
+          (*
+          set_goal([],ind_tm)
+          *)
+          val tac = (
+            rpt gen_tac \\ rpt (disch_then strip_assume_tac)
+            \\ match_mp_tac ind \\ rpt strip_tac
+            \\ last_x_assum irule \\ rpt strip_tac
+            \\ gvs [])
+          in SOME ((tac ([], ind_tm) |> snd) [])
+             handle HOL_ERR _ => NONE end
     in
       case pre_ind of
         SOME th => (th,TRUTH)
       | NONE =>
         if report_pre then
           make_ind_thm false (SOME "") hd_const defs pre_def_tms
+        else if not (is_SOME other_ind) then
+          (lookup_ind_for_const hd_const; failwith "unreachable")
         else let
         val _ = cv_print Silent "\nERROR: failed to prove precondition.\n"
         val _ = indent_print_term Silent "\n" "\n\n" ind_tm
