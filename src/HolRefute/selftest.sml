@@ -65,6 +65,78 @@ val _ = require_msg (check_result cv_ancestry_is_separate) (fn () =>
   String.concatWith ", " (Theory.parents "refute_cv"))
   (fn () => ()) ()
 
+val _ = tprint "Refute model-finder utility"
+
+local
+  open Refute_ModelFinder_Util
+in
+  structure MFU = Refute_ModelFinder_Util
+end
+
+fun mf_reasonable_power_edges () =
+  MFU.reasonable_power 2 10 = 1024 andalso
+  MFU.reasonable_power (~2) 5 = ~32 andalso
+  MFU.reasonable_power 0 0 = 1 andalso
+  MFU.reasonable_power 0 (~3) = 0 andalso
+  MFU.reasonable_power 1 20000 = 1 andalso
+  ((MFU.reasonable_power 2 (~1); false) handle MFU.ARG _ => true) andalso
+  ((MFU.reasonable_power 2 16385; false)
+   handle MFU.TOO_LARGE _ => true) andalso
+  ((MFU.reasonable_power 2 100; false)
+   handle MFU.TOO_LARGE _ => true) andalso
+  ((MFU.reasonable_power 2 (valOf Int.minInt); false)
+   handle MFU.ARG _ => true) andalso
+  ((MFU.reasonable_power (valOf Int.minInt) 2; false)
+   handle MFU.TOO_LARGE _ => true) andalso
+  MFU.exact_log 2 1024 = 10 andalso
+  MFU.exact_root 3 27 = 3
+
+val _ = require_msg (check_result mf_reasonable_power_edges) (fn () =>
+  "model-finder power arithmetic mishandled an edge case")
+  (fn () => ()) ()
+
+fun mf_combinatorics_fixed_inputs () =
+  MFU.offset_list [2, 3, 4] = [0, 2, 5] andalso
+  MFU.index_seq (~2) 4 = [~2, ~3, ~4, ~5] andalso
+  MFU.filter_indices [0, 2, 4] [1, 2, 3, 4, 5] = [1, 3, 5] andalso
+  MFU.filter_out_indices [0, 2, 4] [1, 2, 3, 4, 5] = [2, 4] andalso
+  MFU.fold1 (fn left => fn right => left - right) [10, 3, 2] = 5 andalso
+  MFU.replicate_list 2 [1, 2] = [1, 2, 1, 2] andalso
+  MFU.all_distinct_unordered_pairs_of [1, 2, 3] =
+    [(1, 2), (1, 3), (2, 3)] andalso
+  MFU.nth_combination [(2, 10), (3, 20)] 4 = [11, 21] andalso
+  MFU.all_combinations [(2, 10), (3, 20)] =
+    [[10, 20], [10, 21], [10, 22],
+     [11, 20], [11, 21], [11, 22]] andalso
+  MFU.all_combinations [] = [[]] andalso
+  MFU.all_permutations [1, 2, 3] =
+    [[1, 2, 3], [1, 3, 2], [2, 1, 3],
+     [2, 3, 1], [3, 1, 2], [3, 2, 1]] andalso
+  MFU.all_permutations [] = [[]] andalso
+  MFU.chunk_list 2 [1, 2, 3, 4, 5] = [[1, 2], [3, 4], [5]] andalso
+  MFU.chunk_list_unevenly [2, 1] [1, 2, 3, 4, 5] =
+    [[1, 2], [3], [4], [5]]
+
+val _ = require_msg (check_result mf_combinatorics_fixed_inputs) (fn () =>
+  "model-finder combinatorics changed on fixed inputs")
+  (fn () => ()) ()
+
+fun mf_lookup_precedence () =
+  let
+    val entries =
+      [(SOME 12, "relaxed"), (SOME 2, "exact"), (NONE, "default")]
+    fun congruent (left, right) = left mod 10 = right mod 10
+  in
+    MFU.double_lookup congruent entries 2 = SOME "relaxed" andalso
+    MFU.triple_lookup congruent entries 2 = SOME "exact" andalso
+    MFU.triple_lookup congruent entries 22 = SOME "relaxed" andalso
+    MFU.triple_lookup congruent entries 7 = SOME "default"
+  end
+
+val _ = require_msg (check_result mf_lookup_precedence) (fn () =>
+  "model-finder lookup precedence is incorrect")
+  (fn () => ()) ()
+
 val _ = tprint "Refute unified PRNG"
 
 val pinned_rand_stream = [423, 509, 648, 382, 795]
