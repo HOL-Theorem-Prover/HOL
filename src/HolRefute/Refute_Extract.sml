@@ -2199,6 +2199,16 @@ structure Refute_Extract = struct
         parens ("complete := false; if genuine_only then " ^
           parens ("RefuteContinue, " ^ state) ^ " else " ^ fallback)
 
+      val guard_serial = ref 0
+
+      fun guard_names () =
+        let
+          val n = (guard_serial := !guard_serial + 1;
+            integer (!guard_serial))
+        in
+          ("refute_guard_" ^ n, "refute_genuine_" ^ n)
+        end
+
       fun safe_value expression failure =
         "(case ((SOME (" ^ expression ^ "))\n" ^
         "       handle Match => NONE\n" ^
@@ -2281,14 +2291,15 @@ structure Refute_Extract = struct
             end
         | Guard (tm, next) =>
             let
-              val continued = compile_exhaustive_plan next environment
-                genuine_only
-              val tainted = compile_exhaustive_plan next environment "false"
-              val stuck = recovery "complete" "genuine_only" tainted
+              val (name, flag) = guard_names ()
+              val body = compile_exhaustive_plan next environment flag
+              val stuck = recovery "complete" "genuine_only"
+                (name ^ " false")
             in
-              safe_value (expression context tm) stuck ^
-              "if refute_value then " ^ continued ^
-              " else RefuteContinue)"
+              "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^ "\n" ^
+              "in " ^ safe_value (expression context tm) stuck ^
+              "if refute_value then " ^ name ^ " " ^ genuine_only ^
+              " else RefuteContinue) end"
             end
         | Bind (variable, tm, fallback, next) =>
             let
@@ -2352,14 +2363,14 @@ structure Refute_Extract = struct
             end
         | Guard (tm, next) =>
             let
-              val continued =
-                compile_random_plan next environment genuine state
-              val tainted = compile_random_plan next environment "false" state
-              val stuck = random_recovery state tainted
+              val (name, flag) = guard_names ()
+              val body = compile_random_plan next environment flag state
+              val stuck = random_recovery state (name ^ " false")
             in
-              safe_value (expression context tm) stuck ^
-              "if refute_value then " ^ continued ^ " else " ^
-              parens ("RefuteContinue, " ^ state) ^ ")"
+              "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^ "\n" ^
+              "in " ^ safe_value (expression context tm) stuck ^
+              "if refute_value then " ^ name ^ " " ^ genuine ^ " else " ^
+              parens ("RefuteContinue, " ^ state) ^ ") end"
             end
         | Bind (variable, tm, fallback, next) =>
             let

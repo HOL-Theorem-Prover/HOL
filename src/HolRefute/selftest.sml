@@ -663,6 +663,10 @@ fun partial_plan_checks () =
     val bind = Bind
       (variable, stuck_num, SOME (Test boolSyntax.F), Test boolSyntax.T)
     val guard = Guard (stuck_bool, Test boolSyntax.F)
+    val nested_guard =
+      Guard (boolSyntax.T, Guard (stuck_bool, Test boolSyntax.F))
+    val guard_after_stuck =
+      Guard (stuck_bool, Guard (boolSyntax.T, Test boolSyntax.F))
     val test = Test stuck_bool
     val some_num = #1 (boolSyntax.strip_comb ``SOME (x : num)``)
     val split = Split (``THE (NONE : num option)``,
@@ -698,7 +702,8 @@ fun partial_plan_checks () =
   in
     potential (generated_result Exhaustive bind 2 0 1) andalso
     potential (generated_result (Random {seed = 1}) bind 2 1 1) andalso
-    check guard andalso check test andalso exhaustive split andalso
+    check guard andalso check nested_guard andalso
+    check guard_after_stuck andalso check test andalso exhaustive split andalso
     #match_failures split_answer = 1 andalso
     exhaustive successful_bind andalso exhaustive successful_split andalso
     exhaustive successful_list_split
@@ -730,6 +735,35 @@ fun wide_word_extraction_checks () =
          List.exists (String.isSubstring "32-bit bound") reasons)
   in
     exhaustive_ok andalso random_rejected
+  end
+
+fun guard_scaling_checks () =
+  let
+    val flag = Term.mk_var ("guard_flag", ``:bool``)
+    fun nest 0 = Test boolSyntax.F
+      | nest n = Guard (flag, nest (n - 1))
+    val plan = Gen (flag, nest 12)
+    fun occurrences text source =
+      let
+        val text_size = String.size text
+        val limit = String.size source - text_size
+        fun loop index count =
+          if index > limit then count
+          else if String.substring (source, index, text_size) = text then
+            loop (index + text_size) (count + 1)
+          else
+            loop (index + 1) count
+      in
+        if text_size = 0 then 0 else loop 0 0
+      end
+    fun linear strategy =
+      let
+        val {source, ...} = extract_tests default_config strategy [plan]
+      in
+        occurrences "tests := !tests + 1" source <= 2
+      end
+  in
+    linear Exhaustive andalso linear (Random {seed = 1})
   end
 
 fun generated_hygiene_and_retention_checks () =
@@ -788,6 +822,9 @@ val _ = require_msg (check_result generated_completeness_checks) (fn () =>
   (fn () => ()) ()
 val _ = require_msg (check_result wide_word_extraction_checks) (fn () =>
   "wide-word extraction overflowed or ignored the random bound")
+  (fn () => ()) ()
+val _ = require_msg (check_result guard_scaling_checks) (fn () =>
+  "guarded plan extraction duplicated continuations")
   (fn () => ()) ()
 val _ = require_msg
   (check_result generated_hygiene_and_retention_checks) (fn () =>
