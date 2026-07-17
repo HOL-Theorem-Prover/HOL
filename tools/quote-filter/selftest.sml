@@ -53,6 +53,17 @@ in
   check "two quotes in a row"
         ("`f` `g`\n")
         (lsquo ^ "f" ^ rsquo ^ " " ^ lsquo ^ "g" ^ rsquo ^ "\n");
+  (* Issue #2022: an old-style `Datatype `...`` whose `Datatype` sits at
+     column zero (the `val _ =` on the preceding line) must be treated as
+     the ordinary bossLib.Datatype function applied to a quotation, not as
+     the modern `Datatype: ... End` keyword -- the latter has no backtick
+     quotation and left the parser in a state that raised Unreachable. *)
+  check "col-0 old-style Datatype"
+        ("Datatype\n`repro = RP (bool)`\n")
+        ("Datatype\n" ^ lsquo ^ "repro = RP (bool)" ^ rsquo ^ "\n");
+  check "col-0 old-style Datatype, one line"
+        ("Datatype `x = X`\n")
+        ("Datatype " ^ lsquo ^ "x = X" ^ rsquo ^ "\n");
   OS.Process.exit
     (if !failures = 0 then OS.Process.success else OS.Process.failure)
 end

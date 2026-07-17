@@ -1000,8 +1000,10 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
     Holdep.main {assumes = buildable_extras, diag = diag "holdep",
                  includes = includes, fname = fromFile arg}
     handle Holdep.Holdep_Error s =>
-             (warn ("Holdep failed: "^s); raise HolDepFailed)
-         | e => (warn ("Holdep exception: "^General.exnMessage e);
+             (warn ("Holdep failed on "^fromFile arg^": "^s);
+              raise HolDepFailed)
+         | e => (warn ("Holdep exception on "^fromFile arg^": "^
+                       General.exnMessage e);
                  raise HolDepFailed)
   val _ = createDirIfNecessary DEPDIR
   val outstr = openOut (normPath destination)
