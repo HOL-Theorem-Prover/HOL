@@ -278,4 +278,31 @@ echo "standard library."
 echo "Output: ${tacdata_path}"
 echo
 
-exec "${hol_bin}" run "${sml_file}"
+# Add units to the recorder's decimal-seconds timings.  Keep this in the
+# wrapper so the regular TacticToe output remains unchanged for other users.
+# pipefail (set above) makes the script retain hol's exit status.
+"${hol_bin}" run "${sml_file}" | awk '
+function trim(number) {
+  sub(/0+$/, "", number)
+  sub(/\.$/, "", number)
+  return number == "" ? "0" : number
+}
+function duration(seconds, hours, minutes, remainder, result) {
+  hours = int(seconds / 3600)
+  seconds -= hours * 3600
+  minutes = int(seconds / 60)
+  remainder = trim(sprintf("%.4f", seconds - minutes * 60))
+  result = ""
+  if (hours > 0) result = hours "h "
+  if (minutes > 0 || hours > 0) result = result minutes "m "
+  return result remainder "s"
+}
+/^ttt_record(_thy)? time: [0-9]+(\.[0-9]+)?$/ {
+  prefix = "ttt_record time: "
+  if ($0 ~ /^ttt_record_thy/) prefix = "ttt_record_thy time: "
+  sub(/^.*: /, "")
+  print prefix duration($0)
+  next
+}
+{ print }
+'
