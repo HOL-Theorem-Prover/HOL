@@ -24,8 +24,7 @@ structure Refute_Extract = struct
 
   type type_compilation =
     { source : string,
-      ml_type : string,
-      equality : string }
+      ml_type : string }
 
   val reserved =
     ["abstype", "and", "andalso", "as", "case", "datatype", "do",
@@ -65,10 +64,7 @@ structure Refute_Extract = struct
 
   fun quote text = Portable.mlquote text
 
-  fun join _ [] = ""
-    | join _ [item] = item
-    | join separator (item :: items) =
-        item ^ separator ^ join separator items
+  val join = String.concatWith
 
   fun parens text = "(" ^ text ^ ")"
 
@@ -96,7 +92,10 @@ structure Refute_Extract = struct
       types : (hol_type * ml_ty * string) list ref,
       definitions : (term * string * Thm.thm) list ref,
       definition_groups : term list list ref,
+      definition_clauses : (term * string) list ref,
       pending : term list ref,
+      compset_items :
+        ((string * string) * computeLib.transform list) list option ref,
       next_type : int ref,
       next_const : int ref }
 
@@ -105,7 +104,9 @@ structure Refute_Extract = struct
       types = ref [],
       definitions = ref [],
       definition_groups = ref [],
+      definition_clauses = ref [],
       pending = ref [],
+      compset_items = ref NONE,
       next_type = ref 0,
       next_const = ref 0 }
 
@@ -618,17 +619,26 @@ structure Refute_Extract = struct
           List.find has_head theorems
         end
     in
-      case List.mapPartial from_info (TypeBase.elts ()) of
-        theorem :: _ => SOME theorem
-      | [] => NONE
+      Lib.get_first from_info (TypeBase.elts ())
     end
 
-  fun theorem_for_compset constant =
+  fun compset_items ({compset_items = items, ...} : context) =
+    case !items of
+      SOME listing => listing
+    | NONE =>
+        let
+          val listing = computeLib.listItems (!computeLib.the_compset)
+          val _ = items := SOME listing
+        in
+          listing
+        end
+
+  fun theorem_for_compset context constant =
     let
       val (thy, name) = kname constant
       val item = List.find (fn ((entry_name, entry_thy), _) =>
         entry_name = name andalso entry_thy = thy)
-        (computeLib.listItems (!computeLib.the_compset))
+        (compset_items context)
     in
       case item of
         NONE => NONE
@@ -666,7 +676,7 @@ structure Refute_Extract = struct
           end
     end
 
-  fun definition_theorem constant =
+  fun definition_theorem context constant =
     case DefnBase.lookup_userdef constant of
       SOME {const, thm = DefnBase.STDEQNS theorem, ...} =>
         let
@@ -682,7 +692,7 @@ structure Refute_Extract = struct
         (case theorem_for_typebase constant of
            SOME theorem => theorem
          | NONE =>
-             (case theorem_for_compset constant of
+             (case theorem_for_compset context constant of
                 SOME theorem => theorem
               | NONE =>
                   reject ("no extractable equations for constant " ^
@@ -724,7 +734,7 @@ structure Refute_Extract = struct
                   let
                     val (_, base) = kname member
                     val item = (member, fresh_const context base,
-                                definition_theorem member)
+                                definition_theorem context member)
                     val _ = #definitions context :=
                       item :: !(#definitions context)
                     val _ = #pending context :=
@@ -848,15 +858,14 @@ structure Refute_Extract = struct
             else if Term.same_const fupd head then SOME (true, index)
             else NONE
         in
-          case List.mapPartial matching (Lib.enumerate 0 fields) of
-            match :: _ => SOME (info, fields, match)
-          | [] => NONE
+          case Lib.get_first matching (Lib.enumerate 0 fields) of
+            SOME match => SOME (info, fields, match)
+          | NONE => NONE
         end
-      val found = List.mapPartial find_field (TypeBase.elts ())
     in
-      case found of
-        [] => NONE
-      | (info, fields, (is_update, selected)) :: _ =>
+      case Lib.get_first find_field (TypeBase.elts ()) of
+        NONE => NONE
+      | SOME (info, fields, (is_update, selected)) =>
           let
             val generic_ty = TypeBasePure.ty_of info
             val generic_head = if is_update then
@@ -950,9 +959,8 @@ structure Refute_Extract = struct
         let val element = listSyntax.dest_list_type (list_domain ())
         in equality_name context element end
     in
-      case record_primitive context head arguments of
-        SOME result => SOME result
-      | NONE =>
+      (* The key table covers the common intrinsics; the record scan over
+         TypeBase runs only when nothing in the table matches. *)
       case key of
         ("bool", "T") => SOME "true"
       | ("bool", "ARB") =>
@@ -1280,7 +1288,7 @@ structure Refute_Extract = struct
               | [] => reject "w2i has no word argument"
           in SOME (call ("refute_signed " ^ Int.toString width)
             1 arguments) end
-      | _ => NONE
+      | _ => record_primitive context head arguments
     end
 
   fun expression context term =
@@ -1510,6 +1518,22 @@ structure Refute_Extract = struct
       lhs ^ " = " ^ dispatch infos
     end
 
+  (* Compiling a clause is the expensive part of extraction and its text
+     is final once produced (names are fixed at registration), so the
+     drain pass and the declarations pass share one compilation. *)
+  fun cached_definition_clause context (item as (constant, _, _)) =
+    case List.find (fn (other, _) => same_term other constant)
+      (!(#definition_clauses context)) of
+      SOME (_, clause) => clause
+    | NONE =>
+        let
+          val clause = definition_clause context item
+          val _ = #definition_clauses context :=
+            (constant, clause) :: !(#definition_clauses context)
+        in
+          clause
+        end
+
   fun drain_definitions context =
     let
       fun loop processed =
@@ -1518,7 +1542,7 @@ structure Refute_Extract = struct
           (rev (!(#definitions context))) of
           NONE => ()
         | SOME (item as (constant, _, _)) =>
-            (ignore (definition_clause context item);
+            (ignore (cached_definition_clause context item);
              loop (constant :: processed))
     in
       loop []
@@ -1561,25 +1585,28 @@ structure Refute_Extract = struct
         List.exists (fn done =>
           List.all (fn constant => List.exists (same_term constant) done)
             group) emitted
-      fun ready emitted group =
-        List.all (group_done emitted) (dependencies group)
+      fun ready emitted (_, deps) =
+        List.all (group_done emitted) deps
       fun order emitted [] = rev emitted
         | order emitted remaining =
             (case List.partition (ready emitted) remaining of
                ([], _) =>
                  reject "definition dependency cycle outside a mutual group"
-             | (now, later) => order (rev now @ emitted) later)
+             | (now, later) =>
+                 order (rev (List.map #1 now) @ emitted) later)
       fun one keyword item =
-        keyword ^ " " ^ definition_clause context item
+        keyword ^ " " ^ cached_definition_clause context item
       fun declaration group =
         case List.map item_for group of
           [] => ""
         | first :: rest =>
             join "\n" (one "fun" first :: List.map (one "and") rest)
+      val ordered =
+        order [] (List.map (fn group => (group, dependencies group)) groups)
     in
       case groups of
         [] => ""
-      | _ => join "\n" (List.map declaration (order [] groups)) ^ "\n"
+      | _ => join "\n" (List.map declaration ordered) ^ "\n"
     end
 
   fun source_prefix context =
@@ -1598,12 +1625,8 @@ structure Refute_Extract = struct
         case mltypes of
           [mlty] => ml_ty_text mlty
         | _ => ml_ty_text (MLTuple mltypes)
-      val equality =
-        case types of
-          [ty] => equality_name context ty
-        | _ => ""
     in
-      {source = source, ml_type = ml_type, equality = equality}
+      {source = source, ml_type = ml_type}
     end
 
   fun compile_type ty = compile_types [ty]
@@ -1621,16 +1644,17 @@ structure Refute_Extract = struct
       {source = source, entry = "entry ()"}
     end
 
-  val compile_term = extract_term
-  val extract_constant = extract_term
-
   fun extract_tests (_ : Refute_Core.config) strategy plans : extraction =
     let
       open Refute_Eval
 
       val context = new_context ()
-      val constructor_terms = ref ([] : term list)
-      val raw_terms = ref ([] : term list)
+      val constructor_terms =
+        {list = ref ([] : term list), count = ref 0,
+         indexes = ref (Redblackmap.mkDict Term.compare)}
+      val raw_terms =
+        {list = ref ([] : term list), count = ref 0,
+         indexes = ref (Redblackmap.mkDict Term.compare)}
       val next_bound = ref 0
       val original_variables = ref ([] : (term * term) list)
 
@@ -1695,13 +1719,14 @@ structure Refute_Extract = struct
 
       val plans = List.map (fn plan => rename_plan plan []) plans
 
-      fun index_term terms tm =
-        case List.find (fn (_, other) => Term.aconv other tm)
-          (Lib.enumerate 0 (!terms)) of
-          SOME (index, _) => index
+      fun index_term {list, count, indexes} tm =
+        case Redblackmap.peek (!indexes, tm) of
+          SOME index => index
         | NONE =>
-            let val index = length (!terms)
-                val _ = terms := !terms @ [tm]
+            let val index = !count
+                val _ = indexes := Redblackmap.insert (!indexes, tm, index)
+                val _ = list := tm :: !list
+                val _ = count := index + 1
             in index end
 
       fun constructor_index tm = index_term constructor_terms tm
@@ -1751,19 +1776,6 @@ structure Refute_Extract = struct
           end
           handle Refute_Gen.NoGenerator (missing, why) =>
             reject ("no generator for " ^ type_name missing ^ " — " ^ why)
-
-      fun plan_gen_types current =
-        case current of
-          Test _ => []
-        | Gen (variable, next) =>
-            Term.type_of variable :: plan_gen_types next
-        | Bind (_, _, fallback, next) =>
-            plan_gen_types next @
-            (case fallback of NONE => [] | SOME other => plan_gen_types other)
-        | Split (_, branches) =>
-            List.concat (List.map (plan_gen_types o #3) branches)
-        | Guard (_, next) => plan_gen_types next
-        | Prune => []
 
       val root_types = Lib.mk_set (List.concat (List.map plan_gen_types plans))
       val _ = List.app (fn ty => validate_type ty ty) root_types
@@ -2194,6 +2206,62 @@ structure Refute_Extract = struct
         "   NONE => " ^ failure ^ "\n" ^
         " | SOME refute_value => "
 
+      (* One Split emitter serves both plan compilers; only the recursive
+         compile and the match-failure expression differ. *)
+      fun split_case recurse failure tm branches environment =
+        let
+          val expression_index = raw_index tm
+          val prior_environment = environment
+          fun branch_body (constructor, variables, next) =
+            let
+              val constructor_number = constructor_index constructor
+              val additions = List.map (fn (index, variable) =>
+                (variable, variable_name variable,
+                 thunk ("Refute_EvalSML.split_term " ^
+                   integer constructor_number ^ " " ^ integer index ^
+                   " " ^ integer expression_index ^ " " ^
+                   substitution_source prior_environment)))
+                (Lib.enumerate 0 variables)
+            in
+              recurse next (additions @ environment)
+            end
+          fun branch (entry as (constructor, variables, _)) =
+            constructor_expression context constructor
+              (List.map variable_name variables) ^ " => " ^
+            branch_body entry
+          fun string_entry name =
+            List.find (fn (constructor, _, _) =>
+              kname constructor = ("list", name)) branches
+          fun string_body () =
+            let
+              val nil_body = case string_entry "NIL" of
+                  NONE => failure
+                | SOME entry => branch_body entry
+              val cons_body = case string_entry "CONS" of
+                  NONE => failure
+                | SOME (entry as (_, variables, _)) =>
+                    (case List.map variable_name variables of
+                       [head, tail] =>
+                         "let val " ^ head ^
+                         " = String.sub (refute_value, 0)\n" ^
+                         "    val " ^ tail ^
+                         " = String.extract " ^
+                         "(refute_value, 1, NONE)\n" ^
+                         "in " ^ branch_body entry ^ " end"
+                     | _ => reject "malformed string split")
+            in
+              "if String.size refute_value = 0 then " ^ nil_body ^
+              " else " ^ cons_body
+            end
+          val split_body =
+            if is_char_list (Term.type_of tm) then string_body ()
+            else "case refute_value of\n" ^
+              join "\n | " (List.map branch branches) ^
+              "\n | _ => " ^ failure
+        in
+          safe_value (expression context tm) failure ^ split_body ^ ")"
+        end
+
       fun compile_exhaustive_plan current environment genuine_only =
         case current of
           Prune => "RefuteContinue"
@@ -2240,63 +2308,13 @@ structure Refute_Extract = struct
               "in " ^ continued ^ " end)"
             end
         | Split (tm, branches) =>
-            let
-              val expression_index = raw_index tm
-              val prior_environment = environment
-              fun branch_body (constructor, variables, next) =
-                let
-                  val constructor_number = constructor_index constructor
-                  val additions = List.map (fn (index, variable) =>
-                    let
-                      val term = thunk ("Refute_EvalSML.split_term " ^
-                        integer constructor_number ^ " " ^ integer index ^
-                        " " ^ integer expression_index ^ " " ^
-                        substitution_source prior_environment)
-                    in (variable, variable_name variable, term) end)
-                    (Lib.enumerate 0 variables)
-                in
-                  compile_exhaustive_plan next (additions @ environment)
-                    genuine_only
-                end
-              fun branch (entry as (constructor, variables, _)) =
-                constructor_expression context constructor
-                  (List.map variable_name variables) ^ " => " ^
-                branch_body entry
-              val failed =
-                parens ("complete := false; match_failures := " ^
-                  "!match_failures + 1; RefuteContinue")
-              fun string_entry name =
-                List.find (fn (constructor, _, _) =>
-                  kname constructor = ("list", name)) branches
-              fun string_body () =
-                let
-                  val nil_body = case string_entry "NIL" of
-                      NONE => failed
-                    | SOME entry => branch_body entry
-                  val cons_body = case string_entry "CONS" of
-                      NONE => failed
-                    | SOME (entry as (_, variables, _)) =>
-                        (case List.map variable_name variables of
-                           [head, tail] =>
-                             "let val " ^ head ^
-                             " = String.sub (refute_value, 0)\n" ^
-                             "    val " ^ tail ^
-                             " = String.extract " ^
-                             "(refute_value, 1, NONE)\n" ^
-                             "in " ^ branch_body entry ^ " end"
-                         | _ => reject "malformed string split")
-                in
-                  "if String.size refute_value = 0 then " ^ nil_body ^
-                  " else " ^ cons_body
-                end
-              val split_body =
-                if is_char_list (Term.type_of tm) then string_body ()
-                else "case refute_value of\n" ^
-                  join "\n | " (List.map branch branches) ^
-                  "\n | _ => " ^ failed
-            in
-              safe_value (expression context tm) failed ^ split_body ^ ")"
-            end
+            split_case
+              (fn next => fn branch_environment =>
+                compile_exhaustive_plan next branch_environment
+                  genuine_only)
+              (parens ("complete := false; match_failures := " ^
+                 "!match_failures + 1; RefuteContinue"))
+              tm branches environment
         | Gen (variable, next) =>
             let
               val value = variable_name variable
@@ -2360,62 +2378,14 @@ structure Refute_Extract = struct
               " end)"
             end
         | Split (tm, branches) =>
-            let
-              val expression_index = raw_index tm
-              val prior_environment = environment
-              fun branch_body (constructor, variables, next) =
-                let
-                  val constructor_number = constructor_index constructor
-                  val additions = List.map (fn (index, variable) =>
-                    (variable, variable_name variable,
-                     thunk ("Refute_EvalSML.split_term " ^
-                       integer constructor_number ^ " " ^ integer index ^
-                       " " ^ integer expression_index ^ " " ^
-                       substitution_source prior_environment)))
-                    (Lib.enumerate 0 variables)
-                in
-                  compile_random_plan next (additions @ environment)
-                    genuine state
-                end
-              fun branch (entry as (constructor, variables, _)) =
-                constructor_expression context constructor
-                  (List.map variable_name variables) ^ " => " ^
-                branch_body entry
-              val failure = parens
-                ("complete := false; match_failures := !match_failures + 1; " ^
-                 parens ("RefuteContinue, " ^ state))
-              fun string_entry name =
-                List.find (fn (constructor, _, _) =>
-                  kname constructor = ("list", name)) branches
-              fun string_body () =
-                let
-                  val nil_body = case string_entry "NIL" of
-                      NONE => failure
-                    | SOME entry => branch_body entry
-                  val cons_body = case string_entry "CONS" of
-                      NONE => failure
-                    | SOME (entry as (_, variables, _)) =>
-                        (case List.map variable_name variables of
-                           [head, tail] =>
-                             "let val " ^ head ^
-                             " = String.sub (refute_value, 0)\n" ^
-                             "    val " ^ tail ^
-                             " = String.extract " ^
-                             "(refute_value, 1, NONE)\n" ^
-                             "in " ^ branch_body entry ^ " end"
-                         | _ => reject "malformed string split")
-                in
-                  "if String.size refute_value = 0 then " ^ nil_body ^
-                  " else " ^ cons_body
-                end
-              val split_body =
-                if is_char_list (Term.type_of tm) then string_body ()
-                else "case refute_value of\n" ^
-                  join "\n | " (List.map branch branches) ^
-                  "\n | _ => " ^ failure
-            in
-              safe_value (expression context tm) failure ^ split_body ^ ")"
-            end
+            split_case
+              (fn next => fn branch_environment =>
+                compile_random_plan next branch_environment genuine state)
+              (parens
+                ("complete := false; match_failures := " ^
+                 "!match_failures + 1; " ^
+                 parens ("RefuteContinue, " ^ state)))
+              tm branches environment
         | Gen (variable, next) =>
             let
               val value = variable_name variable
@@ -2489,7 +2459,7 @@ structure Refute_Extract = struct
       val cards = String.concat
         (List.map card_declaration (Lib.enumerate 0 plans))
       val table_id = Refute_EvalSML.register_term_tables
-        (!constructor_terms) (!raw_terms)
+        (rev (!(#list constructor_terms))) (rev (!(#list raw_terms)))
       val table_declaration =
         "val refute_table_id = " ^ integer table_id ^ "\n"
       val card_names = List.map (fn index =>

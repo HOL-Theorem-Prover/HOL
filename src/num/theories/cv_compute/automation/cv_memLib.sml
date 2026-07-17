@@ -70,13 +70,13 @@ fun register_ThmSetData_list tag_name uptodate update_fun = let
                      initial_value = [],
                      apply_delta = apply_delta}
       };
-  (* Filter out entries that reference deleted constants/types: a full
-     revert (delete_const/delete_binding/scrub) leaves stale ADD deltas
-     in the live global list, which export_with_ancestry never prunes.
-     Screening at lookup time makes them unmatchable, so a later
-     translation over the same datatype cleanly re-derives fresh ones. *)
-  fun uptodate_list () = List.filter uptodate (the_list ())
-  in (uptodate_list, fn th => updater (update_fun_append th)) end;
+  (* A full revert (delete_const/delete_binding/scrub) leaves stale ADD
+     deltas in the live global list, which export_with_ancestry never
+     prunes.  Dropping them via prune makes them unmatchable, so a later
+     translation over the same datatype cleanly re-derives fresh ones.
+     Pruning is the reverter's job; lookups stay O(1). *)
+  fun prune () = updater (List.filter uptodate)
+  in (the_list, fn th => updater (update_fun_append th), prune) end;
 
 (*--------------------------------------------------------------------------*
    Reformulate in terms of cv_rep (for use by cv_repLib and cv_transLib)
@@ -125,7 +125,7 @@ fun prepare th = let
  *--------------------------------------------------------------------------*)
 
 fun insert_cv_rep th = prepare th;
-val (cv_rep_thms, _) =
+val (cv_rep_thms, _, cv_rep_prune) =
     register_ThmSetData_list "cv_rep" (Theory.uptodate_thm o snd)
                              insert_cv_rep;
 
@@ -133,14 +133,14 @@ fun insert_cv_pre th = (
   cv_print Verbose "\ncv_pre:\n\n";
   cv_print_thm Verbose th;
   cv_print Verbose "\n\n"; [th])
-val (cv_pre_thms, cv_pre_add) =
+val (cv_pre_thms, cv_pre_add, cv_pre_prune) =
     register_ThmSetData_list "cv_pre" Theory.uptodate_thm insert_cv_pre;
 
 fun insert_cv_inline th = (
   cv_print Verbose "\ncv_inline:\n\n";
   cv_print_thm Verbose th;
   cv_print Verbose "\n\n"; [th])
-val (cv_inline_thms, cv_inline_add) =
+val (cv_inline_thms, cv_inline_add, cv_inline_prune) =
     register_ThmSetData_list "cv_inline" Theory.uptodate_thm
                              insert_cv_inline;
 
@@ -148,8 +148,14 @@ fun insert_cv_from_to th = (
   cv_print Verbose "\ncv_from_to:\n\n";
   cv_print_thm Verbose th;
   cv_print Verbose "\n\n"; [th])
-val (cv_from_to_thms, cv_from_to_add) =
+val (cv_from_to_thms, cv_from_to_add, cv_from_to_prune) =
     register_ThmSetData_list "cv_from_to" Theory.uptodate_thm
                              insert_cv_from_to;
+
+(* For callers that delete constants/types from the current theory:
+   drop the theorem-set entries the deletion made stale. *)
+fun prune_stale_entries () =
+  (cv_rep_prune (); cv_pre_prune (); cv_inline_prune ();
+   cv_from_to_prune ());
 
 end

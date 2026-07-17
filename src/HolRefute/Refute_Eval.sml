@@ -32,6 +32,7 @@ structure Refute_Eval :> Refute_Eval = struct
   type compiled_test =
     { run : run_input -> run_result,
       close : unit -> unit,
+      max_chunk : int option,
       last_stats : (string * int) list ref }
 
   datatype compile_result =
@@ -63,7 +64,82 @@ structure Refute_Eval :> Refute_Eval = struct
       (value, next)
     end
 
+  fun checked_rand_below bound state =
+    if bound <= 0 orelse bound > rand_output_divisor then
+      raise Fail "Refute rand_below bound exceeds 2^32"
+    else
+      rand_below bound state
+
+  val rand_below_limit = rand_output_divisor
+
   val session_seed : IntInf.int ref = ref 42
+
+  (* Preorder, may contain duplicates; callers dedup as needed. *)
+  fun plan_gen_types plan =
+    case plan of
+        Test _ => []
+      | Gen (variable, next) =>
+          Term.type_of variable :: plan_gen_types next
+      | Bind (_, _, fallback, next) =>
+          (case fallback of
+               NONE => []
+             | SOME alternative => plan_gen_types alternative) @
+          plan_gen_types next
+      | Split (_, branches) =>
+          List.concat (List.map (plan_gen_types o #3) branches)
+      | Guard (_, next) => plan_gen_types next
+      | Prune => []
+
+  val same_env = Lib.list_eq boolSyntax.tmp_eq
+
+  fun ignored_candidate env ignored =
+    List.exists (fn candidate => same_env env (#env candidate)) ignored
+
+  fun fully_applied_constructor tm =
+    let
+      val (constructor, arguments) = boolSyntax.strip_comb tm
+      val (domain, _) = boolSyntax.strip_fun (Term.type_of constructor)
+    in
+      if TypeBase.is_constructor constructor andalso
+         length domain = length arguments
+      then SOME (constructor, arguments)
+      else NONE
+    end
+
+  (* Selftest-only stream hook.  Replacing tests by failure exposes each
+     generated environment without changing the generator or its state. *)
+  fun dump_plan current =
+    case current of
+        Test _ => Test boolSyntax.F
+      | Gen (variable, next) => Gen (variable, dump_plan next)
+      | Bind (variable, tm, fallback, next) =>
+          Bind (variable, tm, Option.map dump_plan fallback, dump_plan next)
+      | Split (tm, branches) =>
+          Split (tm, List.map (fn (constructor, variables, next) =>
+            (constructor, variables, dump_plan next)) branches)
+      | Guard (tm, next) => Guard (tm, dump_plan next)
+      | Prune => Test boolSyntax.F
+
+  fun dump_stream (test : compiled_test) {size, count} =
+    let
+      fun loop 0 candidates = rev candidates
+        | loop remaining candidates =
+            (case #run test
+              {genuine_only = true, card = 1, size = size,
+               draws = 1, ignored = []} of
+                 CexFound {env, ...} =>
+                   loop (remaining - 1)
+                     (rev (List.map #2 env) :: candidates)
+               | Exhausted _ =>
+                   raise Fail "Refute candidate dump exhausted"
+               | GaveUp reason => raise Fail reason)
+      val result = Exn.capture (fn () => loop (Int.max (0, count)) []) ()
+      val close_result = Exn.capture (#close test) ()
+    in
+      case close_result of
+          Exn.Res _ => Exn.release result
+        | Exn.Exn error => raise error
+    end
 
   val substrate_registry : substrate list ref = ref []
 

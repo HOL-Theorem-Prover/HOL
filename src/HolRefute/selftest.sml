@@ -51,9 +51,7 @@ val _ = check_empty "refute_simp"
 val _ = check_empty "refute_psimp"
 val _ = check_empty "refute_unfold"
 
-fun same_string_set left right =
-  length left = length right andalso
-  List.all (fn item => Lib.mem item right) left
+val same_string_set : string list -> string list -> bool = Lib.set_eq
 
 fun cv_ancestry_is_separate () =
   same_string_set (Theory.parents "refute")
@@ -132,9 +130,7 @@ val _ = tprint "Refute cv build-time generators"
 
 fun cv_rhs tm = rhs_of (cv_eval tm)
 
-fun same_terms left right =
-  length left = length right andalso
-  ListPair.allEq (fn (left, right) => Term.aconv left right) (left, right)
+val same_terms = boolSyntax.tml_eq
 
 fun compute_exhaustive ty size =
   case enumerate ty of
@@ -156,7 +152,7 @@ fun cv_exhaustive_agrees ty size application =
   end
 
 fun num_term_of_intinf value =
-  numSyntax.mk_numeral (Arbnum.fromString (IntInf.toString value))
+  numSyntax.mk_numeral (Arbnum.fromLargeInt value)
 
 fun cv_random_agrees ty size seed application =
   let
@@ -531,25 +527,11 @@ fun compile_extracted_tests strategy plans =
   let
     val {source, entry} =
       Refute_Extract.extract_tests default_config strategy plans
-    val serial = !extract_compile_counter
-    val _ = extract_compile_counter := serial + 1
-    val structure_name = "RefuteExtractPlan_" ^ Int.toString serial
-    val program =
-      "structure " ^ structure_name ^ " = struct\n" ^ source ^ "end\n" ^
-      "val _ = " ^ structure_name ^ "." ^ entry ^ "\n"
-    val stream = TextIO.openString program
-    fun input () = TextIO.input1 stream
-    fun compile () =
-      if TextIO.endOfStream stream then ()
-      else
-        (PolyML.compiler
-           (input, [PolyML.Compiler.CPOutStream (fn _ => ())]) ();
-         compile ())
-    val _ = installed_dispatch := NONE
-    val _ = compile ()
-    val _ = TextIO.closeIn stream
   in
-    valOf (!installed_dispatch)
+    case Refute_EvalSML.compile_install source entry of
+        Refute_EvalSML.Installed dispatch => dispatch
+      | Refute_EvalSML.CompileError messages =>
+          raise Fail (String.concat messages)
   end
 
 fun generated_result strategy plan size draws seed =
@@ -574,21 +556,13 @@ fun compute_plan_result strategy plan size draws seed =
        ignored = []}
   end
 
-fun same_generated_env [] [] = true
-  | same_generated_env ((variable1, value1) :: rest1)
-      ((variable2, value2) :: rest2) =
-      Term.aconv variable1 variable2 andalso
-      Term.aconv value1 value2 andalso
-      same_generated_env rest1 rest2
-  | same_generated_env _ _ = false
-
 fun generated_compute_agree strategy plan size draws seed =
   case (generated_env (generated_result strategy plan size draws seed),
         compute_plan_result strategy plan size draws seed) of
       (SOME (generated, generated_genuine),
        CexFound {env = computed, genuine = computed_genuine}) =>
         generated_genuine = computed_genuine andalso
-        same_generated_env generated computed
+        same_env generated computed
     | (NONE, Exhausted _) => true
     | _ => false
 
@@ -1531,7 +1505,7 @@ fun gave_up_reason_is_plumbed () =
     val last_stats = ref []
     val test : compiled_test =
       {run = fn _ => GaveUp "selftest gave up", close = fn () => (),
-       last_stats = last_stats}
+       max_chunk = NONE, last_stats = last_stats}
     val replacement : substrate =
       {name = "compute", priority = 30,
        compile = fn _ => fn _ => fn _ => Compiled test}
@@ -1590,12 +1564,7 @@ fun random config goal =
     | Preprocessed instances =>
         strategy_run (Random {seed = strategy_seed config}) config instances
 
-fun same_bindings [] [] = true
-  | same_bindings ((variable1, value1) :: rest1)
-      ((variable2, value2) :: rest2) =
-      Term.aconv variable1 variable2 andalso Term.aconv value1 value2 andalso
-      same_bindings rest1 rest2
-  | same_bindings _ _ = false
+val same_bindings = same_env
 
 fun same_random_outcome (Counterexample (left :: _))
       (Counterexample (right :: _)) =
@@ -2356,6 +2325,7 @@ fun cv_timeout_is_healthy () =
        ignored = #ignored input}
     val replacement_test : compiled_test =
       {run = huge_run, close = #close compiled,
+       max_chunk = #max_chunk compiled,
        last_stats = #last_stats compiled}
     val replacement : substrate =
       {name = "cv", priority = #priority original,
@@ -2411,6 +2381,7 @@ fun cv_dual_run_is_clean sequential goal sound =
          (Multithreading.synchronized "Refute cv racing close"
             result_mutex (fn () => closes := !closes + 1);
           #close test ()),
+       max_chunk = #max_chunk test,
        last_stats = #last_stats test}
     val replacement : substrate =
       {name = "cv", priority = #priority original,

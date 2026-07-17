@@ -128,27 +128,20 @@ structure Refute_EvalSML = struct
      Term.list_mk_comb (Vector.sub (!constructors, index), arguments))
 
   fun num_term value =
-    (note_force ();
-     numSyntax.mk_numeral
-       (Arbnum.fromString (IntInf.toString value)))
+    (note_force (); numSyntax.mk_numeral (Arbnum.fromLargeInt value))
 
   fun int_term value =
-    (note_force ();
-     intSyntax.term_of_int
-       (Arbint.fromString (IntInf.toString value)))
+    (note_force (); intSyntax.term_of_int (Arbint.fromLargeInt value))
 
   fun char_term character =
-    (note_force ();
-     stringSyntax.mk_chr
-       (numSyntax.term_of_int (Char.ord character)))
+    (note_force (); stringSyntax.fromMLchar character)
 
   fun string_term text =
     (note_force (); stringSyntax.fromMLstring text)
 
   fun word_term width value =
     (note_force ();
-     wordsSyntax.mk_wordi
-       (Arbnum.fromString (IntInf.toString value), width))
+     wordsSyntax.mk_wordi (Arbnum.fromLargeInt value, width))
 
   fun fun_term variable default updates =
     (note_force ();
@@ -169,7 +162,7 @@ structure Refute_EvalSML = struct
       val application = instantiate (raw_term index) environment
       val theorem = computeLib.EVAL_CONV application
     in
-      #2 (boolSyntax.dest_eq (Thm.concl theorem))
+      boolSyntax.rhs (Thm.concl theorem)
     end
 
   fun split_term constructor_index argument_index expression_index
@@ -296,19 +289,12 @@ structure Refute_EvalSML = struct
           answer
         end) ()
 
-  fun same_env [] [] = true
-    | same_env ((variable1, value1) :: rest1)
-        ((variable2, value2) :: rest2) =
-        Term.aconv variable1 variable2 andalso
-        Term.aconv value1 value2 andalso same_env rest1 rest2
-    | same_env _ _ = false
-
   fun ignored_hit ignored (environment, _) =
     let
       val env = List.map (fn (index, rebuild) =>
         (raw_term index, rebuild ())) environment
     in
-      List.exists (fn candidate => same_env env (#env candidate)) ignored
+      Refute_Eval.ignored_candidate env ignored
     end
 
   fun with_native_hooks limit ignored action =
@@ -407,7 +393,8 @@ structure Refute_EvalSML = struct
                 else (unregister_term_tables table; closed := true)
             in
               Refute_Eval.Compiled
-                {run = run, close = close, last_stats = last_stats}
+                {run = run, close = close, max_chunk = NONE,
+                 last_stats = last_stats}
             end
           end
     end
@@ -432,49 +419,14 @@ structure Refute_EvalSML = struct
           Exn.release result
         end) ()
 
-  (* Selftest-only stream hook.  Replacing tests by failure exposes each
-     generated environment without changing the generator or its state. *)
-  fun dump_plan current =
-    case current of
-        Refute_Eval.Test _ => Refute_Eval.Test boolSyntax.F
-      | Refute_Eval.Gen (variable, next) =>
-          Refute_Eval.Gen (variable, dump_plan next)
-      | Refute_Eval.Bind (variable, tm, fallback, next) =>
-          Refute_Eval.Bind
-            (variable, tm, Option.map dump_plan fallback, dump_plan next)
-      | Refute_Eval.Split (tm, branches) =>
-          Refute_Eval.Split (tm, List.map (fn (constructor, variables, next) =>
-            (constructor, variables, dump_plan next)) branches)
-      | Refute_Eval.Guard (tm, next) =>
-          Refute_Eval.Guard (tm, dump_plan next)
-      | Refute_Eval.Prune => Refute_Eval.Test boolSyntax.F
-
   fun dump_native_random_candidates {plan, seed, size, count} =
     case compile Refute_Core.default_config
-        (Refute_Eval.Random {seed = seed}) [dump_plan plan] of
+        (Refute_Eval.Random {seed = seed})
+        [Refute_Eval.dump_plan plan] of
         Refute_Eval.Inapplicable reasons =>
           raise Fail (String.concatWith "; " reasons)
       | Refute_Eval.Compiled test =>
-          let
-            fun loop 0 candidates = rev candidates
-              | loop remaining candidates =
-                  (case #run test
-                    {genuine_only = true, card = 1, size = size,
-                     draws = 1, ignored = []} of
-                       Refute_Eval.CexFound {env, ...} =>
-                         loop (remaining - 1)
-                           (rev (List.map #2 env) :: candidates)
-                     | Refute_Eval.Exhausted _ =>
-                         raise Fail "native candidate dump exhausted"
-                     | Refute_Eval.GaveUp reason => raise Fail reason)
-            val result = Exn.capture (fn () =>
-              loop (Int.max (0, count)) []) ()
-            val close_result = Exn.capture (#close test) ()
-          in
-            case close_result of
-                Exn.Res _ => Exn.release result
-              | Exn.Exn error => raise error
-          end
+          Refute_Eval.dump_stream test {size = size, count = count}
 
   val native_substrate : Refute_Eval.substrate =
     {name = "native", priority = 10, compile = compile}

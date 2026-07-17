@@ -26,17 +26,6 @@ structure Refute_QC = struct
     List.foldr (fn (variable, plan) => guarded_gen variable plan)
       continuation variables
 
-  fun fully_applied_constructor tm =
-    let
-      val (constructor, arguments) = boolSyntax.strip_comb tm
-      val (domain, _) = boolSyntax.strip_fun (Term.type_of constructor)
-    in
-      if TypeBase.is_constructor constructor andalso
-         length domain = length arguments
-      then SOME (constructor, arguments)
-      else NONE
-    end
-
   fun fresh_variables avoids types =
     let
       val avoid_variables = List.concat (List.map Term.free_vars_lr avoids)
@@ -273,6 +262,18 @@ structure Refute_QC = struct
       Selected of string * compiled_test
     | SelectionFailed of string list
 
+  fun say_selected name explicit =
+    Refute_Core.Private.say 2
+      ("Refute substrate selection: selected " ^ name ^
+       (if explicit then " (explicit)" else "") ^ "\n")
+
+  fun say_inapplicable name reasons =
+    Refute_Core.Private.say 2
+      ("Refute substrate selection: " ^ name ^
+       " is inapplicable: " ^
+       (if null reasons then "no reason supplied"
+        else String.concatWith "; " reasons) ^ "\n")
+
   fun compile_auto config strategy plans =
     let
       fun try [] reasons =
@@ -282,22 +283,12 @@ structure Refute_QC = struct
         | try (substrate :: rest) reasons =
             (case #compile substrate config strategy plans of
                  Compiled test =>
-                   (Refute_Core.Private.say 2
-                      ("Refute substrate selection: selected " ^
-                       #name substrate ^ "\n");
+                   (say_selected (#name substrate) false;
                     Selected (#name substrate, test))
                | Inapplicable why =>
-                   let
-                     val detail =
-                       if null why then "no reason supplied"
-                       else String.concatWith "; " why
-                     val _ = Refute_Core.Private.say 2
-                       ("Refute substrate selection: " ^ #name substrate ^
-                        " is inapplicable: " ^ detail ^ "\n")
-                   in
-                     try rest (reasons @ map (fn reason =>
-                       #name substrate ^ ": " ^ reason) why)
-                   end)
+                   (say_inapplicable (#name substrate) why;
+                    try rest (reasons @ map (fn reason =>
+                      #name substrate ^ ": " ^ reason) why)))
     in
       try (get_substrates ()) []
     end
@@ -313,16 +304,9 @@ structure Refute_QC = struct
         | SOME substrate =>
             (case #compile substrate config strategy plans of
                  Compiled test =>
-                   (Refute_Core.Private.say 2
-                      ("Refute substrate selection: selected " ^ name ^
-                       " (explicit)\n");
-                    Selected (name, test))
+                   (say_selected name true; Selected (name, test))
                | Inapplicable reasons =>
-                   (Refute_Core.Private.say 2
-                      ("Refute substrate selection: " ^ name ^
-                       " is inapplicable: " ^
-                       (if null reasons then "no reason supplied"
-                        else String.concatWith "; " reasons) ^ "\n");
+                   (say_inapplicable name reasons;
                     SelectionFailed reasons))
     end
 
@@ -425,9 +409,11 @@ structure Refute_QC = struct
                           let
                             val draws =
                               if target > 1 then 1
-                              else if substrate = "cv" then
-                                Int.min (1024, remaining)
-                              else remaining
+                              else
+                                case #max_chunk compiled of
+                                    NONE => remaining
+                                  | SOME chunk =>
+                                      Int.min (chunk, remaining)
                             val reasons_before = length (!gave_up)
                             val _ = one entry draws
                               (#genuine_only config) []

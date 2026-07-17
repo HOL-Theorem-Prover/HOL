@@ -32,6 +32,7 @@ signature Refute_Eval = sig
   type compiled_test =
     { run : run_input -> run_result,
       close : unit -> unit,
+      max_chunk : int option,
       last_stats : (string * int) list ref }
 
   datatype compile_result =
@@ -47,8 +48,20 @@ signature Refute_Eval = sig
   val rand_next : IntInf.int -> IntInf.int
   val rand_out : IntInf.int -> IntInf.int
   val rand_below : IntInf.int -> IntInf.int -> IntInf.int * IntInf.int
+  val rand_below_limit : IntInf.int
+  val checked_rand_below :
+    IntInf.int -> IntInf.int -> IntInf.int * IntInf.int
   val normalize_seed : IntInf.int -> IntInf.int
   val session_seed : IntInf.int ref
+
+  val plan_gen_types : plan -> Type.hol_type list
+  val same_env : (term * term) list -> (term * term) list -> bool
+  val ignored_candidate : (term * term) list -> candidate list -> bool
+  val fully_applied_constructor : term -> (term * term list) option
+
+  val dump_plan : plan -> plan
+  val dump_stream : compiled_test -> {size : int, count : int} ->
+    term list list
 
   val register_substrate : substrate -> unit
   val get_substrates : unit -> substrate list

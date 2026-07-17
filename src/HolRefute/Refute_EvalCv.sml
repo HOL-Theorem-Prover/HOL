@@ -45,16 +45,49 @@ structure Refute_EvalCv = struct
       val _ =
         if #theory baseline = #theory after then ()
         else raise Fail "Refute cv body changed the current theory"
-      val new_types = Lib.set_diff (#types after) (#types baseline)
+      fun additions current base =
+        let
+          val known = Redblackset.addList
+            (Redblackset.empty String.compare, base)
+        in
+          List.filter (fn name =>
+            not (Redblackset.member (known, name))) current
+        end
+      val new_types = additions (#types after) (#types baseline)
       val new_constants =
-        Lib.set_diff (#constants after) (#constants baseline)
+        additions (#constants after) (#constants baseline)
       val new_bindings =
-        Lib.set_diff (#bindings after) (#bindings baseline)
+        additions (#bindings after) (#bindings baseline)
     in
       List.app Theory.delete_type new_types;
       List.app Theory.delete_const new_constants;
       List.app Theory.delete_binding new_bindings;
-      Theory.scrub ()
+      Theory.scrub ();
+      cv_memLib.prune_stale_entries ()
+    end
+
+  type theory_bracket =
+    {baseline : snapshot, old_verbosity : cv_memLib.verbosity}
+
+  (* Callers hold theory_mutex and run uninterruptibly.  This pair is the
+     single implementation of the "cv leaves no residue" invariant. *)
+  fun open_theory_bracket () : theory_bracket =
+    let
+      val baseline = snapshot ()
+      val old_verbosity = !cv_memLib.verbosity_level
+      val _ = cv_memLib.verbosity_level := cv_memLib.Silent
+    in
+      {baseline = baseline, old_verbosity = old_verbosity}
+    end
+
+  fun close_theory_bracket ({baseline, old_verbosity} : theory_bracket) =
+    let
+      val cleanup_result = Exn.capture revert baseline
+      val _ = cv_memLib.verbosity_level := old_verbosity
+    in
+      case cleanup_result of
+          Exn.Res _ => ()
+        | Exn.Exn error => raise CleanupFailed error
     end
 
   fun with_clean_theory body =
@@ -63,25 +96,20 @@ structure Refute_EvalCv = struct
         Thread_Attributes.uninterruptible
           (fn restore_attributes => fn () =>
             let
-              val baseline = snapshot ()
-              val old_verbosity = !cv_memLib.verbosity_level
-              val _ = cv_memLib.verbosity_level := cv_memLib.Silent
+              val bracket = open_theory_bracket ()
               val body_result = Exn.capture (restore_attributes body) ()
-              val cleanup_result = Exn.capture revert baseline
-              val _ = cv_memLib.verbosity_level := old_verbosity
-              val _ =
-                case cleanup_result of
-                    Exn.Res _ => ()
-                  | Exn.Exn error => raise CleanupFailed error
+              val _ = close_theory_bracket bracket
             in
               Exn.release body_result
             end) ())
 
   fun same_type left right = Type.compare (left, right) = EQUAL
 
-  fun map_index function values =
-    ListPair.mapEq function
-      (List.tabulate (length values, fn index => index), values)
+  fun map_index function = Lib.mapi (fn index => fn value =>
+    function (index, value))
+
+  val rand_below_tm =
+    Term.prim_mk_const {Thy = "refute", Name = "rand_below"}
 
   fun table_entry ty exhaustive random =
     (ty, {ty = ty, exhaustive = exhaustive, random = random})
@@ -148,10 +176,7 @@ structure Refute_EvalCv = struct
      exhaustive_helper_equations : term list,
      random_aux_var : term, random_var : term,
      exhaustive_equations : term, random_aux_equations : term,
-     random_equation : term,
-     exhaustive_quote : term Portable.quotation,
-     random_aux_quote : term Portable.quotation,
-     random_quote : term Portable.quotation}
+     random_equation : term}
 
   type bundle = template list
 
@@ -170,13 +195,16 @@ structure Refute_EvalCv = struct
   fun unsupported ty why =
     raise Unsupported (cv_type_name ty ^ " - " ^ why)
 
-  fun recipe_of ty =
+  fun check_in_fragment ty =
     if Type.is_vartype ty then unsupported ty "unresolved type variable"
     else if registered ty (!Refute_Gen.user_generators) then
       unsupported ty "custom generator registered"
     else if registered ty (!Refute_Gen.abstract_specs) then
       unsupported ty "abstract generator registered"
-    else
+    else ()
+
+  fun recipe_of ty =
+    (check_in_fragment ty;
       (case Refute_Gen.spec_of ty of
            Refute_Gen.GenEnum values => EnumRecipe values
          | Refute_Gen.GenDatatype
@@ -191,7 +219,7 @@ structure Refute_EvalCv = struct
              unsupported ty "custom generator registered"
          | Refute_Gen.GenNum _ =>
              unsupported ty "numeric type is outside the cv table")
-      handle Refute_Gen.NoGenerator (_, why) => unsupported ty why
+      handle Refute_Gen.NoGenerator (_, why) => unsupported ty why)
 
   fun validate_supported root =
     let
@@ -201,14 +229,7 @@ structure Refute_EvalCv = struct
         else
           let
             val _ = seen := ty :: !seen
-            val _ =
-              if Type.is_vartype ty then
-                unsupported ty "unresolved type variable"
-              else if registered ty (!Refute_Gen.user_generators) then
-                unsupported ty "custom generator registered"
-              else if registered ty (!Refute_Gen.abstract_specs) then
-                unsupported ty "abstract generator registered"
-              else ()
+            val _ = check_in_fragment ty
           in
             if Option.isSome (table_generator ty) then ()
             else
@@ -267,9 +288,7 @@ structure Refute_EvalCv = struct
       rev (!seen)
     end
 
-  fun function_type (domains, range) =
-    List.foldr (fn (domain, result) =>
-      Type.mk_type ("fun", [domain, result])) range domains
+  val function_type = boolSyntax.list_mk_fun
 
   fun placeholder index suffix ty =
     Term.mk_var
@@ -323,8 +342,7 @@ structure Refute_EvalCv = struct
              (function_type ([numSyntax.num, numSyntax.num], pair_ty))}
         end
 
-      val vars = List.map variables
-        (ListPair.zip (List.tabulate (length recipes, fn n => n), recipes))
+      val vars = map_index variables recipes
 
       fun find_vars ty =
         case List.find (fn data => same_type (#ty data) ty) vars of
@@ -620,7 +638,7 @@ structure Refute_EvalCv = struct
           else
             let
               val rand = Term.list_mk_comb
-                (``refute$rand_below``, [add_terms weights, state])
+                (rand_below_tm, [add_terms weights, state])
               val selected = choose draw positive_entries
             in
               pairSyntax.mk_plet
@@ -633,7 +651,7 @@ structure Refute_EvalCv = struct
           val draw = Term.mk_var ("choice", numSyntax.num)
           val state1 = Term.mk_var ("state1", numSyntax.num)
           val rand = Term.list_mk_comb
-            (``refute$rand_below``, [numeral (length values), state])
+            (rand_below_tm, [numeral (length values), state])
           fun select _ [value] = value
             | select index (value :: rest) =
                 boolSyntax.mk_cond
@@ -678,14 +696,7 @@ structure Refute_EvalCv = struct
         let
           val size = Term.mk_var ("size", numSyntax.num)
           val state = Term.mk_var ("state", numSyntax.num)
-          val floor =
-            case recipe of
-                EnumRecipe _ => 0
-              | DatatypeRecipe {min_size, ...} =>
-                  List.foldl Int.min 1073741823
-                    (List.map (fn row => List.foldl Int.max 0 row)
-                      min_size)
-          val budget = numSyntax.mk_max (numeral floor, size)
+          val budget = numSyntax.mk_max (numeral (recipe_floor recipe), size)
         in
           boolSyntax.mk_eq
             (Term.list_mk_comb (random, [size, state]),
@@ -721,10 +732,7 @@ structure Refute_EvalCv = struct
            random_var = #random_var data,
            exhaustive_equations = exhaustive_equations,
            random_aux_equations = random_aux_equations,
-           random_equation = random_equation,
-           exhaustive_quote = [HOLPP.ANTIQUOTE exhaustive_equations],
-           random_aux_quote = [HOLPP.ANTIQUOTE random_aux_equations],
-           random_quote = [HOLPP.ANTIQUOTE random_equation]}
+           random_equation = random_equation}
         end
     in
       ListPair.mapEq one (recipes, vars)
@@ -739,39 +747,31 @@ structure Refute_EvalCv = struct
         (#exhaustive_helper_equations data)) bundle
 
   fun template_bundle ty =
-    case Redblackmap.peek (!template_cache, ty) of
-        SOME bundle =>
-          if bundle_uptodate bundle then
-            (cache_hits := !cache_hits + 1; bundle)
-          else
-            let
-              val rebuilt = make_templates (collect_recipes ty)
-              val _ = template_cache :=
-                Redblackmap.insert (!template_cache, ty, rebuilt)
-              val _ = cache_misses := !cache_misses + 1
-            in
-              rebuilt
-            end
-      | NONE =>
-          let
-            val bundle = make_templates (collect_recipes ty)
-            val _ = template_cache :=
-              Redblackmap.insert (!template_cache, ty, bundle)
-            val _ = cache_misses := !cache_misses + 1
-          in
-            bundle
-          end
+    let
+      fun rebuild () =
+        let
+          val bundle = make_templates (collect_recipes ty)
+          val _ = template_cache :=
+            Redblackmap.insert (!template_cache, ty, bundle)
+          val _ = cache_misses := !cache_misses + 1
+        in
+          bundle
+        end
+    in
+      case Redblackmap.peek (!template_cache, ty) of
+          SOME bundle =>
+            if bundle_uptodate bundle then
+              (cache_hits := !cache_hits + 1; bundle)
+            else rebuild ()
+        | NONE => rebuild ()
+    end
 
   fun conjunction equations =
     case equations of
         [] => raise Fail "Refute cv empty definition bundle"
       | _ => boolSyntax.list_mk_conj equations
 
-  fun split_equations equation =
-    case Lib.total boolSyntax.dest_conj equation of
-        NONE => [equation]
-      | SOME (left, right) =>
-          split_equations left @ split_equations right
+  val split_equations = boolSyntax.strip_conj
 
   fun instantiate_bundle prefix bundle =
     let
@@ -982,11 +982,9 @@ structure Refute_EvalCv = struct
 
   exception Precondition of string
 
-  fun term_member tm = List.exists (fn other => Term.aconv tm other)
-
   fun distinct_terms terms =
     rev (List.foldl (fn (tm, result) =>
-      if term_member tm result then result else tm :: result) [] terms)
+      if boolSyntax.tmem tm result then result else tm :: result) [] terms)
 
   fun distinct_types types =
     rev (List.foldl (fn (ty, result) =>
@@ -1016,42 +1014,7 @@ structure Refute_EvalCv = struct
     end
 
   fun plan_generator_types plan =
-    let
-      fun collect current types =
-        case current of
-            Refute_Eval.Test _ => types
-          | Refute_Eval.Gen (variable, next) =>
-              collect next (Term.type_of variable :: types)
-          | Refute_Eval.Bind (_, _, fallback, next) =>
-              collect next
-                (case fallback of
-                     NONE => types
-                   | SOME alternative => collect alternative types)
-          | Refute_Eval.Split (_, branches) =>
-              List.foldl (fn ((_, _, next), result) =>
-                collect next result) types branches
-          | Refute_Eval.Guard (_, next) => collect next types
-          | Refute_Eval.Prune => types
-    in
-      distinct_types (rev (collect plan []))
-    end
-
-  fun validate_plan_shapes plan =
-    let
-      fun check current =
-        case current of
-            Refute_Eval.Test _ => ()
-          | Refute_Eval.Gen (_, next) => check next
-          | Refute_Eval.Bind (_, _, fallback, next) =>
-              ((case fallback of NONE => () | SOME other => check other);
-               check next)
-          | Refute_Eval.Split (_, branches) =>
-              List.app (check o #3) branches
-          | Refute_Eval.Guard (_, next) => check next
-          | Refute_Eval.Prune => ()
-    in
-      check plan
-    end
+    distinct_types (Refute_Eval.plan_gen_types plan)
 
   fun plan_payloads plan =
     let
@@ -1073,16 +1036,12 @@ structure Refute_EvalCv = struct
       collect plan []
     end
 
-  fun constants_in tm =
-    if Term.is_const tm then [tm]
-    else if Term.is_comb tm then
-      let val (function, argument) = Term.dest_comb tm
-      in constants_in function @ constants_in argument end
-    else if Term.is_abs tm then constants_in (#2 (Term.dest_abs tm))
-    else []
+  val constants_in = HolKernel.find_terms Term.is_const
 
   val partial_names =
-    ["HD", "TL", "EL", "THE", "OUTL", "OUTR", "LAST", "FRONT"]
+    [("list", "HD"), ("list", "TL"), ("list", "EL"), ("option", "THE"),
+     ("sum", "OUTL"), ("sum", "OUTR"), ("list", "LAST"),
+     ("list", "FRONT")]
 
   fun partial_constant plans =
     let
@@ -1090,17 +1049,16 @@ structure Refute_EvalCv = struct
         (List.map (List.concat o List.map constants_in o plan_payloads)
           plans)
       fun is_partial tm =
-        List.exists (fn name => #1 (Term.dest_const tm) = name)
-          partial_names
+        let val {Thy, Name, ...} = Term.dest_thy_const tm
+        in List.exists (fn known => known = (Thy, Name)) partial_names end
     in
       Option.map (fn tm => #1 (Term.dest_const tm))
         (List.find is_partial constants)
     end
 
-  fun env_type [] = Term.type_of boolSyntax.T
-    | env_type [variable] = Term.type_of variable
-    | env_type (variable :: rest) =
-        pairSyntax.mk_prod (Term.type_of variable, env_type rest)
+  fun env_type [] = Type.bool
+    | env_type variables =
+        pairSyntax.list_mk_prod (List.map Term.type_of variables)
 
   fun lookup_env variable env =
     case List.find (fn (old, _) => Term.aconv old variable) env of
@@ -1109,9 +1067,9 @@ structure Refute_EvalCv = struct
           ("unbound result variable " ^ Parse.term_to_string variable)
 
   fun env_term [] _ = boolSyntax.T
-    | env_term [variable] env = lookup_env variable env
-    | env_term (variable :: rest) env =
-        pairSyntax.mk_pair (lookup_env variable env, env_term rest env)
+    | env_term variables env =
+        pairSyntax.list_mk_pair
+          (List.map (fn variable => lookup_env variable env) variables)
 
   fun decode_env [] _ = []
     | decode_env [variable] value = [(variable, value)]
@@ -1165,10 +1123,8 @@ structure Refute_EvalCv = struct
       | NONE => raise Fail "Refute cv generator lookup failed"
 
   fun make_option_case option_tm none_body some_variable some_body =
-    TypeBase.mk_case
-      (option_tm,
-       [(optionSyntax.mk_none (Term.type_of some_variable), none_body),
-        (optionSyntax.mk_some some_variable, some_body)])
+    optionSyntax.mk_option_case
+      (none_body, Term.mk_abs (some_variable, some_body), option_tm)
 
   fun make_split scrutinee branches env miss build =
     let
@@ -1279,19 +1235,12 @@ structure Refute_EvalCv = struct
                 val recurse = helper_call tail remaining
                 val return_found = pairSyntax.mk_pair
                   (remaining, optionSyntax.mk_some found)
+                val answer = named_variable (stem ^ "answer")
+                  (optionSyntax.mk_option (env_type variables))
                 val after_attempt = pairSyntax.mk_plet
-                  (pairSyntax.mk_pair
-                    (remaining,
-                     named_variable (stem ^ "answer")
-                       (optionSyntax.mk_option (env_type variables))),
+                  (pairSyntax.mk_pair (remaining, answer),
                    attempt,
-                   let
-                     val answer = named_variable
-                       (stem ^ "answer")
-                       (optionSyntax.mk_option (env_type variables))
-                   in
-                     make_option_case answer recurse found return_found
-                   end)
+                   make_option_case answer recurse found return_found)
                 val cons_lhs = helper_call
                   (listSyntax.mk_cons (head, tail)) skip
                 val definition = TotalDefn.Define
@@ -1423,8 +1372,7 @@ structure Refute_EvalCv = struct
         Term.list_mk_comb
           (loop,
            [numeral draws, numeral size_value,
-            numSyntax.mk_numeral
-              (Arbnum.fromString (IntInf.toString state_value))])
+            numSyntax.mk_numeral (Arbnum.fromLargeInt state_value)])
     in
       {variables = variables, result_ty = final_ty,
        application = application}
@@ -1450,8 +1398,7 @@ structure Refute_EvalCv = struct
       val evaluator = cv_computeLib.cv_compute
         (cv_transLib.cv_eqs_for cv_sample)
       val decoder = cv_typeLib.to_term_for result_ty
-      fun theorem_rhs theorem =
-        #2 (boolSyntax.dest_eq (Thm.concl theorem))
+      fun theorem_rhs theorem = boolSyntax.rhs (Thm.concl theorem)
       fun evaluate tm =
         let
           val cv_application = cv_term_for tm
@@ -1511,9 +1458,8 @@ structure Refute_EvalCv = struct
                   if sumSyntax.is_inl decoded then
                     let
                       val (state_tm, _) = sumSyntax.dest_inl decoded
-                      val _ = state_ref := valOf (IntInf.fromString
-                        (Arbnum.toString
-                          (numSyntax.dest_numeral state_tm)))
+                      val _ = state_ref := Arbnum.toLargeInt
+                        (numSyntax.dest_numeral state_tm)
                     in
                       Refute_Eval.Exhausted {complete = complete}
                     end
@@ -1521,9 +1467,8 @@ structure Refute_EvalCv = struct
                     let
                       val (result, _) = sumSyntax.dest_inr decoded
                       val (state_tm, value) = pairSyntax.dest_pair result
-                      val _ = state_ref := valOf (IntInf.fromString
-                        (Arbnum.toString
-                          (numSyntax.dest_numeral state_tm)))
+                      val _ = state_ref := Arbnum.toLargeInt
+                        (numSyntax.dest_numeral state_tm)
                     in
                       Refute_Eval.CexFound
                         {env = decode_env (#variables program) value,
@@ -1541,7 +1486,6 @@ structure Refute_EvalCv = struct
       val all_types = distinct_types
         (List.concat (List.map plan_generator_types plans))
       val _ = List.app validate_supported all_types
-      val _ = List.app validate_plan_shapes plans
       val _ =
         case partial_constant plans of
             NONE => ()
@@ -1551,25 +1495,23 @@ structure Refute_EvalCv = struct
         (case strategy of
              Refute_Eval.Exhaustive => 0
            | Refute_Eval.Random {seed} => seed)
-      val active = ref (NONE : (snapshot * cv_memLib.verbosity) option)
+      val active = ref (NONE : theory_bracket option)
       val runners = ref ([] : (int * card_runner) list)
 
       fun close () =
         case !active of
             NONE => ()
-          | SOME (baseline, old_verbosity) =>
+          | SOME bracket =>
               Thread_Attributes.uninterruptible
                 (fn _ => fn () =>
                   let
-                    val cleanup_result = Exn.capture revert baseline
-                    val _ = cv_memLib.verbosity_level := old_verbosity
+                    val cleanup_result =
+                      Exn.capture close_theory_bracket bracket
                     val _ = runners := []
                     val _ = active := NONE
                     val _ = Mutex.unlock theory_mutex
                   in
-                    case cleanup_result of
-                        Exn.Res _ => ()
-                      | Exn.Exn error => raise CleanupFailed error
+                    Exn.release cleanup_result
                   end) ()
 
       fun start () =
@@ -1578,15 +1520,8 @@ structure Refute_EvalCv = struct
           | NONE =>
               Thread_Attributes.uninterruptible
                 (fn _ => fn () =>
-                  let
-                    val _ = Mutex.lock theory_mutex
-                    val baseline = snapshot ()
-                    val old_verbosity = !cv_memLib.verbosity_level
-                    val _ = active := SOME (baseline, old_verbosity)
-                    val _ = cv_memLib.verbosity_level := cv_memLib.Silent
-                  in
-                    ()
-                  end) ()
+                  (Mutex.lock theory_mutex;
+                   active := SOME (open_theory_bracket ()))) ()
 
       fun runner card =
         case List.find (fn (old_card, _) => old_card = card) (!runners) of
@@ -1623,8 +1558,12 @@ structure Refute_EvalCv = struct
              | Timeout.TIMEOUT _ =>
                  Refute_Eval.GaveUp "cv: chunk timed out"
     in
+      (* Bounding each run keeps a single cv_eval call (and hence the
+         span between timeout checks) small; the driver reads max_chunk
+         instead of knowing which substrate it is talking to. *)
       Refute_Eval.Compiled
-        {run = run, close = close, last_stats = last_stats}
+        {run = run, close = close, max_chunk = SOME 1024,
+         last_stats = last_stats}
     end
     handle Precondition name =>
              Refute_Eval.Inapplicable ["cv: precondition for " ^ name]
@@ -1649,189 +1588,37 @@ structure Refute_EvalCv = struct
         (Refute_Eval.Random {seed = seed}) [dump_plan plan] of
         Refute_Eval.Inapplicable reasons => CvInapplicable reasons
       | Refute_Eval.Compiled test =>
-          let
-            fun loop 0 candidates = rev candidates
-              | loop remaining candidates =
-                  (case #run test
-                    {genuine_only = true, card = 1, size = size,
-                     draws = 1, ignored = []} of
-                       Refute_Eval.CexFound {env, ...} =>
-                         loop (remaining - 1)
-                           (rev (List.map #2 env) :: candidates)
-                     | Refute_Eval.Exhausted _ =>
-                         raise Fail "cv candidate dump exhausted"
-                     | Refute_Eval.GaveUp reason => raise Fail reason)
-            val result = Exn.capture (fn () =>
-              loop (Int.max (0, count)) []) ()
-            val close_result = Exn.capture (#close test) ()
-          in
-            case close_result of
-                Exn.Res _ => CvSuccess (Exn.release result)
-              | Exn.Exn error => raise error
-          end
+          CvSuccess (Refute_Eval.dump_stream test
+            {size = size, count = count})
 
   fun cv_dump_rand_below bound state =
     let
-      fun num value = numSyntax.mk_numeral
-        (Arbnum.fromString (IntInf.toString value))
+      fun num value = numSyntax.mk_numeral (Arbnum.fromLargeInt value)
       val application = Term.list_mk_comb
-        (``refute$rand_below``, [num bound, num state])
+        (rand_below_tm, [num bound, num state])
       val theorem = cv_transLib.cv_eval application
-      val result = #2 (boolSyntax.dest_eq (Thm.concl theorem))
+      val result = boolSyntax.rhs (Thm.concl theorem)
       val (value_tm, state_tm) = pairSyntax.dest_pair result
-      fun dest tm = valOf (IntInf.fromString
-        (Arbnum.toString (numSyntax.dest_numeral tm)))
+      fun dest tm = Arbnum.toLargeInt (numSyntax.dest_numeral tm)
     in
       (dest value_tm, dest state_tm)
     end
 
+  (* The compute substrate's random family, replayed with every draw
+     routed through cv_eval.  Sharing one implementation keeps the
+     consumption discipline identical across substrates by construction. *)
   fun cv_dump_random_term ty size state =
     let
-      val bounded = Int.max (0, size)
-      fun arbnum value = Arbnum.fromString (IntInf.toString value)
-      fun arbint value = Arbint.fromString (IntInf.toString value)
-      fun checked bound current =
-        if bound <= 0 orelse bound > 4294967296 then
+      fun draw bound current =
+        if bound <= 0 orelse bound > Refute_Eval.rand_below_limit then
           raise Unsupported "candidate dump random bound exceeds 2^32"
         else cv_dump_rand_below bound current
-
-      fun entry spec current =
-        random_value spec
-          {budget = Int.max (Refute_Gen.own_floor spec, bounded),
-           size = bounded} current
-
-      and arguments [] [] _ _ current = ([], current)
-        | arguments (ty :: tys) (recursive :: flags) budget draw_size
-            current =
-            let
-              val (value, next) =
-                if recursive then
-                  random_value (Refute_Gen.spec_of ty)
-                    {budget = Int.max (0, budget - 1), size = draw_size}
-                    current
-                else
-                  let val spec = Refute_Gen.spec_of ty
-                  in
-                    random_value spec
-                      {budget = Int.max
-                         (Refute_Gen.own_floor spec, draw_size),
-                       size = draw_size} current
-                  end
-              val (values, final) =
-                arguments tys flags budget draw_size next
-            in
-              (value :: values, final)
-            end
-        | arguments _ _ _ _ _ =
-            raise Fail "cv candidate dump malformed datatype"
-
-      and function_value domain range current =
-        let
-          val variable = Term.mk_var ("x", domain)
-          val range_spec = Refute_Gen.spec_of range
-          val (default, after_default) = entry range_spec current
-          fun draw_points 0 state points = (rev points, state)
-            | draw_points remaining state points =
-                let
-                  val (point, next) = entry
-                    (Refute_Gen.spec_of domain) state
-                in
-                  draw_points (remaining - 1) next (point :: points)
-                end
-          val (points, after_points) =
-            case Refute_Gen.enumerate domain of
-                SOME values => (values, after_default)
-              | NONE => draw_points bounded after_default []
-          fun add (point, (base, state)) =
-            let
-              val (value, next) = entry range_spec state
-            in
-              (Term.mk_comb
-                 (combinSyntax.mk_update (point, value), base), next)
-            end
-        in
-          List.foldl add
-            (Term.mk_abs (variable, default), after_points) points
-        end
-
-      and random_value spec {budget, size = draw_size} current =
-        case spec of
-            Refute_Gen.GenEnum values =>
-              let
-                val (choice, next) =
-                  checked (IntInf.fromInt (length values)) current
-              in
-                (List.nth (values, IntInf.toInt choice), next)
-              end
-          | Refute_Gen.GenNum Refute_Gen.Num =>
-              let val (value, next) =
-                checked (IntInf.fromInt draw_size + 1) current
-              in (numSyntax.mk_numeral (arbnum value), next) end
-          | Refute_Gen.GenNum Refute_Gen.Int =>
-              let
-                val radius = IntInf.fromInt draw_size
-                val (value, next) = checked (2 * radius + 1) current
-              in
-                (intSyntax.term_of_int (arbint (value - radius)), next)
-              end
-          | Refute_Gen.GenNum Refute_Gen.Char =>
-              let val (value, next) = checked 256 current
-              in
-                (stringSyntax.mk_chr
-                   (numSyntax.mk_numeral (arbnum value)), next)
-              end
-          | Refute_Gen.GenNum (Refute_Gen.Word width) =>
-              let val (value, next) =
-                checked (IntInf.pow (2, width)) current
-              in (wordsSyntax.mk_wordi (arbnum value, width), next) end
-          | Refute_Gen.GenFun (domain, range) =>
-              function_value domain range current
-          | Refute_Gen.GenDatatype
-              {constrs, recursive, min_size, ...} =>
-              let
-                fun weight (flags, floors) =
-                  if not (List.exists (fn flag => flag) flags) then 1
-                  else
-                    let
-                      fun depth (true, floor) = Int.max (0, floor - 1)
-                        | depth (false, _) = 0
-                      val minimum = List.foldl Int.max 0
-                        (ListPair.mapEq depth (flags, floors))
-                    in
-                      if minimum = 0 then budget
-                      else if budget > minimum then budget else 0
-                    end
-                fun entries [] [] [] = []
-                  | entries (constructor :: rest) (flags :: more_flags)
-                      (floors :: more_floors) =
-                      (constructor, flags, weight (flags, floors)) ::
-                      entries rest more_flags more_floors
-                  | entries _ _ _ =
-                      raise Fail "cv candidate dump malformed weights"
-                val choices = entries constrs recursive min_size
-                val total = List.foldl (fn ((_, _, value), sum) =>
-                  IntInf.fromInt value + sum) 0 choices
-                val (draw, after_choice) = checked total current
-                fun select _ [] =
-                      raise Fail "cv candidate dump has no constructor"
-                  | select remaining
-                      ((constructor, flags, value) :: rest) =
-                      if remaining < IntInf.fromInt value then
-                        (constructor, flags)
-                      else
-                        select (remaining - IntInf.fromInt value) rest
-                val ((constructor, arg_types), flags) =
-                  select draw choices
-                val (values, final) = arguments arg_types flags
-                  budget draw_size after_choice
-              in
-                (Term.list_mk_comb (constructor, values), final)
-              end
-          | Refute_Gen.GenCustom _ =>
-              raise Unsupported
-                "custom generator is unavailable in cv candidate dump"
+      fun custom _ _ _ =
+        raise Unsupported
+          "custom generator is unavailable in cv candidate dump"
     in
-      entry (Refute_Gen.spec_of ty) state
+      Refute_EvalCompute.random_entry_with draw custom
+        (Refute_Gen.spec_of ty) (Int.max (0, size)) state
     end
 
   fun dump_cv_fallback {plan, seed, size, count} =
@@ -1859,16 +1646,19 @@ structure Refute_EvalCv = struct
       loop (Int.max (0, count)) seed []
     end
 
-  fun dump_cv_random_candidates arguments =
-    case dump_cv_loop arguments of
-        CvSuccess candidates => candidates
-      | CvInapplicable reasons =>
-          if List.exists (fn reason =>
-               String.isSubstring "function type" reason orelse
-               String.isSubstring
-                 "nested recursive datatype generator" reason) reasons
-          then dump_cv_fallback arguments
-          else raise Fail (String.concatWith "; " reasons)
+  fun dump_cv_random_candidates (arguments as {plan, ...}) =
+    let
+      val supported =
+        (List.app validate_supported (plan_generator_types plan); true)
+        handle Unsupported _ => false
+    in
+      if not supported then dump_cv_fallback arguments
+      else
+        case dump_cv_loop arguments of
+            CvSuccess candidates => candidates
+          | CvInapplicable reasons =>
+              raise Fail (String.concatWith "; " reasons)
+    end
 
   val cv_substrate : Refute_Eval.substrate =
     {name = "cv", priority = 20, compile = compile}
