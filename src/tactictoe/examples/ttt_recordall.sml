@@ -29,14 +29,12 @@
    library module is effectively made an ancestor of the current theory
    segment, so that ttt_record () records all of them.
 
-   Resilience
-   ----------
-   ttt_record () skips a theory whose recording raises, logs it, and
-   continues with the rest, so a single un-recordable theory (e.g.
-   pred_set, which the TacticToe rewriter mishandles) no longer aborts
-   the whole run.  Re-runs use the manifest to skip up-to-date theories
-   and re-record stale ones; a theory that can't be recorded is retried
-   and skipped again.
+   Completeness
+   ------------
+   ttt_record () may continue past a failed theory so that independent
+   theories can still be recorded.  This driver audits the final manifest
+   and fails the process if anything remains stale.  A record-all run can
+   therefore never report success after a failed or skipped recording.
 
    Prerequisites
    -------------
@@ -74,3 +72,18 @@ tttSetup.record_flag := true;
 tttSetup.record_savestate_flag := false;
 if keep_existing then () else ttt_clean_record ();
 ttt_record ();
+
+val {stale,up_to_date} = ttt_record_plan CurrentAncestry;
+val _ =
+  if null stale then
+    print_endline
+      ("recording complete: " ^ Int.toString (length up_to_date) ^
+       " theories up-to-date")
+  else
+    let
+      fun incomplete (thy,reason) =
+        thy ^ " (" ^ reason_to_string reason ^ ")"
+      val details = String.concatWith ", " (map incomplete stale)
+    in
+      raise Fail ("ttt_recordall: incomplete recordings: " ^ details)
+    end;

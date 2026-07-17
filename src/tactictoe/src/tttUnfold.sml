@@ -546,10 +546,7 @@ fun sketch sl = case sl of
                      else sketch_pattern_bfun "fun" "=" true m
     (* todo: support for mutually recursive functions *)
   | "fn"  :: m    => sketch_pattern_bfun "fn" "=>" false m
-  | "|"   :: m    =>
-    let val in_fun = !bfun in
-      sketch_pattern_bfun "|" (if in_fun then "=" else "=>") in_fun m
-    end
+  | "|"   :: m    => sketch_pattern_bar (!bfun) m
   | "of"  :: m    => sketch_pattern_bfun "of" "=>" false m
   | "handle" :: m => sketch_pattern_bfun "handle" "=>" false m
   | "local" :: m  => Start "local" :: sketch m
@@ -584,6 +581,25 @@ and sketch_pattern_bfun s sep body_bfun m =
     val _ = bfun := old_bfun
   in
     Pattern (s, map (Code o undecided) head, sep, new_body) :: sketch cont
+  end
+(* A bar is ambiguous: it may continue a fun declaration with `=` or a
+   case/fn/handle expression with `=>`.  bfun is only a hint because nested
+   declarations can finish at the same token level as their enclosing case
+   arm.  Inspect the actual separator, and use it both in the rewritten
+   program and while sketching the arm body. *)
+and sketch_pattern_bar in_fun m =
+  let
+    val preferred = if in_fun then "=" else "=>"
+    val alternate = if in_fun then "=>" else "="
+    val (sep,(head,body,cont)) =
+      (preferred, extract_pattern preferred m)
+      handle HOL_ERR _ => (alternate, extract_pattern alternate m)
+    val old_bfun = !bfun
+    val _ = bfun := sep = "="
+    val new_body = sketch body
+    val _ = bfun := old_bfun
+  in
+    Pattern ("|", map (Code o undecided) head, sep, new_body) :: sketch cont
   end
 and sketch_record m =
   let
