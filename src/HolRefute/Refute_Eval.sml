@@ -47,10 +47,11 @@ structure Refute_Eval :> Refute_Eval = struct
   val rand_modulus : IntInf.int = 18446744073709551616
   val rand_output_divisor : IntInf.int = 4294967296
 
+  fun normalize_seed state = IntInf.mod (state, rand_modulus)
+
   fun rand_next state =
-    IntInf.mod
-      (6364136223846793005 * state + 1442695040888963407,
-       rand_modulus)
+    normalize_seed
+      (6364136223846793005 * state + 1442695040888963407)
 
   fun rand_out state = IntInf.div (state, rand_output_divisor)
 

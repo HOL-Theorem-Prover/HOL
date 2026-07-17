@@ -1639,6 +1639,40 @@ fun random_seed_is_reproducible () =
     same_random_outcome left right andalso !session_seed = prior_seed
   end
 
+fun random_collects_requested_counterexamples () =
+  let
+    val config = upd_substrate Compute
+      (upd_iterations 10
+        (upd_size 1
+          (upd_seed (SOME 1)
+            (upd_max_counterexamples 3 default_config))))
+  in
+    case random config ``(x : num) = x + 1`` of
+        Counterexample counterexamples => length counterexamples = 3
+      | _ => false
+  end
+
+fun negative_seed_agrees_across_substrates () =
+  let
+    val config = upd_iterations 3
+      (upd_size 10
+        (upd_seed (SOME ~1) default_config))
+    val goal = ``(x : num) = x + 1``
+    fun binding choice =
+      case random (upd_substrate choice config) goal of
+          Counterexample (cex :: _) =>
+            (case #bindings cex of
+                 [(_, value)] => SOME value
+               | _ => NONE)
+        | _ => NONE
+  in
+    strategy_seed config = normalize_seed ~1 andalso
+    (case (binding Compute, binding Cv, binding NativeSML) of
+         (SOME compute, SOME cv, SOME native) =>
+           Term.aconv compute cv andalso Term.aconv compute native
+       | _ => false)
+  end
+
 fun session_random_completes () =
   let
     val config = upd_iterations 2 (upd_size 2 default_config)
@@ -1686,6 +1720,16 @@ val _ = require_msg (check_result random_arithmetic_counterexample) (fn () =>
 
 val _ = require_msg (check_result random_seed_is_reproducible) (fn () =>
   "the random backend was not reproducible for an explicit seed")
+  (fn () => ()) ()
+
+val _ = require_msg
+  (check_result random_collects_requested_counterexamples) (fn () =>
+  "the random backend stopped before max_counterexamples")
+  (fn () => ()) ()
+
+val _ = require_msg
+  (check_result negative_seed_agrees_across_substrates) (fn () =>
+  "a negative seed produced different substrate streams")
   (fn () => ()) ()
 
 val _ = require_msg (check_result session_random_completes) (fn () =>

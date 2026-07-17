@@ -1536,7 +1536,7 @@ structure Refute_Extract = struct
       fun group_for constant =
         List.find (List.exists (same_term constant)) groups
       fun constants_in (_, _, theorem) =
-        find_terms Term.is_const (Thm.concl theorem)
+        HolKernel.find_terms Term.is_const (Thm.concl theorem)
       fun same_group left right =
         List.all (fn constant => List.exists (same_term constant) right)
           left andalso
@@ -2525,7 +2525,7 @@ structure Refute_Extract = struct
       {source = source, entry = "install ()"}
     end
 
-  val _ = Refute_EvalSML.extract_tests_hook :=
+  fun install_extractor () = Refute_EvalSML.extract_tests_hook :=
     (fn config => fn strategy => fn plans =>
       let
         val table = !Refute_EvalSML.table_serial
@@ -2544,4 +2544,6 @@ structure Refute_Extract = struct
              | Interrupt => (cleanup (); raise Interrupt)
              | error => (cleanup (); raise error)
       end)
+
+  val _ = install_extractor ()
 end

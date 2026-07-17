@@ -47,6 +47,7 @@ signature Refute_Eval = sig
   val rand_next : IntInf.int -> IntInf.int
   val rand_out : IntInf.int -> IntInf.int
   val rand_below : IntInf.int -> IntInf.int -> IntInf.int * IntInf.int
+  val normalize_seed : IntInf.int -> IntInf.int
   val session_seed : IntInf.int ref
 
   val register_substrate : substrate -> unit

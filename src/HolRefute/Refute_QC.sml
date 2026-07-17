@@ -335,7 +335,7 @@ structure Refute_QC = struct
 
   fun strategy_seed (config : Refute_Core.config) =
     case #seed (#qc config) of
-        SOME seed => IntInf.fromInt seed
+        SOME seed => normalize_seed (IntInf.fromInt seed)
       | NONE =>
           let
             val seed = !session_seed
@@ -417,12 +417,17 @@ structure Refute_QC = struct
                 let
                   val started = Time.now ()
                   val total = bounded_size (#iterations (#qc config))
+                  val target = Int.max (1, #max_counterexamples config)
                   fun chunks 0 = ()
                     | chunks remaining =
-                        if not (null (!counterexamples)) then ()
+                        if length (!counterexamples) >= target then ()
                         else
                           let
-                            val draws = Int.min (1024, remaining)
+                            val draws =
+                              if target > 1 then 1
+                              else if substrate = "cv" then
+                                Int.min (1024, remaining)
+                              else remaining
                             val reasons_before = length (!gave_up)
                             val _ = one entry draws
                               (#genuine_only config) []
@@ -433,8 +438,7 @@ structure Refute_QC = struct
                   val _ =
                     if is_random strategy then
                       if total = 0 then ()
-                      else if substrate = "cv" then chunks total
-                      else one entry total (#genuine_only config) []
+                      else chunks total
                     else one entry 0 (#genuine_only config) []
                   val (card, size) = entry
                   val backend =
