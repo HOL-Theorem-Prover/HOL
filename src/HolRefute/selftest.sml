@@ -1,6 +1,7 @@
 open testutils
 open refuteTheory
 open refute_cvTheory
+open refuteTableZooTheory
 open sortingTheory
 open realTheory
 open Refute_Core
@@ -164,6 +165,164 @@ fun mf_reserved_name_guards () =
 
 val _ = require_msg (check_result mf_reserved_name_guards) (fn () =>
   "model-finder reserved-name entry/no-escape guards failed")
+  (fn () => ()) ()
+
+val _ = tprint "Refute model-finder HOL tables"
+
+structure MFH = Refute_ModelFinder_HOL
+
+val mf_hol_context : MFH.mf_context =
+  MFH.make_context Refute_Core.default_mf_config []
+
+fun mf_has_def constant =
+  let val (_, fallback) = #def_tables mf_hol_context
+  in not (null (MFH.def_props_for_const fallback constant)) end
+
+fun mf_has_simp constant =
+  not (null (MFH.def_props_for_const (!(#simp_table mf_hol_context))
+    constant))
+
+fun mf_has_psimp constant =
+  not (null (MFH.def_props_for_const (#psimp_table mf_hol_context)
+    constant))
+
+fun term_has_const key term =
+  List.exists (fn constant => MFH.const_key constant = key)
+    (HolKernel.find_terms Term.is_const term)
+
+fun mf_table_zoo () =
+  let
+    val total = ``zoo_total : num -> num``
+    val primitive = ``zoo_height : zoo_tree -> num``
+    val specification = ``zoo_spec : num``
+    val raw_specification = ``zoo_raw_spec : num``
+    val even = ``zoo_even : num -> bool``
+    val odd = ``zoo_odd : num -> bool``
+    val tree_case = TypeBase.case_const_of ``:zoo_tree``
+    val record_case = TypeBase.case_const_of ``:zoo_record``
+    val fields = TypeBase.fields_of ``:zoo_record``
+    val {accessor, fupd, ...} = #2 (hd fields)
+    val total_axioms = MFH.equational_fun_axioms mf_hol_context total
+    val total_definition = MFH.def_of_const mf_hol_context total
+    val wfrec = {Thy = "relation", Name = "WFREC"}
+    val choice_only =
+      MFH.is_choice_spec_fun mf_hol_context specification andalso
+      MFH.is_choice_spec_fun mf_hol_context raw_specification andalso
+      MFH.is_choice_spec_fun mf_hol_context
+        ``pred_set$CHOICE : num set -> num`` andalso
+      not (MFH.is_choice_spec_fun mf_hol_context
+        ``pred_set$EMPTY : num set``) andalso
+      not (mf_has_def specification) andalso
+      not (mf_has_def raw_specification)
+    val clean_total =
+      not (null total_axioms) andalso
+      not (List.exists (term_has_const wfrec) total_axioms) andalso
+      (case total_definition of
+           SOME definition => not (term_has_const wfrec definition)
+         | NONE => false)
+  in
+    List.all mf_has_def
+      [total, primitive, tree_case, record_case, accessor, fupd,
+       even, odd] andalso
+    List.all mf_has_simp [total, primitive, even, odd] andalso
+    choice_only andalso clean_total andalso
+    MFH.is_record_get accessor andalso MFH.is_record_update fupd andalso
+    mf_has_psimp ``$@ : (num -> bool) -> num`` andalso
+    mf_has_simp ``list_size : ('a -> num) -> 'a list -> num`` andalso
+    (case MFH.def_of_const_ext mf_hol_context
+       ``one_CASE : unit -> 'a -> 'a`` of
+         SOME (true, _) => true
+       | _ => false)
+  end
+
+val _ = require_msg (check_result mf_table_zoo) (fn () =>
+  "model-finder def/simp/psimp/choice-spec table zoo failed")
+  (fn () => ()) ()
+
+fun mf_definition_last_wins () =
+  let
+    val constant = ``zoo_total : num -> num``
+    val old = boolSyntax.mk_eq (constant, ``\n : num. 0``)
+    val latest = boolSyntax.mk_eq (constant, ``\n : num. 1``)
+    val condition = ``p : bool``
+    val conditional = boolSyntax.mk_imp (condition, latest)
+    val table = MFH.def_table_for [old, latest]
+    val conditional_table = MFH.def_table_for [conditional]
+    val (unfold, _) = #def_tables mf_hol_context
+    val override = ``zoo_override : num -> num``
+    val actual_override_latest =
+      case MFH.get_def_of_const unfold override of
+          SOME definition => Term.aconv definition ``\n : num. n``
+        | NONE => false
+  in
+    (case MFH.get_def_of_const table constant of
+         SOME definition => Term.aconv definition ``\n : num. 1``
+       | NONE => false) andalso
+    not (Option.isSome
+      (MFH.get_def_of_const conditional_table constant)) andalso
+    actual_override_latest andalso
+    (case MFH.def_of_const_ext mf_hol_context override of
+         SOME (true, _) => true
+       | _ => false) andalso
+    (case MFH.def_of_const_ext mf_hol_context
+       ``$?! : (num -> bool) -> bool`` of
+         SOME (true, _) => true
+       | _ => false)
+  end
+
+val _ = require_msg (check_result mf_definition_last_wins) (fn () =>
+  "model-finder definition precedence was not last-wins")
+  (fn () => ()) ()
+
+fun mf_equational_completeness () =
+  MFH.is_equational_fun_surely_complete mf_hol_context
+    ``zoo_total : num -> num`` andalso
+  not (MFH.is_equational_fun_surely_complete mf_hol_context
+    ``$@ : (num -> bool) -> num``)
+
+val _ = require_msg (check_result mf_equational_completeness) (fn () =>
+  "model-finder conditional equations were classified as complete")
+  (fn () => ()) ()
+
+fun mf_nondef_helpers () =
+  let
+    val prop = ``zoo_total n = zoo_height (ZooLeaf n)``
+    val table = MFH.const_nondef_table [prop]
+  in
+    (case MFH.table_lookup table ``zoo_total : num -> num`` of
+         [actual] => Term.aconv actual prop
+       | _ => false) andalso
+    (case MFH.table_lookup table ``zoo_height : zoo_tree -> num`` of
+         [actual] => Term.aconv actual prop
+       | _ => false) andalso
+    MFH.is_poly_term ``[] : 'a list`` andalso
+    not (MFH.is_poly_term ``[] : num list``)
+  end
+
+val _ = require_msg (check_result mf_nondef_helpers) (fn () =>
+  "model-finder nondef indexing or polymorphism test failed")
+  (fn () => ()) ()
+
+fun mf_constructor_recognizers () =
+  let
+    val constructors = MFH.data_type_constrs mf_hol_context ``:num list``
+    val expected = [``NIL : num list``,
+                    ``CONS : num -> num list -> num list``]
+  in
+    ListPair.allEq (fn (left, right) => Term.aconv left right)
+      (constructors, expected) andalso
+    List.all MFH.is_constr constructors andalso
+    MFH.is_data_type ``:num list`` andalso
+    MFH.is_data_type ``:zoo_record`` andalso
+    not (MFH.is_data_type ``:num``) andalso
+    MFH.is_integer_type ``:num`` andalso MFH.is_integer_type ``:int`` andalso
+    MFH.is_descr ``$@ : (num -> bool) -> num`` andalso
+    MFH.is_descr ``safe_The : (num -> bool) -> num`` andalso
+    MFH.is_exists_unique ``$?! : (num -> bool) -> bool``
+  end
+
+val _ = require_msg (check_result mf_constructor_recognizers) (fn () =>
+  "model-finder TypeBase recognizers/constructor enumeration failed")
   (fn () => ()) ()
 
 val _ = tprint "Refute model-finder utility"

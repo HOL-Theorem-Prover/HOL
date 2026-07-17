@@ -1,0 +1,65 @@
+Theory refuteTableZoo
+Ancestors
+  refute
+Libs
+  TotalDefn Refute_Core
+
+Datatype:
+  zoo_tree = ZooLeaf num | ZooNode zoo_tree zoo_tree
+End
+
+Datatype:
+  zoo_record = <| zoo_num : num; zoo_bit : bool |>
+End
+
+val zoo_total_def = TotalDefn.qDefine "zoo_total_def" `
+  zoo_total (n : num) =
+    if n = 0 then 0 else SUC (zoo_total (n - 1))
+`
+  (SOME (WF_REL_TAC `measure I` >> simp []));
+
+val zoo_height_def =
+  Prim_rec.new_recursive_definition
+    {name = "zoo_height_def",
+     rec_axiom = DB.fetch "-" "zoo_tree_Axiom",
+     def = ``(zoo_height (ZooLeaf n) = n) /\
+             (zoo_height (ZooNode left right) =
+                SUC (zoo_height left + zoo_height right))``};
+
+Theorem zoo_spec_exists[local]:
+  ?n : num. EVEN n
+Proof
+  qexists_tac `0` >> simp []
+QED
+
+val zoo_spec_property =
+  new_specification
+    ("zoo_spec_property", ["zoo_spec"], zoo_spec_exists);
+
+val zoo_raw_spec_property =
+  new_specification
+    ("zoo_raw_spec_property[notuserdef]", ["zoo_raw_spec"],
+     zoo_spec_exists);
+
+val zoo_mutual_def = TotalDefn.Define `
+  (zoo_even 0 = T) /\
+  (zoo_even (SUC n) = zoo_odd n) /\
+  (zoo_odd 0 = F) /\
+  (zoo_odd (SUC n) = zoo_even n)
+`;
+
+Definition zoo_override_def:
+  zoo_override n = n
+End
+
+Theorem zoo_override_old[refute_unfold]:
+  zoo_override n = n + 0
+Proof
+  simp [zoo_override_def]
+QED
+
+Theorem zoo_override_latest[refute_unfold]:
+  zoo_override n = n
+Proof
+  simp [zoo_override_def]
+QED

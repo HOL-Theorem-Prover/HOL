@@ -5,17 +5,19 @@ INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit ../sort \
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
-selftest.uo: Refute_ModelFinder_HOL.uo
+selftest.uo: Refute_ModelFinder_HOL.uo refuteTableZooTheory.uo
 
 ifdef POLY
-selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo refuteheap
+selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
+              refuteTableZooTheory.uo refuteheap
 	@printf '%s\n' '#!/bin/sh' 'set -e' \
 	  '$(HOLDIR)/bin/hol --gcthreads=1 run \
 	  --holstate=$(HOLDIR)/src/HolRefute/refuteheap selftest' \
 	  'exit 0' > $@
 	@chmod +x $@
 else
-selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo
+selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
+              refuteTableZooTheory.uo
 	$(HOLMOSMLC) -o $@ $<
 endif
 
