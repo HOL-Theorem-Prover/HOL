@@ -38,10 +38,13 @@ structure Refute_Core = struct
       evals : term list }
 
   datatype expectation =
-      ExpectCex
+      NoExpectation
     | ExpectNone
     | ExpectUnknown
-    | NoExpectation
+    | ExpectCex
+    | ExpectGenuine
+    | ExpectQuasiGenuine
+    | ExpectPotential
 
   datatype substrate_choice = Auto | Compute | Cv | NativeSML
 
@@ -608,10 +611,14 @@ structure Refute_Core = struct
     fun say level message =
       if enabled level then Feedback.HOL_MESG message else ()
 
-    fun expectation_to_string ExpectCex = "ExpectCex"
+    fun expectation_to_string NoExpectation = "NoExpectation"
       | expectation_to_string ExpectNone = "ExpectNone"
       | expectation_to_string ExpectUnknown = "ExpectUnknown"
-      | expectation_to_string NoExpectation = "NoExpectation"
+      | expectation_to_string ExpectCex = "ExpectCex"
+      | expectation_to_string ExpectGenuine = "ExpectGenuine"
+      | expectation_to_string ExpectQuasiGenuine =
+          "ExpectQuasiGenuine"
+      | expectation_to_string ExpectPotential = "ExpectPotential"
 
     fun substrate_to_string Auto = "Auto"
       | substrate_to_string Compute = "Compute"
@@ -781,8 +788,46 @@ structure Refute_Core = struct
   fun report_outcome (cfg : config) result =
     Private.say 1 (format_outcome cfg result ^ "\n")
 
-  fun decisive (Counterexample _) = true
-    | decisive _ = false
+  fun certainty_rank Genuine = 3
+    | certainty_rank (QuasiGenuine _) = 2
+    | certainty_rank (Potential _) = 1
+
+  fun best_certainty [] = NONE
+    | best_certainty (cex :: cexs) =
+        SOME (#certainty (List.foldl (fn (candidate, best) =>
+          if certainty_rank (#certainty candidate) >
+             certainty_rank (#certainty best)
+          then candidate
+          else best) cex cexs))
+
+  fun decisive cfg (Counterexample cexs) =
+        not (null cexs) andalso
+        (#abort_potential cfg orelse
+         List.exists (fn cex =>
+           certainty_rank (#certainty cex) >= 2) cexs)
+    | decisive _ _ = false
+
+  fun best_counterexample_result jobs =
+    let
+      fun candidate (backend, result_ref) =
+        case !result_ref of
+            SOME (Counterexample cexs) =>
+              Option.map (fn certainty =>
+                (backend, cexs, certainty_rank certainty))
+                (best_certainty cexs)
+          | _ => NONE
+      fun better ((backend, _, rank), (best_backend, _, best_rank)) =
+        rank > best_rank orelse
+        (rank = best_rank andalso
+         #weight backend < #weight best_backend)
+      fun choose (candidate, NONE) = SOME candidate
+        | choose (candidate, SOME best) =
+            SOME (if better (candidate, best) then candidate else best)
+    in
+      case List.foldl choose NONE (List.mapPartial candidate jobs) of
+          SOME (_, cexs, _) => SOME (Counterexample cexs)
+        | NONE => NONE
+    end
 
   fun has_no_counterexample jobs =
     List.exists (fn (_, result_ref) =>
@@ -811,7 +856,7 @@ structure Refute_Core = struct
               | e => Unknown [name ^ ": " ^ exception_reason e])
       val _ = result_ref := SOME result
     in
-      if decisive result then SOME result else NONE
+      if decisive cfg result then SOME result else NONE
     end
 
   fun unknown_results jobs =
@@ -848,20 +893,35 @@ structure Refute_Core = struct
         AnyGoal => true
       | ExecutableGoal => executable
 
-  fun actual_name (Counterexample _) = "ExpectCex"
+  fun certainty_expectation Genuine = ExpectGenuine
+    | certainty_expectation (QuasiGenuine _) = ExpectQuasiGenuine
+    | certainty_expectation (Potential _) = ExpectPotential
+
+  fun actual_name (Counterexample cexs) =
+        (case best_certainty cexs of
+             SOME certainty => Private.expectation_to_string
+               (certainty_expectation certainty)
+           | NONE => "ExpectCex")
     | actual_name NoCounterexample = "ExpectNone"
     | actual_name (Unknown _) = "ExpectUnknown"
 
+  fun expectation_holds NoExpectation _ = true
+    | expectation_holds ExpectNone NoCounterexample = true
+    | expectation_holds ExpectUnknown (Unknown _) = true
+    | expectation_holds ExpectCex (Counterexample (_ :: _)) = true
+    | expectation_holds expectation (Counterexample cexs) =
+        (case best_certainty cexs of
+             SOME certainty =>
+               expectation = certainty_expectation certainty
+           | NONE => false)
+    | expectation_holds _ _ = false
+
   fun check_expect cfg result =
-    case #expect cfg of
-        NoExpectation => ()
-      | expectation =>
-          if Private.expectation_to_string expectation = actual_name result
-          then ()
-          else raise Feedback.mk_HOL_ERR "Refute" "expect"
-            ("expected " ^ Private.expectation_to_string expectation ^
-             ", got " ^ actual_name result ^ "\n" ^
-             format_outcome cfg result)
+    if expectation_holds (#expect cfg) result then ()
+    else raise Feedback.mk_HOL_ERR "Refute" "expect"
+      ("expected " ^ Private.expectation_to_string (#expect cfg) ^
+       ", got " ^ actual_name result ^ "\n" ^
+       format_outcome cfg result)
 
   fun refute_problem (cfg : config) (problem : problem) =
     let
@@ -898,16 +958,21 @@ structure Refute_Core = struct
               case winner of
                   SOME result => result
                 | NONE =>
-                    if has_no_counterexample jobs then NoCounterexample
-                    else
-                      let
-                        val reasons =
-                          excluded_reasons @ unknown_results jobs
-                      in
-                        if null reasons then
-                          Unknown ["all selected backends returned no result"]
-                        else Unknown reasons
-                      end
+                    (case best_counterexample_result jobs of
+                         SOME result => result
+                       | NONE =>
+                           if has_no_counterexample jobs then
+                             NoCounterexample
+                           else
+                             let
+                               val reasons =
+                                 excluded_reasons @ unknown_results jobs
+                             in
+                               if null reasons then
+                                 Unknown
+                                   ["all selected backends returned no result"]
+                               else Unknown reasons
+                             end)
             end
         end
       val result =

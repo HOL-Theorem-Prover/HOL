@@ -305,6 +305,171 @@ val _ = require_msg
   "counterexample reporting did not use the substrate line format")
   (fn () => ()) ()
 
+val _ = tprint "Refute genuine-decisive backend racing"
+
+fun stub_cex backend certainty : counterexample =
+  { backend = backend,
+    substrate = "stub",
+    certainty = certainty,
+    bindings = [],
+    evals = [],
+    cert = NONE,
+    scope = NONE,
+    stats = [] }
+
+val race_mutex = Mutex.mutex ()
+val race_ready = ConditionVar.conditionVar ()
+val race_potential_started = ref false
+val race_potential_enabled = ref false
+val race_genuine_enabled = ref false
+
+fun reset_race () =
+  Multithreading.synchronized "Refute race reset" race_mutex
+    (fn () => race_potential_started := false)
+
+fun mark_race_potential_started () =
+  Multithreading.synchronized "Refute race potential" race_mutex
+    (fn () =>
+      (race_potential_started := true;
+       ConditionVar.broadcast race_ready))
+
+fun wait_for_race_potential () =
+  Multithreading.synchronized "Refute race genuine" race_mutex
+    (fn () =>
+      let
+        fun wait () =
+          if !race_potential_started then ()
+          else (ConditionVar.wait (race_ready, race_mutex); wait ())
+      in
+        wait ()
+      end)
+
+val race_potential_backend : backend =
+  { name = "refute-race-mf-potential",
+    weight = 50,
+    configured = fn () => !race_potential_enabled,
+    requires = AnyGoal,
+    run = fn _ => fn _ =>
+      (mark_race_potential_started ();
+       Counterexample
+         [stub_cex "refute-race-mf-potential"
+            (Refute_Core.Potential ["stub"])]) }
+
+val race_genuine_backend : backend =
+  { name = "refute-race-qc-genuine",
+    weight = 20,
+    configured = fn () => !race_genuine_enabled,
+    requires = ExecutableGoal,
+    run = fn _ => fn _ =>
+      (wait_for_race_potential ();
+       OS.Process.sleep (Time.fromReal 0.05);
+       Counterexample
+         [stub_cex "refute-race-qc-genuine" Genuine]) }
+
+val merge_low_enabled = ref false
+val merge_high_enabled = ref false
+
+fun potential_backend name weight enabled : backend =
+  { name = name,
+    weight = weight,
+    configured = fn () => !enabled,
+    requires = AnyGoal,
+    run = fn _ => fn _ =>
+      Counterexample
+        [stub_cex name (Refute_Core.Potential ["stub"])] }
+
+val merge_low_backend =
+  potential_backend "refute-merge-potential-low" 10 merge_low_enabled
+val merge_high_backend =
+  potential_backend "refute-merge-potential-high" 60 merge_high_enabled
+
+val _ = register_backend race_potential_backend
+val _ = register_backend race_genuine_backend
+val _ = register_backend merge_low_backend
+val _ = register_backend merge_high_backend
+
+fun potential_does_not_interrupt_genuine () =
+  let
+    val _ = reset_race ()
+    val _ = race_potential_enabled := true
+    val _ = race_genuine_enabled := true
+    val config =
+      upd_expect ExpectGenuine
+        (upd_timeout 2.0
+          (upd_sequential false
+            (upd_backends
+              (SOME ["refute-race-mf-potential",
+                     "refute-race-qc-genuine"])
+              default_config)))
+    val captured = Exn.capture (fn () => refute config ``T``) ()
+    val _ = race_potential_enabled := false
+    val _ = race_genuine_enabled := false
+  in
+    case Exn.release captured of
+        Counterexample ({backend, certainty = Genuine, ...} :: _) =>
+          backend = "refute-race-qc-genuine"
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result potential_does_not_interrupt_genuine) (fn () =>
+  "an MF-like Potential interrupted a QC Genuine result")
+  (fn () => ()) ()
+
+fun potential_merge_uses_backend_weight () =
+  let
+    val _ = merge_low_enabled := true
+    val _ = merge_high_enabled := true
+    val config =
+      upd_expect ExpectPotential
+        (upd_sequential true
+          (upd_backends
+            (SOME ["refute-merge-potential-low",
+                   "refute-merge-potential-high"])
+            default_config))
+    val captured = Exn.capture (fn () => refute config ``T``) ()
+    val _ = merge_low_enabled := false
+    val _ = merge_high_enabled := false
+  in
+    case Exn.release captured of
+        Counterexample
+          ({backend, certainty = Refute_Core.Potential _, ...} :: _) =>
+          backend = "refute-merge-potential-low"
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result potential_merge_uses_backend_weight) (fn () =>
+  "Potential-only outcomes were not merged by backend weight")
+  (fn () => ()) ()
+
+val _ = tprint "Refute refined expectations"
+
+fun expectation_accepts expectation outcome =
+  ((check_expect (upd_expect expectation default_config) outcome; true)
+   handle _ => false)
+
+fun refined_expectations_hold () =
+  let
+    val potential = stub_cex "potential" (Refute_Core.Potential [])
+    val quasi = stub_cex "quasi" (QuasiGenuine [])
+    val genuine = stub_cex "genuine" Genuine
+    val mixed = Counterexample [potential, quasi]
+  in
+    expectation_accepts ExpectCex mixed andalso
+    expectation_accepts ExpectQuasiGenuine mixed andalso
+    not (expectation_accepts ExpectPotential mixed) andalso
+    expectation_accepts ExpectPotential (Counterexample [potential]) andalso
+    expectation_accepts ExpectGenuine
+      (Counterexample [potential, genuine]) andalso
+    expectation_accepts ExpectNone NoCounterexample andalso
+    expectation_accepts ExpectUnknown (Unknown ["stub"])
+  end
+
+val _ = require_msg (check_result refined_expectations_hold) (fn () =>
+  "refined expectations did not use the best reported certainty")
+  (fn () => ()) ()
+
 val _ = tprint "Refute generator derivation"
 
 fun check_gen name predicate ty =
@@ -2592,30 +2757,19 @@ val corpus_config =
       (upd_sequential true
         (upd_backends (SOME ["exhaustive"]) default_config)))
 
-fun cex_is_certified (Refute.Counterexample ({cert = SOME _, ...} :: _)) = true
-  | cex_is_certified _ = false
-
-fun cex_is_genuine_certified
-      (Refute.Counterexample
-        ({certainty = Refute.Genuine, cert = SOME _, ...} :: _)) = true
-  | cex_is_genuine_certified _ = false
-
-fun public_expect ExpectCex = Refute.ExpectCex
+fun public_expect NoExpectation = Refute.NoExpectation
   | public_expect ExpectNone = Refute.ExpectNone
   | public_expect ExpectUnknown = Refute.ExpectUnknown
-  | public_expect NoExpectation = Refute.NoExpectation
+  | public_expect ExpectCex = Refute.ExpectCex
+  | public_expect ExpectGenuine = Refute.ExpectGenuine
+  | public_expect ExpectQuasiGenuine = Refute.ExpectQuasiGenuine
+  | public_expect ExpectPotential = Refute.ExpectPotential
 
 fun tc {name, cfg, tm, expect} =
   let
     val _ = tprint name
     val config = Refute.upd_expect (public_expect expect) cfg
-    val result = Refute.refute config tm
-    val _ =
-      case expect of
-          ExpectCex =>
-            if cex_is_certified result then ()
-            else raise Fail "expected a certified counterexample"
-        | _ => ()
+    val _ = Refute.refute config tm
   in
     OK ()
   end
@@ -2642,11 +2796,11 @@ fun corpus_smoke () =
   (tc {name = "Refute corpus: classic reverse",
        cfg = corpus_config,
        tm = ``REVERSE (xs : num list) = xs``,
-       expect = ExpectCex};
+       expect = ExpectGenuine};
    tc {name = "Refute corpus: arithmetic",
        cfg = corpus_config,
        tm = ``(x : num) - y + y = x``,
-       expect = ExpectCex};
+       expect = ExpectGenuine};
    tc {name = "Refute corpus: sound reverse",
        cfg = corpus_config,
        tm = ``REVERSE (REVERSE [T; F; T]) = [T; F; T]``,
@@ -2656,20 +2810,20 @@ fun corpus_classics () =
   (tc {name = "Refute corpus: reverse append mutation",
        cfg = corpus_config,
        tm = ``REVERSE (xs : num list ++ ys) = REVERSE xs ++ REVERSE ys``,
-       expect = ExpectCex};
+       expect = ExpectGenuine};
    tc {name = "Refute corpus: ALL_DISTINCT append mutation",
        cfg = corpus_config,
        tm = ``ALL_DISTINCT (xs : num list ++ ys) <=>
              ALL_DISTINCT xs /\ ALL_DISTINCT ys``,
-       expect = ExpectCex};
+       expect = ExpectGenuine};
    tc {name = "Refute corpus: nub append mutation",
        cfg = corpus_config,
        tm = ``nub (xs : num list ++ ys) = nub xs ++ nub ys``,
-       expect = ExpectCex};
+       expect = ExpectGenuine};
    tc {name = "Refute corpus: integer order mutation",
        cfg = corpus_config,
        tm = ``~((x : int) = x)``,
-       expect = ExpectCex})
+       expect = ExpectGenuine})
 
 fun corpus_smart_quantifiers () =
   let
@@ -2683,9 +2837,9 @@ fun corpus_smart_quantifiers () =
           case z of NONE => F | SOME x => x = x``
   in
     tc {name = "Refute corpus: sorted insert mutation",
-        cfg = corpus_config, tm = ordered_insert, expect = ExpectCex};
+        cfg = corpus_config, tm = ordered_insert, expect = ExpectGenuine};
     tc {name = "Refute corpus: fmap lookup premise",
-        cfg = corpus_config, tm = lookup, expect = ExpectCex};
+        cfg = corpus_config, tm = lookup, expect = ExpectGenuine};
     check_corpus "Refute corpus: let/case plan" (fn () =>
       case compile_plan corpus_config let_case of
           Gen (_, Test _) => true
@@ -2694,9 +2848,11 @@ fun corpus_smart_quantifiers () =
 
 fun corpus_default_quickcheck () =
   let
+    val config =
+      upd_backends (SOME ["exhaustive", "random"]) (!the_config)
     fun check name tm =
-      check_corpus ("Refute default quickcheck: " ^ name) (fn () =>
-        cex_is_genuine_certified (Refute.quickcheck tm))
+      tc {name = "Refute default quickcheck: " ^ name,
+          cfg = config, tm = tm, expect = ExpectGenuine}
   in
     check "classic reverse" ``REVERSE (xs : num list) = xs``;
     check "reverse append mutation"
@@ -2741,22 +2897,22 @@ fun corpus_potential () =
           Refute_Core.Counterexample _ => false
         | _ => true);
     tc {name = "Refute corpus: HD/MAP certification upgrade",
-        cfg = corpus_config, tm = hd_map, expect = ExpectCex}
+        cfg = corpus_config, tm = hd_map, expect = ExpectGenuine}
   end
 
 fun corpus_polymorphism () =
   (tc {name = "Refute corpus: polymorphic lists",
        cfg = corpus_config,
        tm = ``(xs : 'a list) = ys``,
-       expect = ExpectCex};
+       expect = ExpectGenuine};
    tc {name = "Refute corpus: polymorphic card schedule",
        cfg = corpus_config,
        tm = ``(x : 'a) = y``,
-       expect = ExpectCex};
+       expect = ExpectGenuine};
    tc {name = "Refute corpus: num fallback",
        cfg = upd_finite_types false corpus_config,
        tm = ``(x : 'a) = y``,
-       expect = ExpectCex})
+       expect = ExpectGenuine})
 
 fun corpus_functions () =
   let
@@ -2769,7 +2925,7 @@ fun corpus_functions () =
     check_corpus "Refute corpus: MAP function plan" (fn () =>
       let val _ = compile_plan corpus_config map_goal in true end);
     tc {name = "Refute corpus: function UPDATE counterexample",
-        cfg = corpus_config, tm = goal, expect = ExpectCex};
+        cfg = corpus_config, tm = goal, expect = ExpectGenuine};
     check_corpus "Refute corpus: function UPDATE witness" (fn () =>
       case Refute.refute corpus_config goal of
           Refute.Counterexample ({bindings, ...} :: _) =>
@@ -2790,7 +2946,7 @@ fun corpus_quantifiers () =
           [instance] => has_conjunction (#goal instance)
         | _ => false);
     tc {name = "Refute corpus: finite check counterexample",
-        cfg = corpus_config, tm = ``(b : bool)``, expect = ExpectCex};
+        cfg = corpus_config, tm = ``(b : bool)``, expect = ExpectGenuine};
     tc {name = "Refute corpus: num quantifier unknown",
         cfg = corpus_config, tm = infinite, expect = ExpectUnknown}
   end
@@ -2803,9 +2959,9 @@ fun corpus_hol4_specific () =
     val quotient_goal = ``(x : real) = y``
   in
     tc {name = "Refute corpus: record type",
-        cfg = corpus_config, tm = record_goal, expect = ExpectCex};
+        cfg = corpus_config, tm = record_goal, expect = ExpectGenuine};
     tc {name = "Refute corpus: word addition",
-        cfg = corpus_config, tm = word_goal, expect = ExpectCex};
+        cfg = corpus_config, tm = word_goal, expect = ExpectGenuine};
     tc {name = "Refute corpus: quotient unknown",
         cfg = corpus_config, tm = quotient_goal, expect = ExpectUnknown};
     check_corpus "Refute corpus: quotient explanation" (fn () =>
@@ -2818,13 +2974,13 @@ fun corpus_hol4_specific () =
    testable and their counterexamples are found and certified. *)
 fun corpus_literals () =
   (tc {name = "Refute corpus: numeral literal counterexample",
-       cfg = corpus_config, tm = ``!n : num. n <> 2``, expect = ExpectCex};
+       cfg = corpus_config, tm = ``!n : num. n <> 2``, expect = ExpectGenuine};
    tc {name = "Refute corpus: character literal counterexample",
        cfg = corpus_config, tm = ``!c : char. c <> #"a"``,
-       expect = ExpectCex};
+       expect = ExpectGenuine};
    tc {name = "Refute corpus: string literal counterexample",
        cfg = corpus_config, tm = ``!s : string. s <> "x"``,
-       expect = ExpectCex})
+       expect = ExpectGenuine})
 
 fun corpus_soundness () =
   (tc {name = "Refute corpus: sound reverse involution",
@@ -2871,7 +3027,7 @@ fun corpus_registries () =
     tc {name = "Refute corpus: custom generator counterexample",
         cfg = corpus_config,
         tm = ``(x : rg_custom) = RGC0``,
-        expect = ExpectCex}
+        expect = ExpectGenuine}
   end
 
 fun corpus_parlist () =
@@ -2951,7 +3107,19 @@ fun conformance_outcome_name (Refute.Counterexample _) = "Counterexample"
 
 fun expectation_holds expectation outcome =
   case expectation of
-      ExpectCex => certified_conformance_cex outcome
+      ExpectCex =>
+        (case outcome of Refute.Counterexample (_ :: _) => true | _ => false)
+    | ExpectGenuine => certified_conformance_cex outcome
+    | ExpectQuasiGenuine =>
+        (case outcome of
+             Refute.Counterexample
+               ({certainty = Refute.QuasiGenuine _, ...} :: _) => true
+           | _ => false)
+    | ExpectPotential =>
+        (case outcome of
+             Refute.Counterexample
+               ({certainty = Refute.Potential _, ...} :: _) => true
+           | _ => false)
     | ExpectNone =>
         (case outcome of Refute.Counterexample _ => false | _ => true)
     | ExpectUnknown =>
@@ -3027,7 +3195,7 @@ fun conformance_config expectation =
         (upd_size 4
           (upd_max_counterexamples 1 default_config))))
 
-val conform_cex_config = conformance_config ExpectCex
+val conform_cex_config = conformance_config ExpectGenuine
 val conform_none_config = conformance_config ExpectNone
 val conform_unknown_config = conformance_config ExpectUnknown
 

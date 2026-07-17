@@ -18,8 +18,9 @@ signature Refute = sig
   datatype outcome = Counterexample of counterexample list
                    | NoCounterexample
                    | Unknown of string list
-  datatype expectation = ExpectCex | ExpectNone | ExpectUnknown
-                        | NoExpectation
+  datatype expectation = NoExpectation | ExpectNone | ExpectUnknown
+                       | ExpectCex | ExpectGenuine | ExpectQuasiGenuine
+                       | ExpectPotential
   datatype substrate_choice = Auto | Compute | Cv | NativeSML
   datatype requirement = datatype Refute_Core.requirement
   type qc_config = Refute_Core.qc_config
