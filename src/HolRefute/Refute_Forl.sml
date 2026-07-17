@@ -1111,7 +1111,9 @@ structure Refute_Forl :> REFUTE_FORL = struct
       (expect (String.explode "relations:{") characters)
 
   fun extract_instance text =
-    #1 (parse_instance (strip_blanks (String.explode text)))
+    (case parse_instance (strip_blanks (String.explode text)) of
+         (instance, []) => instance
+       | _ => raise ParseError)
     handle ParseError =>
       raise SYNTAX
         ("Refute_Forl.extract_instance", "ill-formed Kodkodi output")

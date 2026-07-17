@@ -380,8 +380,13 @@ local
     first_error " \nError: ignored.\n" = " "
 
   fun malformed_instance_is_rejected () =
-    ((ignore (extract_instance "relations:{s0=[[A0],]}" ); false)
-     handle SYNTAX _ => true)
+    let
+      fun rejected text =
+        (ignore (extract_instance text); false) handle SYNTAX _ => true
+    in
+      rejected "relations:{s0=[[A0],]}" andalso
+      rejected "relations:{s0=[[A0]]} trailing output"
+    end
 in
   val _ = require_msg (check_result sat_transcript_parses) (fn () =>
     "Kodkodi solve-all SAT instances were parsed incorrectly")
