@@ -1,0 +1,17 @@
+// HOL4 Refute FORL golden
+// fixed timestamp
+
+// layout problem
+// second line
+solver: "DefaultSAT4J"
+symmetry_breaking: 20
+univ: u6
+$A0' := [A0]
+$P1 := P3
+$t3_1' := {[A0, A1, A2], $T3_0} + (u2->u2@2 & ($t3_0 - {T3_1}))[1]
+bounds s0 /* unary *  relation continued */, r0', m3_2 /* ternary */: [{[A0] .. [A3]}, {[A0, A1] # [A2, A3]}]
+bounds m4_1' /* arity four */: {} + u2->u2@2
+int_bounds: -7: [{[A4]}], [{[A0]}, u3@1]
+$e0' := r0'.r1;$i0' := -12;solve some s0
+   && s0->s0 in r0'
+   && $i0' = -12;

@@ -20,7 +20,10 @@ endif
 ifdef HOLSELFTESTLEVEL
 all: holrefute-selftest.log
 
-holrefute-selftest.log: selftest.exe
+FORL_GOLDENS = tests/forl-layout.kki tests/forl-expressions.kki \
+               tests/forl-multi.kki
+
+holrefute-selftest.log: selftest.exe $(FORL_GOLDENS)
 	$(tee ./selftest.exe 2>&1,$@)
 
 ifdef POLY

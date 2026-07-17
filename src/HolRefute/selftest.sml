@@ -137,6 +137,195 @@ val _ = require_msg (check_result mf_lookup_precedence) (fn () =>
   "model-finder lookup precedence is incorrect")
   (fn () => ()) ()
 
+val _ = tprint "Refute FORL serializer goldens"
+
+local
+  open Refute_Forl
+
+  val golden_header = "HOL4 Refute FORL golden\nfixed timestamp"
+
+  val layout_problem : problem =
+    {comment = "layout problem\nsecond line",
+     settings =
+       [("solver", "\"DefaultSAT4J\""),
+        ("symmetry_breaking", "20")],
+     univ_card = 6,
+     tuple_assigns =
+       [AssignTuple ((1, ~1), Tuple [0]),
+        AssignTuple ((2, 1), TupleIndex (2, 3)),
+        AssignTupleSet ((3, ~2),
+          TupleUnion
+            (TupleSet [Tuple [0, 1, 2], TupleReg (3, 0)],
+             TupleProject
+               (TupleIntersect
+                  (TupleProduct (TupleAtomSeq (2, 0), TupleAtomSeq (2, 2)),
+                   TupleDifference
+                     (TupleSetReg (3, 0), TupleSet [TupleIndex (3, 1)])),
+                1)))],
+     bounds =
+       [([((1, 0), "unary * relation\ncontinued"),
+          ((2, ~1), ""), ((3, 2), "ternary")],
+         [TupleRange (Tuple [0], Tuple [3]),
+          TupleArea (Tuple [0, 1], Tuple [2, 3])]),
+        ([((4, ~2), "arity four")],
+         [TupleUnion
+            (TupleSet [],
+             TupleProduct (TupleAtomSeq (2, 0), TupleAtomSeq (2, 2)))])],
+     int_bounds =
+       [(SOME (~7), [TupleSet [Tuple [4]]]),
+        (NONE, [TupleRange (Tuple [0], Tuple [0]), TupleAtomSeq (3, 1)])],
+     expr_assigns =
+       [AssignRelReg ((2, ~1), Join (Rel (2, ~1), Rel (2, 1))),
+        AssignIntReg (~1, Num (~12))],
+     formula =
+       And
+         (Some (Rel (1, 0)),
+          And
+            (Subset (Product (Rel (1, 0), Rel (1, 0)), Rel (2, ~1)),
+             IntEq (IntReg (~1), Num (~12))))}
+
+  val relation_cases =
+    [RelLet
+       ([AssignFormulaReg (20, True),
+         AssignRelReg ((1, 20), Atom 0),
+         AssignIntReg (20, Num 0)], Rel (1, 20)),
+     RelIf (FormulaReg 20, Atom 0, Atom 1),
+     Union (Rel (1, 0), Difference (Rel (1, 1), Rel (1, 2))),
+     Difference (Union (Rel (1, 0), Rel (1, 1)), Rel (1, 2)),
+     Override (Rel (2, 0), Rel (2, 1)),
+     Intersect (Rel (1, 0), Rel (1, 1)),
+     Product (Rel (1, 0), Rel (1, 1)),
+     IfNo (Rel (1, 0), Rel (1, 1)),
+     Project (Rel (3, 0), [Num 0, Add (Num 1, Num 1)]),
+     Join (Rel (2, 0), Join (Rel (2, 1), Rel (2, 2))),
+     Closure (Union (Rel (2, 0), Rel (2, 1))),
+     ReflexiveClosure
+       (RelLet ([AssignRelReg ((2, 7), Rel (2, 0))], RelReg (2, 7))),
+     Transpose
+       (IfNo (Project (Rel (3, 0), [Num 0, Num 1]),
+              Join (Rel (2, 0), Rel (2, 1)))),
+     Comprehension
+       ([DeclOne ((1, 8), Univ), DeclSet ((1, 9), Univ)],
+        Subset (Var (1, 8), Var (1, 9))),
+     Bits (Num (~3)), Int (Num 4), Iden, Ints, None, Univ,
+     Atom (~1), AtomSeq (2, 3), Rel (1, ~1), Var (2, ~2),
+     RelReg (3, ~3)]
+
+  val integer_cases =
+    [Sum ([DeclOne ((1, 0), Univ)], Cardinality (Var (1, 0))),
+     IntLet ([AssignIntReg (0, Num 1)], Add (IntReg 0, Num 2)),
+     IntIf (FormulaReg 0, Num 1, Num 2),
+     SHL (Num 1, SHL (Num 2, Num 3)),
+     SHA (Num 8, Num 1), SHR (Num 8, Num 1),
+     Add (Num 1, Add (Num 2, Num 3)),
+     Sub (Num 1, Sub (Num 2, Num 3)),
+     Mult (Num 2, Mult (Num 3, Num 4)),
+     Div (Num 8, Div (Num 4, Num 2)),
+     Mod (Num 8, Mod (Num 4, Num 3)),
+     Cardinality (Union (Rel (1, 0), Rel (1, 1))),
+     SetSum (Rel (1, 0)),
+     BitOr (Num 1, BitOr (Num 2, Num 3)),
+     BitXor (BitXor (Num 1, Num 2), Num 3),
+     BitAnd (Num 1, BitAnd (Num 2, Num 3)),
+     BitNot (Add (Num 1, Num 2)),
+     Neg (Add (Num 1, Num 2)), Absolute (Sub (Num 1, Num 2)),
+     Signum (Num (~9)), Num (~42), IntReg (~1)]
+
+  val formula_cases =
+    [All
+       ([DeclNo ((1, 0), None), DeclLone ((1, 1), Univ)],
+        Exist
+          ([DeclOne ((1, 2), Univ), DeclSome ((1, 3), Univ),
+            DeclSet ((1, 4), Univ)], Some (Var (1, 2)))),
+     FormulaLet ([AssignFormulaReg (0, True)], FormulaReg 0),
+     FormulaIf (FormulaReg 0, True, False),
+     Or (True, Iff (False, True)), Iff (True, False),
+     Implies (Implies (True, False), Implies (True, False)),
+     And (True, False),
+     Not (Or (True, False)), Acyclic (2, 0),
+     Function ((2, 0), Rel (1, 0), Rel (1, 1)),
+     Functional ((2, 1), Rel (1, 0), Rel (1, 1)),
+     TotalOrdering ((2, 2), Rel (1, 0), Atom 0, Atom 1),
+     Subset (Rel (1, 0), Univ), RelEq (Rel (1, 0), Rel (1, 1)),
+     IntEq (Num 1, Num 1), LT (Num 1, Num 2), LE (Num 2, Num 2),
+     No None, Lone (Atom 0), One (Atom 0), Some Univ,
+     False, True, FormulaReg (~1)]
+
+  fun indexed_assigns make values =
+    #2 (List.foldl (fn (value, (index, result)) =>
+      (index + 1, make (index, value) :: result)) (0, []) values)
+    |> rev
+
+  val expression_problem : problem =
+    {comment = "all expression forms",
+     settings = [("bit_width", "5")],
+     univ_card = 5,
+     tuple_assigns = [],
+     bounds = [],
+     int_bounds = [],
+     expr_assigns =
+       indexed_assigns (fn (index, relation) =>
+         AssignRelReg ((1, index), relation)) relation_cases @
+       indexed_assigns AssignIntReg integer_cases @
+       indexed_assigns AssignFormulaReg formula_cases,
+     formula =
+       All
+         ([DeclOne ((1, 30), Univ)],
+          Exist
+            ([DeclSet ((1, 31), Univ)],
+             And
+               (Subset (Var (1, 30), Var (1, 31)),
+                Implies (Some (Var (1, 31)), FormulaReg 0))))}
+
+  fun simple_problem comment formula : problem =
+    {comment = comment, settings = [], univ_card = 2,
+     tuple_assigns = [], bounds = [], int_bounds = [], expr_assigns = [],
+     formula = formula}
+
+  val multi_problems =
+    [simple_problem "first" True,
+     simple_problem "second" (And (Some Univ, Not False))]
+
+  fun read_all path =
+    let
+      val stream = TextIO.openIn path
+      val text = TextIO.inputAll stream
+        handle error => (TextIO.closeIn stream; raise error)
+      val _ = TextIO.closeIn stream
+    in
+      text
+    end
+
+  fun remove path = OS.FileSys.remove path handle _ => ()
+
+  fun serialize problems =
+    let
+      val path = OS.FileSys.tmpName ()
+      val stream = TextIO.openOut path
+      val _ = write_problem stream golden_header problems
+        handle error => (TextIO.closeOut stream; remove path; raise error)
+      val _ = TextIO.closeOut stream
+      val text = read_all path handle error => (remove path; raise error)
+      val _ = remove path
+    in
+      text
+    end
+
+  fun golden_matches (name, problems) =
+    serialize problems = read_all (OS.Path.concat ("tests", name))
+
+  fun serializer_goldens () =
+    String.isPrefix "generated by HOL4 Refute\n" (production_header ()) andalso
+    List.all golden_matches
+      [("forl-layout.kki", [layout_problem]),
+       ("forl-expressions.kki", [expression_problem]),
+       ("forl-multi.kki", multi_problems)]
+in
+  val _ = require_msg (check_result serializer_goldens) (fn () =>
+    "FORL output differed byte-for-byte from a checked-in .kki golden")
+    (fn () => ()) ()
+end
+
 val _ = tprint "Refute unified PRNG"
 
 val pinned_rand_stream = [423, 509, 648, 382, 795]

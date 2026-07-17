@@ -1,0 +1,11 @@
+// HOL4 Refute FORL golden
+// fixed timestamp
+
+// first
+univ: u2
+solve true;
+
+// second
+univ: u2
+solve some univ
+   && ! false;
