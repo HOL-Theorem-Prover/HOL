@@ -149,6 +149,20 @@ signature REFUTE_FORL = sig
   val is_problem_trivially_false : problem -> bool
   val problems_equivalent : problem * problem -> bool
 
+  type raw_bound = n_ary_index * int list list
+
+  datatype outcome =
+    Normal of (int * raw_bound list) list * int list * string
+  | TimedOut of int list
+  | Error of string * int list
+
+  exception SYNTAX of string * string
+
+  val extract_instance : string -> raw_bound list
+  val parse_output : string ->
+    (int * raw_bound list) list * int list
+  val first_error : string -> string
+
   val production_header : unit -> string
   val write_problem : TextIO.outstream -> string -> problem list -> unit
 end
@@ -528,6 +542,18 @@ structure Refute_Forl :> REFUTE_FORL = struct
     | arity_of_decl (DeclOne ((arity, _), _)) = arity
     | arity_of_decl (DeclSome ((arity, _), _)) = arity
     | arity_of_decl (DeclSet ((arity, _), _)) = arity
+
+  type raw_bound = n_ary_index * int list list
+
+  datatype outcome =
+    Normal of (int * raw_bound list) list * int list * string
+  | TimedOut of int list
+  | Error of string * int list
+
+  exception SYNTAX of string * string
+
+  fun find_index predicate values =
+    Lib.index predicate values handle HOL_ERR _ => ~1
 
   fun is_problem_trivially_false ({formula = False, ...} : problem) = true
     | is_problem_trivially_false _ = false
@@ -981,6 +1007,229 @@ structure Refute_Forl :> REFUTE_FORL = struct
     in
       out (block_comment header);
       List.app out_problem problems
+    end
+
+  fun is_ident_char character =
+    Char.isAlpha character orelse Char.isDigit character orelse
+    character = #"_" orelse character = #"'" orelse character = #"$"
+
+  fun strip_blanks [] = []
+    | strip_blanks (#" " :: characters) = strip_blanks characters
+    | strip_blanks [character, #" "] = [character]
+    | strip_blanks (first :: #" " :: second :: characters) =
+        if is_ident_char first andalso is_ident_char second then
+          first :: #" " :: strip_blanks (second :: characters)
+        else
+          strip_blanks (first :: second :: characters)
+    | strip_blanks (character :: characters) =
+        character :: strip_blanks characters
+
+  exception ParseError
+
+  fun expect [] characters = characters
+    | expect (wanted :: wanteds) (character :: characters) =
+        if wanted = character then expect wanteds characters
+        else raise ParseError
+    | expect _ _ = raise ParseError
+
+  fun parse_nat characters =
+    let
+      fun take_digits (character :: rest, digits) =
+            if Char.isDigit character then
+              take_digits (rest, character :: digits)
+            else
+              (rev digits, character :: rest)
+        | take_digits ([], digits) = (rev digits, [])
+      val (digits, rest) = take_digits (characters, [])
+    in
+      case (digits, Int.fromString (String.implode digits)) of
+          ([], _) => raise ParseError
+        | (_, SOME value) => (value, rest)
+        | _ => raise ParseError
+    end
+
+  fun parse_rel_name characters =
+    let
+      val ((arity, index), rest) =
+        case characters of
+            #"s" :: tail =>
+              let val (index, rest) = parse_nat tail
+              in ((1, index), rest) end
+          | #"r" :: tail =>
+              let val (index, rest) = parse_nat tail
+              in ((2, index), rest) end
+          | #"m" :: tail =>
+              let
+                val (arity, after_arity) = parse_nat tail
+                val (index, rest) = parse_nat (expect [#"_"] after_arity)
+              in
+                ((arity, index), rest)
+              end
+          | _ => raise ParseError
+    in
+      case rest of
+          #"'" :: tail => ((arity, ~index - 1), tail)
+        | _ => ((arity, index), rest)
+    end
+
+  fun parse_atom (#"A" :: characters) = parse_nat characters
+    | parse_atom _ = raise ParseError
+
+  fun parse_list parse closing characters =
+    if not (null characters) andalso hd characters = closing then
+      ([], tl characters)
+    else
+      let
+        val (first, rest) = parse characters
+        fun more values (#"," :: tail) =
+              let val (value, rest) = parse tail
+              in more (value :: values) rest end
+          | more values (character :: tail) =
+              if character = closing then (rev values, tail)
+              else raise ParseError
+          | more _ [] = raise ParseError
+      in
+        more [first] rest
+      end
+
+  fun parse_tuple characters =
+    parse_list parse_atom #"]" (expect [#"["] characters)
+
+  fun parse_tuple_set characters =
+    parse_list parse_tuple #"]" (expect [#"["] characters)
+
+  fun parse_assignment characters =
+    let
+      val (relation, rest) = parse_rel_name characters
+      val (tuples, rest) = parse_tuple_set (expect [#"="] rest)
+    in
+      ((relation, tuples), rest)
+    end
+
+  fun parse_instance characters =
+    parse_list parse_assignment #"}"
+      (expect (String.explode "relations:{") characters)
+
+  fun extract_instance text =
+    #1 (parse_instance (strip_blanks (String.explode text)))
+    handle ParseError =>
+      raise SYNTAX
+        ("Refute_Forl.extract_instance", "ill-formed Kodkodi output")
+
+  val problem_marker = "*** PROBLEM "
+  val outcome_marker = "---OUTCOME---\n"
+  val instance_marker = "---INSTANCE---\n"
+
+  fun read_section_body marker section =
+    Substring.string
+      (#1 (Substring.position "\n\n"
+        (Substring.triml (String.size marker) section)))
+
+  fun read_next_instance input =
+    let val section = #2 (Substring.position instance_marker input)
+    in
+      if Substring.isEmpty section then
+        raise SYNTAX
+          ("Refute_Forl.read_next_instance",
+           "expected \"INSTANCE\" marker")
+      else
+        extract_instance (read_section_body instance_marker section)
+    end
+
+  fun read_next_outcomes index (input, sat, unsat) =
+    let
+      val (prefix, section) = Substring.position outcome_marker input
+      val next_problem = #2 (Substring.position problem_marker prefix)
+    in
+      if Substring.isEmpty section orelse
+         not (Substring.isEmpty next_problem) then
+        (input, sat, unsat)
+      else
+        let
+          val outcome = read_section_body outcome_marker section
+          val rest = Substring.triml (String.size outcome_marker) section
+        in
+          if String.isSuffix "UNSATISFIABLE" outcome then
+            read_next_outcomes index (rest, sat, index :: unsat)
+          else if String.isSuffix "SATISFIABLE" outcome then
+            read_next_outcomes index
+              (rest, (index, read_next_instance section) :: sat, unsat)
+          else
+            raise SYNTAX
+              ("Refute_Forl.read_next_outcomes",
+               "unknown outcome \"" ^ outcome ^ "\"")
+        end
+    end
+
+  fun read_next_problems (input, sat, unsat) =
+    let val section = #2 (Substring.position problem_marker input)
+    in
+      if Substring.isEmpty section then
+        (sat, unsat)
+      else
+        let
+          val after_marker =
+            Substring.triml (String.size problem_marker) section
+          val number = Substring.string
+            (Substring.takel (fn character => character <> #" ")
+              after_marker)
+        in
+          case Int.fromString number of
+              SOME one_based =>
+                read_next_problems
+                  (read_next_outcomes (one_based - 1)
+                    (after_marker, sat, unsat))
+            | NONE =>
+                raise SYNTAX
+                  ("Refute_Forl.read_next_problems",
+                   "expected number after \"PROBLEM\"")
+        end
+    end
+
+  fun parse_output text =
+    let val (sat, unsat) =
+      read_next_problems (Substring.full text, [], [])
+    in
+      (rev sat, rev unsat)
+    end
+
+  fun trim_line text =
+    if String.isSuffix "\r\n" text then
+      String.substring (text, 0, String.size text - 2)
+    else if String.isSuffix "\r" text orelse String.isSuffix "\n" text then
+      String.substring (text, 0, String.size text - 1)
+    else
+      text
+
+  fun split_lines "" = []
+    | split_lines text =
+        String.fields (fn character => character = #"\n") text
+
+  fun trim_split_lines text =
+    List.map trim_line (split_lines (trim_line text))
+
+  fun remove_suffix suffix text =
+    if String.isSuffix suffix text then
+      String.substring (text, 0, String.size text - String.size suffix)
+    else
+      text
+
+  fun remove_prefix prefix text =
+    if String.isPrefix prefix text then
+      String.extract (text, String.size prefix, NONE)
+    else
+      text
+
+  fun first_error error_text =
+    let
+      fun clean line =
+        line |> remove_suffix "." |> remove_prefix "Solve error: " |>
+        remove_prefix "Error: "
+      val lines = List.map clean (trim_split_lines error_text)
+    in
+      case List.find (fn line => line <> "" andalso line <> "EXIT") lines of
+          SOME line => line
+        | NONE => ""
     end
 
   fun production_header () =

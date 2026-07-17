@@ -1,0 +1,20 @@
+15:01:02.003: [1] done kodkoding
+*** PROBLEM 1 ***
+
+---OUTCOME---
+SATISFIABLE
+
+---INSTANCE---
+relations: { s0 = [[A0]], r1 = [[A0, A1], [A1, A0]], m3_2' = [[A0, A1, A2]], s4 = [] }
+
+---STATS---
+first solution
+
+---OUTCOME---
+SATISFIABLE
+
+---INSTANCE---
+relations: {s0=[[A1]], r1=[], m3_2'=[[A2, A1, A0]], s4=[[A0]]}
+
+---STATS---
+second solution

@@ -326,6 +326,79 @@ in
     (fn () => ()) ()
 end
 
+val _ = tprint "Refute FORL Kodkodi transcript parser"
+
+local
+  open Refute_Forl
+
+  fun read_all path =
+    let
+      val stream = TextIO.openIn (OS.Path.concat ("tests", path))
+      val text = TextIO.inputAll stream
+        handle error => (TextIO.closeIn stream; raise error)
+      val _ = TextIO.closeIn stream
+    in
+      text
+    end
+
+  val first_sat_instance : raw_bound list =
+    [((1, 0), [[0]]),
+     ((2, 1), [[0, 1], [1, 0]]),
+     ((3, ~3), [[0, 1, 2]]),
+     ((1, 4), [])]
+
+  val second_sat_instance : raw_bound list =
+    [((1, 0), [[1]]),
+     ((2, 1), []),
+     ((3, ~3), [[2, 1, 0]]),
+     ((1, 4), [[0]])]
+
+  fun sat_transcript_parses () =
+    let val (solutions, unsat) =
+      parse_output (read_all "kodkodi-sat.stdout")
+    in
+      solutions =
+        [(0, first_sat_instance), (0, second_sat_instance)] andalso
+      length solutions = 2 andalso null unsat
+    end
+
+  fun unsat_transcript_parses () =
+    parse_output (read_all "kodkodi-unsat.stdout") = ([], [0])
+
+  fun mixed_batch_parses () =
+    parse_output (read_all "kodkodi-batch.stdout") =
+      ([(0, [((1, 0), [[1]])]), (2, [])], [1])
+
+  fun timeout_and_error_transcripts_parse () =
+    parse_output (read_all "kodkodi-timeout.stdout") = ([], []) andalso
+    first_error (read_all "kodkodi-timeout.stderr") =
+      "Ran out of time" andalso
+    parse_output (read_all "kodkodi-error.stdout") = ([], []) andalso
+    first_error (read_all "kodkodi-error.stderr") =
+      "No solver was specified" andalso
+    first_error "\nEXIT\n" = "" andalso
+    first_error " \nError: ignored.\n" = " "
+
+  fun malformed_instance_is_rejected () =
+    ((ignore (extract_instance "relations:{s0=[[A0],]}" ); false)
+     handle SYNTAX _ => true)
+in
+  val _ = require_msg (check_result sat_transcript_parses) (fn () =>
+    "Kodkodi solve-all SAT instances were parsed incorrectly")
+    (fn () => ()) ()
+  val _ = require_msg (check_result unsat_transcript_parses) (fn () =>
+    "Kodkodi UNSAT was parsed as SAT") (fn () => ()) ()
+  val _ = require_msg (check_result mixed_batch_parses) (fn () =>
+    "Kodkodi mixed batch outcomes were parsed incorrectly")
+    (fn () => ()) ()
+  val _ = require_msg
+    (check_result timeout_and_error_transcripts_parse) (fn () =>
+    "Kodkodi timeout or stderr error filtering was incorrect")
+    (fn () => ()) ()
+  val _ = require_msg (check_result malformed_instance_is_rejected) (fn () =>
+    "an ill-formed Kodkodi instance was accepted") (fn () => ()) ()
+end
+
 val _ = tprint "Refute unified PRNG"
 
 val pinned_rand_stream = [423, 509, 648, 382, 795]

@@ -22,8 +22,15 @@ all: holrefute-selftest.log
 
 FORL_GOLDENS = tests/forl-layout.kki tests/forl-expressions.kki \
                tests/forl-multi.kki
+FORL_TRANSCRIPTS = tests/kodkodi-sat.stdout \
+                   tests/kodkodi-unsat.stdout \
+                   tests/kodkodi-batch.stdout \
+                   tests/kodkodi-timeout.stdout \
+                   tests/kodkodi-timeout.stderr \
+                   tests/kodkodi-error.stdout \
+                   tests/kodkodi-error.stderr
 
-holrefute-selftest.log: selftest.exe $(FORL_GOLDENS)
+holrefute-selftest.log: selftest.exe $(FORL_GOLDENS) $(FORL_TRANSCRIPTS)
 	$(tee ./selftest.exe 2>&1,$@)
 
 ifdef POLY
