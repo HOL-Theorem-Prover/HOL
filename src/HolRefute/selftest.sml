@@ -1484,6 +1484,8 @@ val _ = require_msg (check_result mf_lookup_precedence) (fn () =>
 val _ = tprint "Refute model-finder representations"
 
 structure MFR = Refute_ModelFinder_Rep
+structure MFK = Refute_ModelFinder_Kodkod
+structure MFPH = Refute_ModelFinder_Peephole
 
 fun mf_rep_arithmetic () =
   MFR.card_of_rep (MFR.Formula MFU.Neut) = 2 andalso
@@ -1618,9 +1620,319 @@ val _ = require_msg (check_result mf_rep_fixed_scope) (fn () =>
   "model-finder best reps changed on a fixed scope")
   (fn () => ()) ()
 
-val _ = tprint "Refute model-finder nuts"
-
 structure MFNT = Refute_ModelFinder_Nut
+
+val _ = tprint "Refute model-finder Kodkod bounds and SUA"
+
+fun mf_kodkod_fixture assignments deep_types =
+  let
+    val scope = MFS.scope_from_descriptor mf_hol_context deep_types
+      (assignments, [])
+    val (selectors, _) = MFNT.choose_reps_for_all_sels scope
+      MFNT.NameTable.empty
+    val (relations, _, relation_table) = MFNT.rename_free_vars selectors
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+  in
+    (scope, relations, relation_table)
+  end
+
+fun mf_relation_for constructor selector relations =
+  valOf (List.find (fn relation =>
+    case relation of
+        MFNT.FreeRel (_, _, _, nickname) =>
+          MFN.original_name nickname = constructor andalso
+          MFN.sel_no_from_name nickname = selector
+      | _ => false) relations)
+
+fun mf_bound_tuple_sets (bound : Refute_Forl.bound) = #2 bound
+
+fun mf_kodkod_plain_bound () =
+  let
+    val relation = MFNT.FreeRel
+      ((1, 42), Type.bool, MFR.Atom (2, 7), "plain")
+  in
+    mf_bound_tuple_sets (MFK.bound_for_plain_rel false relation) =
+      [Refute_Forl.TupleSet [], Refute_Forl.TupleAtomSeq (2, 7)]
+  end
+
+val _ = require_msg (check_result mf_kodkod_plain_bound) (fn () =>
+  "model-finder plain relation bound changed")
+  (fn () => ()) ()
+
+fun mf_kodkod_offset_retry () =
+  let
+    val list_ty = ``:num list``
+    val scope = MFS.scope_from_descriptor mf_hol_context [list_ty]
+      ([(list_ty, 3), (``:num``, 2)], [])
+    val offsets = #ofs scope
+    val main_j0 = MFS.offset_of_type offsets Type.bool
+    val (_, nat_j0) = MFS.spec_of_type scope ``:num``
+    val (_, int_j0) = MFS.spec_of_type scope ``:int``
+    val attempts = ref []
+    fun build candidate =
+      let
+        val offset = MFS.offset_of_type candidate Type.bool
+        val _ = attempts := offset :: !attempts
+      in
+        if offset = main_j0 then
+          (MFK.check_arity "retry" 2 100; offset)
+        else
+          offset
+      end
+    val result = MFK.with_arity_retry offsets build
+    val empty = MFK.empty_offset_table ()
+  in
+    main_j0 = 3 andalso nat_j0 = main_j0 andalso int_j0 = main_j0 andalso
+    result = 0 andalso !attempts = [0, main_j0] andalso
+    MFS.offset_of_type empty list_ty = 0
+  end
+
+val _ = require_msg (check_result mf_kodkod_offset_retry) (fn () =>
+  "model-finder shared offset invariant or arity retry changed")
+  (fn () => ()) ()
+
+fun mf_kodkod_list_bounds () =
+  let
+    val list_ty = ``:num list``
+    val (scope, relations, relation_table) = mf_kodkod_fixture
+      [(list_ty, 3), (``:num``, 2)] [list_ty]
+    val data_types = #data_types scope
+    val needs = MFK.empty_need_values data_types
+    val cons = "list$CONS"
+    val discr = MFK.bound_for_sel_rel false needs data_types
+      (mf_relation_for cons (~1) relations)
+    val head = MFK.bound_for_sel_rel false needs data_types
+      (mf_relation_for cons 0 relations)
+    val tail = MFK.bound_for_sel_rel false needs data_types
+      (mf_relation_for cons 1 relations)
+    val kk = Refute_ModelFinder_Peephole.kodkod_constrs true 2 2 3
+    val axioms = MFK.declarative_axioms_for_data_types mf_hol_context
+      5 0 (#ofs scope) kk relation_table data_types
+  in
+    mf_bound_tuple_sets discr = [Refute_Forl.TupleAtomSeq (2, 1)] andalso
+    mf_bound_tuple_sets head =
+      [Refute_Forl.TupleSet [],
+       Refute_Forl.TupleProduct
+         (Refute_Forl.TupleAtomSeq (2, 1),
+          Refute_Forl.TupleAtomSeq (2, 3))] andalso
+    mf_bound_tuple_sets tail =
+      [Refute_Forl.TupleSet [],
+       Refute_Forl.TupleUnion
+         (Refute_Forl.TupleProduct
+            (Refute_Forl.TupleSet [Refute_Forl.Tuple [1]],
+             Refute_Forl.TupleAtomSeq (1, 0)),
+          Refute_Forl.TupleProduct
+            (Refute_Forl.TupleSet [Refute_Forl.Tuple [2]],
+             Refute_Forl.TupleAtomSeq (2, 0)))] andalso
+    length axioms = 7 andalso
+    length (List.filter (fn Refute_Forl.Function _ => true | _ => false)
+      axioms) = 2
+  end
+
+val _ = require_msg (check_result mf_kodkod_list_bounds) (fn () =>
+  "model-finder list bounds or SUA axioms changed")
+  (fn () => ()) ()
+
+fun mf_kodkod_tree_bounds () =
+  let
+    val tree_ty = ``:zoo_tree``
+    val (scope, relations, _) = mf_kodkod_fixture
+      [(tree_ty, 4), (``:num``, 2)] [tree_ty]
+    val data_types = #data_types scope
+    val needs = MFK.empty_need_values data_types
+    val node = "refuteTableZoo$ZooNode"
+    val left = MFK.bound_for_sel_rel false needs data_types
+      (mf_relation_for node 0 relations)
+    val right = MFK.bound_for_sel_rel false needs data_types
+      (mf_relation_for node 1 relations)
+    fun recursive_upper bound =
+      case mf_bound_tuple_sets bound of
+          [Refute_Forl.TupleSet [], upper] => upper
+        | _ => Refute_Forl.TupleSet []
+    val expected =
+      Refute_Forl.TupleUnion
+        (Refute_Forl.TupleUnion
+          (Refute_Forl.TupleUnion
+            (Refute_Forl.TupleProduct
+              (Refute_Forl.TupleSet [Refute_Forl.Tuple [0]],
+               Refute_Forl.TupleAtomSeq (0, 0)),
+             Refute_Forl.TupleProduct
+              (Refute_Forl.TupleSet [Refute_Forl.Tuple [1]],
+               Refute_Forl.TupleAtomSeq (1, 0))),
+           Refute_Forl.TupleProduct
+             (Refute_Forl.TupleSet [Refute_Forl.Tuple [2]],
+              Refute_Forl.TupleAtomSeq (2, 0))),
+         Refute_Forl.TupleProduct
+           (Refute_Forl.TupleSet [Refute_Forl.Tuple [3]],
+            Refute_Forl.TupleAtomSeq (3, 0)))
+  in
+    recursive_upper left = expected andalso recursive_upper right = expected
+  end
+
+val _ = require_msg (check_result mf_kodkod_tree_bounds) (fn () =>
+  "model-finder tree cycle-breaking bounds changed")
+  (fn () => ()) ()
+
+fun mf_kodkod_record_bounds () =
+  let
+    val record_ty = ``:zoo_record``
+    val (scope, relations, relation_table) = mf_kodkod_fixture
+      [(record_ty, 3), (``:num``, 2)] [record_ty]
+    val data_types = #data_types scope
+    val needs = MFK.empty_need_values data_types
+    val constructor = MFH.constructor_name
+      (#const (hd (#constrs (hd data_types))))
+    val discr = MFK.bound_for_sel_rel false needs data_types
+      (mf_relation_for constructor (~1) relations)
+    val first = MFK.bound_for_sel_rel false needs data_types
+      (mf_relation_for constructor 0 relations)
+    val second = MFK.bound_for_sel_rel false needs data_types
+      (mf_relation_for constructor 1 relations)
+    val expected_selector =
+      [Refute_Forl.TupleSet [],
+       Refute_Forl.TupleProduct
+         (Refute_Forl.TupleAtomSeq (3, 0),
+          Refute_Forl.TupleAtomSeq (2, 3))]
+    val kk = Refute_ModelFinder_Peephole.kodkod_constrs true 2 2 3
+    val axioms = MFK.declarative_axioms_for_data_types mf_hol_context
+      5 0 (#ofs scope) kk relation_table data_types
+  in
+    mf_bound_tuple_sets discr = [Refute_Forl.TupleAtomSeq (3, 0)] andalso
+    mf_bound_tuple_sets first = expected_selector andalso
+    mf_bound_tuple_sets second = expected_selector andalso
+    length (List.filter (fn Refute_Forl.Function _ => true | _ => false)
+      axioms) = 2
+  end
+
+val _ = require_msg (check_result mf_kodkod_record_bounds) (fn () =>
+  "model-finder record bounds or selector axioms changed")
+  (fn () => ()) ()
+
+fun tuples_of_exact_bound relation bounds =
+  case List.find (fn (declarations, _) =>
+         List.exists (fn (index, _) => index = relation) declarations)
+         bounds of
+      SOME (_, [Refute_Forl.TupleSet tuples]) => tuples
+    | _ => []
+
+fun mf_kodkod_nat_tables () =
+  let
+    val formula = Refute_Forl.And
+      (Refute_Forl.Some (Refute_Forl.Rel MFPH.nat_add_rel),
+       Refute_Forl.And
+         (Refute_Forl.Some (Refute_Forl.Rel MFPH.nat_less_rel),
+          Refute_Forl.Some (Refute_Forl.Rel MFPH.suc_rel)))
+    val (bounds, axioms) =
+      MFK.bounds_and_axioms_for_built_in_rels_in_formulas
+        true 3 3 3 0 [formula]
+    val add = tuples_of_exact_bound MFPH.nat_add_rel bounds
+    val less = tuples_of_exact_bound MFPH.nat_less_rel bounds
+    val suc = tuples_of_exact_bound MFPH.suc_rel bounds
+  in
+    add = map Refute_Forl.Tuple
+      [[0, 0, 0], [0, 1, 1], [0, 2, 2],
+       [1, 0, 1], [1, 1, 2], [2, 0, 2]] andalso
+    less = map Refute_Forl.Tuple
+      [[0, 0, 0], [0, 1, 1], [0, 2, 1],
+       [1, 0, 0], [1, 1, 0], [1, 2, 1],
+       [2, 0, 0], [2, 1, 0], [2, 2, 0]] andalso
+    suc = map Refute_Forl.Tuple [[0, 1], [1, 2]] andalso null axioms
+  end
+
+val _ = require_msg (check_result mf_kodkod_nat_tables) (fn () =>
+  "model-finder nat tabulation changed")
+  (fn () => ()) ()
+
+fun mf_kodkod_int_tables () =
+  let
+    val formula = Refute_Forl.And
+      (Refute_Forl.Some (Refute_Forl.Rel MFPH.int_add_rel),
+       Refute_Forl.Some (Refute_Forl.Rel MFPH.int_less_rel))
+    val (bounds, axioms) =
+      MFK.bounds_and_axioms_for_built_in_rels_in_formulas
+        true 3 3 3 0 [formula]
+    val add = tuples_of_exact_bound MFPH.int_add_rel bounds
+    val less = tuples_of_exact_bound MFPH.int_less_rel bounds
+  in
+    add = map Refute_Forl.Tuple
+      [[0, 0, 0], [0, 1, 1], [0, 2, 2],
+       [1, 0, 1], [1, 2, 0], [2, 0, 2], [2, 1, 0]] andalso
+    less = map Refute_Forl.Tuple
+      [[0, 0, 0], [0, 1, 1], [0, 2, 0],
+       [1, 0, 0], [1, 1, 0], [1, 2, 0],
+       [2, 0, 1], [2, 1, 1], [2, 2, 0]] andalso
+    null axioms
+  end
+
+val _ = require_msg (check_result mf_kodkod_int_tables) (fn () =>
+  "model-finder int tabulation changed")
+  (fn () => ()) ()
+
+fun mf_kodkod_mutual_acyclicity () =
+  let
+    val even_ty = ``:zoo_even_tree``
+    val odd_ty = ``:zoo_odd_tree``
+    val (scope, _, relation_table) = mf_kodkod_fixture
+      [(even_ty, 3), (odd_ty, 3), (``:num``, 2)] [even_ty, odd_ty]
+    val kk = Refute_ModelFinder_Peephole.kodkod_constrs true 2 2 6
+    val axioms = MFK.acyclicity_axioms_for_data_types kk relation_table
+      (#data_types scope)
+  in
+    length axioms = 2 andalso
+    List.all (fn Refute_Forl.True => false | _ => true) axioms
+  end
+
+val _ = require_msg (check_result mf_kodkod_mutual_acyclicity) (fn () =>
+  "model-finder mutual-datatype acyclicity NFA changed")
+  (fn () => ()) ()
+
+fun mf_negative_relations formula =
+  let
+    fun relation (Refute_Forl.Rel (index as (_, serial))) result =
+          if serial < 0 then index :: result else result
+      | relation _ result = result
+    val funcs =
+      {formula_func = fn _ => fn result => result,
+       rel_expr_func = relation,
+       int_expr_func = fn _ => fn result => result}
+  in
+    Refute_Forl.fold_formula funcs formula []
+  end
+
+fun mf_kodkod_sym_break_shape () =
+  let
+    val list_ty = ``:num list``
+    val (scope, _, relation_table) = mf_kodkod_fixture
+      [(list_ty, 7), (``:num``, 2)] [list_ty]
+    val kk = Refute_ModelFinder_Peephole.kodkod_constrs true 2 2 7
+    val axioms = MFK.sym_break_axioms_for_data_types mf_hol_context
+      5 kk relation_table (#data_types scope)
+    val successor_relations = List.concat (map mf_negative_relations axioms)
+    val successor_sequences = map MFPH.atom_seq_for_suc_rel
+      successor_relations
+    val expected_sequences = [((7, 0), true), ((2, 7), true)]
+  in
+    (case axioms of
+         Refute_Forl.All ([Refute_Forl.DeclOne _,
+                           Refute_Forl.DeclOne _], _) ::
+           [Refute_Forl.True, Refute_Forl.True] => true
+       | _ => false) andalso
+    List.all (fn sequence => List.exists (fn expected =>
+      sequence = expected) expected_sequences) successor_sequences andalso
+    List.all (fn expected => List.exists (fn sequence =>
+      sequence = expected) successor_sequences) expected_sequences andalso
+    List.all #2 successor_sequences andalso
+    MFPH.max_squeeze_card = 49 andalso
+    MFK.kodkod_settings (~3) =
+      [("symmetry_breaking", "15"), ("sharing", "3"),
+       ("flatten", "false"), ("delay", "-3")]
+  end
+
+val _ = require_msg (check_result mf_kodkod_sym_break_shape) (fn () =>
+  "model-finder datatype symmetry-breaking shape changed")
+  (fn () => ()) ()
+
+val _ = tprint "Refute model-finder nuts"
 
 fun same_mf_type left right = Type.compare (left, right) = EQUAL
 

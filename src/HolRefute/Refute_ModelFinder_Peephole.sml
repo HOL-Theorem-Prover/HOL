@@ -58,6 +58,7 @@ sig
      .agent-files/research/m3-kodkod-translation.md section 6 and
      .agent-files/PLAN_M3.md section 9. *)
   val is_twos_complement_representable : int -> int -> bool
+  val max_squeeze_card : int
   val suc_rel_for_atom_seq : (int * int) * bool -> n_ary_index
   val atom_seq_for_suc_rel : n_ary_index -> (int * int) * bool
   val inline_rel_expr : rel_expr -> bool
