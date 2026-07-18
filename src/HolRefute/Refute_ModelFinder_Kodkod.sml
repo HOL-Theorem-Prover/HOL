@@ -65,16 +65,18 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
      total_consts : bool,
      datatype_sym_break : int,
      comment : string,
-     settings : Refute_Forl.setting list,
+     solver : string list,
+     unsound_delay : int,
      free_names : nut list,
      nonsel_names : nut list,
      nondef_us : nut list,
      def_us : nut list}
   val assemble_problem :
-    assembly_params -> bool -> Refute_ModelFinder_Scope.scope -> rich_problem
+    assembly_params -> bool -> Refute_ModelFinder_Scope.scope ->
+    rich_problem option
   val assemble_problem_pair :
     assembly_params -> Refute_ModelFinder_Scope.scope ->
-    rich_problem * rich_problem
+    rich_problem option * rich_problem option
 
   val empty_need_values : data_type_spec list -> need_values
   val declarative_axiom_for_plain_rel :
@@ -1732,6 +1734,12 @@ fun binary_domain_card representation =
         MFR.card_of_rep first * MFR.card_of_rep second
     | NONE => MFR.card_of_domain_from_rep 2 representation
 
+fun has_function_type domain range ty =
+  case Lib.total Type.dom_rng ty of
+      SOME (actual_domain, actual_range) =>
+        same_type actual_domain domain andalso same_type actual_range range
+    | NONE => false
+
 fun m4_translation location =
   raise MFU.NOT_SUPPORTED
     (location ^ ": unreachable in M3 by the closure proof in " ^
@@ -2081,44 +2089,67 @@ fun kodkod_formula_from_nut offsets
             m4_translation "Refute_ModelFinder_Kodkod.to_r (Fracs)"
         | MFNT.Cst (MFNT.NormFrac, _, _) =>
             m4_translation "Refute_ModelFinder_Kodkod.to_r (NormFrac)"
-        | MFNT.Cst (MFNT.NatToInt, _,
-            MFR.Func (MFR.Atom _, MFR.Atom _)) => KK.Iden
-        | MFNT.Cst (MFNT.NatToInt, _,
-            MFR.Func (MFR.Atom (_, nat_offset),
-              MFR.Opt (MFR.Atom (int_card, int_offset)))) =>
-            if nat_offset = int_offset then
-              kk_intersect KK.Iden
-                (kk_product
-                  (KK.AtomSeq
-                    (MFP.max_int_for_card int_card + 1, nat_offset))
-                  KK.Univ)
+        | MFNT.Cst (MFNT.NatToInt, ty, representation) =>
+            if not (has_function_type MFH.num_type MFH.int_type ty) then
+              (* M4-only word conversion; dead under the M3 closure proof
+                 in m3-kodkod-translation section 6. *)
+              m4_translation
+                "Refute_ModelFinder_Kodkod.to_r (word NatToInt)"
             else
-              raise MFU.BAD
-                ("Refute_ModelFinder_Kodkod.to_r (NatToInt)",
-                 "nat and int offsets differ")
-        | MFNT.Cst (MFNT.IntToNat, _,
-            MFR.Func (MFR.Atom (int_card, int_offset), nat_rep)) =>
-            let
-              val absolute_card = MFP.max_int_for_card int_card + 1
-              val (nat_card, nat_offset) =
-                the_single (MFR.atom_schema_of_rep nat_rep)
-              val overlap = Int.min (nat_card, absolute_card)
-            in
-              if nat_offset = int_offset then
-                kk_union
-                  (kk_product
-                    (KK.AtomSeq
-                      (int_card - absolute_card,
-                       int_offset + absolute_card))
-                    (KK.Atom nat_offset))
-                  (kk_intersect KK.Iden
-                    (kk_product
-                      (KK.AtomSeq (overlap, int_offset)) KK.Univ))
-              else
-                raise MFU.BAD
-                  ("Refute_ModelFinder_Kodkod.to_r (IntToNat)",
-                   "nat and int offsets differ")
-            end
+              (case representation of
+                   MFR.Func (MFR.Atom _, MFR.Atom _) => KK.Iden
+                 | MFR.Func (MFR.Atom (_, nat_offset),
+                     MFR.Opt (MFR.Atom (int_card, int_offset))) =>
+                     if nat_offset = int_offset then
+                       kk_intersect KK.Iden
+                         (kk_product
+                           (KK.AtomSeq
+                             (MFP.max_int_for_card int_card + 1,
+                              nat_offset))
+                           KK.Univ)
+                     else
+                       raise MFU.BAD
+                         ("Refute_ModelFinder_Kodkod.to_r (NatToInt)",
+                          "nat and int offsets differ")
+                 | _ => raise MFNT.NUT
+                     ("Refute_ModelFinder_Kodkod.to_r (NatToInt)",
+                      [candidate]))
+        | MFNT.Cst (MFNT.IntToNat, ty, representation) =>
+            if not (has_function_type MFH.int_type MFH.num_type ty) then
+              (* M4-only word conversion; dead under the M3 closure proof
+                 in m3-kodkod-translation section 6. *)
+              m4_translation
+                "Refute_ModelFinder_Kodkod.to_r (word IntToNat)"
+            else
+              (case representation of
+                   MFR.Func
+                     (MFR.Atom (int_card, int_offset), nat_rep) =>
+                     let
+                       val absolute_card =
+                         MFP.max_int_for_card int_card + 1
+                       val (nat_card, nat_offset) =
+                         the_single (MFR.atom_schema_of_rep nat_rep)
+                       val overlap = Int.min (nat_card, absolute_card)
+                     in
+                       if nat_offset = int_offset then
+                         kk_union
+                           (kk_product
+                             (KK.AtomSeq
+                               (int_card - absolute_card,
+                                int_offset + absolute_card))
+                             (KK.Atom nat_offset))
+                           (kk_intersect KK.Iden
+                             (kk_product
+                               (KK.AtomSeq (overlap, int_offset))
+                               KK.Univ))
+                       else
+                         raise MFU.BAD
+                           ("Refute_ModelFinder_Kodkod.to_r (IntToNat)",
+                            "nat and int offsets differ")
+                     end
+                 | _ => raise MFNT.NUT
+                     ("Refute_ModelFinder_Kodkod.to_r (IntToNat)",
+                      [candidate]))
         | MFNT.Op1 (MFNT.Not, _, representation, first) =>
             kk_not3 (to_rep representation first)
         | MFNT.Op1 (MFNT.Finite, _, MFR.Opt (MFR.Atom _), _) =>
@@ -2710,7 +2741,8 @@ type assembly_params =
    total_consts : bool,
    datatype_sym_break : int,
    comment : string,
-   settings : KK.setting list,
+   solver : string list,
+   unsound_delay : int,
    free_names : nut list,
    nonsel_names : nut list,
    nondef_us : nut list,
@@ -2724,8 +2756,9 @@ fun scope_with_offsets
 
 fun assemble_problem_once
       ({debug, peephole_optim, total_consts, datatype_sym_break,
-        comment, settings, free_names, nonsel_names, nondef_us, def_us}
-       : assembly_params) unsound (scope : MFS.scope) : rich_problem =
+        comment, solver, unsound_delay, free_names, nonsel_names,
+        nondef_us, def_us} : assembly_params)
+      unsound (scope : MFS.scope) : rich_problem =
   let
     val offsets = #ofs scope
     val data_types = #data_types scope
@@ -2814,7 +2847,9 @@ fun assemble_problem_once
       else check_arity "" universe_card highest_bound_arity
     val problem : KK.problem =
       {comment = (if unsound then "unsound" else "sound") ^ "\n" ^ comment,
-       settings = settings, univ_card = universe_card, tuple_assigns = [],
+       settings = kodkod_problem_settings solver bits
+         (if unsound then unsound_delay else 0),
+       univ_card = universe_card, tuple_assigns = [],
        bounds = bounds,
        int_bounds = if bits = 0 then sequential_int_bounds universe_card
          else pow_of_two_int_bounds bits main_j0,
@@ -2828,8 +2863,10 @@ fun assemble_problem_once
   end
 
 fun assemble_problem params unsound scope =
-  with_arity_retry (#ofs scope) (fn offsets =>
-    assemble_problem_once params unsound (scope_with_offsets scope offsets))
+  SOME (with_arity_retry (#ofs scope) (fn offsets =>
+    assemble_problem_once params unsound (scope_with_offsets scope offsets)))
+  handle MFU.TOO_LARGE _ => NONE
+       | MFU.TOO_SMALL _ => NONE
 
 fun assemble_problem_pair params scope =
   (assemble_problem params false scope, assemble_problem params true scope)

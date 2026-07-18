@@ -2399,22 +2399,30 @@ fun mf_assembly_fixture term assignments deep_types =
     val nut = MFNT.nut_from_term mf_hol_context MFNT.Eq term
     val (free_names, nonsel_names) =
       MFNT.add_free_and_const_names nut ([], [])
-    val settings = MFK.kodkod_problem_settings ["DefaultSAT4J"]
-      (#bits scope) 0
     val params : MFK.assembly_params =
       {debug = false, peephole_optim = true, total_consts = false,
        datatype_sym_break = MFK.datatype_sym_break,
-       comment = term_to_string term, settings = settings,
-       free_names = free_names, nonsel_names = nonsel_names,
-       nondef_us = [nut], def_us = []}
+       comment = term_to_string term, solver = ["DefaultSAT4J"],
+       unsound_delay = 1, free_names = free_names,
+       nonsel_names = nonsel_names, nondef_us = [nut], def_us = []}
   in
     (params, scope)
   end
 
 fun mf_assembled_problem term assignments deep_types =
-  let val (params, scope) =
-    mf_assembly_fixture term assignments deep_types
-  in #1 (MFK.assemble_problem params false scope) end
+  let
+    val (params, scope) = mf_assembly_fixture term assignments deep_types
+  in
+    #1 (valOf (MFK.assemble_problem params false scope))
+  end
+
+fun mf_assembled_problem_pair term assignments deep_types =
+  let
+    val (params, scope) = mf_assembly_fixture term assignments deep_types
+    val (sound, unsound) = MFK.assemble_problem_pair params scope
+  in
+    (#1 (valOf sound), #1 (valOf unsound))
+  end
 
 fun mf_kodkod_assembly_golden () =
   let
@@ -2422,14 +2430,19 @@ fun mf_kodkod_assembly_golden () =
     val assignments = [(``:num``, 3)]
     val problem = mf_assembled_problem term assignments []
     val (params, scope) = mf_assembly_fixture term assignments []
-    val ((_, sound), (_, unsound)) =
-      MFK.assemble_problem_pair params scope
-  in
-    not (#unsound sound) andalso #unsound unsound andalso
-    #settings problem =
+    val (sound_problem, sound) =
+      valOf (#1 (MFK.assemble_problem_pair params scope))
+    val (unsound_problem, unsound) =
+      valOf (#2 (MFK.assemble_problem_pair params scope))
+    val common_settings =
       [("solver", "\"DefaultSAT4J\""), ("bit_width", "16"),
        ("symmetry_breaking", "15"), ("sharing", "3"),
-       ("flatten", "false"), ("delay", "0")] andalso
+       ("flatten", "false")]
+  in
+    not (#unsound sound) andalso #unsound unsound andalso
+    #settings problem = common_settings @ [("delay", "0")] andalso
+    #settings sound_problem = common_settings @ [("delay", "0")] andalso
+    #settings unsound_problem = common_settings @ [("delay", "1")] andalso
     #univ_card problem = 3 andalso not (null (#bounds problem)) andalso
     List.exists (fn (declarations, _) => List.exists
       (fn (index, _) => index = MFPH.suc_rel) declarations)
@@ -2438,6 +2451,22 @@ fun mf_kodkod_assembly_golden () =
 
 val _ = require_msg (check_result mf_kodkod_assembly_golden) (fn () =>
   "model-finder problem assembly golden changed")
+  (fn () => ()) ()
+
+fun mf_kodkod_assembly_limit_recovery () =
+  let
+    val list_ty = ``:num list``
+    val (params, scope) = mf_assembly_fixture ``T``
+      [(list_ty, 50), (``:num``, 2)] [list_ty]
+  in
+    case MFK.assemble_problem_pair params scope of
+        (NONE, NONE) => true
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result mf_kodkod_assembly_limit_recovery) (fn () =>
+    "model-finder problem assembly did not skip an oversized scope")
   (fn () => ()) ()
 
 val _ = tprint "Refute model-finder peephole"
@@ -3133,32 +3162,43 @@ local
 
   val conversion_problems = List.map conversion_problem conversion_tests
 
+  val (mf_list_sound_problem, mf_list_unsound_problem) =
+    mf_assembled_problem_pair ``~((xs : num list) = [])``
+      [(``:num list``, 3), (``:num``, 2)] [``:num list``]
+
   val mf_end_to_end_problems =
-    [mf_assembled_problem ``~((xs : num list) = [])``
-       [(``:num list``, 3), (``:num``, 2)] [``:num list``],
+    [mf_list_sound_problem, mf_list_unsound_problem,
      mf_assembled_problem
        ``((xs : num list) = [] /\ xs = [0])``
        [(``:num list``, 3), (``:num``, 2)] [``:num list``],
-     mf_assembled_problem ``~((n : num) + 1 = n)``
+     mf_assembled_problem ``((n : num) + 1 = 2)``
        [(``:num``, 3)] []]
 
   fun mf_translation_end_to_end () =
     let
       fun solve problem = solve_any_problem true false (deadline 60) 1 1
         [problem]
-      fun has_free_tuple instance =
+      fun free_tuples instance =
         case List.find (fn (index, _) => index = (1, 0)) instance of
-            SOME (_, _ :: _) => true
-          | _ => false
-      fun sat (Normal ([(0, instance)], [], "")) =
-            has_free_tuple instance
-        | sat _ = false
+            SOME (_, tuples) => tuples
+          | NONE => []
+      fun sat_with check (Normal ([(0, instance)], [], "")) =
+            check (free_tuples instance)
+        | sat_with _ _ = false
+      fun nonempty_list [[atom]] = atom = 1 orelse atom = 2
+        | nonempty_list _ = false
+      fun arithmetic_witness [[atom]] = atom = 1
+        | arithmetic_witness _ = false
       fun unsat (Normal ([], [0], "")) = true
         | unsat _ = false
     in
-      sat (solve (List.nth (mf_end_to_end_problems, 0))) andalso
-      unsat (solve (List.nth (mf_end_to_end_problems, 1))) andalso
-      sat (solve (List.nth (mf_end_to_end_problems, 2)))
+      sat_with nonempty_list
+        (solve (List.nth (mf_end_to_end_problems, 0))) andalso
+      sat_with nonempty_list
+        (solve (List.nth (mf_end_to_end_problems, 1))) andalso
+      unsat (solve (List.nth (mf_end_to_end_problems, 2))) andalso
+      sat_with arithmetic_witness
+        (solve (List.nth (mf_end_to_end_problems, 3)))
     end
 
   fun conversion_round_trips () =
