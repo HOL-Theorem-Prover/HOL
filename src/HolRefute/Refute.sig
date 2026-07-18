@@ -6,6 +6,10 @@ signature Refute = sig
 
   datatype certainty = Genuine | QuasiGenuine of string list
                      | Potential of string list
+  type model_report =
+    { skolems : (string * term) list,
+      consts : (term * term) list,
+      types : (hol_type * term list * bool) list }
   type counterexample =
     { backend : string,
       substrate : string,
@@ -14,6 +18,7 @@ signature Refute = sig
       evals : (term * term) list,
       cert : thm option,
       scope : (hol_type * int) list option,
+      model : model_report option,
       stats : (string * int) list }
   datatype outcome = Counterexample of counterexample list
                    | NoCounterexample

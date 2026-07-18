@@ -6,6 +6,7 @@ structure Refute :> Refute = struct
 
   datatype certainty = datatype Refute_Core.certainty
   type counterexample = Refute_Core.counterexample
+  type model_report = Refute_Core.model_report
   datatype outcome = datatype Refute_Core.outcome
   datatype expectation = datatype Refute_Core.expectation
   datatype substrate_choice = datatype Refute_Core.substrate_choice

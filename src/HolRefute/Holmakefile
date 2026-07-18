@@ -7,6 +7,7 @@ all: $(DEFAULT_TARGETS) selftest.exe
 
 selftest.uo: Refute_ModelFinder_Preproc.uo \
              Refute_ModelFinder_Kodkod.uo \
+             Refute_ModelFinder_Model.uo \
              Refute_ModelFinder_Nut.uo \
              Refute_ModelFinder_Peephole.uo \
              Refute_ModelFinder_Rep.uo \

@@ -17,6 +17,11 @@ structure Refute_Core = struct
     | QuasiGenuine of string list
     | Potential of string list
 
+  type model_report =
+    { skolems : (string * term) list,
+      consts : (term * term) list,
+      types : (hol_type * term list * bool) list }
+
   type counterexample =
     { backend : string,
       substrate : string,
@@ -25,6 +30,7 @@ structure Refute_Core = struct
       evals : (term * term) list,
       cert : thm option,
       scope : (hol_type * int) list option,
+      model : model_report option,
       stats : (string * int) list }
 
   datatype outcome =
@@ -1067,31 +1073,91 @@ structure Refute_Core = struct
       if null present then "" else ", " ^ String.concatWith ", " present
     end
 
+  fun format_term term =
+    let
+      val string = Parse.term_to_string term
+      val length = size string
+      fun scan index parts =
+        if index >= length then String.concat (rev parts)
+        else if index + 1 < length andalso
+                String.substring (string, index, 2) = "$?" then
+          scan (index + 2) ("?" :: parts)
+        else if index + 3 < length andalso
+                String.substring (string, index, 4) = "$..." then
+          scan (index + 4) ("..." :: parts)
+        else
+          scan (index + 1)
+            (String.substring (string, index, 1) :: parts)
+    in
+      scan 0 []
+    end
+
   fun format_bindings bindings =
     String.concatWith "\n" (map (fn (name, value) =>
-      "  " ^ Parse.term_to_string name ^ " = " ^
-      Parse.term_to_string value) bindings)
+      "  " ^ format_term name ^ " = " ^ format_term value) bindings)
 
   fun format_evals evals =
     String.concatWith "\n" (map (fn (term, value) =>
-      "  " ^ Parse.term_to_string term ^ " = " ^
-      Parse.term_to_string value) evals)
+      "  " ^ format_term term ^ " = " ^ format_term value) evals)
 
   fun format_reasons title reasons =
     if null reasons then "" else
       "\n" ^ title ^ "\n" ^ String.concatWith "\n"
         (map (fn reason => "  " ^ reason) reasons)
 
-  fun format_counterexample (cex : counterexample) =
+  fun type_name ty =
+    let val printed = Parse.type_to_string ty
+    in
+      if String.isPrefix ":" printed then
+        String.extract (printed, 1, NONE)
+      else
+        printed
+    end
+
+  fun format_scope NONE = ""
+    | format_scope (SOME assignments) =
+        "\nScope: " ^ String.concatWith ", " (map (fn (ty, card) =>
+          "card " ^ type_name ty ^ " = " ^ Int.toString card) assignments)
+
+  fun format_named_terms title entries =
+    if null entries then "" else
+      "\n" ^ title ^ ":\n" ^ String.concatWith "\n"
+        (map (fn (name, value) =>
+          "  " ^ name ^ " = " ^ format_term value) entries)
+
+  fun format_types types =
+    if null types then "" else
+      "\nTypes:\n" ^ String.concatWith "\n" (map
+        (fn (ty, values, complete) =>
+          "  " ^ type_name ty ^ " = {" ^
+          String.concatWith ", " (map format_term values) ^
+          (if complete then "" else
+             if null values then "..." else ", ...") ^ "}") types)
+
+  fun format_model (mf : mf_config) NONE = ""
+    | format_model mf (SOME ({skolems, consts, types} : model_report)) =
+        (if #show_types mf then format_types types else "") ^
+        (if #show_skolems mf then
+           format_named_terms "Skolem constants" skolems
+         else "") ^
+        (if #show_consts mf then
+           format_named_terms "Constants" (map (fn (name, value) =>
+             (format_term name, value)) consts)
+         else "")
+
+  fun format_counterexample (mf : mf_config) (cex : counterexample) =
     let
-      val {backend, substrate, certainty, bindings, evals, cert, stats, ...} =
-        cex
+      val {backend, substrate, certainty, bindings, evals, cert, scope,
+           model, stats} = cex
       val header = "Refute found a counterexample (backend: " ^ backend ^
         ", substrate: " ^ substrate ^ format_stats stats ^ "):"
+      val scope_text =
+        if substrate = "kodkod" then format_scope scope else ""
       val binding_text =
         if null bindings then "" else "\n" ^ format_bindings bindings
       val eval_text =
         if null evals then "" else "\nEvaluated terms:\n" ^ format_evals evals
+      val model_text = format_model mf model
       val cert_text =
         case cert of
             NONE => ""
@@ -1104,7 +1170,8 @@ structure Refute_Core = struct
               format_reasons "Potential counterexample:" reasons ^
               "\n…continuing search for a genuine counterexample"
     in
-      header ^ binding_text ^ eval_text ^ cert_text ^ certainty_text
+      header ^ scope_text ^ binding_text ^ eval_text ^ model_text ^
+      cert_text ^ certainty_text
     end
 
   fun format_outcome (cfg : config) result =
@@ -1112,9 +1179,10 @@ structure Refute_Core = struct
       val body =
         case result of
             Counterexample cexs =>
-              String.concatWith "\n\n" (map format_counterexample cexs)
+              String.concatWith "\n\n"
+                (map (format_counterexample (#mf cfg)) cexs)
           | NoCounterexample =>
-              "Refute: goal holds for all tested finite instantiations"
+              "Refute: no counterexample found within the tested finite bounds"
           | Unknown reasons =>
               "Refute could not determine an answer" ^
               format_reasons "Reasons:" reasons

@@ -214,7 +214,7 @@ structure Refute_QC = struct
           certainty = if genuine then Refute_Core.Potential []
             else Refute_Core.Potential ["evaluation stuck during testing"],
           bindings = rev bindings,
-          evals = [], cert = NONE, scope = NONE,
+          evals = [], cert = NONE, scope = NONE, model = NONE,
           stats = stats }
       val next = {env = env, genuine = genuine} :: ignored
     in

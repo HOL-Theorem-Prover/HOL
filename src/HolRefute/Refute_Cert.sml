@@ -56,6 +56,7 @@ structure Refute_Cert = struct
       evals = evals,
       cert = cert,
       scope = #scope cex,
+      model = #model cex,
       stats = #stats cex }
 
   fun certify {original, evals, env, cex} =

@@ -1485,6 +1485,7 @@ val _ = tprint "Refute model-finder representations"
 
 structure MFR = Refute_ModelFinder_Rep
 structure MFK = Refute_ModelFinder_Kodkod
+structure MFM = Refute_ModelFinder_Model
 structure MFPH = Refute_ModelFinder_Peephole
 
 fun mf_rep_arithmetic () =
@@ -2275,6 +2276,222 @@ fun mf_translation_constrs scope =
     Refute_ModelFinder_Peephole.kodkod_constrs true nat_card int_card
       main_j0
   end
+
+val _ = tprint "Refute model-finder model reconstruction"
+
+fun mf_model_args scope ty representation tuples =
+  {scope = scope, atoms = [(NONE, [])], sel_names = [],
+   rel_table = MFNT.NameTable.empty, bounds = [], maybe_opt = false,
+   ty = ty, representation = representation, tuples = tuples}
+
+fun variable_named name term =
+  Term.is_var term andalso #1 (Term.dest_var term) = name
+
+fun mf_model_rep_goldens () =
+  let
+    val scope = mf_translation_scope [(``:num``, 3), (``:int``, 5)] []
+    val number = MFM.term_for_rep (mf_model_args scope ``:num``
+      (MFR.Atom (3, 0)) [[2]])
+    val integer = MFM.term_for_rep (mf_model_args scope ``:int``
+      (MFR.Atom (5, 0)) [[4]])
+    val pair = MFM.term_for_rep (mf_model_args scope ``:num # bool``
+      (MFR.Struct [MFR.Atom (3, 0), MFR.Atom (2, 0)]) [[1, 1]])
+    val function = MFM.term_for_rep (mf_model_args scope ``:num -> num``
+      (MFR.Vect (3, MFR.Atom (3, 0))) [[1, 2, 0]])
+    val set = MFM.term_for_rep (mf_model_args scope ``:num set``
+      (MFR.Func (MFR.Atom (3, 0), MFR.Formula
+        Refute_ModelFinder_Util.Neut)) [[0], [2]])
+    val marker = MFM.term_for_rep (mf_model_args scope ``:num``
+      (MFR.Opt (MFR.Atom (3, 0))) [])
+    val (updates, base) = combinSyntax.strip_update function
+    val base_body = combinSyntax.dest_K_1 base
+  in
+    Term.aconv number ``2`` andalso
+    Term.aconv integer ``-1 : int`` andalso
+    Term.aconv pair ``(1, T)`` andalso
+    map (fn (point, value) =>
+      (numSyntax.int_of_term point, numSyntax.int_of_term value)) updates =
+      [(2, 0), (1, 2), (0, 1)] andalso
+    variable_named "?" base_body andalso
+    Term.aconv set ``{0; 2}`` andalso variable_named "?" marker
+  end
+
+val _ = require_msg (check_result mf_model_rep_goldens) (fn () =>
+  "model reconstruction rep goldens changed") (fn () => ()) ()
+
+fun mf_model_atom_override () =
+  let
+    val alpha = ``:'a``
+    val scope = mf_translation_scope [(alpha, 2)] []
+    val offset = MFS.offset_of_type (#ofs scope) alpha
+    val atom = MFM.term_for_rep
+      {scope = scope, atoms = [(SOME alpha, ["red", "blue"])],
+       sel_names = [], rel_table = MFNT.NameTable.empty, bounds = [],
+       maybe_opt = false, ty = alpha,
+       representation = MFR.Atom (2, offset), tuples = [[offset + 1]]}
+  in
+    variable_named "red" atom
+  end
+
+val _ = require_msg (check_result mf_model_atom_override) (fn () =>
+  "model reconstruction did not honor the atoms override")
+  (fn () => ()) ()
+
+fun mf_model_datatype_golden () =
+  let
+    val list_ty = ``:num list``
+    val scope = mf_translation_scope
+      [(``:num``, 2), (list_ty, 2)] [list_ty]
+    val (sel_names, _) = MFNT.choose_reps_for_all_sels scope
+      MFNT.NameTable.empty
+    val (_, _, rel_table) = MFNT.rename_free_vars sel_names
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+    fun named nickname = valOf (List.find (fn name =>
+      MFNT.nickname_of name = nickname) sel_names)
+    fun relation nickname = MFNT.the_rel rel_table (named nickname)
+    val constructors = MFH.constructors_for mf_hol_context list_ty
+    val nil_constructor = List.nth (constructors, 0)
+    val cons = List.nth (constructors, 1)
+    val nil_id = MFH.constructor_name nil_constructor
+    val cons_id = MFH.constructor_name cons
+    val list_offset = MFS.offset_of_type (#ofs scope) list_ty
+    val num_offset = MFS.offset_of_type (#ofs scope) ``:num``
+    val owner = list_offset + 1
+    val bounds =
+      [(relation (MFN.discr_prefix ^ nil_id), [[list_offset]]),
+       (relation (MFN.discr_prefix ^ cons_id), [[owner]]),
+       (relation (MFN.sel_prefix_for 0 ^ cons_id),
+        [[owner, num_offset + 1]]),
+       (relation (MFN.sel_prefix_for 1 ^ cons_id),
+        [[owner, list_offset]])]
+    val reconstructed = MFM.term_for_rep
+      {scope = scope, atoms = [(NONE, [])], sel_names = sel_names,
+       rel_table = rel_table, bounds = bounds, maybe_opt = false,
+       ty = list_ty, representation = MFR.Atom (2, list_offset),
+       tuples = [[owner]]}
+  in
+    Term.aconv reconstructed ``[1]``
+  end
+
+val _ = require_msg (check_result mf_model_datatype_golden) (fn () =>
+  "datatype reconstruction from discriminator/selector tuples changed")
+  (fn () => ()) ()
+
+fun mf_model_structured_reconstruction () =
+  let
+    val scope = mf_translation_scope [(``:num``, 2), (``:int``, 3)] []
+    val x = ``x : num``
+    val skolem_name = MFN.skolem_prefix_for 0 1 ^ "w"
+    val reconstructed = MFM.reconstruct
+      {scope = scope, atoms = [(NONE, [])], real_frees = [x],
+       eval_terms = [``1 + 1``],
+       free_names = [MFNT.FreeName ("x", ``:num``, MFR.Any)],
+       sel_names = [],
+       nonsel_names =
+         [MFNT.ConstName (skolem_name, ``:num``, MFR.Any),
+          MFNT.ConstName (MFN.eval_prefix ^ "0", ``:num``, MFR.Any),
+          MFNT.ConstName ("num$0", ``:num``, MFR.Any)],
+       rel_table = MFNT.NameTable.empty, bounds = []}
+    val {bindings, evals, skolems, consts, types, codatatypes_ok} =
+      reconstructed
+  in
+    (case bindings of [(name, value)] =>
+       Term.aconv name x andalso variable_named "?" value | _ => false)
+    andalso
+    (case evals of [(term, value)] =>
+       Term.aconv term ``1 + 1`` andalso variable_named "?" value
+     | _ => false) andalso
+    (case skolems of [("w", value)] => variable_named "?" value
+     | _ => false) andalso length consts = 1 andalso
+    List.exists (fn (ty, _, _) => ty = ``:num``) types andalso
+    List.exists (fn (ty, _, _) => ty = ``:int``) types andalso
+    codatatypes_ok
+  end
+
+val _ = require_msg (check_result mf_model_structured_reconstruction)
+  (fn () => "structured reconstruction blocks changed")
+  (fn () => ()) ()
+
+fun mf_model_certifiability_rules () =
+  let
+    val x = ``x : num``
+    val closed = [(x, ``2``)]
+    val unknown = [(x, MFN.unknown_marker ``:num``)]
+    val atom = [(x, MFN.fake_atom 1 ``:num``)]
+    val misplaced_irrelevant = [(x, MFN.irrelevant_marker ``:num``)]
+    val function = combinSyntax.mk_K_1
+      (MFN.irrelevant_marker ``:num``, ``:num``)
+    val prepared = MFM.certification_env [(Term.mk_var
+      ("f", ``:num -> num``), function)]
+  in
+    MFM.certifiable true closed andalso
+    not (MFM.certifiable false closed) andalso
+    not (MFM.certifiable true unknown) andalso
+    not (MFM.certifiable true atom) andalso
+    not (MFM.certifiable true misplaced_irrelevant) andalso
+    (case prepared of
+         SOME [(_, value)] => null (Term.free_vars_lr value)
+       | _ => false) andalso
+    MFM.genuine_means_genuine
+      {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
+       wfs = [false, false], total_consts = NONE} andalso
+    not (MFM.genuine_means_genuine
+      {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
+       wfs = [true], total_consts = NONE}) andalso
+    MFM.try_again_reasons ["wf = true", "total_consts = false"] =
+      ["Try again with wf = true", "Try again with total_consts = false"]
+  end
+
+val _ = require_msg (check_result mf_model_certifiability_rules) (fn () =>
+  "model certification eligibility rules changed") (fn () => ()) ()
+
+fun mf_model_certification_protocol () =
+  let
+    val decoded_eval = (``HD ([] : num list)``, ``7``)
+    val reconstructed : MFM.reconstruction =
+      {bindings = [], evals = [decoded_eval], skolems = [], consts = [],
+       types = [], codatatypes_ok = true}
+    val base : counterexample =
+      {backend = "kodkod", substrate = "kodkod",
+       certainty = Refute_Core.Potential [], bindings = [], evals = [],
+       cert = NONE,
+       scope = SOME [(``:num``, 2)], model = NONE, stats = []}
+    val certified = MFM.certify
+      {executable = true, original = ``F``,
+       eval_terms = [#1 decoded_eval], reconstruction = reconstructed,
+       cex = base, sound = false, genuine_means_genuine = false,
+       reasons = []}
+    val discarded = MFM.certify
+      {executable = true, original = ``T``, eval_terms = [],
+       reconstruction = reconstructed, cex = base, sound = false,
+       genuine_means_genuine = false, reasons = []}
+    val sound_discarded = MFM.certify
+      {executable = true, original = ``T``, eval_terms = [],
+       reconstruction = reconstructed, cex = base, sound = true,
+       genuine_means_genuine = true, reasons = []}
+    val fallback = MFM.certify
+      {executable = false, original = ``F``, eval_terms = [],
+       reconstruction = reconstructed, cex = base, sound = true,
+       genuine_means_genuine = false,
+       reasons = ["Try again with wf = true"]}
+  in
+    (case certified of
+         MFM.Keep {certainty = Genuine, evals = [(_, value)],
+                   cert = SOME _, ...} => Term.aconv value ``7``
+       | _ => false) andalso
+    (case discarded of MFM.Drop => true | _ => false) andalso
+    (case sound_discarded of
+         MFM.Keep {certainty = Refute_Core.Potential
+           ["certification refuted the model — please report"], ...} => true
+       | _ => false) andalso
+    (case fallback of
+         MFM.Keep {certainty = QuasiGenuine
+           ["Try again with wf = true"], cert = NONE, ...} => true
+       | _ => false)
+  end
+
+val _ = require_msg (check_result mf_model_certification_protocol) (fn () =>
+  "model certification/verdict protocol changed") (fn () => ()) ()
 
 fun mf_kodkod_finite_translation () =
   let
@@ -3654,6 +3871,7 @@ val report_cex : counterexample =
     evals = [],
     cert = NONE,
     scope = NONE,
+    model = NONE,
     stats = [("size", 3), ("card", 2), ("tests", 412), ("msec", 400)] }
 
 fun silent_report () =
@@ -3680,6 +3898,48 @@ val _ = require_msg
   "counterexample reporting did not use the substrate line format")
   (fn () => ()) ()
 
+fun mf_formatter_snapshot () =
+  let
+    val x = ``x : num``
+    val cex : counterexample =
+      {backend = "kodkod", substrate = "kodkod",
+       certainty = QuasiGenuine ["Try again with wf = true"],
+       bindings = [(x, MFN.unknown_marker ``:num``)], evals = [],
+       cert = NONE, scope = SOME [(``:num``, 2)],
+       model = SOME
+         {types = [(``:num``, [``0``, ``1``], false)],
+          skolems = [("w", MFN.irrelevant_marker ``:num``)],
+          consts = [(``SUC``, MFN.unknown_marker ``:num -> num``)]},
+       stats = []}
+    val config = upd_show_consts true (upd_show_types true default_config)
+    val actual = format_outcome config (Counterexample [cex])
+    val expected =
+      "Refute found a counterexample (backend: kodkod, substrate: " ^
+      "kodkod):\n" ^
+      "Scope: card num = 2\n" ^
+      "  x = ?\n" ^
+      "Types:\n" ^
+      "  num = {0, 1, ...}\n" ^
+      "Skolem constants:\n" ^
+      "  w = _\n" ^
+      "Constants:\n" ^
+      "  SUC = ?\n" ^
+      "Quasi-genuine:\n" ^
+      "  Try again with wf = true"
+  in
+    actual = expected
+  end
+
+val _ = require_msg (check_result mf_formatter_snapshot) (fn () =>
+  "model-finder formatter snapshot changed") (fn () => ()) ()
+
+fun no_counterexample_snapshot () =
+  format_outcome default_config NoCounterexample =
+    "Refute: no counterexample found within the tested finite bounds"
+
+val _ = require_msg (check_result no_counterexample_snapshot) (fn () =>
+  "bounded no-counterexample wording changed") (fn () => ()) ()
+
 val _ = tprint "Refute genuine-decisive backend racing"
 
 fun stub_cex backend certainty : counterexample =
@@ -3690,6 +3950,7 @@ fun stub_cex backend certainty : counterexample =
     evals = [],
     cert = NONE,
     scope = NONE,
+    model = NONE,
     stats = [] }
 
 val race_mutex = Mutex.mutex ()
@@ -6783,6 +7044,7 @@ fun make_cex genuine : counterexample =
     evals = [],
     cert = NONE,
     scope = NONE,
+    model = NONE,
     stats = [("tests", 1)] }
 
 fun upgrade_from_stuck_path () =
