@@ -480,17 +480,24 @@ structure Refute_ModelFinder_Preproc = struct
       end
       handle HOL_ERR _ => false
 
-  fun count_occurrences needle term =
+  (* Pulled-out values are represented by free reserved variables in HOL4.
+     Count only their free occurrences: a same-named abstraction binder is
+     alpha-local and must neither be collected nor affect this count. *)
+  fun count_free_occurrences needle term =
     let
       val here = if Term.aconv needle term then 1 else 0
     in
       if Term.is_comb term then
         let val (function, argument) = Term.dest_comb term
-        in here + count_occurrences needle function +
-           count_occurrences needle argument
+        in here + count_free_occurrences needle function +
+           count_free_occurrences needle argument
         end
       else if Term.is_abs term then
-        here + count_occurrences needle (#2 (Term.dest_abs term))
+        let val (variable, body) = Term.dest_abs term
+        in
+          if Term.aconv needle variable then 0
+          else count_free_occurrences needle body
+        end
       else
         here
     end
@@ -586,7 +593,8 @@ structure Refute_ModelFinder_Preproc = struct
               (recurse bound false right,
                recurse bound false left)
         else if axiom andalso is_value_var right andalso
-                count_occurrences right term = 1 then
+                not (aconv_member right bound) andalso
+                count_free_occurrences right term = 1 then
           boolSyntax.T
         else
           case destructible_constructor right of
@@ -1129,13 +1137,22 @@ structure Refute_ModelFinder_Preproc = struct
 
   fun is_constructor_pattern_formula term =
     let
-      val (variables, body) = boolSyntax.strip_forall term
-      val (_, conclusion) = boolSyntax.strip_imp body
-      val (left, _) = boolSyntax.dest_eq conclusion
-      val (_, arguments) = HolKernel.strip_comb left
+      fun lhs variables candidate =
+        if boolSyntax.is_forall candidate then
+          let val (variable, body) = boolSyntax.dest_forall candidate
+          in lhs (variable :: variables) body end
+        else if boolSyntax.is_imp_only candidate then
+          lhs variables (#2 (boolSyntax.dest_imp candidate))
+        else
+          SOME (variables, #1 (boolSyntax.dest_eq candidate))
+          handle HOL_ERR _ => NONE
     in
-      List.all (is_constructor_pattern variables) arguments
-    end handle HOL_ERR _ => false
+      case lhs [] term of
+          SOME (variables, left) =>
+            List.all (is_constructor_pattern variables)
+              (#2 (HolKernel.strip_comb left))
+        | NONE => false
+    end
 
   fun axioms_for_term
         (context as {user_axioms, evals, nondefs, nondef_table, ...}

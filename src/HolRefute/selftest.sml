@@ -784,6 +784,30 @@ fun mf_preproc_destroy_goldens () =
       MFP.destroy_pulled_out_constrs context false true beta_redex
     val existential_beta_result =
       MFP.pull_out_existential_constrs context beta_redex
+    val reserved_bound = MFN.mk_reserved_var "refute$v1"
+      ``:num list``
+    val ordinary_bound = ``bound_list : num list``
+    fun bound_axiom variable = boolSyntax.mk_exists
+      (variable, boolSyntax.mk_imp
+        (boolSyntax.mk_eq (``[1] : num list``, variable), boolSyntax.F))
+    val reserved_bound_result = MFP.destroy_pulled_out_constrs
+      context true true (bound_axiom reserved_bound)
+    val ordinary_bound_result = MFP.destroy_pulled_out_constrs
+      context true true (bound_axiom ordinary_bound)
+    val free_value = MFN.mk_reserved_var "refute$vfree"
+      ``:num list``
+    val colliding_bound = MFN.mk_reserved_var "refute$vfree"
+      ``:num list``
+    val fresh_bound = ``fresh_bound : num list``
+    val bound_predicate = ``bound_predicate : num list -> bool``
+    fun sibling_axiom variable = boolSyntax.mk_imp
+      (boolSyntax.mk_eq (free_value, ``[1] : num list``),
+       boolSyntax.mk_exists
+         (variable, Term.mk_comb (bound_predicate, variable)))
+    val colliding_result = MFP.destroy_pulled_out_constrs context true true
+      (sibling_axiom colliding_bound)
+    val fresh_result = MFP.destroy_pulled_out_constrs context true true
+      (sibling_axiom fresh_bound)
   in
     Term.aconv actual_list expected_list andalso
     Term.aconv actual_tree expected_tree andalso
@@ -805,6 +829,8 @@ fun mf_preproc_destroy_goldens () =
     Term.aconv two_existential_result two_existential_expected andalso
     Term.aconv beta_result beta_redex andalso
     Term.aconv existential_beta_result beta_redex andalso
+    Term.aconv reserved_bound_result ordinary_bound_result andalso
+    Term.aconv colliding_result fresh_result andalso
     Term.aconv
       (MFP.destroy_pulled_out_constrs context true true protected_axiom)
       protected_axiom andalso
@@ -1022,6 +1048,12 @@ fun mf_preproc_pipeline_shape () =
     val (_, bound_definitions, _, _) =
       MFP.axioms_for_term (fresh_mf_context ()) [shadow_definition]
         ``!shadow_x : num. p shadow_x``
+    val interleaved_pattern =
+      ``!condition. condition ==> !h : num. !t : num list.
+          (pattern_f : num list -> num) (h :: t) = h``
+    val interleaved_nonpattern =
+      ``!condition. condition ==> !xs : num list.
+          (pattern_f : num list -> num list) (REVERSE xs) = xs``
   in
     length nondefinitions >= 1 andalso
     skolems = [("refute$sk0@1$x", [])] andalso
@@ -1034,7 +1066,9 @@ fun mf_preproc_pipeline_shape () =
       ``(3 : num) = 4`` andalso
     List.exists (Term.aconv definition) selected_definitions andalso
     List.exists (Term.aconv shadow_definition) shadow_definitions andalso
-    null bound_definitions
+    null bound_definitions andalso
+    MFP.is_constructor_pattern_formula interleaved_pattern andalso
+    not (MFP.is_constructor_pattern_formula interleaved_nonpattern)
   end
 
 val _ = require_msg (check_result mf_preproc_pipeline_shape) (fn () =>
