@@ -19,8 +19,8 @@ val _ = use "../src/portableML/json/JSONParser.sig";
 val _ = use "../src/portableML/json/JSONParser.sml";
 val _ = use "../src/portableML/json/JSONDecode.sig";
 val _ = use "../src/portableML/json/JSONDecode.sml";
-val _ = use "holide.ML";
-val _ = use "lsp-server.ML";
+val _ = use "lsp/holide.ML";
+val _ = use "lsp/server.ML";
 
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
