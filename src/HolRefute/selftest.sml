@@ -731,6 +731,30 @@ fun mf_preproc_destroy_goldens () =
           Term.mk_comb (nested_predicate, nested_value)))
     val nested_result =
       MFP.pull_out_existential_constrs context nested_input
+    val relaxed_definition =
+      MFP.pull_out_universal_constrs context true user_free_constructor
+    val second_existential_predicate =
+      ``two_q : ((num -> bool) option) ->
+                 ((num -> bool) option) -> bool``
+    val first_existential_value = MFN.mk_reserved_var "refute$v2"
+      (Term.type_of first_option)
+    val second_existential_value = MFN.mk_reserved_var "refute$v1"
+      (Term.type_of second_option)
+    val two_existential_input = boolSyntax.list_mk_exists
+      ([first_generated_function, second_generated_function],
+       Term.list_mk_comb
+         (second_existential_predicate, [first_option, second_option]))
+    val two_existential_expected = boolSyntax.list_mk_exists
+      ([first_generated_function, second_generated_function,
+        second_existential_value, first_existential_value],
+       boolSyntax.list_mk_conj
+         [boolSyntax.mk_eq (second_existential_value, second_option),
+          boolSyntax.mk_eq (first_existential_value, first_option),
+          Term.list_mk_comb
+            (second_existential_predicate,
+             [first_existential_value, second_existential_value])])
+    val two_existential_result =
+      MFP.pull_out_existential_constrs context two_existential_input
   in
     Term.aconv actual_list expected_list andalso
     Term.aconv actual_tree expected_tree andalso
@@ -740,6 +764,8 @@ fun mf_preproc_destroy_goldens () =
     Term.aconv multiple_result multiple_expected andalso
     Term.aconv existential_result existential_expected andalso
     Term.aconv nested_result nested_expected andalso
+    Term.aconv relaxed_definition user_free_constructor andalso
+    Term.aconv two_existential_result two_existential_expected andalso
     Term.aconv
       (MFP.destroy_pulled_out_constrs context true true protected_axiom)
       protected_axiom andalso
@@ -780,6 +806,17 @@ fun mf_preproc_skolem_golden () =
     val smart_context = fresh_mf_context ()
     val smart_result = MFP.skolemize_term_and_more smart_context 3
       ``(?w : num. T) /\ p``
+    val negative_context = fresh_mf_context ()
+    val negative_skolem = MFN.mk_skolem 0 1 "x" ``:num``
+    val negative_result = MFP.skolemize_term_and_more negative_context 3
+      ``~(!x : num. p x)``
+    val neutral_context = fresh_mf_context ()
+    val neutral_input = ``q (?x : num. p x)``
+    val neutral_result =
+      MFP.skolemize_term_and_more neutral_context 3 neutral_input
+    val collected_context = fresh_mf_context ()
+    val (collected, _, _, _) = MFP.axioms_for_term collected_context
+      [axiom] boolSyntax.T
   in
     Term.aconv actual expected andalso
     metadata = [("refute$sk3@1$x", ["c", "b", "a"])] andalso
@@ -787,7 +824,15 @@ fun mf_preproc_skolem_golden () =
     null (!(#skolems axiom_context)) andalso
     Term.aconv higher_order_result higher_order andalso
     null (!(#skolems higher_order_context)) andalso
-    Term.aconv smart_result ``p : bool``
+    Term.aconv smart_result ``p : bool`` andalso
+    Term.aconv negative_result
+      (boolSyntax.mk_neg (Term.mk_comb (``p : num -> bool``,
+        negative_skolem))) andalso
+    !(#skolems negative_context) = [("refute$sk0@1$x", [])] andalso
+    Term.aconv neutral_result neutral_input andalso
+    null (!(#skolems neutral_context)) andalso
+    List.exists (Term.aconv axiom) collected andalso
+    null (!(#skolems collected_context))
   end
 
 val _ = require_msg (check_result mf_preproc_skolem_golden) (fn () =>
@@ -919,7 +964,11 @@ fun mf_preproc_existential_equality_golden () =
   Term.aconv
     (MFP.destroy_existential_equalities
       ``?x : num. x = y /\ p x``)
-    ``(p (y : num) : bool)``
+    ``(p (y : num) : bool)`` andalso
+  Term.aconv
+    (MFP.destroy_existential_equalities
+      ``?x : num. p x /\ q x``)
+    ``?x : num. q x /\ p x``
 
 val _ = require_msg
   (check_result mf_preproc_existential_equality_golden) (fn () =>
@@ -958,13 +1007,23 @@ fun mf_preproc_quantifier_golden () =
       ``!f g h : (num -> num) -> num.
           f (\x. x) + g (\x. x) = h (\x. x)``
     val high_cost_result = MFP.push_quantifiers_inward high_cost_input
+    val heterogeneous_input =
+      ``!x : bool. !y : num. p x \/ q y \/ r x y``
+    val heterogeneous_expected =
+      ``!y : num. (!x : bool. r x y \/ p x) \/ q y``
+    val heterogeneous_result =
+      MFP.push_quantifiers_inward heterogeneous_input
+    val atomic_quantifier = ``!x : num. T``
   in
     distributed andalso negated andalso negative_preserved andalso
     Term.aconv pushed_shadowed inner andalso
     Term.aconv pushed_distinct inner andalso
     Term.aconv nested_result nested_expected andalso
     Term.type_of high_cost_result = Type.bool andalso
-    null (Term.free_vars_lr high_cost_result)
+    null (Term.free_vars_lr high_cost_result) andalso
+    Term.aconv heterogeneous_result heterogeneous_expected andalso
+    Term.aconv (MFP.push_quantifiers_inward atomic_quantifier)
+      atomic_quantifier
   end
 
 val _ = require_msg (check_result mf_preproc_quantifier_golden) (fn () =>

@@ -317,7 +317,7 @@ structure Refute_ModelFinder_Preproc = struct
           let
             val (left, right) = boolSyntax.dest_eq candidate
             val (right', pulled') =
-              if def then (right, pulled)
+              if relaxed then (right, pulled)
               else recurse forbidden false right pulled
             val (left', pulled'') =
               recurse forbidden false left pulled'
@@ -325,7 +325,7 @@ structure Refute_ModelFinder_Preproc = struct
             (boolSyntax.mk_eq (left', right'), pulled'')
           end
         else if boolSyntax.is_imp_only candidate then
-          if def then (candidate, pulled)
+          if relaxed then (candidate, pulled)
           else
             let
               val (left, right) = boolSyntax.dest_imp candidate
@@ -370,15 +370,17 @@ structure Refute_ModelFinder_Preproc = struct
                        value-variable serials and premise order. *)
                     val (rest', current') = do_arguments rest current
                     val (argument', current'') =
-                      recurse forbidden false argument current'
+                      recurse forbidden relaxed argument current'
                   in
                     (argument' :: rest', current'')
                   end
             val (arguments', pulled') =
               do_arguments arguments pulled
-            val rebuilt = Term.list_mk_comb (head, arguments')
+            val (head', pulled'') =
+              recurse forbidden relaxed head pulled'
+            val rebuilt = Term.list_mk_comb (head', arguments')
           in
-            pull_candidate avoids [] forbidden relaxed rebuilt pulled'
+            pull_candidate avoids [] forbidden relaxed rebuilt pulled''
           end
         else
           pull_candidate avoids [] forbidden relaxed candidate pulled
@@ -408,10 +410,11 @@ structure Refute_ModelFinder_Preproc = struct
             val (body', pulled) = collect outer active body []
             val equations = equations_for_pulled pulled
             val fresh = map #2 pulled
-            val matrix = smart_conj (equations @ [body'])
+            val matrix = List.foldl (fn (equation, result) =>
+              smart_conj [equation, result]) body' equations
           in
             boolSyntax.mk_exists (variable,
-              boolSyntax.list_mk_exists (fresh, matrix))
+              boolSyntax.list_mk_exists (rev fresh, matrix))
           end
         else if boolSyntax.is_forall candidate then
           let val (variable, body) = boolSyntax.dest_forall candidate
@@ -452,9 +455,11 @@ structure Refute_ModelFinder_Preproc = struct
                   end
             val (arguments', pulled') =
               do_arguments arguments pulled
-            val rebuilt = Term.list_mk_comb (head, arguments')
+            val (head', pulled'') =
+              collect outer existentials head pulled'
+            val rebuilt = Term.list_mk_comb (head', arguments')
           in
-            pull_candidate avoids existentials outer false rebuilt pulled'
+            pull_candidate avoids existentials outer false rebuilt pulled''
           end
         else
           pull_candidate avoids existentials outer false candidate pulled
@@ -704,7 +709,8 @@ structure Refute_ModelFinder_Preproc = struct
                    | NONE => boolSyntax.mk_exists
                        (variable, kill rest conjuncts))
         in
-          kill variables (boolSyntax.strip_conj (recurse matrix))
+          (* Nitpick's conjuncts_of traverses the right branch first. *)
+          kill variables (rev (boolSyntax.strip_conj (recurse matrix)))
         end
       and recurse candidate =
         if boolSyntax.is_exists candidate then
@@ -853,7 +859,7 @@ structure Refute_ModelFinder_Preproc = struct
       in Term.mk_abs (variable, distribute_quantifiers body) end
     else if Term.is_comb term then
       let val (function, argument) = Term.dest_comb term
-      in MFH.s_betapply
+      in Term.mk_comb
            (distribute_quantifiers function,
             distribute_quantifiers argument)
       end
@@ -893,22 +899,28 @@ structure Refute_ModelFinder_Preproc = struct
             val (raw_variable, raw_body) =
               if universal then boolSyntax.dest_forall candidate
               else boolSyntax.dest_exists candidate
-            val duplicate = aconv_member raw_variable variables
-            val variable =
-              if duplicate then
-                Term.variant (variables @ Term.free_vars_lr raw_body)
-                  raw_variable
-              else
-                raw_variable
-            val body =
-              if duplicate then substitute raw_variable variable raw_body
-              else raw_body
           in
-            gather universal (variables @ [variable]) body
+            if not (Term.is_comb raw_body) then
+              (variables, candidate)
+            else
+              let
+                val duplicate = aconv_member raw_variable variables
+                val variable =
+                  if duplicate then
+                    Term.variant (variables @ Term.free_vars_lr raw_body)
+                      raw_variable
+                  else
+                    raw_variable
+                val body =
+                  if duplicate then substitute raw_variable variable raw_body
+                  else raw_body
+              in
+                gather universal (variables @ [variable]) body
+              end
           end
         else
           (variables, candidate)
-      fun merge_groups variable groups =
+      fun merge_groups variable_cost variable groups =
         let
           val (yes, no) = List.partition
             (fn (_, used, _) => aconv_member variable used) groups
@@ -925,8 +937,7 @@ structure Refute_ModelFinder_Preproc = struct
               val size = List.foldl
                 (fn ((_, _, cost), total) => total + cost)
                 (0 : IntInf.int) yes *
-                IntInf.fromInt
-                  (MFH.typical_card_of_type (Term.type_of variable))
+                IntInf.fromInt (variable_cost variable)
             in
               (boolSyntax.T, used, size) :: no
             end
@@ -934,12 +945,13 @@ structure Refute_ModelFinder_Preproc = struct
       fun groups_cost groups =
         List.foldl (fn ((_, _, cost), total) => total + cost)
           (0 : IntInf.int) groups
-      fun merge_in_order order groups =
+      fun merge_in_order variable_cost order groups =
         List.foldl (fn (variable, current) =>
-          merge_groups variable current) groups order
-      fun best_order variables groups =
+          merge_groups variable_cost variable current) groups order
+      fun best_order variable_cost variables groups =
         let
-          fun cost order = groups_cost (merge_in_order order groups)
+          fun cost order = groups_cost
+            (merge_in_order variable_cost order groups)
           fun choose (order, NONE) = SOME (cost order, order)
             | choose (order, SOME (best as (best_cost, _))) =
                 let val candidate_cost = cost order
@@ -953,20 +965,20 @@ structure Refute_ModelFinder_Preproc = struct
           #2 (valOf (List.foldl choose NONE
             (MFU.all_permutations variables)))
         end
-      fun greedy_order [] _ = []
-        | greedy_order variables groups =
+      fun greedy_order _ [] _ = []
+        | greedy_order variable_cost variables groups =
             let
               fun remove chosen = List.filter
                 (fn variable => not (Term.aconv chosen variable))
                   variables
               fun choose (variable, NONE) =
-                    SOME (groups_cost (merge_groups variable groups),
-                          variable)
+                    SOME (groups_cost
+                      (merge_groups variable_cost variable groups), variable)
                 | choose (variable,
                     SOME (best as (best_cost, _))) =
                     let
                       val candidate_cost = groups_cost
-                        (merge_groups variable groups)
+                        (merge_groups variable_cost variable groups)
                     in
                       if candidate_cost < best_cost then
                         SOME (candidate_cost, variable)
@@ -976,8 +988,8 @@ structure Refute_ModelFinder_Preproc = struct
               val chosen = #2 (valOf
                 (List.foldl choose NONE variables))
             in
-              chosen :: greedy_order (remove chosen)
-                (merge_groups chosen groups)
+              chosen :: greedy_order variable_cost (remove chosen)
+                (merge_groups variable_cost chosen groups)
             end
       fun build universal connective order groups =
         let
@@ -1027,11 +1039,22 @@ structure Refute_ModelFinder_Preproc = struct
             val groups = map (fn component =>
               (component, used component,
                IntInf.fromInt (Term.term_size component))) components
+            val source_cost_types = rev (map Term.type_of variables)
+            fun variable_cost variable =
+              let
+                val index = Lib.index
+                  (fn other => Term.aconv variable other) variables
+              in
+                (* Upstream stores binder types innermost-first but indexes
+                   their costs by the outermost-first bound number. *)
+                MFH.typical_card_of_type
+                  (List.nth (source_cost_types, index))
+              end
             val order =
               if length variables <= quantifier_cluster_threshold then
-                best_order variables groups
+                best_order variable_cost variables groups
               else
-                greedy_order variables groups
+                greedy_order variable_cost variables groups
           in
             build universal connective order
               (map (fn (component, vars, _) => (component, vars)) groups)
@@ -1041,7 +1064,7 @@ structure Refute_ModelFinder_Preproc = struct
           in Term.mk_abs (variable, recurse body) end
         else if Term.is_comb candidate then
           let val (function, argument) = Term.dest_comb candidate
-          in MFH.s_betapply (recurse function, recurse argument) end
+          in Term.mk_comb (recurse function, recurse argument) end
         else
           candidate
     in
