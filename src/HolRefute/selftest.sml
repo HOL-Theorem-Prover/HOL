@@ -2261,6 +2261,185 @@ val _ = require_msg (check_result mf_nut_renaming) (fn () =>
   "model-finder FreeRel/BoundRel renaming changed")
   (fn () => ()) ()
 
+val _ = tprint "Refute model-finder Kodkod translation"
+
+fun mf_translation_scope assignments deep_types =
+  MFS.scope_from_descriptor mf_hol_context deep_types (assignments, [])
+
+fun mf_translation_constrs scope =
+  let
+    val (nat_card, _) = MFS.spec_of_type scope ``:num``
+    val (int_card, _) = MFS.spec_of_type scope ``:int``
+    val main_j0 = MFS.offset_of_type (#ofs scope) Type.bool
+  in
+    Refute_ModelFinder_Peephole.kodkod_constrs true nat_card int_card
+      main_j0
+  end
+
+fun mf_kodkod_finite_translation () =
+  let
+    val scope = mf_translation_scope [(``:num``, 3)] []
+    val offsets = #ofs scope
+    val kk = mf_translation_constrs scope
+    val exact = MFNT.Cst (MFNT.Unknown, ``:num -> bool``,
+      MFR.Atom (3, 0))
+    val optional = MFNT.Cst (MFNT.Unknown, ``:num -> bool``,
+      MFR.Opt (MFR.Atom (3, 0)))
+    fun finite polarity operand = MFK.kodkod_formula_from_nut offsets kk
+      (MFNT.Op1 (MFNT.Finite, Type.bool, MFR.Formula polarity, operand))
+    val neutral_unknown = MFK.kodkod_formula_from_nut offsets kk
+      (MFNT.Op1 (MFNT.Finite, Type.bool,
+        MFR.Opt (MFR.Atom (2, 0)), optional))
+  in
+    finite MFU.Neut exact = Refute_Forl.True andalso
+    finite MFU.Pos optional = Refute_Forl.False andalso
+    finite MFU.Neg optional = Refute_Forl.True andalso
+    neutral_unknown = Refute_Forl.False
+  end
+
+val _ = require_msg (check_result mf_kodkod_finite_translation) (fn () =>
+  "model-finder FINITE conservative translation changed")
+  (fn () => ()) ()
+
+fun mf_kodkod_quantifier_golden () =
+  let
+    val scope = mf_translation_scope [(``:num``, 3)] []
+    val offsets = #ofs scope
+    val kk = mf_translation_constrs scope
+    val number = MFR.Atom (3, 0)
+    val binder = MFNT.BoundRel ((1, 0), ``:num``, number, "x")
+    val two = MFNT.Cst (MFNT.Num 2, ``:num``, number)
+    val less = MFNT.Op2 (MFNT.Less, Type.bool,
+      MFR.Formula MFU.Pos, binder, two)
+    val quantified = MFNT.Op2 (MFNT.All, Type.bool,
+      MFR.Formula MFU.Pos, binder, less)
+    val expected = Refute_Forl.All
+      ([Refute_Forl.DeclOne ((1, 0), Refute_Forl.AtomSeq (3, 0))],
+       Refute_Forl.RelEq
+         (Refute_Forl.Join
+            (Refute_Forl.Atom 2,
+             Refute_Forl.Join
+               (Refute_Forl.Var (1, 0),
+                Refute_Forl.Rel MFPH.nat_less_rel)),
+          Refute_Forl.Atom 1))
+  in
+    MFK.kodkod_formula_from_nut offsets kk quantified = expected
+  end
+
+val _ = require_msg (check_result mf_kodkod_quantifier_golden) (fn () =>
+  "model-finder quantified nat FORL golden changed")
+  (fn () => ()) ()
+
+fun mf_kodkod_closure_golden () =
+  let
+    val relation_ty = ``:(num # num) -> bool``
+    val scope = mf_translation_scope [(``:num``, 3)] []
+    val atom = MFR.Atom (3, 0)
+    val relation_rep = MFR.Func
+      (MFR.Struct [atom, atom], MFR.Formula MFU.Neut)
+    val relation = MFNT.FreeRel
+      ((2, 0), relation_ty, relation_rep, "r")
+    val closure = MFNT.Op1
+      (MFNT.Closure, relation_ty, relation_rep, relation)
+    val equality = MFNT.Op2 (MFNT.Eq, Type.bool,
+      MFR.Formula MFU.Pos, closure, relation)
+  in
+    MFK.kodkod_formula_from_nut (#ofs scope)
+      (mf_translation_constrs scope) equality =
+      Refute_Forl.RelEq
+        (Refute_Forl.Closure (Refute_Forl.Rel (2, 0)),
+         Refute_Forl.Rel (2, 0))
+  end
+
+val _ = require_msg (check_result mf_kodkod_closure_golden) (fn () =>
+  "model-finder binary closure FORL golden changed")
+  (fn () => ()) ()
+
+fun mf_kodkod_binary_special_goldens () =
+  let
+    val relation_ty = ``:num -> num -> bool``
+    val scope = mf_translation_scope [(``:num``, 3)] []
+    val atom = MFR.Atom (3, 0)
+    val relation_rep = MFR.Func
+      (atom, MFR.Func (atom, MFR.Formula MFU.Neut))
+    fun relation index name = MFNT.FreeRel
+      ((2, index), relation_ty, relation_rep, name)
+    val first = relation 0 "r"
+    val second = relation 1 "s"
+    val result = relation 2 "t"
+    fun equality left right = MFNT.Op2 (MFNT.Eq, Type.bool,
+      MFR.Formula MFU.Pos, left, right)
+    val converse = MFNT.Op1
+      (MFNT.Converse, relation_ty, relation_rep, first)
+    val composition = MFNT.Op2 (MFNT.Composition, relation_ty,
+      relation_rep, first, second)
+    val translate = MFK.kodkod_formula_from_nut (#ofs scope)
+      (mf_translation_constrs scope)
+  in
+    translate (equality converse result) =
+      Refute_Forl.RelEq
+        (Refute_Forl.Project (Refute_Forl.Rel (2, 0),
+           [Refute_Forl.Num 1, Refute_Forl.Num 0]),
+         Refute_Forl.Rel (2, 2)) andalso
+    translate (equality composition result) =
+      Refute_Forl.RelEq
+        (Refute_Forl.Join
+           (Refute_Forl.Rel (2, 0), Refute_Forl.Rel (2, 1)),
+         Refute_Forl.Rel (2, 2))
+  end
+
+val _ = require_msg
+  (check_result mf_kodkod_binary_special_goldens) (fn () =>
+    "model-finder converse/composition FORL goldens changed")
+  (fn () => ()) ()
+
+fun mf_assembly_fixture term assignments deep_types =
+  let
+    val scope = mf_translation_scope assignments deep_types
+    val nut = MFNT.nut_from_term mf_hol_context MFNT.Eq term
+    val (free_names, nonsel_names) =
+      MFNT.add_free_and_const_names nut ([], [])
+    val settings = MFK.kodkod_problem_settings ["DefaultSAT4J"]
+      (#bits scope) 0
+    val params : MFK.assembly_params =
+      {debug = false, peephole_optim = true, total_consts = false,
+       datatype_sym_break = MFK.datatype_sym_break,
+       comment = term_to_string term, settings = settings,
+       free_names = free_names, nonsel_names = nonsel_names,
+       nondef_us = [nut], def_us = []}
+  in
+    (params, scope)
+  end
+
+fun mf_assembled_problem term assignments deep_types =
+  let val (params, scope) =
+    mf_assembly_fixture term assignments deep_types
+  in #1 (MFK.assemble_problem params false scope) end
+
+fun mf_kodkod_assembly_golden () =
+  let
+    val term = ``~((n : num) + 1 = n)``
+    val assignments = [(``:num``, 3)]
+    val problem = mf_assembled_problem term assignments []
+    val (params, scope) = mf_assembly_fixture term assignments []
+    val ((_, sound), (_, unsound)) =
+      MFK.assemble_problem_pair params scope
+  in
+    not (#unsound sound) andalso #unsound unsound andalso
+    #settings problem =
+      [("solver", "\"DefaultSAT4J\""), ("bit_width", "16"),
+       ("symmetry_breaking", "15"), ("sharing", "3"),
+       ("flatten", "false"), ("delay", "0")] andalso
+    #univ_card problem = 3 andalso not (null (#bounds problem)) andalso
+    List.exists (fn (declarations, _) => List.exists
+      (fn (index, _) => index = MFPH.suc_rel) declarations)
+      (#bounds problem)
+  end
+
+val _ = require_msg (check_result mf_kodkod_assembly_golden) (fn () =>
+  "model-finder problem assembly golden changed")
+  (fn () => ()) ()
+
 val _ = tprint "Refute model-finder peephole"
 
 structure MFPP = Refute_ModelFinder_Peephole
@@ -2573,7 +2752,10 @@ local
     List.all golden_matches
       [("forl-layout.kki", [layout_problem]),
        ("forl-expressions.kki", [expression_problem]),
-       ("forl-multi.kki", multi_problems)]
+       ("forl-multi.kki", multi_problems),
+       ("mf-kodkod-translation.kki",
+        [mf_assembled_problem ``~((xs : num list) = [])``
+          [(``:num list``, 3), (``:num``, 2)] [``:num list``]])]
 in
   val _ = require_msg (check_result serializer_goldens) (fn () =>
     "FORL output differed byte-for-byte from a checked-in .kki golden")
@@ -2951,6 +3133,34 @@ local
 
   val conversion_problems = List.map conversion_problem conversion_tests
 
+  val mf_end_to_end_problems =
+    [mf_assembled_problem ``~((xs : num list) = [])``
+       [(``:num list``, 3), (``:num``, 2)] [``:num list``],
+     mf_assembled_problem
+       ``((xs : num list) = [] /\ xs = [0])``
+       [(``:num list``, 3), (``:num``, 2)] [``:num list``],
+     mf_assembled_problem ``~((n : num) + 1 = n)``
+       [(``:num``, 3)] []]
+
+  fun mf_translation_end_to_end () =
+    let
+      fun solve problem = solve_any_problem true false (deadline 60) 1 1
+        [problem]
+      fun has_free_tuple instance =
+        case List.find (fn (index, _) => index = (1, 0)) instance of
+            SOME (_, _ :: _) => true
+          | _ => false
+      fun sat (Normal ([(0, instance)], [], "")) =
+            has_free_tuple instance
+        | sat _ = false
+      fun unsat (Normal ([], [0], "")) = true
+        | unsat _ = false
+    in
+      sat (solve (List.nth (mf_end_to_end_problems, 0))) andalso
+      unsat (solve (List.nth (mf_end_to_end_problems, 1))) andalso
+      sat (solve (List.nth (mf_end_to_end_problems, 2)))
+    end
+
   fun conversion_round_trips () =
     case solve_any_problem true false (deadline 60) 1 1
         conversion_problems of
@@ -2990,6 +3200,12 @@ in
     if bridge_configured then
       require_msg (check_result conversion_round_trips) (fn () =>
         "Kodkodi accepted a negated representation-conversion identity")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_translation_end_to_end) (fn () =>
+        "model-finder scope-to-Kodkodi SAT/UNSAT harness failed")
         (fn () => ()) ()
     else ()
 end

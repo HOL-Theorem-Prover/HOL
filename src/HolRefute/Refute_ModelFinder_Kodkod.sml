@@ -2,10 +2,10 @@
     Author:     Jasmin Blanchette, TU Muenchen
     Copyright   2008, 2009, 2010
 
-Kodkod bounds and datatype axioms for the HOL4 Refute model finder.
+Kodkod translation, bounds, and datatype axioms for the HOL4 Refute model
+finder.
 
-This is part 1 of the port of Isabelle Nitpick's nitpick_kodkod.ML.
-Formula translation is deliberately left to the following stage.
+This is a port of Isabelle Nitpick's nitpick_kodkod.ML.
 *)
 
 signature REFUTE_MODEL_FINDER_KODKOD = sig
@@ -23,6 +23,8 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
   val sharing_level : int
   val flatten : bool
   val kodkod_settings : int -> Refute_Forl.setting list
+  val kodkod_problem_settings :
+    string list -> int -> int -> Refute_Forl.setting list
 
   val univ_card :
     int -> int -> int -> Refute_Forl.bound list ->
@@ -46,6 +48,33 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
     bool -> need_values -> data_type_spec list -> nut ->
     Refute_Forl.bound
   val merge_bounds : Refute_Forl.bound list -> Refute_Forl.bound list
+  val kodkod_formula_from_nut :
+    offset_table -> kodkod_constrs -> nut -> Refute_Forl.formula
+
+  type problem_metadata =
+    {free_names : nut list,
+     sel_names : nut list,
+     nonsel_names : nut list,
+     rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
+     unsound : bool,
+     scope : Refute_ModelFinder_Scope.scope}
+  type rich_problem = Refute_Forl.problem * problem_metadata
+  type assembly_params =
+    {debug : bool,
+     peephole_optim : bool,
+     total_consts : bool,
+     datatype_sym_break : int,
+     comment : string,
+     settings : Refute_Forl.setting list,
+     free_names : nut list,
+     nonsel_names : nut list,
+     nondef_us : nut list,
+     def_us : nut list}
+  val assemble_problem :
+    assembly_params -> bool -> Refute_ModelFinder_Scope.scope -> rich_problem
+  val assemble_problem_pair :
+    assembly_params -> Refute_ModelFinder_Scope.scope ->
+    rich_problem * rich_problem
 
   val empty_need_values : data_type_spec list -> need_values
   val declarative_axiom_for_plain_rel :
@@ -77,6 +106,7 @@ structure MFP = Refute_ModelFinder_Peephole
 structure MFR = Refute_ModelFinder_Rep
 structure MFNT = Refute_ModelFinder_Nut
 structure MFU = Refute_ModelFinder_Util
+structure KK = Refute_Forl
 
 type hol_type = Type.hol_type
 type nut = MFNT.nut
@@ -99,6 +129,13 @@ fun kodkod_settings delay =
    ("sharing", Int.toString sharing_level),
    ("flatten", Bool.toString flatten),
    ("delay", signed_int delay)]
+
+fun quote text = "\"" ^ text ^ "\""
+
+fun kodkod_problem_settings solver bits delay =
+  [("solver", String.concatWith ", " (map quote solver)),
+   ("bit_width", Int.toString (if bits = 0 then 16 else bits + 1))] @
+  kodkod_settings delay
 
 fun same_type left right = Type.compare (left, right) = EQUAL
 fun member equal value = List.exists (fn other => equal (value, other))
@@ -1300,6 +1337,1502 @@ fun declarative_axioms_for_data_types context sym_break bits offsets kk
     maps (other_axioms_for_data_type bits offsets kk need_values
       relation_table) data_types
   end
+
+fun singleton_from_combination atoms =
+  MFU.fold1 (fn left => fn right => KK.Product (left, right))
+    (map KK.Atom atoms)
+
+fun all_singletons_for_rep representation =
+  if MFR.is_lone_rep representation then
+    map singleton_from_combination
+      (MFR.all_combinations_for_rep representation)
+  else
+    raise MFR.REP
+      ("Refute_ModelFinder_Kodkod.all_singletons_for_rep",
+       [representation])
+
+fun unpack_products (KK.Product (left, right)) =
+      unpack_products left @ unpack_products right
+  | unpack_products relation = [relation]
+
+fun unpack_joins (KK.Join (left, right)) =
+      unpack_joins left @ unpack_joins right
+  | unpack_joins relation = [relation]
+
+val empty_rel_for_rep = MFP.empty_n_ary_rel o MFR.arity_of_rep
+
+fun full_rel_for_rep representation =
+  case MFR.atom_schema_of_rep representation of
+      [] => raise MFR.REP
+        ("Refute_ModelFinder_Kodkod.full_rel_for_rep", [representation])
+    | schema => MFU.fold1
+        (fn left => fn right => KK.Product (left, right))
+        (map KK.AtomSeq schema)
+
+fun basic_rel_rel_let register
+      ({kk_rel_let, ...} : kodkod_constrs) body relation =
+  if MFP.inline_rel_expr relation then
+    body relation
+  else
+    let val index = (KK.arity_of_rel_expr relation, register)
+    in
+      kk_rel_let [KK.AssignRelReg (index, relation)]
+        (body (KK.RelReg index))
+    end
+
+val single_rel_rel_let = basic_rel_rel_let 0
+
+fun double_rel_rel_let kk body first second =
+  single_rel_rel_let kk
+    (fn first' => basic_rel_rel_let 1 kk (body first') second) first
+
+fun triple_rel_rel_let kk body first second third =
+  double_rel_rel_let kk
+    (fn first' => fn second' =>
+      basic_rel_rel_let 2 kk (body first' second') third)
+    first second
+
+fun atom_from_formula
+      ({kk_rel_if, ...} : kodkod_constrs) offset formula =
+  kk_rel_if formula (KK.Atom (offset + 1)) (KK.Atom offset)
+
+fun rel_expr_from_formula kk representation formula =
+  case MFR.unopt_rep representation of
+      MFR.Atom (2, offset) => atom_from_formula kk offset formula
+    | _ => raise MFR.REP
+        ("Refute_ModelFinder_Kodkod.rel_expr_from_formula",
+         [representation])
+
+fun unpack_vect_in_chunks
+      ({kk_project_seq, ...} : kodkod_constrs) chunk_arity count relation =
+  List.tabulate (count, fn index =>
+    kk_project_seq relation (index * chunk_arity) chunk_arity)
+
+fun kk_n_fold_join
+      (kk as {kk_intersect, kk_product, kk_join, kk_project_seq, ...}
+       : kodkod_constrs)
+      one domain_rep result_rep argument relation =
+  case MFR.arity_of_rep domain_rep of
+      1 => kk_join argument relation
+    | argument_arity =>
+        let val unpacked = unpack_products argument
+        in
+          if one andalso length unpacked = argument_arity then
+            List.foldl (fn (part, result) => kk_join part result)
+              relation unpacked
+          else if one andalso MFP.inline_rel_expr argument then
+            List.foldl (fn (part, result) => kk_join part result)
+              relation
+              (unpack_vect_in_chunks kk 1 argument_arity argument)
+          else
+            kk_project_seq
+              (kk_intersect
+                (kk_product argument (full_rel_for_rep result_rep))
+                relation)
+              argument_arity (MFR.arity_of_rep result_rep)
+        end
+
+fun kk_case_switch
+      (kk as {kk_union, kk_product, ...} : kodkod_constrs)
+      old_rep new_rep relation old_values new_values =
+  if old_values = new_values then
+    relation
+  else
+    kk_n_fold_join kk true old_rep new_rep relation
+      (MFU.fold1 kk_union
+        (ListPair.mapEq (fn (left, right) => kk_product left right)
+          (old_values, new_values)))
+
+val lone_rep_fallback_max_card = 4096
+val some_offset = 0
+
+fun lone_rep_fallback kk new_rep old_rep relation =
+  if old_rep = new_rep then
+    relation
+  else
+    let val cardinality = MFR.card_of_rep old_rep
+    in
+      if MFR.is_lone_rep old_rep andalso MFR.is_lone_rep new_rep andalso
+         cardinality = MFR.card_of_rep new_rep then
+        if cardinality >= lone_rep_fallback_max_card then
+          raise MFU.TOO_LARGE
+            ("Refute_ModelFinder_Kodkod.lone_rep_fallback",
+             "too high cardinality (" ^ Int.toString cardinality ^ ")")
+        else
+          kk_case_switch kk old_rep new_rep relation
+            (all_singletons_for_rep old_rep)
+            (all_singletons_for_rep new_rep)
+      else
+        raise MFR.REP
+          ("Refute_ModelFinder_Kodkod.lone_rep_fallback",
+           [old_rep, new_rep])
+    end
+and atom_from_rel_expr kk atom old_rep relation =
+  case old_rep of
+      MFR.Func (domain, range) =>
+        let
+          val domain_card = MFR.card_of_rep domain
+          val range' =
+            case range of
+                MFR.Atom _ => range
+              | _ => MFR.Atom (MFR.card_of_rep range, some_offset)
+        in
+          atom_from_rel_expr kk atom (MFR.Vect (domain_card, range'))
+            (vect_from_rel_expr kk domain_card range' old_rep relation)
+        end
+    | MFR.Opt _ => raise MFR.REP
+        ("Refute_ModelFinder_Kodkod.atom_from_rel_expr", [old_rep])
+    | _ => lone_rep_fallback kk (MFR.Atom atom) old_rep relation
+and struct_from_rel_expr kk reps old_rep relation =
+  case old_rep of
+      MFR.Atom _ =>
+        lone_rep_fallback kk (MFR.Struct reps) old_rep relation
+    | MFR.Struct old_reps =>
+        if old_reps = reps then
+          relation
+        else if map MFR.card_of_rep old_reps =
+                map MFR.card_of_rep reps then
+          let
+            val old_arities = map MFR.arity_of_rep old_reps
+            val old_offsets = MFU.offset_list old_arities
+            val old_relations = ListPair.mapEq
+              (fn (offset, arity) =>
+                #kk_project_seq kk relation offset arity)
+              (old_offsets, old_arities)
+          in
+            MFU.fold1 (#kk_product kk)
+              (ListPair.mapEq
+                (fn (new_rep, (old_rep, old_relation)) =>
+                  rel_expr_from_rel_expr kk new_rep old_rep old_relation)
+                (reps, ListPair.zip (old_reps, old_relations)))
+          end
+        else
+          lone_rep_fallback kk (MFR.Struct reps) old_rep relation
+    | _ => raise MFR.REP
+        ("Refute_ModelFinder_Kodkod.struct_from_rel_expr", [old_rep])
+and vect_from_rel_expr kk count rep old_rep relation =
+  case old_rep of
+      MFR.Atom _ =>
+        lone_rep_fallback kk (MFR.Vect (count, rep)) old_rep relation
+    | MFR.Vect (old_count, old_body) =>
+        if count = old_count andalso rep = old_body then relation
+        else lone_rep_fallback kk (MFR.Vect (count, rep)) old_rep relation
+    | MFR.Func (domain, MFR.Formula MFU.Neut) =>
+        if count = MFR.card_of_rep domain then
+          MFU.fold1 (#kk_product kk)
+            (map (fn argument =>
+              rel_expr_from_formula kk rep
+                (#kk_subset kk argument relation))
+              (all_singletons_for_rep domain))
+        else
+          raise MFR.REP
+            ("Refute_ModelFinder_Kodkod.vect_from_rel_expr", [old_rep])
+    | MFR.Func (domain, range) =>
+        MFU.fold1 (#kk_product kk)
+          (map (fn argument =>
+            rel_expr_from_rel_expr kk rep range
+              (kk_n_fold_join kk true domain range argument relation))
+            (all_singletons_for_rep domain))
+    | _ => raise MFR.REP
+        ("Refute_ModelFinder_Kodkod.vect_from_rel_expr", [old_rep])
+and func_from_no_opt_rel_expr kk domain range
+      (MFR.Atom atom) relation =
+    let
+      val domain_card = MFR.card_of_rep domain
+      val range' =
+        case range of
+            MFR.Atom _ => range
+          | _ => MFR.Atom (MFR.card_of_rep range, some_offset)
+    in
+      func_from_no_opt_rel_expr kk domain range
+        (MFR.Vect (domain_card, range'))
+        (vect_from_rel_expr kk domain_card range'
+          (MFR.Atom atom) relation)
+    end
+  | func_from_no_opt_rel_expr kk domain
+      (MFR.Formula MFU.Neut) old_rep relation =
+      (case old_rep of
+           MFR.Vect (count, MFR.Atom (2, offset)) =>
+             let
+               val arguments = all_singletons_for_rep domain
+               val values = unpack_vect_in_chunks kk 1 count relation
+               fun entry argument value =
+                 #kk_join kk value
+                   (#kk_product kk (KK.Atom (offset + 1)) argument)
+             in
+               MFU.fold1 (#kk_union kk)
+                 (ListPair.mapEq (fn (argument, value) =>
+                    entry argument value) (arguments, values))
+             end
+         | MFR.Func (old_domain, MFR.Formula MFU.Neut) =>
+             if domain = old_domain then
+               relation
+             else
+               let
+                 val schema = MFR.atom_schema_of_rep domain
+                 val product = MFU.fold1 (#kk_product kk)
+                   (unary_var_seq (~1) (length schema))
+                 val converted = rel_expr_from_rel_expr kk old_domain
+                   domain product
+                 val equality =
+                   if MFR.is_one_rep old_domain then #kk_subset kk
+                   else #kk_rel_eq kk
+               in
+                 #kk_comprehension kk
+                   (decls_for_atom_schema (~1) schema)
+                   (equality converted relation)
+               end
+         | MFR.Func (old_domain, MFR.Atom (2, offset)) =>
+             func_from_no_opt_rel_expr kk domain
+               (MFR.Formula MFU.Neut)
+               (MFR.Func (old_domain, MFR.Formula MFU.Neut))
+               (#kk_join kk relation (KK.Atom (offset + 1)))
+         | _ => raise MFR.REP
+             ("Refute_ModelFinder_Kodkod.func_from_no_opt_rel_expr",
+              [old_rep, MFR.Func (domain, MFR.Formula MFU.Neut)]))
+  | func_from_no_opt_rel_expr kk domain range old_rep relation =
+      (case old_rep of
+           MFR.Vect (count, old_range) =>
+             let
+               val arguments = all_singletons_for_rep domain
+               val values =
+                 unpack_vect_in_chunks kk
+                   (MFR.arity_of_rep old_range) count relation
+                 |> map (rel_expr_from_rel_expr kk range old_range)
+             in
+               MFU.fold1 (#kk_union kk)
+                 (ListPair.mapEq (fn (argument, value) =>
+                    #kk_product kk argument value) (arguments, values))
+             end
+         | MFR.Func (old_domain, MFR.Formula MFU.Neut) =>
+             (case range of
+                  MFR.Atom (atom as (2, offset)) =>
+                    let val schema = MFR.atom_schema_of_rep domain
+                    in
+                      if length schema = 1 then
+                        #kk_override kk
+                          (#kk_product kk (KK.AtomSeq (hd schema))
+                            (KK.Atom offset))
+                          (#kk_product kk relation
+                            (KK.Atom (offset + 1)))
+                      else
+                        let
+                          val domain_product =
+                            MFU.fold1 (#kk_product kk)
+                              (unary_var_seq (~1) (length schema))
+                          val converted = rel_expr_from_rel_expr kk
+                            old_domain domain domain_product
+                          val range_var =
+                            KK.Var (1, ~(length schema) - 1)
+                          val range_atom = atom_from_formula kk offset
+                            (#kk_subset kk converted relation)
+                        in
+                          #kk_comprehension kk
+                            (decls_for_atom_schema (~1)
+                              (schema @ [atom]))
+                            (#kk_subset kk range_var range_atom)
+                        end
+                    end
+                | _ => raise MFR.REP
+                    ("Refute_ModelFinder_Kodkod." ^
+                     "func_from_no_opt_rel_expr",
+                     [old_rep, MFR.Func (domain, range)]))
+         | MFR.Func (old_domain, old_range) =>
+             if domain = old_domain andalso range = old_range then
+               relation
+             else
+               let
+                 val domain_schema = MFR.atom_schema_of_rep domain
+                 val range_schema = MFR.atom_schema_of_rep range
+                 val domain_product = MFU.fold1 (#kk_product kk)
+                   (unary_var_seq (~1) (length domain_schema))
+                 val converted_domain = rel_expr_from_rel_expr kk
+                   old_domain domain domain_product
+                 val range_product = MFU.fold1 (#kk_product kk)
+                   (unary_var_seq (~(length domain_schema) - 1)
+                     (length range_schema))
+                 val converted_range = rel_expr_from_rel_expr kk
+                   old_range range range_product
+                 val application = kk_n_fold_join kk true old_domain
+                   old_range converted_domain relation
+                 val equality =
+                   if MFR.is_one_rep old_range then #kk_subset kk
+                   else #kk_rel_eq kk
+               in
+                 #kk_comprehension kk
+                   (decls_for_atom_schema (~1)
+                     (domain_schema @ range_schema))
+                   (equality converted_range application)
+               end
+         | _ => raise MFR.REP
+             ("Refute_ModelFinder_Kodkod.func_from_no_opt_rel_expr",
+              [old_rep, MFR.Func (domain, range)]))
+and rel_expr_from_rel_expr kk new_rep old_rep relation =
+  let
+    val old_unopt = MFR.unopt_rep old_rep
+    val new_unopt = MFR.unopt_rep new_rep
+  in
+    if old_unopt <> old_rep andalso new_unopt = new_rep then
+      raise MFR.REP
+        ("Refute_ModelFinder_Kodkod.rel_expr_from_rel_expr",
+         [old_rep, new_rep])
+    else if new_unopt = old_unopt then
+      relation
+    else
+      (case new_unopt of
+           MFR.Atom atom => atom_from_rel_expr kk atom
+         | MFR.Struct reps => struct_from_rel_expr kk reps
+         | MFR.Vect (count, rep) => vect_from_rel_expr kk count rep
+         | MFR.Func (domain, range) =>
+             func_from_no_opt_rel_expr kk domain range
+         | _ => raise MFR.REP
+             ("Refute_ModelFinder_Kodkod.rel_expr_from_rel_expr",
+              [old_rep, new_rep])) old_unopt relation
+  end
+and rel_expr_to_func kk domain range =
+  rel_expr_from_rel_expr kk (MFR.Func (domain, range))
+
+fun the_single [value] = value
+  | the_single _ = raise MFU.ARG
+      ("Refute_ModelFinder_Kodkod.the_single", "not a singleton")
+
+fun flip_nums arity =
+  map KK.Num (MFU.index_seq 1 arity @ [0])
+
+fun binary_rel_types ty =
+  let val (domain, range) = Type.dom_rng ty
+  in
+    if MFH.is_pair_type domain then
+      pairSyntax.dest_prod domain
+    else
+      let val (second, _) = Type.dom_rng range
+      in (domain, second) end
+  end
+
+fun dest_binary_rep representation =
+  case MFR.unopt_rep representation of
+      MFR.Func (MFR.Struct [first, second], body) =>
+        (first, second, body, true)
+    | MFR.Func (first, MFR.Func (second, body)) =>
+        (first, second, body, false)
+    | _ => raise MFR.REP
+        ("Refute_ModelFinder_Kodkod.dest_binary_rep", [representation])
+
+fun binary_rep paired first second body =
+  if paired then MFR.Func (MFR.Struct [first, second], body)
+  else MFR.Func (first, MFR.Func (second, body))
+
+fun binary_rep_for_type ty first second body =
+  binary_rep (MFH.is_pair_type (#1 (Type.dom_rng ty)))
+    first second body
+
+fun binary_domain_card representation =
+  case Lib.total dest_binary_rep representation of
+      SOME (first, second, _, _) =>
+        MFR.card_of_rep first * MFR.card_of_rep second
+    | NONE => MFR.card_of_domain_from_rep 2 representation
+
+fun m4_translation location =
+  raise MFU.NOT_SUPPORTED
+    (location ^ ": unreachable in M3 by the closure proof in " ^
+     "m3-kodkod-translation section 6 / PLAN_M3 section 9")
+
+fun kodkod_formula_from_nut offsets
+      (kk as {kk_all, kk_exist, kk_formula_let, kk_formula_if, kk_or,
+              kk_not, kk_iff, kk_and, kk_subset, kk_rel_eq, kk_no,
+              kk_lone, kk_some, kk_rel_let, kk_rel_if, kk_union,
+              kk_difference, kk_intersect, kk_product, kk_join,
+              kk_closure, kk_comprehension, kk_project,
+              kk_project_seq, kk_not3, kk_nat_less, kk_int_less, ...}
+       : kodkod_constrs) nut =
+  let
+    val main_offset = MFS.offset_of_type offsets Type.bool
+    val bool_offset = main_offset
+    val bool_atom_rep = MFR.Atom (2, main_offset)
+    val false_atom = KK.Atom bool_offset
+    val true_atom = KK.Atom (bool_offset + 1)
+
+    fun formula_from_opt_atom polarity offset relation =
+      case polarity of
+          MFU.Neg => kk_not (kk_rel_eq relation (KK.Atom offset))
+        | _ => kk_rel_eq relation (KK.Atom (offset + 1))
+
+    val formula_from_atom = formula_from_opt_atom MFU.Pos
+
+    fun unknown_formula polarity bad_nut =
+      case polarity of
+          MFU.Pos => KK.False
+        | MFU.Neg => KK.True
+        | MFU.Neut => raise MFNT.NUT
+            ("Refute_ModelFinder_Kodkod.unknown_formula", [bad_nut])
+
+    fun to_f candidate =
+      case MFNT.rep_of candidate of
+          MFR.Formula polarity =>
+            (case candidate of
+                 MFNT.Cst (MFNT.False, _, _) => KK.False
+               | MFNT.Cst (MFNT.True, _, _) => KK.True
+               | MFNT.Cst (MFNT.Unknown, _, _) =>
+                   unknown_formula polarity candidate
+               | MFNT.Cst (MFNT.Unrep, _, _) =>
+                   unknown_formula polarity candidate
+               | MFNT.Op1 (MFNT.Not, _, _, first) =>
+                   kk_not (to_f_with_polarity
+                     (MFU.flip_polarity polarity) first)
+               | MFNT.Op1 (MFNT.Finite, _, _, first) =>
+                   if MFR.is_opt_rep (MFNT.rep_of first) then
+                     (* [deviation] PLAN_M3 decision 30: FINITE on an
+                        optional set is the three-valued unknown Boolean,
+                        never an affirmative fact in a sound problem. *)
+                     unknown_formula polarity candidate
+                   else
+                     (case polarity of
+                          MFU.Neut => KK.True
+                        | MFU.Pos => KK.False
+                        | MFU.Neg => KK.True)
+               | MFNT.Op1 (MFNT.IsUnknown, _, _, first) =>
+                   kk_no (to_r first)
+               | MFNT.Op1 (MFNT.Cast, _, _, first) =>
+                   to_f_with_polarity polarity first
+               | MFNT.Op2 (MFNT.All, _, _, first, second) =>
+                   kk_all (MFNT.untuple to_decl first)
+                     (to_f_with_polarity polarity second)
+               | MFNT.Op2 (MFNT.Exist, _, _, first, second) =>
+                   kk_exist (MFNT.untuple to_decl first)
+                     (to_f_with_polarity polarity second)
+               | MFNT.Op2 (MFNT.Or, _, _, first, second) =>
+                   kk_or (to_f_with_polarity polarity first)
+                     (to_f_with_polarity polarity second)
+               | MFNT.Op2 (MFNT.And, _, _, first, second) =>
+                   kk_and (to_f_with_polarity polarity first)
+                     (to_f_with_polarity polarity second)
+               | MFNT.Op2 (MFNT.Less, ty, MFR.Formula inner_polarity,
+                   first, second) =>
+                   formula_from_opt_atom inner_polarity bool_offset
+                     (to_r (MFNT.Op2 (MFNT.Less, ty,
+                       MFR.Opt bool_atom_rep, first, second)))
+               | MFNT.Op2 (MFNT.DefEq, _, _, first, second) =>
+                   (case MFR.min_rep (MFNT.rep_of first)
+                          (MFNT.rep_of second) of
+                        MFR.Formula inner_polarity =>
+                          kk_iff
+                            (to_f_with_polarity inner_polarity first)
+                            (to_f_with_polarity inner_polarity second)
+                      | minimum_rep =>
+                          let
+                            fun arguments
+                                  (MFNT.Op2 (MFNT.Apply, _, _, func,
+                                     argument)) =
+                                  argument :: arguments func
+                              | arguments (MFNT.Tuple (_, _, items)) =
+                                  items
+                              | arguments _ = []
+                            val optional_arguments =
+                              List.filter
+                                (MFR.is_opt_rep o MFNT.rep_of)
+                                (arguments first)
+                            val equality = kk_rel_eq
+                              (to_rep minimum_rep first)
+                              (to_rep minimum_rep second)
+                          in
+                            if null optional_arguments orelse
+                               not (MFR.is_Opt minimum_rep) orelse
+                               MFNT.is_eval_name first then
+                              List.foldl (fn (argument, result) =>
+                                kk_or (kk_no (to_r argument)) result)
+                                equality optional_arguments
+                            else
+                              kk_subset (to_rep minimum_rep first)
+                                (to_rep minimum_rep second)
+                          end)
+               | MFNT.Op2 (MFNT.Eq, _, _, first, second) =>
+                   (case MFR.min_rep (MFNT.rep_of first)
+                          (MFNT.rep_of second) of
+                        MFR.Formula inner_polarity =>
+                          kk_iff
+                            (to_f_with_polarity inner_polarity first)
+                            (to_f_with_polarity inner_polarity second)
+                      | minimum_rep =>
+                          if MFR.is_opt_rep minimum_rep then
+                            if polarity = MFU.Neut then
+                              kk_rel_eq (to_rep minimum_rep first)
+                                (to_rep minimum_rep second)
+                            else if MFNT.is_Cst MFNT.Unrep first then
+                              to_could_be_unrep
+                                (polarity = MFU.Neg) second
+                            else if MFNT.is_Cst MFNT.Unrep second then
+                              to_could_be_unrep
+                                (polarity = MFU.Neg) first
+                            else
+                              let
+                                val first_rel = to_rep minimum_rep first
+                                val second_rel = to_rep minimum_rep second
+                                val both_optional = List.all
+                                  (MFR.is_opt_rep o MFNT.rep_of)
+                                  [first, second]
+                                fun optimized () =
+                                  if polarity = MFU.Pos then
+                                    if not both_optional then
+                                      kk_rel_eq first_rel second_rel
+                                    else if MFR.is_lone_rep minimum_rep
+                                      andalso
+                                      MFR.arity_of_rep minimum_rep = 1 then
+                                      kk_some (kk_intersect first_rel
+                                        second_rel)
+                                    else
+                                      raise MFU.SAME ()
+                                  else if MFR.is_lone_rep minimum_rep then
+                                    if MFR.arity_of_rep minimum_rep = 1 then
+                                      kk_lone (kk_union first_rel
+                                        second_rel)
+                                    else if not both_optional then
+                                      if MFR.is_opt_rep
+                                           (MFNT.rep_of second) then
+                                        kk_subset first_rel second_rel
+                                      else
+                                        kk_subset second_rel first_rel
+                                    else
+                                      raise MFU.SAME ()
+                                  else
+                                    raise MFU.SAME ()
+                              in
+                                optimized ()
+                                handle MFU.SAME () =>
+                                  formula_from_opt_atom polarity bool_offset
+                                    (to_guard [first, second] bool_atom_rep
+                                      (rel_expr_from_formula kk
+                                        bool_atom_rep
+                                        (kk_rel_eq first_rel second_rel)))
+                              end
+                          else
+                            let
+                              val first_rel = to_rep minimum_rep first
+                              val second_rel = to_rep minimum_rep second
+                            in
+                              if MFR.is_one_rep minimum_rep then
+                                let
+                                  val first_parts =
+                                    unpack_products first_rel
+                                  val second_parts =
+                                    unpack_products second_rel
+                                in
+                                  if length first_parts =
+                                       length second_parts andalso
+                                     map KK.arity_of_rel_expr first_parts =
+                                       map KK.arity_of_rel_expr
+                                         second_parts then
+                                    MFU.fold1 kk_and
+                                      (ListPair.mapEq
+                                        (fn (first, second) =>
+                                          kk_subset first second)
+                                        (first_parts, second_parts))
+                                  else
+                                    kk_subset first_rel second_rel
+                                end
+                              else
+                                kk_rel_eq first_rel second_rel
+                            end)
+               | MFNT.Op2 (MFNT.Apply, ty, _, first, second) =>
+                   (case (polarity, MFNT.rep_of first) of
+                        (MFU.Neg,
+                         MFR.Func (domain, MFR.Formula MFU.Neut)) =>
+                          kk_subset (to_opt domain second) (to_r first)
+                      | _ => to_f_with_polarity polarity
+                          (MFNT.Op2 (MFNT.Apply, ty,
+                            MFR.Opt (MFR.Atom (2,
+                              MFS.offset_of_type offsets ty)),
+                            first, second)))
+               | MFNT.Op3 (MFNT.Let, _, _, first, second, third) =>
+                   kk_formula_let [to_expr_assign first second]
+                     (to_f_with_polarity polarity third)
+               | MFNT.Op3 (MFNT.If, _, _, first, second, third) =>
+                   kk_formula_if (to_f first)
+                     (to_f_with_polarity polarity second)
+                     (to_f_with_polarity polarity third)
+               | MFNT.FormulaReg (register, _, _) =>
+                   KK.FormulaReg register
+               | _ => raise MFNT.NUT
+                   ("Refute_ModelFinder_Kodkod.to_f", [candidate]))
+        | MFR.Atom (2, offset) =>
+            formula_from_atom offset (to_r candidate)
+        | _ => raise MFNT.NUT
+            ("Refute_ModelFinder_Kodkod.to_f", [candidate])
+
+    and to_f_with_polarity polarity candidate =
+      case MFNT.rep_of candidate of
+          MFR.Formula _ => to_f candidate
+        | MFR.Atom (2, offset) =>
+            formula_from_atom offset (to_r candidate)
+        | MFR.Opt (MFR.Atom (2, offset)) =>
+            formula_from_opt_atom polarity offset (to_r candidate)
+        | _ => raise MFNT.NUT
+            ("Refute_ModelFinder_Kodkod.to_f_with_polarity",
+             [candidate])
+
+    and to_r candidate =
+      case candidate of
+          MFNT.Cst (MFNT.False, _, MFR.Atom _) => false_atom
+        | MFNT.Cst (MFNT.True, _, MFR.Atom _) => true_atom
+        | MFNT.Cst (MFNT.Iden, _,
+            MFR.Func (MFR.Struct [first_rep, second_rep],
+              MFR.Formula MFU.Neut)) =>
+            if first_rep = second_rep andalso
+               MFR.arity_of_rep first_rep = 1 then
+              kk_intersect KK.Iden
+                (kk_product (full_rel_for_rep first_rep) KK.Univ)
+            else
+              let
+                val first_schema = MFR.atom_schema_of_rep first_rep
+                val second_schema = MFR.atom_schema_of_rep second_rep
+                val first_arity = length first_schema
+                val second_arity = length second_schema
+                val first_rel = MFU.fold1 kk_product
+                  (unary_var_seq 0 first_arity)
+                val second_rel = MFU.fold1 kk_product
+                  (unary_var_seq first_arity second_arity)
+                val minimum_rep = MFR.min_rep first_rep second_rep
+              in
+                kk_comprehension
+                  (decls_for_atom_schema 0
+                    (first_schema @ second_schema))
+                  (kk_rel_eq
+                    (rel_expr_from_rel_expr kk minimum_rep first_rep
+                      first_rel)
+                    (rel_expr_from_rel_expr kk minimum_rep second_rep
+                      second_rel))
+              end
+        | MFNT.Cst (MFNT.Iden, _,
+            MFR.Func (MFR.Atom (1, offset), MFR.Formula MFU.Neut)) =>
+            KK.Atom offset
+        | MFNT.Cst (MFNT.Num value, ty, representation) =>
+            if ty = MFH.int_type then
+              (case MFP.atom_for_int
+                 (MFR.card_of_rep representation,
+                  MFS.offset_of_type offsets MFH.int_type) value of
+                   ~1 => if MFR.is_opt_rep representation then KK.None
+                         else raise MFNT.NUT
+                           ("Refute_ModelFinder_Kodkod.to_r (Num)",
+                            [candidate])
+                 | atom => KK.Atom atom)
+            else if ty = MFH.num_type then
+              if value < MFR.card_of_rep representation then
+                KK.Atom (value + MFS.offset_of_type offsets ty)
+              else if MFR.is_opt_rep representation then
+                KK.None
+              else
+                raise MFNT.NUT
+                  ("Refute_ModelFinder_Kodkod.to_r (Num)", [candidate])
+            else
+              (* M4-only word numeral path; dead under the M3 closure
+                 proof cited by PLAN_M3 section 9. *)
+              m4_translation
+                "Refute_ModelFinder_Kodkod.to_r (word Num)"
+        | MFNT.Cst (MFNT.Unknown, _, representation) =>
+            empty_rel_for_rep representation
+        | MFNT.Cst (MFNT.Unrep, _, representation) =>
+            empty_rel_for_rep representation
+        | MFNT.Cst (MFNT.Suc, ty,
+            MFR.Func (MFR.Atom sequence, _)) =>
+            if #1 (Type.dom_rng ty) = MFH.num_type then
+              kk_intersect (KK.Rel MFP.suc_rel)
+                (kk_product KK.Univ (KK.AtomSeq sequence))
+            else
+              m4_translation
+                "Refute_ModelFinder_Kodkod.to_r (word Suc)"
+        | MFNT.Cst (MFNT.Add, ty, _) =>
+            if #1 (Type.dom_rng ty) = MFH.num_type then
+              KK.Rel MFP.nat_add_rel
+            else if #1 (Type.dom_rng ty) = MFH.int_type then
+              KK.Rel MFP.int_add_rel
+            else
+              m4_translation
+                "Refute_ModelFinder_Kodkod.to_r (word Add)"
+        | MFNT.Cst (MFNT.Subtract, ty, _) =>
+            if #1 (Type.dom_rng ty) = MFH.num_type then
+              KK.Rel MFP.nat_subtract_rel
+            else if #1 (Type.dom_rng ty) = MFH.int_type then
+              KK.Rel MFP.int_subtract_rel
+            else
+              m4_translation
+                "Refute_ModelFinder_Kodkod.to_r (word Subtract)"
+        | MFNT.Cst (MFNT.Multiply, ty, _) =>
+            if #1 (Type.dom_rng ty) = MFH.num_type then
+              KK.Rel MFP.nat_multiply_rel
+            else if #1 (Type.dom_rng ty) = MFH.int_type then
+              KK.Rel MFP.int_multiply_rel
+            else
+              m4_translation
+                "Refute_ModelFinder_Kodkod.to_r (word Multiply)"
+        | MFNT.Cst (MFNT.Divide, ty, _) =>
+            if #1 (Type.dom_rng ty) = MFH.num_type then
+              KK.Rel MFP.nat_divide_rel
+            else if #1 (Type.dom_rng ty) = MFH.int_type then
+              KK.Rel MFP.int_divide_rel
+            else
+              m4_translation
+                "Refute_ModelFinder_Kodkod.to_r (word Divide)"
+        | MFNT.Cst (MFNT.Gcd, _, _) =>
+            (* M4-only rational support; unreachable by the M3 closure
+               proof in m3-kodkod-translation section 6. *)
+            m4_translation "Refute_ModelFinder_Kodkod.to_r (Gcd)"
+        | MFNT.Cst (MFNT.Lcm, _, _) =>
+            m4_translation "Refute_ModelFinder_Kodkod.to_r (Lcm)"
+        | MFNT.Cst (MFNT.Fracs, _, _) =>
+            m4_translation "Refute_ModelFinder_Kodkod.to_r (Fracs)"
+        | MFNT.Cst (MFNT.NormFrac, _, _) =>
+            m4_translation "Refute_ModelFinder_Kodkod.to_r (NormFrac)"
+        | MFNT.Cst (MFNT.NatToInt, _,
+            MFR.Func (MFR.Atom _, MFR.Atom _)) => KK.Iden
+        | MFNT.Cst (MFNT.NatToInt, _,
+            MFR.Func (MFR.Atom (_, nat_offset),
+              MFR.Opt (MFR.Atom (int_card, int_offset)))) =>
+            if nat_offset = int_offset then
+              kk_intersect KK.Iden
+                (kk_product
+                  (KK.AtomSeq
+                    (MFP.max_int_for_card int_card + 1, nat_offset))
+                  KK.Univ)
+            else
+              raise MFU.BAD
+                ("Refute_ModelFinder_Kodkod.to_r (NatToInt)",
+                 "nat and int offsets differ")
+        | MFNT.Cst (MFNT.IntToNat, _,
+            MFR.Func (MFR.Atom (int_card, int_offset), nat_rep)) =>
+            let
+              val absolute_card = MFP.max_int_for_card int_card + 1
+              val (nat_card, nat_offset) =
+                the_single (MFR.atom_schema_of_rep nat_rep)
+              val overlap = Int.min (nat_card, absolute_card)
+            in
+              if nat_offset = int_offset then
+                kk_union
+                  (kk_product
+                    (KK.AtomSeq
+                      (int_card - absolute_card,
+                       int_offset + absolute_card))
+                    (KK.Atom nat_offset))
+                  (kk_intersect KK.Iden
+                    (kk_product
+                      (KK.AtomSeq (overlap, int_offset)) KK.Univ))
+              else
+                raise MFU.BAD
+                  ("Refute_ModelFinder_Kodkod.to_r (IntToNat)",
+                   "nat and int offsets differ")
+            end
+        | MFNT.Op1 (MFNT.Not, _, representation, first) =>
+            kk_not3 (to_rep representation first)
+        | MFNT.Op1 (MFNT.Finite, _, MFR.Opt (MFR.Atom _), _) =>
+            (* [deviation] PLAN_M3 decision 30: the relational form of
+               unknown FINITE is the empty optional Boolean atom. *)
+            KK.None
+        | MFNT.Op1 (MFNT.Converse, _, representation, first) =>
+            let
+              val (result_left, result_right, body_rep, paired) =
+                dest_binary_rep representation
+              val source_rep = binary_rep paired result_right result_left
+                body_rep
+              val target_rep = binary_rep paired result_left result_right
+                body_rep
+              val source_left_arity = MFR.arity_of_rep result_right
+              val source_right_arity = MFR.arity_of_rep result_left
+              val domain_arity = source_left_arity + source_right_arity
+              val body_arity = MFR.arity_of_rep body_rep
+              val columns = map KK.Num
+                (MFU.index_seq source_left_arity source_right_arity @
+                 MFU.index_seq 0 source_left_arity @
+                 MFU.index_seq domain_arity body_arity)
+            in
+              rel_expr_from_rel_expr kk representation target_rep
+                (kk_project (to_rep source_rep first) columns)
+            end
+        | MFNT.Op1 (MFNT.Closure, _, representation, first) =>
+            if MFR.is_opt_rep representation then
+              let
+                val first_ty = MFNT.type_of first
+                val binary_rep = MFR.rep_to_binary_rel_rep offsets
+                  first_ty (MFR.unopt_rep (MFNT.rep_of first))
+                val optional_binary_rep =
+                  MFR.opt_rep offsets first_ty binary_rep
+              in
+                single_rel_rel_let kk
+                  (fn relation =>
+                    let
+                      val true_relation =
+                        kk_closure (kk_join relation true_atom)
+                      val full_relation = full_rel_for_rep binary_rep
+                      val false_relation = kk_difference full_relation
+                        (kk_closure
+                          (kk_difference full_relation
+                            (kk_join relation false_atom)))
+                    in
+                      rel_expr_from_rel_expr kk representation
+                        optional_binary_rep
+                        (kk_union
+                          (kk_product true_relation true_atom)
+                          (kk_product false_relation false_atom))
+                    end)
+                  (to_rep optional_binary_rep first)
+              end
+            else
+              let
+                val binary_rep = MFR.rep_to_binary_rel_rep offsets
+                  (MFNT.type_of first) (MFNT.rep_of first)
+              in
+                rel_expr_from_rel_expr kk representation binary_rep
+                  (kk_closure (to_rep binary_rep first))
+              end
+        | MFNT.Op1 (MFNT.SingletonSet, _,
+            MFR.Func (domain, MFR.Opt _),
+            MFNT.Cst (MFNT.Unrep, _, _)) =>
+            kk_product (full_rel_for_rep domain) false_atom
+        | MFNT.Op1 (MFNT.SingletonSet, _, representation, first) =>
+            (case representation of
+                 MFR.Func (domain, MFR.Formula MFU.Neut) =>
+                   to_rep domain first
+               | MFR.Func (domain, MFR.Opt _) =>
+                   single_rel_rel_let kk
+                     (fn relation =>
+                       kk_rel_if (kk_no relation)
+                         (empty_rel_for_rep representation)
+                         (rel_expr_to_func kk domain bool_atom_rep
+                           (MFR.Func
+                             (domain, MFR.Formula MFU.Neut)) relation))
+                     (to_opt domain first)
+               | _ => raise MFNT.NUT
+                   ("Refute_ModelFinder_Kodkod.to_r (SingletonSet)",
+                    [candidate]))
+        | MFNT.Op1 (MFNT.SafeThe, _, representation, first) =>
+            if MFR.is_opt_rep representation then
+              kk_join
+                (to_rep
+                  (MFR.Func (MFR.unopt_rep representation,
+                    MFR.Opt bool_atom_rep)) first)
+                true_atom
+            else
+              to_rep
+                (MFR.Func (representation, MFR.Formula MFU.Neut))
+                first
+        | MFNT.Op1 (MFNT.First, _, representation, first) =>
+            to_nth_pair_sel 0 representation first
+        | MFNT.Op1 (MFNT.Second, _, representation, first) =>
+            to_nth_pair_sel 1 representation first
+        | MFNT.Op1 (MFNT.Cast, _, representation, first) =>
+            ((case MFNT.rep_of first of
+                  MFR.Formula _ =>
+                    (case MFR.unopt_rep representation of
+                         MFR.Atom (2, offset) =>
+                           atom_from_formula kk offset (to_f first)
+                       | _ => raise MFU.SAME ())
+                | _ => raise MFU.SAME ())
+             handle MFU.SAME () =>
+               rel_expr_from_rel_expr kk representation
+                 (MFNT.rep_of first) (to_r first))
+        | MFNT.Op2 (MFNT.All, ty, representation as MFR.Opt _,
+            first, second) =>
+            to_r (MFNT.Op1 (MFNT.Not, ty, representation,
+              MFNT.Op2 (MFNT.Exist, ty, representation, first,
+                MFNT.Op1 (MFNT.Not, ty, MFNT.rep_of second, second))))
+        | MFNT.Op2 (MFNT.Exist, _, MFR.Opt _, first, second) =>
+            let val declarations = MFNT.untuple to_decl first
+            in
+              if not (MFR.is_opt_rep (MFNT.rep_of second)) then
+                kk_rel_if (kk_exist declarations (to_f second))
+                  true_atom KK.None
+              else
+                let val relation = to_r second
+                in
+                  kk_union
+                    (kk_rel_if
+                      (kk_exist declarations
+                        (kk_rel_eq relation true_atom))
+                      true_atom KK.None)
+                    (kk_rel_if
+                      (kk_all declarations
+                        (kk_rel_eq relation false_atom))
+                      false_atom KK.None)
+                end
+            end
+        | MFNT.Op2 (MFNT.Or, _, _, first, second) =>
+            if MFR.is_opt_rep (MFNT.rep_of first) then
+              kk_rel_if (to_f second) true_atom (to_r first)
+            else
+              kk_rel_if (to_f first) true_atom (to_r second)
+        | MFNT.Op2 (MFNT.And, _, _, first, second) =>
+            if MFR.is_opt_rep (MFNT.rep_of first) then
+              kk_rel_if (to_f second) (to_r first) false_atom
+            else
+              kk_rel_if (to_f first) (to_r second) false_atom
+        | MFNT.Op2 (MFNT.Less, _, _, first, second) =>
+            if MFNT.type_of first = MFH.num_type then
+              if MFNT.is_Cst MFNT.Unrep first then
+                to_compare_with_unrep second false_atom
+              else if MFNT.is_Cst MFNT.Unrep second then
+                to_compare_with_unrep first true_atom
+              else
+                kk_nat_less (to_integer first) (to_integer second)
+            else if MFNT.type_of first = MFH.int_type then
+              kk_int_less (to_integer first) (to_integer second)
+            else
+              (* Word comparison is M4-only and dead by the M3 closure
+                 proof in m3-kodkod-translation section 6. *)
+              m4_translation
+                "Refute_ModelFinder_Kodkod.to_r (word Less)"
+        | MFNT.Op2 (MFNT.Triad, _, MFR.Opt (MFR.Atom (2, offset)),
+            first, second) =>
+            let
+              val first_formula = to_f first
+              val second_formula = to_f second
+            in
+              if first_formula = second_formula then
+                atom_from_formula kk offset first_formula
+              else
+                kk_union
+                  (kk_rel_if first_formula true_atom KK.None)
+                  (kk_rel_if second_formula KK.None false_atom)
+            end
+        | MFNT.Op2 (MFNT.Composition, _, representation,
+            first, second) =>
+            let
+              val (first_ty, middle_ty) =
+                binary_rel_types (MFNT.type_of first)
+              val (_, last_ty) =
+                binary_rel_types (MFNT.type_of second)
+              val first_middle_card =
+                binary_domain_card (MFNT.rep_of first)
+              val middle_last_card =
+                binary_domain_card (MFNT.rep_of second)
+              val first_last_card = binary_domain_card representation
+              val first_card = MFU.exact_root 2
+                (first_last_card * first_middle_card div
+                 middle_last_card)
+              val middle_card = MFU.exact_root 2
+                (first_middle_card * middle_last_card div
+                 first_last_card)
+              val last_card = MFU.exact_root 2
+                (middle_last_card * first_last_card div
+                 first_middle_card)
+              val first_rep = MFR.Atom (first_card,
+                MFS.offset_of_type offsets first_ty)
+              val middle_rep = MFR.Atom (middle_card,
+                MFS.offset_of_type offsets middle_ty)
+              val last_rep = MFR.Atom (last_card,
+                MFS.offset_of_type offsets last_ty)
+              val body_rep = MFR.body_rep representation
+              val result =
+                case body_rep of
+                    MFR.Formula MFU.Neut =>
+                      kk_join
+                        (to_rep
+                          (binary_rep_for_type (MFNT.type_of first)
+                            first_rep middle_rep
+                            (MFR.Formula MFU.Neut)) first)
+                        (to_rep
+                          (binary_rep_for_type (MFNT.type_of second)
+                            middle_rep last_rep
+                            (MFR.Formula MFU.Neut)) second)
+                  | MFR.Opt (MFR.Atom (2, _)) =>
+                      let
+                        fun must left right item =
+                          kk_join
+                            (to_rep
+                              (binary_rep_for_type (MFNT.type_of item)
+                                left right body_rep) item)
+                            true_atom
+                        fun may left right item =
+                          kk_difference
+                            (full_rel_for_rep (MFR.Struct [left, right]))
+                            (kk_join
+                              (to_rep
+                                (binary_rep_for_type (MFNT.type_of item)
+                                  left right body_rep) item)
+                              false_atom)
+                      in
+                        kk_union
+                          (kk_product
+                            (kk_join
+                              (must first_rep middle_rep first)
+                              (must middle_rep last_rep second))
+                            true_atom)
+                          (kk_product
+                            (kk_difference
+                              (full_rel_for_rep
+                                (MFR.Struct [first_rep, last_rep]))
+                              (kk_join
+                                (may first_rep middle_rep first)
+                                (may middle_rep last_rep second)))
+                            false_atom)
+                      end
+                  | _ => raise MFNT.NUT
+                      ("Refute_ModelFinder_Kodkod.to_r (Composition)",
+                       [candidate])
+              val result_rep = binary_rep_for_type
+                (MFNT.type_of candidate) first_rep last_rep body_rep
+            in
+              rel_expr_from_rel_expr kk representation result_rep result
+            end
+        | MFNT.Op2 (MFNT.Apply, ty, representation,
+            function as MFNT.Op2 (MFNT.Apply, _, _,
+              MFNT.Cst (MFNT.Subtract, _, _), first), second) =>
+            if ty <> MFH.num_type then
+              to_apply representation function second
+            else if MFNT.is_Cst MFNT.Unrep second andalso
+                    not (MFR.is_opt_rep (MFNT.rep_of first)) then
+              KK.Atom (MFS.offset_of_type offsets MFH.num_type)
+            else
+              List.foldl (fn (relation, result) =>
+                kk_join relation result)
+                (KK.Rel MFP.nat_subtract_rel)
+                (map to_integer [first, second])
+        | MFNT.Op2 (MFNT.Apply, _, representation, first, second) =>
+            to_apply representation first second
+        | MFNT.Op2 (MFNT.Lambda, _,
+            representation as MFR.Opt (MFR.Atom (1, offset)),
+            first, second) =>
+            to_guard [first, second] representation (KK.Atom offset)
+        | MFNT.Op2 (MFNT.Lambda, _,
+            MFR.Func (_, MFR.Formula MFU.Neut), first, second) =>
+            kk_comprehension (MFNT.untuple to_decl first) (to_f second)
+        | MFNT.Op2 (MFNT.Lambda, _,
+            MFR.Func (_, range), first, second) =>
+            let
+              val domain_decls = MFNT.untuple to_decl first
+              val range_schema = MFR.atom_schema_of_rep range
+              val range_decls =
+                decls_for_atom_schema (~1) range_schema
+              val range_vars =
+                unary_var_seq (~1) (length range_decls)
+            in
+              kk_comprehension (domain_decls @ range_decls)
+                (kk_subset (MFU.fold1 kk_product range_vars)
+                  (to_rep range second))
+            end
+        | MFNT.Op3 (MFNT.Let, _, representation,
+            first, second, third) =>
+            kk_rel_let [to_expr_assign first second]
+              (to_rep representation third)
+        | MFNT.Op3 (MFNT.If, _, representation,
+            first, second, third) =>
+            if MFR.is_opt_rep (MFNT.rep_of first) then
+              triple_rel_rel_let kk
+                (fn first_rel => fn second_rel => fn third_rel =>
+                  let val empty = empty_rel_for_rep representation
+                  in
+                    MFU.fold1 kk_union
+                      [kk_rel_if
+                         (kk_rel_eq first_rel true_atom)
+                         second_rel empty,
+                       kk_rel_if
+                         (kk_rel_eq first_rel false_atom)
+                         third_rel empty,
+                       kk_rel_if
+                         (kk_rel_eq second_rel third_rel)
+                         (if MFP.inline_rel_expr second_rel then
+                            second_rel
+                          else third_rel)
+                         empty]
+                  end)
+                (to_r first) (to_rep representation second)
+                (to_rep representation third)
+            else
+              kk_rel_if (to_f first) (to_rep representation second)
+                (to_rep representation third)
+        | MFNT.Tuple (_, representation, items) =>
+            (case MFR.unopt_rep representation of
+                 MFR.Struct reps => to_product reps items
+               | MFR.Vect (count, rep) =>
+                   to_product (List.tabulate (count, fn _ => rep)) items
+               | MFR.Atom (1, offset) =>
+                   kk_rel_if
+                     (kk_some (MFU.fold1 kk_product (map to_r items)))
+                     (KK.Atom offset) KK.None
+               | _ => raise MFNT.NUT
+                   ("Refute_ModelFinder_Kodkod.to_r (Tuple)",
+                    [candidate]))
+        | MFNT.Construct ([only], _, _, []) => to_r only
+        | MFNT.Construct (discriminator :: selectors, _, _, arguments) =>
+            let
+              fun inverse selector argument =
+                let
+                  val (domain, range) =
+                    MFR.dest_Func (MFNT.rep_of selector)
+                  val selector_rel = to_r selector
+                  val argument_rel = to_opt range argument
+                in
+                  if MFR.is_one_rep range then
+                    kk_n_fold_join kk true range domain argument_rel
+                      (kk_project selector_rel
+                        (flip_nums (MFR.arity_of_rep range)))
+                  else
+                    let
+                      val relation = kk_comprehension
+                        [KK.DeclOne ((1, ~1), to_r discriminator)]
+                        (kk_rel_eq
+                          (kk_join (KK.Var (1, ~1)) selector_rel)
+                          argument_rel)
+                    in
+                      if MFR.is_opt_rep (MFNT.rep_of argument) then
+                        to_guard [argument] domain relation
+                      else
+                        relation
+                    end
+                end
+            in
+              MFU.fold1 kk_intersect
+                (ListPair.mapEq (fn (selector, argument) =>
+                  inverse selector argument) (selectors, arguments))
+            end
+        | MFNT.BoundRel (index, _, _, _) => KK.Var index
+        | MFNT.FreeRel (index, _, _, _) => KK.Rel index
+        | MFNT.RelReg (register, _, representation) =>
+            KK.RelReg (MFR.arity_of_rep representation, register)
+        | _ => raise MFNT.NUT
+            ("Refute_ModelFinder_Kodkod.to_r", [candidate])
+
+    and to_decl (MFNT.BoundRel (index, _, representation, _)) =
+          KK.DeclOne
+            (index,
+             KK.AtomSeq
+               (the_single (MFR.atom_schema_of_rep representation)))
+      | to_decl candidate = raise MFNT.NUT
+          ("Refute_ModelFinder_Kodkod.to_decl", [candidate])
+
+    and to_expr_assign (MFNT.FormulaReg (register, _, _)) value =
+          KK.AssignFormulaReg (register, to_f value)
+      | to_expr_assign
+          (MFNT.RelReg (register, _, representation)) value =
+          KK.AssignRelReg
+            ((MFR.arity_of_rep representation, register), to_r value)
+      | to_expr_assign target _ = raise MFNT.NUT
+          ("Refute_ModelFinder_Kodkod.to_expr_assign", [target])
+
+    and to_atom (atom as (_, offset)) candidate =
+      case MFNT.rep_of candidate of
+          MFR.Formula _ => atom_from_formula kk offset (to_f candidate)
+        | representation => atom_from_rel_expr kk atom representation
+            (to_r candidate)
+
+    and to_struct reps candidate =
+      struct_from_rel_expr kk reps (MFNT.rep_of candidate)
+        (to_r candidate)
+
+    and to_vect count rep candidate =
+      vect_from_rel_expr kk count rep (MFNT.rep_of candidate)
+        (to_r candidate)
+
+    and to_func domain range candidate =
+      rel_expr_to_func kk domain range (MFNT.rep_of candidate)
+        (to_r candidate)
+
+    and to_opt rep candidate =
+      let val old_rep = MFNT.rep_of candidate
+      in
+        if MFR.is_opt_rep old_rep then
+          rel_expr_from_rel_expr kk (MFR.Opt rep) old_rep
+            (to_r candidate)
+        else
+          to_rep rep candidate
+      end
+
+    and to_rep (MFR.Atom atom) candidate = to_atom atom candidate
+      | to_rep (MFR.Struct reps) candidate = to_struct reps candidate
+      | to_rep (MFR.Vect (count, rep)) candidate =
+          to_vect count rep candidate
+      | to_rep (MFR.Func (domain, range)) candidate =
+          to_func domain range candidate
+      | to_rep (MFR.Opt rep) candidate = to_opt rep candidate
+      | to_rep representation _ = raise MFR.REP
+          ("Refute_ModelFinder_Kodkod.to_rep", [representation])
+
+    and to_integer candidate =
+      to_opt
+        (MFR.one_rep offsets (MFNT.type_of candidate)
+          (MFNT.rep_of candidate)) candidate
+
+    and to_guard guards representation relation =
+      let
+        val unpacked = unpack_joins relation
+        val plain_guards = guards
+          |> List.filter (MFR.is_Opt o MFNT.rep_of)
+          |> map to_r
+          |> List.filter (fn guard => not (member (op =) guard unpacked))
+        val function_guards = List.filter (fn guard =>
+          MFR.is_Func (MFNT.rep_of guard) andalso
+          MFR.is_opt_rep (MFNT.rep_of guard)) guards
+        val function_relations = map to_r function_guards
+        val guard_formulas = map kk_no plain_guards @
+          ListPair.mapEq
+            (fn (guard, guard_relation) =>
+              kk_not (kk_n_ary_function kk
+                (MFR.unopt_rep (MFNT.rep_of guard)) guard_relation))
+            (function_guards, function_relations)
+      in
+        if null guard_formulas then
+          relation
+        else
+          kk_rel_if (MFU.fold1 kk_or guard_formulas)
+            (empty_rel_for_rep representation) relation
+      end
+
+    and to_project new_rep old_rep relation offset =
+      rel_expr_from_rel_expr kk new_rep old_rep
+        (kk_project_seq relation offset (MFR.arity_of_rep old_rep))
+
+    and to_product reps items =
+      MFU.fold1 kk_product
+        (ListPair.mapEq (fn (rep, item) => to_opt rep item)
+          (reps, items))
+
+    and to_nth_pair_sel index result_rep candidate =
+      case candidate of
+          MFNT.Tuple (_, _, items) =>
+            to_rep result_rep (List.nth (items, index))
+        | _ =>
+            let
+              val representation = MFNT.rep_of candidate
+              val (first_ty, second_ty) =
+                pairSyntax.dest_prod (MFNT.type_of candidate)
+              val reps =
+                case MFR.unopt_rep representation of
+                    MFR.Struct (pair as [_, _]) => pair
+                  | _ =>
+                      let
+                        val result_card = MFR.card_of_rep result_rep
+                        val other_card =
+                          MFR.card_of_rep representation div result_card
+                        val (first_card, second_card) =
+                          if index = 0 then (result_card, other_card)
+                          else (other_card, result_card)
+                      in
+                        [MFR.Atom (first_card,
+                           MFS.offset_of_type offsets first_ty),
+                         MFR.Atom (second_card,
+                           MFS.offset_of_type offsets second_ty)]
+                      end
+              val selected_rep = List.nth (reps, index)
+              val column =
+                if index = 0 then 0
+                else MFR.arity_of_rep (hd reps)
+            in
+              to_project result_rep selected_rep
+                (to_rep (MFR.Opt (MFR.Struct reps)) candidate) column
+            end
+
+    and to_apply (representation as MFR.Formula _) _ _ =
+          raise MFR.REP
+            ("Refute_ModelFinder_Kodkod.to_apply", [representation])
+      | to_apply result_rep function argument =
+          (case MFR.unopt_rep (MFNT.rep_of function) of
+               MFR.Atom (1, offset) =>
+                 to_guard [argument] result_rep
+                   (rel_expr_from_rel_expr kk result_rep
+                     (MFR.Atom (1, offset)) (to_r function))
+             | MFR.Atom (cardinality, _) =>
+                 let
+                   val domain_card =
+                     MFR.card_of_rep (MFNT.rep_of argument)
+                   val range_rep = MFR.Atom
+                     (MFU.exact_root domain_card cardinality,
+                      MFS.offset_of_type offsets
+                        (#2 (Type.dom_rng (MFNT.type_of function))))
+                 in
+                   to_apply_vect domain_card range_rep result_rep
+                     (to_vect domain_card range_rep function) argument
+                 end
+             | MFR.Vect (1, range_rep) =>
+                 to_guard [argument] result_rep
+                   (rel_expr_from_rel_expr kk result_rep range_rep
+                     (to_r function))
+             | MFR.Vect (count, range_rep) =>
+                 to_apply_vect count range_rep result_rep
+                   (to_r function) argument
+             | MFR.Func (domain, MFR.Formula MFU.Neut) =>
+                 to_guard [argument] result_rep
+                   (rel_expr_from_formula kk result_rep
+                     (kk_subset (to_opt domain argument)
+                       (to_r function)))
+             | MFR.Func (domain, range) =>
+                 let
+                   val result = rel_expr_from_rel_expr kk result_rep range
+                     (kk_n_fold_join kk true domain range
+                       (to_opt domain argument) (to_r function))
+                 in
+                   if MFR.body_rep range = MFR.Formula MFU.Neut then
+                     to_guard [argument] result_rep result
+                   else
+                     result
+                 end
+             | _ => raise MFNT.NUT
+                 ("Refute_ModelFinder_Kodkod.to_apply", [function]))
+
+    and to_apply_vect count range_rep result_rep function_rel argument =
+      let
+        val argument_rep = MFR.one_rep offsets (MFNT.type_of argument)
+          (MFR.unopt_rep (MFNT.rep_of argument))
+        val vector = vect_from_rel_expr kk count result_rep
+          (MFR.Vect (count, range_rep)) function_rel
+        val values = unpack_vect_in_chunks kk
+          (MFR.arity_of_rep result_rep) count vector
+      in
+        kk_case_switch kk argument_rep result_rep
+          (to_opt argument_rep argument)
+          (all_singletons_for_rep argument_rep) values
+      end
+
+    and to_could_be_unrep negative candidate =
+      if negative andalso MFR.is_opt_rep (MFNT.rep_of candidate) then
+        kk_no (to_r candidate)
+      else
+        KK.False
+
+    and to_compare_with_unrep candidate relation =
+      if MFR.is_opt_rep (MFNT.rep_of candidate) then
+        kk_rel_if (kk_some (to_r candidate)) relation
+          (empty_rel_for_rep (MFNT.rep_of candidate))
+      else
+        relation
+  in
+    to_f_with_polarity MFU.Pos nut
+  end
+
+type problem_metadata =
+  {free_names : nut list,
+   sel_names : nut list,
+   nonsel_names : nut list,
+   rel_table : nut MFNT.NameTable.table,
+   unsound : bool,
+   scope : MFS.scope}
+
+type rich_problem = KK.problem * problem_metadata
+
+type assembly_params =
+  {debug : bool,
+   peephole_optim : bool,
+   total_consts : bool,
+   datatype_sym_break : int,
+   comment : string,
+   settings : KK.setting list,
+   free_names : nut list,
+   nonsel_names : nut list,
+   nondef_us : nut list,
+   def_us : nut list}
+
+fun scope_with_offsets
+      ({hol_ctxt, card_assigns, bits, bisim_depth, data_types, ...}
+       : MFS.scope) offsets : MFS.scope =
+  {hol_ctxt = hol_ctxt, card_assigns = card_assigns, bits = bits,
+   bisim_depth = bisim_depth, data_types = data_types, ofs = offsets}
+
+fun assemble_problem_once
+      ({debug, peephole_optim, total_consts, datatype_sym_break,
+        comment, settings, free_names, nonsel_names, nondef_us, def_us}
+       : assembly_params) unsound (scope : MFS.scope) : rich_problem =
+  let
+    val offsets = #ofs scope
+    val data_types = #data_types scope
+    val bits = #bits scope
+    val main_j0 = MFS.offset_of_type offsets Type.bool
+    val (nat_card, nat_j0) = MFS.spec_of_type scope MFH.num_type
+    val (int_card, int_j0) = MFS.spec_of_type scope MFH.int_type
+    val _ =
+      if nat_j0 = main_j0 andalso int_j0 = main_j0 then ()
+      else raise MFU.BAD
+        ("Refute_ModelFinder_Kodkod.assemble_problem", "bad offsets")
+    val kk = MFP.kodkod_constrs peephole_optim nat_card int_card main_j0
+    val (free_names, rep_table) = MFNT.choose_reps_for_free_vars scope
+      free_names MFNT.NameTable.empty
+    val (sel_names, rep_table) =
+      MFNT.choose_reps_for_all_sels scope rep_table
+    (* Selector/discriminator names occur inside Construct nuts and are
+       therefore seen by the generic name collector as constants.  They
+       must not be chosen and renamed a second time as ordinary constants. *)
+    val nonsel_names = List.filter (fn name =>
+      not (List.exists (fn selector =>
+        MFNT.name_ord (name, selector) = EQUAL) sel_names)) nonsel_names
+    val (nonsel_names, rep_table) = MFNT.choose_reps_for_consts scope
+      total_consts nonsel_names rep_table
+
+    fun largest_rep name (guilty, arity, universe) =
+      let
+        val representation = MFNT.rep_of name
+        val candidate = MFR.arity_of_rep representation
+      in
+        (if candidate > arity then MFNT.nickname_of name else guilty,
+         Int.max (arity, candidate),
+         Int.max (universe, MFR.min_univ_card_of_rep representation))
+      end
+    val initial_universe = univ_card nat_card int_card main_j0 [] KK.True
+    val (guilty, highest_rep_arity, minimum_universe) =
+      List.foldl (fn (name, result) => largest_rep name result)
+        ("", 1, initial_universe)
+        (free_names @ sel_names @ nonsel_names)
+    val _ = check_arity guilty minimum_universe highest_rep_arity
+
+    val def_us = map (MFNT.choose_reps_in_nut scope unsound rep_table true)
+      def_us
+    val nondef_us = map
+      (MFNT.choose_reps_in_nut scope unsound rep_table false) nondef_us
+    val (free_rels, pool, rel_table) = MFNT.rename_free_vars free_names
+      MFP.initial_pool MFNT.NameTable.empty
+    val (sel_rels, pool, rel_table) = MFNT.rename_free_vars sel_names
+      pool rel_table
+    val (other_rels, pool, rel_table) = MFNT.rename_free_vars nonsel_names
+      pool rel_table
+    val def_us = map (MFNT.rename_vars_in_nut pool rel_table) def_us
+    val nondef_us = map (MFNT.rename_vars_in_nut pool rel_table) nondef_us
+    val def_fs = map (kodkod_formula_from_nut offsets kk) def_us
+    val nondef_fs = map (kodkod_formula_from_nut offsets kk) nondef_us
+    val formula = List.foldl (fn (formula, result) =>
+      MFP.s_and result formula) KK.True (def_fs @ nondef_fs)
+
+    val plain_rels = free_rels @ other_rels
+    val plain_bounds = map (bound_for_plain_rel debug) plain_rels
+    val plain_axioms = map (declarative_axiom_for_plain_rel kk) plain_rels
+    val need_values = empty_need_values data_types
+    val sel_bounds = map
+      (bound_for_sel_rel debug need_values data_types) sel_rels
+    val datatype_axioms = declarative_axioms_for_data_types
+      (#hol_ctxt scope) datatype_sym_break bits offsets kk rel_table
+      data_types
+    val declarative_axioms = plain_axioms @ datatype_axioms
+    val universe_card = Int.max
+      (univ_card nat_card int_card main_j0
+         (plain_bounds @ sel_bounds) formula,
+       if bits = 0 then 0 else main_j0 + bits + 1)
+    val (built_in_bounds, built_in_axioms) =
+      bounds_and_axioms_for_built_in_rels_in_formulas debug universe_card
+        nat_card int_card main_j0 (formula :: declarative_axioms)
+    val bounds = built_in_bounds @ plain_bounds @ sel_bounds
+    val bounds = if debug then bounds else merge_bounds bounds
+    val axioms = built_in_axioms @ declarative_axioms
+    val highest_bound_arity = List.foldl (fn ((declarations, _), result) =>
+      List.foldl (fn (((arity, _), _), maximum) =>
+        Int.max (arity, maximum)) result declarations) 0 bounds
+    val formula = List.foldr (fn (axiom, result) =>
+      MFP.s_and axiom result) formula axioms
+    val _ =
+      if formula = KK.False then ()
+      else check_arity "" universe_card highest_bound_arity
+    val problem : KK.problem =
+      {comment = (if unsound then "unsound" else "sound") ^ "\n" ^ comment,
+       settings = settings, univ_card = universe_card, tuple_assigns = [],
+       bounds = bounds,
+       int_bounds = if bits = 0 then sequential_int_bounds universe_card
+         else pow_of_two_int_bounds bits main_j0,
+       expr_assigns = [], formula = formula}
+    val metadata : problem_metadata =
+      {free_names = free_names, sel_names = sel_names,
+       nonsel_names = nonsel_names, rel_table = rel_table,
+       unsound = unsound, scope = scope}
+  in
+    (problem, metadata)
+  end
+
+fun assemble_problem params unsound scope =
+  with_arity_retry (#ofs scope) (fn offsets =>
+    assemble_problem_once params unsound (scope_with_offsets scope offsets))
+
+fun assemble_problem_pair params scope =
+  (assemble_problem params false scope, assemble_problem params true scope)
 
 (* Upstream to_set_bool_op and kk_vect_set_bool_op are dead under the M3
    closure proof and are intentionally omitted (PLAN_M3 decision 31). *)

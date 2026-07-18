@@ -1,0 +1,24 @@
+// HOL4 Refute FORL golden
+// fixed timestamp
+
+// sound
+// xs ≠ []
+solver: "DefaultSAT4J"
+bit_width: 16
+symmetry_breaking: 15
+sharing: 3
+flatten: false
+delay: 0
+univ: u5
+bounds s0 /* xs : A3 */: [{}, u3]
+bounds s1 /* list$CONS : A3 => F= */: u2@1
+bounds r0 /* list$CONS : A3 => A2@3 */: [{}, u2@1->u2@3]
+bounds r1 /* list$CONS : A3 => A3 */: [{}, {[A1]}->u1 + {[A2]}->u2]
+bounds s2 /* list$NIL : A3 => F= */: u1
+int_bounds: [{[A0]}, {[A1]}, {[A2]}, {[A3]}, {[A4]}]
+solve one s0
+   && FUNCTION(r0, u2@1 -> one u2@3)
+   && FUNCTION(r1, u2@1 -> one u3)
+   && (all [S0 : one s1, S1 : one s1] | S0.r0 = S1.r0 && S0.r1 = S1.r1 => S0 = S1)
+   && lone s2
+   && ! s0 in s2;
