@@ -2357,23 +2357,58 @@ val _ = require_msg (check_result mf_kodkod_quantifier_golden) (fn () =>
 
 fun mf_kodkod_closure_golden () =
   let
-    val relation_ty = ``:(num # num) -> bool``
+    val paired_ty = ``:(num # num) -> bool``
+    val curried_ty = ``:num -> num -> bool``
     val scope = mf_translation_scope [(``:num``, 3)] []
     val atom = MFR.Atom (3, 0)
-    val relation_rep = MFR.Func
+    val bool_atom = MFR.Atom
+      (2, MFS.offset_of_type (#ofs scope) Type.bool)
+    val paired_rep = MFR.Func
       (MFR.Struct [atom, atom], MFR.Formula MFU.Neut)
-    val relation = MFNT.FreeRel
-      ((2, 0), relation_ty, relation_rep, "r")
-    val closure = MFNT.Op1
-      (MFNT.Closure, relation_ty, relation_rep, relation)
-    val equality = MFNT.Op2 (MFNT.Eq, Type.bool,
-      MFR.Formula MFU.Pos, closure, relation)
+    val curried_rep = MFR.Func
+      (atom, MFR.Func (atom, MFR.Formula MFU.Neut))
+    val optional_rep = MFR.Func
+      (atom, MFR.Func (atom, MFR.Opt bool_atom))
+    fun relation index ty rep name =
+      MFNT.FreeRel (index, ty, rep, name)
+    fun closure ty rep rel =
+      MFNT.Op1 (MFNT.Closure, ty, rep, rel)
+    fun equality left right = MFNT.Op2 (MFNT.Eq, Type.bool,
+      MFR.Formula MFU.Pos, left, right)
+    val paired = relation (2, 0) paired_ty paired_rep "paired"
+    val curried = relation (2, 1) curried_ty curried_rep "curried"
+    val optional = relation (3, 2) curried_ty optional_rep "optional"
+    val translate = MFK.kodkod_formula_from_nut (#ofs scope)
+      (mf_translation_constrs scope)
+    val full = Refute_Forl.Product
+      (Refute_Forl.AtomSeq (3, 0), Refute_Forl.AtomSeq (3, 0))
+    val optional_expected = Refute_Forl.Union
+      (Refute_Forl.Product
+         (Refute_Forl.Closure
+            (Refute_Forl.Join
+               (Refute_Forl.Rel (3, 2), Refute_Forl.Atom 1)),
+          Refute_Forl.Atom 1),
+       Refute_Forl.Product
+         (Refute_Forl.Difference
+            (full,
+             Refute_Forl.Closure
+               (Refute_Forl.Difference
+                  (full, Refute_Forl.Join
+                    (Refute_Forl.Rel (3, 2), Refute_Forl.Atom 0)))),
+          Refute_Forl.Atom 0))
   in
-    MFK.kodkod_formula_from_nut (#ofs scope)
-      (mf_translation_constrs scope) equality =
+    translate (equality (closure paired_ty paired_rep paired) paired) =
       Refute_Forl.RelEq
         (Refute_Forl.Closure (Refute_Forl.Rel (2, 0)),
-         Refute_Forl.Rel (2, 0))
+         Refute_Forl.Rel (2, 0)) andalso
+    translate (equality (closure curried_ty curried_rep curried) curried) =
+      Refute_Forl.RelEq
+        (Refute_Forl.Closure (Refute_Forl.Rel (2, 1)),
+         Refute_Forl.Rel (2, 1)) andalso
+    translate
+      (MFNT.Op1 (MFNT.IsUnknown, Type.bool, MFR.Formula MFU.Pos,
+         closure curried_ty optional_rep optional)) =
+      Refute_Forl.No optional_expected
   end
 
 val _ = require_msg (check_result mf_kodkod_closure_golden) (fn () =>
@@ -2387,15 +2422,21 @@ fun mf_kodkod_binary_special_goldens () =
     val atom = MFR.Atom (3, 0)
     val relation_rep = MFR.Func
       (atom, MFR.Func (atom, MFR.Formula MFU.Neut))
+    val optional_rep = MFR.Func
+      (atom, MFR.Func (atom, MFR.Opt (MFR.Atom (2, 0))))
     fun relation index name = MFNT.FreeRel
       ((2, index), relation_ty, relation_rep, name)
     val first = relation 0 "r"
     val second = relation 1 "s"
     val result = relation 2 "t"
+    val optional = MFNT.FreeRel
+      ((3, 3), relation_ty, optional_rep, "u")
     fun equality left right = MFNT.Op2 (MFNT.Eq, Type.bool,
       MFR.Formula MFU.Pos, left, right)
     val converse = MFNT.Op1
       (MFNT.Converse, relation_ty, relation_rep, first)
+    val optional_converse = MFNT.Op1
+      (MFNT.Converse, relation_ty, optional_rep, optional)
     val composition = MFNT.Op2 (MFNT.Composition, relation_ty,
       relation_rep, first, second)
     val translate = MFK.kodkod_formula_from_nut (#ofs scope)
@@ -2406,6 +2447,13 @@ fun mf_kodkod_binary_special_goldens () =
         (Refute_Forl.Project (Refute_Forl.Rel (2, 0),
            [Refute_Forl.Num 1, Refute_Forl.Num 0]),
          Refute_Forl.Rel (2, 2)) andalso
+    translate
+      (MFNT.Op1 (MFNT.IsUnknown, Type.bool, MFR.Formula MFU.Pos,
+         optional_converse)) =
+      Refute_Forl.No
+        (Refute_Forl.Project (Refute_Forl.Rel (3, 3),
+           [Refute_Forl.Num 1, Refute_Forl.Num 0, Refute_Forl.Num 2]))
+      andalso
     translate (equality composition result) =
       Refute_Forl.RelEq
         (Refute_Forl.Join

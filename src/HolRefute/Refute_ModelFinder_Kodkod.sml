@@ -1712,13 +1712,20 @@ fun binary_rel_types ty =
   end
 
 fun dest_binary_rep representation =
-  case MFR.unopt_rep representation of
-      MFR.Func (MFR.Struct [first, second], body) =>
-        (first, second, body, true)
-    | MFR.Func (first, MFR.Func (second, body)) =>
-        (first, second, body, false)
-    | _ => raise MFR.REP
-        ("Refute_ModelFinder_Kodkod.dest_binary_rep", [representation])
+  let
+    (* Preserve the optional Boolean body.  Applying unopt_rep to the
+       complete function would silently turn a three-valued relation into
+       an exact one before Converse projects its columns. *)
+    val body = MFR.body_rep representation
+  in
+    case representation of
+        MFR.Func (MFR.Struct [first, second], _) =>
+          (first, second, body, true)
+      | MFR.Func (first, MFR.Func (second, _)) =>
+          (first, second, body, false)
+      | _ => raise MFR.REP
+          ("Refute_ModelFinder_Kodkod.dest_binary_rep", [representation])
+  end
 
 fun binary_rep paired first second body =
   if paired then MFR.Func (MFR.Struct [first, second], body)
