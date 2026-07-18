@@ -107,53 +107,66 @@ fun write_info thy =
    ------------------------------------------------------------------------- *)
 
 fun record_tactic (tac,stac) g =
-  let val ((gl,v),t) = add_time tac g in
-    incr n_tactic_replayed;
-    if op_mem goal_eq g gl then () else
-    calls_glob := (stac,g,gl) :: !calls_glob;
+  let
+    val ((gl,v),t) = add_time tac g
+    val _ =
+      (incr n_tactic_replayed;
+       if op_mem goal_eq g gl then () else
+       calls_glob := (stac,g,gl) :: !calls_glob)
+      handle Interrupt => raise Interrupt
+           | e => debug ("error: recording tactic result: " ^ stac ^
+                          ": " ^ exnMessage e)
+  in
     (gl,v)
   end
-  handle Interrupt => raise Interrupt
-    |  _ => (debug ("error: recording tactic: " ^ stac);
-             raise ERR "record_tactic" stac)
 
 (* -------------------------------------------------------------------------
    Replaying a proof
    ------------------------------------------------------------------------- *)
 
-fun wrap_stac stac = String.concatWith " "
-  ["( tttRecord.record_tactic","(",stac,",",mlquote stac,")",")"]
+fun wrap_stac run_stac recorded_stac = String.concatWith " "
+  ["( tttRecord.record_tactic","(",run_stac,",",mlquote recorded_stac,
+   ")",")"]
 
-fun wrap_proofexp e = case e of
-    ProofTactic stac => ProofTactic (wrap_stac stac)
-  | ProofOther _ => e
-  | ProofTactical _ => e
-  | ProofInfix (s,(e1,e2)) =>
-    ProofInfix (s,(wrap_proofexp e1, wrap_proofexp e2))
+(* Execute the exact source tactic.  The globalized version exists only to
+   label the recorded call; executing it can change termination behaviour
+   when unfolding replaces local aliases or theorem values. *)
+fun wrap_proofexp run_exp recorded_exp = case (run_exp,recorded_exp) of
+    (ProofTactic run_stac, ProofTactic recorded_stac) =>
+      ProofTactic (wrap_stac run_stac recorded_stac)
+  | (ProofOther _, _) => run_exp
+  | (ProofTactical run_stac, _) => ProofTactical ("op " ^ run_stac)
+  | (ProofInfix (s,(e1,e2)), ProofInfix (_,(r1,r2))) =>
+      ProofInfix (s,(wrap_proofexp e1 r1, wrap_proofexp e2 r2))
+  | _ => ProofTactic
+      (wrap_stac (string_of_proofexp run_exp)
+         (string_of_proofexp recorded_exp))
 
-fun wrap_proof ostac =
+fun wrap_proof run_stac recorded_stac =
   let
-    val _ = if not (is_tactic ostac) then raise ERR "wrap_proof" "" else ()
-    val smlexp = extract_smlexp ostac
-    val proofexp = extract_proofexp smlexp
-    val ntac = size_of_proofexp proofexp
+    val _ = if not (is_tactic run_stac) then raise ERR "wrap_proof" "" else ()
+    val run_exp = extract_proofexp (extract_smlexp run_stac)
+    val recorded_exp = extract_proofexp (extract_smlexp recorded_stac)
+    val ntac = size_of_proofexp run_exp
     val _  = debug ("#tactics (proof): " ^ its ntac)
     val _  = n_tactic_parsed := (!n_tactic_parsed) + ntac
     val _  = debug ("#tactics (total): " ^ its (!n_tactic_parsed))
-    val wstac = string_of_proofexp (wrap_proofexp proofexp)
+    val wstac = string_of_proofexp (wrap_proofexp run_exp recorded_exp)
   in
     (wstac, tactic_of_sml_no_timeout wstac)
   end
 
-fun app_wrap_proof name ostac =
-  if String.size ostac > !record_proof_string_size then
+fun app_wrap_proof name run_stac recorded_stac =
+  if String.size run_stac > !record_proof_string_size orelse
+     String.size recorded_stac > !record_proof_string_size then
     (fn _ =>
       (debug ("proof string too large: " ^ name);
        raise ERR "app_wrap_proof" name))
   else
     fn goal =>
       let
-        val (wstac,wtac) = total_time parse_time wrap_proof ostac
+        val (wstac,wtac) = total_time parse_time
+          (wrap_proof run_stac) recorded_stac
         val _ = incr n_proof_parsed
       in
         let val (gl,v) = total_time replay_time wtac goal

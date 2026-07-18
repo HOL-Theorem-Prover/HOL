@@ -693,6 +693,35 @@ fun ppstring_stac qtac =
     String.concatWith " " ["(","String.concatWith",mlquote " ","\n",tac3,")"]
   end
 
+(* Produce an executable version of a proof body without globalizing any of
+   its identifiers.  Infix guards are retained because smlParser uses them to
+   split a proof into tactic calls; they are semantically transparent and
+   still apply the source operator. *)
+fun source_program p =
+  let
+    fun is_infix_open s =
+      String.isPrefix "sml_infix" s andalso String.isSuffix "open" s
+    fun is_infix_close s =
+      String.isPrefix "sml_infix" s andalso String.isSuffix "close" s
+    fun source_code (s,SReplace sl) =
+          if length sl >= 3 andalso is_infix_open (hd sl) andalso
+             is_infix_close (last sl)
+          then [hd sl,"op",s,last sl]
+          else [s]
+      | source_code (s,_) = [s]
+    fun source p = case p of
+        [] => []
+      | Code ("op",_) :: Code (s,_) :: m =>
+          "op" :: s :: source m
+      | Code st :: m => source_code st @ source m
+      | Pattern (s,head,sep,body) :: m =>
+          if mem s ["val","fun"] then source m
+          else s :: source head @ sep :: source body @ source m
+      | _ => raise ERR "source_program" "unexpected proof syntax"
+  in
+    source (bare_body p)
+  end
+
 (* ------------------------------------------------------------------------
    Final modifications of the scripts
    ------------------------------------------------------------------------ *)
@@ -700,20 +729,23 @@ fun ppstring_stac qtac =
 (* todo: remove this flag at a minor computation cost *)
 val is_thm_flag = ref false
 
-(* The tokens that replace a proof's tactic in the rewritten script: bind
-   the original tactic, build the recording wrapper around it, and hand
-   both to record_proof, which replays the wrapper and falls back to the
-   original tactic if it fails.  Shared by the store_thm_at, store_thm and
-   prove branches below, which differ only in what precedes the tactic. *)
+(* The tokens that replace a proof's tactic in the rewritten script: bind the
+   original tactic, build a recording wrapper that executes that same source
+   expression while using the globalized expression only for call labels, and
+   hand both to record_proof.  Shared by the store_thm_at, store_thm and prove
+   branches below, which differ only in what precedes the tactic. *)
 fun record_wrapper name raw_tac learning_tac =
   let
     val tac1 = original_program raw_tac
     val lflag_name = if mem "let" tac1 then "true" else "false"
+    val run_stac = mlquote
+      (String.concatWith " " (source_program learning_tac))
     val tac2 = ppstring_stac learning_tac
   in
     ["let","val","tactictoe_tac1","="] @ tac1 @
     ["val","tactictoe_tac2","=","(","tttRecord.app_wrap_proof",
-     mlquote name,"\n",tac2,"handle","_","=>","tactictoe_tac1",")"] @
+     mlquote name,run_stac,"\n",tac2,"handle","_","=>","tactictoe_tac1",
+     ")"] @
     ["in","tttRecord.record_proof",mlquote name,lflag_name,
      "tactictoe_tac2","tactictoe_tac1","end"]
   end

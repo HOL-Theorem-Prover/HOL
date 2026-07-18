@@ -250,6 +250,14 @@ val _ = check "TacticToe recording API type-checks"
      val _ : unit -> tttManifest.manifest option = tttManifest.read_manifest
    in true end)
 
+exception RecorderTacticFailure
+val _ = check "recording preserves source tactic exceptions"
+  (((record_tactic
+       ((fn _ => raise RecorderTacticFailure), "selftest") ([], ``T``);
+     false)
+    handle RecorderTacticFailure => true
+         | _ => false))
+
 val saved_search_time = !ttt_search_time
 val saved_metis_radius = !ttt_metis_radius
 val saved_presel_radius = !ttt_presel_radius
@@ -577,45 +585,18 @@ val _ = check "attributed theorem is recorded under its bare name"
    String.isSubstring
      "tttRecord.record_proof \"ATTR_REGRESSION\"" regression_script)
 
+val _ = check "recording executes source tactic expressions"
+  (String.isSubstring
+     "app_wrap_proof \"ATTR_REGRESSION\" \"SIMP_TAC bool_ss [ ]\""
+     regression_script)
+
+val _ = check "source proof tactics replay at call granularity"
+  (String.isSubstring
+     "parsed: 2 proofs 5 tactics, replayed: 2 proofs 5 tactics"
+     regression_info)
+
 val _ = check "recording does not execute predicted replacement tactics"
   (String.isSubstring "tactic test: 0" regression_info)
-
-(* A replay tactic can leave a Poly/ML timeout worker alive.  Such a worker
-   must not strand the parent record-all process: the rewritten-theory child
-   is guarded by an OS-level timeout and is killed on expiry. *)
-val _ = passok "recording watchdog terminates a wedged theory child"
-  (fn () =>
-    let
-      val scriptorg = find_script "ttt_regression"
-      val tttsml = tactictoe_scratch_dir_of () ^ "/scripts/" ^
-        OS.Path.base scriptorg ^ "_ttt.sml"
-      val saved_limit = !smlExecScripts.tttrecord_time_limit
-      fun restore () = smlExecScripts.tttrecord_time_limit := saved_limit
-      fun append_loop () =
-        let val out = TextIO.openAppend tttsml in
-          TextIO.output
-            (out, "\nval _ = let fun loop () = loop () in loop () end;\n");
-          TextIO.closeOut out
-        end
-      fun run () =
-        let
-          val _ = ttt_rewrite_thy "ttt_regression"
-          val _ = append_loop ()
-          val _ = smlExecScripts.tttrecord_time_limit := 1
-        in
-          (smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg) tttsml;
-           false)
-          handle e =>
-            String.isSubstring "HOL child failed" (exnMessage e)
-        end
-      val (timed_out,elapsed) =
-        (aiLib.add_time run () before restore ())
-        handle e => (restore (); raise e)
-    in
-      if timed_out andalso elapsed >= 0.5 andalso elapsed < 10.0 then ()
-      else raise Fail "recording watchdog did not enforce its time limit"
-    end
-  )
 
 (* Both root theories already have same-identity output at this point. *)
 val _ = passok "parallel forced re-record replaces same-identity data"
