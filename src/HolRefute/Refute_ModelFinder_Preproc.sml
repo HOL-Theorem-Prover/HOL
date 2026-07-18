@@ -299,10 +299,10 @@ structure Refute_ModelFinder_Preproc = struct
                | NONE =>
                    let
                      val variable = fresh_value_var
-                       (avoids @ map #2 pulled) (length pulled)
+                       (avoids @ map #2 pulled) (length pulled + 1)
                        (Term.type_of candidate)
                    in
-                     (variable, pulled @ [(candidate, variable)])
+                     (variable, (candidate, variable) :: pulled)
                    end)
 
   fun equations_for_pulled pulled =
@@ -362,17 +362,20 @@ structure Refute_ModelFinder_Preproc = struct
         else if Term.is_comb candidate then
           let
             val (head, arguments) = HolKernel.strip_comb candidate
-            fun do_arguments [] result current =
-                  (rev result, current)
-              | do_arguments (argument :: rest) result current =
+            fun do_arguments [] current = ([], current)
+              | do_arguments (argument :: rest) current =
                   let
-                    val (argument', current') =
-                      recurse forbidden false argument current
+                    (* Application descent in Nitpick visits the rightmost
+                       argument first.  Preserve that order because it fixes
+                       value-variable serials and premise order. *)
+                    val (rest', current') = do_arguments rest current
+                    val (argument', current'') =
+                      recurse forbidden false argument current'
                   in
-                    do_arguments rest (argument' :: result) current'
+                    (argument' :: rest', current'')
                   end
             val (arguments', pulled') =
-              do_arguments arguments [] pulled
+              do_arguments arguments pulled
             val rebuilt = Term.list_mk_comb (head, arguments')
           in
             pull_candidate avoids [] forbidden relaxed rebuilt pulled'
@@ -438,17 +441,17 @@ structure Refute_ModelFinder_Preproc = struct
         else if Term.is_comb candidate then
           let
             val (head, arguments) = HolKernel.strip_comb candidate
-            fun do_arguments [] result current =
-                  (rev result, current)
-              | do_arguments (argument :: rest) result current =
+            fun do_arguments [] current = ([], current)
+              | do_arguments (argument :: rest) current =
                   let
-                    val (argument', current') =
-                      collect outer existentials argument current
+                    val (rest', current') = do_arguments rest current
+                    val (argument', current'') =
+                      collect outer existentials argument current'
                   in
-                    do_arguments rest (argument' :: result) current'
+                    (argument' :: rest', current'')
                   end
             val (arguments', pulled') =
-              do_arguments arguments [] pulled
+              do_arguments arguments pulled
             val rebuilt = Term.list_mk_comb (head, arguments')
           in
             pull_candidate avoids existentials outer false rebuilt pulled'
@@ -920,14 +923,17 @@ structure Refute_ModelFinder_Preproc = struct
                     else accumulated @ [item]) result vars)
                 [] yes
               val size = List.foldl
-                (fn ((_, _, cost), total) => total + cost) 0 yes *
-                MFH.typical_card_of_type (Term.type_of variable)
+                (fn ((_, _, cost), total) => total + cost)
+                (0 : IntInf.int) yes *
+                IntInf.fromInt
+                  (MFH.typical_card_of_type (Term.type_of variable))
             in
               (boolSyntax.T, used, size) :: no
             end
         end
       fun groups_cost groups =
-        List.foldl (fn ((_, _, cost), total) => total + cost) 0 groups
+        List.foldl (fn ((_, _, cost), total) => total + cost)
+          (0 : IntInf.int) groups
       fun merge_in_order order groups =
         List.foldl (fn (variable, current) =>
           merge_groups variable current) groups order
@@ -1019,8 +1025,8 @@ structure Refute_ModelFinder_Preproc = struct
               List.filter (fn variable => Term.free_in variable component)
                 variables
             val groups = map (fn component =>
-              (component, used component, Term.term_size component))
-              components
+              (component, used component,
+               IntInf.fromInt (Term.term_size component))) components
             val order =
               if length variables <= quantifier_cluster_threshold then
                 best_order variables groups

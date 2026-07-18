@@ -678,10 +678,32 @@ fun mf_preproc_destroy_goldens () =
     val user_free_constructor = ``q (h :: t : num list)``
     val user_free_result =
       MFP.pull_out_universal_constrs context false user_free_constructor
+    val first_generated_function = MFN.mk_reserved_var "refute$vfunA"
+      ``:num -> bool``
+    val second_generated_function = MFN.mk_reserved_var "refute$vfunB"
+      ``:num -> bool``
+    val first_option = optionSyntax.mk_some first_generated_function
+    val second_option = optionSyntax.mk_some second_generated_function
+    val binary_predicate =
+      ``binary_q : ((num -> bool) option) ->
+                   ((num -> bool) option) -> bool``
+    val first_value = MFN.mk_reserved_var "refute$v2"
+      (Term.type_of first_option)
+    val second_value = MFN.mk_reserved_var "refute$v1"
+      (Term.type_of second_option)
+    val multiple_input = Term.list_mk_comb
+      (binary_predicate, [first_option, second_option])
+    val multiple_expected = boolSyntax.list_mk_imp
+      ([boolSyntax.mk_eq (first_value, first_option),
+        boolSyntax.mk_eq (second_value, second_option)],
+       Term.list_mk_comb
+         (binary_predicate, [first_value, second_value]))
+    val multiple_result =
+      MFP.pull_out_universal_constrs context false multiple_input
     val predicate = ``q : ((num -> bool) option) -> bool``
     val function = ``p : num -> bool``
     val option = optionSyntax.mk_some function
-    val option_value = MFN.mk_reserved_var "refute$v0"
+    val option_value = MFN.mk_reserved_var "refute$v1"
       (Term.type_of option)
     val existential_input = boolSyntax.mk_exists (function,
       Term.mk_comb (predicate, option))
@@ -697,7 +719,7 @@ fun mf_preproc_destroy_goldens () =
       ``SOME (\n. (f : num -> bool) n /\ (g : num -> bool) n)``
     val nested_predicate =
       ``nested_q : ((num -> bool) option) -> bool``
-    val nested_value = MFN.mk_reserved_var "refute$v0"
+    val nested_value = MFN.mk_reserved_var "refute$v1"
       (Term.type_of nested_option)
     val nested_input = boolSyntax.list_mk_exists
       ([first_function, second_function],
@@ -715,6 +737,7 @@ fun mf_preproc_destroy_goldens () =
     Term.aconv weak_pattern expected_weak_pattern andalso
     Term.aconv actual_shared expected_shared andalso
     Term.aconv user_free_result user_free_constructor andalso
+    Term.aconv multiple_result multiple_expected andalso
     Term.aconv existential_result existential_expected andalso
     Term.aconv nested_result nested_expected andalso
     Term.aconv
@@ -931,11 +954,17 @@ fun mf_preproc_quantifier_golden () =
     val nested_expected =
       ``(!x : num. s x) \/ (?y : num. r y /\ q)``
     val nested_result = MFP.push_quantifiers_inward nested_input
+    val high_cost_input =
+      ``!f g h : (num -> num) -> num.
+          f (\x. x) + g (\x. x) = h (\x. x)``
+    val high_cost_result = MFP.push_quantifiers_inward high_cost_input
   in
     distributed andalso negated andalso negative_preserved andalso
     Term.aconv pushed_shadowed inner andalso
     Term.aconv pushed_distinct inner andalso
-    Term.aconv nested_result nested_expected
+    Term.aconv nested_result nested_expected andalso
+    Term.type_of high_cost_result = Type.bool andalso
+    null (Term.free_vars_lr high_cost_result)
   end
 
 val _ = require_msg (check_result mf_preproc_quantifier_golden) (fn () =>
