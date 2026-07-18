@@ -151,7 +151,7 @@ fun dest_thy_typeid (Tyapp((tyc,_),A)) =
    directly. *)
 fun dest_thy_type (Tyapp((tyc,_),A)) =
     {Thy = seg_of tyc, Tyop = KernelSig.name_of tyc, Args = A}
-  | dest_thy_type _ = raise ERR "dest_thy_typeid" "";
+  | dest_thy_type _ = raise ERR "dest_thy_type" "";
 
 fun dest_type (ty as Tyapp _) =
     let val {Tyop,Args,...} = dest_thy_type ty
