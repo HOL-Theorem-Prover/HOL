@@ -583,6 +583,18 @@ structure Refute_ModelFinder_HOL = struct
     if theory = Theory.current_theory () then Theory.current_axioms ()
     else DB.axioms theory
 
+  (* PLAN_M3 section 13.2: bracketed tools may transiently register
+     a DefnBase presentation and then delete its scratch constant.  The
+     DefnBase store retains such entries, and current_userdefs reconstructs
+     every presentation with prim_mk_const, so one stale entry makes an
+     otherwise unrelated later MF run fail.  Discover presentations through
+     the live constant table instead, so lookup_userdef is called only on
+     constants that still exist. *)
+  fun live_userdefs () =
+    List.mapPartial (fn constant =>
+      DefnBase.lookup_userdef constant handle HOL_ERR _ => NONE)
+      (Term.all_consts ())
+
   fun presentation_key {const, ...} = const_key const
 
   fun has_presentation presentations key =
@@ -650,7 +662,7 @@ structure Refute_ModelFinder_HOL = struct
 
   fun make_tables () =
     let
-      val presentations = DefnBase.current_userdefs ()
+      val presentations = live_userdefs ()
       val fallback_props = standard_user_props presentations @
         raw_standard_props presentations
       val unfold_props = clauses_of (DB.fetch "bool"

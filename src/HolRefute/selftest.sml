@@ -1578,6 +1578,8 @@ fun mf_rep_fixed_scope () =
     MFR.best_non_opt_set_rep_for_type scope
       ``:refute$rf2 -> bool`` =
       MFR.Func (enum, MFR.Formula MFU.Neut) andalso
+    MFR.best_non_opt_set_rep_for_type scope
+      ``:refute$rf2 -> num`` = MFR.Func (enum, number) andalso
     MFR.best_opt_set_rep_for_type scope ``:refute$rf2 -> num`` =
       MFR.Func (enum, MFR.Opt number) andalso
     MFR.best_set_rep_for_type scope ``:refute$rf2`` = enum andalso
@@ -7279,6 +7281,183 @@ val _ = require_msg (check_result nitpick_preset_pin) (fn () =>
   "Refute.nitpick did not select only the kodkod backend") (fn () => ()) ()
 val _ = require_msg (check_result kodkod_not_configured_pin) (fn () =>
   "the kodkod not-configured outcome changed") (fn () => ()) ()
+
+(* PLAN_M3 section 13.2: this is the public, expect-driven MF acceptance
+   corpus.  Keep it separate from the JVM-free unit tests above: a missing
+   Kodkodi installation skips this whole block, exactly like HolSmt's live
+   solver tests. *)
+
+datatype mf_cert_pin = MfCertSome | MfCertNone | MfCertIgnored
+
+type mf_acceptance_case =
+  {name : string,
+   tm : term,
+   expect : expectation,
+   cert_pin : mf_cert_pin,
+   unknown_reason : string option,
+   sat4j_smoke : bool}
+
+fun mf_acceptance_config solver =
+  Refute.upd_sat_solver solver
+    (Refute.upd_max_threads 1
+      (Refute.upd_batch_size 8
+        (Refute.upd_card [(NONE, [1, 2, 3, 4, 5, 6])]
+          (Refute.upd_timeout 30.0
+            (Refute.upd_sequential true
+              (Refute.upd_backends (SOME ["kodkod"])
+                Refute.default_config))))))
+
+fun mf_cert_pin_holds MfCertIgnored _ = true
+  | mf_cert_pin_holds MfCertSome
+      (Refute.Counterexample
+        ({certainty = Refute.Genuine, cert = SOME theorem, ...} :: _)) =
+      certificate_tag_clean theorem
+  | mf_cert_pin_holds MfCertNone
+      (Refute.Counterexample
+        ({certainty = Refute.Genuine, cert = NONE, ...} :: _)) = true
+  | mf_cert_pin_holds _ _ = false
+
+fun mf_unknown_reason_holds NONE _ = true
+  | mf_unknown_reason_holds (SOME needle) outcome =
+      is_unknown_with needle outcome
+
+fun mf_gate_pin_holds MfCertIgnored _ = true
+  | mf_gate_pin_holds pin tm =
+      let
+        val instances = preprocess default_config (preprocessing_problem tm)
+        val gated = List.exists
+          (fn (instance : instance) => Option.isSome (#qc_gate instance))
+          instances
+      in
+        case pin of MfCertSome => not gated | MfCertNone => gated
+          | MfCertIgnored => true
+      end
+
+fun mf_pin_outcome_name
+      (Refute.Counterexample
+        ({certainty = Refute.Genuine, cert = SOME _, ...} :: _)) =
+      "Genuine with cert = SOME _"
+  | mf_pin_outcome_name
+      (Refute.Counterexample
+        ({certainty = Refute.Genuine, cert = NONE, ...} :: _)) =
+      "Genuine with cert = NONE"
+  | mf_pin_outcome_name outcome = conformance_outcome_name outcome
+
+fun mf_acceptance_test solver
+      ({name, tm, expect, cert_pin, unknown_reason, ...}
+        : mf_acceptance_case) =
+  let
+    val _ = tprint ("Refute MF (" ^ solver ^ "): " ^ name)
+    val config = Refute.upd_expect (public_expect expect)
+      (mf_acceptance_config solver)
+    val outcome = with_silent_refute (fn () => Refute.refute config tm)
+    val accepted = mf_gate_pin_holds cert_pin tm andalso
+      mf_cert_pin_holds cert_pin outcome andalso
+      mf_unknown_reason_holds unknown_reason outcome
+  in
+    if accepted then OK ()
+    else die ("acceptance pin failed: " ^ mf_pin_outcome_name outcome)
+  end
+  handle e => die (Feedback.exn_to_string e)
+
+val mf_acceptance_cases : mf_acceptance_case list =
+  [
+   {name = "HD non-theorem",
+    tm = ``xs <> [] ==> HD (xs : num list) = 0``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = true},
+   {name = "TL non-theorem",
+    tm = ``xs <> [] ==> TL (xs : num list) = []``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "REVERSE fixed-point mutation",
+    tm = ``REVERSE (xs : num list) = xs``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "REVERSE append mutation",
+    tm = ``REVERSE (xs ++ ys : num list) = REVERSE xs ++ REVERSE ys``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "tree shape mutation",
+    tm = ``(tree : zoo_tree) = ZooLeaf 0``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "tree constructor equation mutation",
+    tm = ``ZooLeaf n = ZooLeaf 0``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "record selector mutation",
+    tm = ``(record : zoo_record).zoo_num = 0``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "set membership mutation",
+    tm = ``(n : num) IN (s : num set)``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "function application mutation",
+    tm = ``(f : bool -> num) b = 0``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "TotalDefn equation mutation",
+    tm = ``zoo_total n = 0``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "DefnBase equation mutation",
+    tm = ``zoo_height (ZooLeaf n) = SUC n``,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "unary natural arithmetic",
+    tm = ``SUC n = n``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "unary integer arithmetic",
+    tm = ``(i : int) + 1 = i``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "non-executable choice-spec counterexample",
+    tm = ``zoo_spec = 1``,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "essentially existential natural",
+    tm = ``?n : num. n <> n``,
+    expect = ExpectPotential, cert_pin = MfCertIgnored,
+    unknown_reason = NONE, sat4j_smoke = true},
+   {name = "small-scope Boolean theorem",
+    tm = ``!b : bool. b \/ ~b``,
+    expect = ExpectNone, cert_pin = MfCertIgnored,
+    unknown_reason = NONE, sat4j_smoke = true},
+   {name = "small-scope finite theorem",
+    tm = ``!x : refute$rf2. x = rf2_1 \/ x = rf2_2``,
+    expect = ExpectNone, cert_pin = MfCertIgnored,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "inductive predicate refusal",
+    tm = ``RTC (r : num -> num -> bool) x y``,
+    expect = ExpectUnknown, cert_pin = MfCertIgnored,
+    unknown_reason = SOME "inductive predicate", sat4j_smoke = true},
+   {name = "GSPEC refused-predicate fallback",
+    tm = ``x IN GSPEC (\n : num. (n, RTC r n x))``,
+    expect = ExpectUnknown, cert_pin = MfCertIgnored,
+    unknown_reason = SOME "inductive predicate", sat4j_smoke = false}
+  ]
+
+fun run_mf_acceptance () =
+  if not (Refute_Forl.is_configured ()) then
+    print "(Kodkodi not configured, MF acceptance corpus skipped.)\n"
+  else
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val _ = if Lib.mem "MiniSat_JNI" solvers then () else
+        raise Fail "MiniSat_JNI is required for the full MF corpus"
+      val _ = List.app (mf_acceptance_test "MiniSat_JNI")
+        mf_acceptance_cases
+      val smoke = List.filter
+        (fn ({sat4j_smoke, ...} : mf_acceptance_case) => sat4j_smoke)
+        mf_acceptance_cases
+    in
+      List.app (mf_acceptance_test "SAT4J") smoke
+    end
+
+val _ = if selftest_level >= 2 then run_mf_acceptance () else ()
 
 val _ = if selftest_level >= 2 then corpus_potential () else ()
 

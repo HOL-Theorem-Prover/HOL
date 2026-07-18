@@ -400,11 +400,17 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
   fun best_non_opt_set_rep_for_type scope ty =
     case Lib.total Type.dom_rng ty of
         SOME (domain_ty, range_ty) =>
-          (case (best_one_rep_for_type scope domain_ty,
-                 best_non_opt_set_rep_for_type scope range_ty) of
-               (domain, Atom (2, _)) =>
-                 Func (domain, Formula MFU.Neut)
-             | pair => Func pair)
+          let
+            val domain = best_one_rep_for_type scope domain_ty
+            val range = best_non_opt_set_rep_for_type scope range_ty
+          in
+            (* PLAN_M3 section 9: cardinality two does not imply Boolean.
+               In particular, a num range at card 2 must remain an Atom;
+               only an actual Boolean range uses Formula. *)
+            Func (domain,
+              if MFH.is_boolean_type range_ty then Formula MFU.Neut
+              else range)
+          end
       | NONE => best_one_rep_for_type scope ty
 
   fun best_set_rep_for_type
