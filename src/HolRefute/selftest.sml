@@ -651,6 +651,9 @@ fun mf_preproc_destroy_goldens () =
         right = (^tree_right) tree``
     val actual_tree = MFP.destroy_pulled_out_constrs context false true
       ``(tree : zoo_tree) = ZooNode left right``
+    val actual_suc = MFP.destroy_pulled_out_constrs context false true
+      ``(n : num) = SUC m``
+    val expected_suc = ``~((0 : num) = n) /\ m = n - 1``
     val (pipeline_lists, pipeline_list_defs, _, _) =
       MFP.preprocess_formulas (fresh_mf_context ()) []
         ``(xs : num list) = h :: t``
@@ -784,6 +787,7 @@ fun mf_preproc_destroy_goldens () =
   in
     Term.aconv actual_list expected_list andalso
     Term.aconv actual_tree expected_tree andalso
+    Term.aconv actual_suc expected_suc andalso
     ListPair.allEq (fn (actual, expected) =>
       Term.aconv actual expected) (pipeline_lists, [expected_list]) andalso
     null pipeline_list_defs andalso
@@ -829,6 +833,14 @@ fun mf_preproc_skolem_golden () =
                x = a + b + c /\ y = d``
     val actual = MFP.skolemize_term_and_more context 3 input
     val metadata = !(#skolems context)
+    val pipeline_context = fresh_mf_context ()
+    val (pipeline_terms, pipeline_defs, pipeline_all_mono,
+         pipeline_no_poly) =
+      MFP.preprocess_formulas pipeline_context [] input
+    val expected_pipeline =
+      ``!c b a : num.
+          let x = (^skolem) a b c
+          in x = a + b + c``
     val axiom_context = fresh_mf_context ()
     val axiom = ``?w : num. w = 2``
     val unskolemized =
@@ -855,6 +867,12 @@ fun mf_preproc_skolem_golden () =
   in
     Term.aconv actual expected andalso
     metadata = [("refute$sk3@1$x", ["c", "b", "a"])] andalso
+    ListPair.allEq (fn (result, golden) => Term.aconv result golden)
+      (pipeline_terms, [expected_pipeline]) andalso
+    null pipeline_defs andalso pipeline_all_mono andalso
+    pipeline_no_poly andalso
+    !(#skolems pipeline_context) =
+      [("refute$sk3@1$x", ["c", "b", "a"])] andalso
     Term.aconv unskolemized axiom andalso
     null (!(#skolems axiom_context)) andalso
     Term.aconv higher_order_result higher_order andalso
@@ -927,6 +945,21 @@ fun mf_preproc_unfold_goldens () =
        Term.mk_comb (list_tail, ``xs : num list``))
     val reconstructed_result =
       MFP.simplify_constrs_and_sels context reconstructed_list
+    val reflexive_result = MFP.simplify_constrs_and_sels context
+      ``(same : num) = same``
+    val true_conditional_result = MFP.simplify_constrs_and_sels context
+      ``if T then (left : num) else right``
+    val false_conditional_result = MFP.simplify_constrs_and_sels context
+      ``if F then (left : num) else right``
+    val let_argument = ``let_x : num``
+    val let_bound = ``let_x : num``
+    val let_parameter = ``let_y : num``
+    val let_function = boolSyntax.mk_let
+      (Term.mk_abs (let_bound,
+         Term.mk_abs (let_parameter,
+           numSyntax.mk_plus (let_bound, let_parameter))),
+       ``1 : num``)
+    val let_result = MFH.s_betapply (let_function, let_argument)
   in
     Term.aconv actual_case expected_case andalso
     ListPair.allEq (fn (actual, expected) =>
@@ -942,7 +975,12 @@ fun mf_preproc_unfold_goldens () =
     Term.aconv pair_first ``a : num`` andalso
     Term.aconv pair_second ``b : bool`` andalso
     Term.aconv eta_result eta_option andalso
-    Term.aconv reconstructed_result ``xs : num list``
+    Term.aconv reconstructed_result ``xs : num list`` andalso
+    Term.aconv reflexive_result boolSyntax.T andalso
+    Term.aconv true_conditional_result ``left : num`` andalso
+    Term.aconv false_conditional_result ``right : num`` andalso
+    Term.aconv let_result
+      ``let let_z = 1 : num in let_z + let_x``
   end
 
 val _ = require_msg (check_result mf_preproc_unfold_goldens) (fn () =>
@@ -1030,6 +1068,41 @@ fun mf_preproc_axiom_closure () =
 
 val _ = require_msg (check_result mf_preproc_axiom_closure) (fn () =>
   "model-finder theorem-table axiom was not universally closed")
+  (fn () => ()) ()
+
+fun mf_preproc_axiom_collection_golden () =
+  let
+    val total_context = fresh_mf_context ()
+    val total_goal = ``zoo_total 2 = 4``
+    val total_axioms =
+      [``!n. zoo_total n =
+          if n = 0 then 0 else SUC (zoo_total (n - 1))``]
+    val (total_nondefs, total_defs, total_all_mono, total_no_poly) =
+      MFP.axioms_for_term total_context [] total_goal
+    val choice_context = fresh_mf_context ()
+    val choice_goal = ``zoo_spec = 0``
+    val choice_spec = ``EVEN zoo_spec``
+    val choice_def_axioms =
+      [``!n. EVEN (SUC n) <=> ~(EVEN n)``,
+       ``EVEN 0 <=> T``]
+    val (choice_nondefs, choice_defs, choice_all_mono, choice_no_poly) =
+      MFP.axioms_for_term choice_context [] choice_goal
+  in
+    ListPair.allEq (fn (actual, expected) => Term.aconv actual expected)
+      (total_nondefs, [total_goal]) andalso
+    ListPair.allEq (fn (actual, expected) => Term.aconv actual expected)
+      (total_defs, total_axioms) andalso
+    total_all_mono andalso total_no_poly andalso
+    ListPair.allEq (fn (actual, expected) => Term.aconv actual expected)
+      (choice_nondefs, [choice_goal, choice_spec]) andalso
+    ListPair.allEq (fn (actual, expected) => Term.aconv actual expected)
+      (choice_defs, choice_def_axioms) andalso
+    choice_all_mono andalso choice_no_poly
+  end
+
+val _ = require_msg
+  (check_result mf_preproc_axiom_collection_golden) (fn () =>
+    "model-finder axiom collection golden changed")
   (fn () => ()) ()
 
 fun mf_preproc_existential_equality_golden () =

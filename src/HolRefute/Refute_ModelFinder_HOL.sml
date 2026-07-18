@@ -967,7 +967,7 @@ structure Refute_ModelFinder_HOL = struct
         let
           val value = Term.mk_var ("n", data_ty)
           val test = boolSyntax.mk_neg
-            (boolSyntax.mk_eq (value, numSyntax.zero_tm))
+            (boolSyntax.mk_eq (numSyntax.zero_tm, value))
         in
           Term.mk_abs (value, test)
         end
@@ -979,11 +979,55 @@ structure Refute_ModelFinder_HOL = struct
           (constructor_name constructor) (fun_type (data_ty, Type.bool))
     end
 
+  (* These smart application forms are observable in preprocessor goldens
+     and match Nitpick's s_betapply before ordinary beta reduction. *)
   fun s_betapply (function, argument) =
-    if Term.is_abs function then
-      Term.beta_conv (Term.mk_comb (function, argument))
-    else
-      Term.mk_comb (function, argument)
+    let
+      val application = Term.mk_comb (function, argument)
+    in
+      if boolSyntax.is_eq application then
+        let val (left, right) = boolSyntax.dest_eq application
+        in
+          if Term.aconv left right then boolSyntax.T else application
+        end
+      else if boolSyntax.is_cond application then
+        let val (condition, left, right) =
+          boolSyntax.dest_cond application
+        in
+          if Term.aconv condition boolSyntax.T then left
+          else if Term.aconv condition boolSyntax.F then right
+          else application
+        end
+      else if boolSyntax.is_let function then
+        let
+          val (abstraction, value) = boolSyntax.dest_let function
+        in
+          case Lib.total Term.dest_abs abstraction of
+              SOME (variable, body) =>
+                let
+                  val fresh =
+                    if Term.free_in variable argument then
+                      Term.variant
+                        (Term.all_vars body @ Term.all_vars argument)
+                        variable
+                    else
+                      variable
+                  val renamed =
+                    if Term.aconv fresh variable then body
+                    else Term.subst [{redex = variable, residue = fresh}]
+                      body
+                in
+                  boolSyntax.mk_let
+                    (Term.mk_abs (fresh,
+                       s_betapply (renamed, argument)), value)
+                end
+            | NONE => application
+        end
+      else if Term.is_abs function then
+        Term.beta_conv application
+      else
+        application
+    end
 
   fun s_betapplys (function, arguments) =
     List.foldl (fn (argument, result) =>
