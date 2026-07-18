@@ -167,13 +167,18 @@ structure Refute_ModelFinder_Names = struct
      free is renamed first, using HOL4's name-based variant discipline. *)
   fun rename_colliding_goal_vars fabricated goal =
     let
-      val _ = assert_user_goal goal
       val goal_frees = Term.free_vars_lr goal
 
       fun rename (variable, (avoids, substitutions, renaming)) =
         if member_name (variable_name variable) fabricated then
           let
-            val fresh = Term.variant avoids variable
+            val (name, ty) = Term.dest_var variable
+            val candidate =
+              if is_reserved_name name then
+                Term.mk_var ("user$" ^ name, ty)
+              else
+                variable
+            val fresh = Term.variant avoids candidate
             val substitution = {redex = variable, residue = fresh}
           in
             (fresh :: avoids, substitution :: substitutions,
@@ -184,8 +189,10 @@ structure Refute_ModelFinder_Names = struct
 
       val (_, substitutions, renaming) =
         List.foldl rename (fabricated @ goal_frees, [], []) goal_frees
+      val renamed = Term.subst (rev substitutions) goal
+      val _ = assert_user_goal renamed
     in
-      (Term.subst (rev substitutions) goal, rev renaming)
+      (renamed, rev renaming)
     end
 end
 
@@ -860,12 +867,18 @@ structure Refute_ModelFinder_HOL = struct
   fun exists_unique_def () = Thm.concl (DB.fetch "bool"
     "EXISTS_UNIQUE_DEF")
 
+  fun relaxed_int_of_term term =
+    case Lib.total intSyntax.dest_negated term of
+        SOME positive => Arbint.~ (relaxed_int_of_term positive)
+      | NONE => Arbint.fromNat (Literal.relaxed_dest_numeral
+          (intSyntax.dest_injected term))
+
   fun numeral_value term =
     if Term.type_of term = int_type then
-      SOME (intSyntax.int_of_term term)
+      SOME (relaxed_int_of_term term)
       handle HOL_ERR _ => NONE
     else if Term.type_of term = num_type then
-      SOME (Arbint.fromNat (numSyntax.dest_numeral term))
+      SOME (Arbint.fromNat (Literal.relaxed_dest_numeral term))
       handle HOL_ERR _ => NONE
     else
       NONE
@@ -1249,12 +1262,27 @@ structure Refute_ModelFinder_HOL = struct
 
   fun cart_type_parts ty = Lib.total fcpSyntax.dest_cart_type ty
 
-  fun cart_dimension index_ty =
-    Arbnum.toInt (fcpLib.index_to_num index_ty)
+  fun numeric_type_card ty =
+    case Lib.total fcpLib.index_to_num ty of
+        SOME card =>
+          SOME (Arbnum.toInt card
+            handle Overflow =>
+              raise Refute_ModelFinder_Util.TOO_LARGE
+                ("Refute_ModelFinder_HOL.numeric_type_card",
+                 "finite type cardinality does not fit in int"))
+      | NONE => NONE
 
   fun word_dimension ty =
-    Option.map cart_dimension
-      (Lib.total wordsSyntax.dest_word_type ty)
+    case Lib.total wordsSyntax.dest_word_type ty of
+        SOME index_ty => numeric_type_card index_ty
+      | NONE => NONE
+
+  fun cart_type_card ty =
+    case cart_type_parts ty of
+        SOME (element, index_ty) =>
+          Option.map (fn dimension => (element, dimension))
+            (numeric_type_card index_ty)
+      | NONE => NONE
 
   fun card_of_type assigns ty =
     if is_boolean_type ty then 2
@@ -1278,20 +1306,22 @@ structure Refute_ModelFinder_HOL = struct
                      "product cardinality does not fit in int")
               end
             else
-              (case word_dimension ty of
-                   SOME width =>
-                     Refute_ModelFinder_Util.reasonable_power 2 width
+              (case numeric_type_card ty of
+                   SOME card => card
                  | NONE =>
-                     (case cart_type_parts ty of
-                          SOME (element, index_ty) =>
-                            Refute_ModelFinder_Util.reasonable_power
-                              (card_of_type assigns element)
-                              (cart_dimension index_ty)
+                     (case word_dimension ty of
+                          SOME width =>
+                            Refute_ModelFinder_Util.reasonable_power 2 width
                         | NONE =>
-                            (case assignment_lookup assigns ty of
-                                 SOME card => card
-                               | NONE => raise err "card_of_type"
-                                   "type has no exact cardinality")))
+                            (case cart_type_card ty of
+                                 SOME (element, dimension) =>
+                                   Refute_ModelFinder_Util.reasonable_power
+                                     (card_of_type assigns element) dimension
+                               | NONE =>
+                                   (case assignment_lookup assigns ty of
+                                        SOME card => card
+                                      | NONE => raise err "card_of_type"
+                                          "type has no exact cardinality"))))
 
   fun bounded_power maximum base exponent =
     let
@@ -1315,7 +1345,16 @@ structure Refute_ModelFinder_HOL = struct
       fun recurse ty =
         case Lib.total Type.dom_rng ty of
             SOME (domain, range) =>
-              bounded_power maximum (recurse range) (recurse domain)
+              let
+                val domain_card = recurse domain
+                val range_card = recurse range
+              in
+                if domain_card >= maximum orelse
+                   range_card >= maximum then
+                  maximum
+                else
+                  bounded_power maximum range_card domain_card
+              end
           | NONE =>
               if is_pair_type ty then
                 let
@@ -1352,8 +1391,8 @@ structure Refute_ModelFinder_HOL = struct
         if List.exists (fn other => other = ty) avoid then 0
         else if List.exists (fn other => other = ty) finitizable then
           fallback ty
-        else if is_boolean_type ty then Int.min (maximum, 2)
-        else if is_itself_type ty then Int.min (maximum, 1)
+        else if is_boolean_type ty then 2
+        else if is_itself_type ty then 1
         else
           case Lib.total Type.dom_rng ty of
               SOME (domain, range) =>
@@ -1370,37 +1409,52 @@ structure Refute_ModelFinder_HOL = struct
                   let val (left, right) = pairSyntax.dest_prod ty
                   in multiply (recurse avoid left) (recurse avoid right) end
                 else
-                  (case word_dimension ty of
-                       SOME width => bounded_power maximum 2 width
+                  (case numeric_type_card ty of
+                       SOME card => card
                      | NONE =>
-                         (case cart_type_parts ty of
-                              SOME (element, index_ty) =>
-                                bounded_power maximum
-                                  (recurse avoid element)
-                                  (cart_dimension index_ty)
+                         (case word_dimension ty of
+                              SOME width => bounded_power maximum 2 width
                             | NONE =>
-                         let val constructors = data_type_constrs context ty
-                         in
-                           if null constructors then
-                             if is_integer_type ty then 0 else fallback ty
-                           else
-                             let
-                               fun constructor_card constructor =
-                                 List.foldl (fn (argument_ty, total) =>
-                                   multiply total
-                                     (recurse (ty :: avoid) argument_ty))
-                                   1 (constructor_arg_types constructor)
-                               val cards = map constructor_card constructors
-                             in
-                               if List.exists (fn card => card = 0) cards then
-                                 0
-                               else List.foldl (fn (card, total) =>
-                                 if total >= maximum - card then maximum
-                                 else total + card) 0 cards
-                             end
-                         end))
+                                (case cart_type_card ty of
+                                     SOME (element, dimension) =>
+                                       bounded_power maximum
+                                         (recurse avoid element) dimension
+                                   | NONE =>
+                                let
+                                  val constructors =
+                                    data_type_constrs context ty
+                                in
+                                  if null constructors then
+                                    if is_integer_type ty then 0
+                                    else fallback ty
+                                  else
+                                    let
+                                      fun constructor_card constructor =
+                                        List.foldl
+                                          (fn (argument_ty, total) =>
+                                            multiply total
+                                              (recurse (ty :: avoid)
+                                                argument_ty))
+                                          1
+                                          (constructor_arg_types constructor)
+                                      val cards =
+                                        map constructor_card constructors
+                                    in
+                                      if List.exists (fn card => card = 0)
+                                           cards then
+                                        0
+                                      else
+                                        List.foldl
+                                          (fn (card, total) =>
+                                            if total >= maximum - card then
+                                              maximum
+                                            else total + card)
+                                          0 cards
+                                    end
+                                end)))
     in
       Int.min (maximum, recurse [] ty)
+      handle Refute_ModelFinder_Util.TOO_LARGE _ => maximum
     end
 
   val typical_atomic_card = 4
@@ -1409,7 +1463,7 @@ structure Refute_ModelFinder_HOL = struct
     bounded_card_of_type 16777217 typical_atomic_card [] ty
 
   fun is_finite_type context ty =
-    bounded_exact_card_of_type context [] 2 2 [] ty > 0
+    bounded_exact_card_of_type context [] 1 2 [] ty > 0
 
   fun eta_expand term missing =
     let

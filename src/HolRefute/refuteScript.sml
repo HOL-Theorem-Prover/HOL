@@ -48,7 +48,11 @@ val _ = new_constant ("is_unknown", ``:'a -> bool``)
 val _ = new_constant ("safe_The", ``:('a -> bool) -> 'a``)
 
 Definition card'_def:
-  card' (s : 'a set) = if FINITE s then CARD s else 0
+  card' (s : 'a set) =
+    if FINITE s then
+      LENGTH (@xs. set xs = s /\ ALL_DISTINCT xs)
+    else
+      0
 End
 
 Theorem Eps_psimp[refute_psimp]:

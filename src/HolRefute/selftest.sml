@@ -126,11 +126,20 @@ fun mf_variant_renames_goal_first () =
     val fabricated = [MFN.unknown_marker ty, MFN.fake_atom 1 ty]
     val (renamed, renaming) =
       MFN.rename_colliding_goal_vars fabricated goal
+    val selector = MFN.mk_selector 0 "list$CONS" ty
+    val (renamed_selector, selector_renaming) =
+      MFN.rename_colliding_goal_vars [selector]
+        (boolSyntax.mk_eq (selector, selector))
   in
     map var_name (Term.free_vars_lr renamed) = ["?'", "a1'"] andalso
     map (fn (old, fresh) => (var_name old, var_name fresh)) renaming =
       [("?", "?'"), ("a1", "a1'")] andalso
-    map var_name fabricated = ["?", "a1"]
+    map var_name fabricated = ["?", "a1"] andalso
+    map var_name (Term.free_vars_lr renamed_selector) =
+      ["user$refute$sel0$list$CONS"] andalso
+    map (fn (old, fresh) => (var_name old, var_name fresh))
+      selector_renaming =
+      [("refute$sel0$list$CONS", "user$refute$sel0$list$CONS")]
   end
 
 val _ = require_msg (check_result mf_variant_renames_goal_first) (fn () =>
@@ -531,6 +540,10 @@ fun mf_builtins_numerals_sets_and_ersatz () =
   let
     val numeral = ``37 : num``
     val integer = ``~12 : int``
+    val bare_zero = numSyntax.alt_zero_tm
+    val bare_one = numSyntax.mk_bit1 bare_zero
+    val bare_integer = intSyntax.mk_negated
+      (intSyntax.mk_injected bare_one)
     val literal = ``literal_case (\n : num. n + 1) 4``
     val set_builder = ``GSPEC (\n : num. (n + 1, n < 3))``
     val open_set_builder =
@@ -540,6 +553,8 @@ fun mf_builtins_numerals_sets_and_ersatz () =
     val unfolded_open_set = MFH.unfold_defs_in_term mf_hol_context
       open_set_builder
     val unfolded_card = MFH.unfold_defs_in_term mf_hol_context card
+    val card_axioms = MFH.equational_fun_axioms mf_hol_context
+      ``card' : 'a set -> num``
     val boolean_conditional = ``if b then T else F``
     val unfolded_conditional = MFH.unfold_defs_in_term mf_hol_context
       boolean_conditional
@@ -568,6 +583,17 @@ fun mf_builtins_numerals_sets_and_ersatz () =
     (case MFH.numeral_value integer of
          SOME value => Arbint.compare (value, Arbint.fromInt ~12) = EQUAL
        | NONE => false) andalso
+    (case MFH.numeral_value bare_zero of
+         SOME value => Arbint.compare (value, Arbint.zero) = EQUAL
+       | NONE => false) andalso
+    (case MFH.numeral_value bare_one of
+         SOME value => Arbint.compare (value, Arbint.one) = EQUAL
+       | NONE => false) andalso
+    (case MFH.numeral_value bare_integer of
+         SOME value => Arbint.compare (value, Arbint.fromInt ~1) = EQUAL
+       | NONE => false) andalso
+    not (List.exists
+      (contains_constant {Thy = "pred_set", Name = "CARD"}) card_axioms) andalso
     not (Option.isSome (MFH.def_of_const mf_hol_context
       ``$~ : bool -> bool``)) andalso
     not (MFH.is_built_in_const
@@ -599,11 +625,15 @@ fun mf_cardinality_arithmetic () =
     val product_overflow_is_normalized =
       ((MFH.card_of_type [] ``:word32 # word32``; false)
        handle Refute_ModelFinder_Util.TOO_LARGE _ => true)
+    val unknown_word = ``:'a word``
   in
     MFH.card_of_type [] ``:bool`` = 2 andalso
     MFH.card_of_type [] ``:bool -> bool`` = 4 andalso
     MFH.card_of_type [] ``:word8`` = 256 andalso
+    MFH.card_of_type [] ``:8`` = 8 andalso
+    MFH.card_of_type [(unknown_word, 7)] unknown_word = 7 andalso
     MFH.bounded_card_of_type 3 4 [] ``:'a`` = 3 andalso
+    MFH.bounded_card_of_type 3 4 [] ``:'a -> bool itself`` = 3 andalso
     MFH.bounded_card_of_type 100 4 [] ``:word32 # word32`` = 100 andalso
     MFH.bounded_exact_card_of_type mf_hol_context [] 100 4 []
       ``:refute$rf3`` = 3 andalso
@@ -615,6 +645,10 @@ fun mf_cardinality_arithmetic () =
       ``:zoo_tree`` = 0 andalso
     MFH.bounded_exact_card_of_type mf_hol_context [] 100 4 []
       ``:zoo_even_tree`` = 0 andalso
+    MFH.bounded_exact_card_of_type mf_hol_context [] 100 4
+      [(unknown_word, 7)] unknown_word = 7 andalso
+    MFH.bounded_exact_card_of_type mf_hol_context [] 1 2 []
+      ``:num -> bool`` = 0 andalso
     MFH.is_finite_type mf_hol_context ``:word8`` andalso
     MFH.is_finite_type mf_hol_context ``:refute$rf3`` andalso
     not (MFH.is_finite_type mf_hol_context ``:zoo_tree``) andalso
