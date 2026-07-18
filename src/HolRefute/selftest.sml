@@ -660,6 +660,12 @@ fun mf_preproc_destroy_goldens () =
     val (pipeline_trees, pipeline_tree_defs, _, _) =
       MFP.preprocess_formulas (fresh_mf_context ()) []
         ``(tree : zoo_tree) = ZooNode left right``
+    val keep_constrs_context = MFH.make_context
+      (#mf (Refute_Core.upd_destroy_constrs false
+        Refute_Core.default_config)) []
+    val (kept_constrs, kept_constr_defs, _, _) =
+      MFP.preprocess_formulas keep_constrs_context []
+        ``(xs : num list) = h :: t``
     val weak_pattern = MFP.destroy_pulled_out_constrs context false false
       ``!h t h' t'. (h :: t : num list) = h' :: t'``
     val expected_weak_pattern =
@@ -818,6 +824,10 @@ fun mf_preproc_destroy_goldens () =
     ListPair.allEq (fn (actual, expected) =>
       Term.aconv actual expected) (pipeline_trees, [expected_tree]) andalso
     null pipeline_tree_defs andalso
+    ListPair.allEq (fn (actual, expected) =>
+      Term.aconv actual expected)
+      (kept_constrs, [``(xs : num list) = h :: t``]) andalso
+    null kept_constr_defs andalso
     Term.aconv weak_pattern expected_weak_pattern andalso
     Term.aconv actual_shared expected_shared andalso
     Term.aconv user_free_result user_free_constructor andalso
