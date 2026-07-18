@@ -1322,6 +1322,241 @@ val _ = require_msg (check_result mf_lookup_precedence) (fn () =>
   "model-finder lookup precedence is incorrect")
   (fn () => ()) ()
 
+val _ = tprint "Refute model-finder representations"
+
+structure MFR = Refute_ModelFinder_Rep
+
+fun mf_rep_arithmetic () =
+  MFR.card_of_rep (MFR.Formula MFU.Neut) = 2 andalso
+  MFR.arity_of_rep (MFR.Formula MFU.Neut) = 0 andalso
+  MFR.card_of_rep (MFR.Struct [MFR.Atom (2, 0), MFR.Atom (3, 2)]) = 6
+  andalso
+  MFR.arity_of_rep (MFR.Struct [MFR.Atom (2, 0), MFR.Atom (3, 2)]) = 2
+  andalso
+  MFR.card_of_rep (MFR.Vect (3, MFR.Atom (2, 0))) = 8 andalso
+  MFR.arity_of_rep (MFR.Vect (3, MFR.Atom (2, 0))) = 3 andalso
+  MFR.card_of_rep
+    (MFR.Func (MFR.Atom (2, 0), MFR.Atom (3, 2))) = 9 andalso
+  MFR.arity_of_rep
+    (MFR.Func (MFR.Atom (2, 0), MFR.Atom (3, 2))) = 2 andalso
+  MFR.min_univ_card_of_rep
+    (MFR.Opt (MFR.Struct [MFR.Atom (2, 0), MFR.Atom (3, 2)])) = 6
+  andalso
+  MFR.card_of_domain_from_rep 2 (MFR.Atom (16, 0)) = 4 andalso
+  MFR.atom_schema_of_rep
+    (MFR.Vect (2, MFR.Struct [MFR.Atom (2, 0), MFR.Atom (3, 4)])) =
+    [(2, 0), (3, 4), (2, 0), (3, 4)] andalso
+  MFR.all_combinations_for_rep
+    (MFR.Struct [MFR.Atom (2, 1), MFR.Atom (2, 4)]) =
+    [[1, 4], [1, 5], [2, 4], [2, 5]]
+
+val _ = require_msg (check_result mf_rep_arithmetic) (fn () =>
+  "model-finder rep cardinality, arity, or schema arithmetic failed")
+  (fn () => ()) ()
+
+fun mf_rep_ordering () =
+  MFR.min_rep (MFR.Opt (MFR.Atom (2, 0)))
+      (MFR.Formula MFU.Neut) = MFR.Opt (MFR.Atom (2, 0)) andalso
+  MFR.min_rep (MFR.Formula MFU.Neut)
+      (MFR.Formula MFU.Pos) = MFR.Formula MFU.Pos andalso
+  MFR.min_rep (MFR.Atom (2, 0))
+      (MFR.Struct [MFR.Atom (2, 0)]) = MFR.Atom (2, 0) andalso
+  MFR.min_rep (MFR.Vect (3, MFR.Atom (2, 0)))
+      (MFR.Vect (2, MFR.Atom (3, 0))) =
+    MFR.Vect (2, MFR.Atom (3, 0)) andalso
+  MFR.min_reps
+      [MFR.Atom (2, 0), MFR.Vect (3, MFR.Atom (2, 0))]
+      [MFR.Atom (2, 0), MFR.Vect (2, MFR.Atom (3, 0))] =
+    [MFR.Atom (2, 0), MFR.Vect (2, MFR.Atom (3, 0))] andalso
+  ((MFR.min_rep (MFR.Formula MFU.Pos) (MFR.Formula MFU.Neg); false)
+   handle MFU.ARG _ => true)
+
+val _ = require_msg (check_result mf_rep_ordering) (fn () =>
+  "model-finder rep ordering or unification failed")
+  (fn () => ()) ()
+
+fun mf_rep_fixed_scope () =
+  let
+    val (_, scopes) = MFS.all_scopes mf_hol_context
+      [(NONE, [2])] [(NONE, [~1])]
+      [``:refute$rf2``, ``:num``] [] []
+    val scope = hd scopes
+    val enum_offset = MFS.offset_of_type (#ofs scope) ``:refute$rf2``
+    val main_offset = MFS.offset_of_type (#ofs scope) ``:bool``
+    val enum = MFR.Atom (2, enum_offset)
+    val number = MFR.Atom (2, main_offset)
+    val vector = MFR.best_one_rep_for_type scope
+      ``:refute$rf2 -> num``
+    val curried_relation = MFR.best_non_opt_set_rep_for_type scope
+      ``:refute$rf2 -> refute$rf2 -> bool``
+    val binary_relation =
+      MFR.Func
+        (MFR.Struct [enum, enum], MFR.Formula MFU.Neut)
+  in
+    MFR.best_one_rep_for_type scope ``:refute$rf2 # num`` =
+      MFR.Struct [enum, number] andalso
+    vector = MFR.Vect (2, number) andalso
+    MFR.card_of_rep vector = 4 andalso MFR.arity_of_rep vector = 2 andalso
+    MFR.best_non_opt_set_rep_for_type scope
+      ``:refute$rf2 -> bool`` =
+      MFR.Func (enum, MFR.Formula MFU.Neut) andalso
+    MFR.best_opt_set_rep_for_type scope ``:refute$rf2 -> num`` =
+      MFR.Func (enum, MFR.Opt number) andalso
+    MFR.best_set_rep_for_type scope ``:refute$rf2`` = enum andalso
+    MFR.best_set_rep_for_type scope ``:num`` = MFR.Opt number andalso
+    MFR.rep_to_binary_rel_rep (#ofs scope)
+      ``:refute$rf2 -> refute$rf2 -> bool`` curried_relation =
+      binary_relation andalso
+    MFR.rep_to_binary_rel_rep (#ofs scope)
+      ``:(refute$rf2 # refute$rf2) -> bool`` binary_relation =
+      binary_relation andalso
+    MFR.rep_to_binary_rel_rep (#ofs scope)
+      ``:refute$rf2 -> refute$rf2 -> bool`` binary_relation =
+      binary_relation andalso
+    MFR.rep_to_binary_rel_rep (#ofs scope)
+      ``:refute$rf2 -> refute$rf2 -> bool``
+      (MFR.Atom (16, main_offset)) = binary_relation andalso
+    MFR.rep_to_binary_rel_rep (#ofs scope)
+      ``:refute$rf2 -> refute$rf2 -> bool``
+      (MFR.Opt (MFR.Atom (16, main_offset))) = binary_relation andalso
+    MFR.type_schema_of_rep ``:refute$rf2 -> num`` vector =
+      [``:num``, ``:num``]
+  end
+
+val _ = require_msg (check_result mf_rep_fixed_scope) (fn () =>
+  "model-finder best reps changed on a fixed scope")
+  (fn () => ()) ()
+
+val _ = tprint "Refute model-finder peephole"
+
+structure MFPP = Refute_ModelFinder_Peephole
+
+fun mf_atom_codecs () =
+  let
+    fun int_round_trip card offset =
+      List.all (fn atom =>
+        MFPP.atom_for_int (card, offset)
+          (MFPP.int_for_atom (card, offset) atom) = atom)
+        (MFU.index_seq offset card)
+    fun value_round_trip card offset =
+      List.all (fn value =>
+        MFPP.int_for_atom (card, offset)
+          (MFPP.atom_for_int (card, offset) value) = value)
+        (List.tabulate
+          (card, fn index => MFPP.min_int_for_card card + index))
+    fun successor_round_trip tabulate =
+      MFPP.atom_seq_for_suc_rel
+        (MFPP.suc_rel_for_atom_seq ((7, 49), tabulate)) =
+      ((7, 49), tabulate)
+  in
+    MFPP.atom_for_bool 11 false = Refute_Forl.Atom 11 andalso
+    MFPP.atom_for_bool 11 true = Refute_Forl.Atom 12 andalso
+    MFPP.formula_for_bool false = Refute_Forl.False andalso
+    MFPP.formula_for_bool true = Refute_Forl.True andalso
+    MFPP.atom_for_nat (4, 10) (~1) = ~1 andalso
+    MFPP.atom_for_nat (4, 10) 0 = 10 andalso
+    MFPP.atom_for_nat (4, 10) 3 = 13 andalso
+    MFPP.atom_for_nat (4, 10) 4 = ~1 andalso
+    MFPP.atom_for_int (5, 20) (~3) = ~1 andalso
+    MFPP.atom_for_int (5, 20) 3 = ~1 andalso
+    int_round_trip 5 20 andalso value_round_trip 5 20 andalso
+    int_round_trip 6 30 andalso value_round_trip 6 30 andalso
+    successor_round_trip false andalso successor_round_trip true andalso
+    ((MFPP.suc_rel_for_atom_seq ((7, 50), true); false)
+     handle MFU.TOO_LARGE _ => true)
+  end
+
+val _ = require_msg (check_result mf_atom_codecs) (fn () =>
+  "model-finder atom codec round-trip failed")
+  (fn () => ()) ()
+
+fun mf_peephole_formula_identities () =
+  let
+    open Refute_Forl
+    val kk = MFPP.kodkod_constrs true 4 5 20
+    val f = No Univ
+    val declaration = DeclOne ((1, 0), AtomSeq (2, 0))
+    val empty_declaration = DeclOne ((1, 1), None)
+  in
+    #kk_and kk True f = f andalso #kk_and kk False f = False andalso
+    #kk_or kk False f = f andalso #kk_or kk f f = f andalso
+    #kk_not kk (Not f) = f andalso #kk_not kk (Some Univ) = No Univ
+    andalso
+    #kk_iff kk f f = True andalso #kk_implies kk f f = True andalso
+    #kk_formula_if kk True f False = f andalso
+    #kk_formula_if kk f True False = f andalso
+    #kk_all kk [declaration]
+      (All ([empty_declaration], f)) = True andalso
+    #kk_exist kk [empty_declaration] f = False
+  end
+
+val _ = require_msg (check_result mf_peephole_formula_identities)
+  (fn () => "model-finder formula peepholes failed")
+  (fn () => ()) ()
+
+fun mf_peephole_relational_identities () =
+  let
+    open Refute_Forl
+    val kk = MFPP.kodkod_constrs true 4 5 20
+    val pair = Product (Atom 1, Atom 2)
+    val projected = Project (pair, [Num 1, Num 0])
+  in
+    #kk_difference kk (Atom 1) (Atom 1) = None andalso
+    #kk_intersect kk (Atom 1) (Atom 2) = None andalso
+    #kk_product kk None (Atom 2) = Product (None, None) andalso
+    #kk_closure kk None = None andalso
+    #kk_reflexive_closure kk None = Iden andalso
+    #kk_project kk pair [Num 0, Num 1] = pair andalso
+    #kk_project kk projected [Num 1] = Project (pair, [Num 0]) andalso
+    #kk_not3 kk (Atom 20) = Atom 21 andalso
+    #kk_not3 kk (#kk_not3 kk (Rel (1, 7))) = Rel (1, 7) andalso
+    #kk_comprehension kk [DeclOne ((1, 0), AtomSeq (2, 3))] True =
+      AtomSeq (2, 3)
+  end
+
+val _ = require_msg (check_result mf_peephole_relational_identities)
+  (fn () => "model-finder relational peepholes failed")
+  (fn () => ()) ()
+
+fun mf_peephole_arithmetic () =
+  let
+    open Refute_Forl
+    val kk = MFPP.kodkod_constrs true 4 5 20
+    fun apply relation left right =
+      #kk_join kk right (Join (left, Rel relation))
+  in
+    #kk_join kk (Atom 22) (Rel MFPP.suc_rel) = Atom 23 andalso
+    #kk_join kk (Atom 23) (Rel MFPP.suc_rel) = None andalso
+    apply MFPP.nat_add_rel (Atom 21) (Atom 22) = Atom 23 andalso
+    apply MFPP.nat_add_rel (Atom 22) (Atom 22) = None andalso
+    apply MFPP.nat_subtract_rel (Atom 23) (Atom 21) = Atom 22 andalso
+    apply MFPP.nat_subtract_rel (Atom 21) (Atom 23) = Atom 20 andalso
+    apply MFPP.nat_multiply_rel (Atom 21) (Atom 23) = Atom 23 andalso
+    apply MFPP.nat_multiply_rel (Atom 22) (Atom 22) = None andalso
+    #kk_nat_less kk (Atom 21) (Atom 22) = Atom 21 andalso
+    #kk_nat_less kk (Atom 22) (Atom 21) = Atom 20 andalso
+    #kk_int_less kk (Atom 23) (Atom 22) = Atom 21
+  end
+
+val _ = require_msg (check_result mf_peephole_arithmetic) (fn () =>
+  "model-finder arithmetic peepholes failed")
+  (fn () => ()) ()
+
+fun mf_peephole_disabled () =
+  let
+    open Refute_Forl
+    val kk = MFPP.kodkod_constrs false 4 5 20
+  in
+    #kk_and kk True False = And (True, False) andalso
+    #kk_not kk True = Not True andalso
+    #kk_project_seq kk (Atom 1) 0 1 = Project (Atom 1, [Num 0]) andalso
+    #kk_not3 kk (Atom 20) = Join (Atom 20, Rel MFPP.not3_rel)
+  end
+
+val _ = require_msg (check_result mf_peephole_disabled) (fn () =>
+  "disabled model-finder peepholes did not preserve raw constructors")
+  (fn () => ()) ()
+
 val _ = tprint "Refute FORL serializer goldens"
 
 local
