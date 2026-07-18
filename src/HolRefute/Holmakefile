@@ -6,6 +6,7 @@ all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
 selftest.uo: Refute_ModelFinder_Preproc.uo \
+             Refute_ModelFinder_Scope.uo \
              Refute_ModelFinder_HOL.uo refuteTableZooTheory.uo
 
 ifdef POLY

@@ -812,6 +812,119 @@ val _ = require_msg (check_result mf_cardinality_arithmetic) (fn () =>
   "model-finder exact/bounded cardinality arithmetic failed")
   (fn () => ()) ()
 
+val _ = tprint "Refute model-finder scope"
+
+structure MFS = Refute_ModelFinder_Scope
+
+fun mf_scope_card_repair () =
+  let
+    val unit_repair = MFS.repair_card_assigns mf_hol_context
+      ([(``:unit``, 3)], [])
+    val enum_repair = MFS.repair_card_assigns mf_hol_context
+      ([(``:refute$rf3``, 5)], [])
+    val cons = List.nth
+      (MFH.data_type_constrs mf_hol_context ``:num list``, 1)
+  in
+    unit_repair = SOME [(``:unit``, 1)] andalso
+    enum_repair = SOME [(``:refute$rf3``, 3)] andalso
+    MFS.domain_card 3 [] cons = 3
+  end
+
+val _ = require_msg (check_result mf_scope_card_repair) (fn () =>
+  "model-finder datatype cardinality repair failed")
+  (fn () => ()) ()
+
+fun mf_scope_mono_partition () =
+  let
+    val alpha = ``:'a``
+    val enum = ``:refute$rf3``
+    val number = ``:num``
+    val defaults = [(NONE, NONE)]
+    val (mono, nonmono) =
+      MFS.mono_partition defaults [alpha, enum, number]
+    val overrides =
+      [(SOME alpha, SOME true), (SOME enum, SOME false),
+       (NONE, NONE)]
+    val (overridden_mono, overridden_nonmono) =
+      MFS.mono_partition overrides [alpha, enum, number]
+    val (calculus_mono, _) = MFS.mono_partition_with
+      (fn _ => true) defaults [alpha]
+    val (_, pattern_nonmono) = MFS.mono_partition
+      [(SOME ``:'a list``, SOME false), (NONE, NONE)]
+      [``:num list``]
+    val (_, pattern_scopes) = MFS.all_scopes mf_hol_context
+      [(SOME ``:'a list``, [3]), (NONE, [1])]
+      [(NONE, [~1])] [``:num list``, number] [] []
+    val pattern_scope = hd pattern_scopes
+  in
+    mono = [enum, number] andalso nonmono = [alpha] andalso
+    overridden_mono = [alpha, number] andalso
+    overridden_nonmono = [enum] andalso
+    pattern_nonmono = [``:num list``] andalso
+    MFH.assignment_lookup (#card_assigns pattern_scope)
+      ``:num list`` = SOME 3 andalso calculus_mono = [alpha]
+  end
+
+val _ = require_msg (check_result mf_scope_mono_partition) (fn () =>
+  "model-finder fundamental monotonicity partition failed")
+  (fn () => ()) ()
+
+fun nondecreasing [] = true
+  | nondecreasing [_] = true
+  | nondecreasing (first :: second :: rest) =
+      first <= second andalso nondecreasing (second :: rest)
+
+fun mf_scope_enumeration_order () =
+  let
+    val ordered = MFS.all_combinations_ordered_smartly
+      [(3, 0), (3, 0)]
+    val (skipped, scopes) = MFS.all_scopes mf_hol_context
+      [(NONE, [1, 2, 3])] [(NONE, [~1])]
+      [``:refute$rf6``] [``:'a``] []
+    val truncation_cards = MFS.default_cards @ [11]
+    val (truncated, retained) = MFS.all_scopes mf_hol_context
+      [(NONE, truncation_cards)] [(NONE, [~1])]
+      [``:refute$rf6``] [``:'a``, ``:'b``, ``:'c``] []
+    fun cards (scope : MFS.scope) =
+      (valOf (MFH.assignment_lookup (#card_assigns scope)
+         ``:refute$rf6``),
+       valOf (MFH.assignment_lookup (#card_assigns scope) ``:'a``))
+  in
+    MFS.default_cards = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] andalso
+    List.take (ordered, 3) = [[0, 0], [1, 1], [2, 2]] andalso
+    nondecreasing (map MFS.combination_cost ordered) andalso
+    skipped = 0 andalso length scopes = 9 andalso
+    map cards (List.take (scopes, 3)) = [(1, 1), (2, 2), (3, 3)] andalso
+    truncated = 9641 andalso length retained = MFS.max_scopes
+  end
+
+val _ = require_msg (check_result mf_scope_enumeration_order) (fn () =>
+  "model-finder scope count or cost ordering changed")
+  (fn () => ()) ()
+
+fun mf_scope_offsets_and_facto_pairs () =
+  let
+    val (_, scopes) = MFS.all_scopes mf_hol_context
+      [(NONE, [2])] [(NONE, [~1])]
+      [``:refute$rf2``, ``:num``] [``:'a``, ``:unit``] []
+    val scope = hd scopes
+    val data_types = #data_types scope
+    fun degenerate_pair (spec : MFS.data_type_spec) =
+      #1 (#complete spec) = #2 (#complete spec) andalso
+      #1 (#concrete spec) = #2 (#concrete spec)
+  in
+    MFS.offset_of_type (#ofs scope) ``:refute$rf2`` = 0 andalso
+    MFS.offset_of_type (#ofs scope) ``:'a`` = 2 andalso
+    MFS.offset_of_type (#ofs scope) ``:num`` = 4 andalso
+    MFS.offset_of_type (#ofs scope) ``:bool`` = 4 andalso
+    MFS.spec_of_type scope ``:unit`` = (1, 4) andalso
+    List.all degenerate_pair data_types
+  end
+
+val _ = require_msg (check_result mf_scope_offsets_and_facto_pairs) (fn () =>
+  "model-finder scope offsets or facto pairs failed")
+  (fn () => ()) ()
+
 val _ = tprint "Refute model-finder utility"
 
 local
