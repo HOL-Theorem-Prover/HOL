@@ -657,10 +657,32 @@ fun mf_preproc_destroy_goldens () =
       ``!h t h' t'. (h' : num) = h /\ (t' : num list) = t``
     val weak_nonpattern =
       ``REVERSE (xs : num list) = h :: t``
+    val protected_axiom = ``(xs : num list) = h :: t``
+    val large_argument = List.foldl (fn (_, result) =>
+      numSyntax.mk_plus (result, ``1 : num``)) ``n : num``
+      (List.tabulate (5, fn index => index))
+    val generated_function = MFN.mk_reserved_var "refute$vfun"
+      ``:num -> num list``
+    val large_left = Term.mk_comb (generated_function, large_argument)
+    val shared = Term.mk_var ("l", ``:num list``)
+    val shared_constraints =
+      boolSyntax.list_mk_conj
+        [Term.mk_comb (list_discriminator, shared),
+         boolSyntax.mk_eq (``h : num``, Term.mk_comb (list_head, shared)),
+         boolSyntax.mk_eq
+           (``t : num list``, Term.mk_comb (list_tail, shared))]
+    val expected_shared = boolSyntax.mk_let
+      (Term.mk_abs (shared, shared_constraints), large_left)
+    val actual_shared = MFP.destroy_pulled_out_constrs context false true
+      (boolSyntax.mk_eq (large_left, ``h :: t : num list``))
   in
     Term.aconv actual_list expected_list andalso
     Term.aconv actual_tree expected_tree andalso
     Term.aconv weak_pattern expected_weak_pattern andalso
+    Term.aconv actual_shared expected_shared andalso
+    Term.aconv
+      (MFP.destroy_pulled_out_constrs context true true protected_axiom)
+      protected_axiom andalso
     Term.aconv
       (MFP.destroy_pulled_out_constrs context false false
         weak_nonpattern)
@@ -690,11 +712,22 @@ fun mf_preproc_skolem_golden () =
     val axiom = ``?w : num. w = 2``
     val unskolemized =
       MFP.skolemize_term_and_more axiom_context ~1 axiom
+    val higher_order_context = fresh_mf_context ()
+    val higher_order =
+      ``!p : (num -> bool) # num. ?w : num. w = SND p``
+    val higher_order_result =
+      MFP.skolemize_term_and_more higher_order_context 3 higher_order
+    val smart_context = fresh_mf_context ()
+    val smart_result = MFP.skolemize_term_and_more smart_context 3
+      ``(?w : num. T) /\ p``
   in
     Term.aconv actual expected andalso
     metadata = [("refute$sk3@1$x", ["c", "b", "a"])] andalso
     Term.aconv unskolemized axiom andalso
-    null (!(#skolems axiom_context))
+    null (!(#skolems axiom_context)) andalso
+    Term.aconv higher_order_result higher_order andalso
+    null (!(#skolems higher_order_context)) andalso
+    Term.aconv smart_result ``p : bool``
   end
 
 val _ = require_msg (check_result mf_preproc_skolem_golden) (fn () =>
@@ -721,9 +754,18 @@ fun mf_preproc_unfold_goldens () =
     val actual_set = set_input
       |> MFH.unfold_defs_in_term context
       |> MFP.destroy_set_Collect
+    val direct_set = MFP.destroy_set_Collect
+      ``(2 : num) IN (\n : num. n < 3)``
+    val pair_first = MFP.simplify_constrs_and_sels context
+      ``FST ((a : num), b : bool)``
+    val pair_second = MFP.simplify_constrs_and_sels context
+      ``SND ((a : num), b : bool)``
   in
     Term.aconv actual_case expected_case andalso
-    Term.aconv actual_set expected_set
+    Term.aconv actual_set expected_set andalso
+    Term.aconv direct_set ``(2 : num) < 3`` andalso
+    Term.aconv pair_first ``a : num`` andalso
+    Term.aconv pair_second ``b : bool``
   end
 
 val _ = require_msg (check_result mf_preproc_unfold_goldens) (fn () =>
@@ -767,6 +809,41 @@ fun mf_preproc_pipeline_shape () =
 
 val _ = require_msg (check_result mf_preproc_pipeline_shape) (fn () =>
   "model-finder preprocessing pipeline shape changed")
+  (fn () => ()) ()
+
+fun mf_preproc_axiom_closure () =
+  case MFH.equational_fun_axioms (fresh_mf_context ())
+         ``zoo_override : num -> num`` of
+      [axiom] =>
+        let val (variables, _) = boolSyntax.strip_forall axiom
+        in
+          length variables = 1 andalso
+          null (Term.free_vars_lr axiom)
+        end
+    | _ => false
+
+val _ = require_msg (check_result mf_preproc_axiom_closure) (fn () =>
+  "model-finder theorem-table axiom was not universally closed")
+  (fn () => ()) ()
+
+fun mf_preproc_existential_equality_golden () =
+  Term.aconv
+    (MFP.destroy_existential_equalities
+      ``?x : num. x = y /\ p x``)
+    ``(p (y : num) : bool)``
+
+val _ = require_msg
+  (check_result mf_preproc_existential_equality_golden) (fn () =>
+    "model-finder existential-equality golden changed")
+  (fn () => ()) ()
+
+fun mf_preproc_quantifier_golden () =
+  Term.aconv
+    (MFP.distribute_quantifiers ``!x : num. p x /\ q``)
+    ``(!x : num. p x) /\ q``
+
+val _ = require_msg (check_result mf_preproc_quantifier_golden) (fn () =>
+  "model-finder quantifier-distribution golden changed")
   (fn () => ()) ()
 
 fun mf_cardinality_arithmetic () =

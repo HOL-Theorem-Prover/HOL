@@ -273,7 +273,17 @@ structure Refute_ModelFinder_HOL = struct
     in KNametab.update (key, old @ [value]) table end
 
   fun theorem_term theorem =
-    boolSyntax.list_mk_imp (Thm.hyp theorem, Thm.concl theorem)
+    let
+      val proposition =
+        boolSyntax.list_mk_imp (Thm.hyp theorem, Thm.concl theorem)
+    in
+      (* HOL theorem frees are implicitly universal.  Isabelle presents the
+         corresponding table variables as schematic Vars, which close_form
+         closes before nut conversion.  Close them here so they cannot be
+         mistaken for freely interpreted model constants. *)
+      boolSyntax.list_mk_forall
+        (Term.free_vars_lr proposition, proposition)
+    end
 
   fun clauses_of theorem = map theorem_term (Drule.CONJUNCTS theorem)
 

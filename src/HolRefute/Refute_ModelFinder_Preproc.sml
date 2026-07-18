@@ -83,7 +83,12 @@ structure Refute_ModelFinder_Preproc = struct
     end
 
   fun is_higher_order_type ty =
-    Option.isSome (Lib.total Type.dom_rng ty)
+    case Lib.total Type.dom_rng ty of
+        SOME _ => true
+      | NONE =>
+          (case Lib.total Type.dest_thy_type ty of
+               SOME {Args, ...} => List.exists is_higher_order_type Args
+             | NONE => false)
 
   fun skolemize_term_and_more
         (context as {skolems, ...} : context) skolem_depth term =
@@ -160,18 +165,28 @@ structure Refute_ModelFinder_Preproc = struct
                recurse dependencies skolemizable polarity right)
           end
         else if boolSyntax.is_conj candidate then
-          let val (left, right) = boolSyntax.dest_conj candidate
+          let
+            val (left, right) = boolSyntax.dest_conj candidate
+            val left' = recurse dependencies skolemizable polarity left
+            val right' = recurse dependencies skolemizable polarity right
           in
-            boolSyntax.mk_conj
-              (recurse dependencies skolemizable polarity left,
-               recurse dependencies skolemizable polarity right)
+            if Term.aconv left' boolSyntax.T then right'
+            else if Term.aconv right' boolSyntax.T then left'
+            else if Term.aconv left' boolSyntax.F orelse
+                    Term.aconv right' boolSyntax.F then boolSyntax.F
+            else boolSyntax.mk_conj (left', right')
           end
         else if boolSyntax.is_disj candidate then
-          let val (left, right) = boolSyntax.dest_disj candidate
+          let
+            val (left, right) = boolSyntax.dest_disj candidate
+            val left' = recurse dependencies skolemizable polarity left
+            val right' = recurse dependencies skolemizable polarity right
           in
-            boolSyntax.mk_disj
-              (recurse dependencies skolemizable polarity left,
-               recurse dependencies skolemizable polarity right)
+            if Term.aconv left' boolSyntax.F then right'
+            else if Term.aconv right' boolSyntax.F then left'
+            else if Term.aconv left' boolSyntax.T orelse
+                    Term.aconv right' boolSyntax.T then boolSyntax.T
+            else boolSyntax.mk_disj (left', right')
           end
         else if boolSyntax.is_let candidate then
           let val (function, argument) = boolSyntax.dest_let candidate
@@ -483,6 +498,43 @@ structure Refute_ModelFinder_Preproc = struct
 
   fun destroy_pulled_out_constrs context axiom strong term =
     let
+      val let_inline_threshold = 20
+      fun eligible_for_duplication bound candidate =
+        let
+          val variables = List.filter (fn variable =>
+            is_value_var variable orelse aconv_member variable bound)
+            (Term.free_vars_lr candidate)
+        in
+          case variables of
+              [] => true
+            | _ =>
+                let
+                  val variable_cost = List.foldl (fn (variable, cost) =>
+                    Int.max (MFH.typical_card_of_type
+                      (Term.type_of variable), cost)) 0 variables
+                  val result_cost =
+                    MFH.typical_card_of_type (Term.type_of candidate)
+                in
+                  variable_cost <= result_cost
+                end
+        end
+      fun share_value bound occurrences candidate build =
+        let
+          val duplication = IntInf.fromInt (occurrences - 1) *
+            IntInf.fromInt (Term.term_size candidate - 1)
+        in
+          if duplication <= IntInf.fromInt let_inline_threshold orelse
+             eligible_for_duplication bound candidate then
+            build candidate
+          else
+            let
+              val variable = Term.variant (Term.all_vars term)
+                (Term.mk_var ("l", Term.type_of candidate))
+            in
+              boolSyntax.mk_let
+                (Term.mk_abs (variable, build variable), candidate)
+            end
+        end
       fun recurse bound careful candidate =
         if boolSyntax.is_imp candidate then
           let val (left, right) = boolSyntax.dest_imp candidate
@@ -529,19 +581,24 @@ structure Refute_ModelFinder_Preproc = struct
                 let
                   val argument_tys =
                     MFH.constructor_arg_types constructor
-                  val discriminator =
-                    MFH.discriminate_value context constructor left
-                  fun selector_equation (index, (argument, ty)) =
-                    recurse bound false (boolSyntax.mk_eq
-                      (argument,
-                       MFH.select_nth_constr_arg context constructor
-                         left index ty))
                   val indexed = ListPair.zip
                     (MFU.index_seq 0 (length arguments),
                      ListPair.zip (arguments, argument_tys))
+                  fun constraints value =
+                    let
+                      val discriminator =
+                        MFH.discriminate_value context constructor value
+                      fun selector_equation (index, (argument, ty)) =
+                        recurse bound false (boolSyntax.mk_eq
+                          (argument,
+                           MFH.select_nth_constr_arg context constructor
+                             value index ty))
+                    in
+                      smart_conj
+                        (discriminator :: map selector_equation indexed)
+                    end
                 in
-                  smart_conj
-                    (discriminator :: map selector_equation indexed)
+                  share_value bound (length arguments + 1) left constraints
                 end
             | NONE =>
                 if first then
@@ -660,31 +717,45 @@ structure Refute_ModelFinder_Preproc = struct
 
   fun simplify_constrs_and_sels context term =
     let
-      fun selector_projection head argument rest =
+      fun selector_index head =
         case Lib.total Term.dest_var head of
             SOME (name, _) =>
               if MFN.is_sel name andalso MFN.sel_no_from_name name >= 0 then
-                let
-                  val (constructor, arguments) =
-                    HolKernel.strip_comb argument
-                  val argument_tys =
-                    MFH.constructor_arg_types constructor
-                  val index = MFN.sel_no_from_name name
-                in
-                  if Term.is_const constructor andalso
-                     MFH.is_free_constr constructor andalso
-                     MFN.original_name name =
-                       MFH.constructor_name constructor andalso
-                     not (List.exists MFH.is_pair_type argument_tys) andalso
-                     index < length arguments then
-                    SOME (MFH.s_betapplys
-                      (List.nth (arguments, index), rest))
-                  else
-                    NONE
-                end
-                handle HOL_ERR _ => NONE
+                SOME (MFN.original_name name,
+                      MFN.sel_no_from_name name)
               else
                 NONE
+          | NONE =>
+              if Term.is_const head andalso
+                 MFH.is_named_const {Thy = "pair", Name = "FST"} head then
+                SOME ("pair$,", 0)
+              else if Term.is_const head andalso
+                      MFH.is_named_const
+                        {Thy = "pair", Name = "SND"} head then
+                SOME ("pair$,", 1)
+              else
+                NONE
+      fun selector_projection head argument rest =
+        case selector_index head of
+            SOME (constructor_name, index) =>
+              (let
+                 val (constructor, arguments) =
+                   HolKernel.strip_comb argument
+                 val argument_tys =
+                   MFH.constructor_arg_types constructor
+               in
+                 if Term.is_const constructor andalso
+                    MFH.is_free_constr constructor andalso
+                    constructor_name =
+                      MFH.constructor_name constructor andalso
+                    not (List.exists MFH.is_pair_type argument_tys) andalso
+                    index < length arguments then
+                   SOME (MFH.s_betapplys
+                     (List.nth (arguments, index), rest))
+                 else
+                   NONE
+               end
+               handle HOL_ERR _ => NONE)
           | NONE => NONE
       fun recurse candidate =
         if Term.is_abs candidate then
@@ -1037,15 +1108,15 @@ structure Refute_ModelFinder_Preproc = struct
       and add_axioms_for_type _ _ accumulator = accumulator
       and add_axioms_for_term depth term
             (accumulator as (seen, definitions, nondefinitions)) =
-        if depth > axioms_max_depth then
-          raise Refute_ModelFinder_Util.TOO_LARGE
-            ("Refute_ModelFinder_Preproc.axioms_for_term",
-             "too many nested axioms")
-        else if Term.is_const term then
+        if Term.is_const term then
           let val already = aconv_member term seen
           in
             if already orelse MFH.is_built_in_const term then
               add_axioms_for_type depth (Term.type_of term) accumulator
+            else if depth > axioms_max_depth then
+              raise Refute_ModelFinder_Util.TOO_LARGE
+                ("Refute_ModelFinder_Preproc.axioms_for_term",
+                 "too many nested axioms")
             else
               let
                 val next =
