@@ -651,6 +651,12 @@ fun mf_preproc_destroy_goldens () =
         right = (^tree_right) tree``
     val actual_tree = MFP.destroy_pulled_out_constrs context false true
       ``(tree : zoo_tree) = ZooNode left right``
+    val (pipeline_lists, pipeline_list_defs, _, _) =
+      MFP.preprocess_formulas (fresh_mf_context ()) []
+        ``(xs : num list) = h :: t``
+    val (pipeline_trees, pipeline_tree_defs, _, _) =
+      MFP.preprocess_formulas (fresh_mf_context ()) []
+        ``(tree : zoo_tree) = ZooNode left right``
     val weak_pattern = MFP.destroy_pulled_out_constrs context false false
       ``!h t h' t'. (h :: t : num list) = h' :: t'``
     val expected_weak_pattern =
@@ -778,6 +784,12 @@ fun mf_preproc_destroy_goldens () =
   in
     Term.aconv actual_list expected_list andalso
     Term.aconv actual_tree expected_tree andalso
+    ListPair.allEq (fn (actual, expected) =>
+      Term.aconv actual expected) (pipeline_lists, [expected_list]) andalso
+    null pipeline_list_defs andalso
+    ListPair.allEq (fn (actual, expected) =>
+      Term.aconv actual expected) (pipeline_trees, [expected_tree]) andalso
+    null pipeline_tree_defs andalso
     Term.aconv weak_pattern expected_weak_pattern andalso
     Term.aconv actual_shared expected_shared andalso
     Term.aconv user_free_result user_free_constructor andalso
@@ -875,6 +887,10 @@ fun mf_preproc_unfold_goldens () =
       ``if (^list_nil_discriminator) (xs : num list) then 7
         else (^list_head) xs + 1``
     val actual_case = MFH.unfold_defs_in_term context case_input
+    val case_goal = boolSyntax.mk_eq (case_input, ``9 : num``)
+    val expected_case_goal = boolSyntax.mk_eq (expected_case, ``9 : num``)
+    val (pipeline_cases, pipeline_case_defs, _, _) =
+      MFP.preprocess_formulas (fresh_mf_context ()) [] case_goal
     val set_input =
       ``(2 : num) IN GSPEC (\n : num. (n + 1, n < 3))``
     val set_value = ``set_value : num``
@@ -885,6 +901,10 @@ fun mf_preproc_unfold_goldens () =
     val actual_set = set_input
       |> MFH.unfold_defs_in_term context
       |> MFP.destroy_set_Collect
+    val (pipeline_sets, pipeline_set_defs, _, _) =
+      MFP.preprocess_formulas (fresh_mf_context ()) [] set_input
+    val expected_pipeline_set =
+      ``?x : num. x + 1 = 2 /\ (x < 3 <=> T)``
     val direct_set = MFP.destroy_set_Collect
       ``(2 : num) IN (\n : num. n < 3)``
     val direct_set_variable = ``n : num``
@@ -909,7 +929,15 @@ fun mf_preproc_unfold_goldens () =
       MFP.simplify_constrs_and_sels context reconstructed_list
   in
     Term.aconv actual_case expected_case andalso
+    ListPair.allEq (fn (actual, expected) =>
+      Term.aconv actual expected)
+      (pipeline_cases, [expected_case_goal]) andalso
+    null pipeline_case_defs andalso
     Term.aconv actual_set expected_set andalso
+    ListPair.allEq (fn (actual, expected) =>
+      Term.aconv actual expected)
+      (pipeline_sets, [expected_pipeline_set]) andalso
+    null pipeline_set_defs andalso
     Term.aconv direct_set expected_direct_set andalso
     Term.aconv pair_first ``a : num`` andalso
     Term.aconv pair_second ``b : bool`` andalso
