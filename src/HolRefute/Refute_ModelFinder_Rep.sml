@@ -322,41 +322,53 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
       fun aggregate_card rep =
         MFU.exact_root 2 (card_of_domain_from_rep 2 rep)
 
-      val (first_ty, second_ty, cardinality) =
+      val (first_ty, second_ty, cardinality, paired_domain) =
         case Type.dom_rng ty of
-            (pair_ty, _) =>
-              if MFH.is_pair_type pair_ty then
-                let
-                  val (left_ty, right_ty) = pairSyntax.dest_prod pair_ty
-                  val card = aggregate_card representation
-                in
-                  (left_ty, right_ty, card)
-                end
-              else
-                let
-                  val (second_ty, _) = Type.dom_rng (#2 (Type.dom_rng ty))
-                  val card =
-                    case domain representation of
-                        SOME (first_card, after_first) =>
-                          (case domain after_first of
-                               SOME (second_card, _) =>
-                                 if first_card = second_card then first_card
-                                 else raise REP
-                                   ("Refute_ModelFinder_Rep." ^
-                                    "rep_to_binary_rel_rep",
-                                    [representation])
-                             | NONE => aggregate_card representation)
-                      | NONE => aggregate_card representation
-                in
-                  (pair_ty, second_ty, card)
-                end
-      val first_offset = MFS.offset_of_type offsets first_ty
-      val second_offset = MFS.offset_of_type offsets second_ty
+            (first_ty, rest_ty) =>
+              (case Lib.total Type.dom_rng rest_ty of
+                   SOME (second_ty, _) =>
+                     let
+                       val card =
+                         case domain representation of
+                             SOME (first_card, after_first) =>
+                               (case domain after_first of
+                                    SOME (second_card, _) =>
+                                      if first_card = second_card then
+                                        first_card
+                                      else
+                                        raise REP
+                                          ("Refute_ModelFinder_Rep." ^
+                                           "rep_to_binary_rel_rep",
+                                           [representation])
+                                  | NONE => aggregate_card representation)
+                           | NONE => aggregate_card representation
+                     in
+                       (first_ty, second_ty, card, false)
+                     end
+                 | NONE =>
+                     if MFH.is_pair_type first_ty then
+                       let
+                         val (left_ty, right_ty) =
+                           pairSyntax.dest_prod first_ty
+                         val card = aggregate_card representation
+                       in
+                         (left_ty, right_ty, card, true)
+                       end
+                     else
+                       raise REP
+                         ("Refute_ModelFinder_Rep.rep_to_binary_rel_rep",
+                          [representation]))
+      val first = Atom (cardinality,
+        MFS.offset_of_type offsets first_ty)
+      val second = Atom (cardinality,
+        MFS.offset_of_type offsets second_ty)
     in
-      Func
-        (Struct [Atom (cardinality, first_offset),
-                 Atom (cardinality, second_offset)],
-         Formula MFU.Neut)
+      if paired_domain then
+        Func (Struct [first, second], Formula MFU.Neut)
+      else
+        (* HOL4 relationTheory relations are curried, unlike Isabelle's
+           sets of pairs; preserve those application boundaries. *)
+        Func (first, Func (second, Formula MFU.Neut))
     end
 
   fun best_one_rep_for_type

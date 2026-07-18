@@ -1392,6 +1392,22 @@ fun mf_rep_fixed_scope () =
     val binary_relation =
       MFR.Func
         (MFR.Struct [enum, enum], MFR.Formula MFU.Neut)
+    val curried_binary_relation =
+      MFR.Func (enum, MFR.Func (enum, MFR.Formula MFU.Neut))
+    val optional_curried_binary_relation =
+      MFR.Func
+        (enum, MFR.Func (enum, MFR.Opt (MFR.Atom (2, main_offset))))
+    val pair_ty = ``:refute$rf2 # refute$rf2``
+    val pair_offset = MFS.offset_of_type (#ofs scope) pair_ty
+    val pair_endpoint = MFR.Struct [enum, enum]
+    val pair_atom = MFR.Atom (4, pair_offset)
+    val pair_curried_relation =
+      MFR.Func
+        (pair_endpoint,
+         MFR.Func (pair_endpoint, MFR.Formula MFU.Neut))
+    val atomized_pair_curried_relation =
+      MFR.Func
+        (pair_atom, MFR.Func (pair_atom, MFR.Formula MFU.Neut))
   in
     MFR.best_one_rep_for_type scope ``:refute$rf2 # num`` =
       MFR.Struct [enum, number] andalso
@@ -1406,19 +1422,35 @@ fun mf_rep_fixed_scope () =
     MFR.best_set_rep_for_type scope ``:num`` = MFR.Opt number andalso
     MFR.rep_to_binary_rel_rep (#ofs scope)
       ``:refute$rf2 -> refute$rf2 -> bool`` curried_relation =
-      binary_relation andalso
+      curried_binary_relation andalso
     MFR.rep_to_binary_rel_rep (#ofs scope)
       ``:(refute$rf2 # refute$rf2) -> bool`` binary_relation =
       binary_relation andalso
     MFR.rep_to_binary_rel_rep (#ofs scope)
       ``:refute$rf2 -> refute$rf2 -> bool`` binary_relation =
-      binary_relation andalso
+      curried_binary_relation andalso
     MFR.rep_to_binary_rel_rep (#ofs scope)
       ``:refute$rf2 -> refute$rf2 -> bool``
-      (MFR.Atom (16, main_offset)) = binary_relation andalso
+      (MFR.Atom (16, main_offset)) = curried_binary_relation andalso
     MFR.rep_to_binary_rel_rep (#ofs scope)
       ``:refute$rf2 -> refute$rf2 -> bool``
-      (MFR.Opt (MFR.Atom (16, main_offset))) = binary_relation andalso
+      (MFR.Opt (MFR.Atom (16, main_offset))) =
+      curried_binary_relation andalso
+    MFR.opt_rep (#ofs scope) ``:refute$rf2 -> refute$rf2 -> bool``
+      curried_binary_relation = optional_curried_binary_relation andalso
+    MFR.type_schema_of_rep ``:refute$rf2 -> refute$rf2 -> bool``
+      curried_binary_relation = [``:refute$rf2``, ``:refute$rf2``] andalso
+    MFR.type_schema_of_rep ``:refute$rf2 -> refute$rf2 -> bool``
+      optional_curried_binary_relation =
+      [``:refute$rf2``, ``:refute$rf2``, ``:bool``] andalso
+    MFR.rep_to_binary_rel_rep (#ofs scope)
+      ``:(refute$rf2 # refute$rf2) ->
+         (refute$rf2 # refute$rf2) -> bool``
+      pair_curried_relation = atomized_pair_curried_relation andalso
+    MFR.type_schema_of_rep
+      ``:(refute$rf2 # refute$rf2) ->
+         (refute$rf2 # refute$rf2) -> bool``
+      atomized_pair_curried_relation = [pair_ty, pair_ty] andalso
     MFR.type_schema_of_rep ``:refute$rf2 -> num`` vector =
       [``:num``, ``:num``]
   end
