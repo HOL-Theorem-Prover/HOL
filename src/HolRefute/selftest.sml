@@ -887,6 +887,16 @@ fun mf_preproc_skolem_golden () =
     val neutral_input = ``q (?x : num. p x)``
     val neutral_result =
       MFP.skolemize_term_and_more neutral_context 3 neutral_input
+    val shadowed_context = fresh_mf_context ()
+    val shadowed_input =
+      ``!x : num. p x /\ !x : num. ?y : num. r x y``
+    val shadowed_result =
+      MFP.skolemize_term_and_more shadowed_context 3 shadowed_input
+    val distinct_context = fresh_mf_context ()
+    val distinct_input =
+      ``!a : num. p a /\ !b : num. ?y : num. r b y``
+    val distinct_result =
+      MFP.skolemize_term_and_more distinct_context 3 distinct_input
     val collected_context = fresh_mf_context ()
     val (collected, _, _, _) = MFP.axioms_for_term collected_context
       [axiom] boolSyntax.T
@@ -910,6 +920,10 @@ fun mf_preproc_skolem_golden () =
     !(#skolems negative_context) = [("refute$sk0@1$x", [])] andalso
     Term.aconv neutral_result neutral_input andalso
     null (!(#skolems neutral_context)) andalso
+    Term.aconv shadowed_input distinct_input andalso
+    Term.aconv shadowed_result distinct_result andalso
+    !(#skolems shadowed_context) =
+      [("refute$sk2@1$y", ["x", "x"])] andalso
     List.exists (Term.aconv axiom) collected andalso
     null (!(#skolems collected_context))
   end

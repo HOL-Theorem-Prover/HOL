@@ -98,20 +98,36 @@ structure Refute_ModelFinder_Preproc = struct
             (MFU.Pos, true) => true
           | (MFU.Neg, false) => true
           | _ => false
+      (* Keep source binder names for model display, but distinct opened
+         variables for de Bruijn-style dependency identity. *)
+      fun dependency_variable (variable, _) = variable
       fun skolem_type dependencies result =
-        boolSyntax.list_mk_fun (map Term.type_of dependencies, result)
+        boolSyntax.list_mk_fun
+          (map (Term.type_of o dependency_variable) dependencies, result)
       fun recurse dependencies skolemizable polarity candidate =
         if boolSyntax.is_forall candidate orelse
            boolSyntax.is_exists candidate then
           let
             val existential = boolSyntax.is_exists candidate
-            val (variable, body) =
+            val (raw_variable, raw_body) =
               if existential then boolSyntax.dest_exists candidate
               else boolSyntax.dest_forall candidate
-            val occurs = Term.free_in variable body
+            val original = variable_name raw_variable
+            val occurs = Term.free_in raw_variable raw_body
+            val dependency_variables = map dependency_variable dependencies
+            val variable =
+              if aconv_member raw_variable dependency_variables then
+                Term.variant (dependency_variables @ Term.all_vars raw_body)
+                  raw_variable
+              else
+                raw_variable
+            val body =
+              if Term.aconv variable raw_variable then raw_body
+              else substitute raw_variable variable raw_body
             fun keep () =
               let
-                val transformed = recurse (dependencies @ [variable])
+                val transformed = recurse
+                  (dependencies @ [(variable, original)])
                   (skolemizable andalso
                    not (is_higher_order_type (Term.type_of variable)))
                   polarity body
@@ -123,21 +139,19 @@ structure Refute_ModelFinder_Preproc = struct
               end
           in
             if not occurs then
-              recurse dependencies skolemizable polarity body
+              recurse dependencies skolemizable polarity raw_body
             else if positive_existential polarity existential andalso
                     skolemizable andalso
                     length dependencies <= skolem_depth then
               let
                 val serial = length (!skolems) + 1
-                val original = variable_name variable
                 val arity = length dependencies
                 val skolem = MFN.mk_skolem arity serial original
                   (skolem_type dependencies (Term.type_of variable))
-                val application =
-                  Term.list_mk_comb (skolem, dependencies)
+                val application = Term.list_mk_comb
+                  (skolem, map dependency_variable dependencies)
                 val generated_name = variable_name skolem
-                val enclosing_names =
-                  rev (map variable_name dependencies)
+                val enclosing_names = rev (map #2 dependencies)
                 val _ = skolems :=
                   (generated_name, enclosing_names) :: !skolems
                 val transformed = recurse dependencies skolemizable
