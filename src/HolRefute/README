@@ -1,6 +1,7 @@
-HolRefute provides certified counterexample generation for HOL4.  Its
-Quickcheck (QC) backend supports exhaustive and random strategies over
-three interchangeable execution substrates:
+HolRefute provides certified counterexample generation for HOL4.  It has a
+Quickcheck (QC) backend for executable goals and a Kodkod-based model-finder
+(MF) backend.  QC supports exhaustive and random strategies over three
+interchangeable execution substrates:
 
 * Compute interprets test plans with computeLib.  It is the compatibility
   substrate and supports registered custom and abstract generators.
@@ -42,14 +43,24 @@ Module layout:
 * Refute_Cert: EVAL-based counterexample certification.
 * Refute_Forl and Refute_ForlSat: the FORL/Kodkodi process bridge and SAT
   solver configuration.
+* Refute_ModelFinder and Refute_ModelFinder_*: preprocessing, scope and
+  representation selection, Kodkod translation, and model reconstruction.
 * Refute.sig and Refute.sml: the public API facade.
 
-Kodkodi support is Unix-only.  Set `HOL4_KODKODI` to a Kodkodi 1.5.7
-component directory containing the four jars in `jar/`.  Java is selected
-from `HOL4_JAVA_EXECUTABLE`, then `JAVA_HOME/bin/java`, then `java` on
-`PATH`.  Alternatively, `HOL4_KODKODI_EXEC` can provide a standalone
-launcher command; it is passed to the shell verbatim.  Configuration checks
-are lazy and never start a JVM while modules are loaded or built.
+Kodkodi support is Unix-only and requires a Java runtime.  Obtain
+`kodkodi-1.5.7.tar.gz` from the Isabelle components mirror at
+<https://isabelle.in.tum.de/components/> and unpack it locally.  Set
+`HOL4_KODKODI` to the resulting `kodkodi-1.5.7` component directory.  Its
+`jar/` directory must contain `antlr-runtime-3.1.1.jar`, `kodkod-1.5.jar`,
+`kodkodi-1.5.7.jar`, and `sat4j-2.3.jar`.
+
+HolRefute constructs the Kodkodi JVM command itself.  Java is selected from
+`HOL4_JAVA_EXECUTABLE`, then `JAVA_HOME/bin/java`, then `java` on `PATH`.
+As an escape hatch, `HOL4_KODKODI_EXEC` can instead name a complete
+standalone launcher command.  It takes precedence and is passed to the
+shell verbatim.  Configuration checks are lazy and never start a JVM while
+modules are loaded or built.  The launcher shipped in the component's
+`bin/` directory depends on Isabelle and is not the standalone override.
 
 `SAT4J` is the portable default.  JNI solvers are advertised only when their
 individual shared libraries are present under `jni/<platform>`: MiniSat,
@@ -57,7 +68,7 @@ CryptoMiniSat, and Lingeling require `libminisat`, `libcryptominisat`, and
 `liblingeling`, respectively.  External solver settings retain Isabelle's
 environment variables, including `MINISAT_HOME`, `CRYPTOMINISAT_HOME`,
 `ZCHAFF_HOME`, `RSAT_HOME`, `RISS3G_HOME`, `BERKMIN_HOME`, and
-`BERKMINALLOY_HOME`.
+`BERKMINALLOY_HOME`; `BERKMIN_EXE` selects a nondefault BerkMin executable.
 
 The prepared development host uses
 `$HOME/.local/opt/Isabelle2025-2/contrib/kodkodi-1.5.7` and
@@ -65,8 +76,9 @@ The prepared development host uses
 and a Java runtime.  No network access is needed at run time.
 
 HolRefute is included in the normal tree build only on Poly/ML; non-Poly
-builds skip the directory.  Its level-2 selftests include cross-substrate
-outcome and candidate-stream conformance plus Cv export-cleanliness checks.
+builds skip the directory.  Its level-2 selftests include the MF acceptance,
+differential, soundness, and theory-hygiene suites, plus cross-substrate QC
+outcome and candidate-stream conformance and Cv export-cleanliness checks.
 
 The refute_simp, refute_psimp, and refute_unfold theorem sets are defined by
-the support theory and are reserved for the future model-finding backend.
+the support theory and used by model-finder preprocessing.
