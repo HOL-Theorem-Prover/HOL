@@ -691,6 +691,24 @@ fun mf_preproc_destroy_goldens () =
          Term.mk_comb (predicate, option_value)))
     val existential_result =
       MFP.pull_out_existential_constrs context existential_input
+    val first_function = ``f : num -> bool``
+    val second_function = ``g : num -> bool``
+    val nested_option =
+      ``SOME (\n. (f : num -> bool) n /\ (g : num -> bool) n)``
+    val nested_predicate =
+      ``nested_q : ((num -> bool) option) -> bool``
+    val nested_value = MFN.mk_reserved_var "refute$v0"
+      (Term.type_of nested_option)
+    val nested_input = boolSyntax.list_mk_exists
+      ([first_function, second_function],
+       Term.mk_comb (nested_predicate, nested_option))
+    val nested_expected = boolSyntax.list_mk_exists
+      ([first_function, second_function, nested_value],
+       boolSyntax.mk_conj
+         (boolSyntax.mk_eq (nested_value, nested_option),
+          Term.mk_comb (nested_predicate, nested_value)))
+    val nested_result =
+      MFP.pull_out_existential_constrs context nested_input
   in
     Term.aconv actual_list expected_list andalso
     Term.aconv actual_tree expected_tree andalso
@@ -698,6 +716,7 @@ fun mf_preproc_destroy_goldens () =
     Term.aconv actual_shared expected_shared andalso
     Term.aconv user_free_result user_free_constructor andalso
     Term.aconv existential_result existential_expected andalso
+    Term.aconv nested_result nested_expected andalso
     Term.aconv
       (MFP.destroy_pulled_out_constrs context true true protected_axiom)
       protected_axiom andalso
@@ -816,6 +835,15 @@ fun mf_preproc_pipeline_shape () =
     val (_, selected_definitions, _, _) =
       MFP.axioms_for_term (fresh_mf_context ()) [definition]
         ``(defined_x : num) = 4``
+    val shadow_definition = ``(shadow_x : num) = 3``
+    val shadow_goal =
+      ``(!shadow_x : num. p shadow_x) /\ q (shadow_x : num)``
+    val (_, shadow_definitions, _, _) =
+      MFP.axioms_for_term (fresh_mf_context ()) [shadow_definition]
+        shadow_goal
+    val (_, bound_definitions, _, _) =
+      MFP.axioms_for_term (fresh_mf_context ()) [shadow_definition]
+        ``!shadow_x : num. p shadow_x``
   in
     length nondefinitions >= 1 andalso
     skolems = [("refute$sk0@1$x", [])] andalso
@@ -826,7 +854,9 @@ fun mf_preproc_pipeline_shape () =
     Term.aconv (MFP.close_form open_value_goal) closed_value_goal andalso
     Term.aconv (MFP.destroy_universal_equalities equality_chain)
       ``(3 : num) = 4`` andalso
-    List.exists (Term.aconv definition) selected_definitions
+    List.exists (Term.aconv definition) selected_definitions andalso
+    List.exists (Term.aconv shadow_definition) shadow_definitions andalso
+    null bound_definitions
   end
 
 val _ = require_msg (check_result mf_preproc_pipeline_shape) (fn () =>
@@ -896,10 +926,16 @@ fun mf_preproc_quantifier_golden () =
     val distinct = boolSyntax.mk_forall (x', inner)
     val pushed_shadowed = MFP.push_quantifiers_inward shadowed
     val pushed_distinct = MFP.push_quantifiers_inward distinct
+    val nested_input =
+      ``!x : num. (?y : num. r y /\ q) \/ s x``
+    val nested_expected =
+      ``(!x : num. s x) \/ (?y : num. r y /\ q)``
+    val nested_result = MFP.push_quantifiers_inward nested_input
   in
     distributed andalso negated andalso negative_preserved andalso
     Term.aconv pushed_shadowed inner andalso
-    Term.aconv pushed_distinct inner
+    Term.aconv pushed_distinct inner andalso
+    Term.aconv nested_result nested_expected
   end
 
 val _ = require_msg (check_result mf_preproc_quantifier_golden) (fn () =>

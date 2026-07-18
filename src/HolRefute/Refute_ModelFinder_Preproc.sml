@@ -397,11 +397,12 @@ structure Refute_ModelFinder_Preproc = struct
   fun pull_out_existential_constrs context term =
     let
       val avoids = Term.all_vars term
-      fun recurse outer candidate =
+      fun recurse outer existentials candidate =
         if boolSyntax.is_exists candidate then
           let
             val (variable, body) = boolSyntax.dest_exists candidate
-            val (body', pulled) = collect outer [variable] body []
+            val active = existentials @ [variable]
+            val (body', pulled) = collect outer active body []
             val equations = equations_for_pulled pulled
             val fresh = map #2 pulled
             val matrix = smart_conj (equations @ [body'])
@@ -412,24 +413,26 @@ structure Refute_ModelFinder_Preproc = struct
         else if boolSyntax.is_forall candidate then
           let val (variable, body) = boolSyntax.dest_forall candidate
           in boolSyntax.mk_forall (variable,
-               recurse (variable :: outer) body)
+               recurse (existentials @ variable :: outer) [] body)
           end
         else if Term.is_abs candidate then
           let val (variable, body) = Term.dest_abs candidate
-          in Term.mk_abs (variable, recurse (variable :: outer) body) end
+          in Term.mk_abs (variable,
+               recurse (existentials @ variable :: outer) [] body) end
         else if Term.is_comb candidate then
           let val (function, argument) = Term.dest_comb candidate
-          in MFH.s_betapply (recurse outer function,
-               recurse outer argument) end
+          in MFH.s_betapply (recurse outer existentials function,
+               recurse outer existentials argument) end
         else
           candidate
       and collect outer existentials candidate pulled =
         if boolSyntax.is_exists candidate then
-          (recurse (existentials @ outer) candidate, pulled)
+          (recurse outer existentials candidate, pulled)
         else if Term.is_abs candidate then
           let val (variable, body) = Term.dest_abs candidate
           in
-            (Term.mk_abs (variable, recurse (variable :: outer) body),
+            (Term.mk_abs (variable,
+               recurse (existentials @ variable :: outer) [] body),
              pulled)
           end
         else if Term.is_comb candidate then
@@ -453,7 +456,7 @@ structure Refute_ModelFinder_Preproc = struct
         else
           pull_candidate avoids existentials outer false candidate pulled
     in
-      recurse [] term
+      recurse [] [] term
     end
 
   fun is_constructor_pattern bound term =
@@ -1007,10 +1010,11 @@ structure Refute_ModelFinder_Preproc = struct
           let
             val universal = boolSyntax.is_forall candidate
             val (variables, matrix) = gather universal [] candidate
-            val matrix' = recurse matrix
+            (* Match Nitpick: the current cluster treats its matrix as
+               opaque.  Structural recursion resumes outside the cluster. *)
             val connective = Option.getOpt
-              (same_connective matrix', true)
-            val components = connective_parts connective matrix'
+              (same_connective matrix, true)
+            val components = connective_parts connective matrix
             fun used component =
               List.filter (fn variable => Term.free_in variable component)
                 variables
@@ -1110,14 +1114,14 @@ structure Refute_ModelFinder_Preproc = struct
                 else
                   (seen, definitions, normalized :: nondefinitions)
             in
-              add_axioms_for_term (depth + 1) normalized accumulator
+              add_axioms_for_term (depth + 1) [] normalized accumulator
             end
         end
       and add_eq_axiom depth axiom accumulator =
         add_axiom (is_constructor_pattern_formula axiom)
           depth axiom accumulator
       and add_axioms_for_type _ _ accumulator = accumulator
-      and add_axioms_for_term depth term
+      and add_axioms_for_term depth bound term
             (accumulator as (seen, definitions, nondefinitions)) =
         if Term.is_const term then
           let val already = aconv_member term seen
@@ -1164,7 +1168,8 @@ structure Refute_ModelFinder_Preproc = struct
         else if Term.is_var term then
           let
             val with_definition =
-              if is_generated_const term orelse aconv_member term seen then
+              if aconv_member term bound orelse is_generated_const term orelse
+                 aconv_member term seen then
                 accumulator
               else
                 (case lookup_def term of
@@ -1178,18 +1183,17 @@ structure Refute_ModelFinder_Preproc = struct
         else if Term.is_comb term then
           let
             val (function, argument) = Term.dest_comb term
-            val first = add_axioms_for_term depth function accumulator
+            val first = add_axioms_for_term depth bound function accumulator
           in
-            add_axioms_for_term depth argument first
+            add_axioms_for_term depth bound argument first
           end
         else if Term.is_abs term then
           let
             val (variable, body) = Term.dest_abs term
-            val first = add_axioms_for_type depth
-              (Term.type_of variable)
-              (variable :: seen, definitions, nondefinitions)
+            val first = add_axioms_for_term depth (variable :: bound)
+              body accumulator
           in
-            add_axioms_for_term depth body first
+            add_axioms_for_type depth (Term.type_of variable) first
           end
         else
           accumulator
@@ -1199,7 +1203,7 @@ structure Refute_ModelFinder_Preproc = struct
       val eval_axioms = ListPair.zip
         (MFU.index_seq 0 (length evals), evals)
         |> map eval_axiom
-      val initial = add_axioms_for_term 1 negated ([], [], [])
+      val initial = add_axioms_for_term 1 [] negated ([], [], [])
       val with_assumptions = List.foldr
         (fn (axiom, result) => add_axiom false 1 axiom result)
         initial nondef_assumptions
