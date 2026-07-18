@@ -773,6 +773,8 @@ fun mf_preproc_destroy_goldens () =
        beta_argument)
     val beta_result =
       MFP.destroy_pulled_out_constrs context false true beta_redex
+    val existential_beta_result =
+      MFP.pull_out_existential_constrs context beta_redex
   in
     Term.aconv actual_list expected_list andalso
     Term.aconv actual_tree expected_tree andalso
@@ -786,6 +788,7 @@ fun mf_preproc_destroy_goldens () =
     Term.aconv relaxed_definition user_free_constructor andalso
     Term.aconv two_existential_result two_existential_expected andalso
     Term.aconv beta_result beta_redex andalso
+    Term.aconv existential_beta_result beta_redex andalso
     Term.aconv
       (MFP.destroy_pulled_out_constrs context true true protected_axiom)
       protected_axiom andalso
@@ -874,23 +877,44 @@ fun mf_preproc_unfold_goldens () =
     val actual_case = MFH.unfold_defs_in_term context case_input
     val set_input =
       ``(2 : num) IN GSPEC (\n : num. (n + 1, n < 3))``
-    val expected_set =
-      ``?x : num. (2 : num, T) = (x + 1, x < 3)``
+    val set_value = ``set_value : num``
+    val expected_set = Term.mk_comb
+      (Term.mk_abs (set_value,
+         ``?x : num. (^set_value, T) = (x + 1, x < 3)``),
+       ``2 : num``)
     val actual_set = set_input
       |> MFH.unfold_defs_in_term context
       |> MFP.destroy_set_Collect
     val direct_set = MFP.destroy_set_Collect
       ``(2 : num) IN (\n : num. n < 3)``
+    val direct_set_variable = ``n : num``
+    val expected_direct_set = Term.mk_comb
+      (Term.mk_abs (direct_set_variable, ``n < 3``), ``2 : num``)
     val pair_first = MFP.simplify_constrs_and_sels context
       ``FST ((a : num), b : bool)``
     val pair_second = MFP.simplify_constrs_and_sels context
       ``SND ((a : num), b : bool)``
+    val eta_variable = ``eta_n : num``
+    val eta_function = ``eta_f : num -> num``
+    val eta_argument = Term.mk_abs
+      (eta_variable, Term.mk_comb (eta_function, eta_variable))
+    val eta_option = optionSyntax.mk_some eta_argument
+    val eta_result = MFP.simplify_constrs_and_sels context eta_option
+    val list_tail = MFN.mk_selector 1 "list$CONS"
+      ``:num list -> num list``
+    val reconstructed_list = listSyntax.mk_cons
+      (Term.mk_comb (list_head, ``xs : num list``),
+       Term.mk_comb (list_tail, ``xs : num list``))
+    val reconstructed_result =
+      MFP.simplify_constrs_and_sels context reconstructed_list
   in
     Term.aconv actual_case expected_case andalso
     Term.aconv actual_set expected_set andalso
-    Term.aconv direct_set ``(2 : num) < 3`` andalso
+    Term.aconv direct_set expected_direct_set andalso
     Term.aconv pair_first ``a : num`` andalso
-    Term.aconv pair_second ``b : bool``
+    Term.aconv pair_second ``b : bool`` andalso
+    Term.aconv eta_result eta_option andalso
+    Term.aconv reconstructed_result ``xs : num list``
   end
 
 val _ = require_msg (check_result mf_preproc_unfold_goldens) (fn () =>

@@ -223,14 +223,14 @@ structure Refute_ModelFinder_Preproc = struct
       in
         if Term.is_abs transformed_set then
           destroy_set_Collect
-            (MFH.s_betapply (transformed_set, transformed_element))
+            (Term.mk_comb (transformed_set, transformed_element))
         else
           boolSyntax.mk_IN (transformed_element, transformed_set)
       end
     else if Term.is_comb term then
       let val (function, argument) = Term.dest_comb term
       in
-        MFH.s_betapply
+        Term.mk_comb
           (destroy_set_Collect function, destroy_set_Collect argument)
       end
     else if Term.is_abs term then
@@ -428,7 +428,7 @@ structure Refute_ModelFinder_Preproc = struct
                recurse (existentials @ variable :: outer) [] body) end
         else if Term.is_comb candidate then
           let val (function, argument) = Term.dest_comb candidate
-          in MFH.s_betapply (recurse outer existentials function,
+          in Term.mk_comb (recurse outer existentials function,
                recurse outer existentials argument) end
         else
           candidate
@@ -771,6 +771,35 @@ structure Refute_ModelFinder_Preproc = struct
                end
                handle HOL_ERR _ => NONE)
           | NONE => NONE
+      (* This pass recognizes selector reconstruction only.  The general
+         construct_value helper also eta-contracts unrelated arguments. *)
+      fun reconstruct constructor arguments =
+        case arguments of
+            [] => NONE
+          | first :: _ =>
+              (case MFH.generated_selector_argument constructor first of
+                   SOME value =>
+                     if Term.type_of value <>
+                        MFH.constructor_result_type constructor then
+                       NONE
+                     else
+                       let
+                         val argument_tys =
+                           MFH.constructor_arg_types constructor
+                         val expected = List.tabulate
+                           (length argument_tys, fn index =>
+                             MFH.select_nth_constr_arg context constructor
+                               value index
+                               (List.nth (argument_tys, index)))
+                       in
+                         if ListPair.allEq (fn (left, right) =>
+                              Term.aconv left right)
+                              (arguments, expected) then
+                           SOME value
+                         else
+                           NONE
+                       end
+                 | NONE => NONE)
       fun recurse candidate =
         if Term.is_abs candidate then
           let val (variable, body) = Term.dest_abs candidate
@@ -785,7 +814,8 @@ structure Refute_ModelFinder_Preproc = struct
             if Term.is_const head' andalso MFH.is_nonfree_constr head' andalso
                length arguments' =
                  length (MFH.constructor_arg_types head') then
-              MFH.construct_value context head' arguments'
+              Option.getOpt
+                (reconstruct head' arguments', rebuilt)
             else
               case arguments' of
                   first :: rest =>
