@@ -1008,6 +1008,15 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
       fun bool_rep polarity optional =
         if polarity = MFU.Neut andalso optional then MFR.Opt bool_atom
         else MFR.Formula polarity
+      fun unknown_boolean constant ty polarity =
+        let val effective_polarity =
+          if unsound then MFU.flip_polarity polarity else polarity
+        in
+          case effective_polarity of
+              MFU.Pos => Cst (False, ty, MFR.Formula MFU.Pos)
+            | MFU.Neg => Cst (True, ty, MFR.Formula MFU.Neg)
+            | MFU.Neut => Cst (constant, ty, MFR.Opt bool_atom)
+        end
       fun triad first second =
         s_op2 Triad (type_of first) (MFR.Opt bool_atom) first second
       fun triad_fn f = triad (f MFU.Pos) (f MFU.Neg)
@@ -1065,18 +1074,11 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 end
             | Cst (constant, ty, _) =>
                 if constant = Unknown orelse constant = Unrep then
-                  let
-                    val effective_polarity =
-                      if unsound then MFU.flip_polarity polarity else polarity
-                  in
-                    case (MFH.is_boolean_type ty, effective_polarity) of
-                        (true, MFU.Pos) =>
-                          Cst (False, ty, MFR.Formula MFU.Pos)
-                      | (true, MFU.Neg) =>
-                          Cst (True, ty, MFR.Formula MFU.Neg)
-                      | _ => Cst (constant, ty,
-                          MFR.best_opt_set_rep_for_type scope ty)
-                  end
+                  if MFH.is_boolean_type ty then
+                    unknown_boolean constant ty polarity
+                  else
+                    Cst (constant, ty,
+                      MFR.best_opt_set_rep_for_type scope ty)
                 else if List.exists (fn other => constant = other)
                     [Add, Subtract, Multiply, Divide, Gcd, Lcm] then
                   let
@@ -1127,13 +1129,22 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
             | Op1 (operator, ty, _, first) =>
                 let
                   val first' = sub first
+                  val optional = MFR.is_opt_rep (rep_of first')
                   val representation =
                     if operator = Finite then
-                      bool_rep polarity (MFR.is_opt_rep (rep_of first'))
-                    else if MFR.is_opt_rep (rep_of first') then
+                      bool_rep polarity optional
+                    else if optional then
                       MFR.best_opt_set_rep_for_type scope ty
                     else MFR.best_non_opt_set_rep_for_type scope ty
-                in s_op1 operator ty representation first' end
+                in
+                  (* [deviation] PLAN_M3 decision 30: optional FINITE is
+                     the same unknown Boolean as Cst Unknown, including
+                     the unsound sibling's polarity flip. *)
+                  if operator = Finite andalso optional andalso
+                     polarity <> MFU.Neut
+                  then unknown_boolean Unknown ty polarity
+                  else s_op1 operator ty representation first'
+                end
             | Op2 (Less, ty, _, first, second) =>
                 let
                   val first' = sub first

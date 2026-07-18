@@ -2290,11 +2290,20 @@ fun mf_kodkod_finite_translation () =
     val neutral_unknown = MFK.kodkod_formula_from_nut offsets kk
       (MFNT.Op1 (MFNT.Finite, Type.bool,
         MFR.Opt (MFR.Atom (2, 0)), optional))
+    val raw_finite = MFNT.Op1
+      (MFNT.Finite, Type.bool, MFR.Any,
+       MFNT.Cst (MFNT.Unknown, ``:num -> bool``, MFR.Any))
+    fun chosen unsound =
+      MFNT.choose_reps_in_nut scope unsound MFNT.NameTable.empty false
+        raw_finite
+      |> MFK.kodkod_formula_from_nut offsets kk
   in
     finite MFU.Neut exact = Refute_Forl.True andalso
     finite MFU.Pos optional = Refute_Forl.False andalso
     finite MFU.Neg optional = Refute_Forl.True andalso
-    neutral_unknown = Refute_Forl.False
+    neutral_unknown = Refute_Forl.False andalso
+    chosen false = Refute_Forl.False andalso
+    chosen true = Refute_Forl.True
   end
 
 val _ = require_msg (check_result mf_kodkod_finite_translation) (fn () =>
