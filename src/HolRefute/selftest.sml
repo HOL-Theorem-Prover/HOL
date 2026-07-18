@@ -22,6 +22,14 @@ val _ = numLib.prefer_num ()
 val erc = ref 0
 val _ = diemode := Remember erc
 
+val selftest_level =
+  case OS.Process.getEnv "HOLSELFTESTLEVEL" of
+      NONE => 1
+    | SOME text =>
+        (case Int.fromString text of
+            NONE => 1
+          | SOME level => level)
+
 val _ = tprint "Refute skeleton smoke check"
 val _ = require_msg (check_result (fn () => true)) (fn () => "")
                     (fn () => ()) ()
@@ -2468,6 +2476,8 @@ fun mf_model_certification_protocol () =
        reconstruction = reconstructed, cex = base, sound = false,
        genuine_means_genuine = false, reasons = []}
     val sound_discarded = MFM.certify
+      (* PLAN_M3 section 13.3: exercise the exact telemetry path for a
+         sound model rejected by executable certification. *)
       {executable = true, original = ``T``, eval_terms = [],
        reconstruction = reconstructed, cex = base, sound = true,
        genuine_means_genuine = true, reasons = []}
@@ -3292,6 +3302,66 @@ local
       expected true_short_circuit
     end
 
+  fun kodkodi_pids () =
+    let
+      val process = Unix.execute ("/bin/ps", ["-eo", "pid=,args="])
+      val input = Unix.textInstreamOf process
+      val output = TextIO.inputAll input
+      val status = Unix.reap process
+      fun pid_of line =
+        if String.isSubstring "isabelle.kodkodi.Kodkodi" line then
+          case String.tokens Char.isSpace line of
+              pid :: _ => Int.fromString pid
+            | [] => NONE
+        else
+          NONE
+    in
+      if OS.Process.isSuccess status then
+        List.mapPartial pid_of (String.fields (fn c => c = #"\n") output)
+      else
+        raise Fail "ps failed during the Kodkodi interrupt smoke test"
+    end
+
+  fun wait_for_new_kodkodi baseline 0 = NONE
+    | wait_for_new_kodkodi baseline attempts =
+        case List.find (fn pid => not (Lib.mem pid baseline))
+          (kodkodi_pids ()) of
+            SOME pid => SOME pid
+          | NONE =>
+              (OS.Process.sleep (Time.fromReal 0.05);
+               wait_for_new_kodkodi baseline (attempts - 1))
+
+  fun wait_for_kodkodi_exit pid 0 = not (Lib.mem pid (kodkodi_pids ()))
+    | wait_for_kodkodi_exit pid attempts =
+        if Lib.mem pid (kodkodi_pids ()) then
+          (OS.Process.sleep (Time.fromReal 0.05);
+           wait_for_kodkodi_exit pid (attempts - 1))
+        else
+          true
+
+  (* PLAN_M3 section 16: cancel a live, delayed solve and pin the actual
+     Kodkodi JVM by PID until the launcher's cleanup has removed it. *)
+  fun interrupt_smoke () =
+    let
+      val baseline = kodkodi_pids ()
+      val delayed = with_delay "interrupt smoke" "5000" sat_problem
+      val future = Future.fork (fn () =>
+        solve_any_problem true false (deadline 30) 1 1 [delayed])
+      val stopped = ref false
+      fun stop () =
+        if !stopped then ()
+        else
+          (Future.cancel future;
+           ignore (Future.join_result future);
+           stopped := true)
+      fun check () =
+        case wait_for_new_kodkodi baseline 100 of
+            NONE => false
+          | SOME pid => (stop (); wait_for_kodkodi_exit pid 40)
+    in
+      Portable.finally stop check ()
+    end
+
   datatype test_rep =
     TestFormula
   | TestAtom of int
@@ -3584,6 +3654,13 @@ in
       require_msg (check_result mf_driver_smoke) (fn () =>
         "the gated model-finder smoke did not find a certified " ^
         "counterexample") (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured andalso selftest_level >= 2 then
+      (tprint "Refute Kodkodi interrupt cleanup";
+       require_msg (check_result interrupt_smoke) (fn () =>
+         "an interrupted Kodkodi solve left a JVM behind")
+         (fn () => ()) ())
     else ()
 end
 
@@ -5684,14 +5761,6 @@ val _ = require_msg (check_result compute_stream_dump_is_pinned) (fn () =>
 
 (* The public corpus precedes the potential-path tests below.  Those tests
    replace the ordinary list generator with tiny adversarial generators. *)
-val selftest_level =
-  case OS.Process.getEnv "HOLSELFTESTLEVEL" of
-      NONE => 1
-    | SOME text =>
-        (case Int.fromString text of
-            NONE => 1
-          | SOME level => level)
-
 fun same_snapshot (left : Refute_EvalCv.snapshot)
     (right : Refute_EvalCv.snapshot) =
   #theory left = #theory right andalso
@@ -6652,23 +6721,18 @@ fun corpus_literals () =
        cfg = corpus_config, tm = ``!s : string. s <> "x"``,
        expect = ExpectGenuine})
 
+val soundness_corpus =
+  [("sound reverse involution",
+    ``REVERSE (REVERSE [T; F; T]) = [T; F; T]``),
+   ("sound addition commutes", ``T``),
+   ("sound bool check_all", ``(b : bool) \/ ~b``),
+   ("sound rf check_all",
+    ``(x : refute$rf2) = rf2_1 \/ x = rf2_2``)]
+
 fun corpus_soundness () =
-  (tc {name = "Refute corpus: sound reverse involution",
-       cfg = corpus_config,
-       tm = ``REVERSE (REVERSE [T; F; T]) = [T; F; T]``,
-       expect = ExpectNone};
-   tc {name = "Refute corpus: sound addition commutes",
-       cfg = corpus_config,
-       tm = ``T``,
-       expect = ExpectNone};
-   tc {name = "Refute corpus: sound bool check_all",
-       cfg = corpus_config,
-       tm = ``(b : bool) \/ ~b``,
-       expect = ExpectNone};
-   tc {name = "Refute corpus: sound rf check_all",
-       cfg = corpus_config,
-       tm = ``(x : refute$rf2) = rf2_1 \/ x = rf2_2``,
-       expect = ExpectNone})
+  List.app (fn (name, tm) =>
+    tc {name = "Refute corpus: " ^ name, cfg = corpus_config,
+        tm = tm, expect = ExpectNone}) soundness_corpus
 
 fun corpus_registries () =
   let
@@ -7440,6 +7504,84 @@ val mf_acceptance_cases : mf_acceptance_case list =
     unknown_reason = SOME "inductive predicate", sat4j_smoke = false}
   ]
 
+(* PLAN_M3 section 13.3: both engines run sequentially on the same
+   executable finite-scope goals.  Bindings are deliberately ignored. *)
+type mf_differential_case =
+  {name : string, tm : term, counterexample : bool}
+
+val mf_differential_cases : mf_differential_case list =
+  [{name = "Boolean counterexample", tm = ``(b : bool)``,
+    counterexample = true},
+   {name = "finite-enum counterexample",
+    tm = ``(x : refute$rf2) = rf2_1``, counterexample = true},
+   {name = "list counterexample",
+    tm = ``REVERSE (xs : bool list) = xs``, counterexample = true},
+   {name = "Boolean theorem", tm = ``(b : bool) \/ ~b``,
+    counterexample = false},
+   {name = "finite-enum theorem",
+    tm = ``(x : refute$rf2) = rf2_1 \/ x = rf2_2``,
+    counterexample = false}]
+
+fun conclusive_counterexample name backend outcome =
+  case outcome of
+      Refute.Counterexample (_ :: _) => true
+    | Refute.NoCounterexample => false
+    | Refute.Counterexample [] =>
+        raise Fail (name ^ ": " ^ backend ^ " returned an empty result")
+    | Refute.Unknown reasons =>
+        raise Fail (name ^ ": " ^ backend ^ " was inconclusive: " ^
+          String.concatWith "; " reasons)
+
+fun mf_differential_test solver
+      ({name, tm, counterexample} : mf_differential_case) =
+  let
+    val _ = tprint ("Refute QC-vs-MF differential: " ^ name)
+    val qc_config = Refute.default_config
+      |> Refute.upd_timeout 20.0
+      |> Refute.upd_size 4
+      |> Refute.upd_substrate Refute.Compute
+      |> Refute.upd_sequential true
+      |> Refute.upd_backends (SOME ["exhaustive"])
+    val qc = quiet_refute qc_config tm
+    val mf = with_silent_refute (fn () =>
+      Refute.refute (mf_acceptance_config solver) tm)
+    val qc_has = conclusive_counterexample name "QC" qc
+    val mf_has = conclusive_counterexample name "MF" mf
+  in
+    if qc_has = mf_has andalso qc_has = counterexample then OK ()
+    else die ("counterexample existence disagreed: QC=" ^
+      Bool.toString qc_has ^ ", MF=" ^ Bool.toString mf_has)
+  end
+  handle e => die (Feedback.exn_to_string e)
+
+fun mf_soundness_test solver (name, tm) =
+  let
+    val _ = tprint ("Refute MF soundness: " ^ name)
+    val config = Refute.upd_expect Refute.ExpectNone
+      (mf_acceptance_config solver)
+    val _ = with_silent_refute (fn () => Refute.refute config tm)
+  in
+    OK ()
+  end
+  handle e => die (Feedback.exn_to_string e)
+
+fun configured_mf_test_solver () =
+  if Lib.mem "MiniSat_JNI"
+      (Refute_ForlSat.configured_sat_solvers false)
+  then "MiniSat_JNI"
+  else Refute_ForlSat.smart_sat_solver_name false
+
+fun run_mf_task20_suites () =
+  if not (Refute_Forl.is_configured ()) then
+    print ("(Kodkodi not configured, MF differential and soundness " ^
+      "suites skipped.)\n")
+  else
+    let val solver = configured_mf_test_solver ()
+    in
+      List.app (mf_differential_test solver) mf_differential_cases;
+      List.app (mf_soundness_test solver) soundness_corpus
+    end
+
 fun run_mf_acceptance () =
   if not (Refute_Forl.is_configured ()) then
     print "(Kodkodi not configured, MF acceptance corpus skipped.)\n"
@@ -7458,6 +7600,8 @@ fun run_mf_acceptance () =
     end
 
 val _ = if selftest_level >= 2 then run_mf_acceptance () else ()
+
+val _ = if selftest_level >= 2 then run_mf_task20_suites () else ()
 
 val _ = if selftest_level >= 2 then corpus_potential () else ()
 
