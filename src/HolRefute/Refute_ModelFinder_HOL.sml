@@ -456,7 +456,17 @@ structure Refute_ModelFinder_HOL = struct
   fun is_built_in_const constant =
     Option.isSome (arity_of_built_in_const constant)
 
-  val is_never_unfold_const = is_built_in_const
+  (* Boolean-valued COND is not arity-limited because the nut layer handles
+     fully applied Boolean conditionals.  It is nevertheless on the built-in
+     table and must not be expanded through HOL4's choice-based COND_DEF. *)
+  fun is_never_unfold_const constant =
+    let
+      val key = const_key constant
+      val ty = Term.type_of constant
+    in
+      Option.isSome (generic_built_in_arity key) orelse
+      Option.isSome (typed_built_in_arity key ty)
+    end handle HOL_ERR _ => false
 
   fun def_props_for_const table constant =
     if is_built_in_const constant then []
@@ -1101,18 +1111,22 @@ structure Refute_ModelFinder_HOL = struct
         | first :: _ =>
             (case generated_selector_argument constructor first of
                  SOME value =>
-                   let
-                     val argument_tys = constructor_arg_types constructor
-                     val expected = List.tabulate (length argument_tys,
-                       fn index => select_nth_constr_arg context constructor
-                         value index (List.nth (argument_tys, index)))
-                   in
-                     if ListPair.allEq (fn (left, right) =>
-                          Term.aconv left right) (arguments, expected) then
-                       value
-                     else
-                       Term.list_mk_comb (constructor, arguments)
-                   end
+                   if Term.type_of value <>
+                      constructor_result_type constructor then
+                     Term.list_mk_comb (constructor, arguments)
+                   else
+                     let
+                       val argument_tys = constructor_arg_types constructor
+                       val expected = List.tabulate (length argument_tys,
+                         fn index => select_nth_constr_arg context constructor
+                           value index (List.nth (argument_tys, index)))
+                     in
+                       if ListPair.allEq (fn (left, right) =>
+                            Term.aconv left right) (arguments, expected) then
+                         value
+                       else
+                         Term.list_mk_comb (constructor, arguments)
+                     end
                | NONE => Term.list_mk_comb (constructor, arguments))
     end
 
@@ -1318,7 +1332,8 @@ structure Refute_ModelFinder_HOL = struct
               else
                 (Int.min (maximum, card_of_type assigns ty)
                  handle error as HOL_ERR _ =>
-                          if default = ~1 then raise error else default
+                          if default = ~1 then raise error
+                          else Int.min (maximum, default)
                       | Refute_ModelFinder_Util.TOO_LARGE _ => maximum)
     in
       recurse ty
@@ -1587,7 +1602,13 @@ structure Refute_ModelFinder_HOL = struct
                | [] => do_term depth (eta_expand constant 1))
           else
             case replacement_for ersatz_table constant of
-                SOME replacement => do_const (depth + 1) replacement arguments
+                SOME replacement =>
+                  if depth >= unfold_max_depth then
+                    raise Refute_ModelFinder_Util.TOO_LARGE
+                      ("Refute_ModelFinder_HOL.unfold_defs_in_term",
+                       "too many nested replacements")
+                  else
+                    do_const (depth + 1) replacement arguments
               | NONE => ordinary ()
         end
     in

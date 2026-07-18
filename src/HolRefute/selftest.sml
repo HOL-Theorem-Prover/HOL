@@ -368,6 +368,19 @@ fun mf_selector_discriminator_roundtrips () =
     val pair_args = List.tabulate (2, fn index =>
       MFH.select_nth_constr_arg mf_hol_context pair_constructor
         pair_variable index (List.nth (pair_tys, index)))
+    val generated_discriminator =
+      MFH.discriminate_value mf_hol_context cons list_variable
+    val (generated_discriminator_head, _) =
+      HolKernel.strip_comb generated_discriminator
+    val generated_discriminator_ok =
+      case Lib.total Term.dest_var generated_discriminator_head of
+          SOME (name, _) =>
+            String.isPrefix MFN.discr_prefix name andalso
+            MFN.original_name name = MFH.constructor_name cons
+        | NONE => false
+    val wrong_constructor_selection =
+      MFH.select_nth_constr_arg mf_hol_context cons
+        nil_constructor 0 ``:num``
   in
     Term.aconv
       (MFH.discriminate_value mf_hol_context cons list_value)
@@ -395,6 +408,9 @@ fun mf_selector_discriminator_roundtrips () =
     Term.aconv
       (MFH.construct_value mf_hol_context pair_constructor pair_args)
       pair_variable andalso
+    generated_discriminator_ok andalso
+    Term.type_of generated_discriminator = Type.bool andalso
+    Term.aconv wrong_constructor_selection (MFH.unknown_value ``:num``) andalso
     length (MFH.constructor_arg_types record_constructor) = 2
   end
 
@@ -438,12 +454,30 @@ fun mf_record_optimizations () =
         ``:bool zoo_poly_record``)
     val expected_changed = Term.list_mk_comb
       (output_constructor, [``1 = 0``, boolSyntax.T])
+    val tail_update =
+      ``zoo_tail_poly_fupd (\n : num. n = 0)
+          <|zoo_tail_bit := T; zoo_tail_poly := 1|>``
+    val (tail_fupd, tail_update_arguments) =
+      HolKernel.strip_comb tail_update
+    val tail_input_constructor = hd
+      (MFH.data_type_constrs mf_hol_context
+        ``:num zoo_poly_tail_record``)
+    val tail_input = Term.list_mk_comb
+      (tail_input_constructor, [boolSyntax.T, ``1 : num``])
+    val tail_changed = MFH.optimized_record_update mf_hol_context
+      tail_fupd (hd tail_update_arguments) tail_input
+    val tail_output_constructor = hd
+      (MFH.data_type_constrs mf_hol_context
+        ``:bool zoo_poly_tail_record``)
+    val expected_tail_changed = Term.list_mk_comb
+      (tail_output_constructor, [boolSyntax.T, ``1 = 0``])
   in
     Term.aconv get ``4`` andalso
     Term.aconv update expected andalso
     Term.aconv unfolded_get ``4`` andalso
     Term.aconv unfolded_update expected andalso
-    Term.aconv changed_type expected_changed
+    Term.aconv changed_type expected_changed andalso
+    Term.aconv tail_changed expected_tail_changed
   end
 
 val _ = require_msg (check_result mf_record_optimizations) (fn () =>
@@ -466,6 +500,16 @@ fun mf_case_order_conformance () =
     val unfolded_partial = MFH.unfold_defs_in_term mf_hol_context partial
     val unfolded_capture = MFH.unfold_defs_in_term mf_hol_context
       capture_candidate
+    val closed_partial = MFH.unfold_defs_in_term mf_hol_context
+      ``(list_CASE [3 : num]) :
+          num -> (num -> num list -> num) -> num``
+    val applied_partial = MFH.s_betapplys
+      (closed_partial,
+       [``0 : num``, ``\h : num. \t : num list. h``])
+    val (partial_head, partial_arguments) =
+      HolKernel.strip_comb applied_partial
+    val normalized_partial =
+      MFH.s_betapplys (partial_head, partial_arguments)
     val list_case_key = {Thy = "list", Name = "list_CASE"}
     val option_case_key = {Thy = "option", Name = "option_CASE"}
   in
@@ -473,6 +517,7 @@ fun mf_case_order_conformance () =
     Term.type_of unfolded_partial = Term.type_of partial andalso
     Term.free_in ``x0 : num`` unfolded_capture andalso
     Term.free_in ``r : refute$rf3`` unfolded_capture andalso
+    Term.aconv normalized_partial ``3 : num`` andalso
     not (contains_constant list_case_key unfolded_partial) andalso
     not (contains_constant list_case_key unfolded_nested) andalso
     not (contains_constant option_case_key unfolded_nested)
@@ -495,6 +540,9 @@ fun mf_builtins_numerals_sets_and_ersatz () =
     val unfolded_open_set = MFH.unfold_defs_in_term mf_hol_context
       open_set_builder
     val unfolded_card = MFH.unfold_defs_in_term mf_hol_context card
+    val boolean_conditional = ``if b then T else F``
+    val unfolded_conditional = MFH.unfold_defs_in_term mf_hol_context
+      boolean_conditional
     val numeral_keys =
       [{Thy = "arithmetic", Name = "NUMERAL"},
        {Thy = "arithmetic", Name = "BIT1"},
@@ -524,6 +572,9 @@ fun mf_builtins_numerals_sets_and_ersatz () =
       ``$~ : bool -> bool``)) andalso
     not (MFH.is_built_in_const
       ``COND : bool -> bool -> bool -> bool``) andalso
+    MFH.is_never_unfold_const
+      ``COND : bool -> bool -> bool -> bool`` andalso
+    Term.aconv unfolded_conditional boolean_conditional andalso
     Term.aconv (MFH.unfold_defs_in_term mf_hol_context literal)
       ``4 + 1`` andalso
     Term.type_of unfolded_set = ``:num set`` andalso
@@ -552,6 +603,7 @@ fun mf_cardinality_arithmetic () =
     MFH.card_of_type [] ``:bool`` = 2 andalso
     MFH.card_of_type [] ``:bool -> bool`` = 4 andalso
     MFH.card_of_type [] ``:word8`` = 256 andalso
+    MFH.bounded_card_of_type 3 4 [] ``:'a`` = 3 andalso
     MFH.bounded_card_of_type 100 4 [] ``:word32 # word32`` = 100 andalso
     MFH.bounded_exact_card_of_type mf_hol_context [] 100 4 []
       ``:refute$rf3`` = 3 andalso

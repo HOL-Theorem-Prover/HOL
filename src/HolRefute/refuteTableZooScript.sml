@@ -17,6 +17,11 @@ Datatype:
 End
 
 Datatype:
+  zoo_poly_tail_record =
+    <| zoo_tail_bit : bool; zoo_tail_poly : 'a |>
+End
+
+Datatype:
   zoo_even_tree = ZooEvenLeaf num | ZooEvenNode zoo_odd_tree ;
   zoo_odd_tree = ZooOddNode zoo_even_tree
 End
