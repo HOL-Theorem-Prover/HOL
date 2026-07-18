@@ -64,6 +64,7 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
      peephole_optim : bool,
      total_consts : bool,
      datatype_sym_break : int,
+     kodkod_sym_break : int,
      comment : string,
      solver : string list,
      unsound_delay : int,
@@ -100,6 +101,8 @@ structure Refute_ModelFinder_Kodkod
   :> REFUTE_MODEL_FINDER_KODKOD = struct
 
 open Refute_Forl
+open Portable
+infix |>
 
 structure MFH = Refute_ModelFinder_HOL
 structure MFN = Refute_ModelFinder_Names
@@ -2747,6 +2750,7 @@ type assembly_params =
    peephole_optim : bool,
    total_consts : bool,
    datatype_sym_break : int,
+   kodkod_sym_break : int,
    comment : string,
    solver : string list,
    unsound_delay : int,
@@ -2763,6 +2767,7 @@ fun scope_with_offsets
 
 fun assemble_problem_once
       ({debug, peephole_optim, total_consts, datatype_sym_break,
+        kodkod_sym_break,
         comment, solver, unsound_delay, free_names, nonsel_names,
         nondef_us, def_us} : assembly_params)
       unsound (scope : MFS.scope) : rich_problem =
@@ -2854,8 +2859,11 @@ fun assemble_problem_once
       else check_arity "" universe_card highest_bound_arity
     val problem : KK.problem =
       {comment = (if unsound then "unsound" else "sound") ^ "\n" ^ comment,
-       settings = kodkod_problem_settings solver bits
-         (if unsound then unsound_delay else 0),
+       settings = map (fn ("symmetry_breaking", _) =>
+           ("symmetry_breaking", Int.toString kodkod_sym_break)
+         | setting => setting)
+         (kodkod_problem_settings solver bits
+           (if unsound then unsound_delay else 0)),
        univ_card = universe_card, tuple_assigns = [],
        bounds = bounds,
        int_bounds = if bits = 0 then sequential_int_bounds universe_card

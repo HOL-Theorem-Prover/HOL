@@ -1,4 +1,7 @@
 structure Refute_ModelFinder_Scope = struct
+  open Portable Feedback
+  infix |>
+
   type hol_type = Type.hol_type
   type term = Term.term
   type context = Refute_ModelFinder_HOL.mf_context

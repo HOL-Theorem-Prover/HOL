@@ -2701,6 +2701,7 @@ fun mf_assembly_fixture term assignments deep_types =
     val params : MFK.assembly_params =
       {debug = false, peephole_optim = true, total_consts = false,
        datatype_sym_break = MFK.datatype_sym_break,
+       kodkod_sym_break = MFK.kodkod_sym_break,
        comment = term_to_string term, solver = ["DefaultSAT4J"],
        unsound_delay = 1, free_names = free_names,
        nonsel_names = nonsel_names, nondef_us = [nut], def_us = []}
@@ -3511,6 +3512,31 @@ local
           unsat = Portable.upto 0 (length conversion_tests - 1)
       | _ => false
 
+  fun mf_driver_smoke () =
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val solver =
+        if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
+      val config = default_config
+        |> upd_timeout 20.0
+        |> upd_backends (SOME ["kodkod"])
+        |> upd_sat_solver solver
+        |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
+      val stat_keys =
+        ["msec", "card", "scopes", "scopes_skipped",
+         "scopes_checked", "problems", "batches", "kodkod_calls",
+         "donno", "met_potential"]
+      fun has_stat stats key =
+        List.exists (fn (candidate, _) => candidate = key) stats
+    in
+      case Refute.refute config ``(x : num) = 0`` of
+          Refute.Counterexample
+            ({backend = "kodkod", substrate = "kodkod",
+              certainty = Refute.Genuine, cert = SOME _, stats, ...} :: _) =>
+            List.all (has_stat stats) stat_keys
+        | _ => false
+    end
+
   val _ =
     if bridge_configured then ()
     else print "(Kodkodi not configured, live bridge tests skipped.)\n"
@@ -3550,6 +3576,12 @@ in
       require_msg (check_result mf_translation_end_to_end) (fn () =>
         "model-finder scope-to-Kodkodi SAT/UNSAT harness failed")
         (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_driver_smoke) (fn () =>
+        "the gated model-finder smoke did not find a certified " ^
+        "counterexample") (fn () => ()) ()
     else ()
 end
 
@@ -7185,6 +7217,68 @@ val _ = require_msg (check_result facade_tactic_allows_unknown) (fn () =>
   "REFUTE_TAC blocked on an inconclusive goal") (fn () => ()) ()
 val _ = require_msg (check_result facade_assumptions) (fn () =>
   "refute_goal did not handle assumptions or no_assms") (fn () => ()) ()
+
+val _ = tprint "Refute model-finder facade"
+
+fun with_silent_refute body =
+  let
+    val prior = Feedback.current_trace "Refute"
+    fun restore () = Feedback.set_trace "Refute" prior
+    val _ = Feedback.set_trace "Refute" 0
+  in
+    Portable.finally restore body ()
+  end
+
+fun with_temporary_kodkod backend body =
+  let
+    fun restore () = Refute_ModelFinder.register_backends ()
+    val _ = register_backend backend
+  in
+    Portable.finally restore body ()
+  end
+
+fun kodkod_registration_pin () =
+  case lookup_backend "kodkod" of
+      SOME backend =>
+        #name backend = "kodkod" andalso #weight backend = 50 andalso
+        (case #requires backend of AnyGoal => true | _ => false) andalso
+        #configured backend () = Refute_Forl.is_configured ()
+    | NONE => false
+
+fun nitpick_preset_pin () =
+  let
+    val selected = ref false
+    val backend : backend =
+      {name = "kodkod", weight = 50, configured = fn () => true,
+       requires = AnyGoal,
+       run = fn config => fn _ =>
+         (selected := (#backends config = SOME ["kodkod"]);
+          Unknown ["preset pin"])}
+  in
+    with_silent_refute (fn () =>
+      with_temporary_kodkod backend (fn () =>
+        (ignore (Refute.nitpick ``T``); !selected)))
+  end
+
+fun kodkod_not_configured_pin () =
+  let
+    val backend : backend =
+      {name = "kodkod", weight = 50, configured = fn () => false,
+       requires = AnyGoal, run = fn _ => fn _ => Unknown []}
+  in
+    with_silent_refute (fn () =>
+      with_temporary_kodkod backend (fn () =>
+        case Refute.nitpick ``T`` of
+            Refute.Unknown ["no configured backend"] => true
+          | _ => false))
+  end
+
+val _ = require_msg (check_result kodkod_registration_pin) (fn () =>
+  "the kodkod backend registration record changed") (fn () => ()) ()
+val _ = require_msg (check_result nitpick_preset_pin) (fn () =>
+  "Refute.nitpick did not select only the kodkod backend") (fn () => ()) ()
+val _ = require_msg (check_result kodkod_not_configured_pin) (fn () =>
+  "the kodkod not-configured outcome changed") (fn () => ()) ()
 
 val _ = if selftest_level >= 2 then corpus_potential () else ()
 

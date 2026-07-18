@@ -69,6 +69,8 @@ end
 structure Refute_ModelFinder_Model
   :> REFUTE_MODEL_FINDER_MODEL = struct
 
+open Feedback
+
 structure MFH = Refute_ModelFinder_HOL
 structure MFN = Refute_ModelFinder_Names
 structure MFNT = Refute_ModelFinder_Nut

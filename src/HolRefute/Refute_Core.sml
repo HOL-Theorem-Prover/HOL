@@ -1149,7 +1149,10 @@ structure Refute_Core = struct
     let
       val {backend, substrate, certainty, bindings, evals, cert, scope,
            model, stats} = cex
-      val header = "Refute found a counterexample (backend: " ^ backend ^
+      val model_word =
+        if backend = "kodkod" andalso not (#falsify mf) then "model"
+        else "counterexample"
+      val header = "Refute found a " ^ model_word ^ " (backend: " ^ backend ^
         ", substrate: " ^ substrate ^ format_stats stats ^ "):"
       val scope_text =
         if substrate = "kodkod" then format_scope scope else ""
@@ -1167,8 +1170,8 @@ structure Refute_Core = struct
             Genuine => ""
           | QuasiGenuine reasons => format_reasons "Quasi-genuine:" reasons
           | Potential reasons =>
-              format_reasons "Potential counterexample:" reasons ^
-              "\n…continuing search for a genuine counterexample"
+              format_reasons ("Potential " ^ model_word ^ ":") reasons ^
+              "\n…continuing search for a genuine " ^ model_word
     in
       header ^ scope_text ^ binding_text ^ eval_text ^ model_text ^
       cert_text ^ certainty_text
@@ -1182,7 +1185,11 @@ structure Refute_Core = struct
               String.concatWith "\n\n"
                 (map (format_counterexample (#mf cfg)) cexs)
           | NoCounterexample =>
-              "Refute: no counterexample found within the tested finite bounds"
+              "Refute: no " ^
+              (if #backends cfg = SOME ["kodkod"] andalso
+                  not (#falsify (#mf cfg))
+               then "model" else "counterexample") ^
+              " found within the tested finite bounds"
           | Unknown reasons =>
               "Refute could not determine an answer" ^
               format_reasons "Reasons:" reasons

@@ -197,6 +197,9 @@ structure Refute_ModelFinder_Names = struct
 end
 
 structure Refute_ModelFinder_HOL = struct
+  open Portable Feedback
+  infix |>
+
   type term = Term.term
   type thm = Thm.thm
   type hol_type = Type.hol_type

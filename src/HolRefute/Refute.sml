@@ -24,6 +24,7 @@ structure Refute :> Refute = struct
      implementation units dependencies of [load "Refute"]. *)
   val () = Refute_Extract.install_extractor ()
   val () = Refute_QC.register_backends ()
+  val () = Refute_ModelFinder.register_backends ()
 
   val refute = Refute_Core.refute
   fun refute_def tm = refute (!Refute_Core.the_config) tm
@@ -37,6 +38,10 @@ structure Refute :> Refute = struct
 
   fun quickcheck tm = refute
     (Refute_Core.upd_backends (SOME ["exhaustive", "random"])
+      (!Refute_Core.the_config)) tm
+
+  fun nitpick tm = refute
+    (Refute_Core.upd_backends (SOME ["kodkod"])
       (!Refute_Core.the_config)) tm
 
   fun REFUTE_TAC goal =
