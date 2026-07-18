@@ -617,6 +617,158 @@ val _ = require_msg
     "model-finder built-in/numeral/set/ersatz mapping failed")
   (fn () => ()) ()
 
+val _ = tprint "Refute model-finder preprocessing goldens"
+
+structure MFP = Refute_ModelFinder_Preproc
+
+fun fresh_mf_context () =
+  MFH.make_context Refute_Core.default_mf_config []
+
+fun mf_preproc_destroy_goldens () =
+  let
+    val context = fresh_mf_context ()
+    val list_discriminator = MFN.mk_discriminator "list$CONS"
+      ``:num list -> bool``
+    val list_head = MFN.mk_selector 0 "list$CONS"
+      ``:num list -> num``
+    val list_tail = MFN.mk_selector 1 "list$CONS"
+      ``:num list -> num list``
+    val expected_list =
+      ``(^list_discriminator) (xs : num list) /\
+        h = (^list_head) xs /\ t = (^list_tail) xs``
+    val actual_list = MFP.destroy_pulled_out_constrs context false true
+      ``(xs : num list) = h :: t``
+    val node_name = "refuteTableZoo$ZooNode"
+    val tree_discriminator = MFN.mk_discriminator node_name
+      ``:zoo_tree -> bool``
+    val tree_left = MFN.mk_selector 0 node_name
+      ``:zoo_tree -> zoo_tree``
+    val tree_right = MFN.mk_selector 1 node_name
+      ``:zoo_tree -> zoo_tree``
+    val expected_tree =
+      ``(^tree_discriminator) (tree : zoo_tree) /\
+        left = (^tree_left) tree /\
+        right = (^tree_right) tree``
+    val actual_tree = MFP.destroy_pulled_out_constrs context false true
+      ``(tree : zoo_tree) = ZooNode left right``
+    val weak_pattern = MFP.destroy_pulled_out_constrs context false false
+      ``!h t h' t'. (h :: t : num list) = h' :: t'``
+    val expected_weak_pattern =
+      ``!h t h' t'. (h' : num) = h /\ (t' : num list) = t``
+    val weak_nonpattern =
+      ``REVERSE (xs : num list) = h :: t``
+  in
+    Term.aconv actual_list expected_list andalso
+    Term.aconv actual_tree expected_tree andalso
+    Term.aconv weak_pattern expected_weak_pattern andalso
+    Term.aconv
+      (MFP.destroy_pulled_out_constrs context false false
+        weak_nonpattern)
+      weak_nonpattern
+  end
+
+val _ = require_msg (check_result mf_preproc_destroy_goldens) (fn () =>
+  "model-finder constructor-destruction golden changed")
+  (fn () => ()) ()
+
+fun mf_preproc_skolem_golden () =
+  let
+    val context = fresh_mf_context ()
+    val input =
+      ``!a b c : num. ?x : num. !d : num. ?y : num.
+          x = a + b + c /\ y = d``
+    val skolem = MFN.mk_skolem 3 1 "x"
+      ``:num -> num -> num -> num``
+    val expected =
+      ``!a b c : num.
+          let x = (^skolem) a b c
+          in !d : num. ?y : num.
+               x = a + b + c /\ y = d``
+    val actual = MFP.skolemize_term_and_more context 3 input
+    val metadata = !(#skolems context)
+    val axiom_context = fresh_mf_context ()
+    val axiom = ``?w : num. w = 2``
+    val unskolemized =
+      MFP.skolemize_term_and_more axiom_context ~1 axiom
+  in
+    Term.aconv actual expected andalso
+    metadata = [("refute$sk3@1$x", ["c", "b", "a"])] andalso
+    Term.aconv unskolemized axiom andalso
+    null (!(#skolems axiom_context))
+  end
+
+val _ = require_msg (check_result mf_preproc_skolem_golden) (fn () =>
+  "model-finder depth-three skolem golden changed")
+  (fn () => ()) ()
+
+fun mf_preproc_unfold_goldens () =
+  let
+    val context = fresh_mf_context ()
+    val list_nil_discriminator = MFN.mk_discriminator "list$NIL"
+      ``:num list -> bool``
+    val list_head = MFN.mk_selector 0 "list$CONS"
+      ``:num list -> num``
+    val case_input =
+      ``list_CASE (xs : num list) 7 (\h t. h + 1)``
+    val expected_case =
+      ``if (^list_nil_discriminator) (xs : num list) then 7
+        else (^list_head) xs + 1``
+    val actual_case = MFH.unfold_defs_in_term context case_input
+    val set_input =
+      ``(2 : num) IN GSPEC (\n : num. (n + 1, n < 3))``
+    val expected_set =
+      ``?x : num. (2 : num, T) = (x + 1, x < 3)``
+    val actual_set = set_input
+      |> MFH.unfold_defs_in_term context
+      |> MFP.destroy_set_Collect
+  in
+    Term.aconv actual_case expected_case andalso
+    Term.aconv actual_set expected_set
+  end
+
+val _ = require_msg (check_result mf_preproc_unfold_goldens) (fn () =>
+  "model-finder case/set-comprehension golden changed")
+  (fn () => ()) ()
+
+fun mf_preproc_pipeline_shape () =
+  let
+    val context = fresh_mf_context ()
+    val goal = ``?x : num. x = 3``
+    val (nondefinitions, _, _, _) =
+      MFP.preprocess_formulas context [] goal
+    val skolems = !(#skolems context)
+    val free_names = map var_name (Term.free_vars_lr (hd nondefinitions))
+    val open_goal = ``(user_x : num) = 3``
+    val value = MFN.mk_reserved_var "refute$vtest" ``:num``
+    val open_value_goal = boolSyntax.mk_eq (value, ``3 : num``)
+    val closed_value_goal =
+      boolSyntax.mk_forall (value, open_value_goal)
+    val equality_chain =
+      boolSyntax.list_mk_imp
+        ([boolSyntax.mk_eq (value, ``3 : num``),
+          boolSyntax.mk_eq
+            (MFN.mk_reserved_var "refute$vother" ``:num``, ``4``)],
+         boolSyntax.mk_eq (value,
+           MFN.mk_reserved_var "refute$vother" ``:num``))
+    val definition = ``(defined_x : num) = 3``
+    val (_, selected_definitions, _, _) =
+      MFP.axioms_for_term (fresh_mf_context ()) [definition]
+        ``(defined_x : num) = 4``
+  in
+    length nondefinitions >= 1 andalso
+    skolems = [("refute$sk0@1$x", [])] andalso
+    free_names = ["refute$sk0@1$x"] andalso
+    Term.aconv (MFP.close_form open_goal) open_goal andalso
+    Term.aconv (MFP.close_form open_value_goal) closed_value_goal andalso
+    Term.aconv (MFP.destroy_universal_equalities equality_chain)
+      ``(3 : num) = 4`` andalso
+    List.exists (Term.aconv definition) selected_definitions
+  end
+
+val _ = require_msg (check_result mf_preproc_pipeline_shape) (fn () =>
+  "model-finder preprocessing pipeline shape changed")
+  (fn () => ()) ()
+
 fun mf_cardinality_arithmetic () =
   let
     val missing_card_raises =
