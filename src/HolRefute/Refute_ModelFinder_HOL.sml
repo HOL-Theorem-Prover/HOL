@@ -423,8 +423,8 @@ structure Refute_ModelFinder_HOL = struct
        binary_type num_type num_type), 0),
      (({Thy = "arithmetic", Name = "DIV"},
        binary_type num_type num_type), 0),
-     (({Thy = "arithmetic", Name = "MOD"},
-       binary_type num_type num_type), 0),
+     (* MOD has no nut primitive.  It must remain unfoldable rather than
+        entering the built-in table and becoming an untranslatable leaf. *)
      (({Thy = "prim_rec", Name = "<"},
        binary_type num_type Type.bool), 2),
      (({Thy = "arithmetic", Name = "<="},
@@ -439,8 +439,7 @@ structure Refute_ModelFinder_HOL = struct
        binary_type int_type int_type), 0),
      (({Thy = "integer", Name = "int_div"},
        binary_type int_type int_type), 0),
-     (({Thy = "integer", Name = "int_mod"},
-       binary_type int_type int_type), 0),
+     (* As above, int_mod is deliberately unfolded in M3. *)
      (({Thy = "integer", Name = "int_neg"},
        fun_type (int_type, int_type)), 0),
      (({Thy = "integer", Name = "int_lt"},

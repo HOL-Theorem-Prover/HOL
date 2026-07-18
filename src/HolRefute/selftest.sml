@@ -571,7 +571,7 @@ fun mf_builtins_numerals_sets_and_ersatz () =
   in
     MFH.is_built_in_const boolSyntax.IN_tm andalso
     length MFH.built_in_consts = 26 andalso
-    length MFH.built_in_typed_consts = 17 andalso
+    length MFH.built_in_typed_consts = 15 andalso
     List.all (built_in o #1) MFH.built_in_consts andalso
     List.all typed_built_in MFH.built_in_typed_consts andalso
     List.all built_in numeral_keys andalso
@@ -1616,6 +1616,337 @@ fun mf_rep_fixed_scope () =
 
 val _ = require_msg (check_result mf_rep_fixed_scope) (fn () =>
   "model-finder best reps changed on a fixed scope")
+  (fn () => ()) ()
+
+val _ = tprint "Refute model-finder nuts"
+
+structure MFNT = Refute_ModelFinder_Nut
+
+fun same_mf_type left right = Type.compare (left, right) = EQUAL
+
+fun same_nut left right =
+  case (left, right) of
+      (MFNT.Cst (c1, t1, r1), MFNT.Cst (c2, t2, r2)) =>
+        c1 = c2 andalso same_mf_type t1 t2 andalso r1 = r2
+    | (MFNT.Op1 (o1, t1, r1, u1), MFNT.Op1 (o2, t2, r2, u2)) =>
+        o1 = o2 andalso same_mf_type t1 t2 andalso r1 = r2 andalso
+        same_nut u1 u2
+    | (MFNT.Op2 (o1, t1, r1, u1, v1),
+       MFNT.Op2 (o2, t2, r2, u2, v2)) =>
+        o1 = o2 andalso same_mf_type t1 t2 andalso r1 = r2 andalso
+        same_nut u1 u2 andalso same_nut v1 v2
+    | (MFNT.Op3 (o1, t1, r1, u1, v1, w1),
+       MFNT.Op3 (o2, t2, r2, u2, v2, w2)) =>
+        o1 = o2 andalso same_mf_type t1 t2 andalso r1 = r2 andalso
+        same_nut u1 u2 andalso same_nut v1 v2 andalso same_nut w1 w2
+    | (MFNT.Tuple (t1, r1, us1), MFNT.Tuple (t2, r2, us2)) =>
+        same_mf_type t1 t2 andalso r1 = r2 andalso
+        ListPair.allEq (fn (u1, u2) => same_nut u1 u2) (us1, us2)
+    | (MFNT.Construct (ss1, t1, r1, us1),
+       MFNT.Construct (ss2, t2, r2, us2)) =>
+        same_mf_type t1 t2 andalso r1 = r2 andalso
+        ListPair.allEq (fn (s1, s2) => same_nut s1 s2) (ss1, ss2) andalso
+        ListPair.allEq (fn (u1, u2) => same_nut u1 u2) (us1, us2)
+    | (MFNT.BoundName (i1, t1, r1, n1),
+       MFNT.BoundName (i2, t2, r2, n2)) =>
+        i1 = i2 andalso same_mf_type t1 t2 andalso r1 = r2 andalso n1 = n2
+    | (MFNT.FreeName (n1, t1, r1), MFNT.FreeName (n2, t2, r2)) =>
+        n1 = n2 andalso same_mf_type t1 t2 andalso r1 = r2
+    | (MFNT.ConstName (n1, t1, r1), MFNT.ConstName (n2, t2, r2)) =>
+        n1 = n2 andalso same_mf_type t1 t2 andalso r1 = r2
+    | (MFNT.BoundRel (i1, t1, r1, n1),
+       MFNT.BoundRel (i2, t2, r2, n2)) =>
+        i1 = i2 andalso same_mf_type t1 t2 andalso r1 = r2 andalso n1 = n2
+    | (MFNT.FreeRel (i1, t1, r1, n1),
+       MFNT.FreeRel (i2, t2, r2, n2)) =>
+        i1 = i2 andalso same_mf_type t1 t2 andalso r1 = r2 andalso n1 = n2
+    | (MFNT.RelReg (i1, t1, r1), MFNT.RelReg (i2, t2, r2)) =>
+        i1 = i2 andalso same_mf_type t1 t2 andalso r1 = r2
+    | (MFNT.FormulaReg (i1, t1, r1),
+       MFNT.FormulaReg (i2, t2, r2)) =>
+        i1 = i2 andalso same_mf_type t1 t2 andalso r1 = r2
+    | _ => false
+
+fun mf_nut_term_goldens () =
+  let
+    val any = MFR.Any
+    val list_ty = ``:num list``
+    val datatype_actual = MFNT.nut_from_term mf_hol_context MFNT.Eq
+      ``(xs : num list) = h :: t``
+    val datatype_expected =
+      MFNT.Op2 (MFNT.Eq, Type.bool, any,
+        MFNT.FreeName ("xs", list_ty, any),
+        MFNT.Construct
+          ([MFNT.ConstName
+              ("refute$is$list$CONS", ``:num list -> bool``, any),
+            MFNT.ConstName
+              ("refute$sel0$list$CONS", ``:num list -> num``, any),
+            MFNT.ConstName
+              ("refute$sel1$list$CONS", ``:num list -> num list``, any)],
+           list_ty, any,
+           [MFNT.FreeName ("h", ``:num``, any),
+            MFNT.FreeName ("t", list_ty, any)]))
+    val quantified_actual = MFNT.nut_from_term mf_hol_context MFNT.Eq
+      ``!x : num. ?y : num. x = y``
+    val quantified_expected =
+      MFNT.Op2 (MFNT.All, Type.bool, any,
+        MFNT.BoundName (0, ``:num``, any, "x"),
+        MFNT.Op2 (MFNT.Exist, Type.bool, any,
+          MFNT.BoundName (1, ``:num``, any, "y"),
+          MFNT.Op2 (MFNT.Eq, Type.bool, any,
+            MFNT.BoundName (0, ``:num``, any, "x"),
+            MFNT.BoundName (1, ``:num``, any, "y"))))
+    val set_actual = MFNT.nut_from_term mf_hol_context MFNT.Eq
+      ``(x : num) IN (\n : num. (p : num -> bool) n)``
+    val set_expected =
+      MFNT.Op2 (MFNT.Apply, Type.bool, any,
+        MFNT.Op2 (MFNT.Lambda, ``:num -> bool``, any,
+          MFNT.BoundName (0, ``:num``, any, "n"),
+          MFNT.Op2 (MFNT.Apply, Type.bool, any,
+            MFNT.FreeName ("p", ``:num -> bool``, any),
+            MFNT.BoundName (0, ``:num``, any, "n"))),
+        MFNT.FreeName ("x", ``:num``, any))
+    val numeral_actual = MFNT.nut_from_term mf_hol_context MFNT.Eq
+      ``(37 : num) = 3``
+    val numeral_expected =
+      MFNT.Op2 (MFNT.Eq, Type.bool, any,
+        MFNT.Cst (MFNT.Num 37, ``:num``, any),
+        MFNT.Cst (MFNT.Num 3, ``:num``, any))
+    val three = numSyntax.mk_numeral (Arbnum.fromInt 3)
+    val equality = boolSyntax.mk_eq (three, three)
+    val equality_at_three = #1 (Term.dest_comb equality)
+    val partial_equality = MFNT.nut_from_term mf_hol_context MFNT.Eq
+      equality_at_three
+    val int_to_nat = MFNT.nut_from_term mf_hol_context MFNT.Eq
+      (Term.prim_mk_const {Thy = "integer", Name = "Num"})
+    val nat_to_int = MFNT.nut_from_term mf_hol_context MFNT.Eq
+      (Term.prim_mk_const {Thy = "integer", Name = "int_of_num"})
+    val extras_ok =
+      (case (partial_equality, int_to_nat, nat_to_int) of
+           (MFNT.Op1 (MFNT.SingletonSet, _, MFR.Any,
+              MFNT.Cst (MFNT.Num 3, _, MFR.Any)),
+            MFNT.Cst (MFNT.IntToNat, _, MFR.Any),
+            MFNT.Cst (MFNT.NatToInt, _, MFR.Any)) => true
+         | _ => false)
+  in
+    same_nut datatype_actual datatype_expected andalso
+    same_nut quantified_actual quantified_expected andalso
+    same_nut set_actual set_expected andalso
+    same_nut numeral_actual numeral_expected andalso extras_ok
+  end
+
+val _ = require_msg (check_result mf_nut_term_goldens) (fn () =>
+  "model-finder nut_from_term golden changed")
+  (fn () => ()) ()
+
+fun mf_nut_fixed_scope () =
+  let
+    val (_, scopes) = MFS.all_scopes mf_hol_context
+      [(NONE, [3])] [(NONE, [~1])]
+      [``:refute$rf2``, ``:num``] [] []
+  in hd scopes end
+
+fun mf_nut_name_reps () =
+  let
+    val scope = mf_nut_fixed_scope ()
+    val ty = ``:num -> num``
+    val free = MFNT.FreeName ("f", ty, MFR.Any)
+    val constant = MFNT.ConstName ("c", ty, MFR.Any)
+    val skolem = MFNT.ConstName
+      ("refute$sk1@7$witness", ty, MFR.Any)
+    val total = MFR.best_non_opt_set_rep_for_type scope ty
+    val optional = MFR.best_opt_set_rep_for_type scope ty
+    val (_, free_table) = MFNT.choose_reps_for_free_vars scope [free]
+      MFNT.NameTable.empty
+    val (_, optional_table) = MFNT.choose_reps_for_consts scope false
+      [constant, skolem] MFNT.NameTable.empty
+    val (_, total_table) = MFNT.choose_reps_for_consts scope true
+      [constant] MFNT.NameTable.empty
+  in
+    MFNT.the_name free_table free = total andalso
+    MFNT.the_name optional_table constant = optional andalso
+    MFNT.the_name optional_table skolem = total andalso
+    MFNT.the_name total_table constant = total
+  end
+
+val _ = require_msg (check_result mf_nut_name_reps) (fn () =>
+  "model-finder free/constant representation rules changed")
+  (fn () => ()) ()
+
+fun mf_nut_deep_selector_reps () =
+  let
+    val list_ty = ``:num list``
+    val (_, scopes) = MFS.all_scopes mf_hol_context
+      [(NONE, [3])] [(NONE, [~1])] [list_ty, ``:num``] [] [list_ty]
+    val scope = hd scopes
+    val cons = List.nth
+      (MFH.data_type_constrs mf_hol_context list_ty, 1)
+    val constructor_name = MFH.constructor_name cons
+    fun generated_name term = #1 (Term.dest_var term)
+    val discr = MFNT.ConstName
+      (generated_name (MFN.mk_discriminator constructor_name
+         ``:num list -> bool``), ``:num list -> bool``, MFR.Any)
+    val head_sel = MFNT.ConstName
+      (generated_name (MFN.mk_selector 0 constructor_name
+         ``:num list -> num``), ``:num list -> num``, MFR.Any)
+    val tail_sel = MFNT.ConstName
+      (generated_name (MFN.mk_selector 1 constructor_name
+         ``:num list -> num list``), ``:num list -> num list``, MFR.Any)
+    val (selectors, table) = MFNT.choose_reps_for_all_sels scope
+      MFNT.NameTable.empty
+    fun ordinary ty = MFR.unopt_rep
+      (MFR.best_opt_set_rep_for_type scope ty)
+    val cons_order =
+      (case selectors of
+           MFNT.ConstName (d, _, _) :: MFNT.ConstName (h, _, _) ::
+             MFNT.ConstName (t, _, _) :: _ =>
+               d = MFNT.nickname_of discr andalso
+               h = MFNT.nickname_of head_sel andalso
+               t = MFNT.nickname_of tail_sel
+         | _ => false)
+  in
+    cons_order andalso MFNT.the_name table discr =
+      MFR.best_non_opt_set_rep_for_type scope ``:num list -> bool`` andalso
+    MFNT.the_name table head_sel = ordinary ``:num list -> num`` andalso
+    MFNT.the_name table tail_sel = ordinary ``:num list -> num list``
+  end
+
+val _ = require_msg (check_result mf_nut_deep_selector_reps) (fn () =>
+  "model-finder deep-datatype selector reps changed")
+  (fn () => ()) ()
+
+fun mf_nut_unsound_switches () =
+  let
+    val scope = mf_nut_fixed_scope ()
+    val unknown = MFNT.Cst (MFNT.Unknown, Type.bool, MFR.Any)
+    val sound_unknown = MFNT.choose_reps_in_nut scope false
+      MFNT.NameTable.empty false unknown
+    val unsound_unknown = MFNT.choose_reps_in_nut scope true
+      MFNT.NameTable.empty false unknown
+    val fun_ty = ``:num -> num``
+    val left = MFNT.FreeName ("f", fun_ty, MFR.Any)
+    val right = MFNT.FreeName ("g", fun_ty, MFR.Any)
+    val equality = MFNT.Op2
+      (MFNT.Eq, Type.bool, MFR.Any, left, right)
+    val (_, eq_table) = MFNT.choose_reps_for_free_vars scope [left, right]
+      MFNT.NameTable.empty
+    val total = MFR.best_non_opt_set_rep_for_type scope fun_ty
+    val sound_equality = MFNT.choose_reps_in_nut scope false eq_table
+      false equality
+    val unsound_equality = MFNT.choose_reps_in_nut scope true eq_table
+      false equality
+    val quantified = MFNT.nut_from_term mf_hol_context MFNT.Eq
+      ``!x : num. x < 1``
+    val sound_quantified = MFNT.choose_reps_in_nut scope false
+      MFNT.NameTable.empty false quantified
+    val unsound_quantified = MFNT.choose_reps_in_nut scope true
+      MFNT.NameTable.empty false quantified
+    val unknown_ok =
+      (case (sound_unknown, unsound_unknown) of
+           (MFNT.Cst (MFNT.False, _, MFR.Formula MFU.Pos),
+            MFNT.Cst (MFNT.True, _, MFR.Formula MFU.Neg)) => true
+         | _ => false)
+    val equality_ok =
+      (case (sound_equality, unsound_equality) of
+           (MFNT.Cst (MFNT.False, _, MFR.Formula MFU.Pos),
+            MFNT.Op2 (MFNT.Eq, _, MFR.Formula MFU.Pos,
+              MFNT.FreeName ("f", _, rf),
+              MFNT.FreeName ("g", _, rg))) => rf = total andalso rg = total
+         | _ => false)
+    val quantifier_ok =
+      (case (sound_quantified, unsound_quantified) of
+           (MFNT.Op2 (MFNT.And, _, MFR.Formula MFU.Pos,
+              MFNT.Op2 (MFNT.All, _, MFR.Formula MFU.Pos, _, _),
+              MFNT.Op2 (MFNT.Less, _, MFR.Formula MFU.Pos,
+                MFNT.Cst (MFNT.Unrep, _, MFR.Opt _),
+                MFNT.Cst (MFNT.Num 1, _, MFR.Atom _))),
+            MFNT.Op2 (MFNT.All, _, MFR.Formula MFU.Pos, _, _)) => true
+         | _ => false)
+  in unknown_ok andalso equality_ok andalso quantifier_ok end
+
+val _ = require_msg (check_result mf_nut_unsound_switches) (fn () =>
+  "model-finder sound/unsound representation switches changed")
+  (fn () => ()) ()
+
+fun mf_nut_triad () =
+  let
+    val scope = mf_nut_fixed_scope ()
+    val fun_ty = ``:num -> num``
+    val c = MFNT.ConstName ("c", fun_ty, MFR.Any)
+    val d = MFNT.ConstName ("d", fun_ty, MFR.Any)
+    val zero = MFNT.Cst (MFNT.Num 0, ``:num``, MFR.Any)
+    val one = MFNT.Cst (MFNT.Num 1, ``:num``, MFR.Any)
+    fun application function =
+      MFNT.Op2 (MFNT.Apply, ``:num``, MFR.Any, function, zero)
+    val condition = MFNT.Op2 (MFNT.Eq, Type.bool, MFR.Any,
+      application c, application d)
+    val conditional = MFNT.Op3
+      (MFNT.If, ``:num``, MFR.Any, condition, zero, one)
+    val (_, table) = MFNT.choose_reps_for_consts scope false [c, d]
+      MFNT.NameTable.empty
+    val number_rep = MFR.best_one_rep_for_type scope ``:num``
+    val bool_rep = MFR.Atom
+      (2, MFS.offset_of_type (#ofs scope) Type.bool)
+    fun has_pinned_triad unsound =
+      case MFNT.choose_reps_in_nut scope unsound table false conditional of
+          MFNT.Op3 (MFNT.If, _, MFR.Opt outer,
+            MFNT.Op2 (MFNT.Triad, _, MFR.Opt triad_rep,
+              MFNT.Op2 (MFNT.Eq, _, MFR.Formula MFU.Pos, _, _),
+              MFNT.Op2 (MFNT.Eq, _, MFR.Formula MFU.Neg, _, _)), _, _) =>
+            outer = number_rep andalso triad_rep = bool_rep
+        | _ => false
+  in has_pinned_triad false andalso has_pinned_triad true end
+
+val _ = require_msg (check_result mf_nut_triad) (fn () =>
+  "model-finder Triad representation changed")
+  (fn () => ()) ()
+
+fun mf_nut_renaming () =
+  let
+    val scope = mf_nut_fixed_scope ()
+    val number_rep = MFR.best_one_rep_for_type scope ``:num``
+    val function_rep = MFR.best_non_opt_set_rep_for_type scope
+      ``:num -> num``
+    val f = MFNT.FreeName ("f", ``:num -> num``, function_rep)
+    val x = MFNT.FreeName ("x", ``:num``, number_rep)
+    val (renamed, pool, table) = MFNT.rename_free_vars [f, x]
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+    val c = MFNT.ConstName ("c", ``:num -> num``, function_rep)
+    val (renamed_c, _, _) = MFNT.rename_free_vars [c] pool table
+    val pair_ty = ``:refute$rf2 # num``
+    val pair_rep = MFR.best_one_rep_for_type scope pair_ty
+    val binder = MFNT.BoundName (0, pair_ty, pair_rep, "p")
+    val quantified = MFNT.Op2 (MFNT.All, Type.bool,
+      MFR.Formula MFU.Pos, binder,
+      MFNT.Op2 (MFNT.Eq, Type.bool, MFR.Formula MFU.Pos,
+        binder, binder))
+    val renamed_quantified = MFNT.rename_vars_in_nut
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+      quantified
+    val free_ok =
+      (case (renamed, renamed_c) of
+           ([MFNT.FreeRel ((2, 0), _, _, "f"),
+             MFNT.FreeRel ((1, 0), _, _, "x")],
+            [MFNT.FreeRel ((2, 1), _, _, "c")]) => true
+         | _ => false)
+    val bound_ok =
+      (case renamed_quantified of
+           MFNT.Op2 (MFNT.All, _, _,
+             MFNT.Tuple (_, _,
+               [MFNT.BoundRel ((1, 0), _, _, "p [0]"),
+                MFNT.BoundRel ((1, 1), _, _, "p [1]")]),
+             MFNT.Op2 (MFNT.Eq, _, _,
+               MFNT.Tuple (_, _,
+                 [MFNT.BoundRel ((1, 0), _, _, "p [0]"),
+                  MFNT.BoundRel ((1, 1), _, _, "p [1]")]),
+               MFNT.Tuple (_, _,
+                 [MFNT.BoundRel ((1, 0), _, _, "p [0]"),
+                  MFNT.BoundRel ((1, 1), _, _, "p [1]")]))) => true
+         | _ => false)
+  in free_ok andalso bound_ok end
+
+val _ = require_msg (check_result mf_nut_renaming) (fn () =>
+  "model-finder FreeRel/BoundRel renaming changed")
   (fn () => ()) ()
 
 val _ = tprint "Refute model-finder peephole"
