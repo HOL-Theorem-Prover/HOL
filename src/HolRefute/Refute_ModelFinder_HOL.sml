@@ -290,7 +290,7 @@ structure Refute_ModelFinder_HOL = struct
   fun term_under_def term =
     if boolSyntax.is_forall term then
       term_under_def (#2 (boolSyntax.dest_forall term))
-    else if boolSyntax.is_imp term then
+    else if boolSyntax.is_imp_only term then
       term_under_def (#2 (boolSyntax.dest_imp term))
     else if boolSyntax.is_eq term then
       term_under_def (#1 (boolSyntax.dest_eq term))
@@ -324,9 +324,13 @@ structure Refute_ModelFinder_HOL = struct
             SOME (left, right) =>
               extensional_equal (variables @ premises) left right
           | NONE => boolSyntax.mk_eq (conclusion, boolSyntax.T)
+      val new_variables = List.filter (fn variable =>
+        not (List.exists (Term.aconv variable) variables))
+        (Term.free_vars_lr equation)
     in
       SOME (boolSyntax.list_mk_forall
-        (variables, boolSyntax.list_mk_imp (premises, equation)))
+        (variables @ new_variables,
+         boolSyntax.list_mk_imp (premises, equation)))
     end
     handle HOL_ERR _ =>
       (Feedback.HOL_WARNING "Refute_ModelFinder_HOL"

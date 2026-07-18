@@ -66,7 +66,7 @@ structure Refute_ModelFinder_Preproc = struct
         boolSyntax.list_mk_forall
           (List.drop (current, length old), body)
       fun recurse seen candidate =
-        if boolSyntax.is_imp candidate then
+        if boolSyntax.is_imp_only candidate then
           let
             val (premise, conclusion) = boolSyntax.dest_imp candidate
             val extended = add_frees premise seen
@@ -156,7 +156,7 @@ structure Refute_ModelFinder_Preproc = struct
           boolSyntax.mk_neg (recurse dependencies skolemizable
             (MFU.flip_polarity polarity)
             (boolSyntax.dest_neg candidate))
-        else if boolSyntax.is_imp candidate then
+        else if boolSyntax.is_imp_only candidate then
           let val (left, right) = boolSyntax.dest_imp candidate
           in
             boolSyntax.mk_imp
@@ -246,15 +246,17 @@ structure Refute_ModelFinder_Preproc = struct
         SOME (_, range) => range = Type.bool
       | NONE => false
 
-  fun heavy_variables term =
-    List.filter (not o is_generated_const) (Term.free_vars_lr term)
+  fun heavy_variables active term =
+    List.filter (fn variable =>
+      is_value_var variable orelse aconv_member variable active)
+      (Term.free_vars_lr term)
 
-  fun has_heavy_vars term =
-    case heavy_variables term of
+  fun has_heavy_vars active term =
+    case heavy_variables active term of
         [] => false
       | [variable] =>
           let val ty = Term.type_of variable
-          in is_higher_order_type ty orelse is_set_type ty orelse
+          in MFH.is_fun_type ty orelse is_set_type ty orelse
              is_pair_type ty
           end
       | _ => true
@@ -271,7 +273,7 @@ structure Refute_ModelFinder_Preproc = struct
     end
 
   fun is_function_set_or_pair ty =
-    is_higher_order_type ty orelse is_set_type ty orelse is_pair_type ty
+    MFH.is_fun_type ty orelse is_set_type ty orelse is_pair_type ty
 
   fun fresh_value_var avoids serial ty =
     Term.variant avoids
@@ -282,12 +284,12 @@ structure Refute_ModelFinder_Preproc = struct
     Option.map #2 (List.find (fn (other, _) => Term.aconv other term)
       pulled)
 
-  fun pull_candidate avoids forbidden relax candidate pulled =
+  fun pull_candidate avoids active forbidden relax candidate pulled =
     case fully_applied_constructor candidate of
         NONE => (candidate, pulled)
       | SOME _ =>
           if relax orelse is_function_set_or_pair (Term.type_of candidate)
-             orelse not (has_heavy_vars candidate) orelse
+             orelse not (has_heavy_vars active candidate) orelse
              List.exists (fn variable => Term.free_in variable candidate)
                forbidden then
             (candidate, pulled)
@@ -322,7 +324,7 @@ structure Refute_ModelFinder_Preproc = struct
           in
             (boolSyntax.mk_eq (left', right'), pulled'')
           end
-        else if boolSyntax.is_imp candidate then
+        else if boolSyntax.is_imp_only candidate then
           if def then (candidate, pulled)
           else
             let
@@ -373,10 +375,10 @@ structure Refute_ModelFinder_Preproc = struct
               do_arguments arguments [] pulled
             val rebuilt = Term.list_mk_comb (head, arguments')
           in
-            pull_candidate avoids forbidden relaxed rebuilt pulled'
+            pull_candidate avoids [] forbidden relaxed rebuilt pulled'
           end
         else
-          pull_candidate avoids forbidden relaxed candidate pulled
+          pull_candidate avoids [] forbidden relaxed candidate pulled
       val (conclusion, pulled) = recurse [] def term []
     in
       boolSyntax.list_mk_imp
@@ -423,7 +425,7 @@ structure Refute_ModelFinder_Preproc = struct
           candidate
       and collect outer existentials candidate pulled =
         if boolSyntax.is_exists candidate then
-          (recurse outer candidate, pulled)
+          (recurse (existentials @ outer) candidate, pulled)
         else if Term.is_abs candidate then
           let val (variable, body) = Term.dest_abs candidate
           in
@@ -446,10 +448,10 @@ structure Refute_ModelFinder_Preproc = struct
               do_arguments arguments [] pulled
             val rebuilt = Term.list_mk_comb (head, arguments')
           in
-            pull_candidate avoids outer false rebuilt pulled'
+            pull_candidate avoids existentials outer false rebuilt pulled'
           end
         else
-          pull_candidate avoids outer false candidate pulled
+          pull_candidate avoids existentials outer false candidate pulled
     in
       recurse [] term
     end
@@ -462,7 +464,6 @@ structure Refute_ModelFinder_Preproc = struct
         val (head, arguments) = HolKernel.strip_comb term
       in
         Term.is_const head andalso MFH.is_nonfree_constr head andalso
-        length arguments = length (MFH.constructor_arg_types head) andalso
         List.all (is_constructor_pattern bound) arguments
       end
       handle HOL_ERR _ => false
@@ -536,7 +537,7 @@ structure Refute_ModelFinder_Preproc = struct
             end
         end
       fun recurse bound careful candidate =
-        if boolSyntax.is_imp candidate then
+        if boolSyntax.is_imp_only candidate then
           let val (left, right) = boolSyntax.dest_imp candidate
           in
             boolSyntax.mk_imp
@@ -612,7 +613,7 @@ structure Refute_ModelFinder_Preproc = struct
     end
 
   fun curry_assms term =
-    if boolSyntax.is_imp term then
+    if boolSyntax.is_imp_only term then
       let
         val (premise, conclusion) = boolSyntax.dest_imp term
         val conclusion' = curry_assms conclusion
@@ -629,7 +630,7 @@ structure Refute_ModelFinder_Preproc = struct
   fun destroy_universal_equalities term =
     let
       fun recurse premises candidate =
-        if boolSyntax.is_imp candidate then
+        if boolSyntax.is_imp_only candidate then
           let
             val (premise, conclusion) = boolSyntax.dest_imp candidate
             fun eliminate variable replacement =
@@ -823,7 +824,7 @@ structure Refute_ModelFinder_Preproc = struct
                distribute_quantifiers
                  (boolSyntax.mk_exists (variable, right)))
           end
-        else if boolSyntax.is_imp body then
+        else if boolSyntax.is_imp_only body then
           let val (left, right) = boolSyntax.dest_imp body
           in
             boolSyntax.mk_imp
@@ -883,9 +884,19 @@ structure Refute_ModelFinder_Preproc = struct
         if (universal andalso boolSyntax.is_forall candidate) orelse
            (not universal andalso boolSyntax.is_exists candidate) then
           let
-            val (variable, body) =
+            val (raw_variable, raw_body) =
               if universal then boolSyntax.dest_forall candidate
               else boolSyntax.dest_exists candidate
+            val duplicate = aconv_member raw_variable variables
+            val variable =
+              if duplicate then
+                Term.variant (variables @ Term.free_vars_lr raw_body)
+                  raw_variable
+              else
+                raw_variable
+            val body =
+              if duplicate then substitute raw_variable variable raw_body
+              else raw_body
           in
             gather universal (variables @ [variable]) body
           end

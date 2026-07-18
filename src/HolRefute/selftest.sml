@@ -675,11 +675,29 @@ fun mf_preproc_destroy_goldens () =
       (Term.mk_abs (shared, shared_constraints), large_left)
     val actual_shared = MFP.destroy_pulled_out_constrs context false true
       (boolSyntax.mk_eq (large_left, ``h :: t : num list``))
+    val user_free_constructor = ``q (h :: t : num list)``
+    val user_free_result =
+      MFP.pull_out_universal_constrs context false user_free_constructor
+    val predicate = ``q : ((num -> bool) option) -> bool``
+    val function = ``p : num -> bool``
+    val option = optionSyntax.mk_some function
+    val option_value = MFN.mk_reserved_var "refute$v0"
+      (Term.type_of option)
+    val existential_input = boolSyntax.mk_exists (function,
+      Term.mk_comb (predicate, option))
+    val existential_expected = boolSyntax.list_mk_exists
+      ([function, option_value], boolSyntax.mk_conj
+        (boolSyntax.mk_eq (option_value, option),
+         Term.mk_comb (predicate, option_value)))
+    val existential_result =
+      MFP.pull_out_existential_constrs context existential_input
   in
     Term.aconv actual_list expected_list andalso
     Term.aconv actual_tree expected_tree andalso
     Term.aconv weak_pattern expected_weak_pattern andalso
     Term.aconv actual_shared expected_shared andalso
+    Term.aconv user_free_result user_free_constructor andalso
+    Term.aconv existential_result existential_expected andalso
     Term.aconv
       (MFP.destroy_pulled_out_constrs context true true protected_axiom)
       protected_axiom andalso
@@ -779,7 +797,9 @@ fun mf_preproc_pipeline_shape () =
     val (nondefinitions, _, _, _) =
       MFP.preprocess_formulas context [] goal
     val skolems = !(#skolems context)
-    val free_names = map var_name (Term.free_vars_lr (hd nondefinitions))
+    val preprocessed = hd nondefinitions
+    val free_names = map var_name (Term.free_vars_lr preprocessed)
+    val expected_skolem = MFN.mk_skolem 0 1 "x" ``:num``
     val open_goal = ``(user_x : num) = 3``
     val value = MFN.mk_reserved_var "refute$vtest" ``:num``
     val open_value_goal = boolSyntax.mk_eq (value, ``3 : num``)
@@ -800,6 +820,8 @@ fun mf_preproc_pipeline_shape () =
     length nondefinitions >= 1 andalso
     skolems = [("refute$sk0@1$x", [])] andalso
     free_names = ["refute$sk0@1$x"] andalso
+    Term.aconv preprocessed
+      (boolSyntax.mk_eq (expected_skolem, ``3 : num``)) andalso
     Term.aconv (MFP.close_form open_goal) open_goal andalso
     Term.aconv (MFP.close_form open_value_goal) closed_value_goal andalso
     Term.aconv (MFP.destroy_universal_equalities equality_chain)
@@ -812,15 +834,29 @@ val _ = require_msg (check_result mf_preproc_pipeline_shape) (fn () =>
   (fn () => ()) ()
 
 fun mf_preproc_axiom_closure () =
-  case MFH.equational_fun_axioms (fresh_mf_context ())
-         ``zoo_override : num -> num`` of
-      [axiom] =>
-        let val (variables, _) = boolSyntax.strip_forall axiom
-        in
-          length variables = 1 andalso
-          null (Term.free_vars_lr axiom)
-        end
-    | _ => false
+  let
+    val table_axiom_closed =
+      case MFH.equational_fun_axioms (fresh_mf_context ())
+             ``zoo_override : num -> num`` of
+          [axiom] =>
+            let val (variables, _) = boolSyntax.strip_forall axiom
+            in
+              length variables = 1 andalso
+              null (Term.free_vars_lr axiom)
+            end
+        | _ => false
+    val extensional_axiom = MFH.equationalize_term "closure golden"
+      ``!f g : num -> num. f = g``
+  in
+    table_axiom_closed andalso
+    case extensional_axiom of
+        SOME axiom =>
+          length (#1 (boolSyntax.strip_forall axiom)) = 3 andalso
+          null (Term.free_vars_lr axiom) andalso
+          Term.aconv axiom
+            ``!f g : num -> num. !x : num. f x = g x``
+      | NONE => false
+  end
 
 val _ = require_msg (check_result mf_preproc_axiom_closure) (fn () =>
   "model-finder theorem-table axiom was not universally closed")
@@ -838,9 +874,33 @@ val _ = require_msg
   (fn () => ()) ()
 
 fun mf_preproc_quantifier_golden () =
-  Term.aconv
-    (MFP.distribute_quantifiers ``!x : num. p x /\ q``)
-    ``(!x : num. p x) /\ q``
+  let
+    val distributed = Term.aconv
+      (MFP.distribute_quantifiers ``!x : num. p x /\ q``)
+      ``(!x : num. p x) /\ q``
+    val negated = Term.aconv
+      (MFP.distribute_quantifiers ``?x : num. ~(p x)``)
+      ``~(!x : num. p x)``
+    val value = MFN.mk_reserved_var "refute$vneg" ``:num``
+    val negative_equality = boolSyntax.mk_neg
+      (boolSyntax.mk_eq (value, ``3 : num``))
+    val negative_preserved = Term.aconv
+      (MFP.destroy_universal_equalities negative_equality)
+      negative_equality
+    val x = ``x : num``
+    val x' = ``x' : num``
+    val predicate = ``p : num -> bool``
+    val inner = boolSyntax.mk_forall
+      (x, Term.mk_comb (predicate, x))
+    val shadowed = boolSyntax.mk_forall (x, inner)
+    val distinct = boolSyntax.mk_forall (x', inner)
+    val pushed_shadowed = MFP.push_quantifiers_inward shadowed
+    val pushed_distinct = MFP.push_quantifiers_inward distinct
+  in
+    distributed andalso negated andalso negative_preserved andalso
+    Term.aconv pushed_shadowed inner andalso
+    Term.aconv pushed_distinct inner
+  end
 
 val _ = require_msg (check_result mf_preproc_quantifier_golden) (fn () =>
   "model-finder quantifier-distribution golden changed")
