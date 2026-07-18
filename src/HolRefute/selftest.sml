@@ -705,6 +705,16 @@ fun mf_preproc_destroy_goldens () =
     val option = optionSyntax.mk_some function
     val option_value = MFN.mk_reserved_var "refute$v1"
       (Term.type_of option)
+    val definition_option = optionSyntax.mk_some first_generated_function
+    val definition_implication = boolSyntax.mk_imp
+      (Term.mk_comb (predicate, definition_option),
+       ``conclusion : bool``)
+    val definition_expected = boolSyntax.list_mk_imp
+      ([boolSyntax.mk_eq (option_value, definition_option)],
+       boolSyntax.mk_imp
+         (Term.mk_comb (predicate, option_value), ``conclusion : bool``))
+    val definition_result = MFP.pull_out_universal_constrs context true
+      definition_implication
     val existential_input = boolSyntax.mk_exists (function,
       Term.mk_comb (predicate, option))
     val existential_expected = boolSyntax.list_mk_exists
@@ -755,6 +765,14 @@ fun mf_preproc_destroy_goldens () =
              [first_existential_value, second_existential_value])])
     val two_existential_result =
       MFP.pull_out_existential_constrs context two_existential_input
+    val beta_variable = ``beta_variable : num``
+    val beta_argument = ``beta_argument : num``
+    val beta_redex = Term.mk_comb
+      (Term.mk_abs (beta_variable,
+         boolSyntax.mk_eq (beta_variable, beta_variable)),
+       beta_argument)
+    val beta_result =
+      MFP.destroy_pulled_out_constrs context false true beta_redex
   in
     Term.aconv actual_list expected_list andalso
     Term.aconv actual_tree expected_tree andalso
@@ -762,10 +780,12 @@ fun mf_preproc_destroy_goldens () =
     Term.aconv actual_shared expected_shared andalso
     Term.aconv user_free_result user_free_constructor andalso
     Term.aconv multiple_result multiple_expected andalso
+    Term.aconv definition_result definition_expected andalso
     Term.aconv existential_result existential_expected andalso
     Term.aconv nested_result nested_expected andalso
     Term.aconv relaxed_definition user_free_constructor andalso
     Term.aconv two_existential_result two_existential_expected andalso
+    Term.aconv beta_result beta_redex andalso
     Term.aconv
       (MFP.destroy_pulled_out_constrs context true true protected_axiom)
       protected_axiom andalso
@@ -961,14 +981,34 @@ val _ = require_msg (check_result mf_preproc_axiom_closure) (fn () =>
   (fn () => ()) ()
 
 fun mf_preproc_existential_equality_golden () =
-  Term.aconv
-    (MFP.destroy_existential_equalities
-      ``?x : num. x = y /\ p x``)
-    ``(p (y : num) : bool)`` andalso
-  Term.aconv
-    (MFP.destroy_existential_equalities
-      ``?x : num. p x /\ q x``)
-    ``?x : num. q x /\ p x``
+  let
+    val beta_variable = ``beta_variable : num``
+    val beta_argument = ``beta_argument : num``
+    val existential = ``existential : num``
+    val beta_redex = Term.mk_comb
+      (Term.mk_abs (beta_variable,
+         boolSyntax.mk_exists (existential,
+           boolSyntax.mk_eq (existential, beta_variable))),
+       beta_argument)
+    val expected_redex = Term.mk_comb
+      (Term.mk_abs (beta_variable, boolSyntax.T), beta_argument)
+  in
+    Term.aconv
+      (MFP.destroy_existential_equalities
+        ``?x : num. x = y /\ p x``)
+      ``(p (y : num) : bool)`` andalso
+    Term.aconv
+      (MFP.destroy_existential_equalities
+        ``?x : num. p x /\ x = y /\ q x``)
+      ``p (y : num) /\ q y`` andalso
+    Term.aconv
+      (MFP.destroy_existential_equalities
+        ``?x : num. p x /\ q x``)
+      ``?x : num. q x /\ p x`` andalso
+    Term.aconv
+      (MFP.destroy_existential_equalities beta_redex)
+      expected_redex
+  end
 
 val _ = require_msg
   (check_result mf_preproc_existential_equality_golden) (fn () =>

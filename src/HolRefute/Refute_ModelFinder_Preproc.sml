@@ -325,17 +325,18 @@ structure Refute_ModelFinder_Preproc = struct
             (boolSyntax.mk_eq (left', right'), pulled'')
           end
         else if boolSyntax.is_imp_only candidate then
-          if relaxed then (candidate, pulled)
-          else
-            let
-              val (left, right) = boolSyntax.dest_imp candidate
-              val (right', pulled') =
-                recurse forbidden false right pulled
-              val (left', pulled'') =
-                recurse forbidden false left pulled'
-            in
-              (boolSyntax.mk_imp (left', right'), pulled'')
-            end
+          let
+            (* HOL4 has only object implication here.  Nitpick resets the
+               definition flag on both sides of object implication; only
+               Isabelle's separate Pure.imp keeps a definition body opaque. *)
+            val (left, right) = boolSyntax.dest_imp candidate
+            val (right', pulled') =
+              recurse forbidden false right pulled
+            val (left', pulled'') =
+              recurse forbidden false left pulled'
+          in
+            (boolSyntax.mk_imp (left', right'), pulled'')
+          end
         else if boolSyntax.is_forall candidate orelse
                 boolSyntax.is_exists candidate then
           let
@@ -567,7 +568,7 @@ structure Refute_ModelFinder_Preproc = struct
         else if Term.is_comb candidate then
           let val (function, argument) = Term.dest_comb candidate
           in
-            MFH.s_betapply
+            Term.mk_comb
               (recurse bound careful function,
                recurse bound careful argument)
           end
@@ -683,7 +684,7 @@ structure Refute_ModelFinder_Preproc = struct
                 fun assignment candidate replacement =
                   if Term.aconv candidate variable andalso
                      not (Term.free_in variable replacement) then
-                    SOME (replacement, rev seen @ rest)
+                    SOME (replacement, rest @ seen)
                   else
                     NONE
               in
@@ -721,7 +722,7 @@ structure Refute_ModelFinder_Preproc = struct
           in Term.mk_abs (variable, recurse body) end
         else if Term.is_comb candidate then
           let val (function, argument) = Term.dest_comb candidate
-          in MFH.s_betapply (recurse function, recurse argument) end
+          in Term.mk_comb (recurse function, recurse argument) end
         else
           candidate
     in
