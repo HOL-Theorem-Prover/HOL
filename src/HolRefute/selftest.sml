@@ -2301,6 +2301,31 @@ val _ = require_msg (check_result mf_kodkod_finite_translation) (fn () =>
   "model-finder FINITE conservative translation changed")
   (fn () => ()) ()
 
+fun mf_kodkod_optional_struct_equality_golden () =
+  let
+    val scope = mf_translation_scope [(``:num``, 3)] []
+    val element = MFR.Atom (3, 0)
+    val pair = MFR.Struct [element, element]
+    val exact = MFNT.FreeRel
+      ((2, 0), ``:num # num``, pair, "exact")
+    val optional = MFNT.FreeRel
+      ((2, 1), ``:num # num``, MFR.Opt pair, "optional")
+    fun equality first second = MFNT.Op2
+      (MFNT.Eq, Type.bool, MFR.Formula MFU.Neg, first, second)
+    val translate = MFK.kodkod_formula_from_nut (#ofs scope)
+      (mf_translation_constrs scope)
+    val expected = Refute_Forl.Subset
+      (Refute_Forl.Rel (2, 1), Refute_Forl.Rel (2, 0))
+  in
+    translate (equality exact optional) = expected andalso
+    translate (equality optional exact) = expected
+  end
+
+val _ = require_msg
+  (check_result mf_kodkod_optional_struct_equality_golden) (fn () =>
+    "model-finder optional structured equality changed direction")
+  (fn () => ()) ()
+
 fun mf_kodkod_quantifier_golden () =
   let
     val scope = mf_translation_scope [(``:num``, 3)] []
@@ -3171,6 +3196,8 @@ local
      mf_assembled_problem
        ``((xs : num list) = [] /\ xs = [0])``
        [(``:num list``, 3), (``:num``, 2)] [``:num list``],
+     mf_assembled_problem ``((xs : num list) = [0])``
+       [(``:num list``, 3), (``:num``, 2)] [``:num list``],
      mf_assembled_problem ``((n : num) + 1 = 2)``
        [(``:num``, 3)] []]
 
@@ -3197,8 +3224,10 @@ local
       sat_with nonempty_list
         (solve (List.nth (mf_end_to_end_problems, 1))) andalso
       unsat (solve (List.nth (mf_end_to_end_problems, 2))) andalso
+      sat_with nonempty_list
+        (solve (List.nth (mf_end_to_end_problems, 3))) andalso
       sat_with arithmetic_witness
-        (solve (List.nth (mf_end_to_end_problems, 3)))
+        (solve (List.nth (mf_end_to_end_problems, 4)))
     end
 
   fun conversion_round_trips () =

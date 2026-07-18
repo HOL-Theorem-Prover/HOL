@@ -1896,9 +1896,9 @@ fun kodkod_formula_from_nut offsets
                                     else if not both_optional then
                                       if MFR.is_opt_rep
                                            (MFNT.rep_of second) then
-                                        kk_subset first_rel second_rel
-                                      else
                                         kk_subset second_rel first_rel
+                                      else
+                                        kk_subset first_rel second_rel
                                     else
                                       raise MFU.SAME ()
                                   else
