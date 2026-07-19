@@ -1869,7 +1869,7 @@ fun mf_scope_mono_partition () =
       [``:num list``]
     val (_, pattern_scopes) = MFS.all_scopes mf_hol_context
       [(SOME ``:'a list``, [3]), (NONE, [1])]
-      [(NONE, [~1])] [``:num list``, number] [] []
+      [(NONE, [~1])] [``:num list``, number] [] [] []
     val pattern_scope = hd pattern_scopes
   in
     mono = [enum, number] andalso nonmono = [alpha] andalso
@@ -1893,9 +1893,9 @@ fun mf_scope_calculus_block_fusion () =
     val (mono, nonmono) = MFS.mono_partition_with actually_monotonic
       [(NONE, NONE)] types
     val (_, fused) = MFS.all_scopes mf_hol_context
-      [(NONE, [1, 2, 3])] [(NONE, [~1])] mono nonmono []
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] mono nonmono [] []
     val (_, separated) = MFS.all_scopes mf_hol_context
-      [(NONE, [1, 2, 3])] [(NONE, [~1])] [] types []
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [] types [] []
   in
     mono = types andalso null nonmono andalso
     length fused = 3 andalso length separated = 9
@@ -1916,11 +1916,11 @@ fun mf_scope_enumeration_order () =
       [(3, 0), (3, 0)]
     val (skipped, scopes) = MFS.all_scopes mf_hol_context
       [(NONE, [1, 2, 3])] [(NONE, [~1])]
-      [``:refute$rf6``] [``:'a``] []
+      [``:refute$rf6``] [``:'a``] [] []
     val truncation_cards = MFS.default_cards @ [11]
     val (truncated, retained) = MFS.all_scopes mf_hol_context
       [(NONE, truncation_cards)] [(NONE, [~1])]
-      [``:refute$rf6``] [``:'a``, ``:'b``, ``:'c``] []
+      [``:refute$rf6``] [``:'a``, ``:'b``, ``:'c``] [] []
     fun cards (scope : MFS.scope) =
       (valOf (MFH.assignment_lookup (#card_assigns scope)
          ``:refute$rf6``),
@@ -1942,9 +1942,17 @@ fun mf_scope_offsets_and_facto_pairs () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context
       [(NONE, [2])] [(NONE, [~1])]
-      [``:refute$rf2``, ``:num``] [``:'a``, ``:unit``] []
+      [``:refute$rf2``, ``:num``] [``:'a``, ``:unit``] [] []
     val scope = hd scopes
     val data_types = #data_types scope
+    val list_ty = ``:num list``
+    val host_ty = ``:((num list -> bool) -> bool) zoo_poly_record``
+    val finitized = MFS.scope_from_descriptor mf_hol_context [] [list_ty]
+      ([(host_ty, 512), (list_ty, 3), (``:num``, 2)], [])
+    val list_spec = valOf
+      (MFS.data_type_spec (#data_types finitized) list_ty)
+    val host_spec = valOf
+      (MFS.data_type_spec (#data_types finitized) host_ty)
     fun degenerate_pair (spec : MFS.data_type_spec) =
       #1 (#complete spec) = #2 (#complete spec) andalso
       #1 (#concrete spec) = #2 (#concrete spec)
@@ -1954,11 +1962,47 @@ fun mf_scope_offsets_and_facto_pairs () =
     MFS.offset_of_type (#ofs scope) ``:num`` = 4 andalso
     MFS.offset_of_type (#ofs scope) ``:bool`` = 4 andalso
     MFS.spec_of_type scope ``:unit`` = (1, 4) andalso
-    List.all degenerate_pair data_types
+    List.all degenerate_pair data_types andalso
+    #complete list_spec = (false, true) andalso
+    #concrete list_spec = (true, true) andalso
+    #complete host_spec = (false, true) andalso
+    #concrete host_spec = (false, true) andalso
+    not (MFS.is_exact_type (#data_types finitized) false list_ty) andalso
+    MFS.is_exact_type (#data_types finitized) true list_ty
   end
 
 val _ = require_msg (check_result mf_scope_offsets_and_facto_pairs) (fn () =>
   "model-finder scope offsets or facto pairs failed")
+  (fn () => ()) ()
+
+fun mf_smart_finitization_classification () =
+  let
+    val list_ty = ``:num list``
+    val word_ty = ``:word8``
+    val goal = ``!xs : num list. (p : num list -> bool) xs``
+    fun kind_of_monotonic ty =
+      MFMono.formulas_monotonic mf_hol_context false ty ([goal], [])
+    val all_types = [list_ty, ``:num``, word_ty]
+    val deep_types = [``:num``, word_ty]
+    val smart = Refute_ModelFinder.finitizable_data_types mf_hol_context
+      (#finitize (#mf default_config)) kind_of_monotonic all_types
+      deep_types
+    val blocked = Refute_ModelFinder.finitizable_data_types mf_hol_context
+      [(SOME list_ty, SOME false), (NONE, NONE)] kind_of_monotonic
+      all_types deep_types
+    val forced = Refute_ModelFinder.finitizable_data_types mf_hol_context
+      [(SOME list_ty, SOME true), (NONE, NONE)] (fn _ => false)
+      all_types deep_types
+  in
+    kind_of_monotonic list_ty andalso smart = [list_ty] andalso
+    forced = [list_ty] andalso null blocked andalso
+    not (List.exists (fn ty =>
+      ty = ``:num`` orelse ty = word_ty) smart)
+  end
+
+val _ = require_msg
+  (check_result mf_smart_finitization_classification) (fn () =>
+  "smart datatype finitization classification changed")
   (fn () => ()) ()
 
 val _ = tprint "Refute model-finder utility"
@@ -2093,7 +2137,7 @@ fun mf_rep_fixed_scope () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context
       [(NONE, [2])] [(NONE, [~1])]
-      [``:refute$rf2``, ``:num``] [] []
+      [``:refute$rf2``, ``:num``] [] [] []
     val scope = hd scopes
     val enum_offset = MFS.offset_of_type (#ofs scope) ``:refute$rf2``
     val main_offset = MFS.offset_of_type (#ofs scope) ``:bool``
@@ -2181,7 +2225,7 @@ val _ = tprint "Refute model-finder Kodkod bounds and SUA"
 
 fun mf_kodkod_fixture assignments deep_types =
   let
-    val scope = MFS.scope_from_descriptor mf_hol_context deep_types
+    val scope = MFS.scope_from_descriptor mf_hol_context deep_types []
       (assignments, [])
     val (selectors, _) = MFNT.choose_reps_for_all_sels scope
       MFNT.NameTable.empty
@@ -2217,7 +2261,7 @@ val _ = require_msg (check_result mf_kodkod_plain_bound) (fn () =>
 fun mf_kodkod_offset_retry () =
   let
     val list_ty = ``:num list``
-    val scope = MFS.scope_from_descriptor mf_hol_context [list_ty]
+    val scope = MFS.scope_from_descriptor mf_hol_context [list_ty] []
       ([(list_ty, 3), (``:num``, 2)], [])
     val offsets = #ofs scope
     val main_j0 = MFS.offset_of_type offsets Type.bool
@@ -2641,7 +2685,7 @@ fun mf_nut_fixed_scope () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context
       [(NONE, [3])] [(NONE, [~1])]
-      [``:refute$rf2``, ``:num``] [] []
+      [``:refute$rf2``, ``:num``] [] [] []
   in hd scopes end
 
 fun mf_nut_name_reps () =
@@ -2675,7 +2719,7 @@ fun mf_nut_deep_selector_reps () =
   let
     val list_ty = ``:num list``
     val (_, scopes) = MFS.all_scopes mf_hol_context
-      [(NONE, [3])] [(NONE, [~1])] [list_ty, ``:num``] [] [list_ty]
+      [(NONE, [3])] [(NONE, [~1])] [list_ty, ``:num``] [] [list_ty] []
     val scope = hd scopes
     val cons = List.nth
       (MFH.data_type_constrs mf_hol_context list_ty, 1)
@@ -2766,6 +2810,58 @@ val _ = require_msg (check_result mf_nut_unsound_switches) (fn () =>
   "model-finder sound/unsound representation switches changed")
   (fn () => ()) ()
 
+fun mf_nut_finitized_quantifier_is_exact () =
+  let
+    val list_ty = ``:num list``
+    val quantified_term =
+      ``!xs : num list. (p : num list -> bool) xs``
+    fun kind_of_monotonic ty =
+      MFMono.formulas_monotonic mf_hol_context false ty
+        ([quantified_term], [])
+    val finitizable = Refute_ModelFinder.finitizable_data_types
+      mf_hol_context (#finitize (#mf default_config))
+      kind_of_monotonic [list_ty, ``:num``] [``:num``]
+    fun scope types = MFS.scope_from_descriptor mf_hol_context []
+      types ([(list_ty, 3), (``:num``, 2)], [])
+    val ordinary_scope = scope []
+    val finitized_scope = scope finitizable
+    val quantified = MFNT.nut_from_term mf_hol_context MFNT.Eq
+      quantified_term
+    val (free_names, const_names) =
+      MFNT.add_free_and_const_names quantified ([], [])
+    fun choose current =
+      let
+        val (_, table) = MFNT.choose_reps_for_free_vars current
+          free_names MFNT.NameTable.empty
+        val (_, table) = MFNT.choose_reps_for_consts current false
+          const_names table
+      in
+        MFNT.choose_reps_in_nut current false table false quantified
+      end
+    fun exact (MFNT.Op2 (MFNT.All, _, _, _, _)) = true
+      | exact _ = false
+    val ordinary = choose ordinary_scope
+    val finitized = choose finitized_scope
+    val sound_finitizes = List.all (fn (_, value) =>
+      value <> SOME true) (#finitize (#mf default_config))
+    val smart_genuine = MFM.genuine_means_genuine
+      {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
+       wfs = [], sound_finitizes = sound_finitizes,
+       total_consts = NONE}
+  in
+    finitizable = [list_ty] andalso smart_genuine andalso
+    not (exact ordinary) andalso
+    exact finitized andalso
+    not (MFS.is_complete_type (#data_types ordinary_scope) true list_ty)
+    andalso
+    MFS.is_complete_type (#data_types finitized_scope) true list_ty
+  end
+
+val _ = require_msg
+  (check_result mf_nut_finitized_quantifier_is_exact) (fn () =>
+  "smart finitization did not make datatype quantifiers exact")
+  (fn () => ()) ()
+
 fun mf_nut_triad () =
   let
     val scope = mf_nut_fixed_scope ()
@@ -2850,7 +2946,8 @@ val _ = require_msg (check_result mf_nut_renaming) (fn () =>
 val _ = tprint "Refute model-finder Kodkod translation"
 
 fun mf_translation_scope assignments deep_types =
-  MFS.scope_from_descriptor mf_hol_context deep_types (assignments, [])
+  MFS.scope_from_descriptor mf_hol_context deep_types []
+    (assignments, [])
 
 fun mf_translation_constrs scope =
   let
@@ -3019,10 +3116,15 @@ fun mf_model_certifiability_rules () =
        | _ => false) andalso
     MFM.genuine_means_genuine
       {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
-       wfs = [false, false], total_consts = NONE} andalso
+       wfs = [false, false], sound_finitizes = true,
+       total_consts = NONE} andalso
     not (MFM.genuine_means_genuine
       {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
-       wfs = [true], total_consts = NONE}) andalso
+       wfs = [true], sound_finitizes = true,
+       total_consts = NONE}) andalso
+    not (MFM.genuine_means_genuine
+      {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
+       wfs = [], sound_finitizes = false, total_consts = NONE}) andalso
     MFM.try_again_reasons ["wf = true", "total_consts = false"] =
       ["Try again with wf = true", "Try again with total_consts = false"]
   end
@@ -3061,6 +3163,20 @@ fun mf_model_certification_protocol () =
        reconstruction = reconstructed, cex = base, sound = true,
        genuine_means_genuine = false,
        reasons = ["Try again with wf = true"]}
+    val forced_config = upd_finitize
+      [(SOME ``:num list``, SOME true), (NONE, NONE)] default_config
+    val forced_reasons = Refute_ModelFinder.authenticity_reasons
+      (#mf forced_config) true true
+    val forced_fallback = MFM.certify
+      {executable = false, original = ``F``, eval_terms = [],
+       reconstruction = reconstructed, cex = base, sound = true,
+       genuine_means_genuine = MFM.genuine_means_genuine
+         {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
+          wfs = [], sound_finitizes = false, total_consts = NONE},
+       reasons = forced_reasons}
+    val smart_genuine = MFM.genuine_means_genuine
+      {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
+       wfs = [], sound_finitizes = true, total_consts = NONE}
   in
     (case certified of
          MFM.Keep {certainty = Genuine, evals = [(_, value)],
@@ -3074,6 +3190,11 @@ fun mf_model_certification_protocol () =
     (case fallback of
          MFM.Keep {certainty = QuasiGenuine
            ["Try again with wf = true"], cert = NONE, ...} => true
+       | _ => false) andalso smart_genuine andalso
+    (case forced_fallback of
+         MFM.Keep {certainty = QuasiGenuine
+           ["Try again with \"finitize\" set to \"smart\" or \"false\""],
+           cert = NONE, ...} => true
        | _ => false)
   end
 
@@ -4572,6 +4693,20 @@ val _ = require_msg (check_result mf_update_is_local) (fn () =>
   "upd_sat_solver changed a field other than mf.sat_solver")
   (fn () => ()) ()
 
+fun finitize_default_and_unlock_are_pinned () =
+  let
+    val rows = [(SOME ``:num list``, SOME true), (NONE, NONE)]
+    val updated = upd_finitize rows default_config
+  in
+    #finitize (#mf default_config) = [(NONE, NONE)] andalso
+    #finitize (#mf updated) = rows
+  end
+
+val _ = require_msg
+  (check_result finitize_default_and_unlock_are_pinned) (fn () =>
+  "finitize is not smart by default or remains guarded")
+  (fn () => ()) ()
+
 fun m4_guard_is_pinned (field, testfn) = shouldfail {
   checkexn = check_HOL_ERRexn
     (fn (_, _, message) =>
@@ -4779,6 +4914,8 @@ fun kodkod_ceiling_preserves_uncertified_genuine () =
     val quasi = upd_wf [(NONE, SOME true)] default_config
     val quasi_satisfy = upd_falsify false quasi
     val total = upd_total_consts (SOME true) default_config
+    val forced_finitize = upd_finitize
+      [(SOME ``:num list``, SOME true), (NONE, NONE)] default_config
   in
     same_certainty_class Genuine
       (Refute_ModelFinder.kodkod_certainty_ceiling
@@ -4794,6 +4931,9 @@ fun kodkod_ceiling_preserves_uncertified_genuine () =
       (Refute_ModelFinder.kodkod_certainty_ceiling quasi gated) andalso
     same_certainty_class (QuasiGenuine [])
       (Refute_ModelFinder.kodkod_certainty_ceiling total gated) andalso
+    same_certainty_class (QuasiGenuine [])
+      (Refute_ModelFinder.kodkod_certainty_ceiling forced_finitize
+        gated) andalso
     same_certainty_class Genuine
       (Refute_ModelFinder.kodkod_certainty_ceiling quasi mixed)
   end

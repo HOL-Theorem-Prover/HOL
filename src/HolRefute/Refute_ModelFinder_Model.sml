@@ -53,6 +53,7 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
     {got_all_mono_user_axioms : bool,
      no_poly_user_axioms : bool,
      wfs : bool list,
+     sound_finitizes : bool,
      total_consts : bool option} -> bool
   val try_again_reasons : string list -> string list
   val certify :
@@ -701,9 +702,10 @@ fun certifiable executable bindings =
 
 fun genuine_means_genuine
       {got_all_mono_user_axioms, no_poly_user_axioms, wfs,
-       total_consts} =
+       sound_finitizes, total_consts} =
   got_all_mono_user_axioms andalso no_poly_user_axioms andalso
-  List.all not wfs andalso total_consts <> SOME true
+  List.all not wfs andalso sound_finitizes andalso
+  total_consts <> SOME true
 
 fun try_again_reasons options = map (fn option =>
   "Try again with " ^ option) options

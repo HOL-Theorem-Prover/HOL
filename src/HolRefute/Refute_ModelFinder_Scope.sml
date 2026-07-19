@@ -445,15 +445,17 @@ structure Refute_ModelFinder_Scope = struct
        total = total} :: constrs
     end
 
-  fun has_exact_card context card_assigns ty =
+  fun has_exact_card context facto finitizable_data_types
+        card_assigns ty =
     let val card = MFH.card_of_type card_assigns ty
     in
-      card = MFH.bounded_exact_card_of_type context []
+      card = MFH.bounded_exact_card_of_type context
+        (if facto then finitizable_data_types else [])
         (card + 1) 0 card_assigns ty
     end
 
   fun data_type_spec_from_scope_descriptor context deep_data_types
-        (desc as (card_assigns, _)) (ty, card) =
+        finitizable_data_types (desc as (card_assigns, _)) (ty, card) =
     let
       val deep = member_type ty deep_data_types
       val co = MFH.is_codatatype ty
@@ -463,13 +465,15 @@ structure Refute_ModelFinder_Scope = struct
       val num_self_recs = length (List.filter (fn value => value) self_recs)
       val num_non_self_recs = length self_recs - num_self_recs
       val self_rec = num_self_recs > 0
-      fun is_complete _ = has_exact_card context card_assigns ty
+      fun is_complete facto = has_exact_card context facto
+        finitizable_data_types card_assigns ty
       fun binder_types argument_ty =
         #1 (boolSyntax.strip_fun argument_ty)
-      fun is_concrete _ =
+      fun is_concrete facto =
         (* FIXME: looks wrong; other types than just functions might be
            abstract. "is_complete" is also suspicious. *)
-        List.all (has_exact_card context card_assigns)
+        List.all (has_exact_card context facto finitizable_data_types
+          card_assigns)
           (List.concat (map binder_types
             (List.concat
               (map MFH.constructor_arg_types constructors))))
@@ -492,10 +496,11 @@ structure Refute_ModelFinder_Scope = struct
     end
 
   fun scope_from_descriptor context deep_data_types
-        (desc as (card_assigns, _)) =
+        finitizable_data_types (desc as (card_assigns, _)) =
     let
       val data_types = map
-        (data_type_spec_from_scope_descriptor context deep_data_types desc)
+        (data_type_spec_from_scope_descriptor context deep_data_types
+          finitizable_data_types desc)
         (List.filter (MFH.is_data_type o #1) card_assigns)
     in
       {hol_ctxt = context, card_assigns = card_assigns,
@@ -547,7 +552,7 @@ structure Refute_ModelFinder_Scope = struct
       else result @ [value]) [] values
 
   fun all_scopes context cards_assigns maxes_assigns
-        mono_types nonmono_types deep_data_types =
+        mono_types nonmono_types deep_data_types finitizable_data_types =
     let
       val cards_assigns =
         repair_cards_assigns_wrt_boxing_etc mono_types cards_assigns
@@ -565,7 +570,8 @@ structure Refute_ModelFinder_Scope = struct
         else descriptions
     in
       (length all - length selected,
-       map (scope_from_descriptor context deep_data_types) descriptions)
+       map (scope_from_descriptor context deep_data_types
+         finitizable_data_types) descriptions)
     end
 
   fun is_number_type ty =

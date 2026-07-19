@@ -192,7 +192,7 @@ structure Refute_Core = struct
       star_linear_preds = false,
       iter = [(NONE, [0])],
       bisim_depth = [~1],
-      finitize = [],
+      finitize = [(NONE, NONE)],
       whack = [],
       need = NONE }
 
@@ -532,8 +532,6 @@ structure Refute_Core = struct
                  | _ => m4_error "iter")
       val _ = unchanged "bisim_depth"
         (#bisim_depth mf = #bisim_depth default_mf_config)
-      val _ = unchanged "finitize"
-        (#finitize mf = #finitize default_mf_config)
       val _ = if null (#whack mf) then () else m4_error "whack"
       val _ = (case #need mf of NONE => () | SOME _ => m4_error "need")
       val _ = if #max_potential mf > 1 then m4_error "max_potential"

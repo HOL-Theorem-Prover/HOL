@@ -8,6 +8,13 @@ Nitpick's pick_them_nits_in_term, specialized to the M3 feature set. *)
 signature REFUTE_MODEL_FINDER = sig
   val prepare_instance_input :
     Refute_Core.instance -> Term.term * Term.term list
+  val finitizable_data_types :
+    Refute_ModelFinder_HOL.mf_context ->
+    (Type.hol_type option * bool option) list ->
+    (Type.hol_type -> bool) -> Type.hol_type list ->
+    Type.hol_type list -> Type.hol_type list
+  val authenticity_reasons :
+    Refute_Core.mf_config -> bool -> bool -> string list
   val kodkod_backend : Refute_Core.backend
   val kodkod_certainty_ceiling : Refute_Core.certainty_ceiling
   val register_backends : unit -> unit
@@ -136,9 +143,13 @@ fun authenticity_reasons (mf : Refute_Core.mf_config)
          else ["\"user_axioms\" set to \"true\""]) @
         (if none_true (#wf mf) then []
          else ["\"wf\" set to \"smart\" or \"false\""]) @
+        (if none_true (#finitize mf) then []
+         else ["\"finitize\" set to \"smart\" or \"false\""]) @
         (if #total_consts mf = SOME true then
            ["\"total_consts\" set to \"smart\" or \"false\""]
          else [])
+        (* TODO(TASK codata): Add the bisim_depth hint once the
+           per-reconstruction codatatypes_ok value reaches this site. *)
     in
       MFM.try_again_reasons options
     end
@@ -166,6 +177,25 @@ fun deep_data_types all_types sel_names =
       same_type ty ``:unit`` orelse same_type ty MFH.num_type orelse
       Option.isSome (MFH.word_dimension ty) orelse
       (MFH.is_data_type ty andalso selected ty)) all_types
+  end
+
+fun finitizable_data_types context finitizes kind_of_monotonic
+      all_types deep_types =
+  let
+    val data_types = List.filter MFH.is_data_type all_types
+    val (deep, shallow) = List.partition (fn ty =>
+      member_type ty deep_types) data_types
+    fun infinite ty = not (MFH.is_finite_type context ty)
+    fun forced ty =
+      MFS.mono_override finitizes ty = SOME (SOME true)
+    fun shallow_finitizable ty =
+      case MFS.mono_override finitizes ty of
+          SOME (SOME value) => value
+        | _ => kind_of_monotonic ty
+  in
+    List.filter (fn ty => infinite ty andalso forced ty) deep @
+    List.filter (fn ty => infinite ty andalso
+      shallow_finitizable ty) shallow
   end
 
 fun actual_solver (mf : Refute_Core.mf_config) =
@@ -251,6 +281,7 @@ fun run_instance deadline started (config : Refute_Core.config)
       (instance : Refute_Core.instance) =
   let
     val mf = #mf config
+    val sound_finitizes = none_true (#finitize mf)
     val (original, eval_terms) = prepare_instance_input instance
     val negated =
       if #falsify mf then boolSyntax.mk_imp (original, boolSyntax.F)
@@ -309,7 +340,6 @@ fun run_instance deadline started (config : Refute_Core.config)
       if unique_scope then (all_types, [])
       else MFS.mono_partition_with is_type_actually_monotonic
         (#mono mf) all_types
-    val _ = is_type_kind_of_monotonic
     val forced_mono_types = List.filter (fn ty =>
       MFS.mono_override (#mono mf) ty = SOME (SOME true)) mono_types
     val inferred_mono_types = rev (!calculus_mono_types)
@@ -329,8 +359,15 @@ fun run_instance deadline started (config : Refute_Core.config)
     val _ = report_monotonic "passed the monotonicity test"
       inferred_mono_types
     val deep_types = deep_data_types all_types sel_names
+    val finitizable_types = finitizable_data_types context (#finitize mf)
+      is_type_kind_of_monotonic all_types deep_types
+    val _ = if null finitizable_types then () else
+      Refute_Core.Private.say 2
+        ("The following type" ^ MFU.plural_s_for_list finitizable_types ^
+         " can use a more precise finite encoding: " ^
+         String.concatWith ", " (map type_name finitizable_types) ^ "\n")
     val (skipped, scopes) = MFS.all_scopes context (#card mf) (#max mf)
-      mono_types nonmono_types deep_types
+      mono_types nonmono_types deep_types finitizable_types
     val batch_size =
       if #debug mf then 1 else Int.max (1, #batch_size mf)
     val batches = MFU.chunk_list batch_size scopes
@@ -342,6 +379,7 @@ fun run_instance deadline started (config : Refute_Core.config)
       {got_all_mono_user_axioms = got_all_mono_user_axioms,
        no_poly_user_axioms = no_poly_user_axioms,
        wfs = map (fn (_, value) => value = SOME true) (#wf mf),
+       sound_finitizes = sound_finitizes,
        total_consts = #total_consts mf}
     val genuine_reasons = authenticity_reasons mf
       got_all_mono_user_axioms no_poly_user_axioms
@@ -728,6 +766,7 @@ fun kodkod_certainty_ceiling (config : Refute_Core.config) instances =
       List.partition MFH.is_poly_term nondefs
     val genuine_fallback_reachable =
       List.all (fn (_, value) => value <> SOME true) (#wf mf) andalso
+      none_true (#finitize mf) andalso
       #total_consts mf <> SOME true andalso
       (#user_axioms mf = SOME true orelse null mono_nondefs) andalso
       null poly_nondefs
