@@ -2,8 +2,8 @@
     Author:     Jasmin Blanchette, TU Muenchen
     Copyright   2009, 2010
 
-Model reconstruction for the HOL4 Refute model finder.  This is the M3
-subset of Isabelle Nitpick's nitpick_model.ML. *)
+Model reconstruction for the HOL4 Refute model finder, including M4
+specialization display. *)
 
 signature REFUTE_MODEL_FINDER_MODEL = sig
   type term = Term.term
@@ -34,9 +34,13 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      representation : rep,
      tuples : int list list} -> term
 
+  val user_friendly_const :
+    Refute_ModelFinder_HOL.special_fun list -> string -> hol_type -> term
+
   val reconstruct :
     {scope : scope,
      atoms : (hol_type option * string list) list,
+     special_funs : Refute_ModelFinder_HOL.special_fun list,
      real_frees : term list,
      eval_terms : term list,
      free_names : nut list,
@@ -490,16 +494,92 @@ fun free_name_for_term free_names term =
       | NONE => MFNT.FreeName (name, ty, MFR.Any)
   end
 
-fun lhs_for_constant name ty =
+fun user_friendly_const special_funs name ty =
   let
-    val original = MFN.original_name name
-    val (thy_part, name_part) = MFN.strip_first_name_sep original
+    fun special_bounds terms =
+      let
+        fun schematic variable =
+          case Lib.total Term.dest_var variable of
+              SOME (variable_name, _) =>
+                String.isPrefix (MFN.reserved_prefix ^ "v") variable_name
+                orelse MFN.is_bound_var_name variable_name
+                orelse MFN.is_cong_var_name variable_name
+            | NONE => false
+        fun add (variable, result) =
+          if schematic variable andalso
+             not (List.exists (Term.aconv variable) result) then
+            variable :: result
+          else result
+      in
+        Listsort.sort Term.compare
+          (List.foldl add [] (List.concat (map Term.free_vars_lr terms)))
+      end
+    fun same_generated special =
+      case Lib.total Term.dest_var special of
+          SOME (special_name, special_ty) =>
+            name = special_name andalso
+            MFH.unarize_unbox_etc_type ty =
+              MFH.unarize_unbox_etc_type special_ty
+        | NONE => false
+    fun friendly_term candidate =
+      if Term.is_abs candidate then
+        let val (variable, body) = Term.dest_abs candidate
+        in Term.mk_abs (variable, friendly_term body) end
+      else if Term.is_comb candidate then
+        let val (function, argument) = Term.dest_comb candidate
+        in MFH.s_betapply (friendly_term function, friendly_term argument) end
+      else
+        case Lib.total Term.dest_var candidate of
+            SOME (candidate_name, candidate_ty) =>
+              if MFN.is_reserved_name candidate_name then
+                user_friendly_const special_funs candidate_name candidate_ty
+              else candidate
+          | NONE => candidate
   in
-    if thy_part <> "" andalso name_part <> "" then
-      Term.mk_thy_const {Thy = thy_part, Name = name_part, Ty = ty}
+    if MFN.is_special_name name then
+      case List.find (same_generated o #2) special_funs of
+          SOME ((original, fixed_indices, fixed_terms), _) =>
+            let
+              val maximum = List.foldl Int.max (~1) fixed_indices
+              val (argument_types, _) =
+                boolSyntax.strip_fun (Term.type_of original)
+              val missing_indices = List.filter (fn index =>
+                not (List.exists (fn fixed => fixed = index)
+                  fixed_indices)) (MFU.index_seq 0 (maximum + 1))
+              val missing_vars = ListPair.map (fn (index, argument_ty) =>
+                Term.mk_var ("arg" ^ Int.toString (index + 1), argument_ty))
+                (missing_indices,
+                 MFU.filter_indices missing_indices argument_types)
+              fun argument index =
+                case List.find (fn (fixed, _) => fixed = index)
+                       (ListPair.zip (fixed_indices, fixed_terms)) of
+                    SOME (_, fixed) => friendly_term fixed
+                  | NONE =>
+                      List.nth (missing_vars,
+                        Lib.index (fn missing => missing = index)
+                          missing_indices)
+              val arguments = map argument
+                (MFU.index_seq 0 (maximum + 1))
+              val bounds = special_bounds fixed_terms
+            in
+              Term.list_mk_abs (bounds @ missing_vars,
+                Term.list_mk_comb (original, arguments))
+            end
+        | NONE => Term.mk_var (name, ty)
     else
-      Term.mk_var (original, ty)
+      let
+        val original = MFN.original_name name
+        val (thy_part, name_part) = MFN.strip_first_name_sep original
+      in
+        if thy_part <> "" andalso name_part <> "" then
+          Term.mk_thy_const {Thy = thy_part, Name = name_part, Ty = ty}
+        else
+          Term.mk_var (original, ty)
+      end
   end handle HOL_ERR _ => Term.mk_var (MFN.original_name name, ty)
+
+fun lhs_for_constant special_funs name ty =
+  user_friendly_const special_funs name ty
 
 fun eval_index name =
   if String.isPrefix MFN.eval_prefix name then
@@ -507,8 +587,8 @@ fun eval_index name =
   else
     NONE
 
-fun reconstruct {scope, atoms, real_frees, eval_terms, free_names,
-                 sel_names, nonsel_names, rel_table, bounds} =
+fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
+                 free_names, sel_names, nonsel_names, rel_table, bounds} =
   let
     val context =
       {scope = scope, atoms = atoms, sel_names = sel_names,
@@ -543,7 +623,8 @@ fun reconstruct {scope, atoms, real_frees, eval_terms, free_names,
                   (evals, skolems, consts)
             | NONE =>
                 (evals, skolems,
-                 (lhs_for_constant nickname (MFNT.type_of name), value) ::
+                 (lhs_for_constant special_funs nickname
+                    (MFNT.type_of name), value) ::
                  consts)
       end
 

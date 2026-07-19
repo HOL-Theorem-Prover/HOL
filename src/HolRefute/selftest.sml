@@ -226,6 +226,9 @@ fun mf_name_round_trips () =
     val selector = MFN.mk_selector 2 "list$CONS" ty
     val discriminator = MFN.mk_discriminator "list$CONS" ty
     val skolem = MFN.mk_skolem 1 7 "witness" ty
+    val special = MFN.mk_special 3 "list$MAP" ty
+    val bound = MFN.mk_bound_var 2 ty
+    val congruence = MFN.mk_cong_var 0 ty
     val nested = MFN.sel_prefix_for 0 ^ var_name skolem
   in
     var_name selector = "refute$sel2$list$CONS" andalso
@@ -240,6 +243,14 @@ fun mf_name_round_trips () =
     MFN.is_skolem_name (var_name skolem) andalso
     MFN.is_skolem_name nested andalso
     MFN.original_name (var_name skolem) = "witness" andalso
+    var_name special = "refute$sp3$list$MAP" andalso
+    MFN.is_special_name (var_name special) andalso
+    MFN.original_name (var_name special) = "list$MAP" andalso
+    var_name bound = "refute$b2$" andalso
+    MFN.is_bound_var_name (var_name bound) andalso
+    not (MFN.is_bound_var_name "refute$base$list$MAP") andalso
+    var_name congruence = "refute$c0$" andalso
+    MFN.is_cong_var_name (var_name congruence) andalso
     var_name (MFN.mk_numeral 3 ty) = "refute$num$3" andalso
     var_name (MFN.mk_eval 4 ty) = "refute$eval4" andalso
     var_name (MFN.unknown_marker ty) = "?" andalso
@@ -1628,6 +1639,117 @@ fun mf_preproc_pipeline_shape () =
 
 val _ = require_msg (check_result mf_preproc_pipeline_shape) (fn () =>
   "model-finder preprocessing pipeline shape changed")
+  (fn () => ()) ()
+
+fun mf_specialization_goldens () =
+  let
+    val context = fresh_mf_context ()
+    val source = ``MAP SUC (xs : num list)``
+    val first = MFP.specialize_consts_in_term context false 0 source
+    val first_cache = !(#special_funs context)
+    val second = MFP.specialize_consts_in_term context false 0
+      ``MAP SUC (ys : num list)``
+    val second_cache = !(#special_funs context)
+    val (first_head, first_args) = HolKernel.strip_comb first
+    val (second_head, second_args) = HolKernel.strip_comb second
+    val shared = Term.aconv first_head second_head andalso
+      length first_cache = 1 andalso length second_cache = 1
+    val fixed =
+      case first_cache of
+          [((original, indices, arguments), special)] =>
+            Term.same_const original ``MAP : (num -> num) ->
+                                      num list -> num list`` andalso
+            indices = [0] andalso length arguments = 1 andalso
+            Term.aconv (hd arguments) ``SUC : num -> num`` andalso
+            Term.aconv special first_head andalso
+            not (null (MFH.equational_fun_axioms context special))
+        | _ => false
+    val _ = MFP.specialize_consts_in_term context false 0
+      ``MAP I (zs : num list)``
+    val congruences = MFP.special_congruence_axioms context
+      (HOLset.empty Term.compare)
+    val names = List.concat (map (map var_name o Term.free_vars_lr)
+      congruences)
+    val manual_congruence = MFP.special_congruence_axiom
+      ``:num -> num -> num``
+      ([1], [``0 : num``], MFN.mk_special 90 "manual$f" ``:num -> num``)
+      ([1], [``1 : num``], MFN.mk_special 91 "manual$f" ``:num -> num``)
+    val manual_names = map var_name
+      (Term.free_vars_lr manual_congruence)
+    val bound_result = MFP.specialize_consts_in_term context false 0
+      ``\b : bool. MAP (K b : num -> bool) (ns : num list)``
+    val bound_names = map var_name (Term.free_vars_lr bound_result)
+    val bound_cached = List.exists (fn ((_, _, arguments), _) =>
+      List.exists (fn argument => List.exists
+        (MFN.is_bound_var_name o var_name)
+        (Term.free_vars_lr argument)) arguments) (!(#special_funs context))
+    val b = MFN.mk_bound_var 1 ``:num``
+    val c = MFN.mk_cong_var 0 ``:num``
+    val closed = MFP.close_form (boolSyntax.mk_eq (b, c))
+    val displayed = Refute_ModelFinder_Model.user_friendly_const first_cache
+      (var_name first_head) (Term.type_of first_head)
+    val pipeline_context = fresh_mf_context ()
+    val (pipeline_nondefs, pipeline_defs, _, _) =
+      MFP.preprocess_formulas pipeline_context []
+        ``MAP SUC (xs : num list) = []``
+    fun open_schematic term = List.exists (fn variable =>
+      let val name = var_name variable
+      in
+        String.isPrefix (MFN.reserved_prefix ^ "v") name orelse
+        MFN.is_bound_var_name name orelse MFN.is_cong_var_name name
+      end) (Term.free_vars_lr term)
+    val pipeline_closed = not (List.exists open_schematic
+      (pipeline_nondefs @ pipeline_defs))
+    val depth_context = fresh_mf_context ()
+    val depth_result = MFP.specialize_consts_in_term
+      depth_context false 21 source
+    val trivial_context = fresh_mf_context ()
+    val trivial_map = ``MAP SUC (xs : num list) = MAP SUC xs``
+    val _ = MFP.axioms_for_term trivial_context [trivial_map] boolSyntax.T
+    val chain_context = fresh_mf_context ()
+    val map_constant = ``MAP : (num -> num) -> num list -> num list``
+    val medium = MFN.mk_special 80 "list$MAP" ``:num list -> num list``
+    val deepest = MFN.mk_special 81 "list$MAP" ``:num list``
+    val _ = (#special_funs chain_context) :=
+      [((map_constant, [0, 1], [``SUC : num -> num``, ``[] : num list``]),
+        deepest),
+       ((map_constant, [0], [``SUC : num -> num``]), medium)]
+    val chain_seen = HOLset.add (HOLset.empty Term.compare, map_constant)
+    val chain_axioms = MFP.special_congruence_axioms chain_context chain_seen
+    val nearest_link = List.exists (fn axiom =>
+      Term.free_in deepest axiom andalso Term.free_in medium axiom)
+      chain_axioms
+    val display_skolem = MFN.mk_skolem 0 99 "g" ``:num -> num``
+    val display_special = MFN.mk_special 99 "list$MAP"
+      ``:num list -> num list``
+    val generated_display = Refute_ModelFinder_Model.user_friendly_const
+      [((map_constant, [0], [display_skolem]), display_special)]
+      (var_name display_special) (Term.type_of display_special)
+  in
+    fixed andalso shared andalso
+    length first_args = 1 andalso
+    Term.aconv (hd first_args) ``xs : num list`` andalso
+    length second_args = 1 andalso
+    Term.aconv (hd second_args) ``ys : num list`` andalso
+    length congruences = 1 andalso
+    List.exists MFN.is_cong_var_name manual_names andalso
+    List.exists (String.isPrefix MFN.special_prefix) names andalso
+    bound_cached andalso not (List.exists MFN.is_bound_var_name bound_names)
+    andalso length (#1 (boolSyntax.strip_forall closed)) = 2 andalso
+    Term.aconv displayed ``MAP SUC : num list -> num list`` andalso
+    not (null pipeline_defs) andalso pipeline_closed andalso
+    not (null (!(#special_funs pipeline_context))) andalso
+    Term.aconv depth_result source andalso
+    null (!(#special_funs depth_context)) andalso
+    null (!(#special_funs trivial_context)) andalso
+    length chain_axioms = 2 andalso nearest_link andalso
+    null (MFN.reserved_frees generated_display) andalso
+    Term.aconv generated_display
+      ``MAP (g : num -> num) : num list -> num list``
+  end
+
+val _ = require_msg (check_result mf_specialization_goldens) (fn () =>
+  "model-finder specialization fixed-arg/cache/congruence golden changed")
   (fn () => ()) ()
 
 fun mf_preproc_axiom_closure () =
@@ -3065,8 +3187,8 @@ fun mf_model_structured_reconstruction () =
     val x = ``x : num``
     val skolem_name = MFN.skolem_prefix_for 0 1 ^ "w"
     val reconstructed = MFM.reconstruct
-      {scope = scope, atoms = [(NONE, [])], real_frees = [x],
-       eval_terms = [``1 + 1``],
+      {scope = scope, atoms = [(NONE, [])], special_funs = [],
+       real_frees = [x], eval_terms = [``1 + 1``],
        free_names = [MFNT.FreeName ("x", ``:num``, MFR.Any)],
        sel_names = [],
        nonsel_names =
@@ -3226,8 +3348,8 @@ fun mf_polymorphic_model_protocol () =
        genuine_means_genuine = true, reasons = []}
     val scope = mf_translation_scope [(ty, 2)] []
     val report = MFM.reconstruct
-      {scope = scope, atoms = [], real_frees = [], eval_terms = [],
-       free_names = [], sel_names = [], nonsel_names = [],
+      {scope = scope, atoms = [], special_funs = [], real_frees = [],
+       eval_terms = [], free_names = [], sel_names = [], nonsel_names = [],
        rel_table = MFNT.NameTable.empty, bounds = []}
     val displayed = #types report
   in
@@ -4707,6 +4829,19 @@ val _ = require_msg
   "finitize is not smart by default or remains guarded")
   (fn () => ()) ()
 
+fun specialize_default_and_unlock_are_pinned () =
+  let
+    val disabled = upd_specialize false default_config
+  in
+    #specialize (#mf default_config) andalso
+    not (#specialize (#mf disabled))
+  end
+
+val _ = require_msg
+  (check_result specialize_default_and_unlock_are_pinned) (fn () =>
+  "specialize is not enabled by default or remains guarded")
+  (fn () => ()) ()
+
 fun m4_guard_is_pinned (field, testfn) = shouldfail {
   checkexn = check_HOL_ERRexn
     (fn (_, _, message) =>
@@ -4717,9 +4852,7 @@ fun m4_guard_is_pinned (field, testfn) = shouldfail {
 } ()
 
 val _ = List.app m4_guard_is_pinned
-  [("specialize", fn () =>
-      Refute.upd_specialize true Refute.default_config),
-   ("max_potential", fn () =>
+  [("max_potential", fn () =>
       Refute.upd_max_potential 2 Refute.default_config),
    ("max_genuine", fn () =>
       Refute.upd_max_genuine 2 Refute.default_config)]
@@ -8567,6 +8700,10 @@ val mf_acceptance_cases : mf_acceptance_case list =
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "set membership mutation",
     tm = ``(n : num) IN (s : num set)``,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "specialized MAP mutation",
+    tm = ``MAP SUC (xs : num list) = []``,
     expect = ExpectGenuine, cert_pin = MfCertSome,
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "function application mutation",

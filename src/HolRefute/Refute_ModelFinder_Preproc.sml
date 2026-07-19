@@ -13,6 +13,7 @@ structure Refute_ModelFinder_Preproc = struct
   val value_var_prefix = MFN.reserved_prefix ^ "v"
   val max_skolem_depth = 3
   val axioms_max_depth = 255
+  val special_max_depth = 20
   val quantifier_cluster_threshold = 7
 
   fun err function message =
@@ -30,10 +31,29 @@ structure Refute_ModelFinder_Preproc = struct
         SOME (name, _) => String.isPrefix value_var_prefix name
       | NONE => false
 
+  fun is_bound_standin term =
+    case Lib.total Term.dest_var term of
+        SOME (name, _) => MFN.is_bound_var_name name
+      | NONE => false
+
+  fun is_congruence_var term =
+    case Lib.total Term.dest_var term of
+        SOME (name, _) => MFN.is_cong_var_name name
+      | NONE => false
+
+  fun is_special_var term =
+    case Lib.total Term.dest_var term of
+        SOME (name, _) => MFN.is_special_name name
+      | NONE => false
+
+  fun is_schematic_var term =
+    is_value_var term orelse is_bound_standin term orelse
+    is_congruence_var term
+
   fun is_generated_const term =
     case Lib.total Term.dest_var term of
         SOME (name, _) =>
-          MFN.is_reserved_name name andalso not (is_value_var term)
+          MFN.is_reserved_name name andalso not (is_schematic_var term)
       | NONE => false
 
   fun is_user_free term =
@@ -41,7 +61,7 @@ structure Refute_ModelFinder_Preproc = struct
     not (MFN.is_reserved_name (variable_name term))
 
   fun is_bound_or_value_var bound term =
-    is_value_var term orelse aconv_member term bound
+    is_schematic_var term orelse aconv_member term bound
 
   fun substitute variable replacement term =
     Term.subst [{redex = variable, residue = replacement}] term
@@ -49,8 +69,8 @@ structure Refute_ModelFinder_Preproc = struct
   fun close_form term =
     let
       (* Isabelle's close_form closes schematic Vars, never user Frees.
-         M3's only schematic HOL4 analogue is a pulled-out value variable. *)
-      fun closable variable = is_value_var variable
+         HOL4 gives each generated schematic family a reserved free name. *)
+      fun closable variable = is_schematic_var variable
       fun add_frees candidate seen =
         List.foldl (fn (variable, result) =>
           if closable variable then add_aconv variable result else result)
@@ -1117,6 +1137,451 @@ structure Refute_ModelFinder_Preproc = struct
       recurse term
     end
 
+  (** Function specialization **)
+
+  fun function_name term =
+    case Lib.total Term.dest_thy_const term of
+        SOME {Thy, Name, ...} => Thy ^ MFN.name_sep ^ Name
+      | NONE => #1 (Term.dest_var term)
+
+  fun same_function left right =
+    Term.aconv left right orelse
+    (Term.is_const left andalso Term.is_const right andalso
+     Term.same_const left right andalso Term.type_of left = Term.type_of right)
+
+  fun params_in_equation term =
+    let
+      val (_, body) = boolSyntax.strip_forall term
+      val (_, conclusion) = boolSyntax.strip_imp body
+      val (left, _) = boolSyntax.dest_eq conclusion
+    in
+      #2 (HolKernel.strip_comb left)
+    end handle HOL_ERR _ => []
+
+  fun schematic_vars_in terms =
+    let
+      fun add (variable, result) =
+        if is_schematic_var variable andalso
+           not (aconv_member variable result) then
+          variable :: result
+        else
+          result
+      val variables = List.concat (map Term.free_vars_lr terms)
+    in
+      Listsort.sort Term.compare (List.foldl add [] variables)
+    end
+
+  fun special_bounds terms = schematic_vars_in terms
+
+  fun schematize_foralls avoids axiom =
+    let
+      val (variables, body) = boolSyntax.strip_forall axiom
+      fun make (variable, (serial, used, substitutions)) =
+        let
+          val fresh = fresh_value_var used serial (Term.type_of variable)
+        in
+          (serial + 1, fresh :: used,
+           {redex = variable, residue = fresh} :: substitutions)
+        end
+      val (_, _, substitutions) = List.foldl make
+        (1, List.concat (map Term.all_vars avoids) @ Term.all_vars axiom,
+         []) variables
+    in
+      Term.subst (rev substitutions) body
+    end
+
+  fun specialize_fun_axiom original special fixed_indices fixed_args
+        extra_args axiom =
+    let
+      val raw_body = schematize_foralls (fixed_args @ extra_args) axiom
+      val fixed_params = MFU.filter_indices fixed_indices
+        (params_in_equation raw_body)
+      val body = Term.subst
+        (ListPair.map (fn (parameter, argument) =>
+          {redex = parameter, residue = argument})
+          (fixed_params, fixed_args)) raw_body
+      fun recurse arguments candidate =
+        if Term.is_comb candidate then
+          let val (function, argument) = Term.dest_comb candidate
+          in recurse (recurse [] argument :: arguments) function end
+        else if Term.is_abs candidate then
+          let val (variable, abs_body) = Term.dest_abs candidate
+          in
+            Term.list_mk_comb
+              (Term.mk_abs (variable, recurse [] abs_body), arguments)
+          end
+        else if same_function candidate original then
+          Term.list_mk_comb
+            (special, extra_args @
+              MFU.filter_out_indices fixed_indices arguments)
+        else
+          Term.list_mk_comb (candidate, arguments)
+    in
+      recurse [] body
+    end
+
+  fun is_ersatz_call ({ersatz_table, ...} : context) original candidate =
+    if not (Term.is_const candidate) then false
+    else
+      let
+        val original_key = MFH.const_key original
+        val candidate_key = MFH.const_key candidate
+      in
+        List.exists (fn ({original = source, replacement} : MFH.ersatz) =>
+          MFH.same_key source original_key andalso
+          MFH.same_key replacement candidate_key andalso
+          Term.type_of original = Term.type_of candidate) ersatz_table
+      end handle HOL_ERR _ => false
+
+  fun static_args_in_term context original term =
+    let
+      val (formal_variables, _) = boolSyntax.strip_forall term
+      fun is_formal variable = aconv_member variable formal_variables
+      fun calls candidate arguments result =
+        if Term.is_abs candidate then
+          calls (#2 (Term.dest_abs candidate)) [] result
+        else if Term.is_comb candidate then
+          let val (function, argument) = Term.dest_comb candidate
+              val after_argument = calls argument [] result
+          in calls function (argument :: arguments) after_argument end
+        else if same_function candidate original orelse
+                is_ersatz_call context original candidate then
+          arguments :: result
+        else
+          result
+      val call_lists = calls term [] []
+      fun terms_at index =
+        if List.all (fn arguments => index < length arguments) call_lists then
+          map (fn arguments => List.nth (arguments, index)) call_lists
+        else
+          []
+      fun distinct terms = List.foldl (fn (candidate, result) =>
+        if aconv_member candidate result then result
+        else result @ [candidate]) [] terms
+      val maximum = List.foldl Int.max 0 (map length call_lists)
+      val sets = List.tabulate (maximum, fn index =>
+        distinct (terms_at index))
+      fun first_equal singleton =
+        Lib.index (fn terms =>
+          length terms = 1 andalso Term.aconv (hd terms) singleton) sets
+      fun classify (index, [singleton]) =
+            if Term.is_var singleton andalso is_formal singleton then
+              if first_equal singleton = index then SOME (index, NONE)
+              else NONE
+            else if Term.is_const singleton orelse
+                    (Term.is_var singleton andalso
+                     not (is_schematic_var singleton)) then
+              SOME (index, SOME singleton)
+            else
+              NONE
+        | classify _ = NONE
+    in
+      if null call_lists then []
+      else List.mapPartial classify
+        (ListPair.zip (MFU.index_seq 0 (length sets), sets))
+    end
+
+  fun same_static ((left_index, left_term),
+                   (right_index, right_term)) =
+    left_index = right_index andalso
+    case (left_term, right_term) of
+        (NONE, NONE) => true
+      | (SOME left, SOME right) => Term.aconv left right
+      | _ => false
+
+  fun static_args_in_terms context original axioms =
+    case map (static_args_in_term context original) axioms of
+        [] => []
+      | first :: rest => List.foldl (fn (current, result) =>
+          List.filter (fn parameter =>
+            List.exists (fn other => same_static (parameter, other)) current)
+            result) first rest
+
+  fun is_special_eligible_arg bound argument =
+    let
+      val schematic = schematic_vars_in [argument]
+      val enclosing = List.filter (fn variable =>
+        Term.free_in variable argument) bound
+      val bad = schematic @ List.filter (fn variable =>
+        not (aconv_member variable schematic)) enclosing
+      val product = List.foldl (fn (variable, result) =>
+        result * IntInf.fromInt
+          (MFH.typical_card_of_type (Term.type_of variable)))
+        (1 : IntInf.int) bad
+    in
+      null bad orelse
+      product < IntInf.fromInt
+        (MFH.typical_card_of_type (Term.type_of argument))
+    end
+
+  fun overlapping_indices static eligible actual_args =
+    List.mapPartial (fn (index, fixed) =>
+      if not (List.exists (fn eligible_index =>
+           eligible_index = index) eligible) then
+        NONE
+      else
+        case fixed of
+            NONE => SOME index
+          | SOME literal =>
+              if index < length actual_args andalso
+                 Term.aconv literal (List.nth (actual_args, index)) then
+                SOME index
+              else
+                NONE) static
+
+  fun special_fun_aconv
+        ((original1, indices1, arguments1),
+         (original2, indices2, arguments2)) =
+    same_function original1 original2 andalso indices1 = indices2 andalso
+    length arguments1 = length arguments2 andalso
+    ListPair.allEq (fn (left, right) => Term.aconv left right)
+      (arguments1, arguments2)
+
+  fun special_cache_lookup entries key =
+    Option.map #2 (List.find (fn (stored, _) =>
+      special_fun_aconv (stored, key)) entries)
+
+  fun specialize_consts_in_term
+        (context as {specialize, special_funs, simp_table, ...} : context)
+        definitional depth term =
+    if not specialize orelse depth > special_max_depth then term
+    else
+      let
+        val blacklist =
+          if definitional then [MFH.term_under_def term] else []
+        fun blacklisted original =
+          List.exists (same_function original) blacklist
+        fun eligible_candidate original arguments =
+          Term.is_const original andalso not (null arguments) andalso
+          not (blacklisted original) andalso
+          not (MFN.is_special_name (function_name original)) andalso
+          not (MFH.is_built_in_const original) andalso
+          not (MFH.is_constr original) andalso
+          not (MFH.is_choice_spec_fun context original) andalso
+          (MFH.is_raw_equational_fun context original orelse
+           Option.isSome (MFH.def_of_const context original))
+        fun replace_bound selected standins candidate =
+          List.foldl (fn ((variable, standin), result) =>
+            substitute variable standin result) candidate
+            (ListPair.zip (selected, standins))
+        fun specialize_occurrence bound original arguments =
+          if not (eligible_candidate original arguments) then
+            Term.list_mk_comb (original, arguments)
+          else
+            let
+              val eligible = List.mapPartial (fn (index, argument) =>
+                if is_special_eligible_arg bound argument then SOME index
+                else NONE)
+                (ListPair.zip
+                  (MFU.index_seq 0 (length arguments), arguments))
+              val old_axioms = map destroy_existential_equalities
+                (MFH.equational_fun_axioms context original)
+              val static = static_args_in_terms context original old_axioms
+              val fixed_indices =
+                overlapping_indices static eligible arguments
+            in
+              if null eligible orelse null fixed_indices then
+                Term.list_mk_comb (original, arguments)
+              else
+                let
+                  val fixed_args =
+                    MFU.filter_indices fixed_indices arguments
+                  val selected_bounds = List.filter (fn variable =>
+                    List.exists (Term.free_in variable) fixed_args) bound
+                  fun make_standin
+                        (variable, (index, used, result)) =
+                    let
+                      fun collides candidate = List.exists (fn other =>
+                        variable_name candidate = variable_name other) used
+                      fun choose serial =
+                        let val candidate = MFN.mk_bound_var serial
+                          (Term.type_of variable)
+                        in
+                          if collides candidate then choose (serial + 1)
+                          else (serial, candidate)
+                        end
+                      val (serial, fresh) = choose (index + 1)
+                    in
+                      (serial, fresh :: used, result @ [fresh])
+                    end
+                  val (_, _, standins) = List.foldl make_standin
+                    (0, List.concat (map Term.all_vars fixed_args), [])
+                    selected_bounds
+                  val fixed_args_in_axiom = map
+                    (replace_bound selected_bounds standins) fixed_args
+                  val axiom_bounds = special_bounds fixed_args_in_axiom
+                  fun actual_bound schematic =
+                    case List.find (fn (standin, _) =>
+                           Term.aconv schematic standin)
+                           (ListPair.zip (standins, selected_bounds)) of
+                        SOME (_, actual) => actual
+                      | NONE => schematic
+                  val actual_bounds = map actual_bound axiom_bounds
+                  val live_args =
+                    MFU.filter_out_indices fixed_indices arguments
+                  val extra_args = actual_bounds @ live_args
+                  val extra_types = map Term.type_of axiom_bounds
+                  val (binder_types, body_type) =
+                    boolSyntax.strip_fun (Term.type_of original)
+                  val special_type = boolSyntax.list_mk_fun
+                    (extra_types @
+                     MFU.filter_out_indices fixed_indices binder_types,
+                     body_type)
+                  val key =
+                    (original, fixed_indices, fixed_args_in_axiom)
+                in
+                  case special_cache_lookup (!special_funs) key of
+                      SOME special =>
+                        Term.list_mk_comb (special, extra_args)
+                    | NONE =>
+                        let
+                          val special = MFN.mk_special
+                            (length (!special_funs) + 1)
+                            (function_name original) special_type
+                          val axiom_extra_args = axiom_bounds
+                          val new_axioms = map
+                            (specialize_fun_axiom original special
+                              fixed_indices fixed_args_in_axiom
+                              axiom_extra_args) old_axioms
+                          val _ = special_funs :=
+                            (key, special) :: !special_funs
+                          val _ = MFH.add_simps simp_table special new_axioms
+                        in
+                          Term.list_mk_comb (special, extra_args)
+                        end
+                end
+            end
+        fun recurse bound candidate =
+          if Term.is_abs candidate then
+            let val (variable, body) = Term.dest_abs candidate
+            in Term.mk_abs (variable, recurse (bound @ [variable]) body) end
+          else if Term.is_comb candidate then
+            let
+              val (head, arguments) = HolKernel.strip_comb candidate
+              val arguments' = map (recurse bound) arguments
+            in
+              if Term.is_const head then
+                specialize_occurrence bound head arguments'
+              else
+                Term.list_mk_comb (recurse bound head, arguments')
+            end
+          else
+            candidate
+      in
+        recurse [] term
+      end
+
+  type special_triple = int list * term list * term
+
+  fun fixed_lookup index (indices, terms, _) =
+    let
+      fun find [] [] = NONE
+        | find (current :: rest_indices) (term :: rest_terms) =
+            if current = index then SOME term
+            else find rest_indices rest_terms
+        | find _ _ = NONE
+    in
+      find indices terms
+    end
+
+  fun special_congruence_axiom original_type
+        (first as (_, first_terms, first_special) : special_triple)
+        (second as (_, second_terms, second_special) : special_triple) =
+    let
+      val first_bounds = special_bounds first_terms
+      val second_bounds = special_bounds second_terms
+      val (argument_types, _) = boolSyntax.strip_fun original_type
+      val maximum = List.foldl Int.max (~1)
+        (#1 first @ #1 second)
+      fun step (index, (premises, first_args, second_args)) =
+        case (fixed_lookup index first, fixed_lookup index second) of
+            (SOME left, SOME right) =>
+              if Term.aconv left right then
+                (premises, first_args, second_args)
+              else
+                (add_aconv (boolSyntax.mk_eq (left, right)) premises,
+                 first_args, second_args)
+          | (SOME left, NONE) =>
+              (premises, first_args, second_args @ [left])
+          | (NONE, SOME right) =>
+              (premises, first_args @ [right], second_args)
+          | (NONE, NONE) =>
+              let
+                val variable = MFN.mk_cong_var index
+                  (List.nth (argument_types, index))
+              in
+                (premises, first_args @ [variable],
+                 second_args @ [variable])
+              end
+      val (premises, first_args, second_args) = List.foldl step
+        ([], [], []) (MFU.index_seq 0 (maximum + 1))
+      val conclusion = boolSyntax.mk_eq
+        (Term.list_mk_comb
+           (first_special, first_bounds @ first_args),
+         Term.list_mk_comb
+           (second_special, second_bounds @ second_args))
+    in
+      boolSyntax.list_mk_imp (premises, conclusion)
+    end
+
+  fun special_congruence_axioms
+        (context as {special_funs, ...} : context) seen =
+    let
+      fun add_group (((original, indices, terms), special), groups) =
+        case List.find (fn (other, _) => same_function original other)
+               groups of
+            NONE => (original, [(indices, terms, special)]) :: groups
+          | SOME (_, triples) =>
+              (original, (indices, terms, special) :: triples) ::
+              List.filter (fn (other, _) =>
+                not (same_function original other)) groups
+      val raw_groups = List.foldl add_group [] (!special_funs)
+      val groups = List.mapPartial (fn (original, triples) =>
+        if MFH.is_equational_fun_surely_complete context original then NONE
+        else
+          SOME (original,
+            if HOLset.member (seen, original) then
+              ([], [], original) :: triples
+            else triples)) raw_groups
+      fun pair_subset (small_indices, small_terms)
+            (large_indices, large_terms) =
+        List.all (fn (index, term) =>
+          case fixed_lookup index
+            (large_indices, large_terms, boolSyntax.T) of
+              SOME other => Term.aconv term other
+            | NONE => false)
+          (ListPair.zip (small_indices, small_terms))
+      fun more_specific
+            ((indices1, terms1, special1) : special_triple)
+            ((indices2, terms2, special2) : special_triple) =
+        not (Term.aconv special1 special2) andalso
+        length indices2 < length indices1 andalso
+        pair_subset (indices2, terms2) (indices1, terms1)
+      fun compare_generality ((indices1, _, _), (indices2, _, _)) =
+        Int.compare (length indices2, length indices1)
+      fun pass1 original triples =
+        let
+          fun visit (triple, (axioms, skipped)) =
+            case Listsort.sort compare_generality
+              (List.filter (more_specific triple) triples) of
+                general :: _ =>
+                  (special_congruence_axiom (Term.type_of original)
+                     triple general :: axioms, skipped)
+              | [] => (axioms, triple :: skipped)
+          val (axioms, skipped) = List.foldl visit ([], []) triples
+          fun pairs [] result = result
+            | pairs (triple :: rest) result =
+                pairs rest (List.foldl (fn (other, current) =>
+                  special_congruence_axiom (Term.type_of original)
+                    triple other :: current) result rest)
+        in
+          pairs skipped axioms
+        end
+    in
+      List.concat (map (fn (original, triples) =>
+        pass1 original triples) groups)
+    end
+
   fun defined_free_by_assumption term =
     if boolSyntax.is_eq term then
       let val (left, right) = boolSyntax.dest_eq term
@@ -1186,27 +1651,34 @@ structure Refute_ModelFinder_Preproc = struct
         let
           (* FIXME: why ~1?  This exactly mirrors Nitpick's axiom-side
              skolemization depth. *)
-          val normalized = axiom
+          val base = axiom
             |> MFH.unfold_defs_in_term context
             |> skolemize_term_and_more context ~1
           val target = if definitional then def_set else nondef_set
         in
-          if is_trivial_equation normalized orelse
-             HOLset.member (target, normalized) then
+          if is_trivial_equation base orelse HOLset.member (target, base) then
             (seen, definitions, def_set, nondefinitions, nondef_set)
           else
             let
-              val accumulator =
-                if definitional then
-                  (seen, normalized :: definitions,
-                   HOLset.add (def_set, normalized),
-                   nondefinitions, nondef_set)
-                else
-                  (seen, definitions, def_set,
-                   normalized :: nondefinitions,
-                   HOLset.add (nondef_set, normalized))
+              val normalized = specialize_consts_in_term context
+                definitional depth base
             in
-              add_axioms_for_term (depth + 1) [] normalized accumulator
+              if HOLset.member (target, normalized) then
+                (seen, definitions, def_set, nondefinitions, nondef_set)
+              else
+                let
+                  val accumulator =
+                    if definitional then
+                      (seen, normalized :: definitions,
+                       HOLset.add (def_set, normalized),
+                       nondefinitions, nondef_set)
+                    else
+                      (seen, definitions, def_set,
+                       normalized :: nondefinitions,
+                       HOLset.add (nondef_set, normalized))
+                in
+                  add_axioms_for_term (depth + 1) [] normalized accumulator
+                end
             end
         end
       and add_eq_axiom depth axiom accumulator =
@@ -1216,7 +1688,7 @@ structure Refute_ModelFinder_Preproc = struct
       and add_axioms_for_term depth bound term
             (accumulator as
                (seen, definitions, def_set, nondefinitions, nondef_set)) =
-        if Term.is_const term then
+        if Term.is_const term orelse is_special_var term then
           let val already = HOLset.member (seen, term)
           in
             if already orelse MFH.is_built_in_const term then
@@ -1231,7 +1703,7 @@ structure Refute_ModelFinder_Preproc = struct
                   (HOLset.add (seen, term), definitions, def_set,
                    nondefinitions, nondef_set)
                 val with_axioms =
-                  if MFH.is_constr term then
+                  if Term.is_const term andalso MFH.is_constr term then
                     next
                   else if MFH.is_descr term then
                     List.foldl (fn (axiom, result) =>
@@ -1306,16 +1778,18 @@ structure Refute_ModelFinder_Preproc = struct
       val with_evals = List.foldr
         (fn (axiom, result) => add_axiom true 1 axiom result)
         with_assumptions eval_axioms
-      val (_, definitions, _, selected_nondefs, _) =
+      val (final_seen, definitions, _, selected_nondefs, _) =
         if user_axioms = SOME true then
           List.foldl (fn (axiom, result) =>
             add_axiom false 1 axiom result) with_evals mono_nondefs
         else
           with_evals
+      val congruence_axioms =
+        special_congruence_axioms context final_seen
       val got_all_mono_user_axioms =
         user_axioms = SOME true orelse null mono_nondefs
     in
-      (negated :: selected_nondefs, definitions,
+      (negated :: selected_nondefs, definitions @ congruence_axioms,
        got_all_mono_user_axioms, null poly_nondefs)
     end
 
@@ -1349,11 +1823,11 @@ structure Refute_ModelFinder_Preproc = struct
         |> MFH.unfold_defs_in_term context
         |> close_form
         |> skolemize_term_and_more context max_skolem_depth
+        |> specialize_consts_in_term context false 0
       val (nondefinitions, definitions, got_all_mono_user_axioms,
            no_poly_user_axioms) =
         axioms_for_term context assumptions prepared
-      (* specialize=false, box=false, and binary_ints=false make the M3
-         do_middle pass exactly the identity. *)
+      (* Boxing and binarization remain the identity until TASK_07/08. *)
       val nondefinitions' = map
         (do_tail context false destroy_constrs) nondefinitions
       val definitions' = map

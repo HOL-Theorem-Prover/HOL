@@ -3,7 +3,7 @@
     Copyright   2008, 2009, 2010
 
 Driver for the HOL4 Refute model finder.  The control flow is a port of
-Nitpick's pick_them_nits_in_term, specialized to the M3 feature set. *)
+Nitpick's pick_them_nits_in_term. *)
 
 signature REFUTE_MODEL_FINDER = sig
   val prepare_instance_input :
@@ -428,6 +428,7 @@ fun run_instance deadline started (config : Refute_Core.config)
         val reconstructed = MFM.reconstruct
           {scope = #scope extension,
            atoms = #atoms mf,
+           special_funs = !(#special_funs context),
            real_frees = real_frees,
            eval_terms = eval_terms,
            free_names = #free_names extension,

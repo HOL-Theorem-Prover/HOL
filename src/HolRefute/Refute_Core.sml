@@ -185,7 +185,7 @@ structure Refute_Core = struct
       overlord = false,
       max_threads = 0,
       tac_timeout = 0.5,
-      specialize = false,
+      specialize = true,
       box = [(NONE, SOME false)],
       binary_ints = SOME false,
       bits = [0],
@@ -519,8 +519,6 @@ structure Refute_Core = struct
   fun validate_mf_config (mf : mf_config) =
     let
       fun unchanged field same = if same then () else m4_error field
-      val _ = unchanged "specialize"
-        (#specialize mf = #specialize default_mf_config)
       val _ = unchanged "box" (#box mf = #box default_mf_config)
       val _ = unchanged "binary_ints"
         (#binary_ints mf = #binary_ints default_mf_config)

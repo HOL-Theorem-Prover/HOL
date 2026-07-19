@@ -18,6 +18,8 @@ structure Refute_ModelFinder_Names = struct
   val quot_normal_prefix = reserved_prefix ^ "qn" ^ name_sep
   val skolem_prefix = reserved_prefix ^ "sk"
   val special_prefix = reserved_prefix ^ "sp"
+  val bound_var_prefix = reserved_prefix ^ "b"
+  val cong_var_prefix = reserved_prefix ^ "c"
   val uncurry_prefix = reserved_prefix ^ "unc"
   val eval_prefix = reserved_prefix ^ "eval"
   val iter_var_prefix = "i"
@@ -59,6 +61,15 @@ structure Refute_ModelFinder_Names = struct
     skolem_prefix ^ Int.toString arity ^ "@" ^ Int.toString serial ^
     name_sep
 
+  fun special_prefix_for serial =
+    special_prefix ^ Int.toString serial ^ name_sep
+
+  fun bound_var_name index =
+    bound_var_prefix ^ Int.toString index ^ name_sep
+
+  fun cong_var_name index =
+    cong_var_prefix ^ Int.toString index ^ name_sep
+
   fun is_sel name =
     String.isPrefix discr_prefix name orelse
     String.isPrefix sel_prefix name
@@ -71,6 +82,26 @@ structure Refute_ModelFinder_Names = struct
       in suffix <> "" andalso has_generated_layer prefix suffix end
 
   fun is_skolem_name name = has_generated_layer skolem_prefix name
+
+  fun is_special_name name = String.isPrefix special_prefix name
+
+  fun is_indexed_var_name prefix name =
+    if not (String.isPrefix prefix name) then false
+    else
+      let
+        val suffix = drop_prefix prefix name
+        val length = size suffix
+        val digits =
+          if length < 1 then ""
+          else String.extract (suffix, 0, SOME (length - 1))
+      in
+        length > 1 andalso String.isSuffix name_sep suffix andalso
+        List.all Char.isDigit (String.explode digits)
+      end
+
+  fun is_bound_var_name name = is_indexed_var_name bound_var_prefix name
+
+  fun is_cong_var_name name = is_indexed_var_name cong_var_prefix name
 
   fun sel_no_from_name name =
     if String.isPrefix discr_prefix name then
@@ -113,6 +144,20 @@ structure Refute_ModelFinder_Names = struct
       raise err "mk_skolem" "negative arity or serial"
     else
       mk_reserved_var (skolem_prefix_for arity serial ^ original) ty
+
+  fun mk_special serial original ty =
+    if serial < 1 then
+      raise err "mk_special" "specialization serial must be positive"
+    else
+      mk_reserved_var (special_prefix_for serial ^ original) ty
+
+  fun mk_bound_var index ty =
+    if index < 0 then raise err "mk_bound_var" "negative bound index"
+    else mk_reserved_var (bound_var_name index) ty
+
+  fun mk_cong_var index ty =
+    if index < 0 then raise err "mk_cong_var" "negative congruence index"
+    else mk_reserved_var (cong_var_name index) ty
 
   fun mk_eval serial ty =
     if serial < 0 then
@@ -260,8 +305,16 @@ structure Refute_ModelFinder_HOL = struct
     Feedback.mk_HOL_ERR "Refute_ModelFinder_HOL" function message
 
   fun const_key constant =
-    let val {Thy, Name, ...} = Term.dest_thy_const constant
-    in {Thy = Thy, Name = Name} end
+    case Lib.total Term.dest_thy_const constant of
+        SOME {Thy, Name, ...} => {Thy = Thy, Name = Name}
+      | NONE =>
+          (case Lib.total Term.dest_var constant of
+               SOME (name, _) =>
+                 if Refute_ModelFinder_Names.is_reserved_name name then
+                   {Thy = "refute.generated", Name = name}
+                 else
+                   raise err "const_key" "ordinary variable is not a constant"
+             | NONE => raise err "const_key" "term is not a constant")
 
   fun same_key left right =
     KernelSig.name_compare (left, right) = EQUAL
@@ -276,6 +329,12 @@ structure Refute_ModelFinder_HOL = struct
   fun table_append key value table =
     let val old = Option.getOpt (KNametab.lookup table key, [])
     in KNametab.update (key, value :: old) table end
+
+  fun add_simps table constant axioms =
+    let val key = const_key constant
+    in table := List.foldl (fn (axiom, result) =>
+         table_append key axiom result) (!table) axioms
+    end
 
   fun theorem_term theorem =
     let
@@ -358,7 +417,11 @@ structure Refute_ModelFinder_HOL = struct
     let
       val key = const_key constant
       fun is_matching term =
-        Term.is_const term andalso same_key (const_key term) key
+        (Term.is_const term orelse
+         (Term.is_var term andalso
+          Refute_ModelFinder_Names.is_reserved_name
+            (#1 (Term.dest_var term)))) andalso
+        same_key (const_key term) key
       fun instantiate occurrence =
         let
           val theta = Type.match_type (Term.type_of occurrence)
@@ -744,11 +807,16 @@ structure Refute_ModelFinder_HOL = struct
           let
             val (_, body) = boolSyntax.strip_forall equation
             val (premises, conclusion) = boolSyntax.strip_imp body
+            fun distinct_vars [] = true
+              | distinct_vars (variable :: rest) =
+                  Term.is_var variable andalso
+                  not (List.exists (Term.aconv variable) rest) andalso
+                  distinct_vars rest
           in
             null premises andalso
             (case Lib.total boolSyntax.dest_eq conclusion of
                  SOME (left, _) =>
-                   List.all Term.is_var (#2 (HolKernel.strip_comb left))
+                   distinct_vars (#2 (HolKernel.strip_comb left))
                | NONE => false)
           end
       | _ => false
@@ -1553,6 +1621,11 @@ structure Refute_ModelFinder_HOL = struct
 
   fun typical_card_of_type ty =
     bounded_card_of_type 16777217 typical_atomic_card [] ty
+
+  (* TASK_07 extends this shared display key with funbox/pairbox erasure.
+     Keeping specialization lookups behind the helper now prevents the two
+     preprocessing passes from acquiring incompatible cache keys. *)
+  fun unarize_unbox_etc_type ty = ty
 
   fun is_finite_type context ty =
     bounded_exact_card_of_type context [] 1 2 [] ty > 0
