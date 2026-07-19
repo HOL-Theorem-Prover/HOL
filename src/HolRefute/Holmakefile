@@ -5,7 +5,8 @@ INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit ../sort \
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
-selftest.uo: Refute_ModelFinder_Preproc.uo \
+selftest.uo: Refute_PropSat.uo \
+             Refute_ModelFinder_Preproc.uo \
              Refute_ModelFinder_Kodkod.uo \
              Refute_ModelFinder_Model.uo \
              Refute_ModelFinder_Nut.uo \
@@ -14,6 +15,10 @@ selftest.uo: Refute_ModelFinder_Preproc.uo \
              Refute_ModelFinder_Scope.uo \
              Refute_ModelFinder_HOL.uo Refute_ModelFinder.uo \
              refuteTableZooTheory.uo
+
+# Keep the independent foundational modules ahead of the FORL stack.
+Refute_Forl.uo: Refute_ModelFinder_Util.uo Refute_PropSat.uo
+Refute_ForlSat.uo: Refute_Forl.uo
 
 Refute_ModelFinder.uo: Refute_ModelFinder_Preproc.uo \
                        Refute_ModelFinder_Kodkod.uo \

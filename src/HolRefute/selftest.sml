@@ -85,6 +85,135 @@ val _ = require_msg (check_result cv_ancestry_is_separate) (fn () =>
   String.concatWith ", " (Theory.parents "refute_cv"))
   (fn () => ()) ()
 
+val _ = tprint "Refute propositional SAT"
+
+structure PS = Refute_PropSat
+
+val ps_p = PS.BoolVar 1
+val ps_q = PS.BoolVar 2
+val ps_r = PS.BoolVar 3
+
+fun ps_model_satisfies formula model =
+  PS.eval (fn index => Option.getOpt (model index, false)) formula
+
+fun ps_has_model formula =
+  case PS.solve formula of
+      PS.SATISFIABLE model => ps_model_satisfies formula model
+    | PS.UNSATISFIABLE => false
+
+fun ps_is_unsat formula =
+  case PS.solve formula of
+      PS.UNSATISFIABLE => true
+    | PS.SATISFIABLE _ => false
+
+fun ps_sat_models () =
+  let
+    val formulas =
+      [PS.True,
+       PS.Or (ps_p, ps_q),
+       PS.all
+         [PS.Or (ps_p, ps_q),
+          PS.Or (PS.Not ps_p, ps_r),
+          PS.Or (PS.Not ps_q, ps_r)]]
+  in
+    List.all
+      (fn formula => PS.is_cnf formula andalso ps_has_model formula)
+      formulas
+  end
+
+val _ = require_msg (check_result ps_sat_models)
+  (fn () => "cdclite returned an invalid SAT result")
+  (fn () => ()) ()
+
+fun ps_unsat_cases () =
+  let
+    val formulas =
+      [PS.False,
+       PS.all [ps_p, PS.Not ps_p],
+       PS.all
+         [PS.Or (ps_p, ps_q),
+          PS.Or (ps_p, PS.Not ps_q),
+          PS.Or (PS.Not ps_p, ps_q),
+          PS.Or (PS.Not ps_p, PS.Not ps_q)]]
+  in
+    List.all
+      (fn formula => PS.is_cnf formula andalso ps_is_unsat formula)
+      formulas
+  end
+
+val _ = require_msg (check_result ps_unsat_cases)
+  (fn () => "cdclite failed a fixed UNSAT instance")
+  (fn () => ()) ()
+
+fun ps_unit_propagation () =
+  let
+    val chain =
+      PS.all
+        [ps_p,
+         PS.Or (PS.Not ps_p, ps_q),
+         PS.Or (PS.Not ps_q, ps_r)]
+    val conflict =
+      PS.all [ps_p, PS.Or (PS.Not ps_p, ps_q), PS.Not ps_q]
+    val chain_ok =
+      case PS.solve chain of
+          PS.SATISFIABLE model =>
+            ps_model_satisfies chain model andalso
+            List.all (fn index => model index = SOME true) [1, 2, 3]
+        | PS.UNSATISFIABLE => false
+  in
+    chain_ok andalso ps_is_unsat conflict
+  end
+
+val _ = require_msg (check_result ps_unit_propagation)
+  (fn () => "cdclite unit propagation failed")
+  (fn () => ()) ()
+
+fun ps_bool_vectors 0 = [[]]
+  | ps_bool_vectors count =
+      List.concat
+        (List.map
+          (fn values => [false :: values, true :: values])
+          (ps_bool_vectors (count - 1)))
+
+fun ps_vector_value values index =
+  index > 0 andalso index <= length values andalso
+  List.nth (values, index - 1)
+
+fun ps_brute_sat formula =
+  List.exists
+    (fn values => PS.eval (ps_vector_value values) formula)
+    (ps_bool_vectors (PS.maxidx formula))
+
+fun ps_defcnf_case formula =
+  let
+    val expected = ps_brute_sat formula
+    val cnf = PS.defcnf formula
+  in
+    not (PS.is_cnf formula) andalso PS.is_cnf cnf andalso
+    (case PS.solve cnf of
+         PS.SATISFIABLE model =>
+           expected andalso ps_model_satisfies cnf model
+       | PS.UNSATISFIABLE => not expected)
+  end
+
+fun ps_defcnf_equisatisfiable () =
+  let
+    val noncnf_sat =
+      PS.Or
+        (PS.And (ps_p, ps_q),
+         PS.And (PS.Not ps_p, ps_r))
+    val noncnf_unsat =
+      PS.And
+        (noncnf_sat,
+         PS.And (PS.Not ps_q, PS.Not ps_r))
+  in
+    List.all ps_defcnf_case [noncnf_sat, noncnf_unsat]
+  end
+
+val _ = require_msg (check_result ps_defcnf_equisatisfiable)
+  (fn () => "defcnf failed an equisatisfiability spot check")
+  (fn () => ()) ()
+
 val _ = tprint "Refute model-finder names"
 
 structure MFN = Refute_ModelFinder_Names
