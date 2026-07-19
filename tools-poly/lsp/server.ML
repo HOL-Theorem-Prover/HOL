@@ -636,7 +636,11 @@ fun start {diag} = let
       end
       handle Thread.Interrupt =>
         send (mkNotif "$/compileInterrupted" (fn print => (
-          print "{\"uri\":"; encString uri print; print "}"))));
+          print "{\"uri\":"; encString uri print; print "}")))
+           | e => (
+        logMessage ("compile aborted: " ^ exnMessage e);
+        send (mkNotif "$/compileInterrupted" (fn print => (
+          print "{\"uri\":"; encString uri print; print "}")))));
       compile := NONE)
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
     in compile := SOME {parse = trees, text = text, thread = thread} end

@@ -522,6 +522,20 @@ in
     | LSP =>
       let in
         QUse.failOnError := false; (* heap may carry true from BUILDHEAP *)
+        (* Match the REPL's "interactive" posture: uncaught HOL_ERRs
+           should not call OS.Process.exit (Feedback.render_exn's
+           batch-mode branch).  Globals lives in hol.state, not in
+           hol.ML's compile-time namespace, so evaluate the setter as
+           a string at runtime. *)
+        let val s = "Globals.interactive := true"
+            val i = ref 0
+            fun read () = (SOME (String.sub (s, !i)) before i := !i + 1)
+                          handle Subscript => NONE
+        in PolyML.compiler (read, []) () end;
+        (* Load HOL_Interactive so the parser's open-rewriting works
+           on Script.sml files (issue #1865). *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/holinteractive.ML"));
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
