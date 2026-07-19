@@ -266,14 +266,16 @@ structure Refute_ModelFinder_HOL = struct
   fun same_key left right =
     KernelSig.name_compare (left, right) = EQUAL
 
+  (* Buckets are stored newest-first so that table_append stays O(1);
+     table_lookup is the only reader and restores insertion order. *)
   fun table_lookup table constant =
     case Lib.total const_key constant of
-        SOME key => Option.getOpt (KNametab.lookup table key, [])
+        SOME key => rev (Option.getOpt (KNametab.lookup table key, []))
       | NONE => []
 
   fun table_append key value table =
     let val old = Option.getOpt (KNametab.lookup table key, [])
-    in KNametab.update (key, old @ [value]) table end
+    in KNametab.update (key, value :: old) table end
 
   fun theorem_term theorem =
     let
@@ -560,12 +562,18 @@ structure Refute_ModelFinder_HOL = struct
   fun def_of_const context = Option.map #2 o def_of_const_ext context
 
   fun constants_in term =
-    HolKernel.find_terms Term.is_const term
-    |> map (fn constant => (const_key constant, constant))
-    |> List.foldl (fn ((key, constant), result) =>
-         if List.exists (fn (other, _) => same_key key other) result then
-           result
-         else result @ [(key, constant)]) []
+    let
+      fun step (constant, (seen, result)) =
+        let val key = const_key constant
+        in
+          if Option.isSome (KNametab.lookup seen key) then (seen, result)
+          else (KNametab.update (key, ()) seen, (key, constant) :: result)
+        end
+    in
+      List.foldl step (KNametab.empty, [])
+        (HolKernel.find_terms Term.is_const term)
+      |> rev o #2
+    end
 
   fun nondef_table_for props =
     List.foldl (fn (prop, table) =>
@@ -597,9 +605,14 @@ structure Refute_ModelFinder_HOL = struct
 
   fun presentation_key {const, ...} = const_key const
 
-  fun has_presentation presentations key =
-    List.exists (fn presentation =>
-      same_key (presentation_key presentation) key) presentations
+  (* Folded into a key set once per make_tables: raw_standard_props tests
+     every equation of every ancestor definition against it. *)
+  fun presentation_key_set presentations =
+    List.foldl (fn (presentation, table) =>
+      KNametab.update (presentation_key presentation, ()) table)
+      KNametab.empty presentations
+
+  fun has_presentation keys key = Option.isSome (KNametab.lookup keys key)
 
   fun standard_user_props presentations =
     List.concat (List.mapPartial (fn {thm, ...} =>
@@ -612,10 +625,11 @@ structure Refute_ModelFinder_HOL = struct
      raw DB definitions fill only constants with no user presentation. *)
   fun raw_standard_props presentations =
     let
+      val keys = presentation_key_set presentations
       fun from_theorem (_, theorem) =
         let
           fun usable (key, equation) =
-            if has_presentation presentations key then []
+            if has_presentation keys key then []
             else clauses_of equation
         in
           List.concat (map usable (DefnBase.defn_eqns theorem))
@@ -872,9 +886,15 @@ structure Refute_ModelFinder_HOL = struct
         in
           search (0, TypeBasePure.fields_of info)
         end
+      (* Early exit: the old List.find over a full map searched every
+         TypeBase entry even after the field was found. *)
+      fun scan [] = NONE
+        | scan (info :: rest) =
+            (case search_type info of
+                 NONE => scan rest
+               | found => found)
     in
-      List.find Option.isSome (map search_type (TypeBase.elts ()))
-      |> Option.mapPartial (fn item => item)
+      scan (TypeBase.elts ())
     end handle HOL_ERR _ => NONE
 
   fun dest_record_get term = find_field #accessor term

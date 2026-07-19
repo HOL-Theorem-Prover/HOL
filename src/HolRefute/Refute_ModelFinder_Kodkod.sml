@@ -693,6 +693,16 @@ fun d_n_ary_function
           MFR.atom_schema_of_reps (MFR.binder_reps representation)
         val body_schema = MFR.atom_schema_of_rep body_rep
         val one = MFR.is_one_rep body_rep
+        fun general () =
+          let
+            val decls = decls_for_atom_schema (~1) binder_schema
+            val variables = unary_var_seq (~1) (length binder_schema)
+            val joined = List.foldl
+              (fn (variable, result) => kk_join variable result)
+              relation variables
+          in
+            kk_all decls ((if one then kk_one else kk_lone) joined)
+          end
       in
         case relation of
             Rel index =>
@@ -702,26 +712,8 @@ fun d_n_ary_function
                   (index, AtomSeq (hd binder_schema),
                    AtomSeq (hd body_schema))
               else
-                let
-                  val decls = decls_for_atom_schema (~1) binder_schema
-                  val variables = unary_var_seq (~1)
-                    (length binder_schema)
-                  val joined = List.foldl
-                    (fn (variable, result) => kk_join variable result)
-                    relation variables
-                in
-                  kk_all decls ((if one then kk_one else kk_lone) joined)
-                end
-          | _ =>
-              let
-                val decls = decls_for_atom_schema (~1) binder_schema
-                val variables = unary_var_seq (~1) (length binder_schema)
-                val joined = List.foldl
-                  (fn (variable, result) => kk_join variable result)
-                  relation variables
-              in
-                kk_all decls ((if one then kk_one else kk_lone) joined)
-              end
+                general ()
+          | _ => general ()
       end
     else
       True
@@ -2790,9 +2782,10 @@ fun assemble_problem_once
     (* Selector/discriminator names occur inside Construct nuts and are
        therefore seen by the generic name collector as constants.  They
        must not be chosen and renamed a second time as ordinary constants. *)
+    val sel_name_set = Redblackset.addList
+      (Redblackset.empty MFNT.name_ord, sel_names)
     val nonsel_names = List.filter (fn name =>
-      not (List.exists (fn selector =>
-        MFNT.name_ord (name, selector) = EQUAL) sel_names)) nonsel_names
+      not (Redblackset.member (sel_name_set, name))) nonsel_names
     val (nonsel_names, rep_table) = MFNT.choose_reps_for_consts scope
       total_consts nonsel_names rep_table
 

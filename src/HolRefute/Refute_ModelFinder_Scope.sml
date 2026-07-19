@@ -526,7 +526,7 @@ structure Refute_ModelFinder_Scope = struct
         | take remaining (value :: rest) result =
             take (remaining - 1) rest (value :: result)
     in
-      take count values []
+      take (Int.max (0, count)) values []
     end
 
   fun same_max_assigns (left, right) =

@@ -3753,7 +3753,7 @@ val _ = tprint "Refute cv build-time generators"
 
 fun cv_rhs tm = rhs_of (cv_eval tm)
 
-val same_terms = boolSyntax.tml_eq
+fun same_terms left right = Lib.list_eq Term.aconv left right
 
 fun compute_exhaustive ty size =
   case enumerate ty of
@@ -3840,8 +3840,6 @@ fun same_bool_term_assignments left right =
       same_term_option left_term right_term andalso
       left_value = right_value)
     left right
-
-fun same_terms left right = Lib.list_eq Term.aconv left right
 
 fun same_optional_terms NONE NONE = true
   | same_optional_terms (SOME left) (SOME right) = same_terms left right

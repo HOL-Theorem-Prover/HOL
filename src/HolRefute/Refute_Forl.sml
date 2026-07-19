@@ -166,6 +166,13 @@ signature REFUTE_FORL = sig
   val production_header : unit -> string
   val write_problem : TextIO.outstream -> string -> problem list -> unit
 
+  (* Shared with Refute_ForlSat, which loads after this structure. *)
+  val getenv : string -> string
+  val readable_file : string -> bool
+  val uname : string -> string
+  val platform_name : unit -> string
+  val jni_dir : unit -> string
+
   val is_configured : unit -> bool
   val solve_any_problem :
     bool -> bool -> Time.time -> int -> int -> problem list -> outcome
@@ -294,6 +301,15 @@ structure Refute_Forl :> REFUTE_FORL = struct
      int_bounds : int_bound list,
      expr_assigns : expr_assign list,
      formula : formula}
+
+  (* The five declaration constructors share a payload and differ only in
+     the multiplicity keyword; splitting them once keeps the fan-outs
+     below to a single clause each. *)
+  fun decl_parts (DeclNo payload) = ("no", payload)
+    | decl_parts (DeclLone payload) = ("lone", payload)
+    | decl_parts (DeclOne payload) = ("one", payload)
+    | decl_parts (DeclSome payload) = ("some", payload)
+    | decl_parts (DeclSet payload) = ("set", payload)
 
   type 'a fold_expr_funcs =
     {formula_func : formula -> 'a -> 'a,
@@ -438,22 +454,10 @@ structure Refute_Forl :> REFUTE_FORL = struct
       | Num _ => #int_expr_func funcs integer initial
       | IntReg _ => #int_expr_func funcs integer initial
   and fold_decl funcs decl initial =
-    case decl of
-        DeclNo (index, relation) =>
-          fold_rel_expr funcs relation
-            (fold_rel_expr funcs (Var index) initial)
-      | DeclLone (index, relation) =>
-          fold_rel_expr funcs relation
-            (fold_rel_expr funcs (Var index) initial)
-      | DeclOne (index, relation) =>
-          fold_rel_expr funcs relation
-            (fold_rel_expr funcs (Var index) initial)
-      | DeclSome (index, relation) =>
-          fold_rel_expr funcs relation
-            (fold_rel_expr funcs (Var index) initial)
-      | DeclSet (index, relation) =>
-          fold_rel_expr funcs relation
-            (fold_rel_expr funcs (Var index) initial)
+    let val (_, (index, relation)) = decl_parts decl
+    in
+      fold_rel_expr funcs relation (fold_rel_expr funcs (Var index) initial)
+    end
   and fold_expr_assign funcs assign initial =
     case assign of
         AssignFormulaReg (index, formula) =>
@@ -541,11 +545,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
     | arity_of_rel_expr (RelReg (arity, _)) = arity
     | arity_of_rel_expr Iden = 2
     | arity_of_rel_expr _ = 1
-  and arity_of_decl (DeclNo ((arity, _), _)) = arity
-    | arity_of_decl (DeclLone ((arity, _), _)) = arity
-    | arity_of_decl (DeclOne ((arity, _), _)) = arity
-    | arity_of_decl (DeclSome ((arity, _), _)) = arity
-    | arity_of_decl (DeclSet ((arity, _), _)) = arity
+  and arity_of_decl decl = #1 (#1 (#2 (decl_parts decl)))
 
   type raw_bound = n_ary_index * int list list
 
@@ -961,16 +961,12 @@ structure Refute_Forl :> REFUTE_FORL = struct
         | out_decls [decl] = out_decl decl
         | out_decls (decl :: decls) =
             (out_decl decl; out ", "; out_decls decls)
-      and out_decl (DeclNo (index, relation)) =
-            (out (var_name index); out " : no "; out_r relation 0)
-        | out_decl (DeclLone (index, relation)) =
-            (out (var_name index); out " : lone "; out_r relation 0)
-        | out_decl (DeclOne (index, relation)) =
-            (out (var_name index); out " : one "; out_r relation 0)
-        | out_decl (DeclSome (index, relation)) =
-            (out (var_name index); out " : some "; out_r relation 0)
-        | out_decl (DeclSet (index, relation)) =
-            (out (var_name index); out " : set "; out_r relation 0)
+      and out_decl decl =
+            let val (keyword, (index, relation)) = decl_parts decl
+            in
+              (out (var_name index); out (" : " ^ keyword ^ " ");
+               out_r relation 0)
+            end
       and out_assigns [] = ()
         | out_assigns [assign] = out_assign assign
         | out_assigns (assign :: assigns) =
@@ -1343,6 +1339,12 @@ structure Refute_Forl :> REFUTE_FORL = struct
       architecture ^ "-" ^ operating_system
     end
 
+  fun jni_dir () =
+    let val component = absolute_path (getenv "HOL4_KODKODI")
+    in
+      OS.Path.concat (OS.Path.concat (component, "jni"), platform_name ())
+    end
+
   fun shell_quote text =
     "'" ^ String.translate
       (fn #"'" => "'\\''" | character => String.str character) text ^ "'"
@@ -1356,8 +1358,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
           val component = absolute_path (getenv "HOL4_KODKODI")
           val java = valOf (java_executable ())
           val classpath = String.concatWith ":" (component_jars component)
-          val jni = OS.Path.concat
-            (OS.Path.concat (component, "jni"), platform_name ())
+          val jni = jni_dir ()
         in
           String.concatWith " "
             [shell_quote java, "-cp", shell_quote classpath,
@@ -1466,17 +1467,19 @@ structure Refute_Forl :> REFUTE_FORL = struct
         problems
       val all_indices = Portable.upto 0 (length problems - 1)
       val indexed = ListPair.zip (all_indices, problems)
-      val indexed_problems =
+      val (indexed_problems, trivially_unsat) =
         if true_index >= 0 then
-          [(true_index, List.nth (problems, true_index))]
+          ([(true_index, List.nth (problems, true_index))],
+           List.filter (fn index => index <> true_index) all_indices)
         else
-          List.filter
-            (fn (_, problem) => not (is_problem_trivially_false problem))
-            indexed
-      val submitted = List.map #1 indexed_problems
-      val trivially_unsat =
-        List.filter (fn index => not (List.exists (fn submitted_index =>
-          submitted_index = index) submitted)) all_indices
+          let
+            val (kept, dropped) =
+              List.partition
+                (fn (_, problem) => not (is_problem_trivially_false problem))
+                indexed
+          in
+            (kept, List.map #1 dropped)
+          end
       fun reindex index = #1 (List.nth (indexed_problems, index))
       val milliseconds =
         Time.toMilliseconds (deadline - Time.now ()) - fudge_milliseconds
@@ -1552,8 +1555,8 @@ structure Refute_Forl :> REFUTE_FORL = struct
     Synchronized.var "Refute_Forl.cached_outcome"
       (NONE : ((int * problem list) * outcome) option)
 
+  (* ListPair.allEq is already false on unequal lengths. *)
   fun problem_lists_equivalent (first, second) =
-    length first = length second andalso
     ListPair.allEq problems_equivalent (first, second)
 
   fun solve_any_problem debug overlord deadline max_threads max_solutions
@@ -1566,34 +1569,23 @@ structure Refute_Forl :> REFUTE_FORL = struct
                            (solutions2, problems2)) =
         solutions1 = solutions2 andalso
         problem_lists_equivalent (problems1, problems2)
+      fun fresh () =
+        let val outcome = solve ()
+        in
+          (case outcome of
+               Normal (_, _, "") =>
+                 Synchronized.change cached_outcome
+                   (fn _ => SOME ((max_solutions, problems), outcome))
+             | _ => ());
+          outcome
+        end
     in
       if debug orelse overlord then solve ()
       else
         case Synchronized.value cached_outcome of
             SOME (key, outcome) =>
-              if keys_equivalent
-                   (key, (max_solutions, problems))
-              then outcome
-              else
-                let val outcome = solve ()
-                in
-                  (case outcome of
-                       Normal (_, _, "") =>
-                         Synchronized.change cached_outcome
-                           (fn _ => SOME
-                             ((max_solutions, problems), outcome))
-                     | _ => ());
-                  outcome
-                end
-          | NONE =>
-              let val outcome = solve ()
-              in
-                (case outcome of
-                     Normal (_, _, "") =>
-                       Synchronized.change cached_outcome
-                         (fn _ => SOME ((max_solutions, problems), outcome))
-                   | _ => ());
-                outcome
-              end
+              if keys_equivalent (key, (max_solutions, problems)) then outcome
+              else fresh ()
+          | NONE => fresh ()
     end
 end

@@ -206,15 +206,7 @@ fun rich_problems_equivalent (left : rich_problem, right : rich_problem) =
 fun rich_member problem = List.exists (fn other =>
   rich_problems_equivalent (problem, other))
 
-fun take_at_most count values =
-  let
-    fun take 0 _ result = rev result
-      | take _ [] result = rev result
-      | take remaining (value :: rest) result =
-          take (remaining - 1) rest (value :: result)
-  in
-    take (Int.max (0, count)) values []
-  end
+val take_at_most = MFS.take_at_most
 
 fun distinct_ints values =
   let

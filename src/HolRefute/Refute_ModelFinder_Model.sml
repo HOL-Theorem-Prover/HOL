@@ -96,7 +96,16 @@ type reconstruction =
 
 datatype verdict = Keep of Refute_Core.counterexample | Drop
 
-type atom_pool = (hol_type * int * int) list ref
+(* Per-type running counters plus the numbers already handed out, so
+   that numbering an atom is a pair of lookups rather than a scan. *)
+type atom_pool =
+  {counts : (hol_type, int) Redblackmap.dict,
+   numbers : (hol_type * int, int) Redblackmap.dict} ref
+
+fun new_atom_pool () : atom_pool =
+  ref {counts = Redblackmap.mkDict Type.compare,
+       numbers = Redblackmap.mkDict
+         (Portable.pair_compare (Type.compare, Int.compare))}
 
 type context =
   {scope : scope,
@@ -152,17 +161,19 @@ fun type_atom_names atoms ty =
            | NONE => [])
 
 fun atom_number (pool : atom_pool) ty atom =
-  case List.find (fn (other_ty, other_atom, _) =>
-         same_type other_ty ty andalso other_atom = atom) (!pool) of
-      SOME (_, _, number) => number
-    | NONE =>
-        let
-          val number = 1 + length (List.filter
-            (fn (other_ty, _, _) => same_type other_ty ty) (!pool))
-          val _ = pool := (ty, atom, number) :: !pool
-        in
-          number
-        end
+  let val {counts, numbers} = !pool in
+    case Redblackmap.peek (numbers, (ty, atom)) of
+        SOME number => number
+      | NONE =>
+          let
+            val number = 1 + Option.getOpt (Redblackmap.peek (counts, ty), 0)
+            val _ = pool :=
+              {counts = Redblackmap.insert (counts, ty, number),
+               numbers = Redblackmap.insert (numbers, (ty, atom), number)}
+          in
+            number
+          end
+  end
 
 fun atom_term ({atoms, pool, ...} : context) ty atom =
   let
@@ -175,17 +186,21 @@ fun atom_term ({atoms, pool, ...} : context) ty atom =
       MFN.fake_atom number ty
   end
 
+(* Schwartzian transform: one pretty-printer call per element instead of
+   two per comparison.  Listsort.sort is not stable, so the original
+   position is carried along as a tie-break; that reproduces exactly the
+   order of the insertion sort this replaces. *)
 fun sort_terms pairs =
   let
-    fun less ((left, _), (right, _)) =
-      String.compare (Parse.term_to_string left,
-                      Parse.term_to_string right) = LESS
-    fun insert pair [] = [pair]
-      | insert pair (first :: rest) =
-          if less (pair, first) then pair :: first :: rest
-          else first :: insert pair rest
+    fun tag _ [] = []
+      | tag index ((pair as (term, _)) :: rest) =
+          (Parse.term_to_string term, index, pair) :: tag (index + 1) rest
+    fun compare ((left_key, left_index, _), (right_key, right_index, _)) =
+      case String.compare (left_key, right_key) of
+          EQUAL => Int.compare (left_index, right_index)
+        | other => other
   in
-    List.foldl (fn (pair, result) => insert pair result) [] pairs
+    map #3 (Listsort.sort compare (tag 0 pairs))
   end
 
 fun is_unknown term =
@@ -326,9 +341,17 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               val (domain_ty, range_ty) = Type.dom_rng ty
               val domain_width = MFR.arity_of_rep domain_rep
               val combinations = MFR.all_combinations_for_rep domain_rep
-              fun tails tuple = map #2 (List.filter
-                (fn (prefix, _) => prefix = tuple)
-                (map (chop domain_width) tuples))
+              (* Chop once and index by prefix, rather than re-chopping
+                 every tuple for every combination. *)
+              val tail_table = List.foldl
+                (fn ((prefix, tail), table) =>
+                   Redblackmap.insert (table, prefix,
+                     tail :: Option.getOpt
+                       (Redblackmap.peek (table, prefix), [])))
+                (Redblackmap.mkDict (Portable.list_compare Int.compare))
+                (map (chop domain_width) tuples)
+              fun tails tuple =
+                rev (Option.getOpt (Redblackmap.peek (tail_table, tuple), []))
               val domains = map (fn tuple =>
                 term_for_rep false seen domain_ty domain_rep [tuple])
                 combinations
@@ -446,7 +469,7 @@ fun term_for_rep {scope, atoms, sel_names, rel_table, bounds, maybe_opt,
                   ty, representation, tuples} =
   reconstruct_term
     {scope = scope, atoms = atoms, sel_names = sel_names,
-     rel_table = rel_table, bounds = bounds, pool = ref []}
+     rel_table = rel_table, bounds = bounds, pool = new_atom_pool ()}
     maybe_opt ty representation tuples
 
 fun same_free name ty term =
@@ -488,7 +511,7 @@ fun reconstruct {scope, atoms, real_frees, eval_terms, free_names,
   let
     val context =
       {scope = scope, atoms = atoms, sel_names = sel_names,
-       rel_table = rel_table, bounds = bounds, pool = ref []}
+       rel_table = rel_table, bounds = bounds, pool = new_atom_pool ()}
 
     fun decode name =
       case MFNT.rep_of name of

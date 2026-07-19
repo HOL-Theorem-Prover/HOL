@@ -43,16 +43,6 @@ structure Refute_ModelFinder_Preproc = struct
   fun is_bound_or_value_var bound term =
     is_value_var term orelse aconv_member term bound
 
-  fun term_occurs needle haystack =
-    Term.aconv needle haystack orelse
-    if Term.is_comb haystack then
-      let val (function, argument) = Term.dest_comb haystack
-      in term_occurs needle function orelse term_occurs needle argument end
-    else if Term.is_abs haystack then
-      term_occurs needle (#2 (Term.dest_abs haystack))
-    else
-      false
-
   fun substitute variable replacement term =
     Term.subst [{redex = variable, residue = replacement}] term
 
@@ -1186,27 +1176,35 @@ structure Refute_ModelFinder_Preproc = struct
       fun lookup_def variable = Option.map #2
         (List.find (fn (other, _) => Term.aconv variable other)
           def_assumption_table)
+      (* Term.compare is alpha-invariant (src/0/Term.sml: the Abs case
+         compares binder types and de Bruijn bodies only), so these HOLsets
+         decide exactly what the old linear Term.aconv scans decided.  The
+         lists stay for output order; the sets carry the membership tests. *)
+      val no_terms = HOLset.empty Term.compare
       fun add_axiom definitional depth axiom
-            (seen, definitions, nondefinitions) =
+            (seen, definitions, def_set, nondefinitions, nondef_set) =
         let
           (* FIXME: why ~1?  This exactly mirrors Nitpick's axiom-side
              skolemization depth. *)
           val normalized = axiom
             |> MFH.unfold_defs_in_term context
             |> skolemize_term_and_more context ~1
-          val target = if definitional then definitions
-                       else nondefinitions
+          val target = if definitional then def_set else nondef_set
         in
           if is_trivial_equation normalized orelse
-             aconv_member normalized target then
-            (seen, definitions, nondefinitions)
+             HOLset.member (target, normalized) then
+            (seen, definitions, def_set, nondefinitions, nondef_set)
           else
             let
               val accumulator =
                 if definitional then
-                  (seen, normalized :: definitions, nondefinitions)
+                  (seen, normalized :: definitions,
+                   HOLset.add (def_set, normalized),
+                   nondefinitions, nondef_set)
                 else
-                  (seen, definitions, normalized :: nondefinitions)
+                  (seen, definitions, def_set,
+                   normalized :: nondefinitions,
+                   HOLset.add (nondef_set, normalized))
             in
               add_axioms_for_term (depth + 1) [] normalized accumulator
             end
@@ -1216,9 +1214,10 @@ structure Refute_ModelFinder_Preproc = struct
           depth axiom accumulator
       and add_axioms_for_type _ _ accumulator = accumulator
       and add_axioms_for_term depth bound term
-            (accumulator as (seen, definitions, nondefinitions)) =
+            (accumulator as
+               (seen, definitions, def_set, nondefinitions, nondef_set)) =
         if Term.is_const term then
-          let val already = aconv_member term seen
+          let val already = HOLset.member (seen, term)
           in
             if already orelse MFH.is_built_in_const term then
               add_axioms_for_type depth (Term.type_of term) accumulator
@@ -1229,7 +1228,8 @@ structure Refute_ModelFinder_Preproc = struct
             else
               let
                 val next =
-                  (term :: seen, definitions, nondefinitions)
+                  (HOLset.add (seen, term), definitions, def_set,
+                   nondefinitions, nondef_set)
                 val with_axioms =
                   if MFH.is_constr term then
                     next
@@ -1263,12 +1263,13 @@ structure Refute_ModelFinder_Preproc = struct
           let
             val with_definition =
               if aconv_member term bound orelse is_generated_const term orelse
-                 aconv_member term seen then
+                 HOLset.member (seen, term) then
                 accumulator
               else
                 (case lookup_def term of
                      SOME axiom => add_axiom true depth axiom
-                       (term :: seen, definitions, nondefinitions)
+                       (HOLset.add (seen, term), definitions, def_set,
+                        nondefinitions, nondef_set)
                    | NONE => accumulator)
           in
             add_axioms_for_type depth (Term.type_of term)
@@ -1297,14 +1298,15 @@ structure Refute_ModelFinder_Preproc = struct
       val eval_axioms = ListPair.zip
         (MFU.index_seq 0 (length evals), evals)
         |> map eval_axiom
-      val initial = add_axioms_for_term 1 [] negated ([], [], [])
+      val initial = add_axioms_for_term 1 [] negated
+        (no_terms, [], no_terms, [], no_terms)
       val with_assumptions = List.foldr
         (fn (axiom, result) => add_axiom false 1 axiom result)
         initial nondef_assumptions
       val with_evals = List.foldr
         (fn (axiom, result) => add_axiom true 1 axiom result)
         with_assumptions eval_axioms
-      val (_, definitions, selected_nondefs) =
+      val (_, definitions, _, selected_nondefs, _) =
         if user_axioms = SOME true then
           List.foldl (fn (axiom, result) =>
             add_axiom false 1 axiom result) with_evals mono_nondefs

@@ -16,7 +16,11 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
       sink * string * string * string * string * string *
       (Time.time -> string list)
 
-  fun getenv name = Option.getOpt (OS.Process.getEnv name, "")
+  (* Environment, platform and file probes are shared with Refute_Forl,
+     which loads first; the JNI directory in particular must stay the very
+     same computation as the one baked into the launcher command. *)
+  val getenv = Refute_Forl.getenv
+  val uname = Refute_Forl.uname
 
   fun to_seconds minimum time =
     Int.max
@@ -60,42 +64,13 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
      ("MiniSat_JNI",
       Internal (JNI "libminisat", Incremental, ["MiniSat"]))]
 
-  fun uname field =
-    case List.find (fn (name, _) => name = field) (Posix.ProcEnv.uname ()) of
-        SOME (_, value) => value
-      | NONE => ""
-
-  fun platform () =
-    let
-      val machine = uname "machine"
-      val system = uname "sysname"
-      val architecture =
-        if machine = "aarch64" orelse machine = "arm64" then "arm64"
-        else if machine = "amd64" then "x86_64"
-        else machine
-      val operating_system =
-        if system = "Linux" then "linux"
-        else if system = "Darwin" then "darwin"
-        else String.map Char.toLower system
-    in
-      architecture ^ "-" ^ operating_system
-    end
-
   fun library_suffix () =
     if uname "sysname" = "Darwin" then ".dylib" else ".so"
 
   fun jni_library_exists stem =
-    let
-      val component = getenv "HOL4_KODKODI"
-      val directory = OS.Path.concat
-        (OS.Path.concat (component, "jni"), platform ())
-      val path = OS.Path.concat (directory, stem ^ library_suffix ())
-    in
-      component <> "" andalso
-      Posix.FileSys.ST.isReg (Posix.FileSys.stat path) andalso
-      OS.FileSys.access (path, [OS.FileSys.A_READ])
-        handle _ => false
-    end
+    getenv "HOL4_KODKODI" <> "" andalso
+    Refute_Forl.readable_file
+      (OS.Path.concat (Refute_Forl.jni_dir (), stem ^ library_suffix ()))
 
   val external_counter = Portable.make_counter {init = 0, inc = 1}
 
