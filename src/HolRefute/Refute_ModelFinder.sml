@@ -22,6 +22,7 @@ structure KK = Refute_Forl
 structure MFH = Refute_ModelFinder_HOL
 structure MFK = Refute_ModelFinder_Kodkod
 structure MFM = Refute_ModelFinder_Model
+structure MFMono = Refute_ModelFinder_Mono
 structure MFN = Refute_ModelFinder_Names
 structure MFNT = Refute_ModelFinder_Nut
 structure MFP = Refute_ModelFinder_Preproc
@@ -161,8 +162,10 @@ fun deep_data_types all_types sel_names =
           SOME domain => same_type ty domain
         | NONE => false) sel_names
   in
-    List.filter (fn ty => MFH.is_data_type ty andalso
-      (same_type ty ``:unit`` orelse selected ty)) all_types
+    List.filter (fn ty =>
+      same_type ty ``:unit`` orelse same_type ty MFH.num_type orelse
+      Option.isSome (MFH.word_dimension ty) orelse
+      (MFH.is_data_type ty andalso selected ty)) all_types
   end
 
 fun actual_solver (mf : Refute_Core.mf_config) =
@@ -267,9 +270,64 @@ fun run_instance deadline started (config : Refute_Core.config)
     val all_types = ground_types context (nondef_ts @ def_ts)
     val unique_scope = List.all (fn (_, values) => length values = 1)
       (#card mf)
+    val calculus_mono_types = ref ([] : hol_type list)
+    val binarize = false
+
+    fun report_mono_failure kind ty detail =
+      if !MFMono.trace then
+        Feedback.HOL_MESG
+          ("Refute monotonicity " ^ kind ^ " for " ^ type_name ty ^
+           (if detail = "" then "" else ": " ^ detail))
+      else ()
+
+    fun is_type_actually_monotonic ty =
+      let
+        val result = Timeout.apply (#tac_timeout context)
+          (MFMono.formulas_monotonic context binarize ty)
+          (nondef_ts, def_ts)
+        val _ = if result andalso
+                       not (member_type ty (!calculus_mono_types)) then
+                  calculus_mono_types := ty :: !calculus_mono_types
+                else ()
+      in
+        result
+      end
+      handle Timeout.TIMEOUT _ =>
+               (report_mono_failure "timeout" ty ""; false)
+           | MFU.BAD (location, detail) =>
+               (report_mono_failure location ty detail; false)
+
+    (* Unlike the scope shortcut, kind-of monotonicity deliberately lets a
+       user false row block the calculus but does not let a true row force
+       it.  TASK_05's finitization plumbing is this helper's first caller. *)
+    fun is_type_kind_of_monotonic ty =
+      case MFS.mono_override (#mono mf) ty of
+          SOME (SOME false) => false
+        | _ => is_type_actually_monotonic ty
+
     val (mono_types, nonmono_types) =
       if unique_scope then (all_types, [])
-      else MFS.mono_partition (#mono mf) all_types
+      else MFS.mono_partition_with is_type_actually_monotonic
+        (#mono mf) all_types
+    val _ = is_type_kind_of_monotonic
+    val forced_mono_types = List.filter (fn ty =>
+      MFS.mono_override (#mono mf) ty = SOME (SOME true)) mono_types
+    val inferred_mono_types = rev (!calculus_mono_types)
+
+    fun report_monotonic wording types =
+      if null types then ()
+      else
+        Refute_Core.Private.say 2
+          ("The following type" ^ MFU.plural_s_for_list types ^ " " ^
+           wording ^ ": " ^
+           String.concatWith ", " (map type_name types) ^
+           ". Refute might be able to skip some scopes.\n")
+
+    val _ = report_monotonic
+      (if length forced_mono_types = 1 then "is considered monotonic"
+       else "are considered monotonic") forced_mono_types
+    val _ = report_monotonic "passed the monotonicity test"
+      inferred_mono_types
     val deep_types = deep_data_types all_types sel_names
     val (skipped, scopes) = MFS.all_scopes context (#card mf) (#max mf)
       mono_types nonmono_types deep_types

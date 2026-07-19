@@ -961,6 +961,193 @@ val _ = require_msg (check_result mono_solve_cases)
   (fn () => "model-finder monotonicity solver cases failed")
   (fn () => ()) ()
 
+val _ = tprint "Refute model-finder Mono_Nits"
+
+datatype mono_nits_kind = MonoTerm | NonmonoTerm | ConstTerm | NonconstTerm
+
+fun mono_nits_is_mono term =
+  MFMono.formulas_monotonic mf_hol_context false ``:'a`` ([term], [])
+
+fun mono_nits_is_const term =
+  let
+    val dummy = Term.mk_var ("dummyP", Term.type_of term)
+    val formula = boolSyntax.mk_imp
+      (boolSyntax.mk_eq (dummy, term), boolSyntax.F)
+  in
+    mono_nits_is_mono formula
+  end
+
+fun mono_nits_check kind term =
+  case kind of
+      MonoTerm => mono_nits_is_mono term
+    | NonmonoTerm => not (mono_nits_is_mono term)
+    | ConstTerm => mono_nits_is_const term
+    | NonconstTerm => not (mono_nits_is_const term)
+
+(* Isabelle's suite has 69 rows.  HOL4 has no THE: the alpha-independent
+   THE row is omitted and the alpha-relevant row is represented by @.  The
+   existing SOME row is also @ in HOL4, leaving 68 executed assertions. *)
+val mono_nits_cases =
+  [("const function", ConstTerm, ``A : 'a -> 'b``),
+   ("const set equality", ConstTerm, ``(A : 'a set) = A``),
+   ("const set-set equality", ConstTerm, ``(A : 'a set set) = A``),
+   ("const membership abstraction", ConstTerm,
+    ``\(x : 'a set). (a : 'a) IN x``),
+   ("const nested singleton", ConstTerm, ``{{a : 'a}} = C``),
+   ("const function singletons", ConstTerm,
+    ``{f : 'a -> num} = {g : 'a -> num}``),
+   ("const union", ConstTerm, ``A UNION (B : 'a set)``),
+   ("const pointwise union", ConstTerm,
+    ``\(A : 'a set) (B : 'a set) (x : 'a). A x \/ B x``),
+   ("const predicate application", ConstTerm, ``P (a : 'a)``),
+   ("const ignored lambda argument", ConstTerm,
+    ``\(a : 'a). b (c (d : 'a)) (e : 'a) (f : 'a)``),
+   ("const forall membership", ConstTerm,
+    ``!(A : 'a set). (a : 'a) IN A``),
+   ("const forall set predicate", ConstTerm, ``!(A : 'a set). P A``),
+   ("const disjunction", ConstTerm, ``P \/ Q``),
+   ("const union equality", ConstTerm, ``A UNION B = (C : 'a set)``),
+   ("const pointwise union equality", ConstTerm,
+    ``(\(A : 'a set) (B : 'a set) (x : 'a). A x \/ B x) A B = C``),
+   ("const conditional", ConstTerm,
+    ``(if P then (A : 'a set) else B) = C``),
+   ("const let", ConstTerm,
+    ``let A = (C : 'a set) in A UNION B``),
+   ("const false function", ConstTerm, ``\(x : 'a). F``),
+   ("const true function", ConstTerm, ``\(x : 'a). T``),
+   ("const equal false functions", ConstTerm,
+    ``(\(x : 'a). F) = (\(x : 'a). F)``),
+   ("const equal true functions", ConstTerm,
+    ``(\(x : 'a). T) = (\(x : 'a). T)``),
+   ("const LET application", ConstTerm, ``LET A (a : 'a)``),
+   ("const free application", ConstTerm, ``A (a : 'a)``),
+   ("const insert", ConstTerm, ``(a : 'a) INSERT A = B``),
+   ("const complement", ConstTerm, ``COMPL (A : 'a set)``),
+   ("const finite", ConstTerm, ``FINITE (A : 'a set)``),
+   ("const not finite", ConstTerm, ``~FINITE (A : 'a set)``),
+   ("const finite set-set", ConstTerm, ``FINITE (A : 'a set set)``),
+   ("const difference lambda", ConstTerm,
+    ``\(a : 'a). A a /\ ~B a``),
+   ("const proper subset", ConstTerm,
+    ``(A : 'a set) PSUBSET B``),
+   ("const subset", ConstTerm, ``(A : 'a set) SUBSET B``),
+   ("const singleton list", ConstTerm, ``[a : 'a]``),
+   ("const set singleton list", ConstTerm, ``[a : 'a set]``),
+   ("const union singleton list", ConstTerm,
+    ``[A UNION (B : 'a set)]``),
+   ("const union list equality", ConstTerm,
+    ``[A UNION (B : 'a set)] = [C]``),
+   ("const singleton predicate", ConstTerm,
+    ``{(\(x : 'a). x = a)} = C``),
+   ("const complement equality", ConstTerm,
+    ``(\(a : 'a). ~(A : 'a -> bool) a) = B``),
+   ("const higher-order implication", ConstTerm,
+    ``!F f g (h : 'a set).
+        F f /\ F g /\ ~f a /\ g a ==> ~f a``),
+   ("const lambda with equality", ConstTerm,
+    ``\(A : 'a set) (B : 'a set) (x : 'a).
+        A x /\ B x /\ (A = B)``),
+   ("const binary predicate definition", ConstTerm,
+    ``p = (\(x : 'a) (y : 'a). P x \/ ~Q y)``),
+   ("const binary eta", ConstTerm,
+    ``p = (\(x : 'a) (y : 'a). p x y : bool)``),
+   ("const applied predicate difference", ConstTerm,
+    ``p = (\(A : 'a set) (B : 'a set) (x : 'a).
+             A x /\ ~B x) (\x. T) (\y. x <> y)``),
+   ("const inequality predicate", ConstTerm,
+    ``p = (\(y : 'a). x <> y)``),
+   ("const eta false argument", ConstTerm,
+    ``\(x : 'a). (p : 'a -> bool -> bool) x F``),
+   ("const eta two false argument", ConstTerm,
+    ``\(x : 'a) (y : 'a).
+        (p : 'a -> 'a -> bool -> bool) x y F``),
+   ("const implication function", ConstTerm,
+    ``f = (\(x : 'a). P x ==> Q x)``),
+   ("const forall element", ConstTerm, ``!(a : 'a). P a``),
+
+   ("nonconst forall predicate", NonconstTerm,
+    ``!P (a : 'a). P a``),
+   ("nonconst choice replacement", NonconstTerm,
+    ``@x : 'a. P x``),
+   ("nonconst choice", NonconstTerm, ``$@ (P : 'a -> bool)``),
+   ("nonconst union definition", NonconstTerm,
+    ``(\(A : 'a set) (B : 'a set) (x : 'a). A x \/ B x) = myunion``),
+   ("nonconst unequal constants", NonconstTerm,
+    ``(\(x : 'a). F) = (\(x : 'a). T)``),
+   ("nonconst higher-order conclusion", NonconstTerm,
+    ``!F f g (h : 'a set).
+        F f /\ F g /\ ~(a IN f) /\ a IN g ==> F h``),
+
+   ("mono nested quantified Boolean", MonoTerm,
+    ``Q (!(x : 'a set). P x)``),
+   ("mono application", MonoTerm, ``P (a : 'a)``),
+   ("mono singleton equality", MonoTerm, ``{a} = {b : 'a}``),
+   ("mono predicate equality", MonoTerm,
+    ``(\x. x = a) = (\y. y = (b : 'a))``),
+   ("mono membership and union", MonoTerm,
+    ``(a : 'a) IN P /\ P UNION P = P``),
+   ("mono irrelevant forall", MonoTerm, ``!F : 'a set set. P``),
+   ("mono negated higher-order", MonoTerm,
+    ``~(!F f g (h : 'a set).
+         F f /\ F g /\ ~(a IN f) /\ a IN g ==> F h)``),
+   ("mono negated quantified Boolean", MonoTerm,
+    ``~Q (!(x : 'a set). P x)``),
+   ("mono negated forall", MonoTerm, ``~(!(x : 'a). P x)``),
+   ("mono all as true equality", MonoTerm,
+    ``myall P = (P = (\(x : 'a). T))``),
+   ("mono all as false equality", MonoTerm,
+    ``myall P = (P = (\(x : 'a). F))``),
+   ("mono forall", MonoTerm, ``!(x : 'a). P x``),
+   ("mono negative union definition", MonoTerm,
+    ``(\(A : 'a set) (B : 'a set) (x : 'a). A x \/ B x) <>
+      myunion``),
+
+   ("nonmono contradictory extensions", NonmonoTerm,
+    ``A = (\(x : 'a). T) /\ A = (\x. F)``),
+   ("nonmono higher-order conclusion", NonmonoTerm,
+    ``!F f g (h : 'a set).
+        F f /\ F g /\ ~(a IN f) /\ a IN g ==> F h``)]
+
+val _ =
+  if length mono_nits_cases = 68 then ()
+  else die "Mono_Nits port does not contain 68 assertions"
+
+val _ = List.app (fn (name, kind, term) =>
+  require_msg (check_result (fn () => mono_nits_check kind term))
+    (fn () => "Mono_Nits failed: " ^ name)
+    (fn () => ()) ()) mono_nits_cases
+
+fun mono_timeout_degrades () =
+  let
+    fun bounded () = Timeout.apply Time.zeroTime
+      (MFMono.formulas_monotonic mf_hol_context false ``:'a``)
+      ([``!(x : 'a). P x``], [])
+  in
+    (bounded () handle Timeout.TIMEOUT _ => false) = false
+  end
+
+val _ = require_msg (check_result mono_timeout_degrades)
+  (fn () => "monotonicity timeout did not degrade to false")
+  (fn () => ()) ()
+
+fun mono_shadowed_binders () =
+  let
+    val x = Term.mk_var ("x", ``:'a``)
+    val y = Term.mk_var ("y", ``:'a``)
+    val predicate = Term.mk_var ("P", ``:'a -> 'a -> bool``)
+    fun twice variable = Term.list_mk_comb
+      (predicate, [variable, variable])
+    val shadowed = Term.mk_abs (x, Term.mk_abs (x, twice x))
+    val freshened = Term.mk_abs (x, Term.mk_abs (y, twice y))
+  in
+    mono_nits_is_const shadowed andalso
+    mono_nits_is_const freshened
+  end
+
+val _ = require_msg (check_result mono_shadowed_binders)
+  (fn () => "shadowed monotonicity binders lost frame identity")
+  (fn () => ()) ()
+
 val _ = tprint "Refute model-finder preprocessing goldens"
 
 structure MFP = Refute_ModelFinder_Preproc
@@ -1695,6 +1882,27 @@ fun mf_scope_mono_partition () =
 
 val _ = require_msg (check_result mf_scope_mono_partition) (fn () =>
   "model-finder fundamental monotonicity partition failed")
+  (fn () => ()) ()
+
+fun mf_scope_calculus_block_fusion () =
+  let
+    val formula = ``p (x : 'a) /\ q (y : 'b)``
+    val types = [``:'a``, ``:'b``]
+    fun actually_monotonic ty =
+      MFMono.formulas_monotonic mf_hol_context false ty ([formula], [])
+    val (mono, nonmono) = MFS.mono_partition_with actually_monotonic
+      [(NONE, NONE)] types
+    val (_, fused) = MFS.all_scopes mf_hol_context
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] mono nonmono []
+    val (_, separated) = MFS.all_scopes mf_hol_context
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [] types []
+  in
+    mono = types andalso null nonmono andalso
+    length fused = 3 andalso length separated = 9
+  end
+
+val _ = require_msg (check_result mf_scope_calculus_block_fusion) (fn () =>
+  "live monotonicity calculus did not fuse type-variable scope blocks")
   (fn () => ()) ()
 
 fun nondecreasing [] = true
@@ -8401,6 +8609,37 @@ fun mf_native_polymorphic_certification solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
+fun mf_mono_driver_scope_fusion solver =
+  let
+    val _ = tprint "Refute MF monotonicity scope fusion"
+    val goal = ``p (x : 'a) /\ q (y : 'b)``
+    val base = mf_acceptance_config solver
+      |> Refute.upd_card [(NONE, [1, 2, 3])]
+    fun run config = #1 (capture_refute_messages 2 (fn () =>
+      Refute.refute config goal))
+    fun scopes outcome =
+      case outcome of
+          Refute.Counterexample (cex :: _) =>
+            lookup_stat "scopes" (#stats cex)
+        | _ => NONE
+    val (smart, smart_output) = capture_refute_messages 2 (fn () =>
+      Refute.refute base goal)
+    val blocked = run (Refute.upd_mono [(NONE, SOME false)] base)
+    val timed = run (Refute.upd_tac_timeout 0.0 base)
+    val (forced, forced_output) = capture_refute_messages 2 (fn () =>
+      Refute.refute (Refute.upd_mono [(NONE, SOME true)] base) goal)
+    val ok =
+      scopes smart = SOME 3 andalso scopes forced = SOME 3 andalso
+      scopes blocked = SOME 9 andalso scopes timed = SOME 9 andalso
+      String.isSubstring "passed the monotonicity" smart_output andalso
+      String.isSubstring "considered monotonic" forced_output andalso
+      String.isSubstring "might be able to skip some scopes" smart_output
+  in
+    if ok then OK ()
+    else die "driver mono partition, timeout, override, or message regressed"
+  end
+  handle e => die (Feedback.exn_to_string e)
+
 fun run_mf_task20_suites () =
   if not (Refute_Forl.is_configured ()) then
     print ("(Kodkodi not configured, MF differential and soundness " ^
@@ -8411,7 +8650,8 @@ fun run_mf_task20_suites () =
       List.app (mf_differential_test solver) mf_differential_cases;
       List.app (mf_soundness_test solver) soundness_corpus;
       mf_instance_loop_stops_at_reachable_genuine solver;
-      mf_native_polymorphic_certification solver
+      mf_native_polymorphic_certification solver;
+      mf_mono_driver_scope_fusion solver
     end
 
 fun run_mf_acceptance () =

@@ -23,6 +23,7 @@ Refute_ForlSat.uo: Refute_Forl.uo
 
 # Keep Mono between HOL and Scope, matching the calculus dependency order.
 Refute_ModelFinder_Mono.uo: Refute_PropSat.uo \
+                            Refute_ModelFinder_Util.uo \
                             Refute_ModelFinder_HOL.uo
 Refute_ModelFinder_Scope.uo: Refute_ModelFinder_Mono.uo
 
