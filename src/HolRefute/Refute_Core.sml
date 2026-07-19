@@ -510,6 +510,10 @@ structure Refute_Core = struct
     raise Feedback.mk_HOL_ERR "Refute_Core" "validate_mf_config"
       (field ^ ": not implemented until M4")
 
+  fun range_error field explanation =
+    raise Feedback.mk_HOL_ERR "Refute_Core" "validate_mf_config"
+      (field ^ ": " ^ explanation)
+
   fun validate_mf_config (mf : mf_config) =
     let
       fun unchanged field same = if same then () else m4_error field
@@ -533,6 +537,15 @@ structure Refute_Core = struct
       val _ = if #max_potential mf > 1 then m4_error "max_potential"
               else ()
       val _ = if #max_genuine mf > 1 then m4_error "max_genuine"
+              else ()
+      (* A zero genuine budget makes the model finder return without ever
+         calling the solver, which would otherwise be reported as "no
+         counterexample" -- indistinguishable from an exhausted search. *)
+      val _ = if #max_genuine mf < 1 then
+                range_error "max_genuine" "must be at least 1"
+              else ()
+      val _ = if #max_potential mf < 0 then
+                range_error "max_potential" "must not be negative"
               else ()
     in
       mf
@@ -1200,6 +1213,14 @@ structure Refute_Core = struct
       cert_text ^ certainty_text
     end
 
+  (* "falsify = false" is a model-finder-only setting, so the wording must
+     track whether kodkod was selected at all, not whether it was selected
+     exclusively; NONE selects every configured backend. *)
+  fun backend_selected name (cfg : config) =
+    case #backends cfg of
+        NONE => true
+      | SOME wanted => List.exists (fn chosen => chosen = name) wanted
+
   fun format_outcome (cfg : config) result =
     let
       val body =
@@ -1209,7 +1230,7 @@ structure Refute_Core = struct
                 (map (format_counterexample (#mf cfg)) cexs)
           | NoCounterexample =>
               "Refute: no " ^
-              (if #backends cfg = SOME ["kodkod"] andalso
+              (if backend_selected "kodkod" cfg andalso
                   not (#falsify (#mf cfg))
                then "model" else "counterexample") ^
               " found within the tested finite bounds"

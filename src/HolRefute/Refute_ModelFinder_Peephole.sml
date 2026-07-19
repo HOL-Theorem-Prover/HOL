@@ -26,9 +26,8 @@ sig
   val not3_rel : n_ary_index
   val suc_rel : n_ary_index
   val suc_rels_base : int
-  (* M4-only word-relation reservations, retained for index/API stability.
-     See .agent-files/research/m3-kodkod-translation.md section 6 and
-     .agent-files/PLAN_M3.md section 9. *)
+  (* M4-only word-relation reservations, retained for index/API
+     stability. *)
   val unsigned_bit_word_sel_rel : n_ary_index
   val signed_bit_word_sel_rel : n_ary_index
   val nat_add_rel : n_ary_index
@@ -42,8 +41,7 @@ sig
   val nat_less_rel : n_ary_index
   val int_less_rel : n_ary_index
   (* M4-only rational/real relation reservations, retained for index/API
-     stability. See .agent-files/research/m3-kodkod-translation.md
-     section 6 and .agent-files/PLAN_M3.md section 9. *)
+     stability. *)
   val gcd_rel : n_ary_index
   val lcm_rel : n_ary_index
   val norm_frac_rel : n_ary_index
@@ -54,9 +52,7 @@ sig
   val max_int_for_card : int -> int
   val int_for_atom : int * int -> int -> int
   val atom_for_int : int * int -> int -> int
-  (* M4-only bits-mode helper reservation. See
-     .agent-files/research/m3-kodkod-translation.md section 6 and
-     .agent-files/PLAN_M3.md section 9. *)
+  (* M4-only bits-mode helper reservation. *)
   val is_twos_complement_representable : int -> int -> bool
   val max_squeeze_card : int
   val suc_rel_for_atom_seq : (int * int) * bool -> n_ary_index
@@ -119,9 +115,8 @@ type name_pool =
 val initial_pool = {rels = [], vars = [], formula_reg = 10, rel_reg = 10}
 
 val not3_rel = (2, ~1)
-(* M4-only word-relation reservations, retained for index/API stability.
-   See .agent-files/research/m3-kodkod-translation.md section 6 and
-   .agent-files/PLAN_M3.md section 9. *)
+(* M4-only word-relation reservations, retained for index/API
+   stability. *)
 val unsigned_bit_word_sel_rel = (2, ~2)
 val signed_bit_word_sel_rel = (2, ~3)
 val suc_rel = (2, ~4)
@@ -137,8 +132,7 @@ val int_divide_rel = (3, ~8)
 val nat_less_rel = (3, ~9)
 val int_less_rel = (3, ~10)
 (* M4-only rational/real relation reservations, retained for index/API
-   stability. See .agent-files/research/m3-kodkod-translation.md
-   section 6 and .agent-files/PLAN_M3.md section 9. *)
+   stability. *)
 val gcd_rel = (3, ~11)
 val lcm_rel = (3, ~12)
 val norm_frac_rel = (4, ~1)
@@ -159,9 +153,7 @@ fun atom_for_int (k, j0) n =
   else if n < 0 then n + k + j0
   else n + j0
 
-(* M4-only bits-mode helper reservation. See
-   .agent-files/research/m3-kodkod-translation.md section 6 and
-   .agent-files/PLAN_M3.md section 9. *)
+(* M4-only bits-mode helper reservation. *)
 fun is_twos_complement_representable bits n =
   let val max = reasonable_power 2 bits in n >= ~max andalso n < max end
 
@@ -220,8 +212,10 @@ fun rel_expr_equal None (Atom _) = SOME false
   | rel_expr_equal r1 r2 = if r1 = r2 then SOME true else NONE
 
 fun rel_expr_intersects (Atom j1) (Atom j2) = SOME (j1 = j2)
-  | rel_expr_intersects (Atom j) (AtomSeq (k, j0)) = SOME (j < j0 + k)
-  | rel_expr_intersects (AtomSeq (k, j0)) (Atom j) = SOME (j < j0 + k)
+  | rel_expr_intersects (Atom j) (AtomSeq (k, j0)) =
+    SOME (j >= j0 andalso j < j0 + k)
+  | rel_expr_intersects (AtomSeq (k, j0)) (Atom j) =
+    SOME (j >= j0 andalso j < j0 + k)
   | rel_expr_intersects (AtomSeq (k1, j01)) (AtomSeq (k2, j02)) =
     SOME (k1 > 0 andalso k2 > 0 andalso j01 + k1 > j02 andalso j02 + k2 > j01)
   | rel_expr_intersects r1 r2 =

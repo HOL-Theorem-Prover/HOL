@@ -1244,19 +1244,20 @@ structure Refute_Forl :> REFUTE_FORL = struct
   fun regular_file path =
     path <> "" andalso
     Posix.FileSys.ST.isReg (Posix.FileSys.stat path)
-      handle _ => false
+      handle Interrupt => raise Interrupt | _ => false
 
   fun readable_file path =
     regular_file path andalso
     OS.FileSys.access (path, [OS.FileSys.A_READ])
-      handle _ => false
+      handle Interrupt => raise Interrupt | _ => false
 
   fun executable_file path =
     regular_file path andalso
     OS.FileSys.access (path, [OS.FileSys.A_EXEC])
-      handle _ => false
+      handle Interrupt => raise Interrupt | _ => false
 
-  fun absolute_path path = OS.FileSys.fullPath path handle _ => path
+  fun absolute_path path =
+    OS.FileSys.fullPath path handle Interrupt => raise Interrupt | _ => path
 
   fun path_entries () =
     String.fields (fn character => character = #":") (getenv "PATH")
@@ -1377,7 +1378,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
     in
       OS.FileSys.fullPath
         (if candidate <> "" andalso
-            (OS.FileSys.isDir candidate handle _ => false)
+            (OS.FileSys.isDir candidate handle OS.SysErr _ => false)
          then candidate
          else "/tmp")
     end
@@ -1414,7 +1415,8 @@ structure Refute_Forl :> REFUTE_FORL = struct
   fun write_problems path problems =
     let
       val stream = TextIO.openOut path
-      fun close () = TextIO.closeOut stream handle _ => ()
+      fun close () =
+        TextIO.closeOut stream handle Interrupt => raise Interrupt | _ => ()
       fun work () = write_problem stream (production_header ()) problems
     in
       Portable.finally close work ()
@@ -1423,12 +1425,13 @@ structure Refute_Forl :> REFUTE_FORL = struct
   fun read_all path =
     let
       val stream = TextIO.openIn path
-      fun close () = TextIO.closeIn stream handle _ => ()
+      fun close () =
+        TextIO.closeIn stream handle Interrupt => raise Interrupt | _ => ()
     in
       Portable.finally close (fn () => TextIO.inputAll stream) ()
     end
 
-  fun remove path = OS.FileSys.remove path handle _ => ()
+  fun remove path = OS.FileSys.remove path handle OS.SysErr _ => ()
 
   fun exit_code status =
     case Posix.Process.fromStatus status of
@@ -1469,8 +1472,17 @@ structure Refute_Forl :> REFUTE_FORL = struct
       val indexed = ListPair.zip (all_indices, problems)
       val (indexed_problems, trivially_unsat) =
         if true_index >= 0 then
+          (* A trivially true problem is satisfiable outright, so solving it
+             alone answers the batch.  Only the trivially false problems may
+             be reported unsat alongside it; the rest are merely left
+             unsolved, and claiming they are unsat would let the driver
+             retire scopes that were never given to the solver. *)
           ([(true_index, List.nth (problems, true_index))],
-           List.filter (fn index => index <> true_index) all_indices)
+           List.map #1 (List.filter
+             (fn (index, problem) =>
+                index <> true_index andalso
+                is_problem_trivially_false problem)
+             indexed))
         else
           let
             val (kept, dropped) =
@@ -1505,7 +1517,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
             if overlord then ()
             else
               (List.app remove paths;
-               OS.FileSys.rmDir directory handle _ => ())
+               OS.FileSys.rmDir directory handle OS.SysErr _ => ())
           fun work () =
             let
               val _ = write_problems input_path (List.map #2 indexed_problems)
@@ -1533,7 +1545,8 @@ structure Refute_Forl :> REFUTE_FORL = struct
               val message = first_error errors
               val _ =
                 if errors <> "" andalso
-                   (Feedback.current_trace "Refute" handle _ => 0) >= 2
+                   (Feedback.current_trace "Refute"
+                      handle Feedback.HOL_ERR _ => 0) >= 2
                 then Feedback.HOL_WARNING "Refute_Forl"
                   "solve_any_problem" errors
                 else ()

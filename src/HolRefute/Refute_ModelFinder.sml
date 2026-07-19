@@ -280,6 +280,10 @@ fun run_instance deadline started (config : Refute_Core.config)
     val kodkod_calls = ref 0
     val met_potential = ref 0
     val last_donno = ref 0
+    (* Set when a sound problem was satisfiable but its model did not
+       survive reconstruction.  Such a scope is neither refuted nor
+       exhausted, so the search may not end in NoCounterexample. *)
+    val discarded_sound_model = ref false
     val error_reasons = ref ([] : string list)
     val original_max_potential =
       if #genuine_only config then 0
@@ -439,10 +443,14 @@ fun run_instance deadline started (config : Refute_Core.config)
                       end
                     else
                       let
+                        val attempted = take_at_most max_genuine conservative
                         val results = List.mapPartial (fn (index, bounds) =>
                           reconstruct (List.nth (problems, index)) bounds)
-                          (take_at_most max_genuine conservative)
+                          attempted
                         val kept = length results
+                        val _ = if kept < length attempted then
+                                  discarded_sound_model := true
+                                else ()
                         val found = found_really_genuine orelse
                           List.exists
                             (certainty_is_genuine o #certainty) results
@@ -598,6 +606,10 @@ fun run_instance deadline started (config : Refute_Core.config)
             if skipped > 0 then
               Refute_Core.Unknown
                 [accounting_reason "scope limit reached"]
+            else if !discarded_sound_model then
+              Refute_Core.Unknown
+                (accounting_reason
+                   "every model found was discarded" :: !error_reasons)
             else
               Refute_Core.NoCounterexample
           else if null cexs then
@@ -633,9 +645,20 @@ fun kodkod_certainty_ceiling (config : Refute_Core.config) instances =
     val certification_reachable =
       #falsify mf andalso
       List.exists Refute_Core.instance_is_executable instances
+    (* MFM.genuine_means_genuine also demands the two user-axiom conjuncts,
+       and both are functions of the theory ancestry alone, so the ceiling
+       can test them here rather than overestimating past them.  An
+       overestimate only costs an early stop, but here it costs every one:
+       a ceiling of Genuine that the fallback path can never reach leaves
+       Refute_Core.decisive permanently false. *)
+    val nondefs = MFH.all_nondefs_of ()
+    val (poly_nondefs, mono_nondefs) =
+      List.partition MFH.is_poly_term nondefs
     val genuine_fallback_reachable =
       List.all (fn (_, value) => value <> SOME true) (#wf mf) andalso
-      #total_consts mf <> SOME true
+      #total_consts mf <> SOME true andalso
+      (#user_axioms mf = SOME true orelse null mono_nondefs) andalso
+      null poly_nondefs
   in
     if certification_reachable orelse genuine_fallback_reachable then
       Refute_Core.Genuine

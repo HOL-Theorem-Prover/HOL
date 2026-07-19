@@ -438,11 +438,11 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
                 | NONE => raise err "term_for_data_type"
                     ("missing selector " ^ nickname)
             val range_rep = #2 (MFR.dest_Func (MFNT.rep_of name))
-            val selected = map #2 (List.filter
-              (fn (owner :: _, _) => owner = real_atom
-                | ([], _) => false)
-              (map (fn tuple => (tuple, tl tuple))
-                (tuples_for_name context name)))
+            val selected = List.mapPartial
+              (fn owner :: rest =>
+                    if owner = real_atom then SOME rest else NONE
+                | [] => NONE)
+              (tuples_for_name context name)
           in
             term_for_rep true ((ty, atom) :: seen) argument_ty
               range_rep selected

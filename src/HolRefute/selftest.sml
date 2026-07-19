@@ -1943,6 +1943,37 @@ val _ = require_msg (check_result mf_kodkod_sym_break_shape) (fn () =>
   "model-finder datatype symmetry-breaking shape changed")
   (fn () => ()) ()
 
+val _ = tprint "Refute peephole atom/atom-sequence disjointness"
+
+(* An atom below the start of a sequence must not count as a member of it:
+   AtomSeq (k, j0) covers j0 .. j0 + k - 1, so both ends bound it. *)
+fun mf_peephole_atom_seq_disjoint () =
+  let
+    val kk = MFPH.kodkod_constrs true 2 2 3
+    val below = Refute_Forl.Atom 1
+    val inside = Refute_Forl.Atom 5
+    val sequence = Refute_Forl.AtomSeq (2, 5)  (* atoms 5 and 6 *)
+    val empty_sequence = Refute_Forl.AtomSeq (0, 5)
+    val tail = Refute_Forl.Rel (1, 3)
+  in
+    (* Disjoint: intersection collapses to the empty unary relation. *)
+    #kk_intersect kk below sequence = Refute_Forl.None andalso
+    #kk_intersect kk sequence below = Refute_Forl.None andalso
+    (* An empty sequence meets nothing, including its own start atom. *)
+    #kk_intersect kk inside empty_sequence = Refute_Forl.None andalso
+    (* Overlapping: the peephole must not claim disjointness either. *)
+    #kk_intersect kk inside sequence <> Refute_Forl.None andalso
+    (* The same test drives join: a disjoint left operand yields the empty
+       relation, not the product's right factor. *)
+    #kk_join kk below (Refute_Forl.Product (sequence, tail)) =
+      Refute_Forl.None andalso
+    #kk_join kk inside (Refute_Forl.Product (sequence, tail)) = tail
+  end
+
+val _ = require_msg (check_result mf_peephole_atom_seq_disjoint) (fn () =>
+  "peephole treated an out-of-range atom as meeting an atom sequence")
+  (fn () => ()) ()
+
 val _ = tprint "Refute model-finder nuts"
 
 fun same_mf_type left right = Type.compare (left, right) = EQUAL
@@ -3297,9 +3328,15 @@ local
         1 1 [false_problem, true_problem, sat_problem]
       fun expected (Normal ([(1, _)], [0, 2], "")) = true
         | expected _ = false
+      (* Short-circuiting on the trivially true problem at index 1 may
+         retire index 0, which is trivially false, but not index 2: that
+         one is satisfiable and simply never reached the solver.  Calling
+         it unsat would let the driver drop an unchecked scope. *)
+      fun expected_short_circuit (Normal ([(1, _)], [0], "")) = true
+        | expected_short_circuit _ = false
     in
       expected solved andalso expected cached andalso
-      expected true_short_circuit
+      expected_short_circuit true_short_circuit
     end
 
   fun kodkodi_pids () =
@@ -3958,6 +3995,22 @@ val _ = List.app m4_guard_is_pinned
       Refute.upd_max_potential 2 Refute.default_config),
    ("max_genuine", fn () =>
       Refute.upd_max_genuine 2 Refute.default_config)]
+
+(* A zero genuine budget would make the model finder return before calling
+   the solver, reporting "no counterexample" for a goal never searched. *)
+fun range_guard_is_pinned (field, explanation, testfn) = shouldfail {
+  checkexn = check_HOL_ERRexn
+    (fn (_, _, message) => message = field ^ ": " ^ explanation),
+  printarg = K (field ^ " range guard"),
+  printresult = K "<config>",
+  testfn = testfn
+} ()
+
+val _ = List.app range_guard_is_pinned
+  [("max_genuine", "must be at least 1", fn () =>
+      Refute.upd_max_genuine 0 Refute.default_config),
+   ("max_potential", "must not be negative", fn () =>
+      Refute.upd_max_potential ~1 Refute.default_config)]
 
 val _ = tprint "Refute core backend registry"
 
