@@ -754,6 +754,213 @@ val _ = require_msg
     "model-finder built-in/numeral/set/ersatz mapping failed")
   (fn () => ()) ()
 
+val _ = tprint "Refute model-finder monotonicity constraints"
+
+structure MFMono = Refute_ModelFinder_Mono
+structure MMT = MFMono.Test
+
+fun mono_raises_unsolvable action =
+  (action (); false) handle MMT.UNSOLVABLE () => true
+
+fun mono_mtype_cases () =
+  let
+    val alpha = ``:'a``
+    val function_data = MMT.initial_mdata mf_hol_context false alpha
+    val function_mtype = MMT.mtype_of_type function_data
+      ``:'a -> bool``
+    val all_minus_data = MMT.initial_mdata mf_hol_context false alpha
+    val all_minus_mtype = MMT.mtype_of_type_all_minus all_minus_data true
+      ``:'a -> bool``
+    val pair_data = MMT.initial_mdata mf_hol_context false alpha
+    val pair_mtype = MMT.mtype_of_type pair_data ``:'a # num``
+    val list_data = MMT.initial_mdata mf_hol_context false alpha
+    val list_mtype = MMT.mtype_of_type list_data ``:'a list``
+    val cons = ``CONS : 'a -> 'a list -> 'a list``
+    val cons_mtype = MMT.mtype_for_constr list_data cons
+  in
+    function_mtype =
+      MMT.MFun (MMT.MAlpha, MMT.V 1,
+        MMT.MType ("min$bool", [])) andalso
+    MMT.max_fresh function_data = 1 andalso
+    all_minus_mtype =
+      MMT.MFun (MMT.MAlpha, MMT.A MMT.Gen,
+        MMT.MType ("min$bool", [])) andalso
+    MMT.max_fresh all_minus_data = 0 andalso
+    (case pair_mtype of
+         MMT.MPair (MMT.MAlpha, MMT.MType (_, [])) => true
+       | _ => false) andalso
+    (case list_mtype of
+         MMT.MType ("list$list", arguments) =>
+           not (null arguments) andalso
+           List.all (fn MMT.MAlpha => true | _ => false) arguments
+       | _ => false) andalso
+    (case cons_mtype of
+         MMT.MFun (MMT.MAlpha, MMT.A MMT.Gen,
+           MMT.MFun (domain, MMT.A MMT.Gen, range)) =>
+             domain = list_mtype andalso range = list_mtype
+       | _ => false) andalso
+    MMT.caches_repaired list_data
+  end
+
+val _ = require_msg (check_result mono_mtype_cases)
+  (fn () => "model-finder mtype construction or cache repair failed")
+  (fn () => ()) ()
+
+fun mono_constraint_cases () =
+  let
+    val empty = MMT.empty_constraints
+    val fixed = MMT.add_annotation_atom_comp MMT.Leq []
+      (MMT.A MMT.New) (MMT.A MMT.Gen) empty
+    val unit = MMT.add_annotation_atom_comp MMT.Eq []
+      (MMT.V 1) (MMT.A MMT.Fls) empty
+    val variable_equality = MMT.add_annotation_atom_comp MMT.Eq []
+      (MMT.V 1) (MMT.V 2) empty
+    val conditional = MMT.add_annotation_atom_comp MMT.Leq [3]
+      (MMT.A MMT.Gen) (MMT.A MMT.New) empty
+  in
+    fixed = empty andalso
+    #2 unit = [[(1, (MMT.Plus, MMT.Fls))]] andalso
+    #1 variable_equality =
+      [(MMT.V 1, MMT.V 2, MMT.Eq, [])] andalso
+    #1 conditional =
+      [(MMT.A MMT.Gen, MMT.A MMT.New, MMT.Leq, [3])] andalso
+    mono_raises_unsolvable (fn () =>
+      ignore (MMT.add_annotation_atom_comp MMT.Leq []
+        (MMT.A MMT.Gen) (MMT.A MMT.New) empty)) andalso
+    mono_raises_unsolvable (fn () =>
+      ignore (MMT.add_annotation_atom_comp MMT.Eq []
+        (MMT.V 1) (MMT.A MMT.New) unit)) andalso
+    mono_raises_unsolvable (fn () =>
+      ignore (MMT.add_annotation_atom_comp MMT.Neq []
+        (MMT.V 1) (MMT.A MMT.Fls) unit))
+  end
+
+val _ = require_msg (check_result mono_constraint_cases)
+  (fn () => "model-finder mtype comparison constraints failed")
+  (fn () => ()) ()
+
+fun mono_q6_regression () =
+  let
+    val bool_mtype = MMT.MType ("min$bool", [])
+    fun arrow annotation =
+      MMT.MFun (MMT.MAlpha, MMT.A annotation, bool_mtype)
+    fun concrete annotation =
+      MMT.add_mtype_is_concrete [] (arrow annotation)
+        MMT.empty_constraints
+    val excludes_fls = MMT.add_annotation_atom_comp MMT.Neq []
+      (MMT.V 1) (MMT.A MMT.Fls) MMT.empty_constraints
+    fun escaped () =
+      MMT.add_mtype_is_concrete [(1, (MMT.Plus, MMT.Fls))]
+        (arrow MMT.Gen) excludes_fls
+  in
+    List.all (fn annotation =>
+      mono_raises_unsolvable (fn () => ignore (concrete annotation)))
+      [MMT.Gen, MMT.New] andalso
+    List.all (fn annotation =>
+      not (mono_raises_unsolvable
+        (fn () => ignore (concrete annotation))))
+      [MMT.Fls, MMT.Tru] andalso
+    mono_raises_unsolvable (fn () => ignore (escaped ()))
+  end
+
+val _ = require_msg (check_result mono_q6_regression)
+  (fn () => "Q6 A-atom Minus domain constraints regressed")
+  (fn () => ()) ()
+
+val mono_annotations = [MMT.Gen, MMT.New, MMT.Fls, MMT.Tru]
+
+fun mono_annotation_bits MMT.Gen = (false, false)
+  | mono_annotation_bits MMT.New = (false, true)
+  | mono_annotation_bits MMT.Fls = (true, false)
+  | mono_annotation_bits MMT.Tru = (true, true)
+
+fun mono_vectors 0 = [[]]
+  | mono_vectors count =
+      List.concat (map (fn rest => map (fn annotation =>
+        annotation :: rest) mono_annotations) (mono_vectors (count - 1)))
+
+fun mono_sat_reduction_goldens () =
+  let
+    val constraints =
+      ([(MMT.V 1, MMT.V 2, MMT.Leq, []),
+        (MMT.V 1, MMT.V 2, MMT.Neq, [3])],
+       [[(1, (MMT.Plus, MMT.New)),
+         (2, (MMT.Minus, MMT.Fls))]])
+    val formula = MMT.encode constraints
+    fun value annotations index =
+      let
+        val variable = if index mod 2 = 0 then index div 2
+                       else (index - 1) div 2
+        val (first, second) = mono_annotation_bits
+          (List.nth (annotations, variable - 1))
+      in
+        if index mod 2 = 0 then first else second
+      end
+    fun expected [first, second, escape] =
+          (first = second orelse second = MMT.Gen) andalso
+          (escape = MMT.Gen orelse first <> second) andalso
+          (first = MMT.New orelse second <> MMT.Fls)
+      | expected _ = false
+    fun assignment_golden (annotation, expected_bits) =
+      let
+        val atom = MMT.prop_for_assign (1, annotation)
+        val (first, second) = expected_bits
+      in
+        PS.eval (fn index =>
+          if index = 2 then first else if index = 3 then second
+          else false) atom
+      end
+  in
+    List.all assignment_golden
+      (map (fn annotation =>
+        (annotation, mono_annotation_bits annotation)) mono_annotations) andalso
+    List.all (fn annotations =>
+      PS.eval (value annotations) formula = expected annotations)
+      (mono_vectors 3)
+  end
+
+val _ = require_msg (check_result mono_sat_reduction_goldens)
+  (fn () => "model-finder two-bit SAT reduction golden failed")
+  (fn () => ()) ()
+
+fun mono_lookup variable assignments =
+  Option.map #2 (List.find (fn (other, _) => other = variable) assignments)
+
+fun mono_solve_cases () =
+  let
+    val timeout = Time.fromReal 2.0
+    val empty = MMT.solve timeout 2 MMT.empty_constraints
+    val not_gen = MMT.add_annotation_atom_comp MMT.Neq []
+      (MMT.V 1) (MMT.A MMT.Gen) MMT.empty_constraints
+    val forced_new = MMT.add_annotation_atom_comp MMT.Eq []
+      (MMT.V 1) (MMT.A MMT.New) MMT.empty_constraints
+    val impossible =
+      MMT.add_assign_clause
+        [(1, (MMT.Plus, MMT.Fls)),
+         (1, (MMT.Plus, MMT.Tru))]
+        (MMT.add_assign_clause
+          [(1, (MMT.Plus, MMT.Gen)),
+           (1, (MMT.Plus, MMT.New))]
+          MMT.empty_constraints)
+  in
+    (case empty of
+         SOME assignments =>
+           mono_lookup 1 assignments = SOME MMT.Gen andalso
+           mono_lookup 2 assignments = SOME MMT.Gen
+       | NONE => false) andalso
+    (case MMT.solve timeout 1 not_gen of
+         SOME assignments => mono_lookup 1 assignments = SOME MMT.Tru
+       | NONE => false) andalso
+    (case MMT.solve timeout 1 forced_new of
+         SOME assignments => mono_lookup 1 assignments = SOME MMT.New
+       | NONE => false) andalso
+    MMT.solve timeout 1 impossible = NONE
+  end
+
+val _ = require_msg (check_result mono_solve_cases)
+  (fn () => "model-finder monotonicity solver cases failed")
+  (fn () => ()) ()
+
 val _ = tprint "Refute model-finder preprocessing goldens"
 
 structure MFP = Refute_ModelFinder_Preproc

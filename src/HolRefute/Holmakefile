@@ -13,6 +13,7 @@ selftest.uo: Refute_PropSat.uo \
              Refute_ModelFinder_Peephole.uo \
              Refute_ModelFinder_Rep.uo \
              Refute_ModelFinder_Scope.uo \
+             Refute_ModelFinder_Mono.uo \
              Refute_ModelFinder_HOL.uo Refute_ModelFinder.uo \
              refuteTableZooTheory.uo
 
@@ -20,11 +21,17 @@ selftest.uo: Refute_PropSat.uo \
 Refute_Forl.uo: Refute_ModelFinder_Util.uo Refute_PropSat.uo
 Refute_ForlSat.uo: Refute_Forl.uo
 
+# Keep Mono between HOL and Scope, matching the calculus dependency order.
+Refute_ModelFinder_Mono.uo: Refute_PropSat.uo \
+                            Refute_ModelFinder_HOL.uo
+Refute_ModelFinder_Scope.uo: Refute_ModelFinder_Mono.uo
+
 Refute_ModelFinder.uo: Refute_ModelFinder_Preproc.uo \
                        Refute_ModelFinder_Kodkod.uo \
                        Refute_ModelFinder_Model.uo \
                        Refute_ModelFinder_Nut.uo \
                        Refute_ModelFinder_Scope.uo \
+                       Refute_ModelFinder_Mono.uo \
                        Refute_ModelFinder_HOL.uo
 
 Refute.uo: Refute_ModelFinder.uo
