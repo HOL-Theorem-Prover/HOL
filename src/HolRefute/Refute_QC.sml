@@ -468,6 +468,7 @@ structure Refute_QC = struct
       weight = 20,
       configured = fn () => true,
       requires = Refute_Core.ExecutableGoal,
+      input = Refute_Core.MonoInstances,
       run = strategy_run Exhaustive }
 
   val random_backend : Refute_Core.backend =
@@ -475,6 +476,7 @@ structure Refute_QC = struct
       weight = 30,
       configured = fn () => true,
       requires = Refute_Core.ExecutableGoal,
+      input = Refute_Core.MonoInstances,
       run = fn config =>
         strategy_run (Random {seed = strategy_seed config}) config }
 

@@ -6,6 +6,8 @@ Driver for the HOL4 Refute model finder.  The control flow is a port of
 Nitpick's pick_them_nits_in_term, specialized to the M3 feature set. *)
 
 signature REFUTE_MODEL_FINDER = sig
+  val prepare_instance_input :
+    Refute_Core.instance -> Term.term * Term.term list
   val kodkod_backend : Refute_Core.backend
   val kodkod_certainty_ceiling : Refute_Core.certainty_ceiling
   val register_backends : unit -> unit
@@ -230,15 +232,27 @@ fun replace_stats stats (cex : Refute_Core.counterexample) =
    evals = #evals cex, cert = #cert cex, scope = #scope cex,
    model = #model cex, stats = stats}
 
+fun prepare_instance_input (instance : Refute_Core.instance) =
+  let
+    val input_original = #original instance
+    val (original, renaming) = MFN.rename_colliding_goal_vars
+      (MFN.reserved_frees input_original) input_original
+    val _ = MFN.assert_user_goal original
+    val renaming_subst = map (fn (old, fresh) =>
+      {redex = old, residue = fresh}) renaming
+  in
+    (original, map (Term.subst renaming_subst) (#evals instance))
+  end
+
 fun run_instance deadline started (config : Refute_Core.config)
       (instance : Refute_Core.instance) =
   let
     val mf = #mf config
-    val original = #original instance
+    val (original, eval_terms) = prepare_instance_input instance
     val negated =
       if #falsify mf then boolSyntax.mk_imp (original, boolSyntax.F)
       else original
-    val context = MFH.make_context mf (#evals instance)
+    val context = MFH.make_context mf eval_terms
     val (nondef_ts, def_ts, got_all_mono_user_axioms,
          no_poly_user_axioms) =
       MFP.preprocess_formulas context [] negated
@@ -319,7 +333,7 @@ fun run_instance deadline started (config : Refute_Core.config)
           {scope = #scope extension,
            atoms = #atoms mf,
            real_frees = real_frees,
-           eval_terms = #evals instance,
+           eval_terms = eval_terms,
            free_names = #free_names extension,
            sel_names = #sel_names extension,
            nonsel_names = #nonsel_names extension,
@@ -331,7 +345,7 @@ fun run_instance deadline started (config : Refute_Core.config)
         case MFM.certify
           {executable = executable,
            original = original,
-           eval_terms = #evals instance,
+           eval_terms = eval_terms,
            reconstruction = reconstructed,
            cex = make_base problem,
            sound = sound,
@@ -713,6 +727,7 @@ val kodkod_backend : Refute_Core.backend =
   {name = "kodkod", weight = 50,
    configured = Refute_Forl.is_configured,
    requires = Refute_Core.AnyGoal,
+   input = Refute_Core.PolyOriginal,
    run = run}
 
 fun register_backends () =

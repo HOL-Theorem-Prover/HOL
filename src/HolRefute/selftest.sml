@@ -2536,6 +2536,55 @@ fun mf_model_certification_protocol () =
 val _ = require_msg (check_result mf_model_certification_protocol) (fn () =>
   "model certification/verdict protocol changed") (fn () => ()) ()
 
+fun mf_polymorphic_model_protocol () =
+  let
+    val ty = ``:'a``
+    val x = Term.mk_var ("x", ty)
+    val y = Term.mk_var ("y", ty)
+    val a1 = MFN.fake_atom 1 ty
+    val a2 = MFN.fake_atom 2 ty
+    val original = boolSyntax.mk_eq (x, y)
+    val reconstructed : MFM.reconstruction =
+      {bindings = [(x, a1), (y, a2)], evals = [], skolems = [],
+       consts = [], types = [], codatatypes_ok = true}
+    fun base card : counterexample =
+      {backend = "kodkod", substrate = "kodkod",
+       certainty = Refute_Core.Potential [], bindings = [], evals = [],
+       cert = NONE, scope = SOME [(ty, card)], model = NONE, stats = []}
+    val small = MFM.certify
+      {executable = true, original = original, eval_terms = [],
+       reconstruction = reconstructed, cex = base 2, sound = false,
+       genuine_means_genuine = false, reasons = []}
+    val large = MFM.certify
+      {executable = true, original = original, eval_terms = [],
+       reconstruction = reconstructed, cex = base 7, sound = true,
+       genuine_means_genuine = true, reasons = []}
+    val scope = mf_translation_scope [(ty, 2)] []
+    val report = MFM.reconstruct
+      {scope = scope, atoms = [], real_frees = [], eval_terms = [],
+       free_names = [], sel_names = [], nonsel_names = [],
+       rel_table = MFNT.NameTable.empty, bounds = []}
+    val displayed = #types report
+  in
+    (case small of
+         MFM.Keep {certainty = Genuine, cert = SOME _,
+                   bindings = [(_, left), (_, right)], ...} =>
+           variable_named "a1" left andalso variable_named "a2" right
+       | _ => false) andalso
+    (case large of
+         MFM.Keep {certainty = Genuine, cert = NONE, ...} => true
+       | _ => false) andalso
+    (case displayed of
+         [(reported_ty, [left, right], true)] =>
+           Type.compare (reported_ty, ty) = EQUAL andalso
+           variable_named "a1" left andalso variable_named "a2" right
+       | _ => false)
+  end
+
+val _ = require_msg (check_result mf_polymorphic_model_protocol) (fn () =>
+  "polymorphic fake-atom display or rf certification changed")
+  (fn () => ()) ()
+
 fun mf_kodkod_finite_translation () =
   let
     val scope = mf_translation_scope [(``:num``, 3)] []
@@ -4019,6 +4068,7 @@ fun dummy_backend name weight : backend =
     weight = weight,
     configured = fn () => true,
     requires = ExecutableGoal,
+    input = MonoInstances,
     run = fn _ => fn _ => Unknown [] }
 
 val registry_alpha = dummy_backend "refute-core-alpha" (~97)
@@ -4030,6 +4080,7 @@ val public_any_goal_backend : Refute.backend =
     weight = ~95,
     configured = fn () => false,
     requires = Refute.AnyGoal,
+    input = MonoInstances,
     run = fn _ => fn _ => Unknown [] }
 
 val _ = Refute.register_backend_with_ceiling public_any_goal_backend
@@ -4037,6 +4088,92 @@ val _ = Refute.register_backend_with_ceiling public_any_goal_backend
 val _ = register_backend registry_alpha
 val _ = register_backend registry_beta
 val _ = register_backend registry_alpha_replacement
+
+val input_dispatch_enabled = ref false
+val mono_input_seen = ref ([] : instance list)
+val poly_input_seen = ref ([] : instance list)
+
+val mono_input_backend : backend =
+  {name = "refute-input-mono", weight = ~94,
+   configured = fn () => !input_dispatch_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn instances =>
+     (mono_input_seen := instances; Unknown ["mono input pin"])}
+
+val poly_input_backend : backend =
+  {name = "refute-input-poly", weight = ~93,
+   configured = fn () => !input_dispatch_enabled,
+   requires = AnyGoal, input = PolyOriginal,
+   run = fn _ => fn instances =>
+     (poly_input_seen := instances; Unknown ["poly input pin"])}
+
+val _ = register_backend mono_input_backend
+val _ = register_backend poly_input_backend
+
+fun backend_input_dispatch () =
+  let
+    val prior_trace = Feedback.current_trace "Refute"
+    fun restore () =
+      (input_dispatch_enabled := false;
+       Feedback.set_trace "Refute" prior_trace)
+    val config = default_config
+      |> upd_sequential true
+      |> upd_finite_type_size 3
+      |> upd_backends (SOME ["refute-input-mono", "refute-input-poly"])
+    val _ = input_dispatch_enabled := true
+    val _ = Feedback.set_trace "Refute" 0
+    fun run () =
+      let
+        val _ = ignore (refute_problem config
+          {goal = ``p (x : 'a) /\ q (y : 'b)``,
+           assumptions = [], evals = []})
+        val poly_ok =
+          length (!mono_input_seen) = 3 andalso
+          (case !poly_input_seen of
+               [{card = 0, original, ...}] =>
+                 length (Term.type_vars_in_term original) = 2
+             | _ => false)
+        val _ = mono_input_seen := []
+        val _ = poly_input_seen := []
+        val _ = ignore (refute_problem config
+          {goal = ``(b : bool) = b``, assumptions = [], evals = []})
+        val mono_ok =
+          case (!mono_input_seen, !poly_input_seen) of
+              ([left], [right]) =>
+                #card left = #card right andalso
+                Term.aconv (#original left) (#original right) andalso
+                Term.aconv (#goal left) (#goal right)
+            | _ => false
+      in
+        poly_ok andalso mono_ok
+      end
+  in
+    Portable.finally restore run ()
+  end
+
+val _ = require_msg (check_result backend_input_dispatch) (fn () =>
+  "backend goal-form dispatch changed") (fn () => ()) ()
+
+fun model_finder_naming_is_wired () =
+  let
+    val reserved = Term.mk_var ("refute$user", ``:bool``)
+    val instance : instance =
+      {original = reserved, goal = reserved, qc_gate = NONE,
+       evals = [reserved], card = 0, size_matters = false}
+    val (renamed, evals) =
+      Refute_ModelFinder.prepare_instance_input instance
+  in
+    (case (Term.free_vars_lr renamed, evals) of
+         ([variable], [eval_term]) =>
+           var_name variable = "user$refute$user" andalso
+           Term.aconv variable eval_term andalso
+           ((MFN.assert_user_goal renamed; true) handle HOL_ERR _ => false)
+       | _ => false)
+  end
+
+val _ = require_msg (check_result model_finder_naming_is_wired) (fn () =>
+  "model-finder production naming pass was not applied")
+  (fn () => ()) ()
 
 fun core_backend_names () =
   map #name (List.filter (fn backend =>
@@ -4251,6 +4388,7 @@ val race_potential_backend : backend =
     weight = 50,
     configured = fn () => !race_potential_enabled,
     requires = AnyGoal,
+    input = MonoInstances,
     run = fn _ => fn _ =>
       (mark_race_potential_started ();
        Counterexample
@@ -4262,6 +4400,7 @@ val race_quasi_backend : backend =
     weight = 50,
     configured = fn () => !race_quasi_enabled,
     requires = AnyGoal,
+    input = MonoInstances,
     run = fn _ => fn _ =>
       (mark_race_potential_started ();
        Counterexample
@@ -4273,6 +4412,7 @@ val race_genuine_backend : backend =
     weight = 20,
     configured = fn () => !race_genuine_enabled,
     requires = ExecutableGoal,
+    input = MonoInstances,
     run = fn _ => fn _ =>
       (wait_for_race_potential ();
        OS.Process.sleep (Time.fromReal 0.05);
@@ -4284,6 +4424,7 @@ val race_slow_quasi_backend : backend =
     weight = 55,
     configured = fn () => !race_slow_quasi_enabled,
     requires = AnyGoal,
+    input = MonoInstances,
     run = fn _ => fn _ =>
       (race_slow_quasi_started := true;
        Counterexample
@@ -4298,6 +4439,7 @@ fun potential_backend name weight enabled : backend =
     weight = weight,
     configured = fn () => !enabled,
     requires = AnyGoal,
+    input = MonoInstances,
     run = fn _ => fn _ =>
       Counterexample
         [stub_cex name (Refute_Core.Potential ["stub"])] }
@@ -5286,6 +5428,31 @@ val _ = require_msg (check_result finite_type_instances) (fn () =>
   "finite-type monomorphization did not produce rf1 through rf3")
   (fn () => ()) ()
 
+fun polymorphic_original_instance () =
+  let
+    val {mono_instances, poly_original} =
+      preprocess_forms (upd_finite_type_size 3 default_config)
+        (preprocessing_problem polymorphic_goal)
+    val monomorphic = preprocess_forms default_config
+      (preprocessing_problem ``(x : bool) = x``)
+  in
+    length mono_instances = 3 andalso
+    (case poly_original of
+         [{original, goal, card = 0, ...}] =>
+           length (Term.type_vars_in_term original) = 2 andalso
+           length (Term.type_vars_in_term goal) = 2
+       | _ => false) andalso
+    (case (#mono_instances monomorphic, #poly_original monomorphic) of
+         ([left], [right]) =>
+           #card left = #card right andalso
+           Term.aconv (#original left) (#original right) andalso
+           Term.aconv (#goal left) (#goal right)
+       | _ => false)
+  end
+
+val _ = require_msg (check_result polymorphic_original_instance) (fn () =>
+  "the native polymorphic backend instance changed") (fn () => ()) ()
+
 fun default_type_instance () =
   case preprocessed_instances
     (preprocess (upd_finite_types false default_config)
@@ -5348,6 +5515,7 @@ val any_goal_stub : backend =
     weight = ~99,
     configured = fn () => !any_goal_stub_enabled,
     requires = AnyGoal,
+    input = MonoInstances,
     run = fn _ => fn instances =>
       (any_goal_stub_received :=
          (not (null instances) andalso
@@ -7545,6 +7713,7 @@ fun kodkod_registration_pin () =
       SOME backend =>
         #name backend = "kodkod" andalso #weight backend = 50 andalso
         (case #requires backend of AnyGoal => true | _ => false) andalso
+        (case #input backend of PolyOriginal => true | _ => false) andalso
         #configured backend () = Refute_Forl.is_configured ()
     | NONE => false
 
@@ -7554,6 +7723,7 @@ fun nitpick_preset_pin () =
     val backend : backend =
       {name = "kodkod", weight = 50, configured = fn () => true,
        requires = AnyGoal,
+       input = PolyOriginal,
        run = fn config => fn _ =>
          (selected := (#backends config = SOME ["kodkod"]);
           Unknown ["preset pin"])}
@@ -7567,7 +7737,8 @@ fun kodkod_not_configured_pin () =
   let
     val backend : backend =
       {name = "kodkod", weight = 50, configured = fn () => false,
-       requires = AnyGoal, run = fn _ => fn _ => Unknown []}
+       requires = AnyGoal, input = PolyOriginal,
+       run = fn _ => fn _ => Unknown []}
   in
     with_silent_refute (fn () =>
       with_temporary_kodkod backend (fn () =>
@@ -7829,21 +8000,68 @@ fun configured_mf_test_solver () =
 
 fun mf_instance_loop_stops_at_reachable_genuine solver =
   let
-    val _ = tprint "Refute MF reachable-certainty instance loop"
+    val _ = tprint "Refute MF native polymorphic singleton loop"
     val config = mf_acceptance_config solver
-    val instances = preprocess config
+    val {mono_instances, poly_original} = preprocess_forms config
       (preprocessing_problem polymorphic_goal)
     val outcome = with_silent_refute (fn () =>
       Refute.refute config polymorphic_goal)
     val stopped =
       case outcome of
-          Refute.Counterexample [cex] =>
-            #certainty cex = Refute.Genuine andalso
-            lookup_stat "card" (#stats cex) = SOME 1
+          Refute.Counterexample (cex :: _) =>
+            lookup_stat "card" (#stats cex) = SOME 0
         | _ => false
   in
-    if length instances = 3 andalso stopped then OK ()
-    else die "model finder did not stop at its reachable Genuine ceiling"
+    if length mono_instances = 3 andalso length poly_original = 1 andalso
+       stopped then OK ()
+    else die "model finder did not use its native polymorphic singleton"
+  end
+  handle e => die (Feedback.exn_to_string e)
+
+fun mf_native_polymorphic_certification solver =
+  let
+    val _ = tprint "Refute MF native polymorphic certification"
+    val ty = ``:'a``
+    val goal = ``(x : 'a) = y``
+    fun config card = mf_acceptance_config solver
+      |> Refute.upd_card [(NONE, [card])]
+    val small = with_silent_refute (fn () =>
+      Refute.refute (config 2) goal)
+    val large = with_silent_refute (fn () =>
+      Refute.refute (config 7) goal)
+    fun fake_values bindings =
+      List.exists (fn (_, value) =>
+        case Lib.total Term.dest_var value of
+            SOME (name, value_ty) =>
+              String.isPrefix "a" name andalso Type.is_vartype value_ty
+          | NONE => false) bindings
+    fun displayed_tyvar model =
+      case model of
+          SOME {types, ...} =>
+            List.exists (fn (reported_ty, values, _) =>
+              Type.compare (reported_ty, ty) = EQUAL andalso
+              length values >= 2) types
+        | NONE => false
+    val small_ok =
+      case small of
+          Refute.Counterexample
+            ({certainty = Refute.Genuine, cert = SOME _, bindings,
+              model, ...} :: _) =>
+              fake_values bindings andalso displayed_tyvar model
+        | _ => false
+    val large_ok =
+      case large of
+          Refute.Counterexample
+            ({certainty = Refute.Genuine, cert = NONE,
+              scope = SOME assignments, ...} :: _) =>
+              List.exists (fn (reported_ty, card) =>
+                Type.compare (reported_ty, ty) = EQUAL andalso card = 7)
+                assignments
+        | _ => false
+  in
+    if small_ok andalso large_ok then OK ()
+    else die ("native polymorphic certification pin failed: small=" ^
+      mf_pin_outcome_name small ^ ", large=" ^ mf_pin_outcome_name large)
   end
   handle e => die (Feedback.exn_to_string e)
 
@@ -7856,7 +8074,8 @@ fun run_mf_task20_suites () =
     in
       List.app (mf_differential_test solver) mf_differential_cases;
       List.app (mf_soundness_test solver) soundness_corpus;
-      mf_instance_loop_stops_at_reachable_genuine solver
+      mf_instance_loop_stops_at_reachable_genuine solver;
+      mf_native_polymorphic_certification solver
     end
 
 fun run_mf_acceptance () =

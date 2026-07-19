@@ -127,12 +127,14 @@ structure Refute_Core = struct
       size_matters : bool }
 
   datatype requirement = ExecutableGoal | AnyGoal
+  datatype goal_form = MonoInstances | PolyOriginal
 
   type backend =
     { name : string,
       weight : int,
       configured : unit -> bool,
       requires : requirement,
+      input : goal_form,
       run : config -> instance list -> outcome }
 
   (* A ceiling must overestimate the best certainty [run] can return for
@@ -857,7 +859,10 @@ structure Refute_Core = struct
       not (Option.isSome (Refute_Gen.enumerate (Term.type_of variable))))
       (Term.free_vars_lr goal)
 
-  fun preprocess (cfg : config) (problem : problem) =
+  type preprocessed_forms =
+    {mono_instances : instance list, poly_original : instance list}
+
+  fun preprocess_forms (cfg : config) (problem : problem) =
     let
       val assumptions =
         if #no_assms cfg then [] else #assumptions problem
@@ -866,10 +871,8 @@ structure Refute_Core = struct
       val types = monomorphic_types (#qc cfg)
       val tyvars = Lib.U
         (map Term.type_vars_in_term (original_goal :: input_evals))
-      fun make_instance (card, replacement) =
+      fun make_instance card theta =
         let
-          val theta = map (fn tyvar =>
-            {redex = tyvar, residue = replacement}) tyvars
           val original = Term.inst theta original_goal
           val initial_goal = strip_outer_forall_body original
           val normalized_goal =
@@ -894,15 +897,30 @@ structure Refute_Core = struct
             card = card,
             size_matters = instance_size_matters goal }
         end
+      fun monomorphic_instance (card, replacement) =
+        make_instance card (map (fn tyvar =>
+          {redex = tyvar, residue = replacement}) tyvars)
+      val mono_instances =
+        if null tyvars then [make_instance 1 []]
+        else
+          List.map monomorphic_instance
+            (ListPair.zip
+              (List.tabulate (length types, fn index => index + 1), types))
+      (* A monomorphic goal has literally the same backend input in both
+         forms.  This is stronger than merely constructing an equivalent
+         singleton and keeps the old front-end behaviour exact. *)
+      val poly_original =
+        if null tyvars then mono_instances else [make_instance 0 []]
     in
-      if null tyvars then
-        [make_instance (1, Type.bool)]
-      else
-        List.map (fn (card, replacement) =>
-          make_instance (card, replacement))
-          (ListPair.zip (List.tabulate (length types, fn index => index + 1),
-            types))
+      {mono_instances = mono_instances, poly_original = poly_original}
     end
+
+  fun preprocess cfg problem =
+    #mono_instances (preprocess_forms cfg problem)
+
+  fun instances_for_form MonoInstances
+        ({mono_instances, ...} : preprocessed_forms) = mono_instances
+    | instances_for_form PolyOriginal {poly_original, ...} = poly_original
 
   structure Private = struct
     val trace = ref 1
@@ -1298,9 +1316,10 @@ structure Refute_Core = struct
   fun no_generator_reason (ty, reason) =
     "no generator for " ^ Parse.type_to_string ty ^ ": " ^ reason
 
-  fun run_backend (cfg : config) ceiling instances (backend, result_ref) =
+  fun run_backend (cfg : config) ceiling forms (backend, result_ref) =
     let
       val name = #name backend
+      val instances = instances_for_form (#input backend) forms
       val timeout =
         if #timeout cfg <= 0.0 then Time.fromReal 0.0
         else Time.fromReal (#timeout cfg)
@@ -1403,16 +1422,22 @@ structure Refute_Core = struct
       fun execute () =
         let
           val configured = selected_backend_registrations (#backends cfg)
-          val instances = preprocess cfg problem
-          val gate_reasons = instance_gate_reasons instances
-          val executable = instances_are_executable instances
-          val selected =
-            List.filter (meets_requirement executable o #backend) configured
+          val forms = preprocess_forms cfg problem
+          fun registration_instances registration =
+            instances_for_form (#input (#backend registration)) forms
+          fun registration_is_eligible registration =
+            meets_requirement
+              (instances_are_executable
+                (registration_instances registration))
+              (#backend registration)
+          val selected = List.filter registration_is_eligible configured
           val excluded =
-            List.filter
-              (not o meets_requirement executable o #backend) configured
+            List.filter (not o registration_is_eligible) configured
           val excluded_reasons =
-            if null excluded then [] else gate_reasons
+            if null excluded then []
+            else
+              instance_gate_reasons
+                (List.concat (map registration_instances excluded))
           val _ = List.app (fn reason => Private.say 2
             ("Refute: QC backends excluded: " ^ reason ^ "\n"))
             excluded_reasons
@@ -1421,17 +1446,27 @@ structure Refute_Core = struct
           else if null selected then Unknown excluded_reasons
           else
             let
-              val ceiling = reachable_certainty cfg instances selected
+              fun higher (registration : backend_registration, best) =
+                let
+                  val candidate = #certainty_ceiling registration cfg
+                    (registration_instances registration)
+                in
+                  if certainty_rank candidate > certainty_rank best then
+                    candidate
+                  else best
+                end
+              val ceiling = List.foldl higher
+                (Potential ["no selected backend"]) selected
               val jobs = map (fn registration =>
                 (#backend registration, ref NONE : outcome option ref))
                 selected
               val winner =
                 if #sequential cfg then
                   ParList.get_first
-                    (run_backend cfg ceiling instances) jobs
+                    (run_backend cfg ceiling forms) jobs
                 else
                   ParList.get_some
-                    (run_backend cfg ceiling instances) jobs
+                    (run_backend cfg ceiling forms) jobs
             in
               case winner of
                   SOME result => result

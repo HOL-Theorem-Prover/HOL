@@ -573,8 +573,16 @@ fun reconstruct {scope, atoms, real_frees, eval_terms, free_names,
                 complete = (false, false), concrete = (true, true),
                 deep = true, constrs = []} : MFS.data_type_spec]
         | NONE => []
+    fun type_variable_spec (ty, card) =
+      if Type.is_vartype ty then
+        [{typ = ty, card = card, co = false, self_rec = false,
+          complete = (true, true), concrete = (true, true), deep = true,
+          constrs = []} : MFS.data_type_spec]
+      else
+        []
     val report_types = deep_types @
-      List.concat (map integer_type [MFH.num_type, MFH.int_type])
+      List.concat (map integer_type [MFH.num_type, MFH.int_type]) @
+      List.concat (map type_variable_spec (#card_assigns scope))
     val types = map values_for_type report_types
   in
     {bindings = map binding real_frees,
@@ -620,6 +628,74 @@ fun certification_env bindings =
     else NONE
   end
 
+fun rf_type card =
+  Type.mk_thy_type
+    {Thy = "refute", Tyop = "rf" ^ Int.toString card, Args = []}
+
+fun rf_constructor card serial =
+  Term.prim_mk_const
+    {Thy = "refute", Name = "rf" ^ Int.toString card ^ "_" ^
+       Int.toString serial}
+
+(* Certification is deliberately performed on a private, monomorphic copy.
+   A native goal type variable with scope cardinality k is transported to
+   the static rf_k enum and its displayed fake atoms are transported to the
+   corresponding constructors.  The reconstructed model itself remains
+   polymorphic, so none of these rf terms escape into model display. *)
+fun certification_copy scope original eval_terms bindings =
+  let
+    val tyvars = Lib.U (map Term.type_vars_in_term
+      (original :: eval_terms @
+       List.concat (map (fn (left, right) => [left, right]) bindings)))
+    fun scope_card ty =
+      case scope of
+          SOME assignments =>
+            Option.map #2 (List.find (fn (other, _) => same_type ty other)
+              assignments)
+        | NONE => NONE
+    fun collect [] = SOME []
+      | collect (tyvar :: rest) =
+          (case (scope_card tyvar, collect rest) of
+               (SOME card, SOME rows) =>
+                 if card >= 1 andalso card <= 6 then
+                   SOME ((tyvar, card) :: rows)
+                 else NONE
+             | _ => NONE)
+    fun atom_substitutions (tyvar, card) =
+      let
+        val ty = rf_type card
+      in
+        List.tabulate (card, fn index =>
+          {redex = MFN.fake_atom (index + 1) ty,
+           residue = rf_constructor card (index + 1)})
+      end
+  in
+    if null tyvars then
+      Option.map (fn env =>
+        {original = original, eval_terms = eval_terms, env = env,
+         polymorphic = false}) (certification_env bindings)
+    else
+      case collect tyvars of
+          NONE => NONE
+        | SOME rows =>
+            let
+              val theta = map (fn (tyvar, card) =>
+                {redex = tyvar, residue = rf_type card}) rows
+              val atoms = List.concat (map atom_substitutions rows)
+              fun copy_value value = Term.subst atoms
+                (Term.inst theta (replace_irrelevant value))
+              val env = map (fn (variable, value) =>
+                (Term.inst theta variable, copy_value value)) bindings
+            in
+              if List.all (null o Term.free_vars_lr o #2) env then
+                SOME
+                  {original = Term.inst theta original,
+                   eval_terms = map (Term.inst theta) eval_terms,
+                   env = env, polymorphic = true}
+              else NONE
+            end
+  end
+
 fun certifiable executable bindings =
   executable andalso Option.isSome (certification_env bindings)
 
@@ -662,16 +738,20 @@ fun certify {executable, original, eval_terms,
     val base = replace_cex cex (fallback_certainty sound genuine reasons)
       bindings evals NONE model
   in
-    case if executable then certification_env bindings else NONE of
+    case if executable then
+           certification_copy (#scope cex) original eval_terms bindings
+         else NONE of
         NONE => Keep base
-      | SOME env =>
+      | SOME {original = cert_original, eval_terms = cert_evals,
+              env, polymorphic} =>
           (case Refute_Cert.certify
-              {original = original, evals = eval_terms, env = env,
+              {original = cert_original, evals = cert_evals, env = env,
                cex = base} of
                Refute_Cert.Certified certified =>
                  Keep (replace_cex certified Refute_Core.Genuine bindings
-                   (merge_evals evals (#evals certified)) (#cert certified)
-                   model)
+                   (if polymorphic then evals
+                    else merge_evals evals (#evals certified))
+                   (#cert certified) model)
              | Refute_Cert.Potential potential =>
                  Keep (replace_cex potential (#certainty potential) bindings
                    evals NONE model)

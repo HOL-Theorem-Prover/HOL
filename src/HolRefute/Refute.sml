@@ -11,6 +11,7 @@ structure Refute :> Refute = struct
   datatype expectation = datatype Refute_Core.expectation
   datatype substrate_choice = datatype Refute_Core.substrate_choice
   datatype requirement = datatype Refute_Core.requirement
+  datatype goal_form = datatype Refute_Core.goal_form
   type qc_config = Refute_Core.qc_config
   type mf_config = Refute_Core.mf_config
   type config = Refute_Core.config
