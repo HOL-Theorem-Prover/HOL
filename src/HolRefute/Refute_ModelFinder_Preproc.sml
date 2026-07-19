@@ -1793,6 +1793,305 @@ structure Refute_ModelFinder_Preproc = struct
        got_all_mono_user_axioms, null poly_nondefs)
     end
 
+  fun uncurry_prefix_for count prefix =
+    MFN.uncurry_prefix ^ Int.toString count ^ "@" ^
+    Int.toString prefix ^ MFN.name_sep
+
+  fun uncurry_name term =
+    case Lib.total Term.dest_thy_const term of
+        SOME {Thy, Name, ...} => Thy ^ MFN.name_sep ^ Name
+      | NONE => #1 (Term.dest_var term)
+
+  fun same_uncurry_key left right = Term.aconv left right
+
+  fun add_to_uncurry_table context term table =
+    let
+      fun update constant arity entries =
+        case List.find (same_uncurry_key constant o #1) entries of
+            NONE => (constant, arity) :: entries
+          | SOME (_, old) =>
+              (constant, Int.min (old, arity)) ::
+              List.filter (not o same_uncurry_key constant o #1) entries
+      fun skippable candidate =
+        MFH.is_built_in_const candidate orelse
+        (Term.is_const candidate andalso MFH.is_nonfree_constr candidate) orelse
+        MFN.is_sel (uncurry_name candidate)
+      fun recurse candidate arguments entries =
+        if Term.is_comb candidate then
+          let
+            val (function, argument) = Term.dest_comb candidate
+            val entries = recurse argument [] entries
+          in recurse function (argument :: arguments) entries end
+        else if Term.is_abs candidate then
+          recurse (#2 (Term.dest_abs candidate)) [] entries
+        else if Term.is_const candidate orelse is_generated_const candidate then
+          if skippable candidate then entries
+          else update candidate (length arguments) entries
+        else entries
+    in
+      recurse term [] table
+    end
+
+  fun uncurry_term table term =
+    let
+      fun lookup candidate = Option.map #2
+        (List.find (same_uncurry_key candidate o #1) table)
+      fun recurse candidate arguments =
+        if Term.is_comb candidate then
+          let val (function, argument) = Term.dest_comb candidate
+          in recurse function (recurse argument [] :: arguments) end
+        else if Term.is_abs candidate then
+          let val (variable, body) = Term.dest_abs candidate
+          in MFH.s_betapplys
+            (Term.mk_abs (variable, recurse body []), arguments) end
+        else if Term.is_const candidate orelse is_generated_const candidate then
+          (case lookup candidate of
+               SOME arity =>
+                 if arity < 2 then MFH.s_betapplys (candidate, arguments)
+                 else
+                   let
+                     val (all_argument_tys, result_ty) =
+                       boolSyntax.strip_fun (Term.type_of candidate)
+                     val argument_tys = List.take (all_argument_tys, arity)
+                     val prefix =
+                       if MFH.is_iterator_type (hd argument_tys) then 1
+                       else
+                         let
+                           fun count [] result = result
+                             | count (ty :: tys) result =
+                                 if ty = Type.bool then count tys (result + 1)
+                                 else result
+                         in count argument_tys 0 end
+                     val tuple_count = arity - prefix
+                   in
+                     if tuple_count < 2 then
+                       MFH.s_betapplys (candidate, arguments)
+                     else
+                       let
+                         val before_arguments = List.take (arguments, prefix)
+                         val tuple_arguments = List.take
+                           (List.drop (arguments, prefix), tuple_count)
+                         val after_arguments = List.drop (arguments, arity)
+                         val before_tys = List.take (argument_tys, prefix)
+                         val tuple_tys = List.drop (argument_tys, prefix)
+                         val remaining_argument_tys =
+                           List.drop (all_argument_tys, arity)
+                         val tuple_ty = pairSyntax.list_mk_prod tuple_tys
+                         val new_ty = boolSyntax.list_mk_fun
+                           (before_tys @ [tuple_ty] @ remaining_argument_tys,
+                            result_ty)
+                         val name = uncurry_prefix_for tuple_count prefix ^
+                           uncurry_name candidate
+                         val uncurried = MFN.mk_reserved_var name new_ty
+                       in
+                         MFH.s_betapplys
+                           (uncurried,
+                            before_arguments @
+                            [pairSyntax.list_mk_pair tuple_arguments] @
+                            after_arguments)
+                       end
+                   end
+             | NONE => MFH.s_betapplys (candidate, arguments))
+        else MFH.s_betapplys (candidate, arguments)
+    in
+      recurse term []
+    end
+
+  fun box_fun_and_pair_in_term context def original =
+    let
+      fun positive_existential polarity existential =
+        (polarity = MFU.Pos andalso existential) orelse
+        (polarity = MFU.Neg andalso not existential)
+      fun type_size ty =
+        if Type.is_vartype ty then 1
+        else 1 + List.foldl (op +) 0
+          (map type_size (#Args (Type.dest_thy_type ty)))
+      fun env_lookup environment variable =
+        Option.map #2 (List.find (Term.aconv variable o #1) environment)
+      fun rebind environment variable new_ty body =
+        let
+          val (name, _) = Term.dest_var variable
+          val variable' = Term.mk_var (name, new_ty)
+        in (variable', body, (variable, variable') :: environment) end
+      fun quantifier environment polarity existential candidate =
+        let
+          val (variable, body) =
+            if existential then boolSyntax.dest_exists candidate
+            else boolSyntax.dest_forall candidate
+          val old_ty = Term.type_of variable
+          val new_ty =
+            if polarity = MFU.Neut orelse
+               positive_existential polarity existential then
+              MFH.box_type context MFH.InFunLHS old_ty
+            else old_ty
+          val (variable', body', environment') =
+            rebind environment variable new_ty body
+          val transformed = recurse environment' polarity body'
+        in
+          if existential then boolSyntax.mk_exists (variable', transformed)
+          else boolSyntax.mk_forall (variable', transformed)
+        end
+      and equality environment left right =
+        let
+          val left' = recurse environment MFU.Neut left
+          val right' = recurse environment MFU.Neut right
+          val left_ty = Term.type_of left'
+          val right_ty = Term.type_of right'
+          val common =
+            if def orelse type_size left_ty <= type_size right_ty then left_ty
+            else right_ty
+        in
+          boolSyntax.mk_eq
+            (MFH.coerce_term context common left_ty left',
+             MFH.coerce_term context common right_ty right')
+        end
+      and application environment function argument =
+        let
+          val function' = recurse environment MFU.Neut function
+          val function_ty = Term.type_of function'
+          val (callable, domain_ty) =
+            if MFH.is_fun_type function_ty then
+              (function', #1 (Type.dom_rng function_ty))
+            else if MFH.is_funbox_type function_ty then
+              let
+                val arguments = MFH.boxed_type_args function_ty
+                val domain = List.nth (arguments, 0)
+                val range = List.nth (arguments, 1)
+                val constructor = hd
+                  (MFH.data_type_constrs context function_ty)
+                val underlying_ty = Type.-->(domain, range)
+              in
+                (MFH.select_nth_constr_arg context constructor function' 0
+                   underlying_ty, domain)
+              end
+            else raise err "box_fun_and_pair_in_term"
+              "application operator has a nonfunction type"
+          val argument' = recurse environment MFU.Neut argument
+          val old_argument_ty = Term.type_of argument'
+        in
+          MFH.s_betapply
+            (callable, MFH.coerce_term context domain_ty old_argument_ty
+              argument')
+        end
+      and constant candidate =
+        let
+          val ty = Term.type_of candidate
+          val new_ty =
+            if MFH.is_descr candidate then
+              let
+                val result_ty = #2 (Type.dom_rng ty)
+                val boxed_result =
+                  MFH.box_type context MFH.InFunLHS result_ty
+              in
+                Type.-->(Type.-->(boxed_result, Type.bool), boxed_result)
+              end
+            else if MFH.is_built_in_const candidate then ty
+            else if Term.is_const candidate andalso
+                    MFH.is_nonfree_constr candidate then
+              MFH.box_type context MFH.InConstr ty
+            else if (case Lib.total Term.dest_var candidate of
+                        SOME (name, _) => MFN.is_sel name
+                      | NONE => MFH.is_record_get candidate) then
+              MFH.box_type context MFH.InSel ty
+            else MFH.box_type context MFH.InExpr ty
+        in
+          MFH.retype_constant "box" candidate new_ty
+        end
+      and box_var_in_def variable =
+        let
+          val old_ty = Term.type_of variable
+          val (_, quantified_body) = boolSyntax.strip_forall original
+          val (_, conclusion) = boolSyntax.strip_imp quantified_body
+          val (left, _) = boolSyntax.dest_eq conclusion
+          val (head, arguments) = HolKernel.strip_comb left
+          val head' =
+            if Term.is_const head orelse Term.is_var head then constant head
+            else head
+          val (argument_tys, _) = boolSyntax.strip_fun (Term.type_of head')
+          fun expected_types expected argument =
+            if Term.aconv argument variable then [expected]
+            else if pairSyntax.is_pair argument andalso
+                    (MFH.is_pair_type expected orelse
+                     MFH.is_pairbox_type expected) then
+              let
+                val (left_arg, right_arg) = pairSyntax.dest_pair argument
+                val expected_args =
+                  if MFH.is_pair_type expected then
+                    let val (left_ty, right_ty) =
+                      pairSyntax.dest_prod expected
+                    in [left_ty, right_ty] end
+                  else MFH.boxed_type_args expected
+              in
+                expected_types (List.nth (expected_args, 0)) left_arg @
+                expected_types (List.nth (expected_args, 1)) right_arg
+              end
+            else if Term.free_in variable argument then [old_ty]
+            else []
+          val demanded = List.concat (ListPair.mapEq
+            (fn (expected, argument) => expected_types expected argument)
+            (List.take (argument_tys, length arguments), arguments))
+          val distinct = List.foldl (fn (ty, result) =>
+            if List.exists (fn other => other = ty) result then result
+            else ty :: result) [] demanded
+        in
+          case distinct of [ty] => ty | _ => old_ty
+        end handle HOL_ERR _ => Term.type_of variable
+      and recurse environment polarity candidate =
+        if boolSyntax.is_forall candidate then
+          quantifier environment polarity false candidate
+        else if boolSyntax.is_exists candidate then
+          quantifier environment polarity true candidate
+        else if boolSyntax.is_eq candidate then
+          let val (left, right) = boolSyntax.dest_eq candidate
+          in equality environment left right end
+        else if boolSyntax.is_neg candidate then
+          boolSyntax.mk_neg (recurse environment
+            (MFU.flip_polarity polarity) (boolSyntax.dest_neg candidate))
+        else if boolSyntax.is_imp_only candidate then
+          let val (left, right) = boolSyntax.dest_imp candidate
+          in boolSyntax.mk_imp
+            (recurse environment (MFU.flip_polarity polarity) left,
+             recurse environment polarity right)
+          end
+        else if boolSyntax.is_conj candidate then
+          let val (left, right) = boolSyntax.dest_conj candidate
+          in boolSyntax.mk_conj
+            (recurse environment polarity left,
+             recurse environment polarity right)
+          end
+        else if boolSyntax.is_disj candidate then
+          let val (left, right) = boolSyntax.dest_disj candidate
+          in boolSyntax.mk_disj
+            (recurse environment polarity left,
+             recurse environment polarity right)
+          end
+        else if Term.is_comb candidate then
+          let val (function, argument) = Term.dest_comb candidate
+          in application environment function argument end
+        else if Term.is_abs candidate then
+          let
+            val (variable, body) = Term.dest_abs candidate
+            val (variable', body', environment') =
+              rebind environment variable (Term.type_of variable) body
+          in
+            Term.mk_abs (variable', recurse environment' MFU.Neut body')
+          end
+        else if Term.is_var candidate then
+          (case env_lookup environment candidate of
+               SOME replacement => replacement
+             | NONE =>
+                 let val (name, ty) = Term.dest_var candidate
+                 in
+                   Term.mk_var (name,
+                     if def then box_var_in_def candidate
+                     else MFH.box_type context MFH.InExpr ty)
+                 end)
+        else if Term.is_const candidate then constant candidate
+        else candidate
+    in
+      recurse [] MFU.Pos original
+    end
+
   fun do_tail context def destroy_constrs term =
     let
       val destroyed_sets = destroy_set_Collect term
@@ -1816,7 +2115,7 @@ structure Refute_ModelFinder_Preproc = struct
     end
 
   fun preprocess_formulas
-        (context as {destroy_constrs, ...} : context)
+        (context as {boxes, destroy_constrs, ...} : context)
         assumptions negated =
     let
       val prepared = negated
@@ -1827,11 +2126,26 @@ structure Refute_ModelFinder_Preproc = struct
       val (nondefinitions, definitions, got_all_mono_user_axioms,
            no_poly_user_axioms) =
         axioms_for_term context assumptions prepared
-      (* Boxing and binarization remain the identity until TASK_07/08. *)
-      val nondefinitions' = map
-        (do_tail context false destroy_constrs) nondefinitions
-      val definitions' = map
-        (do_tail context true destroy_constrs) definitions
+      val box = List.exists (fn (_, value) => value <> SOME false) boxes
+      val uncurry_table =
+        if box then
+          List.foldl (fn (term, table) =>
+            add_to_uncurry_table context term table) []
+            (nondefinitions @ definitions)
+        else []
+      fun do_middle definitional term =
+        if box then
+          term
+          |> uncurry_term uncurry_table
+          |> box_fun_and_pair_in_term context definitional
+        else term
+      (* Binarization is TASK_08's inert first arm of this slot. *)
+      val nondefinitions' = map (fn term =>
+        do_tail context false destroy_constrs (do_middle false term))
+        nondefinitions
+      val definitions' = map (fn term =>
+        do_tail context true destroy_constrs (do_middle true term))
+        definitions
     in
       (nondefinitions', definitions', got_all_mono_user_axioms,
        no_poly_user_axioms)

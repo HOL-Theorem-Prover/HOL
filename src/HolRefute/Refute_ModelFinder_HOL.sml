@@ -842,6 +842,66 @@ structure Refute_ModelFinder_HOL = struct
         SOME {Thy = "pair", Tyop = "prod", ...} => true
       | _ => false
 
+  fun is_funbox_type ty =
+    case Lib.total Type.dest_thy_type ty of
+        SOME {Thy = "refute", Tyop = "funbox", ...} => true
+      | _ => false
+
+  fun is_pairbox_type ty =
+    case Lib.total Type.dest_thy_type ty of
+        SOME {Thy = "refute", Tyop = "pairbox", ...} => true
+      | _ => false
+
+  fun is_iterator_type ty =
+    Type.is_vartype ty andalso
+    let val name = Type.dest_vartype ty
+    in
+      String.isPrefix
+        ("'" ^ Refute_ModelFinder_Names.lfp_iterator_prefix) name orelse
+      String.isPrefix
+        ("'" ^ Refute_ModelFinder_Names.gfp_iterator_prefix) name
+    end
+
+  fun boxed_type_args ty = #Args (Type.dest_thy_type ty)
+
+  fun mk_funbox_type (domain, range) = Type.mk_thy_type
+    {Thy = "refute", Tyop = "funbox", Args = [domain, range]}
+
+  fun mk_pairbox_type (left, right) = Type.mk_thy_type
+    {Thy = "refute", Tyop = "pairbox", Args = [left, right]}
+
+  fun unarize_unbox_etc_type ty =
+    if Type.is_vartype ty then ty
+    else
+      let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+      in
+        if Thy = "refute" andalso Tyop = "funbox" then
+          Type.-->(unarize_unbox_etc_type (List.nth (Args, 0)),
+            unarize_unbox_etc_type (List.nth (Args, 1)))
+        else if Thy = "refute" andalso Tyop = "pairbox" then
+          pairSyntax.mk_prod
+            (unarize_unbox_etc_type (List.nth (Args, 0)),
+             unarize_unbox_etc_type (List.nth (Args, 1)))
+        else
+          Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
+            Args = map unarize_unbox_etc_type Args}
+      end
+
+  fun type_matches_unboxed (pattern, actual) =
+    Lib.can (Type.match_type (unarize_unbox_etc_type pattern))
+      (unarize_unbox_etc_type actual)
+
+  datatype box_position =
+      InConstr | InSel | InExpr | InPair | InFunLHS | InFunRHS1 | InFunRHS2
+
+  fun in_fun_lhs_for InConstr = InSel
+    | in_fun_lhs_for _ = InFunLHS
+
+  fun in_fun_rhs_for InConstr = InConstr
+    | in_fun_rhs_for InSel = InSel
+    | in_fun_rhs_for InFunRHS1 = InFunRHS2
+    | in_fun_rhs_for _ = InFunRHS1
+
   fun is_boolean_type ty =
     case Lib.total Type.dest_thy_type ty of
         SOME {Thy = "min", Tyop = "bool", ...} => true
@@ -852,6 +912,58 @@ structure Refute_ModelFinder_HOL = struct
         SOME {Thy = "num", Tyop = "num", ...} => true
       | SOME {Thy = "integer", Tyop = "int", ...} => true
       | _ => false
+
+  fun is_boxing_worth_it context position ty =
+    if is_fun_type ty then
+      (position = InPair orelse position = InFunLHS) andalso
+      not (is_boolean_type (#2 (boolSyntax.strip_fun ty)))
+    else if is_pair_type ty then
+      let val (left, right) = pairSyntax.dest_prod ty
+      in
+        position = InPair orelse position = InFunRHS1 orelse
+        position = InFunRHS2 orelse
+        ((position = InExpr orelse position = InFunLHS) andalso
+         List.exists (is_boxing_worth_it context InPair)
+           [box_type context InPair left, box_type context InPair right])
+      end
+    else
+      false
+  and should_box_type (context as {boxes, ...} : mf_context) position ty =
+    (case Refute_ModelFinder_Util.triple_lookup type_matches_unboxed
+            boxes ty of
+         SOME (SOME box_me) => box_me
+       | _ => is_boxing_worth_it context position ty)
+  and box_type context position ty =
+    if is_fun_type ty then
+      let val (domain, range) = Type.dom_rng ty
+      in
+        if position <> InConstr andalso position <> InSel andalso
+           should_box_type context position ty then
+          mk_funbox_type
+            (box_type context InFunLHS domain,
+             box_type context InFunRHS1 range)
+        else
+          Type.-->(box_type context (in_fun_lhs_for position) domain,
+            box_type context (in_fun_rhs_for position) range)
+      end
+    else if is_pair_type ty then
+      let val (left, right) = pairSyntax.dest_prod ty
+      in
+        if position <> InConstr andalso position <> InSel andalso
+           should_box_type context position ty then
+          mk_pairbox_type
+            (box_type context InSel left, box_type context InSel right)
+        else
+          let val nested =
+            if position = InConstr orelse position = InSel then position
+            else InPair
+          in
+            pairSyntax.mk_prod
+              (box_type context nested left, box_type context nested right)
+          end
+      end
+    else
+      ty
 
   fun is_interpreted_type ty =
     case Lib.total Type.dest_thy_type ty of
@@ -1319,6 +1431,139 @@ structure Refute_ModelFinder_HOL = struct
         end
     end
 
+  fun boxed_constructor context ty =
+    case data_type_constrs context ty of
+        constructor :: _ => constructor
+      | [] => raise err "boxed_constructor" "boxed type has no constructor"
+
+  fun coerce_term context new_ty old_ty term =
+    if new_ty = old_ty then term
+    else if is_funbox_type new_ty then
+      let
+        val arguments = boxed_type_args new_ty
+        val domain = List.nth (arguments, 0)
+        val range = List.nth (arguments, 1)
+        val function_ty = Type.-->(domain, range)
+        val function = coerce_term context function_ty old_ty term
+      in
+        construct_value context (boxed_constructor context new_ty) [function]
+      end
+    else if is_funbox_type old_ty then
+      let
+        val arguments = boxed_type_args old_ty
+        val domain = List.nth (arguments, 0)
+        val range = List.nth (arguments, 1)
+        val expanded = constr_expand context old_ty term
+        val function = hd (#2 (HolKernel.strip_comb expanded))
+      in
+        coerce_term context new_ty (Type.-->(domain, range)) function
+      end
+    else if is_fun_type new_ty andalso is_fun_type old_ty then
+      let
+        val (new_domain, new_range) = Type.dom_rng new_ty
+        val (old_domain, old_range) = Type.dom_rng old_ty
+        val variable = Term.variant (Term.all_vars term)
+          (Term.mk_var ("x", new_domain))
+        val old_argument = coerce_term context old_domain new_domain variable
+        val body = Term.mk_comb (term, old_argument)
+      in
+        Term.mk_abs (variable,
+          coerce_term context new_range old_range body)
+      end
+    else if (is_pair_type new_ty orelse is_pairbox_type new_ty) andalso
+            (is_pair_type old_ty orelse is_pairbox_type old_ty) then
+      let
+        val new_args =
+          if is_pair_type new_ty then
+            let val (left, right) = pairSyntax.dest_prod new_ty
+            in [left, right] end
+          else boxed_type_args new_ty
+        val old_args =
+          if is_pair_type old_ty then
+            let val (left, right) = pairSyntax.dest_prod old_ty
+            in [left, right] end
+          else boxed_type_args old_ty
+        val expanded = constr_expand context old_ty term
+        val arguments = #2 (HolKernel.strip_comb expanded)
+        val coerced = ListPair.mapEq
+          (fn ((new_arg, old_arg), argument) =>
+            coerce_term context new_arg old_arg argument)
+          (ListPair.zip (new_args, old_args), arguments)
+      in
+        if is_pair_type new_ty then pairSyntax.mk_pair
+          (List.nth (coerced, 0), List.nth (coerced, 1))
+        else construct_value context (boxed_constructor context new_ty)
+          coerced
+      end
+    else
+      raise err "coerce_term"
+        ("incompatible types " ^ Parse.type_to_string old_ty ^ " and " ^
+         Parse.type_to_string new_ty)
+
+  fun retype_constant layer term ty =
+    if Term.type_of term = ty then term
+    else
+      case Lib.total Term.dest_thy_const term of
+          SOME {Thy, Name, ...} =>
+            let
+              val generic = Term.prim_mk_const {Thy = Thy, Name = Name}
+              val legal = Lib.can
+                (Type.match_type (Term.type_of generic)) ty
+            in
+              if legal then Term.mk_thy_const {Thy = Thy, Name = Name, Ty = ty}
+              else Refute_ModelFinder_Names.mk_reserved_var
+                (Refute_ModelFinder_Names.reserved_prefix ^ layer ^
+                 Refute_ModelFinder_Names.name_sep ^ Thy ^
+                 Refute_ModelFinder_Names.name_sep ^ Name) ty
+            end
+        | NONE =>
+            let val (name, _) = Term.dest_var term
+            in Term.mk_var (name, ty) end
+
+  fun unarize_unbox_etc_term term =
+    let
+      fun recurse environment candidate =
+        let val (head, arguments) = HolKernel.strip_comb candidate
+        in
+          if Term.is_const head andalso
+                  is_named_const {Thy = "refute", Name = "FunBox"} head andalso
+                  length arguments = 1 then
+            recurse environment (hd arguments)
+          else if Term.is_const head andalso
+                  is_named_const {Thy = "refute", Name = "PairBox"} head andalso
+                  length arguments = 2 then
+            pairSyntax.mk_pair
+              (recurse environment (List.nth (arguments, 0)),
+               recurse environment (List.nth (arguments, 1)))
+          else if Term.is_abs candidate then
+            let
+              val (variable, body) = Term.dest_abs candidate
+              val (name, ty) = Term.dest_var variable
+              val variable' = Term.mk_var
+                (name, unarize_unbox_etc_type ty)
+            in
+              Term.mk_abs (variable', recurse
+                ((variable, variable') :: environment) body)
+            end
+          else if Term.is_comb candidate then
+            let val (function, argument) = Term.dest_comb candidate
+            in Term.mk_comb
+              (recurse environment function, recurse environment argument)
+            end
+          else if Term.is_const candidate then
+            retype_constant "unbox" candidate
+              (unarize_unbox_etc_type (Term.type_of candidate))
+          else if Term.is_var candidate then
+            (case List.find (Term.aconv candidate o #1) environment of
+                 SOME (_, replacement) => replacement
+               | NONE =>
+                   let val (name, ty) = Term.dest_var candidate
+                   in Term.mk_var
+                     (name, unarize_unbox_etc_type ty) end)
+          else candidate
+        end
+    in recurse [] term end
+
   fun smart_conj (left, right) =
     if Term.aconv left boolSyntax.T then right
     else if Term.aconv right boolSyntax.T then left
@@ -1621,11 +1866,6 @@ structure Refute_ModelFinder_HOL = struct
 
   fun typical_card_of_type ty =
     bounded_card_of_type 16777217 typical_atomic_card [] ty
-
-  (* TASK_07 extends this shared display key with funbox/pairbox erasure.
-     Keeping specialization lookups behind the helper now prevents the two
-     preprocessing passes from acquiring incompatible cache keys. *)
-  fun unarize_unbox_etc_type ty = ty
 
   fun is_finite_type context ty =
     bounded_exact_card_of_type context [] 1 2 [] ty > 0

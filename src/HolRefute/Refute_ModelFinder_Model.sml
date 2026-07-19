@@ -467,7 +467,8 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
         Term.list_mk_comb (constructor, rev arguments)
       end
   in
-    term_for_rep maybe_opt [] ty representation tuples
+    MFH.unarize_unbox_etc_term
+      (term_for_rep maybe_opt [] ty representation tuples)
   end
 
 fun term_for_rep {scope, atoms, sel_names, rel_table, bounds, maybe_opt,
@@ -488,14 +489,45 @@ fun free_name_for_term free_names term =
     case List.find (fn candidate =>
            case candidate of
                MFNT.FreeName (other, other_ty, _) =>
-                 name = other andalso same_type ty other_ty
+                 name = other andalso
+                 same_type (MFH.unarize_unbox_etc_type ty)
+                   (MFH.unarize_unbox_etc_type other_ty)
              | _ => false) free_names of
         SOME found => found
       | NONE => MFNT.FreeName (name, ty, MFR.Any)
   end
 
+fun uncurry_info generated_name =
+  if String.isPrefix MFN.uncurry_prefix generated_name then
+    let
+      val suffix = String.extract
+        (generated_name, size MFN.uncurry_prefix, NONE)
+      val (marker, original) = MFN.strip_first_name_sep suffix
+      val (count_text, at_suffix) =
+        Substring.position "@" (Substring.full marker)
+      val count = Int.fromString (Substring.string count_text)
+      val prefix =
+        if Substring.isEmpty at_suffix then NONE
+        else Int.fromString
+          (Substring.string (Substring.triml 1 at_suffix))
+    in
+      case (count, prefix) of
+          (SOME count, SOME prefix) => SOME (count, prefix, original)
+        | _ => NONE
+    end
+  else NONE
+
+fun dest_n_tuple_type 1 ty = [ty]
+  | dest_n_tuple_type count ty =
+      if count > 1 andalso MFH.is_pair_type ty then
+        let val (left, right) = pairSyntax.dest_prod ty
+        in left :: dest_n_tuple_type (count - 1) right end
+      else
+        raise err "dest_n_tuple_type" "malformed uncurried tuple type"
+
 fun user_friendly_const special_funs name ty =
   let
+    val display_ty = MFH.unarize_unbox_etc_type ty
     fun special_bounds terms =
       let
         fun schematic variable =
@@ -535,8 +567,25 @@ fun user_friendly_const special_funs name ty =
                 user_friendly_const special_funs candidate_name candidate_ty
               else candidate
           | NONE => candidate
+    fun uncurried_friendly count prefix original =
+      let
+        val (argument_tys, result_ty) = boolSyntax.strip_fun display_ty
+        val before_tys = List.take (argument_tys, prefix)
+        val tuple_ty = List.nth (argument_tys, prefix)
+        val tuple_tys = dest_n_tuple_type count tuple_ty
+        val after_tys = List.drop (argument_tys, prefix + 1)
+        val _ = if length tuple_tys = count then ()
+          else raise err "user_friendly_const" "bad uncurry arity"
+        val original_ty = boolSyntax.list_mk_fun
+          (before_tys @ tuple_tys @ after_tys, result_ty)
+      in
+        user_friendly_const special_funs original original_ty
+      end
   in
-    if MFN.is_special_name name then
+    case uncurry_info name of
+        SOME (count, prefix, original) =>
+          uncurried_friendly count prefix original
+      | NONE => if MFN.is_special_name name then
       case List.find (same_generated o #2) special_funs of
           SOME ((original, fixed_indices, fixed_terms), _) =>
             let
@@ -565,18 +614,20 @@ fun user_friendly_const special_funs name ty =
               Term.list_mk_abs (bounds @ missing_vars,
                 Term.list_mk_comb (original, arguments))
             end
-        | NONE => Term.mk_var (name, ty)
+        | NONE => Term.mk_var (name, display_ty)
     else
       let
         val original = MFN.original_name name
         val (thy_part, name_part) = MFN.strip_first_name_sep original
       in
         if thy_part <> "" andalso name_part <> "" then
-          Term.mk_thy_const {Thy = thy_part, Name = name_part, Ty = ty}
+          Term.mk_thy_const
+            {Thy = thy_part, Name = name_part, Ty = display_ty}
         else
-          Term.mk_var (original, ty)
+          Term.mk_var (original, display_ty)
       end
-  end handle HOL_ERR _ => Term.mk_var (MFN.original_name name, ty)
+  end handle HOL_ERR _ => Term.mk_var (MFN.original_name name,
+    MFH.unarize_unbox_etc_type ty)
 
 fun lhs_for_constant special_funs name ty =
   user_friendly_const special_funs name ty
@@ -596,7 +647,8 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
 
     fun decode name =
       case MFNT.rep_of name of
-          MFR.Any => MFN.unknown_marker (MFNT.type_of name)
+          MFR.Any => MFN.unknown_marker
+            (MFH.unarize_unbox_etc_type (MFNT.type_of name))
         | representation => reconstruct_term context
             (not (MFNT.is_fully_representable_set name))
             (MFNT.type_of name) representation
@@ -606,10 +658,38 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
       let val name = free_name_for_term free_names term
       in (term, decode name) end
 
+    fun curry_uncurried_value nickname display_ty value =
+      case uncurry_info nickname of
+          NONE => value
+        | SOME (count, prefix, _) =>
+            let
+              val (argument_tys, _) = boolSyntax.strip_fun display_ty
+              fun add_variable (ty, (index, avoids, variables)) =
+                let
+                  val variable = Term.variant avoids
+                    (Term.mk_var ("x" ^ Int.toString index, ty))
+                in
+                  (index + 1, variable :: avoids, variables @ [variable])
+                end
+              val (_, _, variables) = List.foldl add_variable
+                (0, Term.all_vars value, []) argument_tys
+              val before = List.take (variables, prefix)
+              val tuple = List.take (List.drop (variables, prefix), count)
+              val after = List.drop (variables, prefix + count)
+              val body = Term.list_mk_comb
+                (value, before @ [pairSyntax.list_mk_pair tuple] @ after)
+            in
+              MFH.eta_contract (Term.list_mk_abs (variables, body))
+            end
+
     fun classify (name, (evals, skolems, consts)) =
       let
         val nickname = MFNT.nickname_of name
-        val value = decode name
+        val raw_value = decode name
+        val lhs = lhs_for_constant special_funs nickname
+          (MFNT.type_of name)
+        val value = curry_uncurried_value nickname (Term.type_of lhs)
+          raw_value
       in
         if MFNT.is_skolem_name name then
           (evals, (MFN.original_name nickname, value) :: skolems, consts)
@@ -623,9 +703,7 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
                   (evals, skolems, consts)
             | NONE =>
                 (evals, skolems,
-                 (lhs_for_constant special_funs nickname
-                    (MFNT.type_of name), value) ::
-                 consts)
+                 (lhs, value) :: consts)
       end
 
     val (evals, skolems, consts) =

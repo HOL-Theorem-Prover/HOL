@@ -58,7 +58,7 @@ structure Refute_ModelFinder_Scope = struct
   fun same_type left right = Type.compare (left, right) = EQUAL
 
   fun type_matches pattern actual =
-    Lib.can (Type.match_type pattern) actual
+    MFH.type_matches_unboxed (pattern, actual)
 
   fun member_type ty = List.exists (same_type ty)
 

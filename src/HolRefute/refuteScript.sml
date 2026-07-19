@@ -80,3 +80,14 @@ Theorem list_size_simp[refute_simp]:
 Proof
   Cases_on `xs` >> simp [listTheory.list_size_thm]
 QED
+
+(* Part 4: ordinary datatypes used by the boxing preprocessor.  Keeping
+   these declarations static makes their TypeBase information available to
+   the generic datatype pipeline without adding runtime theory content. *)
+Datatype:
+  funbox = FunBox ('a -> 'b)
+End
+
+Datatype:
+  pairbox = PairBox 'a 'b
+End

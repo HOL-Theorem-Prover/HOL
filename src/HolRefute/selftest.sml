@@ -50,6 +50,8 @@ val _ = check_type (``:refute$rf3``, 3)
 val _ = check_type (``:refute$rf4``, 4)
 val _ = check_type (``:refute$rf5``, 5)
 val _ = check_type (``:refute$rf6``, 6)
+val _ = check_type (``:('a, 'b) refute$funbox``, 1)
+val _ = check_type (``:('a, 'b) refute$pairbox``, 1)
 
 fun same_conclusion left right =
   Term.aconv (Thm.concl left) (Thm.concl right)
@@ -1396,6 +1398,167 @@ val _ = require_msg (check_result mf_preproc_destroy_goldens) (fn () =>
   "model-finder constructor-destruction golden changed")
   (fn () => ()) ()
 
+fun mf_box_uncurry_goldens () =
+  let
+    val context = fresh_mf_context ()
+    val function_ty = ``:num -> num``
+    val predicate_ty = ``:num -> bool``
+    val curried_predicate_ty = ``:num -> num -> bool``
+    val pair_ty = ``:num # bool``
+    val function_box_ty = MFH.mk_funbox_type (``:num``, ``:num``)
+    val pair_box_ty = MFH.mk_pairbox_type (``:num``, ``:bool``)
+    val forced_off = MFH.make_context
+      (#mf (Refute_Core.upd_box [(NONE, SOME false)]
+        Refute_Core.default_config)) []
+    val forced_on = MFH.make_context
+      (#mf (Refute_Core.upd_box [(NONE, SOME true)]
+        Refute_Core.default_config)) []
+    val function = ``f : num -> num``
+    val pair = ``(n : num, b : bool)``
+    val boxed_function = MFH.coerce_term context function_box_ty
+      function_ty function
+    val boxed_pair = MFH.coerce_term context pair_box_ty pair_ty pair
+    val function_roundtrip = MFH.coerce_term context function_ty
+      function_box_ty boxed_function
+    val pair_roundtrip = MFH.coerce_term context pair_ty pair_box_ty
+      boxed_pair
+    val higher_order = ``hof : (num -> num) -> bool``
+    val boxed_call = MFP.box_fun_and_pair_in_term context false
+      (Term.mk_comb (higher_order, function))
+    val existential = MFP.box_fun_and_pair_in_term context false
+      ``?f : num -> num. (q : (num -> num) -> bool) f``
+    val called_existential = MFP.box_fun_and_pair_in_term context false
+      ``?f : num -> num. f 0 = 0``
+    val universal = MFP.box_fun_and_pair_in_term context false
+      ``!f : num -> num. (q : (num -> num) -> bool) f``
+    val (existential_var, _) = boolSyntax.dest_exists existential
+    val (universal_var, _) = boolSyntax.dest_forall universal
+    val illegal = MFH.retype_constant "box" ``SUC : num -> num``
+      ``:bool -> bool``
+    val append = ``APPEND (xs : num list) ys``
+    val table = MFP.add_to_uncurry_table context append []
+    val uncurried_append = MFP.uncurry_term table append
+    val (append_head, append_args) = HolKernel.strip_comb uncurried_append
+    val append_name = #1 (Term.dest_var append_head)
+    val displayed_append = Refute_ModelFinder_Model.user_friendly_const []
+      append_name (Term.type_of append_head)
+    val bool_prefix_const = MFN.mk_special 700 "bool_prefix"
+      ``:bool -> bool -> num -> num -> num``
+    val bool_prefix_term = Term.list_mk_comb (bool_prefix_const,
+      [boolSyntax.T, boolSyntax.F, ``1 : num``, ``2 : num``])
+    val bool_prefix_table = MFP.add_to_uncurry_table context
+      bool_prefix_term []
+    val bool_prefix_result = MFP.uncurry_term bool_prefix_table
+      bool_prefix_term
+    val (bool_prefix_head, bool_prefix_args) =
+      HolKernel.strip_comb bool_prefix_result
+    val iterator_ty = Type.mk_vartype "'refute$lfpit$test"
+    val iterator_const = MFN.mk_special 701 "iterator"
+      (boolSyntax.list_mk_fun
+        ([iterator_ty, ``:num``, ``:num``], ``:num``))
+    val iterator = Term.mk_var ("iterator", iterator_ty)
+    val iterator_term = Term.list_mk_comb
+      (iterator_const, [iterator, ``1 : num``, ``2 : num``])
+    val iterator_result = MFP.uncurry_term
+      (MFP.add_to_uncurry_table context iterator_term []) iterator_term
+    val (iterator_head, iterator_args) =
+      HolKernel.strip_comb iterator_result
+    val skolem = MFN.mk_skolem 2 702 "sk"
+      ``:num -> num -> num``
+    val skolem_term = Term.list_mk_comb
+      (skolem, [``1 : num``, ``2 : num``])
+    val skolem_result = MFP.uncurry_term
+      (MFP.add_to_uncurry_table context skolem_term []) skolem_term
+    val skolem_head = #1 (HolKernel.strip_comb skolem_result)
+    val nested_arg_const = MFN.mk_special 703 "nested_arg"
+      ``:num -> (bool # num) -> num``
+    val nested_arg_term = Term.list_mk_comb
+      (nested_arg_const, [``1 : num``, ``(T, 2 : num)``])
+    val nested_arg_result = MFP.uncurry_term
+      (MFP.add_to_uncurry_table context nested_arg_term []) nested_arg_term
+    val nested_arg_head = #1 (HolKernel.strip_comb nested_arg_result)
+    val nested_arg_display =
+      Refute_ModelFinder_Model.user_friendly_const []
+        (#1 (Term.dest_var nested_arg_head)) (Term.type_of nested_arg_head)
+    val repaired =
+      Refute_ModelFinder_Scope.repair_cards_assigns_wrt_boxing_etc
+        [function_box_ty] [(SOME function_ty, [2, 3])]
+    val boxed_display = Refute_Core.format_types
+      [(function_box_ty, [function], true)]
+    val boxed_scope = Refute_Core.format_scope
+      (SOME [(function_box_ty, 2)])
+    fun text_has source text = not (Substring.isEmpty
+      (#2 (Substring.position text (Substring.full source))))
+    fun display_has text = text_has boxed_display text
+    val boxed_call_heads = HolKernel.find_terms (fn term =>
+      Term.is_const term andalso
+      (case Lib.total Term.dest_thy_const term of
+           SOME {Thy = "refute", Name = "FunBox", ...} => true
+         | _ => false)) boxed_call
+    val projected_calls = HolKernel.find_terms (fn term =>
+      case Lib.total Term.dest_var term of
+          SOME (name, _) => MFN.is_sel name andalso
+            MFN.original_name name = "refute$FunBox"
+        | NONE => false) called_existential
+    val checks =
+      [("expr policy",
+        MFH.box_type context MFH.InExpr function_ty = function_ty),
+       ("argument policy",
+        MFH.box_type context MFH.InFunLHS function_ty = function_box_ty),
+       ("predicate policy",
+        MFH.box_type context MFH.InFunLHS predicate_ty = predicate_ty andalso
+        MFH.box_type context MFH.InFunLHS curried_predicate_ty =
+          curried_predicate_ty),
+       ("pair policy",
+        MFH.box_type context MFH.InPair pair_ty = pair_box_ty),
+       ("force off",
+        MFH.box_type forced_off MFH.InFunLHS function_ty = function_ty),
+       ("force on",
+        MFH.box_type forced_on MFH.InExpr function_ty = function_box_ty),
+       ("function roundtrip", Term.aconv function_roundtrip function),
+       ("pair roundtrip", Term.aconv pair_roundtrip pair),
+       ("call-site boxing", not (null boxed_call_heads)),
+       ("call-site projection", not (null projected_calls)),
+       ("existential binder",
+        Term.type_of existential_var = function_box_ty),
+       ("universal binder", Term.type_of universal_var = function_ty),
+       ("reserved retyping",
+        MFN.is_reserved_name (#1 (Term.dest_var illegal)) andalso
+        MFN.original_name (#1 (Term.dest_var illegal)) = "num$SUC"),
+       ("uncurry name", append_name = "refute$unc2@0$list$APPEND"),
+       ("uncurry tuple", length append_args = 1 andalso
+        pairSyntax.is_pair (hd append_args)),
+       ("uncurry display", Term.same_const displayed_append
+        ``APPEND : num list -> num list -> num list``),
+       ("bool prefix",
+        #1 (Term.dest_var bool_prefix_head) =
+          "refute$unc2@2$refute$sp700$bool_prefix" andalso
+        length bool_prefix_args = 3),
+       ("iterator prefix",
+        #1 (Term.dest_var iterator_head) =
+          "refute$unc2@1$refute$sp701$iterator" andalso
+        length iterator_args = 2),
+       ("generated uncurry",
+        #1 (Term.dest_var skolem_head) =
+          "refute$unc2@0$refute$sk2@702$sk"),
+       ("nested argument display",
+        Term.type_of nested_arg_display =
+          ``:num -> (bool # num) -> num``),
+       ("card transfer", repaired = [(SOME function_box_ty, [2, 3])]),
+       ("boxed display", display_has "[boxed]" andalso
+        not (display_has "funbox") andalso
+        not (text_has boxed_scope "funbox"))]
+    val _ = List.app (fn (label, passed) =>
+      if passed then () else Feedback.HOL_MESG
+        ("TASK_07 failed check: " ^ label)) checks
+  in
+    List.all #2 checks
+  end
+
+val _ = require_msg (check_result mf_box_uncurry_goldens) (fn () =>
+  "model-finder boxing/uncurrying/card-transfer golden changed")
+  (fn () => ()) ()
+
 fun mf_preproc_skolem_golden () =
   let
     val context = fresh_mf_context ()
@@ -1415,9 +1578,15 @@ fun mf_preproc_skolem_golden () =
     val (pipeline_terms, pipeline_defs, pipeline_all_mono,
          pipeline_no_poly) =
       MFP.preprocess_formulas pipeline_context [] input
+    val boxed_num_pair_ty = MFH.mk_pairbox_type (``:num``, ``:num``)
+    val boxed_num_pair = hd
+      (MFH.data_type_constrs pipeline_context boxed_num_pair_ty)
+    val uncurried_skolem = MFN.mk_reserved_var
+      "refute$unc3@0$refute$sk3@1$x"
+      (Type.-->(pairSyntax.mk_prod (``:num``, boxed_num_pair_ty), ``:num``))
     val expected_pipeline =
       ``!c b a : num.
-          let x = (^skolem) a b c
+          let x = (^uncurried_skolem) (a, (^boxed_num_pair) b c)
           in x = a + b + c``
     val axiom_context = fresh_mf_context ()
     val axiom = ``?w : num. w = 2``
@@ -4840,6 +5009,20 @@ fun specialize_default_and_unlock_are_pinned () =
 val _ = require_msg
   (check_result specialize_default_and_unlock_are_pinned) (fn () =>
   "specialize is not enabled by default or remains guarded")
+  (fn () => ()) ()
+
+fun box_default_and_unlock_are_pinned () =
+  let
+    val rows = [(SOME ``:num -> num``, SOME false), (NONE, NONE)]
+    val updated = upd_box rows default_config
+  in
+    #box (#mf default_config) = [(NONE, NONE)] andalso
+    #box (#mf updated) = rows
+  end
+
+val _ = require_msg
+  (check_result box_default_and_unlock_are_pinned) (fn () =>
+  "box is not smart by default or remains guarded")
   (fn () => ()) ()
 
 fun m4_guard_is_pinned (field, testfn) = shouldfail {

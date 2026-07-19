@@ -186,7 +186,7 @@ structure Refute_Core = struct
       max_threads = 0,
       tac_timeout = 0.5,
       specialize = true,
-      box = [(NONE, SOME false)],
+      box = [(NONE, NONE)],
       binary_ints = SOME false,
       bits = [0],
       star_linear_preds = false,
@@ -519,7 +519,6 @@ structure Refute_Core = struct
   fun validate_mf_config (mf : mf_config) =
     let
       fun unchanged field same = if same then () else m4_error field
-      val _ = unchanged "box" (#box mf = #box default_mf_config)
       val _ = unchanged "binary_ints"
         (#binary_ints mf = #binary_ints default_mf_config)
       val _ = unchanged "bits" (#bits mf = #bits default_mf_config)
@@ -1164,10 +1163,34 @@ structure Refute_Core = struct
         printed
     end
 
+  fun unbox_display_type ty =
+    if Type.is_vartype ty then ty
+    else
+      let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+      in
+        if Thy = "refute" andalso Tyop = "funbox" then
+          Type.-->(unbox_display_type (List.nth (Args, 0)),
+            unbox_display_type (List.nth (Args, 1)))
+        else if Thy = "refute" andalso Tyop = "pairbox" then
+          pairSyntax.mk_prod
+            (unbox_display_type (List.nth (Args, 0)),
+             unbox_display_type (List.nth (Args, 1)))
+        else
+          Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
+            Args = map unbox_display_type Args}
+      end
+
+  fun is_boxed_type ty =
+    case Lib.total Type.dest_thy_type ty of
+        SOME {Thy = "refute", Tyop = "funbox", ...} => true
+      | SOME {Thy = "refute", Tyop = "pairbox", ...} => true
+      | _ => false
+
   fun format_scope NONE = ""
     | format_scope (SOME assignments) =
         "\nScope: " ^ String.concatWith ", " (map (fn (ty, card) =>
-          "card " ^ type_name ty ^ " = " ^ Int.toString card) assignments)
+          "card " ^ type_name (unbox_display_type ty) ^ " = " ^
+          Int.toString card) assignments)
 
   fun format_named_terms title entries =
     if null entries then "" else
@@ -1179,7 +1202,8 @@ structure Refute_Core = struct
     if null types then "" else
       "\nTypes:\n" ^ String.concatWith "\n" (map
         (fn (ty, values, complete) =>
-          "  " ^ type_name ty ^ " = {" ^
+          "  " ^ type_name (unbox_display_type ty) ^
+          (if is_boxed_type ty then " [boxed]" else "") ^ " = {" ^
           String.concatWith ", " (map format_term values) ^
           (if complete then "" else
              if null values then "..." else ", ...") ^ "}") types)
