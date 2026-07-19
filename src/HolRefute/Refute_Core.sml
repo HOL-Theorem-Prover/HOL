@@ -1216,7 +1216,7 @@ structure Refute_Core = struct
         not (null cexs) andalso
         (#abort_potential cfg orelse
          List.exists (fn cex =>
-           certainty_rank (#certainty cex) >= 2) cexs)
+           case #certainty cex of Genuine => true | _ => false) cexs)
     | decisive _ _ = false
 
   fun best_counterexample_result jobs =

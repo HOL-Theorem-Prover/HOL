@@ -1371,22 +1371,41 @@ structure Refute_Forl :> REFUTE_FORL = struct
   fun pid_string () =
     SysWord.toString (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
 
-  fun temp_directory overlord =
-    if overlord then OS.FileSys.getDir ()
-    else
-      let val candidate = getenv "TMPDIR"
-      in
-        OS.FileSys.fullPath
-          (if candidate <> "" andalso
-              (OS.FileSys.isDir candidate handle _ => false)
-           then candidate
-           else "/tmp")
-      end
+  fun temp_root () =
+    let val candidate = getenv "TMPDIR"
+    in
+      OS.FileSys.fullPath
+        (if candidate <> "" andalso
+            (OS.FileSys.isDir candidate handle _ => false)
+         then candidate
+         else "/tmp")
+    end
 
-  fun file_stem overlord =
-    if overlord then "kodkodi"
-    else
-      "kodkodi" ^ pid_string () ^ "_" ^ Int.toString (temp_counter ())
+  val private_directory_mode = Posix.FileSys.S.flags
+    [Posix.FileSys.S.irusr, Posix.FileSys.S.iwusr,
+     Posix.FileSys.S.ixusr]
+
+  fun path_exists path =
+    ((ignore (Posix.FileSys.lstat path); true) handle OS.SysErr _ => false)
+
+  fun make_private_temp_directory () =
+    let
+      val root = temp_root ()
+      fun create 0 = raise Fail "unable to create a private Kodkodi directory"
+        | create attempts =
+            let
+              val name = "kodkodi" ^ pid_string () ^ "_" ^
+                Int.toString (temp_counter ())
+              val path = OS.Path.concat (root, name)
+            in
+              (Posix.FileSys.mkdir (path, private_directory_mode); path)
+              handle error as OS.SysErr _ =>
+                if path_exists path then create (attempts - 1)
+                else raise error
+            end
+    in
+      create 100
+    end
 
   fun path_for directory stem suffix =
     OS.Path.concat (directory, stem ^ "." ^ suffix)
@@ -1471,14 +1490,19 @@ structure Refute_Forl :> REFUTE_FORL = struct
         Error ("Kodkodi is not configured", trivially_unsat)
       else
         let
-          val directory = temp_directory overlord
-          val stem = file_stem overlord
+          val directory =
+            if overlord then OS.FileSys.getDir ()
+            else make_private_temp_directory ()
+          val stem = "kodkodi"
           val input_path = path_for directory stem "kki"
           val output_path = path_for directory stem "out"
           val error_path = path_for directory stem "err"
           val paths = [input_path, output_path, error_path]
           fun remove_files () =
-            if overlord then () else List.app remove paths
+            if overlord then ()
+            else
+              (List.app remove paths;
+               OS.FileSys.rmDir directory handle _ => ())
           fun work () =
             let
               val _ = write_problems input_path (List.map #2 indexed_problems)

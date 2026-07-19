@@ -342,11 +342,15 @@ fun run_instance deadline started (config : Refute_Core.config)
            reasons = reasons} of
             MFM.Drop => NONE
           | MFM.Keep cex =>
-              (counterexamples := cex :: !counterexamples;
-               if certainty_is_potential (#certainty cex) then
-                 met_potential := !met_potential + 1
-               else ();
-               SOME cex)
+              if #genuine_only config andalso
+                 certainty_is_potential (#certainty cex)
+              then NONE
+              else
+                (counterexamples := cex :: !counterexamples;
+                 if certainty_is_potential (#certainty cex) then
+                   met_potential := !met_potential + 1
+                 else ();
+                 SOME cex)
       end
 
     fun solve_any_problem state first_time problems =
@@ -451,7 +455,7 @@ fun run_instance deadline started (config : Refute_Core.config)
                             (certainty_is_genuine o #certainty) results
                         val max_genuine = max_genuine - kept
                       in
-                        if max_genuine <= 0 orelse not first_time then
+                        if max_genuine <= 0 then
                           (found, 0, max_genuine, donno)
                         else
                           let

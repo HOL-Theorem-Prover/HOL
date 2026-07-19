@@ -3609,6 +3609,24 @@ local
         | _ => false
     end
 
+  fun mf_genuine_only_hides_potential () =
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val solver =
+        if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
+      val config = default_config
+        |> upd_timeout 20.0
+        |> upd_backends (SOME ["kodkod"])
+        |> upd_sat_solver solver
+        |> upd_genuine_only true
+        |> upd_card [(NONE, [1])]
+    in
+      case Refute.refute config ``!b : bool. b`` of
+          Refute.Counterexample _ => false
+        | Refute.NoCounterexample => true
+        | Refute.Unknown _ => true
+    end
+
   val _ =
     if bridge_configured then ()
     else print "(Kodkodi not configured, live bridge tests skipped.)\n"
@@ -3654,6 +3672,12 @@ in
       require_msg (check_result mf_driver_smoke) (fn () =>
         "the gated model-finder smoke did not find a certified " ^
         "counterexample") (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_genuine_only_hides_potential) (fn () =>
+        "the model finder returned Potential in genuine_only mode")
+        (fn () => ()) ()
     else ()
   val _ =
     if bridge_configured andalso selftest_level >= 2 then
@@ -4068,6 +4092,7 @@ val race_mutex = Mutex.mutex ()
 val race_ready = ConditionVar.conditionVar ()
 val race_potential_started = ref false
 val race_potential_enabled = ref false
+val race_quasi_enabled = ref false
 val race_genuine_enabled = ref false
 
 fun reset_race () =
@@ -4102,6 +4127,17 @@ val race_potential_backend : backend =
          [stub_cex "refute-race-mf-potential"
             (Refute_Core.Potential ["stub"])]) }
 
+val race_quasi_backend : backend =
+  { name = "refute-race-mf-quasi",
+    weight = 50,
+    configured = fn () => !race_quasi_enabled,
+    requires = AnyGoal,
+    run = fn _ => fn _ =>
+      (mark_race_potential_started ();
+       Counterexample
+         [stub_cex "refute-race-mf-quasi"
+            (Refute_Core.QuasiGenuine ["stub"])]) }
+
 val race_genuine_backend : backend =
   { name = "refute-race-qc-genuine",
     weight = 20,
@@ -4131,6 +4167,7 @@ val merge_high_backend =
   potential_backend "refute-merge-potential-high" 60 merge_high_enabled
 
 val _ = register_backend race_potential_backend
+val _ = register_backend race_quasi_backend
 val _ = register_backend race_genuine_backend
 val _ = register_backend merge_low_backend
 val _ = register_backend merge_high_backend
@@ -4161,6 +4198,34 @@ fun potential_does_not_interrupt_genuine () =
 val _ = require_msg
   (check_result potential_does_not_interrupt_genuine) (fn () =>
   "an MF-like Potential interrupted a QC Genuine result")
+  (fn () => ()) ()
+
+fun quasi_does_not_interrupt_genuine () =
+  let
+    val _ = reset_race ()
+    val _ = race_quasi_enabled := true
+    val _ = race_genuine_enabled := true
+    val config =
+      upd_expect ExpectGenuine
+        (upd_timeout 2.0
+          (upd_sequential false
+            (upd_backends
+              (SOME ["refute-race-mf-quasi",
+                     "refute-race-qc-genuine"])
+              default_config)))
+    val captured = Exn.capture (fn () => refute config ``T``) ()
+    val _ = race_quasi_enabled := false
+    val _ = race_genuine_enabled := false
+  in
+    case Exn.release captured of
+        Counterexample ({backend, certainty = Genuine, ...} :: _) =>
+          backend = "refute-race-qc-genuine"
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result quasi_does_not_interrupt_genuine) (fn () =>
+  "a QuasiGenuine result interrupted a slower Genuine result")
   (fn () => ()) ()
 
 fun potential_merge_uses_backend_weight () =
