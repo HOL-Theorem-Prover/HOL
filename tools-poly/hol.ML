@@ -536,6 +536,11 @@ in
            on Script.sml files (issue #1865). *)
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/holinteractive.ML"));
+        (* CompilerSpecific is a .ML file that poly-init.ML uses into
+           hol.state; the load system doesn't know it's already
+           available, so fake-load it to stop holdep from complaining
+           when it appears in Q-filter-expanded Script.sml output. *)
+        Meta.fakeload "CompilerSpecific";
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;

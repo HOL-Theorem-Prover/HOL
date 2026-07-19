@@ -459,7 +459,13 @@ fun start {diag} = let
   type compile_data = {parse: parse_data ref, text: text_data, thread: Thread.thread}
   type file_data = {
     compile: compile_data option ref,
-    lastTrees: {parse: parse_data, text: text_data} ref}
+    lastTrees: {parse: parse_data, text: text_data} ref,
+    (* debounce epoch: incremented on didChange and at startCompile
+       entry.  scheduleCompile's forked thread captures the epoch and
+       only fires startCompile if its epoch still matches when it
+       wakes up.  Rapid-fire edits fork many threads but only the
+       last (whose epoch survives to wake time) actually compiles. *)
+    debounce: int ref}
   local
     val mutex = Mutex.mutex ()
     val fileInfo = ref (Binarymap.mkDict String.compare: (string, file_data) Binarymap.dict)
@@ -474,13 +480,14 @@ fun start {diag} = let
 
   fun newFile text version = let
     val text = {text = text, version = version, lines = mkLineCounter text}
-    in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text}} end
+    in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
+        debounce = ref 0} end
 
   fun stopCompile r = case !r of
     NONE => ()
   | SOME {thread, ...} => (r := NONE; Thread.interrupt thread)
 
-  fun applyEdit ({compile, lastTrees}:file_data) version changes = let
+  fun applyEdit ({compile, lastTrees, ...}:file_data) version changes = let
     val _ = stopCompile compile
     fun getLines text NONE = mkLineCounter text
       | getLines _ (SOME lines) = lines
@@ -544,7 +551,10 @@ fun start {diag} = let
       builtTree = builtTree }
     in lastPos := size code end
 
-  fun startCompile uri ({compile, lastTrees}:file_data) =
+  fun startCompile uri ({compile, lastTrees, debounce}:file_data) = (
+    (* Invalidate any pending scheduleCompile thread: their epoch
+       check will see the new value and self-abort. *)
+    debounce := !debounce + 1;
     if #done (#parse (!lastTrees)) then () else let
     val _ = stopCompile compile
     val {text as {lines, ...}, parse = {diags = oldDiags, ...}} = !lastTrees
@@ -643,9 +653,22 @@ fun start {diag} = let
           print "{\"uri\":"; encString uri print; print "}")))));
       compile := NONE)
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
-    in compile := SOME {parse = trees, text = text, thread = thread} end
+    in compile := SOME {parse = trees, text = text, thread = thread} end)
 
-  fun getState {compile, lastTrees} endTarget = let
+  (* Fire a compile after a debounce delay: rapid didChange bursts
+     collapse to one compile. *)
+  fun scheduleCompile uri (v as {debounce, ...}: file_data) = let
+    val () = debounce := !debounce + 1
+    val myEpoch = !debounce
+    val debounce_ms = Time.fromMilliseconds 300
+    in Thread.fork (fn () =>
+        ((OS.Process.sleep debounce_ms;
+          if !debounce = myEpoch then startCompile uri v else ())
+         handle _ => ()),
+        []); ()
+    end
+
+  fun getState {compile, lastTrees, ...} endTarget = let
     fun getIfValid {parse as {pos, ...}, text} =
       if pos > 0 then let
         val offset = fromLineCol (#lines text) endTarget
@@ -937,7 +960,9 @@ fun start {diag} = let
         NONE => ()
       | SOME v => (
         applyEdit v version changes;
-        if !elabOnRef = ElabOnChange then startCompile uri v else ())
+        (* Debounce so keystroke bursts don't kick off a compile per
+           character; only the last edit in a 300 ms window fires. *)
+        if !elabOnRef = ElabOnChange then scheduleCompile uri v else ())
       in () end
     | Notification {method = "textDocument/didClose", params} => let
       val uri = JSONDecode.decode textDocumentId params
