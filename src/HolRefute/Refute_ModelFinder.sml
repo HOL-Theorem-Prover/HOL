@@ -7,6 +7,7 @@ Nitpick's pick_them_nits_in_term, specialized to the M3 feature set. *)
 
 signature REFUTE_MODEL_FINDER = sig
   val kodkod_backend : Refute_Core.backend
+  val kodkod_certainty_ceiling : Refute_Core.certainty_ceiling
   val register_backends : unit -> unit
 end
 
@@ -626,16 +627,22 @@ fun run_instance deadline started (config : Refute_Core.config)
        end)
   end
 
-fun decisive (config : Refute_Core.config)
-      (Refute_Core.Counterexample cexs) =
-    not (null cexs) andalso
-    (#abort_potential config orelse
-     List.exists (fn cex =>
-       case #certainty cex of
-           Refute_Core.Genuine => true
-         | Refute_Core.QuasiGenuine _ => true
-         | Refute_Core.Potential _ => false) cexs)
-  | decisive _ _ = false
+fun kodkod_certainty_ceiling (config : Refute_Core.config) instances =
+  let
+    val mf = #mf config
+    val certification_reachable =
+      #falsify mf andalso
+      List.exists Refute_Core.instance_is_executable instances
+    val genuine_fallback_reachable =
+      List.all (fn (_, value) => value <> SOME true) (#wf mf) andalso
+      #total_consts mf <> SOME true
+  in
+    if certification_reachable orelse genuine_fallback_reachable then
+      Refute_Core.Genuine
+    else
+      Refute_Core.QuasiGenuine
+        ["model-finder configuration precludes Genuine results"]
+  end
 
 fun run config instances =
   let
@@ -644,6 +651,7 @@ fun run config instances =
     val deadline = started + Time.fromReal budget
     val ordered = Listsort.sort (fn (left, right) =>
       Int.compare (#card left, #card right)) instances
+    val ceiling = kodkod_certainty_ceiling config ordered
 
     fun search [] cexs reasons all_none =
           if not (null cexs) then Refute_Core.Counterexample cexs
@@ -665,7 +673,7 @@ fun run config instances =
                         Refute_Core.Counterexample more =>
                           let val combined = cexs @ more
                           in
-                            if decisive config result then
+                            if Refute_Core.decisive config ceiling result then
                               Refute_Core.Counterexample combined
                             else search rest combined reasons false
                           end
@@ -684,7 +692,9 @@ val kodkod_backend : Refute_Core.backend =
    requires = Refute_Core.AnyGoal,
    run = run}
 
-fun register_backends () = Refute_Core.register_backend kodkod_backend
+fun register_backends () =
+  Refute_Core.register_backend_with_ceiling kodkod_backend
+    kodkod_certainty_ceiling
 
 val _ = register_backends ()
 

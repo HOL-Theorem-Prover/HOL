@@ -31,7 +31,9 @@ signature Refute = sig
   type qc_config = Refute_Core.qc_config
   type mf_config = Refute_Core.mf_config
   type config = Refute_Core.config
+  type instance = Refute_Core.instance
   type backend = Refute_Core.backend
+  type certainty_ceiling = config -> instance list -> certainty
   type substrate = Refute_Eval.substrate
   type custom_gen = Refute_Gen.custom_gen
   type rng = Refute_Gen.rng
@@ -45,6 +47,10 @@ signature Refute = sig
   val REFUTE_TAC    : Abbrev.tactic
 
   val register_backend : backend -> unit
+  (* The callback must upper-bound the certainty returned by the backend's
+     [run] function for the same configuration and instances. *)
+  val register_backend_with_ceiling :
+    backend -> certainty_ceiling -> unit
   val register_substrate : substrate -> unit
   val register_generator : hol_type -> custom_gen -> unit
   val abstract_generator :

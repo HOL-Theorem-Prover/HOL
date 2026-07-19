@@ -135,6 +135,15 @@ structure Refute_Core = struct
       requires : requirement,
       run : config -> instance list -> outcome }
 
+  (* A ceiling must overestimate the best certainty [run] can return for
+     the same configuration and instances.  Overestimates only miss an
+     early stop; underestimates can suppress a stronger backend result. *)
+  type certainty_ceiling = config -> instance list -> certainty
+
+  type backend_registration =
+    { backend : backend,
+      certainty_ceiling : certainty_ceiling }
+
   val default_qc_config : qc_config =
     { size = 10,
       iterations = 100,
@@ -1016,43 +1025,57 @@ structure Refute_Core = struct
           "mf.need = " ^ optional_terms (#need m) ^ "\n" ]
     end
 
-  val backend_registry : (string * backend) list ref = ref []
+  val backend_registry : (string * backend_registration) list ref = ref []
 
-  fun backend_before (left : string * backend) (right : string * backend) =
-    #weight (#2 left) < #weight (#2 right) orelse
-    (#weight (#2 left) = #weight (#2 right) andalso #1 left < #1 right)
+  fun backend_before (left : string * backend_registration)
+      (right : string * backend_registration) =
+    #weight (#backend (#2 left)) < #weight (#backend (#2 right)) orelse
+    (#weight (#backend (#2 left)) = #weight (#backend (#2 right)) andalso
+     #1 left < #1 right)
 
   fun insert_backend entry [] = [entry]
     | insert_backend entry (other :: rest) =
         if backend_before entry other then entry :: other :: rest
         else other :: insert_backend entry rest
 
-  fun register_backend backend =
+  fun register_backend_with_ceiling backend certainty_ceiling =
     let
       val without_old =
         List.filter (fn (name, _) => name <> #name backend) (!backend_registry)
-      val entry = (#name backend, backend)
+      val registration =
+        {backend = backend, certainty_ceiling = certainty_ceiling}
+      val entry = (#name backend, registration)
     in
       backend_registry := insert_backend entry without_old
     end
 
-  fun registered_backends () = map #2 (!backend_registry)
+  fun register_backend backend =
+    (* Preserve source compatibility and safety for backends that do not
+       opt into a tighter, configuration-sensitive declaration. *)
+    register_backend_with_ceiling backend (fn _ => fn _ => Genuine)
+
+  fun registered_backends () = map (#backend o #2) (!backend_registry)
 
   fun lookup_backend name =
-    Option.map #2 (List.find (fn (registered, _) => registered = name)
-      (!backend_registry))
+    Option.map (#backend o #2)
+      (List.find (fn (registered, _) => registered = name)
+        (!backend_registry))
 
-  fun selected_backends names =
+  fun selected_backend_registrations names =
     let
-      fun requested backend =
+      fun requested (registration : backend_registration) =
         case names of
             NONE => true
-          | SOME wanted => List.exists (fn name => name = #name backend) wanted
+          | SOME wanted => List.exists
+              (fn name => name = #name (#backend registration)) wanted
     in
-      map #2 (List.filter (fn (_, backend) =>
-        requested backend andalso (#configured backend) ())
-        (!backend_registry))
+      map #2 (List.filter (fn (_, registration) =>
+        requested registration andalso
+        (#configured (#backend registration)) ()) (!backend_registry))
     end
+
+  fun selected_backends names =
+    map #backend (selected_backend_registrations names)
 
   fun lookup_stat key stats =
     Option.map #2 (List.find (fn (name, _) => name = key) stats)
@@ -1212,12 +1235,14 @@ structure Refute_Core = struct
           then candidate
           else best) cex cexs))
 
-  fun decisive cfg (Counterexample cexs) =
+  fun decisive cfg ceiling (Counterexample cexs) =
         not (null cexs) andalso
         (#abort_potential cfg orelse
-         List.exists (fn cex =>
-           case #certainty cex of Genuine => true | _ => false) cexs)
-    | decisive _ _ = false
+         (case best_certainty cexs of
+              SOME certainty =>
+                certainty_rank certainty >= certainty_rank ceiling
+            | NONE => false))
+    | decisive _ _ _ = false
 
   fun best_counterexample_result jobs =
     let
@@ -1252,7 +1277,7 @@ structure Refute_Core = struct
   fun no_generator_reason (ty, reason) =
     "no generator for " ^ Parse.type_to_string ty ^ ": " ^ reason
 
-  fun run_backend (cfg : config) instances (backend, result_ref) =
+  fun run_backend (cfg : config) ceiling instances (backend, result_ref) =
     let
       val name = #name backend
       val timeout =
@@ -1268,7 +1293,7 @@ structure Refute_Core = struct
               | e => Unknown [name ^ ": " ^ exception_reason e])
       val _ = result_ref := SOME result
     in
-      if decisive cfg result then SOME result else NONE
+      if decisive cfg ceiling result then SOME result else NONE
     end
 
   fun unknown_results jobs =
@@ -1296,9 +1321,24 @@ structure Refute_Core = struct
       List.foldl add_instance [] instances
     end
 
+  fun instance_is_executable (instance : instance) =
+    not (Option.isSome (#qc_gate instance))
+
   fun instances_are_executable instances =
-    List.all (fn (instance : instance) =>
-      not (Option.isSome (#qc_gate instance))) instances
+    List.all instance_is_executable instances
+
+  fun reachable_certainty cfg instances registrations =
+    let
+      fun higher (registration : backend_registration, best) =
+        let
+          val ceiling = #certainty_ceiling registration cfg instances
+        in
+          if certainty_rank ceiling > certainty_rank best then ceiling
+          else best
+        end
+    in
+      List.foldl higher (Potential ["no selected backend"]) registrations
+    end
 
   fun meets_requirement executable (backend : backend) =
     case #requires backend of
@@ -1341,14 +1381,15 @@ structure Refute_Core = struct
         (report_outcome cfg result; check_expect cfg result; result)
       fun execute () =
         let
-          val configured = selected_backends (#backends cfg)
+          val configured = selected_backend_registrations (#backends cfg)
           val instances = preprocess cfg problem
           val gate_reasons = instance_gate_reasons instances
           val executable = instances_are_executable instances
           val selected =
-            List.filter (meets_requirement executable) configured
+            List.filter (meets_requirement executable o #backend) configured
           val excluded =
-            List.filter (not o meets_requirement executable) configured
+            List.filter
+              (not o meets_requirement executable o #backend) configured
           val excluded_reasons =
             if null excluded then [] else gate_reasons
           val _ = List.app (fn reason => Private.say 2
@@ -1359,13 +1400,17 @@ structure Refute_Core = struct
           else if null selected then Unknown excluded_reasons
           else
             let
-              val jobs = map (fn backend =>
-                (backend, ref NONE : outcome option ref)) selected
+              val ceiling = reachable_certainty cfg instances selected
+              val jobs = map (fn registration =>
+                (#backend registration, ref NONE : outcome option ref))
+                selected
               val winner =
                 if #sequential cfg then
-                  ParList.get_first (run_backend cfg instances) jobs
+                  ParList.get_first
+                    (run_backend cfg ceiling instances) jobs
                 else
-                  ParList.get_some (run_backend cfg instances) jobs
+                  ParList.get_some
+                    (run_backend cfg ceiling instances) jobs
             in
               case winner of
                   SOME result => result

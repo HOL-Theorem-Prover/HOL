@@ -14,7 +14,9 @@ structure Refute :> Refute = struct
   type qc_config = Refute_Core.qc_config
   type mf_config = Refute_Core.mf_config
   type config = Refute_Core.config
+  type instance = Refute_Core.instance
   type backend = Refute_Core.backend
+  type certainty_ceiling = config -> instance list -> certainty
   type substrate = Refute_Eval.substrate
   type custom_gen = Refute_Gen.custom_gen
   type rng = Refute_Gen.rng
@@ -53,6 +55,13 @@ structure Refute :> Refute = struct
       | _ => Tactical.ALL_TAC goal
 
   val register_backend = Refute_Core.register_backend
+  fun register_backend_with_ceiling backend ceiling =
+    Refute_Core.register_backend_with_ceiling backend (fn config =>
+      fn instances =>
+        case ceiling config instances of
+            Genuine => Refute_Core.Genuine
+          | QuasiGenuine reasons => Refute_Core.QuasiGenuine reasons
+          | Potential reasons => Refute_Core.Potential reasons)
   val register_substrate = Refute_Eval.register_substrate
   val register_generator = Refute_Gen.register_generator
   val abstract_generator = Refute_Gen.abstract_generator

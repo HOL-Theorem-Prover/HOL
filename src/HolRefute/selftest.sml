@@ -3979,6 +3979,8 @@ val public_any_goal_backend : Refute.backend =
     requires = Refute.AnyGoal,
     run = fn _ => fn _ => Unknown [] }
 
+val _ = Refute.register_backend_with_ceiling public_any_goal_backend
+  (fn _ => fn _ => Refute.Genuine)
 val _ = register_backend registry_alpha
 val _ = register_backend registry_beta
 val _ = register_backend registry_alpha_replacement
@@ -3993,6 +3995,79 @@ val _ = require_msg
     ["refute-core-beta", "refute-core-alpha"]))
   (fn names => "unexpected registry order: " ^ String.concatWith ", " names)
   core_backend_names ()
+
+val ceiling_executable_instance : instance =
+  {original = ``T``, goal = ``T``, qc_gate = NONE, evals = [], card = 1,
+   size_matters = false}
+
+val ceiling_gated_instance : instance =
+  {original = ``T``, goal = ``T``, qc_gate = SOME ["stub gate"],
+   evals = [], card = 2, size_matters = false}
+
+fun fixed_ceiling certainty : certainty_ceiling =
+  fn _ => fn _ => certainty
+
+val ceiling_genuine_registration : backend_registration =
+  {backend = dummy_backend "refute-ceiling-genuine" 1,
+   certainty_ceiling = fixed_ceiling Genuine}
+
+val ceiling_quasi_registration : backend_registration =
+  {backend = dummy_backend "refute-ceiling-quasi" 2,
+   certainty_ceiling = fixed_ceiling (QuasiGenuine ["stub ceiling"])}
+
+fun same_certainty_class Genuine Genuine = true
+  | same_certainty_class (QuasiGenuine _) (QuasiGenuine _) = true
+  | same_certainty_class (Refute_Core.Potential _)
+      (Refute_Core.Potential _) = true
+  | same_certainty_class _ _ = false
+
+fun reachable_certainty_uses_declarations () =
+  same_certainty_class Genuine
+    (reachable_certainty default_config [ceiling_executable_instance]
+      [ceiling_quasi_registration, ceiling_genuine_registration]) andalso
+  same_certainty_class (QuasiGenuine [])
+    (reachable_certainty default_config [ceiling_gated_instance]
+      [ceiling_quasi_registration]) andalso
+  same_certainty_class (Refute_Core.Potential [])
+    (reachable_certainty default_config [ceiling_executable_instance] [])
+
+val _ = require_msg
+  (check_result reachable_certainty_uses_declarations) (fn () =>
+  "reachable certainty ignored a backend declaration")
+  (fn () => ()) ()
+
+fun kodkod_ceiling_preserves_uncertified_genuine () =
+  let
+    val executable = [ceiling_executable_instance]
+    val gated = [ceiling_gated_instance]
+    val mixed = [ceiling_gated_instance, ceiling_executable_instance]
+    val satisfy = upd_falsify false default_config
+    val quasi = upd_wf [(NONE, SOME true)] default_config
+    val quasi_satisfy = upd_falsify false quasi
+    val total = upd_total_consts (SOME true) default_config
+  in
+    same_certainty_class Genuine
+      (Refute_ModelFinder.kodkod_certainty_ceiling
+        default_config executable) andalso
+    same_certainty_class Genuine
+      (Refute_ModelFinder.kodkod_certainty_ceiling satisfy executable) andalso
+    same_certainty_class Genuine
+      (Refute_ModelFinder.kodkod_certainty_ceiling default_config gated) andalso
+    same_certainty_class (QuasiGenuine [])
+      (Refute_ModelFinder.kodkod_certainty_ceiling quasi_satisfy
+        executable) andalso
+    same_certainty_class (QuasiGenuine [])
+      (Refute_ModelFinder.kodkod_certainty_ceiling quasi gated) andalso
+    same_certainty_class (QuasiGenuine [])
+      (Refute_ModelFinder.kodkod_certainty_ceiling total gated) andalso
+    same_certainty_class Genuine
+      (Refute_ModelFinder.kodkod_certainty_ceiling quasi mixed)
+  end
+
+val _ = require_msg
+  (check_result kodkod_ceiling_preserves_uncertified_genuine) (fn () =>
+  "the kodkod certainty ceiling disagreed with reachable outcomes")
+  (fn () => ()) ()
 
 val _ = tprint "Refute core silent report"
 
@@ -4073,7 +4148,7 @@ fun no_counterexample_snapshot () =
 val _ = require_msg (check_result no_counterexample_snapshot) (fn () =>
   "bounded no-counterexample wording changed") (fn () => ()) ()
 
-val _ = tprint "Refute genuine-decisive backend racing"
+val _ = tprint "Refute reachable-certainty backend racing"
 
 fun stub_cex backend certainty : counterexample =
   { backend = backend,
@@ -4092,10 +4167,14 @@ val race_potential_started = ref false
 val race_potential_enabled = ref false
 val race_quasi_enabled = ref false
 val race_genuine_enabled = ref false
+val race_slow_quasi_enabled = ref false
+val race_slow_quasi_started = ref false
 
 fun reset_race () =
   Multithreading.synchronized "Refute race reset" race_mutex
-    (fn () => race_potential_started := false)
+    (fn () =>
+      (race_potential_started := false;
+       race_slow_quasi_started := false))
 
 fun mark_race_potential_started () =
   Multithreading.synchronized "Refute race potential" race_mutex
@@ -4147,6 +4226,17 @@ val race_genuine_backend : backend =
        Counterexample
          [stub_cex "refute-race-qc-genuine" Genuine]) }
 
+val race_slow_quasi_backend : backend =
+  { name = "refute-race-slow-quasi",
+    weight = 55,
+    configured = fn () => !race_slow_quasi_enabled,
+    requires = AnyGoal,
+    run = fn _ => fn _ =>
+      (race_slow_quasi_started := true;
+       Counterexample
+         [stub_cex "refute-race-slow-quasi"
+            (Refute_Core.QuasiGenuine ["slow stub"])]) }
+
 val merge_low_enabled = ref false
 val merge_high_enabled = ref false
 
@@ -4165,8 +4255,11 @@ val merge_high_backend =
   potential_backend "refute-merge-potential-high" 60 merge_high_enabled
 
 val _ = register_backend race_potential_backend
-val _ = register_backend race_quasi_backend
+val _ = register_backend_with_ceiling race_quasi_backend
+  (fixed_ceiling (QuasiGenuine ["stub ceiling"]))
 val _ = register_backend race_genuine_backend
+val _ = register_backend_with_ceiling race_slow_quasi_backend
+  (fixed_ceiling (QuasiGenuine ["stub ceiling"]))
 val _ = register_backend merge_low_backend
 val _ = register_backend merge_high_backend
 
@@ -4224,6 +4317,34 @@ fun quasi_does_not_interrupt_genuine () =
 val _ = require_msg
   (check_result quasi_does_not_interrupt_genuine) (fn () =>
   "a QuasiGenuine result interrupted a slower Genuine result")
+  (fn () => ()) ()
+
+fun quasi_is_decisive_at_declared_ceiling () =
+  let
+    val _ = reset_race ()
+    val _ = race_quasi_enabled := true
+    val _ = race_slow_quasi_enabled := true
+    val config =
+      upd_expect ExpectQuasiGenuine
+        (upd_sequential true
+          (upd_backends
+            (SOME ["refute-race-mf-quasi", "refute-race-slow-quasi"])
+            default_config))
+    val captured = Exn.capture (fn () => refute config ``zoo_spec = 1``) ()
+    val _ = race_quasi_enabled := false
+    val _ = race_slow_quasi_enabled := false
+  in
+    case Exn.release captured of
+        Counterexample
+          ({backend, certainty = Refute_Core.QuasiGenuine _, ...} :: _) =>
+          backend = "refute-race-mf-quasi" andalso
+          not (!race_slow_quasi_started)
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result quasi_is_decisive_at_declared_ceiling) (fn () =>
+  "a result at the declared ceiling did not stop the backend race")
   (fn () => ()) ()
 
 fun potential_merge_uses_backend_weight () =
@@ -7460,6 +7581,24 @@ fun mf_gate_pin_holds MfCertIgnored _ = true
           | MfCertIgnored => true
       end
 
+fun public_certainty_rank Refute.Genuine = 3
+  | public_certainty_rank (Refute.QuasiGenuine _) = 2
+  | public_certainty_rank (Refute.Potential _) = 1
+
+fun mf_ceiling_holds config tm outcome =
+  let
+    val instances = preprocess config (preprocessing_problem tm)
+    val ceiling =
+      Refute_ModelFinder.kodkod_certainty_ceiling config instances
+  in
+    case outcome of
+        Refute.Counterexample cexs =>
+          List.all (fn cex =>
+            public_certainty_rank (#certainty cex) <=
+            certainty_rank ceiling) cexs
+      | _ => true
+  end
+
 fun mf_pin_outcome_name
       (Refute.Counterexample
         ({certainty = Refute.Genuine, cert = SOME _, ...} :: _)) =
@@ -7480,7 +7619,8 @@ fun mf_acceptance_test solver
     val outcome = with_silent_refute (fn () => Refute.refute config tm)
     val accepted = mf_gate_pin_holds cert_pin tm andalso
       mf_cert_pin_holds cert_pin outcome andalso
-      mf_unknown_reason_holds unknown_reason outcome
+      mf_unknown_reason_holds unknown_reason outcome andalso
+      mf_ceiling_holds config tm outcome
   in
     if accepted then OK ()
     else die ("acceptance pin failed: " ^ mf_pin_outcome_name outcome)
@@ -7634,6 +7774,26 @@ fun configured_mf_test_solver () =
   then "MiniSat_JNI"
   else Refute_ForlSat.smart_sat_solver_name false
 
+fun mf_instance_loop_stops_at_reachable_genuine solver =
+  let
+    val _ = tprint "Refute MF reachable-certainty instance loop"
+    val config = mf_acceptance_config solver
+    val instances = preprocess config
+      (preprocessing_problem polymorphic_goal)
+    val outcome = with_silent_refute (fn () =>
+      Refute.refute config polymorphic_goal)
+    val stopped =
+      case outcome of
+          Refute.Counterexample [cex] =>
+            #certainty cex = Refute.Genuine andalso
+            lookup_stat "card" (#stats cex) = SOME 1
+        | _ => false
+  in
+    if length instances = 3 andalso stopped then OK ()
+    else die "model finder did not stop at its reachable Genuine ceiling"
+  end
+  handle e => die (Feedback.exn_to_string e)
+
 fun run_mf_task20_suites () =
   if not (Refute_Forl.is_configured ()) then
     print ("(Kodkodi not configured, MF differential and soundness " ^
@@ -7642,7 +7802,8 @@ fun run_mf_task20_suites () =
     let val solver = configured_mf_test_solver ()
     in
       List.app (mf_differential_test solver) mf_differential_cases;
-      List.app (mf_soundness_test solver) soundness_corpus
+      List.app (mf_soundness_test solver) soundness_corpus;
+      mf_instance_loop_stops_at_reachable_genuine solver
     end
 
 fun run_mf_acceptance () =

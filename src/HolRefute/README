@@ -23,14 +23,26 @@ all substrates.  `Refute.upd_seed (SOME n)` therefore reproduces the same
 candidate stream independently of substrate.  Runs without an explicit
 seed use a deterministic session stream which advances between runs.
 
-Execution substrates are untrusted accelerators.  A candidate becomes
+Execution substrates are untrusted accelerators.  A QC candidate becomes
 `Genuine` only after Refute_Cert re-evaluates its instantiated proposition
-with computeLib and constructs a theorem certifying its negation.  Refute
-uses no oracle tags.  Cv performs all per-call definitions and translations
-inside a full theory snapshot/revert bracket.  Success, failure, timeout,
-and interruption paths leave no Refute-created type, constant, theorem, or
-binding in the user's theory; if safe cleanup is unavailable, Cv reports
-that the goal is inapplicable instead.
+with computeLib and constructs a theorem certifying its negation.  The model
+finder can also classify a sound finite model as `Genuine` when its
+genuineness conditions hold even if the goal is not certifiable; in that
+case `cert = NONE`.  Thus `certainty` records the semantic strength of the
+result, while `cert` records whether Refute constructed a HOL theorem.
+Refute uses no oracle tags.  Cv performs all per-call definitions and
+translations inside a full theory snapshot/revert bracket.  Success,
+failure, timeout, and interruption paths leave no Refute-created type,
+constant, theorem, or binding in the user's theory; if safe cleanup is
+unavailable, Cv reports that the goal is inapplicable instead.
+
+Backend races stop only when a result reaches the highest certainty that
+any selected backend declares reachable for the current configuration and
+instances.  `Refute.register_backend` gives existing backends the safe,
+conservative ceiling `Genuine`.  A backend with a tighter bound can use
+`Refute.register_backend_with_ceiling`.  Its callback must return an upper
+bound: overestimating only forgoes an early stop, whereas underestimating can
+hide a stronger result and violates the backend contract.
 
 Module layout:
 
