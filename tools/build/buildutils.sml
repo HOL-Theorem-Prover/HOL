@@ -978,6 +978,48 @@ fun which arg =
         in first paths end
   end
 
+(* Oldest mdbook we can render the manuals with.  The floor is set by
+   Manual/theme/index.hbs, a vendored copy of the mdbook 0.5.x default
+   theme: it uses the {{fa ...}} FontAwesome Handlebars helper (and the
+   mdbook-menu-bar / mdbook-sidebar element ids), all introduced in
+   mdbook 0.5.0.  An older mdbook aborts rendering index.hbs with
+   "Helper not found fa".  Bump this if the theme comes to rely on a
+   newer feature. *)
+val min_mdbook = (0, 5, 0)
+
+fun mdbook_verstr (a,b,c) =
+    Int.toString a ^ "." ^ Int.toString b ^ "." ^ Int.toString c
+
+(* SML's < / >= aren't polymorphic, so compare the triples by hand. *)
+fun mdbook_ge ((a1,b1,c1), (a2,b2,c2)) =
+    a1 > a2 orelse
+    (a1 = a2 andalso (b1 > b2 orelse (b1 = b2 andalso c1 >= c2)))
+
+(* Ask `mdbook --version` (output looks like "mdbook v0.5.2") and pull
+   out the leading MAJOR.MINOR.PATCH.  NONE if mdbook can't be run or
+   prints nothing version-shaped. *)
+fun mdbook_version () =
+  let
+    val tmp = OS.FileSys.tmpName ()
+    val ran = OS.Process.isSuccess
+                (OS.Process.system ("mdbook --version > " ^ quote tmp))
+  in
+    if not ran then (safedelete tmp; NONE)
+    else
+      let
+        val is = TextIO.openIn tmp
+        val s = TextIO.inputAll is before TextIO.closeIn is
+        val () = safedelete tmp
+        val nums = List.mapPartial Int.fromString
+                     (String.tokens (not o Char.isDigit) s)
+      in
+        case nums of
+            (a :: b :: c :: _) => SOME (a, b, c)
+          | [a, b] => SOME (a, b, 0)
+          | _ => NONE
+      end handle IO.Io _ => (safedelete tmp; NONE)
+  end
+
 fun build_help {graph, no_mdbook, no_helpdocs} =
  (* Skip the theory graph alongside any other doc-build skip:
     `--no-mdbook` and `--no-helpdocs` are the only ways to opt out
@@ -1005,7 +1047,26 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
      val mdbook_present = poly andalso
                           (case which "mdbook" of SOME _ => true
                                                 | NONE => false)
-     val use_mdbook = poly andalso not no_mdbook andalso mdbook_present
+     val mdbook_ver = if mdbook_present then mdbook_version () else NONE
+     val mdbook_new_enough =
+         case mdbook_ver of
+             SOME v => mdbook_ge (v, min_mdbook)
+           | NONE => false
+     val mdbook_desc =
+         case mdbook_ver of
+             SOME v => "v" ^ mdbook_verstr v ^ " is too old"
+           | NONE => "version could not be determined"
+     (* Present but too old (or unreadable version) => warn and fall
+        back rather than aborting the whole doc build on a template
+        error deep inside mdbook. *)
+     val () =
+         if mdbook_present andalso not no_mdbook andalso not mdbook_new_enough
+         then
+           (WARN ("mdbook " ^ mdbook_desc ^ "; the manuals need mdbook >= " ^
+                  mdbook_verstr min_mdbook ^ ".");
+            WARN "Falling back to per-entry HTML for the Reference manual.")
+         else ()
+     val use_mdbook = poly andalso not no_mdbook andalso mdbook_new_enough
      val use_html_fallback = poly andalso not use_mdbook
 
      (* URL bases relative to Manual/book/htmlsigs/<struct>.html (where
