@@ -87,6 +87,17 @@ val _ = check_theorem_set "refute_psimp" [Eps_psimp]
 val _ = check_theorem_set "refute_unfold"
   [one_case_unfold, num_case_unfold, RTC_unfold, RC_unfold]
 
+val _ = tprint "CoIndDefLib registry"
+val _ = require_msg (check_result (fn () =>
+  let
+    val key = {Thy = "refuteTableZoo", Name = "zoo_guarded_gfp"}
+    val registered = Option.getOpt
+      (KNametab.lookup (CoIndDefLib.coinduction_map ()) key, [])
+  in
+    List.exists (same_conclusion zoo_guarded_gfp_coind) registered
+  end)) (fn () => "Hol_coreln theorem missing from coinduction registry")
+  (fn () => ()) ()
+
 val same_string_set : string list -> string list -> bool = Lib.set_eq
 
 fun cv_ancestry_is_separate () =

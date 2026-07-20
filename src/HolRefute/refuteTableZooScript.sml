@@ -87,6 +87,15 @@ Inductive zoo_nonwf_lfp:
   !n : num. zoo_nonwf_lfp n ==> zoo_nonwf_lfp n
 End
 
+CoInductive zoo_guarded_gfp:
+  !b. b /\ zoo_guarded_gfp b ==> zoo_guarded_gfp b
+End
+
+CoInductive zoo_mutual_gfp:
+  (!b. b /\ zoo_mutual_other_gfp b ==> zoo_mutual_gfp b) /\
+  (!b. b /\ zoo_mutual_gfp b ==> zoo_mutual_other_gfp b)
+End
+
 Inductive zoo_unroll_lfp:
   zoo_unroll_lfp 0 /\
   (!n. zoo_unroll_lfp n ==> zoo_unroll_lfp (SUC n)) /\

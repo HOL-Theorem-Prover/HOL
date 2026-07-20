@@ -160,14 +160,66 @@ fun new_coinductive_definition monoset stem (tm,clocs) =
 
 (* ------------------------------------------------------------------------- *)
 
+type coinduction_map = thm list KNametab.table
+
+fun listdict_add (dict, key, theorem) =
+  case KNametab.lookup dict key of
+      NONE => KNametab.update (key, [theorem]) dict
+    | SOME theorems => KNametab.update (key, theorem :: theorems) dict
+
+fun coind_thm_to_consts theorem =
+  let
+    fun key_of clause =
+      clause |> strip_forall |> #2 |> dest_imp |> #2 |> strip_comb |> #1
+             |> dest_thy_const
+             |> (fn {Name, Thy, ...} => {Name = Name, Thy = Thy})
+    val (_, body) = strip_forall (concl theorem)
+    val (_, consequences) = dest_imp body
+  in
+    map key_of (strip_conj consequences)
+  end
+
+fun add_coinduction0 theorem dict =
+  List.foldl (fn (key, result) => listdict_add (result, key, theorem))
+    dict (coind_thm_to_consts theorem)
+
+fun apply_delta (ThmSetData.ADD (_, theorem)) dict =
+      add_coinduction0 theorem dict
+  | apply_delta _ dict = dict
+
+val {update_global_value = coind_apply_global_update,
+     record_delta = coind_record_delta,
+     get_deltas = coind_get_deltas,
+     get_global_value = coinduction_map,
+     DB = coinduction_map_by_theory, ...} =
+  ThmSetData.export_with_ancestry {
+    settype = "coinduction",
+    delta_ops = {apply_to_global = apply_delta,
+                 uptodate_delta = K true,
+                 thy_finaliser = NONE,
+                 initial_value = KNametab.empty,
+                 apply_delta = apply_delta}}
+
+fun add_coinduction theorem =
+  coind_apply_global_update (add_coinduction0 theorem)
+
+fun export_coinduction name =
+  let val delta = ThmSetData.mk_add name
+  in
+    coind_record_delta delta;
+    coind_apply_global_update (apply_delta delta)
+  end
+
+fun thy_coinductions thyname =
+  coind_get_deltas {thyname = thyname} |> ThmSetData.added_thms
+
 fun save_theorems name (rules, coind, strong_ind, cases) = let
 in
   save_thm(name^"_rules", rules);
   save_thm(name^"_coind", coind);
   (* save_thm(name^"_strongind", strong_ind);*)
   save_thm(name^"_cases", cases);
-  (* export_rule_induction (name ^ "_strongind") *)
-  ()
+  export_coinduction (name ^ "_coind")
 end
 
 fun derive_strong_coinduction (rules, coind) = ((* TODO *))
