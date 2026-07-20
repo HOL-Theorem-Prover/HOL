@@ -534,7 +534,6 @@ structure Refute_Core = struct
                 "values must be -1 or nonnegative"
               else ()
       val _ = if null (#whack mf) then () else m4_error "whack"
-      val _ = (case #need mf of NONE => () | SOME _ => m4_error "need")
       val _ = if #max_potential mf > 1 then m4_error "max_potential"
               else ()
       val _ = if #max_genuine mf > 1 then m4_error "max_genuine"

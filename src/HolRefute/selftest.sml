@@ -3328,6 +3328,36 @@ val _ = require_msg (check_result mf_preproc_skolem_golden) (fn () =>
   "model-finder depth-three skolem golden changed")
   (fn () => ()) ()
 
+fun mf_preproc_need_path () =
+  let
+    val need = ``[0] : num list``
+    val folded =
+      ``list_CASE ([0] : num list) [] (\h t. [h])``
+    val mf = Refute_Core.change_mf
+      (Refute_Core.MfNeed (SOME [need, folded]))
+      Refute_Core.default_mf_config
+    val context = MFH.make_context mf []
+    val unfolded = MFH.unfold_defs_in_term context folded
+    val (_, _, need_terms, _, _, _) =
+      MFP.preprocess_formulas context [] ``(xs : num list) = []``
+  in
+    case need_terms of
+        [actual, actual_unfolded] =>
+          Term.aconv actual need andalso
+          not (Term.aconv folded unfolded) andalso
+          Term.aconv actual_unfolded unfolded andalso
+          (case Refute_ModelFinder_Nut.nut_from_term context
+                  Refute_ModelFinder_Nut.Eq actual of
+               Refute_ModelFinder_Nut.Construct (_, ty, _, _) =>
+                 ty = ``:num list``
+             | _ => false)
+      | _ => false
+  end
+
+val _ = require_msg (check_result mf_preproc_need_path) (fn () =>
+  "model-finder need terms did not survive the middle-only path")
+  (fn () => ()) ()
+
 fun mf_preproc_unfold_goldens () =
   let
     val context = fresh_mf_context ()
@@ -4499,7 +4529,7 @@ fun mf_kodkod_list_bounds () =
       (mf_relation_for cons 1 relations)
     val kk = Refute_ModelFinder_Peephole.kodkod_constrs true 2 2 3
     val axioms = MFK.declarative_axioms_for_data_types mf_hol_context
-      false 5 0 (#ofs scope) kk relation_table data_types
+      false [] needs 5 0 (#ofs scope) kk relation_table data_types
   in
     mf_bound_tuple_sets discr = [Refute_Forl.TupleAtomSeq (2, 1)] andalso
     mf_bound_tuple_sets head =
@@ -4587,7 +4617,7 @@ fun mf_kodkod_record_bounds () =
           Refute_Forl.TupleAtomSeq (2, 3))]
     val kk = Refute_ModelFinder_Peephole.kodkod_constrs true 2 2 3
     val axioms = MFK.declarative_axioms_for_data_types mf_hol_context
-      false 5 0 (#ofs scope) kk relation_table data_types
+      false [] needs 5 0 (#ofs scope) kk relation_table data_types
   in
     mf_bound_tuple_sets discr = [Refute_Forl.TupleAtomSeq (3, 0)] andalso
     mf_bound_tuple_sets first = expected_selector andalso
@@ -4688,7 +4718,7 @@ fun mf_kodkod_codatatype_skips () =
   in
     null (MFK.acyclicity_axioms_for_data_types kk relation_table
       data_types) andalso
-    null (MFK.sym_break_axioms_for_data_types mf_hol_context 5 kk
+    null (MFK.sym_break_axioms_for_data_types mf_hol_context [] 5 kk
       relation_table data_types)
   end
 
@@ -4716,7 +4746,7 @@ fun mf_kodkod_sym_break_shape () =
       [(list_ty, 7), (``:num``, 2)] [list_ty]
     val kk = Refute_ModelFinder_Peephole.kodkod_constrs true 2 2 7
     val axioms = MFK.sym_break_axioms_for_data_types mf_hol_context
-      5 kk relation_table (#data_types scope)
+      [] 5 kk relation_table (#data_types scope)
     val successor_relations = List.concat (map mf_negative_relations axioms)
     val successor_sequences = map MFPH.atom_seq_for_suc_rel
       successor_relations
@@ -4740,6 +4770,104 @@ fun mf_kodkod_sym_break_shape () =
 
 val _ = require_msg (check_result mf_kodkod_sym_break_shape) (fn () =>
   "model-finder datatype symmetry-breaking shape changed")
+  (fn () => ()) ()
+
+fun mf_need_assembly need_terms card =
+  let
+    val list_ty = ``:num list``
+    val scope = MFS.scope_from_descriptor mf_hol_context false [list_ty] []
+      ([(list_ty, card), (``:num``, 2)], [])
+    val formula = MFNT.nut_from_term mf_hol_context MFNT.Eq ``T``
+    val needs = map (MFNT.nut_from_term mf_hol_context MFNT.Eq) need_terms
+    val (free_names, const_names) = List.foldl
+      (fn (nut, names) => MFNT.add_free_and_const_names nut names)
+      ([], []) (formula :: needs)
+    val (_, nonsel_names) = List.partition
+      (MFN.is_sel o MFNT.nickname_of) const_names
+    val params : MFK.assembly_params =
+      {debug = false, peephole_optim = true, total_consts = false,
+       datatype_sym_break = MFK.datatype_sym_break,
+       kodkod_sym_break = MFK.kodkod_sym_break,
+       comment = "needed list values", solver = ["DefaultSAT4J"],
+       unsound_delay = 1, free_names = free_names,
+       nonsel_names = nonsel_names, nondef_us = [formula], def_us = [],
+       need_us = needs}
+  in
+    #1 (valOf (MFK.assemble_problem params false scope))
+  end
+
+fun mf_kodkod_need_pinning () =
+  let
+    val list_ty = ``:num list``
+    val scope = MFS.scope_from_descriptor mf_hol_context false [list_ty] []
+      ([(list_ty, 2), (``:num``, 2)], [])
+    val data_type = valOf (List.find (fn spec => #typ spec = list_ty)
+      (#data_types scope))
+    val (selector_names, rep_table) = MFNT.choose_reps_for_all_sels scope
+      MFNT.NameTable.empty
+    val raw_need = MFNT.nut_from_term mf_hol_context MFNT.Eq
+      ``[1] : num list``
+    val represented = MFNT.choose_reps_in_nut scope false rep_table false
+      raw_need
+    val (_, pool, relation_table) = MFNT.rename_free_vars selector_names
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+    val need = MFNT.rename_vars_in_nut pool relation_table represented
+  in
+    case MFK.needed_values_for_data_type [need] (#ofs scope) data_type of
+        SOME values => length values = 2 andalso
+          List.exists (fn (value, atom) => value = need andalso atom = 1)
+            values
+      | NONE => false
+  end
+
+val _ = require_msg (check_result mf_kodkod_need_pinning) (fn () =>
+  "model-finder need value was not pinned to its constructor atom")
+  (fn () => ()) ()
+
+fun mf_kodkod_need_overflow () =
+  let
+    val problem = mf_need_assembly
+      [``[0] : num list``, ``[1] : num list``] 2
+  in
+    Refute_Forl.is_problem_trivially_false problem
+  end
+
+val _ = require_msg (check_result mf_kodkod_need_overflow) (fn () =>
+  "model-finder need overflow did not make the scope unsatisfiable")
+  (fn () => ()) ()
+
+fun mf_kodkod_need_sym_break_golden () =
+  let
+    val list_ty = ``:num list``
+    val scope = MFS.scope_from_descriptor mf_hol_context false [list_ty] []
+      ([(list_ty, 7), (``:num``, 2)], [])
+    val data_types = #data_types scope
+    val (selector_names, rep_table) = MFNT.choose_reps_for_all_sels scope
+      MFNT.NameTable.empty
+    val raw_need = MFNT.nut_from_term mf_hol_context MFNT.Eq
+      ``[0] : num list``
+    val represented = MFNT.choose_reps_in_nut scope false rep_table false
+      raw_need
+    val (_, pool, relation_table) = MFNT.rename_free_vars selector_names
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+    val need = MFNT.rename_vars_in_nut pool relation_table represented
+    val kk = Refute_ModelFinder_Peephole.kodkod_constrs true 2 2 7
+    val ordinary = MFK.sym_break_axioms_for_data_types mf_hol_context []
+      5 kk relation_table data_types
+    val suppressed = MFK.sym_break_axioms_for_data_types mf_hol_context
+      [need] 5 kk relation_table data_types
+  in
+    (case ordinary of
+         Refute_Forl.All
+           ([Refute_Forl.DeclOne _, Refute_Forl.DeclOne _], _) ::
+           [Refute_Forl.True, Refute_Forl.True] => true
+       | _ => false) andalso
+    null suppressed
+  end
+
+val _ = require_msg
+  (check_result mf_kodkod_need_sym_break_golden) (fn () =>
+  "model-finder symmetry breaking ignored a needed datatype")
   (fn () => ()) ()
 
 val _ = tprint "Refute peephole atom/atom-sequence disjointness"
@@ -5888,7 +6016,8 @@ fun mf_assembly_fixture term assignments deep_types =
        kodkod_sym_break = MFK.kodkod_sym_break,
        comment = term_to_string term, solver = ["DefaultSAT4J"],
        unsound_delay = 1, free_names = free_names,
-       nonsel_names = nonsel_names, nondef_us = [nut], def_us = []}
+       nonsel_names = nonsel_names, nondef_us = [nut], def_us = [],
+       need_us = []}
   in
     (params, scope)
   end
@@ -5948,7 +6077,8 @@ fun mf_bisim_assembled_problem () =
        kodkod_sym_break = MFK.kodkod_sym_break,
        comment = "codatatype bisimulation", solver = ["DefaultSAT4J"],
        unsound_delay = 1, free_names = free_names,
-       nonsel_names = nonsel_names, nondef_us = nuts, def_us = []}
+       nonsel_names = nonsel_names, nondef_us = nuts, def_us = [],
+       need_us = []}
   in
     #1 (valOf (MFK.assemble_problem params false scope))
   end
@@ -6020,7 +6150,8 @@ fun mf_binary_assembly_fixture bits term =
        kodkod_sym_break = MFK.kodkod_sym_break,
        comment = term_to_string term, solver = ["DefaultSAT4J"],
        unsound_delay = 1, free_names = free_names,
-       nonsel_names = nonsel_names, nondef_us = [nut], def_us = []}
+       nonsel_names = nonsel_names, nondef_us = [nut], def_us = [],
+       need_us = []}
   in
     MFK.assemble_problem params false scope
   end
@@ -7682,6 +7813,23 @@ fun bisim_default_and_unlock_are_pinned () =
 val _ = require_msg
   (check_result bisim_default_and_unlock_are_pinned) (fn () =>
   "bisim_depth default or user values remain guarded") (fn () => ()) ()
+
+fun need_default_and_unlock_are_pinned () =
+  let
+    val values = [``[] : num list``, ``[0] : num list``]
+    val updated = Refute.upd_need (SOME values) Refute.default_config
+  in
+    (case #need (#mf Refute.default_config) of
+         NONE => true | SOME _ => false) andalso
+    (case #need (#mf updated) of
+         SOME actual => ListPair.allEq
+           (fn (left, right) => Term.aconv left right) (actual, values)
+       | NONE => false)
+  end
+
+val _ = require_msg
+  (check_result need_default_and_unlock_are_pinned) (fn () =>
+  "need default or user values remain guarded") (fn () => ()) ()
 
 val _ = List.app m4_guard_is_pinned
   [("max_potential", fn () =>
@@ -11889,6 +12037,53 @@ fun mf_quotient_typedef_acceptance solver =
   end)
   handle e => die (Feedback.exn_to_string e)
 
+fun mf_need_acceptance solver =
+  let
+    val _ = tprint "Refute MF: needed-value pinning and overflow"
+    val list_ty = ``:num list``
+    val base = mf_acceptance_config solver
+      |> Refute.upd_card
+        [(SOME list_ty, [2]), (SOME ``:num``, [2]), (NONE, [2])]
+    val pinned = with_silent_refute (fn () =>
+      Refute.refute
+        (Refute.upd_need (SOME [``[1] : num list``]) base)
+        ``(xs : num list) = []``)
+    fun pinned_at_one model =
+      case model of
+          SOME {types, ...} =>
+            List.exists (fn (ty, values, _) =>
+              ty = list_ty andalso length values = 2 andalso
+              Term.aconv (List.nth (values, 1)) ``[1] : num list``) types
+        | NONE => false
+    val pinned_ok =
+      case pinned of
+          Refute.Counterexample ({model, ...} :: _) => pinned_at_one model
+        | _ => false
+    val overflow = with_silent_refute (fn () =>
+      Refute.refute
+        (Refute.upd_need
+          (SOME [``[0] : num list``, ``[1] : num list``]) base)
+        ``(xs : num list) = []``)
+    val overflow_ok =
+      case overflow of Refute.NoCounterexample => true | _ => false
+    fun verdict outcome =
+      case outcome of
+          Refute.Counterexample _ => 0
+        | Refute.NoCounterexample => 1
+        | Refute.Unknown _ => 2
+    val samples =
+      [(``(b : bool) \/ ~b``, 1), (``(xs : bool list) = []``, 0)]
+    val none_ok = List.all (fn (goal, expected) =>
+      verdict (with_silent_refute (fn () => Refute.refute base goal)) =
+        expected) samples
+  in
+    if pinned_ok andalso overflow_ok andalso none_ok then OK ()
+    else die ("need acceptance failed: pinned=" ^
+      mf_pin_outcome_name pinned ^ ", overflow=" ^
+      mf_pin_outcome_name overflow)
+  end
+  handle e => die (Feedback.exn_to_string e)
+
 fun run_mf_acceptance () =
   if not (Refute_Forl.is_configured ()) then
     print "(Kodkodi not configured, MF acceptance corpus skipped.)\n"
@@ -11901,6 +12096,7 @@ fun run_mf_acceptance () =
         mf_acceptance_cases
       val _ = mf_codatatype_acceptance "MiniSat_JNI"
       val _ = mf_quotient_typedef_acceptance "MiniSat_JNI"
+      val _ = mf_need_acceptance "MiniSat_JNI"
       val smoke = List.filter
         (fn ({sat4j_smoke, ...} : mf_acceptance_case) => sat4j_smoke)
         mf_acceptance_cases

@@ -72,7 +72,8 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
      free_names : nut list,
      nonsel_names : nut list,
      nondef_us : nut list,
-     def_us : nut list}
+     def_us : nut list,
+     need_us : nut list}
   val assemble_problem :
     assembly_params -> bool -> Refute_ModelFinder_Scope.scope ->
     rich_problem option
@@ -81,6 +82,8 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
     rich_problem option * rich_problem option
 
   val empty_need_values : data_type_spec list -> need_values
+  val needed_values_for_data_type :
+    nut list -> offset_table -> data_type_spec -> (nut * int) list option
   val declarative_axiom_for_plain_rel :
     kodkod_constrs -> nut -> Refute_Forl.formula
   val acyclicity_axioms_for_data_types :
@@ -88,12 +91,13 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
       Refute_ModelFinder_Nut.NameTable.table -> data_type_spec list ->
     Refute_Forl.formula list
   val sym_break_axioms_for_data_types :
-    Refute_ModelFinder_HOL.mf_context -> int -> kodkod_constrs ->
+    Refute_ModelFinder_HOL.mf_context -> nut list -> int ->
+    kodkod_constrs ->
     Refute_ModelFinder_Nut.nut Refute_ModelFinder_Nut.NameTable.table ->
     data_type_spec list -> Refute_Forl.formula list
   val declarative_axioms_for_data_types :
-    Refute_ModelFinder_HOL.mf_context -> bool -> int -> int -> offset_table ->
-    kodkod_constrs ->
+    Refute_ModelFinder_HOL.mf_context -> bool -> nut list -> need_values ->
+    int -> int -> offset_table -> kodkod_constrs ->
     Refute_ModelFinder_Nut.nut Refute_ModelFinder_Nut.NameTable.table ->
     data_type_spec list -> Refute_Forl.formula list
 end
@@ -1193,7 +1197,13 @@ fun take count values =
   if count <= 0 orelse null values then []
   else hd values :: take (count - 1) (tl values)
 
-fun sym_break_axioms_for_data_types context limit kk relation_table
+fun is_data_type_in_needed_value ty
+      (MFNT.Construct (_, other_ty, _, arguments)) =
+    same_type ty other_ty orelse
+    List.exists (is_data_type_in_needed_value ty) arguments
+  | is_data_type_in_needed_value _ _ = false
+
+fun sym_break_axioms_for_data_types context need_us limit kk relation_table
       data_types =
   if limit = 0 then
     []
@@ -1204,6 +1214,8 @@ fun sym_break_axioms_for_data_types context limit kk relation_table
         |> List.filter (fn {card, constrs, ...} =>
              length constrs > 1 andalso card >= min_sym_break_card andalso
              List.all first_order_constructor constrs)
+        |> List.filter (fn {typ, ...} =>
+             not (List.exists (is_data_type_in_needed_value typ) need_us))
       val selected =
         if length candidates <= limit then candidates
         else take limit (rev (sort_by compare_data_types candidates))
@@ -1351,35 +1363,63 @@ fun other_axioms_for_data_type _ _ _ _ _
 fun empty_need_values data_types =
   map (fn (spec : data_type_spec) => (#typ spec, SOME [])) data_types
 
-fun declarative_axioms_for_data_types context binarize sym_break bits
-      offsets kk relation_table data_types =
-  let
-    fun check_constructors (spec : data_type_spec) =
-      let
-        val expected = MFH.binarized_and_boxed_data_type_constrs
-          context binarize (#typ spec)
-        fun present ({const, ...} : MFS.constr_spec) =
-          List.exists (fn constructor =>
-            MFH.constructor_name constructor =
-              MFH.constructor_name const andalso
-            Term.type_of constructor = Term.type_of const) expected
-      in
-        if List.all present (#constrs spec) then ()
-        else raise MFU.BAD
-          ("Refute_ModelFinder_Kodkod.declarative_axioms_for_data_types",
-           "datatype constructor threading mismatch")
-      end
-    val _ = if binarize then List.app check_constructors data_types else ()
-    (* PLAN_M3 decision 31: the need machinery remains in every bound and
-       axiom helper, but M3 deliberately hard-wires need_us to []. *)
-    val need_values = empty_need_values data_types
-  in
-    acyclicity_axioms_for_data_types kk relation_table data_types @
-    sym_break_axioms_for_data_types context sym_break kk relation_table
-      data_types @
-    maps (other_axioms_for_data_type bits offsets kk need_values
-      relation_table) data_types
-  end
+fun needed_values_for_data_type [] _ _ = SOME []
+  | needed_values_for_data_type need_us offsets
+      ({typ, card, constrs, ...} : data_type_spec) =
+    let
+      fun constructor_range nickname =
+        let val constructor_name = MFN.original_name nickname
+        in
+          case List.find (fn (spec : MFS.constr_spec) =>
+                 MFH.constructor_name (#const spec) = constructor_name)
+               constrs of
+              SOME {delta, epsilon, ...} => (delta, epsilon)
+            | NONE => raise MFU.BAD
+                ("Refute_ModelFinder_Kodkod.needed_values_for_data_type",
+                 "missing constructor specification")
+        end
+
+      fun allocate
+            (nut as MFNT.Construct
+              (MFNT.FreeRel (_, _, _, nickname) :: _, ty, _, arguments))
+            state =
+          let
+            val state = List.foldl (fn (argument, result) =>
+              case result of
+                  NONE => NONE
+                | SOME value => allocate argument (SOME value))
+              state arguments
+          in
+            case state of
+                NONE => NONE
+              | SOME (loose, fixed) =>
+                  if not (same_type ty typ) orelse
+                     List.exists (fn (other, _) => other = nut) fixed then
+                    state
+                  else
+                    let
+                      val (delta, epsilon) = constructor_range nickname
+                    in
+                      case List.find (fn atom =>
+                             atom >= delta andalso atom < epsilon) loose of
+                          SOME atom =>
+                            SOME (filter_out (fn other => other = atom) loose,
+                              (nut, MFS.offset_of_type offsets ty + atom) ::
+                              fixed)
+                        | NONE => NONE
+                    end
+          end
+        | allocate _ state = state
+
+      val initial = SOME (MFU.index_seq 0 card, [])
+    in
+      case List.foldl (fn (nut, state) =>
+             case state of
+                 NONE => NONE
+               | SOME value => allocate nut (SOME value)) initial need_us of
+          NONE => NONE
+        | SOME (_, fixed) => SOME (rev fixed)
+    end
 
 fun singleton_from_combination atoms =
   MFU.fold1 (fn left => fn right => KK.Product (left, right))
@@ -2930,6 +2970,58 @@ fun kodkod_formula_from_nut offsets
     to_f_with_polarity MFU.Pos nut
   end
 
+fun atom_equation_for_nut offsets kk (nut, atom) =
+  let
+    val dummy = MFNT.RelReg (0, MFNT.type_of nut, MFNT.rep_of nut)
+    val equation = MFNT.Op2
+      (MFNT.DefEq, Type.bool, MFR.Formula MFU.Pos, dummy, nut)
+  in
+    case kodkod_formula_from_nut offsets kk equation of
+        KK.RelEq (KK.RelReg _, relation) =>
+          SOME (KK.RelEq (KK.Atom atom, relation))
+      | _ => raise MFU.BAD
+          ("Refute_ModelFinder_Kodkod.atom_equation_for_nut",
+           "malformed Kodkod formula")
+  end
+
+fun needed_value_axioms_for_data_type _ _ _ (_, NONE) = [KK.False]
+  | needed_value_axioms_for_data_type offsets kk data_types
+      (ty, SOME fixed) =
+      (case data_type_spec data_types ty of
+           SOME spec =>
+             if is_data_type_nat_like spec then []
+             else map_filter (atom_equation_for_nut offsets kk) fixed
+         | NONE => [])
+
+fun declarative_axioms_for_data_types context binarize need_us need_values
+      sym_break bits offsets kk relation_table data_types =
+  let
+    fun check_constructors (spec : data_type_spec) =
+      let
+        val expected = MFH.binarized_and_boxed_data_type_constrs
+          context binarize (#typ spec)
+        fun present ({const, ...} : MFS.constr_spec) =
+          List.exists (fn constructor =>
+            MFH.constructor_name constructor =
+              MFH.constructor_name const andalso
+            Term.type_of constructor = Term.type_of const) expected
+      in
+        if List.all present (#constrs spec) then ()
+        else raise MFU.BAD
+          ("Refute_ModelFinder_Kodkod.declarative_axioms_for_data_types",
+           "datatype constructor threading mismatch")
+      end
+    val _ = if binarize then List.app check_constructors data_types else ()
+  in
+    acyclicity_axioms_for_data_types kk relation_table data_types @
+    maps (needed_value_axioms_for_data_type offsets kk data_types)
+      need_values @
+    sym_break_axioms_for_data_types context need_us sym_break kk
+      relation_table data_types @
+    maps (other_axioms_for_data_type bits offsets kk need_values
+      relation_table) data_types
+  end
+
 type problem_metadata =
   {free_names : nut list,
    sel_names : nut list,
@@ -2952,7 +3044,8 @@ type assembly_params =
    free_names : nut list,
    nonsel_names : nut list,
    nondef_us : nut list,
-   def_us : nut list}
+   def_us : nut list,
+   need_us : nut list}
 
 fun scope_with_offsets
       ({hol_ctxt, binarize, card_assigns, bits, bisim_depth,
@@ -2965,7 +3058,7 @@ fun assemble_problem_once
       ({debug, peephole_optim, total_consts, datatype_sym_break,
         kodkod_sym_break,
         comment, solver, unsound_delay, free_names, nonsel_names,
-        nondef_us, def_us} : assembly_params)
+        nondef_us, def_us, need_us} : assembly_params)
       unsound (scope : MFS.scope) : rich_problem =
   let
     val offsets = #ofs scope
@@ -3013,6 +3106,8 @@ fun assemble_problem_once
       def_us
     val nondef_us = map
       (MFNT.choose_reps_in_nut scope unsound rep_table false) nondef_us
+    val need_us = map
+      (MFNT.choose_reps_in_nut scope unsound rep_table false) need_us
     val (free_rels, pool, rel_table) = MFNT.rename_free_vars free_names
       MFP.initial_pool MFNT.NameTable.empty
     val (sel_rels, pool, rel_table) = MFNT.rename_free_vars sel_names
@@ -3021,6 +3116,7 @@ fun assemble_problem_once
       pool rel_table
     val def_us = map (MFNT.rename_vars_in_nut pool rel_table) def_us
     val nondef_us = map (MFNT.rename_vars_in_nut pool rel_table) nondef_us
+    val need_us = map (MFNT.rename_vars_in_nut pool rel_table) need_us
     val def_fs = map (kodkod_formula_from_nut offsets kk) def_us
     val nondef_fs = map (kodkod_formula_from_nut offsets kk) nondef_us
     val formula = List.foldl (fn (formula, result) =>
@@ -3029,12 +3125,14 @@ fun assemble_problem_once
     val plain_rels = free_rels @ other_rels
     val plain_bounds = map (bound_for_plain_rel debug) plain_rels
     val plain_axioms = map (declarative_axiom_for_plain_rel kk) plain_rels
-    val need_values = empty_need_values data_types
+    val need_values = map (fn (spec : data_type_spec) =>
+      (#typ spec,
+       needed_values_for_data_type need_us offsets spec)) data_types
     val sel_bounds = map
       (bound_for_sel_rel debug need_values data_types) sel_rels
     val datatype_axioms = declarative_axioms_for_data_types
-      (#hol_ctxt scope) (#binarize scope) datatype_sym_break bits offsets
-      kk rel_table data_types
+      (#hol_ctxt scope) (#binarize scope) need_us need_values
+      datatype_sym_break bits offsets kk rel_table data_types
     val declarative_axioms = plain_axioms @ datatype_axioms
     val universe_card = Int.max
       (univ_card nat_card int_card main_j0

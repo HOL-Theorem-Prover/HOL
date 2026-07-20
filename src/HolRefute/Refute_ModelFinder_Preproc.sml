@@ -2409,6 +2409,8 @@ structure Refute_ModelFinder_Preproc = struct
         case needs of
             SOME terms => map (fn term =>
               do_middle false (MFH.unfold_defs_in_term context term)) terms
+          (* Upstream leaves automatic needed-value inference as a FIXME.
+             NONE therefore deliberately enables no needed-value reasoning. *)
           | NONE => []
       val nondefinitions' = map (fn term =>
         do_tail context false destroy_constrs (do_middle false term))

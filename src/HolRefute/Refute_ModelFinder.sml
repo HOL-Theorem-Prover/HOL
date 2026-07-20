@@ -198,7 +198,7 @@ fun solver_arguments deadline solver =
   #2 (Refute_ForlSat.sat_solver_spec (remaining deadline) solver)
 
 fun problem_for_scope deadline (mf : Refute_Core.mf_config)
-      all_types solver free_names nonsel_names nondef_us def_us
+      all_types solver free_names nonsel_names nondef_us def_us need_us
       unsound scope =
   let
     val effective_total_consts =
@@ -215,7 +215,8 @@ fun problem_for_scope deadline (mf : Refute_Core.mf_config)
        free_names = free_names,
        nonsel_names = nonsel_names,
        nondef_us = nondef_us,
-       def_us = def_us}
+       def_us = def_us,
+       need_us = need_us}
   in
     MFK.assemble_problem params unsound scope
   end
@@ -301,17 +302,17 @@ fun run_instance deadline started (config : Refute_Core.config)
     val _ = MFH.print_wf_cache context
     val nondef_us = map (MFNT.nut_from_term context MFNT.Eq) nondef_ts
     val def_us = map (MFNT.nut_from_term context MFNT.DefEq) def_ts
+    val need_us = map (MFNT.nut_from_term context MFNT.Eq) need_ts
     val (free_names, const_names) =
       List.foldl (fn (nut, names) =>
         MFNT.add_free_and_const_names nut names)
-        ([], []) (nondef_us @ def_us)
+        ([], []) (nondef_us @ def_us @ need_us)
     val (sel_names, nonsel_names) = List.partition
       (MFN.is_sel o MFNT.nickname_of) const_names
     val all_types = ground_types context binarize (nondef_ts @ def_ts)
     val unique_scope = List.all (fn (_, values) => length values = 1)
       (#card mf)
     val calculus_mono_types = ref ([] : hol_type list)
-    val _ = need_ts
     val _ =
       if #binary_ints mf = SOME true andalso not binarize andalso
          List.exists (fn ty => ty = MFH.num_type orelse ty = MFH.int_type)
@@ -628,7 +629,8 @@ fun run_instance deadline started (config : Refute_Core.config)
             val _ = check_deadline deadline
           in
             case problem_for_scope deadline mf all_types solver
-                free_names nonsel_names nondef_us def_us unsound scope of
+                free_names nonsel_names nondef_us def_us need_us
+                unsound scope of
                 NONE => (kept, unknown + 1)
               | SOME problem =>
                   (case rev kept of
