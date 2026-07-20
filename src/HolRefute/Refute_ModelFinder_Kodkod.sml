@@ -91,7 +91,7 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
     Refute_ModelFinder_Nut.nut Refute_ModelFinder_Nut.NameTable.table ->
     data_type_spec list -> Refute_Forl.formula list
   val declarative_axioms_for_data_types :
-    Refute_ModelFinder_HOL.mf_context -> int -> int -> offset_table ->
+    Refute_ModelFinder_HOL.mf_context -> bool -> int -> int -> offset_table ->
     kodkod_constrs ->
     Refute_ModelFinder_Nut.nut Refute_ModelFinder_Nut.NameTable.table ->
     data_type_spec list -> Refute_Forl.formula list
@@ -1321,9 +1321,24 @@ fun other_axioms_for_data_type _ _ _ _ _
 fun empty_need_values data_types =
   map (fn (spec : data_type_spec) => (#typ spec, SOME [])) data_types
 
-fun declarative_axioms_for_data_types context sym_break bits offsets kk
-      relation_table data_types =
+fun declarative_axioms_for_data_types context binarize sym_break bits
+      offsets kk relation_table data_types =
   let
+    fun check_constructors (spec : data_type_spec) =
+      let
+        val expected = MFH.binarized_and_boxed_data_type_constrs
+          context binarize (#typ spec)
+        fun present ({const, ...} : MFS.constr_spec) =
+          List.exists (fn constructor =>
+            MFH.constructor_name constructor = MFH.constructor_name const andalso
+            Term.type_of constructor = Term.type_of const) expected
+      in
+        if List.all present (#constrs spec) then ()
+        else raise MFU.BAD
+          ("Refute_ModelFinder_Kodkod.declarative_axioms_for_data_types",
+           "datatype constructor threading mismatch")
+      end
+    val _ = if binarize then List.app check_constructors data_types else ()
     (* PLAN_M3 decision 31: the need machinery remains in every bound and
        axiom helper, but M3 deliberately hard-wires need_us to []. *)
     val need_values = empty_need_values data_types
@@ -2752,10 +2767,11 @@ type assembly_params =
    def_us : nut list}
 
 fun scope_with_offsets
-      ({hol_ctxt, card_assigns, bits, bisim_depth, data_types, ...}
-       : MFS.scope) offsets : MFS.scope =
-  {hol_ctxt = hol_ctxt, card_assigns = card_assigns, bits = bits,
-   bisim_depth = bisim_depth, data_types = data_types, ofs = offsets}
+      ({hol_ctxt, binarize, card_assigns, bits, bisim_depth,
+        data_types, ...} : MFS.scope) offsets : MFS.scope =
+  {hol_ctxt = hol_ctxt, binarize = binarize, card_assigns = card_assigns,
+   bits = bits, bisim_depth = bisim_depth, data_types = data_types,
+   ofs = offsets}
 
 fun assemble_problem_once
       ({debug, peephole_optim, total_consts, datatype_sym_break,
@@ -2829,8 +2845,8 @@ fun assemble_problem_once
     val sel_bounds = map
       (bound_for_sel_rel debug need_values data_types) sel_rels
     val datatype_axioms = declarative_axioms_for_data_types
-      (#hol_ctxt scope) datatype_sym_break bits offsets kk rel_table
-      data_types
+      (#hol_ctxt scope) (#binarize scope) datatype_sym_break bits offsets
+      kk rel_table data_types
     val declarative_axioms = plain_axioms @ datatype_axioms
     val universe_card = Int.max
       (univ_card nat_card int_card main_j0

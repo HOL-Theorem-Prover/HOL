@@ -52,6 +52,18 @@ val _ = check_type (``:refute$rf5``, 5)
 val _ = check_type (``:refute$rf6``, 6)
 val _ = check_type (``:('a, 'b) refute$funbox``, 1)
 val _ = check_type (``:('a, 'b) refute$pairbox``, 1)
+val _ = check_type (``:'a refute$bitword``, 1)
+
+fun check_nullary_type (ty, name) =
+  require_msg (check_result (fn () =>
+    case Type.dest_thy_type ty of
+        {Thy = "refute", Tyop, Args = []} => Tyop = name
+      | _ => false))
+    (fn () => "missing refute$" ^ name ^ " type")
+    (fn () => ()) ()
+
+val _ = check_nullary_type (``:refute$unsigned_bit``, "unsigned_bit")
+val _ = check_nullary_type (``:refute$signed_bit``, "signed_bit")
 
 fun same_conclusion left right =
   Term.aconv (Thm.concl left) (Thm.concl right)
@@ -68,7 +80,9 @@ fun check_theorem_set settype expected =
       (fn () => ()) ()
   end
 
-val _ = check_theorem_set "refute_simp" [list_size_simp]
+val _ = check_theorem_set "refute_simp"
+  [list_size_simp, num_pre_simp, list_length_simp,
+   list_take_simp, list_drop_simp]
 val _ = check_theorem_set "refute_psimp" [Eps_psimp]
 val _ = check_theorem_set "refute_unfold"
   [one_case_unfold, num_case_unfold]
@@ -1168,6 +1182,134 @@ structure MFP = Refute_ModelFinder_Preproc
 fun fresh_mf_context () =
   MFH.make_context Refute_Core.default_mf_config []
 
+fun mf_binarize_preproc_goldens () =
+  let
+    val context = fresh_mf_context ()
+    val unsigned = MFH.unsigned_bitword_type
+    val signed = MFH.signed_bitword_type
+    val nested = Type.-->(MFH.num_type,
+      pairSyntax.mk_prod (MFH.int_type, MFH.num_type))
+    val mapped_nested = Type.-->(unsigned,
+      pairSyntax.mk_prod (signed, unsigned))
+    val source = ``SUC (n : num) = 5``
+    val mapped = MFP.binarize_nat_and_int_in_term source
+    val (mapped_left, mapped_right) = boolSyntax.dest_eq mapped
+    val (mapped_suc, mapped_args) = HolKernel.strip_comb mapped_left
+    val (suc_name, suc_ty) = Term.dest_var mapped_suc
+    val (numeral_name, numeral_ty) = Term.dest_var mapped_right
+    val polymorphic = MFP.binarize_nat_and_int_in_term ``I (n : num)``
+    val (poly_head, _) = HolKernel.strip_comb polymorphic
+    val mapped_leaf = MFP.binarize_nat_and_int_in_term
+      ``ZooLeaf (n : num)``
+    val mapped_partial_less = MFP.binarize_nat_and_int_in_term
+      ``($< : num -> num -> bool) 4``
+    val partial_less_nut = Refute_ModelFinder_Nut.nut_from_term context
+      Refute_ModelFinder_Nut.Eq mapped_partial_less
+    fun contains_less nut =
+      case nut of
+          Refute_ModelFinder_Nut.Op2
+            (Refute_ModelFinder_Nut.Less, _, _, _, _) => true
+        | Refute_ModelFinder_Nut.Op1 (_, _, _, first) =>
+            contains_less first
+        | Refute_ModelFinder_Nut.Op2 (_, _, _, first, second) =>
+            contains_less first orelse contains_less second
+        | Refute_ModelFinder_Nut.Op3 (_, _, _, first, second, third) =>
+            contains_less first orelse contains_less second orelse
+            contains_less third
+        | _ => false
+    val partial_less_seen = contains_less partial_less_nut
+    val (mapped_leaf_head, _) = HolKernel.strip_comb mapped_leaf
+    val (mapped_leaf_name, _) = Term.dest_var mapped_leaf_head
+    val gcd = Term.prim_mk_const {Thy = "gcd", Name = "gcd"}
+    val frac = Term.prim_mk_const {Thy = "frac", Name = "abs_frac"}
+    val suc_definition = ``SUC (n : num) = m``
+    val suc_rhs = ``(n : num) = SUC m``
+    val restatements =
+      [num_pre_simp, list_length_simp, list_take_simp,
+       list_drop_simp, list_size_simp]
+    val constructors = MFH.binarized_and_boxed_data_type_constrs
+      context true unsigned
+    val tree_constructors =
+      MFH.binarized_and_boxed_data_type_constrs context true ``:zoo_tree``
+    val mapped_leaf_constructor = hd tree_constructors
+    val constructor = hd constructors
+    val selector = MFH.binarized_and_boxed_nth_sel_for_constr
+      context true constructor 0
+    val recovered = MFH.binarized_and_boxed_constr_for_sel
+      context true selector
+    val pipeline_context = MFH.context_with_binary_ints
+      (fresh_mf_context ()) NONE
+    val (pipeline_terms, pipeline_defs, pipeline_needs, _, _,
+         pipeline_binarize) = MFP.preprocess_formulas pipeline_context []
+      ``(p : num -> num -> bool) n 5``
+    val pipeline_types = map Term.type_of
+      (List.concat (map Term.free_vars_lr
+        (pipeline_terms @ pipeline_defs)))
+    val checks =
+      [("type map", MFH.binarize_nat_and_int_in_type nested = mapped_nested),
+       ("trigger threshold",
+        not (MFP.should_use_binary_ints ``3 : num``) andalso
+        MFP.should_use_binary_ints ``4 : num`` andalso
+        MFP.should_use_binary_ints ``~4 : int``),
+       ("operator trigger",
+        MFP.should_use_binary_ints ``(m : num) * n`` andalso
+        MFP.should_use_binary_ints ``int_mul (i : int) j``),
+       ("SUC blocker",
+        not (MFP.may_use_binary_ints true suc_definition) andalso
+        MFP.may_use_binary_ints false suc_definition andalso
+        MFP.may_use_binary_ints true suc_rhs),
+       ("gcd/frac blockers",
+        not (MFP.may_use_binary_ints false gcd) andalso
+        not (MFP.may_use_binary_ints false frac)),
+       ("Suc-free restatements",
+        List.all (MFP.may_use_binary_ints true o Thm.concl)
+          restatements),
+       ("reserved SUC",
+        null mapped_args = false andalso
+        MFN.is_reserved_name suc_name andalso
+        MFN.original_name suc_name = "num$SUC" andalso
+        suc_ty = Type.-->(unsigned, unsigned)),
+       ("reserved numeral",
+        MFN.is_reserved_name numeral_name andalso
+        numeral_name = "refute$num$5" andalso numeral_ty = unsigned),
+       ("polymorphic instantiation",
+        Term.is_const poly_head andalso
+        Term.type_of poly_head = Type.-->(unsigned, unsigned)),
+       ("enabled pipeline",
+        pipeline_binarize andalso null pipeline_needs andalso
+        List.exists (fn ty => ty = unsigned) pipeline_types andalso
+        not (List.exists (fn ty => ty = MFH.num_type orelse
+          ty = MFH.int_type) pipeline_types)),
+       ("partial comparison", partial_less_seen),
+       ("constructor max row",
+        Refute_ModelFinder_Scope.lookup_const_ints_assign
+          [(SOME ``ZooLeaf : num -> zoo_tree``, [7])]
+          mapped_leaf_constructor = [7]),
+       ("reserved constructor",
+        MFN.is_reserved_name mapped_leaf_name andalso
+        MFN.original_name mapped_leaf_name =
+          "refuteTableZoo$ZooLeaf" andalso
+        MFH.is_constr mapped_leaf_head andalso
+        Option.isSome (MFP.fully_applied_constructor mapped_leaf) andalso
+        not (Term.is_const mapped_leaf_constructor) andalso
+        MFH.constructor_name mapped_leaf_constructor =
+          "refuteTableZoo$ZooLeaf"),
+       ("bitword wrappers",
+        length constructors = 1 andalso
+        Term.type_of constructor = Type.-->
+          (Type.-->(MFH.unsigned_bit_type, Type.bool), unsigned) andalso
+        Term.aconv constructor recovered)]
+    val _ = List.app (fn (label, passed) =>
+      if passed then () else Feedback.HOL_MESG
+        ("TASK_08 failed check: " ^ label)) checks
+  in
+    List.all #2 checks
+  end
+
+val _ = require_msg (check_result mf_binarize_preproc_goldens) (fn () =>
+  "model-finder binarize trigger/blocker/type-map golden changed")
+  (fn () => ()) ()
+
 fun mf_preproc_destroy_goldens () =
   let
     val context = fresh_mf_context ()
@@ -1198,16 +1340,16 @@ fun mf_preproc_destroy_goldens () =
     val actual_suc = MFP.destroy_pulled_out_constrs context false true
       ``(n : num) = SUC m``
     val expected_suc = ``~((0 : num) = n) /\ m = n - 1``
-    val (pipeline_lists, pipeline_list_defs, _, _) =
+    val (pipeline_lists, pipeline_list_defs, _, _, _, _) =
       MFP.preprocess_formulas (fresh_mf_context ()) []
         ``(xs : num list) = h :: t``
-    val (pipeline_trees, pipeline_tree_defs, _, _) =
+    val (pipeline_trees, pipeline_tree_defs, _, _, _, _) =
       MFP.preprocess_formulas (fresh_mf_context ()) []
         ``(tree : zoo_tree) = ZooNode left right``
     val keep_constrs_context = MFH.make_context
       (#mf (Refute_Core.upd_destroy_constrs false
         Refute_Core.default_config)) []
-    val (kept_constrs, kept_constr_defs, _, _) =
+    val (kept_constrs, kept_constr_defs, _, _, _, _) =
       MFP.preprocess_formulas keep_constrs_context []
         ``(xs : num list) = h :: t``
     val weak_pattern = MFP.destroy_pulled_out_constrs context false false
@@ -1575,8 +1717,8 @@ fun mf_preproc_skolem_golden () =
     val actual = MFP.skolemize_term_and_more context 3 input
     val metadata = !(#skolems context)
     val pipeline_context = fresh_mf_context ()
-    val (pipeline_terms, pipeline_defs, pipeline_all_mono,
-         pipeline_no_poly) =
+    val (pipeline_terms, pipeline_defs, pipeline_needs,
+         pipeline_all_mono, pipeline_no_poly, pipeline_binarize) =
       MFP.preprocess_formulas pipeline_context [] input
     val boxed_num_pair_ty = MFH.mk_pairbox_type (``:num``, ``:num``)
     val boxed_num_pair = hd
@@ -1626,8 +1768,9 @@ fun mf_preproc_skolem_golden () =
     metadata = [("refute$sk3@1$x", ["c", "b", "a"])] andalso
     ListPair.allEq (fn (result, golden) => Term.aconv result golden)
       (pipeline_terms, [expected_pipeline]) andalso
-    null pipeline_defs andalso pipeline_all_mono andalso
-    pipeline_no_poly andalso
+    null pipeline_defs andalso null pipeline_needs andalso
+    pipeline_all_mono andalso pipeline_no_poly andalso
+    not pipeline_binarize andalso
     !(#skolems pipeline_context) =
       [("refute$sk3@1$x", ["c", "b", "a"])] andalso
     Term.aconv unskolemized axiom andalso
@@ -1668,7 +1811,7 @@ fun mf_preproc_unfold_goldens () =
     val actual_case = MFH.unfold_defs_in_term context case_input
     val case_goal = boolSyntax.mk_eq (case_input, ``9 : num``)
     val expected_case_goal = boolSyntax.mk_eq (expected_case, ``9 : num``)
-    val (pipeline_cases, pipeline_case_defs, _, _) =
+    val (pipeline_cases, pipeline_case_defs, _, _, _, _) =
       MFP.preprocess_formulas (fresh_mf_context ()) [] case_goal
     val set_input =
       ``(2 : num) IN GSPEC (\n : num. (n + 1, n < 3))``
@@ -1680,7 +1823,7 @@ fun mf_preproc_unfold_goldens () =
     val actual_set = set_input
       |> MFH.unfold_defs_in_term context
       |> MFP.destroy_set_Collect
-    val (pipeline_sets, pipeline_set_defs, _, _) =
+    val (pipeline_sets, pipeline_set_defs, _, _, _, _) =
       MFP.preprocess_formulas (fresh_mf_context ()) [] set_input
     val expected_pipeline_set =
       ``?x : num. x + 1 = 2 /\ (x < 3 <=> T)``
@@ -1752,7 +1895,7 @@ fun mf_preproc_pipeline_shape () =
   let
     val context = fresh_mf_context ()
     val goal = ``?x : num. x = 3``
-    val (nondefinitions, _, _, _) =
+    val (nondefinitions, _, _, _, _, _) =
       MFP.preprocess_formulas context [] goal
     val skolems = !(#skolems context)
     val preprocessed = hd nondefinitions
@@ -1858,7 +2001,7 @@ fun mf_specialization_goldens () =
     val displayed = Refute_ModelFinder_Model.user_friendly_const first_cache
       (var_name first_head) (Term.type_of first_head)
     val pipeline_context = fresh_mf_context ()
-    val (pipeline_nondefs, pipeline_defs, _, _) =
+    val (pipeline_nondefs, pipeline_defs, _, _, _, _) =
       MFP.preprocess_formulas pipeline_context []
         ``MAP SUC (xs : num list) = []``
     fun open_schematic term = List.exists (fn variable =>
@@ -2124,9 +2267,9 @@ structure MFS = Refute_ModelFinder_Scope
 
 fun mf_scope_card_repair () =
   let
-    val unit_repair = MFS.repair_card_assigns mf_hol_context
+    val unit_repair = MFS.repair_card_assigns mf_hol_context false
       ([(``:unit``, 3)], [])
-    val enum_repair = MFS.repair_card_assigns mf_hol_context
+    val enum_repair = MFS.repair_card_assigns mf_hol_context false
       ([(``:refute$rf3``, 5)], [])
     val cons = List.nth
       (MFH.data_type_constrs mf_hol_context ``:num list``, 1)
@@ -2158,7 +2301,7 @@ fun mf_scope_mono_partition () =
     val (_, pattern_nonmono) = MFS.mono_partition
       [(SOME ``:'a list``, SOME false), (NONE, NONE)]
       [``:num list``]
-    val (_, pattern_scopes) = MFS.all_scopes mf_hol_context
+    val (_, pattern_scopes) = MFS.all_scopes mf_hol_context false
       [(SOME ``:'a list``, [3]), (NONE, [1])]
       [(NONE, [~1])] [``:num list``, number] [] [] []
     val pattern_scope = hd pattern_scopes
@@ -2183,9 +2326,9 @@ fun mf_scope_calculus_block_fusion () =
       MFMono.formulas_monotonic mf_hol_context false ty ([formula], [])
     val (mono, nonmono) = MFS.mono_partition_with actually_monotonic
       [(NONE, NONE)] types
-    val (_, fused) = MFS.all_scopes mf_hol_context
+    val (_, fused) = MFS.all_scopes mf_hol_context false
       [(NONE, [1, 2, 3])] [(NONE, [~1])] mono nonmono [] []
-    val (_, separated) = MFS.all_scopes mf_hol_context
+    val (_, separated) = MFS.all_scopes mf_hol_context false
       [(NONE, [1, 2, 3])] [(NONE, [~1])] [] types [] []
   in
     mono = types andalso null nonmono andalso
@@ -2205,11 +2348,11 @@ fun mf_scope_enumeration_order () =
   let
     val ordered = MFS.all_combinations_ordered_smartly
       [(3, 0), (3, 0)]
-    val (skipped, scopes) = MFS.all_scopes mf_hol_context
+    val (skipped, scopes) = MFS.all_scopes mf_hol_context false
       [(NONE, [1, 2, 3])] [(NONE, [~1])]
       [``:refute$rf6``] [``:'a``] [] []
     val truncation_cards = MFS.default_cards @ [11]
-    val (truncated, retained) = MFS.all_scopes mf_hol_context
+    val (truncated, retained) = MFS.all_scopes mf_hol_context false
       [(NONE, truncation_cards)] [(NONE, [~1])]
       [``:refute$rf6``] [``:'a``, ``:'b``, ``:'c``] [] []
     fun cards (scope : MFS.scope) =
@@ -2231,14 +2374,15 @@ val _ = require_msg (check_result mf_scope_enumeration_order) (fn () =>
 
 fun mf_scope_offsets_and_facto_pairs () =
   let
-    val (_, scopes) = MFS.all_scopes mf_hol_context
+    val (_, scopes) = MFS.all_scopes mf_hol_context false
       [(NONE, [2])] [(NONE, [~1])]
       [``:refute$rf2``, ``:num``] [``:'a``, ``:unit``] [] []
     val scope = hd scopes
     val data_types = #data_types scope
     val list_ty = ``:num list``
     val host_ty = ``:((num list -> bool) -> bool) zoo_poly_record``
-    val finitized = MFS.scope_from_descriptor mf_hol_context [] [list_ty]
+    val finitized = MFS.scope_from_descriptor mf_hol_context false []
+      [list_ty]
       ([(host_ty, 512), (list_ty, 3), (``:num``, 2)], [])
     val list_spec = valOf
       (MFS.data_type_spec (#data_types finitized) list_ty)
@@ -2426,7 +2570,7 @@ val _ = require_msg (check_result mf_rep_ordering) (fn () =>
 
 fun mf_rep_fixed_scope () =
   let
-    val (_, scopes) = MFS.all_scopes mf_hol_context
+    val (_, scopes) = MFS.all_scopes mf_hol_context false
       [(NONE, [2])] [(NONE, [~1])]
       [``:refute$rf2``, ``:num``] [] [] []
     val scope = hd scopes
@@ -2516,7 +2660,8 @@ val _ = tprint "Refute model-finder Kodkod bounds and SUA"
 
 fun mf_kodkod_fixture assignments deep_types =
   let
-    val scope = MFS.scope_from_descriptor mf_hol_context deep_types []
+    val scope = MFS.scope_from_descriptor mf_hol_context false
+      deep_types []
       (assignments, [])
     val (selectors, _) = MFNT.choose_reps_for_all_sels scope
       MFNT.NameTable.empty
@@ -2552,7 +2697,8 @@ val _ = require_msg (check_result mf_kodkod_plain_bound) (fn () =>
 fun mf_kodkod_offset_retry () =
   let
     val list_ty = ``:num list``
-    val scope = MFS.scope_from_descriptor mf_hol_context [list_ty] []
+    val scope = MFS.scope_from_descriptor mf_hol_context false
+      [list_ty] []
       ([(list_ty, 3), (``:num``, 2)], [])
     val offsets = #ofs scope
     val main_j0 = MFS.offset_of_type offsets Type.bool
@@ -2597,7 +2743,7 @@ fun mf_kodkod_list_bounds () =
       (mf_relation_for cons 1 relations)
     val kk = Refute_ModelFinder_Peephole.kodkod_constrs true 2 2 3
     val axioms = MFK.declarative_axioms_for_data_types mf_hol_context
-      5 0 (#ofs scope) kk relation_table data_types
+      false 5 0 (#ofs scope) kk relation_table data_types
   in
     mf_bound_tuple_sets discr = [Refute_Forl.TupleAtomSeq (2, 1)] andalso
     mf_bound_tuple_sets head =
@@ -2685,7 +2831,7 @@ fun mf_kodkod_record_bounds () =
           Refute_Forl.TupleAtomSeq (2, 3))]
     val kk = Refute_ModelFinder_Peephole.kodkod_constrs true 2 2 3
     val axioms = MFK.declarative_axioms_for_data_types mf_hol_context
-      5 0 (#ofs scope) kk relation_table data_types
+      false 5 0 (#ofs scope) kk relation_table data_types
   in
     mf_bound_tuple_sets discr = [Refute_Forl.TupleAtomSeq (3, 0)] andalso
     mf_bound_tuple_sets first = expected_selector andalso
@@ -2974,7 +3120,7 @@ val _ = require_msg (check_result mf_nut_term_goldens) (fn () =>
 
 fun mf_nut_fixed_scope () =
   let
-    val (_, scopes) = MFS.all_scopes mf_hol_context
+    val (_, scopes) = MFS.all_scopes mf_hol_context false
       [(NONE, [3])] [(NONE, [~1])]
       [``:refute$rf2``, ``:num``] [] [] []
   in hd scopes end
@@ -3009,7 +3155,7 @@ val _ = require_msg (check_result mf_nut_name_reps) (fn () =>
 fun mf_nut_deep_selector_reps () =
   let
     val list_ty = ``:num list``
-    val (_, scopes) = MFS.all_scopes mf_hol_context
+    val (_, scopes) = MFS.all_scopes mf_hol_context false
       [(NONE, [3])] [(NONE, [~1])] [list_ty, ``:num``] [] [list_ty] []
     val scope = hd scopes
     val cons = List.nth
@@ -3112,7 +3258,7 @@ fun mf_nut_finitized_quantifier_is_exact () =
     val finitizable = Refute_ModelFinder.finitizable_data_types
       mf_hol_context (#finitize (#mf default_config))
       kind_of_monotonic [list_ty, ``:num``] [``:num``]
-    fun scope types = MFS.scope_from_descriptor mf_hol_context []
+    fun scope types = MFS.scope_from_descriptor mf_hol_context false []
       types ([(list_ty, 3), (``:num``, 2)], [])
     val ordinary_scope = scope []
     val finitized_scope = scope finitizable
@@ -3237,7 +3383,7 @@ val _ = require_msg (check_result mf_nut_renaming) (fn () =>
 val _ = tprint "Refute model-finder Kodkod translation"
 
 fun mf_translation_scope assignments deep_types =
-  MFS.scope_from_descriptor mf_hol_context deep_types []
+  MFS.scope_from_descriptor mf_hol_context false deep_types []
     (assignments, [])
 
 fun mf_translation_constrs scope =
@@ -5035,7 +5181,11 @@ fun m4_guard_is_pinned (field, testfn) = shouldfail {
 } ()
 
 val _ = List.app m4_guard_is_pinned
-  [("max_potential", fn () =>
+  [("binary_ints", fn () =>
+      Refute.upd_binary_ints NONE Refute.default_config),
+   ("bits", fn () =>
+      Refute.upd_bits [4] Refute.default_config),
+   ("max_potential", fn () =>
       Refute.upd_max_potential 2 Refute.default_config),
    ("max_genuine", fn () =>
       Refute.upd_max_genuine 2 Refute.default_config)]

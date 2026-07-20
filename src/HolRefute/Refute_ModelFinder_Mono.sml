@@ -189,7 +189,8 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
     end
   and fresh_mtype_for_type
         (mdata as
-          {context, alpha_ty, data_type_mcache, constr_mcache, ...} : mdata)
+          {context, binarize, alpha_ty, data_type_mcache,
+           constr_mcache, ...} : mdata)
         all_minus ty =
     let
       fun nominal_type current =
@@ -202,7 +203,9 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                 let
                   val _ = data_type_mcache :=
                     (current, MRec current) :: !data_type_mcache
-                  val constructors = MFH.data_type_constrs context current
+                  val constructors =
+                    MFH.binarized_and_boxed_data_type_constrs
+                      context binarize current
                   fun do_constructor constructor
                         (all_mtypes, constructor_mtypes) =
                     let
@@ -713,18 +716,14 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
     end
 
   fun mtype_for_sel
-        (mdata as {context, ...} : mdata) selector =
+        (mdata as {context, binarize, ...} : mdata) selector =
     let
       val (name, selector_ty) = Term.dest_var selector
       val (domain, _) = Type.dom_rng selector_ty
-      val original = MFN.original_name name
       val constructor =
-        case List.find (fn candidate =>
-               MFH.constructor_name candidate = original)
-             (MFH.data_type_constrs context domain) of
-            SOME candidate => candidate
-          | NONE => raise MTYPE
-              ("Refute_ModelFinder_Mono.mtype_for_sel", [], [domain])
+        MFH.binarized_and_boxed_constr_for_sel context binarize selector
+        handle HOL_ERR _ => raise MTYPE
+          ("Refute_ModelFinder_Mono.mtype_for_sel", [], [domain])
     in
       sel_mtype_from_constr_mtype name
         (mtype_for_constr mdata constructor)
@@ -1171,7 +1170,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                   else if is_reserved term andalso
                           MFN.is_sel (variable_name term) then
                     (mtype_for_sel mdata term, accum)
-                  else if Term.is_const term andalso MFH.is_constr term then
+                  else if MFH.is_constr term then
                     (mtype_for_constr mdata term, accum)
                   else if MFH.is_named_const
                             {Thy = "refute", Name = "safe_The"} term then
@@ -1553,7 +1552,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
     else
       let val (head, arguments) = HolKernel.strip_comb term
       in
-        Term.is_const head andalso MFH.is_nonfree_constr head andalso
+        MFH.is_nonfree_constr head andalso
         List.all (is_constructor_pattern bound) arguments
       end handle HOL_ERR _ => false
 

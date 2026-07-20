@@ -81,13 +81,52 @@ Proof
   Cases_on `xs` >> simp [listTheory.list_size_thm]
 QED
 
-(* Part 4: ordinary datatypes used by the boxing preprocessor.  Keeping
-   these declarations static makes their TypeBase information available to
-   the generic datatype pipeline without adding runtime theory content. *)
+(* Primitive recursion equations with SUC on their left-hand sides prevent
+   the binary-integer encoding from matching them.  These equivalent forms
+   keep the common arithmetic/list operations usable without such patterns. *)
+Theorem num_pre_simp[refute_simp]:
+  PRE n = if n = 0 then 0 else n - 1
+Proof
+  Cases_on `n` >> simp []
+QED
+
+Theorem list_length_simp[refute_simp]:
+  LENGTH xs = if xs = [] then 0 else SUC (LENGTH (TL xs))
+Proof
+  Cases_on `xs` >> simp []
+QED
+
+Theorem list_take_simp[refute_simp]:
+  TAKE n xs =
+    if n = 0 \/ xs = [] then []
+    else HD xs :: TAKE (n - 1) (TL xs)
+Proof
+  Cases_on `n` >> Cases_on `xs` >> simp []
+QED
+
+Theorem list_drop_simp[refute_simp]:
+  DROP n xs =
+    if n = 0 \/ xs = [] then xs
+    else DROP (n - 1) (TL xs)
+Proof
+  Cases_on `n` >> Cases_on `xs` >> simp []
+QED
+
+(* Part 4: ordinary datatypes used by the boxing and binary-integer
+   preprocessors.  Keeping these declarations static makes their TypeBase
+   information available to the generic datatype pipeline without adding
+   runtime theory content. *)
 Datatype:
   funbox = FunBox ('a -> 'b)
 End
 
 Datatype:
   pairbox = PairBox 'a 'b
+End
+
+val _ = new_type ("unsigned_bit", 0)
+val _ = new_type ("signed_bit", 0)
+
+Datatype:
+  bitword = Bitword ('a -> bool)
 End

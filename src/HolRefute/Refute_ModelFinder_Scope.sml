@@ -31,6 +31,7 @@ structure Refute_ModelFinder_Scope = struct
 
   type scope =
     {hol_ctxt : context,
+     binarize : bool,
      card_assigns : (hol_type * int) list,
      bits : int,
      bisim_depth : int,
@@ -70,7 +71,8 @@ structure Refute_ModelFinder_Scope = struct
     predicate ty orelse List.exists (exists_subtype predicate)
       (type_arguments ty)
 
-  fun is_asymmetric_non_data_type ty = MFH.is_integer_type ty
+  fun is_asymmetric_non_data_type ty =
+    MFH.is_integer_type ty orelse MFH.is_bit_type ty
 
   fun data_type_spec (data_types : data_type_spec list) ty =
     List.find (fn spec => same_type (#typ spec) ty) data_types
@@ -79,7 +81,7 @@ structure Refute_ModelFinder_Scope = struct
     #2 (boolSyntax.strip_fun (Term.type_of constructor))
 
   fun same_constructor left right =
-    Term.same_const left right andalso
+    MFH.constructor_name left = MFH.constructor_name right andalso
     same_type (constructor_result_type left)
       (constructor_result_type right)
 
@@ -197,7 +199,7 @@ structure Refute_ModelFinder_Scope = struct
          type_matches pattern actual) assigns ty)
 
   fun const_matches (pattern, actual) =
-    Term.same_const pattern actual andalso
+    MFH.constructor_name pattern = MFH.constructor_name actual andalso
     type_matches (Term.type_of pattern) (Term.type_of actual)
 
   fun lookup_const_ints_assign assigns constructor =
@@ -226,18 +228,18 @@ structure Refute_ModelFinder_Scope = struct
       lookup_const_ints_assign maxes_assigns constructor)
     handle HOL_ERR _ => NONE
 
-  fun block_for_type context cards_assigns maxes_assigns ty =
+  fun block_for_type context binarize cards_assigns maxes_assigns ty =
     (Card ty, lookup_type_ints_assign cards_assigns ty) ::
-    (case MFH.data_type_constrs context ty of
+    (case MFH.binarized_and_boxed_data_type_constrs context binarize ty of
          [_] => []
        | constructors =>
            List.mapPartial (row_for_constr maxes_assigns) constructors)
 
-  fun blocks_for_types context cards_assigns maxes_assigns
+  fun blocks_for_types context binarize cards_assigns maxes_assigns
         mono_types nonmono_types =
     let
       fun block_for ty =
-        block_for_type context cards_assigns maxes_assigns ty
+        block_for_type context binarize cards_assigns maxes_assigns ty
       val mono_block = List.concat (map block_for mono_types)
       val nonmono_blocks = map block_for nonmono_types
     in
@@ -287,9 +289,9 @@ structure Refute_ModelFinder_Scope = struct
         else total * card
       end) 1 (MFH.constructor_arg_types constructor)
 
-  fun is_surely_inconsistent_card_assign context
+  fun is_surely_inconsistent_card_assign context binarize
         (card_assigns, max_assigns) (ty, card) =
-    case MFH.data_type_constrs context ty of
+    case MFH.binarized_and_boxed_data_type_constrs context binarize ty of
         [] => false
       | constructors =>
           let
@@ -307,18 +309,18 @@ structure Refute_ModelFinder_Scope = struct
             maximum < card
           end
 
-  fun is_surely_inconsistent_scope_description context seen rest
+  fun is_surely_inconsistent_scope_description context binarize seen rest
         max_assigns =
     List.exists
-      (is_surely_inconsistent_card_assign context
+      (is_surely_inconsistent_card_assign context binarize
         (seen @ rest, max_assigns)) seen
 
-  fun repair_card_assigns context (card_assigns, max_assigns) =
+  fun repair_card_assigns context binarize (card_assigns, max_assigns) =
     let
       fun repair seen [] = SOME seen
         | repair _ ((_, 0) :: _) = NONE
         | repair seen ((ty, card) :: rest) =
-          ((if is_surely_inconsistent_scope_description context
+          ((if is_surely_inconsistent_scope_description context binarize
                  ((ty, card) :: seen) rest max_assigns then
               raise MFU.SAME ()
             else
@@ -345,7 +347,7 @@ structure Refute_ModelFinder_Scope = struct
     List.foldr (fn (row, desc) =>
       add_row_to_scope_descriptor row desc) ([], []) block
 
-  fun scope_descriptor_from_combination context blocks columns =
+  fun scope_descriptor_from_combination context binarize blocks columns =
     let
       val rows = List.concat
         (ListPair.map project_block (columns, blocks))
@@ -353,7 +355,7 @@ structure Refute_ModelFinder_Scope = struct
         scope_descriptor_from_block rows
     in
       Option.map (fn repaired => (repaired, max_assigns))
-        (repair_card_assigns context (card_assigns, max_assigns))
+        (repair_card_assigns context binarize (card_assigns, max_assigns))
     end
 
   fun offset_table_for_card_assigns data_types assigns =
@@ -454,12 +456,13 @@ structure Refute_ModelFinder_Scope = struct
         (card + 1) 0 card_assigns ty
     end
 
-  fun data_type_spec_from_scope_descriptor context deep_data_types
+  fun data_type_spec_from_scope_descriptor context binarize deep_data_types
         finitizable_data_types (desc as (card_assigns, _)) (ty, card) =
     let
       val deep = member_type ty deep_data_types
       val co = MFH.is_codatatype ty
-      val constructors = MFH.data_type_constrs context ty
+      val constructors =
+        MFH.binarized_and_boxed_data_type_constrs context binarize ty
       val self_recs = map
         (is_self_recursive_constr_type o Term.type_of) constructors
       val num_self_recs = length (List.filter (fn value => value) self_recs)
@@ -495,16 +498,17 @@ structure Refute_ModelFinder_Scope = struct
        constrs = constrs}
     end
 
-  fun scope_from_descriptor context deep_data_types
+  fun scope_from_descriptor context binarize deep_data_types
         finitizable_data_types (desc as (card_assigns, _)) =
     let
       val data_types = map
-        (data_type_spec_from_scope_descriptor context deep_data_types
+        (data_type_spec_from_scope_descriptor context binarize deep_data_types
           finitizable_data_types desc)
         (List.filter (MFH.is_data_type o #1) card_assigns)
     in
-      {hol_ctxt = context, card_assigns = card_assigns,
-       bits = 0, bisim_depth = ~1, data_types = data_types,
+      {hol_ctxt = context, binarize = binarize,
+       card_assigns = card_assigns, bits = 0, bisim_depth = ~1,
+       data_types = data_types,
        ofs = offset_table_for_card_assigns data_types card_assigns}
     end
 
@@ -551,31 +555,31 @@ structure Refute_ModelFinder_Scope = struct
            same_description (other, value)) result then result
       else result @ [value]) [] values
 
-  fun all_scopes context cards_assigns maxes_assigns
+  fun all_scopes context binarize cards_assigns maxes_assigns
         mono_types nonmono_types deep_data_types finitizable_data_types =
     let
       val cards_assigns =
         repair_cards_assigns_wrt_boxing_etc mono_types cards_assigns
-      val blocks = blocks_for_types context cards_assigns maxes_assigns
-        mono_types nonmono_types
+      val blocks = blocks_for_types context binarize cards_assigns
+        maxes_assigns mono_types nonmono_types
       val ranks = map rank_of_block blocks
       val all = all_combinations_ordered_smartly
         (map (fn rank => (rank, 0)) ranks)
       val selected = take_at_most max_scopes all
       val descriptions = List.mapPartial
-        (scope_descriptor_from_combination context blocks) selected
+        (scope_descriptor_from_combination context binarize blocks) selected
       val descriptions =
         if length descriptions <= distinct_threshold then
           distinct_descriptions descriptions
         else descriptions
     in
       (length all - length selected,
-       map (scope_from_descriptor context deep_data_types
+       map (scope_from_descriptor context binarize deep_data_types
          finitizable_data_types) descriptions)
     end
 
   fun is_number_type ty =
-    MFH.is_integer_type ty orelse
+    MFH.is_integer_type ty orelse MFH.is_bit_type ty orelse
     Option.isSome (MFH.numeric_type_card ty) orelse
     Option.isSome (MFH.word_dimension ty)
 

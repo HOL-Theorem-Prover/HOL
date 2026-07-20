@@ -476,6 +476,53 @@ structure Refute_ModelFinder_HOL = struct
     {Thy = "num", Tyop = "num", Args = []}
   val int_type = Type.mk_thy_type
     {Thy = "integer", Tyop = "int", Args = []}
+  val unsigned_bit_type = Type.mk_thy_type
+    {Thy = "refute", Tyop = "unsigned_bit", Args = []}
+  val signed_bit_type = Type.mk_thy_type
+    {Thy = "refute", Tyop = "signed_bit", Args = []}
+
+  fun mk_bitword_type bit = Type.mk_thy_type
+    {Thy = "refute", Tyop = "bitword", Args = [bit]}
+
+  val unsigned_bitword_type = mk_bitword_type unsigned_bit_type
+  val signed_bitword_type = mk_bitword_type signed_bit_type
+
+  fun is_bit_type ty = ty = unsigned_bit_type orelse ty = signed_bit_type
+
+  fun is_bitword_type ty =
+    case Lib.total Type.dest_thy_type ty of
+        SOME {Thy = "refute", Tyop = "bitword", ...} => true
+      | _ => false
+
+  fun binarize_nat_and_int_in_type ty =
+    if ty = num_type then unsigned_bitword_type
+    else if ty = int_type then signed_bitword_type
+    else if Type.is_vartype ty then ty
+    else
+      let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+      in Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
+           Args = map binarize_nat_and_int_in_type Args}
+      end
+
+  fun retype_constant layer term ty =
+    if Term.type_of term = ty then term
+    else
+      case Lib.total Term.dest_thy_const term of
+          SOME {Thy, Name, ...} =>
+            let
+              val generic = Term.prim_mk_const {Thy = Thy, Name = Name}
+              val legal = Lib.can
+                (Type.match_type (Term.type_of generic)) ty
+            in
+              if legal then Term.mk_thy_const {Thy = Thy, Name = Name, Ty = ty}
+              else Refute_ModelFinder_Names.mk_reserved_var
+                (Refute_ModelFinder_Names.reserved_prefix ^ layer ^
+                 Refute_ModelFinder_Names.name_sep ^ Thy ^
+                 Refute_ModelFinder_Names.name_sep ^ Name) ty
+            end
+        | NONE =>
+            let val (name, _) = Term.dest_var term
+            in Term.mk_var (name, ty) end
 
   fun fun_type (domain, range) = Type.-->(domain, range)
   fun binary_type argument result =
@@ -871,7 +918,9 @@ structure Refute_ModelFinder_HOL = struct
     {Thy = "refute", Tyop = "pairbox", Args = [left, right]}
 
   fun unarize_unbox_etc_type ty =
-    if Type.is_vartype ty then ty
+    if ty = unsigned_bitword_type then num_type
+    else if ty = signed_bitword_type then int_type
+    else if Type.is_vartype ty then ty
     else
       let val {Thy, Tyop, Args} = Type.dest_thy_type ty
       in
@@ -1035,14 +1084,63 @@ structure Refute_ModelFinder_HOL = struct
             constructors
           end
 
+  fun binarized_and_boxed_data_type_constrs context binarize ty =
+    let
+      fun transform constructor =
+        let
+          val boxed = box_type context InConstr (Term.type_of constructor)
+          val transformed =
+            if binarize then binarize_nat_and_int_in_type boxed else boxed
+        in
+          retype_constant "middle" constructor transformed
+        end
+    in
+      map transform (data_type_constrs context ty)
+    end
+
   fun registered_constructor term =
     List.exists (fn {constructors, ...} =>
       List.exists (fn constructor =>
         Term.same_const constructor term) constructors)
       (!codatatype_registry)
 
+  fun raw_constructor_name constructor =
+    let val {Thy, Name, ...} = Term.dest_thy_const constructor
+    in Thy ^ "$" ^ Name end
+
+  fun reserved_constructor term =
+    case Lib.total Term.dest_var term of
+        SOME (name, _) =>
+          if not (Refute_ModelFinder_Names.is_reserved_name name) orelse
+             Refute_ModelFinder_Names.is_sel name then false
+          else
+            let
+              val original = Refute_ModelFinder_Names.original_name name
+              val result_ty = #2 (boolSyntax.strip_fun (Term.type_of term))
+              val raw =
+                case TypeBase.fetch result_ty of
+                    SOME info => TypeBasePure.constructors_of info
+                  | NONE => []
+              val registered = List.concat (map #constructors
+                (List.filter (fn {constructors, ...} =>
+                   case constructors of
+                       constructor :: _ =>
+                         #2 (boolSyntax.strip_fun
+                           (Term.type_of constructor)) = result_ty
+                     | [] => false) (!codatatype_registry)))
+            in
+              List.exists (fn constructor =>
+                raw_constructor_name constructor = original)
+                (raw @ registered)
+            end
+        | NONE => false
+    handle HOL_ERR _ => false
+
   fun is_nonfree_constr term =
-    TypeBase.is_constructor term orelse registered_constructor term
+    if Term.is_const term then
+      TypeBase.is_constructor term orelse registered_constructor term
+    else
+      reserved_constructor term
 
   val is_free_constr = is_nonfree_constr
 
@@ -1083,7 +1181,13 @@ structure Refute_ModelFinder_HOL = struct
   fun is_record_update term = Option.isSome (dest_record_update term)
 
   fun is_named_const expected term =
-    Term.is_const term andalso same_key (const_key term) expected
+    (Term.is_const term andalso same_key (const_key term) expected) orelse
+    (case Lib.total Term.dest_var term of
+         SOME (name, _) =>
+           Refute_ModelFinder_Names.is_reserved_name name andalso
+           Refute_ModelFinder_Names.original_name name =
+             #Thy expected ^ "$" ^ #Name expected
+       | NONE => false)
 
   fun is_descr term =
     is_named_const {Thy = "min", Name = "@"} term orelse
@@ -1151,8 +1255,11 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun constructor_name constructor =
-    let val {Thy, Name, ...} = Term.dest_thy_const constructor
-    in Thy ^ "$" ^ Name end
+    case Lib.total Term.dest_thy_const constructor of
+        SOME {Thy, Name, ...} => Thy ^ "$" ^ Name
+      | NONE =>
+          let val (name, _) = Term.dest_var constructor
+          in Refute_ModelFinder_Names.original_name name end
 
   fun constructor_arg_types constructor =
     #1 (boolSyntax.strip_fun (Term.type_of constructor))
@@ -1168,6 +1275,39 @@ structure Refute_ModelFinder_HOL = struct
       map (TypeBasePure.cinst ty) (TypeBase.constructors_of ty)
     else
       data_type_constrs context ty
+
+  fun binarized_and_boxed_nth_sel_for_constr context binarize
+        constructor index =
+    let
+      val transformed = retype_constant "middle" constructor
+        ((if binarize then binarize_nat_and_int_in_type else fn ty => ty)
+          (box_type context InConstr (Term.type_of constructor)))
+      val data_ty = constructor_result_type transformed
+      val constructor_id = constructor_name transformed
+    in
+      if index = ~1 then
+        Refute_ModelFinder_Names.mk_discriminator constructor_id
+          (Type.-->(data_ty, Type.bool))
+      else
+        Refute_ModelFinder_Names.mk_selector index constructor_id
+          (Type.-->(data_ty,
+             List.nth (constructor_arg_types transformed, index)))
+    end
+
+  fun binarized_and_boxed_constr_for_sel context binarize selector =
+    let
+      val (name, ty) = Term.dest_var selector
+      val (domain, _) = Type.dom_rng ty
+      val original = Refute_ModelFinder_Names.original_name name
+      val constructors =
+        binarized_and_boxed_data_type_constrs context binarize domain
+    in
+      case List.find (fn constructor =>
+             constructor_name constructor = original) constructors of
+          SOME constructor => constructor
+        | NONE => raise err "binarized_and_boxed_constr_for_sel"
+            ("no constructor for selector " ^ name)
+    end
 
   fun is_suc_constructor constructor =
     is_named_const {Thy = "num", Name = "SUC"} constructor
@@ -1247,13 +1387,17 @@ structure Refute_ModelFinder_HOL = struct
     List.foldl (fn (argument, result) =>
       s_betapply (result, argument)) function arguments
 
+  fun same_constructor_term left right =
+    is_nonfree_constr left andalso is_nonfree_constr right andalso
+    constructor_name left = constructor_name right andalso
+    constructor_result_type left = constructor_result_type right
+
   fun discriminate_value context constructor value =
     let val (head, _) = HolKernel.strip_comb value
     in
-      if Term.is_const head andalso
-         Term.same_const constructor head then
+      if same_constructor_term constructor head then
         boolSyntax.T
-      else if Term.is_const head andalso is_nonfree_constr head then
+      else if is_nonfree_constr head then
         boolSyntax.F
       else
         s_betapply (discriminator_term context constructor, value)
@@ -1317,11 +1461,10 @@ structure Refute_ModelFinder_HOL = struct
     let
       val (head, arguments) = HolKernel.strip_comb value
     in
-      if Term.is_const head andalso
-         Term.same_const constructor head andalso
+      if same_constructor_term constructor head andalso
          index < length arguments then
         List.nth (arguments, index)
-      else if Term.is_const head andalso is_nonfree_constr head then
+      else if is_nonfree_constr head then
         unknown_value result_ty
       else
         s_betapply
@@ -1418,7 +1561,7 @@ structure Refute_ModelFinder_HOL = struct
   fun constr_expand context ty value =
     let val (head, _) = HolKernel.strip_comb value
     in
-      if Term.is_const head andalso is_nonfree_constr head then value
+      if is_nonfree_constr head then value
       else
         let
           val constructor = hd (constructors_for context ty)
@@ -1499,26 +1642,6 @@ structure Refute_ModelFinder_HOL = struct
       raise err "coerce_term"
         ("incompatible types " ^ Parse.type_to_string old_ty ^ " and " ^
          Parse.type_to_string new_ty)
-
-  fun retype_constant layer term ty =
-    if Term.type_of term = ty then term
-    else
-      case Lib.total Term.dest_thy_const term of
-          SOME {Thy, Name, ...} =>
-            let
-              val generic = Term.prim_mk_const {Thy = Thy, Name = Name}
-              val legal = Lib.can
-                (Type.match_type (Term.type_of generic)) ty
-            in
-              if legal then Term.mk_thy_const {Thy = Thy, Name = Name, Ty = ty}
-              else Refute_ModelFinder_Names.mk_reserved_var
-                (Refute_ModelFinder_Names.reserved_prefix ^ layer ^
-                 Refute_ModelFinder_Names.name_sep ^ Thy ^
-                 Refute_ModelFinder_Names.name_sep ^ Name) ty
-            end
-        | NONE =>
-            let val (name, _) = Term.dest_var term
-            in Term.mk_var (name, ty) end
 
   fun unarize_unbox_etc_term term =
     let
@@ -2082,6 +2205,25 @@ structure Refute_ModelFinder_HOL = struct
       {tables = tables, nondefs = nondefs,
        nondef_table = const_nondef_table nondefs}
     end
+
+  fun context_with_binary_ints
+        ({max_bisim_depth, boxes, wfs, user_axioms, debug, whacks,
+          destroy_constrs, specialize, star_linear_preds, total_consts,
+          needs, tac_timeout, evals, case_names, def_tables, nondef_table,
+          nondefs, simp_table, psimp_table, choice_spec_table, intro_table,
+          ersatz_table, skolems, special_funs, wf_cache, constr_cache, ...}
+         : mf_context) binary_ints : mf_context =
+    {max_bisim_depth = max_bisim_depth, boxes = boxes, wfs = wfs,
+     user_axioms = user_axioms, debug = debug, whacks = whacks,
+     binary_ints = binary_ints, destroy_constrs = destroy_constrs,
+     specialize = specialize, star_linear_preds = star_linear_preds,
+     total_consts = total_consts, needs = needs, tac_timeout = tac_timeout,
+     evals = evals, case_names = case_names, def_tables = def_tables,
+     nondef_table = nondef_table, nondefs = nondefs, simp_table = simp_table,
+     psimp_table = psimp_table, choice_spec_table = choice_spec_table,
+     intro_table = intro_table, ersatz_table = ersatz_table,
+     skolems = skolems, special_funs = special_funs, wf_cache = wf_cache,
+     constr_cache = constr_cache}
 
   fun make_context (mf : Refute_Core.mf_config) evals =
     let

@@ -73,7 +73,7 @@ fun type_arguments ty =
   if Type.is_vartype ty then []
   else #Args (Type.dest_thy_type ty)
 
-fun ground_types context terms =
+fun ground_types context binarize terms =
   let
     fun add ty types =
       if MFH.is_fun_type ty orelse MFH.is_pair_type ty orelse
@@ -87,7 +87,8 @@ fun ground_types context terms =
           val types = add_type ty types
           val constructor_types = List.concat
             (map MFH.constructor_arg_types
-              (MFH.data_type_constrs context ty))
+              (MFH.binarized_and_boxed_data_type_constrs
+                 context binarize ty))
           val nested =
             if null constructor_types then type_arguments ty
             else constructor_types
@@ -175,6 +176,7 @@ fun deep_data_types all_types sel_names =
   in
     List.filter (fn ty =>
       same_type ty ``:unit`` orelse same_type ty MFH.num_type orelse
+      MFH.is_bitword_type ty orelse
       Option.isSome (MFH.word_dimension ty) orelse
       (MFH.is_data_type ty andalso selected ty)) all_types
   end
@@ -287,8 +289,8 @@ fun run_instance deadline started (config : Refute_Core.config)
       if #falsify mf then boolSyntax.mk_imp (original, boolSyntax.F)
       else original
     val context = MFH.make_context mf eval_terms
-    val (nondef_ts, def_ts, got_all_mono_user_axioms,
-         no_poly_user_axioms) =
+    val (nondef_ts, def_ts, need_ts, got_all_mono_user_axioms,
+         no_poly_user_axioms, binarize) =
       MFP.preprocess_formulas context [] negated
     val nondef_us = map (MFNT.nut_from_term context MFNT.Eq) nondef_ts
     val def_us = map (MFNT.nut_from_term context MFNT.DefEq) def_ts
@@ -298,11 +300,20 @@ fun run_instance deadline started (config : Refute_Core.config)
         ([], []) (nondef_us @ def_us)
     val (sel_names, nonsel_names) = List.partition
       (MFN.is_sel o MFNT.nickname_of) const_names
-    val all_types = ground_types context (nondef_ts @ def_ts)
+    val all_types = ground_types context binarize (nondef_ts @ def_ts)
     val unique_scope = List.all (fn (_, values) => length values = 1)
       (#card mf)
     val calculus_mono_types = ref ([] : hol_type list)
-    val binarize = false
+    val _ = need_ts
+    val _ =
+      if #binary_ints mf = SOME true andalso not binarize andalso
+         List.exists (fn ty => ty = MFH.num_type orelse ty = MFH.int_type)
+           all_types then
+        Refute_Core.Private.say 2
+          ("The option \"binary_ints\" will be ignored because of the " ^
+           "presence of rationals, reals, \"Suc\", \"gcd\", or \"lcm\" " ^
+           "in the problem.\n")
+      else ()
 
     fun report_mono_failure kind ty detail =
       if !MFMono.trace then
@@ -366,8 +377,9 @@ fun run_instance deadline started (config : Refute_Core.config)
         ("The following type" ^ MFU.plural_s_for_list finitizable_types ^
          " can use a more precise finite encoding: " ^
          String.concatWith ", " (map type_name finitizable_types) ^ "\n")
-    val (skipped, scopes) = MFS.all_scopes context (#card mf) (#max mf)
-      mono_types nonmono_types deep_types finitizable_types
+    val (skipped, scopes) = MFS.all_scopes context binarize
+      (#card mf) (#max mf) mono_types nonmono_types deep_types
+      finitizable_types
     val batch_size =
       if #debug mf then 1 else Int.max (1, #batch_size mf)
     val batches = MFU.chunk_list batch_size scopes

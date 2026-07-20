@@ -15,6 +15,7 @@ structure Refute_ModelFinder_Preproc = struct
   val axioms_max_depth = 255
   val special_max_depth = 20
   val quantifier_cluster_threshold = 7
+  val binary_int_threshold = 3
 
   fun err function message =
     Feedback.mk_HOL_ERR "Refute_ModelFinder_Preproc" function message
@@ -93,6 +94,122 @@ structure Refute_ModelFinder_Preproc = struct
           in close_new seen extended candidate end
     in
       recurse [] term
+    end
+
+  fun generated_or_constant_name term =
+    case Lib.total Term.dest_thy_const term of
+        SOME {Thy, Name, ...} => SOME (Thy ^ "$" ^ Name)
+      | NONE =>
+          (case Lib.total Term.dest_var term of
+               SOME (name, _) =>
+                 if MFN.is_reserved_name name then
+                   SOME (MFN.original_name name)
+                 else NONE
+             | NONE => NONE)
+
+  val binary_int_blockers =
+    ["frac$abs_frac", "frac$rep_frac", "gcd$gcd", "gcd$lcm",
+     "refute$nat_gcd", "refute$nat_lcm", "refute$Frac",
+     "refute$norm_frac"]
+
+  fun may_use_binary_ints definitional term =
+    let
+      fun blocked_constant def candidate =
+        case generated_or_constant_name candidate of
+            SOME name =>
+              not (def andalso name = "num$SUC") andalso
+              not (List.exists (fn blocker => blocker = name)
+                binary_int_blockers)
+          | NONE => true
+      fun recurse def candidate =
+        if boolSyntax.is_eq candidate then
+          let val (left, right) = boolSyntax.dest_eq candidate
+          in recurse def left andalso recurse false right end
+        else if boolSyntax.is_imp_only candidate then
+          let val (premise, conclusion) = boolSyntax.dest_imp candidate
+          in recurse false premise andalso recurse def conclusion end
+        else if Term.is_comb candidate then
+          let val (function, argument) = Term.dest_comb candidate
+          in recurse def function andalso recurse def argument end
+        else if Term.is_abs candidate then
+          recurse def (Term.body candidate)
+        else
+          blocked_constant def candidate
+    in
+      recurse definitional term
+    end
+
+  fun should_use_binary_ints term =
+    let
+      val threshold = Arbint.fromInt binary_int_threshold
+      fun large_numeral candidate =
+        case MFH.numeral_value candidate of
+            SOME value =>
+              Arbint.< (threshold, value) orelse
+              Arbint.< (value, Arbint.~ threshold)
+          | NONE => false
+      fun integer_operation candidate =
+        case Lib.total Term.dest_thy_const candidate of
+            SOME {Thy, Name, ...} =>
+              List.exists (fn key => key = Thy ^ "$" ^ Name)
+                ["arithmetic$*", "arithmetic$DIV",
+                 "integer$int_mul", "integer$int_div"] andalso
+              MFH.is_integer_type
+                (#2 (boolSyntax.strip_fun (Term.type_of candidate)))
+          | NONE => false
+      fun recurse candidate =
+        large_numeral candidate orelse integer_operation candidate orelse
+        if Term.is_comb candidate then
+          let val (function, argument) = Term.dest_comb candidate
+          in recurse function orelse recurse argument end
+        else if Term.is_abs candidate then recurse (Term.body candidate)
+        else false
+    in
+      recurse term
+    end
+
+  fun binarize_nat_and_int_in_term original =
+    let
+      fun lookup variable [] = NONE
+        | lookup variable ((old, replacement) :: rest) =
+            if Term.aconv variable old then SOME replacement
+            else lookup variable rest
+      fun recurse environment candidate =
+        case MFH.numeral_value candidate of
+            SOME value => MFN.mk_numeral (Arbint.toInt value)
+              (MFH.binarize_nat_and_int_in_type (Term.type_of candidate))
+          | NONE =>
+              if Term.is_abs candidate then
+                let
+                  val (variable, body) = Term.dest_abs candidate
+                  val (name, ty) = Term.dest_var variable
+                  val replacement = Term.mk_var
+                    (name, MFH.binarize_nat_and_int_in_type ty)
+                in
+                  Term.mk_abs (replacement,
+                    recurse ((variable, replacement) :: environment) body)
+                end
+              else if Term.is_comb candidate then
+                let val (function, argument) = Term.dest_comb candidate
+                in Term.mk_comb
+                  (recurse environment function,
+                   recurse environment argument)
+                end
+              else if Term.is_var candidate then
+                (case lookup candidate environment of
+                     SOME replacement => replacement
+                   | NONE =>
+                       let val (name, ty) = Term.dest_var candidate
+                       in Term.mk_var (name,
+                            MFH.binarize_nat_and_int_in_type ty)
+                       end)
+              else if Term.is_const candidate then
+                MFH.retype_constant "bin" candidate
+                  (MFH.binarize_nat_and_int_in_type
+                    (Term.type_of candidate))
+              else candidate
+    in
+      recurse [] original
     end
 
   fun is_higher_order_type ty =
@@ -292,7 +409,7 @@ structure Refute_ModelFinder_Preproc = struct
     let
       val (head, arguments) = HolKernel.strip_comb term
     in
-      if Term.is_const head andalso MFH.is_constr head andalso
+      if MFH.is_constr head andalso
          length arguments = length (MFH.constructor_arg_types head) then
         SOME (head, arguments)
       else
@@ -502,7 +619,7 @@ structure Refute_ModelFinder_Preproc = struct
       let
         val (head, arguments) = HolKernel.strip_comb term
       in
-        Term.is_const head andalso MFH.is_nonfree_constr head andalso
+        MFH.is_nonfree_constr head andalso
         List.all (is_constructor_pattern bound) arguments
       end
       handle HOL_ERR _ => false
@@ -532,9 +649,9 @@ structure Refute_ModelFinder_Preproc = struct
   fun destructible_constructor term =
     let
       val (head, arguments) = HolKernel.strip_comb term
-      val constructor = Term.is_const head andalso
-        (MFH.is_constr head orelse MFH.is_pair_constructor head orelse
-         MFH.is_suc_constructor head)
+      val constructor =
+        MFH.is_constr head orelse MFH.is_pair_constructor head orelse
+        MFH.is_suc_constructor head
     in
       if constructor andalso
          length arguments = length (MFH.constructor_arg_types head) then
@@ -846,7 +963,7 @@ structure Refute_ModelFinder_Preproc = struct
             val arguments' = map recurse arguments
             val rebuilt = MFH.s_betapplys (head', arguments')
           in
-            if Term.is_const head' andalso MFH.is_nonfree_constr head' andalso
+            if MFH.is_nonfree_constr head' andalso
                length arguments' =
                  length (MFH.constructor_arg_types head') then
               Option.getOpt
@@ -1703,7 +1820,7 @@ structure Refute_ModelFinder_Preproc = struct
                   (HOLset.add (seen, term), definitions, def_set,
                    nondefinitions, nondef_set)
                 val with_axioms =
-                  if Term.is_const term andalso MFH.is_constr term then
+                  if MFH.is_constr term then
                     next
                   else if MFH.is_descr term then
                     List.foldl (fn (axiom, result) =>
@@ -1814,7 +1931,7 @@ structure Refute_ModelFinder_Preproc = struct
               List.filter (not o same_uncurry_key constant o #1) entries
       fun skippable candidate =
         MFH.is_built_in_const candidate orelse
-        (Term.is_const candidate andalso MFH.is_nonfree_constr candidate) orelse
+        MFH.is_nonfree_constr candidate orelse
         MFN.is_sel (uncurry_name candidate)
       fun recurse candidate arguments entries =
         if Term.is_comb candidate then
@@ -1986,8 +2103,7 @@ structure Refute_ModelFinder_Preproc = struct
                 Type.-->(Type.-->(boxed_result, Type.bool), boxed_result)
               end
             else if MFH.is_built_in_const candidate then ty
-            else if Term.is_const candidate andalso
-                    MFH.is_nonfree_constr candidate then
+            else if MFH.is_nonfree_constr candidate then
               MFH.box_type context MFH.InConstr ty
             else if (case Lib.total Term.dest_var candidate of
                         SOME (name, _) => MFN.is_sel name
@@ -2115,7 +2231,8 @@ structure Refute_ModelFinder_Preproc = struct
     end
 
   fun preprocess_formulas
-        (context as {boxes, destroy_constrs, ...} : context)
+        (context as
+          {binary_ints, boxes, destroy_constrs, needs, ...} : context)
         assumptions negated =
     let
       val prepared = negated
@@ -2126,6 +2243,15 @@ structure Refute_ModelFinder_Preproc = struct
       val (nondefinitions, definitions, got_all_mono_user_axioms,
            no_poly_user_axioms) =
         axioms_for_term context assumptions prepared
+      val binarize =
+        case binary_ints of
+            SOME false => false
+          | _ =>
+              List.all (may_use_binary_ints false) nondefinitions andalso
+              List.all (may_use_binary_ints true) definitions andalso
+              (binary_ints = SOME true orelse
+               List.exists should_use_binary_ints
+                 (nondefinitions @ definitions))
       val box = List.exists (fn (_, value) => value <> SOME false) boxes
       val uncurry_table =
         if box then
@@ -2134,12 +2260,21 @@ structure Refute_ModelFinder_Preproc = struct
             (nondefinitions @ definitions)
         else []
       fun do_middle definitional term =
-        if box then
-          term
-          |> uncurry_term uncurry_table
-          |> box_fun_and_pair_in_term context definitional
-        else term
-      (* Binarization is TASK_08's inert first arm of this slot. *)
+        let
+          val binarized =
+            if binarize then binarize_nat_and_int_in_term term else term
+        in
+          if box then
+            binarized
+            |> uncurry_term uncurry_table
+            |> box_fun_and_pair_in_term context definitional
+          else binarized
+        end
+      val need_ts =
+        case needs of
+            SOME terms => map (fn term =>
+              do_middle false (MFH.unfold_defs_in_term context term)) terms
+          | NONE => []
       val nondefinitions' = map (fn term =>
         do_tail context false destroy_constrs (do_middle false term))
         nondefinitions
@@ -2147,7 +2282,7 @@ structure Refute_ModelFinder_Preproc = struct
         do_tail context true destroy_constrs (do_middle true term))
         definitions
     in
-      (nondefinitions', definitions', got_all_mono_user_axioms,
-       no_poly_user_axioms)
+      (nondefinitions', definitions', need_ts, got_all_mono_user_axioms,
+       no_poly_user_axioms, binarize)
     end
 end

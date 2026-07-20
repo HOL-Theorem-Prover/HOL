@@ -394,7 +394,21 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
   fun range_type ty = #2 (Type.dom_rng ty)
   fun body_type ty = #2 (boolSyntax.strip_fun ty)
 
-  fun is_named key term = MFH.is_named_const key term
+  fun is_named key term =
+    MFH.is_named_const key term orelse
+    (case Lib.total Term.dest_var term of
+         SOME (name, _) => MFN.is_reserved_name name andalso
+           MFN.original_name name = #Thy key ^ "$" ^ #Name key
+       | NONE => false)
+
+  fun reserved_numeral term =
+    case Lib.total Term.dest_var term of
+        SOME (name, _) =>
+          if String.isPrefix MFN.numeral_prefix name then
+            Int.fromString (String.extract
+              (name, size MFN.numeral_prefix, NONE))
+          else NONE
+      | NONE => NONE
 
   fun factor_types ty =
     if MFH.is_pair_type ty then
@@ -553,11 +567,15 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
             else NONE
           val (head, arguments) = HolKernel.strip_comb candidate
         in
-          case MFH.numeral_value candidate of
+          case reserved_numeral candidate of
               SOME integer =>
-                Cst (Num (Arbint.toInt integer), Term.type_of candidate,
-                  MFR.Any)
+                Cst (Num integer, Term.type_of candidate, MFR.Any)
             | NONE =>
+              (case MFH.numeral_value candidate of
+                   SOME integer =>
+                     Cst (Num (Arbint.toInt integer),
+                       Term.type_of candidate, MFR.Any)
+                 | NONE =>
               if boolSyntax.is_forall candidate then
                 let val (variable, body) = boolSyntax.dest_forall candidate
                 in do_quantifier All variable body end
@@ -659,22 +677,25 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                       andalso length arguments = 1 then
                 Op1 (SafeThe, Term.type_of candidate, MFR.Any,
                   sub (hd arguments))
-              else if Term.is_const head andalso
-                      (is_named {Thy = "prim_rec", Name = "<"} head orelse
+              else if (is_named {Thy = "prim_rec", Name = "<"} head orelse
+                       is_named {Thy = "integer", Name = "int_lt"} head orelse
+                       is_named {Thy = "arithmetic", Name = "<="} head orelse
+                       is_named {Thy = "integer", Name = "int_le"} head)
+                      andalso length arguments < 2 then
+                sub (MFH.eta_expand candidate (2 - length arguments))
+              else if (is_named {Thy = "prim_rec", Name = "<"} head orelse
                        is_named {Thy = "integer", Name = "int_lt"} head)
                       andalso length arguments = 2 then
                 Op2 (Less, Type.bool, MFR.Any,
                   sub (hd arguments), sub (List.nth (arguments, 1)))
-              else if Term.is_const head andalso
-                      (is_named {Thy = "arithmetic", Name = "<="} head orelse
+              else if (is_named {Thy = "arithmetic", Name = "<="} head orelse
                        is_named {Thy = "integer", Name = "int_le"} head)
                       andalso length arguments = 2 then
                 (* FIXME: Ported bug-for-bug from Nitpick. *)
                 Op1 (Not, Type.bool, MFR.Any,
                   Op2 (Less, Type.bool, MFR.Any,
                     sub (List.nth (arguments, 1)), sub (hd arguments)))
-              else if Term.is_const head andalso
-                      is_named {Thy = "integer", Name = "int_neg"} head andalso
+              else if is_named {Thy = "integer", Name = "int_neg"} head andalso
                       null arguments then
                 let val number_ty = domain_type (Term.type_of head)
                 in
@@ -684,22 +705,23 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                       MFR.Any),
                     Cst (Num 0, number_ty, MFR.Any))
                 end
-              else if Term.is_const head andalso
-                      is_named {Thy = "integer", Name = "int_of_num"} head
+              else if is_named {Thy = "integer", Name = "int_of_num"} head
                       andalso null arguments then
                 Cst (NatToInt, Term.type_of head, MFR.Any)
-              else if Term.is_const head andalso
-                      is_named {Thy = "integer", Name = "Num"} head andalso
+              else if is_named {Thy = "integer", Name = "Num"} head andalso
                       null arguments then
                 Cst (IntToNat, Term.type_of head, MFR.Any)
               else if Term.is_const head andalso
                       is_named {Thy = "refute", Name = "unknown"} head andalso
                       null arguments then
                 Cst (Unknown, Term.type_of head, MFR.Any)
-              else if Term.is_const head andalso null arguments andalso
+              else if (Term.is_const head orelse
+                       (Term.is_var head andalso MFN.is_reserved_name
+                         (name_of_variable head))) andalso
+                      null arguments andalso
                       Option.isSome (arithmetic_cst head) then
                 cst (valOf (arithmetic_cst head)) head
-              else if Term.is_const head andalso MFH.is_constr head then
+              else if MFH.is_constr head then
                 do_construct head arguments
               else if Term.is_const head then
                 (case MFH.arity_of_built_in_const head of
@@ -747,7 +769,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 do_apply head arguments
               else
                 raise Feedback.mk_HOL_ERR "Refute_ModelFinder_Nut"
-                  "nut_from_term" "unsupported HOL term"
+                  "nut_from_term" "unsupported HOL term")
         end
     in
       aux equality [] term
@@ -813,9 +835,22 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
       choose_rep_for_const scope total_consts constant result)
       ([], table) constants
 
-  fun generated_names_for_constructor constructor =
-    map (fn selector => ConstName (name_of_variable selector,
-      Term.type_of selector, MFR.Any)) (selector_names_for constructor)
+  fun generated_names_for_constructor scope constructor =
+    let
+      val raw_arguments = MFH.constructor_arg_types constructor
+      val flattened = List.concat (map factor_types raw_arguments)
+      val selectors =
+        if length raw_arguments = length flattened then
+          MFH.binarized_and_boxed_nth_sel_for_constr
+            (#hol_ctxt scope) (#binarize scope) constructor ~1 ::
+          List.tabulate (length raw_arguments, fn index =>
+            MFH.binarized_and_boxed_nth_sel_for_constr
+              (#hol_ctxt scope) (#binarize scope) constructor index)
+        else selector_names_for constructor
+    in
+      map (fn selector => ConstName (name_of_variable selector,
+        Term.type_of selector, MFR.Any)) selectors
+    end
 
   fun final_result_type ty = #2 (boolSyntax.strip_fun ty)
 
@@ -838,7 +873,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
     end
 
   fun choose_reps_for_constructor scope constructor result =
-    let val selectors = generated_names_for_constructor constructor
+    let val selectors = generated_names_for_constructor scope constructor
     in
       List.foldr (fn ((index, selector), current) =>
         choose_rep_for_selector scope (index - 1) selector current)
