@@ -1201,6 +1201,11 @@ fun mf_binarize_preproc_goldens () =
     val (poly_head, _) = HolKernel.strip_comb polymorphic
     val mapped_leaf = MFP.binarize_nat_and_int_in_term
       ``ZooLeaf (n : num)``
+    val mapped_int_add = MFP.binarize_nat_and_int_in_term
+      ``int_add (i : int) 4``
+    val (mapped_int_add_head, _) = HolKernel.strip_comb mapped_int_add
+    val (mapped_int_add_name, mapped_int_add_ty) =
+      Term.dest_var mapped_int_add_head
     val mapped_partial_less = MFP.binarize_nat_and_int_in_term
       ``($< : num -> num -> bool) 4``
     val partial_less_nut = Refute_ModelFinder_Nut.nut_from_term context
@@ -1220,18 +1225,60 @@ fun mf_binarize_preproc_goldens () =
     val partial_less_seen = contains_less partial_less_nut
     val (mapped_leaf_head, _) = HolKernel.strip_comb mapped_leaf
     val (mapped_leaf_name, _) = Term.dest_var mapped_leaf_head
-    val gcd = Term.prim_mk_const {Thy = "gcd", Name = "gcd"}
-    val frac = Term.prim_mk_const {Thy = "frac", Name = "abs_frac"}
+    val blocker_constants =
+      map Term.prim_mk_const
+        [{Thy = "gcd", Name = "gcd"},
+         {Thy = "gcd", Name = "lcm"},
+         {Thy = "frac", Name = "abs_frac"},
+         {Thy = "frac", Name = "rep_frac"}]
+    val blocker_variables = map (fn name =>
+      MFN.mk_reserved_var name Type.bool)
+      ["refute$nat_gcd", "refute$nat_lcm", "refute$Frac",
+       "refute$norm_frac"]
     val suc_definition = ``SUC (n : num) = m``
     val suc_rhs = ``(n : num) = SUC m``
-    val restatements =
+    val simp_restatements =
       [num_pre_simp, list_length_simp, list_take_simp,
        list_drop_simp, list_size_simp]
+    val restatements = num_case_unfold :: simp_restatements
+    fun theorem_head theorem =
+      let
+        val (_, body) = boolSyntax.strip_forall (Thm.concl theorem)
+        val (_, conclusion) = boolSyntax.strip_imp body
+        val (left, _) = boolSyntax.dest_eq conclusion
+      in
+        #1 (HolKernel.strip_comb left)
+      end
+    fun selected_restatement_is_suc_free theorem =
+      let
+        val axioms = MFH.equational_fun_axioms context
+          (theorem_head theorem)
+      in
+        not (null axioms) andalso
+        List.all (MFP.may_use_binary_ints true) axioms
+      end
     val constructors = MFH.binarized_and_boxed_data_type_constrs
       context true unsigned
     val tree_constructors =
       MFH.binarized_and_boxed_data_type_constrs context true ``:zoo_tree``
     val mapped_leaf_constructor = hd tree_constructors
+    val forced_box_context = MFH.make_context
+      (#mf (Refute_Core.upd_box [(NONE, SOME true)]
+        Refute_Core.default_config)) []
+    val boxed_mapped_leaf = MFP.box_fun_and_pair_in_term
+      forced_box_context false mapped_leaf
+    val (boxed_mapped_leaf_head, _) =
+      HolKernel.strip_comb boxed_mapped_leaf
+    val mapped_take = MFP.binarize_nat_and_int_in_term
+      ``TAKE 5 (xs : num list)``
+    val uncurried_take = MFP.uncurry_term
+      (MFP.add_to_uncurry_table context mapped_take []) mapped_take
+    fun is_uncurried_take candidate =
+      case Lib.total Term.dest_var candidate of
+          SOME (name, _) =>
+            String.isPrefix MFN.uncurry_prefix name andalso
+            MFN.original_name name = "list$TAKE"
+        | NONE => false
     val constructor = hd constructors
     val selector = MFH.binarized_and_boxed_nth_sel_for_constr
       context true constructor 0
@@ -1245,6 +1292,18 @@ fun mf_binarize_preproc_goldens () =
     val pipeline_types = map Term.type_of
       (List.concat (map Term.free_vars_lr
         (pipeline_terms @ pipeline_defs)))
+    val (_, take_pipeline_defs, _, _, _, take_pipeline_binarize) =
+      MFP.preprocess_formulas pipeline_context []
+        ``TAKE 5 (xs : num list) = []``
+    val forced_binary_context = MFH.context_with_binary_ints
+      (fresh_mf_context ()) (SOME true)
+    val (suc_pipeline_terms, suc_pipeline_defs, _, _, _,
+         suc_pipeline_binarize) =
+      MFP.preprocess_formulas forced_binary_context []
+        ``(n : num) = SUC m /\ n = 4``
+    val suc_pipeline_types = map Term.type_of
+      (List.concat (map Term.free_vars_lr
+        (suc_pipeline_terms @ suc_pipeline_defs)))
     val checks =
       [("type map", MFH.binarize_nat_and_int_in_type nested = mapped_nested),
        ("trigger threshold",
@@ -1253,17 +1312,20 @@ fun mf_binarize_preproc_goldens () =
         MFP.should_use_binary_ints ``~4 : int``),
        ("operator trigger",
         MFP.should_use_binary_ints ``(m : num) * n`` andalso
-        MFP.should_use_binary_ints ``int_mul (i : int) j``),
+        MFP.should_use_binary_ints ``(m : num) DIV n`` andalso
+        MFP.should_use_binary_ints ``int_mul (i : int) j`` andalso
+        MFP.should_use_binary_ints ``int_div (i : int) j``),
        ("SUC blocker",
         not (MFP.may_use_binary_ints true suc_definition) andalso
         MFP.may_use_binary_ints false suc_definition andalso
         MFP.may_use_binary_ints true suc_rhs),
        ("gcd/frac blockers",
-        not (MFP.may_use_binary_ints false gcd) andalso
-        not (MFP.may_use_binary_ints false frac)),
+        List.all (not o MFP.may_use_binary_ints false)
+          (blocker_constants @ blocker_variables)),
        ("Suc-free restatements",
         List.all (MFP.may_use_binary_ints true o Thm.concl)
-          restatements),
+          restatements andalso
+        List.all selected_restatement_is_suc_free simp_restatements),
        ("reserved SUC",
         null mapped_args = false andalso
         MFN.is_reserved_name suc_name andalso
@@ -1275,11 +1337,29 @@ fun mf_binarize_preproc_goldens () =
        ("polymorphic instantiation",
         Term.is_const poly_head andalso
         Term.type_of poly_head = Type.-->(unsigned, unsigned)),
+       ("reserved signed arithmetic",
+        MFN.is_reserved_name mapped_int_add_name andalso
+        MFN.original_name mapped_int_add_name = "integer$int_add" andalso
+        mapped_int_add_ty = Type.-->(signed, Type.-->(signed, signed)) andalso
+        MFH.is_built_in_const mapped_int_add_head),
        ("enabled pipeline",
         pipeline_binarize andalso null pipeline_needs andalso
         List.exists (fn ty => ty = unsigned) pipeline_types andalso
         not (List.exists (fn ty => ty = MFH.num_type orelse
           ty = MFH.int_type) pipeline_types)),
+       ("restatement pipeline",
+        take_pipeline_binarize andalso not (null take_pipeline_defs)),
+       ("binarized SUC destruction",
+        suc_pipeline_binarize andalso
+        not (List.exists (fn ty => ty = MFH.num_type)
+          suc_pipeline_types)),
+       ("binarized uncurry key",
+        List.exists is_uncurried_take
+          (HolKernel.find_terms Term.is_var uncurried_take)),
+       ("binarize-box constructor",
+        MFH.is_constr boxed_mapped_leaf_head andalso
+        MFH.constructor_name boxed_mapped_leaf_head =
+          "refuteTableZoo$ZooLeaf"),
        ("partial comparison", partial_less_seen),
        ("constructor max row",
         Refute_ModelFinder_Scope.lookup_const_ints_assign

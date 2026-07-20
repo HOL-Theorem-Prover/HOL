@@ -910,8 +910,7 @@ structure Refute_ModelFinder_Preproc = struct
                  val argument_tys =
                    MFH.constructor_arg_types constructor
                in
-                 if Term.is_const constructor andalso
-                    MFH.is_free_constr constructor andalso
+                 if MFH.is_free_constr constructor andalso
                     constructor_name =
                       MFH.constructor_name constructor andalso
                     not (List.exists MFH.is_pair_type argument_tys) andalso
@@ -1941,7 +1940,8 @@ structure Refute_ModelFinder_Preproc = struct
           in recurse function (argument :: arguments) entries end
         else if Term.is_abs candidate then
           recurse (#2 (Term.dest_abs candidate)) [] entries
-        else if Term.is_const candidate orelse is_generated_const candidate then
+        else if Term.is_const candidate orelse
+                is_generated_const candidate then
           if skippable candidate then entries
           else update candidate (length arguments) entries
         else entries
@@ -1961,7 +1961,8 @@ structure Refute_ModelFinder_Preproc = struct
           let val (variable, body) = Term.dest_abs candidate
           in MFH.s_betapplys
             (Term.mk_abs (variable, recurse body []), arguments) end
-        else if Term.is_const candidate orelse is_generated_const candidate then
+        else if Term.is_const candidate orelse
+                is_generated_const candidate then
           (case lookup candidate of
                SOME arity =>
                  if arity < 2 then MFH.s_betapplys (candidate, arguments)
@@ -2196,12 +2197,15 @@ structure Refute_ModelFinder_Preproc = struct
           (case env_lookup environment candidate of
                SOME replacement => replacement
              | NONE =>
-                 let val (name, ty) = Term.dest_var candidate
-                 in
-                   Term.mk_var (name,
-                     if def then box_var_in_def candidate
-                     else MFH.box_type context MFH.InExpr ty)
-                 end)
+                 if is_generated_const candidate then
+                   constant candidate
+                 else
+                   let val (name, ty) = Term.dest_var candidate
+                   in
+                     Term.mk_var (name,
+                       if def then box_var_in_def candidate
+                       else MFH.box_type context MFH.InExpr ty)
+                   end)
         else if Term.is_const candidate then constant candidate
         else candidate
     in
@@ -2253,11 +2257,16 @@ structure Refute_ModelFinder_Preproc = struct
                List.exists should_use_binary_ints
                  (nondefinitions @ definitions))
       val box = List.exists (fn (_, value) => value <> SOME false) boxes
+      val uncurry_terms =
+        if binarize then
+          map binarize_nat_and_int_in_term
+            (nondefinitions @ definitions)
+        else
+          nondefinitions @ definitions
       val uncurry_table =
         if box then
           List.foldl (fn (term, table) =>
-            add_to_uncurry_table context term table) []
-            (nondefinitions @ definitions)
+            add_to_uncurry_table context term table) [] uncurry_terms
         else []
       fun do_middle definitional term =
         let

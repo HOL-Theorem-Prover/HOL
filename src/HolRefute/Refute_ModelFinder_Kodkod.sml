@@ -1330,7 +1330,8 @@ fun declarative_axioms_for_data_types context binarize sym_break bits
           context binarize (#typ spec)
         fun present ({const, ...} : MFS.constr_spec) =
           List.exists (fn constructor =>
-            MFH.constructor_name constructor = MFH.constructor_name const andalso
+            MFH.constructor_name constructor =
+              MFH.constructor_name const andalso
             Term.type_of constructor = Term.type_of const) expected
       in
         if List.all present (#constrs spec) then ()

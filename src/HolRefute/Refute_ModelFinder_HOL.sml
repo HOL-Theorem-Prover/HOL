@@ -319,6 +319,26 @@ structure Refute_ModelFinder_HOL = struct
   fun same_key left right =
     KernelSig.name_compare (left, right) = EQUAL
 
+  (* Retyping a monomorphic HOL4 constant can turn it into a reserved free
+     variable.  Semantic recognizers must nevertheless keep using the
+     original theory/name carried by that variable. *)
+  fun original_const_key constant =
+    case Lib.total Term.dest_thy_const constant of
+        SOME {Thy, Name, ...} => {Thy = Thy, Name = Name}
+      | NONE =>
+          let
+            val (name, _) = Term.dest_var constant
+            val original = Refute_ModelFinder_Names.original_name name
+            val (theory, const_name) =
+              Refute_ModelFinder_Names.strip_first_name_sep original
+          in
+            if Refute_ModelFinder_Names.is_reserved_name name andalso
+               const_name <> "" then
+              {Thy = theory, Name = const_name}
+            else
+              const_key constant
+          end
+
   (* Buckets are stored newest-first so that table_append stays O(1);
      table_lookup is the only reader and restores insertion order. *)
   fun table_lookup table constant =
@@ -504,6 +524,16 @@ structure Refute_ModelFinder_HOL = struct
            Args = map binarize_nat_and_int_in_type Args}
       end
 
+  fun unbinarize_nat_and_int_in_type ty =
+    if ty = unsigned_bitword_type then num_type
+    else if ty = signed_bitword_type then int_type
+    else if Type.is_vartype ty then ty
+    else
+      let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+      in Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
+           Args = map unbinarize_nat_and_int_in_type Args}
+      end
+
   fun retype_constant layer term ty =
     if Term.type_of term = ty then term
     else
@@ -576,8 +606,8 @@ structure Refute_ModelFinder_HOL = struct
 
   fun arity_of_built_in_const constant =
     let
-      val key = const_key constant
-      val ty = Term.type_of constant
+      val key = original_const_key constant
+      val ty = unbinarize_nat_and_int_in_type (Term.type_of constant)
     in
       if same_key key {Thy = "bool", Name = "COND"} andalso
          result_type_after 3 ty = Type.bool then
@@ -792,8 +822,20 @@ structure Refute_ModelFinder_HOL = struct
       val unfold_props = clauses_of (DB.fetch "bool"
         "EXISTS_UNIQUE_DEF") @
         raw_theorem_set_props Refute_Core.refute_unfold
-      val simp_props = user_simp_props presentations @
+      val refute_simp_props =
         theorem_set_props Refute_Core.refute_simp "refute_simp"
+      val refute_simp_keys = map (#1 o pair_for_prop) refute_simp_props
+      fun is_refute_simp_key prop =
+        let val key = #1 (pair_for_prop prop)
+        in List.exists (same_key key) refute_simp_keys end
+      (* A refute_simp restatement replaces, rather than supplements, the
+         DefnBase equations for its head constant.  This is HOL4's static
+         counterpart of Isabelle's [nitpick_simp del]: retaining an old
+         SUC-pattern clause would make may_use_binary_ints reject the whole
+         definition despite the Suc-free restatement. *)
+      val simp_props =
+        List.filter (not o is_refute_simp_key)
+          (user_simp_props presentations) @ refute_simp_props
       val psimp_props =
         theorem_set_props Refute_Core.refute_psimp "refute_psimp"
       val choice_table = List.foldl (fn ((key, prop), table) =>
@@ -1151,13 +1193,13 @@ structure Refute_ModelFinder_HOL = struct
 
   fun find_field which term =
     let
-      val key = const_key term
+      val key = original_const_key term
       fun search_type info =
         let
           val ty = TypeBasePure.ty_of info
           fun search (_, []) = NONE
             | search (index, (field, data) :: rest) =
-                if same_key (const_key (which data)) key then
+                if same_key (original_const_key (which data)) key then
                   SOME {record_ty = ty, index = index,
                         field = field, info = data}
                 else search (index + 1, rest)
@@ -1181,13 +1223,7 @@ structure Refute_ModelFinder_HOL = struct
   fun is_record_update term = Option.isSome (dest_record_update term)
 
   fun is_named_const expected term =
-    (Term.is_const term andalso same_key (const_key term) expected) orelse
-    (case Lib.total Term.dest_var term of
-         SOME (name, _) =>
-           Refute_ModelFinder_Names.is_reserved_name name andalso
-           Refute_ModelFinder_Names.original_name name =
-             #Thy expected ^ "$" ^ #Name expected
-       | NONE => false)
+    same_key (original_const_key term) expected handle HOL_ERR _ => false
 
   fun is_descr term =
     is_named_const {Thy = "min", Name = "@"} term orelse
@@ -1320,8 +1356,13 @@ structure Refute_ModelFinder_HOL = struct
       if is_suc_constructor constructor then
         let
           val value = Term.mk_var ("n", data_ty)
+          val zero =
+            if data_ty = unsigned_bitword_type then
+              Refute_ModelFinder_Names.mk_numeral 0 data_ty
+            else
+              numSyntax.zero_tm
           val test = boolSyntax.mk_neg
-            (boolSyntax.mk_eq (numSyntax.zero_tm, value))
+            (boolSyntax.mk_eq (zero, value))
         in
           Term.mk_abs (value, test)
         end
@@ -1436,9 +1477,23 @@ structure Refute_ModelFinder_HOL = struct
       val value = Term.mk_var ("x", data_ty)
     in
       if is_suc_constructor constructor then
-        Term.mk_abs (value,
-          numSyntax.mk_minus (value,
-            numSyntax.mk_numeral Arbnum.one))
+        let
+          val one =
+            if data_ty = unsigned_bitword_type then
+              Refute_ModelFinder_Names.mk_numeral 1 data_ty
+            else
+              numSyntax.mk_numeral Arbnum.one
+          val subtraction =
+            if data_ty = unsigned_bitword_type then
+              retype_constant "bin"
+                (Term.prim_mk_const {Thy = "arithmetic", Name = "-"})
+                (binary_type data_ty data_ty)
+            else
+              Term.prim_mk_const {Thy = "arithmetic", Name = "-"}
+        in
+          Term.mk_abs (value,
+            Term.list_mk_comb (subtraction, [value, one]))
+        end
       else if is_pair_constructor constructor then
         let
           val selected =
@@ -1649,11 +1704,12 @@ structure Refute_ModelFinder_HOL = struct
         let val (head, arguments) = HolKernel.strip_comb candidate
         in
           if Term.is_const head andalso
-                  is_named_const {Thy = "refute", Name = "FunBox"} head andalso
-                  length arguments = 1 then
+             is_named_const {Thy = "refute", Name = "FunBox"} head andalso
+             length arguments = 1 then
             recurse environment (hd arguments)
           else if Term.is_const head andalso
-                  is_named_const {Thy = "refute", Name = "PairBox"} head andalso
+                  is_named_const
+                    {Thy = "refute", Name = "PairBox"} head andalso
                   length arguments = 2 then
             pairSyntax.mk_pair
               (recurse environment (List.nth (arguments, 0)),

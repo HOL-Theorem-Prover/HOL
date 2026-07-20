@@ -1180,8 +1180,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                     in
                       (MFun (predicate_mtype, A Gen, element_mtype), accum)
                     end
-                  else if Term.is_const term andalso
-                          MFH.is_built_in_const term then
+                  else if MFH.is_built_in_const term then
                     (fresh_mtype_for_type mdata true ty, accum)
                   else
                     let val mtype = mtype_for ty
@@ -1196,7 +1195,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
       fun is_enough_eta_expanded term =
         let val (head, arguments) = HolKernel.strip_comb term
         in
-          if Term.is_const head then
+          if Term.is_const head orelse is_reserved head then
             Option.getOpt (MFH.arity_of_built_in_const head, 0) <=
               length arguments
           else true
@@ -1528,9 +1527,8 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
   fun is_harmless_axiom term =
     let
       val constants = HolKernel.find_terms is_constant_like term
-      val nonbuiltins = List.filter (fn candidate =>
-        not (Term.is_const candidate andalso
-             MFH.is_built_in_const candidate)) constants
+      val nonbuiltins = List.filter
+        (not o MFH.is_built_in_const) constants
       fun canonical candidate = MFN.original_name (term_name candidate)
     in
       List.all (fn candidate => List.exists (fn harmless =>
