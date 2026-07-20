@@ -616,12 +616,21 @@ fun start {diag} = let
           in if keep then DArray.push (newDiags, x) else (); loop (i+1) end
         in loop 0; DArray.replace (oldDiags, newDiags) end
 
-      fun sendDiags () =
-        send (mkNotif "textDocument/publishDiagnostics" (fn print => (
-          print "{\"uri\":"; encString uri print;
-          print ",\"version\":"; encInt (#version text) print;
-          print ",\"diagnostics\":"; encDArray encDiag oldDiags print;
-          print "}")))
+      (* Only emit publishDiagnostics when the accumulated list has
+         actually changed size since the last emit.  Progress events
+         far past the point where an error was found still update
+         `oldDiags` (by re-merging), but if the size didn't change,
+         re-sending is pure noise for the client's log. *)
+      val lastSentSize = ref ~1
+      fun sendDiags () = let val n = DArray.size oldDiags
+        in if n = !lastSentSize then () else (
+          lastSentSize := n;
+          send (mkNotif "textDocument/publishDiagnostics" (fn print => (
+            print "{\"uri\":"; encString uri print;
+            print ",\"version\":"; encInt (#version text) print;
+            print ",\"diagnostics\":"; encDArray encDiag oldDiags print;
+            print "}"))))
+        end
 
       val ls = ref (beforeCompile ())
       val lastPos = ref 0
