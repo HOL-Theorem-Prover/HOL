@@ -25,6 +25,8 @@ structure Refute_ModelFinder_Names = struct
   val uncurry_prefix = reserved_prefix ^ "unc"
   val eval_prefix = reserved_prefix ^ "eval"
   val iter_var_prefix = "i"
+  val cyclic_co_val_name = "ω"
+  val cyclic_co_val_name_ascii = "w"
 
   fun err function message =
     Feedback.mk_HOL_ERR "Refute_ModelFinder_Names" function message

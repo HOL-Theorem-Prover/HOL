@@ -191,7 +191,7 @@ structure Refute_Core = struct
       bits = List.tabulate (10, fn n => n + 1),
       star_linear_preds = true,
       iter = [(NONE, [0, 1, 2, 4, 8, 12, 16, 20, 24, 28])],
-      bisim_depth = [~1],
+      bisim_depth = [9],
       finitize = [(NONE, NONE)],
       whack = [],
       need = NONE }
@@ -518,7 +518,6 @@ structure Refute_Core = struct
 
   fun validate_mf_config (mf : mf_config) =
     let
-      fun unchanged field same = if same then () else m4_error field
       val _ = if null (#bits mf) orelse
                      List.exists (fn bits => bits < 1 orelse bits > 31)
                        (#bits mf) then
@@ -529,8 +528,11 @@ structure Refute_Core = struct
                        List.exists (fn value => value < 0) values) (#iter mf)
               then range_error "iter" "rows must contain nonnegative values"
               else ()
-      val _ = unchanged "bisim_depth"
-        (#bisim_depth mf = #bisim_depth default_mf_config)
+      val _ = if null (#bisim_depth mf) orelse
+                     List.exists (fn depth => depth < ~1) (#bisim_depth mf)
+              then range_error "bisim_depth"
+                "values must be -1 or nonnegative"
+              else ()
       val _ = if null (#whack mf) then () else m4_error "whack"
       val _ = (case #need mf of NONE => () | SOME _ => m4_error "need")
       val _ = if #max_potential mf > 1 then m4_error "max_potential"

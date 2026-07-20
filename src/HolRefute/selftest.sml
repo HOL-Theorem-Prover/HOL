@@ -668,7 +668,7 @@ fun mf_inductive_recognition_and_wf () =
     val true_config = Refute.upd_wf [(SOME easy, SOME true)]
       default_config
     val true_reasons = Refute_ModelFinder.authenticity_reasons
-      (#mf true_config) true true
+      (#mf true_config) true true true
     val true_override_degrades = List.exists
       (Refute_ModelFinder_Util.is_substring_of "\"wf\"") true_reasons
     val mutual_group = MFH.fixpoint_group_of_const context other
@@ -2358,8 +2358,11 @@ fun mf_codatatype_bisim_axiom_goldens () =
          boolSyntax.mk_eq (x, y)))
     val enabled_mf = Refute_Core.change_mf
       (Refute_Core.MfBisimDepth [2]) Refute_Core.default_mf_config
+    val disabled_mf = Refute_Core.change_mf
+      (Refute_Core.MfBisimDepth [~1]) Refute_Core.default_mf_config
     val enabled = MFH.make_context enabled_mf []
-    val disabled_result = MFP.axioms_for_term mf_hol_context []
+    val disabled = MFH.make_context disabled_mf []
+    val disabled_result = MFP.axioms_for_term disabled []
       (boolSyntax.mk_eq (x, x))
     val enabled_result = MFP.axioms_for_term enabled []
       (boolSyntax.mk_eq (x, x))
@@ -2371,8 +2374,8 @@ fun mf_codatatype_bisim_axiom_goldens () =
     Term.aconv actual_step expected_step andalso
     Term.aconv actual_max expected_max andalso
     not (has_bisim disabled_axioms) andalso has_bisim enabled_axioms andalso
-    has_bisim (#1 enabled_result) andalso
-    not (has_bisim (#2 enabled_result)) andalso
+    not (has_bisim (#1 enabled_result)) andalso
+    has_bisim (#2 enabled_result) andalso
     length enabled_axioms >= length disabled_axioms + 2
   end
 
@@ -4975,6 +4978,111 @@ val _ = require_msg (check_result mf_model_datatype_golden) (fn () =>
   "datatype reconstruction from discriminator/selector tuples changed")
   (fn () => ()) ()
 
+fun mf_model_codatatype_cycles_and_recheck () =
+  let
+    val ty = ``:num llist``
+    fun setup card iterator =
+      let
+        val assignments =
+          (case iterator of
+               NONE => [(ty, card), (``:num``, 1)]
+             | SOME iterator_card =>
+                 [(MFH.bisim_iterator_type, iterator_card),
+                  (ty, card), (``:num``, 1)])
+        val scope = mf_translation_scope assignments [ty]
+        val (sel_names, _) = MFNT.choose_reps_for_all_sels scope
+          MFNT.NameTable.empty
+        val (_, _, rel_table) = MFNT.rename_free_vars sel_names
+          Refute_ModelFinder_Peephole.initial_pool
+          MFNT.NameTable.empty
+        fun named nickname = valOf (List.find (fn name =>
+          MFNT.nickname_of name = nickname) sel_names)
+        fun relation nickname = MFNT.the_rel rel_table (named nickname)
+        val constructors = MFH.constructors_for mf_hol_context ty
+        val nil_constructor = List.nth (constructors, 0)
+        val cons = List.nth (constructors, 1)
+        val nil_id = MFH.constructor_name nil_constructor
+        val cons_id = MFH.constructor_name cons
+        val offset = MFS.offset_of_type (#ofs scope) ty
+        val num_offset = MFS.offset_of_type (#ofs scope) ``:num``
+        val owners = List.tabulate (card, fn index => offset + index)
+        val bounds =
+          [(relation (MFN.discr_prefix ^ nil_id), []),
+           (relation (MFN.discr_prefix ^ cons_id), map single owners),
+           (relation (MFN.sel_prefix_for 0 ^ cons_id),
+            map (fn owner => [owner, num_offset]) owners),
+           (relation (MFN.sel_prefix_for 1 ^ cons_id),
+            map (fn owner => [owner, owner]) owners)]
+      in
+        (scope, sel_names, rel_table, bounds, offset,
+         nil_constructor, cons)
+      end
+    fun reconstruct (scope, sel_names, rel_table, bounds, _, _, _) =
+      MFM.reconstruct
+        {scope = scope, atoms = [(NONE, [])], special_funs = [],
+         real_frees = [], eval_terms = [], free_names = [],
+         sel_names = sel_names, nonsel_names = [],
+         rel_table = rel_table, bounds = bounds}
+    val one as
+      (scope, sel_names, rel_table, bounds, offset, nil_term, cons) =
+      setup 1 NONE
+    val cyclic = MFM.term_for_rep
+      {scope = scope, atoms = [(NONE, [])], sel_names = sel_names,
+       rel_table = rel_table, bounds = bounds, maybe_opt = false,
+       ty = ty, representation = MFR.Atom (1, offset),
+       tuples = [[offset]]}
+    val nil_value = nil_term
+    val cycle_shape =
+      case Lib.total Term.dest_comb cyclic of
+          SOME (choice, abstraction) =>
+            (case Lib.total Term.dest_thy_const choice of
+                 SOME {Thy = "refute", Name = "safe_The", ...} =>
+                   if Term.is_abs abstraction then
+                     let
+                       val (omega, equation) = Term.dest_abs abstraction
+                       val (left, right) = boolSyntax.dest_eq equation
+                       val (head, args) = HolKernel.strip_comb right
+                     in
+                       #1 (Term.dest_var omega) =
+                         MFN.cyclic_co_val_name andalso
+                       MFN.cyclic_co_val_name_ascii = "w" andalso
+                       Term.aconv left omega andalso Term.aconv head cons andalso
+                       length args = 2 andalso
+                       Term.aconv (List.nth (args, 1)) omega
+                     end
+                   else false
+               | _ => false)
+        | NONE => false
+    val two_disabled = reconstruct (setup 2 NONE)
+    val two_enabled = reconstruct (setup 2 (SOME 2))
+    val support = MFM.reconstruct
+      {scope = scope, atoms = [(NONE, [])], special_funs = [],
+       real_frees = [], eval_terms = [], free_names = [],
+       sel_names = sel_names,
+       nonsel_names =
+         [MFNT.ConstName
+            ("refute$bisim", Term.type_of (MFH.bisim_const ty), MFR.Any),
+          MFNT.ConstName
+            ("refute$bisim_iterator_max", MFH.bisim_iterator_type,
+             MFR.Any)],
+       rel_table = rel_table, bounds = bounds}
+  in
+    cycle_shape andalso
+    String.isSubstring MFN.cyclic_co_val_name
+      (Parse.term_to_string cyclic) andalso
+    MFM.bisimilar_values [ty] 0 (cyclic, nil_value) andalso
+    MFM.bisimilar_values [ty] 2 (cyclic, cyclic) andalso
+    not (MFM.bisimilar_values [ty] 2 (cyclic, nil_value)) andalso
+    #codatatypes_ok (reconstruct one) andalso
+    not (#codatatypes_ok two_disabled) andalso
+    #codatatypes_ok two_enabled andalso null (#consts support)
+  end
+
+val _ = require_msg
+  (check_result mf_model_codatatype_cycles_and_recheck) (fn () =>
+  "cyclic codatatype reconstruction, bisim recheck, or filtering changed")
+  (fn () => ()) ()
+
 fun mf_model_structured_reconstruction () =
   let
     val scope = mf_translation_scope [(``:num``, 2), (``:int``, 3)] []
@@ -5165,10 +5273,19 @@ fun mf_model_certification_protocol () =
        reconstruction = reconstructed, cex = base, sound = true,
        genuine_means_genuine = false,
        reasons = ["Try again with wf = true"]}
+    val bad_codata : MFM.reconstruction =
+      {bindings = [], evals = [], skolems = [], consts = [], types = [],
+       codatatypes_ok = false}
+    val codata_reasons = Refute_ModelFinder.authenticity_reasons
+      (#mf default_config) true true false
+    val codata_fallback = MFM.certify
+      {executable = true, original = ``F``, eval_terms = [],
+       reconstruction = bad_codata, cex = base, sound = true,
+       genuine_means_genuine = true, reasons = codata_reasons}
     val forced_config = upd_finitize
       [(SOME ``:num list``, SOME true), (NONE, NONE)] default_config
     val forced_reasons = Refute_ModelFinder.authenticity_reasons
-      (#mf forced_config) true true
+      (#mf forced_config) true true true
     val forced_fallback = MFM.certify
       {executable = false, original = ``F``, eval_terms = [],
        reconstruction = reconstructed, cex = base, sound = true,
@@ -5192,6 +5309,10 @@ fun mf_model_certification_protocol () =
     (case fallback of
          MFM.Keep {certainty = QuasiGenuine
            ["Try again with wf = true"], cert = NONE, ...} => true
+       | _ => false) andalso
+    (case codata_fallback of
+         MFM.Keep {certainty = QuasiGenuine [reason], ...} =>
+           String.isSubstring "bisim_depth" reason
        | _ => false) andalso smart_genuine andalso
     (case forced_fallback of
          MFM.Keep {certainty = QuasiGenuine
@@ -7244,10 +7365,22 @@ val _ = require_msg
   (check_result binary_int_defaults_and_unlock_are_pinned) (fn () =>
   "binary_ints/bits defaults or unlock changed") (fn () => ()) ()
 
+fun bisim_default_and_unlock_are_pinned () =
+  let
+    val disabled = Refute.upd_bisim_depth [~1] Refute.default_config
+    val depths = Refute.upd_bisim_depth [0, 3, 9] Refute.default_config
+  in
+    #bisim_depth (#mf Refute.default_config) = [9] andalso
+    #bisim_depth (#mf disabled) = [~1] andalso
+    #bisim_depth (#mf depths) = [0, 3, 9]
+  end
+
+val _ = require_msg
+  (check_result bisim_default_and_unlock_are_pinned) (fn () =>
+  "bisim_depth default or user values remain guarded") (fn () => ()) ()
+
 val _ = List.app m4_guard_is_pinned
-  [("bisim_depth", fn () =>
-      Refute.upd_bisim_depth [0] Refute.default_config),
-   ("max_potential", fn () =>
+  [("max_potential", fn () =>
       Refute.upd_max_potential 2 Refute.default_config),
    ("max_genuine", fn () =>
       Refute.upd_max_genuine 2 Refute.default_config)]
@@ -7274,7 +7407,11 @@ val _ = List.app range_guard_is_pinned
    ("iter", "rows must contain nonnegative values", fn () =>
       Refute.upd_iter [] Refute.default_config),
    ("iter", "rows must contain nonnegative values", fn () =>
-      Refute.upd_iter [(NONE, [~1])] Refute.default_config)]
+      Refute.upd_iter [(NONE, [~1])] Refute.default_config),
+   ("bisim_depth", "values must be -1 or nonnegative", fn () =>
+      Refute.upd_bisim_depth [] Refute.default_config),
+   ("bisim_depth", "values must be -1 or nonnegative", fn () =>
+      Refute.upd_bisim_depth [~2] Refute.default_config)]
 
 val _ = tprint "Refute core backend registry"
 
@@ -10369,7 +10506,11 @@ val mf_mutual_soundness_corpus =
     ``zoo_guarded_gfp b <=> b``),
    ("mutual coinductive greatest fixpoint",
     ``(zoo_mutual_gfp b <=> b) /\
-      (zoo_mutual_other_gfp b <=> b)``)]
+      (zoo_mutual_other_gfp b <=> b)``),
+   ("codatatype constructor head injectivity",
+    ``llist$LCONS (a : num) xs = llist$LCONS b ys ==> a = b``),
+   ("codatatype constructors distinct",
+    ``llist$LNIL <> llist$LCONS (a : num) xs``)]
 
 fun corpus_soundness () =
   List.app (fn (name, tm) =>
@@ -11369,6 +11510,51 @@ fun run_mf_task20_suites () =
       mf_mono_driver_scope_fusion solver
     end
 
+fun mf_codatatype_acceptance solver =
+  let
+    val _ = tprint "Refute MF: cyclic codatatype countermodel"
+    val base = mf_acceptance_config solver
+      |> Refute.upd_card [(NONE, [2, 3])]
+    val cycle_config = base
+      |> Refute.upd_expect Refute.ExpectGenuine
+    val cycle_goal =
+      ``(xs : num llist) <> llist$LCONS a xs``
+    val cycle = with_silent_refute (fn () =>
+      Refute.refute cycle_config cycle_goal)
+    fun has_omega bindings = List.exists (fn (_, value) =>
+      String.isSubstring MFN.cyclic_co_val_name
+        (Parse.term_to_string value)) bindings
+    val cycle_ok =
+      case cycle of
+          Refute.Counterexample
+            ({certainty = Refute.Genuine, bindings, ...} :: _) =>
+              has_omega bindings
+        | _ => false
+    val _ = if cycle_ok then ()
+      else raise Fail ("cyclic display pin failed: " ^
+        mf_pin_outcome_name cycle)
+    val _ = tprint "Refute MF: disabled bisimulation recheck"
+    val quasi_config = base
+      |> Refute.upd_bisim_depth [~1]
+      |> Refute.upd_expect Refute.ExpectQuasiGenuine
+    val quasi_goal =
+      ``(xs = llist$LCONS (a : num) xs /\
+         ys = llist$LCONS a ys) ==> xs = ys``
+    val quasi = with_silent_refute (fn () =>
+      Refute.refute quasi_config quasi_goal)
+    val quasi_ok =
+      case quasi of
+          Refute.Counterexample
+            ({certainty = Refute.QuasiGenuine reasons, ...} :: _) =>
+              List.exists (String.isSubstring "bisim_depth") reasons
+        | _ => false
+  in
+    if quasi_ok then OK ()
+    else die ("codatatype recheck pin failed: " ^
+      conformance_outcome_name quasi)
+  end
+  handle e => die (Feedback.exn_to_string e)
+
 fun run_mf_acceptance () =
   if not (Refute_Forl.is_configured ()) then
     print "(Kodkodi not configured, MF acceptance corpus skipped.)\n"
@@ -11379,6 +11565,7 @@ fun run_mf_acceptance () =
         raise Fail "MiniSat_JNI is required for the full MF corpus"
       val _ = List.app (mf_acceptance_test "MiniSat_JNI")
         mf_acceptance_cases
+      val _ = mf_codatatype_acceptance "MiniSat_JNI"
       val smoke = List.filter
         (fn ({sat4j_smoke, ...} : mf_acceptance_case) => sat4j_smoke)
         mf_acceptance_cases

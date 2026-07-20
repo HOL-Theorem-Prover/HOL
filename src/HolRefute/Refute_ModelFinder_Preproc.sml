@@ -1875,8 +1875,12 @@ structure Refute_ModelFinder_Preproc = struct
         in
           if #max_bisim_depth context >= 0 andalso
              MFH.is_codatatype ty then
+            (* These axioms define the finite bisimulation support itself.
+               Treating their codatatype quantifiers as ordinary nondefs
+               adds an unrepresented-value guard and makes every sound
+               scope false before the support relation can constrain it. *)
             List.foldl (fn (axiom, result) =>
-              add_maybe_def_axiom depth axiom result) with_arguments
+              add_axiom true depth axiom result) with_arguments
               (MFH.codatatype_bisim_axioms context ty)
           else
             with_arguments

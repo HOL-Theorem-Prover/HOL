@@ -14,7 +14,7 @@ signature REFUTE_MODEL_FINDER = sig
     (Type.hol_type -> bool) -> Type.hol_type list ->
     Type.hol_type list -> Type.hol_type list
   val authenticity_reasons :
-    Refute_Core.mf_config -> bool -> bool -> string list
+    Refute_Core.mf_config -> bool -> bool -> bool -> string list
   val kodkod_backend : Refute_Core.backend
   val kodkod_certainty_ceiling : Refute_Core.certainty_ceiling
   val register_backends : unit -> unit
@@ -119,7 +119,7 @@ fun none_true assignments =
   List.all (fn (_, value) => value <> SOME true) assignments
 
 fun authenticity_reasons (mf : Refute_Core.mf_config)
-      got_all_mono_user_axioms no_poly_user_axioms =
+      got_all_mono_user_axioms no_poly_user_axioms codatatypes_ok =
   if not no_poly_user_axioms then
     ["polymorphic axioms prevent an authenticity guarantee"]
   else
@@ -133,9 +133,9 @@ fun authenticity_reasons (mf : Refute_Core.mf_config)
          else ["\"finitize\" set to \"smart\" or \"false\""]) @
         (if #total_consts mf = SOME true then
            ["\"total_consts\" set to \"smart\" or \"false\""]
-         else [])
-        (* TODO(TASK codata): Add the bisim_depth hint once the
-           per-reconstruction codatatypes_ok value reaches this site. *)
+         else []) @
+        (if codatatypes_ok then []
+         else ["\"bisim_depth\" set to a nonnegative value"])
     in
       MFM.try_again_reasons options
     end
@@ -301,13 +301,6 @@ fun run_instance deadline started (config : Refute_Core.config)
     val (sel_names, nonsel_names) = List.partition
       (MFN.is_sel o MFNT.nickname_of) const_names
     val all_types = ground_types context binarize (nondef_ts @ def_ts)
-    (* TASK_16 will add cycle-aware reconstruction.  Until then the live
-       codatatype encoding is available to term/scope/serializer tests but
-       must not be allowed to feed a cyclic Kodkod model to reconstruction. *)
-    val _ = if List.exists MFH.is_codatatype all_types then
-        raise MFU.NOT_SUPPORTED
-          "codatatype model reconstruction is not implemented yet"
-      else ()
     val unique_scope = List.all (fn (_, values) => length values = 1)
       (#card mf)
     val calculus_mono_types = ref ([] : hol_type list)
@@ -394,15 +387,13 @@ fun run_instance deadline started (config : Refute_Core.config)
     val solver = actual_solver mf
     val real_frees = free_variables [original]
     val executable = not (Option.isSome (#qc_gate instance)) andalso
-      #falsify mf
+      #falsify mf andalso not (List.exists MFH.is_codatatype all_types)
     val genuine_formula = MFM.genuine_means_genuine
       {got_all_mono_user_axioms = got_all_mono_user_axioms,
        no_poly_user_axioms = no_poly_user_axioms,
        wfs = map (fn (_, value) => value = SOME true) (#wf mf),
        sound_finitizes = sound_finitizes,
        total_consts = #total_consts mf}
-    val genuine_reasons = authenticity_reasons mf
-      got_all_mono_user_axioms no_poly_user_axioms
     val generated_problems = ref ([] : rich_problem list)
     val generated_scopes = ref ([] : MFS.scope list)
     val checked_problems = ref ([] : rich_problem list)
@@ -457,10 +448,15 @@ fun run_instance deadline started (config : Refute_Core.config)
            rel_table = #rel_table extension,
            bounds = bounds}
         val sound = not (#unsound extension)
-        val reasons = if sound then genuine_reasons else []
+        val scope_has_codatatype =
+          List.exists #co (#data_types (#scope extension))
+        val reasons = if sound then
+            authenticity_reasons mf got_all_mono_user_axioms
+              no_poly_user_axioms (#codatatypes_ok reconstructed)
+          else []
       in
         case MFM.certify
-          {executable = executable,
+          {executable = executable andalso not scope_has_codatatype,
            original = original,
            eval_terms = eval_terms,
            reconstruction = reconstructed,

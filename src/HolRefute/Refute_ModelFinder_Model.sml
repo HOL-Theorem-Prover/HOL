@@ -37,6 +37,9 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   val user_friendly_const :
     Refute_ModelFinder_HOL.special_fun list -> string -> hol_type -> term
 
+  val bisimilar_values :
+    hol_type list -> int -> term * term -> bool
+
   val reconstruct :
     {scope : scope,
      atoms : (hol_type option * string list) list,
@@ -441,6 +444,9 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
     and term_for_data_type seen (spec : MFS.data_type_spec) atom =
       let
         val ty = #typ spec
+        val co = #co spec
+        val cycle = Term.mk_var
+          (MFN.reserved_prefix ^ "cycle" ^ Int.toString atom, ty)
         val real_atom = atom + MFS.offset_of_type ofs ty
         fun name_for nickname =
           List.find (fn name =>
@@ -480,16 +486,29 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
             (name, selected)
           end
 
-        fun selector_value (index, argument_ty) =
+        fun selector_value next_seen (index, argument_ty) =
           let
             val (name, selected) = selector_info index
             val range_rep = #2 (MFR.dest_Func (MFNT.rep_of name))
           in
-            term_for_rep true ((ty, atom) :: seen) argument_ty
-              range_rep selected
+            term_for_rep true next_seen argument_ty range_rep selected
+          end
+        fun safe_the body =
+          let
+            val omega = Term.mk_var (MFN.cyclic_co_val_name, ty)
+            val unfolded = Term.subst [{redex = cycle, residue = omega}] body
+            val predicate = Term.mk_abs
+              (omega, boolSyntax.mk_eq (omega, unfolded))
+            val choice = Term.mk_thy_const
+              {Thy = "refute", Name = "safe_The",
+               Ty = Type.-->(Type.-->(ty, Type.bool), ty)}
+          in
+            Term.mk_comb (choice, predicate)
           end
       in
-        if MFH.is_bitword_type ty then
+        if co andalso List.exists (fn entry => entry = (ty, atom)) seen then
+          cycle
+        else if MFH.is_bitword_type ty then
           let
             val value = value_of_bits (#2 (selector_info 0))
           in
@@ -500,7 +519,8 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
           end
         else
           let
-            val flat_values = map selector_value
+            val next_seen = if co then (ty, atom) :: seen else seen
+            val flat_values = map (selector_value next_seen)
               (ListPair.zip
                 (List.tabulate (length flat_tys, fn index => index), flat_tys))
             fun rebuild (argument_ty, (arguments, values)) =
@@ -510,8 +530,10 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               List.foldl rebuild ([], flat_values) argument_tys
             val _ = if null remaining then () else
               raise err "term_for_data_type" "unused selector values"
+            val value = Term.list_mk_comb (constructor, rev arguments)
           in
-            Term.list_mk_comb (constructor, rev arguments)
+            if co andalso Term.free_in cycle value then safe_the value
+            else value
           end
       end
   in
@@ -709,6 +731,57 @@ fun eval_index name =
   else
     NONE
 
+fun is_safe_the term =
+  case Lib.total Term.dest_thy_const term of
+      SOME {Thy = "refute", Name = "safe_The", ...} => true
+    | _ => false
+
+fun unfold_outer_the_binders term =
+  case Lib.total Term.dest_comb term of
+      SOME (choice, abstraction) =>
+        if is_safe_the choice andalso Term.is_abs abstraction then
+          let
+            val (variable, body) = Term.dest_abs abstraction
+            val (left, _) = boolSyntax.dest_eq body
+          in
+            if Term.aconv left variable then
+              unfold_outer_the_binders
+                (Term.beta_conv (Term.mk_comb (abstraction, term)))
+            else term
+          end handle HOL_ERR _ => term
+        else term
+    | NONE => term
+
+fun has_codatatype_subtype co_types ty =
+  List.exists (same_type ty) co_types orelse
+  (not (Type.is_vartype ty) andalso
+   List.exists (has_codatatype_subtype co_types)
+     (#Args (Type.dest_thy_type ty)))
+
+fun bisimilar_values _ 0 _ = true
+  | bisimilar_values co_types max_depth (left, right) =
+      let
+        val ty = Term.type_of left
+      in
+        if not (same_type ty (Term.type_of right)) then false
+        else if has_codatatype_subtype co_types ty then
+          let
+            val (left_head, left_args) =
+              HolKernel.strip_comb (unfold_outer_the_binders left)
+            val (right_head, right_args) =
+              HolKernel.strip_comb (unfold_outer_the_binders right)
+            val next_depth = max_depth -
+              (if List.exists (same_type ty) co_types then 1 else 0)
+          in
+            Term.aconv left_head right_head andalso
+            ListPair.allEq
+              (bisimilar_values co_types next_depth)
+              (left_args, right_args)
+          end
+        else
+          Term.aconv left right
+      end
+
 fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
                  free_names, sel_names, nonsel_names, rel_table, bounds} =
   let
@@ -777,8 +850,16 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
                  (lhs, assignment_operator nickname, value) :: consts)
       end
 
+    fun is_bisim_support name =
+      let val nickname = MFNT.nickname_of name
+      in
+        nickname = "refute$bisim" orelse
+        nickname = "refute$bisim_iterator_max"
+      end
+
+    val displayed_names = List.filter (not o is_bisim_support) nonsel_names
     val (evals, skolems, consts) =
-      List.foldl classify ([], [], []) nonsel_names
+      List.foldl classify ([], [], []) displayed_names
 
     fun values_for_type (spec : MFS.data_type_spec) =
       let
@@ -815,13 +896,29 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
       List.concat (map integer_type [MFH.num_type, MFH.int_type]) @
       List.concat (map type_variable_spec (#card_assigns scope))
     val types = map values_for_type report_types
+    val codatatypes = List.filter #co (#data_types scope)
+    val co_types = map #typ codatatypes
+    val max_depth = List.foldl
+      (fn (spec : MFS.data_type_spec, total) => #card spec + total)
+      0 codatatypes
+    fun distinct_pairs [] = []
+      | distinct_pairs (value :: rest) =
+          map (fn other => (value, other)) rest @ distinct_pairs rest
+    fun wellformed (spec : MFS.data_type_spec) =
+      let val (_, values, _) = values_for_type spec
+      in
+        List.all (not o bisimilar_values co_types max_depth)
+          (distinct_pairs values)
+      end
+    val codatatypes_ok = #bisim_depth scope >= 0 orelse
+      List.all wellformed codatatypes
   in
     {bindings = map binding real_frees,
      evals = rev evals,
      skolems = rev skolems,
      consts = rev consts,
      types = types,
-     codatatypes_ok = true}
+     codatatypes_ok = codatatypes_ok}
   end
 
 fun model_report ({skolems, consts, types, ...} : reconstruction) =
@@ -965,12 +1062,13 @@ fun certify {executable, original, eval_terms,
              reconstruction = reconstructed, cex, sound,
              genuine_means_genuine = genuine, reasons} =
   let
-    val {bindings, evals, ...} = reconstructed
+    val {bindings, evals, codatatypes_ok, ...} = reconstructed
+    val genuine = genuine andalso codatatypes_ok
     val model = SOME (model_report reconstructed)
     val base = replace_cex cex (fallback_certainty sound genuine reasons)
       bindings evals NONE model
   in
-    case if executable then
+    case if executable andalso codatatypes_ok then
            certification_copy (#scope cex) original eval_terms bindings
          else NONE of
         NONE => Keep base
