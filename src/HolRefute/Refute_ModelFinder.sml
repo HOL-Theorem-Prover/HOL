@@ -576,6 +576,11 @@ fun run_instance deadline started (config : Refute_Core.config)
                   in
                     if null conservative then
                       let
+                        (* A certification promotion is the phase boundary
+                           from [m4-driver section 7 Q6]: do not reconstruct
+                           a later liberal model (which could be merely
+                           Potential), and consume exactly one genuine slot
+                           before dropping the remaining unsound problems. *)
                         fun reconstruct_until_genuine [] = false
                           | reconstruct_until_genuine
                               ((index, bounds) :: models) =
