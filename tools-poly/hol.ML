@@ -569,6 +569,32 @@ in
            available, so fake-load it to stop holdep from complaining
            when it appears in Q-filter-expanded Script.sml output. *)
         Meta.fakeload "CompilerSpecific";
+        (* Snapshot the clean Context now and install a hook that
+           restores it before each LSP compile.  Without this, each
+           didChange recompile inherits the previous compile's
+           theory (new_theory retires the constants but leaves stale
+           theorems in DB), producing a flood of "is out-of-date!"
+           errors.  Restoring first gives every compile a fresh
+           HOL environment. *)
+        let val s = "let val snap = Context.snapshot () in \
+                    \  LSPExtension.resetForCompile := \
+                    \    (fn () => Context.restore snap) \
+                    \end"
+            val i = ref 0
+            fun read () = (SOME (String.sub (s, !i)) before i := !i + 1)
+                          handle Subscript => NONE
+            fun err {message, hard, ...} =
+              (TextIO.output (TextIO.stdErr,
+                 "[LSP-init] " ^ (if hard then "ERROR" else "warning") ^ ": ");
+               PolyML.prettyPrint (fn s => TextIO.output (TextIO.stdErr, s), 80) message;
+               TextIO.output (TextIO.stdErr, "\n");
+               TextIO.flushOut TextIO.stdErr)
+            fun runall () =
+              if !i >= String.size s then ()
+              else (PolyML.compiler
+                      (read, [PolyML.Compiler.CPErrorMessageProc err]) ();
+                    runall ())
+        in runall () end;
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;

@@ -555,6 +555,10 @@ fun start {diag} = let
     (* Invalidate any pending scheduleCompile thread: their epoch
        check will see the new value and self-abort. *)
     debounce := !debounce + 1;
+    (* Restore the LSP-startup Context snapshot so this compile runs
+       against a clean HOL state (no residual theories / stale DB
+       entries from the previous compile of this or another file). *)
+    !LSPExtension.resetForCompile ();
     if #done (#parse (!lastTrees)) then () else let
     val _ = stopCompile compile
     val {text as {lines, ...}, parse = {diags = oldDiags, ...}} = !lastTrees

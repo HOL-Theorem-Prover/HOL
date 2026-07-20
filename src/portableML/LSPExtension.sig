@@ -61,4 +61,11 @@ val fixupTheoremLink:
 
 val helpLookup: (string * (string -> bool) -> string list) ref
 
+(* Called at the start of each LSP compile pass.  Intended to restore
+   the HOL Context to a snapshot taken at LSP startup, so recompiles
+   run against a clean state (no accumulated theorems / retired
+   constants / stale DB entries).  Default is a no-op; installed by
+   the LSP runtime init in tools-poly/hol.ML. *)
+val resetForCompile: (unit -> unit) ref
+
 end;
