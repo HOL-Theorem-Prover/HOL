@@ -118,3 +118,36 @@ Inductive zoo_mutual_lfp:
   (!n. zoo_mutual_lfp n ==>
        zoo_mutual_other_lfp (SUC n))
 End
+
+(* The final, extensionally redundant rule makes the group's recursive
+   relation non-well-founded without changing its even/odd least fixpoint. *)
+Inductive zoo_mutual_nonwf_lfp:
+  zoo_mutual_nonwf_lfp 0 /\
+  (!n. zoo_mutual_nonwf_other_lfp n ==>
+       zoo_mutual_nonwf_lfp (SUC n)) /\
+  (!n. zoo_mutual_nonwf_lfp n ==>
+       zoo_mutual_nonwf_other_lfp (SUC n)) /\
+  (!n. zoo_mutual_nonwf_lfp n ==>
+       zoo_mutual_nonwf_lfp n)
+End
+
+(* Two instances in one model-finder context must retain distinct iterator
+   markers even though their generated unroll constants share a name. *)
+Inductive zoo_mutual_poly_nonwf_lfp:
+  (!(x : 'a). zoo_mutual_poly_nonwf_lfp x 0) /\
+  (!x n. zoo_mutual_poly_nonwf_other_lfp x n ==>
+         zoo_mutual_poly_nonwf_lfp x (SUC n)) /\
+  (!x n. zoo_mutual_poly_nonwf_lfp x n ==>
+         zoo_mutual_poly_nonwf_other_lfp x (SUC n)) /\
+  (!x n. zoo_mutual_poly_nonwf_lfp x n ==>
+         zoo_mutual_poly_nonwf_lfp x n)
+End
+
+(* The rule variable deliberately collides with the joint wf relation's
+   preferred name and type.  It must not capture the generated relation. *)
+Inductive zoo_mutual_capture_lfp:
+  (!(R : (num + num) -> (num + num) -> bool) n.
+       R (INL n) (INL n) /\ zoo_mutual_capture_lfp n ==>
+       zoo_mutual_capture_lfp n) /\
+  zoo_mutual_capture_other_lfp 0
+End

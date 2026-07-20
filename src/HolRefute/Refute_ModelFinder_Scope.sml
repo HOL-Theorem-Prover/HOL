@@ -230,27 +230,40 @@ structure Refute_ModelFinder_Scope = struct
                            Parse.term_to_string constructor)))
     end
 
-  fun lookup_iter_ints_assign assigns predicate =
+  fun explicit_iter_ints_assign assigns predicate =
     let
       fun exact (SOME other, _) = Term.aconv other predicate
         | exact _ = false
       fun relaxed (SOME other, _) = MFH.const_match (predicate, other)
         | relaxed _ = false
-      fun fallback (NONE, _) = true
-        | fallback _ = false
     in
       case List.find exact assigns of
-          SOME (_, candidates) => candidates
-        | NONE =>
-            (case List.find relaxed assigns of
-                 SOME (_, candidates) => candidates
-               | NONE =>
-                   (case List.find fallback assigns of
-                        SOME (_, candidates) => candidates
-                      | NONE => raise err "lookup_iter_ints_assign"
-                          ("missing assignment for " ^
-                           Parse.term_to_string predicate)))
+          SOME (_, candidates) => SOME candidates
+        | NONE => Option.map #2 (List.find relaxed assigns)
     end
+
+  fun default_iter_ints_assign assigns = Option.map #2
+    (List.find (fn (pattern, _) => not (Option.isSome pattern)) assigns)
+
+  fun lookup_group_iter_ints_assign assigns predicates =
+    let
+      fun first [] = NONE
+        | first (predicate :: rest) =
+            (case explicit_iter_ints_assign assigns predicate of
+                 SOME candidates => SOME candidates
+               | NONE => first rest)
+    in
+      case first predicates of
+          SOME candidates => candidates
+        | NONE =>
+            (case default_iter_ints_assign assigns of
+                 SOME candidates => candidates
+               | NONE => raise err "lookup_group_iter_ints_assign"
+                   "missing iterator assignment")
+    end
+
+  fun lookup_iter_ints_assign assigns predicate =
+    lookup_group_iter_ints_assign assigns [predicate]
 
   fun row_for_constr maxes_assigns constructor =
     SOME (Max constructor,
@@ -263,9 +276,9 @@ structure Refute_ModelFinder_Scope = struct
         iters_assigns bitss ty =
     if MFH.is_iterator_type ty then
       (case MFH.iterator_info_for_type context ty of
-           SOME {pred, ...} =>
+           SOME {preds, ...} =>
              [(Card ty, map (fn count => Int.max (0, count) + 1)
-               (lookup_iter_ints_assign iters_assigns pred))]
+               (lookup_group_iter_ints_assign iters_assigns preds))]
          | NONE => raise err "block_for_type" "unregistered iterator type")
     else if ty = MFH.unsigned_bit_type then
       [(Card ty, map bit_card bitss)]
@@ -398,11 +411,20 @@ structure Refute_ModelFinder_Scope = struct
   fun repair_iterator_assign context assigns (assign as (ty, card)) =
     case MFH.iterator_info_for_type context ty of
         NONE => assign
-      | SOME {arg_tys, ...} =>
+      | SOME {arg_tyss, ...} =>
           let
-            val tuple_ty = MFH.tuple_type arg_tys
-            val maximum = if null arg_tys then 1
-              else MFH.bounded_card_of_type card ~1 assigns tuple_ty
+            fun tuple_card argument_tys =
+              if null argument_tys then 1
+              else
+                (* A disconnected member need not occur in the collected
+                   equations, so its argument types may have no scope row.
+                   Falling back to the proposed iterator card merely skips
+                   this optional cap; every unrolling depth remains sound. *)
+                MFH.bounded_card_of_type card card assigns
+                  (MFH.tuple_type argument_tys)
+            fun add_capped (argument_tys, total) =
+              Int.min (card, total + tuple_card argument_tys)
+            val maximum = List.foldl add_capped 0 arg_tyss
           in
             (ty, Int.min (card, maximum))
           end

@@ -121,6 +121,8 @@ signature Refute = sig
   val upd_binary_ints : bool option -> config -> config
   val upd_bits : int list -> config -> config
   val upd_star_linear_preds : bool -> config -> config
+  (* A mutual fixpoint group shares one iterator row.  Group members are
+     checked in cases-theorem order, and the first explicit row wins. *)
   val upd_iter : (term option * int list) list -> config -> config
   val upd_bisim_depth : int list -> config -> config
   val upd_finitize :

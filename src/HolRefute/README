@@ -94,3 +94,7 @@ outcome and candidate-stream conformance and Cv export-cleanliness checks.
 
 The refute_simp, refute_psimp, and refute_unfold theorem sets are defined by
 the support theory and used by model-finder preprocessing.
+
+`Refute.upd_iter` selects model-finder unrolling depths.  A mutual fixpoint
+group shares one iterator row: members are checked in `_cases` theorem order,
+and the first member with an explicit row wins before the default row is used.

@@ -461,6 +461,9 @@ fun mf_inductive_recognition_and_wf () =
     val poly_actual = ``zoo_poly_lfp : num -> num -> bool``
     val mutual = ``zoo_mutual_lfp : num -> bool``
     val other = ``zoo_mutual_other_lfp : num -> bool``
+    val nonwf_mutual = ``zoo_mutual_nonwf_lfp : num -> bool``
+    val nonwf_other = ``zoo_mutual_nonwf_other_lfp : num -> bool``
+    val capture = ``zoo_mutual_capture_lfp : num -> bool``
     val baseline = mf_theory_footprint ()
     val easy_wf = MFH.is_well_founded_inductive_pred context easy
     val hard_wf = MFH.is_well_founded_inductive_pred context hard
@@ -492,6 +495,16 @@ fun mf_inductive_recognition_and_wf () =
     val true_override_degrades = List.exists
       (Refute_ModelFinder_Util.is_substring_of "\"wf\"") true_reasons
     val mutual_group = MFH.fixpoint_group_of_const context other
+    val mutual_group_from_first =
+      MFH.fixpoint_group_of_const context mutual
+    val mutual_wf = MFH.is_well_founded_inductive_pred context mutual
+    val other_wf = MFH.is_well_founded_inductive_pred context other
+    val nonwf_mutual_wf =
+      MFH.is_well_founded_inductive_pred context nonwf_mutual
+    val nonwf_other_wf =
+      MFH.is_well_founded_inductive_pred context nonwf_other
+    val capture_wf =
+      MFH.is_well_founded_inductive_pred context capture
     val easy_cases = MFH.case_props_for_const context easy
     val easy_rules = MFH.intro_props_for_const context easy
     val unfolded = MFH.unfold_defs_in_term context ``zoo_wf_lfp n``
@@ -506,24 +519,39 @@ fun mf_inductive_recognition_and_wf () =
       ``FINITE : num set -> bool``) andalso
     easy_wf andalso parameterized_wf andalso not hard_wf andalso
     timed_out_cleanly andalso session_cache_flushed andalso
-    length (!(#wf_cache context)) = 3 andalso override_blocks andalso
+    length (!(#wf_cache context)) = 9 andalso override_blocks andalso
     poly_override_blocks andalso true_override_degrades andalso
     baseline = after andalso
     baseline = final_footprint andalso
     length easy_cases = 1 andalso length easy_rules = 2 andalso
-    (case mutual_group of
-         SOME {stem, members, ...} =>
-           stem = "zoo_mutual_lfp" andalso length members = 2
-       | NONE => false) andalso
+    (case (mutual_group, mutual_group_from_first) of
+         (SOME {stem, members, rules, cases, ...},
+          SOME {stem = other_stem, members = other_members,
+                rules = other_rules, cases = other_cases, ...}) =>
+           stem = "zoo_mutual_lfp" andalso stem = other_stem andalso
+           length members = 2 andalso
+           List.exists (fn member => member =
+             {Thy = "refuteTableZoo", Name = "zoo_mutual_lfp"})
+             members andalso
+           List.exists (fn member => member =
+             {Thy = "refuteTableZoo", Name = "zoo_mutual_other_lfp"})
+             members andalso
+           members = other_members andalso
+           ListPair.allEq (fn (left, right) => Term.aconv left right)
+             (rules, other_rules) andalso
+           ListPair.allEq (fn (left, right) => Term.aconv left right)
+             (cases, other_cases)
+       | _ => false) andalso
     MFH.is_mutually_inductive_pred context mutual andalso
     MFH.is_mutually_inductive_pred context other andalso
+    mutual_wf andalso other_wf andalso
+    not nonwf_mutual_wf andalso not nonwf_other_wf andalso
+    not capture_wf andalso
     term_has_const {Thy = "refuteTableZoo", Name = "zoo_wf_lfp"}
       unfolded andalso
     MFH.fixpoint_refusal_reason context hard = NONE andalso
-    (case MFH.fixpoint_refusal_reason context mutual of
-         SOME reason => Refute_ModelFinder_Util.is_substring_of
-           "mutual inductive predicate group" reason
-       | NONE => false)
+    MFH.fixpoint_refusal_reason context mutual = NONE andalso
+    MFH.fixpoint_refusal_reason context nonwf_mutual = NONE
   end
 
 val _ = require_msg (check_result mf_inductive_recognition_and_wf) (fn () =>
@@ -547,6 +575,39 @@ fun mf_inductive_direct_equation () =
 
 val _ = require_msg (check_result mf_inductive_direct_equation) (fn () =>
   "well-founded inductive predicate did not use its direct cases equation")
+  (fn () => ()) ()
+
+fun mf_joint_inductive_direct_equations () =
+  let
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val footprint = mf_theory_footprint ()
+    val (_, definitions, _, _, _, _) =
+      Refute_ModelFinder_Preproc.preprocess_formulas
+        context [] ``zoo_mutual_lfp n``
+    val even = {Thy = "refuteTableZoo", Name = "zoo_mutual_lfp"}
+    val odd =
+      {Thy = "refuteTableZoo", Name = "zoo_mutual_other_lfp"}
+    fun has_generated prefix term = List.exists (fn candidate =>
+      case Lib.total Term.dest_var candidate of
+          SOME (name, _) => String.isPrefix prefix name
+        | NONE => false) (HolKernel.find_terms Term.is_var term)
+    val generated_prefixes =
+      [MFN.unrolled_prefix, MFN.ubfp_prefix,
+       MFN.base_prefix, MFN.step_prefix]
+  in
+    List.exists (term_has_const even) definitions andalso
+    List.exists (term_has_const odd) definitions andalso
+    null (!(#iterator_table context)) andalso
+    List.all (fn prefix =>
+      not (List.exists (has_generated prefix) definitions))
+      generated_prefixes andalso
+    not (List.exists (term_has_const
+      {Thy = "relation", Name = "WFREC"}) definitions) andalso
+    footprint = mf_theory_footprint ()
+  end
+
+val _ = require_msg (check_result mf_joint_inductive_direct_equations)
+  (fn () => "joint-wf mutual group did not use direct cases equations")
   (fn () => ()) ()
 
 fun reserved_name_of term =
@@ -670,6 +731,189 @@ fun mf_inductive_unroll_goldens () =
 
 val _ = require_msg (check_result mf_inductive_unroll_goldens) (fn () =>
   "inductive unroll equation, iterator names, or polarity golden changed")
+  (fn () => ()) ()
+
+fun mf_joint_inductive_unroll_goldens () =
+  let
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val even = ``zoo_mutual_nonwf_lfp : num -> bool``
+    val odd = ``zoo_mutual_nonwf_other_lfp : num -> bool``
+    val footprint = mf_theory_footprint ()
+    val odd_at_zero = MFH.unrolled_inductive_pred_const
+      context false odd
+    val (odd_unrolled, zero_arguments) = HolKernel.strip_comb odd_at_zero
+    val zero = case zero_arguments of
+        [argument] => argument
+      | _ => raise Fail "expected a shared iterator-zero argument"
+    val iterator_ty = Term.type_of zero
+    val successor = MFH.iterator_suc_for_type context iterator_ty
+    val even_unrolled = MFN.mk_unrolled
+      "refuteTableZoo$zoo_mutual_nonwf_lfp" iterator_ty
+      (Term.type_of even)
+    val even_at_zero = Term.mk_comb (even_unrolled, zero)
+    val even_equations = MFH.def_props_for_const
+      (!(#simp_table context)) even_unrolled
+    val odd_equations = MFH.def_props_for_const
+      (!(#simp_table context)) odd_unrolled
+
+    fun expected member member_unrolled =
+      let
+        val (case_prop, variables, premises, arguments, right) =
+          MFH.fixpoint_case_equation context member
+        val iterator = Term.variant
+          (variables @ Term.free_vars_lr case_prop)
+          (Term.mk_var (MFN.iter_var_prefix, iterator_ty))
+        val next = Term.mk_comb (successor, iterator)
+        val substitution =
+          [{redex = even,
+            residue = Term.mk_comb (even_unrolled, next)},
+           {redex = odd,
+            residue = Term.mk_comb (odd_unrolled, next)}]
+      in
+        boolSyntax.list_mk_forall
+          (iterator :: variables,
+           boolSyntax.list_mk_imp
+             (premises, boolSyntax.mk_eq
+               (Term.list_mk_comb
+                  (member_unrolled, iterator :: arguments),
+                Term.subst substitution right)))
+      end
+
+    val even_upper = MFH.fixpoint_bound_const context true even
+    val odd_upper = MFH.fixpoint_bound_const context true odd
+    val even_upper_axioms = MFH.equational_fun_axioms context even_upper
+    val odd_upper_axioms = MFH.equational_fun_axioms context odd_upper
+    val even_key =
+      {Thy = "refuteTableZoo", Name = "zoo_mutual_nonwf_lfp"}
+    val odd_key =
+      {Thy = "refuteTableZoo", Name = "zoo_mutual_nonwf_other_lfp"}
+    fun expected_bound member =
+      let
+        val (case_prop, _, _, _, _) =
+          MFH.fixpoint_case_equation context member
+        val substitution =
+          [{redex = even, residue = even_upper},
+           {redex = odd, residue = odd_upper}]
+      in
+        Term.subst substitution case_prop
+      end
+    val positive = Refute_ModelFinder_Preproc.skolemize_term_and_more
+      context 3 ``zoo_mutual_nonwf_lfp n``
+    val negative = Refute_ModelFinder_Preproc.skolemize_term_and_more
+      context 3 ``~zoo_mutual_nonwf_other_lfp n``
+    val repeated = MFH.unrolled_inductive_pred_const context false even
+    val info = MFH.iterator_info_for_type context iterator_ty
+    val checks =
+      [("shared iterator name", Type.dest_vartype iterator_ty =
+          "'refute$lfpit$refuteTableZoo$zoo_mutual_nonwf_lfp"),
+       ("shared zero", var_name zero =
+          "refute$iterzero$refute$lfpit$refuteTableZoo$" ^
+          "zoo_mutual_nonwf_lfp"),
+       ("member names", var_name even_unrolled =
+          "refute$unroll$refuteTableZoo$zoo_mutual_nonwf_lfp" andalso
+          var_name odd_unrolled =
+          "refute$unroll$refuteTableZoo$zoo_mutual_nonwf_other_lfp"),
+       ("one iterator", length (!(#iterator_table context)) = 1),
+       ("iterator members", case info of
+            SOME {preds, arg_tyss = [[even_ty], [odd_ty]], ...} =>
+              length preds = 2 andalso even_ty = ``:num`` andalso
+              odd_ty = ``:num``
+          | _ => false),
+       ("even equation", case even_equations of
+            [equation] => Term.aconv equation
+              (expected even even_unrolled)
+          | _ => false),
+       ("odd equation", case odd_equations of
+            [equation] => Term.aconv equation
+              (expected odd odd_unrolled)
+          | _ => false),
+       ("no raw predicates", List.all (fn equation =>
+          not (term_has_const even_key equation) andalso
+          not (term_has_const odd_key equation))
+          (even_equations @ odd_equations)),
+       ("joint upper equations", case
+          (even_upper_axioms, odd_upper_axioms) of
+            ([even_axiom], [odd_axiom]) =>
+              Term.aconv even_axiom (expected_bound even) andalso
+              Term.aconv odd_axiom (expected_bound odd) andalso
+              not (term_has_const even_key even_axiom) andalso
+              not (term_has_const odd_key even_axiom) andalso
+              not (term_has_const even_key odd_axiom) andalso
+              not (term_has_const odd_key odd_axiom)
+          | _ => false),
+       ("polarity", term_has_generated_prefix
+          MFN.unrolled_prefix positive andalso
+          term_has_generated_prefix MFN.ubfp_prefix negative),
+       ("memo", Term.aconv repeated even_at_zero andalso
+          length (MFH.def_props_for_const
+            (!(#simp_table context)) even_unrolled) = 1 andalso
+          length (MFH.def_props_for_const
+            (!(#simp_table context)) odd_unrolled) = 1),
+       ("star skipped", not (MFH.should_star_linear_pred
+          context false even) andalso
+          not (MFH.should_star_linear_pred context false odd) andalso
+          not (term_has_generated_prefix MFN.base_prefix positive) andalso
+          not (term_has_generated_prefix MFN.step_prefix positive)),
+       ("theory footprint", footprint = mf_theory_footprint ())]
+    val _ = List.app (fn (label, passed) =>
+      if passed then () else
+        print ("TASK_13 failed joint check: " ^ label ^ "\n")) checks
+  in
+    List.all #2 checks
+  end
+
+val _ = require_msg (check_result mf_joint_inductive_unroll_goldens)
+  (fn () => "joint mutual unroll/bound equation golden changed")
+  (fn () => ()) ()
+
+fun mf_joint_poly_iterator_instances () =
+  let
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val generic =
+      ``zoo_mutual_poly_nonwf_lfp : 'a -> num -> bool``
+    val concrete =
+      ``zoo_mutual_poly_nonwf_lfp : num -> num -> bool``
+    val generic_at_zero = MFH.unrolled_inductive_pred_const
+      context false generic
+    val (generic_unrolled, generic_arguments) =
+      HolKernel.strip_comb generic_at_zero
+    val concrete_at_zero = MFH.unrolled_inductive_pred_const
+      context false concrete
+    val (concrete_unrolled, concrete_arguments) =
+      HolKernel.strip_comb concrete_at_zero
+    val generic_ty = Term.type_of (hd generic_arguments)
+    val concrete_ty = Term.type_of (hd concrete_arguments)
+    val generic_equations = MFH.def_props_for_const
+      (!(#simp_table context)) generic_unrolled
+    val concrete_equations = MFH.def_props_for_const
+      (!(#simp_table context)) concrete_unrolled
+    fun valid_successors expected_ty equation =
+      let
+        fun is_successor candidate =
+          case Lib.total Term.dest_var candidate of
+              SOME (name, _) => MFN.is_iterator_suc_name name
+            | NONE => false
+        val successors = HolKernel.find_terms is_successor equation
+      in
+        not (null successors) andalso
+        List.all (fn successor =>
+          #1 (Type.dom_rng (Term.type_of successor)) = expected_ty andalso
+          MFH.iterator_marker_of_term context successor =
+            SOME MFH.IteratorSuc) successors
+      end
+  in
+    generic_ty <> concrete_ty andalso
+    length (!(#iterator_table context)) = 2 andalso
+    (case generic_equations of
+         [equation] => valid_successors generic_ty equation
+       | _ => false) andalso
+    (case concrete_equations of
+         [equation] => valid_successors concrete_ty equation
+       | _ => false)
+  end
+
+val _ = require_msg (check_result mf_joint_poly_iterator_instances)
+  (fn () => "polymorphic mutual instances reused stale iterator markers")
   (fn () => ()) ()
 
 fun mf_star_linear_pred_goldens () =
@@ -2845,6 +3089,21 @@ fun mf_iterator_scope_rows_and_repair () =
       (binary_iterator, 10)
     val unchanged = MFS.repair_iterator_assign context
       [(iterator_ty, 9), (``:num``, 3)] (``:num``, 3)
+    val mutual_even = ``zoo_mutual_nonwf_lfp : num -> bool``
+    val mutual_odd =
+      ``zoo_mutual_nonwf_other_lfp : num -> bool``
+    val mutual_application = MFH.unrolled_inductive_pred_const
+      context false mutual_odd
+    val (_, mutual_arguments) = HolKernel.strip_comb mutual_application
+    val mutual_iterator_ty = Term.type_of (hd mutual_arguments)
+    val second_member_row = MFS.block_for_type context false cards maxes
+      [(SOME mutual_even, [4]), (NONE, [0])] [] mutual_iterator_ty
+    val first_member_row = MFS.block_for_type context false cards maxes
+      [(SOME mutual_even, [7]), (SOME mutual_odd, [3]),
+       (NONE, [0])] [] mutual_iterator_ty
+    val mutual_repaired = MFS.repair_iterator_assign context
+      [(mutual_iterator_ty, 9), (``:num``, 3)]
+      (mutual_iterator_ty, 9)
     val (skipped, scopes) = MFS.all_scopes context false cards maxes
       [(NONE, [0, 1, 2])] [] [iterator_ty, ``:num``] [] [] []
     fun iterator_card (scope : MFS.scope) =
@@ -2861,6 +3120,13 @@ fun mf_iterator_scope_rows_and_repair () =
     #2 repaired = 3 andalso #2 binary_repaired = 9 andalso
     Type.compare (#1 unchanged, ``:num``) = EQUAL andalso
     #2 unchanged = 3 andalso
+    (case second_member_row of
+         [(MFS.Card ty, [5])] => ty = mutual_iterator_ty
+       | _ => false) andalso
+    (case first_member_row of
+         [(MFS.Card ty, [4])] => ty = mutual_iterator_ty
+       | _ => false) andalso
+    #2 mutual_repaired = 6 andalso
     skipped = 0 andalso map iterator_card scopes =
       [SOME 1, SOME 2, SOME 3] andalso
     MFS.is_type_fundamentally_monotonic iterator_ty andalso
@@ -9396,6 +9662,17 @@ val soundness_corpus =
    ("sound rf check_all",
     ``(x : refute$rf2) = rf2_1 \/ x = rf2_2``)]
 
+(* Inductive predicates are intentionally absent from the QC corpus.  These
+   entries run only through MF and turn any unsound joint counterexample into
+   an ExpectNone failure. *)
+val mf_mutual_soundness_corpus =
+  [("joint-wf mutual parity",
+    ``(zoo_mutual_lfp n <=> zoo_even n) /\
+      (zoo_mutual_other_lfp n <=> zoo_odd n)``),
+   ("joint-unrolled mutual parity",
+    ``(zoo_mutual_nonwf_lfp n <=> zoo_even n) /\
+      (zoo_mutual_nonwf_other_lfp n <=> zoo_odd n)``)]
+
 fun corpus_soundness () =
   List.app (fn (name, tm) =>
     tc {name = "Refute corpus: " ^ name, cfg = corpus_config,
@@ -10195,16 +10472,15 @@ val mf_acceptance_cases : mf_acceptance_case list =
     tm = ``~zoo_unroll_lfp 2``,
     expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = true},
-   {name = "mutual inductive predicate refusal",
-    tm = ``zoo_mutual_other_lfp n``,
-    expect = ExpectUnknown, cert_pin = MfCertIgnored,
-    unknown_reason = SOME "mutual inductive predicate group",
-    sat4j_smoke = false},
-   {name = "GSPEC refused-predicate fallback",
-    tm = ``x IN GSPEC (\n : num. (n, zoo_mutual_other_lfp n))``,
-    expect = ExpectUnknown, cert_pin = MfCertIgnored,
-    unknown_reason = SOME "mutual inductive predicate group",
-    sat4j_smoke = false}
+   {name = "joint-wf mutual inductive equations",
+    tm = ``zoo_mutual_lfp n ==> zoo_mutual_other_lfp n``,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
+    unknown_reason = NONE, sat4j_smoke = false},
+   {name = "joint mutual inductive unrolling",
+    tm = ``zoo_mutual_nonwf_lfp n ==>
+           zoo_mutual_nonwf_other_lfp n``,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
+    unknown_reason = NONE, sat4j_smoke = false}
   ]
 
 (* PLAN_M3 section 13.3: both engines run sequentially on the same
@@ -10380,7 +10656,8 @@ fun run_mf_task20_suites () =
     let val solver = configured_mf_test_solver ()
     in
       List.app (mf_differential_test solver) mf_differential_cases;
-      List.app (mf_soundness_test solver) soundness_corpus;
+      List.app (mf_soundness_test solver)
+        (soundness_corpus @ mf_mutual_soundness_corpus);
       mf_instance_loop_stops_at_reachable_genuine solver;
       mf_native_polymorphic_certification solver;
       mf_mono_driver_scope_fusion solver
