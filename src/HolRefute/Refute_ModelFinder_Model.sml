@@ -791,7 +791,14 @@ fun format_term_matches pattern actual =
         pattern_thy = actual_thy andalso pattern_name = actual_name andalso
         MFH.type_matches_unboxed
           (Term.type_of pattern, Term.type_of actual)
-    | _ => Term.aconv pattern actual
+    | _ =>
+        (case (Lib.total Term.dest_var pattern,
+               Lib.total Term.dest_var actual) of
+             (SOME (pattern_name, pattern_ty),
+              SOME (actual_name, actual_ty)) =>
+               pattern_name = actual_name andalso
+               MFH.type_matches_unboxed (pattern_ty, actual_ty)
+           | _ => Term.aconv pattern actual)
 
 fun binder_count ty = length (#1 (boolSyntax.strip_fun
   (MFH.uniterize_unarize_unbox_etc_type ty)))
@@ -799,21 +806,57 @@ fun binder_count ty = length (#1 (boolSyntax.strip_fun
 fun abstraction_count term =
   if Term.is_abs term then 1 + abstraction_count (Term.body term) else 0
 
+fun skolem_arity name =
+  if MFN.is_skolem_name name then
+    let
+      val (_, layer) = Substring.position MFN.skolem_prefix
+        (Substring.full name)
+    in
+      if Substring.isEmpty layer then NONE
+      else
+        let
+          val suffix = Substring.triml (size MFN.skolem_prefix) layer
+          val (arity, _) = Substring.position "@" suffix
+        in
+          Int.fromString (Substring.string arity)
+        end
+    end
+  else
+    NONE
+
 fun const_format context term =
   let
     val count = binder_count (Term.type_of term)
+    val generated_name = Option.map #1 (Lib.total Term.dest_var term)
   in
-    if Term.is_const term then
-      case MFH.def_of_const context term of
-          SOME rhs =>
-            if MFH.raw_fixpoint_kind term <> MFH.NoFp orelse
-               MFH.fixpoint_kind_of_rhs rhs <> MFH.NoFp then
-              let val fixed = Int.min (count, abstraction_count rhs)
-              in [fixed, count - fixed] end
-            else [count]
-        | NONE => [count]
-    else
-      [count]
+    case generated_name of
+        SOME name =>
+          if MFN.is_unrolled_name name then
+            let
+              val (_, predicate_ty) = Type.dom_rng (Term.type_of term)
+              val original = user_friendly_const []
+                (MFN.original_name name) predicate_ty
+            in
+              const_format context original
+            end
+          else
+            (case skolem_arity name of
+                 SOME fixed =>
+                   [Int.min (fixed, count), Int.max (0, count - fixed)]
+               | NONE => [count])
+      | NONE =>
+          if Term.is_const term then
+            case MFH.def_of_const context term of
+                SOME rhs =>
+                  if MFH.raw_fixpoint_kind term <> MFH.NoFp orelse
+                     MFH.fixpoint_kind_of_rhs rhs <> MFH.NoFp then
+                    let val fixed =
+                      Int.min (count, abstraction_count rhs)
+                    in [fixed, count - fixed] end
+                  else [count]
+              | NONE => [count]
+          else
+            [count]
   end
 
 fun default_format formats =
@@ -827,8 +870,19 @@ fun lookup_format context formats term =
              SOME pattern => format_term_matches pattern term
            | NONE => false) formats of
       SOME (_, format) => format
-    | NONE => intersect_formats (default_format formats)
-        (const_format context term)
+    | NONE =>
+        let
+          val generated =
+            case Lib.total Term.dest_var term of
+                SOME (name, _) => MFN.is_reserved_name name
+              | NONE => false
+        in
+          if Term.is_const term orelse generated then
+            intersect_formats (default_format formats)
+              (const_format context term)
+          else
+            default_format formats
+        end
 
 fun format_term_type context formats term =
   format_type (default_format formats) (lookup_format context formats term)
@@ -838,17 +892,6 @@ fun format_metadata_name name =
   case uncurry_info name of
       SOME (_, _, original) => format_metadata_name original
     | NONE => name
-
-fun skolem_arity name =
-  if MFN.is_skolem_name name then
-    let
-      val suffix = String.extract (name, size MFN.skolem_prefix, NONE)
-      val (arity, _) = Substring.position "@" (Substring.full suffix)
-    in
-      Int.fromString (Substring.string arity)
-    end
-  else
-    NONE
 
 fun repair_special_format fixed_indices count format =
   let
@@ -895,25 +938,36 @@ fun format_term_type_for_name context formats special_funs name term =
       SOME format =>
         format_type (default_format formats) format (Term.type_of term)
     | NONE =>
-        (case List.find (fn (key, _) =>
-                 case key of
-                     SOME pattern => format_term_matches pattern term
-                   | NONE => false) formats of
-             SOME (_, format) =>
-               format_type (default_format formats) format
-                 (Term.type_of term)
-           | NONE =>
-               (case skolem_arity metadata_name of
-                    SOME fixed =>
-                      let val count = binder_count (Term.type_of term)
-                      in
-                        format_type (default_format formats)
-                          (intersect_formats (default_format formats)
-                            [Int.min (fixed, count),
-                             Int.max (0, count - fixed)])
-                          (Term.type_of term)
-                      end
-                  | NONE => format_term_type context formats term))
+        if MFN.is_unrolled_name metadata_name then
+          let
+            val (_, predicate_ty) = Type.dom_rng (Term.type_of term)
+            val predicate = user_friendly_const special_funs
+              (MFN.original_name metadata_name) predicate_ty
+          in
+            format_type (default_format formats)
+              (lookup_format context formats predicate) (Term.type_of term)
+          end
+        else
+          case skolem_arity metadata_name of
+              SOME fixed =>
+                let val count = binder_count (Term.type_of term)
+                in
+                  format_type (default_format formats)
+                    (intersect_formats (default_format formats)
+                      [Int.min (fixed, count),
+                       Int.max (0, count - fixed)])
+                    (Term.type_of term)
+                end
+            | NONE =>
+                (case List.find (fn (key, _) =>
+                         case key of
+                             SOME pattern =>
+                               format_term_matches pattern term
+                           | NONE => false) formats of
+                     SOME (_, format) =>
+                       format_type (default_format formats) format
+                         (Term.type_of term)
+                   | NONE => format_term_type context formats term)
   end
 
 fun pair_leaves ty =
@@ -1142,10 +1196,12 @@ fun format_fun target_ty term =
               end
             val expanded = map expand outer_pairs
             val pairs = List.concat (map #1 expanded)
+            val empty_set_default =
+              case dest_literal_set outer_marker of
+                  SOME [] => true
+                | _ => false
             val all_sets = MFH.is_boolean_type target_range andalso
-              List.all #2 expanded andalso
-              (not (null expanded) orelse
-               Option.isSome (dest_literal_set outer_marker))
+              empty_set_default andalso List.all #2 expanded
           in
             if all_sets then
               make_literal_set target_domain
@@ -1197,7 +1253,24 @@ fun format_fun target_ty term =
             candidate
         end
       else if MFH.is_pair_type target andalso MFH.is_pair_type source then
-        reshape_pair target source candidate
+        if pairSyntax.is_pair candidate then
+          let
+            val source_tys = pair_leaves source
+            val target_tys = pair_leaves target
+            val source_terms = flatten_pair_term source candidate
+            val _ = if length source_tys = length target_tys then ()
+              else raise err "format_fun" "tuple arities differ"
+            val converted = ListPair.map
+              (fn (target_ty, (source_ty, source_term)) =>
+                do_term target_ty source_ty source_term)
+              (target_tys, ListPair.zip (source_tys, source_terms))
+            val (result, rest) = build_pair_term target converted
+          in
+            if null rest then result
+            else raise err "format_fun" "unused converted tuple leaves"
+          end
+        else
+          marker_with_type target candidate
       else
         marker_with_type target candidate
   in
@@ -1290,10 +1363,7 @@ fun reconstruct_with formatting
       case formatting of
           NONE => value
         | SOME (format_context, formats) =>
-            Option.getOpt
-              (Lib.total (format_fun
-                (format_term_type format_context formats key)) value,
-               value)
+            format_fun (format_term_type format_context formats key) value
 
     fun binding term =
       let val name = free_name_for_term free_names term
@@ -1335,12 +1405,9 @@ fun reconstruct_with formatting
           case formatting of
               NONE => ordinary_value
             | SOME (context, formats) =>
-                Option.getOpt
-                  (Lib.total (format_fun
-                    (format_term_type_for_name context formats special_funs
-                      nickname lhs))
-                     raw_value,
-                   ordinary_value)
+                format_fun
+                  (format_term_type_for_name context formats special_funs
+                    nickname lhs) raw_value
       in
         if MFNT.is_skolem_name name then
           (evals, (MFN.original_name nickname, display_value) :: skolems,
@@ -1451,10 +1518,30 @@ fun model_report ({skolems, consts, types, ...} : reconstruction) =
 fun display_counterexample
       (reconstructed : reconstruction)
       (cex : Refute_Core.counterexample) : Refute_Core.counterexample =
-  {backend = #backend cex, substrate = #substrate cex,
-   certainty = #certainty cex, bindings = #bindings reconstructed,
-   evals = #evals reconstructed, cert = #cert cex, scope = #scope cex,
-   model = SOME (model_report reconstructed), stats = #stats cex}
+  let
+    fun displayed_value entries (key, value) =
+      case List.find (fn (candidate, _) => Term.aconv candidate key)
+             entries of
+          SOME (_, displayed) =>
+            if is_unknown displayed then
+              (key, displayed)
+            else if same_type
+              (Term.type_of value) (Term.type_of displayed) then
+              (key, value)
+            else
+              (key, Option.getOpt
+                (Lib.total (format_fun (Term.type_of displayed)) value,
+                 displayed))
+        | NONE => (key, value)
+  in
+    {backend = #backend cex, substrate = #substrate cex,
+     certainty = #certainty cex,
+     bindings = map (displayed_value (#bindings reconstructed))
+       (#bindings cex),
+     evals = map (displayed_value (#evals reconstructed)) (#evals cex),
+     cert = #cert cex, scope = #scope cex,
+     model = SOME (model_report reconstructed), stats = #stats cex}
+  end
 
 fun replace_irrelevant term =
   if combinSyntax.is_K_1 term then

@@ -4347,10 +4347,31 @@ fun mf_format_grouping_goldens () =
       (pred_setSyntax.mk_empty ``:bool``, ``:num``)
     val formatted_empty_set = MFM.format_fun
       ``:(num # bool) -> bool`` empty_curried_set
+    val partial_curried_set = Term.mk_comb
+      (combinSyntax.mk_update (``0 : num``, inner_set),
+       combinSyntax.mk_K_1
+         (MFN.unknown_marker ``:bool -> bool``, ``:num``))
+    val formatted_partial_set = MFM.format_fun
+      ``:(num # bool) -> bool`` partial_curried_set
+    val expected_partial_set = Term.mk_comb
+      (combinSyntax.mk_update
+         (pairSyntax.mk_pair (``0 : num``, boolSyntax.F), boolSyntax.T),
+       combinSyntax.mk_K_1
+         (MFN.unknown_marker ``:bool``, ``:num # bool``))
+    val pair_curried = pairSyntax.mk_pair (curried, boolSyntax.T)
+    val formatted_pair = MFM.format_fun
+      ``:((num # bool) -> num) # bool`` pair_curried
+    val expected_pair = pairSyntax.mk_pair (expected, boolSyntax.T)
     val cond_pattern = ``COND : bool -> 'a -> 'a -> 'a``
     val cond_number = ``COND : bool -> num -> num -> num``
     val formats = [(SOME cond_pattern, [2]), (NONE, [1])]
     val instance_ty = MFM.format_term_type context formats cond_number
+    val free_pattern = Term.mk_var
+      ("polymorphic_format", ``:'a -> 'a -> bool``)
+    val free_instance = Term.mk_var
+      ("polymorphic_format", ``:num -> num -> bool``)
+    val free_instance_ty = MFM.format_term_type context
+      [(SOME free_pattern, [2]), (NONE, [1])] free_instance
     val scope = MFS.scope_from_descriptor context false [] []
       ([(``:num``, 2)], [])
     val cond = MFNT.ConstName
@@ -4379,6 +4400,41 @@ fun mf_format_grouping_goldens () =
       case #consts displayed of
           [(lhs, "=", value)] =>
             Term.same_const lhs cond_number andalso
+            Term.type_of value = ``:bool -> (num # num) -> num``
+        | _ => false
+    val iterator_ty = Lib.with_flag (Feedback.emit_WARNING, false)
+      Type.mk_vartype "'refute$lfpit$format$bool$COND"
+    val unrolled = MFN.mk_unrolled "bool$COND" iterator_ty
+      (Term.type_of cond_number)
+    val unrolled_name = MFNT.ConstName
+      (#1 (Term.dest_var unrolled), Term.type_of unrolled, MFR.Any)
+    val unrolled_displayed = MFM.reconstruct_formatted
+      {context = context,
+       formats = [(SOME cond_pattern, [1]), (NONE, [2])],
+       scope = scope, atoms = [(NONE, [])], special_funs = [],
+       real_frees = [], eval_terms = [], free_names = [], sel_names = [],
+       nonsel_names = [unrolled_name], rel_table = MFNT.NameTable.empty,
+       bounds = []}
+    val unrolled_override_preserved =
+      case #consts unrolled_displayed of
+          [(lhs, "=", value)] =>
+            Term.type_of lhs = ``:num -> bool -> num -> num -> num`` andalso
+            Term.type_of value = ``:num -> bool -> num -> num -> num``
+        | _ => false
+    val skolem = MFN.mk_skolem 1 0 "bool$COND"
+      (Term.type_of cond_number)
+    val skolem_name = MFNT.ConstName
+      (#1 (Term.dest_var skolem), Term.type_of skolem, MFR.Any)
+    val skolem_displayed = MFM.reconstruct_formatted
+      {context = context,
+       formats = [(SOME cond_pattern, [3]), (NONE, [3])],
+       scope = scope, atoms = [(NONE, [])], special_funs = [],
+       real_frees = [], eval_terms = [], free_names = [], sel_names = [],
+       nonsel_names = [skolem_name], rel_table = MFNT.NameTable.empty,
+       bounds = []}
+    val skolem_dependency_preserved =
+      case #skolems skolem_displayed of
+          [(_, value)] =>
             Term.type_of value = ``:bool -> (num # num) -> num``
         | _ => false
     val special = MFN.mk_special 1 "bool$COND"
@@ -4436,11 +4492,38 @@ fun mf_format_grouping_goldens () =
             Term.type_of binding = ``:(bool # num) -> num`` andalso
             Term.type_of eval = ``:(bool # num) -> num``
         | _ => false
+    val exact_key = ``exact_format_eval : num``
+    val exact_cex : Refute_Core.counterexample =
+      {backend = "kodkod", substrate = "kodkod",
+       certainty = Refute_Core.Genuine, bindings = [],
+       evals = [(exact_key, ``7 : num``)], cert = NONE,
+       scope = NONE, model = NONE, stats = []}
+    val exact_reconstruction : MFM.reconstruction =
+      {bindings = [], evals = [(exact_key, ``0 : num``)],
+       skolems = [], consts = [], types = [], codatatypes_ok = true}
+    val exact_eval_preserved =
+      case #evals
+        (MFM.display_counterexample exact_reconstruction exact_cex) of
+          [(_, value)] => Term.aconv value ``7 : num``
+        | _ => false
+    val unknown_reconstruction : MFM.reconstruction =
+      {bindings = [],
+       evals = [(exact_key, MFN.unknown_marker ``:num``)],
+       skolems = [], consts = [], types = [], codatatypes_ok = true}
+    val displayed_unknown_preserved =
+      case #evals
+        (MFM.display_counterexample unknown_reconstruction exact_cex) of
+          [(_, value)] =>
+            (case Lib.total Term.dest_var value of
+                 SOME (name, _) => name = "?"
+               | NONE => false)
+        | _ => false
   in
     MFM.format_type [1] [2] ``:num -> bool -> num`` = grouped_ty andalso
     MFM.format_type [1] [2] hotel_ty =
       ``:num -> (bool # num) -> bool`` andalso
     instance_ty = ``:bool -> (num # num) -> num`` andalso
+    free_instance_ty = ``:(num # num) -> bool`` andalso
     Term.type_of formatted = grouped_ty andalso
     Term.aconv formatted expected andalso
     Term.aconv formatted_hotel expected_hotel andalso
@@ -4449,8 +4532,13 @@ fun mf_format_grouping_goldens () =
     Term.aconv recurried_set curried_set andalso
     Term.aconv formatted_empty_set
       (pred_setSyntax.mk_empty ``:num # bool``) andalso
-    display_path_grouped andalso special_format_repaired andalso
-    uncurried_special_repaired andalso assignments_grouped
+    Term.aconv formatted_partial_set expected_partial_set andalso
+    Term.aconv formatted_pair expected_pair andalso
+    display_path_grouped andalso unrolled_override_preserved andalso
+    skolem_dependency_preserved andalso special_format_repaired andalso
+    uncurried_special_repaired andalso
+    assignments_grouped andalso exact_eval_preserved andalso
+    displayed_unknown_preserved
   end
 
 val _ = require_msg (check_result mf_format_grouping_goldens) (fn () =>
@@ -7351,10 +7439,11 @@ local
         |> upd_sat_solver solver
         |> upd_evals [``I (1 : num)``]
         |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
-      val plain = Refute.refute base ``!n : num. n = 0``
+      val goal =
+        ``(n : num) = 0 /\ (I T \/ ~(I T))``
+      val plain = Refute.refute base goal
       val whacked = Refute.refute
-        (upd_whack [``I : 'a -> 'a``] base)
-        ``!n : num. n = 0``
+        (upd_whack [``I : 'a -> 'a``] base) goal
       fun verdict outcome =
         case outcome of
             Refute.Counterexample
