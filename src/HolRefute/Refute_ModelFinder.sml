@@ -255,13 +255,17 @@ fun replace_stats stats (cex : Refute_Core.counterexample) =
 fun prepare_instance_input (instance : Refute_Core.instance) =
   let
     val input_original = #original instance
-    val (original, renaming) = MFN.rename_colliding_goal_vars
-      (MFN.reserved_frees input_original) input_original
+    val (original, renaming, type_renaming) =
+      MFN.rename_colliding_goal_vars
+        (MFN.reserved_frees input_original) input_original
     val _ = MFN.assert_user_goal original
     val renaming_subst = map (fn (old, fresh) =>
       {redex = old, residue = fresh}) renaming
+    fun rename term = term
+      |> Term.subst renaming_subst
+      |> Term.inst type_renaming
   in
-    (original, map (Term.subst renaming_subst) (#evals instance))
+    (original, map rename (#evals instance))
   end
 
 fun run_instance deadline started (config : Refute_Core.config)
@@ -283,6 +287,7 @@ fun run_instance deadline started (config : Refute_Core.config)
     val (nondef_ts, def_ts, need_ts, got_all_mono_user_axioms,
          no_poly_user_axioms, binarize) =
       MFP.preprocess_formulas context [] negated
+    val _ = MFH.refresh_iterator_arg_types context (nondef_ts @ def_ts)
     val _ = MFH.print_wf_cache context
     val nondef_us = map (MFNT.nut_from_term context MFNT.Eq) nondef_ts
     val def_us = map (MFNT.nut_from_term context MFNT.DefEq) def_ts
@@ -370,8 +375,8 @@ fun run_instance deadline started (config : Refute_Core.config)
          " can use a more precise finite encoding: " ^
          String.concatWith ", " (map type_name finitizable_types) ^ "\n")
     val (skipped, scopes) = MFS.all_scopes context binarize
-      (#card mf) (#max mf) (#bits mf) mono_types nonmono_types deep_types
-      finitizable_types
+      (#card mf) (#max mf) (#iter mf) (#bits mf) mono_types nonmono_types
+      deep_types finitizable_types
     val batch_size =
       if #debug mf then 1 else Int.max (1, #batch_size mf)
     val batches = MFU.chunk_list batch_size scopes

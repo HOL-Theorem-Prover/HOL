@@ -10,6 +10,8 @@ structure Refute_ModelFinder_Names = struct
   val discr_prefix = reserved_prefix ^ "is" ^ name_sep
   val lfp_iterator_prefix = reserved_prefix ^ "lfpit" ^ name_sep
   val gfp_iterator_prefix = reserved_prefix ^ "gfpit" ^ name_sep
+  val iterator_zero_prefix = reserved_prefix ^ "iterzero" ^ name_sep
+  val iterator_suc_prefix = reserved_prefix ^ "itersuc" ^ name_sep
   val unrolled_prefix = reserved_prefix ^ "unroll" ^ name_sep
   val base_prefix = reserved_prefix ^ "base" ^ name_sep
   val step_prefix = reserved_prefix ^ "step" ^ name_sep
@@ -133,6 +135,32 @@ structure Refute_ModelFinder_Names = struct
   fun mk_discriminator constructor ty =
     mk_reserved_var (discr_prefix ^ constructor) ty
 
+  fun mk_iterator_zero token ty =
+    mk_reserved_var (iterator_zero_prefix ^ token) ty
+
+  fun mk_iterator_suc token ty =
+    mk_reserved_var (iterator_suc_prefix ^ token) (Type.-->(ty, ty))
+
+  fun mk_unrolled original iterator_ty predicate_ty =
+    mk_reserved_var (unrolled_prefix ^ original)
+      (Type.-->(iterator_ty, predicate_ty))
+
+  fun mk_ubfp original predicate_ty =
+    mk_reserved_var (ubfp_prefix ^ original) predicate_ty
+
+  fun mk_lbfp original predicate_ty =
+    mk_reserved_var (lbfp_prefix ^ original) predicate_ty
+
+  fun is_iterator_zero_name name =
+    String.isPrefix iterator_zero_prefix name
+
+  fun is_iterator_suc_name name =
+    String.isPrefix iterator_suc_prefix name
+
+  fun is_unrolled_name name = has_generated_layer unrolled_prefix name
+  fun is_ubfp_name name = has_generated_layer ubfp_prefix name
+  fun is_lbfp_name name = has_generated_layer lbfp_prefix name
+
   fun mk_selector index constructor ty =
     if index < 0 then
       raise err "mk_selector" "negative selector index"
@@ -187,13 +215,26 @@ structure Refute_ModelFinder_Names = struct
   fun reserved_variables term =
     List.filter (is_reserved_name o variable_name) (Term.all_vars term)
 
+  fun is_reserved_type_variable ty =
+    Type.is_vartype ty andalso
+    String.isPrefix ("'" ^ reserved_prefix) (Type.dest_vartype ty)
+
+  fun reserved_type_variables term =
+    List.filter is_reserved_type_variable (Term.type_vars_in_term term)
+
   fun assert_user_goal term =
     case reserved_variables term of
-        [] => ()
-      | variable :: _ =>
+        variable :: _ =>
           raise err "assert_user_goal"
             ("reserved variable in user goal: " ^
              variable_name variable)
+      | [] =>
+          (case reserved_type_variables term of
+               ty :: _ =>
+                 raise err "assert_user_goal"
+                   ("reserved type variable in user goal: " ^
+                    Type.dest_vartype ty)
+             | [] => ())
 
   fun theorem_terms theorem = Thm.concl theorem :: Thm.hyp theorem
 
@@ -213,6 +254,7 @@ structure Refute_ModelFinder_Names = struct
   fun rename_colliding_goal_vars fabricated goal =
     let
       val goal_frees = Term.free_vars_lr goal
+      val goal_tyvars = Term.type_vars_in_term goal
 
       fun rename (variable, (avoids, substitutions, renaming)) =
         if member_name (variable_name variable) fabricated then
@@ -232,12 +274,35 @@ structure Refute_ModelFinder_Names = struct
         else
           (avoids, substitutions, renaming)
 
+      fun fresh_tyvar avoids serial =
+        let val ty = Type.mk_vartype ("'user" ^ Int.toString serial)
+        in
+          if List.exists (fn old => old = ty) avoids then
+            fresh_tyvar avoids (serial + 1)
+          else ty
+        end
+
+      fun rename_tyvar (ty, (serial, avoids, substitutions)) =
+        if is_reserved_type_variable ty then
+          let
+            val fresh = fresh_tyvar avoids serial
+          in
+            (serial + 1, fresh :: avoids,
+             {redex = ty, residue = fresh} :: substitutions)
+          end
+        else
+          (serial, avoids, substitutions)
+
       val (_, substitutions, renaming) =
         List.foldl rename (fabricated @ goal_frees, [], []) goal_frees
-      val renamed = Term.subst (rev substitutions) goal
+      val (_, _, type_substitutions) =
+        List.foldl rename_tyvar (0, goal_tyvars, []) goal_tyvars
+      val type_substitutions = rev type_substitutions
+      val renamed = Term.inst type_substitutions
+        (Term.subst (rev substitutions) goal)
       val _ = assert_user_goal renamed
     in
-      (renamed, rev renaming)
+      (renamed, rev renaming, type_substitutions)
     end
 end
 
@@ -253,6 +318,9 @@ structure Refute_ModelFinder_HOL = struct
   type const_table = term list KNametab.table
   type special_fun = (term * int list * term list) * term
   type wf_cache = (term * (bool * bool)) list
+  type iterator_info =
+    {pred : term, arg_tys : hol_type list, gfp : bool, token : string}
+  type iterator_table = (hol_type * iterator_info) list ref
 
   datatype fixpoint_kind = Lfp | Gfp | NoFp
 
@@ -304,6 +372,7 @@ structure Refute_ModelFinder_HOL = struct
      intro_table : const_table ref,
      case_table : const_table ref,
      fixpoint_cache : fixpoint_cache ref,
+     iterator_table : iterator_table,
      ersatz_table : ersatz list,
      skolems : (string * string list) list ref,
      special_funs : special_fun list ref,
@@ -1052,9 +1121,41 @@ structure Refute_ModelFinder_HOL = struct
         SOME {kind, ...} => kind
       | NONE => raw_fixpoint_kind constant
 
+  fun generated_name constant =
+    case Lib.total Term.dest_var constant of
+        SOME (name, _) =>
+          if Refute_ModelFinder_Names.is_reserved_name name then SOME name
+          else NONE
+      | NONE => NONE
+
+  fun is_fixpoint_bound_const constant =
+    case generated_name constant of
+        SOME name => Refute_ModelFinder_Names.is_ubfp_name name orelse
+                     Refute_ModelFinder_Names.is_lbfp_name name
+      | NONE => false
+
+  fun is_unrolled_const constant =
+    case generated_name constant of
+        SOME name => Refute_ModelFinder_Names.is_unrolled_name name
+      | NONE => false
+
+  fun is_iterator_marker_const constant =
+    case generated_name constant of
+        SOME name =>
+          Refute_ModelFinder_Names.is_iterator_zero_name name orelse
+          Refute_ModelFinder_Names.is_iterator_suc_name name
+      | NONE => false
+
   fun is_raw_inductive_pred context constant =
     not (is_built_in_const constant) andalso
+    not (is_fixpoint_bound_const constant) andalso
+    not (is_unrolled_const constant) andalso
+    not (is_iterator_marker_const constant) andalso
     fixpoint_kind_of_const context constant <> NoFp
+
+  fun is_inductive_pred context constant =
+    is_raw_inductive_pred context constant orelse
+    is_fixpoint_bound_const constant
 
   fun is_mutually_inductive_pred context constant =
     case fixpoint_group_of_const context constant of
@@ -1078,13 +1179,26 @@ structure Refute_ModelFinder_HOL = struct
     is_raw_equational_fun context constant orelse
     is_raw_inductive_pred context constant
 
+  fun substituted_fixpoint_axioms context generated =
+    let
+      val key = original_const_key generated
+      val original = Term.mk_thy_const
+        {Thy = #Thy key, Name = #Name key, Ty = Term.type_of generated}
+      val substitution = [{redex = original, residue = generated}]
+    in
+      map (Term.subst substitution) (case_props_for_const context original)
+    end
+    handle HOL_ERR _ => []
+
   fun equational_fun_axioms
         (context as {simp_table, psimp_table, ...} : mf_context) constant =
     case def_props_for_const (!simp_table) constant of
         [] =>
           (case def_props_for_const psimp_table constant of
                [] =>
-                 if is_raw_inductive_pred context constant then
+                 if is_fixpoint_bound_const constant then
+                   substituted_fixpoint_axioms context constant
+                 else if is_raw_inductive_pred context constant then
                    case_props_for_const context constant
                  else
                  (case def_of_const context constant of
@@ -1378,11 +1492,7 @@ structure Refute_ModelFinder_HOL = struct
             SOME ("mutual inductive predicate group containing " ^
               Parse.term_to_string constant ^
               ": unsupported until TASK_13")
-          else if is_well_founded_inductive_pred context constant then NONE
-          else SOME ("inductive predicate " ^
-            Parse.term_to_string constant ^
-            " could not be proved well-founded; unrolling is unsupported " ^
-            "until TASK_11")
+          else NONE
 
   fun first_fixpoint_refusal context term =
     let
@@ -1458,14 +1568,191 @@ structure Refute_ModelFinder_HOL = struct
         SOME {Thy = "refute", Tyop = "pairbox", ...} => true
       | _ => false
 
-  fun is_iterator_type ty =
+  fun is_lfp_iterator_type ty =
     Type.is_vartype ty andalso
-    let val name = Type.dest_vartype ty
+    String.isPrefix
+      ("'" ^ Refute_ModelFinder_Names.lfp_iterator_prefix)
+      (Type.dest_vartype ty)
+
+  fun is_gfp_iterator_type ty =
+    Type.is_vartype ty andalso
+    String.isPrefix
+      ("'" ^ Refute_ModelFinder_Names.gfp_iterator_prefix)
+      (Type.dest_vartype ty)
+
+  fun is_iterator_type ty =
+    is_lfp_iterator_type ty orelse is_gfp_iterator_type ty
+
+  fun iterator_info_for_type
+        ({iterator_table, ...} : mf_context) ty =
+    Option.map #2 (List.find (fn (other, _) => other = ty) (!iterator_table))
+
+  fun refresh_iterator_arg_types
+        ({iterator_table, ...} : mf_context) terms =
+    let
+      val generated = List.concat (map
+        (HolKernel.find_terms (fn term =>
+          case Lib.total Term.dest_var term of
+              SOME (name, _) => Refute_ModelFinder_Names.is_unrolled_name name
+            | NONE => false)) terms)
+
+      fun transformed_arg_tys iterator_ty fallback =
+        let
+          fun matches term =
+            case #1 (boolSyntax.strip_fun (Term.type_of term)) of
+                first :: _ => first = iterator_ty
+              | [] => false
+        in
+          case List.find matches generated of
+              SOME term => tl (#1 (boolSyntax.strip_fun (Term.type_of term)))
+            | NONE => fallback
+        end
+
+      fun refresh (iterator_ty,
+            {pred, arg_tys, gfp, token} : iterator_info) =
+        (iterator_ty,
+         {pred = pred,
+          arg_tys = transformed_arg_tys iterator_ty arg_tys,
+          gfp = gfp, token = token} : iterator_info)
     in
-      String.isPrefix
-        ("'" ^ Refute_ModelFinder_Names.lfp_iterator_prefix) name orelse
-      String.isPrefix
-        ("'" ^ Refute_ModelFinder_Names.gfp_iterator_prefix) name
+      iterator_table := map refresh (!iterator_table)
+    end
+
+  fun iterator_type_for_const
+        ({iterator_table, ...} : mf_context) gfp pred =
+    case List.find (fn (_, {pred = other, gfp = other_gfp, ...}) =>
+           gfp = other_gfp andalso Term.aconv pred other) (!iterator_table) of
+        SOME (ty, _) => ty
+      | NONE =>
+          let
+            val key = original_const_key pred
+            val original = #Thy key ^ Refute_ModelFinder_Names.name_sep ^
+              #Name key
+            val prefix = if gfp then
+                Refute_ModelFinder_Names.gfp_iterator_prefix
+              else Refute_ModelFinder_Names.lfp_iterator_prefix
+            val base = "'" ^ prefix ^ original
+            val (arg_tys, result_ty) = boolSyntax.strip_fun
+              (Term.type_of pred)
+            val _ = if result_ty = Type.bool then () else
+              raise err "iterator_type_for_const"
+                "fixpoint constant is not a predicate"
+            val occupied = map (Type.dest_vartype o #1) (!iterator_table) @
+              map Type.dest_vartype
+                (List.concat (map Type.type_vars arg_tys))
+            fun fresh serial =
+              let
+                val name = if serial = 0 then base
+                  else base ^ Refute_ModelFinder_Names.name_sep ^
+                    Int.toString serial
+              in
+                if List.exists (fn old => old = name) occupied then
+                  fresh (serial + 1)
+                else name
+              end
+            val name = fresh 0
+            val ty = Lib.with_flag (Feedback.emit_WARNING, false)
+              Type.mk_vartype name
+            val token = String.extract (name, 1, NONE)
+            val info : iterator_info =
+              {pred = pred, arg_tys = arg_tys, gfp = gfp, token = token}
+            val _ = iterator_table := (ty, info) :: !iterator_table
+          in ty end
+
+  fun const_for_iterator_type context ty =
+    case iterator_info_for_type context ty of
+        SOME {pred, ...} => pred
+      | NONE => raise err "const_for_iterator_type"
+          "unregistered iterator type"
+
+  fun iterator_zero_for_type context ty =
+    case iterator_info_for_type context ty of
+        SOME {token, ...} =>
+          Refute_ModelFinder_Names.mk_iterator_zero token ty
+      | NONE => raise err "iterator_zero_for_type"
+          "unregistered iterator type"
+
+  fun iterator_suc_for_type context ty =
+    case iterator_info_for_type context ty of
+        SOME {token, ...} =>
+          Refute_ModelFinder_Names.mk_iterator_suc token ty
+      | NONE => raise err "iterator_suc_for_type"
+          "unregistered iterator type"
+
+  datatype iterator_marker = IteratorZero | IteratorSuc
+
+  fun iterator_marker_of_term context term =
+    case Lib.total Term.dest_var term of
+        SOME (name, ty) =>
+          if Refute_ModelFinder_Names.is_iterator_zero_name name andalso
+             Option.isSome (iterator_info_for_type context ty) andalso
+             Term.aconv term (iterator_zero_for_type context ty) then
+            SOME IteratorZero
+          else if Refute_ModelFinder_Names.is_iterator_suc_name name then
+            (case Lib.total Type.dom_rng ty of
+                 SOME (domain, range) =>
+                   if domain = range andalso
+                      Option.isSome (iterator_info_for_type context domain)
+                      andalso
+                      Term.aconv term (iterator_suc_for_type context domain)
+                   then SOME IteratorSuc else NONE
+               | NONE => NONE)
+          else NONE
+      | NONE => NONE
+
+  fun unrolled_inductive_pred_const context gfp pred =
+    let
+      val iterator_ty = iterator_type_for_const context gfp pred
+      val key = original_const_key pred
+      val original = #Thy key ^ Refute_ModelFinder_Names.name_sep ^ #Name key
+      val unrolled = Refute_ModelFinder_Names.mk_unrolled original
+        iterator_ty (Term.type_of pred)
+      val zero = iterator_zero_for_type context iterator_ty
+    in
+      if is_raw_equational_fun context unrolled then
+        Term.mk_comb (unrolled, zero)
+      else
+        let
+          val case_prop =
+            case case_props_for_const context pred of
+                [prop] => prop
+              | _ => raise err "unrolled_inductive_pred_const"
+                  "expected one fixpoint equation"
+          val (variables, body) = boolSyntax.strip_forall case_prop
+          val (premises, conclusion) = boolSyntax.strip_imp body
+          val (left, right) = boolSyntax.dest_eq conclusion
+          val (head, arguments) = HolKernel.strip_comb left
+          val _ = if same_fixpoint_const head pred then () else
+            raise err "unrolled_inductive_pred_const"
+              "fixpoint equation has the wrong head"
+          val iterator = Term.variant
+            (variables @ Term.free_vars_lr case_prop)
+            (Term.mk_var (Refute_ModelFinder_Names.iter_var_prefix,
+              iterator_ty))
+          val next = Term.mk_comb
+            (iterator_suc_for_type context iterator_ty, iterator)
+          val next_pred = Term.mk_comb (unrolled, next)
+          val right = Term.subst [{redex = pred, residue = next_pred}] right
+          val left = Term.list_mk_comb (unrolled, iterator :: arguments)
+          val equation = boolSyntax.list_mk_forall
+            (iterator :: variables,
+             boolSyntax.list_mk_imp
+               (premises, boolSyntax.mk_eq (left, right)))
+          val _ = add_simps (#simp_table context) unrolled [equation]
+        in
+          Term.mk_comb (unrolled, zero)
+        end
+    end
+
+  fun fixpoint_bound_const context upper pred =
+    let
+      val key = original_const_key pred
+      val original = #Thy key ^ Refute_ModelFinder_Names.name_sep ^ #Name key
+    in
+      if upper then
+        Refute_ModelFinder_Names.mk_ubfp original (Term.type_of pred)
+      else
+        Refute_ModelFinder_Names.mk_lbfp original (Term.type_of pred)
     end
 
   fun boxed_type_args ty = #Args (Type.dest_thy_type ty)
@@ -1493,6 +1780,25 @@ structure Refute_ModelFinder_HOL = struct
         else
           Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
             Args = map unarize_unbox_etc_type Args}
+      end
+
+  fun uniterize_unarize_unbox_etc_type ty =
+    if is_iterator_type ty then num_type
+    else if Type.is_vartype ty then ty
+    else
+      let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+      in
+        if Thy = "refute" andalso Tyop = "funbox" then
+          Type.-->(uniterize_unarize_unbox_etc_type (List.nth (Args, 0)),
+            uniterize_unarize_unbox_etc_type (List.nth (Args, 1)))
+        else if Thy = "refute" andalso Tyop = "pairbox" then
+          pairSyntax.mk_prod
+            (uniterize_unarize_unbox_etc_type (List.nth (Args, 0)),
+             uniterize_unarize_unbox_etc_type (List.nth (Args, 1)))
+        else
+          unarize_unbox_etc_type
+            (Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
+              Args = map uniterize_unarize_unbox_etc_type Args})
       end
 
   fun type_matches_unboxed (pattern, actual) =
@@ -2784,8 +3090,8 @@ structure Refute_ModelFinder_HOL = struct
           destroy_constrs, specialize, star_linear_preds, total_consts,
           needs, tac_timeout, evals, case_names, def_tables, nondef_table,
           nondefs, simp_table, psimp_table, choice_spec_table, intro_table,
-          case_table, fixpoint_cache, ersatz_table, skolems, special_funs,
-          wf_cache, constr_cache, ...}
+          case_table, fixpoint_cache, iterator_table, ersatz_table,
+          skolems, special_funs, wf_cache, constr_cache, ...}
          : mf_context) binary_ints : mf_context =
     {max_bisim_depth = max_bisim_depth, boxes = boxes, wfs = wfs,
      user_axioms = user_axioms, debug = debug, whacks = whacks,
@@ -2796,7 +3102,8 @@ structure Refute_ModelFinder_HOL = struct
      nondef_table = nondef_table, nondefs = nondefs, simp_table = simp_table,
      psimp_table = psimp_table, choice_spec_table = choice_spec_table,
      intro_table = intro_table, case_table = case_table,
-     fixpoint_cache = fixpoint_cache, ersatz_table = ersatz_table,
+     fixpoint_cache = fixpoint_cache, iterator_table = iterator_table,
+     ersatz_table = ersatz_table,
      skolems = skolems, special_funs = special_funs, wf_cache = wf_cache,
      constr_cache = constr_cache}
 
@@ -2831,6 +3138,7 @@ structure Refute_ModelFinder_HOL = struct
        intro_table = ref KNametab.empty,
        case_table = ref KNametab.empty,
        fixpoint_cache = ref [],
+       iterator_table = ref [],
        ersatz_table = current_ersatz_table (),
        skolems = ref [],
        special_funs = ref [],

@@ -246,6 +246,15 @@ fun mf_name_round_trips () =
     val bound = MFN.mk_bound_var 2 ty
     val congruence = MFN.mk_cong_var 0 ty
     val nested = MFN.sel_prefix_for 0 ^ var_name skolem
+    val iterator_ty = Lib.with_flag (Feedback.emit_WARNING, false)
+      Type.mk_vartype "'refute$lfpit$test$pred"
+    val iterator_zero = MFN.mk_iterator_zero
+      "refute$lfpit$test$pred" iterator_ty
+    val iterator_suc = MFN.mk_iterator_suc
+      "refute$lfpit$test$pred" iterator_ty
+    val unrolled = MFN.mk_unrolled "test$pred" iterator_ty
+      ``:num -> bool``
+    val upper = MFN.mk_ubfp "test$pred" ``:num -> bool``
   in
     var_name selector = "refute$sel2$list$CONS" andalso
     MFN.is_sel (var_name selector) andalso
@@ -274,7 +283,18 @@ fun mf_name_round_trips () =
     var_name (MFN.unrepresented_marker_ascii ty) = "..." andalso
     var_name (MFN.irrelevant_marker ty) = "_" andalso
     Parse.term_to_string (MFN.irrelevant_marker ty) = "_" andalso
-    var_name (MFN.fake_atom 1 ty) = "a1"
+    var_name (MFN.fake_atom 1 ty) = "a1" andalso
+    var_name iterator_zero =
+      "refute$iterzero$refute$lfpit$test$pred" andalso
+    var_name iterator_suc =
+      "refute$itersuc$refute$lfpit$test$pred" andalso
+    MFN.is_iterator_zero_name (var_name iterator_zero) andalso
+    MFN.is_iterator_suc_name (var_name iterator_suc) andalso
+    var_name unrolled = "refute$unroll$test$pred" andalso
+    var_name upper = "refute$ubfp$test$pred" andalso
+    MFN.is_unrolled_name (var_name unrolled) andalso
+    MFN.is_ubfp_name (var_name upper) andalso
+    MFN.original_name (var_name unrolled) = "test$pred"
   end
 
 val _ = require_msg (check_result mf_name_round_trips) (fn () =>
@@ -288,13 +308,20 @@ fun mf_variant_renames_goal_first () =
     val atom = Term.mk_var ("a1", ty)
     val goal = boolSyntax.mk_eq (question, atom)
     val fabricated = [MFN.unknown_marker ty, MFN.fake_atom 1 ty]
-    val (renamed, renaming) =
+    val (renamed, renaming, ordinary_type_renaming) =
       MFN.rename_colliding_goal_vars fabricated goal
     val selector = MFN.mk_selector 0 "list$CONS" ty
-    val (renamed_selector, selector_renaming) =
+    val (renamed_selector, selector_renaming, selector_type_renaming) =
       MFN.rename_colliding_goal_vars [selector]
         (boolSyntax.mk_eq (selector, selector))
+    val reserved_ty = Lib.with_flag (Feedback.emit_WARNING, false)
+      Type.mk_vartype "'refute$lfpit$user$collision"
+    val typed = Term.mk_var ("x", reserved_ty)
+    val (renamed_typed, typed_renaming, type_renaming) =
+      MFN.rename_colliding_goal_vars [] (boolSyntax.mk_eq (typed, typed))
   in
+    null ordinary_type_renaming andalso
+    null selector_type_renaming andalso null typed_renaming andalso
     map var_name (Term.free_vars_lr renamed) = ["?'", "a1'"] andalso
     map (fn (old, fresh) => (var_name old, var_name fresh)) renaming =
       [("?", "?'"), ("a1", "a1'")] andalso
@@ -303,7 +330,13 @@ fun mf_variant_renames_goal_first () =
       ["user$refute$sel0$list$CONS"] andalso
     map (fn (old, fresh) => (var_name old, var_name fresh))
       selector_renaming =
-      [("refute$sel0$list$CONS", "user$refute$sel0$list$CONS")]
+      [("refute$sel0$list$CONS", "user$refute$sel0$list$CONS")] andalso
+    map Type.dest_vartype (Term.type_vars_in_term renamed_typed) =
+      ["'user0"] andalso
+    (case type_renaming of
+         [{redex, residue}] => redex = reserved_ty andalso
+           Type.dest_vartype residue = "'user0"
+       | _ => false)
   end
 
 val _ = require_msg (check_result mf_variant_renames_goal_first) (fn () =>
@@ -486,10 +519,7 @@ fun mf_inductive_recognition_and_wf () =
     MFH.is_mutually_inductive_pred context other andalso
     term_has_const {Thy = "refuteTableZoo", Name = "zoo_wf_lfp"}
       unfolded andalso
-    (case MFH.fixpoint_refusal_reason context hard of
-         SOME reason => Refute_ModelFinder_Util.is_substring_of
-           "unrolling is unsupported until TASK_11" reason
-       | NONE => false) andalso
+    MFH.fixpoint_refusal_reason context hard = NONE andalso
     (case MFH.fixpoint_refusal_reason context mutual of
          SOME reason => Refute_ModelFinder_Util.is_substring_of
            "mutual inductive predicate group" reason
@@ -517,6 +547,127 @@ fun mf_inductive_direct_equation () =
 
 val _ = require_msg (check_result mf_inductive_direct_equation) (fn () =>
   "well-founded inductive predicate did not use its direct cases equation")
+  (fn () => ()) ()
+
+fun reserved_name_of term =
+  case Lib.total Term.dest_var term of
+      SOME (name, _) => if MFN.is_reserved_name name then SOME name else NONE
+    | NONE => NONE
+
+fun term_has_generated_prefix prefix term =
+  List.exists (fn candidate =>
+    case reserved_name_of candidate of
+        SOME name => String.isPrefix prefix name
+      | NONE => false)
+    (HolKernel.find_terms Term.is_var term)
+
+fun mf_inductive_unroll_goldens () =
+  let
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val predicate = ``zoo_nonwf_lfp : num -> bool``
+    val footprint = mf_theory_footprint ()
+    val unrolled_at_zero =
+      MFH.unrolled_inductive_pred_const context false predicate
+    val (unrolled, zero_arguments) =
+      HolKernel.strip_comb unrolled_at_zero
+    val zero = case zero_arguments of
+        [argument] => argument
+      | _ => raise Fail "expected the iterator-zero argument"
+    val iterator_ty = Term.type_of zero
+    val successor = MFH.iterator_suc_for_type context iterator_ty
+    val iterator = Term.mk_var ("i", iterator_ty)
+    val argument = Term.mk_var ("n", ``:num``)
+    val expected = boolSyntax.list_mk_forall ([iterator, argument],
+      boolSyntax.mk_eq
+        (Term.list_mk_comb (unrolled, [iterator, argument]),
+         Term.list_mk_comb
+           (unrolled, [Term.mk_comb (successor, iterator), argument])))
+    val equations = MFH.def_props_for_const (!(#simp_table context))
+      unrolled
+    val repeated = MFH.unrolled_inductive_pred_const context false predicate
+    val upper = MFH.fixpoint_bound_const context true predicate
+    val upper_axioms = MFH.equational_fun_axioms context upper
+    val positive = Refute_ModelFinder_Preproc.skolemize_term_and_more
+      context 3 ``zoo_nonwf_lfp n``
+    val negative = Refute_ModelFinder_Preproc.skolemize_term_and_more
+      context 3 ``~zoo_nonwf_lfp n``
+    val neutral = Refute_ModelFinder_Preproc.skolemize_term_and_more
+      context 3
+      ``(q : (num -> bool) -> bool) zoo_nonwf_lfp``
+    val info = MFH.iterator_info_for_type context iterator_ty
+    val zero_nut = Refute_ModelFinder_Nut.nut_from_term context
+      Refute_ModelFinder_Nut.Eq zero
+    val suc_nut = Refute_ModelFinder_Nut.nut_from_term context
+      Refute_ModelFinder_Nut.Eq successor
+    val binary_predicate = ``zoo_param_lfp : num -> num -> bool``
+    val binary_iterator = MFH.iterator_type_for_const
+      context false binary_predicate
+    val binary_unrolled = MFN.mk_unrolled
+      "refuteTableZoo$zoo_param_lfp" binary_iterator
+      (Term.type_of binary_predicate)
+    val binary_term = Term.list_mk_comb
+      (binary_unrolled,
+       [Term.mk_var ("j", binary_iterator), ``n : num``, ``m : num``])
+    val binary_uncurried = Refute_ModelFinder_Preproc.uncurry_term
+      (Refute_ModelFinder_Preproc.add_to_uncurry_table
+        context binary_term []) binary_term
+    val (binary_head, binary_arguments) =
+      HolKernel.strip_comb binary_uncurried
+    val binary_name = var_name binary_head
+    val checks =
+      [("iterator type", Type.dest_vartype iterator_ty =
+          "'refute$lfpit$refuteTableZoo$zoo_nonwf_lfp"),
+       ("zero name", var_name zero =
+          "refute$iterzero$refute$lfpit$refuteTableZoo$zoo_nonwf_lfp"),
+       ("suc name", var_name successor =
+          "refute$itersuc$refute$lfpit$refuteTableZoo$zoo_nonwf_lfp"),
+       ("unroll name", var_name unrolled =
+          "refute$unroll$refuteTableZoo$zoo_nonwf_lfp"),
+       ("equation", case equations of
+            [equation] => Term.aconv equation expected | _ => false),
+       ("memo", Term.aconv repeated unrolled_at_zero andalso
+          length (MFH.def_props_for_const (!(#simp_table context))
+            unrolled) = 1),
+       ("info", case info of
+            SOME {pred, arg_tys = [argument_ty], gfp = false, ...} =>
+              Term.aconv pred predicate andalso argument_ty = ``:num``
+          | _ => false),
+       ("inverse", Term.aconv
+          (MFH.const_for_iterator_type context iterator_ty) predicate),
+       ("zero nut", case zero_nut of
+            Refute_ModelFinder_Nut.Cst
+              (Refute_ModelFinder_Nut.Num 0, ty, _) => ty = iterator_ty
+          | _ => false),
+       ("suc nut", case suc_nut of
+            Refute_ModelFinder_Nut.Cst
+              (Refute_ModelFinder_Nut.Suc, ty, _) =>
+                ty = Type.-->(iterator_ty, iterator_ty)
+          | _ => false),
+       ("uncurry iterator prefix",
+          binary_name =
+            "refute$unc2@1$refute$unroll$refuteTableZoo$zoo_param_lfp"
+          andalso length binary_arguments = 2),
+       ("upper equation", length upper_axioms = 1 andalso
+          term_has_generated_prefix MFN.ubfp_prefix (hd upper_axioms)
+          andalso not (term_has_const
+            {Thy = "refuteTableZoo", Name = "zoo_nonwf_lfp"}
+            (hd upper_axioms))),
+       ("positive", term_has_generated_prefix
+          MFN.unrolled_prefix positive),
+       ("negative", term_has_generated_prefix MFN.ubfp_prefix negative),
+       ("neutral unroll", term_has_generated_prefix
+          MFN.unrolled_prefix neutral),
+       ("neutral upper", term_has_generated_prefix MFN.ubfp_prefix neutral),
+       ("theory footprint", footprint = mf_theory_footprint ())]
+    val _ = List.app (fn (label, passed) =>
+      if passed then () else print ("TASK_11 failed check: " ^ label ^ "\n"))
+      checks
+  in
+    List.all #2 checks
+  end
+
+val _ = require_msg (check_result mf_inductive_unroll_goldens) (fn () =>
+  "inductive unroll equation, iterator names, or polarity golden changed")
   (fn () => ()) ()
 
 fun mf_definition_last_wins () =
@@ -2474,6 +2625,63 @@ val _ = require_msg (check_result mf_scope_card_repair) (fn () =>
   "model-finder datatype cardinality repair failed")
   (fn () => ()) ()
 
+fun mf_iterator_scope_rows_and_repair () =
+  let
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val predicate = ``zoo_nonwf_lfp : num -> bool``
+    val application = MFH.unrolled_inductive_pred_const
+      context false predicate
+    val (unrolled, _) = HolKernel.strip_comb application
+    val iterator_ty = #1 (Type.dom_rng (Term.type_of unrolled))
+    val cards = [(SOME ``:num``, [1, 2, 3]), (NONE, [1, 2, 3])]
+    val maxes = [(NONE, [~1])]
+    val specific = [(SOME predicate, [2]), (NONE, [0])]
+    val row = MFS.block_for_type context false cards maxes specific []
+      iterator_ty
+    val repaired = MFS.repair_iterator_assign context
+      [(iterator_ty, 9), (``:num``, 3)] (iterator_ty, 9)
+    val binary_iterator = MFH.iterator_type_for_const context false
+      ``zoo_param_lfp : num -> num -> bool``
+    val transformed_binary = MFN.mk_unrolled
+      "refuteTableZoo$zoo_param_lfp" binary_iterator
+      (Type.-->(pairSyntax.mk_prod
+        (MFH.unsigned_bitword_type, MFH.unsigned_bitword_type), Type.bool))
+    val _ = MFH.refresh_iterator_arg_types context [transformed_binary]
+    val binary_repaired = MFS.repair_iterator_assign context
+      [(binary_iterator, 10), (MFH.unsigned_bitword_type, 3)]
+      (binary_iterator, 10)
+    val unchanged = MFS.repair_iterator_assign context
+      [(iterator_ty, 9), (``:num``, 3)] (``:num``, 3)
+    val (skipped, scopes) = MFS.all_scopes context false cards maxes
+      [(NONE, [0, 1, 2])] [] [iterator_ty, ``:num``] [] [] []
+    fun iterator_card (scope : MFS.scope) =
+      MFH.assignment_lookup (#card_assigns scope) iterator_ty
+  in
+    (case #iter Refute_Core.default_mf_config of
+         [(NONE, values)] =>
+           values = [0, 1, 2, 4, 8, 12, 16, 20, 24, 28]
+       | _ => false) andalso
+    (case row of
+         [(MFS.Card ty, [3])] => Type.compare (ty, iterator_ty) = EQUAL
+       | _ => false) andalso
+    Type.compare (#1 repaired, iterator_ty) = EQUAL andalso
+    #2 repaired = 3 andalso #2 binary_repaired = 9 andalso
+    Type.compare (#1 unchanged, ``:num``) = EQUAL andalso
+    #2 unchanged = 3 andalso
+    skipped = 0 andalso map iterator_card scopes =
+      [SOME 1, SOME 2, SOME 3] andalso
+    MFS.is_type_fundamentally_monotonic iterator_ty andalso
+    MFS.is_asymmetric_non_data_type iterator_ty andalso
+    not (MFS.is_complete_type [] false iterator_ty) andalso
+    List.all (fn scope =>
+      MFS.offset_of_type (#ofs scope) iterator_ty =
+      MFS.offset_of_type (#ofs scope) Type.bool) scopes
+  end
+
+val _ = require_msg (check_result mf_iterator_scope_rows_and_repair)
+  (fn () => "iterator scope row, mono block, offset, or repair changed")
+  (fn () => ()) ()
+
 fun mf_scope_mono_partition () =
   let
     val alpha = ``:'a``
@@ -2494,7 +2702,7 @@ fun mf_scope_mono_partition () =
       [``:num list``]
     val (_, pattern_scopes) = MFS.all_scopes mf_hol_context false
       [(SOME ``:'a list``, [3]), (NONE, [1])]
-      [(NONE, [~1])] [] [``:num list``, number] [] [] []
+      [(NONE, [~1])] [(NONE, [0])] [] [``:num list``, number] [] [] []
     val pattern_scope = hd pattern_scopes
   in
     mono = [enum, number] andalso nonmono = [alpha] andalso
@@ -2518,9 +2726,11 @@ fun mf_scope_calculus_block_fusion () =
     val (mono, nonmono) = MFS.mono_partition_with actually_monotonic
       [(NONE, NONE)] types
     val (_, fused) = MFS.all_scopes mf_hol_context false
-      [(NONE, [1, 2, 3])] [(NONE, [~1])] [] mono nonmono [] []
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [(NONE, [0])] []
+      mono nonmono [] []
     val (_, separated) = MFS.all_scopes mf_hol_context false
-      [(NONE, [1, 2, 3])] [(NONE, [~1])] [] [] types [] []
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [(NONE, [0])] []
+      [] types [] []
   in
     mono = types andalso null nonmono andalso
     length fused = 3 andalso length separated = 9
@@ -2540,11 +2750,11 @@ fun mf_scope_enumeration_order () =
     val ordered = MFS.all_combinations_ordered_smartly
       [(3, 0), (3, 0)]
     val (skipped, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [1, 2, 3])] [(NONE, [~1])] []
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [(NONE, [0])] []
       [``:refute$rf6``] [``:'a``] [] []
     val truncation_cards = MFS.default_cards @ [11]
     val (truncated, retained) = MFS.all_scopes mf_hol_context false
-      [(NONE, truncation_cards)] [(NONE, [~1])] []
+      [(NONE, truncation_cards)] [(NONE, [~1])] [(NONE, [0])] []
       [``:refute$rf6``] [``:'a``, ``:'b``, ``:'c``] [] []
     fun cards (scope : MFS.scope) =
       (valOf (MFH.assignment_lookup (#card_assigns scope)
@@ -2566,7 +2776,7 @@ val _ = require_msg (check_result mf_scope_enumeration_order) (fn () =>
 fun mf_scope_offsets_and_facto_pairs () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [2])] [(NONE, [~1])] []
+      [(NONE, [2])] [(NONE, [~1])] [(NONE, [0])] []
       [``:refute$rf2``, ``:num``] [``:'a``, ``:unit``] [] []
     val scope = hd scopes
     val data_types = #data_types scope
@@ -2638,7 +2848,8 @@ fun mf_binary_int_scope_rows () =
        (NONE, [1])]
     val maxes = [(NONE, [~1])]
     val bitss = [0, 9, 40]
-    fun row ty = MFS.block_for_type mf_hol_context true cards maxes bitss ty
+    fun row ty = MFS.block_for_type mf_hol_context true cards maxes
+      [(NONE, [0])] bitss ty
     fun row_is ty expected =
       case row ty of
           [(MFS.Card actual, values)] =>
@@ -2801,7 +3012,7 @@ val _ = require_msg (check_result mf_rep_ordering) (fn () =>
 fun mf_rep_fixed_scope () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [2])] [(NONE, [~1])] []
+      [(NONE, [2])] [(NONE, [~1])] [(NONE, [0])] []
       [``:refute$rf2``, ``:num``] [] [] []
     val scope = hd scopes
     val enum_offset = MFS.offset_of_type (#ofs scope) ``:refute$rf2``
@@ -3351,7 +3562,7 @@ val _ = require_msg (check_result mf_nut_term_goldens) (fn () =>
 fun mf_nut_fixed_scope () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [3])] [(NONE, [~1])] []
+      [(NONE, [3])] [(NONE, [~1])] [(NONE, [0])] []
       [``:refute$rf2``, ``:num``] [] [] []
   in hd scopes end
 
@@ -3386,7 +3597,7 @@ fun mf_nut_deep_selector_reps () =
   let
     val list_ty = ``:num list``
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [3])] [(NONE, [~1])] []
+      [(NONE, [3])] [(NONE, [~1])] [(NONE, [0])] []
       [list_ty, ``:num``] [] [list_ty] []
     val scope = hd scopes
     val cons = List.nth
@@ -3760,6 +3971,80 @@ fun mf_model_structured_reconstruction () =
 
 val _ = require_msg (check_result mf_model_structured_reconstruction)
   (fn () => "structured reconstruction blocks changed")
+  (fn () => ()) ()
+
+fun mf_iterator_model_display () =
+  let
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val predicate = ``zoo_nonwf_lfp : num -> bool``
+    val application = MFH.unrolled_inductive_pred_const
+      context false predicate
+    val (unrolled, _) = HolKernel.strip_comb application
+    val iterator_ty = #1 (Type.dom_rng (Term.type_of unrolled))
+    val upper = MFH.fixpoint_bound_const context true predicate
+    val scope = MFS.scope_from_descriptor context false [] []
+      ([(iterator_ty, 3), (``:num``, 3)], [])
+    val offset = MFS.offset_of_type (#ofs scope) iterator_ty
+    val atom = MFM.term_for_rep
+      {scope = scope, atoms = [(NONE, [])], sel_names = [],
+       rel_table = MFNT.NameTable.empty, bounds = [], maybe_opt = false,
+       ty = iterator_ty, representation = MFR.Atom (3, offset),
+       tuples = [[offset]]}
+    val iterator_set = MFM.term_for_rep
+      {scope = scope, atoms = [(NONE, [])], sel_names = [],
+       rel_table = MFNT.NameTable.empty, bounds = [], maybe_opt = false,
+       ty = Type.-->(iterator_ty, Type.bool),
+       representation = MFR.Func
+         (MFR.Atom (3, offset), MFR.Formula Refute_ModelFinder_Util.Neut),
+       tuples = [[offset]]}
+    val unrolled_name = var_name unrolled
+    val upper_name = var_name upper
+    val friendly = MFM.user_friendly_const [] unrolled_name
+      (Term.type_of unrolled)
+    val reconstruction = MFM.reconstruct
+      {scope = scope, atoms = [(NONE, [])], special_funs = [],
+       real_frees = [], eval_terms = [], free_names = [], sel_names = [],
+       nonsel_names =
+         [MFNT.ConstName (unrolled_name, Term.type_of unrolled, MFR.Any),
+          MFNT.ConstName (upper_name, Term.type_of upper, MFR.Any)],
+       rel_table = MFNT.NameTable.empty, bounds = []}
+    val expected_friendly = Term.mk_abs
+      (Term.mk_var ("i", ``:num``), predicate)
+    val report = MFM.model_report reconstruction
+    val config = upd_show_consts true default_config
+    val text = Refute_Core.format_model (#mf config) (SOME report)
+    val hidden = Refute_Core.format_model
+      (#mf default_config) (SOME report)
+    val scope_text = Refute_Core.format_scope
+      (SOME [(iterator_ty, 3), (``:num``, 3)])
+  in
+    Term.aconv atom ``2 : num`` andalso
+    Term.type_of atom = ``:num`` andalso
+    Term.type_of iterator_set = ``:num -> bool`` andalso
+    Term.aconv friendly expected_friendly andalso
+    MFM.assignment_operator upper_name = "≤" andalso
+    MFM.assignment_operator
+      (MFN.uncurry_prefix ^ "2@0$" ^ upper_name) = "≤" andalso
+    (case #consts reconstruction of
+         [(left, "=", unroll_value),
+          (upper_left, "≤", upper_value)] =>
+           Term.aconv left expected_friendly andalso
+           Term.aconv upper_left predicate andalso
+           Term.type_of unroll_value = ``:num -> num -> bool`` andalso
+           Term.type_of upper_value = ``:num -> bool``
+       | _ => false) andalso
+    not (List.exists (MFH.is_iterator_type o #1)
+      (#types reconstruction)) andalso
+    Refute_ModelFinder_Util.is_substring_of
+      (Parse.term_to_string expected_friendly) text andalso
+    Refute_ModelFinder_Util.is_substring_of " ≤ " text andalso
+    hidden = "" andalso
+    scope_text =
+      "\nScope: iter refuteTableZoo$zoo_nonwf_lfp = 2, card num = 3"
+  end
+
+val _ = require_msg (check_result mf_iterator_model_display) (fn () =>
+  "iterator countdown, unroll lambda, or fixpoint-bound display changed")
   (fn () => ()) ()
 
 fun mf_model_certifiability_rules () =
@@ -5206,6 +5491,32 @@ local
         | _ => false
     end
 
+  fun mf_inductive_unroll_smoke () =
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val solver =
+        if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
+      val predicate = ``zoo_unroll_lfp : num -> bool``
+      val config = default_config
+        |> upd_timeout 20.0
+        |> upd_backends (SOME ["kodkod"])
+        |> upd_sat_solver solver
+        |> upd_iter [(SOME predicate, [2]), (NONE, [0])]
+        |> upd_card [(SOME ``:num``, [3]), (NONE, [1])]
+      fun pinned ({scope, ...} : Refute.counterexample) =
+        case scope of
+            SOME assignments => List.exists (fn (ty, card) =>
+              MFH.is_iterator_type ty andalso card = 3) assignments
+          | NONE => false
+    in
+      case Refute.refute config ``~zoo_unroll_lfp 2`` of
+          Refute.Counterexample
+            ((counterexample as
+              {backend = "kodkod", certainty = Refute.Genuine,
+               cert = NONE, ...}) :: _) => pinned counterexample
+        | _ => false
+    end
+
   fun mf_binary_smart_trigger () =
     let
       val solvers = Refute_ForlSat.configured_sat_solvers false
@@ -5310,6 +5621,12 @@ in
     if bridge_configured then
       require_msg (check_result mf_inductive_direct_equation_smoke) (fn () =>
         "the gated inductive direct-equation pin did not refute")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_inductive_unroll_smoke) (fn () =>
+        "the pinned non-wf inductive iterator row did not refute")
         (fn () => ()) ()
     else ()
   val _ =
@@ -5628,6 +5945,24 @@ val _ = require_msg
   "box is not smart by default or remains guarded")
   (fn () => ()) ()
 
+fun iter_default_and_unlock_are_pinned () =
+  let
+    val values = [0, 1, 2, 4, 8, 12, 16, 20, 24, 28]
+    val predicate = ``zoo_unroll_lfp : num -> bool``
+    val rows = [(SOME predicate, [2]), (NONE, [0])]
+    val updated = Refute.upd_iter rows Refute.default_config
+  in
+    (case #iter (#mf Refute.default_config) of
+         [(NONE, defaults)] => defaults = values
+       | _ => false) andalso
+    same_term_assignments (#iter (#mf updated)) rows
+  end
+
+val _ = require_msg
+  (check_result iter_default_and_unlock_are_pinned) (fn () =>
+  "iter default or predicate-specific user row remains guarded")
+  (fn () => ()) ()
+
 fun m4_guard_is_pinned (field, testfn) = shouldfail {
   checkexn = check_HOL_ERRexn
     (fn (_, _, message) =>
@@ -5677,7 +6012,11 @@ val _ = List.app range_guard_is_pinned
    ("bits", "values must lie between 1 and 31", fn () =>
       Refute.upd_bits [0] Refute.default_config),
    ("bits", "values must lie between 1 and 31", fn () =>
-      Refute.upd_bits [32] Refute.default_config)]
+      Refute.upd_bits [32] Refute.default_config),
+   ("iter", "rows must contain nonnegative values", fn () =>
+      Refute.upd_iter [] Refute.default_config),
+   ("iter", "rows must contain nonnegative values", fn () =>
+      Refute.upd_iter [(NONE, [~1])] Refute.default_config)]
 
 val _ = tprint "Refute core backend registry"
 
@@ -5930,7 +6269,8 @@ fun mf_formatter_snapshot () =
        model = SOME
          {types = [(``:num``, [``0``, ``1``], false)],
           skolems = [("w", MFN.irrelevant_marker ``:num``)],
-          consts = [(``SUC``, MFN.unknown_marker ``:num -> num``)]},
+          consts = [(``SUC``, "=",
+            MFN.unknown_marker ``:num -> num``)]},
        stats = []}
     val config = upd_show_consts true (upd_show_types true default_config)
     val actual = format_outcome config (Counterexample [cex])
@@ -9552,20 +9892,20 @@ val mf_acceptance_cases : mf_acceptance_case list =
     tm = ``zoo_wf_lfp n ==> n = 0``,
     expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = true},
-   {name = "non-wf inductive predicate refusal",
-    tm = ``RTC (r : num -> num -> bool) x y``,
-    expect = ExpectUnknown, cert_pin = MfCertIgnored,
-    unknown_reason = SOME "unrolling is unsupported until TASK_11",
-    sat4j_smoke = true},
+   {name = "non-wf inductive predicate unrolling",
+    tm = ``~zoo_unroll_lfp 2``,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
+    unknown_reason = NONE, sat4j_smoke = true},
    {name = "mutual inductive predicate refusal",
     tm = ``zoo_mutual_other_lfp n``,
     expect = ExpectUnknown, cert_pin = MfCertIgnored,
     unknown_reason = SOME "mutual inductive predicate group",
     sat4j_smoke = false},
    {name = "GSPEC refused-predicate fallback",
-    tm = ``x IN GSPEC (\n : num. (n, RTC r n x))``,
+    tm = ``x IN GSPEC (\n : num. (n, zoo_mutual_other_lfp n))``,
     expect = ExpectUnknown, cert_pin = MfCertIgnored,
-    unknown_reason = SOME "inductive predicate", sat4j_smoke = false}
+    unknown_reason = SOME "mutual inductive predicate group",
+    sat4j_smoke = false}
   ]
 
 (* PLAN_M3 section 13.3: both engines run sequentially on the same

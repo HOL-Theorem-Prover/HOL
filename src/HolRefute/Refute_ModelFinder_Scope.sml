@@ -73,7 +73,8 @@ structure Refute_ModelFinder_Scope = struct
       (type_arguments ty)
 
   fun is_asymmetric_non_data_type ty =
-    MFH.is_integer_type ty orelse MFH.is_bit_type ty
+    MFH.is_iterator_type ty orelse MFH.is_integer_type ty orelse
+    MFH.is_bit_type ty
 
   fun data_type_spec (data_types : data_type_spec list) ty =
     List.find (fn spec => same_type (#typ spec) ty) data_types
@@ -107,7 +108,8 @@ structure Refute_ModelFinder_Scope = struct
               is_complete_type data_types facto left andalso
               is_complete_type data_types facto right
             end
-          else if MFH.is_integer_type ty orelse MFH.is_bit_type ty orelse
+          else if MFH.is_iterator_type ty orelse
+                  MFH.is_integer_type ty orelse MFH.is_bit_type ty orelse
                   MFH.is_bitword_type ty then
             false
           else
@@ -224,7 +226,30 @@ structure Refute_ModelFinder_Scope = struct
                    (case List.find fallback assigns of
                         SOME (_, candidates) => candidates
                       | NONE => raise err "lookup_const_ints_assign"
-                          "missing assignment"))
+                          ("missing assignment for " ^
+                           Parse.term_to_string constructor)))
+    end
+
+  fun lookup_iter_ints_assign assigns predicate =
+    let
+      fun exact (SOME other, _) = Term.aconv other predicate
+        | exact _ = false
+      fun relaxed (SOME other, _) = MFH.const_match (predicate, other)
+        | relaxed _ = false
+      fun fallback (NONE, _) = true
+        | fallback _ = false
+    in
+      case List.find exact assigns of
+          SOME (_, candidates) => candidates
+        | NONE =>
+            (case List.find relaxed assigns of
+                 SOME (_, candidates) => candidates
+               | NONE =>
+                   (case List.find fallback assigns of
+                        SOME (_, candidates) => candidates
+                      | NONE => raise err "lookup_iter_ints_assign"
+                          ("missing assignment for " ^
+                           Parse.term_to_string predicate)))
     end
 
   fun row_for_constr maxes_assigns constructor =
@@ -234,8 +259,15 @@ structure Refute_ModelFinder_Scope = struct
 
   fun bit_card bits = Int.min (max_bits, Int.max (1, bits))
 
-  fun block_for_type context binarize cards_assigns maxes_assigns bitss ty =
-    if ty = MFH.unsigned_bit_type then
+  fun block_for_type context binarize cards_assigns maxes_assigns
+        iters_assigns bitss ty =
+    if MFH.is_iterator_type ty then
+      (case MFH.iterator_info_for_type context ty of
+           SOME {pred, ...} =>
+             [(Card ty, map (fn count => Int.max (0, count) + 1)
+               (lookup_iter_ints_assign iters_assigns pred))]
+         | NONE => raise err "block_for_type" "unregistered iterator type")
+    else if ty = MFH.unsigned_bit_type then
       [(Card ty, map bit_card bitss)]
     else if ty = MFH.signed_bit_type then
       [(Card ty, map (fn bits => bit_card bits + 1) bitss)]
@@ -250,11 +282,12 @@ structure Refute_ModelFinder_Scope = struct
          | constructors =>
              List.mapPartial (row_for_constr maxes_assigns) constructors)
 
-  fun blocks_for_types context binarize cards_assigns maxes_assigns bitss
-        mono_types nonmono_types =
+  fun blocks_for_types context binarize cards_assigns maxes_assigns
+        iters_assigns bitss mono_types nonmono_types =
     let
       fun block_for ty =
-        block_for_type context binarize cards_assigns maxes_assigns bitss ty
+        block_for_type context binarize cards_assigns maxes_assigns
+          iters_assigns bitss ty
       val mono_block = List.concat (map block_for mono_types)
       val nonmono_blocks = map block_for nonmono_types
     in
@@ -362,6 +395,18 @@ structure Refute_ModelFinder_Scope = struct
     List.foldr (fn (row, desc) =>
       add_row_to_scope_descriptor row desc) ([], []) block
 
+  fun repair_iterator_assign context assigns (assign as (ty, card)) =
+    case MFH.iterator_info_for_type context ty of
+        NONE => assign
+      | SOME {arg_tys, ...} =>
+          let
+            val tuple_ty = MFH.tuple_type arg_tys
+            val maximum = if null arg_tys then 1
+              else MFH.bounded_card_of_type card ~1 assigns tuple_ty
+          in
+            (ty, Int.min (card, maximum))
+          end
+
   fun scope_descriptor_from_combination context binarize blocks columns =
     let
       val rows = List.concat
@@ -369,7 +414,9 @@ structure Refute_ModelFinder_Scope = struct
       val (card_assigns, max_assigns) =
         scope_descriptor_from_block rows
     in
-      Option.map (fn repaired => (repaired, max_assigns))
+      Option.map (fn repaired =>
+        (map (repair_iterator_assign context repaired) repaired,
+         max_assigns))
         (repair_card_assigns context binarize (card_assigns, max_assigns))
     end
 
@@ -576,13 +623,14 @@ structure Refute_ModelFinder_Scope = struct
            same_description (other, value)) result then result
       else result @ [value]) [] values
 
-  fun all_scopes context binarize cards_assigns maxes_assigns bitss
-        mono_types nonmono_types deep_data_types finitizable_data_types =
+  fun all_scopes context binarize cards_assigns maxes_assigns
+        iters_assigns bitss mono_types nonmono_types deep_data_types
+        finitizable_data_types =
     let
       val cards_assigns =
         repair_cards_assigns_wrt_boxing_etc mono_types cards_assigns
       val blocks = blocks_for_types context binarize cards_assigns
-        maxes_assigns bitss mono_types nonmono_types
+        maxes_assigns iters_assigns bitss mono_types nonmono_types
       val ranks = map rank_of_block blocks
       val all = all_combinations_ordered_smartly
         (map (fn rank => (rank, 0)) ranks)
@@ -600,7 +648,8 @@ structure Refute_ModelFinder_Scope = struct
     end
 
   fun is_number_type ty =
-    MFH.is_integer_type ty orelse MFH.is_bit_type ty orelse
+    MFH.is_iterator_type ty orelse MFH.is_integer_type ty orelse
+    MFH.is_bit_type ty orelse
     Option.isSome (MFH.numeric_type_card ty) orelse
     Option.isSome (MFH.word_dimension ty)
 

@@ -17,7 +17,7 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
     {bindings : (term * term) list,
      evals : (term * term) list,
      skolems : (string * term) list,
-     consts : (term * term) list,
+     consts : (term * string * term) list,
      types : (hol_type * term list * bool) list,
      codatatypes_ok : bool}
 
@@ -50,6 +50,7 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      bounds : raw_bound list} -> reconstruction
 
   val model_report : reconstruction -> Refute_Core.model_report
+  val assignment_operator : string -> string
   val certification_env :
     (term * term) list -> (term * term) list option
   val certifiable : bool -> (term * term) list -> bool
@@ -95,7 +96,7 @@ type reconstruction =
   {bindings : (term * term) list,
    evals : (term * term) list,
    skolems : (string * term) list,
-   consts : (term * term) list,
+   consts : (term * string * term) list,
    types : (hol_type * term list * bool) list,
    codatatypes_ok : bool}
 
@@ -214,20 +215,23 @@ fun is_unknown term =
 fun make_update (point, value) base =
   Term.mk_comb (combinSyntax.mk_update (point, value), base)
 
-fun make_fun ({scope, ...} : context) domain_ty range_ty pairs =
+fun make_fun ({scope, ...} : context) actual_domain_ty
+      display_domain_ty display_range_ty pairs =
   let
-    val complete = MFS.is_complete_type (#data_types scope) false domain_ty
+    val complete = MFS.is_complete_type (#data_types scope) false
+      actual_domain_ty
     val marker =
-      if complete then MFN.irrelevant_marker range_ty
-      else MFN.unknown_marker range_ty
-    val base = combinSyntax.mk_K_1 (marker, domain_ty)
+      if complete then MFN.irrelevant_marker display_range_ty
+      else MFN.unknown_marker display_range_ty
+    val base = combinSyntax.mk_K_1 (marker, display_domain_ty)
     val determined = List.filter (not o is_unknown o #2) pairs
   in
     List.foldl (fn (pair, result) => make_update pair result)
       base (sort_terms determined)
   end
 
-fun make_set ({scope, ...} : context) maybe_opt element_ty pairs =
+fun make_set ({scope, ...} : context) maybe_opt actual_element_ty
+      display_element_ty pairs =
   let
     val present = map #1 (List.filter
       (fn (_, value) => Term.aconv value boolSyntax.T) pairs)
@@ -236,27 +240,30 @@ fun make_set ({scope, ...} : context) maybe_opt element_ty pairs =
         not (Term.aconv value boolSyntax.T) andalso
         not (Term.aconv value boolSyntax.F)) pairs
     val incomplete =
-      not (MFS.is_complete_type (#data_types scope) false element_ty)
+      not (MFS.is_complete_type (#data_types scope) false actual_element_ty)
     val elements =
       if maybe_opt andalso incomplete then
-        present @ [MFN.unrepresented_marker_ascii element_ty]
+        present @ [MFN.unrepresented_marker_ascii display_element_ty]
       else
         present
     fun insert (element, set) = pred_setSyntax.mk_insert (element, set)
   in
     if all_unknown then
-      MFN.unknown_marker (pred_setSyntax.mk_set_type element_ty)
+      MFN.unknown_marker (pred_setSyntax.mk_set_type display_element_ty)
     else
-      List.foldr insert (pred_setSyntax.mk_empty element_ty) elements
+      List.foldr insert (pred_setSyntax.mk_empty display_element_ty) elements
   end
 
 fun make_fun_or_set context maybe_opt ty pairs =
-  let val (domain_ty, range_ty) = Type.dom_rng ty
+  let
+    val (domain_ty, _) = Type.dom_rng ty
+    val display_ty = MFH.uniterize_unarize_unbox_etc_type ty
+    val (display_domain_ty, display_range_ty) = Type.dom_rng display_ty
   in
     if pred_setSyntax.is_set_type ty then
-      make_set context maybe_opt domain_ty pairs
+      make_set context maybe_opt domain_ty display_domain_ty pairs
     else
-      make_fun context domain_ty range_ty pairs
+      make_fun context domain_ty display_domain_ty display_range_ty pairs
   end
 
 fun factor_types ty =
@@ -299,7 +306,8 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
 
     fun term_for_rep maybe_opt seen ty representation tuples =
       case (representation, tuples) of
-          (MFR.Any, _) => MFN.unknown_marker ty
+          (MFR.Any, _) => MFN.unknown_marker
+            (MFH.uniterize_unarize_unbox_etc_type ty)
         | (MFR.Formula _, _) =>
             if null tuples then boolSyntax.F else boolSyntax.T
         | (MFR.Atom (card, offset), [[atom]]) =>
@@ -379,7 +387,8 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               make_fun_or_set context maybe_opt ty
                 (ListPair.zip (domains, ranges))
             end
-        | (MFR.Opt inner, []) => MFN.unknown_marker ty
+        | (MFR.Opt inner, []) => MFN.unknown_marker
+            (MFH.uniterize_unarize_unbox_etc_type ty)
         | (MFR.Opt inner, _) => term_for_rep true seen ty inner tuples
         | _ => raise err "term_for_rep"
             ("cannot decode " ^ MFR.string_for_rep representation ^
@@ -413,6 +422,8 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               end
             else if MFH.is_boolean_type ty then
               if atom = 0 then boolSyntax.F else boolSyntax.T
+            else if MFH.is_iterator_type ty then
+              numSyntax.term_of_int (card - atom - 1)
             else if same_type ty MFH.num_type then
               numSyntax.term_of_int atom
             else if same_type ty MFH.int_type then
@@ -564,7 +575,7 @@ fun dest_n_tuple_type 1 ty = [ty]
 
 fun user_friendly_const special_funs name ty =
   let
-    val display_ty = MFH.unarize_unbox_etc_type ty
+    val display_ty = MFH.uniterize_unarize_unbox_etc_type ty
     fun special_bounds terms =
       let
         fun schematic variable =
@@ -587,8 +598,8 @@ fun user_friendly_const special_funs name ty =
       case Lib.total Term.dest_var special of
           SOME (special_name, special_ty) =>
             name = special_name andalso
-            MFH.unarize_unbox_etc_type ty =
-              MFH.unarize_unbox_etc_type special_ty
+            MFH.uniterize_unarize_unbox_etc_type ty =
+              MFH.uniterize_unarize_unbox_etc_type special_ty
         | NONE => false
     fun friendly_term candidate =
       if Term.is_abs candidate then
@@ -622,7 +633,16 @@ fun user_friendly_const special_funs name ty =
     case uncurry_info name of
         SOME (count, prefix, original) =>
           uncurried_friendly count prefix original
-      | NONE => if MFN.is_special_name name then
+      | NONE => if MFN.is_unrolled_name name then
+      let
+        val (_, predicate_ty) = Type.dom_rng display_ty
+        val original = MFN.original_name name
+        val predicate = user_friendly_const special_funs original predicate_ty
+        val iterator = Term.mk_var (MFN.iter_var_prefix, MFH.num_type)
+      in
+        Term.mk_abs (iterator, predicate)
+      end
+    else if MFN.is_special_name name then
       case List.find (same_generated o #2) special_funs of
           SOME ((original, fixed_indices, fixed_terms), _) =>
             let
@@ -664,10 +684,15 @@ fun user_friendly_const special_funs name ty =
           Term.mk_var (original, display_ty)
       end
   end handle HOL_ERR _ => Term.mk_var (MFN.original_name name,
-    MFH.unarize_unbox_etc_type ty)
+    MFH.uniterize_unarize_unbox_etc_type ty)
 
 fun lhs_for_constant special_funs name ty =
   user_friendly_const special_funs name ty
+
+fun assignment_operator name =
+  if MFN.is_ubfp_name name then "≤"
+  else if MFN.is_lbfp_name name then "≥"
+  else "="
 
 fun eval_index name =
   if String.isPrefix MFN.eval_prefix name then
@@ -685,7 +710,7 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
     fun decode name =
       case MFNT.rep_of name of
           MFR.Any => MFN.unknown_marker
-            (MFH.unarize_unbox_etc_type (MFNT.type_of name))
+            (MFH.uniterize_unarize_unbox_etc_type (MFNT.type_of name))
         | representation => reconstruct_term context
             (not (MFNT.is_fully_representable_set name))
             (MFNT.type_of name) representation
@@ -740,7 +765,7 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
                   (evals, skolems, consts)
             | NONE =>
                 (evals, skolems,
-                 (lhs, value) :: consts)
+                 (lhs, assignment_operator nickname, value) :: consts)
       end
 
     val (evals, skolems, consts) =
@@ -771,7 +796,7 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
                 deep = true, constrs = []} : MFS.data_type_spec]
         | NONE => []
     fun type_variable_spec (ty, card) =
-      if Type.is_vartype ty then
+      if Type.is_vartype ty andalso not (MFH.is_iterator_type ty) then
         [{typ = ty, card = card, co = false, self_rec = false,
           complete = (true, true), concrete = (true, true), deep = true,
           constrs = []} : MFS.data_type_spec]

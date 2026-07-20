@@ -87,6 +87,12 @@ Inductive zoo_nonwf_lfp:
   !n : num. zoo_nonwf_lfp n ==> zoo_nonwf_lfp n
 End
 
+Inductive zoo_unroll_lfp:
+  zoo_unroll_lfp 0 /\
+  (!n. zoo_unroll_lfp n ==> zoo_unroll_lfp (SUC n)) /\
+  (!n. zoo_unroll_lfp n ==> zoo_unroll_lfp n)
+End
+
 Inductive zoo_param_lfp:
   (!k : num. zoo_param_lfp k 0) /\
   (!k n. zoo_param_lfp k n ==>

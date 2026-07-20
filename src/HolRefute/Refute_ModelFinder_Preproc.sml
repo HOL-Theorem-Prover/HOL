@@ -352,6 +352,52 @@ structure Refute_ModelFinder_Preproc = struct
             Term.mk_abs (variable,
               recurse dependencies skolemizable polarity body)
           end
+        else if (Term.is_const candidate orelse is_generated_const candidate)
+                andalso MFH.is_raw_inductive_pred context candidate andalso
+                not (MFH.is_raw_equational_fun context candidate) andalso
+                not (MFH.is_well_founded_inductive_pred context candidate)
+                then
+          let
+            val gfp = MFH.fixpoint_kind_of_const context candidate = MFH.Gfp
+            fun positive () =
+              recurse dependencies skolemizable polarity
+                (MFH.unrolled_inductive_pred_const context gfp candidate)
+            fun negative () =
+              MFH.fixpoint_bound_const context (not gfp) candidate
+            val effective = if gfp then MFU.flip_polarity polarity
+              else polarity
+          in
+            case effective of
+                MFU.Pos => positive ()
+              | MFU.Neg => negative ()
+              | MFU.Neut =>
+                  let
+                    val (argument_tys, result_ty) = boolSyntax.strip_fun
+                      (Term.type_of candidate)
+                    val _ = if result_ty = Type.bool then () else
+                      raise err "skolemize_term_and_more"
+                        ("fixpoint constant is not a predicate: " ^
+                         Parse.term_to_string candidate)
+                    fun add_argument (ty, (index, avoids, arguments)) =
+                      let
+                        val argument = Term.variant avoids
+                          (Term.mk_var ("x" ^ Int.toString index, ty))
+                      in
+                        (index + 1, argument :: avoids,
+                         arguments @ [argument])
+                      end
+                    val (_, _, arguments) = List.foldl add_argument
+                      (1, Term.all_vars candidate @
+                          map dependency_variable dependencies, [])
+                      argument_tys
+                    val left = Term.list_mk_comb (positive (), arguments)
+                    val right = Term.list_mk_comb (negative (), arguments)
+                    val body = if gfp then boolSyntax.mk_disj (left, right)
+                      else boolSyntax.mk_conj (left, right)
+                  in
+                    Term.list_mk_abs (arguments, body)
+                  end
+          end
         else
           candidate
     in
@@ -1814,7 +1860,8 @@ structure Refute_ModelFinder_Preproc = struct
       and add_axioms_for_term depth bound term
             (accumulator as
                (seen, definitions, def_set, nondefinitions, nondef_set)) =
-        if Term.is_const term orelse is_special_var term then
+        if Term.is_const term orelse is_special_var term orelse
+           is_generated_const term then
           let val already = HOLset.member (seen, term)
           in
             if already orelse MFH.is_built_in_const term then
@@ -1842,7 +1889,8 @@ structure Refute_ModelFinder_Preproc = struct
                        | NONE => List.foldl (fn (axiom, result) =>
                            add_eq_axiom depth axiom result) next
                            (MFH.equational_fun_axioms context term))
-                  else if MFH.is_raw_equational_fun context term then
+                  else if MFH.is_fixpoint_bound_const term orelse
+                          MFH.is_raw_equational_fun context term then
                     List.foldl (fn (axiom, result) =>
                       add_eq_axiom depth axiom result) next
                       (MFH.equational_fun_axioms context term)

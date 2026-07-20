@@ -19,7 +19,7 @@ structure Refute_Core = struct
 
   type model_report =
     { skolems : (string * term) list,
-      consts : (term * term) list,
+      consts : (term * string * term) list,
       types : (hol_type * term list * bool) list }
 
   type counterexample =
@@ -190,7 +190,7 @@ structure Refute_Core = struct
       binary_ints = NONE,
       bits = List.tabulate (10, fn n => n + 1),
       star_linear_preds = false,
-      iter = [(NONE, [0])],
+      iter = [(NONE, [0, 1, 2, 4, 8, 12, 16, 20, 24, 28])],
       bisim_depth = [~1],
       finitize = [(NONE, NONE)],
       whack = [],
@@ -526,9 +526,11 @@ structure Refute_Core = struct
               else ()
       val _ = unchanged "star_linear_preds"
         (#star_linear_preds mf = #star_linear_preds default_mf_config)
-      val _ = (case #iter mf of
-                   [(NONE, [0])] => ()
-                 | _ => m4_error "iter")
+      val _ = if null (#iter mf) orelse
+                     List.exists (fn (_, values) => null values orelse
+                       List.exists (fn value => value < 0) values) (#iter mf)
+              then range_error "iter" "rows must contain nonnegative values"
+              else ()
       val _ = unchanged "bisim_depth"
         (#bisim_depth mf = #bisim_depth default_mf_config)
       val _ = if null (#whack mf) then () else m4_error "whack"
@@ -1188,11 +1190,32 @@ structure Refute_Core = struct
       | SOME {Thy = "refute", Tyop = "pairbox", ...} => true
       | _ => false
 
+  fun iterator_scope_name ty =
+    if Type.is_vartype ty then
+      let
+        val name = Type.dest_vartype ty
+        val lfp_prefix = "'refute$lfpit$"
+        val gfp_prefix = "'refute$gfpit$"
+        fun after prefix = String.extract (name, size prefix, NONE)
+      in
+        if String.isPrefix lfp_prefix name then SOME (after lfp_prefix)
+        else if String.isPrefix gfp_prefix name then SOME (after gfp_prefix)
+        else NONE
+      end
+    else NONE
+
+  fun format_scope_assignment (ty, card) =
+    case iterator_scope_name ty of
+        SOME predicate =>
+          "iter " ^ predicate ^ " = " ^ Int.toString (Int.max (0, card - 1))
+      | NONE =>
+          "card " ^ type_name (unbox_display_type ty) ^ " = " ^
+          Int.toString card
+
   fun format_scope NONE = ""
     | format_scope (SOME assignments) =
-        "\nScope: " ^ String.concatWith ", " (map (fn (ty, card) =>
-          "card " ^ type_name (unbox_display_type ty) ^ " = " ^
-          Int.toString card) assignments)
+        "\nScope: " ^ String.concatWith ", "
+          (map format_scope_assignment assignments)
 
   fun format_named_terms title entries =
     if null entries then "" else
@@ -1216,9 +1239,11 @@ structure Refute_Core = struct
         (if #show_skolems mf then
            format_named_terms "Skolem constants" skolems
          else "") ^
-        (if #show_consts mf then
-           format_named_terms "Constants" (map (fn (name, value) =>
-             (format_term name, value)) consts)
+        (if #show_consts mf andalso not (null consts) then
+           "\nConstants:\n" ^ String.concatWith "\n"
+             (map (fn (name, operator, value) =>
+               "  " ^ format_term name ^ " " ^ operator ^ " " ^
+               format_term value) consts)
          else "")
 
   fun format_counterexample (mf : mf_config) (cex : counterexample) =

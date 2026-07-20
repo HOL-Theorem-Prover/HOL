@@ -551,7 +551,9 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
           fun cst constant head =
             Cst (constant, Term.type_of head, MFR.Any)
           fun arithmetic_cst head =
-            if is_named {Thy = "num", Name = "SUC"} head then SOME Suc
+            if MFH.iterator_marker_of_term context head =
+                 SOME MFH.IteratorSuc then SOME Suc
+            else if is_named {Thy = "num", Name = "SUC"} head then SOME Suc
             else if is_named {Thy = "arithmetic", Name = "+"} head orelse
                     is_named {Thy = "integer", Name = "int_add"} head then
               SOME Add
@@ -567,7 +569,13 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
             else NONE
           val (head, arguments) = HolKernel.strip_comb candidate
         in
-          case reserved_numeral candidate of
+          case MFH.iterator_marker_of_term context candidate of
+              SOME MFH.IteratorZero =>
+                Cst (Num 0, Term.type_of candidate, MFR.Any)
+            | SOME MFH.IteratorSuc =>
+                Cst (Suc, Term.type_of candidate, MFR.Any)
+            | NONE =>
+          (case reserved_numeral candidate of
               SOME integer =>
                 Cst (Num integer, Term.type_of candidate, MFR.Any)
             | NONE =>
@@ -769,7 +777,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 do_apply head arguments
               else
                 raise Feedback.mk_HOL_ERR "Refute_ModelFinder_Nut"
-                  "nut_from_term" "unsupported HOL term")
+                  "nut_from_term" "unsupported HOL term"))
         end
     in
       aux equality [] term

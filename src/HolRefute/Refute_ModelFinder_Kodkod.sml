@@ -2076,8 +2076,9 @@ fun kodkod_formula_from_nut offsets
                            ("Refute_ModelFinder_Kodkod.to_r (Num)",
                             [candidate])
                  | atom => KK.Atom atom)
-            else if ty = MFH.num_type then
-              if value < MFR.card_of_rep representation then
+            else if ty = MFH.num_type orelse MFH.is_iterator_type ty then
+              if value >= 0 andalso
+                 value < MFR.card_of_rep representation then
                 KK.Atom (value + MFS.offset_of_type offsets ty)
               else if MFR.is_opt_rep representation then
                 KK.None

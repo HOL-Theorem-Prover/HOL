@@ -8,7 +8,7 @@ signature Refute = sig
                      | Potential of string list
   type model_report =
     { skolems : (string * term) list,
-      consts : (term * term) list,
+      consts : (term * string * term) list,
       types : (hol_type * term list * bool) list }
   type counterexample =
     { backend : string,
