@@ -1930,6 +1930,9 @@ structure Refute_ModelFinder_HOL = struct
     else
       NONE
 
+  (* Vis continuations in both interaction-tree theories have function type.
+     As in Isabelle, SUB therefore compares their finite continuation graphs
+     by equality rather than recursively by bisimulation. *)
   val builtin_codatatypes =
     [{Thy = "llist", Tyop = "llist", case_name = "llist_CASE",
       constructor_names = ["LNIL", "LCONS"]},
@@ -2780,6 +2783,21 @@ structure Refute_ModelFinder_HOL = struct
       end handle HOL_ERR _ => false
     else
       reserved_constructor term
+
+  (* A TypeBase pseudo-datatype may expose constructors other than the
+     registered coconstructors.  They must not survive as unconstrained
+     constants merely because the codatatype classification overrides the
+     raw free-datatype classification. *)
+  fun is_stale_constr term =
+    if Term.is_const term then
+      let
+        val result_ty = #2 (boolSyntax.strip_fun (Term.type_of term))
+      in
+        is_codatatype result_ty andalso TypeBase.is_constructor term andalso
+        not (registered_constructor term)
+      end handle HOL_ERR _ => false
+    else
+      false
 
   val is_free_constr = is_nonfree_constr
 
@@ -3851,6 +3869,10 @@ structure Refute_ModelFinder_HOL = struct
                     if is_constr constant then
                       Term.list_mk_comb
                         (constant, process_args depth arguments)
+                    else if is_stale_constr constant then
+                      raise Refute_ModelFinder_Util.NOT_SUPPORTED
+                        ("(non-co)constructors of codatatypes (\"" ^
+                         raw_constructor_name constant ^ "\")")
                     else if is_record_get constant then
                       if null arguments then
                         do_term depth (eta_expand constant 1)

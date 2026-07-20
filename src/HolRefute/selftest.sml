@@ -440,6 +440,20 @@ fun mf_codatatype_registrations () =
       {tyop = {Thy = "llist", Tyop = "llist"},
        case_const = ``list$list_CASE``,
        constructors = [``llist$LNIL``, ``llist$LCONS``]}
+    val duplicate_constructor_rejected = rejected
+      {tyop = {Thy = "llist", Tyop = "llist"},
+       case_const = ``llist$llist_CASE``,
+       constructors = [``llist$LNIL``, ``llist$LNIL``]}
+    val variable_case_rejected = rejected
+      {tyop = {Thy = "llist", Tyop = "llist"},
+       case_const = Term.mk_var
+         ("fake_case", Term.type_of ``llist$llist_CASE``),
+       constructors = [``llist$LNIL``, ``llist$LCONS``]}
+    val variable_constructor_rejected = rejected
+      {tyop = {Thy = "llist", Tyop = "llist"},
+       case_const = ``llist$llist_CASE``,
+       constructors = [``llist$LNIL``, Term.mk_var
+         ("fake_cons", Term.type_of ``llist$LCONS``)]}
     val ret = ``itree$Ret``
     val result_args = #Args (Type.dest_thy_type
       (#2 (boolSyntax.strip_fun (Term.type_of ret))))
@@ -480,14 +494,50 @@ fun mf_codatatype_registrations () =
        {Thy = "itreeTau", Name = "itree_CASE"}] andalso
     empty_rejected andalso wrong_operator_rejected andalso
     interpreted_rejected andalso boolean_rejected andalso
-    wrong_case_rejected andalso duplicate_rejected andalso
-    nonvariable_rejected andalso mixed_results_rejected andalso
+    wrong_case_rejected andalso duplicate_constructor_rejected andalso
+    variable_case_rejected andalso variable_constructor_rejected andalso
+    duplicate_rejected andalso nonvariable_rejected andalso
+    mixed_results_rejected andalso
     map MFH.constructor_name (MFH.registered_constructors llist_ty) =
       ["llist$LNIL", "llist$LCONS"]
   end
 
 val _ = require_msg (check_result mf_codatatype_registrations) (fn () =>
   "codatatype lazy registration or public validation failed")
+  (fn () => ()) ()
+
+fun mf_stale_codatatype_constructor_is_refused () =
+  let
+    val saved = !MFH.codatatype_registry
+    fun restore () = MFH.codatatype_registry := saved
+    fun check () =
+      let
+        val _ = MFH.codatatype_registry :=
+          [{tyop = {Thy = "llist", Tyop = "llist"},
+            case_const = ``llist$llist_CASE``,
+            constructors = [``llist$LNIL``]}]
+        val context = MFH.make_context Refute_Core.default_mf_config []
+        val refused =
+          ((ignore (MFH.unfold_defs_in_term context ``llist$LCONS``);
+            false)
+           handle Refute_ModelFinder_Util.NOT_SUPPORTED message =>
+             String.isPrefix
+               "(non-co)constructors of codatatypes" message)
+      in
+        MFH.is_codatatype ``:num llist`` andalso
+        MFH.is_raw_free_datatype ``:num llist`` andalso
+        MFH.is_nonfree_constr ``llist$LNIL`` andalso
+        not (MFH.is_nonfree_constr ``llist$LCONS``) andalso
+        MFH.is_stale_constr ``llist$LCONS`` andalso refused
+      end
+  in
+    (check () before restore ())
+    handle error => (restore (); raise error)
+  end
+
+val _ = require_msg
+  (check_result mf_stale_codatatype_constructor_is_refused) (fn () =>
+    "a stale free constructor of a codatatype was not refused")
   (fn () => ()) ()
 
 val mf_hol_context : MFH.mf_context =
