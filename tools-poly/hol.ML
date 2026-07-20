@@ -576,9 +576,10 @@ in
            theorems in DB), producing a flood of "is out-of-date!"
            errors.  Restoring first gives every compile a fresh
            HOL environment. *)
-        let val s = "let val snap = Context.snapshot () in \
+        let val s = "let val snap = Context.snapshot () \
+                    \    val restoreLoaded = Meta.snapshotLoaded () in \
                     \  LSPExtension.resetForCompile := \
-                    \    (fn () => Context.restore snap) \
+                    \    (fn () => (Context.restore snap; restoreLoaded ())) \
                     \end"
             val i = ref 0
             fun read () = (SOME (String.sub (s, !i)) before i := !i + 1)

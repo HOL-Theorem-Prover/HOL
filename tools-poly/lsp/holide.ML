@@ -728,11 +728,43 @@ fun initialize {
     CPLineOffset getOffset,
     CPPrintInAlphabeticalOrder false,
     CPBindingSeq (fn () => (fn n => n before serial := n + 1) (!serial))];
+  (* Optional stack-trace on runtime exceptions from the compiled unit.
+     PolyML.Exception.exception_trace prints a backtrace to stdErr and
+     then re-raises, so it must wrap the raising call directly (not run
+     on an already-caught exn).  Gated on HOL_LSP_DEBUG_TRACE to avoid
+     spamming stderr in normal use.  exception_trace's backtrace is only
+     populated when the compiled unit carries debug info, so we add
+     CPDebug true to the compiler parameters in that mode. *)
+  val traceExn = case OS.Process.getEnv "HOL_LSP_DEBUG_TRACE" of
+      SOME s => s <> "" andalso s <> "0"
+    | NONE => false
+  val parameters =
+    if traceExn then CPDebug true :: parameters else parameters
+  fun dbgOut s = (TextIO.output (TextIO.stdErr, s);
+                  TextIO.flushOut TextIO.stdErr)
+  fun runCompiler () =
+    if traceExn then let
+      val () = dbgOut ("[LSP-trace] enter compile @pos=" ^ Int.toString (!pos) ^ "\n")
+      in
+        PolyML.Exception.exception_trace (fn () =>
+          PolyML.compiler (read2, parameters) ())
+        handle e => (
+          dbgOut ("[LSP-trace] caught " ^ exnMessage e ^ "\n"
+                  ^ (case PolyML.Exception.exceptionLocation e of
+                       NONE => "  (no location)\n"
+                     | SOME {file, startLine, endLine, startPosition, endPosition} =>
+                       "  location: " ^ file ^ ":" ^ FixedInt.toString startLine
+                       ^ "-" ^ FixedInt.toString endLine ^ " ("
+                       ^ FixedInt.toString startPosition ^ ".."
+                       ^ FixedInt.toString endPosition ^ ")\n"));
+          raise e)
+      end
+    else PolyML.compiler (read2, parameters) ()
   fun finish () = (
     progress (!pos);
     case !curToken of
       (_, "") => ()
-    | _ => ((PolyML.compiler (read2, parameters) () handle e => runtimeExn e); finish ()))
+    | _ => ((runCompiler () handle e => runtimeExn e); finish ()))
   fun emitBuilt () = let
     val decs = !decsRef
     val pts = rev (!ptRef)
