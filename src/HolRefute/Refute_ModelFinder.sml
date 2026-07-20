@@ -17,7 +17,7 @@ signature REFUTE_MODEL_FINDER = sig
     Refute_Core.mf_config -> bool -> bool -> bool -> string list
   val liberal_budget_after_models :
     {max_potential : int, max_genuine : int, delivered : int,
-     promoted : bool} -> int * int
+     kept : int, promoted : bool, incremental : bool} -> int * int
   val kodkod_backend : Refute_Core.backend
   val kodkod_certainty_ceiling : Refute_Core.certainty_ceiling
   val register_backends : unit -> unit
@@ -247,9 +247,12 @@ fun problem_for_scope deadline (mf : Refute_Core.mf_config)
 fun metadata (_, metadata : MFK.problem_metadata) = metadata
 
 fun liberal_budget_after_models
-      {max_potential, max_genuine, delivered, promoted} =
+      {max_potential, max_genuine, delivered, kept, promoted,
+       incremental} =
   if promoted then (0, max_genuine - 1)
-  else (max_potential - delivered, max_genuine)
+  else
+    (max_potential - (if incremental then delivered else kept),
+     max_genuine)
 
 fun raw_problem (problem, _ : MFK.problem_metadata) = problem
 
@@ -581,29 +584,39 @@ fun run_instance deadline started (config : Refute_Core.config)
                            a later liberal model (which could be merely
                            Potential), and consume exactly one genuine slot
                            before dropping the remaining unsound problems. *)
-                        fun reconstruct_until_genuine [] = false
+                        fun reconstruct_until_genuine [] = (false, 0)
                           | reconstruct_until_genuine
                               ((index, bounds) :: models) =
                               (case reconstruct
                                   (List.nth (problems, index)) bounds of
                                    SOME cex =>
                                      if certainty_is_genuine (#certainty cex)
-                                     then true
-                                     else reconstruct_until_genuine models
+                                     then (true, 1)
+                                     else
+                                       let
+                                         val (promoted, kept) =
+                                           reconstruct_until_genuine models
+                                       in
+                                         (promoted, kept + 1)
+                                       end
                                  | NONE => reconstruct_until_genuine models)
-                        val promoted = reconstruct_until_genuine
+                        val (promoted, kept) = reconstruct_until_genuine
                           (take_at_most max_potential liberal)
                         val found = found_really_genuine orelse promoted
                         (* Port the upstream over-delivery behavior
-                           bug-for-bug: even unprinted liberal models consume
-                           potential slots; recursive entry clamps at zero.
+                           bug-for-bug in incremental mode: even unprinted
+                           liberal models consume potential slots; recursive
+                           entry clamps at zero.  At the degenerate M3
+                           boundary, only reconstructed models consume the
+                           single slot.
                            See [m4-driver section 7 Q5]. *)
                         val (max_potential, max_genuine) =
                           liberal_budget_after_models
                             {max_potential = max_potential,
                              max_genuine = max_genuine,
                              delivered = length liberal,
-                             promoted = promoted}
+                             kept = kept, promoted = promoted,
+                             incremental = incremental}
                         val _ = latest_state :=
                           (found, max_potential, max_genuine, donno)
                       in

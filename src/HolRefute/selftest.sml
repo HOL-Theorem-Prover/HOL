@@ -8201,14 +8201,19 @@ val _ = require_msg (check_result multi_model_ranges_are_live) (fn () =>
 
 fun liberal_budget_accounting_is_pinned () =
   Refute_ModelFinder.liberal_budget_after_models
-    {max_potential = 2, max_genuine = 3, delivered = 1,
-     promoted = false} = (1, 3) andalso
+    {max_potential = 2, max_genuine = 3, delivered = 1, kept = 1,
+     promoted = false, incremental = true} = (1, 3) andalso
   Refute_ModelFinder.liberal_budget_after_models
-    {max_potential = 2, max_genuine = 3, delivered = 3,
-     promoted = false} = (~1, 3) andalso
+    {max_potential = 2, max_genuine = 3, delivered = 3, kept = 2,
+     promoted = false, incremental = true} = (~1, 3) andalso
   Refute_ModelFinder.liberal_budget_after_models
-    {max_potential = 2, max_genuine = 3, delivered = 2,
-     promoted = true} = (0, 2)
+    {max_potential = 2, max_genuine = 3, delivered = 2, kept = 2,
+     promoted = true, incremental = true} = (0, 2) andalso
+  (* Degenerate 1/1 search remains byte-for-byte M3: a liberal model
+     discarded during reconstruction does not consume its sole slot. *)
+  Refute_ModelFinder.liberal_budget_after_models
+    {max_potential = 1, max_genuine = 1, delivered = 1, kept = 0,
+     promoted = false, incremental = false} = (1, 1)
 
 val _ = require_msg (check_result liberal_budget_accounting_is_pinned)
   (fn () => "liberal-model budget accounting changed") (fn () => ()) ()
