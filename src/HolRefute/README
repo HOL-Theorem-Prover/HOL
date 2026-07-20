@@ -98,3 +98,7 @@ the support theory and used by model-finder preprocessing.
 `Refute.upd_iter` selects model-finder unrolling depths.  A mutual fixpoint
 group shares one iterator row: members are checked in `_cases` theorem order,
 and the first member with an explicit row wins before the default row is used.
+Predicates introduced by `Hol_reln` and `Hol_coreln` are recognized through
+the IndDef registries and support direct well-founded equations or joint
+least/greatest-fixpoint unrolling.  Hand-rolled greatest fixpoints are not
+recognized; define coinductive predicates with `Hol_coreln`.

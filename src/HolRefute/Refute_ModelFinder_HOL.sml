@@ -733,14 +733,8 @@ structure Refute_ModelFinder_HOL = struct
       (original_const_key constant))
     handle HOL_ERR _ => false
 
-  (* TASK_14 replaces this empty provider by CoIndDefLib's registry.  Keeping
-     the branch here gives gfp precedence and, importantly, keeps this slice
-     from guessing coinductiveness from theorem names. *)
-  val empty_coinduction_map = KNametab.empty : thm list KNametab.table
-  fun coinduction_map () = empty_coinduction_map
-
   fun is_registered_gfp constant =
-    Option.isSome (KNametab.lookup (coinduction_map ())
+    Option.isSome (KNametab.lookup (CoIndDefLib.coinduction_map ())
       (original_const_key constant))
     handle HOL_ERR _ => false
 
@@ -1056,14 +1050,17 @@ structure Refute_ModelFinder_HOL = struct
     Term.aconv (Thm.concl left) (Thm.concl right)
 
   fun registered_stem Lfp key stem =
-        let
-          val theorem = DB.fetch (#Thy key) (stem ^ "_strongind")
-          val registered = Option.getOpt
-            (KNametab.lookup (IndDefLib.rule_induction_map ()) key, [])
-        in
-          List.exists (same_conclusion theorem) registered
-        end
-    | registered_stem Gfp _ _ = true
+        (let
+           val theorem = DB.fetch (#Thy key) (stem ^ "_strongind")
+           val registered = Option.getOpt
+             (KNametab.lookup (IndDefLib.rule_induction_map ()) key, [])
+         in
+           List.exists (same_conclusion theorem) registered
+         end
+         handle HOL_ERR _ => false)
+    | registered_stem Gfp key _ =
+        Option.isSome
+          (KNametab.lookup (CoIndDefLib.coinduction_map ()) key)
     | registered_stem NoFp _ _ = false
 
   fun theorem_has_member key theorem =
@@ -1814,7 +1811,7 @@ structure Refute_ModelFinder_HOL = struct
                | NONE =>
                    let
                      val kind = fixpoint_kind_of_const context constant
-                     val result = kind = Lfp andalso
+                     val result = kind <> NoFp andalso
                        (case instance of
                             SOME {rules, ...} =>
                               if length members > 1 then
@@ -1830,13 +1827,18 @@ structure Refute_ModelFinder_HOL = struct
 
   fun fixpoint_refusal_reason context constant =
     case fixpoint_group_of_const context constant of
-        NONE => SOME ("inductive predicate " ^
-          Parse.term_to_string constant ^
-          " has no usable _cases/_rules theorem")
-      | SOME {kind = Gfp, ...} => SOME ("coinductive predicate " ^
-          Parse.term_to_string constant ^
-          ": unsupported until TASK_14")
+        NONE =>
+          let
+            val label =
+              if raw_fixpoint_kind constant = Gfp then "coinductive"
+              else "inductive"
+          in
+            SOME (label ^ " predicate " ^ Parse.term_to_string constant ^
+              " has no usable registered _cases/_rules theorem; " ^
+              "hand-rolled greatest fixpoints are not supported")
+          end
       | SOME {kind = Lfp, ...} => NONE
+      | SOME {kind = Gfp, ...} => NONE
       | SOME {kind = NoFp, ...} => SOME ("predicate " ^
           Parse.term_to_string constant ^ " is not a fixpoint")
 

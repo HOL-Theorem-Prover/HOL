@@ -87,6 +87,11 @@ Inductive zoo_nonwf_lfp:
   !n : num. zoo_nonwf_lfp n ==> zoo_nonwf_lfp n
 End
 
+CoInductive zoo_wf_gfp:
+  zoo_wf_gfp 0 /\
+  (!n. zoo_wf_gfp n ==> zoo_wf_gfp (SUC n))
+End
+
 CoInductive zoo_guarded_gfp:
   !b. b /\ zoo_guarded_gfp b ==> zoo_guarded_gfp b
 End
