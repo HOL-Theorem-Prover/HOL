@@ -522,16 +522,44 @@ in
     | LSP =>
       let in
         QUse.failOnError := false; (* heap may carry true from BUILDHEAP *)
-        (* Match the REPL's "interactive" posture: uncaught HOL_ERRs
-           should not call OS.Process.exit (Feedback.render_exn's
-           batch-mode branch).  Globals lives in hol.state, not in
-           hol.ML's compile-time namespace, so evaluate the setter as
-           a string at runtime. *)
-        let val s = "Globals.interactive := true"
+        (* Runtime setup that references hol.state bindings not in
+           hol.ML's compile-time namespace: Globals.interactive
+           (so uncaught HOL_ERRs don't call OS.Process.exit via
+           Feedback.render_exn's batch-mode branch) and the Feedback
+           output streams that HOL_MESG / HOL_WARNING / HOL_INFO
+           write to.  Those streams default to stdout, which the LSP
+           owns for JSON-RPC framing — leaving them there corrupts
+           every message the LSP sends.  Redirect to stderr so they
+           show up in the client's stderr view.
+
+           PolyML.compiler consumes one top-level declaration per
+           invocation; we loop until the reader is exhausted. *)
+        let val s =
+              "Globals.interactive := true; \
+              \Feedback.MESG_outstream := \
+              \  (fn s => (TextIO.output (TextIO.stdErr, s); \
+              \            TextIO.flushOut TextIO.stdErr)); \
+              \Feedback.WARNING_outstream := \
+              \  (fn s => (TextIO.output (TextIO.stdErr, s); \
+              \            TextIO.flushOut TextIO.stdErr)); \
+              \Feedback.INFO_outstream := \
+              \  (fn s => (TextIO.output (TextIO.stdErr, s); \
+              \            TextIO.flushOut TextIO.stdErr))"
             val i = ref 0
             fun read () = (SOME (String.sub (s, !i)) before i := !i + 1)
                           handle Subscript => NONE
-        in PolyML.compiler (read, []) () end;
+            fun err {message, hard, ...} =
+              (TextIO.output (TextIO.stdErr,
+                 "[LSP-init] " ^ (if hard then "ERROR" else "warning") ^ ": ");
+               PolyML.prettyPrint (fn s => TextIO.output (TextIO.stdErr, s), 80) message;
+               TextIO.output (TextIO.stdErr, "\n");
+               TextIO.flushOut TextIO.stdErr)
+            fun runall () =
+              if !i >= String.size s then ()
+              else (PolyML.compiler
+                      (read, [PolyML.Compiler.CPErrorMessageProc err]) ();
+                    runall ())
+        in runall () end;
         (* Load HOL_Interactive so the parser's open-rewriting works
            on Script.sml files (issue #1865). *)
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
