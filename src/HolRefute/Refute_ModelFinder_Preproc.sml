@@ -1474,13 +1474,22 @@ structure Refute_ModelFinder_Preproc = struct
           not (MFH.is_built_in_const original) andalso
           not (MFH.is_constr original) andalso
           not (MFH.is_choice_spec_fun context original) andalso
-          (MFH.is_raw_equational_fun context original orelse
+          (MFH.is_equational_fun context original orelse
            Option.isSome (MFH.def_of_const context original))
         fun replace_bound selected standins candidate =
           List.foldl (fn ((variable, standin), result) =>
             substitute variable standin result) candidate
             (ListPair.zip (selected, standins))
         fun specialize_occurrence bound original arguments =
+          let
+            val _ =
+              if MFH.is_raw_inductive_pred context original then
+                case MFH.fixpoint_refusal_reason context original of
+                    SOME reason =>
+                      raise Refute_ModelFinder_Util.NOT_SUPPORTED reason
+                  | NONE => ()
+              else ()
+          in
           if not (eligible_candidate original arguments) then
             Term.list_mk_comb (original, arguments)
           else
@@ -1567,6 +1576,7 @@ structure Refute_ModelFinder_Preproc = struct
                         end
                 end
             end
+          end
         fun recurse bound candidate =
           if Term.is_abs candidate then
             let val (variable, body) = Term.dest_abs candidate
@@ -1825,6 +1835,13 @@ structure Refute_ModelFinder_Preproc = struct
                     List.foldl (fn (axiom, result) =>
                       add_axiom false depth axiom result) next
                       (MFH.equational_fun_axioms context term)
+                  else if MFH.is_raw_inductive_pred context term then
+                    (case MFH.fixpoint_refusal_reason context term of
+                         SOME reason =>
+                           raise Refute_ModelFinder_Util.NOT_SUPPORTED reason
+                       | NONE => List.foldl (fn (axiom, result) =>
+                           add_eq_axiom depth axiom result) next
+                           (MFH.equational_fun_axioms context term))
                   else if MFH.is_raw_equational_fun context term then
                     List.foldl (fn (axiom, result) =>
                       add_eq_axiom depth axiom result) next

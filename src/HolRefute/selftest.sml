@@ -412,6 +412,113 @@ val _ = require_msg (check_result mf_table_zoo) (fn () =>
   "model-finder def/simp/psimp/choice-spec table zoo failed")
   (fn () => ()) ()
 
+fun mf_theory_footprint () =
+  (Theory.current_theory (),
+   map #1 (Theory.types "-"),
+   map (#1 o Term.dest_const) (Theory.constants "-"),
+   map (fn ((_, name), _) => name) (DB.thy "-"))
+
+fun mf_inductive_recognition_and_wf () =
+  let
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val easy = ``zoo_wf_lfp : num -> bool``
+    val hard = ``zoo_nonwf_lfp : num -> bool``
+    val parameterized = ``zoo_param_lfp : num -> num -> bool``
+    val poly_pattern = ``zoo_poly_lfp : 'a -> num -> bool``
+    val poly_actual = ``zoo_poly_lfp : num -> num -> bool``
+    val mutual = ``zoo_mutual_lfp : num -> bool``
+    val other = ``zoo_mutual_other_lfp : num -> bool``
+    val baseline = mf_theory_footprint ()
+    val easy_wf = MFH.is_well_founded_inductive_pred context easy
+    val hard_wf = MFH.is_well_founded_inductive_pred context hard
+    val after = mf_theory_footprint ()
+    val parameterized_wf =
+      MFH.is_well_founded_inductive_pred context parameterized
+    val zero_config = Refute.upd_tac_timeout 0.0 default_config
+    val zero_context = MFH.make_context (#mf zero_config) []
+    val timed_out_cleanly =
+      not (MFH.is_well_founded_inductive_pred zero_context hard)
+    val zero_cache = Synchronized.value MFH.cached_wf_props
+    val session_cache_flushed =
+      Time.compare (#timeout zero_cache, Time.zeroTime) = EQUAL andalso
+      length (#entries zero_cache) <= MFH.max_cached_wfs
+    val false_config = Refute.upd_wf [(SOME easy, SOME false)]
+      default_config
+    val false_context = MFH.make_context (#mf false_config) []
+    val override_blocks =
+      not (MFH.is_well_founded_inductive_pred false_context easy)
+    val poly_config = Refute.upd_wf
+      [(SOME poly_pattern, SOME false)] default_config
+    val poly_context = MFH.make_context (#mf poly_config) []
+    val poly_override_blocks =
+      not (MFH.is_well_founded_inductive_pred poly_context poly_actual)
+    val true_config = Refute.upd_wf [(SOME easy, SOME true)]
+      default_config
+    val true_reasons = Refute_ModelFinder.authenticity_reasons
+      (#mf true_config) true true
+    val true_override_degrades = List.exists
+      (Refute_ModelFinder_Util.is_substring_of "\"wf\"") true_reasons
+    val mutual_group = MFH.fixpoint_group_of_const context other
+    val easy_cases = MFH.case_props_for_const context easy
+    val easy_rules = MFH.intro_props_for_const context easy
+    val unfolded = MFH.unfold_defs_in_term context ``zoo_wf_lfp n``
+    val final_footprint = mf_theory_footprint ()
+  in
+    MFH.fixpoint_kind_of_const context easy = MFH.Lfp andalso
+    MFH.fixpoint_kind_from_memberships true true = MFH.Gfp andalso
+    MFH.fixpoint_kind_from_memberships false true = MFH.Lfp andalso
+    MFH.fixpoint_kind_from_memberships false false = MFH.NoFp andalso
+    MFH.is_raw_inductive_pred context easy andalso
+    not (MFH.is_raw_inductive_pred context
+      ``FINITE : num set -> bool``) andalso
+    easy_wf andalso parameterized_wf andalso not hard_wf andalso
+    timed_out_cleanly andalso session_cache_flushed andalso
+    length (!(#wf_cache context)) = 3 andalso override_blocks andalso
+    poly_override_blocks andalso true_override_degrades andalso
+    baseline = after andalso
+    baseline = final_footprint andalso
+    length easy_cases = 1 andalso length easy_rules = 2 andalso
+    (case mutual_group of
+         SOME {stem, members, ...} =>
+           stem = "zoo_mutual_lfp" andalso length members = 2
+       | NONE => false) andalso
+    MFH.is_mutually_inductive_pred context mutual andalso
+    MFH.is_mutually_inductive_pred context other andalso
+    term_has_const {Thy = "refuteTableZoo", Name = "zoo_wf_lfp"}
+      unfolded andalso
+    (case MFH.fixpoint_refusal_reason context hard of
+         SOME reason => Refute_ModelFinder_Util.is_substring_of
+           "unrolling is unsupported until TASK_11" reason
+       | NONE => false) andalso
+    (case MFH.fixpoint_refusal_reason context mutual of
+         SOME reason => Refute_ModelFinder_Util.is_substring_of
+           "mutual inductive predicate group" reason
+       | NONE => false)
+  end
+
+val _ = require_msg (check_result mf_inductive_recognition_and_wf) (fn () =>
+  "model-finder inductive recognition, tables, or wf prover failed")
+  (fn () => ()) ()
+
+fun mf_inductive_direct_equation () =
+  let
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val (_, definitions, _, _, _, _) =
+      Refute_ModelFinder_Preproc.preprocess_formulas
+        context [] ``zoo_wf_lfp n``
+    val key = {Thy = "refuteTableZoo", Name = "zoo_wf_lfp"}
+  in
+    List.exists (term_has_const key) definitions andalso
+    List.exists Refute_ModelFinder_Preproc.is_constructor_pattern_formula
+      definitions andalso
+    not (List.exists (term_has_const
+      {Thy = "relation", Name = "WFREC"}) definitions)
+  end
+
+val _ = require_msg (check_result mf_inductive_direct_equation) (fn () =>
+  "well-founded inductive predicate did not use its direct cases equation")
+  (fn () => ()) ()
+
 fun mf_definition_last_wins () =
   let
     val constant = ``zoo_total : num -> num``
@@ -5081,6 +5188,24 @@ local
         | _ => false
     end
 
+  fun mf_inductive_direct_equation_smoke () =
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val solver =
+        if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
+      val config = default_config
+        |> upd_timeout 20.0
+        |> upd_backends (SOME ["kodkod"])
+        |> upd_sat_solver solver
+        |> upd_card [(SOME ``:num``, [3]), (NONE, [1])]
+    in
+      case Refute.refute config ``zoo_wf_lfp n ==> n = 0`` of
+          Refute.Counterexample
+            ({backend = "kodkod", certainty = Refute.Genuine,
+              cert = NONE, ...} :: _) => true
+        | _ => false
+    end
+
   fun mf_binary_smart_trigger () =
     let
       val solvers = Refute_ForlSat.configured_sat_solvers false
@@ -5180,6 +5305,12 @@ in
       require_msg (check_result mf_driver_smoke) (fn () =>
         "the gated model-finder smoke did not find a certified " ^
         "counterexample") (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_inductive_direct_equation_smoke) (fn () =>
+        "the gated inductive direct-equation pin did not refute")
+        (fn () => ()) ()
     else ()
   val _ =
     if bridge_configured then
@@ -9417,10 +9548,20 @@ val mf_acceptance_cases : mf_acceptance_case list =
     tm = ``!x : refute$rf2. x = rf2_1 \/ x = rf2_2``,
     expect = ExpectNone, cert_pin = MfCertIgnored,
     unknown_reason = NONE, sat4j_smoke = false},
-   {name = "inductive predicate refusal",
+   {name = "direct well-founded inductive equation",
+    tm = ``zoo_wf_lfp n ==> n = 0``,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
+    unknown_reason = NONE, sat4j_smoke = true},
+   {name = "non-wf inductive predicate refusal",
     tm = ``RTC (r : num -> num -> bool) x y``,
     expect = ExpectUnknown, cert_pin = MfCertIgnored,
-    unknown_reason = SOME "inductive predicate", sat4j_smoke = true},
+    unknown_reason = SOME "unrolling is unsupported until TASK_11",
+    sat4j_smoke = true},
+   {name = "mutual inductive predicate refusal",
+    tm = ``zoo_mutual_other_lfp n``,
+    expect = ExpectUnknown, cert_pin = MfCertIgnored,
+    unknown_reason = SOME "mutual inductive predicate group",
+    sat4j_smoke = false},
    {name = "GSPEC refused-predicate fallback",
     tm = ``x IN GSPEC (\n : num. (n, RTC r n x))``,
     expect = ExpectUnknown, cert_pin = MfCertIgnored,

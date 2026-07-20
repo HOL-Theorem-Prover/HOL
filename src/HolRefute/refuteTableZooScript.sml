@@ -77,3 +77,32 @@ Theorem zoo_override_latest[refute_unfold]:
 Proof
   simp [zoo_override_def]
 QED
+
+Inductive zoo_wf_lfp:
+  zoo_wf_lfp 0 /\
+  (!n. zoo_wf_lfp n ==> zoo_wf_lfp (SUC n))
+End
+
+Inductive zoo_nonwf_lfp:
+  !n : num. zoo_nonwf_lfp n ==> zoo_nonwf_lfp n
+End
+
+Inductive zoo_param_lfp:
+  (!k : num. zoo_param_lfp k 0) /\
+  (!k n. zoo_param_lfp k n ==>
+         zoo_param_lfp k (SUC n))
+End
+
+Inductive zoo_poly_lfp:
+  (!(x : 'a). zoo_poly_lfp x 0) /\
+  (!x n. zoo_poly_lfp x n ==>
+         zoo_poly_lfp x (SUC n))
+End
+
+Inductive zoo_mutual_lfp:
+  zoo_mutual_lfp 0 /\
+  (!n. zoo_mutual_other_lfp n ==>
+       zoo_mutual_lfp (SUC n)) /\
+  (!n. zoo_mutual_lfp n ==>
+       zoo_mutual_other_lfp (SUC n))
+End

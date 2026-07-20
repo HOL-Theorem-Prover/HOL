@@ -115,21 +115,6 @@ fun distinct_terms terms =
 fun free_variables terms =
   distinct_terms (List.concat (map Term.free_vars_lr terms))
 
-fun inductive_predicate term =
-  let
-    val table = IndDefLib.rule_induction_map ()
-    fun is_inductive constant =
-      Option.isSome (KNametab.lookup table (MFH.const_key constant))
-      handle HOL_ERR _ => false
-  in
-    List.find is_inductive (HolKernel.find_terms Term.is_const term)
-  end
-
-fun inductive_reason term =
-  Option.map (fn constant =>
-    "inductive predicate " ^ Parse.term_to_string constant ^
-    ": unsupported until M4") (inductive_predicate term)
-
 fun none_true assignments =
   List.all (fn (_, value) => value <> SOME true) assignments
 
@@ -289,9 +274,16 @@ fun run_instance deadline started (config : Refute_Core.config)
       if #falsify mf then boolSyntax.mk_imp (original, boolSyntax.F)
       else original
     val context = MFH.make_context mf eval_terms
+    val fixpoint_refusal = MFH.first_fixpoint_refusal context original
+    val _ = if Option.isSome fixpoint_refusal then
+        MFH.print_wf_cache context else ()
+    val _ = case fixpoint_refusal of
+        SOME reason => raise MFU.NOT_SUPPORTED reason
+      | NONE => ()
     val (nondef_ts, def_ts, need_ts, got_all_mono_user_axioms,
          no_poly_user_axioms, binarize) =
       MFP.preprocess_formulas context [] negated
+    val _ = MFH.print_wf_cache context
     val nondef_us = map (MFNT.nut_from_term context MFNT.Eq) nondef_ts
     val def_us = map (MFNT.nut_from_term context MFNT.DefEq) def_ts
     val (free_names, const_names) =
@@ -811,24 +803,24 @@ fun run config instances =
             if null cexs then Refute_Core.Unknown ["kodkod timed out"]
             else Refute_Core.Counterexample cexs
           else
-            case inductive_reason (#original instance) of
-                SOME reason => search rest cexs (reasons @ [reason]) false
-              | NONE =>
-                  let val result = run_instance deadline started config instance
-                  in
-                    case result of
-                        Refute_Core.Counterexample more =>
-                          let val combined = cexs @ more
-                          in
-                            if Refute_Core.decisive config ceiling result then
-                              Refute_Core.Counterexample combined
-                            else search rest combined reasons false
-                          end
-                      | Refute_Core.NoCounterexample =>
-                          search rest cexs reasons all_none
-                      | Refute_Core.Unknown more =>
-                          search rest cexs (reasons @ more) false
-                  end
+            let
+              val result = run_instance deadline started config instance
+                handle MFU.NOT_SUPPORTED reason =>
+                  Refute_Core.Unknown [reason]
+            in
+              case result of
+                  Refute_Core.Counterexample more =>
+                    let val combined = cexs @ more
+                    in
+                      if Refute_Core.decisive config ceiling result then
+                        Refute_Core.Counterexample combined
+                      else search rest combined reasons false
+                    end
+                | Refute_Core.NoCounterexample =>
+                    search rest cexs reasons all_none
+                | Refute_Core.Unknown more =>
+                    search rest cexs (reasons @ more) false
+            end
   in
     search ordered [] [] (not (null ordered))
   end

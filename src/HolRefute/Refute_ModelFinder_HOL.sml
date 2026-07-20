@@ -253,6 +253,16 @@ structure Refute_ModelFinder_HOL = struct
   type const_table = term list KNametab.table
   type special_fun = (term * int list * term list) * term
   type wf_cache = (term * (bool * bool)) list
+
+  datatype fixpoint_kind = Lfp | Gfp | NoFp
+
+  type fixpoint_group =
+    {kind : fixpoint_kind,
+     stem : string,
+     members : kname list,
+     rules : term list,
+     cases : term list}
+  type fixpoint_cache = (kname * fixpoint_group option) list
   type type_operator = {Thy : string, Tyop : string}
   type ersatz = {original : kname, replacement : kname}
   type codatatype_info =
@@ -291,7 +301,9 @@ structure Refute_ModelFinder_HOL = struct
      simp_table : const_table ref,
      psimp_table : const_table,
      choice_spec_table : const_table,
-     intro_table : const_table,
+     intro_table : const_table ref,
+     case_table : const_table ref,
+     fixpoint_cache : fixpoint_cache ref,
      ersatz_table : ersatz list,
      skolems : (string * string list) list ref,
      special_funs : special_fun list ref,
@@ -370,6 +382,20 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun clauses_of theorem = map theorem_term (Drule.CONJUNCTS theorem)
+
+  (* Hol_reln puts parameters outside the conjunction for some mutual
+     groups.  Split at term level and restore those parameters on every
+     clause; Drule.CONJUNCTS only sees top-level conjunctions. *)
+  fun quantified_conjuncts theorem =
+    let
+      val proposition = theorem_term theorem
+      val (outer, body) = boolSyntax.strip_forall proposition
+      fun close clause =
+        let val (inner, core) = boolSyntax.strip_forall clause
+        in boolSyntax.list_mk_forall (outer @ inner, core) end
+    in
+      map close (boolSyntax.strip_conj body)
+    end
 
   fun term_under_def term =
     if boolSyntax.is_forall term then
@@ -621,6 +647,29 @@ structure Refute_ModelFinder_HOL = struct
   fun is_built_in_const constant =
     Option.isSome (arity_of_built_in_const constant)
 
+  fun is_registered_lfp constant =
+    Option.isSome (KNametab.lookup (IndDefLib.rule_induction_map ())
+      (original_const_key constant))
+    handle HOL_ERR _ => false
+
+  (* TASK_14 replaces this empty provider by CoIndDefLib's registry.  Keeping
+     the branch here gives gfp precedence and, importantly, keeps this slice
+     from guessing coinductiveness from theorem names. *)
+  val empty_coinduction_map = KNametab.empty : thm list KNametab.table
+  fun coinduction_map () = empty_coinduction_map
+
+  fun is_registered_gfp constant =
+    Option.isSome (KNametab.lookup (coinduction_map ())
+      (original_const_key constant))
+    handle HOL_ERR _ => false
+
+  fun fixpoint_kind_from_memberships gfp lfp =
+    if gfp then Gfp else if lfp then Lfp else NoFp
+
+  fun raw_fixpoint_kind constant =
+    fixpoint_kind_from_memberships
+      (is_registered_gfp constant) (is_registered_lfp constant)
+
   (* Boolean-valued COND is not arity-limited because the nut layer handles
      fully applied Boolean conditionals.  It is nevertheless on the built-in
      table and must not be expanded through HOL4's choice-based COND_DEF. *)
@@ -630,7 +679,8 @@ structure Refute_ModelFinder_HOL = struct
       val ty = Term.type_of constant
     in
       Option.isSome (generic_built_in_arity key) orelse
-      Option.isSome (typed_built_in_arity key ty)
+      Option.isSome (typed_built_in_arity key ty) orelse
+      raw_fixpoint_kind constant <> NoFp
     end handle HOL_ERR _ => false
 
   fun def_props_for_const table constant =
@@ -869,10 +919,164 @@ structure Refute_ModelFinder_HOL = struct
   fun is_choice_spec_fun context constant =
     not (null (choice_spec_props_for_const context constant))
 
+  fun prop_key prop = #1 (pair_for_prop prop)
+
+  fun case_prop_key prop =
+    let
+      val (_, body) = boolSyntax.strip_forall prop
+      val (premises, equation) = boolSyntax.strip_imp body
+      val (left, _) = boolSyntax.dest_eq equation
+      val (head, arguments) = HolKernel.strip_comb left
+    in
+      if null premises andalso Term.is_const head andalso
+         List.all Term.is_var arguments then SOME (const_key head)
+      else NONE
+    end
+    handle HOL_ERR _ => NONE
+
+  fun same_conclusion left right =
+    Term.aconv (Thm.concl left) (Thm.concl right)
+
+  fun registered_stem Lfp key stem =
+        let
+          val theorem = DB.fetch (#Thy key) (stem ^ "_strongind")
+          val registered = Option.getOpt
+            (KNametab.lookup (IndDefLib.rule_induction_map ()) key, [])
+        in
+          List.exists (same_conclusion theorem) registered
+        end
+    | registered_stem Gfp _ _ = true
+    | registered_stem NoFp _ _ = false
+
+  fun theorem_has_member key theorem =
+    List.exists (fn prop =>
+      case case_prop_key prop of
+          SOME head => same_key head key
+        | NONE => false) (quantified_conjuncts theorem)
+    handle HOL_ERR _ => false
+
+  fun drop_cases_suffix name =
+    String.substring (name, 0, size name - size "_cases")
+
+  fun locate_cases_theorem kind ({Thy, Name} : kname) =
+    let
+      val key = {Thy = Thy, Name = Name}
+      fun usable stem theorem =
+        registered_stem kind key stem andalso
+        theorem_has_member key theorem
+      fun scan () =
+        List.find (fn (binding, theorem) =>
+          String.isSuffix "_cases" binding andalso
+          usable (drop_cases_suffix binding) theorem)
+          (DB.theorems Thy)
+        |> Option.map (fn (binding, theorem) =>
+             (drop_cases_suffix binding, theorem))
+      val fast = Lib.total (DB.fetch Thy) (Name ^ "_cases")
+    in
+      case fast of
+          SOME theorem => if usable Name theorem then
+              SOME (Name, theorem) else scan ()
+        | NONE => scan ()
+    end
+    handle HOL_ERR _ => NONE
+
+  fun cache_lookup key entries =
+    Option.map #2 (List.find (fn (other, _) => same_key other key) entries)
+
+  fun fixpoint_group_of_const
+        ({intro_table, case_table, fixpoint_cache, ...} : mf_context)
+        constant =
+    if is_built_in_const constant then NONE
+    else
+      let
+        val key = original_const_key constant
+        val kind = raw_fixpoint_kind constant
+      in
+        case cache_lookup key (!fixpoint_cache) of
+            SOME result => result
+          | NONE =>
+              if kind = NoFp then
+                (fixpoint_cache := (key, NONE) :: !fixpoint_cache; NONE)
+              else
+                (case locate_cases_theorem kind key of
+                     NONE =>
+                       (fixpoint_cache := (key, NONE) :: !fixpoint_cache;
+                        NONE)
+                   | SOME (stem, cases_theorem) =>
+                       let
+                         val rules_theorem = DB.fetch (#Thy key)
+                           (stem ^ "_rules")
+                         val cases = quantified_conjuncts cases_theorem
+                         val rules = quantified_conjuncts rules_theorem
+                         val member_options = map case_prop_key cases
+                         val members = List.mapPartial (fn value => value)
+                           member_options
+                         val rule_heads = map prop_key rules
+                         val valid = length members = length cases andalso
+                           not (null rules) andalso
+                           List.all (fn head => List.exists
+                             (same_key head) members) rule_heads
+                         val _ = if valid then () else
+                           raise err "fixpoint_group_of_const"
+                             "malformed fixpoint theorem group"
+                         val group : fixpoint_group =
+                           {kind = kind, stem = stem, members = members,
+                            rules = rules, cases = cases}
+                         fun install (member, entries) =
+                           (member, SOME group) ::
+                           List.filter (fn (other, _) =>
+                             not (same_key other member)) entries
+                         val _ = fixpoint_cache :=
+                           List.foldl install (!fixpoint_cache) members
+                         val _ = intro_table := List.foldl
+                           (fn (prop, table) =>
+                             let val (head, value) = pair_for_prop prop
+                             in table_append head value table end)
+                           (!intro_table) rules
+                         val _ = case_table := List.foldl
+                           (fn (prop, table) =>
+                             let val (head, value) = pair_for_prop prop
+                             in table_append head value table end)
+                           (!case_table) cases
+                       in
+                         SOME group
+                       end
+                       handle HOL_ERR _ =>
+                         (fixpoint_cache := (key, NONE) :: !fixpoint_cache;
+                          NONE))
+      end
+      handle HOL_ERR _ => NONE
+
+  fun fixpoint_kind_of_const context constant =
+    case fixpoint_group_of_const context constant of
+        SOME {kind, ...} => kind
+      | NONE => raw_fixpoint_kind constant
+
+  fun is_raw_inductive_pred context constant =
+    not (is_built_in_const constant) andalso
+    fixpoint_kind_of_const context constant <> NoFp
+
+  fun is_mutually_inductive_pred context constant =
+    case fixpoint_group_of_const context constant of
+        SOME {members, ...} => length members > 1
+      | NONE => false
+
+  fun intro_props_for_const context constant =
+    (ignore (fixpoint_group_of_const context constant);
+     def_props_for_const (!(#intro_table context)) constant)
+
+  fun case_props_for_const context constant =
+    (ignore (fixpoint_group_of_const context constant);
+     def_props_for_const (!(#case_table context)) constant)
+
   fun is_raw_equational_fun
         ({simp_table, psimp_table, ...} : mf_context) constant =
     not (null (def_props_for_const (!simp_table) constant)) orelse
     not (null (def_props_for_const psimp_table constant))
+
+  fun is_equational_fun context constant =
+    is_raw_equational_fun context constant orelse
+    is_raw_inductive_pred context constant
 
   fun equational_fun_axioms
         (context as {simp_table, psimp_table, ...} : mf_context) constant =
@@ -880,6 +1084,9 @@ structure Refute_ModelFinder_HOL = struct
         [] =>
           (case def_props_for_const psimp_table constant of
                [] =>
+                 if is_raw_inductive_pred context constant then
+                   case_props_for_const context constant
+                 else
                  (case def_of_const context constant of
                       SOME definition =>
                         (case equationalize_term "definition"
@@ -889,6 +1096,316 @@ structure Refute_ModelFinder_HOL = struct
                     | NONE => [])
              | psimps => psimps)
       | simps => simps
+
+  fun same_fixpoint_const left right =
+    same_key (original_const_key left) (original_const_key right) andalso
+    Lib.can (Type.match_type (Term.type_of right)) (Term.type_of left)
+    handle HOL_ERR _ => false
+
+  fun term_mentions_const constant term =
+    List.exists (fn candidate =>
+      (Term.is_const candidate orelse Term.is_var candidate) andalso
+      same_key (original_const_key candidate)
+        (original_const_key constant)
+      handle HOL_ERR _ => false)
+      (HolKernel.find_terms (fn candidate =>
+         Term.is_const candidate orelse Term.is_var candidate) term)
+
+  type intro_triple =
+    {variables : term list, side : term list,
+     main : term list, conclusion : term}
+
+  fun intro_triple_for constant rule =
+    let
+      val (variables, body) = boolSyntax.strip_forall rule
+      val (raw_premises, conclusion) = boolSyntax.strip_imp body
+      val premises = List.concat (map boolSyntax.strip_conj raw_premises)
+      val (main, side) = List.partition
+        (term_mentions_const constant) premises
+      fun directly_headed premise =
+        let val (head, _) = HolKernel.strip_comb premise
+        in same_fixpoint_const head constant end
+      val (conclusion_head, _) = HolKernel.strip_comb conclusion
+    in
+      if same_fixpoint_const conclusion_head constant andalso
+         List.all directly_headed main then
+        SOME {variables = variables, side = side, main = main,
+              conclusion = conclusion}
+      else
+        NONE
+    end
+    handle HOL_ERR _ => NONE
+
+  fun tuple_term [] = oneSyntax.one_tm
+    | tuple_term [term] = term
+    | tuple_term terms = pairSyntax.list_mk_pair terms
+
+  fun tuple_type [] = oneSyntax.one_ty
+    | tuple_type [ty] = ty
+    | tuple_type tys = pairSyntax.list_mk_prod tys
+
+  fun wf_problem constant rules =
+    let
+      val triples = List.mapPartial (intro_triple_for constant) rules
+      val malformed = length triples <> length rules
+      val (_, argument_tys) =
+        let val (domains, range) = boolSyntax.strip_fun
+              (Term.type_of constant)
+        in
+          if range = Type.bool then (range, domains)
+          else raise err "wf_problem" "predicate does not return bool"
+        end
+      val domain_ty = tuple_type argument_tys
+      val relation = Term.mk_var ("R",
+        Type.-->(domain_ty, Type.-->(domain_ty, Type.bool)))
+      fun constraint
+            ({variables, side, main, conclusion} : intro_triple) recursive =
+        let
+          val (_, recursive_args) = HolKernel.strip_comb recursive
+          val (_, conclusion_args) = HolKernel.strip_comb conclusion
+          val decrease = Term.list_mk_comb
+            (relation, [tuple_term recursive_args,
+                        tuple_term conclusion_args])
+        in
+          boolSyntax.list_mk_forall
+            (variables, boolSyntax.list_mk_imp (side, decrease))
+        end
+      val constraints = List.concat (map (fn triple =>
+        map (constraint triple) (#main triple)) triples)
+      val proposition = boolSyntax.mk_exists (relation,
+        boolSyntax.mk_conj
+          (relationSyntax.mk_wf relation,
+           if null constraints then boolSyntax.T
+           else boolSyntax.list_mk_conj constraints))
+      fun argument_pairs
+            ({main, conclusion, ...} : intro_triple) =
+        let val (_, conclusion_args) = HolKernel.strip_comb conclusion
+        in map (fn recursive =>
+             let val (_, recursive_args) = HolKernel.strip_comb recursive
+             in ListPair.zip (recursive_args, conclusion_args) end) main
+        end
+    in
+      {malformed = malformed, proposition = proposition,
+       argument_tys = argument_tys,
+       pairs = List.concat (map argument_pairs triples),
+       recursive = not (null constraints)}
+    end
+
+  fun permutations values =
+    let
+      fun insert value [] = [[value]]
+        | insert value (head :: tail) =
+            (value :: head :: tail) ::
+            map (fn rest => head :: rest) (insert value tail)
+    in
+      List.foldl (fn (value, result) =>
+        List.concat (map (insert value) result)) [[]] values
+    end
+
+  fun lex_relation 1 = numSyntax.less_tm
+    | lex_relation count = pairSyntax.mk_lex
+        (numSyntax.less_tm, lex_relation (count - 1))
+
+  fun wf_candidates argument_tys pairs =
+    let
+      val domain_ty = tuple_type argument_tys
+      val arguments = List.tabulate (length argument_tys, fn index =>
+        Term.mk_var ("v" ^ Int.toString index,
+          List.nth (argument_tys, index)))
+      val tuple = tuple_term arguments
+      fun size_function ty =
+        TypeBasePure.type_size (TypeBase.theTypeBase ()) ty
+      fun component_size (argument, ty) =
+        Term.mk_comb (size_function ty, argument)
+      fun abstraction body =
+        if length arguments <= 1 then
+          Term.mk_abs
+            (if null arguments then
+               Term.mk_var ("u", oneSyntax.one_ty)
+             else hd arguments, body)
+        else
+          pairSyntax.mk_pabs (tuple, body)
+      fun measure_of index =
+        numSyntax.mk_cmeasure
+          (abstraction (component_size
+            (List.nth (arguments, index),
+             List.nth (argument_tys, index))))
+      val whole = Lib.total (fn ty =>
+        numSyntax.mk_cmeasure (size_function ty)) domain_ty
+      val components = List.mapPartial (fn index =>
+        Lib.total measure_of index)
+        (List.tabulate (length argument_tys, fn index => index))
+      fun changed index = List.exists (fn row =>
+        let val (left, right) = List.nth (row, index)
+        in not (Term.aconv left right) end) pairs
+      val changed_indices = List.filter changed
+        (List.tabulate (length argument_tys, fn index => index))
+      (* Cap factorial permutation growth as TotalDefn does, but retain
+         forward and reverse measures over every changed component. *)
+      val arrangements =
+        if length changed_indices > 4 then
+          permutations (List.take (changed_indices, 4)) @
+          [changed_indices, rev changed_indices]
+        else
+          permutations changed_indices
+      fun lex_candidate indices =
+        if null indices then NONE
+        else
+          let
+            val sizes = map (fn index => component_size
+              (List.nth (arguments, index),
+               List.nth (argument_tys, index))) indices
+            val image = abstraction (tuple_term sizes)
+          in
+            SOME (relationSyntax.mk_inv_image
+              (lex_relation (length indices), image))
+          end
+          handle HOL_ERR _ => NONE
+      val lex = List.mapPartial lex_candidate arrangements
+    in
+      distinct_terms ((case whole of SOME value => [value] | NONE => []) @
+        components @ lex)
+    end
+
+  val max_cached_wfs = 50
+  type cached_wf_state =
+    {timeout : Time.time, entries : (term * bool) list}
+  val cached_wf_props = Synchronized.var
+    "Refute_ModelFinder_HOL.cached_wf_props"
+    ({timeout = Time.zeroTime, entries = []} : cached_wf_state)
+
+  fun cached_wf_lookup timeout proposition =
+    let val {timeout = old_timeout, entries} =
+          Synchronized.value cached_wf_props
+    in
+      if Time.compare (timeout, old_timeout) <> EQUAL then
+        (Synchronized.change cached_wf_props (fn _ =>
+           {timeout = timeout, entries = []}); NONE)
+      else
+        Option.map #2 (List.find (fn (other, _) =>
+          Term.aconv other proposition) entries)
+    end
+
+  fun cache_wf timeout proposition result =
+    Synchronized.change cached_wf_props (fn state =>
+      let
+        val entries =
+          if Time.compare (timeout, #timeout state) <> EQUAL orelse
+             length (#entries state) >= max_cached_wfs then []
+          else #entries state
+      in
+        {timeout = timeout, entries = (proposition, result) :: entries}
+      end)
+
+  fun prove_wf_candidate timeout proposition candidate =
+    let
+      open Tactical Tactic
+      val tactic = EXISTS_TAC candidate THEN CONJ_TAC THENL
+        [TotalDefn.WF_TAC,
+         TotalDefn.TC_SIMP_TAC (TotalDefn.termination_ss ()) []]
+      fun prove () = ignore (TAC_PROOF (([], proposition), tactic))
+    in
+      Timeout.apply timeout (fn () => (prove (); true)) ()
+    end
+    handle Timeout.TIMEOUT _ => false
+         | HOL_ERR _ => false
+
+  fun uncached_is_well_founded_inductive_pred context constant =
+    let
+      val rules = intro_props_for_const context constant
+      val {malformed, proposition, argument_tys, pairs, recursive} =
+        wf_problem constant rules
+    in
+      if malformed orelse null rules then false
+      else if not recursive then true
+      else
+        case cached_wf_lookup (#tac_timeout context) proposition of
+            SOME result => result
+          | NONE =>
+              let
+                val result = List.exists
+                  (prove_wf_candidate (#tac_timeout context) proposition)
+                  (wf_candidates argument_tys pairs)
+                val _ = cache_wf (#tac_timeout context) proposition result
+              in result end
+    end
+    handle HOL_ERR _ => false
+
+  fun const_match (actual, pattern) =
+    same_key (original_const_key actual) (original_const_key pattern) andalso
+    Lib.can (Type.match_type (Term.type_of pattern)) (Term.type_of actual)
+    handle HOL_ERR _ => false
+
+  fun wf_override rows constant =
+    case List.find (fn (pattern, _) =>
+           case pattern of
+               SOME candidate => const_match (constant, candidate)
+             | NONE => false) rows of
+        SOME (_, value) => SOME value
+      | NONE => Option.map #2
+          (List.find (fn (pattern, _) => not (Option.isSome pattern)) rows)
+
+  fun is_well_founded_inductive_pred
+        (context as {wfs, wf_cache, ...} : mf_context) constant =
+    case wf_override wfs constant of
+        SOME (SOME result) => result
+      | _ =>
+          (* Isabelle's hard-wired Nats/fold_graph' entries have no HOL4
+             analog; all HOL4 predicates go through the hygienic prover. *)
+          (case List.find (fn (other, _) => Term.aconv other constant)
+                   (!wf_cache) of
+               SOME (_, (_, result)) => result
+             | NONE =>
+                 let
+                   val kind = fixpoint_kind_of_const context constant
+                   val result = kind = Lfp andalso
+                     not (is_mutually_inductive_pred context constant) andalso
+                     uncached_is_well_founded_inductive_pred context constant
+                   val _ = wf_cache :=
+                     (constant, (kind = Gfp, result)) :: !wf_cache
+                 in result end)
+
+  fun fixpoint_refusal_reason context constant =
+    case fixpoint_group_of_const context constant of
+        NONE => SOME ("inductive predicate " ^
+          Parse.term_to_string constant ^
+          " has no usable _cases/_rules theorem")
+      | SOME {kind = Gfp, ...} => SOME ("coinductive predicate " ^
+          Parse.term_to_string constant ^
+          ": unsupported until TASK_14")
+      | SOME {members, ...} =>
+          if length members > 1 then
+            SOME ("mutual inductive predicate group containing " ^
+              Parse.term_to_string constant ^
+              ": unsupported until TASK_13")
+          else if is_well_founded_inductive_pred context constant then NONE
+          else SOME ("inductive predicate " ^
+            Parse.term_to_string constant ^
+            " could not be proved well-founded; unrolling is unsupported " ^
+            "until TASK_11")
+
+  fun first_fixpoint_refusal context term =
+    let
+      val constants = HolKernel.find_terms Term.is_const term
+      fun check [] = NONE
+        | check (constant :: rest) =
+            if is_raw_inductive_pred context constant then
+              (case fixpoint_refusal_reason context constant of
+                   SOME reason => SOME reason
+                 | NONE => check rest)
+            else check rest
+    in check constants end
+
+  fun print_wf_cache ({wf_cache, ...} : mf_context) =
+    List.app (fn (constant, (gfp, proved)) =>
+      Refute_Core.Private.say 2
+        ("The " ^ (if gfp then "coinductive" else "inductive") ^
+         " predicate \"" ^ Parse.term_to_string constant ^ "\" " ^
+         (if proved then
+            "was proved well-founded; Refute can compute it efficiently\n"
+          else
+            "could not be proved well-founded; Refute might need to " ^
+            "unroll it\n"))) (rev (!wf_cache))
 
   fun is_equational_fun_surely_complete context constant =
     case equational_fun_axioms context constant of
@@ -2185,7 +2702,7 @@ structure Refute_ModelFinder_HOL = struct
                              (do_term depth (hd arguments))
                              (do_term depth (List.nth (arguments, 1))),
                            process_args depth (List.drop (arguments, 2)))
-                    else if is_raw_equational_fun context constant orelse
+                    else if is_equational_fun context constant orelse
                             is_choice_spec_fun context constant then
                       Term.list_mk_comb
                         (constant, process_args depth arguments)
@@ -2267,7 +2784,8 @@ structure Refute_ModelFinder_HOL = struct
           destroy_constrs, specialize, star_linear_preds, total_consts,
           needs, tac_timeout, evals, case_names, def_tables, nondef_table,
           nondefs, simp_table, psimp_table, choice_spec_table, intro_table,
-          ersatz_table, skolems, special_funs, wf_cache, constr_cache, ...}
+          case_table, fixpoint_cache, ersatz_table, skolems, special_funs,
+          wf_cache, constr_cache, ...}
          : mf_context) binary_ints : mf_context =
     {max_bisim_depth = max_bisim_depth, boxes = boxes, wfs = wfs,
      user_axioms = user_axioms, debug = debug, whacks = whacks,
@@ -2277,7 +2795,8 @@ structure Refute_ModelFinder_HOL = struct
      evals = evals, case_names = case_names, def_tables = def_tables,
      nondef_table = nondef_table, nondefs = nondefs, simp_table = simp_table,
      psimp_table = psimp_table, choice_spec_table = choice_spec_table,
-     intro_table = intro_table, ersatz_table = ersatz_table,
+     intro_table = intro_table, case_table = case_table,
+     fixpoint_cache = fixpoint_cache, ersatz_table = ersatz_table,
      skolems = skolems, special_funs = special_funs, wf_cache = wf_cache,
      constr_cache = constr_cache}
 
@@ -2309,7 +2828,9 @@ structure Refute_ModelFinder_HOL = struct
        simp_table = ref simp_table,
        psimp_table = psimp_table,
        choice_spec_table = choice_spec_table,
-       intro_table = KNametab.empty,
+       intro_table = ref KNametab.empty,
+       case_table = ref KNametab.empty,
+       fixpoint_cache = ref [],
        ersatz_table = current_ersatz_table (),
        skolems = ref [],
        special_funs = ref [],
