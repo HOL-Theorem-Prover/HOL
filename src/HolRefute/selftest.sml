@@ -7017,6 +7017,7 @@ local
       not (Lib.mem "CryptoMiniSat_JNI" solvers) andalso
       not (null solvers) andalso not (null incremental) andalso
       Refute_ForlSat.smart_sat_solver_name false = hd solvers andalso
+      Refute_ForlSat.smart_sat_solver_name false = "MiniSat_JNI" andalso
       Refute_ForlSat.smart_sat_solver_name true = hd incremental andalso
       Refute_ForlSat.smart_sat_solver_name true = "SAT4J"
     end

@@ -122,7 +122,21 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
           [sat, instance, unsat]
 
   fun dynamic_list timeout incremental =
-    List.mapPartial (dynamic_entry timeout incremental) static_list
+    let
+      val configured =
+        List.mapPartial (dynamic_entry timeout incremental) static_list
+      fun java_solver (name, _) =
+        name = "SAT4J" orelse name = "SAT4J_Light"
+    in
+      if incremental then configured
+      else
+        (* Prefer a configured native or external solver to the always
+           available Java fallbacks.  This keeps MiniSat_JNI first on the
+           prepared host while incremental smart selection still starts
+           with SAT4J. *)
+        List.filter (not o java_solver) configured @
+        List.filter java_solver configured
+    end
 
   fun configured_sat_solvers incremental =
     List.map #1 (dynamic_list Time.zeroTime incremental)

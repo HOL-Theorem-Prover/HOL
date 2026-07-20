@@ -671,7 +671,11 @@ fun run_instance deadline started (config : Refute_Core.config)
                         val _ = latest_state :=
                           (found, 0, max_genuine, donno)
                       in
-                        if max_genuine <= 0 then
+                        (* Upstream harvests sound models for at most two
+                           rounds per incremental batch.  Keep the M3 1/1
+                           path unchanged, where [first_time] was ignored. *)
+                        if max_genuine <= 0 orelse
+                           (incremental andalso not first_time) then
                           (found, 0, max_genuine, donno)
                         else
                           let
