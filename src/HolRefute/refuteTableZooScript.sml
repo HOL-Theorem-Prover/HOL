@@ -1,6 +1,6 @@
 Theory refuteTableZoo
 Ancestors
-  refute ltree itreeTau
+  refute ltree itreeTau fixedPoint
 Libs
   TotalDefn Refute_Core
 
@@ -99,6 +99,24 @@ End
 CoInductive zoo_mutual_gfp:
   (!b. b /\ zoo_mutual_other_gfp b ==> zoo_mutual_gfp b) /\
   (!b. b /\ zoo_mutual_gfp b ==> zoo_mutual_other_gfp b)
+End
+
+(* These deliberately misleading bindings ensure that group discovery ties
+   a cases/rules stem to the coinduction theorem stored in the registry. *)
+Theorem zoo_mutual_other_gfp_cases:
+  !b. zoo_mutual_other_gfp b <=> zoo_mutual_other_gfp b
+Proof
+  simp []
+QED
+
+Theorem zoo_mutual_other_gfp_rules:
+  !b. zoo_mutual_other_gfp b ==> zoo_mutual_other_gfp b
+Proof
+  simp []
+QED
+
+Definition zoo_hand_gfp_def:
+  zoo_hand_gfp = fixedPoint$gfp (\p : bool -> bool. p)
 End
 
 Inductive zoo_unroll_lfp:

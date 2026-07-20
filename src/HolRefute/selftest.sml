@@ -759,6 +759,34 @@ val _ = require_msg (check_result mf_coinductive_recognition_and_wf)
   (fn () => "coinductive registry recognition or wf dual failed")
   (fn () => ()) ()
 
+fun mf_hand_rolled_gfp_refusal () =
+  let
+    val predicate = ``zoo_hand_gfp : bool -> bool``
+    val goal = ``zoo_hand_gfp F``
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val reason = MFH.fixpoint_refusal_reason context predicate
+    val first = MFH.first_fixpoint_refusal context goal
+    val config = default_config |> upd_timeout 2.0
+    val instances = Refute_Core.preprocess config
+      {goal = goal, assumptions = [], evals = []}
+    val outcome = #run Refute_ModelFinder.kodkod_backend config instances
+    fun hand_rolled text = Refute_ModelFinder_Util.is_substring_of
+      "hand-rolled greatest fixpoint" text
+  in
+    MFH.raw_fixpoint_kind predicate = MFH.NoFp andalso
+    MFH.fixpoint_kind_of_const context predicate = MFH.NoFp andalso
+    MFH.is_hand_rolled_gfp context predicate andalso
+    Option.getOpt (Option.map hand_rolled reason, false) andalso
+    Option.getOpt (Option.map hand_rolled first, false) andalso
+    (case outcome of
+         Unknown reasons => List.exists hand_rolled reasons
+       | _ => false)
+  end
+
+val _ = require_msg (check_result mf_hand_rolled_gfp_refusal)
+  (fn () => "a hand-rolled greatest fixpoint was not refused with a reason")
+  (fn () => ()) ()
+
 fun mf_inductive_direct_equation () =
   let
     val context = MFH.make_context Refute_Core.default_mf_config []
@@ -992,6 +1020,13 @@ fun mf_coinductive_unroll_goldens () =
       context 3 ``~zoo_guarded_gfp b``
     val neutral = Refute_ModelFinder_Preproc.skolemize_term_and_more
       context 3 ``(q : (bool -> bool) -> bool) zoo_guarded_gfp``
+    val neutral_is_disjunction =
+      case #2 (HolKernel.strip_comb neutral) of
+          [argument] =>
+            (case Lib.total Term.dest_abs argument of
+                 SOME (_, body) => boolSyntax.is_disj body
+               | NONE => false)
+        | _ => false
     val checks =
       [("iterator type", Type.dest_vartype iterator_ty =
           "'refute$gfpit$refuteTableZoo$zoo_guarded_gfp"),
@@ -1008,8 +1043,8 @@ fun mf_coinductive_unroll_goldens () =
        ("negative unroll", term_has_generated_prefix
           MFN.unrolled_prefix negative andalso
           not (term_has_generated_prefix MFN.lbfp_prefix negative)),
-       ("neutral disjunction", term_has_generated_prefix
-          MFN.unrolled_prefix neutral andalso
+       ("neutral disjunction", neutral_is_disjunction andalso
+          term_has_generated_prefix MFN.unrolled_prefix neutral andalso
           term_has_generated_prefix MFN.lbfp_prefix neutral),
        ("iterator metadata", case
           MFH.iterator_info_for_type context iterator_ty of

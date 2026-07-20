@@ -881,6 +881,29 @@ structure Refute_ModelFinder_HOL = struct
 
   fun def_of_const context = Option.map #2 o def_of_const_ext context
 
+  fun fixpoint_kind_of_rhs rhs =
+    let
+      fun strip_abstractions term =
+        if Term.is_abs term then strip_abstractions (Term.body term)
+        else term
+      val (head, _) = HolKernel.strip_comb (strip_abstractions rhs)
+    in
+      if Term.is_const head andalso
+         same_key (const_key head) {Thy = "fixedPoint", Name = "gfp"}
+      then Gfp
+      else NoFp
+    end
+    handle HOL_ERR _ => NoFp
+
+  (* CoIndDefLib's registry is authoritative for package-generated gfps.
+     A definition headed directly by fixedPoint$gfp but absent from that
+     registry has none of the rules/cases evidence needed by the encoding. *)
+  fun is_hand_rolled_gfp context constant =
+    raw_fixpoint_kind constant = NoFp andalso
+    (case def_of_const context constant of
+         SOME rhs => fixpoint_kind_of_rhs rhs = Gfp
+       | NONE => false)
+
   fun constants_in term =
     let
       fun step (constant, (seen, result)) =
@@ -1076,9 +1099,15 @@ structure Refute_ModelFinder_HOL = struct
            List.exists (same_conclusion theorem) registered
          end
          handle HOL_ERR _ => false)
-    | registered_stem Gfp key _ =
-        Option.isSome
-          (KNametab.lookup (CoIndDefLib.coinduction_map ()) key)
+    | registered_stem Gfp key stem =
+        (let
+           val theorem = DB.fetch (#Thy key) (stem ^ "_coind")
+           val registered = Option.getOpt
+             (KNametab.lookup (CoIndDefLib.coinduction_map ()) key, [])
+         in
+           List.exists (same_conclusion theorem) registered
+         end
+         handle HOL_ERR _ => false)
     | registered_stem NoFp _ _ = false
 
   fun theorem_has_member key theorem =
@@ -1844,28 +1873,32 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun fixpoint_refusal_reason context constant =
-    case fixpoint_group_of_const context constant of
-        NONE =>
-          let
-            val label =
-              if raw_fixpoint_kind constant = Gfp then "coinductive"
-              else "inductive"
-          in
-            SOME (label ^ " predicate " ^ Parse.term_to_string constant ^
-              " has no usable registered _cases/_rules theorem; " ^
-              "hand-rolled greatest fixpoints are not supported")
-          end
-      | SOME {kind = Lfp, ...} => NONE
-      | SOME {kind = Gfp, ...} => NONE
-      | SOME {kind = NoFp, ...} => SOME ("predicate " ^
-          Parse.term_to_string constant ^ " is not a fixpoint")
+    if is_hand_rolled_gfp context constant then
+      SOME ("hand-rolled greatest fixpoint " ^
+        Parse.term_to_string constant ^ " is not supported; " ^
+        "define coinductive predicates with Hol_coreln")
+    else
+      case raw_fixpoint_kind constant of
+          NoFp => NONE
+        | raw_kind =>
+            (case fixpoint_group_of_const context constant of
+                 NONE =>
+                   SOME ((if raw_kind = Gfp then "coinductive"
+                          else "inductive") ^ " predicate " ^
+                     Parse.term_to_string constant ^
+                     " has no usable registered _cases/_rules theorem")
+               | SOME {kind = Lfp, ...} => NONE
+               | SOME {kind = Gfp, ...} => NONE
+               | SOME {kind = NoFp, ...} => SOME ("predicate " ^
+                   Parse.term_to_string constant ^ " is not a fixpoint"))
 
   fun first_fixpoint_refusal context term =
     let
       val constants = HolKernel.find_terms Term.is_const term
       fun check [] = NONE
         | check (constant :: rest) =
-            if is_raw_inductive_pred context constant then
+            if is_hand_rolled_gfp context constant orelse
+               is_raw_inductive_pred context constant then
               (case fixpoint_refusal_reason context constant of
                    SOME reason => SOME reason
                  | NONE => check rest)
