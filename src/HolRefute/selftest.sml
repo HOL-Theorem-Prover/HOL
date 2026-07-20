@@ -1892,7 +1892,9 @@ fun mf_preproc_unfold_goldens () =
     val case_goal = boolSyntax.mk_eq (case_input, ``9 : num``)
     val expected_case_goal = boolSyntax.mk_eq (expected_case, ``9 : num``)
     val (pipeline_cases, pipeline_case_defs, _, _, _, _) =
-      MFP.preprocess_formulas (fresh_mf_context ()) [] case_goal
+      MFP.preprocess_formulas
+        (MFH.context_with_binary_ints (fresh_mf_context ()) (SOME false))
+        [] case_goal
     val set_input =
       ``(2 : num) IN GSPEC (\n : num. (n + 1, n < 3))``
     val set_value = ``set_value : num``
@@ -1904,7 +1906,9 @@ fun mf_preproc_unfold_goldens () =
       |> MFH.unfold_defs_in_term context
       |> MFP.destroy_set_Collect
     val (pipeline_sets, pipeline_set_defs, _, _, _, _) =
-      MFP.preprocess_formulas (fresh_mf_context ()) [] set_input
+      MFP.preprocess_formulas
+        (MFH.context_with_binary_ints (fresh_mf_context ()) (SOME false))
+        [] set_input
     val expected_pipeline_set =
       ``?x : num. x + 1 = 2 /\ (x < 3 <=> T)``
     val direct_set = MFP.destroy_set_Collect
@@ -2383,7 +2387,7 @@ fun mf_scope_mono_partition () =
       [``:num list``]
     val (_, pattern_scopes) = MFS.all_scopes mf_hol_context false
       [(SOME ``:'a list``, [3]), (NONE, [1])]
-      [(NONE, [~1])] [``:num list``, number] [] [] []
+      [(NONE, [~1])] [] [``:num list``, number] [] [] []
     val pattern_scope = hd pattern_scopes
   in
     mono = [enum, number] andalso nonmono = [alpha] andalso
@@ -2407,9 +2411,9 @@ fun mf_scope_calculus_block_fusion () =
     val (mono, nonmono) = MFS.mono_partition_with actually_monotonic
       [(NONE, NONE)] types
     val (_, fused) = MFS.all_scopes mf_hol_context false
-      [(NONE, [1, 2, 3])] [(NONE, [~1])] mono nonmono [] []
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [] mono nonmono [] []
     val (_, separated) = MFS.all_scopes mf_hol_context false
-      [(NONE, [1, 2, 3])] [(NONE, [~1])] [] types [] []
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [] [] types [] []
   in
     mono = types andalso null nonmono andalso
     length fused = 3 andalso length separated = 9
@@ -2429,11 +2433,11 @@ fun mf_scope_enumeration_order () =
     val ordered = MFS.all_combinations_ordered_smartly
       [(3, 0), (3, 0)]
     val (skipped, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [1, 2, 3])] [(NONE, [~1])]
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] []
       [``:refute$rf6``] [``:'a``] [] []
     val truncation_cards = MFS.default_cards @ [11]
     val (truncated, retained) = MFS.all_scopes mf_hol_context false
-      [(NONE, truncation_cards)] [(NONE, [~1])]
+      [(NONE, truncation_cards)] [(NONE, [~1])] []
       [``:refute$rf6``] [``:'a``, ``:'b``, ``:'c``] [] []
     fun cards (scope : MFS.scope) =
       (valOf (MFH.assignment_lookup (#card_assigns scope)
@@ -2455,7 +2459,7 @@ val _ = require_msg (check_result mf_scope_enumeration_order) (fn () =>
 fun mf_scope_offsets_and_facto_pairs () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [2])] [(NONE, [~1])]
+      [(NONE, [2])] [(NONE, [~1])] []
       [``:refute$rf2``, ``:num``] [``:'a``, ``:unit``] [] []
     val scope = hd scopes
     val data_types = #data_types scope
@@ -2518,6 +2522,45 @@ fun mf_smart_finitization_classification () =
 val _ = require_msg
   (check_result mf_smart_finitization_classification) (fn () =>
   "smart datatype finitization classification changed")
+  (fn () => ()) ()
+
+fun mf_binary_int_scope_rows () =
+  let
+    val cards =
+      [(SOME ``:num``, [3, 4]), (SOME ``:int``, [5, 6]),
+       (NONE, [1])]
+    val maxes = [(NONE, [~1])]
+    val bitss = [0, 9, 40]
+    fun row ty = MFS.block_for_type mf_hol_context true cards maxes bitss ty
+    fun row_is ty expected =
+      case row ty of
+          [(MFS.Card actual, values)] =>
+            Type.compare (actual, ty) = EQUAL andalso values = expected
+        | _ => false
+    val signed_scope = MFS.scope_from_descriptor mf_hol_context true [] []
+      ([(MFH.signed_bit_type, 10),
+        (MFH.signed_bitword_type, 5)], [])
+    val unsigned_scope = MFS.scope_from_descriptor mf_hol_context true [] []
+      ([(MFH.unsigned_bit_type, 9),
+        (MFH.unsigned_bitword_type, 4)], [])
+    val signed_spec = valOf (MFS.data_type_spec
+      (#data_types signed_scope) MFH.signed_bitword_type)
+  in
+    row_is MFH.unsigned_bit_type [1, 9, 31] andalso
+    row_is MFH.signed_bit_type [2, 10, 32] andalso
+    row_is MFH.unsigned_bitword_type [3, 4] andalso
+    row_is MFH.signed_bitword_type [5, 6] andalso
+    #bits signed_scope = 9 andalso #bits unsigned_scope = 9 andalso
+    MFS.offset_of_type (#ofs signed_scope) MFH.signed_bit_type =
+      MFS.offset_of_type (#ofs signed_scope) Type.bool andalso
+    not (MFS.is_complete_type (#data_types signed_scope) false
+      MFH.signed_bitword_type) andalso
+    MFS.is_concrete_type (#data_types signed_scope) false
+      MFH.signed_bitword_type andalso #concrete signed_spec = (true, true)
+  end
+
+val _ = require_msg (check_result mf_binary_int_scope_rows) (fn () =>
+  "binary integer scope rows, bits recovery, or asymmetry changed")
   (fn () => ()) ()
 
 val _ = tprint "Refute model-finder utility"
@@ -2651,7 +2694,7 @@ val _ = require_msg (check_result mf_rep_ordering) (fn () =>
 fun mf_rep_fixed_scope () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [2])] [(NONE, [~1])]
+      [(NONE, [2])] [(NONE, [~1])] []
       [``:refute$rf2``, ``:num``] [] [] []
     val scope = hd scopes
     val enum_offset = MFS.offset_of_type (#ofs scope) ``:refute$rf2``
@@ -3201,7 +3244,7 @@ val _ = require_msg (check_result mf_nut_term_goldens) (fn () =>
 fun mf_nut_fixed_scope () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [3])] [(NONE, [~1])]
+      [(NONE, [3])] [(NONE, [~1])] []
       [``:refute$rf2``, ``:num``] [] [] []
   in hd scopes end
 
@@ -3236,7 +3279,8 @@ fun mf_nut_deep_selector_reps () =
   let
     val list_ty = ``:num list``
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [3])] [(NONE, [~1])] [list_ty, ``:num``] [] [list_ty] []
+      [(NONE, [3])] [(NONE, [~1])] []
+      [list_ty, ``:num``] [] [list_ty] []
     val scope = hd scopes
     val cons = List.nth
       (MFH.data_type_constrs mf_hol_context list_ty, 1)
@@ -4043,6 +4087,113 @@ val _ = require_msg
     "model-finder problem assembly did not skip an oversized scope")
   (fn () => ()) ()
 
+fun mf_binary_assembly_fixture bits term =
+  let
+    val context = MFH.context_with_binary_ints (fresh_mf_context ())
+      (SOME true)
+    val mapped = MFP.binarize_nat_and_int_in_term term
+    val nut = MFNT.nut_from_term context MFNT.Eq mapped
+    val (free_names, nonsel_names) =
+      MFNT.add_free_and_const_names nut ([], [])
+    val assignments =
+      [(MFH.unsigned_bitword_type, 4),
+       (MFH.signed_bitword_type, 5),
+       (MFH.unsigned_bit_type, bits),
+       (MFH.signed_bit_type, bits + 1)]
+    val scope = MFS.scope_from_descriptor context true
+      [MFH.unsigned_bitword_type, MFH.signed_bitword_type] []
+      (assignments, [])
+    val params : MFK.assembly_params =
+      {debug = false, peephole_optim = true, total_consts = false,
+       datatype_sym_break = MFK.datatype_sym_break,
+       kodkod_sym_break = MFK.kodkod_sym_break,
+       comment = term_to_string term, solver = ["DefaultSAT4J"],
+       unsound_delay = 1, free_names = free_names,
+       nonsel_names = nonsel_names, nondef_us = [nut], def_us = []}
+  in
+    MFK.assemble_problem params false scope
+  end
+
+val binary_integer_formula =
+  ``~(SUC n + m - m * n DIV 2 < 260 /\
+       int_div ((i : int) * j) 2 + i - j < i /\
+       &(m : num) < i /\ Num j < n)``
+
+fun mf_binary_integer_backend_goldens () =
+  let
+    open Refute_Forl
+    val (problem, metadata) =
+      valOf (mf_binary_assembly_fixture 9 binary_integer_formula)
+    val selector_bounds = List.concat (map #1 (#bounds problem))
+    val powers = map #1 (#int_bounds problem)
+    val accepted_boundaries =
+      (MFK.check_bits 9 (And (IntEq (Num (~512), Num 511), True)); true)
+    val rejected_boundary =
+      ((MFK.check_bits 9 (IntEq (Num 512, Num 0)); false)
+       handle MFU.TOO_SMALL _ => true)
+  in
+    #bits (#scope metadata) = 9 andalso
+    List.exists (fn setting => setting = ("bit_width", "10"))
+      (#settings problem) andalso
+    powers =
+      [SOME 1, SOME 2, SOME 4, SOME 8, SOME 16,
+       SOME 32, SOME 64, SOME 128, SOME 256, SOME (~512)] andalso
+    List.exists (fn (index, _) =>
+      index = MFPH.unsigned_bit_word_sel_rel) selector_bounds andalso
+    List.exists (fn (index, _) =>
+      index = MFPH.signed_bit_word_sel_rel) selector_bounds andalso
+    accepted_boundaries andalso rejected_boundary
+  end
+
+val _ = require_msg
+  (check_result mf_binary_integer_backend_goldens) (fn () =>
+  "binary integer bounds, translation, registers, or check_bits changed")
+  (fn () => ()) ()
+
+fun mf_bitword_model_decoding () =
+  let
+    val (_, metadata) =
+      valOf (mf_binary_assembly_fixture 9 binary_integer_formula)
+    val scope = #scope metadata
+    val names = #sel_names metadata
+    val table = #rel_table metadata
+    fun selector ty = valOf (List.find (fn name =>
+      MFN.sel_no_from_name (MFNT.nickname_of name) = 0 andalso
+      #1 (Type.dom_rng (MFNT.type_of name)) = ty) names)
+    fun discriminator ty = valOf (List.find (fn name =>
+      MFN.sel_no_from_name (MFNT.nickname_of name) = ~1 andalso
+      #1 (Type.dom_rng (MFNT.type_of name)) = ty) names)
+    fun decode ty bit_indices =
+      let
+        val word_offset = MFS.offset_of_type (#ofs scope) ty
+        val bit_offset = MFS.offset_of_type (#ofs scope)
+          MFH.unsigned_bit_type
+        val selector = selector ty
+        val discriminator = discriminator ty
+        val bounds =
+          [(MFNT.the_rel table discriminator, [[word_offset]]),
+           (MFNT.the_rel table selector,
+            map (fn index => [word_offset, bit_offset + index]) bit_indices)]
+      in
+        MFM.term_for_rep
+          {scope = scope, atoms = [(NONE, [])], sel_names = names,
+           rel_table = table, bounds = bounds, maybe_opt = false, ty = ty,
+           representation = MFR.Atom
+             (#1 (MFS.spec_of_type scope ty), word_offset),
+           tuples = [[word_offset]]}
+      end
+    val unsigned = decode MFH.unsigned_bitword_type [2, 8]
+    val signed = decode MFH.signed_bitword_type [0, 2, 9]
+  in
+    Term.aconv unsigned ``260 : num`` andalso
+    Term.aconv signed ``~507 : int`` andalso
+    Term.type_of unsigned = ``:num`` andalso Term.type_of signed = ``:int``
+  end
+
+val _ = require_msg (check_result mf_bitword_model_decoding) (fn () =>
+  "bitword model decoding or implementation-type erasure changed")
+  (fn () => ()) ()
+
 val _ = tprint "Refute model-finder peephole"
 
 structure MFPP = Refute_ModelFinder_Peephole
@@ -4358,7 +4509,10 @@ local
        ("forl-multi.kki", multi_problems),
        ("mf-kodkod-translation.kki",
         [mf_assembled_problem ``~((xs : num list) = [])``
-          [(``:num list``, 3), (``:num``, 2)] [``:num list``]])]
+          [(``:num list``, 3), (``:num``, 2)] [``:num list``]]),
+       ("mf-binary-integers.kki",
+        [#1 (valOf
+          (mf_binary_assembly_fixture 9 binary_integer_formula))])]
 in
   val _ = require_msg (check_result serializer_goldens) (fn () =>
     "FORL output differed byte-for-byte from a checked-in .kki golden")
@@ -4816,6 +4970,17 @@ local
      mf_assembled_problem ``((n : num) + 1 = 2)``
        [(``:num``, 3)] []]
 
+  val unary_integer_agreement_problem =
+    mf_assembled_problem ``((n : num) + 1 = 2)`` [(``:num``, 3)] []
+  val binary_integer_agreement =
+    valOf (mf_binary_assembly_fixture 9 ``((n : num) + 1 = 2)``)
+  val binary_integer_agreement_problem = #1 binary_integer_agreement
+  val binary_integer_overflow_problems =
+    [#1 (valOf (mf_binary_assembly_fixture 9
+       ``(511 : num) + 1 = 0``)),
+     #1 (valOf (mf_binary_assembly_fixture 9
+       ``(511 : int) + 1 = ~512``))]
+
   fun mf_translation_end_to_end () =
     let
       fun solve problem = solve_any_problem true false (deadline 60) 1 1
@@ -4852,6 +5017,45 @@ local
           unsat = Portable.upto 0 (length conversion_tests - 1)
       | _ => false
 
+  fun binary_integer_end_to_end () =
+    let
+      fun solve problem = solve_any_problem true false (deadline 60) 1 1
+        [problem]
+      fun tuples index instance =
+        Option.getOpt (AList.lookup (op =) instance index, [])
+      fun unary_witness (Normal ([(0, instance)], [], "")) =
+            (case tuples (1, 0) instance of
+                 [[atom]] => SOME atom
+               | _ => NONE)
+        | unary_witness _ = NONE
+      fun binary_witness (Normal ([(0, instance)], [], "")) =
+            (case tuples (1, 0) instance of
+                 [[word]] =>
+                   let
+                     val scope = #scope (#2 binary_integer_agreement)
+                     val bit_offset = MFS.offset_of_type (#ofs scope)
+                       MFH.unsigned_bit_type
+                     val bit_atoms = List.mapPartial
+                       (fn [owner, bit] =>
+                             if owner = word then SOME bit else NONE
+                         | _ => NONE)
+                       (tuples MFPH.unsigned_bit_word_sel_rel instance)
+                   in
+                     SOME (List.foldl (fn (bit, total) =>
+                       MFU.reasonable_power 2 (bit - bit_offset) + total)
+                       0 bit_atoms)
+                   end
+               | _ => NONE)
+        | binary_witness _ = NONE
+      fun unsat (Normal ([], [0], "")) = true
+        | unsat _ = false
+      val unary = unary_witness (solve unary_integer_agreement_problem)
+      val binary = binary_witness (solve binary_integer_agreement_problem)
+    in
+      unary = SOME 1 andalso binary = unary andalso
+      List.all (unsat o solve) binary_integer_overflow_problems
+    end
+
   fun mf_driver_smoke () =
     let
       val solvers = Refute_ForlSat.configured_sat_solvers false
@@ -4874,6 +5078,36 @@ local
             ({backend = "kodkod", substrate = "kodkod",
               certainty = Refute.Genuine, cert = SOME _, stats, ...} :: _) =>
             List.all (has_stat stats) stat_keys
+        | _ => false
+    end
+
+  fun mf_binary_smart_trigger () =
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val solver =
+        if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
+      val config = default_config
+        |> upd_timeout 30.0
+        |> upd_backends (SOME ["kodkod"])
+        |> upd_sat_solver solver
+        |> upd_binary_ints NONE
+        |> upd_bits [9]
+        |> upd_card
+          [(SOME ``:num list``, [3]), (SOME ``:num``, [3]),
+           (NONE, [1])]
+      fun has_binary_scope
+            ({backend, scope, ...} : Refute.counterexample) =
+        backend = "kodkod" andalso
+        case scope of
+            SOME assignments =>
+              List.exists (fn (ty, card) =>
+                Type.compare (ty, MFH.unsigned_bit_type) = EQUAL andalso
+                card = 9) assignments
+          | NONE => false
+    in
+      case Refute.refute config ``(n : num) + 5 = n`` of
+          Refute.Counterexample counterexamples =>
+            List.exists has_binary_scope counterexamples
         | _ => false
     end
 
@@ -4937,9 +5171,21 @@ in
     else ()
   val _ =
     if bridge_configured then
+      require_msg (check_result binary_integer_end_to_end) (fn () =>
+        "binary/unary integer agreement or guarded overflow failed")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
       require_msg (check_result mf_driver_smoke) (fn () =>
         "the gated model-finder smoke did not find a certified " ^
         "counterexample") (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_binary_smart_trigger) (fn () =>
+        "smart binary integers did not fire on the arithmetic goal")
+        (fn () => ()) ()
     else ()
   val _ =
     if bridge_configured then
@@ -5260,12 +5506,24 @@ fun m4_guard_is_pinned (field, testfn) = shouldfail {
   testfn = testfn
 } ()
 
+fun binary_int_defaults_and_unlock_are_pinned () =
+  let
+    val forced = Refute.upd_binary_ints (SOME true) Refute.default_config
+    val widths = Refute.upd_bits [1, 9, 31] Refute.default_config
+  in
+    #binary_ints (#mf Refute.default_config) = NONE andalso
+    #bits (#mf Refute.default_config) =
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] andalso
+    #binary_ints (#mf forced) = SOME true andalso
+    #bits (#mf widths) = [1, 9, 31]
+  end
+
+val _ = require_msg
+  (check_result binary_int_defaults_and_unlock_are_pinned) (fn () =>
+  "binary_ints/bits defaults or unlock changed") (fn () => ()) ()
+
 val _ = List.app m4_guard_is_pinned
-  [("binary_ints", fn () =>
-      Refute.upd_binary_ints NONE Refute.default_config),
-   ("bits", fn () =>
-      Refute.upd_bits [4] Refute.default_config),
-   ("max_potential", fn () =>
+  [("max_potential", fn () =>
       Refute.upd_max_potential 2 Refute.default_config),
    ("max_genuine", fn () =>
       Refute.upd_max_genuine 2 Refute.default_config)]
@@ -5284,7 +5542,11 @@ val _ = List.app range_guard_is_pinned
   [("max_genuine", "must be at least 1", fn () =>
       Refute.upd_max_genuine 0 Refute.default_config),
    ("max_potential", "must not be negative", fn () =>
-      Refute.upd_max_potential ~1 Refute.default_config)]
+      Refute.upd_max_potential ~1 Refute.default_config),
+   ("bits", "values must lie between 1 and 31", fn () =>
+      Refute.upd_bits [0] Refute.default_config),
+   ("bits", "values must lie between 1 and 31", fn () =>
+      Refute.upd_bits [32] Refute.default_config)]
 
 val _ = tprint "Refute core backend registry"
 

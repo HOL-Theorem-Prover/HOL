@@ -283,7 +283,19 @@ fun rebuild_value ty values =
 fun reconstruct_term (context as {scope, sel_names, ...} : context)
       maybe_opt ty representation tuples =
   let
-    val {card_assigns, data_types, ofs, ...} = scope
+    val {card_assigns, bits, data_types, ofs, ...} = scope
+
+    fun value_of_bits tuples =
+      let
+        val offset = MFS.offset_of_type ofs MFH.unsigned_bit_type
+        fun bit_value [atom] =
+              let val index = atom - offset
+                  val power = MFU.reasonable_power 2 index
+              in if index = bits then ~power else power end
+          | bit_value _ = raise err "value_of_bits" "malformed bit tuple"
+      in
+        List.foldl (fn (tuple, total) => bit_value tuple + total) 0 tuples
+      end
 
     fun term_for_rep maybe_opt seen ty representation tuples =
       case (representation, tuples) of
@@ -419,11 +431,17 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
       let
         val ty = #typ spec
         val real_atom = atom + MFS.offset_of_type ofs ty
+        fun name_for nickname =
+          List.find (fn name =>
+            MFNT.nickname_of name = nickname andalso
+            same_type (#1 (Type.dom_rng (MFNT.type_of name))) ty) sel_names
         fun discriminator constructor =
           MFN.discr_prefix ^ MFH.constructor_name constructor
         fun is_constructor ({const, ...} : MFS.constr_spec) =
-          member_tuple [real_atom]
-            (tuples_for_nickname context (discriminator const))
+          case name_for (discriminator const) of
+              SOME name =>
+                member_tuple [real_atom] (tuples_for_name context name)
+            | NONE => false
         val constructor_spec =
           case List.find is_constructor (#constrs spec) of
               SOME found => found
@@ -434,37 +452,56 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
         val argument_tys = MFH.constructor_arg_types constructor
         val flat_tys = List.concat (map factor_types argument_tys)
 
-        fun selector_value (index, argument_ty) =
+        fun selector_info index =
           let
             val nickname = MFN.sel_prefix_for index ^ constructor_id
             val name =
-              case find_name sel_names nickname of
+              case name_for nickname of
                   SOME found => found
                 | NONE => raise err "term_for_data_type"
                     ("missing selector " ^ nickname)
-            val range_rep = #2 (MFR.dest_Func (MFNT.rep_of name))
             val selected = List.mapPartial
               (fn owner :: rest =>
                     if owner = real_atom then SOME rest else NONE
                 | [] => NONE)
               (tuples_for_name context name)
           in
+            (name, selected)
+          end
+
+        fun selector_value (index, argument_ty) =
+          let
+            val (name, selected) = selector_info index
+            val range_rep = #2 (MFR.dest_Func (MFNT.rep_of name))
+          in
             term_for_rep true ((ty, atom) :: seen) argument_ty
               range_rep selected
           end
-
-        val flat_values = map selector_value
-          (ListPair.zip
-            (List.tabulate (length flat_tys, fn index => index), flat_tys))
-        fun rebuild (argument_ty, (arguments, values)) =
-          let val (argument, values) = rebuild_value argument_ty values
-          in (argument :: arguments, values) end
-        val (arguments, remaining) =
-          List.foldl rebuild ([], flat_values) argument_tys
-        val _ = if null remaining then () else
-          raise err "term_for_data_type" "unused selector values"
       in
-        Term.list_mk_comb (constructor, rev arguments)
+        if MFH.is_bitword_type ty then
+          let
+            val value = value_of_bits (#2 (selector_info 0))
+          in
+            if ty = MFH.unsigned_bitword_type then
+              numSyntax.term_of_int value
+            else
+              intSyntax.term_of_int (Arbint.fromInt value)
+          end
+        else
+          let
+            val flat_values = map selector_value
+              (ListPair.zip
+                (List.tabulate (length flat_tys, fn index => index), flat_tys))
+            fun rebuild (argument_ty, (arguments, values)) =
+              let val (argument, values) = rebuild_value argument_ty values
+              in (argument :: arguments, values) end
+            val (arguments, remaining) =
+              List.foldl rebuild ([], flat_values) argument_tys
+            val _ = if null remaining then () else
+              raise err "term_for_data_type" "unused selector values"
+          in
+            Term.list_mk_comb (constructor, rev arguments)
+          end
       end
   in
     MFH.unarize_unbox_etc_term

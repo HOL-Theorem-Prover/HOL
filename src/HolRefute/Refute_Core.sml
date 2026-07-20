@@ -187,8 +187,8 @@ structure Refute_Core = struct
       tac_timeout = 0.5,
       specialize = true,
       box = [(NONE, NONE)],
-      binary_ints = SOME false,
-      bits = [0],
+      binary_ints = NONE,
+      bits = List.tabulate (10, fn n => n + 1),
       star_linear_preds = false,
       iter = [(NONE, [0])],
       bisim_depth = [~1],
@@ -519,9 +519,11 @@ structure Refute_Core = struct
   fun validate_mf_config (mf : mf_config) =
     let
       fun unchanged field same = if same then () else m4_error field
-      val _ = unchanged "binary_ints"
-        (#binary_ints mf = #binary_ints default_mf_config)
-      val _ = unchanged "bits" (#bits mf = #bits default_mf_config)
+      val _ = if null (#bits mf) orelse
+                     List.exists (fn bits => bits < 1 orelse bits > 31)
+                       (#bits mf) then
+                range_error "bits" "values must lie between 1 and 31"
+              else ()
       val _ = unchanged "star_linear_preds"
         (#star_linear_preds mf = #star_linear_preds default_mf_config)
       val _ = (case #iter mf of

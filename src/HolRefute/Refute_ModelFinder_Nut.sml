@@ -857,10 +857,8 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
   fun choose_rep_for_selector scope index selector (selectors, table) =
     let
       val ty = type_of selector
-      (* Upstream's word-selector branch is intentionally unreachable:
-         its word is Nitpick's M4 binary-int datatype, not HOL4 words.
-         See m3-scope-rep-nut section 9 and PLAN_M3 section 9. *)
       val special = index = ~1 orelse
+        MFH.is_bitword_type (domain_type ty) orelse
         (MFH.is_fun_type (range_type ty) andalso
          MFH.is_boolean_type (final_result_type (range_type ty)))
       val representation =
@@ -1075,20 +1073,28 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
             | Cst (True, ty, _) =>
                 Cst (True, ty, MFR.Formula MFU.Neut)
             | Cst (Num value, ty, _) =>
-                (* Nitpick word/bit numerals are an M4 binary-int feature,
-                   not HOL4 words.  The branch is dead by the closure proof
-                   in m3-scope-rep-nut section 9 / PLAN_M3 section 9. *)
-                let
-                  val (cardinality, offset) = MFS.spec_of_type scope ty
-                  val representable =
-                    if ty = MFH.int_type then
-                      MFP.atom_for_int (cardinality, offset) value <> ~1
-                    else value >= 0 andalso value < cardinality
-                  val atom = MFR.Atom (cardinality, offset)
-                in
-                  if representable then Cst (Num value, ty, atom)
-                  else Cst (Unrep, ty, MFR.Opt atom)
-                end
+                if MFH.is_bitword_type ty then
+                  let
+                    val representation =
+                      MFR.best_opt_set_rep_for_type scope ty
+                  in
+                    Cst (if MFP.is_twos_complement_representable
+                               (#bits scope) value
+                         then Num value else Unrep,
+                      ty, representation)
+                  end
+                else
+                  let
+                    val (cardinality, offset) = MFS.spec_of_type scope ty
+                    val representable =
+                      if ty = MFH.int_type then
+                        MFP.atom_for_int (cardinality, offset) value <> ~1
+                      else value >= 0 andalso value < cardinality
+                    val atom = MFR.Atom (cardinality, offset)
+                  in
+                    if representable then Cst (Num value, ty, atom)
+                    else Cst (Unrep, ty, MFR.Opt atom)
+                  end
             | Cst (Suc, ty, _) =>
                 let val atom = MFR.Atom
                   (MFS.spec_of_type scope (domain_type ty))
@@ -1134,10 +1140,11 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     val (range_card, range_offset) =
                       MFS.spec_of_type scope (range_type ty)
                     val total =
-                      if constant = NatToInt then
-                        MFP.max_int_for_card range_card >= domain_card + 1
-                      else
-                        MFP.max_int_for_card domain_card < range_card
+                      not (MFH.is_bitword_type (domain_type ty)) andalso
+                      (if constant = NatToInt then
+                         MFP.max_int_for_card range_card >= domain_card + 1
+                       else
+                         MFP.max_int_for_card domain_card < range_card)
                     val range = MFR.Atom (range_card, range_offset)
                   in
                     Cst (constant, ty,
@@ -1524,10 +1531,18 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
         end
       else
         let
-          (* Fixed bit-word selector IDs are M4-only and deliberately not
-             selected for HOL4 words.  See m3-scope-rep-nut section 9 and
-             PLAN_M3 section 9 for the closure proof. *)
-          val (index, pool') = fresh arity pool
+          val fixed =
+            case variable of
+                ConstName _ =>
+                  if is_selector_like nickname andalso
+                     MFH.is_bitword_type (domain_type ty) then
+                    SOME (if domain_type ty = MFH.unsigned_bitword_type then
+                            #2 MFP.unsigned_bit_word_sel_rel
+                          else #2 MFP.signed_bit_word_sel_rel)
+                  else NONE
+              | _ => NONE
+          val (index, pool') =
+            case fixed of SOME index => (index, pool) | NONE => fresh arity pool
           val renamed = construct (arity, index) ty representation nickname
         in
           (renamed :: variables, pool',

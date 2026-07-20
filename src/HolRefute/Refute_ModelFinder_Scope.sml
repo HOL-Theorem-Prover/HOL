@@ -49,6 +49,7 @@ structure Refute_ModelFinder_Scope = struct
   val distinct_threshold = 1000
   val sync_threshold = 5
   val linearity = 5
+  val max_bits = 31
 
   (* PLAN_M3 minor decision 22: pseudo_frees is deliberately absent;
      its only consumer hardwires the vestigial upstream list to []. *)
@@ -106,7 +107,8 @@ structure Refute_ModelFinder_Scope = struct
               is_complete_type data_types facto left andalso
               is_complete_type data_types facto right
             end
-          else if MFH.is_integer_type ty then
+          else if MFH.is_integer_type ty orelse MFH.is_bit_type ty orelse
+                  MFH.is_bitword_type ty then
             false
           else
             (case data_type_spec data_types ty of
@@ -124,6 +126,8 @@ structure Refute_ModelFinder_Scope = struct
               is_concrete_type data_types facto left andalso
               is_concrete_type data_types facto right
             end
+          else if MFH.is_bitword_type ty then
+            true
           else
             (case data_type_spec data_types ty of
                  SOME spec => MFU.fun_from_pair (#concrete spec) facto
@@ -228,18 +232,29 @@ structure Refute_ModelFinder_Scope = struct
       lookup_const_ints_assign maxes_assigns constructor)
     handle HOL_ERR _ => NONE
 
-  fun block_for_type context binarize cards_assigns maxes_assigns ty =
-    (Card ty, lookup_type_ints_assign cards_assigns ty) ::
-    (case MFH.binarized_and_boxed_data_type_constrs context binarize ty of
-         [_] => []
-       | constructors =>
-           List.mapPartial (row_for_constr maxes_assigns) constructors)
+  fun bit_card bits = Int.min (max_bits, Int.max (1, bits))
 
-  fun blocks_for_types context binarize cards_assigns maxes_assigns
+  fun block_for_type context binarize cards_assigns maxes_assigns bitss ty =
+    if ty = MFH.unsigned_bit_type then
+      [(Card ty, map bit_card bitss)]
+    else if ty = MFH.signed_bit_type then
+      [(Card ty, map (fn bits => bit_card bits + 1) bitss)]
+    else if ty = MFH.unsigned_bitword_type then
+      [(Card ty, lookup_type_ints_assign cards_assigns MFH.num_type)]
+    else if ty = MFH.signed_bitword_type then
+      [(Card ty, lookup_type_ints_assign cards_assigns MFH.int_type)]
+    else
+      (Card ty, lookup_type_ints_assign cards_assigns ty) ::
+      (case MFH.binarized_and_boxed_data_type_constrs context binarize ty of
+           [_] => []
+         | constructors =>
+             List.mapPartial (row_for_constr maxes_assigns) constructors)
+
+  fun blocks_for_types context binarize cards_assigns maxes_assigns bitss
         mono_types nonmono_types =
     let
       fun block_for ty =
-        block_for_type context binarize cards_assigns maxes_assigns ty
+        block_for_type context binarize cards_assigns maxes_assigns bitss ty
       val mono_block = List.concat (map block_for mono_types)
       val nonmono_blocks = map block_for nonmono_types
     in
@@ -473,6 +488,7 @@ structure Refute_ModelFinder_Scope = struct
       fun binder_types argument_ty =
         #1 (boolSyntax.strip_fun argument_ty)
       fun is_concrete facto =
+        MFH.is_bitword_type ty orelse
         (* FIXME: looks wrong; other types than just functions might be
            abstract. "is_complete" is also suspicious. *)
         List.all (has_exact_card context facto finitizable_data_types
@@ -505,9 +521,14 @@ structure Refute_ModelFinder_Scope = struct
         (data_type_spec_from_scope_descriptor context binarize deep_data_types
           finitizable_data_types desc)
         (List.filter (MFH.is_data_type o #1) card_assigns)
+      fun card ty = MFH.assignment_lookup card_assigns ty
+      val bits =
+        case card MFH.signed_bit_type of
+            SOME signed => signed - 1
+          | NONE => Option.getOpt (card MFH.unsigned_bit_type, 0)
     in
       {hol_ctxt = context, binarize = binarize,
-       card_assigns = card_assigns, bits = 0, bisim_depth = ~1,
+       card_assigns = card_assigns, bits = bits, bisim_depth = ~1,
        data_types = data_types,
        ofs = offset_table_for_card_assigns data_types card_assigns}
     end
@@ -555,13 +576,13 @@ structure Refute_ModelFinder_Scope = struct
            same_description (other, value)) result then result
       else result @ [value]) [] values
 
-  fun all_scopes context binarize cards_assigns maxes_assigns
+  fun all_scopes context binarize cards_assigns maxes_assigns bitss
         mono_types nonmono_types deep_data_types finitizable_data_types =
     let
       val cards_assigns =
         repair_cards_assigns_wrt_boxing_etc mono_types cards_assigns
       val blocks = blocks_for_types context binarize cards_assigns
-        maxes_assigns mono_types nonmono_types
+        maxes_assigns bitss mono_types nonmono_types
       val ranks = map rank_of_block blocks
       val all = all_combinations_ordered_smartly
         (map (fn rank => (rank, 0)) ranks)

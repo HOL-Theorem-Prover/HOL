@@ -29,6 +29,7 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
   val univ_card :
     int -> int -> int -> Refute_Forl.bound list ->
     Refute_Forl.formula -> int
+  val check_bits : int -> Refute_Forl.formula -> unit
   val check_arity : string -> int -> int -> unit
   val empty_offset_table : unit -> offset_table
   val with_arity_retry :
@@ -181,6 +182,23 @@ fun univ_card nat_card int_card main_j0 bounds formula =
   in
     Int.max
       (main_j0 + List.foldl Int.max 2 [nat_card, int_card], formula_card)
+  end
+
+fun check_bits bits formula =
+  let
+    fun int_expr_func (KK.Num value) () =
+          if MFP.is_twos_complement_representable bits value then ()
+          else raise MFU.TOO_SMALL
+            ("Refute_ModelFinder_Kodkod.check_bits",
+             "\"bits\" value " ^ Int.toString bits ^
+             " too small for problem")
+      | int_expr_func _ () = ()
+    val funcs =
+      {formula_func = fn _ => fn value => value,
+       rel_expr_func = fn _ => fn value => value,
+       int_expr_func = int_expr_func}
+  in
+    Refute_Forl.fold_formula funcs formula ()
   end
 
 fun check_arity guilty universe_card arity =
@@ -1760,12 +1778,28 @@ fun has_function_type domain range ty =
 
 fun m4_translation location =
   raise MFU.NOT_SUPPORTED
-    (location ^ ": unreachable in M3 by the closure proof in " ^
-     "m3-kodkod-translation section 6 / PLAN_M3 section 9")
+    (location ^ ": feature not yet translated")
+
+fun bit_set_from_atom
+      ({kk_join, ...} : kodkod_constrs) ty relation =
+  kk_join relation
+    (KK.Rel (if ty = MFH.unsigned_bitword_type then
+               MFP.unsigned_bit_word_sel_rel
+             else MFP.signed_bit_word_sel_rel))
+
+fun int_expr_from_atom kk ty = KK.SetSum o bit_set_from_atom kk ty
+
+fun atom_from_int_expr
+      (kk as {kk_rel_eq, kk_comprehension, ...} : kodkod_constrs)
+      ty representation integer =
+  kk_comprehension
+    (decls_for_atom_schema (~1) (MFR.atom_schema_of_rep representation))
+    (kk_rel_eq (bit_set_from_atom kk ty (KK.Var (1, ~1)))
+      (KK.Bits integer))
 
 fun kodkod_formula_from_nut offsets
       (kk as {kk_all, kk_exist, kk_formula_let, kk_formula_if, kk_or,
-              kk_not, kk_iff, kk_and, kk_subset, kk_rel_eq, kk_no,
+              kk_not, kk_iff, kk_implies, kk_and, kk_subset, kk_rel_eq, kk_no,
               kk_lone, kk_some, kk_rel_let, kk_rel_if, kk_union,
               kk_difference, kk_intersect, kk_product, kk_join,
               kk_closure, kk_comprehension, kk_project,
@@ -2031,7 +2065,9 @@ fun kodkod_formula_from_nut offsets
             MFR.Func (MFR.Atom (1, offset), MFR.Formula MFU.Neut)) =>
             KK.Atom offset
         | MFNT.Cst (MFNT.Num value, ty, representation) =>
-            if ty = MFH.int_type then
+            if MFH.is_bitword_type ty then
+              atom_from_int_expr kk ty representation (KK.Num value)
+            else if ty = MFH.int_type then
               (case MFP.atom_for_int
                  (MFR.card_of_rep representation,
                   MFS.offset_of_type offsets MFH.int_type) value of
@@ -2049,54 +2085,124 @@ fun kodkod_formula_from_nut offsets
                 raise MFNT.NUT
                   ("Refute_ModelFinder_Kodkod.to_r (Num)", [candidate])
             else
-              (* M4-only word numeral path; dead under the M3 closure
-                 proof cited by PLAN_M3 section 9. *)
-              m4_translation
-                "Refute_ModelFinder_Kodkod.to_r (word Num)"
+              raise MFNT.NUT
+                ("Refute_ModelFinder_Kodkod.to_r (Num)", [candidate])
         | MFNT.Cst (MFNT.Unknown, _, representation) =>
             empty_rel_for_rep representation
         | MFNT.Cst (MFNT.Unrep, _, representation) =>
             empty_rel_for_rep representation
-        | MFNT.Cst (MFNT.Suc, ty,
-            MFR.Func (MFR.Atom sequence, _)) =>
-            if #1 (Type.dom_rng ty) = MFH.num_type then
-              kk_intersect (KK.Rel MFP.suc_rel)
-                (kk_product KK.Univ (KK.AtomSeq sequence))
+        | MFNT.Cst (MFNT.Suc, ty, representation) =>
+            if #1 (Type.dom_rng ty) = MFH.unsigned_bitword_type then
+              to_bit_word_unary_op ty representation
+                (fn integer => KK.Add (KK.Num 1, integer))
             else
-              m4_translation
-                "Refute_ModelFinder_Kodkod.to_r (word Suc)"
+              (case representation of
+                   MFR.Func (MFR.Atom sequence, _) =>
+                     kk_intersect (KK.Rel MFP.suc_rel)
+                       (kk_product KK.Univ (KK.AtomSeq sequence))
+                 | _ => raise MFNT.NUT
+                     ("Refute_ModelFinder_Kodkod.to_r (Suc)", [candidate]))
         | MFNT.Cst (MFNT.Add, ty, _) =>
             if #1 (Type.dom_rng ty) = MFH.num_type then
               KK.Rel MFP.nat_add_rel
             else if #1 (Type.dom_rng ty) = MFH.int_type then
               KK.Rel MFP.int_add_rel
+            else if #1 (Type.dom_rng ty) = MFH.unsigned_bitword_type then
+              to_bit_word_binary_op ty (MFNT.rep_of candidate) NONE
+                (SOME (fn left => fn right => KK.Add (left, right)))
+            else if #1 (Type.dom_rng ty) = MFH.signed_bitword_type then
+              to_bit_word_binary_op ty (MFNT.rep_of candidate)
+                (SOME (fn first => fn second => fn result =>
+                  kk_implies
+                    (KK.LE (KK.Num 0, KK.BitXor (first, second)))
+                    (KK.LE (KK.Num 0, KK.BitXor (second, result)))))
+                (SOME (fn left => fn right => KK.Add (left, right)))
             else
-              m4_translation
-                "Refute_ModelFinder_Kodkod.to_r (word Add)"
+              raise MFNT.NUT
+                ("Refute_ModelFinder_Kodkod.to_r (Add)", [candidate])
         | MFNT.Cst (MFNT.Subtract, ty, _) =>
             if #1 (Type.dom_rng ty) = MFH.num_type then
               KK.Rel MFP.nat_subtract_rel
             else if #1 (Type.dom_rng ty) = MFH.int_type then
               KK.Rel MFP.int_subtract_rel
+            else if #1 (Type.dom_rng ty) = MFH.unsigned_bitword_type then
+              to_bit_word_binary_op ty (MFNT.rep_of candidate) NONE
+                (SOME (fn left => fn right =>
+                  KK.IntIf (KK.LE (left, right), KK.Num 0,
+                    KK.Sub (left, right))))
+            else if #1 (Type.dom_rng ty) = MFH.signed_bitword_type then
+              to_bit_word_binary_op ty (MFNT.rep_of candidate)
+                (SOME (fn first => fn second => fn result =>
+                  kk_implies
+                    (KK.LT (KK.BitXor (first, second), KK.Num 0))
+                    (KK.LT (KK.BitXor (second, result), KK.Num 0))))
+                (SOME (fn left => fn right => KK.Sub (left, right)))
             else
-              m4_translation
-                "Refute_ModelFinder_Kodkod.to_r (word Subtract)"
+              raise MFNT.NUT
+                ("Refute_ModelFinder_Kodkod.to_r (Subtract)", [candidate])
         | MFNT.Cst (MFNT.Multiply, ty, _) =>
             if #1 (Type.dom_rng ty) = MFH.num_type then
               KK.Rel MFP.nat_multiply_rel
             else if #1 (Type.dom_rng ty) = MFH.int_type then
               KK.Rel MFP.int_multiply_rel
+            else if MFH.is_bitword_type (#1 (Type.dom_rng ty)) then
+              let
+                val signed = #1 (Type.dom_rng ty) = MFH.signed_bitword_type
+                fun guard first second result =
+                  kk_or (KK.IntEq (second, KK.Num 0))
+                    (let val exact = KK.IntEq
+                           (KK.Div (result, second), first)
+                     in
+                       if signed then
+                         kk_and exact
+                           (KK.LE (KK.Num 0,
+                             MFU.fold1 (fn left => fn right =>
+                               KK.BitAnd (left, right))
+                               [first, second, result]))
+                       else exact
+                     end)
+              in
+                to_bit_word_binary_op ty (MFNT.rep_of candidate)
+                  (SOME guard)
+                  (SOME (fn left => fn right => KK.Mult (left, right)))
+              end
             else
-              m4_translation
-                "Refute_ModelFinder_Kodkod.to_r (word Multiply)"
+              raise MFNT.NUT
+                ("Refute_ModelFinder_Kodkod.to_r (Multiply)", [candidate])
         | MFNT.Cst (MFNT.Divide, ty, _) =>
             if #1 (Type.dom_rng ty) = MFH.num_type then
               KK.Rel MFP.nat_divide_rel
             else if #1 (Type.dom_rng ty) = MFH.int_type then
               KK.Rel MFP.int_divide_rel
+            else if #1 (Type.dom_rng ty) = MFH.unsigned_bitword_type then
+              to_bit_word_binary_op ty (MFNT.rep_of candidate) NONE
+                (SOME (fn left => fn right =>
+                  KK.IntIf (KK.IntEq (right, KK.Num 0), KK.Num 0,
+                    KK.Div (left, right))))
+            else if #1 (Type.dom_rng ty) = MFH.signed_bitword_type then
+              let
+                fun negative integer = KK.LT (integer, KK.Num 0)
+                fun positive integer = KK.LT (KK.Num 0, integer)
+                fun divide first second =
+                  KK.IntIf (kk_and (negative first) (positive second),
+                    KK.Sub (KK.Div (KK.Add (first, KK.Num 1), second),
+                      KK.Num 1),
+                    KK.IntIf (kk_and (positive first) (negative second),
+                      KK.Sub (KK.Div (KK.Sub (first, KK.Num 1), second),
+                        KK.Num 1),
+                      KK.IntIf (KK.IntEq (second, KK.Num 0), KK.Num 0,
+                        KK.Div (first, second))))
+                fun guard first second result =
+                  KK.LE (KK.Num 0,
+                    MFU.fold1 (fn left => fn right =>
+                      KK.BitAnd (left, right)) [first, second, result])
+              in
+                to_bit_word_binary_op ty (MFNT.rep_of candidate)
+                  (SOME guard) (SOME divide)
+              end
             else
-              m4_translation
-                "Refute_ModelFinder_Kodkod.to_r (word Divide)"
+              raise MFNT.NUT
+                ("Refute_ModelFinder_Kodkod.to_r (Divide)", [candidate])
         | MFNT.Cst (MFNT.Gcd, _, _) =>
             (* M4-only rational support; unreachable by the M3 closure
                proof in m3-kodkod-translation section 6. *)
@@ -2108,12 +2214,10 @@ fun kodkod_formula_from_nut offsets
         | MFNT.Cst (MFNT.NormFrac, _, _) =>
             m4_translation "Refute_ModelFinder_Kodkod.to_r (NormFrac)"
         | MFNT.Cst (MFNT.NatToInt, ty, representation) =>
-            if not (has_function_type MFH.num_type MFH.int_type ty) then
-              (* M4-only word conversion; dead under the M3 closure proof
-                 in m3-kodkod-translation section 6. *)
-              m4_translation
-                "Refute_ModelFinder_Kodkod.to_r (word NatToInt)"
-            else
+            if has_function_type MFH.unsigned_bitword_type
+                 MFH.signed_bitword_type ty then
+              to_bit_word_unary_op ty representation (fn integer => integer)
+            else if has_function_type MFH.num_type MFH.int_type ty then
               (case representation of
                    MFR.Func (MFR.Atom _, MFR.Atom _) => KK.Iden
                  | MFR.Func (MFR.Atom (_, nat_offset),
@@ -2132,13 +2236,14 @@ fun kodkod_formula_from_nut offsets
                  | _ => raise MFNT.NUT
                      ("Refute_ModelFinder_Kodkod.to_r (NatToInt)",
                       [candidate]))
+            else raise MFNT.NUT
+              ("Refute_ModelFinder_Kodkod.to_r (NatToInt)", [candidate])
         | MFNT.Cst (MFNT.IntToNat, ty, representation) =>
-            if not (has_function_type MFH.int_type MFH.num_type ty) then
-              (* M4-only word conversion; dead under the M3 closure proof
-                 in m3-kodkod-translation section 6. *)
-              m4_translation
-                "Refute_ModelFinder_Kodkod.to_r (word IntToNat)"
-            else
+            if has_function_type MFH.signed_bitword_type
+                 MFH.unsigned_bitword_type ty then
+              to_bit_word_unary_op ty representation (fn integer =>
+                KK.IntIf (KK.LE (integer, KK.Num 0), KK.Num 0, integer))
+            else if has_function_type MFH.int_type MFH.num_type ty then
               (case representation of
                    MFR.Func
                      (MFR.Atom (int_card, int_offset), nat_rep) =>
@@ -2168,6 +2273,8 @@ fun kodkod_formula_from_nut offsets
                  | _ => raise MFNT.NUT
                      ("Refute_ModelFinder_Kodkod.to_r (IntToNat)",
                       [candidate]))
+            else raise MFNT.NUT
+              ("Refute_ModelFinder_Kodkod.to_r (IntToNat)", [candidate])
         | MFNT.Op1 (MFNT.Not, _, representation, first) =>
             kk_not3 (to_rep representation first)
         | MFNT.Op1 (MFNT.Finite, _, MFR.Opt (MFR.Atom _), _) =>
@@ -2321,11 +2428,36 @@ fun kodkod_formula_from_nut offsets
                 kk_nat_less (to_integer first) (to_integer second)
             else if MFNT.type_of first = MFH.int_type then
               kk_int_less (to_integer first) (to_integer second)
+            else if MFH.is_bitword_type (MFNT.type_of first) then
+              let
+                val operand_rep = MFR.Opt
+                  (MFR.Atom (MFR.card_of_rep (MFNT.rep_of first),
+                    MFS.offset_of_type offsets (MFNT.type_of first)))
+                fun present (nut, relation) =
+                  if MFR.is_opt_rep (MFNT.rep_of nut) then
+                    SOME (kk_some relation)
+                  else NONE
+                fun guarded first_rel second_rel =
+                  let
+                    val guards = List.mapPartial present
+                      [(first, first_rel), (second, second_rel)]
+                    val guard = List.foldl
+                      (fn (formula, result) => kk_and result formula)
+                      KK.True guards
+                    val less = KK.LT
+                      (int_expr_from_atom kk (MFNT.type_of first) first_rel,
+                       int_expr_from_atom kk (MFNT.type_of second) second_rel)
+                  in
+                    kk_rel_if guard
+                      (atom_from_formula kk bool_offset less) KK.None
+                  end
+              in
+                double_rel_rel_let kk guarded
+                  (to_rep operand_rep first) (to_rep operand_rep second)
+              end
             else
-              (* Word comparison is M4-only and dead by the M3 closure
-                 proof in m3-kodkod-translation section 6. *)
-              m4_translation
-                "Refute_ModelFinder_Kodkod.to_r (word Less)"
+              raise MFNT.NUT
+                ("Refute_ModelFinder_Kodkod.to_r (Less)", [candidate])
         | MFNT.Op2 (MFNT.Triad, _, MFR.Opt (MFR.Atom (2, offset)),
             first, second) =>
             let
@@ -2666,6 +2798,48 @@ fun kodkod_formula_from_nut offsets
                 (to_rep (MFR.Opt (MFR.Struct reps)) candidate) column
             end
 
+    and to_bit_word_unary_op ty representation operation =
+      let
+        val (domains, range) = boolSyntax.strip_fun ty
+        val types = domains @ [range]
+        fun integer index = int_expr_from_atom kk
+          (List.nth (types, index)) (KK.Var (1, index))
+      in
+        kk_comprehension
+          (decls_for_atom_schema 0
+            (MFR.atom_schema_of_rep representation))
+          (KK.FormulaLet
+            (map (fn index => KK.AssignIntReg (index, integer index))
+               (MFU.index_seq 0 2),
+             KK.IntEq (KK.IntReg 1, operation (KK.IntReg 0))))
+      end
+
+    and to_bit_word_binary_op ty representation guard operation =
+      let
+        val (domains, range) = boolSyntax.strip_fun ty
+        val types = domains @ [range]
+        fun integer index = int_expr_from_atom kk
+          (List.nth (types, index)) (KK.Var (1, index))
+        val formulas =
+          (case guard of
+               SOME formula =>
+                 [formula (KK.IntReg 0) (KK.IntReg 1) (KK.IntReg 2)]
+             | NONE => []) @
+          (case operation of
+               SOME function =>
+                 [KK.IntEq (KK.IntReg 2,
+                    function (KK.IntReg 0) (KK.IntReg 1))]
+             | NONE => [])
+      in
+        kk_comprehension
+          (decls_for_atom_schema 0
+            (MFR.atom_schema_of_rep representation))
+          (KK.FormulaLet
+            (map (fn index => KK.AssignIntReg (index, integer index))
+               (MFU.index_seq 0 3),
+             MFU.fold1 kk_and formulas))
+      end
+
     and to_apply (representation as MFR.Formula _) _ _ =
           raise MFR.REP
             ("Refute_ModelFinder_Kodkod.to_apply", [representation])
@@ -2864,6 +3038,7 @@ fun assemble_problem_once
         Int.max (arity, maximum)) result declarations) 0 bounds
     val formula = List.foldr (fn (axiom, result) =>
       MFP.s_and axiom result) formula axioms
+    val _ = if bits = 0 then () else check_bits bits formula
     val _ =
       if formula = KK.False then ()
       else check_arity "" universe_card highest_bound_arity

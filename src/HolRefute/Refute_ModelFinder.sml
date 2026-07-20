@@ -378,7 +378,7 @@ fun run_instance deadline started (config : Refute_Core.config)
          " can use a more precise finite encoding: " ^
          String.concatWith ", " (map type_name finitizable_types) ^ "\n")
     val (skipped, scopes) = MFS.all_scopes context binarize
-      (#card mf) (#max mf) mono_types nonmono_types deep_types
+      (#card mf) (#max mf) (#bits mf) mono_types nonmono_types deep_types
       finitizable_types
     val batch_size =
       if #debug mf then 1 else Int.max (1, #batch_size mf)
