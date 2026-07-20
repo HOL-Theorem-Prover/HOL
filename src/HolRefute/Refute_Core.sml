@@ -1207,8 +1207,12 @@ structure Refute_Core = struct
         SOME predicate =>
           "iter " ^ predicate ^ " = " ^ Int.toString (Int.max (0, card - 1))
       | NONE =>
-          "card " ^ type_name (unbox_display_type ty) ^ " = " ^
-          Int.toString card
+          (case Lib.total Type.dest_thy_type ty of
+               SOME {Thy = "refute", Tyop = "bisim_iterator", ...} =>
+                 "bisim_depth = " ^ Int.toString (card - 1)
+             | _ =>
+                 "card " ^ type_name (unbox_display_type ty) ^ " = " ^
+                 Int.toString card)
 
   fun format_scope NONE = ""
     | format_scope (SOME assignments) =

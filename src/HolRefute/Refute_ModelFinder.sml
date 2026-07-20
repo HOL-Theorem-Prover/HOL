@@ -147,7 +147,10 @@ fun type_name ty = Parse.type_to_string ty
 
 fun scope_comment (scope : MFS.scope) =
   String.concatWith ", " (map (fn (ty, card) =>
-    "card " ^ type_name ty ^ " = " ^ Int.toString card)
+    if MFH.is_bisim_iterator_type ty then
+      "bisim_depth = " ^ Int.toString (card - 1)
+    else
+      "card " ^ type_name ty ^ " = " ^ Int.toString card)
     (#card_assigns scope))
 
 fun deep_data_types all_types sel_names =
@@ -298,6 +301,13 @@ fun run_instance deadline started (config : Refute_Core.config)
     val (sel_names, nonsel_names) = List.partition
       (MFN.is_sel o MFNT.nickname_of) const_names
     val all_types = ground_types context binarize (nondef_ts @ def_ts)
+    (* TASK_16 will add cycle-aware reconstruction.  Until then the live
+       codatatype encoding is available to term/scope/serializer tests but
+       must not be allowed to feed a cyclic Kodkod model to reconstruction. *)
+    val _ = if List.exists MFH.is_codatatype all_types then
+        raise MFU.NOT_SUPPORTED
+          "codatatype model reconstruction is not implemented yet"
+      else ()
     val unique_scope = List.all (fn (_, values) => length values = 1)
       (#card mf)
     val calculus_mono_types = ref ([] : hol_type list)
@@ -375,7 +385,8 @@ fun run_instance deadline started (config : Refute_Core.config)
          " can use a more precise finite encoding: " ^
          String.concatWith ", " (map type_name finitizable_types) ^ "\n")
     val (skipped, scopes) = MFS.all_scopes context binarize
-      (#card mf) (#max mf) (#iter mf) (#bits mf) mono_types nonmono_types
+      (#card mf) (#max mf) (#iter mf) (#bits mf) (#bisim_depth mf)
+      mono_types nonmono_types
       deep_types finitizable_types
     val batch_size =
       if #debug mf then 1 else Int.max (1, #batch_size mf)

@@ -54,6 +54,9 @@ signature Refute = sig
     backend -> certainty_ceiling -> unit
   val register_substrate : substrate -> unit
   val register_generator : hol_type -> custom_gen -> unit
+  val register_codatatype :
+    {tyop : {Thy : string, Tyop : string},
+     case_const : term, constructors : term list} -> unit
   val abstract_generator :
     {ty : hol_type, constructors : term list, pred : term option} -> unit
   val export_refute_simp : string -> unit

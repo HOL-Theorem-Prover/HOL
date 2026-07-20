@@ -500,8 +500,20 @@ fun bound_comment debug nickname ty representation =
 
 fun bound_for_plain_rel debug
       (MFNT.FreeRel (index, ty, representation, nickname)) =
-    ([(index, bound_comment debug nickname ty representation)],
-     [TupleSet [], upper_bound_for_rep representation])
+    let
+      val bounds =
+        if MFN.original_name nickname =
+             "refute$bisim_iterator_max" then
+          (case representation of
+               MFR.Atom (card, offset) =>
+                 [single_atom (offset + card - 1)]
+             | _ => raise MFNT.NUT
+                 ("Refute_ModelFinder_Kodkod.bound_for_plain_rel", []))
+        else
+          [TupleSet [], upper_bound_for_rep representation]
+    in
+      ([(index, bound_comment debug nickname ty representation)], bounds)
+    end
   | bound_for_plain_rel _ nut =
       raise MFNT.NUT
         ("Refute_ModelFinder_Kodkod.bound_for_plain_rel", [nut])

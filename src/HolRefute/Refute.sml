@@ -65,6 +65,7 @@ structure Refute :> Refute = struct
           | Potential reasons => Refute_Core.Potential reasons)
   val register_substrate = Refute_Eval.register_substrate
   val register_generator = Refute_Gen.register_generator
+  val register_codatatype = Refute_ModelFinder_HOL.register_codatatype
   val abstract_generator = Refute_Gen.abstract_generator
 
   val export_refute_simp = #export Refute_Core.refute_simp

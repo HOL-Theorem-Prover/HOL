@@ -349,8 +349,8 @@ structure Refute_ModelFinder_HOL = struct
      equiv_thm : thm, partial : bool}
   type frac_info = {tyop : type_operator, ersatz : ersatz list}
 
-  (* M3 leaves these session registries empty.  Their record shapes are the
-     hooks for M4; raw typedef harvesting is deliberately not attempted. *)
+  (* Registrations are session-level ML state.  In particular, registering a
+     codatatype never extends the current HOL theory. *)
   val codatatype_registry = ref ([] : codatatype_info list)
   val quotient_registry = ref ([] : quotient_info list)
   val frac_registry = ref ([] : frac_info list)
@@ -590,6 +590,8 @@ structure Refute_ModelFinder_HOL = struct
      ({Thy = "refute", Name = "unknown"}, 0),
      ({Thy = "refute", Name = "is_unknown"}, 1),
      ({Thy = "refute", Name = "safe_The"}, 1),
+     ({Thy = "refute", Name = "bisim_suc"}, 0),
+     ({Thy = "refute", Name = "bisim_zero"}, 0),
      ({Thy = "num", Name = "SUC"}, 0),
      ({Thy = "integer", Name = "Num"}, 0),
      (* HOL4 numeral syntax is recognized directly.  Keeping its binary
@@ -607,6 +609,22 @@ structure Refute_ModelFinder_HOL = struct
     {Thy = "refute", Tyop = "unsigned_bit", Args = []}
   val signed_bit_type = Type.mk_thy_type
     {Thy = "refute", Tyop = "signed_bit", Args = []}
+  val bisim_iterator_type = Type.mk_thy_type
+    {Thy = "refute", Tyop = "bisim_iterator", Args = []}
+
+  fun bisim_const ty = Term.mk_thy_const
+    {Thy = "refute", Name = "bisim",
+     Ty = Type.-->(bisim_iterator_type,
+       Type.-->(ty, Type.-->(ty, Type.bool)))}
+
+  val bisim_iterator_max_const = Term.mk_thy_const
+    {Thy = "refute", Name = "bisim_iterator_max",
+     Ty = bisim_iterator_type}
+  val bisim_suc_const = Term.mk_thy_const
+    {Thy = "refute", Name = "bisim_suc",
+     Ty = Type.-->(bisim_iterator_type, bisim_iterator_type)}
+  val bisim_zero_const = Term.mk_thy_const
+    {Thy = "refute", Name = "bisim_zero", Ty = bisim_iterator_type}
 
   fun mk_bitword_type bit = Type.mk_thy_type
     {Thy = "refute", Tyop = "bitword", Args = [bit]}
@@ -1892,6 +1910,169 @@ structure Refute_ModelFinder_HOL = struct
   fun same_type_operator (left : type_operator) right =
     #Thy left = #Thy right andalso #Tyop left = #Tyop right
 
+  fun theory_is_available theory =
+    theory = Theory.current_theory () orelse
+    Lib.mem theory (Theory.ancestry "-")
+
+  fun primitive_constant key = Term.prim_mk_const
+    {Thy = #Thy key, Name = #Name key}
+
+  fun builtin_codatatype_info
+        ({Thy, Tyop, case_name, constructor_names} :
+         {Thy : string, Tyop : string, case_name : string,
+          constructor_names : string list}) =
+    if theory_is_available Thy then
+      SOME
+        {tyop = {Thy = Thy, Tyop = Tyop},
+         case_const = primitive_constant {Thy = Thy, Name = case_name},
+         constructors = map (fn Name =>
+           primitive_constant {Thy = Thy, Name = Name}) constructor_names}
+    else
+      NONE
+
+  val builtin_codatatypes =
+    [{Thy = "llist", Tyop = "llist", case_name = "llist_CASE",
+      constructor_names = ["LNIL", "LCONS"]},
+     {Thy = "ltree", Tyop = "ltree", case_name = "ltree_CASE",
+      constructor_names = ["Branch"]},
+     {Thy = "itree", Tyop = "itree", case_name = "itree_CASE",
+      constructor_names = ["Ret", "Div", "Vis"]},
+     {Thy = "itreeTau", Tyop = "itree", case_name = "itree_CASE",
+      constructor_names = ["Ret", "Tau", "Vis"]}]
+
+  val builtin_codatatype_cache = ref ([] : codatatype_info list)
+
+  fun builtin_codatatype_for (operator as {Thy, ...} : type_operator) =
+    if not (theory_is_available Thy) then NONE
+    else
+      case List.find (fn {tyop, ...} => same_type_operator tyop operator)
+             (!builtin_codatatype_cache) of
+          SOME info => SOME info
+        | NONE =>
+            (case List.find (fn {Thy, Tyop, ...} =>
+                     same_type_operator {Thy = Thy, Tyop = Tyop} operator)
+                   builtin_codatatypes of
+                 NONE => NONE
+               | SOME descriptor =>
+                   (case builtin_codatatype_info descriptor of
+                        NONE => NONE
+                      | SOME info =>
+                          (builtin_codatatype_cache :=
+                             info :: !builtin_codatatype_cache;
+                           SOME info)))
+
+  fun explicit_codatatype_for operator =
+    List.find (fn {tyop, ...} => same_type_operator tyop operator)
+      (!codatatype_registry)
+
+  fun codatatype_for operator =
+    case explicit_codatatype_for operator of
+        SOME info => SOME info
+      | NONE => builtin_codatatype_for operator
+
+  fun current_codatatype_registry () =
+    let
+      val explicit = !codatatype_registry
+      fun built_in {Thy, Tyop, ...} =
+        builtin_codatatype_for {Thy = Thy, Tyop = Tyop}
+      fun shadowed ({tyop, ...} : codatatype_info) =
+        Option.isSome (explicit_codatatype_for tyop)
+    in
+      explicit @
+      List.filter (not o shadowed)
+        (List.mapPartial built_in builtin_codatatypes)
+    end
+
+  fun distinct_types tys =
+    let
+      fun add (ty, seen) =
+        if List.exists (fn old => Type.compare (ty, old) = EQUAL) seen then
+          raise err "register_codatatype"
+            "type arguments must be distinct type variables"
+        else
+          ty :: seen
+    in
+      ignore (List.foldl add [] tys)
+    end
+
+  fun interpreted_type_operator ({Thy, Tyop} : type_operator) =
+    (Thy = "min" andalso (Tyop = "bool" orelse Tyop = "fun")) orelse
+    (Thy = "pair" andalso Tyop = "prod") orelse
+    (Thy = "num" andalso Tyop = "num") orelse
+    (Thy = "integer" andalso Tyop = "int")
+
+  fun register_codatatype
+        ({tyop, case_const, constructors} : codatatype_info) =
+    let
+      val _ = if null constructors then
+          raise err "register_codatatype" "constructor list must not be empty"
+        else ()
+      val _ = if Term.is_const case_const andalso
+                     List.all Term.is_const constructors then () else
+        raise err "register_codatatype"
+          "case and constructor terms must be constants"
+      fun distinct_constructor constructor =
+        length (List.filter (Term.same_const constructor) constructors) = 1
+      val _ = if List.all distinct_constructor constructors then () else
+        raise err "register_codatatype" "constructors must be distinct"
+      val result_ty = #2 (boolSyntax.strip_fun
+        (Term.type_of (hd constructors)))
+      val {Thy, Tyop, Args} = Type.dest_thy_type result_ty
+      val actual = {Thy = Thy, Tyop = Tyop}
+      val _ = if same_type_operator tyop actual then () else
+        raise err "register_codatatype"
+          "constructor result has the wrong type operator"
+      val _ = if interpreted_type_operator tyop then
+          raise err "register_codatatype"
+            "interpreted and function types cannot be codatatypes"
+        else ()
+      val _ = if List.all Type.is_vartype Args then () else
+        raise err "register_codatatype"
+          "type arguments must all be type variables"
+      val _ = distinct_types Args
+      fun normalize_constructor constructor =
+        let
+          val constructor_result = #2 (boolSyntax.strip_fun
+            (Term.type_of constructor))
+          val theta = Type.match_type constructor_result result_ty
+          val normalized = Term.inst theta constructor
+        in
+          if #2 (boolSyntax.strip_fun (Term.type_of normalized)) = result_ty
+          then normalized
+          else raise err "register_codatatype"
+            "constructor result types do not agree"
+        end
+      val constructors = map normalize_constructor constructors
+      val (raw_case_domains, _) = boolSyntax.strip_fun
+        (Term.type_of case_const)
+      val _ = if null raw_case_domains then
+          raise err "register_codatatype"
+            "case constant has no codatatype argument"
+        else ()
+      val case_const = Term.inst
+        (Type.match_type (hd raw_case_domains) result_ty) case_const
+      val (case_domains, case_result) = boolSyntax.strip_fun
+        (Term.type_of case_const)
+      val _ = if length case_domains = length constructors + 1 andalso
+                     hd case_domains = result_ty then () else
+        raise err "register_codatatype"
+          "case constant does not match the registered type"
+      fun valid_branch (constructor, branch_ty) =
+        branch_ty = boolSyntax.list_mk_fun
+          (#1 (boolSyntax.strip_fun (Term.type_of constructor)), case_result)
+      val _ = if ListPair.allEq valid_branch
+                     (constructors, tl case_domains) then () else
+        raise err "register_codatatype"
+          "case branches do not match the constructors"
+      val normalized : codatatype_info =
+        {tyop = tyop, case_const = case_const, constructors = constructors}
+      fun other ({tyop = old, ...} : codatatype_info) =
+        not (same_type_operator old tyop)
+    in
+      codatatype_registry := normalized ::
+        List.filter other (!codatatype_registry)
+    end
+
   fun has_type_operator project registry ty =
     let val operator = type_operator_of ty
     in
@@ -1928,8 +2109,13 @@ structure Refute_ModelFinder_HOL = struct
       ("'" ^ Refute_ModelFinder_Names.gfp_iterator_prefix)
       (Type.dest_vartype ty)
 
-  fun is_iterator_type ty =
+  fun is_fp_iterator_type ty =
     is_lfp_iterator_type ty orelse is_gfp_iterator_type ty
+
+  fun is_bisim_iterator_type ty = ty = bisim_iterator_type
+
+  fun is_iterator_type ty =
+    is_bisim_iterator_type ty orelse is_fp_iterator_type ty
 
   fun iterator_info_for_type
         ({iterator_table, ...} : mf_context) ty =
@@ -2064,7 +2250,9 @@ structure Refute_ModelFinder_HOL = struct
   datatype iterator_marker = IteratorZero | IteratorSuc
 
   fun iterator_marker_of_term context term =
-    case Lib.total Term.dest_var term of
+    if Term.aconv term bisim_zero_const then SOME IteratorZero
+    else if Term.aconv term bisim_suc_const then SOME IteratorSuc
+    else case Lib.total Term.dest_var term of
         SOME (name, ty) =>
           if Refute_ModelFinder_Names.is_iterator_zero_name name andalso
              Option.isSome (iterator_info_for_type context ty) andalso
@@ -2472,7 +2660,9 @@ structure Refute_ModelFinder_HOL = struct
       | NONE => false
     handle HOL_ERR _ => false
 
-  fun is_codatatype ty = has_type_operator #tyop codatatype_registry ty
+  fun is_codatatype ty =
+    Option.isSome (codatatype_for (type_operator_of ty))
+    handle HOL_ERR _ => false
 
   fun is_quot_type ty =
     let val operator = type_operator_of ty
@@ -2488,14 +2678,13 @@ structure Refute_ModelFinder_HOL = struct
      (PLAN_M3 minor decision 22). *)
   fun is_data_type ty =
     not (is_interpreted_type ty) andalso
-    (is_raw_free_datatype ty orelse is_codatatype ty orelse
+    (is_codatatype ty orelse is_raw_free_datatype ty orelse
      is_quot_type ty orelse is_frac_type ty)
 
   fun registered_constructors ty =
     let val operator = type_operator_of ty
     in
-      case List.find (fn {tyop, ...} =>
-             same_type_operator tyop operator) (!codatatype_registry) of
+      case codatatype_for operator of
           SOME {constructors, ...} =>
             map (fn constructor =>
               Term.inst
@@ -2542,10 +2731,14 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun registered_constructor term =
-    List.exists (fn {constructors, ...} =>
+    let
+      val result_ty = #2 (boolSyntax.strip_fun (Term.type_of term))
+    in
       List.exists (fn constructor =>
-        Term.same_const constructor term) constructors)
-      (!codatatype_registry)
+        Term.same_const constructor term andalso
+        Term.type_of constructor = Term.type_of term)
+        (registered_constructors result_ty)
+    end handle HOL_ERR _ => false
 
   fun raw_constructor_name constructor =
     let val {Thy, Name, ...} = Term.dest_thy_const constructor
@@ -2561,16 +2754,13 @@ structure Refute_ModelFinder_HOL = struct
               val original = Refute_ModelFinder_Names.original_name name
               val result_ty = #2 (boolSyntax.strip_fun (Term.type_of term))
               val raw =
-                case TypeBase.fetch result_ty of
-                    SOME info => TypeBasePure.constructors_of info
-                  | NONE => []
-              val registered = List.concat (map #constructors
-                (List.filter (fn {constructors, ...} =>
-                   case constructors of
-                       constructor :: _ =>
-                         #2 (boolSyntax.strip_fun
-                           (Term.type_of constructor)) = result_ty
-                     | [] => false) (!codatatype_registry)))
+                if is_codatatype result_ty then []
+                else
+                  (case TypeBase.fetch result_ty of
+                       SOME info => map (TypeBasePure.cinst result_ty)
+                         (TypeBasePure.constructors_of info)
+                     | NONE => [])
+              val registered = registered_constructors result_ty
             in
               List.exists (fn constructor =>
                 raw_constructor_name constructor = original)
@@ -2581,7 +2771,13 @@ structure Refute_ModelFinder_HOL = struct
 
   fun is_nonfree_constr term =
     if Term.is_const term then
-      TypeBase.is_constructor term orelse registered_constructor term
+      let
+        val result_ty = #2 (boolSyntax.strip_fun (Term.type_of term))
+      in
+        registered_constructor term orelse
+        (not (is_codatatype result_ty) andalso
+         TypeBase.is_constructor term)
+      end handle HOL_ERR _ => false
     else
       reserved_constructor term
 
@@ -2675,20 +2871,21 @@ structure Refute_ModelFinder_HOL = struct
 
   fun case_names () =
     let
+      val registered = current_codatatype_registry ()
       fun entry info =
         let
           val ty = TypeBasePure.ty_of info
           val constructors = TypeBasePure.constructors_of info
           val case_const = TypeBasePure.case_const_of info
         in
-          if null constructors orelse not (is_data_type ty) then NONE
+          if null constructors orelse is_codatatype ty orelse
+             not (is_data_type ty) then NONE
           else SOME (const_key case_const, length constructors)
         end handle HOL_ERR _ => NONE
+      val raw = List.mapPartial entry (TypeBase.elts ())
     in
-      List.mapPartial entry (TypeBase.elts ()) @
-      map (fn {case_const, constructors, ...} =>
-        (const_key case_const, length constructors))
-        (!codatatype_registry)
+      raw @ map (fn {case_const, constructors, ...} =>
+        (const_key case_const, length constructors)) registered
     end
 
   fun constructor_name constructor =
@@ -3196,6 +3393,75 @@ structure Refute_ModelFinder_HOL = struct
         functions value
     in
       Term.mk_abs (value, body)
+    end
+
+  fun codatatype_bisim_axioms context ty =
+    let
+      val constructors = data_type_constrs context ty
+      val n = Term.mk_var ("n", bisim_iterator_type)
+      val x = Term.mk_var ("x", ty)
+      val y = Term.mk_var ("y", ty)
+      val m = Term.mk_var ("m", bisim_iterator_type)
+      val predecessor = Term.mk_comb
+        (Term.mk_thy_const
+           {Thy = "refute", Name = "safe_The",
+            Ty = Type.-->(Type.-->(bisim_iterator_type, Type.bool),
+              bisim_iterator_type)},
+         Term.mk_abs (m, boolSyntax.mk_eq
+           (Term.mk_comb (bisim_suc_const, m), n)))
+
+      fun comparison constructor index argument_ty =
+        let
+          val left = select_nth_constr_arg context constructor x index
+            argument_ty
+          val right = select_nth_constr_arg context constructor y index
+            argument_ty
+          val relation =
+            if is_codatatype argument_ty then
+              Term.mk_comb (bisim_const argument_ty, predecessor)
+            else
+              Term.mk_thy_const
+                {Thy = "min", Name = "=",
+                 Ty = Type.-->(argument_ty,
+                   Type.-->(argument_ty, Type.bool))}
+        in
+          Term.list_mk_comb (relation, [left, right])
+        end
+
+      fun branch constructor =
+        let
+          val argument_tys = constructor_arg_types constructor
+          val same_constructor = discriminate_value context constructor y
+          val indexed = ListPair.zip
+            (List.tabulate (length argument_tys, fn index => index),
+             argument_tys)
+          val comparisons = map (fn (index, argument_ty) =>
+            comparison constructor index argument_ty) indexed
+          val body = List.foldr smart_conj boolSyntax.T
+            (same_constructor :: comparisons)
+          fun abstract (argument_ty, (serial, result)) =
+            (serial + 1,
+             Term.mk_abs
+               (Term.mk_var ("a" ^ Int.toString serial, argument_ty),
+                result))
+        in
+          #2 (List.foldr abstract (0, body) argument_tys)
+        end
+
+      val case_function = optimized_case_def context [] ty Type.bool
+        (map branch constructors)
+      val one_step = boolSyntax.mk_imp
+        (boolSyntax.mk_disj
+           (boolSyntax.mk_eq (n, bisim_zero_const),
+            s_betapply (case_function, x)),
+         Term.list_mk_comb (bisim_const ty, [n, x, y]))
+      val maximum = boolSyntax.mk_imp
+        (Term.list_mk_comb
+           (bisim_const ty, [bisim_iterator_max_const, x, y]),
+         boolSyntax.mk_eq (x, y))
+    in
+      [boolSyntax.list_mk_forall ([n, x, y], one_step),
+       boolSyntax.list_mk_forall ([x, y], maximum)]
     end
 
   fun optimized_record_get context accessor record =

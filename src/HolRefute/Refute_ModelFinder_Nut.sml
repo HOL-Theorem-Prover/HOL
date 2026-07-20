@@ -835,11 +835,11 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
     let
       val name = nickname_of constant
       val ty = type_of constant
-      (* M4 abs/rep-function and bisimulation branches are dead in M3.
-         This is the closure proof of m3-scope-rep-nut section 9 and
-         PLAN_M3 section 9: M3 preprocessing creates none of them. *)
+      val original = MFN.original_name name
       val representation =
-        if total_consts orelse is_skolem_name constant then
+        if total_consts orelse is_skolem_name constant orelse
+           original = "refute$bisim" orelse
+           original = "refute$bisim_iterator_max" then
           MFR.best_non_opt_set_rep_for_type scope ty
         else if is_set_rule_constant name then
           MFR.best_set_rep_for_type scope ty

@@ -1,5 +1,5 @@
 INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit ../sort \
-           ../real $(HOLDIR)/src/num/theories/cv_compute \
+           ../real ../coalgebras $(HOLDIR)/src/num/theories/cv_compute \
            $(HOLDIR)/src/num/theories/cv_compute/automation
 
 all: $(DEFAULT_TARGETS) selftest.exe
@@ -56,7 +56,7 @@ all: holrefute-selftest.log
 
 FORL_GOLDENS = tests/forl-layout.kki tests/forl-expressions.kki \
                tests/forl-multi.kki tests/mf-kodkod-translation.kki \
-               tests/mf-binary-integers.kki
+               tests/mf-binary-integers.kki tests/mf-bisim.kki
 FORL_TRANSCRIPTS = tests/kodkodi-sat.stdout \
                    tests/kodkodi-unsat.stdout \
                    tests/kodkodi-batch.stdout \

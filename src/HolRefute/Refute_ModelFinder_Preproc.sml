@@ -1857,7 +1857,30 @@ structure Refute_ModelFinder_Preproc = struct
       and add_eq_axiom depth axiom accumulator =
         add_axiom (is_constructor_pattern_formula axiom)
           depth axiom accumulator
-      and add_axioms_for_type _ _ accumulator = accumulator
+      and add_maybe_def_axiom depth axiom accumulator =
+        let val (_, body) = boolSyntax.strip_forall axiom
+        in
+          add_axiom (not (boolSyntax.is_imp_only body))
+            depth axiom accumulator
+        end
+      and add_axioms_for_type depth ty accumulator =
+        let
+          val arguments =
+            if Type.is_vartype ty then []
+            else #Args (Type.dest_thy_type ty)
+          val with_arguments = List.foldl
+            (fn (argument, result) =>
+              add_axioms_for_type depth argument result)
+            accumulator arguments
+        in
+          if #max_bisim_depth context >= 0 andalso
+             MFH.is_codatatype ty then
+            List.foldl (fn (axiom, result) =>
+              add_maybe_def_axiom depth axiom result) with_arguments
+              (MFH.codatatype_bisim_axioms context ty)
+          else
+            with_arguments
+        end
       and add_axioms_for_term depth bound term
             (accumulator as
                (seen, definitions, def_set, nondefinitions, nondef_set)) =

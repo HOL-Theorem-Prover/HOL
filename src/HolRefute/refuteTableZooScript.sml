@@ -1,6 +1,6 @@
 Theory refuteTableZoo
 Ancestors
-  refute
+  refute ltree itreeTau
 Libs
   TotalDefn Refute_Core
 

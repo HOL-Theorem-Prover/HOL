@@ -273,8 +273,11 @@ structure Refute_ModelFinder_Scope = struct
   fun bit_card bits = Int.min (max_bits, Int.max (1, bits))
 
   fun block_for_type context binarize cards_assigns maxes_assigns
-        iters_assigns bitss ty =
-    if MFH.is_iterator_type ty then
+        iters_assigns bitss bisim_depths ty =
+    if MFH.is_bisim_iterator_type ty then
+      [(Card ty, map (fn depth => Int.max (0, depth) + 1)
+        bisim_depths)]
+    else if MFH.is_fp_iterator_type ty then
       (case MFH.iterator_info_for_type context ty of
            SOME {preds, ...} =>
              [(Card ty, map (fn count => Int.max (0, count) + 1)
@@ -296,11 +299,11 @@ structure Refute_ModelFinder_Scope = struct
              List.mapPartial (row_for_constr maxes_assigns) constructors)
 
   fun blocks_for_types context binarize cards_assigns maxes_assigns
-        iters_assigns bitss mono_types nonmono_types =
+        iters_assigns bitss bisim_depths mono_types nonmono_types =
     let
       fun block_for ty =
         block_for_type context binarize cards_assigns maxes_assigns
-          iters_assigns bitss ty
+          iters_assigns bitss bisim_depths ty
       val mono_block = List.concat (map block_for mono_types)
       val nonmono_blocks = map block_for nonmono_types
     in
@@ -409,7 +412,15 @@ structure Refute_ModelFinder_Scope = struct
       add_row_to_scope_descriptor row desc) ([], []) block
 
   fun repair_iterator_assign context assigns (assign as (ty, card)) =
-    case MFH.iterator_info_for_type context ty of
+    if MFH.is_bisim_iterator_type ty then
+      let
+        val maximum = List.foldl (fn ((other, other_card), total) =>
+          if MFH.is_codatatype other then total + other_card else total)
+          0 assigns
+      in
+        (ty, Int.min (card, maximum))
+      end
+    else case MFH.iterator_info_for_type context ty of
         NONE => assign
       | SOME {arg_tyss, ...} =>
           let
@@ -597,7 +608,10 @@ structure Refute_ModelFinder_Scope = struct
           | NONE => Option.getOpt (card MFH.unsigned_bit_type, 0)
     in
       {hol_ctxt = context, binarize = binarize,
-       card_assigns = card_assigns, bits = bits, bisim_depth = ~1,
+       card_assigns = card_assigns, bits = bits,
+       bisim_depth = Option.getOpt
+         (Option.map (fn value => value - 1)
+           (card MFH.bisim_iterator_type), ~1),
        data_types = data_types,
        ofs = offset_table_for_card_assigns data_types card_assigns}
     end
@@ -646,13 +660,14 @@ structure Refute_ModelFinder_Scope = struct
       else result @ [value]) [] values
 
   fun all_scopes context binarize cards_assigns maxes_assigns
-        iters_assigns bitss mono_types nonmono_types deep_data_types
+        iters_assigns bitss bisim_depths mono_types nonmono_types deep_data_types
         finitizable_data_types =
     let
       val cards_assigns =
         repair_cards_assigns_wrt_boxing_etc mono_types cards_assigns
       val blocks = blocks_for_types context binarize cards_assigns
-        maxes_assigns iters_assigns bitss mono_types nonmono_types
+        maxes_assigns iters_assigns bitss bisim_depths mono_types
+        nonmono_types
       val ranks = map rank_of_block blocks
       val all = all_combinations_ordered_smartly
         (map (fn rank => (rank, 0)) ranks)

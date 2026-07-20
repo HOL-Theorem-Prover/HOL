@@ -142,6 +142,18 @@ End
 val _ = new_type ("unsigned_bit", 0)
 val _ = new_type ("signed_bit", 0)
 
+(* The codatatype model encoding interprets these declarations directly.
+   They deliberately have no HOL defining equations. *)
+val _ = new_type ("bisim_iterator", 0)
+val _ = new_constant
+  ("bisim", ``:bisim_iterator -> 'a -> 'a -> bool``)
+val _ = new_constant
+  ("bisim_iterator_max", ``:bisim_iterator``)
+val _ = new_constant
+  ("bisim_suc", ``:bisim_iterator -> bisim_iterator``)
+val _ = new_constant ("bisim_zero", ``:bisim_iterator``)
+val _ = new_constant ("Quot", ``:'a -> 'b``)
+
 Datatype:
   bitword = Bitword ('a -> bool)
 End

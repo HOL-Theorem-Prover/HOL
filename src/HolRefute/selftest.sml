@@ -64,6 +64,23 @@ fun check_nullary_type (ty, name) =
 
 val _ = check_nullary_type (``:refute$unsigned_bit``, "unsigned_bit")
 val _ = check_nullary_type (``:refute$signed_bit``, "signed_bit")
+val _ = check_nullary_type
+  (``:refute$bisim_iterator``, "bisim_iterator")
+
+fun support_constant_has_type name ty =
+  Term.type_of (Term.prim_mk_const {Thy = "refute", Name = name}) = ty
+
+val _ = require_msg (check_result (fn () =>
+  support_constant_has_type "bisim"
+    ``:refute$bisim_iterator -> 'a -> 'a -> bool`` andalso
+  support_constant_has_type "bisim_iterator_max"
+    ``:refute$bisim_iterator`` andalso
+  support_constant_has_type "bisim_suc"
+    ``:refute$bisim_iterator -> refute$bisim_iterator`` andalso
+  support_constant_has_type "bisim_zero" ``:refute$bisim_iterator`` andalso
+  support_constant_has_type "Quot" ``:'a -> 'b``))
+  (fn () => "codatatype support constant has the wrong type")
+  (fn () => ()) ()
 
 fun same_conclusion left right =
   Term.aconv (Thm.concl left) (Thm.concl right)
@@ -387,6 +404,91 @@ val _ = require_msg (check_result mf_reserved_name_guards) (fn () =>
 val _ = tprint "Refute model-finder HOL tables"
 
 structure MFH = Refute_ModelFinder_HOL
+
+fun mf_codatatype_registrations () =
+  let
+    val llist_ty = ``:num llist``
+    val ltree_ty = ``:num ltree``
+    val itree_ty = ``:(num, bool, num) itree$itree``
+    val tau_ty = ``:(num, bool, num) itreeTau$itree``
+    val initial_constructors = MFH.registered_constructors llist_ty
+    val _ = Refute.register_codatatype
+      {tyop = {Thy = "llist", Tyop = "llist"},
+       case_const = ``llist$llist_CASE``,
+       constructors = [``llist$LNIL``, ``llist$LCONS``]}
+    val after = MFH.registered_constructors llist_ty
+    fun constructor_names ty =
+      map MFH.constructor_name (MFH.registered_constructors ty)
+    fun rejected registration =
+      ((Refute.register_codatatype registration; false)
+       handle HOL_ERR _ => true)
+    val empty_rejected = rejected
+      {tyop = {Thy = "llist", Tyop = "llist"},
+       case_const = ``llist$llist_CASE``, constructors = []}
+    val wrong_operator_rejected = rejected
+      {tyop = {Thy = "num", Tyop = "num"},
+       case_const = ``llist$llist_CASE``,
+       constructors = [``llist$LNIL``, ``llist$LCONS``]}
+    val interpreted_rejected = rejected
+      {tyop = {Thy = "min", Tyop = "fun"},
+       case_const = ``llist$llist_CASE``,
+       constructors = [``llist$LNIL``, ``llist$LCONS``]}
+    val boolean_rejected = rejected
+      {tyop = {Thy = "min", Tyop = "bool"},
+       case_const = ``COND``, constructors = [``T``, ``F``]}
+    val wrong_case_rejected = rejected
+      {tyop = {Thy = "llist", Tyop = "llist"},
+       case_const = ``list$list_CASE``,
+       constructors = [``llist$LNIL``, ``llist$LCONS``]}
+    val ret = ``itree$Ret``
+    val result_args = #Args (Type.dest_thy_type
+      (#2 (boolSyntax.strip_fun (Term.type_of ret))))
+    val duplicate_ret = Term.inst
+      [{redex = List.nth (result_args, 1), residue = hd result_args}] ret
+    val duplicate_rejected = rejected
+      {tyop = {Thy = "itree", Tyop = "itree"},
+       case_const = ``itree$itree_CASE``,
+       constructors = [duplicate_ret, ``itree$Div``, ``itree$Vis``]}
+    val nonvariable_ret = Term.inst
+      [{redex = hd result_args, residue = ``:num``}] ret
+    val nonvariable_rejected = rejected
+      {tyop = {Thy = "itree", Tyop = "itree"},
+       case_const = ``itree$itree_CASE``,
+       constructors = [nonvariable_ret, ``itree$Div``, ``itree$Vis``]}
+    val mixed_results_rejected = rejected
+      {tyop = {Thy = "llist", Tyop = "llist"},
+       case_const = ``llist$llist_CASE``,
+       constructors = [``llist$LNIL``, ``list$NIL``]}
+    val case_keys = map #1 (MFH.case_names ())
+    fun exactly_one key =
+      length (List.filter (fn other => MFH.same_key key other) case_keys) = 1
+  in
+    map MFH.constructor_name initial_constructors =
+      ["llist$LNIL", "llist$LCONS"] andalso
+    map MFH.constructor_name after = ["llist$LNIL", "llist$LCONS"] andalso
+    constructor_names ltree_ty = ["ltree$Branch"] andalso
+    constructor_names itree_ty =
+      ["itree$Ret", "itree$Div", "itree$Vis"] andalso
+    constructor_names tau_ty =
+      ["itreeTau$Ret", "itreeTau$Tau", "itreeTau$Vis"] andalso
+    List.all MFH.is_codatatype [llist_ty, ltree_ty, itree_ty, tau_ty] andalso
+    MFH.is_raw_free_datatype llist_ty andalso
+    List.all exactly_one
+      [{Thy = "llist", Name = "llist_CASE"},
+       {Thy = "ltree", Name = "ltree_CASE"},
+       {Thy = "itree", Name = "itree_CASE"},
+       {Thy = "itreeTau", Name = "itree_CASE"}] andalso
+    empty_rejected andalso wrong_operator_rejected andalso
+    interpreted_rejected andalso boolean_rejected andalso
+    wrong_case_rejected andalso duplicate_rejected andalso
+    nonvariable_rejected andalso mixed_results_rejected andalso
+    map MFH.constructor_name (MFH.registered_constructors llist_ty) =
+      ["llist$LNIL", "llist$LCONS"]
+  end
+
+val _ = require_msg (check_result mf_codatatype_registrations) (fn () =>
+  "codatatype lazy registration or public validation failed")
+  (fn () => ()) ()
 
 val mf_hol_context : MFH.mf_context =
   MFH.make_context Refute_Core.default_mf_config []
@@ -1551,7 +1653,7 @@ fun mf_builtins_numerals_sets_and_ersatz () =
         (Term.mk_thy_const {Thy = Thy, Name = Name, Ty = ty})
   in
     MFH.is_built_in_const boolSyntax.IN_tm andalso
-    length MFH.built_in_consts = 29 andalso
+    length MFH.built_in_consts = 31 andalso
     length MFH.built_in_typed_consts = 15 andalso
     List.all (built_in o #1) MFH.built_in_consts andalso
     List.all typed_built_in MFH.built_in_typed_consts andalso
@@ -2106,6 +2208,79 @@ structure MFP = Refute_ModelFinder_Preproc
 
 fun fresh_mf_context () =
   MFH.make_context Refute_Core.default_mf_config []
+
+fun mf_codatatype_bisim_axiom_goldens () =
+  let
+    val ty = ``:num llist``
+    val constructors = MFH.data_type_constrs mf_hol_context ty
+    val nil_constructor = List.nth (constructors, 0)
+    val cons = List.nth (constructors, 1)
+    val actual_axioms = MFH.codatatype_bisim_axioms mf_hol_context ty
+    val actual_step = List.nth (actual_axioms, 0)
+    val actual_max = List.nth (actual_axioms, 1)
+    val n = Term.mk_var ("n", MFH.bisim_iterator_type)
+    val x = Term.mk_var ("x", ty)
+    val y = Term.mk_var ("y", ty)
+    val m = Term.mk_var ("m", MFH.bisim_iterator_type)
+    val safe_the = Term.mk_thy_const
+      {Thy = "refute", Name = "safe_The",
+       Ty = Type.-->(Type.-->(MFH.bisim_iterator_type, Type.bool),
+         MFH.bisim_iterator_type)}
+    val predecessor = Term.mk_comb (safe_the,
+      Term.mk_abs (m, boolSyntax.mk_eq
+        (Term.mk_comb (MFH.bisim_suc_const, m), n)))
+    fun select constructor value index result_ty =
+      MFH.select_nth_constr_arg mf_hol_context constructor value index
+        result_ty
+    val nil_x = MFH.discriminate_value mf_hol_context nil_constructor x
+    val nil_y = MFH.discriminate_value mf_hol_context nil_constructor y
+    val cons_x = MFH.discriminate_value mf_hol_context cons x
+    val cons_y = MFH.discriminate_value mf_hol_context cons y
+    val head_equal = boolSyntax.mk_eq
+      (select cons x 0 ``:num``, select cons y 0 ``:num``)
+    val tail_bisim = Term.list_mk_comb
+      (MFH.bisim_const ty,
+       [predecessor, select cons x 1 ty, select cons y 1 ty])
+    val cases = boolSyntax.mk_conj
+      (boolSyntax.mk_imp (cons_x,
+         boolSyntax.mk_conj
+           (cons_y, boolSyntax.mk_conj (head_equal, tail_bisim))),
+       boolSyntax.mk_imp (nil_x, nil_y))
+    val expected_step = boolSyntax.list_mk_forall ([n, x, y],
+      boolSyntax.mk_imp
+        (boolSyntax.mk_disj
+           (boolSyntax.mk_eq (n, MFH.bisim_zero_const), cases),
+         Term.list_mk_comb (MFH.bisim_const ty, [n, x, y])))
+    val expected_max = boolSyntax.list_mk_forall ([x, y],
+      boolSyntax.mk_imp
+        (Term.list_mk_comb
+           (MFH.bisim_const ty,
+            [MFH.bisim_iterator_max_const, x, y]),
+         boolSyntax.mk_eq (x, y)))
+    val enabled_mf = Refute_Core.change_mf
+      (Refute_Core.MfBisimDepth [2]) Refute_Core.default_mf_config
+    val enabled = MFH.make_context enabled_mf []
+    val disabled_result = MFP.axioms_for_term mf_hol_context []
+      (boolSyntax.mk_eq (x, x))
+    val enabled_result = MFP.axioms_for_term enabled []
+      (boolSyntax.mk_eq (x, x))
+    val disabled_axioms = #1 disabled_result @ #2 disabled_result
+    val enabled_axioms = #1 enabled_result @ #2 enabled_result
+    val bisim_key = {Thy = "refute", Name = "bisim"}
+    fun has_bisim terms = List.exists (term_has_const bisim_key) terms
+  in
+    Term.aconv actual_step expected_step andalso
+    Term.aconv actual_max expected_max andalso
+    not (has_bisim disabled_axioms) andalso has_bisim enabled_axioms andalso
+    has_bisim (#1 enabled_result) andalso
+    not (has_bisim (#2 enabled_result)) andalso
+    length enabled_axioms >= length disabled_axioms + 2
+  end
+
+val _ = require_msg
+  (check_result mf_codatatype_bisim_axiom_goldens) (fn () =>
+    "codatatype bisimulation axiom or preprocessing golden changed")
+  (fn () => ()) ()
 
 fun mf_binarize_preproc_goldens () =
   let
@@ -3306,7 +3481,7 @@ fun mf_iterator_scope_rows_and_repair () =
     val maxes = [(NONE, [~1])]
     val specific = [(SOME predicate, [2]), (NONE, [0])]
     val row = MFS.block_for_type context false cards maxes specific []
-      iterator_ty
+      [~1] iterator_ty
     val repaired = MFS.repair_iterator_assign context
       [(iterator_ty, 9), (``:num``, 3)] (iterator_ty, 9)
     val binary_iterator = MFH.iterator_type_for_const context false
@@ -3329,15 +3504,16 @@ fun mf_iterator_scope_rows_and_repair () =
     val (_, mutual_arguments) = HolKernel.strip_comb mutual_application
     val mutual_iterator_ty = Term.type_of (hd mutual_arguments)
     val second_member_row = MFS.block_for_type context false cards maxes
-      [(SOME mutual_even, [4]), (NONE, [0])] [] mutual_iterator_ty
+      [(SOME mutual_even, [4]), (NONE, [0])] [] [~1]
+      mutual_iterator_ty
     val first_member_row = MFS.block_for_type context false cards maxes
       [(SOME mutual_even, [7]), (SOME mutual_odd, [3]),
-       (NONE, [0])] [] mutual_iterator_ty
+       (NONE, [0])] [] [~1] mutual_iterator_ty
     val mutual_repaired = MFS.repair_iterator_assign context
       [(mutual_iterator_ty, 9), (``:num``, 3)]
       (mutual_iterator_ty, 9)
     val (skipped, scopes) = MFS.all_scopes context false cards maxes
-      [(NONE, [0, 1, 2])] [] [iterator_ty, ``:num``] [] [] []
+      [(NONE, [0, 1, 2])] [] [~1] [iterator_ty, ``:num``] [] [] []
     fun iterator_card (scope : MFS.scope) =
       MFH.assignment_lookup (#card_assigns scope) iterator_ty
   in
@@ -3373,6 +3549,41 @@ val _ = require_msg (check_result mf_iterator_scope_rows_and_repair)
   (fn () => "iterator scope row, mono block, offset, or repair changed")
   (fn () => ()) ()
 
+fun mf_bisim_scope_rows_and_repair () =
+  let
+    val ty = MFH.bisim_iterator_type
+    val llist_num = ``:num llist``
+    val llist_bool = ``:bool llist``
+    val cards = [(NONE, [1])]
+    val row = MFS.block_for_type mf_hol_context false cards
+      [(NONE, [~1])] [(NONE, [0])] [] [0, 2, 9] ty
+    val repaired = MFS.repair_iterator_assign mf_hol_context
+      [(ty, 10), (llist_num, 2), (llist_bool, 3), (``:num``, 4)]
+      (ty, 10)
+    val scope = MFS.scope_from_descriptor mf_hol_context false [] []
+      ([(ty, 3), (llist_num, 2), (``:num``, 2)], [])
+    val without = MFS.scope_from_descriptor mf_hol_context false [] []
+      ([(llist_num, 2), (``:num``, 2)], [])
+    val spec = valOf (MFS.data_type_spec (#data_types scope) llist_num)
+    val scope_text = Refute_Core.format_scope
+      (SOME [(ty, 3), (llist_num, 2)])
+  in
+    (case row of
+         [(MFS.Card actual, values)] =>
+           actual = ty andalso values = [1, 3, 10]
+       | _ => false) andalso
+    repaired = (ty, 5) andalso #bisim_depth scope = 2 andalso
+    #bisim_depth without = ~1 andalso #co spec andalso
+    List.all (not o #total) (#constrs spec) andalso
+    MFH.is_raw_free_datatype llist_num andalso
+    MFS.is_asymmetric_non_data_type ty andalso
+    scope_text = "\nScope: bisim_depth = 2, card num llist = 2"
+  end
+
+val _ = require_msg (check_result mf_bisim_scope_rows_and_repair) (fn () =>
+  "bisim iterator scope row, cap, classification, or printing changed")
+  (fn () => ()) ()
+
 fun mf_scope_mono_partition () =
   let
     val alpha = ``:'a``
@@ -3393,7 +3604,8 @@ fun mf_scope_mono_partition () =
       [``:num list``]
     val (_, pattern_scopes) = MFS.all_scopes mf_hol_context false
       [(SOME ``:'a list``, [3]), (NONE, [1])]
-      [(NONE, [~1])] [(NONE, [0])] [] [``:num list``, number] [] [] []
+      [(NONE, [~1])] [(NONE, [0])] [] [~1]
+      [``:num list``, number] [] [] []
     val pattern_scope = hd pattern_scopes
   in
     mono = [enum, number] andalso nonmono = [alpha] andalso
@@ -3417,10 +3629,10 @@ fun mf_scope_calculus_block_fusion () =
     val (mono, nonmono) = MFS.mono_partition_with actually_monotonic
       [(NONE, NONE)] types
     val (_, fused) = MFS.all_scopes mf_hol_context false
-      [(NONE, [1, 2, 3])] [(NONE, [~1])] [(NONE, [0])] []
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [(NONE, [0])] [] [~1]
       mono nonmono [] []
     val (_, separated) = MFS.all_scopes mf_hol_context false
-      [(NONE, [1, 2, 3])] [(NONE, [~1])] [(NONE, [0])] []
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [(NONE, [0])] [] [~1]
       [] types [] []
   in
     mono = types andalso null nonmono andalso
@@ -3441,11 +3653,11 @@ fun mf_scope_enumeration_order () =
     val ordered = MFS.all_combinations_ordered_smartly
       [(3, 0), (3, 0)]
     val (skipped, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [1, 2, 3])] [(NONE, [~1])] [(NONE, [0])] []
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [(NONE, [0])] [] [~1]
       [``:refute$rf6``] [``:'a``] [] []
     val truncation_cards = MFS.default_cards @ [11]
     val (truncated, retained) = MFS.all_scopes mf_hol_context false
-      [(NONE, truncation_cards)] [(NONE, [~1])] [(NONE, [0])] []
+      [(NONE, truncation_cards)] [(NONE, [~1])] [(NONE, [0])] [] [~1]
       [``:refute$rf6``] [``:'a``, ``:'b``, ``:'c``] [] []
     fun cards (scope : MFS.scope) =
       (valOf (MFH.assignment_lookup (#card_assigns scope)
@@ -3467,7 +3679,7 @@ val _ = require_msg (check_result mf_scope_enumeration_order) (fn () =>
 fun mf_scope_offsets_and_facto_pairs () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [2])] [(NONE, [~1])] [(NONE, [0])] []
+      [(NONE, [2])] [(NONE, [~1])] [(NONE, [0])] [] [~1]
       [``:refute$rf2``, ``:num``] [``:'a``, ``:unit``] [] []
     val scope = hd scopes
     val data_types = #data_types scope
@@ -3540,7 +3752,7 @@ fun mf_binary_int_scope_rows () =
     val maxes = [(NONE, [~1])]
     val bitss = [0, 9, 40]
     fun row ty = MFS.block_for_type mf_hol_context true cards maxes
-      [(NONE, [0])] bitss ty
+      [(NONE, [0])] bitss [~1] ty
     fun row_is ty expected =
       case row ty of
           [(MFS.Card actual, values)] =>
@@ -3703,7 +3915,7 @@ val _ = require_msg (check_result mf_rep_ordering) (fn () =>
 fun mf_rep_fixed_scope () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [2])] [(NONE, [~1])] [(NONE, [0])] []
+      [(NONE, [2])] [(NONE, [~1])] [(NONE, [0])] [] [~1]
       [``:refute$rf2``, ``:num``] [] [] []
     val scope = hd scopes
     val enum_offset = MFS.offset_of_type (#ofs scope) ``:refute$rf2``
@@ -3817,9 +4029,15 @@ fun mf_kodkod_plain_bound () =
   let
     val relation = MFNT.FreeRel
       ((1, 42), Type.bool, MFR.Atom (2, 7), "plain")
+    val bisim_max = MFNT.FreeRel
+      ((1, 43), MFH.bisim_iterator_type, MFR.Atom (3, 7),
+       "refute$bisim_iterator_max")
+    val exact = Refute_Forl.TupleSet [Refute_Forl.Tuple [9]]
   in
     mf_bound_tuple_sets (MFK.bound_for_plain_rel false relation) =
-      [Refute_Forl.TupleSet [], Refute_Forl.TupleAtomSeq (2, 7)]
+      [Refute_Forl.TupleSet [], Refute_Forl.TupleAtomSeq (2, 7)] andalso
+    mf_bound_tuple_sets (MFK.bound_for_plain_rel false bisim_max) =
+      [exact]
   end
 
 val _ = require_msg (check_result mf_kodkod_plain_bound) (fn () =>
@@ -4054,6 +4272,24 @@ val _ = require_msg (check_result mf_kodkod_mutual_acyclicity) (fn () =>
   "model-finder mutual-datatype acyclicity NFA changed")
   (fn () => ()) ()
 
+fun mf_kodkod_codatatype_skips () =
+  let
+    val ty = ``:num llist``
+    val (scope, _, relation_table) = mf_kodkod_fixture
+      [(ty, 7), (``:num``, 2)] [ty]
+    val kk = Refute_ModelFinder_Peephole.kodkod_constrs true 2 2 7
+    val data_types = #data_types scope
+  in
+    null (MFK.acyclicity_axioms_for_data_types kk relation_table
+      data_types) andalso
+    null (MFK.sym_break_axioms_for_data_types mf_hol_context 5 kk
+      relation_table data_types)
+  end
+
+val _ = require_msg (check_result mf_kodkod_codatatype_skips) (fn () =>
+  "codatatype acyclicity or datatype symmetry breaking became active")
+  (fn () => ()) ()
+
 fun mf_negative_relations formula =
   let
     fun relation (Refute_Forl.Rel (index as (_, serial))) result =
@@ -4253,7 +4489,7 @@ val _ = require_msg (check_result mf_nut_term_goldens) (fn () =>
 fun mf_nut_fixed_scope () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [3])] [(NONE, [~1])] [(NONE, [0])] []
+      [(NONE, [3])] [(NONE, [~1])] [(NONE, [0])] [] [~1]
       [``:refute$rf2``, ``:num``] [] [] []
   in hd scopes end
 
@@ -4273,11 +4509,22 @@ fun mf_nut_name_reps () =
       [constant, skolem] MFNT.NameTable.empty
     val (_, total_table) = MFNT.choose_reps_for_consts scope true
       [constant] MFNT.NameTable.empty
+    val codata_ty = ``:num llist``
+    val codata_scope = MFS.scope_from_descriptor mf_hol_context false [] []
+      ([(MFH.bisim_iterator_type, 3), (codata_ty, 3), (``:num``, 2)], [])
+    val bisim = MFNT.ConstName
+      ("refute$bisim", Term.type_of (MFH.bisim_const codata_ty), MFR.Any)
+    val bisim_max = MFNT.ConstName
+      ("refute$bisim_iterator_max", MFH.bisim_iterator_type, MFR.Any)
+    val (_, bisim_table) = MFNT.choose_reps_for_consts codata_scope false
+      [bisim, bisim_max] MFNT.NameTable.empty
   in
     MFNT.the_name free_table free = total andalso
     MFNT.the_name optional_table constant = optional andalso
     MFNT.the_name optional_table skolem = total andalso
-    MFNT.the_name total_table constant = total
+    MFNT.the_name total_table constant = total andalso
+    not (MFR.is_opt_rep (MFNT.the_name bisim_table bisim)) andalso
+    not (MFR.is_opt_rep (MFNT.the_name bisim_table bisim_max))
   end
 
 val _ = require_msg (check_result mf_nut_name_reps) (fn () =>
@@ -4288,7 +4535,7 @@ fun mf_nut_deep_selector_reps () =
   let
     val list_ty = ``:num list``
     val (_, scopes) = MFS.all_scopes mf_hol_context false
-      [(NONE, [3])] [(NONE, [~1])] [(NONE, [0])] []
+      [(NONE, [3])] [(NONE, [~1])] [(NONE, [0])] [] [~1]
       [list_ty, ``:num``] [] [list_ty] []
     val scope = hd scopes
     val cons = List.nth
@@ -5137,6 +5384,51 @@ fun mf_assembled_problem_pair term assignments deep_types =
     (#1 (valOf sound), #1 (valOf unsound))
   end
 
+fun mf_bisim_assembled_problem () =
+  let
+    val ty = ``:num llist``
+    val enabled_mf = Refute_Core.change_mf
+      (Refute_Core.MfBisimDepth [1]) Refute_Core.default_mf_config
+    val context = MFH.make_context enabled_mf []
+    val x = Term.mk_var ("xs", ty)
+    val y = Term.mk_var ("ys", ty)
+    val m = Term.mk_var ("m", MFH.bisim_iterator_type)
+    val safe_the = Term.mk_thy_const
+      {Thy = "refute", Name = "safe_The",
+       Ty = Type.-->(Type.-->(MFH.bisim_iterator_type, Type.bool),
+         MFH.bisim_iterator_type)}
+    val predecessor = Term.mk_comb
+      (safe_the, Term.mk_abs (m, boolSyntax.mk_eq
+        (Term.mk_comb (MFH.bisim_suc_const, m),
+         MFH.bisim_iterator_max_const)))
+    fun related iterator = Term.list_mk_comb
+      (MFH.bisim_const ty, [iterator, x, y])
+    val formulas =
+      [boolSyntax.list_mk_conj
+         [related MFH.bisim_zero_const,
+          related (Term.mk_comb
+            (MFH.bisim_suc_const, MFH.bisim_zero_const)),
+          related predecessor,
+          related MFH.bisim_iterator_max_const]]
+    val nuts = map (MFNT.nut_from_term context MFNT.Eq) formulas
+    val (free_names, const_names) = List.foldl
+      (fn (nut, names) => MFNT.add_free_and_const_names nut names)
+      ([], []) nuts
+    val (_, nonsel_names) = List.partition
+      (MFN.is_sel o MFNT.nickname_of) const_names
+    val scope = MFS.scope_from_descriptor context false [ty] []
+      ([(MFH.bisim_iterator_type, 2), (ty, 2), (``:num``, 2)], [])
+    val params : MFK.assembly_params =
+      {debug = false, peephole_optim = false, total_consts = false,
+       datatype_sym_break = MFK.datatype_sym_break,
+       kodkod_sym_break = MFK.kodkod_sym_break,
+       comment = "codatatype bisimulation", solver = ["DefaultSAT4J"],
+       unsound_delay = 1, free_names = free_names,
+       nonsel_names = nonsel_names, nondef_us = nuts, def_us = []}
+  in
+    #1 (valOf (MFK.assemble_problem params false scope))
+  end
+
 fun mf_kodkod_assembly_golden () =
   let
     val term = ``~((n : num) + 1 = n)``
@@ -5607,7 +5899,8 @@ local
           [(``:num list``, 3), (``:num``, 2)] [``:num list``]]),
        ("mf-binary-integers.kki",
         [#1 (valOf
-          (mf_binary_assembly_fixture 9 binary_integer_formula))])]
+          (mf_binary_assembly_fixture 9 binary_integer_formula))]),
+       ("mf-bisim.kki", [mf_bisim_assembled_problem ()])]
 in
   val _ = require_msg (check_result serializer_goldens) (fn () =>
     "FORL output differed byte-for-byte from a checked-in .kki golden")
@@ -6853,7 +7146,9 @@ val _ = require_msg
   "binary_ints/bits defaults or unlock changed") (fn () => ()) ()
 
 val _ = List.app m4_guard_is_pinned
-  [("max_potential", fn () =>
+  [("bisim_depth", fn () =>
+      Refute.upd_bisim_depth [0] Refute.default_config),
+   ("max_potential", fn () =>
       Refute.upd_max_potential 2 Refute.default_config),
    ("max_genuine", fn () =>
       Refute.upd_max_genuine 2 Refute.default_config)]
@@ -7701,7 +7996,7 @@ fun extraction_plan_checks () =
     val word_plan = compile_plan default_config
       ``(word : bool[8]) = 0w``
     val function_plan = compile_plan default_config
-      ``(function : refute$rf2 -> refute$rf2) rf2_2 = rf2_1``
+      ``(f : refute$rf2 -> refute$rf2) rf2_2 = rf2_1``
     fun both plan size =
       generated_compute_agree Exhaustive plan size 0 1 andalso
       List.all (fn seed => generated_compute_agree
