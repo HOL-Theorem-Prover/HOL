@@ -159,6 +159,16 @@ structure Refute_ModelFinder_Names = struct
   fun mk_lbfp original predicate_ty =
     mk_reserved_var (lbfp_prefix ^ original) predicate_ty
 
+  fun quot_normal_name_for_type ty =
+    quot_normal_prefix ^ Parse.type_to_string ty
+
+  fun mk_quot_normal abs_ty rep_ty =
+    mk_reserved_var (quot_normal_name_for_type abs_ty)
+      (Type.-->(rep_ty, rep_ty))
+
+  fun is_quot_normal_name name =
+    String.isPrefix quot_normal_prefix name
+
   fun is_iterator_zero_name name =
     String.isPrefix iterator_zero_prefix name
 
@@ -349,12 +359,16 @@ structure Refute_ModelFinder_HOL = struct
   type quotient_info =
     {qty : hol_type, rty : hol_type, abs : term, rep : term,
      equiv_thm : thm, partial : bool}
+  type typedef_info =
+    {ty : hol_type, rty : hol_type, abs : term, rep : term,
+     pred : term, inverse_axioms : term list, univ : bool}
   type frac_info = {tyop : type_operator, ersatz : ersatz list}
 
   (* Registrations are session-level ML state.  In particular, registering a
-     codatatype never extends the current HOL theory. *)
+     codatatype, quotient, or typedef never extends the current HOL theory. *)
   val codatatype_registry = ref ([] : codatatype_info list)
   val quotient_registry = ref ([] : quotient_info list)
+  val typedef_registry = ref ([] : typedef_info list)
   val frac_registry = ref ([] : frac_info list)
   val ersatz_registry = ref ([] : ersatz list)
 
@@ -2021,17 +2035,34 @@ structure Refute_ModelFinder_HOL = struct
         (List.mapPartial built_in builtin_codatatypes)
     end
 
-  fun distinct_types tys =
+  fun distinct_type_variables function tys =
     let
       fun add (ty, seen) =
         if List.exists (fn old => Type.compare (ty, old) = EQUAL) seen then
-          raise err "register_codatatype"
-            "type arguments must be distinct type variables"
+          raise err function "type arguments must be distinct type variables"
         else
           ty :: seen
     in
-      ignore (List.foldl add [] tys)
+      if List.all Type.is_vartype tys then
+        ignore (List.foldl add [] tys)
+      else
+        raise err function "type arguments must all be type variables"
     end
+
+  fun distinct_types tys = distinct_type_variables "register_codatatype" tys
+
+  fun has_type_operator project registry ty =
+    let val operator = type_operator_of ty
+    in
+      List.exists (fn entry =>
+        same_type_operator (project entry) operator) (!registry)
+    end handle HOL_ERR _ => false
+
+  fun raw_free_datatype ty =
+    case TypeBase.fetch ty of
+        SOME info => not (null (TypeBasePure.constructors_of info))
+      | NONE => false
+    handle HOL_ERR _ => false
 
   fun interpreted_type_operator ({Thy, Tyop} : type_operator) =
     (Thy = "min" andalso (Tyop = "bool" orelse Tyop = "fun")) orelse
@@ -2064,9 +2095,14 @@ structure Refute_ModelFinder_HOL = struct
           raise err "register_codatatype"
             "interpreted and function types cannot be codatatypes"
         else ()
-      val _ = if List.all Type.is_vartype Args then () else
-        raise err "register_codatatype"
-          "type arguments must all be type variables"
+      val _ = if has_type_operator (type_operator_of o #qty)
+                       quotient_registry result_ty orelse
+                     has_type_operator (type_operator_of o #ty)
+                       typedef_registry result_ty orelse
+                     has_type_operator #tyop frac_registry result_ty then
+          raise err "register_codatatype"
+            "type operator already has an incompatible registration"
+        else ()
       val _ = distinct_types Args
       fun normalize_constructor constructor =
         let
@@ -2111,12 +2147,299 @@ structure Refute_ModelFinder_HOL = struct
         List.filter other (!codatatype_registry)
     end
 
-  fun has_type_operator project registry ty =
-    let val operator = type_operator_of ty
+  fun same_named key term =
+    same_key (const_key term) key handle HOL_ERR _ => false
+
+  fun beta_apply (function, argument) =
+    let val application = Term.mk_comb (function, argument)
     in
-      List.exists (fn entry =>
-        same_type_operator (project entry) operator) (!registry)
-    end handle HOL_ERR _ => false
+      if Term.is_abs function then Term.beta_conv application
+      else application
+    end
+
+  fun beta_normalize term =
+    if Term.is_abs term then
+      let val (variable, body) = Term.dest_abs term
+      in Term.mk_abs (variable, beta_normalize body) end
+    else if Term.is_comb term then
+      let
+        val (function, argument) = Term.dest_comb term
+        val function = beta_normalize function
+        val argument = beta_normalize argument
+      in
+        if Term.is_abs function then
+          beta_normalize (Term.beta_conv (Term.mk_comb (function, argument)))
+        else
+          Term.mk_comb (function, argument)
+      end
+    else
+      term
+
+  fun dest_total_equivalence theorem =
+    let
+      val _ = if null (Thm.hyp theorem) then () else
+        raise err "register_quotient" "equivalence theorem has hypotheses"
+      val (variables, body) = boolSyntax.strip_forall (Thm.concl theorem)
+      val _ = if length variables = 2 then () else
+        raise err "register_quotient"
+          "equivalence theorem has an unsupported shape"
+      val x = List.nth (variables, 0)
+      val y = List.nth (variables, 1)
+      val (left, right) = boolSyntax.dest_eq body
+      val (relation, arguments) = HolKernel.strip_comb left
+      val (right_x, right_y) = boolSyntax.dest_eq right
+      val (relation_x, x_arguments) = HolKernel.strip_comb right_x
+      val (relation_y, y_arguments) = HolKernel.strip_comb right_y
+      val _ =
+        if length arguments = 2 andalso length x_arguments = 1 andalso
+           length y_arguments = 1 andalso
+           Term.aconv relation relation_x andalso
+           Term.aconv relation relation_y andalso
+           Term.aconv (List.nth (arguments, 0)) x andalso
+           Term.aconv (List.nth (arguments, 1)) y andalso
+           Term.aconv (hd x_arguments) x andalso
+           Term.aconv (hd y_arguments) y then ()
+        else raise err "register_quotient"
+          "equivalence theorem has an unsupported shape"
+    in
+      relation
+    end
+
+  fun dest_bare_quotient theorem =
+    let
+      val _ = if null (Thm.hyp theorem) then () else
+        raise err "register_quotient" "quotient theorem has hypotheses"
+      val (head, arguments) = HolKernel.strip_comb (Thm.concl theorem)
+      val _ =
+        if same_named {Thy = "quotient", Name = "QUOTIENT"} head andalso
+           length arguments = 3 then ()
+        else raise err "register_quotient"
+          "equivalence theorem has an unsupported shape"
+    in
+      (List.nth (arguments, 0), List.nth (arguments, 1),
+       List.nth (arguments, 2))
+    end
+
+  fun quotient_theorem_info theorem supplied_abs supplied_rep =
+    (dest_total_equivalence theorem, false)
+    handle HOL_ERR _ =>
+      let
+        val (raw_relation, theorem_abs, theorem_rep) =
+          dest_bare_quotient theorem
+        val theta = Type.match_type (Term.type_of theorem_abs)
+          (Term.type_of supplied_abs)
+        val relation = Term.inst theta raw_relation
+        val theorem_abs = Term.inst theta theorem_abs
+        val theorem_rep = Term.inst theta theorem_rep
+        val _ =
+          if Term.same_const supplied_abs theorem_abs andalso
+             Term.type_of supplied_abs = Term.type_of theorem_abs andalso
+             Term.same_const supplied_rep theorem_rep andalso
+             Term.type_of supplied_rep = Term.type_of theorem_rep then ()
+          else raise err "register_quotient"
+            "QUOTIENT theorem does not mention the registered abs and rep"
+      in
+        (relation, true)
+      end
+
+  fun validate_registered_type function ty =
+    let
+      val {Args, ...} = Type.dest_thy_type ty
+      val _ = distinct_type_variables function Args
+      val _ = if interpreted_type_operator (type_operator_of ty) then
+          raise err function "interpreted types cannot be registered"
+        else ()
+    in
+      ()
+    end
+
+  fun register_quotient
+        ({qty, rty, abs, rep, equiv_thm, partial = _} : quotient_info) =
+    let
+      val _ = validate_registered_type "register_quotient" qty
+      val _ = if Term.is_const abs andalso Term.is_const rep then () else
+        raise err "register_quotient" "abs and rep must be constants"
+      val _ = if Term.type_of abs = Type.-->(rty, qty) andalso
+                     Term.type_of rep = Type.-->(qty, rty) then () else
+        raise err "register_quotient" "abs and rep have incompatible types"
+      val _ =
+        if List.all (fn variable => List.exists (fn parameter =>
+             Type.compare (variable, parameter) = EQUAL)
+             (Type.type_vars qty)) (Type.type_vars rty) then ()
+        else raise err "register_quotient"
+          "representation type has unbound type variables"
+      val _ =
+        if Option.isSome (codatatype_for (type_operator_of qty)) orelse
+           has_type_operator (type_operator_of o #ty) typedef_registry qty orelse
+           has_type_operator #tyop frac_registry qty orelse
+           raw_free_datatype qty then
+          raise err "register_quotient"
+            "type operator already has an incompatible classification"
+        else ()
+      val (raw_relation, inferred_partial) =
+        quotient_theorem_info equiv_thm abs rep
+      val relation_ty = Type.-->(rty, Type.-->(rty, Type.bool))
+      val relation = Term.inst
+        (Type.match_type (Term.type_of raw_relation) relation_ty)
+        raw_relation
+      val _ = if Term.type_of relation = relation_ty then () else
+        raise err "register_quotient"
+          "equivalence relation has an incompatible type"
+      val _ = if null (Term.free_vars_lr relation) then () else
+        raise err "register_quotient"
+          "equivalence relation has free term variables"
+      (* The theorem shape, not the caller's legacy record bit, is
+         authoritative.  A bare QUOTIENT theorem therefore defaults to the
+         sound partial encoding; a total extensionality theorem disables the
+         redundant domain axiom. *)
+      val normalized : quotient_info =
+        {qty = qty, rty = rty, abs = abs, rep = rep,
+         equiv_thm = equiv_thm, partial = inferred_partial}
+      val operator = type_operator_of qty
+      fun other ({qty = old, ...} : quotient_info) =
+        not (same_type_operator (type_operator_of old) operator)
+    in
+      quotient_registry := normalized ::
+        List.filter other (!quotient_registry)
+    end
+
+  fun raw_typedef_data ty =
+    let
+      val {Thy, Tyop, ...} = Type.dest_thy_type ty
+      val theorem = DB.fetch Thy (Tyop ^ "_TY_DEF")
+      val (witnesses, body) = boolSyntax.strip_exists (Thm.concl theorem)
+      val _ = if length witnesses = 1 then () else
+        raise err "raw_typedef_data" "malformed type definition theorem"
+      val (head, arguments) = HolKernel.strip_comb body
+      val _ =
+        if same_named {Thy = "bool", Name = "TYPE_DEFINITION"} head
+           andalso length arguments = 2 then ()
+        else raise err "raw_typedef_data" "malformed type definition theorem"
+      val witness = hd witnesses
+      val (abs_pattern, rep_pattern) = Type.dom_rng (Term.type_of witness)
+      val theta = Type.match_type abs_pattern ty
+    in
+      SOME
+        {rty = Type.type_subst theta rep_pattern,
+         pred = Term.inst theta (hd arguments)}
+    end
+    handle HOL_ERR _ => NONE
+
+  fun parse_absrep theorem supplied_abs supplied_rep =
+    let
+      val _ = if null (Thm.hyp theorem) then () else
+        raise err "register_typedef" "bijections theorem has hypotheses"
+      val raw_conclusion = Thm.concl theorem
+      val (raw_first, _) = boolSyntax.dest_conj raw_conclusion
+      val (_, raw_first_body) = boolSyntax.strip_forall raw_first
+      val (raw_first_left, _) = boolSyntax.dest_eq raw_first_body
+      val (raw_abs, _) = HolKernel.strip_comb raw_first_left
+      val theta = Type.match_type (Term.type_of raw_abs)
+        (Term.type_of supplied_abs)
+      val conclusion = Term.inst theta raw_conclusion
+      val (first, second) = boolSyntax.dest_conj conclusion
+      val (first_variables, first_body) = boolSyntax.strip_forall first
+      val (second_variables, second_body) = boolSyntax.strip_forall second
+      val _ = if length first_variables = 1 andalso
+                     length second_variables = 1 then () else
+        raise err "register_typedef" "bijections theorem has a bad shape"
+      val abstract = hd first_variables
+      val representation = hd second_variables
+      val (first_left, first_right) = boolSyntax.dest_eq first_body
+      val (first_abs, first_abs_arguments) =
+        HolKernel.strip_comb first_left
+      val _ = if length first_abs_arguments = 1 then () else
+        raise err "register_typedef" "bijections theorem has a bad shape"
+      val (first_rep, first_rep_arguments) =
+        HolKernel.strip_comb (hd first_abs_arguments)
+      val (predicate_body, second_right) = boolSyntax.dest_eq second_body
+      val (second_rep, second_rep_arguments) =
+        HolKernel.strip_comb (#1 (boolSyntax.dest_eq second_right))
+      val _ = if length second_rep_arguments = 1 then () else
+        raise err "register_typedef" "bijections theorem has a bad shape"
+      val (second_abs, second_abs_arguments) =
+        HolKernel.strip_comb (hd second_rep_arguments)
+      val _ =
+        if length first_rep_arguments = 1 andalso
+           length second_abs_arguments = 1 andalso
+           Term.same_const supplied_abs first_abs andalso
+           Term.same_const supplied_abs second_abs andalso
+           Term.same_const supplied_rep first_rep andalso
+           Term.same_const supplied_rep second_rep andalso
+           Term.aconv (hd first_rep_arguments) abstract andalso
+           Term.aconv first_right abstract andalso
+           Term.aconv (hd second_abs_arguments) representation andalso
+           Term.aconv (#2 (boolSyntax.dest_eq second_right)) representation
+        then ()
+        else raise err "register_typedef" "bijections theorem has a bad shape"
+      val pred = Term.mk_abs (representation, predicate_body)
+      val probe = Term.variant (Term.all_vars pred)
+        (Term.mk_var ("r", Term.type_of representation))
+      val univ = Term.aconv
+        (beta_normalize (beta_apply (pred, probe))) boolSyntax.T
+      val inverse_axioms =
+        let
+          val (outer, body) = boolSyntax.strip_forall conclusion
+          fun close conjunct =
+            let val (inner, matrix) = boolSyntax.strip_forall conjunct
+            in boolSyntax.list_mk_forall (outer @ inner, matrix) end
+        in
+          map close (boolSyntax.strip_conj body)
+        end
+    in
+      (pred, inverse_axioms, univ)
+    end
+
+  fun register_typedef
+        {ty : hol_type, abs : term, rep : term, absrep_thm : thm} =
+    let
+      val _ = validate_registered_type "register_typedef" ty
+      val _ = if Term.is_const abs andalso Term.is_const rep then () else
+        raise err "register_typedef" "abs and rep must be constants"
+      val (rty, _) = Type.dom_rng (Term.type_of abs)
+      val _ = if Term.type_of abs = Type.-->(rty, ty) andalso
+                     Term.type_of rep = Type.-->(ty, rty) then () else
+        raise err "register_typedef" "abs and rep have incompatible types"
+      val _ =
+        if List.all (fn variable => List.exists (fn parameter =>
+             Type.compare (variable, parameter) = EQUAL)
+             (Type.type_vars ty)) (Type.type_vars rty) then ()
+        else raise err "register_typedef"
+          "representation type has unbound type variables"
+      val _ =
+        if Option.isSome (codatatype_for (type_operator_of ty)) orelse
+           has_type_operator (type_operator_of o #qty) quotient_registry ty orelse
+           has_type_operator #tyop frac_registry ty orelse
+           raw_free_datatype ty then
+          raise err "register_typedef"
+            "type operator already has an incompatible classification"
+        else ()
+      val (pred, inverse_axioms, univ) =
+        parse_absrep absrep_thm abs rep
+      val {rty = raw_rty, pred = raw_pred} =
+        case raw_typedef_data ty of
+            SOME data => data
+          | NONE => raise err "register_typedef"
+              "the registered type has no <tyop>_TY_DEF theorem"
+      val probe = Term.variant (Term.all_vars pred @ Term.all_vars raw_pred)
+        (Term.mk_var ("r", rty))
+      val _ =
+        if raw_rty = rty andalso
+           Term.aconv
+             (beta_normalize (beta_apply (pred, probe)))
+             (beta_normalize (beta_apply (raw_pred, probe))) then ()
+        else raise err "register_typedef"
+          "bijections predicate does not match the type definition"
+      val normalized : typedef_info =
+        {ty = ty, rty = rty, abs = abs, rep = rep, pred = pred,
+         inverse_axioms = inverse_axioms, univ = univ}
+      val operator = type_operator_of ty
+      fun other ({ty = old, ...} : typedef_info) =
+        not (same_type_operator (type_operator_of old) operator)
+    in
+      typedef_registry := normalized ::
+        List.filter other (!typedef_registry)
+    end
 
   fun is_fun_type ty = Option.isSome (Lib.total Type.dom_rng ty)
 
@@ -2692,32 +3015,83 @@ structure Refute_ModelFinder_HOL = struct
       | SOME {Thy = "integer", Tyop = "int", ...} => true
       | _ => false
 
-  fun is_raw_free_datatype ty =
-    case TypeBase.fetch ty of
-        SOME info => not (null (TypeBasePure.constructors_of info))
-      | NONE => false
-    handle HOL_ERR _ => false
+  val is_raw_free_datatype = raw_free_datatype
 
   fun is_codatatype ty =
     Option.isSome (codatatype_for (type_operator_of ty))
     handle HOL_ERR _ => false
 
-  fun is_quot_type ty =
-    let val operator = type_operator_of ty
-    in
-      List.exists (fn {qty, ...} =>
+  fun quotient_for_type ty =
+    let
+      val operator = type_operator_of ty
+      val info = List.find (fn {qty, ...} =>
         same_type_operator (type_operator_of qty) operator)
         (!quotient_registry)
-    end handle HOL_ERR _ => false
+    in
+      case info of
+          NONE => NONE
+        | SOME {qty, rty, abs, rep, equiv_thm, partial} =>
+            let val theta = Type.match_type qty ty
+            in
+              SOME
+                {qty = ty, rty = Type.type_subst theta rty,
+                 abs = Term.inst theta abs, rep = Term.inst theta rep,
+                 equiv_thm = equiv_thm, partial = partial}
+            end
+    end handle HOL_ERR _ => NONE
+
+  fun is_quot_type ty = Option.isSome (quotient_for_type ty)
+
+  fun typedef_for_type ty =
+    let
+      val operator = type_operator_of ty
+      val info = List.find (fn ({ty = registered, ...} : typedef_info) =>
+        same_type_operator (type_operator_of registered) operator)
+        (!typedef_registry)
+    in
+      case info of
+          NONE => NONE
+        | SOME {ty = registered, rty, abs, rep, pred, inverse_axioms,
+                univ} =>
+            let val theta = Type.match_type registered ty
+            in
+              SOME
+                {ty = ty, rty = Type.type_subst theta rty,
+                 abs = Term.inst theta abs, rep = Term.inst theta rep,
+                 pred = Term.inst theta pred,
+                 inverse_axioms = map (Term.inst theta) inverse_axioms,
+                 univ = univ}
+            end
+    end handle HOL_ERR _ => NONE
+
+  fun is_typedef ty = Option.isSome (typedef_for_type ty)
+
+  fun quotient_relation_for_type ty =
+    case quotient_for_type ty of
+        SOME {qty, rty, abs, rep, equiv_thm, ...} =>
+          let
+            val (relation, _) = quotient_theorem_info equiv_thm abs rep
+            val relation_ty = Type.-->(rty, Type.-->(rty, Type.bool))
+          in
+            if Term.type_of relation = relation_ty then relation
+            else
+              let val theta = Type.match_type (Term.type_of relation)
+                    relation_ty
+              in Term.inst theta relation end
+          end
+      | NONE => raise err "quotient_relation_for_type"
+          "unregistered quotient type"
 
   fun is_frac_type ty = has_type_operator #tyop frac_registry ty
 
-  (* Raw typedefs and min$ind are intentionally unsupported in M3
-     (PLAN_M3 minor decision 22). *)
   fun is_data_type ty =
     not (is_interpreted_type ty) andalso
     (is_codatatype ty orelse is_raw_free_datatype ty orelse
-     is_quot_type ty orelse is_frac_type ty)
+     is_quot_type ty orelse is_typedef ty orelse is_frac_type ty)
+
+  fun quot_constructor rty qty =
+    Term.mk_thy_const
+      {Thy = "refute", Name = "Quot", Ty = Type.-->(rty, qty)}
 
   fun registered_constructors ty =
     let val operator = type_operator_of ty
@@ -2729,7 +3103,13 @@ structure Refute_ModelFinder_HOL = struct
                 (Type.match_type
                   (#2 (boolSyntax.strip_fun (Term.type_of constructor))) ty)
                 constructor) constructors
-        | NONE => []
+        | NONE =>
+            (case quotient_for_type ty of
+                 SOME {rty, ...} => [quot_constructor rty ty]
+               | NONE =>
+                   (case typedef_for_type ty of
+                        SOME {abs, ...} => [abs]
+                      | NONE => []))
     end handle HOL_ERR _ => []
 
   fun uncached_data_type_constrs ty =
@@ -2834,12 +3214,149 @@ structure Refute_ModelFinder_HOL = struct
     else
       false
 
-  val is_free_constr = is_nonfree_constr
+  fun is_free_constr term =
+    if not (is_nonfree_constr term) then false
+    else
+      let val result_ty = #2 (boolSyntax.strip_fun (Term.type_of term))
+      in
+        if is_quot_type result_ty then false
+        else
+          case typedef_for_type result_ty of
+              SOME {univ, ...} => univ
+            | NONE => true
+      end handle HOL_ERR _ => false
 
   fun is_constr term =
     is_nonfree_constr term andalso
     not (is_interpreted_type (#2 (boolSyntax.strip_fun
       (Term.type_of term))))
+
+  fun same_registered_constant expected actual =
+    Term.same_const expected actual andalso
+    Term.type_of expected = Term.type_of actual
+    handle HOL_ERR _ => false
+
+  fun quotient_for_abs constant =
+    let val (_, qty) = Type.dom_rng (Term.type_of constant)
+    in
+      case quotient_for_type qty of
+          SOME (info as {abs, ...}) =>
+            if same_registered_constant abs constant then SOME info else NONE
+        | NONE => NONE
+    end handle HOL_ERR _ => NONE
+
+  fun quotient_for_rep constant =
+    let val (qty, _) = Type.dom_rng (Term.type_of constant)
+    in
+      case quotient_for_type qty of
+          SOME (info as {rep, ...}) =>
+            if same_registered_constant rep constant then SOME info else NONE
+        | NONE => NONE
+    end handle HOL_ERR _ => NONE
+
+  fun typedef_for_abs constant =
+    let val (_, ty) = Type.dom_rng (Term.type_of constant)
+    in
+      case typedef_for_type ty of
+          SOME (info as {abs, ...}) =>
+            if same_registered_constant abs constant then SOME info else NONE
+        | NONE => NONE
+    end handle HOL_ERR _ => NONE
+
+  fun typedef_for_rep constant =
+    let val (ty, _) = Type.dom_rng (Term.type_of constant)
+    in
+      case typedef_for_type ty of
+          SOME (info as {rep, ...}) =>
+            if same_registered_constant rep constant then SOME info else NONE
+        | NONE => NONE
+    end handle HOL_ERR _ => NONE
+
+  fun quotient_class_abs_for constant =
+    let
+      val (_, qty) = Type.dom_rng (Term.type_of constant)
+      val info = quotient_for_type qty
+      val key = const_key constant
+    in
+      case info of
+          SOME (found as {abs, rty, ...}) =>
+            let val abs_key = const_key abs
+            in
+              if #Thy key = #Thy abs_key andalso
+                 #Name key = #Name abs_key ^ "_CLASS" andalso
+                 Term.type_of constant =
+                   Type.-->(Type.-->(rty, Type.bool), qty)
+              then SOME found else NONE
+            end
+        | NONE => NONE
+    end handle HOL_ERR _ => NONE
+
+  fun quotient_class_rep_for constant =
+    let
+      val (qty, _) = Type.dom_rng (Term.type_of constant)
+      val info = quotient_for_type qty
+      val key = const_key constant
+    in
+      case info of
+          SOME (found as {rep, rty, ...}) =>
+            let val rep_key = const_key rep
+            in
+              if #Thy key = #Thy rep_key andalso
+                 #Name key = #Name rep_key ^ "_CLASS" andalso
+                 Term.type_of constant =
+                   Type.-->(qty, Type.-->(rty, Type.bool))
+              then SOME found else NONE
+            end
+        | NONE => NONE
+    end handle HOL_ERR _ => NONE
+
+  fun is_quot_abs_fun term = Option.isSome (quotient_for_abs term)
+  fun is_quot_rep_fun term = Option.isSome (quotient_for_rep term)
+  fun is_abs_fun term = Option.isSome (typedef_for_abs term)
+  fun is_rep_fun term = Option.isSome (typedef_for_rep term)
+
+  fun mate_of_rep_fun term =
+    case typedef_for_rep term of
+        SOME {abs, ...} => abs
+      | NONE => raise err "mate_of_rep_fun" "unregistered Rep function"
+
+  fun unregistered_typedef_type constant =
+    let
+      val (domain, range) = Type.dom_rng (Term.type_of constant)
+      fun candidate abstract representation =
+        if is_interpreted_type abstract orelse is_codatatype abstract orelse
+           is_quot_type abstract orelse is_typedef abstract orelse
+           is_raw_free_datatype abstract then NONE
+        else
+          case raw_typedef_data abstract of
+              SOME {rty, ...} =>
+                if rty = representation then SOME abstract else NONE
+            | NONE => NONE
+    in
+      case candidate range domain of
+          SOME ty => SOME ty
+        | NONE => candidate domain range
+    end handle HOL_ERR _ => NONE
+
+  fun first_unregistered_typedef terms =
+    let
+      fun check [] = NONE
+        | check (constant :: rest) =
+            (case unregistered_typedef_type constant of
+                 SOME ty => SOME ty
+               | NONE => check rest)
+      val constants = List.concat
+        (map (HolKernel.find_terms Term.is_const) terms)
+    in
+      check constants
+    end
+
+  fun unregistered_typedef_reason terms =
+    case first_unregistered_typedef terms of
+        NONE => NONE
+      | SOME ty =>
+          SOME ("unregistered typedef " ^ #Tyop (Type.dest_thy_type ty) ^
+            ": register with Refute.register_typedef")
 
   fun find_field which term =
     let
@@ -3448,6 +3965,66 @@ structure Refute_ModelFinder_HOL = struct
       Term.mk_abs (value, body)
     end
 
+  fun quot_normal_for_type qty rty =
+    Refute_ModelFinder_Names.mk_quot_normal qty rty
+
+  fun optimized_quot_type_axioms context qty =
+    let
+      val {rty, partial, ...} =
+        case quotient_for_type qty of
+            SOME info => info
+          | NONE => raise err "optimized_quot_type_axioms"
+              "unregistered quotient type"
+      val relation = quotient_relation_for_type qty
+      val constructor = quot_constructor rty qty
+      val normal = quot_normal_for_type qty rty
+      val a = Term.mk_var ("a", qty)
+      val x = Term.mk_var ("x", rty)
+      val y = Term.mk_var ("y", rty)
+      val sel_a = select_nth_constr_arg context constructor a 0 rty
+      val normal_sel = Term.mk_comb (normal, sel_a)
+      val normal_x = Term.mk_comb (normal, x)
+      val normal_y = Term.mk_comb (normal, y)
+      val is_unknown = Term.mk_thy_const
+        {Thy = "refute", Name = "is_unknown",
+         Ty = Type.-->(rty, Type.bool)}
+      fun unknown value = Term.mk_comb (is_unknown, value)
+      fun relates left right = Term.list_mk_comb (relation, [left, right])
+      val fixed = boolSyntax.mk_forall
+        (a, boolSyntax.mk_eq (normal_sel, sel_a))
+      val respects = boolSyntax.list_mk_forall ([x, y],
+        boolSyntax.list_mk_imp
+          ([boolSyntax.mk_neg (unknown normal_x),
+            boolSyntax.mk_neg (unknown normal_y), relates x y],
+           boolSyntax.mk_eq (normal_x, normal_y)))
+      val representative = boolSyntax.mk_forall (x,
+        boolSyntax.list_mk_imp
+          ([boolSyntax.mk_neg (unknown normal_x),
+            boolSyntax.mk_neg (boolSyntax.mk_eq (normal_x, x))],
+           relates x normal_x))
+      val domain = boolSyntax.mk_forall (a, relates sel_a sel_a)
+    in
+      [fixed, respects, representative] @ (if partial then [domain] else [])
+    end
+
+  fun optimized_typedef_axioms ty =
+    case typedef_for_type ty of
+        NONE => []
+      | SOME {univ = true, ...} => []
+      | SOME {rty, rep, pred, ...} =>
+          let
+            val abstract = Term.mk_var ("a", ty)
+            val represented = Term.mk_comb (rep, abstract)
+          in
+            [boolSyntax.mk_forall
+              (abstract, beta_normalize (beta_apply (pred, represented)))]
+          end
+
+  fun inverse_axioms_for_rep_fun rep =
+    case typedef_for_rep rep of
+        NONE => []
+      | SOME {inverse_axioms, ...} => inverse_axioms
+
   fun codatatype_bisim_axioms context ty =
     let
       val constructors = data_type_constrs context ty
@@ -3901,6 +4478,72 @@ structure Refute_ModelFinder_HOL = struct
                         end
                     end
                 | NONE =>
+                    (case quotient_for_abs constant of
+                         SOME {qty, rty, ...} =>
+                           let
+                             val representation = Term.mk_var ("r", rty)
+                             val body = Term.mk_comb
+                               (quot_constructor rty qty,
+                                Term.mk_comb
+                                  (quot_normal_for_type qty rty,
+                                   representation))
+                           in
+                             do_term depth (s_betapplys
+                               (Term.mk_abs (representation, body),
+                                arguments))
+                           end
+                       | NONE =>
+                         (case quotient_for_rep constant of
+                              SOME {qty, rty, ...} =>
+                                do_term depth (s_betapplys
+                                  (selector_term_for_constructor
+                                     (quot_constructor rty qty) 0,
+                                   arguments))
+                            | NONE =>
+                         (case quotient_class_abs_for constant of
+                              SOME {qty, rty, ...} =>
+                                let
+                                  val set = Term.mk_var
+                                    ("S", Type.-->(rty, Type.bool))
+                                  val choice = Term.mk_thy_const
+                                    {Thy = "min", Name = "@",
+                                     Ty = Type.-->
+                                       (Type.-->(rty, Type.bool), rty)}
+                                  val body = Term.mk_comb
+                                    (quot_constructor rty qty,
+                                     Term.mk_comb
+                                       (quot_normal_for_type qty rty,
+                                        Term.mk_comb (choice, set)))
+                                in
+                                  do_term depth (s_betapplys
+                                    (Term.mk_abs (set, body), arguments))
+                                end
+                            | NONE =>
+                         (case quotient_class_rep_for constant of
+                              SOME {qty, rty, ...} =>
+                                let
+                                  val abstract = Term.mk_var ("a", qty)
+                                  val representation = Term.mk_var ("r", rty)
+                                  val selected = Term.mk_comb
+                                    (selector_term_for_constructor
+                                       (quot_constructor rty qty) 0,
+                                     abstract)
+                                  val body = Term.list_mk_comb
+                                    (quotient_relation_for_type qty,
+                                     [selected, representation])
+                                in
+                                  do_term depth (s_betapplys
+                                    (Term.mk_abs (abstract,
+                                       Term.mk_abs (representation, body)),
+                                     arguments))
+                                end
+                            | NONE =>
+                         (case typedef_for_rep constant of
+                              SOME {abs, rty, ...} =>
+                                do_term depth (s_betapplys
+                                  (selector_term_for_constructor abs 0,
+                                   arguments))
+                            | NONE =>
                     if is_constr constant then
                       Term.list_mk_comb
                         (constant, process_args depth arguments)
@@ -3957,7 +4600,7 @@ structure Refute_ModelFinder_HOL = struct
                                     (s_betapplys (definition, arguments))
                               end
                         | NONE => Term.list_mk_comb
-                            (constant, process_args depth arguments)
+                            (constant, process_args depth arguments))))))
         in
           if whacked constant then
             unknown_value (Term.type_of

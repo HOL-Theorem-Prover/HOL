@@ -520,6 +520,122 @@ val _ = require_msg (check_result mf_codatatype_registrations) (fn () =>
   "codatatype lazy registration or public validation failed")
   (fn () => ()) ()
 
+fun with_quotient_typedef_registries_restored body =
+  let
+    val saved_quotients = !MFH.quotient_registry
+    val saved_typedefs = !MFH.typedef_registry
+    fun restore () =
+      (MFH.quotient_registry := saved_quotients;
+       MFH.typedef_registry := saved_typedefs)
+  in
+    Portable.finally restore body ()
+  end
+
+val zoo_three_registration =
+  {ty = ``:zoo_three``, abs = ``zoo_three_abs``, rep = ``zoo_three_rep``,
+   absrep_thm = zoo_three_absrep}
+
+val zoo_univ_registration =
+  {ty = ``:zoo_univ``, abs = ``zoo_univ_abs``, rep = ``zoo_univ_rep``,
+   absrep_thm = zoo_univ_absrep}
+
+fun mf_quotient_typedef_registrations () =
+  with_quotient_typedef_registries_restored (fn () => let
+    val initially_unregistered =
+      not (MFH.is_quot_type ``:rat``) andalso
+      not (MFH.is_typedef ``:zoo_three``)
+    val total_registration =
+      {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
+       rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV,
+       partial = true}
+    val partial_registration =
+      {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
+       rep = ``rat$rep_rat``, equiv_thm = ratTheory.rat_def,
+       partial = false}
+    val _ = Refute.register_quotient total_registration
+    val total_inferred =
+      case MFH.quotient_for_type ``:rat`` of
+          SOME {partial = false, ...} => true
+        | _ => false
+    val _ = Refute.register_quotient partial_registration
+    val partial_defaulted =
+      case MFH.quotient_for_type ``:rat`` of
+          SOME {partial = true, ...} => true
+        | _ => false
+    val malformed_quotient_rejected =
+      ((Refute.register_quotient
+          {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
+           rep = ``rat$rep_rat``, equiv_thm = boolTheory.TRUTH,
+           partial = false}; false)
+       handle HOL_ERR _ => true)
+    val quotient_typedef_overlap_rejected =
+      ((Refute.register_typedef
+          {ty = ``:rat``, abs = ``rat$abs_rat``, rep = ``rat$rep_rat``,
+           absrep_thm = boolTheory.TRUTH}; false)
+       handle HOL_ERR _ => true)
+    val _ = Refute.register_typedef zoo_three_registration
+    val _ = Refute.register_typedef zoo_univ_registration
+    val typedef_registered =
+      MFH.is_typedef ``:zoo_three`` andalso
+      MFH.is_typedef ``:zoo_univ`` andalso
+      map MFH.constructor_name
+        (MFH.registered_constructors ``:zoo_three``) =
+          ["refuteTableZoo$zoo_three_abs"] andalso
+      MFH.is_nonfree_constr ``zoo_three_abs`` andalso
+      not (MFH.is_free_constr ``zoo_three_abs``) andalso
+      MFH.is_free_constr ``zoo_univ_abs``
+    val malformed_typedef_rejected =
+      ((Refute.register_typedef
+          {ty = ``:zoo_three``, abs = ``zoo_three_abs``,
+           rep = ``zoo_three_rep``, absrep_thm = boolTheory.TRUTH}; false)
+       handle HOL_ERR _ => true)
+    val typedef_quotient_overlap_rejected =
+      ((Refute.register_quotient
+          {qty = ``:zoo_three``, rty = ``:num``,
+           abs = ``zoo_three_abs``, rep = ``zoo_three_rep``,
+           equiv_thm = boolTheory.TRUTH, partial = false}; false)
+       handle HOL_ERR _ => true)
+  in
+    initially_unregistered andalso total_inferred andalso
+    partial_defaulted andalso malformed_quotient_rejected andalso
+    quotient_typedef_overlap_rejected andalso typedef_registered andalso
+    malformed_typedef_rejected andalso typedef_quotient_overlap_rejected
+  end)
+
+val _ = require_msg
+  (check_result mf_quotient_typedef_registrations) (fn () =>
+    "quotient or typedef public registration validation failed")
+  (fn () => ()) ()
+
+fun mf_unregistered_typedef_guard () =
+  with_quotient_typedef_registries_restored (fn () => let
+    val rep_goal = ``zoo_three_rep (x : zoo_three) = 0``
+    val abs_goal = ``zoo_three_abs 0 = (x : zoo_three)``
+    val wrapper_goal =
+      ``zoo_three_rep_wrapper T (x : zoo_three) = 0``
+    val expected =
+      "unregistered typedef zoo_three: register with " ^
+      "Refute.register_typedef"
+    val direct = List.all (fn goal =>
+      MFH.unregistered_typedef_reason [goal] = SOME expected)
+      [rep_goal, abs_goal]
+    val config = default_config |> upd_timeout 2.0
+    fun guarded goal =
+      let
+        val instances = Refute_Core.preprocess config
+          {goal = goal, assumptions = [], evals = []}
+        val outcome = #run Refute_ModelFinder.kodkod_backend config instances
+      in
+        case outcome of Unknown [reason] => reason = expected | _ => false
+      end
+  in
+    direct andalso List.all guarded [rep_goal, abs_goal, wrapper_goal]
+  end)
+
+val _ = require_msg (check_result mf_unregistered_typedef_guard) (fn () =>
+  "unregistered typedef did not return the exact Unknown reason")
+  (fn () => ()) ()
+
 fun mf_stale_codatatype_constructor_is_refused () =
   let
     val saved = !MFH.codatatype_registry
@@ -2384,6 +2500,140 @@ val _ = require_msg
     "codatatype bisimulation axiom or preprocessing golden changed")
   (fn () => ()) ()
 
+fun mf_quotient_typedef_axiom_goldens () =
+  with_quotient_typedef_registries_restored (fn () => let
+    val quotient_context = fresh_mf_context ()
+    val _ = Refute.register_quotient
+      {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
+       rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV,
+       partial = true}
+    val total_axioms =
+      MFH.optimized_quot_type_axioms quotient_context ``:rat``
+    val qn = MFH.quot_normal_for_type ``:rat`` ``:frac``
+    val constructor = MFH.quot_constructor ``:frac`` ``:rat``
+    val a = Term.mk_var ("a", ``:rat``)
+    val selected = MFH.select_nth_constr_arg quotient_context
+      constructor a 0 ``:frac``
+    val x = Term.mk_var ("x", ``:frac``)
+    val y = Term.mk_var ("y", ``:frac``)
+    val normal_x = Term.mk_comb (qn, x)
+    val normal_y = Term.mk_comb (qn, y)
+    val is_unknown = Term.mk_thy_const
+      {Thy = "refute", Name = "is_unknown", Ty = ``:frac -> bool``}
+    fun unknown value = Term.mk_comb (is_unknown, value)
+    fun relates left right =
+      Term.list_mk_comb (``rat$rat_equiv``, [left, right])
+    val expected_fixed = boolSyntax.mk_forall
+      (a, boolSyntax.mk_eq (Term.mk_comb (qn, selected), selected))
+    val expected_respects = boolSyntax.list_mk_forall ([x, y],
+      boolSyntax.list_mk_imp
+        ([boolSyntax.mk_neg (unknown normal_x),
+          boolSyntax.mk_neg (unknown normal_y), relates x y],
+         boolSyntax.mk_eq (normal_x, normal_y)))
+    val expected_representative = boolSyntax.mk_forall (x,
+      boolSyntax.list_mk_imp
+        ([boolSyntax.mk_neg (unknown normal_x),
+          boolSyntax.mk_neg (boolSyntax.mk_eq (normal_x, x))],
+         relates x normal_x))
+    val expected_total_axioms =
+      [expected_fixed, expected_respects, expected_representative]
+    val _ = Refute.register_quotient
+      {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
+       rep = ``rat$rep_rat``, equiv_thm = ratTheory.rat_def,
+       partial = false}
+    val partial_axioms =
+      MFH.optimized_quot_type_axioms quotient_context ``:rat``
+    val expected_domain = boolSyntax.mk_forall
+      (a, relates selected selected)
+    val expected_partial_axioms = expected_total_axioms @ [expected_domain]
+    val _ = Refute.register_typedef zoo_three_registration
+    val _ = Refute.register_typedef zoo_univ_registration
+    val membership = MFH.optimized_typedef_axioms ``:zoo_three``
+    val expected_membership = ``!a : zoo_three. zoo_three_rep a < 3``
+    val inverses = MFH.inverse_axioms_for_rep_fun ``zoo_three_rep``
+    val expected_inverses = MFH.quantified_conjuncts zoo_three_absrep
+    fun same_terms left right =
+      length left = length right andalso List.all (fn term =>
+        List.exists (Term.aconv term) right) left
+    val unfold_context = fresh_mf_context ()
+    val quotient_abs =
+      MFH.unfold_defs_in_term unfold_context ``rat$abs_rat``
+    val quotient_rep =
+      MFH.unfold_defs_in_term unfold_context ``rat$rep_rat``
+    val quotient_class_abs =
+      MFH.unfold_defs_in_term unfold_context ``rat$abs_rat_CLASS``
+    val quotient_class_rep =
+      MFH.unfold_defs_in_term unfold_context ``rat$rep_rat_CLASS``
+    val typedef_rep =
+      MFH.unfold_defs_in_term unfold_context ``zoo_three_rep``
+    val quotient_preprocessed = MFP.preprocess_formulas
+      (fresh_mf_context ()) []
+      (boolSyntax.mk_imp (``(x : rat) = y``, boolSyntax.F))
+    val typedef_preprocessed = MFP.preprocess_formulas
+      (fresh_mf_context ()) []
+      (boolSyntax.mk_imp (``(x : zoo_three) = y``, boolSyntax.F))
+    val abs_argument = Term.mk_var ("r", ``:frac``)
+    val expected_quotient_abs = Term.mk_abs
+      (abs_argument, Term.mk_comb
+        (constructor, Term.mk_comb (qn, abs_argument)))
+    val set = Term.mk_var ("S", ``:frac -> bool``)
+    val choice = Term.mk_thy_const
+      {Thy = "min", Name = "@", Ty = ``:(frac -> bool) -> frac``}
+    val expected_class_abs = Term.mk_abs
+      (set, Term.mk_comb
+        (constructor, Term.mk_comb (qn, Term.mk_comb (choice, set))))
+    val class_abstract = Term.mk_var ("a", ``:rat``)
+    val class_representation = Term.mk_var ("r", ``:frac``)
+    val class_selected = MFH.select_nth_constr_arg unfold_context
+      constructor class_abstract 0 ``:frac``
+    val expected_class_rep = Term.mk_abs
+      (class_abstract, Term.mk_abs
+        (class_representation,
+         relates class_selected class_representation))
+    fun selector_for original term =
+      let val (variable, body) = Term.dest_abs term
+          val (head, arguments) = HolKernel.strip_comb body
+          val (name, _) = Term.dest_var head
+      in
+        length arguments = 1 andalso Term.aconv (hd arguments) variable andalso
+        MFN.is_sel name andalso MFN.original_name name = original
+      end handle HOL_ERR _ => false
+    fun same_ordered left right =
+      ListPair.allEq (fn (left, right) => Term.aconv left right)
+        (left, right)
+    val checks =
+      [("total axioms", same_ordered total_axioms expected_total_axioms),
+       ("partial axioms",
+          same_ordered partial_axioms expected_partial_axioms),
+       ("membership count", length membership = 1),
+       ("membership", Term.aconv (hd membership) expected_membership),
+       ("univ", null (MFH.optimized_typedef_axioms ``:zoo_univ``)),
+       ("inverses", same_terms inverses expected_inverses),
+       ("quot abs", Term.aconv quotient_abs expected_quotient_abs),
+       ("quot rep", selector_for "refute$Quot" quotient_rep),
+       ("quot class abs",
+          Term.aconv quotient_class_abs expected_class_abs),
+       ("quot class rep",
+          Term.aconv quotient_class_rep expected_class_rep),
+       ("typedef rep",
+          selector_for "refuteTableZoo$zoo_three_abs" typedef_rep),
+       ("quot preproc", not (null (#1 quotient_preprocessed)) andalso
+          not (null (#2 quotient_preprocessed))),
+       ("typedef preproc", not (null (#1 typedef_preprocessed)) andalso
+          not (null (#2 typedef_preprocessed)))]
+    val failed = map #1 (List.filter (not o #2) checks)
+    val _ = if null failed then () else
+      Feedback.HOL_MESG ("TASK_17 golden failures: " ^
+        String.concatWith ", " failed)
+  in
+    null failed
+  end)
+
+val _ = require_msg
+  (check_result mf_quotient_typedef_axiom_goldens) (fn () =>
+    "quotient/typedef axioms, constructors, or unfolds changed")
+  (fn () => ()) ()
+
 fun mf_binarize_preproc_goldens () =
   let
     val context = fresh_mf_context ()
@@ -3964,6 +4214,60 @@ structure MFR = Refute_ModelFinder_Rep
 structure MFK = Refute_ModelFinder_Kodkod
 structure MFM = Refute_ModelFinder_Model
 structure MFPH = Refute_ModelFinder_Peephole
+
+fun mf_quotient_displays () =
+  with_quotient_typedef_registries_restored (fn () => let
+    val _ = Refute.register_quotient
+      {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
+       rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV,
+       partial = false}
+    val qn = MFH.quot_normal_for_type ``:rat`` ``:frac``
+    val (qn_name, qn_ty) = Term.dest_var qn
+    val friendly = MFM.user_friendly_const [] qn_name qn_ty
+    val representation = Term.mk_var ("r", ``:frac``)
+    val quotient = Term.mk_comb
+      (MFH.quot_constructor ``:frac`` ``:rat``, representation)
+    val nested = pairSyntax.mk_pair (quotient, quotient)
+    fun occurrences needle text =
+      let
+        val width = size needle
+        fun count index total =
+          if index + width > size text then total
+          else if String.substring (text, index, width) = needle then
+            count (index + width) (total + 1)
+          else count (index + 1) total
+      in
+        count 0 0
+      end
+    val old_ascii = Feedback.get_tracefn "PP.avoid_unicode" ()
+    fun restore () = Feedback.set_trace "PP.avoid_unicode" old_ascii
+    fun displays () =
+      let
+        val _ = Feedback.set_trace "PP.avoid_unicode" 0
+        val unicode = Refute_Core.format_term quotient
+        val nested_unicode = Refute_Core.format_term nested
+        val _ = Feedback.set_trace "PP.avoid_unicode" 1
+        val ascii = Refute_Core.format_term quotient
+        val nested_ascii = Refute_Core.format_term nested
+      in
+        unicode = "«r»" andalso ascii = "<<r>>" andalso
+        occurrences "«" nested_unicode = 2 andalso
+        occurrences "<<" nested_ascii = 2 andalso
+        not (String.isSubstring "Quot" nested_unicode) andalso
+        not (String.isSubstring "Quot" nested_ascii)
+      end
+    val values_display = Portable.finally restore displays ()
+    val second = MFN.mk_quot_normal ``:zoo_three`` ``:num``
+  in
+    qn_name = MFN.quot_normal_prefix ^ Parse.type_to_string ``:rat`` andalso
+    #1 (Term.dest_var friendly) = "refute$qn" andalso
+    Term.type_of friendly = ``:frac -> frac`` andalso
+    #1 (Term.dest_var second) <> qn_name andalso values_display
+  end)
+
+val _ = require_msg (check_result mf_quotient_displays) (fn () =>
+  "quotient value or refute$qn display changed")
+  (fn () => ()) ()
 
 fun mf_rep_arithmetic () =
   MFR.card_of_rep (MFR.Formula MFU.Neut) = 2 andalso
@@ -11555,6 +11859,36 @@ fun mf_codatatype_acceptance solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
+fun mf_quotient_typedef_acceptance solver =
+  with_quotient_typedef_registries_restored (fn () => let
+    val _ = tprint "Refute MF: quotient and typedef countermodels"
+    val _ = Refute.register_quotient
+      {qty = ``:zoo_bool_quot``, rty = ``:bool``,
+       abs = ``zoo_bool_quot_abs``, rep = ``zoo_bool_quot_rep``,
+       equiv_thm = zoo_bool_equiv, partial = false}
+    val _ = Refute.register_typedef zoo_three_registration
+    val config = mf_acceptance_config solver
+      |> Refute.upd_card
+        [(SOME ``:zoo_bool_quot``, [2]),
+         (SOME ``:zoo_three``, [2]), (NONE, [2])]
+    val quotient = with_silent_refute (fn () =>
+      Refute.refute config ``(x : zoo_bool_quot) = y``)
+    val typedef = with_silent_refute (fn () =>
+      Refute.refute config
+        ``zoo_three_abs (zoo_three_rep x) = (y : zoo_three)``)
+    fun genuine outcome =
+      case outcome of
+          Refute.Counterexample
+            ({certainty = Refute.Genuine, ...} :: _) => true
+        | _ => false
+  in
+    if genuine quotient andalso genuine typedef then OK ()
+    else die ("quotient/typedef acceptance failed: quotient=" ^
+      mf_pin_outcome_name quotient ^ ", typedef=" ^
+      mf_pin_outcome_name typedef)
+  end)
+  handle e => die (Feedback.exn_to_string e)
+
 fun run_mf_acceptance () =
   if not (Refute_Forl.is_configured ()) then
     print "(Kodkodi not configured, MF acceptance corpus skipped.)\n"
@@ -11566,6 +11900,7 @@ fun run_mf_acceptance () =
       val _ = List.app (mf_acceptance_test "MiniSat_JNI")
         mf_acceptance_cases
       val _ = mf_codatatype_acceptance "MiniSat_JNI"
+      val _ = mf_quotient_typedef_acceptance "MiniSat_JNI"
       val smoke = List.filter
         (fn ({sat4j_smoke, ...} : mf_acceptance_case) => sat4j_smoke)
         mf_acceptance_cases

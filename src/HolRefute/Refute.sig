@@ -57,6 +57,14 @@ signature Refute = sig
   val register_codatatype :
     {tyop : {Thy : string, Tyop : string},
      case_const : term, constructors : term list} -> unit
+  val register_quotient :
+    {qty : hol_type, rty : hol_type, abs : term, rep : term,
+     equiv_thm : thm, partial : bool} -> unit
+  val register_typedef :
+    {ty : hol_type, abs : term, rep : term, absrep_thm : thm} -> unit
+  val register_ersatz :
+    {original : {Thy : string, Name : string},
+     replacement : {Thy : string, Name : string}} -> unit
   val abstract_generator :
     {ty : hol_type, constructors : term list, pred : term option} -> unit
   val export_refute_simp : string -> unit

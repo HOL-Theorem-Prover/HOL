@@ -290,6 +290,13 @@ fun run_instance deadline started (config : Refute_Core.config)
     val (nondef_ts, def_ts, need_ts, got_all_mono_user_axioms,
          no_poly_user_axioms, binarize) =
       MFP.preprocess_formulas context [] negated
+    (* A typedef morphism can enter through an unfolded wrapper even when it
+       was absent from the surface goal.  Scan the complete preprocessed
+       problem as well as the early surface-goal guard in [run]. *)
+    val _ =
+      case MFH.unregistered_typedef_reason (nondef_ts @ def_ts) of
+          SOME reason => raise MFU.NOT_SUPPORTED reason
+        | NONE => ()
     val _ = MFH.refresh_iterator_arg_types context (nondef_ts @ def_ts)
     val _ = MFH.print_wf_cache context
     val nondef_us = map (MFNT.nut_from_term context MFNT.Eq) nondef_ts
@@ -387,7 +394,10 @@ fun run_instance deadline started (config : Refute_Core.config)
     val solver = actual_solver mf
     val real_frees = free_variables [original]
     val executable = not (Option.isSome (#qc_gate instance)) andalso
-      #falsify mf andalso not (List.exists MFH.is_codatatype all_types)
+      #falsify mf andalso
+      not (List.exists (fn ty =>
+        MFH.is_codatatype ty orelse MFH.is_quot_type ty orelse
+        MFH.is_typedef ty) all_types)
     val genuine_formula = MFM.genuine_means_genuine
       {got_all_mono_user_axioms = got_all_mono_user_axioms,
        no_poly_user_axioms = no_poly_user_axioms,
@@ -803,6 +813,9 @@ fun run config instances =
     val ordered = Listsort.sort (fn (left, right) =>
       Int.compare (#card left, #card right)) instances
     val ceiling = kodkod_certainty_ceiling config ordered
+    val typedef_reason = MFH.unregistered_typedef_reason
+      (List.concat (map (fn (instance : Refute_Core.instance) =>
+        #original instance :: #evals instance) ordered))
 
     fun search [] cexs reasons all_none =
           if not (null cexs) then Refute_Core.Counterexample cexs
@@ -834,7 +847,9 @@ fun run config instances =
                     search rest cexs (reasons @ more) false
             end
   in
-    search ordered [] [] (not (null ordered))
+    case typedef_reason of
+        SOME reason => Refute_Core.Unknown [reason]
+      | NONE => search ordered [] [] (not (null ordered))
   end
 
 val kodkod_backend : Refute_Core.backend =

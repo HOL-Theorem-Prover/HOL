@@ -2,7 +2,7 @@ Theory refuteTableZoo
 Ancestors
   refute ltree itreeTau fixedPoint
 Libs
-  TotalDefn Refute_Core
+  TotalDefn Refute_Core quotient
 
 Datatype:
   zoo_tree = ZooLeaf num | ZooNode zoo_tree zoo_tree
@@ -20,6 +20,52 @@ Datatype:
   zoo_poly_tail_record =
     <| zoo_tail_bit : bool; zoo_tail_poly : 'a |>
 End
+
+Definition zoo_bool_rel_def:
+  zoo_bool_rel (x : bool) y = (x = y)
+End
+
+Theorem zoo_bool_equiv:
+  !x y. zoo_bool_rel x y = (zoo_bool_rel x = zoo_bool_rel y)
+Proof
+  simp [zoo_bool_rel_def, EQ_IMP_THM, FUN_EQ_THM] >>
+  metis_tac []
+QED
+
+val zoo_bool_quot_def =
+  define_quotient_type "zoo_bool_quot" "zoo_bool_quot_abs"
+    "zoo_bool_quot_rep" zoo_bool_equiv;
+
+Theorem zoo_three_exists[local]:
+  ?n : num. (\n. n < 3) n
+Proof
+  qexists_tac `0` >> simp []
+QED
+
+val zoo_three_tydef =
+  new_type_definition ("zoo_three", zoo_three_exists);
+
+val zoo_three_absrep = define_new_type_bijections
+  {name = "zoo_three_absrep", ABS = "zoo_three_abs",
+   REP = "zoo_three_rep", tyax = zoo_three_tydef};
+
+Definition zoo_three_rep_wrapper_def:
+  zoo_three_rep_wrapper b (x : zoo_three) =
+    if b then zoo_three_rep x else zoo_three_rep x
+End
+
+Theorem zoo_univ_exists[local]:
+  ?n : num. (\n. T) n
+Proof
+  qexists_tac `0` >> simp []
+QED
+
+val zoo_univ_tydef =
+  new_type_definition ("zoo_univ", zoo_univ_exists);
+
+val zoo_univ_absrep = define_new_type_bijections
+  {name = "zoo_univ_absrep", ABS = "zoo_univ_abs",
+   REP = "zoo_univ_rep", tyax = zoo_univ_tydef};
 
 Datatype:
   zoo_even_tree = ZooEvenLeaf num | ZooEvenNode zoo_odd_tree ;

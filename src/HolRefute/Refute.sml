@@ -66,6 +66,9 @@ structure Refute :> Refute = struct
   val register_substrate = Refute_Eval.register_substrate
   val register_generator = Refute_Gen.register_generator
   val register_codatatype = Refute_ModelFinder_HOL.register_codatatype
+  val register_quotient = Refute_ModelFinder_HOL.register_quotient
+  val register_typedef = Refute_ModelFinder_HOL.register_typedef
+  val register_ersatz = Refute_ModelFinder_HOL.register_ersatz
   val abstract_generator = Refute_Gen.abstract_generator
 
   val export_refute_simp = #export Refute_Core.refute_simp

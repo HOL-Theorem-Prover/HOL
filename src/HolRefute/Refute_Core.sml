@@ -1128,21 +1128,83 @@ structure Refute_Core = struct
 
   fun format_term term =
     let
-      val string = Parse.term_to_string term
+      fun quotient_argument candidate =
+        let val (head, arguments) = HolKernel.strip_comb candidate
+        in
+          case Lib.total Term.dest_thy_const head of
+              SOME {Thy = "refute", Name = "Quot", ...} =>
+                if length arguments = 1 then SOME (hd arguments) else NONE
+            | _ => NONE
+        end
+      fun delimit value =
+        if Feedback.get_tracefn "PP.avoid_unicode" () = 1 then
+          "<<" ^ value ^ ">>"
+        else
+          "«" ^ value ^ "»"
+      fun replace_quotients candidate index replacements =
+        case quotient_argument candidate of
+            SOME argument =>
+              let
+                val name = "refute$quotdisplay$" ^ Int.toString index ^
+                  "$value"
+                val placeholder = Term.mk_var (name, Term.type_of candidate)
+              in
+                (placeholder, index + 1,
+                 (Parse.term_to_string placeholder,
+                  delimit (format_term argument)) :: replacements)
+              end
+          | NONE =>
+              if Term.is_abs candidate then
+                let
+                  val (variable, body) = Term.dest_abs candidate
+                  val (body, next, replacements) =
+                    replace_quotients body index replacements
+                in
+                  (Term.mk_abs (variable, body), next, replacements)
+                end
+              else if Term.is_comb candidate then
+                let
+                  val (function, argument) = Term.dest_comb candidate
+                  val (function, next, replacements) =
+                    replace_quotients function index replacements
+                  val (argument, next, replacements) =
+                    replace_quotients argument next replacements
+                in
+                  (Term.mk_comb (function, argument), next, replacements)
+                end
+              else
+                (candidate, index, replacements)
+      fun replace_all needle replacement string =
+        let
+          val needle_length = size needle
+          val string_length = size string
+          fun scan index parts =
+            if index >= string_length then String.concat (rev parts)
+            else if index + needle_length <= string_length andalso
+                    String.substring (string, index, needle_length) = needle
+            then scan (index + needle_length) (replacement :: parts)
+            else scan (index + 1)
+              (String.substring (string, index, 1) :: parts)
+        in
+          scan 0 []
+        end
+      val (printable, _, replacements) = replace_quotients term 0 []
+      val string = Parse.term_to_string printable
       val length = size string
-      fun scan index parts =
+      fun clean index parts =
         if index >= length then String.concat (rev parts)
         else if index + 1 < length andalso
                 String.substring (string, index, 2) = "$?" then
-          scan (index + 2) ("?" :: parts)
+          clean (index + 2) ("?" :: parts)
         else if index + 3 < length andalso
                 String.substring (string, index, 4) = "$..." then
-          scan (index + 4) ("..." :: parts)
+          clean (index + 4) ("..." :: parts)
         else
-          scan (index + 1)
+          clean (index + 1)
             (String.substring (string, index, 1) :: parts)
     in
-      scan 0 []
+      List.foldl (fn ((needle, replacement), result) =>
+        replace_all needle replacement result) (clean 0 []) replacements
     end
 
   fun format_bindings bindings =

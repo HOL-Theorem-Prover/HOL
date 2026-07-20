@@ -1882,6 +1882,22 @@ structure Refute_ModelFinder_Preproc = struct
             List.foldl (fn (axiom, result) =>
               add_axiom true depth axiom result) with_arguments
               (MFH.codatatype_bisim_axioms context ty)
+          else if MFH.is_quot_type ty then
+            List.foldl (fn (axiom, result) =>
+              add_axiom true depth axiom result) with_arguments
+              (MFH.optimized_quot_type_axioms context ty)
+          else if MFH.is_typedef ty then
+            let
+              val with_membership = List.foldl (fn (axiom, result) =>
+                add_maybe_def_axiom depth axiom result) with_arguments
+                (MFH.optimized_typedef_axioms ty)
+            in
+              case MFH.typedef_for_type ty of
+                  SOME {rep, ...} => List.foldl (fn (axiom, result) =>
+                    add_axiom true depth axiom result) with_membership
+                    (MFH.inverse_axioms_for_rep_fun rep)
+                | NONE => with_membership
+            end
           else
             with_arguments
         end
@@ -1904,7 +1920,17 @@ structure Refute_ModelFinder_Preproc = struct
                   (HOLset.add (seen, term), definitions, def_set,
                    nondefinitions, nondef_set)
                 val with_axioms =
-                  if MFH.is_constr term then
+                  if MFH.is_rep_fun term then
+                    let
+                      val with_inverses = List.foldl
+                        (fn (axiom, result) =>
+                          add_axiom true depth axiom result) next
+                        (MFH.inverse_axioms_for_rep_fun term)
+                    in
+                      add_axioms_for_term depth []
+                        (MFH.mate_of_rep_fun term) with_inverses
+                    end
+                  else if MFH.is_constr term then
                     next
                   else if MFH.is_descr term then
                     List.foldl (fn (axiom, result) =>
@@ -2188,7 +2214,14 @@ structure Refute_ModelFinder_Preproc = struct
         let
           val ty = Term.type_of candidate
           val new_ty =
-            if MFH.is_descr candidate then
+            if (case Lib.total Term.dest_var candidate of
+                    SOME (name, _) => MFN.is_quot_normal_name name
+                  | NONE => false) then
+              let
+                val (domain, _) = Type.dom_rng ty
+                val boxed = MFH.box_type context MFH.InFunLHS domain
+              in Type.-->(boxed, boxed) end
+            else if MFH.is_descr candidate then
               let
                 val result_ty = #2 (Type.dom_rng ty)
                 val boxed_result =

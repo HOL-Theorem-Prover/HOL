@@ -655,7 +655,9 @@ fun user_friendly_const special_funs name ty =
     case uncurry_info name of
         SOME (count, prefix, original) =>
           uncurried_friendly count prefix original
-      | NONE => if MFN.is_unrolled_name name then
+      | NONE => if MFN.is_quot_normal_name name then
+      Term.mk_var (MFN.reserved_prefix ^ "qn", display_ty)
+    else if MFN.is_unrolled_name name then
       let
         val (_, predicate_ty) = Type.dom_rng display_ty
         val original = MFN.original_name name
