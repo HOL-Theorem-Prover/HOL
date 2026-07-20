@@ -405,12 +405,25 @@ val _ = tprint "Refute model-finder HOL tables"
 
 structure MFH = Refute_ModelFinder_HOL
 
-fun mf_codatatype_registrations () =
+fun with_codatatype_registry_restored body =
   let
+    val saved = !MFH.codatatype_registry
+    fun restore () = MFH.codatatype_registry := saved
+  in
+    Portable.finally restore body ()
+  end
+
+fun mf_codatatype_registrations () =
+  with_codatatype_registry_restored (fn () => let
     val llist_ty = ``:num llist``
     val ltree_ty = ``:num ltree``
     val itree_ty = ``:(num, bool, num) itree$itree``
     val tau_ty = ``:(num, bool, num) itreeTau$itree``
+    val llist_operator = {Thy = "llist", Tyop = "llist"}
+    val initial_is_lazy = not (List.exists
+      (fn ({tyop, ...} : MFH.codatatype_info) =>
+        MFH.same_type_operator tyop llist_operator)
+      (!MFH.codatatype_registry))
     val initial_constructors = MFH.registered_constructors llist_ty
     val _ = Refute.register_codatatype
       {tyop = {Thy = "llist", Tyop = "llist"},
@@ -477,6 +490,7 @@ fun mf_codatatype_registrations () =
     fun exactly_one key =
       length (List.filter (fn other => MFH.same_key key other) case_keys) = 1
   in
+    initial_is_lazy andalso
     map MFH.constructor_name initial_constructors =
       ["llist$LNIL", "llist$LCONS"] andalso
     map MFH.constructor_name after = ["llist$LNIL", "llist$LCONS"] andalso
@@ -500,7 +514,7 @@ fun mf_codatatype_registrations () =
     mixed_results_rejected andalso
     map MFH.constructor_name (MFH.registered_constructors llist_ty) =
       ["llist$LNIL", "llist$LCONS"]
-  end
+  end)
 
 val _ = require_msg (check_result mf_codatatype_registrations) (fn () =>
   "codatatype lazy registration or public validation failed")
