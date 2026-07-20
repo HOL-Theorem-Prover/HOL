@@ -24,6 +24,7 @@ signature REFUTE_MODEL_FINDER_MONO_TEST = sig
   val mtype_of_type : mdata -> Type.hol_type -> mtyp
   val mtype_of_type_all_minus : mdata -> bool -> Type.hol_type -> mtyp
   val mtype_for_constr : mdata -> Term.term -> mtyp
+  val mtype_for_term : mdata -> Term.term -> mtyp * constraint_set
   val max_fresh : mdata -> int
   val caches_repaired : mdata -> bool
 

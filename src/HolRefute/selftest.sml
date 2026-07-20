@@ -85,7 +85,7 @@ val _ = check_theorem_set "refute_simp"
    list_take_simp, list_drop_simp]
 val _ = check_theorem_set "refute_psimp" [Eps_psimp]
 val _ = check_theorem_set "refute_unfold"
-  [one_case_unfold, num_case_unfold]
+  [one_case_unfold, num_case_unfold, RTC_unfold, RC_unfold]
 
 val same_string_set : string list -> string list -> bool = Lib.set_eq
 
@@ -563,7 +563,9 @@ fun term_has_generated_prefix prefix term =
 
 fun mf_inductive_unroll_goldens () =
   let
-    val context = MFH.make_context Refute_Core.default_mf_config []
+    val no_star = #mf (Refute.upd_star_linear_preds false
+      Refute.default_config)
+    val context = MFH.make_context no_star []
     val predicate = ``zoo_nonwf_lfp : num -> bool``
     val footprint = mf_theory_footprint ()
     val unrolled_at_zero =
@@ -668,6 +670,87 @@ fun mf_inductive_unroll_goldens () =
 
 val _ = require_msg (check_result mf_inductive_unroll_goldens) (fn () =>
   "inductive unroll equation, iterator names, or polarity golden changed")
+  (fn () => ()) ()
+
+fun mf_star_linear_pred_goldens () =
+  let
+    val footprint = mf_theory_footprint ()
+    val linear = ``zoo_wf_lfp : num -> bool``
+    val nonlinear = ``zoo_nonlinear_lfp : num -> bool``
+    val bad_type = ``zoo_poly_lfp : (num -> num) -> num -> bool``
+    fun forced_context predicate star =
+      MFH.make_context
+        (#mf (Refute.upd_star_linear_preds star
+          (Refute.upd_wf [(SOME predicate, SOME false)]
+            Refute.default_config))) []
+    val linear_context = forced_context linear true
+    val nonlinear_context = forced_context nonlinear true
+    val bad_type_context = forced_context bad_type true
+    val disabled_context = forced_context linear false
+    val starred = Refute_ModelFinder_Preproc.skolemize_term_and_more
+      linear_context 3 ``zoo_wf_lfp n``
+    val nonlinear_result = MFH.unrolled_inductive_pred_const
+      nonlinear_context false nonlinear
+    val bad_type_result = MFH.unrolled_inductive_pred_const
+      bad_type_context false bad_type
+    val disabled_result = MFH.unrolled_inductive_pred_const
+      disabled_context false linear
+    val linear_key = {Thy = "refuteTableZoo", Name = "zoo_wf_lfp"}
+    val original = #Thy linear_key ^ MFN.name_sep ^ #Name linear_key
+    val base = MFN.mk_base original ``:num -> bool``
+    val step = MFN.mk_step original ``:num -> num -> bool``
+    val friendly_base = Refute_ModelFinder_Model.user_friendly_const []
+      (#1 (Term.dest_var base)) (Term.type_of base)
+    val friendly_step = Refute_ModelFinder_Model.user_friendly_const []
+      (#1 (Term.dest_var step)) (Term.type_of step)
+    val checks =
+      [("linear", MFH.is_linear_inductive_pred linear_context linear),
+       ("nonlinear", not (MFH.is_linear_inductive_pred
+          nonlinear_context nonlinear)),
+       ("bad type linear", MFH.is_linear_inductive_pred
+          bad_type_context bad_type),
+       ("good type", MFH.is_good_starred_linear_pred_type
+          (Term.type_of linear)),
+       ("bad type", not (MFH.is_good_starred_linear_pred_type
+          (Term.type_of bad_type))),
+       ("base term", term_has_generated_prefix MFN.base_prefix starred),
+       ("step term", term_has_generated_prefix MFN.step_prefix starred),
+       ("TC term", term_has_const {Thy = "relation", Name = "TC"} starred),
+       ("no RTC", not (term_has_const
+          {Thy = "relation", Name = "RTC"} starred)),
+       ("no unroll", not (term_has_generated_prefix
+          MFN.unrolled_prefix starred)),
+       ("no iterator", null (!(#iterator_table linear_context))),
+       ("base equation", length (MFH.def_props_for_const
+          (!(#simp_table linear_context)) base) = 1),
+       ("step equation", length (MFH.def_props_for_const
+          (!(#simp_table linear_context)) step) = 1),
+       ("nonlinear unroll", term_has_generated_prefix
+          MFN.unrolled_prefix nonlinear_result),
+       ("bad-type unroll", term_has_generated_prefix
+          MFN.unrolled_prefix bad_type_result),
+       ("disabled unroll", term_has_generated_prefix
+          MFN.unrolled_prefix disabled_result),
+       ("nonlinear iterator", not (null (!(#iterator_table
+          nonlinear_context)))),
+       ("bad-type iterator", not (null (!(#iterator_table
+          bad_type_context)))),
+       ("disabled iterator", not (null (!(#iterator_table
+          disabled_context)))),
+       ("base display", #1 (Term.dest_var friendly_base) =
+          "zoo_wf_lfp.base"),
+       ("step display", #1 (Term.dest_var friendly_step) =
+          "zoo_wf_lfp.step"),
+       ("theory footprint", footprint = mf_theory_footprint ())]
+    val _ = List.app (fn (label, passed) =>
+      if passed then () else print ("TASK_12 failed star check: " ^
+        label ^ "\n")) checks
+  in
+    List.all #2 checks
+  end
+
+val _ = require_msg (check_result mf_star_linear_pred_goldens) (fn () =>
+  "star linearity/type/config gate, equations, or display names changed")
   (fn () => ()) ()
 
 fun mf_definition_last_wins () =
@@ -992,13 +1075,15 @@ fun mf_builtins_numerals_sets_and_ersatz () =
         (Term.mk_thy_const {Thy = Thy, Name = Name, Ty = ty})
   in
     MFH.is_built_in_const boolSyntax.IN_tm andalso
-    length MFH.built_in_consts = 26 andalso
+    length MFH.built_in_consts = 29 andalso
     length MFH.built_in_typed_consts = 15 andalso
     List.all (built_in o #1) MFH.built_in_consts andalso
     List.all typed_built_in MFH.built_in_typed_consts andalso
     List.all built_in numeral_keys andalso
-    not (MFH.is_built_in_const
-      (Term.prim_mk_const {Thy = "relation", Name = "TC"})) andalso
+    List.all (MFH.is_built_in_const o Term.prim_mk_const)
+      [{Thy = "relation", Name = "TC"},
+       {Thy = "relation", Name = "inv"},
+       {Thy = "relation", Name = "O"}] andalso
     (case MFH.numeral_value numeral of
          SOME value => Arbint.compare (value, Arbint.fromInt 37) = EQUAL
        | NONE => false) andalso
@@ -1037,6 +1122,63 @@ fun mf_builtins_numerals_sets_and_ersatz () =
 val _ = require_msg
   (check_result mf_builtins_numerals_sets_and_ersatz) (fn () =>
     "model-finder built-in/numeral/set/ersatz mapping failed")
+  (fn () => ()) ()
+
+fun mf_relation_builtin_producers () =
+  let
+    val relation = ``r : num -> num -> bool``
+    val outer = ``outer : bool -> num -> bool``
+    val inner = ``inner : num -> bool -> bool``
+    val tc_term = ``TC (r : num -> num -> bool)``
+    val inv_term = ``inv (r : num -> num -> bool)``
+    val composition_term =
+      ``(outer : bool -> num -> bool) O
+        (inner : num -> bool -> bool)``
+    val tc = Refute_ModelFinder_Nut.nut_from_term mf_hol_context
+      Refute_ModelFinder_Nut.Eq tc_term
+    val inv = Refute_ModelFinder_Nut.nut_from_term mf_hol_context
+      Refute_ModelFinder_Nut.Eq inv_term
+    val composition = Refute_ModelFinder_Nut.nut_from_term mf_hol_context
+      Refute_ModelFinder_Nut.Eq composition_term
+    val unfolded_rtc = MFH.unfold_defs_in_term mf_hol_context
+      ``RTC (r : num -> num -> bool)``
+    val checks =
+      [("TC nut", case tc of
+           Refute_ModelFinder_Nut.Op1
+             (Refute_ModelFinder_Nut.Closure, ty, _, _) =>
+               ty = Term.type_of tc_term
+         | _ => false),
+       ("inv nut", case inv of
+           Refute_ModelFinder_Nut.Op1
+             (Refute_ModelFinder_Nut.Converse, ty, _, _) =>
+               ty = Term.type_of inv_term
+         | _ => false),
+       ("O nut", case composition of
+           Refute_ModelFinder_Nut.Op2
+             (Refute_ModelFinder_Nut.Composition, ty, _, first, second) =>
+               ty = Term.type_of composition_term andalso
+               Refute_ModelFinder_Nut.type_of first = Term.type_of inner
+               andalso
+               Refute_ModelFinder_Nut.type_of second = Term.type_of outer
+         | _ => false),
+       ("no RTC", not (contains_constant
+          {Thy = "relation", Name = "RTC"} unfolded_rtc)),
+       ("no RC", not (contains_constant
+          {Thy = "relation", Name = "RC"} unfolded_rtc)),
+       ("has TC", contains_constant
+          {Thy = "relation", Name = "TC"} unfolded_rtc),
+       ("has r", Term.free_in relation unfolded_rtc),
+       ("has outer", Term.free_in outer composition_term),
+       ("has inner", Term.free_in inner composition_term)]
+    val _ = List.app (fn (label, passed) =>
+      if passed then () else print ("TASK_12 failed relation check: " ^
+        label ^ "\n")) checks
+  in
+    List.all #2 checks
+  end
+
+val _ = require_msg (check_result mf_relation_builtin_producers) (fn () =>
+  "TC/inv/O nut production or RTC-to-TC unfolding failed")
   (fn () => ()) ()
 
 val _ = tprint "Refute model-finder monotonicity constraints"
@@ -1401,6 +1543,55 @@ val _ = List.app (fn (name, kind, term) =>
   require_msg (check_result (fn () => mono_nits_check kind term))
     (fn () => "Mono_Nits failed: " ^ name)
     (fn () => ()) ()) mono_nits_cases
+
+fun mono_relation_builtin_mtypes () =
+  let
+    val alpha = ``:'a``
+    val relation_ty = ``:'a -> 'a -> bool``
+    val tc = Term.mk_thy_const
+      {Thy = "relation", Name = "TC",
+       Ty = Type.-->(relation_ty, relation_ty)}
+    val inv = ``inv : ('a -> bool -> bool) -> bool -> 'a -> bool``
+    val composition =
+      ``(O) : (bool -> 'a -> bool) ->
+              (num -> bool -> bool) -> num -> 'a -> bool``
+    fun infer term = MMT.mtype_for_term
+      (MMT.initial_mdata mf_hol_context false alpha) term
+    val (tc_mtype, tc_constraints) = infer tc
+    val (inv_mtype, inv_constraints) = infer inv
+    val (composition_mtype, composition_constraints) = infer composition
+    fun constrained (comparisons, clauses) =
+      not (null comparisons andalso null clauses)
+    val tc_shares_relation_mtype =
+      case tc_mtype of
+          MMT.MFun (domain, MMT.A MMT.Gen, range) => domain = range
+        | _ => false
+    val converse_shape =
+      case inv_mtype of
+          MMT.MFun (MMT.MFun _, MMT.A MMT.Gen, MMT.MFun _) => true
+        | _ => false
+    val composition_shape =
+      case composition_mtype of
+          MMT.MFun (MMT.MFun _, MMT.A MMT.Gen,
+            MMT.MFun (MMT.MFun _, MMT.A MMT.Gen, MMT.MFun _)) => true
+        | _ => false
+    val checks =
+      [("TC shape", tc_shares_relation_mtype),
+       ("TC constraint", constrained tc_constraints),
+       ("inv shape", converse_shape),
+       ("inv constraint", constrained inv_constraints),
+       ("O shape", composition_shape),
+       ("O constraint", constrained composition_constraints)]
+    val _ = List.app (fn (label, passed) =>
+      if passed then () else print ("TASK_12 failed mono check: " ^
+        label ^ "\n")) checks
+  in
+    List.all #2 checks
+  end
+
+val _ = require_msg (check_result mono_relation_builtin_mtypes) (fn () =>
+  "TC/inv/O monotonicity mtypes disagree with their nut built-ins")
+  (fn () => ()) ()
 
 fun mono_timeout_degrades () =
   let
@@ -2627,7 +2818,9 @@ val _ = require_msg (check_result mf_scope_card_repair) (fn () =>
 
 fun mf_iterator_scope_rows_and_repair () =
   let
-    val context = MFH.make_context Refute_Core.default_mf_config []
+    val no_star = #mf (Refute.upd_star_linear_preds false
+      Refute.default_config)
+    val context = MFH.make_context no_star []
     val predicate = ``zoo_nonwf_lfp : num -> bool``
     val application = MFH.unrolled_inductive_pred_const
       context false predicate
@@ -3975,7 +4168,9 @@ val _ = require_msg (check_result mf_model_structured_reconstruction)
 
 fun mf_iterator_model_display () =
   let
-    val context = MFH.make_context Refute_Core.default_mf_config []
+    val no_star = #mf (Refute.upd_star_linear_preds false
+      Refute.default_config)
+    val context = MFH.make_context no_star []
     val predicate = ``zoo_nonwf_lfp : num -> bool``
     val application = MFH.unrolled_inductive_pred_const
       context false predicate
@@ -5501,6 +5696,7 @@ local
         |> upd_timeout 20.0
         |> upd_backends (SOME ["kodkod"])
         |> upd_sat_solver solver
+        |> upd_star_linear_preds false
         |> upd_iter [(SOME predicate, [2]), (NONE, [0])]
         |> upd_card [(SOME ``:num``, [3]), (NONE, [1])]
       fun pinned ({scope, ...} : Refute.counterexample) =
@@ -5514,6 +5710,77 @@ local
             ((counterexample as
               {backend = "kodkod", certainty = Refute.Genuine,
                cert = NONE, ...}) :: _) => pinned counterexample
+        | _ => false
+    end
+
+  fun mf_star_linear_pred_smoke () =
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val solver =
+        if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
+      val predicate = ``zoo_wf_lfp : num -> bool``
+      val config = default_config
+        |> upd_timeout 20.0
+        |> upd_backends (SOME ["kodkod"])
+        |> upd_sat_solver solver
+        |> upd_wf [(SOME predicate, SOME false)]
+        |> upd_star_linear_preds true
+        |> upd_binary_ints (SOME false)
+        |> upd_card [(SOME ``:num``, [3]), (NONE, [1])]
+      fun no_iterator ({scope, ...} : Refute.counterexample) =
+        case scope of
+            SOME assignments =>
+              not (List.exists (MFH.is_iterator_type o #1) assignments)
+          | NONE => false
+    in
+      case Refute.refute config ``zoo_wf_lfp 2 ==> (2 : num) = 0`` of
+          Refute.Counterexample
+            ((counterexample as
+              {backend = "kodkod", certainty = Refute.Genuine,
+               cert = NONE, ...}) :: _) => no_iterator counterexample
+        | _ => false
+    end
+
+  fun mf_direct_rtc_smoke () =
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val solver =
+        if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
+      val config = default_config
+        |> upd_timeout 20.0
+        |> upd_backends (SOME ["kodkod"])
+        |> upd_sat_solver solver
+        |> upd_binary_ints (SOME false)
+        |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
+    in
+      case Refute.refute config
+        ``~RTC (\x : num. \y : num. x = 0 /\ y = 1) 0 1`` of
+          Refute.Counterexample
+            ({backend = "kodkod", certainty = Refute.Genuine, ...} :: _) =>
+              true
+        | _ => false
+    end
+
+  fun mf_relation_ops_smoke () =
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val solver =
+        if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
+      val config = default_config
+        |> upd_timeout 20.0
+        |> upd_backends (SOME ["kodkod"])
+        |> upd_sat_solver solver
+        |> upd_binary_ints (SOME false)
+        |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
+      val goal =
+        ``~(inv (\n : num. \b : bool. n = 0 /\ b) T 0 /\
+            (((\b : bool. \n : num. b /\ n = 1) O
+              (\n : num. \b : bool. n = 0 /\ b)) 0 1))``
+    in
+      case Refute.refute config goal of
+          Refute.Counterexample
+            ({backend = "kodkod", certainty = Refute.Genuine, ...} :: _) =>
+              true
         | _ => false
     end
 
@@ -5627,6 +5894,24 @@ in
     if bridge_configured then
       require_msg (check_result mf_inductive_unroll_smoke) (fn () =>
         "the pinned non-wf inductive iterator row did not refute")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_star_linear_pred_smoke) (fn () =>
+        "the starred linear predicate did not refute without an iterator")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_direct_rtc_smoke) (fn () =>
+        "the direct RTC goal did not refute through native Closure")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_relation_ops_smoke) (fn () =>
+        "heterogeneous O/inv did not refute with their native semantics")
         (fn () => ()) ()
     else ()
   val _ =
@@ -5961,6 +6246,20 @@ fun iter_default_and_unlock_are_pinned () =
 val _ = require_msg
   (check_result iter_default_and_unlock_are_pinned) (fn () =>
   "iter default or predicate-specific user row remains guarded")
+  (fn () => ()) ()
+
+fun star_default_and_unlock_are_pinned () =
+  let
+    val disabled = Refute.upd_star_linear_preds false
+      Refute.default_config
+  in
+    #star_linear_preds (#mf Refute.default_config) andalso
+    not (#star_linear_preds (#mf disabled))
+  end
+
+val _ = require_msg
+  (check_result star_default_and_unlock_are_pinned) (fn () =>
+  "star_linear_preds is not enabled by default or remains guarded")
   (fn () => ()) ()
 
 fun m4_guard_is_pinned (field, testfn) = shouldfail {

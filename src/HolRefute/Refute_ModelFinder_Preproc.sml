@@ -361,7 +361,8 @@ structure Refute_ModelFinder_Preproc = struct
             val gfp = MFH.fixpoint_kind_of_const context candidate = MFH.Gfp
             fun positive () =
               recurse dependencies skolemizable polarity
-                (MFH.unrolled_inductive_pred_const context gfp candidate)
+                (MFH.unfold_defs_in_term context
+                  (MFH.unrolled_inductive_pred_const context gfp candidate))
             fun negative () =
               MFH.fixpoint_bound_const context (not gfp) candidate
             val effective = if gfp then MFU.flip_polarity polarity

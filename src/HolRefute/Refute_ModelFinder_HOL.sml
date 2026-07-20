@@ -145,6 +145,12 @@ structure Refute_ModelFinder_Names = struct
     mk_reserved_var (unrolled_prefix ^ original)
       (Type.-->(iterator_ty, predicate_ty))
 
+  fun mk_base original predicate_ty =
+    mk_reserved_var (base_prefix ^ original) predicate_ty
+
+  fun mk_step original relation_ty =
+    mk_reserved_var (step_prefix ^ original) relation_ty
+
   fun mk_ubfp original predicate_ty =
     mk_reserved_var (ubfp_prefix ^ original) predicate_ty
 
@@ -158,6 +164,8 @@ structure Refute_ModelFinder_Names = struct
     String.isPrefix iterator_suc_prefix name
 
   fun is_unrolled_name name = has_generated_layer unrolled_prefix name
+  fun is_base_name name = has_generated_layer base_prefix name
+  fun is_step_name name = has_generated_layer step_prefix name
   fun is_ubfp_name name = has_generated_layer ubfp_prefix name
   fun is_lbfp_name name = has_generated_layer lbfp_prefix name
 
@@ -575,6 +583,9 @@ structure Refute_ModelFinder_HOL = struct
      ({Thy = "pair", Name = "SND"}, 1),
      ({Thy = "bool", Name = "IN"}, 2),
      ({Thy = "pred_set", Name = "FINITE"}, 1),
+     ({Thy = "relation", Name = "TC"}, 1),
+     ({Thy = "relation", Name = "inv"}, 1),
+     ({Thy = "relation", Name = "O"}, 2),
      ({Thy = "refute", Name = "unknown"}, 0),
      ({Thy = "refute", Name = "is_unknown"}, 1),
      ({Thy = "refute", Name = "safe_The"}, 1),
@@ -1700,49 +1711,208 @@ structure Refute_ModelFinder_HOL = struct
           else NONE
       | NONE => NONE
 
-  fun unrolled_inductive_pred_const context gfp pred =
+  fun fixpoint_case_equation context pred =
     let
-      val iterator_ty = iterator_type_for_const context gfp pred
+      val case_prop =
+        case case_props_for_const context pred of
+            [prop] => prop
+          | _ => raise err "fixpoint_case_equation"
+              "expected one fixpoint equation"
+      val (variables, body) = boolSyntax.strip_forall case_prop
+      val (premises, conclusion) = boolSyntax.strip_imp body
+      val (left, right) = boolSyntax.dest_eq conclusion
+      val (head, arguments) = HolKernel.strip_comb left
+      val _ = if same_fixpoint_const head pred then () else
+        raise err "fixpoint_case_equation"
+          "fixpoint equation has the wrong head"
+    in
+      (case_prop, variables, premises, arguments, right)
+    end
+
+  fun disjuncts_of term =
+    if boolSyntax.is_disj term then
+      let val (left, right) = boolSyntax.dest_disj term
+      in disjuncts_of left @ disjuncts_of right end
+    else [term]
+
+  fun mk_disjunction [] = boolSyntax.F
+    | mk_disjunction terms = boolSyntax.list_mk_disj terms
+
+  (* Count recursive calls as applications, rather than also counting every
+     partial application on their spines.  A partial or bare occurrence is
+     deliberately counted twice, and hence rejected by the linearity gate. *)
+  fun recursive_call_count pred arity term =
+    if Term.is_abs term then
+      recursive_call_count pred arity (#2 (Term.dest_abs term))
+    else if Term.is_comb term then
+      let val (head, arguments) = HolKernel.strip_comb term
+      in
+        if same_fixpoint_const head pred then
+          (if length arguments = arity then 1 else 2) +
+          List.foldl (fn (argument, total) =>
+            recursive_call_count pred arity argument + total) 0 arguments
+        else
+          List.foldl (fn (part, total) =>
+            recursive_call_count pred arity part + total) 0
+            (head :: arguments)
+      end
+    else if (Term.is_const term orelse Term.is_var term) andalso
+            same_fixpoint_const term pred then 2
+    else 0
+
+  fun strip_existentials term = #2 (boolSyntax.strip_exists term)
+
+  fun is_direct_recursive_conjunct pred arity conjunct =
+    let val (head, arguments) = HolKernel.strip_comb conjunct
+    in same_fixpoint_const head pred andalso length arguments = arity end
+
+  fun is_linear_inductive_pred context pred =
+    let
+      val (_, _, premises, arguments, right) =
+        fixpoint_case_equation context pred
+      val arity = length arguments
+      fun linear disjunct =
+        let
+          val body = strip_existentials disjunct
+          val count = recursive_call_count pred arity body
+        in
+          count = 0 orelse
+          (count = 1 andalso List.exists
+            (is_direct_recursive_conjunct pred arity)
+            (boolSyntax.strip_conj body))
+        end
+    in
+      null premises andalso arity > 0 andalso
+      List.all linear (disjuncts_of right)
+    end
+    handle HOL_ERR _ => false
+
+  fun is_good_starred_linear_pred_type ty =
+    let val (argument_tys, result_ty) = boolSyntax.strip_fun ty
+    in
+      result_ty = Type.bool andalso not (null argument_tys) andalso
+      List.all (fn argument_ty =>
+        not (is_fun_type argument_ty) andalso
+        not (is_pair_type argument_ty)) argument_tys
+    end
+
+  fun recursive_conjunct pred arity disjunct =
+    let
+      val (_, body) = boolSyntax.strip_exists disjunct
+    in
+      case List.find (is_direct_recursive_conjunct pred arity)
+             (boolSyntax.strip_conj body) of
+          SOME occurrence => occurrence
+        | NONE => raise err "recursive_conjunct"
+            "linear disjunct has no direct recursive conjunct"
+    end
+
+  fun starred_linear_pred_const context pred =
+    let
+      val (_, variables, premises, arguments, right) =
+        fixpoint_case_equation context pred
+      val _ = if null premises then () else
+        raise err "starred_linear_pred_const"
+          "conditional fixpoint equation"
+      val argument_tys = map Term.type_of arguments
+      val tuple_ty = tuple_type argument_tys
+      val relation_ty = Type.-->(tuple_ty,
+        Type.-->(tuple_ty, Type.bool))
       val key = original_const_key pred
       val original = #Thy key ^ Refute_ModelFinder_Names.name_sep ^ #Name key
-      val unrolled = Refute_ModelFinder_Names.mk_unrolled original
-        iterator_ty (Term.type_of pred)
-      val zero = iterator_zero_for_type context iterator_ty
-    in
-      if is_raw_equational_fun context unrolled then
-        Term.mk_comb (unrolled, zero)
-      else
+      val base = Refute_ModelFinder_Names.mk_base original
+        (Type.-->(tuple_ty, Type.bool))
+      val step = Refute_ModelFinder_Names.mk_step original relation_ty
+      val arity = length arguments
+      val disjuncts = disjuncts_of right
+      val (base_disjuncts, step_disjuncts) = List.partition
+        (fn disjunct => recursive_call_count pred arity disjunct = 0)
+        disjuncts
+      val base_body = mk_disjunction base_disjuncts
+      val source = Term.variant
+        (variables @ Term.all_vars right)
+        (Term.mk_var ("y", tuple_ty))
+      fun repair disjunct =
         let
-          val case_prop =
-            case case_props_for_const context pred of
-                [prop] => prop
-              | _ => raise err "unrolled_inductive_pred_const"
-                  "expected one fixpoint equation"
-          val (variables, body) = boolSyntax.strip_forall case_prop
-          val (premises, conclusion) = boolSyntax.strip_imp body
-          val (left, right) = boolSyntax.dest_eq conclusion
-          val (head, arguments) = HolKernel.strip_comb left
-          val _ = if same_fixpoint_const head pred then () else
-            raise err "unrolled_inductive_pred_const"
-              "fixpoint equation has the wrong head"
-          val iterator = Term.variant
-            (variables @ Term.free_vars_lr case_prop)
-            (Term.mk_var (Refute_ModelFinder_Names.iter_var_prefix,
-              iterator_ty))
-          val next = Term.mk_comb
-            (iterator_suc_for_type context iterator_ty, iterator)
-          val next_pred = Term.mk_comb (unrolled, next)
-          val right = Term.subst [{redex = pred, residue = next_pred}] right
-          val left = Term.list_mk_comb (unrolled, iterator :: arguments)
-          val equation = boolSyntax.list_mk_forall
-            (iterator :: variables,
-             boolSyntax.list_mk_imp
-               (premises, boolSyntax.mk_eq (left, right)))
-          val _ = add_simps (#simp_table context) unrolled [equation]
+          val occurrence = recursive_conjunct pred arity disjunct
+          val (_, recursive_arguments) = HolKernel.strip_comb occurrence
+          val replacement = boolSyntax.mk_eq
+            (source, tuple_term recursive_arguments)
         in
-          Term.mk_comb (unrolled, zero)
+          Term.subst [{redex = occurrence, residue = replacement}] disjunct
         end
+      val step_body = mk_disjunction (map repair step_disjuncts)
+      val destination = tuple_term arguments
+      val base_equation = boolSyntax.list_mk_forall
+        (variables, boolSyntax.mk_eq
+          (Term.mk_comb (base, destination), base_body))
+      val step_equation = boolSyntax.list_mk_forall
+        (source :: variables, boolSyntax.mk_eq
+          (Term.list_mk_comb (step, [source, destination]), step_body))
+      val _ = if is_raw_equational_fun context base then ()
+        else add_simps (#simp_table context) base [base_equation]
+      val _ = if is_raw_equational_fun context step then ()
+        else add_simps (#simp_table context) step [step_equation]
+      val rtc = Term.mk_thy_const
+        {Thy = "relation", Name = "RTC",
+         Ty = Type.-->(relation_ty, relation_ty)}
+      val reached = Term.list_mk_comb
+        (rtc, [step, source, destination])
+      (* HOL4 relations are curried predicates and have no separate
+         relation-image operator.  This existential is the predicatified
+         form of RTC step `` {y | base y}. *)
+      val body = boolSyntax.mk_exists
+        (source, boolSyntax.mk_conj (Term.mk_comb (base, source), reached))
+    in
+      Term.list_mk_abs (arguments, body)
     end
+
+  fun should_star_linear_pred
+        (context as {star_linear_preds, ...} : mf_context) gfp pred =
+    not gfp andalso star_linear_preds andalso
+    not (is_mutually_inductive_pred context pred) andalso
+    is_linear_inductive_pred context pred andalso
+    is_good_starred_linear_pred_type (Term.type_of pred)
+
+  fun unrolled_inductive_pred_const context gfp pred =
+    if should_star_linear_pred context gfp pred then
+      starred_linear_pred_const context pred
+    else
+      let
+        val iterator_ty = iterator_type_for_const context gfp pred
+        val key = original_const_key pred
+        val original = #Thy key ^ Refute_ModelFinder_Names.name_sep ^
+          #Name key
+        val unrolled = Refute_ModelFinder_Names.mk_unrolled original
+          iterator_ty (Term.type_of pred)
+        val zero = iterator_zero_for_type context iterator_ty
+      in
+        if is_raw_equational_fun context unrolled then
+          Term.mk_comb (unrolled, zero)
+        else
+          let
+            val (case_prop, variables, premises, arguments, right) =
+              fixpoint_case_equation context pred
+            val iterator = Term.variant
+              (variables @ Term.free_vars_lr case_prop)
+              (Term.mk_var (Refute_ModelFinder_Names.iter_var_prefix,
+                iterator_ty))
+            val next = Term.mk_comb
+              (iterator_suc_for_type context iterator_ty, iterator)
+            val next_pred = Term.mk_comb (unrolled, next)
+            val right = Term.subst
+              [{redex = pred, residue = next_pred}] right
+            val left = Term.list_mk_comb
+              (unrolled, iterator :: arguments)
+            val equation = boolSyntax.list_mk_forall
+              (iterator :: variables,
+               boolSyntax.list_mk_imp
+                 (premises, boolSyntax.mk_eq (left, right)))
+            val _ = add_simps (#simp_table context) unrolled [equation]
+          in
+            Term.mk_comb (unrolled, zero)
+          end
+      end
 
   fun fixpoint_bound_const context upper pred =
     let
@@ -2956,7 +3126,25 @@ structure Refute_ModelFinder_HOL = struct
         let
           val key = const_key constant
           fun ordinary () =
-            if is_never_unfold_const constant then
+            if same_key key {Thy = "relation", Name = "RTC"} orelse
+               same_key key {Thy = "relation", Name = "RC"} then
+              (* RTC is itself a Hol_reln predicate and RC has ordinary
+                 equational simplifications; both would normally be
+                 preserved.  Their pinned refute_unfold entries
+                 intentionally take precedence so the star trick and direct
+                 RTC terms reach native TC/Closure. *)
+              (case def_of_const_ext context constant of
+                   SOME (_, definition) =>
+                     if depth >= unfold_max_depth then
+                       raise Refute_ModelFinder_Util.TOO_LARGE
+                         ("Refute_ModelFinder_HOL.unfold_defs_in_term",
+                          "too many nested relation closure definitions")
+                     else
+                       do_term (depth + 1)
+                         (s_betapplys (definition, arguments))
+                 | NONE => Term.list_mk_comb
+                     (constant, process_args depth arguments))
+            else if is_never_unfold_const constant then
               Term.list_mk_comb (constant, process_args depth arguments)
             else
               case List.find (fn (other, _) => same_key key other)

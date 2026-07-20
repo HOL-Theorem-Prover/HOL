@@ -93,6 +93,12 @@ Inductive zoo_unroll_lfp:
   (!n. zoo_unroll_lfp n ==> zoo_unroll_lfp n)
 End
 
+Inductive zoo_nonlinear_lfp:
+  zoo_nonlinear_lfp (0 : num) /\
+  (!(m : num) n. zoo_nonlinear_lfp m /\ zoo_nonlinear_lfp n ==>
+                  zoo_nonlinear_lfp (m + n))
+End
+
 Inductive zoo_param_lfp:
   (!k : num. zoo_param_lfp k 0) /\
   (!k n. zoo_param_lfp k n ==>

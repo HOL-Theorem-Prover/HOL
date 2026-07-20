@@ -642,6 +642,15 @@ fun user_friendly_const special_funs name ty =
       in
         Term.mk_abs (iterator, predicate)
       end
+    else if MFN.is_base_name name orelse MFN.is_step_name name then
+      let
+        val original = MFN.original_name name
+        val (_, short_name) = MFN.strip_first_name_sep original
+        val stem = if short_name = "" then original else short_name
+        val suffix = if MFN.is_base_name name then ".base" else ".step"
+      in
+        Term.mk_var (stem ^ suffix, display_ty)
+      end
     else if MFN.is_special_name name then
       case List.find (same_generated o #2) special_funs of
           SOME ((original, fixed_indices, fixed_terms), _) =>

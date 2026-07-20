@@ -1069,6 +1069,45 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
            (gamma, add_mtype_is_concrete [] shared_mtype constraints))
         end
 
+      fun relation_mtype variable ty =
+        let
+          val (domain_ty, rest_ty) = Type.dom_rng ty
+          val (range_ty, result_ty) = Type.dom_rng rest_ty
+          val _ = if result_ty = Type.bool then () else
+            raise MTYPE
+              ("Refute_ModelFinder_Mono.relation_mtype", [], [ty])
+        in
+          MFun (mtype_for domain_ty, V variable,
+            MFun (mtype_for range_ty, V variable, bool_M))
+        end
+
+      fun do_converse ty (gamma, constraints) =
+        let
+          val (argument_ty, result_ty) = Type.dom_rng ty
+          val variable = fresh max_fresh
+          val argument_mtype = relation_mtype variable argument_ty
+          val result_mtype = relation_mtype variable result_ty
+        in
+          (MFun (argument_mtype, A Gen, result_mtype),
+           (gamma, add_annotation_atom_comp Neq []
+             (V variable) (A New) constraints))
+        end
+
+      fun do_composition ty (gamma, constraints) =
+        let
+          val (outer_ty, rest_ty) = Type.dom_rng ty
+          val (inner_ty, result_ty) = Type.dom_rng rest_ty
+          val variable = fresh max_fresh
+          val outer_mtype = relation_mtype variable outer_ty
+          val inner_mtype = relation_mtype variable inner_ty
+          val result_mtype = relation_mtype variable result_ty
+        in
+          (MFun (outer_mtype, A Gen,
+             MFun (inner_mtype, A Gen, result_mtype)),
+           (gamma, add_annotation_atom_comp Neq []
+             (V variable) (A New) constraints))
+        end
+
       fun do_pair_constructor ty accum =
         let
           val result_ty = range_after 2 ty
@@ -1167,6 +1206,18 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                   else if MFH.is_named_const
                             {Thy = "pred_set", Name = "SUBSET"} term then
                     do_fragile_operation ty accum
+                  else if MFH.is_named_const
+                            {Thy = "relation", Name = "TC"} term then
+                    (* TC is translated natively as Closure, so mono must
+                       retain Nitpick's fragile-set-operation mtype instead
+                       of reasoning about an unfolded definition. *)
+                    do_fragile_operation ty accum
+                  else if MFH.is_named_const
+                            {Thy = "relation", Name = "inv"} term then
+                    do_converse ty accum
+                  else if MFH.is_named_const
+                            {Thy = "relation", Name = "O"} term then
+                    do_composition ty accum
                   else if is_reserved term andalso
                           MFN.is_sel (variable_name term) then
                     (mtype_for_sel mdata term, accum)
@@ -1689,6 +1740,10 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
     fun mtype_of_type data ty = fresh_mtype_for_type data false ty
     val mtype_of_type_all_minus = fresh_mtype_for_type
     val mtype_for_constr = mtype_for_constr
+    fun mtype_for_term data term =
+      let val (mtype, (_, constraints)) =
+        consider_term data term (initial_gamma, empty_constraints)
+      in (mtype, constraints) end
     fun max_fresh ({max_fresh, ...} : mdata) = !max_fresh
     fun caches_repaired
           ({data_type_mcache, constr_mcache, ...} : mdata) =

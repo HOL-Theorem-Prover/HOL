@@ -73,6 +73,21 @@ Proof
   Cases_on `n` >> simp [arithmeticTheory.num_case_compute]
 QED
 
+(* RTC is presented to the model finder as reflexive closure of TC.  RC is
+   then expanded to equality plus TC, leaving TC as the sole closure
+   primitive that the nut translator must recognize. *)
+Theorem RTC_unfold[refute_unfold]:
+  RTC R = RC (TC R)
+Proof
+  metis_tac [relationTheory.TC_RC_EQNS]
+QED
+
+Theorem RC_unfold[refute_unfold]:
+  RC R x y <=> x = y \/ R x y
+Proof
+  simp [relationTheory.RC_DEF]
+QED
+
 Theorem list_size_simp[refute_simp]:
   list_size f xs =
     if xs = [] then 0

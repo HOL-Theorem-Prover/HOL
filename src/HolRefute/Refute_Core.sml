@@ -189,7 +189,7 @@ structure Refute_Core = struct
       box = [(NONE, NONE)],
       binary_ints = NONE,
       bits = List.tabulate (10, fn n => n + 1),
-      star_linear_preds = false,
+      star_linear_preds = true,
       iter = [(NONE, [0, 1, 2, 4, 8, 12, 16, 20, 24, 28])],
       bisim_depth = [~1],
       finitize = [(NONE, NONE)],
@@ -524,8 +524,6 @@ structure Refute_Core = struct
                        (#bits mf) then
                 range_error "bits" "values must lie between 1 and 31"
               else ()
-      val _ = unchanged "star_linear_preds"
-        (#star_linear_preds mf = #star_linear_preds default_mf_config)
       val _ = if null (#iter mf) orelse
                      List.exists (fn (_, values) => null values orelse
                        List.exists (fn value => value < 0) values) (#iter mf)

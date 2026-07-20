@@ -677,6 +677,24 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     Op1 (Finite, Type.bool, MFR.Any, sub set)
                 end
               else if Term.is_const head andalso
+                      is_named {Thy = "relation", Name = "TC"} head andalso
+                      length arguments = 1 then
+                Op1 (Closure, Term.type_of candidate, MFR.Any,
+                  sub (hd arguments))
+              else if Term.is_const head andalso
+                      is_named {Thy = "relation", Name = "inv"} head andalso
+                      length arguments = 1 then
+                Op1 (Converse, Term.type_of candidate, MFR.Any,
+                  sub (hd arguments))
+              else if Term.is_const head andalso
+                      is_named {Thy = "relation", Name = "O"} head andalso
+                      length arguments = 2 then
+                (* HOL4's R1 O R2 applies R2 first.  Composition's internal
+                   operands are ordered source-to-target, so reverse the
+                   surface arguments (essential for heterogeneous relations). *)
+                Op2 (Composition, Term.type_of candidate, MFR.Any,
+                  sub (List.nth (arguments, 1)), sub (hd arguments))
+              else if Term.is_const head andalso
                       is_named {Thy = "refute", Name = "is_unknown"} head
                       andalso length arguments = 1 then
                 Op1 (IsUnknown, Type.bool, MFR.Any, sub (hd arguments))
