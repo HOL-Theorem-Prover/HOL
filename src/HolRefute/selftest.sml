@@ -4243,7 +4243,219 @@ val _ = tprint "Refute model-finder representations"
 structure MFR = Refute_ModelFinder_Rep
 structure MFK = Refute_ModelFinder_Kodkod
 structure MFM = Refute_ModelFinder_Model
+structure MFNT = Refute_ModelFinder_Nut
 structure MFPH = Refute_ModelFinder_Peephole
+
+fun mf_whack_matching_goldens () =
+  let
+    val polymorphic_identity = ``I : 'a -> 'a``
+    val free = ``whacked_free : num``
+    val config = Refute.upd_whack [polymorphic_identity, free]
+      Refute.default_config
+    val context = MFH.make_context (#mf config) []
+    val number = MFH.unfold_defs_in_term context ``I (3 : num)``
+    val truth = MFH.unfold_defs_in_term context ``I T``
+    val free_value = MFH.unfold_defs_in_term context free
+    val other_free = MFH.unfold_defs_in_term context
+      ``whacked_free : bool``
+    val fixed_config = Refute.upd_whack [``I : num -> num``]
+      Refute.default_config
+    val fixed_context = MFH.make_context (#mf fixed_config) []
+    val fixed_number = MFH.unfold_defs_in_term fixed_context ``I (3 : num)``
+    val fixed_truth = MFH.unfold_defs_in_term fixed_context ``I T``
+    fun unknown_at ty term =
+      case Lib.total Term.dest_thy_const term of
+          SOME {Thy = "refute", Name = "unknown", Ty = actual_ty} =>
+            Type.compare (ty, actual_ty) = EQUAL
+        | _ => false
+  in
+    unknown_at ``:num`` number andalso
+    unknown_at ``:bool`` truth andalso
+    unknown_at ``:num`` free_value andalso
+    Term.aconv other_free ``whacked_free : bool`` andalso
+    unknown_at ``:num`` fixed_number andalso
+    Term.aconv fixed_truth ``I T``
+  end
+
+val _ = require_msg (check_result mf_whack_matching_goldens) (fn () =>
+  "whack did not use constant type-instance matching or exact free matching")
+  (fn () => ()) ()
+
+fun mf_format_grouping_goldens () =
+  let
+    val context = MFH.make_context (#mf Refute.default_config) []
+    val marker = MFN.irrelevant_marker ``:num``
+    val inner = Term.mk_comb
+      (combinSyntax.mk_update (boolSyntax.F, ``1 : num``),
+       combinSyntax.mk_K_1 (marker, ``:bool``))
+    val curried = Term.mk_comb
+      (combinSyntax.mk_update (``0 : num``, inner),
+       combinSyntax.mk_K_1
+         (MFN.irrelevant_marker ``:bool -> num``, ``:num``))
+    val hotel_ty = ``:num -> bool -> num -> bool``
+    val grouped_ty = ``:(num # bool) -> num``
+    val formatted = MFM.format_fun grouped_ty curried
+    val expected = Term.mk_comb
+      (combinSyntax.mk_update
+         (pairSyntax.mk_pair (``0 : num``, boolSyntax.F), ``1 : num``),
+       combinSyntax.mk_K_1 (marker, ``:num # bool``))
+    val hotel_tail = Term.mk_comb
+      (combinSyntax.mk_update (``2 : num``, ``3 : num``),
+       combinSyntax.mk_K_1 (marker, ``:num``))
+    val hotel_middle = Term.mk_comb
+      (combinSyntax.mk_update (boolSyntax.F, hotel_tail),
+       combinSyntax.mk_K_1
+         (MFN.irrelevant_marker ``:num -> num``, ``:bool``))
+    val hotel_value = Term.mk_comb
+      (combinSyntax.mk_update (``0 : num``, hotel_middle),
+       combinSyntax.mk_K_1
+         (MFN.irrelevant_marker ``:bool -> num -> num``, ``:num``))
+    val formatted_hotel = MFM.format_fun
+      ``:num -> (bool # num) -> num`` hotel_value
+    val expected_hotel_tail = Term.mk_comb
+      (combinSyntax.mk_update
+         (pairSyntax.mk_pair (boolSyntax.F, ``2 : num``), ``3 : num``),
+       combinSyntax.mk_K_1 (marker, ``:bool # num``))
+    val expected_hotel = Term.mk_comb
+      (combinSyntax.mk_update (``0 : num``, expected_hotel_tail),
+       combinSyntax.mk_K_1
+         (MFN.irrelevant_marker ``:(bool # num) -> num``, ``:num``))
+    val uncurried_three = Term.mk_comb
+      (combinSyntax.mk_update
+         (pairSyntax.mk_pair
+            (``0 : num``, pairSyntax.mk_pair (boolSyntax.F, ``2 : num``)),
+          ``3 : num``),
+       combinSyntax.mk_K_1 (marker, ``:num # (bool # num)``))
+    val regrouped_three = MFM.format_fun
+      ``:(num # bool) -> num -> num`` uncurried_three
+    val expected_regrouped_three = Term.mk_comb
+      (combinSyntax.mk_update
+         (pairSyntax.mk_pair (``0 : num``, boolSyntax.F), hotel_tail),
+       combinSyntax.mk_K_1
+         (combinSyntax.mk_K_1 (marker, ``:num``), ``:num # bool``))
+    val inner_set = pred_setSyntax.mk_insert
+      (boolSyntax.F, pred_setSyntax.mk_empty ``:bool``)
+    val curried_set = Term.mk_comb
+      (combinSyntax.mk_update (``0 : num``, inner_set),
+       combinSyntax.mk_K_1 (pred_setSyntax.mk_empty ``:bool``, ``:num``))
+    val formatted_set = MFM.format_fun ``:(num # bool) -> bool`` curried_set
+    val expected_set = pred_setSyntax.mk_insert
+      (pairSyntax.mk_pair (``0 : num``, boolSyntax.F),
+       pred_setSyntax.mk_empty ``:num # bool``)
+    val recurried_set = MFM.format_fun ``:num -> bool -> bool`` expected_set
+    val empty_curried_set = combinSyntax.mk_K_1
+      (pred_setSyntax.mk_empty ``:bool``, ``:num``)
+    val formatted_empty_set = MFM.format_fun
+      ``:(num # bool) -> bool`` empty_curried_set
+    val cond_pattern = ``COND : bool -> 'a -> 'a -> 'a``
+    val cond_number = ``COND : bool -> num -> num -> num``
+    val formats = [(SOME cond_pattern, [2]), (NONE, [1])]
+    val instance_ty = MFM.format_term_type context formats cond_number
+    val scope = MFS.scope_from_descriptor context false [] []
+      ([(``:num``, 2)], [])
+    val cond = MFNT.ConstName
+      ("bool$COND", Term.type_of cond_number, MFR.Any)
+    val (cond_names, _) = MFNT.choose_reps_for_consts scope true [cond]
+      MFNT.NameTable.empty
+    val cond_name = hd cond_names
+    val (_, _, cond_rel_table) = MFNT.rename_free_vars cond_names
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+    val bool_offset = MFS.offset_of_type (#ofs scope) ``:bool``
+    val num_offset = MFS.offset_of_type (#ofs scope) ``:num``
+    val cond_tuples = List.concat (List.tabulate (2, fn boolean =>
+      List.concat (List.tabulate (2, fn then_value =>
+        List.tabulate (2, fn else_value =>
+          [bool_offset + boolean, num_offset + then_value,
+           num_offset + else_value, num_offset])))))
+    val cond_bounds =
+      [(MFNT.the_rel cond_rel_table cond_name, cond_tuples)]
+    val displayed = MFM.reconstruct_formatted
+      {context = context, formats = formats, scope = scope,
+       atoms = [(NONE, [])], special_funs = [], real_frees = [],
+       eval_terms = [], free_names = [], sel_names = [],
+       nonsel_names = [cond_name], rel_table = cond_rel_table,
+       bounds = cond_bounds}
+    val display_path_grouped =
+      case #consts displayed of
+          [(lhs, "=", value)] =>
+            Term.same_const lhs cond_number andalso
+            Term.type_of value = ``:bool -> (num # num) -> num``
+        | _ => false
+    val special = MFN.mk_special 1 "bool$COND"
+      ``:bool -> num -> num``
+    val special_formats =
+      [(SOME cond_pattern, [2]), (NONE, [2])]
+    val special_displayed = MFM.reconstruct_formatted
+      {context = context, formats = special_formats, scope = scope,
+       atoms = [(NONE, [])],
+       special_funs = [((cond_number, [1], [``0 : num``]), special)],
+       real_frees = [], eval_terms = [], free_names = [], sel_names = [],
+       nonsel_names =
+         [MFNT.ConstName (#1 (Term.dest_var special), Term.type_of special,
+            MFR.Any)],
+       rel_table = MFNT.NameTable.empty, bounds = []}
+    val special_format_repaired =
+      case #consts special_displayed of
+          [(_, "=", value)] =>
+            Term.type_of value = ``:bool -> num -> num``
+        | _ => false
+    val special_name = #1 (Term.dest_var special)
+    val uncurried_special_name = MFN.uncurry_prefix ^ "2@0" ^
+      MFN.name_sep ^ special_name
+    val uncurried_special = MFM.reconstruct_formatted
+      {context = context, formats = special_formats, scope = scope,
+       atoms = [(NONE, [])],
+       special_funs = [((cond_number, [1], [``0 : num``]), special)],
+       real_frees = [], eval_terms = [], free_names = [], sel_names = [],
+       nonsel_names =
+         [MFNT.ConstName
+            (uncurried_special_name, ``:(bool # num) -> num``, MFR.Any)],
+       rel_table = MFNT.NameTable.empty, bounds = []}
+    val uncurried_special_repaired =
+      case #consts uncurried_special of
+          [(_, "=", value)] =>
+            Term.type_of value = ``:bool -> num -> num``
+        | _ => false
+    val function_free = ``format_free : bool -> num -> num``
+    val function_eval = MFN.mk_eval 0 (Term.type_of function_free)
+    val assignment_displayed = MFM.reconstruct_formatted
+      {context = context, formats = [(NONE, [2])], scope = scope,
+       atoms = [(NONE, [])], special_funs = [],
+       real_frees = [function_free], eval_terms = [function_free],
+       free_names =
+         [MFNT.FreeName (#1 (Term.dest_var function_free),
+            Term.type_of function_free, MFR.Any)],
+       sel_names = [],
+       nonsel_names =
+         [MFNT.ConstName (#1 (Term.dest_var function_eval),
+            Term.type_of function_eval, MFR.Any)],
+       rel_table = MFNT.NameTable.empty, bounds = []}
+    val assignments_grouped =
+      case (#bindings assignment_displayed, #evals assignment_displayed) of
+          ([(_, binding)], [(_, eval)]) =>
+            Term.type_of binding = ``:(bool # num) -> num`` andalso
+            Term.type_of eval = ``:(bool # num) -> num``
+        | _ => false
+  in
+    MFM.format_type [1] [2] ``:num -> bool -> num`` = grouped_ty andalso
+    MFM.format_type [1] [2] hotel_ty =
+      ``:num -> (bool # num) -> bool`` andalso
+    instance_ty = ``:bool -> (num # num) -> num`` andalso
+    Term.type_of formatted = grouped_ty andalso
+    Term.aconv formatted expected andalso
+    Term.aconv formatted_hotel expected_hotel andalso
+    Term.aconv regrouped_three expected_regrouped_three andalso
+    Term.aconv formatted_set expected_set andalso
+    Term.aconv recurried_set curried_set andalso
+    Term.aconv formatted_empty_set
+      (pred_setSyntax.mk_empty ``:num # bool``) andalso
+    display_path_grouped andalso special_format_repaired andalso
+    uncurried_special_repaired andalso assignments_grouped
+  end
+
+val _ = require_msg (check_result mf_format_grouping_goldens) (fn () =>
+  "format argument-grouping or polymorphic lookup golden changed")
+  (fn () => ()) ()
 
 fun mf_quotient_displays () =
   with_quotient_typedef_registries_restored (fn () => let
@@ -4433,8 +4645,6 @@ fun mf_rep_fixed_scope () =
 val _ = require_msg (check_result mf_rep_fixed_scope) (fn () =>
   "model-finder best reps changed on a fixed scope")
   (fn () => ()) ()
-
-structure MFNT = Refute_ModelFinder_Nut
 
 val _ = tprint "Refute model-finder Kodkod bounds and SUA"
 
@@ -7124,6 +7334,44 @@ local
         | _ => false
     end
 
+  fun mf_whack_smoke () =
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val solver =
+        if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
+      val base = default_config
+        |> upd_timeout 20.0
+        |> upd_backends (SOME ["kodkod"])
+        |> upd_sat_solver solver
+        |> upd_evals [``I (1 : num)``]
+        |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
+      val plain = Refute.refute base ``!n : num. n = 0``
+      val whacked = Refute.refute
+        (upd_whack [``I : 'a -> 'a``] base)
+        ``!n : num. n = 0``
+      fun verdict outcome =
+        case outcome of
+            Refute.Counterexample
+              ({certainty = Refute.Genuine, ...} :: _) => SOME 3
+          | Refute.Counterexample
+              ({certainty = Refute.QuasiGenuine _, ...} :: _) => SOME 2
+          | Refute.Counterexample
+              ({certainty = Refute.Potential _, ...} :: _) => SOME 1
+          | Refute.Counterexample [] => NONE
+          | Refute.NoCounterexample => SOME 0
+          | Refute.Unknown _ => NONE
+      fun unknown_eval outcome =
+        case outcome of
+            Refute.Counterexample ({evals = [(_, value)], ...} :: _) =>
+              (case Lib.total Term.dest_var value of
+                   SOME (name, _) => name = "?"
+                 | NONE => false)
+          | _ => false
+    in
+      Option.isSome (verdict plain) andalso
+      verdict plain = verdict whacked andalso unknown_eval whacked
+    end
+
   fun mf_inductive_direct_equation_smoke () =
     let
       val solvers = Refute_ForlSat.configured_sat_solvers false
@@ -7384,6 +7632,12 @@ in
       require_msg (check_result mf_driver_smoke) (fn () =>
         "the gated model-finder smoke did not find a certified " ^
         "counterexample") (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_whack_smoke) (fn () =>
+        "whack changed the verdict or failed to display an unknown value")
+        (fn () => ()) ()
     else ()
   val _ =
     if bridge_configured then
@@ -7830,6 +8084,19 @@ fun need_default_and_unlock_are_pinned () =
 val _ = require_msg
   (check_result need_default_and_unlock_are_pinned) (fn () =>
   "need default or user values remain guarded") (fn () => ()) ()
+
+fun whack_default_and_unlock_are_pinned () =
+  let
+    val values = [``I : 'a -> 'a``, ``whacked_free : num``]
+    val updated = Refute.upd_whack values Refute.default_config
+  in
+    null (#whack (#mf Refute.default_config)) andalso
+    same_terms (#whack (#mf updated)) values
+  end
+
+val _ = require_msg
+  (check_result whack_default_and_unlock_are_pinned) (fn () =>
+  "whack default or user values remain guarded") (fn () => ()) ()
 
 val _ = List.app m4_guard_is_pinned
   [("max_potential", fn () =>

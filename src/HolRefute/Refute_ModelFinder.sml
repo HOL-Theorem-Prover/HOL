@@ -447,7 +447,7 @@ fun run_instance deadline started (config : Refute_Core.config)
     fun reconstruct problem bounds =
       let
         val extension = metadata problem
-        val reconstructed = MFM.reconstruct
+        val arguments =
           {scope = #scope extension,
            atoms = #atoms mf,
            special_funs = !(#special_funs context),
@@ -458,6 +458,18 @@ fun run_instance deadline started (config : Refute_Core.config)
            nonsel_names = #nonsel_names extension,
            rel_table = #rel_table extension,
            bounds = bounds}
+        val reconstructed = MFM.reconstruct arguments
+        val displayed = MFM.reconstruct_formatted
+          {context = context, formats = #format mf,
+           scope = #scope arguments, atoms = #atoms arguments,
+           special_funs = #special_funs arguments,
+           real_frees = #real_frees arguments,
+           eval_terms = #eval_terms arguments,
+           free_names = #free_names arguments,
+           sel_names = #sel_names arguments,
+           nonsel_names = #nonsel_names arguments,
+           rel_table = #rel_table arguments,
+           bounds = #bounds arguments}
         val sound = not (#unsound extension)
         val scope_has_codatatype =
           List.exists #co (#data_types (#scope extension))
@@ -476,16 +488,20 @@ fun run_instance deadline started (config : Refute_Core.config)
            genuine_means_genuine = genuine_formula,
            reasons = reasons} of
             MFM.Drop => NONE
-          | MFM.Keep cex =>
-              if #genuine_only config andalso
-                 certainty_is_potential (#certainty cex)
-              then NONE
-              else
-                (counterexamples := cex :: !counterexamples;
-                 if certainty_is_potential (#certainty cex) then
-                   met_potential := !met_potential + 1
-                 else ();
-                 SOME cex)
+          | MFM.Keep semantic_cex =>
+              let val cex =
+                MFM.display_counterexample displayed semantic_cex
+              in
+                if #genuine_only config andalso
+                   certainty_is_potential (#certainty cex)
+                then NONE
+                else
+                  (counterexamples := cex :: !counterexamples;
+                   if certainty_is_potential (#certainty cex) then
+                     met_potential := !met_potential + 1
+                   else ();
+                   SOME cex)
+              end
       end
 
     fun solve_any_problem state first_time problems =

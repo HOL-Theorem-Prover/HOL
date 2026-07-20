@@ -4406,7 +4406,18 @@ structure Refute_ModelFinder_HOL = struct
         (context as {case_names, ersatz_table, whacks, total_consts, ...}
           : mf_context) term =
     let
-      fun whacked candidate = List.exists (Term.aconv candidate) whacks
+      fun whack_matches pattern candidate =
+        case (Lib.total Term.dest_thy_const pattern,
+              Lib.total Term.dest_thy_const candidate) of
+            (SOME {Thy = pattern_thy, Name = pattern_name, ...},
+             SOME {Thy = actual_thy, Name = actual_name, ...}) =>
+              pattern_thy = actual_thy andalso
+              pattern_name = actual_name andalso
+              type_matches_unboxed
+                (Term.type_of pattern, Term.type_of candidate)
+          | _ => Term.aconv pattern candidate
+      fun whacked candidate =
+        List.exists (fn pattern => whack_matches pattern candidate) whacks
       fun process_args depth arguments = map (do_term depth) arguments
       and do_term depth candidate =
         if is_numeral candidate then candidate

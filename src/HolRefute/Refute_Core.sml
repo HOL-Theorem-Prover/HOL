@@ -533,7 +533,6 @@ structure Refute_Core = struct
               then range_error "bisim_depth"
                 "values must be -1 or nonnegative"
               else ()
-      val _ = if null (#whack mf) then () else m4_error "whack"
       val _ = if #max_potential mf > 1 then m4_error "max_potential"
               else ()
       val _ = if #max_genuine mf > 1 then m4_error "max_genuine"

@@ -37,6 +37,12 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   val user_friendly_const :
     Refute_ModelFinder_HOL.special_fun list -> string -> hol_type -> term
 
+  val format_type : int list -> int list -> hol_type -> hol_type
+  val format_term_type :
+    Refute_ModelFinder_HOL.mf_context ->
+    (term option * int list) list -> term -> hol_type
+  val format_fun : hol_type -> term -> term
+
   val bisimilar_values :
     hol_type list -> int -> term * term -> bool
 
@@ -52,7 +58,23 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
      bounds : raw_bound list} -> reconstruction
 
+  val reconstruct_formatted :
+    {context : Refute_ModelFinder_HOL.mf_context,
+     formats : (term option * int list) list,
+     scope : scope,
+     atoms : (hol_type option * string list) list,
+     special_funs : Refute_ModelFinder_HOL.special_fun list,
+     real_frees : term list,
+     eval_terms : term list,
+     free_names : nut list,
+     sel_names : nut list,
+     nonsel_names : nut list,
+     rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
+     bounds : raw_bound list} -> reconstruction
+
   val model_report : reconstruction -> Refute_Core.model_report
+  val display_counterexample :
+    reconstruction -> Refute_Core.counterexample -> Refute_Core.counterexample
   val assignment_operator : string -> string
   val certification_env :
     (term * term) list -> (term * term) list option
@@ -719,6 +741,469 @@ fun user_friendly_const special_funs name ty =
   end handle HOL_ERR _ => Term.mk_var (MFN.original_name name,
     MFH.uniterize_unarize_unbox_etc_type ty)
 
+fun positive_format format = List.filter (fn count => count > 0) format
+
+fun last_and_front values =
+  case rev values of
+      last :: rest => (rev rest, last)
+    | [] => raise err "last_and_front" "empty format"
+
+fun intersect_formats _ [] = []
+  | intersect_formats [] _ = []
+  | intersect_formats left right =
+      let
+        val (left_front, left_last) = last_and_front left
+        val (right_front, right_last) = last_and_front right
+        val next_left = left_front @
+          (if left_last > right_last then [left_last - right_last] else [])
+        val next_right = right_front @
+          (if right_last > left_last then [right_last - left_last] else [])
+      in
+        intersect_formats next_left next_right @
+        [Int.min (left_last, right_last)]
+      end
+
+fun format_type default_format requested ty =
+  let
+    val ty = MFH.uniterize_unarize_unbox_etc_type ty
+    val requested = positive_format requested
+  in
+    if List.all (fn count => count = 1) requested then ty
+    else
+      let
+        val (argument_tys, result_ty) = boolSyntax.strip_fun ty
+        val formatted_arguments = map
+          (format_type default_format default_format) argument_tys
+        val reverse_groups = MFU.chunk_list_unevenly (rev requested)
+          (rev formatted_arguments)
+        val grouped = rev
+          (map (pairSyntax.list_mk_prod o rev) reverse_groups)
+      in
+        boolSyntax.list_mk_fun (grouped, result_ty)
+      end
+  end
+
+fun format_term_matches pattern actual =
+  case (Lib.total Term.dest_thy_const pattern,
+        Lib.total Term.dest_thy_const actual) of
+      (SOME {Thy = pattern_thy, Name = pattern_name, ...},
+       SOME {Thy = actual_thy, Name = actual_name, ...}) =>
+        pattern_thy = actual_thy andalso pattern_name = actual_name andalso
+        MFH.type_matches_unboxed
+          (Term.type_of pattern, Term.type_of actual)
+    | _ => Term.aconv pattern actual
+
+fun binder_count ty = length (#1 (boolSyntax.strip_fun
+  (MFH.uniterize_unarize_unbox_etc_type ty)))
+
+fun abstraction_count term =
+  if Term.is_abs term then 1 + abstraction_count (Term.body term) else 0
+
+fun const_format context term =
+  let
+    val count = binder_count (Term.type_of term)
+  in
+    if Term.is_const term then
+      case MFH.def_of_const context term of
+          SOME rhs =>
+            if MFH.raw_fixpoint_kind term <> MFH.NoFp orelse
+               MFH.fixpoint_kind_of_rhs rhs <> MFH.NoFp then
+              let val fixed = Int.min (count, abstraction_count rhs)
+              in [fixed, count - fixed] end
+            else [count]
+        | NONE => [count]
+    else
+      [count]
+  end
+
+fun default_format formats =
+  case List.find (fn (key, _) => not (Option.isSome key)) formats of
+      SOME (_, format) => format
+    | NONE => [1]
+
+fun lookup_format context formats term =
+  case List.find (fn (key, _) =>
+         case key of
+             SOME pattern => format_term_matches pattern term
+           | NONE => false) formats of
+      SOME (_, format) => format
+    | NONE => intersect_formats (default_format formats)
+        (const_format context term)
+
+fun format_term_type context formats term =
+  format_type (default_format formats) (lookup_format context formats term)
+    (Term.type_of term)
+
+fun format_metadata_name name =
+  case uncurry_info name of
+      SOME (_, _, original) => format_metadata_name original
+    | NONE => name
+
+fun skolem_arity name =
+  if MFN.is_skolem_name name then
+    let
+      val suffix = String.extract (name, size MFN.skolem_prefix, NONE)
+      val (arity, _) = Substring.position "@" (Substring.full suffix)
+    in
+      Int.fromString (Substring.string arity)
+    end
+  else
+    NONE
+
+fun repair_special_format fixed_indices count format =
+  let
+    val indices = rev (MFU.index_seq 0 count)
+    val chunks = MFU.chunk_list_unevenly (rev (positive_format format))
+      indices
+    fun retained chunk = List.filter (fn index =>
+      not (List.exists (fn fixed => fixed = index) fixed_indices)) chunk
+  in
+    rev (map length (List.filter (not o null) (map retained chunks)))
+  end
+
+fun special_format context formats special_funs name =
+  let
+    fun generated_name (_, generated) =
+      case Lib.total Term.dest_var generated of
+          SOME (candidate, _) => candidate = name
+        | NONE => false
+  in
+    case List.find generated_name special_funs of
+        SOME ((original, fixed_indices, _), _) =>
+          let
+            val original_count = binder_count (Term.type_of original)
+            val format =
+              case List.find (fn (key, _) =>
+                     case key of
+                         SOME pattern => format_term_matches pattern original
+                       | NONE => false) formats of
+                  SOME (_, requested) =>
+                    repair_special_format fixed_indices original_count
+                      requested
+                | NONE => intersect_formats (default_format formats)
+                    (repair_special_format fixed_indices original_count
+                      (const_format context original))
+          in
+            SOME format
+          end
+      | NONE => NONE
+  end
+
+fun format_term_type_for_name context formats special_funs name term =
+  let val metadata_name = format_metadata_name name in
+  case special_format context formats special_funs metadata_name of
+      SOME format =>
+        format_type (default_format formats) format (Term.type_of term)
+    | NONE =>
+        (case List.find (fn (key, _) =>
+                 case key of
+                     SOME pattern => format_term_matches pattern term
+                   | NONE => false) formats of
+             SOME (_, format) =>
+               format_type (default_format formats) format
+                 (Term.type_of term)
+           | NONE =>
+               (case skolem_arity metadata_name of
+                    SOME fixed =>
+                      let val count = binder_count (Term.type_of term)
+                      in
+                        format_type (default_format formats)
+                          (intersect_formats (default_format formats)
+                            [Int.min (fixed, count),
+                             Int.max (0, count - fixed)])
+                          (Term.type_of term)
+                      end
+                  | NONE => format_term_type context formats term))
+  end
+
+fun pair_leaves ty =
+  if MFH.is_pair_type ty then
+    let val (left, right) = pairSyntax.dest_prod ty
+    in pair_leaves left @ pair_leaves right end
+  else
+    [ty]
+
+fun flatten_pair_term ty term =
+  if MFH.is_pair_type ty then
+    let
+      val (left_ty, right_ty) = pairSyntax.dest_prod ty
+      val (left, right) = pairSyntax.dest_pair term
+    in
+      flatten_pair_term left_ty left @ flatten_pair_term right_ty right
+    end
+  else
+    [term]
+
+fun build_pair_term ty terms =
+  if MFH.is_pair_type ty then
+    let
+      val (left_ty, right_ty) = pairSyntax.dest_prod ty
+      val (left, terms) = build_pair_term left_ty terms
+      val (right, terms) = build_pair_term right_ty terms
+    in
+      (pairSyntax.mk_pair (left, right), terms)
+    end
+  else
+    case terms of
+        term :: rest =>
+          if same_type ty (Term.type_of term) then (term, rest)
+          else raise err "build_pair_term" "tuple leaf type mismatch"
+      | [] => raise err "build_pair_term" "not enough tuple leaves"
+
+fun reshape_pair target_ty source_ty term =
+  let
+    val source_leaves = pair_leaves source_ty
+    val target_leaves = pair_leaves target_ty
+    val _ = if Lib.list_eq same_type source_leaves target_leaves then ()
+      else raise err "reshape_pair" "tuple types have different leaves"
+    val (result, rest) = build_pair_term target_ty
+      (flatten_pair_term source_ty term)
+  in
+    if null rest then result
+    else raise err "reshape_pair" "unused tuple leaves"
+  end
+
+fun marker_with_type ty marker =
+  case Lib.total Term.dest_var marker of
+      SOME (name, _) => Term.mk_var (name, ty)
+    | NONE =>
+        if same_type ty (Term.type_of marker) then marker
+        else raise err "marker_with_type" "cannot retype function base"
+
+fun dest_display_fun term =
+  case Lib.total combinSyntax.dest_update_comb term of
+      SOME ((point, value), base) =>
+        let val (marker, pairs) = dest_display_fun base
+        in (marker, pairs @ [(point, value)]) end
+    | NONE =>
+        if combinSyntax.is_K_1 term then
+          (combinSyntax.dest_K_1 term, [])
+        else
+          raise err "dest_display_fun" "not a reconstructed function"
+
+fun make_display_fun domain_ty marker pairs =
+  List.foldl (fn (pair, base) => make_update pair base)
+    (combinSyntax.mk_K_1 (marker, domain_ty)) pairs
+
+fun dest_literal_set term =
+  if pred_setSyntax.is_empty term then SOME []
+  else
+    case Lib.total pred_setSyntax.dest_insert term of
+        SOME (element, rest) =>
+          Option.map (fn elements => element :: elements)
+            (dest_literal_set rest)
+      | NONE => NONE
+
+fun make_literal_set element_ty elements =
+  List.foldr (fn (element, set) =>
+      pred_setSyntax.mk_insert (element, set))
+    (pred_setSyntax.mk_empty element_ty) elements
+
+fun factor_count ty =
+  if MFH.is_pair_type ty then
+    let val (left, right) = pairSyntax.dest_prod ty
+    in factor_count left + factor_count right end
+  else 1
+
+fun factor_out_types left right =
+  if MFH.is_pair_type left andalso MFH.is_pair_type right then
+    let
+      val (left_head, left_tail) = pairSyntax.dest_prod left
+      val (right_head, right_tail) = pairSyntax.dest_prod right
+      val left_count = factor_count left_head
+      val right_count = factor_count right_head
+    in
+      if left_count = right_count then
+        let
+          val ((left_prefix, left_rest),
+               (right_prefix, right_rest)) =
+            factor_out_types left_tail right_tail
+        in
+          ((pairSyntax.mk_prod (left_head, left_prefix), left_rest),
+           (pairSyntax.mk_prod (right_head, right_prefix), right_rest))
+        end
+      else if left_count < right_count then
+        (case factor_out_types left right_head of
+             (left_parts, (right_prefix, NONE)) =>
+               (left_parts, (right_prefix, SOME right_tail))
+           | (left_parts, (right_prefix, SOME right_rest)) =>
+               (left_parts,
+                (right_prefix,
+                 SOME (pairSyntax.mk_prod (right_rest, right_tail)))))
+      else
+        let val (right_parts, left_parts) =
+          factor_out_types right left
+        in (left_parts, right_parts) end
+    end
+  else if MFH.is_pair_type left then
+    let val (first, second) = pairSyntax.dest_prod left
+    in ((first, SOME second), (right, NONE)) end
+  else if MFH.is_pair_type right then
+    let val (first, second) = pairSyntax.dest_prod right
+    in ((left, NONE), (first, SOME second)) end
+  else
+    ((left, NONE), (right, NONE))
+
+fun format_fun target_ty term =
+  let
+    fun deepest_marker target candidate =
+      case Lib.total dest_display_fun candidate of
+          SOME (marker, _) =>
+            if MFH.is_fun_type (Term.type_of marker) then
+              deepest_marker target marker
+            else marker_with_type target marker
+        | NONE => marker_with_type target candidate
+
+    fun split_point source_ty left_ty right_ty point =
+      let
+        val leaves = flatten_pair_term source_ty point
+        val (left, leaves) = build_pair_term left_ty leaves
+        val (right, leaves) = build_pair_term right_ty leaves
+      in
+        if null leaves then (left, right)
+        else raise err "format_fun" "unused curried tuple leaves"
+      end
+
+    fun add_group ((left, right, value), []) =
+          [(left, [(right, value)])]
+      | add_group ((left, right, value), (key, pairs) :: rest) =
+          if Term.aconv left key then
+            (key, pairs @ [(right, value)]) :: rest
+          else
+            (key, pairs) ::
+              add_group ((left, right, value), rest)
+
+    fun curry_fun source_domain left_ty right_ty source_range candidate =
+      let
+        fun triples pairs = map (fn (point, value) =>
+          let val (left, right) =
+            split_point source_domain left_ty right_ty point
+          in (left, right, value) end) pairs
+        fun grouped pairs = List.foldl add_group [] (triples pairs)
+        fun ordinary marker pairs =
+          let
+            val groups = grouped pairs
+            val inner_base = marker_with_type source_range marker
+            fun inner entries = make_display_fun right_ty inner_base entries
+            val outer_base = make_display_fun right_ty inner_base []
+          in
+            make_display_fun left_ty outer_base
+              (map (fn (left, entries) => (left, inner entries)) groups)
+          end
+        fun set_value entries = make_literal_set right_ty
+          (map #1 entries)
+      in
+        case Lib.total dest_display_fun candidate of
+            SOME (marker, pairs) => ordinary marker pairs
+          | NONE =>
+              (case dest_literal_set candidate of
+                   SOME elements =>
+                     if MFH.is_boolean_type source_range then
+                       let
+                         val groups = grouped
+                           (map (fn element => (element, boolSyntax.T)) elements)
+                         val outer_base = make_literal_set right_ty []
+                       in
+                         make_display_fun left_ty outer_base
+                           (map (fn (left, entries) =>
+                             (left, set_value entries)) groups)
+                       end
+                     else
+                       raise err "format_fun" "set with non-boolean range"
+                 | NONE => marker_with_type
+                     (Type.-->(left_ty, Type.-->(right_ty, source_range)))
+                     candidate)
+      end
+
+    fun uncurry_fun target_domain target_range candidate =
+      case Lib.total dest_display_fun candidate of
+          NONE => marker_with_type
+            (Type.-->(target_domain, target_range)) candidate
+        | SOME (outer_marker, outer_pairs) =>
+          let
+            fun expand (left, inner) =
+              let
+                val (inner_pairs, was_set) =
+                  case Lib.total dest_display_fun inner of
+                      SOME (_, pairs) => (pairs, false)
+                    | NONE =>
+                        (case dest_literal_set inner of
+                             SOME elements =>
+                               (map (fn element =>
+                                  (element, boolSyntax.T)) elements, true)
+                           | NONE => ([], false))
+              in
+                (map (fn (right, value) =>
+                   (reshape_pair target_domain
+                      (pairSyntax.mk_prod
+                        (Term.type_of left, Term.type_of right))
+                      (pairSyntax.mk_pair (left, right)), value)) inner_pairs,
+                 was_set)
+              end
+            val expanded = map expand outer_pairs
+            val pairs = List.concat (map #1 expanded)
+            val all_sets = MFH.is_boolean_type target_range andalso
+              List.all #2 expanded andalso
+              (not (null expanded) orelse
+               Option.isSome (dest_literal_set outer_marker))
+          in
+            if all_sets then
+              make_literal_set target_domain
+                (map #1 (List.filter
+                  (fn (_, value) => Term.aconv value boolSyntax.T) pairs))
+            else
+              make_display_fun target_domain
+                (deepest_marker target_range outer_marker) pairs
+          end
+
+    fun do_arrow target_domain target_range source_domain source_range
+          candidate =
+      case Lib.total dest_display_fun candidate of
+          NONE => marker_with_type (Type.-->(target_domain, target_range))
+            candidate
+        | SOME (marker, pairs) =>
+            make_display_fun target_domain
+              (do_term target_range source_range marker)
+              (map (fn (point, value) =>
+                (do_term target_domain source_domain point,
+                 do_term target_range source_range value)) pairs)
+
+    and do_fun target_domain target_range source_domain source_range
+          candidate =
+      case factor_out_types target_domain source_domain of
+          ((_, NONE), (_, NONE)) =>
+            do_arrow target_domain target_range source_domain source_range
+              candidate
+        | ((_, NONE), (source_left, SOME source_right)) =>
+            do_arrow target_domain target_range source_left
+              (Type.-->(source_right, source_range))
+              (curry_fun source_domain source_left source_right source_range
+                 candidate)
+        | ((target_left, SOME target_right), (_, NONE)) =>
+            uncurry_fun target_domain target_range
+              (do_arrow target_left
+                 (Type.-->(target_right, target_range))
+                 source_domain source_range candidate)
+        | _ => raise err "format_fun" "incompatible function grouping"
+
+    and do_term target source candidate =
+      if same_type target source then candidate
+      else if MFH.is_fun_type target andalso MFH.is_fun_type source then
+        let
+          val (target_domain, target_range) = Type.dom_rng target
+          val (source_domain, source_range) = Type.dom_rng source
+        in
+          do_fun target_domain target_range source_domain source_range
+            candidate
+        end
+      else if MFH.is_pair_type target andalso MFH.is_pair_type source then
+        reshape_pair target source candidate
+      else
+        marker_with_type target candidate
+  in
+    do_term target_ty (Term.type_of term) term
+  end
+
 fun lhs_for_constant special_funs name ty =
   user_friendly_const special_funs name ty
 
@@ -784,8 +1269,9 @@ fun bisimilar_values _ 0 _ = true
           Term.aconv left right
       end
 
-fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
-                 free_names, sel_names, nonsel_names, rel_table, bounds} =
+fun reconstruct_with formatting
+      {scope, atoms, special_funs, real_frees, eval_terms,
+       free_names, sel_names, nonsel_names, rel_table, bounds} =
   let
     val context =
       {scope = scope, atoms = atoms, sel_names = sel_names,
@@ -800,9 +1286,18 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
             (MFNT.type_of name) representation
             (tuples_for_name context name)
 
+    fun formatted_value key value =
+      case formatting of
+          NONE => value
+        | SOME (format_context, formats) =>
+            Option.getOpt
+              (Lib.total (format_fun
+                (format_term_type format_context formats key)) value,
+               value)
+
     fun binding term =
       let val name = free_name_for_term free_names term
-      in (term, decode name) end
+      in (term, formatted_value term (decode name)) end
 
     fun curry_uncurried_value nickname display_ty value =
       case uncurry_info nickname of
@@ -819,11 +1314,11 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
                 end
               val (_, _, variables) = List.foldl add_variable
                 (0, Term.all_vars value, []) argument_tys
-              val before = List.take (variables, prefix)
+              val leading = List.take (variables, prefix)
               val tuple = List.take (List.drop (variables, prefix), count)
-              val after = List.drop (variables, prefix + count)
+              val trailing = List.drop (variables, prefix + count)
               val body = Term.list_mk_comb
-                (value, before @ [pairSyntax.list_mk_pair tuple] @ after)
+                (value, leading @ [pairSyntax.list_mk_pair tuple] @ trailing)
             in
               MFH.eta_contract (Term.list_mk_abs (variables, body))
             end
@@ -834,22 +1329,38 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
         val raw_value = decode name
         val lhs = lhs_for_constant special_funs nickname
           (MFNT.type_of name)
-        val value = curry_uncurried_value nickname (Term.type_of lhs)
-          raw_value
+        val ordinary_value = curry_uncurried_value nickname
+          (Term.type_of lhs) raw_value
+        val display_value =
+          case formatting of
+              NONE => ordinary_value
+            | SOME (context, formats) =>
+                Option.getOpt
+                  (Lib.total (format_fun
+                    (format_term_type_for_name context formats special_funs
+                      nickname lhs))
+                     raw_value,
+                   ordinary_value)
       in
         if MFNT.is_skolem_name name then
-          (evals, (MFN.original_name nickname, value) :: skolems, consts)
+          (evals, (MFN.original_name nickname, display_value) :: skolems,
+           consts)
         else
           case eval_index nickname of
               SOME index =>
                 if index < length eval_terms then
-                  ((List.nth (eval_terms, index), value) :: evals,
-                   skolems, consts)
+                  let val eval_term = List.nth (eval_terms, index)
+                  in
+                    ((eval_term, formatted_value eval_term ordinary_value) ::
+                       evals,
+                     skolems, consts)
+                  end
                 else
                   (evals, skolems, consts)
             | NONE =>
                 (evals, skolems,
-                 (lhs, assignment_operator nickname, value) :: consts)
+                 (lhs, assignment_operator nickname, display_value) ::
+                   consts)
       end
 
     fun is_bisim_support name =
@@ -923,8 +1434,27 @@ fun reconstruct {scope, atoms, special_funs, real_frees, eval_terms,
      codatatypes_ok = codatatypes_ok}
   end
 
+fun reconstruct arguments = reconstruct_with NONE arguments
+
+fun reconstruct_formatted
+      {context, formats, scope, atoms, special_funs, real_frees, eval_terms,
+       free_names, sel_names, nonsel_names, rel_table, bounds} =
+  reconstruct_with (SOME (context, formats))
+    {scope = scope, atoms = atoms, special_funs = special_funs,
+     real_frees = real_frees, eval_terms = eval_terms,
+     free_names = free_names, sel_names = sel_names,
+     nonsel_names = nonsel_names, rel_table = rel_table, bounds = bounds}
+
 fun model_report ({skolems, consts, types, ...} : reconstruction) =
   {skolems = skolems, consts = consts, types = types}
+
+fun display_counterexample
+      (reconstructed : reconstruction)
+      (cex : Refute_Core.counterexample) : Refute_Core.counterexample =
+  {backend = #backend cex, substrate = #substrate cex,
+   certainty = #certainty cex, bindings = #bindings reconstructed,
+   evals = #evals reconstructed, cert = #cert cex, scope = #scope cex,
+   model = SOME (model_report reconstructed), stats = #stats cex}
 
 fun replace_irrelevant term =
   if combinSyntax.is_K_1 term then
