@@ -508,10 +508,6 @@ structure Refute_Core = struct
       use_subtype = #use_subtype qc, seed = #seed qc,
       smart_quantifier = #smart_quantifier qc, optimise_equality = value })
 
-  fun m4_error field =
-    raise Feedback.mk_HOL_ERR "Refute_Core" "validate_mf_config"
-      (field ^ ": not implemented until M4")
-
   fun range_error field explanation =
     raise Feedback.mk_HOL_ERR "Refute_Core" "validate_mf_config"
       (field ^ ": " ^ explanation)
@@ -532,10 +528,6 @@ structure Refute_Core = struct
                      List.exists (fn depth => depth < ~1) (#bisim_depth mf)
               then range_error "bisim_depth"
                 "values must be -1 or nonnegative"
-              else ()
-      val _ = if #max_potential mf > 1 then m4_error "max_potential"
-              else ()
-      val _ = if #max_genuine mf > 1 then m4_error "max_genuine"
               else ()
       (* A zero genuine budget makes the model finder return without ever
          calling the solver, which would otherwise be reported as "no

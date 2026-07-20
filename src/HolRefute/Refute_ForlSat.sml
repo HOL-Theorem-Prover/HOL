@@ -127,7 +127,8 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
   fun configured_sat_solvers incremental =
     List.map #1 (dynamic_list Time.zeroTime incremental)
 
-  fun smart_sat_solver_name _ = "SAT4J"
+  fun smart_sat_solver_name incremental =
+    #1 (hd (dynamic_list Time.zeroTime incremental))
 
   fun quote text = "\"" ^ text ^ "\""
 

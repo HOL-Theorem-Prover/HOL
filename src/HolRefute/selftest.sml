@@ -6919,12 +6919,18 @@ local
      formula = formula}
 
   fun solver_surface_is_correct () =
-    let val solvers = Refute_ForlSat.configured_sat_solvers false
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val incremental = Refute_ForlSat.configured_sat_solvers true
     in
       Lib.mem "MiniSat_JNI" solvers andalso
+      Lib.mem "MiniSat_JNI" incremental andalso
       not (Lib.mem "Lingeling_JNI" solvers) andalso
       not (Lib.mem "CryptoMiniSat_JNI" solvers) andalso
-      Refute_ForlSat.smart_sat_solver_name false = "SAT4J"
+      not (null solvers) andalso not (null incremental) andalso
+      Refute_ForlSat.smart_sat_solver_name false = hd solvers andalso
+      Refute_ForlSat.smart_sat_solver_name true = hd incremental andalso
+      Refute_ForlSat.smart_sat_solver_name true = "SAT4J"
     end
 
   fun native_preflight () =
@@ -8029,15 +8035,6 @@ val _ = require_msg
   "star_linear_preds is not enabled by default or remains guarded")
   (fn () => ()) ()
 
-fun m4_guard_is_pinned (field, testfn) = shouldfail {
-  checkexn = check_HOL_ERRexn
-    (fn (_, _, message) =>
-      message = field ^ ": not implemented until M4"),
-  printarg = K (field ^ " M4 guard"),
-  printresult = K "<config>",
-  testfn = testfn
-} ()
-
 fun binary_int_defaults_and_unlock_are_pinned () =
   let
     val forced = Refute.upd_binary_ints (SOME true) Refute.default_config
@@ -8098,11 +8095,32 @@ val _ = require_msg
   (check_result whack_default_and_unlock_are_pinned) (fn () =>
   "whack default or user values remain guarded") (fn () => ()) ()
 
-val _ = List.app m4_guard_is_pinned
-  [("max_potential", fn () =>
-      Refute.upd_max_potential 2 Refute.default_config),
-   ("max_genuine", fn () =>
-      Refute.upd_max_genuine 2 Refute.default_config)]
+fun multi_model_ranges_are_live () =
+  let
+    val updated = Refute.default_config
+      |> Refute.upd_max_potential 2
+      |> Refute.upd_max_genuine 3
+  in
+    #max_potential (#mf updated) = 2 andalso
+    #max_genuine (#mf updated) = 3
+  end
+
+val _ = require_msg (check_result multi_model_ranges_are_live) (fn () =>
+  "multi-model budget ranges remain guarded or clamped") (fn () => ()) ()
+
+fun liberal_budget_accounting_is_pinned () =
+  Refute_ModelFinder.liberal_budget_after_models
+    {max_potential = 2, max_genuine = 3, delivered = 1,
+     promoted = false} = (1, 3) andalso
+  Refute_ModelFinder.liberal_budget_after_models
+    {max_potential = 2, max_genuine = 3, delivered = 3,
+     promoted = false} = (~1, 3) andalso
+  Refute_ModelFinder.liberal_budget_after_models
+    {max_potential = 2, max_genuine = 3, delivered = 2,
+     promoted = true} = (0, 2)
+
+val _ = require_msg (check_result liberal_budget_accounting_is_pinned)
+  (fn () => "liberal-model budget accounting changed") (fn () => ()) ()
 
 (* A zero genuine budget would make the model finder return before calling
    the solver, reporting "no counterexample" for a goal never searched. *)
@@ -12214,6 +12232,159 @@ fun mf_mono_driver_scope_fusion solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
+fun distinct_terms terms =
+  List.foldl (fn (tm, seen) =>
+    if List.exists (fn old => Term.aconv old tm) seen then seen
+    else tm :: seen) [] terms
+
+fun binding_value variable ({bindings, ...} : Refute.counterexample) =
+  Option.map #2 (List.find (fn (candidate, _) =>
+    Term.aconv candidate variable) bindings)
+
+fun mf_incremental_genuine_models solver =
+  let
+    val _ = tprint "Refute MF incremental genuine models"
+    val variable = ``x : refute$rf3``
+    val config = mf_acceptance_config solver
+      |> Refute.upd_card
+           [(SOME ``:refute$rf3``, [3]), (NONE, [1])]
+      |> Refute.upd_max_potential 0
+      |> Refute.upd_max_genuine 3
+    val outcome = with_silent_refute (fn () =>
+      Refute.refute config ``(x : refute$rf3) = rf3_1``)
+    val ok =
+      case outcome of
+          Refute.Counterexample cexs =>
+            let
+              val values = List.mapPartial (binding_value variable) cexs
+            in
+              length (distinct_terms values) >= 2 andalso
+              List.all (fn ({certainty, cert, ...} :
+                  Refute.counterexample) =>
+                certainty = Refute.Genuine andalso Option.isSome cert) cexs
+            end
+        | _ => false
+  in
+    if ok then OK ()
+    else die ("incremental genuine-model pin failed: " ^
+      mf_pin_outcome_name outcome)
+  end
+  handle e => die (Feedback.exn_to_string e)
+
+fun mf_incremental_potential_models solver =
+  let
+    val _ = tprint "Refute MF incremental potential models"
+    val config = mf_acceptance_config solver
+      |> Refute.upd_card
+           [(SOME ``:num``, [2]), (SOME ``:refute$rf3``, [3]),
+            (NONE, [1])]
+      |> Refute.upd_max_potential 2
+      |> Refute.upd_max_genuine 1
+    val outcome = with_silent_refute (fn () =>
+      Refute.refute config
+        ``?n : num. n <> n \/ (x : refute$rf3) = rf3_1``)
+    val ok =
+      case outcome of
+          Refute.Counterexample cexs =>
+            not (null cexs) andalso length cexs <= 2 andalso
+            List.all (fn ({certainty, cert, stats, ...} :
+                Refute.counterexample) =>
+              (case certainty of Refute.Potential _ => true | _ => false)
+              andalso not (Option.isSome cert) andalso
+              lookup_stat "met_potential" stats = SOME (length cexs)) cexs
+        | _ => false
+  in
+    if ok then OK ()
+    else die ("incremental potential-model pin failed: " ^
+      mf_pin_outcome_name outcome)
+  end
+  handle e => die (Feedback.exn_to_string e)
+
+fun mf_genuine_stops_potential solver =
+  let
+    val _ = tprint "Refute MF genuine stops potential search"
+    val config = mf_acceptance_config solver
+      |> Refute.upd_batch_size 1
+      |> Refute.upd_card
+           [(SOME ``:num``, [2]), (SOME ``:num list``, [1, 2]),
+            (NONE, [1])]
+      |> Refute.upd_max_potential 2
+      |> Refute.upd_max_genuine 2
+    val outcome = with_silent_refute (fn () =>
+      Refute.refute config ``xs <> [] ==> HD (xs : num list) = 0``)
+    fun certified_genuine ({certainty, cert, ...} :
+        Refute.counterexample) =
+      certainty = Refute.Genuine andalso Option.isSome cert
+    val ok =
+      case outcome of
+          Refute.Counterexample cexs =>
+            length cexs <= 2 andalso
+            List.exists certified_genuine cexs andalso
+            List.all (fn ({certainty, ...} : Refute.counterexample) =>
+              case certainty of Refute.Potential _ => false | _ => true)
+              cexs
+        | _ => false
+  in
+    if ok then OK ()
+    else die ("genuine-stops-potential pin failed: " ^
+      mf_pin_outcome_name outcome)
+  end
+  handle e => die (Feedback.exn_to_string e)
+
+fun mf_sound_sat_checked_scope solver =
+  let
+    val _ = tprint "Refute MF sound-SAT checked-scope accounting"
+    val config = mf_acceptance_config solver
+      |> Refute.upd_batch_size 8
+      |> Refute.upd_card [(SOME ``:num``, [1, 2]), (NONE, [1])]
+      |> Refute.upd_max_potential 0
+      |> Refute.upd_max_genuine 1
+    val outcome = with_silent_refute (fn () =>
+      Refute.refute config ``(x : num) = 0``)
+    val ok =
+      case outcome of
+          Refute.Counterexample ({stats, ...} :: _) =>
+            lookup_stat "scopes" stats = SOME 2 andalso
+            lookup_stat "scopes_checked" stats = SOME 1 andalso
+            lookup_stat "batches" stats = SOME 1 andalso
+            lookup_stat "kodkod_calls" stats = SOME 1
+        | _ => false
+  in
+    if ok then OK ()
+    else die ("sound-SAT scope accounting pin failed: " ^
+      mf_pin_outcome_name outcome)
+  end
+  handle e => die (Feedback.exn_to_string e)
+
+fun mf_incremental_solver_selection () =
+  let
+    val _ = tprint "Refute MF incremental solver selection"
+    val goal = ``(x : refute$rf3) = rf3_1``
+    fun config solver = mf_acceptance_config solver
+      |> Refute.upd_card
+           [(SOME ``:refute$rf3``, [3]), (NONE, [1])]
+      |> Refute.upd_max_potential 0
+      |> Refute.upd_max_genuine 2
+    val (forced, warning) = capture_refute_messages 2 (fn () =>
+      Refute.refute (config "CryptoMiniSat_JNI") goal)
+    val (_, verbose) = capture_refute_messages 2 (fn () =>
+      Refute.refute (config "smart") goal)
+    val forced_ok =
+      case forced of Refute.Counterexample (_ :: _) => true | _ => false
+    val ok = forced_ok andalso
+      String.isSubstring
+        ("An incremental SAT solver is required: \"SAT4J\" will be " ^
+         "used instead of \"CryptoMiniSat_JNI\"") warning andalso
+      String.isSubstring "Using SAT solver \"SAT4J\"" verbose andalso
+      String.isSubstring
+        "The following incremental solvers are configured:" verbose andalso
+      List.all (fn name => String.isSubstring ("\"" ^ name ^ "\"") verbose)
+        (Refute_ForlSat.configured_sat_solvers true)
+  in
+    if ok then OK () else die "incremental solver selection pin failed"
+  end
+  handle e => die (Feedback.exn_to_string e)
+
 fun run_mf_task20_suites () =
   if not (Refute_Forl.is_configured ()) then
     print ("(Kodkodi not configured, MF differential and soundness " ^
@@ -12226,7 +12397,12 @@ fun run_mf_task20_suites () =
         (soundness_corpus @ mf_mutual_soundness_corpus);
       mf_instance_loop_stops_at_reachable_genuine solver;
       mf_native_polymorphic_certification solver;
-      mf_mono_driver_scope_fusion solver
+      mf_mono_driver_scope_fusion solver;
+      mf_incremental_genuine_models solver;
+      mf_incremental_potential_models solver;
+      mf_genuine_stops_potential solver;
+      mf_sound_sat_checked_scope solver;
+      mf_incremental_solver_selection ()
     end
 
 fun mf_codatatype_acceptance solver =

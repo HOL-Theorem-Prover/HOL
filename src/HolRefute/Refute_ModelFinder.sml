@@ -15,6 +15,9 @@ signature REFUTE_MODEL_FINDER = sig
     Type.hol_type list -> Type.hol_type list
   val authenticity_reasons :
     Refute_Core.mf_config -> bool -> bool -> bool -> string list
+  val liberal_budget_after_models :
+    {max_potential : int, max_genuine : int, delivered : int,
+     promoted : bool} -> int * int
   val kodkod_backend : Refute_Core.backend
   val kodkod_certainty_ceiling : Refute_Core.certainty_ceiling
   val register_backends : unit -> unit
@@ -188,11 +191,31 @@ fun finitizable_data_types context finitizes kind_of_monotonic
       shallow_finitizable ty) shallow
   end
 
-fun actual_solver (mf : Refute_Core.mf_config) =
-  if #sat_solver mf = "smart" then
-    Refute_ForlSat.smart_sat_solver_name false
-  else
-    #sat_solver mf
+fun quote text = "\"" ^ text ^ "\""
+
+fun actual_solver incremental (mf : Refute_Core.mf_config) =
+  let
+    val requested = #sat_solver mf
+    val configured = Refute_ForlSat.configured_sat_solvers incremental
+    val solver =
+      if requested = "smart" then
+        Refute_ForlSat.smart_sat_solver_name incremental
+      else if incremental andalso not (Lib.mem requested configured) then
+        (Refute_Core.Private.say 1
+           ("An incremental SAT solver is required: \"SAT4J\" will be " ^
+            "used instead of " ^ quote requested ^ "\n");
+         "SAT4J")
+      else
+        requested
+    val _ = if requested <> "smart" then () else
+      Refute_Core.Private.say 2
+        ("Using SAT solver " ^ quote solver ^ "\nThe following" ^
+         (if incremental then " incremental " else " ") ^
+         "solvers are configured: " ^
+         String.concatWith ", " (map quote configured) ^ "\n")
+  in
+    solver
+  end
 
 fun solver_arguments deadline solver =
   #2 (Refute_ForlSat.sat_solver_spec (remaining deadline) solver)
@@ -222,6 +245,12 @@ fun problem_for_scope deadline (mf : Refute_Core.mf_config)
   end
 
 fun metadata (_, metadata : MFK.problem_metadata) = metadata
+
+fun liberal_budget_after_models
+      {max_potential, max_genuine, delivered, promoted} =
+  if promoted then (0, max_genuine - 1)
+  else (max_potential - delivered, max_genuine)
+
 fun raw_problem (problem, _ : MFK.problem_metadata) = problem
 
 fun rich_problems_equivalent (left : rich_problem, right : rich_problem) =
@@ -273,6 +302,7 @@ fun prepare_instance_input (instance : Refute_Core.instance) =
   end
 
 fun run_instance deadline started (config : Refute_Core.config)
+      incremental solver (initial_max_potential, initial_max_genuine)
       (instance : Refute_Core.instance) =
   let
     val mf = #mf config
@@ -392,7 +422,6 @@ fun run_instance deadline started (config : Refute_Core.config)
     val batch_size =
       if #debug mf then 1 else Int.max (1, #batch_size mf)
     val batches = MFU.chunk_list batch_size scopes
-    val solver = actual_solver mf
     val real_frees = free_variables [original]
     val executable = not (Option.isSome (#qc_gate instance)) andalso
       #falsify mf andalso
@@ -417,11 +446,10 @@ fun run_instance deadline started (config : Refute_Core.config)
        exhausted, so the search may not end in NoCounterexample. *)
     val discarded_sound_model = ref false
     val error_reasons = ref ([] : string list)
-    val original_max_potential =
-      if #genuine_only config then 0
-      else Int.min (1, Int.max (0, #max_potential mf))
-    val original_max_genuine =
-      Int.min (1, Int.max (0, #max_genuine mf))
+    val original_max_potential = Int.max (0, initial_max_potential)
+    val original_max_genuine = Int.max (0, initial_max_genuine)
+    val latest_state = ref
+      (false, original_max_potential, original_max_genuine, 0)
 
     fun add_error reason =
       if List.exists (fn old => old = reason) (!error_reasons) then ()
@@ -511,7 +539,10 @@ fun run_instance deadline started (config : Refute_Core.config)
         val _ = last_donno := donno
         val max_potential = Int.max (0, raw_max_potential)
         val max_genuine = Int.max (0, raw_max_genuine)
-        val max_solutions = Int.min (1, max_potential + max_genuine)
+        val _ = latest_state :=
+          (found_really_genuine, max_potential, max_genuine, donno)
+        val max_solutions = max_potential + max_genuine
+          |> (fn count => if incremental then count else Int.min (1, count))
       in
         if max_solutions <= 0 then
           (found_really_genuine, 0, 0, donno)
@@ -540,31 +571,41 @@ fun run_instance deadline started (config : Refute_Core.config)
                       (fn (index, _) =>
                         #unsound (metadata (List.nth (problems, index))))
                       sat_models
+                    val _ = update_checked problems
+                      (unsat_indices @ map #1 liberal)
                   in
                     if null conservative then
                       let
-                        val _ = update_checked problems
-                          (unsat_indices @ map #1 liberal)
-                        val results = List.mapPartial (fn (index, bounds) =>
-                          reconstruct (List.nth (problems, index)) bounds)
+                        fun reconstruct_until_genuine [] = false
+                          | reconstruct_until_genuine
+                              ((index, bounds) :: models) =
+                              (case reconstruct
+                                  (List.nth (problems, index)) bounds of
+                                   SOME cex =>
+                                     if certainty_is_genuine (#certainty cex)
+                                     then true
+                                     else reconstruct_until_genuine models
+                                 | NONE => reconstruct_until_genuine models)
+                        val promoted = reconstruct_until_genuine
                           (take_at_most max_potential liberal)
-                        val genuine_count = length (List.filter
-                          (certainty_is_genuine o #certainty) results)
-                        val potential_count = length results - genuine_count
-                        val found = found_really_genuine orelse
-                          genuine_count > 0
-                        val max_genuine = max_genuine - genuine_count
-                        val max_potential =
-                          max_potential - potential_count
+                        val found = found_really_genuine orelse promoted
+                        (* Port the upstream over-delivery behavior
+                           bug-for-bug: even unprinted liberal models consume
+                           potential slots; recursive entry clamps at zero.
+                           See [m4-driver section 7 Q5]. *)
+                        val (max_potential, max_genuine) =
+                          liberal_budget_after_models
+                            {max_potential = max_potential,
+                             max_genuine = max_genuine,
+                             delivered = length liberal,
+                             promoted = promoted}
+                        val _ = latest_state :=
+                          (found, max_potential, max_genuine, donno)
                       in
                         if max_genuine <= 0 then
                           (found, 0, 0, donno)
                         else
                           let
-                            (* m3-driver Q4: the upstream potential promotion
-                               filter was dead.  Certification is handled
-                               directly above, so no vestigial option filter
-                               remains here. *)
                             val co_indices = List.mapPartial (fn index =>
                               let val sound_index = index - 1
                               in
@@ -609,6 +650,8 @@ fun run_instance deadline started (config : Refute_Core.config)
                           List.exists
                             (certainty_is_genuine o #certainty) results
                         val max_genuine = max_genuine - kept
+                        val _ = latest_state :=
+                          (found, 0, max_genuine, donno)
                       in
                         if max_genuine <= 0 then
                           (found, 0, max_genuine, donno)
@@ -752,7 +795,7 @@ fun run_instance deadline started (config : Refute_Core.config)
         val (_, max_potential, max_genuine, donno) = state
         val cexs = rev (!counterexamples)
         val outcome =
-          if donno > 0 andalso max_genuine > 0 then
+          if donno > 0 andalso max_genuine > 0 andalso null cexs then
             Refute_Core.Unknown
               (accounting_reason "model search was inconclusive" ::
                !error_reasons)
@@ -779,19 +822,23 @@ fun run_instance deadline started (config : Refute_Core.config)
 
     val initial =
       (false, original_max_potential, original_max_genuine, 0)
+    fun remaining (_, max_potential, max_genuine, _) =
+      (Int.max (0, max_potential), Int.max (0, max_genuine))
   in
-    (finish (run_batches batches initial)
-     handle Timeout.TIMEOUT _ =>
-       let
-         val cexs = rev (!counterexamples)
-         val outcome =
-           if !met_potential > 0 andalso not (null cexs) then
-             Refute_Core.Counterexample cexs
-           else
-             Refute_Core.Unknown [accounting_reason "kodkod timed out"]
-       in
-         finalize (!last_donno) outcome
-       end)
+    let val final_state = run_batches batches initial
+    in
+      (finish final_state, remaining final_state)
+    end
+    handle Timeout.TIMEOUT _ =>
+      let
+        val cexs = rev (!counterexamples)
+        val outcome =
+          if not (null cexs) then Refute_Core.Counterexample cexs
+          else
+            Refute_Core.Unknown [accounting_reason "kodkod timed out"]
+      in
+        (finalize (!last_donno) outcome, remaining (!latest_state))
+      end
   end
 
 fun kodkod_certainty_ceiling (config : Refute_Core.config) instances =
@@ -830,44 +877,56 @@ fun run config instances =
     val deadline = started + Time.fromReal budget
     val ordered = Listsort.sort (fn (left, right) =>
       Int.compare (#card left, #card right)) instances
-    val ceiling = kodkod_certainty_ceiling config ordered
+    val mf = #mf config
+    val initial_max_potential =
+      if #genuine_only config then 0
+      else Int.max (0, #max_potential mf)
+    val initial_max_genuine = Int.max (0, #max_genuine mf)
+    val incremental =
+      Int.max (initial_max_potential, initial_max_genuine) >= 2
+    val solver = actual_solver incremental mf
     val typedef_reason = MFH.unregistered_typedef_reason
       (List.concat (map (fn (instance : Refute_Core.instance) =>
         #original instance :: #evals instance) ordered))
 
-    fun search [] cexs reasons all_none =
+    fun search [] cexs reasons all_none _ =
           if not (null cexs) then Refute_Core.Counterexample cexs
           else if all_none then Refute_Core.NoCounterexample
           else Refute_Core.Unknown
             (if null reasons then ["model search was inconclusive"]
              else reasons)
-      | search (instance :: rest) cexs reasons all_none =
+      | search (instance :: rest) cexs reasons all_none budget =
           if Time.now () >= deadline then
             if null cexs then Refute_Core.Unknown ["kodkod timed out"]
             else Refute_Core.Counterexample cexs
           else
             let
-              val result = run_instance deadline started config instance
+              val (result, next_budget) =
+                run_instance deadline started config incremental solver
+                  budget instance
                 handle MFU.NOT_SUPPORTED reason =>
-                  Refute_Core.Unknown [reason]
+                  (Refute_Core.Unknown [reason], budget)
+              val (_, max_genuine) = next_budget
             in
               case result of
                   Refute_Core.Counterexample more =>
                     let val combined = cexs @ more
                     in
-                      if Refute_Core.decisive config ceiling result then
+                      if max_genuine <= 0 orelse #abort_potential config then
                         Refute_Core.Counterexample combined
-                      else search rest combined reasons false
+                      else
+                        search rest combined reasons false next_budget
                     end
                 | Refute_Core.NoCounterexample =>
-                    search rest cexs reasons all_none
+                    search rest cexs reasons all_none next_budget
                 | Refute_Core.Unknown more =>
-                    search rest cexs (reasons @ more) false
+                    search rest cexs (reasons @ more) false next_budget
             end
   in
     case typedef_reason of
         SOME reason => Refute_Core.Unknown [reason]
       | NONE => search ordered [] [] (not (null ordered))
+          (initial_max_potential, initial_max_genuine)
   end
 
 val kodkod_backend : Refute_Core.backend =
