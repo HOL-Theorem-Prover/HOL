@@ -8190,6 +8190,8 @@ fun multi_model_ranges_are_live () =
       |> Refute.upd_max_potential 2
       |> Refute.upd_max_genuine 3
   in
+    #max_potential (#mf Refute.default_config) = 1 andalso
+    #max_genuine (#mf Refute.default_config) = 1 andalso
     #max_potential (#mf updated) = 2 andalso
     #max_genuine (#mf updated) = 3
   end
@@ -12347,6 +12349,7 @@ fun mf_incremental_genuine_models solver =
             let
               val values = List.mapPartial (binding_value variable) cexs
             in
+              length cexs <= 3 andalso
               length (distinct_terms values) >= 2 andalso
               List.all (fn ({certainty, cert, ...} :
                   Refute.counterexample) =>

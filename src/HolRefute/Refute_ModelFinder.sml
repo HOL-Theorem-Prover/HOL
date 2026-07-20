@@ -800,7 +800,9 @@ fun run_instance deadline started (config : Refute_Core.config)
         val (_, max_potential, max_genuine, donno) = state
         val cexs = rev (!counterexamples)
         val outcome =
-          if donno > 0 andalso max_genuine > 0 andalso null cexs then
+          (* Keep the M3/upstream inconclusive-result precedence when the
+             genuine budget is still open, even if a potential was kept. *)
+          if donno > 0 andalso max_genuine > 0 then
             Refute_Core.Unknown
               (accounting_reason "model search was inconclusive" ::
                !error_reasons)
