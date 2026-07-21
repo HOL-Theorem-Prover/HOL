@@ -13686,15 +13686,25 @@ datatype mf_differential_verdict =
   | MfDiffPotential
   | MfDiffNone
 
+fun mf_differential_certainty_verdict Refute.Genuine = MfDiffGenuine
+  | mf_differential_certainty_verdict (Refute.QuasiGenuine _) =
+      MfDiffQuasiGenuine
+  | mf_differential_certainty_verdict (Refute.Potential _) =
+      MfDiffPotential
+
+fun higher_public_certainty
+      (({certainty, ...} : Refute.counterexample), best) =
+  if public_certainty_rank certainty > public_certainty_rank best then
+    certainty
+  else
+    best
+
 fun mf_differential_verdict name backend outcome =
   case outcome of
       Refute.Counterexample
-        ({certainty = Refute.Genuine, ...} :: _) => MfDiffGenuine
-    | Refute.Counterexample
-        ({certainty = Refute.QuasiGenuine _, ...} :: _) =>
-          MfDiffQuasiGenuine
-    | Refute.Counterexample
-        ({certainty = Refute.Potential _, ...} :: _) => MfDiffPotential
+        ((first : Refute.counterexample) :: rest) =>
+          mf_differential_certainty_verdict
+            (List.foldl higher_public_certainty (#certainty first) rest)
     | Refute.NoCounterexample => MfDiffNone
     | Refute.Unknown reasons =>
         raise Fail (name ^ ": " ^ backend ^ " was inconclusive: " ^
@@ -13706,6 +13716,28 @@ fun mf_differential_verdict_name MfDiffGenuine = "Genuine"
   | mf_differential_verdict_name MfDiffQuasiGenuine = "QuasiGenuine"
   | mf_differential_verdict_name MfDiffPotential = "Potential"
   | mf_differential_verdict_name MfDiffNone = "NoCounterexample"
+
+fun mf_differential_verdict_uses_best_certainty () =
+  let
+    fun cex backend certainty : Refute.counterexample =
+      {backend = backend, substrate = "stub", certainty = certainty,
+       bindings = [], evals = [], cert = NONE, scope = NONE, model = NONE,
+       stats = []}
+    val potential = cex "potential" (Refute.Potential [])
+    val quasi = cex "quasi" (Refute.QuasiGenuine [])
+    val genuine = cex "genuine" Refute.Genuine
+    fun verdict cexs = mf_differential_verdict "selftest" "stub"
+      (Refute.Counterexample cexs)
+  in
+    verdict [potential, genuine] = MfDiffGenuine andalso
+    verdict [genuine, potential] = MfDiffGenuine andalso
+    verdict [potential, quasi] = MfDiffQuasiGenuine
+  end
+
+val _ = require_msg
+  (check_result mf_differential_verdict_uses_best_certainty) (fn () =>
+  "differential verdict did not use the best reported certainty")
+  (fn () => ()) ()
 
 fun mf_differential_has_counterexample MfDiffGenuine = true
   | mf_differential_has_counterexample MfDiffQuasiGenuine = true
@@ -14216,6 +14248,13 @@ fun mf_need_acceptance solver =
         ``(xs : num list) = []``)
     val overflow_ok =
       case overflow of Refute.NoCounterexample => true | _ => false
+    val introduced = with_silent_refute (fn () =>
+      Refute.refute
+        (Refute.upd_need (SOME [``SOME T``])
+          (mf_acceptance_config solver))
+        ``T``)
+    val introduced_ok =
+      case introduced of Refute.NoCounterexample => true | _ => false
     fun verdict outcome =
       case outcome of
           Refute.Counterexample _ => 0
@@ -14227,10 +14266,12 @@ fun mf_need_acceptance solver =
       verdict (with_silent_refute (fn () => Refute.refute base goal)) =
         expected) samples
   in
-    if pinned_ok andalso overflow_ok andalso none_ok then OK ()
+    if pinned_ok andalso overflow_ok andalso introduced_ok andalso
+       none_ok then OK ()
     else die ("need acceptance failed: pinned=" ^
       mf_pin_outcome_name pinned ^ ", overflow=" ^
-      mf_pin_outcome_name overflow)
+      mf_pin_outcome_name overflow ^ ", introduced=" ^
+      mf_pin_outcome_name introduced)
   end
   handle e => die (Feedback.exn_to_string e)
 

@@ -342,7 +342,8 @@ fun run_instance deadline started (config : Refute_Core.config)
         ([], []) (nondef_us @ def_us @ need_us)
     val (sel_names, nonsel_names) = List.partition
       (MFN.is_sel o MFNT.nickname_of) const_names
-    val all_types = ground_types context binarize (nondef_ts @ def_ts)
+    val all_types = ground_types context binarize
+      (nondef_ts @ def_ts @ need_ts)
     val unique_scope = List.all (fn (_, values) => length values = 1)
       (#card mf)
     val calculus_mono_types = ref ([] : hol_type list)
