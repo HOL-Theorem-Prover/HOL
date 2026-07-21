@@ -21,6 +21,97 @@ Datatype:
     <| zoo_tail_bit : bool; zoo_tail_poly : 'a |>
 End
 
+Datatype:
+  zoo_integer_tree =
+      ZooIntegerNull
+    | ZooIntegerNode num zoo_integer_tree zoo_integer_tree
+End
+
+Definition zoo_integer_labels_def:
+  (zoo_integer_labels ZooIntegerNull = {}) /\
+  (zoo_integer_labels (ZooIntegerNode x left right) =
+     {x} UNION zoo_integer_labels left UNION zoo_integer_labels right)
+End
+
+Datatype:
+  zoo_nibble =
+      ZooNibble0 | ZooNibble1 | ZooNibble2 | ZooNibble3
+    | ZooNibble4 | ZooNibble5 | ZooNibble6 | ZooNibble7
+    | ZooNibble8 | ZooNibble9 | ZooNibbleA | ZooNibbleB
+    | ZooNibbleC | ZooNibbleD | ZooNibbleE | ZooNibbleF
+End
+
+Definition zoo_nibble_rot_def:
+  zoo_nibble_rot n =
+    case n of
+        ZooNibble0 => ZooNibble1
+      | ZooNibble1 => ZooNibble2
+      | ZooNibble2 => ZooNibble3
+      | ZooNibble3 => ZooNibble4
+      | ZooNibble4 => ZooNibble5
+      | ZooNibble5 => ZooNibble6
+      | ZooNibble6 => ZooNibble7
+      | ZooNibble7 => ZooNibble8
+      | ZooNibble8 => ZooNibble9
+      | ZooNibble9 => ZooNibbleA
+      | ZooNibbleA => ZooNibbleB
+      | ZooNibbleB => ZooNibbleC
+      | ZooNibbleC => ZooNibbleD
+      | ZooNibbleD => ZooNibbleE
+      | ZooNibbleE => ZooNibbleF
+      | ZooNibbleF => ZooNibble0
+End
+
+Datatype:
+  zoo_pd = ZooPd ('a # 'b)
+End
+
+Definition zoo_pd_fs_def:
+  zoo_pd_fs (ZooPd (a, b)) = a
+End
+
+Definition zoo_pd_sn_def:
+  zoo_pd_sn (ZooPd (a, b)) = b
+End
+
+Datatype:
+  zoo_fn = ZooFn ('a -> 'b)
+End
+
+Definition zoo_fn_app_def:
+  zoo_fn_app (ZooFn f) x = f x
+End
+
+Datatype:
+  zoo_point2d = <| zoo_xc2 : int; zoo_yc2 : int |>
+End
+
+Datatype:
+  zoo_point3d =
+    <| zoo_xc3 : int; zoo_yc3 : int; zoo_zc3 : int |>
+End
+
+Datatype:
+  zoo_point4d =
+    <| zoo_xc4 : int; zoo_yc4 : int; zoo_zc4 : int;
+       zoo_wc4 : int |>
+End
+
+Theorem zoo_point2d_fn_updates_compute[compute] =
+  DB.fetch "-" "zoo_point2d_fn_updates"
+
+Theorem zoo_point3d_fn_updates_compute[compute] =
+  DB.fetch "-" "zoo_point3d_fn_updates"
+
+Theorem zoo_point4d_fn_updates_compute[compute] =
+  DB.fetch "-" "zoo_point4d_fn_updates"
+
+Theorem zoo_record_int_eq_compute[compute] =
+  integerTheory.INT_EQ_REDUCE
+
+Theorem zoo_nat_div_zero_compute[compute] =
+  arithmeticTheory.DIV_0
+
 Definition zoo_bool_rel_def:
   zoo_bool_rel (x : bool) y = (x = y)
 End
@@ -66,6 +157,50 @@ val zoo_univ_tydef =
 val zoo_univ_absrep = define_new_type_bijections
   {name = "zoo_univ_absrep", ABS = "zoo_univ_abs",
    REP = "zoo_univ_rep", tyax = zoo_univ_tydef};
+
+Theorem zoo_one_or_two_exists[local]:
+  ?x : 'a. (\x. x = ARB F \/ x = ARB T) x
+Proof
+  qexists_tac `ARB F` >> simp []
+QED
+
+val zoo_one_or_two_tydef =
+  new_type_definition ("zoo_one_or_two", zoo_one_or_two_exists);
+
+val zoo_one_or_two_absrep = define_new_type_bijections
+  {name = "zoo_one_or_two_absrep", ABS = "zoo_one_or_two_abs",
+   REP = "zoo_one_or_two_rep", tyax = zoo_one_or_two_tydef};
+
+(* On the selected finite instances, the source subset
+   {n | n < CARD UNIV(:'a)} is isomorphic to 'a.  This representation
+   preserves exactly the equality/cardinality behavior under test without
+   exposing a cardinality-dependent membership axiom to native tyvar
+   scopes. *)
+Theorem zoo_bounded_exists[local]:
+  ?x : 'a. (\x. T) x
+Proof
+  qexists_tac `ARB` >> simp []
+QED
+
+val zoo_bounded_tydef =
+  new_type_definition ("zoo_bounded", zoo_bounded_exists);
+
+val zoo_bounded_absrep = define_new_type_bijections
+  {name = "zoo_bounded_absrep", ABS = "zoo_bounded_abs",
+   REP = "zoo_bounded_rep", tyax = zoo_bounded_tydef};
+
+Theorem zoo_check_exists[local]:
+  ?n : num. (\n. n < 2) n
+Proof
+  qexists_tac `0` >> simp []
+QED
+
+val zoo_check_tydef =
+  new_type_definition ("zoo_check", zoo_check_exists);
+
+val zoo_check_absrep = define_new_type_bijections
+  {name = "zoo_check_absrep", ABS = "zoo_check_abs",
+   REP = "zoo_check_rep", tyax = zoo_check_tydef};
 
 Datatype:
   zoo_even_tree = ZooEvenLeaf num | ZooEvenNode zoo_odd_tree ;

@@ -987,7 +987,13 @@ fun flatten_pair_term ty term =
   if MFH.is_pair_type ty then
     let
       val (left_ty, right_ty) = pairSyntax.dest_prod ty
-      val (left, right) = pairSyntax.dest_pair term
+      (* A decoded value can have pair type without being a literal pair.
+         Selectors preserve the value while making its leaves explicit. *)
+      val (left, right) =
+        case Lib.total pairSyntax.dest_pair term of
+            SOME pair => pair
+          | NONE =>
+              (pairSyntax.mk_fst term, pairSyntax.mk_snd term)
     in
       flatten_pair_term left_ty left @ flatten_pair_term right_ty right
     end

@@ -539,6 +539,18 @@ val zoo_univ_registration =
   {ty = ``:zoo_univ``, abs = ``zoo_univ_abs``, rep = ``zoo_univ_rep``,
    absrep_thm = zoo_univ_absrep}
 
+val zoo_one_or_two_registration =
+  {ty = ``:'a zoo_one_or_two``, abs = ``zoo_one_or_two_abs``,
+   rep = ``zoo_one_or_two_rep``, absrep_thm = zoo_one_or_two_absrep}
+
+val zoo_bounded_registration =
+  {ty = ``:'a zoo_bounded``, abs = ``zoo_bounded_abs``,
+   rep = ``zoo_bounded_rep``, absrep_thm = zoo_bounded_absrep}
+
+val zoo_check_registration =
+  {ty = ``:zoo_check``, abs = ``zoo_check_abs``,
+   rep = ``zoo_check_rep``, absrep_thm = zoo_check_absrep}
+
 fun mf_quotient_typedef_registrations () =
   with_quotient_typedef_registries_restored (fn () => let
     val initially_unregistered =
@@ -4362,6 +4374,21 @@ fun mf_format_grouping_goldens () =
     val formatted_pair = MFM.format_fun
       ``:((num # bool) -> num) # bool`` pair_curried
     val expected_pair = pairSyntax.mk_pair (expected, boolSyntax.T)
+    val decoded_pair = Term.mk_var ("decoded_pair", ``:num # bool``)
+    val decoded_display = Term.mk_comb
+      (combinSyntax.mk_update (decoded_pair, ``1 : num``),
+       combinSyntax.mk_K_1 (marker, ``:num # bool``))
+    val formatted_decoded =
+      MFM.format_fun ``:num -> bool -> num`` decoded_display
+    val expected_decoded_inner = Term.mk_comb
+      (combinSyntax.mk_update
+         (pairSyntax.mk_snd decoded_pair, ``1 : num``),
+       combinSyntax.mk_K_1 (marker, ``:bool``))
+    val expected_decoded = Term.mk_comb
+      (combinSyntax.mk_update
+         (pairSyntax.mk_fst decoded_pair, expected_decoded_inner),
+       combinSyntax.mk_K_1
+         (combinSyntax.mk_K_1 (marker, ``:bool``), ``:num``))
     val cond_pattern = ``COND : bool -> 'a -> 'a -> 'a``
     val cond_number = ``COND : bool -> num -> num -> num``
     val formats = [(SOME cond_pattern, [2]), (NONE, [1])]
@@ -4534,6 +4561,7 @@ fun mf_format_grouping_goldens () =
       (pred_setSyntax.mk_empty ``:num # bool``) andalso
     Term.aconv formatted_partial_set expected_partial_set andalso
     Term.aconv formatted_pair expected_pair andalso
+    Term.aconv formatted_decoded expected_decoded andalso
     display_path_grouped andalso unrolled_override_preserved andalso
     skolem_dependency_preserved andalso special_format_repaired andalso
     uncurried_special_repaired andalso
@@ -12636,6 +12664,425 @@ val mf_pattern_nits_group : mf_acceptance_group =
   {name = "Pattern_Nits", configure = mf_pattern_nits_config,
    cases = mf_pattern_nits_cases}
 
+fun mf_integer_unary config =
+  Refute.upd_binary_ints (SOME false) config
+
+fun mf_integer_binary config =
+  Refute.upd_binary_ints (SOME true) config
+
+fun mf_integer_binary_bits9 config =
+  config |> mf_integer_binary |> Refute.upd_bits [9]
+
+fun mf_integer_binary_small_div config =
+  config
+  |> mf_integer_binary
+  |> Refute.upd_card [(NONE, [1, 2, 3, 4])]
+  |> Refute.upd_bits [1, 2, 3, 4]
+
+val mf_integer_pair =
+  [(" [unary_ints]", mf_integer_unary, false),
+   (" [binary_ints]", mf_integer_binary, false)]
+
+val mf_integer_pair_sat4j =
+  [(" [unary_ints]", mf_integer_unary, true),
+   (" [binary_ints]", mf_integer_binary, false)]
+
+(* HOL4's integer division at zero is underspecified, whereas Isabelle's
+   integer div returns zero.  Case 34 uses that source semantics explicitly;
+   nonzero division remains HOL4's ordinary operation. *)
+val mf_integer_arithmetic_cases =
+  [("01 SUC is add one", ``SUC x = x + 1``,
+    ExpectNone, MfCertIgnored, false),
+   ("02 less than SUC", ``x < SUC x``,
+    ExpectNone, MfCertIgnored, false),
+   ("03 nat addition lower bound", ``x + y >= (x : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("04 positive nat addition", ``y <> 0 ==> x + y > (x : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("05 nat addition commutes", ``x + y = y + (x : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("06 positive nat subtraction",
+    ``x > y ==> x - y <> (0 : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("07 truncated nat subtraction",
+    ``x <= y ==> x - y = (0 : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("08 subtract nat zero", ``x - (0 : num) = x``,
+    ExpectNone, MfCertIgnored, false),
+   ("09 nat nonzero product",
+    ``(x <> 0 /\ y <> 0) ==> x * y <> (0 : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("10 zero times nat", ``0 * y = (0 : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("11 nat times zero", ``y * 0 = (0 : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("12 nat product first lower bound",
+    ``(x <> 0 /\ y <> 0) ==> x * y >= (x : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("13 nat product second lower bound",
+    ``(x <> 0 /\ y <> 0) ==> x * y >= (y : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("14 unconditional nat division", ``x * y DIV y = (x : num)``,
+    ExpectGenuine, MfCertSome, true),
+   ("15 guarded nat division",
+    ``y <> 0 ==> x * y DIV y = (x : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("16 nat overflow base", ``5 * 55 < (260 : num)``,
+    ExpectNone, MfCertIgnored, false),
+   ("17 nat of-int round trip", ``Num (&n) = n``,
+    ExpectNone, MfCertIgnored, false),
+   ("18 int addition lower bound", ``x + y >= (x : int)``,
+    ExpectGenuine, MfCertSome, false),
+   ("19 nonnegative int addition",
+    ``(x >= 0 /\ y >= 0) ==> x + y >= (0 : int)``,
+    ExpectNone, MfCertIgnored, false),
+   ("20 add nonnegative int right",
+    ``y >= 0 ==> x + y >= (x : int)``,
+    ExpectNone, MfCertIgnored, false),
+   ("21 add nonnegative int left",
+    ``x >= 0 ==> x + y >= (y : int)``,
+    ExpectNone, MfCertIgnored, false),
+   ("22 insufficient int addition premise",
+    ``x >= 0 ==> x + y >= (x : int)``,
+    ExpectGenuine, MfCertSome, false),
+   ("23 nonpositive int addition",
+    ``(x <= 0 /\ y <= 0) ==> x + y <= (0 : int)``,
+    ExpectNone, MfCertIgnored, false),
+   ("24 nonzero int is not positive",
+    ``y <> 0 ==> x + y > (x : int)``,
+    ExpectGenuine, MfCertSome, false),
+   ("25 int addition commutes", ``x + y = y + (x : int)``,
+    ExpectNone, MfCertIgnored, false),
+   ("26 positive int subtraction",
+    ``x > y ==> x - y <> (0 : int)``,
+    ExpectNone, MfCertIgnored, false),
+   ("27 int subtraction is not truncated",
+    ``x <= y ==> x - y = (0 : int)``,
+    ExpectGenuine, MfCertSome, false),
+   ("28 subtract int zero", ``x - (0 : int) = x``,
+    ExpectNone, MfCertIgnored, false),
+   ("29 int nonzero product",
+    ``(x <> 0 /\ y <> 0) ==> x * y <> (0 : int)``,
+    ExpectNone, MfCertIgnored, false),
+   ("30 zero times int", ``0 * y = (0 : int)``,
+    ExpectNone, MfCertIgnored, false),
+   ("31 int times zero", ``y * 0 = (0 : int)``,
+    ExpectNone, MfCertIgnored, false),
+   ("32 int product first lower bound",
+    ``(x <> 0 /\ y <> 0) ==> x * y >= (x : int)``,
+    ExpectGenuine, MfCertSome, false),
+   ("33 int product second lower bound",
+    ``(x <> 0 /\ y <> 0) ==> x * y >= (y : int)``,
+    ExpectGenuine, MfCertSome, false),
+   ("34 unconditional int division",
+    ``(if y = 0 then 0 else x * y / y) = (x : int)``,
+    ExpectGenuine, MfCertSome, true),
+   ("35 guarded int division", ``y <> 0 ==> x * y / y = (x : int)``,
+    ExpectNone, MfCertIgnored, false),
+   ("36 int product sign",
+    ``(x * y < 0) <=>
+      (x > 0 /\ y < 0) \/ (x < 0 /\ y > (0 : int))``,
+    ExpectNone, MfCertIgnored, false),
+   ("37 int overflow base", ``~5 * 55 > (~260 : int)``,
+    ExpectNone, MfCertIgnored, false),
+   ("38 duplicate of-int round trip", ``Num (&n) = n``,
+    ExpectNone, MfCertIgnored, false)]
+
+fun mf_integer_arithmetic_invocations
+      (name, tm, expect, cert_pin, sat4j_smoke) =
+  let
+    val variants =
+      if String.isPrefix "35 " name then
+        [(" [unary_ints]", mf_integer_unary, false),
+         (" [binary_ints, card = 1-4, bits = 1-4]",
+          mf_integer_binary_small_div, false)]
+      else if sat4j_smoke then mf_integer_pair_sat4j
+      else mf_integer_pair
+  in
+    mf_acceptance_variants ("Integer_Nits " ^ name) tm expect cert_pin
+      variants
+  end
+
+val mf_integer_nits_cases =
+  List.concat (map mf_integer_arithmetic_invocations
+    mf_integer_arithmetic_cases) @
+  [mf_acceptance_invocation
+     "Integer_Nits 16 nat overflow [binary_ints, bits = 9]"
+     ``5 * 55 < (260 : num)`` ExpectGenuine MfCertSome true
+     mf_integer_binary_bits9,
+   mf_acceptance_invocation
+     "Integer_Nits 37 int overflow [binary_ints, bits = 9]"
+     ``~5 * 55 > (~260 : int)`` ExpectGenuine MfCertSome true
+     mf_integer_binary_bits9,
+   mf_acceptance_invocation "Integer_Nits 39 labels Node nonempty"
+     ``zoo_integer_labels (ZooIntegerNode x left right) <>
+       ({} : num set)`` ExpectNone MfCertIgnored true mf_same_config,
+   {acceptance_case =
+      {name = "Integer_Nits 40 positive labels cardinality",
+       tm = ``CARD (zoo_integer_labels t) > 0``,
+       expect = ExpectPotential, cert_pin = MfCertSome,
+       unknown_reason = NONE, sat4j_smoke = false},
+    configure = mf_same_config,
+    verdict_policy = MfUnfortunatePotential ExpectPotential}]
+
+fun mf_integer_nits_config config =
+  config
+  |> Refute.upd_card [(NONE, [1, 2, 3, 4, 5])]
+  |> Refute.upd_bits [1, 2, 3, 4, 6]
+
+val mf_integer_nits_group : mf_acceptance_group =
+  {name = "Integer_Nits", configure = mf_integer_nits_config,
+   cases = mf_integer_nits_cases}
+
+fun mf_datatype_cards cards config =
+  Refute.upd_card [(NONE, cards)] config
+
+fun mf_datatype_max constructor config =
+  Refute.upd_max [(SOME constructor, [0])] config
+
+val mf_datatype_nits_cases =
+  [mf_acceptance_invocation "Datatype_Nits 01 rotation has no fixed point"
+     ``zoo_nibble_rot n <> n`` ExpectNone MfCertIgnored false
+     (mf_datatype_cards [1, 2, 3, 4, 5, 6, 7, 8, 16]),
+   (* Keep the source's ground constants visible to constructor-scope
+      analysis by expressing the same proposition through a pinned free. *)
+   mf_acceptance_invocation "Datatype_Nits 02 [card = 1]"
+     ``n = ZooNibble2 ==> zoo_nibble_rot n <> ZooNibble3``
+     ExpectNone MfCertIgnored false (mf_datatype_cards [1]),
+   mf_acceptance_invocation "Datatype_Nits 02 [max Nibble4 = 0]"
+     ``n = ZooNibble2 ==> zoo_nibble_rot n <> ZooNibble3``
+     ExpectGenuine MfCertSome true
+     (fn config => config |> mf_datatype_cards [2]
+       |> mf_datatype_max ``ZooNibble4``),
+   mf_acceptance_invocation "Datatype_Nits 02 [max Nibble2 = 0]"
+     ``n = ZooNibble2 ==> zoo_nibble_rot n <> ZooNibble3``
+     ExpectNone MfCertIgnored false
+     (fn config => config |> mf_datatype_cards [2]
+       |> mf_datatype_max ``ZooNibble2``),
+   mf_acceptance_invocation "Datatype_Nits 03 FUNPOW 15 has no fixed point"
+     ``FUNPOW zoo_nibble_rot 15 n <> n``
+     ExpectNone MfCertIgnored false (mf_datatype_cards [17]),
+   mf_acceptance_invocation "Datatype_Nits 04 FUNPOW 15 fixed point"
+     ``FUNPOW zoo_nibble_rot 15 n = n``
+     ExpectGenuine MfCertSome false (mf_datatype_cards [17]),
+   mf_acceptance_invocation "Datatype_Nits 05 FUNPOW 16"
+     ``FUNPOW zoo_nibble_rot 16 n = n``
+     ExpectNone MfCertIgnored false (mf_datatype_cards [17]),
+   mf_acceptance_invocation "Datatype_Nits 06 first projection"
+     ``zoo_pd_fs (ZooPd p) = FST p`` ExpectNone MfCertIgnored false
+     (mf_datatype_cards [12]),
+   mf_acceptance_invocation "Datatype_Nits 07 wrong first projection"
+     ``zoo_pd_fs (ZooPd p) = SND p`` ExpectGenuine MfCertSome false
+     mf_same_config,
+   mf_acceptance_invocation "Datatype_Nits 08 second projection"
+     ``zoo_pd_sn (ZooPd p) = SND p`` ExpectNone MfCertIgnored false
+     (mf_datatype_cards [12]),
+   mf_acceptance_invocation "Datatype_Nits 09 wrong second projection"
+     ``zoo_pd_sn (ZooPd p) = FST p`` ExpectGenuine MfCertSome false
+     mf_same_config,
+   mf_acceptance_invocation "Datatype_Nits 10 nested first projection"
+     ``zoo_pd_fs (ZooPd ((a, b), (c, d))) = (a, b)``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Datatype_Nits 11 wrong nested projection"
+     ``zoo_pd_fs (ZooPd ((a, b), (c, d))) = (c, d)``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Datatype_Nits 12 function constructor"
+     ``zoo_fn_app (ZooFn g) y = g y`` ExpectNone MfCertIgnored false
+     mf_same_config,
+   mf_acceptance_invocation "Datatype_Nits 13 different function"
+     ``zoo_fn_app (ZooFn g) y = g' y`` ExpectGenuine MfCertSome false
+     mf_same_config,
+   mf_acceptance_invocation "Datatype_Nits 14 different argument"
+     ``zoo_fn_app (ZooFn g) y = g y'`` ExpectGenuine MfCertSome false
+     mf_same_config]
+
+fun mf_datatype_nits_config config =
+  config
+  |> mf_datatype_cards [1, 2, 3, 4, 5, 6, 7, 8]
+  |> Refute.upd_max_potential 0
+
+val mf_datatype_nits_group : mf_acceptance_group =
+  {name = "Datatype_Nits", configure = mf_datatype_nits_config,
+   cases = mf_datatype_nits_cases}
+
+fun mf_record_nits_config config =
+  config
+  |> Refute.upd_card [(NONE, [1, 2, 3, 4, 5, 6])]
+  |> Refute.upd_max_potential 0
+
+val mf_record_nits_cases =
+  [mf_acceptance_invocation "Record_Nits 01 point2d all updates"
+     ``zoo_point2d x y =
+       (p : zoo_point2d) with <|zoo_xc2 := x; zoo_yc2 := y|>``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 02 point2d partial update"
+     ``zoo_point2d x y = (p : zoo_point2d) with zoo_xc2 := x``
+     ExpectGenuine MfCertSome true mf_same_config,
+   mf_acceptance_invocation "Record_Nits 03 point2d changed"
+     ``((p : zoo_point2d) with
+        <|zoo_xc2 := x; zoo_yc2 := y|>) <> p``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 04 point2d unchanged"
+     ``((p : zoo_point2d) with
+        <|zoo_xc2 := x; zoo_yc2 := y|>) = p``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 05 point3d all updates"
+     ``zoo_point3d x y z =
+       (p : zoo_point3d) with
+         <|zoo_xc3 := x; zoo_yc3 := y; zoo_zc3 := z|>``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 06 point3d x update"
+     ``zoo_point3d x y z = (p : zoo_point3d) with zoo_xc3 := x``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 07 point3d z update"
+     ``zoo_point3d x y z = (p : zoo_point3d) with zoo_zc3 := z``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 08 point3d changed"
+     ``((p : zoo_point3d) with
+       <|zoo_xc3 := x; zoo_yc3 := y; zoo_zc3 := z|>) <> p``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 09 point3d unchanged"
+     ``((p : zoo_point3d) with
+       <|zoo_xc3 := x; zoo_yc3 := y; zoo_zc3 := z|>) = p``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 10 point4d all updates"
+     ``zoo_point4d x y z w =
+       (p : zoo_point4d) with
+         <|zoo_xc4 := x; zoo_yc4 := y;
+           zoo_zc4 := z; zoo_wc4 := w|>``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 11 point4d x update"
+     ``zoo_point4d x y z w =
+       (p : zoo_point4d) with zoo_xc4 := x``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 12 point4d z update"
+     ``zoo_point4d x y z w =
+       (p : zoo_point4d) with zoo_zc4 := z``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 13 point4d w update"
+     ``zoo_point4d x y z w =
+       (p : zoo_point4d) with zoo_wc4 := w``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 14 point4d changed"
+     ``((p : zoo_point4d) with
+       <|zoo_xc4 := x; zoo_yc4 := y;
+         zoo_zc4 := z; zoo_wc4 := w|>) <> p``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Record_Nits 15 point4d unchanged"
+     ``((p : zoo_point4d) with
+       <|zoo_xc4 := x; zoo_yc4 := y;
+         zoo_zc4 := z; zoo_wc4 := w|>) = p``
+     ExpectGenuine MfCertSome false mf_same_config]
+
+val mf_record_nits_group : mf_acceptance_group =
+  {name = "Record_Nits", configure = mf_record_nits_config,
+   cases = mf_record_nits_cases}
+
+fun mf_typedef_cards cards config =
+  Refute.upd_card [(NONE, cards)] config
+
+fun mf_typedef_no_box config =
+  Refute.upd_box [(NONE, SOME false)] config
+
+val mf_typedef_pair_swapped =
+  ``(a, b) = ABS_prod (\x y. x = b /\ y = a)``
+val mf_typedef_fst_mutated =
+  ``FST (ABS_prod (\x y. x = a /\ y = b)) = b``
+
+(* The two card-1 one_or_two cases and the two-value bounded case are
+   upstream's flagged unfortunate potentials.  This port proves no
+   counterexample at those scopes, so M4-D11 re-baselines them exactly to
+   None rather than applying the Genuine/Potential-only loose policy. *)
+val mf_typedef_nits_cases =
+  [mf_acceptance_invocation "Typedef_Nits 01 three equality"
+     ``(x : zoo_three) = y`` ExpectGenuine MfCertNone true
+     mf_same_config,
+   mf_acceptance_invocation "Typedef_Nits 02 unit one_or_two"
+     ``(x : unit zoo_one_or_two) = y``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Typedef_Nits 03 bool one_or_two"
+     ``(x : bool zoo_one_or_two) = y``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Typedef_Nits 04 collapsed one_or_two"
+     ``((ARB F : bool) <=> ARB T) ==>
+       (x : bool zoo_one_or_two) = y``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation
+     "Typedef_Nits 05 collapsed one_or_two distinct [card = 1]"
+     ``((ARB F : bool) <=> ARB T) ==>
+       ?x y : bool zoo_one_or_two. x <> y``
+     ExpectNone MfCertIgnored false (mf_typedef_cards [1]),
+   mf_acceptance_invocation
+     "Typedef_Nits 06 one_or_two distinct [card = 1]"
+     ``?x y : bool zoo_one_or_two. x <> y``
+     ExpectNone MfCertIgnored false (mf_typedef_cards [1]),
+   mf_acceptance_invocation
+     "Typedef_Nits 06 one_or_two distinct [card = 2]"
+     ``?x y : bool zoo_one_or_two. x <> y``
+     ExpectNone MfCertIgnored false (mf_typedef_cards [2]),
+   mf_acceptance_invocation "Typedef_Nits 07 unit bounded"
+     ``(x : unit zoo_bounded) = y``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Typedef_Nits 08 bool bounded"
+     ``(x : bool zoo_bounded) = y``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Typedef_Nits 09 bool bounded has two values"
+     ``(x : bool zoo_bounded) <> y ==> z = x \/ z = y``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Typedef_Nits 10 pair-bool bounded"
+     ``(x : (bool # bool) zoo_bounded) <> y ==> z = x \/ z = y``
+     ExpectGenuine MfCertNone false (mf_typedef_cards [1, 2, 3, 4, 5]),
+   mf_acceptance_invocation "Typedef_Nits 11 check membership"
+     ``zoo_check_rep (zoo_check_abs n) = n ==> n < 2``
+     ExpectNone MfCertIgnored false (mf_typedef_cards [1, 2, 3]),
+   mf_acceptance_invocation "Typedef_Nits 12 check mutation"
+     ``zoo_check_rep (zoo_check_abs n) = n ==> n < 1``
+     ExpectGenuine MfCertNone false (mf_typedef_cards [1, 2, 3]),
+   mf_acceptance_invocation
+     "Typedef_Nits 13 swapped product representation [boxed]"
+     mf_typedef_pair_swapped ExpectNone MfCertIgnored false
+     (mf_typedef_cards [1, 2]),
+   mf_acceptance_invocation
+     "Typedef_Nits 13 swapped product representation [dont_box]"
+     mf_typedef_pair_swapped ExpectGenuine MfCertNone true
+     mf_typedef_no_box,
+   mf_acceptance_invocation
+     "Typedef_Nits 14 mutated first projection [boxed]"
+     mf_typedef_fst_mutated ExpectNone MfCertIgnored false
+     (mf_typedef_cards [1, 2]),
+   mf_acceptance_invocation
+     "Typedef_Nits 14 mutated first projection [dont_box]"
+     mf_typedef_fst_mutated ExpectGenuine MfCertNone false
+     mf_typedef_no_box]
+
+fun mf_typedef_nits_config config =
+  mf_typedef_cards [1, 2, 3, 4] config
+
+val mf_typedef_nits_group : mf_acceptance_group =
+  {name = "Typedef_Nits", configure = mf_typedef_nits_config,
+   cases = mf_typedef_nits_cases}
+
+fun mf_executable_genuine_pin_is_some
+      ({acceptance_case = {expect, cert_pin, ...}, ...} :
+        mf_acceptance_invocation) =
+  expect <> ExpectGenuine orelse cert_pin = MfCertSome
+
+val _ = require_msg (check_result (fn () =>
+  (* Counts are solver invocations.  Integer has 38 unary/binary source
+     pairs, two overflow variants, and two retained labels cases.
+     Registered typedef goals are deliberately non-executable in the MF;
+     the ABS_prod mutations are gated by their representation constants. *)
+  length mf_integer_arithmetic_cases = 38 andalso
+  length mf_integer_nits_cases = 80 andalso
+  length mf_datatype_nits_cases = 16 andalso
+  length mf_record_nits_cases = 15 andalso
+  length mf_typedef_nits_cases = 17 andalso
+  List.all mf_executable_genuine_pin_is_some
+    (mf_integer_nits_cases @ mf_datatype_nits_cases @
+     mf_record_nits_cases)))
+  (fn () => "M4 corpus count or executable-certificate pin changed")
+  (fn () => ()) ()
+
 val mf_refusal_flip_cases =
   [mf_acceptance_invocation "M4 refusal flip: RTC"
      ``RTC (r : num -> num -> bool) x y``
@@ -12650,7 +13097,9 @@ val mf_refusal_flip_group : mf_acceptance_group =
 
 val mf_acceptance_groups =
   [mf_m3_acceptance_group, mf_induct_nits_group,
-   mf_special_nits_group, mf_pattern_nits_group,
+   mf_special_nits_group, mf_integer_nits_group,
+   mf_datatype_nits_group, mf_record_nits_group,
+   mf_pattern_nits_group, mf_typedef_nits_group,
    mf_refusal_flip_group]
 
 (* PLAN_M3 section 13.3: both engines run sequentially on the same
@@ -13134,7 +13583,10 @@ fun run_mf_acceptance () =
   if not (Refute_Forl.is_configured ()) then
     print "(Kodkodi not configured, MF acceptance corpus skipped.)\n"
   else
-    let
+    with_quotient_typedef_registries_restored (fn () => let
+      val _ = List.app Refute.register_typedef
+        [zoo_three_registration, zoo_one_or_two_registration,
+         zoo_bounded_registration, zoo_check_registration]
       val solvers = Refute_ForlSat.configured_sat_solvers false
       val _ = if Lib.mem "MiniSat_JNI" solvers then () else
         raise Fail "MiniSat_JNI is required for the full MF corpus"
@@ -13146,7 +13598,7 @@ fun run_mf_acceptance () =
     in
       List.app (run_timed_mf_group "SAT4J" " smoke")
         mf_acceptance_groups
-    end
+    end)
 
 val _ = if selftest_level >= 2 then run_mf_acceptance () else ()
 
