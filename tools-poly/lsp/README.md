@@ -81,6 +81,13 @@ underlines; `M-x eldoc` (or `eldoc-mode`) shows hover at point;
 `M-.` (`xref-find-definitions`) jumps to definitions; `M-x
 eglot-events-buffer` shows the raw traffic.
 
+Compile progress: with `eglot-report-progress` at its default `t`,
+the mode-line reads `[eglot:HOL/42%]` and the token/title only appear
+in the tooltip.  With `eglot-report-progress` set to `'messages`,
+eglot unconditionally echoes `[eglot] <nick> <token>: <title>` on
+every progress update — that's an eglot formatting choice, not
+something the server can suppress.
+
 ### With lsp-mode
 
 Lsp-mode documentation:

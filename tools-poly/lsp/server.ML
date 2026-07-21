@@ -435,6 +435,13 @@ fun start {diag} = let
   val elabOnRef = ref ElabOnChange
   val holdepMode = ref HoldepQuiet
 
+  (* Server-initiated request ids and progress tokens for
+     window/workDoneProgress. *)
+  val nextRequestId = ref 100000
+  fun allocRequestId () =
+      !nextRequestId before nextRequestId := !nextRequestId + 1
+  val progressIdCounter = ref 0
+
   datatype report =
     Error of {hard: bool, pos: range, msg: encode}
   | CompilerOut of int * string list
@@ -639,6 +646,41 @@ fun start {diag} = let
             print "}"))))
         end
 
+      (* Standard LSP window/workDoneProgress: gives eglot a
+         mode-line spinner + percentage while the compile runs. *)
+      val totalSize = size (#text text)
+      (* Token is a bare integer; some clients (eglot) concatenate
+         title and token when reporting, so we keep the token free of
+         label-like text. *)
+      val progressToken = Int.toString (!progressIdCounter)
+        before progressIdCounter := !progressIdCounter + 1
+      val () = send (Request {
+        id = Id (allocRequestId ()),
+        method = "window/workDoneProgress/create",
+        params = fn print => (
+          print "{\"token\":"; encString progressToken print; print "}")})
+      val () = send (mkNotif "$/progress" (fn print => (
+        print "{\"token\":"; encString progressToken print;
+        print ",\"value\":{\"kind\":\"begin\",\"title\":\"HOL compile\",";
+        print "\"cancellable\":false,\"percentage\":0,\"message\":";
+        encString (OS.Path.file uri) print;
+        print "}}")))
+      val lastReportedPct = ref 0
+      fun sendProgressReport pos =
+        if totalSize <= 0 then () else let
+          val pct = FixedInt.toInt (FixedInt.fromInt pos * 100 div FixedInt.fromInt totalSize)
+          in if pct <= !lastReportedPct then () else (
+            lastReportedPct := pct;
+            send (mkNotif "$/progress" (fn print => (
+              print "{\"token\":"; encString progressToken print;
+              print ",\"value\":{\"kind\":\"report\",\"percentage\":";
+              encInt pct print; print "}}"))))
+          end
+      fun sendProgressEnd () =
+        send (mkNotif "$/progress" (fn print => (
+          print "{\"token\":"; encString progressToken print;
+          print ",\"value\":{\"kind\":\"end\"}}")))
+
       val ls = ref (beforeCompile ())
       val lastPos = ref 0
       fun process (Progress i) = (
@@ -648,6 +690,7 @@ fun start {diag} = let
             print "{\"uri\":"; encString uri print;
             print ",\"pos\":"; encPosLC lines i print;
             print "}")));
+          sendProgressReport i;
           updateDiags i;
           sendDiags ();
           ls := beforeCompile ())
@@ -657,20 +700,23 @@ fun start {diag} = let
         | process Interrupted = raise Bind
         | process (msg as Error _) = DArray.push (#diags (!trees), msg)
       fun processBuiltTree t = trees := addBuiltTree t (!trees)
-      in
+      in (
         compileForReport uri (#text text) lastPos processBuiltTree process;
         afterCompile (!lastPos, size (#text text)) (!ls);
+        sendProgressEnd ();
         send (mkNotif "$/compileCompleted" (fn print => (
           print "{\"uri\":"; encString uri print; print "}")));
         lastTrees := {text = text, parse = setParseDone (size (#text text)) (!trees)}
-      end
-      handle Thread.Interrupt =>
+      ) handle Thread.Interrupt => (
+        sendProgressEnd ();
         send (mkNotif "$/compileInterrupted" (fn print => (
-          print "{\"uri\":"; encString uri print; print "}")))
+          print "{\"uri\":"; encString uri print; print "}"))))
            | e => (
         logMessage ("compile aborted: " ^ exnMessage e);
+        sendProgressEnd ();
         send (mkNotif "$/compileInterrupted" (fn print => (
-          print "{\"uri\":"; encString uri print; print "}")))));
+          print "{\"uri\":"; encString uri print; print "}"))))
+      end);
       compile := NONE)
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
     in compile := SOME {parse = trees, text = text, thread = thread} end)

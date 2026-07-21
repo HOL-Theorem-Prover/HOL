@@ -440,6 +440,28 @@ def test_diagnostic_dedup():
 # ------------------------------------------------------------------
 # Runner
 # ------------------------------------------------------------------
+def test_workdone_progress():
+    """Server emits window/workDoneProgress/create + $/progress
+    begin/report(s)/end during a compile."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/progress.sml"
+        _did_open(c, uri, "Theory progress\n\nval a = 3\n")
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        msgs, _ = c.messages_since(0)
+        create = [m for m in msgs
+                  if m.get("method") == "window/workDoneProgress/create"]
+        progress = [m for m in msgs if m.get("method") == "$/progress"]
+        kinds = [m["params"]["value"]["kind"] for m in progress]
+        assert_ge(len(create), 1, "at least one workDoneProgress/create")
+        assert_true("begin" in kinds, f"got a 'begin' kind (kinds={kinds})")
+        assert_true("end" in kinds, f"got an 'end' kind (kinds={kinds})")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("small_clean_file",             test_small_clean_file),
@@ -450,6 +472,7 @@ TESTS = [
     ("integer_recompile_blank",      test_integer_recompile_blank_lines),
     ("integer_recompile_type_error", test_integer_recompile_with_type_error),
     ("diagnostic_dedup",             test_diagnostic_dedup),
+    ("workdone_progress",            test_workdone_progress),
 ]
 
 
