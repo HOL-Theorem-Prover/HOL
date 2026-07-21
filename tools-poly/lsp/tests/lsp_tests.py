@@ -419,6 +419,31 @@ def test_integer_recompile_with_type_error():
         c.close()
 
 
+def test_small_recompile_bare_val():
+    """Unterminated `val` decl before another val: reproducer for the
+    updateDiags Subscript bug where oldDiags outgrew the current-compile
+    diags array across non-monotonic Progress positions."""
+    original = "Theory small\nAncestors\n  arithmetic\n\nval a = 3\nval b = 4\n"
+    lines = original.split("\n")
+    lines.insert(4, "val")
+    edited = "\n".join(lines)
+    uri = "file:///tmp/small_bare_val.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, original)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "first compileCompleted")
+        idx = c.total_msgs()
+        _did_change_full(c, uri, edited, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx),
+                    "second compileCompleted (would fail with cascading Subscript)")
+        assert_true(c.wait_for_method("$/compileInterrupted", 1, idx) is None,
+                    "no compileInterrupted")
+    finally:
+        c.close()
+
+
 def test_diagnostic_dedup():
     """Type-error inserted → publishDiagnostics event count should be small."""
     c = Client("/tmp")
@@ -468,6 +493,7 @@ TESTS = [
     ("small_typerror_at_open",       test_small_typerror_at_open),
     ("small_recompile_blank_line",   test_small_recompile_blank_line),
     ("small_recompile_type_error",   test_small_recompile_type_error_inserted),
+    ("small_recompile_bare_val",     test_small_recompile_bare_val),
     ("integer_first_compile",        test_integer_first_compile),
     ("integer_recompile_blank",      test_integer_recompile_blank_lines),
     ("integer_recompile_type_error", test_integer_recompile_with_type_error),

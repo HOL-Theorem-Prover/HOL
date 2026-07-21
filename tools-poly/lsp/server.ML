@@ -625,7 +625,7 @@ fun start {diag} = let
         val n = DArray.size oldDiags
         val newDiags = DArray.clone (diags, DArray.size diags + n)
         fun loop i = if i >= n then () else let
-          val x = DArray.sub (diags, i)
+          val x = DArray.sub (oldDiags, i)
           val keep = case x of Error {pos = (start, _), ...} => start >= pos | _ => true
           in if keep then DArray.push (newDiags, x) else (); loop (i+1) end
         in loop 0; DArray.replace (oldDiags, newDiags) end
