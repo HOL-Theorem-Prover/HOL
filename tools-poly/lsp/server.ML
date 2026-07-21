@@ -382,7 +382,7 @@ fun start {diag} = let
   val _ = PolyML.print_depth 100
   val conn as {send, recv} = stdioConnection ()
   val _ (*clientCapabilities*) = initialize conn (concat [
-    "{\"textDocumentSync\":1", (* 1 = Full *)
+    "{\"textDocumentSync\":2", (* 2 = Incremental; applyEdit supports it *)
     ",\"hoverProvider\":true",
     ",\"definitionProvider\":true",
     ",\"referencesProvider\":true",
