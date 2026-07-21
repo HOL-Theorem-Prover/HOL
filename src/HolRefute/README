@@ -59,6 +59,57 @@ Module layout:
   representation selection, Kodkod translation, and model reconstruction.
 * Refute.sig and Refute.sml: the public API facade.
 
+M4 model-finder surface
+-----------------------
+
+The M4 model finder adds native polymorphic scopes, monotonicity and smart
+finitization, specialization and boxing, binary integers, (co)inductive
+predicates, codatatypes, quotients, typedefs, value pinning, model formatting,
+and incremental multi-model search.  The new or newly active options and their
+defaults are:
+
+| updater | default | meaning |
+| --- | --- | --- |
+| `upd_specialize` | `true` | specialize static higher-order arguments |
+| `upd_box` | `[(NONE, NONE)]` | box functions and pairs when useful |
+| `upd_binary_ints` | `NONE` | select binary integers when useful |
+| `upd_bits` | `[1, ..., 10]` | candidate binary word widths |
+| `upd_star_linear_preds` | `true` | use exact closure for linear predicates |
+| `upd_iter` | default depth row (below) | fixpoint unrolling depths |
+| `upd_bisim_depth` | `[9]` | codatatype bisimulation depth; `~1` disables it |
+| `upd_finitize` | `[(NONE, NONE)]` | finitization selected by monotonicity |
+| `upd_whack` | `[]` | constants whose definitions are ignored |
+| `upd_need` | `NONE` | values that must occur in the model |
+| `upd_tac_timeout` | `0.5` seconds | inner tactic timeout |
+| `upd_format` | default row `[1]` | displayed model-value depth |
+| `upd_max_potential` | `1` | maximum potential models returned |
+| `upd_max_genuine` | `1` | maximum genuine models returned |
+
+The default `iter` row is `[0,1,2,4,8,12,16,20,24,28]`.  A `NONE` key in a
+row is its fallback.  For smart Boolean rows, a `NONE` value asks Refute to
+choose; `SOME true` and `SOME false` force the choice.
+The `max_potential` and `max_genuine` limits are global budgets.  Requesting
+more than one model forces an incremental SAT solver when necessary, and a
+genuine result ends the potential-model search.
+
+Registrations are session-local ML state and create no theory content:
+
+* `Refute.register_codatatype {tyop, case_const, constructors}` registers a
+  genuine type operator, its case constant, and its distinct constructors.
+  Lazy built-ins cover `llist`, `ltree`, `itree`, and `itreeTau` when their
+  theories are present.
+* `Refute.register_quotient {qty, rty, abs, rep, equiv_thm, partial}`
+  registers the abstract and representation types and constants.  The
+  theorem shape determines whether the sound partial encoding is required;
+  the legacy `partial` field is retained for source compatibility.
+* `Refute.register_typedef {ty, abs, rep, absrep_thm}` registers an existing
+  HOL typedef.  `absrep_thm` must be its exported conjunction of the two
+  bijection laws and must agree with the type's `<tyop>_TY_DEF` theorem.
+
+All registration types use distinct type variables as parameters.  Abs, rep,
+case, and constructor terms must be existing constants.  A later compatible
+registration for the same type operator replaces the session entry.
+
 Kodkodi support is Unix-only and requires a Java runtime.  Obtain
 `kodkodi-1.5.7.tar.gz` from the Isabelle components mirror at
 <https://isabelle.in.tum.de/components/> and unpack it locally.  Set
@@ -102,3 +153,17 @@ Predicates introduced by `Hol_reln` and `Hol_coreln` are recognized through
 the IndDef registries and support direct well-founded equations or joint
 least/greatest-fixpoint unrolling.  Hand-rolled greatest fixpoints are not
 recognized; define coinductive predicates with `Hol_coreln`.
+
+Known limitations and follow-ups
+--------------------------------
+
+An Abs/Rep occurrence for an unregistered typedef makes the model finder
+return `Unknown`, rather than risk a spurious genuine result.  Register the
+typedef explicitly.  The `rat` type is not registered: its intended
+fraction/ersatz representation remains future work.
+
+The following parity work is intentionally not in M4: native narrowing,
+predicate-mode smart generators, `find_unused_assms`, `lbtree` and `path`
+codata registrations, automatic quotient/typedef database harvesting,
+`merge_type_vars`, fraction/`rat` support, and monotonicity promotion for
+relation inverse and composition (`inv` and `O`).
