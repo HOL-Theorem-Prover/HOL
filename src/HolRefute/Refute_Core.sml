@@ -514,6 +514,11 @@ structure Refute_Core = struct
 
   fun validate_mf_config (mf : mf_config) =
     let
+      val _ = List.app (fn (NONE, _) => ()
+                         | (SOME key, _) =>
+          if Term.is_const key orelse Term.is_var key then ()
+          else range_error "max" ("row key must be a constant or variable; " ^
+            "got: " ^ Parse.term_to_string key)) (#max mf)
       val _ = if null (#bits mf) orelse
                      List.exists (fn bits => bits < 1 orelse bits > 31)
                        (#bits mf) then
@@ -1140,8 +1145,7 @@ structure Refute_Core = struct
                 val placeholder = Term.mk_var (name, Term.type_of candidate)
               in
                 (placeholder, index + 1,
-                 (Parse.term_to_string placeholder,
-                  delimit (format_term argument)) :: replacements)
+                 (placeholder, delimit (format_term argument)) :: replacements)
               end
           | NONE =>
               if Term.is_abs candidate then
@@ -1164,22 +1168,26 @@ structure Refute_Core = struct
                 end
               else
                 (candidate, index, replacements)
-      fun replace_all needle replacement string =
+      fun replace_all needle replacement source =
         let
           val needle_length = size needle
-          val string_length = size string
+          val source_length = size source
           fun scan index parts =
-            if index >= string_length then String.concat (rev parts)
-            else if index + needle_length <= string_length andalso
-                    String.substring (string, index, needle_length) = needle
+            if index >= source_length then String.concat (rev parts)
+            else if index + needle_length <= source_length andalso
+                    String.substring (source, index, needle_length) = needle
             then scan (index + needle_length) (replacement :: parts)
             else scan (index + 1)
-              (String.substring (string, index, 1) :: parts)
+              (String.substring (source, index, 1) :: parts)
         in
           scan 0 []
         end
       val (printable, _, replacements) = replace_quotients term 0 []
-      val string = Parse.term_to_string printable
+      (* A placeholder must print identically in isolation and in context.
+         Suppressing free-variable annotations also prevents line wrapping
+         from splitting an annotation away from its marker. *)
+      val string = Lib.with_flag (Globals.show_types, false)
+        Parse.term_to_string printable
       val length = size string
       fun clean index parts =
         if index >= length then String.concat (rev parts)
@@ -1193,8 +1201,11 @@ structure Refute_Core = struct
           clean (index + 1)
             (String.substring (string, index, 1) :: parts)
     in
-      List.foldl (fn ((needle, replacement), result) =>
-        replace_all needle replacement result) (clean 0 []) replacements
+      List.foldl (fn ((placeholder, replacement), result) =>
+        replace_all
+          (Lib.with_flag (Globals.show_types, false)
+             Parse.term_to_string placeholder)
+          replacement result) (clean 0 []) replacements
     end
 
   fun format_bindings bindings =

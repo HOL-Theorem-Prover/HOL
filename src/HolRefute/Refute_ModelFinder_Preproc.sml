@@ -1427,12 +1427,9 @@ structure Refute_ModelFinder_Preproc = struct
           map (fn arguments => List.nth (arguments, index)) call_lists
         else
           []
-      fun distinct terms = List.rev (List.foldl (fn (candidate, result) =>
-        if Util.aconv_member candidate result then result
-        else candidate :: result) [] terms)
       val maximum = List.foldl Int.max 0 (map length call_lists)
       val sets = List.tabulate (maximum, fn index =>
-        distinct (terms_at index))
+        Util.distinct_terms (terms_at index))
       fun first_equal singleton =
         Lib.index (fn terms =>
           length terms = 1 andalso Term.aconv (hd terms) singleton) sets

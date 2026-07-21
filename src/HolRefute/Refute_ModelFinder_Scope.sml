@@ -201,8 +201,12 @@ structure Refute_ModelFinder_Scope = struct
          type_matches pattern actual) assigns ty)
 
   fun const_matches (pattern, actual) =
-    MFH.constructor_name pattern = MFH.constructor_name actual andalso
-    type_matches (Term.type_of pattern) (Term.type_of actual)
+    case (Lib.total MFH.constructor_name pattern,
+          Lib.total MFH.constructor_name actual) of
+        (SOME pattern_name, SOME actual_name) =>
+          pattern_name = actual_name andalso
+          type_matches (Term.type_of pattern) (Term.type_of actual)
+      | _ => false
 
   fun lookup_const_ints_assign assigns constructor =
     let

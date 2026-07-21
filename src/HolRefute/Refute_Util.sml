@@ -20,12 +20,9 @@ end
 structure Refute_Util :> REFUTE_UTIL = struct
   fun same_type left right = Type.compare (left, right) = EQUAL
 
-  fun member_type ty = List.exists (same_type ty)
-
-  fun add_type ty types =
-    if member_type ty types then types else ty :: types
-
-  fun aconv_member term = List.exists (Term.aconv term)
+  val member_type = Lib.op_mem same_type
+  val add_type = Lib.op_insert same_type
+  val aconv_member = Lib.op_mem Term.aconv
 
   fun distinct_terms terms =
     List.rev (List.foldl (fn (term, result) =>

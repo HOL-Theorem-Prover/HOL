@@ -1,6 +1,7 @@
 signature REFUTE_FORL_SAT = sig
   val configured_sat_solvers : bool -> string list
   val smart_sat_solver_name : bool -> string
+  val executable_available : string -> bool
   val sat_solver_spec : Time.time -> string -> string * string list
 end
 
@@ -79,8 +80,15 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
       (getenv home,
        if Systeml.OS = "winNT" then executable ^ ".exe" else executable)
 
+  fun executable_available path =
+    OS.FileSys.access
+      (path, [OS.FileSys.A_READ, OS.FileSys.A_EXEC])
+    handle OS.SysErr _ => false
+
   fun external_entry name device home executable arguments markers =
-    if getenv home = "" then NONE
+    if getenv home = "" orelse
+       not (executable_available (external_executable (home, executable)))
+    then NONE
     else
       let
         fun make_arguments () =
@@ -142,7 +150,9 @@ structure Refute_ForlSat :> REFUTE_FORL_SAT = struct
     List.map #1 (dynamic_list Time.zeroTime incremental)
 
   fun smart_sat_solver_name incremental =
-    #1 (hd (dynamic_list Time.zeroTime incremental))
+    case dynamic_list Time.zeroTime incremental of
+        [] => "SAT4J"
+      | entry :: _ => #1 entry
 
   fun quote text = "\"" ^ text ^ "\""
 

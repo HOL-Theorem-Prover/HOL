@@ -72,6 +72,21 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
      bounds : raw_bound list} -> reconstruction
 
+  val reconstruct_both :
+    {context : Refute_ModelFinder_HOL.mf_context,
+     formats : (term option * int list) list,
+     scope : scope,
+     atoms : (hol_type option * string list) list,
+     special_funs : Refute_ModelFinder_HOL.special_fun list,
+     real_frees : term list,
+     eval_terms : term list,
+     free_names : nut list,
+     sel_names : nut list,
+     nonsel_names : nut list,
+     rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
+     bounds : raw_bound list} ->
+    {raw : reconstruction, displayed : reconstruction}
+
   val model_report : reconstruction -> Refute_Core.model_report
   val display_counterexample :
     reconstruction -> Refute_Core.counterexample -> Refute_Core.counterexample
@@ -1308,11 +1323,12 @@ fun unfold_outer_the_binders term =
         if is_safe_the choice andalso Term.is_abs abstraction then
           let
             val (variable, body) = Term.dest_abs abstraction
-            val (left, _) = boolSyntax.dest_eq body
+            val (left, right) = boolSyntax.dest_eq body
           in
             if Term.aconv left variable then
               unfold_outer_the_binders
-                (Term.beta_conv (Term.mk_comb (abstraction, term)))
+                (Term.beta_conv
+                   (Term.mk_comb (Term.mk_abs (variable, right), term)))
             else term
           end handle HOL_ERR _ => term
         else term
@@ -1373,7 +1389,8 @@ fun reconstruct_with formatting
 
     fun binding term =
       let val name = free_name_for_term free_names term
-      in (term, formatted_value term (decode name)) end
+          val value = decode name
+      in ((term, value), (term, formatted_value term value)) end
 
     fun curry_uncurried_value nickname display_ty value =
       case uncurry_info nickname of
@@ -1399,7 +1416,9 @@ fun reconstruct_with formatting
               MFH.eta_contract (Term.list_mk_abs (variables, body))
             end
 
-    fun classify (name, (evals, skolems, consts)) =
+    fun classify (name, ((evals, skolems, consts),
+                         (display_evals, display_skolems,
+                          display_consts))) =
       let
         val nickname = MFNT.nickname_of name
         val raw_value = decode name
@@ -1410,30 +1429,38 @@ fun reconstruct_with formatting
         val display_value =
           case formatting of
               NONE => ordinary_value
-            | SOME (context, formats) =>
-                format_fun
-                  (format_term_type_for_name context formats special_funs
-                    nickname lhs) raw_value
+            | SOME (format_context, formats) => format_fun
+                (format_term_type_for_name format_context formats special_funs
+                  nickname lhs) raw_value
       in
         if MFNT.is_skolem_name name then
-          (evals, (MFN.original_name nickname, display_value) :: skolems,
-           consts)
+          ((evals, (MFN.original_name nickname, ordinary_value) :: skolems,
+            consts),
+           (display_evals,
+            (MFN.original_name nickname, display_value) :: display_skolems,
+            display_consts))
         else
           case eval_index nickname of
               SOME index =>
                 if index < length eval_terms then
                   let val eval_term = List.nth (eval_terms, index)
                   in
-                    ((eval_term, formatted_value eval_term ordinary_value) ::
-                       evals,
-                     skolems, consts)
+                    (((eval_term, ordinary_value) :: evals,
+                      skolems, consts),
+                     ((eval_term, formatted_value eval_term ordinary_value) ::
+                        display_evals,
+                      display_skolems, display_consts))
                   end
                 else
-                  (evals, skolems, consts)
+                  ((evals, skolems, consts),
+                   (display_evals, display_skolems, display_consts))
             | NONE =>
-                (evals, skolems,
-                 (lhs, assignment_operator nickname, display_value) ::
-                   consts)
+                ((evals, skolems,
+                  (lhs, assignment_operator nickname, ordinary_value) ::
+                    consts),
+                 (display_evals, display_skolems,
+                  (lhs, assignment_operator nickname, display_value) ::
+                    display_consts))
       end
 
     fun is_bisim_support name =
@@ -1444,8 +1471,9 @@ fun reconstruct_with formatting
       end
 
     val displayed_names = List.filter (not o is_bisim_support) nonsel_names
-    val (evals, skolems, consts) =
-      List.foldl classify ([], [], []) displayed_names
+    val ((evals, skolems, consts),
+         (display_evals, display_skolems, display_consts)) =
+      List.foldl classify (([], [], []), ([], [], [])) displayed_names
 
     fun values_for_type (spec : MFS.data_type_spec) =
       let
@@ -1498,18 +1526,19 @@ fun reconstruct_with formatting
       end
     val codatatypes_ok = #bisim_depth scope >= 0 orelse
       List.all wellformed codatatypes
+    val (bindings, display_bindings) = ListPair.unzip (map binding real_frees)
+    fun result bindings evals skolems consts =
+      {bindings = bindings, evals = rev evals, skolems = rev skolems,
+       consts = rev consts, types = types, codatatypes_ok = codatatypes_ok}
   in
-    {bindings = map binding real_frees,
-     evals = rev evals,
-     skolems = rev skolems,
-     consts = rev consts,
-     types = types,
-     codatatypes_ok = codatatypes_ok}
+    {raw = result bindings evals skolems consts,
+     displayed = result display_bindings display_evals display_skolems
+       display_consts}
   end
 
-fun reconstruct arguments = reconstruct_with NONE arguments
+fun reconstruct arguments = #raw (reconstruct_with NONE arguments)
 
-fun reconstruct_formatted
+fun reconstruct_both
       {context, formats, scope, atoms, special_funs, real_frees, eval_terms,
        free_names, sel_names, nonsel_names, rel_table, bounds} =
   reconstruct_with (SOME (context, formats))
@@ -1517,6 +1546,8 @@ fun reconstruct_formatted
      real_frees = real_frees, eval_terms = eval_terms,
      free_names = free_names, sel_names = sel_names,
      nonsel_names = nonsel_names, rel_table = rel_table, bounds = bounds}
+
+fun reconstruct_formatted arguments = #displayed (reconstruct_both arguments)
 
 fun model_report ({skolems, consts, types, ...} : reconstruction) =
   {skolems = skolems, consts = consts, types = types}

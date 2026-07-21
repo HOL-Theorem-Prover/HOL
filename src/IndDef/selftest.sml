@@ -85,6 +85,36 @@ val _ = tprint "Can still look at rule_induction data"
 val _ = if can ThmSetData.current_data{settype = "rule_induction"} then OK()
         else die ""
 
+val malformed_coinduction =
+  ASSUME ``!P : num -> bool. T ==> (!x. T ==> P x)``
+
+fun malformed_coinduction_error testfn =
+  (testfn (); false)
+  handle HOL_ERR error =>
+    top_structure_of error = "CoIndDefLib" andalso
+    top_function_of error = "add_coinduction" andalso
+    String.isSubstring "conclusions headed by a constant"
+      (message_of error) andalso
+    String.isSubstring "P x" (message_of error)
+
+val _ = tprint "Malformed [coinduction] theorem has a useful diagnostic"
+val _ = if malformed_coinduction_error (fn () =>
+    ThmAttribute.local_attribute
+      {name = "malformed_coinduction", attrname = "coinduction", args = [],
+       thm = malformed_coinduction}) then OK ()
+  else die "malformed coinduction theorem was accepted or poorly diagnosed"
+
+val malformed_coinduction_name = "malformed_coinduction_export"
+val _ = save_thm (malformed_coinduction_name, malformed_coinduction)
+val coinduction_count_before =
+  length (CoIndDefLib.thy_coinductions (current_theory ()))
+val _ = tprint "Malformed coinduction export is not persisted"
+val _ = if malformed_coinduction_error (fn () =>
+    CoIndDefLib.export_coinduction malformed_coinduction_name) andalso
+    length (CoIndDefLib.thy_coinductions (current_theory ())) =
+      coinduction_count_before then OK ()
+  else die "malformed coinduction export changed persistent data"
+
 val _ = shouldfail {testfn = quietly (in_repl_mode (xHol_reln "tr")),
                     printresult = (fn (th,_,_) => thm_to_string th),
                     printarg = K "With Unicode should fail",

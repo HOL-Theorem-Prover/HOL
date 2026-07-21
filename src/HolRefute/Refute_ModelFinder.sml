@@ -333,7 +333,7 @@ fun run_instance deadline started (config : Refute_Core.config)
       (nondef_ts @ def_ts @ need_ts)
     val unique_scope = List.all (fn (_, values) => length values = 1)
       (#card mf)
-    val calculus_mono_types = ref ([] : hol_type list)
+    val calculus_mono_cache = ref ([] : (hol_type * bool) list)
     val _ =
       if #binary_ints mf = SOME true andalso not binarize andalso
          List.exists (fn ty => ty = MFH.num_type orelse ty = MFH.int_type)
@@ -352,21 +352,24 @@ fun run_instance deadline started (config : Refute_Core.config)
       else ()
 
     fun is_type_actually_monotonic ty =
-      let
-        val result = Timeout.apply (#tac_timeout context)
-          (MFMono.formulas_monotonic context binarize ty)
-          (nondef_ts, def_ts)
-        val _ = if result andalso
-                       not (Util.member_type ty (!calculus_mono_types)) then
-                  calculus_mono_types := ty :: !calculus_mono_types
-                else ()
-      in
-        result
-      end
-      handle Timeout.TIMEOUT _ =>
-               (report_mono_failure "timeout" ty ""; false)
-           | Util.BAD (location, detail) =>
-               (report_mono_failure location ty detail; false)
+      case List.find (fn (cached_ty, _) => Util.same_type ty cached_ty)
+             (!calculus_mono_cache) of
+          SOME (_, result) => result
+        | NONE =>
+            let
+              val result =
+                (Timeout.apply (#tac_timeout context)
+                   (MFMono.formulas_monotonic context binarize ty)
+                   (nondef_ts, def_ts)
+                 handle Timeout.TIMEOUT _ =>
+                          (report_mono_failure "timeout" ty ""; false)
+                      | Util.BAD (location, detail) =>
+                          (report_mono_failure location ty detail; false))
+              val _ = calculus_mono_cache :=
+                (ty, result) :: !calculus_mono_cache
+            in
+              result
+            end
 
     (* Unlike the scope shortcut, kind-of monotonicity deliberately lets a
        user false row block the calculus but does not let a true row force
@@ -382,7 +385,8 @@ fun run_instance deadline started (config : Refute_Core.config)
         (#mono mf) all_types
     val forced_mono_types = List.filter (fn ty =>
       MFS.mono_override (#mono mf) ty = SOME (SOME true)) mono_types
-    val inferred_mono_types = rev (!calculus_mono_types)
+    val inferred_mono_types = rev (List.mapPartial
+      (fn (ty, true) => SOME ty | _ => NONE) (!calculus_mono_cache))
 
     fun report_monotonic wording types =
       if null types then ()
@@ -477,8 +481,7 @@ fun run_instance deadline started (config : Refute_Core.config)
            nonsel_names = #nonsel_names extension,
            rel_table = #rel_table extension,
            bounds = bounds}
-        val reconstructed = MFM.reconstruct arguments
-        val displayed = MFM.reconstruct_formatted
+        val {raw = reconstructed, displayed} = MFM.reconstruct_both
           {context = context, formats = #format mf,
            scope = #scope arguments, atoms = #atoms arguments,
            special_funs = #special_funs arguments,

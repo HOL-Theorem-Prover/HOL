@@ -2832,7 +2832,8 @@ fun mf_binarize_preproc_goldens () =
        ("partial comparison", partial_less_seen),
        ("constructor max row",
         Refute_ModelFinder_Scope.lookup_const_ints_assign
-          [(SOME ``ZooLeaf : num -> zoo_tree``, [7])]
+          [(SOME ``ZooLeaf 0``, [3]),
+           (SOME ``ZooLeaf : num -> zoo_tree``, [7])]
           mapped_leaf_constructor = [7]),
        ("reserved constructor",
         MFN.is_reserved_name mapped_leaf_name andalso
@@ -4612,12 +4613,18 @@ fun mf_quotient_displays () =
         val _ = Feedback.set_trace "PP.avoid_unicode" 1
         val ascii = Refute_Core.format_term quotient
         val nested_ascii = Refute_Core.format_term nested
+        val long_nested = List.foldl (fn (_, result) =>
+          pairSyntax.mk_pair (quotient, result)) quotient
+          (List.tabulate (12, fn index => index))
+        val typed = Lib.with_flag (Globals.show_types, true)
+          Refute_Core.format_term long_nested
       in
         unicode = "«r»" andalso ascii = "<<r>>" andalso
         occurrences "«" nested_unicode = 2 andalso
         occurrences "<<" nested_ascii = 2 andalso
         not (String.isSubstring "Quot" nested_unicode) andalso
-        not (String.isSubstring "Quot" nested_ascii)
+        not (String.isSubstring "Quot" nested_ascii) andalso
+        not (String.isSubstring "refute$quotdisplay" typed)
       end
     val values_display = Portable.finally restore displays ()
     val second = MFN.mk_quot_normal ``:zoo_three`` ``:num``
@@ -5829,12 +5836,17 @@ fun mf_model_codatatype_cycles_and_recheck () =
             ("refute$bisim_iterator_max", MFH.bisim_iterator_type,
              MFR.Any)],
        rel_table = rel_table, bounds = bounds}
+    val (omega, equation) = Term.dest_abs (#2 (Term.dest_comb cyclic))
+    val one_step = Term.beta_conv
+      (Term.mk_comb
+        (Term.mk_abs (omega, #2 (boolSyntax.dest_eq equation)), cyclic))
   in
     cycle_shape andalso
     String.isSubstring MFN.cyclic_co_val_name
       (Parse.term_to_string cyclic) andalso
     MFM.bisimilar_values [ty] 0 (cyclic, nil_value) andalso
     MFM.bisimilar_values [ty] 2 (cyclic, cyclic) andalso
+    MFM.bisimilar_values [ty] 2 (cyclic, one_step) andalso
     not (MFM.bisimilar_values [ty] 2 (cyclic, nil_value)) andalso
     #codatatypes_ok (reconstruct one) andalso
     not (#codatatypes_ok two_disabled) andalso
@@ -7048,6 +7060,8 @@ local
       Lib.mem "MiniSat_JNI" incremental andalso
       not (Lib.mem "Lingeling_JNI" solvers) andalso
       not (Lib.mem "CryptoMiniSat_JNI" solvers) andalso
+      not (Refute_ForlSat.executable_available
+        "/definitely/not/a/real/SAT/solver") andalso
       not (null solvers) andalso not (null incremental) andalso
       Refute_ForlSat.smart_sat_solver_name false = hd solvers andalso
       Refute_ForlSat.smart_sat_solver_name false = "MiniSat_JNI" andalso
@@ -8263,7 +8277,10 @@ fun range_guard_is_pinned (field, explanation, testfn) = shouldfail {
 } ()
 
 val _ = List.app range_guard_is_pinned
-  [("max_genuine", "must be at least 1", fn () =>
+  [("max", "row key must be a constant or variable; got: ZooLeaf 0",
+     fn () => Refute.upd_max [(SOME ``ZooLeaf 0``, [1])]
+       Refute.default_config),
+   ("max_genuine", "must be at least 1", fn () =>
       Refute.upd_max_genuine 0 Refute.default_config),
    ("max_potential", "must not be negative", fn () =>
       Refute.upd_max_potential ~1 Refute.default_config),
@@ -13920,11 +13937,6 @@ fun mf_mono_driver_scope_fusion solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
-fun distinct_terms terms =
-  List.foldl (fn (tm, seen) =>
-    if List.exists (fn old => Term.aconv old tm) seen then seen
-    else tm :: seen) [] terms
-
 fun binding_value variable ({bindings, ...} : Refute.counterexample) =
   Option.map #2 (List.find (fn (candidate, _) =>
     Term.aconv candidate variable) bindings)
@@ -13947,7 +13959,8 @@ fun mf_incremental_genuine_models solver =
               val values = List.mapPartial (binding_value variable) cexs
             in
               length cexs <= 3 andalso
-              length (distinct_terms values) >= 2 andalso
+              length (Refute_ModelFinder_Util.distinct_terms values) >= 2
+                andalso
               List.all (fn ({certainty, cert, ...} :
                   Refute.counterexample) =>
                 certainty = Refute.Genuine andalso Option.isSome cert) cexs

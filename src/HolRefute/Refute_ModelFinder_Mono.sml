@@ -52,7 +52,6 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
   fun insert equal value values =
     if member equal value values then values else value :: values
 
-  fun same_type (left, right) = left = right
   fun same_mtype (left, right) = left = right
   fun same_term (left, right) = Term.aconv left right
 
@@ -93,14 +92,14 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
     else #Args (Type.dest_thy_type ty)
 
   fun could_exist_alpha_subtype alpha_ty ty =
-    same_type (alpha_ty, ty) orelse
+    Util.same_type alpha_ty ty orelse
     List.exists (could_exist_alpha_subtype alpha_ty) (type_arguments ty)
 
   fun could_exist_alpha_sub_mtype _ alpha_ty ty =
     if Type.is_vartype alpha_ty then
       could_exist_alpha_subtype alpha_ty ty
     else
-      same_type (alpha_ty, ty) orelse MFH.is_data_type ty
+      Util.same_type alpha_ty ty orelse MFH.is_data_type ty
 
   fun exists_alpha_sub_mtype MAlpha = true
     | exists_alpha_sub_mtype (MFun (left, _, right)) =
@@ -138,7 +137,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
           List.concat (map
             (flatten_mtype o repair_mtype cache seen) arguments))
     | repair_mtype cache seen (MRec ty) =
-        (case lookup same_type ty cache of
+        (case lookup (Lib.uncurry Util.same_type) ty cache of
              SOME (MRec _) => MType (type_name ty, [])
            | SOME mtype =>
                if member same_mtype mtype seen then
@@ -151,7 +150,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
 
   fun repair_data_type_mcache cache =
     List.app (fn (ty, mtype) =>
-      cache := update same_type
+      cache := update (Lib.uncurry Util.same_type)
         (ty, repair_mtype (!cache) [] mtype) (!cache))
       (rev (!cache))
 
@@ -195,7 +194,8 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
         if not (could_exist_alpha_sub_mtype context alpha_ty current) then
           MType (type_name current, [])
         else
-          case lookup same_type current (!data_type_mcache) of
+          case lookup (Lib.uncurry Util.same_type) current
+                 (!data_type_mcache) of
               SOME mtype => mtype
             | NONE =>
                 let
@@ -223,7 +223,8 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                   val constructor_mtypes =
                     rev reversed_constructor_mtypes
                   val mtype = MType (type_name current, all_mtypes)
-                  val _ = data_type_mcache := update same_type
+                  val _ = data_type_mcache :=
+                    update (Lib.uncurry Util.same_type)
                     (current, mtype) (!data_type_mcache)
                   val _ = ListPair.appEq
                     (fn (constructor, constructor_mtype) =>
@@ -236,7 +237,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                     (repair_data_type_mcache data_type_mcache;
                      repair_constr_mcache (!data_type_mcache)
                        constr_mcache;
-                     case lookup same_type current
+                     case lookup (Lib.uncurry Util.same_type) current
                             (!data_type_mcache) of
                          SOME repaired => repaired
                        | NONE => raise MTYPE
@@ -246,7 +247,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                     mtype
                 end
       and do_type current =
-        if same_type (current, alpha_ty) then
+        if Util.same_type current alpha_ty then
           MAlpha
         else if MFH.is_pair_type current then
           let val (left, right) = pairSyntax.dest_prod current
@@ -274,7 +275,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
         case lookup same_term constructor (!constr_mcache) of
             SOME mtype => mtype
           | NONE =>
-              if same_type (ty, alpha_ty) then
+              if Util.same_type ty alpha_ty then
                 let
                   val mtype = fresh_mtype_for_type mdata false ty
                   val _ = constr_mcache := update same_term
@@ -1056,7 +1057,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
           val shared_ty = #1 (Type.dom_rng ty)
           val shared_mtype = mtype_for shared_ty
           fun custom current =
-            if same_type (current, shared_ty) then shared_mtype
+            if Util.same_type current shared_ty then shared_mtype
             else
               case Lib.total Type.dom_rng current of
                   SOME (domain, range) =>

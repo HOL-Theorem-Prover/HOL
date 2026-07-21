@@ -21,7 +21,19 @@ sig
   val export_mono   : string -> unit
   val thy_monos     : string -> thm list
 
-  type rule_induction_map = thm list KNametab.table
+  type keyed_thm_map = thm list KNametab.table
+  type keyed_thm_set
+  val export_keyed_thm_set :
+    {settype : string, clause_key : term * term -> term,
+     error_structure : string, error_function : string} -> keyed_thm_set
+  val keyed_add : keyed_thm_set -> thm -> unit
+  val keyed_export : keyed_thm_set -> string -> unit
+  val keyed_thy_thms : keyed_thm_set -> string -> thm list
+  val keyed_map : keyed_thm_set -> unit -> keyed_thm_map
+  val keyed_map_by_theory : keyed_thm_set -> {thyname : string} ->
+                            keyed_thm_map option
+
+  type rule_induction_map = keyed_thm_map
   val thy_rule_inductions : string -> thm list
   val rule_induction_map : unit -> rule_induction_map
   val rule_induction_map_by_theory : {thyname : string} ->
