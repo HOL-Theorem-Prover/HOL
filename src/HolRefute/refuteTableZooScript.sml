@@ -2,7 +2,7 @@ Theory refuteTableZoo
 Ancestors
   refute ltree itreeTau fixedPoint
 Libs
-  TotalDefn Refute_Core quotient
+  TotalDefn Refute_Core quotient Omega
 
 Datatype:
   zoo_tree = ZooLeaf num | ZooNode zoo_tree zoo_tree
@@ -463,3 +463,378 @@ val zoo_pattern_f7_def = TotalDefn.Define `
   (zoo_pattern_f7 x [y] = x) /\
   (zoo_pattern_f7 x [] = x)
 `;
+
+(* Static support for the Core/Refute/Manual/Hotel acceptance groups. *)
+
+Datatype:
+  zoo_ref_t3 = ZooRefE ('a -> 'b)
+End
+
+Definition zoo_ref_rec_t3_def:
+  zoo_ref_rec_t3 e (ZooRefE f) = e f
+End
+
+Datatype:
+  zoo_ref_bintree =
+      ZooRefLeaf 'a
+    | ZooRefNode zoo_ref_bintree zoo_ref_bintree
+End
+
+val zoo_ref_rec_bintree_def = TotalDefn.Define `
+  (zoo_ref_rec_bintree l n (ZooRefLeaf x) = l x) /\
+  (zoo_ref_rec_bintree l n (ZooRefNode x y) =
+     n x y (zoo_ref_rec_bintree l n x)
+       (zoo_ref_rec_bintree l n y))
+`;
+
+Datatype:
+  zoo_ref_aexp =
+      ZooRefNumber 'a
+    | ZooRefITE zoo_ref_bexp zoo_ref_aexp zoo_ref_aexp ;
+  zoo_ref_bexp = ZooRefEqual zoo_ref_aexp zoo_ref_aexp
+End
+
+val zoo_ref_rec_exp_def = TotalDefn.Define `
+  (zoo_ref_rec_aexp number ite equal (ZooRefNumber x) = number x) /\
+  (zoo_ref_rec_aexp number ite equal (ZooRefITE x y z) =
+     ite x y z (zoo_ref_rec_bexp number ite equal x)
+       (zoo_ref_rec_aexp number ite equal y)
+       (zoo_ref_rec_aexp number ite equal z)) /\
+  (zoo_ref_rec_bexp number ite equal (ZooRefEqual x y) =
+     equal x y (zoo_ref_rec_aexp number ite equal x)
+       (zoo_ref_rec_aexp number ite equal y))
+`;
+
+Datatype:
+  zoo_ref_x = ZooRefXA | ZooRefXB zoo_ref_x | ZooRefXC zoo_ref_y ;
+  zoo_ref_y = ZooRefYD zoo_ref_x | ZooRefYE zoo_ref_y | ZooRefYF
+End
+
+val zoo_ref_rec_xy_def = TotalDefn.Define `
+  (zoo_ref_rec_x a b c d e f ZooRefXA = a) /\
+  (zoo_ref_rec_x a b c d e f (ZooRefXB x) =
+     b x (zoo_ref_rec_x a b c d e f x)) /\
+  (zoo_ref_rec_x a b c d e f (ZooRefXC y) =
+     c y (zoo_ref_rec_y a b c d e f y)) /\
+  (zoo_ref_rec_y a b c d e f (ZooRefYD x) =
+     d x (zoo_ref_rec_x a b c d e f x)) /\
+  (zoo_ref_rec_y a b c d e f (ZooRefYE y) =
+     e y (zoo_ref_rec_y a b c d e f y)) /\
+  (zoo_ref_rec_y a b c d e f ZooRefYF = f)
+`;
+
+(* HOL4's datatype package cannot form recursive occurrences below the
+   function type constructor.  These fixtures preserve the embedding shape
+   at the constructor boundary while using Boolean function codomains. *)
+Datatype:
+  zoo_ref_xopt = ZooRefCX (zoo_ref_xopt option) | ZooRefDX bool
+End
+
+Datatype:
+  zoo_ref_yopt = ZooRefCY (('a -> bool) option)
+End
+
+Datatype:
+  zoo_ref_trie = ZooRefTR (zoo_ref_trie list)
+End
+
+Datatype:
+  zoo_ref_inftree = ZooRefInfLeaf | ZooRefInfNode (num -> bool)
+End
+
+Datatype:
+  zoo_ref_lambda =
+      ZooRefVar 'a
+    | ZooRefApp zoo_ref_lambda zoo_ref_lambda
+    | ZooRefLam ('a -> bool)
+End
+
+Datatype:
+  zoo_ref_t = ZooRefTC ('a -> bool) | ZooRefTD ('b list)
+End
+
+Datatype:
+  zoo_ref_u = ZooRefUE ('a -> bool)
+End
+
+Datatype:
+  zoo_ref_point = <| zoo_ref_xpos : 'a; zoo_ref_ypos : 'b |>
+End
+
+Datatype:
+  zoo_ref_extpoint =
+    <| zoo_ref_ext_xpos : 'a; zoo_ref_ext_ypos : 'b;
+       zoo_ref_extension : 'c |>
+End
+
+Inductive zoo_ref_undefined_set:
+  !(x : 'a). x = ARB ==> zoo_ref_undefined_set x
+End
+
+Inductive zoo_ref_even_card:
+  zoo_ref_even_card ({} : 'a set) /\
+  (!S x y. zoo_ref_even_card S /\ x NOTIN S /\ y NOTIN S /\ x <> y ==>
+     zoo_ref_even_card (S UNION {x; y}))
+End
+
+Inductive zoo_ref_even:
+  zoo_ref_even 0 /\
+  (!n. zoo_ref_even n ==> zoo_ref_odd (SUC n)) /\
+  (!n. zoo_ref_odd n ==> zoo_ref_even (SUC n))
+End
+
+Inductive zoo_ref_a_even:
+  (!(f : 'a -> 'a) x. x = ARB ==> zoo_ref_a_even f x) /\
+  (!f x. zoo_ref_a_even f x ==> zoo_ref_a_odd f (f x)) /\
+  (!f x. zoo_ref_a_odd f x ==> zoo_ref_a_even f (f x))
+End
+
+Definition zoo_manual_my_int_rel_def:
+  zoo_manual_my_int_rel (x : num # num) y <=>
+    FST x + SND y = FST y + SND x
+End
+
+Theorem zoo_manual_my_int_equiv:
+  !x y. zoo_manual_my_int_rel x y =
+        (zoo_manual_my_int_rel x = zoo_manual_my_int_rel y)
+Proof
+  Cases >> Cases >>
+  simp [zoo_manual_my_int_rel_def, FUN_EQ_THM,
+        pairTheory.FORALL_PROD] >>
+  Omega.OMEGA_TAC
+QED
+
+val zoo_manual_my_int_quot_def =
+  define_quotient_type "zoo_manual_my_int" "zoo_manual_my_int_abs"
+    "zoo_manual_my_int_rep" zoo_manual_my_int_equiv;
+
+Definition zoo_manual_add_def:
+  zoo_manual_add x y =
+    zoo_manual_my_int_abs
+      (FST (zoo_manual_my_int_rep x) + FST (zoo_manual_my_int_rep y),
+       SND (zoo_manual_my_int_rep x) + SND (zoo_manual_my_int_rep y))
+End
+
+Inductive zoo_manual_even:
+  zoo_manual_even 0 /\
+  (!n. zoo_manual_even n ==> zoo_manual_even (SUC (SUC n)))
+End
+
+Inductive zoo_manual_even_alt:
+  zoo_manual_even_alt (0 : num) /\ zoo_manual_even_alt 2 /\
+  (!m n. zoo_manual_even_alt m /\ zoo_manual_even_alt n ==>
+         zoo_manual_even_alt (m + n))
+End
+
+CoInductive zoo_manual_nats:
+  !n : num. zoo_manual_nats n ==> zoo_manual_nats n
+End
+
+Inductive zoo_manual_odd:
+  zoo_manual_odd 1 /\
+  (!m n. zoo_manual_odd m /\ zoo_manual_even n ==>
+         zoo_manual_odd (m + n))
+End
+
+Definition zoo_manual_iterates_def:
+  zoo_manual_iterates f a =
+    llist$LUNFOLD (\x. SOME (f x, x)) a
+End
+
+Datatype:
+  zoo_manual_tm =
+      ZooManualVar num
+    | ZooManualLam zoo_manual_tm
+    | ZooManualApp zoo_manual_tm zoo_manual_tm
+End
+
+val zoo_manual_lift_def = TotalDefn.Define `
+  (zoo_manual_lift (ZooManualVar j) k =
+     ZooManualVar (if j < k then j else j + 1)) /\
+  (zoo_manual_lift (ZooManualLam t) k =
+     ZooManualLam (zoo_manual_lift t (k + 1))) /\
+  (zoo_manual_lift (ZooManualApp t u) k =
+     ZooManualApp (zoo_manual_lift t k) (zoo_manual_lift u k))
+`;
+
+val zoo_manual_loose_def = TotalDefn.Define `
+  (zoo_manual_loose (ZooManualVar j) k = (j >= k)) /\
+  (zoo_manual_loose (ZooManualLam t) k =
+     zoo_manual_loose t (SUC k)) /\
+  (zoo_manual_loose (ZooManualApp t u) k =
+     (zoo_manual_loose t k \/ zoo_manual_loose u k))
+`;
+
+val zoo_manual_subst1_def = TotalDefn.Define `
+  (zoo_manual_subst1 sigma (ZooManualVar j) = sigma j) /\
+  (zoo_manual_subst1 sigma (ZooManualLam t) =
+     ZooManualLam
+       (zoo_manual_subst1
+         (\n. case n of
+                  0 => ZooManualVar 0
+                | SUC m => zoo_manual_lift (sigma m) 1) t)) /\
+  (zoo_manual_subst1 sigma (ZooManualApp t u) =
+     ZooManualApp (zoo_manual_subst1 sigma t)
+       (zoo_manual_subst1 sigma u))
+`;
+
+val zoo_manual_subst2_def = TotalDefn.Define `
+  (zoo_manual_subst2 sigma (ZooManualVar j) = sigma j) /\
+  (zoo_manual_subst2 sigma (ZooManualLam t) =
+     ZooManualLam
+       (zoo_manual_subst2
+         (\n. case n of
+                  0 => ZooManualVar 0
+                | SUC m => zoo_manual_lift (sigma m) 0) t)) /\
+  (zoo_manual_subst2 sigma (ZooManualApp t u) =
+     ZooManualApp (zoo_manual_subst2 sigma t)
+       (zoo_manual_subst2 sigma u))
+`;
+
+Datatype:
+  zoo_manual_aa_tree =
+      ZooManualAALeaf
+    | ZooManualAAN num num zoo_manual_aa_tree zoo_manual_aa_tree
+End
+
+val zoo_manual_data_def = TotalDefn.Define `
+  (zoo_manual_data ZooManualAALeaf = ARB) /\
+  (zoo_manual_data (ZooManualAAN x k t u) = x)
+`;
+
+val zoo_manual_dataset_def = TotalDefn.Define `
+  (zoo_manual_dataset ZooManualAALeaf = {}) /\
+  (zoo_manual_dataset (ZooManualAAN x k t u) =
+     {x} UNION zoo_manual_dataset t UNION zoo_manual_dataset u)
+`;
+
+val zoo_manual_level_def = TotalDefn.Define `
+  (zoo_manual_level ZooManualAALeaf = 0) /\
+  (zoo_manual_level (ZooManualAAN x k t u) = k)
+`;
+
+val zoo_manual_left_def = TotalDefn.Define `
+  (zoo_manual_left ZooManualAALeaf = ZooManualAALeaf) /\
+  (zoo_manual_left (ZooManualAAN x k t u) = t)
+`;
+
+val zoo_manual_right_def = TotalDefn.Define `
+  (zoo_manual_right ZooManualAALeaf = ZooManualAALeaf) /\
+  (zoo_manual_right (ZooManualAAN x k t u) = u)
+`;
+
+val zoo_manual_wf_def = TotalDefn.Define `
+  (zoo_manual_wf ZooManualAALeaf = T) /\
+  (zoo_manual_wf (ZooManualAAN x k t u) =
+     if t = ZooManualAALeaf then
+       k = 1 /\
+       (u = ZooManualAALeaf \/
+        (zoo_manual_level u = 1 /\
+         zoo_manual_left u = ZooManualAALeaf /\
+         zoo_manual_right u = ZooManualAALeaf))
+     else
+       zoo_manual_wf t /\ zoo_manual_wf u /\
+       u <> ZooManualAALeaf /\ zoo_manual_level t < k /\
+       zoo_manual_level u <= k /\ zoo_manual_level (zoo_manual_right u) < k)
+`;
+
+val zoo_manual_skew_def = TotalDefn.Define `
+  (zoo_manual_skew ZooManualAALeaf = ZooManualAALeaf) /\
+  (zoo_manual_skew (ZooManualAAN x k t u) =
+     if t <> ZooManualAALeaf /\ k = zoo_manual_level t then
+       ZooManualAAN (zoo_manual_data t) k (zoo_manual_left t)
+         (ZooManualAAN x k (zoo_manual_right t) u)
+     else ZooManualAAN x k t u)
+`;
+
+val zoo_manual_split_def = TotalDefn.Define `
+  (zoo_manual_split ZooManualAALeaf = ZooManualAALeaf) /\
+  (zoo_manual_split (ZooManualAAN x k t u) =
+     if u <> ZooManualAALeaf /\
+        k = zoo_manual_level (zoo_manual_right u) then
+       ZooManualAAN (zoo_manual_data u) (SUC k)
+         (ZooManualAAN x k t (zoo_manual_left u)) (zoo_manual_right u)
+     else ZooManualAAN x k t u)
+`;
+
+val zoo_manual_insort1_def = TotalDefn.Define `
+  (zoo_manual_insort1 ZooManualAALeaf x =
+     ZooManualAAN x 1 ZooManualAALeaf ZooManualAALeaf) /\
+  (zoo_manual_insort1 (ZooManualAAN y k t u) x =
+     ZooManualAAN y k
+       (if x < y then zoo_manual_insort1 t x else t)
+       (if x > y then zoo_manual_insort1 u x else u))
+`;
+
+val zoo_manual_insort2_def = TotalDefn.Define `
+  (zoo_manual_insort2 ZooManualAALeaf x =
+     ZooManualAAN x 1 ZooManualAALeaf ZooManualAALeaf) /\
+  (zoo_manual_insort2 (ZooManualAAN y k t u) x =
+     zoo_manual_split (zoo_manual_skew
+       (ZooManualAAN y k
+         (if x < y then zoo_manual_insort2 t x else t)
+         (if x > y then zoo_manual_insort2 u x else u))))
+`;
+
+val _ = new_type ("zoo_hotel_guest", 0);
+val _ = new_type ("zoo_hotel_key", 0);
+val _ = new_type ("zoo_hotel_room", 0);
+
+Datatype:
+  zoo_hotel_state =
+    <| zoo_hotel_owns : zoo_hotel_room -> zoo_hotel_guest option;
+       zoo_hotel_currk : zoo_hotel_room -> zoo_hotel_key;
+       zoo_hotel_issued : zoo_hotel_key set;
+       zoo_hotel_cards : zoo_hotel_guest ->
+         (zoo_hotel_key # zoo_hotel_key) set;
+       zoo_hotel_roomk : zoo_hotel_room -> zoo_hotel_key;
+       zoo_hotel_isin : zoo_hotel_room -> zoo_hotel_guest set;
+       zoo_hotel_safe : zoo_hotel_room -> bool |>
+End
+
+Inductive zoo_hotel_reach:
+  (!initk. ONE_ONE initk ==>
+     zoo_hotel_reach
+       <| zoo_hotel_owns := K NONE;
+          zoo_hotel_currk := initk;
+          zoo_hotel_issued := IMAGE initk UNIV;
+          zoo_hotel_cards := K {};
+          zoo_hotel_roomk := initk;
+          zoo_hotel_isin := K {};
+          zoo_hotel_safe := K T |>) /\
+  (!s k r g. zoo_hotel_reach s /\ k NOTIN zoo_hotel_issued s ==>
+     zoo_hotel_reach
+       (s with
+        <| zoo_hotel_currk := (r =+ k) (zoo_hotel_currk s);
+           zoo_hotel_issued := zoo_hotel_issued s UNION {k};
+           zoo_hotel_cards :=
+             (g =+ (zoo_hotel_cards s g UNION
+                    {(zoo_hotel_currk s r, k)})) (zoo_hotel_cards s);
+           zoo_hotel_owns := (r =+ SOME g) (zoo_hotel_owns s);
+           zoo_hotel_safe := (r =+ F) (zoo_hotel_safe s) |>)) /\
+  (!s k k' g r.
+     zoo_hotel_reach s /\ (k, k') IN zoo_hotel_cards s g /\
+     zoo_hotel_roomk s r IN {k; k'} ==>
+     zoo_hotel_reach
+       (s with
+        <| zoo_hotel_isin :=
+             (r =+ (zoo_hotel_isin s r UNION {g})) (zoo_hotel_isin s);
+           zoo_hotel_roomk := (r =+ k') (zoo_hotel_roomk s);
+           zoo_hotel_safe :=
+             (r =+ ((zoo_hotel_owns s r = SOME g /\
+                      zoo_hotel_isin s r = {}) \/ zoo_hotel_safe s r))
+               (zoo_hotel_safe s) |>)) /\
+  (!s g r. zoo_hotel_reach s /\ g IN zoo_hotel_isin s r ==>
+     zoo_hotel_reach
+       (s with zoo_hotel_isin :=
+          (r =+ (zoo_hotel_isin s r DELETE g)) (zoo_hotel_isin s)))
+End
+
+(* A one-step projection of the planted enter-room bug keeps this format
+   regression independent of the protocol-unrolling depth.  The complete
+   reach relation remains above as static theory content. *)
+Inductive zoo_hotel_pinned:
+  (!s r g. zoo_hotel_safe s r /\ g IN zoo_hotel_isin s r /\
+           zoo_hotel_owns s r <> SOME g ==>
+           zoo_hotel_pinned s r g)
+End

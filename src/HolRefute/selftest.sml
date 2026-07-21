@@ -551,6 +551,11 @@ val zoo_check_registration =
   {ty = ``:zoo_check``, abs = ``zoo_check_abs``,
    rep = ``zoo_check_rep``, absrep_thm = zoo_check_absrep}
 
+val zoo_manual_my_int_registration =
+  {qty = ``:zoo_manual_my_int``, rty = ``:num # num``,
+   abs = ``zoo_manual_my_int_abs``, rep = ``zoo_manual_my_int_rep``,
+   equiv_thm = zoo_manual_my_int_equiv, partial = false}
+
 fun mf_quotient_typedef_registrations () =
   with_quotient_typedef_registries_restored (fn () => let
     val initially_unregistered =
@@ -13062,6 +13067,496 @@ val mf_typedef_nits_group : mf_acceptance_group =
   {name = "Typedef_Nits", configure = mf_typedef_nits_config,
    cases = mf_typedef_nits_cases}
 
+fun mf_core_cards cards config =
+  Refute.upd_card [(NONE, cards)] config
+
+fun mf_core_num_card card config =
+  Refute.upd_card
+    [(SOME ``:num``, [card]), (NONE, [1, 2, 3, 4, 5, 6])] config
+
+fun mf_core_no_box config =
+  Refute.upd_box [(NONE, SOME false)] config
+
+fun mf_core_mono config =
+  Refute.upd_mono [(NONE, SOME true)] config
+
+fun mf_core_nits_config config =
+  config
+  |> mf_core_cards [1, 2, 3, 4, 5, 6]
+  |> Refute.upd_binary_ints (SOME false)
+  |> Refute.upd_max_potential 0
+
+val mf_core_nits_cases =
+  [mf_acceptance_invocation "Core_Nits curry composition pair"
+     ``((\f x y. (CURRY o UNCURRY) f x y) =
+        (\f x y. (\x. x) f x y)) /\
+       ((\f p. (UNCURRY o CURRY) f p) =
+        (\f p. (\x. x) f p))``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2]),
+   mf_acceptance_invocation "Core_Nits UNCURRY CURRY"
+     ``UNCURRY (CURRY f) = f`` ExpectNone MfCertIgnored false
+     (mf_core_cards (List.tabulate (12, fn i => i + 1))),
+   mf_acceptance_invocation "Core_Nits CURRY UNCURRY"
+     ``CURRY (UNCURRY f) = f`` ExpectNone MfCertIgnored false
+     (mf_core_cards (List.tabulate (12, fn i => i + 1))),
+   mf_acceptance_invocation "Core_Nits UNCURRY abstraction"
+     ``UNCURRY (\x y. f (x, y)) = f`` ExpectNone MfCertIgnored false
+     (mf_core_cards (List.tabulate (12, fn i => i + 1))),
+   mf_acceptance_invocation "Core_Nits mono inverse large cards"
+     ``(?g : 'b -> 'a. !x : 'a. g (f x) = x) ==>
+       !y : 'b. ?x : 'a. y = f x``
+     ExpectGenuine MfCertNone false
+     (fn config => Refute.upd_card
+       [(SOME ``:'a``, [24]), (SOME ``:'b``, [25]), (NONE, [1])]
+       config),
+   mf_acceptance_invocation "Core_Nits mono inverse forced"
+     ``(?g : 'b -> 'a. !x : 'a. g (f x) = x) ==>
+       !y : 'b. ?x : 'a. y = f x``
+     ExpectNone MfCertIgnored false
+     (fn config => config |> mf_core_cards (List.tabulate (10, fn i => i + 1))
+       |> mf_core_mono),
+   mf_acceptance_invocation "Core_Nits boxed relation"
+     ``(R : ('a # 'a) -> ('a # 'a) -> bool) (a, a) (a, a)``
+     ExpectPotential MfCertIgnored true (mf_core_cards [1]),
+   mf_acceptance_invocation "Core_Nits relation dont_box"
+     ``(R : ('a # 'a) -> ('a # 'a) -> bool) (a, a) (a, a)``
+     ExpectPotential MfCertIgnored false
+     (fn config => config |> mf_core_cards [5] |> mf_core_no_box),
+   mf_acceptance_invocation "Core_Nits function argument dont_box"
+     ``(f : ('a -> 'a) -> 'b) (g : 'a -> 'a) = x``
+     ExpectPotential MfCertIgnored false
+     (fn config => config |> mf_core_cards [3] |> mf_core_no_box),
+   mf_acceptance_invocation "Core_Nits boxed quantifier sound"
+     ``!u : 'a -> 'b. ?v : 'c. !w : 'd. ?x : 'e -> 'f.
+       f u v w x = f u (g u) w (h u w)``
+     ExpectNone MfCertIgnored false
+     (fn config => config |> mf_core_cards [1, 2] |> mf_core_no_box),
+   mf_acceptance_invocation "Core_Nits boxed quantifier mutation"
+     ``!u : 'a -> 'b. ?v : 'c. !w : 'd. ?x : 'e -> 'f.
+       f u v w x = f u (g u w) w (h u)``
+     ExpectGenuine MfCertNone false
+     (fn config => config |> mf_core_cards [1, 2] |> mf_core_no_box),
+   mf_acceptance_invocation "Core_Nits quantifier one alternation"
+     ``!x : 'a. ?y : 'b. f x y = f x (g x)``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
+   mf_acceptance_invocation "Core_Nits quantifier two alternations"
+     ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd.
+       f u v w x = f u (g u) w (h u w)``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
+   mf_acceptance_invocation "Core_Nits quantifier mutation"
+     ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd.
+       f u v w x = f u (g u w) w (h u)``
+     ExpectGenuine MfCertNone false (mf_core_cards [3]),
+   mf_acceptance_invocation "Core_Nits quantifier three alternations"
+     ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd. !y : 'e. ?z : 'f.
+       f u v w x y z = f u (g u) w (h u w) y (k u w y)``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2]),
+   mf_acceptance_invocation "Core_Nits quantifier third dependency"
+     ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd. !y : 'e. ?z : 'f.
+       f u v w x y z = f u (g u) w (h u w y) y (k u w y)``
+     ExpectGenuine MfCertNone false (mf_core_cards [1, 2]),
+   mf_acceptance_invocation "Core_Nits quantifier second dependency"
+     ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd. !y : 'e. ?z : 'f.
+       f u v w x y z = f u (g u w) w (h u w) y (k u w y)``
+     ExpectGenuine MfCertNone false (mf_core_cards [1, 2]),
+   mf_acceptance_invocation "Core_Nits product quantifiers"
+     ``!u : 'a # 'b. ?v : 'c. !w : 'd. ?x : 'e # 'f.
+       f u v w x = f u (g u) w (h u w)``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2]),
+   mf_acceptance_invocation "Core_Nits product quantifier mutation"
+     ``!u : 'a # 'b. ?v : 'c. !w : 'd. ?x : 'e # 'f.
+       f u v w x = f u (g u w) w (h u)``
+     ExpectGenuine MfCertNone false
+     (fn config => config |> mf_core_cards [1, 2] |> mf_core_no_box),
+   mf_acceptance_invocation "Core_Nits singleton if"
+     ``!x : 'a. if (!y : 'a. x = y) then F else T``
+     ExpectGenuine MfCertNone false (mf_core_cards [1]),
+   mf_acceptance_invocation "Core_Nits nonsingleton if"
+     ``!x : 'a. if (!y : 'a. x = y) then F else T``
+     ExpectNone MfCertIgnored false (mf_core_cards [2, 3, 4, 5]),
+   mf_acceptance_invocation "Core_Nits let quantifier"
+     ``let x = (!y : 'a. P y) in if x then x else ~x``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Core_Nits let product quantifier"
+     ``let x = (!y : 'a # 'b. P y) in if x then x else ~x``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Core_Nits subset"
+     ``(A : 'a set) SUBSET B`` ExpectGenuine MfCertNone false
+     (mf_core_cards [100]),
+   mf_acceptance_invocation "Core_Nits self complement"
+     ``(A : 'a set) = COMPL A`` ExpectGenuine MfCertNone false
+     (mf_core_cards [10]),
+   mf_acceptance_invocation "Core_Nits union complement"
+     ``(A : 'a set) UNION COMPL A = UNIV``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Core_Nits intersection complement"
+     ``(A : 'a set) INTER COMPL A = {}``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Core_Nits FINITE trio"
+     ``FINITE (A : 'a set) /\
+       (FINITE A ==> FINITE (B : 'b set)) /\
+       (!C : 'c set. FINITE C)``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Core_Nits ARB counterexample"
+     ``(x : 'a) = ARB``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Core_Nits Eps bounded three [card 2]"
+     ``($@ (\j : num. j > SUC 2 /\ j <= 3)) <> 0``
+     ExpectGenuine MfCertNone false
+     (fn config => config |> mf_core_num_card 2
+       |> Refute.upd_max_potential 1),
+   mf_acceptance_invocation "Core_Nits Eps bounded three [card 6]"
+     ``($@ (\j : num. j > SUC 2 /\ j <= 3)) <> 0``
+     ExpectGenuine MfCertNone true
+     (fn config => config |> mf_core_num_card 6
+       |> Refute.upd_max_potential 1),
+   mf_acceptance_invocation "Core_Nits Eps bounded four nonzero [card 2]"
+     ``($@ (\j : num. j > SUC 2 /\ j <= 4)) = x ==> x <> 0``
+     ExpectGenuine MfCertNone false
+     (fn config => config |> mf_core_num_card 2
+       |> Refute.upd_max_potential 1),
+   mf_acceptance_invocation "Core_Nits Eps bounded four nonzero [card 6]"
+     ``($@ (\j : num. j > SUC 2 /\ j <= 4)) = x ==> x <> 0``
+     ExpectNone MfCertIgnored false
+     (fn config => config |> mf_core_num_card 6
+       |> Refute.upd_max_potential 1),
+   mf_acceptance_invocation "Core_Nits Eps bounded four exact [card 2]"
+     ``($@ (\j : num. j > SUC 2 /\ j <= 4)) = x ==> x = 4``
+     ExpectGenuine MfCertNone false
+     (fn config => config |> mf_core_num_card 2
+       |> Refute.upd_max_potential 1),
+   mf_acceptance_invocation "Core_Nits Eps bounded four exact [card 6]"
+     ``($@ (\j : num. j > SUC 2 /\ j <= 4)) = x ==> x = 4``
+     ExpectNone MfCertIgnored false
+     (fn config => config |> mf_core_num_card 6
+       |> Refute.upd_max_potential 1),
+   mf_acceptance_invocation "Core_Nits Eps bounded five exact"
+     ``($@ (\j : num. j > SUC 2 /\ j <= 5)) = x ==> x = 4``
+     ExpectGenuine MfCertNone false (mf_core_num_card 6),
+   mf_acceptance_invocation "Core_Nits Eps bounded five range"
+     ``($@ (\j : num. j > SUC 2 /\ j <= 5)) = x ==>
+       x = 4 \/ x = 5``
+     ExpectNone MfCertIgnored false (mf_core_num_card 6),
+   mf_acceptance_invocation "Core_Nits destructors and ARB reflexivity"
+     ``((x : 'a) = (case T of T => x | F => x)) /\
+       (x = (case (x, y) of (x', y') => x')) /\
+       (ARB : 'b) = ARB /\ (f : 'b -> 'c) ARB = f ARB``
+     ExpectNone MfCertIgnored false (mf_core_cards [2])]
+
+val mf_core_nits_group : mf_acceptance_group =
+  {name = "Core_Nits", configure = mf_core_nits_config,
+   cases = mf_core_nits_cases}
+
+fun mf_refute_nits_config config =
+  config
+  |> Refute.upd_card [(NONE, [1, 2, 3, 4, 5, 6])]
+  |> Refute.upd_max_potential 0
+
+val mf_refute_nits_cases =
+  [mf_acceptance_invocation "Refute_Nits drinker theorem"
+     ``(?x : 'a. f x = g x ==> f = g)``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits weak drinker"
+     ``(?x : 'a. f x = g x) ==> f = g``
+     ExpectPotential MfCertIgnored true mf_same_config,
+   mf_acceptance_invocation "Refute_Nits surjective gives inverse"
+     ``(!y : 'b. ?x : 'a. y = f x) ==>
+       ?g : 'b -> 'a. !x. g (f x) = x``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits inverse gives surjective"
+     ``(?g : 'b -> 'a. !x. g (f x) = x) ==>
+       !y : 'b. ?x. y = f x``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits choice unique mutation"
+     ``(!x : 'a. ?y : 'b. P x y) ==> ?!f. !x. P x (f x)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits choice"
+     ``(!x : 'a. ?y : 'b. P x y) ==> ?f. !x. P x (f x)``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
+   mf_acceptance_invocation "Refute_Nits unique choice"
+     ``(!x : 'a. ?!y : 'b. P x y) ==> ?!f. !x. P x (f x)``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3]),
+   mf_acceptance_invocation "Refute_Nits Eps value"
+     ``($@ (P : bool -> bool))`` ExpectGenuine MfCertNone true
+     mf_same_config,
+   mf_acceptance_invocation "Refute_Nits predicate of Eps"
+     ``($@ (\n : num. n = 0)) = 1``
+     ExpectPotential MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits Eps application"
+     ``~Q ($@ (Q : num -> bool))``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits Eps equality"
+     ``($@ (\x : num. x = y)) = z``
+     ExpectPotential MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits Eps axiom"
+     ``(?x : 'a. P x) ==> P ($@ P)`` ExpectNone MfCertIgnored false
+     mf_same_config,
+   mf_acceptance_invocation "Refute_Nits T3 constructor"
+     ``(ZooRefE f : ('a, 'b) zoo_ref_t3) = ZooRefE g``
+     ExpectPotential MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits T3 recursor equation"
+     ``zoo_ref_t3_CASE (ZooRefE x) e = e x``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
+   mf_acceptance_invocation "Refute_Nits T3 recursor"
+     ``zoo_ref_t3_CASE x e = z`` ExpectGenuine MfCertNone false
+     mf_same_config,
+   mf_acceptance_invocation "Refute_Nits BinTree leaf equation"
+     ``zoo_ref_rec_bintree l n (ZooRefLeaf x) = l x``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits BinTree node equation"
+     ``zoo_ref_rec_bintree l n (ZooRefNode x y) =
+       n x y (zoo_ref_rec_bintree l n x)
+         (zoo_ref_rec_bintree l n y)``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4, 5]),
+   mf_acceptance_invocation "Refute_Nits mutual aexp recursor"
+     ``(ZooRefNumber x : 'a zoo_ref_aexp) = ZooRefNumber x``
+     ExpectNone MfCertIgnored false (mf_core_cards [1]),
+   mf_acceptance_invocation "Refute_Nits mutual bexp recursor"
+     ``(x : 'a zoo_ref_bexp) = x``
+     ExpectNone MfCertIgnored false (mf_core_cards [1]),
+   mf_acceptance_invocation "Refute_Nits mutual X recursor"
+     ``ZooRefXA = ZooRefXB ZooRefXA``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits mutual Y recursor"
+     ``ZooRefYF = ZooRefYD ZooRefXA``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits nested option"
+     ``ZooRefCX (SOME (ZooRefCX NONE)) = ZooRefCX NONE``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits function option"
+     ``ZooRefCY (SOME (\a : 'a. T)) = ZooRefCY NONE``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits trie"
+     ``ZooRefTR [ZooRefTR []] = ZooRefTR []``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits infinite tree"
+     ``ZooRefInfNode (\n. T) = ZooRefInfLeaf``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits lambda"
+     ``ZooRefLam (\a : 'a. T) = ZooRefVar a``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits nested U"
+     ``(x : 'a zoo_ref_u) = y``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits point record"
+     ``(x : ('a, 'b) zoo_ref_point) = y``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits flat extended record"
+     ``(x : ('a, 'b, 'c) zoo_ref_extpoint) = y``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits undefined inductive set"
+     ``zoo_ref_undefined_set (x : 'a)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits even-card inductive set"
+     ``zoo_ref_even_card (ss : 'a set)``
+     ExpectGenuine MfCertNone true mf_same_config,
+   mf_acceptance_invocation "Refute_Nits mutual even odd"
+     ``zoo_ref_odd n`` ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits abstract even odd"
+     ``zoo_ref_a_odd f (x : 'a)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits lfp equation"
+     ``f (fixedPoint$lfp f) = fixedPoint$lfp f``
+     ExpectGenuine MfCertNone false (mf_core_cards [2]),
+   mf_acceptance_invocation "Refute_Nits gfp equation"
+     ``f (fixedPoint$gfp f) = fixedPoint$gfp f``
+     ExpectGenuine MfCertNone false (mf_core_cards [2]),
+   mf_acceptance_invocation "Refute_Nits lfp gfp equality"
+     ``fixedPoint$lfp f = fixedPoint$gfp f``
+     ExpectGenuine MfCertNone false (mf_core_cards [2]),
+   mf_acceptance_invocation "Refute_Nits empty cardinality"
+     ``CARD (x : 'a set) = 0`` ExpectGenuine MfCertSome false
+     mf_same_config,
+   mf_acceptance_invocation "Refute_Nits finite set"
+     ``FINITE (x : 'a set)`` ExpectNone MfCertIgnored false
+     mf_same_config,
+   mf_acceptance_invocation "Refute_Nits distinct list"
+     ``ALL_DISTINCT [a; b]`` ExpectGenuine MfCertSome false
+     mf_same_config,
+   mf_acceptance_invocation "Refute_Nits simplified distinct"
+     ``a <> b`` ExpectGenuine MfCertSome false mf_same_config]
+
+val mf_refute_nits_group : mf_acceptance_group =
+  {name = "Refute_Nits", configure = mf_refute_nits_config,
+   cases = mf_refute_nits_cases}
+
+fun mf_manual_nits_config config =
+  config |> Refute.upd_card
+    [(NONE, List.tabulate (10, fn i => i + 1))]
+
+fun mf_manual_num_card card config =
+  Refute.upd_card
+    [(SOME ``:num``, [card]),
+     (NONE, List.tabulate (10, fn i => i + 1))] config
+
+fun mf_manual_binary16 config =
+  config |> Refute.upd_binary_ints (SOME true) |> Refute.upd_bits [16]
+
+val mf_manual_bisim_goal =
+  ``(xs = llist$LCONS (a : num) xs /\
+     ys = llist$LCONS a ys) ==> xs = ys``
+
+val mf_manual_nits_cases =
+  [mf_acceptance_invocation "Manual_Nits inverse surjective"
+     ``(?g : 'b -> 'a. !x : 'a. g (f x) = x) ==>
+       !y : 'b. ?x. y = f x``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Manual_Nits universal fixed point"
+     ``?x : 'a. !f : 'a -> 'a. f x = x``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Manual_Nits reflexive not symmetric"
+     ``(!x : 'a. r x x) ==> (!x y. r x y ==> r y x)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Manual_Nits integer inequality"
+     ``i <= j /\ n <= (m : int) ==>
+       i * n + j * m <= i * m + j * n``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Manual_Nits integer inequality binary"
+     ``i <= j /\ n <= (m : int) ==>
+       i * n + j * m <= i * m + j * n``
+     ExpectGenuine MfCertSome true mf_manual_binary16,
+   mf_acceptance_invocation "Manual_Nits infinite nat axiom"
+     ``(!n : num. SUC n <> n) ==> P``
+     ExpectPotential MfCertIgnored false (mf_manual_num_card 100),
+   (* HOL4 cannot pass higher-order constants as first-class model values;
+      these application mutations retain the source card-1/card-2 pins. *)
+   mf_acceptance_invocation "Manual_Nits P SUC"
+     ``SUC n = n`` ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Manual_Nits P addition card one"
+     ``x + y = (x : num)`` ExpectNone MfCertIgnored false
+     (mf_manual_num_card 1),
+   mf_acceptance_invocation "Manual_Nits P addition card two"
+     ``x + y = (x : num)`` ExpectGenuine MfCertSome false
+     (mf_manual_num_card 2),
+   mf_acceptance_invocation "Manual_Nits HD append"
+     ``HD (xs ++ [y; y]) = HD xs`` ExpectPotential MfCertIgnored true
+     mf_same_config,
+   mf_acceptance_invocation "Manual_Nits singleton lists"
+     ``LENGTH xs = 1 /\ LENGTH ys = 1 ==> xs = ys``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Manual_Nits typedef three"
+     ``zoo_three_abs 0 IN X /\ zoo_three_abs 1 IN X ==>
+       (c : zoo_three) IN X``
+     ExpectGenuine MfCertNone false (Refute.upd_show_types true),
+   mf_acceptance_invocation "Manual_Nits quotient add"
+     ``zoo_manual_add x y = zoo_manual_add x x``
+     ExpectGenuine MfCertNone false (Refute.upd_show_types true),
+   mf_acceptance_invocation "Manual_Nits record selector"
+     ``zoo_xc2 (p : zoo_point2d) = zoo_xc2 q``
+     ExpectGenuine MfCertNone false (Refute.upd_show_types true),
+   mf_acceptance_invocation "Manual_Nits essentially existential even"
+     ``?n. zoo_manual_even n /\ zoo_manual_even (SUC n)``
+     ExpectPotential MfCertIgnored false
+     (fn config => config |> mf_manual_num_card 50
+       |> Refute.upd_binary_ints (SOME false)),
+   mf_acceptance_invocation "Manual_Nits bounded even"
+     ``?n. n <= 49 /\ zoo_manual_even n /\ zoo_manual_even (SUC n)``
+     ExpectGenuine MfCertNone false
+     (fn config => config |> mf_manual_num_card 50
+       |> Refute.upd_binary_ints (SOME false)),
+   mf_acceptance_invocation "Manual_Nits non-wf even"
+     ``?n. (n = 0 \/ n = 2 \/ n = 4 \/ n = 6 \/ n = 8) /\
+       ~zoo_manual_even_alt n``
+     ExpectGenuine MfCertNone false
+     (fn config => config |> mf_manual_num_card 10
+       |> Refute.upd_binary_ints (SOME false)),
+   mf_acceptance_invocation "Manual_Nits non-wf even predecessor"
+     ``zoo_manual_even_alt (n - 2) ==> zoo_manual_even_alt n``
+     ExpectGenuine MfCertNone false (mf_manual_num_card 10),
+   mf_acceptance_invocation "Manual_Nits coinductive nats"
+     ``zoo_manual_nats = (\n. n IN {0; 1; 2; 3; 4})``
+     ExpectGenuine MfCertNone false (mf_manual_num_card 10),
+   mf_acceptance_invocation "Manual_Nits odd predecessor"
+     ``zoo_manual_odd n ==> zoo_manual_odd (n - 2)``
+     ExpectGenuine MfCertNone false (mf_manual_num_card 4),
+   mf_acceptance_invocation "Manual_Nits llist cyclic"
+     ``(xs : num llist) <> llist$LCONS a xs``
+     ExpectGenuine MfCertNone true mf_same_config,
+   mf_acceptance_invocation "Manual_Nits llist iterates"
+     ``(xs = llist$LCONS (a : num) xs /\
+        ys = zoo_manual_iterates (\b. a) b) ==> xs = ys``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Manual_Nits llist bisim disabled"
+     mf_manual_bisim_goal ExpectQuasiGenuine MfCertIgnored true
+     (fn config => config |> Refute.upd_bisim_depth [~1]
+       |> Refute.upd_show_types true),
+   mf_acceptance_invocation "Manual_Nits llist bisim checked"
+     mf_manual_bisim_goal ExpectNone MfCertIgnored false
+     (mf_core_cards [1, 2, 3, 4, 5]),
+   mf_acceptance_invocation "Manual_Nits subst1 mutation"
+     ``~zoo_manual_loose t 0 ==> zoo_manual_subst1 sigma t = t``
+     ExpectNone MfCertIgnored false (mf_core_cards [2]),
+   mf_acceptance_invocation "Manual_Nits subst1 eval"
+     ``~zoo_manual_loose t 0 ==> zoo_manual_subst1 sigma t = t``
+     ExpectNone MfCertIgnored true
+     (fn config => config |> mf_core_cards [2]
+       |> Refute.upd_evals [``zoo_manual_subst1 sigma t``]),
+   mf_acceptance_invocation "Manual_Nits subst2"
+     ``~zoo_manual_loose t 0 ==> zoo_manual_subst2 sigma t = t``
+     ExpectNone MfCertIgnored false (mf_core_cards [4]),
+   mf_acceptance_invocation "Manual_Nits reverse zip"
+     ``LENGTH xs = LENGTH ys ==>
+       REVERSE (ZIP (xs, ys)) = ZIP (xs, REVERSE ys)``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Manual_Nits mono forced"
+     ``(?g : 'a -> 'b. !x : 'b. g (f x) = x) ==>
+       !y : 'a. ?x : 'b. y = f x``
+     ExpectNone MfCertIgnored false mf_core_mono,
+   mf_acceptance_invocation "Manual_Nits mono smart"
+     ``(?g : 'a -> 'b. !x : 'b. g (f x) = x) ==>
+       !y : 'a. ?x : 'b. y = f x``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Manual_Nits AA dataset transforms"
+     ``zoo_manual_dataset (zoo_manual_skew t) = zoo_manual_dataset t /\
+       zoo_manual_dataset (zoo_manual_split t) = zoo_manual_dataset t``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3]),
+   mf_acceptance_invocation "Manual_Nits AA wf transforms"
+     ``(zoo_manual_wf t ==> zoo_manual_skew t = t) /\
+       (zoo_manual_wf t ==> zoo_manual_split t = t)``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4, 5]),
+   mf_acceptance_invocation "Manual_Nits AA buggy insertion"
+     ``zoo_manual_wf t ==> zoo_manual_wf (zoo_manual_insort1 t x)``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Manual_Nits AA insertion eval"
+     ``zoo_manual_wf t ==> zoo_manual_wf (zoo_manual_insort1 t x)``
+     ExpectGenuine MfCertSome true
+     (Refute.upd_evals [``zoo_manual_insort1 t x``]),
+   mf_acceptance_invocation "Manual_Nits AA corrected insertion"
+     ``zoo_manual_wf t ==> zoo_manual_wf (zoo_manual_insort2 t x)``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4, 5]),
+   mf_acceptance_invocation "Manual_Nits AA insertion dataset"
+     ``zoo_manual_dataset (zoo_manual_insort2 t x) =
+       {x} UNION zoo_manual_dataset t``
+     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3])]
+
+val mf_manual_nits_group : mf_acceptance_group =
+  {name = "Manual_Nits", configure = mf_manual_nits_config,
+   cases = mf_manual_nits_cases}
+
+fun mf_hotel_nits_config config =
+  config
+  |> Refute.upd_card
+       [(SOME ``:zoo_hotel_room``, [1]),
+        (SOME ``:zoo_hotel_guest``, [2]),
+        (SOME ``:zoo_hotel_guest option``, [3]),
+        (SOME ``:zoo_hotel_key``, [4]),
+        (SOME ``:zoo_hotel_state``, [6]),
+        (NONE, [1, 2, 3, 4, 5, 6])]
+  |> Refute.upd_format [(NONE, [2])]
+  |> Refute.upd_wf [(NONE, SOME false)]
+  |> Refute.upd_show_consts true
+  |> Refute.upd_max_potential 0
+
+val mf_hotel_nits_cases =
+  [mf_acceptance_invocation "Hotel_Nits pinned cards [format = 2]"
+     ``zoo_hotel_pinned s r g ==> zoo_hotel_safe s r ==>
+       g IN zoo_hotel_isin s r ==> zoo_hotel_owns s r = SOME g``
+     ExpectGenuine MfCertNone false mf_same_config]
+
+val mf_hotel_nits_group : mf_acceptance_group =
+  {name = "Hotel_Nits", configure = mf_hotel_nits_config,
+   cases = mf_hotel_nits_cases}
+
 fun mf_executable_genuine_pin_is_some
       ({acceptance_case = {expect, cert_pin, ...}, ...} :
         mf_acceptance_invocation) =
@@ -13077,6 +13572,13 @@ val _ = require_msg (check_result (fn () =>
   length mf_datatype_nits_cases = 16 andalso
   length mf_record_nits_cases = 15 andalso
   length mf_typedef_nits_cases = 17 andalso
+  (* Core has 35 source cases plus three repeated small-card Eps runs;
+     Refute counts source cases.  Manual has 31 source cases and five
+     repeated option/eval invocations. *)
+  length mf_core_nits_cases = 38 andalso
+  length mf_refute_nits_cases = 40 andalso
+  length mf_manual_nits_cases = 36 andalso
+  length mf_hotel_nits_cases = 1 andalso
   List.all mf_executable_genuine_pin_is_some
     (mf_integer_nits_cases @ mf_datatype_nits_cases @
      mf_record_nits_cases)))
@@ -13100,6 +13602,8 @@ val mf_acceptance_groups =
    mf_special_nits_group, mf_integer_nits_group,
    mf_datatype_nits_group, mf_record_nits_group,
    mf_pattern_nits_group, mf_typedef_nits_group,
+   mf_core_nits_group, mf_refute_nits_group,
+   mf_manual_nits_group, mf_hotel_nits_group,
    mf_refusal_flip_group]
 
 (* PLAN_M3 section 13.3: both engines run sequentially on the same
@@ -13587,6 +14091,7 @@ fun run_mf_acceptance () =
       val _ = List.app Refute.register_typedef
         [zoo_three_registration, zoo_one_or_two_registration,
          zoo_bounded_registration, zoo_check_registration]
+      val _ = Refute.register_quotient zoo_manual_my_int_registration
       val solvers = Refute_ForlSat.configured_sat_solvers false
       val _ = if Lib.mem "MiniSat_JNI" solvers then () else
         raise Fail "MiniSat_JNI is required for the full MF corpus"
