@@ -4188,51 +4188,51 @@ val _ = tprint "Refute model-finder utility"
 local
   open Refute_ModelFinder_Util
 in
-  structure MFU = Refute_ModelFinder_Util
+  structure Util = Refute_ModelFinder_Util
 end
 
 fun mf_reasonable_power_edges () =
-  MFU.reasonable_power 2 10 = 1024 andalso
-  MFU.reasonable_power (~2) 5 = ~32 andalso
-  MFU.reasonable_power 0 0 = 1 andalso
-  MFU.reasonable_power 0 (~3) = 0 andalso
-  MFU.reasonable_power 1 20000 = 1 andalso
-  ((MFU.reasonable_power 2 (~1); false) handle MFU.ARG _ => true) andalso
-  ((MFU.reasonable_power 2 16385; false)
-   handle MFU.TOO_LARGE _ => true) andalso
-  ((MFU.reasonable_power 2 100; false)
-   handle MFU.TOO_LARGE _ => true) andalso
-  ((MFU.reasonable_power 2 (valOf Int.minInt); false)
-   handle MFU.ARG _ => true) andalso
-  ((MFU.reasonable_power (valOf Int.minInt) 2; false)
-   handle MFU.TOO_LARGE _ => true) andalso
-  MFU.exact_log 2 1024 = 10 andalso
-  MFU.exact_root 3 27 = 3
+  Util.reasonable_power 2 10 = 1024 andalso
+  Util.reasonable_power (~2) 5 = ~32 andalso
+  Util.reasonable_power 0 0 = 1 andalso
+  Util.reasonable_power 0 (~3) = 0 andalso
+  Util.reasonable_power 1 20000 = 1 andalso
+  ((Util.reasonable_power 2 (~1); false) handle Util.ARG _ => true) andalso
+  ((Util.reasonable_power 2 16385; false)
+   handle Util.TOO_LARGE _ => true) andalso
+  ((Util.reasonable_power 2 100; false)
+   handle Util.TOO_LARGE _ => true) andalso
+  ((Util.reasonable_power 2 (valOf Int.minInt); false)
+   handle Util.ARG _ => true) andalso
+  ((Util.reasonable_power (valOf Int.minInt) 2; false)
+   handle Util.TOO_LARGE _ => true) andalso
+  Util.exact_log 2 1024 = 10 andalso
+  Util.exact_root 3 27 = 3
 
 val _ = require_msg (check_result mf_reasonable_power_edges) (fn () =>
   "model-finder power arithmetic mishandled an edge case")
   (fn () => ()) ()
 
 fun mf_combinatorics_fixed_inputs () =
-  MFU.offset_list [2, 3, 4] = [0, 2, 5] andalso
-  MFU.index_seq (~2) 4 = [~2, ~3, ~4, ~5] andalso
-  MFU.filter_indices [0, 2, 4] [1, 2, 3, 4, 5] = [1, 3, 5] andalso
-  MFU.filter_out_indices [0, 2, 4] [1, 2, 3, 4, 5] = [2, 4] andalso
-  MFU.fold1 (fn left => fn right => left - right) [10, 3, 2] = 5 andalso
-  MFU.replicate_list 2 [1, 2] = [1, 2, 1, 2] andalso
-  MFU.all_distinct_unordered_pairs_of [1, 2, 3] =
+  Util.offset_list [2, 3, 4] = [0, 2, 5] andalso
+  Util.index_seq (~2) 4 = [~2, ~3, ~4, ~5] andalso
+  Util.filter_indices [0, 2, 4] [1, 2, 3, 4, 5] = [1, 3, 5] andalso
+  Util.filter_out_indices [0, 2, 4] [1, 2, 3, 4, 5] = [2, 4] andalso
+  Util.fold1 (fn left => fn right => left - right) [10, 3, 2] = 5 andalso
+  Util.replicate_list 2 [1, 2] = [1, 2, 1, 2] andalso
+  Util.all_distinct_unordered_pairs_of [1, 2, 3] =
     [(1, 2), (1, 3), (2, 3)] andalso
-  MFU.nth_combination [(2, 10), (3, 20)] 4 = [11, 21] andalso
-  MFU.all_combinations [(2, 10), (3, 20)] =
+  Util.nth_combination [(2, 10), (3, 20)] 4 = [11, 21] andalso
+  Util.all_combinations [(2, 10), (3, 20)] =
     [[10, 20], [10, 21], [10, 22],
      [11, 20], [11, 21], [11, 22]] andalso
-  MFU.all_combinations [] = [[]] andalso
-  MFU.all_permutations [1, 2, 3] =
+  Util.all_combinations [] = [[]] andalso
+  Util.all_permutations [1, 2, 3] =
     [[1, 2, 3], [1, 3, 2], [2, 1, 3],
      [2, 3, 1], [3, 1, 2], [3, 2, 1]] andalso
-  MFU.all_permutations [] = [[]] andalso
-  MFU.chunk_list 2 [1, 2, 3, 4, 5] = [[1, 2], [3, 4], [5]] andalso
-  MFU.chunk_list_unevenly [2, 1] [1, 2, 3, 4, 5] =
+  Util.all_permutations [] = [[]] andalso
+  Util.chunk_list 2 [1, 2, 3, 4, 5] = [[1, 2], [3, 4], [5]] andalso
+  Util.chunk_list_unevenly [2, 1] [1, 2, 3, 4, 5] =
     [[1, 2], [3], [4], [5]]
 
 val _ = require_msg (check_result mf_combinatorics_fixed_inputs) (fn () =>
@@ -4245,10 +4245,10 @@ fun mf_lookup_precedence () =
       [(SOME 12, "relaxed"), (SOME 2, "exact"), (NONE, "default")]
     fun congruent (left, right) = left mod 10 = right mod 10
   in
-    MFU.double_lookup congruent entries 2 = SOME "relaxed" andalso
-    MFU.triple_lookup congruent entries 2 = SOME "exact" andalso
-    MFU.triple_lookup congruent entries 22 = SOME "relaxed" andalso
-    MFU.triple_lookup congruent entries 7 = SOME "default"
+    Util.double_lookup congruent entries 2 = SOME "relaxed" andalso
+    Util.triple_lookup congruent entries 2 = SOME "exact" andalso
+    Util.triple_lookup congruent entries 22 = SOME "relaxed" andalso
+    Util.triple_lookup congruent entries 7 = SOME "default"
   end
 
 val _ = require_msg (check_result mf_lookup_precedence) (fn () =>
@@ -4633,8 +4633,8 @@ val _ = require_msg (check_result mf_quotient_displays) (fn () =>
   (fn () => ()) ()
 
 fun mf_rep_arithmetic () =
-  MFR.card_of_rep (MFR.Formula MFU.Neut) = 2 andalso
-  MFR.arity_of_rep (MFR.Formula MFU.Neut) = 0 andalso
+  MFR.card_of_rep (MFR.Formula Util.Neut) = 2 andalso
+  MFR.arity_of_rep (MFR.Formula Util.Neut) = 0 andalso
   MFR.card_of_rep (MFR.Struct [MFR.Atom (2, 0), MFR.Atom (3, 2)]) = 6
   andalso
   MFR.arity_of_rep (MFR.Struct [MFR.Atom (2, 0), MFR.Atom (3, 2)]) = 2
@@ -4662,9 +4662,9 @@ val _ = require_msg (check_result mf_rep_arithmetic) (fn () =>
 
 fun mf_rep_ordering () =
   MFR.min_rep (MFR.Opt (MFR.Atom (2, 0)))
-      (MFR.Formula MFU.Neut) = MFR.Opt (MFR.Atom (2, 0)) andalso
-  MFR.min_rep (MFR.Formula MFU.Neut)
-      (MFR.Formula MFU.Pos) = MFR.Formula MFU.Pos andalso
+      (MFR.Formula Util.Neut) = MFR.Opt (MFR.Atom (2, 0)) andalso
+  MFR.min_rep (MFR.Formula Util.Neut)
+      (MFR.Formula Util.Pos) = MFR.Formula Util.Pos andalso
   MFR.min_rep (MFR.Atom (2, 0))
       (MFR.Struct [MFR.Atom (2, 0)]) = MFR.Atom (2, 0) andalso
   MFR.min_rep (MFR.Vect (3, MFR.Atom (2, 0)))
@@ -4674,8 +4674,8 @@ fun mf_rep_ordering () =
       [MFR.Atom (2, 0), MFR.Vect (3, MFR.Atom (2, 0))]
       [MFR.Atom (2, 0), MFR.Vect (2, MFR.Atom (3, 0))] =
     [MFR.Atom (2, 0), MFR.Vect (2, MFR.Atom (3, 0))] andalso
-  ((MFR.min_rep (MFR.Formula MFU.Pos) (MFR.Formula MFU.Neg); false)
-   handle MFU.ARG _ => true)
+  ((MFR.min_rep (MFR.Formula Util.Pos) (MFR.Formula Util.Neg); false)
+   handle Util.ARG _ => true)
 
 val _ = require_msg (check_result mf_rep_ordering) (fn () =>
   "model-finder rep ordering or unification failed")
@@ -4697,9 +4697,9 @@ fun mf_rep_fixed_scope () =
       ``:refute$rf2 -> refute$rf2 -> bool``
     val binary_relation =
       MFR.Func
-        (MFR.Struct [enum, enum], MFR.Formula MFU.Neut)
+        (MFR.Struct [enum, enum], MFR.Formula Util.Neut)
     val curried_binary_relation =
-      MFR.Func (enum, MFR.Func (enum, MFR.Formula MFU.Neut))
+      MFR.Func (enum, MFR.Func (enum, MFR.Formula Util.Neut))
     val optional_curried_binary_relation =
       MFR.Func
         (enum, MFR.Func (enum, MFR.Opt (MFR.Atom (2, main_offset))))
@@ -4710,10 +4710,10 @@ fun mf_rep_fixed_scope () =
     val pair_curried_relation =
       MFR.Func
         (pair_endpoint,
-         MFR.Func (pair_endpoint, MFR.Formula MFU.Neut))
+         MFR.Func (pair_endpoint, MFR.Formula Util.Neut))
     val atomized_pair_curried_relation =
       MFR.Func
-        (pair_atom, MFR.Func (pair_atom, MFR.Formula MFU.Neut))
+        (pair_atom, MFR.Func (pair_atom, MFR.Formula Util.Neut))
   in
     MFR.best_one_rep_for_type scope ``:refute$rf2 # num`` =
       MFR.Struct [enum, number] andalso
@@ -4721,7 +4721,7 @@ fun mf_rep_fixed_scope () =
     MFR.card_of_rep vector = 4 andalso MFR.arity_of_rep vector = 2 andalso
     MFR.best_non_opt_set_rep_for_type scope
       ``:refute$rf2 -> bool`` =
-      MFR.Func (enum, MFR.Formula MFU.Neut) andalso
+      MFR.Func (enum, MFR.Formula Util.Neut) andalso
     MFR.best_non_opt_set_rep_for_type scope
       ``:refute$rf2 -> num`` = MFR.Func (enum, number) andalso
     MFR.best_opt_set_rep_for_type scope ``:refute$rf2 -> num`` =
@@ -5467,24 +5467,24 @@ fun mf_nut_unsound_switches () =
       MFNT.NameTable.empty false quantified
     val unknown_ok =
       (case (sound_unknown, unsound_unknown) of
-           (MFNT.Cst (MFNT.False, _, MFR.Formula MFU.Pos),
-            MFNT.Cst (MFNT.True, _, MFR.Formula MFU.Neg)) => true
+           (MFNT.Cst (MFNT.False, _, MFR.Formula Util.Pos),
+            MFNT.Cst (MFNT.True, _, MFR.Formula Util.Neg)) => true
          | _ => false)
     val equality_ok =
       (case (sound_equality, unsound_equality) of
-           (MFNT.Cst (MFNT.False, _, MFR.Formula MFU.Pos),
-            MFNT.Op2 (MFNT.Eq, _, MFR.Formula MFU.Pos,
+           (MFNT.Cst (MFNT.False, _, MFR.Formula Util.Pos),
+            MFNT.Op2 (MFNT.Eq, _, MFR.Formula Util.Pos,
               MFNT.FreeName ("f", _, rf),
               MFNT.FreeName ("g", _, rg))) => rf = total andalso rg = total
          | _ => false)
     val quantifier_ok =
       (case (sound_quantified, unsound_quantified) of
-           (MFNT.Op2 (MFNT.And, _, MFR.Formula MFU.Pos,
-              MFNT.Op2 (MFNT.All, _, MFR.Formula MFU.Pos, _, _),
-              MFNT.Op2 (MFNT.Less, _, MFR.Formula MFU.Pos,
+           (MFNT.Op2 (MFNT.And, _, MFR.Formula Util.Pos,
+              MFNT.Op2 (MFNT.All, _, MFR.Formula Util.Pos, _, _),
+              MFNT.Op2 (MFNT.Less, _, MFR.Formula Util.Pos,
                 MFNT.Cst (MFNT.Unrep, _, MFR.Opt _),
                 MFNT.Cst (MFNT.Num 1, _, MFR.Atom _))),
-            MFNT.Op2 (MFNT.All, _, MFR.Formula MFU.Pos, _, _)) => true
+            MFNT.Op2 (MFNT.All, _, MFR.Formula Util.Pos, _, _)) => true
          | _ => false)
   in unknown_ok andalso equality_ok andalso quantifier_ok end
 
@@ -5567,8 +5567,8 @@ fun mf_nut_triad () =
       case MFNT.choose_reps_in_nut scope unsound table false conditional of
           MFNT.Op3 (MFNT.If, _, MFR.Opt outer,
             MFNT.Op2 (MFNT.Triad, _, MFR.Opt triad_rep,
-              MFNT.Op2 (MFNT.Eq, _, MFR.Formula MFU.Pos, _, _),
-              MFNT.Op2 (MFNT.Eq, _, MFR.Formula MFU.Neg, _, _)), _, _) =>
+              MFNT.Op2 (MFNT.Eq, _, MFR.Formula Util.Pos, _, _),
+              MFNT.Op2 (MFNT.Eq, _, MFR.Formula Util.Neg, _, _)), _, _) =>
             outer = number_rep andalso triad_rep = bool_rep
         | _ => false
   in has_pinned_triad false andalso has_pinned_triad true end
@@ -5593,8 +5593,8 @@ fun mf_nut_renaming () =
     val pair_rep = MFR.best_one_rep_for_type scope pair_ty
     val binder = MFNT.BoundName (0, pair_ty, pair_rep, "p")
     val quantified = MFNT.Op2 (MFNT.All, Type.bool,
-      MFR.Formula MFU.Pos, binder,
-      MFNT.Op2 (MFNT.Eq, Type.bool, MFR.Formula MFU.Pos,
+      MFR.Formula Util.Pos, binder,
+      MFNT.Op2 (MFNT.Eq, Type.bool, MFR.Formula Util.Pos,
         binder, binder))
     val renamed_quantified = MFNT.rename_vars_in_nut
       Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
@@ -6158,9 +6158,9 @@ fun mf_kodkod_finite_translation () =
         raw_finite
       |> MFK.kodkod_formula_from_nut offsets kk
   in
-    finite MFU.Neut exact = Refute_Forl.True andalso
-    finite MFU.Pos optional = Refute_Forl.False andalso
-    finite MFU.Neg optional = Refute_Forl.True andalso
+    finite Util.Neut exact = Refute_Forl.True andalso
+    finite Util.Pos optional = Refute_Forl.False andalso
+    finite Util.Neg optional = Refute_Forl.True andalso
     neutral_unknown = Refute_Forl.False andalso
     chosen false = Refute_Forl.False andalso
     chosen true = Refute_Forl.True
@@ -6180,7 +6180,7 @@ fun mf_kodkod_optional_struct_equality_golden () =
     val optional = MFNT.FreeRel
       ((2, 1), ``:num # num``, MFR.Opt pair, "optional")
     fun equality first second = MFNT.Op2
-      (MFNT.Eq, Type.bool, MFR.Formula MFU.Neg, first, second)
+      (MFNT.Eq, Type.bool, MFR.Formula Util.Neg, first, second)
     val translate = MFK.kodkod_formula_from_nut (#ofs scope)
       (mf_translation_constrs scope)
     val expected = Refute_Forl.Subset
@@ -6204,9 +6204,9 @@ fun mf_kodkod_quantifier_golden () =
     val binder = MFNT.BoundRel ((1, 0), ``:num``, number, "x")
     val two = MFNT.Cst (MFNT.Num 2, ``:num``, number)
     val less = MFNT.Op2 (MFNT.Less, Type.bool,
-      MFR.Formula MFU.Pos, binder, two)
+      MFR.Formula Util.Pos, binder, two)
     val quantified = MFNT.Op2 (MFNT.All, Type.bool,
-      MFR.Formula MFU.Pos, binder, less)
+      MFR.Formula Util.Pos, binder, less)
     val expected = Refute_Forl.All
       ([Refute_Forl.DeclOne ((1, 0), Refute_Forl.AtomSeq (3, 0))],
        Refute_Forl.RelEq
@@ -6233,9 +6233,9 @@ fun mf_kodkod_closure_golden () =
     val bool_atom = MFR.Atom
       (2, MFS.offset_of_type (#ofs scope) Type.bool)
     val paired_rep = MFR.Func
-      (MFR.Struct [atom, atom], MFR.Formula MFU.Neut)
+      (MFR.Struct [atom, atom], MFR.Formula Util.Neut)
     val curried_rep = MFR.Func
-      (atom, MFR.Func (atom, MFR.Formula MFU.Neut))
+      (atom, MFR.Func (atom, MFR.Formula Util.Neut))
     val optional_rep = MFR.Func
       (atom, MFR.Func (atom, MFR.Opt bool_atom))
     fun relation index ty rep name =
@@ -6243,7 +6243,7 @@ fun mf_kodkod_closure_golden () =
     fun closure ty rep rel =
       MFNT.Op1 (MFNT.Closure, ty, rep, rel)
     fun equality left right = MFNT.Op2 (MFNT.Eq, Type.bool,
-      MFR.Formula MFU.Pos, left, right)
+      MFR.Formula Util.Pos, left, right)
     val paired = relation (2, 0) paired_ty paired_rep "paired"
     val curried = relation (2, 1) curried_ty curried_rep "curried"
     val optional = relation (3, 2) curried_ty optional_rep "optional"
@@ -6275,7 +6275,7 @@ fun mf_kodkod_closure_golden () =
         (Refute_Forl.Closure (Refute_Forl.Rel (2, 1)),
          Refute_Forl.Rel (2, 1)) andalso
     translate
-      (MFNT.Op1 (MFNT.IsUnknown, Type.bool, MFR.Formula MFU.Pos,
+      (MFNT.Op1 (MFNT.IsUnknown, Type.bool, MFR.Formula Util.Pos,
          closure curried_ty optional_rep optional)) =
       Refute_Forl.No optional_expected
   end
@@ -6290,7 +6290,7 @@ fun mf_kodkod_binary_special_goldens () =
     val scope = mf_translation_scope [(``:num``, 3)] []
     val atom = MFR.Atom (3, 0)
     val relation_rep = MFR.Func
-      (atom, MFR.Func (atom, MFR.Formula MFU.Neut))
+      (atom, MFR.Func (atom, MFR.Formula Util.Neut))
     val optional_rep = MFR.Func
       (atom, MFR.Func (atom, MFR.Opt (MFR.Atom (2, 0))))
     fun relation index name = MFNT.FreeRel
@@ -6301,7 +6301,7 @@ fun mf_kodkod_binary_special_goldens () =
     val optional = MFNT.FreeRel
       ((3, 3), relation_ty, optional_rep, "u")
     fun equality left right = MFNT.Op2 (MFNT.Eq, Type.bool,
-      MFR.Formula MFU.Pos, left, right)
+      MFR.Formula Util.Pos, left, right)
     val converse = MFNT.Op1
       (MFNT.Converse, relation_ty, relation_rep, first)
     val optional_converse = MFNT.Op1
@@ -6317,7 +6317,7 @@ fun mf_kodkod_binary_special_goldens () =
            [Refute_Forl.Num 1, Refute_Forl.Num 0]),
          Refute_Forl.Rel (2, 2)) andalso
     translate
-      (MFNT.Op1 (MFNT.IsUnknown, Type.bool, MFR.Formula MFU.Pos,
+      (MFNT.Op1 (MFNT.IsUnknown, Type.bool, MFR.Formula Util.Pos,
          optional_converse)) =
       Refute_Forl.No
         (Refute_Forl.Project (Refute_Forl.Rel (3, 3),
@@ -6503,7 +6503,7 @@ fun mf_binary_integer_backend_goldens () =
       (MFK.check_bits 9 (And (IntEq (Num (~512), Num 511), True)); true)
     val rejected_boundary =
       ((MFK.check_bits 9 (IntEq (Num 512, Num 0)); false)
-       handle MFU.TOO_SMALL _ => true)
+       handle Util.TOO_SMALL _ => true)
   in
     #bits (#scope metadata) = 9 andalso
     List.exists (fn setting => setting = ("bit_width", "10"))
@@ -6577,7 +6577,7 @@ fun mf_atom_codecs () =
       List.all (fn atom =>
         MFPP.atom_for_int (card, offset)
           (MFPP.int_for_atom (card, offset) atom) = atom)
-        (MFU.index_seq offset card)
+        (Util.index_seq offset card)
     fun value_round_trip card offset =
       List.all (fn value =>
         MFPP.int_for_atom (card, offset)
@@ -6603,7 +6603,7 @@ fun mf_atom_codecs () =
     int_round_trip 6 30 andalso value_round_trip 6 30 andalso
     successor_round_trip false andalso successor_round_trip true andalso
     ((MFPP.suc_rel_for_atom_seq ((7, 50), true); false)
-     handle MFU.TOO_LARGE _ => true)
+     handle Util.TOO_LARGE _ => true)
   end
 
 val _ = require_msg (check_result mf_atom_codecs) (fn () =>
@@ -7423,7 +7423,7 @@ local
                        (tuples MFPH.unsigned_bit_word_sel_rel instance)
                    in
                      SOME (List.foldl (fn (bit, total) =>
-                       MFU.reasonable_power 2 (bit - bit_offset) + total)
+                       Util.reasonable_power 2 (bit - bit_offset) + total)
                        0 bit_atoms)
                    end
                | _ => NONE)

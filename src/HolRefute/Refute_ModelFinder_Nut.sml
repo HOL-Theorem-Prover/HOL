@@ -98,7 +98,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
   structure MFS = Refute_ModelFinder_Scope
   structure MFR = Refute_ModelFinder_Rep
   structure MFP = Refute_ModelFinder_Peephole
-  structure MFU = Refute_ModelFinder_Util
+  structure Util = Refute_ModelFinder_Util
 
   datatype cst =
     False | True | Iden | Num of int | Unknown | Unrep | Suc | Add |
@@ -927,7 +927,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
       val arity = MFR.arity_of_rep representation
     in
       if arity > Refute_Forl.max_arity min_univ_card then
-        raise MFU.TOO_LARGE
+        raise Util.TOO_LARGE
           ("Refute_ModelFinder_Nut.choose_rep_for_bound_var",
            "arity " ^ Int.toString arity ^ " of bound variable too large")
       else
@@ -954,8 +954,8 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
 
   fun unknown_boolean ty representation =
     Cst (case representation of
-             MFR.Formula MFU.Pos => False
-           | MFR.Formula MFU.Neg => True
+             MFR.Formula Util.Pos => False
+           | MFR.Formula Util.Neg => True
            | _ => Unknown,
          ty, representation)
 
@@ -963,9 +963,9 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
     ((if operator = Not then
         if is_Cst True first then Cst (False, ty, representation)
         else if is_Cst False first then Cst (True, ty, representation)
-        else raise MFU.SAME ()
-      else raise MFU.SAME ())
-     handle MFU.SAME () => Op1 (operator, ty, representation, first))
+        else raise Util.SAME ()
+      else raise Util.SAME ())
+     handle Util.SAME () => Op1 (operator, ty, representation, first))
 
   fun s_op2 operator ty representation first second =
     ((case operator of
@@ -980,31 +980,31 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
               Cst (True, ty, MFR.unopt_rep representation)
             else if is_Cst False first then second
             else if is_Cst False second then first
-            else raise MFU.SAME ()
+            else raise Util.SAME ()
         | And =>
             if List.exists (is_Cst False) [first, second] then
               Cst (False, ty, MFR.unopt_rep representation)
             else if is_Cst True first then second
             else if is_Cst True second then first
-            else raise MFU.SAME ()
+            else raise Util.SAME ()
         | Eq =>
             (case (is_Cst Unrep first, is_Cst Unrep second) of
                  (true, true) => unknown_boolean ty representation
-               | (false, false) => raise MFU.SAME ()
+               | (false, false) => raise Util.SAME ()
                | _ =>
                    if List.all (MFR.is_opt_rep o rep_of) [first, second] then
-                     raise MFU.SAME ()
-                   else Cst (False, ty, MFR.Formula MFU.Neut))
+                     raise Util.SAME ()
+                   else Cst (False, ty, MFR.Formula Util.Neut))
         | Triad =>
             if is_Cst True first then first
             else if is_Cst False second then second
-            else raise MFU.SAME ()
+            else raise Util.SAME ()
         | Apply =>
             if is_Cst Unrep first then Cst (Unrep, ty, representation)
             else if is_Cst Unrep second then
               if MFH.is_boolean_type ty then
                 if is_fully_representable_set first then
-                  Cst (False, ty, MFR.Formula MFU.Neut)
+                  Cst (False, ty, MFR.Formula Util.Neut)
                 else unknown_boolean ty representation
               else if is_constructive first then
                 Cst (Unrep, ty, representation)
@@ -1014,11 +1014,11 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                        ConstName (name, _, _), _) =>
                          if MFN.original_name name = "list$APPEND" then
                            Cst (Unrep, ty, representation)
-                         else raise MFU.SAME ()
-                   | _ => raise MFU.SAME ())
-            else raise MFU.SAME ()
-        | _ => raise MFU.SAME ())
-     handle MFU.SAME () =>
+                         else raise Util.SAME ()
+                   | _ => raise Util.SAME ())
+            else raise Util.SAME ()
+        | _ => raise Util.SAME ())
+     handle Util.SAME () =>
        Op2 (operator, ty, representation, first, second))
 
   fun s_op3 operator ty representation first second third =
@@ -1027,9 +1027,9 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
             if inline_nut second orelse
                num_occurrences_in_nut first third < 2 then
               substitute_in_nut first second third
-            else raise MFU.SAME ()
-        | _ => raise MFU.SAME ())
-     handle MFU.SAME () =>
+            else raise Util.SAME ()
+        | _ => raise Util.SAME ())
+     handle Util.SAME () =>
        Op3 (operator, ty, representation, first, second, third))
 
   fun s_tuple ty representation nuts =
@@ -1065,20 +1065,20 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
     let
       val bool_atom = MFR.Atom (2, MFS.offset_of_type ofs Type.bool)
       fun bool_rep polarity optional =
-        if polarity = MFU.Neut andalso optional then MFR.Opt bool_atom
+        if polarity = Util.Neut andalso optional then MFR.Opt bool_atom
         else MFR.Formula polarity
       fun unknown_boolean constant ty polarity =
         let val effective_polarity =
-          if unsound then MFU.flip_polarity polarity else polarity
+          if unsound then Util.flip_polarity polarity else polarity
         in
           case effective_polarity of
-              MFU.Pos => Cst (False, ty, MFR.Formula MFU.Pos)
-            | MFU.Neg => Cst (True, ty, MFR.Formula MFU.Neg)
-            | MFU.Neut => Cst (constant, ty, MFR.Opt bool_atom)
+              Util.Pos => Cst (False, ty, MFR.Formula Util.Pos)
+            | Util.Neg => Cst (True, ty, MFR.Formula Util.Neg)
+            | Util.Neut => Cst (constant, ty, MFR.Opt bool_atom)
         end
       fun triad first second =
         s_op2 Triad (type_of first) (MFR.Opt bool_atom) first second
-      fun triad_fn f = triad (f MFU.Pos) (f MFU.Neg)
+      fun triad_fn f = triad (f Util.Pos) (f Util.Neg)
       fun unrepify table definition polarity needle body =
         let val ty = type_of needle
         in
@@ -1091,13 +1091,13 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
         let
           fun gsub definition polarity item =
             aux table definition polarity item
-          fun sub item = gsub false MFU.Neut item
+          fun sub item = gsub false Util.Neut item
         in
           case candidate of
               Cst (False, ty, _) =>
-                Cst (False, ty, MFR.Formula MFU.Neut)
+                Cst (False, ty, MFR.Formula Util.Neut)
             | Cst (True, ty, _) =>
-                Cst (True, ty, MFR.Formula MFU.Neut)
+                Cst (True, ty, MFR.Formula Util.Neut)
             | Cst (Num value, ty, _) =>
                 if MFH.is_bitword_type ty then
                   let
@@ -1180,19 +1180,19 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 else
                   Cst (constant, ty, MFR.best_set_rep_for_type scope ty)
             | Op1 (Not, ty, _, first) =>
-                (case gsub definition (MFU.flip_polarity polarity) first of
+                (case gsub definition (Util.flip_polarity polarity) first of
                      Op2 (Triad, _, _, positive, negative) =>
                        triad
-                         (s_op1 Not ty (MFR.Formula MFU.Pos) negative)
-                         (s_op1 Not ty (MFR.Formula MFU.Neg) positive)
+                         (s_op1 Not ty (MFR.Formula Util.Pos) negative)
+                         (s_op1 Not ty (MFR.Formula Util.Neg) positive)
                    | first' => s_op1 Not ty
                        (MFR.flip_rep_polarity (rep_of first')) first')
             | Op1 (IsUnknown, ty, _, first) =>
                 let val first' = sub first
                 in
                   if MFR.is_opt_rep (rep_of first') then
-                    Op1 (IsUnknown, ty, MFR.Formula MFU.Neut, first')
-                  else Cst (False, ty, MFR.Formula MFU.Neut)
+                    Op1 (IsUnknown, ty, MFR.Formula Util.Neut, first')
+                  else Cst (False, ty, MFR.Formula Util.Neut)
                 end
             | Op1 (operator, ty, _, first) =>
                 let
@@ -1209,7 +1209,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                      the same unknown Boolean as Cst Unknown, including
                      the unsound sibling's polarity flip. *)
                   if operator = Finite andalso optional andalso
-                     polarity <> MFU.Neut
+                     polarity <> Util.Neut
                   then unknown_boolean Unknown ty polarity
                   else s_op1 operator ty representation first'
                 end
@@ -1223,7 +1223,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                   s_op2 Less ty (bool_rep polarity optional) first' second'
                 end
             | Op2 (DefEq, ty, _, first, second) =>
-                s_op2 DefEq ty (MFR.Formula MFU.Neut)
+                s_op2 DefEq ty (MFR.Formula Util.Neut)
                   (sub first) (sub second)
             | Op2 (Eq, ty, _, first, second) =>
                 let
@@ -1232,16 +1232,16 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                   fun non_opt_case () =
                     s_op2 Eq ty (MFR.Formula polarity) first' second'
                   fun opt_opt_case () =
-                    if polarity = MFU.Neut then
+                    if polarity = Util.Neut then
                       triad_fn (fn p =>
                         s_op2 Eq ty (MFR.Formula p) first' second')
                     else non_opt_case ()
                   fun hybrid_case optional_side =
                     if is_constructive optional_side then
-                      s_op2 Eq ty (MFR.Formula MFU.Neut) first' second'
+                      s_op2 Eq ty (MFR.Formula Util.Neut) first' second'
                     else opt_opt_case ()
                 in
-                  if unsound orelse polarity = MFU.Neg orelse
+                  if unsound orelse polarity = Util.Neg orelse
                      MFS.is_concrete_type data_types true (type_of first) then
                     case (MFR.is_opt_rep (rep_of first'),
                           MFR.is_opt_rep (rep_of second')) of
@@ -1251,10 +1251,10 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                       | (false, false) => non_opt_case ()
                   else
                     let val positive =
-                      Cst (False, ty, MFR.Formula MFU.Pos)
+                      Cst (False, ty, MFR.Formula Util.Pos)
                     in
-                      if polarity = MFU.Neut then
-                        triad positive (gsub definition MFU.Neg candidate)
+                      if polarity = Util.Neut then
+                        triad positive (gsub definition Util.Neg candidate)
                       else positive
                     end
                 end
@@ -1292,8 +1292,8 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                        let
                          val table' = NameTable.update
                            (binder, domain_rep) table
-                         val binder' = aux table' false MFU.Neut binder
-                         val body' = aux table' false MFU.Neut body
+                         val binder' = aux table' false Util.Neut binder
+                         val body' = aux table' false Util.Neut body
                          val representation' =
                            if MFR.is_opt_rep (rep_of body') then
                              MFR.opt_rep ofs ty representation
@@ -1314,7 +1314,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     val binder' = aux table' definition polarity binder
                     val body' = aux table' definition polarity body
                   in
-                    if polarity = MFU.Neut andalso
+                    if polarity = Util.Neut andalso
                        MFR.is_opt_rep (rep_of body') then
                       triad_fn (fn p => gsub definition p candidate)
                     else
@@ -1323,7 +1323,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                           (MFR.Formula polarity) binder' body'
                         val omit_guard = definition orelse
                           (unsound andalso
-                           ((polarity = MFU.Pos) = (operator = All))) orelse
+                           ((polarity = Util.Pos) = (operator = All))) orelse
                           MFS.is_complete_type data_types true
                             (type_of binder)
                       in
@@ -1347,7 +1347,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     val first' = gsub definition polarity binder
                     val second' = gsub definition polarity body
                   in
-                    ((if polarity = MFU.Neut then
+                    ((if polarity = Util.Neut then
                         case (MFR.is_opt_rep (rep_of first'),
                               MFR.is_opt_rep (rep_of second')) of
                             (true, true) => triad_fn
@@ -1360,9 +1360,9 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                               s_op2 operator ty (MFR.Opt bool_atom) first'
                                 (triad_fn (fn p =>
                                    gsub definition p body))
-                          | (false, false) => raise MFU.SAME ()
-                      else raise MFU.SAME ())
-                     handle MFU.SAME () =>
+                          | (false, false) => raise Util.SAME ()
+                      else raise Util.SAME ())
+                     handle Util.SAME () =>
                        s_op2 operator ty (MFR.Formula polarity)
                          first' second')
                   end
@@ -1425,7 +1425,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                   val representation = the_name table candidate
                   val named = modify_name_rep candidate representation
                 in
-                  if polarity = MFU.Neut orelse
+                  if polarity = Util.Neut orelse
                      not (MFH.is_boolean_type (type_of named)) orelse
                      not (MFR.is_opt_rep representation) then
                     named
@@ -1434,7 +1434,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 end
         end
     in
-      aux table definition MFU.Pos nut
+      aux table definition Util.Pos nut
     end
 
   fun fresh_n_ary_index arity [] previous =
@@ -1475,7 +1475,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
 
   fun rename_plain_var variable (variables, pool, table) =
     let
-      val is_formula = rep_of variable = MFR.Formula MFU.Neut
+      val is_formula = rep_of variable = MFR.Formula Util.Neut
       val (index, pool') =
         if is_formula then fresh_formula_reg pool else fresh_rel_reg pool
       val renamed =
@@ -1510,7 +1510,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
         in
           Tuple (ty, representation,
             map (shape_tuple range_ty element_rep)
-              (MFU.chunk_list chunk_size nuts))
+              (Util.chunk_list chunk_size nuts))
         end
     | shape_tuple ty _ [nut] =
         if type_of nut = ty then nut

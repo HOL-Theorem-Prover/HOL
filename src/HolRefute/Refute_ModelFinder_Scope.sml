@@ -7,7 +7,7 @@ structure Refute_ModelFinder_Scope = struct
   type context = Refute_ModelFinder_HOL.mf_context
 
   structure MFH = Refute_ModelFinder_HOL
-  structure MFU = Refute_ModelFinder_Util
+  structure Util = Refute_ModelFinder_Util
 
   type constr_spec =
     {const : term,
@@ -57,12 +57,8 @@ structure Refute_ModelFinder_Scope = struct
   fun err function message =
     Feedback.mk_HOL_ERR "Refute_ModelFinder_Scope" function message
 
-  fun same_type left right = Type.compare (left, right) = EQUAL
-
   fun type_matches pattern actual =
     MFH.type_matches_unboxed (pattern, actual)
-
-  fun member_type ty = List.exists (same_type ty)
 
   fun type_arguments ty =
     if Type.is_vartype ty then []
@@ -77,14 +73,14 @@ structure Refute_ModelFinder_Scope = struct
     MFH.is_bit_type ty
 
   fun data_type_spec (data_types : data_type_spec list) ty =
-    List.find (fn spec => same_type (#typ spec) ty) data_types
+    List.find (fn spec => Util.same_type (#typ spec) ty) data_types
 
   fun constructor_result_type constructor =
     #2 (boolSyntax.strip_fun (Term.type_of constructor))
 
   fun same_constructor left right =
     MFH.constructor_name left = MFH.constructor_name right andalso
-    same_type (constructor_result_type left)
+    Util.same_type (constructor_result_type left)
       (constructor_result_type right)
 
   fun constr_spec ([] : data_type_spec list) constructor =
@@ -114,7 +110,7 @@ structure Refute_ModelFinder_Scope = struct
             false
           else
             (case data_type_spec data_types ty of
-                 SOME spec => MFU.fun_from_pair (#complete spec) facto
+                 SOME spec => Util.fun_from_pair (#complete spec) facto
                | NONE => true)
   and is_concrete_type data_types facto ty =
     case Lib.total Type.dom_rng ty of
@@ -132,7 +128,7 @@ structure Refute_ModelFinder_Scope = struct
             true
           else
             (case data_type_spec data_types ty of
-                 SOME spec => MFU.fun_from_pair (#concrete spec) facto
+                 SOME spec => Util.fun_from_pair (#concrete spec) facto
                | NONE => true)
 
   fun is_exact_type data_types facto ty =
@@ -151,7 +147,7 @@ structure Refute_ModelFinder_Scope = struct
   fun same_card_assigns (left, right) =
     ListPair.allEq (fn ((left_ty, left_card),
                         (right_ty, right_card)) =>
-      same_type left_ty right_ty andalso left_card = right_card)
+      Util.same_type left_ty right_ty andalso left_card = right_card)
       (left, right)
 
   fun same_constr_specs (left, right) =
@@ -166,7 +162,7 @@ structure Refute_ModelFinder_Scope = struct
   fun same_data_type_specs (left, right) =
     ListPair.allEq (fn (left : data_type_spec,
                         right : data_type_spec) =>
-      same_type (#typ left) (#typ right) andalso
+      Util.same_type (#typ left) (#typ right) andalso
       #card left = #card right andalso #co left = #co right andalso
       #self_rec left = #self_rec right andalso
       #complete left = #complete right andalso
@@ -195,7 +191,7 @@ structure Refute_ModelFinder_Scope = struct
   fun project_block (column, block) = map (project_row column) block
 
   fun lookup_ints_assign equal assigns key =
-    case MFU.triple_lookup equal assigns key of
+    case Util.triple_lookup equal assigns key of
         SOME candidates => candidates
       | NONE => raise err "lookup_ints_assign" "missing assignment"
 
@@ -246,21 +242,13 @@ structure Refute_ModelFinder_Scope = struct
     (List.find (fn (pattern, _) => not (Option.isSome pattern)) assigns)
 
   fun lookup_group_iter_ints_assign assigns predicates =
-    let
-      fun first [] = NONE
-        | first (predicate :: rest) =
-            (case explicit_iter_ints_assign assigns predicate of
-                 SOME candidates => SOME candidates
-               | NONE => first rest)
-    in
-      case first predicates of
-          SOME candidates => candidates
-        | NONE =>
-            (case default_iter_ints_assign assigns of
-                 SOME candidates => candidates
-               | NONE => raise err "lookup_group_iter_ints_assign"
-                   "missing iterator assignment")
-    end
+    case get_first (explicit_iter_ints_assign assigns) predicates of
+        SOME candidates => candidates
+      | NONE =>
+          (case default_iter_ints_assign assigns of
+               SOME candidates => candidates
+             | NONE => raise err "lookup_group_iter_ints_assign"
+                 "missing iterator assignment")
 
   fun lookup_iter_ints_assign assigns predicate =
     lookup_group_iter_ints_assign assigns [predicate]
@@ -322,7 +310,7 @@ structure Refute_ModelFinder_Scope = struct
           0 (column :: columns)
 
   fun all_combinations_ordered_smartly ranks =
-    MFU.all_combinations ranks
+    Util.all_combinations ranks
     |> map (fn combination =>
          (combination_cost combination, combination))
     |> Lib.sort (fn (left, _) => fn (right, _) => left <= right)
@@ -331,7 +319,7 @@ structure Refute_ModelFinder_Scope = struct
   fun is_self_recursive_constr_type constructor_ty =
     let val body = #2 (boolSyntax.strip_fun constructor_ty)
     in
-      List.exists (exists_subtype (same_type body))
+      List.exists (exists_subtype (Util.same_type body))
         (#1 (boolSyntax.strip_fun constructor_ty))
     end
 
@@ -386,12 +374,12 @@ structure Refute_ModelFinder_Scope = struct
         | repair seen ((ty, card) :: rest) =
           ((if is_surely_inconsistent_scope_description context binarize
                  ((ty, card) :: seen) rest max_assigns then
-              raise MFU.SAME ()
+              raise Util.SAME ()
             else
               case repair ((ty, card) :: seen) rest of
                   result as SOME _ => result
-                | NONE => raise MFU.SAME ())
-           handle MFU.SAME () =>
+                | NONE => raise Util.SAME ())
+           handle Util.SAME () =>
              repair seen ((ty, card - 1) :: rest))
     in
       repair [] (rev card_assigns)
@@ -514,15 +502,15 @@ structure Refute_ModelFinder_Scope = struct
                     {delta = 0, epsilon = 1, exclusive = true, ...} =>
                       {delta = 1, epsilon = card,
                        exclusive = num_self_recs = 1, total = false}
-                  | _ => raise MFU.SAME ()
+                  | _ => raise Util.SAME ()
               else if domain_card 2 card_assigns constructor = 1 then
                 {delta = 0, epsilon = 1,
                  exclusive = acyclic, total = acyclic}
               else
-                raise MFU.SAME ()
+                raise Util.SAME ()
             else
-              raise MFU.SAME ())
-           handle MFU.SAME () =>
+              raise Util.SAME ())
+           handle Util.SAME () =>
              {delta = 0, epsilon = card,
               exclusive = false, total = false})
         else if card = sum_dom_cards (card + 1) then
@@ -554,13 +542,13 @@ structure Refute_ModelFinder_Scope = struct
   fun data_type_spec_from_scope_descriptor context binarize deep_data_types
         finitizable_data_types (desc as (card_assigns, _)) (ty, card) =
     let
-      val deep = member_type ty deep_data_types
+      val deep = Util.member_type ty deep_data_types
       val co = MFH.is_codatatype ty
       val constructors =
         MFH.binarized_and_boxed_data_type_constrs context binarize ty
       val self_recs = map
         (is_self_recursive_constr_type o Term.type_of) constructors
-      val num_self_recs = length (List.filter (fn value => value) self_recs)
+      val num_self_recs = length (List.filter I self_recs)
       val num_non_self_recs = length self_recs - num_self_recs
       val self_rec = num_self_recs > 0
       fun is_complete facto = has_exact_card context facto
@@ -576,8 +564,8 @@ structure Refute_ModelFinder_Scope = struct
           (List.concat (map binder_types
             (List.concat
               (map MFH.constructor_arg_types constructors))))
-      val complete = MFU.pair_from_fun is_complete
-      val concrete = MFU.pair_from_fun is_concrete
+      val complete = Util.pair_from_fun is_complete
+      val concrete = Util.pair_from_fun is_concrete
       fun sum_dom_cards maximum =
         List.foldl (fn (constructor, total) =>
           total + domain_card maximum card_assigns constructor)
@@ -654,10 +642,10 @@ structure Refute_ModelFinder_Scope = struct
     same_max_assigns (left_maxes, right_maxes)
 
   fun distinct_descriptions values =
-    List.foldl (fn (value, result) =>
+    List.rev (List.foldl (fn (value, result) =>
       if List.exists (fn other =>
            same_description (other, value)) result then result
-      else result @ [value]) [] values
+      else value :: result) [] values)
 
   fun all_scopes context binarize cards_assigns maxes_assigns
         iters_assigns bitss bisim_depths mono_types nonmono_types deep_data_types
@@ -699,7 +687,7 @@ structure Refute_ModelFinder_Scope = struct
   fun is_type_actually_monotonic _ = false
 
   fun mono_override monos ty =
-    MFU.triple_lookup (fn (actual, pattern) =>
+    Util.triple_lookup (fn (actual, pattern) =>
       type_matches pattern actual) monos ty
 
   fun is_type_monotonic_with actually_monotonic monos ty =

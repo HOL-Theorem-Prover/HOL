@@ -330,6 +330,8 @@ structure Refute_ModelFinder_HOL = struct
   open Portable Feedback
   infix |>
 
+  structure Util = Refute_ModelFinder_Util
+
   type term = Term.term
   type thm = Thm.thm
   type hol_type = Type.hol_type
@@ -575,12 +577,6 @@ structure Refute_ModelFinder_HOL = struct
       List.mapPartial instantiate
         (HolKernel.find_terms is_matching prop)
     end
-
-  fun aconv_member term = List.exists (Term.aconv term)
-
-  fun distinct_terms terms =
-    List.foldl (fn (term, result) =>
-      if aconv_member term result then result else result @ [term]) [] terms
 
   val built_in_consts =
     [({Thy = "bool", Name = "~"}, 1),
@@ -851,13 +847,13 @@ structure Refute_ModelFinder_HOL = struct
     in
       HolKernel.find_terms is_matching prop
       |> List.mapPartial instantiate
-      |> distinct_terms
+      |> Util.distinct_terms
     end
 
   fun nondef_props_for_const table constant =
     List.concat (map (all_instantiations constant)
       (table_lookup table constant))
-    |> distinct_terms
+    |> Util.distinct_terms
 
   fun normalized_rhs_of prop =
     let
@@ -1648,7 +1644,7 @@ structure Refute_ModelFinder_HOL = struct
           handle HOL_ERR _ => NONE
       val lex = List.mapPartial lex_candidate arrangements
     in
-      distinct_terms ((case whole of SOME value => [value] | NONE => []) @
+      Util.distinct_terms ((case whole of SOME value => [value] | NONE => []) @
         components @ lex)
     end
 
@@ -1722,7 +1718,7 @@ structure Refute_ModelFinder_HOL = struct
         (List.tabulate (common_arity, fn index => index))
       val ordinary = wf_candidates [sum_ty] []
     in
-      distinct_terms
+      Util.distinct_terms
         ((case whole of SOME candidate => [candidate] | NONE => []) @
          components @ ordinary)
     end
@@ -1831,17 +1827,9 @@ structure Refute_ModelFinder_HOL = struct
       | NONE => default_wf_override rows
 
   fun group_wf_override rows members =
-    let
-      fun first [] = NONE
-        | first (member :: rest) =
-            (case explicit_wf_override rows member of
-                 SOME value => SOME value
-               | NONE => first rest)
-    in
-      case first members of
-          SOME value => SOME value
-        | NONE => default_wf_override rows
-    end
+    case get_first (explicit_wf_override rows) members of
+        SOME value => SOME value
+      | NONE => default_wf_override rows
 
   fun is_well_founded_inductive_pred
         (context as {wfs, wf_cache, ...} : mf_context) constant =
@@ -3007,13 +2995,7 @@ structure Refute_ModelFinder_HOL = struct
       ty
 
   fun is_interpreted_type ty =
-    case Lib.total Type.dest_thy_type ty of
-        SOME {Thy = "min", Tyop = "bool", ...} => true
-      | SOME {Thy = "min", Tyop = "fun", ...} => true
-      | SOME {Thy = "pair", Tyop = "prod", ...} => true
-      | SOME {Thy = "num", Tyop = "num", ...} => true
-      | SOME {Thy = "integer", Tyop = "int", ...} => true
-      | _ => false
+    interpreted_type_operator (type_operator_of ty) handle HOL_ERR _ => false
 
   val is_raw_free_datatype = raw_free_datatype
 
@@ -3340,23 +3322,17 @@ structure Refute_ModelFinder_HOL = struct
 
   fun first_unregistered_typedef terms =
     let
-      fun check [] = NONE
-        | check (constant :: rest) =
-            (case unregistered_typedef_type constant of
-                 SOME ty => SOME ty
-               | NONE => check rest)
       val constants = List.concat
         (map (HolKernel.find_terms Term.is_const) terms)
     in
-      check constants
+      get_first unregistered_typedef_type constants
     end
 
   fun unregistered_typedef_reason terms =
-    case first_unregistered_typedef terms of
-        NONE => NONE
-      | SOME ty =>
-          SOME ("unregistered typedef " ^ #Tyop (Type.dest_thy_type ty) ^
-            ": register with Refute.register_typedef")
+    Option.map (fn ty =>
+      "unregistered typedef " ^ #Tyop (Type.dest_thy_type ty) ^
+        ": register with Refute.register_typedef")
+      (first_unregistered_typedef terms)
 
   fun find_field which term =
     let

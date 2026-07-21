@@ -11,7 +11,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
 
   structure MFH = Refute_ModelFinder_HOL
   structure MFN = Refute_ModelFinder_Names
-  structure MFU = Refute_ModelFinder_Util
+  structure Util = Refute_ModelFinder_Util
   structure PS = Refute_PropSat
 
   datatype sign = Plus | Minus
@@ -57,9 +57,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
   fun same_term (left, right) = Term.aconv left right
 
   fun lookup equal key pairs =
-    case List.find (fn (other, _) => equal (key, other)) pairs of
-        SOME (_, value) => SOME value
-      | NONE => NONE
+    Option.map #2 (List.find (fn (other, _) => equal (key, other)) pairs)
 
   fun update equal (key, value) pairs =
     (key, value) ::
@@ -1662,7 +1660,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
                 (gamma, constraints)
             end
           else
-            raise MFU.BAD
+            raise Util.BAD
               ("Refute_ModelFinder_Mono.consider_definitional_axiom",
                Parse.term_to_string candidate)
       in
@@ -1705,7 +1703,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
              (* Deviation from upstream: an internal mtype mismatch must not
                 abort Refute.  The driver catches BAD, reports at trace
                 level, and conservatively classifies the type nonmonotonic. *)
-             raise MFU.BAD
+             raise Util.BAD
                (location,
                 String.concatWith ", "
                   (map string_for_mtype mtypes @

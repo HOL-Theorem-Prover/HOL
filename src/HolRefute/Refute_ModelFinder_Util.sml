@@ -46,6 +46,13 @@ signature REFUTE_MODEL_FINDER_UTIL = sig
   val nat_subscript : int -> string
 
   val flip_polarity : polarity -> polarity
+
+  val same_type : Type.hol_type -> Type.hol_type -> bool
+  val member_type : Type.hol_type -> Type.hol_type list -> bool
+  val add_type :
+    Type.hol_type -> Type.hol_type list -> Type.hol_type list
+  val aconv_member : Term.term -> Term.term list -> bool
+  val distinct_terms : Term.term list -> Term.term list
 end
 
 structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
@@ -347,6 +354,14 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
   fun flip_polarity Pos = Neg
     | flip_polarity Neg = Pos
     | flip_polarity Neut = Neut
+
+  (* Re-exported from Refute_Util so the model-finder modules can reach the
+     shared type/term helpers through their usual Util alias. *)
+  val same_type = Refute_Util.same_type
+  val member_type = Refute_Util.member_type
+  val add_type = Refute_Util.add_type
+  val aconv_member = Refute_Util.aconv_member
+  val distinct_terms = Refute_Util.distinct_terms
 
   (* Prefix ownership moves to Refute_ModelFinder_Names (PLAN_M3 M3-D5). *)
   (* Upstream Pretty/PIDE, parsing, type, tactic, hash, and spy helpers drop. *)

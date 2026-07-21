@@ -37,7 +37,7 @@ structure MFN = Refute_ModelFinder_Names
 structure MFNT = Refute_ModelFinder_Nut
 structure MFP = Refute_ModelFinder_Preproc
 structure MFS = Refute_ModelFinder_Scope
-structure MFU = Refute_ModelFinder_Util
+structure Util = Refute_ModelFinder_Util
 
 type term = Term.term
 type hol_type = Type.hol_type
@@ -65,13 +65,6 @@ fun unsound_delay deadline =
       max_unsound_delay_percent div 100))
   handle _ => 0
 
-fun same_type left right = Type.compare (left, right) = EQUAL
-
-fun member_type ty = List.exists (same_type ty)
-
-fun add_type ty types =
-  if member_type ty types then types else ty :: types
-
 fun type_arguments ty =
   if Type.is_vartype ty then []
   else #Args (Type.dest_thy_type ty)
@@ -83,11 +76,11 @@ fun ground_types context binarize terms =
          pred_setSyntax.is_set_type ty then
         List.foldl (fn (argument, result) => add argument result)
           types (type_arguments ty)
-      else if MFH.is_boolean_type ty orelse member_type ty types then
+      else if MFH.is_boolean_type ty orelse Util.member_type ty types then
         types
       else
         let
-          val types = add_type ty types
+          val types = Util.add_type ty types
           val constructor_types = List.concat
             (map MFH.constructor_arg_types
               (MFH.binarized_and_boxed_data_type_constrs
@@ -109,14 +102,8 @@ fun ground_types context binarize terms =
         [] terms)
   end
 
-fun aconv_member term = List.exists (Term.aconv term)
-
-fun distinct_terms terms =
-  List.foldl (fn (term, result) =>
-    if aconv_member term result then result else result @ [term]) [] terms
-
 fun free_variables terms =
-  distinct_terms (List.concat (map Term.free_vars_lr terms))
+  Util.distinct_terms (List.concat (map Term.free_vars_lr terms))
 
 fun none_true assignments =
   List.all (fn (_, value) => value <> SOME true) assignments
@@ -162,11 +149,11 @@ fun deep_data_types all_types sel_names =
       Option.map #1 (Lib.total Type.dom_rng (MFNT.type_of name))
     fun selected ty = List.exists (fn name =>
       case selector_domain name of
-          SOME domain => same_type ty domain
+          SOME domain => Util.same_type ty domain
         | NONE => false) sel_names
   in
     List.filter (fn ty =>
-      same_type ty ``:unit`` orelse same_type ty MFH.num_type orelse
+      Util.same_type ty ``:unit`` orelse Util.same_type ty MFH.num_type orelse
       MFH.is_bitword_type ty orelse
       Option.isSome (MFH.word_dimension ty) orelse
       (MFH.is_data_type ty andalso selected ty)) all_types
@@ -177,7 +164,7 @@ fun finitizable_data_types context finitizes kind_of_monotonic
   let
     val data_types = List.filter MFH.is_data_type all_types
     val (deep, shallow) = List.partition (fn ty =>
-      member_type ty deep_types) data_types
+      Util.member_type ty deep_types) data_types
     fun infinite ty = not (MFH.is_finite_type context ty)
     fun forced ty =
       MFS.mono_override finitizes ty = SOME (SOME true)
@@ -319,7 +306,7 @@ fun run_instance deadline started (config : Refute_Core.config)
     val _ = if Option.isSome fixpoint_refusal then
         MFH.print_wf_cache context else ()
     val _ = case fixpoint_refusal of
-        SOME reason => raise MFU.NOT_SUPPORTED reason
+        SOME reason => raise Util.NOT_SUPPORTED reason
       | NONE => ()
     val (nondef_ts, def_ts, need_ts, got_all_mono_user_axioms,
          no_poly_user_axioms, binarize) =
@@ -329,7 +316,7 @@ fun run_instance deadline started (config : Refute_Core.config)
        problem as well as the early surface-goal guard in [run]. *)
     val _ =
       case MFH.unregistered_typedef_reason (nondef_ts @ def_ts) of
-          SOME reason => raise MFU.NOT_SUPPORTED reason
+          SOME reason => raise Util.NOT_SUPPORTED reason
         | NONE => ()
     val _ = MFH.refresh_iterator_arg_types context (nondef_ts @ def_ts)
     val _ = MFH.print_wf_cache context
@@ -370,7 +357,7 @@ fun run_instance deadline started (config : Refute_Core.config)
           (MFMono.formulas_monotonic context binarize ty)
           (nondef_ts, def_ts)
         val _ = if result andalso
-                       not (member_type ty (!calculus_mono_types)) then
+                       not (Util.member_type ty (!calculus_mono_types)) then
                   calculus_mono_types := ty :: !calculus_mono_types
                 else ()
       in
@@ -378,7 +365,7 @@ fun run_instance deadline started (config : Refute_Core.config)
       end
       handle Timeout.TIMEOUT _ =>
                (report_mono_failure "timeout" ty ""; false)
-           | MFU.BAD (location, detail) =>
+           | Util.BAD (location, detail) =>
                (report_mono_failure location ty detail; false)
 
     (* Unlike the scope shortcut, kind-of monotonicity deliberately lets a
@@ -401,7 +388,7 @@ fun run_instance deadline started (config : Refute_Core.config)
       if null types then ()
       else
         Refute_Core.Private.say 2
-          ("The following type" ^ MFU.plural_s_for_list types ^ " " ^
+          ("The following type" ^ Util.plural_s_for_list types ^ " " ^
            wording ^ ": " ^
            String.concatWith ", " (map type_name types) ^
            ". Refute might be able to skip some scopes.\n")
@@ -416,7 +403,7 @@ fun run_instance deadline started (config : Refute_Core.config)
       is_type_kind_of_monotonic all_types deep_types
     val _ = if null finitizable_types then () else
       Refute_Core.Private.say 2
-        ("The following type" ^ MFU.plural_s_for_list finitizable_types ^
+        ("The following type" ^ Util.plural_s_for_list finitizable_types ^
          " can use a more precise finite encoding: " ^
          String.concatWith ", " (map type_name finitizable_types) ^ "\n")
     val (skipped, scopes) = MFS.all_scopes context binarize
@@ -425,7 +412,7 @@ fun run_instance deadline started (config : Refute_Core.config)
       deep_types finitizable_types
     val batch_size =
       if #debug mf then 1 else Int.max (1, #batch_size mf)
-    val batches = MFU.chunk_list batch_size scopes
+    val batches = Util.chunk_list batch_size scopes
     val real_frees = free_variables [original]
     val executable = not (Option.isSome (#qc_gate instance)) andalso
       #falsify mf andalso
@@ -643,7 +630,7 @@ fun run_instance deadline started (config : Refute_Core.config)
                             val bye = distinct_ints
                               (map #1 sat_models @ unsat_indices @ co_indices)
                             val remaining_problems =
-                              MFU.filter_out_indices bye problems
+                              Util.filter_out_indices bye problems
                               |> (fn values =>
                                 if max_potential <= 0 then
                                   List.filter
@@ -683,7 +670,7 @@ fun run_instance deadline started (config : Refute_Core.config)
                             val bye = distinct_ints
                               (map #1 sat_models @ unsat_indices)
                             val remaining_problems =
-                              MFU.filter_out_indices bye problems
+                              Util.filter_out_indices bye problems
                               |> List.filter (not o #unsound o metadata)
                           in
                             solve_any_problem
@@ -929,7 +916,7 @@ fun run config instances =
               val (result, next_budget) =
                 run_instance deadline started config incremental solver
                   budget instance
-                handle MFU.NOT_SUPPORTED reason =>
+                handle Util.NOT_SUPPORTED reason =>
                   (Refute_Core.Unknown [reason], budget)
               val (_, max_genuine) = next_budget
             in

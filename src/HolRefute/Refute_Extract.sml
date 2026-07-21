@@ -1,6 +1,7 @@
 structure Refute_Extract = struct
   type term = Term.term
   type hol_type = Type.hol_type
+  structure Util = Refute_Util
 
   exception NotExtractable of string list
 
@@ -53,7 +54,6 @@ structure Refute_Extract = struct
   fun upper_name name = "C_" ^ clean_name name
   fun lower_name name = "f_" ^ clean_name name
 
-  fun same_type left right = Type.compare (left, right) = EQUAL
   fun same_term left right = Term.compare (left, right) = EQUAL
 
   fun kname tm =
@@ -111,12 +111,12 @@ structure Refute_Extract = struct
       next_const = ref 0 }
 
   fun lookup_type ({types, ...} : context) ty =
-    case List.find (fn (other, _, _) => same_type other ty) (!types) of
+    case List.find (fn (other, _, _) => Util.same_type other ty) (!types) of
       SOME (_, mlty, equality) => SOME (mlty, equality)
     | NONE => NONE
 
   fun lookup_datatype ({datatypes, ...} : context) ty =
-    List.find (fn info => same_type (#hol_ty info) ty) (!datatypes)
+    List.find (fn info => Util.same_type (#hol_ty info) ty) (!datatypes)
 
   fun fresh_type ({next_type, ...} : context) =
     let val number = !next_type
@@ -139,17 +139,17 @@ structure Refute_Extract = struct
          | Overflow =>
       reject ("word width is too large: " ^ type_name ty)
 
-  fun is_char_list ty = same_type ty stringSyntax.string_ty
+  fun is_char_list ty = Util.same_type ty stringSyntax.string_ty
 
   fun classify_primitive context ty =
     if Type.is_vartype ty then
       SOME (MLVar (clean_name (Type.dest_vartype ty)))
-    else if same_type ty Type.bool then SOME MLBool
-    else if same_type ty numSyntax.num then SOME MLIntInf
-    else if same_type ty intSyntax.int_ty then SOME MLIntInf
-    else if same_type ty stringSyntax.char_ty then SOME MLChar
+    else if Util.same_type ty Type.bool then SOME MLBool
+    else if Util.same_type ty numSyntax.num then SOME MLIntInf
+    else if Util.same_type ty intSyntax.int_ty then SOME MLIntInf
+    else if Util.same_type ty stringSyntax.char_ty then SOME MLChar
     else if is_char_list ty then SOME MLString
-    else if same_type ty oneSyntax.one_ty then SOME MLUnit
+    else if Util.same_type ty oneSyntax.one_ty then SOME MLUnit
     else if wordsSyntax.is_word_type ty then SOME (MLWord (word_width ty))
     else
       case Lib.total Type.dom_rng ty of
@@ -212,7 +212,7 @@ structure Refute_Extract = struct
                     val (arguments, result) =
                       boolSyntax.strip_fun (Term.type_of constructor)
                     val _ =
-                      if same_type result ty then ()
+                      if Util.same_type result ty then ()
                       else reject ("ill-instantiated constructor " ^
                                    kname_text (kname constructor))
                     val (_, name) = kname constructor
@@ -260,7 +260,7 @@ structure Refute_Extract = struct
       fun collect ty =
         case lookup_datatype context ty of
           SOME info =>
-            if same_type hol_ty (#hol_ty info) then [] else [#hol_ty info]
+            if Util.same_type hol_ty (#hol_ty info) then [] else [#hol_ty info]
         | NONE =>
             if Type.is_vartype ty then []
             else
@@ -274,8 +274,8 @@ structure Refute_Extract = struct
   fun reachable context source target =
     let
       fun visit seen ty =
-        if List.exists (same_type ty) seen then false
-        else if same_type ty target then true
+        if List.exists (Util.same_type ty) seen then false
+        else if Util.same_type ty target then true
         else
           case lookup_datatype context ty of
             NONE => false
@@ -298,7 +298,7 @@ structure Refute_Extract = struct
             in (info :: same) :: groups other end
       val raw = groups datatypes
       fun group_has group ty =
-        List.exists (fn info => same_type (#hol_ty info) ty) group
+        List.exists (fn info => Util.same_type (#hol_ty info) ty) group
       fun dependencies group = Lib.mk_set
         (List.concat (List.map (datatype_dependencies context) group))
       fun ready emitted group =
@@ -371,9 +371,9 @@ structure Refute_Extract = struct
           build arguments []
         end
     in
-      if same_type ty Type.bool then "[false, true]"
-      else if same_type ty oneSyntax.one_ty then "[()]"
-      else if same_type ty stringSyntax.char_ty then
+      if Util.same_type ty Type.bool then "[false, true]"
+      else if Util.same_type ty oneSyntax.one_ty then "[()]"
+      else if Util.same_type ty stringSyntax.char_ty then
         "List.tabulate (256, Char.chr)"
       else if wordsSyntax.is_word_type ty andalso word_width ty <= 8 then
         let val count = IntInf.toInt (IntInf.pow (2, word_width ty))
@@ -1742,13 +1742,13 @@ structure Refute_Extract = struct
 
       fun custom_type ty =
         Option.isSome (Refute_Gen.generator_of ty) orelse
-        List.exists (fn (other, _) => same_type other ty)
+        List.exists (fn (other, _) => Util.same_type other ty)
           (!(Refute_Gen.abstract_specs))
 
       val validated = ref ([] : hol_type list)
 
       fun validate_type root ty =
-        if List.exists (same_type ty) (!validated) then ()
+        if List.exists (Util.same_type ty) (!validated) then ()
         else
           let
             val _ = validated := ty :: !validated
@@ -1789,7 +1789,7 @@ structure Refute_Extract = struct
 
       fun close_types [] seen = rev seen
         | close_types (ty :: rest) seen =
-            if List.exists (same_type ty) seen then close_types rest seen
+            if List.exists (Util.same_type ty) seen then close_types rest seen
             else close_types (dependencies ty @ rest) (ty :: seen)
 
       val generator_types = close_types root_types []
@@ -1798,7 +1798,7 @@ structure Refute_Extract = struct
 
       fun generator_name prefix ty =
         let
-          val index = Lib.index (same_type ty) generator_types
+          val index = Lib.index (Util.same_type ty) generator_types
         in prefix ^ Int.toString index end
 
       fun raw_reconstruction tm =

@@ -4,6 +4,7 @@ open refuteTheory refute_cvTheory
 structure Refute_EvalCv = struct
   type term = Term.term
   type hol_type = Type.hol_type
+  structure Util = Refute_Util
 
   datatype 'a cv_attempt =
       CvSuccess of 'a
@@ -103,8 +104,6 @@ structure Refute_EvalCv = struct
               Exn.release body_result
             end) ())
 
-  fun same_type left right = Type.compare (left, right) = EQUAL
-
   fun map_index function = Lib.mapi (fn index => fn value =>
     function (index, value))
 
@@ -157,11 +156,11 @@ structure Refute_EvalCv = struct
 
   fun table_generator ty =
     Option.map #2
-      (List.find (fn (entry_ty, _) => same_type entry_ty ty)
+      (List.find (fn (entry_ty, _) => Util.same_type entry_ty ty)
         generator_table)
 
   fun registered ty entries =
-    List.exists (fn (entry_ty, _) => same_type entry_ty ty) entries
+    List.exists (fn (entry_ty, _) => Util.same_type entry_ty ty) entries
 
   datatype recipe =
       EnumRecipe of term list
@@ -225,7 +224,7 @@ structure Refute_EvalCv = struct
     let
       val seen = ref ([] : hol_type list)
       fun visit ty =
-        if List.exists (same_type ty) (!seen) then ()
+        if List.exists (Util.same_type ty) (!seen) then ()
         else
           let
             val _ = seen := ty :: !seen
@@ -240,7 +239,7 @@ structure Refute_EvalCv = struct
                       fun nested ((_, arguments), flags) =
                         List.exists (fn (argument, is_recursive) =>
                           is_recursive andalso
-                          not (List.exists (same_type argument) family))
+                          not (List.exists (Util.same_type argument) family))
                           (ListPair.zip (arguments, flags))
                       val _ =
                         if List.exists nested
@@ -269,7 +268,7 @@ structure Refute_EvalCv = struct
 
       fun visit ty =
         if Option.isSome (table_generator ty) orelse
-           List.exists (fn (old_ty, _) => same_type old_ty ty) (!seen)
+           List.exists (fn (old_ty, _) => Util.same_type old_ty ty) (!seen)
         then ()
         else
           let
@@ -345,12 +344,12 @@ structure Refute_EvalCv = struct
       val vars = map_index variables recipes
 
       fun find_vars ty =
-        case List.find (fn data => same_type (#ty data) ty) vars of
+        case List.find (fn data => Util.same_type (#ty data) ty) vars of
             SOME data => data
           | NONE => raise Fail "Refute cv template dependency missing"
 
       fun find_recipe ty =
-        case List.find (fn (recipe_ty, _) => same_type recipe_ty ty)
+        case List.find (fn (recipe_ty, _) => Util.same_type recipe_ty ty)
             recipes of
             SOME (_, recipe) => recipe
           | NONE => raise Fail "Refute cv recipe dependency missing"
@@ -947,7 +946,8 @@ structure Refute_EvalCv = struct
             val generated = instantiate_bundle (fresh_prefix ())
               (template_bundle ty)
           in
-            case List.find (fn data => same_type (#ty data) ty) generated of
+            case List.find (fn data => Util.same_type (#ty data) ty)
+                 generated of
                 SOME result => result
               | NONE => raise Fail "Refute cv root generator missing"
           end
@@ -982,13 +982,9 @@ structure Refute_EvalCv = struct
 
   exception Precondition of string
 
-  fun distinct_terms terms =
-    rev (List.foldl (fn (tm, result) =>
-      if boolSyntax.tmem tm result then result else tm :: result) [] terms)
-
   fun distinct_types types =
     rev (List.foldl (fn (ty, result) =>
-      if List.exists (same_type ty) result then result else ty :: result)
+      if List.exists (Util.same_type ty) result then result else ty :: result)
       [] types)
 
   fun plan_variables plan =
@@ -1010,7 +1006,7 @@ structure Refute_EvalCv = struct
           | Refute_Eval.Guard (_, next) => collect next variables
           | Refute_Eval.Prune => variables
     in
-      distinct_terms (collect plan [])
+      Util.distinct_terms (collect plan [])
     end
 
   fun plan_generator_types plan =
@@ -1082,7 +1078,7 @@ structure Refute_EvalCv = struct
       {redex = redex, residue = residue}) env) tm
 
   fun env_parameters env =
-    distinct_terms (List.map #2 (rev env))
+    Util.distinct_terms (List.map #2 (rev env))
 
   fun result_type variables =
     pairSyntax.mk_prod
@@ -1117,7 +1113,7 @@ structure Refute_EvalCv = struct
              | NONE => prefix)
 
   fun generator_for ty generators =
-    case List.find (fn generator => same_type (#ty generator) ty)
+    case List.find (fn generator => Util.same_type (#ty generator) ty)
         generators of
         SOME generator => generator
       | NONE => raise Fail "Refute cv generator lookup failed"

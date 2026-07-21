@@ -48,13 +48,9 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
         SAnd (simplify left, simplify right)
     | simplify formula = formula
 
-  fun add_new value values =
-    if List.exists (fn old => old = value) values then values
-    else value :: values
-
   fun add_indices True values = values
     | add_indices False values = values
-    | add_indices (BoolVar index) values = add_new index values
+    | add_indices (BoolVar index) values = Lib.insert index values
     | add_indices (Not formula) values = add_indices formula values
     | add_indices (Or (left, right)) values =
         add_indices right (add_indices left values)
@@ -86,11 +82,11 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
     List.foldl (fn (formula, result) => SAnd (result, formula))
       True formulas
 
-  local
-    fun is_literal (BoolVar _) = true
-      | is_literal (Not (BoolVar _)) = true
-      | is_literal _ = false
+  fun is_literal (BoolVar _) = true
+    | is_literal (Not (BoolVar _)) = true
+    | is_literal _ = false
 
+  local
     fun is_conj_disj (Or (left, right)) =
           is_conj_disj left andalso is_conj_disj right
       | is_conj_disj (And (left, right)) =
@@ -103,10 +99,6 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
   end
 
   local
-    fun is_literal (BoolVar _) = true
-      | is_literal (Not (BoolVar _)) = true
-      | is_literal _ = false
-
     fun is_disjunction (Or (left, right)) =
           is_disjunction left andalso is_disjunction right
       | is_disjunction formula = is_literal formula
@@ -219,84 +211,24 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
     | eval valuation (And (left, right)) =
         eval valuation left andalso eval valuation right
 
-  (* A small private AVL map keeps this module independent of HOL and of the
-     Kodkodi stack while retaining cdclite's logarithmic integer tables. *)
-  datatype 'a int_table =
-      Empty
-    | Node of int * 'a * int * 'a int_table * 'a int_table
+  (* Integer-keyed maps back cdclite's variable, clause and proof tables.
+     Redblackmap gives the logarithmic lookups and, crucially, the
+     ascending-key fold order the decision heuristic relies on. *)
+  type 'a int_table = (int, 'a) Redblackmap.dict
 
-  fun table_height Empty = 0
-    | table_height (Node (_, _, height, _, _)) = height
+  fun empty_table () : 'a int_table = Redblackmap.mkDict Int.compare
 
-  fun table_node key value left right =
-    Node (key, value,
-      Int.max (table_height left, table_height right) + 1,
-      left, right)
+  fun table_lookup key table = Redblackmap.peek (table, key)
 
-  fun table_balance key value left right =
-    if table_height left > table_height right + 1 then
-      case left of
-          Node (left_key, left_value, _, left_left, left_right) =>
-            if table_height left_left >= table_height left_right then
-              table_node left_key left_value left_left
-                (table_node key value left_right right)
-            else
-              (case left_right of
-                   Node (middle_key, middle_value, _, middle_left,
-                         middle_right) =>
-                     table_node middle_key middle_value
-                       (table_node left_key left_value left_left middle_left)
-                       (table_node key value middle_right right)
-                 | Empty => raise Fail "Refute_PropSat: bad AVL table")
-        | Empty => raise Fail "Refute_PropSat: bad AVL table"
-    else if table_height right > table_height left + 1 then
-      case right of
-          Node (right_key, right_value, _, right_left, right_right) =>
-            if table_height right_right >= table_height right_left then
-              table_node right_key right_value
-                (table_node key value left right_left) right_right
-            else
-              (case right_left of
-                   Node (middle_key, middle_value, _, middle_left,
-                         middle_right) =>
-                     table_node middle_key middle_value
-                       (table_node key value left middle_left)
-                       (table_node right_key right_value middle_right
-                         right_right)
-                 | Empty => raise Fail "Refute_PropSat: bad AVL table")
-        | Empty => raise Fail "Refute_PropSat: bad AVL table"
-    else
-      table_node key value left right
-
-  fun table_insert key value Empty =
-        Node (key, value, 1, Empty, Empty)
-    | table_insert key value (Node (old_key, old_value, height,
-                                    left, right)) =
-        (case Int.compare (key, old_key) of
-             LESS =>
-               table_balance old_key old_value
-                 (table_insert key value left) right
-           | GREATER =>
-               table_balance old_key old_value left
-                 (table_insert key value right)
-           | EQUAL => Node (key, value, height, left, right))
-
-  fun table_lookup _ Empty = NONE
-    | table_lookup key (Node (old_key, value, _, left, right)) =
-        (case Int.compare (key, old_key) of
-             LESS => table_lookup key left
-           | GREATER => table_lookup key right
-           | EQUAL => SOME value)
+  fun table_insert key value table = Redblackmap.insert (table, key, value)
 
   fun table_map_entry key function table =
-    case table_lookup key table of
-        SOME value => table_insert key (function value) table
+    case Redblackmap.peek (table, key) of
+        SOME value => Redblackmap.insert (table, key, function value)
       | NONE => raise Fail "Refute_PropSat: missing table entry"
 
-  fun table_fold _ Empty result = result
-    | table_fold function (Node (key, value, _, left, right)) result =
-        table_fold function right
-          (function (key, value, table_fold function left result))
+  fun table_fold function table result =
+    Redblackmap.foldl function result table
 
   fun table_cons key value table =
     table_insert key
@@ -488,7 +420,7 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
               lower_literals' proof_ids'
         end
     in
-      back 0 0 conflicting_clause trail Empty [] []
+      back 0 0 conflicting_clause trail (empty_table ()) [] []
     end
 
   fun keep_clause (clause as (literals, _))
@@ -563,16 +495,8 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
           in (units, keep_clause clause state) end
 
   fun distinct_literals literals =
-    let
-      fun collect [] result = rev result
-        | collect (literal :: rest) result =
-            if List.exists (fn old => old = literal) result then
-              collect rest result
-            else
-              collect rest (literal :: result)
-    in
-      collect literals []
-    end
+    rev (List.foldl (fn (literal, result) => Lib.insert literal result)
+      [] literals)
 
   fun make_clauses literal_lists =
     let
@@ -585,7 +509,7 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
               make rest proofs' (clause :: clauses)
             end
     in
-      make literal_lists (0, Empty) []
+      make literal_lists (0, empty_table ()) []
     end
 
   fun solve_clauses literal_lists =
@@ -597,8 +521,8 @@ structure Refute_PropSat :> REFUTE_PROP_SAT = struct
              List.foldl
                (fn (literal, result) => add_variable literal result)
                table literals)
-          Empty literal_lists
-      val state = (0, [], variables, Empty, proofs)
+          (empty_table ()) literal_lists
+      val state = (0, [], variables, empty_table (), proofs)
       val (units, state') =
         List.foldl
           (fn (clause, context) => add_clause clause context)

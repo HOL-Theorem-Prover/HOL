@@ -60,7 +60,7 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
   type scope = Refute_ModelFinder_Scope.scope
   type offset_table = Refute_ModelFinder_Scope.offset_table
 
-  structure MFU = Refute_ModelFinder_Util
+  structure Util = Refute_ModelFinder_Util
   structure MFH = Refute_ModelFinder_HOL
   structure MFS = Refute_ModelFinder_Scope
 
@@ -75,15 +75,15 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
 
   exception REP of string * rep list
 
-  fun string_for_polarity MFU.Pos = "+"
-    | string_for_polarity MFU.Neg = "-"
-    | string_for_polarity MFU.Neut = "="
+  fun string_for_polarity Util.Pos = "+"
+    | string_for_polarity Util.Neg = "-"
+    | string_for_polarity Util.Neut = "="
 
   fun atomic_string_for_rep representation =
     let val string = string_for_rep representation
     in
       if String.isPrefix "[" string orelse
-         not (MFU.is_substring_of " " string) then
+         not (Util.is_substring_of " " string) then
         string
       else
         "(" ^ string ^ ")"
@@ -124,9 +124,9 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
         List.foldl (fn (representation, result) =>
           result * card_of_rep representation) 1 representations
     | card_of_rep (Vect (cardinality, representation)) =
-        MFU.reasonable_power (card_of_rep representation) cardinality
+        Util.reasonable_power (card_of_rep representation) cardinality
     | card_of_rep (Func (domain, range)) =
-        MFU.reasonable_power (card_of_rep range) (card_of_rep domain)
+        Util.reasonable_power (card_of_rep range) (card_of_rep domain)
     | card_of_rep (Opt representation) = card_of_rep representation
 
   fun arity_of_rep Any =
@@ -199,7 +199,7 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
     | body_rep representation = representation
 
   fun flip_rep_polarity (Formula polarity) =
-        Formula (MFU.flip_polarity polarity)
+        Formula (Util.flip_polarity polarity)
     | flip_rep_polarity (Func (domain, range)) =
         Func (domain, flip_rep_polarity range)
     | flip_rep_polarity representation = representation
@@ -236,12 +236,12 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
   fun min_polarity left right =
     if left = right then
       left
-    else if left = MFU.Neut then
+    else if left = Util.Neut then
       right
-    else if right = MFU.Neut then
+    else if right = Util.Neut then
       left
     else
-      raise MFU.ARG
+      raise Util.ARG
         ("Refute_ModelFinder_Rep.min_polarity",
          String.concatWith ", "
            (map (fn polarity =>
@@ -302,7 +302,7 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
 
   fun card_of_domain_from_rep range_card representation =
     case representation of
-        Atom (cardinality, _) => MFU.exact_log range_card cardinality
+        Atom (cardinality, _) => Util.exact_log range_card cardinality
       | Vect (cardinality, _) => cardinality
       | Func (domain, _) => card_of_rep domain
       | Opt inner => card_of_domain_from_rep range_card inner
@@ -320,7 +320,7 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
         | domain _ = NONE
 
       fun aggregate_card rep =
-        MFU.exact_root 2 (card_of_domain_from_rep 2 rep)
+        Util.exact_root 2 (card_of_domain_from_rep 2 rep)
 
       val (first_ty, second_ty, cardinality, paired_domain) =
         case Type.dom_rng ty of
@@ -364,11 +364,11 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
         MFS.offset_of_type offsets second_ty)
     in
       if paired_domain then
-        Func (Struct [first, second], Formula MFU.Neut)
+        Func (Struct [first, second], Formula Util.Neut)
       else
         (* HOL4 relationTheory relations are curried, unlike Isabelle's
            sets of pairs; preserve those application boundaries. *)
-        Func (first, Func (second, Formula MFU.Neut))
+        Func (first, Func (second, Formula Util.Neut))
     end
 
   fun best_one_rep_for_type
@@ -408,7 +408,7 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
                In particular, a num range at card 2 must remain an Atom;
                only an actual Boolean range uses Formula. *)
             Func (domain,
-              if MFH.is_boolean_type range_ty then Formula MFU.Neut
+              if MFH.is_boolean_type range_ty then Formula Util.Neut
               else range)
           end
       | NONE => best_one_rep_for_type scope ty
@@ -439,7 +439,7 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
     | atom_schema_of_rep (Struct representations) =
         atom_schema_of_reps representations
     | atom_schema_of_rep (Vect (cardinality, representation)) =
-        MFU.replicate_list cardinality
+        Util.replicate_list cardinality
           (atom_schema_of_rep representation)
     | atom_schema_of_rep (Func (domain, range)) =
         atom_schema_of_rep domain @ atom_schema_of_rep range
@@ -460,7 +460,7 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
     | type_schema_of_rep ty (Vect (cardinality, representation)) =
         (case Lib.total Type.dom_rng ty of
              SOME (_, range_ty) =>
-               MFU.replicate_list cardinality
+               Util.replicate_list cardinality
                  (type_schema_of_rep range_ty representation)
            | NONE => raise REP
                ("Refute_ModelFinder_Rep.type_schema_of_rep",
@@ -483,8 +483,8 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
       type_schema_of_rep ty representation) (types, representations))
 
   val all_combinations_for_rep =
-    MFU.all_combinations o atom_schema_of_rep
+    Util.all_combinations o atom_schema_of_rep
 
   val all_combinations_for_reps =
-    MFU.all_combinations o atom_schema_of_reps
+    Util.all_combinations o atom_schema_of_reps
 end

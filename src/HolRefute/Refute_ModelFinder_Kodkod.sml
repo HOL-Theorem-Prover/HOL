@@ -115,7 +115,7 @@ structure MFS = Refute_ModelFinder_Scope
 structure MFP = Refute_ModelFinder_Peephole
 structure MFR = Refute_ModelFinder_Rep
 structure MFNT = Refute_ModelFinder_Nut
-structure MFU = Refute_ModelFinder_Util
+structure Util = Refute_ModelFinder_Util
 structure KK = Refute_Forl
 
 type hol_type = Type.hol_type
@@ -147,7 +147,6 @@ fun kodkod_problem_settings solver bits delay =
    ("bit_width", Int.toString (if bits = 0 then 16 else bits + 1))] @
   kodkod_settings delay
 
-fun same_type left right = Type.compare (left, right) = EQUAL
 fun member equal value = List.exists (fn other => equal (value, other))
 fun filter_out predicate = List.filter (not o predicate)
 fun map_filter f = List.mapPartial f
@@ -192,7 +191,7 @@ fun check_bits bits formula =
   let
     fun int_expr_func (KK.Num value) () =
           if MFP.is_twos_complement_representable bits value then ()
-          else raise MFU.TOO_SMALL
+          else raise Util.TOO_SMALL
             ("Refute_ModelFinder_Kodkod.check_bits",
              "\"bits\" value " ^ Int.toString bits ^
              " too small for problem")
@@ -207,7 +206,7 @@ fun check_bits bits formula =
 
 fun check_arity guilty universe_card arity =
   if arity > Refute_Forl.max_arity universe_card then
-    raise MFU.TOO_LARGE
+    raise Util.TOO_LARGE
       ("Refute_ModelFinder_Kodkod.check_arity",
        "arity " ^ Int.toString arity ^
        (if guilty = "" then ""
@@ -227,7 +226,7 @@ fun offset_table_is_empty (table, _) = Redblackmap.numItems table = 0
 
 fun with_arity_retry offsets build =
   build offsets
-  handle error as (MFU.TOO_LARGE (location, _)) =>
+  handle error as (Util.TOO_LARGE (location, _)) =>
     if location = "Refute_ModelFinder_Kodkod.check_arity" andalso
        not (offset_table_is_empty offsets) then
       build (empty_offset_table ())
@@ -259,7 +258,7 @@ val upper_bound_for_rep =
   tuple_set_from_atom_schema o MFR.atom_schema_of_rep
 
 fun sequential_int_bounds count =
-  [(NONE, map single_atom (MFU.index_seq 0 count))]
+  [(NONE, map single_atom (Util.index_seq 0 count))]
 
 fun pow_of_two_int_bounds bits first =
   let
@@ -297,7 +296,7 @@ val max_table_size = 65536
 
 fun check_table_size size =
   if size > max_table_size then
-    raise MFU.TOO_LARGE
+    raise Util.TOO_LARGE
       ("Refute_ModelFinder_Kodkod.check_table_size",
        "precomputed table too large (" ^ Int.toString size ^ ")")
   else
@@ -314,7 +313,7 @@ fun tabulate_func1 debug universe_card (card, offset) f =
           [atom + offset, result + offset])
       end
   in
-    map_filter tuple (MFU.index_seq 0 card)
+    map_filter tuple (Util.index_seq 0 card)
   end
 
 fun tabulate_op2 debug universe_card (card, offset) result_offset f =
@@ -331,7 +330,7 @@ fun tabulate_op2 debug universe_card (card, offset) result_offset f =
           [left + offset, right + offset, result + result_offset])
       end
   in
-    map_filter tuple (MFU.index_seq 0 (card * card))
+    map_filter tuple (Util.index_seq 0 (card * card))
   end
 
 fun tabulate_op2_2 debug universe_card (card, offset) result_offset f =
@@ -349,7 +348,7 @@ fun tabulate_op2_2 debug universe_card (card, offset) result_offset f =
            result1 + result_offset, result2 + result_offset])
       end
   in
-    map_filter tuple (MFU.index_seq 0 (card * card))
+    map_filter tuple (Util.index_seq 0 (card * card))
   end
 
 fun tabulate_nat_op2 debug universe_card (card, offset) f =
@@ -412,7 +411,7 @@ fun tabulate_built_in_rel debug universe_card nat_card int_card main_j0
     else if index = MFP.nat_subtract_rel then
       ("nat_subtract", tabulate_op2 debug universe_card
         (nat_card, main_j0) main_j0
-        (fn (left, right) => MFU.nat_minus left right))
+        (fn (left, right) => Util.nat_minus left right))
     else if index = MFP.int_subtract_rel then
       ("int_subtract", tabulate_int_op2 debug universe_card
         (int_card, main_j0) (op -))
@@ -431,11 +430,11 @@ fun tabulate_built_in_rel debug universe_card nat_card int_card main_j0
     else if index = MFP.nat_less_rel then
       ("nat_less", tabulate_nat_op2 debug universe_card
         (nat_card, main_j0)
-        (fn pair => MFU.int_from_bool (#1 pair < #2 pair)))
+        (fn pair => Util.int_from_bool (#1 pair < #2 pair)))
     else if index = MFP.int_less_rel then
       ("int_less", tabulate_int_op2 debug universe_card
         (int_card, main_j0)
-        (fn pair => MFU.int_from_bool (#1 pair < #2 pair)))
+        (fn pair => Util.int_from_bool (#1 pair < #2 pair)))
     else if index = MFP.gcd_rel then
       ("gcd", tabulate_nat_op2 debug universe_card
         (nat_card, main_j0) isa_gcd)
@@ -446,7 +445,7 @@ fun tabulate_built_in_rel debug universe_card nat_card int_card main_j0
       ("norm_frac", tabulate_int_op2_2 debug universe_card
         (int_card, main_j0) isa_norm_frac)
     else
-      raise MFU.ARG
+      raise Util.ARG
         ("Refute_ModelFinder_Kodkod.tabulate_built_in_rel",
          "unknown relation")
   end
@@ -534,14 +533,14 @@ fun is_data_type_nat_like ({typ, constrs, ...} : data_type_spec) =
             (MFH.constructor_arg_types o #const) [first, second]
         in
           (case argument_lists of
-               [[], [argument]] => same_type argument typ
-             | [[argument], []] => same_type argument typ
+               [[], [argument]] => Util.same_type argument typ
+             | [[argument], []] => Util.same_type argument typ
              | _ => false)
         end
     | _ => false
 
 fun needed_values need_values ty =
-  case List.find (fn (other, _) => same_type other ty) need_values of
+  case List.find (fn (other, _) => Util.same_type other ty) need_values of
       SOME (_, SOME values) => values
     | _ => []
 
@@ -561,7 +560,7 @@ fun find_constr_spec data_types constructor_name ty =
   let
     fun matches (spec : MFS.constr_spec) =
       MFH.constructor_name (#const spec) = constructor_name andalso
-      same_type (MFH.constructor_result_type (#const spec)) ty
+      Util.same_type (MFH.constructor_result_type (#const spec)) ty
     fun search [] = NONE
       | search ((data_type : data_type_spec) :: rest) =
           (case List.find matches (#constrs data_type) of
@@ -576,7 +575,7 @@ fun find_constr_spec data_types constructor_name ty =
   end
 
 fun data_type_spec data_types ty =
-  List.find (fn (spec : data_type_spec) => same_type (#typ spec) ty)
+  List.find (fn (spec : data_type_spec) => Util.same_type (#typ spec) ty)
     data_types
 
 fun tuple_union [] = TupleSet []
@@ -595,7 +594,7 @@ fun bound_for_sel_rel debug need_values data_types
         find_constr_spec data_types constructor_name domain_ty
       val data_type = valOf (data_type_spec data_types domain_ty)
       val domain_need_values = needed_values need_values domain_ty
-      val discriminator = range_rep = MFR.Formula MFU.Neut
+      val discriminator = range_rep = MFR.Formula Util.Neut
       val complete_need_values =
         length domain_need_values = #card data_type
       val (my_need_values, other_need_values) =
@@ -652,7 +651,7 @@ fun bound_for_sel_rel debug need_values data_types
             val atoms =
               if complete_need_values then map #2 my_need_values
               else
-                MFU.index_seq (delta + offset) (epsilon - delta)
+                Util.index_seq (delta + offset) (epsilon - delta)
                 |> filter_out (fn atom =>
                      List.exists (fn (_, other) => atom = other)
                        other_need_values)
@@ -673,13 +672,14 @@ fun bound_for_sel_rel debug need_values data_types
         else
           let
             val upper =
-              if same_type domain_ty range_ty andalso epsilon > delta andalso
+              if Util.same_type domain_ty range_ty andalso
+                 epsilon > delta andalso
                  is_data_type_acyclic data_type then
                 tuple_union
                   (map (fn atom => tuple_product
                     (single_atom (atom + offset))
                     (TupleAtomSeq (atom_seq_for_self_rec atom)))
-                    (MFU.index_seq delta (epsilon - delta)))
+                    (Util.index_seq delta (epsilon - delta)))
               else
                 bound_tuples true
             val lower = bound_tuples false
@@ -709,12 +709,12 @@ fun merge_bounds bounds =
   end
 
 fun unary_var_seq first count =
-  map (fn index => Var (1, index)) (MFU.index_seq first count)
+  map (fn index => Var (1, index)) (Util.index_seq first count)
 
 fun decls_for_atom_schema first schema =
   ListPair.mapEq (fn (index, atom_sequence) =>
     DeclOne ((1, index), AtomSeq atom_sequence))
-    (MFU.index_seq first (length schema), schema)
+    (Util.index_seq first (length schema), schema)
 
 fun d_n_ary_function
       ({kk_all, kk_join, kk_lone, kk_one, ...} : kodkod_constrs)
@@ -832,7 +832,7 @@ fun generated_names_for_constructor constructor =
   in
     discriminator ::
     map selector (ListPair.zip
-      (MFU.index_seq 0 (length selector_types), selector_types))
+      (Util.index_seq 0 (length selector_types), selector_types))
   end
 
 fun const_triple relation_table name =
@@ -862,11 +862,11 @@ fun nfa_transitions_for_sel
       const_triple relation_table name
     val type_schema = MFR.type_schema_of_rep ty representation
     val indexed = ListPair.zip
-      (MFU.index_seq 1 (arity - 1), tl type_schema)
+      (Util.index_seq 1 (arity - 1), tl type_schema)
   in
     map_filter (fn (index, target_ty) =>
       if List.all (fn (spec : data_type_spec) =>
-           not (same_type target_ty (#typ spec))) data_types then
+           not (Util.same_type target_ty (#typ spec))) data_types then
         NONE
       else
         SOME ((name, kk_project relation [Num 0, Num index]), target_ty))
@@ -885,10 +885,10 @@ fun nfa_entry_for_data_type _ _ _
 val empty_binary_rel = Product (None, None)
 
 fun direct_path_rel_exprs nfa start_ty final_ty =
-  case List.find (fn (ty, _) => same_type ty final_ty) nfa of
+  case List.find (fn (ty, _) => Util.same_type ty final_ty) nfa of
       SOME (_, transitions) =>
         map (#2 o #1)
-          (List.filter (fn (_, source_ty) => same_type source_ty start_ty)
+          (List.filter (fn (_, source_ty) => Util.same_type source_ty start_ty)
             transitions)
     | NONE => []
 
@@ -898,7 +898,7 @@ fun fold_union ({kk_union, ...} : kodkod_constrs) relations initial =
 
 fun any_path_rel_expr kk nfa [] start_ty final_ty =
       fold_union kk (direct_path_rel_exprs nfa start_ty final_ty)
-        (if same_type start_ty final_ty then Iden else empty_binary_rel)
+        (if Util.same_type start_ty final_ty then Iden else empty_binary_rel)
   | any_path_rel_expr
       (kk as {kk_union, ...} : kodkod_constrs)
       nfa (ty :: tys) start_ty final_ty =
@@ -918,7 +918,7 @@ and loop_path_rel_expr kk nfa [] start_ty =
   | loop_path_rel_expr
       (kk as {kk_union, kk_closure, ...} : kodkod_constrs)
       nfa (ty :: tys) start_ty =
-      if same_type start_ty ty then
+      if Util.same_type start_ty ty then
         kk_closure (loop_path_rel_expr kk nfa tys start_ty)
       else
         kk_union (loop_path_rel_expr kk nfa tys start_ty)
@@ -943,7 +943,7 @@ fun strongly_connected_sub_nfas nfa =
       TypeGraph.empty nfa
   in
     map (fn types => List.filter
-      (fn (ty, _) => List.exists (same_type ty) types) nfa)
+      (fn (ty, _) => List.exists (Util.same_type ty) types) nfa)
       (TypeGraph.strong_conn graph)
   end
 
@@ -958,7 +958,7 @@ fun acyclicity_axioms_for_nfa _ [_] = []
       maps (fn (start_ty, _) =>
         [kk_no (kk_intersect
           (loop_path_rel_expr kk nfa
-            (pull (fn (left, right) => same_type left right)
+            (pull (fn (left, right) => Util.same_type left right)
               start_ty (map #1 nfa)) start_ty)
           Iden)]) nfa
 
@@ -1015,7 +1015,8 @@ fun is_nil_like_constr_type data_types constructor_ty =
           (case List.filter (fn spec =>
                    not (MFS.is_self_recursive_constr_type
                      (Term.type_of (#const spec)))) constrs of
-               [spec] => same_type (Term.type_of (#const spec)) constructor_ty
+               [spec] =>
+                 Util.same_type (Term.type_of (#const spec)) constructor_ty
              | _ => false)
       | NONE => false
   end
@@ -1069,7 +1070,7 @@ fun sym_break_axioms_for_constr_pair context
     val data_ty = MFH.constructor_result_type first_const
     val nfa =
       case List.find (fn component => List.exists
-             (fn (ty, _) => same_type ty data_ty) component) nfas of
+             (fn (ty, _) => Util.same_type ty data_ty) component) nfas of
           SOME component => component
         | NONE => []
     val recursive_types = map #1 nfa
@@ -1077,7 +1078,7 @@ fun sym_break_axioms_for_constr_pair context
     fun rec_and_nonrec_selectors constructor =
       List.partition (fn selector =>
         let val range_ty = #2 (Type.dom_rng (MFNT.type_of selector))
-        in List.exists (same_type range_ty) recursive_types end)
+        in List.exists (Util.same_type range_ty) recursive_types end)
         (selector_names constructor)
 
     val (first_recursive, first_nonrecursive) =
@@ -1115,7 +1116,7 @@ fun sym_break_axioms_for_constr_pair context
              not ((constructor_order = EQUAL andalso
                    not (null selectors) andalso
                    same_nut selector (hd selectors)) orelse
-                  (same_type target_ty data_ty andalso
+                  (Util.same_type target_ty data_ty andalso
                    (no_direct orelse
                     not (List.exists (same_nut selector) selectors)))))
              transitions)
@@ -1123,7 +1124,7 @@ fun sym_break_axioms_for_constr_pair context
         fun subterms no_direct selectors variable =
           loop_path_rel_expr kk
             (map (filter_transitions no_direct selectors) nfa)
-            (filter_out (same_type data_ty) (map #1 nfa)) data_ty
+            (filter_out (Util.same_type data_ty) (map #1 nfa)) data_ty
           |> kk_join (Var (1, variable))
 
         val first_domain =
@@ -1199,7 +1200,7 @@ fun take count values =
 
 fun is_data_type_in_needed_value ty
       (MFNT.Construct (_, other_ty, _, arguments)) =
-    same_type ty other_ty orelse
+    Util.same_type ty other_ty orelse
     List.exists (is_data_type_in_needed_value ty) arguments
   | is_data_type_in_needed_value _ _ = false
 
@@ -1238,7 +1239,7 @@ fun sel_axioms_for_sel offset
     val relation_index =
       case relation of
           Rel index => index
-        | _ => raise MFU.BAD
+        | _ => raise Util.BAD
             ("Refute_ModelFinder_Kodkod.sel_axioms_for_sel",
              "non-Rel")
     val range_rep = #2 (MFR.dest_Func representation)
@@ -1283,14 +1284,14 @@ fun sel_axioms_for_constr bits offset kk need_values relation_table
                     (epsilon - delta) then
             LE (Cardinality domain, Num explicit_max)
           else
-            raise MFU.TOO_SMALL
+            raise Util.TOO_SMALL
               ("Refute_ModelFinder_Kodkod.sel_axioms_for_constr",
                "bits value too small for max")
       in
         max_axiom ::
         maps (sel_axioms_for_sel offset kk need_values relation_table
           domain data_type spec)
-          (MFU.index_seq 0 (length (selector_names const)))
+          (Util.index_seq 0 (length (selector_names const)))
       end
   end
 
@@ -1316,7 +1317,7 @@ fun uniqueness_axioms_for_constr
       [kk_all [DeclOne ((1, 0), discriminator),
                DeclOne ((1, 1), discriminator)]
         (kk_implies
-          (MFU.fold1 kk_and (map same_selector_value selectors))
+          (Util.fold1 kk_and (map same_selector_value selectors))
           (kk_rel_eq (Var (1, 0)) (Var (1, 1))))]
   end
 
@@ -1339,7 +1340,7 @@ fun partition_axioms_for_data_type offset
         val relations = map (discriminator_rel_expr relation_table o #const)
           constrs
       in
-        [kk_rel_eq (MFU.fold1 kk_union relations)
+        [kk_rel_eq (Util.fold1 kk_union relations)
            (AtomSeq (#card data_type, offset)),
          kk_disjoint_sets kk relations]
       end
@@ -1374,7 +1375,7 @@ fun needed_values_for_data_type [] _ _ = SOME []
                  MFH.constructor_name (#const spec) = constructor_name)
                constrs of
               SOME {delta, epsilon, ...} => (delta, epsilon)
-            | NONE => raise MFU.BAD
+            | NONE => raise Util.BAD
                 ("Refute_ModelFinder_Kodkod.needed_values_for_data_type",
                  "missing constructor specification")
         end
@@ -1393,7 +1394,7 @@ fun needed_values_for_data_type [] _ _ = SOME []
             case state of
                 NONE => NONE
               | SOME (loose, fixed) =>
-                  if not (same_type ty typ) orelse
+                  if not (Util.same_type ty typ) orelse
                      List.exists (fn (other, _) => other = nut) fixed then
                     state
                   else
@@ -1411,7 +1412,7 @@ fun needed_values_for_data_type [] _ _ = SOME []
           end
         | allocate _ state = state
 
-      val initial = SOME (MFU.index_seq 0 card, [])
+      val initial = SOME (Util.index_seq 0 card, [])
     in
       case List.foldl (fn (nut, state) =>
              case state of
@@ -1422,7 +1423,7 @@ fun needed_values_for_data_type [] _ _ = SOME []
     end
 
 fun singleton_from_combination atoms =
-  MFU.fold1 (fn left => fn right => KK.Product (left, right))
+  Util.fold1 (fn left => fn right => KK.Product (left, right))
     (map KK.Atom atoms)
 
 fun all_singletons_for_rep representation =
@@ -1448,7 +1449,7 @@ fun full_rel_for_rep representation =
   case MFR.atom_schema_of_rep representation of
       [] => raise MFR.REP
         ("Refute_ModelFinder_Kodkod.full_rel_for_rep", [representation])
-    | schema => MFU.fold1
+    | schema => Util.fold1
         (fn left => fn right => KK.Product (left, right))
         (map KK.AtomSeq schema)
 
@@ -1522,7 +1523,7 @@ fun kk_case_switch
     relation
   else
     kk_n_fold_join kk true old_rep new_rep relation
-      (MFU.fold1 kk_union
+      (Util.fold1 kk_union
         (ListPair.mapEq (fn (left, right) => kk_product left right)
           (old_values, new_values)))
 
@@ -1538,7 +1539,7 @@ fun lone_rep_fallback kk new_rep old_rep relation =
       if MFR.is_lone_rep old_rep andalso MFR.is_lone_rep new_rep andalso
          cardinality = MFR.card_of_rep new_rep then
         if cardinality >= lone_rep_fallback_max_card then
-          raise MFU.TOO_LARGE
+          raise Util.TOO_LARGE
             ("Refute_ModelFinder_Kodkod.lone_rep_fallback",
              "too high cardinality (" ^ Int.toString cardinality ^ ")")
         else
@@ -1577,13 +1578,13 @@ and struct_from_rel_expr kk reps old_rep relation =
                 map MFR.card_of_rep reps then
           let
             val old_arities = map MFR.arity_of_rep old_reps
-            val old_offsets = MFU.offset_list old_arities
+            val old_offsets = Util.offset_list old_arities
             val old_relations = ListPair.mapEq
               (fn (offset, arity) =>
                 #kk_project_seq kk relation offset arity)
               (old_offsets, old_arities)
           in
-            MFU.fold1 (#kk_product kk)
+            Util.fold1 (#kk_product kk)
               (ListPair.mapEq
                 (fn (new_rep, (old_rep, old_relation)) =>
                   rel_expr_from_rel_expr kk new_rep old_rep old_relation)
@@ -1600,9 +1601,9 @@ and vect_from_rel_expr kk count rep old_rep relation =
     | MFR.Vect (old_count, old_body) =>
         if count = old_count andalso rep = old_body then relation
         else lone_rep_fallback kk (MFR.Vect (count, rep)) old_rep relation
-    | MFR.Func (domain, MFR.Formula MFU.Neut) =>
+    | MFR.Func (domain, MFR.Formula Util.Neut) =>
         if count = MFR.card_of_rep domain then
-          MFU.fold1 (#kk_product kk)
+          Util.fold1 (#kk_product kk)
             (map (fn argument =>
               rel_expr_from_formula kk rep
                 (#kk_subset kk argument relation))
@@ -1611,7 +1612,7 @@ and vect_from_rel_expr kk count rep old_rep relation =
           raise MFR.REP
             ("Refute_ModelFinder_Kodkod.vect_from_rel_expr", [old_rep])
     | MFR.Func (domain, range) =>
-        MFU.fold1 (#kk_product kk)
+        Util.fold1 (#kk_product kk)
           (map (fn argument =>
             rel_expr_from_rel_expr kk rep range
               (kk_n_fold_join kk true domain range argument relation))
@@ -1633,7 +1634,7 @@ and func_from_no_opt_rel_expr kk domain range
           (MFR.Atom atom) relation)
     end
   | func_from_no_opt_rel_expr kk domain
-      (MFR.Formula MFU.Neut) old_rep relation =
+      (MFR.Formula Util.Neut) old_rep relation =
       (case old_rep of
            MFR.Vect (count, MFR.Atom (2, offset)) =>
              let
@@ -1643,17 +1644,17 @@ and func_from_no_opt_rel_expr kk domain range
                  #kk_join kk value
                    (#kk_product kk (KK.Atom (offset + 1)) argument)
              in
-               MFU.fold1 (#kk_union kk)
+               Util.fold1 (#kk_union kk)
                  (ListPair.mapEq (fn (argument, value) =>
                     entry argument value) (arguments, values))
              end
-         | MFR.Func (old_domain, MFR.Formula MFU.Neut) =>
+         | MFR.Func (old_domain, MFR.Formula Util.Neut) =>
              if domain = old_domain then
                relation
              else
                let
                  val schema = MFR.atom_schema_of_rep domain
-                 val product = MFU.fold1 (#kk_product kk)
+                 val product = Util.fold1 (#kk_product kk)
                    (unary_var_seq (~1) (length schema))
                  val converted = rel_expr_from_rel_expr kk old_domain
                    domain product
@@ -1667,12 +1668,12 @@ and func_from_no_opt_rel_expr kk domain range
                end
          | MFR.Func (old_domain, MFR.Atom (2, offset)) =>
              func_from_no_opt_rel_expr kk domain
-               (MFR.Formula MFU.Neut)
-               (MFR.Func (old_domain, MFR.Formula MFU.Neut))
+               (MFR.Formula Util.Neut)
+               (MFR.Func (old_domain, MFR.Formula Util.Neut))
                (#kk_join kk relation (KK.Atom (offset + 1)))
          | _ => raise MFR.REP
              ("Refute_ModelFinder_Kodkod.func_from_no_opt_rel_expr",
-              [old_rep, MFR.Func (domain, MFR.Formula MFU.Neut)]))
+              [old_rep, MFR.Func (domain, MFR.Formula Util.Neut)]))
   | func_from_no_opt_rel_expr kk domain range old_rep relation =
       (case old_rep of
            MFR.Vect (count, old_range) =>
@@ -1683,11 +1684,11 @@ and func_from_no_opt_rel_expr kk domain range
                    (MFR.arity_of_rep old_range) count relation
                  |> map (rel_expr_from_rel_expr kk range old_range)
              in
-               MFU.fold1 (#kk_union kk)
+               Util.fold1 (#kk_union kk)
                  (ListPair.mapEq (fn (argument, value) =>
                     #kk_product kk argument value) (arguments, values))
              end
-         | MFR.Func (old_domain, MFR.Formula MFU.Neut) =>
+         | MFR.Func (old_domain, MFR.Formula Util.Neut) =>
              (case range of
                   MFR.Atom (atom as (2, offset)) =>
                     let val schema = MFR.atom_schema_of_rep domain
@@ -1701,7 +1702,7 @@ and func_from_no_opt_rel_expr kk domain range
                       else
                         let
                           val domain_product =
-                            MFU.fold1 (#kk_product kk)
+                            Util.fold1 (#kk_product kk)
                               (unary_var_seq (~1) (length schema))
                           val converted = rel_expr_from_rel_expr kk
                             old_domain domain domain_product
@@ -1727,11 +1728,11 @@ and func_from_no_opt_rel_expr kk domain range
                let
                  val domain_schema = MFR.atom_schema_of_rep domain
                  val range_schema = MFR.atom_schema_of_rep range
-                 val domain_product = MFU.fold1 (#kk_product kk)
+                 val domain_product = Util.fold1 (#kk_product kk)
                    (unary_var_seq (~1) (length domain_schema))
                  val converted_domain = rel_expr_from_rel_expr kk
                    old_domain domain domain_product
-                 val range_product = MFU.fold1 (#kk_product kk)
+                 val range_product = Util.fold1 (#kk_product kk)
                    (unary_var_seq (~(length domain_schema) - 1)
                      (length range_schema))
                  val converted_range = rel_expr_from_rel_expr kk
@@ -1776,11 +1777,11 @@ and rel_expr_to_func kk domain range =
   rel_expr_from_rel_expr kk (MFR.Func (domain, range))
 
 fun the_single [value] = value
-  | the_single _ = raise MFU.ARG
+  | the_single _ = raise Util.ARG
       ("Refute_ModelFinder_Kodkod.the_single", "not a singleton")
 
 fun flip_nums arity =
-  map KK.Num (MFU.index_seq 1 arity @ [0])
+  map KK.Num (Util.index_seq 1 arity @ [0])
 
 fun binary_rel_types ty =
   let val (domain, range) = Type.dom_rng ty
@@ -1825,11 +1826,12 @@ fun binary_domain_card representation =
 fun has_function_type domain range ty =
   case Lib.total Type.dom_rng ty of
       SOME (actual_domain, actual_range) =>
-        same_type actual_domain domain andalso same_type actual_range range
+        Util.same_type actual_domain domain andalso
+        Util.same_type actual_range range
     | NONE => false
 
 fun m4_translation location =
-  raise MFU.NOT_SUPPORTED
+  raise Util.NOT_SUPPORTED
     (location ^ ": feature not yet translated")
 
 fun bit_set_from_atom
@@ -1866,16 +1868,16 @@ fun kodkod_formula_from_nut offsets
 
     fun formula_from_opt_atom polarity offset relation =
       case polarity of
-          MFU.Neg => kk_not (kk_rel_eq relation (KK.Atom offset))
+          Util.Neg => kk_not (kk_rel_eq relation (KK.Atom offset))
         | _ => kk_rel_eq relation (KK.Atom (offset + 1))
 
-    val formula_from_atom = formula_from_opt_atom MFU.Pos
+    val formula_from_atom = formula_from_opt_atom Util.Pos
 
     fun unknown_formula polarity bad_nut =
       case polarity of
-          MFU.Pos => KK.False
-        | MFU.Neg => KK.True
-        | MFU.Neut => raise MFNT.NUT
+          Util.Pos => KK.False
+        | Util.Neg => KK.True
+        | Util.Neut => raise MFNT.NUT
             ("Refute_ModelFinder_Kodkod.unknown_formula", [bad_nut])
 
     fun to_f candidate =
@@ -1890,7 +1892,7 @@ fun kodkod_formula_from_nut offsets
                    unknown_formula polarity candidate
                | MFNT.Op1 (MFNT.Not, _, _, first) =>
                    kk_not (to_f_with_polarity
-                     (MFU.flip_polarity polarity) first)
+                     (Util.flip_polarity polarity) first)
                | MFNT.Op1 (MFNT.Finite, _, _, first) =>
                    if MFR.is_opt_rep (MFNT.rep_of first) then
                      (* [deviation] PLAN_M3 decision 30: FINITE on an
@@ -1899,9 +1901,9 @@ fun kodkod_formula_from_nut offsets
                      unknown_formula polarity candidate
                    else
                      (case polarity of
-                          MFU.Neut => KK.True
-                        | MFU.Pos => KK.False
-                        | MFU.Neg => KK.True)
+                          Util.Neut => KK.True
+                        | Util.Pos => KK.False
+                        | Util.Neg => KK.True)
                | MFNT.Op1 (MFNT.IsUnknown, _, _, first) =>
                    kk_no (to_r first)
                | MFNT.Op1 (MFNT.Cast, _, _, first) =>
@@ -1966,15 +1968,15 @@ fun kodkod_formula_from_nut offsets
                             (to_f_with_polarity inner_polarity second)
                       | minimum_rep =>
                           if MFR.is_opt_rep minimum_rep then
-                            if polarity = MFU.Neut then
+                            if polarity = Util.Neut then
                               kk_rel_eq (to_rep minimum_rep first)
                                 (to_rep minimum_rep second)
                             else if MFNT.is_Cst MFNT.Unrep first then
                               to_could_be_unrep
-                                (polarity = MFU.Neg) second
+                                (polarity = Util.Neg) second
                             else if MFNT.is_Cst MFNT.Unrep second then
                               to_could_be_unrep
-                                (polarity = MFU.Neg) first
+                                (polarity = Util.Neg) first
                             else
                               let
                                 val first_rel = to_rep minimum_rep first
@@ -1983,7 +1985,7 @@ fun kodkod_formula_from_nut offsets
                                   (MFR.is_opt_rep o MFNT.rep_of)
                                   [first, second]
                                 fun optimized () =
-                                  if polarity = MFU.Pos then
+                                  if polarity = Util.Pos then
                                     if not both_optional then
                                       kk_rel_eq first_rel second_rel
                                     else if MFR.is_lone_rep minimum_rep
@@ -1992,7 +1994,7 @@ fun kodkod_formula_from_nut offsets
                                       kk_some (kk_intersect first_rel
                                         second_rel)
                                     else
-                                      raise MFU.SAME ()
+                                      raise Util.SAME ()
                                   else if MFR.is_lone_rep minimum_rep then
                                     if MFR.arity_of_rep minimum_rep = 1 then
                                       kk_lone (kk_union first_rel
@@ -2004,12 +2006,12 @@ fun kodkod_formula_from_nut offsets
                                       else
                                         kk_subset first_rel second_rel
                                     else
-                                      raise MFU.SAME ()
+                                      raise Util.SAME ()
                                   else
-                                    raise MFU.SAME ()
+                                    raise Util.SAME ()
                               in
                                 optimized ()
-                                handle MFU.SAME () =>
+                                handle Util.SAME () =>
                                   formula_from_opt_atom polarity bool_offset
                                     (to_guard [first, second] bool_atom_rep
                                       (rel_expr_from_formula kk
@@ -2033,7 +2035,7 @@ fun kodkod_formula_from_nut offsets
                                      map KK.arity_of_rel_expr first_parts =
                                        map KK.arity_of_rel_expr
                                          second_parts then
-                                    MFU.fold1 kk_and
+                                    Util.fold1 kk_and
                                       (ListPair.mapEq
                                         (fn (first, second) =>
                                           kk_subset first second)
@@ -2046,8 +2048,8 @@ fun kodkod_formula_from_nut offsets
                             end)
                | MFNT.Op2 (MFNT.Apply, ty, _, first, second) =>
                    (case (polarity, MFNT.rep_of first) of
-                        (MFU.Neg,
-                         MFR.Func (domain, MFR.Formula MFU.Neut)) =>
+                        (Util.Neg,
+                         MFR.Func (domain, MFR.Formula Util.Neut)) =>
                           kk_subset (to_opt domain second) (to_r first)
                       | _ => to_f_with_polarity polarity
                           (MFNT.Op2 (MFNT.Apply, ty,
@@ -2087,7 +2089,7 @@ fun kodkod_formula_from_nut offsets
         | MFNT.Cst (MFNT.True, _, MFR.Atom _) => true_atom
         | MFNT.Cst (MFNT.Iden, _,
             MFR.Func (MFR.Struct [first_rep, second_rep],
-              MFR.Formula MFU.Neut)) =>
+              MFR.Formula Util.Neut)) =>
             if first_rep = second_rep andalso
                MFR.arity_of_rep first_rep = 1 then
               kk_intersect KK.Iden
@@ -2098,9 +2100,9 @@ fun kodkod_formula_from_nut offsets
                 val second_schema = MFR.atom_schema_of_rep second_rep
                 val first_arity = length first_schema
                 val second_arity = length second_schema
-                val first_rel = MFU.fold1 kk_product
+                val first_rel = Util.fold1 kk_product
                   (unary_var_seq 0 first_arity)
-                val second_rel = MFU.fold1 kk_product
+                val second_rel = Util.fold1 kk_product
                   (unary_var_seq first_arity second_arity)
                 val minimum_rep = MFR.min_rep first_rep second_rep
               in
@@ -2114,7 +2116,7 @@ fun kodkod_formula_from_nut offsets
                       second_rel))
               end
         | MFNT.Cst (MFNT.Iden, _,
-            MFR.Func (MFR.Atom (1, offset), MFR.Formula MFU.Neut)) =>
+            MFR.Func (MFR.Atom (1, offset), MFR.Formula Util.Neut)) =>
             KK.Atom offset
         | MFNT.Cst (MFNT.Num value, ty, representation) =>
             if MFH.is_bitword_type ty then
@@ -2209,7 +2211,7 @@ fun kodkod_formula_from_nut offsets
                        if signed then
                          kk_and exact
                            (KK.LE (KK.Num 0,
-                             MFU.fold1 (fn left => fn right =>
+                             Util.fold1 (fn left => fn right =>
                                KK.BitAnd (left, right))
                                [first, second, result]))
                        else exact
@@ -2247,7 +2249,7 @@ fun kodkod_formula_from_nut offsets
                         KK.Div (first, second))))
                 fun guard first second result =
                   KK.LE (KK.Num 0,
-                    MFU.fold1 (fn left => fn right =>
+                    Util.fold1 (fn left => fn right =>
                       KK.BitAnd (left, right)) [first, second, result])
               in
                 to_bit_word_binary_op ty (MFNT.rep_of candidate)
@@ -2283,7 +2285,7 @@ fun kodkod_formula_from_nut offsets
                               nat_offset))
                            KK.Univ)
                      else
-                       raise MFU.BAD
+                       raise Util.BAD
                          ("Refute_ModelFinder_Kodkod.to_r (NatToInt)",
                           "nat and int offsets differ")
                  | _ => raise MFNT.NUT
@@ -2319,7 +2321,7 @@ fun kodkod_formula_from_nut offsets
                                (KK.AtomSeq (overlap, int_offset))
                                KK.Univ))
                        else
-                         raise MFU.BAD
+                         raise Util.BAD
                            ("Refute_ModelFinder_Kodkod.to_r (IntToNat)",
                             "nat and int offsets differ")
                      end
@@ -2347,9 +2349,9 @@ fun kodkod_formula_from_nut offsets
               val domain_arity = source_left_arity + source_right_arity
               val body_arity = MFR.arity_of_rep body_rep
               val columns = map KK.Num
-                (MFU.index_seq source_left_arity source_right_arity @
-                 MFU.index_seq 0 source_left_arity @
-                 MFU.index_seq domain_arity body_arity)
+                (Util.index_seq source_left_arity source_right_arity @
+                 Util.index_seq 0 source_left_arity @
+                 Util.index_seq domain_arity body_arity)
             in
               rel_expr_from_rel_expr kk representation target_rep
                 (kk_project (to_rep source_rep first) columns)
@@ -2396,7 +2398,7 @@ fun kodkod_formula_from_nut offsets
             kk_product (full_rel_for_rep domain) false_atom
         | MFNT.Op1 (MFNT.SingletonSet, _, representation, first) =>
             (case representation of
-                 MFR.Func (domain, MFR.Formula MFU.Neut) =>
+                 MFR.Func (domain, MFR.Formula Util.Neut) =>
                    to_rep domain first
                | MFR.Func (domain, MFR.Opt _) =>
                    single_rel_rel_let kk
@@ -2405,7 +2407,7 @@ fun kodkod_formula_from_nut offsets
                          (empty_rel_for_rep representation)
                          (rel_expr_to_func kk domain bool_atom_rep
                            (MFR.Func
-                             (domain, MFR.Formula MFU.Neut)) relation))
+                             (domain, MFR.Formula Util.Neut)) relation))
                      (to_opt domain first)
                | _ => raise MFNT.NUT
                    ("Refute_ModelFinder_Kodkod.to_r (SingletonSet)",
@@ -2419,7 +2421,7 @@ fun kodkod_formula_from_nut offsets
                 true_atom
             else
               to_rep
-                (MFR.Func (representation, MFR.Formula MFU.Neut))
+                (MFR.Func (representation, MFR.Formula Util.Neut))
                 first
         | MFNT.Op1 (MFNT.First, _, representation, first) =>
             to_nth_pair_sel 0 representation first
@@ -2431,9 +2433,9 @@ fun kodkod_formula_from_nut offsets
                     (case MFR.unopt_rep representation of
                          MFR.Atom (2, offset) =>
                            atom_from_formula kk offset (to_f first)
-                       | _ => raise MFU.SAME ())
-                | _ => raise MFU.SAME ())
-             handle MFU.SAME () =>
+                       | _ => raise Util.SAME ())
+                | _ => raise Util.SAME ())
+             handle Util.SAME () =>
                rel_expr_from_rel_expr kk representation
                  (MFNT.rep_of first) (to_r first))
         | MFNT.Op2 (MFNT.All, ty, representation as MFR.Opt _,
@@ -2536,13 +2538,13 @@ fun kodkod_formula_from_nut offsets
               val middle_last_card =
                 binary_domain_card (MFNT.rep_of second)
               val first_last_card = binary_domain_card representation
-              val first_card = MFU.exact_root 2
+              val first_card = Util.exact_root 2
                 (first_last_card * first_middle_card div
                  middle_last_card)
-              val middle_card = MFU.exact_root 2
+              val middle_card = Util.exact_root 2
                 (first_middle_card * middle_last_card div
                  first_last_card)
-              val last_card = MFU.exact_root 2
+              val last_card = Util.exact_root 2
                 (middle_last_card * first_last_card div
                  first_middle_card)
               val first_rep = MFR.Atom (first_card,
@@ -2554,16 +2556,16 @@ fun kodkod_formula_from_nut offsets
               val body_rep = MFR.body_rep representation
               val result =
                 case body_rep of
-                    MFR.Formula MFU.Neut =>
+                    MFR.Formula Util.Neut =>
                       kk_join
                         (to_rep
                           (binary_rep_for_type (MFNT.type_of first)
                             first_rep middle_rep
-                            (MFR.Formula MFU.Neut)) first)
+                            (MFR.Formula Util.Neut)) first)
                         (to_rep
                           (binary_rep_for_type (MFNT.type_of second)
                             middle_rep last_rep
-                            (MFR.Formula MFU.Neut)) second)
+                            (MFR.Formula Util.Neut)) second)
                   | MFR.Opt (MFR.Atom (2, _)) =>
                       let
                         fun must left right item =
@@ -2624,7 +2626,7 @@ fun kodkod_formula_from_nut offsets
             first, second) =>
             to_guard [first, second] representation (KK.Atom offset)
         | MFNT.Op2 (MFNT.Lambda, _,
-            MFR.Func (_, MFR.Formula MFU.Neut), first, second) =>
+            MFR.Func (_, MFR.Formula Util.Neut), first, second) =>
             kk_comprehension (MFNT.untuple to_decl first) (to_f second)
         | MFNT.Op2 (MFNT.Lambda, _,
             MFR.Func (_, range), first, second) =>
@@ -2637,7 +2639,7 @@ fun kodkod_formula_from_nut offsets
                 unary_var_seq (~1) (length range_decls)
             in
               kk_comprehension (domain_decls @ range_decls)
-                (kk_subset (MFU.fold1 kk_product range_vars)
+                (kk_subset (Util.fold1 kk_product range_vars)
                   (to_rep range second))
             end
         | MFNT.Op3 (MFNT.Let, _, representation,
@@ -2651,7 +2653,7 @@ fun kodkod_formula_from_nut offsets
                 (fn first_rel => fn second_rel => fn third_rel =>
                   let val empty = empty_rel_for_rep representation
                   in
-                    MFU.fold1 kk_union
+                    Util.fold1 kk_union
                       [kk_rel_if
                          (kk_rel_eq first_rel true_atom)
                          second_rel empty,
@@ -2677,7 +2679,7 @@ fun kodkod_formula_from_nut offsets
                    to_product (List.tabulate (count, fn _ => rep)) items
                | MFR.Atom (1, offset) =>
                    kk_rel_if
-                     (kk_some (MFU.fold1 kk_product (map to_r items)))
+                     (kk_some (Util.fold1 kk_product (map to_r items)))
                      (KK.Atom offset) KK.None
                | _ => raise MFNT.NUT
                    ("Refute_ModelFinder_Kodkod.to_r (Tuple)",
@@ -2711,7 +2713,7 @@ fun kodkod_formula_from_nut offsets
                     end
                 end
             in
-              MFU.fold1 kk_intersect
+              Util.fold1 kk_intersect
                 (ListPair.mapEq (fn (selector, argument) =>
                   inverse selector argument) (selectors, arguments))
             end
@@ -2803,7 +2805,7 @@ fun kodkod_formula_from_nut offsets
         if null guard_formulas then
           relation
         else
-          kk_rel_if (MFU.fold1 kk_or guard_formulas)
+          kk_rel_if (Util.fold1 kk_or guard_formulas)
             (empty_rel_for_rep representation) relation
       end
 
@@ -2812,7 +2814,7 @@ fun kodkod_formula_from_nut offsets
         (kk_project_seq relation offset (MFR.arity_of_rep old_rep))
 
     and to_product reps items =
-      MFU.fold1 kk_product
+      Util.fold1 kk_product
         (ListPair.mapEq (fn (rep, item) => to_opt rep item)
           (reps, items))
 
@@ -2863,7 +2865,7 @@ fun kodkod_formula_from_nut offsets
             (MFR.atom_schema_of_rep representation))
           (KK.FormulaLet
             (map (fn index => KK.AssignIntReg (index, integer index))
-               (MFU.index_seq 0 2),
+               (Util.index_seq 0 2),
              KK.IntEq (KK.IntReg 1, operation (KK.IntReg 0))))
       end
 
@@ -2889,8 +2891,8 @@ fun kodkod_formula_from_nut offsets
             (MFR.atom_schema_of_rep representation))
           (KK.FormulaLet
             (map (fn index => KK.AssignIntReg (index, integer index))
-               (MFU.index_seq 0 3),
-             MFU.fold1 kk_and formulas))
+               (Util.index_seq 0 3),
+             Util.fold1 kk_and formulas))
       end
 
     and to_apply (representation as MFR.Formula _) _ _ =
@@ -2907,7 +2909,7 @@ fun kodkod_formula_from_nut offsets
                    val domain_card =
                      MFR.card_of_rep (MFNT.rep_of argument)
                    val range_rep = MFR.Atom
-                     (MFU.exact_root domain_card cardinality,
+                     (Util.exact_root domain_card cardinality,
                       MFS.offset_of_type offsets
                         (#2 (Type.dom_rng (MFNT.type_of function))))
                  in
@@ -2921,7 +2923,7 @@ fun kodkod_formula_from_nut offsets
              | MFR.Vect (count, range_rep) =>
                  to_apply_vect count range_rep result_rep
                    (to_r function) argument
-             | MFR.Func (domain, MFR.Formula MFU.Neut) =>
+             | MFR.Func (domain, MFR.Formula Util.Neut) =>
                  to_guard [argument] result_rep
                    (rel_expr_from_formula kk result_rep
                      (kk_subset (to_opt domain argument)
@@ -2932,7 +2934,7 @@ fun kodkod_formula_from_nut offsets
                      (kk_n_fold_join kk true domain range
                        (to_opt domain argument) (to_r function))
                  in
-                   if MFR.body_rep range = MFR.Formula MFU.Neut then
+                   if MFR.body_rep range = MFR.Formula Util.Neut then
                      to_guard [argument] result_rep result
                    else
                      result
@@ -2967,19 +2969,19 @@ fun kodkod_formula_from_nut offsets
       else
         relation
   in
-    to_f_with_polarity MFU.Pos nut
+    to_f_with_polarity Util.Pos nut
   end
 
 fun atom_equation_for_nut offsets kk (nut, atom) =
   let
     val dummy = MFNT.RelReg (0, MFNT.type_of nut, MFNT.rep_of nut)
     val equation = MFNT.Op2
-      (MFNT.DefEq, Type.bool, MFR.Formula MFU.Pos, dummy, nut)
+      (MFNT.DefEq, Type.bool, MFR.Formula Util.Pos, dummy, nut)
   in
     case kodkod_formula_from_nut offsets kk equation of
         KK.RelEq (KK.RelReg _, relation) =>
           SOME (KK.RelEq (KK.Atom atom, relation))
-      | _ => raise MFU.BAD
+      | _ => raise Util.BAD
           ("Refute_ModelFinder_Kodkod.atom_equation_for_nut",
            "malformed Kodkod formula")
   end
@@ -3007,7 +3009,7 @@ fun declarative_axioms_for_data_types context binarize need_us need_values
             Term.type_of constructor = Term.type_of const) expected
       in
         if List.all present (#constrs spec) then ()
-        else raise MFU.BAD
+        else raise Util.BAD
           ("Refute_ModelFinder_Kodkod.declarative_axioms_for_data_types",
            "datatype constructor threading mismatch")
       end
@@ -3069,7 +3071,7 @@ fun assemble_problem_once
     val (int_card, int_j0) = MFS.spec_of_type scope MFH.int_type
     val _ =
       if nat_j0 = main_j0 andalso int_j0 = main_j0 then ()
-      else raise MFU.BAD
+      else raise Util.BAD
         ("Refute_ModelFinder_Kodkod.assemble_problem", "bad offsets")
     val kk = MFP.kodkod_constrs peephole_optim nat_card int_card main_j0
     val (free_names, rep_table) = MFNT.choose_reps_for_free_vars scope
@@ -3176,8 +3178,8 @@ fun assemble_problem_once
 fun assemble_problem params unsound scope =
   SOME (with_arity_retry (#ofs scope) (fn offsets =>
     assemble_problem_once params unsound (scope_with_offsets scope offsets)))
-  handle MFU.TOO_LARGE _ => NONE
-       | MFU.TOO_SMALL _ => NONE
+  handle Util.TOO_LARGE _ => NONE
+       | Util.TOO_SMALL _ => NONE
 
 fun assemble_problem_pair params scope =
   (assemble_problem params false scope, assemble_problem params true scope)

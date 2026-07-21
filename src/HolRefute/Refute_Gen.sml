@@ -1,6 +1,7 @@
 structure Refute_Gen = struct
   type term = Term.term
   type hol_type = Type.hol_type
+  structure Util = Refute_Util
 
   val enum_cap = 256
 
@@ -38,7 +39,7 @@ structure Refute_Gen = struct
   val abstract_specs : (hol_type * genspec) list ref = ref []
   val abstract_predicates : (hol_type * term) list ref = ref []
 
-  fun same_type (ty1, ty2) = Type.compare (ty1, ty2) = EQUAL
+  fun same_type (ty1, ty2) = Util.same_type ty1 ty2
 
   fun lookup_type entries ty =
     Option.map #2

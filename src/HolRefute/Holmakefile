@@ -17,6 +17,14 @@ selftest.uo: Refute_PropSat.uo \
              Refute_ModelFinder_HOL.uo Refute_ModelFinder.uo \
              refuteTableZooTheory.uo
 
+# The substrate layer reaches the shared type/term helpers through a
+# `structure Util = Refute_Util` alias, which holdep does not follow, so the
+# dependency is declared explicitly (as for the model-finder modules below).
+Refute_Gen.uo: Refute_Util.uo
+Refute_EvalCompute.uo: Refute_Util.uo
+Refute_EvalCv.uo: Refute_Util.uo
+Refute_Extract.uo: Refute_Util.uo
+
 # Keep the independent foundational modules ahead of the FORL stack.
 Refute_Forl.uo: Refute_ModelFinder_Util.uo Refute_PropSat.uo
 Refute_ForlSat.uo: Refute_Forl.uo

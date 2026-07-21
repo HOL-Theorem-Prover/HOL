@@ -8,7 +8,7 @@ structure Refute_ModelFinder_Preproc = struct
 
   structure MFH = Refute_ModelFinder_HOL
   structure MFN = Refute_ModelFinder_Names
-  structure MFU = Refute_ModelFinder_Util
+  structure Util = Refute_ModelFinder_Util
 
   val value_var_prefix = MFN.reserved_prefix ^ "v"
   val max_skolem_depth = 3
@@ -22,10 +22,8 @@ structure Refute_ModelFinder_Preproc = struct
 
   fun variable_name variable = #1 (Term.dest_var variable)
 
-  fun aconv_member term = List.exists (Term.aconv term)
-
   fun add_aconv term terms =
-    if aconv_member term terms then terms else terms @ [term]
+    if Util.aconv_member term terms then terms else terms @ [term]
 
   fun is_value_var term =
     case Lib.total Term.dest_var term of
@@ -62,7 +60,7 @@ structure Refute_ModelFinder_Preproc = struct
     not (MFN.is_reserved_name (variable_name term))
 
   fun is_bound_or_value_var bound term =
-    is_schematic_var term orelse aconv_member term bound
+    is_schematic_var term orelse Util.aconv_member term bound
 
   fun substitute variable replacement term =
     Term.subst [{redex = variable, residue = replacement}] term
@@ -225,8 +223,8 @@ structure Refute_ModelFinder_Preproc = struct
     let
       fun positive_existential polarity existential =
         case (polarity, existential) of
-            (MFU.Pos, true) => true
-          | (MFU.Neg, false) => true
+            (Util.Pos, true) => true
+          | (Util.Neg, false) => true
           | _ => false
       (* Keep source binder names for model display, but distinct opened
          variables for de Bruijn-style dependency identity. *)
@@ -246,7 +244,7 @@ structure Refute_ModelFinder_Preproc = struct
             val occurs = Term.free_in raw_variable raw_body
             val dependency_variables = map dependency_variable dependencies
             val variable =
-              if aconv_member raw_variable dependency_variables then
+              if Util.aconv_member raw_variable dependency_variables then
                 Term.variant (dependency_variables @ Term.all_vars raw_body)
                   raw_variable
               else
@@ -298,14 +296,14 @@ structure Refute_ModelFinder_Preproc = struct
           end
         else if boolSyntax.is_neg candidate then
           boolSyntax.mk_neg (recurse dependencies skolemizable
-            (MFU.flip_polarity polarity)
+            (Util.flip_polarity polarity)
             (boolSyntax.dest_neg candidate))
         else if boolSyntax.is_imp_only candidate then
           let val (left, right) = boolSyntax.dest_imp candidate
           in
             boolSyntax.mk_imp
               (recurse dependencies skolemizable
-                 (MFU.flip_polarity polarity) left,
+                 (Util.flip_polarity polarity) left,
                recurse dependencies skolemizable polarity right)
           end
         else if boolSyntax.is_conj candidate then
@@ -344,7 +342,7 @@ structure Refute_ModelFinder_Preproc = struct
           in
             MFH.s_betapply
               (recurse dependencies false polarity function,
-               recurse dependencies false MFU.Neut argument)
+               recurse dependencies false Util.Neut argument)
           end
         else if Term.is_abs candidate then
           let val (variable, body) = Term.dest_abs candidate
@@ -365,13 +363,13 @@ structure Refute_ModelFinder_Preproc = struct
                   (MFH.unrolled_inductive_pred_const context gfp candidate))
             fun negative () =
               MFH.fixpoint_bound_const context (not gfp) candidate
-            val effective = if gfp then MFU.flip_polarity polarity
+            val effective = if gfp then Util.flip_polarity polarity
               else polarity
           in
             case effective of
-                MFU.Pos => positive ()
-              | MFU.Neg => negative ()
-              | MFU.Neut =>
+                Util.Pos => positive ()
+              | Util.Neg => negative ()
+              | Util.Neut =>
                   let
                     val (argument_tys, result_ty) = boolSyntax.strip_fun
                       (Term.type_of candidate)
@@ -402,7 +400,7 @@ structure Refute_ModelFinder_Preproc = struct
         else
           candidate
     in
-      recurse [] true MFU.Pos term
+      recurse [] true Util.Pos term
     end
 
   fun destroy_set_Collect term =
@@ -439,7 +437,7 @@ structure Refute_ModelFinder_Preproc = struct
 
   fun heavy_variables active term =
     List.filter (fn variable =>
-      is_value_var variable orelse aconv_member variable active)
+      is_value_var variable orelse Util.aconv_member variable active)
       (Term.free_vars_lr term)
 
   fun has_heavy_vars active term =
@@ -724,7 +722,7 @@ structure Refute_ModelFinder_Preproc = struct
       fun eligible_for_duplication bound candidate =
         let
           val variables = List.filter (fn variable =>
-            is_value_var variable orelse aconv_member variable bound)
+            is_value_var variable orelse Util.aconv_member variable bound)
             (Term.free_vars_lr candidate)
         in
           case variables of
@@ -795,7 +793,7 @@ structure Refute_ModelFinder_Preproc = struct
               (recurse bound false right,
                recurse bound false left)
         else if axiom andalso is_value_var right andalso
-                not (aconv_member right bound) andalso
+                not (Util.aconv_member right bound) andalso
                 count_free_occurrences right term = 1 then
           boolSyntax.T
         else
@@ -805,7 +803,7 @@ structure Refute_ModelFinder_Preproc = struct
                   val argument_tys =
                     MFH.constructor_arg_types constructor
                   val indexed = ListPair.zip
-                    (MFU.index_seq 0 (length arguments),
+                    (Util.index_seq 0 (length arguments),
                      ListPair.zip (arguments, argument_tys))
                   fun constraints value =
                     let
@@ -1144,7 +1142,7 @@ structure Refute_ModelFinder_Preproc = struct
               (variables, candidate)
             else
               let
-                val duplicate = aconv_member raw_variable variables
+                val duplicate = Util.aconv_member raw_variable variables
                 val variable =
                   if duplicate then
                     Term.variant (variables @ Term.free_vars_lr raw_body)
@@ -1163,7 +1161,7 @@ structure Refute_ModelFinder_Preproc = struct
       fun merge_groups variable_cost variable groups =
         let
           val (yes, no) = List.partition
-            (fn (_, used, _) => aconv_member variable used) groups
+            (fn (_, used, _) => Util.aconv_member variable used) groups
         in
           if null yes then no
           else
@@ -1171,7 +1169,7 @@ structure Refute_ModelFinder_Preproc = struct
               val used = List.foldl
                 (fn ((_, vars, _), result) =>
                   List.foldl (fn (item, accumulated) =>
-                    if aconv_member item accumulated then accumulated
+                    if Util.aconv_member item accumulated then accumulated
                     else accumulated @ [item]) result vars)
                 [] yes
               val size = List.foldl
@@ -1203,7 +1201,7 @@ structure Refute_ModelFinder_Preproc = struct
                 end
         in
           #2 (valOf (List.foldl choose NONE
-            (MFU.all_permutations variables)))
+            (Util.all_permutations variables)))
         end
       fun greedy_order _ [] _ = []
         | greedy_order variable_cost variables groups =
@@ -1236,7 +1234,7 @@ structure Refute_ModelFinder_Preproc = struct
           fun step (variable, current) =
             let
               val (yes, no) = List.partition
-                (fn (_, used) => aconv_member variable used) current
+                (fn (_, used) => Util.aconv_member variable used) current
             in
               if null yes then no
               else
@@ -1251,7 +1249,7 @@ structure Refute_ModelFinder_Preproc = struct
                   val used = List.foldl
                     (fn ((_, vars), result) =>
                       List.foldl (fn (item, accumulated) =>
-                        if aconv_member item accumulated then accumulated
+                        if Util.aconv_member item accumulated then accumulated
                         else accumulated @ [item]) result vars)
                     [] yes
                 in
@@ -1336,7 +1334,7 @@ structure Refute_ModelFinder_Preproc = struct
     let
       fun add (variable, result) =
         if is_schematic_var variable andalso
-           not (aconv_member variable result) then
+           not (Util.aconv_member variable result) then
           variable :: result
         else
           result
@@ -1368,7 +1366,7 @@ structure Refute_ModelFinder_Preproc = struct
         extra_args axiom =
     let
       val raw_body = schematize_foralls (fixed_args @ extra_args) axiom
-      val fixed_params = MFU.filter_indices fixed_indices
+      val fixed_params = Util.filter_indices fixed_indices
         (params_in_equation raw_body)
       val body = Term.subst
         (ListPair.map (fn (parameter, argument) =>
@@ -1387,7 +1385,7 @@ structure Refute_ModelFinder_Preproc = struct
         else if same_function candidate original then
           Term.list_mk_comb
             (special, extra_args @
-              MFU.filter_out_indices fixed_indices arguments)
+              Util.filter_out_indices fixed_indices arguments)
         else
           Term.list_mk_comb (candidate, arguments)
     in
@@ -1410,7 +1408,7 @@ structure Refute_ModelFinder_Preproc = struct
   fun static_args_in_term context original term =
     let
       val (formal_variables, _) = boolSyntax.strip_forall term
-      fun is_formal variable = aconv_member variable formal_variables
+      fun is_formal variable = Util.aconv_member variable formal_variables
       fun calls candidate arguments result =
         if Term.is_abs candidate then
           calls (#2 (Term.dest_abs candidate)) [] result
@@ -1429,9 +1427,9 @@ structure Refute_ModelFinder_Preproc = struct
           map (fn arguments => List.nth (arguments, index)) call_lists
         else
           []
-      fun distinct terms = List.foldl (fn (candidate, result) =>
-        if aconv_member candidate result then result
-        else result @ [candidate]) [] terms
+      fun distinct terms = List.rev (List.foldl (fn (candidate, result) =>
+        if Util.aconv_member candidate result then result
+        else candidate :: result) [] terms)
       val maximum = List.foldl Int.max 0 (map length call_lists)
       val sets = List.tabulate (maximum, fn index =>
         distinct (terms_at index))
@@ -1452,7 +1450,7 @@ structure Refute_ModelFinder_Preproc = struct
     in
       if null call_lists then []
       else List.mapPartial classify
-        (ListPair.zip (MFU.index_seq 0 (length sets), sets))
+        (ListPair.zip (Util.index_seq 0 (length sets), sets))
     end
 
   fun same_static ((left_index, left_term),
@@ -1477,7 +1475,7 @@ structure Refute_ModelFinder_Preproc = struct
       val enclosing = List.filter (fn variable =>
         Term.free_in variable argument) bound
       val bad = schematic @ List.filter (fn variable =>
-        not (aconv_member variable schematic)) enclosing
+        not (Util.aconv_member variable schematic)) enclosing
       val product = List.foldl (fn (variable, result) =>
         result * IntInf.fromInt
           (MFH.typical_card_of_type (Term.type_of variable)))
@@ -1556,7 +1554,7 @@ structure Refute_ModelFinder_Preproc = struct
                 if is_special_eligible_arg bound argument then SOME index
                 else NONE)
                 (ListPair.zip
-                  (MFU.index_seq 0 (length arguments), arguments))
+                  (Util.index_seq 0 (length arguments), arguments))
               val old_axioms = map destroy_existential_equalities
                 (MFH.equational_fun_axioms context original)
               val static = static_args_in_terms context original old_axioms
@@ -1568,7 +1566,7 @@ structure Refute_ModelFinder_Preproc = struct
               else
                 let
                   val fixed_args =
-                    MFU.filter_indices fixed_indices arguments
+                    Util.filter_indices fixed_indices arguments
                   val selected_bounds = List.filter (fn variable =>
                     List.exists (Term.free_in variable) fixed_args) bound
                   fun make_standin
@@ -1601,14 +1599,14 @@ structure Refute_ModelFinder_Preproc = struct
                       | NONE => schematic
                   val actual_bounds = map actual_bound axiom_bounds
                   val live_args =
-                    MFU.filter_out_indices fixed_indices arguments
+                    Util.filter_out_indices fixed_indices arguments
                   val extra_args = actual_bounds @ live_args
                   val extra_types = map Term.type_of axiom_bounds
                   val (binder_types, body_type) =
                     boolSyntax.strip_fun (Term.type_of original)
                   val special_type = boolSyntax.list_mk_fun
                     (extra_types @
-                     MFU.filter_out_indices fixed_indices binder_types,
+                     Util.filter_out_indices fixed_indices binder_types,
                      body_type)
                   val key =
                     (original, fixed_indices, fixed_args_in_axiom)
@@ -1698,7 +1696,7 @@ structure Refute_ModelFinder_Preproc = struct
                  second_args @ [variable])
               end
       val (premises, first_args, second_args) = List.foldl step
-        ([], [], []) (MFU.index_seq 0 (maximum + 1))
+        ([], [], []) (Util.index_seq 0 (maximum + 1))
       val conclusion = boolSyntax.mk_eq
         (Term.list_mk_comb
            (first_special, first_bounds @ first_args),
@@ -1980,7 +1978,8 @@ structure Refute_ModelFinder_Preproc = struct
         else if Term.is_var term then
           let
             val with_definition =
-              if aconv_member term bound orelse is_generated_const term orelse
+              if Util.aconv_member term bound orelse
+                 is_generated_const term orelse
                  HOLset.member (seen, term) then
                 accumulator
               else
@@ -2014,7 +2013,7 @@ structure Refute_ModelFinder_Preproc = struct
         boolSyntax.mk_eq
           (MFN.mk_eval serial (Term.type_of term), term)
       val eval_axioms = ListPair.zip
-        (MFU.index_seq 0 (length evals), evals)
+        (Util.index_seq 0 (length evals), evals)
         |> map eval_axiom
       val initial = add_axioms_for_term 1 [] negated
         (no_terms, [], no_terms, [], no_terms)
@@ -2148,8 +2147,8 @@ structure Refute_ModelFinder_Preproc = struct
   fun box_fun_and_pair_in_term context def original =
     let
       fun positive_existential polarity existential =
-        (polarity = MFU.Pos andalso existential) orelse
-        (polarity = MFU.Neg andalso not existential)
+        (polarity = Util.Pos andalso existential) orelse
+        (polarity = Util.Neg andalso not existential)
       fun type_size ty =
         if Type.is_vartype ty then 1
         else 1 + List.foldl (op +) 0
@@ -2168,7 +2167,7 @@ structure Refute_ModelFinder_Preproc = struct
             else boolSyntax.dest_forall candidate
           val old_ty = Term.type_of variable
           val new_ty =
-            if polarity = MFU.Neut orelse
+            if polarity = Util.Neut orelse
                positive_existential polarity existential then
               MFH.box_type context MFH.InFunLHS old_ty
             else old_ty
@@ -2181,8 +2180,8 @@ structure Refute_ModelFinder_Preproc = struct
         end
       and equality environment left right =
         let
-          val left' = recurse environment MFU.Neut left
-          val right' = recurse environment MFU.Neut right
+          val left' = recurse environment Util.Neut left
+          val right' = recurse environment Util.Neut right
           val left_ty = Term.type_of left'
           val right_ty = Term.type_of right'
           val common =
@@ -2195,7 +2194,7 @@ structure Refute_ModelFinder_Preproc = struct
         end
       and application environment function argument =
         let
-          val function' = recurse environment MFU.Neut function
+          val function' = recurse environment Util.Neut function
           val function_ty = Term.type_of function'
           val (callable, domain_ty) =
             if MFH.is_fun_type function_ty then
@@ -2214,7 +2213,7 @@ structure Refute_ModelFinder_Preproc = struct
               end
             else raise err "box_fun_and_pair_in_term"
               "application operator has a nonfunction type"
-          val argument' = recurse environment MFU.Neut argument
+          val argument' = recurse environment Util.Neut argument
           val old_argument_ty = Term.type_of argument'
         in
           MFH.s_betapply
@@ -2300,11 +2299,11 @@ structure Refute_ModelFinder_Preproc = struct
           in equality environment left right end
         else if boolSyntax.is_neg candidate then
           boolSyntax.mk_neg (recurse environment
-            (MFU.flip_polarity polarity) (boolSyntax.dest_neg candidate))
+            (Util.flip_polarity polarity) (boolSyntax.dest_neg candidate))
         else if boolSyntax.is_imp_only candidate then
           let val (left, right) = boolSyntax.dest_imp candidate
           in boolSyntax.mk_imp
-            (recurse environment (MFU.flip_polarity polarity) left,
+            (recurse environment (Util.flip_polarity polarity) left,
              recurse environment polarity right)
           end
         else if boolSyntax.is_conj candidate then
@@ -2328,7 +2327,7 @@ structure Refute_ModelFinder_Preproc = struct
             val (variable', body', environment') =
               rebind environment variable (Term.type_of variable) body
           in
-            Term.mk_abs (variable', recurse environment' MFU.Neut body')
+            Term.mk_abs (variable', recurse environment' Util.Neut body')
           end
         else if Term.is_var candidate then
           (case env_lookup environment candidate of
@@ -2346,7 +2345,7 @@ structure Refute_ModelFinder_Preproc = struct
         else if Term.is_const candidate then constant candidate
         else candidate
     in
-      recurse [] MFU.Pos original
+      recurse [] Util.Pos original
     end
 
   fun do_tail context def destroy_constrs term =

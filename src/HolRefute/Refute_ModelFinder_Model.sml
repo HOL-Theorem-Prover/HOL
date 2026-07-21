@@ -108,7 +108,7 @@ structure MFNT = Refute_ModelFinder_Nut
 structure MFP = Refute_ModelFinder_Peephole
 structure MFR = Refute_ModelFinder_Rep
 structure MFS = Refute_ModelFinder_Scope
-structure MFU = Refute_ModelFinder_Util
+structure Util = Refute_ModelFinder_Util
 
 type term = Term.term
 type hol_type = Type.hol_type
@@ -149,8 +149,6 @@ type context =
 fun err function message =
   Feedback.mk_HOL_ERR "Refute_ModelFinder_Model" function message
 
-fun same_type left right = Type.compare (left, right) = EQUAL
-
 fun member_tuple tuple = List.exists (fn other => other = tuple)
 
 fun chop count values =
@@ -181,7 +179,7 @@ fun type_atom_names atoms ty =
   case List.find (fn (pattern, _) =>
          case pattern of
              SOME pattern_ty =>
-               same_type pattern_ty ty orelse
+               Util.same_type pattern_ty ty orelse
                Lib.can (Type.match_type pattern_ty) ty
            | NONE => false) atoms of
       SOME (_, names) => names
@@ -322,7 +320,7 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
         val offset = MFS.offset_of_type ofs MFH.unsigned_bit_type
         fun bit_value [atom] =
               let val index = atom - offset
-                  val power = MFU.reasonable_power 2 index
+                  val power = Util.reasonable_power 2 index
               in if index = bits then ~power else power end
           | bit_value _ = raise err "value_of_bits" "malformed bit tuple"
       in
@@ -360,7 +358,7 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
             let
               val (domain_ty, range_ty) = Type.dom_rng ty
               val width = MFR.arity_of_rep range_rep
-              val chunks = MFU.chunk_list width tuple
+              val chunks = Util.chunk_list width tuple
               val domains = List.tabulate (card, fn atom =>
                 MFH.unarize_unbox_etc_term
                   (term_for_atom seen domain_ty atom card))
@@ -432,8 +430,8 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               val domain_card = MFH.card_of_type card_assigns domain_ty
               val range_card = MFH.card_of_type card_assigns range_ty
               val range_rep = MFR.Atom (range_card, 0)
-              val tuple = MFU.nth_combination
-                (MFU.replicate_list domain_card [(range_card, 0)]) atom
+              val tuple = Util.nth_combination
+                (Util.replicate_list domain_card [(range_card, 0)]) atom
             in
               term_for_rep true seen ty
                 (MFR.Vect (domain_card, range_rep)) [tuple]
@@ -455,9 +453,9 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               if atom = 0 then boolSyntax.F else boolSyntax.T
             else if MFH.is_iterator_type ty then
               numSyntax.term_of_int (card - atom - 1)
-            else if same_type ty MFH.num_type then
+            else if Util.same_type ty MFH.num_type then
               numSyntax.term_of_int atom
-            else if same_type ty MFH.int_type then
+            else if Util.same_type ty MFH.int_type then
               intSyntax.term_of_int
                 (Arbint.fromInt (MFP.int_for_atom (card, 0) atom))
             else
@@ -479,7 +477,8 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
         fun name_for nickname =
           List.find (fn name =>
             MFNT.nickname_of name = nickname andalso
-            same_type (#1 (Type.dom_rng (MFNT.type_of name))) ty) sel_names
+            Util.same_type (#1 (Type.dom_rng (MFNT.type_of name))) ty)
+            sel_names
         fun discriminator constructor =
           MFN.discr_prefix ^ MFH.constructor_name constructor
         fun is_constructor ({const, ...} : MFS.constr_spec) =
@@ -578,7 +577,7 @@ fun term_for_rep {scope, atoms, sel_names, rel_table, bounds, maybe_opt,
 
 fun same_free name ty term =
   case Lib.total Term.dest_var term of
-      SOME (other, other_ty) => name = other andalso same_type ty other_ty
+      SOME (other, other_ty) => name = other andalso Util.same_type ty other_ty
     | NONE => false
 
 fun free_name_for_term free_names term =
@@ -588,7 +587,7 @@ fun free_name_for_term free_names term =
            case candidate of
                MFNT.FreeName (other, other_ty, _) =>
                  name = other andalso
-                 same_type (MFH.unarize_unbox_etc_type ty)
+                 Util.same_type (MFH.unarize_unbox_etc_type ty)
                    (MFH.unarize_unbox_etc_type other_ty)
              | _ => false) free_names of
         SOME found => found
@@ -712,11 +711,11 @@ fun user_friendly_const special_funs name ty =
                 boolSyntax.strip_fun (Term.type_of original)
               val missing_indices = List.filter (fn index =>
                 not (List.exists (fn fixed => fixed = index)
-                  fixed_indices)) (MFU.index_seq 0 (maximum + 1))
+                  fixed_indices)) (Util.index_seq 0 (maximum + 1))
               val missing_vars = ListPair.map (fn (index, argument_ty) =>
                 Term.mk_var ("arg" ^ Int.toString (index + 1), argument_ty))
                 (missing_indices,
-                 MFU.filter_indices missing_indices argument_types)
+                 Util.filter_indices missing_indices argument_types)
               fun argument index =
                 case List.find (fn (fixed, _) => fixed = index)
                        (ListPair.zip (fixed_indices, fixed_terms)) of
@@ -726,7 +725,7 @@ fun user_friendly_const special_funs name ty =
                         Lib.index (fn missing => missing = index)
                           missing_indices)
               val arguments = map argument
-                (MFU.index_seq 0 (maximum + 1))
+                (Util.index_seq 0 (maximum + 1))
               val bounds = special_bounds fixed_terms
             in
               Term.list_mk_abs (bounds @ missing_vars,
@@ -780,7 +779,7 @@ fun format_type default_format requested ty =
         val (argument_tys, result_ty) = boolSyntax.strip_fun ty
         val formatted_arguments = map
           (format_type default_format default_format) argument_tys
-        val reverse_groups = MFU.chunk_list_unevenly (rev requested)
+        val reverse_groups = Util.chunk_list_unevenly (rev requested)
           (rev formatted_arguments)
         val grouped = rev
           (map (pairSyntax.list_mk_prod o rev) reverse_groups)
@@ -901,8 +900,8 @@ fun format_metadata_name name =
 
 fun repair_special_format fixed_indices count format =
   let
-    val indices = rev (MFU.index_seq 0 count)
-    val chunks = MFU.chunk_list_unevenly (rev (positive_format format))
+    val indices = rev (Util.index_seq 0 count)
+    val chunks = Util.chunk_list_unevenly (rev (positive_format format))
       indices
     fun retained chunk = List.filter (fn index =>
       not (List.exists (fn fixed => fixed = index) fixed_indices)) chunk
@@ -917,25 +916,20 @@ fun special_format context formats special_funs name =
           SOME (candidate, _) => candidate = name
         | NONE => false
   in
-    case List.find generated_name special_funs of
-        SOME ((original, fixed_indices, _), _) =>
-          let
-            val original_count = binder_count (Term.type_of original)
-            val format =
-              case List.find (fn (key, _) =>
-                     case key of
-                         SOME pattern => format_term_matches pattern original
-                       | NONE => false) formats of
-                  SOME (_, requested) =>
-                    repair_special_format fixed_indices original_count
-                      requested
-                | NONE => intersect_formats (default_format formats)
-                    (repair_special_format fixed_indices original_count
-                      (const_format context original))
-          in
-            SOME format
-          end
-      | NONE => NONE
+    Option.map (fn ((original, fixed_indices, _), _) =>
+      let
+        val original_count = binder_count (Term.type_of original)
+      in
+        case List.find (fn (key, _) =>
+               case key of
+                   SOME pattern => format_term_matches pattern original
+                 | NONE => false) formats of
+            SOME (_, requested) =>
+              repair_special_format fixed_indices original_count requested
+          | NONE => intersect_formats (default_format formats)
+              (repair_special_format fixed_indices original_count
+                (const_format context original))
+      end) (List.find generated_name special_funs)
   end
 
 fun format_term_type_for_name context formats special_funs name term =
@@ -1012,7 +1006,7 @@ fun build_pair_term ty terms =
   else
     case terms of
         term :: rest =>
-          if same_type ty (Term.type_of term) then (term, rest)
+          if Util.same_type ty (Term.type_of term) then (term, rest)
           else raise err "build_pair_term" "tuple leaf type mismatch"
       | [] => raise err "build_pair_term" "not enough tuple leaves"
 
@@ -1020,7 +1014,7 @@ fun reshape_pair target_ty source_ty term =
   let
     val source_leaves = pair_leaves source_ty
     val target_leaves = pair_leaves target_ty
-    val _ = if Lib.list_eq same_type source_leaves target_leaves then ()
+    val _ = if Lib.list_eq Util.same_type source_leaves target_leaves then ()
       else raise err "reshape_pair" "tuple types have different leaves"
     val (result, rest) = build_pair_term target_ty
       (flatten_pair_term source_ty term)
@@ -1033,7 +1027,7 @@ fun marker_with_type ty marker =
   case Lib.total Term.dest_var marker of
       SOME (name, _) => Term.mk_var (name, ty)
     | NONE =>
-        if same_type ty (Term.type_of marker) then marker
+        if Util.same_type ty (Term.type_of marker) then marker
         else raise err "marker_with_type" "cannot retype function base"
 
 fun dest_display_fun term =
@@ -1255,7 +1249,7 @@ fun format_fun target_ty term =
         | _ => raise err "format_fun" "incompatible function grouping"
 
     and do_term target source candidate =
-      if same_type target source then candidate
+      if Util.same_type target source then candidate
       else if MFH.is_fun_type target andalso MFH.is_fun_type source then
         let
           val (target_domain, target_range) = Type.dom_rng target
@@ -1325,7 +1319,7 @@ fun unfold_outer_the_binders term =
     | NONE => term
 
 fun has_codatatype_subtype co_types ty =
-  List.exists (same_type ty) co_types orelse
+  List.exists (Util.same_type ty) co_types orelse
   (not (Type.is_vartype ty) andalso
    List.exists (has_codatatype_subtype co_types)
      (#Args (Type.dest_thy_type ty)))
@@ -1335,7 +1329,7 @@ fun bisimilar_values _ 0 _ = true
       let
         val ty = Term.type_of left
       in
-        if not (same_type ty (Term.type_of right)) then false
+        if not (Util.same_type ty (Term.type_of right)) then false
         else if has_codatatype_subtype co_types ty then
           let
             val (left_head, left_args) =
@@ -1343,7 +1337,7 @@ fun bisimilar_values _ 0 _ = true
             val (right_head, right_args) =
               HolKernel.strip_comb (unfold_outer_the_binders right)
             val next_depth = max_depth -
-              (if List.exists (same_type ty) co_types then 1 else 0)
+              (if List.exists (Util.same_type ty) co_types then 1 else 0)
           in
             Term.aconv left_head right_head andalso
             ListPair.allEq
@@ -1461,14 +1455,14 @@ fun reconstruct_with formatting
         val values = List.tabulate (card, fn index =>
           reconstruct_term context false ty (MFR.Atom (card, offset))
             [[offset + index]])
-        val complete = MFU.fun_from_pair (#complete spec) false
+        val complete = Util.fun_from_pair (#complete spec) false
       in
         (ty, values, complete)
       end
 
     val deep_types = List.filter #deep (#data_types scope)
     fun has_type ty = List.exists (fn (spec : MFS.data_type_spec) =>
-      same_type (#typ spec) ty) deep_types
+      Util.same_type (#typ spec) ty) deep_types
     fun integer_type ty =
       case MFH.assignment_lookup (#card_assigns scope) ty of
           SOME card =>
@@ -1537,7 +1531,7 @@ fun display_counterexample
           SOME (_, displayed) =>
             if is_unknown displayed then
               (key, displayed)
-            else if same_type
+            else if Util.same_type
               (Term.type_of value) (Term.type_of displayed) then
               (key, value)
             else
@@ -1609,7 +1603,7 @@ fun certification_copy scope original eval_terms bindings =
     fun scope_card ty =
       case scope of
           SOME assignments =>
-            Option.map #2 (List.find (fn (other, _) => same_type ty other)
+            Option.map #2 (List.find (fn (other, _) => Util.same_type ty other)
               assignments)
         | NONE => NONE
     fun collect [] = SOME []

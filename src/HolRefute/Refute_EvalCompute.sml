@@ -1,6 +1,7 @@
 structure Refute_EvalCompute = struct
   type term = Term.term
   open Refute_Cert Refute_Eval
+  structure Util = Refute_Util
 
   fun eval_rhs env tm =
     SOME (rhs_of (eval (instantiate env tm)))
@@ -482,8 +483,6 @@ structure Refute_EvalCompute = struct
       loop (bounded_size count) []
     end
 
-  fun same_type ty1 ty2 = Type.compare (ty1, ty2) = EQUAL
-
   fun no_generator_reason ty why =
     "no generator for " ^ Parse.type_to_string ty ^ " \226\128\148 " ^ why
 
@@ -497,7 +496,7 @@ structure Refute_EvalCompute = struct
         else reasons := reason :: !reasons
 
       fun validate_type ty =
-        if List.exists (same_type ty) (!seen) then ()
+        if List.exists (Util.same_type ty) (!seen) then ()
         else
           let
             val _ = seen := ty :: !seen
