@@ -12409,6 +12409,9 @@ val mf_induct_nits_group : mf_acceptance_group =
 fun mf_special_no_specialize config =
   Refute.upd_specialize false config
 
+fun mf_special_force_box config =
+  Refute.upd_box [(NONE, SOME true)] config
+
 fun mf_special_no_box config =
   Refute.upd_box [(NONE, SOME false)] config
 
@@ -13660,11 +13663,12 @@ val mf_differential_cases : mf_differential_case list =
       [(" [specialize]", mf_same_config),
        (" [dont_specialize]", mf_special_no_specialize)]},
    {name = "boxing on/off",
-    tm = ``(R : (bool # bool) -> (bool # bool) -> bool)
-           (a, a) (a, a)``,
-    counterexample = true,
+    tm = ``(R : (unit # unit) -> (unit # unit) -> bool)
+             ((), ()) ((), ()) \/
+           ~R ((), ()) ((), ())``,
+    counterexample = false,
     configurations =
-      [(" [box]", mf_same_config),
+      [(" [box]", mf_special_force_box),
        (" [dont_box]", mf_special_no_box)]}]
 
 fun with_temporary_compute_thms thms body =
@@ -13676,15 +13680,37 @@ fun with_temporary_compute_thms thms body =
     Portable.finally restore body ()
   end
 
-fun conclusive_counterexample name backend outcome =
+datatype mf_differential_verdict =
+    MfDiffGenuine
+  | MfDiffQuasiGenuine
+  | MfDiffPotential
+  | MfDiffNone
+
+fun mf_differential_verdict name backend outcome =
   case outcome of
-      Refute.Counterexample (_ :: _) => true
-    | Refute.NoCounterexample => false
-    | Refute.Counterexample [] =>
-        raise Fail (name ^ ": " ^ backend ^ " returned an empty result")
+      Refute.Counterexample
+        ({certainty = Refute.Genuine, ...} :: _) => MfDiffGenuine
+    | Refute.Counterexample
+        ({certainty = Refute.QuasiGenuine _, ...} :: _) =>
+          MfDiffQuasiGenuine
+    | Refute.Counterexample
+        ({certainty = Refute.Potential _, ...} :: _) => MfDiffPotential
+    | Refute.NoCounterexample => MfDiffNone
     | Refute.Unknown reasons =>
         raise Fail (name ^ ": " ^ backend ^ " was inconclusive: " ^
           String.concatWith "; " reasons)
+    | Refute.Counterexample [] =>
+        raise Fail (name ^ ": " ^ backend ^ " returned an empty result")
+
+fun mf_differential_verdict_name MfDiffGenuine = "Genuine"
+  | mf_differential_verdict_name MfDiffQuasiGenuine = "QuasiGenuine"
+  | mf_differential_verdict_name MfDiffPotential = "Potential"
+  | mf_differential_verdict_name MfDiffNone = "NoCounterexample"
+
+fun mf_differential_has_counterexample MfDiffGenuine = true
+  | mf_differential_has_counterexample MfDiffQuasiGenuine = true
+  | mf_differential_has_counterexample MfDiffPotential = true
+  | mf_differential_has_counterexample MfDiffNone = false
 
 fun mf_differential_test solver
       ({name, tm, counterexample, configurations} : mf_differential_case) =
@@ -13696,17 +13722,24 @@ fun mf_differential_test solver
       |> Refute.upd_sequential true
       |> Refute.upd_backends (SOME ["exhaustive"])
     val qc = quiet_refute qc_config tm
-    val qc_has = conclusive_counterexample name "QC" qc
+    val qc_verdict = mf_differential_verdict name "QC" qc
+    val qc_has = mf_differential_has_counterexample qc_verdict
+    val existence_only = not (null (Term.type_vars_in_term tm))
     fun check_mf (suffix, configure) =
       let
+        val backend = "MF" ^ suffix
         val _ = tprint ("Refute QC-vs-MF differential: " ^ name ^ suffix)
         val mf = with_silent_refute (fn () =>
           Refute.refute (configure (mf_acceptance_config solver)) tm)
-        val mf_has = conclusive_counterexample name ("MF" ^ suffix) mf
+        val mf_verdict = mf_differential_verdict name backend mf
+        val mf_has = mf_differential_has_counterexample mf_verdict
+        val agrees = qc_has = mf_has andalso
+          (existence_only orelse qc_verdict = mf_verdict)
       in
-        if qc_has = mf_has andalso qc_has = counterexample then ()
-        else raise Fail ("counterexample existence disagreed: QC=" ^
-          Bool.toString qc_has ^ ", MF=" ^ Bool.toString mf_has)
+        if agrees andalso qc_has = counterexample then ()
+        else raise Fail ("differential verdict disagreed: QC=" ^
+          mf_differential_verdict_name qc_verdict ^ ", " ^ backend ^ "=" ^
+          mf_differential_verdict_name mf_verdict)
       end
   in
     List.app check_mf configurations;
