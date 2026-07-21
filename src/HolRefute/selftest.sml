@@ -104,6 +104,70 @@ val _ = check_theorem_set "refute_psimp" [Eps_psimp]
 val _ = check_theorem_set "refute_unfold"
   [one_case_unfold, num_case_unfold, RTC_unfold, RC_unfold]
 
+val _ = tprint "Refute bounded-quantifier support"
+
+val bounded_quantifier_shapes =
+  [(bounded_forall_less,
+    ``(∀n : num. n < e ⇒ P n) ⇔ EVERY P (COUNT_LIST e)``),
+   (bounded_exists_less,
+    ``(∃n : num. n < e ∧ P n) ⇔ EXISTS P (COUNT_LIST e)``),
+   (bounded_forall_leq,
+    ``(∀n : num. n ≤ e ⇒ P n) ⇔ EVERY P (COUNT_LIST (e + 1))``),
+   (bounded_exists_leq,
+    ``(∃n : num. n ≤ e ∧ P n) ⇔ EXISTS P (COUNT_LIST (e + 1))``),
+   (bounded_forall_in_count,
+    ``(∀n : num. n IN count e ⇒ P n) ⇔ EVERY P (COUNT_LIST e)``),
+   (bounded_exists_in_count,
+    ``(∃n : num. n IN count e ∧ P n) ⇔ EXISTS P (COUNT_LIST e)``),
+   (bounded_forall_mem,
+    ``(∀x : 'a. MEM x l ⇒ P x) ⇔ EVERY P l``),
+   (bounded_exists_mem,
+    ``(∃x : 'a. MEM x l ∧ P x) ⇔ EXISTS P l``)]
+
+val _ = require_msg (check_result (fn () =>
+  List.all (fn (theorem, expected) =>
+    Term.aconv (Thm.concl theorem) expected) bounded_quantifier_shapes))
+  (fn () => "a bounded-quantifier theorem statement changed")
+  (fn () => ()) ()
+
+fun bounded_quantifier_evals (rewrite, term, expected) =
+  let
+    val rewritten = Ho_Rewrite.REWRITE_CONV [rewrite] term
+      |> Thm.concl |> boolSyntax.dest_eq |> #2
+    val theorem = computeLib.EVAL_CONV rewritten
+    val result = #2 (boolSyntax.dest_eq (Thm.concl theorem))
+  in
+    Term.aconv result expected
+  end
+
+val bounded_quantifier_eval_cases =
+  [("forall-less", bounded_forall_less,
+    ``∀n : num. n < 3 ⇒ n < 2``, boolSyntax.F),
+   ("exists-less", bounded_exists_less,
+    ``∃n : num. n < 3 ∧ n = 2``, boolSyntax.T),
+   ("forall-leq", bounded_forall_leq,
+    ``∀n : num. n ≤ 2 ⇒ n < 3``, boolSyntax.T),
+   ("exists-leq", bounded_exists_leq,
+    ``∃n : num. n ≤ 2 ∧ n = 3``, boolSyntax.F),
+   ("forall-count", bounded_forall_in_count,
+    ``∀n : num. n IN count 3 ⇒ n ≤ 2``, boolSyntax.T),
+   ("exists-count", bounded_exists_in_count,
+    ``∃n : num. n IN count 3 ∧ n = 1``, boolSyntax.T),
+   ("forall-mem", bounded_forall_mem,
+    ``∀x : num. MEM x [0; 2] ⇒ x < 3``, boolSyntax.T),
+   ("exists-mem", bounded_exists_mem,
+    ``∃x : num. MEM x [0; 2] ∧ x = 1``, boolSyntax.F)]
+
+fun check_bounded_quantifier_eval (name, rewrite, term, expected) =
+  require_msg (check_result (fn () =>
+    bounded_quantifier_evals (rewrite, term, expected)
+    handle HOL_ERR _ => false))
+    (fn () => name ^ " did not rewrite and EVAL")
+    (fn () => ()) ()
+
+val _ = List.app check_bounded_quantifier_eval
+  bounded_quantifier_eval_cases
+
 val _ = tprint "CoIndDefLib registry"
 val _ = require_msg (check_result (fn () =>
   let

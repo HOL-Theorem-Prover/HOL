@@ -157,3 +157,56 @@ val _ = new_constant ("Quot", ``:'a -> 'b``)
 Datatype:
   bitword = Bitword ('a -> bool)
 End
+
+(* Part 5: executable forms for bounded quantifiers.  Refute's
+   preprocessing rewrites to these list combinators before checking for
+   unexpanded binders. *)
+Theorem bounded_forall_less:
+  (∀n. n < e ⇒ P n) ⇔ EVERY P (COUNT_LIST e)
+Proof
+  simp [listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST]
+QED
+
+Theorem bounded_exists_less:
+  (∃n. n < e ∧ P n) ⇔ EXISTS P (COUNT_LIST e)
+Proof
+  simp [listTheory.EXISTS_MEM, rich_listTheory.MEM_COUNT_LIST]
+QED
+
+Theorem bounded_forall_leq:
+  (∀n. n ≤ e ⇒ P n) ⇔ EVERY P (COUNT_LIST (e + 1))
+Proof
+  simp [listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST,
+        arithmeticTheory.ADD1, arithmeticTheory.LESS_EQ_IFF_LESS_SUC]
+QED
+
+Theorem bounded_exists_leq:
+  (∃n. n ≤ e ∧ P n) ⇔ EXISTS P (COUNT_LIST (e + 1))
+Proof
+  simp [listTheory.EXISTS_MEM, rich_listTheory.MEM_COUNT_LIST,
+        arithmeticTheory.ADD1, arithmeticTheory.LESS_EQ_IFF_LESS_SUC]
+QED
+
+Theorem bounded_forall_in_count:
+  (∀n. n IN count e ⇒ P n) ⇔ EVERY P (COUNT_LIST e)
+Proof
+  simp [listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST]
+QED
+
+Theorem bounded_exists_in_count:
+  (∃n. n IN count e ∧ P n) ⇔ EXISTS P (COUNT_LIST e)
+Proof
+  simp [listTheory.EXISTS_MEM, rich_listTheory.MEM_COUNT_LIST]
+QED
+
+Theorem bounded_forall_mem:
+  (∀x. MEM x l ⇒ P x) ⇔ EVERY P l
+Proof
+  simp [listTheory.EVERY_MEM]
+QED
+
+Theorem bounded_exists_mem:
+  (∃x. MEM x l ∧ P x) ⇔ EXISTS P l
+Proof
+  simp [listTheory.EXISTS_MEM]
+QED
