@@ -310,6 +310,13 @@ fun stdioConnection (): connection = let
     val _ = Thread.fork (readerThread, [])
     in fn () => Channel.recv recv end
 
+  (* Hijack the real stdOut for our JSON-RPC frames, and re-point
+     TextIO.stdOut at TextIO.stdErr so USER code that writes via
+     TextIO.stdOut (e.g. `val _ = print "..."` at top level in a HOL
+     script) doesn't corrupt the wire. *)
+  val lspOut = TextIO.getOutstream TextIO.stdOut
+  val () = TextIO.setOutstream (TextIO.stdOut,
+                                TextIO.getOutstream TextIO.stdErr)
   val send = let
     val (send, recv) = Channel.channel ()
     fun writerThread () = let
@@ -318,9 +325,9 @@ fun stdioConnection (): connection = let
       val () = encMessage msg (fn s => buf := s :: !buf)
       fun write (n, a :: buf, acc) = write (n + size a, buf, a :: acc)
         | write (n, [], acc) =
-          TextIO.output (TextIO.stdOut,
+          TextIO.StreamIO.output (lspOut,
             String.concat ("Content-Length: " :: Int.toString n :: "\r\n\r\n" :: acc))
-      in write (0, !buf, []); TextIO.flushOut TextIO.stdOut;
+      in write (0, !buf, []); TextIO.StreamIO.flushOut lspOut;
          writerThread () end
     val _ = Thread.fork (writerThread, [])
     in Channel.send send end

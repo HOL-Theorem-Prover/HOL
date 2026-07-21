@@ -1,0 +1,480 @@
+#!/usr/bin/env python3
+"""End-to-end LSP scenario tests.
+
+Each test drives bin/hol lsp with a scripted client and asserts expected
+notifications/state.  Designed to be self-contained: no editor
+dependency, easy CI'ability, fast (target: <5 min total).
+
+Run:  python3 tools-poly/lsp/tests/lsp_tests.py [test_name ...]
+Exit code: 0 if all passed, 1 if any failed.
+"""
+import subprocess, threading, time, json, os, sys, re, tempfile
+
+REPO = os.environ.get("HOL_LSP_TEST_REPO",
+    "/repo/.claude/worktrees/lsp-project")
+HOL_BIN = f"{REPO}/bin/hol"
+
+# ------------------------------------------------------------------
+# LSP client — minimal, efficient, no O(N^2) buffer slicing.
+# ------------------------------------------------------------------
+class Client:
+    def __init__(self, cwd):
+        self.p = subprocess.Popen(
+            [HOL_BIN, "lsp"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            cwd=cwd)
+        self.buf = bytearray()
+        self.buf_pos = 0
+        self.msgs = []
+        self.msgs_lock = threading.Lock()
+        self.errs = bytearray()
+        self._stop = False
+        threading.Thread(target=self._reader, daemon=True).start()
+        threading.Thread(target=self._ereader, daemon=True).start()
+
+    def _reader(self):
+        try:
+            self._reader_loop()
+        except Exception as e:
+            sys.stderr.write(f"[client reader died] {type(e).__name__}: {e}\n")
+
+    def _reader_loop(self):
+        while not self._stop:
+            try: c = self.p.stdout.read1(65536)
+            except: return
+            if not c: return
+            self.buf.extend(c)
+            while True:
+                i = self.buf.find(b"\r\n\r\n", self.buf_pos)
+                if i < 0: break
+                try:
+                    header = bytes(self.buf[self.buf_pos:i]).decode("ascii",
+                                                                     "replace")
+                except Exception:
+                    header = ""
+                length = None
+                for line in header.split("\r\n"):
+                    if line.lower().startswith("content-length:"):
+                        try:
+                            length = int(line.split(":")[1].strip())
+                        except Exception:
+                            length = None
+                if length is None or len(self.buf) < i + 4 + length: break
+                body = bytes(self.buf[i+4:i+4+length])
+                self.buf_pos = i + 4 + length
+                try:
+                    m = json.loads(body)
+                    with self.msgs_lock:
+                        self.msgs.append(m)
+                except Exception:
+                    pass
+
+    def _ereader(self):
+        while not self._stop:
+            try: c = self.p.stderr.read1(65536)
+            except: return
+            if not c: return
+            self.errs.extend(c)
+
+    def send(self, m):
+        b = json.dumps(m).encode()
+        self.p.stdin.write(b"Content-Length: %d\r\n\r\n%s" % (len(b), b))
+        self.p.stdin.flush()
+
+    def messages_since(self, from_idx):
+        with self.msgs_lock:
+            return list(self.msgs[from_idx:]), len(self.msgs)
+
+    def total_msgs(self):
+        with self.msgs_lock:
+            return len(self.msgs)
+
+    def wait_for_method(self, method, timeout, since=0):
+        """Return the first message m with m.method == method arriving at
+        index >= since.  Efficient for large message volumes: scans only
+        the new tail on each poll, no whole-list copy."""
+        deadline = time.time() + timeout
+        idx = since
+        while time.time() < deadline:
+            # Snapshot end-index under lock, then scan msgs[idx:end]
+            # without holding the lock.
+            with self.msgs_lock:
+                end = len(self.msgs)
+            while idx < end:
+                # Direct index access is safe — Python list append is
+                # atomic under the GIL for a single element; the tail
+                # up to `end` was written before we sampled end.
+                m = self.msgs[idx]
+                idx += 1
+                if m.get("method") == method:
+                    return m
+            time.sleep(0.05)
+        return None
+
+    def wait_until(self, pred, timeout):
+        """Wait until pred(client) is truthy. `pred` takes the client."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            r = pred(self)
+            if r: return r
+            time.sleep(0.05)
+        return None
+
+    def stderr_text(self):
+        return bytes(self.errs).decode(errors='replace')
+
+    def close(self):
+        try:
+            self.send({"jsonrpc":"2.0","id":999,"method":"shutdown","params":None})
+            time.sleep(0.1)
+            self.send({"jsonrpc":"2.0","method":"exit","params":None})
+            self.p.wait(timeout=3)
+        except Exception:
+            try: self.p.kill()
+            except: pass
+        self._stop = True
+
+
+# ------------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------------
+def _diag_count(client, uri, ver=None):
+    """Return list of diagnostics from the LATEST publishDiagnostics for uri."""
+    msgs, _ = client.messages_since(0)
+    latest = None
+    for m in msgs:
+        if m.get("method") == "textDocument/publishDiagnostics":
+            p = m["params"]
+            if p["uri"] == uri and (ver is None or p.get("version") == ver):
+                latest = p
+    return (latest or {}).get("diagnostics", [])
+
+
+def _count_out_of_date(diags):
+    return sum(1 for d in diags if "out-of-date" in d.get("message", ""))
+
+
+def _count_lib_first(diags):
+    return sum(1 for d in diags if "Lib" in d.get("message", "")
+                                    and "first" in d.get("message", ""))
+
+
+def _count_diag_events(client, uri):
+    msgs, _ = client.messages_since(0)
+    return sum(1 for m in msgs
+               if m.get("method") == "textDocument/publishDiagnostics"
+               and m["params"]["uri"] == uri
+               and m["params"]["diagnostics"])
+
+
+def _init(c, root=None):
+    c.send({"jsonrpc":"2.0","id":1,"method":"initialize",
+            "params":{"capabilities":{},"rootUri":f"file://{root or REPO}",
+                      "processId":None}})
+    def got_init_reply(cl):
+        msgs, _ = cl.messages_since(0)
+        return any(m.get("id") == 1 for m in msgs)
+    if not c.wait_until(got_init_reply, 5):
+        raise RuntimeError("initialize timed out")
+    c.send({"jsonrpc":"2.0","method":"initialized","params":{}})
+
+
+def _did_open(c, uri, text, version=1):
+    c.send({"jsonrpc":"2.0","method":"textDocument/didOpen",
+            "params":{"textDocument":{"uri":uri,"languageId":"holsml",
+                                        "version":version,"text":text}}})
+
+
+def _did_change_full(c, uri, text, version):
+    c.send({"jsonrpc":"2.0","method":"textDocument/didChange",
+            "params":{"textDocument":{"uri":uri,"version":version},
+                      "contentChanges":[{"text":text}]}})
+
+
+# ------------------------------------------------------------------
+# Assertions
+# ------------------------------------------------------------------
+class Failed(Exception): pass
+def assert_eq(actual, expected, label):
+    if actual != expected:
+        raise Failed(f"{label}: expected {expected!r}, got {actual!r}")
+
+def assert_le(actual, expected, label):
+    if not (actual <= expected):
+        raise Failed(f"{label}: expected <= {expected!r}, got {actual!r}")
+
+def assert_ge(actual, expected, label):
+    if not (actual >= expected):
+        raise Failed(f"{label}: expected >= {expected!r}, got {actual!r}")
+
+def assert_true(cond, label):
+    if not cond: raise Failed(f"{label}: expected truthy, got {cond!r}")
+
+def assert_contains(haystack, needle, label):
+    if needle not in haystack:
+        raise Failed(f"{label}: {needle!r} not in {haystack[:200]!r}")
+
+
+# ------------------------------------------------------------------
+# Scenarios
+# ------------------------------------------------------------------
+def test_smoke_handshake():
+    c = Client("/tmp")
+    try:
+        _init(c)
+        # No file opened; just shutdown cleanly.
+    finally:
+        c.close()
+    assert_eq(c.p.returncode, 0, "clean exit")
+
+
+def test_small_clean_file():
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/smoke_clean.sml"
+        _did_open(c, uri, "Theory smoke_clean\n\nval a = 3\n")
+        m = c.wait_for_method("$/compileCompleted", 30)
+        assert_true(m is not None, "compileCompleted arrived")
+        assert_eq(len(_diag_count(c, uri)), 0, "no diagnostics")
+    finally:
+        c.close()
+
+
+def test_small_typerror_at_open():
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/smoke_bad.sml"
+        _did_open(c, uri, "Theory smoke_bad\n\nval x = 3 + true\n")
+        m = c.wait_for_method("$/compileCompleted", 30)
+        assert_true(m is not None, "compileCompleted arrived")
+        d = _diag_count(c, uri)
+        assert_ge(len(d), 1, "at least one diagnostic")
+        assert_true(any("Type error" in x.get("message","") or
+                        "Can't unify" in x.get("message","")
+                        for x in d),
+                    f"got type-error diagnostic (msgs: {[x['message'][:80] for x in d]})")
+    finally:
+        c.close()
+
+
+def test_small_recompile_blank_line():
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/smoke_recompile.sml"
+        v1 = "Theory smoke_recompile\n\nval a = 3\n"
+        _did_open(c, uri, v1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "first compileCompleted")
+        idx_before = c.total_msgs()
+        _did_change_full(c, uri, "Theory smoke_recompile\n\n\n\nval a = 3\n", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx_before),
+                    "second compileCompleted")
+        # Look at LATEST diagnostics for version 2
+        msgs, _ = c.messages_since(0)
+        latest_v2 = None
+        for m in msgs:
+            if m.get("method") == "textDocument/publishDiagnostics":
+                p = m["params"]
+                if p["uri"] == uri and p.get("version") == 2:
+                    latest_v2 = p["diagnostics"]
+        assert_true(latest_v2 is not None, "have v2 diagnostics")
+        assert_eq(len(latest_v2), 0, "no diagnostics after blank-line edit")
+        assert_eq(_count_out_of_date(latest_v2), 0, "no out-of-date")
+        assert_eq(_count_lib_first(latest_v2), 0, "no Lib.first")
+    finally:
+        c.close()
+
+
+def test_small_recompile_type_error_inserted():
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/smoke_typerr.sml"
+        v1 = "Theory smoke_typerr\n\nval a = 3\n"
+        v2 = "Theory smoke_typerr\n\nval a = 3\nval b = 3 + true\n"
+        _did_open(c, uri, v1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "first compileCompleted")
+        idx_before = c.total_msgs()
+        _did_change_full(c, uri, v2, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx_before),
+                    "second compileCompleted")
+        msgs, _ = c.messages_since(0)
+        latest_v2 = None
+        for m in msgs:
+            if m.get("method") == "textDocument/publishDiagnostics":
+                p = m["params"]
+                if p["uri"] == uri and p.get("version") == 2:
+                    latest_v2 = p["diagnostics"]
+        assert_true(latest_v2 is not None, "have v2 diagnostics")
+        # At least one diagnostic (the type error), no Lib.first / out-of-date
+        # cascade noise.
+        assert_ge(len(latest_v2), 1, "at least one diagnostic")
+        assert_eq(_count_out_of_date(latest_v2), 0,
+                  f"no out-of-date cascade (got: {[d['message'][:80] for d in latest_v2 if 'out-of-date' in d['message']]})")
+        assert_eq(_count_lib_first(latest_v2), 0,
+                  f"no Lib.first cascade (got count)")
+        # And the diag SET size should be small — one real error, not 100.
+        assert_le(len(latest_v2), 5, f"diag set stays small (got {len(latest_v2)})")
+    finally:
+        c.close()
+
+
+def test_integer_first_compile():
+    src = f"{REPO}/src/integer/integerScript.sml"
+    c = Client(os.path.dirname(src))
+    try:
+        _init(c, REPO)
+        uri = f"file://{src}"
+        with open(src) as f: text = f.read()
+        t0 = time.time()
+        _did_open(c, uri, text)
+        m = c.wait_for_method("$/compileCompleted", 60)
+        elapsed = time.time() - t0
+        assert_true(m is not None, f"compileCompleted arrived ({elapsed:.2f}s)")
+        assert_le(elapsed, 20.0, f"first compile under 20s ({elapsed:.2f}s)")
+        d = _diag_count(c, uri)
+        assert_eq(len(d), 0, f"clean file: no diagnostics ({len(d)} got)")
+    finally:
+        c.close()
+
+
+def test_integer_recompile_blank_lines():
+    src = f"{REPO}/src/integer/integerScript.sml"
+    c = Client(os.path.dirname(src))
+    try:
+        _init(c, REPO)
+        uri = f"file://{src}"
+        with open(src) as f: text = f.read()
+        _did_open(c, uri, text)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "first compileCompleted")
+        edited = text.replace("Theory integer\n", "\n\nTheory integer\n", 1)
+        idx_before = c.total_msgs()
+        t0 = time.time()
+        _did_change_full(c, uri, edited, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, idx_before),
+                    "second compileCompleted")
+        elapsed = time.time() - t0
+        assert_le(elapsed, 20.0, f"second compile under 20s ({elapsed:.2f}s)")
+        msgs, _ = c.messages_since(0)
+        latest_v2 = None
+        for m in msgs:
+            if m.get("method") == "textDocument/publishDiagnostics":
+                p = m["params"]
+                if p["uri"] == uri and p.get("version") == 2:
+                    latest_v2 = p["diagnostics"]
+        assert_true(latest_v2 is not None, "have v2 diagnostics")
+        assert_eq(len(latest_v2), 0,
+                  f"no diagnostics after blank-line ({len(latest_v2)} got)")
+    finally:
+        c.close()
+
+
+def test_integer_recompile_with_type_error():
+    """Michael's specific scenario: insert `val x = 3 + true` after the header."""
+    src = f"{REPO}/src/integer/integerScript.sml"
+    c = Client(os.path.dirname(src))
+    try:
+        _init(c, REPO)
+        uri = f"file://{src}"
+        with open(src) as f: text = f.read()
+        _did_open(c, uri, text)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "first compileCompleted")
+        lines = text.split("\n")
+        # Find the closing '===' banner and insert after it
+        banners = [i for i, l in enumerate(lines)
+                   if l.startswith("(*==") and "==*)" in l]
+        insert_at = banners[1] + 1
+        lines.insert(insert_at, "val x = 3 + true")
+        edited = "\n".join(lines)
+        idx_before = c.total_msgs()
+        _did_change_full(c, uri, edited, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, idx_before),
+                    "second compileCompleted")
+        msgs, _ = c.messages_since(0)
+        latest_v2 = None
+        for m in msgs:
+            if m.get("method") == "textDocument/publishDiagnostics":
+                p = m["params"]
+                if p["uri"] == uri and p.get("version") == 2:
+                    latest_v2 = p["diagnostics"]
+        assert_true(latest_v2 is not None, "have v2 diagnostics")
+        # We expect ONE real type-error diagnostic and no cascade.
+        ood = _count_out_of_date(latest_v2)
+        lf = _count_lib_first(latest_v2)
+        assert_eq(ood, 0,
+                  f"no out-of-date cascade (got {ood}, sample: {[d['message'][:80] for d in latest_v2 if 'out-of-date' in d['message']][:3]})")
+        assert_eq(lf, 0, f"no Lib.first cascade (got {lf})")
+        # There MUST be at least one diagnostic (the type error)
+        assert_ge(len(latest_v2), 1, "at least the type error is reported")
+        assert_le(len(latest_v2), 5,
+                  f"only a handful of diagnostics (got {len(latest_v2)}: "
+                  f"{[d['message'][:60] for d in latest_v2[:5]]})")
+    finally:
+        c.close()
+
+
+def test_diagnostic_dedup():
+    """Type-error inserted → publishDiagnostics event count should be small."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/dedup.sml"
+        _did_open(c, uri,
+                  "Theory dedup\n\nval a = 3\nval b : string = a\n"
+                  "val c = a + 1\nval d = c * 2\nval e = d + a\n")
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Count non-empty diagnostic events for this uri
+        n = _count_diag_events(c, uri)
+        assert_le(n, 3, f"at most a few non-empty diag events (got {n})")
+    finally:
+        c.close()
+
+
+# ------------------------------------------------------------------
+# Runner
+# ------------------------------------------------------------------
+TESTS = [
+    ("smoke_handshake",              test_smoke_handshake),
+    ("small_clean_file",             test_small_clean_file),
+    ("small_typerror_at_open",       test_small_typerror_at_open),
+    ("small_recompile_blank_line",   test_small_recompile_blank_line),
+    ("small_recompile_type_error",   test_small_recompile_type_error_inserted),
+    ("integer_first_compile",        test_integer_first_compile),
+    ("integer_recompile_blank",      test_integer_recompile_blank_lines),
+    ("integer_recompile_type_error", test_integer_recompile_with_type_error),
+    ("diagnostic_dedup",             test_diagnostic_dedup),
+]
+
+
+def main():
+    wanted = set(sys.argv[1:])
+    passed = failed = 0
+    for name, fn in TESTS:
+        if wanted and name not in wanted: continue
+        t0 = time.time()
+        try:
+            fn()
+            dt = time.time() - t0
+            print(f"  PASS  {name}  ({dt:.1f}s)")
+            passed += 1
+        except Failed as e:
+            dt = time.time() - t0
+            print(f"  FAIL  {name}  ({dt:.1f}s): {e}")
+            failed += 1
+        except Exception as e:
+            dt = time.time() - t0
+            print(f"  ERROR {name}  ({dt:.1f}s): {type(e).__name__}: {e}")
+            failed += 1
+    print(f"\n{passed} passed, {failed} failed")
+    sys.exit(0 if failed == 0 else 1)
+
+
+if __name__ == "__main__":
+    main()
