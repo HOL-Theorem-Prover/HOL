@@ -264,6 +264,16 @@ Inductive zoo_wf_lfp:
   (!n. zoo_wf_lfp n ==> zoo_wf_lfp (SUC n))
 End
 
+(* A computational view for the QC-vs-MF differential corpus.  Hol_reln
+   constants are not executable merely from their cases theorem; this
+   proved equation lets QC evaluate the inductive predicate without
+   changing the predicate seen by MF. *)
+Theorem zoo_wf_lfp_compute:
+  !n. zoo_wf_lfp n <=> T
+Proof
+  Induct >> metis_tac [zoo_wf_lfp_rules]
+QED
+
 Inductive zoo_nonwf_lfp:
   !n : num. zoo_nonwf_lfp n ==> zoo_nonwf_lfp n
 End

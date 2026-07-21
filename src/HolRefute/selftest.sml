@@ -11377,7 +11377,10 @@ val mf_mutual_soundness_corpus =
    ("codatatype constructor head injectivity",
     ``llist$LCONS (a : num) xs = llist$LCONS b ys ==> a = b``),
    ("codatatype constructors distinct",
-    ``llist$LNIL <> llist$LCONS (a : num) xs``)]
+    ``llist$LNIL <> llist$LCONS (a : num) xs``),
+   ("codatatype bisimulation equality",
+    ``(xs = llist$LCONS (a : num) xs /\
+       ys = llist$LCONS a ys) ==> xs = ys``)]
 
 fun corpus_soundness () =
   List.app (fn (name, tm) =>
@@ -12002,7 +12005,20 @@ val _ = require_msg (check_result kodkod_not_configured_pin) (fn () =>
 (* PLAN_M3 section 13.2: this is the public, expect-driven MF acceptance
    corpus.  Keep it separate from the JVM-free unit tests above: a missing
    Kodkodi installation skips this whole block, exactly like HolSmt's live
-   solver tests. *)
+   solver tests.
+
+   TASK_24 supplement audit (2026-07-21): earlier feature tasks already
+   pinned multi-model search (the mf_incremental suites), bits = 9 overflow
+   (mf_integer_nits_cases), mutual groups (the mf_mutual suites), codatatype
+   rechecking (mf_codatatype_acceptance), refusal flips
+   (mf_refusal_flip_cases), predicate-specific iter rows
+   (mf_inductive_unroll_smoke/mf_coinductive_unroll_smoke), whack
+   (mf_whack_smoke), and need (mf_need_acceptance).  Do not duplicate those
+   pins here.  mf_atoms_finitize_acceptance below supplies the two missing
+   live smokes.  On the prepared host the 2026-07-21 timing run measured
+   270.76 s for run_level2_mf_corpus and 402.80 s for the complete level-2
+   selftest executable.  No cases were re-tiered: both remain below
+   M4-D11's approximately ten-minute threshold. *)
 
 datatype mf_cert_pin = MfCertSome | MfCertNone | MfCertIgnored
 
@@ -13609,20 +13625,56 @@ val mf_acceptance_groups =
 (* PLAN_M3 section 13.3: both engines run sequentially on the same
    executable finite-scope goals.  Bindings are deliberately ignored. *)
 type mf_differential_case =
-  {name : string, tm : term, counterexample : bool}
+  {name : string, tm : term, counterexample : bool,
+   configurations : (string * (Refute.config -> Refute.config)) list}
 
 val mf_differential_cases : mf_differential_case list =
   [{name = "Boolean counterexample", tm = ``(b : bool)``,
-    counterexample = true},
+    counterexample = true, configurations = [("", mf_same_config)]},
    {name = "finite-enum counterexample",
-    tm = ``(x : refute$rf2) = rf2_1``, counterexample = true},
+    tm = ``(x : refute$rf2) = rf2_1``, counterexample = true,
+    configurations = [("", mf_same_config)]},
+   (* For polymorphic goals only counterexample existence is compared: MF
+      may report native atoms while QC works over its rf instances. *)
+   {name = "polymorphic counterexample", tm = ``(x : 'a) = y``,
+    counterexample = true, configurations = [("", mf_same_config)]},
    {name = "list counterexample",
-    tm = ``REVERSE (xs : bool list) = xs``, counterexample = true},
+    tm = ``REVERSE (xs : bool list) = xs``, counterexample = true,
+    configurations = [("", mf_same_config)]},
    {name = "Boolean theorem", tm = ``(b : bool) \/ ~b``,
-    counterexample = false},
+    counterexample = false, configurations = [("", mf_same_config)]},
    {name = "finite-enum theorem",
     tm = ``(x : refute$rf2) = rf2_1 \/ x = rf2_2``,
-    counterexample = false}]
+    counterexample = false, configurations = [("", mf_same_config)]},
+   {name = "executable inductive counterexample",
+    tm = ``zoo_wf_lfp 2 ==> (2 : num) = 0``, counterexample = true,
+    configurations = [("", mf_same_config)]},
+   {name = "executable inductive theorem", tm = ``zoo_wf_lfp 2``,
+    counterexample = false, configurations = [("", mf_same_config)]},
+   (* As in Special_Nits, each on/off pair must retain one verdict. *)
+   {name = "specialization on/off",
+    tm = ``zoo_special_f2 1 0 0 0 0 =
+           zoo_special_f2 0 1 0 0 0``,
+    counterexample = true,
+    configurations =
+      [(" [specialize]", mf_same_config),
+       (" [dont_specialize]", mf_special_no_specialize)]},
+   {name = "boxing on/off",
+    tm = ``(R : (bool # bool) -> (bool # bool) -> bool)
+           (a, a) (a, a)``,
+    counterexample = true,
+    configurations =
+      [(" [box]", mf_same_config),
+       (" [dont_box]", mf_special_no_box)]}]
+
+fun with_temporary_compute_thms thms body =
+  let
+    val saved = !computeLib.the_compset
+    fun restore () = computeLib.the_compset := saved
+    val _ = computeLib.the_compset := computeLib.add_thms thms saved
+  in
+    Portable.finally restore body ()
+  end
 
 fun conclusive_counterexample name backend outcome =
   case outcome of
@@ -13635,9 +13687,8 @@ fun conclusive_counterexample name backend outcome =
           String.concatWith "; " reasons)
 
 fun mf_differential_test solver
-      ({name, tm, counterexample} : mf_differential_case) =
+      ({name, tm, counterexample, configurations} : mf_differential_case) =
   let
-    val _ = tprint ("Refute QC-vs-MF differential: " ^ name)
     val qc_config = Refute.default_config
       |> Refute.upd_timeout 20.0
       |> Refute.upd_size 4
@@ -13645,27 +13696,60 @@ fun mf_differential_test solver
       |> Refute.upd_sequential true
       |> Refute.upd_backends (SOME ["exhaustive"])
     val qc = quiet_refute qc_config tm
-    val mf = with_silent_refute (fn () =>
-      Refute.refute (mf_acceptance_config solver) tm)
     val qc_has = conclusive_counterexample name "QC" qc
-    val mf_has = conclusive_counterexample name "MF" mf
+    fun check_mf (suffix, configure) =
+      let
+        val _ = tprint ("Refute QC-vs-MF differential: " ^ name ^ suffix)
+        val mf = with_silent_refute (fn () =>
+          Refute.refute (configure (mf_acceptance_config solver)) tm)
+        val mf_has = conclusive_counterexample name ("MF" ^ suffix) mf
+      in
+        if qc_has = mf_has andalso qc_has = counterexample then ()
+        else raise Fail ("counterexample existence disagreed: QC=" ^
+          Bool.toString qc_has ^ ", MF=" ^ Bool.toString mf_has)
+      end
   in
-    if qc_has = mf_has andalso qc_has = counterexample then OK ()
-    else die ("counterexample existence disagreed: QC=" ^
-      Bool.toString qc_has ^ ", MF=" ^ Bool.toString mf_has)
+    List.app check_mf configurations;
+    OK ()
   end
   handle e => die (Feedback.exn_to_string e)
 
-fun mf_soundness_test solver (name, tm) =
+fun mf_soundness_test_with configure solver (name, tm) =
   let
     val _ = tprint ("Refute MF soundness: " ^ name)
-    val config = Refute.upd_expect Refute.ExpectNone
-      (mf_acceptance_config solver)
+    val config = mf_acceptance_config solver
+      |> configure
+      |> Refute.upd_expect Refute.ExpectNone
     val _ = with_silent_refute (fn () => Refute.refute config tm)
   in
     OK ()
   end
   handle e => die (Feedback.exn_to_string e)
+
+fun mf_soundness_test solver test =
+  mf_soundness_test_with mf_same_config solver test
+
+fun mf_binary_soundness_config config =
+  config
+  |> Refute.upd_binary_ints (SOME true)
+  |> Refute.upd_bits [4]
+  |> Refute.upd_card [(NONE, [1, 2, 3, 4])]
+
+val mf_quotient_typedef_soundness_corpus =
+  [("typedef ABS/REP law",
+    ``zoo_three_abs (zoo_three_rep x) = (x : zoo_three)``),
+   ("typedef representation membership",
+    ``zoo_three_rep (x : zoo_three) < 3``),
+   ("quotient ABS/REP law",
+    ``zoo_manual_my_int_abs (zoo_manual_my_int_rep x) =
+      (x : zoo_manual_my_int)``),
+   ("quotient class law",
+    ``zoo_manual_my_int_rel p q ==>
+      zoo_manual_my_int_abs p = zoo_manual_my_int_abs q``)]
+
+val mf_binary_soundness_corpus =
+  [("binary natural addition commutes", ``x + y = (y : num) + x``),
+   ("binary integer addition commutes", ``x + y = (y : int) + x``)]
 
 fun configured_mf_test_solver () =
   if Lib.mem "MiniSat_JNI"
@@ -13930,11 +14014,18 @@ fun run_mf_task20_suites () =
     print ("(Kodkodi not configured, MF differential and soundness " ^
       "suites skipped.)\n")
   else
-    let val solver = configured_mf_test_solver ()
+    with_quotient_typedef_registries_restored (fn () => let
+      val solver = configured_mf_test_solver ()
+      val _ = Refute.register_typedef zoo_three_registration
+      val _ = Refute.register_quotient zoo_manual_my_int_registration
     in
-      List.app (mf_differential_test solver) mf_differential_cases;
+      with_temporary_compute_thms [zoo_wf_lfp_compute] (fn () =>
+        List.app (mf_differential_test solver) mf_differential_cases);
       List.app (mf_soundness_test solver)
-        (soundness_corpus @ mf_mutual_soundness_corpus);
+        (soundness_corpus @ mf_mutual_soundness_corpus @
+         mf_quotient_typedef_soundness_corpus);
+      List.app (mf_soundness_test_with mf_binary_soundness_config solver)
+        mf_binary_soundness_corpus;
       mf_instance_loop_stops_at_reachable_genuine solver;
       mf_native_polymorphic_certification solver;
       mf_mono_driver_scope_fusion solver;
@@ -13943,7 +14034,7 @@ fun run_mf_task20_suites () =
       mf_genuine_stops_potential solver;
       mf_sound_sat_checked_scope solver;
       mf_incremental_solver_selection ()
-    end
+    end)
 
 fun mf_codatatype_acceptance solver =
   let
@@ -14018,6 +14109,49 @@ fun mf_quotient_typedef_acceptance solver =
       mf_pin_outcome_name quotient ^ ", typedef=" ^
       mf_pin_outcome_name typedef)
   end)
+  handle e => die (Feedback.exn_to_string e)
+
+fun mf_atoms_finitize_acceptance solver =
+  let
+    val _ = tprint "Refute MF: atoms override and smart finitization"
+    val alpha = ``:'a``
+    val atom_names = ["scarlet", "azure"]
+    val atoms_config = mf_acceptance_config solver
+      |> Refute.upd_card [(SOME alpha, [2]), (NONE, [1])]
+      |> Refute.upd_atoms [(SOME alpha, atom_names), (NONE, [])]
+      |> Refute.upd_show_types true
+    val atoms = with_silent_refute (fn () =>
+      Refute.refute atoms_config ``(x : 'a) = y``)
+    val atom_rows_ok =
+      #atoms (#mf atoms_config) =
+        [(SOME alpha, atom_names), (NONE, [])]
+    val list_ty = ``:bool list``
+    val finitize_base = mf_acceptance_config solver
+      |> Refute.upd_card
+        [(SOME list_ty, [2]), (SOME ``:bool``, [2]), (NONE, [1])]
+    val finitize_goal = ``!xs : bool list. xs = []``
+    val smart = with_silent_refute (fn () =>
+      Refute.refute finitize_base finitize_goal)
+    val forced = with_silent_refute (fn () =>
+      Refute.refute
+        (Refute.upd_finitize
+          [(SOME list_ty, SOME true), (NONE, NONE)] finitize_base)
+        finitize_goal)
+    fun has_counterexample (Refute.Counterexample (_ :: _)) = true
+      | has_counterexample _ = false
+    val custom_atoms_uncertified =
+      case atoms of
+          Refute.Counterexample
+            ({certainty = Refute.Genuine, cert = NONE, ...} :: _) => true
+        | _ => false
+  in
+    if atom_rows_ok andalso custom_atoms_uncertified andalso
+       has_counterexample smart andalso has_counterexample forced then OK ()
+    else die ("atoms/finitize acceptance failed: atoms=" ^
+      mf_pin_outcome_name atoms ^ ", smart=" ^
+      mf_pin_outcome_name smart ^ ", forced=" ^
+      mf_pin_outcome_name forced)
+  end
   handle e => die (Feedback.exn_to_string e)
 
 fun mf_need_acceptance solver =
@@ -14099,15 +14233,25 @@ fun run_mf_acceptance () =
         mf_acceptance_groups
       val _ = mf_codatatype_acceptance "MiniSat_JNI"
       val _ = mf_quotient_typedef_acceptance "MiniSat_JNI"
+      val _ = mf_atoms_finitize_acceptance "MiniSat_JNI"
       val _ = mf_need_acceptance "MiniSat_JNI"
     in
       List.app (run_timed_mf_group "SAT4J" " smoke")
         mf_acceptance_groups
     end)
 
-val _ = if selftest_level >= 2 then run_mf_acceptance () else ()
+fun run_level2_mf_corpus () =
+  let
+    val timer = Timer.startRealTimer ()
+    val _ = run_mf_acceptance ()
+    val _ = run_mf_task20_suites ()
+    val elapsed = Timer.checkRealTimer timer
+  in
+    print ("Refute MF complete level-2 corpus: " ^
+      Time.fmt 2 elapsed ^ "s\n")
+  end
 
-val _ = if selftest_level >= 2 then run_mf_task20_suites () else ()
+val _ = if selftest_level >= 2 then run_level2_mf_corpus () else ()
 
 val _ = if selftest_level >= 2 then corpus_potential () else ()
 
