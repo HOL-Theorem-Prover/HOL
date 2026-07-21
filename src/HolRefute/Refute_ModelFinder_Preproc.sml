@@ -463,8 +463,13 @@ structure Refute_ModelFinder_Preproc = struct
         NONE
     end
 
-  fun is_function_set_or_pair ty =
-    MFH.is_fun_type ty orelse is_set_type ty orelse is_pair_type ty
+  (* With specialization disabled, keep representation boxes intact.  Pulling
+     a concrete FunBox/PairBox into a low-cardinality existential can omit
+     the very wrapped value required by its selector equation. *)
+  fun is_function_set_or_pair preserve_boxes ty =
+    MFH.is_fun_type ty orelse is_set_type ty orelse is_pair_type ty orelse
+    preserve_boxes andalso
+      (MFH.is_funbox_type ty orelse MFH.is_pairbox_type ty)
 
   fun fresh_value_var avoids serial ty =
     Term.variant avoids
@@ -475,11 +480,13 @@ structure Refute_ModelFinder_Preproc = struct
     Option.map #2 (List.find (fn (other, _) => Term.aconv other term)
       pulled)
 
-  fun pull_candidate avoids active forbidden relax candidate pulled =
+  fun pull_candidate preserve_boxes avoids active forbidden relax
+        candidate pulled =
     case fully_applied_constructor candidate of
         NONE => (candidate, pulled)
       | SOME _ =>
-          if relax orelse is_function_set_or_pair (Term.type_of candidate)
+          if relax orelse
+             is_function_set_or_pair preserve_boxes (Term.type_of candidate)
              orelse not (has_heavy_vars active candidate) orelse
              List.exists (fn variable => Term.free_in variable candidate)
                forbidden then
@@ -572,10 +579,12 @@ structure Refute_ModelFinder_Preproc = struct
               recurse forbidden relaxed head pulled'
             val rebuilt = Term.list_mk_comb (head', arguments')
           in
-            pull_candidate avoids [] forbidden relaxed rebuilt pulled''
+            pull_candidate (not (#specialize context)) avoids [] forbidden
+              relaxed rebuilt pulled''
           end
         else
-          pull_candidate avoids [] forbidden relaxed candidate pulled
+          pull_candidate (not (#specialize context)) avoids [] forbidden
+            relaxed candidate pulled
       val (conclusion, pulled) = recurse [] def term []
     in
       boolSyntax.list_mk_imp
@@ -651,10 +660,12 @@ structure Refute_ModelFinder_Preproc = struct
               collect outer existentials head pulled'
             val rebuilt = Term.list_mk_comb (head', arguments')
           in
-            pull_candidate avoids existentials outer false rebuilt pulled''
+            pull_candidate (not (#specialize context)) avoids existentials
+              outer false rebuilt pulled''
           end
         else
-          pull_candidate avoids existentials outer false candidate pulled
+          pull_candidate (not (#specialize context)) avoids existentials
+            outer false candidate pulled
     in
       recurse [] [] term
     end
@@ -2221,7 +2232,7 @@ structure Refute_ModelFinder_Preproc = struct
                 val (domain, _) = Type.dom_rng ty
                 val boxed = MFH.box_type context MFH.InFunLHS domain
               in Type.-->(boxed, boxed) end
-            else if MFH.is_descr candidate then
+            else if MFH.is_descr candidate andalso MFH.is_fun_type ty then
               let
                 val result_ty = #2 (Type.dom_rng ty)
                 val boxed_result =

@@ -3393,8 +3393,16 @@ structure Refute_ModelFinder_HOL = struct
     same_key (original_const_key term) expected handle HOL_ERR _ => false
 
   fun is_descr term =
-    is_named_const {Thy = "min", Name = "@"} term orelse
-    is_named_const {Thy = "refute", Name = "safe_The"} term
+    let
+      val specialized =
+        case Lib.total Term.dest_var term of
+            SOME (name, _) => Refute_ModelFinder_Names.is_special_name name
+          | NONE => false
+    in
+      not specialized andalso
+      (is_named_const {Thy = "min", Name = "@"} term orelse
+       is_named_const {Thy = "refute", Name = "safe_The"} term)
+    end
 
   fun is_exists_unique term =
     is_named_const {Thy = "bool", Name = "?!"} term

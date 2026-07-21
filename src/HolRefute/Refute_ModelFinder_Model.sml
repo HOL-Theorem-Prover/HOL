@@ -362,9 +362,11 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               val width = MFR.arity_of_rep range_rep
               val chunks = MFU.chunk_list width tuple
               val domains = List.tabulate (card, fn atom =>
-                term_for_atom seen domain_ty atom card)
+                MFH.unarize_unbox_etc_term
+                  (term_for_atom seen domain_ty atom card))
               val ranges = map (fn chunk =>
-                term_for_rep true seen range_ty range_rep [chunk]) chunks
+                MFH.unarize_unbox_etc_term
+                  (term_for_rep true seen range_ty range_rep [chunk])) chunks
             in
               if length domains <> length ranges then
                 raise err "term_for_rep" "malformed vector tuple"
@@ -377,7 +379,8 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               val (domain_ty, _) = Type.dom_rng ty
               val combinations = MFR.all_combinations_for_rep domain_rep
               val domains = map (fn tuple =>
-                term_for_rep true seen domain_ty domain_rep [tuple])
+                MFH.unarize_unbox_etc_term
+                  (term_for_rep true seen domain_ty domain_rep [tuple]))
                 combinations
               val ranges = map (fn tuple =>
                 if member_tuple tuple tuples then boolSyntax.T
@@ -403,10 +406,13 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               fun tails tuple =
                 rev (Option.getOpt (Redblackmap.peek (tail_table, tuple), []))
               val domains = map (fn tuple =>
-                term_for_rep false seen domain_ty domain_rep [tuple])
+                MFH.unarize_unbox_etc_term
+                  (term_for_rep false seen domain_ty domain_rep [tuple]))
                 combinations
               val ranges = map (fn tuple =>
-                term_for_rep false seen range_ty range_rep (tails tuple))
+                MFH.unarize_unbox_etc_term
+                  (term_for_rep false seen range_ty range_rep
+                    (tails tuple)))
                 combinations
             in
               make_fun_or_set context maybe_opt ty

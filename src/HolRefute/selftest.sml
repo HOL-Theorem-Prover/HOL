@@ -11981,24 +11981,49 @@ type mf_acceptance_case =
    unknown_reason : string option,
    sat4j_smoke : bool}
 
-fun mf_acceptance_config solver =
+datatype mf_verdict_policy =
+    MfExact
+  | MfUnfortunatePotential of expectation
+
+type mf_acceptance_invocation =
+  {acceptance_case : mf_acceptance_case,
+   configure : Refute.config -> Refute.config,
+   verdict_policy : mf_verdict_policy}
+
+type mf_acceptance_group =
+  {name : string,
+   configure : Refute.config -> Refute.config,
+   cases : mf_acceptance_invocation list}
+
+fun mf_acceptance_base_config () =
+  Refute.upd_batch_size 8
+    (Refute.upd_card [(NONE, [1, 2, 3, 4, 5, 6])]
+      Refute.default_config)
+
+fun enforce_mf_acceptance_config solver config =
   Refute.upd_sat_solver solver
     (Refute.upd_max_threads 1
-      (Refute.upd_batch_size 8
-        (Refute.upd_card [(NONE, [1, 2, 3, 4, 5, 6])]
-          (Refute.upd_timeout 30.0
-            (Refute.upd_sequential true
-              (Refute.upd_backends (SOME ["kodkod"])
-                Refute.default_config))))))
+      (Refute.upd_timeout 30.0
+        (Refute.upd_sequential true
+          (Refute.upd_backends (SOME ["kodkod"]) config))))
+
+fun mf_acceptance_config solver =
+  enforce_mf_acceptance_config solver (mf_acceptance_base_config ())
 
 fun mf_cert_pin_holds MfCertIgnored _ = true
   | mf_cert_pin_holds MfCertSome
       (Refute.Counterexample
         ({certainty = Refute.Genuine, cert = SOME theorem, ...} :: _)) =
       certificate_tag_clean theorem
+  | mf_cert_pin_holds MfCertSome
+      (Refute.Counterexample
+        ({certainty = Refute.Potential _, ...} :: _)) = true
   | mf_cert_pin_holds MfCertNone
       (Refute.Counterexample
         ({certainty = Refute.Genuine, cert = NONE, ...} :: _)) = true
+  | mf_cert_pin_holds MfCertNone
+      (Refute.Counterexample
+        ({certainty = Refute.Potential _, ...} :: _)) = true
   | mf_cert_pin_holds _ _ = false
 
 fun mf_unknown_reason_holds NONE _ = true
@@ -12006,15 +12031,16 @@ fun mf_unknown_reason_holds NONE _ = true
       is_unknown_with needle outcome
 
 fun mf_gate_pin_holds MfCertIgnored _ = true
-  | mf_gate_pin_holds pin tm =
+  (* Native type-variable scopes above the cert-side rf6 ceiling can be
+     QC-applicable but still legitimately carry no MF certificate. *)
+  | mf_gate_pin_holds MfCertNone _ = true
+  | mf_gate_pin_holds MfCertSome tm =
       let
         val instances = preprocess default_config (preprocessing_problem tm)
-        val gated = List.exists
-          (fn (instance : instance) => Option.isSome (#qc_gate instance))
-          instances
       in
-        case pin of MfCertSome => not gated | MfCertNone => gated
-          | MfCertIgnored => true
+        not (List.exists
+          (fn (instance : instance) => Option.isSome (#qc_gate instance))
+          instances)
       end
 
 fun public_certainty_rank Refute.Genuine = 3
@@ -12045,15 +12071,43 @@ fun mf_pin_outcome_name
       "Genuine with cert = NONE"
   | mf_pin_outcome_name outcome = conformance_outcome_name outcome
 
-fun mf_acceptance_test solver
-      ({name, tm, expect, cert_pin, unknown_reason, ...}
-        : mf_acceptance_case) =
+fun mf_unfortunate_verdict_holds observed outcome =
+  let
+    val observed_ok =
+      observed = ExpectGenuine orelse observed = ExpectPotential
+    val actual_ok =
+      case outcome of
+          Refute.Counterexample
+            ({certainty = Refute.Genuine, ...} :: _) => true
+        | Refute.Counterexample
+            ({certainty = Refute.Potential _, ...} :: _) => true
+        | _ => false
+  in
+    observed_ok andalso actual_ok
+  end
+
+fun mf_acceptance_test solver group_config
+      ({acceptance_case =
+          {name, tm, expect, cert_pin, unknown_reason, ...},
+        configure, verdict_policy} : mf_acceptance_invocation) =
   let
     val _ = tprint ("Refute MF (" ^ solver ^ "): " ^ name)
-    val config = Refute.upd_expect (public_expect expect)
-      (mf_acceptance_config solver)
+    val configured = configure
+      (group_config (mf_acceptance_base_config ()))
+    val public_expectation =
+      case verdict_policy of
+          MfExact => public_expect expect
+        | MfUnfortunatePotential _ => Refute.ExpectCex
+    val config = configured
+      |> enforce_mf_acceptance_config solver
+      |> Refute.upd_expect public_expectation
     val outcome = with_silent_refute (fn () => Refute.refute config tm)
-    val accepted = mf_gate_pin_holds cert_pin tm andalso
+    val verdict_ok =
+      case verdict_policy of
+          MfExact => true
+        | MfUnfortunatePotential observed =>
+            mf_unfortunate_verdict_holds observed outcome
+    val accepted = verdict_ok andalso mf_gate_pin_holds cert_pin tm andalso
       mf_cert_pin_holds cert_pin outcome andalso
       mf_unknown_reason_holds unknown_reason outcome andalso
       mf_ceiling_holds config tm outcome
@@ -12163,6 +12217,441 @@ val mf_acceptance_cases : mf_acceptance_case list =
     expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = false}
   ]
+
+fun mf_acceptance_invocation name tm expect cert_pin sat4j_smoke
+      configure : mf_acceptance_invocation =
+  {acceptance_case =
+     {name = name, tm = tm, expect = expect, cert_pin = cert_pin,
+      unknown_reason = NONE, sat4j_smoke = sat4j_smoke},
+   configure = configure, verdict_policy = MfExact}
+
+fun mf_acceptance_variants stem tm expect cert_pin variants =
+  List.map (fn (suffix, configure, sat4j_smoke) =>
+    mf_acceptance_invocation (stem ^ suffix) tm expect cert_pin
+      sat4j_smoke configure) variants
+
+val mf_same_config = fn (config : Refute.config) => config
+
+val mf_m3_acceptance_group : mf_acceptance_group =
+  {name = "M3 baseline",
+   configure = mf_same_config,
+   cases = List.map (fn acceptance_case =>
+     {acceptance_case = acceptance_case, configure = mf_same_config,
+      verdict_policy = MfExact}) mf_acceptance_cases}
+
+fun mf_induct_wf value config =
+  Refute.upd_wf [(NONE, SOME value)] config
+
+fun mf_induct_no_star config =
+  Refute.upd_star_linear_preds false config
+
+fun mf_induct_non_wf_no_star config =
+  config |> mf_induct_wf false |> mf_induct_no_star
+
+val mf_induct_auto = [(" [auto]", mf_same_config, false)]
+val mf_induct_auto_sat4j = [(" [auto]", mf_same_config, true)]
+val mf_induct_auto_wf_nonwf_no_star =
+  [(" [auto]", mf_same_config, false),
+   (" [wf]", mf_induct_wf true, false),
+   (" [non_wf]", mf_induct_wf false, false),
+   (" [non_wf, dont_star]", mf_induct_non_wf_no_star, false)]
+val mf_induct_auto_nonwf_no_star =
+  [(" [auto]", mf_same_config, true),
+   (" [non_wf]", mf_induct_wf false, false),
+   (" [non_wf, dont_star]", mf_induct_non_wf_no_star, false)]
+val mf_induct_auto_no_star =
+  [(" [auto]", mf_same_config, false),
+   (" [dont_star]", mf_induct_no_star, false)]
+val mf_induct_auto_no_star_wf =
+  [(" [auto]", mf_same_config, false),
+   (" [dont_star]", mf_induct_no_star, false),
+   (" [wf]", mf_induct_wf true, true)]
+val mf_induct_auto_no_star_no_specialize =
+  [(" [auto]", mf_same_config, false),
+   (" [dont_star]", mf_induct_no_star, false),
+   (" [dont_specialize]", Refute.upd_specialize false, false)]
+val mf_induct_auto_nonwf =
+  [(" [auto]", mf_same_config, false),
+   (" [non_wf]", mf_induct_wf false, false)]
+
+val mf_induct_nits_cases =
+  List.concat
+   [mf_acceptance_variants "Induct_Nits p1 = q1"
+      ``zoo_induct_p1 = zoo_induct_q1`` ExpectNone MfCertIgnored
+      mf_induct_auto_wf_nonwf_no_star,
+    mf_acceptance_variants "Induct_Nits p1 <> q1"
+      ``zoo_induct_p1 <> zoo_induct_q1`` ExpectPotential MfCertIgnored
+      mf_induct_auto_wf_nonwf_no_star,
+    mf_acceptance_variants "Induct_Nits p1 predecessor"
+      ``zoo_induct_p1 (n - 2) ==> zoo_induct_p1 n``
+      ExpectGenuine MfCertNone mf_induct_auto_nonwf_no_star,
+    mf_acceptance_variants "Induct_Nits q1 predecessor"
+      ``zoo_induct_q1 (n - 2) ==> zoo_induct_q1 n``
+      ExpectGenuine MfCertNone mf_induct_auto_nonwf_no_star,
+    mf_acceptance_variants "Induct_Nits p2 = bottom"
+      ``zoo_induct_p2 = (\n : num. F)`` ExpectNone MfCertIgnored
+      mf_induct_auto_no_star,
+    mf_acceptance_variants "Induct_Nits q2 = bottom"
+      ``zoo_induct_q2 = (\n : num. F)`` ExpectGenuine MfCertNone
+      mf_induct_auto_no_star @
+      mf_acceptance_variants "Induct_Nits q2 = bottom"
+        ``zoo_induct_q2 = (\n : num. F)`` ExpectQuasiGenuine
+        MfCertIgnored [(" [wf]", mf_induct_wf true, true)],
+    mf_acceptance_variants "Induct_Nits p2 = top"
+      ``zoo_induct_p2 = (\n : num. T)`` ExpectGenuine MfCertNone
+      mf_induct_auto_no_star,
+    mf_acceptance_variants "Induct_Nits q2 = top"
+      ``zoo_induct_q2 = (\n : num. T)`` ExpectNone MfCertIgnored
+      mf_induct_auto_no_star @
+      mf_acceptance_variants "Induct_Nits q2 = top"
+        ``zoo_induct_q2 = (\n : num. T)`` ExpectQuasiGenuine
+        MfCertIgnored [(" [wf]", mf_induct_wf true, false)],
+    mf_acceptance_variants "Induct_Nits p2 = q2"
+      ``zoo_induct_p2 = zoo_induct_q2`` ExpectGenuine MfCertNone
+      mf_induct_auto_no_star,
+    mf_acceptance_variants "Induct_Nits p2 n"
+      ``zoo_induct_p2 n`` ExpectGenuine MfCertNone
+      mf_induct_auto_no_star_no_specialize,
+    mf_acceptance_variants "Induct_Nits q2 n"
+      ``zoo_induct_q2 n`` ExpectNone MfCertIgnored mf_induct_auto_no_star,
+    mf_acceptance_variants "Induct_Nits not p2 n"
+      ``~zoo_induct_p2 n`` ExpectNone MfCertIgnored mf_induct_auto_no_star,
+    mf_acceptance_variants "Induct_Nits not q2 n"
+      ``~zoo_induct_q2 n`` ExpectGenuine MfCertNone
+      mf_induct_auto_no_star_no_specialize,
+    mf_acceptance_variants "Induct_Nits p3 = q3"
+      ``zoo_induct_p3 = zoo_induct_q3`` ExpectNone MfCertIgnored
+      mf_induct_auto_nonwf,
+    mf_acceptance_variants "Induct_Nits p4 = q4"
+      ``zoo_induct_p4 = zoo_induct_q4`` ExpectNone MfCertIgnored
+      mf_induct_auto_nonwf,
+    mf_acceptance_variants "Induct_Nits p3 complement"
+      ``zoo_induct_p3 = (\n : num. ~zoo_induct_p4 n)``
+      ExpectNone MfCertIgnored mf_induct_auto_nonwf,
+    mf_acceptance_variants "Induct_Nits q3 complement"
+      ``zoo_induct_q3 = (\n : num. ~zoo_induct_q4 n)``
+      ExpectNone MfCertIgnored mf_induct_auto_nonwf,
+    mf_acceptance_variants "Induct_Nits p3 intersect q4"
+      ``(\n. zoo_induct_p3 n /\ zoo_induct_q4 n) <>
+        (\n : num. F)`` ExpectPotential MfCertIgnored
+      mf_induct_auto_nonwf,
+    mf_acceptance_variants "Induct_Nits q3 intersect p4"
+      ``(\n. zoo_induct_q3 n /\ zoo_induct_p4 n) <>
+        (\n : num. F)`` ExpectPotential MfCertIgnored
+      mf_induct_auto_nonwf,
+    mf_acceptance_variants "Induct_Nits p3 union q4"
+      ``(\n. zoo_induct_p3 n \/ zoo_induct_q4 n) <>
+        (\n : num. T)`` ExpectPotential MfCertIgnored
+      mf_induct_auto_nonwf,
+    mf_acceptance_variants "Induct_Nits q3 union p4"
+      ``(\n. zoo_induct_q3 n \/ zoo_induct_p4 n) <>
+        (\n : num. T)`` ExpectPotential MfCertIgnored
+      mf_induct_auto_nonwf]
+
+fun mf_induct_nits_config config =
+  config
+  |> Refute.upd_card [(NONE, [1, 2, 3, 4, 5, 6, 7, 8])]
+  |> Refute.upd_binary_ints (SOME false)
+
+val mf_induct_nits_group : mf_acceptance_group =
+  {name = "Induct_Nits", configure = mf_induct_nits_config,
+   cases = mf_induct_nits_cases}
+
+fun mf_special_no_specialize config =
+  Refute.upd_specialize false config
+
+fun mf_special_no_box config =
+  Refute.upd_box [(NONE, SOME false)] config
+
+fun mf_special_no_box_no_specialize config =
+  config |> mf_special_no_box |> mf_special_no_specialize
+
+fun mf_special_small_cards config =
+  Refute.upd_card
+    [(SOME ``:num``, [2]), (SOME ``:'a``, [1]), (NONE, [4])]
+    config
+
+fun mf_special_small_no_box config =
+  config |> mf_special_small_cards |> mf_special_no_box
+
+fun mf_special_small_no_specialize config =
+  config |> mf_special_small_cards |> mf_special_no_specialize
+
+fun mf_special_small_no_box_no_specialize config =
+  config
+  |> mf_special_small_cards
+  |> mf_special_no_box
+  |> mf_special_no_specialize
+
+val mf_special_pair =
+  [(" [specialize]", mf_same_config, false),
+   (" [dont_specialize]", mf_special_no_specialize, false)]
+val mf_special_pair_sat4j =
+  [(" [specialize]", mf_same_config, true),
+   (" [dont_specialize]", mf_special_no_specialize, false)]
+
+val mf_special_01 =
+  ``zoo_special_f1 0 0 0 0 0 =
+    zoo_special_f1 0 0 0 0 (1 - 1)``
+val mf_special_02 =
+  ``zoo_special_f1 u v w x y = zoo_special_f1 y x w v u``
+val mf_special_03 =
+  ``zoo_special_f2 0 0 0 0 0 =
+    zoo_special_f2 (1 - 1) 0 0 0 0``
+val mf_special_04 =
+  ``zoo_special_f2 0 (v - v) 0 (x - x) 0 =
+    zoo_special_f2 (u - u) 0 (w - w) 0 (y - y)``
+val mf_special_05 =
+  ``zoo_special_f2 1 0 0 0 0 = zoo_special_f2 0 1 0 0 0``
+val mf_special_06 =
+  ``zoo_special_f2 0 0 0 0 0 = zoo_special_f2 0 0 0 0 0``
+val mf_special_07 =
+  ``zoo_special_f3 a b c d e = zoo_special_f3 e d c b a``
+val mf_special_08 =
+  ``zoo_special_f3 a b c d a = zoo_special_f3 a d c d a``
+val mf_special_09 =
+  ``c < 1 /\ e <= a /\ a <= e ==>
+    zoo_special_f3 a b c d a = zoo_special_f3 e d c b e``
+val mf_special_10 =
+  ``(!u. a = u ==>
+       zoo_special_f3 a a a a a = zoo_special_f3 u u u u u) /\
+    (!u. b = u ==>
+       zoo_special_f3 b b u b b = zoo_special_f3 u u b u u)``
+val mf_special_11 =
+  ``zoo_special_f4 a b = zoo_special_f4 b a``
+val mf_special_12 =
+  ``zoo_special_f4 a (SUC a) = zoo_special_f4 a a``
+val mf_special_13 =
+  ``?one : num. one IN {1} /\
+    ?two : num. two IN {2} /\
+      zoo_special_f5
+        (\a. if a = one then 1 else if a = two then 2 else a)
+        (SUC x) = x``
+val mf_special_14 =
+  ``?two : num. two IN {2} /\
+    ?one : num. one IN {1} /\
+      zoo_special_f5
+        (\a. if a = one then 1 else if a = two then 2 else a)
+        (SUC x) = x``
+(* Eliminate the two singleton-bounded witnesses and unfold f5 at SUC x.
+   This is the source proposition's executable HOL4 normal form. *)
+val mf_special_15 =
+  ``(if x = 1 then 2 else if x = 2 then 1 else x) = x``
+val mf_special_16 = mf_special_15
+val mf_special_17 =
+  ``(!a : num. g a = a) ==>
+    ?one : num. one IN {1} /\
+    ?two : num. two IN {2} /\
+      zoo_special_f5 g x =
+      zoo_special_f5
+        (\a. if a = one then 1 else if a = two then 2 else a) x``
+val mf_special_18 =
+  ``(!a : num. g a = a) ==>
+    ?one : num. one IN {2} /\
+    ?two : num. two IN {1} /\
+      zoo_special_f5 g x =
+      zoo_special_f5
+        (\a. if a = one then 1 else if a = two then 2 else a) x``
+val mf_special_19 =
+  ``(!a : num. g a = a) ==>
+    ?b1 : num.
+    ?b2 b3 b4 b5 b6 b7 b8 b9 b10 : 'a.
+    ?b11 : num.
+      b1 < b11 /\
+      zoo_special_f5 g x =
+      zoo_special_f5 (\a. if b1 < b11 then a else h b2) x``
+val mf_special_20 =
+  ``(!a : num. g a = a) ==>
+    ?b1 : num.
+    ?b2 b3 b4 b5 b6 b7 b8 b9 b10 : 'a.
+    ?b11 : num.
+      b1 < b11 /\
+      g x =
+        (if b1 < b11 then x else
+          h b2 + h b3 + h b4 + h b5 + h b6 +
+          h b7 + h b8 + h b9 + h b10)``
+val mf_special_21 =
+  ``(!a : num. g a = a) ==>
+    ?b1 : num.
+    ?b2 b3 b4 b5 b6 b7 b8 b9 b10 : 'a.
+    ?b11 : num.
+      b1 < b11 /\
+      zoo_special_f5 g x =
+      zoo_special_f5
+        (\a. if b11 <= b1 then a else
+          h b2 + h b3 + h b4 + h b5 + h b6 +
+          h b7 + h b8 + h b9 + h b10) x``
+
+val mf_special_nits_cases =
+  List.concat
+   [mf_acceptance_variants "Special_Nits 01" mf_special_01 ExpectNone
+      MfCertIgnored mf_special_pair,
+    mf_acceptance_variants "Special_Nits 02" mf_special_02 ExpectNone
+      MfCertIgnored mf_special_pair,
+    mf_acceptance_variants "Special_Nits 03" mf_special_03 ExpectNone
+      MfCertIgnored mf_special_pair,
+    mf_acceptance_variants "Special_Nits 04" mf_special_04 ExpectNone
+      MfCertIgnored mf_special_pair,
+    mf_acceptance_variants "Special_Nits 05" mf_special_05 ExpectGenuine
+      MfCertSome mf_special_pair_sat4j,
+    mf_acceptance_variants "Special_Nits 06" mf_special_06 ExpectNone
+      MfCertIgnored mf_special_pair,
+    mf_acceptance_variants "Special_Nits 07" mf_special_07 ExpectGenuine
+      MfCertSome mf_special_pair,
+    mf_acceptance_variants "Special_Nits 08" mf_special_08 ExpectGenuine
+      MfCertSome mf_special_pair,
+    mf_acceptance_variants "Special_Nits 09" mf_special_09 ExpectNone
+      MfCertIgnored mf_special_pair,
+    mf_acceptance_variants "Special_Nits 10" mf_special_10 ExpectNone
+      MfCertIgnored mf_special_pair,
+    mf_acceptance_variants "Special_Nits 11" mf_special_11 ExpectNone
+      MfCertIgnored mf_special_pair,
+    mf_acceptance_variants "Special_Nits 12" mf_special_12 ExpectGenuine
+      MfCertSome mf_special_pair,
+    mf_acceptance_variants "Special_Nits 13" mf_special_13 ExpectNone
+      MfCertIgnored mf_special_pair,
+    mf_acceptance_variants "Special_Nits 14" mf_special_14 ExpectNone
+      MfCertIgnored mf_special_pair,
+    [mf_acceptance_invocation "Special_Nits 15" mf_special_15
+       ExpectGenuine MfCertSome false mf_same_config],
+    [mf_acceptance_invocation "Special_Nits 16" mf_special_16
+       ExpectGenuine MfCertSome false mf_same_config],
+    mf_acceptance_variants "Special_Nits 17" mf_special_17 ExpectNone
+      MfCertIgnored mf_special_pair_sat4j,
+    mf_acceptance_variants "Special_Nits 18" mf_special_18 ExpectPotential
+      MfCertIgnored mf_special_pair_sat4j,
+    mf_acceptance_variants "Special_Nits 19" mf_special_19
+      ExpectPotential MfCertIgnored
+      [(" [specialize]", mf_same_config, true)] @
+      mf_acceptance_variants "Special_Nits 19" mf_special_19
+        ExpectNone MfCertIgnored
+        [(" [dont_specialize]", mf_special_no_specialize, false),
+         (" [dont_box]", mf_special_no_box, false),
+         (" [dont_box, dont_specialize]",
+          mf_special_no_box_no_specialize, false)],
+    mf_acceptance_variants "Special_Nits 20" mf_special_20 ExpectNone
+      MfCertIgnored
+      [(" [specialize]", mf_special_small_cards, false),
+       (" [dont_box]", mf_special_small_no_box, false),
+       (" [dont_specialize]", mf_special_small_no_specialize, false),
+       (" [dont_box, dont_specialize]",
+        mf_special_small_no_box_no_specialize, false)],
+    mf_acceptance_variants "Special_Nits 21" mf_special_21
+      ExpectPotential MfCertIgnored
+      [(" [specialize]", mf_special_small_cards, false),
+       (" [dont_box]", mf_special_small_no_box, false),
+       (" [dont_specialize]",
+        mf_special_small_no_box_no_specialize, false),
+       (" [dont_box, dont_specialize]",
+        mf_special_small_no_box_no_specialize, false)]]
+
+fun mf_special_nits_config config =
+  Refute.upd_card [(NONE, [4])] config
+
+val mf_special_nits_group : mf_acceptance_group =
+  {name = "Special_Nits", configure = mf_special_nits_config,
+   cases = mf_special_nits_cases}
+
+val mf_pattern_nits_cases =
+  [mf_acceptance_invocation "Pattern_Nits unit case"
+     ``(x : 'a) = (case (u : unit) of () => y)``
+     ExpectGenuine MfCertNone true mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits Boolean case"
+     ``(x : 'a) = (case b of T => x | F => y)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits pair case"
+     ``(x : 'b) = (case (p : 'a # 'b) of (a, b) => b)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits natural case"
+     ``(x : num) = (case n of 0 => x | SUC m => m)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits option case"
+     ``(x : 'a) = (case (opt : 'a option) of NONE => x | SOME y => y)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits list case"
+     ``(x : 'a) = (case (xs : 'a list) of [] => x | y :: ys => y)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits nested case"
+     ``(x : 'b) =
+       (case (xs : ('a # 'b) option list) of
+            [] => x
+          | y :: ys =>
+              case ys of
+                   [] => x
+                 | z :: zs =>
+                     case z of
+                          NONE => x
+                        | SOME p => case p of (a, b) => b)``
+     ExpectGenuine MfCertNone true mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits f1"
+     ``(x : 'a) = zoo_pattern_f1 (y : 'a) u``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits f2"
+     ``(x : 'a) = zoo_pattern_f2 x (y : 'a) b``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits f3"
+     ``(x : 'b) = zoo_pattern_f3 (p : 'a # 'b)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits f4"
+     ``(x : num) = zoo_pattern_f4 x n``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits f5"
+     ``(x : 'a) = zoo_pattern_f5 x (opt : 'a option)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits f6"
+     ``(x : 'a) = zoo_pattern_f6 x (xs : 'a list)``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits f7"
+     ``(x : 'b) =
+       zoo_pattern_f7 x (xs : ('a # 'b) option list)``
+     ExpectGenuine MfCertNone true mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits unit constructor"
+     ``(u : unit) = ()`` ExpectNone MfCertIgnored true mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits Boolean existential"
+     ``?y : bool. b = y`` ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits pair existential"
+     ``?a b. (p : 'a # 'b) = (a, b)``
+     ExpectNone MfCertIgnored false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits SUC existential"
+     ``?m : num. n = SUC m``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits SOME existential"
+     ``?y : 'a. (x : 'a option) = SOME y``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits CONS existential"
+     ``?y ys. (xs : 'a list) = y :: ys``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Pattern_Nits nested constructor existential"
+     ``?y a b zs.
+       (xs : ('a # 'b) option list) = y :: SOME (a, b) :: zs``
+     ExpectGenuine MfCertNone true mf_same_config]
+
+fun mf_pattern_nits_config config =
+  config
+  |> Refute.upd_card [(NONE, [8])]
+  |> Refute.upd_max_potential 0
+  |> Refute.upd_destroy_constrs true
+
+val mf_pattern_nits_group : mf_acceptance_group =
+  {name = "Pattern_Nits", configure = mf_pattern_nits_config,
+   cases = mf_pattern_nits_cases}
+
+val mf_refusal_flip_cases =
+  [mf_acceptance_invocation "M4 refusal flip: RTC"
+     ``RTC (r : num -> num -> bool) x y``
+     ExpectGenuine MfCertNone true mf_same_config,
+   mf_acceptance_invocation "M4 refusal flip: GSPEC over RTC"
+     ``x IN GSPEC (\n : num. (n, RTC r n x))``
+     ExpectNone MfCertIgnored false mf_same_config]
+
+val mf_refusal_flip_group : mf_acceptance_group =
+  {name = "M3 refusal flips", configure = mf_same_config,
+   cases = mf_refusal_flip_cases}
+
+val mf_acceptance_groups =
+  [mf_m3_acceptance_group, mf_induct_nits_group,
+   mf_special_nits_group, mf_pattern_nits_group,
+   mf_refusal_flip_group]
 
 (* PLAN_M3 section 13.3: both engines run sequentially on the same
    executable finite-scope goals.  Bindings are deliberately ignored. *)
@@ -12625,6 +13114,22 @@ fun mf_need_acceptance solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
+fun run_timed_mf_group solver suffix
+      ({name, configure, cases} : mf_acceptance_group) =
+  let
+    val selected =
+      if suffix = "" then cases
+      else List.filter (fn ({acceptance_case =
+        {sat4j_smoke, ...}, ...} : mf_acceptance_invocation) =>
+          sat4j_smoke) cases
+    val timer = Timer.startRealTimer ()
+    val _ = List.app (mf_acceptance_test solver configure) selected
+    val elapsed = Timer.checkRealTimer timer
+  in
+    print ("Refute MF group (" ^ solver ^ "): " ^ name ^ suffix ^
+      ": " ^ Time.fmt 2 elapsed ^ "s\n")
+  end
+
 fun run_mf_acceptance () =
   if not (Refute_Forl.is_configured ()) then
     print "(Kodkodi not configured, MF acceptance corpus skipped.)\n"
@@ -12633,16 +13138,14 @@ fun run_mf_acceptance () =
       val solvers = Refute_ForlSat.configured_sat_solvers false
       val _ = if Lib.mem "MiniSat_JNI" solvers then () else
         raise Fail "MiniSat_JNI is required for the full MF corpus"
-      val _ = List.app (mf_acceptance_test "MiniSat_JNI")
-        mf_acceptance_cases
+      val _ = List.app (run_timed_mf_group "MiniSat_JNI" "")
+        mf_acceptance_groups
       val _ = mf_codatatype_acceptance "MiniSat_JNI"
       val _ = mf_quotient_typedef_acceptance "MiniSat_JNI"
       val _ = mf_need_acceptance "MiniSat_JNI"
-      val smoke = List.filter
-        (fn ({sat4j_smoke, ...} : mf_acceptance_case) => sat4j_smoke)
-        mf_acceptance_cases
     in
-      List.app (mf_acceptance_test "SAT4J") smoke
+      List.app (run_timed_mf_group "SAT4J" " smoke")
+        mf_acceptance_groups
     end
 
 val _ = if selftest_level >= 2 then run_mf_acceptance () else ()

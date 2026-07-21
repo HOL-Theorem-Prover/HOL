@@ -229,3 +229,102 @@ Inductive zoo_mutual_capture_lfp:
        zoo_mutual_capture_lfp n) /\
   zoo_mutual_capture_other_lfp 0
 End
+
+(* Static support for the ported Nitpick_Examples acceptance corpus. *)
+Inductive zoo_induct_p1:
+  zoo_induct_p1 (0 : num) /\
+  (!n : num. zoo_induct_p1 n ==>
+       zoo_induct_p1 (n + 2))
+End
+
+CoInductive zoo_induct_q1:
+  zoo_induct_q1 (0 : num) /\
+  (!n : num. zoo_induct_q1 n ==>
+       zoo_induct_q1 (n + 2))
+End
+
+Inductive zoo_induct_p2:
+  !n : num. zoo_induct_p2 n ==> zoo_induct_p2 n
+End
+
+CoInductive zoo_induct_q2:
+  !n : num. zoo_induct_q2 n ==> zoo_induct_q2 n
+End
+
+Inductive zoo_induct_p3:
+  zoo_induct_p3 0 /\
+  (!n. zoo_induct_p3 n ==> zoo_induct_p4 (SUC n)) /\
+  (!n. zoo_induct_p4 n ==> zoo_induct_p3 (SUC n))
+End
+
+CoInductive zoo_induct_q3:
+  zoo_induct_q3 0 /\
+  (!n. zoo_induct_q3 n ==> zoo_induct_q4 (SUC n)) /\
+  (!n. zoo_induct_q4 n ==> zoo_induct_q3 (SUC n))
+End
+
+Definition zoo_special_f1_def:
+  zoo_special_f1 (a : num) b c d e = a + b + c + d + e
+End
+
+(* HOL4's partial-definition completion is a choice specification, which
+   prevents certification even at applications covered by the source
+   equations.  These deterministic completions preserve those equations;
+   the flat f3 body also avoids higher-order case combinators in the
+   dont_specialize runs. *)
+Definition zoo_special_f2_def:
+  zoo_special_f2 (a : num) (b : num) (c : num) (d : num) (e : num) =
+    if e = 0 then a else a + b + c + d + PRE e
+End
+
+Definition zoo_special_f3_def:
+  zoo_special_f3 (a : num) (b : num) (c : num) (d : num) (e : num) =
+    if c <> 0 then a
+    else if a = 0 then
+      if e = 0 then b + d else a
+    else if e = 0 then a
+    else PRE a + b + d + PRE e
+End
+
+Definition zoo_special_f4_def:
+  zoo_special_f4 (y : num) z = if y = z then (1 : num) else 0
+End
+
+val zoo_special_f5_def = TotalDefn.Define `
+  zoo_special_f5 (f : num -> num) (SUC a) = f a
+`;
+
+val zoo_pattern_f1_def = TotalDefn.Define `
+  zoo_pattern_f1 x () = x
+`;
+
+val zoo_pattern_f2_def = TotalDefn.Define `
+  (zoo_pattern_f2 x y T = x) /\
+  (zoo_pattern_f2 x y F = y)
+`;
+
+val zoo_pattern_f3_def = TotalDefn.Define `
+  zoo_pattern_f3 (x, y) = y
+`;
+
+val zoo_pattern_f4_def = TotalDefn.Define `
+  (zoo_pattern_f4 x 0 = x) /\
+  (zoo_pattern_f4 x (SUC n) = n)
+`;
+
+val zoo_pattern_f5_def = TotalDefn.Define `
+  (zoo_pattern_f5 x NONE = x) /\
+  (zoo_pattern_f5 x (SOME y) = y)
+`;
+
+val zoo_pattern_f6_def = TotalDefn.Define `
+  (zoo_pattern_f6 x [] = x) /\
+  (zoo_pattern_f6 x (y :: ys) = y)
+`;
+
+val zoo_pattern_f7_def = TotalDefn.Define `
+  (zoo_pattern_f7 x (y :: SOME (a, b) :: zs) = b) /\
+  (zoo_pattern_f7 x (y :: NONE :: zs) = x) /\
+  (zoo_pattern_f7 x [y] = x) /\
+  (zoo_pattern_f7 x [] = x)
+`;
