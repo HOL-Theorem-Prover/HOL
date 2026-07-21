@@ -9694,6 +9694,58 @@ val _ = require_msg (check_result num_binder_is_not_executable) (fn () =>
   "a universal over num was accepted as executable")
   (fn () => ()) ()
 
+val bounded_preprocess_cases =
+  [("forall less",
+    ``(q : bool -> bool) (∀n : num. n < e ⇒ n < k)``,
+    ``(q : bool -> bool) (EVERY (λn : num. n < k) (COUNT_LIST e))``),
+   ("exists less",
+    ``(q : bool -> bool) (∃n : num. n < e ∧ n = k)``,
+    ``(q : bool -> bool) (EXISTS (λn : num. n = k) (COUNT_LIST e))``),
+   ("forall leq",
+    ``(q : bool -> bool) (∀n : num. n ≤ e ⇒ n < k)``,
+    ``(q : bool -> bool)
+        (EVERY (λn : num. n < k) (COUNT_LIST (e + 1)))``),
+   ("exists leq",
+    ``(q : bool -> bool) (∃n : num. n ≤ e ∧ n = k)``,
+    ``(q : bool -> bool)
+        (EXISTS (λn : num. n = k) (COUNT_LIST (e + 1)))``),
+   ("forall count",
+    ``(q : bool -> bool) (∀n : num. n IN count e ⇒ n < k)``,
+    ``(q : bool -> bool) (EVERY (λn : num. n < k) (COUNT_LIST e))``),
+   ("exists count",
+    ``(q : bool -> bool) (∃n : num. n IN count e ∧ n = k)``,
+    ``(q : bool -> bool) (EXISTS (λn : num. n = k) (COUNT_LIST e))``),
+   ("forall mem",
+    ``(q : bool -> bool) (∀n : num. MEM n l ⇒ n < k)``,
+    ``(q : bool -> bool) (EVERY (λn : num. n < k) l)``),
+   ("exists mem",
+    ``(q : bool -> bool) (∃n : num. MEM n l ∧ n = k)``,
+    ``(q : bool -> bool) (EXISTS (λn : num. n = k) l)``),
+   ("dependent bound",
+    ``(q : bool -> bool) (∀i : num. i < LENGTH l ⇒ EL i l ≤ k)``,
+    ``(q : bool -> bool)
+        (EVERY (λi : num. EL i l ≤ k) (COUNT_LIST (LENGTH l)))``)]
+
+fun check_bounded_preprocess (name, input, expected) =
+  let
+    val result = preprocess default_config (preprocessing_problem input)
+    fun failure () =
+      case result of
+          [{goal, qc_gate, ...}] =>
+            name ^ " produced " ^ Parse.term_to_string goal ^
+            (case qc_gate of NONE => "" | SOME reasons =>
+               " (gate: " ^ String.concatWith "; " reasons ^ ")")
+        | _ => name ^ " produced " ^ Int.toString (length result) ^
+            " instances"
+  in
+    require_msg (check_result (fn () =>
+      case result of
+          [{goal, qc_gate = NONE, ...}] => Term.aconv goal expected
+        | _ => false)) failure (fn () => ()) ()
+  end
+
+val _ = List.app check_bounded_preprocess bounded_preprocess_cases
+
 fun negated_exists_normalizes () =
   let
     val normalized = normalize ``~(?x : bool. x)``
@@ -10042,6 +10094,52 @@ fun complete_bool_goal () =
 
 val _ = require_msg (check_result complete_bool_goal) (fn () =>
   "a decidable closed boolean goal was not exhausted completely")
+  (fn () => ()) ()
+
+val bounded_genuine_cases =
+  [("forall less", ``(∀n : num. n < 3 ⇒ n * n < 4) ⇔ T``),
+   ("exists less", ``(∃n : num. n < 3 ∧ n = 3) ⇔ T``),
+   ("forall leq", ``(∀n : num. n ≤ 2 ⇒ n < 2) ⇔ T``),
+   ("exists leq", ``(∃n : num. n ≤ 2 ∧ n = 3) ⇔ T``),
+   ("forall count", ``(∀n : num. n IN count 3 ⇒ n < 2) ⇔ T``),
+   ("exists count", ``(∃n : num. n IN count 3 ∧ n = 3) ⇔ T``),
+   ("forall mem", ``(∀n : num. MEM n [0; 2] ⇒ n < 2) ⇔ T``),
+   ("exists mem", ``(∃n : num. MEM n [0; 2] ∧ n = 1) ⇔ T``),
+   ("dependent bound",
+    ``(∀i : num. i < LENGTH l ⇒ EL i l ≤ 5) ⇔ T``)]
+
+fun certifies_negated_closure goal theorem =
+  let val (_, closure, _) = closure_of goal
+  in
+    Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg closure)
+  end
+
+fun check_bounded_genuine (name, goal) =
+  require_msg (check_result (fn () =>
+    case exhaustive default_config goal of
+        Counterexample
+          ({certainty = Genuine, cert = SOME theorem, ...} :: _) =>
+            certifies_negated_closure goal theorem
+      | _ => false))
+    (fn () => name ^ " did not produce the expected certificate theorem")
+    (fn () => ()) ()
+
+val _ = List.app check_bounded_genuine bounded_genuine_cases
+
+fun true_bounded_expect_none () =
+  let
+    val config = upd_expect ExpectNone
+      (upd_sequential true
+        (upd_backends (SOME ["exhaustive"]) default_config))
+  in
+    case refute_problem config
+      (qc_problem ``(∀n : num. n < 4 ⇒ n ≤ 4) ⇔ T``) of
+        NoCounterexample => true
+      | _ => false
+  end
+
+val _ = require_msg (check_result true_bounded_expect_none) (fn () =>
+  "a true bounded statement failed under ExpectNone")
   (fn () => ()) ()
 
 fun stuck_split_counts_failure () =
@@ -11674,7 +11772,9 @@ val conformance_smoke_cases : conformance_case list =
     tm = ``(b : bool) \/ ~b``, inapplicable = []}]
 
 val conformance_full_cases : conformance_case list =
-  [{name = "reverse", cfg = conform_cex_config,
+  [{name = "bounded natural quantifier", cfg = conform_cex_config,
+    tm = ``(∀n : num. n < 3 ⇒ n * n < 4) ⇔ T``, inapplicable = []},
+   {name = "reverse", cfg = conform_cex_config,
     tm = ``REVERSE (xs : num list) = xs``, inapplicable = []},
    {name = "natural subtraction", cfg = conform_cex_config,
     tm = ``(x : num) - y + y = x``, inapplicable = []},
@@ -12697,7 +12797,7 @@ val mf_pattern_nits_cases =
      ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits natural case"
      ``(x : num) = (case n of 0 => x | SUC m => m)``
-     ExpectGenuine MfCertNone false mf_same_config,
+     ExpectGenuine MfCertSome false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits option case"
      ``(x : 'a) = (case (opt : 'a option) of NONE => x | SOME y => y)``
      ExpectGenuine MfCertNone false mf_same_config,
@@ -13425,16 +13525,16 @@ val mf_refute_nits_cases =
      ExpectGenuine MfCertSome false mf_same_config,
    mf_acceptance_invocation "Refute_Nits function option"
      ``ZooRefCY (SOME (\a : 'a. T)) = ZooRefCY NONE``
-     ExpectGenuine MfCertNone false mf_same_config,
+     ExpectGenuine MfCertSome false mf_same_config,
    mf_acceptance_invocation "Refute_Nits trie"
      ``ZooRefTR [ZooRefTR []] = ZooRefTR []``
      ExpectGenuine MfCertSome false mf_same_config,
    mf_acceptance_invocation "Refute_Nits infinite tree"
      ``ZooRefInfNode (\n. T) = ZooRefInfLeaf``
-     ExpectGenuine MfCertNone false mf_same_config,
+     ExpectGenuine MfCertSome false mf_same_config,
    mf_acceptance_invocation "Refute_Nits lambda"
      ``ZooRefLam (\a : 'a. T) = ZooRefVar a``
-     ExpectGenuine MfCertNone false mf_same_config,
+     ExpectGenuine MfCertSome false mf_same_config,
    mf_acceptance_invocation "Refute_Nits nested U"
      ``(x : 'a zoo_ref_u) = y``
      ExpectGenuine MfCertNone false mf_same_config,

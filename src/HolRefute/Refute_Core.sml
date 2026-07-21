@@ -687,13 +687,70 @@ structure Refute_Core = struct
 
   fun strip_outer_forall_body tm = #2 (strip_outer_forall tm)
 
+  val bounded_rewrites =
+    [ refuteTheory.bounded_forall_less,
+      refuteTheory.bounded_exists_less,
+      refuteTheory.bounded_forall_leq,
+      refuteTheory.bounded_exists_leq,
+      refuteTheory.bounded_forall_in_count,
+      refuteTheory.bounded_exists_in_count,
+      refuteTheory.bounded_forall_mem,
+      refuteTheory.bounded_exists_mem ]
+
   val normal_rewrites =
     [ boolTheory.NOT_EXISTS_THM,
       boolTheory.NOT_FORALL_THM,
       boolTheory.AND_IMP_INTRO,
       boolTheory.FUN_EQ_THM ] @
+    bounded_rewrites @
     Drule.CONJUNCTS boolTheory.PULL_EXISTS @
     Drule.CONJUNCTS boolTheory.PULL_FORALL
+
+  fun has_bounded_quantifier tm =
+    let
+      fun bound_left dest variable guard =
+        case Lib.total dest guard of
+            SOME (left, _) => Term.aconv left variable
+          | NONE => false
+      fun in_count variable guard =
+        case Lib.total pred_setSyntax.dest_in guard of
+            SOME (element, set) =>
+              Term.aconv element variable andalso
+              Option.isSome (Lib.total pred_setSyntax.dest_count set)
+          | NONE => false
+      fun in_list variable guard =
+        case Lib.total listSyntax.dest_mem guard of
+            SOME (element, _) => Term.aconv element variable
+          | NONE => false
+      fun bounded variable body universal =
+        case Lib.total
+          (if universal then boolSyntax.dest_imp else boolSyntax.dest_conj)
+          body of
+            SOME (guard, _) =>
+              bound_left numSyntax.dest_less variable guard orelse
+              bound_left numSyntax.dest_leq variable guard orelse
+              in_count variable guard orelse in_list variable guard
+          | NONE => false
+      fun search tm =
+        if boolSyntax.is_forall tm orelse boolSyntax.is_exists tm then
+          let
+            val universal = boolSyntax.is_forall tm
+            val (variable, body) =
+              if universal then boolSyntax.dest_forall tm
+              else boolSyntax.dest_exists tm
+          in
+            bounded variable body universal orelse search body
+          end
+        else if Term.is_comb tm then
+          let val (left, right) = Term.dest_comb tm
+          in search left orelse search right end
+        else if Term.is_abs tm then
+          search (Term.body tm)
+        else
+          false
+    in
+      search tm
+    end
 
   fun normalize tm =
     #2 (boolSyntax.dest_eq (Thm.concl
@@ -752,13 +809,7 @@ structure Refute_Core = struct
        boolSyntax.is_select tm then
       true
     else if Term.is_abs tm then
-      let
-        val (variable, body) = Term.dest_abs tm
-      in
-        not (Option.isSome
-          (Refute_Gen.enumerate (Term.type_of variable))) orelse
-        has_unexpanded_binder body
-      end
+      has_unexpanded_binder (Term.body tm)
     else if Term.is_comb tm then
       let
         val (left, right) = Term.dest_comb tm

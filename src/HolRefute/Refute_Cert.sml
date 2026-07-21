@@ -14,6 +14,18 @@ structure Refute_Cert = struct
 
   fun eval tm = computeLib.CBV_CONV (!computeLib.the_compset) tm
 
+  fun eval_original tm =
+    if Refute_Core.has_bounded_quantifier tm then
+      let
+        val rewritten =
+          Ho_Rewrite.REWRITE_CONV Refute_Core.bounded_rewrites tm
+        val normalized = rhs_of rewritten
+      in
+        Thm.TRANS rewritten (eval normalized)
+      end
+    else
+      eval tm
+
   fun head_name tm =
     let
       fun visit candidate =
@@ -64,7 +76,7 @@ structure Refute_Cert = struct
       val (variables, closure, body) = closure_of original
       val instance = instantiate env body
     in
-      case (SOME (eval instance)
+      case (SOME (eval_original instance)
             handle Interrupt => raise Interrupt | _ => NONE) of
           NONE =>
             Potential (replace cex
