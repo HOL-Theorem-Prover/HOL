@@ -225,9 +225,16 @@ fun overspan sp (b as Built (sp', props, _)) =
 
 fun mkList [a] = a
   | mkList ls = let
-    val Built ((a,_),_,_) = hd ls
-    val Built ((_,b),_,_) = List.last ls
-    in Built ((a,b), [], ls) end
+    (* Compute the enclosing span as (min-start, max-end).  Simply
+       using hd's start and List.last's end assumes source-ordered
+       elements, which synthetic constructs (e.g. HOLSourceExpand's
+       wrapTac dummy positioned at expStop tac) can violate. *)
+    fun loop [] a b = (a, b)
+      | loop (Built ((s, e), _, _) :: rest) a b =
+        loop rest (FixedInt.min (a, s)) (FixedInt.max (b, e))
+    val Built ((a0, b0), _, _) = hd ls
+    val (a, b) = loop ls a0 b0
+    in Built ((a, b), [], ls) end
 
 fun respan sp (Built (_, props, ls)) = Built (sp, props, ls)
 

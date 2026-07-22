@@ -507,6 +507,51 @@ def test_diagnostic_dedup():
 # ------------------------------------------------------------------
 # Runner
 # ------------------------------------------------------------------
+def test_hover_inside_proof_qed():
+    """Hover on SML identifiers inside a Theorem-Proof-QED block should
+    resolve to their SML type.  Previously the DecExpansion wrapping
+    HOLTheoremDecl produced a zero-width synthetic-tuple Built parent
+    over the tac's real-span children, blocking builtNavigateTo."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/proof_qed_hover.sml"
+        src = ("Theory proof_qed_hover\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem foo:\n"
+               "  T\n"
+               "Proof\n"
+               "  rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 6 = "  rw[]", char 3 lands on 'w' of 'rw'.
+        c.send({"jsonrpc":"2.0","id":42,"method":"textDocument/hover",
+                "params":{"textDocument":{"uri":uri},
+                          "position":{"line":6,"character":3}}})
+        def got(cl):
+            with cl.msgs_lock:
+                for m in cl.msgs:
+                    if m.get("id") == 42: return m
+            return None
+        reply = c.wait_until(got, 5)
+        assert_true(reply is not None, "hover reply arrived")
+        assert_true(reply.get("result") is not None,
+                    "hover result non-null")
+        md = reply["result"]["contents"]["value"]
+        # rw : thm list -> tactic.  Require a real function type — not
+        # just "term frag list" (the quotation arg's type), which was
+        # what the previous synthetic-anchor bug returned.
+        assert_true("val rw" in md and "->" in md and "tactic" in md,
+                    "hover for rw is its SML type ({0!r})".format(md))
+        assert_true("frag list" not in md,
+                    "hover shouldn't be the quotation's `term frag list` "
+                    "({0!r})".format(md))
+    finally:
+        c.close()
+
+
 def test_thm_hover_shows_statement():
     """Hover on an SML identifier of type thm should render the
     theorem statement (⊢ ...) alongside the SML type."""
@@ -608,6 +653,7 @@ TESTS = [
     ("workdone_progress",            test_workdone_progress),
     ("cheat_proofs_installed",       test_cheat_proofs_installed),
     ("thm_hover_shows_statement",    test_thm_hover_shows_statement),
+    ("hover_inside_proof_qed",       test_hover_inside_proof_qed),
 ]
 
 
