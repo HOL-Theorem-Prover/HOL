@@ -440,6 +440,23 @@ structure Refute_QC = struct
         List.map (fn card => (card, size)) cards
     end
 
+  (* Narrowing's size coordinate is exactly refinement depth.  Unlike the
+     ground generators it must test depth zero, and it does so independently
+     of the ordinary [size_matters] optimization. *)
+  fun narrowing_schedule instances size =
+    let
+      val maximum = Int.max (0, size)
+      val entries = List.concat (map (fn instance =>
+        List.tabulate (maximum + 1, fn depth => (#card instance, depth)))
+        instances)
+      fun compare ((card1, depth1), (card2, depth2)) =
+        case Int.compare (depth1, depth2) of
+            EQUAL => Int.compare (card1, card2)
+          | order => order
+    in
+      Listsort.sort compare entries
+    end
+
   fun elapsed_msec start =
     LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
     handle _ => 0
@@ -452,7 +469,9 @@ structure Refute_QC = struct
          stats : (string * int) list,
          counterexamples : Refute_Core.counterexample list ref,
          discarded : int ref,
-         retry : bool -> candidate list -> unit}
+         interim_potential : string option,
+         retry : bool -> candidate list -> unit,
+         retry_potential : bool -> candidate list -> unit}
         {env, genuine, genuine_only, ignored} =
     let
       val bindings = List.filter
@@ -469,6 +488,22 @@ structure Refute_QC = struct
           evals = [], cert = NONE, scope = NONE, model = NONE,
           stats = stats }
       val next = {env = env, genuine = genuine} :: ignored
+      val has_hole = List.exists
+        (Refute_ModelFinder_Names.contains_irrelevant_marker o #2) env
+      (* TASK_20 grounds partial narrowing values before replay.  Until then
+         do not let a spine-only EVAL proof overstate the displayed holes. *)
+      val interim_potential =
+        if backend = "narrowing" andalso has_hole then
+          SOME "partial narrowing awaits grounding reconstruction"
+        else interim_potential
+      fun keep_potential potential =
+        if #abort_potential config andalso not genuine_only then
+          counterexamples := potential :: !counterexamples
+        else if genuine_only then retry_potential true next
+        else
+          (Refute_Core.report_outcome config
+             (Refute_Core.Counterexample [potential]);
+           retry_potential true next)
     in
       (* QC hits retain their semantic Genuine grade when theorem replay is
          explicitly disabled; [cert = NONE] records the opt-out. *)
@@ -477,21 +512,22 @@ structure Refute_QC = struct
           Refute_Cert.replace cex Refute_Core.Genuine [] NONE ::
           !counterexamples
       else
-        case Refute_Cert.certify
-          {original = #original instance, evals = #evals instance,
-           env = env, cex = cex} of
-            Refute_Cert.Certified certified =>
-              counterexamples := certified :: !counterexamples
-          | Refute_Cert.Discarded =>
-              (discarded := !discarded + 1; retry genuine_only next)
-          | Refute_Cert.Potential potential =>
-              if #abort_potential config andalso not genuine_only then
-                counterexamples := potential :: !counterexamples
-              else if genuine_only then retry true next
-              else
-                (Refute_Core.report_outcome config
-                   (Refute_Core.Counterexample [potential]);
-                 retry true next)
+        case interim_potential of
+            SOME reason =>
+              keep_potential
+                (Refute_Cert.replace cex (Refute_Core.Potential [reason])
+                   [] NONE)
+          | NONE =>
+              (case Refute_Cert.certify
+                {original = #original instance, evals = #evals instance,
+                 env = env, cex = cex} of
+                   Refute_Cert.Certified certified =>
+                     counterexamples := certified :: !counterexamples
+                 | Refute_Cert.Discarded =>
+                     (discarded := !discarded + 1;
+                      retry genuine_only next)
+                 | Refute_Cert.Potential potential =>
+                     keep_potential potential)
     end
 
   fun plan_has_gen current =
@@ -703,6 +739,91 @@ structure Refute_QC = struct
     | strategy_name (Random _) = "random"
     | strategy_name Narrowing = "narrowing"
 
+  fun close_tests tests =
+    let
+      fun close (test, NONE) =
+            (case Exn.capture (#close test) () of
+                 Exn.Res _ => NONE
+               | Exn.Exn error => SOME error)
+        | close (test, found) =
+            (ignore (Exn.capture (#close test) ()); found)
+    in
+      case List.foldl close NONE tests of
+          NONE => ()
+        | SOME error => raise error
+    end
+
+  (* [qc_problem] is intentionally one PNF formula, whereas plans are a
+     list.  Compile each monomorphic/cardinality instance independently and
+     multiplex the resulting native tests behind the unchanged scheduler. *)
+  fun compile_narrowing_instances config instances =
+    let
+      fun compile_one instance =
+        case Refute_Narrow.select_for_config config (#goal instance) of
+            (Refute_Narrow.PlainRefusal reasons, _) =>
+              SelectionFailed reasons
+          | (_, problem) => compile_selected config Narrowing problem
+      fun selected_tests selected = map #3 selected
+      fun preserve_error error selected =
+        let
+          val cleanup = Exn.capture close_tests (selected_tests selected)
+        in
+          case (error, cleanup) of
+              (Interrupt, _) => raise Interrupt
+            | (_, Exn.Exn Interrupt) => raise Interrupt
+            | _ => Exn.reraise error
+        end
+      fun loop [] selected =
+            let
+              val entries = rev selected
+              val names = map #2 entries
+              val compiled = selected_tests entries
+              val last_stats = ref []
+              val closed = ref false
+              fun run input =
+                let
+                  val test =
+                    case List.find (fn (card, _, _) => card = #card input)
+                      entries of
+                        SOME (_, _, found) => found
+                      | NONE => raise Subscript
+                  val result = #run test
+                    {genuine_only = #genuine_only input, card = 1,
+                     size = #size input, draws = #draws input,
+                     ignored = #ignored input}
+                  val _ = last_stats := !(#last_stats test)
+                in
+                  result
+                end
+              fun close () =
+                if !closed then ()
+                else (closed := true; close_tests compiled)
+              val name =
+                case Lib.mk_set names of
+                    [single] => single
+                  | _ => "native"
+            in
+              Selected (name,
+                {run = run, close = close, max_chunk = NONE,
+                 last_stats = last_stats})
+            end
+        | loop (instance :: rest) selected =
+            (case Exn.capture compile_one instance of
+                 Exn.Res (Selected (name, test)) =>
+                   loop rest ((#card instance, name, test) :: selected)
+               | Exn.Res (SelectionFailed reasons) =>
+                   (close_tests (selected_tests selected);
+                    SelectionFailed reasons)
+               | Exn.Exn error => preserve_error error selected)
+    in
+      loop instances []
+    end
+
+  fun narrowing_has_existentials instances =
+    List.exists (fn instance =>
+      let val (prefix, _) = Refute_Narrow.pnf_of (#goal instance)
+      in Refute_Narrow.contains_existentials prefix end) instances
+
   fun strategy_run strategy (config : Refute_Core.config)
       (instances : Refute_Core.instance list) =
     let
@@ -712,17 +833,23 @@ structure Refute_QC = struct
         case strategy of
             Random _ => Refute_Core.upd_smart_generators false config
           | _ => config
-      val plans = List.map
-        (fn instance => compile_plan plan_config (#goal instance)) instances
+      val plans =
+        if strategy = Narrowing then map (Test o #goal) instances
+        else List.map
+          (fn instance => compile_plan plan_config (#goal instance)) instances
       val _ =
-        if not (Refute_Core.Private.enabled 3) then ()
+        if strategy = Narrowing orelse
+           not (Refute_Core.Private.enabled 3) then ()
         else List.app (fn (instance, plan) =>
           Refute_Core.Private.say 3
             ("Refute plan (card " ^ Int.toString (#card instance) ^
              "):\n" ^ pp_plan plan ^ "\n"))
           (ListPair.zip (instances, plans))
       val paired = ListPair.zip (instances, plans)
-      val gated = List.exists (Option.isSome o #qc_gate) instances
+      (* Narrowing compiles the raw prenex formula and deliberately bypasses
+         both the executable-goal gate and smart-quantifier plans. *)
+      val gated = strategy <> Narrowing andalso
+        List.exists (Option.isSome o #qc_gate) instances
       val original_gate_reasons = List.concat
         (List.mapPartial (fn (instance : Refute_Core.instance) =>
           #qc_gate instance) instances)
@@ -750,9 +877,12 @@ structure Refute_QC = struct
            else
              ["smart generators require an Enum-capable exhaustive substrate"])
       val selection =
-        case smart_selection of
-            SOME selected => selected
-          | NONE => compile_selected config strategy (Plans plans)
+        if strategy = Narrowing then
+          compile_narrowing_instances config instances
+        else
+          case smart_selection of
+              SOME selected => selected
+            | NONE => compile_selected config strategy (Plans plans)
     in
       if not (null gate_reasons) then Refute_Core.Unknown gate_reasons
       else case selection of
@@ -761,7 +891,11 @@ structure Refute_QC = struct
             let
               fun selected_body () =
                 let
-                  val entries = schedule instances (#size (#qc config))
+                  val entries =
+                    if strategy = Narrowing then
+                      narrowing_schedule instances (#size (#qc config))
+                    else
+                      schedule instances (#size (#qc config))
               val complete = ref
                 (case strategy of
                      Exhaustive => not (null entries)
@@ -770,7 +904,16 @@ structure Refute_QC = struct
               val counterexamples = ref []
               val discarded = ref 0
               val gave_up = ref []
+              (* A plain potential switches this card to the upstream retry
+                 phase.  The state belongs to the scheduled search, not one
+                 generated-code call, so depths k+1..size retain both the
+                 genuine-only flag and every rejected candidate. *)
+              val narrowing_states :
+                  (bool * candidate list) ref list =
+                map (fn _ => ref (#genuine_only config, [])) instances
               fun instance_for card = List.nth (instances, card - 1)
+              fun narrowing_state card =
+                List.nth (narrowing_states, card - 1)
               fun stats_for size card msec =
                 !(#last_stats compiled) @
                 (if !discarded = 0 then []
@@ -801,8 +944,25 @@ structure Refute_QC = struct
                             stats = stats_for size card msec,
                             counterexamples = counterexamples,
                             discarded = discarded,
+                            (* TASK_21 replaces this interim ceiling with
+                               finite-tree replay certification. *)
+                            interim_potential =
+                              if strategy = Narrowing andalso
+                                 narrowing_has_existentials
+                                   [instance_for card]
+                              then SOME
+                                "existential narrowing awaits case-tree replay"
+                              else NONE,
                             retry = fn go => fn ig =>
-                              one (card, size) draws go ig }
+                              one (card, size) draws go ig,
+                            (* Potentials retry at the next scheduled depth,
+                               never recursively at the depth that found
+                               them.  Genuine certification discards still
+                               resume this depth's engine through [retry]. *)
+                            retry_potential = fn go => fn ig =>
+                              if strategy = Narrowing then
+                                narrowing_state card := (go, ig)
+                              else one (card, size) draws go ig }
                           { env = env,
                             genuine = genuine,
                             genuine_only = genuine_only,
@@ -836,6 +996,14 @@ structure Refute_QC = struct
                     if is_random strategy then
                       if total = 0 then ()
                       else chunks total
+                    else if strategy = Narrowing then
+                      let
+                        val (card, _) = entry
+                        val (genuine_only, ignored) =
+                          !(narrowing_state card)
+                      in
+                        one entry 0 genuine_only ignored
+                      end
                     else one entry 0 (#genuine_only config) []
                   val (card, size) = entry
                   val backend = strategy_name strategy
@@ -892,13 +1060,34 @@ structure Refute_QC = struct
       run = fn config =>
         strategy_run (Random {seed = strategy_seed config}) config }
 
+  (* Active by default: unlike Isabelle's GHC-backed tester, the native
+     engine has no external-compiler availability hedge (M5-D5). *)
+  val narrowing_backend : Refute_Core.backend =
+    { name = "narrowing",
+      weight = 40,
+      configured = fn () => true,
+      requires = Refute_Core.AnyGoal,
+      input = Refute_Core.MonoInstances,
+      run = strategy_run Narrowing }
+
+  fun narrowing_certainty_ceiling (config : Refute_Core.config) instances =
+    if not (#certify (#qc config)) orelse
+       List.exists (fn instance =>
+         let val (prefix, _) = Refute_Narrow.pnf_of (#goal instance)
+         in not (Refute_Narrow.contains_existentials prefix) end) instances
+    then Refute_Core.Genuine
+    else Refute_Core.Potential
+      ["existential narrowing awaits case-tree replay"]
+
   fun register_backends () =
     (Refute_Core.executable_goal_override := smart_gate_override;
      Refute_EvalSML.register_substrate ();
      Refute_EvalCompute.register_substrate ();
      Refute_EvalCv.register_substrate ();
      Refute_Core.register_backend exhaustive_backend;
-     Refute_Core.register_backend random_backend)
+     Refute_Core.register_backend random_backend;
+     Refute_Core.register_backend_with_ceiling narrowing_backend
+       narrowing_certainty_ceiling)
 
   val _ = register_backends ()
 end

@@ -455,6 +455,7 @@ fun mf_name_round_trips () =
     var_name (MFN.unrepresented_marker ty) = "…" andalso
     var_name (MFN.unrepresented_marker_ascii ty) = "..." andalso
     var_name (MFN.irrelevant_marker ty) = "_" andalso
+    MFN.is_irrelevant_marker (MFN.irrelevant_marker ty) andalso
     Parse.term_to_string (MFN.irrelevant_marker ty) = "_" andalso
     var_name (MFN.fake_atom 1 ty) = "a1" andalso
     var_name iterator_zero =
@@ -472,6 +473,27 @@ fun mf_name_round_trips () =
 
 val _ = require_msg (check_result mf_name_round_trips) (fn () =>
   "model-finder fabricated names did not round-trip")
+  (fn () => ()) ()
+
+fun irrelevant_marker_collision_is_varied () =
+  let
+    val user = Term.mk_var ("_", ``:num``)
+    val goal = boolSyntax.mk_eq (user, ``0 : num``)
+    val (renamed_terms, renaming) =
+      MFN.rename_irrelevant_collisions [goal]
+    val renamed = hd renamed_terms
+    val free = hd (Term.free_vars_lr renamed)
+  in
+    length renamed_terms = 1 andalso
+    not (MFN.is_irrelevant_marker free) andalso
+    var_name free <> "_" andalso
+    (case renaming of
+         [(old, fresh)] => Term.aconv old user andalso Term.aconv fresh free
+       | _ => false)
+  end
+
+val _ = require_msg (check_result irrelevant_marker_collision_is_varied)
+  (fn () => "a user underscore collided with the display marker")
   (fn () => ()) ()
 
 fun mf_variant_renames_goal_first () =
@@ -10445,7 +10467,7 @@ fun lazy_hook_seam_and_rejection () =
     val rejection_ok =
       case rejected of
           Inapplicable [reason] =>
-            reason = "native: narrowing engine is not installed"
+            reason = "narrowing requires a prenex problem"
         | Inapplicable _ => false
         | Compiled test => (#close test (); false)
   in
@@ -11025,6 +11047,12 @@ fun plain_engine_units () =
       refute_plain false {arguments = [root], evaluate = pass}
     val refined =
       refute_plain false {arguments = [root], evaluate = refine_then_hit}
+    val resumed = refute_plain_avoiding false
+      {arguments = [root], evaluate = hit,
+       accept = fn arguments => fn _ =>
+         case arguments of
+             [Narrowing_constructor (1, _)] => true
+           | _ => false}
   in
     (case direct of
          PlainCounterexample
@@ -11036,6 +11064,11 @@ fun plain_engine_units () =
          PlainCounterexample
            {genuine = true,
             arguments = [Narrowing_constructor (1, _)], tests = 3} => true
+       | _ => false) andalso
+    (case resumed of
+         PlainCounterexample
+           {arguments = [Narrowing_constructor (1, _)], tests = 3, ...} =>
+           true
        | _ => false)
   end
 
@@ -12636,7 +12669,7 @@ val _ = require_msg
   "NoGenerator was not converted to compile-time Inapplicable")
   (fn () => ()) ()
 
-fun pnf_seam_is_inapplicable () =
+fun pnf_seam_dispatches_only_to_native () =
   let
     val x = Term.mk_var ("x", ``:bool``)
     val problem = Pnf
@@ -12646,9 +12679,12 @@ fun pnf_seam_is_inapplicable () =
           Inapplicable [reason] => reason = expected
         | Inapplicable _ => false
         | Compiled test => (#close test (); false)
+    val native =
+      case Refute_EvalSML.compile default_config Narrowing problem of
+          Compiled test => (#close test (); true)
+        | Inapplicable _ => false
   in
-    rejected "native: narrowing engine is not installed"
-      Refute_EvalSML.compile andalso
+    native andalso
     rejected "narrowing requires the native substrate"
       Refute_EvalCv.compile andalso
     rejected "narrowing requires the native substrate"
@@ -12656,8 +12692,9 @@ fun pnf_seam_is_inapplicable () =
   end
 
 val _ = tprint "Refute qc problem seam"
-val _ = require_msg (check_result pnf_seam_is_inapplicable) (fn () =>
-  "a substrate accepted Pnf or changed its inapplicability reason")
+val _ = require_msg (check_result pnf_seam_dispatches_only_to_native)
+  (fn () =>
+  "Pnf did not dispatch exclusively to the native substrate")
   (fn () => ()) ()
 
 fun explicit_cv_is_available strategy =
@@ -12683,6 +12720,140 @@ fun selected_substrate expected result =
   case result of
       Counterexample (cex :: _) => #substrate cex = expected
     | _ => false
+
+val _ = tprint "Refute narrowing backend"
+
+fun narrowing_registration_is_pinned () =
+  let
+    val names = map #name (registered_backends ())
+    fun position name = Lib.index (fn other => other = name) names
+  in
+    case lookup_backend "narrowing" of
+        SOME backend =>
+          #weight backend = 40 andalso #configured backend () andalso
+          position "exhaustive" < position "random" andalso
+          position "random" < position "narrowing" andalso
+          position "narrowing" < position "kodkod"
+      | NONE => false
+  end
+
+fun narrowing_ground_hit_is_certified () =
+  let
+    val config = upd_size 1 (upd_substrate NativeSML default_config)
+  in
+    case run_with_strategy Narrowing config ``(b : bool)`` of
+        Counterexample [cex] =>
+          #backend cex = "narrowing" andalso
+          #substrate cex = "native" andalso
+          #certainty cex = Genuine andalso Option.isSome (#cert cex) andalso
+          (case #bindings cex of
+               [(_, value)] => Term.aconv value boolSyntax.F
+             | _ => false)
+      | _ => false
+  end
+
+fun narrowing_partial_hit_has_holes () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 1
+      |> upd_abort_potential true
+    fun is_hole variable = MFN.is_irrelevant_marker variable
+  in
+    case run_with_strategy Narrowing config ``NULL (xs : num list)`` of
+        Counterexample [cex] =>
+          (case #certainty cex of
+               Potential reasons =>
+                 List.exists (String.isSubstring "awaits grounding") reasons
+             | _ => false) andalso
+          not (Option.isSome (#cert cex)) andalso
+          (case #bindings cex of
+               [(_, value)] =>
+                 List.exists is_hole (Term.free_vars_lr value) andalso
+                 String.isSubstring "_" (Parse.term_to_string value)
+             | _ => false)
+      | _ => false
+  end
+
+fun narrowing_plain_retry_is_integrated () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+    val result = Feedback.with_traces [("Refute", 0)]
+      (run_with_strategy Narrowing config) ``NULL (xs : num list)``
+  in
+    not (#abort_potential config) andalso
+    (case result of
+         Counterexample [cex] =>
+           #certainty cex = Genuine andalso Option.isSome (#cert cex) andalso
+           lookup_stat "size" (#stats cex) = SOME 2 andalso
+           (case #bindings cex of
+                [(_, value)] =>
+                  not (MFN.contains_irrelevant_marker value)
+              | _ => false)
+       | _ => false)
+  end
+
+fun narrowing_existential_is_interim_potential () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+      |> upd_abort_potential true
+    val disabled = upd_allow_existentials false config
+    val goal = ``?n : num. n < 0``
+    val potential_result = run_with_strategy Narrowing config goal
+    val potential =
+      case potential_result of
+          Counterexample [cex] =>
+            (case #certainty cex of
+                 Potential reasons => List.exists
+                   (String.isSubstring "case-tree replay") reasons
+               | _ => false) andalso not (Option.isSome (#cert cex))
+        | _ => false
+    val refused_result = run_with_strategy Narrowing disabled goal
+    val refused =
+      case refused_result of
+          Unknown reasons => List.exists
+            (String.isSubstring "allow_existentials") reasons
+        | _ => false
+  in
+    potential andalso refused
+  end
+
+fun narrowing_ceiling_is_pinned () =
+  let
+    val universal = qc_instances default_config ``(b : bool)``
+    val existential = qc_instances default_config ``?n : num. n < 0``
+  in
+    Refute_QC.narrowing_certainty_ceiling default_config universal =
+      Genuine andalso
+    (case Refute_QC.narrowing_certainty_ceiling default_config existential of
+         Potential _ => true
+       | _ => false) andalso
+    Refute_QC.narrowing_certainty_ceiling
+      (upd_certify false default_config) existential = Genuine
+  end
+
+val _ = require_msg (check_result narrowing_registration_is_pinned)
+  (fn () => "narrowing was not active at weight 40 in the backend order")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_ground_hit_is_certified)
+  (fn () => "ground universal narrowing did not use EVAL certification")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_partial_hit_has_holes)
+  (fn () => "partial narrowing did not display Potential underscore holes")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_plain_retry_is_integrated)
+  (fn () =>
+    "plain narrowing did not retry genuinely at the next scheduled depth")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_existential_is_interim_potential)
+  (fn () => "existential narrowing certainty or option gating changed")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_ceiling_is_pinned)
+  (fn () => "narrowing certainty ceiling is unsound") (fn () => ()) ()
 
 val auto_ho_custom : custom_gen =
   {enumerate = SOME (fn _ =>
@@ -12755,6 +12926,36 @@ fun capture_refute_messages level action =
   in
     (result, String.concat (rev (!chunks)))
   end
+
+fun default_backend_race_includes_narrowing () =
+  let
+    fun weight name =
+      Option.map #weight (lookup_backend name)
+    val production_weights =
+      map weight ["exhaustive", "random", "narrowing", "kodkod"] =
+        [SOME 20, SOME 30, SOME 40, SOME 50]
+    val config = default_config
+      |> upd_size 0
+      |> upd_timeout 10.0
+    val (result, messages) = capture_refute_messages 2 (fn () =>
+      refute config boolSyntax.T)
+    fun started weight name = String.isSubstring
+      ("Refute backend started (weight " ^ Int.toString weight ^
+       "): " ^ name) messages
+    val configured_kodkod = Refute_Forl.is_configured ()
+  in
+    production_weights andalso #backends config = NONE andalso
+    not (#sequential config) andalso not (#abort_potential config) andalso
+    started 20 "exhaustive" andalso started 30 "random" andalso
+    started 40 "narrowing" andalso
+    (not configured_kodkod orelse started 50 "kodkod") andalso
+    (case result of NoCounterexample => true | _ => false)
+  end
+
+val _ = require_msg (check_result default_backend_race_includes_narrowing)
+  (fn () =>
+    "the real default 20/30/40/50 race did not run narrowing")
+  (fn () => ()) ()
 
 fun smartgen_guard_diagnostic_is_not_fallback () =
   let

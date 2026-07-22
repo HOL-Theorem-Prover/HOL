@@ -3865,6 +3865,332 @@ structure Refute_Extract = struct
       {source = source, entry = entry}
     end
 
+  (* Compile the first-order bridge between generic narrowing terms and the
+     lazy extracted property.  Shapes and search live in Refute_Narrow; only
+     these heterogeneously typed conversion functions must be generated. *)
+  fun extract_narrowing (config : Refute_Core.config) prefix body =
+    let
+      val context = new_context Lazy
+      val constructor_terms =
+        {list = ref ([] : term list), count = ref 0,
+         indexes = ref (Redblackmap.mkDict Term.compare)}
+      val raw_terms =
+        {list = ref ([] : term list), count = ref 0,
+         indexes = ref (Redblackmap.mkDict Term.compare)}
+
+      fun index_term {list, count, indexes} tm =
+        case Redblackmap.peek (!indexes, tm) of
+            SOME index => index
+          | NONE =>
+              let
+                val index = !count
+                val _ = indexes := Redblackmap.insert (!indexes, tm, index)
+                val _ = list := tm :: !list
+                val _ = count := index + 1
+              in
+                index
+              end
+      fun constructor_index tm = index_term constructor_terms tm
+      fun raw_index tm = index_term raw_terms tm
+      fun integer value = Int.toString value
+      fun term_list values = "[" ^ join ", " values ^ "]"
+
+      val originals = map #2 prefix
+      val safe = List.map (fn (index, variable) =>
+        Term.mk_var ("refute_bound_" ^ integer index,
+          Term.type_of variable)) (Lib.enumerate 0 originals)
+      val substitution = ListPair.mapEq (fn (old, fresh) =>
+        {redex = old, residue = fresh}) (originals, safe)
+      val body = Term.subst substitution body
+      val prefix = ListPair.mapEq (fn ((quantifier, _), variable) =>
+        (quantifier, variable)) (prefix, safe)
+
+      fun dependencies ty =
+        case Refute_Gen.spec_of ty of
+            Refute_Gen.GenDatatype {constrs, ...} =>
+              List.concat (map #2 constrs)
+          | Refute_Gen.GenFun _ =>
+              reject ("narrowing cannot generate function type " ^
+                type_name ty ^ " before finitization")
+          | Refute_Gen.GenCustom _ =>
+              reject ("narrowing cannot use a custom generator for " ^
+                type_name ty)
+          | _ => []
+        handle Refute_Gen.NoGenerator (missing, reason) =>
+          reject ("no narrowing generator for " ^ type_name missing ^
+            " — " ^ reason)
+
+      fun close_types [] seen = rev seen
+        | close_types (ty :: rest) seen =
+            if List.exists (Util.same_type ty) seen then
+              close_types rest seen
+            else
+              close_types (dependencies ty @ rest) (ty :: seen)
+      val types = close_types (map (Term.type_of o #2) prefix) []
+      val _ = List.app (fn ty => ignore (ensure_type context ty)) types
+      val _ = ignore (ensure_type context Type.bool)
+
+      fun type_index ty = Lib.index (Util.same_type ty) types
+      fun conv_name ty = "narrow_conv_" ^ integer (type_index ty)
+      fun recon_name ty = "narrow_recon_" ^ integer (type_index ty)
+      val witnesses = List.map (fn (index, ty) =>
+        Term.mk_var ("refute_narrow_type_" ^ integer index, ty))
+        (Lib.enumerate 0 types)
+      fun witness_index ty = raw_index (List.nth (witnesses, type_index ty))
+
+      fun lazy body = "Susp.delay (fn () => " ^ body ^ ")"
+      fun around_zero index =
+        "(if " ^ index ^ " = 0 then 0 else if " ^ index ^
+        " mod 2 = 1 then (" ^ index ^ " + 1) div 2 else ~(" ^
+        index ^ " div 2))"
+
+      fun primitive_value kind index =
+        case kind of
+            Refute_Gen.Num => lazy ("IntInf.fromInt " ^ index)
+          | Refute_Gen.Int =>
+              lazy ("IntInf.fromInt " ^ around_zero index)
+          | Refute_Gen.Char => lazy ("Char.chr " ^ index)
+          | Refute_Gen.Word _ => lazy ("IntInf.fromInt " ^ index)
+
+      fun primitive_term kind index =
+        case kind of
+            Refute_Gen.Num =>
+              "Refute_EvalSML.num_term (IntInf.fromInt " ^ index ^ ")"
+          | Refute_Gen.Int =>
+              "Refute_EvalSML.int_term (IntInf.fromInt " ^
+              around_zero index ^ ")"
+          | Refute_Gen.Char =>
+              "Refute_EvalSML.char_term (Char.chr " ^ index ^ ")"
+          | Refute_Gen.Word width =>
+              "Refute_EvalSML.word_term " ^ integer width ^
+              " (IntInf.fromInt " ^ index ^ ")"
+
+      fun constructor_pattern index arguments =
+        "(" ^ integer index ^ ", " ^
+        term_list (map (fn argument => argument) arguments) ^ ")"
+
+      fun conversion_case ty =
+        case Refute_Gen.spec_of ty of
+            Refute_Gen.GenEnum values =>
+              "List.nth (" ^ term_list (map (expression context) values) ^
+              ", constructor)"
+          | Refute_Gen.GenNum kind => primitive_value kind "constructor"
+          | Refute_Gen.GenDatatype {constrs, ...} =>
+              let
+                fun branch (index, (constructor, argument_types)) =
+                  let
+                    val arguments = List.tabulate (length argument_types,
+                      fn number => "argument_" ^ integer number)
+                    val converted = ListPair.mapEq (fn (argument, arg_ty) =>
+                      conv_name arg_ty ^ " depth " ^ argument)
+                      (arguments, argument_types)
+                  in
+                    constructor_pattern index arguments ^ " => " ^
+                    constructor_expression context constructor converted
+                  end
+              in
+                "(case (constructor, arguments) of\n" ^
+                join "\n       | " (map branch (Lib.enumerate 0 constrs)) ^
+                "\n       | _ => raise Match)"
+              end
+          | _ => raise Fail "validated narrowing conversion"
+
+      fun reconstruction_case ty =
+        case Refute_Gen.spec_of ty of
+            Refute_Gen.GenEnum values =>
+              "Refute_EvalSML.raw_term (List.nth (" ^
+              term_list (map (integer o raw_index) values) ^
+              ", constructor))"
+          | Refute_Gen.GenNum kind => primitive_term kind "constructor"
+          | Refute_Gen.GenDatatype {constrs, ...} =>
+              let
+                fun branch (index, (constructor, argument_types)) =
+                  let
+                    val arguments = List.tabulate (length argument_types,
+                      fn number => "argument_" ^ integer number)
+                    val rebuilt = ListPair.mapEq (fn (argument, arg_ty) =>
+                      recon_name arg_ty ^ " depth " ^ argument)
+                      (arguments, argument_types)
+                  in
+                    constructor_pattern index arguments ^ " => " ^
+                    "Refute_EvalSML.con_term " ^
+                    integer (constructor_index constructor) ^ " " ^
+                    term_list rebuilt
+                  end
+              in
+                "(case (constructor, arguments) of\n" ^
+                join "\n       | " (map branch (Lib.enumerate 0 constrs)) ^
+                "\n       | _ => raise Match)"
+              end
+          | _ => raise Fail "validated narrowing reconstruction"
+
+      fun conversion_declaration (index, ty) =
+        (if index = 0 then "fun " else "and ") ^ conv_name ty ^
+        " depth narrowing_term =\n  case narrowing_term of\n" ^
+        "      Refute_Narrow.Narrowing_variable (position, _) =>\n" ^
+        "        Refute_EvalSML.lazy_hole position\n" ^
+        "    | Refute_Narrow.Narrowing_constructor " ^
+        "(constructor, arguments) =>\n        " ^ conversion_case ty
+
+      fun reconstruction_declaration (index, ty) =
+        (if index = 0 then "fun " else "and ") ^ recon_name ty ^
+        " depth narrowing_term =\n  case narrowing_term of\n" ^
+        "      Refute_Narrow.Narrowing_variable _ =>\n" ^
+        "        Refute_EvalSML.hole_term " ^ integer (witness_index ty) ^
+        "\n    | Refute_Narrow.Narrowing_constructor " ^
+        "(constructor, arguments) =>\n        " ^ reconstruction_case ty
+
+      val conversions = join "\n"
+        (map conversion_declaration (Lib.enumerate 0 types)) ^ "\n"
+      val reconstructions = join "\n"
+        (map reconstruction_declaration (Lib.enumerate 0 types)) ^ "\n"
+
+      val body_expression = expression context body
+      fun binding (index, ((_, variable), original)) =
+        let val ty = Term.type_of variable
+        in
+          "(" ^ integer (raw_index original) ^ ", fn () => " ^
+          recon_name ty ^ " depth (List.nth (arguments, " ^
+          integer index ^ ")))"
+        end
+      val has_existential = List.exists
+        (fn (Refute_Eval.Exists, _) => true | _ => false) prefix
+      val leading_count =
+        let
+          fun count total ((Refute_Eval.Forall, _) :: rest) =
+                count (total + 1) rest
+            | count total _ = total
+        in
+          count 0 prefix
+        end
+      val reported_prefix =
+        if has_existential then
+          List.take (ListPair.zip (prefix, originals), leading_count)
+        else ListPair.zip (prefix, originals)
+      val bindings = map binding (Lib.enumerate 0 reported_prefix)
+      val environment_source = term_list bindings
+      val argument_values = map (fn (index, (_, variable)) =>
+        conv_name (Term.type_of variable) ^
+        " depth (List.nth (arguments, " ^ integer index ^ "))")
+        (Lib.enumerate 0 prefix)
+      val shapes = map (fn (_, variable) =>
+        "Refute_Narrow.shape_of depth (Term.type_of " ^
+        "(Refute_EvalSML.raw_term " ^
+        integer (witness_index (Term.type_of variable)) ^ "))") prefix
+      val initial_arguments = term_list (map (fn (index, shape) =>
+        "Refute_Narrow.Narrowing_variable ([" ^ integer index ^
+        "], " ^ shape ^ ")") (Lib.enumerate 0 shapes))
+      fun quantifier_source (Refute_Eval.Forall, _) =
+            "Refute_Narrow.Universal"
+        | quantifier_source (Refute_Eval.Exists, _) =
+            "Refute_Narrow.Existential"
+      val tree_prefix = term_list (ListPair.mapEq (fn (entry, shape) =>
+        "(" ^ quantifier_source entry ^ ", " ^ shape ^ ")")
+        (prefix, shapes))
+      val _ = if has_existential andalso
+          not (#allow_existentials (#qc config)) then
+          reject "narrowing existential goals require allow_existentials"
+        else ()
+
+      val evaluate =
+        "fun narrow_evaluate depth genuine_only arguments =\n" ^
+        "  let\n" ^
+        join "\n" (map (fn (index, value) =>
+          "    val " ^ variable_name (#2 (List.nth (prefix, index))) ^
+          " = " ^ value) (Lib.enumerate 0 argument_values)) ^
+        (if null prefix then "" else "\n") ^
+        "  in\n    (Refute_EvalSML.check_deadline ();\n" ^
+        "     Refute_Narrow.Known {genuine = true, result =\n" ^
+        "       Susp.force (" ^ body_expression ^ ")})\n" ^
+        "    handle Refute_EvalSML.Hole position =>\n" ^
+        "      Refute_Narrow.NeedsRefinement position\n" ^
+        "         | Match => Refute_Narrow.Known\n" ^
+        "             {genuine = false, result = genuine_only}\n" ^
+        "  end\n"
+
+      val engine =
+        if has_existential then
+          "val initial = Refute_Narrow.tree_of " ^ tree_prefix ^ "\n" ^
+          "val result = Refute_Narrow.refute_pnf genuine_only depth\n" ^
+          "  (narrow_evaluate depth) initial\n" ^
+          "val (hit, tests) =\n" ^
+          "  case result of\n" ^
+          "      Refute_Narrow.PnfCounterexample\n" ^
+          "        {genuine, example, tests, ...} =>\n" ^
+          "        let val arguments = Refute_Narrow.leading_universals " ^
+          integer leading_count ^ " example\n" ^
+          "        in (make_hit depth arguments genuine, tests) end\n" ^
+          "    | Refute_Narrow.PnfExhausted {tests, ...} => (NONE, tests)\n"
+        else
+          "val result = Refute_Narrow.refute_plain_avoiding genuine_only\n" ^
+          "  {arguments = " ^ initial_arguments ^ ",\n" ^
+          "   evaluate = narrow_evaluate depth,\n" ^
+          "   accept = accept_hit depth genuine_only}\n" ^
+          "val (hit, tests) =\n" ^
+          "  case result of\n" ^
+          "      Refute_Narrow.PlainCounterexample\n" ^
+          "        {genuine, arguments, tests} =>\n" ^
+          "        (make_hit depth arguments genuine, tests)\n" ^
+          "    | Refute_Narrow.PlainExhausted {tests} => (NONE, tests)\n"
+
+      val table_id = Refute_EvalSML.register_term_tables
+        (rev (!(#list constructor_terms))) (rev (!(#list raw_terms)))
+      fun finish () =
+        let
+          val _ = drain_definitions context
+          val runtime =
+            "val refute_table_id = " ^ integer table_id ^ "\n" ^
+            "fun candidate depth arguments genuine =\n" ^
+            "  (" ^ environment_source ^ ", genuine)\n" ^
+            "fun accept_hit depth genuine_only arguments genuine =\n" ^
+            "  (not genuine_only orelse Refute_Narrow.all_ground arguments)\n" ^
+            "  andalso not ((!Refute_EvalSML.ignored_filter)\n" ^
+            "    (candidate depth arguments genuine))\n" ^
+            "fun make_hit depth arguments genuine =\n" ^
+            "  let val found = candidate depth arguments genuine\n" ^
+            "  in if (!Refute_EvalSML.ignored_filter) found then NONE\n" ^
+            "     else SOME found\n  end\n" ^
+            "fun dispatch card genuine_only depth draws state =\n" ^
+            "  if card <> 1 then raise Subscript else\n" ^
+            "  let\n    " ^ engine ^
+            "  in {hit = hit, complete = false, table = refute_table_id,\n" ^
+            "      state = state, tests = tests, match_failures = 0}\n" ^
+            "  end\n" ^
+            "fun protected_dispatch card genuine_only depth draws state =\n" ^
+            "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
+            "    let val answer = dispatch card genuine_only depth draws state\n" ^
+            "        val hit = Option.map (fn (environment, genuine) =>\n" ^
+            "          (List.map (fn (index, rebuild) =>\n" ^
+            "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
+            "               refute_table_id rebuild)) environment, genuine))\n" ^
+            "          (#hit answer)\n" ^
+            "    in {hit = hit, complete = #complete answer,\n" ^
+            "        table = refute_table_id, state = #state answer,\n" ^
+            "        tests = #tests answer,\n" ^
+            "        match_failures = #match_failures answer}\n" ^
+            "    end)\n" ^
+            "fun install () = Refute_EvalSML.installed_dispatch :=\n" ^
+            "  SOME protected_dispatch\n"
+          val source = source_prefix context ^
+            definition_declarations context ^ "\n" ^ conversions ^
+            reconstructions ^ evaluate ^ runtime
+        in
+          {source = source, entry = "install ()", table = table_id}
+        end
+    in
+      finish ()
+      handle error =>
+        let
+          val cleanup = Exn.capture
+            Refute_EvalSML.unregister_term_tables table_id
+        in
+          case (error, cleanup) of
+              (Interrupt, _) => raise Interrupt
+            | (_, Exn.Exn Interrupt) => raise Interrupt
+            | _ => Exn.reraise error
+        end
+    end
+
   fun safe_exception_text error =
     ((case General.exnMessage error of
           "" => "unknown extraction exception"
@@ -3946,16 +4272,17 @@ structure Refute_Extract = struct
         val mode = case extraction_mode of
             Refute_EvalSML.StrictExtraction => Strict
           | Refute_EvalSML.LazyExtraction => Lazy
-        val plans = case problem of
-            Refute_Eval.Plans found => found
-          | Refute_Eval.Pnf _ =>
-              raise NotExtractable
-                ["native: narrowing engine is not installed"]
-        val {source, entry, table} =
-          extract_tests_with mode false config strategy plans
+        val extracted = case problem of
+            Refute_Eval.Plans plans =>
+              extract_tests_with mode false config strategy plans
+          | Refute_Eval.Pnf {prefix, body} =>
+              if strategy = Refute_Eval.Narrowing andalso mode = Lazy then
+                extract_narrowing config prefix body
+              else
+                raise NotExtractable
+                  ["narrowing requires the native lazy substrate"]
       in
-        Refute_EvalSML.Extracted
-          {source = source, entry = entry, table = table}
+        Refute_EvalSML.Extracted extracted
       end
       handle NotExtractable reasons =>
                Refute_EvalSML.ExtractionFailed reasons

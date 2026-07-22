@@ -1,4 +1,6 @@
 structure Refute_EvalSML = struct
+  structure Names = Refute_ModelFinder_Names
+
   type term = Term.term
 
   exception Stuck of string
@@ -147,6 +149,11 @@ structure Refute_EvalSML = struct
 
   fun string_term text =
     (note_force (); stringSyntax.fromMLstring text)
+
+  (* Narrowing holes use the M3 model-display marker constructor. *)
+  fun hole_term type_index =
+    (note_force ();
+     Names.irrelevant_marker (Term.type_of (raw_term type_index)))
 
   fun word_term width value =
     (note_force ();
@@ -463,9 +470,11 @@ structure Refute_EvalSML = struct
 
   fun compile config strategy problem =
     case (strategy, problem) of
-        (Refute_Eval.Narrowing, _) =>
+        (Refute_Eval.Narrowing, Refute_Eval.Pnf _) =>
+          compile_problem config strategy problem
+      | (Refute_Eval.Narrowing, Refute_Eval.Plans _) =>
           Refute_Eval.Inapplicable
-            ["native: narrowing engine is not installed"]
+            ["narrowing requires a prenex problem"]
       | (_, Refute_Eval.Pnf _) =>
           Refute_Eval.Inapplicable
             ["narrowing requires the native substrate"]

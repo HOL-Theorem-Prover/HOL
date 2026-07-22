@@ -21,11 +21,26 @@ selftest.uo: Refute_SmartGen.uo Refute_Narrow.uo Refute_PropSat.uo \
 # `structure Util = Refute_Util` alias, which holdep does not follow, so the
 # dependency is declared explicitly (as for the model-finder modules below).
 Refute_Gen.uo: Refute_Util.uo
+Refute_Core.uo: Refute_Names.uo
 Refute_Narrow.uo: Refute_Gen.uo
 Refute_EvalEnum.uo: Refute_Util.uo
 Refute_EvalCompute.uo: Refute_Util.uo Refute_EvalEnum.uo
 Refute_EvalCv.uo: Refute_Util.uo Refute_EvalEnum.uo
+Refute_EvalSML.uo: Refute_Names.uo
 Refute_Extract.uo: Refute_Util.uo
+
+# Refute_ModelFinder_Names retains its public structure name but now lives in
+# Refute_Names.sml.  Holdep cannot infer these file-name-mismatched edges.
+Refute_ModelFinder_HOL.uo: Refute_Names.uo
+Refute_ModelFinder_Kodkod.uo: Refute_Names.uo
+Refute_ModelFinder_Model.uo: Refute_Names.uo
+Refute_ModelFinder_Mono.uo: Refute_Names.uo
+Refute_ModelFinder_Nut.uo: Refute_Names.uo
+Refute_ModelFinder_Preproc.uo: Refute_Names.uo
+Refute_ModelFinder_Util.uo: Refute_Names.uo
+Refute_ModelFinder.uo: Refute_Names.uo
+Refute_QC.uo: Refute_Names.uo
+selftest.uo: Refute_Names.uo
 
 # SmartGen is deliberately independent of the model finder: both consumers
 # use the same structural intro-triple shape, but Horn lookup must also be

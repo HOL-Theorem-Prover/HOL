@@ -1,4 +1,6 @@
 structure Refute_Core = struct
+  structure Names = Refute_ModelFinder_Names
+
   type term = Term.term
   type thm = Thm.thm
   type hol_type = Type.hol_type
@@ -753,8 +755,15 @@ structure Refute_Core = struct
     let
       val assumptions =
         if #no_assms cfg then [] else #assumptions problem
-      val original_goal = boolSyntax.list_mk_imp (assumptions, #goal problem)
-      val input_evals = #evals problem @ #evals cfg
+      val unrenamed_goal =
+        boolSyntax.list_mk_imp (assumptions, #goal problem)
+      val unrenamed_evals = #evals problem @ #evals cfg
+      (* `_` is the shared model/narrowing marker.  Vary a colliding user
+         free once for every backend, before any marker can be introduced. *)
+      val (renamed, _) = Names.rename_irrelevant_collisions
+        (unrenamed_goal :: unrenamed_evals)
+      val original_goal = hd renamed
+      val input_evals = tl renamed
       val types = monomorphic_types (#qc cfg)
       val tyvars = Lib.U
         (map Term.type_vars_in_term (original_goal :: input_evals))
@@ -1341,6 +1350,9 @@ structure Refute_Core = struct
       val timeout =
         if #timeout cfg <= 0.0 then Time.fromReal 0.0
         else Time.fromReal (#timeout cfg)
+      val _ = Private.say 2
+        ("Refute backend started (weight " ^ Int.toString (#weight backend) ^
+         "): " ^ name ^ "\n")
       val result =
         (Timeout.apply timeout (#run backend cfg) instances
          handle Timeout.TIMEOUT _ =>

@@ -1586,7 +1586,7 @@ fun replace_irrelevant term =
       val body = combinSyntax.dest_K_1 term
       val (domain_ty, _) = Type.dom_rng (Term.type_of term)
     in
-      if Term.is_var body andalso #1 (Term.dest_var body) = "_" then
+      if MFN.is_irrelevant_marker body then
         combinSyntax.mk_K_1 (boolSyntax.mk_arb (Term.type_of body), domain_ty)
       else
         combinSyntax.mk_K_1 (replace_irrelevant body, domain_ty)

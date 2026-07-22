@@ -205,30 +205,63 @@ structure Refute_Narrow = struct
     handle ShapeFailure (offending_ty, reason) =>
       Inapplicable [inapplicable_message offending_ty reason]
 
+  fun is_ground (Narrowing_variable _) = false
+    | is_ground (Narrowing_constructor (_, arguments)) =
+        List.all is_ground arguments
+
+  fun all_ground arguments = List.all is_ground arguments
+
+  fun first_variable_position arguments =
+    let
+      fun in_term (Narrowing_variable (position, _)) = SOME position
+        | in_term (Narrowing_constructor (_, children)) = in_terms children
+      and in_terms [] = NONE
+        | in_terms (term :: terms) =
+            (case in_term term of
+                 SOME position => SOME position
+               | NONE => in_terms terms)
+    in
+      in_terms arguments
+    end
+
   (* The plain Lazy SmallCheck engine.  The callback encapsulates forcing the
      extracted lazy property and translates Hole/Match into this first-order
      protocol.  Each refinement candidate is evaluated afresh, exactly as in
-     Narrowing_Engine.ref/refute. *)
-  fun refute_from genuine_only evaluate arguments tests =
-    case evaluate genuine_only arguments of
-        Known {genuine, result = true} => PlainExhausted {tests = tests + 1}
-      | Known {genuine, result = false} =>
-          PlainCounterexample
-            {genuine = genuine, arguments = arguments, tests = tests + 1}
-      | NeedsRefinement position =>
-          let
-            fun search [] count = PlainExhausted {tests = count}
-              | search (refined :: rest) count =
-                  (case refute_from genuine_only evaluate refined count of
-                       result as PlainCounterexample _ => result
-                     | PlainExhausted {tests = count'} =>
-                         search rest count')
-          in
+     Narrowing_Engine.ref/refute.  Rejected hits are refined in this DFS;
+     returning them to the driver as NONE would restart at the same root. *)
+  fun refute_from genuine_only evaluate accept arguments tests =
+    let
+      fun search [] count = PlainExhausted {tests = count}
+        | search (refined :: rest) count =
+            (case refute_from genuine_only evaluate accept refined count of
+                 result as PlainCounterexample _ => result
+               | PlainExhausted {tests = count'} => search rest count')
+      fun continue count =
+        case first_variable_position arguments of
+            NONE => PlainExhausted {tests = count}
+          | SOME position => search (refineList arguments position) count
+    in
+      case evaluate genuine_only arguments of
+          Known {genuine, result = true} =>
+            PlainExhausted {tests = tests + 1}
+        | Known {genuine, result = false} =>
+            if accept arguments genuine then
+              PlainCounterexample
+                {genuine = genuine, arguments = arguments, tests = tests + 1}
+            else
+              continue (tests + 1)
+        | NeedsRefinement position =>
             search (refineList arguments position) (tests + 1)
-          end
+    end
+
+  fun refute_plain_avoiding genuine_only
+        {arguments, evaluate, accept} =
+    refute_from genuine_only evaluate accept arguments 0
 
   fun refute_plain genuine_only ({arguments, evaluate} : plain_test) =
-    refute_from genuine_only evaluate arguments 0
+    refute_plain_avoiding genuine_only
+      {arguments = arguments, evaluate = evaluate,
+       accept = fn _ => fn _ => true}
 
   (* The upstream ML driver retries a potential hit genuinely at the next
      depth and discards it if the inclusive 0..size search finds no genuine
@@ -595,6 +628,14 @@ structure Refute_Narrow = struct
   (* Keep the executable-spec spelling available to make audits against the
      Haskell extraction routine direct. *)
   val exampleOf = example_of
+
+  (* The universally closed goal puts its user frees before the original
+     prefix.  Only those leading universal witnesses belong in [candidate.env];
+     later existential branches are retained in the tree for TASK_21 replay. *)
+  fun leading_universals 0 _ = []
+    | leading_universals count (UnivExample (term, rest)) =
+        term :: leading_universals (count - 1) rest
+    | leading_universals _ _ = []
 
   fun refute_pnf genuine_only depth evaluate initial_tree =
     let
