@@ -278,6 +278,38 @@ Inductive zoo_nonwf_lfp:
   !n : num. zoo_nonwf_lfp n ==> zoo_nonwf_lfp n
 End
 
+(* Smart-generator mode-inference zoo.  These deliberately cover a linear
+   relation, a mutual SCC, an unconstrained conclusion variable, and a
+   higher-order relation parameter. *)
+Inductive zoo_sg_linear:
+  zoo_sg_linear 0 /\
+  (!n. zoo_sg_linear n ==> zoo_sg_linear (SUC n))
+End
+
+Inductive zoo_sg_mutual:
+  zoo_sg_even 0 /\
+  (!n. zoo_sg_linear n /\ zoo_sg_odd n /\
+       zoo_sg_linear (SUC n) ==> zoo_sg_even (SUC n)) /\
+  (!n. zoo_sg_even n ==> zoo_sg_odd (SUC n))
+End
+
+Inductive zoo_sg_fresh:
+  !x : num. !y : num. x = 0 ==> zoo_sg_fresh x y
+End
+
+Inductive zoo_sg_higher_order:
+  !P x. P x ==> zoo_sg_higher_order P x
+End
+
+(* The clauses have the same partitioned intro shape modulo alpha-renaming,
+   but their source premise interleavings differ. *)
+Inductive zoo_sg_ordered:
+  (!x y. x = x /\ zoo_sg_ordered x y /\ y = y ==>
+         zoo_sg_ordered x y) /\
+  (!a b. a = a /\ b = b /\ zoo_sg_ordered a b ==>
+         zoo_sg_ordered a b)
+End
+
 CoInductive zoo_wf_gfp:
   zoo_wf_gfp 0 /\
   (!n. zoo_wf_gfp n ==> zoo_wf_gfp (SUC n))

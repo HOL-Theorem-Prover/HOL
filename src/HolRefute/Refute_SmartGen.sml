@@ -1,12 +1,18 @@
-(* Horn-shaped Boolean function recognition for smart generators.
-   This module deliberately implements only the Horn slice: it reads existing
-   defining equations, checks their constructor-pattern coverage, and converts
-   them syntactically to intro triples.  It neither flattens functions nor
-   creates theory definitions. *)
+(* Horn sources and positive first-order mode inference for smart generators.
+   This module reads existing equations, checks their constructor-pattern
+   coverage, converts them syntactically to intro triples, and mode-checks
+   Horn SCCs.  It neither flattens functions nor creates theory definitions. *)
 structure Refute_SmartGen = struct
   type intro_triple =
     {variables : term list, side : term list,
      main : term list, conclusion : term}
+
+  (* Intro tables deliberately retain their established split [main]/[side]
+     shape.  Inference never tries to recover source order from that lossy
+     view: every origin constructs one of these records before partitioning. *)
+  type inference_clause =
+    {side : term list, main : term list, head : term,
+     ordered : term list}
 
   datatype pattern = Wild | Constructor of term * pattern list
 
@@ -251,16 +257,26 @@ structure Refute_SmartGen = struct
     handle HOL_ERR _ => NONE
          | Option.Option => NONE
 
-  fun triple_of constant
-        ({variables, premises, conclusion, ...} : clause) =
+  type horn_clause =
+    {variables : term list, patterns : pattern list,
+     inference : inference_clause}
+
+  fun horn_clause_of constant
+        ({variables, patterns, premises, conclusion} : clause) =
     let
-      val (main, side) = List.partition (mentions constant) premises
+      (* Capture [premises] first.  Once partitioned, this interleaving is not
+         derivable, even when two clauses have identical split views. *)
+      val ordered = premises
+      val (main, side) = List.partition (mentions constant) ordered
+      val inference =
+        {side = side, main = main, head = conclusion,
+         ordered = ordered} : inference_clause
     in
-      {variables = variables, side = side, main = main,
-       conclusion = conclusion} : intro_triple
+      {variables = variables, patterns = patterns,
+       inference = inference} : horn_clause
     end
 
-  fun recognize_horn_equations constant equations =
+  fun recognize_horn_sources constant equations =
     let
       val (domains, range) = boolSyntax.strip_fun (Term.type_of constant)
       val _ = if Term.is_const constant andalso range = Type.bool andalso
@@ -268,17 +284,33 @@ structure Refute_SmartGen = struct
               then ()
               else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
                 "recognize_horn_equations" "not a Boolean function"
-      val clauses = List.mapPartial
+      val raw = List.mapPartial
         (recognize_clause constant (length domains)) equations
-      val _ = if length clauses = length equations andalso
-                     exhaustive (map #patterns clauses)
+      val _ = if length raw = length equations andalso
+                     exhaustive (map #patterns raw)
               then ()
               else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
                 "recognize_horn_equations" "malformed or incomplete clauses"
     in
-      SOME (map (triple_of constant) clauses)
+      SOME (map (horn_clause_of constant) raw)
     end
     handle HOL_ERR _ => NONE
+
+  fun intro_triple_of
+        ({variables, patterns = _,
+          inference = {side, main, head, ...}} : horn_clause) =
+    {variables = variables, side = side, main = main,
+     conclusion = head} : intro_triple
+
+  fun recognize_horn_clauses constant equations =
+    Option.map (map #inference)
+      (recognize_horn_sources constant equations)
+
+  (* Keep the established public intro-triple result, but do not retain any
+     side channel from it into inference. *)
+  fun recognize_horn_equations constant equations =
+    Option.map (map intro_triple_of)
+      (recognize_horn_sources constant equations)
 
   fun theorem_term theorem =
     let
@@ -307,7 +339,7 @@ structure Refute_SmartGen = struct
 
   type cache_entry =
     {constant : term, stamp : term option,
-     result : intro_triple list option}
+     result : horn_clause list option}
 
   (* Positive and negative results are session-local ML state.  The source
      stamp prevents a transient current-theory presentation from poisoning a
@@ -323,7 +355,7 @@ structure Refute_SmartGen = struct
       List.filter (fn {constant = other, ...} =>
         not (same_constant constant other)) (!intro_cache)
 
-  fun horn_intro_triples_for constant =
+  fun cached_horn_sources_for constant =
     if not (Term.is_const constant) then NONE
     else
       let
@@ -340,7 +372,7 @@ structure Refute_SmartGen = struct
                 val result =
                   case source of
                       SOME (_, equations) =>
-                        recognize_horn_equations constant equations
+                        recognize_horn_sources constant equations
                     | NONE => NONE
                 val _ = cache_result constant stamp result
               in
@@ -348,6 +380,667 @@ structure Refute_SmartGen = struct
               end
       end
 
+  fun horn_intro_triples_for constant =
+    Option.map (map intro_triple_of) (cached_horn_sources_for constant)
+
+  fun horn_inference_clauses_for constant =
+    Option.map (map #inference) (cached_horn_sources_for constant)
+
   fun clear_intro_cache () = intro_cache := []
   fun intro_cache_size () = length (!intro_cache)
+
+  fun remove_term_once _ [] = NONE
+    | remove_term_once term (candidate :: rest) =
+        if same_term term candidate then SOME rest
+        else Option.map (fn suffix => candidate :: suffix)
+          (remove_term_once term rest)
+
+  fun same_term_multiset [] right = null right
+    | same_term_multiset (term :: left) right =
+        (case remove_term_once term right of
+             SOME rest => same_term_multiset left rest
+           | NONE => false)
+
+  (* Goal and theorem-table clients have an intro triple and the originating
+     ordered premise list at the same time.  Construct the internal record at
+     that boundary; never look it up later by the partitioned triple. *)
+  fun inference_clause_of_triple ordered
+        ({side, main, conclusion, ...} : intro_triple) =
+    if same_term_multiset ordered (main @ side) then
+      SOME ({side = side, main = main, head = conclusion,
+             ordered = ordered} : inference_clause)
+    else
+      NONE
+
+  (* Modes describe which parts of a predicate call are known on entry.
+     [Fun] is used only to curry the modes of a predicate itself.  A [Fun]
+     below an argument position is deliberately not inferred: that is the
+     higher-order fragment from which this port degrades. *)
+  datatype mode =
+      Bool
+    | Input
+    | Output
+    | Pair of mode * mode
+    | Fun of mode * mode
+
+  datatype mode_derivation =
+      Mode_App of mode_derivation * mode_derivation
+    | Context of mode
+    | Mode_Pair of mode_derivation * mode_derivation
+    | Term_Mode of mode
+
+  datatype indprem =
+      Prem of term
+    | Sidecond of term
+    | Generator of term
+
+  type moded_clause =
+    {arguments : term list,
+     premises : (indprem * mode_derivation) list,
+     needs_generator : bool}
+
+  type relation_modes =
+    {relation : term,
+     modes : (mode * moded_clause list * bool) list}
+
+  datatype external_status =
+      Compiled of
+        {modes : (mode * bool) list,
+         functional : mode list}
+    | Uncompiled
+
+  datatype degradation =
+      HigherOrderParameters of term
+    | CrossGroupReference of term
+
+  type inference_result =
+    {relations : relation_modes list,
+     degradation : degradation list}
+
+  type premise_score =
+    {missing : int,
+     functional : bool,
+     generator : bool,
+     outputs : int,
+     recursive : bool}
+
+  fun eq_mode (Fun (left1, left2), Fun (right1, right2)) =
+        eq_mode (left1, right1) andalso eq_mode (left2, right2)
+    | eq_mode (Pair (left1, left2), Pair (right1, right2)) =
+        eq_mode (left1, right1) andalso eq_mode (left2, right2)
+    | eq_mode (Pair (left, right), Input) =
+        eq_mode (left, Input) andalso eq_mode (right, Input)
+    | eq_mode (Pair (left, right), Output) =
+        eq_mode (left, Output) andalso eq_mode (right, Output)
+    | eq_mode (Input, Pair (left, right)) =
+        eq_mode (Input, left) andalso eq_mode (Input, right)
+    | eq_mode (Output, Pair (left, right)) =
+        eq_mode (Output, left) andalso eq_mode (Output, right)
+    | eq_mode (Input, Input) = true
+    | eq_mode (Output, Output) = true
+    | eq_mode (Bool, Bool) = true
+    | eq_mode _ = false
+
+  fun list_mode [] = Bool
+    | list_mode (mode :: modes) = Fun (mode, list_mode modes)
+
+  fun strip_mode (Fun (mode, rest)) = mode :: strip_mode rest
+    | strip_mode Bool = []
+    | strip_mode _ =
+        raise Feedback.mk_HOL_ERR "Refute_SmartGen" "strip_mode"
+          "predicate mode does not end in Bool"
+
+  fun mode_of (Context mode) = mode
+    | mode_of (Term_Mode mode) = mode
+    | mode_of (Mode_Pair (left, right)) =
+        Pair (mode_of left, mode_of right)
+    | mode_of (Mode_App (operator, operand)) =
+        (case mode_of operator of
+             Fun (domain, range) =>
+               if eq_mode (domain, mode_of operand) then range
+               else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
+                 "mode_of" "mode application does not match"
+           | _ => raise Feedback.mk_HOL_ERR "Refute_SmartGen"
+               "mode_of" "mode operator is not a function")
+
+  fun head_mode_of derivation =
+    let
+      fun head (Mode_App (operator, _)) = head operator
+        | head other = other
+    in
+      mode_of (head derivation)
+    end
+
+  fun is_all_input mode =
+    let
+      fun input (Fun _) = true
+        | input (Pair (left, right)) = input left andalso input right
+        | input Input = true
+        | input Output = false
+        | input Bool = true
+    in
+      List.all input (strip_mode mode)
+    end
+
+  fun mode_string Bool = "bool"
+    | mode_string Input = "i"
+    | mode_string Output = "o"
+    | mode_string (Pair (left, right)) =
+        "(" ^ mode_string left ^ " * " ^ mode_string right ^ ")"
+    | mode_string (Fun (domain, range)) =
+        mode_string domain ^ " => " ^ mode_string range
+
+  fun contains_function_type ty =
+    case Lib.total Type.dom_rng ty of
+        SOME _ => true
+      | NONE =>
+          (case Lib.total Type.dest_type ty of
+               SOME (_, arguments) =>
+                 List.exists contains_function_type arguments
+             | NONE => false)
+
+  fun argument_modes ty =
+    case Lib.total pairSyntax.dest_prod ty of
+        SOME (left, right) =>
+          List.concat (map (fn left_mode =>
+            map (fn right_mode => Pair (left_mode, right_mode))
+              (argument_modes right)) (argument_modes left))
+      | NONE => [Input, Output]
+
+  fun all_modes_for relation =
+    let
+      val (domains, range) = boolSyntax.strip_fun (Term.type_of relation)
+    in
+      if range = Type.bool andalso
+         not (List.exists contains_function_type domains) then
+        let
+          fun product [] = [[]]
+            | product (choices :: rest) =
+                List.concat (map (fn choice =>
+                  map (fn suffix => choice :: suffix) (product rest))
+                    choices)
+        in
+          map list_mode (product (map argument_modes domains))
+        end
+      else
+        []
+    end
+    handle HOL_ERR _ => []
+
+  fun same_mode left right = eq_mode (left, right)
+
+  fun compare_score
+        ({missing = left_missing, functional = left_functional,
+          generator = left_generator, outputs = left_outputs,
+          recursive = left_recursive} : premise_score,
+         {missing = right_missing, functional = right_functional,
+          generator = right_generator, outputs = right_outputs,
+          recursive = right_recursive} : premise_score) =
+    let
+      fun lex [] = EQUAL
+        | lex (order :: rest) =
+            (case order of EQUAL => lex rest | other => other)
+      fun preferred flag = if flag then 0 else 1
+    in
+      lex [Int.compare (left_missing, right_missing),
+           Int.compare (preferred left_functional,
+                        preferred right_functional),
+           Int.compare (preferred (not left_generator),
+                        preferred (not right_generator)),
+           Int.compare (left_outputs, right_outputs),
+           Int.compare (preferred left_recursive,
+                        preferred right_recursive)]
+    end
+
+  fun output_positions mode =
+    let
+      fun has_output (Pair (left, right)) =
+            has_output left orelse has_output right
+        | has_output Output = true
+        | has_output _ = false
+    in
+      length (List.filter has_output (strip_mode mode))
+    end
+
+  fun union_terms left right =
+    List.foldl (fn (term, result) =>
+      if member_term term result then result else result @ [term])
+      left right
+
+  fun missing_vars known term =
+    List.filter (fn variable => not (member_term variable known))
+      (Term.free_vars_lr term)
+
+  fun is_equality_type ty = not (contains_function_type ty)
+
+  fun invertible_head term =
+    Term.is_const term andalso TypeBase.is_constructor term
+    handle HOL_ERR _ => false
+
+  fun noninvertible_subterms term =
+    if Term.is_var term then []
+    else
+      let
+        val (head, arguments) = HolKernel.strip_comb term
+      in
+        if invertible_head head then
+          List.concat (map noninvertible_subterms arguments)
+        else [term]
+      end
+    handle HOL_ERR _ => [term]
+
+  fun possible_output known term =
+    let
+      (* HOL4 has no sort discipline that can certify equality on arbitrary
+         higher-order values.  In particular, an application [f x] has a
+         first-order result type but is still a higher-order output pattern
+         when the known free [f] has function type. *)
+      fun first_order_known variable =
+        not (member_term variable known) orelse
+        not (contains_function_type (Term.type_of variable))
+    in
+      List.all first_order_known (Term.free_vars_lr term) andalso
+      List.all (fn subterm =>
+        is_equality_type (Term.type_of subterm) andalso
+        null (missing_vars known subterm)) (noninvertible_subterms term)
+    end
+
+  fun destructable_vars term =
+    if Term.is_var term then [term]
+    else
+      let
+        val (head, arguments) = HolKernel.strip_comb term
+      in
+        if invertible_head head then
+          List.concat (map destructable_vars arguments)
+        else []
+      end
+    handle HOL_ERR _ => []
+
+  fun derive_argument known term (Pair (left_mode, right_mode)) =
+        (case Lib.total pairSyntax.dest_pair term of
+             SOME (left, right) =>
+               List.concat (map (fn (left_derivation, left_missing) =>
+                 map (fn (right_derivation, right_missing) =>
+                   (Mode_Pair (left_derivation, right_derivation),
+                    union_terms left_missing right_missing))
+                   (derive_argument known right right_mode))
+                 (derive_argument known left left_mode))
+           | NONE => derive_atomic known term
+               (Pair (left_mode, right_mode)))
+    | derive_argument known term mode = derive_atomic known term mode
+  and derive_atomic known term mode =
+    if eq_mode (mode, Input) then
+      [(Term_Mode Input, missing_vars known term)]
+    else if eq_mode (mode, Output) andalso possible_output known term then
+      [(Term_Mode Output, [])]
+    else
+      []
+
+  fun same_relation left right =
+    same_constant left right handle HOL_ERR _ => false
+
+  fun lookup_assoc relation entries =
+    Option.map #2 (List.find (fn (other, _) =>
+      same_relation relation other) entries)
+
+  fun premise_head premise =
+    let val (head, _) = HolKernel.strip_comb premise
+    in if Term.is_const head then SOME head else NONE end
+    handle HOL_ERR _ => NONE
+
+  fun direct_call premise =
+    not (boolSyntax.is_neg premise) andalso
+    case premise_head premise of SOME _ => true | NONE => false
+
+  fun modes_of table external relation =
+    case lookup_assoc relation table of
+        SOME modes => SOME modes
+      | NONE =>
+          (case lookup_assoc relation external of
+               SOME (Compiled {modes, ...}) => SOME modes
+             | _ => NONE)
+
+  fun functional_mode external relation mode =
+    case lookup_assoc relation external of
+        SOME (Compiled {functional, ...}) =>
+          List.exists (fn candidate => eq_mode (candidate, mode)) functional
+      | _ => false
+
+  fun derive_call table external known term =
+    let
+      val (head, arguments) = HolKernel.strip_comb term
+      val infos = Option.getOpt (modes_of table external head, [])
+      fun derive (predicate_mode, needs_generator) =
+        let
+          val argument_mode = strip_mode predicate_mode
+          fun step [] [] states = states
+            | step (argument :: arguments) (mode :: modes) states =
+                step arguments modes
+                  (List.concat (map (fn (derivation, missing) =>
+                    map (fn (argument_derivation, argument_missing) =>
+                      (Mode_App (derivation, argument_derivation),
+                       union_terms missing argument_missing))
+                      (derive_argument known argument mode)) states))
+            | step _ _ _ = []
+          val derivations = step arguments argument_mode
+            [(Context predicate_mode, [])]
+        in
+          map (fn (derivation, missing) =>
+            (derivation, missing, predicate_mode, needs_generator))
+            derivations
+        end
+    in
+      List.concat (map derive infos)
+    end
+    handle HOL_ERR _ => []
+
+  fun classify members external term =
+    if boolSyntax.is_neg term then Sidecond term
+    else
+      case premise_head term of
+          NONE => Sidecond term
+        | SOME head =>
+            if List.exists (same_relation head) members then Prem term
+            else
+              (case lookup_assoc head external of
+                   SOME (Compiled _) => Prem term
+                 | _ => Sidecond term)
+
+  fun is_recursive relation term =
+    case premise_head term of
+        SOME head => same_relation relation head
+      | NONE => false
+
+  fun term_of_premise (Prem term) = term
+    | term_of_premise (Sidecond term) = term
+    | term_of_premise (Generator term) = term
+
+  fun best_derivation relation table external known premise =
+    let
+      val term = term_of_premise premise
+      fun score derivation missing predicate_mode needs_generator =
+        {missing = length missing,
+         functional = functional_mode external
+           (Option.getOpt (premise_head term, term)) predicate_mode,
+         generator = needs_generator,
+         outputs = output_positions predicate_mode,
+         recursive = is_recursive relation term} : premise_score
+      val candidates =
+        case premise of
+            Prem term => map (fn (derivation, missing, mode, random) =>
+              (derivation, missing,
+               score derivation missing mode random))
+              (derive_call table external known term)
+          | Sidecond term =>
+              [(Context Bool, missing_vars known term,
+                {missing = length (missing_vars known term),
+                 functional = false, generator = false, outputs = 0,
+                 recursive = false})]
+          | Generator _ => []
+      fun least candidate NONE = SOME candidate
+        | least (candidate as (_, _, score))
+            (current as SOME (_, _, current_score)) =
+            if compare_score (score, current_score) = LESS then
+              SOME candidate
+            else current
+    in
+      List.foldl (fn (candidate, current) =>
+        least candidate current) NONE candidates
+    end
+
+  fun remove_index selected entries =
+    List.filter (fn (index, _) => index <> selected) entries
+
+  fun select_premise reorder relation table external known entries =
+    let
+      val candidates = if reorder then entries else [hd entries]
+      fun decorate (index, premise) =
+        Option.map (fn (derivation, missing, score) =>
+          (index, premise, derivation, missing, score))
+          (best_derivation relation table external known premise)
+      fun least NONE current = current
+        | least candidate NONE = candidate
+        | least (candidate as SOME (_, _, _, _, score))
+            (current as SOME (_, _, _, _, current_score)) =
+            if compare_score (score, current_score) = LESS then
+              candidate
+            else current
+    in
+      List.foldl (fn (entry, result) => least (decorate entry) result)
+        NONE candidates
+    end
+
+  fun split_arguments mode arguments =
+    let
+      fun combine NONE NONE = NONE
+        | combine (SOME term) NONE = SOME term
+        | combine NONE (SOME term) = SOME term
+        | combine (SOME left) (SOME right) =
+            SOME (pairSyntax.mk_pair (left, right))
+      fun split_argument (Pair (left_mode, right_mode)) term =
+            (case Lib.total pairSyntax.dest_pair term of
+                 SOME (left, right) =>
+                   let
+                     val (left_input, left_output) =
+                       split_argument left_mode left
+                     val (right_input, right_output) =
+                       split_argument right_mode right
+                   in
+                     (combine left_input right_input,
+                      combine left_output right_output)
+                   end
+               | NONE => split_atomic
+                   (Pair (left_mode, right_mode)) term)
+        | split_argument argument_mode term =
+            split_atomic argument_mode term
+      and split_atomic argument_mode term =
+        if eq_mode (argument_mode, Input) then (SOME term, NONE)
+        else if eq_mode (argument_mode, Output) then (NONE, SOME term)
+        else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
+          "split_arguments" "argument mode does not match term"
+      fun split [] [] inputs outputs = (rev inputs, rev outputs)
+        | split (argument_mode :: modes) (term :: terms) inputs outputs =
+            let
+              val (input, output) = split_argument argument_mode term
+              val inputs = case input of SOME value => value :: inputs
+                                       | NONE => inputs
+              val outputs = case output of SOME value => value :: outputs
+                                         | NONE => outputs
+            in
+              split modes terms inputs outputs
+            end
+        | split _ _ _ _ =
+            raise Feedback.mk_HOL_ERR "Refute_SmartGen"
+              "split_arguments" "mode arity mismatch"
+    in
+      split (strip_mode mode) arguments [] []
+    end
+
+  fun check_clause reorder members external table relation mode
+        ({side, main, head = conclusion,
+          ordered = raw_premises} : inference_clause) =
+    let
+      val (head, arguments) = HolKernel.strip_comb conclusion
+      val _ = if same_relation head relation then ()
+        else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
+          "check_clause" "clause belongs to another relation"
+      val _ = if same_term_multiset raw_premises (main @ side) then ()
+        else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
+          "check_clause" "ordered premises do not match clause partition"
+      val (inputs, outputs) = split_arguments mode arguments
+      val initial = union_terms []
+        (List.concat (map destructable_vars inputs))
+      val premises = map (classify members external) raw_premises
+      val indexed = ListPair.zip
+        (List.tabulate (length premises, fn index => index), premises)
+      fun process known result generated [] =
+            SOME (known, result, generated)
+        | process known result generated remaining =
+            (case select_premise reorder relation table external known
+                    remaining of
+                 NONE => NONE
+               | SOME (index, premise, derivation, missing, _) =>
+                   let
+                     val generators = rev (map (fn variable =>
+                       (Generator variable, Term_Mode Output)) missing)
+                     val known' = union_terms known missing
+                     val known'' = union_terms known'
+                       (Term.free_vars_lr (term_of_premise premise))
+                   in
+                     process known''
+                       (result @ generators @ [(premise, derivation)])
+                       (generated orelse not (null missing))
+                       (remove_index index remaining)
+                   end)
+    in
+      case process initial [] false indexed of
+          NONE => NONE
+        | SOME (known, premises, generated) =>
+            let
+              val head_variables = union_terms []
+                (List.concat (map Term.free_vars_lr (inputs @ outputs)))
+              val missing = List.filter (fn variable =>
+                not (member_term variable known)) head_variables
+              val trailing = rev (map (fn variable =>
+                (Generator variable, Term_Mode Output)) missing)
+            in
+              SOME {arguments = arguments,
+                    premises = premises @ trailing,
+                    needs_generator = generated orelse
+                      not (null missing)}
+            end
+    end
+    handle HOL_ERR _ => NONE
+
+  fun clauses_for relation clauses =
+    List.filter (fn ({head = conclusion, ...} : inference_clause) =>
+      case premise_head conclusion of
+          SOME head => same_relation relation head
+        | NONE => false) clauses
+
+  fun check_relation reorder members external clauses table relation
+        modes =
+    let
+      val clauses = clauses_for relation clauses
+      fun check (mode, _) =
+        let
+          val results = map (check_clause reorder members external table
+            relation mode) clauses
+        in
+          if not (null clauses) andalso List.all Option.isSome results then
+            let
+              val checked = List.mapPartial (fn value => value) results
+              val needs = List.exists #needs_generator checked
+            in
+              SOME (mode, needs)
+            end
+          else NONE
+        end
+    in
+      List.mapPartial check modes
+    end
+
+  fun same_mode_infos left right =
+    length left = length right andalso
+    ListPair.allEq (fn ((left_mode, left_random),
+                        (right_mode, right_random)) =>
+      eq_mode (left_mode, right_mode) andalso
+      left_random = right_random) (left, right)
+
+  fun same_mode_table left right =
+    length left = length right andalso
+    ListPair.allEq (fn ((left_relation, left_modes),
+                        (right_relation, right_modes)) =>
+      same_relation left_relation right_relation andalso
+      same_mode_infos left_modes right_modes) (left, right)
+
+  fun infer_clauses
+        {members, clauses, external, reorder_premises} : inference_result =
+    let
+      val higher_order = List.filter (null o all_modes_for) members
+      fun cross_reference term =
+        case premise_head term of
+            SOME head =>
+              (case lookup_assoc head external of
+                   SOME Uncompiled => SOME head
+                 | _ => NONE)
+          | NONE => NONE
+      val cross = List.mapPartial cross_reference
+        (List.concat (map (fn ({ordered, ...} : inference_clause) =>
+          ordered) clauses))
+      fun distinct_relations relations =
+        List.foldl (fn (relation, result) =>
+          if List.exists (same_relation relation) result then result
+          else result @ [relation]) [] relations
+      val degradation =
+        map HigherOrderParameters higher_order @
+        map CrossGroupReference (distinct_relations cross)
+      val start = map (fn relation =>
+        (relation, map (fn mode => (mode, false))
+          (all_modes_for relation))) members
+      fun iteration table = map (fn (relation, modes) =>
+        (relation, check_relation reorder_premises members external
+          clauses table relation modes)) table
+      fun fixpoint table =
+        let val next = iteration table
+        in if same_mode_table table next then table else fixpoint next end
+      val stable =
+        if null higher_order then fixpoint start
+        else map (fn relation => (relation, [])) members
+      fun materialize (relation, modes) =
+        let
+          val clauses = clauses_for relation clauses
+          fun one (mode, needs) =
+            let
+              val checked = List.mapPartial
+                (check_clause reorder_premises members external stable
+                  relation mode) clauses
+            in
+              (mode, checked, needs)
+            end
+        in
+          {relation = relation, modes = map one modes} : relation_modes
+        end
+    in
+      {relations = map materialize stable, degradation = degradation}
+    end
+
+  fun infer_group
+        {members, clauses, external, reorder_premises} : inference_result =
+    infer_clauses
+      {members = members, clauses = clauses, external = external,
+       reorder_premises = reorder_premises}
+
+  fun source_premises rule =
+    let
+      val (_, body) = boolSyntax.strip_forall rule
+      val (raw_premises, _) = boolSyntax.strip_imp body
+    in
+      List.concat (map boolSyntax.strip_conj raw_premises)
+    end
+
+  fun clause_for_rule triple_for members rule =
+    case triple_for members rule of
+        SOME triple =>
+          inference_clause_of_triple (source_premises rule) triple
+      | NONE => NONE
+
+  (* [triple_for] is normally
+     [Refute_ModelFinder_HOL.joint_intro_triple_for].  Keeping it as an
+     argument preserves SmartGen's independence from the model finder while
+     ensuring that one shared SCC and its cross-member calls are inferred in
+     a single decreasing fixpoint. *)
+  fun infer_scc
+        {members, rules, triple_for, external, reorder_premises} =
+    let
+      val clauses = List.mapPartial
+        (clause_for_rule triple_for members) rules
+    in
+      if length clauses = length rules then
+        SOME (infer_clauses
+          {members = members, clauses = clauses, external = external,
+           reorder_premises = reorder_premises})
+      else NONE
+    end
 end

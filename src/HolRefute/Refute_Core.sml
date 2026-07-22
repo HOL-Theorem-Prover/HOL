@@ -67,7 +67,8 @@ structure Refute_Core = struct
       seed : int option,
       certify : bool,
       smart_quantifier : bool,
-      optimise_equality : bool }
+      optimise_equality : bool,
+      reorder_premises : bool }
 
   type mf_config =
     { card : (hol_type option * int list) list,
@@ -161,7 +162,8 @@ structure Refute_Core = struct
       seed = NONE,
       certify = true,
       smart_quantifier = true,
-      optimise_equality = true }
+      optimise_equality = true,
+      reorder_premises = true }
 
   val default_mf_config : mf_config =
     { card = [(NONE, List.tabulate (10, fn n => n + 1))],
@@ -287,6 +289,7 @@ structure Refute_Core = struct
     | QcCertify of bool
     | QcSmartQuantifier of bool
     | QcOptimiseEquality of bool
+    | QcReorderPremises of bool
 
   fun change_qc update (qc : qc_config) =
     { size = (case update of QcSize value => value | _ => #size qc),
@@ -311,7 +314,9 @@ structure Refute_Core = struct
       smart_quantifier = (case update of QcSmartQuantifier value => value
                           | _ => #smart_quantifier qc),
       optimise_equality = (case update of QcOptimiseEquality value => value
-                           | _ => #optimise_equality qc) }
+                           | _ => #optimise_equality qc),
+      reorder_premises = (case update of QcReorderPremises value => value
+                          | _ => #reorder_premises qc) }
 
   fun update_qc update = map_qc (change_qc update)
 
@@ -329,6 +334,7 @@ structure Refute_Core = struct
   fun upd_certify value = update_qc (QcCertify value)
   fun upd_smart_quantifier value = update_qc (QcSmartQuantifier value)
   fun upd_optimise_equality value = update_qc (QcOptimiseEquality value)
+  fun upd_reorder_premises value = update_qc (QcReorderPremises value)
 
   fun range_error field explanation =
     raise Feedback.mk_HOL_ERR "Refute_Core" "validate_mf_config"
@@ -882,6 +888,8 @@ structure Refute_Core = struct
             Bool.toString (#smart_quantifier q) ^ "\n",
           "optimise_equality = " ^
             Bool.toString (#optimise_equality q) ^ "\n",
+          "reorder_premises = " ^
+            Bool.toString (#reorder_premises q) ^ "\n",
           "mf.card = " ^ type_ints (#card m) ^ "\n",
           "mf.max = " ^ term_ints (#max m) ^ "\n",
           "mf.mono = " ^ type_bools (#mono m) ^ "\n",

@@ -149,6 +149,7 @@ structure Refute :> Refute = struct
   val upd_certify = Refute_Core.upd_certify
   val upd_smart_quantifier = Refute_Core.upd_smart_quantifier
   val upd_optimise_equality = Refute_Core.upd_optimise_equality
+  val upd_reorder_premises = Refute_Core.upd_reorder_premises
   val upd_mf = Refute_Core.upd_mf
   val upd_card = Refute_Core.upd_card
   val upd_max = Refute_Core.upd_max

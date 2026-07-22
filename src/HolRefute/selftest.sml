@@ -727,9 +727,466 @@ val _ = require_msg (check_result (fn () =>
   (fn () => "non-Horn MEM equations were accepted or not cached")
   (fn () => ()) ()
 
-val _ = tprint "Refute model-finder HOL tables"
-
 structure MFH = Refute_ModelFinder_HOL
+
+val _ = tprint "Refute SmartGen mode inference"
+
+fun sg_relation_result relation
+      ({relations, ...} : SG.inference_result) =
+  List.find (fn ({relation = candidate, ...} : SG.relation_modes) =>
+    SG.same_constant relation candidate) relations
+
+fun sg_mode_result mode ({modes, ...} : SG.relation_modes) =
+  List.find (fn (candidate, _, _) => SG.eq_mode (candidate, mode)) modes
+
+fun sg_clause triple ordered =
+  valOf (SG.inference_clause_of_triple ordered triple)
+
+fun sg_infer_hol_reln relation reorder =
+  let
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val {members, rules, ...} =
+      valOf (MFH.instantiated_fixpoint_group context relation)
+  in
+    valOf (SG.infer_scc
+      {members = members, rules = rules,
+       triple_for = MFH.joint_intro_triple_for, external = [],
+       reorder_premises = reorder})
+  end
+
+fun sg_generator_count premises =
+  length (List.filter (fn (SG.Generator _, _) => true | _ => false)
+    premises)
+
+fun smartgen_linear_modes () =
+  let
+    val relation = ``zoo_sg_linear : num -> bool``
+    val result = sg_infer_hol_reln relation true
+    val modes = valOf (sg_relation_result relation result)
+    val input = SG.list_mode [SG.Input]
+    val output = SG.list_mode [SG.Output]
+  in
+    case (sg_mode_result input modes, sg_mode_result output modes) of
+        (SOME (_, input_clauses, false),
+         SOME (_, output_clauses, false)) =>
+          length input_clauses = 2 andalso length output_clauses = 2
+      | _ => false
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_linear_modes)
+  (fn () => "linear Hol_reln modes were not inferred by fixpoint")
+  (fn () => ()) ()
+
+fun smartgen_mutual_modes () =
+  let
+    val even = ``zoo_sg_even : num -> bool``
+    val odd = ``zoo_sg_odd : num -> bool``
+    val result = sg_infer_hol_reln even true
+    val even_modes = valOf (sg_relation_result even result)
+    val odd_modes = valOf (sg_relation_result odd result)
+    val output = SG.list_mode [SG.Output]
+  in
+    length (#relations result) = 2 andalso
+    Option.isSome (sg_mode_result output even_modes) andalso
+    Option.isSome (sg_mode_result output odd_modes)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_mutual_modes)
+  (fn () => "mutual Hol_reln SCC was not inferred jointly")
+  (fn () => ()) ()
+
+fun smartgen_generator_insertion () =
+  let
+    val relation = ``zoo_sg_fresh : num -> num -> bool``
+    val result = sg_infer_hol_reln relation true
+    val relation_modes = valOf (sg_relation_result relation result)
+    val mode = SG.list_mode [SG.Output, SG.Output]
+  in
+    case sg_mode_result mode relation_modes of
+        SOME (_, [{premises, needs_generator, ...}], true) =>
+          needs_generator andalso sg_generator_count premises = 2 andalso
+          (case premises of
+               (SG.Generator _, _) :: (SG.Sidecond _, _) ::
+                   (SG.Generator _, _) :: [] => true
+             | _ => false)
+      | _ => false
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_generator_insertion)
+  (fn () => "missing premise/head variables did not get Generators")
+  (fn () => ()) ()
+
+fun smartgen_generator_order () =
+  let
+    val relation = ``$< : num -> num -> bool``
+    val x = ``x : num``
+    val y = ``y : num``
+    val equality = ``(x : num) = y``
+    val triple : SG.intro_triple =
+      {variables = [x, y], main = [], side = [equality],
+       conclusion = ``(x : num) < y``}
+    val clause = sg_clause triple [equality]
+    val result = SG.infer_group
+      {members = [relation], clauses = [clause], external = [],
+       reorder_premises = true}
+    val relation_modes = valOf (sg_relation_result relation result)
+    val mode = SG.list_mode [SG.Output, SG.Output]
+  in
+    case sg_mode_result mode relation_modes of
+        SOME (_, [{premises =
+          (SG.Generator first, _) :: (SG.Generator second, _) ::
+            (SG.Sidecond _, _) :: [], ...}], true) =>
+          same_term_list [first, second]
+            (rev (Term.free_vars_lr equality))
+      | _ => false
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_generator_order)
+  (fn () => "Generator insertion did not preserve upstream variable order")
+  (fn () => ()) ()
+
+fun smartgen_higher_order_degrades () =
+  let
+    val relation =
+      ``zoo_sg_higher_order : (num -> bool) -> num -> bool``
+    val result = sg_infer_hol_reln relation true
+    val relation_modes = valOf (sg_relation_result relation result)
+  in
+    null (#modes relation_modes) andalso
+    List.exists (fn SG.HigherOrderParameters candidate =>
+      SG.same_constant relation candidate | _ => false)
+      (#degradation result)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_higher_order_degrades)
+  (fn () => "higher-order relation parameter did not degrade")
+  (fn () => ()) ()
+
+fun smartgen_reordering_flag () =
+  let
+    val relation = ``$< : num -> num -> bool``
+    val x = ``x : num``
+    val y = ``y : num``
+    val ordered = [``MEM (y : num) [x]``, ``(x : num) = 0``]
+    val triple : SG.intro_triple =
+      {variables = [x, y], main = [], side = ordered,
+       conclusion = ``(x : num) < y``}
+    val clause = sg_clause triple ordered
+    fun premises reorder =
+      let
+        val result = SG.infer_group
+          {members = [relation], clauses = [clause], external = [],
+           reorder_premises = reorder}
+        val relation_modes = valOf (sg_relation_result relation result)
+        val mode = SG.list_mode [SG.Input, SG.Output]
+      in
+        case sg_mode_result mode relation_modes of
+            SOME (_, [{premises, ...}], _) => premises
+          | _ => raise Fail "missing synthetic mode"
+      end
+    val reordered = premises
+      (#reorder_premises (#qc Refute.default_config))
+    val original = premises (#reorder_premises (#qc
+      (Refute.upd_reorder_premises false Refute.default_config)))
+  in
+    (case reordered of
+         (SG.Sidecond _, _) :: (SG.Generator _, _) ::
+             (SG.Sidecond _, _) :: [] => true
+       | _ => false) andalso
+    (case original of
+         (SG.Generator _, _) :: (SG.Sidecond _, _) ::
+             (SG.Sidecond _, _) :: [] => true
+       | _ => false)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+       | Fail _ => false
+
+val _ = require_msg (check_result smartgen_reordering_flag)
+  (fn () => "premise reordering or its false escape hatch was ignored")
+  (fn () => ()) ()
+
+fun interleaved_premises premises =
+  let
+    fun drop_generators ((SG.Generator _, _) :: rest) =
+          drop_generators rest
+      | drop_generators rest = rest
+  in
+    case drop_generators premises of
+        (SG.Sidecond _, _) :: (SG.Prem _, _) ::
+            (SG.Sidecond _, _) :: [] => true
+      | _ => false
+  end
+
+fun smartgen_horn_source_order () =
+  let
+    val relation = all_distinct_const
+    val clauses = valOf (SG.recognize_horn_clauses relation
+      [``ALL_DISTINCT ([] : num list) = T``,
+       ``ALL_DISTINCT (h :: t : num list) =
+           ((h = h) /\ ALL_DISTINCT t /\ (MEM h t = F))``])
+    val result = SG.infer_group
+      {members = [relation], clauses = clauses, external = [],
+       reorder_premises = false}
+    val relation_modes = valOf (sg_relation_result relation result)
+    val mode = SG.list_mode [SG.Input]
+  in
+    case sg_mode_result mode relation_modes of
+        SOME (_, [_, {premises, ...}], _) =>
+          interleaved_premises premises
+      | _ => false
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_horn_source_order)
+  (fn () => "Horn premise interleaving was replaced by main @ side")
+  (fn () => ()) ()
+
+fun sg_premise_shape premises =
+  map (fn (SG.Prem _, _) => "M"
+        | (SG.Sidecond _, _) => "S"
+        | (SG.Generator _, _) => "G") premises
+
+fun smartgen_duplicate_horn_orders () =
+  let
+    val relation = all_distinct_const
+    val equations =
+      [``ALL_DISTINCT ([] : num list) = T``,
+       ``ALL_DISTINCT (h :: t : num list) =
+           ((h = h) /\ ALL_DISTINCT t /\ (MEM h t = F))``,
+       ``ALL_DISTINCT (h :: t : num list) =
+           ((h = h) /\ (MEM h t = F) /\ ALL_DISTINCT t)``]
+    val triples = valOf (SG.recognize_horn_equations relation equations)
+    val clauses = valOf (SG.recognize_horn_clauses relation equations)
+    val first = List.nth (triples, 1)
+    val second = List.nth (triples, 2)
+    val same_partition =
+      same_term_list (#side first) (#side second) andalso
+      same_term_list (#main first) (#main second) andalso
+      Term.aconv (#conclusion first) (#conclusion second)
+    val result = SG.infer_group
+      {members = [relation], clauses = clauses, external = [],
+       reorder_premises = false}
+    val relation_modes = valOf (sg_relation_result relation result)
+    val mode = SG.list_mode [SG.Input]
+  in
+    same_partition andalso
+    case sg_mode_result mode relation_modes of
+        SOME (_, [_, first_clause, second_clause], _) =>
+          sg_premise_shape (#premises first_clause) = ["S", "M", "S"]
+          andalso
+          sg_premise_shape (#premises second_clause) = ["S", "S", "M"]
+      | _ => false
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+       | Subscript => false
+
+val _ = require_msg (check_result smartgen_duplicate_horn_orders)
+  (fn () =>
+    "duplicate partition-identical Horn clauses shared premise order")
+  (fn () => ()) ()
+
+fun smartgen_hol_reln_source_order () =
+  let
+    val relation = ``zoo_sg_even : num -> bool``
+    val result = sg_infer_hol_reln relation false
+    val relation_modes = valOf (sg_relation_result relation result)
+    val mode = SG.list_mode [SG.Output]
+  in
+    case sg_mode_result mode relation_modes of
+        SOME (_, [_, {premises, ...}], _) =>
+          interleaved_premises premises
+      | _ => false
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_hol_reln_source_order)
+  (fn () =>
+    "mutual Hol_reln premise interleaving was replaced by main @ side")
+  (fn () => ()) ()
+
+fun smartgen_alpha_renamed_hol_reln_orders () =
+  let
+    val relation = ``zoo_sg_ordered : num -> num -> bool``
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val {members, rules, ...} =
+      valOf (MFH.instantiated_fixpoint_group context relation)
+    val triples = List.mapPartial
+      (MFH.joint_intro_triple_for members) rules
+    fun closed_partition
+          ({variables, side, main, conclusion} : MFH.intro_triple) =
+      boolSyntax.list_mk_forall
+        (variables, boolSyntax.list_mk_imp (main @ side, conclusion))
+    val alpha_partition =
+      case triples of
+          [first, second] =>
+            Term.aconv (closed_partition first) (closed_partition second)
+        | _ => false
+    val result = valOf (SG.infer_scc
+      {members = members, rules = rules,
+       triple_for = MFH.joint_intro_triple_for, external = [],
+       reorder_premises = false})
+    val relation_modes = valOf (sg_relation_result relation result)
+    val mode = SG.list_mode [SG.Input, SG.Input]
+  in
+    alpha_partition andalso
+    case sg_mode_result mode relation_modes of
+        SOME (_, [first_clause, second_clause], _) =>
+          sg_premise_shape (#premises first_clause) = ["S", "M", "S"]
+          andalso
+          sg_premise_shape (#premises second_clause) = ["S", "S", "M"]
+      | _ => false
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg
+  (check_result smartgen_alpha_renamed_hol_reln_orders)
+  (fn () =>
+    "alpha-renamed Hol_reln clauses shared partition-derived order")
+  (fn () => ()) ()
+
+fun smartgen_goal_clause_source_order () =
+  let
+    val relation = ``$< : num -> num -> bool``
+    val rule =
+      ``!x y : num. x = x ==> x < y ==> y = y ==> x < y``
+    val result = valOf (SG.infer_scc
+      {members = [relation], rules = [rule],
+       triple_for = MFH.joint_intro_triple_for, external = [],
+       reorder_premises = false})
+    val relation_modes = valOf (sg_relation_result relation result)
+    val mode = SG.list_mode [SG.Input, SG.Input]
+  in
+    case sg_mode_result mode relation_modes of
+        SOME (_, [{premises, ...}], _) =>
+          interleaved_premises premises
+      | _ => false
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_goal_clause_source_order)
+  (fn () =>
+    "goal-level clause premise interleaving was replaced by main @ side")
+  (fn () => ()) ()
+
+fun smartgen_five_criteria () =
+  let
+    fun score missing functional generator outputs recursive :
+          SG.premise_score =
+      {missing = missing, functional = functional,
+       generator = generator, outputs = outputs, recursive = recursive}
+    fun preferred left right = SG.compare_score (left, right) = LESS
+  in
+    preferred (score 0 false true 3 false)
+      (score 1 true false 0 true) andalso
+    preferred (score 0 true true 3 false)
+      (score 0 false false 0 true) andalso
+    preferred (score 0 false false 3 false)
+      (score 0 false true 0 true) andalso
+    preferred (score 0 false false 0 false)
+      (score 0 false false 1 true) andalso
+    preferred (score 0 false false 0 true)
+      (score 0 false false 0 false)
+  end
+
+val _ = require_msg (check_result smartgen_five_criteria)
+  (fn () => "five-criterion premise ordering is not lexicographic")
+  (fn () => ()) ()
+
+fun smartgen_first_order_scope () =
+  let
+    val pair_modes = SG.argument_modes ``:num # bool``
+    val current = [``zoo_sg_linear : num -> bool``]
+  in
+    length pair_modes = 4 andalso
+    null (SG.all_modes_for
+      ``zoo_sg_higher_order : (num -> bool) -> num -> bool``) andalso
+    (case SG.classify current [] ``~zoo_sg_linear (x : num)`` of
+         SG.Sidecond _ => true
+       | _ => false)
+  end
+
+val _ = require_msg (check_result smartgen_first_order_scope)
+  (fn () => "tuple modes or positive-only negation scope was violated")
+  (fn () => ()) ()
+
+fun smartgen_possible_output_scope () =
+  let
+    val f = ``f : num -> num``
+    val x = ``x : num``
+    val pair = ``p : (num -> num) # bool``
+  in
+    SG.possible_output [x] ``SUC x`` andalso
+    not (SG.possible_output [f, x] ``f x``) andalso
+    null (SG.derive_argument [f, x] ``f x`` SG.Output) andalso
+    not (SG.possible_output [pair, x] ``(FST p) x``)
+  end
+
+val _ = require_msg (check_result smartgen_possible_output_scope)
+  (fn () => "higher-order known frees were accepted as possible outputs")
+  (fn () => ()) ()
+
+fun smartgen_cross_group_behavior () =
+  let
+    val relation = ``$< : num -> num -> bool``
+    val dependency = ``zoo_sg_linear : num -> bool``
+    val x = ``x : num``
+    val y = ``y : num``
+    val ordered = [``zoo_sg_linear y``]
+    val triple : SG.intro_triple =
+      {variables = [x, y], main = [], side = ordered,
+       conclusion = ``(x : num) < y``}
+    val clause = sg_clause triple ordered
+    val dependency_result = sg_infer_hol_reln dependency true
+    val dependency_modes = valOf
+      (sg_relation_result dependency dependency_result)
+    val exported = map (fn (mode, _, random) => (mode, random))
+      (#modes dependency_modes)
+    fun infer status = SG.infer_group
+      {members = [relation], clauses = [clause],
+       external = [(dependency, status)], reorder_premises = true}
+    val compiled = infer (SG.Compiled
+      {modes = exported, functional = []})
+    val degraded = infer SG.Uncompiled
+    val mode = SG.list_mode [SG.Input, SG.Output]
+    fun generators result =
+      let
+        val relation_modes = valOf (sg_relation_result relation result)
+      in
+        case sg_mode_result mode relation_modes of
+            SOME (_, [{premises, ...}], _) =>
+              sg_generator_count premises
+          | _ => ~1
+      end
+  in
+    generators compiled = 0 andalso generators degraded = 1 andalso
+    List.exists (fn SG.CrossGroupReference candidate =>
+      SG.same_constant dependency candidate | _ => false)
+      (#degradation degraded)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_cross_group_behavior)
+  (fn () => "cross-group modes were not reused or degraded to a guard")
+  (fn () => ()) ()
+
+val _ = tprint "Refute model-finder HOL tables"
 
 fun with_codatatype_registry_restored body =
   let
@@ -8384,6 +8841,7 @@ fun size_update_is_local () =
     #certify after = #certify original andalso
     #smart_quantifier after = #smart_quantifier original andalso
     #optimise_equality after = #optimise_equality original andalso
+    #reorder_premises after = #reorder_premises original andalso
     Real.== (#timeout updated, #timeout default_config) andalso
     #backends updated = #backends default_config andalso
     #sequential updated = #sequential default_config andalso
@@ -8405,20 +8863,25 @@ fun certify_and_quiet_defaults_are_pinned () =
   let
     val uncertified = Refute.upd_certify false Refute.default_config
     val silent = Refute.upd_quiet true Refute.default_config
+    val ordered =
+      Refute.upd_reorder_premises false Refute.default_config
   in
     #certify (#qc default_config) andalso
+    #reorder_premises (#qc default_config) andalso
     not (#quiet default_config) andalso
     not (#certify (#qc uncertified)) andalso
+    not (#reorder_premises (#qc ordered)) andalso
     #quiet silent andalso
     #qc silent = #qc default_config andalso
     #quiet uncertified = #quiet default_config andalso
+    same_mf (#mf ordered) (#mf default_config) andalso
     same_mf (#mf uncertified) (#mf default_config) andalso
     same_mf (#mf silent) (#mf default_config)
   end
 
 val _ = require_msg
   (check_result certify_and_quiet_defaults_are_pinned) (fn () =>
-  "certify/quiet defaults or public updaters changed unrelated fields")
+  "certify/quiet/reordering defaults or updaters changed unrelated fields")
   (fn () => ()) ()
 
 fun config_surface_snapshot () =
@@ -8456,6 +8919,7 @@ fun config_surface_snapshot () =
        "certify = false\n",
        "smart_quantifier = true\n",
        "optimise_equality = true\n",
+       "reorder_premises = true\n",
        "mf.card = [NONE => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]\n",
        "mf.max = [NONE => [~1]]\n",
        "mf.mono = [NONE => NONE]\n",

@@ -111,6 +111,7 @@ signature Refute = sig
   val upd_certify : bool -> config -> config
   val upd_smart_quantifier : bool -> config -> config
   val upd_optimise_equality : bool -> config -> config
+  val upd_reorder_premises : bool -> config -> config
   val upd_mf : mf_config -> config -> config
   val upd_card : (hol_type option * int list) list -> config -> config
   val upd_max : (term option * int list) list -> config -> config
