@@ -840,13 +840,34 @@ fun start {diag} = let
           case NameSpace.Values.print (value, printDepth) of
             PrettyString "" => NONE
           | otherwise => SOME otherwise
-      val out = case (id, ty, value) of
-          (_, NONE, NONE) => []
-        | (NONE, SOME ty, NONE) => [typeHover (loc, ty)]
-        | (SOME id, SOME ty, NONE) =>
+      (* Values of type `thm` are opaque to PolyML.NameSpace.Values;
+         the SML-side hover would show only "val name: thm = ?".
+         When DB has a theorem by this name, replace the standard
+         value-print with the theorem statement (rendered by
+         Parse.thm_to_string on the LSP-init hook). *)
+      val thmMd = case id of
+          NONE => NONE
+        | SOME id => (!LSPExtension.thmLookup id handle _ => NONE)
+      val out = case (id, ty, value, thmMd) of
+          (_, NONE, NONE, _) => []
+        | (NONE, SOME ty, NONE, _) => [typeHover (loc, ty)]
+        | (SOME id, SOME ty, _, SOME md) => let
+          (* Theorem: "val id: thm\n\n<statement>" as one markdown block.
+             ppToString may leave a trailing newline; strip it before
+             appending the separator so we get exactly one blank line. *)
+          fun rtrim s = let
+            val n = size s
+            fun k i = if i > 0 andalso Char.contains "\n\r " (String.sub (s, i-1))
+                      then k (i-1) else i
+            in String.substring (s, 0, k n) end
+          in [{range = SOME (locToRange loc),
+               markdown = "val " ^ id ^ ": " ^ rtrim (ppToString ty)
+                          ^ "\n\n" ^ md}]
+          end
+        | (SOME id, SOME ty, NONE, NONE) =>
           [typeHover (loc, PrettyBlock(0, true, [],
             [PrettyString ("val " ^ id ^ ":"), PrettyBreak(1, 2), ty]))]
-        | (id, ty, SOME value) =>
+        | (id, ty, SOME value, NONE) =>
           [typeHover (loc, PrettyBlock(2, true, [], [
             PrettyBlock(0, false, [],
               (case ty of
@@ -856,6 +877,7 @@ fun start {diag} = let
                   PrettyBreak(1, 2), ty])
               @ [PrettyBreak(1, 2), PrettyString "="]),
              PrettyBreak(1, 0), value]))]
+        | _ => []
       in thyHov @ help @ out end
     fun fromTree NONE = []
       | fromTree (pt as (SOME (HOL_IDE.Built ((s, e), props, _), _))) =

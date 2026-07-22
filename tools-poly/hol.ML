@@ -620,6 +620,57 @@ in
                       (read, [PolyML.Compiler.CPErrorMessageProc err]) ();
                     runall ())
         in runall () end;
+        (* Wire LSPExtension.thmLookup to DB + Parse so the hover
+           handler can render a theorem's statement when the cursor
+           lands on an SML identifier of type thm.  Handles bare names
+           (searched across loaded DB) and dotted references like
+           arithmeticTheory.ADD_COMM (with the -Theory suffix stripped
+           for DB.fetch). *)
+        let val s =
+              "LSPExtension.thmLookup := (fn id => \
+              \  let \
+              \    fun findLast i c = \
+              \      if i < 0 then ~1 \
+              \      else if String.sub (id, i) = c then i \
+              \      else findLast (i - 1) c \
+              \    val dot = findLast (String.size id - 1) #\".\" \
+              \    fun matchExact name = \
+              \      List.mapPartial \
+              \        (fn ((_, n), (th, _)) => \
+              \           if n = name then SOME th else NONE) \
+              \        (DB.find_all name) \
+              \    val thm_opt = \
+              \      if dot < 0 then \
+              \        (case matchExact id of th :: _ => SOME th | [] => NONE) \
+              \      else \
+              \        let val prefix = String.substring (id, 0, dot) \
+              \            val name = String.extract (id, dot + 1, NONE) \
+              \            val thy = \
+              \              if String.isSuffix \"Theory\" prefix \
+              \              then String.substring \
+              \                     (prefix, 0, String.size prefix - 6) \
+              \              else prefix \
+              \        in SOME (DB.fetch thy name) handle _ => \
+              \          (case matchExact name of \
+              \             th :: _ => SOME th | [] => NONE) \
+              \        end \
+              \  in Option.map Parse.thm_to_string thm_opt end \
+              \  handle _ => NONE)"
+            val i = ref 0
+            fun read () = (SOME (String.sub (s, !i)) before i := !i + 1)
+                          handle Subscript => NONE
+            fun err {message, hard, ...} =
+              (TextIO.output (TextIO.stdErr,
+                 "[LSP-init] " ^ (if hard then "ERROR" else "warning") ^ ": ");
+               PolyML.prettyPrint (fn s => TextIO.output (TextIO.stdErr, s), 80) message;
+               TextIO.output (TextIO.stdErr, "\n");
+               TextIO.flushOut TextIO.stdErr)
+            fun runall () =
+              if !i >= String.size s then ()
+              else (PolyML.compiler
+                      (read, [PolyML.Compiler.CPErrorMessageProc err]) ();
+                    runall ())
+        in runall () end;
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;

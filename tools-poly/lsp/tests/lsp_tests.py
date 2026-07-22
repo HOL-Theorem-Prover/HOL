@@ -507,6 +507,42 @@ def test_diagnostic_dedup():
 # ------------------------------------------------------------------
 # Runner
 # ------------------------------------------------------------------
+def test_thm_hover_shows_statement():
+    """Hover on an SML identifier of type thm should render the
+    theorem statement (⊢ ...) alongside the SML type."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/thm_hover_stmt.sml"
+        src = ("Theory thm_hover_stmt\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem plus_zero:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  ALL_TAC\n"
+               "QED\n\n"
+               "val myThm = plus_zero\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        c.send({"jsonrpc":"2.0","id":42,"method":"textDocument/hover",
+                "params":{"textDocument":{"uri":uri},
+                          "position":{"line":9,"character":14}}})
+        def got(cl):
+            with cl.msgs_lock:
+                for m in cl.msgs:
+                    if m.get("id") == 42: return m
+            return None
+        reply = c.wait_until(got, 5)
+        assert_true(reply is not None, "hover reply arrived")
+        md = reply["result"]["contents"]["value"]
+        assert_true("thm" in md, f"markdown mentions thm type ({md!r})")
+        assert_true("n + 0 = n" in md or "⊢" in md,
+                    f"markdown includes theorem statement ({md!r})")
+    finally:
+        c.close()
+
+
 def test_cheat_proofs_installed():
     """LSP session installs a set_prover thunk that returns
     mk_oracle_thm for any goal, so tactic bodies never run.  A goal
@@ -571,6 +607,7 @@ TESTS = [
     ("diagnostic_dedup",             test_diagnostic_dedup),
     ("workdone_progress",            test_workdone_progress),
     ("cheat_proofs_installed",       test_cheat_proofs_installed),
+    ("thm_hover_shows_statement",    test_thm_hover_shows_statement),
 ]
 
 
