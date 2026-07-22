@@ -1,12 +1,19 @@
 structure Refute_Eval :> Refute_Eval = struct
   type term = Term.term
 
+  type mode = Refute_SmartGen.mode
+  type program_version = Refute_SmartGen.program_version
+
   datatype plan =
       Test of term
     | Gen of term * plan
     | Bind of term * term * plan option * plan
     | Split of term * (term * term list * plan) list
     | Guard of term * plan
+    | SmartGuard of {predicate : term, version : program_version,
+                     cont : plan}
+    | Enum of {rel : term, mode : mode, version : program_version,
+               ins : term list, outs : term list, cont : plan}
     | Prune
 
   datatype quant = Forall | Exists
@@ -95,6 +102,8 @@ structure Refute_Eval :> Refute_Eval = struct
       | Split (_, branches) =>
           List.concat (List.map (plan_gen_types o #3) branches)
       | Guard (_, next) => plan_gen_types next
+      | SmartGuard {cont, ...} => plan_gen_types cont
+      | Enum {cont, ...} => plan_gen_types cont
       | Prune => []
 
   val same_env = Lib.list_eq boolSyntax.tmp_eq
@@ -125,6 +134,12 @@ structure Refute_Eval :> Refute_Eval = struct
           Split (tm, List.map (fn (constructor, variables, next) =>
             (constructor, variables, dump_plan next)) branches)
       | Guard (tm, next) => Guard (tm, dump_plan next)
+      | SmartGuard {predicate, version, cont} =>
+          SmartGuard {predicate = predicate, version = version,
+                      cont = dump_plan cont}
+      | Enum {rel, mode, version, ins, outs, cont} =>
+          Enum {rel = rel, mode = mode, version = version,
+                ins = ins, outs = outs, cont = dump_plan cont}
       | Prune => Test boolSyntax.F
 
   fun dump_stream (test : compiled_test) {size, count} =

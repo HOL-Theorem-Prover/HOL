@@ -110,6 +110,7 @@ signature Refute = sig
   val upd_seed : int option -> config -> config
   val upd_certify : bool -> config -> config
   val upd_smart_quantifier : bool -> config -> config
+  val upd_smart_generators : bool -> config -> config
   val upd_optimise_equality : bool -> config -> config
   val upd_reorder_premises : bool -> config -> config
   val upd_mf : mf_config -> config -> config

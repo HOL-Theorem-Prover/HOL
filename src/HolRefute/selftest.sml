@@ -8840,6 +8840,7 @@ fun size_update_is_local () =
     #seed after = #seed original andalso
     #certify after = #certify original andalso
     #smart_quantifier after = #smart_quantifier original andalso
+    #smart_generators after = #smart_generators original andalso
     #optimise_equality after = #optimise_equality original andalso
     #reorder_premises after = #reorder_premises original andalso
     Real.== (#timeout updated, #timeout default_config) andalso
@@ -8867,6 +8868,7 @@ fun certify_and_quiet_defaults_are_pinned () =
       Refute.upd_reorder_premises false Refute.default_config
   in
     #certify (#qc default_config) andalso
+    #smart_generators (#qc default_config) andalso
     #reorder_premises (#qc default_config) andalso
     not (#quiet default_config) andalso
     not (#certify (#qc uncertified)) andalso
@@ -8918,6 +8920,7 @@ fun config_surface_snapshot () =
        "seed = NONE\n",
        "certify = false\n",
        "smart_quantifier = true\n",
+       "smart_generators = true\n",
        "optimise_equality = true\n",
        "reorder_premises = true\n",
        "mf.card = [NONE => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]\n",
@@ -10933,7 +10936,7 @@ fun plan_is_fmap_lookup plan =
 
 fun plan_is_distinct_zip plan =
   case plan of
-      Gen (_, Gen (_, Guard (_, Test _))) => true
+      Gen (_, Gen (_, SmartGuard {cont = Test _, ...})) => true
     | _ => false
 
 fun plan_is_naive goal plan =
@@ -10983,6 +10986,162 @@ val _ = require_msg (check_result (plan_is_naive naive_goal)) (fn _ =>
 
 val _ = check_plan plan_has_abstract_guard
   "abstract-generator predicate was not inserted as Guard" abstract_guard_goal
+
+fun contains_enum current =
+  case current of
+      Enum _ => true
+    | Gen (_, next) => contains_enum next
+    | Bind (_, _, fallback, next) =>
+        contains_enum next orelse Option.getOpt
+          (Option.map contains_enum fallback, false)
+    | Split (_, branches) => List.exists (contains_enum o #3) branches
+    | Guard (_, next) => contains_enum next
+    | SmartGuard {cont, ...} => contains_enum cont
+    | _ => false
+
+val smartgen_linear_goal =
+  ``zoo_sg_linear (n : num) ==> n < 3``
+
+fun smartgen_plan_trigger () =
+  let
+    val enabled = compile_plan default_config smartgen_linear_goal
+    val disabled = compile_plan
+      (Refute.upd_smart_generators false default_config)
+      smartgen_linear_goal
+  in
+    contains_enum enabled andalso not (contains_enum disabled) andalso
+    (case disabled of Gen (_, Guard (_, Test _)) => true | _ => false)
+  end
+
+val _ = require_msg (check_result smartgen_plan_trigger) (fn () =>
+  "Hol_reln premise did not trigger Enum or flag-off changed fallback")
+  (fn () => ()) ()
+
+fun smartgen_cps_program_is_cached () =
+  case compile_plan default_config smartgen_linear_goal of
+      Enum {rel, mode, ...} =>
+        (case SG.enumerator_for rel mode of
+             SOME {clauses =
+               [SG.CpsClause {premises = [], ...},
+                SG.CpsClause {premises = [SG.CpsCall _], ...}], ...} => true
+           | _ => false)
+    | _ => false
+
+val _ = require_msg (check_result smartgen_cps_program_is_cached)
+  (fn () => "linear relation was not compiled to cached CPS clauses")
+  (fn () => ()) ()
+
+fun smartgen_horn_plan_trigger () =
+  contains_enum (compile_plan default_config
+    ``ALL_DISTINCT (xs : num list) ==> LENGTH xs < 2``)
+
+val _ = require_msg (check_result smartgen_horn_plan_trigger)
+  (fn () => "Horn-recognized Boolean premise did not trigger Enum")
+  (fn () => ()) ()
+
+fun smartgen_all_input_is_guard () =
+  let
+    val relation = ``zoo_sg_linear (n : num)``
+    fun guarded current =
+      case current of
+          SmartGuard {predicate, ...} => Term.aconv predicate relation
+        | Gen (_, next) => guarded next
+        | Bind (_, _, fallback, next) =>
+            guarded next orelse Option.getOpt
+              (Option.map guarded fallback, false)
+        | Split (_, branches) => List.exists (guarded o #3) branches
+        | _ => false
+    val plan = compile_plan default_config
+      ``(n : num) = 0 ==> zoo_sg_linear n ==> F``
+  in
+    not (contains_enum plan) andalso guarded plan
+  end
+
+val _ = require_msg (check_result smartgen_all_input_is_guard)
+  (fn () => "all-input relation mode did not remain a smart Guard")
+  (fn () => ()) ()
+
+fun smartgen_goal_reordering_pin () =
+  let
+    val goal = ``zoo_sg_linear (n : num) ==> n = 0 ==> F``
+    val reordered = compile_plan default_config goal
+    val source_order = compile_plan
+      (Refute.upd_reorder_premises false default_config) goal
+  in
+    (case reordered of Bind (_, _, _, SmartGuard _) => true | _ => false)
+    andalso (case source_order of Enum _ => true | _ => false)
+  end
+
+val _ = require_msg (check_result smartgen_goal_reordering_pin)
+  (fn () => "goal premise reordering did not expose equality before Enum")
+  (fn () => ()) ()
+
+fun smartgen_reordering_enablement_pin () =
+  let
+    val disabled = Refute.upd_smart_generators false default_config
+    val disabled_source = Refute.upd_reorder_premises false disabled
+    val triggering =
+      ``zoo_sg_linear (n : num) ==> n = 0 ==> n = 1 ==> F``
+    val ordinary =
+      ``(p : num -> bool) n ==> n = 0 ==> n = 1 ==> F``
+    fun same left right = pp_plan left = pp_plan right
+  in
+    same (compile_plan disabled triggering)
+      (compile_plan disabled_source triggering) andalso
+    same (compile_plan default_config ordinary)
+      (compile_plan
+        (Refute.upd_reorder_premises false default_config) ordinary)
+  end
+
+val _ = require_msg (check_result smartgen_reordering_enablement_pin)
+  (fn () =>
+    "flag-off or non-triggering multi-premise goal changed source ordering")
+  (fn () => ()) ()
+
+fun smartgen_all_input_tie_prefers_guard () =
+  let
+    val plan = compile_plan default_config
+      ``(n : num) = 0 ==> zoo_sg_tied n ==> F``
+  in
+    case plan of Bind (_, _, _, SmartGuard _) => true | _ => false
+  end
+
+val _ = require_msg (check_result smartgen_all_input_tie_prefers_guard)
+  (fn () => "a tied all-input smart mode fell back to ordinary analysis")
+  (fn () => ()) ()
+
+fun smartgen_mode_failure_falls_back () =
+  let
+    val goal =
+      ``zoo_sg_higher_order (P : num -> bool) (x : num) ==> F``
+    val plan = compile_plan default_config goal
+  in
+    not (contains_enum plan) andalso
+    (case plan of Gen (_, Gen (_, Guard (_, Test _))) => true | _ => false)
+  end
+
+val _ = require_msg (check_result smartgen_mode_failure_falls_back)
+  (fn () => "failed SmartGen mode analysis did not retain Gen+Guard")
+  (fn () => ()) ()
+
+fun temporary_enum_inapplicability () =
+  let
+    val plan = compile_plan default_config smartgen_linear_goal
+    fun temporary result =
+      case result of
+          Inapplicable reasons =>
+            List.exists (String.isSubstring "TASK_11") reasons
+        | _ => false
+  in
+    temporary (Refute_EvalCompute.compile default_config Exhaustive
+      (Plans [plan])) andalso
+    temporary (Refute_EvalCv.compile default_config Exhaustive
+      (Plans [plan]))
+  end
+
+val _ = require_msg (check_result temporary_enum_inapplicability)
+  (fn () => "compute/cv did not cleanly defer Enum to TASK_11")
+  (fn () => ()) ()
 
 val _ = tprint "Refute QC exhaustive backend"
 
@@ -11048,6 +11207,347 @@ fun exhaustive config goal =
 fun has_binding predicate (Counterexample (cex :: _)) =
       List.exists predicate (#bindings cex)
   | has_binding _ _ = false
+
+fun smartgen_native_end_to_end () =
+  let
+    val saved = !computeLib.the_compset
+    fun restore () = computeLib.the_compset := saved
+    fun body () =
+      let
+        val _ = computeLib.the_compset :=
+          computeLib.add_thms [zoo_sg_linear_compute] saved
+        fun run depth = exhaustive
+          (default_config
+           |> Refute.upd_backends (SOME ["exhaustive"])
+           |> Refute.upd_substrate Refute.NativeSML
+           |> Refute.upd_size 1
+           |> Refute.upd_depth depth)
+          smartgen_linear_goal
+        val shallow = run 3
+        val deep = run 4
+      in
+        (case shallow of Unknown _ => true | _ => false) andalso
+        case deep of
+            Counterexample (cex :: _) =>
+              #substrate cex = "native" andalso
+              #certainty cex = Genuine andalso
+              Option.isSome (#cert cex) andalso
+              List.exists (fn (_, value) =>
+                Term.aconv value ``3 : num``) (#bindings cex)
+          | _ => false
+      end
+  in
+    Portable.finally restore body ()
+  end
+
+val _ = require_msg (check_result smartgen_native_end_to_end) (fn () =>
+  "native Enum ignored depth fuel or bypassed certified candidate flow")
+  (fn () => ()) ()
+
+fun smartgen_native_matches_duplicate_outputs () =
+  let
+    val saved = !computeLib.the_compset
+    fun restore () = computeLib.the_compset := saved
+    fun body () =
+      let
+        val _ = computeLib.the_compset :=
+          computeLib.add_thms [zoo_sg_duplicate_compute] saved
+        val result = exhaustive
+          (default_config
+           |> Refute.upd_backends (SOME ["exhaustive"])
+           |> Refute.upd_substrate Refute.NativeSML
+           |> Refute.upd_size 1
+           |> Refute.upd_depth 1)
+          ``zoo_sg_duplicate (n : num) p ==> n = 0``
+      in
+        case result of
+            Counterexample (cex :: _) =>
+              #certainty cex = Genuine andalso
+              Option.isSome (#cert cex) andalso
+              List.exists (fn (variable, value) =>
+                Term.aconv variable ``p : num # num`` andalso
+                Term.aconv value ``(1,1) : num # num``) (#bindings cex)
+          | _ => false
+      end
+  in
+    Portable.finally restore body ()
+  end
+
+val _ = require_msg
+  (check_result smartgen_native_matches_duplicate_outputs) (fn () =>
+  "native Enum did not enforce and reconstruct duplicate output patterns")
+  (fn () => ()) ()
+
+fun smartgen_plain_all_input_native () =
+  let
+    val config = default_config
+      |> Refute.upd_substrate Refute.NativeSML
+      |> Refute.upd_depth 2
+    val plan = compile_plan config
+      ``(n : num) = 0 ==> zoo_sg_linear n ==> F``
+  in
+    case Refute_EvalSML.compile config Exhaustive (Plans [plan]) of
+        Compiled test =>
+          let
+            val result = #run test
+              {genuine_only = false, card = 1, size = 1, draws = 0,
+               ignored = []}
+            val _ = #close test ()
+          in
+            case result of CexFound _ => true | _ => false
+          end
+      | Inapplicable _ => false
+  end
+
+val _ = require_msg (check_result smartgen_plain_all_input_native) (fn () =>
+  "plain all-input Hol_reln Guard was not evaluated by its enumerator")
+  (fn () => ()) ()
+
+fun smartgen_gate_preflight_rejects_mixed_nonexec () =
+  let
+    val config = default_config
+      |> Refute.upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_substrate Refute.NativeSML
+      |> Refute.upd_certify false
+    val goal =
+      ``(n : num) = 0 ==> zoo_sg_linear n ==>
+        refute_task07_unmapped ==> F``
+    val eval_problem : problem =
+      {goal = ``zoo_sg_linear (n : num) ==> n < 3``, assumptions = [],
+       evals = [``refute_task07_unmapped``]}
+    fun unknown problem =
+      case refute_problem config problem of Unknown _ => true | _ => false
+  in
+    unknown (qc_problem goal) andalso unknown eval_problem
+  end
+
+val _ = require_msg
+  (check_result smartgen_gate_preflight_rejects_mixed_nonexec) (fn () =>
+  "smart gate preflight consumed an unrelated nonexec goal or eval")
+  (fn () => ()) ()
+
+fun smartgen_preflight_interrupt_propagates () =
+  let
+    val config = default_config
+      |> Refute.upd_substrate Refute.NativeSML
+      |> Refute.upd_certify false
+    val plan = compile_plan config smartgen_linear_goal
+    val instance : instance =
+      {original = smartgen_linear_goal, goal = smartgen_linear_goal,
+       qc_gate = SOME ["interrupt propagation pin"], evals = [], card = 1,
+       size_matters = true}
+    val tables_before = term_table_count ()
+    val preflight_interrupt =
+      ((ignore (native_preflight_with (fn _ => raise Interrupt)
+          config Exhaustive [plan] []); false)
+       handle Interrupt => true)
+    fun interrupting_preflight _ _ _ _ = raise Interrupt
+    val gate_interrupt =
+      ((ignore (smart_gate_override_with interrupting_preflight config
+          exhaustive_backend [instance]); false)
+       handle Interrupt => true)
+  in
+    preflight_interrupt andalso gate_interrupt andalso
+    term_table_count () = tables_before
+  end
+
+val _ = require_msg
+  (check_result smartgen_preflight_interrupt_propagates) (fn () =>
+  "native preflight or smart gate swallowed Interrupt or leaked its table")
+  (fn () => ()) ()
+
+fun smartgen_concurrent_preflights_are_isolated () =
+  let
+    val saved_threads = Multithreading.max_threads ()
+    fun restore_threads () =
+      Multithreading.max_threads_update saved_threads
+    fun body () =
+      let
+        val _ = Multithreading.max_threads_update
+          (Int.max (2, saved_threads))
+        val config = default_config
+          |> Refute.upd_substrate Refute.NativeSML
+          |> Refute.upd_certify false
+        val plans = [compile_plan config smartgen_linear_goal]
+        val left_id = Synchronized.var "Refute preflight left ID"
+          (NONE : int option)
+        val right_id = Synchronized.var "Refute preflight right ID"
+          (NONE : int option)
+        val release_left = Synchronized.var
+          "Refute preflight release left" false
+        val release_right = Synchronized.var
+          "Refute preflight release right" false
+        val workers = ref ([] : string list Future.future list)
+        fun table_ids () = Multithreading.synchronized
+          "Refute preflight table IDs" table_mutex
+          (fn () => map #1 (!term_tables))
+        fun same_ids left right =
+          length left = length right andalso
+          List.all (fn id => Lib.mem id right) left
+        val tables_before = table_ids ()
+        fun registration_hook id_slot release_slot id =
+          (Synchronized.change id_slot (fn _ => SOME id);
+           Synchronized.guarded_access release_slot
+             (fn true => SOME ((), true) | false => NONE))
+        fun await_id id_slot =
+          Synchronized.guarded_access id_slot
+            (fn NONE => NONE
+              | SOME id => SOME (id, SOME id))
+        fun release slot = Synchronized.change slot (fn _ => true)
+        fun release_all () =
+          (release release_left; release release_right)
+        fun fork_worker action = Thread_Attributes.uninterruptible
+          (fn _ => fn () =>
+            let val worker = Future.fork action
+            in workers := worker :: !workers; worker end) ()
+        fun drain_workers () =
+          let
+            val current = !workers
+            val _ = release_all ()
+            val _ = List.app (fn worker =>
+              if Future.is_finished worker then ()
+              else Future.cancel worker) current
+          in
+            ignore (Future.join_results current)
+          end
+        fun run () =
+          let
+            val left = fork_worker (fn () =>
+              native_preflight_with
+                (registration_hook left_id release_left)
+                config Exhaustive plans [])
+            val right = fork_worker (fn () =>
+              native_preflight_with
+                (registration_hook right_id release_right)
+                config Exhaustive plans [])
+            val left_table = await_id left_id
+            val right_table = await_id right_id
+            val overlap = left_table <> right_table andalso
+              same_ids (left_table :: right_table :: tables_before)
+                (table_ids ())
+            val _ = release release_left
+            val left_result = Future.join_result left
+            val left_clean =
+              same_ids (right_table :: tables_before) (table_ids ())
+            val _ = release release_right
+            val right_result = Future.join_result right
+            fun successful (Exn.Res []) = true
+              | successful _ = false
+          in
+            overlap andalso successful left_result andalso left_clean andalso
+            successful right_result
+          end
+        val completed =
+          (Portable.finally drain_workers (fn () =>
+             Timeout.apply (Time.fromSeconds 10) run ()) ()
+           handle Timeout.TIMEOUT _ => false)
+        val clean = same_ids tables_before (table_ids ())
+      in
+        completed andalso clean
+      end
+  in
+    Portable.finally restore_threads body ()
+  end
+
+val _ = require_msg
+  (check_result smartgen_concurrent_preflights_are_isolated) (fn () =>
+  "concurrent native preflights deadlocked, crossed, or leaked term tables")
+  (fn () => ()) ()
+
+fun smartgen_mutual_string_and_hygiene_native () =
+  let
+    fun run goal depth =
+      refute
+        (default_config
+         |> Refute.upd_backends (SOME ["exhaustive"])
+         |> Refute.upd_substrate Refute.NativeSML
+         |> Refute.upd_certify false
+         |> Refute.upd_size 1
+         |> Refute.upd_depth depth) goal
+    fun genuine (Counterexample (cex :: _)) = #certainty cex = Genuine
+      | genuine _ = false
+  in
+    genuine
+      (run ``zoo_sg_native_left (n : num) ==> n = 0`` 4) andalso
+    genuine (run
+      ``zoo_sg_string (s : char list) ==> LENGTH s < 2`` 3) andalso
+    genuine (run
+      ``zoo_sg_hygiene (x : num) y z ==> x = 0`` 2)
+  end
+
+val _ = require_msg
+  (check_result smartgen_mutual_string_and_hygiene_native) (fn () =>
+  "mutual, string-pattern, or identifier-hygiene native Enum failed")
+  (fn () => ()) ()
+
+fun smartgen_ir_validation_and_theory_footprint () =
+  let
+    val footprint_before = map #1 (Theory.current_definitions ())
+    val plan = compile_plan default_config smartgen_linear_goal
+    val guard_plan = compile_plan default_config
+      ``(n : num) = 0 ==> zoo_sg_linear n ==> F``
+    val malformed =
+      case plan of
+          Enum {rel, mode, version, outs, cont, ...} =>
+            Enum {rel = rel, mode = mode, version = version,
+                  ins = [``0 : num``], outs = outs, cont = cont}
+        | _ => plan
+    fun rejected candidate fragment =
+      case Refute_EvalSML.compile default_config Exhaustive
+        (Plans [candidate]) of
+          Inapplicable reasons => List.exists
+            (String.isSubstring fragment) reasons
+        | Compiled test => (#close test (); false)
+    val malformed_ok = rejected malformed "smart plan:"
+    val _ = SG.clear_enumerator_cache ()
+    val absent_ok = rejected plan "missing top-level enumerator"
+    val _ = ignore (compile_plan default_config smartgen_linear_goal)
+    val rebound_ok = rejected plan "stale Enum version"
+    val guard_rebound_ok = rejected guard_plan "stale or non-all-input"
+  in
+    malformed_ok andalso absent_ok andalso rebound_ok andalso
+    guard_rebound_ok andalso
+    footprint_before = map #1 (Theory.current_definitions ())
+  end
+
+val _ = require_msg
+  (check_result smartgen_ir_validation_and_theory_footprint) (fn () =>
+  "malformed/stale/rebound Enum IR or runtime theory footprint was not pinned")
+  (fn () => ()) ()
+
+fun smartgen_cache_replacement_is_atomic () =
+  let
+    val relation = ``zoo_sg_linear``
+    val context = MFH.make_context (#mf default_config) []
+    val group = valOf (MFH.instantiated_fixpoint_group context relation)
+    val inference = valOf (SG.infer_scc
+      {members = #members group, rules = #rules group,
+       triple_for = MFH.joint_intro_triple_for, external = [],
+       reorder_premises = true})
+    val _ = SG.cache_inference inference
+    val programs = List.filter (fn {program = {relation = other, ...}, ...} =>
+      SG.same_relation relation other) (SG.enumerator_snapshot ())
+    val removed = #mode (#program (List.last programs))
+    val {relations, degradation} = inference
+    fun trim ({relation = other, modes} : SG.relation_modes) =
+      {relation = other,
+       modes = List.filter (fn (mode, _, _) =>
+         not (SG.same_relation relation other andalso
+              SG.eq_mode (mode, removed))) modes} : SG.relation_modes
+    val reduced : SG.inference_result =
+      {relations = map trim relations, degradation = degradation}
+    val _ = SG.cache_inference reduced
+    val obsolete_gone =
+      not (Option.isSome (SG.enumerator_for relation removed))
+    val _ = ignore (compile_plan default_config smartgen_linear_goal)
+  in
+    length programs > 1 andalso obsolete_gone
+  end
+  handle Option.Option => false | Empty => false
+
+val _ = require_msg (check_result smartgen_cache_replacement_is_atomic)
+  (fn () => "inference replacement retained an obsolete relation mode")
+  (fn () => ()) ()
 
 fun reverse_counterexample () =
   let
@@ -11179,6 +11679,7 @@ fun pnf_seam_is_inapplicable () =
       case compile default_config Narrowing problem of
           Inapplicable [reason] =>
             reason = "narrowing requires the native substrate"
+        | Inapplicable _ => false
         | Compiled test => (#close test (); false)
   in
     rejected Refute_EvalSML.compile andalso
@@ -11286,6 +11787,21 @@ fun capture_refute_messages level action =
   in
     (result, String.concat (rev (!chunks)))
   end
+
+fun smartgen_guard_diagnostic_is_not_fallback () =
+  let
+    val (_, messages) = capture_refute_messages 2 (fn () =>
+      ignore (compile_plan default_config
+        ``(n : num) = 0 ==> zoo_sg_linear n ==> F``))
+  in
+    String.isSubstring "smart generator Guard" messages andalso
+    not (String.isSubstring "smart generator fallback" messages)
+  end
+
+val _ = require_msg
+  (check_result smartgen_guard_diagnostic_is_not_fallback) (fn () =>
+  "valid all-input smart Guard was diagnosed as analysis fallback")
+  (fn () => ()) ()
 
 fun unused_fixture_results_are_pinned () =
   let
@@ -11703,6 +12219,56 @@ fun trace_level_two_reports_qc_gate () =
 val _ = require_msg
   (check_result trace_level_two_reports_qc_gate) (fn () =>
   "trace level 2 omitted the executability-gate reason")
+  (fn () => ()) ()
+
+fun smartgen_failure_reason_and_gate_output () =
+  let
+    val (_, fallback) = capture_refute_messages 2 (fn () =>
+      ignore (compile_plan default_config
+        ``zoo_sg_higher_order (P : num -> bool) x ==> F``))
+    val disabled = default_config
+      |> upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_smart_generators false
+    val (disabled_result, disabled_output) =
+      capture_refute_messages 2 (fn () =>
+        refute disabled smartgen_linear_goal)
+  in
+    String.isSubstring "no executable first-order positive mode" fallback
+      andalso
+    reason_contains "not executable: zoo_sg_linear" disabled_result andalso
+    String.isSubstring "QC backends excluded: not executable" disabled_output
+  end
+
+val _ = require_msg
+  (check_result smartgen_failure_reason_and_gate_output) (fn () =>
+  "smart fallback detail or flag-off QC gate output was lost")
+  (fn () => ()) ()
+
+fun smartgen_random_plan_is_unchanged () =
+  let
+    val saved = !computeLib.the_compset
+    fun restore () = computeLib.the_compset := saved
+    fun body () =
+      let
+        val _ = computeLib.the_compset :=
+          computeLib.add_thms [zoo_sg_linear_compute] saved
+        val config = default_config
+          |> upd_backends (SOME ["random"])
+          |> upd_substrate NativeSML
+          |> upd_seed (SOME 1)
+          |> upd_iterations 1
+        val (_, output) = capture_refute_messages 3 (fn () =>
+          ignore (refute config smartgen_linear_goal))
+      in
+        String.isSubstring "Guard zoo_sg_linear" output andalso
+        not (String.isSubstring "Enum zoo_sg_linear" output)
+      end
+  in
+    Portable.finally restore body ()
+  end
+
+val _ = require_msg (check_result smartgen_random_plan_is_unchanged)
+  (fn () => "random planning was altered by smart generators")
   (fn () => ()) ()
 
 fun trace_level_two_reports_selection () =

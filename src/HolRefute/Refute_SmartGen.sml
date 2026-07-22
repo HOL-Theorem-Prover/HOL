@@ -3,6 +3,8 @@
    coverage, converts them syntactically to intro triples, and mode-checks
    Horn SCCs.  It neither flattens functions nor creates theory definitions. *)
 structure Refute_SmartGen = struct
+  type term = Term.term
+
   type intro_triple =
     {variables : term list, side : term list,
      main : term list, conclusion : term}
@@ -31,12 +33,12 @@ structure Refute_SmartGen = struct
   fun same_constant_symbol left right =
     Term.is_const left andalso Term.is_const right andalso
     Term.same_const left right
-    handle HOL_ERR _ => false
+    handle Feedback.HOL_ERR _ => false
 
   fun same_constant left right =
     same_constant_symbol left right andalso
     Term.type_of left = Term.type_of right
-    handle HOL_ERR _ => false
+    handle Feedback.HOL_ERR _ => false
 
   fun constructors_for ty =
     let
@@ -76,7 +78,7 @@ structure Refute_SmartGen = struct
                 List.concat (map #2 children))
         else NONE
       end
-      handle HOL_ERR _ => NONE
+      handle Feedback.HOL_ERR _ => NONE
 
   fun constructor_arity constructor =
     length (#1 (boolSyntax.strip_fun (Term.type_of constructor)))
@@ -110,7 +112,7 @@ structure Refute_SmartGen = struct
       in
         List.all covers constructors
       end
-      handle HOL_ERR _ => false
+      handle Feedback.HOL_ERR _ => false
            | Option.Option => false
 
   fun forbidden_formula term =
@@ -140,7 +142,7 @@ structure Refute_SmartGen = struct
     Term.is_const term andalso
     List.exists (fn logical => Term.same_const term logical)
       forbidden_value_heads
-    handle HOL_ERR _ => false
+    handle Feedback.HOL_ERR _ => false
 
   (* Higher-order values are legitimate atom arguments: SORTED's relation
      parameter is the canonical example.  What matters at this layer is
@@ -156,7 +158,7 @@ structure Refute_SmartGen = struct
       let val (operator, operand) = HolKernel.dest_comb term
       in atom_value operator andalso atom_value operand end
     else false
-    handle HOL_ERR _ => false
+    handle Feedback.HOL_ERR _ => false
 
   fun predicate_application term =
     not (forbidden_formula term) andalso not (boolSyntax.is_eq term) andalso
@@ -167,7 +169,7 @@ structure Refute_SmartGen = struct
       not (null arguments) andalso
       (Term.is_const head orelse Term.is_var head)
     end
-    handle HOL_ERR _ => false
+    handle Feedback.HOL_ERR _ => false
 
   fun positive_atom term =
     same_term term boolSyntax.T orelse same_term term boolSyntax.F orelse
@@ -221,7 +223,7 @@ structure Refute_SmartGen = struct
       occurrences = 0 orelse
       (occurrences = 1 andalso same_constant constant outer_head)
     end
-    handle HOL_ERR _ => false
+    handle Feedback.HOL_ERR _ => false
 
   fun close_free term =
     boolSyntax.list_mk_forall (Term.free_vars_lr term, term)
@@ -254,7 +256,7 @@ structure Refute_SmartGen = struct
       SOME {variables = variables, patterns = map #1 parsed,
             premises = premises, conclusion = left}
     end
-    handle HOL_ERR _ => NONE
+    handle Feedback.HOL_ERR _ => NONE
          | Option.Option => NONE
 
   type horn_clause =
@@ -294,7 +296,7 @@ structure Refute_SmartGen = struct
     in
       SOME (map (horn_clause_of constant) raw)
     end
-    handle HOL_ERR _ => NONE
+    handle Feedback.HOL_ERR _ => NONE
 
   fun intro_triple_of
         ({variables, patterns = _,
@@ -335,7 +337,7 @@ structure Refute_SmartGen = struct
              SOME (theorem_term theorem, clauses)
            end
        | _ => NONE)
-    handle HOL_ERR _ => NONE
+    handle Feedback.HOL_ERR _ => NONE
 
   type cache_entry =
     {constant : term, stamp : term option,
@@ -565,7 +567,7 @@ structure Refute_SmartGen = struct
       else
         []
     end
-    handle HOL_ERR _ => []
+    handle Feedback.HOL_ERR _ => []
 
   fun same_mode left right = eq_mode (left, right)
 
@@ -615,7 +617,7 @@ structure Refute_SmartGen = struct
 
   fun invertible_head term =
     Term.is_const term andalso TypeBase.is_constructor term
-    handle HOL_ERR _ => false
+    handle Feedback.HOL_ERR _ => false
 
   fun noninvertible_subterms term =
     if Term.is_var term then []
@@ -627,7 +629,7 @@ structure Refute_SmartGen = struct
           List.concat (map noninvertible_subterms arguments)
         else [term]
       end
-    handle HOL_ERR _ => [term]
+    handle Feedback.HOL_ERR _ => [term]
 
   fun possible_output known term =
     let
@@ -655,7 +657,7 @@ structure Refute_SmartGen = struct
           List.concat (map destructable_vars arguments)
         else []
       end
-    handle HOL_ERR _ => []
+    handle Feedback.HOL_ERR _ => []
 
   fun derive_argument known term (Pair (left_mode, right_mode)) =
         (case Lib.total pairSyntax.dest_pair term of
@@ -678,7 +680,7 @@ structure Refute_SmartGen = struct
       []
 
   fun same_relation left right =
-    same_constant left right handle HOL_ERR _ => false
+    same_constant left right handle Feedback.HOL_ERR _ => false
 
   fun lookup_assoc relation entries =
     Option.map #2 (List.find (fn (other, _) =>
@@ -687,7 +689,7 @@ structure Refute_SmartGen = struct
   fun premise_head premise =
     let val (head, _) = HolKernel.strip_comb premise
     in if Term.is_const head then SOME head else NONE end
-    handle HOL_ERR _ => NONE
+    handle Feedback.HOL_ERR _ => NONE
 
   fun direct_call premise =
     not (boolSyntax.is_neg premise) andalso
@@ -733,7 +735,7 @@ structure Refute_SmartGen = struct
     in
       List.concat (map derive infos)
     end
-    handle HOL_ERR _ => []
+    handle Feedback.HOL_ERR _ => []
 
   fun classify members external term =
     if boolSyntax.is_neg term then Sidecond term
@@ -911,7 +913,7 @@ structure Refute_SmartGen = struct
                       not (null missing)}
             end
     end
-    handle HOL_ERR _ => NONE
+    handle Feedback.HOL_ERR _ => NONE
 
   fun clauses_for relation clauses =
     List.filter (fn ({head = conclusion, ...} : inference_clause) =>
@@ -1043,4 +1045,239 @@ structure Refute_SmartGen = struct
            reorder_premises = reorder_premises})
       else NONE
     end
+
+  (* The substrate-neutral enumerator is a positive, depth-bounded CPS
+     program.  [CpsClause] is [single inputs >>= case-match >>=
+     premise-chain >>= single outputs]; the list of clauses is [plus] in
+     source order.  Every substrate must preserve these two list orders. *)
+  datatype cps_premise =
+      CpsCall of {rel : term, mode : mode, ins : term list,
+                  outs : term list}
+    | CpsGuard of term
+    | CpsGenerate of term
+
+  datatype cps_clause = CpsClause of
+    {ins : term list, premises : cps_premise list, outs : term list}
+
+  (* The logical fields of an enumerator are not enough to identify the
+     definition generation from which they were inferred: snapshot/revert can
+     install a same-named constant with an identical printed payload.  Keep a
+     session-opaque generation plus a deterministic inference fingerprint and
+     bind every compiled plan to that pair. *)
+  abstype program_version = ProgramVersion of
+    {generation : int, fingerprint : string}
+  with
+    val source_generation = ref 0
+
+    fun same_program_version
+          (ProgramVersion left, ProgramVersion right) = left = right
+
+    fun current_program_version
+          (ProgramVersion {generation, ...}) =
+      generation = !source_generation
+
+    fun new_program_version fingerprint = ProgramVersion
+      {generation = !source_generation, fingerprint = fingerprint}
+
+    fun advance_source_generation () =
+      source_generation := !source_generation + 1
+  end
+
+  type enumerator =
+    {relation : term, mode : mode, version : program_version,
+     clauses : cps_clause list}
+
+  fun first_order_mode Input = true
+    | first_order_mode Output = true
+    | first_order_mode (Pair (left, right)) =
+        first_order_mode left andalso first_order_mode right
+    | first_order_mode _ = false
+
+  fun compile_premise premise derivation =
+    case premise of
+        Generator variable => SOME (CpsGenerate variable)
+      | Sidecond term => SOME (CpsGuard term)
+      | Prem term =>
+          let
+            val (relation, arguments) = HolKernel.strip_comb term
+            val mode = head_mode_of derivation
+            val (ins, outs) = split_arguments mode arguments
+          in
+            if List.all first_order_mode (strip_mode mode) then
+              SOME (CpsCall
+                {rel = relation, mode = mode, ins = ins, outs = outs})
+            else NONE
+          end
+          handle Feedback.HOL_ERR _ => NONE
+
+  fun compile_clause mode
+        ({arguments, premises, ...} : moded_clause) =
+    let
+      val (ins, outs) = split_arguments mode arguments
+      val compiled = map (fn (premise, derivation) =>
+        compile_premise premise derivation) premises
+    in
+      if List.all first_order_mode (strip_mode mode) andalso
+         List.all Option.isSome compiled then
+        SOME (CpsClause
+          {ins = ins, premises = List.mapPartial (fn value => value) compiled,
+           outs = outs})
+      else NONE
+    end
+    handle Feedback.HOL_ERR _ => NONE
+
+  fun compile_relation version
+        ({relation, modes} : relation_modes) =
+    List.mapPartial (fn (mode, clauses, _) =>
+      let val compiled = map (compile_clause mode) clauses
+      in
+        if length compiled = length clauses then
+          SOME ({relation = relation, mode = mode, version = version,
+                 clauses = List.mapPartial (fn value => value) compiled}
+                : enumerator)
+        else NONE
+      end) modes
+
+  fun inference_fingerprint relations =
+    let
+      fun clause ({arguments, premises, ...} : moded_clause) =
+        String.concatWith ","
+          (map Parse.term_to_string
+            (arguments @ map (term_of_premise o #1) premises))
+      fun relation ({relation, modes} : relation_modes) =
+        Parse.term_to_string relation ^ "{" ^
+        String.concatWith ";" (map (fn (mode, clauses, needs) =>
+          mode_string mode ^ ":" ^ Bool.toString needs ^ ":" ^
+          String.concatWith "/" (map clause clauses)) modes) ^ "}"
+    in
+      String.concatWith "|" (map relation relations)
+    end
+
+  type enumerator_cache_entry =
+    {relation : term, mode : mode, program : enumerator}
+
+  (* Session-local only: enumerator compilation creates no HOL definition.
+     Recompiling a typed relation/mode replaces its previous program. *)
+  val enumerator_cache = ref ([] : enumerator_cache_entry list)
+
+  fun same_enumerator_key relation mode
+        ({relation = other, mode = other_mode, ...} :
+          enumerator_cache_entry) =
+    same_relation relation other andalso eq_mode (mode, other_mode)
+
+  fun relation_in relations candidate =
+    List.exists (fn ({relation, ...} : relation_modes) =>
+      same_relation relation candidate) relations
+
+  (* One assignment replaces the complete inferred group.  This also removes
+     modes that disappeared or ceased to compile, rather than leaving an
+     obsolete per-mode program behind. *)
+  fun cache_inference ({relations, ...} : inference_result) =
+    let
+      val version = new_program_version (inference_fingerprint relations)
+      val programs = List.concat (map (compile_relation version) relations)
+      val fresh = map (fn program as {relation, mode, ...} =>
+        {relation = relation, mode = mode, program = program}) programs
+      val retained = List.filter (fn {relation, ...} =>
+        not (relation_in relations relation)) (!enumerator_cache)
+    in
+      enumerator_cache := fresh @ retained
+    end
+
+  fun program_is_fresh ({relation, version, ...} : enumerator) =
+    current_program_version version andalso Theory.uptodate_term relation
+
+  fun enumerator_for_in entries relation mode =
+    case List.find (same_enumerator_key relation mode) entries of
+        SOME {program, ...} =>
+          if program_is_fresh program then SOME program else NONE
+      | NONE => NONE
+
+  fun enumerator_for relation mode =
+    enumerator_for_in (!enumerator_cache) relation mode
+
+  (* A compile invocation takes this immutable value once.  Code extraction
+     must resolve the complete recursive closure from that value, never from
+     the mutable session cache. *)
+  fun enumerator_snapshot () =
+    List.filter (program_is_fresh o #program) (!enumerator_cache)
+
+  fun enumerator_gen_types ({clauses, ...} : enumerator) =
+    List.concat (map (fn CpsClause {premises, ...} =>
+      List.mapPartial (fn CpsGenerate variable =>
+        SOME (Term.type_of variable) | _ => NONE) premises) clauses)
+
+  fun invalidate_enumerator_cache _ =
+    (advance_source_generation (); enumerator_cache := [])
+
+  val _ = Theory.register_hook
+    ("Refute_SmartGen.enumerators", invalidate_enumerator_cache)
+
+  fun clear_enumerator_cache () = invalidate_enumerator_cache ()
+  fun enumerator_cache_size () = length (!enumerator_cache)
+
+  fun relation_modes_for relation
+        ({relations, ...} : inference_result) =
+    List.find (fn ({relation = other, ...} : relation_modes) =>
+      same_relation relation other) relations
+
+  fun top_level_parts mode arguments =
+    SOME (split_arguments mode arguments)
+    handle Feedback.HOL_ERR _ => NONE
+
+  type goal_mode =
+    {mode : mode, ins : term list, outs : term list,
+     missing : term list, score : premise_score}
+
+  (* Goal-premise mode selection uses the same five-way order as rule mode
+     inference.  Missing input variables are explicit: the plan compiler may
+     generate them before the Enum, allowing an earlier equality premise to
+     win and bind them instead when premise reordering is enabled. *)
+  fun goal_modes_for_call known call inference =
+    let
+      val (relation, arguments) = HolKernel.strip_comb call
+      val relation_result = relation_modes_for relation inference
+      fun candidate (mode, _, needs_generator) =
+        case top_level_parts mode arguments of
+            NONE => NONE
+          | SOME (ins, outs) =>
+              let
+                val missing = List.foldl (fn (input, result) =>
+                  union_terms result (missing_vars known input)) [] ins
+                val available = union_terms known missing
+              in
+                if List.all (possible_output available) outs then
+                  SOME
+                    {mode = mode, ins = ins, outs = outs,
+                     missing = missing,
+                     score =
+                       {missing = length missing, functional = false,
+                        generator = needs_generator,
+                        outputs = length outs, recursive = false}}
+                else NONE
+              end
+    in
+      case relation_result of
+          NONE => []
+        | SOME {modes, ...} => List.mapPartial candidate modes
+    end
+    handle Feedback.HOL_ERR _ => []
+
+  fun best_goal_mode known call inference =
+    let
+      fun least candidate NONE = SOME candidate
+        | least (candidate as {score, ...} : goal_mode)
+            (current as SOME ({score = old, ...} : goal_mode)) =
+            if compare_score (score, old) = LESS then SOME candidate
+            else current
+    in
+      List.foldl (fn (candidate, result) => least candidate result) NONE
+        (goal_modes_for_call known call inference)
+    end
+
+  (* Compatibility helper for clients that require already-bound inputs. *)
+  fun mode_for_call known call inference =
+    case best_goal_mode known call inference of
+        SOME {mode, ins, outs, missing = [], ...} => SOME (mode, ins, outs)
+      | _ => NONE
 end

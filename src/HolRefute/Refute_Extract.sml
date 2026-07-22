@@ -9,6 +9,11 @@ structure Refute_Extract = struct
     { source : string,
       entry : string }
 
+  type registered_extraction =
+    { source : string,
+      entry : string,
+      table : int }
+
   datatype ml_ty =
       MLVar of string
     | MLBool
@@ -1644,10 +1649,14 @@ structure Refute_Extract = struct
       {source = source, entry = "entry ()"}
     end
 
-  fun extract_tests (_ : Refute_Core.config) strategy plans : extraction =
+  fun extract_tests_with strict
+        (config : Refute_Core.config) strategy plans : registered_extraction =
     let
       open Refute_Eval
 
+      (* One immutable cache view governs validation, dependency closure and
+         emission for this compile call. *)
+      val enum_cache = Refute_SmartGen.enumerator_snapshot ()
       val context = new_context ()
       val constructor_terms =
         {list = ref ([] : term list), count = ref 0,
@@ -1715,9 +1724,380 @@ structure Refute_Extract = struct
         | Guard (tm, next) =>
             Guard (substitute_variables environment tm,
               rename_plan next environment)
+        | SmartGuard {predicate, version, cont} =>
+            SmartGuard
+              {predicate = substitute_variables environment predicate,
+               version = version, cont = rename_plan cont environment}
+        | Enum {rel, mode, version, ins, outs, cont} =>
+            let
+              val bound = map #1 environment
+              val output_variables = List.foldl (fn (variable, result) =>
+                if List.exists (fn old => Term.aconv old variable)
+                     (bound @ result)
+                then result else result @ [variable]) []
+                (List.concat (map Term.free_vars_lr outs))
+              val safe = map fresh_bound output_variables
+              val additions = ListPair.zip (output_variables, safe)
+              val extended = additions @ environment
+            in
+              Enum {rel = rel, mode = mode, version = version,
+                    ins = map (substitute_variables environment) ins,
+                    outs = map (substitute_variables extended) outs,
+                    cont = rename_plan cont extended}
+            end
         | Prune => Prune
 
       val plans = List.map (fn plan => rename_plan plan []) plans
+
+      fun same_program
+            ({relation = left, mode = left_mode, version = left_version, ...} :
+              Refute_SmartGen.enumerator)
+            ({relation = right, mode = right_mode,
+              version = right_version, ...} :
+              Refute_SmartGen.enumerator) =
+        Refute_SmartGen.same_relation left right andalso
+        Refute_SmartGen.eq_mode (left_mode, right_mode) andalso
+        Refute_SmartGen.same_program_version
+          (left_version, right_version)
+
+      fun add_program program programs =
+        if List.exists (same_program program) programs then programs
+        else programs @ [program]
+
+      fun cached_all_input predicate expected_version =
+        if not (#smart_generators (#qc config)) orelse
+           strategy <> Exhaustive then NONE
+        else
+          let
+            val (head, arguments) = HolKernel.strip_comb predicate
+            fun find {program =
+                  (program as {relation, mode, version, ...} :
+                    Refute_SmartGen.enumerator), ...} =
+              if Refute_SmartGen.same_relation head relation andalso
+                 Refute_SmartGen.same_program_version
+                   (expected_version, version) andalso
+                 Refute_SmartGen.program_is_fresh program andalso
+                 Theory.uptodate_term predicate
+              then
+                case Refute_SmartGen.top_level_parts mode arguments of
+                    SOME (ins, []) => SOME (program, ins)
+                  | _ => NONE
+              else NONE
+          in
+            Lib.get_first find enum_cache
+          end
+        handle Feedback.HOL_ERR _ => NONE
+
+      fun program_closure current programs =
+        let
+          val programs = add_program current programs
+          val {clauses, ...} = current
+          fun called (Refute_SmartGen.CpsClause {premises, ...}) =
+            List.mapPartial (fn Refute_SmartGen.CpsCall
+                {rel, mode, ...} =>
+                  (case Refute_SmartGen.enumerator_for_in
+                       enum_cache rel mode of
+                       SOME program => SOME program
+                     | NONE => reject
+                         "smart plan: missing recursive enumerator dependency")
+              | _ => NONE) premises
+          fun visit program result =
+            if List.exists (same_program program) result then result
+            else program_closure program result
+        in
+          List.foldl (fn (program, result) => visit program result)
+            programs (List.concat (map called clauses))
+        end
+
+      fun collect_programs current programs =
+        case current of
+            Test _ => programs
+          | Gen (_, next) => collect_programs next programs
+          | Bind (_, _, fallback, next) =>
+              collect_programs next
+                (case fallback of NONE => programs
+                 | SOME other => collect_programs other programs)
+          | Split (_, branches) =>
+              List.foldl (fn ((_, _, next), result) =>
+                collect_programs next result) programs branches
+          | Guard (_, next) => collect_programs next programs
+          | SmartGuard {predicate, version, cont} =>
+              let
+                val program =
+                  case cached_all_input predicate version of
+                      SOME (found, _) => found
+                    | NONE => reject
+                        "smart plan: stale or non-all-input smart Guard"
+              in
+                collect_programs cont (program_closure program programs)
+              end
+          | Enum {rel, mode, version, cont, ...} =>
+              let
+                val program =
+                  case Refute_SmartGen.enumerator_for_in
+                    enum_cache rel mode of
+                      SOME found =>
+                        if Refute_SmartGen.same_program_version
+                             (version, #version found)
+                        then found
+                        else reject "smart plan: stale Enum version"
+                    | NONE => reject
+                        "smart plan: missing top-level enumerator program"
+              in
+                collect_programs cont (program_closure program programs)
+              end
+          | Prune => programs
+
+      val enum_programs = List.foldl (fn (plan, programs) =>
+        collect_programs plan programs) [] plans
+
+      fun smart_reject message = reject ("smart plan: " ^ message)
+
+      fun same_type left right = Util.same_type left right
+      fun same_types left right =
+        length left = length right andalso
+        ListPair.allEq (fn (first, second) => same_type first second)
+          (left, right)
+      fun vars_bound bound tm =
+        List.all (fn variable => List.exists (fn old =>
+          Term.aconv old variable) bound) (Term.free_vars_lr tm)
+      fun require_bound label bound terms =
+        if List.all (vars_bound bound) terms then ()
+        else smart_reject (label ^ " uses an unbound variable")
+      fun fresh_in bound variable =
+        not (List.exists (fn old => Term.aconv old variable) bound)
+
+      fun validate_executable label consumed terms =
+        if not strict andalso null enum_programs then ()
+        else
+          let
+            val constants = Refute_Core.nonexecutable_constants terms
+            val remaining = List.filter (fn constant =>
+              not (List.exists (fn allowed =>
+                Term.same_const allowed constant) consumed)) constants
+            val has_binder = List.exists (fn tm =>
+              not (null (HolKernel.find_terms Term.is_abs tm))) terms
+          in
+            if has_binder then
+              smart_reject (label ^ " contains an unexpanded binder")
+            else if null remaining then ()
+            else smart_reject (label ^ " is nonexecutable: " ^
+              Refute_Core.show_constants remaining)
+          end
+
+      fun mode_shape relation mode =
+        let
+          val _ =
+            if Term.is_const relation then ()
+            else smart_reject "enumerator relation is not a constant"
+          val (domains, range) = boolSyntax.strip_fun (Term.type_of relation)
+          val _ =
+            if same_type range Type.bool then ()
+            else smart_reject "enumerator relation does not return bool"
+          val modes = Refute_SmartGen.strip_mode mode
+          val _ =
+            if length domains = length modes andalso
+               List.all Refute_SmartGen.first_order_mode modes then ()
+            else smart_reject "enumerator mode/arity mismatch"
+          val arguments = List.map (fn (index, ty) =>
+            Term.mk_var ("refute_validate_" ^ Int.toString index, ty))
+            (Lib.enumerate 0 domains)
+          val (ins, outs) = Refute_SmartGen.split_arguments mode arguments
+        in
+          (map Term.type_of ins, map Term.type_of outs)
+        end
+        handle Feedback.HOL_ERR _ =>
+          smart_reject "enumerator mode/type mismatch"
+
+      fun program_for relation mode =
+        case List.find (fn ({relation = other, mode = other_mode, ...} :
+            Refute_SmartGen.enumerator) =>
+          Refute_SmartGen.same_relation relation other andalso
+          Refute_SmartGen.eq_mode (mode, other_mode)) enum_programs of
+            SOME program => program
+          | NONE => smart_reject "enumerator dependency is absent"
+
+      fun validate_program
+            ({relation, mode, clauses, ...} : Refute_SmartGen.enumerator) =
+        let
+          val (input_types, output_types) = mode_shape relation mode
+          fun introduce bound terms =
+            List.foldl (fn (variable, current) =>
+              if fresh_in current variable then current @ [variable]
+              else current) bound (List.concat (map Term.free_vars_lr terms))
+          fun premise (premise, current) =
+            case premise of
+                Refute_SmartGen.CpsGenerate variable =>
+                  if Term.is_var variable andalso fresh_in current variable
+                  then current @ [variable]
+                  else smart_reject
+                    "generator variable is malformed or already bound"
+              | Refute_SmartGen.CpsGuard tm =>
+                  (require_bound "enumerator Guard" current [tm];
+                   validate_executable "enumerator Guard" [] [tm]; current)
+              | Refute_SmartGen.CpsCall {rel, mode, ins, outs} =>
+                  let
+                    val dependency = program_for rel mode
+                    val _ = ignore dependency
+                    val (expected_ins, expected_outs) = mode_shape rel mode
+                    val _ =
+                      if same_types (map Term.type_of ins) expected_ins andalso
+                         same_types (map Term.type_of outs) expected_outs
+                      then ()
+                      else smart_reject
+                        "recursive call mode/arity/types mismatch"
+                    val _ = require_bound "recursive call input" current ins
+                    val _ = validate_executable
+                      "recursive call input" [] ins
+                  in
+                    introduce current outs
+                  end
+          fun clause (Refute_SmartGen.CpsClause
+                {ins, premises, outs}) =
+            let
+              val _ =
+                if same_types (map Term.type_of ins) input_types andalso
+                   same_types (map Term.type_of outs) output_types then ()
+                else smart_reject "clause mode/arity/types mismatch"
+              val current = introduce [] ins
+              val current = List.foldl premise current premises
+              val _ = require_bound "clause output" current outs
+            in
+              ()
+            end
+        in
+          List.app clause clauses
+        end
+
+      val _ = List.app validate_program enum_programs
+
+      fun validate_plan current bound =
+        case current of
+            Test tm =>
+              (require_bound "Test" bound [tm];
+               validate_executable "Test" [] [tm])
+          | Gen (variable, next) =>
+              if Term.is_var variable andalso fresh_in bound variable then
+                validate_plan next (variable :: bound)
+              else smart_reject "Gen variable is malformed or already bound"
+          | Bind (variable, tm, fallback, next) =>
+              (require_bound "Bind expression" bound [tm];
+               validate_executable "Bind expression" [] [tm];
+               if Term.is_var variable andalso fresh_in bound variable then ()
+               else smart_reject
+                 "Bind variable is malformed or already bound";
+               Option.app (fn other => validate_plan other bound) fallback;
+               validate_plan next (variable :: bound))
+          | Split (tm, branches) =>
+              let
+                val _ = require_bound "Split scrutinee" bound [tm]
+                val _ = validate_executable "Split scrutinee" [] [tm]
+                fun branch (_, variables, next) =
+                  if List.all (fresh_in bound) variables then
+                    validate_plan next (variables @ bound)
+                  else smart_reject "Split branch variable is already bound"
+              in
+                List.app branch branches
+              end
+          | Guard (tm, next) =>
+              (require_bound "Guard" bound [tm];
+               validate_executable "Guard" [] [tm];
+               validate_plan next bound)
+          | SmartGuard {predicate, version, cont} =>
+              let
+                val (program as {relation, ...}, ins) =
+                  case cached_all_input predicate version of
+                      SOME found => found
+                    | NONE => smart_reject
+                        "stale or non-all-input smart Guard"
+                val _ = ignore program
+              in
+                require_bound "smart Guard" bound [predicate];
+                require_bound "smart Guard input" bound ins;
+                validate_executable "smart Guard" [relation] [predicate];
+                validate_plan cont bound
+              end
+          | Enum {rel, mode, version, ins, outs, cont} =>
+              let
+                val {relation, mode = program_mode,
+                     version = program_version, ...} = program_for rel mode
+                val _ =
+                  if Refute_SmartGen.same_relation rel relation andalso
+                     Refute_SmartGen.eq_mode (mode, program_mode) andalso
+                     Refute_SmartGen.same_program_version
+                       (version, program_version)
+                  then ()
+                  else smart_reject "stale enumerator cache key/version"
+                val (expected_ins, expected_outs) = mode_shape rel mode
+                val _ =
+                  if same_types (map Term.type_of ins) expected_ins andalso
+                     same_types (map Term.type_of outs) expected_outs then ()
+                  else smart_reject "Enum mode/arity/types mismatch"
+                val _ = require_bound "Enum input" bound ins
+                val _ = validate_executable "Enum input" [] ins
+                val introduced = List.foldl (fn (variable, result) =>
+                  if fresh_in (bound @ result) variable then
+                    result @ [variable] else result) []
+                  (List.concat (map Term.free_vars_lr outs))
+              in
+                validate_plan cont (introduced @ bound)
+              end
+          | Prune => ()
+
+      val _ = List.app (fn plan => validate_plan plan []) plans
+
+      (* Enumerator clauses come from arbitrary HOL source.  Rename every
+         clause-local variable into a generated namespace whose sanitized
+         spelling is injective and disjoint from all emitter helper names. *)
+      val next_enum_local = ref 0
+      fun fresh_enum_local variable =
+        let val serial = !next_enum_local
+            val _ = next_enum_local := serial + 1
+        in
+          Term.mk_var ("refute_enum_local_" ^ Int.toString serial,
+            Term.type_of variable)
+        end
+      fun rename_program
+            ({relation, mode, version, clauses} :
+              Refute_SmartGen.enumerator) =
+        let
+          fun rename_clause (Refute_SmartGen.CpsClause
+                {ins, premises, outs}) =
+            let
+              fun premise_terms premise =
+                case premise of
+                    Refute_SmartGen.CpsCall {ins, outs, ...} => ins @ outs
+                  | Refute_SmartGen.CpsGuard tm => [tm]
+                  | Refute_SmartGen.CpsGenerate variable => [variable]
+              val terms = ins @ List.concat (map premise_terms premises) @ outs
+              val variables = List.foldl (fn (variable, result) =>
+                if List.exists (fn old => Term.aconv old variable) result
+                then result else result @ [variable]) []
+                (List.concat (map Term.free_vars_lr terms))
+              val renamed = map fresh_enum_local variables
+              val substitution = ListPair.mapEq (fn (old, fresh) =>
+                {redex = old, residue = fresh}) (variables, renamed)
+              fun sub tm = Term.subst substitution tm
+              fun sub_premise premise =
+                case premise of
+                    Refute_SmartGen.CpsCall {rel, mode, ins, outs} =>
+                      Refute_SmartGen.CpsCall
+                        {rel = rel, mode = mode, ins = map sub ins,
+                         outs = map sub outs}
+                  | Refute_SmartGen.CpsGuard tm =>
+                      Refute_SmartGen.CpsGuard (sub tm)
+                  | Refute_SmartGen.CpsGenerate variable =>
+                      Refute_SmartGen.CpsGenerate (sub variable)
+            in
+              Refute_SmartGen.CpsClause
+                {ins = map sub ins, premises = map sub_premise premises,
+                 outs = map sub outs}
+            end
+        in
+          {relation = relation, mode = mode, version = version,
+           clauses = map rename_clause clauses}
+        end
+      val enum_programs = map rename_program enum_programs
 
       fun index_term {list, count, indexes} tm =
         case Redblackmap.peek (!indexes, tm) of
@@ -1778,7 +2158,9 @@ structure Refute_Extract = struct
           handle Refute_Gen.NoGenerator (missing, why) =>
             reject ("no generator for " ^ type_name missing ^ " — " ^ why)
 
-      val root_types = Lib.mk_set (List.concat (List.map plan_gen_types plans))
+      val root_types = Lib.mk_set
+        (List.concat (List.map plan_gen_types plans) @
+         List.concat (map Refute_SmartGen.enumerator_gen_types enum_programs))
       val _ = List.app (fn ty => validate_type ty ty) root_types
 
       fun dependencies ty =
@@ -1849,6 +2231,7 @@ structure Refute_Extract = struct
       val generator_runtime =
         "datatype refute_attempt =\n" ^
         "    RefuteContinue\n" ^
+        "  | RefuteGuardSuccess\n" ^
         "  | RefuteHit of Refute_EvalSML.generated_hit\n" ^
         "fun refute_hit found =\n" ^
         "  if (!Refute_EvalSML.ignored_filter) found then\n" ^
@@ -2273,6 +2656,322 @@ structure Refute_Extract = struct
           safe_value (expression context tm) failure ^ split_body ^ ")"
         end
 
+      fun enum_name program =
+        "smart_enum_" ^ integer
+          (Lib.index (same_program program) enum_programs)
+
+      fun generated_from environment tm =
+        pair (expression context tm) (evaluation_thunk tm environment)
+
+      val enum_match_serial = ref 0
+      fun fresh_enum_match () =
+        let val serial = !enum_match_serial
+            val _ = enum_match_serial := serial + 1
+        in "refute_enum_match_" ^ integer serial end
+
+      fun match_generated terms generated environment success failure =
+        let
+          val _ = if length terms = length generated then ()
+                  else smart_reject "enumerator output arity mismatch"
+          val bound = map #1 environment
+          fun known seen variable =
+            List.exists (fn old => Term.aconv old variable) (bound @ seen)
+          fun constructor_result constructor =
+            #2 (boolSyntax.strip_fun (Term.type_of constructor))
+          fun special_name tm name =
+            Term.is_const tm andalso kname tm = name
+          fun make_pattern tm value rebuild seen =
+            if Term.is_var tm then
+              if known seen tm then ("_", [], [], [], seen)
+              else
+                let val binder = variable_name tm
+                in
+                  ("_", [], ["val " ^ binder ^ " = " ^ value],
+                   [(tm, binder, rebuild)], tm :: seen)
+                end
+            else if Literal.is_numeral tm orelse
+                    intSyntax.is_int_literal tm orelse
+                    Literal.is_char_lit tm orelse
+                    Literal.is_string_lit tm orelse
+                    oneSyntax.is_one tm orelse
+                    Term.aconv tm boolSyntax.T orelse
+                    Term.aconv tm boolSyntax.F then
+              ("_",
+               [equality_name context (Term.type_of tm) ^ " " ^
+                parens value ^ " " ^ parens (expression context tm)],
+               [], [], seen)
+            else
+              let
+                val (constructor, arguments) = boolSyntax.strip_comb tm
+              in
+                if special_name constructor ("num", "SUC") then
+                  (case arguments of
+                       [argument] =>
+                         let
+                           val (pat, guards, bindings, additions, next) =
+                             make_pattern argument
+                               (parens (value ^ " - 1"))
+                               (thunk ("Refute_EvalSML.num_term " ^
+                                 parens (value ^ " - 1"))) seen
+                         in
+                           (pat, value ^ " > 0" :: guards, bindings,
+                            additions, next)
+                         end
+                     | _ => smart_reject "malformed SUC output pattern")
+                else if special_name constructor ("num", "ZERO") then
+                  ("_", [value ^ " = 0"], [], [], seen)
+                else if special_name constructor ("list", "NIL") andalso
+                        is_char_list (constructor_result constructor) then
+                  ("_", ["String.size " ^ parens value ^ " = 0"],
+                   [], [], seen)
+                else if special_name constructor ("list", "CONS") andalso
+                        is_char_list (constructor_result constructor) then
+                  (case arguments of
+                       [head, tail] =>
+                         let
+                           val (head_pat, head_guards, head_bindings,
+                                head_additions, after_head) =
+                             make_pattern head
+                               ("String.sub (" ^ value ^ ", 0)")
+                               (thunk ("Refute_EvalSML.char_term " ^
+                                 "(String.sub (" ^ value ^ ", 0))")) seen
+                           val (tail_pat, tail_guards, tail_bindings,
+                                tail_additions, after_tail) =
+                             make_pattern tail
+                               ("String.extract (" ^ value ^
+                                 ", 1, NONE)")
+                               (thunk ("Refute_EvalSML.string_term " ^
+                                 "(String.extract (" ^ value ^
+                                 ", 1, NONE))")) after_head
+                           val _ = (head_pat, tail_pat)
+                         in
+                           ("_", "String.size " ^ parens value ^ " > 0" ::
+                            head_guards @ tail_guards,
+                            head_bindings @ tail_bindings,
+                            head_additions @ tail_additions, after_tail)
+                         end
+                     | _ => smart_reject "malformed CONS output pattern")
+                else if Term.is_const constructor andalso
+                        TypeBase.is_constructor constructor then
+                  let
+                    val constructor_number = constructor_index constructor
+                    val child_names = List.tabulate (length arguments,
+                      fn _ => fresh_enum_match ())
+                    fun one (((index, argument), child_name),
+                        (patterns, guards, bindings, additions,
+                         current_seen)) =
+                      let
+                        val child_term =
+                          thunk ("Refute_EvalSML.reconstruction_arg " ^
+                            integer constructor_number ^ " " ^ integer index ^
+                            " " ^ parens rebuild ^ " ()")
+                        val (child_pattern, child_guards, child_bindings,
+                             child_additions, next_seen) =
+                          make_pattern argument child_name child_term
+                            current_seen
+                      in
+                        (patterns @ [child_pattern], guards @ child_guards,
+                         bindings @ child_bindings,
+                         additions @ child_additions, next_seen)
+                      end
+                    val (patterns, guards, bindings, additions, next_seen) =
+                      List.foldl one ([], [], [], [], seen)
+                        (ListPair.zip (Lib.enumerate 0 arguments, child_names))
+                  in
+                    (constructor_expression context constructor
+                       (ListPair.mapEq (fn (name, pat) =>
+                         parens (name ^ " as " ^ pat))
+                         (child_names, patterns)),
+                     guards, bindings, additions, next_seen)
+                  end
+                else
+                  ("_", [], [], [], seen)
+              end
+          fun item ((tm, name),
+              (patterns, guards, bindings, additions, seen)) =
+            let
+              val value = "#1 " ^ parens name
+              val rebuild = "#2 " ^ parens name
+              val (pat, more_guards, more_bindings, more_additions,
+                   next_seen) = make_pattern tm value rebuild seen
+            in
+              (patterns @ [pat], guards @ more_guards,
+               bindings @ more_bindings, additions @ more_additions,
+               next_seen)
+            end
+          val (patterns, guards, bindings, additions, _) =
+            List.foldl item ([], [], [], [], [])
+              (ListPair.zip (terms, generated))
+          val values = map (fn name => "#1 " ^ parens name) generated
+          val pattern_text =
+            case patterns of
+                [] => "()"
+              | [single] => single
+              | _ => parens (join ", " patterns)
+          val value_text =
+            case values of
+                [] => "()"
+              | [single] => single
+              | _ => parens (join ", " values)
+          fun residual (tm, name) =
+            equality_name context (Term.type_of tm) ^ " " ^
+              parens ("#1 " ^ parens name) ^ " " ^
+              parens (expression context tm)
+          val checks = guards @ ListPair.mapEq residual (terms, generated)
+          val body =
+            if null checks then success (additions @ environment)
+            else
+              safe_value (join " andalso " (map parens checks)) failure ^
+              "if refute_value then " ^
+              success (additions @ environment) ^ " else " ^ failure ^ ")"
+          val body =
+            if null bindings then body
+            else "let " ^ join "\n    " bindings ^ "\nin " ^ body ^ " end"
+        in
+          "(case " ^ value_text ^ " of " ^ pattern_text ^ " => " ^
+          body ^ " | _ => " ^ failure ^ ")"
+        end
+
+      fun cps_lambda [] body = "(fn () => " ^ body ^ ")"
+        | cps_lambda names body =
+            List.foldr (fn (name, rest) =>
+              "(fn " ^ name ^ " => " ^ rest ^ ")") body names
+
+      fun enum_call_name relation mode =
+        let
+          val program =
+            case List.find (fn ({relation = other, mode = other_mode, ...} :
+                Refute_SmartGen.enumerator) =>
+              Refute_SmartGen.same_relation relation other andalso
+              Refute_SmartGen.eq_mode (mode, other_mode)) enum_programs of
+                SOME found => found
+              | NONE => reject "smart enumerator dependency is unavailable"
+        in
+          enum_name program
+        end
+
+      fun compile_smart_guard predicate version environment success failure =
+        case cached_all_input predicate version of
+            NONE => NONE
+          | SOME (program, ins) =>
+              let
+                val generated_inputs = map (generated_from environment) ins
+                val fuel = Int.max (0, #depth (#qc config))
+                val call = enum_name program ^ " " ^
+                  join " " (map parens generated_inputs) ^
+                  (if null generated_inputs then "" else " ") ^
+                  "(fn () => RefuteGuardSuccess) " ^ integer fuel ^
+                  " size complete"
+              in
+                SOME (parens ("complete := false; case " ^ call ^ " of " ^
+                  "RefuteGuardSuccess => " ^ success ^
+                  " | _ => " ^ failure))
+              end
+
+      fun compile_enum_program program =
+        let
+          val {mode, clauses, ...} = program
+          fun has_input Refute_SmartGen.Input = true
+            | has_input (Refute_SmartGen.Pair (left, right)) =
+                has_input left orelse has_input right
+            | has_input _ = false
+          val input_count = length (List.filter has_input
+            (Refute_SmartGen.strip_mode mode))
+          val formals = List.tabulate (input_count, fn index =>
+            "smart_in_" ^ integer index)
+          val empty = "RefuteContinue"
+
+          (* pos_bound_cps_bind runs its left operand at [fuel - 1],
+             but invokes the following computation at the original fuel.
+             Thus only a nested enumerator call receives reduced fuel;
+             sequential premises retain the current budget. *)
+          fun compile_premises outputs [] environment fuel =
+                if null outputs then "continuation ()"
+                else "continuation " ^
+                  join " "
+                    (map (parens o generated_from environment) outputs)
+            | compile_premises outputs
+                ((Refute_SmartGen.CpsGuard tm) :: rest) environment fuel =
+                "if " ^ fuel ^ " <= 0 then " ^ empty ^ " else " ^
+                safe_value (expression context tm) empty ^
+                "if refute_value then " ^
+                compile_premises outputs rest environment fuel ^
+                " else " ^ empty ^ ")"
+            | compile_premises outputs
+                ((Refute_SmartGen.CpsGenerate variable) :: rest)
+                environment fuel =
+                let
+                  val value = variable_name variable
+                  val term = "smart_term_" ^ clean_name value
+                  val body = compile_premises outputs rest
+                    ((variable, value, term) :: environment) fuel
+                  val ty = Term.type_of variable
+                  val generated =
+                    case Refute_Gen.enumerate ty of
+                        SOME _ => "refute_each " ^ enum_source ty ^
+                          " (fn (" ^ value ^ ", " ^ term ^ ") => " ^
+                          body ^ ")"
+                      | NONE =>
+                          parens ("complete := false; " ^
+                            generator_name "exh_" ty ^ " (fn (" ^ value ^
+                            ", " ^ term ^ ") => " ^ body ^
+                            ") size complete")
+                in
+                  "if " ^ fuel ^ " <= 0 then " ^ empty ^ " else " ^
+                  generated
+                end
+            | compile_premises outputs
+                ((Refute_SmartGen.CpsCall
+                  {rel, mode, ins, outs}) :: rest) environment fuel =
+                let
+                  val generated_inputs = map (generated_from environment) ins
+                  val output_names = List.tabulate (length outs, fn index =>
+                    "smart_out_" ^ integer index)
+                  fun success extended =
+                    compile_premises outputs rest extended fuel
+                  val callback = cps_lambda output_names
+                    (match_generated outs output_names environment success
+                      empty)
+                in
+                  "if " ^ fuel ^ " <= 0 then " ^ empty ^ " else " ^
+                  enum_call_name rel mode ^ " " ^
+                  join " " (map parens generated_inputs) ^
+                  (if null generated_inputs then "" else " ") ^ callback ^
+                  " " ^ parens (fuel ^ " - 1") ^ " size complete"
+                end
+
+          fun compile_clause (Refute_SmartGen.CpsClause
+                {ins, premises, outs}) =
+            let
+              fun success environment =
+                compile_premises outs premises environment "fuel"
+            in
+              "if fuel <= 0 then " ^ empty ^ " else " ^
+              match_generated ins formals [] success empty
+            end
+
+          fun choices [] = empty
+            | choices (clause :: rest) =
+                "(case " ^ compile_clause clause ^ " of " ^
+                "RefuteContinue => " ^ choices rest ^
+                " | answer => answer)"
+          val keyword = if enum_name program = "smart_enum_0" then "fun "
+                        else "and "
+        in
+          keyword ^ enum_name program ^ " " ^ join " " formals ^
+          (if null formals then "" else " ") ^
+          "continuation fuel size complete =\n  " ^ choices clauses
+        end
+
+      val enum_declarations =
+        if null enum_programs then ""
+        else
+          (case strategy of
+               Exhaustive => join "\n" (map compile_enum_program enum_programs)
+             | _ => reject
+                 "smart generators currently require exhaustive native SML") ^
+          "\n"
+
       fun compile_exhaustive_plan current environment genuine_only =
         case current of
           Prune => "RefuteContinue"
@@ -2297,10 +2996,23 @@ structure Refute_Extract = struct
               val stuck = recovery "complete" "genuine_only"
                 (name ^ " false")
             in
-              "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^ "\n" ^
-              "in " ^ safe_value (expression context tm) stuck ^
+              "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^
+              "\nin " ^ safe_value (expression context tm) stuck ^
               "if refute_value then " ^ name ^ " " ^ genuine_only ^
               " else RefuteContinue) end"
+            end
+        | SmartGuard {predicate, version, cont} =>
+            let
+              val (name, flag) = guard_names ()
+              val body = compile_exhaustive_plan cont environment flag
+              val compiled =
+                case compile_smart_guard predicate version environment
+                    (name ^ " " ^ genuine_only) "RefuteContinue" of
+                    SOME source => source
+                  | NONE => smart_reject "smart Guard became stale"
+            in
+              "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^
+              "\nin " ^ compiled ^ " end"
             end
         | Bind (variable, tm, fallback, next) =>
             let
@@ -2343,6 +3055,23 @@ structure Refute_Extract = struct
                     generator_name "exh_" ty ^ " (fn (" ^ value ^ ", " ^
                     term ^ ") => " ^ body ^ ") size complete")
             end
+        | Enum {rel, mode, ins, outs, cont, ...} =>
+            let
+              val generated_inputs = map (generated_from environment) ins
+              val output_names = List.tabulate (length outs, fn index =>
+                "plan_smart_out_" ^ integer index)
+              fun success extended =
+                compile_exhaustive_plan cont extended genuine_only
+              val callback = cps_lambda output_names
+                (match_generated outs output_names environment success
+                  "RefuteContinue")
+              val fuel = Int.max (0, #depth (#qc config))
+            in
+              parens ("complete := false; " ^ enum_call_name rel mode ^ " " ^
+                join " " (map parens generated_inputs) ^
+                (if null generated_inputs then "" else " ") ^ callback ^
+                " " ^ integer fuel ^ " size complete")
+            end
 
       fun compile_random_plan current environment genuine state =
         case current of
@@ -2373,6 +3102,8 @@ structure Refute_Extract = struct
               "if refute_value then " ^ name ^ " " ^ genuine ^ " else " ^
               parens ("RefuteContinue, " ^ state) ^ ") end"
             end
+        | SmartGuard _ =>
+            smart_reject "smart Guard reached random compilation"
         | Bind (variable, tm, fallback, next) =>
             let
               val value = variable_name variable
@@ -2411,6 +3142,8 @@ structure Refute_Extract = struct
               "let val ((" ^ value ^ ", " ^ term ^ "), " ^ next_state ^
               ") = " ^ draw ^ "\nin " ^ body ^ " end"
             end
+        | Enum _ =>
+            reject "smart generators require exhaustive native SML"
 
       fun card_declaration (index, plan) =
         let
@@ -2467,66 +3200,159 @@ structure Refute_Extract = struct
                  List.app (payload o #3) branches)
             | Guard (tm, next) =>
                 (ignore (expression context tm); payload next)
+            | SmartGuard {cont, ...} => payload cont
+            | Enum {ins, cont, ...} =>
+                (List.app (ignore o expression context) ins; payload cont)
             | Prune => ()
         in payload plan end) plans
       val cards = String.concat
         (List.map card_declaration (Lib.enumerate 0 plans))
       val table_id = Refute_EvalSML.register_term_tables
         (rev (!(#list constructor_terms))) (rev (!(#list raw_terms)))
-      val table_declaration =
-        "val refute_table_id = " ^ integer table_id ^ "\n"
-      val card_names = List.map (fn index =>
-        "card_" ^ integer (index + 1))
-        (List.tabulate (length plans, fn x => x))
-      val dispatch =
-        "val test_cards = Vector.fromList [" ^
-        join ", " card_names ^ "]\n" ^
-        "fun dispatch card genuine_only size draws state =\n" ^
-        "  Vector.sub (test_cards, card - 1)\n" ^
-        "    genuine_only size draws state\n" ^
-        "fun protected_dispatch card genuine_only size draws state =\n" ^
-        "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
-        "    let val answer = dispatch card genuine_only size draws state\n" ^
-        "        val hit = Option.map (fn (environment, genuine) =>\n" ^
-        "          (List.map (fn (index, rebuild) =>\n" ^
-        "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
-        "               refute_table_id rebuild)) environment, genuine))\n" ^
-        "          (#hit answer)\n" ^
-        "    in {hit = hit, complete = #complete answer,\n" ^
-        "        table = refute_table_id, state = #state answer,\n" ^
-        "        tests = #tests answer,\n" ^
-        "        match_failures = #match_failures answer}\n" ^
-        "    end)\n" ^
-        "fun install () =\n" ^
-        "  Refute_EvalSML.installed_dispatch := SOME protected_dispatch\n"
-      val _ = drain_definitions context
-      val source = source_prefix context ^
-        definition_declarations context ^ "\n" ^ generator_runtime ^ "\n" ^
-        exhaustive_generators ^ random_generators ^ table_declaration ^
-        cards ^ dispatch
+      fun finish () =
+        let
+          val table_declaration =
+            "val refute_table_id = " ^ integer table_id ^ "\n"
+          val card_names = List.map (fn index =>
+            "card_" ^ integer (index + 1))
+            (List.tabulate (length plans, fn x => x))
+          val dispatch =
+            "val test_cards = Vector.fromList [" ^
+            join ", " card_names ^ "]\n" ^
+            "fun dispatch card genuine_only size draws state =\n" ^
+            "  Vector.sub (test_cards, card - 1)\n" ^
+            "    genuine_only size draws state\n" ^
+            "fun protected_dispatch card genuine_only size draws state =\n" ^
+            "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
+            "    let val answer = dispatch card genuine_only size draws state\n" ^
+            "        val hit = Option.map (fn (environment, genuine) =>\n" ^
+            "          (List.map (fn (index, rebuild) =>\n" ^
+            "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
+            "               refute_table_id rebuild)) environment, genuine))\n" ^
+            "          (#hit answer)\n" ^
+            "    in {hit = hit, complete = #complete answer,\n" ^
+            "        table = refute_table_id, state = #state answer,\n" ^
+            "        tests = #tests answer,\n" ^
+            "        match_failures = #match_failures answer}\n" ^
+            "    end)\n" ^
+            "fun install () =\n" ^
+            "  Refute_EvalSML.installed_dispatch := SOME protected_dispatch\n"
+          val _ = drain_definitions context
+          val source = source_prefix context ^
+            definition_declarations context ^ "\n" ^
+            generator_runtime ^ "\n" ^ exhaustive_generators ^
+            random_generators ^ enum_declarations ^ table_declaration ^
+            cards ^ dispatch
+        in
+          {source = source, entry = "install ()", table = table_id}
+        end
     in
-      {source = source, entry = "install ()"}
+      finish ()
+      handle error =>
+        let
+          val cleanup_result = Exn.capture
+            Refute_EvalSML.unregister_term_tables table_id
+        in
+          case (error, cleanup_result) of
+              (Interrupt, _) => raise Interrupt
+            | (_, Exn.Exn Interrupt) => raise Interrupt
+            | _ => Exn.reraise error
+        end
     end
+
+  fun extract_tests config strategy plans =
+    let val {source, entry, ...} =
+      extract_tests_with false config strategy plans
+    in
+      {source = source, entry = entry}
+    end
+
+  fun safe_exception_text error =
+    ((case General.exnMessage error of
+          "" => "unknown extraction exception"
+        | text => text)
+     handle Interrupt => raise Interrupt
+          | _ => "unknown extraction exception")
+
+  (* This is the same extraction and scope validator used by native compile,
+     run in strict gate mode over the complete plan set.  Evaluation terms are
+     not executable plan nodes, so validate them separately without granting
+     the smart-Guard relation exception.  Each extraction returns its exact
+     table ID: concurrent preflights and compiles therefore clean only their
+     own registrations, without nesting the non-recursive compile mutex.
+
+     The registration callback is a private test seam.  The production entry
+     point supplies an inert callback, so it cannot change normal behavior. *)
+  fun native_preflight_with registration_callback config strategy plans
+      evals =
+    let
+      fun validate_eval tm =
+        let
+          val constants = Refute_Core.nonexecutable_constants [tm]
+          val binders = HolKernel.find_terms Term.is_abs tm
+          val _ =
+            if null binders then ()
+            else raise NotExtractable
+              ["native preflight eval contains an unexpanded binder"]
+          val _ =
+            if null constants then ()
+            else raise NotExtractable
+              ["native preflight eval is nonexecutable: " ^
+               Refute_Core.show_constants constants]
+        in
+          ignore (extract_term tm)
+        end
+
+      fun report (result, cleanup_result) =
+        case (result, cleanup_result) of
+            (Exn.Exn Interrupt, _) => raise Interrupt
+          | (_, Exn.Exn Interrupt) => raise Interrupt
+          | (Exn.Res _, Exn.Res _) => []
+          | (Exn.Exn (NotExtractable reasons), Exn.Res _) => reasons
+          | (Exn.Exn error, Exn.Res _) =>
+              ["native preflight: " ^ safe_exception_text error]
+          | (Exn.Res _, Exn.Exn error) =>
+              ["native preflight cleanup: " ^ safe_exception_text error]
+          | (Exn.Exn (NotExtractable reasons), Exn.Exn error) =>
+              reasons @
+              ["native preflight cleanup: " ^ safe_exception_text error]
+          | (Exn.Exn error, Exn.Exn cleanup_error) =>
+              ["native preflight: " ^ safe_exception_text error,
+               "native preflight cleanup: " ^
+                 safe_exception_text cleanup_error]
+    in
+      case Exn.capture (fn () =>
+          extract_tests_with true config strategy plans) () of
+          Exn.Exn Interrupt => raise Interrupt
+        | Exn.Exn (NotExtractable reasons) => reasons
+        | Exn.Exn error =>
+            ["native preflight: " ^ safe_exception_text error]
+        | Exn.Res {table, ...} =>
+            let
+              val result = Exn.capture (fn () =>
+                (registration_callback table;
+                 List.app validate_eval evals)) ()
+              val cleanup_result = Exn.capture
+                Refute_EvalSML.unregister_term_tables table
+            in
+              report (result, cleanup_result)
+            end
+    end
+
+  fun native_preflight config strategy plans evals =
+    native_preflight_with (fn _ => ()) config strategy plans evals
 
   fun install_extractor () = Refute_EvalSML.extract_tests_hook :=
     (fn config => fn strategy => fn plans =>
-      let
-        val table = !Refute_EvalSML.table_serial
-        fun cleanup () =
-          if !Refute_EvalSML.table_serial = table then ()
-          else Refute_EvalSML.unregister_term_tables table
+      let val {source, entry, table} =
+        extract_tests_with false config strategy plans
       in
-        let val {source, entry} = extract_tests config strategy plans
-        in
-          Refute_EvalSML.Extracted
-            {source = source, entry = entry, table = table}
-        end
-        handle NotExtractable reasons =>
-                 (cleanup ();
-                  Refute_EvalSML.ExtractionFailed reasons)
-             | Interrupt => (cleanup (); raise Interrupt)
-             | error => (cleanup (); raise error)
-      end)
+        Refute_EvalSML.Extracted
+          {source = source, entry = entry, table = table}
+      end
+      handle NotExtractable reasons =>
+               Refute_EvalSML.ExtractionFailed reasons
+           | Interrupt => raise Interrupt)
 
   val _ = install_extractor ()
 end

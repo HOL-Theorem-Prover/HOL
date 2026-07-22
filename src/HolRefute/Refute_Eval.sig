@@ -1,12 +1,19 @@
 signature Refute_Eval = sig
   type term = Term.term
 
+  type mode = Refute_SmartGen.mode
+  type program_version = Refute_SmartGen.program_version
+
   datatype plan =
       Test of term
     | Gen of term * plan
     | Bind of term * term * plan option * plan
     | Split of term * (term * term list * plan) list
     | Guard of term * plan
+    | SmartGuard of {predicate : term, version : program_version,
+                     cont : plan}
+    | Enum of {rel : term, mode : mode, version : program_version,
+               ins : term list, outs : term list, cont : plan}
     | Prune
 
   datatype quant = Forall | Exists

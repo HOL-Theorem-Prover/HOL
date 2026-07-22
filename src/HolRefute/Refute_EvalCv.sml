@@ -1004,6 +1004,8 @@ structure Refute_EvalCv = struct
               List.foldl (fn ((_, _, next), result) =>
                 collect next result) variables branches
           | Refute_Eval.Guard (_, next) => collect next variables
+          | Refute_Eval.SmartGuard {cont, ...} => collect cont variables
+          | Refute_Eval.Enum {cont, ...} => collect cont variables
           | Refute_Eval.Prune => variables
     in
       Util.distinct_terms (collect plan [])
@@ -1027,6 +1029,10 @@ structure Refute_EvalCv = struct
               List.foldl (fn ((_, _, next), result) =>
                 collect next result) (tm :: terms) branches
           | Refute_Eval.Guard (tm, next) => collect next (tm :: terms)
+          | Refute_Eval.SmartGuard {predicate, cont, ...} =>
+              collect cont (predicate :: terms)
+          | Refute_Eval.Enum {ins, cont, ...} =>
+              collect cont (ins @ terms)
           | Refute_Eval.Prune => terms
     in
       collect plan []
@@ -1188,6 +1194,12 @@ structure Refute_EvalCv = struct
               boolSyntax.mk_cond
                 (substitute env tm, build next env skip,
                  no_hit variables skip)
+          | Refute_Eval.SmartGuard {predicate, cont, ...} =>
+              boolSyntax.mk_cond
+                (substitute env predicate, build cont env skip,
+                 no_hit variables skip)
+          | Refute_Eval.Enum _ =>
+              raise Unsupported "Enum requires native compilation"
           | Refute_Eval.Bind (variable, tm, _, next) =>
               let
                 val value = named_variable
@@ -1302,6 +1314,12 @@ structure Refute_EvalCv = struct
               boolSyntax.mk_cond
                 (substitute env tm, build next env state,
                  no_hit variables state)
+          | Refute_Eval.SmartGuard {predicate, cont, ...} =>
+              boolSyntax.mk_cond
+                (substitute env predicate, build cont env state,
+                 no_hit variables state)
+          | Refute_Eval.Enum _ =>
+              raise Unsupported "Enum requires native compilation"
           | Refute_Eval.Bind (variable, tm, _, next) =>
               let
                 val value = named_variable
@@ -1572,19 +1590,38 @@ structure Refute_EvalCv = struct
          | Feedback.HOL_ERR error =>
              Refute_Eval.Inapplicable [hol_error_reason error]
 
+  fun plan_has_enum current =
+    case current of
+        Refute_Eval.Test _ => false
+      | Refute_Eval.Gen (_, next) => plan_has_enum next
+      | Refute_Eval.Bind (_, _, fallback, next) =>
+          plan_has_enum next orelse Option.getOpt
+            (Option.map plan_has_enum fallback, false)
+      | Refute_Eval.Split (_, branches) =>
+          List.exists (plan_has_enum o #3) branches
+      | Refute_Eval.Guard (_, next) => plan_has_enum next
+      | Refute_Eval.SmartGuard {cont, ...} => plan_has_enum cont
+      | Refute_Eval.Enum _ => true
+      | Refute_Eval.Prune => false
+
   fun compile config strategy problem =
     case problem of
         Refute_Eval.Pnf _ =>
           Refute_Eval.Inapplicable
             ["narrowing requires the native substrate"]
       | Refute_Eval.Plans plans =>
-          (case strategy of
-               Refute_Eval.Narrowing =>
-                 Refute_Eval.Inapplicable ["narrowing is not installed"]
-             | Refute_Eval.Exhaustive =>
-                 compile_plans config strategy plans
-             | Refute_Eval.Random _ =>
-                 compile_plans config strategy plans)
+          if List.exists plan_has_enum plans then
+            (* Temporary until TASK_11 adds the shared HOL enumerator. *)
+            Refute_Eval.Inapplicable
+              ["Enum plans require cv compilation (TASK_11)"]
+          else
+            (case strategy of
+                 Refute_Eval.Narrowing =>
+                   Refute_Eval.Inapplicable ["narrowing is not installed"]
+               | Refute_Eval.Exhaustive =>
+                   compile_plans config strategy plans
+               | Refute_Eval.Random _ =>
+                   compile_plans config strategy plans)
 
   (* Selftest-only stream hook.  Supported plans run through the production
      cv loop.  Values outside its first-order result fragment still take

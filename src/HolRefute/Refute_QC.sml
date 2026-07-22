@@ -1,6 +1,8 @@
 structure Refute_QC = struct
   type term = Term.term
   open Refute_Cert Refute_Eval
+  structure SmartGen = Refute_SmartGen
+  structure MFH = Refute_ModelFinder_HOL
 
   fun member tm = List.exists (fn other => Term.aconv tm other)
 
@@ -65,14 +67,218 @@ structure Refute_QC = struct
   fun compile_plan (config : Refute_Core.config) goal =
     let
       val (assumptions, conclusion) = boolSyntax.strip_imp goal
+      val smart_context =
+        if #smart_generators (#qc config) then
+          SOME (MFH.make_context (#mf config) [])
+        else NONE
+      type analysis =
+        {result : SmartGen.inference_result option,
+         trigger : bool, reason : string option}
+      val analyses = ref ([] : (term * analysis) list)
 
       fun vars_of bound tm = subtract_terms (Term.free_vars_lr tm) bound
+
+      fun premise_head premise =
+        let val (head, _) = HolKernel.strip_comb premise
+        in if Term.is_const head then SOME head else NONE end
+        handle HOL_ERR _ => NONE
+
+      fun error_text error =
+        ((case General.exnMessage error of
+              "" => "unexpected mode-inference exception"
+            | text => text)
+         handle Interrupt => raise Interrupt
+              | _ => "unexpected mode-inference exception")
+
+      fun safe_term_text tm =
+        Parse.term_to_string tm
+        handle Interrupt => raise Interrupt
+             | _ => "<unprintable premise>"
+
+      fun analyse relation =
+        case List.find (fn (other, _) =>
+               SmartGen.same_constant relation other) (!analyses) of
+            SOME (_, answer) => answer
+          | NONE =>
+              let
+                val answer =
+                  case smart_context of
+                      NONE => {result = NONE, trigger = false, reason = NONE}
+                    | SOME context =>
+                        (case MFH.instantiated_fixpoint_group context relation of
+                             SOME {members, rules, ...} =>
+                               (case SmartGen.infer_scc
+                                  {members = members, rules = rules,
+                                   triple_for = MFH.joint_intro_triple_for,
+                                   external = [],
+                                   reorder_premises =
+                                     #reorder_premises (#qc config)} of
+                                    SOME result =>
+                                      {result = SOME result, trigger = true,
+                                       reason = NONE}
+                                  | NONE =>
+                                      {result = NONE, trigger = true,
+                                       reason = SOME
+                                         "introduction-rule conversion failed"})
+                           | NONE =>
+                               (case SmartGen.horn_inference_clauses_for
+                                   relation of
+                                    SOME clauses =>
+                                      {result = SOME (SmartGen.infer_group
+                                        {members = [relation],
+                                         clauses = clauses, external = [],
+                                         reorder_premises =
+                                           #reorder_premises (#qc config)}),
+                                       trigger = true, reason = NONE}
+                                  | NONE =>
+                                      {result = NONE, trigger = false,
+                                       reason = NONE}))
+                val _ = analyses := (relation, answer) :: !analyses
+                val _ = Option.app SmartGen.cache_inference (#result answer)
+              in
+                answer
+              end
+              handle Interrupt => raise Interrupt
+                   | error =>
+                       let
+                         val answer =
+                           {result = NONE, trigger = true,
+                            reason = SOME (error_text error)}
+                         val _ = analyses := (relation, answer) :: !analyses
+                       in
+                         answer
+                       end
+
+      fun smart_candidates bound assumption =
+        case premise_head assumption of
+            NONE => ([], false, NONE)
+          | SOME relation =>
+              let val {result, trigger, reason} = analyse relation
+                  val inferred =
+                    case result of
+                        NONE => []
+                      | SOME inference => SmartGen.goal_modes_for_call bound
+                          assumption inference
+                  val modes =
+                    List.mapPartial (fn goal_mode as
+                        ({mode, ...} : SmartGen.goal_mode) =>
+                      Option.map (fn program => (goal_mode, program))
+                        (SmartGen.enumerator_for relation mode)) inferred
+                  val reason =
+                    if not (null modes) orelse not trigger then reason
+                    else if not (null inferred) then SOME
+                      "CPS enumerator compilation failed for inferred mode"
+                    else SOME (Option.getOpt (reason,
+                      "no executable first-order positive mode"))
+              in
+                (modes, trigger, reason)
+              end
+
+      fun report_fallback assumption reason =
+        Refute_Core.Private.say 2
+          ("Refute smart generator fallback for " ^
+           safe_term_text assumption ^ ": " ^ reason ^ "\n")
+
+      datatype premise_action =
+          Smart of SmartGen.goal_mode * SmartGen.enumerator
+        | Ordinary
+
+      fun orientation_score bound (lhs, rhs) =
+        if Term.is_var rhs andalso
+           not (member rhs (Term.free_vars_lr lhs)) andalso
+           not (member rhs bound)
+        then SOME
+          {missing = length (vars_of bound lhs), functional = true,
+           generator = false, outputs = 1, recursive = false}
+        else
+          case fully_applied_constructor rhs of
+              NONE => NONE
+            | SOME (_, arguments) => SOME
+                {missing = length (vars_of bound lhs), functional = true,
+                 generator = false, outputs = length arguments,
+                 recursive = false}
+
+      fun equality_score bound assumption =
+        case Lib.total boolSyntax.dest_eq assumption of
+            NONE => NONE
+          | SOME (left, right) =>
+              (case (orientation_score bound (left, right),
+                     orientation_score bound (right, left)) of
+                   (NONE, other) => other
+                 | (other, NONE) => other
+                 | (SOME first, SOME second) =>
+                     if SmartGen.compare_score (second, first) = LESS
+                     then SOME second else SOME first)
+
+      fun ordinary_score bound assumption =
+        if #optimise_equality (#qc config) then
+          Option.getOpt (equality_score bound assumption,
+            {missing = length (vars_of bound assumption),
+             functional = false, generator = true, outputs = 0,
+             recursive = false})
+        else
+          {missing = length (vars_of bound assumption),
+           functional = false, generator = true, outputs = 0,
+           recursive = false}
+
+      fun action_for bound assumption =
+        let
+          val ordinary = (Ordinary, ordinary_score bound assumption)
+          val (modes, trigger, reason) = smart_candidates bound assumption
+          fun add ((mode as {score, ...} : SmartGen.goal_mode, program),
+                   NONE) = SOME (Smart (mode, program), score)
+            | add ((mode as {score, ...} : SmartGen.goal_mode, program),
+                   current as SOME (_, old)) =
+                if SmartGen.compare_score (score, old) = LESS then
+                  SOME (Smart (mode, program), score)
+                else current
+          val smart = List.foldl add NONE modes
+          val best =
+            case smart of
+                NONE => ordinary
+              | SOME (candidate as (_, score)) =>
+                  if SmartGen.compare_score (#2 ordinary, score) = LESS
+                  then ordinary else candidate
+        in
+          (best, trigger, reason)
+        end
+
+      fun remove_nth selected entries =
+        List.map #2 (List.filter (fn (index, _) => index <> selected)
+          (Lib.enumerate 0 entries))
+
+      fun select_premise bound entries =
+        let
+          fun candidate (index, assumption) =
+            let val (scored, trigger, reason) = action_for bound assumption
+            in (index, assumption, scored, trigger, reason) end
+          val first = candidate (0, hd entries)
+          val all =
+            if #smart_generators (#qc config) andalso
+               #reorder_premises (#qc config)
+            then map candidate (Lib.enumerate 0 entries)
+            else [first]
+          val reorder = length all > 1 andalso
+            List.exists (fn (_, _, _, trigger, _) => trigger) all
+          val candidates = if reorder then all else [first]
+          fun least (item as (_, _, (_, score), _, _)) NONE = SOME item
+            | least (item as (_, _, (_, score), _, _))
+                (current as SOME (_, _, (_, old), _, _)) =
+                if SmartGen.compare_score (score, old) = LESS
+                then SOME item else current
+        in
+          (valOf (List.foldl (fn (item, result) => least item result)
+             NONE candidates), reorder)
+        end
 
       fun compile conclusion bound assumptions =
         case assumptions of
           [] => gen_all (vars_of bound conclusion) (Test conclusion)
-        | assumption :: rest =>
+        | _ =>
             let
+              val ((selected, assumption, (action, _), triggering, reason),
+                   reorder) = select_premise bound assumptions
+              val rest = remove_nth selected assumptions
               val assumption_vars = vars_of bound assumption
               val next_bound = union_terms assumption_vars bound
               fun continuation () = compile conclusion next_bound rest
@@ -89,8 +295,7 @@ structure Refute_QC = struct
                     val fallback =
                       if genspec_available (Term.type_of rhs) then
                         SOME (guarded_gen rhs (continuation ()))
-                      else
-                        NONE
+                      else NONE
                     val variables = subtract_terms assumption_vars [rhs]
                   in
                     SOME (gen_all variables
@@ -115,19 +320,55 @@ structure Refute_QC = struct
                         SOME (gen_all lhs_variables
                           (Split (lhs, [(constructor, variables, branch)])))
                       end
-            in
-              if #optimise_equality (#qc config) then
-                case Lib.total boolSyntax.dest_eq assumption of
-                  NONE => default ()
-                | SOME (left, right) =>
-                    (case try_equality (left, right) of
-                       SOME result => result
-                     | NONE =>
-                         (case try_equality (right, left) of
+
+              fun ordinary () =
+                if #optimise_equality (#qc config) then
+                  case Lib.total boolSyntax.dest_eq assumption of
+                    NONE => default ()
+                  | SOME (left, right) =>
+                      let
+                        val orientations =
+                          if not reorder then
+                            [(left, right), (right, left)]
+                          else
+                            (case (orientation_score bound (left, right),
+                                   orientation_score bound (right, left)) of
+                                 (SOME first, SOME second) =>
+                                   if SmartGen.compare_score
+                                        (second, first) = LESS
+                                   then [(right, left), (left, right)]
+                                   else [(left, right), (right, left)]
+                               | _ => [(left, right), (right, left)])
+                      in
+                        case Lib.get_first try_equality orientations of
                             SOME result => result
-                          | NONE => default ()))
-              else
-                default ()
+                          | NONE => default ()
+                      end
+                else default ()
+            in
+              case action of
+                  Smart ({mode, ins, outs, missing, ...},
+                         {version, ...} : SmartGen.enumerator) =>
+                    gen_all missing
+                      (if null outs then
+                         (Refute_Core.Private.say 2
+                            ("Refute smart generator Guard for " ^
+                             safe_term_text assumption ^ "\n");
+                          SmartGuard
+                            {predicate = assumption, version = version,
+                             cont = continuation ()})
+                       else
+                         Enum {rel = valOf (premise_head assumption),
+                               mode = mode, version = version,
+                               ins = ins, outs = outs,
+                               cont = continuation ()})
+                | Ordinary =>
+                    (if triggering then
+                       report_fallback assumption
+                         (Option.getOpt (reason,
+                           "no executable first-order positive mode"))
+                     else ();
+                     ordinary ())
             end
     in
       if #smart_quantifier (#qc config) then
@@ -166,6 +407,17 @@ structure Refute_QC = struct
         | Guard (predicate, continuation) =>
             indent depth ^ "Guard " ^ Parse.term_to_string predicate ^ "\n" ^
             show (depth + 2) continuation
+        | SmartGuard {predicate, cont, ...} =>
+            indent depth ^ "Smart Guard " ^
+            Parse.term_to_string predicate ^ "\n" ^
+            show (depth + 2) cont
+        | Enum {rel, mode, ins, outs, cont, ...} =>
+            indent depth ^ "Enum " ^ Parse.term_to_string rel ^ "[" ^
+            SmartGen.mode_string mode ^ "] (" ^
+            String.concatWith ", " (map Parse.term_to_string ins) ^
+            ") -> (" ^
+            String.concatWith ", " (map Parse.term_to_string outs) ^
+            ")\n" ^ show (depth + 2) cont
         | Prune => indent depth ^ "Prune"
     in
       show 0 plan
@@ -254,7 +506,55 @@ structure Refute_QC = struct
       | Split (_, branches) =>
           List.exists (fn (_, _, next) => plan_has_gen next) branches
       | Guard (_, next) => plan_has_gen next
+      | SmartGuard {cont, ...} => plan_has_gen cont
+      | Enum _ => true
       | Prune => false
+
+  fun plan_uses_smart current =
+    case current of
+        Test _ => false
+      | Gen (_, next) => plan_uses_smart next
+      | Bind (_, _, fallback, next) =>
+          plan_uses_smart next orelse
+          (case fallback of
+               NONE => false
+             | SOME alternative => plan_uses_smart alternative)
+      | Split (_, branches) =>
+          List.exists (plan_uses_smart o #3) branches
+      | Guard (_, next) => plan_uses_smart next
+      | SmartGuard _ => true
+      | Enum _ => true
+      | Prune => false
+
+  fun smart_gate_override_with preflight (config : Refute_Core.config)
+        (backend : Refute_Core.backend) instances =
+    let
+      val native_capable =
+        case #substrate (#qc config) of
+            Refute_Core.Compute => false
+          | Refute_Core.Cv => false
+          | _ => true
+      val plans = map (fn (instance : Refute_Core.instance) =>
+        compile_plan config (#goal instance)) instances
+      val gated_plans = List.mapPartial
+        (fn (instance, plan) =>
+          case #qc_gate instance of NONE => NONE | SOME _ => SOME plan)
+        (ListPair.zip (instances, plans))
+      val evals = List.concat
+        (map (fn (instance : Refute_Core.instance) => #evals instance)
+          instances)
+    in
+      #name backend = "exhaustive" andalso
+      #smart_generators (#qc config) andalso native_capable andalso
+      not (null gated_plans) andalso List.all plan_uses_smart gated_plans andalso
+      null (preflight config Exhaustive plans evals)
+    end
+    handle Interrupt => raise Interrupt
+         | _ => false
+
+  fun smart_gate_override config backend instances =
+    smart_gate_override_with Refute_Extract.native_preflight
+      config backend instances
 
   fun substrate_name Refute_Core.Compute = SOME "compute"
     | substrate_name Refute_Core.Cv = SOME "cv"
@@ -346,8 +646,14 @@ structure Refute_QC = struct
   fun strategy_run strategy (config : Refute_Core.config)
       (instances : Refute_Core.instance list) =
     let
+      (* Smart generators are the positive exhaustive CPS compilation.
+         Random testing retains its existing generator/guard plans. *)
+      val plan_config =
+        case strategy of
+            Random _ => Refute_Core.upd_smart_generators false config
+          | _ => config
       val plans = List.map
-        (fn instance => compile_plan config (#goal instance)) instances
+        (fn instance => compile_plan plan_config (#goal instance)) instances
       val _ =
         if not (Refute_Core.Private.enabled 3) then ()
         else List.app (fn (instance, plan) =>
@@ -355,11 +661,44 @@ structure Refute_QC = struct
             ("Refute plan (card " ^ Int.toString (#card instance) ^
              "):\n" ^ pp_plan plan ^ "\n"))
           (ListPair.zip (instances, plans))
+      val paired = ListPair.zip (instances, plans)
+      val gated = List.exists (Option.isSome o #qc_gate) instances
+      val original_gate_reasons = List.concat
+        (List.mapPartial (fn (instance : Refute_Core.instance) =>
+          #qc_gate instance) instances)
+      val native_capable =
+        case #substrate (#qc config) of
+            Refute_Core.Compute => false
+          | Refute_Core.Cv => false
+          | _ => true
+      val every_gated_plan_is_smart = List.all (fn (instance, plan) =>
+        not (Option.isSome (#qc_gate instance)) orelse plan_uses_smart plan)
+        paired
+      val can_preflight = gated andalso strategy = Exhaustive andalso
+        #smart_generators (#qc config) andalso native_capable andalso
+        every_gated_plan_is_smart
+      val preflight_reasons =
+        if can_preflight then
+          Refute_Extract.native_preflight config strategy plans
+            (List.concat (map (fn (instance : Refute_Core.instance) =>
+              #evals instance) instances))
+        else []
+      val gate_reasons =
+        if not gated then []
+        else if can_preflight andalso null preflight_reasons then []
+        else original_gate_reasons @ preflight_reasons @
+          (if native_capable orelse is_random strategy then []
+           else ["smart generators require an Enum-capable native substrate"])
     in
-      case compile_selected config strategy (Plans plans) of
+      if not (null gate_reasons) then Refute_Core.Unknown gate_reasons
+      else case compile_selected config strategy (Plans plans) of
           SelectionFailed reasons => Refute_Core.Unknown reasons
         | Selected (substrate, compiled) =>
-            let
+            if gated andalso substrate <> "native" then
+              (#close compiled ();
+               Refute_Core.Unknown
+                 ["smart-gated plans require the native substrate"])
+            else let
               fun selected_body () =
                 let
                   val entries = schedule instances (#size (#qc config))
@@ -494,7 +833,8 @@ structure Refute_QC = struct
         strategy_run (Random {seed = strategy_seed config}) config }
 
   fun register_backends () =
-    (Refute_EvalSML.register_substrate ();
+    (Refute_Core.executable_goal_override := smart_gate_override;
+     Refute_EvalSML.register_substrate ();
      Refute_EvalCompute.register_substrate ();
      Refute_EvalCv.register_substrate ();
      Refute_Core.register_backend exhaustive_backend;

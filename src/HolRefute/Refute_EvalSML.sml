@@ -165,6 +165,34 @@ structure Refute_EvalSML = struct
       boolSyntax.rhs (Thm.concl theorem)
     end
 
+  fun reconstruction_arg constructor_index argument_index rebuild () =
+    let
+      val value = rebuild ()
+      val expected = Vector.sub (!constructors, constructor_index)
+      val expected_name =
+        let val {Thy, Name, ...} = Term.dest_thy_const expected
+        in (Thy, Name) end
+      val string_cons = expected_name = ("list", "CONS") andalso
+        Type.compare (Term.type_of value, stringSyntax.string_ty) = EQUAL
+    in
+      if string_cons then
+        let val text = Literal.relaxed_dest_string_lit value
+        in
+          if text = "" then raise Stuck "empty string reconstruction"
+          else if argument_index = 0 then char_term (String.sub (text, 0))
+          else if argument_index = 1 then
+            string_term (String.extract (text, 1, NONE))
+          else raise Subscript
+        end
+      else
+        let val (constructor, arguments) = boolSyntax.strip_comb value
+        in
+          if Term.same_const constructor expected then
+            List.nth (arguments, argument_index)
+          else raise Stuck "constructor reconstruction mismatch"
+        end
+    end
+
   fun split_term constructor_index argument_index expression_index
       environment =
     let

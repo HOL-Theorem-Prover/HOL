@@ -67,6 +67,7 @@ structure Refute_Core = struct
       seed : int option,
       certify : bool,
       smart_quantifier : bool,
+      smart_generators : bool,
       optimise_equality : bool,
       reorder_premises : bool }
 
@@ -162,6 +163,7 @@ structure Refute_Core = struct
       seed = NONE,
       certify = true,
       smart_quantifier = true,
+      smart_generators = true,
       optimise_equality = true,
       reorder_premises = true }
 
@@ -288,6 +290,7 @@ structure Refute_Core = struct
     | QcSeed of int option
     | QcCertify of bool
     | QcSmartQuantifier of bool
+    | QcSmartGenerators of bool
     | QcOptimiseEquality of bool
     | QcReorderPremises of bool
 
@@ -313,6 +316,8 @@ structure Refute_Core = struct
       certify = (case update of QcCertify value => value | _ => #certify qc),
       smart_quantifier = (case update of QcSmartQuantifier value => value
                           | _ => #smart_quantifier qc),
+      smart_generators = (case update of QcSmartGenerators value => value
+                          | _ => #smart_generators qc),
       optimise_equality = (case update of QcOptimiseEquality value => value
                            | _ => #optimise_equality qc),
       reorder_premises = (case update of QcReorderPremises value => value
@@ -333,6 +338,7 @@ structure Refute_Core = struct
   fun upd_seed value = update_qc (QcSeed value)
   fun upd_certify value = update_qc (QcCertify value)
   fun upd_smart_quantifier value = update_qc (QcSmartQuantifier value)
+  fun upd_smart_generators value = update_qc (QcSmartGenerators value)
   fun upd_optimise_equality value = update_qc (QcOptimiseEquality value)
   fun upd_reorder_premises value = update_qc (QcReorderPremises value)
 
@@ -886,6 +892,8 @@ structure Refute_Core = struct
           "certify = " ^ Bool.toString (#certify q) ^ "\n",
           "smart_quantifier = " ^
             Bool.toString (#smart_quantifier q) ^ "\n",
+          "smart_generators = " ^
+            Bool.toString (#smart_generators q) ^ "\n",
           "optimise_equality = " ^
             Bool.toString (#optimise_equality q) ^ "\n",
           "reorder_premises = " ^
@@ -1380,10 +1388,18 @@ structure Refute_Core = struct
       List.foldl higher (Potential ["no selected backend"]) registrations
     end
 
-  fun meets_requirement executable (backend : backend) =
+  (* QC may prove, by compiling the actual goal plans, that a gated relation
+     is consumed by a native Enum.  This is deliberately a backend-level
+     exception to the ordinary executability gate, not a constant whitelist. *)
+  val executable_goal_override = ref
+    (fn (_ : config) => fn (_ : backend) =>
+      fn (_ : instance list) => false)
+
+  fun meets_requirement cfg executable (backend : backend) instances =
     case #requires backend of
         AnyGoal => true
-      | ExecutableGoal => executable
+      | ExecutableGoal => executable orelse
+          (!executable_goal_override) cfg backend instances
 
   fun certainty_expectation Genuine = ExpectGenuine
     | certainty_expectation (QuasiGenuine _) = ExpectQuasiGenuine
@@ -1426,10 +1442,10 @@ structure Refute_Core = struct
           fun registration_instances registration =
             instances_for_form (#input (#backend registration)) forms
           fun registration_is_eligible registration =
-            meets_requirement
+            meets_requirement cfg
               (instances_are_executable
                 (registration_instances registration))
-              (#backend registration)
+              (#backend registration) (registration_instances registration)
           val selected = List.filter registration_is_eligible configured
           val excluded =
             List.filter (not o registration_is_eligible) configured

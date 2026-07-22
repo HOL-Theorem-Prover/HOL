@@ -286,6 +286,22 @@ Inductive zoo_sg_linear:
   (!n. zoo_sg_linear n ==> zoo_sg_linear (SUC n))
 End
 
+Theorem zoo_sg_linear_compute:
+  !n. zoo_sg_linear n <=> T
+Proof
+  Induct >> metis_tac [zoo_sg_linear_rules]
+QED
+
+Inductive zoo_sg_duplicate:
+  (!n : num. zoo_sg_duplicate n (n,n))
+End
+
+Theorem zoo_sg_duplicate_compute:
+  !n p. zoo_sg_duplicate n p <=> (p = (n,n))
+Proof
+  metis_tac [zoo_sg_duplicate_cases, zoo_sg_duplicate_rules]
+QED
+
 Inductive zoo_sg_mutual:
   zoo_sg_even 0 /\
   (!n. zoo_sg_linear n /\ zoo_sg_odd n /\
@@ -297,8 +313,38 @@ Inductive zoo_sg_fresh:
   !x : num. !y : num. x = 0 ==> zoo_sg_fresh x y
 End
 
+(* Its all-input mode still needs a clause-local generator.  This makes its
+   goal score tie the ordinary Guard score and pins SmartGen's tie-break. *)
+Inductive zoo_sg_tied:
+  !x : num. !y : num. y = y ==> zoo_sg_tied x
+End
+
+Inductive zoo_sg_native_mutual:
+  zoo_sg_native_left 0 /\
+  (!n. zoo_sg_native_right n ==> zoo_sg_native_left (SUC n)) /\
+  (!n. zoo_sg_native_left n ==> zoo_sg_native_right (SUC n))
+End
+
 Inductive zoo_sg_higher_order:
   !P x. P x ==> zoo_sg_higher_order P x
+End
+
+Inductive zoo_sg_string:
+  zoo_sg_string [] /\
+  (!c s. zoo_sg_string s ==> zoo_sg_string (c::s))
+End
+
+Theorem zoo_sg_string_compute:
+  !s : char list. zoo_sg_string s <=> T
+Proof
+  Induct >> metis_tac [zoo_sg_string_rules]
+QED
+
+(* Source names here deliberately collide with fixed emitter helpers after
+   ordinary SML sanitization. *)
+Inductive zoo_sg_hygiene:
+  !size complete smart_in_0 : num.
+    size = complete ==> zoo_sg_hygiene size complete smart_in_0
 End
 
 (* The clauses have the same partitioned intro shape modulo alpha-renaming,

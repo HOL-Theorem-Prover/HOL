@@ -152,6 +152,16 @@ structure Refute_EvalCompute = struct
                      (complete := false;
                       if genuine_only then Continue
                       else visit env false next))
+          | SmartGuard {predicate, cont, ...} =>
+              (case eval_boolean env predicate of
+                   IsTrue => visit env genuine cont
+                 | IsFalse => Continue
+                 | IsStuck =>
+                     (complete := false;
+                      if genuine_only then Continue
+                      else visit env false cont))
+          | Enum _ =>
+              raise Fail "Enum reached compute evaluator"
           | Bind (variable, tm, fallback, next) =>
               (case eval_rhs env tm of
                    SOME value =>
@@ -546,6 +556,10 @@ structure Refute_EvalCompute = struct
           | Split (_, branches) =>
               List.app (fn (_, _, next) => validate_plan next) branches
           | Guard (_, next) => validate_plan next
+          | SmartGuard {cont, ...} => validate_plan cont
+          | Enum _ =>
+              (* Temporary: TASK_11 adds fueled HOL Enum compilation. *)
+              add "Enum plans require compute compilation (TASK_11)"
           | Prune => ()
       val _ = List.app validate_plan plans
     in
