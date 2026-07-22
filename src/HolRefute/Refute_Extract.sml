@@ -3153,7 +3153,8 @@ structure Refute_Extract = struct
           case strategy of
             Exhaustive =>
               "fun " ^ name ^ " genuine_only size draws state =\n" ^
-              "  let val complete = ref true\n" ^
+              "  let val complete = ref " ^
+                Bool.toString (not (Refute_EvalEnum.has_enum plan)) ^ "\n" ^
               "      val tests = ref 0\n" ^
               "      val match_failures = ref 0\n" ^
               "      val answer = " ^

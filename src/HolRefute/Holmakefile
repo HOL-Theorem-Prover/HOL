@@ -21,8 +21,9 @@ selftest.uo: Refute_SmartGen.uo Refute_PropSat.uo \
 # `structure Util = Refute_Util` alias, which holdep does not follow, so the
 # dependency is declared explicitly (as for the model-finder modules below).
 Refute_Gen.uo: Refute_Util.uo
-Refute_EvalCompute.uo: Refute_Util.uo
-Refute_EvalCv.uo: Refute_Util.uo
+Refute_EvalEnum.uo: Refute_Util.uo
+Refute_EvalCompute.uo: Refute_Util.uo Refute_EvalEnum.uo
+Refute_EvalCv.uo: Refute_Util.uo Refute_EvalEnum.uo
 Refute_Extract.uo: Refute_Util.uo
 
 # SmartGen is deliberately independent of the model finder: both consumers

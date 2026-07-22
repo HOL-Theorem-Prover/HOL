@@ -112,11 +112,99 @@ structure Refute_EvalCompute = struct
            boolean_value_to_string result ^ "\n")
       end
 
+  exception EnumInvalid = Refute_EvalEnum.Invalid
+
+  val prepare_enums = Refute_EvalEnum.prepare
+
+  fun exhaustive_terms ty size =
+    case Refute_Gen.enumerate ty of
+        SOME values => values
+      | NONE =>
+          let
+            val values = ref []
+            val _ = exhaustive_values (Refute_Gen.spec_of ty) size
+              (fn value => (values := value :: !values; Continue))
+          in
+            rev (!values)
+          end
+
+  fun match_enum_terms environment patterns values =
+    let
+      fun match_term additions pattern value =
+        let val bound = additions @ environment
+        in
+          if Term.is_var pattern then
+            (case List.find (fn (old, _) => Term.aconv old pattern) bound of
+                 SOME (_, old_value) =>
+                   if Term.aconv old_value value then SOME additions else NONE
+               | NONE => SOME (additions @ [(pattern, value)]))
+          else if Util.same_type (Term.type_of pattern) numSyntax.num andalso
+                  numSyntax.is_numeral value andalso
+                  numSyntax.is_suc pattern then
+            let val number = numSyntax.dest_numeral value
+            in
+              if number = Arbnum.zero then NONE
+              else match_term additions (numSyntax.dest_suc pattern)
+                (numSyntax.mk_numeral (Arbnum.less1 number))
+            end
+          else
+            case (fully_applied_constructor pattern,
+                  fully_applied_constructor value) of
+                (SOME (pattern_constructor, pattern_args),
+                 SOME (value_constructor, value_args)) =>
+                  if Term.same_const pattern_constructor value_constructor
+                     andalso length pattern_args = length value_args then
+                    match_many additions pattern_args value_args
+                  else NONE
+              | _ =>
+                  (case eval_rhs bound pattern of
+                       SOME expected =>
+                         if Term.aconv expected value
+                         then SOME additions else NONE
+                     | NONE => NONE)
+        end
+      and match_many additions [] [] = SOME additions
+        | match_many additions (pattern :: rest) (value :: values) =
+            (case match_term additions pattern value of
+                 SOME extended => match_many extended rest values
+               | NONE => NONE)
+        | match_many _ _ _ = NONE
+    in
+      Option.map (fn additions => additions @ environment)
+        (match_many [] patterns values)
+    end
+
+  fun enum_program_for programs relation mode =
+    case List.find (fn ({relation = other, mode = other_mode, ...} :
+        Refute_SmartGen.enumerator) =>
+      Refute_SmartGen.same_relation relation other andalso
+      Refute_SmartGen.eq_mode (mode, other_mode)) programs of
+        SOME program => program
+      | NONE => raise EnumInvalid
+          "smart plan: enumerator dependency is absent"
+
+  fun smart_guard_program programs predicate version =
+    let
+      val (relation, arguments) = HolKernel.strip_comb predicate
+      fun suitable (program as {relation = other, mode,
+            version = found, ...} : Refute_SmartGen.enumerator) =
+        Refute_SmartGen.same_relation relation other andalso
+        Refute_SmartGen.same_program_version (version, found) andalso
+        (case Refute_SmartGen.top_level_parts mode arguments of
+             SOME (_, []) => true | _ => false)
+    in
+      case List.find suitable programs of
+          NONE => NONE
+        | SOME program =>
+            Option.map (fn (ins, _) => (program, ins))
+              (Refute_SmartGen.top_level_parts (#mode program) arguments)
+    end
+
   (* Filtering ignored candidates belongs here rather than in a driver:
      other substrates use different retry protocols. *)
-  fun traverse gen genuine_only ignored plan =
+  fun traverse enum_values programs gen genuine_only ignored plan =
     let
-      val complete = ref true
+      val complete = ref (not (Refute_EvalEnum.has_enum plan))
       val match_failures = ref 0
       val tests = ref 0
 
@@ -152,16 +240,42 @@ structure Refute_EvalCompute = struct
                      (complete := false;
                       if genuine_only then Continue
                       else visit env false next))
-          | SmartGuard {predicate, cont, ...} =>
-              (case eval_boolean env predicate of
-                   IsTrue => visit env genuine cont
-                 | IsFalse => Continue
-                 | IsStuck =>
-                     (complete := false;
-                      if genuine_only then Continue
-                      else visit env false cont))
-          | Enum _ =>
-              raise Fail "Enum reached compute evaluator"
+          | SmartGuard {predicate, version, cont} =>
+              (case smart_guard_program programs predicate version of
+                   SOME (program, ins) =>
+                     let val inputs = List.map (eval_rhs env) ins
+                     in
+                       complete := false;
+                       if List.all Option.isSome inputs then
+                         each (enum_values program (List.map valOf inputs))
+                           (fn _ => visit env genuine cont)
+                       else Continue
+                     end
+                 | NONE =>
+                     (case eval_boolean env predicate of
+                          IsTrue => visit env genuine cont
+                        | IsFalse => Continue
+                        | IsStuck =>
+                            (complete := false;
+                             if genuine_only then Continue
+                             else visit env false cont)))
+          | Enum {rel, mode, ins, outs, cont, ...} =>
+              let
+                val inputs = List.map (eval_rhs env) ins
+                val _ = complete := false
+              in
+                if List.all Option.isSome inputs then
+                  let
+                    val program = enum_program_for programs rel mode
+                  in
+                    each (enum_values program (List.map valOf inputs))
+                      (fn values =>
+                        case match_enum_terms env outs values of
+                            SOME extended => visit extended genuine cont
+                          | NONE => Continue)
+                  end
+                else Continue
+              end
           | Bind (variable, tm, fallback, next) =>
               (case eval_rhs env tm of
                    SOME value =>
@@ -208,9 +322,75 @@ structure Refute_EvalCompute = struct
           ("match_failures", !match_failures)] }
     end
 
-  fun exhaustive_compile plans =
+  fun exhaustive_compile (config : Refute_Core.config) plans programs =
     let
       val last_stats = ref []
+      val active = ref (NONE : Refute_EvalEnum.theory_bracket option)
+      val definition = ref
+        (NONE : Refute_EvalEnum.definition option)
+      val prefix = Refute_EvalEnum.fresh_prefix "refute_compute_enum_"
+
+      fun close () =
+        case !active of
+            NONE => ()
+          | SOME bracket =>
+              Thread_Attributes.uninterruptible
+                (fn _ => fn () =>
+                  let
+                    val cleanup = Exn.capture
+                      Refute_EvalEnum.close_theory_bracket bracket
+                    val _ = definition := NONE
+                    val _ = active := NONE
+                    val _ = Mutex.unlock Refute_EvalEnum.theory_mutex
+                  in
+                    Exn.release cleanup
+                  end) ()
+
+      fun start () =
+        case !definition of
+            SOME data => data
+          | NONE =>
+              Thread_Attributes.uninterruptible
+                (fn restore_attributes => fn () =>
+                  let
+                    val _ = Mutex.lock Refute_EvalEnum.theory_mutex
+                    val bracket = Refute_EvalEnum.open_theory_bracket ()
+                    val _ = active := SOME bracket
+                    val result = Exn.capture (restore_attributes (fn () =>
+                      Refute_EvalEnum.define
+                        {prefix = prefix, programs = programs,
+                         after_define = fn _ => ()})) ()
+                  in
+                    case result of
+                        Exn.Res data => (definition := SOME data; data)
+                      | Exn.Exn error =>
+                          (close (); raise error)
+                  end) ()
+
+      fun enum_values size program inputs =
+        let
+          val data = start ()
+          val enumerator = Refute_EvalEnum.enumerator_for
+            (#enumerators data) (#relation program) (#mode program)
+          val generators = map (fn ty =>
+            listSyntax.mk_list (exhaustive_terms ty size, ty))
+            (#generator_types data)
+          val application = Refute_EvalEnum.application enumerator
+            generators inputs (Int.max (0, #depth (#qc config)))
+          val value =
+            case eval_rhs [] application of
+                SOME found => found
+              | NONE => raise Fail "compute Enum evaluation was stuck"
+          val packed = #1 (listSyntax.dest_list value)
+        in
+          map (fn output => map (fn component =>
+            case eval_rhs [] component of
+                SOME value => value
+              | NONE => component)
+            (Refute_EvalEnum.unpack_terms
+              (#output_types enumerator) output)) packed
+        end
+
       fun run {genuine_only, card, size, draws, ignored} =
         let
           val _ = draws
@@ -228,15 +408,20 @@ structure Refute_EvalCompute = struct
                      exhaustive_values (Refute_Gen.spec_of ty) size try)
             end
           val {result, complete, stats} =
-            traverse gen genuine_only ignored plan
+            traverse (enum_values size) programs gen
+              genuine_only ignored plan
           val _ = last_stats := stats
         in
           case result of
               Found candidate => CexFound candidate
             | Continue => Exhausted {complete = complete}
         end
+        handle Refute_Gen.NoGenerator (_, reason) => GaveUp reason
+             | Fail reason => GaveUp reason
+             | Feedback.HOL_ERR error =>
+                 GaveUp (Feedback.message_of error)
     in
-      {run = run, close = fn () => (), max_chunk = NONE,
+      {run = run, close = close, max_chunk = NONE,
        last_stats = last_stats}
     end
 
@@ -437,7 +622,8 @@ structure Refute_EvalCompute = struct
             | attempt remaining =
                 let
                   val {result, complete, stats} =
-                    traverse (random_gen state size) genuine_only ignored plan
+                    traverse (fn _ => fn _ => []) []
+                      (random_gen state size) genuine_only ignored plan
                   val _ = tests := !tests + stat "tests" stats
                   val _ = match_failures := !match_failures +
                     stat "match_failures" stats
@@ -481,7 +667,7 @@ structure Refute_EvalCompute = struct
             in
               visit ((variable, value) :: env) genuine next
             end
-          val _ = traverse gen false [] plan
+          val _ = traverse (fn _ => fn _ => []) [] gen false [] plan
         in
           rev (!generated)
         end
@@ -496,7 +682,7 @@ structure Refute_EvalCompute = struct
   fun no_generator_reason ty why =
     "no generator for " ^ Parse.type_to_string ty ^ " \226\128\148 " ^ why
 
-  fun validation_reasons strategy plans =
+  fun validation_reasons strategy plans programs =
     let
       val seen = ref []
       val reasons = ref []
@@ -557,11 +743,11 @@ structure Refute_EvalCompute = struct
               List.app (fn (_, _, next) => validate_plan next) branches
           | Guard (_, next) => validate_plan next
           | SmartGuard {cont, ...} => validate_plan cont
-          | Enum _ =>
-              (* Temporary: TASK_11 adds fueled HOL Enum compilation. *)
-              add "Enum plans require compute compilation (TASK_11)"
+          | Enum {cont, ...} => validate_plan cont
           | Prune => ()
       val _ = List.app validate_plan plans
+      val _ = List.app validate_type
+        (Refute_EvalEnum.generator_types programs)
     in
       rev (!reasons)
     end
@@ -574,13 +760,24 @@ structure Refute_EvalCompute = struct
           (case strategy of
                Narrowing => Inapplicable ["narrowing is not installed"]
              | Exhaustive =>
-                 (case validation_reasons strategy plans of
-                      [] => Compiled (exhaustive_compile plans)
-                    | reasons => Inapplicable reasons)
+                 ((let
+                     val programs = prepare_enums strategy plans
+                   in
+                     case validation_reasons strategy plans programs of
+                         [] => Compiled
+                           (exhaustive_compile config plans programs)
+                       | reasons => Inapplicable reasons
+                   end)
+                  handle EnumInvalid reason => Inapplicable [reason])
              | Random {seed} =>
-                 (case validation_reasons strategy plans of
-                      [] => Compiled (random_compile plans (ref seed))
-                    | reasons => Inapplicable reasons))
+                 ((let
+                     val programs = prepare_enums strategy plans
+                   in
+                     case validation_reasons strategy plans programs of
+                         [] => Compiled (random_compile plans (ref seed))
+                       | reasons => Inapplicable reasons
+                   end)
+                  handle EnumInvalid reason => Inapplicable [reason]))
 
   val compute_substrate : substrate =
     { name = "compute",

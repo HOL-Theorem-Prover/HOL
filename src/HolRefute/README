@@ -10,13 +10,16 @@ interchangeable execution substrates:
 * NativeSML extracts the executable fragment to SML and compiles the test
   loop in process.  It is the preferred fast substrate on Poly/ML.
 
-Set a substrate with `Refute.upd_substrate`.  The default, `Auto`, tries
-NativeSML, Cv, and Compute in that order and falls through when a substrate
-is inapplicable.  An explicitly selected inapplicable substrate reports
-`Unknown`; it never silently changes substrate.  Selection applies to both
-exhaustive and random QC backends.  At Refute trace level 2 or higher, Auto
-reports selection and fallthrough reasons.  Every counterexample also
-records the selected substrate in its `substrate` field.
+Set a substrate with `Refute.upd_substrate`.  The default, `Auto`, walks all
+registered substrates in priority order; the built-in order is NativeSML,
+Cv, then Compute.  Auto falls through when a substrate is inapplicable.  An
+explicitly selected inapplicable substrate reports `Unknown`; it never
+silently changes substrate.  Selection applies to both exhaustive and random
+QC backends.  A custom or replacement substrate can open a smart-generator
+gate only by compiling the smart plan itself, and Auto executes that exact
+selected compilation.  At Refute trace level 2 or higher, Auto reports
+selection and fallthrough reasons.  Every counterexample also records the
+selected substrate in its `substrate` field.
 
 Random testing uses one specified 64-bit generator and consumption order on
 all substrates.  `Refute.upd_seed (SOME n)` therefore reproduces the same
@@ -25,11 +28,16 @@ seed use a deterministic session stream which advances between runs.
 
 Smart generators are enabled by default.  A `Hol_reln` premise, or a
 Boolean function with exhaustive Horn-shaped equations, is mode-compiled to
-a positive CPS enumerator for exhaustive NativeSML.  `upd_depth` sets its
-fixed per-plan fuel (default 10); it does not add a schedule loop.  Setting
+a positive CPS enumerator for exhaustive testing on all three substrates.
+`upd_depth` sets its fixed per-plan fuel (default 10); it does not add a
+schedule loop.  Compute and cv define the same structurally recursive HOL
+list enumerators (cv then translates those definitions); native SML preserves
+the same clause and premise order.  Because fuel bounds every smart
+enumeration, Enum- or SmartGuard-bearing terminal exhaustion is always
+reported as incomplete.  Ignored counterexamples are matched by structural
+environment equality, not by stream position.  Setting
 `upd_smart_generators false` restores generate-and-guard planning, and
-`upd_reorder_premises` controls mode-analysis reordering.  Compute and Cv
-temporarily report Enum-bearing plans as inapplicable.
+`upd_reorder_premises` controls mode-analysis reordering.
 
 Execution substrates are untrusted accelerators.  A QC candidate becomes
 `Genuine` only after Refute_Cert re-evaluates its instantiated proposition

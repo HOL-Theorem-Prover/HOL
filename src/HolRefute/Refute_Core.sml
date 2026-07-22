@@ -1389,8 +1389,9 @@ structure Refute_Core = struct
     end
 
   (* QC may prove, by compiling the actual goal plans, that a gated relation
-     is consumed by a native Enum.  This is deliberately a backend-level
-     exception to the ordinary executability gate, not a constant whitelist. *)
+     is consumed by an Enum-capable substrate.  This is deliberately a
+     backend-level exception to the ordinary executability gate, not a
+     constant whitelist. *)
   val executable_goal_override = ref
     (fn (_ : config) => fn (_ : backend) =>
       fn (_ : instance list) => false)

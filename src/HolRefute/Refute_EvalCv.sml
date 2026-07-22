@@ -14,95 +14,20 @@ structure Refute_EvalCv = struct
     {ty : hol_type, exhaustive : term, random : term}
 
   exception Unsupported of string
-  exception CleanupFailed of exn
+  exception CleanupFailed = Refute_EvalEnum.CleanupFailed
 
-  (* Theory mutation is process-global.  Overlapping snapshots could delete
-     another caller's additions even though all Refute names are fresh. *)
-  val theory_mutex = Mutex.mutex ()
-  val serial = ref 0
+  val theory_mutex = Refute_EvalEnum.theory_mutex
 
   fun fresh_prefix () =
-    "refute_cv_" ^ Int.toString (Unsynchronized.inc serial) ^ "_"
+    Refute_EvalEnum.fresh_prefix "refute_cv_"
 
-  fun type_names () = List.map #1 (Theory.types "-")
-
-  fun constant_names () =
-    List.map (fn tm => #1 (Term.dest_const tm)) (Theory.constants "-")
-
-  fun binding_names () =
-    List.map (fn ((_, name), _) => name) (DB.thy "-")
-
-  type snapshot =
-    {theory : string, types : string list, constants : string list,
-     bindings : string list}
-
-  fun snapshot () : snapshot =
-    {theory = Theory.current_theory (), types = type_names (),
-     constants = constant_names (), bindings = binding_names ()}
-
-  fun revert (baseline : snapshot) =
-    let
-      val after = snapshot ()
-      val _ =
-        if #theory baseline = #theory after then ()
-        else raise Fail "Refute cv body changed the current theory"
-      fun additions current base =
-        let
-          val known = Redblackset.addList
-            (Redblackset.empty String.compare, base)
-        in
-          List.filter (fn name =>
-            not (Redblackset.member (known, name))) current
-        end
-      val new_types = additions (#types after) (#types baseline)
-      val new_constants =
-        additions (#constants after) (#constants baseline)
-      val new_bindings =
-        additions (#bindings after) (#bindings baseline)
-    in
-      List.app Theory.delete_type new_types;
-      List.app Theory.delete_const new_constants;
-      List.app Theory.delete_binding new_bindings;
-      Theory.scrub ();
-      cv_memLib.prune_stale_entries ()
-    end
-
-  type theory_bracket =
-    {baseline : snapshot, old_verbosity : cv_memLib.verbosity}
-
-  (* Callers hold theory_mutex and run uninterruptibly.  This pair is the
-     single implementation of the "cv leaves no residue" invariant. *)
-  fun open_theory_bracket () : theory_bracket =
-    let
-      val baseline = snapshot ()
-      val old_verbosity = !cv_memLib.verbosity_level
-      val _ = cv_memLib.verbosity_level := cv_memLib.Silent
-    in
-      {baseline = baseline, old_verbosity = old_verbosity}
-    end
-
-  fun close_theory_bracket ({baseline, old_verbosity} : theory_bracket) =
-    let
-      val cleanup_result = Exn.capture revert baseline
-      val _ = cv_memLib.verbosity_level := old_verbosity
-    in
-      case cleanup_result of
-          Exn.Res _ => ()
-        | Exn.Exn error => raise CleanupFailed error
-    end
-
-  fun with_clean_theory body =
-    Multithreading.synchronized "Refute cv theory" theory_mutex
-      (fn () =>
-        Thread_Attributes.uninterruptible
-          (fn restore_attributes => fn () =>
-            let
-              val bracket = open_theory_bracket ()
-              val body_result = Exn.capture (restore_attributes body) ()
-              val _ = close_theory_bracket bracket
-            in
-              Exn.release body_result
-            end) ())
+  type snapshot = Refute_EvalEnum.snapshot
+  type theory_bracket = Refute_EvalEnum.theory_bracket
+  val snapshot = Refute_EvalEnum.snapshot
+  val revert = Refute_EvalEnum.revert
+  val open_theory_bracket = Refute_EvalEnum.open_theory_bracket
+  val close_theory_bracket = Refute_EvalEnum.close_theory_bracket
+  val with_clean_theory = Refute_EvalEnum.with_clean_theory
 
   fun map_index function = Lib.mapi (fn index => fn value =>
     function (index, value))
@@ -1005,7 +930,9 @@ structure Refute_EvalCv = struct
                 collect next result) variables branches
           | Refute_Eval.Guard (_, next) => collect next variables
           | Refute_Eval.SmartGuard {cont, ...} => collect cont variables
-          | Refute_Eval.Enum {cont, ...} => collect cont variables
+          | Refute_Eval.Enum {outs, cont, ...} =>
+              collect cont
+                (List.concat (map Term.free_vars_lr outs) @ variables)
           | Refute_Eval.Prune => variables
     in
       Util.distinct_terms (collect plan [])
@@ -1031,8 +958,8 @@ structure Refute_EvalCv = struct
           | Refute_Eval.Guard (tm, next) => collect next (tm :: terms)
           | Refute_Eval.SmartGuard {predicate, cont, ...} =>
               collect cont (predicate :: terms)
-          | Refute_Eval.Enum {ins, cont, ...} =>
-              collect cont (ins @ terms)
+          | Refute_Eval.Enum {ins, outs, cont, ...} =>
+              collect cont (ins @ outs @ terms)
           | Refute_Eval.Prune => terms
     in
       collect plan []
@@ -1082,9 +1009,6 @@ structure Refute_EvalCv = struct
   fun substitute env tm =
     Term.subst (List.map (fn (redex, residue) =>
       {redex = redex, residue = residue}) env) tm
-
-  fun env_parameters env =
-    Util.distinct_terms (List.map #2 (rev env))
 
   fun result_type variables =
     pairSyntax.mk_prod
@@ -1169,37 +1093,160 @@ structure Refute_EvalCv = struct
         (scrutinee' :: functions)
     end
 
+  val tuple_type = Refute_EvalEnum.tuple_type
+  val unpack_terms = Refute_EvalEnum.unpack_terms
+
+  fun define_enumerators prefix payloads programs =
+    Refute_EvalEnum.define
+      {prefix = prefix, programs = programs,
+       after_define = translate_checked prefix payloads}
+
+  val hol_enumerator_for = Refute_EvalEnum.enumerator_for
+
+  fun make_pattern_matches patterns values environment failure success =
+    let
+      fun special tm =
+        Literal.is_numeral tm orelse intSyntax.is_int_literal tm orelse
+        Literal.is_char_lit tm orelse Literal.is_string_lit tm orelse
+        oneSyntax.is_one tm orelse wordsSyntax.is_word_literal tm orelse
+        Term.aconv tm boolSyntax.T orelse Term.aconv tm boolSyntax.F
+      fun match_one pattern value additions continue =
+        let val bound = additions @ environment
+        in
+          if Term.is_var pattern then
+            (case List.find (fn (old, _) => Term.aconv old pattern) bound of
+                 SOME (_, old_value) =>
+                   boolSyntax.mk_cond
+                     (boolSyntax.mk_eq (old_value, value),
+                      continue additions, failure)
+               | NONE => continue (additions @ [(pattern, value)]))
+          else if special pattern then
+            boolSyntax.mk_cond
+              (boolSyntax.mk_eq (pattern, value),
+               continue additions, failure)
+          else
+            case Refute_Eval.fully_applied_constructor pattern of
+                SOME (wanted, pattern_args) =>
+                  let
+                    val ty = Term.type_of value
+                    val constructors = TypeBase.constructors_of ty
+                    val raw_case = TypeBase.case_const_of ty
+                    val raw_ty = hd (#1 (boolSyntax.strip_fun
+                      (Term.type_of raw_case)))
+                    val case_constant = Term.inst
+                      (Type.match_type raw_ty ty) raw_case
+                    val (case_domains, _) = boolSyntax.strip_fun
+                      (Term.type_of case_constant)
+                    val branch_types = List.take
+                      (tl case_domains, length constructors)
+                    fun branch (constructor, branch_ty) =
+                      let
+                        val (argument_types, _) =
+                          boolSyntax.strip_fun branch_ty
+                        val arguments = map_index (fn (index, arg_ty) =>
+                          named_variable (fresh_prefix () ^ "pat_" ^
+                            Int.toString index) arg_ty) argument_types
+                        val body = if Term.same_const constructor wanted
+                            andalso length arguments = length pattern_args
+                          then match_many pattern_args arguments additions
+                            continue
+                          else failure
+                      in
+                        Term.list_mk_abs (arguments, body)
+                      end
+                  in
+                    HolKernel.list_mk_icomb case_constant
+                      (value :: ListPair.mapEq branch
+                        (constructors, branch_types))
+                  end
+              | NONE =>
+                  boolSyntax.mk_cond
+                    (boolSyntax.mk_eq (substitute bound pattern, value),
+                     continue additions, failure)
+        end
+      and match_many [] [] additions continue = continue additions
+        | match_many (pattern :: rest) (value :: values) additions continue =
+            match_one pattern value additions (fn extended =>
+              match_many rest values extended continue)
+        | match_many _ _ _ _ = failure
+    in
+      match_many patterns values [] (fn additions =>
+        success (additions @ environment))
+    end
+
   type loop_program =
     {variables : term list, result_ty : hol_type,
-     application : int -> int -> term}
+     application : int -> term}
 
-  fun define_exhaustive prefix payloads plan generators =
+  fun define_exhaustive prefix payloads plan generators programs enum_fuel =
     let
       val variables = plan_variables plan
-      val result_ty = optionSyntax.mk_option (env_type variables)
+      val value_ty = env_type variables
+      val result_ty = listSyntax.mk_list_type value_ty
       val size = named_variable (prefix ^ "size") numSyntax.num
+      val enum_definition = define_enumerators prefix payloads programs
+      val enumerators = #enumerators enum_definition
+      val enum_generator_types = #generator_types enum_definition
+      val enum_generators = map (fn ty =>
+        Term.mk_comb (#exhaustive (generator_for ty generators), size))
+        enum_generator_types
+      val empty = listSyntax.mk_list ([], value_ty)
+      fun singleton value = listSyntax.mk_list ([value], value_ty)
+      fun bind values variable body = listSyntax.mk_flat
+        (listSyntax.mk_map (Term.mk_abs (variable, body), values))
 
-      fun build current env skip =
+      fun enum_values relation mode inputs =
+        Refute_EvalEnum.application
+          (hol_enumerator_for enumerators relation mode)
+          enum_generators inputs enum_fuel
+
+      fun smart_guard_values predicate version env =
+        let
+          val (relation, arguments) = HolKernel.strip_comb predicate
+          fun suitable {program = {relation = other, mode,
+                version = found, ...}, ...} =
+            Refute_SmartGen.same_relation relation other andalso
+            Refute_SmartGen.same_program_version (version, found) andalso
+            (case Refute_SmartGen.top_level_parts mode arguments of
+                 SOME (_, []) => true | _ => false)
+          val data = case List.find suitable enumerators of
+              SOME found => found
+            | NONE => raise Unsupported "stale smart Guard"
+          val (ins, _) = valOf (Refute_SmartGen.top_level_parts
+            (#mode (#program data)) arguments)
+        in
+          enum_values relation (#mode (#program data))
+            (map (substitute env) ins)
+        end
+
+      fun build current env =
         case current of
-            Refute_Eval.Prune => no_hit variables skip
+            Refute_Eval.Prune => empty
           | Refute_Eval.Test tm =>
               boolSyntax.mk_cond
-                (substitute env tm, no_hit variables skip,
-                 boolSyntax.mk_cond
-                   (boolSyntax.mk_eq (skip, numeral 0),
-                    hit variables (numeral 0) env,
-                    no_hit variables
-                      (numSyntax.mk_minus (skip, numeral 1))))
+                (substitute env tm, empty,
+                 singleton (env_term variables env))
           | Refute_Eval.Guard (tm, next) =>
               boolSyntax.mk_cond
-                (substitute env tm, build next env skip,
-                 no_hit variables skip)
-          | Refute_Eval.SmartGuard {predicate, cont, ...} =>
+                (substitute env tm, build next env, empty)
+          | Refute_Eval.SmartGuard {predicate, version, cont} =>
               boolSyntax.mk_cond
-                (substitute env predicate, build cont env skip,
-                 no_hit variables skip)
-          | Refute_Eval.Enum _ =>
-              raise Unsupported "Enum requires native compilation"
+                (listSyntax.mk_null
+                   (smart_guard_values predicate version env),
+                 empty, build cont env)
+          | Refute_Eval.Enum {rel, mode, ins, outs, cont, ...} =>
+              let
+                val data = hol_enumerator_for enumerators rel mode
+                val output = named_variable (fresh_prefix () ^ "enum_out")
+                  (tuple_type (#output_types data))
+                val values = enum_values rel mode
+                  (map (substitute env) ins)
+                val body = make_pattern_matches outs
+                  (unpack_terms (#output_types data) output) env empty
+                  (fn extended => build cont extended)
+              in
+                bind values output body
+              end
           | Refute_Eval.Bind (variable, tm, _, next) =>
               let
                 val value = named_variable
@@ -1207,85 +1254,36 @@ structure Refute_EvalCv = struct
               in
                 boolSyntax.mk_let
                   (Term.mk_abs
-                    (value, build next ((variable, value) :: env) skip),
+                    (value, build next ((variable, value) :: env)),
                    substitute env tm)
               end
           | Refute_Eval.Split (scrutinee, branches) =>
-              make_split scrutinee branches env (no_hit variables skip)
-                (fn next => fn branch_env =>
-                  build next branch_env skip)
+              make_split scrutinee branches env empty
+                (fn next => fn branch_env => build next branch_env)
           | Refute_Eval.Gen (variable, next) =>
               let
-                val stem = fresh_prefix ()
-                val ty = Term.type_of variable
-                val list_ty = listSyntax.mk_list_type ty
-                val head = named_variable (stem ^ "head") ty
-                val tail = named_variable (stem ^ "tail") list_ty
-                val current_parameters = env_parameters env
-                val helper_ty = function_type
-                  (list_ty :: numSyntax.num ::
-                   List.map Term.type_of current_parameters @
-                   [numSyntax.num], result_type variables)
-                val helper = named_variable (stem ^ "find") helper_ty
-                fun helper_call list counter =
-                  Term.list_mk_comb
-                    (helper, list :: size ::
-                     current_parameters @ [counter])
-                val nil_lhs = helper_call
-                  (listSyntax.mk_list ([], ty)) skip
-                val nil_eq = boolSyntax.mk_eq
-                  (nil_lhs, no_hit variables skip)
-                val attempt = build next ((variable, head) :: env) skip
-                val remaining = named_variable
-                  (stem ^ "remaining") numSyntax.num
-                val found = named_variable
-                  (stem ^ "found") (env_type variables)
-                val recurse = helper_call tail remaining
-                val return_found = pairSyntax.mk_pair
-                  (remaining, optionSyntax.mk_some found)
-                val answer = named_variable (stem ^ "answer")
-                  (optionSyntax.mk_option (env_type variables))
-                val after_attempt = pairSyntax.mk_plet
-                  (pairSyntax.mk_pair (remaining, answer),
-                   attempt,
-                   make_option_case answer recurse found return_found)
-                val cons_lhs = helper_call
-                  (listSyntax.mk_cons (head, tail)) skip
-                val definition = TotalDefn.Define
-                  [HOLPP.ANTIQUOTE
-                    (boolSyntax.mk_conj
-                      (nil_eq, boolSyntax.mk_eq (cons_lhs, after_attempt)))]
-                val _ = translate_checked prefix payloads definition
-                val helper_constant = definition_head definition
-                val exhaustive = #exhaustive
-                  (generator_for ty generators)
+                val values = Term.mk_comb
+                  (#exhaustive (generator_for (Term.type_of variable)
+                    generators), size)
               in
-                Term.list_mk_comb
-                  (helper_constant,
-                   Term.mk_comb (exhaustive, size) :: size ::
-                   current_parameters @ [skip])
+                bind values variable
+                  (build next ((variable, variable) :: env))
               end
 
-      val skip = named_variable (prefix ^ "skip") numSyntax.num
       val loop_var = named_variable (prefix ^ "loop")
-        (function_type
-          ([numSyntax.num, numSyntax.num], result_ty))
-      val body = pairSyntax.mk_snd (build plan [] skip)
+        (function_type ([numSyntax.num], result_ty))
       val loop_definition = TotalDefn.Define
-        [HOLPP.ANTIQUOTE
-          (boolSyntax.mk_eq
-            (Term.list_mk_comb (loop_var, [size, skip]), body))]
-      val _ =
-        if Refute_Core.Private.enabled 3 then
+        [HOLPP.ANTIQUOTE (boolSyntax.mk_eq
+          (Term.mk_comb (loop_var, size), build plan []))]
+      val _ = if Refute_Core.Private.enabled 3 then
           Refute_Core.Private.say 3
             ("Refute synthesized HOL loop:\n" ^
              Parse.thm_to_string loop_definition ^ "\n")
         else ()
       val _ = translate_checked prefix payloads loop_definition
       val loop = definition_head loop_definition
-      fun application size_value skip_value =
-        Term.list_mk_comb
-          (loop, [numeral size_value, numeral skip_value])
+      fun application size_value =
+        Term.mk_comb (loop, numeral size_value)
     in
       {variables = variables, result_ty = result_ty,
        application = application}
@@ -1319,7 +1317,8 @@ structure Refute_EvalCv = struct
                 (substitute env predicate, build cont env state,
                  no_hit variables state)
           | Refute_Eval.Enum _ =>
-              raise Unsupported "Enum requires native compilation"
+              raise Unsupported
+                "smart generators currently require exhaustive testing"
           | Refute_Eval.Bind (variable, tm, _, next) =>
               let
                 val value = named_variable
@@ -1426,7 +1425,7 @@ structure Refute_EvalCv = struct
       evaluate
     end
 
-  fun compile_card strategy plan generators state_ref =
+  fun compile_card strategy plan generators programs enum_fuel state_ref =
     let
       val prefix = fresh_prefix ()
       val payloads = plan_payloads plan
@@ -1435,23 +1434,28 @@ structure Refute_EvalCv = struct
           Refute_Eval.Exhaustive =>
             let
               val program = define_exhaustive prefix payloads plan generators
+                programs enum_fuel
               val evaluate = evaluator_for
-                (fn () => #application program 0 0) (#result_ty program)
-              val complete = List.all (Option.isSome o Refute_Gen.enumerate)
-                (plan_generator_types plan)
+                (fn () => #application program 0) (#result_ty program)
+              val complete =
+                not (Refute_EvalEnum.has_enum plan) andalso
+                List.all (Option.isSome o Refute_Gen.enumerate)
+                  (plan_generator_types plan)
               fun run {size, ignored, ...} =
                 let
                   val decoded = evaluate
-                    (#application program (Int.max (0, size))
-                      (length ignored))
+                    (#application program (Int.max (0, size)))
+                  val (values, _) = listSyntax.dest_list decoded
+                  fun candidate value =
+                    let val env = decode_env (#variables program) value
+                    in
+                      if Refute_Eval.ignored_candidate env ignored then NONE
+                      else SOME {env = env, genuine = true}
+                    end
                 in
-                  if optionSyntax.is_none decoded then
-                    Refute_Eval.Exhausted {complete = complete}
-                  else
-                    Refute_Eval.CexFound
-                      {env = decode_env (#variables program)
-                         (optionSyntax.dest_some decoded),
-                       genuine = true}
+                  case Lib.get_first candidate values of
+                      SOME found => Refute_Eval.CexFound found
+                    | NONE => Refute_Eval.Exhausted {complete = complete}
                 end
             in
               run
@@ -1498,9 +1502,10 @@ structure Refute_EvalCv = struct
 
   fun compile_plans (config : Refute_Core.config) strategy plans =
     let
-      val _ = config
+      val programs = Refute_EvalEnum.prepare strategy plans
       val all_types = distinct_types
-        (List.concat (List.map plan_generator_types plans))
+        (List.concat (List.map plan_generator_types plans) @
+         List.concat (map Refute_SmartGen.enumerator_gen_types programs))
       val _ = List.app validate_supported all_types
       val _ =
         case partial_constant plans of
@@ -1546,9 +1551,12 @@ structure Refute_EvalCv = struct
           | NONE =>
               let
                 val plan = List.nth (plans, card - 1)
-                val types = plan_generator_types plan
+                val types = distinct_types
+                  (plan_generator_types plan @
+                   Refute_EvalEnum.generator_types programs)
                 val generators = synthesise_generators types
-                val run = compile_card strategy plan generators state_ref
+                val run = compile_card strategy plan generators programs
+                  (Int.max (0, #depth (#qc config))) state_ref
                 val _ = runners := (card, run) :: !runners
               in
                 run
@@ -1585,24 +1593,12 @@ structure Refute_EvalCv = struct
     end
     handle Precondition name =>
              Refute_Eval.Inapplicable ["cv: precondition for " ^ name]
+         | Refute_EvalEnum.Invalid reason =>
+             Refute_Eval.Inapplicable [reason]
          | Unsupported reason =>
              Refute_Eval.Inapplicable ["cv: " ^ reason]
          | Feedback.HOL_ERR error =>
              Refute_Eval.Inapplicable [hol_error_reason error]
-
-  fun plan_has_enum current =
-    case current of
-        Refute_Eval.Test _ => false
-      | Refute_Eval.Gen (_, next) => plan_has_enum next
-      | Refute_Eval.Bind (_, _, fallback, next) =>
-          plan_has_enum next orelse Option.getOpt
-            (Option.map plan_has_enum fallback, false)
-      | Refute_Eval.Split (_, branches) =>
-          List.exists (plan_has_enum o #3) branches
-      | Refute_Eval.Guard (_, next) => plan_has_enum next
-      | Refute_Eval.SmartGuard {cont, ...} => plan_has_enum cont
-      | Refute_Eval.Enum _ => true
-      | Refute_Eval.Prune => false
 
   fun compile config strategy problem =
     case problem of
@@ -1610,18 +1606,13 @@ structure Refute_EvalCv = struct
           Refute_Eval.Inapplicable
             ["narrowing requires the native substrate"]
       | Refute_Eval.Plans plans =>
-          if List.exists plan_has_enum plans then
-            (* Temporary until TASK_11 adds the shared HOL enumerator. *)
-            Refute_Eval.Inapplicable
-              ["Enum plans require cv compilation (TASK_11)"]
-          else
-            (case strategy of
-                 Refute_Eval.Narrowing =>
-                   Refute_Eval.Inapplicable ["narrowing is not installed"]
-               | Refute_Eval.Exhaustive =>
-                   compile_plans config strategy plans
-               | Refute_Eval.Random _ =>
-                   compile_plans config strategy plans)
+          (case strategy of
+               Refute_Eval.Narrowing =>
+                 Refute_Eval.Inapplicable ["narrowing is not installed"]
+             | Refute_Eval.Exhaustive =>
+                 compile_plans config strategy plans
+             | Refute_Eval.Random _ =>
+                 compile_plans config strategy plans)
 
   (* Selftest-only stream hook.  Supported plans run through the production
      cv loop.  Values outside its first-order result fragment still take

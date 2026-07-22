@@ -11124,23 +11124,20 @@ val _ = require_msg (check_result smartgen_mode_failure_falls_back)
   (fn () => "failed SmartGen mode analysis did not retain Gen+Guard")
   (fn () => ()) ()
 
-fun temporary_enum_inapplicability () =
+fun enum_compiles_on_all_substrates () =
   let
     val plan = compile_plan default_config smartgen_linear_goal
-    fun temporary result =
-      case result of
-          Inapplicable reasons =>
-            List.exists (String.isSubstring "TASK_11") reasons
-        | _ => false
+    fun compiled compile =
+      case compile default_config Exhaustive (Plans [plan]) of
+          Compiled test => (#close test (); true)
+        | Inapplicable _ => false
   in
-    temporary (Refute_EvalCompute.compile default_config Exhaustive
-      (Plans [plan])) andalso
-    temporary (Refute_EvalCv.compile default_config Exhaustive
-      (Plans [plan]))
+    compiled Refute_EvalCompute.compile andalso
+    compiled Refute_EvalCv.compile
   end
 
-val _ = require_msg (check_result temporary_enum_inapplicability)
-  (fn () => "compute/cv did not cleanly defer Enum to TASK_11")
+val _ = require_msg (check_result enum_compiles_on_all_substrates)
+  (fn () => "an exhaustive Enum plan was not accepted by every substrate")
   (fn () => ()) ()
 
 val _ = tprint "Refute QC exhaustive backend"
@@ -11189,6 +11186,50 @@ val _ = require_msg (check_result (fn () =>
   List.exists (fn substrate => #name substrate = "refute-public-seam")
     (get_substrates ()))) (fn () =>
   "the public register_substrate re-export did not register a substrate")
+  (fn () => ()) ()
+
+fun higher_priority_custom_opens_smart_gate () =
+  let
+    val compile_count = ref 0
+    fun compile config strategy problem =
+      (compile_count := !compile_count + 1;
+       Refute_EvalCompute.compile config strategy problem)
+    val custom : substrate =
+      {name = "refute-smart-custom", priority = 5, compile = compile}
+    val restore : substrate =
+      {name = "refute-smart-custom", priority = 50,
+       compile = dummy_compile}
+    val config = default_config
+      |> upd_certify false
+      |> upd_depth 4
+      |> upd_size 1
+    val instance : instance =
+      {original = smartgen_linear_goal, goal = smartgen_linear_goal,
+       qc_gate = SOME ["custom smart gate pin"], evals = [], card = 1,
+       size_matters = true}
+    fun selected result =
+      case result of
+          Counterexample (cex :: _) =>
+            #substrate cex = "refute-smart-custom"
+        | _ => false
+    fun body () =
+      let
+        val _ = register_substrate custom
+        val plan = compile_plan config smartgen_linear_goal
+        val preflight = selected_smart_preflight config Exhaustive [plan] []
+        val preflight_count = !compile_count
+        val result = strategy_run Exhaustive config [instance]
+      in
+        null preflight andalso preflight_count = 1 andalso
+        !compile_count = 2 andalso selected result
+      end
+  in
+    Portable.finally (fn () => register_substrate restore) body ()
+  end
+
+val _ = require_msg
+  (check_result higher_priority_custom_opens_smart_gate) (fn () =>
+  "Auto did not preflight and retain its higher-priority custom substrate")
   (fn () => ()) ()
 
 fun qc_problem goal : problem = {goal = goal, assumptions = [], evals = []}
@@ -11492,12 +11533,15 @@ fun smartgen_ir_validation_and_theory_footprint () =
             Enum {rel = rel, mode = mode, version = version,
                   ins = [``0 : num``], outs = outs, cont = cont}
         | _ => plan
-    fun rejected candidate fragment =
-      case Refute_EvalSML.compile default_config Exhaustive
-        (Plans [candidate]) of
+    fun rejected_by compile candidate fragment =
+      case compile default_config Exhaustive (Plans [candidate]) of
           Inapplicable reasons => List.exists
             (String.isSubstring fragment) reasons
         | Compiled test => (#close test (); false)
+    fun rejected candidate fragment =
+      List.all (fn compile => rejected_by compile candidate fragment)
+        [Refute_EvalCompute.compile, Refute_EvalCv.compile,
+         Refute_EvalSML.compile]
     val malformed_ok = rejected malformed "smart plan:"
     val _ = SG.clear_enumerator_cache ()
     val absent_ok = rejected plan "missing top-level enumerator"
@@ -12612,6 +12656,119 @@ val _ = require_msg (check_result (fn () =>
     "cv bracket left a theory artifact on a return or exception")
   (fn () => ()) ()
 
+fun enum_snapshot_restoration () =
+  let
+    val baseline = snapshot ()
+    val config = default_config |> Refute.upd_depth 2
+    val plan = compile_plan config
+      ``zoo_sg_derivations (n : num) ==> F``
+    val _ = if contains_enum plan then ()
+      else raise Fail "snapshot restoration plan has no Enum"
+    fun compile selected_plan substrate =
+      case substrate config Exhaustive (Plans [selected_plan]) of
+          Compiled test => test
+        | Inapplicable reasons =>
+            raise Fail (String.concatWith "; " reasons)
+    fun execute test = Portable.finally (#close test) (fn () =>
+      case #run test
+        {genuine_only = true, card = 1, size = 1, draws = 0,
+         ignored = []} of
+          CexFound _ => ()
+        | _ => raise Fail "Enum snapshot run found no candidate") ()
+    val compute_test = compile plan Refute_EvalCompute.compile
+    val cv_test = compile plan Refute_EvalCv.compile
+    val _ = execute compute_test
+    val _ = execute cv_test
+    val success_clean = same_snapshot baseline (snapshot ())
+    val malformed =
+      case plan of
+          Enum {rel, mode, version, outs, cont, ...} =>
+            Enum {rel = rel, mode = mode, version = version,
+                  ins = [``T``], outs = outs, cont = cont}
+        | _ => raise Fail "unexpected Enum snapshot plan"
+    fun rejected substrate =
+      case substrate config Exhaustive (Plans [malformed]) of
+          Inapplicable _ => true
+        | Compiled test => (#close test (); false)
+    val failure_clean =
+      rejected Refute_EvalCompute.compile andalso
+      rejected Refute_EvalCv.compile andalso
+      same_snapshot baseline (snapshot ())
+    val concurrent_plan = compile_plan config
+      ``zoo_sg_derivations (n : num) ==> F``
+    val concurrent_compute =
+      compile concurrent_plan Refute_EvalCompute.compile
+    val concurrent_cv = compile concurrent_plan Refute_EvalCv.compile
+    val saved_threads = Multithreading.max_threads ()
+    fun restore_threads () =
+      Multithreading.max_threads_update saved_threads
+    val concurrent_clean = Portable.finally restore_threads (fn () =>
+      let
+        val _ = Multithreading.max_threads_update
+          (Int.max (2, saved_threads))
+        val left = Future.fork (fn () => execute concurrent_compute)
+        val right = Future.fork (fn () => execute concurrent_cv)
+        val joined = Future.join_results [left, right]
+      in
+        List.all (fn Exn.Res _ => true | Exn.Exn _ => false) joined andalso
+        same_snapshot baseline (snapshot ())
+      end) ()
+  in
+    success_clean andalso failure_clean andalso concurrent_clean
+  end
+
+exception ForcedEnumPostDefinitionFailure
+
+fun enum_post_definition_failures_are_clean () =
+  let
+    val baseline = snapshot ()
+    val baseline_definitions = map #1 (Theory.current_definitions ())
+    val hook = Refute_EvalEnum.post_definition_failure_hook
+    val initially_inert = not (Option.isSome (!hook))
+
+    fun run choice =
+      let
+        val config = default_config
+          |> upd_substrate choice
+          |> upd_backends (SOME ["exhaustive"])
+          |> upd_sequential true
+          |> upd_certify false
+          |> upd_size 1
+          |> upd_depth 4
+        val instances = qc_instances config smartgen_linear_goal
+        val gated = List.all (Option.isSome o #qc_gate) instances
+        val mutation_seen = ref false
+        fun fail _ =
+          (mutation_seen :=
+             (not (same_snapshot baseline (snapshot ())) andalso
+              not (same_string_set baseline_definitions
+                (map #1 (Theory.current_definitions ()))));
+           raise ForcedEnumPostDefinitionFailure)
+        val old_hook = !hook
+        fun restore_hook () = hook := old_hook
+        fun body () =
+          let
+            val _ = hook := SOME fail
+          in
+            ((ignore (strategy_run Exhaustive config instances); false)
+             handle ForcedEnumPostDefinitionFailure => true)
+          end
+        val raised = Portable.finally restore_hook body ()
+      in
+        gated andalso raised andalso !mutation_seen andalso
+        same_snapshot baseline (snapshot ()) andalso
+        same_string_set baseline_definitions
+          (map #1 (Theory.current_definitions ())) andalso
+        not (Option.isSome (!hook))
+      end
+
+    val compute_clean = run Compute
+    val cv_clean = run Cv
+  in
+    initially_inert andalso compute_clean andalso cv_clean andalso
+    not (Option.isSome (!hook))
+  end
+
 fun generated_tree_agrees () =
   let
     val baseline = snapshot ()
@@ -12729,7 +12886,15 @@ fun out_of_fragment_is_clean () =
 
 val _ =
   if selftest_level >= 2 then
-    (tprint "Refute cv per-goal generator synthesis";
+    (tprint "Refute Enum snapshot restoration";
+     require_msg (check_result enum_snapshot_restoration) (fn () =>
+       "Enum success/failure/concurrent runs did not restore snapshots")
+       (fn () => ()) ();
+     require_msg
+       (check_result enum_post_definition_failures_are_clean) (fn () =>
+         "post-definition Enum failures leaked mutation or hook state")
+       (fn () => ()) ();
+     tprint "Refute cv per-goal generator synthesis";
      require_msg (check_result generated_tree_repeats_and_caches) (fn () =>
        "cv generator synthesis disagreed, leaked, or missed its cache")
        (fn () => ()) ();
@@ -13723,7 +13888,9 @@ fun conform ({name, cfg, tm, inapplicable} : conformance_case) =
             | NONE =>
                 if not (same_conformance_outcome (baseline, outcome)) then
                   raise Fail (name ^ ": " ^ substrate ^
-                    " disagreed with compute on " ^ strategy)
+                    " disagreed with compute on " ^ strategy ^ ": " ^
+                    conformance_outcome_name baseline ^ " versus " ^
+                    conformance_outcome_name outcome)
                 else if expectation_holds base expectation outcome then ()
                 else raise Fail (name ^ ": " ^ substrate ^
                   " produced an uncertified or unsound result on " ^ strategy)
@@ -13859,6 +14026,214 @@ val conformance_full_cases : conformance_case list =
 
 fun run_conformance cases = List.app conform cases
 
+fun enum_solution_stream_conformance () =
+  let
+    val config = default_config
+      |> Refute.upd_depth 4
+      |> Refute.upd_size 1
+    val compilers =
+      [Refute_EvalCompute.compile, Refute_EvalCv.compile,
+       Refute_EvalSML.compile]
+
+    fun compile_all_with selected_config plan = map (fn substrate =>
+      case substrate selected_config Exhaustive (Plans [plan]) of
+          Compiled test => test
+        | Inapplicable reasons => raise Fail
+            ("Enum stream substrate inapplicable: " ^
+             String.concatWith "; " reasons)) compilers
+    val compile_all = compile_all_with config
+
+    fun solutions test =
+      let
+        fun collect ignored result =
+          case #run test
+              {genuine_only = false, card = 1, size = 1, draws = 0,
+               ignored = ignored} of
+              CexFound candidate =>
+                collect (candidate :: ignored) (#env candidate :: result)
+            | Exhausted {complete = false} => rev result
+            | Exhausted {complete = true} =>
+                raise Fail "depth-bounded Enum reported complete"
+            | GaveUp reason => raise Fail reason
+      in
+        Portable.finally (#close test) (fn () => collect [] []) ()
+      end
+
+    fun streams goal = map solutions
+      (compile_all (compile_plan config goal))
+    fun same_stream left right =
+      length left = length right andalso
+      ListPair.allEq (fn (first, second) => same_env first second)
+        (left, right)
+    fun all_equal all = List.all (same_stream (hd all)) all
+    fun binding variable value = (variable, value)
+
+    val n = ``n : num``
+    val b = ``b : bool``
+    val linear = streams ``zoo_sg_linear (n : num) ==> F``
+    val linear_expected = map (fn value =>
+      [binding n (numSyntax.term_of_int value)]) [0, 1, 2, 3]
+
+    val multi = streams
+      ``zoo_sg_multi_output (n : num) (b : bool) ==> F``
+    val multi_expected =
+      [[binding n ``0 : num``, binding b boolSyntax.F],
+       [binding n ``0 : num``, binding b boolSyntax.T],
+       [binding n ``1 : num``, binding b boolSyntax.F]]
+
+    (* Ignoring the first environment must discard both duplicate
+       derivations of 0, not merely skip one stream element. *)
+    val duplicates = streams ``zoo_sg_derivations (n : num) ==> F``
+    val duplicate_expected =
+      [[binding n ``0 : num``], [binding n ``1 : num``]]
+
+    val successors = streams ``zoo_sg_linear (SUC (n : num)) ==> F``
+    val successor_expected = map (fn value =>
+      [binding n (numSyntax.term_of_int value)]) [0, 1, 2]
+
+    val hygiene = streams
+      ``zoo_sg_hygiene (x : num) y z ==> F``
+
+    val string_config = Refute.upd_depth 2 config
+    val string_plan = compile_plan string_config
+      ``zoo_sg_string (s : char list) ==> F``
+    val mixed_plan = compile_plan string_config
+      ``(left : char list) = [] ==>
+        zoo_sg_string_mixed left (right : char list) ==> F``
+    val input_plan = compile_plan string_config
+      ``(left : char list) = [] ==> (right : char list) = [] ==>
+        zoo_sg_string_mixed left right ==> F``
+    val string_programs = Refute_EvalEnum.prepare Exhaustive
+      [string_plan, mixed_plan, input_plan]
+    val string_types = Refute_EvalEnum.generator_types string_programs
+    val string_tests = compile_all_with string_config string_plan
+    val mixed_tests = compile_all_with string_config mixed_plan
+    val input_tests = compile_all_with string_config input_plan
+    fun run test ignored = #run test
+      {genuine_only = false, card = 1, size = 1, draws = 0,
+       ignored = ignored}
+    fun output_strings test = Portable.finally (#close test) (fn () =>
+      case run test [] of
+          CexFound (first as {env = [(sv, empty)], ...}) =>
+            (case run test [first] of
+                 CexFound {env = [(next_sv, singleton)], ...} =>
+                   Term.aconv sv ``s : char list`` andalso
+                   Term.aconv next_sv sv andalso
+                   Term.aconv empty ``[] : char list`` andalso
+                   Term.aconv singleton ``[CHR 0]``
+               | _ => false)
+        | _ => false) ()
+    fun mixed_string test = Portable.finally (#close test) (fn () =>
+      case run test [] of
+          CexFound {env = [(rv, empty_right), (lv, empty_left)], ...} =>
+            Term.aconv rv ``right : char list`` andalso
+            Term.aconv lv ``left : char list`` andalso
+            Term.aconv empty_right ``[] : char list`` andalso
+            Term.aconv empty_left ``[] : char list``
+        | _ => false) ()
+    fun input_string test = Portable.finally (#close test) (fn () =>
+      case run test [] of CexFound _ => true | _ => false) ()
+    val strings_ok = List.all output_strings string_tests
+    val mixed_ok = List.all mixed_string mixed_tests
+    val input_ok = List.all input_string input_tests
+
+    val word_config = Refute.upd_depth 2 config
+    val word_plan = compile_plan word_config
+      ``zoo_sg_word8_list (ws : word8 list) ==> F``
+    val word_tests = compile_all_with word_config word_plan
+    fun finite_word_generator test = Portable.finally (#close test) (fn () =>
+      let
+        fun next ignored expected =
+          case run test ignored of
+              CexFound (candidate as {env = [(variable, value)], ...}) =>
+                if Term.aconv variable ``ws : word8 list`` andalso
+                   Term.aconv value expected
+                then candidate else raise Fail "wrong word8 Enum value"
+            | _ => raise Fail "word8 Enum stream ended early"
+        val empty = next [] ``[] : word8 list``
+        val zero = next [empty] ``[(0w : word8)]``
+        val _ = next [zero, empty] ``[(1w : word8)]``
+      in
+        true
+      end) ()
+    val words_ok = List.all finite_word_generator word_tests
+  in
+    same_stream linear_expected (hd linear) andalso all_equal linear andalso
+    same_stream multi_expected (hd multi) andalso all_equal multi andalso
+    same_stream duplicate_expected (hd duplicates) andalso
+    all_equal duplicates andalso
+    same_stream successor_expected (hd successors) andalso
+    all_equal successors andalso all_equal hygiene andalso
+    List.exists (Util.same_type ``:char``) string_types andalso
+    strings_ok andalso mixed_ok andalso input_ok andalso words_ok
+  end
+
+fun enum_terminal_incompleteness () =
+  let
+    val config = default_config |> Refute.upd_depth 2
+    val goals =
+      [``zoo_sg_linear (n : num) ==> T``,
+       ``(n : num) = 0 ==> zoo_sg_linear n ==> T``]
+    val compilers =
+      [Refute_EvalCompute.compile, Refute_EvalCv.compile,
+       Refute_EvalSML.compile]
+    fun compile plan substrate =
+      case substrate config Exhaustive (Plans [plan]) of
+          Inapplicable reasons =>
+            raise Fail (String.concatWith "; " reasons)
+        | Compiled test => test
+    fun check test = Portable.finally (#close test) (fn () =>
+      case #run test
+        {genuine_only = true, card = 1, size = 1, draws = 0,
+         ignored = []} of
+          Exhausted {complete = false} => true
+        | _ => false) ()
+    fun goal tm = List.all check
+      (map (compile (compile_plan config tm)) compilers)
+  in
+    List.all goal goals
+  end
+
+fun enum_conformance () =
+  let
+    val base = conform_cex_config
+      |> Refute.upd_expect Refute.NoExpectation
+      |> Refute.upd_depth 4
+      |> Refute.upd_size 1
+      |> Refute.upd_sequential true
+      |> Refute.upd_certify false
+      |> Refute.upd_backends (SOME ["exhaustive"])
+    val instances = qc_instances base smartgen_linear_goal
+    val genuinely_gated =
+      not (null instances) andalso
+      List.all (Option.isSome o #qc_gate) instances andalso
+      List.all (fn (instance : instance) =>
+        contains_enum (compile_plan base (#goal instance))) instances
+    fun outcome (choice, substrate) =
+      (substrate, quiet_refute
+        (Refute.upd_substrate (public_substrate choice) base)
+        smartgen_linear_goal)
+    val results = map outcome conformance_substrates
+    val baseline = #2 (hd results)
+    fun traversed (substrate, result) =
+      case result of
+          Refute.Counterexample
+            ({substrate = selected, certainty = Refute.Genuine,
+              cert = NONE, bindings, ...} :: _) =>
+            selected = substrate andalso
+            List.exists (fn (variable, value) =>
+              Term.aconv variable ``n : num`` andalso
+              Term.aconv value ``3 : num``) bindings
+        | _ => false
+  in
+    genuinely_gated andalso List.all traversed results andalso
+    List.all (fn (_, result) =>
+      same_conformance_outcome (baseline, result)) results
+  end
+
+fun run_full_conformance () =
+  run_conformance conformance_full_cases
+
 fun same_candidate_stream left right =
   length left = length right andalso
   ListPair.allEq (fn (left_candidate, right_candidate) =>
@@ -13904,9 +14279,20 @@ val _ =
 
 val _ =
   if selftest_level >= 2 then
-    (tprint "Refute full substrate conformance matrix";
+    (tprint "Refute Enum solution-stream conformance";
+     require_msg (check_result enum_solution_stream_conformance) (fn () =>
+       "Enum ordered/duplicate/string streams differed across substrates")
+       (fn () => ()) ();
+     require_msg (check_result enum_terminal_incompleteness) (fn () =>
+       "a terminal depth-bounded Enum reported complete")
+       (fn () => ()) ();
+     tprint "Refute Enum substrate conformance";
+     require_msg (check_result enum_conformance) (fn () =>
+       "Enum outcomes differed across substrates")
+       (fn () => ()) ();
+     tprint "Refute full substrate conformance matrix";
      require_msg (check_result (fn () =>
-       (run_conformance conformance_full_cases; true))) (fn () =>
+       (run_full_conformance (); true))) (fn () =>
          "the full substrate conformance matrix disagreed")
        (fn () => ()) ();
      tprint "Refute substrate candidate-stream conformance";

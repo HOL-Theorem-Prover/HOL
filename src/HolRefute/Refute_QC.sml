@@ -526,35 +526,19 @@ structure Refute_QC = struct
       | Enum _ => true
       | Prune => false
 
-  fun smart_gate_override_with preflight (config : Refute_Core.config)
-        (backend : Refute_Core.backend) instances =
+  fun eval_preflight evals =
     let
-      val native_capable =
-        case #substrate (#qc config) of
-            Refute_Core.Compute => false
-          | Refute_Core.Cv => false
-          | _ => true
-      val plans = map (fn (instance : Refute_Core.instance) =>
-        compile_plan config (#goal instance)) instances
-      val gated_plans = List.mapPartial
-        (fn (instance, plan) =>
-          case #qc_gate instance of NONE => NONE | SOME _ => SOME plan)
-        (ListPair.zip (instances, plans))
-      val evals = List.concat
-        (map (fn (instance : Refute_Core.instance) => #evals instance)
-          instances)
+      val constants = Refute_Core.nonexecutable_constants evals
+      val has_binder = List.exists (fn tm =>
+        not (null (HolKernel.find_terms Term.is_abs tm))) evals
     in
-      #name backend = "exhaustive" andalso
-      #smart_generators (#qc config) andalso native_capable andalso
-      not (null gated_plans) andalso List.all plan_uses_smart gated_plans andalso
-      null (preflight config Exhaustive plans evals)
+      (if has_binder then
+         ["smart preflight eval contains an unexpanded binder"]
+       else []) @
+      (if null constants then []
+       else ["smart preflight eval is nonexecutable: " ^
+         Refute_Core.show_constants constants])
     end
-    handle Interrupt => raise Interrupt
-         | _ => false
-
-  fun smart_gate_override config backend instances =
-    smart_gate_override_with Refute_Extract.native_preflight
-      config backend instances
 
   fun substrate_name Refute_Core.Compute = SOME "compute"
     | substrate_name Refute_Core.Cv = SOME "cv"
@@ -569,6 +553,25 @@ structure Refute_QC = struct
       Selected of string * compiled_test
     | SelectionFailed of string list
 
+  datatype substrate_candidates =
+      Candidates of {explicit : bool, substrates : substrate list}
+    | CandidatesUnavailable of string list
+
+  fun ordered_substrate_candidates (config : Refute_Core.config) =
+    case #substrate (#qc config) of
+        Refute_Core.Auto =>
+          Candidates {explicit = false, substrates = get_substrates ()}
+      | choice =>
+          let val name = valOf (substrate_name choice)
+          in
+            case List.find (fn substrate => #name substrate = name)
+              (get_substrates ()) of
+                NONE => CandidatesUnavailable
+                  ["requested substrate " ^ name ^ " is unavailable"]
+              | SOME substrate =>
+                  Candidates {explicit = true, substrates = [substrate]}
+          end
+
   fun say_selected name explicit =
     Refute_Core.Private.say 2
       ("Refute substrate selection: selected " ^ name ^
@@ -581,46 +584,103 @@ structure Refute_QC = struct
        (if null reasons then "no reason supplied"
         else String.concatWith "; " reasons) ^ "\n")
 
-  fun compile_auto config strategy problem =
-    let
-      fun try [] reasons =
-            SelectionFailed
-              (if null reasons then ["no substrate is registered"]
-               else reasons)
-        | try (substrate :: rest) reasons =
-            (case #compile substrate config strategy problem of
-                 Compiled test =>
-                   (say_selected (#name substrate) false;
-                    Selected (#name substrate, test))
-               | Inapplicable why =>
-                   (say_inapplicable (#name substrate) why;
-                    try rest (reasons @ map (fn reason =>
-                      #name substrate ^ ": " ^ reason) why)))
-    in
-      try (get_substrates ()) []
-    end
+  (* Gate preflight and execution must walk this same registry snapshot and
+     apply the same Auto fallthrough.  In particular, a higher-priority
+     custom substrate cannot be skipped while a built-in opens the gate. *)
+  fun select_registered config report attempt =
+    case ordered_substrate_candidates config of
+        CandidatesUnavailable reasons => SelectionFailed reasons
+      | Candidates {explicit, substrates} =>
+          let
+            fun failed [] =
+                  if explicit then [] else ["no substrate is registered"]
+              | failed reasons = reasons
+            fun try [] reasons = SelectionFailed (failed reasons)
+              | try (substrate :: rest) reasons =
+                  (case attempt substrate of
+                       Compiled test =>
+                         (if report then
+                            say_selected (#name substrate) explicit
+                          else ();
+                          Selected (#name substrate, test))
+                     | Inapplicable why =>
+                         (if report then
+                            say_inapplicable (#name substrate) why
+                          else ();
+                          if explicit then SelectionFailed why
+                          else try rest (reasons @ map (fn reason =>
+                            #name substrate ^ ": " ^ reason) why)))
+          in
+            try substrates []
+          end
 
-  fun compile_explicit config choice strategy problem =
-    let
-      val name = valOf (substrate_name choice)
-    in
-      case List.find (fn substrate => #name substrate = name)
-        (get_substrates ()) of
-          NONE => SelectionFailed
-            ["requested substrate " ^ name ^ " is unavailable"]
-        | SOME substrate =>
-            (case #compile substrate config strategy problem of
-                 Compiled test =>
-                   (say_selected name true; Selected (name, test))
-               | Inapplicable reasons =>
-                   (say_inapplicable name reasons;
-                    SelectionFailed reasons))
-    end
+  fun preflight_substrate (substrate : substrate) config strategy plans evals =
+    case eval_preflight evals of
+        reasons as _ :: _ => Inapplicable reasons
+      | [] =>
+          let
+            val native_reasons =
+              if #name substrate = "native" then
+                Refute_Extract.native_preflight config strategy plans evals
+              else []
+          in
+            if null native_reasons then
+              #compile substrate config strategy (Plans plans)
+            else Inapplicable native_reasons
+          end
+
+  fun compile_auto config strategy problem =
+    select_registered config true (fn substrate =>
+      #compile substrate config strategy problem)
+
+  fun compile_explicit config _ strategy problem =
+    select_registered config true (fn substrate =>
+      #compile substrate config strategy problem)
 
   fun compile_selected config strategy problem =
     case #substrate (#qc config) of
         Refute_Core.Auto => compile_auto config strategy problem
       | choice => compile_explicit config choice strategy problem
+
+  fun compile_smart_selected config report strategy plans evals =
+    select_registered config report (fn substrate =>
+      preflight_substrate substrate config strategy plans evals)
+
+  fun selected_smart_preflight config strategy plans evals =
+    case compile_smart_selected config false strategy plans evals of
+        SelectionFailed reasons => reasons
+      | Selected (name, test) =>
+          (case Exn.capture (#close test) () of
+               Exn.Res _ => []
+             | Exn.Exn Interrupt => raise Interrupt
+             | Exn.Exn error =>
+                 [name ^ " preflight cleanup: " ^
+                  Feedback.exn_to_string error])
+
+  fun smart_gate_override_with preflight (config : Refute_Core.config)
+        (backend : Refute_Core.backend) instances =
+    let
+      val plans = map (fn (instance : Refute_Core.instance) =>
+        compile_plan config (#goal instance)) instances
+      val gated_plans = List.mapPartial
+        (fn (instance, plan) =>
+          case #qc_gate instance of NONE => NONE | SOME _ => SOME plan)
+        (ListPair.zip (instances, plans))
+      val evals = List.concat
+        (map (fn (instance : Refute_Core.instance) => #evals instance)
+          instances)
+    in
+      #name backend = "exhaustive" andalso
+      #smart_generators (#qc config) andalso
+      not (null gated_plans) andalso List.all plan_uses_smart gated_plans andalso
+      null (preflight config Exhaustive plans evals)
+    end
+    handle Interrupt => raise Interrupt
+         | _ => false
+
+  fun smart_gate_override config backend instances =
+    smart_gate_override_with selected_smart_preflight
+      config backend instances
 
   fun bounded_size size = Int.max (0, size)
 
@@ -666,39 +726,39 @@ structure Refute_QC = struct
       val original_gate_reasons = List.concat
         (List.mapPartial (fn (instance : Refute_Core.instance) =>
           #qc_gate instance) instances)
-      val native_capable =
-        case #substrate (#qc config) of
-            Refute_Core.Compute => false
-          | Refute_Core.Cv => false
-          | _ => true
       val every_gated_plan_is_smart = List.all (fn (instance, plan) =>
         not (Option.isSome (#qc_gate instance)) orelse plan_uses_smart plan)
         paired
       val can_preflight = gated andalso strategy = Exhaustive andalso
-        #smart_generators (#qc config) andalso native_capable andalso
-        every_gated_plan_is_smart
-      val preflight_reasons =
+        #smart_generators (#qc config) andalso every_gated_plan_is_smart
+      val evals = List.concat
+        (map (fn (instance : Refute_Core.instance) => #evals instance)
+          instances)
+      val smart_selection =
         if can_preflight then
-          Refute_Extract.native_preflight config strategy plans
-            (List.concat (map (fn (instance : Refute_Core.instance) =>
-              #evals instance) instances))
-        else []
+          SOME (compile_smart_selected config true strategy plans evals)
+        else NONE
+      val preflight_reasons =
+        case smart_selection of
+            SOME (SelectionFailed reasons) => reasons
+          | _ => []
       val gate_reasons =
         if not gated then []
         else if can_preflight andalso null preflight_reasons then []
         else original_gate_reasons @ preflight_reasons @
-          (if native_capable orelse is_random strategy then []
-           else ["smart generators require an Enum-capable native substrate"])
+          (if can_preflight orelse is_random strategy then []
+           else
+             ["smart generators require an Enum-capable exhaustive substrate"])
+      val selection =
+        case smart_selection of
+            SOME selected => selected
+          | NONE => compile_selected config strategy (Plans plans)
     in
       if not (null gate_reasons) then Refute_Core.Unknown gate_reasons
-      else case compile_selected config strategy (Plans plans) of
+      else case selection of
           SelectionFailed reasons => Refute_Core.Unknown reasons
         | Selected (substrate, compiled) =>
-            if gated andalso substrate <> "native" then
-              (#close compiled ();
-               Refute_Core.Unknown
-                 ["smart-gated plans require the native substrate"])
-            else let
+            let
               fun selected_body () =
                 let
                   val entries = schedule instances (#size (#qc config))

@@ -302,6 +302,34 @@ Proof
   metis_tac [zoo_sg_duplicate_cases, zoo_sg_duplicate_rules]
 QED
 
+(* Stream-order pins for substrate-neutral enumerator synthesis.  The first
+   relation has genuinely duplicate derivations; the second exposes multiple
+   outputs in source order. *)
+Inductive zoo_sg_derivations:
+  zoo_sg_derivations (0 : num) /\
+  zoo_sg_derivations (0 : num) /\
+  zoo_sg_derivations (1 : num)
+End
+
+Theorem zoo_sg_derivations_compute:
+  !n. zoo_sg_derivations n <=> (n = 0) \/ (n = 1)
+Proof
+  metis_tac [zoo_sg_derivations_cases, zoo_sg_derivations_rules]
+QED
+
+Inductive zoo_sg_multi_output:
+  zoo_sg_multi_output (0 : num) F /\
+  zoo_sg_multi_output (0 : num) T /\
+  zoo_sg_multi_output (1 : num) F
+End
+
+Theorem zoo_sg_multi_output_compute:
+  !n b. zoo_sg_multi_output n b <=>
+    (n = 0 /\ (b = F \/ b = T)) \/ (n = 1 /\ b = F)
+Proof
+  metis_tac [zoo_sg_multi_output_cases, zoo_sg_multi_output_rules]
+QED
+
 Inductive zoo_sg_mutual:
   zoo_sg_even 0 /\
   (!n. zoo_sg_linear n /\ zoo_sg_odd n /\
@@ -339,6 +367,20 @@ Theorem zoo_sg_string_compute:
 Proof
   Induct >> metis_tac [zoo_sg_string_rules]
 QED
+
+Inductive zoo_sg_string_mixed:
+  zoo_sg_string_mixed [] [] /\
+  (!c left right. zoo_sg_string_mixed left right ==>
+     zoo_sg_string_mixed (c::left) (c::right))
+End
+
+(* word8 sits exactly at the finite-enumeration cap.  Its recursive rule
+   distinguishes complete finite CpsGenerate semantics from size-bounding. *)
+Inductive zoo_sg_word8_list:
+  zoo_sg_word8_list ([] : word8 list) /\
+  (!w ws. zoo_sg_word8_list ws ==>
+     zoo_sg_word8_list (w::ws))
+End
 
 (* Source names here deliberately collide with fixed emitter helpers after
    ordinary SML sanitization. *)
