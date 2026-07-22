@@ -210,3 +210,29 @@ Theorem bounded_exists_mem:
 Proof
   simp [listTheory.EXISTS_MEM]
 QED
+
+(* Part 6: narrowing represents function variables by finite update chains.
+   The distinct constructor prefixes replace Isabelle's type-scoped
+   Constant names.  These static datatypes are also available to TypeBase
+   before any goal is processed. *)
+Datatype:
+  ffun = FConstant 'b | FUpdate 'a 'b ffun
+End
+
+Definition eval_ffun_def:
+  (eval_ffun (FConstant c) x = c) /\
+  (eval_ffun (FUpdate x' y f) x =
+     if x = x' then y else eval_ffun f x)
+End
+
+Theorem eval_ffun_compute[compute] = eval_ffun_def
+
+Datatype:
+  cfun = CConstant 'b
+End
+
+Definition eval_cfun_def:
+  eval_cfun (CConstant c) x = c
+End
+
+Theorem eval_cfun_compute[compute] = eval_cfun_def

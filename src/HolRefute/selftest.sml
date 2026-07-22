@@ -54,6 +54,8 @@ val _ = check_type (``:refute$rf6``, 6)
 val _ = check_type (``:('a, 'b) refute$funbox``, 1)
 val _ = check_type (``:('a, 'b) refute$pairbox``, 1)
 val _ = check_type (``:'a refute$bitword``, 1)
+val _ = check_type (``:('a, 'b) refute$ffun``, 2)
+val _ = check_type (``:'b refute$cfun``, 1)
 
 fun check_nullary_type (ty, name) =
   require_msg (check_result (fn () =>
@@ -81,6 +83,80 @@ val _ = require_msg (check_result (fn () =>
   support_constant_has_type "bisim_zero" ``:refute$bisim_iterator`` andalso
   support_constant_has_type "Quot" ``:'a -> 'b``))
   (fn () => "codatatype support constant has the wrong type")
+  (fn () => ()) ()
+
+val _ = tprint "Refute narrowing function representations"
+
+fun support_constant_has_type_modulo_vars name ty =
+  let
+    val actual = Term.type_of
+      (Term.prim_mk_const {Thy = "refute", Name = name})
+  in
+    Lib.can (Type.match_type actual) ty andalso
+    Lib.can (Type.match_type ty) actual
+  end
+
+val _ = require_msg (check_result (fn () =>
+  support_constant_has_type_modulo_vars "FConstant"
+    ``:'b -> ('a, 'b) refute$ffun`` andalso
+  support_constant_has_type_modulo_vars "FUpdate"
+    ``:'a -> 'b -> ('a, 'b) refute$ffun -> ('a, 'b) refute$ffun`` andalso
+  support_constant_has_type_modulo_vars "CConstant"
+    ``:'b -> 'b refute$cfun`` andalso
+  support_constant_has_type_modulo_vars "eval_ffun"
+    ``:('a, 'b) refute$ffun -> 'a -> 'b`` andalso
+  support_constant_has_type_modulo_vars "eval_cfun"
+    ``:'b refute$cfun -> 'a -> 'b``))
+  (fn () => "narrowing function support types: " ^
+    String.concatWith ", "
+      (map (fn name => name ^ " : " ^ Parse.type_to_string
+             (Term.type_of
+               (Term.prim_mk_const {Thy = "refute", Name = name})))
+           ["FConstant", "FUpdate", "CConstant", "eval_ffun",
+            "eval_cfun"]))
+  (fn () => ()) ()
+
+val eval_ffun_shape =
+  ``(∀(c : 'b) (x : 'a). eval_ffun (FConstant c) x = c) /\
+    (∀(x' : 'a) (y : 'b) (f : ('a, 'b) ffun) (x : 'a).
+       eval_ffun (FUpdate x' y f) x =
+         if x = x' then y else eval_ffun f x)``
+val eval_cfun_shape =
+  ``∀(c : 'b) (x : 'a). eval_cfun (CConstant c) x = c``
+
+fun same_polymorphic_shape left right =
+  Lib.can (Term.match_term left) right andalso
+  Lib.can (Term.match_term right) left
+
+val _ = require_msg (check_result (fn () =>
+  same_polymorphic_shape (Thm.concl eval_ffun_compute)
+    eval_ffun_shape andalso
+  same_polymorphic_shape (Thm.concl eval_cfun_compute)
+    eval_cfun_shape))
+  (fn () => "narrowing evaluator equations: " ^
+    Parse.term_to_string (Thm.concl eval_ffun_compute) ^ " versus " ^
+    Parse.term_to_string eval_ffun_shape ^ "; " ^
+    Parse.term_to_string (Thm.concl eval_cfun_compute) ^ " versus " ^
+    Parse.term_to_string eval_cfun_shape)
+  (fn () => ()) ()
+
+fun closed_eval_is term expected =
+  let
+    val theorem = computeLib.EVAL_CONV term
+    val result = #2 (boolSyntax.dest_eq (Thm.concl theorem))
+  in
+    Term.aconv result expected
+  end
+
+val _ = require_msg (check_result (fn () =>
+  closed_eval_is
+    ``eval_ffun
+        (FUpdate 1 7 (FUpdate 1 8 (FConstant 0))) 1`` ``7 : num`` andalso
+  closed_eval_is
+    ``eval_ffun
+        (FUpdate 1 7 (FUpdate 1 8 (FConstant 0))) 2`` ``0 : num`` andalso
+  closed_eval_is ``eval_cfun (CConstant 9) T`` ``9 : num``))
+  (fn () => "narrowing function evaluator did not EVAL")
   (fn () => ()) ()
 
 fun same_conclusion left right =
