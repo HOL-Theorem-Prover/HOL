@@ -11285,6 +11285,106 @@ val _ = require_msg (check_result smartgen_native_end_to_end) (fn () =>
   "native Enum ignored depth fuel or bypassed certified candidate flow")
   (fn () => ()) ()
 
+fun smartgen_payoff_result expected_substrate variable predicate outcome =
+  case outcome of
+      Refute.Counterexample
+        ({backend, substrate, certainty = Refute.Genuine, cert = SOME _,
+          bindings, ...} :: _) =>
+          backend = "exhaustive" andalso substrate = expected_substrate andalso
+          List.exists (fn (candidate, value) =>
+            Term.aconv candidate variable andalso predicate value) bindings
+    | _ => false
+
+fun contains_guard current =
+  case current of
+      Guard _ => true
+    | Gen (_, next) => contains_guard next
+    | Bind (_, _, fallback, next) =>
+        contains_guard next orelse Option.getOpt
+          (Option.map contains_guard fallback, false)
+    | Split (_, branches) => List.exists (contains_guard o #3) branches
+    | SmartGuard {cont, ...} => contains_guard cont
+    | Enum {cont, ...} => contains_guard cont
+    | _ => false
+
+fun smartgen_payoff_run config goal =
+  let
+    val smart_plan = compile_plan config goal
+    val plain_config = Refute.upd_smart_generators false config
+    val plain_plan = compile_plan plain_config goal
+    val smart = Feedback.with_traces [("Refute", 0)]
+      (fn () => Refute.refute config goal) ()
+    val plain = Feedback.with_traces [("Refute", 0)]
+      (fn () => Refute.refute plain_config goal) ()
+    val generate_then_test = not (contains_enum plain_plan) andalso
+      plan_has_gen plain_plan andalso contains_guard plain_plan
+  in
+    (contains_enum smart_plan, generate_then_test, smart, plain)
+  end
+
+fun normal_bounded_no_hit
+      (Refute.Unknown ["exhaustive: search space not exhausted"]) = true
+  | normal_bounded_no_hit _ = false
+
+val _ = tprint "Refute SmartGen smart-payoff pins"
+
+fun smartgen_hol_reln_payoff () =
+  let
+    val saved = !computeLib.the_compset
+    fun restore () = computeLib.the_compset := saved
+    fun body () =
+      let
+        val _ = computeLib.the_compset :=
+          computeLib.add_thms [zoo_sg_linear_compute] saved
+        val goal = smartgen_linear_goal
+        val config = default_config
+          |> Refute.upd_backends (SOME ["exhaustive"])
+          |> Refute.upd_substrate Refute.NativeSML
+          |> Refute.upd_size 1
+          |> Refute.upd_depth 4
+          |> Refute.upd_timeout 5.0
+        val (smart_plan, plain_plan, smart, plain) =
+          smartgen_payoff_run config goal
+      in
+        smart_plan andalso plain_plan andalso
+        smartgen_payoff_result "native" ``n : num``
+          (fn value => Term.aconv value ``3 : num``) smart andalso
+        normal_bounded_no_hit plain
+      end
+  in
+    Portable.finally restore body ()
+  end
+
+val _ = require_msg (check_result smartgen_hol_reln_payoff) (fn () =>
+  "Hol_reln Enum missed a same-budget payoff over generate-then-test")
+  (fn () => ()) ()
+
+fun smartgen_horn_payoff () =
+  let
+    val goal =
+      ``ALL_DISTINCT (xs : bool list) ==> LENGTH xs < 1``
+    val config = default_config
+      |> Refute.upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_substrate Refute.Compute
+      |> Refute.upd_size 1
+      |> Refute.upd_depth 8
+      |> Refute.upd_timeout 5.0
+    val (smart_plan, plain_plan, smart, plain) =
+      smartgen_payoff_run config goal
+    fun long_list value =
+      case Lib.total listSyntax.dest_list value of
+          SOME (elements, _) => not (null elements)
+        | NONE => false
+  in
+    smart_plan andalso plain_plan andalso
+    smartgen_payoff_result "compute" ``xs : bool list`` long_list smart andalso
+    normal_bounded_no_hit plain
+  end
+
+val _ = require_msg (check_result smartgen_horn_payoff) (fn () =>
+  "Horn-function Enum missed a same-budget payoff over generate-then-test")
+  (fn () => ()) ()
+
 fun smartgen_native_matches_duplicate_outputs () =
   let
     val saved = !computeLib.the_compset
