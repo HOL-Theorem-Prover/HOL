@@ -15,6 +15,9 @@ open Refute_EvalSML
 open Refute_EvalCv
 open Refute_Extract
 open Refute_QC
+(* Refute_Narrow.Truth has a nullary Unknown constructor; keep the public
+   Refute outcome constructor as the unqualified selftest default. *)
+open Refute_Core
 open cv_transLib
 
 (* cv_std loads ratTheory, whose parser preference would otherwise make
@@ -11126,6 +11129,163 @@ fun narrowing_selection_units () =
            String.isSubstring "allow_existentials" reason
        | _ => false)
   end
+
+fun pnf_truth_tables () =
+  let
+    val false_value = Eval {result = false, potential = false}
+    val true_value = Eval {result = true, potential = false}
+    val values =
+      [false_value, true_value, Unevaluated, Refute_Narrow.Unknown]
+    val expected_conj =
+      [[false_value, false_value, false_value, false_value],
+       [false_value, true_value, Unevaluated, Refute_Narrow.Unknown],
+       [false_value, Unevaluated, Unevaluated, Unevaluated],
+       [false_value, Refute_Narrow.Unknown, Unevaluated,
+        Refute_Narrow.Unknown]]
+    val expected_disj =
+      [[false_value, true_value, Unevaluated, Refute_Narrow.Unknown],
+       [true_value, true_value, true_value, true_value],
+       [Unevaluated, true_value, Unevaluated, Refute_Narrow.Unknown],
+       [Refute_Narrow.Unknown, true_value, Refute_Narrow.Unknown,
+        Refute_Narrow.Unknown]]
+    fun table operation =
+      List.map (fn left =>
+        List.map (fn right => operation (left, right)) values) values
+    val potential_false = Eval {result = false, potential = true}
+    val potential_true = Eval {result = true, potential = true}
+  in
+    table conj = expected_conj andalso table disj = expected_disj andalso
+    (* A genuine decisive branch may remove an irrelevant potential, while
+       an existential false result needs every branch and remains tainted. *)
+    conj (potential_false, false_value) = false_value andalso
+    conj (potential_true, false_value) = false_value andalso
+    conj (potential_true, true_value) = potential_true andalso
+    disj (potential_false, false_value) = potential_false andalso
+    disj (potential_true, true_value) = true_value andalso
+    disj (potential_false, true_value) = true_value
+  end
+
+val pnf_bool_shape = Narrowing_sum_of_products [[], []]
+
+fun pnf_tree_goldens () =
+  let
+    val false_value = Eval {result = false, potential = false}
+    val universal = tree_of [(Universal, pnf_bool_shape)]
+    val existential = tree_of [(Existential, pnf_bool_shape)]
+    val refined_universal = refine_tree (find universal) [0] universal
+    val refined_existential = refine_tree (find existential) [0] existential
+    val expected_universal = Constructor
+      (Universal, Unevaluated, [0], [Leaf Unevaluated, Leaf Unevaluated])
+    val expected_existential = Constructor
+      (Existential, Unevaluated, [0], [Leaf Unevaluated, Leaf Unevaluated])
+    val universal_update =
+      update (find refined_universal) false_value refined_universal
+    val existential_update =
+      update (find refined_existential) false_value refined_existential
+  in
+    refined_universal = expected_universal andalso
+    refined_existential = expected_existential andalso
+    universal_update = Constructor
+      (Universal, false_value, [0],
+       [Leaf false_value, Leaf Unevaluated]) andalso
+    existential_update = Constructor
+      (Existential, Unevaluated, [0],
+       [Leaf false_value, Leaf Unevaluated]) andalso
+    terms_of [] [C ([0], 1)] = [Narrowing_constructor (1, [])]
+  end
+
+fun pnf_engine_units () =
+  let
+    val mixed_tree = tree_of
+      [(Universal, pnf_bool_shape), (Existential, pnf_bool_shape)]
+    fun mixed _
+          [Narrowing_variable ([0], _), Narrowing_variable ([1], _)] =
+          NeedsRefinement [0]
+      | mixed _
+          [Narrowing_constructor (0, []), Narrowing_variable ([1], _)] =
+          NeedsRefinement [1]
+      | mixed _
+          [Narrowing_constructor (0, []),
+           Narrowing_constructor (0, [])] =
+          Known {genuine = true, result = false}
+      | mixed _
+          [Narrowing_constructor (0, []),
+           Narrowing_constructor (1, [])] =
+          Known {genuine = false, result = false}
+      | mixed _ _ = Known {genuine = true, result = true}
+    val potential = refute_pnf false 2 mixed mixed_tree
+    val depth_limited = refute_pnf false 1 mixed mixed_tree
+    fun universal_pass _ [Narrowing_variable ([0], _)] =
+          NeedsRefinement [0]
+      | universal_pass _ [Narrowing_constructor _] =
+          Known {genuine = true, result = true}
+      | universal_pass _ _ = raise Fail "unexpected universal prefix"
+    val exhausted = refute_pnf false 2 universal_pass
+      (tree_of [(Universal, pnf_bool_shape)])
+    fun nested_hit _ [Narrowing_variable ([0], _)] =
+          NeedsRefinement [0]
+      | nested_hit _ [Narrowing_constructor (0, [])] =
+          Known {genuine = true, result = true}
+      | nested_hit _
+          [Narrowing_constructor
+            (1, [Narrowing_variable ([0, 0], _)])] =
+          NeedsRefinement [0, 0]
+      | nested_hit _
+          [Narrowing_constructor
+            (1, [Narrowing_constructor (0, [])])] =
+          Known {genuine = true, result = false}
+      | nested_hit _ _ = raise Fail "unexpected nested prefix"
+    val nested = refute_pnf false 3 nested_hit
+      (tree_of [(Universal, narrow_branch)])
+    val expected_example =
+      UnivExample
+        (Narrowing_constructor (0, []),
+         ExExample
+           [(Narrowing_constructor (0, []), EmptyExample),
+            (Narrowing_constructor (1, []), EmptyExample)])
+    val uniform_shape = tree_of_types 1 [(Existential, ``:num list``)]
+  in
+    (case potential of
+         PnfCounterexample
+           {genuine = false, example, tree, tests = 4} =>
+             example = expected_example andalso
+             value_of tree = Eval {result = false, potential = true}
+       | _ => false) andalso
+    (case depth_limited of
+         PnfExhausted
+           {truth = Refute_Narrow.Unknown, tests = 1, ...} => true
+       | _ => false) andalso
+    (case exhausted of
+         PnfExhausted
+           {truth = Eval {result = true, potential = false}, tests = 3,
+            ...} => true
+       | _ => false) andalso
+    (case nested of
+         PnfCounterexample
+           {genuine = true,
+            example = UnivExample
+              (Narrowing_constructor
+                (1, [Narrowing_constructor (0, [])]), EmptyExample),
+            tests = 4, ...} => true
+       | _ => false) andalso
+    (case uniform_shape of
+         Variable
+           (Existential, Unevaluated, [0], actual_shape,
+            Leaf Unevaluated) =>
+           actual_shape = shape_of 1 ``:num list``
+       | _ => false)
+  end
+  handle Fail _ => false
+
+val _ = require_msg (check_result pnf_truth_tables) (fn () =>
+  "PNF three-valued or potential truth table changed")
+  (fn () => ()) ()
+val _ = require_msg (check_result pnf_tree_goldens) (fn () =>
+  "PNF tree refinement, update, or path term golden changed")
+  (fn () => ()) ()
+val _ = require_msg (check_result pnf_engine_units) (fn () =>
+  "PNF hit, extraction, exhaustion, depth, or potential propagation failed")
+  (fn () => ()) ()
 
 val _ = require_msg (check_result plain_engine_units) (fn () =>
   "plain narrowing hit, exhaustion, or hole refinement failed")
