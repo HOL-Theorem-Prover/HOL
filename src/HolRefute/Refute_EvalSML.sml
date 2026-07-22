@@ -2,7 +2,15 @@ structure Refute_EvalSML = struct
   type term = Term.term
 
   exception Stuck of string
+  (* A position is the constructor-field path from the quantified root.
+     Narrowing catches this precise sentinel and re-runs from scratch after
+     refining that position; unrelated exceptions must remain unrelated. *)
+  exception Hole of int list
   exception Deadline
+
+  datatype extraction_mode = StrictExtraction | LazyExtraction
+
+  fun lazy_hole position = Susp.delay (fn () => raise Hole position)
 
   type reconstruction = unit -> term
   type generated_hit = (int * reconstruction) list * bool
@@ -40,9 +48,10 @@ structure Refute_EvalSML = struct
     | ExtractionFailed of string list
 
   val extract_tests_hook = ref
-    (fn (_ : Refute_Core.config) =>
+    (fn (_ : extraction_mode) =>
+      fn (_ : Refute_Core.config) =>
       fn (_ : Refute_Eval.strategy) =>
-      fn (_ : Refute_Eval.plan list) =>
+      fn (_ : Refute_Eval.qc_problem) =>
         ExtractionFailed ["native: extractor is not installed"])
 
   fun note_force () =
@@ -351,12 +360,16 @@ structure Refute_EvalSML = struct
       else raise Deadline
     end
 
-  fun compile_locked (config : Refute_Core.config) strategy plans =
+  fun compile_locked (config : Refute_Core.config) strategy problem =
     let
       val started = Time.now ()
       val timeout = Time.fromReal (Real.max (0.0, #timeout config))
       val limit = Time.+ (started, timeout)
-      val extracted = (!extract_tests_hook) config strategy plans
+      val mode =
+        case strategy of
+            Refute_Eval.Narrowing => LazyExtraction
+          | _ => StrictExtraction
+      val extracted = (!extract_tests_hook) mode config strategy problem
     in
       case extracted of
           ExtractionFailed reasons => Refute_Eval.Inapplicable reasons
@@ -436,31 +449,28 @@ structure Refute_EvalSML = struct
                Refute_Eval.Inapplicable [reason]
              end
 
-  fun compile_plans config strategy plans =
+  fun compile_problem config strategy problem =
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
         let
           val _ = Mutex.lock goal_compile_mutex
           val result = Exn.capture
-            (restore (fn () => compile_locked config strategy plans)) ()
+            (restore (fn () => compile_locked config strategy problem)) ()
           val _ = Mutex.unlock goal_compile_mutex
         in
           Exn.release result
         end) ()
 
   fun compile config strategy problem =
-    case problem of
-        Refute_Eval.Pnf _ =>
+    case (strategy, problem) of
+        (Refute_Eval.Narrowing, _) =>
+          Refute_Eval.Inapplicable
+            ["native: narrowing engine is not installed"]
+      | (_, Refute_Eval.Pnf _) =>
           Refute_Eval.Inapplicable
             ["narrowing requires the native substrate"]
-      | Refute_Eval.Plans plans =>
-          (case strategy of
-               Refute_Eval.Narrowing =>
-                 Refute_Eval.Inapplicable ["narrowing is not installed"]
-             | Refute_Eval.Exhaustive =>
-                 compile_plans config strategy plans
-             | Refute_Eval.Random _ =>
-                 compile_plans config strategy plans)
+      | (_, Refute_Eval.Plans _) =>
+          compile_problem config strategy problem
 
   fun dump_native_random_candidates {plan, seed, size, count} =
     case compile Refute_Core.default_config

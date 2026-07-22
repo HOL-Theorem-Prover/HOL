@@ -10043,6 +10043,9 @@ val rx_record_def = TotalDefn.Define
 val rx_partial_def = TotalDefn.Define
   `rx_partial RGLeaf = 10`
 
+val rx_zero_pair_def = TotalDefn.Define
+  `rx_zero_pair (0, n : num) = T`
+
 val rx_even_odd_def = TotalDefn.Define
   `rx_even 0 = T /\
    rx_even (SUC n) = rx_odd n /\
@@ -10083,6 +10086,55 @@ fun compile_extracted_with term finish =
   end
 
 fun compile_extracted term = compile_extracted_with term (fn entry => entry)
+
+fun compile_lazy_extracted term finish =
+  let
+    val {source, entry} = Refute_Extract.extract_lazy_term term
+    fun generated_name prefix =
+      let
+        val prefix_size = size prefix
+        val limit = size source - prefix_size
+        fun seek index =
+          if index > limit then raise Fail "missing lazy constructor"
+          else if String.substring (source, index, prefix_size) = prefix then
+            index
+          else seek (index + 1)
+        fun name_char character =
+          Char.isAlphaNum character orelse character = #"_"
+        fun finish_at index =
+          if index < size source andalso
+             name_char (String.sub (source, index)) then
+            finish_at (index + 1)
+          else index
+        val start = seek 0
+        val stop = finish_at start
+      in
+        String.substring (source, start, stop - start)
+      end
+    val cons_name =
+      generated_name "C_CONS_refute_ty_" handle Fail _ => ""
+    val serial = !extract_compile_counter
+    val _ = extract_compile_counter := serial + 1
+    val structure_name = "RefuteLazyGolden_" ^ Int.toString serial
+    val program =
+      "structure " ^ structure_name ^ " = struct\n" ^ source ^ "end\n" ^
+      "val _ = RefuteExtractSelftest.result := SOME (" ^
+      finish (structure_name, structure_name ^ "." ^ entry,
+        structure_name ^ "." ^ cons_name) ^ ")\n"
+    val stream = TextIO.openString program
+    fun input () = TextIO.input1 stream
+    fun compile () =
+      if TextIO.endOfStream stream then ()
+      else
+        (PolyML.compiler
+           (input, [PolyML.Compiler.CPOutStream (fn _ => ())]) ();
+         compile ())
+    val _ = RefuteExtractSelftest.result := NONE
+    val _ = compile ()
+    val _ = TextIO.closeIn stream
+  in
+    valOf (!RefuteExtractSelftest.result)
+  end
 
 fun evaluated_bool term =
   let
@@ -10166,6 +10218,300 @@ fun extracted_missing_clause_is_match () =
 
 val _ = require_msg (check_result extracted_missing_clause_is_match) (fn () =>
   "an extracted inexhaustive function did not raise Match")
+  (fn () => ()) ()
+
+val _ = tprint "Refute lazy extraction"
+
+fun lazy_cons constructor head tail =
+  "Susp.delay (fn () => " ^ constructor ^ " (" ^ head ^ ", " ^
+  tail ^ "))"
+
+fun lazy_fields_are_not_forced () =
+  compile_lazy_extracted ``\xs : num list. NULL xs``
+    (fn (structure_name, entry, cons) =>
+      "let val head = " ^ structure_name ^ ".refute_hole [3, 0]\n" ^
+      "    val tail = " ^ structure_name ^ ".refute_hole [3, 1]\n" ^
+      "    val value = " ^ lazy_cons cons "head" "tail" ^ "\n" ^
+      "in not (Susp.force (Susp.force (" ^ entry ^ ") value)) end")
+
+fun lazy_case_forces_only_spine () =
+  compile_lazy_extracted
+    ``\xs : num list. case xs of [] => F | h :: t => T``
+    (fn (structure_name, entry, cons) =>
+      "let val head = " ^ structure_name ^ ".refute_hole [6, 0]\n" ^
+      "    val tail = " ^ structure_name ^ ".refute_hole [6, 1]\n" ^
+      "    val value = " ^ lazy_cons cons "head" "tail" ^ "\n" ^
+      "in Susp.force (Susp.force (" ^ entry ^ ") value) end")
+
+fun lazy_hole_position_propagates () =
+  compile_lazy_extracted ``\xs : num list. HD xs = 0``
+    (fn (structure_name, entry, cons) =>
+      "let val head = " ^ structure_name ^ ".refute_hole [4, 2]\n" ^
+      "    val tail = " ^ structure_name ^ ".refute_hole [4, 3]\n" ^
+      "    val value = " ^ lazy_cons cons "head" "tail" ^ "\n" ^
+      "in (Susp.force (Susp.force (" ^ entry ^ ") value); false)\n" ^
+      "   handle Refute_EvalSML.Hole position => position = [4, 2] end")
+
+fun lazy_equality_short_circuits () =
+  compile_lazy_extracted
+    ``\xs : num list. \ys : num list. xs = ys``
+    (fn (structure_name, entry, cons) =>
+      "let val zero = Susp.delay (fn () => 0 : IntInf.int)\n" ^
+      "    val one = Susp.delay (fn () => 1 : IntInf.int)\n" ^
+      "    val left_tail = " ^ structure_name ^ ".refute_hole [8]\n" ^
+      "    val right_tail = " ^ structure_name ^ ".refute_hole [9]\n" ^
+      "    val left = " ^ lazy_cons cons "zero" "left_tail" ^ "\n" ^
+      "    val right = " ^ lazy_cons cons "one" "right_tail" ^ "\n" ^
+      "    val after_left = Susp.force (" ^ entry ^ ") left\n" ^
+      "in not (Susp.force (Susp.force after_left right)) end")
+
+fun lazy_equality_demands_equal_tail () =
+  compile_lazy_extracted
+    ``\xs : num list. \ys : num list. xs = ys``
+    (fn (structure_name, entry, cons) =>
+      "let val zero = Susp.delay (fn () => 0 : IntInf.int)\n" ^
+      "    val left_tail = " ^ structure_name ^ ".refute_hole [10]\n" ^
+      "    val right_tail = " ^ structure_name ^ ".refute_hole [11]\n" ^
+      "    val left = " ^ lazy_cons cons "zero" "left_tail" ^ "\n" ^
+      "    val right = " ^ lazy_cons cons "zero" "right_tail" ^ "\n" ^
+      "    val after_left = Susp.force (" ^ entry ^ ") left\n" ^
+      "in (Susp.force (Susp.force after_left right); false)\n" ^
+      "   handle Refute_EvalSML.Hole position => position = [10] end")
+
+fun lazy_generated_field_is_not_forced () =
+  compile_lazy_extracted ``\xs : num list. NULL [HD xs]``
+    (fn (structure_name, entry, _) =>
+      "let val hole = " ^ structure_name ^ ".refute_hole [12, 0]\n" ^
+      "in not (Susp.force (Susp.force (" ^ entry ^ ") hole)) end")
+
+fun lazy_generated_field_keeps_path () =
+  compile_lazy_extracted ``\xs : num list. HD [HD xs] = 0``
+    (fn (structure_name, entry, _) =>
+      "let val hole = " ^ structure_name ^ ".refute_hole [12, 1]\n" ^
+      "in (Susp.force (Susp.force (" ^ entry ^ ") hole); false)\n" ^
+      "   handle Refute_EvalSML.Hole position =>\n" ^
+      "     position = [12, 1] end")
+
+fun lazy_generated_fields_defer_computations () =
+  let
+    fun untouched term = compile_lazy_extracted term
+      (fn (structure_name, entry, _) =>
+        "let val hole = " ^ structure_name ^ ".refute_hole [13]\n" ^
+        "in not (Susp.force (Susp.force (" ^ entry ^ ") hole)) end")
+  in
+    untouched
+      ``\xs : num list. NULL [case xs of [] => 0 | h :: t => h]`` andalso
+    untouched ``\xs : num list. NULL [(\ys. HD ys) xs]`` andalso
+    untouched ``\xs : num list. NULL [rx_sum xs]``
+  end
+
+fun lazy_singleton_pattern_keeps_element_lazy () =
+  compile_lazy_extracted
+    ``\x : num. case [x] of [y] => T | _ => F``
+    (fn (structure_name, entry, _) =>
+      "let val hole = " ^ structure_name ^ ".refute_hole [15, 0]\n" ^
+      "in Susp.force (Susp.force (" ^ entry ^ ") hole) end")
+
+fun lazy_nested_pattern_mismatch_falls_through () =
+  compile_lazy_extracted
+    ``\x : num. case [SOME x] of
+         [NONE] => F
+       | [SOME y] => T
+       | _ => F``
+    (fn (structure_name, entry, _) =>
+      "let val hole = " ^ structure_name ^ ".refute_hole [15, 1]\n" ^
+      "in Susp.force (Susp.force (" ^ entry ^ ") hole) end")
+
+fun lazy_zero_pair_pattern_keeps_second_lazy () =
+  compile_lazy_extracted ``\n : num. rx_zero_pair (0, n)``
+    (fn (structure_name, entry, _) =>
+      "let val hole = " ^ structure_name ^ ".refute_hole [15, 2]\n" ^
+      "in Susp.force (Susp.force (" ^ entry ^ ") hole) end")
+
+fun lazy_let_and_pair_abstraction_keep_fields_lazy () =
+  let
+    fun untouched term = compile_lazy_extracted term
+      (fn (structure_name, entry, _) =>
+        "let val hole = " ^ structure_name ^ ".refute_hole [15, 3]\n" ^
+        "in Susp.force (Susp.force (" ^ entry ^ ") hole) end")
+  in
+    untouched ``\x : num. let (a, b) = (x, 0) in b = 0`` andalso
+    untouched ``\x : num. (\(a, b). b = 0) (x, 0)``
+  end
+
+fun lazy_nested_pattern_holes_are_left_to_right () =
+  compile_lazy_extracted
+    ``\x : num. \y : num.
+        case RGBin (RGTip x) (RGTip y) of
+            RGBin (RGTip 0) (RGTip 0) => T
+          | _ => F``
+    (fn (structure_name, entry, _) =>
+      "let val zero = Susp.delay (fn () => 0 : IntInf.int)\n" ^
+      "    val left = " ^ structure_name ^ ".refute_hole [15, 4]\n" ^
+      "    val right = " ^ structure_name ^ ".refute_hole [15, 5]\n" ^
+      "    fun run first second =\n" ^
+      "      Susp.force (Susp.force (Susp.force (" ^ entry ^
+        ") first) second)\n" ^
+      "    val left_first =\n" ^
+      "      ((run left right; false)\n" ^
+      "       handle Refute_EvalSML.Hole position =>\n" ^
+      "         position = [15, 4])\n" ^
+      "    val right_second =\n" ^
+      "      ((run zero right; false)\n" ^
+      "       handle Refute_EvalSML.Hole position =>\n" ^
+      "         position = [15, 5])\n" ^
+      "in left_first andalso right_second end")
+
+fun lazy_unit_equality_forces_in_order () =
+  compile_lazy_extracted ``\x : one. \y : one. x = y``
+    (fn (structure_name, entry, _) =>
+      "let val unit = Susp.delay (fn () => ())\n" ^
+      "    val left_hole = " ^ structure_name ^
+        ".refute_hole [14, 0]\n" ^
+      "    val right_hole = " ^ structure_name ^
+        ".refute_hole [14, 1]\n" ^
+      "    fun equal left right =\n" ^
+      "      Susp.force (Susp.force (Susp.force (" ^ entry ^
+        ") left) right)\n" ^
+      "    val right_forced =\n" ^
+      "      ((equal unit right_hole; false)\n" ^
+      "       handle Refute_EvalSML.Hole position =>\n" ^
+      "         position = [14, 1])\n" ^
+      "    val left_first =\n" ^
+      "      ((equal left_hole right_hole; false)\n" ^
+      "       handle Refute_EvalSML.Hole position =>\n" ^
+      "         position = [14, 0])\n" ^
+      "in right_forced andalso left_first end")
+
+fun lazy_force_twice_memoizes_application () =
+  compile_lazy_extracted ``\f : num -> num. f 7``
+    (fn (_, entry, _) =>
+      "let val effects = ref 0\n" ^
+      "    val function = Susp.delay (fn () => fn argument =>\n" ^
+      "      (effects := !effects + 1; argument))\n" ^
+      "    val result = Susp.force (" ^ entry ^ ") function\n" ^
+      "    val initially_delayed = !effects = 0\n" ^
+      "    val first = Susp.force result\n" ^
+      "    val once = !effects = 1\n" ^
+      "    val second = Susp.force result\n" ^
+      "in initially_delayed andalso once andalso !effects = 1 andalso\n" ^
+      "   IntInf.compare (first, 7) = EQUAL andalso\n" ^
+      "   IntInf.compare (second, 7) = EQUAL end")
+
+fun lazy_definition_and_constructor_literals () =
+  compile_lazy_extracted ``rx_sum [1; 2; 3] = 6``
+    (fn (_, entry, _) => "Susp.force (" ^ entry ^ ")")
+
+fun lazy_hook_seam_and_rejection () =
+  let
+    val original = !extract_tests_hook
+    val modes = ref ([] : Refute_EvalSML.extraction_mode list)
+    fun observing mode config strategy problem =
+      (modes := mode :: !modes; original mode config strategy problem)
+    val _ = extract_tests_hook := observing
+    val captured = Exn.capture (fn () =>
+      (!extract_tests_hook) LazyExtraction default_config Narrowing
+        (Plans [Test boolSyntax.T])) ()
+    val rejected = Refute_EvalSML.compile default_config Narrowing
+      (Plans [Test boolSyntax.T])
+    val _ = extract_tests_hook := original
+    val direct = Exn.release captured
+    val seam_ok =
+      case direct of
+          ExtractionFailed _ => false
+        | Extracted {source, entry, table} =>
+            let
+              val installed = Exn.capture
+                (fn () => Refute_EvalSML.compile_install source entry) ()
+              val _ = unregister_term_tables table
+            in
+              case installed of
+                  Exn.Res (Installed _) => true
+                | _ => false
+            end
+    val rejection_ok =
+      case rejected of
+          Inapplicable [reason] =>
+            reason = "native: narrowing engine is not installed"
+        | Inapplicable _ => false
+        | Compiled test => (#close test (); false)
+  in
+    seam_ok andalso rejection_ok andalso !modes = [LazyExtraction]
+  end
+
+fun lazy_deadline_during_force_cleans_up () =
+  compile_lazy_extracted ``\x : num. x = 0``
+    (fn (_, entry, _) =>
+      "let val forced = ref false\n" ^
+      "    val deadline_fired =\n" ^
+      "      (Refute_EvalSML.with_native_hooks (Time.now ()) []\n" ^
+      "         (fn () =>\n" ^
+      "           let val argument = Susp.delay (fn () =>\n" ^
+      "                 (forced := true;\n" ^
+      "                  Refute_EvalSML.check_deadline ();\n" ^
+      "                  0 : IntInf.int))\n" ^
+      "           in Susp.force (Susp.force (" ^ entry ^
+        ") argument); false end)\n" ^
+      "       handle Refute_EvalSML.Deadline => true)\n" ^
+      "    val cleaned =\n" ^
+      "      ((Refute_EvalSML.check_deadline (); true)\n" ^
+      "       handle Refute_EvalSML.Deadline => false)\n" ^
+      "in deadline_fired andalso !forced andalso cleaned end")
+
+val _ = require_msg (check_result lazy_fields_are_not_forced) (fn () =>
+  "a lazy constructor match forced an unused field") (fn () => ()) ()
+val _ = require_msg (check_result lazy_case_forces_only_spine) (fn () =>
+  "a lazy case forced constructor fields while matching its spine")
+  (fn () => ()) ()
+val _ = require_msg (check_result lazy_hole_position_propagates) (fn () =>
+  "a demanded lazy field lost its Hole position") (fn () => ()) ()
+val _ = require_msg (check_result lazy_equality_short_circuits) (fn () =>
+  "lazy structural equality forced a tail after unequal heads")
+  (fn () => ()) ()
+val _ = require_msg (check_result lazy_equality_demands_equal_tail) (fn () =>
+  "lazy structural equality did not demand an equal-prefix tail")
+  (fn () => ()) ()
+val _ = require_msg (check_result lazy_generated_field_is_not_forced)
+  (fn () => "NULL forced its generated HD field") (fn () => ()) ()
+val _ = require_msg (check_result lazy_generated_field_keeps_path) (fn () =>
+  "a demanded generated field lost its Hole path") (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_generated_fields_defer_computations) (fn () =>
+  "constructor construction evaluated a generated field computation")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_singleton_pattern_keeps_element_lazy) (fn () =>
+  "a [x] pattern forced its variable field") (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_nested_pattern_mismatch_falls_through) (fn () =>
+  "a nested constructor mismatch forced a payload or missed its next row")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_zero_pair_pattern_keeps_second_lazy) (fn () =>
+  "a (0,n) definition pattern forced n") (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_let_and_pair_abstraction_keep_fields_lazy) (fn () =>
+  "a lazy let or pair abstraction forced a variable field")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_nested_pattern_holes_are_left_to_right) (fn () =>
+  "nested lazy pattern holes were not forced left-to-right")
+  (fn () => ()) ()
+val _ = require_msg (check_result lazy_unit_equality_forces_in_order)
+  (fn () => "lazy unit equality did not force both operands left-to-right")
+  (fn () => ()) ()
+val _ = require_msg (check_result lazy_force_twice_memoizes_application)
+  (fn () => "forcing a successful lazy application twice re-evaluated it")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_definition_and_constructor_literals) (fn () =>
+  "lazy extraction failed across a recursive definition")
+  (fn () => ()) ()
+val _ = require_msg (check_result lazy_hook_seam_and_rejection) (fn () =>
+  "the direct lazy hook seam or narrowing rejection failed")
+  (fn () => ()) ()
+val _ = require_msg (check_result lazy_deadline_during_force_cleans_up)
+  (fn () => "a deadline during lazy forcing leaked native hook state")
   (fn () => ()) ()
 
 fun unmapped_is_not_extractable () =
@@ -11895,16 +12241,18 @@ fun pnf_seam_is_inapplicable () =
     val x = Term.mk_var ("x", ``:bool``)
     val problem = Pnf
       {prefix = [(Forall, x), (Exists, x)], body = boolSyntax.T}
-    fun rejected compile =
+    fun rejected expected compile =
       case compile default_config Narrowing problem of
-          Inapplicable [reason] =>
-            reason = "narrowing requires the native substrate"
+          Inapplicable [reason] => reason = expected
         | Inapplicable _ => false
         | Compiled test => (#close test (); false)
   in
-    rejected Refute_EvalSML.compile andalso
-    rejected Refute_EvalCv.compile andalso
-    rejected Refute_EvalCompute.compile
+    rejected "native: narrowing engine is not installed"
+      Refute_EvalSML.compile andalso
+    rejected "narrowing requires the native substrate"
+      Refute_EvalCv.compile andalso
+    rejected "narrowing requires the native substrate"
+      Refute_EvalCompute.compile
   end
 
 val _ = tprint "Refute qc problem seam"
@@ -13181,7 +13529,7 @@ fun native_compile_error_is_reason () =
   let
     val original = !extract_tests_hook
     val table_count_before = term_table_count ()
-    fun broken _ _ _ =
+    fun broken _ _ _ _ =
       let val table = register_term_tables [] []
       in
         Extracted
