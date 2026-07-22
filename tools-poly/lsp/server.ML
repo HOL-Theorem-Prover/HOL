@@ -470,7 +470,8 @@ fun start {diag} = let
     {done = done, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
 
   type text_data = {text: string, version: int, lines: lines}
-  type compile_data = {parse: parse_data ref, text: text_data, thread: Thread.thread}
+  type compile_data = {parse: parse_data ref, text: text_data,
+                       thread: Thread.thread, cancelled: bool ref}
   type file_data = {
     compile: compile_data option ref,
     lastTrees: {parse: parse_data, text: text_data} ref,
@@ -497,9 +498,24 @@ fun start {diag} = let
     in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
         debounce = ref 0} end
 
+  (* Cooperative cancel: signal the flag, which the compile thread
+     checks at each Progress event and raises Thread.Interrupt.  We
+     can't use Thread.interrupt directly for two reasons: the compile
+     thread runs InterruptDefer (so Poly wouldn't deliver it), and
+     HOL's tactic-level `handle _ =>` would swallow it mid-proof
+     without stopping the wider compile.
+
+     We also wait for the thread to actually exit before returning:
+     the caller usually calls resetForCompile immediately after
+     stopCompile, and a still-running previous compile would race
+     against that reset on shared HOL state. *)
   fun stopCompile r = case !r of
     NONE => ()
-  | SOME {thread, ...} => (r := NONE; Thread.interrupt thread)
+  | SOME {cancelled, thread, ...} => (
+      r := NONE;
+      cancelled := true;
+      while Thread.isActive thread do
+        OS.Process.sleep (Time.fromMilliseconds 20))
 
   fun applyEdit ({compile, lastTrees, ...}:file_data) version changes = let
     val _ = stopCompile compile
@@ -577,6 +593,7 @@ fun start {diag} = let
     val _ = stopCompile compile
     val {text as {lines, ...}, parse = {diags = oldDiags, ...}} = !lastTrees
     val trees = ref (emptyParseData 8)
+    val cancelled = ref false
 
     fun compileThread () = ((let
       fun encDiag (Error {hard, pos, msg}) print = (
@@ -684,6 +701,7 @@ fun start {diag} = let
       val ls = ref (beforeCompile ())
       val lastPos = ref 0
       fun process (Progress i) = (
+          if !cancelled then raise Thread.Interrupt else ();
           trees := setParsePos i (!trees);
           afterCompile (!lastPos before lastPos := i, i) (!ls);
           send (mkNotif "$/compileProgress" (fn print => (
@@ -719,7 +737,8 @@ fun start {diag} = let
       end);
       compile := NONE)
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
-    in compile := SOME {parse = trees, text = text, thread = thread} end)
+    in compile := SOME {parse = trees, text = text, thread = thread,
+                        cancelled = cancelled} end)
 
   (* Fire a compile after a debounce delay: rapid didChange bursts
      collapse to one compile. *)

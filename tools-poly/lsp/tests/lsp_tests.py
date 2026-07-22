@@ -444,6 +444,48 @@ def test_small_recompile_bare_val():
         c.close()
 
 
+def test_integer_didChange_interrupts_stale_compile():
+    """didChange mid-compile must interrupt the stale compile and start a
+    fresh one.  Otherwise we get two compiles running against the same
+    shared HOL state, cascading semantic errors, and diagnostics tagged
+    with a stale version."""
+    src = f"{REPO}/src/integer/integerScript.sml"
+    c = Client(os.path.dirname(src))
+    try:
+        _init(c, REPO)
+        uri = f"file://{src}"
+        with open(src) as f: text = f.read()
+        _did_open(c, uri, text)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "first compileCompleted")
+        # v2: blank lines only, then before it finishes, v3: add a val.
+        v2 = text.replace("Theory integer\n", "\n\nTheory integer\n", 1)
+        v3 = v2.replace("Theory integer\n", "Theory integer\nval x = 3\n", 1)
+        idx = c.total_msgs()
+        _did_change_full(c, uri, v2, 2)
+        time.sleep(0.5)   # let v2 compile start
+        _did_change_full(c, uri, v3, 3)
+        # We should see exactly one final compileCompleted, and any
+        # diagnostics emitted after the didChange must be tagged v3
+        # (or empty version-agnostic).  Zero stale-v2 diagnostics.
+        m = c.wait_for_method("$/compileCompleted", 60, idx)
+        assert_true(m is not None, "final compileCompleted")
+        # After that final compileCompleted, check no v2-tagged diagnostics
+        # appeared AFTER the v3 didChange was sent.
+        msgs, _ = c.messages_since(idx)
+        v3_didChange_idx = next(
+            (i for i, m in enumerate(msgs)
+             if m.get("method") == "textDocument/didChange"), None)
+        stale_diags = [m for m in msgs
+                       if m.get("method") == "textDocument/publishDiagnostics"
+                       and m["params"].get("version") == 2
+                       and m["params"].get("diagnostics")]
+        assert_eq(len(stale_diags), 0,
+                  f"no v2-tagged diagnostics after v3 (got {len(stale_diags)})")
+    finally:
+        c.close()
+
+
 def test_diagnostic_dedup():
     """Type-error inserted → publishDiagnostics event count should be small."""
     c = Client("/tmp")
@@ -497,6 +539,8 @@ TESTS = [
     ("integer_first_compile",        test_integer_first_compile),
     ("integer_recompile_blank",      test_integer_recompile_blank_lines),
     ("integer_recompile_type_error", test_integer_recompile_with_type_error),
+    ("integer_didChange_interrupts",
+                                     test_integer_didChange_interrupts_stale_compile),
     ("diagnostic_dedup",             test_diagnostic_dedup),
     ("workdone_progress",            test_workdone_progress),
 ]
