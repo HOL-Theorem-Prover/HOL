@@ -2,6 +2,7 @@ open testutils
 open refuteTheory
 open refute_cvTheory
 open refuteTableZooTheory
+open refuteUnusedTheory
 open sortingTheory
 open realTheory
 open Refute_Core
@@ -8527,6 +8528,86 @@ val quiet_output_probe_backend : backend =
 
 val _ = register_backend quiet_output_probe_backend
 
+val unused_unknown_enabled = ref false
+val unused_timeout_enabled = ref false
+val unused_registry_enabled = ref false
+val unused_registry_seen = ref false
+val unused_profile_enabled = ref false
+val unused_profile_seen = ref false
+
+val unused_unknown_backend : backend =
+  {name = "refute-unused-unknown", weight = ~91,
+   configured = fn () => !unused_unknown_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn _ => Unknown ["unused-assumption probe pin"]}
+
+val unused_timeout_backend : backend =
+  {name = "refute-unused-timeout", weight = ~90,
+   configured = fn () => !unused_timeout_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn _ =>
+     (OS.Process.sleep (Time.fromReal 0.05); NoCounterexample)}
+
+val unused_registry_backend : backend =
+  {name = "refute-unused-future-registry", weight = ~89,
+   configured = fn () => !unused_registry_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn _ =>
+     (unused_registry_seen := true; Unknown ["full registry pin"])}
+
+val unused_profile_backend : backend =
+  {name = "refute-unused-profile", weight = ~88,
+   configured = fn () => !unused_profile_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn config => fn _ =>
+     (unused_profile_seen :=
+        (#sequential config andalso #quiet config andalso
+         #abort_potential config andalso #expect config = NoExpectation);
+      Feedback.HOL_MESG "unused-assumption profile output";
+      NoCounterexample)}
+
+(* Keep the gate and counters together so a concurrent sweep cannot hide an
+   overlap through races in the regression instrumentation itself. *)
+val unused_sweep_state =
+  Synchronized.var "Refute unused sweep state" (false, 0, 0, 0)
+
+fun reset_unused_sweep enabled =
+  Synchronized.change unused_sweep_state (K (enabled, 0, 0, 0))
+
+fun unused_sweep_enabled () =
+  let val (enabled, _, _, _) = Synchronized.value unused_sweep_state
+  in enabled end
+
+fun enter_unused_sweep () =
+  Synchronized.change unused_sweep_state
+    (fn (enabled, active, max_active, calls) =>
+      let val active' = active + 1
+      in (enabled, active', Int.max (active', max_active), calls + 1) end)
+
+fun leave_unused_sweep () =
+  Synchronized.change unused_sweep_state
+    (fn (enabled, active, max_active, calls) =>
+      (enabled, active - 1, max_active, calls))
+
+val unused_sweep_backend : backend =
+  {name = "refute-unused-sequential-sweep", weight = ~87,
+   configured = unused_sweep_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn _ =>
+     let
+       val _ = enter_unused_sweep ()
+       fun probe () =
+         (OS.Process.sleep (Time.fromReal 0.02); NoCounterexample)
+     in
+       Portable.finally leave_unused_sweep probe ()
+     end}
+
+val _ = register_backend unused_unknown_backend
+val _ = register_backend unused_timeout_backend
+val _ = register_backend unused_registry_backend
+val _ = register_backend unused_profile_backend
+val _ = register_backend unused_sweep_backend
+
 val try_profile_enabled = ref false
 val try_profile_seen = ref false
 
@@ -10458,6 +10539,165 @@ fun capture_refute_messages level action =
   in
     (result, String.concat (rev (!chunks)))
   end
+
+fun unused_fixture_results_are_pinned () =
+  let
+    val config = default_config
+      |> upd_backends (SOME ["exhaustive", "random"])
+      |> upd_substrate Compute
+      |> upd_size 2
+      |> upd_iterations 20
+      |> upd_timeout 2.0
+    val expected =
+      [("conjunctive_assumption", SOME []),
+       ("incomparable_maximals", SOME [[0, 1], [2]]),
+       ("needed_assumption", SOME []),
+       ("no_assumptions", NONE),
+       ("one_unused_assumption", SOME [[1]]),
+       ("two_unused_assumptions", SOME [[0, 1]])]
+  in
+    Refute.find_unused_assms (SOME config) "refuteUnused" = expected andalso
+    Refute.check_unused_assms (SOME config)
+      ("one", refuteUnusedTheory.one_unused_assumption) =
+      ("one", SOME [[1]])
+  end
+
+val _ = tprint "Refute unused assumptions implication and antichain pins"
+val _ = require_msg (check_result unused_fixture_results_are_pinned)
+  (fn () =>
+    "unused-assumption implication indexing or maximal antichain changed")
+  (fn () => ()) ()
+
+fun unused_backend_selection_is_pinned () =
+  let
+    val saved_config = !Refute.the_config
+    val config = default_config
+      |> upd_backends NONE
+      |> upd_substrate Compute
+      |> upd_size 2
+      |> upd_timeout 2.0
+    val theorem = ("selection", refuteUnusedTheory.needed_assumption)
+    fun restore () =
+      (unused_registry_enabled := false;
+       unused_registry_seen := false;
+       Refute.the_config := saved_config)
+    fun run () =
+      let
+        val _ = unused_registry_enabled := true
+        val _ = Refute.the_config := config
+        val _ = unused_registry_seen := false
+        val default_result = Refute.check_unused_assms NONE theorem
+        val default_excluded_fixture = not (!unused_registry_seen)
+        val _ = unused_registry_seen := false
+        val configured_result = Refute.check_unused_assms (SOME config) theorem
+      in
+        default_result = ("selection", SOME []) andalso
+        configured_result = default_result andalso
+        default_excluded_fixture andalso !unused_registry_seen
+      end
+  in
+    Portable.finally restore run ()
+  end
+
+val _ = tprint "Refute unused assumptions default QC and full registry"
+val _ = require_msg (check_result unused_backend_selection_is_pinned)
+  (fn () =>
+    "default probes were not QC-only or configured NONE missed a backend")
+  (fn () => ()) ()
+
+fun unused_profile_is_pinned () =
+  let
+    val config = default_config
+      |> upd_backends (SOME ["refute-unused-profile"])
+      |> upd_sequential false
+      |> upd_abort_potential false
+      |> upd_quiet false
+      |> upd_expect ExpectNone
+    fun restore () =
+      (unused_profile_enabled := false; unused_profile_seen := false)
+    fun run () =
+      let
+        val _ = unused_profile_enabled := true
+        val _ = unused_profile_seen := false
+        val (result, output) = capture_refute_messages 4 (fn () =>
+          Refute.check_unused_assms (SOME config)
+            ("profile", refuteUnusedTheory.needed_assumption))
+      in
+        !unused_profile_seen andalso output = "" andalso
+        result = ("profile", SOME [[0]])
+      end
+  in
+    Portable.finally restore run ()
+  end
+
+val _ = tprint "Refute unused assumptions forced probe profile"
+val _ = require_msg (check_result unused_profile_is_pinned)
+  (fn () =>
+    "probes were not sequential, quiet, abort-potential, and expectation-free")
+  (fn () => ()) ()
+
+fun unused_theorem_sweep_is_sequential () =
+  let
+    val config = default_config
+      |> upd_backends (SOME ["refute-unused-sequential-sweep"])
+      |> upd_sequential false
+      |> upd_timeout 2.0
+    fun restore () = reset_unused_sweep false
+    fun run () =
+      let
+        val _ = reset_unused_sweep true
+        val results = Refute.find_unused_assms (SOME config) "refuteUnused"
+        val (_, active, max_active, calls) =
+          Synchronized.value unused_sweep_state
+      in
+        (* The largest single fixture theorem makes seven probes, so this
+           also pins that the backend gated more than one theorem. *)
+        length results = 6 andalso calls > 7 andalso active = 0 andalso
+        max_active = 1
+      end
+  in
+    Portable.finally restore run ()
+  end
+
+val _ = tprint "Refute unused assumptions theorem sweep is sequential"
+val _ = require_msg (check_result unused_theorem_sweep_is_sequential)
+  (fn () => "unused-assumption probes overlapped across the theory sweep")
+  (fn () => ()) ()
+
+fun unused_skipped_count_is_pinned (backend, enabled, timeout) =
+  let
+    val config = default_config
+      |> upd_backends (SOME [backend])
+      |> upd_timeout timeout
+    fun restore () = enabled := false
+    fun run () =
+      let
+        val _ = enabled := true
+        val (_, output) = capture_refute_messages 4 (fn () =>
+          Refute.print_unused_assms (SOME config) (SOME "refuteUnused"))
+      in
+        String.isSubstring "Found 0 theorems" output andalso
+        String.isSubstring
+          "Checked 5 theorems with assumptions (6 total)" output andalso
+        String.isSubstring "Skipped 9 inconclusive probes." output
+      end
+  in
+    Portable.finally restore run ()
+  end
+
+val _ = tprint "Refute unused assumptions unknown skipped count"
+val _ = require_msg (check_result (fn () =>
+  unused_skipped_count_is_pinned
+    ("refute-unused-unknown", unused_unknown_enabled, 1.0)))
+  (fn () => "Unknown probes were not reported as skipped")
+  (fn () => ()) ()
+
+val _ = tprint "Refute unused assumptions timeout skipped count"
+val _ = require_msg (check_result (fn () =>
+  unused_skipped_count_is_pinned
+    ("refute-unused-timeout", unused_timeout_enabled, 0.001)))
+  (fn () => "timed-out probes were not reported as skipped")
+  (fn () => ()) ()
 
 fun try_refute_protocol_and_profile () =
   let

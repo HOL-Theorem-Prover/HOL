@@ -65,6 +65,23 @@ structure Refute :> Refute = struct
     end
     handle Timeout.TIMEOUT _ => NONE
 
+  fun qc_only config = Refute_Core.upd_backends
+    (SOME ["exhaustive", "random"]) config
+
+  (* The option distinguishes the QC-only convenience from an explicitly
+     supplied configuration whose [backends = NONE] means the full registry. *)
+  fun unused_config NONE = qc_only (!Refute_Core.the_config)
+    | unused_config (SOME config) = config
+
+  fun check_unused_assms config named_theorem =
+    Refute_Unused.check_unused_assms (unused_config config) named_theorem
+
+  fun find_unused_assms config theory =
+    Refute_Unused.find_unused_assms (unused_config config) theory
+
+  fun print_unused_assms config theory =
+    Refute_Unused.print_unused_assms (unused_config config) theory
+
   fun quickcheck tm = refute
     (Refute_Core.upd_backends (SOME ["exhaustive", "random"])
       (!Refute_Core.the_config)) tm

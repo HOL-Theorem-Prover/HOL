@@ -44,6 +44,13 @@ conservative ceiling `Genuine`.  A backend with a tighter bound can use
 bound: overestimating only forgoes an early stop, whereas underestimating can
 hide a stronger result and violates the backend contract.
 
+The unused-assumption facade consists of `check_unused_assms`,
+`find_unused_assms`, and `print_unused_assms`.  Each takes a `config option`
+first.  `NONE` derives a QC-only configuration from the current configuration;
+`SOME cfg` supplies the base configuration and preserves its backend selection.
+Every individual probe forces a sequential, quiet, abort-potential,
+expectation-free profile.
+
 Module layout:
 
 * Refute_Core: shared types, configuration, registry, and orchestration.
@@ -57,6 +64,7 @@ Module layout:
   solver configuration.
 * Refute_ModelFinder and Refute_ModelFinder_*: preprocessing, scope and
   representation selection, Kodkod translation, and model reconstruction.
+* Refute_Unused: unused-assumption probes and theory sweeps.
 * Refute.sig and Refute.sml: the public API facade.
 
 M4 model-finder surface
@@ -163,7 +171,7 @@ typedef explicitly.  The `rat` type is not registered: its intended
 fraction/ersatz representation remains future work.
 
 The following parity work is intentionally not in M4: native narrowing,
-predicate-mode smart generators, `find_unused_assms`, `lbtree` and `path`
-codata registrations, automatic quotient/typedef database harvesting,
+predicate-mode smart generators, `lbtree` and `path` codata registrations,
+automatic quotient/typedef database harvesting,
 `merge_type_vars`, fraction/`rat` support, and monotonicity promotion for
 relation inverse and composition (`inv` and `O`).

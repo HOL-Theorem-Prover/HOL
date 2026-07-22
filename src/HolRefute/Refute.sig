@@ -44,6 +44,15 @@ signature Refute = sig
   val refute_goal   : config -> goal -> outcome
   val refute_top    : unit -> outcome
   val try_refute    : config -> goal -> (string * outcome) option
+  (* [NONE] derives a QC-only configuration from [the_config].  [SOME cfg]
+     supplies the base configuration and preserves its backend selection.
+     Every probe forces a sequential, quiet, abort-potential,
+     expectation-free profile. *)
+  val check_unused_assms :
+    config option -> string * thm -> string * int list list option
+  val find_unused_assms :
+    config option -> string -> (string * int list list option) list
+  val print_unused_assms : config option -> string option -> unit
   val quickcheck    : term -> outcome
   val nitpick       : term -> outcome
   val REFUTE_TAC    : Abbrev.tactic

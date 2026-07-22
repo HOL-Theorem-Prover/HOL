@@ -15,7 +15,7 @@ selftest.uo: Refute_PropSat.uo \
              Refute_ModelFinder_Scope.uo \
              Refute_ModelFinder_Mono.uo \
              Refute_ModelFinder_HOL.uo Refute_ModelFinder.uo \
-             refuteTableZooTheory.uo
+             refuteTableZooTheory.uo refuteUnusedTheory.uo
 
 # The substrate layer reaches the shared type/term helpers through a
 # `structure Util = Refute_Util` alias, which holdep does not follow, so the
@@ -43,11 +43,14 @@ Refute_ModelFinder.uo: Refute_ModelFinder_Preproc.uo \
                        Refute_ModelFinder_Mono.uo \
                        Refute_ModelFinder_HOL.uo
 
-Refute.uo: Refute_ModelFinder.uo
+# The unused-assumption engine is kept below the facade so its probes can
+# call the core without introducing a Refute -> Refute_Unused cycle.
+Refute_Unused.uo: Refute_Core.uo
+Refute.uo: Refute_Unused.uo Refute_ModelFinder.uo
 
 ifdef POLY
 selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
-              refuteTableZooTheory.uo refuteheap
+              refuteTableZooTheory.uo refuteUnusedTheory.uo refuteheap
 	@printf '%s\n' '#!/bin/sh' 'set -e' \
 	  '$(HOLDIR)/bin/hol --gcthreads=1 run \
 	  --holstate=$(HOLDIR)/src/HolRefute/refuteheap selftest' \
@@ -55,7 +58,7 @@ selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
 	@chmod +x $@
 else
 selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
-              refuteTableZooTheory.uo
+              refuteTableZooTheory.uo refuteUnusedTheory.uo
 	$(HOLMOSMLC) -o $@ $<
 endif
 
