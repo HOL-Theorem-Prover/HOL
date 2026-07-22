@@ -281,14 +281,14 @@ structure Refute_QC = struct
        (if null reasons then "no reason supplied"
         else String.concatWith "; " reasons) ^ "\n")
 
-  fun compile_auto config strategy plans =
+  fun compile_auto config strategy problem =
     let
       fun try [] reasons =
             SelectionFailed
               (if null reasons then ["no substrate is registered"]
                else reasons)
         | try (substrate :: rest) reasons =
-            (case #compile substrate config strategy plans of
+            (case #compile substrate config strategy problem of
                  Compiled test =>
                    (say_selected (#name substrate) false;
                     Selected (#name substrate, test))
@@ -300,7 +300,7 @@ structure Refute_QC = struct
       try (get_substrates ()) []
     end
 
-  fun compile_explicit config choice strategy plans =
+  fun compile_explicit config choice strategy problem =
     let
       val name = valOf (substrate_name choice)
     in
@@ -309,7 +309,7 @@ structure Refute_QC = struct
           NONE => SelectionFailed
             ["requested substrate " ^ name ^ " is unavailable"]
         | SOME substrate =>
-            (case #compile substrate config strategy plans of
+            (case #compile substrate config strategy problem of
                  Compiled test =>
                    (say_selected name true; Selected (name, test))
                | Inapplicable reasons =>
@@ -317,10 +317,10 @@ structure Refute_QC = struct
                     SelectionFailed reasons))
     end
 
-  fun compile_selected config strategy plans =
+  fun compile_selected config strategy problem =
     case #substrate (#qc config) of
-        Refute_Core.Auto => compile_auto config strategy plans
-      | choice => compile_explicit config choice strategy plans
+        Refute_Core.Auto => compile_auto config strategy problem
+      | choice => compile_explicit config choice strategy problem
 
   fun bounded_size size = Int.max (0, size)
 
@@ -337,6 +337,11 @@ structure Refute_QC = struct
 
   fun is_random (Random _) = true
     | is_random Exhaustive = false
+    | is_random Narrowing = false
+
+  fun strategy_name Exhaustive = "exhaustive"
+    | strategy_name (Random _) = "random"
+    | strategy_name Narrowing = "narrowing"
 
   fun strategy_run strategy (config : Refute_Core.config)
       (instances : Refute_Core.instance list) =
@@ -351,7 +356,7 @@ structure Refute_QC = struct
              "):\n" ^ pp_plan plan ^ "\n"))
           (ListPair.zip (instances, plans))
     in
-      case compile_selected config strategy plans of
+      case compile_selected config strategy (Plans plans) of
           SelectionFailed reasons => Refute_Core.Unknown reasons
         | Selected (substrate, compiled) =>
             let
@@ -361,7 +366,8 @@ structure Refute_QC = struct
               val complete = ref
                 (case strategy of
                      Exhaustive => not (null entries)
-                   | Random _ => List.all (not o plan_has_gen) plans)
+                   | Random _ => List.all (not o plan_has_gen) plans
+                   | Narrowing => false)
               val counterexamples = ref []
               val discarded = ref 0
               val gave_up = ref []
@@ -390,8 +396,7 @@ structure Refute_QC = struct
                     | CexFound {env, genuine} =>
                         record_candidate
                           { config = config,
-                            backend = if is_random strategy then "random"
-                              else "exhaustive",
+                            backend = strategy_name strategy,
                             substrate = substrate,
                             instance = instance_for card,
                             stats = stats_for size card msec,
@@ -434,8 +439,7 @@ structure Refute_QC = struct
                       else chunks total
                     else one entry 0 (#genuine_only config) []
                   val (card, size) = entry
-                  val backend =
-                    if is_random strategy then "random" else "exhaustive"
+                  val backend = strategy_name strategy
                   val elapsed = elapsed_msec started
                   val _ = Refute_Core.Private.say 2
                     ("Refute schedule entry (backend: " ^ backend ^
@@ -453,8 +457,10 @@ structure Refute_QC = struct
                     else (run_entry entry; search rest)
               val _ = search entries
               val generic_reason =
-                if is_random strategy then "random search exhausted"
-                else "search space not exhausted"
+                case strategy of
+                    Random _ => "random search exhausted"
+                  | Exhaustive => "search space not exhausted"
+                  | Narrowing => "narrowing search exhausted"
             in
                   if not (null (!counterexamples)) then
                     Refute_Core.Counterexample (rev (!counterexamples))

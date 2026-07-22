@@ -1771,7 +1771,8 @@ structure Refute_Extract = struct
                      if width <= 32 then ()
                      else reject ("word width exceeds rand_below's " ^
                        "32-bit bound for " ^ type_name root)
-                 | Exhaustive => ())
+                 | Exhaustive => ()
+                 | Narrowing => reject "narrowing is not installed")
             | _ => ()
           end
           handle Refute_Gen.NoGenerator (missing, why) =>
@@ -2449,6 +2450,7 @@ structure Refute_Extract = struct
               "      table = refute_table_id, state = final_state,\n" ^
               "      tests = !tests, match_failures = !match_failures}\n" ^
               "  end\n"
+          | Narrowing => reject "narrowing is not installed"
         end
 
       val _ = List.app (fn plan =>

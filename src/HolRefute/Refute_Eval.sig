@@ -9,6 +9,12 @@ signature Refute_Eval = sig
     | Guard of term * plan
     | Prune
 
+  datatype quant = Forall | Exists
+
+  datatype qc_problem =
+      Plans of plan list
+    | Pnf of {prefix : (quant * term) list, body : term}
+
   type candidate = {env : (term * term) list, genuine : bool}
 
   datatype verdict = Continue | Found of candidate
@@ -21,6 +27,7 @@ signature Refute_Eval = sig
   datatype strategy =
       Exhaustive
     | Random of {seed : IntInf.int}
+    | Narrowing
 
   type run_input =
     { genuine_only : bool,
@@ -42,7 +49,7 @@ signature Refute_Eval = sig
   type substrate =
     { name : string,
       priority : int,
-      compile : Refute_Core.config -> strategy -> plan list ->
+      compile : Refute_Core.config -> strategy -> qc_problem ->
         compile_result }
 
   val rand_next : IntInf.int -> IntInf.int

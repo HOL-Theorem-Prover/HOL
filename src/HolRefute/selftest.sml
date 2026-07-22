@@ -9406,7 +9406,8 @@ fun generated_env ({hit = SOME (environment, genuine), table, ...} :
 fun compute_plan_result strategy plan size draws seed =
   let
     val compiled =
-      case Refute_EvalCompute.compile default_config strategy [plan] of
+      case Refute_EvalCompute.compile default_config strategy
+        (Plans [plan]) of
         Compiled test => test
       | Inapplicable reasons =>
           raise Fail (String.concatWith "; " reasons)
@@ -10407,7 +10408,7 @@ fun stuck_split_counts_failure () =
     val instances = qc_instances config goal
     val plans = List.map (fn i => compile_plan config (#goal i)) instances
     val compiled =
-      case Refute_EvalCompute.compile config Exhaustive plans of
+      case Refute_EvalCompute.compile config Exhaustive (Plans plans) of
           Compiled test => test
         | Inapplicable reasons => raise Fail (String.concatWith "; " reasons)
     val _ = List.app (fn (card, size) =>
@@ -10431,7 +10432,7 @@ fun no_generator_is_compile_inapplicable () =
     val variable = Term.mk_var ("r", ``:real``)
   in
     case Refute_EvalCompute.compile default_config Exhaustive
-      [Gen (variable, Test boolSyntax.T)] of
+      (Plans [Gen (variable, Test boolSyntax.T)]) of
         Inapplicable reasons =>
           List.exists (fn reason =>
             String.isSubstring "no generator for :real" reason andalso
@@ -10442,6 +10443,27 @@ fun no_generator_is_compile_inapplicable () =
 val _ = require_msg
   (check_result no_generator_is_compile_inapplicable) (fn () =>
   "NoGenerator was not converted to compile-time Inapplicable")
+  (fn () => ()) ()
+
+fun pnf_seam_is_inapplicable () =
+  let
+    val x = Term.mk_var ("x", ``:bool``)
+    val problem = Pnf
+      {prefix = [(Forall, x), (Exists, x)], body = boolSyntax.T}
+    fun rejected compile =
+      case compile default_config Narrowing problem of
+          Inapplicable [reason] =>
+            reason = "narrowing requires the native substrate"
+        | Compiled test => (#close test (); false)
+  in
+    rejected Refute_EvalSML.compile andalso
+    rejected Refute_EvalCv.compile andalso
+    rejected Refute_EvalCompute.compile
+  end
+
+val _ = tprint "Refute qc problem seam"
+val _ = require_msg (check_result pnf_seam_is_inapplicable) (fn () =>
+  "a substrate accepted Pnf or changed its inapplicability reason")
   (fn () => ()) ()
 
 fun explicit_cv_is_available strategy =
@@ -11513,7 +11535,8 @@ fun native_custom_is_inapplicable () =
     val variable = Term.mk_var ("native_custom", ``:rg_record``)
     val plan = Gen (variable, Test boolSyntax.T)
     fun rejected strategy =
-      case Refute_EvalSML.compile default_config strategy [plan] of
+      case Refute_EvalSML.compile default_config strategy
+        (Plans [plan]) of
           Inapplicable reasons =>
             List.exists (String.isPrefix
               "custom generator registered for :rg_record") reasons
@@ -11534,7 +11557,7 @@ fun native_compile_error_is_reason () =
       end
     val _ = extract_tests_hook := broken
     val captured = Exn.capture (fn () =>
-      Refute_EvalSML.compile default_config Exhaustive []) ()
+      Refute_EvalSML.compile default_config Exhaustive (Plans [])) ()
     val _ = extract_tests_hook := original
   in
     case captured of
@@ -11550,7 +11573,8 @@ fun native_ignored_filter_resumes () =
     val variable = Term.mk_var ("native_ignored", ``:bool``)
     val plan = Gen (variable, Test boolSyntax.F)
     fun exhaustive () =
-      case Refute_EvalSML.compile default_config Exhaustive [plan] of
+      case Refute_EvalSML.compile default_config Exhaustive
+          (Plans [plan]) of
           Inapplicable _ => false
         | Compiled test =>
             let
@@ -11575,7 +11599,7 @@ fun native_ignored_filter_resumes () =
     val random_plan = Gen (number, Test boolSyntax.F)
     fun random () =
       case Refute_EvalSML.compile default_config (Random {seed = 1})
-          [random_plan] of
+          (Plans [random_plan]) of
           Inapplicable _ => false
         | Compiled test =>
             let
@@ -11611,7 +11635,7 @@ fun native_timeout_is_healthy () =
     val short = upd_timeout 0.05 default_config
     val started = Time.now ()
     val timed =
-      case Refute_EvalSML.compile short Exhaustive [huge] of
+      case Refute_EvalSML.compile short Exhaustive (Plans [huge]) of
           Inapplicable _ => false
         | Compiled test =>
             let
@@ -11625,7 +11649,7 @@ fun native_timeout_is_healthy () =
     val elapsed = Time.toReal (Time.- (Time.now (), started))
     val healthy =
       case Refute_EvalSML.compile default_config Exhaustive
-          [Test boolSyntax.F] of
+          (Plans [Test boolSyntax.F]) of
           Inapplicable _ => false
         | Compiled test =>
             let
@@ -11645,7 +11669,8 @@ fun native_benchmark () =
     val plan = compile_plan default_config
       ``REVERSE (REVERSE (xs : num list)) = xs``
   in
-    case Refute_EvalSML.compile default_config Exhaustive [plan] of
+    case Refute_EvalSML.compile default_config Exhaustive
+        (Plans [plan]) of
         Inapplicable _ => false
       | Compiled test =>
           let
@@ -11704,7 +11729,7 @@ fun cv_stream_resumes () =
       (variable, Test (boolSyntax.mk_neg
         (boolSyntax.mk_eq (variable, ``2803 : num``))))
     fun run compile =
-      case compile default_config (Random {seed = 1}) [plan] of
+      case compile default_config (Random {seed = 1}) (Plans [plan]) of
           Inapplicable reasons =>
             raise Fail (String.concatWith "; " reasons)
         | Compiled test =>
@@ -11745,7 +11770,8 @@ fun cv_partial_is_clean () =
     val plan = Gen
       (variable, Test ``HD (xs : num list) = HD xs``)
     val rejected =
-      case Refute_EvalCv.compile default_config Exhaustive [plan] of
+      case Refute_EvalCv.compile default_config Exhaustive
+          (Plans [plan]) of
           Inapplicable reasons =>
             List.exists (fn reason =>
               String.isSubstring "cv: precondition for HD" reason) reasons
@@ -11785,7 +11811,8 @@ fun cv_revert_under_translation_failure () =
     val plan = Gen
       (variable, Test ``rx_unmapped 0 = 0``)
     val production_clean =
-      case Refute_EvalCv.compile default_config Exhaustive [plan] of
+      case Refute_EvalCv.compile default_config Exhaustive
+          (Plans [plan]) of
           Inapplicable reasons => not (null reasons)
         | Compiled test =>
             let
@@ -11819,7 +11846,7 @@ fun cv_timeout_is_healthy () =
               (upd_substrate Cv default_config)))))
     val compiled =
       case Refute_EvalCv.compile config (Random {seed = 1})
-          [Test boolSyntax.T] of
+          (Plans [Test boolSyntax.T]) of
           Inapplicable reasons =>
             raise Fail (String.concatWith "; " reasons)
         | Compiled test => test
@@ -11896,8 +11923,8 @@ fun cv_dual_run_is_clean sequential goal sound =
        last_stats = #last_stats test}
     val replacement : substrate =
       {name = "cv", priority = #priority original,
-       compile = fn config => fn strategy => fn plans =>
-         case #compile original config strategy plans of
+       compile = fn config => fn strategy => fn problem =>
+         case #compile original config strategy problem of
              Inapplicable reasons => Inapplicable reasons
            | Compiled test => Compiled (wrap strategy test)}
     val config = upd_timeout 10.0

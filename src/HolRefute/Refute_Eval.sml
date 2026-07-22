@@ -9,6 +9,12 @@ structure Refute_Eval :> Refute_Eval = struct
     | Guard of term * plan
     | Prune
 
+  datatype quant = Forall | Exists
+
+  datatype qc_problem =
+      Plans of plan list
+    | Pnf of {prefix : (quant * term) list, body : term}
+
   type candidate = {env : (term * term) list, genuine : bool}
 
   datatype verdict = Continue | Found of candidate
@@ -21,6 +27,7 @@ structure Refute_Eval :> Refute_Eval = struct
   datatype strategy =
       Exhaustive
     | Random of {seed : IntInf.int}
+    | Narrowing
 
   type run_input =
     { genuine_only : bool,
@@ -42,7 +49,7 @@ structure Refute_Eval :> Refute_Eval = struct
   type substrate =
     { name : string,
       priority : int,
-      compile : Refute_Core.config -> strategy -> plan list ->
+      compile : Refute_Core.config -> strategy -> qc_problem ->
         compile_result }
 
   val rand_modulus : IntInf.int = 18446744073709551616

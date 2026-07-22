@@ -510,7 +510,8 @@ structure Refute_EvalCompute = struct
                        if width <= 32 then ()
                        else add (no_generator_reason ty
                          "word width exceeds rand_below's 32-bit bound")
-                   | Exhaustive => ())
+                   | Exhaustive => ()
+                   | Narrowing => ())
               | Refute_Gen.GenNum _ => ()
               | Refute_Gen.GenFun (dom, rng) =>
                   (validate_type dom; validate_type rng)
@@ -526,7 +527,8 @@ structure Refute_EvalCompute = struct
                    | Random _ =>
                        if Option.isSome random then ()
                        else add (no_generator_reason ty
-                         "custom generator has no random arm"))
+                         "custom generator has no random arm")
+                   | Narrowing => ())
           end
           handle Refute_Gen.NoGenerator (missing_ty, why) =>
             add (no_generator_reason missing_ty why)
@@ -550,14 +552,21 @@ structure Refute_EvalCompute = struct
       rev (!reasons)
     end
 
-  fun compile (config : Refute_Core.config) strategy plans =
-    case validation_reasons strategy plans of
-        [] =>
-          Compiled
-            (case strategy of
-               Exhaustive => exhaustive_compile plans
-             | Random {seed} => random_compile plans (ref seed))
-      | reasons => Inapplicable reasons
+  fun compile (config : Refute_Core.config) strategy problem =
+    case problem of
+        Pnf _ =>
+          Inapplicable ["narrowing requires the native substrate"]
+      | Plans plans =>
+          (case strategy of
+               Narrowing => Inapplicable ["narrowing is not installed"]
+             | Exhaustive =>
+                 (case validation_reasons strategy plans of
+                      [] => Compiled (exhaustive_compile plans)
+                    | reasons => Inapplicable reasons)
+             | Random {seed} =>
+                 (case validation_reasons strategy plans of
+                      [] => Compiled (random_compile plans (ref seed))
+                    | reasons => Inapplicable reasons))
 
   val compute_substrate : substrate =
     { name = "compute",

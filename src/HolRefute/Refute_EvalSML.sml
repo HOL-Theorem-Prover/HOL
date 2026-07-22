@@ -360,7 +360,8 @@ structure Refute_EvalSML = struct
               val state = ref
                 (case strategy of
                      Refute_Eval.Exhaustive => 0
-                   | Refute_Eval.Random {seed} => seed)
+                   | Refute_Eval.Random {seed} => seed
+                   | Refute_Eval.Narrowing => 0)
               val closed = ref false
 
               fun run input =
@@ -407,7 +408,7 @@ structure Refute_EvalSML = struct
                Refute_Eval.Inapplicable [reason]
              end
 
-  fun compile config strategy plans =
+  fun compile_plans config strategy plans =
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
         let
@@ -419,10 +420,24 @@ structure Refute_EvalSML = struct
           Exn.release result
         end) ()
 
+  fun compile config strategy problem =
+    case problem of
+        Refute_Eval.Pnf _ =>
+          Refute_Eval.Inapplicable
+            ["narrowing requires the native substrate"]
+      | Refute_Eval.Plans plans =>
+          (case strategy of
+               Refute_Eval.Narrowing =>
+                 Refute_Eval.Inapplicable ["narrowing is not installed"]
+             | Refute_Eval.Exhaustive =>
+                 compile_plans config strategy plans
+             | Refute_Eval.Random _ =>
+                 compile_plans config strategy plans)
+
   fun dump_native_random_candidates {plan, seed, size, count} =
     case compile Refute_Core.default_config
         (Refute_Eval.Random {seed = seed})
-        [Refute_Eval.dump_plan plan] of
+        (Refute_Eval.Plans [Refute_Eval.dump_plan plan]) of
         Refute_Eval.Inapplicable reasons =>
           raise Fail (String.concatWith "; " reasons)
       | Refute_Eval.Compiled test =>
