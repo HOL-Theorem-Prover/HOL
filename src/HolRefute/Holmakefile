@@ -5,7 +5,7 @@ INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit ../sort \
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
-selftest.uo: Refute_PropSat.uo \
+selftest.uo: Refute_SmartGen.uo Refute_PropSat.uo \
              Refute_ModelFinder_Preproc.uo \
              Refute_ModelFinder_Kodkod.uo \
              Refute_ModelFinder_Model.uo \
@@ -24,6 +24,11 @@ Refute_Gen.uo: Refute_Util.uo
 Refute_EvalCompute.uo: Refute_Util.uo
 Refute_EvalCv.uo: Refute_Util.uo
 Refute_Extract.uo: Refute_Util.uo
+
+# SmartGen is deliberately independent of the model finder: both consumers
+# use the same structural intro-triple shape, but Horn lookup must also be
+# available to QC-only builds.
+Refute_SmartGen.uo: Refute_Util.uo
 
 # Keep the independent foundational modules ahead of the FORL stack.
 Refute_Forl.uo: Refute_ModelFinder_Util.uo Refute_PropSat.uo

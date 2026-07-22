@@ -466,6 +466,267 @@ val _ = require_msg (check_result mf_reserved_name_guards) (fn () =>
   "model-finder reserved-name entry/no-escape guards failed")
   (fn () => ()) ()
 
+val _ = tprint "Refute SmartGen Horn recognizer"
+
+structure SG = Refute_SmartGen
+
+fun same_term_list left right =
+  length left = length right andalso
+  ListPair.allEq (fn (first, second) => Term.aconv first second)
+    (left, right)
+
+fun has_intro_triple conclusion side main triples =
+  List.exists (fn ({variables, side = actual_side, main = actual_main,
+                    conclusion = actual_conclusion} : SG.intro_triple) =>
+    Term.aconv actual_conclusion conclusion andalso
+    same_term_list actual_side side andalso
+    same_term_list actual_main main andalso
+    SG.same_term_set variables
+      (Term.free_vars_lr
+        (boolSyntax.list_mk_conj (conclusion :: side @ main)))) triples
+
+val all_distinct_const = ``ALL_DISTINCT : num list -> bool``
+val sorted_const =
+  ``SORTED : (num -> num -> bool) -> num list -> bool``
+
+fun smartgen_acceptance () =
+  let
+    val definitions_before = Theory.current_definitions ()
+    val _ = SG.clear_intro_cache ()
+    val distinct = valOf (SG.horn_intro_triples_for all_distinct_const)
+    val cache_after_first = SG.intro_cache_size ()
+    val distinct_again =
+      valOf (SG.horn_intro_triples_for all_distinct_const)
+    val cache_after_second = SG.intro_cache_size ()
+    val definitions_after = Theory.current_definitions ()
+  in
+    length distinct = 2 andalso
+    has_intro_triple ``ALL_DISTINCT ([] : num list)`` [] [] distinct andalso
+    has_intro_triple ``ALL_DISTINCT (h :: t : num list)``
+      [``MEM (h : num) t = F``] [``ALL_DISTINCT (t : num list)``]
+      distinct andalso cache_after_first = 1 andalso
+    cache_after_second = 1 andalso SG.intro_cache_size () = 1 andalso
+    same_term_list (map #conclusion distinct)
+      (map #conclusion distinct_again) andalso
+    map #1 definitions_before = map #1 definitions_after
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_acceptance)
+  (fn () => "Horn equations were not converted to the expected triples")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  case SG.horn_intro_triples_for sorted_const of
+      SOME triples =>
+        length triples = 3 andalso
+        has_intro_triple ``SORTED R ([] : num list)`` [] [] triples andalso
+        has_intro_triple ``SORTED R ([x] : num list)`` [] [] triples andalso
+        has_intro_triple ``SORTED R (x :: y :: rst : num list)``
+          [``(R : num -> num -> bool) x y``]
+          [``SORTED R (y :: rst : num list)``]
+          triples
+    | NONE => false))
+  (fn () => "SORTED equations with a free relation were rejected")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  SG.positive_atom ``(f : num -> num) = I`` andalso
+  SG.positive_atom ``MEM (f : num -> num) [I]`` andalso
+  SG.positive_atom ``MEM (I : num -> num) [f]``))
+  (fn () => "function-valued atom variables or constants were rejected")
+  (fn () => ()) ()
+
+fun horn_equations equations =
+  SG.recognize_horn_equations all_distinct_const equations
+
+val synthetic_horn = horn_equations
+  [``ALL_DISTINCT ([] : num list) = (0 = 0)``,
+   ``ALL_DISTINCT (h :: t : num list) =
+       ((h = h) /\ ALL_DISTINCT t)``]
+
+val _ = require_msg (check_result (fn () =>
+  case synthetic_horn of
+      SOME triples =>
+        length triples = 2 andalso
+        has_intro_triple ``ALL_DISTINCT ([] : num list)``
+          [``(0 : num) = 0``] [] triples andalso
+        has_intro_triple ``ALL_DISTINCT (h :: t : num list)``
+          [``(h : num) = h``] [``ALL_DISTINCT (t : num list)``]
+          triples
+    | NONE => false))
+  (fn () => "constructor Horn equations with equality atoms were rejected")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  case horn_equations
+    [``ALL_DISTINCT ([] : num list) = F``,
+     ``ALL_DISTINCT (h :: t : num list) = ALL_DISTINCT t``] of
+      SOME triples =>
+        has_intro_triple ``ALL_DISTINCT ([] : num list)``
+          [boolSyntax.F] [] triples
+    | NONE => false))
+  (fn () => "F was not preserved as an intro-rule side atom")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  case horn_equations
+    [``ALL_DISTINCT ([] : num list) = T``,
+     ``ALL_DISTINCT (h :: t : num list) =
+         (~MEM h t /\ ALL_DISTINCT t)``] of
+      SOME triples =>
+        length triples = 2 andalso
+        has_intro_triple ``ALL_DISTINCT (h :: t : num list)``
+          [``MEM (h : num) t = F``]
+          [``ALL_DISTINCT (t : num list)``] triples andalso
+        not (SG.positive_atom ``~MEM (h : num) t``)
+    | NONE => false))
+  (fn () =>
+    "negative side predicate was not normalized to a positive equality")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  case horn_equations
+    [``ALL_DISTINCT ([] : num list) = (LENGTH ([] : num list) = 0)``,
+     ``ALL_DISTINCT (h :: t : num list) =
+         (LENGTH (h :: t) = SUC (LENGTH t) /\
+          MEM (SUC h) (REVERSE t) /\ ALL_DISTINCT t)``] of
+      SOME triples =>
+        has_intro_triple ``ALL_DISTINCT ([] : num list)``
+          [``LENGTH ([] : num list) = 0``] [] triples andalso
+        has_intro_triple ``ALL_DISTINCT (h :: t : num list)``
+          [``LENGTH ((h : num) :: t) = SUC (LENGTH t)``,
+           ``MEM (SUC h) (REVERSE t)``]
+          [``ALL_DISTINCT (t : num list)``] triples
+    | NONE => false))
+  (fn () => "ordinary nested first-order function terms were rejected")
+  (fn () => ()) ()
+
+val non_horn_equation_sets =
+  [("empty equation set", []),
+   ("incomplete pattern matrix",
+    [``ALL_DISTINCT ([] : num list) = T``]),
+   ("wrong equation head",
+    [``NULL ([] : num list) = T``,
+     ``ALL_DISTINCT (h :: t : num list) = ALL_DISTINCT t``]),
+   ("non-equation",
+    [``ALL_DISTINCT ([] : num list)``,
+     ``ALL_DISTINCT (h :: t : num list) = ALL_DISTINCT t``]),
+   ("non-constructor pattern",
+    [``ALL_DISTINCT (APPEND xs ys : num list) = T``]),
+   ("disjunction",
+    [``ALL_DISTINCT ([] : num list) = T``,
+     ``ALL_DISTINCT (h :: t : num list) =
+         (~MEM h t \/ ALL_DISTINCT t)``]),
+   ("implication",
+    [``ALL_DISTINCT ([] : num list) = T``,
+     ``ALL_DISTINCT (h :: t : num list) =
+         (MEM h t ==> ALL_DISTINCT t)``]),
+   ("quantifier",
+    [``ALL_DISTINCT ([] : num list) = T``,
+     ``ALL_DISTINCT (h :: t : num list) =
+         (!x. MEM x t)``]),
+   ("conditional",
+    [``ALL_DISTINCT ([] : num list) = T``,
+     ``ALL_DISTINCT (h :: t : num list) =
+         (if MEM h t then ALL_DISTINCT t else T)``]),
+   ("lambda application",
+    [``ALL_DISTINCT ([] : num list) = T``,
+     ``ALL_DISTINCT (h :: t : num list) =
+         ((\z. z) (ALL_DISTINCT t))``]),
+   ("bare Boolean variable",
+    [``ALL_DISTINCT ([] : num list) = T``,
+     ``ALL_DISTINCT (h :: t : num list) = b``]),
+   ("negative recursion",
+    [``ALL_DISTINCT ([] : num list) = T``,
+     ``ALL_DISTINCT (h :: t : num list) = ~ALL_DISTINCT t``])]
+
+val _ = List.app (fn (name, equations) =>
+  require_msg (check_result (fn () =>
+    not (Option.isSome (horn_equations equations))))
+    (fn () => "non-Horn equation set accepted: " ^ name)
+    (fn () => ()) ()) non_horn_equation_sets
+
+val nested_forbidden_atoms =
+  [("quantifier in equality operand", ``(!x. MEM x t) = T``),
+   ("disjunction in equality operand", ``(MEM h t \/ MEM h t) = T``),
+   ("implication in equality operand", ``(MEM h t ==> MEM h t) = T``),
+   ("negation in equality operand", ``(~MEM h t) = T``),
+   ("lambda in equality operand", ``((\x : num. x) h) = h``),
+   ("quantifier in predicate argument", ``MEM (!x. MEM x t) [T]``),
+   ("disjunction in predicate argument", ``MEM (MEM h t \/ MEM h t) [T]``),
+   ("implication in predicate argument",
+    ``MEM (MEM h t ==> MEM h t) [T]``),
+   ("negation in predicate argument", ``MEM (~MEM h t) [T]``),
+   ("lambda in predicate argument", ``MEM ((\x : num. x) h) t``),
+   ("lambda as a function value", ``MEM (\x : num. x) [I]``)]
+
+val _ = List.app (fn (name, premise) =>
+  require_msg (check_result (fn () =>
+    not (Option.isSome (horn_equations
+      [``ALL_DISTINCT ([] : num list) = T``,
+       boolSyntax.mk_eq
+         (``ALL_DISTINCT (h :: t : num list)``, premise)]))))
+    (fn () => "nested non-first-order atom accepted: " ^ name)
+    (fn () => ()) ()) nested_forbidden_atoms
+
+val _ = require_msg (check_result (fn () =>
+  let
+    val less = ``$< : num -> num -> bool``
+  in
+    case SG.recognize_horn_equations less
+      [``(0 < y) = T``,
+       ``(SUC x < 0) = T``,
+       ``(SUC x < SUC x) = T``,
+       ``(SUC x < SUC y) = T``] of
+        SOME triples =>
+          length triples = 4 andalso
+          has_intro_triple ``SUC x < SUC x`` [] [] triples
+      | NONE => false
+  end))
+  (fn () =>
+    "constructor-built non-linear patterns were rejected or linearized")
+  (fn () => ()) ()
+
+fun sorted_bool_equations equations =
+  SG.recognize_horn_equations
+    ``SORTED : (bool -> bool -> bool) -> bool list -> bool`` equations
+
+val _ = require_msg (check_result (fn () =>
+  not (Option.isSome (sorted_bool_equations
+    [``SORTED R ([] : bool list) = T``,
+     ``SORTED R (x :: xs) = MEM (SORTED R xs) [T]``]))))
+  (fn () => "recursive use hidden below another atom head was accepted")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  not (Option.isSome (sorted_bool_equations
+    [``SORTED R ([] : bool list) = T``,
+     ``SORTED R (x :: xs) = SORTED R [SORTED R xs]``]))))
+  (fn () => "multiple recursive uses in one headed atom were accepted")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  not (Option.isSome (sorted_bool_equations
+    [``SORTED R ([] : bool list) = T``,
+     ``SORTED R (x :: xs) = MEM (SORTED $< ([] : num list)) [T]``]))))
+  (fn () => "polymorphically hidden recursive use was accepted")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  let
+    val before_count = SG.intro_cache_size ()
+    val mem_const = #1 (HolKernel.strip_comb
+      ``MEM (x : num) (xs : num list)``)
+    val rejected = SG.horn_intro_triples_for mem_const
+  in
+    not (Option.isSome rejected) andalso
+    SG.intro_cache_size () = before_count + 1
+  end))
+  (fn () => "non-Horn MEM equations were accepted or not cached")
+  (fn () => ()) ()
+
 val _ = tprint "Refute model-finder HOL tables"
 
 structure MFH = Refute_ModelFinder_HOL
