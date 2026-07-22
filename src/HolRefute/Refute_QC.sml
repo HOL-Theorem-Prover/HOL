@@ -218,21 +218,28 @@ structure Refute_QC = struct
           stats = stats }
       val next = {env = env, genuine = genuine} :: ignored
     in
-      case Refute_Cert.certify
-        {original = #original instance, evals = #evals instance,
-         env = env, cex = cex} of
-          Refute_Cert.Certified certified =>
-            counterexamples := certified :: !counterexamples
-        | Refute_Cert.Discarded =>
-            (discarded := !discarded + 1; retry genuine_only next)
-        | Refute_Cert.Potential potential =>
-            if #abort_potential config andalso not genuine_only then
-              counterexamples := potential :: !counterexamples
-            else if genuine_only then retry true next
-            else
-              (Refute_Core.report_outcome config
-                 (Refute_Core.Counterexample [potential]);
-               retry true next)
+      (* QC hits retain their semantic Genuine grade when theorem replay is
+         explicitly disabled; [cert = NONE] records the opt-out. *)
+      if not (#certify (#qc config)) then
+        counterexamples :=
+          Refute_Cert.replace cex Refute_Core.Genuine [] NONE ::
+          !counterexamples
+      else
+        case Refute_Cert.certify
+          {original = #original instance, evals = #evals instance,
+           env = env, cex = cex} of
+            Refute_Cert.Certified certified =>
+              counterexamples := certified :: !counterexamples
+          | Refute_Cert.Discarded =>
+              (discarded := !discarded + 1; retry genuine_only next)
+          | Refute_Cert.Potential potential =>
+              if #abort_potential config andalso not genuine_only then
+                counterexamples := potential :: !counterexamples
+              else if genuine_only then retry true next
+              else
+                (Refute_Core.report_outcome config
+                   (Refute_Core.Counterexample [potential]);
+                 retry true next)
     end
 
   fun plan_has_gen current =

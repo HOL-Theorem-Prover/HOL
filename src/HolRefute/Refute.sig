@@ -81,6 +81,7 @@ signature Refute = sig
   val upd_sequential : bool -> config -> config
   val upd_genuine_only : bool -> config -> config
   val upd_abort_potential : bool -> config -> config
+  val upd_quiet : bool -> config -> config
   val upd_no_assms : bool -> config -> config
   val upd_evals : term list -> config -> config
   val upd_expect : expectation -> config -> config
@@ -97,6 +98,7 @@ signature Refute = sig
   val upd_allow_function_inversion : bool -> config -> config
   val upd_use_subtype : bool -> config -> config
   val upd_seed : int option -> config -> config
+  val upd_certify : bool -> config -> config
   val upd_smart_quantifier : bool -> config -> config
   val upd_optimise_equality : bool -> config -> config
   val upd_mf : mf_config -> config -> config

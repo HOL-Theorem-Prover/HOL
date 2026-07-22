@@ -85,6 +85,7 @@ structure Refute :> Refute = struct
   val upd_sequential = Refute_Core.upd_sequential
   val upd_genuine_only = Refute_Core.upd_genuine_only
   val upd_abort_potential = Refute_Core.upd_abort_potential
+  val upd_quiet = Refute_Core.upd_quiet
   val upd_no_assms = Refute_Core.upd_no_assms
   val upd_evals = Refute_Core.upd_evals
   val upd_expect = Refute_Core.upd_expect
@@ -102,6 +103,7 @@ structure Refute :> Refute = struct
     Refute_Core.upd_allow_function_inversion
   val upd_use_subtype = Refute_Core.upd_use_subtype
   val upd_seed = Refute_Core.upd_seed
+  val upd_certify = Refute_Core.upd_certify
   val upd_smart_quantifier = Refute_Core.upd_smart_quantifier
   val upd_optimise_equality = Refute_Core.upd_optimise_equality
   val upd_mf = Refute_Core.upd_mf

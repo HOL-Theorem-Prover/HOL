@@ -65,6 +65,7 @@ structure Refute_Core = struct
       allow_function_inversion : bool,
       use_subtype : bool,
       seed : int option,
+      certify : bool,
       smart_quantifier : bool,
       optimise_equality : bool }
 
@@ -110,6 +111,7 @@ structure Refute_Core = struct
       sequential : bool,
       genuine_only : bool,
       abort_potential : bool,
+      quiet : bool,
       no_assms : bool,
       evals : term list,
       expect : expectation,
@@ -157,6 +159,7 @@ structure Refute_Core = struct
       allow_function_inversion = false,
       use_subtype = false,
       seed = NONE,
+      certify = true,
       smart_quantifier = true,
       optimise_equality = true }
 
@@ -202,6 +205,7 @@ structure Refute_Core = struct
       sequential = false,
       genuine_only = false,
       abort_potential = false,
+      quiet = false,
       no_assms = false,
       evals = [],
       expect = NoExpectation,
@@ -212,301 +216,119 @@ structure Refute_Core = struct
 
   val the_config = ref default_config
 
-  fun map_qc f (cfg : config) =
-    let
-      val {timeout, backends, sequential, genuine_only, abort_potential,
-           no_assms, evals, expect, max_counterexamples, tag, qc, mf} = cfg
-    in
-      { timeout = timeout,
-        backends = backends,
-        sequential = sequential,
-        genuine_only = genuine_only,
-        abort_potential = abort_potential,
-        no_assms = no_assms,
-        evals = evals,
-        expect = expect,
-        max_counterexamples = max_counterexamples,
-        tag = tag,
-        qc = f qc,
-        mf = mf }
-    end
+  datatype config_update =
+      ConfigTimeout of real
+    | ConfigBackends of string list option
+    | ConfigSequential of bool
+    | ConfigGenuineOnly of bool
+    | ConfigAbortPotential of bool
+    | ConfigQuiet of bool
+    | ConfigNoAssms of bool
+    | ConfigEvals of term list
+    | ConfigExpect of expectation
+    | ConfigMaxCounterexamples of int
+    | ConfigTag of string
+    | ConfigQc of qc_config
+    | ConfigMf of mf_config
 
-  fun map_mf f (cfg : config) =
-    let
-      val {timeout, backends, sequential, genuine_only, abort_potential,
-           no_assms, evals, expect, max_counterexamples, tag, qc, mf} = cfg
-    in
-      { timeout = timeout,
-        backends = backends,
-        sequential = sequential,
-        genuine_only = genuine_only,
-        abort_potential = abort_potential,
-        no_assms = no_assms,
-        evals = evals,
-        expect = expect,
-        max_counterexamples = max_counterexamples,
-        tag = tag,
-        qc = qc,
-        mf = f mf }
-    end
+  fun change_config update (cfg : config) =
+    { timeout = (case update of ConfigTimeout value => value
+                 | _ => #timeout cfg),
+      backends = (case update of ConfigBackends value => value
+                  | _ => #backends cfg),
+      sequential = (case update of ConfigSequential value => value
+                    | _ => #sequential cfg),
+      genuine_only = (case update of ConfigGenuineOnly value => value
+                      | _ => #genuine_only cfg),
+      abort_potential = (case update of ConfigAbortPotential value => value
+                         | _ => #abort_potential cfg),
+      quiet = (case update of ConfigQuiet value => value | _ => #quiet cfg),
+      no_assms = (case update of ConfigNoAssms value => value
+                  | _ => #no_assms cfg),
+      evals = (case update of ConfigEvals value => value | _ => #evals cfg),
+      expect = (case update of ConfigExpect value => value
+                | _ => #expect cfg),
+      max_counterexamples =
+        (case update of ConfigMaxCounterexamples value => value
+         | _ => #max_counterexamples cfg),
+      tag = (case update of ConfigTag value => value | _ => #tag cfg),
+      qc = (case update of ConfigQc value => value | _ => #qc cfg),
+      mf = (case update of ConfigMf value => value | _ => #mf cfg) }
 
-  fun upd_timeout value (cfg : config) =
-    { timeout = value,
-      backends = #backends cfg,
-      sequential = #sequential cfg,
-      genuine_only = #genuine_only cfg,
-      abort_potential = #abort_potential cfg,
-      no_assms = #no_assms cfg,
-      evals = #evals cfg,
-      expect = #expect cfg,
-      max_counterexamples = #max_counterexamples cfg,
-      tag = #tag cfg,
-      qc = #qc cfg,
-      mf = #mf cfg }
+  fun map_qc f (cfg : config) = change_config (ConfigQc (f (#qc cfg))) cfg
+  fun map_mf f (cfg : config) = change_config (ConfigMf (f (#mf cfg))) cfg
 
-  fun upd_backends value (cfg : config) =
-    { timeout = #timeout cfg,
-      backends = value,
-      sequential = #sequential cfg,
-      genuine_only = #genuine_only cfg,
-      abort_potential = #abort_potential cfg,
-      no_assms = #no_assms cfg,
-      evals = #evals cfg,
-      expect = #expect cfg,
-      max_counterexamples = #max_counterexamples cfg,
-      tag = #tag cfg,
-      qc = #qc cfg,
-      mf = #mf cfg }
-
-  fun upd_sequential value (cfg : config) =
-    { timeout = #timeout cfg,
-      backends = #backends cfg,
-      sequential = value,
-      genuine_only = #genuine_only cfg,
-      abort_potential = #abort_potential cfg,
-      no_assms = #no_assms cfg,
-      evals = #evals cfg,
-      expect = #expect cfg,
-      max_counterexamples = #max_counterexamples cfg,
-      tag = #tag cfg,
-      qc = #qc cfg,
-      mf = #mf cfg }
-
-  fun upd_genuine_only value (cfg : config) =
-    { timeout = #timeout cfg,
-      backends = #backends cfg,
-      sequential = #sequential cfg,
-      genuine_only = value,
-      abort_potential = #abort_potential cfg,
-      no_assms = #no_assms cfg,
-      evals = #evals cfg,
-      expect = #expect cfg,
-      max_counterexamples = #max_counterexamples cfg,
-      tag = #tag cfg,
-      qc = #qc cfg,
-      mf = #mf cfg }
-
-  fun upd_abort_potential value (cfg : config) =
-    { timeout = #timeout cfg,
-      backends = #backends cfg,
-      sequential = #sequential cfg,
-      genuine_only = #genuine_only cfg,
-      abort_potential = value,
-      no_assms = #no_assms cfg,
-      evals = #evals cfg,
-      expect = #expect cfg,
-      max_counterexamples = #max_counterexamples cfg,
-      tag = #tag cfg,
-      qc = #qc cfg,
-      mf = #mf cfg }
-
-  fun upd_no_assms value (cfg : config) =
-    { timeout = #timeout cfg,
-      backends = #backends cfg,
-      sequential = #sequential cfg,
-      genuine_only = #genuine_only cfg,
-      abort_potential = #abort_potential cfg,
-      no_assms = value,
-      evals = #evals cfg,
-      expect = #expect cfg,
-      max_counterexamples = #max_counterexamples cfg,
-      tag = #tag cfg,
-      qc = #qc cfg,
-      mf = #mf cfg }
-
-  fun upd_evals value (cfg : config) =
-    { timeout = #timeout cfg,
-      backends = #backends cfg,
-      sequential = #sequential cfg,
-      genuine_only = #genuine_only cfg,
-      abort_potential = #abort_potential cfg,
-      no_assms = #no_assms cfg,
-      evals = value,
-      expect = #expect cfg,
-      max_counterexamples = #max_counterexamples cfg,
-      tag = #tag cfg,
-      qc = #qc cfg,
-      mf = #mf cfg }
-
-  fun upd_expect value (cfg : config) =
-    { timeout = #timeout cfg,
-      backends = #backends cfg,
-      sequential = #sequential cfg,
-      genuine_only = #genuine_only cfg,
-      abort_potential = #abort_potential cfg,
-      no_assms = #no_assms cfg,
-      evals = #evals cfg,
-      expect = value,
-      max_counterexamples = #max_counterexamples cfg,
-      tag = #tag cfg,
-      qc = #qc cfg,
-      mf = #mf cfg }
-
-  fun upd_max_counterexamples value (cfg : config) =
-    { timeout = #timeout cfg,
-      backends = #backends cfg,
-      sequential = #sequential cfg,
-      genuine_only = #genuine_only cfg,
-      abort_potential = #abort_potential cfg,
-      no_assms = #no_assms cfg,
-      evals = #evals cfg,
-      expect = #expect cfg,
-      max_counterexamples = value,
-      tag = #tag cfg,
-      qc = #qc cfg,
-      mf = #mf cfg }
-
-  fun upd_tag value (cfg : config) =
-    { timeout = #timeout cfg,
-      backends = #backends cfg,
-      sequential = #sequential cfg,
-      genuine_only = #genuine_only cfg,
-      abort_potential = #abort_potential cfg,
-      no_assms = #no_assms cfg,
-      evals = #evals cfg,
-      expect = #expect cfg,
-      max_counterexamples = #max_counterexamples cfg,
-      tag = value,
-      qc = #qc cfg,
-      mf = #mf cfg }
+  fun upd_timeout value = change_config (ConfigTimeout value)
+  fun upd_backends value = change_config (ConfigBackends value)
+  fun upd_sequential value = change_config (ConfigSequential value)
+  fun upd_genuine_only value = change_config (ConfigGenuineOnly value)
+  fun upd_abort_potential value = change_config (ConfigAbortPotential value)
+  fun upd_quiet value = change_config (ConfigQuiet value)
+  fun upd_no_assms value = change_config (ConfigNoAssms value)
+  fun upd_evals value = change_config (ConfigEvals value)
+  fun upd_expect value = change_config (ConfigExpect value)
+  fun upd_max_counterexamples value =
+    change_config (ConfigMaxCounterexamples value)
+  fun upd_tag value = change_config (ConfigTag value)
 
   fun upd_qc value (cfg : config) = map_qc (fn _ => value) cfg
 
-  fun upd_size value = map_qc (fn (qc : qc_config) =>
-    { size = value, iterations = #iterations qc, depth = #depth qc,
-      finite_types = #finite_types qc,
-      finite_type_size = #finite_type_size qc,
-      default_type = #default_type qc, substrate = #substrate qc,
-      allow_function_inversion = #allow_function_inversion qc,
-      use_subtype = #use_subtype qc, seed = #seed qc,
-      smart_quantifier = #smart_quantifier qc,
-      optimise_equality = #optimise_equality qc })
+  datatype qc_update =
+      QcSize of int
+    | QcIterations of int
+    | QcDepth of int
+    | QcFiniteTypes of bool
+    | QcFiniteTypeSize of int
+    | QcDefaultType of hol_type list
+    | QcSubstrate of substrate_choice
+    | QcAllowFunctionInversion of bool
+    | QcUseSubtype of bool
+    | QcSeed of int option
+    | QcCertify of bool
+    | QcSmartQuantifier of bool
+    | QcOptimiseEquality of bool
 
-  fun upd_iterations value = map_qc (fn (qc : qc_config) =>
-    { size = #size qc, iterations = value, depth = #depth qc,
-      finite_types = #finite_types qc,
-      finite_type_size = #finite_type_size qc,
-      default_type = #default_type qc, substrate = #substrate qc,
-      allow_function_inversion = #allow_function_inversion qc,
-      use_subtype = #use_subtype qc, seed = #seed qc,
-      smart_quantifier = #smart_quantifier qc,
-      optimise_equality = #optimise_equality qc })
+  fun change_qc update (qc : qc_config) =
+    { size = (case update of QcSize value => value | _ => #size qc),
+      iterations = (case update of QcIterations value => value
+                    | _ => #iterations qc),
+      depth = (case update of QcDepth value => value | _ => #depth qc),
+      finite_types = (case update of QcFiniteTypes value => value
+                      | _ => #finite_types qc),
+      finite_type_size = (case update of QcFiniteTypeSize value => value
+                          | _ => #finite_type_size qc),
+      default_type = (case update of QcDefaultType value => value
+                      | _ => #default_type qc),
+      substrate = (case update of QcSubstrate value => value
+                   | _ => #substrate qc),
+      allow_function_inversion =
+        (case update of QcAllowFunctionInversion value => value
+         | _ => #allow_function_inversion qc),
+      use_subtype = (case update of QcUseSubtype value => value
+                     | _ => #use_subtype qc),
+      seed = (case update of QcSeed value => value | _ => #seed qc),
+      certify = (case update of QcCertify value => value | _ => #certify qc),
+      smart_quantifier = (case update of QcSmartQuantifier value => value
+                          | _ => #smart_quantifier qc),
+      optimise_equality = (case update of QcOptimiseEquality value => value
+                           | _ => #optimise_equality qc) }
 
-  fun upd_depth value = map_qc (fn (qc : qc_config) =>
-    { size = #size qc, iterations = #iterations qc, depth = value,
-      finite_types = #finite_types qc,
-      finite_type_size = #finite_type_size qc,
-      default_type = #default_type qc, substrate = #substrate qc,
-      allow_function_inversion = #allow_function_inversion qc,
-      use_subtype = #use_subtype qc, seed = #seed qc,
-      smart_quantifier = #smart_quantifier qc,
-      optimise_equality = #optimise_equality qc })
+  fun update_qc update = map_qc (change_qc update)
 
-  fun upd_finite_types value = map_qc (fn (qc : qc_config) =>
-    { size = #size qc, iterations = #iterations qc, depth = #depth qc,
-      finite_types = value, finite_type_size = #finite_type_size qc,
-      default_type = #default_type qc, substrate = #substrate qc,
-      allow_function_inversion = #allow_function_inversion qc,
-      use_subtype = #use_subtype qc, seed = #seed qc,
-      smart_quantifier = #smart_quantifier qc,
-      optimise_equality = #optimise_equality qc })
-
-  fun upd_finite_type_size value = map_qc (fn (qc : qc_config) =>
-    { size = #size qc, iterations = #iterations qc, depth = #depth qc,
-      finite_types = #finite_types qc, finite_type_size = value,
-      default_type = #default_type qc, substrate = #substrate qc,
-      allow_function_inversion = #allow_function_inversion qc,
-      use_subtype = #use_subtype qc, seed = #seed qc,
-      smart_quantifier = #smart_quantifier qc,
-      optimise_equality = #optimise_equality qc })
-
-  fun upd_default_type value = map_qc (fn (qc : qc_config) =>
-    { size = #size qc, iterations = #iterations qc, depth = #depth qc,
-      finite_types = #finite_types qc,
-      finite_type_size = #finite_type_size qc, default_type = value,
-      substrate = #substrate qc,
-      allow_function_inversion = #allow_function_inversion qc,
-      use_subtype = #use_subtype qc, seed = #seed qc,
-      smart_quantifier = #smart_quantifier qc,
-      optimise_equality = #optimise_equality qc })
-
-  fun upd_substrate value = map_qc (fn (qc : qc_config) =>
-    { size = #size qc, iterations = #iterations qc, depth = #depth qc,
-      finite_types = #finite_types qc,
-      finite_type_size = #finite_type_size qc,
-      default_type = #default_type qc, substrate = value,
-      allow_function_inversion = #allow_function_inversion qc,
-      use_subtype = #use_subtype qc, seed = #seed qc,
-      smart_quantifier = #smart_quantifier qc,
-      optimise_equality = #optimise_equality qc })
-
-  fun upd_allow_function_inversion value = map_qc (fn (qc : qc_config) =>
-    { size = #size qc, iterations = #iterations qc, depth = #depth qc,
-      finite_types = #finite_types qc,
-      finite_type_size = #finite_type_size qc,
-      default_type = #default_type qc, substrate = #substrate qc,
-      allow_function_inversion = value, use_subtype = #use_subtype qc,
-      seed = #seed qc, smart_quantifier = #smart_quantifier qc,
-      optimise_equality = #optimise_equality qc })
-
-  fun upd_use_subtype value = map_qc (fn (qc : qc_config) =>
-    { size = #size qc, iterations = #iterations qc, depth = #depth qc,
-      finite_types = #finite_types qc,
-      finite_type_size = #finite_type_size qc,
-      default_type = #default_type qc, substrate = #substrate qc,
-      allow_function_inversion = #allow_function_inversion qc,
-      use_subtype = value, seed = #seed qc,
-      smart_quantifier = #smart_quantifier qc,
-      optimise_equality = #optimise_equality qc })
-
-  fun upd_seed value = map_qc (fn (qc : qc_config) =>
-    { size = #size qc, iterations = #iterations qc, depth = #depth qc,
-      finite_types = #finite_types qc,
-      finite_type_size = #finite_type_size qc,
-      default_type = #default_type qc, substrate = #substrate qc,
-      allow_function_inversion = #allow_function_inversion qc,
-      use_subtype = #use_subtype qc, seed = value,
-      smart_quantifier = #smart_quantifier qc,
-      optimise_equality = #optimise_equality qc })
-
-  fun upd_smart_quantifier value = map_qc (fn (qc : qc_config) =>
-    { size = #size qc, iterations = #iterations qc, depth = #depth qc,
-      finite_types = #finite_types qc,
-      finite_type_size = #finite_type_size qc,
-      default_type = #default_type qc, substrate = #substrate qc,
-      allow_function_inversion = #allow_function_inversion qc,
-      use_subtype = #use_subtype qc, seed = #seed qc,
-      smart_quantifier = value,
-      optimise_equality = #optimise_equality qc })
-
-  fun upd_optimise_equality value = map_qc (fn (qc : qc_config) =>
-    { size = #size qc, iterations = #iterations qc, depth = #depth qc,
-      finite_types = #finite_types qc,
-      finite_type_size = #finite_type_size qc,
-      default_type = #default_type qc, substrate = #substrate qc,
-      allow_function_inversion = #allow_function_inversion qc,
-      use_subtype = #use_subtype qc, seed = #seed qc,
-      smart_quantifier = #smart_quantifier qc, optimise_equality = value })
+  fun upd_size value = update_qc (QcSize value)
+  fun upd_iterations value = update_qc (QcIterations value)
+  fun upd_depth value = update_qc (QcDepth value)
+  fun upd_finite_types value = update_qc (QcFiniteTypes value)
+  fun upd_finite_type_size value = update_qc (QcFiniteTypeSize value)
+  fun upd_default_type value = update_qc (QcDefaultType value)
+  fun upd_substrate value = update_qc (QcSubstrate value)
+  fun upd_allow_function_inversion value =
+    update_qc (QcAllowFunctionInversion value)
+  fun upd_use_subtype value = update_qc (QcUseSubtype value)
+  fun upd_seed value = update_qc (QcSeed value)
+  fun upd_certify value = update_qc (QcCertify value)
+  fun upd_smart_quantifier value = update_qc (QcSmartQuantifier value)
+  fun upd_optimise_equality value = update_qc (QcOptimiseEquality value)
 
   fun range_error field explanation =
     raise Feedback.mk_HOL_ERR "Refute_Core" "validate_mf_config"
@@ -997,7 +819,7 @@ structure Refute_Core = struct
   fun show_config () =
     let
       val {timeout, backends, sequential, genuine_only, abort_potential,
-           no_assms, evals, expect, max_counterexamples, tag, qc, mf} =
+           quiet, no_assms, evals, expect, max_counterexamples, tag, qc, mf} =
         !the_config
       val q = qc
       val m = mf
@@ -1032,6 +854,7 @@ structure Refute_Core = struct
           "sequential = " ^ Bool.toString sequential ^ "\n",
           "genuine_only = " ^ Bool.toString genuine_only ^ "\n",
           "abort_potential = " ^ Bool.toString abort_potential ^ "\n",
+          "quiet = " ^ Bool.toString quiet ^ "\n",
           "no_assms = " ^ Bool.toString no_assms ^ "\n",
           "evals = " ^ Int.toString (length evals) ^ " terms\n",
           "expect = " ^ Private.expectation_to_string expect ^ "\n",
@@ -1048,11 +871,13 @@ structure Refute_Core = struct
           "substrate = " ^ Private.substrate_to_string (#substrate q) ^
             "\n",
           "allow_function_inversion = " ^
-            Bool.toString (#allow_function_inversion q) ^ "\n",
+            Bool.toString (#allow_function_inversion q) ^
+            " (reserved)\n",
           "use_subtype = " ^ Bool.toString (#use_subtype q) ^
-            "\n",
+            " (reserved)\n",
           "seed = " ^ Private.option_to_string Int.toString (#seed q) ^
             "\n",
+          "certify = " ^ Bool.toString (#certify q) ^ "\n",
           "smart_quantifier = " ^
             Bool.toString (#smart_quantifier q) ^ "\n",
           "optimise_equality = " ^
@@ -1381,9 +1206,11 @@ structure Refute_Core = struct
         if null evals then "" else "\nEvaluated terms:\n" ^ format_evals evals
       val model_text = format_model mf model
       val cert_text =
-        case cert of
-            NONE => ""
-          | SOME theorem => "\nCertified: " ^ Parse.thm_to_string theorem
+        case (certainty, cert) of
+            (Genuine, NONE) => "\nCertification: uncertified"
+          | (_, NONE) => ""
+          | (_, SOME theorem) =>
+              "\nCertified: " ^ Parse.thm_to_string theorem
       val certainty_text =
         case certainty of
             Genuine => ""
@@ -1580,7 +1407,7 @@ structure Refute_Core = struct
        ", got " ^ actual_name result ^ "\n" ^
        format_outcome cfg result)
 
-  fun refute_problem (cfg : config) (problem : problem) =
+  fun refute_problem_unquiet (cfg : config) (problem : problem) =
     let
       fun finish result =
         (report_outcome cfg result; check_expect cfg result; result)
@@ -1662,6 +1489,16 @@ structure Refute_Core = struct
     in
       finish result
     end
+
+  fun refute_problem (cfg : config) problem =
+    if not (#quiet cfg) then refute_problem_unquiet cfg problem
+    else
+      (* Most output uses the Refute trace, but model-finder diagnostics also
+         use the independent message and warning channels.  The standard
+         scoped Feedback combinators restore every flag after exceptions. *)
+      Feedback.with_traces [("Refute", 0)]
+        (Feedback.quiet_messages
+          (Feedback.quiet_warnings (refute_problem_unquiet cfg))) problem
 
   fun refute cfg tm =
     refute_problem cfg {goal = tm, assumptions = [], evals = []}

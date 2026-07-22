@@ -8119,6 +8119,7 @@ fun size_update_is_local () =
       #allow_function_inversion original andalso
     #use_subtype after = #use_subtype original andalso
     #seed after = #seed original andalso
+    #certify after = #certify original andalso
     #smart_quantifier after = #smart_quantifier original andalso
     #optimise_equality after = #optimise_equality original andalso
     Real.== (#timeout updated, #timeout default_config) andalso
@@ -8126,6 +8127,7 @@ fun size_update_is_local () =
     #sequential updated = #sequential default_config andalso
     #genuine_only updated = #genuine_only default_config andalso
     #abort_potential updated = #abort_potential default_config andalso
+    #quiet updated = #quiet default_config andalso
     #no_assms updated = #no_assms default_config andalso
     null (#evals updated) andalso
     #expect updated = #expect default_config andalso
@@ -8136,6 +8138,103 @@ fun size_update_is_local () =
 
 val _ = require_msg (check_result size_update_is_local) (fn () =>
   "upd_size changed a field other than qc.size") (fn () => ()) ()
+
+fun certify_and_quiet_defaults_are_pinned () =
+  let
+    val uncertified = Refute.upd_certify false Refute.default_config
+    val silent = Refute.upd_quiet true Refute.default_config
+  in
+    #certify (#qc default_config) andalso
+    not (#quiet default_config) andalso
+    not (#certify (#qc uncertified)) andalso
+    #quiet silent andalso
+    #qc silent = #qc default_config andalso
+    #quiet uncertified = #quiet default_config andalso
+    same_mf (#mf uncertified) (#mf default_config) andalso
+    same_mf (#mf silent) (#mf default_config)
+  end
+
+val _ = require_msg
+  (check_result certify_and_quiet_defaults_are_pinned) (fn () =>
+  "certify/quiet defaults or public updaters changed unrelated fields")
+  (fn () => ()) ()
+
+fun config_surface_snapshot () =
+  let
+    val chunks = ref ([] : string list)
+    fun output text = chunks := text :: !chunks
+    val config = upd_quiet true (upd_certify false default_config)
+    val _ = Lib.with_flag (Feedback.MESG_outstream, output)
+      (Lib.with_flag (Feedback.MESG_to_string, fn text => text)
+        (Feedback.with_traces [("Refute", 1)]
+          (Lib.with_flag (the_config, config) show_config))) ()
+    val actual = String.concat (rev (!chunks))
+    val expected = String.concat
+      ["timeout = 30.0\n",
+       "backends = NONE\n",
+       "sequential = false\n",
+       "genuine_only = false\n",
+       "abort_potential = false\n",
+       "quiet = true\n",
+       "no_assms = false\n",
+       "evals = 0 terms\n",
+       "expect = NoExpectation\n",
+       "max_counterexamples = 1\n",
+       "tag = \n",
+       "size = 10\n",
+       "iterations = 100\n",
+       "depth = 10\n",
+       "finite_types = true\n",
+       "finite_type_size = 3\n",
+       "default_type = :num\n",
+       "substrate = Auto\n",
+       "allow_function_inversion = false (reserved)\n",
+       "use_subtype = false (reserved)\n",
+       "seed = NONE\n",
+       "certify = false\n",
+       "smart_quantifier = true\n",
+       "optimise_equality = true\n",
+       "mf.card = [NONE => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]\n",
+       "mf.max = [NONE => [~1]]\n",
+       "mf.mono = [NONE => NONE]\n",
+       "mf.wf = [NONE => NONE]\n",
+       "mf.sat_solver = smart\n",
+       "mf.batch_size = 50\n",
+       "mf.falsify = true\n",
+       "mf.user_axioms = NONE\n",
+       "mf.destroy_constrs = true\n",
+       "mf.total_consts = NONE\n",
+       "mf.peephole_optim = true\n",
+       "mf.datatype_sym_break = 5\n",
+       "mf.kodkod_sym_break = 15\n",
+       "mf.max_potential = 1\n",
+       "mf.max_genuine = 1\n",
+       "mf.atoms = [NONE => []]\n",
+       "mf.format = [NONE => [1]]\n",
+       "mf.show_types = false\n",
+       "mf.show_skolems = true\n",
+       "mf.show_consts = false\n",
+       "mf.debug = false\n",
+       "mf.overlord = false\n",
+       "mf.max_threads = 0\n",
+       "mf.tac_timeout = 0.5\n",
+       "mf.specialize = true\n",
+       "mf.box = [NONE => NONE]\n",
+       "mf.binary_ints = NONE\n",
+       "mf.bits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\n",
+       "mf.star_linear_preds = true\n",
+       "mf.iter = [NONE => [0, 1, 2, 4, 8, 12, 16, 20, 24, 28]]\n",
+       "mf.bisim_depth = [9]\n",
+       "mf.finitize = [NONE => NONE]\n",
+       "mf.whack = []\n",
+       "mf.need = NONE\n"]
+  in
+    actual = expected
+  end
+
+val _ = require_msg (check_result config_surface_snapshot) (fn () =>
+  "show_config certify/quiet/reserved-field golden changed")
+  (fn () => ()) ()
 
 fun mf_update_is_local () =
   let
@@ -8151,6 +8250,7 @@ fun mf_update_is_local () =
     #sequential updated = #sequential base andalso
     #genuine_only updated = #genuine_only base andalso
     #abort_potential updated = #abort_potential base andalso
+    #quiet updated = #quiet base andalso
     #no_assms updated = #no_assms base andalso
     same_terms (#evals updated) (#evals base) andalso
     #expect updated = #expect base andalso
@@ -8409,6 +8509,23 @@ val poly_input_backend : backend =
 
 val _ = register_backend mono_input_backend
 val _ = register_backend poly_input_backend
+
+val quiet_output_probe_enabled = ref false
+
+val quiet_output_probe_backend : backend =
+  {name = "refute-quiet-output-probe", weight = ~92,
+   configured = fn () => !quiet_output_probe_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn _ =>
+     let
+       val _ = ignore (MFH.equationalize_term "quiet selftest" ``0 : num``)
+       val _ = ignore (MFMono.formulas_monotonic mf_hol_context false ``:'a``
+         ([``!(x : 'a). P x``], []))
+     in
+       Unknown ["quiet output probe"]
+     end}
+
+val _ = register_backend quiet_output_probe_backend
 
 fun backend_input_dispatch () =
   let
@@ -10279,10 +10396,127 @@ fun capture_refute_messages level action =
     val chunks = ref ([] : string list)
     fun output text = chunks := text :: !chunks
     val result = Lib.with_flag (Feedback.MESG_outstream, output)
-      (Feedback.with_traces [("Refute", level)] action) ()
+      (Lib.with_flag (Feedback.WARNING_outstream, output)
+        (Feedback.with_traces [("Refute", level)] action)) ()
   in
     (result, String.concat (rev (!chunks)))
   end
+
+fun quiet_suppresses_whole_refute_call () =
+  let
+    val config = default_config
+      |> upd_backends (SOME ["exhaustive"])
+      |> upd_sequential true
+      |> upd_substrate Compute
+      |> upd_quiet true
+    val (_, output) = capture_refute_messages 4 (fn () =>
+      ignore (Refute.refute config ``F``))
+  in
+    output = ""
+  end
+
+val _ = require_msg
+  (check_result quiet_suppresses_whole_refute_call) (fn () =>
+  "quiet QC refute emitted trace or result output") (fn () => ()) ()
+
+fun quiet_suppresses_model_finder_output () =
+  let
+    val prior_mono_trace = !MFMono.trace
+    fun restore () =
+      (quiet_output_probe_enabled := false;
+       MFMono.trace := prior_mono_trace)
+    fun run () =
+      let
+        val config = default_config
+          |> upd_backends (SOME ["refute-quiet-output-probe"])
+          |> upd_sequential true
+        val _ = quiet_output_probe_enabled := true
+        val _ = MFMono.trace := true
+        val (_, loud) = capture_refute_messages 4 (fn () =>
+          ignore (Refute.refute config ``T``))
+        val (_, quiet) = capture_refute_messages 4 (fn () =>
+          ignore (Refute.refute (upd_quiet true config) ``T``))
+      in
+        String.isSubstring "ignoring quiet selftest non-equation" loud andalso
+        String.isSubstring "Monotonicity analysis for" loud andalso
+        quiet = "" andalso !MFMono.trace
+      end
+  in
+    Portable.finally restore run ()
+  end
+
+val _ = require_msg
+  (check_result quiet_suppresses_model_finder_output) (fn () =>
+  "quiet MF refute emitted a warning or independent monotonicity trace")
+  (fn () => ()) ()
+
+fun quiet_restores_output_state_after_exception () =
+  let
+    val config = default_config
+      |> upd_backends (SOME ["exhaustive"])
+      |> upd_sequential true
+      |> upd_quiet true
+      |> upd_expect ExpectNone
+    fun action () =
+      let
+        val raised =
+          ((ignore (Refute.refute config ``F``); false)
+           handle HOL_ERR _ => true)
+        val state = (raised, Feedback.current_trace "Refute",
+                     !Feedback.emit_MESG, !Feedback.emit_WARNING)
+        val _ = Feedback.HOL_MESG "message-restored"
+        val _ = Feedback.HOL_WARNING "Refute selftest"
+          "quiet_restores_output_state_after_exception" "warning-restored"
+      in
+        state
+      end
+    val ((raised, trace, messages, warnings), output) =
+      capture_refute_messages 4 action
+  in
+    raised andalso trace = 4 andalso messages andalso warnings andalso
+    String.isSubstring "message-restored" output andalso
+    String.isSubstring "warning-restored" output andalso
+    not (String.isSubstring "Refute found" output)
+  end
+
+val _ = require_msg
+  (check_result quiet_restores_output_state_after_exception) (fn () =>
+  "quiet did not restore trace and output state after an exception")
+  (fn () => ()) ()
+
+fun uncertified_qc_is_genuine_and_decisive () =
+  let
+    val base = default_config
+      |> upd_sequential true
+      |> upd_substrate Compute
+      |> upd_size 2
+      |> upd_iterations 20
+      |> upd_evals [``x + 1 : num``]
+      |> upd_certify false
+      |> upd_quiet true
+    fun check backend seed =
+      let
+        val config = base
+          |> upd_backends (SOME [backend])
+          |> upd_seed seed
+        val outcome = refute config ``(x : num) = 0``
+      in
+        case outcome of
+            Counterexample
+              ([{certainty = Genuine, cert = NONE, evals = [], ...}]) =>
+                String.isSubstring "Certification: uncertified"
+                  (format_outcome config outcome) andalso
+                decisive config Genuine outcome
+          | _ => false
+      end
+  in
+    check "exhaustive" NONE andalso check "random" (SOME 1)
+  end
+
+val _ = require_msg
+  (check_result uncertified_qc_is_genuine_and_decisive) (fn () =>
+  "certify=false did not return an uncertified, race-decisive Genuine hit")
+  (fn () => ()) ()
 
 fun trace_level_two_reports_qc_gate () =
   let
@@ -11660,22 +11894,26 @@ fun same_conformance_outcome (left, right) =
 fun certificate_tag_clean theorem =
   Tag.isEmpty (Thm.tag theorem) orelse Tag.isDisk (Thm.tag theorem)
 
-fun certified_conformance_cex
-      (Refute.Counterexample ({certainty = Refute.Genuine,
-                               cert = SOME theorem, ...} :: _)) =
-        certificate_tag_clean theorem
-  | certified_conformance_cex _ = false
+fun certified_conformance_cex certify
+      (Refute.Counterexample ({certainty = Refute.Genuine, cert, ...} :: _)) =
+        if certify then
+          (case cert of SOME theorem => certificate_tag_clean theorem
+                      | NONE => false)
+        else
+          not (Option.isSome cert)
+  | certified_conformance_cex _ _ = false
 
 fun conformance_outcome_name (Refute.Counterexample _) = "Counterexample"
   | conformance_outcome_name Refute.NoCounterexample = "NoCounterexample"
   | conformance_outcome_name (Refute.Unknown reasons) =
       "Unknown (" ^ String.concatWith "; " reasons ^ ")"
 
-fun expectation_holds expectation outcome =
+fun expectation_holds (config : config) expectation outcome =
   case expectation of
       ExpectCex =>
         (case outcome of Refute.Counterexample (_ :: _) => true | _ => false)
-    | ExpectGenuine => certified_conformance_cex outcome
+    | ExpectGenuine =>
+        certified_conformance_cex (#certify (#qc config)) outcome
     | ExpectQuasiGenuine =>
         (case outcome of
              Refute.Counterexample
@@ -11729,7 +11967,7 @@ fun conform ({name, cfg, tm, inapplicable} : conformance_case) =
           conformance_substrates
         val baseline = #3 (hd results)
         val _ =
-          if expectation_holds expectation baseline then ()
+          if expectation_holds base expectation baseline then ()
           else raise Fail (name ^ ": compute violated the expectation on " ^
             strategy ^ ": " ^ conformance_outcome_name baseline)
 
@@ -11744,7 +11982,7 @@ fun conform ({name, cfg, tm, inapplicable} : conformance_case) =
                 if not (same_conformance_outcome (baseline, outcome)) then
                   raise Fail (name ^ ": " ^ substrate ^
                     " disagreed with compute on " ^ strategy)
-                else if expectation_holds expectation outcome then ()
+                else if expectation_holds base expectation outcome then ()
                 else raise Fail (name ^ ": " ^ substrate ^
                   " produced an uncertified or unsound result on " ^ strategy)
       in
