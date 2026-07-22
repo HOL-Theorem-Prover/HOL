@@ -8527,6 +8527,63 @@ val quiet_output_probe_backend : backend =
 
 val _ = register_backend quiet_output_probe_backend
 
+val try_profile_enabled = ref false
+val try_profile_seen = ref false
+
+val try_profile_backend : backend =
+  {name = "refute-try-profile", weight = ~91,
+   configured = fn () => !try_profile_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn config => fn _ =>
+     let
+       val _ = try_profile_seen :=
+         (#sequential config andalso #seed (#qc config) = SOME 42 andalso
+          #expect config = NoExpectation andalso #quiet config)
+       val _ = Feedback.HOL_MESG "try_refute profile output"
+       val cex : counterexample =
+         {backend = "refute-try-profile", substrate = "stub",
+          certainty = Genuine, bindings = [], evals = [], cert = NONE,
+          scope = NONE, model = NONE, stats = []}
+     in
+       Counterexample [cex]
+     end}
+
+val try_budget_first_enabled = ref false
+val try_budget_second_enabled = ref false
+
+datatype try_budget_progress =
+    TryBudgetIdle
+  | TryBudgetFirstFinished
+  | TryBudgetSecondStarted
+  | TryBudgetSecondFinished
+
+val try_budget_progress =
+  Synchronized.var "Refute try budget progress" TryBudgetIdle
+val try_budget_backend_delay = Time.fromReal 1.0
+
+val try_budget_first_backend : backend =
+  {name = "refute-try-budget-first", weight = ~90,
+   configured = fn () => !try_budget_first_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn _ =>
+     (OS.Process.sleep try_budget_backend_delay;
+      Synchronized.change try_budget_progress (K TryBudgetFirstFinished);
+      Unknown ["first budget probe finished"])}
+
+val try_budget_second_backend : backend =
+  {name = "refute-try-budget-second", weight = ~89,
+   configured = fn () => !try_budget_second_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn _ =>
+     (Synchronized.change try_budget_progress (K TryBudgetSecondStarted);
+      OS.Process.sleep try_budget_backend_delay;
+      Synchronized.change try_budget_progress (K TryBudgetSecondFinished);
+      Unknown ["second budget probe finished"])}
+
+val _ = register_backend try_profile_backend
+val _ = register_backend try_budget_first_backend
+val _ = register_backend try_budget_second_backend
+
 fun backend_input_dispatch () =
   let
     val prior_trace = Feedback.current_trace "Refute"
@@ -10401,6 +10458,133 @@ fun capture_refute_messages level action =
   in
     (result, String.concat (rev (!chunks)))
   end
+
+fun try_refute_protocol_and_profile () =
+  let
+    fun restore () = try_profile_enabled := false
+    fun run () =
+      let
+        val config = default_config
+          |> upd_backends (SOME ["refute-try-profile"])
+          |> upd_sequential false
+          |> upd_seed NONE
+          |> upd_expect ExpectNone
+          |> upd_quiet false
+          |> upd_timeout 1.0
+        val _ = try_profile_seen := false
+        val _ = try_profile_enabled := true
+        val (hit, output) = capture_refute_messages 4 (fn () =>
+          Refute.try_refute config ([], ``F``))
+        val miss = Refute.try_refute
+          (config |> upd_backends (SOME ["exhaustive"])
+                  |> upd_substrate Compute)
+          ([], ``T``)
+      in
+        !try_profile_seen andalso output = "" andalso
+        (case hit of
+             SOME ("refute-try-profile",
+               Refute.Counterexample
+                 [{backend = "refute-try-profile", ...}]) => true
+           | _ => false) andalso
+        not (Option.isSome miss)
+      end
+  in
+    Portable.finally restore run ()
+  end
+
+val _ = tprint "Refute try protocol and forced profile"
+val _ = require_msg (check_result try_refute_protocol_and_profile) (fn () =>
+  "try_refute was noisy or lost its hit/miss, seed, sequencing, or expect " ^
+  "protocol") (fn () => ()) ()
+
+fun same_try_cert NONE NONE = true
+  | same_try_cert (SOME left) (SOME right) =
+      Term.aconv (Thm.concl left) (Thm.concl right)
+  | same_try_cert _ _ = false
+
+fun same_try_certainty Refute.Genuine Refute.Genuine = true
+  | same_try_certainty (Refute.QuasiGenuine _)
+      (Refute.QuasiGenuine _) = true
+  | same_try_certainty (Refute.Potential _) (Refute.Potential _) = true
+  | same_try_certainty _ _ = false
+
+fun same_try_counterexample (left : Refute.counterexample)
+    (right : Refute.counterexample) =
+  let
+    fun stable_stats stats =
+      List.filter (fn (name, _) => name <> "msec") stats
+  in
+    #backend left = #backend right andalso
+    #substrate left = #substrate right andalso
+    same_try_certainty (#certainty left) (#certainty right) andalso
+    same_env (#bindings left) (#bindings right) andalso
+    same_env (#evals left) (#evals right) andalso
+    same_try_cert (#cert left) (#cert right) andalso
+    #scope left = #scope right andalso
+    not (Option.isSome (#model left)) andalso
+    not (Option.isSome (#model right)) andalso
+    stable_stats (#stats left) = stable_stats (#stats right)
+  end
+
+fun try_refute_is_deterministic () =
+  let
+    val config = default_config
+      |> upd_backends (SOME ["random"])
+      |> upd_substrate Compute
+      |> upd_size 3
+      |> upd_iterations 40
+      |> upd_sequential false
+      |> upd_seed NONE
+      |> upd_quiet false
+      |> upd_timeout 2.0
+    val first = Refute.try_refute config ([], ``(x : num) = 0``)
+    val second = Refute.try_refute config ([], ``(x : num) = 0``)
+  in
+    case (first, second) of
+        (SOME ("random", Refute.Counterexample [left]),
+         SOME ("random", Refute.Counterexample [right])) =>
+          same_try_counterexample left right
+      | _ => false
+  end
+
+val _ = tprint "Refute try determinism"
+val _ = require_msg (check_result try_refute_is_deterministic) (fn () =>
+  "try_refute changed its fixed-seed sequential result between runs")
+  (fn () => ()) ()
+
+fun try_refute_honors_whole_budget () =
+  let
+    fun restore () =
+      (try_budget_first_enabled := false;
+       try_budget_second_enabled := false;
+       Synchronized.change try_budget_progress (K TryBudgetIdle))
+    fun run () =
+      let
+        val _ =
+          Synchronized.change try_budget_progress (K TryBudgetIdle)
+        val _ = try_budget_first_enabled := true
+        val _ = try_budget_second_enabled := true
+        val config = default_config
+          |> upd_backends
+               (SOME ["refute-try-budget-first",
+                      "refute-try-budget-second"])
+          |> upd_timeout 1.5
+        (* Each one-second backend fits comfortably within a reset 1.5s
+           backend budget, but together they cannot fit in the one outer
+           budget.  The second-started state therefore distinguishes the
+           outer deadline without measuring elapsed time. *)
+        val result = Refute.try_refute config ([], ``T``)
+      in
+        not (Option.isSome result) andalso
+        Synchronized.value try_budget_progress = TryBudgetSecondStarted
+      end
+  in
+    Portable.finally restore run ()
+  end
+
+val _ = tprint "Refute try whole-call timeout"
+val _ = require_msg (check_result try_refute_honors_whole_budget) (fn () =>
+  "try_refute overran its whole-call budget") (fn () => ()) ()
 
 fun quiet_suppresses_whole_refute_call () =
   let

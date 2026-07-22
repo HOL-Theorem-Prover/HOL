@@ -43,6 +43,7 @@ signature Refute = sig
   val refute_def    : term -> outcome
   val refute_goal   : config -> goal -> outcome
   val refute_top    : unit -> outcome
+  val try_refute    : config -> goal -> (string * outcome) option
   val quickcheck    : term -> outcome
   val nitpick       : term -> outcome
   val REFUTE_TAC    : Abbrev.tactic

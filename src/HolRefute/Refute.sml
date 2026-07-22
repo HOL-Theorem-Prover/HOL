@@ -39,6 +39,32 @@ structure Refute :> Refute = struct
   fun refute_top () = refute_goal (!Refute_Core.the_config)
     (proofManagerLib.top_goal ())
 
+  val try_seed = 42
+
+  fun try_refute cfg (assumptions, goal) =
+    let
+      val try_config = cfg
+        |> Refute_Core.upd_sequential true
+        |> Refute_Core.upd_seed (SOME try_seed)
+        |> Refute_Core.upd_expect Refute_Core.NoExpectation
+        |> Refute_Core.upd_quiet true
+      val budget =
+        if #timeout try_config <= 0.0 then Time.zeroTime
+        else Time.fromReal (#timeout try_config)
+      fun run () = Refute_Core.refute_problem try_config
+        {goal = goal, assumptions = assumptions, evals = []}
+      (* This outer limit is deliberately a whole-call budget.  Threading a
+         shared deadline into each backend, as Nitpick does, is a possible
+         future refinement that would let backends spend the remainder. *)
+      val result = Timeout.apply budget run ()
+    in
+      case result of
+          outcome as Refute_Core.Counterexample (cex :: _) =>
+            SOME (#backend cex, outcome)
+        | _ => NONE
+    end
+    handle Timeout.TIMEOUT _ => NONE
+
   fun quickcheck tm = refute
     (Refute_Core.upd_backends (SOME ["exhaustive", "random"])
       (!Refute_Core.the_config)) tm
