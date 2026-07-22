@@ -7,6 +7,7 @@ open sortingTheory
 open realTheory
 open Refute_Core
 open Refute_Gen
+open Refute_Narrow
 open Refute_Cert
 open Refute_Eval
 open Refute_EvalCompute
@@ -10898,6 +10899,103 @@ val _ = require_msg (check_result (fn () => has_no_generator real_ty))
   (fn () => "real unexpectedly has a generator") (fn () => ()) ()
 val _ = require_msg (check_result (fn () => has_no_generator ``:ind``))
   (fn () => "unknown type unexpectedly has a generator") (fn () => ()) ()
+
+val _ = tprint "Refute narrowing core"
+
+val narrow_leaf = Narrowing_sum_of_products [[]]
+val narrow_branch = Narrowing_sum_of_products [[], [narrow_leaf]]
+
+fun narrowing_position_algebra () =
+  let
+    val root = Narrowing_variable ([4], narrow_branch)
+    val alternatives = new [4] (products_of narrow_branch)
+    val expected =
+      [Narrowing_constructor (0, []),
+       Narrowing_constructor
+         (1, [Narrowing_variable ([4, 0], narrow_leaf)])]
+    val arguments =
+      [Narrowing_variable ([0], narrow_leaf),
+       Narrowing_variable ([1], narrow_branch)]
+    val refined_arguments = refineList arguments [1]
+    val expected_arguments =
+      [[Narrowing_variable ([0], narrow_leaf),
+        Narrowing_constructor (0, [])],
+       [Narrowing_variable ([0], narrow_leaf),
+        Narrowing_constructor
+          (1, [Narrowing_variable ([1, 0], narrow_leaf)])]]
+    val nested = refine
+      (Narrowing_constructor
+        (7, [Narrowing_variable ([9, 0], narrow_branch)])) [0]
+    val expected_nested = List.map (fn value =>
+      Narrowing_constructor (7, [value]))
+      (new [9, 0] (products_of narrow_branch))
+    val rejects_bad_path =
+      ((ignore (refine root [0]); false)
+       handle InvalidPosition [0] => true | _ => false)
+  in
+    dummy_variable [4] narrow_branch = root andalso
+    alternatives = expected andalso refine root [] = expected andalso
+    refined_arguments = expected_arguments andalso
+    nested = expected_nested andalso rejects_bad_path
+  end
+
+fun narrowing_total_grounding () =
+  let
+    val completions = total (Narrowing_variable ([2], narrow_branch))
+    fun ground (Narrowing_variable _) = false
+      | ground (Narrowing_constructor (_, arguments)) =
+          List.all ground arguments
+  in
+    completions =
+      [Narrowing_constructor (0, []),
+       Narrowing_constructor
+         (1, [Narrowing_constructor (0, [])])] andalso
+    List.all ground completions
+  end
+
+fun narrowing_shape_derivation () =
+  let
+    val num_products = products_of (shape_of 3 ``:num``)
+    val list_zero = products_of (shape_of 0 ``:num list``)
+    val list_one = products_of (shape_of 1 ``:num list``)
+    val enum_products = products_of (shape_of 7 ``:rg_enum``)
+    val around = narrowing_terms Refute_Gen.Int 2
+    val expected_around =
+      List.map (intSyntax.term_of_int o Arbint.fromInt) [0, 1, ~1, 2, ~2]
+  in
+    length num_products = 4 andalso List.all null num_products andalso
+    list_zero = [[]] andalso length list_one = 2 andalso
+    length (List.nth (list_one, 1)) = 2 andalso
+    length enum_products = 3 andalso List.all null enum_products andalso
+    ListPair.allEq (fn (left, right) => Term.aconv left right)
+      (around, expected_around)
+  end
+
+fun narrowing_function_inapplicable () =
+  let
+    fun mentions ty fragments =
+      case derive_shape 2 ty of
+          Refute_Narrow.Inapplicable [message] =>
+            List.all (fn fragment =>
+              String.isSubstring fragment message) fragments
+        | _ => false
+  in
+    mentions ``:num -> bool``
+      ["narrowing is inapplicable", "num -> bool",
+       "function types require finitization"]
+  end
+
+val _ = require_msg (check_result narrowing_position_algebra) (fn () =>
+  "narrowing refinement lost a constructor or position") (fn () => ()) ()
+val _ = require_msg (check_result narrowing_total_grounding) (fn () =>
+  "narrowing total did not produce ordered ground completions")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_shape_derivation) (fn () =>
+  "narrowing datatype, primitive, or enum shape derivation failed")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_function_inapplicable) (fn () =>
+  "narrowing function inapplicability did not name its offending type")
+  (fn () => ()) ()
 
 val _ = tprint "Refute enumeration and registries"
 

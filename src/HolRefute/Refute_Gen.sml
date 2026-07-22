@@ -437,6 +437,43 @@ structure Refute_Gen = struct
       loop exponent 1
     end
 
+  (* Narrowing treats primitive values as flat, nullary alternatives.
+     Integers follow Quickcheck_Narrowing.around_zero exactly; the other
+     kinds retain the established exhaustive bounds.  Keeping this table in
+     Refute_Gen makes shape indices and later value reconstruction agree. *)
+  fun narrowing_terms kind depth =
+    let
+      val depth = Int.max (0, depth)
+
+      fun around_zero index =
+        if index = 0 then 0
+        else if index mod 2 = 1 then (index + 1) div 2
+        else ~(index div 2)
+
+      fun word_bound width =
+        let
+          fun grow 0 power = power - 1
+            | grow remaining power =
+                if power > depth div 2 then depth
+                else grow (remaining - 1) (2 * power)
+        in
+          if width <= 0 then 0 else grow width 1
+        end
+    in
+      case kind of
+          Num =>
+            List.tabulate (depth + 1, numSyntax.term_of_int)
+        | Int =>
+            List.tabulate (2 * depth + 1, fn index =>
+              intSyntax.term_of_int (Arbint.fromInt (around_zero index)))
+        | Char =>
+            List.tabulate (enum_cap, fn index =>
+              stringSyntax.mk_chr (numSyntax.term_of_int index))
+        | Word width =>
+            List.tabulate (word_bound width + 1, fn index =>
+              wordsSyntax.mk_wordii (index, width))
+    end
+
   fun cardinality ty =
     case Redblackmap.peek (!cardinality_cache, ty) of
         SOME cached => cached
