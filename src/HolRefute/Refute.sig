@@ -109,6 +109,7 @@ signature Refute = sig
   val upd_use_subtype : bool -> config -> config
   val upd_seed : int option -> config -> config
   val upd_allow_existentials : bool -> config -> config
+  val upd_finite_functions : bool -> config -> config
   val upd_certify : bool -> config -> config
   val upd_smart_quantifier : bool -> config -> config
   val upd_smart_generators : bool -> config -> config

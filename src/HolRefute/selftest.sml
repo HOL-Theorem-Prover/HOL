@@ -8941,6 +8941,7 @@ fun size_update_is_local () =
     #use_subtype after = #use_subtype original andalso
     #seed after = #seed original andalso
     #allow_existentials after = #allow_existentials original andalso
+    #finite_functions after = #finite_functions original andalso
     #certify after = #certify original andalso
     #smart_quantifier after = #smart_quantifier original andalso
     #smart_generators after = #smart_generators original andalso
@@ -8968,23 +8969,30 @@ fun certify_and_quiet_defaults_are_pinned () =
     val uncertified = Refute.upd_certify false Refute.default_config
     val no_existentials =
       Refute.upd_allow_existentials false Refute.default_config
+    val infinite_functions =
+      Refute.upd_finite_functions false Refute.default_config
     val silent = Refute.upd_quiet true Refute.default_config
     val ordered =
       Refute.upd_reorder_premises false Refute.default_config
   in
     #allow_existentials (#qc default_config) andalso
+    #finite_functions (#qc default_config) andalso
     #certify (#qc default_config) andalso
     #smart_generators (#qc default_config) andalso
     #reorder_premises (#qc default_config) andalso
     not (#quiet default_config) andalso
     not (#certify (#qc uncertified)) andalso
     not (#allow_existentials (#qc no_existentials)) andalso
+    not (#finite_functions (#qc infinite_functions)) andalso
     not (#reorder_premises (#qc ordered)) andalso
     #quiet silent andalso
     #qc silent = #qc default_config andalso
     #quiet no_existentials = #quiet default_config andalso
     #certify (#qc no_existentials) = #certify (#qc default_config) andalso
     same_mf (#mf no_existentials) (#mf default_config) andalso
+    #allow_existentials (#qc infinite_functions) =
+      #allow_existentials (#qc default_config) andalso
+    same_mf (#mf infinite_functions) (#mf default_config) andalso
     #quiet uncertified = #quiet default_config andalso
     same_mf (#mf ordered) (#mf default_config) andalso
     same_mf (#mf uncertified) (#mf default_config) andalso
@@ -9029,6 +9037,7 @@ fun config_surface_snapshot () =
        "use_subtype = false (reserved)\n",
        "seed = NONE\n",
        "allow_existentials = true\n",
+       "finite_functions = true\n",
        "certify = false\n",
        "smart_quantifier = true\n",
        "smart_generators = true\n",
@@ -11019,6 +11028,190 @@ fun narrowing_function_inapplicable () =
        "function types require finitization"]
   end
 
+fun narrowing_function_finitization () =
+  let
+    val f = Term.mk_var ("f", ``:bool -> bool``)
+    val h = Term.mk_var ("h", ``:(bool -> bool) -> bool``)
+    val p = Term.mk_var ("p", ``:(bool -> bool) # bool``)
+    val body = boolSyntax.mk_eq
+      (Term.mk_comb (f, boolSyntax.F), Term.mk_comb (f, boolSyntax.T))
+    val (prefix, body') = finitize_functions
+      ([(Refute_Eval.Forall, f), (Refute_Eval.Forall, h),
+        (Refute_Eval.Forall, p)], body)
+    val product_body = boolSyntax.mk_eq
+      (Term.mk_comb (pairSyntax.mk_fst p, boolSyntax.F),
+       Term.mk_comb (pairSyntax.mk_fst p, boolSyntax.T))
+    val (product_prefix, product_body') =
+      finitize_functions ([(Refute_Eval.Forall, p)], product_body)
+    val product = #2 (hd product_prefix)
+    val product_value = pairSyntax.mk_pair
+      (``FUpdate T F (FConstant T) : (bool, bool) refute$ffun``,
+       boolSyntax.T)
+    val product_instance = Term.subst
+      [{redex = product, residue = product_value}] product_body'
+    val product_result = boolSyntax.rhs
+      (Thm.concl (computeLib.EVAL_CONV product_instance))
+    fun has_eval tm =
+      List.exists (fn candidate =>
+        case Lib.total Term.dest_thy_const candidate of
+            SOME {Thy = "refute", Name, ...} =>
+              Name = "eval_ffun" orelse Name = "eval_cfun"
+          | SOME _ => false
+          | NONE => false) (HolKernel.find_terms Term.is_const tm)
+  in
+    map (Term.type_of o #2) prefix =
+      [``:(bool, bool) refute$ffun``, ``:bool refute$cfun``,
+       ``:(bool, bool) refute$ffun # bool``] andalso
+    has_eval body' andalso null (List.filter (Term.aconv f)
+      (Term.free_vars_lr body')) andalso
+    Term.aconv product_result boolSyntax.F
+  end
+
+fun narrowing_finite_function_display () =
+  let
+    val function_ty = ``:bool -> bool``
+    val ffun_ty = ``:(bool, bool) refute$ffun``
+    val value =
+      ``FUpdate F T (FConstant F) : (bool, bool) refute$ffun``
+    val base = Term.mk_abs (Term.mk_var ("x", ``:bool``), boolSyntax.F)
+    val expected = Term.mk_comb
+      (combinSyntax.mk_update (boolSyntax.F, boolSyntax.T), base)
+    val higher = ``CConstant F : bool refute$cfun``
+    val higher_expected = Term.mk_abs
+      (Term.mk_var ("g", ``:bool -> bool``), boolSyntax.F)
+    val range_hole = MFN.irrelevant_marker ``:bool``
+    val higher_hole = Term.mk_comb
+      (``CConstant : bool -> bool refute$cfun``, range_hole)
+    val higher_hole_expected = Term.mk_abs
+      (Term.mk_var ("g", ``:bool -> bool``), range_hole)
+    val function_hole = MFN.irrelevant_marker function_ty
+    val ffun_hole = MFN.irrelevant_marker ffun_ty
+    val cfun_hole = MFN.irrelevant_marker ``:bool refute$cfun``
+    val tail_value = Term.list_mk_comb
+      (``FUpdate : bool -> bool -> (bool, bool) refute$ffun ->
+          (bool, bool) refute$ffun``,
+       [boolSyntax.F, boolSyntax.T, ffun_hole])
+    val tail_expected = Term.mk_comb
+      (combinSyntax.mk_update (boolSyntax.F, boolSyntax.T), function_hole)
+    val nested_value = Term.mk_comb
+      (``FConstant : bool -> (bool, bool) refute$ffun``, range_hole)
+    val nested_expected = Term.mk_abs
+      (Term.mk_var ("x", ``:bool``), range_hole)
+    val nested_function_ty = ``:bool -> bool -> bool``
+    val nested_ffun_hole = MFN.irrelevant_marker
+      ``:(bool, bool) refute$ffun``
+    val nested_ffun_value = Term.mk_comb
+      (``FConstant : (bool, bool) refute$ffun ->
+          (bool, (bool, bool) refute$ffun) refute$ffun``,
+       nested_ffun_hole)
+    val nested_ffun_expected = Term.mk_abs
+      (Term.mk_var ("x", ``:bool``),
+       MFN.irrelevant_marker function_ty)
+    val pair_value = pairSyntax.mk_pair (tail_value, range_hole)
+    val pair_expected = pairSyntax.mk_pair (tail_expected, range_hole)
+    val transformed_pair_ty = ``:(bool, bool) refute$ffun # bool``
+    val original_pair_ty = ``:(bool -> bool) # bool``
+    val malformed_ffun = Term.mk_var ("bad", ffun_ty)
+    val malformed_cfun =
+      Term.mk_var ("bad_cfun", ``:bool refute$cfun``)
+    val malformed_pair = Term.mk_var ("bad_pair", transformed_pair_ty)
+    fun rejected action =
+      (action (); false) handle HOL_ERR _ => true
+    fun wrong_typed_hole_rejected () =
+      ((ignore (eval_finite_functions_as function_ty function_hole);
+        false)
+       handle HOL_ERR error =>
+         Feedback.top_structure_of error = "Refute_Narrow" andalso
+         Feedback.top_function_of error =
+           "eval_finite_functions_as" andalso
+         Feedback.message_of error =
+           ("malformed transformed value for " ^
+            Parse.type_to_string function_ty ^ ": " ^
+            Parse.term_to_string function_hole))
+  in
+    Term.aconv (eval_finite_functions value) expected andalso
+    wrong_typed_hole_rejected () andalso
+    Term.aconv
+      (eval_finite_functions_as ``:(bool -> bool) -> bool`` higher)
+      higher_expected andalso
+    Term.aconv
+      (eval_finite_functions_as ``:(bool -> bool) -> bool`` higher_hole)
+      higher_hole_expected andalso
+    Term.aconv (eval_finite_functions_as function_ty ffun_hole)
+      function_hole andalso
+    Term.aconv
+      (eval_finite_functions_as ``:(bool -> bool) -> bool`` cfun_hole)
+      (MFN.irrelevant_marker ``:(bool -> bool) -> bool``) andalso
+    Term.aconv (eval_finite_functions_as function_ty tail_value)
+      tail_expected andalso
+    Term.aconv (eval_finite_functions_as function_ty nested_value)
+      nested_expected andalso
+    Term.aconv
+      (eval_finite_functions_as nested_function_ty nested_ffun_value)
+      nested_ffun_expected andalso
+    Term.aconv (eval_finite_functions_as original_pair_ty pair_value)
+      pair_expected andalso
+    Term.aconv
+      (eval_finite_functions_as original_pair_ty
+        (MFN.irrelevant_marker transformed_pair_ty))
+      (MFN.irrelevant_marker original_pair_ty) andalso
+    rejected (fn () =>
+      ignore (eval_finite_functions_as function_ty malformed_ffun)) andalso
+    rejected (fn () => ignore (eval_finite_functions_as
+      ``:(bool -> bool) -> bool`` malformed_cfun)) andalso
+    rejected (fn () =>
+      ignore (eval_finite_functions_as original_pair_ty malformed_pair))
+  end
+
+val narrowing_report_mismatch = ref ""
+
+fun narrowing_update_report_goldens () =
+  let
+    val function_ty = ``:bool -> bool``
+    val f = Term.mk_var ("f", function_ty)
+    val g = Term.mk_var ("g", function_ty)
+    val h = Term.mk_var ("h", function_ty)
+    val p = Term.mk_var ("p", ``:(bool -> bool) # bool``)
+    val multiple = eval_finite_functions
+      ``FUpdate T F (FUpdate F T (FConstant F)) :
+          (bool, bool) refute$ffun``
+    val duplicate = eval_finite_functions
+      ``FUpdate T F (FUpdate T T (FConstant F)) :
+          (bool, bool) refute$ffun``
+    val ffun_hole =
+      MFN.irrelevant_marker ``:(bool, bool) refute$ffun``
+    val partial_function =
+      eval_finite_functions_as function_ty ffun_hole
+    val partial_update = eval_finite_functions_as function_ty
+      (Term.list_mk_comb
+        (``FUpdate : bool -> bool -> (bool, bool) refute$ffun ->
+            (bool, bool) refute$ffun``,
+         [boolSyntax.F, boolSyntax.T, ffun_hole]))
+    val partial_pair = pairSyntax.mk_pair
+      (partial_update, MFN.irrelevant_marker ``:bool``)
+    val cex : counterexample =
+      {backend = "narrowing", substrate = "native",
+       certainty = QuasiGenuine [],
+       bindings = [(f, multiple), (g, duplicate),
+         (h, partial_function), (p, partial_pair)],
+       evals = [], cert = NONE, scope = NONE, model = NONE, stats = []}
+    val actual = format_outcome default_config (Counterexample [cex])
+    val expected =
+      "Refute found a counterexample (backend: narrowing, substrate: " ^
+      "native):\n" ^
+      "  f = (λx. F)⦇T ↦ F; F ↦ T⦈\n" ^
+      "  g = (λx. F)⦇T ↦ F; T ↦ T⦈\n" ^
+      "  h = _\n" ^
+      "  p = (_⦇F ↦ T⦈,_)"
+    val duplicate_at_t = boolSyntax.rhs
+      (Thm.concl (computeLib.EVAL_CONV
+        (Term.mk_comb (duplicate, boolSyntax.T))))
+  in
+    if actual = expected andalso Term.aconv duplicate_at_t boolSyntax.F
+    then true
+    else (narrowing_report_mismatch := actual; false)
+  end
+
 val _ = require_msg (check_result narrowing_position_algebra) (fn () =>
   "narrowing refinement lost a constructor or position") (fn () => ()) ()
 val _ = require_msg (check_result narrowing_total_grounding) (fn () =>
@@ -11029,6 +11222,16 @@ val _ = require_msg (check_result narrowing_shape_derivation) (fn () =>
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_function_inapplicable) (fn () =>
   "narrowing function inapplicability did not name its offending type")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_function_finitization) (fn () =>
+  "narrowing did not finitize ffun, cfun, or product binders")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_finite_function_display) (fn () =>
+  "ffun/cfun reconstruction did not preserve typed partial values")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_update_report_goldens) (fn () =>
+  "UPDATE order, shadowing, or partial report-string golden changed:\n" ^
+  !narrowing_report_mismatch)
   (fn () => ()) ()
 
 fun plain_engine_units () =
@@ -12822,6 +13025,97 @@ fun narrowing_existential_is_interim_potential () =
     potential andalso refused
   end
 
+fun narrowing_function_update_is_integrated () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+    val goal = ``(f : bool -> bool) F = f T``
+    val expected_base = Term.mk_abs
+      (Term.mk_var ("x", ``:bool``), boolSyntax.T)
+    val expected = Term.mk_comb
+      (combinSyntax.mk_update (boolSyntax.T, boolSyntax.F), expected_base)
+  in
+    case run_with_strategy Narrowing config goal of
+        Counterexample [cex] =>
+          #certainty cex = Genuine andalso Option.isSome (#cert cex) andalso
+          (case #bindings cex of
+               [(variable, value)] =>
+                 Term.aconv variable ``f : bool -> bool`` andalso
+                 Term.aconv value expected
+             | _ => false)
+      | _ => false
+  end
+
+fun narrowing_cfun_is_integrated () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 1
+    val goal = ``(f : (bool -> bool) -> bool) (\x. T)``
+    val expected = Term.mk_abs
+      (Term.mk_var ("g", ``:bool -> bool``), boolSyntax.F)
+  in
+    case run_with_strategy Narrowing config goal of
+        Counterexample [cex] =>
+          #certainty cex = Genuine andalso Option.isSome (#cert cex) andalso
+          (case #bindings cex of
+               [(variable, value)] =>
+                 Term.aconv variable ``f : (bool -> bool) -> bool`` andalso
+                 Term.aconv value expected
+             | _ => false)
+      | _ => false
+  end
+
+val narrowing_product_mismatch = ref ""
+
+fun narrowing_product_is_integrated () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 3
+      |> upd_abort_potential true
+    val goal =
+      ``FST (p : (bool -> bool) # bool) F = FST p T``
+  in
+    case run_with_strategy Narrowing config goal of
+        result as Counterexample [cex] =>
+          let
+            val good =
+              (case #bindings cex of
+                   [(variable, value)] =>
+                     Term.aconv variable
+                       ``p : (bool -> bool) # bool`` andalso
+                     pairSyntax.is_pair value andalso
+                     same_type (Term.type_of value)
+                       ``:(bool -> bool) # bool`` andalso
+                     not (null (#1 (combinSyntax.strip_update
+                       (#1 (pairSyntax.dest_pair value)))))
+                 | _ => false)
+          in
+            if good then true
+            else (narrowing_product_mismatch :=
+              format_outcome config result; false)
+          end
+      | result => (narrowing_product_mismatch :=
+          format_outcome config result; false)
+  end
+
+fun narrowing_finite_functions_gate () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+      |> upd_finite_functions false
+  in
+    case run_with_strategy Narrowing config
+      ``(f : bool -> bool) F = f T`` of
+        Unknown reasons => List.exists (fn reason =>
+          String.isSubstring "function type" reason andalso
+          String.isSubstring "before finitization" reason) reasons
+      | _ => false
+  end
+
 fun narrowing_ceiling_is_pinned () =
   let
     val universal = qc_instances default_config ``(b : bool)``
@@ -12851,6 +13145,20 @@ val _ = require_msg (check_result narrowing_plain_retry_is_integrated)
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_existential_is_interim_potential)
   (fn () => "existential narrowing certainty or option gating changed")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_function_update_is_integrated)
+  (fn () => "function narrowing did not display the exact UPDATE golden")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_cfun_is_integrated)
+  (fn () => "higher-order-domain narrowing did not display constant cfun")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_product_is_integrated)
+  (fn () =>
+    "narrowing product finitization was not integrated end to end:\n" ^
+    !narrowing_product_mismatch)
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_finite_functions_gate)
+  (fn () => "finite_functions=false did not restore function refusal")
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_ceiling_is_pinned)
   (fn () => "narrowing certainty ceiling is unsound") (fn () => ()) ()

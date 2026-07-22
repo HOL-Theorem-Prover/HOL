@@ -68,6 +68,7 @@ structure Refute_Core = struct
       use_subtype : bool,
       seed : int option,
       allow_existentials : bool,
+      finite_functions : bool,
       certify : bool,
       smart_quantifier : bool,
       smart_generators : bool,
@@ -165,6 +166,7 @@ structure Refute_Core = struct
       use_subtype = false,
       seed = NONE,
       allow_existentials = true,
+      finite_functions = true,
       certify = true,
       smart_quantifier = true,
       smart_generators = true,
@@ -293,6 +295,7 @@ structure Refute_Core = struct
     | QcUseSubtype of bool
     | QcSeed of int option
     | QcAllowExistentials of bool
+    | QcFiniteFunctions of bool
     | QcCertify of bool
     | QcSmartQuantifier of bool
     | QcSmartGenerators of bool
@@ -321,6 +324,9 @@ structure Refute_Core = struct
       allow_existentials =
         (case update of QcAllowExistentials value => value
          | _ => #allow_existentials qc),
+      finite_functions =
+        (case update of QcFiniteFunctions value => value
+         | _ => #finite_functions qc),
       certify = (case update of QcCertify value => value | _ => #certify qc),
       smart_quantifier = (case update of QcSmartQuantifier value => value
                           | _ => #smart_quantifier qc),
@@ -346,6 +352,7 @@ structure Refute_Core = struct
   fun upd_seed value = update_qc (QcSeed value)
   fun upd_allow_existentials value =
     update_qc (QcAllowExistentials value)
+  fun upd_finite_functions value = update_qc (QcFiniteFunctions value)
   fun upd_certify value = update_qc (QcCertify value)
   fun upd_smart_quantifier value = update_qc (QcSmartQuantifier value)
   fun upd_smart_generators value = update_qc (QcSmartGenerators value)
@@ -908,6 +915,8 @@ structure Refute_Core = struct
             "\n",
           "allow_existentials = " ^
             Bool.toString (#allow_existentials q) ^ "\n",
+          "finite_functions = " ^
+            Bool.toString (#finite_functions q) ^ "\n",
           "certify = " ^ Bool.toString (#certify q) ^ "\n",
           "smart_quantifier = " ^
             Bool.toString (#smart_quantifier q) ^ "\n",

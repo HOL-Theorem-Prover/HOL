@@ -464,8 +464,8 @@ structure Refute_Extract = struct
       case mlty of
         MLBool =>
           parens ("(" ^ left_value ^ " andalso " ^ right_value ^
-                  ") orelse (not " ^ left_value ^ " andalso not " ^
-                  right_value ^ ")")
+                  ") orelse (not " ^ parens left_value ^
+                  " andalso not " ^ parens right_value ^ ")")
       | MLIntInf =>
           "IntInf.compare (" ^ left_value ^ ", " ^ right_value ^
           ") = EQUAL"
@@ -1501,7 +1501,8 @@ structure Refute_Extract = struct
         | ("bool", "F") => SOME (delay "false")
         | ("bool", "ARB") => SOME
             (delay "(raise Refute_EvalSML.Stuck \"ARB\")")
-        | ("bool", "~") => SOME (unary (fn value => "not " ^ value))
+        | ("bool", "~") => SOME
+            (unary (fn value => "not " ^ parens value))
         | ("bool", "/\\") => SOME (binary (fn (left, right) =>
             left ^ " andalso " ^ right))
         | ("bool", "\\/") => SOME (binary (fn (left, right) =>
@@ -3895,12 +3896,21 @@ structure Refute_Extract = struct
       fun integer value = Int.toString value
       fun term_list values = "[" ^ join ", " values ^ "]"
 
+      (* Finitization belongs to the narrowing instance, after prenexing but
+         before extraction.  Keep the original binders as environment keys;
+         reconstructed descriptions are converted back to those types. *)
       val originals = map #2 prefix
+      val (prefix, body) =
+        if #finite_functions (#qc config) then
+          Refute_Narrow.finitize_functions (prefix, body)
+        else
+          (prefix, body)
+      val transformed = map #2 prefix
       val safe = List.map (fn (index, variable) =>
         Term.mk_var ("refute_bound_" ^ integer index,
-          Term.type_of variable)) (Lib.enumerate 0 originals)
+          Term.type_of variable)) (Lib.enumerate 0 transformed)
       val substitution = ListPair.mapEq (fn (old, fresh) =>
-        {redex = old, residue = fresh}) (originals, safe)
+        {redex = old, residue = fresh}) (transformed, safe)
       val body = Term.subst substitution body
       val prefix = ListPair.mapEq (fn ((quantifier, _), variable) =>
         (quantifier, variable)) (prefix, safe)
@@ -4047,11 +4057,18 @@ structure Refute_Extract = struct
 
       val body_expression = expression context body
       fun binding (index, ((_, variable), original)) =
-        let val ty = Term.type_of variable
+        let
+          val ty = Term.type_of variable
+          val original_index = raw_index original
+          val rebuilt = recon_name ty ^
+            " depth (List.nth (arguments, " ^ integer index ^ "))"
         in
-          "(" ^ integer (raw_index original) ^ ", fn () => " ^
-          recon_name ty ^ " depth (List.nth (arguments, " ^
-          integer index ^ ")))"
+          "(" ^ integer original_index ^ ", fn () => " ^
+          (if #finite_functions (#qc config) then
+             "Refute_Narrow.eval_finite_functions_as " ^
+             "(Term.type_of (Refute_EvalSML.raw_term " ^
+             integer original_index ^ ")) (" ^ rebuilt ^ ")"
+           else rebuilt) ^ ")"
         end
       val has_existential = List.exists
         (fn (Refute_Eval.Exists, _) => true | _ => false) prefix

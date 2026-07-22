@@ -722,6 +722,213 @@ structure Refute_Narrow = struct
     let val (prefix, body) = pnf_of tm
     in Refute_Eval.Pnf {prefix = prefix, body = body} end
 
+  fun ffun_type domain range =
+    Type.mk_thy_type
+      {Thy = "refute", Tyop = "ffun", Args = [domain, range]}
+
+  fun cfun_type range =
+    Type.mk_thy_type {Thy = "refute", Tyop = "cfun", Args = [range]}
+
+  fun is_function_type ty = Option.isSome (Lib.total Type.dom_rng ty)
+
+  fun is_product_type ty = Option.isSome (Lib.total pairSyntax.dest_prod ty)
+
+  fun same_type left right = Type.compare (left, right) = EQUAL
+
+  fun finitize_type ty =
+    case Lib.total Type.dom_rng ty of
+        SOME (domain, range) =>
+          if is_function_type domain then cfun_type (finitize_type range)
+          else ffun_type domain (finitize_type range)
+      | NONE =>
+          (case Lib.total pairSyntax.dest_prod ty of
+               SOME (left, right) =>
+                 pairSyntax.mk_prod
+                   (finitize_type left, finitize_type right)
+             | NONE => ty)
+
+  fun mk_eval_ffun domain range =
+    Term.mk_thy_const
+      {Thy = "refute", Name = "eval_ffun",
+       Ty = Type.-->(ffun_type domain range, Type.-->(domain, range))}
+
+  fun mk_eval_cfun domain range =
+    Term.mk_thy_const
+      {Thy = "refute", Name = "eval_cfun",
+       Ty = Type.-->(cfun_type range, Type.-->(domain, range))}
+
+  (* Port of narrowing_generators.ML:finitize_functions.  The returned
+     prefix carries only first-order datatype descriptions; [body] observes
+     each description through eval_ffun/eval_cfun.  Products are mapped
+     componentwise, as in upstream's map_prod branch. *)
+  fun finitize_functions (prefix, body) =
+    let
+      fun transform ty =
+        case Lib.total Type.dom_rng ty of
+            SOME (domain, range) =>
+              let
+                val (range_ty, restore_range) = transform range
+                val description_ty =
+                  if is_function_type domain then cfun_type range_ty
+                  else ffun_type domain range_ty
+                val evaluator =
+                  if is_function_type domain then
+                    mk_eval_cfun domain range_ty
+                  else
+                    mk_eval_ffun domain range_ty
+                fun restore description =
+                  let
+                    val argument = Term.variant
+                      (Term.free_vars_lr description)
+                      (Term.mk_var ("x", domain))
+                    val result = Term.list_mk_comb
+                      (evaluator, [description, argument])
+                  in
+                    Term.mk_abs (argument, restore_range result)
+                  end
+              in
+                (description_ty, restore)
+              end
+          | NONE =>
+              if is_product_type ty then
+                let
+                  val (left, right) = pairSyntax.dest_prod ty
+                  val (left_ty, restore_left) = transform left
+                  val (right_ty, restore_right) = transform right
+                  fun restore description =
+                    pairSyntax.mk_pair
+                      (restore_left (pairSyntax.mk_fst description),
+                       restore_right (pairSyntax.mk_snd description))
+                in
+                  (pairSyntax.mk_prod (left_ty, right_ty), restore)
+                end
+              else
+                (ty, fn value => value)
+
+      fun prepare ((quantifier, variable), avoid) =
+        let
+          val (ty, restore) = transform (Term.type_of variable)
+          val replacement =
+            if same_type ty (Term.type_of variable) then variable
+            else Term.variant avoid
+              (Term.mk_var (fst (Term.dest_var variable), ty))
+        in
+          ((quantifier, replacement),
+           {redex = variable, residue = restore replacement},
+           replacement :: avoid)
+        end
+
+      fun prepare_all [] _ entries substitutions =
+            (rev entries, rev substitutions)
+        | prepare_all (entry :: rest) avoid entries substitutions =
+            let val (entry', substitution, avoid') = prepare (entry, avoid)
+            in
+              prepare_all rest avoid'
+                (entry' :: entries) (substitution :: substitutions)
+            end
+      val (prefix', substitutions) =
+        prepare_all prefix (Term.free_vars_lr body) [] []
+    in
+      (prefix', Term.subst substitutions body)
+    end
+
+  fun dest_type tyop ty =
+    case Lib.total Type.dest_thy_type ty of
+        SOME {Thy = "refute", Tyop = actual, Args} =>
+          if actual = tyop then SOME Args else NONE
+      | _ => NONE
+
+  fun constructor_application expected term =
+    let
+      val (head, arguments) = HolKernel.strip_comb term
+      val {Thy, Name, ...} = Term.dest_thy_const head
+    in
+      if Thy = "refute" andalso Name = expected then SOME arguments
+      else NONE
+    end
+    handle HOL_ERR _ => NONE
+
+  fun update_function point value base =
+    Term.mk_comb (combinSyntax.mk_update (point, value), base)
+
+  fun malformed_value expected value =
+    raise Feedback.mk_HOL_ERR "Refute_Narrow"
+      "eval_finite_functions_as"
+      ("malformed transformed value for " ^ Parse.type_to_string expected ^
+       ": " ^ Parse.term_to_string value)
+
+  (* Reconstruct the original type as well as the original value.  Supplying
+     that type is essential for cfun, whose datatype parameter deliberately
+     omits the higher-order domain.  A narrowing variable may occur at every
+     transformed node, so translate the marker before inspecting a datatype
+     constructor. *)
+  fun eval_finite_functions_as original_ty value =
+    if not (same_type (Term.type_of value)
+              (finitize_type original_ty)) then
+      malformed_value original_ty value
+    else if Refute_ModelFinder_Names.is_irrelevant_marker value then
+      Refute_ModelFinder_Names.irrelevant_marker original_ty
+    else
+      case Lib.total Type.dom_rng original_ty of
+          SOME (domain, range) =>
+            if is_function_type domain then
+              (case constructor_application "CConstant" value of
+                   SOME [constant] =>
+                     let
+                       val argument =
+                         Term.variant (Term.free_vars_lr constant)
+                           (Term.mk_var ("x", domain))
+                     in
+                       Term.mk_abs
+                         (argument,
+                          eval_finite_functions_as range constant)
+                     end
+                 | _ => malformed_value original_ty value)
+            else
+              (case constructor_application "FConstant" value of
+                   SOME [constant] =>
+                     let
+                       val argument =
+                         Term.variant (Term.free_vars_lr constant)
+                           (Term.mk_var ("x", domain))
+                     in
+                       Term.mk_abs
+                         (argument,
+                          eval_finite_functions_as range constant)
+                     end
+                 | _ =>
+                     (case constructor_application "FUpdate" value of
+                          SOME [point, result, rest] =>
+                            update_function point
+                              (eval_finite_functions_as range result)
+                              (eval_finite_functions_as original_ty rest)
+                        | _ => malformed_value original_ty value))
+        | NONE =>
+            if is_product_type original_ty then
+              if pairSyntax.is_pair value then
+                let
+                  val (left_ty, right_ty) =
+                    pairSyntax.dest_prod original_ty
+                  val (left, right) = pairSyntax.dest_pair value
+                in
+                  pairSyntax.mk_pair
+                    (eval_finite_functions_as left_ty left,
+                     eval_finite_functions_as right_ty right)
+                end
+              else
+                malformed_value original_ty value
+            else
+              value
+
+  (* The type-directed entry above additionally handles cfun and products.
+     This source-compatible upstream operation infers an ffun's domain and
+     range directly and is useful for display-level callers. *)
+  fun eval_finite_functions value =
+    case dest_type "ffun" (Term.type_of value) of
+        SOME [domain, range] =>
+          eval_finite_functions_as (Type.-->(domain, range)) value
+      | _ => value
+
   fun contains_existentials prefix =
     List.exists (fn (Refute_Eval.Exists, _) => true | _ => false) prefix
 
