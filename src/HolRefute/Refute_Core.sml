@@ -65,6 +65,7 @@ structure Refute_Core = struct
       allow_function_inversion : bool,
       use_subtype : bool,
       seed : int option,
+      allow_existentials : bool,
       certify : bool,
       smart_quantifier : bool,
       smart_generators : bool,
@@ -161,6 +162,7 @@ structure Refute_Core = struct
       allow_function_inversion = false,
       use_subtype = false,
       seed = NONE,
+      allow_existentials = true,
       certify = true,
       smart_quantifier = true,
       smart_generators = true,
@@ -288,6 +290,7 @@ structure Refute_Core = struct
     | QcAllowFunctionInversion of bool
     | QcUseSubtype of bool
     | QcSeed of int option
+    | QcAllowExistentials of bool
     | QcCertify of bool
     | QcSmartQuantifier of bool
     | QcSmartGenerators of bool
@@ -313,6 +316,9 @@ structure Refute_Core = struct
       use_subtype = (case update of QcUseSubtype value => value
                      | _ => #use_subtype qc),
       seed = (case update of QcSeed value => value | _ => #seed qc),
+      allow_existentials =
+        (case update of QcAllowExistentials value => value
+         | _ => #allow_existentials qc),
       certify = (case update of QcCertify value => value | _ => #certify qc),
       smart_quantifier = (case update of QcSmartQuantifier value => value
                           | _ => #smart_quantifier qc),
@@ -336,6 +342,8 @@ structure Refute_Core = struct
     update_qc (QcAllowFunctionInversion value)
   fun upd_use_subtype value = update_qc (QcUseSubtype value)
   fun upd_seed value = update_qc (QcSeed value)
+  fun upd_allow_existentials value =
+    update_qc (QcAllowExistentials value)
   fun upd_certify value = update_qc (QcCertify value)
   fun upd_smart_quantifier value = update_qc (QcSmartQuantifier value)
   fun upd_smart_generators value = update_qc (QcSmartGenerators value)
@@ -889,6 +897,8 @@ structure Refute_Core = struct
             " (reserved)\n",
           "seed = " ^ Private.option_to_string Int.toString (#seed q) ^
             "\n",
+          "allow_existentials = " ^
+            Bool.toString (#allow_existentials q) ^ "\n",
           "certify = " ^ Bool.toString (#certify q) ^ "\n",
           "smart_quantifier = " ^
             Bool.toString (#smart_quantifier q) ^ "\n",

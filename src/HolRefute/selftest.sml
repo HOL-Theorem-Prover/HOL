@@ -8915,6 +8915,7 @@ fun size_update_is_local () =
       #allow_function_inversion original andalso
     #use_subtype after = #use_subtype original andalso
     #seed after = #seed original andalso
+    #allow_existentials after = #allow_existentials original andalso
     #certify after = #certify original andalso
     #smart_quantifier after = #smart_quantifier original andalso
     #smart_generators after = #smart_generators original andalso
@@ -8940,18 +8941,25 @@ val _ = require_msg (check_result size_update_is_local) (fn () =>
 fun certify_and_quiet_defaults_are_pinned () =
   let
     val uncertified = Refute.upd_certify false Refute.default_config
+    val no_existentials =
+      Refute.upd_allow_existentials false Refute.default_config
     val silent = Refute.upd_quiet true Refute.default_config
     val ordered =
       Refute.upd_reorder_premises false Refute.default_config
   in
+    #allow_existentials (#qc default_config) andalso
     #certify (#qc default_config) andalso
     #smart_generators (#qc default_config) andalso
     #reorder_premises (#qc default_config) andalso
     not (#quiet default_config) andalso
     not (#certify (#qc uncertified)) andalso
+    not (#allow_existentials (#qc no_existentials)) andalso
     not (#reorder_premises (#qc ordered)) andalso
     #quiet silent andalso
     #qc silent = #qc default_config andalso
+    #quiet no_existentials = #quiet default_config andalso
+    #certify (#qc no_existentials) = #certify (#qc default_config) andalso
+    same_mf (#mf no_existentials) (#mf default_config) andalso
     #quiet uncertified = #quiet default_config andalso
     same_mf (#mf ordered) (#mf default_config) andalso
     same_mf (#mf uncertified) (#mf default_config) andalso
@@ -8995,6 +9003,7 @@ fun config_surface_snapshot () =
        "allow_function_inversion = false (reserved)\n",
        "use_subtype = false (reserved)\n",
        "seed = NONE\n",
+       "allow_existentials = true\n",
        "certify = false\n",
        "smart_quantifier = true\n",
        "smart_generators = true\n",
@@ -10995,6 +11004,139 @@ val _ = require_msg (check_result narrowing_shape_derivation) (fn () =>
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_function_inapplicable) (fn () =>
   "narrowing function inapplicability did not name its offending type")
+  (fn () => ()) ()
+
+fun plain_engine_units () =
+  let
+    val root = Narrowing_variable ([0], narrow_branch)
+    fun hit _ _ = Known {genuine = true, result = false}
+    fun pass _ _ = Known {genuine = true, result = true}
+    fun refine_then_hit _ [Narrowing_variable _] = NeedsRefinement [0]
+      | refine_then_hit _ [Narrowing_constructor (0, [])] =
+          Known {genuine = true, result = true}
+      | refine_then_hit _ [Narrowing_constructor (1, _)] =
+          Known {genuine = true, result = false}
+      | refine_then_hit _ _ = raise Fail "unexpected narrowing argument"
+    val direct = refute_plain false {arguments = [root], evaluate = hit}
+    val exhausted =
+      refute_plain false {arguments = [root], evaluate = pass}
+    val refined =
+      refute_plain false {arguments = [root], evaluate = refine_then_hit}
+  in
+    (case direct of
+         PlainCounterexample
+           {genuine = true, arguments = [Narrowing_variable _], tests = 1} =>
+           true
+       | _ => false) andalso
+    (case exhausted of PlainExhausted {tests = 1} => true | _ => false) andalso
+    (case refined of
+         PlainCounterexample
+           {genuine = true,
+            arguments = [Narrowing_constructor (1, _)], tests = 3} => true
+       | _ => false)
+  end
+
+fun plain_depth_retry () =
+  let
+    val calls = ref ([] : (int * bool) list)
+    val potential_calls = ref ([] : (int * bool) list)
+    fun at_depth depth =
+      {arguments = [Narrowing_variable ([0], narrow_leaf)],
+       evaluate = fn genuine_only => fn _ =>
+         (calls := (depth, genuine_only) :: !calls;
+          Known {genuine = genuine_only, result = false})}
+    fun potential_at_depth depth =
+      {arguments = [Narrowing_variable ([0], narrow_leaf)],
+       evaluate = fn genuine_only => fn _ =>
+         (potential_calls :=
+            (depth, genuine_only) :: !potential_calls;
+          Known {genuine = false, result = false})}
+    val result = search_plain
+      {size = 3, genuine_only = false, at_depth = at_depth}
+    val potential_result = search_plain
+      {size = 3, genuine_only = false, at_depth = potential_at_depth}
+  in
+    rev (!calls) = [(0, false), (1, true)] andalso
+    (case result of
+         PlainFound {depth = 1, genuine = true, tests = 2, ...} => true
+       | _ => false) andalso
+    rev (!potential_calls) =
+      [(0, false), (1, true), (2, true), (3, true)] andalso
+    (case potential_result of
+         PlainSearchExhausted {tests = 4} => true
+       | _ => false)
+  end
+
+fun pnf_normalization_goldens () =
+  let
+    val (prefix, body) = pnf_of
+      ``!x:num. (?y:num. y = x) /\ (!z:bool. z \/ (x = 0))``
+    val expected_body = ``(y:num) = x /\ ((z:bool) \/ (x = 0))``
+    fun quantifiers
+      [(Refute_Eval.Forall, x), (Refute_Eval.Exists, y),
+       (Refute_Eval.Forall, z)] =
+        map (fst o Term.dest_var) [x, y, z] = ["x", "y", "z"] andalso
+        map Term.type_of [x, y, z] = [``:num``, ``:num``, ``:bool``]
+      | quantifiers _ = false
+    val (negated_prefix, negated_body) = pnf_of
+      ``!x:num. ~(!y:num. ?z:bool. (x = y) /\ z)``
+    val (free_prefix, free_body) = pnf_of
+      ``(y:num) = x /\ (b:bool)``
+    val (unique_prefix, _) = pnf_of ``?!x:num. x = n``
+  in
+    quantifiers prefix andalso Term.aconv body expected_body andalso
+    (case negated_prefix of
+         [(Refute_Eval.Forall, _), (Refute_Eval.Exists, _),
+          (Refute_Eval.Forall, _)] => true
+       | _ => false) andalso
+    Term.aconv negated_body ``~((x:num) = y /\ (z:bool))`` andalso
+    (case free_prefix of
+         [(Refute_Eval.Forall, y), (Refute_Eval.Forall, x),
+          (Refute_Eval.Forall, b)] =>
+           map (fst o Term.dest_var) [y, x, b] = ["y", "x", "b"]
+       | _ => false) andalso
+    Term.aconv free_body ``(y:num) = x /\ (b:bool)`` andalso
+    (case unique_prefix of
+         [(Refute_Eval.Forall, n), (Refute_Eval.Forall, _),
+          (Refute_Eval.Forall, _), (Refute_Eval.Exists, _)] =>
+           fst (Term.dest_var n) = "n"
+       | _ => false)
+  end
+
+fun narrowing_selection_units () =
+  let
+    val (universal, _) = pnf_of ``!x:num. x = x``
+    val (existential, _) = pnf_of ``!x:num. ?y:num. x = y``
+    val (unique, _) = pnf_of ``?!x:num. x = n``
+    val refusal = select_engine false existential
+    val (configured, problem) = select_for_config
+      (upd_allow_existentials false default_config)
+      ``!x:num. ?y:num. x = y``
+  in
+    #allow_existentials (#qc default_config) andalso
+    select_engine true universal = PlainEngine andalso
+    select_engine true existential = PnfEngine andalso
+    select_engine true unique = PnfEngine andalso
+    (case (configured, problem) of
+         (PlainRefusal _, Refute_Eval.Pnf {prefix, ...}) =>
+           contains_existentials prefix
+       | _ => false) andalso
+    (case refusal of
+         PlainRefusal [reason] =>
+           String.isSubstring "allow_existentials" reason
+       | _ => false)
+  end
+
+val _ = require_msg (check_result plain_engine_units) (fn () =>
+  "plain narrowing hit, exhaustion, or hole refinement failed")
+  (fn () => ()) ()
+val _ = require_msg (check_result plain_depth_retry) (fn () =>
+  "plain narrowing did not retry a potential hit at the next depth")
+  (fn () => ()) ()
+val _ = require_msg (check_result pnf_normalization_goldens) (fn () =>
+  "narrowing prenex prefix or matrix changed") (fn () => ()) ()
+val _ = require_msg (check_result narrowing_selection_units) (fn () =>
+  "narrowing engine selection or allow_existentials default changed")
   (fn () => ()) ()
 
 val _ = tprint "Refute enumeration and registries"

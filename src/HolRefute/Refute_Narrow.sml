@@ -13,6 +13,30 @@ structure Refute_Narrow = struct
       NarrowingShape of narrowing_type
     | Inapplicable of string list
 
+  datatype evaluation =
+      Known of {genuine : bool, result : bool}
+    | NeedsRefinement of position
+
+  type plain_test =
+    { arguments : narrowing_term list,
+      evaluate : bool -> narrowing_term list -> evaluation }
+
+  datatype plain_result =
+      PlainCounterexample of
+        {genuine : bool, arguments : narrowing_term list, tests : int}
+    | PlainExhausted of {tests : int}
+
+  datatype plain_search_result =
+      PlainFound of
+        {depth : int, genuine : bool, arguments : narrowing_term list,
+         tests : int}
+    | PlainSearchExhausted of {tests : int}
+
+  datatype engine_selection =
+      PlainEngine
+    | PnfEngine
+    | PlainRefusal of string list
+
   exception InvalidPosition of position
   exception ShapeFailure of hol_type * string
 
@@ -146,4 +170,145 @@ structure Refute_Narrow = struct
     NarrowingShape (shape_of depth ty)
     handle ShapeFailure (offending_ty, reason) =>
       Inapplicable [inapplicable_message offending_ty reason]
+
+  (* The plain Lazy SmallCheck engine.  The callback encapsulates forcing the
+     extracted lazy property and translates Hole/Match into this first-order
+     protocol.  Each refinement candidate is evaluated afresh, exactly as in
+     Narrowing_Engine.ref/refute. *)
+  fun refute_from genuine_only evaluate arguments tests =
+    case evaluate genuine_only arguments of
+        Known {genuine, result = true} => PlainExhausted {tests = tests + 1}
+      | Known {genuine, result = false} =>
+          PlainCounterexample
+            {genuine = genuine, arguments = arguments, tests = tests + 1}
+      | NeedsRefinement position =>
+          let
+            fun search [] count = PlainExhausted {tests = count}
+              | search (refined :: rest) count =
+                  (case refute_from genuine_only evaluate refined count of
+                       result as PlainCounterexample _ => result
+                     | PlainExhausted {tests = count'} =>
+                         search rest count')
+          in
+            search (refineList arguments position) (tests + 1)
+          end
+
+  fun refute_plain genuine_only ({arguments, evaluate} : plain_test) =
+    refute_from genuine_only evaluate arguments 0
+
+  (* The upstream ML driver retries a potential hit genuinely at the next
+     depth and discards it if the inclusive 0..size search finds no genuine
+     hit. *)
+  fun search_plain {size, genuine_only, at_depth} =
+    let
+      val maximum = size
+
+      fun loop depth genuine_only tests =
+        if depth > maximum then
+          PlainSearchExhausted {tests = tests}
+        else
+          case refute_plain genuine_only (at_depth depth) of
+              PlainExhausted {tests = count} =>
+                loop (depth + 1) genuine_only (tests + count)
+            | PlainCounterexample
+                {genuine = true, arguments, tests = count} =>
+                PlainFound
+                  {depth = depth, genuine = true, arguments = arguments,
+                   tests = tests + count}
+            | PlainCounterexample
+                {genuine = false, tests = count, ...} =>
+                loop (depth + 1) true (tests + count)
+    in
+      loop 0 genuine_only 0
+    end
+
+  (* HOL4's pull theorems are the reversed all_simps/ex_simps family used by
+     Isabelle's narrowing pass.  Ho_Rewrite handles binder renaming while the
+     NOT rules expose quantifiers under negation. *)
+  val prenex_rewrites =
+    [ boolTheory.EQ_IMP_THM,
+      boolTheory.EXISTS_UNIQUE_DEF,
+      boolTheory.NOT_FORALL_THM,
+      boolTheory.NOT_EXISTS_THM,
+      boolTheory.LEFT_AND_FORALL_THM,
+      boolTheory.RIGHT_AND_FORALL_THM,
+      GSYM boolTheory.LEFT_EXISTS_AND_THM,
+      GSYM boolTheory.RIGHT_EXISTS_AND_THM,
+      GSYM boolTheory.LEFT_FORALL_OR_THM,
+      GSYM boolTheory.RIGHT_FORALL_OR_THM,
+      boolTheory.LEFT_OR_EXISTS_THM,
+      boolTheory.RIGHT_OR_EXISTS_THM,
+      GSYM boolTheory.LEFT_FORALL_IMP_THM,
+      GSYM boolTheory.LEFT_EXISTS_IMP_THM,
+      GSYM boolTheory.RIGHT_FORALL_IMP_THM,
+      GSYM boolTheory.RIGHT_EXISTS_IMP_THM ]
+
+  fun apply_conversion conversion tm =
+    (#2 (boolSyntax.dest_eq (Thm.concl (conversion tm))))
+    handle UNCHANGED => tm
+
+  fun prenex tm =
+    let
+      fun normalize tm =
+        let
+          val reduced = apply_conversion (DEPTH_CONV BETA_CONV) tm
+          val rewritten = apply_conversion
+            (Ho_Rewrite.REWRITE_CONV prenex_rewrites) reduced
+        in
+          if Term.aconv tm rewritten then rewritten
+          else normalize rewritten
+        end
+    in
+      normalize tm
+    end
+
+  fun strip_quantifiers tm =
+    if boolSyntax.is_forall tm then
+      let
+        val (variable, body) = boolSyntax.dest_forall tm
+        val (prefix, matrix) = strip_quantifiers body
+      in
+        ((Refute_Eval.Forall, variable) :: prefix, matrix)
+      end
+    else if boolSyntax.is_exists tm then
+      let
+        val (variable, body) = boolSyntax.dest_exists tm
+        val (prefix, matrix) = strip_quantifiers body
+      in
+        ((Refute_Eval.Exists, variable) :: prefix, matrix)
+      end
+    else
+      ([], tm)
+
+  local
+    fun pnf_of_closed tm = strip_quantifiers (prenex tm)
+  in
+    (* Free variables denote universally quantified test inputs.  Textual
+       left-to-right order makes the public PNF entry deterministic. *)
+    fun pnf_of tm =
+      pnf_of_closed
+        (boolSyntax.list_mk_forall (Term.free_vars_lr tm, tm))
+  end
+
+  fun pnf_problem tm =
+    let val (prefix, body) = pnf_of tm
+    in Refute_Eval.Pnf {prefix = prefix, body = body} end
+
+  fun contains_existentials prefix =
+    List.exists (fn (Refute_Eval.Exists, _) => true | _ => false) prefix
+
+  fun select_engine allow_existentials prefix =
+    if contains_existentials prefix then
+      if allow_existentials then PnfEngine
+      else PlainRefusal
+        ["narrowing existential goals require allow_existentials"]
+    else
+      PlainEngine
+
+  fun select_for_config (config : Refute_Core.config) tm =
+    let val (prefix, body) = pnf_of tm
+    in
+      (select_engine (#allow_existentials (#qc config)) prefix,
+       Refute_Eval.Pnf {prefix = prefix, body = body})
+    end
 end

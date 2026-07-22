@@ -146,6 +146,7 @@ structure Refute :> Refute = struct
     Refute_Core.upd_allow_function_inversion
   val upd_use_subtype = Refute_Core.upd_use_subtype
   val upd_seed = Refute_Core.upd_seed
+  val upd_allow_existentials = Refute_Core.upd_allow_existentials
   val upd_certify = Refute_Core.upd_certify
   val upd_smart_quantifier = Refute_Core.upd_smart_quantifier
   val upd_smart_generators = Refute_Core.upd_smart_generators
