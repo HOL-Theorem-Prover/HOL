@@ -507,6 +507,33 @@ def test_diagnostic_dedup():
 # ------------------------------------------------------------------
 # Runner
 # ------------------------------------------------------------------
+def test_cheat_proofs_installed():
+    """LSP session installs a set_prover thunk that returns
+    mk_oracle_thm for any goal, so tactic bodies never run.  A goal
+    that is deliberately false (m + n = 99999999) with a no-op
+    tactic (ALL_TAC) must therefore compile without diagnostics."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/cheat_proofs.sml"
+        src = ("Theory cheat_proofs\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem definitely_false[allow_rebind]:\n"
+               "  !m n:num. m + n = 99999999\n"
+               "Proof\n"
+               "  ALL_TAC\n"
+               "QED\n")
+        _did_open(c, uri, src)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        d = _diag_count(c, uri)
+        assert_eq(len(d), 0,
+                  f"no diagnostics (got {len(d)}, sample: "
+                  f"{[x.get('message','')[:60] for x in d[:3]]})")
+    finally:
+        c.close()
+
+
 def test_workdone_progress():
     """Server emits window/workDoneProgress/create + $/progress
     begin/report(s)/end during a compile."""
@@ -543,6 +570,7 @@ TESTS = [
                                      test_integer_didChange_interrupts_stale_compile),
     ("diagnostic_dedup",             test_diagnostic_dedup),
     ("workdone_progress",            test_workdone_progress),
+    ("cheat_proofs_installed",       test_cheat_proofs_installed),
 ]
 
 

@@ -596,6 +596,30 @@ in
                       (read, [PolyML.Compiler.CPErrorMessageProc err]) ();
                     runall ())
         in runall () end;
+        (* Cheat every tactic proof: return an oracle-tagged theorem
+           for the goal instead of running the tactic.  Proofs
+           dominate compile time and the LSP session's purpose is
+           editor feedback, not verification.  Same hook that
+           fastbuild (Holmake --fast) uses.  Tag identifies theorems
+           whose proofs were skipped in an LSP session; downstream
+           soundness annotations propagate the tag normally. *)
+        let val s = "Tactical.set_prover \
+                    \  (fn (g, _) => Thm.mk_oracle_thm \"lsp_compile_skip\" g)"
+            val i = ref 0
+            fun read () = (SOME (String.sub (s, !i)) before i := !i + 1)
+                          handle Subscript => NONE
+            fun err {message, hard, ...} =
+              (TextIO.output (TextIO.stdErr,
+                 "[LSP-init] " ^ (if hard then "ERROR" else "warning") ^ ": ");
+               PolyML.prettyPrint (fn s => TextIO.output (TextIO.stdErr, s), 80) message;
+               TextIO.output (TextIO.stdErr, "\n");
+               TextIO.flushOut TextIO.stdErr)
+            fun runall () =
+              if !i >= String.size s then ()
+              else (PolyML.compiler
+                      (read, [PolyML.Compiler.CPErrorMessageProc err]) ();
+                    runall ())
+        in runall () end;
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
