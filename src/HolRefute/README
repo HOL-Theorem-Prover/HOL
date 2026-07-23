@@ -155,9 +155,12 @@ Registrations are session-local ML state and create no theory content:
   snapshot is used for an entire model, callback failures or type changes
   leave that display term unchanged, and certification always uses untouched
   raw terms.  `Refute.lookup_term_postprocessor ty` reports this composed
-  transformation.  The opt-in `Refute.register_frac_type_rat ()` atomically
-  installs both the Frac encoding and the built-in rational transformation,
-  which displays reconstructed Frac atoms with `rat_cons`'s `//` syntax.
+  transformation.  Rational Frac encoding is registered by default after its
+  normalization-faithfulness corpus passed.  The idempotent
+  `Refute.register_frac_type_rat ()` restores or refreshes both the encoding
+  and the built-in transformation, which displays reconstructed Frac atoms
+  with `rat_cons`'s `//` syntax.  Support for `real` via Frac is deferred;
+  certification of real literals is a real blocker.
 
 Structural registration types use distinct type variables as parameters.
 Abs, rep, case, and constructor terms must be existing constants.  A later

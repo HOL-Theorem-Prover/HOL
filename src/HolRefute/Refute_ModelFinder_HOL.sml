@@ -48,9 +48,9 @@ structure Refute_ModelFinder_HOL = struct
   val ersatz_registry = ref ([] : ersatz list)
 
   (* Every classification registration and lazy harvest is serialized here.
-     Model-display registration shares the mutex so the public rational
-     opt-in can install both halves atomically.  Functions suffixed
-     "_unlocked" are internal helpers whose callers already hold it. *)
+     Model-display registration shares the mutex so rational registration
+     can install both halves atomically.  Functions suffixed "_unlocked" are
+     internal helpers whose callers already hold it. *)
   val registration_mutex = Mutex.mutex ()
 
   fun with_registration_lock body =
@@ -430,6 +430,13 @@ structure Refute_ModelFinder_HOL = struct
          Args = map (replace_frac_type target) Args}
       end
 
+  (* A monomorphic Frac operation retyped to a registered carrier cannot be
+     a HOL constant.  All such occurrences, including the synthetic typedef's
+     abs/rep pair, must nevertheless denote one reserved constant layer.
+     A different layer string here creates a second Kodkod relation with the
+     same printed raw name and disconnects the carrier axioms from operations. *)
+  fun retype_frac_constant term ty = retype_constant "frac" term ty
+
   fun specialize_frac_prop target wanted prop =
     let
       val wanted_key = original_const_key wanted
@@ -443,7 +450,7 @@ structure Refute_ModelFinder_HOL = struct
           in
             if same_key (original_const_key candidate) wanted_key andalso
                ty = Term.type_of wanted then wanted
-            else retype_constant "frac" candidate ty
+            else retype_frac_constant candidate ty
           end
         else if Term.is_abs candidate then
           let val (variable, body) = Term.dest_abs candidate
@@ -2537,8 +2544,9 @@ structure Refute_ModelFinder_HOL = struct
       val ty = Type.mk_thy_type
         {Thy = #Thy tyop, Tyop = #Tyop tyop, Args = []}
       (* Quotient and typedef entries can have been harvested merely by
-         looking at a goal before the explicit frac opt-in.  They are the
-         representation we are replacing, not an incompatible user choice. *)
+         looking at a goal before Frac registration or after session-level
+         customization.  They are the representation we are replacing, not
+         an incompatible user choice. *)
       val _ = if interpreted_type_operator tyop orelse
                      raw_free_datatype ty orelse
                      Option.isSome (codatatype_for tyop) then
@@ -3296,10 +3304,10 @@ structure Refute_ModelFinder_HOL = struct
     if not (registered_frac_type ty) then NONE
     else
       let
-        val abs = retype_constant "fracconstr"
+        val abs = retype_frac_constant
           (Term.prim_mk_const {Thy = "frac", Name = "abs_frac"})
           (Type.-->(frac_pair_type, ty))
-        val rep = retype_constant "fracconstr"
+        val rep = retype_frac_constant
           (Term.prim_mk_const {Thy = "frac", Name = "rep_frac"})
           (Type.-->(ty, frac_pair_type))
         val pred = Term.prim_mk_const {Thy = "refute", Name = "Frac"}
@@ -4775,6 +4783,9 @@ structure Refute_ModelFinder_HOL = struct
           | _ => Term.aconv pattern candidate
       fun whacked candidate =
         List.exists (fn pattern => whack_matches pattern candidate) whacks
+      fun retyped_frac_constant candidate =
+        Term.is_var candidate andalso
+        Option.isSome (frac_target_for_constant candidate)
       fun process_args depth arguments = map (do_term depth) arguments
       and do_term depth candidate =
         if is_numeral candidate then candidate
@@ -4784,13 +4795,14 @@ structure Refute_ModelFinder_HOL = struct
         else if Term.is_comb candidate then
           let val (head, arguments) = HolKernel.strip_comb candidate
           in
-            if Term.is_const head then
+            if Term.is_const head orelse retyped_frac_constant head then
               do_const depth head arguments
             else
               s_betapplys (do_term depth head,
                 process_args depth arguments)
           end
-        else if Term.is_const candidate then
+        else if Term.is_const candidate orelse
+                retyped_frac_constant candidate then
           do_const depth candidate []
         else if whacked candidate then unknown_value (Term.type_of candidate)
         else candidate

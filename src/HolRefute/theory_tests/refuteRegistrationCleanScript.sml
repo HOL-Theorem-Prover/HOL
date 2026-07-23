@@ -13,8 +13,12 @@ val _ = Refute.register_typedef
   {ty = ``:zoo_three``, abs = ``zoo_three_abs``, rep = ``zoo_three_rep``,
    absrep_thm = zoo_three_absrep};
 
-(* Frac registration is session data too.  It remains explicitly opt-in. *)
-val _ = Refute.register_frac_type_rat ();
+(* The default Frac registration is session data and creates no theory
+   content.  Its display half is present without an explicit registration. *)
+val _ =
+  case Refute.lookup_term_postprocessor ``:rat`` of
+      SOME _ => ()
+    | NONE => raise Fail "default rational Frac registration is missing";
 
 (* The inductive conjunct takes the normal well-foundedness-check path; the
    typedef conjunct takes registration, unfolding, and axiom generation. *)

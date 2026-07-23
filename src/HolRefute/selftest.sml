@@ -1751,8 +1751,49 @@ val zoo_manual_my_int_registration =
    abs = ``zoo_manual_my_int_abs``, rep = ``zoo_manual_my_int_rep``,
    equiv_thm = zoo_manual_my_int_equiv, partial = false}
 
+fun with_term_postprocessors_restored body =
+  let
+    val saved =
+      Refute_ModelFinder_Model.snapshot_term_postprocessors ()
+    fun restore () =
+      Refute_ModelFinder_Model.restore_term_postprocessors saved
+  in
+    Portable.finally restore body ()
+  end
+
+fun with_frac_registry_restored body =
+  with_term_postprocessors_restored (fn () => let
+    val saved_frac = !MFH.frac_registry
+    val saved_ersatz = !MFH.ersatz_registry
+    val saved_quotients = !MFH.quotient_registry
+    val saved_typedefs = !MFH.typedef_registry
+    val saved_quotient_misses = !MFH.quotient_harvest_misses
+    val saved_typedef_misses = !MFH.typedef_harvest_misses
+    fun restore () =
+      (MFH.frac_registry := saved_frac;
+       MFH.ersatz_registry := saved_ersatz;
+       MFH.quotient_registry := saved_quotients;
+       MFH.typedef_registry := saved_typedefs;
+       MFH.quotient_harvest_misses := saved_quotient_misses;
+       MFH.typedef_harvest_misses := saved_typedef_misses)
+  in
+    Portable.finally restore body ()
+  end)
+
+fun with_rat_frac_unregistered body =
+  with_frac_registry_restored (fn () => let
+    val rat_operator = {Thy = "rat", Tyop = "rat"}
+    fun other_rat ({tyop, ...} : MFH.frac_info) =
+      not (MFH.same_type_operator tyop rat_operator)
+    val _ = MFH.frac_registry :=
+      List.filter other_rat (!MFH.frac_registry)
+  in
+    body ()
+  end)
+
 fun mf_quotient_typedef_registrations () =
-  with_quotient_typedef_registries_restored (fn () => let
+  with_rat_frac_unregistered (fn () =>
+    with_quotient_typedef_registries_restored (fn () => let
     val initially_unregistered =
       not (MFH.is_quot_type ``:rat``) andalso
       not (MFH.is_typedef ``:zoo_three``)
@@ -1812,41 +1853,12 @@ fun mf_quotient_typedef_registrations () =
     partial_defaulted andalso malformed_quotient_rejected andalso
     quotient_typedef_overlap_rejected andalso typedef_registered andalso
     malformed_typedef_rejected andalso typedef_quotient_overlap_rejected
-  end)
+  end))
 
 val _ = require_msg
   (check_result mf_quotient_typedef_registrations) (fn () =>
     "quotient or typedef public registration validation failed")
   (fn () => ()) ()
-
-fun with_term_postprocessors_restored body =
-  let
-    val saved =
-      Refute_ModelFinder_Model.snapshot_term_postprocessors ()
-    fun restore () =
-      Refute_ModelFinder_Model.restore_term_postprocessors saved
-  in
-    Portable.finally restore body ()
-  end
-
-fun with_frac_registry_restored body =
-  with_term_postprocessors_restored (fn () => let
-    val saved_frac = !MFH.frac_registry
-    val saved_ersatz = !MFH.ersatz_registry
-    val saved_quotients = !MFH.quotient_registry
-    val saved_typedefs = !MFH.typedef_registry
-    val saved_quotient_misses = !MFH.quotient_harvest_misses
-    val saved_typedef_misses = !MFH.typedef_harvest_misses
-    fun restore () =
-      (MFH.frac_registry := saved_frac;
-       MFH.ersatz_registry := saved_ersatz;
-       MFH.quotient_registry := saved_quotients;
-       MFH.typedef_registry := saved_typedefs;
-       MFH.quotient_harvest_misses := saved_quotient_misses;
-       MFH.typedef_harvest_misses := saved_typedef_misses)
-  in
-    Portable.finally restore body ()
-  end)
 
 fun mf_frac_registration () =
   with_frac_registry_restored (fn () => let
@@ -1872,7 +1884,11 @@ fun mf_frac_registration () =
       not (MFH.same_type_operator (MFH.type_operator_of qty) rat_operator)
     fun other_rat_typedef ({ty, ...} : MFH.typedef_info) =
       not (MFH.same_type_operator (MFH.type_operator_of ty) rat_operator)
-    val default_off = not (MFH.is_frac_type ``:rat``)
+    fun other_rat_frac ({tyop, ...} : MFH.frac_info) =
+      not (MFH.same_type_operator tyop rat_operator)
+    val default_on = MFH.is_frac_type ``:rat``
+    val _ = MFH.frac_registry :=
+      List.filter other_rat_frac (!MFH.frac_registry)
     val rat_key = {Thy = "rat", Name = "rat"}
     val _ = MFH.quotient_registry :=
       List.filter other_rat_quotient (!MFH.quotient_registry)
@@ -2008,7 +2024,7 @@ fun mf_frac_registration () =
            partial = false}; false)
        handle HOL_ERR _ => true)
   in
-    default_off andalso goal_harvested andalso invalid_atomic andalso
+    default_on andalso goal_harvested andalso invalid_atomic andalso
     synthetic andalso synthetic_has_no_inverse_theorems andalso
     reclassified_quotient andalso caches_replaced andalso frac_precedence
     andalso merged andalso specialized andalso reclassified_typedef andalso
@@ -2017,6 +2033,93 @@ fun mf_frac_registration () =
 
 val _ = require_msg (check_result mf_frac_registration) (fn () =>
   "frac registration, synthetic typedef, or ersatz merge failed")
+  (fn () => ()) ()
+
+(* The synthetic typedef and specialized ersatz definitions must share the
+   exact reserved abs/rep terms.  Frac operations intentionally remain
+   equational relations, so inspect their generated axioms and serialize the
+   constructor itself.  Constructor nicknames are Kodkod identities; this
+   prevents two layers with the same human-facing [frac$abs_frac] name. *)
+fun mf_frac_raw_serialization_identity () =
+  with_frac_registry_restored (fn () => let
+    val _ = Refute.register_frac_type_rat ()
+    val ty = ``:rat``
+    val canonical_abs = MFH.retype_frac_constant
+      (Term.prim_mk_const {Thy = "frac", Name = "abs_frac"})
+      ``:(int # int) -> rat``
+    val canonical_rep = MFH.retype_frac_constant
+      (Term.prim_mk_const {Thy = "frac", Name = "rep_frac"})
+      ``:rat -> int # int``
+    val {abs, rep, ...} = valOf (MFH.typedef_for_type ty)
+    val constructor = hd (MFH.registered_constructors ty)
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val x = Term.mk_var ("x", ty)
+    val y = Term.mk_var ("y", ty)
+    val operations = map (MFH.unfold_defs_in_term context)
+      [``rat$rat_cons (1 : int) (2 : int)``,
+       ``rat$rat_add ^x ^y``]
+    val operation_heads = map (#1 o HolKernel.strip_comb) operations
+    val specialized_nmr = MFH.retype_frac_constant
+      (Term.prim_mk_const {Thy = "frac", Name = "frac_nmr"})
+      ``:rat -> int``
+    val operation_axioms = List.concat
+      (map (MFH.equational_fun_axioms context)
+        (specialized_nmr :: operation_heads))
+    fun generated_endpoint wanted candidate =
+      case Lib.total Term.dest_var candidate of
+          SOME (name, _) => MFN.original_name name = wanted
+        | NONE => false
+    fun endpoints wanted = List.concat (map
+      (HolKernel.find_terms (generated_endpoint wanted)) operation_axioms)
+    val operation_abses = endpoints "frac$abs_frac"
+    val operation_reps = endpoints "frac$rep_frac"
+    val selected = MFH.unfold_defs_in_term context
+      (Term.mk_comb (canonical_rep, x))
+    val selected_vars = Term.free_vars_lr selected
+    val constructor_id = MFH.constructor_name constructor
+    val raw_constructor = Term.mk_comb (canonical_abs,
+      pairSyntax.mk_pair
+        (intSyntax.term_of_int (Arbint.fromInt 1),
+         intSyntax.term_of_int (Arbint.fromInt 2)))
+    val raw_nut = Refute_ModelFinder_Nut.nut_from_term context
+      Refute_ModelFinder_Nut.Eq raw_constructor
+    fun var_name term = #1 (Term.dest_var term)
+    val generated_names =
+      map var_name [canonical_abs, canonical_rep]
+    val serialized_identity =
+      case raw_nut of
+          Refute_ModelFinder_Nut.Construct
+            (specs, result_ty, Refute_ModelFinder_Rep.Any, arguments) =>
+            result_ty = ty andalso length arguments = 2 andalso
+            map Refute_ModelFinder_Nut.nickname_of specs =
+              [MFN.discr_prefix ^ constructor_id,
+               MFN.sel_prefix_for 0 ^ constructor_id,
+               MFN.sel_prefix_for 1 ^ constructor_id]
+        | _ => false
+    val checks =
+      [("generated names", generated_names =
+         ["refute$frac$frac$abs_frac", "refute$frac$frac$rep_frac"]),
+       ("typedef abs", Term.aconv abs canonical_abs),
+       ("typedef rep", Term.aconv rep canonical_rep),
+       ("constructor", Term.aconv constructor canonical_abs),
+       ("operation abs axioms", not (null operation_abses) andalso
+          List.all (Term.aconv canonical_abs) operation_abses),
+       ("operation rep axioms", not (null operation_reps) andalso
+          List.all (Term.aconv canonical_rep) operation_reps),
+       ("selector", not (List.exists
+          (Term.aconv canonical_rep) selected_vars)),
+       ("serialized constructor", serialized_identity)]
+    val failed = map #1 (List.filter (not o #2) checks)
+    val _ = if null failed then () else
+      Feedback.HOL_MESG ("Frac identity failures: " ^
+        String.concatWith ", " failed)
+  in
+    null failed
+  end)
+
+val _ = require_msg
+  (check_result mf_frac_raw_serialization_identity) (fn () =>
+    "Frac raw serializer/model constant identity split across layers")
   (fn () => ()) ()
 
 fun mf_harvest_frac_registration_race () =
@@ -2142,7 +2245,7 @@ fun mf_lazy_db_harvest () =
     val sum_ty = mkty "sum" "sum" [Type.bool, Type.bool]
     val llist_ty = mkty "llist" "llist" [Type.bool]
     val typedef_targets = [frac_ty, hreal_ty, fmap_ty, metric_ty]
-    val quotient_targets = [rat_ty, real_ty, hrat_ty, fset_ty]
+    val quotient_targets = [real_ty, hrat_ty, fset_ty]
     val _ = MFH.quotient_registry := []
     val _ = MFH.typedef_registry := []
     val _ = MFH.quotient_harvest_misses := KNametab.empty
@@ -2152,6 +2255,9 @@ fun mf_lazy_db_harvest () =
     val quotients = List.all (fn ty =>
       MFH.harvest_quotient ty andalso MFH.is_quot_type ty)
       quotient_targets
+    val rat_stays_frac = MFH.is_frac_type rat_ty andalso
+      not (MFH.harvest_quotient rat_ty) andalso
+      not (MFH.is_quot_type rat_ty)
     val negatives =
       not (MFH.harvest_typedef MFH.num_type) andalso
       not (MFH.harvest_quotient MFH.num_type) andalso
@@ -2162,7 +2268,7 @@ fun mf_lazy_db_harvest () =
       MFH.is_interpreted_type MFH.num_type andalso
       MFH.is_raw_free_datatype sum_ty andalso MFH.is_codatatype llist_ty
   in
-    typedefs andalso quotients andalso negatives
+    typedefs andalso quotients andalso rat_stays_frac andalso negatives
   end)
 
 val _ = require_msg (check_result mf_lazy_db_harvest) (fn () =>
@@ -4260,7 +4366,8 @@ val _ = require_msg (check_result mf_path_bisim_axiom_golden) (fn () =>
   (fn () => ()) ()
 
 fun mf_quotient_typedef_axiom_goldens () =
-  with_quotient_typedef_registries_restored (fn () => let
+  with_rat_frac_unregistered (fn () =>
+    with_quotient_typedef_registries_restored (fn () => let
     val quotient_context = fresh_mf_context ()
     val _ = Refute.register_quotient
       {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
@@ -4386,7 +4493,7 @@ fun mf_quotient_typedef_axiom_goldens () =
         String.concatWith ", " failed)
   in
     null failed
-  end)
+  end))
 
 val _ = require_msg
   (check_result mf_quotient_typedef_axiom_goldens) (fn () =>
@@ -6330,7 +6437,8 @@ val _ = require_msg (check_result mf_format_grouping_goldens) (fn () =>
   (fn () => ()) ()
 
 fun mf_quotient_displays () =
-  with_quotient_typedef_registries_restored (fn () => let
+  with_rat_frac_unregistered (fn () =>
+    with_quotient_typedef_registries_restored (fn () => let
     val _ = Refute.register_quotient
       {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
        rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV,
@@ -6383,7 +6491,7 @@ fun mf_quotient_displays () =
     #1 (Term.dest_var friendly) = "refute$qn" andalso
     Term.type_of friendly = ``:frac -> frac`` andalso
     #1 (Term.dest_var second) <> qn_name andalso values_display
-  end)
+  end))
 
 val _ = require_msg (check_result mf_quotient_displays) (fn () =>
   "quotient value or refute$qn display changed")
@@ -7760,9 +7868,11 @@ fun mf_model_frac_display_golden () =
                   intSyntax.term_of_int (Arbint.fromInt denominator)])
     fun binding reconstruction = #2 (hd (#bindings reconstruction))
     val raw_half = binding (#raw half)
+    val (raw_constructor, _) = HolKernel.strip_comb raw_half
     val shown_half = binding (#displayed half)
     val shown_zero = binding (#displayed zero)
   in
+    Term.aconv raw_constructor constructor andalso
     not (Term.aconv raw_half shown_half) andalso
     Term.aconv shown_half (expected ~1 2) andalso
     Parse.term_to_string shown_half = "-1 // 2" andalso
@@ -7771,7 +7881,7 @@ fun mf_model_frac_display_golden () =
   end)
 
 val _ = require_msg (check_result mf_model_frac_display_golden) (fn () =>
-  "Frac display, zero canonicalization, or repeated opt-in changed")
+  "Frac display, zero canonicalization, or repeated registration changed")
   (fn () => ()) ()
 
 fun mf_rat_registration_is_transactional () =
@@ -20638,6 +20748,40 @@ val mf_binary_soundness_corpus =
   [("binary natural addition commutes", ``x + y = (y : num) + x``),
    ("binary integer addition commutes", ``x + y = (y : int) + x``)]
 
+(* TASK_30's normalization-faithfulness gate.  These are instances of the
+   arithmetic, order, and equality laws in ratTheory (RAT_ADD_RID,
+   RAT_MUL_RID, RAT_ADD_COMM, RAT_MUL_COMM, RAT_ADD_RINV,
+   RAT_AINV_AINV, RAT_LES_REF, RAT_LEQ_REF, RAT_LES_TOTAL,
+   RAT_LEQ_ANTISYM, RAT_EQ_AINV, and RAT_EQ_LADD).  In particular, the
+   cancellation and normalized-literal rows make a non-injective Frac atom
+   encoding fabricate a counterexample rather than merely lose one. *)
+val mf_rat_soundness_corpus =
+  [("rat additive identity",
+    ``rat$rat_add x rat$rat_0 = (x : rat$rat)``),
+   ("rat multiplicative identity",
+    ``rat$rat_mul x rat$rat_1 = (x : rat$rat)``),
+   ("rat addition commutes",
+    ``rat$rat_add x y = rat$rat_add y (x : rat$rat)``),
+   ("rat multiplication commutes",
+    ``rat$rat_mul x y = rat$rat_mul y (x : rat$rat)``),
+   ("rat additive inverse",
+    ``rat$rat_add x (rat$rat_ainv x) = rat$rat_0``),
+   ("rat double additive inverse",
+    ``rat$rat_ainv (rat$rat_ainv x) = (x : rat$rat)``),
+   ("rat strict order irreflexive", ``~rat$rat_les x (x : rat$rat)``),
+   ("rat non-strict order reflexive", ``rat$rat_leq x (x : rat$rat)``),
+   ("rat strict order total",
+    ``rat$rat_les x y \/ x = (y : rat$rat) \/ rat$rat_les y x``),
+   ("rat non-strict order antisymmetric",
+    ``rat$rat_leq x y /\ rat$rat_leq y x ==> x = (y : rat$rat)``),
+   ("rat additive inverse equality shape",
+    ``(rat$rat_ainv x = rat$rat_ainv y) <=> x = (y : rat$rat)``),
+   ("rat addition cancellation equality shape",
+    ``(rat$rat_add z x = rat$rat_add z y) <=> x = (y : rat$rat)``),
+   ("rat normalized literal equality shape",
+    ``rat$rat_cons (1 : int) (2 : int) =
+      rat$rat_cons (2 : int) (4 : int)``)]
+
 fun configured_mf_test_solver () =
   if Lib.mem "MiniSat_JNI"
       (Refute_ForlSat.configured_sat_solvers false)
@@ -21114,10 +21258,20 @@ fun mf_need_acceptance solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
+fun mf_rat_soundness_config config =
+  config
+  |> Refute.upd_binary_ints (SOME true)
+  |> Refute.upd_bits [4]
+  |> Refute.upd_card [(NONE, [1, 2, 3])]
+
+fun mf_rat_soundness_acceptance solver =
+  List.app (mf_soundness_test_with mf_rat_soundness_config solver)
+    mf_rat_soundness_corpus
+
 fun mf_frac_acceptance solver =
   with_frac_registry_restored (fn () => let
-    val _ = tprint "Refute MF: opt-in rat frac encoding"
-    val _ = Refute.register_frac_type_rat ()
+    val _ = tprint "Refute MF: default rat frac encoding"
+    val _ = mf_rat_soundness_acceptance solver
     val config = mf_acceptance_config solver
       |> Refute.upd_binary_ints (SOME true)
       |> Refute.upd_card [(NONE, [3])]
@@ -21139,7 +21293,7 @@ fun mf_frac_acceptance solver =
     val printed = String.isSubstring " // " output
   in
     if encoded andalso displayed andalso printed andalso warned then OK ()
-    else die ("opt-in frac acceptance failed: " ^
+    else die ("default frac acceptance failed: " ^
       mf_pin_outcome_name outcome ^ "; display=" ^
       Bool.toString displayed ^ "; printed=" ^ Bool.toString printed ^
       "; warning=" ^ Bool.toString warned)
@@ -21227,9 +21381,13 @@ fun run_level2_mf_corpus () =
 
 val _ =
   if selftest_level = 1 andalso
-     (OS.Process.getEnv "TASK29_FRAC_ONLY" = SOME "yes" orelse
-      OS.Process.getEnv "TASK28_FRAC_ONLY" = SOME "yes") andalso
+     OS.Process.getEnv "TASK30_RAT_ONLY" = SOME "yes" andalso
      Refute_Forl.is_configured () then
+    mf_rat_soundness_acceptance (configured_mf_test_solver ())
+  else if selftest_level = 1 andalso
+          (OS.Process.getEnv "TASK29_FRAC_ONLY" = SOME "yes" orelse
+           OS.Process.getEnv "TASK28_FRAC_ONLY" = SOME "yes") andalso
+          Refute_Forl.is_configured () then
     mf_frac_acceptance (configured_mf_test_solver ())
   else ()
 

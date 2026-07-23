@@ -82,7 +82,8 @@ signature Refute = sig
      ersatz :
        {original : {Thy : string, Name : string},
         replacement : {Thy : string, Name : string}} list} -> unit
-  (* Opt-in until the rational soundness corpus makes the TASK_30 decision. *)
+  (* Installed by default; this idempotent entry point restores or refreshes
+     the built-in rational registration after session-level customization. *)
   val register_frac_type_rat : unit -> unit
   val register_ersatz :
     {original : {Thy : string, Name : string},

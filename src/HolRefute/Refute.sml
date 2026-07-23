@@ -29,6 +29,9 @@ structure Refute :> Refute = struct
   val () = Refute_Extract.install_extractor ()
   val () = Refute_QC.register_backends ()
   val () = Refute_ModelFinder.register_backends ()
+  (* M5-D11: the normalization-faithfulness corpus is green, so rational
+     Frac encoding and display are part of the default session setup. *)
+  val () = Refute_ModelFinder_Model.register_frac_type_rat ()
 
   val refute = Refute_Core.refute
   fun refute_def tm = refute (!Refute_Core.the_config) tm
