@@ -1453,13 +1453,19 @@ If no visible HOL window exists, creates a new window to the right with 83 colum
              (cons (point-min)
                    (progn
                      (while (looking-at "[[:space:]]*\n") (forward-line 1))
-                     (search-backward "\n\n")
-                     (while (looking-at "[[:space:]]*\n") (forward-line 1))
-                     (point))))))
+                     (if (search-backward "\n\n" nil t)
+                         (progn
+                           (while (looking-at "[[:space:]]*\n") (forward-line 1))
+                           (point))
+                       (message
+                        "No earlier blank line; starting HOL with nothing pasted.")
+                       (point-min)))))))
       (save-mark-and-excursion
         (goto-char (car begin-end))
         (let ((bare nil)
-              (limit (cdr begin-end)))
+              (limit (if (= (car begin-end) (cdr begin-end))
+                         (point-max)
+                       (cdr begin-end))))
           (while (and (not bare)
                       (re-search-forward "^Theory [A-Za-z0-9_']+ *\\[bare\\]" limit t))
             (let ((pps (syntax-ppss)))
