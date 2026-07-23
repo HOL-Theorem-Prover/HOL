@@ -486,6 +486,48 @@ def test_integer_didChange_interrupts_stale_compile():
         c.close()
 
 
+def test_hover_responsive_during_compile():
+    """A didChange kicks off a compile; while it's running, hover
+    requests must still be answered promptly (recv thread must not
+    block on stopCompile).  Regression test for the freeze Michael
+    hit typing `Theorem foo:\\n  x` at end of file — old stopCompile
+    spin-waited for the (stuck) compile thread to exit and blocked
+    every subsequent hover / didChange until Emacs killed the LSP."""
+    src = f"{REPO}/src/integer/integerScript.sml"
+    c = Client(os.path.dirname(src))
+    try:
+        _init(c, REPO)
+        uri = f"file://{src}"
+        with open(src) as f: text = f.read()
+        _did_open(c, uri, text)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "first compileCompleted")
+        # Kick a fresh compile by inserting text at file start.
+        edited = "\n\n" + text
+        _did_change_full(c, uri, edited, 2)
+        time.sleep(0.3)   # let the new compile actually start
+        # Fire a hover while the compile is still running.  Server
+        # should respond within a couple of seconds.
+        c.send({"jsonrpc":"2.0","id":424242,"method":"textDocument/hover",
+                "params":{"textDocument":{"uri":uri},
+                          "position":{"line":0,"character":0}}})
+        def got(cl):
+            with cl.msgs_lock:
+                for m in cl.msgs:
+                    if m.get("id") == 424242: return m
+            return None
+        t0 = time.time()
+        reply = c.wait_until(got, 5)
+        dt = time.time() - t0
+        assert_true(reply is not None,
+                    "hover reply arrived while compile was running "
+                    "(waited {0:.1f}s)".format(dt))
+        assert_le(dt, 3.0,
+                  "hover responded quickly (took {0:.2f}s)".format(dt))
+    finally:
+        c.close()
+
+
 def test_diagnostic_dedup():
     """Type-error inserted → publishDiagnostics event count should be small."""
     c = Client("/tmp")
@@ -649,6 +691,8 @@ TESTS = [
     ("integer_recompile_type_error", test_integer_recompile_with_type_error),
     ("integer_didChange_interrupts",
                                      test_integer_didChange_interrupts_stale_compile),
+    ("hover_responsive_during_compile",
+                                     test_hover_responsive_during_compile),
     ("diagnostic_dedup",             test_diagnostic_dedup),
     ("workdone_progress",            test_workdone_progress),
     ("cheat_proofs_installed",       test_cheat_proofs_installed),

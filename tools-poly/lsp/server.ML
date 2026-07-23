@@ -505,17 +505,16 @@ fun start {diag} = let
      HOL's tactic-level `handle _ =>` would swallow it mid-proof
      without stopping the wider compile.
 
-     We also wait for the thread to actually exit before returning:
-     the caller usually calls resetForCompile immediately after
-     stopCompile, and a still-running previous compile would race
-     against that reset on shared HOL state. *)
+     stopCompile does NOT wait for the thread to exit — it's called
+     from the recv thread on every didChange, and a stuck compile
+     (e.g., HOL's parser recovering from an unterminated `Theorem`)
+     would otherwise block recv, freezing hover requests and further
+     didChanges.  The `cancelled` flag doubles as a "no longer
+     current" marker: the compile thread checks it before writing
+     lastTrees so a stale finish can't clobber the new state. *)
   fun stopCompile r = case !r of
     NONE => ()
-  | SOME {cancelled, thread, ...} => (
-      r := NONE;
-      cancelled := true;
-      while Thread.isActive thread do
-        OS.Process.sleep (Time.fromMilliseconds 20))
+  | SOME {cancelled, ...} => (r := NONE; cancelled := true)
 
   fun applyEdit ({compile, lastTrees, ...}:file_data) version changes = let
     val _ = stopCompile compile
@@ -721,10 +720,17 @@ fun start {diag} = let
       in (
         compileForReport uri (#text text) lastPos processBuiltTree process;
         afterCompile (!lastPos, size (#text text)) (!ls);
-        sendProgressEnd ();
-        send (mkNotif "$/compileCompleted" (fn print => (
-          print "{\"uri\":"; encString uri print; print "}")));
-        lastTrees := {text = text, parse = setParseDone (size (#text text)) (!trees)}
+        (* stopCompile no longer waits for the thread to exit, so
+           we might land here on a stale thread whose applyEdit has
+           already superseded the buffer we compiled.  Emit the
+           completion events only if we're still current; otherwise
+           the fresh compile that replaced us owns lastTrees. *)
+        if !cancelled then () else (
+          sendProgressEnd ();
+          send (mkNotif "$/compileCompleted" (fn print => (
+            print "{\"uri\":"; encString uri print; print "}")));
+          lastTrees := {text = text,
+                        parse = setParseDone (size (#text text)) (!trees)})
       ) handle Thread.Interrupt => (
         sendProgressEnd ();
         send (mkNotif "$/compileInterrupted" (fn print => (
@@ -735,7 +741,10 @@ fun start {diag} = let
         send (mkNotif "$/compileInterrupted" (fn print => (
           print "{\"uri\":"; encString uri print; print "}"))))
       end);
-      compile := NONE)
+      (* Don't clobber `compile` here — stopCompile may have moved on
+         and started another compile that installed a fresh SOME.
+         The `cancelled` flag already fences correctness. *)
+      ())
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
     in compile := SOME {parse = trees, text = text, thread = thread,
                         cancelled = cancelled} end)
