@@ -76,14 +76,12 @@ val snap2 = Context.snapshot ()
 val _ = new_definition ("issue2025_re_D_def",
                         mk_eq (mk_var("issue2025_re_d", Type.bool), T))
 val () = Theory.delete_const "issue2025_re_d"
-val e_pre_restore =
-    KernelSig.symtab_epoch (Context.termsig (Context.snapshot ()))
+val e_pre_restore = Term.term_epoch ()
 val () = Context.restore snap2
 val _ = new_definition ("issue2025_re_D_def",
                         mk_eq (mk_var("issue2025_re_d", Type.bool), T))
 val () = Theory.delete_const "issue2025_re_d"
-val e_post_restore =
-    KernelSig.symtab_epoch (Context.termsig (Context.snapshot ()))
+val e_post_restore = Term.term_epoch ()
 val () =
     if e_post_restore > e_pre_restore then OK ()
     else die ("retire epoch not strictly monotone across restore: pre="
