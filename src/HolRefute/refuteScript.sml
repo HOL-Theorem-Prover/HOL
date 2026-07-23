@@ -1,6 +1,6 @@
 Theory refute
 Ancestors
-  real sorting words
+  real sorting words rat
 Libs
   EnumType
 
@@ -158,7 +158,161 @@ Datatype:
   bitword = Bitword ('a -> bool)
 End
 
-(* Part 5: executable forms for bounded quantifiers.  Refute's
+(* Part 5: alternative fractions for the model finder.
+
+   Normalization faithfulness.  The raw HOL4 frac carrier only requires a
+   positive denominator, but Frac selects the positive, coprime pairs.  Every
+   frac-valued ersatz operation below calls frac, and frac calls norm_frac;
+   hence every atom produced by an operation is in canonical reduced form.
+   Canonical pairs are therefore in one-to-one correspondence with rationals,
+   rather than exposing the many raw frac representatives of one rational. *)
+
+(* integerTheory deliberately keeps abstract integer operations out of the
+   default evaluator.  The ersatz suite is executable, so expose its existing
+   numeral calculation rules to EVAL without introducing new arithmetic. *)
+Theorem frac_int_eq_compute[compute] = integerTheory.INT_EQ_CALCULATE
+Theorem frac_int_lt_compute[compute] = integerTheory.INT_LT_CALCULATE
+Theorem frac_int_le_compute[compute] = integerTheory.INT_LE_CALCULATE
+Theorem frac_int_add_compute[compute] = integerTheory.INT_ADD_CALCULATE
+Theorem frac_int_mul_compute[compute] = integerTheory.INT_MUL_CALCULATE
+Theorem frac_int_div_compute[compute] = integerTheory.INT_DIV_CALCULATE
+Theorem frac_int_add_reduce[compute] = integerTheory.INT_ADD_REDUCE
+Theorem frac_int_mul_reduce[compute] = integerTheory.INT_MUL_REDUCE
+Theorem frac_int_div_reduce[compute] = integerTheory.INT_DIV_REDUCE
+Theorem frac_int_eq_reduce[compute] = integerTheory.INT_EQ_REDUCE
+Theorem frac_int_lt_reduce[compute] = integerTheory.INT_LT_REDUCE
+Theorem frac_int_le_reduce[compute] = integerTheory.INT_LE_REDUCE
+Theorem frac_int_negneg_compute[compute] = integerTheory.INT_NEGNEG
+
+Definition nat_gcd_def:
+  nat_gcd x y =
+    if y = 0 then x else nat_gcd y (x MOD y)
+Termination
+  WF_REL_TAC `measure SND` >> simp []
+End
+
+Definition nat_lcm_def:
+  nat_lcm x y = x * y DIV nat_gcd x y
+End
+
+Definition Frac_def:
+  Frac (p : int # int) <=>
+    integer$int_lt (integer$int_of_num 0) (SND p) /\
+    nat_gcd (integer$Num (FST p)) (integer$Num (SND p)) = 1
+End
+
+Definition norm_frac_def:
+  norm_frac (a : int) (b : int) =
+    if a = integer$int_of_num 0 \/ b = integer$int_of_num 0 then
+      (integer$int_of_num 0, integer$int_of_num 1)
+    else
+      let a' = if integer$int_lt b (integer$int_of_num 0)
+               then integer$int_neg a else a;
+          c = nat_gcd (integer$Num a) (integer$Num b);
+          d = integer$Num b DIV c
+      in
+        (integer$int_div a' (integer$int_of_num c),
+         integer$int_of_num (SUC (PRE d)))
+End
+
+Theorem norm_frac_dnm_pos:
+  integer$int_lt (integer$int_of_num 0) (SND (norm_frac a b))
+Proof
+  rw [norm_frac_def] >> simp []
+QED
+
+Definition frac_def[nocompute]:
+  frac a b = frac$abs_frac (norm_frac a b)
+End
+
+Definition zero_frac_def:
+  zero_frac = frac (integer$int_of_num 0) (integer$int_of_num 1)
+End
+
+Definition one_frac_def:
+  one_frac = frac (integer$int_of_num 1) (integer$int_of_num 1)
+End
+
+Definition num_def[nocompute]:
+  num q = frac$frac_nmr q
+End
+
+Definition denom_def[nocompute]:
+  denom q = frac$frac_dnm q
+End
+
+Theorem rep_frac_frac[compute]:
+  frac$rep_frac (frac a b) = norm_frac a b
+Proof
+  rw [frac_def] >>
+  irule (iffLR (Q.SPEC `norm_frac a b`
+    (CONJUNCT2 fracTheory.frac_bij))) >>
+  simp [norm_frac_dnm_pos]
+QED
+
+Theorem num_frac[compute]:
+  num (frac a b) = FST (norm_frac a b)
+Proof
+  simp [num_def, fracTheory.frac_nmr_def, rep_frac_frac]
+QED
+
+Theorem denom_frac[compute]:
+  denom (frac a b) = SND (norm_frac a b)
+Proof
+  simp [denom_def, fracTheory.frac_dnm_def, rep_frac_frac]
+QED
+
+Definition plus_frac_def:
+  plus_frac q r =
+    let d = integer$int_of_num
+          (nat_lcm (integer$Num (denom q)) (integer$Num (denom r)))
+    in frac
+      (integer$int_add
+        (integer$int_mul (num q) (integer$int_div d (denom q)))
+        (integer$int_mul (num r) (integer$int_div d (denom r)))) d
+End
+
+Definition times_frac_def:
+  times_frac q r =
+    frac (integer$int_mul (num q) (num r))
+      (integer$int_mul (denom q) (denom r))
+End
+
+Definition uminus_frac_def:
+  uminus_frac q = frac (integer$int_neg (num q)) (denom q)
+End
+
+Definition number_of_frac_def:
+  number_of_frac n = frac n (integer$int_of_num 1)
+End
+
+Definition inverse_frac_def:
+  inverse_frac q = frac (denom q) (num q)
+End
+
+Definition less_frac_def:
+  less_frac q r <=>
+    integer$int_lt (num (plus_frac q (uminus_frac r)))
+      (integer$int_of_num 0)
+End
+
+Definition less_eq_frac_def:
+  less_eq_frac q r <=>
+    integer$int_le (num (plus_frac q (uminus_frac r)))
+      (integer$int_of_num 0)
+End
+
+Definition of_frac_def:
+  of_frac q = rat$abs_rat q
+End
+
+Theorem of_frac_frac[compute]:
+  of_frac (frac a b) = rat$abs_rat (frac$abs_frac (norm_frac a b))
+Proof
+  simp [of_frac_def, frac_def]
+QED
+
+(* Part 5 continued: executable forms for bounded quantifiers.  Refute's
    preprocessing rewrites to these list combinators before checking for
    unexpanded binders. *)
 Theorem bounded_forall_less:

@@ -168,6 +168,192 @@ val _ = require_msg (check_result (fn () =>
   (fn () => "narrowing function evaluator did not EVAL")
   (fn () => ()) ()
 
+val _ = tprint "Refute normalized fraction support"
+
+val frac_definition_shapes =
+  [("nat_gcd_def", nat_gcd_def,
+    ``∀(y : num) x.
+        nat_gcd x y = if y = 0 then x else nat_gcd y (x MOD y)``),
+   ("nat_lcm_def", nat_lcm_def,
+    ``∀(x : num) y. nat_lcm x y = x * y DIV nat_gcd x y``),
+   ("Frac_def", Frac_def,
+    ``∀p : int # int.
+        Frac p ⇔
+        integer$int_lt (integer$int_of_num 0) (SND p) /\
+        nat_gcd (integer$Num (FST p)) (integer$Num (SND p)) = 1``),
+   ("norm_frac_def", norm_frac_def,
+    ``∀(a : int) b.
+        norm_frac a b =
+          if a = integer$int_of_num 0 \/ b = integer$int_of_num 0 then
+            (integer$int_of_num 0, integer$int_of_num 1)
+          else
+            let a' = if integer$int_lt b (integer$int_of_num 0)
+                     then integer$int_neg a else a;
+                c = nat_gcd (integer$Num a) (integer$Num b);
+                d = integer$Num b DIV c
+            in
+              (integer$int_div a' (integer$int_of_num c),
+               integer$int_of_num (SUC (PRE d)))``),
+   ("frac_def", frac_def,
+    ``∀(a : int) b. frac a b = frac$abs_frac (norm_frac a b)``),
+   ("zero_frac_def", zero_frac_def,
+    ``zero_frac = frac (integer$int_of_num 0) (integer$int_of_num 1)``),
+   ("one_frac_def", one_frac_def,
+    ``one_frac = frac (integer$int_of_num 1) (integer$int_of_num 1)``),
+   ("num_def", num_def,
+    ``∀q : frac$frac. num q = frac$frac_nmr q``),
+   ("denom_def", denom_def,
+    ``∀q : frac$frac. denom q = frac$frac_dnm q``),
+   ("plus_frac_def", plus_frac_def,
+    ``∀(q : frac$frac) r.
+        plus_frac q r =
+          let d = integer$int_of_num
+                (nat_lcm (integer$Num (denom q))
+                  (integer$Num (denom r)))
+          in frac
+            (integer$int_add
+              (integer$int_mul (num q) (integer$int_div d (denom q)))
+              (integer$int_mul (num r) (integer$int_div d (denom r)))) d``),
+   ("times_frac_def", times_frac_def,
+    ``∀(q : frac$frac) r.
+        times_frac q r =
+          frac (integer$int_mul (num q) (num r))
+            (integer$int_mul (denom q) (denom r))``),
+   ("uminus_frac_def", uminus_frac_def,
+    ``∀q : frac$frac.
+        uminus_frac q = frac (integer$int_neg (num q)) (denom q)``),
+   ("number_of_frac_def", number_of_frac_def,
+    ``∀n : int.
+        number_of_frac n = frac n (integer$int_of_num 1)``),
+   ("inverse_frac_def", inverse_frac_def,
+    ``∀q : frac$frac. inverse_frac q = frac (denom q) (num q)``),
+   ("less_frac_def", less_frac_def,
+    ``∀(q : frac$frac) r.
+        less_frac q r ⇔
+          integer$int_lt (num (plus_frac q (uminus_frac r)))
+            (integer$int_of_num 0)``),
+   ("less_eq_frac_def", less_eq_frac_def,
+    ``∀(q : frac$frac) r.
+        less_eq_frac q r ⇔
+          integer$int_le (num (plus_frac q (uminus_frac r)))
+            (integer$int_of_num 0)``),
+   ("of_frac_def", of_frac_def,
+    ``∀q : frac$frac. of_frac q = rat$abs_rat q``)]
+
+val frac_compute_shapes =
+  [("rep_frac_frac", rep_frac_frac,
+    ``frac$rep_frac (frac (a : int) b) = norm_frac a b``),
+   ("num_frac", num_frac,
+    ``num (frac (a : int) b) = FST (norm_frac a b)``),
+   ("denom_frac", denom_frac,
+    ``denom (frac (a : int) b) = SND (norm_frac a b)``),
+   ("of_frac_frac", of_frac_frac,
+    ``of_frac (frac (a : int) b) =
+        rat$abs_rat (frac$abs_frac (norm_frac a b))``)]
+
+val frac_integer_compute_shapes =
+  [("frac_int_eq_compute", frac_int_eq_compute,
+    integerTheory.INT_EQ_CALCULATE),
+   ("frac_int_lt_compute", frac_int_lt_compute,
+    integerTheory.INT_LT_CALCULATE),
+   ("frac_int_le_compute", frac_int_le_compute,
+    integerTheory.INT_LE_CALCULATE),
+   ("frac_int_add_compute", frac_int_add_compute,
+    integerTheory.INT_ADD_CALCULATE),
+   ("frac_int_mul_compute", frac_int_mul_compute,
+    integerTheory.INT_MUL_CALCULATE),
+   ("frac_int_div_compute", frac_int_div_compute,
+    integerTheory.INT_DIV_CALCULATE),
+   ("frac_int_add_reduce", frac_int_add_reduce,
+    integerTheory.INT_ADD_REDUCE),
+   ("frac_int_mul_reduce", frac_int_mul_reduce,
+    integerTheory.INT_MUL_REDUCE),
+   ("frac_int_div_reduce", frac_int_div_reduce,
+    integerTheory.INT_DIV_REDUCE),
+   ("frac_int_eq_reduce", frac_int_eq_reduce,
+    integerTheory.INT_EQ_REDUCE),
+   ("frac_int_lt_reduce", frac_int_lt_reduce,
+    integerTheory.INT_LT_REDUCE),
+   ("frac_int_le_reduce", frac_int_le_reduce,
+    integerTheory.INT_LE_REDUCE),
+   ("frac_int_negneg_compute", frac_int_negneg_compute,
+    integerTheory.INT_NEGNEG)]
+
+fun check_frac_theorem_shape (name, theorem, expected) =
+  require_msg (check_result (fn () =>
+    Term.aconv (Thm.concl theorem) expected))
+    (fn () => name ^ " has the wrong conclusion")
+    (fn () => ()) ()
+
+val _ = List.app check_frac_theorem_shape
+  (frac_definition_shapes @ frac_compute_shapes)
+
+val _ = List.app (fn (name, theorem, expected) =>
+  check_frac_theorem_shape (name, theorem, Thm.concl expected))
+  frac_integer_compute_shapes
+
+val frac_compute_cases =
+  [("nat_gcd", ``nat_gcd 54 24``, ``6 : num``),
+   ("nat_gcd left zero", ``nat_gcd 0 9``, ``9 : num``),
+   ("nat_gcd right zero", ``nat_gcd 9 0``, ``9 : num``),
+   ("nat_gcd both zero", ``nat_gcd 0 0``, ``0 : num``),
+   ("nat_lcm", ``nat_lcm 6 15``, ``30 : num``),
+   ("nat_lcm left zero", ``nat_lcm 0 9``, ``0 : num``),
+   ("nat_lcm right zero", ``nat_lcm 9 0``, ``0 : num``),
+   ("nat_lcm both zero", ``nat_lcm 0 0``, ``0 : num``),
+   ("normalization", ``norm_frac (2 : int) 4``,
+    ``((1 : int), (2 : int))``),
+   ("negative denominator", ``norm_frac (~3 : int) (~6)``,
+    ``((1 : int), (2 : int))``),
+   ("zero denominator", ``norm_frac (9 : int) 0``,
+    ``((0 : int), (1 : int))``),
+   ("Frac canonical", ``Frac ((1 : int), (2 : int))``, boolSyntax.T),
+   ("Frac noncanonical", ``Frac ((2 : int), (4 : int))``, boolSyntax.F),
+   ("zero_frac", ``frac$rep_frac zero_frac``,
+    ``((0 : int), (1 : int))``),
+   ("one_frac", ``frac$rep_frac one_frac``,
+    ``((1 : int), (1 : int))``),
+   ("frac normalization", ``frac$rep_frac (frac (2 : int) 4)``,
+    ``((1 : int), (2 : int))``),
+   ("num", ``num (frac (~6 : int) 9)``, ``~2 : int``),
+   ("denom", ``denom (frac (~6 : int) 9)``, ``3 : int``),
+   ("plus_frac",
+    ``frac$rep_frac (plus_frac (frac (1 : int) 2) (frac 1 3))``,
+    ``((5 : int), (6 : int))``),
+   ("times_frac",
+    ``frac$rep_frac (times_frac (frac (2 : int) 3) (frac 9 4))``,
+    ``((3 : int), (2 : int))``),
+   ("uminus_frac", ``frac$rep_frac (uminus_frac (frac (2 : int) 4))``,
+    ``((~1 : int), (2 : int))``),
+   ("number_of_frac", ``frac$rep_frac (number_of_frac (~7 : int))``,
+    ``((~7 : int), (1 : int))``),
+   ("inverse_frac", ``frac$rep_frac (inverse_frac (frac (2 : int) 3))``,
+    ``((3 : int), (2 : int))``),
+   ("inverse_frac negative",
+    ``frac$rep_frac (inverse_frac (frac (~2 : int) 3))``,
+    ``((~3 : int), (2 : int))``),
+   ("inverse_frac zero", ``frac$rep_frac (inverse_frac zero_frac)``,
+    ``((0 : int), (1 : int))``),
+   ("less_frac true", ``less_frac (frac (1 : int) 3) (frac 1 2)``,
+    boolSyntax.T),
+   ("less_frac equal false",
+    ``less_frac (frac (1 : int) 2) (frac 2 4)``, boolSyntax.F),
+   ("less_frac reversed false",
+    ``less_frac (frac (1 : int) 2) (frac 1 3)``, boolSyntax.F),
+   ("less_eq_frac equal true",
+    ``less_eq_frac (frac (2 : int) 4) (frac 1 2)``, boolSyntax.T),
+   ("less_eq_frac reversed false",
+    ``less_eq_frac (frac (1 : int) 2) (frac 1 3)``, boolSyntax.F),
+   ("less_eq_frac forward true",
+    ``less_eq_frac (frac (1 : int) 3) (frac 1 2)``, boolSyntax.T),
+   ("of_frac", ``of_frac (frac (2 : int) 4)``,
+    ``rat$abs_rat (frac$abs_frac ((1 : int), (2 : int)))``)]
+
+val _ = List.app (fn (name, term, expected) =>
+  require_msg (check_result (fn () => closed_eval_is term expected))
+    (fn () => name ^ " did not normalize under EVAL")
+    (fn () => ()) ()) frac_compute_cases
+
 fun same_conclusion left right =
   Term.aconv (Thm.concl left) (Thm.concl right)
 
@@ -269,7 +455,7 @@ val same_string_set : string list -> string list -> bool = Lib.set_eq
 
 fun cv_ancestry_is_separate () =
   same_string_set (Theory.parents "refute")
-    ["real", "sorting", "words"] andalso
+    ["real", "sorting", "words", "rat"] andalso
   same_string_set (Theory.parents "refute_cv") ["refute", "cv_std"] andalso
   not (Lib.mem "cv_std" (Theory.ancestry "refute"))
 
