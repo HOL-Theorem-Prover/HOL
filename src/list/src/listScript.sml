@@ -5425,6 +5425,45 @@ Proof
   \\ Cases_on`OPT_MMAP f ls` \\ fs[]
 QED
 
+Theorem OPT_MMAP_LENGTH:
+  ∀ls x. OPT_MMAP f ls = SOME x ⇒ LENGTH x = LENGTH ls
+Proof
+  Induct >> rw[]>>
+  simp[ADD1]
+QED
+
+Theorem OPT_MMAP_SOME:
+  OPT_MMAP SOME ls = SOME ls
+Proof
+  Induct_on ‘ls’>>simp[]
+QED
+
+Theorem OPT_MMAP_MAP:
+  OPT_MMAP f ls = OPT_MMAP I (MAP f ls)
+Proof
+  map_every qid_spec_tac [‘f’,‘ls’]>>
+  Induct>>fs[]
+QED
+
+Theorem OPT_MMAP_MAP_o:
+  OPT_MMAP g (MAP f ls) = OPT_MMAP (g o f) ls
+Proof
+  simp[Once OPT_MMAP_MAP,MAP_MAP_o]>>
+  simp[Once OPT_MMAP_MAP,SimpRHS]
+QED
+
+Theorem OPT_MMAP_APPEND:
+  ∀xs ys.
+    OPT_MMAP f (xs ++ ys) =
+    OPTION_BIND (OPT_MMAP f xs) (λh. OPTION_BIND (OPT_MMAP f ys) (λt. SOME (h ++ t)))
+Proof
+  Induct >> rw[ETA_THM]>-
+   simp[optionTheory.OPTION_BIND_SOME]>>
+  Cases_on ‘f h’>>fs[]>>
+  Cases_on ‘OPT_MMAP f xs’>>fs[]>>
+  Cases_on ‘OPT_MMAP f ys’>>fs[]
+QED
+
 Theorem LAST_compute:
     (!x. LAST [x] = x) /\
     (!h1 h2 t. LAST (h1::h2::t) = LAST (h2::t))
