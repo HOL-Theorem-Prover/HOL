@@ -320,7 +320,8 @@ fun stdioConnection (): connection = let
         | write (n, [], acc) =
           TextIO.output (TextIO.stdOut,
             String.concat ("Content-Length: " :: Int.toString n :: "\r\n\r\n" :: acc))
-      in write (0, !buf, []); writerThread () end
+      in write (0, !buf, []); TextIO.flushOut TextIO.stdOut;
+         writerThread () end
     val _ = Thread.fork (writerThread, [])
     in Channel.send send end
   in {send = send, recv = recv} end
@@ -918,11 +919,14 @@ fun start {diag} = let
       in app (fn (j,th) => if j = id then Thread.interrupt th else ()) (jobs I) end
     | Notification {method = "textDocument/didOpen", params} => let
       val {uri, text, version} = JSONDecode.decode textDocumentParams params
-      val v = withFileInfo (fn fileInfo =>
+      val (v, existed) = withFileInfo (fn fileInfo =>
         case Binarymap.peek (fileInfo, uri) of
-          SOME v => (fileInfo, SOME v)
-        | NONE => (Binarymap.insert (fileInfo, uri, newFile text version), NONE))
-      in case v of NONE => () | SOME v => applyEdit v version [{range = NONE, text = text}] end
+          SOME v => (fileInfo, (v, true))
+        | NONE => let val v = newFile text version
+                  in (Binarymap.insert (fileInfo, uri, v), (v, false)) end)
+      val () = if existed then applyEdit v version [{range = NONE, text = text}]
+               else ()
+      in if !elabOnRef = ElabOnChange then startCompile uri v else () end
     | Notification {method = "textDocument/didChange", params} => let
       val {uri, version, changes} = JSONDecode.decode didChangeParams params
       val _ = case withFileInfo (fn fileInfo => (fileInfo, Binarymap.peek (fileInfo, uri))) of
