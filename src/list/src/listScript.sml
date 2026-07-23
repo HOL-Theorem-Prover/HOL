@@ -2347,11 +2347,26 @@ Theorem HD_DROP:
 Proof   Induct_on ‘l’ >> asm_simp_tac (srw_ss() ++ DNF_ss) [LT_SUC]
 QED
 
+Theorem DROP_LAST:
+  ls ≠ [] ⇒ DROP (LENGTH ls - 1) ls = [LAST ls]
+Proof
+  Induct_on ‘ls’>>rw[]>>
+  Cases_on ‘ls’>>fs[]
+QED
+
 Theorem EL_DROP:
   !m n l. m + n < LENGTH l ==> (EL m (DROP n l) = EL (m + n) l)
 Proof
   Induct_on ‘l’ >> SIMP_TAC (srw_ss()) [] >> Cases_on ‘n’ >>
   FULL_SIMP_TAC (srw_ss()) [DROP_def, ADD_CLAUSES]
+QED
+
+Theorem MEM_DROP_SUBSET:
+  MEM x (DROP n ls) ⇒ MEM x ls
+Proof
+  map_every qid_spec_tac [‘n’,‘x’,‘ls’]>>
+  Induct>>fs[]>>rw[]>>
+  Cases_on ‘n’>>fs[]>>res_tac>>simp[]
 QED
 
 Theorem MAP_DROP:
@@ -3706,6 +3721,31 @@ Proof
 Induct THEN SRW_TAC [] [MAP, ZIP]
 QED
 
+Theorem FLAT_GENLIST_single:
+  FLAT (GENLIST (K [x]) n) = GENLIST (K x) n
+Proof
+  Induct_on ‘n’>>rw[GENLIST_CONS]
+QED
+
+Theorem ZIP_SNOC:
+  ∀l l' x y.
+    LENGTH l = LENGTH l' ⇒ ZIP (SNOC x l, SNOC y l') = SNOC (x,y) (ZIP (l,l'))
+Proof
+  Induct>>rw[]>- simp[ZIP_def]>>
+  Cases_on ‘l'’>>fs[]>>
+  simp[ZIP_def]
+QED
+
+Theorem ZIP_GENLIST2:
+  ∀l f n. LENGTH l = n ⇒ ZIP (GENLIST f n,l) = GENLIST (λx. (f x, EL x l)) n
+Proof
+  ho_match_mp_tac SNOC_INDUCT>>rw[]>- simp[ZIP_def]>>
+  simp[GENLIST,ZIP_SNOC]>>
+  simp[EL_LENGTH_SNOC]>>
+  irule GENLIST_CONG>>rw[]>>
+  metis_tac[EL_SNOC]
+QED
+
 (* ----------------------------------------------------------------------
     All lists have infinite universes
    ---------------------------------------------------------------------- *)
@@ -5042,6 +5082,19 @@ Proof
    rw [Once arithmeticTheory.ADD_SYM, SimpRHS]
    >> RW_TAC arith_ss [GENLIST_APPEND]
    >> SRW_TAC [ETA_ss] [arithmeticTheory.ADD_ASSOC]
+QED
+
+Theorem GENLIST_APPEND_rev:
+  GENLIST f n ++ ls = GENLIST (λi. if i < n then f i else EL (i - n) ls) (n + LENGTH ls)
+Proof
+  irule LIST_EQ>>simp[]>>rw[]>>
+  fs[EL_APPEND_EQN]
+QED
+
+Theorem GENLIST_APPEND1:
+  x = f n ⇒ GENLIST f n ++ [x] = GENLIST f (SUC n)
+Proof
+  simp[GENLIST,SNOC_APPEND]
 QED
 
 Theorem LIST_TO_SET_GENLIST:
