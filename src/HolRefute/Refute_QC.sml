@@ -464,6 +464,26 @@ structure Refute_QC = struct
   fun pnf_replay_eligible case_tree genuine =
     Option.isSome case_tree andalso genuine
 
+  fun case_tree_incomplete Refute_Eval.CaseLeaf = false
+    | case_tree_incomplete
+        (Refute_Eval.CaseUniversal
+          {shape = Refute_Eval.CaseShape {complete, ...}, subtree, ...}) =
+        not complete orelse case_tree_incomplete subtree
+    | case_tree_incomplete
+        (Refute_Eval.CaseExistential
+          {shape = Refute_Eval.CaseShape {complete, ...}, branches}) =
+        not complete orelse List.exists
+          (case_tree_incomplete o #3) branches
+
+  fun pnf_case_bindings (instance : Refute_Core.instance) tree =
+    let
+      val goal = Refute_Core.normalize
+        (#2 (boolSyntax.strip_forall (#original instance)))
+      val (prefix, _) = Refute_Narrow.pnf_of goal
+    in
+      Refute_Narrow.case_bindings prefix tree
+    end
+
   fun record_candidate
         {config : Refute_Core.config,
          backend : string,
@@ -483,17 +503,25 @@ structure Refute_QC = struct
           List.exists (fn free => Term.aconv free variable)
             (Term.free_vars_lr (#goal instance)))
         env
+      val report_bindings =
+        case (case_tree, genuine) of
+            (SOME tree, true) => pnf_case_bindings instance tree
+          | _ => bindings
       val cex : Refute_Core.counterexample =
         { backend = backend,
           substrate = substrate,
           certainty = if genuine then Refute_Core.Potential []
             else Refute_Core.Potential ["evaluation stuck during testing"],
-          bindings = rev bindings,
+          bindings = rev report_bindings,
           evals = [], cert = NONE, scope = NONE, model = NONE,
           stats = stats }
       val next =
         {env = env, ground_env = ground_env, case_tree = case_tree,
          genuine = genuine, run_depth = run_depth} :: ignored
+      val incomplete_pnf =
+        case case_tree of
+            SOME tree => not genuine andalso case_tree_incomplete tree
+          | NONE => false
       val has_hole = List.exists
         (Refute_ModelFinder_Names.contains_irrelevant_marker o #2) env
       val partial_universal =
@@ -517,17 +545,15 @@ structure Refute_QC = struct
          ordinary certification may still prove the original proposition
          false and safely upgrade it; only semantically complete case trees
          are themselves replayed as exhaustive proofs. *)
-      if backend = "narrowing" andalso
-         Option.isSome case_tree andalso
-         not (pnf_replay_eligible case_tree genuine) andalso
-         not (#certify (#qc config)) then
+      if incomplete_pnf andalso not (#certify (#qc config)) then
         (keep_potential (Refute_Cert.replace cex
            (Refute_Core.Potential
              ["PNF testing used an incomplete finite approximation"])
            [] NONE);
          ())
-      else if not genuine andalso not (backend = "narrowing" andalso
-          Option.isSome case_tree) then
+      else if not genuine andalso
+          (not (backend = "narrowing" andalso Option.isSome case_tree)
+           orelse not (#certify (#qc config))) then
         (keep_potential (Refute_Cert.replace cex
            (Refute_Core.Potential ["evaluation stuck during testing"])
            [] NONE);
@@ -569,10 +595,21 @@ structure Refute_QC = struct
                  (discarded := !discarded + 1;
                   retry genuine_only next)
              | Refute_Cert.Potential potential =>
-                 if keep_potential potential andalso
-                    Option.isSome case_tree
-                 then retain_replay_potential potential
-                 else ()
+                 let
+                   val reported =
+                     if incomplete_pnf then
+                       Refute_Cert.replace potential
+                         (Refute_Core.Potential
+                           ["PNF testing used an incomplete finite " ^
+                            "approximation"])
+                         [] NONE
+                     else potential
+                 in
+                   if keep_potential reported andalso
+                      Option.isSome case_tree
+                   then retain_replay_potential reported
+                   else ()
+                 end
         end
     end
 

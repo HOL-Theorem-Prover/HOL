@@ -1473,6 +1473,7 @@ structure Refute_Extract = struct
             [value] =>
               let
                 val ty = #1 (Type.dom_rng (Term.type_of head))
+                val _ = ignore (ensure_type context ty)
                 val info = valOf (lookup_datatype context ty)
                 val (_, _, constructor) = hd (#constructors info)
                 val fields = if index = 0 then "left" else "right"
@@ -1485,6 +1486,7 @@ structure Refute_Extract = struct
       fun list_case value nil_body cons_body =
         let
           val ty = #1 (Type.dom_rng (Term.type_of head))
+          val _ = ignore (ensure_type context ty)
           val info = valOf (lookup_datatype context ty)
           fun named name = valOf (List.find (fn (constructor, _, _) =>
             kname constructor = ("list", name)) (#constructors info))
@@ -4166,8 +4168,17 @@ structure Refute_Extract = struct
       val indexed_prefix = Lib.enumerate 0 reported_prefix
       val bindings = map (binding false) indexed_prefix
       val ground_bindings = map (binding true) indexed_prefix
+      fun groundable (index, ((_, variable), _)) =
+        "Option.isSome (Refute_Narrow.first_completion " ^
+        "(List.nth (narrow_shapes depth, " ^
+        integer (type_index (Term.type_of variable)) ^ ")) " ^
+        "(List.nth (arguments, " ^ integer index ^ ")))"
+      val groundability = map groundable indexed_prefix
       val environment_source = term_list bindings
-      val ground_environment_source = term_list ground_bindings
+      val ground_environment_source =
+        if null groundability then "SOME []"
+        else "if " ^ join " andalso " groundability ^ " then SOME (" ^
+          term_list ground_bindings ^ ") else NONE"
       fun replay_binding (index, ((_, variable), original)) =
         let
           val ty = Term.type_of variable
@@ -4214,6 +4225,9 @@ structure Refute_Extract = struct
           reject "narrowing existential goals require allow_existentials"
         else ()
 
+      (* Lazy primitive failures are the native analogue of upstream's
+         PatternMatchFail.  Like generated non-exhaustive matches, they taint
+         the result instead of escaping the narrowing engine. *)
       val evaluate =
         "fun narrow_evaluate depth genuine_only arguments =\n" ^
         "  let\n" ^
@@ -4227,6 +4241,8 @@ structure Refute_Extract = struct
         "    handle Refute_EvalSML.Hole position =>\n" ^
         "      Refute_Narrow.NeedsRefinement position\n" ^
         "         | Match => Refute_Narrow.Known\n" ^
+        "             {genuine = false, result = genuine_only}\n" ^
+        "         | Refute_EvalSML.Stuck _ => Refute_Narrow.Known\n" ^
         "             {genuine = false, result = genuine_only}\n" ^
         "  end\n"
 
@@ -4268,8 +4284,8 @@ structure Refute_Extract = struct
             "val refute_table_id = " ^ integer table_id ^ "\n" ^
             replay_rebuild ^
             "fun candidate depth arguments case_tree genuine =\n" ^
-            "  (" ^ environment_source ^ ", SOME (" ^
-            ground_environment_source ^ "), case_tree, genuine)\n" ^
+            "  (" ^ environment_source ^ ", " ^
+            ground_environment_source ^ ", case_tree, genuine)\n" ^
             "fun accept_hit depth genuine_only arguments genuine =\n" ^
             "  (not genuine_only orelse Refute_Narrow.all_ground arguments)\n" ^
             "  andalso not ((!Refute_EvalSML.ignored_filter)\n" ^

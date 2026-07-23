@@ -867,6 +867,35 @@ structure Refute_Narrow = struct
       project 0 example
     end
 
+  (* Upstream reports a universal witness below existentials as a case term
+     in the preceding existential variables.  Recreate that user-facing
+     assignment from the replay tree; the tree itself remains the proof
+     certificate consumed by Refute_Cert. *)
+  fun case_bindings prefix tree =
+    let
+      fun at 0 ((Refute_Eval.Forall, _) :: _)
+            (Refute_Eval.CaseUniversal {witness, ...}) = witness
+        | at index ((Refute_Eval.Forall, _) :: rest)
+            (Refute_Eval.CaseUniversal {subtree, ...}) =
+            at (index - 1) rest subtree
+        | at index ((Refute_Eval.Exists, variable) :: rest)
+            (Refute_Eval.CaseExistential {branches, ...}) =
+            TypeBase.mk_case
+              (variable, map (fn (_, value, subtree) =>
+                (value, at (index - 1) rest subtree)) branches)
+        | at _ _ _ = raise InvalidPath
+
+      fun collect _ [] = []
+        | collect index ((quantifier, variable) :: rest) =
+            (case quantifier of
+                 Refute_Eval.Forall =>
+                   (variable, at index prefix tree) ::
+                   collect (index + 1) rest
+               | Refute_Eval.Exists => collect (index + 1) rest)
+    in
+      collect 0 prefix
+    end
+
   (* The universally closed goal puts its user frees before the original
      prefix.  Only those leading universal witnesses belong in [candidate.env];
      later existential branches are retained for proof replay. *)

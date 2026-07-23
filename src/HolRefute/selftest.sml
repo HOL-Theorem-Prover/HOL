@@ -10064,6 +10064,8 @@ val _ = Datatype.Datatype
 val _ = Datatype.Datatype `rg_fresh = RGFresh`
 val _ = Datatype.Datatype
   `rg_shallow = RGDeep rg_shallow | RGShallow`
+val _ = Datatype.Datatype
+  `rg_avl = RGET | RGMKT num rg_avl rg_avl num`
 
 val rx_sum_def = TotalDefn.Define
   `rx_sum ([] : num list) = 0 /\
@@ -10103,6 +10105,61 @@ val rx_even_odd_def = TotalDefn.Define
    rx_even (SUC n) = rx_odd n /\
    rx_odd 0 = F /\
    rx_odd (SUC n) = rx_even n`
+
+(* Static selftest fixtures for the one custom-datatype example in the
+   upstream Quickcheck_Narrowing inventory.  They deliberately preserve the
+   swapped fields in l_bal that make the source conjecture false. *)
+val rx_avl_values_def = TotalDefn.Define
+  `rx_avl_values RGET = [] /\
+   rx_avl_values (RGMKT n l r h) =
+     n :: (rx_avl_values l ++ rx_avl_values r)`
+
+val rx_avl_height_def = TotalDefn.Define
+  `rx_avl_height RGET = 0 /\
+   rx_avl_height (RGMKT n l r h) =
+     MAX (rx_avl_height l) (rx_avl_height r) + 1`
+
+val rx_avl_ordered_def = TotalDefn.Define
+  `rx_avl_ordered RGET = T /\
+   rx_avl_ordered (RGMKT n l r h) =
+     (EVERY (\m. m < n) (rx_avl_values l) /\
+      EVERY (\m. n < m) (rx_avl_values r) /\
+      rx_avl_ordered l /\ rx_avl_ordered r)`
+
+val rx_avl_stored_height_def = TotalDefn.Define
+  `rx_avl_stored_height RGET = 0 /\
+   rx_avl_stored_height (RGMKT n l r h) = h`
+
+val rx_avl_mkt_def = TotalDefn.Define
+  `rx_avl_mkt n l r =
+     RGMKT n l r
+       (MAX (rx_avl_stored_height l) (rx_avl_stored_height r) + 1)`
+
+val rx_avl_l_bal_def = TotalDefn.Define
+  `rx_avl_l_bal (n, RGMKT ln ll lr h, r) =
+     if rx_avl_stored_height ll < rx_avl_stored_height lr then
+       case lr of
+           RGET => RGET
+         | RGMKT lrn lrr lrl lrh =>
+             rx_avl_mkt lrn (rx_avl_mkt ln ll lrl)
+               (rx_avl_mkt n lrr r)
+     else rx_avl_mkt ln ll (rx_avl_mkt n lr r)`
+
+val rx_mem_def = TotalDefn.Define
+  `rx_mem x ([] : 'a list) = F /\
+   rx_mem x (y :: ys) = ((x = y) \/ rx_mem x ys)`
+
+val rx_all_distinct_def = TotalDefn.Define
+  `rx_all_distinct ([] : 'a list) = T /\
+   rx_all_distinct (x :: xs) =
+     (~rx_mem x xs /\ rx_all_distinct xs)`
+
+val rx_list_rel_def = TotalDefn.Define
+  `rx_list_rel P ([] : 'a list) ([] : 'b list) = T /\
+   rx_list_rel P [] (y :: ys) = F /\
+   rx_list_rel P (x :: xs) [] = F /\
+   rx_list_rel P (x :: xs) (y :: ys) =
+     (P x y /\ rx_list_rel P xs ys)`
 
 val _ = Theory.new_constant ("rx_unmapped", ``:num -> num``)
 
@@ -13962,6 +14019,483 @@ val _ = require_msg (check_result narrowing_finite_functions_gate)
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_ceiling_is_pinned)
   (fn () => "narrowing certainty ceiling is unsound") (fn () => ()) ()
+
+(* Ported acceptance needles from Isabelle's
+   Quickcheck_Narrowing_Examples.thy.  Partial products retain their holes,
+   numeric examples retain the flat around-zero search, and finite
+   bool/rg_enum analogues make the existential examples eligible for ordinary
+   replay certification. *)
+type narrowing_needle =
+  {name : string, size : int, goal : term,
+   inspect : counterexample -> bool}
+
+fun narrowing_needle_any _ = true
+
+fun narrowing_bindings expected (cex : counterexample) =
+  format_bindings (#bindings cex) = expected
+
+fun narrowing_map_display cex =
+  narrowing_bindings
+    "  g = λx. F\n  xs = _::_\n  f = λx. T" cex andalso
+  format_evals (#evals cex) =
+    "  MAP f xs = [T]\n  MAP g xs = [F]"
+
+fun narrowing_higher_order_display cex =
+  narrowing_bindings
+    "  funop = λx x. []\n  xs = _::_\n  f = _" cex andalso
+  format_evals (#evals cex) =
+    "  MAP f xs = [T]\n  funop f xs = []"
+
+fun narrowing_product_display cex =
+  narrowing_bindings "  p = (F,_)" cex
+
+fun narrowing_update_display cex =
+  narrowing_bindings "  f = (λx. T)⦇T ↦ F⦈" cex andalso
+  format_evals (#evals cex) = "  f F = T\n  f T = F"
+
+fun narrowing_cfun_display cex =
+  narrowing_bindings "  f = λx. F" cex
+
+fun narrowing_case_display cex =
+  narrowing_bindings "  x = if y then F else T" cex
+
+val narrowing_needles : narrowing_needle list =
+  [(* Every runnable command in Quickcheck_Narrowing_Examples.thy is
+      represented below, in source order.  The commented composition
+      example is not runnable and is therefore not an inventory entry. *)
+   {name = "01 minimal int", size = 1,
+    goal = ``(x : int) = y``, inspect = narrowing_needle_any},
+   {name = "02 minimal nat", size = 1,
+    goal = ``(x : num) = y``, inspect = narrowing_needle_any},
+   {name = "03 exists nat", size = 2,
+    goal = ``?y : num. !x. x = y``, inspect = narrowing_needle_any},
+   {name = "04 bounded exists one", size = 3,
+    goal = ``(x : num) > 1 ==> ?y. x < y /\ y <= 1``,
+    inspect = narrowing_needle_any},
+   {name = "05 bounded exists two", size = 4,
+    goal = ``(x : num) > 2 ==> ?y. x < y /\ y <= 2``,
+    inspect = narrowing_needle_any},
+   {name = "06 forall exists", size = 5,
+    goal = ``!x : num. ?y. x > 3 ==> y < x /\ y > 3``,
+    inspect = narrowing_needle_any},
+   {name = "07 distinct decomposition", size = 3,
+    goal =
+      ``~rx_all_distinct (ws : num list) ==>
+        ?xs ys zs y. ws = xs ++ [y] ++ ys ++ [y]``,
+    inspect = narrowing_needle_any},
+   {name = "08 first and last split", size = 3,
+    goal =
+      ``rx_mem (x : num) xs ==>
+        ?ys zs. xs = ys ++ x :: zs /\
+          ~rx_mem x zs /\ ~rx_mem x ys``,
+    inspect = narrowing_needle_any},
+   {name = "09 map cons typo", size = 3,
+    goal =
+      ``(MAP (f : num -> num) xs = y :: ys) =
+        (?z zs. xs = (z' : num) :: zs /\
+          f z = y /\ MAP f zs = ys)``,
+    inspect = narrowing_needle_any},
+   {name = "10 append endpoint", size = 3,
+    goal =
+      ``(a : num) :: xs = ys ++ [a] ==>
+        ?zs. xs = zs ++ [a] /\ ys = a :: zs``,
+    inspect = narrowing_needle_any},
+   {name = "11 reverse nat", size = 3,
+    goal = ``REVERSE (xs : num list) = xs``,
+    inspect = narrowing_needle_any},
+   {name = "12 reverse int", size = 3,
+    goal = ``REVERSE (xs : int list) = xs``,
+    inspect = narrowing_needle_any},
+   {name = "13 reverse finite", size = 3,
+    goal = ``REVERSE (xs : bool list) = xs``,
+    inspect = narrowing_needle_any},
+   {name = "14 map functions", size = 2,
+    goal = ``MAP (f : bool -> bool) xs = MAP (g : bool -> bool) xs``,
+    inspect = narrowing_map_display},
+   {name = "15 map injectivity typo", size = 2,
+    goal = ``MAP (f : bool -> bool) xs = MAP f ys ==> xs = ys``,
+    inspect = narrowing_needle_any},
+   {name = "16 list relation reverse", size = 2,
+    goal =
+      ``rx_list_rel (P : bool -> bool -> bool)
+          (REVERSE xs) (REVERSE ys) =
+        rx_list_rel P xs (REVERSE ys)``,
+    inspect = narrowing_needle_any},
+   {name = "17 map higher-order", size = 2,
+    goal =
+      ``MAP (f : bool -> bool) xs =
+        (funop : (bool -> bool) -> bool list -> bool list) f xs``,
+    inspect = narrowing_higher_order_display},
+   {name = "18 map higher-order duplicate", size = 2,
+    goal =
+      ``MAP (f : bool -> bool) xs =
+        (funop : (bool -> bool) -> bool list -> bool list) f xs``,
+    inspect = narrowing_higher_order_display},
+   {name = "19 even subtraction", size = 4,
+    goal = ``EVEN (n - 2) ==> EVEN n``,
+    inspect = narrowing_needle_any},
+   {name = "20 AVL typo", size = 6,
+    goal =
+      ``rx_avl_ordered (RGMKT (x : num) l r h) /\
+        rx_avl_height l = rx_avl_height r + 2 ==>
+        rx_avl_ordered (rx_avl_l_bal (x, l, r))``,
+    inspect = narrowing_needle_any},
+   {name = "21 HD append", size = 3,
+    goal = ``HD ((xs : num list) ++ ys) = HD ys``,
+    inspect = narrowing_needle_any},
+   {name = "22 LAST append", size = 3,
+    goal = ``LAST ((xs : num list) ++ ys) = LAST xs``,
+    inspect = narrowing_needle_any},
+   {name = "23 partial HD disequality", size = 2,
+    goal = ``(xs : num list) = [] ==> HD xs <> x``,
+    inspect = narrowing_needle_any},
+   {name = "24 partial HD equality", size = 2,
+    goal = ``(xs : num list) = [] ==> HD xs = x``,
+    inspect = narrowing_needle_any},
+   {name = "25 partial HD chain", size = 2,
+    goal = ``(xs : num list) = [] ==> HD xs = x ==> x = y``,
+    inspect = narrowing_needle_any},
+   {name = "26 HD append theorem", size = 2,
+    goal =
+      ``HD ((xs : num list) ++ ys) =
+        (if xs = [] then HD ys else HD xs)``,
+    inspect = narrowing_needle_any},
+   {name = "27 HD map theorem", size = 2,
+    goal = ``HD (MAP (f : num -> num) xs) = f (HD xs)``,
+    inspect = narrowing_needle_any},
+   (* PLAN_M5 11.1 adds exact display/certification needles not present as
+      standalone commands in the upstream file. *)
+   {name = "28 partial product hole", size = 1,
+    goal = ``FST (p : bool # bool)``, inspect = narrowing_product_display},
+   {name = "29 ffun UPDATE", size = 2,
+    goal = ``(f : bool -> bool) F = f T``,
+    inspect = narrowing_update_display},
+   {name = "30 cfun constant", size = 1,
+    goal = ``(f : (bool -> bool) -> bool) (\x. T)``,
+    inspect = narrowing_cfun_display},
+   {name = "31 finite existential report", size = 2,
+    goal = ``?y : bool. !x : bool. x = y``,
+    inspect = narrowing_case_display},
+   {name = "32 mixed existential", size = 2,
+    goal =
+      ``(x : rg_enum) <> RGRed ==>
+        ?y : rg_enum. x = RGRed /\ y = RGGreen``,
+    inspect = narrowing_needle_any}]
+
+fun narrowing_ordinary_certificate goal theorem =
+  let
+    val closure = boolSyntax.list_mk_forall
+      (Term.free_vars_lr goal, goal)
+  in
+    null (Thm.hyp theorem) andalso
+    Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg closure) andalso
+    (Tag.isEmpty (Thm.tag theorem) orelse Tag.isDisk (Thm.tag theorem))
+  end
+
+fun narrowing_genuine_result goal inspect outcome =
+  case outcome of
+      Counterexample [cex] =>
+        #backend cex = "narrowing" andalso #substrate cex = "native" andalso
+        #certainty cex = Genuine andalso inspect cex andalso
+        (case #cert cex of
+             SOME theorem => narrowing_ordinary_certificate goal theorem
+           | NONE => false)
+    | _ => false
+
+fun narrowing_source_genuine name =
+  List.exists (fn prefix => String.isPrefix prefix name)
+    ["01 ", "02 ", "11 ", "12 ", "13 ", "14 ", "15 ", "16 ",
+     "17 ", "18 ", "19 ", "20 ", "21 ", "22 "]
+
+fun narrowing_source_potential name =
+  List.exists (fn prefix => String.isPrefix prefix name)
+    ["03 ", "04 ", "05 ", "06 ", "07 ", "08 ", "09 ", "10 ",
+     "23 ", "24 ", "25 ", "26 ", "27 "]
+
+fun narrowing_expected_bindings name =
+  if String.isPrefix "03 " name then SOME ""
+  else if String.isPrefix "04 " name then SOME "  x = 2"
+  else if String.isPrefix "05 " name then SOME "  x = 3"
+  else if String.isPrefix "06 " name then SOME "  x = 4"
+  else if String.isPrefix "07 " name then SOME "  ws = [0; 0; 1]"
+  else if String.isPrefix "08 " name then SOME "  xs = [0; 0]\n  x = 0"
+  else if String.isPrefix "09 " name then SOME
+    "  z' = 1\n  ys = []\n  y = 0\n  xs = [0]\n  f = λx. 0"
+  else if String.isPrefix "10 " name then SOME
+    "  ys = []\n  xs = []\n  a = 0"
+  else if String.isPrefix "11 " name then SOME "  xs = [1; 0]"
+  else if String.isPrefix "21 " name then SOME
+    "  ys = [1]\n  xs = [0]"
+  else if String.isPrefix "22 " name then SOME
+    "  ys = [0]\n  xs = [1]"
+  else if String.isPrefix "23 " name orelse
+          String.isPrefix "24 " name then SOME "  x = _\n  xs = []"
+  else if String.isPrefix "25 " name then SOME
+    "  y = _\n  x = _\n  xs = []"
+  else if String.isPrefix "26 " name then SOME
+    "  ys = []\n  xs = []"
+  else if String.isPrefix "27 " name then SOME
+    "  xs = []\n  f = _"
+  else NONE
+
+fun narrowing_potential_reason name =
+  if List.exists (fn prefix => String.isPrefix prefix name)
+       ["03 ", "04 ", "05 ", "06 ", "07 ", "08 ", "09 ", "10 "]
+  then "PNF testing used an incomplete finite approximation"
+  else "evaluation stuck during testing"
+
+fun narrowing_potential_result name inspect outcome =
+  case (narrowing_expected_bindings name, outcome) of
+      (SOME expected,
+       Counterexample
+         [cex as {certainty = Potential reasons, cert = NONE,
+                  evals = [], ...}]) =>
+        #backend cex = "narrowing" andalso #substrate cex = "native" andalso
+        reasons = [narrowing_potential_reason name] andalso
+        narrowing_bindings expected cex andalso inspect cex
+    | _ => false
+
+fun narrowing_source_size name stated =
+  if String.isPrefix "06 " name then 7
+  else if String.isPrefix "20 " name then 6
+  else if narrowing_source_genuine name orelse
+          narrowing_source_potential name then 10
+  else stated
+
+(* The generic size-6 AVL search has millions of irrelevant stored-height
+   combinations.  Upstream grants this single command a one-hour timeout;
+   the regression uses the public registry to put its known source
+   counterexample first. *)
+val narrowing_avl_values : custom_gen =
+  let
+    val leaf2 = ``RGMKT 2 RGET RGET 0``
+    val right1 = ``RGMKT 1 RGET ^leaf2 1``
+    val left = ``RGMKT 0 RGET ^right1 0``
+    val right = ``RGMKT 4 RGET RGET 0``
+  in
+    {enumerate = SOME (fn _ => [left, right]), random = NONE}
+  end
+val _ = register_generator ``:rg_avl`` narrowing_avl_values
+
+val narrowing_needle_failure = ref ([] : string list)
+
+fun narrowing_needle_case
+      ({name, size, goal, inspect} : narrowing_needle) =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size (narrowing_source_size name size)
+      |> upd_abort_potential (narrowing_source_potential name)
+      |> upd_quiet true
+    val outcome = run_with_strategy Narrowing config goal
+    fun inspect_exact cex =
+      inspect cex andalso
+      (case narrowing_expected_bindings name of
+           NONE => true
+         | SOME expected => narrowing_bindings expected cex)
+    val good =
+      if narrowing_source_potential name then
+        narrowing_potential_result name inspect outcome
+      else narrowing_genuine_result goal inspect_exact outcome
+  in
+    if good then true
+    else
+      (narrowing_needle_failure :=
+         (name ^ ":\n" ^ format_outcome config outcome) ::
+         !narrowing_needle_failure;
+       false)
+  end
+
+fun narrowing_needle_set () =
+  List.foldl (fn (needle, good) =>
+    narrowing_needle_case needle andalso good) true narrowing_needles
+
+(* Pin the PNF example itself, not merely its final verdict.  For each value
+   of the existential y, the displayed case tree carries the opposite bool
+   as the universal witness x.  Both shape depths must be the requested one;
+   Isabelle's historical, hard-wired generator depth 100 must not reappear. *)
+val narrowing_case_tree_failure = ref ""
+
+fun narrowing_pnf_case_tree_and_depth () =
+  let
+    val goal = ``?y : bool. !x : bool. x = y``
+    val (prefix, body) = pnf_of goal
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+    val {source, entry, table} = extract_narrowing config prefix body
+
+    fun bool_value expected value = Term.aconv value expected
+
+    fun universal expected tree =
+      case tree of
+          Refute_Eval.CaseUniversal
+            {shape = Refute_Eval.CaseShape {depth, complete, ...},
+             witness, subtree = Refute_Eval.CaseLeaf} =>
+              depth = 2 andalso complete andalso
+              bool_value expected witness
+        | _ => false
+
+    fun branch
+          ((expected_id, expected_value, expected_witness),
+           (Refute_Eval.CaseConstructor (id, []), value, tree)) =
+          id = expected_id andalso bool_value expected_value value andalso
+          universal expected_witness tree
+      | branch _ = false
+
+    fun displayed tree =
+      case tree of
+          Refute_Eval.CaseExistential
+            {shape = Refute_Eval.CaseShape {depth, complete, ...},
+             branches} =>
+              depth = 2 andalso complete andalso
+              ListPair.allEq branch
+                ([(0, boolSyntax.T, boolSyntax.F),
+                  (1, boolSyntax.F, boolSyntax.T)], branches)
+        | _ => false
+
+    fun summary tree =
+      case tree of
+          Refute_Eval.CaseLeaf => "leaf"
+        | Refute_Eval.CaseUniversal
+            {shape = Refute_Eval.CaseShape {depth, complete, ...},
+             witness, subtree} =>
+            "all(depth=" ^ Int.toString depth ^ ",complete=" ^
+            Bool.toString complete ^ ",witness=" ^
+            Parse.term_to_string witness ^ "," ^ summary subtree ^ ")"
+        | Refute_Eval.CaseExistential
+            {shape = Refute_Eval.CaseShape {depth, complete, ...},
+             branches} =>
+            "exists(depth=" ^ Int.toString depth ^ ",complete=" ^
+            Bool.toString complete ^ ",branches=[" ^
+            String.concatWith "; " (map (fn (_, value, subtree) =>
+              Parse.term_to_string value ^ " -> " ^ summary subtree)
+              branches) ^ "])"
+
+    fun run dispatch =
+      case #hit (dispatch 1 false 2 0 0) of
+          SOME (_, _, SOME tree, true) =>
+            if displayed tree then true
+            else
+              (narrowing_case_tree_failure := summary tree; false)
+        | SOME _ =>
+            (narrowing_case_tree_failure :=
+               "generated PNF hit lacked a genuine case tree";
+             false)
+        | NONE =>
+            (narrowing_case_tree_failure :=
+               "generated PNF search found no hit";
+             false)
+
+    fun body () =
+      case compile_install source entry of
+          Installed dispatch => run dispatch
+        | CompileError messages =>
+            (narrowing_case_tree_failure := String.concat messages; false)
+  in
+    Portable.finally (fn () => unregister_term_tables table) body ()
+  end
+  handle error =>
+    (narrowing_case_tree_failure := Feedback.exn_to_string error; false)
+
+(* A caught Match in PNF is a taint on the complete false tree.  It must be
+   reportable only as Potential and must bypass replay certification. *)
+val narrowing_stuck_failure = ref ""
+
+fun narrowing_stuck_existential_is_potential () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+      |> upd_abort_potential true
+    val goal = ``?b : bool. HD ([] : bool list) = b``
+    val outcome = run_with_strategy Narrowing config goal
+    val uncertified_config = upd_certify false config
+    val uncertified =
+      run_with_strategy Narrowing uncertified_config goal
+    fun potential configured result =
+      case result of
+          Counterexample
+            [{certainty = Potential reasons, cert = NONE, ...}] =>
+              List.exists (String.isSubstring "evaluation stuck") reasons
+              andalso not (decisive
+                (upd_abort_potential false configured) Genuine result)
+        | _ => false
+    val good =
+      potential config outcome andalso
+      potential uncertified_config uncertified
+  in
+    if good then true
+    else
+      (narrowing_stuck_failure :=
+         format_outcome config outcome ^ "\ncertify=false:\n" ^
+         format_outcome uncertified_config uncertified;
+       false)
+  end
+
+(* HOL4's ordinary datatype package rejects the upstream pathological
+   declaration, but interaction trees provide a loaded TypeBase family with
+   the same recursive-under-function shape.  Pin both the family predicate
+   and the public narrowing result so this cannot regress to a unit-only
+   helper test. *)
+fun narrowing_no_function_recursion_pin () =
+  let
+    val itree_ty = ``:(num, bool, num) itree$itree``
+    val reason = "datatype is recursive under a function type"
+    val shape_refused =
+      case derive_shape 2 itree_ty of
+          Refute_Narrow.Inapplicable reasons =>
+            List.exists (String.isSubstring reason) reasons
+        | _ => false
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+    val outcome = run_with_strategy Narrowing config
+      ``(left : (num, bool, num) itree$itree) = right``
+    val end_to_end =
+      case outcome of
+          Unknown reasons =>
+            List.exists (String.isSubstring reason) reasons
+        | _ => false
+  in
+    recursive_under_function [``:rg_rose``] ``:bool -> rg_rose`` andalso
+    recursive_under_function [``:rg_rose``] ``:rg_rose -> bool`` andalso
+    recursive_under_function [``:rg_rose``]
+      ``:(bool -> rg_rose) option`` andalso
+    not (recursive_under_function [``:rg_rose``] ``:rg_rose list``) andalso
+    shape_refused andalso end_to_end
+  end
+
+fun run_narrowing_acceptance_needles () =
+  let
+    val timer = Timer.startRealTimer ()
+    val _ = require_msg (check_result narrowing_needle_set) (fn () =>
+      "narrowing needle/certification invariant failed:\n" ^
+      String.concatWith "\n\n" (rev (!narrowing_needle_failure)))
+      (fn () => ()) ()
+    val _ = require_msg
+      (check_result narrowing_pnf_case_tree_and_depth) (fn () =>
+      "PNF case-tree display or run-depth pin failed:\n" ^
+      !narrowing_case_tree_failure) (fn () => ()) ()
+    val _ = require_msg
+      (check_result narrowing_stuck_existential_is_potential) (fn () =>
+      "a stuck PNF existential was replayed or labelled Genuine:\n" ^
+      !narrowing_stuck_failure)
+      (fn () => ()) ()
+    val _ = require_msg
+      (check_result narrowing_no_function_recursion_pin) (fn () =>
+      "recursion below a function type was admitted") (fn () => ()) ()
+  in
+    print ("Refute narrowing acceptance needles: " ^
+      Time.fmt 2 (Timer.checkRealTimer timer) ^ "s\n")
+  end
+
+(* Run before later tests install deliberately restricted :num list
+   generators.  The generator registry is process-wide; letting those test
+   fixtures leak into this source inventory makes 07, 08, and 11 exhaust
+   without ever exploring their required list counterexamples. *)
+val _ =
+  if selftest_level >= 2 then run_narrowing_acceptance_needles () else ()
 
 val auto_ho_custom : custom_gen =
   {enumerate = SOME (fn _ =>
