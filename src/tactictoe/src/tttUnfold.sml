@@ -86,7 +86,8 @@ fun stringl_of_infix (a,b) = case b of
 fun original_program p = case p of
     [] => []
   | Open sl :: m    => ("open" :: sl) @ original_program m
-  | Infix l :: m    => List.concat (map stringl_of_infix l) @ original_program m
+  | Infix l :: m    =>
+    List.concat (map stringl_of_infix l) @ original_program m
   | In :: m         => "in" :: original_program m
   | Start s :: m    => s :: original_program m
   | End :: m        => "end" :: original_program m
@@ -1644,7 +1645,8 @@ fun mk_scan force prov man src_hashes work =
       dfind thy src handle NotFound => source_hash thy
     fun identity thy =
       (ancestry_version thy, ancestry_hash_from indexed_source_hash thy)
-    val identities = dnew String.compare (map (fn thy => (thy,identity thy)) work)
+    val identities =
+      dnew String.compare (map (fn thy => (thy, identity thy)) work)
     val entries = case man of NONE => [] | SOME m => #entries m
     fun add (e : entry, d) =
       dadd (#thy e) (e :: (dfind (#thy e) d handle NotFound => [])) d
@@ -1791,7 +1793,8 @@ fun record_one (cfg : record_config) prov src_hashes recorded_stale thy =
               let
                 val file = current_tacdata_file thy
                 val _ = if exists_file file then () else
-                  raise ERR "record_one" ("missing data after recording " ^ thy)
+                  raise ERR "record_one"
+                    ("missing data after recording " ^ thy)
                 val data_hash = sha1_file file
                 val src_hash = source_hash thy
                 val entry = success_entry prov thy data_hash src_hash

@@ -19,7 +19,8 @@ sig
 
   (* tnn examples *)
   val collect_ex : string -> ((term * real list) list) list
-  val uniq_ex : ((term * real list) list) list -> ((term * real list) list) list
+  val uniq_ex :
+    ((term * real list) list) list -> ((term * real list) list) list
   val tnnex_to_basicex : ((term * real list) list) list -> (term * real) list
 
   (* tactictoe function for the evaluation framework *)
