@@ -94,7 +94,8 @@ all: holrefute-selftest.log
 
 FORL_GOLDENS = tests/forl-layout.kki tests/forl-expressions.kki \
                tests/forl-multi.kki tests/mf-kodkod-translation.kki \
-               tests/mf-binary-integers.kki tests/mf-bisim.kki
+               tests/mf-binary-integers.kki tests/mf-frac.kki \
+               tests/mf-bisim.kki
 FORL_TRANSCRIPTS = tests/kodkodi-sat.stdout \
                    tests/kodkodi-unsat.stdout \
                    tests/kodkodi-batch.stdout \

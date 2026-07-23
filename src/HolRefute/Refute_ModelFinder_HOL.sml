@@ -39,7 +39,8 @@ structure Refute_ModelFinder_HOL = struct
   type frac_info = {tyop : type_operator, ersatz : ersatz list}
 
   (* Registrations are session-level ML state.  In particular, registering a
-     codatatype, quotient, or typedef never extends the current HOL theory. *)
+     codatatype, quotient, typedef, or frac type never extends the current HOL
+     theory. *)
   val codatatype_registry = ref ([] : codatatype_info list)
   val quotient_registry = ref ([] : quotient_info list)
   val typedef_registry = ref ([] : typedef_info list)
@@ -276,6 +277,12 @@ structure Refute_ModelFinder_HOL = struct
      ({Thy = "refute", Name = "safe_The"}, 1),
      ({Thy = "refute", Name = "bisim_suc"}, 0),
      ({Thy = "refute", Name = "bisim_zero"}, 0),
+     ({Thy = "gcd", Name = "gcd"}, 0),
+     ({Thy = "gcd", Name = "lcm"}, 0),
+     ({Thy = "refute", Name = "nat_gcd"}, 0),
+     ({Thy = "refute", Name = "nat_lcm"}, 0),
+     ({Thy = "refute", Name = "Frac"}, 0),
+     ({Thy = "refute", Name = "norm_frac"}, 0),
      ({Thy = "num", Name = "SUC"}, 0),
      ({Thy = "integer", Name = "Num"}, 0),
      (* HOL4 numeral syntax is recognized directly.  Keeping its binary
@@ -289,6 +296,9 @@ structure Refute_ModelFinder_HOL = struct
     {Thy = "num", Tyop = "num", Args = []}
   val int_type = Type.mk_thy_type
     {Thy = "integer", Tyop = "int", Args = []}
+  val frac_type = Type.mk_thy_type
+    {Thy = "frac", Tyop = "frac", Args = []}
+  val frac_pair_type = pairSyntax.mk_prod (int_type, int_type)
   val unsigned_bit_type = Type.mk_thy_type
     {Thy = "refute", Tyop = "unsigned_bit", Args = []}
   val signed_bit_type = Type.mk_thy_type
@@ -362,6 +372,78 @@ structure Refute_ModelFinder_HOL = struct
         | NONE =>
             let val (name, _) = Term.dest_var term
             in Term.mk_var (name, ty) end
+
+  fun registered_frac_type ty =
+    case Lib.total Type.dest_thy_type ty of
+        SOME {Thy, Tyop, Args = []} =>
+          List.exists (fn ({tyop, ...} : frac_info) =>
+            #Thy tyop = Thy andalso #Tyop tyop = Tyop) (!frac_registry)
+      | _ => false
+
+  fun frac_target_for_constant constant =
+    let
+      val key = original_const_key constant
+      val source = Term.prim_mk_const {Thy = #Thy key, Name = #Name key}
+      fun merge (NONE, target) = target
+        | merge (target, NONE) = target
+        | merge (SOME left, SOME right) =
+            if left = right then SOME left else raise Match
+      fun descend source_ty target_ty =
+        if source_ty = frac_type then
+          if registered_frac_type target_ty then SOME target_ty else raise Match
+        else if Type.is_vartype source_ty then NONE
+        else
+          let
+            val source_parts = Type.dest_thy_type source_ty
+            val target_parts = Type.dest_thy_type target_ty
+            val _ = if #Thy source_parts = #Thy target_parts andalso
+                           #Tyop source_parts = #Tyop target_parts andalso
+                           length (#Args source_parts) =
+                             length (#Args target_parts) then ()
+                    else raise Match
+          in
+            ListPair.foldlEq (fn (source_arg, target_arg, result) =>
+              merge (result, descend source_arg target_arg)) NONE
+              (#Args source_parts, #Args target_parts)
+          end
+    in
+      descend (Term.type_of source) (Term.type_of constant)
+    end handle HOL_ERR _ => NONE | Match => NONE
+
+  fun replace_frac_type target ty =
+    if ty = frac_type then target
+    else if Type.is_vartype ty then ty
+    else
+      let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+      in Type.mk_thy_type
+        {Thy = Thy, Tyop = Tyop,
+         Args = map (replace_frac_type target) Args}
+      end
+
+  fun specialize_frac_prop target wanted prop =
+    let
+      val wanted_key = original_const_key wanted
+      fun transform candidate =
+        if Term.is_var candidate then
+          let val (name, ty) = Term.dest_var candidate
+          in Term.mk_var (name, replace_frac_type target ty) end
+        else if Term.is_const candidate then
+          let
+            val ty = replace_frac_type target (Term.type_of candidate)
+          in
+            if same_key (original_const_key candidate) wanted_key andalso
+               ty = Term.type_of wanted then wanted
+            else retype_constant "frac" candidate ty
+          end
+        else if Term.is_abs candidate then
+          let val (variable, body) = Term.dest_abs candidate
+          in Term.mk_abs (transform variable, transform body) end
+        else
+          let val (function, argument) = Term.dest_comb candidate
+          in Term.mk_comb (transform function, transform argument) end
+    in
+      transform prop
+    end
 
   fun fun_type (domain, range) = Type.-->(domain, range)
   fun binary_type argument result =
@@ -497,14 +579,26 @@ structure Refute_ModelFinder_HOL = struct
   fun def_props_for_const table constant =
     if is_built_in_const constant then []
     else
-      table_lookup table constant
-      |> List.mapPartial (fn prop =>
-           case matching_instantiations constant prop of
-               first :: _ =>
-                 if has_matching_iterator_markers constant first then
-                   SOME first
-                 else NONE
-             | [] => NONE)
+      let
+        val props =
+          case frac_target_for_constant constant of
+              NONE => table_lookup table constant
+            | SOME target =>
+                let val key = original_const_key constant
+                in
+                  rev (Option.getOpt (KNametab.lookup table key, []))
+                  |> map (specialize_frac_prop target constant)
+                end
+      in
+        props
+        |> List.mapPartial (fn prop =>
+             case matching_instantiations constant prop of
+                 first :: _ =>
+                   if has_matching_iterator_markers constant first then
+                     SOME first
+                   else NONE
+               | [] => NONE)
+      end
 
   fun all_instantiations constant prop =
     let
@@ -554,7 +648,8 @@ structure Refute_ModelFinder_HOL = struct
         constant =
     case Lib.total Term.dest_var constant of
         SOME (name, _) =>
-          if Refute_ModelFinder_Names.is_reserved_name name then NONE
+          if Refute_ModelFinder_Names.is_reserved_name name andalso
+             not (Option.isSome (frac_target_for_constant constant)) then NONE
           else Option.map (fn definition => (false, definition))
             (get_def_of_const fallback_table constant)
       | NONE =>
@@ -2406,6 +2501,88 @@ structure Refute_ModelFinder_HOL = struct
         List.filter other (!typedef_registry)
     end
 
+  fun validate_ersatz function ({original, replacement} : ersatz) =
+    let
+      val _ = Term.prim_mk_const
+        {Thy = #Thy original, Name = #Name original}
+      val _ = Term.prim_mk_const
+        {Thy = #Thy replacement, Name = #Name replacement}
+    in
+      ()
+    end handle HOL_ERR _ => raise err function
+      "ersatz constants must name existing theory constants"
+
+  fun register_frac_type
+        (registration as {tyop, ersatz} : frac_info) =
+    let
+      val function = "register_frac_type"
+      val ty = Type.mk_thy_type
+        {Thy = #Thy tyop, Tyop = #Tyop tyop, Args = []}
+      (* Quotient and typedef entries can have been harvested merely by
+         looking at a goal before the explicit frac opt-in.  They are the
+         representation we are replacing, not an incompatible user choice. *)
+      val _ = if interpreted_type_operator tyop orelse
+                     raw_free_datatype ty orelse
+                     Option.isSome (codatatype_for tyop) then
+          raise err function
+            "type operator already has an incompatible classification"
+        else ()
+      val _ = List.app (validate_ersatz function) ersatz
+      fun unique [] = true
+        | unique (entry :: rest) =
+            not (List.exists (fn other =>
+              same_key (#original entry) (#original other)) rest) andalso
+            unique rest
+      val _ = if unique ersatz then () else
+        raise err function "ersatz originals must be distinct"
+
+      (* Compute every replacement before touching session state.  Once all
+         validation and filtering has succeeded, the assignments below
+         cannot leave a half-reclassified type behind. *)
+      fun other_frac ({tyop = old, ...} : frac_info) =
+        not (same_type_operator old tyop)
+      fun other_quotient ({qty, ...} : quotient_info) =
+        not (same_type_operator (type_operator_of qty) tyop)
+      fun other_typedef ({ty = old, ...} : typedef_info) =
+        not (same_type_operator (type_operator_of old) tyop)
+      val new_fracs = registration ::
+        List.filter other_frac (!frac_registry)
+      val new_quotients = List.filter other_quotient (!quotient_registry)
+      val new_typedefs = List.filter other_typedef (!typedef_registry)
+      val key = operator_key tyop
+      val new_quotient_misses =
+        KNametab.delete_safe key (!quotient_harvest_misses)
+      val new_typedef_misses =
+        KNametab.delete_safe key (!typedef_harvest_misses)
+    in
+      quotient_registry := new_quotients;
+      typedef_registry := new_typedefs;
+      quotient_harvest_misses := new_quotient_misses;
+      typedef_harvest_misses := new_typedef_misses;
+      frac_registry := new_fracs
+    end
+
+  val rat_frac_registration : frac_info =
+    {tyop = {Thy = "rat", Tyop = "rat"},
+     ersatz =
+       map (fn (original, replacement) =>
+         {original = {Thy = "rat", Name = original},
+          replacement = {Thy = "refute", Name = replacement}})
+       [("rat_0", "zero_frac"),
+        ("rat_1", "one_frac"),
+        ("rat_ainv", "uminus_frac"),
+        ("rat_minv", "inverse_frac"),
+        ("rat_add", "plus_frac"),
+        ("rat_sub", "subtract_frac"),
+        ("rat_mul", "times_frac"),
+        ("rat_div", "divide_frac"),
+        ("rat_les", "less_frac"),
+        ("rat_leq", "less_eq_frac"),
+        ("rat_of_num", "of_num_frac"),
+        ("rat_cons", "frac")]}
+
+  fun register_frac_type_rat () = register_frac_type rat_frac_registration
+
   fun harvest_index_entry operator =
     Option.getOpt (KNametab.lookup (!harvest_session_index)
       (operator_key operator),
@@ -3083,6 +3260,25 @@ structure Refute_ModelFinder_HOL = struct
 
   fun is_quot_type ty = Option.isSome (quotient_for_type ty)
 
+  fun synthetic_frac_typedef ty =
+    if not (registered_frac_type ty) then NONE
+    else
+      let
+        val abs = retype_constant "fracconstr"
+          (Term.prim_mk_const {Thy = "frac", Name = "abs_frac"})
+          (Type.-->(frac_pair_type, ty))
+        val rep = retype_constant "fracconstr"
+          (Term.prim_mk_const {Thy = "frac", Name = "rep_frac"})
+          (Type.-->(ty, frac_pair_type))
+        val pred = Term.prim_mk_const {Thy = "refute", Name = "Frac"}
+      in
+        (* As in Nitpick's synthetic frac typedef, constructor/selector
+           axioms provide the bijection.  Inverse theorems belong only to
+           genuine HOL typedefs and would duplicate that encoding here. *)
+        SOME {ty = ty, rty = frac_pair_type, abs = abs, rep = rep,
+          pred = pred, inverse_axioms = [], univ = false}
+      end
+
   fun typedef_for_type ty =
     let
       val operator = type_operator_of ty
@@ -3091,7 +3287,7 @@ structure Refute_ModelFinder_HOL = struct
         (!typedef_registry)
     in
       case info of
-          NONE => NONE
+          NONE => synthetic_frac_typedef ty
         | SOME {ty = registered, rty, abs, rep, pred, inverse_axioms,
                 univ} =>
             let val theta = Type.match_type registered ty
@@ -3260,8 +3456,11 @@ structure Refute_ModelFinder_HOL = struct
     end handle HOL_ERR _ => false
 
   fun raw_constructor_name constructor =
-    let val {Thy, Name, ...} = Term.dest_thy_const constructor
-    in Thy ^ "$" ^ Name end
+    case Lib.total Term.dest_thy_const constructor of
+        SOME {Thy, Name, ...} => Thy ^ "$" ^ Name
+      | NONE =>
+          let val (name, _) = Term.dest_var constructor
+          in Refute_ModelFinder_Names.original_name name end
 
   fun reserved_constructor term =
     case Lib.total Term.dest_var term of
@@ -3333,8 +3532,8 @@ structure Refute_ModelFinder_HOL = struct
       (Term.type_of term))))
 
   fun same_registered_constant expected actual =
-    Term.same_const expected actual andalso
-    Term.type_of expected = Term.type_of actual
+    Term.type_of expected = Term.type_of actual andalso
+    (Term.aconv expected actual orelse Term.same_const expected actual)
     handle HOL_ERR _ => false
 
   fun quotient_for_abs constant =
@@ -3536,11 +3735,23 @@ structure Refute_ModelFinder_HOL = struct
         List.filter (not o same_original) (!ersatz_registry)
     end
 
+  fun append_new_ersatz (entry, table) =
+    if List.exists (fn ({original, ...} : ersatz) =>
+         same_key original (#original entry)) table then table
+    else table @ [entry]
+
   fun current_ersatz_table () =
-    List.foldl (fn (entry, table) =>
-      if List.exists (fn ({original, ...} : ersatz) =>
-           same_key original (#original entry)) table then table
-      else entry :: table) (!ersatz_registry) builtin_ersatz
+    let
+      val ordinary = List.foldl append_new_ersatz
+        (!ersatz_registry) builtin_ersatz
+      val frac = List.concat (map #ersatz (!frac_registry))
+    in
+      (* Upstream prepends active frac mappings to the ordinary table.  Keep
+         collisions rather than deduplicating them: replacement_for selects
+         the first entry, so frac has deterministic highest precedence while
+         the shadowed session registration remains available after restore. *)
+      frac @ ordinary
+    end
 
   fun case_names () =
     let
@@ -4481,8 +4692,9 @@ structure Refute_ModelFinder_HOL = struct
       case List.find (fn ({original, ...} : ersatz) =>
              same_key original key) table of
           SOME {replacement = {Thy, Name}, ...} =>
-            SOME (Term.mk_thy_const
-              {Thy = Thy, Name = Name, Ty = Term.type_of constant})
+            SOME (retype_constant "ersatz"
+              (Term.prim_mk_const {Thy = Thy, Name = Name})
+              (Term.type_of constant))
         | NONE => NONE
     end
 

@@ -282,12 +282,24 @@ Definition uminus_frac_def:
   uminus_frac q = frac (integer$int_neg (num q)) (denom q)
 End
 
+Definition subtract_frac_def:
+  subtract_frac q r = plus_frac q (uminus_frac r)
+End
+
 Definition number_of_frac_def:
   number_of_frac n = frac n (integer$int_of_num 1)
 End
 
 Definition inverse_frac_def:
   inverse_frac q = frac (denom q) (num q)
+End
+
+Definition divide_frac_def:
+  divide_frac q r = times_frac q (inverse_frac r)
+End
+
+Definition of_num_frac_def:
+  of_num_frac n = frac (integer$int_of_num n) (integer$int_of_num 1)
 End
 
 Definition less_frac_def:

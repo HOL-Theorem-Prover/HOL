@@ -72,6 +72,13 @@ signature Refute = sig
      equiv_thm : thm, partial : bool} -> unit
   val register_typedef :
     {ty : hol_type, abs : term, rep : term, absrep_thm : thm} -> unit
+  val register_frac_type :
+    {tyop : {Thy : string, Tyop : string},
+     ersatz :
+       {original : {Thy : string, Name : string},
+        replacement : {Thy : string, Name : string}} list} -> unit
+  (* Opt-in until the rational soundness corpus makes the TASK_30 decision. *)
+  val register_frac_type_rat : unit -> unit
   val register_ersatz :
     {original : {Thy : string, Name : string},
      replacement : {Thy : string, Name : string}} -> unit

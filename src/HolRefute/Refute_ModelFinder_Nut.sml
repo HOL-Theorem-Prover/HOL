@@ -721,6 +721,20 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 Op1 (Not, Type.bool, MFR.Any,
                   Op2 (Less, Type.bool, MFR.Any,
                     sub (List.nth (arguments, 1)), sub (hd arguments)))
+              else if (is_named {Thy = "gcd", Name = "gcd"} head orelse
+                       is_named {Thy = "refute", Name = "nat_gcd"} head)
+                      andalso null arguments then
+                Cst (Gcd, Term.type_of head, MFR.Any)
+              else if (is_named {Thy = "gcd", Name = "lcm"} head orelse
+                       is_named {Thy = "refute", Name = "nat_lcm"} head)
+                      andalso null arguments then
+                Cst (Lcm, Term.type_of head, MFR.Any)
+              else if is_named {Thy = "refute", Name = "Frac"} head andalso
+                      null arguments then
+                Cst (Fracs, Term.type_of head, MFR.Any)
+              else if is_named {Thy = "refute", Name = "norm_frac"} head
+                      andalso null arguments then
+                Cst (NormFrac, Term.type_of head, MFR.Any)
               else if is_named {Thy = "integer", Name = "int_neg"} head andalso
                       null arguments then
                 let val number_ty = domain_type (Term.type_of head)
@@ -1126,12 +1140,8 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                   (MFS.spec_of_type scope (domain_type ty))
                 in Cst (Suc, ty, MFR.Func (atom, MFR.Opt atom)) end
             | Cst (Fracs, ty, _) =>
-                (* M4-only frac path; unreachable by the M3 closure proof
-                   cited in PLAN_M3 section 9. *)
                 Cst (Fracs, ty, MFR.best_non_opt_set_rep_for_type scope ty)
             | Cst (NormFrac, ty, _) =>
-                (* M4-only frac path; unreachable in M3, as proved in
-                   m3-scope-rep-nut section 9. *)
                 let val atom = MFR.Atom
                   (MFS.spec_of_type scope (domain_type ty))
                 in
@@ -1151,8 +1161,6 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                   let
                     val number_ty = domain_type ty
                     val atom = MFR.Atom (MFS.spec_of_type scope number_ty)
-                    (* Gcd/Lcm are retained for M4 API stability but M3
-                       preprocessing cannot emit them; PLAN_M3 section 9. *)
                     val total = number_ty = MFH.num_type andalso
                       (constant = Subtract orelse constant = Divide orelse
                        constant = Gcd)

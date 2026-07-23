@@ -2258,16 +2258,16 @@ fun kodkod_formula_from_nut offsets
             else
               raise MFNT.NUT
                 ("Refute_ModelFinder_Kodkod.to_r (Divide)", [candidate])
-        | MFNT.Cst (MFNT.Gcd, _, _) =>
-            (* M4-only rational support; unreachable by the M3 closure
-               proof in m3-kodkod-translation section 6. *)
-            m4_translation "Refute_ModelFinder_Kodkod.to_r (Gcd)"
-        | MFNT.Cst (MFNT.Lcm, _, _) =>
-            m4_translation "Refute_ModelFinder_Kodkod.to_r (Lcm)"
+        | MFNT.Cst (MFNT.Gcd, _, _) => KK.Rel MFP.gcd_rel
+        | MFNT.Cst (MFNT.Lcm, _, _) => KK.Rel MFP.lcm_rel
+        | MFNT.Cst (MFNT.Fracs, _, MFR.Func (MFR.Atom (1, _), _)) =>
+            KK.None
+        | MFNT.Cst (MFNT.Fracs, _, MFR.Func (MFR.Struct _, _)) =>
+            kk_project_seq (KK.Rel MFP.norm_frac_rel) 2 2
         | MFNT.Cst (MFNT.Fracs, _, _) =>
-            m4_translation "Refute_ModelFinder_Kodkod.to_r (Fracs)"
-        | MFNT.Cst (MFNT.NormFrac, _, _) =>
-            m4_translation "Refute_ModelFinder_Kodkod.to_r (NormFrac)"
+            raise MFNT.NUT
+              ("Refute_ModelFinder_Kodkod.to_r (Fracs)", [candidate])
+        | MFNT.Cst (MFNT.NormFrac, _, _) => KK.Rel MFP.norm_frac_rel
         | MFNT.Cst (MFNT.NatToInt, ty, representation) =>
             if has_function_type MFH.unsigned_bitword_type
                  MFH.signed_bitword_type ty then
