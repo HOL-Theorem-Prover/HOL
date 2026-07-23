@@ -580,6 +580,30 @@ fun cleanAll HOLDIR dirname =
 fun cleanForReloc HOLDIR dirname =
     moveTo dirname (maybe_gmakeclean dirname (fn () => cleanForReloc0 HOLDIR))
 
+(* Holmake and its supporting tech under tools/Holmake are built by
+   configure, not by the build sequence, so `clean` must leave them
+   alone: stripping e.g. tools/Holmake/core/Holmake_tools.uo makes the
+   next Moscow ML build fail (nothing in the sequence can remake it,
+   and src/parse/testutils.sml needs it via sigobj).  The tests subtree
+   is ordinary buildable material and is still cleaned.
+
+   Paths are canonicalised (.. and symlinks resolved) and compared by
+   arc so the check is robust to however a Holmakefile spelled its
+   INCLUDES; moveTo only lexically absolutises them. *)
+fun is_holmake_infra HOLDIR d =
+    let
+      fun canonical p = OS.FileSys.fullPath p handle OS.SysErr _ => normPath p
+      fun arcs_of p = #arcs (Path.fromString (canonical p))
+      fun is_prefix [] _ = true
+        | is_prefix _ [] = false
+        | is_prefix (x::xs) (y::ys) = x = y andalso is_prefix xs ys
+      val darcs = arcs_of d
+      val infra = arcs_of (fullPath [HOLDIR, "tools", "Holmake"])
+      val infra_tests = arcs_of (fullPath [HOLDIR, "tools", "Holmake", "tests"])
+    in
+      is_prefix infra darcs andalso not (is_prefix infra_tests darcs)
+    end
+
 fun clean_dirs {HOLDIR,action} dirs = let
   val seen = Binaryset.empty String.compare
   fun recurse sofar todo =
@@ -587,7 +611,8 @@ fun clean_dirs {HOLDIR,action} dirs = let
         [] => ()
       | d::ds => let
         in
-          if Binaryset.member(sofar, d) then recurse sofar ds
+          if Binaryset.member(sofar, d) orelse is_holmake_infra HOLDIR d then
+            recurse sofar ds
           else let
               val newincludes = action HOLDIR d
             in
