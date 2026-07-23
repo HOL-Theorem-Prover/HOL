@@ -30,6 +30,7 @@ sig
   val thm_of_sml        : string -> (string * thm) option
   val thml_of_sml       : string list -> thm list option
   val tactic_of_sml     : real -> string -> tactic
+  val tactic_of_sml_no_timeout : string -> tactic
   val string_of_sml     : string -> string
   val goal_of_sml       : string -> goal
 

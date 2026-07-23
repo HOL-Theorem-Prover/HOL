@@ -11,9 +11,22 @@ struct
 
 open HolKernel Abbrev boolLib aiLib
   smlLexer smlInfix smlOpen smlExecute smlParallel
-  mlTacticData tttSetup
+  tttManifest mlTacticData tttSetup
 
 val ERR = mk_HOL_ERR "tttUnfold"
+
+fun load_sigobj () = with_tactictoe_cache aiLib.load_sigobj
+
+fun with_deferred_interrupts f =
+  let
+    val attributes = Thread.getAttributes ()
+    val _ = Thread.setAttributes
+      [Thread.InterruptState Thread.InterruptDefer]
+    fun restore () = Thread.setAttributes attributes
+  in
+    (let val result = f () in restore (); result end
+     handle e => (restore (); raise e))
+  end
 
 (* -----------------------------------------------------------------------
    Program representation and stack
@@ -73,7 +86,8 @@ fun stringl_of_infix (a,b) = case b of
 fun original_program p = case p of
     [] => []
   | Open sl :: m    => ("open" :: sl) @ original_program m
-  | Infix l :: m    => List.concat (map stringl_of_infix l) @ original_program m
+  | Infix l :: m    =>
+    List.concat (map stringl_of_infix l) @ original_program m
   | In :: m         => "in" :: original_program m
   | Start s :: m    => s :: original_program m
   | End :: m        => "end" :: original_program m
@@ -288,6 +302,12 @@ fun extract_infix inf_constr l =
 val store_thm_list =
   ["store_thm","maybe_thm","Store_thm","asm_store_thm"]
 
+(* Theorem/Proof/QED blocks are expanded by HOLSource to calls of
+   Q.store_thm_at.  These calls produce theorem values just like
+   store_thm, but have a curried source-location argument, so they need
+   separate parsing below. *)
+val store_thm_at_list = ["store_thm_at"]
+
 val name_thm_list =
   ["save_thm","new_specification",
   "new_definition","new_infixr_definition","new_infixl_definition",
@@ -296,31 +316,7 @@ val name_thm_list =
 val prove_list = ["prove","TAC_PROOF"]
 
 
-val watch_list_init =
-  store_thm_list @
-  name_thm_list @
-  prove_list @
-  ["tprove"] @
-  ["store_definition",
-   "zDefine","qDefine","bDefine","tDefine","xDefine","dDefine",
-   "export_rewrites"] @
-  ["save_defn","defnDefine","primDefine","tDefine","xDefine","Define",
-   "multiDefine","apiDefine","apiDefineq","std_apiDefine","std_apiDefineq",
-   "xDefineSchema","DefineSchema"] @
-  ["mk_fp_encoding"] @
-  ["Hol_reln","xHol_reln","Hol_mono_reln","add_mono_thm","export_mono",
-   "add_rule_induction","export_rule_induction"] @
-  ["Hol_coreln","xHol_coreln","Hol_mono_coreln","new_coinductive_definition"] @
-  ["new_list_rec_definition"] @
-  ["define_new_type_bijections"] @
-  ["new_binder_definition"] @
-  ["new_recursive_definition","define_case_constant"] @
-  ["define_equivalence_type"] @
-  ["define_quotient_type","define_quotient_lifted_function",
-   "define_quotient_types_rule","define_quotient_types_full",
-   "define_quotient_types_full_rule","define_quotient_types_std",
-   "define_quotient_types_std_rule","define_equivalence_type",
-   "define_subset_types","define_subset_types_rule"]
+val watch_list_init = watched_store_operations
 
 val watch_dict = dnew String.compare (map (fn x => (x,())) watch_list_init)
 
@@ -364,12 +360,112 @@ fun extract_store_thm sl =
     val name = original_code (last namel)
   in
     if is_quoted name
-    then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, cont)
+    then SOME (rm_squote name, namel, term, qtac, cont)
     else NONE
   end
   handle HOL_ERR _ =>
     (
     print_endline ("Warning: extract_store_thm: " ^
+      (String.concatWith " "(map original_code (first_n 10 sl))));
+    NONE
+    )
+
+(* For the modern Theorem/Proof/QED syntax, sketch_wrap feeds HOL's
+   source-expander output, which desugars each Theorem block to
+     val id = Q.store_thm_at (loc) ("name[attrs]", term, tac)
+   The store_thm recognizer above does not see `store_thm_at` and cannot
+   parse the curried (loc)(args) shape, so such scripts record zero proofs.
+   extract_store_thm_at handles that form.  The expander may eta-expand the
+   tactic; we normalize that structurally below, without depending on a name
+   chosen by the expander. *)
+
+(* take_group: given a sketch list starting with "(" (or "[" / "{"),
+   return the tokens inside that one balanced group (without the outer
+   delimiters) and the rest. *)
+fun take_group_aux d pl [] = raise ERR "take_group" "unbalanced"
+  | take_group_aux d pl (x :: m) =
+    case x of
+      Code (a,_) =>
+        if mem a ["(","[","{"] then take_group_aux (d + 1) (x :: pl) m
+        else if mem a [")","]","}"] then
+          if d <= 1 then (rev pl, m) else take_group_aux (d - 1) (x :: pl) m
+        else take_group_aux d (x :: pl) m
+    | _ => take_group_aux d (x :: pl) m
+
+fun take_group (Code(a,_) :: m) =
+      if a = "(" orelse a = "[" orelse a = "{" then take_group_aux 1 [] m
+      else raise ERR "take_group" ("expected (, got " ^ a)
+  | take_group _ = raise ERR "take_group" "not a paren"
+
+(* eta_normalize: recognize exactly `fn x => tac x`, using the binding
+   structure rather than a magic variable name.  The learner gets `tac`; the
+   fallback gets an alpha-equivalent eta wrapper with a fresh TacticToe name,
+   preserving delayed evaluation without retaining an expander implementation
+   detail.  The sketcher represents `fn X => BODY` as
+   Pattern ("fn", [X], "=>", sketched BODY). *)
+fun fresh_eta_name sk =
+  let
+    val names = original_program sk
+    fun loop n =
+      let val candidate = "tactictoe_eta_goal_" ^ int_to_string n in
+        if mem candidate names then loop (n + 1) else candidate
+      end
+  in
+    loop 0
+  end
+
+fun eta_normalize sk =
+  case sk of
+    [Pattern ("fn", [Code (x,_)], "=>", body)] =>
+      (case rev body of
+         Code (y,_) :: tac_rev =>
+           (* This is eta-reduction only if x is absent from tac.  In
+              particular, `fn x => f x x` must retain its original
+              wrapper: removing the last x would leave the first one
+              unbound in the fallback.  Treating every occurrence as
+              non-free is deliberately conservative around nested scopes. *)
+           if x = y andalso not (null tac_rev) andalso
+              not (mem x (original_program (rev tac_rev))) then
+             let
+               val tac = rev tac_rev
+               val fresh = fresh_eta_name tac
+               val fallback =
+                 [Pattern ("fn", [Code (fresh,Undecided)], "=>",
+                   tac @ [Code (fresh,Undecided)])]
+             in
+               SOME (fallback,tac)
+             end
+           else NONE
+       | _ => NONE)
+  | _ => NONE
+
+(* Match the attribute grammar used by the theorem store itself, so recorder
+   keys agree with DB.fetch for every supported theorem name. *)
+fun theorem_name s = #1 (AttributeSyntax.dest_name_attrs s)
+
+fun extract_store_thm_at sl =
+  let
+    (* sl is the content inside the first paren (the opening "(" was
+       dropped by `tl m` in the recognizer), i.e. the loc group content
+       followed by the args group:  <loc> ) ( <args> ) <rest> *)
+    val (locg, rest1) = split_codelevel ")" sl
+    val (argsg, cont) = take_group rest1
+    val (namel, l0)  = split_codelevel "," argsg
+    val (term, qtac_raw) = split_codelevel "," l0
+    val (qtac_fallback, qtac_learning) =
+      case eta_normalize qtac_raw of
+        SOME result => result
+      | NONE => (qtac_raw,qtac_raw)
+    val name = original_code (last namel)
+  in
+    if is_quoted name
+    then SOME (rm_squote name, locg, namel, term,
+               qtac_fallback, qtac_learning, cont)
+    else NONE
+  end
+  handle HOL_ERR _ =>
+    (
+    print_endline ("Warning: extract_store_thm_at: " ^
       (String.concatWith " "(map original_code (first_n 10 sl))));
     NONE
     )
@@ -444,15 +540,16 @@ fun sketch sl = case sl of
       Infix infl :: sketch cont
     end
   | "val" :: m    => (bval := true; sketch_pattern "val" "=" m)
-  | "fun" :: m    => (bval := false; bfun := true; sketch_pattern "fun" "=" m)
+  | "fun" :: m    =>
+    (bval := false; bfun := true; sketch_pattern_bfun "fun" "=" true m)
   | "and" :: m    => if !bval
                      then sketch_pattern "val" "=" m
-                     else sketch_pattern "fun" "=" m
+                     else sketch_pattern_bfun "fun" "=" true m
     (* todo: support for mutually recursive functions *)
-  | "fn"  :: m    => (bfun := false; sketch_pattern "fn" "=>" m)
-  | "|"   :: m    => sketch_pattern "|" (if !bfun then "=" else "=>") m
-  | "of"  :: m    => (bfun := false; sketch_pattern "of" "=>" m)
-  | "handle" :: m => (bfun := false; sketch_pattern "handle" "=>" m)
+  | "fn"  :: m    => sketch_pattern_bfun "fn" "=>" false m
+  | "|"   :: m    => sketch_pattern_bar (!bfun) m
+  | "of"  :: m    => sketch_pattern_bfun "of" "=>" false m
+  | "handle" :: m => sketch_pattern_bfun "handle" "=>" false m
   | "local" :: m  => Start "local" :: sketch m
   | "let" :: m    => Start "let" :: sketch m
   | "structure" :: a :: "=" :: "struct" :: m =>
@@ -474,6 +571,36 @@ and sketch_pattern s sep m =
     val new_body = sketch body
   in
     Pattern (s, map (Code o undecided) head, sep, new_body) :: sketch cont
+  end
+and sketch_pattern_bfun s sep body_bfun m =
+  let
+    val old_bfun = !bfun
+    val (head,body,cont) = extract_pattern sep m
+      handle _ => extract_pattern "=" m
+    val _ = bfun := body_bfun
+    val new_body = sketch body
+    val _ = bfun := old_bfun
+  in
+    Pattern (s, map (Code o undecided) head, sep, new_body) :: sketch cont
+  end
+(* A bar is ambiguous: it may continue a fun declaration with `=` or a
+   case/fn/handle expression with `=>`.  bfun is only a hint because nested
+   declarations can finish at the same token level as their enclosing case
+   arm.  Inspect the actual separator, and use it both in the rewritten
+   program and while sketching the arm body. *)
+and sketch_pattern_bar in_fun m =
+  let
+    val preferred = if in_fun then "=" else "=>"
+    val alternate = if in_fun then "=>" else "="
+    val (sep,(head,body,cont)) =
+      (preferred, extract_pattern preferred m)
+      handle HOL_ERR _ => (alternate, extract_pattern alternate m)
+    val old_bfun = !bfun
+    val _ = bfun := sep = "="
+    val new_body = sketch body
+    val _ = bfun := old_bfun
+  in
+    Pattern ("|", map (Code o undecided) head, sep, new_body) :: sketch cont
   end
 and sketch_record m =
   let
@@ -567,12 +694,62 @@ fun ppstring_stac qtac =
     String.concatWith " " ["(","String.concatWith",mlquote " ","\n",tac3,")"]
   end
 
+(* Produce an executable version of a proof body without globalizing any of
+   its identifiers.  Infix guards are retained because smlParser uses them to
+   split a proof into tactic calls; they are semantically transparent and
+   still apply the source operator. *)
+fun source_program p =
+  let
+    fun is_infix_open s =
+      String.isPrefix "sml_infix" s andalso String.isSuffix "open" s
+    fun is_infix_close s =
+      String.isPrefix "sml_infix" s andalso String.isSuffix "close" s
+    fun source_code (s,SReplace sl) =
+          if length sl >= 3 andalso is_infix_open (hd sl) andalso
+             is_infix_close (last sl)
+          then [hd sl,"op",s,last sl]
+          else [s]
+      | source_code (s,_) = [s]
+    fun source p = case p of
+        [] => []
+      | Code ("op",_) :: Code (s,_) :: m =>
+          "op" :: s :: source m
+      | Code st :: m => source_code st @ source m
+      | Pattern (s,head,sep,body) :: m =>
+          if mem s ["val","fun"] then source m
+          else s :: source head @ sep :: source body @ source m
+      | _ => raise ERR "source_program" "unexpected proof syntax"
+  in
+    source (bare_body p)
+  end
+
 (* ------------------------------------------------------------------------
    Final modifications of the scripts
    ------------------------------------------------------------------------ *)
 
 (* todo: remove this flag at a minor computation cost *)
 val is_thm_flag = ref false
+
+(* The tokens that replace a proof's tactic in the rewritten script: bind the
+   original tactic, build a recording wrapper that executes that same source
+   expression while using the globalized expression only for call labels, and
+   hand both to record_proof.  Shared by the store_thm_at, store_thm and prove
+   branches below, which differ only in what precedes the tactic. *)
+fun record_wrapper name raw_tac learning_tac =
+  let
+    val tac1 = original_program raw_tac
+    val lflag_name = if mem "let" tac1 then "true" else "false"
+    val run_stac = mlquote
+      (String.concatWith " " (source_program learning_tac))
+    val tac2 = ppstring_stac learning_tac
+  in
+    ["let","val","tactictoe_tac1","="] @ tac1 @
+    ["val","tactictoe_tac2","=","(","tttRecord.app_wrap_proof",
+     mlquote name,run_stac,"\n",tac2,"handle","_","=>","tactictoe_tac1",
+     ")"] @
+    ["in","tttRecord.record_proof",mlquote name,lflag_name,
+     "tactictoe_tac2","tactictoe_tac1","end"]
+  end
 
 fun modified_program (h,d) p =
   let fun continue m' = modified_program (h,d) m' in
@@ -601,6 +778,20 @@ fun modified_program (h,d) p =
     (
     if mem (drop_sig a) ["export_theory"] then continue m
     else if h orelse d > 1 then a :: continue m
+    else if drop_sig a = "store_thm_at" andalso hd_code_par m
+      then
+      case extract_store_thm_at (tl m) of
+        NONE => a :: continue m
+      | SOME (name,locg,namel,term,raw_tac,learning_tac,cont) =>
+        let
+          val _ = is_thm_flag := true
+          val _ = incr n_store_thm
+        in
+          [a,"("] @ original_program locg @ [")","("] @
+          original_program namel @ [","] @ original_program term @ [","] @
+          record_wrapper (theorem_name name) raw_tac learning_tac @ [")"]
+          @ continue cont
+        end
     else if mem (drop_sig a) store_thm_list andalso hd_code_par m
       then
       case extract_store_thm (tl m) of
@@ -609,19 +800,10 @@ fun modified_program (h,d) p =
         let
           val _ = is_thm_flag := true
           val _ = incr n_store_thm
-          val tac1 = original_program qtac
-          val lflag = mem "let" tac1
-          val lflag_name = if lflag then "true" else "false"
-          val tac2 = ppstring_stac qtac
         in
-          [a,"("] @ original_program namel @ [","] @ original_program term @
-          [","] @
-            ["let","val","tactictoe_tac1","="] @ tac1 @
-            ["val","tactictoe_tac2","=","tttRecord.app_wrap_proof",
-             mlquote name,"\n",tac2] @
-            ["in","tttRecord.record_proof",
-             mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
-          [")"]
+          [a,"("] @ original_program namel @ [","] @
+          original_program term @ [","] @
+          record_wrapper (theorem_name name) qtac qtac @ [")"]
           @ continue cont
         end
     else if mem (drop_sig a) prove_list andalso hd_code_par m
@@ -633,19 +815,9 @@ fun modified_program (h,d) p =
           val _ = is_thm_flag := true
           val name = "tactictoe_prove_" ^ (int_to_string (!n_store_thm))
           val _ = incr n_store_thm
-          val tac1 = original_program qtac
-          val lflag = mem "let" tac1
-          val lflag_name = if lflag then "true" else "false"
-          val tac2 = ppstring_stac qtac
         in
-          [a,"("] @ original_program term @
-          [","] @
-            ["let","val","tactictoe_tac1","="] @ tac1 @
-            ["val","tactictoe_tac2","=","tttRecord.app_wrap_proof",
-             mlquote name,"\n",tac2] @
-            ["in","tttRecord.record_proof",
-             mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
-          [")"]
+          [a,"("] @ original_program term @ [","] @
+          record_wrapper name qtac qtac @ [")"]
           @ continue cont
         end
     else a :: continue m
@@ -698,7 +870,11 @@ fun open_struct_aux stack s'=
       let
         val l0 = String.tokens (fn x => x = #".") s
         val (l1,l2,l3,l4) = view_struct_cached s
-          handle Interrupt => raise Interrupt | _ => ([],[],[],[])
+          handle Interrupt => raise Interrupt
+               | OpenStruct (s,e) =>
+                   raise ERR "open_struct"
+                     ("could not analyse open structure " ^ s ^ ": " ^
+                      General.exnMessage e)
         fun f constr a =
           let fun g l =
             (String.concatWith "." (l @ [a]), constr (s ^ "." ^ a))
@@ -724,6 +900,7 @@ fun open_structure s = open_struct_aux [] s
    its arguments.
    ------------------------------------------------------------------------ *)
 
+fun is_store_thm_at x = mem (drop_sig x) store_thm_at_list
 fun is_watch_name x = mem (drop_sig x) (store_thm_list @ name_thm_list)
 
 fun mk_fetch b =
@@ -734,7 +911,13 @@ fun replace_fetch l = case l of
     [] => []
   | Code(a,Watch) :: m =>
     (
-    if is_watch_name a andalso hd_code_par2 m
+    if is_store_thm_at a andalso hd_code_par m
+    then
+      case extract_store_thm_at (tl m) of
+        SOME (name,_,_,_,_,_,cont) =>
+        mk_fetch (theorem_name name) @ replace_fetch cont
+      | NONE => Code(a,Watch) :: replace_fetch m
+    else if is_watch_name a andalso hd_code_par2 m
     then
       let val x =
         if hd_code_par m
@@ -908,6 +1091,10 @@ fun reflect_time oc s x =
 val metis_theories =
   ["sat", "marker", "combin", "min", "bool", "normalForms"]
 
+(* Set only while producing a recording script.  The child writes this
+   unpublished attempt path; record_thy_raw publishes it after success. *)
+val record_tacdata_file = ref (NONE : string option)
+
 fun output_header oc cthy =
   (
   app (osn oc)
@@ -920,19 +1107,28 @@ fun output_header oc cthy =
   app (os oc) (bare_readl infix_file);
   (* debugging *)
   reflect_flag oc "aiLib.debug_flag" debug_flag;
+  (* cache root *)
+  osn oc ("val _ = tttSetup.set_tactictoe_cache_dir " ^
+          mlquote (tactictoe_dir_of ()));
   (* recording *)
   reflect_flag oc "tttSetup.record_flag" record_flag;
   reflect_flag oc "tttSetup.record_prove_flag" record_prove_flag;
   reflect_flag oc "tttSetup.record_let_flag" record_let_flag;
   reflect_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;
   reflect_flag oc "tttSetup.record_savestate_flag" record_savestate_flag;
+  reflect_flag oc "tttSetup.record_ortho_flag" record_ortho_flag;
   reflect_flag oc "tttSetup.export_thmdata_flag" export_thmdata_flag;
   reflect_flag oc "tttSetup.learn_abstract_term" learn_abstract_term;
   reflect_time oc "tttSetup.record_tactic_time" record_tactic_time;
   reflect_time oc "tttSetup.record_proof_time" record_proof_time;
+  reflect_time oc "tttSetup.learn_tactic_time" learn_tactic_time;
   (* search *)
   reflect_time oc "tttSetup.ttt_search_time" ttt_search_time;
   reflect_time oc "tttSetup.ttt_tactic_time" ttt_tactic_time;
+  osn oc ("val _ = mlTacticData.ttt_tacdata_file_override := SOME " ^
+          mlquote (case !record_tacdata_file of
+              SOME file => file
+            | NONE => current_tacdata_file cthy));
   (* hook *)
   osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )
@@ -976,7 +1172,7 @@ fun sketch_wrap thy file =
     val s1 = HOLSource.inputFile {quietOpen = false, print = K()} file
     val s2 = rm_spaces (rm_comment s1)
     val sl = partial_sml_lexer s2
-    val lexdir = tactictoe_dir ^ "/log/lexer"
+    val lexdir = tactictoe_dir_of () ^ "/log/lexer"
     val _ = app mkDir_err [OS.Path.dir lexdir, lexdir]
     val _ = write_sl (lexdir ^ "/" ^ thy) sl
   in
@@ -989,21 +1185,23 @@ fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
    Rewriting script
    ------------------------------------------------------------------------ *)
 
-fun tttsml_of file = OS.Path.base file ^ "_ttt.sml"
+fun tttsml_of file =
+  tactictoe_scratch_dir_of () ^ "/scripts/" ^ OS.Path.base file ^ "_ttt.sml"
 
 fun print_program cthy fileorg sl =
   let
     val _ = debug ("print_program: " ^ fileorg)
     val fileout = tttsml_of fileorg
-    val scriptdir = tactictoe_dir ^ "/log/scripts"
-    val _ = app mkDir_err [OS.Path.dir scriptdir, scriptdir]
+    val scriptdir = tactictoe_dir_of () ^ "/log/scripts"
+    val _ = app mkDir_err [OS.Path.dir fileout, OS.Path.dir scriptdir,
+                            scriptdir]
     val oc = TextIO.openOut fileout
     fun script_save () =
       let
         val cmd = String.concatWith " "
-          ["cp", fileout, scriptdir ^ "/" ^ cthy]
+          ["cp", shell_quote fileout, shell_quote (scriptdir ^ "/" ^ cthy)]
       in
-        cmd_in_dir tactictoe_dir cmd
+        cmd_in_dir (tactictoe_dir_of ()) cmd
       end
   in
     output_header oc cthy;
@@ -1028,84 +1226,867 @@ fun rewrite_script thy fileorg =
     end_unfold_thy ()
   end
 
-fun find_script x =
-  let val dir =
-    Binarymap.find(fileDirMap(),x ^ "Theory.sml")
-    handle NotFound => raise ERR "find_script" ("please load " ^ x ^ "Theory")
+fun full_path dir = OS.FileSys.fullPath dir handle _ => dir
+
+fun record_context_includes scriptorg =
+  let
+    val scriptdir = OS.Path.dir scriptorg
+    val loaded_dirs = map snd (Binarymap.listItems (fileDirMap ()))
+    (* dedup before resolving: fileDirMap has one entry per loaded file,
+       so the same handful of directories repeats thousands of times *)
+    val dirs = mk_sameorder_set String.compare
+      (scriptdir :: loaded_dirs @ !loadPath)
   in
-    dir ^ "/" ^ x ^ "Script.sml"
+    mk_sameorder_set String.compare (map full_path dirs)
+  end
+
+type record_context =
+  {scriptorg : string, dirorg : string, includes : string list}
+
+fun mk_record_context thy =
+  let
+    val scriptorg = find_script thy
+    val dirorg = OS.Path.dir scriptorg
+  in
+    {scriptorg = scriptorg, dirorg = dirorg,
+     includes = record_context_includes scriptorg}
+  end
+
+fun ttt_rewrite_thy_in_context thy
+    ({scriptorg,dirorg,includes} : record_context) =
+  let
+    val _ = print_endline ("ttt_rewrite_thy: " ^ thy ^ "\n  " ^ scriptorg)
+    fun rewrite_with_context script =
+      with_flag (smlOpen.openscript_run_dir, SOME dirorg)
+        (with_flag (smlOpen.openscript_includes, includes)
+           (rewrite_script thy)) script
+    val (_,t) = add_time rewrite_with_context scriptorg
+  in
+    print_endline ("ttt_rewrite_thy time: " ^ rts_round 4 t)
   end
 
 fun ttt_rewrite_thy thy =
   if mem thy ["bool","min"] then () else
-  let
-    val scriptorg = find_script thy
-    val dirorg = OS.Path.dir scriptorg
-    val _ = print_endline ("ttt_rewrite_thy: " ^ thy ^ "\n  " ^ scriptorg)
-    val (_,t) = add_time (rewrite_script thy) scriptorg
-  in
-    print_endline ("ttt_rewrite_thy time: " ^ rts_round 4 t)
-  end
+    ttt_rewrite_thy_in_context thy (mk_record_context thy)
 
 (* -------------------------------------------------------------------------
    Recording (includes rewriting)
    ------------------------------------------------------------------------ *)
 
-fun ttt_ancestry thy =
-  filter (fn x => not (mem x ["min","bool"])) (sort_thyl (ancestry thy))
-
-fun exists_tacdata_ancestry thy =
-  exists_tacdata_thy thy andalso
-  all exists_tacdata_thy (ttt_ancestry thy)
-
-fun ttt_record_thy thy =
+fun record_thy_raw thy =
   if mem thy ["min","bool"] then () else
   let
-    val _ = ttt_rewrite_thy thy
-    val scriptorg = find_script thy
-    val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
-    val (_,t) = add_time
-      smlExecScripts.exec_tttrecord (tttsml_of scriptorg)
+    val publish_tacdata = !record_flag
+    val current_file = current_tacdata_file thy
+    val attempt_file = current_file ^ "." ^
+      Portable.unique_tmp_suffix () ^ ".attempt"
+    fun record_attempt () = with_tactictoe_cache (fn () =>
+      let
+        val context as {scriptorg,dirorg,...} = mk_record_context thy
+        val _ = with_flag (record_tacdata_file, SOME attempt_file)
+          (ttt_rewrite_thy_in_context thy) context
+        val _ = remove_file attempt_file
+        val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
+        val (_,t) = add_time
+          (smlExecScripts.exec_tttrecord_in_dir dirorg)
+          (tttsml_of scriptorg)
+      in
+        print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
+        if publish_tacdata andalso not (exists_file attempt_file)
+        then (print_endline "ttt_record_thy: failed";
+              raise ERR "ttt_record_thy" thy)
+        else ()
+      end)
   in
-    print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
-    if not (exists_tacdata_thy thy)
-    then (print_endline "ttt_record_thy: failed";
-          raise ERR "ttt_record_thy" thy)
-    else ()
+    ((record_attempt ();
+      if publish_tacdata
+      then OS.FileSys.rename {old = attempt_file, new = current_file}
+      else ())
+     handle e => (remove_file attempt_file; raise e))
   end
 
 fun ttt_clean_temp () =
   (
-  clean_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
-  clean_dir (HOLDIR ^ "/src/AI/sml_inspection/buildheap");
-  clean_dir (tactictoe_dir ^ "/info")
+  clean_dir (tactictoe_scratch_dir_of () ^ "/sml_inspection/open");
+  clean_dir (tactictoe_scratch_dir_of () ^ "/sml_inspection/buildheap");
+  clean_dir (tactictoe_dir_of () ^ "/info");
+  clean_dir (tactictoe_scratch_dir_of () ^ "/scripts")
   )
 
 fun ttt_clean_record () =
-  (ttt_clean_temp (); clean_dir (tactictoe_dir ^ "/ttt_tacdata"))
+  (ttt_clean_temp (); clean_dir (tacdata_dir ()))
 
 fun ttt_clean_savestate () =
-  (ttt_clean_temp (); clean_dir (tactictoe_dir ^ "/savestate"))
+  (ttt_clean_temp (); clean_dir (tactictoe_dir_of () ^ "/savestate"))
 
-fun ttt_record () =
-  let
-    val thyl1 = ttt_ancestry (current_theory ())
-    val thyl2 = filter (not o exists_tacdata_ancestry) thyl1
-    val ((),t) = add_time (app ttt_record_thy) thyl2
-  in
-    print_endline ("ttt_record time: " ^ rts_round 4 t)
-  end
+(* record_thy_raw may raise on a theory the rewriter cannot handle
+   (upstream limitations in tttUnfold's script rewriting).  Savestate
+   recording is not manifest-managed, so wrap each raw call: skip the
+   theory, log why, and continue. *)
+fun try_record_thy thy =
+  record_thy_raw thy
+  handle Interrupt => raise Interrupt
+       | e =>
+    print_endline ("ttt_record_thy: skipped " ^ thy ^ ": " ^ exnMessage e)
 
 (* used to record savestates with record_flag := false *)
 fun ttt_record_savestate () =
   let
     val _ = ttt_clean_savestate ()
     val thyl1 = ttt_ancestry (current_theory ())
-    val ((),t) = add_time (app ttt_record_thy) thyl1
+    val ((),t) = add_time (app try_record_thy) thyl1
   in
     print_endline ("ttt_record time: " ^ rts_round 4 t)
   end
 
+(* -------------------------------------------------------------------------
+   Manifest-based recording
+
+   tttManifest owns the on-disk format and the identity of a theory's
+   tactic data.  What lives here is the recording policy: which theories
+   are stale and why, how to lock them, and in which order (and how many
+   at a time) to record them.
+   ------------------------------------------------------------------------ *)
+
+datatype record_scope =
+    CurrentAncestry
+  | Ancestry of string
+  | Theories of string list
+
+type record_config =
+  { scope        : record_scope,
+    parallel     : int,
+    force        : bool,
+    dry_run      : bool,
+    max_lock_age : Time.time }
+
+datatype record_option =
+    Scope of record_scope
+  | Parallel of int
+  | Force of bool
+  | DryRun of bool
+  | MaxLockAge of Time.time
+
+datatype reason =
+    Source_changed
+  | Ancestor_recorded of string
+  | Manifest_incompatible
+  | Tacdata_version_changed
+  | Tactictoe_version_changed
+  | Missing_data
+  | Missing_manifest_line
+  | Tampered_data
+  | Forced
+
+type record_worker_param =
+  { force : bool, max_lock_age_seconds : int,
+    tacdata_version : int, tactictoe_version : int,
+    src_hashes : (string * string) list, recorded_stale : string list }
+
+fun reason_to_string reason = case reason of
+    Source_changed => "source hash changed"
+  | Ancestor_recorded dep => "ancestor was recorded this run: " ^ dep
+  | Manifest_incompatible => "manifest format changed or manifest missing"
+  | Tacdata_version_changed => "tactic-data format version changed"
+  | Tactictoe_version_changed => "TacticToe version changed"
+  | Missing_data => "tactic data file is missing or failed"
+  | Missing_manifest_line => "manifest line is missing"
+  | Tampered_data => "data hash differs from manifest"
+  | Forced => "forced"
+
+val default_record_config =
+  { scope = CurrentAncestry, parallel = 1, force = false, dry_run = false,
+    max_lock_age = Time.fromSeconds 7200 }
+
+fun mk_config (scope,parallel,force,dry_run,max_lock_age) : record_config =
+  {scope = scope, parallel = parallel, force = force, dry_run = dry_run,
+   max_lock_age = max_lock_age}
+
+fun apply_record_option opt ({scope,parallel,force,dry_run,max_lock_age}
+    : record_config) =
+  case opt of
+    Scope x      => mk_config (x,parallel,force,dry_run,max_lock_age)
+  | Parallel x   => mk_config (scope,Int.max (1,x),force,dry_run,max_lock_age)
+  | Force x      => mk_config (scope,parallel,x,dry_run,max_lock_age)
+  | DryRun x     => mk_config (scope,parallel,force,x,max_lock_age)
+  | MaxLockAge x => mk_config (scope,parallel,force,dry_run,x)
+
+val record_parallel_dir = ref ""
+fun record_parallel_dir_of () =
+  if !record_parallel_dir = ""
+  then tactictoe_scratch_dir_of () ^ "/parallel/ttt_record"
+  else !record_parallel_dir
+
+fun theories_of_scope scope =
+  let
+    val thyl = case scope of
+        CurrentAncestry => ancestry (current_theory ())
+      | Ancestry thy => ancestry thy
+      | Theories thyl0 => thyl0 @ List.concat (map ancestry thyl0)
+  in
+    filter (fn x => not (mem x ["min","bool"]))
+      (sort_thyl (mk_sameorder_set String.compare thyl))
+  end
+
+(* -------------------------------------------------------------------------
+   Per-theory locks
+   ------------------------------------------------------------------------ *)
+
+fun locks_dir () = tacdata_dir () ^ "/.locks"
+
+(* Directory-lock metadata operations are serialized by an advisory lock.
+   The kernel releases this lock if a process dies, so it cannot itself go
+   stale.  In particular, checking a holder token and removing its directory
+   is atomic with respect to every acquire/release operation: a completed
+   owner cannot remove the directory and have a new owner recreate it between
+   those two steps. *)
+fun with_lock_registry f =
+  let
+    val _ = app mkDir_err [tacdata_dir (), locks_dir ()]
+    val file = locks_dir () ^ "/.registry"
+    open Posix.FileSys
+    val fd = createf (file, O_WRONLY, O.flags [O.trunc],
+      S.flags [S.irusr, S.iwusr])
+    open Posix.IO
+    val registry_lock = FLock.flock
+      {ltype = F_WRLCK, whence = SEEK_SET, start = 0, len = 0, pid = NONE}
+    fun close () = Posix.IO.close fd handle OS.SysErr _ => ()
+    val _ = setlkw (fd,registry_lock)
+      handle e => (close (); raise e)
+  in
+    (let val result = f () in close (); result end
+     handle e => (close (); raise e))
+  end
+
+(* unique_tmp_suffix is only an owner token: it is not a portable decimal PID.
+   Consequently stale detection is deliberately age-based and never removes a
+   young lock merely because its token cannot be used for process liveness. *)
+fun lock_stale max_lock_age lock =
+  let
+    val age = Time.- (Time.now (), OS.FileSys.modTime lock)
+      handle _ => Time.zeroTime
+  in
+    Time.compare (age,max_lock_age) = GREATER
+  end
+
+type record_lock = {path : string, holder : string}
+
+fun lock_holder path =
+  (case readl (path ^ "/holder") of
+     holder :: _ => SOME holder
+   | [] => NONE)
+  handle _ => NONE
+
+fun lock_owned ({path,holder} : record_lock) =
+  lock_holder path = SOME holder
+
+(* with_lock_registry makes this test-and-remove indivisible with respect to
+   lock replacement. *)
+fun release_lock (lock as {path,...} : record_lock) =
+  with_lock_registry (fn () =>
+    if lock_owned lock
+    then (remove_file (path ^ "/holder");
+          OS.FileSys.rmDir path handle _ => remove_file path handle _ => ())
+    else ())
+
+(* A process can die after creating the directory but before publishing its
+   holder token.  Recheck that it is still holderless before removing it;
+   rmDir then fails harmlessly if a live creator publishes the holder first. *)
+fun reclaim_holderless_lock path =
+  lock_holder path = NONE andalso
+  ((OS.FileSys.rmDir path; true) handle _ => false)
+
+fun acquire_lock max_lock_age name =
+  let
+    val _ = app mkDir_err [tacdata_dir (), locks_dir ()]
+    val path = locks_dir () ^ "/" ^ name ^ ".lock"
+    fun create () =
+      let
+        val holder = Portable.unique_tmp_suffix ()
+        val made = ref false
+        fun cleanup () =
+          if !made then
+            (remove_file (path ^ "/holder");
+             OS.FileSys.rmDir path
+               handle _ => remove_file path handle _ => ())
+          else ()
+        fun attempt () =
+          (with_deferred_interrupts (fn () =>
+             (HOLFileSys.mkDir path; made := true));
+           writel (path ^ "/holder")
+             [holder, Time.toString (Time.now ())];
+           SOME {path = path, holder = holder})
+      in
+        attempt ()
+        handle Interrupt =>
+          (with_deferred_interrupts cleanup; raise Interrupt)
+             | _ => (with_deferred_interrupts cleanup; NONE)
+      end
+    fun acquire () =
+      case create () of
+        SOME l => SOME l
+      | NONE =>
+          case lock_holder path of
+            SOME holder =>
+              if lock_stale max_lock_age path
+              then
+                (remove_file (path ^ "/holder");
+                 OS.FileSys.rmDir path
+                   handle _ => remove_file path handle _ => ();
+                 create ())
+              else NONE
+          | NONE =>
+              if lock_stale max_lock_age path andalso
+                 reclaim_holderless_lock path
+              then create ()
+              else NONE
+  in
+    with_lock_registry acquire
+  end
+
+fun with_manifest_lock max_lock_age f =
+  let
+    fun loop 0 = raise ERR "with_manifest_lock" "MANIFEST lock held"
+      | loop n =
+        case acquire_lock max_lock_age "MANIFEST" of
+          NONE => (OS.Process.sleep (Time.fromSeconds 1); loop (n - 1))
+        | SOME lock =>
+            (let val r = f () in release_lock lock; r end
+             handle e => (release_lock lock; raise e))
+  in
+    loop 60
+  end
+
+fun publish_manifest_entry max_lock_age prov entry after_publish =
+  with_manifest_lock max_lock_age (fn () =>
+    let
+      val entries = case read_manifest () of
+          NONE => []
+        | SOME m => #entries m
+    in
+      with_deferred_interrupts (fn () =>
+        (write_manifest prov (update_entry entry entries); after_publish ()))
+    end)
+
+fun update_manifest_entry max_lock_age prov entry =
+  publish_manifest_entry max_lock_age prov entry (fn () => ())
+
+(* Preserve a valid same-identity recording while a forced replacement is
+   being published.  Use binary I/O so restoring the copy also restores the
+   hash recorded in the old manifest entry exactly. *)
+fun copy_file src dst =
+  let
+    val ins = BinIO.openIn src
+    val outs =
+      BinIO.openOut dst
+      handle e => (BinIO.closeIn ins; raise e)
+    fun loop () =
+      let val bytes = BinIO.inputN (ins, 65536) in
+        if Word8Vector.length bytes = 0 then ()
+        else (BinIO.output (outs,bytes); loop ())
+      end
+  in
+    ((loop (); BinIO.closeIn ins; BinIO.closeOut outs)
+     handle e =>
+       ((BinIO.closeIn ins handle _ => ());
+        (BinIO.closeOut outs handle _ => ());
+        remove_file dst;
+        raise e))
+  end
+
+(* -------------------------------------------------------------------------
+   Staleness
+
+   A scan indexes the manifest and the source hashes so that the ancestor
+   walk below is a dictionary lookup per ancestor rather than a linear
+   scan (and a re-hash) of every theory in scope.
+   ------------------------------------------------------------------------ *)
+
+type scan =
+  { force : bool,
+    prov : provenance,
+    man : manifest option,
+    src : (string,string) Redblackmap.dict,
+    (* ancestry identities computed from src, without re-reading scripts *)
+    identities : (string, int * string) Redblackmap.dict,
+    (* entries of the manifest, grouped by theory *)
+    entries : (string, entry list) Redblackmap.dict,
+    (* theories whose current source has no matching manifest entry *)
+    changed : string HOLset.set }
+
+fun src_hash_of (sc : scan) thy =
+  SOME (dfind thy (#src sc)) handle NotFound => NONE
+
+fun entries_of (sc : scan) thy = dfind thy (#entries sc) handle NotFound => []
+
+fun identity_of (sc : scan) thy =
+  dfind thy (#identities sc) handle NotFound =>
+    (ancestry_version thy, ancestry_hash thy)
+
+fun scan_entry_matches (sc : scan) src thy (e : entry) =
+  let val (anc_version,anc_hash) = identity_of sc thy in
+    #thy e = thy andalso
+    #src_hash e = src andalso
+    #anc_version e = anc_version andalso
+    #anc_hash e = anc_hash andalso
+    #tacdata_version e = #tacdata_version (#prov sc) andalso
+    #tactictoe_version e = #tactictoe_version (#prov sc)
+  end
+
+fun lookup_entry (sc : scan) thy =
+  case src_hash_of sc thy of
+    NONE => NONE
+  | SOME src => List.find (scan_entry_matches sc src thy) (entries_of sc thy)
+
+fun mk_scan force prov man src_hashes work =
+  let
+    val src = dnew String.compare src_hashes
+    fun indexed_source_hash thy =
+      dfind thy src handle NotFound => source_hash thy
+    fun identity thy =
+      (ancestry_version thy, ancestry_hash_from indexed_source_hash thy)
+    val identities =
+      dnew String.compare (map (fn thy => (thy, identity thy)) work)
+    val entries = case man of NONE => [] | SOME m => #entries m
+    fun add (e : entry, d) =
+      dadd (#thy e) (e :: (dfind (#thy e) d handle NotFound => [])) d
+    val index = foldl add (dempty String.compare) entries
+    val sc0 = {force = force, prov = prov, man = man, src = src,
+               identities = identities,
+               entries = index, changed = HOLset.empty String.compare}
+    val changed = HOLset.addList (HOLset.empty String.compare,
+      filter (fn thy => not (isSome (lookup_entry sc0 thy))) work)
+  in
+    {force = force, prov = prov, man = man, src = src,
+     identities = identities, entries = index, changed = changed}
+  end
+
+fun stale_reason (sc : scan) stale_set thy =
+  if #force sc then SOME Forced else
+  case #man sc of
+    NONE => SOME Manifest_incompatible
+  | SOME m =>
+    if #tacdata_version m <> #tacdata_version (#prov sc)
+    then SOME Tacdata_version_changed
+    else if #tactictoe_version m <> #tactictoe_version (#prov sc)
+    then SOME Tactictoe_version_changed
+    else
+    case lookup_entry sc thy of
+      (* no entry for the current identity: either the theory was never
+         recorded, or its source has moved on from what was recorded *)
+      NONE => if null (entries_of sc thy)
+              then SOME Missing_manifest_line
+              else SOME Source_changed
+    | SOME e =>
+      let
+        val data_file = entry_file e
+        val ancestors = ttt_ancestry thy
+        fun recorded_this_run dep = mem dep stale_set
+        fun source_moved dep = HOLset.member (#changed sc, dep)
+      in
+        if #failed e then SOME Missing_data
+        else if not (exists_file data_file) then SOME Missing_data
+        else if sha1_file data_file <> #data_hash e then SOME Tampered_data
+        else
+          case List.find recorded_this_run ancestors of
+            SOME dep => SOME (Ancestor_recorded dep)
+          | NONE =>
+            case List.find source_moved ancestors of
+              SOME dep => SOME (Ancestor_recorded dep)
+            | NONE => NONE
+      end
+
+type record_plan =
+  { provenance : provenance,
+    source_hashes : (string * string) list,
+    stale : (string * reason) list,
+    up_to_date : string list }
+
+fun compute_record_plan force scope : record_plan =
+  let
+    val prov = current_provenance ()
+    val man = read_manifest ()
+    val work = theories_of_scope scope
+    val src_hashes = map (fn thy => (thy, source_hash thy)) work
+    val sc = mk_scan force prov man src_hashes work
+    fun step (thy,(stale,up,stale_names)) =
+      case stale_reason sc stale_names thy of
+        NONE => (stale, thy :: up, stale_names)
+      | SOME r => ((thy,r) :: stale, up, thy :: stale_names)
+    val (stale,up,_) = foldl step ([],[],[]) work
+  in
+    {provenance = prov, source_hashes = src_hashes,
+     stale = rev stale, up_to_date = rev up}
+  end
+
+fun ttt_record_plan scope =
+  let val p = compute_record_plan false scope in
+    {stale = #stale p, up_to_date = #up_to_date p}
+  end
+
+(* -------------------------------------------------------------------------
+   Recording one theory
+   ------------------------------------------------------------------------ *)
+
+fun record_one (cfg : record_config) prov src_hashes recorded_stale thy =
+  let val {force,max_lock_age,...} = cfg in
+    case acquire_lock max_lock_age thy of
+      NONE =>
+        let val msg = "skipped: " ^ thy ^ "  reason: held by another process"
+        in print_endline msg; (false,msg) end
+    | SOME lock =>
+      (let
+        (* another process may have recorded this theory, or one of its
+           ancestors, since the plan was made: re-read the manifest.  The
+           source hashes cannot have changed, so reuse them. *)
+        val work = map fst src_hashes
+        val sc = mk_scan force prov (read_manifest ()) src_hashes work
+      in
+        case stale_reason sc recorded_stale thy of
+          NONE =>
+            let val msg = "up-to-date after lock: " ^ thy in
+              print_endline msg; release_lock lock; (true,msg)
+            end
+        | SOME r =>
+          let
+            (* A forced attempt may target the same identity.  Keep its valid
+               manifest entry if the replacement fails. *)
+            fun usable e =
+              not (#failed e) andalso exists_file (entry_file e) andalso
+              sha1_file (entry_file e) = #data_hash e
+              handle Interrupt => raise Interrupt | _ => false
+            val previous =
+              case lookup_entry sc thy of
+                SOME e => if usable e then SOME e else NONE
+              | NONE => NONE
+            val backup = ref (NONE : (string * string) option)
+            val committed = ref false
+            fun preserve_previous () =
+              case previous of
+                NONE => ()
+              | SOME e =>
+                  let
+                    val file = entry_file e
+                    val saved = file ^ "." ^
+                      Portable.unique_tmp_suffix () ^ ".rollback"
+                  in
+                    copy_file file saved;
+                    backup := SOME (file,saved)
+                  end
+            fun discard_backup () =
+              case !backup of
+                NONE => ()
+              | SOME (_,saved) =>
+                  ((remove_file saved handle _ => ()); backup := NONE)
+            fun restore_previous () =
+              if !committed then () else
+              case !backup of
+                NONE => ()
+              | SOME (file,saved) =>
+                  (OS.FileSys.rename {old = saved, new = file};
+                   backup := NONE)
+          in
+            ((print_endline
+                ("recording: " ^ thy ^ "  reason: " ^ reason_to_string r);
+              preserve_previous ();
+              record_thy_raw thy;
+              let
+                val file = current_tacdata_file thy
+                val _ = if exists_file file then () else
+                  raise ERR "record_one"
+                    ("missing data after recording " ^ thy)
+                val data_hash = sha1_file file
+                val src_hash = source_hash thy
+                val entry = success_entry prov thy data_hash src_hash
+                val msg = "recorded: " ^ thy ^
+                  "  data=" ^ data_hash ^ "  src=" ^ src_hash
+              in
+                publish_manifest_entry max_lock_age prov entry
+                  (fn () => committed := true);
+                discard_backup ();
+                print_endline msg;
+                release_lock lock; (true,msg)
+              end)
+             handle Interrupt =>
+                    ((restore_previous () handle _ => ()); raise Interrupt)
+                  | e =>
+               let
+                 val _ = restore_previous ()
+                 val src_hash = source_hash thy handle _ => ""
+                 val msg = "failed: " ^ thy ^ "  " ^ exnMessage e
+                 val _ = case previous of
+                     SOME _ => ()
+                   | NONE =>
+                       update_manifest_entry max_lock_age prov
+                         (failed_entry prov thy src_hash) handle _ => ()
+               in
+                 print_endline msg;
+                 release_lock lock; (false,msg)
+               end)
+          end
+      end
+      handle e => (release_lock lock; raise e))
+  end
+
+(* -------------------------------------------------------------------------
+   Parallel workers
+   ------------------------------------------------------------------------ *)
+
+fun worker_value key sl =
+  let fun keyed line = case String.tokens Char.isSpace line of
+      k :: _ => k = key
+    | _ => false
+  in
+    case List.find keyed sl of
+      SOME line =>
+        (case String.tokens Char.isSpace line of
+           [_,v] => v
+         | _ => raise ERR "worker_value" key)
+    | NONE => raise ERR "worker_value" key
+  end
+
+(* a source hash is empty when the script is not on disk; "-" keeps the
+   line shape intact for the reader *)
+fun worker_encode s = if s = "" then "-" else s
+fun worker_decode s = if s = "-" then "" else s
+
+fun write_worker_param file (p : record_worker_param) =
+  let
+    fun src_line (thy,h) = String.concatWith " " ["src",thy,worker_encode h]
+    fun stale_line thy = "stale " ^ thy
+  in
+    writel file
+      (["force " ^ bts (#force p),
+        "max_lock_age_seconds " ^ its (#max_lock_age_seconds p),
+        "tacdata_version " ^ its (#tacdata_version p),
+        "tactictoe_version " ^ its (#tactictoe_version p)] @
+       map src_line (#src_hashes p) @ map stale_line (#recorded_stale p))
+  end
+
+fun read_worker_param file =
+  let
+    val sl = readl file
+    fun src line = case String.tokens Char.isSpace line of
+        ["src",thy,h] => SOME (thy, worker_decode h)
+      | _ => NONE
+    fun stale line = case String.tokens Char.isSpace line of
+        ["stale",thy] => SOME thy
+      | _ => NONE
+  in
+    { force = string_to_bool (worker_value "force" sl),
+      max_lock_age_seconds =
+        string_to_int (worker_value "max_lock_age_seconds" sl),
+      tacdata_version = string_to_int (worker_value "tacdata_version" sl),
+      tactictoe_version = string_to_int (worker_value "tactictoe_version" sl),
+      src_hashes = List.mapPartial src sl,
+      recorded_stale = List.mapPartial stale sl }
+  end
+
+fun record_worker (p : record_worker_param) thy =
+  let
+    val cfg = mk_config (Theories [], 1, #force p, false,
+      Time.fromSeconds (Int.toLarge (#max_lock_age_seconds p)))
+    val prov = {tacdata_version = #tacdata_version p,
+                tactictoe_version = #tactictoe_version p}
+    val _ = load (thy ^ "Theory")
+      handle Interrupt => raise Interrupt | _ => ()
+    val (ok,msg) =
+      record_one cfg prov (#src_hashes p) (#recorded_stale p) thy
+  in
+    (if ok then "ok " else "fail ") ^ thy ^ "  " ^ msg
+  end
+  handle Interrupt => raise Interrupt
+       | e => "fail " ^ thy ^ "  " ^ exnMessage e
+
+fun record_extspec () =
+  let
+    val loaded_dirs = map snd (Binarymap.listItems (fileDirMap ()))
+    val includes = mk_sameorder_set String.compare
+      (map full_path
+        (HOLDIR ^ "/src/tactictoe/src" :: loaded_dirs @ !loadPath))
+    fun set_bool name r = name ^ " := " ^ bts (!r)
+    fun set_real name r = name ^ " := " ^ Real.toString (!r)
+    val globals =
+      ["tttUnfold.record_parallel_dir := " ^
+         mlquote (record_parallel_dir_of ()),
+       "tttSetup.set_tactictoe_cache_dir " ^ mlquote (tactictoe_dir_of ()),
+       set_bool "aiLib.debug_flag" debug_flag,
+       set_bool "tttSetup.record_flag" record_flag,
+       set_bool "tttSetup.record_prove_flag" record_prove_flag,
+       set_bool "tttSetup.record_let_flag" record_let_flag,
+       set_bool "tttSetup.record_ortho_flag" record_ortho_flag,
+       set_bool "tttSetup.ttt_ex_flag" ttt_ex_flag,
+       set_bool "tttSetup.record_savestate_flag" record_savestate_flag,
+       set_bool "tttSetup.export_thmdata_flag" export_thmdata_flag,
+       set_bool "tttSetup.learn_abstract_term" learn_abstract_term,
+       set_real "tttSetup.record_tactic_time" record_tactic_time,
+       set_real "tttSetup.record_proof_time" record_proof_time,
+       set_real "tttSetup.learn_tactic_time" learn_tactic_time,
+       set_real "tttSetup.ttt_search_time" ttt_search_time,
+       set_real "tttSetup.ttt_tactic_time" ttt_tactic_time]
+  in
+  {
+  self_dir = String.concatWith " " includes,
+  self = "(tttUnfold.record_extspec ())",
+  parallel_dir = record_parallel_dir_of (),
+  reflect_globals = "(" ^ String.concatWith "; " globals ^ ")",
+  function = record_worker,
+  write_param = write_worker_param,
+  read_param = read_worker_param,
+  write_arg = (fn file => fn thy => writel file [thy]),
+  read_arg = (fn file => hd (readl file)),
+  write_result = (fn file => fn s => writel file [s]),
+  read_result = (fn file => hd (readl_rm file))
+  }
+  end
+
+(* -------------------------------------------------------------------------
+   Driver
+   ------------------------------------------------------------------------ *)
+
+fun ttt_record_cfg (cfg : record_config) =
+  let
+    val {scope,parallel,force,dry_run,max_lock_age} = cfg
+    val plan = compute_record_plan force scope
+    val stale = #stale plan
+    val up = #up_to_date plan
+    val _ = app (fn thy => print_endline ("up-to-date: " ^ thy)) up
+    val _ = app (fn (thy,r) => print_endline
+      ("stale: " ^ thy ^ "  reason: " ^ reason_to_string r)) stale
+  in
+    if dry_run then
+      print_endline ("ttt_record dry-run: " ^ its (length stale) ^
+        " stale, " ^ its (length up) ^ " up-to-date")
+    else
+      let
+        val prov = #provenance plan
+        val src_hashes = #source_hashes plan
+        val stale_names = map fst stale
+        val _ = if parallel <= 1 then () else
+          (mkDir_err (tactictoe_scratch_dir_of () ^ "/parallel");
+           record_parallel_dir :=
+             tactictoe_scratch_dir_of () ^ "/parallel/ttt_record_" ^
+             Portable.unique_tmp_suffix ())
+        (* the stale theories form a DAG; record them in dependency
+           batches so that a theory is only started once every stale
+           ancestor of it has been recorded *)
+        val stale_set = HOLset.addList (HOLset.empty String.compare,
+          stale_names)
+        fun stale_deps thy = filter (fn d => HOLset.member (stale_set,d))
+          (ttt_ancestry thy)
+        val deps = dnew String.compare
+          (map (fn thy => (thy, stale_deps thy)) stale_names)
+        fun deps_of thy = dfind thy deps handle NotFound => []
+        fun make_batches done pending =
+          if null pending then [] else
+          let
+            fun ready thy = all (fn d => HOLset.member (done,d)) (deps_of thy)
+            val (readyl,later) = List.partition ready pending
+          in
+            if null readyl
+            then raise ERR "ttt_record_cfg" "dependency cycle"
+            else readyl :: make_batches (HOLset.addList (done,readyl)) later
+          end
+        val batches = make_batches (HOLset.empty String.compare) stale_names
+        fun worker_param done =
+          { force = force,
+            max_lock_age_seconds = IntInf.toInt (Time.toSeconds max_lock_age)
+              handle _ => 7200,
+            tacdata_version = #tacdata_version prov,
+            tactictoe_version = #tactictoe_version prov,
+            src_hashes = src_hashes,
+            recorded_stale = done }
+        fun outcome_ok s = String.isPrefix "ok " s
+        fun serial_record done thy =
+          let val (ok,msg) = record_one cfg prov src_hashes done thy in
+            (if ok then "ok " else "fail ") ^ thy ^ "  " ^ msg
+          end
+        fun run_parallel done batch =
+          let val ncore = Int.min (parallel, length batch) in
+            if ncore <= 1 then map (serial_record done) batch else
+            let
+              val results = with_tactictoe_cache (fn () =>
+                parmap_queue_extern ncore
+                  (record_extspec ()) (worker_param done) batch)
+                handle Interrupt => raise Interrupt
+                     | e =>
+                       let
+                         val msg = "external worker failure: " ^ exnMessage e
+                         val _ = print_endline ("parallel failure: " ^ msg)
+                       in
+                         map (fn thy => "fail " ^ thy ^ "  " ^ msg) batch
+                       end
+            in
+              app (fn s => print_endline ("parallel result: " ^ s)) results;
+              results
+            end
+          end
+        fun run_batch batch (done,failed) =
+          let
+            fun failed_dep thy = List.find (fn d => mem d failed)
+              (ttt_ancestry thy)
+            val (runnable,skipped) =
+              List.partition (not o isSome o failed_dep) batch
+            fun print_skip thy =
+              print_endline ("skipped: " ^ thy ^
+                "  reason: failed ancestor " ^ valOf (failed_dep thy))
+            val _ = app print_skip skipped
+            val results =
+              if null runnable then [] else run_parallel done runnable
+            val pairs = combine (runnable,results)
+            val successes = map fst (filter (outcome_ok o snd) pairs)
+            val failures = map fst (filter (not o outcome_ok o snd) pairs)
+          in
+            (done @ successes, failed @ skipped @ failures)
+          end
+        val ((),t) = add_time (fn () =>
+          ignore (foldl (fn (batch,acc) => run_batch batch acc)
+            ([],[]) batches)) ()
+      in
+        print_endline ("ttt_record time: " ^ rts_round 4 t)
+      end
+  end
+
+fun ttt_record_opts opts =
+  ttt_record_cfg
+    (foldl (fn (opt,cfg) => apply_record_option opt cfg)
+       default_record_config opts)
+
+fun ttt_record () = ttt_record_cfg default_record_config
+
+(* The manifest tracks tactic data only.  Other recording outputs are
+   invocation side effects, so they must not be skipped based on tactic-data
+   freshness. *)
+fun tactic_data_only () =
+  !record_flag andalso
+  not (!record_savestate_flag) andalso
+  not (!export_thmdata_flag)
+
+(* Side-effectful recording must run even when tactic data is fresh.  Force
+   just the requested theory through record_one so that replacing its tactic
+   data and publishing the corresponding manifest hash remain atomic. *)
+fun record_thy_with_side_effects thy =
+  let
+    val scope = Theories [thy]
+    val plan = compute_record_plan true scope
+    val cfg = apply_record_option (Force true)
+      (apply_record_option (Scope scope) default_record_config)
+    val (ok,msg) = record_one cfg (#provenance plan)
+      (#source_hashes plan) [] thy
+  in
+    if ok then () else raise ERR "ttt_record_thy" msg
+  end
+
+fun ttt_record_thy thy =
+  if mem thy ["min","bool"] then () else
+  if tactic_data_only () then
+    (ttt_record_opts [Scope (Theories [thy])];
+     let val plan = compute_record_plan false (Theories [thy]) in
+       if mem thy (#up_to_date plan) then ()
+       else raise ERR "ttt_record_thy" thy
+     end)
+  else if !record_flag then record_thy_with_side_effects thy
+  else record_thy_raw thy
 
 
 end (* struct *)

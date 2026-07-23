@@ -8,7 +8,7 @@
 structure mlTacticData :> mlTacticData =
 struct
 
-open HolKernel boolLib Abbrev aiLib smlLexer mlFeature
+open HolKernel boolLib Abbrev aiLib smlLexer mlFeature tttManifest
 
 val ERR = mk_HOL_ERR "mlTacticData"
 
@@ -58,7 +58,7 @@ fun export_calls file calls1 =
     val calls2 = filter (test o snd) calls1
     val _ = debug ("export_calls: " ^ its (length calls2) ^ " filtered calls")
   in
-    writel file (List.concat (map call_to_string calls2))
+    writel_atomic file (List.concat (map call_to_string calls2))
   end
 
 fun export_tacdata thy file tacdata =
@@ -112,19 +112,20 @@ fun import_tacdata filel =
    Tactictoe database management
    ------------------------------------------------------------------------- *)
 
-val ttt_tacdata_dir = HOLDIR ^ "/src/tactictoe/ttt_tacdata"
+val ttt_tacdata_file_override = ref (NONE : string option)
 
-fun exists_tacdata_thy thy =
-  exists_file (ttt_tacdata_dir ^ "/" ^ thy)
+fun exists_tacdata_thy thy = isSome (tacdata_file_for_thy thy)
 
 fun create_tacdata () =
   let
-    fun test file = exists_file file
     val thyl = ancestry (current_theory ())
-    fun f x = ttt_tacdata_dir ^ "/" ^ x
-    val filel = filter test (map f thyl)
-    val thyl1 = map OS.Path.file filel
-    val thyl2 = list_diff thyl thyl1
+    (* read the manifest once, not once per ancestor *)
+    val man = read_manifest ()
+    val resolved = tacdata_files_for_thys_in man thyl
+    val filel = List.mapPartial (fn (_,SOME file) => SOME file | _ => NONE)
+      resolved
+    val thyl2 = List.mapPartial (fn (thy,NONE) => SOME thy | _ => NONE)
+      resolved
     val thyl3 = filter (fn x => not (mem x ["bool","min"])) thyl2
     val _ = if null thyl3 then () else
       (
@@ -148,8 +149,10 @@ fun ttt_update_tacdata ((loc,call),{calld,taccov,symfreq}) =
 
 fun ttt_export_tacdata thy tacdata =
   let
-    val _ = mkDir_err ttt_tacdata_dir
-    val file = ttt_tacdata_dir ^ "/" ^ thy
+    val _ = mkDir_err (tacdata_data_dir ())
+    val file = case !ttt_tacdata_file_override of
+        SOME file => file
+      | NONE => current_tacdata_file thy
   in
     export_tacdata thy file tacdata
   end

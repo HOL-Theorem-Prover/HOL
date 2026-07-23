@@ -45,11 +45,19 @@ sig
 
   (* commands *)
   val mkDir_err : string -> unit
+  val cache_root : unit -> string
+  val home_cache_dir : string -> string
+  val tool_cache_dir : string -> string -> string
+  val tactictoe_cache_dir : string ref
+  val scratch_dir : string ref
+  val require_dir : string -> string -> string
+  val scratch_dir_of : unit -> string
   val run_cmd : string -> unit
   val cmd_in_dir : string -> string -> unit
   val exists_file : string -> bool
   val remove_file : string -> unit
   val clean_dir : string -> unit
+  val shell_quote : string -> string
 
   (* dictionnary *)
   val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b
@@ -177,6 +185,8 @@ sig
     string -> string * string -> (int * int) list -> unit
   val readl_rm : string -> string list
   val writel_atomic : string -> string list -> unit
+  val sha1_file : string -> string
+  val sha1_string : string -> string
   val listDir : string -> string list
   val listDir_all : string -> string list
 

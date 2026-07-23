@@ -23,8 +23,9 @@ sig
   val import_tacdata : string list -> tacdata
   val export_tacdata : string -> string -> tacdata -> unit
 
-  (* tactictoe database *)
-  val ttt_tacdata_dir : string
+  (* tactictoe database; the on-disk identity and manifest live in
+     tttManifest *)
+  val ttt_tacdata_file_override : string option ref
   val exists_tacdata_thy : string -> bool
   val create_tacdata : unit -> tacdata
   val ttt_update_tacdata : ((loc * call) * tacdata) -> tacdata

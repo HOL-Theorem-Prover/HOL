@@ -12,8 +12,12 @@ struct
 open HolKernel boolLib aiLib smlExecScripts
 
 val ERR = mk_HOL_ERR "smlOpen"
-val open_dir = HOLDIR ^ "/src/AI/sml_inspection/open"
-val openscript_dir = HOLDIR ^ "/src/AI/sml_inspection/openscript"
+fun open_dir () = scratch_dir_of () ^ "/sml_inspection/open"
+fun openscript_dir () = scratch_dir_of () ^ "/sml_inspection/openscript"
+val openscript_run_dir = ref (NONE : string option)
+val openscript_includes = ref ([] : string list)
+
+exception OpenStruct of string * exn
 
 (* -------------------------------------------------------------------------
    Generate SML code for exporting values of a structure
@@ -47,8 +51,8 @@ fun sml_cleanval () =
 
 fun sml_exportstruct s =
   let
-    val dir = open_dir ^ "/" ^ s
-    val _ = app mkDir_err [open_dir,dir]
+    val dir = open_dir () ^ "/" ^ s
+    val _ = app mkDir_err [open_dir (),dir]
     val l = filter test_val (#allVal PolyML.globalNameSpace ())
     val structures =
       filter (test_struct s) (#allStruct PolyML.globalNameSpace ())
@@ -60,9 +64,12 @@ fun sml_exportstruct s =
     writel (dir ^ "/exceptions")   (map fst exceptions)
   end
 
+(* The generated script runs in a fresh process, so it must be told the
+   scratch root this one is using. *)
 fun export_struct_code s =
   [
    "open smlOpen;",
+   "aiLib.scratch_dir := " ^ mlquote (scratch_dir_of ()) ^ ";",
    "sml_cleanval ();",
    "sml_cleanstruct " ^ mlquote s ^ ";",
    "open " ^ s ^ ";",
@@ -75,24 +82,26 @@ fun export_struct_code s =
 
 fun export_struct s =
   let
-    val _ = mkDir_err openscript_dir
-    val script = openscript_dir ^ "/" ^ s ^ "__open__sml.sml"
+    val _ = mkDir_err (openscript_dir ())
+    val script = openscript_dir () ^ "/" ^ s ^ "__open__sml.sml"
+    val dir = getOpt (!openscript_run_dir, openscript_dir ())
   in
     writel script (export_struct_code s);
-    exec_script script
+    with_flag (smlExecScripts.script_includes, !openscript_includes)
+      (exec_script_in_dir dir) script
   end
 
 fun import_struct s =
-  let val dir = open_dir ^ "/" ^ s in
+  let val dir = open_dir () ^ "/" ^ s in
     (readl (dir ^ "/values"), readl (dir ^ "/constructors"),
      readl (dir ^ "/exceptions"), readl (dir ^ "/structures"))
   end
 
-fun view_struct s = (export_struct s; import_struct s)
+fun view_struct s =
+  (export_struct s; import_struct s)
+  handle Interrupt => raise Interrupt | e => raise OpenStruct (s,e)
 
 fun view_struct_cached s = import_struct s handle Io _ => view_struct s
-
-
 
 
 end (* struct *)
