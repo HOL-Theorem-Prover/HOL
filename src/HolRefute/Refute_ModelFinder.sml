@@ -291,6 +291,24 @@ fun prepare_instance_input (instance : Refute_Core.instance) =
     (original, map rename (#evals instance))
   end
 
+(* A quotient package type also has a kernel typedef theorem, so the raw
+   morphism guard discovers both classes.  Prefer the quotient theorem; only
+   if that validated harvest misses do we try the typedef bijections shape.
+   Iterate because one problem may mention several previously unseen types. *)
+fun harvest_guard terms =
+  case MFH.first_unregistered_typedef terms of
+      NONE => (NONE, false)
+    | SOME ty =>
+        if MFH.harvest_quotient ty orelse MFH.harvest_typedef ty then
+          let val (reason, _) = harvest_guard terms
+          in (reason, true) end
+        else
+          (MFH.unregistered_typedef_reason terms, false)
+
+fun harvest_guard_reason terms = #1 (harvest_guard terms)
+
+exception RESTART_AFTER_HARVEST
+
 fun run_instance deadline started (config : Refute_Core.config)
       incremental solver (initial_max_potential, initial_max_genuine)
       (instance : Refute_Core.instance) =
@@ -315,9 +333,16 @@ fun run_instance deadline started (config : Refute_Core.config)
        was absent from the surface goal.  Scan the complete preprocessed
        problem as well as the early surface-goal guard in [run]. *)
     val _ =
-      case MFH.unregistered_typedef_reason (nondef_ts @ def_ts) of
-          SOME reason => raise Util.NOT_SUPPORTED reason
-        | NONE => ()
+      case harvest_guard (nondef_ts @ def_ts) of
+          (SOME reason, _) => raise Util.NOT_SUPPORTED reason
+        | (NONE, true) =>
+            (* The first preprocessing pass did not know the harvested
+               registration and therefore did not insert its axioms or
+               morphism rewrites.  Restart with a fresh context before any
+               scope or solver work; the positive registry cache makes the
+               second pass constant-time at this guard. *)
+            raise RESTART_AFTER_HARVEST
+        | (NONE, false) => ()
     val _ = MFH.refresh_iterator_arg_types context (nondef_ts @ def_ts)
     val _ = MFH.print_wf_cache context
     val nondef_us = map (MFNT.nut_from_term context MFNT.Eq) nondef_ts
@@ -855,6 +880,9 @@ fun run_instance deadline started (config : Refute_Core.config)
         (finalize (!last_donno) outcome, remaining (!latest_state))
       end
   end
+  handle RESTART_AFTER_HARVEST =>
+    run_instance deadline started config incremental solver
+      (initial_max_potential, initial_max_genuine) instance
 
 fun kodkod_certainty_ceiling (config : Refute_Core.config) instances =
   let
@@ -900,7 +928,7 @@ fun run config instances =
     val incremental =
       Int.max (initial_max_potential, initial_max_genuine) >= 2
     val solver = actual_solver incremental mf
-    val typedef_reason = MFH.unregistered_typedef_reason
+    val typedef_reason = harvest_guard_reason
       (List.concat (map (fn (instance : Refute_Core.instance) =>
         #original instance :: #evals instance) ordered))
 

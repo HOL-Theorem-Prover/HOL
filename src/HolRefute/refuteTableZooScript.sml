@@ -145,6 +145,42 @@ Definition zoo_three_rep_wrapper_def:
     if b then zoo_three_rep x else zoo_three_rep x
 End
 
+(* A kernel typedef whose two valid bijection halves are saved separately,
+   but whose harvestable conjunction is deliberately absent.  A selftest can
+   add that conjunction temporarily to exercise negative-cache freshness. *)
+Theorem zoo_unharvested_exists[local]:
+  ?n : num. (\n. n < 2) n
+Proof
+  qexists_tac `0` >> simp []
+QED
+
+val zoo_unharvested_tydef =
+  new_type_definition ("zoo_unharvested", zoo_unharvested_exists);
+
+val zoo_unharvested_absrep = define_new_type_bijections
+  {name = "zoo_unharvested_absrep", ABS = "zoo_unharvested_abs",
+   REP = "zoo_unharvested_rep", tyax = zoo_unharvested_tydef};
+
+Theorem zoo_unharvested_absrep_1:
+  !x. zoo_unharvested_abs (zoo_unharvested_rep x) = x
+Proof
+  metis_tac [zoo_unharvested_absrep]
+QED
+
+Theorem zoo_unharvested_absrep_2:
+  !n. (\n. n < 2) n =
+      (zoo_unharvested_rep (zoo_unharvested_abs n) = n)
+Proof
+  metis_tac [zoo_unharvested_absrep]
+QED
+
+val _ = Theory.delete_binding "zoo_unharvested_absrep";
+
+Definition zoo_unharvested_wrapper_def:
+  zoo_unharvested_wrapper b n =
+    if b then zoo_unharvested_abs n else zoo_unharvested_abs n
+End
+
 Theorem zoo_univ_exists[local]:
   ?n : num. (\n. T) n
 Proof

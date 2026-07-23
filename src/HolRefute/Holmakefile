@@ -1,5 +1,7 @@
 INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit ../sort \
-           ../real ../coalgebras $(HOLDIR)/src/num/theories/cv_compute \
+           ../real ../coalgebras ../finite_maps \
+           ../pred_set/src/more_theories \
+           $(HOLDIR)/src/num/theories/cv_compute \
            $(HOLDIR)/src/num/theories/cv_compute/automation
 
 all: $(DEFAULT_TARGETS) selftest.exe
@@ -15,7 +17,8 @@ selftest.uo: Refute_SmartGen.uo Refute_Narrow.uo Refute_PropSat.uo \
              Refute_ModelFinder_Scope.uo \
              Refute_ModelFinder_Mono.uo \
              Refute_ModelFinder_HOL.uo Refute_ModelFinder.uo \
-             refuteTableZooTheory.uo refuteUnusedTheory.uo
+             refuteTableZooTheory.uo refuteUnusedTheory.uo \
+             refuteHarvestTheoremTheory.uo
 
 # The substrate layer reaches the shared type/term helpers through a
 # `structure Util = Refute_Util` alias, which holdep does not follow, so the
@@ -72,7 +75,8 @@ Refute.uo: Refute_Unused.uo Refute_ModelFinder.uo
 
 ifdef POLY
 selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
-              refuteTableZooTheory.uo refuteUnusedTheory.uo refuteheap
+              refuteTableZooTheory.uo refuteUnusedTheory.uo \
+              refuteHarvestTheoremTheory.uo refuteheap
 	@printf '%s\n' '#!/bin/sh' 'set -e' \
 	  '$(HOLDIR)/bin/hol --gcthreads=1 run \
 	  --holstate=$(HOLDIR)/src/HolRefute/refuteheap selftest' \
@@ -80,7 +84,8 @@ selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
 	@chmod +x $@
 else
 selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
-              refuteTableZooTheory.uo refuteUnusedTheory.uo
+              refuteTableZooTheory.uo refuteUnusedTheory.uo \
+              refuteHarvestTheoremTheory.uo
 	$(HOLMOSMLC) -o $@ $<
 endif
 

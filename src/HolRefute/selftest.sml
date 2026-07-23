@@ -5,8 +5,11 @@ open refuteTableZooTheory
 open refuteUnusedTheory
 open sortingTheory
 open realTheory
+open metricTheory
 open lbtreeTheory
 open pathTheory
+open refuteHarvestTheoremTheory
+local open finite_mapTheory finite_setTheory in end
 open Refute_Core
 open Refute_Gen
 open Refute_Narrow
@@ -1488,9 +1491,33 @@ fun with_quotient_typedef_registries_restored body =
   let
     val saved_quotients = !MFH.quotient_registry
     val saved_typedefs = !MFH.typedef_registry
+    val saved_quotient_misses = !MFH.quotient_harvest_misses
+    val saved_typedef_misses = !MFH.typedef_harvest_misses
+    val saved_quotient_scans = !MFH.quotient_harvest_scan_count
+    val saved_typedef_scans = !MFH.typedef_harvest_scan_count
+    val saved_quotient_scan_theories =
+      !MFH.quotient_harvest_scan_theories
+    val saved_typedef_scan_theories = !MFH.typedef_harvest_scan_theories
+    val saved_index_scans = !MFH.harvest_index_theory_scan_count
+    val saved_index_scan_theories =
+      !MFH.harvest_index_theory_scan_theories
+    val saved_ancestry_scans = !MFH.harvest_global_ancestry_scan_count
+    val saved_constant_scans = !MFH.harvest_global_constant_scan_count
     fun restore () =
       (MFH.quotient_registry := saved_quotients;
-       MFH.typedef_registry := saved_typedefs)
+       MFH.typedef_registry := saved_typedefs;
+       MFH.quotient_harvest_misses := saved_quotient_misses;
+       MFH.typedef_harvest_misses := saved_typedef_misses;
+       MFH.quotient_harvest_scan_count := saved_quotient_scans;
+       MFH.typedef_harvest_scan_count := saved_typedef_scans;
+       MFH.quotient_harvest_scan_theories :=
+         saved_quotient_scan_theories;
+       MFH.typedef_harvest_scan_theories := saved_typedef_scan_theories;
+       MFH.harvest_index_theory_scan_count := saved_index_scans;
+       MFH.harvest_index_theory_scan_theories :=
+         saved_index_scan_theories;
+       MFH.harvest_global_ancestry_scan_count := saved_ancestry_scans;
+       MFH.harvest_global_constant_scan_count := saved_constant_scans)
   in
     Portable.finally restore body ()
   end
@@ -1588,33 +1615,163 @@ val _ = require_msg
     "quotient or typedef public registration validation failed")
   (fn () => ()) ()
 
-fun mf_unregistered_typedef_guard () =
+fun mf_lazy_db_harvest () =
   with_quotient_typedef_registries_restored (fn () => let
-    val rep_goal = ``zoo_three_rep (x : zoo_three) = 0``
-    val abs_goal = ``zoo_three_abs 0 = (x : zoo_three)``
+    fun mkty Thy Tyop Args =
+      Type.mk_thy_type {Thy = Thy, Tyop = Tyop, Args = Args}
+    val frac_ty = mkty "frac" "frac" []
+    val hreal_ty = mkty "hreal" "hreal" []
+    val fmap_ty = mkty "finite_map" "fmap" [Type.bool, Type.bool]
+    val metric_ty = mkty "metric" "metric" [Type.bool]
+    val rat_ty = mkty "rat" "rat" []
+    val real_ty = mkty "realax" "real" []
+    val hrat_ty = mkty "hrat" "hrat" []
+    val fset_ty = mkty "finite_set" "fset" [Type.bool]
+    val sum_ty = mkty "sum" "sum" [Type.bool, Type.bool]
+    val llist_ty = mkty "llist" "llist" [Type.bool]
+    val typedef_targets = [frac_ty, hreal_ty, fmap_ty, metric_ty]
+    val quotient_targets = [rat_ty, real_ty, hrat_ty, fset_ty]
+    val _ = MFH.quotient_registry := []
+    val _ = MFH.typedef_registry := []
+    val _ = MFH.quotient_harvest_misses := KNametab.empty
+    val _ = MFH.typedef_harvest_misses := KNametab.empty
+    val typedefs = List.all (fn ty =>
+      MFH.harvest_typedef ty andalso MFH.is_typedef ty) typedef_targets
+    val quotients = List.all (fn ty =>
+      MFH.harvest_quotient ty andalso MFH.is_quot_type ty)
+      quotient_targets
+    val negatives =
+      not (MFH.harvest_typedef MFH.num_type) andalso
+      not (MFH.harvest_quotient MFH.num_type) andalso
+      not (MFH.harvest_typedef sum_ty) andalso
+      not (MFH.harvest_quotient sum_ty) andalso
+      not (MFH.harvest_typedef llist_ty) andalso
+      not (MFH.harvest_quotient llist_ty) andalso
+      MFH.is_interpreted_type MFH.num_type andalso
+      MFH.is_raw_free_datatype sum_ty andalso MFH.is_codatatype llist_ty
+  in
+    typedefs andalso quotients andalso negatives
+  end)
+
+val _ = require_msg (check_result mf_lazy_db_harvest) (fn () =>
+  "lazy typedef/quotient DB harvest targets or controls failed")
+  (fn () => ()) ()
+
+fun mf_lazy_db_harvest_split_theories () =
+  with_quotient_typedef_registries_restored (fn () => let
+    val ty = ``:refute_harvest_split``
+    val expected_theories =
+      ["refuteHarvestType", "refuteHarvestAbs", "refuteHarvestRep",
+       "refuteHarvestTheorem"]
+    fun scanned theory = List.exists (fn old => old = theory)
+      (!MFH.typedef_harvest_scan_theories)
+    val _ = MFH.typedef_registry := []
+    val _ = MFH.typedef_harvest_misses := KNametab.empty
+    val _ = MFH.typedef_harvest_scan_theories := []
+    val harvested = MFH.harvest_typedef ty
+    val right_constants =
+      case MFH.typedef_for_type ty of
+          SOME {abs, rep, ...} =>
+            #Thy (Term.dest_thy_const abs) = "refuteHarvestAbs" andalso
+            #Thy (Term.dest_thy_const rep) = "refuteHarvestRep"
+        | NONE => false
+  in
+    harvested andalso right_constants andalso
+    List.all scanned expected_theories
+  end)
+
+val _ = require_msg
+  (check_result mf_lazy_db_harvest_split_theories) (fn () =>
+    "lazy typedef harvest did not scan split home/abs/rep/theorem theories")
+  (fn () => ()) ()
+
+fun mf_lazy_db_harvest_guards_and_cache () =
+  with_quotient_typedef_registries_restored (fn () => let
+    val typedef_goal = ``zoo_three_rep (x : zoo_three) = 0``
     val wrapper_goal =
       ``zoo_three_rep_wrapper T (x : zoo_three) = 0``
+    val miss_goal = ``zoo_unharvested_abs 0 =
+      (x : zoo_unharvested)``
+    val miss_wrapper_goal =
+      ``zoo_unharvested_wrapper T 0 = (x : zoo_unharvested)``
     val expected =
-      "unregistered typedef zoo_three: register with " ^
+      "unregistered typedef zoo_unharvested: register with " ^
       "Refute.register_typedef"
-    val direct = List.all (fn goal =>
-      MFH.unregistered_typedef_reason [goal] = SOME expected)
-      [rep_goal, abs_goal]
     val config = default_config |> upd_timeout 2.0
-    fun guarded goal =
+    fun run goal =
       let
         val instances = Refute_Core.preprocess config
           {goal = goal, assumptions = [], evals = []}
-        val outcome = #run Refute_ModelFinder.kodkod_backend config instances
       in
-        case outcome of Unknown [reason] => reason = expected | _ => false
+        #run Refute_ModelFinder.kodkod_backend config instances
       end
+    fun missed goal =
+      case run goal of Unknown [reason] => reason = expected | _ => false
+    val _ = MFH.quotient_registry := []
+    val _ = MFH.typedef_registry := []
+    val _ = MFH.quotient_harvest_misses := KNametab.empty
+    val _ = MFH.typedef_harvest_misses := KNametab.empty
+    val _ = ignore (run typedef_goal)
+    val surface_harvested = MFH.is_typedef ``:zoo_three``
+    val positive_scans = (!MFH.quotient_harvest_scan_count,
+                          !MFH.typedef_harvest_scan_count)
+    val _ = ignore (run typedef_goal)
+    val positive_cached =
+      positive_scans = (!MFH.quotient_harvest_scan_count,
+                        !MFH.typedef_harvest_scan_count)
+    val _ = MFH.typedef_registry := []
+    val _ = ignore (run wrapper_goal)
+    val unfolded_harvested = MFH.is_typedef ``:zoo_three``
+    val first_miss = missed miss_goal
+    val scans = (!MFH.quotient_harvest_scan_count,
+                 !MFH.typedef_harvest_scan_count)
+    val discovery_scans = (!MFH.harvest_index_theory_scan_count,
+      !MFH.harvest_global_ancestry_scan_count,
+      !MFH.harvest_global_constant_scan_count)
+    val second_miss = missed miss_wrapper_goal
+    val cached = scans = (!MFH.quotient_harvest_scan_count,
+                          !MFH.typedef_harvest_scan_count) andalso
+      discovery_scans = (!MFH.harvest_index_theory_scan_count,
+        !MFH.harvest_global_ancestry_scan_count,
+        !MFH.harvest_global_constant_scan_count) andalso
+      #2 discovery_scans = 0 andalso #3 discovery_scans = 0
+    val pure_message =
+      MFH.unregistered_typedef_reason [miss_goal] = SOME expected
+    val dynamic_name = "zoo_unharvested_dynamic_absrep"
+    val snapshot = map #1 (DB.thms "-")
+    fun revert_dynamic () =
+      if List.exists (fn name => name = dynamic_name) (map #1 (DB.thms "-"))
+      then Theory.delete_binding dynamic_name
+      else ()
+    val fresh_after_add =
+      Portable.finally revert_dynamic (fn () => let
+        val _ = save_thm
+          (dynamic_name,
+           CONJ zoo_unharvested_absrep_1 zoo_unharvested_absrep_2)
+        val before_retry = !MFH.typedef_harvest_scan_count
+        val harvested = MFH.harvest_typedef ``:zoo_unharvested``
+        val rescanned_after_add =
+          !MFH.typedef_harvest_scan_count > before_retry
+        val _ = MFH.typedef_registry := []
+        val _ = Theory.delete_binding dynamic_name
+        val before_revert = !MFH.typedef_harvest_scan_count
+        val missed_after_revert =
+          not (MFH.harvest_typedef ``:zoo_unharvested``)
+      in
+        harvested andalso rescanned_after_add andalso
+        missed_after_revert andalso
+        !MFH.typedef_harvest_scan_count > before_revert
+      end) ()
+    val reverted = map #1 (DB.thms "-") = snapshot
   in
-    direct andalso List.all guarded [rep_goal, abs_goal, wrapper_goal]
+    surface_harvested andalso positive_cached andalso
+    unfolded_harvested andalso first_miss andalso second_miss andalso
+    cached andalso pure_message andalso fresh_after_add andalso reverted
   end)
 
-val _ = require_msg (check_result mf_unregistered_typedef_guard) (fn () =>
-  "unregistered typedef did not return the exact Unknown reason")
+val _ = require_msg
+  (check_result mf_lazy_db_harvest_guards_and_cache) (fn () =>
+    "targeted DB harvest, cache discovery, or Unknown message failed")
   (fn () => ()) ()
 
 fun mf_stale_codatatype_constructor_is_refused () =
