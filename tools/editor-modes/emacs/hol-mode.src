@@ -1332,6 +1332,19 @@ offers any dumped-heap candidates in DIR via `hol--prompt-heap'."
                      (car alternate))))
         first-option)))
 
+(defun hol--region-has-bare-theory-p (start end)
+  "Non-nil when a `Theory foo[bare]' declaration appears between START and END
+outside strings/comments."
+  (save-excursion
+    (goto-char start)
+    (let ((bare nil))
+      (while (and (not bare)
+                  (re-search-forward
+                   "^Theory [A-Za-z0-9_']+ *\\[bare\\]" end t))
+        (let ((pps (syntax-ppss)))
+          (if (or (nth 3 pps) (nth 4 pps)) nil (setq bare t))))
+      bare)))
+
 (defun hol (&optional display-actions display-alist)
   "Runs a HOL session in a comint window."
   (interactive)
@@ -1339,7 +1352,14 @@ offers any dumped-heap candidates in DIR via `hol--prompt-heap'."
          (my-dir (or (ignore-errors (file-name-directory buffer-file-name))
                      default-directory))
          (hol-executable (hol--get-executable))
+         (bare-detected (and (not hol-bare-p)
+                             (hol--region-has-bare-theory-p
+                              (point-min) (point-max))))
+         (hol-bare-p (or hol-bare-p bare-detected))
          (extra-args (hol-start-extra-args my-dir)))
+    (when bare-detected
+      (message "Using hol --bare")
+      (sleep-for 2))
     (if (not (file-executable-p hol-executable))
         (error "Wanted to execute %s as HOL, but can not find/execute it"
                hol-executable))
@@ -1460,21 +1480,15 @@ If no visible HOL window exists, creates a new window to the right with 83 colum
                        (message
                         "No earlier blank line; starting HOL with nothing pasted.")
                        (point-min)))))))
-      (save-mark-and-excursion
-        (goto-char (car begin-end))
-        (let ((bare nil)
-              (limit (if (= (car begin-end) (cdr begin-end))
-                         (point-max)
-                       (cdr begin-end))))
-          (while (and (not bare)
-                      (re-search-forward "^Theory [A-Za-z0-9_']+ *\\[bare\\]" limit t))
-            (let ((pps (syntax-ppss)))
-              (if (or (nth 3 pps) (nth 4 pps)) nil (setq bare t))))
-          (if bare (let ((hol-bare-p t))
-                     (message "Using hol --bare")
-                     (sleep-for 2)
-                     (funcall starter))
-            (funcall starter))))
+      (let* ((limit (if (= (car begin-end) (cdr begin-end))
+                        (point-max)
+                      (cdr begin-end)))
+             (bare (hol--region-has-bare-theory-p (car begin-end) limit)))
+        (if bare (let ((hol-bare-p t))
+                   (message "Using hol --bare")
+                   (sleep-for 2)
+                   (funcall starter))
+          (funcall starter)))
       (if (region-active-p) nil
         (push-mark (point-min))
         (activate-mark t))
