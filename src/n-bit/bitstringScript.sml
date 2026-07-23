@@ -987,6 +987,18 @@ Proof
   Cases_on ‘bs=[]’>>fs[]
 QED
 
+Theorem leadingF_bitstring:
+  bs ≠ [] ⇒ bs = GENLIST (K F) (LENGTH bs - LENGTH (n2v (v2n bs))) ++ n2v (v2n bs)
+Proof
+  rw[]>>
+  irule EQ_TRANS>>
+  irule_at Any (GSYM listTheory.TAKE_DROP)>>
+  irule_at Any (iffRL $ cj 1 listTheory.APPEND_11_LENGTH)>>simp[]>>
+  irule_at Any listTheory.LENGTH_TAKE>>
+  irule_at Any (GSYM n2v_v2n)>>simp[]>>
+  simp[leadingF_n2v_v2n]
+QED
+
 (* ------------------------------------------------------------------------- *)
 
 fun bitwise_tac x y =
@@ -1412,6 +1424,59 @@ Proof
   >- lfs [listTheory.PAD_LEFT, zero_extend_def]
   \\ `LENGTH (shiftr v i) <> 0` by (strip_tac \\ gvs[])
   \\ lfs [GSYM listTheory.NULL_LENGTH, DROP_LAST]
+QED
+
+(* ------------------------------------------------------------------------- *)
+
+Theorem w2v_lsl:
+  n < dimindex (:'a) ⇒
+  w2v (word_lsl (w:'a words$word) n)
+  = DROP n (w2v w) ++ GENLIST (λ_. F) n
+Proof
+  rw[]>>
+  assume_tac (Q.SPEC ‘w’ ranged_bitstring_nchotomy)>>fs[]>>
+  simp[word_lsl_v2w]>>
+  simp[shiftl_def,listTheory.PAD_RIGHT]>>
+  simp[w2v_v2w,fixwidth]>>
+  simp[listTheory.DROP_GENLIST,listTheory.DROP_APPEND]>>
+  simp[combinTheory.K_DEF]>>
+  ‘n - LENGTH v = 0’ by gvs[]>>simp[]
+QED
+
+Theorem n2v_w2n:
+  n2v (w2n w) = DROP (dimindex(:'a) - LENGTH (n2v (w2n w))) (w2v (w:'a words$word))
+Proof
+  assume_tac (Q.SPEC ‘w’ ranged_bitstring_nchotomy)>>fs[]>>
+  dxrule EQ_SYM>>strip_tac>>
+  simp[w2n_v2w]>>
+  simp[GSYM MOD_2EXP_DIMINDEX]>>
+  ‘v2n v < dimword (:'a)’ by
+    (irule arithmeticTheory.LESS_LESS_EQ_TRANS>>
+     irule_at Any v2n_lt>>
+     simp[dimword_def])>>
+  simp[arithmeticTheory.LESS_MOD]>>
+  simp[w2v_v2w,fixwidth]>>
+  Cases_on ‘v = []’>>fs[DIMINDEX_GT_0]>>
+  irule EQ_TRANS>>
+  irule_at Any n2v_v2n>>simp[]
+QED
+
+Theorem leadingF_w2v:
+  w2v (w:'a words$word) = GENLIST (K F) (dimindex(:'a) - LENGTH (n2v (w2n w))) ++ n2v (w2n w)
+Proof
+  assume_tac (Q.SPEC ‘w’ ranged_bitstring_nchotomy)>>fs[]>>
+  dxrule EQ_SYM>>strip_tac>>
+  simp[w2n_v2w]>>
+  simp[GSYM MOD_2EXP_DIMINDEX]>>
+  ‘v2n v < dimword (:'a)’ by
+    (irule arithmeticTheory.LESS_LESS_EQ_TRANS>>
+     irule_at Any v2n_lt>>
+     simp[dimword_def])>>
+  simp[arithmeticTheory.LESS_MOD]>>
+  simp[w2v_v2w,fixwidth]>>
+  irule EQ_TRANS>>
+  irule_at Any leadingF_bitstring>>
+  simp[]>>Cases_on ‘v’>>fs[]
 QED
 
 (* ------------------------------------------------------------------------- *)
