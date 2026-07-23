@@ -461,6 +461,9 @@ structure Refute_QC = struct
     LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
     handle _ => 0
 
+  fun pnf_replay_eligible case_tree genuine =
+    Option.isSome case_tree andalso genuine
+
   fun record_candidate
         {config : Refute_Core.config,
          backend : string,
@@ -469,10 +472,11 @@ structure Refute_QC = struct
          stats : (string * int) list,
          counterexamples : Refute_Core.counterexample list ref,
          discarded : int ref,
-         interim_potential : string option,
+         run_depth : int option,
+         retain_replay_potential : Refute_Core.counterexample -> unit,
          retry : bool -> candidate list -> unit,
          retry_potential : bool -> candidate list -> unit}
-        {env, ground_env, genuine, genuine_only, ignored} =
+        {env, ground_env, case_tree, genuine, genuine_only, ignored} =
     let
       val bindings = List.filter
         (fn (variable, _) =>
@@ -488,7 +492,8 @@ structure Refute_QC = struct
           evals = [], cert = NONE, scope = NONE, model = NONE,
           stats = stats }
       val next =
-        {env = env, ground_env = ground_env, genuine = genuine} :: ignored
+        {env = env, ground_env = ground_env, case_tree = case_tree,
+         genuine = genuine, run_depth = run_depth} :: ignored
       val has_hole = List.exists
         (Refute_ModelFinder_Names.contains_irrelevant_marker o #2) env
       val partial_universal =
@@ -497,28 +502,56 @@ structure Refute_QC = struct
           (#1 (Refute_Narrow.pnf_of (#goal instance))))
       fun keep_potential potential =
         if #abort_potential config andalso not genuine_only then
-          counterexamples := potential :: !counterexamples
-        else if genuine_only then retry_potential true next
+          (counterexamples := potential :: !counterexamples; true)
+        else if genuine_only then
+          (retry_potential true next; false)
         else
           (Refute_Core.report_outcome config
              (Refute_Core.Counterexample [potential]);
-           retry_potential true next)
+           retry_potential true next;
+           false)
     in
-      (* QC hits retain their semantic Genuine grade when theorem replay is
-         explicitly disabled; [cert = NONE] records the opt-out. *)
-      if not (#certify (#qc config)) then
+      (* Certification opt-out applies only to an algorithmically genuine
+         hit.  A PNF hit tainted by finite-domain approximation remains
+         Potential when replay is disabled.  With certification enabled,
+         ordinary certification may still prove the original proposition
+         false and safely upgrade it; only semantically complete case trees
+         are themselves replayed as exhaustive proofs. *)
+      if backend = "narrowing" andalso
+         Option.isSome case_tree andalso
+         not (pnf_replay_eligible case_tree genuine) andalso
+         not (#certify (#qc config)) then
+        (keep_potential (Refute_Cert.replace cex
+           (Refute_Core.Potential
+             ["PNF testing used an incomplete finite approximation"])
+           [] NONE);
+         ())
+      else if not genuine andalso not (backend = "narrowing" andalso
+          Option.isSome case_tree) then
+        (keep_potential (Refute_Cert.replace cex
+           (Refute_Core.Potential ["evaluation stuck during testing"])
+           [] NONE);
+         ())
+      else if not (#certify (#qc config)) then
         counterexamples :=
           Refute_Cert.replace cex Refute_Core.Genuine [] NONE ::
           !counterexamples
       else
-        case interim_potential of
-            SOME reason =>
-              keep_potential
-                (Refute_Cert.replace cex (Refute_Core.Potential [reason])
-                   [] NONE)
-          | NONE =>
-              let
-                val certification =
+        let
+          val certification =
+            case case_tree of
+                SOME tree =>
+                  if genuine then
+                    Refute_Cert.certify_case_tree
+                      {original = #original instance,
+                       evals = #evals instance, env = env,
+                       run_depth = Option.getOpt (run_depth, ~1),
+                       case_tree = tree, cex = cex}
+                  else
+                    Refute_Cert.certify
+                      {original = #original instance,
+                       evals = #evals instance, env = env, cex = cex}
+              | NONE =>
                   if partial_universal then
                     Refute_Cert.ground_and_certify
                       {original = #original instance,
@@ -528,16 +561,19 @@ structure Refute_QC = struct
                     Refute_Cert.certify
                       {original = #original instance,
                        evals = #evals instance, env = env, cex = cex}
-              in
-                case certification of
-                     Refute_Cert.Certified certified =>
-                       counterexamples := certified :: !counterexamples
-                   | Refute_Cert.Discarded =>
-                       (discarded := !discarded + 1;
-                        retry genuine_only next)
-                   | Refute_Cert.Potential potential =>
-                       keep_potential potential
-              end
+        in
+          case certification of
+               Refute_Cert.Certified certified =>
+                 counterexamples := certified :: !counterexamples
+             | Refute_Cert.Discarded =>
+                 (discarded := !discarded + 1;
+                  retry genuine_only next)
+             | Refute_Cert.Potential potential =>
+                 if keep_potential potential andalso
+                    Option.isSome case_tree
+                 then retain_replay_potential potential
+                 else ()
+        end
     end
 
   fun plan_has_gen current =
@@ -763,13 +799,22 @@ structure Refute_QC = struct
         | SOME error => raise error
     end
 
+  (* General QC expands finite quantifiers into conjunctions/disjunctions.
+     Native PNF narrowing must instead retain the source quantifier so its
+     case tree records the exhaustive proof structure.  Outer universals are
+     still input binders, matching ordinary QC preprocessing. *)
+  fun narrowing_goal (instance : Refute_Core.instance) =
+    Refute_Core.normalize
+      (#2 (boolSyntax.strip_forall (#original instance)))
+
   (* [qc_problem] is intentionally one PNF formula, whereas plans are a
      list.  Compile each monomorphic/cardinality instance independently and
      multiplex the resulting native tests behind the unchanged scheduler. *)
   fun compile_narrowing_instances config instances =
     let
       fun compile_one instance =
-        case Refute_Narrow.select_for_config config (#goal instance) of
+        case Refute_Narrow.select_for_config config
+          (narrowing_goal instance) of
             (Refute_Narrow.PlainRefusal reasons, _) =>
               SelectionFailed reasons
           | (_, problem) => compile_selected config Narrowing problem
@@ -828,11 +873,6 @@ structure Refute_QC = struct
     in
       loop instances []
     end
-
-  fun narrowing_has_existentials instances =
-    List.exists (fn instance =>
-      let val (prefix, _) = Refute_Narrow.pnf_of (#goal instance)
-      in Refute_Narrow.contains_existentials prefix end) instances
 
   fun strategy_run strategy (config : Refute_Core.config)
       (instances : Refute_Core.instance list) =
@@ -912,6 +952,7 @@ structure Refute_QC = struct
                    | Random _ => List.all (not o plan_has_gen) plans
                    | Narrowing => false)
               val counterexamples = ref []
+              val replay_potential = ref NONE
               val discarded = ref 0
               val gave_up = ref []
               (* A plain potential switches this card to the upstream retry
@@ -945,7 +986,8 @@ structure Refute_QC = struct
                         complete := (!complete andalso entry_complete)
                     | GaveUp reason =>
                         (complete := false; add_reason reason gave_up)
-                    | CexFound {env, ground_env, genuine} =>
+                    | CexFound
+                        {env, ground_env, case_tree, genuine, ...} =>
                         record_candidate
                           { config = config,
                             backend = strategy_name strategy,
@@ -954,15 +996,14 @@ structure Refute_QC = struct
                             stats = stats_for size card msec,
                             counterexamples = counterexamples,
                             discarded = discarded,
-                            (* TASK_21 replaces this interim ceiling with
-                               finite-tree replay certification. *)
-                            interim_potential =
-                              if strategy = Narrowing andalso
-                                 narrowing_has_existentials
-                                   [instance_for card]
-                              then SOME
-                                "existential narrowing awaits case-tree replay"
+                            run_depth =
+                              if strategy = Narrowing then SOME size
                               else NONE,
+                            (* Only replay failures accepted by the ordinary
+                               keep-potential policy may enter the fallback;
+                               genuine-only and continuing retries never do. *)
+                            retain_replay_potential = fn potential =>
+                              replay_potential := SOME potential,
                             retry = fn go => fn ig =>
                               one (card, size) draws go ig,
                             (* Potentials retry at the next scheduled depth,
@@ -975,6 +1016,7 @@ structure Refute_QC = struct
                               else one (card, size) draws go ig }
                           { env = env,
                             ground_env = ground_env,
+                            case_tree = case_tree,
                             genuine = genuine,
                             genuine_only = genuine_only,
                             ignored = ignored }
@@ -1042,8 +1084,14 @@ structure Refute_QC = struct
             in
                   if not (null (!counterexamples)) then
                     Refute_Core.Counterexample (rev (!counterexamples))
-                  else if !complete then Refute_Core.NoCounterexample
-                  else Refute_Core.Unknown (generic_reason :: !gave_up)
+                  else
+                    case !replay_potential of
+                        SOME potential =>
+                          Refute_Core.Counterexample [potential]
+                      | NONE =>
+                          if !complete then Refute_Core.NoCounterexample
+                          else Refute_Core.Unknown
+                            (generic_reason :: !gave_up)
                 end
               val body_result = Exn.capture selected_body ()
               val close_result = Exn.capture (#close compiled) ()
@@ -1081,14 +1129,9 @@ structure Refute_QC = struct
       input = Refute_Core.MonoInstances,
       run = strategy_run Narrowing }
 
-  fun narrowing_certainty_ceiling (config : Refute_Core.config) instances =
-    if not (#certify (#qc config)) orelse
-       List.exists (fn instance =>
-         let val (prefix, _) = Refute_Narrow.pnf_of (#goal instance)
-         in not (Refute_Narrow.contains_existentials prefix) end) instances
-    then Refute_Core.Genuine
-    else Refute_Core.Potential
-      ["existential narrowing awaits case-tree replay"]
+  fun narrowing_certainty_ceiling
+        (_ : Refute_Core.config) (_ : Refute_Core.instance list) =
+    Refute_Core.Genuine
 
   fun register_backends () =
     (Refute_Core.executable_goal_override := smart_gate_override;

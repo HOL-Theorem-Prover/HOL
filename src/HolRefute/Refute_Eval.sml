@@ -22,10 +22,30 @@ structure Refute_Eval :> Refute_Eval = struct
       Plans of plan list
     | Pnf of {prefix : (quant * term) list, body : term}
 
+  datatype case_shape =
+    CaseShape of
+      {depth : int, complete : bool,
+       constructors : case_constructor list}
+  withtype case_constructor = {id : int, fields : case_shape list}
+
+  datatype case_pattern =
+      CaseVariable
+    | CaseConstructor of int * case_pattern list
+
+  datatype case_tree =
+      CaseLeaf
+    | CaseUniversal of
+        {shape : case_shape, witness : term, subtree : case_tree}
+    | CaseExistential of
+        {shape : case_shape,
+         branches : (case_pattern * term * case_tree) list}
+
   type candidate =
     {env : (term * term) list,
      ground_env : (term * term) list option,
-     genuine : bool}
+     case_tree : case_tree option,
+     genuine : bool,
+     run_depth : int option}
 
   datatype verdict = Continue | Found of candidate
 
@@ -111,8 +131,76 @@ structure Refute_Eval :> Refute_Eval = struct
 
   val same_env = Lib.list_eq boolSyntax.tmp_eq
 
-  fun ignored_candidate env ignored =
-    List.exists (fn candidate => same_env env (#env candidate)) ignored
+  fun same_shape
+        (CaseShape {depth = depth1, complete = complete1,
+                    constructors = constructors1},
+         CaseShape {depth = depth2, complete = complete2,
+                    constructors = constructors2}) =
+    let
+      fun same_constructor
+            ({id = id1, fields = fields1},
+             {id = id2, fields = fields2}) =
+        id1 = id2 andalso
+        Lib.list_eq (fn first => fn second =>
+          same_shape (first, second)) fields1 fields2
+    in
+      depth1 = depth2 andalso complete1 = complete2 andalso
+      Lib.list_eq (fn first => fn second =>
+        same_constructor (first, second)) constructors1 constructors2
+    end
+
+  fun same_pattern (CaseVariable, CaseVariable) = true
+    | same_pattern
+        (CaseConstructor (id1, arguments1),
+         CaseConstructor (id2, arguments2)) =
+        id1 = id2 andalso
+        Lib.list_eq (fn first => fn second =>
+          same_pattern (first, second)) arguments1 arguments2
+    | same_pattern _ = false
+
+  fun same_tree (CaseLeaf, CaseLeaf) = true
+    | same_tree
+        (CaseUniversal {shape = shape1, witness = witness1,
+                        subtree = subtree1},
+         CaseUniversal {shape = shape2, witness = witness2,
+                        subtree = subtree2}) =
+        same_shape (shape1, shape2) andalso
+        Term.aconv witness1 witness2 andalso same_tree (subtree1, subtree2)
+    | same_tree
+        (CaseExistential {shape = shape1, branches = branches1},
+         CaseExistential {shape = shape2, branches = branches2}) =
+        let
+          fun same_branch
+                ((pattern1, term1, subtree1),
+                 (pattern2, term2, subtree2)) =
+            same_pattern (pattern1, pattern2) andalso
+            Term.aconv term1 term2 andalso same_tree (subtree1, subtree2)
+        in
+          same_shape (shape1, shape2) andalso
+          Lib.list_eq (fn first => fn second =>
+            same_branch (first, second)) branches1 branches2
+        end
+    | same_tree _ = false
+
+  fun same_case_tree NONE NONE = true
+    | same_case_tree (SOME first) (SOME second) =
+        same_tree (first, second)
+    | same_case_tree _ _ = false
+
+  fun same_optional_env NONE NONE = true
+    | same_optional_env (SOME first) (SOME second) =
+        same_env first second
+    | same_optional_env _ _ = false
+
+  fun same_candidate first second =
+    same_env (#env first) (#env second) andalso
+    same_optional_env (#ground_env first) (#ground_env second) andalso
+    #genuine first = #genuine second andalso
+    same_case_tree (#case_tree first) (#case_tree second) andalso
+    #run_depth first = #run_depth second
+
+  fun ignored_candidate candidate ignored =
+    List.exists (same_candidate candidate) ignored
 
   fun fully_applied_constructor tm =
     let

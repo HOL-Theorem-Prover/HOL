@@ -1447,11 +1447,14 @@ structure Refute_EvalCv = struct
                     (#application program (Int.max (0, size)))
                   val (values, _) = listSyntax.dest_list decoded
                   fun candidate value =
-                    let val env = decode_env (#variables program) value
+                    let
+                      val found =
+                        {env = decode_env (#variables program) value,
+                         ground_env = NONE, case_tree = NONE,
+                         genuine = true, run_depth = NONE}
                     in
-                      if Refute_Eval.ignored_candidate env ignored then NONE
-                      else SOME
-                        {env = env, ground_env = NONE, genuine = true}
+                      if Refute_Eval.ignored_candidate found ignored then NONE
+                      else SOME found
                     end
                 in
                   case Lib.get_first candidate values of
@@ -1491,7 +1494,8 @@ structure Refute_EvalCv = struct
                     in
                       Refute_Eval.CexFound
                         {env = decode_env (#variables program) value,
-                         ground_env = NONE, genuine = true}
+                         ground_env = NONE, case_tree = NONE,
+                         genuine = true, run_depth = NONE}
                     end
                 end
             in

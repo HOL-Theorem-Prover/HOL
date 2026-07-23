@@ -22,10 +22,34 @@ signature Refute_Eval = sig
       Plans of plan list
     | Pnf of {prefix : (quant * term) list, body : term}
 
+  (* Frozen narrowing-domain metadata.  [complete] is computed when the
+     depth-indexed shape is built; replay additionally checks it against
+     TypeBase rather than trusting this flag. *)
+  datatype case_shape =
+    CaseShape of
+      {depth : int, complete : bool,
+       constructors : case_constructor list}
+  withtype case_constructor = {id : int, fields : case_shape list}
+
+  datatype case_pattern =
+      CaseVariable
+    | CaseConstructor of int * case_pattern list
+
+  (* A proof-oriented projection of the PNF refinement tree. *)
+  datatype case_tree =
+      CaseLeaf
+    | CaseUniversal of
+        {shape : case_shape, witness : term, subtree : case_tree}
+    | CaseExistential of
+        {shape : case_shape,
+         branches : (case_pattern * term * case_tree) list}
+
   type candidate =
     {env : (term * term) list,
      ground_env : (term * term) list option,
-     genuine : bool}
+     case_tree : case_tree option,
+     genuine : bool,
+     run_depth : int option}
 
   datatype verdict = Continue | Found of candidate
 
@@ -73,7 +97,8 @@ signature Refute_Eval = sig
 
   val plan_gen_types : plan -> Type.hol_type list
   val same_env : (term * term) list -> (term * term) list -> bool
-  val ignored_candidate : (term * term) list -> candidate list -> bool
+  val same_case_tree : case_tree option -> case_tree option -> bool
+  val ignored_candidate : candidate -> candidate list -> bool
   val fully_applied_constructor : term -> (term * term list) option
 
   val dump_plan : plan -> plan

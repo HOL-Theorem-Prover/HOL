@@ -209,8 +209,14 @@ structure Refute_EvalCompute = struct
       val tests = ref 0
 
       fun candidate env genuine =
-        if ignored_candidate env ignored then Continue
-        else Found {env = env, ground_env = NONE, genuine = genuine}
+        let
+          val found =
+            {env = env, ground_env = NONE, case_tree = NONE,
+             genuine = genuine, run_depth = NONE}
+        in
+          if ignored_candidate found ignored then Continue
+          else Found found
+        end
 
       fun visit env genuine current =
         case current of

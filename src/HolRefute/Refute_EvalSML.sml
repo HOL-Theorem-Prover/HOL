@@ -17,7 +17,8 @@ structure Refute_EvalSML = struct
   type reconstruction = unit -> term
   type generated_environment = (int * reconstruction) list
   type generated_hit =
-    generated_environment * generated_environment option * bool
+    generated_environment * generated_environment option *
+    Refute_Eval.case_tree option * bool
   type generated_answer =
     { hit : generated_hit option,
       complete : bool,
@@ -156,6 +157,14 @@ structure Refute_EvalSML = struct
   fun hole_term type_index =
     (note_force ();
      Names.irrelevant_marker (Term.type_of (raw_term type_index)))
+
+  fun replay_variable type_index position =
+    let
+      val suffix = String.concatWith "$" (map Int.toString position)
+      val name = Names.reserved_prefix ^ "case$" ^ suffix
+    in
+      Term.mk_var (name, Term.type_of (raw_term type_index))
+    end
 
   fun word_term width value =
     (note_force ();
@@ -335,15 +344,21 @@ structure Refute_EvalSML = struct
           answer
         end) ()
 
-  fun ignored_hit ignored (environment, _, _) =
+  fun ignored_hit run_depth ignored
+        (environment, grounding, case_tree, genuine) =
     let
-      val env = List.map (fn (index, rebuild) =>
-        (raw_term index, rebuild ())) environment
+      fun rebuild values = List.map (fn (index, reconstruction) =>
+        (raw_term index, reconstruction ())) values
+      val candidate =
+        {env = rebuild environment,
+         ground_env = Option.map rebuild grounding,
+         case_tree = case_tree, genuine = genuine,
+         run_depth = run_depth}
     in
-      Refute_Eval.ignored_candidate env ignored
+      Refute_Eval.ignored_candidate candidate ignored
     end
 
-  fun with_native_hooks limit ignored action =
+  fun with_native_hooks limit run_depth ignored action =
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
         let
@@ -351,7 +366,7 @@ structure Refute_EvalSML = struct
           val old_deadline = !deadline
           val old_filter = !ignored_filter
           val _ = deadline := SOME limit
-          val _ = ignored_filter := ignored_hit ignored
+          val _ = ignored_filter := ignored_hit run_depth ignored
           val result = Exn.capture (restore action) ()
           val _ = deadline := old_deadline
           val _ = ignored_filter := old_filter
@@ -419,8 +434,12 @@ structure Refute_EvalSML = struct
                   fun invoke () = dispatch (#card input)
                     (#genuine_only input) (#size input) (#draws input)
                     (!state)
-                  val answer = with_native_hooks limit (#ignored input)
-                    (fn () => run_before limit invoke)
+                  val run_depth =
+                    case strategy of
+                        Refute_Eval.Narrowing => SOME (#size input)
+                      | _ => NONE
+                  val answer = with_native_hooks limit run_depth
+                    (#ignored input) (fn () => run_before limit invoke)
                   val _ = state := #state answer
                   val _ = last_stats :=
                     [("tests", #tests answer),
@@ -429,7 +448,7 @@ structure Refute_EvalSML = struct
                   case #hit answer of
                       NONE => Refute_Eval.Exhausted
                         {complete = #complete answer}
-                    | SOME (environment, grounding, genuine) =>
+                    | SOME (environment, grounding, case_tree, genuine) =>
                         Refute_Eval.CexFound
                           {env = List.map (fn (index, rebuild) =>
                              (table_term (#table answer) index, rebuild ()))
@@ -438,7 +457,9 @@ structure Refute_EvalSML = struct
                              (fn (index, rebuild) =>
                                (table_term (#table answer) index,
                                 rebuild ()))) grounding,
-                           genuine = genuine}
+                           case_tree = case_tree,
+                           genuine = genuine,
+                           run_depth = run_depth}
                 end
                 handle Deadline => Refute_Eval.GaveUp "deadline"
                      | Timeout.TIMEOUT _ => Refute_Eval.GaveUp "deadline"

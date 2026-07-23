@@ -7,7 +7,9 @@ structure Refute_Narrow = struct
      Per-compile reconstruction selects the corresponding frozen shape, so
      no process-global custom-term table retains HOL terms. *)
   datatype narrowing_type =
-    Narrowing_sum_of_products of narrowing_alternative list
+    Narrowing_sum_of_products of
+      {depth : int, complete : bool, syntactic_complete : bool,
+       alternatives : narrowing_alternative list}
   withtype narrowing_alternative =
     {id : int, exact : Term.term option, arguments : narrowing_type list}
 
@@ -68,8 +70,9 @@ structure Refute_Narrow = struct
   type path = edge list
 
   datatype example =
-      UnivExample of narrowing_term * example
-    | ExExample of (narrowing_term * example) list
+      UnivExample of narrowing_type * narrowing_term * example
+    | ExExample of
+        narrowing_type * (narrowing_term * example) list
     | EmptyExample
 
   datatype pnf_result =
@@ -82,13 +85,23 @@ structure Refute_Narrow = struct
   exception NoUnevaluated
   exception ShapeFailure of hol_type * string
 
-  fun products_of (Narrowing_sum_of_products products) = products
+  fun products_of
+        (Narrowing_sum_of_products {alternatives, ...}) = alternatives
+
+  fun shape_complete
+        (Narrowing_sum_of_products {complete, ...}) = complete
+
+  fun shape_syntactically_complete
+        (Narrowing_sum_of_products {syntactic_complete, ...}) =
+    syntactic_complete
+
+  fun shape_depth (Narrowing_sum_of_products {depth, ...}) = depth
 
   (* Strict spine walks must apply a quantifier body to this value rather
      than to an undefined argument, as the lazy upstream engine does. *)
   fun dummy_variable position ty = Narrowing_variable (position, ty)
 
-  fun non_empty (Narrowing_sum_of_products products) = not (null products)
+  fun non_empty shape = not (null (products_of shape))
 
   fun indexed_map f values =
     let
@@ -107,8 +120,9 @@ structure Refute_Narrow = struct
 
   fun alternative_id ({id, ...} : narrowing_alternative) = id
 
-  fun alternative_of (Narrowing_sum_of_products alternatives) id =
-    case List.find (fn alternative => #id alternative = id) alternatives of
+  fun alternative_of shape id =
+    case List.find (fn alternative => #id alternative = id)
+      (products_of shape) of
         SOME alternative => alternative
       | NONE => raise InvalidPath
 
@@ -206,11 +220,19 @@ structure Refute_Narrow = struct
       complete shape term
     end
 
-  fun flat_shape values =
+  fun flat_shape depth complete values =
     Narrowing_sum_of_products
-      (indexed_map exact_alternative values)
+      {depth = depth, complete = complete,
+       syntactic_complete = complete,
+       alternatives = indexed_map exact_alternative values}
 
   fun shape_failure ty reason = raise ShapeFailure (ty, reason)
+
+  fun is_finitization_approximation ty =
+    case Lib.total Type.dest_thy_type ty of
+        SOME {Thy = "refute", Tyop, ...} =>
+          Tyop = "cfun" orelse Tyop = "ffun"
+      | _ => false
 
   (* Shapes use the same depth convention as Quickcheck narrowing: nullary
      constructors remain available at depth zero, while every constructor
@@ -222,9 +244,10 @@ structure Refute_Narrow = struct
 
       fun derive depth ty =
         case Refute_Gen.spec_of ty of
-            Refute_Gen.GenEnum values => flat_shape values
+            Refute_Gen.GenEnum values => flat_shape depth true values
           | Refute_Gen.GenNum kind =>
-              flat_shape (Refute_Gen.narrowing_terms kind depth)
+              flat_shape depth false
+                (Refute_Gen.narrowing_terms kind depth)
           | Refute_Gen.GenDatatype {constrs, ...} =>
               let
                 fun constructor_shape
@@ -244,10 +267,27 @@ structure Refute_Narrow = struct
                           else
                             NONE
                         end
+                val alternatives = List.mapPartial constructor_shape
+                  (indexed_map I constrs)
+                val syntactic_complete =
+                  length alternatives = length constrs andalso
+                  List.all
+                    (List.all shape_syntactically_complete o #arguments)
+                    alternatives
+                (* ffun and cfun enumerate datatype descriptions, not all
+                   inhabitants of the source function type.  This semantic
+                   incompleteness propagates through products and other
+                   containing datatypes via their argument shapes. *)
+                val complete =
+                  syntactic_complete andalso
+                  not (is_finitization_approximation ty) andalso
+                  List.all (List.all shape_complete o #arguments)
+                    alternatives
               in
                 Narrowing_sum_of_products
-                  (List.mapPartial constructor_shape
-                    (indexed_map I constrs))
+                  {depth = depth, complete = complete,
+                   syntactic_complete = syntactic_complete,
+                   alternatives = alternatives}
               end
           | Refute_Gen.GenFun _ =>
               shape_failure ty "function types require finitization"
@@ -260,7 +300,8 @@ structure Refute_Narrow = struct
                   else shape_failure ty
                     "custom exhaustive enumeration returned a mistyped value"
               in
-                flat_shape values
+                (* A custom callback has no completeness contract. *)
+                flat_shape depth false values
               end
           | Refute_Gen.GenCustom _ =>
               shape_failure ty
@@ -472,10 +513,21 @@ structure Refute_Narrow = struct
       conj (result, value_of subtree))
       (Eval {result = true, potential = false}) branches
 
-  fun bexists branches =
-    List.foldl (fn ((_, subtree), result) =>
-      disj (result, value_of subtree))
-      (Eval {result = false, potential = false}) branches
+  fun incomplete_false shape
+        (Eval {result = false, potential}) =
+        Eval {result = false,
+              potential = potential orelse not (shape_complete shape)}
+    | incomplete_false _ truth = truth
+
+  fun bexists shape branches =
+    incomplete_false shape
+      (List.foldl (fn ((_, subtree), result) =>
+        disj (result, value_of subtree))
+        (Eval {result = false, potential = false}) branches)
+
+  fun variable_value Existential shape result =
+        incomplete_false shape result
+    | variable_value Universal _ result = result
 
   fun position_of (V (position, _)) = position
     | position_of (C (position, _, _)) = position
@@ -511,7 +563,8 @@ structure Refute_Narrow = struct
           val subtree' = update edges result subtree
         in
           Variable
-            (quantifier, value_of subtree', position, ty, subtree')
+            (quantifier, variable_value quantifier ty (value_of subtree'),
+             position, ty, subtree')
         end
     | update (C (_, index, _) :: edges) result
         (Constructor (quantifier, _, position, shape, branches)) =
@@ -524,7 +577,7 @@ structure Refute_Narrow = struct
           val aggregate =
             case quantifier of
                 Universal => ball branches'
-              | Existential => bexists branches'
+              | Existential => bexists shape branches'
         in
           Constructor (quantifier, aggregate, position, shape, branches')
         end
@@ -559,8 +612,7 @@ structure Refute_Narrow = struct
 
       fun refine_variable
             (Variable
-              (quantifier, result, position,
-               Narrowing_sum_of_products products, subtree)) =
+              (quantifier, result, position, shape, subtree)) =
             let
               fun branch alternative =
                 (#id alternative,
@@ -570,9 +622,8 @@ structure Refute_Narrow = struct
                    subtree (indexed_map I (#arguments alternative)))
             in
               Constructor
-                (quantifier, result, position,
-                 Narrowing_sum_of_products products,
-                 List.map branch products)
+                (quantifier, result, position, shape,
+                 List.map branch (products_of shape))
             end
         | refine_variable _ = raise InvalidPath
     in
@@ -659,6 +710,10 @@ structure Refute_Narrow = struct
   fun is_false (Eval {result = false, ...}) = true
     | is_false _ = false
 
+  fun is_genuine_false
+        (Eval {result = false, potential = false}) = true
+    | is_genuine_false _ = false
+
   fun is_prefix prefix position =
     length prefix <= length position andalso
     prefix = List.take (position, length prefix)
@@ -678,9 +733,12 @@ structure Refute_Narrow = struct
         if is_prefix prefix position then
           let
             val index =
-              case first_index (is_false o value_of o #2) branches of
+              case first_index (is_genuine_false o value_of o #2) branches of
                   SOME index => index
-                | NONE => raise InvalidPath
+                | NONE =>
+                    (case first_index (is_false o value_of o #2) branches of
+                         SOME index => index
+                       | NONE => raise InvalidPath)
             val (id, selected) = List.nth (branches, index)
             fun fixpoint argument state =
               let
@@ -746,30 +804,74 @@ structure Refute_Narrow = struct
     | quantifier_of (Constructor (quantifier, _, _, _, _)) = quantifier
     | quantifier_of (Leaf _) = raise InvalidPath
 
+  fun shape_of_tree (Variable (_, _, _, shape, _)) = shape
+    | shape_of_tree (Constructor (_, _, _, shape, _)) = shape
+    | shape_of_tree (Leaf _) = raise InvalidPath
+
   fun example_of _ (Leaf _) = EmptyExample
     | example_of index tree =
         case quantifier_of tree of
             Universal =>
               (case termlist_of [index] ([], tree) of
                    ([term], residual) =>
-                     UnivExample (term, example_of (index + 1) residual)
+                     UnivExample
+                       (shape_of_tree tree, term,
+                        example_of (index + 1) residual)
                  | _ => raise InvalidPath)
           | Existential =>
-              ExExample (List.map (fn (terms, residual) =>
-                case terms of
-                    [term] => (term, example_of (index + 1) residual)
-                  | _ => raise InvalidPath)
-                (alltermlist_of [index] ([], tree)))
+              ExExample
+                (shape_of_tree tree,
+                 List.map (fn (terms, residual) =>
+                   case terms of
+                       [term] => (term, example_of (index + 1) residual)
+                     | _ => raise InvalidPath)
+                   (alltermlist_of [index] ([], tree)))
 
   (* Keep the executable-spec spelling available to make audits against the
      Haskell extraction routine direct. *)
   val exampleOf = example_of
 
+  fun replay_shape shape =
+    let
+      fun project current =
+        Refute_Eval.CaseShape
+          {depth = shape_depth current,
+           complete = shape_syntactically_complete current,
+           constructors = map (fn alternative =>
+             {id = #id alternative,
+              fields = map project (#arguments alternative)})
+             (products_of current)}
+    in
+      project shape
+    end
+
+  fun replay_pattern (Narrowing_variable _) = Refute_Eval.CaseVariable
+    | replay_pattern (Narrowing_constructor (id, arguments)) =
+        Refute_Eval.CaseConstructor (id, map replay_pattern arguments)
+
+  fun replay_of_example rebuild example =
+    let
+      fun project _ EmptyExample = Refute_Eval.CaseLeaf
+        | project index (UnivExample (shape, term, rest)) =
+            Refute_Eval.CaseUniversal
+              {shape = replay_shape shape,
+               witness = rebuild index term,
+               subtree = project (index + 1) rest}
+        | project index (ExExample (shape, branches)) =
+            Refute_Eval.CaseExistential
+              {shape = replay_shape shape,
+               branches = map (fn (term, rest) =>
+                 (replay_pattern term, rebuild index term,
+                  project (index + 1) rest)) branches}
+    in
+      project 0 example
+    end
+
   (* The universally closed goal puts its user frees before the original
      prefix.  Only those leading universal witnesses belong in [candidate.env];
-     later existential branches are retained in the tree for TASK_21 replay. *)
+     later existential branches are retained for proof replay. *)
   fun leading_universals 0 _ = []
-    | leading_universals count (UnivExample (term, rest)) =
+    | leading_universals count (UnivExample (_, term, rest)) =
         term :: leading_universals (count - 1) rest
     | leading_universals _ _ = []
 
@@ -811,20 +913,37 @@ structure Refute_Narrow = struct
     (#2 (boolSyntax.dest_eq (Thm.concl (conversion tm))))
     handle UNCHANGED => tm
 
-  fun prenex tm =
+  fun prenex_conversion tm =
     let
-      fun normalize tm =
+      fun step tm =
         let
-          val reduced = apply_conversion (DEPTH_CONV BETA_CONV) tm
-          val rewritten = apply_conversion
-            (Ho_Rewrite.REWRITE_CONV prenex_rewrites) reduced
+          val beta =
+            (DEPTH_CONV BETA_CONV tm
+             handle UNCHANGED => Thm.REFL tm)
+          val reduced = rhs_of beta
+          val rewrite =
+            (Ho_Rewrite.REWRITE_CONV prenex_rewrites reduced
+             handle UNCHANGED => Thm.REFL reduced)
         in
-          if Term.aconv tm rewritten then rewritten
-          else normalize rewritten
+          Thm.TRANS beta rewrite
+        end
+
+      fun normalize tm accumulated =
+        let
+          val next = step tm
+          val rewritten = rhs_of next
+          val accumulated' = Thm.TRANS accumulated next
+        in
+          if Term.aconv tm rewritten then accumulated'
+          else normalize rewritten accumulated'
         end
     in
-      normalize tm
+      normalize tm (Thm.REFL tm)
     end
+
+  and rhs_of theorem = #2 (boolSyntax.dest_eq (Thm.concl theorem))
+
+  fun prenex tm = rhs_of (prenex_conversion tm)
 
   fun strip_quantifiers tm =
     if boolSyntax.is_forall tm then

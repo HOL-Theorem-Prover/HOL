@@ -12,6 +12,13 @@ structure Refute_Cert = struct
 
   fun rhs_of theorem = #2 (boolSyntax.dest_eq (Thm.concl theorem))
 
+  fun conform_conclusion label expected theorem =
+    Thm.EQ_MP (Thm.ALPHA (Thm.concl theorem) expected) theorem
+    handle HOL_ERR _ => raise Fail
+      (label ^ " conclusion mismatch: " ^
+       Parse.term_to_string (Thm.concl theorem) ^ " versus " ^
+       Parse.term_to_string expected)
+
   fun eval tm = computeLib.CBV_CONV (!computeLib.the_compset) tm
 
   fun eval_original tm =
@@ -129,4 +136,236 @@ structure Refute_Cert = struct
     end
     handle Interrupt => raise Interrupt
          | _ => grounding_failure cex
+
+  fun replay_failure cex detail =
+    Potential (replace cex
+      (Refute_Core.Potential
+        ["existential narrowing case-tree replay failed: " ^ detail])
+      [] NONE)
+
+  fun replay_error_text error =
+    let val message = General.exnMessage error
+    in if message = "" then "unknown proof failure" else message end
+    handle _ => "unknown proof failure"
+
+  (* Replay never infers exhaustiveness from a successful simplification.
+     Every quantified node's frozen shape is checked exactly; existential
+     pattern covers are checked too.  Only an acyclic TypeBase constructor
+     tree can be complete, so numeric prefixes, recursive truncations, and
+     custom enumerations fail closed. *)
+  fun certify_case_tree
+        {original, evals, env, run_depth, case_tree, cex} =
+    let
+      val _ = if run_depth >= 0 then ()
+        else raise Fail "negative narrowing run depth"
+      val (_, closure, _) = closure_of original
+      val prenex_equality = Refute_Narrow.prenex_conversion closure
+      val pnf = rhs_of prenex_equality
+
+      fun same_type left right = Type.compare (left, right) = EQUAL
+
+      fun constructors_of ty =
+        case TypeBase.fetch ty of
+            NONE => raise Fail "quantified type has no TypeBase nchotomy"
+          | SOME info =>
+              map (TypeBasePure.cinst ty)
+                (TypeBasePure.constructors_of info)
+
+      fun constructor_arguments constructor =
+        #1 (boolSyntax.strip_fun (Term.type_of constructor))
+
+      fun cartesian [] = [[]]
+        | cartesian (values :: rest) =
+            List.concat (map (fn value =>
+              map (fn tail => value :: tail) (cartesian rest)) values)
+
+      fun ground_patterns
+            (Refute_Eval.CaseShape {constructors, ...}) =
+        List.concat (map (fn {id, fields} =>
+          map (fn arguments =>
+            Refute_Eval.CaseConstructor (id, arguments))
+            (cartesian (map ground_patterns fields))) constructors)
+
+      fun pattern_matches (Refute_Eval.CaseVariable, _) = true
+        | pattern_matches
+            (Refute_Eval.CaseConstructor (id, arguments),
+             Refute_Eval.CaseConstructor (other, values)) =
+            id = other andalso
+            ListPair.allEq pattern_matches (arguments, values)
+        | pattern_matches _ = false
+
+      fun validate_shape ancestors expected_depth ty
+            (shape as Refute_Eval.CaseShape
+              {depth, complete, constructors}) =
+        let
+          val _ = if complete then ()
+            else raise Fail "quantified domain metadata is incomplete"
+          val _ = if depth = expected_depth andalso depth >= 0 then ()
+            else raise Fail "case-tree depth metadata mismatch"
+          val _ = if List.exists (same_type ty) ancestors then
+              raise Fail "recursive quantified domain is depth-truncated"
+            else ()
+          val actual = constructors_of ty
+          val _ = if length actual = length constructors then ()
+            else raise Fail "case-tree constructor count mismatch"
+
+          fun one (index, (constructor, metadata)) =
+            let
+              val {id, fields} = metadata
+              val argument_types = constructor_arguments constructor
+              val _ = if id = index then ()
+                else raise Fail "case-tree constructor identity mismatch"
+              val _ = if length argument_types = length fields then ()
+                else raise Fail "case-tree constructor arity mismatch"
+              val child_depth = Int.max (0, depth - 1)
+              val _ = if null fields orelse depth > 0 then ()
+                else raise Fail "constructor fields truncated at depth zero"
+            in
+              ListPair.appEq
+                (fn (field_ty, field_shape) =>
+                  validate_shape (ty :: ancestors) child_depth
+                    field_ty field_shape)
+                (argument_types, fields)
+            end
+        in
+          List.app one (Lib.enumerate 0
+            (ListPair.zip (actual, constructors)))
+        end
+
+      fun validate_term ty Refute_Eval.CaseVariable tm =
+            if Term.is_var tm andalso same_type (Term.type_of tm) ty then ()
+            else raise Fail "case variable pattern does not match its term"
+        | validate_term ty
+            (Refute_Eval.CaseConstructor (id, patterns)) tm =
+            let
+              val constructors = constructors_of ty
+              val constructor = List.nth (constructors, id)
+                handle Subscript =>
+                  raise Fail "case pattern constructor is out of range"
+              val (head, arguments) = boolSyntax.strip_comb tm
+              val argument_types = constructor_arguments constructor
+              val _ = if Term.aconv head constructor then ()
+                else raise Fail "case pattern constructor term mismatch"
+              val _ = if length arguments = length patterns andalso
+                         length patterns = length argument_types then ()
+                else raise Fail "case pattern term arity mismatch"
+            in
+              ListPair.appEq
+                (fn ((argument_ty, pattern), argument) =>
+                  validate_term argument_ty pattern argument)
+                (ListPair.zip (argument_types, patterns), arguments)
+            end
+
+      fun validate_cover shape ty branches =
+        let
+          val expected = ground_patterns shape
+          val supplied = map #1 branches
+          val _ = List.app (fn pattern =>
+            if List.exists (fn value =>
+              pattern_matches (pattern, value)) expected then ()
+            else raise Fail "case tree has an extra branch") supplied
+          val _ = List.app (fn value =>
+            case List.filter (fn pattern =>
+              pattern_matches (pattern, value))
+              supplied of
+                [_] => ()
+              | [] => raise Fail "case tree has a missing branch"
+              | _ => raise Fail "case tree has overlapping branches") expected
+          val _ = List.app (fn (pattern, tm, _) =>
+            validate_term ty pattern tm) branches
+        in
+          ()
+        end
+
+      fun close_from refutations (goal as (_, conclusion)) =
+        case Lib.get_first (fn theorem =>
+          SOME (MATCH_ACCEPT_TAC theorem goal)
+          handle HOL_ERR _ => NONE) refutations of
+            SOME solved => solved
+          | NONE =>
+              let
+                val variables = Term.free_vars_lr conclusion
+                fun splittable variable =
+                  Option.isSome (TypeBase.fetch (Term.type_of variable))
+                val variable =
+                  case List.find splittable variables of
+                      SOME found => found
+                    | NONE => raise Fail
+                        "case split did not reach a replay leaf"
+                val nchotomy = TypeBase.nchotomy_of
+                  (Term.type_of variable)
+              in
+                (STRUCT_CASES_TAC (Thm.SPEC variable nchotomy) THEN
+                 close_from refutations) goal
+              end
+
+      fun prove_neg formula Refute_Eval.CaseLeaf =
+            let
+              val theorem = eval_original formula
+              val rhs = rhs_of theorem
+            in
+              if Term.aconv rhs boolSyntax.F then Drule.EQF_ELIM theorem
+              else raise Fail
+                ("leaf EVAL did not produce F: " ^ head_name rhs)
+            end
+        | prove_neg formula
+            (Refute_Eval.CaseUniversal {shape, witness, subtree}) =
+            let
+              val (variable, body) = boolSyntax.dest_forall formula
+              val variable_ty = Term.type_of variable
+              val _ = validate_shape [] run_depth variable_ty shape
+              val _ = if same_type variable_ty (Term.type_of witness) then ()
+                else raise Fail "universal witness type mismatch"
+              val instance = Term.subst
+                [{redex = variable, residue = witness}] body
+              val refutation = prove_neg instance subtree
+              val assumed = Thm.ASSUME formula
+              val assumed_instance = Drule.SPECL [witness] assumed
+              val falsehood = Thm.MP (Thm.NOT_ELIM refutation)
+                assumed_instance
+            in
+              Thm.NOT_INTRO (Thm.DISCH formula falsehood)
+            end
+        | prove_neg formula
+            (Refute_Eval.CaseExistential {shape, branches}) =
+            let
+              val _ = if null branches then
+                  raise Fail "existential node has no branches"
+                else ()
+              val (variable, body) = boolSyntax.dest_exists formula
+              val _ = validate_shape [] run_depth
+                (Term.type_of variable) shape
+              val _ = validate_cover shape (Term.type_of variable) branches
+              fun branch_refutation (_, pattern, subtree) =
+                prove_neg (Term.subst
+                  [{redex = variable, residue = pattern}] body) subtree
+              val refutations = map branch_refutation branches
+              val all_negated = boolSyntax.mk_forall
+                (variable, boolSyntax.mk_neg body)
+              val exhaustive = Tactical.prove
+                (all_negated, GEN_TAC THEN close_from refutations)
+              val conversion = CONV_RULE
+                (DEPTH_CONV BETA_CONV)
+                (Drule.ISPEC (Term.mk_abs (variable, body))
+                  boolTheory.NOT_EXISTS_THM)
+              val target = rhs_of conversion
+              val exhaustive = conform_conclusion
+                "existential" target exhaustive
+            in
+              Thm.EQ_MP (Thm.SYM conversion) exhaustive
+            end
+
+      val replayed = prove_neg pnf case_tree
+      val negated_equality = Thm.AP_TERM boolSyntax.negation prenex_equality
+      val replayed = conform_conclusion
+        "prenex" (rhs_of negated_equality) replayed
+      val certificate = Thm.EQ_MP (Thm.SYM negated_equality) replayed
+      val _ = if null (Thm.hyp certificate) then ()
+        else raise Fail "replay certificate retained hypotheses"
+      val values = map (fn tm => (tm, eval_term env tm)) evals
+    in
+      Certified (replace cex Refute_Core.Genuine values (SOME certificate))
+    end
+    handle Interrupt => raise Interrupt
+         | error => replay_failure cex (replay_error_text error)
 end

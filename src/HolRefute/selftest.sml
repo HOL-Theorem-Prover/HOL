@@ -10087,6 +10087,11 @@ val rx_record_def = TotalDefn.Define
      let updated = r with rg_field := r.rg_field + 1
      in updated.rg_field`
 
+val rx_enum_code_def = TotalDefn.Define
+  `rx_enum_code RGRed = 0 /\
+   rx_enum_code RGGreen = 1 /\
+   rx_enum_code RGBlue = 2`
+
 val rx_partial_def = TotalDefn.Define
   `rx_partial RGLeaf = 10`
 
@@ -10491,7 +10496,7 @@ fun lazy_deadline_during_force_cleans_up () =
     (fn (_, entry, _) =>
       "let val forced = ref false\n" ^
       "    val deadline_fired =\n" ^
-      "      (Refute_EvalSML.with_native_hooks (Time.now ()) []\n" ^
+      "      (Refute_EvalSML.with_native_hooks (Time.now ()) NONE []\n" ^
       "         (fn () =>\n" ^
       "           let val argument = Susp.delay (fn () =>\n" ^
       "                 (forced := true;\n" ^
@@ -10595,7 +10600,7 @@ fun generated_result strategy plan size draws seed =
   compile_extracted_tests strategy [plan] 1 false size draws seed
 
 fun generated_env
-      ({hit = SOME (environment, _, genuine), table, ...} :
+      ({hit = SOME (environment, _, _, genuine), table, ...} :
        generated_answer) =
       SOME (List.map (fn (index, rebuild) =>
         (table_term table index, rebuild ())) environment, genuine)
@@ -10620,8 +10625,8 @@ fun generated_compute_agree strategy plan size draws seed =
         compute_plan_result strategy plan size draws seed) of
       (SOME (generated, generated_genuine),
        CexFound
-         {env = computed, ground_env = NONE,
-          genuine = computed_genuine}) =>
+         {env = computed, ground_env = NONE, case_tree = NONE,
+          genuine = computed_genuine, run_depth = NONE}) =>
         generated_genuine = computed_genuine andalso
         same_env generated computed
     | (NONE, Exhausted _) => true
@@ -10657,7 +10662,7 @@ fun generated_stream seed count =
       | loop remaining state candidates =
           let
             val answer = dispatch 1 false 999 1 state
-            val (environment, _, _) = valOf (#hit answer)
+            val (environment, _, _, _) = valOf (#hit answer)
             val values = rev (List.map (fn (_, rebuild) => rebuild ())
               environment)
           in
@@ -10676,7 +10681,7 @@ fun generated_type_stream ty size seed count =
       | loop remaining state candidates =
           let
             val answer = dispatch 1 false size 1 state
-            val (environment, _, _) = valOf (#hit answer)
+            val (environment, _, _, _) = valOf (#hit answer)
             val value = #2 (hd environment) ()
           in
             loop (remaining - 1) (#state answer) ([value] :: candidates)
@@ -10952,18 +10957,28 @@ val _ = require_msg (check_result (fn () => has_no_generator ``:ind``))
 val _ = tprint "Refute narrowing core"
 
 val narrow_leaf =
-  Narrowing_sum_of_products [indexed_alternative (0, [])]
+  Narrowing_sum_of_products
+    {depth = 0, complete = true, syntactic_complete = true,
+     alternatives = [indexed_alternative (0, [])]}
 val narrow_branch =
   Narrowing_sum_of_products
-    [indexed_alternative (0, []),
-     indexed_alternative (1, [narrow_leaf])]
+    {depth = 1, complete = false, syntactic_complete = false,
+     alternatives =
+       [indexed_alternative (0, []),
+        indexed_alternative (1, [narrow_leaf])]}
 
 fun narrow_node _ id arguments =
   Narrowing_constructor (id, arguments)
 
 fun same_narrow_shape
-      (Narrowing_sum_of_products left,
-       Narrowing_sum_of_products right) =
+      (Narrowing_sum_of_products
+         {depth = left_depth, complete = left_complete,
+          syntactic_complete = left_syntactic,
+          alternatives = left},
+       Narrowing_sum_of_products
+         {depth = right_depth, complete = right_complete,
+          syntactic_complete = right_syntactic,
+          alternatives = right}) =
     let
       fun same_exact (NONE, NONE) = true
         | same_exact (SOME x, SOME y) = Term.aconv x y
@@ -10972,6 +10987,9 @@ fun same_narrow_shape
         #id x = #id y andalso same_exact (#exact x, #exact y) andalso
         ListPair.allEq same_narrow_shape (#arguments x, #arguments y)
     in
+      left_depth = right_depth andalso
+      left_complete = right_complete andalso
+      left_syntactic = right_syntactic andalso
       ListPair.allEq same_alternative (left, right)
     end
 
@@ -11475,7 +11493,9 @@ fun pnf_truth_tables () =
 
 val pnf_bool_shape =
   Narrowing_sum_of_products
-    [indexed_alternative (0, []), indexed_alternative (1, [])]
+    {depth = 0, complete = true, syntactic_complete = true,
+     alternatives =
+       [indexed_alternative (0, []), indexed_alternative (1, [])]}
 
 fun same_narrow_tree (Leaf left, Leaf right) = left = right
   | same_narrow_tree
@@ -11538,11 +11558,15 @@ fun pnf_tree_goldens () =
 
 fun same_narrow_example (EmptyExample, EmptyExample) = true
   | same_narrow_example
-      (UnivExample (left_term, left_rest),
-       UnivExample (right_term, right_rest)) =
+      (UnivExample (left_shape, left_term, left_rest),
+       UnivExample (right_shape, right_term, right_rest)) =
+      same_narrow_shape (left_shape, right_shape) andalso
       same_narrow_term (left_term, right_term) andalso
       same_narrow_example (left_rest, right_rest)
-  | same_narrow_example (ExExample left, ExExample right) =
+  | same_narrow_example
+      (ExExample (left_shape, left),
+       ExExample (right_shape, right)) =
+      same_narrow_shape (left_shape, right_shape) andalso
       ListPair.allEq
         (fn ((left_term, left_rest), (right_term, right_rest)) =>
           same_narrow_term (left_term, right_term) andalso
@@ -11597,10 +11621,11 @@ fun pnf_engine_units () =
       (tree_of [(Universal, narrow_branch)])
     val expected_example =
       UnivExample
-        (narrow_node pnf_bool_shape 0 [],
+        (pnf_bool_shape, narrow_node pnf_bool_shape 0 [],
          ExExample
-           [(narrow_node pnf_bool_shape 0 [], EmptyExample),
-            (narrow_node pnf_bool_shape 1 [], EmptyExample)])
+           (pnf_bool_shape,
+            [(narrow_node pnf_bool_shape 0 [], EmptyExample),
+             (narrow_node pnf_bool_shape 1 [], EmptyExample)]))
     val uniform_shape = tree_of_types 1 [(Existential, ``:num list``)]
   in
     (case potential of
@@ -11622,8 +11647,9 @@ fun pnf_engine_units () =
          PnfCounterexample
            {genuine = true,
             example = UnivExample
-              (Narrowing_constructor
-                (1, [Narrowing_constructor (0, [])]),
+              (narrow_branch,
+               Narrowing_constructor
+                 (1, [Narrowing_constructor (0, [])]),
                EmptyExample),
             tests = 4, ...} => true
        | _ => false) andalso
@@ -11636,6 +11662,62 @@ fun pnf_engine_units () =
   end
   handle Fail _ => false
 
+fun universal_prefers_genuine_false () =
+  let
+    val potential = Eval {result = false, potential = true}
+    val genuine = Eval {result = false, potential = false}
+    val tree = Constructor
+      (Universal, genuine, [0], pnf_bool_shape,
+       [(0, Leaf potential), (1, Leaf genuine)])
+  in
+    case example_of 0 tree of
+        UnivExample
+          (_, Narrowing_constructor (1, []), EmptyExample) => true
+      | _ => false
+  end
+
+fun narrowing_shape_completeness () =
+  shape_complete (shape_of 0 ``:bool``) andalso
+  not (shape_complete (shape_of 0 ``:bool option``)) andalso
+  shape_complete (shape_of 1 ``:bool option``) andalso
+  not (shape_complete (shape_of 8 ``:num``)) andalso
+  not (shape_complete (shape_of 8 ``:bool list``)) andalso
+  not (shape_complete (shape_of 3 ``:bool refute$cfun``)) andalso
+  shape_syntactically_complete
+    (shape_of 3 ``:bool refute$cfun``) andalso
+  not (shape_complete
+    (shape_of 3 ``:(bool, bool) refute$ffun``)) andalso
+  not (shape_complete
+    (shape_of 3 ``:bool refute$cfun # bool``)) andalso
+  not (shape_complete
+    (shape_of 3 ``:bool refute$cfun option``))
+
+fun full_candidate_identity () =
+  let
+    fun candidate env ground_env genuine shape_depth run_depth =
+      {env = env, ground_env = ground_env, genuine = genuine,
+       run_depth = SOME run_depth,
+       case_tree = SOME (Refute_Eval.CaseExistential
+         {shape = Refute_Eval.CaseShape
+            {depth = shape_depth, complete = true,
+             constructors =
+               [{id = 0, fields = []}, {id = 1, fields = []}]},
+          branches = []})}
+    val left = ``\x : bool. x``
+    val alpha = ``\y : bool. y``
+    val base = candidate [(left, left)] NONE true 0 0
+    val equivalent = candidate [(alpha, alpha)] NONE true 0 0
+    fun distinct other =
+      not (Refute_Eval.ignored_candidate other [base])
+  in
+    Refute_Eval.ignored_candidate equivalent [base] andalso
+    distinct (candidate [(left, boolSyntax.F)] NONE true 0 0) andalso
+    distinct (candidate [(left, left)] (SOME []) true 0 0) andalso
+    distinct (candidate [(left, left)] NONE false 0 0) andalso
+    distinct (candidate [(left, left)] NONE true 1 0) andalso
+    distinct (candidate [(left, left)] NONE true 0 1)
+  end
+
 val _ = require_msg (check_result pnf_truth_tables) (fn () =>
   "PNF three-valued or potential truth table changed")
   (fn () => ()) ()
@@ -11644,6 +11726,15 @@ val _ = require_msg (check_result pnf_tree_goldens) (fn () =>
   (fn () => ()) ()
 val _ = require_msg (check_result pnf_engine_units) (fn () =>
   "PNF hit, extraction, exhaustion, depth, or potential propagation failed")
+  (fn () => ()) ()
+val _ = require_msg (check_result universal_prefers_genuine_false) (fn () =>
+  "universal extraction preferred a potential false branch")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_shape_completeness) (fn () =>
+  "narrowing shape completeness or depth metadata changed")
+  (fn () => ()) ()
+val _ = require_msg (check_result full_candidate_identity) (fn () =>
+  "candidate identity omitted semantic retry state")
   (fn () => ()) ()
 
 val _ = require_msg (check_result plain_engine_units) (fn () =>
@@ -11842,7 +11933,7 @@ fun compile_fresh_narrowing pnf =
 
 fun generated_fresh_term (dispatch : generated_dispatch) =
   case #hit (dispatch 1 false 0 0 0) of
-      SOME (_, SOME ((_, rebuild) :: _), true) => rebuild ()
+      SOME (_, SOME ((_, rebuild) :: _), _, true) => rebuild ()
     | _ => raise Fail "fresh narrowing dispatch produced no genuine hit"
 
 val fresh_isolation_mismatch = ref ""
@@ -13289,23 +13380,26 @@ fun narrowing_partial_certify_opt_out () =
       | _ => false
   end
 
-fun narrowing_existential_is_interim_potential () =
+val narrowing_replay_mismatch = ref ""
+
+fun narrowing_existential_replay_is_certified () =
   let
     val config = default_config
       |> upd_substrate NativeSML
       |> upd_size 2
-      |> upd_abort_potential true
     val disabled = upd_allow_existentials false config
-    val goal = ``?n : num. n < 0``
-    val potential_result = run_with_strategy Narrowing config goal
-    val potential =
-      case potential_result of
-          Counterexample [cex] =>
-            (case #certainty cex of
-                 Potential reasons => List.exists
-                   (String.isSubstring "case-tree replay") reasons
-               | _ => false) andalso not (Option.isSome (#cert cex))
-        | _ => false
+    val goal = ``?x : rg_enum. rx_enum_code x = 3``
+    val outcome = run_with_strategy Narrowing config goal
+    val certified =
+      case outcome of
+          Counterexample
+            [{certainty = Genuine, cert = SOME theorem, ...}] =>
+              null (Thm.hyp theorem) andalso
+              Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg goal) andalso
+              (Tag.isEmpty (Thm.tag theorem) orelse
+               Tag.isDisk (Thm.tag theorem))
+        | _ => (narrowing_replay_mismatch :=
+            format_outcome config outcome; false)
     val refused_result = run_with_strategy Narrowing disabled goal
     val refused =
       case refused_result of
@@ -13313,7 +13407,293 @@ fun narrowing_existential_is_interim_potential () =
             (String.isSubstring "allow_existentials") reasons
         | _ => false
   in
-    potential andalso refused
+    certified andalso refused
+  end
+
+fun narrowing_mixed_prefix_replay_is_certified () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+    val goal =
+      ``(b : bool) /\ (?x : rg_enum. rx_enum_code x = 3)``
+    val closure =
+      ``!b : bool. b /\ (?x : rg_enum. rx_enum_code x = 3)``
+  in
+    case run_with_strategy Narrowing config goal of
+        Counterexample
+          [{certainty = Genuine, cert = SOME theorem, ...}] =>
+            null (Thm.hyp theorem) andalso
+            Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg closure)
+      | _ => false
+  end
+
+fun narrowing_existential_certify_opt_out () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+      |> upd_certify false
+  in
+    case run_with_strategy Narrowing config
+      ``?x : rg_enum. rx_enum_code x = 3`` of
+        Counterexample
+          [{certainty = Genuine, cert = NONE, ...}] => true
+      | _ => false
+  end
+
+fun narrowing_replay_failure_is_retained () =
+  let
+    val native = valOf (List.find (fn substrate =>
+      #name substrate = "native") (get_substrates ()))
+    val stats = ref []
+    fun compile _ _ _ = Compiled
+      {run = fn {size, ...} =>
+         if size < 2 then Exhausted {complete = false}
+         else CexFound
+           {env = [], ground_env = NONE, genuine = true,
+            run_depth = SOME size,
+            case_tree = SOME (Refute_Eval.CaseExistential
+              {shape = Refute_Eval.CaseShape
+                 {depth = size, complete = true,
+                  constructors =
+                    [{id = 0, fields = []}, {id = 1, fields = []}]},
+               branches =
+                 [(Refute_Eval.CaseConstructor (0, []), boolSyntax.F,
+                   Refute_Eval.CaseLeaf)]})},
+       close = fn () => (), max_chunk = NONE, last_stats = stats}
+    val broken : substrate =
+      {name = "native", priority = #priority native, compile = compile}
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+      |> upd_abort_potential true
+    fun body () =
+      (register_substrate broken;
+       #abort_potential config andalso
+       case run_with_strategy Narrowing config
+         ``?b : bool. b /\ ~b`` of
+           Counterexample
+             [{certainty = Potential reasons, cert = NONE, stats, ...}] =>
+               List.exists (String.isSubstring "case-tree replay failed")
+                 reasons andalso
+               List.exists (fn (name, value) =>
+                 name = "size" andalso value = 2) stats
+         | _ => false)
+  in
+    Portable.finally (fn () => register_substrate native) body ()
+  end
+
+fun narrowing_genuine_only_never_returns_replay_potential () =
+  let
+    val native = valOf (List.find (fn substrate =>
+      #name substrate = "native") (get_substrates ()))
+    val stats = ref []
+    fun compile _ _ _ = Compiled
+      {run = fn {size, ...} => CexFound
+         {env = [], ground_env = NONE, genuine = true,
+          run_depth = SOME size,
+          case_tree = SOME (Refute_Eval.CaseExistential
+            {shape = Refute_Eval.CaseShape
+               {depth = size, complete = true,
+                constructors =
+                  [{id = 0, fields = []}, {id = 1, fields = []}]},
+             branches =
+               [(Refute_Eval.CaseConstructor (0, []), boolSyntax.F,
+                 Refute_Eval.CaseLeaf)]})},
+       close = fn () => (), max_chunk = NONE, last_stats = stats}
+    val broken : substrate =
+      {name = "native", priority = #priority native, compile = compile}
+    val base = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 1
+    val genuine = base
+      |> upd_genuine_only true
+      |> upd_abort_potential true
+    fun no_potential config =
+      case run_with_strategy Narrowing config ``?b : bool. b /\ ~b`` of
+          Unknown _ => true
+        | _ => false
+    fun body () =
+      (register_substrate broken;
+       no_potential base andalso no_potential genuine)
+  in
+    Portable.finally (fn () => register_substrate native) body ()
+  end
+
+fun upgraded_genuine_retry_not_suppressed () =
+  let
+    val native = valOf (List.find (fn substrate =>
+      #name substrate = "native") (get_substrates ()))
+    val stats = ref []
+    fun compile _ _ _ = Compiled
+      {run = fn {ignored, ...} =>
+         let
+           val candidate =
+             {env = [], ground_env = NONE, case_tree = NONE,
+              genuine = not (null ignored), run_depth = NONE}
+         in
+           if Refute_Eval.ignored_candidate candidate ignored then
+             Exhausted {complete = false}
+           else CexFound candidate
+         end,
+       close = fn () => (), max_chunk = NONE, last_stats = stats}
+    val retrying : substrate =
+      {name = "native", priority = #priority native, compile = compile}
+    val config = default_config |> upd_substrate NativeSML
+    fun body () =
+      (register_substrate retrying;
+       case run_with_strategy Exhaustive config boolSyntax.F of
+           Counterexample [{certainty = Genuine, ...}] => true
+         | _ => false)
+  in
+    Portable.finally (fn () => register_substrate native) body ()
+  end
+
+fun different_grounding_retry_not_suppressed () =
+  let
+    val native = valOf (List.find (fn substrate =>
+      #name substrate = "native") (get_substrates ()))
+    val stats = ref []
+    val variable = ``b : bool``
+    val hole = MFN.irrelevant_marker ``:bool``
+    fun compile _ _ _ = Compiled
+      {run = fn {size, ignored, ...} =>
+         let
+           val grounded = if size = 0 then boolSyntax.T else boolSyntax.F
+           (* Pin the reported depth to the rejected candidate so grounding
+              is the sole equality difference.  The driver independently
+              supplies the scheduled depth to replay and its retry state. *)
+           val candidate =
+             {env = [(variable, hole)],
+              ground_env = SOME [(variable, grounded)],
+              case_tree = NONE, genuine = true, run_depth = SOME 0}
+         in
+           if Refute_Eval.ignored_candidate candidate ignored then
+             Exhausted {complete = false}
+           else CexFound candidate
+         end,
+       close = fn () => (), max_chunk = NONE, last_stats = stats}
+    val retrying : substrate =
+      {name = "native", priority = #priority native, compile = compile}
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 1
+    fun body () =
+      (register_substrate retrying;
+       case run_with_strategy Narrowing config variable of
+           Counterexample [{certainty = Genuine, ...}] => true
+         | _ => false)
+  in
+    Portable.finally (fn () => register_substrate native) body ()
+  end
+
+fun narrowing_incomplete_num_never_genuine certify =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+      |> upd_certify certify
+    val outcome = run_with_strategy Narrowing config
+      ``?n : num. n = 4``
+  in
+    case outcome of
+        Unknown reasons => List.exists
+          (String.isSubstring "narrowing search exhausted") reasons
+      | _ => false
+  end
+
+fun narrowing_recursive_domain_never_genuine () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+  in
+    case run_with_strategy Narrowing config
+      ``?xs : bool list. LENGTH xs = 3`` of
+        Unknown reasons => List.exists
+          (String.isSubstring "narrowing search exhausted") reasons
+      | _ => false
+  end
+
+fun narrowing_pnf_potential_bypasses_replay () =
+  let
+    val initial = tree_of [(Existential, pnf_bool_shape)]
+    (* [genuine = false] is the PNF protocol produced by caught Match. *)
+    fun stuck _ _ = Known {genuine = false, result = false}
+  in
+    case refute_pnf false 1 stuck initial of
+        PnfCounterexample {genuine = false, ...} =>
+          not (Refute_QC.pnf_replay_eligible
+            (SOME Refute_Eval.CaseLeaf) false)
+      | _ => false
+  end
+
+fun narrowing_result_is_not_genuine outcome =
+  case outcome of
+      Counterexample cexs =>
+        List.all (fn (cex : counterexample) =>
+          #certainty cex <> Genuine) cexs
+    | _ => true
+
+fun narrowing_finitization_never_genuine certify size goal =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size size
+      |> upd_certify certify
+      |> upd_abort_potential true
+  in
+    narrowing_result_is_not_genuine
+      (run_with_strategy Narrowing config goal)
+  end
+
+fun narrowing_true_existential_finitization_is_sound () =
+  let
+    val higher_order_domain =
+      ``?f : (bool -> bool) -> bool.
+          f (\x. x) /\ ~f (\x. ~x)``
+    val first_order_ffun =
+      ``?f : rg_enum -> bool.
+          f RGRed /\ f RGGreen /\ ~f RGBlue``
+    val product_ffun =
+      ``?p : (rg_enum -> bool) # bool.
+          FST p RGRed /\ FST p RGGreen /\ ~FST p RGBlue``
+    fun both size goal =
+      narrowing_finitization_never_genuine true size goal andalso
+      narrowing_finitization_never_genuine false size goal
+  in
+    both 2 higher_order_domain andalso
+    both 2 first_order_ffun andalso
+    both 3 product_ffun
+  end
+
+fun narrowing_incomplete_domain_can_be_certified () =
+  let
+    val native = valOf (List.find (fn substrate =>
+      #name substrate = "native") (get_substrates ()))
+    val stats = ref []
+    fun compile _ _ _ = Compiled
+      {run = fn {size, ...} => CexFound
+         {env = [], ground_env = NONE, genuine = false,
+          run_depth = SOME size,
+          case_tree = SOME Refute_Eval.CaseLeaf},
+       close = fn () => (), max_chunk = NONE, last_stats = stats}
+    val approximate : substrate =
+      {name = "native", priority = #priority native, compile = compile}
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 0
+      |> upd_abort_potential true
+    fun body () =
+      (register_substrate approximate;
+       case run_with_strategy Narrowing config boolSyntax.F of
+           Counterexample
+             [{certainty = Genuine, cert = SOME theorem, ...}] =>
+               Term.aconv (Thm.concl theorem) ``~F``
+         | _ => false)
+  in
+    Portable.finally (fn () => register_substrate native) body ()
   end
 
 fun narrowing_reversed_shallow_is_integrated () =
@@ -13486,9 +13866,8 @@ fun narrowing_ceiling_is_pinned () =
   in
     Refute_QC.narrowing_certainty_ceiling default_config universal =
       Genuine andalso
-    (case Refute_QC.narrowing_certainty_ceiling default_config existential of
-         Potential _ => true
-       | _ => false) andalso
+    Refute_QC.narrowing_certainty_ceiling default_config existential =
+      Genuine andalso
     Refute_QC.narrowing_certainty_ceiling
       (upd_certify false default_config) existential = Genuine
   end
@@ -13507,8 +13886,52 @@ val _ = require_msg (check_result narrowing_partial_certify_opt_out)
   (fn () =>
     "certify=false did not preserve an uncertified partial narrowing hit")
   (fn () => ()) ()
-val _ = require_msg (check_result narrowing_existential_is_interim_potential)
-  (fn () => "existential narrowing certainty or option gating changed")
+val _ = require_msg
+  (check_result narrowing_existential_replay_is_certified)
+  (fn () =>
+    "existential narrowing replay was not ordinarily certified:\n" ^
+    !narrowing_replay_mismatch)
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result narrowing_mixed_prefix_replay_is_certified)
+  (fn () => "mixed universal/existential PNF replay was not certified")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_existential_certify_opt_out)
+  (fn () => "certify=false did not skip existential replay")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_replay_failure_is_retained)
+  (fn () => "keep-potential mode lost its replay Potential")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result narrowing_genuine_only_never_returns_replay_potential)
+  (fn () => "a continuing or genuine_only retry returned replay Potential")
+  (fn () => ()) ()
+val _ = require_msg (check_result upgraded_genuine_retry_not_suppressed)
+  (fn () => "candidate equality suppressed an upgraded genuine retry")
+  (fn () => ()) ()
+val _ = require_msg (check_result different_grounding_retry_not_suppressed)
+  (fn () => "candidate equality suppressed a different grounding retry")
+  (fn () => ()) ()
+val _ = require_msg (check_result (fn () =>
+  narrowing_incomplete_num_never_genuine true andalso
+  narrowing_incomplete_num_never_genuine false))
+  (fn () => "an incomplete numeric existential was labelled Genuine")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_recursive_domain_never_genuine)
+  (fn () => "a recursive truncated existential was labelled Genuine")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_pnf_potential_bypasses_replay)
+  (fn () => "a potential-flagged PNF result reached replay")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result narrowing_true_existential_finitization_is_sound)
+  (fn () =>
+    "a true existential became Genuine from function finitization")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result narrowing_incomplete_domain_can_be_certified)
+  (fn () =>
+    "ordinary certification did not upgrade an incomplete-domain hit")
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_reversed_shallow_is_integrated)
   (fn () =>
@@ -14878,7 +15301,8 @@ fun native_ignored_filter_resumes () =
                       {genuine_only = true, card = 1, size = 0, draws = 5,
                        ignored = [candidate]}
                   | _ => CexFound
-                      {env = [], ground_env = NONE, genuine = false}
+                      {env = [], ground_env = NONE, case_tree = NONE,
+                       genuine = false, run_depth = NONE}
               val _ = #close test ()
             in
               case second of Exhausted _ => true | _ => false
@@ -16190,6 +16614,140 @@ fun uncertifiable_grounding_has_pinned_reason () =
 val _ = require_msg
   (check_result uncertifiable_grounding_has_pinned_reason) (fn () =>
   "uncertifiable partial grounding did not use the pinned reason")
+  (fn () => ()) ()
+
+val replay_bool_shape = Refute_Eval.CaseShape
+  {depth = 0, complete = true,
+   constructors =
+     [{id = 0, fields = []}, {id = 1, fields = []}]}
+
+fun replay_degraded tree =
+  case Refute_Cert.certify_case_tree
+    { original = ``?b : bool. b /\ ~b``,
+      evals = [], env = [], run_depth = 0, case_tree = tree,
+      cex = make_cex true } of
+      Refute_Cert.Potential
+        {certainty = Refute_Core.Potential reasons, cert = NONE, ...} =>
+          List.exists (String.isSubstring "case-tree replay failed") reasons
+    | _ => false
+
+fun incomplete_case_tree_degrades () =
+  case Refute_Cert.certify_case_tree
+    { original = ``?b : bool. b``,
+      evals = [], env = [], run_depth = 0,
+      case_tree = Refute_Eval.CaseExistential
+        {shape = Refute_Eval.CaseShape
+           {depth = 0, complete = true,
+            constructors =
+              [{id = 0, fields = []}, {id = 1, fields = []}]},
+         branches =
+           [(Refute_Eval.CaseConstructor (0, []), boolSyntax.F,
+             Refute_Eval.CaseLeaf)]},
+      cex = make_cex true } of
+      Refute_Cert.Potential
+        {certainty = Refute_Core.Potential reasons, cert = NONE, ...} =>
+          List.exists (String.isSubstring "case-tree replay failed") reasons
+    | _ => false
+
+fun extra_case_tree_degrades () = replay_degraded
+  (Refute_Eval.CaseExistential
+    {shape = replay_bool_shape,
+     branches =
+       [(Refute_Eval.CaseConstructor (0, []), boolSyntax.F,
+         Refute_Eval.CaseLeaf),
+        (Refute_Eval.CaseConstructor (1, []), boolSyntax.T,
+         Refute_Eval.CaseLeaf),
+        (Refute_Eval.CaseConstructor (1, []), boolSyntax.T,
+         Refute_Eval.CaseLeaf)]})
+
+fun malformed_case_tree_degrades () = replay_degraded
+  (Refute_Eval.CaseExistential
+    {shape = replay_bool_shape,
+     branches =
+       [(Refute_Eval.CaseConstructor (0, []), boolSyntax.T,
+         Refute_Eval.CaseLeaf),
+        (Refute_Eval.CaseConstructor (1, []), boolSyntax.T,
+         Refute_Eval.CaseLeaf)]})
+
+fun incomplete_metadata_degrades () = replay_degraded
+  (Refute_Eval.CaseExistential
+    {shape = Refute_Eval.CaseShape
+       {depth = 2, complete = false,
+        constructors =
+          [{id = 0, fields = []}, {id = 1, fields = []}]},
+     branches =
+       [(Refute_Eval.CaseConstructor (0, []), boolSyntax.F,
+         Refute_Eval.CaseLeaf),
+        (Refute_Eval.CaseConstructor (1, []), boolSyntax.T,
+         Refute_Eval.CaseLeaf)]})
+
+fun forged_root_depth_degrades () = replay_degraded
+  (Refute_Eval.CaseExistential
+    {shape = Refute_Eval.CaseShape
+       {depth = 1, complete = true,
+        constructors =
+          [{id = 0, fields = []}, {id = 1, fields = []}]},
+     branches =
+       [(Refute_Eval.CaseConstructor (0, []), boolSyntax.F,
+         Refute_Eval.CaseLeaf)]})
+
+fun forged_child_depth_degrades () =
+  let
+    val bool_shape = Refute_Eval.CaseShape
+      {depth = 1, complete = true,
+       constructors =
+         [{id = 0, fields = []}, {id = 1, fields = []}]}
+    val tree = Refute_Eval.CaseExistential
+      {shape = Refute_Eval.CaseShape
+         {depth = 1, complete = true,
+          constructors =
+            [{id = 0, fields = []},
+             {id = 1, fields = [bool_shape]}]},
+       branches =
+         [(Refute_Eval.CaseConstructor (0, []),
+           optionSyntax.mk_none ``:bool``, Refute_Eval.CaseLeaf)]}
+  in
+    case Refute_Cert.certify_case_tree
+      {original = ``?x : bool option. F``, evals = [], env = [],
+       run_depth = 1, case_tree = tree, cex = make_cex true} of
+        Refute_Cert.Potential _ => true
+      | _ => false
+  end
+
+fun universal_metadata_degrades () =
+  let
+    fun replay shape =
+      case Refute_Cert.certify_case_tree
+        {original = ``!b : bool. b``, evals = [], env = [],
+         run_depth = 0,
+         case_tree = Refute_Eval.CaseUniversal
+           {shape = shape, witness = boolSyntax.F,
+            subtree = Refute_Eval.CaseLeaf},
+         cex = make_cex true} of
+          Refute_Cert.Potential _ => true
+        | _ => false
+    val incomplete = Refute_Eval.CaseShape
+      {depth = 0, complete = false,
+       constructors =
+         [{id = 0, fields = []}, {id = 1, fields = []}]}
+    val wrong_constructors = Refute_Eval.CaseShape
+      {depth = 0, complete = true,
+       constructors = [{id = 0, fields = []}]}
+  in
+    replay incomplete andalso replay wrong_constructors
+  end
+
+val _ = require_msg (check_result incomplete_case_tree_degrades) (fn () =>
+  "an incomplete existential case tree did not degrade safely")
+  (fn () => ()) ()
+val _ = require_msg (check_result (fn () =>
+  extra_case_tree_degrades () andalso
+  malformed_case_tree_degrades () andalso
+  incomplete_metadata_degrades () andalso
+  forged_root_depth_degrades () andalso
+  forged_child_depth_degrades () andalso
+  universal_metadata_degrades ())) (fn () =>
+  "malformed, depth-forged, or universal metadata passed replay")
   (fn () => ()) ()
 
 fun false_positive_is_discarded () =
