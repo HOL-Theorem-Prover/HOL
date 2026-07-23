@@ -168,12 +168,20 @@ fun force_const r name =
 
 (* Registration helpers *)
 fun check_def_thm fname th =
-  (if null (hyp th) then ()
-   else ERR fname "definition theorem must have no hypotheses";
-   let val (lhs, rhs, _) = Term.dest_eq_ty (concl th)
-   in (lhs, rhs)
-   end
-   handle HOL_ERR _ => ERR fname "definition not an equation")
+    let
+      val _ = null (hyp th) orelse
+              ERR fname "definition theorem must have no hypotheses"
+      val t = tag th
+      val t = Tag.isEmpty t orelse Tag.isDisk t orelse
+              ERR fname "definition theorem cannot be tagged"
+      val (lhs, rhs, _) = Term.dest_eq_ty (concl th)
+                          handle HOL_ERR _ =>
+                                 ERR fname "definition not an equation"
+      val _ = Term.is_const lhs orelse
+              ERR fname "LHS of definition theorem must be a constant"
+    in
+      (lhs, rhs)
+    end
 
 fun register_once r fname th expected_rhs =
   case !r of
