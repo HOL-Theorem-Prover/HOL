@@ -61,7 +61,7 @@ structure Refute_ModelFinder_HOL = struct
      needs : term list option,
      tac_timeout : Time.time,
      evals : term list,
-     case_names : (kname * int) list,
+     case_names : (kname * (int * int)) list,
      def_tables : const_table * const_table,
      nondef_table : const_table,
      nondefs : term list,
@@ -1626,16 +1626,123 @@ structure Refute_ModelFinder_HOL = struct
   fun primitive_constant key = Term.prim_mk_const
     {Thy = #Thy key, Name = #Name key}
 
+  fun distinct_type_variables function tys =
+    let
+      fun add (ty, seen) =
+        if List.exists (fn old => Type.compare (ty, old) = EQUAL) seen then
+          raise err function "type arguments must be distinct type variables"
+        else
+          ty :: seen
+    in
+      if List.all Type.is_vartype tys then
+        ignore (List.foldl add [] tys)
+      else
+        raise err function "type arguments must all be type variables"
+    end
+
+  fun distinct_types tys = distinct_type_variables "register_codatatype" tys
+
+  fun interpreted_type_operator ({Thy, Tyop} : type_operator) =
+    (Thy = "min" andalso (Tyop = "bool" orelse Tyop = "fun")) orelse
+    (Thy = "pair" andalso Tyop = "prod") orelse
+    (Thy = "num" andalso Tyop = "num") orelse
+    (Thy = "integer" andalso Tyop = "int")
+
+  fun remove_nth index values =
+    List.take (values, index) @ List.drop (values, index + 1)
+
+  (* Case constants in HOL normally take the scrutinee first, but manually
+     defined codata case constants may put it elsewhere.  A candidate
+     position is accepted only if instantiating that domain to the registered
+     codata type makes every remaining domain, in order, the branch type for
+     the corresponding constructor. *)
+  fun validate_codatatype_shape
+        ({tyop, case_const, constructors} : codatatype_info) =
+    let
+      val function = "register_codatatype"
+      val _ = if null constructors then
+          raise err function "constructor list must not be empty"
+        else ()
+      val _ = if Term.is_const case_const andalso
+                     List.all Term.is_const constructors then () else
+        raise err function "case and constructor terms must be constants"
+      fun distinct_constructor constructor =
+        length (List.filter (Term.same_const constructor) constructors) = 1
+      val _ = if List.all distinct_constructor constructors then () else
+        raise err function "constructors must be distinct"
+      val result_ty = #2 (boolSyntax.strip_fun
+        (Term.type_of (hd constructors)))
+      val {Thy, Tyop, Args} = Type.dest_thy_type result_ty
+      val actual = {Thy = Thy, Tyop = Tyop}
+      val _ = if same_type_operator tyop actual then () else
+        raise err function "constructor result has the wrong type operator"
+      val _ = if interpreted_type_operator tyop then
+          raise err function
+            "interpreted and function types cannot be codatatypes"
+        else ()
+      val _ = distinct_types Args
+      fun normalize_constructor constructor =
+        let
+          val constructor_result = #2 (boolSyntax.strip_fun
+            (Term.type_of constructor))
+          val theta = Type.match_type constructor_result result_ty
+          val normalized = Term.inst theta constructor
+        in
+          if #2 (boolSyntax.strip_fun (Term.type_of normalized)) = result_ty
+          then normalized
+          else raise err function "constructor result types do not agree"
+        end
+      val constructors = map normalize_constructor constructors
+      val (raw_domains, _) = boolSyntax.strip_fun (Term.type_of case_const)
+      val _ = if length raw_domains = length constructors + 1 then () else
+        raise err function
+          "case constant must have one argument per branch and a scrutinee"
+      fun candidate index =
+        let
+          val raw_domain = List.nth (raw_domains, index)
+          val _ = if same_type_operator (type_operator_of raw_domain) tyop
+                  then () else raise Match
+          val theta = Type.match_type raw_domain result_ty
+          val normalized = Term.inst theta case_const
+          val (domains, case_result) = boolSyntax.strip_fun
+            (Term.type_of normalized)
+          val branch_tys = remove_nth index domains
+          fun valid_branch (constructor, branch_ty) =
+            branch_ty = boolSyntax.list_mk_fun
+              (#1 (boolSyntax.strip_fun (Term.type_of constructor)),
+               case_result)
+        in
+          if List.nth (domains, index) = result_ty andalso
+             ListPair.allEq valid_branch (constructors, branch_tys) then
+            SOME normalized
+          else
+            NONE
+        end handle HOL_ERR _ => NONE | Match => NONE
+      val candidates = List.mapPartial (fn index =>
+        Option.map (fn normalized => (index, normalized)) (candidate index))
+        (List.tabulate (length raw_domains, fn index => index))
+      val (scrutinee_index, case_const) =
+        case candidates of
+            [candidate] => candidate
+          | [] => raise err function
+              "case constant has no valid codatatype scrutinee argument"
+          | _ => raise err function
+              "case constant has more than one valid scrutinee argument"
+    in
+      ({tyop = tyop, case_const = case_const, constructors = constructors},
+       scrutinee_index)
+    end
+
   fun builtin_codatatype_info
         ({Thy, Tyop, case_name, constructor_names} :
          {Thy : string, Tyop : string, case_name : string,
           constructor_names : string list}) =
     if theory_is_available Thy then
-      SOME
+      SOME (#1 (validate_codatatype_shape
         {tyop = {Thy = Thy, Tyop = Tyop},
          case_const = primitive_constant {Thy = Thy, Name = case_name},
          constructors = map (fn Name =>
-           primitive_constant {Thy = Thy, Name = Name}) constructor_names}
+           primitive_constant {Thy = Thy, Name = Name}) constructor_names}))
     else
       NONE
 
@@ -1650,7 +1757,11 @@ structure Refute_ModelFinder_HOL = struct
      {Thy = "itree", Tyop = "itree", case_name = "itree_CASE",
       constructor_names = ["Ret", "Div", "Vis"]},
      {Thy = "itreeTau", Tyop = "itree", case_name = "itree_CASE",
-      constructor_names = ["Ret", "Tau", "Vis"]}]
+      constructor_names = ["Ret", "Tau", "Vis"]},
+     {Thy = "lbtree", Tyop = "lbtree", case_name = "lbtree_case",
+      constructor_names = ["Lf", "Nd"]},
+     {Thy = "path", Tyop = "path", case_name = "path_case",
+      constructor_names = ["stopped_at", "pcons"]}]
 
   val builtin_codatatype_cache = ref ([] : codatatype_info list)
 
@@ -1695,22 +1806,6 @@ structure Refute_ModelFinder_HOL = struct
         (List.mapPartial built_in builtin_codatatypes)
     end
 
-  fun distinct_type_variables function tys =
-    let
-      fun add (ty, seen) =
-        if List.exists (fn old => Type.compare (ty, old) = EQUAL) seen then
-          raise err function "type arguments must be distinct type variables"
-        else
-          ty :: seen
-    in
-      if List.all Type.is_vartype tys then
-        ignore (List.foldl add [] tys)
-      else
-        raise err function "type arguments must all be type variables"
-    end
-
-  fun distinct_types tys = distinct_type_variables "register_codatatype" tys
-
   fun has_type_operator project registry ty =
     let val operator = type_operator_of ty
     in
@@ -1724,37 +1819,12 @@ structure Refute_ModelFinder_HOL = struct
       | NONE => false
     handle HOL_ERR _ => false
 
-  fun interpreted_type_operator ({Thy, Tyop} : type_operator) =
-    (Thy = "min" andalso (Tyop = "bool" orelse Tyop = "fun")) orelse
-    (Thy = "pair" andalso Tyop = "prod") orelse
-    (Thy = "num" andalso Tyop = "num") orelse
-    (Thy = "integer" andalso Tyop = "int")
-
-  fun register_codatatype
-        ({tyop, case_const, constructors} : codatatype_info) =
+  fun register_codatatype (registration : codatatype_info) =
     let
-      val _ = if null constructors then
-          raise err "register_codatatype" "constructor list must not be empty"
-        else ()
-      val _ = if Term.is_const case_const andalso
-                     List.all Term.is_const constructors then () else
-        raise err "register_codatatype"
-          "case and constructor terms must be constants"
-      fun distinct_constructor constructor =
-        length (List.filter (Term.same_const constructor) constructors) = 1
-      val _ = if List.all distinct_constructor constructors then () else
-        raise err "register_codatatype" "constructors must be distinct"
+      val (normalized as {tyop, constructors, ...}, _) =
+        validate_codatatype_shape registration
       val result_ty = #2 (boolSyntax.strip_fun
         (Term.type_of (hd constructors)))
-      val {Thy, Tyop, Args} = Type.dest_thy_type result_ty
-      val actual = {Thy = Thy, Tyop = Tyop}
-      val _ = if same_type_operator tyop actual then () else
-        raise err "register_codatatype"
-          "constructor result has the wrong type operator"
-      val _ = if interpreted_type_operator tyop then
-          raise err "register_codatatype"
-            "interpreted and function types cannot be codatatypes"
-        else ()
       val _ = if has_type_operator (type_operator_of o #qty)
                        quotient_registry result_ty orelse
                      has_type_operator (type_operator_of o #ty)
@@ -1763,43 +1833,6 @@ structure Refute_ModelFinder_HOL = struct
           raise err "register_codatatype"
             "type operator already has an incompatible registration"
         else ()
-      val _ = distinct_types Args
-      fun normalize_constructor constructor =
-        let
-          val constructor_result = #2 (boolSyntax.strip_fun
-            (Term.type_of constructor))
-          val theta = Type.match_type constructor_result result_ty
-          val normalized = Term.inst theta constructor
-        in
-          if #2 (boolSyntax.strip_fun (Term.type_of normalized)) = result_ty
-          then normalized
-          else raise err "register_codatatype"
-            "constructor result types do not agree"
-        end
-      val constructors = map normalize_constructor constructors
-      val (raw_case_domains, _) = boolSyntax.strip_fun
-        (Term.type_of case_const)
-      val _ = if null raw_case_domains then
-          raise err "register_codatatype"
-            "case constant has no codatatype argument"
-        else ()
-      val case_const = Term.inst
-        (Type.match_type (hd raw_case_domains) result_ty) case_const
-      val (case_domains, case_result) = boolSyntax.strip_fun
-        (Term.type_of case_const)
-      val _ = if length case_domains = length constructors + 1 andalso
-                     hd case_domains = result_ty then () else
-        raise err "register_codatatype"
-          "case constant does not match the registered type"
-      fun valid_branch (constructor, branch_ty) =
-        branch_ty = boolSyntax.list_mk_fun
-          (#1 (boolSyntax.strip_fun (Term.type_of constructor)), case_result)
-      val _ = if ListPair.allEq valid_branch
-                     (constructors, tl case_domains) then () else
-        raise err "register_codatatype"
-          "case branches do not match the constructors"
-      val normalized : codatatype_info =
-        {tyop = tyop, case_const = case_const, constructors = constructors}
       fun other ({tyop = old, ...} : codatatype_info) =
         not (same_type_operator old tyop)
     in
@@ -3106,12 +3139,16 @@ structure Refute_ModelFinder_HOL = struct
         in
           if null constructors orelse is_codatatype ty orelse
              not (is_data_type ty) then NONE
-          else SOME (const_key case_const, length constructors)
+          else SOME (const_key case_const, (length constructors, 0))
         end handle HOL_ERR _ => NONE
       val raw = List.mapPartial entry (TypeBase.elts ())
+      fun registered_entry (info as {case_const, constructors, ...}) =
+        let val (_, scrutinee_index) = validate_codatatype_shape info
+        in
+          (const_key case_const, (length constructors, scrutinee_index))
+        end
     in
-      raw @ map (fn {case_const, constructors, ...} =>
-        (const_key case_const, length constructors)) registered
+      raw @ map registered_entry registered
     end
 
   fun constructor_name constructor =
@@ -4120,7 +4157,7 @@ structure Refute_ModelFinder_HOL = struct
             else
               case List.find (fn (other, _) => same_key key other)
                      case_names of
-                  SOME (_, constructor_count) =>
+                  SOME (_, (constructor_count, scrutinee_index)) =>
                     let val needed = constructor_count + 1
                     in
                       if length arguments < needed then
@@ -4129,13 +4166,15 @@ structure Refute_ModelFinder_HOL = struct
                           (needed - length arguments))
                       else
                         let
-                          val scrutinee = do_term depth (hd arguments)
+                          val case_arguments = List.take (arguments, needed)
+                          val scrutinee = do_term depth
+                            (List.nth (case_arguments, scrutinee_index))
                           val functions =
-                            List.take (tl arguments, constructor_count)
+                            remove_nth scrutinee_index case_arguments
                           val rest = List.drop (arguments, needed)
                           val data_ty = Term.type_of scrutinee
-                          val full = Term.list_mk_comb (constant,
-                            List.take (arguments, needed))
+                          val full = Term.list_mk_comb
+                            (constant, case_arguments)
                           val result_ty = Term.type_of full
                           val value = optimized_case_value context data_ty
                             result_ty functions scrutinee

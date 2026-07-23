@@ -128,8 +128,10 @@ Registrations are session-local ML state and create no theory content:
 
 * `Refute.register_codatatype {tyop, case_const, constructors}` registers a
   genuine type operator, its case constant, and its distinct constructors.
-  Lazy built-ins cover `llist`, `ltree`, `itree`, and `itreeTau` when their
-  theories are present.
+  Registration checks the constructor and branch types and requires a unique
+  codatatype scrutinee argument; both scrutinee-first and scrutinee-last case
+  constants are supported.  Lazy built-ins cover `llist`, `ltree`, `itree`,
+  `itreeTau`, `lbtree`, and `path` when their theories are present.
 * `Refute.register_quotient {qty, rty, abs, rep, equiv_thm, partial}`
   registers the abstract and representation types and constants.  The
   theorem shape determines whether the sound partial encoding is required;
@@ -194,8 +196,7 @@ return `Unknown`, rather than risk a spurious genuine result.  Register the
 typedef explicitly.  The `rat` type is not registered: its intended
 fraction/ersatz representation remains future work.
 
-The following parity work is intentionally not in M4: native narrowing,
-predicate-mode smart generators, `lbtree` and `path` codata registrations,
-automatic quotient/typedef database harvesting,
-`merge_type_vars`, fraction/`rat` support, and monotonicity promotion for
-relation inverse and composition (`inv` and `O`).
+The following parity work was intentionally not in M4: native narrowing,
+predicate-mode smart generators, automatic quotient/typedef database
+harvesting, `merge_type_vars`, fraction/`rat` support, and monotonicity
+promotion for relation inverse and composition (`inv` and `O`).

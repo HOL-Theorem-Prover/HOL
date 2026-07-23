@@ -5,6 +5,8 @@ open refuteTableZooTheory
 open refuteUnusedTheory
 open sortingTheory
 open realTheory
+open lbtreeTheory
+open pathTheory
 open Refute_Core
 open Refute_Gen
 open Refute_Narrow
@@ -1304,6 +1306,8 @@ fun mf_codatatype_registrations () =
     val ltree_ty = ``:num ltree``
     val itree_ty = ``:(num, bool, num) itree$itree``
     val tau_ty = ``:(num, bool, num) itreeTau$itree``
+    val lbtree_ty = ``:num lbtree$lbtree``
+    val path_ty = ``:(num, bool) path$path``
     val llist_operator = {Thy = "llist", Tyop = "llist"}
     val initial_is_lazy = not (List.exists
       (fn ({tyop, ...} : MFH.codatatype_info) =>
@@ -1315,6 +1319,11 @@ fun mf_codatatype_registrations () =
        case_const = ``llist$llist_CASE``,
        constructors = [``llist$LNIL``, ``llist$LCONS``]}
     val after = MFH.registered_constructors llist_ty
+    val _ = Refute.register_codatatype
+      {tyop = {Thy = "lbtree", Tyop = "lbtree"},
+       case_const = ``lbtree$lbtree_case``,
+       constructors = [``lbtree$Lf``, ``lbtree$Nd``]}
+    val lbtree_after = MFH.registered_constructors lbtree_ty
     fun constructor_names ty =
       map MFH.constructor_name (MFH.registered_constructors ty)
     fun rejected registration =
@@ -1371,6 +1380,36 @@ fun mf_codatatype_registrations () =
       {tyop = {Thy = "llist", Tyop = "llist"},
        case_const = ``llist$llist_CASE``,
        constructors = [``llist$LNIL``, ``list$NIL``]}
+    val lbtree_empty_rejected = rejected
+      {tyop = {Thy = "lbtree", Tyop = "lbtree"},
+       case_const = ``lbtree$lbtree_case``, constructors = []}
+    val lbtree_duplicate_rejected = rejected
+      {tyop = {Thy = "lbtree", Tyop = "lbtree"},
+       case_const = ``lbtree$lbtree_case``,
+       constructors = [``lbtree$Lf``, ``lbtree$Lf``]}
+    val lbtree_wrong_case_rejected = rejected
+      {tyop = {Thy = "lbtree", Tyop = "lbtree"},
+       case_const = ``llist$llist_CASE``,
+       constructors = [``lbtree$Lf``, ``lbtree$Nd``]}
+    val lbtree_wrong_branch_order_rejected = rejected
+      {tyop = {Thy = "lbtree", Tyop = "lbtree"},
+       case_const = ``lbtree$lbtree_case``,
+       constructors = [``lbtree$Nd``, ``lbtree$Lf``]}
+    val path_empty_rejected = rejected
+      {tyop = {Thy = "path", Tyop = "path"},
+       case_const = ``path$path_case``, constructors = []}
+    val path_duplicate_rejected = rejected
+      {tyop = {Thy = "path", Tyop = "path"},
+       case_const = ``path$path_case``,
+       constructors = [``path$stopped_at``, ``path$stopped_at``]}
+    val path_wrong_case_rejected = rejected
+      {tyop = {Thy = "path", Tyop = "path"},
+       case_const = ``llist$llist_CASE``,
+       constructors = [``path$stopped_at``, ``path$pcons``]}
+    val unavailable_gated = not (Option.isSome
+      (MFH.builtin_codatatype_info
+        {Thy = "Refute_unavailable_codatatype", Tyop = "missing",
+         case_name = "missing_case", constructor_names = ["missing"]}))
     val case_keys = map #1 (MFH.case_names ())
     fun exactly_one key =
       length (List.filter (fn other => MFH.same_key key other) case_keys) = 1
@@ -1379,30 +1418,70 @@ fun mf_codatatype_registrations () =
     map MFH.constructor_name initial_constructors =
       ["llist$LNIL", "llist$LCONS"] andalso
     map MFH.constructor_name after = ["llist$LNIL", "llist$LCONS"] andalso
+    map MFH.constructor_name lbtree_after = ["lbtree$Lf", "lbtree$Nd"] andalso
     constructor_names ltree_ty = ["ltree$Branch"] andalso
     constructor_names itree_ty =
       ["itree$Ret", "itree$Div", "itree$Vis"] andalso
     constructor_names tau_ty =
       ["itreeTau$Ret", "itreeTau$Tau", "itreeTau$Vis"] andalso
-    List.all MFH.is_codatatype [llist_ty, ltree_ty, itree_ty, tau_ty] andalso
-    MFH.is_raw_free_datatype llist_ty andalso
+    constructor_names lbtree_ty = ["lbtree$Lf", "lbtree$Nd"] andalso
+    constructor_names path_ty = ["path$stopped_at", "path$pcons"] andalso
+    List.all MFH.is_codatatype
+      [llist_ty, ltree_ty, itree_ty, tau_ty, lbtree_ty, path_ty] andalso
+    MFH.is_raw_free_datatype llist_ty andalso unavailable_gated andalso
     List.all exactly_one
       [{Thy = "llist", Name = "llist_CASE"},
        {Thy = "ltree", Name = "ltree_CASE"},
        {Thy = "itree", Name = "itree_CASE"},
-       {Thy = "itreeTau", Name = "itree_CASE"}] andalso
+       {Thy = "itreeTau", Name = "itree_CASE"},
+       {Thy = "lbtree", Name = "lbtree_case"},
+       {Thy = "path", Name = "path_case"}] andalso
     empty_rejected andalso wrong_operator_rejected andalso
     interpreted_rejected andalso boolean_rejected andalso
     wrong_case_rejected andalso duplicate_constructor_rejected andalso
     variable_case_rejected andalso variable_constructor_rejected andalso
     duplicate_rejected andalso nonvariable_rejected andalso
-    mixed_results_rejected andalso
+    mixed_results_rejected andalso lbtree_empty_rejected andalso
+    lbtree_duplicate_rejected andalso lbtree_wrong_case_rejected andalso
+    lbtree_wrong_branch_order_rejected andalso path_empty_rejected andalso
+    path_duplicate_rejected andalso
+    path_wrong_case_rejected andalso
     map MFH.constructor_name (MFH.registered_constructors llist_ty) =
       ["llist$LNIL", "llist$LCONS"]
   end)
 
 val _ = require_msg (check_result mf_codatatype_registrations) (fn () =>
   "codatatype lazy registration or public validation failed")
+  (fn () => ()) ()
+
+fun mf_codatatype_case_orientations () =
+  let
+    val path_ty = ``:(num, bool) path$path``
+    val constructor_names = map MFH.constructor_name
+      (MFH.registered_constructors path_ty)
+    fun entries key = List.filter (fn (candidate, _) =>
+      MFH.same_key candidate key) (MFH.case_names ())
+    val path_cases = entries {Thy = "path", Name = "path_case"}
+    val lbtree_cases = entries {Thy = "lbtree", Name = "lbtree_case"}
+    val llist_cases = entries {Thy = "llist", Name = "llist_CASE"}
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val scope = Refute_ModelFinder_Scope.scope_from_descriptor
+      context false [] [] ([(path_ty, 2)], [])
+    val spec = valOf
+      (Refute_ModelFinder_Scope.data_type_spec (#data_types scope) path_ty)
+  in
+    MFH.is_raw_free_datatype path_ty andalso
+    MFH.is_codatatype path_ty andalso MFH.is_data_type path_ty andalso
+    #co spec andalso
+    constructor_names = ["path$stopped_at", "path$pcons"] andalso
+    path_cases = [({Thy = "path", Name = "path_case"}, (2, 0))] andalso
+    lbtree_cases =
+      [({Thy = "lbtree", Name = "lbtree_case"}, (2, 2))] andalso
+    llist_cases = [({Thy = "llist", Name = "llist_CASE"}, (2, 0))]
+  end
+
+val _ = require_msg (check_result mf_codatatype_case_orientations) (fn () =>
+  "codatatype classification or derived case orientation changed")
   (fn () => ()) ()
 
 fun with_quotient_typedef_registries_restored body =
@@ -1544,11 +1623,11 @@ fun mf_stale_codatatype_constructor_is_refused () =
     fun restore () = MFH.codatatype_registry := saved
     fun check () =
       let
+        val context = MFH.make_context Refute_Core.default_mf_config []
         val _ = MFH.codatatype_registry :=
           [{tyop = {Thy = "llist", Tyop = "llist"},
             case_const = ``llist$llist_CASE``,
             constructors = [``llist$LNIL``]}]
-        val context = MFH.make_context Refute_Core.default_mf_config []
         val refused =
           ((ignore (MFH.unfold_defs_in_term context ``llist$LCONS``);
             false)
@@ -3400,6 +3479,115 @@ fun mf_codatatype_bisim_axiom_goldens () =
 val _ = require_msg
   (check_result mf_codatatype_bisim_axiom_goldens) (fn () =>
     "codatatype bisimulation axiom or preprocessing golden changed")
+  (fn () => ()) ()
+
+fun mf_check_codatatype_bisim_golden ty make_cases =
+  let
+    val actual = MFH.codatatype_bisim_axioms mf_hol_context ty
+    val n = Term.mk_var ("n", MFH.bisim_iterator_type)
+    val x = Term.mk_var ("x", ty)
+    val y = Term.mk_var ("y", ty)
+    val m = Term.mk_var ("m", MFH.bisim_iterator_type)
+    val safe_the = Term.mk_thy_const
+      {Thy = "refute", Name = "safe_The",
+       Ty = Type.-->(Type.-->(MFH.bisim_iterator_type, Type.bool),
+         MFH.bisim_iterator_type)}
+    val predecessor = Term.mk_comb (safe_the,
+      Term.mk_abs (m, boolSyntax.mk_eq
+        (Term.mk_comb (MFH.bisim_suc_const, m), n)))
+    val cases = make_cases predecessor x y
+    val expected_step = boolSyntax.list_mk_forall ([n, x, y],
+      boolSyntax.mk_imp
+        (boolSyntax.mk_disj
+           (boolSyntax.mk_eq (n, MFH.bisim_zero_const), cases),
+         Term.list_mk_comb (MFH.bisim_const ty, [n, x, y])))
+    val expected_max = boolSyntax.list_mk_forall ([x, y],
+      boolSyntax.mk_imp
+        (Term.list_mk_comb
+           (MFH.bisim_const ty,
+            [MFH.bisim_iterator_max_const, x, y]),
+         boolSyntax.mk_eq (x, y)))
+  in
+    length actual = 2 andalso
+    Term.aconv (List.nth (actual, 0)) expected_step andalso
+    Term.aconv (List.nth (actual, 1)) expected_max
+  end
+
+fun mf_lbtree_bisim_axiom_golden () =
+  let
+    val ty = ``:num lbtree$lbtree``
+    val constructors = MFH.data_type_constrs mf_hol_context ty
+    val lf = List.nth (constructors, 0)
+    val nd = List.nth (constructors, 1)
+    fun expected predecessor x y =
+      let
+        fun discr constructor value =
+          MFH.discriminate_value mf_hol_context constructor value
+        fun select value index result_ty =
+          MFH.select_nth_constr_arg mf_hol_context nd value index result_ty
+        fun recurse index = Term.list_mk_comb
+          (MFH.bisim_const ty,
+           [predecessor, select x index ty, select y index ty])
+        val nd_body = boolSyntax.mk_conj (discr nd y,
+          boolSyntax.mk_conj
+            (boolSyntax.mk_eq (select x 0 ``:num``, select y 0 ``:num``),
+             boolSyntax.mk_conj (recurse 1, recurse 2)))
+      in
+        boolSyntax.mk_conj
+          (boolSyntax.mk_imp (discr nd x, nd_body),
+           boolSyntax.mk_imp (discr lf x, discr lf y))
+      end
+  in
+    length constructors = 2 andalso
+    mf_check_codatatype_bisim_golden ty expected
+  end
+
+val _ = require_msg (check_result mf_lbtree_bisim_axiom_golden) (fn () =>
+  "lbtree bisimulation axiom golden changed")
+  (fn () => ()) ()
+
+fun mf_path_bisim_axiom_golden () =
+  let
+    val ty = ``:(num, bool) path$path``
+    val constructors = MFH.data_type_constrs mf_hol_context ty
+    val stopped_at = List.nth (constructors, 0)
+    val pcons = List.nth (constructors, 1)
+    fun expected predecessor x y =
+      let
+        fun discr constructor value =
+          MFH.discriminate_value mf_hol_context constructor value
+        fun select constructor value index result_ty =
+          MFH.select_nth_constr_arg mf_hol_context constructor value index
+            result_ty
+        val tail_bisim = Term.list_mk_comb
+          (MFH.bisim_const ty,
+           [predecessor, select pcons x 2 ty, select pcons y 2 ty])
+        val pcons_body = boolSyntax.mk_conj (discr pcons y,
+          boolSyntax.mk_conj
+            (boolSyntax.mk_eq
+               (select pcons x 0 ``:num``, select pcons y 0 ``:num``),
+             boolSyntax.mk_conj
+               (boolSyntax.mk_eq
+                  (select pcons x 1 ``:bool``,
+                   select pcons y 1 ``:bool``),
+                tail_bisim)))
+        val stopped_body = boolSyntax.mk_conj
+          (discr stopped_at y,
+           boolSyntax.mk_eq
+             (select stopped_at x 0 ``:num``,
+              select stopped_at y 0 ``:num``))
+      in
+        boolSyntax.mk_conj
+          (boolSyntax.mk_imp (discr pcons x, pcons_body),
+           boolSyntax.mk_imp (discr stopped_at x, stopped_body))
+      end
+  in
+    length constructors = 2 andalso
+    mf_check_codatatype_bisim_golden ty expected
+  end
+
+val _ = require_msg (check_result mf_path_bisim_axiom_golden) (fn () =>
+  "path bisimulation axiom golden changed")
   (fn () => ()) ()
 
 fun mf_quotient_typedef_axiom_goldens () =
@@ -16469,7 +16657,32 @@ val mf_mutual_soundness_corpus =
     ``llist$LNIL <> llist$LCONS (a : num) xs``),
    ("codatatype bisimulation equality",
     ``(xs = llist$LCONS (a : num) xs /\
-       ys = llist$LCONS a ys) ==> xs = ys``)]
+       ys = llist$LCONS a ys) ==> xs = ys``),
+   ("scrutinee-first codatatype case",
+    ``llist$llist_CASE (llist$LCONS (a : num) xs) T
+        (\b tail. F) = F``),
+   ("lbtree constructor injectivity",
+    ``lbtree$Nd (a : num) l1 r1 = lbtree$Nd b l2 r2 ==>
+      a = b /\ l1 = l2 /\ r1 = r2``),
+   ("lbtree constructors distinct",
+    ``lbtree$Lf <> lbtree$Nd (a : num) l r``),
+   ("lbtree bisimulation equality",
+    ``(t = lbtree$Nd (a : num) t t /\
+       u = lbtree$Nd a u u) ==> t = u``),
+   ("scrutinee-last lbtree leaf case",
+    ``lbtree$lbtree_case T (\(a : num) l r. F) lbtree$Lf = T``),
+   ("scrutinee-last lbtree node case",
+    ``lbtree$lbtree_case T (\(a : num) l r. F)
+        (lbtree$Nd b t u) = F``),
+   ("path constructor injectivity",
+    ``path$pcons (s : num) (l : bool) p = path$pcons t m q ==>
+      s = t /\ l = m /\ p = q``),
+   ("path constructors distinct",
+    ``path$stopped_at (s : num) <>
+      path$pcons s (l : bool) p``),
+   ("path bisimulation equality",
+    ``(p = path$pcons (s : num) (l : bool) p /\
+       q = path$pcons s m q /\ l = m) ==> p = q``)]
 
 fun corpus_soundness () =
   List.app (fn (name, tm) =>
@@ -19592,6 +19805,27 @@ fun mf_codatatype_acceptance solver =
     val _ = if cycle_ok then ()
       else raise Fail ("cyclic display pin failed: " ^
         mf_pin_outcome_name cycle)
+    fun require_genuine label goal =
+      let
+        val _ = tprint ("Refute MF: " ^ label ^ " codatatype countermodel")
+        val outcome = with_silent_refute (fn () =>
+          Refute.refute cycle_config goal)
+      in
+        case outcome of
+            Refute.Counterexample
+              ({certainty = Refute.Genuine, ...} :: _) => ()
+          | _ => raise Fail (label ^ " codatatype acceptance failed: " ^
+              mf_pin_outcome_name outcome)
+      end
+    val _ = require_genuine "branching lbtree"
+      ``t = lbtree$Nd (a : num) t t ==> t = lbtree$Lf``
+    val _ = require_genuine "scrutinee-last lbtree case"
+      ``lbtree$lbtree_case T (\(a : num) l r. F) t``
+    val _ = require_genuine "scrutinee-first llist case"
+      ``llist$llist_CASE (xs : num llist) T (\a tail. F)``
+    val _ = require_genuine "cyclic path"
+      ``(p : (num, bool) path$path) <>
+        path$pcons s l p``
     val _ = tprint "Refute MF: disabled bisimulation recheck"
     val quasi_config = base
       |> Refute.upd_bisim_depth [~1]
