@@ -16,6 +16,18 @@ sig
      one.  Restore is silent — no TheoryDelta events fire — so any state
      that needs to travel with the context must live in the context.
 
+     `restore` is a **non-logical** operation.  It rewinds the bindings
+     inside the kernel signatures and every `Data` slot, but it does
+     NOT rewind the process-global kernelid allocation clock (see
+     `KernelSig`'s `alloc_counter`).  A `restore` followed by a fresh
+     `new_definition` therefore mints a *new* constant whose kernelid
+     differs from any pre-restore id of the same name — the old
+     constant is reported as retired by `uptodate_id`.  This is the
+     invariant `Term.same_const` / `id_compare` rely on.  Do NOT use
+     `restore` as a scoping mechanism to reintroduce a name at an
+     earlier epoch; see issue #2025 for the exploit that motivated
+     the design.
+
      Locking (see Context.sml for the full story):
        - `snapshot` is lock-free: `t` is immutable, so the caller keeps
          a consistent view even if writers race with them afterwards.

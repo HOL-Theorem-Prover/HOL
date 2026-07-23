@@ -29,19 +29,49 @@ struct
           EQUAL => Int.compare(epoch_of id1, epoch_of id2)
         | x => x
 
+  (* Monotone process-global clocks.  Both live *outside* Context.t so
+     Context.restore cannot rewind them.
+       - alloc_counter stamps every fresh kernelid.  Uniqueness of the
+         {name, epoch} pair — the invariant Term.same_const /
+         id_compare rests on — is preserved across arbitrary
+         snapshot/restore cycles.
+       - retire_counter stamps every genuine retirement.  A KTab's
+         retire_epoch field caches the last stamp so symtab_epoch()
+         is a fast read; a post-restore mutation always draws a
+         strictly-larger stamp than anything the ThmSetData /
+         AncestryData / GrammarDeltas scanners can have recorded, so
+         their memoisation gates cannot false-positive after a
+         restore.  See issue #2025 for the exploit that motivated
+         the switch from in-table counter bumping. *)
+  (* Both counters use post-increment (`(n+1, n+1)`): every call
+     returns a value STRICTLY GREATER than any previous return.
+     Critical for `retire_epoch`: `empty_table` initialises
+     retire_epoch to 0, and callers (e.g. GrammarDeltas scanners)
+     compare `symtab_epoch()` for equality against a cached
+     last-scan value that itself starts at 0.  A pre-increment
+     `next_retire` would return 0 on its first call, matching the
+     initial retire_epoch, and the memoisation gate would silently
+     skip a scan that a real retirement demanded. *)
+  val alloc_counter  : int Sref.t = Sref.new 0
+  val retire_counter : int Sref.t = Sref.new 0
+  fun next_alloc  () = Sref.gen_update alloc_counter  (fn n => (n + 1, n + 1))
+  fun next_retire () = Sref.gen_update retire_counter (fn n => (n + 1, n + 1))
+
   type 'a thytable = (kernelid * 'a) Symtab.table
   datatype 'a symboltable =
            KTab of {thymap : 'a thytable Symtab.table,
                     invmap : string list Symtab.table,
                     size : int,
-                    epoch : int,
                     retire_epoch : int}
   (* thymap : theory*name -> kernelid (staged in two levels)
      invmap : name -> theory list
      size   : total entries of thymap
-     epoch  : bumped every mutation; supplies fresh kernelids
-     retire_epoch : bumped only on genuine retirement; the memoization
-       gate for ThmSetData / AncestryData / GrammarDeltas. *)
+     retire_epoch : cached snapshot of retire_counter at the moment of
+       the last mutation that retired an entry.  Used only as the
+       return of symtab_epoch(); the field travels with
+       snapshot/restore but the *stamps* written to it are drawn from
+       the process-global counter, so post-restore mutations produce
+       strictly-fresh values. *)
   exception NoSuchThy of string
   exception NotPresent of kernelname
   datatype 'a symtab_error = Success of 'a
@@ -50,7 +80,7 @@ struct
   fun symtab_epoch (KTab{retire_epoch,...}) = retire_epoch
 
   val empty_table = KTab {thymap = Symtab.empty, invmap = Symtab.empty,
-                          size = 0, epoch = 0, retire_epoch = 0}
+                          size = 0, retire_epoch = 0}
   fun peek(KTab {thymap, ...} : 'a symboltable, knm as {Thy,Name}) =
       case Symtab.lookup thymap Thy of
           NONE => Failure (NoSuchThy Thy)
@@ -76,8 +106,9 @@ struct
       case peek(tab, knm) of
           Failure e => raise e
         | Success r => r
-  (* Success bumps both counters; failure leaves the table untouched. *)
-  fun remove(t as KTab{thymap,invmap,epoch,retire_epoch,size},
+  (* Success stamps retire_epoch from the global clock; failure leaves
+     the table untouched. *)
+  fun remove(t as KTab{thymap,invmap,retire_epoch=_,size},
              knm as {Thy,Name}) =
       case Symtab.lookup thymap Thy of
           NONE => (t, Failure (NoSuchThy Thy))
@@ -89,8 +120,8 @@ struct
               in
                 (KTab{thymap = Symtab.update(Thy,m') thymap,
                       invmap = Symtab.remove_list equal (Name,Thy) invmap,
-                      size = size-1, epoch = epoch+1,
-                      retire_epoch = retire_epoch+1},
+                      size = size-1,
+                      retire_epoch = next_retire ()},
                  Success kid)
               end
 
@@ -119,18 +150,19 @@ struct
 
   fun insert(n as {Thy,Name}, v) (tab0 : 'a symboltable) =
       let
-        (* A colliding (Thy,Name) is retired transitively by `remove`;
-           a fresh insert leaves retire_epoch alone. *)
-        val tab1 as KTab{epoch,retire_epoch,size,invmap,thymap} =
+        (* A colliding (Thy,Name) is retired transitively by `remove`
+           (which stamps retire_epoch from the global clock); a fresh
+           insert leaves retire_epoch alone. *)
+        val tab1 as KTab{retire_epoch,size,invmap,thymap} =
             #1 (remove (tab0,n))
-        val id = {name = n, epoch = epoch}
+        val id = {name = n, epoch = next_alloc ()}
         val thymap' =
             Symtab.map_default (Thy,Symtab.make[(Name,(id,v))])
                                (Symtab.update(Name,(id,v)))
                                thymap
         val invmap' = Symtab.insert_list equal (Name,Thy) invmap
       in
-        (KTab{epoch = epoch + 1, size = size + 1, invmap = invmap',
+        (KTab{size = size + 1, invmap = invmap',
               thymap = thymap', retire_epoch = retire_epoch},
          id)
       end
@@ -157,7 +189,7 @@ struct
         map (fn k => (k, find(tab, k))) knms
       end
 
-  fun del_segment thyname (tab as KTab{thymap,epoch,retire_epoch,
+  fun del_segment thyname (tab as KTab{thymap,retire_epoch=_,
                                        invmap,size}) =
       case Symtab.lookup thymap thyname of
           NONE => tab
@@ -168,7 +200,7 @@ struct
                 Symtab.remove_list equal (nm, thyname) invmap_acc
             val invmap' = Symtab.fold foldthis m invmap
           in
-            KTab{epoch = epoch+1, retire_epoch = retire_epoch+1,
+            KTab{retire_epoch = next_retire (),
                  size = size - Symtab.size m,
                  thymap = thymap', invmap = invmap'}
           end
