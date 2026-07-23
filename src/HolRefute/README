@@ -116,13 +116,19 @@ defaults are:
 | `upd_format` | default row `[1]` | displayed model-value depth |
 | `upd_max_potential` | `1` | maximum potential models returned |
 | `upd_max_genuine` | `1` | maximum genuine models returned |
+| `upd_merge_type_vars` | `false` | fuse all MF type-variable scopes |
 
 The default `iter` row is `[0,1,2,4,8,12,16,20,24,28]`.  A `NONE` key in a
 row is its fallback.  For smart Boolean rows, a `NONE` value asks Refute to
 choose; `SOME true` and `SOME false` force the choice.
 The `max_potential` and `max_genuine` limits are global budgets.  Requesting
 more than one model forces an incremental SAT solver when necessary, and a
-genuine result ends the potential-model search.
+genuine result ends the potential-model search.  With
+`upd_merge_type_vars true`, the model finder type-instantiates every goal,
+evaluated-term, and needed-term type variable to the alphabetically first one
+before building its context.  This reduces independent scope blocks, at the
+cost of potentially losing models that require the variables to have
+different cardinalities.
 
 Registrations are session-local ML state and create no theory content:
 
@@ -196,7 +202,5 @@ return `Unknown`, rather than risk a spurious genuine result.  Register the
 typedef explicitly.  The `rat` type is not registered: its intended
 fraction/ersatz representation remains future work.
 
-The following parity work was intentionally not in M4: native narrowing,
-predicate-mode smart generators, automatic quotient/typedef database
-harvesting, `merge_type_vars`, fraction/`rat` support, and monotonicity
-promotion for relation inverse and composition (`inv` and `O`).
+Remaining model-finder parity work includes fraction/`rat` support and
+monotonicity promotion for relation inverse and composition (`inv` and `O`).

@@ -188,4 +188,5 @@ structure Refute :> Refute = struct
   val upd_finitize = Refute_Core.upd_finitize
   val upd_whack = Refute_Core.upd_whack
   val upd_need = Refute_Core.upd_need
+  val upd_merge_type_vars = Refute_Core.upd_merge_type_vars
 end

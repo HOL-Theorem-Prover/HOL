@@ -7378,6 +7378,38 @@ val _ = require_msg (check_result mf_polymorphic_model_protocol) (fn () =>
   "polymorphic fake-atom display or rf certification changed")
   (fn () => ()) ()
 
+fun mf_merged_type_vars_rf_certification () =
+  let
+    val unmerged = ``(x : 'b) = y /\ (u : 'a) = v``
+    val original = hd
+      (Refute_ModelFinder.merge_type_vars_in_terms [unmerged])
+    val ty = hd (Term.type_vars_in_term original)
+    val a1 = MFN.fake_atom 1 ty
+    val a2 = MFN.fake_atom 2 ty
+    fun assignment variable =
+      (variable, if var_name variable = "y" then a2 else a1)
+    val bindings = map assignment (Term.free_vars_lr original)
+    val reconstructed : MFM.reconstruction =
+      {bindings = bindings, evals = [], skolems = [], consts = [],
+       types = [], codatatypes_ok = true}
+    val base : counterexample =
+      {backend = "kodkod", substrate = "kodkod",
+       certainty = Refute_Core.Potential [], bindings = [], evals = [],
+       cert = NONE, scope = SOME [(ty, 2)], model = NONE, stats = []}
+  in
+    case MFM.certify
+      {executable = true, original = original, eval_terms = [],
+       reconstruction = reconstructed, cex = base, sound = false,
+       genuine_means_genuine = false, reasons = []} of
+        MFM.Keep {certainty = Genuine, cert = SOME _, ...} => true
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result mf_merged_type_vars_rf_certification) (fn () =>
+  "merged type variables are incompatible with fake-atom rf certification")
+  (fn () => ()) ()
+
 fun mf_kodkod_finite_translation () =
   let
     val scope = mf_translation_scope [(``:num``, 3)] []
@@ -9266,7 +9298,8 @@ fun same_mf (left : mf_config) (right : mf_config) =
   #bisim_depth left = #bisim_depth right andalso
   #finitize left = #finitize right andalso
   same_terms (#whack left) (#whack right) andalso
-  same_optional_terms (#need left) (#need right)
+  same_optional_terms (#need left) (#need right) andalso
+  #merge_type_vars left = #merge_type_vars right
 
 fun size_update_is_local () =
   let
@@ -9421,7 +9454,8 @@ fun config_surface_snapshot () =
        "mf.bisim_depth = [9]\n",
        "mf.finitize = [NONE => NONE]\n",
        "mf.whack = []\n",
-       "mf.need = NONE\n"]
+       "mf.need = NONE\n",
+       "mf.merge_type_vars = false\n"]
   in
     actual = expected
   end
@@ -9456,6 +9490,21 @@ fun mf_update_is_local () =
 val _ = require_msg (check_result mf_update_is_local) (fn () =>
   "upd_sat_solver changed a field other than mf.sat_solver")
   (fn () => ()) ()
+
+fun merge_type_vars_default_and_updater_are_pinned () =
+  let
+    val updated = upd_merge_type_vars true default_config
+    val restored = upd_merge_type_vars false updated
+  in
+    not (#merge_type_vars (#mf default_config)) andalso
+    #merge_type_vars (#mf updated) andalso
+    same_mf (#mf restored) (#mf default_config) andalso
+    #qc updated = #qc default_config
+  end
+
+val _ = require_msg
+  (check_result merge_type_vars_default_and_updater_are_pinned) (fn () =>
+  "merge_type_vars default or updater changed") (fn () => ()) ()
 
 fun finitize_default_and_unlock_are_pinned () =
   let
@@ -9922,6 +9971,57 @@ fun model_finder_naming_is_wired () =
 val _ = require_msg (check_result model_finder_naming_is_wired) (fn () =>
   "model-finder production naming pass was not applied")
   (fn () => ()) ()
+
+fun model_finder_type_var_merge_covers_context_terms () =
+  let
+    val goal = ``(x : 'z) = y``
+    val evals = [``I (w : 'b)``]
+    val needs = [``need_first : 'a``, ``need_second : 'y``]
+    val mf = Refute_Core.default_mf_config
+      |> Refute_Core.change_mf (Refute_Core.MfNeed (SOME needs))
+      |> Refute_Core.change_mf (Refute_Core.MfMergeTypeVars true)
+    val (context_mf, merged_goal, merged_evals) =
+      Refute_ModelFinder.merge_type_vars_in_context_input mf goal evals
+    val context = MFH.make_context context_mf merged_evals
+    fun only_a term =
+      case Term.type_vars_in_term term of
+          [tyvar] => Type.dest_vartype tyvar = "'a"
+        | _ => false
+    val merged_needs = #needs context
+    val ordered_needs =
+      case merged_needs of
+          SOME [first, second] =>
+            var_name first = "need_first" andalso
+            var_name second = "need_second"
+        | _ => false
+    fun metadata_preserved needs =
+      let
+        val configured = Refute_Core.change_mf
+          (Refute_Core.MfNeed needs) mf
+        val (actual, _, _) =
+          Refute_ModelFinder.merge_type_vars_in_context_input
+            configured goal evals
+      in
+        same_optional_terms (#need actual) needs
+      end
+  in
+    List.all only_a
+      (merged_goal :: merged_evals @ Option.getOpt (merged_needs, [])) andalso
+    not (Term.aconv merged_goal goal) andalso
+    same_terms (#evals context) merged_evals andalso ordered_needs andalso
+    metadata_preserved NONE andalso metadata_preserved (SOME [])
+  end
+
+val _ = require_msg
+  (check_result model_finder_type_var_merge_covers_context_terms) (fn () =>
+  "merge_type_vars omitted an eval/need or changed need metadata/order")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  Refute_ModelFinder.scope_limit_hint =
+    "scope limit reached; consider using \"mono\" or \"merge_type_vars\" " ^
+    "to prevent this")) (fn () =>
+  "scope-limit merge_type_vars hint changed") (fn () => ()) ()
 
 fun core_backend_names () =
   map #name (List.filter (fn backend =>
@@ -20134,6 +20234,33 @@ fun mf_need_acceptance solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
+fun mf_merge_type_vars_acceptance solver =
+  let
+    val _ = tprint "Refute MF: merged goal/need type-variable scope budget"
+    val duplicate_cards = List.tabulate (71, fn _ => 1)
+    val goal = ``(f : 'z -> 'z) x = f y ==> x = y``
+    val base = mf_acceptance_config solver
+      |> Refute.upd_card [(NONE, duplicate_cards)]
+      |> Refute.upd_mono [(NONE, SOME false)]
+      |> Refute.upd_finitize [(NONE, SOME false)]
+      |> Refute.upd_need (SOME [``need_only : 'a``])
+      |> Refute.upd_max_potential 0
+    val separate = with_silent_refute (fn () =>
+      Refute.refute (Refute.upd_merge_type_vars false base) goal)
+    val merged = with_silent_refute (fn () =>
+      Refute.refute (Refute.upd_merge_type_vars true base) goal)
+    val hint_ok = is_unknown_with
+      Refute_ModelFinder.scope_limit_hint separate
+    val merged_ok =
+      case merged of Refute.NoCounterexample => true | _ => false
+  in
+    if hint_ok andalso merged_ok then OK ()
+    else die ("merge_type_vars acceptance failed: separate=" ^
+      mf_pin_outcome_name separate ^ ", merged=" ^
+      mf_pin_outcome_name merged)
+  end
+  handle e => die (Feedback.exn_to_string e)
+
 fun run_timed_mf_group solver suffix
       ({name, configure, cases} : mf_acceptance_group) =
   let
@@ -20168,6 +20295,7 @@ fun run_mf_acceptance () =
       val _ = mf_quotient_typedef_acceptance "MiniSat_JNI"
       val _ = mf_atoms_finitize_acceptance "MiniSat_JNI"
       val _ = mf_need_acceptance "MiniSat_JNI"
+      val _ = mf_merge_type_vars_acceptance "MiniSat_JNI"
     in
       List.app (run_timed_mf_group "SAT4J" " smoke")
         mf_acceptance_groups

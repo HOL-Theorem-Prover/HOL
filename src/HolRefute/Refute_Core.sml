@@ -109,7 +109,8 @@ structure Refute_Core = struct
       bisim_depth : int list,
       finitize : (hol_type option * bool option) list,
       whack : term list,
-      need : term list option }
+      need : term list option,
+      merge_type_vars : bool }
 
   type config =
     { timeout : real,
@@ -207,7 +208,8 @@ structure Refute_Core = struct
       bisim_depth = [9],
       finitize = [(NONE, NONE)],
       whack = [],
-      need = NONE }
+      need = NONE,
+      merge_type_vars = false }
 
   val default_config : config =
     { timeout = 30.0,
@@ -433,6 +435,7 @@ structure Refute_Core = struct
     | MfFinitize of (hol_type option * bool option) list
     | MfWhack of term list
     | MfNeed of term list option
+    | MfMergeTypeVars of bool
 
   fun change_mf update (mf : mf_config) =
     { card = (case update of MfCard value => value | _ => #card mf),
@@ -493,7 +496,10 @@ structure Refute_Core = struct
       finitize = (case update of MfFinitize value => value
                   | _ => #finitize mf),
       whack = (case update of MfWhack value => value | _ => #whack mf),
-      need = (case update of MfNeed value => value | _ => #need mf) }
+      need = (case update of MfNeed value => value | _ => #need mf),
+      merge_type_vars =
+        (case update of MfMergeTypeVars value => value
+         | _ => #merge_type_vars mf) }
 
   fun upd_mf value = map_mf (fn _ => validate_mf_config value)
 
@@ -533,6 +539,7 @@ structure Refute_Core = struct
   fun upd_finitize value = update_mf (MfFinitize value)
   fun upd_whack value = update_mf (MfWhack value)
   fun upd_need value = update_mf (MfNeed value)
+  fun upd_merge_type_vars value = update_mf (MfMergeTypeVars value)
 
   fun strip_outer_forall tm = boolSyntax.strip_forall tm
 
@@ -967,7 +974,9 @@ structure Refute_Core = struct
           "mf.bisim_depth = " ^ ints (#bisim_depth m) ^ "\n",
           "mf.finitize = " ^ type_bools (#finitize m) ^ "\n",
           "mf.whack = " ^ terms (#whack m) ^ "\n",
-          "mf.need = " ^ optional_terms (#need m) ^ "\n" ]
+          "mf.need = " ^ optional_terms (#need m) ^ "\n",
+          "mf.merge_type_vars = " ^ Bool.toString (#merge_type_vars m) ^
+            "\n" ]
     end
 
   val backend_registry : (string * backend_registration) list ref = ref []

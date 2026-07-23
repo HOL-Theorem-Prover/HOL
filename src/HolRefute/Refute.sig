@@ -156,4 +156,5 @@ signature Refute = sig
     (hol_type option * bool option) list -> config -> config
   val upd_whack : term list -> config -> config
   val upd_need : term list option -> config -> config
+  val upd_merge_type_vars : bool -> config -> config
 end

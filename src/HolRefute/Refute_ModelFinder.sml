@@ -8,6 +8,11 @@ Nitpick's pick_them_nits_in_term. *)
 signature REFUTE_MODEL_FINDER = sig
   val prepare_instance_input :
     Refute_Core.instance -> Term.term * Term.term list
+  val merge_type_vars_in_terms : Term.term list -> Term.term list
+  val merge_type_vars_in_context_input :
+    Refute_Core.mf_config -> Term.term -> Term.term list ->
+    Refute_Core.mf_config * Term.term * Term.term list
+  val scope_limit_hint : string
   val finitizable_data_types :
     Refute_ModelFinder_HOL.mf_context ->
     (Type.hol_type option * bool option) list ->
@@ -275,6 +280,46 @@ fun replace_stats stats (cex : Refute_Core.counterexample) =
    evals = #evals cex, cert = #cert cex, scope = #scope cex,
    model = #model cex, stats = stats}
 
+(* HOL4 has no type classes or sorts, so all goal type variables occupy
+   Isabelle's single default-sort equivalence class.  Keeping the
+   alphabetically first variable is therefore the sortless specialization
+   of Nitpick's [merged_type_var_table_for_terms]. *)
+fun merge_type_vars_in_terms terms =
+  let
+    val tyvars = Listsort.sort (fn (left, right) =>
+      String.compare (Type.dest_vartype left, Type.dest_vartype right))
+      (Lib.U (map Term.type_vars_in_term terms))
+  in
+    case tyvars of
+        [] => terms
+      | canonical :: rest =>
+          let
+            val theta = map (fn tyvar =>
+              {redex = tyvar, residue = canonical}) rest
+          in
+            map (Term.inst theta) terms
+          end
+  end
+
+fun merge_type_vars_in_context_input
+      (mf : Refute_Core.mf_config) original evals =
+  if not (#merge_type_vars mf) then (mf, original, evals)
+  else
+    let
+      val needs = #need mf
+      val need_terms = Option.getOpt (needs, [])
+      val merged = merge_type_vars_in_terms
+        (original :: (evals @ need_terms))
+      val merged_tail = tl merged
+      val merged_evals = List.take (merged_tail, length evals)
+      val merged_need_terms = List.drop (merged_tail, length evals)
+      val merged_needs = Option.map (fn _ => merged_need_terms) needs
+      val context_mf = Refute_Core.change_mf
+        (Refute_Core.MfNeed merged_needs) mf
+    in
+      (context_mf, hd merged, merged_evals)
+    end
+
 fun prepare_instance_input (instance : Refute_Core.instance) =
   let
     val input_original = #original instance
@@ -309,17 +354,24 @@ fun harvest_guard_reason terms = #1 (harvest_guard terms)
 
 exception RESTART_AFTER_HARVEST
 
+val scope_limit_hint =
+  "scope limit reached; consider using \"mono\" or \"merge_type_vars\" " ^
+  "to prevent this"
+
 fun run_instance deadline started (config : Refute_Core.config)
       incremental solver (initial_max_potential, initial_max_genuine)
       (instance : Refute_Core.instance) =
   let
     val mf = #mf config
     val sound_finitizes = none_true (#finitize mf)
-    val (original, eval_terms) = prepare_instance_input instance
+    val (prepared_original, prepared_evals) =
+      prepare_instance_input instance
+    val (context_mf, original, eval_terms) =
+      merge_type_vars_in_context_input mf prepared_original prepared_evals
     val negated =
       if #falsify mf then boolSyntax.mk_imp (original, boolSyntax.F)
       else original
-    val context = MFH.make_context mf eval_terms
+    val context = MFH.make_context context_mf eval_terms
     val fixpoint_refusal = MFH.first_fixpoint_refusal context original
     val _ = if Option.isSome fixpoint_refusal then
         MFH.print_wf_cache context else ()
@@ -843,7 +895,7 @@ fun run_instance deadline started (config : Refute_Core.config)
                   max_potential = original_max_potential then
             if skipped > 0 then
               Refute_Core.Unknown
-                [accounting_reason "scope limit reached"]
+                [accounting_reason scope_limit_hint]
             else if !discarded_sound_model then
               Refute_Core.Unknown
                 (accounting_reason
