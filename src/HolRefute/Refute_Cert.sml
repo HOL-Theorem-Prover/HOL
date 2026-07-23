@@ -106,4 +106,27 @@ structure Refute_Cert = struct
                         (SOME certificate))
                     end)
     end
+
+  fun grounding_failure cex =
+    Potential (replace cex
+      (Refute_Core.Potential
+        ["partial counterexample; grounding uncertifiable"]) [] NONE)
+
+  (* Bindings in [cex] deliberately remain partial for display.  Native
+     narrowing supplies a separately reconstructed environment grounded from
+     the exact shapes used by that compile; no later generator lookup occurs. *)
+  fun ground_and_certify {original, evals, env, ground_env, cex} =
+    let
+      val grounded =
+        case ground_env of
+            SOME values => values
+          | NONE => raise Fail "narrowing grounding shape unavailable"
+    in
+      case certify
+        {original = original, evals = evals, env = grounded, cex = cex} of
+          result as Certified _ => result
+        | _ => grounding_failure cex
+    end
+    handle Interrupt => raise Interrupt
+         | _ => grounding_failure cex
 end

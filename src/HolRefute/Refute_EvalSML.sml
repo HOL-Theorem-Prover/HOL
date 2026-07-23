@@ -15,7 +15,9 @@ structure Refute_EvalSML = struct
   fun lazy_hole position = Susp.delay (fn () => raise Hole position)
 
   type reconstruction = unit -> term
-  type generated_hit = (int * reconstruction) list * bool
+  type generated_environment = (int * reconstruction) list
+  type generated_hit =
+    generated_environment * generated_environment option * bool
   type generated_answer =
     { hit : generated_hit option,
       complete : bool,
@@ -333,7 +335,7 @@ structure Refute_EvalSML = struct
           answer
         end) ()
 
-  fun ignored_hit ignored (environment, _) =
+  fun ignored_hit ignored (environment, _, _) =
     let
       val env = List.map (fn (index, rebuild) =>
         (raw_term index, rebuild ())) environment
@@ -427,11 +429,15 @@ structure Refute_EvalSML = struct
                   case #hit answer of
                       NONE => Refute_Eval.Exhausted
                         {complete = #complete answer}
-                    | SOME (environment, genuine) =>
+                    | SOME (environment, grounding, genuine) =>
                         Refute_Eval.CexFound
                           {env = List.map (fn (index, rebuild) =>
                              (table_term (#table answer) index, rebuild ()))
                              environment,
+                           ground_env = Option.map (List.map
+                             (fn (index, rebuild) =>
+                               (table_term (#table answer) index,
+                                rebuild ()))) grounding,
                            genuine = genuine}
                 end
                 handle Deadline => Refute_Eval.GaveUp "deadline"

@@ -10061,6 +10061,9 @@ val _ = Datatype.Datatype
 val _ = Datatype.Datatype `rg_enum = RGRed | RGGreen | RGBlue`
 val _ = Datatype.Datatype
   `rg_custom_matrix = RGCustomA | RGCustomB`
+val _ = Datatype.Datatype `rg_fresh = RGFresh`
+val _ = Datatype.Datatype
+  `rg_shallow = RGDeep rg_shallow | RGShallow`
 
 val rx_sum_def = TotalDefn.Define
   `rx_sum ([] : num list) = 0 /\
@@ -10591,8 +10594,9 @@ fun compile_extracted_tests strategy plans =
 fun generated_result strategy plan size draws seed =
   compile_extracted_tests strategy [plan] 1 false size draws seed
 
-fun generated_env ({hit = SOME (environment, genuine), table, ...} :
-    generated_answer) =
+fun generated_env
+      ({hit = SOME (environment, _, genuine), table, ...} :
+       generated_answer) =
       SOME (List.map (fn (index, rebuild) =>
         (table_term table index, rebuild ())) environment, genuine)
   | generated_env _ = NONE
@@ -10615,7 +10619,9 @@ fun generated_compute_agree strategy plan size draws seed =
   case (generated_env (generated_result strategy plan size draws seed),
         compute_plan_result strategy plan size draws seed) of
       (SOME (generated, generated_genuine),
-       CexFound {env = computed, genuine = computed_genuine}) =>
+       CexFound
+         {env = computed, ground_env = NONE,
+          genuine = computed_genuine}) =>
         generated_genuine = computed_genuine andalso
         same_env generated computed
     | (NONE, Exhausted _) => true
@@ -10651,7 +10657,7 @@ fun generated_stream seed count =
       | loop remaining state candidates =
           let
             val answer = dispatch 1 false 999 1 state
-            val (environment, _) = valOf (#hit answer)
+            val (environment, _, _) = valOf (#hit answer)
             val values = rev (List.map (fn (_, rebuild) => rebuild ())
               environment)
           in
@@ -10670,7 +10676,7 @@ fun generated_type_stream ty size seed count =
       | loop remaining state candidates =
           let
             val answer = dispatch 1 false size 1 state
-            val (environment, _) = valOf (#hit answer)
+            val (environment, _, _) = valOf (#hit answer)
             val value = #2 (hd environment) ()
           in
             loop (remaining - 1) (#state answer) ([value] :: candidates)
@@ -10945,41 +10951,79 @@ val _ = require_msg (check_result (fn () => has_no_generator ``:ind``))
 
 val _ = tprint "Refute narrowing core"
 
-val narrow_leaf = Narrowing_sum_of_products [[]]
-val narrow_branch = Narrowing_sum_of_products [[], [narrow_leaf]]
+val narrow_leaf =
+  Narrowing_sum_of_products [indexed_alternative (0, [])]
+val narrow_branch =
+  Narrowing_sum_of_products
+    [indexed_alternative (0, []),
+     indexed_alternative (1, [narrow_leaf])]
+
+fun narrow_node _ id arguments =
+  Narrowing_constructor (id, arguments)
+
+fun same_narrow_shape
+      (Narrowing_sum_of_products left,
+       Narrowing_sum_of_products right) =
+    let
+      fun same_exact (NONE, NONE) = true
+        | same_exact (SOME x, SOME y) = Term.aconv x y
+        | same_exact _ = false
+      fun same_alternative (x, y) =
+        #id x = #id y andalso same_exact (#exact x, #exact y) andalso
+        ListPair.allEq same_narrow_shape (#arguments x, #arguments y)
+    in
+      ListPair.allEq same_alternative (left, right)
+    end
+
+fun same_narrow_term
+      (Narrowing_variable (left_position, left_shape),
+       Narrowing_variable (right_position, right_shape)) =
+      left_position = right_position andalso
+      same_narrow_shape (left_shape, right_shape)
+  | same_narrow_term
+      (Narrowing_constructor (left_id, left_arguments),
+       Narrowing_constructor (right_id, right_arguments)) =
+      left_id = right_id andalso
+      ListPair.allEq same_narrow_term (left_arguments, right_arguments)
+  | same_narrow_term _ = false
+
+fun same_narrow_terms (left, right) =
+  ListPair.allEq same_narrow_term (left, right)
 
 fun narrowing_position_algebra () =
   let
     val root = Narrowing_variable ([4], narrow_branch)
-    val alternatives = new [4] (products_of narrow_branch)
+    val alternatives = new [4] narrow_branch
     val expected =
-      [Narrowing_constructor (0, []),
-       Narrowing_constructor
-         (1, [Narrowing_variable ([4, 0], narrow_leaf)])]
+      [narrow_node narrow_branch 0 [],
+       narrow_node narrow_branch 1
+         [Narrowing_variable ([4, 0], narrow_leaf)]]
     val arguments =
       [Narrowing_variable ([0], narrow_leaf),
        Narrowing_variable ([1], narrow_branch)]
     val refined_arguments = refineList arguments [1]
     val expected_arguments =
       [[Narrowing_variable ([0], narrow_leaf),
-        Narrowing_constructor (0, [])],
+        narrow_node narrow_branch 0 []],
        [Narrowing_variable ([0], narrow_leaf),
-        Narrowing_constructor
-          (1, [Narrowing_variable ([1, 0], narrow_leaf)])]]
+        narrow_node narrow_branch 1
+          [Narrowing_variable ([1, 0], narrow_leaf)]]]
     val nested = refine
-      (Narrowing_constructor
-        (7, [Narrowing_variable ([9, 0], narrow_branch)])) [0]
+      (narrow_node narrow_branch 7
+        [Narrowing_variable ([9, 0], narrow_branch)]) [0]
     val expected_nested = List.map (fn value =>
-      Narrowing_constructor (7, [value]))
-      (new [9, 0] (products_of narrow_branch))
+      narrow_node narrow_branch 7 [value])
+      (new [9, 0] narrow_branch)
     val rejects_bad_path =
       ((ignore (refine root [0]); false)
        handle InvalidPosition [0] => true | _ => false)
   in
-    dummy_variable [4] narrow_branch = root andalso
-    alternatives = expected andalso refine root [] = expected andalso
-    refined_arguments = expected_arguments andalso
-    nested = expected_nested andalso rejects_bad_path
+    same_narrow_term (dummy_variable [4] narrow_branch, root) andalso
+    same_narrow_terms (alternatives, expected) andalso
+    same_narrow_terms (refine root [], expected) andalso
+    ListPair.allEq same_narrow_terms
+      (refined_arguments, expected_arguments) andalso
+    same_narrow_terms (nested, expected_nested) andalso rejects_bad_path
   end
 
 fun narrowing_total_grounding () =
@@ -10989,10 +11033,10 @@ fun narrowing_total_grounding () =
       | ground (Narrowing_constructor (_, arguments)) =
           List.all ground arguments
   in
-    completions =
-      [Narrowing_constructor (0, []),
-       Narrowing_constructor
-         (1, [Narrowing_constructor (0, [])])] andalso
+    same_narrow_terms
+      (completions,
+       [narrow_node narrow_branch 0 [],
+        narrow_node narrow_branch 1 [narrow_node narrow_leaf 0 []]]) andalso
     List.all ground completions
   end
 
@@ -11006,12 +11050,34 @@ fun narrowing_shape_derivation () =
     val expected_around =
       List.map (intSyntax.term_of_int o Arbint.fromInt) [0, 1, ~1, 2, ~2]
   in
-    length num_products = 4 andalso List.all null num_products andalso
-    list_zero = [[]] andalso length list_one = 2 andalso
-    length (List.nth (list_one, 1)) = 2 andalso
-    length enum_products = 3 andalso List.all null enum_products andalso
+    length num_products = 4 andalso
+    List.all (null o #arguments) num_products andalso
+    map alternative_id list_zero = [0] andalso
+    map alternative_id list_one = [0, 1] andalso
+    length (#arguments (List.nth (list_one, 1))) = 2 andalso
+    length enum_products = 3 andalso
+    List.all (null o #arguments) enum_products andalso
     ListPair.allEq (fn (left, right) => Term.aconv left right)
       (around, expected_around)
+  end
+
+fun narrowing_minimal_completion_pins () =
+  let
+    val shallow_ty = ``:rg_shallow``
+    val shallow_shape = shape_of 0 shallow_ty
+    val shallow = first_completion shallow_shape
+      (Narrowing_variable ([], shallow_shape))
+    val zero_char = hd (narrowing_terms Refute_Gen.Char 0)
+    val char_triple_ty = ``:char # char # char``
+    val expected_chars = pairSyntax.mk_pair
+      (zero_char, pairSyntax.mk_pair (zero_char, zero_char))
+  in
+    (case shallow of
+         SOME completed =>
+           Term.aconv
+             (term_of_ground shallow_ty shallow_shape completed) ``RGShallow``
+       | NONE => false) andalso
+    Term.aconv (minimal_term char_triple_ty) expected_chars
   end
 
 fun narrowing_function_inapplicable () =
@@ -11220,6 +11286,10 @@ val _ = require_msg (check_result narrowing_total_grounding) (fn () =>
 val _ = require_msg (check_result narrowing_shape_derivation) (fn () =>
   "narrowing datatype, primitive, or enum shape derivation failed")
   (fn () => ()) ()
+val _ = require_msg (check_result narrowing_minimal_completion_pins)
+  (fn () =>
+    "minimal completion lost a shallow constructor or built a char product")
+  (fn () => ()) ()
 val _ = require_msg (check_result narrowing_function_inapplicable) (fn () =>
   "narrowing function inapplicability did not name its offending type")
   (fn () => ()) ()
@@ -11240,9 +11310,11 @@ fun plain_engine_units () =
     fun hit _ _ = Known {genuine = true, result = false}
     fun pass _ _ = Known {genuine = true, result = true}
     fun refine_then_hit _ [Narrowing_variable _] = NeedsRefinement [0]
-      | refine_then_hit _ [Narrowing_constructor (0, [])] =
+      | refine_then_hit _
+          [Narrowing_constructor (0, [])] =
           Known {genuine = true, result = true}
-      | refine_then_hit _ [Narrowing_constructor (1, _)] =
+      | refine_then_hit _
+          [Narrowing_constructor (1, _)] =
           Known {genuine = true, result = false}
       | refine_then_hit _ _ = raise Fail "unexpected narrowing argument"
     val direct = refute_plain false {arguments = [root], evaluate = hit}
@@ -11401,7 +11473,33 @@ fun pnf_truth_tables () =
     disj (potential_false, true_value) = true_value
   end
 
-val pnf_bool_shape = Narrowing_sum_of_products [[], []]
+val pnf_bool_shape =
+  Narrowing_sum_of_products
+    [indexed_alternative (0, []), indexed_alternative (1, [])]
+
+fun same_narrow_tree (Leaf left, Leaf right) = left = right
+  | same_narrow_tree
+      (Variable (left_quantifier, left_value, left_position, left_shape,
+         left_subtree),
+       Variable (right_quantifier, right_value, right_position, right_shape,
+         right_subtree)) =
+      left_quantifier = right_quantifier andalso left_value = right_value andalso
+      left_position = right_position andalso
+      same_narrow_shape (left_shape, right_shape) andalso
+      same_narrow_tree (left_subtree, right_subtree)
+  | same_narrow_tree
+      (Constructor (left_quantifier, left_value, left_position, left_shape,
+         left_branches),
+       Constructor (right_quantifier, right_value, right_position, right_shape,
+         right_branches)) =
+      left_quantifier = right_quantifier andalso left_value = right_value andalso
+      left_position = right_position andalso
+      same_narrow_shape (left_shape, right_shape) andalso
+      ListPair.allEq (fn ((left_id, left_tree), (right_id, right_tree)) =>
+        left_id = right_id andalso
+        same_narrow_tree (left_tree, right_tree))
+        (left_branches, right_branches)
+  | same_narrow_tree _ = false
 
 fun pnf_tree_goldens () =
   let
@@ -11411,24 +11509,46 @@ fun pnf_tree_goldens () =
     val refined_universal = refine_tree (find universal) [0] universal
     val refined_existential = refine_tree (find existential) [0] existential
     val expected_universal = Constructor
-      (Universal, Unevaluated, [0], [Leaf Unevaluated, Leaf Unevaluated])
+      (Universal, Unevaluated, [0], pnf_bool_shape,
+       [(0, Leaf Unevaluated), (1, Leaf Unevaluated)])
     val expected_existential = Constructor
-      (Existential, Unevaluated, [0], [Leaf Unevaluated, Leaf Unevaluated])
+      (Existential, Unevaluated, [0], pnf_bool_shape,
+       [(0, Leaf Unevaluated), (1, Leaf Unevaluated)])
     val universal_update =
       update (find refined_universal) false_value refined_universal
     val existential_update =
       update (find refined_existential) false_value refined_existential
   in
-    refined_universal = expected_universal andalso
-    refined_existential = expected_existential andalso
-    universal_update = Constructor
-      (Universal, false_value, [0],
-       [Leaf false_value, Leaf Unevaluated]) andalso
-    existential_update = Constructor
-      (Existential, Unevaluated, [0],
-       [Leaf false_value, Leaf Unevaluated]) andalso
-    terms_of [] [C ([0], 1)] = [Narrowing_constructor (1, [])]
+    same_narrow_tree (refined_universal, expected_universal) andalso
+    same_narrow_tree (refined_existential, expected_existential) andalso
+    same_narrow_tree
+      (universal_update,
+       Constructor
+         (Universal, false_value, [0], pnf_bool_shape,
+          [(0, Leaf false_value), (1, Leaf Unevaluated)])) andalso
+    same_narrow_tree
+      (existential_update,
+       Constructor
+         (Existential, Unevaluated, [0], pnf_bool_shape,
+          [(0, Leaf false_value), (1, Leaf Unevaluated)])) andalso
+    same_narrow_terms
+      (terms_of [] [C ([0], 1, 1)],
+       [narrow_node pnf_bool_shape 1 []])
   end
+
+fun same_narrow_example (EmptyExample, EmptyExample) = true
+  | same_narrow_example
+      (UnivExample (left_term, left_rest),
+       UnivExample (right_term, right_rest)) =
+      same_narrow_term (left_term, right_term) andalso
+      same_narrow_example (left_rest, right_rest)
+  | same_narrow_example (ExExample left, ExExample right) =
+      ListPair.allEq
+        (fn ((left_term, left_rest), (right_term, right_rest)) =>
+          same_narrow_term (left_term, right_term) andalso
+          same_narrow_example (left_rest, right_rest))
+        (left, right)
+  | same_narrow_example _ = false
 
 fun pnf_engine_units () =
   let
@@ -11438,7 +11558,8 @@ fun pnf_engine_units () =
           [Narrowing_variable ([0], _), Narrowing_variable ([1], _)] =
           NeedsRefinement [0]
       | mixed _
-          [Narrowing_constructor (0, []), Narrowing_variable ([1], _)] =
+          [Narrowing_constructor (0, []),
+           Narrowing_variable ([1], _)] =
           NeedsRefinement [1]
       | mixed _
           [Narrowing_constructor (0, []),
@@ -11460,7 +11581,8 @@ fun pnf_engine_units () =
       (tree_of [(Universal, pnf_bool_shape)])
     fun nested_hit _ [Narrowing_variable ([0], _)] =
           NeedsRefinement [0]
-      | nested_hit _ [Narrowing_constructor (0, [])] =
+      | nested_hit _
+          [Narrowing_constructor (0, [])] =
           Known {genuine = true, result = true}
       | nested_hit _
           [Narrowing_constructor
@@ -11475,16 +11597,16 @@ fun pnf_engine_units () =
       (tree_of [(Universal, narrow_branch)])
     val expected_example =
       UnivExample
-        (Narrowing_constructor (0, []),
+        (narrow_node pnf_bool_shape 0 [],
          ExExample
-           [(Narrowing_constructor (0, []), EmptyExample),
-            (Narrowing_constructor (1, []), EmptyExample)])
+           [(narrow_node pnf_bool_shape 0 [], EmptyExample),
+            (narrow_node pnf_bool_shape 1 [], EmptyExample)])
     val uniform_shape = tree_of_types 1 [(Existential, ``:num list``)]
   in
     (case potential of
          PnfCounterexample
            {genuine = false, example, tree, tests = 4} =>
-             example = expected_example andalso
+             same_narrow_example (example, expected_example) andalso
              value_of tree = Eval {result = false, potential = true}
        | _ => false) andalso
     (case depth_limited of
@@ -11501,14 +11623,15 @@ fun pnf_engine_units () =
            {genuine = true,
             example = UnivExample
               (Narrowing_constructor
-                (1, [Narrowing_constructor (0, [])]), EmptyExample),
+                (1, [Narrowing_constructor (0, [])]),
+               EmptyExample),
             tests = 4, ...} => true
        | _ => false) andalso
     (case uniform_shape of
          Variable
            (Existential, Unevaluated, [0], actual_shape,
             Leaf Unevaluated) =>
-           actual_shape = shape_of 1 ``:num list``
+           same_narrow_shape (actual_shape, shape_of 1 ``:num list``)
        | _ => false)
   end
   handle Fail _ => false
@@ -11608,6 +11731,22 @@ val matrix_custom : custom_gen =
        (if choice = 0 then ``RGCustomA`` else ``RGCustomB``, next)
      end)}
 val _ = register_generator ``:rg_custom_matrix`` matrix_custom
+val fresh_custom_mutex = Mutex.mutex ()
+val fresh_custom_serial = ref 0
+fun fresh_custom_values _ =
+  let
+    val serial = Multithreading.synchronized
+      "Refute fresh custom value" fresh_custom_mutex (fn () =>
+        let val serial = !fresh_custom_serial
+        in fresh_custom_serial := serial + 1; serial end)
+    val ignored = Term.mk_var ("ignored", ``:num``)
+    val payload = numSyntax.mk_numeral (Arbnum.fromInt serial)
+  in
+    [Term.mk_comb (Term.mk_abs (ignored, ``RGFresh``), payload)]
+  end
+val fresh_custom : custom_gen =
+  {enumerate = SOME fresh_custom_values, random = NONE}
+val _ = register_generator ``:rg_fresh`` fresh_custom
 val _ = require_msg (check_result (fn () =>
   case spec_of ``:ind`` of GenCustom _ => true | _ => false))
   (fn () => "custom generator was not registered") (fn () => ()) ()
@@ -11622,6 +11761,148 @@ fun custom_random_threads_state () =
 
 val _ = require_msg (check_result custom_random_threads_state) (fn () =>
   "a custom random generator did not return its successor state")
+  (fn () => ()) ()
+
+fun custom_narrowing_shape_recovers_exact_term () =
+  let
+    val ty = ``:rg_custom_matrix``
+    val alternatives = new [] (shape_of 0 ty)
+  in
+    case List.nth (alternatives, 1) of
+        candidate as Narrowing_constructor (id, []) =>
+          let val shape = shape_of 0 ty
+          in
+            Term.aconv (exact_term shape id) ``RGCustomB`` andalso
+            Term.aconv (term_of_ground ty shape candidate) ``RGCustomB``
+          end
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result custom_narrowing_shape_recovers_exact_term) (fn () =>
+  "custom narrowing shape did not retain its exact enumerated HOL term")
+  (fn () => ()) ()
+
+fun fresh_shape_term () =
+  let val shape = shape_of 0 ``:rg_fresh``
+  in (shape, exact_term shape 0) end
+
+fun custom_narrowing_shapes_are_call_local () =
+  let
+    val saved_threads = Multithreading.max_threads ()
+    fun body () =
+      let
+        val _ = Multithreading.max_threads_update
+          (Int.max (2, saved_threads))
+        val left = Future.fork fresh_shape_term
+        val right = Future.fork fresh_shape_term
+      in
+        case Future.join_results [left, right] of
+            [Exn.Res (left_shape, left_term),
+             Exn.Res (right_shape, right_term)] =>
+              map alternative_id (products_of left_shape) = [0] andalso
+              map alternative_id (products_of right_shape) = [0] andalso
+              not (Term.aconv left_term right_term) andalso
+              Term.aconv (exact_term left_shape 0) left_term andalso
+              Term.aconv (exact_term right_shape 0) right_term
+          | _ => false
+      end
+  in
+    Portable.finally
+      (fn () => Multithreading.max_threads_update saved_threads) body ()
+  end
+
+fun repeated_fresh_shapes_retain_no_terms () =
+  let
+    val tables_before = term_table_count ()
+    val values = List.tabulate (500, fn _ => #2 (fresh_shape_term ()))
+  in
+    length (Util.distinct_terms values) = length values andalso
+    term_table_count () = tables_before
+  end
+
+fun compile_fresh_narrowing pnf =
+  let
+    val value = Term.mk_var ("fresh_value", ``:rg_fresh``)
+    val flag = Term.mk_var ("fresh_flag", ``:bool``)
+    val prefix =
+      if pnf then [(Forall, value), (Exists, flag)]
+      else [(Forall, value)]
+    val config = default_config
+      |> upd_size 0
+      |> upd_allow_existentials true
+    val {source, entry, table} = extract_narrowing config prefix boolSyntax.F
+  in
+    case compile_install source entry of
+        Installed dispatch => (dispatch, table)
+      | CompileError messages =>
+          (unregister_term_tables table;
+           raise Fail (String.concat messages))
+  end
+
+fun generated_fresh_term (dispatch : generated_dispatch) =
+  case #hit (dispatch 1 false 0 0 0) of
+      SOME (_, SOME ((_, rebuild) :: _), true) => rebuild ()
+    | _ => raise Fail "fresh narrowing dispatch produced no genuine hit"
+
+val fresh_isolation_mismatch = ref ""
+
+fun fresh_plain_pnf_compiles_are_isolated () =
+  let
+    val tables_before = term_table_count ()
+    val saved_threads = Multithreading.max_threads ()
+    val (plain, plain_table) = compile_fresh_narrowing false
+    val (pnf, pnf_table) = compile_fresh_narrowing true
+    fun cleanup () =
+      (unregister_term_tables plain_table;
+       unregister_term_tables pnf_table;
+       Multithreading.max_threads_update saved_threads)
+    fun body () =
+      let
+        val _ = Multithreading.max_threads_update
+          (Int.max (2, saved_threads))
+        val plain_future = Future.fork (fn () => generated_fresh_term plain)
+        val pnf_future = Future.fork (fn () => generated_fresh_term pnf)
+      in
+        case Future.join_results [plain_future, pnf_future] of
+            [Exn.Res plain_term, Exn.Res pnf_term] =>
+              let
+                val distinct = not (Term.aconv plain_term pnf_term)
+                val plain_stable =
+                  Term.aconv plain_term (generated_fresh_term plain)
+                val pnf_stable = Term.aconv pnf_term (generated_fresh_term pnf)
+                val _ = fresh_isolation_mismatch :=
+                  "distinct=" ^ Bool.toString distinct ^
+                  ", plain_stable=" ^ Bool.toString plain_stable ^
+                  ", pnf_stable=" ^ Bool.toString pnf_stable ^
+                  ", plain=" ^ Parse.term_to_string plain_term ^
+                  ", pnf=" ^ Parse.term_to_string pnf_term
+              in
+                distinct andalso plain_stable andalso pnf_stable
+              end
+          | results =>
+              (fresh_isolation_mismatch := String.concatWith "; "
+                 (map (fn Exn.Res _ => "result"
+                        | Exn.Exn error => General.exnMessage error) results);
+               false)
+      end
+    val isolated = Portable.finally cleanup body ()
+  in
+    isolated andalso term_table_count () = tables_before
+  end
+
+val _ = require_msg
+  (check_result custom_narrowing_shapes_are_call_local) (fn () =>
+  "concurrent custom narrowing shapes crossed their local alternatives")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result repeated_fresh_shapes_retain_no_terms) (fn () =>
+  "repeated fresh custom shapes grew a retained term table")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result fresh_plain_pnf_compiles_are_isolated) (fn () =>
+  "plain and PNF compiles crossed or retained fresh custom alternatives: " ^
+  !fresh_isolation_mismatch)
   (fn () => ()) ()
 
 val abstract_ty = ``:rg_record``
@@ -12955,21 +13236,30 @@ fun narrowing_ground_hit_is_certified () =
       | _ => false
   end
 
-fun narrowing_partial_hit_has_holes () =
+fun narrowing_partial_hit_is_certified () =
   let
     val config = default_config
       |> upd_substrate NativeSML
       |> upd_size 1
-      |> upd_abort_potential true
+      |> upd_evals [``xs : num list``]
     fun is_hole variable = MFN.is_irrelevant_marker variable
+    val outcome =
+      run_with_strategy Narrowing config ``NULL (xs : num list)``
   in
-    case run_with_strategy Narrowing config ``NULL (xs : num list)`` of
+    case outcome of
         Counterexample [cex] =>
-          (case #certainty cex of
-               Potential reasons =>
-                 List.exists (String.isSubstring "awaits grounding") reasons
+          #certainty cex = Genuine andalso
+          (case #cert cex of
+               SOME theorem => Term.aconv (Thm.concl theorem)
+                 ``~(!xs : num list. NULL xs)``
+             | NONE => false) andalso
+          lookup_stat "size" (#stats cex) = SOME 1 andalso
+          String.isSubstring "_" (format_outcome config outcome) andalso
+          (case #evals cex of
+               [(expression, value)] =>
+                 Term.aconv expression ``xs : num list`` andalso
+                 Term.aconv value ``[0] : num list``
              | _ => false) andalso
-          not (Option.isSome (#cert cex)) andalso
           (case #bindings cex of
                [(_, value)] =>
                  List.exists is_hole (Term.free_vars_lr value) andalso
@@ -12978,24 +13268,25 @@ fun narrowing_partial_hit_has_holes () =
       | _ => false
   end
 
-fun narrowing_plain_retry_is_integrated () =
+fun narrowing_partial_certify_opt_out () =
   let
     val config = default_config
       |> upd_substrate NativeSML
-      |> upd_size 2
-    val result = Feedback.with_traces [("Refute", 0)]
-      (run_with_strategy Narrowing config) ``NULL (xs : num list)``
+      |> upd_size 1
+      |> upd_certify false
+    val outcome =
+      run_with_strategy Narrowing config ``NULL (xs : num list)``
   in
-    not (#abort_potential config) andalso
-    (case result of
-         Counterexample [cex] =>
-           #certainty cex = Genuine andalso Option.isSome (#cert cex) andalso
-           lookup_stat "size" (#stats cex) = SOME 2 andalso
-           (case #bindings cex of
-                [(_, value)] =>
-                  not (MFN.contains_irrelevant_marker value)
-              | _ => false)
-       | _ => false)
+    case outcome of
+        Counterexample [cex] =>
+          #certainty cex = Genuine andalso not (Option.isSome (#cert cex))
+          andalso decisive config Genuine outcome andalso
+          String.isSubstring "Certification: uncertified"
+            (format_outcome config outcome) andalso
+          (case #bindings cex of
+               [(_, value)] => MFN.contains_irrelevant_marker value
+             | _ => false)
+      | _ => false
   end
 
 fun narrowing_existential_is_interim_potential () =
@@ -13023,6 +13314,78 @@ fun narrowing_existential_is_interim_potential () =
         | _ => false
   in
     potential andalso refused
+  end
+
+fun narrowing_reversed_shallow_is_integrated () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 1
+  in
+    case run_with_strategy Narrowing config
+      ``(x : rg_shallow) = RGDeep RGShallow`` of
+        Counterexample [cex] =>
+          #certainty cex = Genuine andalso Option.isSome (#cert cex) andalso
+          (case #bindings cex of
+               [(variable, value)] =>
+                 Term.aconv variable ``x : rg_shallow`` andalso
+                 Term.aconv value ``RGShallow``
+             | _ => false)
+      | _ => false
+  end
+
+fun narrowing_custom_enum_is_integrated () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 1
+  in
+    case run_with_strategy Narrowing config
+      ``(x : rg_custom_matrix) = RGCustomA`` of
+        Counterexample [cex] =>
+          #certainty cex = Genuine andalso Option.isSome (#cert cex) andalso
+          (case #bindings cex of
+               [(variable, value)] =>
+                 Term.aconv variable ``x : rg_custom_matrix`` andalso
+                 Term.aconv value ``RGCustomB``
+             | _ => false)
+      | _ => false
+  end
+
+fun narrowing_partial_function_is_certified () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+  in
+    case run_with_strategy Narrowing config
+      ``FST ((f : bool -> bool # bool) F)`` of
+        Counterexample [cex] =>
+          #certainty cex = Genuine andalso Option.isSome (#cert cex) andalso
+          (case #bindings cex of
+               [(variable, value)] =>
+                 Term.aconv variable ``f : bool -> bool # bool`` andalso
+                 MFN.contains_irrelevant_marker value
+             | _ => false)
+      | _ => false
+  end
+
+fun narrowing_partial_product_is_certified () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 1
+  in
+    case run_with_strategy Narrowing config ``FST (p : bool # bool)`` of
+        Counterexample [cex] =>
+          #certainty cex = Genuine andalso Option.isSome (#cert cex) andalso
+          (case #bindings cex of
+               [(variable, value)] =>
+                 Term.aconv variable ``p : bool # bool`` andalso
+                 pairSyntax.is_pair value andalso
+                 MFN.contains_irrelevant_marker value
+             | _ => false)
+      | _ => false
   end
 
 fun narrowing_function_update_is_integrated () =
@@ -13136,15 +13499,29 @@ val _ = require_msg (check_result narrowing_registration_is_pinned)
 val _ = require_msg (check_result narrowing_ground_hit_is_certified)
   (fn () => "ground universal narrowing did not use EVAL certification")
   (fn () => ()) ()
-val _ = require_msg (check_result narrowing_partial_hit_has_holes)
-  (fn () => "partial narrowing did not display Potential underscore holes")
-  (fn () => ()) ()
-val _ = require_msg (check_result narrowing_plain_retry_is_integrated)
+val _ = require_msg (check_result narrowing_partial_hit_is_certified)
   (fn () =>
-    "plain narrowing did not retry genuinely at the next scheduled depth")
+    "partial universal narrowing was not grounded, certified, and displayed")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_partial_certify_opt_out)
+  (fn () =>
+    "certify=false did not preserve an uncertified partial narrowing hit")
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_existential_is_interim_potential)
   (fn () => "existential narrowing certainty or option gating changed")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_reversed_shallow_is_integrated)
+  (fn () =>
+    "depth filtering lost the original shallow constructor identity")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_custom_enum_is_integrated)
+  (fn () => "custom enumerable narrowing was not reconstructed exactly")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_partial_function_is_certified)
+  (fn () => "partial function narrowing hit was not certified")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_partial_product_is_certified)
+  (fn () => "partial product narrowing hit was not certified")
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_function_update_is_integrated)
   (fn () => "function narrowing did not display the exact UPDATE golden")
@@ -14500,7 +14877,8 @@ fun native_ignored_filter_resumes () =
                     CexFound candidate => #run test
                       {genuine_only = true, card = 1, size = 0, draws = 5,
                        ignored = [candidate]}
-                  | _ => CexFound {env = [], genuine = false}
+                  | _ => CexFound
+                      {env = [], ground_env = NONE, genuine = false}
               val _ = #close test ()
             in
               case second of Exhausted _ => true | _ => false
@@ -15790,6 +16168,28 @@ fun upgrade_from_stuck_path () =
 
 val _ = require_msg (check_result upgrade_from_stuck_path) (fn () =>
   "certification did not upgrade a tainted candidate to Genuine")
+  (fn () => ()) ()
+
+fun uncertifiable_grounding_has_pinned_reason () =
+  let
+    val variable = ``x : 'a``
+    val hole = MFN.irrelevant_marker (Term.type_of variable)
+  in
+    case Refute_Cert.ground_and_certify
+      { original = ``(x : 'a) = x``,
+        evals = [],
+        env = [(variable, hole)], ground_env = NONE,
+        cex = make_cex true } of
+        Refute_Cert.Potential
+          {certainty = Refute_Core.Potential reasons, cert = NONE, ...} =>
+          reasons =
+            ["partial counterexample; grounding uncertifiable"]
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result uncertifiable_grounding_has_pinned_reason) (fn () =>
+  "uncertifiable partial grounding did not use the pinned reason")
   (fn () => ()) ()
 
 fun false_positive_is_discarded () =

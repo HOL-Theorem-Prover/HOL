@@ -22,7 +22,10 @@ structure Refute_Eval :> Refute_Eval = struct
       Plans of plan list
     | Pnf of {prefix : (quant * term) list, body : term}
 
-  type candidate = {env : (term * term) list, genuine : bool}
+  type candidate =
+    {env : (term * term) list,
+     ground_env : (term * term) list option,
+     genuine : bool}
 
   datatype verdict = Continue | Found of candidate
 

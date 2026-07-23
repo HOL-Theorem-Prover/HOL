@@ -210,7 +210,7 @@ structure Refute_EvalCompute = struct
 
       fun candidate env genuine =
         if ignored_candidate env ignored then Continue
-        else Found {env = env, genuine = genuine}
+        else Found {env = env, ground_env = NONE, genuine = genuine}
 
       fun visit env genuine current =
         case current of

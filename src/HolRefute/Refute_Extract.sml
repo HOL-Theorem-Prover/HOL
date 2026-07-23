@@ -3566,10 +3566,10 @@ structure Refute_Extract = struct
         | Test tm =>
             let
               val hit = "refute_hit (" ^ environment_source environment ^
-                ", " ^ genuine_only ^ ")"
+                ", NONE, " ^ genuine_only ^ ")"
               val stuck = recovery "complete" "genuine_only"
                 ("refute_hit (" ^ environment_source environment ^
-                  ", false)")
+                  ", NONE, false)")
             in
               parens ("tests := !tests + 1; " ^
                 "if !tests mod 4096 = 0 then " ^
@@ -3667,10 +3667,10 @@ structure Refute_Extract = struct
         | Test tm =>
             let
               val hit = "refute_hit (" ^ environment_source environment ^
-                ", " ^ genuine ^ ")"
+                ", NONE, " ^ genuine ^ ")"
               val stuck = recovery "complete" "genuine_only"
                 ("refute_hit (" ^ environment_source environment ^
-                  ", false)")
+                  ", NONE, false)")
             in
               parens ("tests := !tests + 1; " ^
                 "if !tests mod 4096 = 0 then " ^
@@ -3814,10 +3814,14 @@ structure Refute_Extract = struct
             "fun protected_dispatch card genuine_only size draws state =\n" ^
             "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
             "    let val answer = dispatch card genuine_only size draws state\n" ^
-            "        val hit = Option.map (fn (environment, genuine) =>\n" ^
+            "        val hit = Option.map\n" ^
+            "          (fn (environment, grounding, genuine) =>\n" ^
             "          (List.map (fn (index, rebuild) =>\n" ^
             "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
-            "               refute_table_id rebuild)) environment, genuine))\n" ^
+            "               refute_table_id rebuild)) environment,\n" ^
+            "           Option.map (List.map (fn (index, rebuild) =>\n" ^
+            "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
+            "               refute_table_id rebuild))) grounding, genuine))\n" ^
             "          (#hit answer)\n" ^
             "    in {hit = hit, complete = #complete answer,\n" ^
             "        table = refute_table_id, state = #state answer,\n" ^
@@ -3922,9 +3926,10 @@ structure Refute_Extract = struct
           | Refute_Gen.GenFun _ =>
               reject ("narrowing cannot generate function type " ^
                 type_name ty ^ " before finitization")
+          | Refute_Gen.GenCustom {enumerate = SOME _, ...} => []
           | Refute_Gen.GenCustom _ =>
-              reject ("narrowing cannot use a custom generator for " ^
-                type_name ty)
+              reject ("narrowing custom generator for " ^ type_name ty ^
+                " has no exhaustive enumeration")
           | _ => []
         handle Refute_Gen.NoGenerator (missing, reason) =>
           reject ("no narrowing generator for " ^ type_name missing ^
@@ -3939,8 +3944,30 @@ structure Refute_Extract = struct
       val types = close_types (map (Term.type_of o #2) prefix) []
       val _ = List.app (fn ty => ignore (ensure_type context ty)) types
       val _ = ignore (ensure_type context Type.bool)
+      val maximum_depth = Int.max (0, #size (#qc config))
+
+      fun checked_shape depth ty =
+        Refute_Narrow.shape_of depth ty
+        handle Refute_Narrow.ShapeFailure (offending_ty, reason) =>
+          reject (Refute_Narrow.inapplicable_message offending_ty reason)
+
+      (* Freeze every depth's shape while extracting.  Generated search shapes
+         contain only local IDs and product structure.  The exact alternatives
+         stay in these meta-level rows and generate an immutable compile-local
+         reconstruction case; no custom enumerator is called at run time. *)
+      val shape_rows = List.tabulate (maximum_depth + 1, fn depth =>
+        map (checked_shape depth) types)
 
       fun type_index ty = Lib.index (Util.same_type ty) types
+      fun shapes_of ty = map (fn row =>
+        List.nth (row, type_index ty)) shape_rows
+      fun exact_entries_of ty =
+        List.concat (map (fn (depth, shape) =>
+          List.mapPartial (fn alternative =>
+            Option.map (fn value =>
+              ((depth, #id alternative), value)) (#exact alternative))
+            (Refute_Narrow.products_of shape))
+          (Lib.enumerate 0 (shapes_of ty)))
       fun conv_name ty = "narrow_conv_" ^ integer (type_index ty)
       fun recon_name ty = "narrow_recon_" ^ integer (type_index ty)
       val witnesses = List.map (fn (index, ty) =>
@@ -3962,22 +3989,21 @@ structure Refute_Extract = struct
           | Refute_Gen.Char => lazy ("Char.chr " ^ index)
           | Refute_Gen.Word _ => lazy ("IntInf.fromInt " ^ index)
 
-      fun primitive_term kind index =
-        case kind of
-            Refute_Gen.Num =>
-              "Refute_EvalSML.num_term (IntInf.fromInt " ^ index ^ ")"
-          | Refute_Gen.Int =>
-              "Refute_EvalSML.int_term (IntInf.fromInt " ^
-              around_zero index ^ ")"
-          | Refute_Gen.Char =>
-              "Refute_EvalSML.char_term (Char.chr " ^ index ^ ")"
-          | Refute_Gen.Word width =>
-              "Refute_EvalSML.word_term " ^ integer width ^
-              " (IntInf.fromInt " ^ index ^ ")"
-
       fun constructor_pattern index arguments =
         "(" ^ integer index ^ ", " ^
         term_list (map (fn argument => argument) arguments) ^ ")"
+
+      fun exact_case render ty =
+        let
+          fun branch ((depth, id), value) =
+            "(" ^ integer depth ^ ", " ^ integer id ^ ") => " ^
+            render value
+          val branches = map branch (exact_entries_of ty)
+        in
+          if null branches then "raise Match"
+          else "(case (depth, constructor) of\n       " ^
+            join "\n     | " branches ^ "\n     | _ => raise Match)"
+        end
 
       fun conversion_case ty =
         case Refute_Gen.spec_of ty of
@@ -3992,7 +4018,8 @@ structure Refute_Extract = struct
                     val arguments = List.tabulate (length argument_types,
                       fn number => "argument_" ^ integer number)
                     val converted = ListPair.mapEq (fn (argument, arg_ty) =>
-                      conv_name arg_ty ^ " depth " ^ argument)
+                      conv_name arg_ty ^
+                      " (Int.max (0, depth - 1)) " ^ argument)
                       (arguments, argument_types)
                   in
                     constructor_pattern index arguments ^ " => " ^
@@ -4003,15 +4030,18 @@ structure Refute_Extract = struct
                 join "\n       | " (map branch (Lib.enumerate 0 constrs)) ^
                 "\n       | _ => raise Match)"
               end
+          | Refute_Gen.GenCustom {enumerate = SOME _, ...} =>
+              exact_case (expression context) ty
           | _ => raise Fail "validated narrowing conversion"
 
       fun reconstruction_case ty =
         case Refute_Gen.spec_of ty of
-            Refute_Gen.GenEnum values =>
-              "Refute_EvalSML.raw_term (List.nth (" ^
-              term_list (map (integer o raw_index) values) ^
-              ", constructor))"
-          | Refute_Gen.GenNum kind => primitive_term kind "constructor"
+            Refute_Gen.GenEnum _ =>
+              exact_case (fn value =>
+                "Refute_EvalSML.raw_term " ^ integer (raw_index value)) ty
+          | Refute_Gen.GenNum _ =>
+              exact_case (fn value =>
+                "Refute_EvalSML.raw_term " ^ integer (raw_index value)) ty
           | Refute_Gen.GenDatatype {constrs, ...} =>
               let
                 fun branch (index, (constructor, argument_types)) =
@@ -4019,7 +4049,8 @@ structure Refute_Extract = struct
                     val arguments = List.tabulate (length argument_types,
                       fn number => "argument_" ^ integer number)
                     val rebuilt = ListPair.mapEq (fn (argument, arg_ty) =>
-                      recon_name arg_ty ^ " depth " ^ argument)
+                      recon_name arg_ty ^
+                      " (Int.max (0, depth - 1)) " ^ argument)
                       (arguments, argument_types)
                   in
                     constructor_pattern index arguments ^ " => " ^
@@ -4032,6 +4063,9 @@ structure Refute_Extract = struct
                 join "\n       | " (map branch (Lib.enumerate 0 constrs)) ^
                 "\n       | _ => raise Match)"
               end
+          | Refute_Gen.GenCustom {enumerate = SOME _, ...} =>
+              exact_case (fn value =>
+                "Refute_EvalSML.raw_term " ^ integer (raw_index value)) ty
           | _ => raise Fail "validated narrowing reconstruction"
 
       fun conversion_declaration (index, ty) =
@@ -4050,18 +4084,41 @@ structure Refute_Extract = struct
         "\n    | Refute_Narrow.Narrowing_constructor " ^
         "(constructor, arguments) =>\n        " ^ reconstruction_case ty
 
+      fun shape_source
+            (Refute_Narrow.Narrowing_sum_of_products alternatives) =
+        let
+          fun alternative_source {id, arguments, ...} =
+            "{id = " ^ integer id ^ ", exact = NONE" ^
+            ", arguments = " ^ term_list (map shape_source arguments) ^ "}"
+        in
+          "Refute_Narrow.Narrowing_sum_of_products " ^
+          term_list (map alternative_source alternatives)
+        end
+      fun shape_row_source row = term_list (map shape_source row)
+      val shape_declaration =
+        "fun narrow_shapes depth =\n  case depth of\n      " ^
+        join "\n    | " (map (fn (depth, row) =>
+          integer depth ^ " => " ^ shape_row_source row)
+          (Lib.enumerate 0 shape_rows)) ^
+        "\n    | _ => raise Subscript\n"
       val conversions = join "\n"
         (map conversion_declaration (Lib.enumerate 0 types)) ^ "\n"
       val reconstructions = join "\n"
         (map reconstruction_declaration (Lib.enumerate 0 types)) ^ "\n"
 
       val body_expression = expression context body
-      fun binding (index, ((_, variable), original)) =
+      fun binding grounded (index, ((_, variable), original)) =
         let
           val ty = Term.type_of variable
           val original_index = raw_index original
-          val rebuilt = recon_name ty ^
-            " depth (List.nth (arguments, " ^ integer index ^ "))"
+          val argument = "List.nth (arguments, " ^ integer index ^ ")"
+          val narrowing_term =
+            if grounded then
+              "valOf (Refute_Narrow.first_completion " ^
+              "(List.nth (narrow_shapes depth, " ^
+              integer (type_index ty) ^ ")) (" ^ argument ^ "))"
+            else argument
+          val rebuilt = recon_name ty ^ " depth (" ^ narrowing_term ^ ")"
         in
           "(" ^ integer original_index ^ ", fn () => " ^
           (if #finite_functions (#qc config) then
@@ -4084,16 +4141,18 @@ structure Refute_Extract = struct
         if has_existential then
           List.take (ListPair.zip (prefix, originals), leading_count)
         else ListPair.zip (prefix, originals)
-      val bindings = map binding (Lib.enumerate 0 reported_prefix)
+      val indexed_prefix = Lib.enumerate 0 reported_prefix
+      val bindings = map (binding false) indexed_prefix
+      val ground_bindings = map (binding true) indexed_prefix
       val environment_source = term_list bindings
+      val ground_environment_source = term_list ground_bindings
       val argument_values = map (fn (index, (_, variable)) =>
         conv_name (Term.type_of variable) ^
         " depth (List.nth (arguments, " ^ integer index ^ "))")
         (Lib.enumerate 0 prefix)
       val shapes = map (fn (_, variable) =>
-        "Refute_Narrow.shape_of depth (Term.type_of " ^
-        "(Refute_EvalSML.raw_term " ^
-        integer (witness_index (Term.type_of variable)) ^ "))") prefix
+        "List.nth (narrow_shapes depth, " ^
+        integer (type_index (Term.type_of variable)) ^ ")") prefix
       val initial_arguments = term_list (map (fn (index, shape) =>
         "Refute_Narrow.Narrowing_variable ([" ^ integer index ^
         "], " ^ shape ^ ")") (Lib.enumerate 0 shapes))
@@ -4158,7 +4217,8 @@ structure Refute_Extract = struct
           val runtime =
             "val refute_table_id = " ^ integer table_id ^ "\n" ^
             "fun candidate depth arguments genuine =\n" ^
-            "  (" ^ environment_source ^ ", genuine)\n" ^
+            "  (" ^ environment_source ^ ", SOME (" ^
+            ground_environment_source ^ "), genuine)\n" ^
             "fun accept_hit depth genuine_only arguments genuine =\n" ^
             "  (not genuine_only orelse Refute_Narrow.all_ground arguments)\n" ^
             "  andalso not ((!Refute_EvalSML.ignored_filter)\n" ^
@@ -4176,10 +4236,14 @@ structure Refute_Extract = struct
             "fun protected_dispatch card genuine_only depth draws state =\n" ^
             "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
             "    let val answer = dispatch card genuine_only depth draws state\n" ^
-            "        val hit = Option.map (fn (environment, genuine) =>\n" ^
+            "        val hit = Option.map\n" ^
+            "          (fn (environment, grounding, genuine) =>\n" ^
             "          (List.map (fn (index, rebuild) =>\n" ^
             "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
-            "               refute_table_id rebuild)) environment, genuine))\n" ^
+            "               refute_table_id rebuild)) environment,\n" ^
+            "           Option.map (List.map (fn (index, rebuild) =>\n" ^
+            "             (index, Refute_EvalSML.wrap_reconstruction\n" ^
+            "               refute_table_id rebuild))) grounding, genuine))\n" ^
             "          (#hit answer)\n" ^
             "    in {hit = hit, complete = #complete answer,\n" ^
             "        table = refute_table_id, state = #state answer,\n" ^
@@ -4189,8 +4253,8 @@ structure Refute_Extract = struct
             "fun install () = Refute_EvalSML.installed_dispatch :=\n" ^
             "  SOME protected_dispatch\n"
           val source = source_prefix context ^
-            definition_declarations context ^ "\n" ^ conversions ^
-            reconstructions ^ evaluate ^ runtime
+            definition_declarations context ^ "\n" ^ shape_declaration ^
+            conversions ^ reconstructions ^ evaluate ^ runtime
         in
           {source = source, entry = "install ()", table = table_id}
         end

@@ -1450,7 +1450,8 @@ structure Refute_EvalCv = struct
                     let val env = decode_env (#variables program) value
                     in
                       if Refute_Eval.ignored_candidate env ignored then NONE
-                      else SOME {env = env, genuine = true}
+                      else SOME
+                        {env = env, ground_env = NONE, genuine = true}
                     end
                 in
                   case Lib.get_first candidate values of
@@ -1490,7 +1491,7 @@ structure Refute_EvalCv = struct
                     in
                       Refute_Eval.CexFound
                         {env = decode_env (#variables program) value,
-                         genuine = true}
+                         ground_env = NONE, genuine = true}
                     end
                 end
             in

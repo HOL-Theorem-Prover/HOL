@@ -472,7 +472,7 @@ structure Refute_QC = struct
          interim_potential : string option,
          retry : bool -> candidate list -> unit,
          retry_potential : bool -> candidate list -> unit}
-        {env, genuine, genuine_only, ignored} =
+        {env, ground_env, genuine, genuine_only, ignored} =
     let
       val bindings = List.filter
         (fn (variable, _) =>
@@ -487,15 +487,14 @@ structure Refute_QC = struct
           bindings = rev bindings,
           evals = [], cert = NONE, scope = NONE, model = NONE,
           stats = stats }
-      val next = {env = env, genuine = genuine} :: ignored
+      val next =
+        {env = env, ground_env = ground_env, genuine = genuine} :: ignored
       val has_hole = List.exists
         (Refute_ModelFinder_Names.contains_irrelevant_marker o #2) env
-      (* TASK_20 grounds partial narrowing values before replay.  Until then
-         do not let a spine-only EVAL proof overstate the displayed holes. *)
-      val interim_potential =
-        if backend = "narrowing" andalso has_hole then
-          SOME "partial narrowing awaits grounding reconstruction"
-        else interim_potential
+      val partial_universal =
+        backend = "narrowing" andalso has_hole andalso
+        not (Refute_Narrow.contains_existentials
+          (#1 (Refute_Narrow.pnf_of (#goal instance))))
       fun keep_potential potential =
         if #abort_potential config andalso not genuine_only then
           counterexamples := potential :: !counterexamples
@@ -518,16 +517,27 @@ structure Refute_QC = struct
                 (Refute_Cert.replace cex (Refute_Core.Potential [reason])
                    [] NONE)
           | NONE =>
-              (case Refute_Cert.certify
-                {original = #original instance, evals = #evals instance,
-                 env = env, cex = cex} of
-                   Refute_Cert.Certified certified =>
-                     counterexamples := certified :: !counterexamples
-                 | Refute_Cert.Discarded =>
-                     (discarded := !discarded + 1;
-                      retry genuine_only next)
-                 | Refute_Cert.Potential potential =>
-                     keep_potential potential)
+              let
+                val certification =
+                  if partial_universal then
+                    Refute_Cert.ground_and_certify
+                      {original = #original instance,
+                       evals = #evals instance, env = env,
+                       ground_env = ground_env, cex = cex}
+                  else
+                    Refute_Cert.certify
+                      {original = #original instance,
+                       evals = #evals instance, env = env, cex = cex}
+              in
+                case certification of
+                     Refute_Cert.Certified certified =>
+                       counterexamples := certified :: !counterexamples
+                   | Refute_Cert.Discarded =>
+                       (discarded := !discarded + 1;
+                        retry genuine_only next)
+                   | Refute_Cert.Potential potential =>
+                       keep_potential potential
+              end
     end
 
   fun plan_has_gen current =
@@ -935,7 +945,7 @@ structure Refute_QC = struct
                         complete := (!complete andalso entry_complete)
                     | GaveUp reason =>
                         (complete := false; add_reason reason gave_up)
-                    | CexFound {env, genuine} =>
+                    | CexFound {env, ground_env, genuine} =>
                         record_candidate
                           { config = config,
                             backend = strategy_name strategy,
@@ -964,6 +974,7 @@ structure Refute_QC = struct
                                 narrowing_state card := (go, ig)
                               else one (card, size) draws go ig }
                           { env = env,
+                            ground_env = ground_env,
                             genuine = genuine,
                             genuine_only = genuine_only,
                             ignored = ignored }

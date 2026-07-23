@@ -2,8 +2,14 @@ structure Refute_Narrow = struct
   type hol_type = Type.hol_type
   type position = int list
 
+  (* Alternative IDs are local to one immutable shape.  Exact enumerated
+     values live only in meta-level shapes; narrowing terms carry local IDs.
+     Per-compile reconstruction selects the corresponding frozen shape, so
+     no process-global custom-term table retains HOL terms. *)
   datatype narrowing_type =
-    Narrowing_sum_of_products of narrowing_type list list
+    Narrowing_sum_of_products of narrowing_alternative list
+  withtype narrowing_alternative =
+    {id : int, exact : Term.term option, arguments : narrowing_type list}
 
   datatype narrowing_term =
       Narrowing_variable of position * narrowing_type
@@ -51,11 +57,13 @@ structure Refute_Narrow = struct
       Leaf of truth
     | Variable of
         pnf_quantifier * truth * position * narrowing_type * tree
-    | Constructor of pnf_quantifier * truth * position * tree list
+    | Constructor of
+        pnf_quantifier * truth * position * narrowing_type *
+        (int * tree) list
 
   datatype edge =
       V of position * narrowing_type
-    | C of position * int
+    | C of position * int * int
 
   type path = edge list
 
@@ -91,15 +99,34 @@ structure Refute_Narrow = struct
       loop 0 values
     end
 
+  fun indexed_alternative (id, arguments) : narrowing_alternative =
+    {id = id, exact = NONE, arguments = arguments}
+
+  fun exact_alternative (id, value) : narrowing_alternative =
+    {id = id, exact = SOME value, arguments = []}
+
+  fun alternative_id ({id, ...} : narrowing_alternative) = id
+
+  fun alternative_of (Narrowing_sum_of_products alternatives) id =
+    case List.find (fn alternative => #id alternative = id) alternatives of
+        SOME alternative => alternative
+      | NONE => raise InvalidPath
+
+  fun exact_term shape id =
+    case #exact (alternative_of shape id) of
+        SOME value => value
+      | NONE => raise InvalidPath
+
   (* This is Narrowing_Engine.new.  A child position is obtained by
      appending its product coordinate, not by allocating a fresh name. *)
-  fun new position products =
-    indexed_map (fn (constructor, argument_types) =>
+  fun new position shape =
+    List.map (fn alternative =>
       Narrowing_constructor
-        (constructor,
+        (#id alternative,
          indexed_map (fn (index, ty) =>
-           dummy_variable (position @ [index]) ty) argument_types))
-      products
+           dummy_variable (position @ [index]) ty)
+           (#arguments alternative)))
+      (products_of shape)
 
   fun replace_nth values index replacements =
     let
@@ -115,12 +142,11 @@ structure Refute_Narrow = struct
     end
 
   fun refine (Narrowing_variable (position, ty)) [] =
-        new position (products_of ty)
+        new position ty
     | refine (Narrowing_variable _) position =
         raise InvalidPosition position
-    | refine (Narrowing_constructor (constructor, arguments)) position =
-        List.map (fn refined =>
-          Narrowing_constructor (constructor, refined))
+    | refine (Narrowing_constructor (id, arguments)) position =
+        List.map (fn refined => Narrowing_constructor (id, refined))
           (refineList arguments position)
 
   and refineList arguments (index :: position) =
@@ -134,20 +160,55 @@ structure Refute_Narrow = struct
         List.concat (List.map (fn value =>
           List.map (fn tail => value :: tail) (cartesian rest)) values)
 
-  (* The first result is the minimal completion used for certification.
-     Keeping the complete list is the strict transliteration of the
-     upstream total operation and is useful when that first completion
-     cannot be certified. *)
-  fun total (Narrowing_constructor (constructor, arguments)) =
-        List.map (fn completed =>
-          Narrowing_constructor (constructor, completed))
+  (* Retain the complete TASK_15 operation for engine-level clients. *)
+  fun total (Narrowing_constructor (id, arguments)) =
+        List.map (fn completed => Narrowing_constructor (id, completed))
           (cartesian (List.map total arguments))
     | total (Narrowing_variable (position, ty)) =
-        List.concat (List.map total (new position (products_of ty)))
+        List.concat (List.map total (new position ty))
 
-  fun flat_shape count =
+  (* Grounding needs only the lexicographically first completion.  Do not
+     implement this as [hd o total]: that constructs every Cartesian product
+     before returning, which is catastrophic even for char # char # char. *)
+  fun first_completion shape term =
+    let
+      fun complete current_shape
+            (Narrowing_constructor (id, arguments)) =
+            let
+              val alternative = alternative_of current_shape id
+            in
+              Option.map (fn completed =>
+                Narrowing_constructor (id, completed))
+                (complete_arguments
+                  (#arguments alternative) arguments)
+            end
+        | complete _
+            (Narrowing_variable (position, variable_shape)) =
+            (case products_of variable_shape of
+                 [] => NONE
+               | alternative :: _ =>
+                   complete variable_shape
+                     (Narrowing_constructor
+                       (#id alternative,
+                        indexed_map (fn (index, ty) =>
+                          dummy_variable (position @ [index]) ty)
+                          (#arguments alternative))))
+
+      and complete_arguments [] [] = SOME []
+        | complete_arguments (shape :: shapes) (argument :: arguments) =
+            (case complete shape argument of
+                 NONE => NONE
+               | SOME completed =>
+                   Option.map (fn rest => completed :: rest)
+                     (complete_arguments shapes arguments))
+        | complete_arguments _ _ = raise InvalidPath
+    in
+      complete shape term
+    end
+
+  fun flat_shape values =
     Narrowing_sum_of_products
-      (List.tabulate (Int.max (0, count), fn _ => []))
+      (indexed_map exact_alternative values)
 
   fun shape_failure ty reason = raise ShapeFailure (ty, reason)
 
@@ -161,13 +222,16 @@ structure Refute_Narrow = struct
 
       fun derive depth ty =
         case Refute_Gen.spec_of ty of
-            Refute_Gen.GenEnum values => flat_shape (length values)
+            Refute_Gen.GenEnum values => flat_shape values
           | Refute_Gen.GenNum kind =>
-              flat_shape (length (Refute_Gen.narrowing_terms kind depth))
+              flat_shape (Refute_Gen.narrowing_terms kind depth)
           | Refute_Gen.GenDatatype {constrs, ...} =>
               let
-                fun constructor_shape (_, []) = SOME []
-                  | constructor_shape (_, argument_types) =
+                fun constructor_shape
+                      (index, (_, [])) =
+                      SOME (indexed_alternative (index, []))
+                  | constructor_shape
+                      (index, (_, argument_types)) =
                       if depth = 0 then NONE
                       else
                         let
@@ -175,18 +239,29 @@ structure Refute_Narrow = struct
                             List.map (derive (depth - 1)) argument_types
                         in
                           if List.all non_empty argument_shapes then
-                            SOME argument_shapes
+                            SOME
+                              (indexed_alternative (index, argument_shapes))
                           else
                             NONE
                         end
               in
                 Narrowing_sum_of_products
-                  (List.mapPartial constructor_shape constrs)
+                  (List.mapPartial constructor_shape
+                    (indexed_map I constrs))
               end
           | Refute_Gen.GenFun _ =>
               shape_failure ty "function types require finitization"
           | Refute_Gen.GenCustom {enumerate = SOME enumerate, ...} =>
-              flat_shape (length (enumerate depth))
+              let
+                val values = enumerate depth
+                val _ = if List.all (fn value =>
+                    Type.compare (Term.type_of value, ty) = EQUAL) values
+                  then ()
+                  else shape_failure ty
+                    "custom exhaustive enumeration returned a mistyped value"
+              in
+                flat_shape values
+              end
           | Refute_Gen.GenCustom _ =>
               shape_failure ty
                 "custom generator has no exhaustive enumeration"
@@ -204,6 +279,65 @@ structure Refute_Narrow = struct
     NarrowingShape (shape_of depth ty)
     handle ShapeFailure (offending_ty, reason) =>
       Inapplicable [inapplicable_message offending_ty reason]
+
+  fun exact_alternative_term ty arguments value =
+    if null arguments andalso
+       Type.compare (Term.type_of value, ty) = EQUAL then value
+    else shape_failure ty "malformed exact narrowing alternative"
+
+  fun term_of_ground ty shape
+        (Narrowing_constructor (id, arguments)) =
+    let
+      val alternative = alternative_of shape id
+    in
+      case #exact alternative of
+          SOME value => exact_alternative_term ty arguments value
+        | NONE =>
+            (case Refute_Gen.spec_of ty of
+                 Refute_Gen.GenDatatype {constrs, ...} =>
+                   let
+                     val (head, argument_types) = List.nth (constrs, id)
+                     val rebuilt = ListPair.mapEq
+                       (fn ((argument_ty, argument_shape), argument) =>
+                         term_of_ground argument_ty argument_shape argument)
+                       (ListPair.zip
+                          (argument_types, #arguments alternative),
+                        arguments)
+                   in
+                     Term.list_mk_comb (head, rebuilt)
+                   end
+               | _ => shape_failure ty
+                   "narrowing constructor shape lost its exact value")
+    end
+    | term_of_ground ty _ (Narrowing_variable _) =
+        shape_failure ty "first_completion returned a partial term"
+
+  (* Reconstructed ffun/cfun values are ordinary functions.  Their minimal
+     completion is constant; first-order holes use [first_completion]
+     directly and never enumerate [total]'s Cartesian products. *)
+  fun minimal_term ty =
+    case Lib.total Type.dom_rng ty of
+        SOME (domain, range) =>
+          let
+            val result = minimal_term range
+            val argument = Term.variant (Term.free_vars_lr result)
+              (Term.mk_var ("x", domain))
+          in
+            Term.mk_abs (argument, result)
+          end
+      | NONE =>
+          let
+            fun at_depth depth =
+              let val shape = shape_of depth ty
+              in
+                case first_completion shape
+                  (Narrowing_variable ([], shape)) of
+                    SOME completed => term_of_ground ty shape completed
+                  | NONE => at_depth (depth + 1)
+              end
+          in
+            at_depth 0
+          end
 
   fun is_ground (Narrowing_variable _) = false
     | is_ground (Narrowing_constructor (_, arguments)) =
@@ -331,20 +465,20 @@ structure Refute_Narrow = struct
 
   fun value_of (Leaf result) = result
     | value_of (Variable (_, result, _, _, _)) = result
-    | value_of (Constructor (_, result, _, _)) = result
+    | value_of (Constructor (_, result, _, _, _)) = result
 
-  fun ball trees =
-    List.foldl (fn (subtree, result) =>
+  fun ball branches =
+    List.foldl (fn ((_, subtree), result) =>
       conj (result, value_of subtree))
-      (Eval {result = true, potential = false}) trees
+      (Eval {result = true, potential = false}) branches
 
-  fun bexists trees =
-    List.foldl (fn (subtree, result) =>
+  fun bexists branches =
+    List.foldl (fn ((_, subtree), result) =>
       disj (result, value_of subtree))
-      (Eval {result = false, potential = false}) trees
+      (Eval {result = false, potential = false}) branches
 
   fun position_of (V (position, _)) = position
-    | position_of (C (position, _)) = position
+    | position_of (C (position, _, _)) = position
 
   fun first_index predicate values =
     let
@@ -361,11 +495,12 @@ structure Refute_Narrow = struct
   fun find (Leaf Unevaluated) = []
     | find (Variable (_, _, position, ty, subtree)) =
         V (position, ty) :: find subtree
-    | find (Constructor (_, _, position, subtrees)) =
+    | find (Constructor (_, _, position, shape, branches)) =
         (case first_index
-           (fn subtree => value_of subtree = Unevaluated) subtrees of
+           (fn (_, subtree) => value_of subtree = Unevaluated) branches of
              SOME index =>
-               C (position, index) :: find (List.nth (subtrees, index))
+               let val (id, subtree) = List.nth (branches, index)
+               in C (position, index, id) :: find subtree end
            | NONE => raise NoUnevaluated)
     | find _ = raise NoUnevaluated
 
@@ -378,20 +513,20 @@ structure Refute_Narrow = struct
           Variable
             (quantifier, value_of subtree', position, ty, subtree')
         end
-    | update (C (_, index) :: edges) result
-        (Constructor (quantifier, _, position, subtrees)) =
+    | update (C (_, index, _) :: edges) result
+        (Constructor (quantifier, _, position, shape, branches)) =
         let
-          val subtree = List.nth (subtrees, index)
+          val (id, subtree) = List.nth (branches, index)
             handle Subscript => raise InvalidPath
           val subtree' = update edges result subtree
-          val subtrees' = List.take (subtrees, index) @
-            (subtree' :: List.drop (subtrees, index + 1))
+          val branches' = List.take (branches, index) @
+            ((id, subtree') :: List.drop (branches, index + 1))
           val aggregate =
             case quantifier of
-                Universal => ball subtrees'
-              | Existential => bexists subtrees'
+                Universal => ball branches'
+              | Existential => bexists branches'
         in
-          Constructor (quantifier, aggregate, position, subtrees')
+          Constructor (quantifier, aggregate, position, shape, branches')
         end
     | update _ _ _ = raise InvalidPath
 
@@ -401,17 +536,17 @@ structure Refute_Narrow = struct
         Variable
           (quantifier, result, position, ty,
            replace_tree replacement edges subtree)
-    | replace_tree replacement (C (_, index) :: edges)
-        (Constructor (quantifier, result, position, subtrees)) =
+    | replace_tree replacement (C (_, index, _) :: edges)
+        (Constructor (quantifier, result, position, shape, branches)) =
         let
-          val subtree = List.nth (subtrees, index)
+          val (id, subtree) = List.nth (branches, index)
             handle Subscript => raise InvalidPath
           val subtree' = replace_tree replacement edges subtree
         in
           Constructor
-            (quantifier, result, position,
-             List.take (subtrees, index) @
-               (subtree' :: List.drop (subtrees, index + 1)))
+            (quantifier, result, position, shape,
+             List.take (branches, index) @
+               ((id, subtree') :: List.drop (branches, index + 1)))
         end
     | replace_tree _ _ _ = raise InvalidPath
 
@@ -427,14 +562,17 @@ structure Refute_Narrow = struct
               (quantifier, result, position,
                Narrowing_sum_of_products products, subtree)) =
             let
-              fun branch argument_types =
-                List.foldr (fn ((index, ty), rest) =>
-                  Variable
-                    (quantifier, result, position @ [index], ty, rest))
-                  subtree (indexed_map I argument_types)
+              fun branch alternative =
+                (#id alternative,
+                 List.foldr (fn ((index, ty), rest) =>
+                   Variable
+                     (quantifier, result, position @ [index], ty, rest))
+                   subtree (indexed_map I (#arguments alternative)))
             in
               Constructor
-                (quantifier, result, position, List.map branch products)
+                (quantifier, result, position,
+                 Narrowing_sum_of_products products,
+                 List.map branch products)
             end
         | refine_variable _ = raise InvalidPath
     in
@@ -443,14 +581,14 @@ structure Refute_Narrow = struct
 
   fun map_edge_position transform (V (position, ty)) =
         V (transform position, ty)
-    | map_edge_position transform (C (position, index)) =
-        C (transform position, index)
+    | map_edge_position transform (C (position, index, id)) =
+        C (transform position, index, id)
 
   fun tail_position (_ :: rest) = rest
     | tail_position [] = raise InvalidPath
 
-  fun term_of position (C ([], constructor) :: edges) =
-        Narrowing_constructor (constructor, terms_of position edges)
+  fun term_of position (C ([], _, id) :: edges) =
+        Narrowing_constructor (id, terms_of position edges)
     | term_of position [V ([], ty)] =
         Narrowing_variable (position, ty)
     | term_of _ _ = raise InvalidPath
@@ -536,14 +674,14 @@ structure Refute_Narrow = struct
           (terms,
            Variable (quantifier, result, position, ty, subtree))
     | termlist_of prefix
-        (terms, Constructor (quantifier, result, position, subtrees)) =
+        (terms, Constructor (quantifier, result, position, shape, branches)) =
         if is_prefix prefix position then
           let
             val index =
-              case first_index (is_false o value_of) subtrees of
+              case first_index (is_false o value_of o #2) branches of
                   SOME index => index
                 | NONE => raise InvalidPath
-            val selected = List.nth (subtrees, index)
+            val (id, selected) = List.nth (branches, index)
             fun fixpoint argument state =
               let
                 val next =
@@ -554,11 +692,11 @@ structure Refute_Narrow = struct
               end
             val (arguments, residual) = fixpoint 0 ([], selected)
           in
-            (terms @ [Narrowing_constructor (index, arguments)], residual)
+            (terms @ [Narrowing_constructor (id, arguments)], residual)
           end
         else
           (terms,
-           Constructor (quantifier, result, position, subtrees))
+           Constructor (quantifier, result, position, shape, branches))
 
   fun alltermlist_of prefix (terms, Leaf result) =
         [(terms, Leaf result)]
@@ -571,12 +709,11 @@ structure Refute_Narrow = struct
           [(terms,
             Variable (quantifier, result, position, ty, subtree))]
     | alltermlist_of prefix
-        (terms, Constructor (quantifier, result, position, subtrees)) =
+        (terms, Constructor (quantifier, result, position, shape, branches)) =
         if is_prefix prefix position then
           let
-            val indexed = indexed_map I subtrees
-            val false_subtrees = List.filter
-              (fn (_, subtree) => is_false (value_of subtree)) indexed
+            val false_branches = List.filter
+              (fn (_, subtree) => is_false (value_of subtree)) branches
 
             fun fixpoint argument state =
               let
@@ -594,20 +731,19 @@ structure Refute_Narrow = struct
                         (fixpoint (argument + 1)) many)
               end
 
-            fun extract (index, subtree) =
+            fun extract (id, subtree) =
               List.map (fn (arguments, residual) =>
-                (terms @ [Narrowing_constructor (index, arguments)],
-                 residual))
+                (terms @ [Narrowing_constructor (id, arguments)], residual))
                 (fixpoint 0 ([], subtree))
           in
-            List.concat (List.map extract false_subtrees)
+            List.concat (List.map extract false_branches)
           end
         else
           [(terms,
-            Constructor (quantifier, result, position, subtrees))]
+            Constructor (quantifier, result, position, shape, branches))]
 
   fun quantifier_of (Variable (quantifier, _, _, _, _)) = quantifier
-    | quantifier_of (Constructor (quantifier, _, _, _)) = quantifier
+    | quantifier_of (Constructor (quantifier, _, _, _, _)) = quantifier
     | quantifier_of (Leaf _) = raise InvalidPath
 
   fun example_of _ (Leaf _) = EmptyExample
