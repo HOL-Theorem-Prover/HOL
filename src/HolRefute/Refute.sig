@@ -38,6 +38,7 @@ signature Refute = sig
   type substrate = Refute_Eval.substrate
   type custom_gen = Refute_Gen.custom_gen
   type rng = Refute_Gen.rng
+  type term_postprocessor = term -> term
 
   val refute        : config -> term -> outcome
   val refute_def    : term -> outcome
@@ -64,6 +65,10 @@ signature Refute = sig
     backend -> certainty_ceiling -> unit
   val register_substrate : substrate -> unit
   val register_generator : hol_type -> custom_gen -> unit
+  val register_term_postprocessor :
+    hol_type -> term_postprocessor -> unit
+  val lookup_term_postprocessor :
+    hol_type -> term_postprocessor option
   val register_codatatype :
     {tyop : {Thy : string, Tyop : string},
      case_const : term, constructors : term list} -> unit

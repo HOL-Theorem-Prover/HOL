@@ -558,7 +558,8 @@ fun run_instance deadline started (config : Refute_Core.config)
            nonsel_names = #nonsel_names extension,
            rel_table = #rel_table extension,
            bounds = bounds}
-        val {raw = reconstructed, displayed} = MFM.reconstruct_both
+        val {raw = reconstructed, displayed, postprocessors} =
+          MFM.reconstruct_both
           {context = context, formats = #format mf,
            scope = #scope arguments, atoms = #atoms arguments,
            special_funs = #special_funs arguments,
@@ -589,7 +590,8 @@ fun run_instance deadline started (config : Refute_Core.config)
             MFM.Drop => NONE
           | MFM.Keep semantic_cex =>
               let val cex =
-                MFM.display_counterexample displayed semantic_cex
+                MFM.display_counterexample postprocessors displayed
+                  semantic_cex
               in
                 if #genuine_only config andalso
                    certainty_is_potential (#certainty cex)

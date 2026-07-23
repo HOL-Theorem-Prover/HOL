@@ -21,6 +21,7 @@ structure Refute :> Refute = struct
   type substrate = Refute_Eval.substrate
   type custom_gen = Refute_Gen.custom_gen
   type rng = Refute_Gen.rng
+  type term_postprocessor = term -> term
 
   (* Install the native extractor and register the built-in backends through
      this public entry point.  These explicit references also make both
@@ -108,13 +109,21 @@ structure Refute :> Refute = struct
           | Potential reasons => Refute_Core.Potential reasons)
   val register_substrate = Refute_Eval.register_substrate
   val register_generator = Refute_Gen.register_generator
-  val register_codatatype = Refute_ModelFinder_HOL.register_codatatype
+  val register_term_postprocessor =
+    Refute_ModelFinder_Model.register_term_postprocessor
+  val lookup_term_postprocessor =
+    Refute_ModelFinder_Model.lookup_term_postprocessor
+  fun register_codatatype registration =
+    Refute_ModelFinder_HOL.with_registration_lock (fn () =>
+      Refute_ModelFinder_HOL.register_codatatype registration)
   val register_quotient = Refute_ModelFinder_HOL.register_quotient
   val register_typedef = Refute_ModelFinder_HOL.register_typedef
   val register_frac_type = Refute_ModelFinder_HOL.register_frac_type
   val register_frac_type_rat =
-    Refute_ModelFinder_HOL.register_frac_type_rat
-  val register_ersatz = Refute_ModelFinder_HOL.register_ersatz
+    Refute_ModelFinder_Model.register_frac_type_rat
+  fun register_ersatz registration =
+    Refute_ModelFinder_HOL.with_registration_lock (fn () =>
+      Refute_ModelFinder_HOL.register_ersatz registration)
   val abstract_generator = Refute_Gen.abstract_generator
 
   val export_refute_simp = #export Refute_Core.refute_simp

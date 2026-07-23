@@ -145,10 +145,24 @@ Registrations are session-local ML state and create no theory content:
 * `Refute.register_typedef {ty, abs, rep, absrep_thm}` registers an existing
   HOL typedef.  `absrep_thm` must be its exported conjunction of the two
   bijection laws and must agree with the type's `<tyop>_TY_DEF` theorem.
+* `Refute.register_term_postprocessor pattern f` installs a bottom-up,
+  display-only model-value transformation for every type matched by
+  `pattern`; `f` must preserve the term's type.  Re-registering the same
+  pattern replaces rather than duplicates it.  All matching transformations
+  compose: general patterns run before strictly more specific patterns, and
+  otherwise older registrations run before newer ones.  Thus a specific or
+  later incomparable transformation has final precedence.  One registry
+  snapshot is used for an entire model, callback failures or type changes
+  leave that display term unchanged, and certification always uses untouched
+  raw terms.  `Refute.lookup_term_postprocessor ty` reports this composed
+  transformation.  The opt-in `Refute.register_frac_type_rat ()` atomically
+  installs both the Frac encoding and the built-in rational transformation,
+  which displays reconstructed Frac atoms with `rat_cons`'s `//` syntax.
 
-All registration types use distinct type variables as parameters.  Abs, rep,
-case, and constructor terms must be existing constants.  A later compatible
-registration for the same type operator replaces the session entry.
+Structural registration types use distinct type variables as parameters.
+Abs, rep, case, and constructor terms must be existing constants.  A later
+compatible registration for the same type operator replaces the session
+entry.
 
 Kodkodi support is Unix-only and requires a Java runtime.  Obtain
 `kodkodi-1.5.7.tar.gz` from the Isabelle components mirror at

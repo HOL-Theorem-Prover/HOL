@@ -23,6 +23,17 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
 
   datatype verdict = Keep of Refute_Core.counterexample | Drop
 
+  type term_postprocessor = term -> term
+  type term_postprocessor_snapshot
+  val register_term_postprocessor :
+    hol_type -> term_postprocessor -> unit
+  val lookup_term_postprocessor :
+    hol_type -> term_postprocessor option
+  val snapshot_term_postprocessors : unit -> term_postprocessor_snapshot
+  val restore_term_postprocessors : term_postprocessor_snapshot -> unit
+  val postprocess_term : term_postprocessor_snapshot -> term -> term
+  val register_frac_type_rat : unit -> unit
+
   val term_for_rep :
     {scope : scope,
      atoms : (hol_type option * string list) list,
@@ -85,11 +96,14 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      nonsel_names : nut list,
      rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
      bounds : raw_bound list} ->
-    {raw : reconstruction, displayed : reconstruction}
+    {raw : reconstruction,
+     displayed : reconstruction,
+     postprocessors : term_postprocessor_snapshot}
 
   val model_report : reconstruction -> Refute_Core.model_report
   val display_counterexample :
-    reconstruction -> Refute_Core.counterexample -> Refute_Core.counterexample
+    term_postprocessor_snapshot -> reconstruction ->
+    Refute_Core.counterexample -> Refute_Core.counterexample
   val assignment_operator : string -> string
   val certification_env :
     (term * term) list -> (term * term) list option
@@ -141,6 +155,193 @@ type reconstruction =
    codatatypes_ok : bool}
 
 datatype verdict = Keep of Refute_Core.counterexample | Drop
+
+type term_postprocessor = term -> term
+
+type term_postprocessor_entry =
+  {pattern : hol_type, postprocessor : term_postprocessor, serial : int}
+type term_postprocessor_snapshot =
+  {entries : term_postprocessor_entry list, next_serial : int}
+
+(* Model display extensions are process-local ML data.  The registry uses
+   type patterns: every pattern that matches an actual type participates.
+   Composition is deterministic: general patterns run before strictly more
+   specific patterns, and otherwise older registrations run before newer
+   ones.  Re-registering an alpha-equivalent pattern replaces its callback
+   without adding a duplicate or changing its established position. *)
+val term_postprocessors = ref
+  ({entries = [], next_serial = 0} : term_postprocessor_snapshot)
+
+fun with_term_postprocessor_lock body = MFH.with_registration_lock body
+
+fun snapshot_term_postprocessors () =
+  with_term_postprocessor_lock (fn () => !term_postprocessors)
+
+fun restore_term_postprocessors snapshot =
+  with_term_postprocessor_lock (fn () => term_postprocessors := snapshot)
+
+fun pattern_matches pattern actual =
+  Lib.can (Type.match_type pattern) actual
+
+fun same_pattern left right =
+  pattern_matches left right andalso pattern_matches right left
+
+fun strictly_more_general left right =
+  pattern_matches left right andalso not (pattern_matches right left)
+
+fun matching_postprocessors
+      ({entries, ...} : term_postprocessor_snapshot) actual =
+  let
+    val matches = List.filter (fn {pattern, ...} =>
+      pattern_matches pattern actual) entries
+    fun before ({serial = left, ...} : term_postprocessor_entry)
+          ({serial = right, ...} : term_postprocessor_entry) = left < right
+    fun take_first candidate [] = (candidate, [])
+      | take_first candidate (entry :: rest) =
+          let val (chosen, others) = take_first entry rest in
+            if before candidate chosen then (candidate, chosen :: others)
+            else (chosen, candidate :: others)
+          end
+    fun has_more_general
+          (candidate : term_postprocessor_entry)
+          (other : term_postprocessor_entry) =
+      strictly_more_general (#pattern other) (#pattern candidate)
+    fun order ([] : term_postprocessor_entry list) result = rev result
+      | order remaining result =
+          let
+            val candidates = List.filter (fn candidate =>
+              not (List.exists (has_more_general candidate) remaining))
+              remaining
+            val (chosen, _) = take_first (hd candidates) (tl candidates)
+            val rest = List.filter (fn entry =>
+              #serial entry <> #serial chosen) remaining
+          in
+            order rest (#postprocessor chosen :: result)
+          end
+  in
+    order matches []
+  end
+
+fun safe_postprocess postprocessor candidate =
+  let val processed = postprocessor candidate in
+    if Util.same_type (Term.type_of processed) (Term.type_of candidate) then
+      processed
+    else
+      candidate
+  end
+  handle error =>
+    if Exn.is_interrupt error then Exn.reraise error else candidate
+
+fun composed_postprocessor snapshot ty =
+  case matching_postprocessors snapshot ty of
+      [] => NONE
+    | postprocessors => SOME (fn term =>
+        List.foldl (fn (postprocessor, candidate) =>
+          safe_postprocess postprocessor candidate) term postprocessors)
+
+fun lookup_term_postprocessor ty =
+  composed_postprocessor (snapshot_term_postprocessors ()) ty
+
+fun register_term_postprocessor pattern postprocessor =
+  with_term_postprocessor_lock (fn () =>
+    let
+      val {entries, next_serial} = !term_postprocessors
+      fun replace [] =
+            ([{pattern = pattern, postprocessor = postprocessor,
+               serial = next_serial}], next_serial + 1)
+        | replace ((entry as {pattern = old, serial, ...}) :: rest) =
+            if same_pattern old pattern then
+              ({pattern = pattern, postprocessor = postprocessor,
+                serial = serial} :: rest, next_serial)
+            else
+              let val (tail, next) = replace rest
+              in (entry :: tail, next) end
+      val (entries, next_serial) = replace entries
+    in
+      term_postprocessors :=
+        {entries = entries, next_serial = next_serial}
+    end)
+
+fun postprocess_term snapshot term =
+  let
+    fun apply candidate =
+      case composed_postprocessor snapshot (Term.type_of candidate) of
+          SOME postprocessor => postprocessor candidate
+        | NONE => candidate
+    fun descend candidate =
+      apply
+        (if Term.is_abs candidate then
+           let val (variable, body) = Term.dest_abs candidate
+           in Term.mk_abs (variable, descend body) end
+         else
+           case Lib.total Term.dest_comb candidate of
+               SOME (function, argument) =>
+                 Term.mk_comb (descend function, descend argument)
+             | NONE => candidate)
+  in
+    if null (#entries snapshot) then term else descend term
+  end
+
+fun frac_atom_to_rat term =
+  case HolKernel.strip_comb term of
+      (constructor, [pair]) =>
+        if MFH.raw_constructor_name constructor = "frac$abs_frac" then
+          let
+            val (numerator, denominator) = pairSyntax.dest_pair pair
+            val rat_cons = Term.prim_mk_const
+              {Thy = "rat", Name = "rat_cons"}
+          in
+            if Util.same_type (Term.type_of numerator) MFH.int_type andalso
+               Util.same_type (Term.type_of denominator) MFH.int_type then
+              let
+                val denominator =
+                  if Arbint.compare
+                       (intSyntax.int_of_term numerator, Arbint.zero) = EQUAL
+                  then intSyntax.term_of_int Arbint.one
+                  else denominator
+              in
+                Term.list_mk_comb (rat_cons, [numerator, denominator])
+              end
+            else
+              term
+          end handle HOL_ERR _ => term
+        else
+          term
+    | _ => term
+
+fun prepare_rat_term_postprocessor () =
+  let
+    val pattern = Type.mk_thy_type
+      {Thy = "rat", Tyop = "rat", Args = []}
+    val {entries, next_serial} = !term_postprocessors
+    fun other {pattern = old, ...} = not (same_pattern old pattern)
+    val previous = List.find (fn {pattern = old, ...} =>
+      same_pattern old pattern) entries
+    val serial =
+      case previous of SOME {serial, ...} => serial | NONE => next_serial
+    val next = if Option.isSome previous then next_serial else next_serial + 1
+    val updated =
+      {entries = {pattern = pattern, postprocessor = frac_atom_to_rat,
+                  serial = serial} :: List.filter other entries,
+       next_serial = next}
+  in
+    fn () => term_postprocessors := updated
+  end
+
+fun register_frac_type_rat () =
+  with_term_postprocessor_lock (fn () =>
+    let
+      (* Frac validation and all list construction happen before either
+         registry is changed.  Both following commits are callback-free and
+         execute while all term/Frac registrations share the same mutex. *)
+      val commit_frac =
+        MFH.prepare_frac_type_unlocked MFH.rat_frac_registration
+      val commit_postprocessor = prepare_rat_term_postprocessor ()
+    in
+      Thread_Attributes.uninterruptible (fn _ => fn () =>
+        (commit_frac ();
+         commit_postprocessor ())) ()
+    end)
 
 (* Per-type running counters plus the numbers already handed out, so
    that numbering an atom is a pair of lookups rather than a scan. *)
@@ -1368,6 +1569,10 @@ fun reconstruct_with formatting
       {scope, atoms, special_funs, real_frees, eval_terms,
        free_names, sel_names, nonsel_names, rel_table, bounds} =
   let
+    (* One immutable callback snapshot governs the entire displayed model.
+       Raw terms below never consult it and remain suitable for
+       certification. *)
+    val postprocessors = snapshot_term_postprocessors ()
     val context =
       {scope = scope, atoms = atoms, sel_names = sel_names,
        rel_table = rel_table, bounds = bounds, pool = new_atom_pool ()}
@@ -1527,13 +1732,31 @@ fun reconstruct_with formatting
     val codatatypes_ok = #bisim_depth scope >= 0 orelse
       List.all wellformed codatatypes
     val (bindings, display_bindings) = ListPair.unzip (map binding real_frees)
-    fun result bindings evals skolems consts =
+    fun result bindings evals skolems consts types =
       {bindings = bindings, evals = rev evals, skolems = rev skolems,
        consts = rev consts, types = types, codatatypes_ok = codatatypes_ok}
+    fun process_pair (key, value) =
+      (key, postprocess_term postprocessors value)
+    fun process_skolem (name, value) =
+      (name, postprocess_term postprocessors value)
+    fun process_const (left, operator, value) =
+      (left, operator, postprocess_term postprocessors value)
+    fun process_type (ty, values, complete) =
+      (ty, map (postprocess_term postprocessors) values, complete)
+    fun displayed_result () = result
+      (map process_pair display_bindings)
+      (map process_pair display_evals)
+      (map process_skolem display_skolems)
+      (map process_const display_consts)
+      (map process_type types)
   in
-    {raw = result bindings evals skolems consts,
-     displayed = result display_bindings display_evals display_skolems
-       display_consts}
+    {raw = result bindings evals skolems consts types,
+     displayed =
+       (case formatting of
+            NONE => result display_bindings display_evals display_skolems
+              display_consts types
+          | SOME _ => displayed_result ()),
+     postprocessors = postprocessors}
   end
 
 fun reconstruct arguments = #raw (reconstruct_with NONE arguments)
@@ -1552,7 +1775,7 @@ fun reconstruct_formatted arguments = #displayed (reconstruct_both arguments)
 fun model_report ({skolems, consts, types, ...} : reconstruction) =
   {skolems = skolems, consts = consts, types = types}
 
-fun display_counterexample
+fun display_counterexample postprocessors
       (reconstructed : reconstruction)
       (cex : Refute_Core.counterexample) : Refute_Core.counterexample =
   let
@@ -1564,12 +1787,13 @@ fun display_counterexample
               (key, displayed)
             else if Util.same_type
               (Term.type_of value) (Term.type_of displayed) then
-              (key, value)
+              (key, postprocess_term postprocessors value)
             else
-              (key, Option.getOpt
-                (Lib.total (format_fun (Term.type_of displayed)) value,
-                 displayed))
-        | NONE => (key, value)
+              (key, postprocess_term postprocessors
+                (Option.getOpt
+                  (Lib.total (format_fun (Term.type_of displayed)) value,
+                   displayed)))
+        | NONE => (key, postprocess_term postprocessors value)
   in
     {backend = #backend cex, substrate = #substrate cex,
      certainty = #certainty cex,

@@ -1819,8 +1819,18 @@ val _ = require_msg
     "quotient or typedef public registration validation failed")
   (fn () => ()) ()
 
-fun with_frac_registry_restored body =
+fun with_term_postprocessors_restored body =
   let
+    val saved =
+      Refute_ModelFinder_Model.snapshot_term_postprocessors ()
+    fun restore () =
+      Refute_ModelFinder_Model.restore_term_postprocessors saved
+  in
+    Portable.finally restore body ()
+  end
+
+fun with_frac_registry_restored body =
+  with_term_postprocessors_restored (fn () => let
     val saved_frac = !MFH.frac_registry
     val saved_ersatz = !MFH.ersatz_registry
     val saved_quotients = !MFH.quotient_registry
@@ -1836,7 +1846,7 @@ fun with_frac_registry_restored body =
        MFH.typedef_harvest_misses := saved_typedef_misses)
   in
     Portable.finally restore body ()
-  end
+  end)
 
 fun mf_frac_registration () =
   with_frac_registry_restored (fn () => let
@@ -2007,6 +2017,114 @@ fun mf_frac_registration () =
 
 val _ = require_msg (check_result mf_frac_registration) (fn () =>
   "frac registration, synthetic typedef, or ersatz merge failed")
+  (fn () => ()) ()
+
+fun mf_harvest_frac_registration_race () =
+  with_frac_registry_restored (fn () => let
+    val operator = {Thy = "rat", Tyop = "rat"}
+    val key = {Thy = "rat", Name = "rat"}
+    val registration : MFH.frac_info = {tyop = operator, ersatz = []}
+    val saved_threads = Multithreading.max_threads ()
+    fun restore_threads () =
+      Multithreading.max_threads_update saved_threads
+    fun other_quotient ({qty, ...} : MFH.quotient_info) =
+      not (MFH.same_type_operator (MFH.type_operator_of qty) operator)
+    fun other_typedef ({ty, ...} : MFH.typedef_info) =
+      not (MFH.same_type_operator (MFH.type_operator_of ty) operator)
+    fun other_frac ({tyop, ...} : MFH.frac_info) =
+      not (MFH.same_type_operator tyop operator)
+    fun reset () = MFH.with_registration_lock (fn () =>
+      (MFH.quotient_registry :=
+         List.filter other_quotient (!MFH.quotient_registry);
+       MFH.typedef_registry :=
+         List.filter other_typedef (!MFH.typedef_registry);
+       MFH.frac_registry := List.filter other_frac (!MFH.frac_registry);
+       MFH.quotient_harvest_misses :=
+         KNametab.delete_safe key (!MFH.quotient_harvest_misses);
+       MFH.typedef_harvest_misses := KNametab.update
+         (key, (29, [("rat", 29)])) (!MFH.typedef_harvest_misses)))
+    fun counts_unlocked () =
+      (length (List.filter (not o other_quotient)
+         (!MFH.quotient_registry)),
+       length (List.filter (not o other_typedef) (!MFH.typedef_registry)),
+       length (List.filter (not o other_frac) (!MFH.frac_registry)))
+    fun frac_state_unlocked () =
+      counts_unlocked () = (0, 0, 1) andalso
+      not (Option.isSome
+        (KNametab.lookup (!MFH.quotient_harvest_misses) key)) andalso
+      not (Option.isSome
+        (KNametab.lookup (!MFH.typedef_harvest_misses) key))
+    (* The first worker owns the registration mutex before the second is
+       released.  Thus each run fixes the linearization order rather than
+       merely hoping that repeated racing happens to exercise both orders. *)
+    fun interleave first second =
+      let
+        val barrier_mutex = Mutex.mutex ()
+        val barrier = ConditionVar.conditionVar ()
+        val owner_ready = ref false
+        val contender_ready = ref false
+        fun mark flag =
+          Multithreading.synchronized "Refute registration race mark"
+            barrier_mutex (fn () =>
+              (flag := true; ConditionVar.broadcast barrier))
+        fun wait flag =
+          Multithreading.synchronized "Refute registration race wait"
+            barrier_mutex (fn () =>
+              let
+                fun loop () =
+                  if !flag then ()
+                  else (ConditionVar.wait (barrier, barrier_mutex); loop ())
+              in
+                loop ()
+              end)
+        val owner = Future.fork (fn () =>
+          MFH.with_registration_lock (fn () =>
+            (mark owner_ready; wait contender_ready; first ())))
+        val _ = wait owner_ready
+        val contender = Future.fork (fn () =>
+          (mark contender_ready; second ()))
+      in
+        case Future.join_results [owner, contender] of
+            [Exn.Res left, Exn.Res right] => left andalso right
+          | _ => false
+      end
+    fun seed_quotient_miss () =
+      MFH.quotient_harvest_misses := KNametab.update
+        (key, (29, [("rat", 29)])) (!MFH.quotient_harvest_misses)
+    fun harvest_first () =
+      let val harvested = MFH.harvest_quotient_unlocked ``:rat`` in
+        seed_quotient_miss ();
+        harvested andalso counts_unlocked () = (1, 0, 0)
+      end
+    fun frac_first () =
+      (seed_quotient_miss ();
+       MFH.register_frac_type_unlocked registration;
+       frac_state_unlocked ())
+    fun final_frac_state () =
+      MFH.with_registration_lock frac_state_unlocked
+    fun body () =
+      let
+        val _ = Multithreading.max_threads_update
+          (Int.max (3, saved_threads))
+        val _ = reset ()
+        val harvest_then_frac = interleave harvest_first (fn () =>
+          (Refute.register_frac_type registration; true))
+        val first_final = final_frac_state ()
+        val _ = reset ()
+        val frac_then_harvest = interleave frac_first (fn () =>
+          not (MFH.harvest_quotient ``:rat``))
+        val second_final = final_frac_state ()
+      in
+        harvest_then_frac andalso first_final andalso
+        frac_then_harvest andalso second_final
+      end
+  in
+    Portable.finally restore_threads body ()
+  end)
+
+val _ = require_msg
+  (check_result mf_harvest_frac_registration_race) (fn () =>
+    "barrier-controlled harvest/Frac race left a conflicting classification")
   (fn () => ()) ()
 
 fun mf_lazy_db_harvest () =
@@ -6163,9 +6281,11 @@ fun mf_format_grouping_goldens () =
     val exact_reconstruction : MFM.reconstruction =
       {bindings = [], evals = [(exact_key, ``0 : num``)],
        skolems = [], consts = [], types = [], codatatypes_ok = true}
+    val postprocessors = MFM.snapshot_term_postprocessors ()
     val exact_eval_preserved =
       case #evals
-        (MFM.display_counterexample exact_reconstruction exact_cex) of
+        (MFM.display_counterexample postprocessors exact_reconstruction
+          exact_cex) of
           [(_, value)] => Term.aconv value ``7 : num``
         | _ => false
     val unknown_reconstruction : MFM.reconstruction =
@@ -6174,7 +6294,8 @@ fun mf_format_grouping_goldens () =
        skolems = [], consts = [], types = [], codatatypes_ok = true}
     val displayed_unknown_preserved =
       case #evals
-        (MFM.display_counterexample unknown_reconstruction exact_cex) of
+        (MFM.display_counterexample postprocessors unknown_reconstruction
+          exact_cex) of
           [(_, value)] =>
             (case Lib.total Term.dest_var value of
                  SOME (name, _) => name = "?"
@@ -7382,6 +7503,181 @@ val _ = require_msg (check_result mf_model_atom_override) (fn () =>
   "model reconstruction did not honor the atoms override")
   (fn () => ()) ()
 
+fun mf_term_postprocessor_registry () =
+  with_term_postprocessors_restored (fn () => let
+    val absent_ty = ``:zoo_univ``
+    val absent = not (Option.isSome
+      (Refute.lookup_term_postprocessor absent_ty))
+    val raw_absent = Term.mk_var ("raw-absent", absent_ty)
+    val absent_falls_through = Term.aconv raw_absent
+      (MFM.postprocess_term (MFM.snapshot_term_postprocessors ())
+        raw_absent)
+    val trace = ref ([] : string list)
+    fun record label term = (trace := !trace @ [label]; term)
+    val _ = Refute.register_term_postprocessor ``:num list``
+      (record "specific-old")
+    val _ = Refute.register_term_postprocessor ``:'a`` (record "general")
+    val _ = Refute.register_term_postprocessor ``:'a list``
+      (record "list-old")
+    (* Alpha-equivalent and exact repetitions replace in place. *)
+    val _ = Refute.register_term_postprocessor ``:'b list``
+      (record "list-new")
+    val _ = Refute.register_term_postprocessor ``:num list``
+      (record "specific-new")
+    val composed =
+      case Refute.lookup_term_postprocessor ``:num list`` of
+          SOME postprocessor =>
+            (ignore (postprocessor ``[] : num list``);
+             !trace = ["general", "list-new", "specific-new"])
+        | NONE => false
+    val bad_type_safe =
+      let
+        val _ = Refute.register_term_postprocessor ``:num``
+          (fn _ => boolSyntax.T)
+      in
+        case Refute.lookup_term_postprocessor ``:num`` of
+            SOME postprocessor => Term.aconv (postprocessor ``3``) ``3``
+          | NONE => false
+      end
+    val exception_safe =
+      let
+        val _ = Refute.register_term_postprocessor ``:bool``
+          (fn _ => raise Fail "display callback")
+      in
+        case Refute.lookup_term_postprocessor ``:bool`` of
+            SOME postprocessor => Term.aconv (postprocessor ``T``) ``T``
+          | NONE => false
+      end
+  in
+    absent andalso absent_falls_through andalso composed andalso
+    bad_type_safe andalso exception_safe
+  end)
+
+val _ = require_msg
+  (check_result mf_term_postprocessor_registry) (fn () =>
+    "term-postprocessor patterns, precedence, idempotence, or safety failed")
+  (fn () => ()) ()
+
+fun mf_term_postprocessor_restore_is_exception_safe () =
+  let
+    val ty = ``:zoo_univ``
+    val absent_before = not (Option.isSome
+      (Refute.lookup_term_postprocessor ty))
+    val raised =
+      ((with_term_postprocessors_restored (fn () =>
+          (Refute.register_term_postprocessor ty (fn term => term);
+           raise Fail "restore pin")); false)
+       handle Fail "restore pin" => true | _ => false)
+  in
+    absent_before andalso raised andalso
+    not (Option.isSome (Refute.lookup_term_postprocessor ty))
+  end
+
+val _ = require_msg
+  (check_result mf_term_postprocessor_restore_is_exception_safe) (fn () =>
+    "term-postprocessor test snapshot was not restored after an exception")
+  (fn () => ()) ()
+
+fun mf_term_postprocessor_traversal () =
+  with_term_postprocessors_restored (fn () => let
+    val saw_abs = ref false
+    val saw_comb = ref false
+    val saw_any = ref false
+    fun inspect term =
+      (if Term.is_abs term then saw_abs := true else ();
+       if Term.is_comb term then saw_comb := true else ();
+       case Lib.total Term.dest_var term of
+           SOME ("?", ty) =>
+             (saw_any := true; Term.mk_var ("any-output", ty))
+         | SOME ("nested", ty) => Term.mk_var ("visited", ty)
+         | _ => term)
+    val _ = Refute.register_term_postprocessor ``:'a`` inspect
+    val snapshot = MFM.snapshot_term_postprocessors ()
+    val nested = Term.mk_abs
+      (Term.mk_var ("bound", ``:num``),
+       pairSyntax.mk_pair
+         (Term.mk_var ("nested", ``:num``),
+          optionSyntax.mk_some (Term.mk_var ("nested", ``:bool``))))
+    val traversed = MFM.postprocess_term snapshot nested
+    val (_, body) = Term.dest_abs traversed
+    val (left, right) = pairSyntax.dest_pair body
+    val nested_ok = variable_named "visited" left andalso
+      variable_named "visited" (optionSyntax.dest_some right)
+    val any_ty = ``:zoo_univ``
+    val any_free = Term.mk_var ("any_free", any_ty)
+    val any_name = MFNT.FreeName ("any_free", any_ty, MFR.Any)
+    val any_scope = mf_translation_scope [(any_ty, 1)] []
+    val {raw, displayed, ...} = MFM.reconstruct_both
+      {context = mf_hol_context, formats = [], scope = any_scope,
+       atoms = [(NONE, [])], special_funs = [], real_frees = [any_free],
+       eval_terms = [], free_names = [any_name], sel_names = [],
+       nonsel_names = [], rel_table = MFNT.NameTable.empty, bounds = []}
+    val any_ok =
+      case (#bindings raw, #bindings displayed) of
+          ([(_, raw_value)], [(_, shown_value)]) =>
+            variable_named "?" raw_value andalso
+            variable_named "any-output" shown_value
+        | _ => false
+  in
+    !saw_abs andalso !saw_comb andalso !saw_any andalso
+    nested_ok andalso any_ok
+  end)
+
+val _ = require_msg (check_result mf_term_postprocessor_traversal) (fn () =>
+  "postprocessing missed nested, abstraction-root, or Any display terms")
+  (fn () => ()) ()
+
+fun mf_term_postprocessor_certification_isolation () =
+  with_term_postprocessors_restored (fn () => let
+    val x = Term.mk_var ("cert_x", ``:num``)
+    val y = Term.mk_var ("cert_y", ``:num``)
+    val scope = mf_translation_scope [(``:num``, 2)] []
+    val offset = MFS.offset_of_type (#ofs scope) ``:num``
+    val representation = MFR.Atom (2, offset)
+    val x_name = MFNT.FreeName ("cert_x", ``:num``, representation)
+    val y_name = MFNT.FreeName ("cert_y", ``:num``, representation)
+    val (_, _, rel_table) = MFNT.rename_free_vars [x_name, y_name]
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+    val first = ref true
+    fun malicious _ =
+      (if !first then
+         (first := false;
+          Refute.register_term_postprocessor ``:num`` (fn term => term))
+       else ();
+       ``1 : num``)
+    val _ = Refute.register_term_postprocessor ``:num`` malicious
+    val {raw, displayed, ...} = MFM.reconstruct_both
+      {context = mf_hol_context, formats = [], scope = scope,
+       atoms = [(NONE, [])], special_funs = [], real_frees = [x, y],
+       eval_terms = [], free_names = [x_name, y_name], sel_names = [],
+       nonsel_names = [], rel_table = rel_table,
+       bounds = [(MFNT.the_rel rel_table x_name, [[offset]]),
+                 (MFNT.the_rel rel_table y_name, [[offset]])]}
+    val separated =
+      case (#bindings raw, #bindings displayed) of
+          ([(_, raw_x), (_, raw_y)], [(_, shown_x), (_, shown_y)]) =>
+            List.all (fn value => Term.aconv value ``0 : num``)
+              [raw_x, raw_y] andalso
+            List.all (fn value => Term.aconv value ``1 : num``)
+              [shown_x, shown_y]
+        | _ => false
+    val base : Refute_Core.counterexample =
+      {backend = "kodkod", substrate = "kodkod",
+       certainty = Refute_Core.Potential [], bindings = [], evals = [],
+       cert = NONE, scope = SOME [(``:num``, 2)], model = NONE, stats = []}
+    val verdict = MFM.certify
+      {executable = true, original = boolSyntax.mk_eq (x, ``0 : num``),
+       eval_terms = [], reconstruction = raw, cex = base, sound = false,
+       genuine_means_genuine = false, reasons = []}
+  in
+    separated andalso (case verdict of MFM.Drop => true | _ => false)
+  end)
+
+val _ = require_msg
+  (check_result mf_term_postprocessor_certification_isolation) (fn () =>
+    "a malicious display callback contaminated certification terms")
+  (fn () => ()) ()
+
 fun mf_model_datatype_golden () =
   let
     val list_ty = ``:num list``
@@ -7420,6 +7716,141 @@ fun mf_model_datatype_golden () =
 
 val _ = require_msg (check_result mf_model_datatype_golden) (fn () =>
   "datatype reconstruction from discriminator/selector tuples changed")
+  (fn () => ()) ()
+
+fun mf_model_frac_display_golden () =
+  with_frac_registry_restored (fn () => let
+    val _ = Refute.register_frac_type_rat ()
+    val _ = Refute.register_frac_type_rat ()
+    val ty = ``:rat``
+    val free = Term.mk_var ("rat_value", ty)
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val scope = MFS.scope_from_descriptor context false [ty] []
+      ([(ty, 1), (``:int``, 5)], [])
+    val rat_offset = MFS.offset_of_type (#ofs scope) ty
+    val representation = MFR.Atom (1, rat_offset)
+    val free_name = MFNT.FreeName ("rat_value", ty, representation)
+    val (sel_names, _) = MFNT.choose_reps_for_all_sels scope
+      MFNT.NameTable.empty
+    val (_, _, rel_table) = MFNT.rename_free_vars (free_name :: sel_names)
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+    fun named nickname = valOf (List.find (fn name =>
+      MFNT.nickname_of name = nickname) sel_names)
+    fun relation nickname = MFNT.the_rel rel_table (named nickname)
+    val constructor = hd (MFH.constructors_for context ty)
+    val constructor_id = MFH.constructor_name constructor
+    val int_offset = MFS.offset_of_type (#ofs scope) ``:int``
+    fun bounds numerator denominator =
+      [(MFNT.the_rel rel_table free_name, [[rat_offset]]),
+       (relation (MFN.discr_prefix ^ constructor_id), [[rat_offset]]),
+       (relation (MFN.sel_prefix_for 0 ^ constructor_id),
+        [[rat_offset, int_offset + numerator]]),
+       (relation (MFN.sel_prefix_for 1 ^ constructor_id),
+        [[rat_offset, int_offset + denominator]])]
+    fun reconstruct tuples = MFM.reconstruct_both
+      {context = context, formats = [], scope = scope,
+       atoms = [(NONE, [])], special_funs = [], real_frees = [free],
+       eval_terms = [], free_names = [free_name], sel_names = sel_names,
+       nonsel_names = [], rel_table = rel_table, bounds = tuples}
+    val half = reconstruct (bounds 4 2)
+    val zero = reconstruct (bounds 0 2)
+    val rat_cons = Term.prim_mk_const {Thy = "rat", Name = "rat_cons"}
+    fun expected numerator denominator = Term.list_mk_comb
+      (rat_cons, [intSyntax.term_of_int (Arbint.fromInt numerator),
+                  intSyntax.term_of_int (Arbint.fromInt denominator)])
+    fun binding reconstruction = #2 (hd (#bindings reconstruction))
+    val raw_half = binding (#raw half)
+    val shown_half = binding (#displayed half)
+    val shown_zero = binding (#displayed zero)
+  in
+    not (Term.aconv raw_half shown_half) andalso
+    Term.aconv shown_half (expected ~1 2) andalso
+    Parse.term_to_string shown_half = "-1 // 2" andalso
+    Term.aconv shown_zero (expected 0 1) andalso
+    Parse.term_to_string shown_zero = "0 // 1"
+  end)
+
+val _ = require_msg (check_result mf_model_frac_display_golden) (fn () =>
+  "Frac display, zero canonicalization, or repeated opt-in changed")
+  (fn () => ()) ()
+
+fun mf_rat_registration_is_transactional () =
+  with_frac_registry_restored (fn () =>
+    with_codatatype_registry_restored (fn () => let
+      val rat_ty = ``:rat``
+      val before_frac = !MFH.frac_registry
+      val input = Term.mk_var ("rat-input", rat_ty)
+      val custom = Term.mk_var ("rat-custom", rat_ty)
+      val _ = Refute.register_term_postprocessor rat_ty (fn _ => custom)
+      (* A conflicting classification makes Frac validation fail.  Install
+         this test-only entry directly because the public validator correctly
+         rejects its deliberately irrelevant constructor shape. *)
+      val fake_codatatype : MFH.codatatype_info =
+        {tyop = {Thy = "rat", Tyop = "rat"},
+         case_const = boolSyntax.T, constructors = [boolSyntax.T]}
+      val _ = MFH.codatatype_registry :=
+        fake_codatatype :: !MFH.codatatype_registry
+      val rejected =
+        ((Refute.register_frac_type_rat (); false)
+         handle HOL_ERR _ => true)
+      val frac_unchanged = !MFH.frac_registry = before_frac
+      val postprocessor_unchanged =
+        case Refute.lookup_term_postprocessor rat_ty of
+            SOME postprocessor => Term.aconv (postprocessor input) custom
+          | NONE => false
+    in
+      rejected andalso frac_unchanged andalso postprocessor_unchanged
+    end))
+
+val _ = require_msg
+  (check_result mf_rat_registration_is_transactional) (fn () =>
+    "failed rat validation partially changed a session registry")
+  (fn () => ()) ()
+
+fun mf_term_postprocessor_concurrency () =
+  with_frac_registry_restored (fn () => let
+    val saved_threads = Multithreading.max_threads ()
+    fun restore_threads () =
+      Multithreading.max_threads_update saved_threads
+    fun repeat 0 action = ()
+      | repeat count action = (action (); repeat (count - 1) action)
+    fun body () =
+      let
+        val _ = Multithreading.max_threads_update
+          (Int.max (4, saved_threads))
+        val workers =
+          [Future.fork (fn () => repeat 100 (fn () =>
+             Refute.register_term_postprocessor ``:'a list``
+               (fn term => term))),
+           Future.fork (fn () => repeat 100 (fn () =>
+             Refute.register_term_postprocessor ``:'a option``
+               (fn term => term))),
+           Future.fork (fn () => repeat 30
+             Refute.register_frac_type_rat),
+           Future.fork (fn () => repeat 100 (fn () =>
+             ignore (MFM.postprocess_term
+               (MFM.snapshot_term_postprocessors ())
+               ``\x : num. SOME [x]``)))]
+        val joined = Future.join_results workers
+        val workers_ok = List.all
+          (fn Exn.Res () => true | Exn.Exn _ => false) joined
+        val lookups_ok = List.all (Option.isSome o
+          Refute.lookup_term_postprocessor)
+          [``:num list``, ``:bool option``, ``:rat``]
+        val frac_ok = List.exists
+          (fn ({tyop, ...} : MFH.frac_info) =>
+            MFH.same_type_operator tyop {Thy = "rat", Tyop = "rat"})
+          (!MFH.frac_registry)
+      in
+        workers_ok andalso lookups_ok andalso frac_ok
+      end
+  in
+    Portable.finally restore_threads body ()
+  end)
+
+val _ = require_msg
+  (check_result mf_term_postprocessor_concurrency) (fn () =>
+    "concurrent postprocessor/Frac registration lost or corrupted state")
   (fn () => ()) ()
 
 fun mf_model_codatatype_cycles_and_recheck () =
@@ -20693,18 +21124,25 @@ fun mf_frac_acceptance solver =
     val (outcome, output) = capture_refute_messages 2 (fn () =>
       Refute.refute config
         ``rat$rat_add x rat$rat_0 = rat$rat_0``)
-    val encoded =
+    val (encoded, displayed) =
       case outcome of
           Refute.Counterexample
-            ({backend = "kodkod", substrate = "kodkod", ...} :: _) => true
-        | _ => false
+            ({backend = "kodkod", substrate = "kodkod",
+              bindings, ...} :: _) =>
+            (true, List.exists (fn (_, value) =>
+              String.isSubstring " // " (Parse.term_to_string value))
+              bindings)
+        | _ => (false, false)
     val warned = String.isSubstring
       "binary_ints\" will be ignored because of the presence of rationals"
       output
+    val printed = String.isSubstring " // " output
   in
-    if encoded andalso warned then OK ()
+    if encoded andalso displayed andalso printed andalso warned then OK ()
     else die ("opt-in frac acceptance failed: " ^
-      mf_pin_outcome_name outcome ^ "; warning=" ^ Bool.toString warned)
+      mf_pin_outcome_name outcome ^ "; display=" ^
+      Bool.toString displayed ^ "; printed=" ^ Bool.toString printed ^
+      "; warning=" ^ Bool.toString warned)
   end)
   handle e => die (Feedback.exn_to_string e)
 
@@ -20789,7 +21227,8 @@ fun run_level2_mf_corpus () =
 
 val _ =
   if selftest_level = 1 andalso
-     OS.Process.getEnv "TASK28_FRAC_ONLY" = SOME "yes" andalso
+     (OS.Process.getEnv "TASK29_FRAC_ONLY" = SOME "yes" orelse
+      OS.Process.getEnv "TASK28_FRAC_ONLY" = SOME "yes") andalso
      Refute_Forl.is_configured () then
     mf_frac_acceptance (configured_mf_test_solver ())
   else ()

@@ -47,6 +47,16 @@ structure Refute_ModelFinder_HOL = struct
   val frac_registry = ref ([] : frac_info list)
   val ersatz_registry = ref ([] : ersatz list)
 
+  (* Every classification registration and lazy harvest is serialized here.
+     Model-display registration shares the mutex so the public rational
+     opt-in can install both halves atomically.  Functions suffixed
+     "_unlocked" are internal helpers whose callers already hold it. *)
+  val registration_mutex = Mutex.mutex ()
+
+  fun with_registration_lock body =
+    Multithreading.synchronized "Refute model registrations"
+      registration_mutex body
+
   type mf_context =
     {max_bisim_depth : int,
      boxes : (hol_type option * bool option) list,
@@ -2303,7 +2313,7 @@ structure Refute_ModelFinder_HOL = struct
       ()
     end
 
-  fun register_quotient
+  fun register_quotient_unlocked
         ({qty, rty, abs, rep, equiv_thm, partial = _} : quotient_info) =
     let
       val _ = validate_registered_type "register_quotient" qty
@@ -2352,6 +2362,10 @@ structure Refute_ModelFinder_HOL = struct
       quotient_registry := normalized ::
         List.filter other (!quotient_registry)
     end
+
+  fun register_quotient registration =
+    with_registration_lock (fn () =>
+      register_quotient_unlocked registration)
 
   fun raw_typedef_data_generic ty =
     let
@@ -2450,7 +2464,7 @@ structure Refute_ModelFinder_HOL = struct
       (pred, inverse_axioms, univ)
     end
 
-  fun register_typedef
+  fun register_typedef_unlocked
         {ty : hol_type, abs : term, rep : term, absrep_thm : thm} =
     let
       val _ = validate_registered_type "register_typedef" ty
@@ -2501,6 +2515,10 @@ structure Refute_ModelFinder_HOL = struct
         List.filter other (!typedef_registry)
     end
 
+  fun register_typedef registration =
+    with_registration_lock (fn () =>
+      register_typedef_unlocked registration)
+
   fun validate_ersatz function ({original, replacement} : ersatz) =
     let
       val _ = Term.prim_mk_const
@@ -2512,7 +2530,7 @@ structure Refute_ModelFinder_HOL = struct
     end handle HOL_ERR _ => raise err function
       "ersatz constants must name existing theory constants"
 
-  fun register_frac_type
+  fun prepare_frac_type_unlocked
         (registration as {tyop, ersatz} : frac_info) =
     let
       val function = "register_frac_type"
@@ -2536,9 +2554,8 @@ structure Refute_ModelFinder_HOL = struct
       val _ = if unique ersatz then () else
         raise err function "ersatz originals must be distinct"
 
-      (* Compute every replacement before touching session state.  Once all
-         validation and filtering has succeeded, the assignments below
-         cannot leave a half-reclassified type behind. *)
+      (* Compute every replacement before touching session state.  The
+         returned commit only assigns precomputed values and cannot fail. *)
       fun other_frac ({tyop = old, ...} : frac_info) =
         not (same_type_operator old tyop)
       fun other_quotient ({qty, ...} : quotient_info) =
@@ -2554,13 +2571,24 @@ structure Refute_ModelFinder_HOL = struct
         KNametab.delete_safe key (!quotient_harvest_misses)
       val new_typedef_misses =
         KNametab.delete_safe key (!typedef_harvest_misses)
+      fun commit () =
+        (quotient_registry := new_quotients;
+         typedef_registry := new_typedefs;
+         quotient_harvest_misses := new_quotient_misses;
+         typedef_harvest_misses := new_typedef_misses;
+         frac_registry := new_fracs)
     in
-      quotient_registry := new_quotients;
-      typedef_registry := new_typedefs;
-      quotient_harvest_misses := new_quotient_misses;
-      typedef_harvest_misses := new_typedef_misses;
-      frac_registry := new_fracs
+      commit
     end
+
+  fun register_frac_type_unlocked registration =
+    let val commit = prepare_frac_type_unlocked registration in
+      Thread_Attributes.uninterruptible (fn _ => fn () => commit ()) ()
+    end
+
+  fun register_frac_type registration =
+    with_registration_lock (fn () =>
+      register_frac_type_unlocked registration)
 
   val rat_frac_registration : frac_info =
     {tyop = {Thy = "rat", Tyop = "rat"},
@@ -2581,7 +2609,11 @@ structure Refute_ModelFinder_HOL = struct
         ("rat_of_num", "of_num_frac"),
         ("rat_cons", "frac")]}
 
-  fun register_frac_type_rat () = register_frac_type rat_frac_registration
+  fun register_frac_type_rat_unlocked () =
+    register_frac_type_unlocked rat_frac_registration
+
+  fun register_frac_type_rat () =
+    with_registration_lock register_frac_type_rat_unlocked
 
   fun harvest_index_entry operator =
     Option.getOpt (KNametab.lookup (!harvest_session_index)
@@ -2638,7 +2670,7 @@ structure Refute_ModelFinder_HOL = struct
       val (rty, qty) = Type.dom_rng (Term.type_of abs)
       val _ = if same_type_operator (type_operator_of qty) operator then ()
         else raise Match
-      val _ = register_quotient
+      val _ = register_quotient_unlocked
         {qty = qty, rty = rty, abs = abs, rep = rep,
          equiv_thm = theorem, partial = true}
     in
@@ -2658,7 +2690,7 @@ structure Refute_ModelFinder_HOL = struct
       val (_, ty) = Type.dom_rng (Term.type_of abs)
       val _ = if same_type_operator (type_operator_of ty) operator then ()
         else raise Match
-      val _ = register_typedef
+      val _ = register_typedef_unlocked
         {ty = ty, abs = abs, rep = rep, absrep_thm = theorem}
     in
       true
@@ -3326,7 +3358,7 @@ structure Refute_ModelFinder_HOL = struct
     (is_codatatype ty orelse is_raw_free_datatype ty orelse
      is_quot_type ty orelse is_typedef ty orelse is_frac_type ty)
 
-  fun harvest_quotient ty =
+  fun harvest_quotient_unlocked ty =
     let
       val operator = type_operator_of ty
       val theories = indexed_harvest_theories ty
@@ -3358,7 +3390,10 @@ structure Refute_ModelFinder_HOL = struct
     end
     handle HOL_ERR _ => false
 
-  fun harvest_typedef ty =
+  fun harvest_quotient ty =
+    with_registration_lock (fn () => harvest_quotient_unlocked ty)
+
+  fun harvest_typedef_unlocked ty =
     let
       val operator = type_operator_of ty
       val theories = indexed_harvest_theories ty
@@ -3385,6 +3420,9 @@ structure Refute_ModelFinder_HOL = struct
          false)
     end
     handle HOL_ERR _ => false
+
+  fun harvest_typedef ty =
+    with_registration_lock (fn () => harvest_typedef_unlocked ty)
 
   fun quot_constructor rty qty =
     Term.mk_thy_const
