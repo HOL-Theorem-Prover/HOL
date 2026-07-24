@@ -216,8 +216,12 @@ Known limitations and follow-ups
 
 An Abs/Rep occurrence for an unregistered typedef makes the model finder
 return `Unknown`, rather than risk a spurious genuine result.  Register the
-typedef explicitly.  The `rat` type is not registered: its intended
-fraction/ersatz representation remains future work.
+typedef explicitly.  The normalized Frac/ersatz encoding for `rat` is
+registered by default.  Fraction support is deferred only for `real`, because
+certification of real literals remains unresolved.
 
-Remaining model-finder parity work includes fraction/`rat` support and
-monotonicity promotion for relation inverse and composition (`inv` and `O`).
+Remaining model-finder fraction parity work is real-only.
+Relation inverse and composition (`inv` and `O`) already have native
+monotonicity rules, with dedicated verdict, scope, soundness, and certified
+argument-order coverage.  Relation identity (`Id`) remains unfolded because
+there is no corresponding nut builtin.

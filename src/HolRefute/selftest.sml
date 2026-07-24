@@ -4142,6 +4142,32 @@ val _ = require_msg (check_result mono_relation_builtin_mtypes) (fn () =>
   "TC/inv/O monotonicity mtypes disagree with their nut built-ins")
   (fn () => ()) ()
 
+(* These four verdicts are the HOL4-curried counterparts of Nitpick's
+   converse and relcomp cases.  The equality rows require New extension;
+   relation_mtype's explicit V x <> New constraint must reject them. *)
+fun mono_relation_builtin_verdicts () =
+  let
+    val cases =
+      [("inv positive", true,
+        ``inv (R : 'a -> bool -> bool) b (x : 'a)``),
+       ("inv excludes New", false,
+        ``!x : 'a. inv (R : 'a -> bool -> bool) b x <=> P x``),
+       ("O positive", true,
+        ``((R : 'a -> bool -> bool) O
+          (rel2 : bool -> 'a -> bool)) b c``),
+       ("O excludes New", false,
+        ``((R : 'a -> bool -> bool) O
+           (rel2 : 'a -> 'a -> bool)) = (\x y. T) /\
+          (R O rel2) = (\x y. F)``)]
+  in
+    List.all (fn (_, expected, term) =>
+      mono_nits_is_mono term = expected) cases
+  end
+
+val _ = require_msg (check_result mono_relation_builtin_verdicts)
+  (fn () => "inv/O monotonicity calculus verdict changed")
+  (fn () => ()) ()
+
 fun mono_timeout_degrades () =
   let
     fun bounded () = Timeout.apply Time.zeroTime
@@ -5895,6 +5921,32 @@ fun mf_scope_calculus_block_fusion () =
 
 val _ = require_msg (check_result mf_scope_calculus_block_fusion) (fn () =>
   "live monotonicity calculus did not fuse type-variable scope blocks")
+  (fn () => ()) ()
+
+fun mf_scope_relation_block_fusion () =
+  let
+    val formula =
+      ``inv (rel1 : 'a -> bool -> bool) b (x : 'a) /\
+        (((outer : bool -> bool -> bool) O
+          (rel2 : 'b -> bool -> bool)) (y : 'b) c)``
+    val types = [``:'a``, ``:'b``]
+    fun actually_monotonic ty =
+      MFMono.formulas_monotonic mf_hol_context false ty ([formula], [])
+    val (mono, nonmono) = MFS.mono_partition_with actually_monotonic
+      [(NONE, NONE)] types
+    val (_, fused) = MFS.all_scopes mf_hol_context false
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [(NONE, [0])] [] [~1]
+      mono nonmono [] []
+    val (_, separated) = MFS.all_scopes mf_hol_context false
+      [(NONE, [1, 2, 3])] [(NONE, [~1])] [(NONE, [0])] [] [~1]
+      [] types [] []
+  in
+    mono = types andalso null nonmono andalso
+    length fused = 3 andalso length separated = 9
+  end
+
+val _ = require_msg (check_result mf_scope_relation_block_fusion) (fn () =>
+  "inv/O formulas did not fuse their live-calculus scope block")
   (fn () => ()) ()
 
 fun nondecreasing [] = true
@@ -18964,6 +19016,7 @@ type mf_acceptance_case =
 
 datatype mf_verdict_policy =
     MfExact
+  | MfCertifiedGenuine
   | MfUnfortunatePotential of expectation
 
 type mf_acceptance_invocation =
@@ -19078,6 +19131,7 @@ fun mf_acceptance_test solver group_config
     val public_expectation =
       case verdict_policy of
           MfExact => public_expect expect
+        | MfCertifiedGenuine => Refute.ExpectGenuine
         | MfUnfortunatePotential _ => Refute.ExpectCex
     val config = configured
       |> enforce_mf_acceptance_config solver
@@ -19086,6 +19140,12 @@ fun mf_acceptance_test solver group_config
     val verdict_ok =
       case verdict_policy of
           MfExact => true
+        | MfCertifiedGenuine =>
+            (case outcome of
+                 Refute.Counterexample
+                   ({certainty = Refute.Genuine, cert = SOME theorem, ...}
+                    :: _) => certificate_tag_clean theorem
+               | _ => false)
         | MfUnfortunatePotential observed =>
             mf_unfortunate_verdict_holds observed outcome
     val accepted = verdict_ok andalso mf_gate_pin_holds cert_pin tm andalso
@@ -19205,6 +19265,11 @@ fun mf_acceptance_invocation name tm expect cert_pin sat4j_smoke
      {name = name, tm = tm, expect = expect, cert_pin = cert_pin,
       unknown_reason = NONE, sat4j_smoke = sat4j_smoke},
    configure = configure, verdict_policy = MfExact}
+
+fun mf_with_verdict_policy verdict_policy
+      ({acceptance_case, configure, ...} : mf_acceptance_invocation) =
+  {acceptance_case = acceptance_case, configure = configure,
+   verdict_policy = verdict_policy}
 
 fun mf_acceptance_variants stem tm expect cert_pin variants =
   List.map (fn (suffix, configure, sat4j_smoke) =>
@@ -20548,6 +20613,155 @@ val mf_refusal_flip_group : mf_acceptance_group =
   {name = "M3 refusal flips", configure = mf_same_config,
    cases = mf_refusal_flip_cases}
 
+(* Closed, heterogeneous relations make swapping either curried argument or
+   the two operands of O change the truth value.  Both counterexamples must
+   therefore survive replay as certified Genuine results. *)
+fun mf_relation_ersatz_config config =
+  let
+    val _ = List.app Refute.register_ersatz
+      [{original = {Thy = "refuteTableZoo", Name = "zoo_relation_inv"},
+        replacement = {Thy = "relation", Name = "inv"}},
+       {original = {Thy = "refuteTableZoo", Name = "zoo_bool_relcomp"},
+        replacement = {Thy = "relation", Name = "O"}}]
+  in
+    Refute.upd_card
+      [(SOME ``:num``, [2]), (NONE, [1])] config
+  end
+
+val mf_relation_argument_order_cases =
+  [mf_acceptance_invocation "Relation mono: inv argument order"
+     ``~zoo_relation_inv
+         (\n : num. \b : bool. n = 0 /\ b) T 0``
+     ExpectGenuine MfCertSome true mf_relation_ersatz_config
+     |> mf_with_verdict_policy MfCertifiedGenuine,
+   mf_acceptance_invocation "Relation mono: O argument order"
+     ``~zoo_bool_relcomp
+         (\b : bool. \n : num. b /\ n = 1)
+         (\n : num. \b : bool. n = 0 /\ b) 0 1``
+     ExpectGenuine MfCertSome false mf_relation_ersatz_config
+     |> mf_with_verdict_policy MfCertifiedGenuine]
+
+val mf_relation_argument_order_group : mf_acceptance_group =
+  {name = "Relation inv/O argument order", configure = mf_same_config,
+   cases = mf_relation_argument_order_cases}
+
+(* Run the same front-end, MF preprocessing, and nut conversion as
+   run_instance before a solver sees these two acceptance goals.  The
+   source-side zoo constants exist only for certificate replay: their ersatz
+   registrations must become native relation Csts, which must then become
+   the heterogeneous curried Converse/Composition nut applications below. *)
+fun mf_relation_pipeline_shape () =
+  let
+    fun pipeline
+          ({acceptance_case = {tm, ...}, configure, ...}
+           : mf_acceptance_invocation) =
+      let
+        val config = configure (mf_acceptance_base_config ())
+        val {poly_original, ...} = preprocess_forms config
+          (preprocessing_problem tm)
+        val (prepared_original, prepared_evals) =
+          Refute_ModelFinder.prepare_instance_input (hd poly_original)
+        val (context_mf, original, eval_terms) =
+          Refute_ModelFinder.merge_type_vars_in_context_input
+            (#mf config) prepared_original prepared_evals
+        val negated =
+          if #falsify context_mf then
+            boolSyntax.mk_imp (original, boolSyntax.F)
+          else original
+        val context = MFH.make_context context_mf eval_terms
+        val (nondefinitions, definitions, needs, _, _, _) =
+          MFP.preprocess_formulas context [] negated
+        val nuts =
+          map (MFNT.nut_from_term context MFNT.Eq) nondefinitions @
+          map (MFNT.nut_from_term context MFNT.DefEq) definitions @
+          map (MFNT.nut_from_term context MFNT.Eq) needs
+      in
+        (nondefinitions @ definitions @ needs, nuts)
+      end
+    fun nut_exists predicate nut =
+      predicate nut orelse
+      (case nut of
+           MFNT.Op1 (_, _, _, first) => nut_exists predicate first
+         | MFNT.Op2 (_, _, _, first, second) =>
+             nut_exists predicate first orelse nut_exists predicate second
+         | MFNT.Op3 (_, _, _, first, second, third) =>
+             nut_exists predicate first orelse
+             nut_exists predicate second orelse nut_exists predicate third
+         | MFNT.Tuple (_, _, items) => List.exists (nut_exists predicate) items
+         | MFNT.Construct (selectors, _, _, arguments) =>
+             List.exists (nut_exists predicate) (selectors @ arguments)
+         | _ => false)
+    fun has_native_application key head_ty argument_tys result_ty term =
+      List.exists (fn candidate =>
+        let
+          val (head, arguments) = HolKernel.strip_comb candidate
+        in
+          Term.is_const head andalso MFH.same_key (MFH.const_key head) key
+          andalso Term.type_of head = head_ty andalso
+          map Term.type_of arguments = argument_tys andalso
+          Term.type_of candidate = result_ty
+        end handle HOL_ERR _ => false)
+        (HolKernel.find_terms (fn _ => true) term)
+    fun has_key key = List.exists (contains_constant key)
+    val (inv_terms, inv_nuts) = pipeline
+      (List.nth (mf_relation_argument_order_cases, 0))
+    val (composition_terms, composition_nuts) = pipeline
+      (List.nth (mf_relation_argument_order_cases, 1))
+    val inv_key = {Thy = "relation", Name = "inv"}
+    val composition_key = {Thy = "relation", Name = "O"}
+    val zoo_inv_key = {Thy = "refuteTableZoo", Name = "zoo_relation_inv"}
+    val zoo_composition_key =
+      {Thy = "refuteTableZoo", Name = "zoo_bool_relcomp"}
+    fun inv_application nut =
+      case nut of
+          MFNT.Op2 (MFNT.Apply, result_ty, _,
+            MFNT.Op2 (MFNT.Apply, partial_ty, _,
+              MFNT.Op1 (MFNT.Converse, converse_ty, _, relation), first),
+            second) =>
+              result_ty = ``:bool`` andalso partial_ty = ``:num -> bool``
+              andalso converse_ty = ``:bool -> num -> bool`` andalso
+              MFNT.type_of relation = ``:num -> bool -> bool`` andalso
+              MFNT.type_of first = ``:bool`` andalso
+              MFNT.type_of second = ``:num``
+        | _ => false
+    fun composition_application nut =
+      case nut of
+          MFNT.Op2 (MFNT.Apply, result_ty, _,
+            MFNT.Op2 (MFNT.Apply, partial_ty, _,
+              MFNT.Op2 (MFNT.Composition, composition_ty, _, inner, outer),
+              first), second) =>
+              result_ty = ``:bool`` andalso partial_ty = ``:num -> bool``
+              andalso composition_ty = ``:num -> num -> bool`` andalso
+              MFNT.type_of inner = ``:num -> bool -> bool`` andalso
+              MFNT.type_of outer = ``:bool -> num -> bool`` andalso
+              MFNT.type_of first = ``:num`` andalso
+              MFNT.type_of second = ``:num``
+        | _ => false
+  in
+    has_key inv_key inv_terms andalso
+    not (has_key zoo_inv_key inv_terms) andalso
+    List.exists
+      (has_native_application inv_key
+        ``:(num -> bool -> bool) -> bool -> num -> bool``
+        [``:num -> bool -> bool``, ``:bool``, ``:num``] ``:bool``)
+      inv_terms andalso
+    List.exists (nut_exists inv_application) inv_nuts andalso
+    has_key composition_key composition_terms andalso
+    not (has_key zoo_composition_key composition_terms) andalso
+    List.exists
+      (has_native_application composition_key
+        ``:(bool -> num -> bool) -> (num -> bool -> bool) ->
+          num -> num -> bool``
+        [``:bool -> num -> bool``, ``:num -> bool -> bool``, ``:num``,
+         ``:num``] ``:bool``)
+      composition_terms andalso
+    List.exists (nut_exists composition_application) composition_nuts
+  end
+
+val _ = require_msg (check_result mf_relation_pipeline_shape) (fn () =>
+  "inv/O ersatz goals lost native curried MF nut structure")
+  (fn () => ()) ()
+
 val mf_acceptance_groups =
   [mf_m3_acceptance_group, mf_induct_nits_group,
    mf_special_nits_group, mf_integer_nits_group,
@@ -20555,7 +20769,7 @@ val mf_acceptance_groups =
    mf_pattern_nits_group, mf_typedef_nits_group,
    mf_core_nits_group, mf_refute_nits_group,
    mf_manual_nits_group, mf_hotel_nits_group,
-   mf_refusal_flip_group]
+   mf_refusal_flip_group, mf_relation_argument_order_group]
 
 (* PLAN_M3 section 13.3: both engines run sequentially on the same
    executable finite-scope goals.  Bindings are deliberately ignored. *)
@@ -20748,6 +20962,18 @@ val mf_binary_soundness_corpus =
   [("binary natural addition commutes", ``x + y = (y : num) + x``),
    ("binary integer addition commutes", ``x + y = (y : int) + x``)]
 
+val mf_relation_soundness_corpus =
+  [("relation double inverse",
+    ``inv (inv (R : 'a -> 'b -> bool)) = R``),
+   ("relation composition associative",
+    ``(((R : 'c -> 'd -> bool) O (rel2 : 'b -> 'c -> bool)) O
+       (rel3 : 'a -> 'b -> bool)) = R O (rel2 O rel3)``),
+   ("inverse reverses composition",
+    ``inv ((R : 'b -> 'c -> bool) O (rel2 : 'a -> 'b -> bool)) =
+      inv rel2 O inv R``),
+   ("inverse application",
+    ``inv (R : 'a -> 'b -> bool) y x <=> R x y``)]
+
 (* TASK_30's normalization-faithfulness gate.  These are instances of the
    arithmetic, order, and equality laws in ratTheory (RAT_ADD_RID,
    RAT_MUL_RID, RAT_ADD_COMM, RAT_MUL_COMM, RAT_ADD_RINV,
@@ -20852,6 +21078,52 @@ fun mf_native_polymorphic_certification solver =
     if small_ok andalso large_ok then OK ()
     else die ("native polymorphic certification pin failed: small=" ^
       mf_pin_outcome_name small ^ ", large=" ^ mf_pin_outcome_name large)
+  end
+  handle e => die (Feedback.exn_to_string e)
+
+fun mf_relation_scope_fusion solver =
+  let
+    val _ = tprint "Refute MF inv/O scope fusion"
+    val fused_goal =
+      ``inv (rel1 : 'a -> bool -> bool) b (x : 'a) /\
+        (((outer : bool -> bool -> bool) O
+          (rel2 : 'b -> bool -> bool)) (y : 'b) c)``
+    val base = mf_acceptance_config solver
+      |> Refute.upd_card [(NONE, [1, 2, 3])]
+    val fused = with_silent_refute (fn () =>
+      Refute.refute base fused_goal)
+    fun scopes outcome =
+      case outcome of
+          Refute.Counterexample (cex :: _) =>
+            lookup_stat "scopes" (#stats cex)
+        | _ => NONE
+    val control_goal =
+      ``(?g : 'b -> 'a. !u : 'a. g (f u) = u) ==>
+        !v : 'b. ?u : 'a.
+          inv (\x : 'a. \y : 'b. y = f x) v u /\
+          (((\y : 'b. \z : 'b. y = z) O
+            (\x : 'a. \y : 'b. y = f x)) u v)``
+    val control_config = mf_acceptance_config solver
+      |> Refute.upd_card [(NONE, [1, 2])]
+      |> Refute.upd_max_potential 0
+    val control = with_silent_refute (fn () =>
+      Refute.refute control_config control_goal)
+    fun has_card ty card assignments =
+      List.exists (fn (other, value) =>
+        Type.compare (other, ty) = EQUAL andalso value = card) assignments
+    val asymmetric =
+      case control of
+          Refute.Counterexample
+            ({certainty = Refute.Genuine,
+              scope = SOME assignments, ...} :: _) =>
+              has_card ``:'a`` 1 assignments andalso
+              has_card ``:'b`` 2 assignments
+        | _ => false
+  in
+    if scopes fused = SOME 3 andalso asymmetric then OK ()
+    else die ("relation scope fusion/control failed: fused=" ^
+      mf_pin_outcome_name fused ^ ", control=" ^
+      mf_pin_outcome_name control)
   end
   handle e => die (Feedback.exn_to_string e)
 
@@ -21053,8 +21325,12 @@ fun run_mf_task20_suites () =
          mf_quotient_typedef_soundness_corpus);
       List.app (mf_soundness_test_with mf_binary_soundness_config solver)
         mf_binary_soundness_corpus;
+      List.app (mf_soundness_test_with
+        (Refute.upd_card [(NONE, [1, 2])]) solver)
+        mf_relation_soundness_corpus;
       mf_instance_loop_stops_at_reachable_genuine solver;
       mf_native_polymorphic_certification solver;
+      mf_relation_scope_fusion solver;
       mf_mono_driver_scope_fusion solver;
       mf_incremental_genuine_models solver;
       mf_incremental_potential_models solver;
@@ -21379,8 +21655,26 @@ fun run_level2_mf_corpus () =
       Time.fmt 2 elapsed ^ "s\n")
   end
 
+fun run_mf_task31_suites () =
+  if not (Refute_Forl.is_configured ()) then
+    print "(Kodkodi not configured, MF inv/O suites skipped.)\n"
+  else
+    let
+      val solver = configured_mf_test_solver ()
+      val _ = run_timed_mf_group solver ""
+        mf_relation_argument_order_group
+      val _ = List.app (mf_soundness_test_with
+        (Refute.upd_card [(NONE, [1, 2])]) solver)
+        mf_relation_soundness_corpus
+    in
+      mf_relation_scope_fusion solver
+    end
+
 val _ =
   if selftest_level = 1 andalso
+     OS.Process.getEnv "TASK31_MONO_ONLY" = SOME "yes" then
+    run_mf_task31_suites ()
+  else if selftest_level = 1 andalso
      OS.Process.getEnv "TASK30_RAT_ONLY" = SOME "yes" andalso
      Refute_Forl.is_configured () then
     mf_rat_soundness_acceptance (configured_mf_test_solver ())

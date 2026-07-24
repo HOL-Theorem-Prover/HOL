@@ -8,6 +8,17 @@ Datatype:
   zoo_tree = ZooLeaf num | ZooNode zoo_tree zoo_tree
 End
 
+(* Executable source-side copies used to certify that the model finder's
+   native relation inv/O ersatz operations preserve HOL4 argument order. *)
+Definition zoo_relation_inv_def:
+  zoo_relation_inv r y x = r x y
+End
+
+Definition zoo_bool_relcomp_def:
+  zoo_bool_relcomp r s x z =
+    ((s x F /\ r F z) \/ (s x T /\ r T z))
+End
+
 Datatype:
   zoo_record = <| zoo_num : num; zoo_bit : bool |>
 End

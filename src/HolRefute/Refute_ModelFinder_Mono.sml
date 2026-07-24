@@ -1068,6 +1068,17 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
            (gamma, add_mtype_is_concrete [] shared_mtype constraints))
         end
 
+      (* HOL4 represents a relation as a curried predicate, whereas the
+         source calculus represents it as a predicate on pairs.  Sharing
+         [variable] on both arrows is exactly the curried image of sharing
+         one annotation on the pair domain: extending either component is
+         governed by the same positive/negative type-variable constraint.
+         It can add constraints compared with the uncurried presentation,
+         but that only rejects monotonicity solutions, the conservative
+         direction.  See Blanchette and Krauss, "Monotonicity Inference for
+         Higher-Order Formulas", J. Autom. Reasoning 47 (2011), Def. 6.3.
+         Relation Id deliberately stays unfolded: unlike inv and O, it has
+         no corresponding nut builtin. *)
       fun relation_mtype variable ty =
         let
           val (domain_ty, rest_ty) = Type.dom_rng ty
