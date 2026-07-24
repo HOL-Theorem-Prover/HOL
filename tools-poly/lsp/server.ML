@@ -397,6 +397,13 @@ fun start {diag} = let
   val conn as {send, recv} = stdioConnection ()
   val _ (*clientCapabilities*) = initialize conn (concat [
     "{\"textDocumentSync\":2", (* 2 = Incremental; applyEdit supports it *)
+    (* LSP 3.17 offset encoding.  Server-side buffers and fromLineCol
+       count bytes, so ask the client for UTF-8 positions.  Without this
+       eglot defaults to UTF-16 code units, and edits crossing multi-
+       byte characters (e.g. `⇒`, `∧`) land mid-codepoint and corrupt
+       the buffer — surfaces as a HOL "Lexical error" on the first byte
+       of the split character. *)
+    ",\"positionEncoding\":\"utf-8\"",
     ",\"hoverProvider\":true",
     ",\"definitionProvider\":true",
     ",\"referencesProvider\":true",

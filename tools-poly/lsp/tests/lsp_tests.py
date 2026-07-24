@@ -683,8 +683,55 @@ def test_workdone_progress():
         c.close()
 
 
+def test_edit_across_multibyte_char():
+    """didChange positions must align with the server's byte-oriented
+    buffer even when edits sit past multi-byte UTF-8 characters.
+    Regression for the ⇒ Lexical-error bug: server advertises
+    positionEncoding=utf-8 so eglot switches from UTF-16 code units to
+    bytes; otherwise inserts land mid-codepoint and HOL's lexer
+    complains about the first byte of a split character.
+
+    Uses an incremental range-based didChange (not full-text) so the
+    (line, character) → byte-offset conversion in applyEdit is
+    actually exercised."""
+    c = Client("/tmp")
+    try:
+        _init(c)
+        uri = "file:///tmp/multibyte.sml"
+        src = ("Theory mbtst\nAncestors hol\n\n"
+               "Theorem foo:\n  x < y  ⇒ x < z + y\nProof\n  DECIDE_TAC\nQED\n")
+        _did_open(c, uri, src)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "initial compileCompleted")
+        d = _diag_count(c, uri)
+        assert_eq(len(d), 0, f"clean file, no diagnostics ({len(d)} got)")
+
+        # Insert one char past the ⇒ on line 4.  Under UTF-8 positions,
+        # col 13 sits between "  " and "x" (after the ⇒ + space); under
+        # UTF-16 it lands two bytes into the ⇒ sequence.  If we're
+        # negotiating utf-8 correctly the insert of "y" here is a no-op
+        # syntactically (adds "yx <").
+        since = c.total_msgs()
+        c.send({"jsonrpc":"2.0","method":"textDocument/didChange",
+                "params":{"textDocument":{"uri":uri,"version":2},
+                          "contentChanges":[{"range":{
+                              "start":{"line":4,"character":13},
+                              "end":{"line":4,"character":13}},
+                              "rangeLength":0,"text":"y"}]}})
+        assert_true(c.wait_for_method("$/compileCompleted", 30, since=since),
+                    "post-edit compileCompleted")
+        d = _diag_count(c, uri, ver=2)
+        # We expect at most an "unbound variable y" style error from
+        # HOL — NOT a lexical error on \226.
+        lex = [x for x in d if "lexical error" in x.get("message","").lower()]
+        assert_eq(len(lex), 0, f"no lex errors after multibyte-edge edit ({d})")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
+    ("edit_across_multibyte",        test_edit_across_multibyte_char),
     ("small_clean_file",             test_small_clean_file),
     ("small_typerror_at_open",       test_small_typerror_at_open),
     ("small_recompile_blank_line",   test_small_recompile_blank_line),
