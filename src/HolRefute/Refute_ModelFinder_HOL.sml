@@ -1759,6 +1759,8 @@ structure Refute_ModelFinder_HOL = struct
 
   val harvest_session_index =
     ref (KNametab.empty : harvest_index_entry KNametab.table)
+  val harvest_session_index_stale = ref false
+  val harvest_session_rebuild_count = ref 0
   val harvest_binding_index =
     ref (KNametab.empty : harvest_binding KNametab.table)
   val harvest_operator_generations =
@@ -1788,12 +1790,17 @@ structure Refute_ModelFinder_HOL = struct
 
   fun add_string value values =
     if List.exists (fn old => old = value) values then values
-    else values @ [value]
+    else value :: values
 
   fun add_type_operator operator operators =
     if List.exists (fn old => same_type_operator old operator) operators
     then operators
-    else operators @ [operator]
+    else operator :: operators
+
+  (* The collectors cons in O(1); reverse once at the construction boundary
+     before imposing the canonical theory order. *)
+  fun sort_strings values =
+    Listsort.sort String.compare (rev values)
 
   fun type_operators_in_type ty operators =
     case Lib.total Type.dest_thy_type ty of
@@ -1807,8 +1814,8 @@ structure Refute_ModelFinder_HOL = struct
     let
       val atoms = map #2 (constants_in term) @ Term.all_vars term
     in
-      List.foldl (fn (atom, operators) =>
-        type_operators_in_type (Term.type_of atom) operators) [] atoms
+      rev (List.foldl (fn (atom, operators) =>
+        type_operators_in_type (Term.type_of atom) operators) [] atoms)
     end
 
   fun constant_operator_pairs term =
@@ -1822,8 +1829,8 @@ structure Refute_ModelFinder_HOL = struct
       fun add ((_, constant), pairs) =
         let
           val {Thy, ...} = Term.dest_thy_const constant
-          val operators = type_operators_in_type
-            (Term.type_of constant) []
+          val operators = rev (type_operators_in_type
+            (Term.type_of constant) [])
         in
           List.foldl (fn (operator, result) =>
             add_pair (operator, Thy) result) pairs operators
@@ -1872,15 +1879,18 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun rebuild_harvest_session_index () =
-    harvest_session_index := KNametab.fold
-      (fn (_, binding) => fn table =>
-        add_harvest_binding_to_index binding table)
-      (!harvest_binding_index) KNametab.empty
+    (harvest_session_rebuild_count :=
+       !harvest_session_rebuild_count + 1;
+     harvest_session_index := KNametab.fold
+       (fn (_, binding) => fn table =>
+         add_harvest_binding_to_index binding table)
+       (!harvest_binding_index) KNametab.empty)
 
   fun binding_operators
         ({theorem_operators, constant_operators, ...} : harvest_binding) =
-    List.foldl (fn ((operator, _), result) =>
-      add_type_operator operator result) theorem_operators constant_operators
+    rev (List.foldl (fn (operator, result) =>
+      add_type_operator operator result) []
+      (theorem_operators @ map #1 constant_operators))
 
   fun note_harvest_operator_changes operators =
     if null operators then ()
@@ -1903,7 +1913,7 @@ structure Refute_ModelFinder_HOL = struct
             (note_harvest_operator_changes (binding_operators old);
              harvest_binding_index := KNametab.delete key
                (!harvest_binding_index);
-             rebuild_harvest_session_index ())
+             harvest_session_index_stale := true)
     end
 
   fun remove_harvest_theory theory =
@@ -1913,14 +1923,14 @@ structure Refute_ModelFinder_HOL = struct
         else (KNametab.update (key, binding) kept, removed)
       val (kept, removed) = KNametab.fold partition
         (!harvest_binding_index) (KNametab.empty, [])
-      val operators = List.foldl (fn (binding, result) =>
+      val operators = rev (List.foldl (fn (binding, result) =>
         List.foldl (fn (operator, operators) =>
           add_type_operator operator operators) result
-          (binding_operators binding)) [] removed
+          (binding_operators binding)) [] removed)
       val _ = note_harvest_operator_changes operators
     in
       harvest_binding_index := kept;
-      rebuild_harvest_session_index ()
+      harvest_session_index_stale := true
     end
 
   fun note_harvest_binding theory (name, theorem) =
@@ -1940,7 +1950,7 @@ structure Refute_ModelFinder_HOL = struct
         val _ = note_harvest_operator_changes
           (binding_operators binding)
       in
-        if replacing then rebuild_harvest_session_index ()
+        if replacing then harvest_session_index_stale := true
         else harvest_session_index := add_harvest_binding_to_index binding
           (!harvest_session_index)
       end
@@ -2624,9 +2634,22 @@ structure Refute_ModelFinder_HOL = struct
         ("rat_cons", "frac")]}
 
   fun harvest_index_entry operator =
-    Option.getOpt (KNametab.lookup (!harvest_session_index)
-      (operator_key operator),
-      {operator = operator, theorem_theories = [], constant_theories = []})
+    let
+      val _ =
+        if !harvest_session_index_stale then
+          (rebuild_harvest_session_index ();
+           harvest_session_index_stale := false)
+        else ()
+      val {operator, theorem_theories, constant_theories} =
+        Option.getOpt (KNametab.lookup (!harvest_session_index)
+          (operator_key operator),
+          {operator = operator, theorem_theories = [],
+           constant_theories = []})
+    in
+      {operator = operator,
+       theorem_theories = sort_strings theorem_theories,
+       constant_theories = sort_strings constant_theories}
+    end
 
   fun seed_harvest_theory theory =
     if Option.isSome (Symtab.lookup (!harvest_indexed_theories) theory)
@@ -2646,8 +2669,9 @@ structure Refute_ModelFinder_HOL = struct
       val {theorem_theories, constant_theories, ...} =
         harvest_index_entry operator
     in
-      List.foldl (fn (theory, result) => add_string theory result)
-        [home] (constant_theories @ theorem_theories)
+      rev (List.foldl (fn (theory, result) =>
+        add_string theory result) []
+        (home :: constant_theories @ theorem_theories))
     end
 
   fun harvest_theory_generation theory =

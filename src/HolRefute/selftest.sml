@@ -1726,6 +1726,80 @@ fun with_quotient_typedef_registries_restored body =
     Portable.finally restore body ()
   end
 
+fun with_harvest_indexes_restored body =
+  let
+    val saved_session = !MFH.harvest_session_index
+    val saved_stale = !MFH.harvest_session_index_stale
+    val saved_rebuilds = !MFH.harvest_session_rebuild_count
+    val saved_bindings = !MFH.harvest_binding_index
+    val saved_generations = !MFH.harvest_operator_generations
+    val saved_generation = !MFH.harvest_operator_generation
+    fun restore () =
+      (MFH.harvest_session_index := saved_session;
+       MFH.harvest_session_index_stale := saved_stale;
+       MFH.harvest_session_rebuild_count := saved_rebuilds;
+       MFH.harvest_binding_index := saved_bindings;
+       MFH.harvest_operator_generations := saved_generations;
+       MFH.harvest_operator_generation := saved_generation)
+  in
+    Portable.finally restore body ()
+  end
+
+fun harvest_session_rebuild_is_deferred () =
+  with_harvest_indexes_restored (fn () => let
+    val operator = MFH.type_operator_of ``:bool``
+    fun entry () = MFH.harvest_index_entry operator
+    fun same_entry
+          ({operator = left_operator,
+            theorem_theories = left_theorems,
+            constant_theories = left_constants} :
+           MFH.harvest_index_entry)
+          ({operator = right_operator,
+            theorem_theories = right_theorems,
+            constant_theories = right_constants} :
+           MFH.harvest_index_entry) =
+      MFH.same_type_operator left_operator right_operator andalso
+      left_theorems = right_theorems andalso
+      left_constants = right_constants
+    fun note theory name =
+      MFH.note_harvest_binding theory (name, boolTheory.TRUTH)
+    val _ = MFH.harvest_session_index := KNametab.empty
+    val _ = MFH.harvest_session_index_stale := false
+    val _ = MFH.harvest_session_rebuild_count := 0
+    val _ = MFH.harvest_binding_index := KNametab.empty
+    val _ = note "zetaTheory" "third"
+    val _ = note "alphaTheory" "first"
+    val _ = note "middleTheory" "second"
+    val incremental = entry ()
+    val incremental_order =
+      #theorem_theories incremental =
+        ["alphaTheory", "middleTheory", "zetaTheory"]
+    val _ = MFH.rebuild_harvest_session_index ()
+    val rebuilt = entry ()
+    val same_after_rebuild = same_entry incremental rebuilt
+    val _ = MFH.harvest_session_rebuild_count := 0
+    val _ = MFH.remove_harvest_binding "zetaTheory" "third"
+    val _ = MFH.remove_harvest_binding "middleTheory" "second"
+    val deferred = !MFH.harvest_session_rebuild_count = 0
+    val lazy_entry = entry ()
+    val rebuilt_once = !MFH.harvest_session_rebuild_count = 1
+    val _ = ignore (entry ())
+    val still_once = !MFH.harvest_session_rebuild_count = 1
+    val _ = MFH.rebuild_harvest_session_index ()
+    val eager_entry = entry ()
+  in
+    incremental_order andalso same_after_rebuild andalso deferred andalso
+    rebuilt_once andalso still_once andalso
+    same_entry lazy_entry eager_entry andalso
+    !MFH.harvest_global_ancestry_scan_count = 0 andalso
+    !MFH.harvest_global_constant_scan_count = 0
+  end)
+
+val _ = require_msg
+  (check_result harvest_session_rebuild_is_deferred) (fn () =>
+  "harvest index rebuild deferral or canonical theory order changed")
+  (fn () => ()) ()
+
 val zoo_three_registration =
   {ty = ``:zoo_three``, abs = ``zoo_three_abs``, rep = ``zoo_three_rep``,
    absrep_thm = zoo_three_absrep}
