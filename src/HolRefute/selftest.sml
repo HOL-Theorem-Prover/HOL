@@ -15061,6 +15061,75 @@ fun narrowing_existential_replay_is_certified () =
     certified andalso refused
   end
 
+fun narrowing_wide_enum_replay_is_certified () =
+  let
+    val ty = ``:rg_octet``
+    val goal = ``?x : rg_octet. rx_octet_false x``
+    val terms =
+      [``RGE0``, ``RGE1``, ``RGE2``, ``RGE3``,
+       ``RGE4``, ``RGE5``, ``RGE6``, ``RGE7``]
+    val branches = ListPair.mapEq (fn (id, term) =>
+      (Refute_Eval.CaseConstructor (id, []), term,
+       Refute_Eval.CaseLeaf))
+      (List.tabulate (8, fn id => id), terms)
+    val tree = Refute_Eval.CaseExistential
+      {shape = Refute_Narrow.replay_shape
+         (Refute_Narrow.shape_of 0 ty),
+       branches = branches}
+    val result = Refute_Cert.certify_case_tree
+      {original = goal, evals = [], env = [], run_depth = 0,
+       case_tree = tree, cex = make_cex true}
+  in
+    case result of
+        Refute_Cert.Certified
+          {certainty = Genuine, cert = SOME theorem, ...} =>
+            null (Thm.hyp theorem) andalso
+            Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg goal)
+      | Refute_Cert.Potential
+          {certainty = Potential reasons, ...} =>
+            (narrowing_index_mismatch :=
+               "wide enum: " ^ String.concatWith "; " reasons;
+             false)
+      | _ => false
+  end
+
+fun narrowing_nested_replay_uses_fallback () =
+  let
+    val ty = ``:bool option option``
+    val goal = ``?x : bool option option. rx_nested_false x``
+    fun branch pattern term =
+      (pattern, term, Refute_Eval.CaseLeaf)
+    val none = Refute_Eval.CaseConstructor (0, [])
+    fun some pattern = Refute_Eval.CaseConstructor (1, [pattern])
+    val branches =
+      [branch none ``NONE : bool option option``,
+       branch (some none) ``SOME NONE : bool option option``,
+       branch (some (some (Refute_Eval.CaseConstructor (1, []))))
+         ``SOME (SOME F) : bool option option``,
+       branch (some (some none))
+         ``SOME (SOME T) : bool option option``]
+    val tree = Refute_Eval.CaseExistential
+      {shape = Refute_Narrow.replay_shape
+         (Refute_Narrow.shape_of 2 ty),
+       branches = branches}
+    val result = Refute_Cert.certify_case_tree
+      {original = goal, evals = [], env = [], run_depth = 2,
+       case_tree = tree, cex = make_cex true}
+  in
+    case result of
+        Refute_Cert.Certified
+          {certainty = Genuine, cert = SOME theorem, ...} =>
+            null (Thm.hyp theorem) andalso
+            Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg goal)
+      | Refute_Cert.Potential
+          {certainty = Potential reasons, ...} =>
+          (narrowing_index_mismatch :=
+             !narrowing_index_mismatch ^ "\nnested:\n" ^
+             String.concatWith "; " reasons;
+           false)
+      | _ => false
+  end
+
 fun narrowing_mixed_prefix_replay_is_certified () =
   let
     val config = default_config
@@ -15542,6 +15611,16 @@ val _ = require_msg
   (fn () =>
     "existential narrowing replay was not ordinarily certified:\n" ^
     !narrowing_replay_mismatch)
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result narrowing_wide_enum_replay_is_certified)
+  (fn () => "wide enum replay did not use a clean certificate:\n" ^
+    !narrowing_index_mismatch)
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result narrowing_nested_replay_uses_fallback)
+  (fn () => "nested replay did not certify through the indexed fallback:\n" ^
+    !narrowing_index_mismatch)
   (fn () => ()) ()
 val _ = require_msg
   (check_result narrowing_mixed_prefix_replay_is_certified)

@@ -315,10 +315,71 @@ structure Refute_Cert = struct
           ()
         end
 
-      fun close_from refutations (goal as (_, conclusion)) =
-        case Lib.get_first (fn theorem =>
-          SOME (MATCH_ACCEPT_TAC theorem goal)
-          handle HOL_ERR _ => NONE) refutations of
+      fun constructor_key tm =
+        let
+          val (head, _) = boolSyntax.strip_comb tm
+          val {Thy, Name, ...} = Term.dest_thy_const head
+        in
+          SOME (Thy ^ "$" ^ Name)
+        end
+        handle HOL_ERR _ => NONE
+
+      fun refutation_index patterned_refutations =
+        let
+          fun add ((pattern, theorem), index) =
+            case constructor_key pattern of
+                NONE => index
+              | SOME key =>
+                  Redblackmap.insert
+                    (index, key,
+                     theorem ::
+                       Option.getOpt
+                         (Redblackmap.peek (index, key), []))
+        in
+          List.foldl add
+            (Redblackmap.mkDict String.compare)
+            patterned_refutations
+        end
+
+      fun indexed_refutation index conclusion =
+        let
+          fun add_key (tm, keys) =
+            case constructor_key tm of
+                NONE => keys
+              | SOME key =>
+                  if List.exists (fn old => old = key) keys then keys
+                  else key :: keys
+          val keys = List.foldl add_key []
+            (HolKernel.find_terms (Option.isSome o constructor_key)
+              conclusion)
+          val candidates = List.mapPartial (fn key =>
+            case Redblackmap.peek (index, key) of
+                SOME [theorem] => SOME theorem
+              | _ => NONE) keys
+        in
+          case candidates of [theorem] => SOME theorem | _ => NONE
+        end
+
+      fun close_from index refutations (goal as (_, conclusion)) =
+        let
+          fun accept theorem =
+            SOME (MATCH_ACCEPT_TAC theorem goal)
+            handle HOL_ERR _ => NONE
+          fun scan () = Lib.get_first accept refutations
+          (* [validate_cover] has proved the patterns disjoint and
+             exhaustive, so at most one refutation can close this leaf.
+             A unique constructor-head lookup therefore preserves the
+             theorem selected by the old scan.  Ambiguous or finer splits
+             deliberately miss the index and retain the linear fallback. *)
+          val solved =
+            case indexed_refutation index conclusion of
+                SOME theorem =>
+                  (case accept theorem of
+                       SOME result => SOME result
+                     | NONE => scan ())
+              | NONE => scan ()
+        in
+        case solved of
             SOME solved => solved
           | NONE =>
               let
@@ -333,9 +394,10 @@ structure Refute_Cert = struct
                 val nchotomy = TypeBase.nchotomy_of
                   (Term.type_of variable)
               in
-                (STRUCT_CASES_TAC (Thm.SPEC variable nchotomy) THEN
-                 close_from refutations) goal
+                (STRUCT_CASES_TAC (Drule.ISPEC variable nchotomy) THEN
+                 close_from index refutations) goal
               end
+        end
 
       fun prove_neg formula Refute_Eval.CaseLeaf =
             let
@@ -378,10 +440,14 @@ structure Refute_Cert = struct
                 prove_neg (Term.subst
                   [{redex = variable, residue = pattern}] body) subtree
               val refutations = map branch_refutation branches
+              val patterned_refutations =
+                ListPair.mapEq (fn ((_, pattern, _), theorem) =>
+                  (pattern, theorem)) (branches, refutations)
+              val index = refutation_index patterned_refutations
               val all_negated = boolSyntax.mk_forall
                 (variable, boolSyntax.mk_neg body)
               val exhaustive = Tactical.prove
-                (all_negated, GEN_TAC THEN close_from refutations)
+                (all_negated, GEN_TAC THEN close_from index refutations)
               val conversion = CONV_RULE
                 (DEPTH_CONV BETA_CONV)
                 (Drule.ISPEC (Term.mk_abs (variable, body))
