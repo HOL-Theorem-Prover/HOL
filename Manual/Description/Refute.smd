@@ -1,0 +1,673 @@
+## The `HolRefute` Library
+
+\label{sec:HolRefute}
+\index{HolRefute|(}
+\index{counterexamples|see {HolRefute}}
+\index{model finding|see {HolRefute}}
+
+`HolRefute` searches for finite counterexamples to HOL conjectures.  It
+combines Quickcheck-style execution, native narrowing, and a
+Nitpick-style finite model finder behind the `Refute` structure.  It is
+intended for finding mistakes quickly; a report that no counterexample
+was found within the selected bounds is not a proof.
+
+The library is available on Poly/ML builds.  The following tested
+sequence starts an interactive session from the HOL source tree:
+
+    cd src/HolRefute
+    ../../bin/hol --holstate=refuteheap
+
+The heap contains Refute's base theories and dependencies; it does not
+preload the ML modules.  At the prompt, load the public facade explicitly:
+
+    load "Refute"; open Refute;
+
+This loads the implementation modules and registers the built-in backends.
+Loading and running Refute leaves no Refute-created type, constant, theorem,
+or theory binding in the user's theory.  In particular, temporary
+compilation artefacts are removed on success, failure, timeout, and
+interruption.
+
+### A first counterexample
+
+The following is a static transcript from a Refute-enabled session.
+Timing fields are machine-dependent.  The configuration selects the
+portable `Compute` execution substrate to make the example independent
+of an external compiler.
+
+```{=latex}
+\begin{session}
+\begin{verbatim}
+- load "Refute"; open Refute;
+(* load output omitted *)
+> val it = () : unit
+
+- the_config :=
+    (default_config
+       |> upd_sequential true
+       |> upd_substrate Compute
+       |> upd_size 4);
+> val it = () : unit
+
+- val _ = quickcheck ``(n : num) < 3``;
+> Refute found a counterexample
+    (backend: exhaustive, substrate: compute, size 3, 0.0s):
+    n = 3
+  Certified: |- ~!n. n < 3
+\end{verbatim}
+\end{session}
+```
+
+```{=mdbook}
+    - load "Refute"; open Refute;
+    (* load output omitted *)
+    > val it = () : unit
+
+    - the_config :=
+        (default_config
+           |> upd_sequential true
+           |> upd_substrate Compute
+           |> upd_size 4);
+    > val it = () : unit
+
+    - val _ = quickcheck ``(n : num) < 3``;
+    > Refute found a counterexample
+        (backend: exhaustive, substrate: compute, size 3, 0.0s):
+        n = 3
+      Certified: ⊢ ¬∀n. n < 3
+```
+
+Free variables are implicitly universally closed.  The `bindings` field
+of the returned structured counterexample contains `n = 3`, and its
+`cert` field contains the displayed HOL theorem.  Refute reports through
+the `"Refute"` trace at level 1.  Higher trace levels show backend and
+substrate selection, schedules, and compiled plans; level 0 suppresses
+normal Refute output.  `upd_quiet true` is the preferred per-call way to
+suppress all messages and warnings.
+
+### Entry points and results
+
+The principal result type is:
+
+```sml
+datatype outcome =
+    Counterexample of counterexample list
+  | NoCounterexample
+  | Unknown of string list
+```
+
+A `counterexample` records its `backend`, execution `substrate`,
+`certainty`, free-variable `bindings`, requested `evals`, optional
+certificate, optional finite `scope` and model, and statistics.
+`NoCounterexample` means only that a selected search completely exhausted
+the finite space it claimed to cover.  `Unknown` carries timeout,
+inapplicability, missing-generator, or incomplete-search reasons.
+
+The public entry points are:
+
+| Entry point | Behaviour |
+|---|---|
+| `refute cfg tm` | Search for a counterexample to `tm` with `cfg`, print the result unless quiet, and return the structured `outcome`. |
+| `refute_goal cfg (asms, tm)` | Search the goal whose assumptions are `asms` and conclusion is `tm`. |
+| `REFUTE_TAC` | Inspect a tactic goal using `!the_config`.  A counterexample raises a `Refute.REFUTE_TAC` HOL error containing the report; otherwise the tactic leaves the goal unchanged. |
+| `quickcheck tm` | Use `!the_config`, but select only the `exhaustive` and `random` backends. |
+| `nitpick tm` | Use `!the_config`, but select only the `kodkod` model-finder backend. |
+| `try_refute cfg goal` | Run quietly and return `SOME (backend, outcome)` only for a counterexample, or `NONE` for a miss, timeout, or inconclusive search. |
+| `find_unused_assms cfgopt thy` | Probe the named theory and return possible unused-assumption sets. |
+
+There are also conveniences `refute_def tm`, which calls `refute
+!the_config tm`, and `refute_top ()`, which applies `refute_goal` to the
+current top goal.
+
+`try_refute` is intended for other automation.  It preserves the
+caller's backend selection but forces sequential execution, seed 42,
+`NoExpectation`, and quiet mode.  Unlike the ordinary per-backend timeout,
+its `timeout` is an outer whole-call budget.  Its result is structured;
+callers need not parse Refute's printed text.  For example, this call
+prints no Refute report:
+
+```{=latex}
+\begin{session}
+\begin{verbatim}
+- Option.map #1
+    (try_refute
+       (default_config
+          |> upd_backends (SOME ["exhaustive"])
+          |> upd_substrate Compute
+          |> upd_size 4)
+       ([], ``(n : num) < 3``));
+> val it = SOME "exhaustive" : string option
+\end{verbatim}
+\end{session}
+```
+
+```{=mdbook}
+    - Option.map #1
+        (try_refute
+           (default_config
+              |> upd_backends (SOME ["exhaustive"])
+              |> upd_substrate Compute
+              |> upd_size 4)
+           ([], ``(n : num) < 3``));
+    > val it = SOME "exhaustive" : string option
+```
+
+### Backends, substrates, and racing
+
+Four backends are registered by default, in increasing weight order:
+
+| Weight | Backend | Search |
+|---:|---|---|
+| 20 | `exhaustive` | Size-bounded enumeration and evaluation. |
+| 30 | `random` | Reproducible random generation and evaluation. |
+| 40 | `narrowing` | Native symbolic narrowing, including prenex existentials. |
+| 50 | `kodkod` | Relational finite-model search through Kodkodi. |
+
+With `backends = NONE`, every configured backend is selected.  Kodkod is
+simply absent from that set when its external component is not available.
+`SOME names` restricts the set.  Weights order sequential execution and
+break ties between results of equal certainty; in parallel mode they do
+not promise which process finishes first.
+
+The default `sequential = false` races the selected backends.  A result
+stops the race only when its certainty reaches the best ceiling declared
+by every eligible backend.  Thus a quick potential counterexample does
+not hide a genuine result that another selected backend can still
+produce.  A backend registered through `register_backend` conservatively
+declares the ceiling `Genuine`; a backend with a tighter ceiling can use
+`register_backend_with_ceiling`.
+
+Exhaustive and random testing compile a common test-plan language onto
+one of three substrates:
+
+* `NativeSML` extracts and compiles the executable fragment in process.
+  It is the preferred fast substrate on Poly/ML.
+* `Cv` compiles a fuel-bounded HOL test loop and evaluates its
+  `cv_compute` translation.  It accepts a smaller, first-order fragment.
+* `Compute` interprets plans with `computeLib`.  It is the compatibility
+  substrate and supports registered custom and abstract generators.
+
+The default `Auto` tries these in priority order: Native SML, Cv, then
+Compute.  It falls through only when a substrate says it is inapplicable.
+Selecting `NativeSML`, `Cv`, or `Compute` explicitly never silently
+changes substrate; inapplicability then contributes an `Unknown` reason.
+For a fixed `seed`, all three consume the same specified 64-bit random
+stream.
+
+Narrowing is a native backend rather than another choice in this
+substrate ladder.  It searches refinement depths from 0 through `size`.
+Purely universal problems use plain narrowing; a prenex problem with an
+existential uses the PNF engine when `allow_existentials` is true.
+Function inputs are represented by finite update chains when
+`finite_functions` is true, with constant functions used for
+higher-order domains.  Partially known values are printed with `_` holes.
+
+The model finder translates the original polymorphic problem into a
+bounded relational formula.  It handles finite scopes, datatypes and
+codatatypes, functions, sets, inductive and coinductive predicates,
+typedefs, quotients, binary integers, and the registered `rat` fraction
+encoding.  Its `Scope:` line records the exact finite interpretation.
+For example:
+
+```{=latex}
+\begin{session}
+\begin{verbatim}
+- val cfg =
+    default_config
+      |> upd_backends (SOME ["kodkod"])
+      |> upd_sequential true
+      |> upd_card [(NONE, [2])];
+(* configuration value omitted *)
+
+- val _ = refute cfg ``(x : 'a) = y``;
+> Refute found a counterexample
+    (backend: kodkod, substrate: kodkod, 0.177s):
+  Scope: card alpha = 2
+    x = a2
+    y = a1
+  Certified: |- ~!x y. x = y
+\end{verbatim}
+\end{session}
+```
+
+```{=mdbook}
+    - val cfg =
+        default_config
+          |> upd_backends (SOME ["kodkod"])
+          |> upd_sequential true
+          |> upd_card [(NONE, [2])];
+    (* configuration value omitted *)
+
+    - val _ = refute cfg ``(x : 'a) = y``;
+    > Refute found a counterexample
+        (backend: kodkod, substrate: kodkod, 0.177s):
+      Scope: card α = 2
+        x = a2
+        y = a1
+      Certified: ⊢ ¬∀x y. x = y
+```
+
+### Smart testing
+
+Refute rewrites executable bounded quantifiers before planning.  It
+supports the universal forms `!n. n < e ==> P n`, `!n. n <= e ==> P n`,
+`!n. n IN count e ==> P n`, and `!x. MEM x xs ==> P x`, and their
+existential conjunction duals.  The rewrites use `EVERY` or `EXISTS`, so a
+bound such as `LENGTH xs` may depend on another generated value.  Offset
+intervals such as `lo <= n /\ n < hi` are not recognized; neither they nor
+unrestricted quantifiers over infinite types become executable QC goals.
+
+With `smart_quantifier = true`, premises are considered while the test
+plan is built rather than after every variable has been generated.
+Equality premises can bind variables directly.  With
+`smart_generators = true`, a positive, first-order Horn premise recovered
+from `Hol_reln`, or from Horn-shaped Boolean function equations, can be
+mode-compiled to an `Enum` plan.  `depth` is the fixed fuel supplied to
+such an enumerator.  Premises may be reordered during mode analysis;
+`reorder_premises = false` disables that step.  If mode compilation is not
+possible, Refute safely falls back to generate-and-guard testing.
+
+A corpus-reach probe found that the only directly reachable distribution
+corpus is `src/HolRefute/selftest.sml`: no file elsewhere in `src` or
+`examples` invokes Refute.  The adopted payoff cases are its first-order
+`Hol_reln` goal `zoo_sg_linear n ==> n < 3` and the Horn-function
+`ALL_DISTINCT` example below.  Existing `SORTED` candidates degrade to
+guards because their relation argument is function-valued.  Other
+`ALL_DISTINCT` occurrences hide it inside equivalences, while promising
+first-order distribution relations lack a compact executable certification
+view or need heavier generators; those candidates are deferred.
+
+The practical difference is visible at small bounds.  At `size = 1` and
+`depth = 8`, the Horn-function premise in the following example directly
+generates a distinct list and finds a certified counterexample.  With
+smart generators disabled, generate-and-test does not reach one at the
+same bound and reports an incomplete no-hit result.
+
+```{=latex}
+\begin{session}
+\begin{verbatim}
+- val cfg =
+    default_config
+      |> upd_backends (SOME ["exhaustive"])
+      |> upd_substrate Compute
+      |> upd_sequential true
+      |> upd_size 1
+      |> upd_depth 8;
+(* configuration value omitted *)
+
+- val _ = refute cfg
+    ``ALL_DISTINCT (xs : bool list) ==> LENGTH xs < 1``;
+(* temporary compilation messages omitted *)
+> Refute found a counterexample
+    (backend: exhaustive, substrate: compute, size 1, 0.075s):
+    xs = [T]
+  Certified: |- ~!xs. ALL_DISTINCT xs ==> LENGTH xs < 1
+\end{verbatim}
+\end{session}
+```
+
+```{=mdbook}
+    - val cfg =
+        default_config
+          |> upd_backends (SOME ["exhaustive"])
+          |> upd_substrate Compute
+          |> upd_sequential true
+          |> upd_size 1
+          |> upd_depth 8;
+    (* configuration value omitted *)
+
+    - val _ = refute cfg
+        ``ALL_DISTINCT (xs : bool list) ==> LENGTH xs < 1``;
+    (* temporary compilation messages omitted *)
+    > Refute found a counterexample
+        (backend: exhaustive, substrate: compute, size 1, 0.075s):
+        xs = [T]
+      Certified: ⊢ ¬∀xs. ALL_DISTINCT xs ⇒ LENGTH xs < 1
+```
+
+Smart-enumerator fuel bounds every generated derivation.  Exhausting an
+`Enum` or smart guard is consequently incomplete even if its finite
+search happened not to find a hit.
+
+### Certification and certainty
+
+Execution substrates, generated SML, Kodkodi, and SAT solvers are
+untrusted accelerators.  With the default `certify = true`, a Quickcheck
+candidate is re-evaluated independently with `computeLib`; Refute returns
+`Genuine` only after constructing a theorem for the negated, closed
+instance.  Narrowing grounds partial hits before evaluation and certifies
+PNF existential hits by replaying their finite case tree.  Refute never
+adds an oracle tag.
+
+The fields `certainty` and `cert` deliberately answer different
+questions.  `Genuine` says that the backend's semantic conditions for a
+real counterexample hold.  `cert = SOME thm` says that Refute additionally
+constructed a HOL theorem.  A sound finite model from the model finder
+can therefore be `Genuine` with `cert = NONE`; this is printed as
+`Certification: uncertified`.  Models whose encoding relies on an
+approximation are instead `QuasiGenuine reasons` or `Potential reasons`.
+The backend and substrate fields make clear whether a report came from
+MF, narrowing, or executable QC.
+
+Setting `certify = false` skips all QC EVAL and replay certification.  A
+QC hit remains `Genuine`, but has `cert = NONE` and gets the same explicit
+uncertified marker as a genuine MF result:
+
+```{=latex}
+\begin{session}
+\begin{verbatim}
+- the_config := (!the_config |> upd_certify false);
+> val it = () : unit
+
+- val _ = quickcheck ``(n : num) < 3``;
+> Refute found a counterexample
+    (backend: exhaustive, substrate: compute, size 3, 0.0s):
+    n = 3
+  Certification: uncertified
+\end{verbatim}
+\end{session}
+```
+
+```{=mdbook}
+    - the_config := (!the_config |> upd_certify false);
+    > val it = () : unit
+
+    - val _ = quickcheck ``(n : num) < 3``;
+    > Refute found a counterexample
+        (backend: exhaustive, substrate: compute, size 3, 0.0s):
+        n = 3
+      Certification: uncertified
+```
+
+This opt-out is useful while exploring, but clients that require a kernel
+object must inspect `cert`, not merely test `certainty = Genuine`.
+
+### Finding unused assumptions
+
+The unused-assumption interface has three levels:
+
+```sml
+check_unused_assms :
+  config option -> string * thm -> string * int list list option
+find_unused_assms :
+  config option -> string -> (string * int list list option) list
+print_unused_assms : config option -> string option -> unit
+```
+
+`NONE` derives a QC-only configuration from `!the_config`; `SOME cfg`
+preserves the supplied backend selection.  Each probe nevertheless forces
+sequential, quiet, abort-potential, expectation-free operation.  Probes
+are serial.  An inconclusive `Unknown` is conservatively treated as "not
+shown unused" rather than as evidence that an assumption can be removed.
+
+For each theorem, the tool strips outer universal quantifiers and indexes
+the left-to-right chain of implication premises exactly as written.  It
+does not split a conjunctive antecedent: in `(p /\ q) ==> r`, `p /\ q` is
+one premise at index 0.  The tool first tests every single indexed premise,
+then grows combinations only from individually droppable premises and
+returns the maximal simultaneously droppable sets.  Result indexes are
+zero-based; `print_unused_assms` displays them one-based.  `NONE` in the
+per-theorem result means that the theorem has no implication premises,
+whereas `SOME []` means that no premise was shown droppable.
+
+```{=latex}
+\begin{session}
+\begin{verbatim}
+- val th = prove (``!p q. p ==> q ==> q``, simp []);
+> val th = |- !p q. p ==> q ==> q : thm
+
+- Refute.check_unused_assms (SOME cfg) ("demo", th);
+> val it = ("demo", SOME [[0]])
+    : string * int list list option
+\end{verbatim}
+\end{session}
+```
+
+```{=mdbook}
+    - val th = prove (``!p q. p ==> q ==> q``, simp []);
+    > val th = ⊢ ∀p q. p ⇒ q ⇒ q : thm
+
+    - Refute.check_unused_assms (SOME cfg) ("demo", th);
+    > val it = ("demo", SOME [[0]])
+        : string * int list list option
+```
+
+`find_unused_assms cfgopt "foo"` checks all theorems returned by
+`DB.thms "foo"`, sorted by name.  `print_unused_assms cfgopt NONE` checks
+the current theory and prints a summary, including the number of
+inconclusive probes.
+
+### Configuration
+
+Configurations are immutable records changed by updater functions.  The
+usual idiom is:
+
+```sml
+val cfg = Refute.default_config
+  |> Refute.upd_timeout 5.0
+  |> Refute.upd_backends (SOME ["exhaustive", "narrowing"])
+  |> Refute.upd_size 7
+```
+
+`default_config` contains `default_qc_config` and `default_mf_config`.
+`upd_qc` and `upd_mf` replace a complete sub-record; the individual
+updaters are generally less brittle.  `the_config : config ref` supplies
+the interactive defaults, and `show_config ()` prints its complete
+current value.  The common fields are:
+
+| Updater | Default | Meaning |
+|---|---:|---|
+| `upd_timeout` | `30.0` | Seconds allowed to each ordinary backend run. |
+| `upd_backends` | `NONE` | All configured backends, or exactly the names in `SOME`. |
+| `upd_sequential` | `false` | Run backends by weight instead of racing them. |
+| `upd_genuine_only` | `false` | Suppress potential results and continue looking for genuine ones. |
+| `upd_abort_potential` | `false` | Stop at the first counterexample regardless of certainty. |
+| `upd_quiet` | `false` | Suppress Refute traces, messages, and warnings for this call. |
+| `upd_no_assms` | `false` | Ignore goal assumptions supplied to `refute_goal`. |
+| `upd_evals` | `[]` | Extra terms whose values should be reconstructed and displayed. |
+| `upd_expect` | `NoExpectation` | Regression expectation checked after the run. |
+| `upd_max_counterexamples` | `1` | Maximum QC counterexamples requested. |
+| `upd_tag` | `""` | Text appended to the formatted outcome. |
+
+Expectations are `ExpectNone`, `ExpectUnknown`, `ExpectCex`,
+`ExpectGenuine`, `ExpectQuasiGenuine`, and `ExpectPotential`.  A mismatch
+raises a HOL error.  They are intended mainly for tests.
+
+#### Quickcheck and narrowing fields
+
+| Updater | Default | Meaning |
+|---|---:|---|
+| `upd_size` | `10` | Maximum generated size and narrowing refinement depth. |
+| `upd_iterations` | `100` | Random draws. |
+| `upd_depth` | `10` | Fixed smart-enumerator fuel for each plan. |
+| `upd_finite_types` | `true` | Add small fresh finite types when monomorphizing type variables. |
+| `upd_finite_type_size` | `3` | Number of such finite cardinalities considered. |
+| `upd_default_type` | `[``:num``]` | Type instances used when `finite_types` is false. |
+| `upd_substrate` | `Auto` | `Auto`, `NativeSML`, `Cv`, or `Compute` for executable QC. |
+| `upd_allow_existentials` | `true` | Permit PNF narrowing of prenex existentials. |
+| `upd_finite_functions` | `true` | Finitize narrowing function inputs as update chains or constants. |
+| `upd_certify` | `true` | Independently certify QC and narrowing hits. |
+| `upd_smart_quantifier` | `true` | Compile premises into binds, guards, and generators. |
+| `upd_smart_generators` | `true` | Enable Horn relation/function `Enum` plans. |
+| `upd_optimise_equality` | `true` | Turn suitable equality premises into direct bindings. |
+| `upd_reorder_premises` | `true` | Reorder premises during smart mode inference. |
+| `upd_seed` | `NONE` | Reproducible random seed; `NONE` advances a deterministic session stream. |
+| `upd_allow_function_inversion` | `false` | Reserved; currently has no consumer. |
+| `upd_use_subtype` | `false` | Reserved; currently has no consumer. |
+
+The reserved annotations also appear in `show_config`; changing either
+reserved field has no effect.  In contrast, `depth` is live and is not a
+second 0-through-depth schedule loop.
+
+#### Model-finder fields
+
+Several MF options are rows.  A `NONE` key is the fallback;
+`SOME ty` or `SOME tm` overrides matching types or constants.  A Boolean
+row value of `NONE` asks Refute to choose, while `SOME true` or
+`SOME false` forces the choice.
+
+| Updater | Default | Meaning |
+|---|---:|---|
+| `upd_card` | fallback `[1,...,10]` | Candidate finite cardinalities by type. |
+| `upd_max` | fallback `[~1]` | Maximum constructor multiplicities; `~1` means automatic. |
+| `upd_mono` | fallback `NONE` | Automatic or forced monotonicity classification by type. |
+| `upd_wf` | fallback `NONE` | Automatic or forced well-founded treatment by constant. |
+| `upd_sat_solver` | `"smart"` | Kodkodi SAT solver selection. |
+| `upd_batch_size` | `50` | Scope problems submitted per solver batch. |
+| `upd_falsify` | `true` | Falsify the conjecture; false searches for a model of it. |
+| `upd_user_axioms` | `NONE` | Automatic or forced inclusion of user axioms. |
+| `upd_destroy_constrs` | `true` | Simplify constructor applications during preprocessing. |
+| `upd_total_consts` | `NONE` | Automatic or forced total relational encoding of constants. |
+| `upd_peephole_optim` | `true` | Enable relational peephole optimization. |
+| `upd_datatype_sym_break` | `5` | Datatype symmetry-breaking strength. |
+| `upd_kodkod_sym_break` | `15` | Kodkod's symmetry-breaking limit. |
+| `upd_max_potential` | `1` | Global budget for potential models. |
+| `upd_max_genuine` | `1` | Global budget for genuine models. |
+| `upd_atoms` | fallback `[]` | Preferred printed atom names by type. |
+| `upd_format` | fallback `[1]` | Model-value display depth by constant. |
+| `upd_show_types` | `false` | Include interpreted type universes in models. |
+| `upd_show_skolems` | `true` | Include Skolem values. |
+| `upd_show_consts` | `false` | Include reconstructed constant tables. |
+| `upd_debug` | `false` | Enable MF debug mode and single-problem batches. |
+| `upd_overlord` | `false` | Keep solver files with stable names in the current directory. |
+| `upd_max_threads` | `0` | Kodkodi thread cap; zero leaves it unspecified. |
+| `upd_tac_timeout` | `0.5` | Seconds for inner monotonicity and well-foundedness tactics. |
+| `upd_specialize` | `true` | Specialize static higher-order arguments. |
+| `upd_box` | fallback `NONE` | Automatically or forcibly box function and pair types. |
+| `upd_binary_ints` | `NONE` | Automatically or forcibly use binary integers. |
+| `upd_bits` | `[1,...,10]` | Candidate binary word widths. |
+| `upd_star_linear_preds` | `true` | Use exact closure for linear inductive predicates. |
+| `upd_iter` | fallback depth row | Fixpoint-unrolling depths for inductive predicates. |
+| `upd_bisim_depth` | `[9]` | Codatatype bisimulation depths; `~1` disables bisimulation. |
+| `upd_finitize` | fallback `NONE` | Automatically or forcibly finitize shallow infinite types. |
+| `upd_whack` | `[]` | Constants whose definitions preprocessing should ignore. |
+| `upd_need` | `NONE` | Optional terms whose values must occur in a model. |
+| `upd_merge_type_vars` | `false` | Merge all MF type-variable scopes into the first variable. |
+
+The default iterator row is `[0,1,2,4,8,12,16,20,24,28]`.  A mutual
+fixpoint group shares one row: members are considered in cases-theorem
+order, and the first explicit row wins.  Requesting multiple models may
+force an incremental SAT solver.  Merging type variables reduces scope
+products but can lose models that require different cardinalities for
+the original variables.
+
+### Extending Refute
+
+All registrations below are session-local ML state.  They do not define
+HOL constants or types, and a later registration for the same key
+replaces the old one.
+
+* `register_generator ty {enumerate, random}` installs a QC generator.
+  `enumerate` has type `int -> term list`; `random` has type
+  `int -> rng -> term * rng`.  At least one callback must be present.
+  `abstract_generator {ty, constructors, pred}` instead describes an
+  abstract type through existing constructor terms and an optional
+  predicate.
+* `register_substrate {name, priority, compile}` extends or replaces the
+  executable substrate ladder.  A substrate must compile the common plan
+  and preserve candidate order and cleanup; returning `Inapplicable`
+  allows `Auto` to continue.
+* `register_backend backend` adds or replaces a weighted backend.
+  `register_backend_with_ceiling backend ceiling` additionally declares
+  a configuration- and instance-sensitive certainty ceiling.  The
+  callback must overestimate: an underestimate can stop a race before a
+  stronger result and violates the contract.
+* `register_codatatype {tyop, case_const, constructors}` describes an
+  existing codatatype.  Constructor, branch, and scrutinee types are
+  checked.  Built-in lazy registrations cover `llist`, `ltree`, `itree`,
+  `itreeTau`, `lbtree`, and `path` when their theories are present.
+* `register_typedef {ty, abs, rep, absrep_thm}` registers existing Abs and
+  Rep constants and the exported bijection conjunction.
+  `register_quotient {qty, rty, abs, rep, equiv_thm, partial}` registers
+  an existing quotient; the theorem shape determines whether the sound
+  partial encoding is needed, while `partial` remains for source
+  compatibility.
+* `register_frac_type {tyop, ersatz}` supplies a fraction representation
+  and replacements.  `register_frac_type_rat ()` idempotently restores
+  the built-in rational registration.  `register_ersatz` adds an
+  individual original-to-replacement constant mapping.
+* `register_term_postprocessor pattern f` installs a bottom-up,
+  display-only model transformation.  Matching transformations compose
+  from general to specific; failures or type changes leave the raw term
+  unchanged.  Certification always uses raw terms.
+  `lookup_term_postprocessor ty` returns the composed callback.
+
+The theorem sets used by MF preprocessing can be extended in a theory
+script with `export_refute_simp`, `export_refute_psimp`, and
+`export_refute_unfold`.  Their arguments are names of existing theorems
+to export into the corresponding set.
+
+Structural registrations require distinct type variables as parameters
+and existing constants for constructors, case operators, Abs, and Rep.
+The model finder also attempts a lazy, validated database harvest when it
+first encounters an unregistered typedef or quotient; explicit
+registration remains useful when a nonstandard theorem shape cannot be
+recovered.
+
+### Installing Kodkodi
+
+The three native QC backends need no external solver.  The `kodkod`
+backend is Unix-only and requires Java and Kodkodi 1.5.7.  Obtain
+`kodkodi-1.5.7.tar.gz` from the Isabelle components mirror at
+<https://isabelle.in.tum.de/components/>, unpack it, and set
+`HOL4_KODKODI` to the component directory.  Its `jar` directory must
+contain:
+
+* `antlr-runtime-3.1.1.jar`;
+* `kodkod-1.5.jar`;
+* `kodkodi-1.5.7.jar`; and
+* `sat4j-2.3.jar`.
+
+Java is selected from `HOL4_JAVA_EXECUTABLE`, then `JAVA_HOME/bin/java`,
+then `java` on `PATH`.  As an escape hatch,
+`HOL4_KODKODI_EXEC` may name a complete standalone launcher command; it
+takes precedence and is passed to the shell verbatim.  The component's
+usual launcher depends on Isabelle and is not a standalone replacement.
+Configuration probes are lazy and never start Java merely by loading
+Refute.
+
+SAT4J is the portable default.  JNI MiniSat, CryptoMiniSat, and Lingeling
+are advertised only when their respective shared libraries are found in
+the component's platform `jni` directory.  External solver environment
+variables understood by Kodkodi, such as `MINISAT_HOME`,
+`CRYPTOMINISAT_HOME`, `ZCHAFF_HOME`, and `RISS3G_HOME`, are retained.
+
+### Limitations and interpretation
+
+Counterexample search is bounded and incomplete.  In particular:
+
+* random exhaustion, smart-generator fuel exhaustion, and narrowing at a
+  finite depth normally produce `Unknown`, not a proof of validity;
+* bounded-quantifier rewriting does not support offset intervals such as
+  `lo <= n /\ n < hi`;
+* ordinary QC requires executable terms and generators.  Unrestricted
+  quantifiers over infinite types, choice, unsupported constants, and
+  recursive datatypes beneath function types may make a substrate
+  inapplicable;
+* smart generators support positive first-order modes.  Higher-order
+  relation parameters, negative modes, and general function flattening
+  fall back to guards rather than becoming errors;
+* `use_subtype` and `allow_function_inversion` are reserved.  Subtype
+  lifting and general function inversion are not implemented;
+* narrowing finitizes function inputs.  The constant-function fallback
+  for a higher-order domain is an approximation, and every depth bound
+  remains incomplete;
+* the model finder depends on finite scopes and on the soundness
+  conditions reported in `certainty`.  Unsupported encodings are refused
+  or downgraded rather than silently called genuine;
+* fraction support covers `rat`, not `real`; certification of reconstructed
+  real literals remains unresolved;
+* hand-written greatest fixpoints are not recognized for unrolling; use
+  `Hol_coreln`.  Relation identity remains unfolded rather than a native
+  relational primitive;
+* if lazy metadata harvest cannot validate an Abs/Rep type, MF returns
+  `Unknown` and asks for an explicit typedef registration; and
+* HolRefute is built only with Poly/ML.  Kodkodi adds the Unix, Java, and
+  local-component restrictions described above.
+
+A counterexample is useful evidence that a statement is false, especially
+when `cert = SOME thm`.  Conversely, `NoCounterexample` and `Unknown`
+should be read as guidance for changing bounds, generators, backends, or
+the conjecture—not as theorem-prover success.
+
+\index{HolRefute|)}
