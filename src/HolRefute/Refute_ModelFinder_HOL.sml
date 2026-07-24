@@ -1961,34 +1961,35 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun harvest_db_hook delta =
-    let
-      fun current () = Theory.current_theory ()
-      fun changed theory = note_harvest_db_change theory
-      fun add theory named_theorem =
-        (changed theory; note_harvest_binding theory named_theorem)
-    in
-      case delta of
-          TheoryDelta.NewBinding (name, (theorem, _)) =>
-            if Theory.is_temp_binding name then ()
-            else add (current ()) (name, theorem)
-        | TheoryDelta.UpdBinding (name, {thm, ...}) =>
-            if Theory.is_temp_binding name then ()
-            else
-              (remove_harvest_binding (current ()) name;
-               add (current ()) (name, thm))
-        | TheoryDelta.DelBinding name =>
-            if Theory.is_temp_binding name then ()
-            else
-              (changed (current ());
-               remove_harvest_binding (current ()) name)
-        | TheoryDelta.NewTheory {oldseg, newseg} =>
-            (changed oldseg; changed newseg)
-        | TheoryDelta.ExportTheory theory =>
-            (changed theory; index_harvest_theory theory)
-        | TheoryDelta.TheoryLoaded theory =>
-            (changed theory; index_harvest_theory theory)
-        | _ => ()
-    end
+    with_registration_lock (fn () =>
+      let
+        fun current () = Theory.current_theory ()
+        fun changed theory = note_harvest_db_change theory
+        fun add theory named_theorem =
+          (changed theory; note_harvest_binding theory named_theorem)
+      in
+        case delta of
+            TheoryDelta.NewBinding (name, (theorem, _)) =>
+              if Theory.is_temp_binding name then ()
+              else add (current ()) (name, theorem)
+          | TheoryDelta.UpdBinding (name, {thm, ...}) =>
+              if Theory.is_temp_binding name then ()
+              else
+                (remove_harvest_binding (current ()) name;
+                 add (current ()) (name, thm))
+          | TheoryDelta.DelBinding name =>
+              if Theory.is_temp_binding name then ()
+              else
+                (changed (current ());
+                 remove_harvest_binding (current ()) name)
+          | TheoryDelta.NewTheory {oldseg, newseg} =>
+              (changed oldseg; changed newseg)
+          | TheoryDelta.ExportTheory theory =>
+              (changed theory; index_harvest_theory theory)
+          | TheoryDelta.TheoryLoaded theory =>
+              (changed theory; index_harvest_theory theory)
+          | _ => ()
+      end)
 
   val _ = Theory.register_hook ("Refute_ModelFinder_HOL.harvest_db",
                                 harvest_db_hook)
