@@ -19463,6 +19463,12 @@ fun mf_acceptance_test solver group_config
     val config = configured
       |> enforce_mf_acceptance_config solver
       |> Refute.upd_expect public_expectation
+    val config =
+      (* This exhaustive ExpectNone case sits just above the shared
+         30-second corpus budget on slower builders. *)
+      if name = "Manual_Nits subst2" then
+        Refute.upd_timeout 60.0 config
+      else config
     val outcome = with_silent_refute (fn () => Refute.refute config tm)
     val verdict_ok =
       case verdict_policy of
