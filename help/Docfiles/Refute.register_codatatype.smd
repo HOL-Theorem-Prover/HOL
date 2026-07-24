@@ -1,0 +1,42 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_codatatype`
+
+``` hol4
+Refute.register_codatatype :
+  {tyop : {Thy : string, Tyop : string},
+   case_const : term,
+   constructors : term list} -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers an existing codatatype with the model finder.
+
+`tyop` names the codatatype operator, `constructors` gives its distinct
+constructor constants in cases-theorem order, and `case_const` is its
+case constant.  Refute validates and normalizes polymorphic constructor
+types, infers the case constant's unique scrutinee position, and checks
+each remaining argument against the corresponding constructor branch.
+Type-operator parameters must be distinct type variables.
+
+Registrations are session-local.  A later valid registration for the same
+type operator replaces the old one and an explicit registration shadows a
+built-in lazy registration.  Built-ins cover `llist`, `ltree`, `itree`,
+`itreeTau`, `lbtree`, and `path` when their theories are available.
+
+### Failure
+
+Fails for an empty or duplicate constructor list, nonconstant terms,
+wrong constructor results or case branches, ambiguous or absent
+scrutinee position, interpreted or function types, malformed type
+parameters, or an incompatible quotient, typedef, or fraction
+classification.
+
+### See also
+
+[`Refute.register_quotient`](#Refute.register_quotient),
+[`Refute.register_typedef`](#Refute.register_typedef),
+[`Refute.register_frac_type`](#Refute.register_frac_type),
+[`Refute.nitpick`](#Refute.nitpick)
+
+Codatatype bounds are described in \ref{Description:the-holrefute-library}.

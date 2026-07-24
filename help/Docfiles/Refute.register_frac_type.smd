@@ -1,0 +1,41 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_frac_type`
+
+``` hol4
+Refute.register_frac_type :
+  {tyop : {Thy : string, Tyop : string},
+   ersatz :
+     {original : {Thy : string, Name : string},
+      replacement : {Thy : string, Name : string}} list} -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers a nullary fraction-like type and its model-finder replacements.
+
+`tyop` names an existing nullary HOL type.  Each `ersatz` row names an
+existing original constant and the existing constant used in its place by
+model-finder preprocessing.  Original keys in the list must be distinct.
+Active fraction mappings have precedence over ordinary ersatz mappings.
+
+The operation validates the complete registration before changing
+session state, then atomically replaces any fraction registration for the
+same type operator.  It also removes any quotient or typedef registry row
+for that operator, because the explicit fraction classification supersedes
+it.  It does not create a HOL type, constant, or theorem.
+
+### Failure
+
+Fails if the type does not exist or is not nullary, an ersatz constant
+does not exist, original keys repeat, or the operator is an interpreted,
+free datatype, or codatatype classification.
+
+### See also
+
+[`Refute.register_frac_type_rat`](#Refute.register_frac_type_rat),
+[`Refute.register_ersatz`](#Refute.register_ersatz),
+[`Refute.register_term_postprocessor`](#Refute.register_term_postprocessor),
+[`Refute.register_quotient`](#Refute.register_quotient),
+[`Refute.register_typedef`](#Refute.register_typedef)
+
+Fraction encoding is described in \ref{Description:the-holrefute-library}.

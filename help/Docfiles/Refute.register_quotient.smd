@@ -1,0 +1,53 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_quotient`
+
+``` hol4
+Refute.register_quotient :
+  {qty : hol_type,
+   rty : hol_type,
+   abs : term,
+   rep : term,
+   equiv_thm : thm,
+   partial : bool} -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers an existing quotient type with the model finder.
+
+`qty` is the quotient type and `rty` its representation type.  `abs` and
+`rep` must be existing constants of types `rty -> qty` and
+`qty -> rty`.  `equiv_thm` may be either the total equivalence form
+`!r1 r2. equiv r1 r2 = (equiv r1 = equiv r2)` or a standard bare
+`QUOTIENT equiv abs rep` theorem, with no hypotheses.  Here `equiv` is
+the equivalence relation, used in its curried unary form on the right;
+it is not the registered representation function `rep`.  For example,
+`ratTheory.RAT_EQUIV` has exactly this first shape, with `rat_equiv` in
+place of `equiv`.
+
+The theorem shape, not the legacy `partial` record field, decides the
+encoding.  The total extensionality form is registered as total; a bare
+`QUOTIENT` theorem uses the sound partial encoding.  The
+`partial` field remains only for source compatibility; its value is
+ignored.
+
+Registrations are session-local.  A valid later registration replaces the
+same quotient type operator.  The model finder can also lazily harvest
+standard quotient metadata; explicit registration is useful for a
+nonstandard database location or shape.
+
+### Failure
+
+Fails for malformed parameter types, nonconstant or ill-typed Abs/Rep
+terms, free or ill-typed equivalence relations, unsupported theorem
+shapes, theorem hypotheses, a theorem naming different constants, or an
+incompatible datatype, codatatype, typedef, or fraction classification.
+
+### See also
+
+[`Refute.register_typedef`](#Refute.register_typedef),
+[`Refute.register_codatatype`](#Refute.register_codatatype),
+[`Refute.register_frac_type`](#Refute.register_frac_type),
+[`Refute.nitpick`](#Refute.nitpick)
+
+Quotient encoding is described in \ref{Description:the-holrefute-library}.

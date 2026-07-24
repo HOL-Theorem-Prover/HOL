@@ -1,0 +1,32 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `nitpick`
+
+``` hol4
+Refute.nitpick : term -> outcome
+```
+
+------------------------------------------------------------------------
+
+Runs Refute's Nitpick-style finite model finder.
+
+`Refute.nitpick tm` calls `Refute.refute` using `!Refute.the_config` after
+forcing backend selection to `SOME ["kodkod"]`.  Every other field of the
+current configuration is preserved, including finite scopes, solver and
+encoding options, output controls, quiet mode, and expectations.
+
+The `kodkod` backend is configured only when the external Kodkodi
+component is available.  If it is unavailable, the result is `Unknown`
+with a no-configured-backend reason.  A finite model may be `Genuine`
+without a HOL certificate; clients requiring a theorem must inspect the
+counterexample's `cert` field.
+
+### See also
+
+[`Refute.config`](#Refute.config),
+[`Refute.refute`](#Refute.refute),
+[`Refute.quickcheck`](#Refute.quickcheck),
+[`Refute.register_codatatype`](#Refute.register_codatatype),
+[`Refute.register_quotient`](#Refute.register_quotient),
+[`Refute.register_typedef`](#Refute.register_typedef)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

@@ -1,0 +1,36 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_backend_with_ceiling`
+
+``` hol4
+Refute.register_backend_with_ceiling :
+  backend -> certainty_ceiling -> unit
+```
+
+------------------------------------------------------------------------
+
+Adds or replaces a backend with an explicit certainty ceiling.
+
+``` hol4
+type certainty_ceiling =
+  config -> instance list -> certainty
+```
+
+For the same configuration and instances, the callback must upper-bound
+the best certainty that the backend's `run` callback can return.  It may
+return `Genuine`, `QuasiGenuine reasons`, or `Potential reasons`.
+Overestimating is safe but can delay a race's early stop.  Underestimating
+can stop a race before another backend returns a stronger result and
+violates the registration contract.
+
+As with `register_backend`, a later registration with the same backend
+name replaces the old one and session-local ordering is by weight then
+name.
+
+### See also
+
+[`Refute.register_backend`](#Refute.register_backend),
+[`Refute.config`](#Refute.config),
+[`Refute.refute`](#Refute.refute)
+
+The racing and certainty model is described in
+\ref{Description:the-holrefute-library}.

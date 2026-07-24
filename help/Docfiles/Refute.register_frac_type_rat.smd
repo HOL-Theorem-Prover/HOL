@@ -1,0 +1,37 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_frac_type_rat`
+
+``` hol4
+Refute.register_frac_type_rat : unit -> unit
+```
+
+------------------------------------------------------------------------
+
+Restores or refreshes Refute's built-in rational fraction registration.
+
+The built-in registration maps the nullary `rat` type and its arithmetic,
+comparison, numeral, and constructor constants to the corresponding
+normalized `refute` fraction operations.  It also installs the display
+postprocessor that reconstructs model values with `rat_cons`.
+
+The operation validates all fraction metadata before changing state and
+commits the fraction and display registrations together.  It is
+session-local, synchronized, atomic, and idempotent.  The registration is
+installed when `Refute` is loaded; this entry point is useful after
+session-level customization of the `rat` fraction or postprocessor rows.
+It creates no HOL objects.
+
+### Failure
+
+Fails if the required `rat` or `refute` constants are unavailable or if
+`rat` has an incompatible datatype or codatatype classification.  A
+failure leaves both registries unchanged.
+
+### See also
+
+[`Refute.register_frac_type`](#Refute.register_frac_type),
+[`Refute.register_ersatz`](#Refute.register_ersatz),
+[`Refute.register_term_postprocessor`](#Refute.register_term_postprocessor),
+[`Refute.nitpick`](#Refute.nitpick)
+
+Rational model display is described in \ref{Description:the-holrefute-library}.

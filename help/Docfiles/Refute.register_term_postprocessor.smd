@@ -1,0 +1,40 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_term_postprocessor`
+
+``` hol4
+Refute.register_term_postprocessor :
+  hol_type -> term_postprocessor -> unit
+```
+
+------------------------------------------------------------------------
+
+Registers a display-only model-term transformation.
+
+``` hol4
+type term_postprocessor = term -> term
+```
+
+The first argument is a HOL type pattern.  Every pattern matching a
+model term's actual type participates.  General patterns run before
+strictly more specific ones; otherwise older registrations run first.
+Re-registering an alpha-equivalent pattern replaces its callback without
+changing that position.
+
+Refute snapshots the registry for a model display and applies the
+composed transformations bottom-up.  If a callback raises a
+non-interrupt exception or changes the term's type, its result is ignored
+and composition continues from that callback's input candidate.  Interrupts are
+re-raised.  Postprocessing never changes raw model values or
+certification.
+
+Registrations are session-local and synchronized with the other model
+registries.  `Refute.lookup_term_postprocessor ty` returns the currently
+composed callback for `ty`, if any.
+
+### See also
+
+[`Refute.register_frac_type`](#Refute.register_frac_type),
+[`Refute.register_frac_type_rat`](#Refute.register_frac_type_rat),
+[`Refute.nitpick`](#Refute.nitpick)
+
+Model reconstruction is described in \ref{Description:the-holrefute-library}.

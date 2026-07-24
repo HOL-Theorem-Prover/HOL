@@ -1,0 +1,35 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `REFUTE_TAC`
+
+``` hol4
+Refute.REFUTE_TAC : Abbrev.tactic
+```
+
+------------------------------------------------------------------------
+
+Searches for a counterexample to the current tactic goal.
+
+`REFUTE_TAC` calls `Refute.refute_goal !Refute.the_config` on the supplied
+goal.  If Refute finds any counterexample, the tactic raises a
+`Refute.REFUTE_TAC` HOL error whose message is the formatted outcome.  If
+the result is `NoCounterexample` or `Unknown`, it applies `ALL_TAC` and
+leaves the goal unchanged.  Thus this is a diagnostic tactic, not a proof
+tactic: failure to find a counterexample never closes a goal.
+
+Normal reporting is controlled by `the_config`, including `quiet` and the
+`"Refute"` trace.
+
+### Failure
+
+Fails deliberately when a counterexample is found.  A configured
+expectation mismatch can also raise a HOL error; interrupts are re-raised.
+
+### See also
+
+[`Refute.config`](#Refute.config),
+[`Refute.refute`](#Refute.refute),
+[`Refute.refute_goal`](#Refute.refute_goal),
+[`Refute.quickcheck`](#Refute.quickcheck),
+[`Refute.nitpick`](#Refute.nitpick)
+
+The complete library guide is \ref{Description:the-holrefute-library}.

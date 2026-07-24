@@ -1,0 +1,36 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `try_refute`
+
+``` hol4
+Refute.try_refute :
+  config -> goal -> (string * outcome) option
+```
+
+------------------------------------------------------------------------
+
+Quietly probes a goal for use by other automation.
+
+`Refute.try_refute cfg goal` preserves `cfg`'s backend selection but
+forces sequential execution, random seed 42, `NoExpectation`, and quiet
+mode.  Its `timeout` is an outer budget for the whole call rather than a
+fresh budget for every backend.
+
+The result is `SOME (backend, outcome)` exactly when the search returns a
+nonempty `Counterexample`; `backend` is the name recorded by the first
+returned counterexample.  A miss, `Unknown`, or expiry of the whole-call
+budget returns `NONE`.  The forced quiet profile suppresses normal Refute
+traces, messages, and warnings.
+
+### Failure
+
+Backend and timeout failures are converted to `NONE`.  Interrupts are
+re-raised.
+
+### See also
+
+[`Refute.config`](#Refute.config),
+[`Refute.refute`](#Refute.refute),
+[`Refute.refute_goal`](#Refute.refute_goal),
+[`Refute.find_unused_assms`](#Refute.find_unused_assms)
+
+The complete library guide is \ref{Description:the-holrefute-library}.
