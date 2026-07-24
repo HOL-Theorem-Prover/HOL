@@ -14633,6 +14633,91 @@ val _ = require_msg
   "malformed/stale/rebound Enum IR or runtime theory footprint was not pinned")
   (fn () => ()) ()
 
+(* The validator used to have two independently drifting implementations.
+   This corpus records their old asymmetries and pins the deliberately
+   stronger, unified result.  D2 was previously skipped by EvalEnum (and
+   ordinary native extraction) without enum programs; D3--D6 were skipped
+   by native extraction; D8 was skipped by EvalEnum.  Each is an intended
+   refusal now.  D7 stays accepted, proving that the native cache's first
+   all-input program agrees with EvalEnum's closure-order resolver.  Each
+   case runs the shared walker through both exception adapters, so changing
+   an adapter cannot quietly change a refusal. *)
+fun smartgen_validator_corpus () =
+  let
+    val valid = compile_plan default_config smartgen_linear_goal
+    val programs = Refute_EvalEnum.prepare Exhaustive [valid]
+    fun eval_verdict selected selected_programs =
+      (Refute_EvalEnum.validate
+         (fn message => raise Refute_EvalEnum.Invalid
+           ("smart plan: " ^ message)) selected_programs [selected];
+       "accepted")
+      handle Refute_EvalEnum.Invalid message => message
+    fun native_verdict selected selected_programs =
+      (Refute_EvalEnum.validate
+         (fn message => raise Refute_Extract.NotExtractable
+           ["smart plan: " ^ message]) selected_programs [selected];
+       "accepted")
+      handle Refute_Extract.NotExtractable messages =>
+        String.concatWith "\n" messages
+    fun has_verdict wanted selected selected_programs =
+      eval_verdict selected selected_programs = wanted andalso
+      native_verdict selected selected_programs = wanted
+    fun rewrite_outputs replacement
+          ({relation, mode, version, clauses} : SG.enumerator) =
+      let
+        fun rewrite (SG.CpsClause {ins, premises, outs}) =
+          SG.CpsClause
+            {ins = ins, premises = premises, outs = map replacement outs}
+      in
+        {relation = relation, mode = mode, version = version,
+         clauses = map rewrite clauses}
+      end
+    val bad_pattern = map (rewrite_outputs (fn _ =>
+      ``SUC ((unbound : num) + 1)``)) programs
+    val bad_output = map (rewrite_outputs (fn _ =>
+      ``rx_unmapped 0``)) programs
+    val duplicate = Term.mk_var ("duplicate", ``:num``)
+    val duplicate_split = Split
+      (``0 : num``, [(``0 : num``, [duplicate, duplicate], Test boolSyntax.T)])
+    val guard_nonboolean = Guard (``0 : num``, Test boolSyntax.T)
+    val old = valid
+    val _ = SG.clear_enumerator_cache ()
+    val current = compile_plan default_config smartgen_linear_goal
+    val current_programs = Refute_EvalEnum.prepare Exhaustive [current]
+    val stale =
+      case (old, current) of
+          (Enum _, Enum _) => old
+        | _ => raise Fail "linear smart-generator plan is no longer Enum"
+    val nonexecutable = Parse.term_to_string ``rx_unmapped``
+    val d2 = has_verdict
+      ("smart plan: Test is nonexecutable: " ^ nonexecutable)
+      (Test ``rx_unmapped 0 = 0``) []
+    val d3_test = has_verdict "smart plan: Test does not have type bool"
+      (Test ``0 : num``) []
+    val d3_guard = has_verdict "smart plan: Guard does not have type bool"
+      guard_nonboolean []
+    val d4 = has_verdict
+      "smart plan: clause output uses an unbound variable" valid bad_pattern
+    val d5 = has_verdict
+      ("smart plan: clause output is nonexecutable: " ^ nonexecutable)
+      valid bad_output
+    val d6 = has_verdict
+      "smart plan: Split branch variable is already bound" duplicate_split []
+    val d7 = has_verdict "accepted" valid programs andalso
+      null (Refute_Extract.native_preflight default_config Exhaustive
+        [compile_plan default_config
+          ``(n : num) = 0 ==> zoo_sg_linear n ==> F``] [])
+    val d8 = has_verdict "smart plan: stale enumerator cache key/version"
+      stale current_programs
+  in
+    d2 andalso d3_test andalso d3_guard andalso d4 andalso d5 andalso d6
+    andalso d7 andalso d8
+  end
+
+val _ = require_msg (check_result smartgen_validator_corpus) (fn () =>
+  "smart-plan validator corpus lost a unified refusal or SmartGuard match")
+  (fn () => ()) ()
+
 fun smartgen_cache_replacement_is_atomic () =
   let
     val relation = ``zoo_sg_linear``

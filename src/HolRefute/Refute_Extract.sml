@@ -2219,7 +2219,7 @@ structure Refute_Extract = struct
   fun extract_term term = extract_term_with Strict term
   fun extract_lazy_term term = extract_term_with Lazy term
 
-  fun extract_tests_with mode strict
+  fun extract_tests_with mode
         (config : Refute_Core.config) strategy plans : registered_extraction =
     let
       open Refute_Eval
@@ -2437,198 +2437,8 @@ structure Refute_Extract = struct
 
       fun smart_reject message = reject ("smart plan: " ^ message)
 
-      fun same_type left right = Util.same_type left right
-      fun same_types left right =
-        length left = length right andalso
-        ListPair.allEq (fn (first, second) => same_type first second)
-          (left, right)
-      fun vars_bound bound tm =
-        List.all (fn variable => List.exists (fn old =>
-          Term.aconv old variable) bound) (Term.free_vars_lr tm)
-      fun require_bound label bound terms =
-        if List.all (vars_bound bound) terms then ()
-        else smart_reject (label ^ " uses an unbound variable")
-      fun fresh_in bound variable =
-        not (List.exists (fn old => Term.aconv old variable) bound)
-
-      fun validate_executable label consumed terms =
-        if not strict andalso null enum_programs then ()
-        else
-          let
-            val constants = Refute_Core.nonexecutable_constants terms
-            val remaining = List.filter (fn constant =>
-              not (List.exists (fn allowed =>
-                Term.same_const allowed constant) consumed)) constants
-            val has_binder = List.exists (fn tm =>
-              not (null (HolKernel.find_terms Term.is_abs tm))) terms
-          in
-            if has_binder then
-              smart_reject (label ^ " contains an unexpanded binder")
-            else if null remaining then ()
-            else smart_reject (label ^ " is nonexecutable: " ^
-              Refute_Core.show_constants remaining)
-          end
-
-      fun mode_shape relation mode =
-        let
-          val _ =
-            if Term.is_const relation then ()
-            else smart_reject "enumerator relation is not a constant"
-          val (domains, range) = boolSyntax.strip_fun (Term.type_of relation)
-          val _ =
-            if same_type range Type.bool then ()
-            else smart_reject "enumerator relation does not return bool"
-          val modes = Refute_SmartGen.strip_mode mode
-          val _ =
-            if length domains = length modes andalso
-               List.all Refute_SmartGen.first_order_mode modes then ()
-            else smart_reject "enumerator mode/arity mismatch"
-          val arguments = List.map (fn (index, ty) =>
-            Term.mk_var ("refute_validate_" ^ Int.toString index, ty))
-            (Lib.enumerate 0 domains)
-          val (ins, outs) = Refute_SmartGen.split_arguments mode arguments
-        in
-          (map Term.type_of ins, map Term.type_of outs)
-        end
-        handle Feedback.HOL_ERR _ =>
-          smart_reject "enumerator mode/type mismatch"
-
-      fun program_for relation mode =
-        case List.find (fn ({relation = other, mode = other_mode, ...} :
-            Refute_SmartGen.enumerator) =>
-          Refute_SmartGen.same_relation relation other andalso
-          Refute_SmartGen.eq_mode (mode, other_mode)) enum_programs of
-            SOME program => program
-          | NONE => smart_reject "enumerator dependency is absent"
-
-      fun validate_program
-            ({relation, mode, clauses, ...} : Refute_SmartGen.enumerator) =
-        let
-          val (input_types, output_types) = mode_shape relation mode
-          fun introduce bound terms =
-            List.foldl (fn (variable, current) =>
-              if fresh_in current variable then current @ [variable]
-              else current) bound (List.concat (map Term.free_vars_lr terms))
-          fun premise (premise, current) =
-            case premise of
-                Refute_SmartGen.CpsGenerate variable =>
-                  if Term.is_var variable andalso fresh_in current variable
-                  then current @ [variable]
-                  else smart_reject
-                    "generator variable is malformed or already bound"
-              | Refute_SmartGen.CpsGuard tm =>
-                  (require_bound "enumerator Guard" current [tm];
-                   validate_executable "enumerator Guard" [] [tm]; current)
-              | Refute_SmartGen.CpsCall {rel, mode, ins, outs} =>
-                  let
-                    val dependency = program_for rel mode
-                    val _ = ignore dependency
-                    val (expected_ins, expected_outs) = mode_shape rel mode
-                    val _ =
-                      if same_types (map Term.type_of ins) expected_ins andalso
-                         same_types (map Term.type_of outs) expected_outs
-                      then ()
-                      else smart_reject
-                        "recursive call mode/arity/types mismatch"
-                    val _ = require_bound "recursive call input" current ins
-                    val _ = validate_executable
-                      "recursive call input" [] ins
-                  in
-                    introduce current outs
-                  end
-          fun clause (Refute_SmartGen.CpsClause
-                {ins, premises, outs}) =
-            let
-              val _ =
-                if same_types (map Term.type_of ins) input_types andalso
-                   same_types (map Term.type_of outs) output_types then ()
-                else smart_reject "clause mode/arity/types mismatch"
-              val current = introduce [] ins
-              val current = List.foldl premise current premises
-              val _ = require_bound "clause output" current outs
-            in
-              ()
-            end
-        in
-          List.app clause clauses
-        end
-
-      val _ = List.app validate_program enum_programs
-
-      fun validate_plan current bound =
-        case current of
-            Test tm =>
-              (require_bound "Test" bound [tm];
-               validate_executable "Test" [] [tm])
-          | Gen (variable, next) =>
-              if Term.is_var variable andalso fresh_in bound variable then
-                validate_plan next (variable :: bound)
-              else smart_reject "Gen variable is malformed or already bound"
-          | Bind (variable, tm, fallback, next) =>
-              (require_bound "Bind expression" bound [tm];
-               validate_executable "Bind expression" [] [tm];
-               if Term.is_var variable andalso fresh_in bound variable then ()
-               else smart_reject
-                 "Bind variable is malformed or already bound";
-               Option.app (fn other => validate_plan other bound) fallback;
-               validate_plan next (variable :: bound))
-          | Split (tm, branches) =>
-              let
-                val _ = require_bound "Split scrutinee" bound [tm]
-                val _ = validate_executable "Split scrutinee" [] [tm]
-                fun branch (_, variables, next) =
-                  if List.all (fresh_in bound) variables then
-                    validate_plan next (variables @ bound)
-                  else smart_reject "Split branch variable is already bound"
-              in
-                List.app branch branches
-              end
-          | Guard (tm, next) =>
-              (require_bound "Guard" bound [tm];
-               validate_executable "Guard" [] [tm];
-               validate_plan next bound)
-          | SmartGuard {predicate, version, cont} =>
-              let
-                val (program as {relation, ...}, ins) =
-                  case cached_all_input predicate version of
-                      SOME found => found
-                    | NONE => smart_reject
-                        "stale or non-all-input smart Guard"
-                val _ = ignore program
-              in
-                require_bound "smart Guard" bound [predicate];
-                require_bound "smart Guard input" bound ins;
-                validate_executable "smart Guard" [relation] [predicate];
-                validate_plan cont bound
-              end
-          | Enum {rel, mode, version, ins, outs, cont} =>
-              let
-                val {relation, mode = program_mode,
-                     version = program_version, ...} = program_for rel mode
-                val _ =
-                  if Refute_SmartGen.same_relation rel relation andalso
-                     Refute_SmartGen.eq_mode (mode, program_mode) andalso
-                     Refute_SmartGen.same_program_version
-                       (version, program_version)
-                  then ()
-                  else smart_reject "stale enumerator cache key/version"
-                val (expected_ins, expected_outs) = mode_shape rel mode
-                val _ =
-                  if same_types (map Term.type_of ins) expected_ins andalso
-                     same_types (map Term.type_of outs) expected_outs then ()
-                  else smart_reject "Enum mode/arity/types mismatch"
-                val _ = require_bound "Enum input" bound ins
-                val _ = validate_executable "Enum input" [] ins
-                val introduced = List.foldl (fn (variable, result) =>
-                  if fresh_in (bound @ result) variable then
-                    result @ [variable] else result) []
-                  (List.concat (map Term.free_vars_lr outs))
-              in
-                validate_plan cont (introduced @ bound)
-              end
-          | Prune => ()
-
-      val _ = List.app (fn plan => validate_plan plan []) plans
+      val _ = Refute_EvalEnum.validate
+        smart_reject enum_programs plans
 
       (* Enumerator clauses come from arbitrary HOL source.  Rename every
          clause-local variable into a generated namespace whose sanitized
@@ -3858,7 +3668,7 @@ structure Refute_Extract = struct
 
   fun extract_tests config strategy plans =
     let val {source, entry, ...} =
-      extract_tests_with Strict false config strategy plans
+      extract_tests_with Strict config strategy plans
     in
       {source = source, entry = entry}
     end
@@ -3868,7 +3678,7 @@ structure Refute_Extract = struct
      entry point while shapes and refinement still live out of tree. *)
   fun extract_lazy_tests config plans =
     let val {source, entry, ...} =
-      extract_tests_with Lazy false config Refute_Eval.Narrowing plans
+      extract_tests_with Lazy config Refute_Eval.Narrowing plans
     in
       {source = source, entry = entry}
     end
@@ -4348,7 +4158,7 @@ structure Refute_Extract = struct
           | _ => "unknown extraction exception")
 
   (* This is the same extraction and scope validator used by native compile,
-     run in strict gate mode over the complete plan set.  Evaluation terms are
+     run over the complete plan set.  Evaluation terms are
      not executable plan nodes, so validate them separately without granting
      the smart-Guard relation exception.  Each extraction returns its exact
      table ID: concurrent preflights and compiles therefore clean only their
@@ -4395,7 +4205,7 @@ structure Refute_Extract = struct
                  safe_exception_text cleanup_error]
     in
       case Exn.capture (fn () =>
-          extract_tests_with Strict true config strategy plans) () of
+          extract_tests_with Strict config strategy plans) () of
           Exn.Exn Interrupt => raise Interrupt
         | Exn.Exn (NotExtractable reasons) => reasons
         | Exn.Exn error =>
