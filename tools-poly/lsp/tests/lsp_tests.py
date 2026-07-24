@@ -13,6 +13,10 @@ import subprocess, threading, time, json, os, sys, re, tempfile
 REPO = os.environ.get("HOL_LSP_TEST_REPO",
     "/repo/.claude/worktrees/lsp-project")
 HOL_BIN = f"{REPO}/bin/hol"
+# Extra args passed to `bin/hol lsp`.  E.g. `HOL_LSP_ARGS=--bare` to test
+# against hol.state0 (relies on the LSP's own auto-loading to pull in
+# bossLib etc.).  Split on whitespace, no shell quoting.
+LSP_ARGS = os.environ.get("HOL_LSP_ARGS", "").split()
 
 # ------------------------------------------------------------------
 # LSP client — minimal, efficient, no O(N^2) buffer slicing.
@@ -20,7 +24,7 @@ HOL_BIN = f"{REPO}/bin/hol"
 class Client:
     def __init__(self, cwd):
         self.p = subprocess.Popen(
-            [HOL_BIN, "lsp"],
+            [HOL_BIN, "lsp", *LSP_ARGS],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             cwd=cwd)
         self.buf = bytearray()
