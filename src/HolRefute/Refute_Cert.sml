@@ -174,23 +174,6 @@ structure Refute_Cert = struct
       fun constructor_arguments constructor =
         #1 (boolSyntax.strip_fun (Term.type_of constructor))
 
-      val cartesian = Refute_Narrow.cartesian
-
-      fun ground_patterns
-            (Refute_Eval.CaseShape {constructors, ...}) =
-        List.concat (map (fn {id, fields} =>
-          map (fn arguments =>
-            Refute_Eval.CaseConstructor (id, arguments))
-            (cartesian (map ground_patterns fields))) constructors)
-
-      fun pattern_matches (Refute_Eval.CaseVariable, _) = true
-        | pattern_matches
-            (Refute_Eval.CaseConstructor (id, arguments),
-             Refute_Eval.CaseConstructor (other, values)) =
-            id = other andalso
-            ListPair.allEq pattern_matches (arguments, values)
-        | pattern_matches _ = false
-
       fun validate_shape ancestors expected_depth ty
             (shape as Refute_Eval.CaseShape
               {depth, complete, constructors}) =
@@ -255,19 +238,77 @@ structure Refute_Cert = struct
 
       fun validate_cover shape ty branches =
         let
-          val expected = ground_patterns shape
+          val size_cache =
+            ref ([] :
+              (Refute_Eval.case_shape * Arbnum.num) list)
+
+          fun domain_size shape =
+            case List.find (fn (cached, _) => cached = shape)
+              (!size_cache) of
+                SOME (_, size) => size
+              | NONE =>
+                  let
+                    val Refute_Eval.CaseShape {constructors, ...} = shape
+                    fun product fields =
+                      List.foldl (fn (field, total) =>
+                        Arbnum.* (domain_size field, total))
+                        Arbnum.one fields
+                    val size = List.foldl (fn ({fields, ...}, total) =>
+                      Arbnum.+ (product fields, total))
+                      Arbnum.zero constructors
+                    val _ = size_cache := (shape, size) :: !size_cache
+                  in
+                    size
+                  end
+
+          fun cover_size shape Refute_Eval.CaseVariable =
+                domain_size shape
+            | cover_size
+                (Refute_Eval.CaseShape {constructors, ...})
+                (Refute_Eval.CaseConstructor (id, arguments)) =
+                let
+                  val fields =
+                    case List.find (fn {id = other, ...} =>
+                      id = other) constructors of
+                        SOME {fields, ...} => fields
+                      | NONE =>
+                          raise Fail "case tree has an extra branch"
+                  val _ = if length fields = length arguments then ()
+                    else raise Fail "case tree has an extra branch"
+                in
+                  ListPair.foldlEq (fn (field, argument, total) =>
+                    Arbnum.* (cover_size field argument, total))
+                    Arbnum.one (fields, arguments)
+                end
+
+          fun disjoint
+                (Refute_Eval.CaseVariable, _) = false
+            | disjoint (_, Refute_Eval.CaseVariable) = false
+            | disjoint
+                (Refute_Eval.CaseConstructor (left, left_arguments),
+                 Refute_Eval.CaseConstructor (right, right_arguments)) =
+                left <> right orelse
+                ListPair.exists disjoint
+                  (left_arguments, right_arguments)
+
+          fun pairwise [] = true
+            | pairwise (pattern :: rest) =
+                List.all (fn other =>
+                  disjoint (pattern, other)) rest andalso
+                pairwise rest
+
           val supplied = map #1 branches
-          val _ = List.app (fn pattern =>
-            if List.exists (fn value =>
-              pattern_matches (pattern, value)) expected then ()
-            else raise Fail "case tree has an extra branch") supplied
-          val _ = List.app (fn value =>
-            case List.filter (fn pattern =>
-              pattern_matches (pattern, value))
-              supplied of
-                [_] => ()
-              | [] => raise Fail "case tree has a missing branch"
-              | _ => raise Fail "case tree has overlapping branches") expected
+          val sizes = map (cover_size shape) supplied
+          (* Patterns are constructor trees over this finite shape.
+             Pairwise disjointness makes their cover counts additive, so
+             equality with the domain size is exactly the condition that
+             every ground value is matched once.  Error priority is fixed
+             as extra, overlapping, then missing. *)
+          val _ = if pairwise supplied then ()
+            else raise Fail "case tree has overlapping branches"
+          val covered = List.foldl Arbnum.+ Arbnum.zero sizes
+          val _ = if covered = domain_size shape then ()
+            else raise Fail "case tree has a missing branch"
           val _ = List.app (fn (pattern, tm, _) =>
             validate_term ty pattern tm) branches
         in

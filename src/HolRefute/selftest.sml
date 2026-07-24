@@ -11547,6 +11547,13 @@ val _ = Datatype.Datatype
   `rg_stream_record = <| rg_stream_field : num; rg_stream_flag : bool |>`
 val _ = Datatype.Datatype `rg_enum = RGRed | RGGreen | RGBlue`
 val _ = Datatype.Datatype
+  `rg_octet = RGE0 | RGE1 | RGE2 | RGE3 |
+              RGE4 | RGE5 | RGE6 | RGE7`
+val _ = Datatype.Datatype
+  `rg_wide = RGWide refute$rf6 refute$rf6 refute$rf6 refute$rf6
+                    refute$rf6 refute$rf6 refute$rf6 refute$rf6
+                    refute$rf6 refute$rf6`
+val _ = Datatype.Datatype
   `rg_custom_matrix = RGCustomA | RGCustomB`
 val _ = Datatype.Datatype `rg_fresh = RGFresh`
 val _ = Datatype.Datatype
@@ -11580,6 +11587,17 @@ val rx_enum_code_def = TotalDefn.Define
   `rx_enum_code RGRed = 0 /\
    rx_enum_code RGGreen = 1 /\
    rx_enum_code RGBlue = 2`
+
+val rx_octet_false_def = TotalDefn.Define
+  `rx_octet_false (x : rg_octet) = F`
+
+val rx_nested_false_def = TotalDefn.Define
+  `rx_nested_false (NONE : bool option option) = F /\
+   rx_nested_false (SOME NONE) = F /\
+   rx_nested_false (SOME (SOME b)) = F`
+
+val rx_wide_false_def = TotalDefn.Define
+  `rx_wide_false (x : rg_wide) = F`
 
 val rx_partial_def = TotalDefn.Define
   `rx_partial RGLeaf = 10`
@@ -15001,7 +15019,19 @@ fun narrowing_partial_certify_opt_out () =
       | _ => false
   end
 
+fun make_cex genuine : counterexample =
+  { backend = "selftest",
+    substrate = "compute",
+    certainty = Refute_Core.Potential [],
+    bindings = [],
+    evals = [],
+    cert = NONE,
+    scope = NONE,
+    model = NONE,
+    stats = [("tests", 1)] }
+
 val narrowing_replay_mismatch = ref ""
+val narrowing_index_mismatch = ref ""
 
 fun narrowing_existential_replay_is_certified () =
   let
@@ -18692,17 +18722,6 @@ val _ = require_msg (check_result certified_reverse) (fn () =>
   "REVERSE xs = xs was not certified with a tag-clean theorem")
   (fn () => ()) ()
 
-fun make_cex genuine : counterexample =
-  { backend = "selftest",
-    substrate = "compute",
-    certainty = Refute_Core.Potential [],
-    bindings = [],
-    evals = [],
-    cert = NONE,
-    scope = NONE,
-    model = NONE,
-    stats = [("tests", 1)] }
-
 fun upgrade_from_stuck_path () =
   case Refute_Cert.certify
     { original = ``F``,
@@ -18754,6 +18773,24 @@ fun replay_degraded tree =
           List.exists (String.isSubstring "case-tree replay failed") reasons
     | _ => false
 
+fun replay_failure_reason tree =
+  case Refute_Cert.certify_case_tree
+    { original = ``?b : bool. b /\ ~b``,
+      evals = [], env = [], run_depth = 0, case_tree = tree,
+      cex = make_cex true } of
+      Refute_Cert.Potential
+        {certainty = Refute_Core.Potential [reason], cert = NONE, ...} =>
+          SOME reason
+    | _ => NONE
+
+val replay_failure_prefix =
+  "existential narrowing case-tree replay failed: Fail " ^
+  "\"case tree has "
+
+fun cover_failure_has_message expected tree =
+  replay_failure_reason tree =
+    SOME (replay_failure_prefix ^ expected ^ "\"")
+
 fun incomplete_case_tree_degrades () =
   case Refute_Cert.certify_case_tree
     { original = ``?b : bool. b``,
@@ -18782,6 +18819,60 @@ fun extra_case_tree_degrades () = replay_degraded
          Refute_Eval.CaseLeaf),
         (Refute_Eval.CaseConstructor (1, []), boolSyntax.T,
          Refute_Eval.CaseLeaf)]})
+
+fun case_cover_failures_are_pinned () =
+  let
+    fun branch pattern term =
+      (pattern, term, Refute_Eval.CaseLeaf)
+    val missing = Refute_Eval.CaseExistential
+      {shape = replay_bool_shape,
+       branches =
+         [branch (Refute_Eval.CaseConstructor (0, [])) boolSyntax.F]}
+    val overlapping = Refute_Eval.CaseExistential
+      {shape = replay_bool_shape,
+       branches =
+         [branch Refute_Eval.CaseVariable ``b : bool``,
+          branch (Refute_Eval.CaseConstructor (0, [])) boolSyntax.F]}
+    val extra = Refute_Eval.CaseExistential
+      {shape = replay_bool_shape,
+       branches =
+         [branch (Refute_Eval.CaseConstructor (0, [])) boolSyntax.F,
+          branch (Refute_Eval.CaseConstructor (1, [])) boolSyntax.T,
+          branch (Refute_Eval.CaseConstructor (2, [])) boolSyntax.F]}
+  in
+    cover_failure_has_message "a missing branch" missing andalso
+    cover_failure_has_message "overlapping branches" overlapping andalso
+    cover_failure_has_message "an extra branch" extra
+  end
+
+val wide_case_cover_mismatch = ref ""
+
+fun wide_case_cover_certifies () =
+  let
+    val ty = ``:rg_wide``
+    val variable = Term.mk_var ("p", ty)
+    val goal = ``?p : rg_wide. rx_wide_false p``
+    val tree = Refute_Eval.CaseExistential
+      {shape = Refute_Narrow.replay_shape
+         (Refute_Narrow.shape_of 1 ty),
+       branches =
+         [(Refute_Eval.CaseVariable, variable,
+           Refute_Eval.CaseLeaf)]}
+  in
+    case Refute_Cert.certify_case_tree
+      {original = goal, evals = [], env = [], run_depth = 1,
+       case_tree = tree, cex = make_cex true} of
+        Refute_Cert.Certified
+          {certainty = Genuine, cert = SOME theorem, ...} =>
+            null (Thm.hyp theorem) andalso
+            Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg goal)
+      | Refute_Cert.Potential
+          {certainty = Potential reasons, ...} =>
+            (wide_case_cover_mismatch :=
+               String.concatWith "; " reasons;
+             false)
+      | _ => false
+  end
 
 fun malformed_case_tree_degrades () = replay_degraded
   (Refute_Eval.CaseExistential
@@ -18862,6 +18953,12 @@ fun universal_metadata_degrades () =
 
 val _ = require_msg (check_result incomplete_case_tree_degrades) (fn () =>
   "an incomplete existential case tree did not degrade safely")
+  (fn () => ()) ()
+val _ = require_msg (check_result case_cover_failures_are_pinned) (fn () =>
+  "case-cover failure priority or message changed") (fn () => ()) ()
+val _ = require_msg (check_result wide_case_cover_certifies) (fn () =>
+  "wide finite case cover did not certify without enumeration:\n" ^
+  !wide_case_cover_mismatch)
   (fn () => ()) ()
 val _ = require_msg (check_result (fn () =>
   extra_case_tree_degrades () andalso
