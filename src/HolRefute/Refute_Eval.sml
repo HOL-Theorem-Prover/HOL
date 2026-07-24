@@ -129,6 +129,23 @@ structure Refute_Eval :> Refute_Eval = struct
       | Enum {cont, ...} => plan_gen_types cont
       | Prune => []
 
+  (* Does this plan depend on the smart-generator machinery?  Both the
+     substrate compilers and the QC gate ask this question, so a new plan
+     constructor is classified in one place. *)
+  fun plan_uses_enum plan =
+    case plan of
+        Enum _ => true
+      | SmartGuard _ => true
+      | Gen (_, next) => plan_uses_enum next
+      | Bind (_, _, fallback, next) =>
+          plan_uses_enum next orelse
+          Option.getOpt (Option.map plan_uses_enum fallback, false)
+      | Split (_, branches) =>
+          List.exists (plan_uses_enum o #3) branches
+      | Guard (_, next) => plan_uses_enum next
+      | Test _ => false
+      | Prune => false
+
   val same_env = Lib.list_eq boolSyntax.tmp_eq
 
   fun same_shape

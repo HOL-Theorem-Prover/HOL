@@ -17,28 +17,14 @@ structure Refute_Narrow = struct
       Narrowing_variable of position * narrowing_type
     | Narrowing_constructor of int * narrowing_term list
 
-  datatype shape_result =
-      NarrowingShape of narrowing_type
-    | Inapplicable of string list
-
   datatype evaluation =
       Known of {genuine : bool, result : bool}
     | NeedsRefinement of position
-
-  type plain_test =
-    { arguments : narrowing_term list,
-      evaluate : bool -> narrowing_term list -> evaluation }
 
   datatype plain_result =
       PlainCounterexample of
         {genuine : bool, arguments : narrowing_term list, tests : int}
     | PlainExhausted of {tests : int}
-
-  datatype plain_search_result =
-      PlainFound of
-        {depth : int, genuine : bool, arguments : narrowing_term list,
-         tests : int}
-    | PlainSearchExhausted of {tests : int}
 
   datatype engine_selection =
       PlainEngine
@@ -103,14 +89,9 @@ structure Refute_Narrow = struct
 
   fun non_empty shape = not (null (products_of shape))
 
-  fun indexed_map f values =
-    let
-      fun loop _ [] = []
-        | loop index (value :: rest) =
-            f (index, value) :: loop (index + 1) rest
-    in
-      loop 0 values
-    end
+  (* Tupled view of [Lib.mapi], matching the (index, value) idiom the
+     engine uses for product coordinates. *)
+  fun indexed_map f values = Lib.mapi (Lib.curry f) values
 
   fun indexed_alternative (id, arguments) : narrowing_alternative =
     {id = id, exact = NONE, arguments = arguments}
@@ -118,17 +99,10 @@ structure Refute_Narrow = struct
   fun exact_alternative (id, value) : narrowing_alternative =
     {id = id, exact = SOME value, arguments = []}
 
-  fun alternative_id ({id, ...} : narrowing_alternative) = id
-
   fun alternative_of shape id =
     case List.find (fn alternative => #id alternative = id)
       (products_of shape) of
         SOME alternative => alternative
-      | NONE => raise InvalidPath
-
-  fun exact_term shape id =
-    case #exact (alternative_of shape id) of
-        SOME value => value
       | NONE => raise InvalidPath
 
   (* This is Narrowing_Engine.new.  A child position is obtained by
@@ -174,16 +148,12 @@ structure Refute_Narrow = struct
         List.concat (List.map (fn value =>
           List.map (fn tail => value :: tail) (cartesian rest)) values)
 
-  (* Retain the complete operation for engine-level clients. *)
-  fun total (Narrowing_constructor (id, arguments)) =
-        List.map (fn completed => Narrowing_constructor (id, completed))
-          (cartesian (List.map total arguments))
-    | total (Narrowing_variable (position, ty)) =
-        List.concat (List.map total (new position ty))
-
-  (* Grounding needs only the lexicographically first completion.  Do not
-     implement this as [hd o total]: that constructs every Cartesian product
-     before returning, which is catastrophic even for char # char # char. *)
+  (* Grounding needs only the lexicographically first completion.  Upstream
+     enumerates all of them (Narrowing_Engine.hs:27-29) and takes the head,
+     which is free under Haskell's laziness and catastrophic under Poly/ML's
+     strictness -- even char # char # char builds 256^3 terms first.  So the
+     complete enumeration is not part of the engine at all; it lives in
+     selftest.sml as the reference this function is checked against. *)
   fun first_completion shape term =
     let
       fun complete current_shape
@@ -242,7 +212,27 @@ structure Refute_Narrow = struct
     let
       val depth = Int.max (0, depth)
 
+      (* A constructor with several recursive arguments makes [derive] visit
+         the same (depth, type) pair once per argument, so the naive walk is
+         exponential in the depth.  A shape depends on nothing but that pair,
+         so one cache per call collapses it. *)
+      fun key_compare ((depth1, ty1), (depth2, ty2)) =
+        case Int.compare (depth1, depth2) of
+            EQUAL => Type.compare (ty1, ty2)
+          | order => order
+      val derived = ref (Redblackmap.mkDict key_compare)
+
       fun derive depth ty =
+        case Redblackmap.peek (!derived, (depth, ty)) of
+            SOME shape => shape
+          | NONE =>
+              let val shape = compute_shape depth ty
+              in
+                derived := Redblackmap.insert (!derived, (depth, ty), shape);
+                shape
+              end
+
+      and compute_shape depth ty =
         case Refute_Gen.spec_of ty of
             Refute_Gen.GenEnum values => flat_shape depth true values
           | Refute_Gen.GenNum kind =>
@@ -316,70 +306,6 @@ structure Refute_Narrow = struct
     "narrowing is inapplicable for " ^ Parse.type_to_string ty ^
     ": " ^ reason
 
-  fun derive_shape depth ty =
-    NarrowingShape (shape_of depth ty)
-    handle ShapeFailure (offending_ty, reason) =>
-      Inapplicable [inapplicable_message offending_ty reason]
-
-  fun exact_alternative_term ty arguments value =
-    if null arguments andalso
-       Type.compare (Term.type_of value, ty) = EQUAL then value
-    else shape_failure ty "malformed exact narrowing alternative"
-
-  fun term_of_ground ty shape
-        (Narrowing_constructor (id, arguments)) =
-    let
-      val alternative = alternative_of shape id
-    in
-      case #exact alternative of
-          SOME value => exact_alternative_term ty arguments value
-        | NONE =>
-            (case Refute_Gen.spec_of ty of
-                 Refute_Gen.GenDatatype {constrs, ...} =>
-                   let
-                     val (head, argument_types) = List.nth (constrs, id)
-                     val rebuilt = ListPair.mapEq
-                       (fn ((argument_ty, argument_shape), argument) =>
-                         term_of_ground argument_ty argument_shape argument)
-                       (ListPair.zip
-                          (argument_types, #arguments alternative),
-                        arguments)
-                   in
-                     Term.list_mk_comb (head, rebuilt)
-                   end
-               | _ => shape_failure ty
-                   "narrowing constructor shape lost its exact value")
-    end
-    | term_of_ground ty _ (Narrowing_variable _) =
-        shape_failure ty "first_completion returned a partial term"
-
-  (* Reconstructed ffun/cfun values are ordinary functions.  Their minimal
-     completion is constant; first-order holes use [first_completion]
-     directly and never enumerate [total]'s Cartesian products. *)
-  fun minimal_term ty =
-    case Lib.total Type.dom_rng ty of
-        SOME (domain, range) =>
-          let
-            val result = minimal_term range
-            val argument = Term.variant (Term.free_vars_lr result)
-              (Term.mk_var ("x", domain))
-          in
-            Term.mk_abs (argument, result)
-          end
-      | NONE =>
-          let
-            fun at_depth depth =
-              let val shape = shape_of depth ty
-              in
-                case first_completion shape
-                  (Narrowing_variable ([], shape)) of
-                    SOME completed => term_of_ground ty shape completed
-                  | NONE => at_depth (depth + 1)
-              end
-          in
-            at_depth 0
-          end
-
   fun is_ground (Narrowing_variable _) = false
     | is_ground (Narrowing_constructor (_, arguments)) =
         List.all is_ground arguments
@@ -432,37 +358,6 @@ structure Refute_Narrow = struct
   fun refute_plain_avoiding genuine_only
         {arguments, evaluate, accept} =
     refute_from genuine_only evaluate accept arguments 0
-
-  fun refute_plain genuine_only ({arguments, evaluate} : plain_test) =
-    refute_plain_avoiding genuine_only
-      {arguments = arguments, evaluate = evaluate,
-       accept = fn _ => fn _ => true}
-
-  (* The upstream ML driver retries a potential hit genuinely at the next
-     depth and discards it if the inclusive 0..size search finds no genuine
-     hit. *)
-  fun search_plain {size, genuine_only, at_depth} =
-    let
-      val maximum = size
-
-      fun loop depth genuine_only tests =
-        if depth > maximum then
-          PlainSearchExhausted {tests = tests}
-        else
-          case refute_plain genuine_only (at_depth depth) of
-              PlainExhausted {tests = count} =>
-                loop (depth + 1) genuine_only (tests + count)
-            | PlainCounterexample
-                {genuine = true, arguments, tests = count} =>
-                PlainFound
-                  {depth = depth, genuine = true, arguments = arguments,
-                   tests = tests + count}
-            | PlainCounterexample
-                {genuine = false, tests = count, ...} =>
-                loop (depth + 1) true (tests + count)
-    in
-      loop 0 genuine_only 0
-    end
 
   (* Three-valued PNF refinement trees.  The Boolean tables are the upstream
      tables.  For decided values, potential tracks exactly the evidence needed
@@ -532,15 +427,7 @@ structure Refute_Narrow = struct
   fun position_of (V (position, _)) = position
     | position_of (C (position, _, _)) = position
 
-  fun first_index predicate values =
-    let
-      fun loop _ [] = NONE
-        | loop index (value :: rest) =
-            if predicate value then SOME index
-            else loop (index + 1) rest
-    in
-      loop 0 values
-    end
+  fun first_index predicate values = Lib.total (Lib.index predicate) values
 
   (* The operation is intentionally partial, as upstream: it is called only
      while the root cache is Unevaluated. *)
@@ -676,12 +563,6 @@ structure Refute_Narrow = struct
     in
       build 0 prefix
     end
-
-  (* Every quantified shape is made at this loop depth.  In particular there
-     is no PNF-only generator depth constant. *)
-  fun tree_of_types depth prefix =
-    tree_of (List.map (fn (quantifier, ty) =>
-      (quantifier, shape_of depth ty)) prefix)
 
   fun refute evaluate genuine_only depth initial_tree =
     let
@@ -938,10 +819,6 @@ structure Refute_Narrow = struct
       GSYM boolTheory.RIGHT_FORALL_IMP_THM,
       GSYM boolTheory.RIGHT_EXISTS_IMP_THM ]
 
-  fun apply_conversion conversion tm =
-    (#2 (boolSyntax.dest_eq (Thm.concl (conversion tm))))
-    handle UNCHANGED => tm
-
   fun prenex_conversion tm =
     let
       fun step tm =
@@ -1001,10 +878,6 @@ structure Refute_Narrow = struct
       pnf_of_closed
         (boolSyntax.list_mk_forall (Term.free_vars_lr tm, tm))
   end
-
-  fun pnf_problem tm =
-    let val (prefix, body) = pnf_of tm
-    in Refute_Eval.Pnf {prefix = prefix, body = body} end
 
   fun ffun_type domain range =
     Type.mk_thy_type
@@ -1116,12 +989,6 @@ structure Refute_Narrow = struct
       (prefix', Term.subst substitutions body)
     end
 
-  fun dest_type tyop ty =
-    case Lib.total Type.dest_thy_type ty of
-        SOME {Thy = "refute", Tyop = actual, Args} =>
-          if actual = tyop then SOME Args else NONE
-      | _ => NONE
-
   fun constructor_application expected term =
     let
       val (head, arguments) = HolKernel.strip_comb term
@@ -1203,15 +1070,6 @@ structure Refute_Narrow = struct
                 malformed_value original_ty value
             else
               value
-
-  (* The type-directed entry above additionally handles cfun and products.
-     This source-compatible upstream operation infers an ffun's domain and
-     range directly and is useful for display-level callers. *)
-  fun eval_finite_functions value =
-    case dest_type "ffun" (Term.type_of value) of
-        SOME [domain, range] =>
-          eval_finite_functions_as (Type.-->(domain, range)) value
-      | _ => value
 
   fun contains_existentials prefix =
     List.exists (fn (Refute_Eval.Exists, _) => true | _ => false) prefix

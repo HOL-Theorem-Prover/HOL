@@ -381,6 +381,78 @@ structure Refute_EvalEnum = struct
     Term.subst (map (fn (redex, residue) =>
       {redex = redex, residue = residue}) env) tm
 
+  (* Compile [patterns] against [values] into a nest of case terms and
+     equality tests, calling [success] with [environment] extended by the
+     bindings the match introduced, and yielding [failure] wherever the
+     match cannot succeed.  Both HOL-term substrates share this; they differ
+     only in how [fresh] names the variables a constructor branch binds. *)
+  fun match_patterns fresh patterns values environment failure success =
+    let
+      fun match_one pattern value additions continue =
+        let
+          val bound = additions @ environment
+        in
+          if Term.is_var pattern then
+            (case List.find (fn (old, _) => Term.aconv old pattern) bound of
+                 SOME (_, old_value) =>
+                   boolSyntax.mk_cond
+                     (boolSyntax.mk_eq (old_value, value),
+                      continue additions, failure)
+               | NONE => continue (additions @ [(pattern, value)]))
+          else if special_literal pattern then
+            boolSyntax.mk_cond
+              (boolSyntax.mk_eq (pattern, value),
+               continue additions, failure)
+          else
+            case Refute_Eval.fully_applied_constructor pattern of
+                SOME (wanted, pattern_args) =>
+                  let
+                    val ty = Term.type_of value
+                    val constructors = TypeBase.constructors_of ty
+                    val raw_case = TypeBase.case_const_of ty
+                    val raw_ty = hd (#1 (boolSyntax.strip_fun
+                      (Term.type_of raw_case)))
+                    val case_constant = Term.inst
+                      (Type.match_type raw_ty ty) raw_case
+                    val (case_domains, _) = boolSyntax.strip_fun
+                      (Term.type_of case_constant)
+                    val branch_types = List.take
+                      (tl case_domains, length constructors)
+                    fun branch (constructor, branch_ty) =
+                      let
+                        val (argument_types, _) =
+                          boolSyntax.strip_fun branch_ty
+                        val arguments = map fresh argument_types
+                        val body =
+                          if Term.same_const constructor wanted andalso
+                             length arguments = length pattern_args then
+                            match_many pattern_args arguments additions
+                              continue
+                          else failure
+                      in
+                        Term.list_mk_abs (arguments, body)
+                      end
+                  in
+                    HolKernel.list_mk_icomb case_constant
+                      (value :: ListPair.mapEq branch
+                        (constructors, branch_types))
+                  end
+              | NONE =>
+                  boolSyntax.mk_cond
+                    (boolSyntax.mk_eq (substitute bound pattern, value),
+                     continue additions, failure)
+        end
+      and match_many [] [] additions continue = continue additions
+        | match_many (pattern :: patterns) (value :: values)
+              additions continue =
+            match_one pattern value additions (fn extended =>
+              match_many patterns values extended continue)
+        | match_many _ _ _ _ = failure
+    in
+      match_many patterns values [] (fn additions =>
+        success (additions @ environment))
+    end
+
   fun conjunction [] = raise Fail "Refute enum empty definition"
     | conjunction equations = boolSyntax.list_mk_conj equations
 
@@ -441,66 +513,7 @@ structure Refute_EvalEnum = struct
               val _ = match_serial := index + 1
           in named ("enum_match_" ^ Int.toString index) ty end
 
-        fun match_one pattern value env additions failure success =
-          if Term.is_var pattern then
-            (case List.find (fn (old, _) => Term.aconv old pattern)
-                    (additions @ env) of
-                 SOME (_, old_value) =>
-                   boolSyntax.mk_cond
-                     (boolSyntax.mk_eq (old_value, value),
-                      success env additions, failure)
-               | NONE => success env (additions @ [(pattern, value)]))
-          else if special_literal pattern then
-            boolSyntax.mk_cond
-              (boolSyntax.mk_eq (pattern, value),
-               success env additions, failure)
-          else
-            case Refute_Eval.fully_applied_constructor pattern of
-                SOME (wanted, pattern_args) =>
-                  let
-                    val ty = Term.type_of value
-                    val constructors = TypeBase.constructors_of ty
-                    val raw_case = TypeBase.case_const_of ty
-                    val raw_ty = hd (#1 (boolSyntax.strip_fun
-                      (Term.type_of raw_case)))
-                    val case_constant = Term.inst
-                      (Type.match_type raw_ty ty) raw_case
-                    val (case_domains, _) = boolSyntax.strip_fun
-                      (Term.type_of case_constant)
-                    val branch_types = List.take
-                      (tl case_domains, length constructors)
-                    fun branch (constructor, branch_ty) =
-                      let
-                        val (argument_types, _) = boolSyntax.strip_fun branch_ty
-                        val arguments = map fresh argument_types
-                        val body =
-                          if Term.same_const constructor wanted andalso
-                             length arguments = length pattern_args then
-                            match_many pattern_args arguments env additions
-                              failure success
-                          else failure
-                      in
-                        Term.list_mk_abs (arguments, body)
-                      end
-                  in
-                    HolKernel.list_mk_icomb case_constant
-                      (value :: ListPair.mapEq branch
-                        (constructors, branch_types))
-                  end
-              | NONE =>
-                  boolSyntax.mk_cond
-                    (boolSyntax.mk_eq
-                      (substitute (additions @ env) pattern, value),
-                     success env additions, failure)
-        and match_many [] [] env additions _ success =
-              success env additions
-          | match_many (pattern :: patterns) (value :: values)
-              env additions failure success =
-              match_one pattern value env additions failure
-                (fn next_env => fn next_additions =>
-                  match_many patterns values next_env next_additions
-                    failure success)
-          | match_many _ _ _ _ failure _ = failure
+        val match = match_patterns fresh
 
         fun equations data =
           let
@@ -534,17 +547,14 @@ structure Refute_EvalEnum = struct
                              (tuple_type (#output_types dependency))
                            val components = unpack_terms
                              (#output_types dependency) result
-                           val body = match_many patterns components env []
-                             empty (fn old => fn additions =>
-                               premises outs rest (additions @ old))
+                           val body = match patterns components env empty
+                             (premises outs rest)
                          in
                            bind values result body
                          end)
             fun clause (Refute_SmartGen.CpsClause
                   {ins, premises = steps, outs}) =
-              match_many ins formals [] [] empty
-                (fn env => fn additions =>
-                  premises outs steps (additions @ env))
+              match ins formals [] empty (premises outs steps)
             fun append [] = empty
               | append [tm] = tm
               | append (tm :: rest) =
@@ -586,18 +596,7 @@ structure Refute_EvalEnum = struct
     Term.list_mk_comb (function,
       generator_values @ inputs @ [numSyntax.term_of_int fuel])
 
-  fun has_enum current =
-    case current of
-        Refute_Eval.Enum _ => true
-      | Refute_Eval.SmartGuard _ => true
-      | Refute_Eval.Gen (_, next) => has_enum next
-      | Refute_Eval.Bind (_, _, fallback, next) =>
-          has_enum next orelse Option.getOpt (Option.map has_enum fallback,
-            false)
-      | Refute_Eval.Split (_, branches) =>
-          List.exists (has_enum o #3) branches
-      | Refute_Eval.Guard (_, next) => has_enum next
-      | _ => false
+  val has_enum = Refute_Eval.plan_uses_enum
 
   (* Shared process-global theory bracket.  Compute definitions and cv
      translations must serialize against one another. *)

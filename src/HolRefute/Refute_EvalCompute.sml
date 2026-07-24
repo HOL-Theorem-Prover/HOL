@@ -763,27 +763,25 @@ structure Refute_EvalCompute = struct
         Pnf _ =>
           Inapplicable ["narrowing requires the native substrate"]
       | Plans plans =>
-          (case strategy of
-               Narrowing => Inapplicable ["narrowing is not installed"]
-             | Exhaustive =>
-                 ((let
-                     val programs = prepare_enums strategy plans
-                   in
-                     case validation_reasons strategy plans programs of
-                         [] => Compiled
-                           (exhaustive_compile config plans programs)
-                       | reasons => Inapplicable reasons
-                   end)
-                  handle EnumInvalid reason => Inapplicable [reason])
-             | Random {seed} =>
-                 ((let
-                     val programs = prepare_enums strategy plans
-                   in
-                     case validation_reasons strategy plans programs of
-                         [] => Compiled (random_compile plans (ref seed))
-                       | reasons => Inapplicable reasons
-                   end)
-                  handle EnumInvalid reason => Inapplicable [reason]))
+          let
+            (* Both testing strategies share the enumerator preparation and
+               validation; only the loop built from the result differs. *)
+            fun attempt build =
+              (let
+                 val programs = prepare_enums strategy plans
+               in
+                 case validation_reasons strategy plans programs of
+                     [] => Compiled (build programs)
+                   | reasons => Inapplicable reasons
+               end)
+              handle EnumInvalid reason => Inapplicable [reason]
+          in
+            case strategy of
+                Narrowing => Inapplicable ["narrowing is not installed"]
+              | Exhaustive => attempt (exhaustive_compile config plans)
+              | Random {seed} =>
+                  attempt (fn _ => random_compile plans (ref seed))
+          end
 
   val compute_substrate : substrate =
     { name = "compute",

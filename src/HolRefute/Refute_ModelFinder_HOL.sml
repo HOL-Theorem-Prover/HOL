@@ -1778,6 +1778,14 @@ structure Refute_ModelFinder_HOL = struct
   val harvest_theory_generations =
     ref (Symtab.empty : int Symtab.table)
 
+  fun scan_harvest_theorems counter scan_log theory =
+    (* Constant specifications (including define_new_type_bijections) are
+       stored in HOL4's definition class, whereas quotient saves are ordinary
+       theorems.  DB.thms covers both persisted classes. *)
+    (counter := !counter + 1;
+     scan_log := !scan_log @ [theory];
+     DB.thms theory)
+
   fun add_string value values =
     if List.exists (fn old => old = value) values then values
     else values @ [value]
@@ -1939,11 +1947,8 @@ structure Refute_ModelFinder_HOL = struct
 
   fun index_harvest_theory theory =
     let
-      val theorems = DB.thms theory
-      val _ = harvest_index_theory_scan_count :=
-        !harvest_index_theory_scan_count + 1
-      val _ = harvest_index_theory_scan_theories :=
-        !harvest_index_theory_scan_theories @ [theory]
+      val theorems = scan_harvest_theorems harvest_index_theory_scan_count
+        harvest_index_theory_scan_theories theory
       val _ = remove_harvest_theory theory
       val _ = List.app (note_harvest_binding theory) theorems
     in
@@ -2618,12 +2623,6 @@ structure Refute_ModelFinder_HOL = struct
         ("rat_of_num", "of_num_frac"),
         ("rat_cons", "frac")]}
 
-  fun register_frac_type_rat_unlocked () =
-    register_frac_type_unlocked rat_frac_registration
-
-  fun register_frac_type_rat () =
-    with_registration_lock register_frac_type_rat_unlocked
-
   fun harvest_index_entry operator =
     Option.getOpt (KNametab.lookup (!harvest_session_index)
       (operator_key operator),
@@ -2664,14 +2663,6 @@ structure Refute_ModelFinder_HOL = struct
 
   fun remember_harvest_miss misses operator fingerprint =
     misses := KNametab.update (operator_key operator, fingerprint) (!misses)
-
-  fun scan_harvest_theorems counter scan_log theory =
-    (* Constant specifications (including define_new_type_bijections) are
-       stored in HOL4's definition class, whereas quotient saves are ordinary
-       theorems.  DB.thms covers both persisted classes. *)
-    (counter := !counter + 1;
-     scan_log := !scan_log @ [theory];
-     DB.thms theory)
 
   fun quotient_candidate operator theorem =
     let

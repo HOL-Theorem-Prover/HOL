@@ -10,7 +10,7 @@ structure Refute_Cert = struct
     Term.subst (map (fn (variable, value) =>
       {redex = variable, residue = value}) env) tm
 
-  fun rhs_of theorem = #2 (boolSyntax.dest_eq (Thm.concl theorem))
+  val rhs_of = boolSyntax.rhs o Thm.concl
 
   fun conform_conclusion label expected theorem =
     Thm.EQ_MP (Thm.ALPHA (Thm.concl theorem) expected) theorem
@@ -174,10 +174,7 @@ structure Refute_Cert = struct
       fun constructor_arguments constructor =
         #1 (boolSyntax.strip_fun (Term.type_of constructor))
 
-      fun cartesian [] = [[]]
-        | cartesian (values :: rest) =
-            List.concat (map (fn value =>
-              map (fn tail => value :: tail) (cartesian rest)) values)
+      val cartesian = Refute_Narrow.cartesian
 
       fun ground_patterns
             (Refute_Eval.CaseShape {constructors, ...}) =

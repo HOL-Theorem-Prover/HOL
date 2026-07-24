@@ -1483,13 +1483,18 @@ structure Refute_Core = struct
           fun registration_instances registration =
             instances_for_form (#input (#backend registration)) forms
           fun registration_is_eligible registration =
-            meets_requirement cfg
-              (instances_are_executable
-                (registration_instances registration))
-              (#backend registration) (registration_instances registration)
-          val selected = List.filter registration_is_eligible configured
-          val excluded =
-            List.filter (not o registration_is_eligible) configured
+            let val instances = registration_instances registration
+            in
+              meets_requirement cfg (instances_are_executable instances)
+                (#backend registration) instances
+            end
+          (* Deciding eligibility can run a whole trial substrate compile
+             (the smart-generator gate), so decide it once per registration
+             and partition that answer. *)
+          val eligibility = map (fn registration =>
+            (registration, registration_is_eligible registration)) configured
+          val selected = map #1 (List.filter #2 eligibility)
+          val excluded = map #1 (List.filter (not o #2) eligibility)
           val excluded_reasons =
             if null excluded then []
             else

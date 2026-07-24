@@ -2200,8 +2200,6 @@ structure Refute_Extract = struct
 
   fun compile_types types = compile_types_with Strict types
   fun compile_type ty = compile_types [ty]
-  fun compile_lazy_types types = compile_types_with Lazy types
-  fun compile_lazy_type ty = compile_lazy_types [ty]
 
   fun extract_term_with mode term =
     let
@@ -4233,7 +4231,7 @@ structure Refute_Extract = struct
           | Refute_EvalSML.LazyExtraction => Lazy
         val extracted = case problem of
             Refute_Eval.Plans plans =>
-              extract_tests_with mode false config strategy plans
+              extract_tests_with mode config strategy plans
           | Refute_Eval.Pnf {prefix, body} =>
               if strategy = Refute_Eval.Narrowing andalso mode = Lazy then
                 extract_narrowing config prefix body

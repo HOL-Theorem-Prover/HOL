@@ -96,6 +96,7 @@ signature Refute_Eval = sig
   val session_seed : IntInf.int ref
 
   val plan_gen_types : plan -> Type.hol_type list
+  val plan_uses_enum : plan -> bool
   val same_env : (term * term) list -> (term * term) list -> bool
   val same_case_tree : case_tree option -> case_tree option -> bool
   val ignored_candidate : candidate -> candidate list -> bool

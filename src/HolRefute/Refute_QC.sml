@@ -67,10 +67,22 @@ structure Refute_QC = struct
   fun compile_plan (config : Refute_Core.config) goal =
     let
       val (assumptions, conclusion) = boolSyntax.strip_imp goal
-      val smart_context =
-        if #smart_generators (#qc config) then
-          SOME (MFH.make_context (#mf config) [])
-        else NONE
+      (* Building a model-finder context scans the whole theory ancestry,
+         so pay for it only once a premise actually reaches mode inference:
+         goals without relational premises never need it. *)
+      val smart_context_cache = ref NONE
+      fun smart_context () =
+        case !smart_context_cache of
+            SOME cached => cached
+          | NONE =>
+              let
+                val built =
+                  if #smart_generators (#qc config) then
+                    SOME (MFH.make_context (#mf config) [])
+                  else NONE
+              in
+                smart_context_cache := SOME built; built
+              end
       type analysis =
         {result : SmartGen.inference_result option,
          trigger : bool, reason : string option}
@@ -102,7 +114,7 @@ structure Refute_QC = struct
           | NONE =>
               let
                 val answer =
-                  case smart_context of
+                  case smart_context () of
                       NONE => {result = NONE, trigger = false, reason = NONE}
                     | SOME context =>
                         (case MFH.instantiated_fixpoint_group context relation of
@@ -475,11 +487,18 @@ structure Refute_QC = struct
         not complete orelse List.exists
           (case_tree_incomplete o #3) branches
 
-  fun pnf_case_bindings (instance : Refute_Core.instance) tree =
+  (* General QC expands finite quantifiers into conjunctions/disjunctions.
+     Native PNF narrowing must instead retain the source quantifier so its
+     case tree records the exhaustive proof structure.  Outer universals are
+     still input binders, matching ordinary QC preprocessing. *)
+  fun narrowing_goal (instance : Refute_Core.instance) =
+    Refute_Core.normalize
+      (#2 (boolSyntax.strip_forall (#original instance)))
+
+  (* Report against the same prenex form the narrowing compiler consumed. *)
+  fun pnf_case_bindings instance tree =
     let
-      val goal = Refute_Core.normalize
-        (#2 (boolSyntax.strip_forall (#original instance)))
-      val (prefix, _) = Refute_Narrow.pnf_of goal
+      val (prefix, _) = Refute_Narrow.pnf_of (narrowing_goal instance)
     in
       Refute_Narrow.case_bindings prefix tree
     end
@@ -629,21 +648,7 @@ structure Refute_QC = struct
       | Enum _ => true
       | Prune => false
 
-  fun plan_uses_smart current =
-    case current of
-        Test _ => false
-      | Gen (_, next) => plan_uses_smart next
-      | Bind (_, _, fallback, next) =>
-          plan_uses_smart next orelse
-          (case fallback of
-               NONE => false
-             | SOME alternative => plan_uses_smart alternative)
-      | Split (_, branches) =>
-          List.exists (plan_uses_smart o #3) branches
-      | Guard (_, next) => plan_uses_smart next
-      | SmartGuard _ => true
-      | Enum _ => true
-      | Prune => false
+  val plan_uses_smart = Refute_Eval.plan_uses_enum
 
   fun eval_preflight evals =
     let
@@ -748,18 +753,12 @@ structure Refute_QC = struct
             else Inapplicable native_reasons
           end
 
-  fun compile_auto config strategy problem =
-    select_registered config true (fn substrate =>
-      #compile substrate config strategy problem)
-
-  fun compile_explicit config _ strategy problem =
-    select_registered config true (fn substrate =>
-      #compile substrate config strategy problem)
-
+  (* [select_registered] already reads the configured substrate choice and
+     applies the Auto fallthrough, so there is nothing left to dispatch on
+     here. *)
   fun compile_selected config strategy problem =
-    case #substrate (#qc config) of
-        Refute_Core.Auto => compile_auto config strategy problem
-      | choice => compile_explicit config choice strategy problem
+    select_registered config true (fn substrate =>
+      #compile substrate config strategy problem)
 
   fun compile_smart_selected config report strategy plans evals =
     select_registered config report (fn substrate =>
@@ -835,14 +834,6 @@ structure Refute_QC = struct
           NONE => ()
         | SOME error => raise error
     end
-
-  (* General QC expands finite quantifiers into conjunctions/disjunctions.
-     Native PNF narrowing must instead retain the source quantifier so its
-     case tree records the exhaustive proof structure.  Outer universals are
-     still input binders, matching ordinary QC preprocessing. *)
-  fun narrowing_goal (instance : Refute_Core.instance) =
-    Refute_Core.normalize
-      (#2 (boolSyntax.strip_forall (#original instance)))
 
   (* [qc_problem] is intentionally one PNF formula, whereas plans are a
      list.  Compile each monomorphic/cardinality instance independently and

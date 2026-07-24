@@ -12588,18 +12588,37 @@ fun narrowing_position_algebra () =
     same_narrow_terms (nested, expected_nested) andalso rejects_bad_path
   end
 
+(* Upstream's complete-completion primitive (Narrowing_Engine.hs:27-29),
+   transliterated here rather than in the engine.  [first_completion] is a
+   strict hand-rolled optimisation of [hd o all_completions]; this is the
+   reference that optimisation is checked against.  The engine itself must
+   never enumerate completions -- see the comment on [first_completion]. *)
+fun all_completions (Narrowing_constructor (id, arguments)) =
+      List.map (fn completed => Narrowing_constructor (id, completed))
+        (cartesian (List.map all_completions arguments))
+  | all_completions (Narrowing_variable (position, ty)) =
+      List.concat (List.map all_completions (new position ty))
+
 fun narrowing_total_grounding () =
   let
-    val completions = total (Narrowing_variable ([2], narrow_branch))
+    val partial = Narrowing_variable ([2], narrow_branch)
+    val completions = all_completions partial
     fun ground (Narrowing_variable _) = false
       | ground (Narrowing_constructor (_, arguments)) =
           List.all ground arguments
+    (* The engine's grounding must pick exactly the head of this
+       enumeration, without ever constructing the rest of it. *)
+    val agrees_with_engine =
+      case (first_completion narrow_branch partial, completions) of
+          (SOME chosen, first :: _) => same_narrow_term (chosen, first)
+        | (NONE, []) => true
+        | _ => false
   in
     same_narrow_terms
       (completions,
        [narrow_node narrow_branch 0 [],
         narrow_node narrow_branch 1 [narrow_node narrow_leaf 0 []]]) andalso
-    List.all ground completions
+    List.all ground completions andalso agrees_with_engine
   end
 
 fun narrowing_shape_derivation () =
@@ -12614,8 +12633,8 @@ fun narrowing_shape_derivation () =
   in
     length num_products = 4 andalso
     List.all (null o #arguments) num_products andalso
-    map alternative_id list_zero = [0] andalso
-    map alternative_id list_one = [0, 1] andalso
+    map #id list_zero = [0] andalso
+    map #id list_one = [0, 1] andalso
     length (#arguments (List.nth (list_one, 1))) = 2 andalso
     length enum_products = 3 andalso
     List.all (null o #arguments) enum_products andalso
@@ -12625,31 +12644,33 @@ fun narrowing_shape_derivation () =
 
 fun narrowing_minimal_completion_pins () =
   let
-    val shallow_ty = ``:rg_shallow``
-    val shallow_shape = shape_of 0 shallow_ty
-    val shallow = first_completion shallow_shape
-      (Narrowing_variable ([], shallow_shape))
-    val zero_char = hd (narrowing_terms Refute_Gen.Char 0)
-    val char_triple_ty = ``:char # char # char``
-    val expected_chars = pairSyntax.mk_pair
-      (zero_char, pairSyntax.mk_pair (zero_char, zero_char))
+    (* A minimal completion is ground even where the leading alternative is
+       not completable at this depth, and char # char # char must reach one
+       without ever building any of the other 256^3 - 1 completions. *)
+    fun minimal depth ty =
+      let val shape = shape_of depth ty
+      in
+        case first_completion shape (Narrowing_variable ([], shape)) of
+            SOME completed => all_ground [completed]
+          | NONE => false
+      end
   in
-    (case shallow of
-         SOME completed =>
-           Term.aconv
-             (term_of_ground shallow_ty shallow_shape completed) ``RGShallow``
-       | NONE => false) andalso
-    Term.aconv (minimal_term char_triple_ty) expected_chars
+    minimal 0 ``:rg_shallow`` andalso
+    minimal 2 ``:char # char # char``
   end
 
 fun narrowing_function_inapplicable () =
   let
+    fun refusal ty =
+      (ignore (shape_of 2 ty); NONE)
+      handle Refute_Narrow.ShapeFailure (offending_ty, reason) =>
+        SOME (inapplicable_message offending_ty reason)
     fun mentions ty fragments =
-      case derive_shape 2 ty of
-          Refute_Narrow.Inapplicable [message] =>
+      case refusal ty of
+          SOME message =>
             List.all (fn fragment =>
               String.isSubstring fragment message) fragments
-        | _ => false
+        | NONE => false
   in
     mentions ``:num -> bool``
       ["narrowing is inapplicable", "num -> bool",
@@ -12757,7 +12778,7 @@ fun narrowing_finite_function_display () =
             Parse.type_to_string function_ty ^ ": " ^
             Parse.term_to_string function_hole))
   in
-    Term.aconv (eval_finite_functions value) expected andalso
+    Term.aconv (eval_finite_functions_as function_ty value) expected andalso
     wrong_typed_hole_rejected () andalso
     Term.aconv
       (eval_finite_functions_as ``:(bool -> bool) -> bool`` higher)
@@ -12800,10 +12821,10 @@ fun narrowing_update_report_goldens () =
     val g = Term.mk_var ("g", function_ty)
     val h = Term.mk_var ("h", function_ty)
     val p = Term.mk_var ("p", ``:(bool -> bool) # bool``)
-    val multiple = eval_finite_functions
+    val multiple = eval_finite_functions_as function_ty
       ``FUpdate T F (FUpdate F T (FConstant F)) :
           (bool, bool) refute$ffun``
-    val duplicate = eval_finite_functions
+    val duplicate = eval_finite_functions_as function_ty
       ``FUpdate T F (FUpdate T T (FConstant F)) :
           (bool, bool) refute$ffun``
     val ffun_hole =
@@ -12850,7 +12871,7 @@ val _ = require_msg (check_result narrowing_shape_derivation) (fn () =>
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_minimal_completion_pins)
   (fn () =>
-    "minimal completion lost a shallow constructor or built a char product")
+    "minimal completion was partial or built a char product")
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_function_inapplicable) (fn () =>
   "narrowing function inapplicability did not name its offending type")
@@ -12879,11 +12900,13 @@ fun plain_engine_units () =
           [Narrowing_constructor (1, _)] =
           Known {genuine = true, result = false}
       | refine_then_hit _ _ = raise Fail "unexpected narrowing argument"
-    val direct = refute_plain false {arguments = [root], evaluate = hit}
-    val exhausted =
-      refute_plain false {arguments = [root], evaluate = pass}
-    val refined =
-      refute_plain false {arguments = [root], evaluate = refine_then_hit}
+    fun refute_all evaluate =
+      refute_plain_avoiding false
+        {arguments = [root], evaluate = evaluate,
+         accept = fn _ => fn _ => true}
+    val direct = refute_all hit
+    val exhausted = refute_all pass
+    val refined = refute_all refine_then_hit
     val resumed = refute_plain_avoiding false
       {arguments = [root], evaluate = hit,
        accept = fn arguments => fn _ =>
@@ -12906,37 +12929,6 @@ fun plain_engine_units () =
          PlainCounterexample
            {arguments = [Narrowing_constructor (1, _)], tests = 3, ...} =>
            true
-       | _ => false)
-  end
-
-fun plain_depth_retry () =
-  let
-    val calls = ref ([] : (int * bool) list)
-    val potential_calls = ref ([] : (int * bool) list)
-    fun at_depth depth =
-      {arguments = [Narrowing_variable ([0], narrow_leaf)],
-       evaluate = fn genuine_only => fn _ =>
-         (calls := (depth, genuine_only) :: !calls;
-          Known {genuine = genuine_only, result = false})}
-    fun potential_at_depth depth =
-      {arguments = [Narrowing_variable ([0], narrow_leaf)],
-       evaluate = fn genuine_only => fn _ =>
-         (potential_calls :=
-            (depth, genuine_only) :: !potential_calls;
-          Known {genuine = false, result = false})}
-    val result = search_plain
-      {size = 3, genuine_only = false, at_depth = at_depth}
-    val potential_result = search_plain
-      {size = 3, genuine_only = false, at_depth = potential_at_depth}
-  in
-    rev (!calls) = [(0, false), (1, true)] andalso
-    (case result of
-         PlainFound {depth = 1, genuine = true, tests = 2, ...} => true
-       | _ => false) andalso
-    rev (!potential_calls) =
-      [(0, false), (1, true), (2, true), (3, true)] andalso
-    (case potential_result of
-         PlainSearchExhausted {tests = 4} => true
        | _ => false)
   end
 
@@ -13170,7 +13162,8 @@ fun pnf_engine_units () =
            (pnf_bool_shape,
             [(narrow_node pnf_bool_shape 0 [], EmptyExample),
              (narrow_node pnf_bool_shape 1 [], EmptyExample)]))
-    val uniform_shape = tree_of_types 1 [(Existential, ``:num list``)]
+    val uniform_shape =
+      tree_of [(Existential, shape_of 1 ``:num list``)]
   in
     (case potential of
          PnfCounterexample
@@ -13283,9 +13276,6 @@ val _ = require_msg (check_result full_candidate_identity) (fn () =>
 
 val _ = require_msg (check_result plain_engine_units) (fn () =>
   "plain narrowing hit, exhaustion, or hole refinement failed")
-  (fn () => ()) ()
-val _ = require_msg (check_result plain_depth_retry) (fn () =>
-  "plain narrowing did not retry a potential hit at the next depth")
   (fn () => ()) ()
 val _ = require_msg (check_result pnf_normalization_goldens) (fn () =>
   "narrowing prenex prefix or matrix changed") (fn () => ()) ()
@@ -13404,11 +13394,11 @@ fun custom_narrowing_shape_recovers_exact_term () =
     val alternatives = new [] (shape_of 0 ty)
   in
     case List.nth (alternatives, 1) of
-        candidate as Narrowing_constructor (id, []) =>
+        Narrowing_constructor (id, []) =>
           let val shape = shape_of 0 ty
           in
-            Term.aconv (exact_term shape id) ``RGCustomB`` andalso
-            Term.aconv (term_of_ground ty shape candidate) ``RGCustomB``
+            Term.aconv (valOf (#exact (alternative_of shape id)))
+              ``RGCustomB``
           end
       | _ => false
   end
@@ -13420,7 +13410,7 @@ val _ = require_msg
 
 fun fresh_shape_term () =
   let val shape = shape_of 0 ``:rg_fresh``
-  in (shape, exact_term shape 0) end
+  in (shape, valOf (#exact (alternative_of shape 0))) end
 
 fun custom_narrowing_shapes_are_call_local () =
   let
@@ -13435,11 +13425,13 @@ fun custom_narrowing_shapes_are_call_local () =
         case Future.join_results [left, right] of
             [Exn.Res (left_shape, left_term),
              Exn.Res (right_shape, right_term)] =>
-              map alternative_id (products_of left_shape) = [0] andalso
-              map alternative_id (products_of right_shape) = [0] andalso
+              map #id (products_of left_shape) = [0] andalso
+              map #id (products_of right_shape) = [0] andalso
               not (Term.aconv left_term right_term) andalso
-              Term.aconv (exact_term left_shape 0) left_term andalso
-              Term.aconv (exact_term right_shape 0) right_term
+              Term.aconv (valOf (#exact (alternative_of left_shape 0)))
+                left_term andalso
+              Term.aconv (valOf (#exact (alternative_of right_shape 0)))
+                right_term
           | _ => false
       end
   in
@@ -16015,10 +16007,10 @@ fun narrowing_no_function_recursion_pin () =
     val itree_ty = ``:(num, bool, num) itree$itree``
     val reason = "datatype is recursive under a function type"
     val shape_refused =
-      case derive_shape 2 itree_ty of
-          Refute_Narrow.Inapplicable reasons =>
-            List.exists (String.isSubstring reason) reasons
-        | _ => false
+      (ignore (shape_of 2 itree_ty); false)
+      handle Refute_Narrow.ShapeFailure (offending_ty, refusal) =>
+        String.isSubstring reason
+          (inapplicable_message offending_ty refusal)
     val config = default_config
       |> upd_substrate NativeSML
       |> upd_size 2

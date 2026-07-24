@@ -1103,75 +1103,21 @@ structure Refute_EvalCv = struct
 
   val hol_enumerator_for = Refute_EvalEnum.enumerator_for
 
+  (* The pattern compiler itself is shared with the enum substrate; only the
+     naming of the variables a constructor branch binds is local. *)
   fun make_pattern_matches patterns values environment failure success =
     let
-      fun special tm =
-        Literal.is_numeral tm orelse intSyntax.is_int_literal tm orelse
-        Literal.is_char_lit tm orelse Literal.is_string_lit tm orelse
-        oneSyntax.is_one tm orelse wordsSyntax.is_word_literal tm orelse
-        Term.aconv tm boolSyntax.T orelse Term.aconv tm boolSyntax.F
-      fun match_one pattern value additions continue =
-        let val bound = additions @ environment
+      val serial = ref 0
+      fun fresh ty =
+        let
+          val index = !serial
+          val _ = serial := index + 1
         in
-          if Term.is_var pattern then
-            (case List.find (fn (old, _) => Term.aconv old pattern) bound of
-                 SOME (_, old_value) =>
-                   boolSyntax.mk_cond
-                     (boolSyntax.mk_eq (old_value, value),
-                      continue additions, failure)
-               | NONE => continue (additions @ [(pattern, value)]))
-          else if special pattern then
-            boolSyntax.mk_cond
-              (boolSyntax.mk_eq (pattern, value),
-               continue additions, failure)
-          else
-            case Refute_Eval.fully_applied_constructor pattern of
-                SOME (wanted, pattern_args) =>
-                  let
-                    val ty = Term.type_of value
-                    val constructors = TypeBase.constructors_of ty
-                    val raw_case = TypeBase.case_const_of ty
-                    val raw_ty = hd (#1 (boolSyntax.strip_fun
-                      (Term.type_of raw_case)))
-                    val case_constant = Term.inst
-                      (Type.match_type raw_ty ty) raw_case
-                    val (case_domains, _) = boolSyntax.strip_fun
-                      (Term.type_of case_constant)
-                    val branch_types = List.take
-                      (tl case_domains, length constructors)
-                    fun branch (constructor, branch_ty) =
-                      let
-                        val (argument_types, _) =
-                          boolSyntax.strip_fun branch_ty
-                        val arguments = map_index (fn (index, arg_ty) =>
-                          named_variable (fresh_prefix () ^ "pat_" ^
-                            Int.toString index) arg_ty) argument_types
-                        val body = if Term.same_const constructor wanted
-                            andalso length arguments = length pattern_args
-                          then match_many pattern_args arguments additions
-                            continue
-                          else failure
-                      in
-                        Term.list_mk_abs (arguments, body)
-                      end
-                  in
-                    HolKernel.list_mk_icomb case_constant
-                      (value :: ListPair.mapEq branch
-                        (constructors, branch_types))
-                  end
-              | NONE =>
-                  boolSyntax.mk_cond
-                    (boolSyntax.mk_eq (substitute bound pattern, value),
-                     continue additions, failure)
+          named_variable (fresh_prefix () ^ "pat_" ^ Int.toString index) ty
         end
-      and match_many [] [] additions continue = continue additions
-        | match_many (pattern :: rest) (value :: values) additions continue =
-            match_one pattern value additions (fn extended =>
-              match_many rest values extended continue)
-        | match_many _ _ _ _ = failure
     in
-      match_many patterns values [] (fn additions =>
-        success (additions @ environment))
+      Refute_EvalEnum.match_patterns fresh patterns values environment
+        failure success
     end
 
   type loop_program =
@@ -1614,10 +1560,7 @@ structure Refute_EvalCv = struct
           (case strategy of
                Refute_Eval.Narrowing =>
                  Refute_Eval.Inapplicable ["narrowing is not installed"]
-             | Refute_Eval.Exhaustive =>
-                 compile_plans config strategy plans
-             | Refute_Eval.Random _ =>
-                 compile_plans config strategy plans)
+             | _ => compile_plans config strategy plans)
 
   (* Selftest-only stream hook.  Supported plans run through the production
      cv loop.  Values outside its first-order result fragment still take
