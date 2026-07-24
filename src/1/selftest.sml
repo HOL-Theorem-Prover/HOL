@@ -1589,3 +1589,17 @@ in
     testfn = snd o Thm.gen_prim_specification (Theory.current_theory ())
   } h_proves_F
 end
+
+(* Test for #2024 *)
+val _ = let
+  val x = mk_var("x", bool)
+  val y = mk_var("y", bool)
+  val k = mk_abs(x, mk_abs(y, x))
+in
+  shouldfail {
+    checkexn = (fn HOL_ERR _ => true | _ => false),
+    printarg = K "Testing for #2024 malformed read_raw",
+    printresult = term_to_string,
+    testfn = Term.read_raw (Vector.fromList [k])
+  } "%0$0@"
+end

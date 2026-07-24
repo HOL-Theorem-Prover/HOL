@@ -1159,6 +1159,8 @@ local
 datatype tok = lam | id of int | app of int
 open StringCvt
 
+val ERR = mk_HOL_ERR "Term" "read_raw"
+
 fun readtok (c : (char, cs) reader) cs = let
   val intread = Int.scan DEC c
 in
@@ -1180,11 +1182,11 @@ fun parse tmv c cs0 = let
   fun parse_term stk cur =
       case (stk, cur) of
           ([t], (NONE,cs)) => SOME (t, cs)
-        | ([], (NONE, _)) => raise Fail "raw_parse.eof: empty stack"
-        | (_, (NONE, _)) => raise Fail "raw_parse.eof: large stack"
+        | ([], (NONE, _)) => raise ERR "empty stack"
+        | (_, (NONE, _)) => raise ERR "large stack"
         | (body :: bvar :: stk, (SOME lam, cs')) =>
             parse_term (Abs(bvar,body) :: stk) (adv cs')
-        | (_, (SOME lam, _)) => raise Fail "raw_parse.abs: short stack"
+        | (_, (SOME lam, _)) => raise ERR "short stack"
         | (stk, (SOME (app i), cs')) => doapp i stk cs'
         | (stk, (SOME (id i), cs')) =>
             parse_term (Vector.sub(tmv, i) :: stk) (adv cs')
@@ -1193,16 +1195,44 @@ fun parse tmv c cs0 = let
       else
         case stk of
             x :: f :: stk => doapp (i - 1) (App(f,x) :: stk) cs
-          | _ => raise Fail "raw_parse.app: short stack"
+          | _ => raise ERR "short stack"
 in
   parse_term [] (adv cs0)
 end
 
+fun bvtype (Var (_, ty)) = ty
+  | bvtype _ = raise ERR "malformed abstraction"
+fun synth t =
+    case t of
+        Var(_, ty) => ty
+      | Const(_, ty) => ty
+      | Abs (bv, bod) => bvtype bv --> synth bod
+      | App(f,x) =>
+        let
+          val fty = synth f
+          val (dty, rty) = Type.dom_rng fty
+        in
+          check x dty ; rty
+        end
+and check tm expected =
+    case tm of
+        Abs(bv,bod) =>
+        let val (ed,er) = Type.dom_rng expected
+        in
+          if Type.compare(ed,bvtype bv) <> EQUAL then
+            raise ERR "Ill-typed"
+          else ();
+          check bod er
+        end
+      | _ => Type.compare(synth tm, expected) = EQUAL
 
 in
 
-fun read_raw tmv s =
-  valOf (scanString (parse tmv) s)
+fun read_raw tmv s = let val t = valOf (scanString (parse tmv) s)
+                         val _ = synth t
+                     in
+                       t
+                     end
 
 end (* local *)
 

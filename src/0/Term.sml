@@ -1108,6 +1108,37 @@ datatype lexeme
    | I1 of int
    | I2 of int
 
+fun wfCheck t =
+    let
+      val WFERR = ERR "read_raw"
+      fun bvType (Fv(_, ty)) = ty
+        | bvType _           = raise WFERR "Malformed abs"
+      fun synth bv_env tm =
+          case tm of
+              Clos _      => raise WFERR "Malformed: no Clos allowed"
+            | Bv i        => (List.nth(bv_env, i)
+                              handle Subscript =>
+                                    raise WFERR "Malformed: dangling BV")
+            | Fv(_, ty)   => ty
+            | Const(_,ty) => to_hol_type ty
+            | Comb(f, x)  => let val (d, r) = Type.dom_rng (synth bv_env f)
+                             in check bv_env x d; r end
+            | Abs(bv,bod) => let val bvty = bvType bv
+                             in bvty --> synth (bvty::bv_env) bod end
+      and check bv_env (Abs(bv, bod)) exp =
+            let val bvty  = bvType bv
+                val (d,r) = Type.dom_rng exp
+            in if Type.compare(d,bvty) = EQUAL then check (bvty::bv_env) bod r
+               else raise WFERR "Ill-typed: bound-variable annotation"
+            end
+        | check bv_env tm exp =
+            if Type.compare(synth bv_env tm, exp) = EQUAL then ()
+            else raise WFERR "Ill-typed"
+      val _ = synth [] t
+    in
+      t
+    end
+
 local val numeric = Char.contains "0123456789"
 in
 fun take_numb ss0 =
@@ -1164,7 +1195,7 @@ fun read_raw tmv = let
           | _ =>  raise ERR "read_raw" "app: small stack"
 
 in
-fn s => parse ([], Substring.full s)
+  fn s => wfCheck (parse ([], Substring.full s))
 end
 end (* local *)
 
