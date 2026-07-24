@@ -767,17 +767,33 @@ fun initialize {
           raise e)
       end
     else PolyML.compiler (read2, parameters) ()
-  fun finish () = (
-    progress (!pos);
-    case !curToken of
-      (_, "") => ()
-    | _ => ((runCompiler () handle e => runtimeExn e); finish ()))
+  (* PolyML.compiler may return without consuming any input when
+     rejecting a malformed decl (e.g., a `Theorem foo:` whose expansion
+     type-checks to `() g`).  Detect no-progress and drain to avoid
+     infinite recursion. *)
+  fun finish () = let
+    val startIdx = !idx
+    val startTok = !curToken
+    in
+      progress (!pos);
+      case !curToken of
+        (_, "") => ()
+      | _ => (
+        (runCompiler ()
+          handle Thread.Thread.Interrupt => raise Thread.Thread.Interrupt
+               | e => runtimeExn e);
+        (if !idx = startIdx andalso !curToken = startTok
+         then curToken := (0, "")
+         else ());
+        finish ())
+    end
   fun emitBuilt () = let
     val decs = !decsRef
     val pts = rev (!ptRef)
     val (acc, _) = annotateDecs decs (PTTop pts) []
     in app builtTree (rev acc) end
-    handle _ => () (* annotation can fail if trees are out of sync *)
+    handle Thread.Thread.Interrupt => raise Thread.Thread.Interrupt
+         | _ => () (* annotation can fail if trees are out of sync *)
   fun loop () = (
     DArray.clear queue;
     if fetchDec () then () else (

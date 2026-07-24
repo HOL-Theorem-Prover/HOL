@@ -329,6 +329,13 @@ fun stdioConnection (): connection = let
             String.concat ("Content-Length: " :: Int.toString n :: "\r\n\r\n" :: acc))
       in write (0, !buf, []); TextIO.StreamIO.flushOut lspOut;
          writerThread () end
+       (* An encode-time exception must not kill the writer: the
+          channel would stay Full and every send would hang. *)
+       handle e => (
+         TextIO.output (TextIO.stdErr,
+           "[LSP-writer] dropping message; encode raised: " ^ exnMessage e ^ "\n");
+         TextIO.flushOut TextIO.stdErr;
+         writerThread ())
     val _ = Thread.fork (writerThread, [])
     in Channel.send send end
   in {send = send, recv = recv} end
@@ -652,14 +659,19 @@ fun start {diag} = let
          `oldDiags` (by re-merging), but if the size didn't change,
          re-sending is pure noise for the client's log. *)
       val lastSentSize = ref ~1
+      (* Snapshot oldDiags for the writer thread.  A live reference
+         races updateDiags on the next Progress event: DArray.replace
+         mid-encode makes encDArray raise Subscript, which kills the
+         writer and jams every subsequent send. *)
       fun sendDiags () = let val n = DArray.size oldDiags
         in if n = !lastSentSize then () else (
           lastSentSize := n;
+          let val snapshot = DArray.clone (oldDiags, n) in
           send (mkNotif "textDocument/publishDiagnostics" (fn print => (
             print "{\"uri\":"; encString uri print;
             print ",\"version\":"; encInt (#version text) print;
-            print ",\"diagnostics\":"; encDArray encDiag oldDiags print;
-            print "}"))))
+            print ",\"diagnostics\":"; encDArray encDiag snapshot print;
+            print "}"))) end)
         end
 
       (* Standard LSP window/workDoneProgress: gives eglot a
