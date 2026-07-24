@@ -896,7 +896,7 @@ structure Refute_EvalCv = struct
     end
 
   (* Generated constants become stale on return.  The continuation form
-     forces TASK_09's loop synthesis and evaluation to happen in-bracket. *)
+     forces loop synthesis and evaluation to happen in-bracket. *)
   fun with_generators types continuation =
     (CvSuccess
        (with_clean_theory (fn () =>

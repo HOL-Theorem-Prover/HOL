@@ -146,7 +146,7 @@ structure Refute_SmartGen = struct
 
   (* Higher-order values are legitimate atom arguments: SORTED's relation
      parameter is the canonical example.  What matters at this layer is
-     syntactic opacity, not mode support (TASK_09 degrades unsupported modes).
+     syntactic opacity, not mode support; unsupported modes degrade safely.
      Traverse the whole value so that no lambda or logical syntax can be
      smuggled inside an otherwise acceptable application.  Equality itself is
      admitted only by positive_atom, never as a nested value. *)

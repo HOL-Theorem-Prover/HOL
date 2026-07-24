@@ -450,7 +450,7 @@ fun run_instance deadline started (config : Refute_Core.config)
 
     (* Unlike the scope shortcut, kind-of monotonicity deliberately lets a
        user false row block the calculus but does not let a true row force
-       it.  TASK_05's finitization plumbing is this helper's first caller. *)
+       it.  Finitization plumbing is this helper's first caller. *)
     fun is_type_kind_of_monotonic ty =
       case MFS.mono_override (#mono mf) ty of
           SOME (SOME false) => false

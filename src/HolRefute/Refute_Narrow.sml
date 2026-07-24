@@ -174,7 +174,7 @@ structure Refute_Narrow = struct
         List.concat (List.map (fn value =>
           List.map (fn tail => value :: tail) (cartesian rest)) values)
 
-  (* Retain the complete TASK_15 operation for engine-level clients. *)
+  (* Retain the complete operation for engine-level clients. *)
   fun total (Narrowing_constructor (id, arguments)) =
         List.map (fn completed => Narrowing_constructor (id, completed))
           (cartesian (List.map total arguments))

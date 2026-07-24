@@ -2319,8 +2319,8 @@ structure Refute_Extract = struct
 
       val plans = List.map (fn plan => rename_plan plan []) plans
 
-      (* TASK_14 installs only the lazy property compiler.  Generation and
-         refinement belong to the narrowing engine; accepting those nodes
+      (* Lazy extraction installs only the property compiler.  Generation
+         and refinement belong to the narrowing engine; accepting those nodes
          here would accidentally run strict enumeration over lazy values. *)
       fun test_only current =
         case current of

@@ -1,7 +1,8 @@
-HolRefute provides certified counterexample generation for HOL4.  It has a
-Quickcheck (QC) backend for executable goals and a Kodkod-based model-finder
-(MF) backend.  QC supports exhaustive and random strategies over three
-interchangeable execution substrates:
+HolRefute provides counterexample generation for HOL4, with theorem
+certification enabled by default.  It has a Quickcheck (QC) backend for
+executable goals, native narrowing, and a Kodkod-based model-finder (MF)
+backend.  Exhaustive and random QC testing run over three interchangeable
+execution substrates:
 
 * Compute interprets test plans with computeLib.  It is the compatibility
   substrate and supports registered custom and abstract generators.
@@ -47,13 +48,17 @@ higher-order domains.  Counterexamples reconstruct `ffun` values as HOL
 `UPDATE` chains.  Setting the option to false restores the direct function-
 type inapplicability diagnostic.
 
-Execution substrates are untrusted accelerators.  A QC candidate becomes
-`Genuine` only after Refute_Cert re-evaluates its instantiated proposition
-with computeLib and constructs a theorem certifying its negation.  The model
-finder can also classify a sound finite model as `Genuine` when its
-genuineness conditions hold even if the goal is not certifiable; in that
-case `cert = NONE`.  Thus `certainty` records the semantic strength of the
-result, while `cert` records whether Refute constructed a HOL theorem.
+Execution substrates are untrusted accelerators.  When `certify=true` (the
+default), a QC candidate becomes `Genuine` only after Refute_Cert re-evaluates
+its instantiated proposition with computeLib and constructs a theorem
+certifying its negation.  With `certify=false`, Refute skips that QC
+certification: a QC hit otherwise eligible for `Genuine` remains `Genuine`,
+but has `cert = NONE` and is reported as uncertified.  Disabling certification
+does not promote candidates already known to be stuck or incomplete.  The
+model finder can independently classify a sound finite model as `Genuine`
+when its genuineness conditions hold even if the goal is not certifiable; in
+that case `cert = NONE`.  Thus `certainty` records the semantic strength of
+the result, while `cert` records whether Refute constructed a HOL theorem.
 Refute uses no oracle tags.  Cv performs all per-call definitions and
 translations inside a full theory snapshot/revert bracket.  Success,
 failure, timeout, and interruption paths leave no Refute-created type,
@@ -91,14 +96,14 @@ Module layout:
 * Refute_Unused: unused-assumption probes and theory sweeps.
 * Refute.sig and Refute.sml: the public API facade.
 
-M4 model-finder surface
------------------------
+Model-finder surface
+--------------------
 
-The M4 model finder adds native polymorphic scopes, monotonicity and smart
+The model finder supports native polymorphic scopes, monotonicity and smart
 finitization, specialization and boxing, binary integers, (co)inductive
 predicates, codatatypes, quotients, typedefs, value pinning, model formatting,
-and incremental multi-model search.  The new or newly active options and their
-defaults are:
+and incremental multi-model search.  The principal options and their defaults
+are:
 
 | updater | default | meaning |
 | --- | --- | --- |
@@ -214,14 +219,21 @@ recognized; define coinductive predicates with `Hol_coreln`.
 Known limitations and follow-ups
 --------------------------------
 
-An Abs/Rep occurrence for an unregistered typedef makes the model finder
-return `Unknown`, rather than risk a spurious genuine result.  Register the
-typedef explicitly.  The normalized Frac/ersatz encoding for `rat` is
-registered by default.  Fraction support is deferred only for `real`, because
-certification of real literals remains unresolved.
+The model finder lazily harvests typedef and quotient metadata when an
+unregistered Abs/Rep occurrence is encountered.  If validated harvesting
+fails, it returns `Unknown` rather than risk a spurious genuine result; an
+explicit registration can then supply the metadata.  Harvesting is deliberately
+per-type and lazy rather than an eager scan of the whole theory ancestry.
 
-Remaining model-finder fraction parity work is real-only.
-Relation inverse and composition (`inv` and `O`) already have native
-monotonicity rules, with dedicated verdict, scope, soundness, and certified
-argument-order coverage.  Relation identity (`Id`) remains unfolded because
-there is no corresponding nut builtin.
+The normalized Frac/ersatz encoding for `rat` is registered by default.
+Support for `real` via Frac remains deferred because certification of real
+literals is unresolved.  Relation inverse and composition (`inv` and `O`)
+already have native monotonicity rules, with dedicated verdict, scope,
+soundness, and certified argument-order coverage.  Relation identity (`Id`)
+remains unfolded because there is no corresponding nut builtin.
+
+Recorded follow-ups are compute-hosted residual-inspection narrowing; full
+function flattening; higher-order and negative smart-generator modes; `real`
+via Frac; offset interval rewrites such as `lo <= n /\\ n < hi`; and eager
+whole-ancestry typedef/quotient harvesting.  These are not part of the current
+implementation.

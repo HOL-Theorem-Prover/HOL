@@ -2856,8 +2856,8 @@ fun mf_inductive_unroll_goldens () =
        ("neutral upper", term_has_generated_prefix MFN.ubfp_prefix neutral),
        ("theory footprint", footprint = mf_theory_footprint ())]
     val _ = List.app (fn (label, passed) =>
-      if passed then () else print ("TASK_11 failed check: " ^ label ^ "\n"))
-      checks
+      if passed then () else
+        print ("inductive unroll failed check: " ^ label ^ "\n")) checks
   in
     List.all #2 checks
   end
@@ -2938,7 +2938,7 @@ fun mf_coinductive_unroll_goldens () =
           | _ => false)]
     val _ = List.app (fn (label, passed) =>
       if passed then () else
-        print ("TASK_14 failed gfp check: " ^ label ^ "\n")) checks
+        print ("coinductive unroll failed check: " ^ label ^ "\n")) checks
   in
     List.all #2 checks
   end
@@ -3071,7 +3071,7 @@ fun mf_joint_inductive_unroll_goldens () =
        ("theory footprint", footprint = mf_theory_footprint ())]
     val _ = List.app (fn (label, passed) =>
       if passed then () else
-        print ("TASK_13 failed joint check: " ^ label ^ "\n")) checks
+        print ("joint unroll failed check: " ^ label ^ "\n")) checks
   in
     List.all #2 checks
   end
@@ -3162,7 +3162,7 @@ fun mf_joint_coinductive_unroll_goldens () =
           | _ => false)]
     val _ = List.app (fn (label, passed) =>
       if passed then () else
-        print ("TASK_14 failed mutual gfp check: " ^ label ^ "\n")) checks
+        print ("mutual gfp failed check: " ^ label ^ "\n")) checks
   in
     List.all #2 checks
   end
@@ -3292,7 +3292,7 @@ fun mf_star_linear_pred_goldens () =
           "zoo_wf_lfp.step"),
        ("theory footprint", footprint = mf_theory_footprint ())]
     val _ = List.app (fn (label, passed) =>
-      if passed then () else print ("TASK_12 failed star check: " ^
+      if passed then () else print ("star translation failed check: " ^
         label ^ "\n")) checks
   in
     List.all #2 checks
@@ -3720,7 +3720,7 @@ fun mf_relation_builtin_producers () =
        ("has outer", Term.free_in outer composition_term),
        ("has inner", Term.free_in inner composition_term)]
     val _ = List.app (fn (label, passed) =>
-      if passed then () else print ("TASK_12 failed relation check: " ^
+      if passed then () else print ("relation translation failed check: " ^
         label ^ "\n")) checks
   in
     List.all #2 checks
@@ -4132,7 +4132,7 @@ fun mono_relation_builtin_mtypes () =
        ("O shape", composition_shape),
        ("O constraint", constrained composition_constraints)]
     val _ = List.app (fn (label, passed) =>
-      if passed then () else print ("TASK_12 failed mono check: " ^
+      if passed then () else print ("relation mono failed check: " ^
         label ^ "\n")) checks
   in
     List.all #2 checks
@@ -4515,7 +4515,7 @@ fun mf_quotient_typedef_axiom_goldens () =
           not (null (#2 typedef_preprocessed)))]
     val failed = map #1 (List.filter (not o #2) checks)
     val _ = if null failed then () else
-      Feedback.HOL_MESG ("TASK_17 golden failures: " ^
+      Feedback.HOL_MESG ("quotient/typedef golden failures: " ^
         String.concatWith ", " failed)
   in
     null failed
@@ -4731,7 +4731,7 @@ fun mf_binarize_preproc_goldens () =
         Term.aconv constructor recovered)]
     val _ = List.app (fn (label, passed) =>
       if passed then () else Feedback.HOL_MESG
-        ("TASK_08 failed check: " ^ label)) checks
+        ("binary preprocessing failed check: " ^ label)) checks
   in
     List.all #2 checks
   end
@@ -5122,7 +5122,7 @@ fun mf_box_uncurry_goldens () =
         not (text_has boxed_scope "funbox"))]
     val _ = List.app (fn (label, passed) =>
       if passed then () else Feedback.HOL_MESG
-        ("TASK_07 failed check: " ^ label)) checks
+        ("boxing preprocessing failed check: " ^ label)) checks
   in
     List.all #2 checks
   end
@@ -13795,13 +13795,13 @@ val _ = require_msg (check_result equation_adds_evals) (fn () =>
   "an equational conclusion did not add both evaluation terms")
   (fn () => ()) ()
 
-val _ = Theory.new_constant ("refute_task07_unmapped", ``:bool``)
+val _ = Theory.new_constant ("refute_unmapped_eval", ``:bool``)
 
 fun unmapped_constant_is_not_executable () =
   case preprocess default_config
-    (preprocessing_problem ``refute_task07_unmapped``) of
+    (preprocessing_problem ``refute_unmapped_eval``) of
       [{qc_gate = SOME [reason], ...}] =>
-        String.isSubstring "refute_task07_unmapped" reason
+        String.isSubstring "refute_unmapped_eval" reason
     | _ => false
 
 val _ = require_msg
@@ -14426,10 +14426,10 @@ fun smartgen_gate_preflight_rejects_mixed_nonexec () =
       |> Refute.upd_certify false
     val goal =
       ``(n : num) = 0 ==> zoo_sg_linear n ==>
-        refute_task07_unmapped ==> F``
+        refute_unmapped_eval ==> F``
     val eval_problem : problem =
       {goal = ``zoo_sg_linear (n : num) ==> n < 3``, assumptions = [],
-       evals = [``refute_task07_unmapped``]}
+       evals = [``refute_unmapped_eval``]}
     fun unknown problem =
       case refute_problem config problem of Unknown _ => true | _ => false
   in
@@ -18991,8 +18991,8 @@ val _ = require_msg (check_result kodkod_not_configured_pin) (fn () =>
    Kodkodi installation skips this whole block, exactly like HolSmt's live
    solver tests.
 
-   TASK_24 supplement audit (2026-07-21): earlier feature tasks already
-   pinned multi-model search (the mf_incremental suites), bits = 9 overflow
+   Supplemental audit (2026-07-21): the feature suites already pin
+   multi-model search (the mf_incremental suites), bits = 9 overflow
    (mf_integer_nits_cases), mutual groups (the mf_mutual suites), codatatype
    rechecking (mf_codatatype_acceptance), refusal flips
    (mf_refusal_flip_cases), predicate-specific iter rows
@@ -20974,8 +20974,8 @@ val mf_relation_soundness_corpus =
    ("inverse application",
     ``inv (R : 'a -> 'b -> bool) y x <=> R x y``)]
 
-(* TASK_30's normalization-faithfulness gate.  These are instances of the
-   arithmetic, order, and equality laws in ratTheory (RAT_ADD_RID,
+(* The normalization-faithfulness gate uses instances of the arithmetic,
+   order, and equality laws in ratTheory (RAT_ADD_RID,
    RAT_MUL_RID, RAT_ADD_COMM, RAT_MUL_COMM, RAT_ADD_RINV,
    RAT_AINV_AINV, RAT_LES_REF, RAT_LEQ_REF, RAT_LES_TOTAL,
    RAT_LEQ_ANTISYM, RAT_EQ_AINV, and RAT_EQ_LADD).  In particular, the
@@ -21308,7 +21308,7 @@ fun mf_incremental_solver_selection () =
   end
   handle e => die (Feedback.exn_to_string e)
 
-fun run_mf_task20_suites () =
+fun run_mf_core_suites () =
   if not (Refute_Forl.is_configured ()) then
     print ("(Kodkodi not configured, MF differential and soundness " ^
       "suites skipped.)\n")
@@ -21648,14 +21648,14 @@ fun run_level2_mf_corpus () =
   let
     val timer = Timer.startRealTimer ()
     val _ = run_mf_acceptance ()
-    val _ = run_mf_task20_suites ()
+    val _ = run_mf_core_suites ()
     val elapsed = Timer.checkRealTimer timer
   in
     print ("Refute MF complete level-2 corpus: " ^
       Time.fmt 2 elapsed ^ "s\n")
   end
 
-fun run_mf_task31_suites () =
+fun run_mf_relation_mono_suites () =
   if not (Refute_Forl.is_configured ()) then
     print "(Kodkodi not configured, MF inv/O suites skipped.)\n"
   else
@@ -21672,15 +21672,15 @@ fun run_mf_task31_suites () =
 
 val _ =
   if selftest_level = 1 andalso
-     OS.Process.getEnv "TASK31_MONO_ONLY" = SOME "yes" then
-    run_mf_task31_suites ()
+     OS.Process.getEnv "REFUTE_MONO_ONLY" = SOME "yes" then
+    run_mf_relation_mono_suites ()
   else if selftest_level = 1 andalso
-     OS.Process.getEnv "TASK30_RAT_ONLY" = SOME "yes" andalso
+     OS.Process.getEnv "REFUTE_RAT_ONLY" = SOME "yes" andalso
      Refute_Forl.is_configured () then
     mf_rat_soundness_acceptance (configured_mf_test_solver ())
   else if selftest_level = 1 andalso
-          (OS.Process.getEnv "TASK29_FRAC_ONLY" = SOME "yes" orelse
-           OS.Process.getEnv "TASK28_FRAC_ONLY" = SOME "yes") andalso
+          (OS.Process.getEnv "REFUTE_FRAC_MODEL_ONLY" = SOME "yes" orelse
+           OS.Process.getEnv "REFUTE_FRAC_ENCODING_ONLY" = SOME "yes") andalso
           Refute_Forl.is_configured () then
     mf_frac_acceptance (configured_mf_test_solver ())
   else ()
