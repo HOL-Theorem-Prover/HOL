@@ -90,8 +90,8 @@ structure Refute_EvalEnum = struct
           val remaining = List.filter (fn constant =>
             not (List.exists (fn allowed =>
               Term.same_const allowed constant) consumed)) constants
-          val has_binder = List.exists (fn tm =>
-            not (null (HolKernel.find_terms Term.is_abs tm))) terms
+          val has_binder =
+            List.exists Refute_Core.has_unexpanded_binder terms
         in
           if has_binder then
             rejected (label ^ " contains an unexpanded binder")
