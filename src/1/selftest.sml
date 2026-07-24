@@ -1537,3 +1537,55 @@ val _ = let
 in
   if null (hyp unsound) then die "UNSOUND" else die "unexpected hyps"
 end handle HOL_ERR _ => OK();
+
+(* Test for #2026 *)
+val _ = let
+  val b  = Type.bool
+  val T0 = boolSyntax.T
+  val F0 = boolSyntax.F
+
+  val x = Term.mk_var ("eq_attack_x", b)
+  val y = Term.mk_var ("eq_attack_y", b)
+  val kF = Term.mk_abs (x, Term.mk_abs (y, F0))
+
+  (* Prove: |- ?e. e = (\x y. F) *)
+  val e = Term.mk_var ("eq_attack_witness", b --> b --> b)
+  val ex =
+      boolSyntax.mk_exists
+        (e, boolSyntax.mk_eq (e, kF))
+  val exth = Thm.EXISTS (ex, kF) (Thm.REFL kF)
+
+  (* Replaces min$= and returns, using the old primitive equality:
+     |- fake_equal = (\x y. F)
+   *)
+  val fake_def = Thm.prim_specification "min" ["="] exth
+  val fake_eq =
+      Term.prim_mk_const {Thy = "min", Name = "="}
+
+  val p = Term.mk_var ("eqspec_h_20260723", b)
+  val h = Term.list_mk_comb (fake_eq, [p, T0])
+
+  (* |- fake_equal p T = ((\x y. F) p) T *)
+  val d0 = Thm.AP_THM (Thm.AP_THM fake_def p) T0
+
+  (* |- ((\x y. F) p) T = (\y. F) T *)
+  val d1 =
+      Thm.AP_THM
+        (Thm.BETA_CONV (Term.mk_comb (kF, p)))
+        T0
+
+  (* |- (\y. F) T = F *)
+  val d2 =
+      Thm.BETA_CONV
+        (Term.mk_comb (Term.mk_abs (y, F0), T0))
+
+  val h_eq_F = Thm.TRANS (Thm.TRANS d0 d1) d2
+  val h_proves_F = Thm.EQ_MP h_eq_F (Thm.ASSUME h)
+in
+  shouldfail {
+    checkexn = is_struct_HOL_ERR "Thm",
+    printarg = K "Testing for #2026 gen_prim_specification/dest_eq bug",
+    printresult = thm_to_string,
+    testfn = snd o Thm.gen_prim_specification (Theory.current_theory ())
+  } h_proves_F
+end

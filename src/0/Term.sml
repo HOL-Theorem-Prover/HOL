@@ -979,13 +979,19 @@ fun prim_mk_imp tm1 tm2  = Comb(Comb(imp, tm1),tm2);
       Take an equality apart, and return the type of the operands
  ---------------------------------------------------------------------------*)
 
-local val err = ERR "dest_eq_ty" ""
+local val tyerr = ERR "dest_eq_ty" "Term not an equality"
+      val err = ERR "dest_eq" "Term not an equality"
 in
 fun dest_eq_ty t =
- let val ((c,M),N) = with_exn ((dest_comb##I) o dest_comb) t err
+ let val ((c,M),N) = with_exn ((dest_comb##I) o dest_comb) t tyerr
  in if same_const c eqc
        then (M,N,fst(Type.dom_rng (type_of c)))
        else raise err
+ end
+fun dest_eq t =
+ let val ((c,M),N) = with_exn ((dest_comb##I) o dest_comb) t err
+ in
+   if same_const c eqc then (M,N) else raise err
  end
 end;
 

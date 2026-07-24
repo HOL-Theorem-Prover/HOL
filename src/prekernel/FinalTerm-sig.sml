@@ -48,6 +48,7 @@ sig
   val dest_thy_constid
                     : term -> {Thy:string, Name:KernelSig.kernelid, Ty:hol_type}
   val dest_comb     : term -> term * term
+  val dest_eq       : term -> term * term
   val strip_binder  : term option -> term -> term list * term
   val strip_abs     : term -> term list * term
   val dest_abs      : term -> term * term

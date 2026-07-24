@@ -1273,20 +1273,6 @@ fun mk_exists (absrec as (Bvar,_)) =
   in mk_comb(inst[alpha |-> type_of Bvar] ec, mk_abs absrec)
   end
 
-fun dest_eq M =
-  let val (Rator,r) = dest_comb M
-      val (eq,l) = dest_comb Rator
-  in case dest_thy_const eq
-      of {Name="=",Thy="min",...} => (l,r)
-       | _ => raise ERR "dest_eq" "not an equality"
-  end;
-
-fun mk_eq (lhs,rhs) =
- let val ty = type_of lhs
-     val eq = mk_thy_const{Name="=",Thy="min",Ty=ty-->ty-->bool}
- in list_mk_comb(eq,[lhs,rhs])
- end;
-
 fun nstrip_exists 0 t = ([],t)
   | nstrip_exists n t =
      let val (Bvar, Body) = dest_exists t

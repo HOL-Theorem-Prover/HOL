@@ -1089,6 +1089,14 @@ in
   else raise ERR "dest_eq_ty" "Term not an equality"
 end
 
+fun dest_eq t = let
+  val (fx, y) = dest_comb t
+  val (f, x) = dest_comb fx
+in
+  if same_const f equality then (x,y)
+  else raise ERR "dest_eq" "Term not an equality"
+end
+
 fun prim_mk_eq ty t1 t2 =
     App(App(inst [alpha |-> ty] equality, t1), t2)
 
