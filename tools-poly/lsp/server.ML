@@ -912,10 +912,35 @@ fun start {diag} = let
         case process {startPosition = s, endPosition = e} props of
           [] => fromTree (HOL_IDE.builtMoveUp pt)
         | out => out
-    fun f () = let
-      val offset' = {startOffset = FixedInt.fromInt startOffset, endOffset = FixedInt.fromInt endOffset}
-      in fromTree (HOL_IDE.builtNavigateTo' builtTrees offset') end
-    val out = case out of [] => f () | _ => out
+    val offset' = {startOffset = FixedInt.fromInt startOffset,
+                   endOffset = FixedInt.fromInt endOffset}
+    val innermost = HOL_IDE.builtNavigateTo' builtTrees offset'
+    (* If the cursor sits on raw HOL-quotation text — the innermost
+       built-tree node has PQuote — the SML tree hover would walk up
+       to the enclosing expansion and return misleading info (e.g.
+       "string" for the QUOTE-wrapped body).  Dispatch to the
+       HOL-side Preterm hover instead; and if it can't produce a
+       hover, return nothing rather than bogus SML type info. *)
+    val inQuoteSpan =
+      case innermost of
+        SOME (HOL_IDE.Built (sp, props, _), _) =>
+          if List.exists (fn HOL_IDE.PQuote => true | _ => false) props
+          then SOME sp else NONE
+      | _ => NONE
+    fun fq (s, e) = let
+      val qs = FixedInt.toInt s
+      val qe = FixedInt.toInt e
+      val quote = String.substring (#text text, qs, qe - qs)
+      in !LSPExtension.hoverQuotation
+           ({uri = uri, lines = #lines text, plugins = plugins,
+             ppToString = ppToString},
+            {quote = quote, quoteStart = qs, target = startOffset}) end
+    fun f () = fromTree innermost
+    val out =
+      case (out, inQuoteSpan) of
+        (_::_, _)     => out
+      | ([], SOME sp) => fq sp
+      | ([], NONE)    => f ()
     val _ = case out of [] => raise Empty | _ => ()
     fun merge ({range = NONE, ...}, a) = a
       | merge ({range = a, ...}, NONE) = a

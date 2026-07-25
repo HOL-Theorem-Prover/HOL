@@ -729,6 +729,73 @@ def test_edit_across_multibyte_char():
         c.close()
 
 
+def test_hover_inside_term_quotation():
+    """Hover inside an explicit ``‘‘...’’`` HOL term quotation resolves
+    identifiers via the HOL parser (Preterm walker with type + theory
+    info), not just as raw SML `term frag list`.  Exercises
+    hover_quote_init.ML's Preterm-based callback registered into
+    LSPExtension.hoverQuotation."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/quote_hover.sml"
+        # ``‘‘`` and ``’’`` are 3-byte UTF-8 sequences each.  The line
+        # `val body = ‘‘!n:num. SUC n = n + 1’’` has these BYTE columns:
+        #   0..10   = "val body = " (11 bytes)
+        #   11..13  = first ``‘`` (3 bytes)
+        #   14..16  = second ``‘``
+        #   17      = '!'
+        #   18      = 'n' (binder)
+        #   19..24  = ':num. '
+        #   25..27  = 'SUC'
+        #   28      = ' '
+        #   29      = 'n' (bound)
+        src = ("Theory quote_hover\n"
+               "Ancestors arithmetic\n\n"
+               "val body = ‘‘"
+               "!n:num. SUC n = n + 1’’\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        def do_hover(id_, line, char):
+            c.send({"jsonrpc":"2.0","id":id_,
+                    "method":"textDocument/hover",
+                    "params":{"textDocument":{"uri":uri},
+                              "position":{"line":line,"character":char}}})
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == id_: return m
+                return None
+            reply = c.wait_until(got, 5)
+            assert_true(reply is not None,
+                        f"hover reply {id_} arrived")
+            return reply
+
+        # Hover on middle char of SUC (byte col 26): expect const info.
+        reply = do_hover(101, 3, 26)
+        result = reply.get("result")
+        assert_true(result is not None,
+                    f"hover on SUC returned a result ({reply})")
+        md = result["contents"]["value"]
+        assert_true("SUC" in md,
+                    f"hover on SUC mentions the name ({md!r})")
+        assert_true("num" in md,
+                    f"hover on SUC mentions num type ({md!r})")
+
+        # Hover on bound `n` at byte col 29: expect bound-var info.
+        reply = do_hover(102, 3, 29)
+        result = reply.get("result")
+        assert_true(result is not None,
+                    f"hover on bound n returned a result ({reply})")
+        md = result["contents"]["value"]
+        assert_true("bound" in md,
+                    f"hover on bound n says 'bound' ({md!r})")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -749,6 +816,7 @@ TESTS = [
     ("cheat_proofs_installed",       test_cheat_proofs_installed),
     ("thm_hover_shows_statement",    test_thm_hover_shows_statement),
     ("hover_inside_proof_qed",       test_hover_inside_proof_qed),
+    ("hover_inside_term_quotation",  test_hover_inside_term_quotation),
 ]
 
 

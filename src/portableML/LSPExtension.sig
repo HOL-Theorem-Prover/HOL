@@ -55,6 +55,16 @@ type hover_context = {
 
 val hover: (hover_context * (int * int) -> hover list) ref
 
+(* Hover inside a HOL quotation.  server.ML calls this after the
+   default (SML) hover returns nothing and the cursor sits inside a
+   PQuote span.  `quote` is the raw quotation body (no backticks);
+   `quoteStart` is its file byte offset; `target` is the cursor's
+   file byte offset (inside the quote).  Default no-op; the LSP
+   runtime init installs a Preterm-based implementation. *)
+val hoverQuotation:
+  (hover_context *
+   {quote: string, quoteStart: int, target: int} -> hover list) ref
+
 val fixupTheoremLink:
   ({start: int, stop: int, text: string, uri: string} ->
    {file: string, line: int} option) ref

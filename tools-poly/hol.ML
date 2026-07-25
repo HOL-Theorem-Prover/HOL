@@ -621,6 +621,10 @@ in
           \        end \
           \  in Option.map Parse.thm_to_string thm_opt end \
           \  handle _ => NONE)";
+        (* HOL-side hover for cursors inside quotations: parses the
+           captured quote to a resolved Preterm and walks it. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/hover_quote_init.ML"));
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
