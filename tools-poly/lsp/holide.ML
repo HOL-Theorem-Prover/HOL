@@ -849,17 +849,23 @@ fun builtMoveUp NONE = NONE
 fun builtNavigateTo NONE _ = NONE
   | builtNavigateTo (tree as SOME (Built (sp as (startPosition, endPosition), props, children), parents))
                (target as {startOffset, endOffset}) =
-    if startOffset >= startPosition andalso endOffset <= endPosition
+    (* Endpoint convention: nodes carry half-open [startPosition,
+       endPosition) spans (idStop = p + size s, mkLocPragma-driven
+       PolyML positions, etc.).  Use strict `<` on the endpoint so
+       a POINT cursor at the seam between two adjacent siblings
+       lands on the RIGHT sibling — otherwise a cursor exactly at
+       the start of a quote body gets claimed by the preceding
+       string arg. *)
+    if startOffset >= startPosition andalso endOffset < endPosition
     then (* It's this node or a child. *)
       case children of
         [] => tree (* No children. *)
       | first :: rest => let
-        (* See which child it is. *)
         fun findChild [] = NONE
           | findChild (c :: cs) = let
             val Built ((s, e), _, _) = c
             in
-              if startOffset >= s andalso endOffset <= e
+              if startOffset >= s andalso endOffset < e
               then SOME c
               else findChild cs
             end

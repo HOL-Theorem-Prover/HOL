@@ -866,6 +866,76 @@ def test_hover_inside_theorem_body():
         c.close()
 
 
+def test_hover_at_body_boundary_and_operators():
+    """Cursor at three tricky positions in a Theorem body:
+    (a) the very first byte of the body — must not be claimed by
+        the preceding synthetic-`bar` string arg (seam bug);
+    (b) the byte of an infix operator whose HOL parser gave it a
+        synthetic Locn borrowed from an operand (∧ in `p ∧ q ⇒ r`);
+    (c) the bytes of an operator whose Locn doesn't span its source
+        position at all (⇒ in the same expression) — must fall back
+        via the enclosing Comb's Locn."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_boundary.sml"
+        # Line 3 (0-origin): "Theorem bar: p ∧ q ⇒ r"
+        # UTF-8 byte columns:
+        #   13='p'  14=' '  15..17='∧'  18=' '  19='q'  20=' '
+        #   21..23='⇒'  24=' '  25='r'
+        src = ("Theory hover_boundary\n"
+               "Ancestors hol\n\n"
+               "Theorem bar: p ∧ q ⇒ r\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        def hover(id_, ch):
+            c.send({"jsonrpc":"2.0","id":id_,"method":"textDocument/hover",
+                    "params":{"textDocument":{"uri":uri},
+                              "position":{"line":3,"character":ch}}})
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == id_: return m
+                return None
+            reply = c.wait_until(got, 5)
+            assert_true(reply is not None, f"hover reply {id_} arrived")
+            return reply.get("result")
+
+        # (a) Body-boundary: cursor at byte 13 = 'p'.  Must NOT return
+        # "string" (which is what the SML tree walk-up would give from
+        # the synthetic nameAttrs `mkString(pos, "bar")` whose exclusive
+        # end coincides with the body's inclusive start).
+        r = hover(301, 13)
+        assert_true(r is not None, "hover on 'p' returned result")
+        md = r["contents"]["value"]
+        assert_true("p " in md and "bool" in md and "string" not in md,
+                    f"hover on 'p' identifies the variable ({md!r})")
+
+        # (b) Operator ∧ at byte 16 (middle of the 3-byte UTF-8 sequence).
+        # Must find the ∧/`/\` Const via the Comb.combLocn fallback.
+        r = hover(302, 16)
+        assert_true(r is not None, "hover on ∧ returned result")
+        md = r["contents"]["value"]
+        assert_true("/\\" in md or "∧" in md,
+                    f"hover on ∧ identifies the conjunction ({md!r})")
+
+        # (c) Operator ⇒ at byte 22 (middle byte).  The parser gives
+        # `==>` Const a Locn that doesn't include this byte, so the
+        # walker must fall back through the outer Comb's Locn.
+        r = hover(303, 22)
+        assert_true(r is not None, "hover on ⇒ returned result")
+        md = r["contents"]["value"]
+        assert_true("==>" in md,
+                    f"hover on ⇒ identifies the implication ({md!r})")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -888,6 +958,8 @@ TESTS = [
     ("hover_inside_proof_qed",       test_hover_inside_proof_qed),
     ("hover_inside_term_quotation",  test_hover_inside_term_quotation),
     ("hover_inside_theorem_body",    test_hover_inside_theorem_body),
+    ("hover_at_body_boundary_and_operators",
+                                     test_hover_at_body_boundary_and_operators),
 ]
 
 

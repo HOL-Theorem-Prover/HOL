@@ -64,17 +64,37 @@ local
         LSPExtension.fromLineCol lines (l1, c1)
     | locn_size _ _ = 100000000
 
+  fun is_var (HLBound _) = true
+    | is_var (HLFree _) = true
+    | is_var (HLConst _) = false
+
   (* Prefer the leaf with the smaller Locn — i.e., the more specific
      identifier under the cursor.  HOL's parser sometimes gives an
-     infix operator's Const a wide Locn spanning both operands, so a
-     naive first-match walk would pick `=` over the `SUC` under the
-     cursor. *)
+     infix operator's Const a wide Locn spanning both operands (e.g.
+     `==>` in `p ∧ q ⇒ r` has Locn `p..q`), so a naive first-match
+     walk picks the operator over the variable under the cursor.
+     On a tie, prefer a Var over a Const: variables carry their
+     actual source Locn, while operator Consts may carry borrowed
+     Locns from operands. *)
   fun better lines a NONE = a
     | better lines NONE b = b
     | better lines (SOME la) (SOME lb) =
-        if locn_size lines (leaf_locn la) <=
-           locn_size lines (leaf_locn lb)
-        then SOME la else SOME lb
+        let val sa = locn_size lines (leaf_locn la)
+            val sb = locn_size lines (leaf_locn lb)
+        in
+          if sa < sb then SOME la
+          else if sb < sa then SOME lb
+          else if is_var la andalso not (is_var lb) then SOME la
+          else if is_var lb andalso not (is_var la) then SOME lb
+          (* Tie between two Consts (or two Vars) with the same
+             synthetic Locn.  Prefer the Rand-branch result: at a
+             Comb node the Rand recursion carries the deeper
+             sub-application, whose combLocn-derived operator is
+             usually the one directly under the cursor.  E.g. in
+             `p ∧ q ⇒ r`, at ∧ position, Rator gives `==>` and Rand
+             gives `∧` — the ∧ is what the user is hovering. *)
+          else SOME lb
+        end
 
   fun find_leaf pt target lines = let
     fun cov l = locn_covers lines target l
@@ -90,8 +110,29 @@ local
           if cov Locn
           then SOME (HLConst {Name = Name, Thy = Thy, Ty = Ty, Locn = Locn})
           else NONE
-      | Comb {Rator, Rand, ...} =>
-          better lines (go bvs Rator) (go bvs Rand)
+      | Comb {Rator, Rand, Locn = combLocn} => let
+          (* Descend into both children first.  If neither leaf covers
+             the cursor, the cursor may be on an infix-operator symbol
+             whose Const has a Locn borrowed from its operands rather
+             than the operator's own source position.  Fall back to
+             checking whether the Comb's own Locn covers the cursor
+             and, if so, surface the operator Const. *)
+          val descend = better lines (go bvs Rator) (go bvs Rand)
+        in
+          case descend of
+            SOME _ => descend
+          | NONE =>
+              if cov combLocn then
+                case Rator of
+                  Const {Name, Thy, Ty, Locn = _} =>
+                    SOME (HLConst {Name = Name, Thy = Thy,
+                                   Ty = Ty, Locn = combLocn})
+                | Comb {Rator = Const {Name, Thy, Ty, Locn = _}, ...} =>
+                    SOME (HLConst {Name = Name, Thy = Thy,
+                                   Ty = Ty, Locn = combLocn})
+                | _ => NONE
+              else NONE
+        end
       | Abs {Bvar, Body, ...} => let
           (* Bvar may be wrapped in Constrained (e.g. `!n:num. …`
              gives Abs{Bvar = Constrained{Ptm = Var …, Ty = num},
