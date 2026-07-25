@@ -1,10 +1,10 @@
 structure KernelTypes =
 struct
 
-datatype hol_type = Tyv of string
-                  | Tyapp of KernelSig.kernelid * hol_type list
+type hol_type = Type_dtype.hol_type
+type id = KernelSig.kernelid
 
-type const_info = (KernelSig.kernelid * hol_type)
+type const_info = id * Type_dtype.holty
 datatype term = Var of string * hol_type
               | App of term * term
               | Const of const_info
