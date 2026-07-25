@@ -64,35 +64,21 @@ local
         LSPExtension.fromLineCol lines (l1, c1)
     | locn_size _ _ = 100000000
 
-  fun is_var (HLBound _) = true
-    | is_var (HLFree _) = true
-    | is_var (HLConst _) = false
-
   (* Prefer the leaf with the smaller Locn — i.e., the more specific
-     identifier under the cursor.  HOL's parser sometimes gives an
-     infix operator's Const a wide Locn spanning both operands (e.g.
-     `==>` in `p ∧ q ⇒ r` has Locn `p..q`), so a naive first-match
-     walk picks the operator over the variable under the cursor.
-     On a tie, prefer a Var over a Const: variables carry their
-     actual source Locn, while operator Consts may carry borrowed
-     Locns from operands. *)
+     identifier under the cursor.  With Absyn-level Locns pointing at
+     the operator token (parse_term.sml giving each operator VAR its
+     own token's Locn instead of the LHS's start), operator and
+     operand Locns are disjoint in the common case, so `<` on size
+     usually decides.  On a size tie, prefer the Rand branch (the
+     inner sub-application). *)
   fun better lines a NONE = a
     | better lines NONE b = b
     | better lines (SOME la) (SOME lb) =
         let val sa = locn_size lines (leaf_locn la)
             val sb = locn_size lines (leaf_locn lb)
         in
-          if sa < sb then SOME la
-          else if sb < sa then SOME lb
-          else if is_var la andalso not (is_var lb) then SOME la
-          else if is_var lb andalso not (is_var la) then SOME lb
-          (* Tie between two Consts (or two Vars) with the same
-             synthetic Locn.  Prefer the Rand-branch result: at a
-             Comb node the Rand recursion carries the deeper
-             sub-application, whose combLocn-derived operator is
-             usually the one directly under the cursor.  E.g. in
-             `p ∧ q ⇒ r`, at ∧ position, Rator gives `==>` and Rand
-             gives `∧` — the ∧ is what the user is hovering. *)
+          if sa <= sb then
+            if sa = sb then SOME lb else SOME la
           else SOME lb
         end
 
