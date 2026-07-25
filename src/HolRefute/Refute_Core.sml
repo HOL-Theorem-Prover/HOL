@@ -143,6 +143,7 @@ structure Refute_Core = struct
       weight : int,
       configured : unit -> bool,
       requires : requirement,
+      executable_exception : (config -> instance list -> bool) option,
       input : goal_form,
       run : config -> instance list -> outcome }
 
@@ -1428,19 +1429,14 @@ structure Refute_Core = struct
       List.foldl higher (Potential ["no selected backend"]) registrations
     end
 
-  (* QC may prove, by compiling the actual goal plans, that a gated relation
-     is consumed by an Enum-capable substrate.  This is deliberately a
-     backend-level exception to the ordinary executability gate, not a
-     constant whitelist. *)
-  val executable_goal_override = ref
-    (fn (_ : config) => fn (_ : backend) =>
-      fn (_ : instance list) => false)
-
   fun meets_requirement cfg executable (backend : backend) instances =
     case #requires backend of
         AnyGoal => true
-      | ExecutableGoal => executable orelse
-          (!executable_goal_override) cfg backend instances
+      | ExecutableGoal =>
+          executable orelse
+          (case #executable_exception backend of
+               NONE => false
+             | SOME predicate => predicate cfg instances)
 
   fun certainty_expectation Genuine = ExpectGenuine
     | certainty_expectation (QuasiGenuine _) = ExpectQuasiGenuine

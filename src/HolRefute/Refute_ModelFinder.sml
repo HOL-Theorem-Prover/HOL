@@ -1030,6 +1030,7 @@ val kodkod_backend : Refute_Core.backend =
   {name = "kodkod", weight = 50,
    configured = Refute_Forl.is_configured,
    requires = Refute_Core.AnyGoal,
+   executable_exception = NONE,
    input = Refute_Core.PolyOriginal,
    run = run}
 

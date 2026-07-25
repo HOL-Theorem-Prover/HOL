@@ -92,6 +92,41 @@ structure Refute_Extract = struct
     let val text = Arbint.toString integer
     in intinf_literal (String.substring (text, 0, String.size text - 1)) end
 
+  fun lazy_delay body = "Susp.delay (fn () => " ^ body ^ ")"
+  fun lazy_force value = "Susp.force " ^ parens value
+  fun lazy_defer value = lazy_delay (lazy_force value)
+
+  fun strict_apply function argument =
+    parens (function ^ " " ^ parens argument)
+
+  fun lazy_apply function argument =
+    lazy_defer (parens (lazy_force function ^ " " ^ parens argument))
+
+  type mode_operations =
+    { suspend : string -> string,
+      force : string -> string,
+      delay : string -> string,
+      defer : string -> string,
+      apply : string -> string -> string,
+      wrap_type : ml_ty -> ml_ty,
+      algebraic :
+        (unit -> string option) -> (unit -> string option) -> string option }
+
+  fun operations Strict : mode_operations =
+        {suspend = Lib.I, force = Lib.I, delay = Lib.I, defer = Lib.I,
+         apply = strict_apply, wrap_type = Lib.I,
+         algebraic = fn strict => fn _ => strict ()}
+    | operations Lazy =
+        {suspend = lazy_delay, force = lazy_force, delay = lazy_delay,
+         defer = lazy_defer, apply = lazy_apply, wrap_type = MLSusp,
+         algebraic = fn _ => fn lazy => lazy ()}
+
+  fun choose operations strict lazy =
+    case #algebraic operations
+      (fn () => SOME (strict ())) (fn () => SOME (lazy ())) of
+        SOME result => result
+      | NONE => raise Fail "Refute_Extract: mode choice returned NONE"
+
   fun type_name ty =
     Hol_pp.type_to_string ty
     handle _ => "<unknown type>"
@@ -104,7 +139,7 @@ structure Refute_Extract = struct
       constructors : (term * hol_type list * string) list }
 
   type context =
-    { mode : extraction_mode,
+    { operations : mode_operations,
       datatypes : datatype_desc list ref,
       types : (hol_type * ml_ty * string) list ref,
       equalities : hol_type list ref,
@@ -119,7 +154,7 @@ structure Refute_Extract = struct
       next_pattern : int ref }
 
   fun new_context mode : context =
-    { mode = mode,
+    { operations = operations mode,
       datatypes = ref [],
       types = ref [],
       equalities = ref [],
@@ -132,7 +167,7 @@ structure Refute_Extract = struct
       next_const = ref 0,
       next_pattern = ref 0 }
 
-  fun is_lazy ({mode, ...} : context) = mode = Lazy
+  fun context_operations ({operations, ...} : context) = operations
 
   fun lookup_type ({types, ...} : context) ty =
     case List.find (fn (other, _, _) => Util.same_type other ty) (!types) of
@@ -168,30 +203,33 @@ structure Refute_Extract = struct
          | Overflow =>
       reject ("word width is too large: " ^ type_name ty)
 
-  fun is_char_list ty = Util.same_type ty stringSyntax.string_ty
+  val is_char_list = Refute_EvalSML.is_char_list_type
 
   fun classify_primitive context ty =
     let
-      fun suspend raw = if is_lazy context then MLSusp raw else raw
-      fun algebraic strict = if is_lazy context then NONE else SOME strict
+      val ops = context_operations context
+      val wrap_type = #wrap_type ops
+      fun algebraic strict =
+        case wrap_type strict of
+            MLSusp _ => NONE
+          | wrapped => SOME wrapped
     in
       if Type.is_vartype ty then
-        SOME (suspend (MLVar (clean_name (Type.dest_vartype ty))))
-      else if Util.same_type ty Type.bool then SOME (suspend MLBool)
-      else if Util.same_type ty numSyntax.num then SOME (suspend MLIntInf)
-      else if Util.same_type ty intSyntax.int_ty then SOME (suspend MLIntInf)
+        SOME (wrap_type (MLVar (clean_name (Type.dest_vartype ty))))
+      else if Util.same_type ty Type.bool then SOME (wrap_type MLBool)
+      else if Util.same_type ty numSyntax.num then SOME (wrap_type MLIntInf)
+      else if Util.same_type ty intSyntax.int_ty then SOME (wrap_type MLIntInf)
       else if Util.same_type ty stringSyntax.char_ty then
-        SOME (suspend MLChar)
-      else if is_char_list ty andalso not (is_lazy context) then
-        SOME MLString
-      else if Util.same_type ty oneSyntax.one_ty then SOME (suspend MLUnit)
+        SOME (wrap_type MLChar)
+      else if is_char_list ty then algebraic MLString
+      else if Util.same_type ty oneSyntax.one_ty then SOME (wrap_type MLUnit)
       else if wordsSyntax.is_word_type ty then
-        SOME (suspend (MLWord (word_width ty)))
+        SOME (wrap_type (MLWord (word_width ty)))
       else
         case Lib.total Type.dom_rng ty of
           SOME (domain, range) =>
-            SOME (suspend (MLArrow (ensure_type context domain,
-                                    ensure_type context range)))
+            SOME (wrap_type (MLArrow (ensure_type context domain,
+                                      ensure_type context range)))
         | NONE =>
             (case Lib.total pairSyntax.dest_prod ty of
                SOME (left, right) =>
@@ -242,8 +280,9 @@ structure Refute_Extract = struct
                             type_name ty)
                   else ()
                 val ml_name = fresh_type context
-                val mlty = if is_lazy context then
-                  MLSusp (MLDatatype ml_name) else MLDatatype ml_name
+                val mlty =
+                  #wrap_type (context_operations context)
+                    (MLDatatype ml_name)
                 val _ = #types context :=
                   (ty, mlty, equality) :: !(#types context)
                 fun constructor_info constructor =
@@ -392,12 +431,10 @@ structure Refute_Extract = struct
 
   fun enum_expression context ty =
     let
+      val ops = context_operations context
       fun nonenumerable () =
         reject ("function equality has non-enumerable domain " ^ type_name ty)
-      fun delayed value =
-        if is_lazy context then
-          "Susp.delay (fn () => " ^ value ^ ")"
-        else value
+      val delayed = #suspend ops
       fun constructor_values (_, arguments, name) =
         let
           fun build [] variables =
@@ -438,26 +475,30 @@ structure Refute_Extract = struct
           "List.tabulate (" ^ Int.toString count ^
           ", fn n => " ^ delayed "(IntInf.fromInt n)" ^ ")"
         end
-      else if is_lazy context then algebraic ()
       else
-        case Lib.total optionSyntax.dest_option ty of
-          SOME element =>
-            "NONE :: List.map SOME " ^ parens (enum_expression context element)
-        | NONE =>
-            (case Lib.total pairSyntax.dest_prod ty of
-               SOME (left, right) =>
-                 "List.concat (List.map (fn a => List.map (fn b => " ^
-                 "(a, b)) " ^ parens (enum_expression context right) ^
-                 ") " ^ parens (enum_expression context left) ^ ")"
-             | NONE => algebraic ())
+        choose ops
+          (fn () =>
+            case Lib.total optionSyntax.dest_option ty of
+                SOME element =>
+                  "NONE :: List.map SOME " ^
+                  parens (enum_expression context element)
+              | NONE =>
+                  (case Lib.total pairSyntax.dest_prod ty of
+                       SOME (left, right) =>
+                         "List.concat (List.map (fn a => List.map " ^
+                         "(fn b => (a, b)) " ^
+                         parens (enum_expression context right) ^
+                         ") " ^ parens (enum_expression context left) ^ ")"
+                     | NONE => algebraic ()))
+          algebraic
     end
 
   fun equality_body context ty left right =
     let
+      val ops = context_operations context
       val represented = ensure_type context ty
       val mlty = case represented of MLSusp raw => raw | raw => raw
-      fun force value = if is_lazy context then
-        "Susp.force " ^ parens value else value
+      val force = #force ops
       val left_value = force left
       val right_value = force right
     in
@@ -475,10 +516,11 @@ structure Refute_Extract = struct
           "String.compare (" ^ left_value ^ ", " ^ right_value ^
           ") = EQUAL"
       | MLUnit =>
-          if is_lazy context then
-            "let val _ = " ^ left_value ^ " val _ = " ^ right_value ^
-            " in true end"
-          else "true"
+          choose ops
+            (fn () => "true")
+            (fn () =>
+              "let val _ = " ^ left_value ^ " val _ = " ^ right_value ^
+              " in true end")
       | MLWord _ =>
           "IntInf.compare (" ^ left_value ^ ", " ^ right_value ^
           ") = EQUAL"
@@ -514,18 +556,17 @@ structure Refute_Extract = struct
           let
             val (domain_ty, range_ty) = Type.dom_rng ty
             val eq_range = equality_name context range_ty
-            val (left_fun, right_fun) =
-              if is_lazy context then ("left_fun", "right_fun")
-              else (left, right)
-            val body =
-              "List.all (fn z => " ^ eq_range ^ " (" ^ left_fun ^
-              " z) (" ^ right_fun ^ " z)) " ^
+            fun body left_fun right_fun =
+              "List.all (fn z => " ^ eq_range ^ " (" ^ left_fun ^ " z) (" ^
+              right_fun ^ " z)) " ^
               parens (enum_expression context domain_ty)
           in
-            if is_lazy context then
-              "let val left_fun = " ^ left_value ^
-              " val right_fun = " ^ right_value ^ " in " ^ body ^ " end"
-            else body
+            choose ops
+              (fn () => body left right)
+              (fn () =>
+                "let val left_fun = " ^ left_value ^
+                " val right_fun = " ^ right_value ^ " in " ^
+                body "left_fun" "right_fun" ^ " end")
           end
       | MLDatatype _ => datatype_equality context ty left right
       | MLVar _ =>
@@ -537,6 +578,7 @@ structure Refute_Extract = struct
 
   and datatype_equality context ty left right =
     let
+      val force = #force (context_operations context)
       val info =
         case lookup_datatype context ty of
           SOME found => found
@@ -560,8 +602,6 @@ structure Refute_Extract = struct
           "(" ^ payload name avars ^ ", " ^ payload name bvars ^
           ") => " ^ body
         end
-      fun force value = if is_lazy context then
-        "Susp.force " ^ parens value else value
     in
       "(case (" ^ force left ^ ", " ^ force right ^ ") of " ^
       join " | " (List.map clause (#constructors info)) ^
@@ -570,6 +610,7 @@ structure Refute_Extract = struct
 
   fun equality_declarations context =
     let
+      val ops = context_operations context
       fun discover seen =
         case List.find (fn ty =>
           not (List.exists (Util.same_type ty) seen))
@@ -578,23 +619,29 @@ structure Refute_Extract = struct
           | SOME ty =>
               (ignore (equality_body context ty "x" "y");
                discover (ty :: seen))
-      val _ = if is_lazy context then discover [] else ()
-      val requested = !(#equalities context)
-      val types =
-        if is_lazy context then
-          List.filter (fn (ty, _, _) =>
-            List.exists (Util.same_type ty) requested)
-            (rev (!(#types context)))
-        else rev (!(#types context))
       fun one keyword (ty, mlty, name) =
         keyword ^ " " ^ name ^ " (x : " ^ ml_ty_text mlty ^ ") " ^
         "(y : " ^ ml_ty_text mlty ^ ") =\n  " ^
         equality_body context ty "x" "y"
+      fun declarations types =
+        case types of
+            [] => ""
+          | first :: rest =>
+              join "\n" (one "fun" first :: List.map (one "and") rest) ^
+              "\n"
+      fun strict () = declarations (rev (!(#types context)))
+      fun lazy () =
+        let
+          val _ = discover []
+          val requested = !(#equalities context)
+          val types = List.filter (fn (ty, _, _) =>
+            List.exists (Util.same_type ty) requested)
+            (rev (!(#types context)))
+        in
+          declarations types
+        end
     in
-      case types of
-        [] => ""
-      | first :: rest =>
-          join "\n" (one "fun" first :: List.map (one "and") rest) ^ "\n"
+      choose ops strict lazy
     end
 
   val prelude =
@@ -871,15 +918,11 @@ structure Refute_Extract = struct
      This is the composition operation used by applications and
      eliminators: merely constructing a surrounding constructor must not
      run either of them. *)
-  fun lazy_delay body = "Susp.delay (fn () => " ^ body ^ ")"
-  fun lazy_force value = "Susp.force " ^ parens value
-  fun lazy_defer value = lazy_delay (lazy_force value)
-
-  fun lazy_apply function argument =
-    lazy_defer (parens (lazy_force function ^ " " ^ parens argument))
-
   fun constructor_expression context constructor arguments =
     let
+      val ops = context_operations context
+      val delay = #delay ops
+      val apply = #apply ops
       val (argument_types, _) =
         boolSyntax.strip_fun (Term.type_of constructor)
       val arity = length argument_types
@@ -892,51 +935,51 @@ structure Refute_Extract = struct
         let
           fun abstract [] body = body
             | abstract (variable :: variables) body =
-                lazy_delay ("fn " ^ variable ^ " => " ^
+                delay ("fn " ^ variable ^ " => " ^
                   abstract variables body)
           val supplied = Int.min (length arguments, arity)
           val initial = List.take (arguments, supplied)
           val extra = List.drop (arguments, supplied)
           val variables = List.tabulate (arity - supplied, fn index =>
             "refute_arg_" ^ Int.toString index)
-          val built = lazy_delay (custom name (initial @ variables))
+          val built = delay (custom name (initial @ variables))
           val abstraction = abstract variables built
         in
           List.foldl (fn (argument, result) =>
-            lazy_apply result argument) abstraction extra
+            apply result argument) abstraction extra
         end
-      fun build_custom name =
-        if is_lazy context then lazy_custom name
-        else with_arity arguments arity (custom name)
-    in
-      if is_lazy context then
-        (case constructor_for context constructor of
-           SOME (_, _, name) => build_custom name
-         | NONE => reject ("unknown lazy constructor " ^
-                           kname_text (kname constructor)))
-      else case kname constructor of
-        ("list", "NIL") =>
-          if is_char_list (#2 (boolSyntax.strip_fun
-            (Term.type_of constructor))) then quote "" else "[]"
-      | ("list", "CONS") => with_arity arguments 2 (fn values =>
-          case values of
-            [head, tail] =>
+      fun strict_custom name = with_arity arguments arity (custom name)
+      fun strict () =
+        case kname constructor of
+            ("list", "NIL") =>
               if is_char_list (#2 (boolSyntax.strip_fun
-                (Term.type_of constructor))) then
-                parens ("String.str " ^ parens head ^ " ^ " ^ tail)
-              else parens (head ^ " :: " ^ tail)
-          | _ => raise Fail "CONS")
-      | ("option", "NONE") => "NONE"
-      | ("option", "SOME") => with_arity arguments 1 (fn values =>
-          case values of [argument] => "SOME " ^ parens argument
-          | _ => raise Fail "SOME")
-      | ("pair", ",") => with_arity arguments 2 (fn values =>
-          parens (join ", " values))
-      | _ =>
-          (case constructor_for context constructor of
-             SOME (_, _, name) => build_custom name
-           | NONE => reject ("unknown constructor " ^
-                             kname_text (kname constructor)))
+                (Term.type_of constructor))) then quote "" else "[]"
+          | ("list", "CONS") => with_arity arguments 2 (fn values =>
+              case values of
+                [head, tail] =>
+                  if is_char_list (#2 (boolSyntax.strip_fun
+                    (Term.type_of constructor))) then
+                    parens ("String.str " ^ parens head ^ " ^ " ^ tail)
+                  else parens (head ^ " :: " ^ tail)
+              | _ => raise Fail "CONS")
+          | ("option", "NONE") => "NONE"
+          | ("option", "SOME") => with_arity arguments 1 (fn values =>
+              case values of [argument] => "SOME " ^ parens argument
+              | _ => raise Fail "SOME")
+          | ("pair", ",") => with_arity arguments 2 (fn values =>
+              parens (join ", " values))
+          | _ =>
+              (case constructor_for context constructor of
+                   SOME (_, _, name) => strict_custom name
+                 | NONE => reject ("unknown constructor " ^
+                                   kname_text (kname constructor)))
+      fun lazy () =
+        case constructor_for context constructor of
+            SOME (_, _, name) => lazy_custom name
+          | NONE => reject ("unknown lazy constructor " ^
+                            kname_text (kname constructor))
+    in
+      choose ops strict lazy
     end
 
   fun pattern context term =
@@ -963,17 +1006,18 @@ structure Refute_Extract = struct
         val (head, arguments) = boolSyntax.strip_comb term
       in
         if Term.is_const head andalso TypeBase.is_constructor head then
-          if is_lazy context then
-            (case constructor_for context head of
-               SOME (_, _, name) =>
-                 (case List.map (pattern context) arguments of
-                    [] => name
-                  | [argument] => name ^ " " ^ argument
-                  | values => name ^ " (" ^ join ", " values ^ ")")
-             | NONE => reject ("unknown lazy pattern constructor " ^
-                               kname_text (kname head)))
-          else constructor_expression context head
-            (List.map (pattern context) arguments)
+          choose (context_operations context)
+            (fn () => constructor_expression context head
+              (List.map (pattern context) arguments))
+            (fn () =>
+              case constructor_for context head of
+                  SOME (_, _, name) =>
+                    (case List.map (pattern context) arguments of
+                         [] => name
+                       | [argument] => name ^ " " ^ argument
+                       | values => name ^ " (" ^ join ", " values ^ ")")
+                | NONE => reject ("unknown lazy pattern constructor " ^
+                                  kname_text (kname head)))
         else
           reject ("non-constructor pattern: " ^
                   Parse.term_to_string term)
@@ -1217,14 +1261,14 @@ structure Refute_Extract = struct
           case values of [a] =>
             if string_list () then parens ("if String.size " ^ parens a ^
               " = 0 then raise Refute_EvalSML.Stuck \"HD []\" " ^
-              "else String.sub (" ^ a ^ ", 0)")
+              "else " ^ Refute_EvalSML.char_list_head_source a)
             else "refute_hd " ^ parens a
           | _ => raise Fail "HD"))
       | ("list", "TL") => SOME (with_arity arguments 1 (fn values =>
           case values of [a] =>
             if string_list () then parens ("if String.size " ^ parens a ^
               " = 0 then raise Refute_EvalSML.Stuck \"TL []\" " ^
-              "else String.extract (" ^ a ^ ", 1, NONE)")
+              "else " ^ Refute_EvalSML.char_list_tail_source a)
             else "refute_tl " ^ parens a
           | _ => raise Fail "TL"))
       | ("list", "APPEND") =>
@@ -1309,8 +1353,9 @@ structure Refute_Extract = struct
       | ("string", "DEST_STRING") =>
           SOME (with_arity arguments 1 (fn values =>
             case values of [value] => parens ("if String.size " ^
-              parens value ^ " = 0 then NONE else SOME (String.sub (" ^
-              value ^ ", 0), String.extract (" ^ value ^ ", 1, NONE))")
+              parens value ^ " = 0 then NONE else SOME (" ^
+              Refute_EvalSML.char_list_head_source value ^ ", " ^
+              Refute_EvalSML.char_list_tail_source value ^ ")")
             | _ => raise Fail "DEST_STRING"))
       | ("string", "string_lt") => SOME (binary "<" arguments)
       | ("string", "string_le") => SOME (binary "<=" arguments)
@@ -1429,8 +1474,9 @@ structure Refute_Extract = struct
       | _ => record_primitive context head arguments
     end
 
-  fun lazy_with_arity arguments arity build =
+  fun lazy_with_arity context arguments arity build =
     let
+      val {delay, apply, ...} = context_operations context
       val supplied = Int.min (length arguments, arity)
       val initial = List.take (arguments, supplied)
       val extra = List.drop (arguments, supplied)
@@ -1438,27 +1484,27 @@ structure Refute_Extract = struct
         "refute_lazy_arg_" ^ Int.toString index)
       val body = build (initial @ variables)
       val abstraction = List.foldr (fn (variable, result) =>
-        "Susp.delay (fn () => fn " ^ variable ^ " => " ^ result ^ ")")
+        delay ("fn " ^ variable ^ " => " ^ result))
         body variables
     in
       List.foldl (fn (argument, result) =>
-        lazy_apply result argument) abstraction extra
+        apply result argument) abstraction extra
     end
 
   fun lazy_primitive context head argument_terms arguments =
     let
+      val {delay, force, defer, apply, ...} =
+        context_operations context
       val key = kname head
       val arity = length (#1 (boolSyntax.strip_fun (Term.type_of head)))
-      val delay = lazy_delay
-      val force = lazy_force
-      fun unary operation = lazy_with_arity arguments 1 (fn values =>
+      fun unary operation = lazy_with_arity context arguments 1 (fn values =>
         case values of [value] => delay (operation (force value))
         | _ => raise Fail "lazy unary")
-      fun binary operation = lazy_with_arity arguments 2 (fn values =>
+      fun binary operation = lazy_with_arity context arguments 2 (fn values =>
         case values of [left, right] =>
           delay (operation (force left, force right))
         | _ => raise Fail "lazy binary")
-      fun flat () = lazy_with_arity arguments arity (fn values =>
+      fun flat () = lazy_with_arity context arguments arity (fn values =>
         let
           val forced = map force values
           val source = strict_primitive context head argument_terms forced
@@ -1468,7 +1514,8 @@ structure Refute_Extract = struct
             | NONE => reject ("unsupported lazy primitive " ^
                               kname_text key)
         end)
-      fun pair_selector index = lazy_with_arity arguments 1 (fn values =>
+      fun pair_selector index =
+        lazy_with_arity context arguments 1 (fn values =>
         case values of
             [value] =>
               let
@@ -1478,7 +1525,7 @@ structure Refute_Extract = struct
                 val (_, _, constructor) = hd (#constructors info)
                 val fields = if index = 0 then "left" else "right"
               in
-                lazy_defer
+                defer
                   (parens ("case " ^ force value ^ " of " ^ constructor ^
                     " (left, right) => " ^ fields))
               end
@@ -1514,32 +1561,38 @@ structure Refute_Extract = struct
         | ("min", "=") =>
             let val compared = #1 (Type.dom_rng (Term.type_of head))
             in
-              SOME (lazy_with_arity arguments 2 (fn values =>
+              SOME (lazy_with_arity context arguments 2 (fn values =>
                 case values of [left, right] =>
                   delay (equality_name context compared ^ " " ^
                     parens left ^ " " ^ parens right)
                 | _ => raise Fail "lazy equality"))
             end
-        | ("combin", "I") => SOME (lazy_with_arity arguments 1 (fn values =>
-            case values of [value] => lazy_defer value
+        | ("combin", "I") =>
+            SOME (lazy_with_arity context arguments 1 (fn values =>
+            case values of [value] => defer value
             | _ => raise Fail "lazy I"))
-        | ("combin", "K") => SOME (lazy_with_arity arguments 2 (fn values =>
-            case values of [value, _] => lazy_defer value
+        | ("combin", "K") =>
+            SOME (lazy_with_arity context arguments 2 (fn values =>
+            case values of [value, _] => defer value
             | _ => raise Fail "lazy K"))
-        | ("combin", "o") => SOME (lazy_with_arity arguments 3 (fn values =>
-            case values of [f, g, x] => lazy_apply f (lazy_apply g x)
+        | ("combin", "o") =>
+            SOME (lazy_with_arity context arguments 3 (fn values =>
+            case values of [f, g, x] => apply f (apply g x)
             | _ => raise Fail "lazy composition"))
         | ("pair", "FST") => SOME (pair_selector 0)
         | ("pair", "SND") => SOME (pair_selector 1)
-        | ("list", "NULL") => SOME (lazy_with_arity arguments 1 (fn values =>
+        | ("list", "NULL") =>
+            SOME (lazy_with_arity context arguments 1 (fn values =>
             case values of [value] => delay (list_case value "true" "false")
             | _ => raise Fail "lazy NULL"))
-        | ("list", "HD") => SOME (lazy_with_arity arguments 1 (fn values =>
-            case values of [value] => lazy_defer (list_case value
+        | ("list", "HD") =>
+            SOME (lazy_with_arity context arguments 1 (fn values =>
+            case values of [value] => defer (list_case value
               "(raise Refute_EvalSML.Stuck \"HD []\")" "refute_head")
             | _ => raise Fail "lazy HD"))
-        | ("list", "TL") => SOME (lazy_with_arity arguments 1 (fn values =>
-            case values of [value] => lazy_defer (list_case value
+        | ("list", "TL") =>
+            SOME (lazy_with_arity context arguments 1 (fn values =>
+            case values of [value] => defer (list_case value
               "(raise Refute_EvalSML.Stuck \"TL []\")" "refute_tail")
             | _ => raise Fail "lazy TL"))
         | ("option", "THE") =>
@@ -1555,13 +1608,13 @@ structure Refute_Extract = struct
                             kname constructor = ("option", name))
                           (#constructors info)))
                       in
-                        lazy_defer
+                        defer
                           ("(case " ^ force value ^ " of " ^ named "NONE" ^
                            " => raise Refute_EvalSML.Stuck \"THE NONE\" | " ^
                            named "SOME" ^ " result => result)")
                       end
                   | _ => raise Fail "lazy THE"
-            in SOME (lazy_with_arity arguments 1 build) end
+            in SOME (lazy_with_arity context arguments 1 build) end
         | (thy, _) =>
             if Lib.mem thy
               ["num", "arithmetic", "prim_rec", "integer", "words",
@@ -1571,13 +1624,14 @@ structure Refute_Extract = struct
     end
 
   fun primitive context head argument_terms arguments =
-    if is_lazy context then
-      lazy_primitive context head argument_terms arguments
-    else strict_primitive context head argument_terms arguments
+    #algebraic (context_operations context)
+      (fn () => strict_primitive context head argument_terms arguments)
+      (fn () => lazy_primitive context head argument_terms arguments)
 
   fun expression context term =
-    if is_lazy context then lazy_expression context term
-    else strict_expression context term
+    choose (context_operations context)
+      (fn () => strict_expression context term)
+      (fn () => lazy_expression context term)
 
   and strict_expression context term =
     if Term.is_var term then variable_name term
@@ -1661,11 +1715,12 @@ structure Refute_Extract = struct
                        parens (expression context scrutinee) ^
                        " = 0 then " ^ expression context nil_rhs ^
                        " else let val " ^ pattern context head ^
-                       " = String.sub (" ^ expression context scrutinee ^
-                       ", 0) val " ^ pattern context tail ^
-                       " = String.extract (" ^
-                       expression context scrutinee ^
-                       ", 1, NONE) in " ^ expression context cons_rhs ^
+                       " = " ^ Refute_EvalSML.char_list_head_source
+                         (expression context scrutinee) ^
+                       " val " ^ pattern context tail ^
+                       " = " ^ Refute_EvalSML.char_list_tail_source
+                         (expression context scrutinee) ^
+                       " in " ^ expression context cons_rhs ^
                        " end")
                  | _ => reject "malformed string case")
             | _ => reject "malformed string case"
@@ -1703,8 +1758,8 @@ structure Refute_Extract = struct
 
   and lazy_expression context term =
     let
-      val delay = lazy_delay
-      val force = lazy_force
+      val {delay, force, defer, apply, ...} =
+        context_operations context
       fun named_constructor ty wanted =
         let
           val _ = ignore (ensure_type context ty)
@@ -1725,13 +1780,13 @@ structure Refute_Extract = struct
         end
       fun application head arguments =
         List.foldl (fn (argument, result) =>
-          lazy_apply result argument) head arguments
+          apply result argument) head arguments
     in
       if Term.is_var term then variable_name term
       else if boolSyntax.is_cond term then
         let val (condition, left, right) = boolSyntax.dest_cond term
         in
-          lazy_defer
+          defer
             (parens ("if " ^ force (expression context condition) ^
               " then " ^ expression context left ^ " else " ^
               expression context right))
@@ -1759,7 +1814,7 @@ structure Refute_Extract = struct
                     matched ^ "\nend")
                 end
         in
-          lazy_defer (compile_groups groups)
+          defer (compile_groups groups)
         end
       else if Literal.is_numeral term then
         delay (num_literal (Literal.relaxed_dest_numeral term))
@@ -1831,7 +1886,7 @@ structure Refute_Extract = struct
                       (expression context rhs) failure ^ " end")
                 end
         in
-          lazy_defer
+          defer
             (parens ("let val " ^ value ^ " = " ^
               expression context scrutinee ^ "\nin " ^ dispatch rows ^
               "\nend"))
@@ -1852,12 +1907,13 @@ structure Refute_Extract = struct
                      val name = ensure_definition context head
                      val (domains, _) =
                        boolSyntax.strip_fun (Term.type_of head)
-                     fun invoke values = lazy_defer
+                     fun invoke values = defer
                        (if null values then name ^ " ()"
                         else name ^ " " ^
                           join " " (List.map parens values))
                    in
-                     lazy_with_arity arguments (length domains) invoke
+                     lazy_with_arity context arguments
+                       (length domains) invoke
                    end)
           else application (expression context head) arguments
         end
@@ -1870,6 +1926,9 @@ structure Refute_Extract = struct
      Keeping failure explicit also lets case rows and definition clauses share
      this compiler without relying on eager SML patterns. *)
   and lazy_match_pattern context tm value success failure =
+    let
+      val {delay, force, ...} = context_operations context
+    in
     if Term.is_var tm then
       let val variable = variable_name tm
       in
@@ -1894,9 +1953,9 @@ structure Refute_Extract = struct
                [argument] =>
                  let
                    val raw = fresh_pattern context "refute_lazy_suc_"
-                   val predecessor = lazy_delay (parens (raw ^ " - 1"))
+                   val predecessor = delay (parens (raw ^ " - 1"))
                  in
-                   "let val " ^ raw ^ " = " ^ lazy_force value ^ " in " ^
+                   "let val " ^ raw ^ " = " ^ force value ^ " in " ^
                    "if " ^ raw ^ " > 0 then " ^
                    lazy_match_pattern context argument predecessor success
                      failure ^ " else " ^ failure ^ " end"
@@ -1920,7 +1979,7 @@ structure Refute_Extract = struct
                 lazy_match_pattern context argument child rest failure)
               success (ListPair.zip (arguments, children))
           in
-            parens ("case " ^ lazy_force value ^ " of " ^
+            parens ("case " ^ force value ^ " of " ^
               payload children ^ " => " ^ body ^ " | _ => " ^
               failure)
           end
@@ -1928,6 +1987,7 @@ structure Refute_Extract = struct
           reject ("unsupported lazy pattern: " ^
                   Parse.term_to_string tm)
       end
+    end
 
   fun strict_definition_clause context (constant, name, theorem) =
     let
@@ -2081,8 +2141,9 @@ structure Refute_Extract = struct
     end
 
   fun definition_clause context item =
-    if is_lazy context then lazy_definition_clause context item
-    else strict_definition_clause context item
+    choose (context_operations context)
+      (fn () => strict_definition_clause context item)
+      (fn () => lazy_definition_clause context item)
 
   (* Compiling a clause is the expensive part of extraction and its text
      is final once produced (names are fixed at registration), so the
@@ -2177,9 +2238,10 @@ structure Refute_Extract = struct
 
   fun source_prefix context =
     prelude ^ "\n" ^
-    (if is_lazy context then
-       "fun refute_hole position = Refute_EvalSML.lazy_hole position\n\n"
-     else "") ^
+    choose (context_operations context)
+      (fn () => "")
+      (fn () =>
+        "fun refute_hole position = Refute_EvalSML.lazy_hole position\n\n") ^
     String.concat (List.map (datatype_declaration context)
       (datatype_groups context)) ^ "\n" ^
     equality_declarations context ^ "\n"
@@ -2987,9 +3049,7 @@ structure Refute_Extract = struct
 
       fun evaluated_expression tm =
         let val source = expression context tm
-        in
-          if is_lazy context then "Susp.force " ^ parens source else source
-        end
+        in #force (context_operations context) source end
 
       fun safe_value expression failure =
         "(case ((SOME (" ^ expression ^ "))\n" ^
@@ -3035,10 +3095,11 @@ structure Refute_Extract = struct
                     (case List.map variable_name variables of
                        [head, tail] =>
                          "let val " ^ head ^
-                         " = String.sub (refute_value, 0)\n" ^
+                         " = " ^ Refute_EvalSML.char_list_head_source
+                           "refute_value" ^ "\n" ^
                          "    val " ^ tail ^
-                         " = String.extract " ^
-                         "(refute_value, 1, NONE)\n" ^
+                         " = " ^ Refute_EvalSML.char_list_tail_source
+                           "refute_value" ^ "\n" ^
                          "in " ^ branch_body entry ^ " end"
                      | _ => reject "malformed string split")
             in
@@ -3130,17 +3191,19 @@ structure Refute_Extract = struct
                            val (head_pat, head_guards, head_bindings,
                                 head_additions, after_head) =
                              make_pattern head
-                               ("String.sub (" ^ value ^ ", 0)")
+                               (Refute_EvalSML.char_list_head_source value)
                                (thunk ("Refute_EvalSML.char_term " ^
-                                 "(String.sub (" ^ value ^ ", 0))")) seen
+                                 parens
+                                   (Refute_EvalSML.char_list_head_source
+                                     value))) seen
                            val (tail_pat, tail_guards, tail_bindings,
                                 tail_additions, after_tail) =
                              make_pattern tail
-                               ("String.extract (" ^ value ^
-                                 ", 1, NONE)")
+                               (Refute_EvalSML.char_list_tail_source value)
                                (thunk ("Refute_EvalSML.string_term " ^
-                                 "(String.extract (" ^ value ^
-                                 ", 1, NONE))")) after_head
+                                 parens
+                                   (Refute_EvalSML.char_list_tail_source
+                                     value))) after_head
                            val _ = (head_pat, tail_pat)
                          in
                            ("_", "String.size " ^ parens value ^ " > 0" ::
@@ -4223,27 +4286,29 @@ structure Refute_Extract = struct
   fun native_preflight config strategy plans evals =
     native_preflight_with (fn _ => ()) config strategy plans evals
 
-  fun install_extractor () = Refute_EvalSML.extract_tests_hook :=
-    (fn extraction_mode => fn config => fn strategy => fn problem =>
-      let
-        val mode = case extraction_mode of
-            Refute_EvalSML.StrictExtraction => Strict
-          | Refute_EvalSML.LazyExtraction => Lazy
-        val extracted = case problem of
-            Refute_Eval.Plans plans =>
-              extract_tests_with mode config strategy plans
-          | Refute_Eval.Pnf {prefix, body} =>
-              if strategy = Refute_Eval.Narrowing andalso mode = Lazy then
-                extract_narrowing config prefix body
-              else
-                raise NotExtractable
-                  ["narrowing requires the native lazy substrate"]
-      in
-        Refute_EvalSML.Extracted extracted
-      end
-      handle NotExtractable reasons =>
-               Refute_EvalSML.ExtractionFailed reasons
-           | Interrupt => raise Interrupt)
+  fun install_extractor () =
+    Refute_EvalSML.extract_tests_hook :=
+      (fn extraction_mode => fn config => fn strategy => fn problem =>
+        let
+          val mode = case extraction_mode of
+              Refute_EvalSML.StrictExtraction => Strict
+            | Refute_EvalSML.LazyExtraction => Lazy
+          val extracted = case problem of
+              Refute_Eval.Plans plans =>
+                extract_tests_with mode config strategy plans
+            | Refute_Eval.Pnf {prefix, body} =>
+                if strategy = Refute_Eval.Narrowing andalso mode = Lazy then
+                  extract_narrowing config prefix body
+                else
+                  raise NotExtractable
+                    ["narrowing requires the native lazy substrate"]
+        in
+          Refute_EvalSML.Extracted extracted
+        end
+        handle NotExtractable reasons =>
+                 Refute_EvalSML.ExtractionFailed reasons
+             | Interrupt => raise Interrupt)
 
   val _ = install_extractor ()
+  val _ = Refute_EvalSML.register_substrate native_preflight
 end

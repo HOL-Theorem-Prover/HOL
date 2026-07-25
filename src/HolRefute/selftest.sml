@@ -10827,6 +10827,7 @@ fun dummy_backend name weight : backend =
     weight = weight,
     configured = fn () => true,
     requires = ExecutableGoal,
+    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ => Unknown [] }
 
@@ -10839,6 +10840,7 @@ val public_any_goal_backend : Refute.backend =
     weight = ~95,
     configured = fn () => false,
     requires = Refute.AnyGoal,
+    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ => Unknown [] }
 
@@ -10855,14 +10857,16 @@ val poly_input_seen = ref ([] : instance list)
 val mono_input_backend : backend =
   {name = "refute-input-mono", weight = ~94,
    configured = fn () => !input_dispatch_enabled,
-   requires = AnyGoal, input = MonoInstances,
+   requires = AnyGoal, executable_exception = NONE,
+   input = MonoInstances,
    run = fn _ => fn instances =>
      (mono_input_seen := instances; Unknown ["mono input pin"])}
 
 val poly_input_backend : backend =
   {name = "refute-input-poly", weight = ~93,
    configured = fn () => !input_dispatch_enabled,
-   requires = AnyGoal, input = PolyOriginal,
+   requires = AnyGoal, executable_exception = NONE,
+   input = PolyOriginal,
    run = fn _ => fn instances =>
      (poly_input_seen := instances; Unknown ["poly input pin"])}
 
@@ -10874,7 +10878,8 @@ val quiet_output_probe_enabled = ref false
 val quiet_output_probe_backend : backend =
   {name = "refute-quiet-output-probe", weight = ~92,
    configured = fn () => !quiet_output_probe_enabled,
-   requires = AnyGoal, input = MonoInstances,
+   requires = AnyGoal, executable_exception = NONE,
+   input = MonoInstances,
    run = fn _ => fn _ =>
      let
        val _ = ignore (MFH.equationalize_term "quiet selftest" ``0 : num``)
@@ -10896,27 +10901,31 @@ val unused_profile_seen = ref false
 val unused_unknown_backend : backend =
   {name = "refute-unused-unknown", weight = ~91,
    configured = fn () => !unused_unknown_enabled,
-   requires = AnyGoal, input = MonoInstances,
+   requires = AnyGoal, executable_exception = NONE,
+   input = MonoInstances,
    run = fn _ => fn _ => Unknown ["unused-assumption probe pin"]}
 
 val unused_timeout_backend : backend =
   {name = "refute-unused-timeout", weight = ~90,
    configured = fn () => !unused_timeout_enabled,
-   requires = AnyGoal, input = MonoInstances,
+   requires = AnyGoal, executable_exception = NONE,
+   input = MonoInstances,
    run = fn _ => fn _ =>
      (OS.Process.sleep (Time.fromReal 0.05); NoCounterexample)}
 
 val unused_registry_backend : backend =
   {name = "refute-unused-future-registry", weight = ~89,
    configured = fn () => !unused_registry_enabled,
-   requires = AnyGoal, input = MonoInstances,
+   requires = AnyGoal, executable_exception = NONE,
+   input = MonoInstances,
    run = fn _ => fn _ =>
      (unused_registry_seen := true; Unknown ["full registry pin"])}
 
 val unused_profile_backend : backend =
   {name = "refute-unused-profile", weight = ~88,
    configured = fn () => !unused_profile_enabled,
-   requires = AnyGoal, input = MonoInstances,
+   requires = AnyGoal, executable_exception = NONE,
+   input = MonoInstances,
    run = fn config => fn _ =>
      (unused_profile_seen :=
         (#sequential config andalso #quiet config andalso
@@ -10950,7 +10959,8 @@ fun leave_unused_sweep () =
 val unused_sweep_backend : backend =
   {name = "refute-unused-sequential-sweep", weight = ~87,
    configured = unused_sweep_enabled,
-   requires = AnyGoal, input = MonoInstances,
+   requires = AnyGoal, executable_exception = NONE,
+   input = MonoInstances,
    run = fn _ => fn _ =>
      let
        val _ = enter_unused_sweep ()
@@ -10972,7 +10982,8 @@ val try_profile_seen = ref false
 val try_profile_backend : backend =
   {name = "refute-try-profile", weight = ~91,
    configured = fn () => !try_profile_enabled,
-   requires = AnyGoal, input = MonoInstances,
+   requires = AnyGoal, executable_exception = NONE,
+   input = MonoInstances,
    run = fn config => fn _ =>
      let
        val _ = try_profile_seen :=
@@ -11003,7 +11014,8 @@ val try_budget_backend_delay = Time.fromReal 1.0
 val try_budget_first_backend : backend =
   {name = "refute-try-budget-first", weight = ~90,
    configured = fn () => !try_budget_first_enabled,
-   requires = AnyGoal, input = MonoInstances,
+   requires = AnyGoal, executable_exception = NONE,
+   input = MonoInstances,
    run = fn _ => fn _ =>
      (OS.Process.sleep try_budget_backend_delay;
       Synchronized.change try_budget_progress (K TryBudgetFirstFinished);
@@ -11012,7 +11024,8 @@ val try_budget_first_backend : backend =
 val try_budget_second_backend : backend =
   {name = "refute-try-budget-second", weight = ~89,
    configured = fn () => !try_budget_second_enabled,
-   requires = AnyGoal, input = MonoInstances,
+   requires = AnyGoal, executable_exception = NONE,
+   input = MonoInstances,
    run = fn _ => fn _ =>
      (Synchronized.change try_budget_progress (K TryBudgetSecondStarted);
       OS.Process.sleep try_budget_backend_delay;
@@ -11358,6 +11371,7 @@ val race_potential_backend : backend =
     weight = 50,
     configured = fn () => !race_potential_enabled,
     requires = AnyGoal,
+    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ =>
       (mark_race_potential_started ();
@@ -11370,6 +11384,7 @@ val race_quasi_backend : backend =
     weight = 50,
     configured = fn () => !race_quasi_enabled,
     requires = AnyGoal,
+    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ =>
       (mark_race_potential_started ();
@@ -11382,6 +11397,7 @@ val race_genuine_backend : backend =
     weight = 20,
     configured = fn () => !race_genuine_enabled,
     requires = ExecutableGoal,
+    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ =>
       (wait_for_race_potential ();
@@ -11394,6 +11410,7 @@ val race_slow_quasi_backend : backend =
     weight = 55,
     configured = fn () => !race_slow_quasi_enabled,
     requires = AnyGoal,
+    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ =>
       (race_slow_quasi_started := true;
@@ -11409,6 +11426,7 @@ fun potential_backend name weight enabled : backend =
     weight = weight,
     configured = fn () => !enabled,
     requires = AnyGoal,
+    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ =>
       Counterexample
@@ -11839,7 +11857,25 @@ fun evaluated_bool term =
 
 fun extraction_agrees term = compile_extracted term = evaluated_bool term
 
+fun extraction_source_goldens () =
+  let
+    (* Captured before the mode-operation refactor.  Pair the byte count with
+       the digest so whitespace-only changes are part of the contract. *)
+    val term = ``NULL [HD [1; 2]]``
+    val strict = #source (Refute_Extract.extract_term term)
+    val lazy = #source (Refute_Extract.extract_lazy_term term)
+  in
+    size strict = 3237 andalso
+    Portable.md5sum strict = "+Laya5NxShiHPB8cFqsi9g" andalso
+    size lazy = 3842 andalso
+    Portable.md5sum lazy = "qXJimoP7xWnOa2c1TE0vpA"
+  end
+
 val _ = tprint "Refute extraction type and constant layers"
+
+val _ = require_msg (check_result extraction_source_goldens) (fn () =>
+  "strict or lazy emitted SML changed from its byte golden")
+  (fn () => ()) ()
 
 val extraction_goldens =
   [``APPEND [1; 2] [3; 4] = [1; 2; 3; 4]``,
@@ -12493,6 +12529,29 @@ fun generated_hygiene_and_retention_checks () =
      | _ => false)
   end
 
+fun string_reconstruction_round_trip () =
+  let
+    val cons = #1 (boolSyntax.strip_comb ``#"a" :: (s : string)``)
+    val table = register_term_tables [cons] []
+    fun argument text index =
+      with_term_tables table (fn () =>
+        reconstruction_arg 0 index
+          (fn () => stringSyntax.fromMLstring text) ())
+    fun body () =
+      let
+        val empty_stuck =
+          ((ignore (argument "" 0); false)
+           handle Stuck "empty string reconstruction" => true
+                | _ => false)
+      in
+        empty_stuck andalso
+        Term.aconv (argument "abc" 0) ``#"a"`` andalso
+        Term.aconv (argument "abc" 1) ``"bc"``
+      end
+  in
+    Portable.finally (fn () => unregister_term_tables table) body ()
+  end
+
 fun reconstruction_is_lazy () =
   let
     val variable = Term.mk_var ("lazy_x", ``:num list``)
@@ -12531,6 +12590,9 @@ val _ = require_msg (check_result guard_scaling_checks) (fn () =>
 val _ = require_msg
   (check_result generated_hygiene_and_retention_checks) (fn () =>
   "generated names, string splitting, or retained term tables failed")
+  (fn () => ()) ()
+val _ = require_msg (check_result string_reconstruction_round_trip) (fn () =>
+  "string reconstruction changed its empty or head/tail behavior")
   (fn () => ()) ()
 val _ = require_msg (check_result reconstruction_is_lazy) (fn () =>
   "an extracted reconstruction thunk was forced before a hit")
@@ -13915,6 +13977,7 @@ val any_goal_stub : backend =
     weight = ~99,
     configured = fn () => !any_goal_stub_enabled,
     requires = AnyGoal,
+    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn instances =>
       (any_goal_stub_received :=
@@ -14216,11 +14279,14 @@ val _ = require_msg
 fun dummy_compile _ _ _ = Inapplicable ["dummy substrate"]
 
 val seam_alpha : substrate =
-  {name = "refute-seam-alpha", priority = 50, compile = dummy_compile}
+  {name = "refute-seam-alpha", priority = 50, preflight = NONE,
+   compile = dummy_compile}
 val seam_beta : substrate =
-  {name = "refute-seam-beta", priority = 40, compile = dummy_compile}
+  {name = "refute-seam-beta", priority = 40, preflight = NONE,
+   compile = dummy_compile}
 val seam_alpha_replacement : substrate =
-  {name = "refute-seam-alpha", priority = 35, compile = dummy_compile}
+  {name = "refute-seam-alpha", priority = 35, preflight = NONE,
+   compile = dummy_compile}
 
 val _ = register_substrate seam_alpha
 val _ = register_substrate seam_beta
@@ -14236,8 +14302,35 @@ val _ = require_msg (check_result seam_registry_order) (fn () =>
   "substrate registry replacement or priority ordering failed")
   (fn () => ()) ()
 
+fun substrate_owned_preflight_is_honored () =
+  let
+    val compiled = ref false
+    fun compile _ _ _ =
+      (compiled := true; Inapplicable ["unexpected compile"])
+    fun preflight _ _ _ _ = ["declared substrate preflight"]
+    val substrate : Refute.substrate =
+      {name = "refute-seam-preflight", priority = 60,
+       preflight = SOME preflight, compile = compile}
+    val restore : Refute.substrate =
+      {name = "refute-seam-preflight", priority = 60,
+       preflight = NONE, compile = dummy_compile}
+    fun body () =
+      (register_substrate substrate;
+       case preflight_substrate substrate default_config Exhaustive [] [] of
+           Inapplicable ["declared substrate preflight"] => not (!compiled)
+         | _ => false)
+  in
+    Portable.finally (fn () => register_substrate restore) body ()
+  end
+
+val _ = require_msg
+  (check_result substrate_owned_preflight_is_honored) (fn () =>
+  "a substrate-declared preflight was not returned as Inapplicable")
+  (fn () => ()) ()
+
 val public_seam : Refute.substrate =
-  {name = "refute-public-seam", priority = 45, compile = dummy_compile}
+  {name = "refute-public-seam", priority = 45, preflight = NONE,
+   compile = dummy_compile}
 val _ = Refute.register_substrate public_seam
 
 val _ = require_msg (check_result (fn () =>
@@ -14253,9 +14346,11 @@ fun higher_priority_custom_opens_smart_gate () =
       (compile_count := !compile_count + 1;
        Refute_EvalCompute.compile config strategy problem)
     val custom : substrate =
-      {name = "refute-smart-custom", priority = 5, compile = compile}
+      {name = "refute-smart-custom", priority = 5, preflight = NONE,
+       compile = compile}
     val restore : substrate =
       {name = "refute-smart-custom", priority = 50,
+       preflight = NONE,
        compile = dummy_compile}
     val config = default_config
       |> upd_certify false
@@ -14525,6 +14620,37 @@ val _ = require_msg
   "smart gate preflight consumed an unrelated nonexec goal or eval")
   (fn () => ()) ()
 
+fun backend_without_executable_exception_stays_gated () =
+  let
+    val ran = ref false
+    val backend : backend =
+      {name = "exhaustive", weight = 20, configured = fn () => true,
+       requires = ExecutableGoal, executable_exception = NONE,
+       input = MonoInstances,
+       run = fn _ => fn _ => (ran := true; Unknown ["unexpected run"])}
+    val config = default_config
+      |> Refute.upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_substrate Refute.NativeSML
+      |> Refute.upd_certify false
+    fun body () =
+      let
+        val _ = register_backend backend
+        val result = refute_problem config (qc_problem smartgen_linear_goal)
+      in
+        not (!ran) andalso
+        (case result of
+             Unknown reasons => not (null reasons)
+           | _ => false)
+      end
+  in
+    Portable.finally Refute_QC.register_backends body ()
+  end
+
+val _ = require_msg
+  (check_result backend_without_executable_exception_stays_gated) (fn () =>
+  "a backend without an executable exception bypassed the QC gate")
+  (fn () => ()) ()
+
 fun smartgen_preflight_interrupt_propagates () =
   let
     val config = default_config
@@ -14543,7 +14669,7 @@ fun smartgen_preflight_interrupt_propagates () =
     fun interrupting_preflight _ _ _ _ = raise Interrupt
     val gate_interrupt =
       ((ignore (smart_gate_override_with interrupting_preflight config
-          exhaustive_backend [instance]); false)
+          [instance]); false)
        handle Interrupt => true)
   in
     preflight_interrupt andalso gate_interrupt andalso
@@ -15011,6 +15137,37 @@ fun selected_substrate expected result =
 
 val _ = tprint "Refute narrowing backend"
 
+fun renamed_narrowing_uses_typed_certification_path () =
+  let
+    val counterexamples = ref []
+    val discarded = ref 0
+    val instance : instance =
+      {original = boolSyntax.F, goal = boolSyntax.F, qc_gate = NONE,
+       evals = [], card = 1, size_matters = false}
+    fun display Narrowing = "renamed-narrowing"
+      | display Exhaustive = "renamed-exhaustive"
+      | display (Random _) = "renamed-random"
+    val _ = record_candidate_with display
+      {config = default_config, strategy = Narrowing, substrate = "stub",
+       instance = instance, stats = [], counterexamples = counterexamples,
+       discarded = discarded, run_depth = SOME 0,
+       retain_replay_potential = fn _ => (),
+       retry = fn _ => fn _ => (),
+       retry_potential = fn _ => fn _ => ()}
+      {env = [], ground_env = NONE, case_tree = SOME CaseLeaf,
+       genuine = false, genuine_only = false, ignored = []}
+  in
+    case !counterexamples of
+        [{backend = "renamed-narrowing", certainty = Genuine,
+          cert = SOME _, ...}] => true
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result renamed_narrowing_uses_typed_certification_path) (fn () =>
+  "candidate certification redispatched on a strategy display name")
+  (fn () => ()) ()
+
 fun narrowing_registration_is_pinned () =
   let
     val names = map #name (registered_backends ())
@@ -15257,7 +15414,8 @@ fun narrowing_replay_failure_is_retained () =
                    Refute_Eval.CaseLeaf)]})},
        close = fn () => (), max_chunk = NONE, last_stats = stats}
     val broken : substrate =
-      {name = "native", priority = #priority native, compile = compile}
+      {name = "native", priority = #priority native,
+       preflight = #preflight native, compile = compile}
     val config = default_config
       |> upd_substrate NativeSML
       |> upd_size 2
@@ -15297,7 +15455,8 @@ fun narrowing_genuine_only_never_returns_replay_potential () =
                  Refute_Eval.CaseLeaf)]})},
        close = fn () => (), max_chunk = NONE, last_stats = stats}
     val broken : substrate =
-      {name = "native", priority = #priority native, compile = compile}
+      {name = "native", priority = #priority native,
+       preflight = #preflight native, compile = compile}
     val base = default_config
       |> upd_substrate NativeSML
       |> upd_size 1
@@ -15333,7 +15492,8 @@ fun upgraded_genuine_retry_not_suppressed () =
          end,
        close = fn () => (), max_chunk = NONE, last_stats = stats}
     val retrying : substrate =
-      {name = "native", priority = #priority native, compile = compile}
+      {name = "native", priority = #priority native,
+       preflight = #preflight native, compile = compile}
     val config = default_config |> upd_substrate NativeSML
     fun body () =
       (register_substrate retrying;
@@ -15369,7 +15529,8 @@ fun different_grounding_retry_not_suppressed () =
          end,
        close = fn () => (), max_chunk = NONE, last_stats = stats}
     val retrying : substrate =
-      {name = "native", priority = #priority native, compile = compile}
+      {name = "native", priority = #priority native,
+       preflight = #preflight native, compile = compile}
     val config = default_config
       |> upd_substrate NativeSML
       |> upd_size 1
@@ -15474,7 +15635,8 @@ fun narrowing_incomplete_domain_can_be_certified () =
           case_tree = SOME Refute_Eval.CaseLeaf},
        close = fn () => (), max_chunk = NONE, last_stats = stats}
     val approximate : substrate =
-      {name = "native", priority = #priority native, compile = compile}
+      {name = "native", priority = #priority native,
+       preflight = #preflight native, compile = compile}
     val config = default_config
       |> upd_substrate NativeSML
       |> upd_size 0
@@ -16890,6 +17052,7 @@ fun gave_up_reason_is_plumbed () =
        max_chunk = NONE, last_stats = last_stats}
     val replacement : substrate =
       {name = "compute", priority = 30,
+       preflight = #preflight original,
        compile = fn _ => fn _ => fn _ => Compiled test}
     val config = upd_substrate Compute default_config
     val instances = qc_instances config ``T``
@@ -17839,6 +18002,7 @@ fun cv_timeout_is_healthy () =
        last_stats = #last_stats compiled}
     val replacement : substrate =
       {name = "cv", priority = #priority original,
+       preflight = #preflight original,
        compile = fn _ => fn _ => fn _ => Compiled replacement_test}
     val _ = register_substrate replacement
     val started = Time.now ()
@@ -17895,6 +18059,7 @@ fun cv_dual_run_is_clean sequential goal sound =
        last_stats = #last_stats test}
     val replacement : substrate =
       {name = "cv", priority = #priority original,
+       preflight = #preflight original,
        compile = fn config => fn strategy => fn problem =>
          case #compile original config strategy problem of
              Inapplicable reasons => Inapplicable reasons
@@ -19282,6 +19447,7 @@ fun nitpick_preset_pin () =
     val backend : backend =
       {name = "kodkod", weight = 50, configured = fn () => true,
        requires = AnyGoal,
+       executable_exception = NONE,
        input = PolyOriginal,
        run = fn config => fn _ =>
          (selected := (#backends config = SOME ["kodkod"]);
@@ -19296,7 +19462,8 @@ fun kodkod_not_configured_pin () =
   let
     val backend : backend =
       {name = "kodkod", weight = 50, configured = fn () => false,
-       requires = AnyGoal, input = PolyOriginal,
+       requires = AnyGoal, executable_exception = NONE,
+       input = PolyOriginal,
        run = fn _ => fn _ => Unknown []}
   in
     with_silent_refute (fn () =>

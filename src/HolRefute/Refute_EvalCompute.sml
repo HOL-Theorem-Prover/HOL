@@ -786,6 +786,7 @@ structure Refute_EvalCompute = struct
   val compute_substrate : substrate =
     { name = "compute",
       priority = 30,
+      preflight = NONE,
       compile = compile }
 
   fun register_substrate () =

@@ -503,9 +503,13 @@ structure Refute_QC = struct
       Refute_Narrow.case_bindings prefix tree
     end
 
-  fun record_candidate
+  fun strategy_name Exhaustive = "exhaustive"
+    | strategy_name (Random _) = "random"
+    | strategy_name Narrowing = "narrowing"
+
+  fun record_candidate_with display_name
         {config : Refute_Core.config,
-         backend : string,
+         strategy : strategy,
          substrate : string,
          instance : Refute_Core.instance,
          stats : (string * int) list,
@@ -527,7 +531,7 @@ structure Refute_QC = struct
             (SOME tree, true) => pnf_case_bindings instance tree
           | _ => bindings
       val cex : Refute_Core.counterexample =
-        { backend = backend,
+        { backend = display_name strategy,
           substrate = substrate,
           certainty = if genuine then Refute_Core.Potential []
             else Refute_Core.Potential ["evaluation stuck during testing"],
@@ -543,8 +547,10 @@ structure Refute_QC = struct
           | NONE => false
       val has_hole = List.exists
         (Refute_ModelFinder_Names.contains_irrelevant_marker o #2) env
+      val narrowing =
+        case strategy of Narrowing => true | _ => false
       val partial_universal =
-        backend = "narrowing" andalso has_hole andalso
+        narrowing andalso has_hole andalso
         not (Refute_Narrow.contains_existentials
           (#1 (Refute_Narrow.pnf_of (#goal instance))))
       fun keep_potential potential =
@@ -571,7 +577,7 @@ structure Refute_QC = struct
            [] NONE);
          ())
       else if not genuine andalso
-          (not (backend = "narrowing" andalso Option.isSome case_tree)
+          (not (narrowing andalso Option.isSome case_tree)
            orelse not (#certify (#qc config))) then
         (keep_potential (Refute_Cert.replace cex
            (Refute_Core.Potential ["evaluation stuck during testing"])
@@ -631,6 +637,9 @@ structure Refute_QC = struct
                  end
         end
     end
+
+  fun record_candidate arguments candidate =
+    record_candidate_with strategy_name arguments candidate
 
   fun plan_has_gen current =
     case current of
@@ -743,14 +752,14 @@ structure Refute_QC = struct
         reasons as _ :: _ => Inapplicable reasons
       | [] =>
           let
-            val native_reasons =
-              if #name substrate = "native" then
-                Refute_Extract.native_preflight config strategy plans evals
-              else []
+            val substrate_reasons =
+              case #preflight substrate of
+                  NONE => []
+                | SOME preflight => preflight config strategy plans evals
           in
-            if null native_reasons then
+            if null substrate_reasons then
               #compile substrate config strategy (Plans plans)
-            else Inapplicable native_reasons
+            else Inapplicable substrate_reasons
           end
 
   (* [select_registered] already reads the configured substrate choice and
@@ -776,7 +785,7 @@ structure Refute_QC = struct
                   Feedback.exn_to_string error])
 
   fun smart_gate_override_with preflight (config : Refute_Core.config)
-        (backend : Refute_Core.backend) instances =
+        instances =
     let
       val plans = map (fn (instance : Refute_Core.instance) =>
         compile_plan config (#goal instance)) instances
@@ -788,7 +797,6 @@ structure Refute_QC = struct
         (map (fn (instance : Refute_Core.instance) => #evals instance)
           instances)
     in
-      #name backend = "exhaustive" andalso
       #smart_generators (#qc config) andalso
       not (null gated_plans) andalso List.all plan_uses_smart gated_plans andalso
       null (preflight config Exhaustive plans evals)
@@ -796,9 +804,9 @@ structure Refute_QC = struct
     handle Interrupt => raise Interrupt
          | _ => false
 
-  fun smart_gate_override config backend instances =
+  fun smart_gate_override config instances =
     smart_gate_override_with selected_smart_preflight
-      config backend instances
+      config instances
 
   fun bounded_size size = Int.max (0, size)
 
@@ -816,10 +824,6 @@ structure Refute_QC = struct
   fun is_random (Random _) = true
     | is_random Exhaustive = false
     | is_random Narrowing = false
-
-  fun strategy_name Exhaustive = "exhaustive"
-    | strategy_name (Random _) = "random"
-    | strategy_name Narrowing = "narrowing"
 
   fun close_tests tests =
     let
@@ -1018,7 +1022,7 @@ structure Refute_QC = struct
                         {env, ground_env, case_tree, genuine, ...} =>
                         record_candidate
                           { config = config,
-                            backend = strategy_name strategy,
+                            strategy = strategy,
                             substrate = substrate,
                             instance = instance_for card,
                             stats = stats_for size card msec,
@@ -1135,6 +1139,9 @@ structure Refute_QC = struct
       weight = 20,
       configured = fn () => true,
       requires = Refute_Core.ExecutableGoal,
+      (* Exhaustive SmartGen can discharge an ordinary executability gate
+         by compiling every gated quantifier through an Enum substrate. *)
+      executable_exception = SOME smart_gate_override,
       input = Refute_Core.MonoInstances,
       run = strategy_run Exhaustive }
 
@@ -1143,6 +1150,7 @@ structure Refute_QC = struct
       weight = 30,
       configured = fn () => true,
       requires = Refute_Core.ExecutableGoal,
+      executable_exception = NONE,
       input = Refute_Core.MonoInstances,
       run = fn config =>
         strategy_run (Random {seed = strategy_seed config}) config }
@@ -1154,6 +1162,7 @@ structure Refute_QC = struct
       weight = 40,
       configured = fn () => true,
       requires = Refute_Core.AnyGoal,
+      executable_exception = NONE,
       input = Refute_Core.MonoInstances,
       run = strategy_run Narrowing }
 
@@ -1162,8 +1171,7 @@ structure Refute_QC = struct
     Refute_Core.Genuine
 
   fun register_backends () =
-    (Refute_Core.executable_goal_override := smart_gate_override;
-     Refute_EvalSML.register_substrate ();
+    (Refute_EvalSML.register_substrate Refute_Extract.native_preflight;
      Refute_EvalCompute.register_substrate ();
      Refute_EvalCv.register_substrate ();
      Refute_Core.register_backend exhaustive_backend;

@@ -153,6 +153,22 @@ structure Refute_EvalSML = struct
   fun string_term text =
     (note_force (); stringSyntax.fromMLstring text)
 
+  fun is_char_list_type ty =
+    Type.compare (ty, stringSyntax.string_ty) = EQUAL
+
+  fun char_list_head_source value =
+    "String.sub (" ^ value ^ ", 0)"
+
+  fun char_list_tail_source value =
+    "String.extract (" ^ value ^ ", 1, NONE)"
+
+  fun char_list_value_parts value =
+    let val text = Literal.relaxed_dest_string_lit value
+    in
+      if text = "" then NONE
+      else SOME (String.sub (text, 0), String.extract (text, 1, NONE))
+    end
+
   (* Narrowing holes use the M3 model-display marker constructor. *)
   fun hole_term type_index =
     (note_force ();
@@ -200,17 +216,15 @@ structure Refute_EvalSML = struct
         let val {Thy, Name, ...} = Term.dest_thy_const expected
         in (Thy, Name) end
       val string_cons = expected_name = ("list", "CONS") andalso
-        Type.compare (Term.type_of value, stringSyntax.string_ty) = EQUAL
+        is_char_list_type (Term.type_of value)
     in
       if string_cons then
-        let val text = Literal.relaxed_dest_string_lit value
-        in
-          if text = "" then raise Stuck "empty string reconstruction"
-          else if argument_index = 0 then char_term (String.sub (text, 0))
-          else if argument_index = 1 then
-            string_term (String.extract (text, 1, NONE))
-          else raise Subscript
-        end
+        (case char_list_value_parts value of
+             NONE => raise Stuck "empty string reconstruction"
+           | SOME (head, tail) =>
+               if argument_index = 0 then char_term head
+               else if argument_index = 1 then string_term tail
+               else raise Subscript)
       else
         let val (constructor, arguments) = boolSyntax.strip_comb value
         in
@@ -231,7 +245,7 @@ structure Refute_EvalSML = struct
       val expected_result =
         #2 (boolSyntax.strip_fun (Term.type_of expected))
       val string_cons = expected_name = ("list", "CONS") andalso
-        Type.compare (expected_result, stringSyntax.string_ty) = EQUAL
+        is_char_list_type expected_result
       fun ordinary () =
         let val (constructor, arguments) = boolSyntax.strip_comb value
         in
@@ -241,16 +255,14 @@ structure Refute_EvalSML = struct
             raise Stuck "constructor reconstruction mismatch"
         end
       fun string_argument () =
-        let val text = Literal.relaxed_dest_string_lit value
-        in
-          if expected_name = ("list", "CONS") andalso text <> "" then
-            if argument_index = 0 then char_term (String.sub (text, 0))
-            else if argument_index = 1 then
-              string_term (String.extract (text, 1, NONE))
-            else raise Subscript
-          else
-            raise Stuck "string reconstruction mismatch"
-        end
+        case char_list_value_parts value of
+            SOME (head, tail) =>
+              if expected_name <> ("list", "CONS") then
+                raise Stuck "string reconstruction mismatch"
+              else if argument_index = 0 then char_term head
+              else if argument_index = 1 then string_term tail
+              else raise Subscript
+          | NONE => raise Stuck "string reconstruction mismatch"
     in
       if string_cons then string_argument () else ordinary ()
     end
@@ -517,11 +529,11 @@ structure Refute_EvalSML = struct
       | Refute_Eval.Compiled test =>
           Refute_Eval.dump_stream test {size = size, count = count}
 
-  val native_substrate : Refute_Eval.substrate =
-    {name = "native", priority = 10, compile = compile}
+  fun native_substrate preflight : Refute_Eval.substrate =
+    {name = "native", priority = 10,
+     preflight = SOME preflight,
+     compile = compile}
 
-  fun register_substrate () =
-    Refute_Eval.register_substrate native_substrate
-
-  val _ = register_substrate ()
+  fun register_substrate preflight =
+    Refute_Eval.register_substrate (native_substrate preflight)
 end

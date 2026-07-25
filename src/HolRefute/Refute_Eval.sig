@@ -83,6 +83,9 @@ signature Refute_Eval = sig
   type substrate =
     { name : string,
       priority : int,
+      preflight :
+        (Refute_Core.config -> strategy -> plan list -> term list ->
+          string list) option,
       compile : Refute_Core.config -> strategy -> qc_problem ->
         compile_result }
 

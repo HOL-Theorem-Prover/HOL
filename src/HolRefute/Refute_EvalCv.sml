@@ -1652,7 +1652,7 @@ structure Refute_EvalCv = struct
     end
 
   val cv_substrate : Refute_Eval.substrate =
-    {name = "cv", priority = 20, compile = compile}
+    {name = "cv", priority = 20, preflight = NONE, compile = compile}
 
   fun register_substrate () =
     Refute_Eval.register_substrate cv_substrate
