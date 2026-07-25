@@ -443,6 +443,10 @@ and annotateQuote (List {elems = {args, ...}, ...}) pt acc = let
           annotateExp NONE e (moveRight (moveDown pt)) :: acc
         | _ => acc)
     in go args (moveDown pt) acc end
+  | annotateQuote (ExpExpansion {result, ...}) pt acc =
+    (* expandQuote now wraps its returned List in an ExpExpansion
+       for quotation-hover.  Descend through it transparently. *)
+    annotateQuote result pt acc
   | annotateQuote _ _ acc = acc
 
 and annotateFunPat (App (f, x)) pt = let

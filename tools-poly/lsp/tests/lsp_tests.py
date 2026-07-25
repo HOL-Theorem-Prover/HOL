@@ -734,7 +734,11 @@ def test_hover_inside_term_quotation():
     identifiers via the HOL parser (Preterm walker with type + theory
     info), not just as raw SML `term frag list`.  Exercises
     hover_quote_init.ML's Preterm-based callback registered into
-    LSPExtension.hoverQuotation."""
+    LSPExtension.hoverQuotation.
+
+    Companion test test_hover_inside_theorem_body covers the same
+    machinery on Theorem-QED bodies (which route through the
+    HOLSourceExpand PQuote-annotation path)."""
     c = Client("/tmp")
     try:
         _init(c, "/tmp")
@@ -796,6 +800,72 @@ def test_hover_inside_term_quotation():
         c.close()
 
 
+def test_hover_inside_theorem_body():
+    """Hover inside the term body of a Theorem-QED declaration works
+    just as hover inside an explicit ``‘‘...’’`` quotation.  Requires
+    HOLSourceExpand's expandQuote to give the synthesized quote List a
+    body-precise span AND to wrap it in ExpExpansion(HOLQuote-synth,
+    ...) so the LSP annotator adds PQuote."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/thmqed_body_hover.sml"
+        # 0: Theory quote_hover
+        # 1: Ancestors arithmetic
+        # 2:
+        # 3: Theorem foo:
+        # 4:   !n:num. SUC n = n + 1
+        #      0123456789012345678901
+        # 4 cols: 2='!' 3='n' (binder) 10..12='SUC' 14='n' (bound) ...
+        src = ("Theory thm_body_hover\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem foo:\n"
+               "  !n:num. SUC n = n + 1\n"
+               "Proof\n"
+               "  ALL_TAC\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        def do_hover(id_, line, char):
+            c.send({"jsonrpc":"2.0","id":id_,
+                    "method":"textDocument/hover",
+                    "params":{"textDocument":{"uri":uri},
+                              "position":{"line":line,"character":char}}})
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == id_: return m
+                return None
+            reply = c.wait_until(got, 5)
+            assert_true(reply is not None,
+                        f"hover reply {id_} arrived")
+            return reply
+
+        reply = do_hover(201, 4, 11)
+        result = reply.get("result")
+        assert_true(result is not None,
+                    f"hover on SUC (theorem body) returned result "
+                    f"({reply})")
+        md = result["contents"]["value"]
+        assert_true("SUC" in md,
+                    f"hover on SUC mentions the name ({md!r})")
+        assert_true("num" in md,
+                    f"hover on SUC mentions num ({md!r})")
+
+        reply = do_hover(202, 4, 14)
+        result = reply.get("result")
+        assert_true(result is not None,
+                    f"hover on bound n (theorem body) returned "
+                    f"result ({reply})")
+        md = result["contents"]["value"]
+        assert_true("bound" in md,
+                    f"hover on bound n says 'bound' ({md!r})")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -817,6 +887,7 @@ TESTS = [
     ("thm_hover_shows_statement",    test_thm_hover_shows_statement),
     ("hover_inside_proof_qed",       test_hover_inside_proof_qed),
     ("hover_inside_term_quotation",  test_hover_inside_term_quotation),
+    ("hover_inside_theorem_body",    test_hover_inside_theorem_body),
 ]
 
 

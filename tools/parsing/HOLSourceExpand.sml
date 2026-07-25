@@ -278,9 +278,37 @@ and expandQuoteCore start toks = let
     | go (DefinitionLabel _ :: _) _ = raise Unreachable
   in go toks [] end
 
+(* Byte-precise positions of a qdecl in the source file.  Used by
+   expandQuote to give the synthesized quotation List and its
+   ExpExpansion wrapper a span that covers the ACTUAL body text, so
+   the LSP annotator can tag the body with PQuote and quotation
+   hover works on Theorem-QED / Definition / Datatype / etc. bodies
+   (not just explicit `‘...’` / `‘‘...’’` quotations). *)
+and qdStart (QuoteLiteral (p, _)) = p
+  | qdStart (QuoteAntiq {caret_, ...}) = caret_
+  | qdStart (DefinitionLabel {left, ...}) = left
+and qdStop (QuoteLiteral (p, s)) = p + String.size s
+  | qdStop (QuoteAntiq {exp, ...}) = expStop exp
+  | qdStop (DefinitionLabel {stop, ...}) = stop
+
 and expandQuote start stop toks = let
-  val elems = {args = expandQuoteCore start toks, seps = [], stop = stop}
-  in List {left = start, elems = elems, right = NONE, stop = stop} end
+  val (bodyStart, bodyEnd) = case toks of
+      [] => (start, stop)
+    | _ => (qdStart (hd toks), qdStop (List.last toks))
+  val elems = {args = expandQuoteCore start toks, seps = [], stop = bodyEnd}
+  val list = List {left = bodyStart, elems = elems, right = NONE, stop = bodyEnd}
+  (* Wrap the synthesized List in an ExpExpansion whose orig is a
+     synthetic HOLQuote pointing at the body span.  The LSP's
+     annotateExp fires its HOLQuote case on this List and adds a
+     PQuote-tagged Built node — the same mechanism used for explicit
+     source quotations.  For quotations that WERE explicit in source
+     (HOLFullQuote / HOLQuote), expandExp wraps expandQuote's result
+     in ANOTHER ExpExpansion carrying the original AST node; that
+     outer wrap keeps its own wider span (including delimiters) via
+     overspan. *)
+  val orig = HOLQuote {head = (bodyStart, ""), quote = toks,
+                       end_tok = NONE, stop = bodyEnd}
+  in ExpExpansion {orig = orig, result = list} end
 
 and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
   | expandDec _ (DecVal {val_, tyvars, elems}) = let
