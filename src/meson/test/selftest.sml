@@ -1,5 +1,7 @@
 open HolKernel Feedback testutils Parse boolLib mesonLib
 
+val _ = new_theory "scratch"
+
 local open pairTheory in end
 
 val op$ = Portable.$

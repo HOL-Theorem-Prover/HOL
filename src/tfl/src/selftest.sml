@@ -2,6 +2,8 @@ open HolKernel Parse
 open Defn
 open testutils
 
+val _ = new_theory "scratch"
+
 fun test msg f x = (tprint msg; require (check_result (K true)) f x)
 
 val _ = print "\n"

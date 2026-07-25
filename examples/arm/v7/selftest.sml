@@ -1,4 +1,6 @@
 open HolKernel Parse boolLib bossLib
+
+val _ = new_theory "scratch"
 open armLib arm_random_testingLib;
 
 val ERR = mk_HOL_ERR "selftest"

@@ -1,6 +1,8 @@
 open testutils HolKernel Parse boolLib cv_computeLib cvSyntax cvTheory;
 open arithmeticTheory tailrecLib
 
+val _ = new_theory "scratch"
+
 fun simp ths = simpLib.ASM_SIMP_TAC (BasicProvers.srw_ss()) ths
 
 val M = “(λf n. cv_if (cv_lt n (cv$Num 1)) (cv$Num 1)

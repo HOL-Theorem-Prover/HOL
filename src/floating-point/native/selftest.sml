@@ -1,4 +1,6 @@
 open HolKernel Parse boolLib bossLib
+
+val _ = new_theory "scratch"
 open intLib binary_ieeeSyntax binary_ieeeLib machine_ieeeTheory
 open testutils
 

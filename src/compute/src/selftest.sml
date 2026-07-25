@@ -1,5 +1,7 @@
 open testutils HolKernel Parse boolLib computeLib
 
+val _ = new_theory "scratch"
+
 val _ = tprint "Checking monitoring output goes to Feedback MESG"
 
 fun capture_mesg f x =

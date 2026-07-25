@@ -1,5 +1,7 @@
 open HolKernel Parse boolLib testutils markerLib
 
+val _ = new_theory "scratch"
+
 val _ = set_trace "Unicode" 0
 
 fun testtac tac = #1 o VALID tac

@@ -2,6 +2,8 @@ open HolKernel Parse boolLib normalForms metisLib
 
 open testutils;
 
+val _ = new_theory "scratch"
+
 val _ = let
   val p = mk_var("p", bool)
   val q = mk_var("q", bool)

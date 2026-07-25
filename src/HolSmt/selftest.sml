@@ -3,6 +3,8 @@
 (* HolSmtLib tests *)
 open HolKernel Parse boolLib bossLib;
 
+val _ = new_theory "scratch"
+
 val _ = print "Testing HolSmtLib\n"
 
 (*****************************************************************************)

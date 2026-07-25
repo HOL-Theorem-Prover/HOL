@@ -1,5 +1,8 @@
 open HolKernel Parse boolLib
 open testutils TotalDefn
+
+val _ = new_theory "scratch"
+
 val _ = Feedback.emit_MESG := false
 
 fun badpp x = HOLPP.add_string "<Can't print this>"

@@ -1,5 +1,7 @@
 open HolKernel bossLib
 
+val _ = new_theory "scratch"
+
 val _ = loadPath :=
             (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) ::
             (concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"]) ::

@@ -2,6 +2,8 @@ open HolKernel boolLib Parse PFset_conv
 open pred_setSimps
 open testutils
 
+val _ = new_theory "scratch"
+
 val _ = let
   open testutils
 in

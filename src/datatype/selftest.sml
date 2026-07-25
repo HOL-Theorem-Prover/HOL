@@ -3,6 +3,8 @@
 open HolKernel Parse
 open testutils
 
+val _ = new_theory "scratch"
+
 val _ = Feedback.set_trace "Theory.save_thm_reporting" 0;
 val _ = Feedback.set_trace "Theory.allow_rebinds" 1;
 

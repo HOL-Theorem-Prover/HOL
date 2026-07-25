@@ -1,4 +1,6 @@
 open HolKernel bossLib testutils
+
+val _ = new_theory "scratch"
 local open basis_emitTheory in end
 
 val (is_con, thy, name, ty) = ConstMapML.apply ``bool$IN``

@@ -1,5 +1,7 @@
 open Parse BasicProvers simpLib testutils
 
+val _ = Theory.new_theory "scratch"
+
 (* tests for diminish applying to constituents that are "built-in" to srw_ss
    from its point of definition *)
 val _ = diminish_srw_ss ["COMBIN"]
