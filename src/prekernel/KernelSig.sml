@@ -57,6 +57,39 @@ struct
   fun next_alloc  () = Sref.gen_update alloc_counter  (fn n => (n + 1, n + 1))
   fun next_retire () = Sref.gen_update retire_counter (fn n => (n + 1, n + 1))
 
+  (* Session-level sealed-theories set.  A theory becomes sealed
+     when it is exported or when it is loaded from disk in this
+     session — from that point on no new mint or retire may target
+     it.  The set starts empty so that "min" can be seeded into
+     KernelSig by Type.sml and Term.sml's bootstrap; the tail of
+     Term.sml then calls `mark_sealed_thy "min"` to close it off.
+
+     A "cross-theory mint" here is a call to `insert` whose `Thy`
+     field names a theory other than the one the caller is
+     currently building (per `Thm.getCT`) — a route that would
+     otherwise let an attacker pollute a sealed theory's segment
+     from the outside and build unsound theorems from its
+     constants.  "Cross-theory retire" is the symmetric operation
+     on `retire_name`.
+
+     The gate is enforced INSIDE `insert`, `retire_name`, and
+     `del_segment` below, so *any* mutation of the symbol table —
+     whether via `Term.prim_new_const`, `Context.map_termsig`, or
+     any future path that reaches through the raw `KernelSig`
+     API — is subject to the same check. *)
+  val sealed_ref : string HOLset.set Sref.t =
+      Sref.new (HOLset.empty String.compare)
+  fun mark_sealed_thy s =
+      Sref.update sealed_ref (fn ss => HOLset.add (ss, s))
+  fun is_sealed_thy s = HOLset.member (Sref.value sealed_ref, s)
+
+  fun sealed_check op_name thy =
+      if HOLset.member (Sref.value sealed_ref, thy) then
+        raise Feedback.mk_HOL_ERR "KernelSig" op_name
+              ("target theory \"" ^ thy ^
+               "\" is sealed; cross-theory mints/retires refused")
+      else ()
+
   type 'a thytable = (kernelid * 'a) Symtab.table
   datatype 'a symboltable =
            KTab of {thymap : 'a thytable Symtab.table,
@@ -146,10 +179,12 @@ struct
         Symtab.fold perthyfold thymap acc
       end
 
-  fun retire_name n tab = remove(tab, n)
+  fun retire_name (n as {Thy,Name}) tab =
+      (sealed_check "retire_name" Thy; remove(tab, n))
 
   fun insert(n as {Thy,Name}, v) (tab0 : 'a symboltable) =
       let
+        val () = sealed_check "insert" Thy
         (* A colliding (Thy,Name) is retired transitively by `remove`
            (which stamps retire_epoch from the global clock); a fresh
            insert leaves retire_epoch alone. *)
@@ -191,19 +226,20 @@ struct
 
   fun del_segment thyname (tab as KTab{thymap,retire_epoch=_,
                                        invmap,size}) =
-      case Symtab.lookup thymap thyname of
-          NONE => tab
-        | SOME m =>
-          let
-            val thymap' = Symtab.delete thyname thymap
-            fun foldthis (nm, _) invmap_acc =
-                Symtab.remove_list equal (nm, thyname) invmap_acc
-            val invmap' = Symtab.fold foldthis m invmap
-          in
-            KTab{retire_epoch = next_retire (),
-                 size = size - Symtab.size m,
-                 thymap = thymap', invmap = invmap'}
-          end
+      (sealed_check "del_segment" thyname;
+       case Symtab.lookup thymap thyname of
+           NONE => tab
+         | SOME m =>
+           let
+             val thymap' = Symtab.delete thyname thymap
+             fun foldthis (nm, _) invmap_acc =
+                 Symtab.remove_list equal (nm, thyname) invmap_acc
+             val invmap' = Symtab.fold foldthis m invmap
+           in
+             KTab{retire_epoch = next_retire (),
+                  size = size - Symtab.size m,
+                  thymap = thymap', invmap = invmap'}
+           end)
 
   fun thyExists (KTab{thymap,...}) thy = Symtab.defined thymap thy
   fun nameExists (KTab{invmap,...}) n = Symtab.defined invmap n

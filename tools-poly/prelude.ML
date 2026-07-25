@@ -199,4 +199,10 @@ in
   val help = Help.help
 end
 
+(* Establish a working "scratch" segment for the interactive session.
+   Non-interactive entry points (RUN, LSP, BUILDHEAP) leave Thm.getCT
+   as NONE so that `current_theory ()` raises visibly on any caller
+   that forgot to open a segment first. *)
+val _ = Thm.setCT "scratch"
+
 val _ = HOL_Interactive.toggle_quietdec ()

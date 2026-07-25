@@ -58,6 +58,12 @@ sig
   val map_typesig
       : (int KernelSig.symboltable -> int KernelSig.symboltable) -> t -> t
 
+  (* Current-theory name.  Baked in alongside the kernel signatures so
+     snapshot/restore semantics travel with it.  `Thm.setCT` is the
+     only sanctioned mutator; it goes through `map_current_thy`. *)
+  val current_thy     : t -> string option
+  val map_current_thy : (string option -> string option) -> t -> t
+
   (* Extensible session-local registry.  Each `new` mints a fresh
      UniversalType witness and returns a typed slot handle; the handle's
      `get`/`put`/`update` operate on the context's session-data dict.

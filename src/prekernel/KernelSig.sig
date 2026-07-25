@@ -45,4 +45,13 @@ sig
   val retire_name : kernelname -> 'a symboltable ->
                     'a symboltable * (kernelid * 'a) symtab_error
 
+  (* Session-level set of sealed theories: a theory becomes sealed
+     once it has been exported or loaded from disk in the current
+     session.  `insert`, `retire_name` and `del_segment` above all
+     refuse mutations targeting a sealed theory, closing cross-
+     theory redefinition attacks that would otherwise bypass Thm's
+     definition principles. *)
+  val mark_sealed_thy : string -> unit
+  val is_sealed_thy   : string -> bool
+
 end

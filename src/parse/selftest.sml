@@ -620,11 +620,11 @@ val _ = tpp "ParoundPrec: stacked same-prec suffixes parenthesise inner"
 end
 
 val cCONS_t =
-    Term.prim_new_const {Thy = "min", Name = "CONS"} (bool --> (bool --> bool))
-val cNIL_t = Term.prim_new_const {Thy = "min", Name = "NIL"} bool
+    Term.prim_new_const {Thy = "parseSelftest", Name = "CONS"} (bool --> (bool --> bool))
+val cNIL_t = Term.prim_new_const {Thy = "parseSelftest", Name = "NIL"} bool
 val cmk_list = mk_list0 bool cNIL_t cCONS_t
 
-val _ = tpp "Printing nil (const, no overload)" "min$NIL" lf_g cNIL_t
+val _ = tpp "Printing nil (const, no overload)" "parseSelftest$NIL" lf_g cNIL_t
 
 val lfco_g = lf_g |> term_grammar.fupdate_overload_info
                        (Overload.add_overloading ("NIL", cNIL_t))
@@ -643,9 +643,9 @@ val lfcono_g =
 val _ = tpp "Printing nil (const, double-overload)" "[x]" lfcono_g
             (cmk_list "x")
 
-val cINS_t = Term.prim_new_const{Thy = "min", Name = "INS"}
+val cINS_t = Term.prim_new_const{Thy = "parseSelftest", Name = "INS"}
                        (alpha --> (alpha --> bool) --> (alpha --> bool))
-val cEMP_t = Term.prim_new_const{Thy = "min", Name = "EMP"} (alpha --> bool)
+val cEMP_t = Term.prim_new_const{Thy = "parseSelftest", Name = "EMP"} (alpha --> bool)
 fun add_setlistform g =
   term_grammar.add_listform g {
       block_info = (CONSISTENT, 0),

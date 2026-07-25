@@ -37,23 +37,32 @@ struct
   type t = {
     termsig      : Type_dtype.holty KernelSig.symboltable,
     typesig      : int KernelSig.symboltable,
+    current_thy  : string option,
     session_data : UniversalType.t Symtab.table
   }
 
-  fun termsig      ({termsig,...} : t) = termsig
-  fun typesig      ({typesig,...} : t) = typesig
+  fun termsig      ({termsig,...} : t)      = termsig
+  fun typesig      ({typesig,...} : t)      = typesig
+  fun current_thy  ({current_thy,...} : t)  = current_thy
   fun session_data ({session_data,...} : t) = session_data
 
-  fun map_termsig f {termsig, typesig, session_data} =
-      {termsig = f termsig, typesig = typesig, session_data = session_data}
-  fun map_typesig f {termsig, typesig, session_data} =
-      {termsig = termsig, typesig = f typesig, session_data = session_data}
-  fun map_session_data f {termsig, typesig, session_data} =
-      {termsig = termsig, typesig = typesig, session_data = f session_data}
+  fun map_termsig f {termsig, typesig, current_thy, session_data} =
+      {termsig = f termsig, typesig = typesig,
+       current_thy = current_thy, session_data = session_data}
+  fun map_typesig f {termsig, typesig, current_thy, session_data} =
+      {termsig = termsig, typesig = f typesig,
+       current_thy = current_thy, session_data = session_data}
+  fun map_current_thy f {termsig, typesig, current_thy, session_data} =
+      {termsig = termsig, typesig = typesig,
+       current_thy = f current_thy, session_data = session_data}
+  fun map_session_data f {termsig, typesig, current_thy, session_data} =
+      {termsig = termsig, typesig = typesig,
+       current_thy = current_thy, session_data = f session_data}
 
   val initial : t = {
     termsig      = KernelSig.empty_table,
     typesig      = KernelSig.empty_table,
+    current_thy  = NONE,
     session_data = Symtab.empty
   }
 

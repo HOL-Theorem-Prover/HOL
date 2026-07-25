@@ -307,17 +307,19 @@ fun replay (db: trDB) file = let
 
     def_tyop = fn (id, th, name) => let
       val (Thy, Tyop) = split_qualified name
-    in set_th (id, prim_type_definition ({Thy=Thy, Tyop=Tyop},
-                                         get_th th)) end,
+      val () = if Thm.getCT () = SOME Thy then () else Thm.setCT Thy
+    in set_th (id, prim_type_definition (Tyop, get_th th)) end,
 
     def_spec = fn (id, th, names) => let
       val thy = thy_of_names names
       val cnames = List.map (#2 o split_qualified) names
-    in set_th (id, prim_specification thy cnames (get_th th)) end,
+      val () = if Thm.getCT () = SOME thy then () else Thm.setCT thy
+    in set_th (id, prim_specification cnames (get_th th)) end,
 
     def_spec_gen = fn (id, th, names) => let
       val thy = thy_of_names names
-      val thm = #2 (gen_prim_specification thy (get_th th))
+      val () = if Thm.getCT () = SOME thy then () else Thm.setCT thy
+      val thm = #2 (gen_prim_specification (get_th th))
       val () = if thy = "bool" then
                  List.app (fn n => register_bool_def (#2 (split_qualified n)) thm)
                    names

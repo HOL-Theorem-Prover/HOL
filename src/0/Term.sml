@@ -39,14 +39,29 @@ fun genupd_termsig f =
 fun term_epoch () = KernelSig.symtab_epoch (termsig())
 fun display_name_of_id id = KernelSig.display_name_of_id (termsig()) id
 
-fun prim_delete_const kn = upd_termsig (#1 o KernelSig.retire_name kn)
+fun prim_delete_const (kn as {Thy, Name}) =
+    if KernelSig.is_sealed_thy Thy then
+      raise ERR "prim_delete_const"
+            ("target theory \"" ^ Thy ^
+             "\" is sealed; cross-theory deletes are refused")
+    else
+      upd_termsig (#1 o KernelSig.retire_name kn)
 fun prim_new_const (k as {Thy,Name}) ty = let
+  val _ = not (KernelSig.is_sealed_thy Thy) orelse
+          raise ERR "prim_new_const"
+                ("target theory \"" ^ Thy ^
+                 "\" is sealed; cross-theory mints are refused")
   val hty = if Type.polymorphic ty then POLY ty else GRND ty
   val id = genupd_termsig (KernelSig.insert(k, hty))
 in
   Const(id, hty)
 end
-fun del_segment s = upd_termsig (KernelSig.del_segment s)
+fun del_segment s =
+    if KernelSig.is_sealed_thy s then
+      raise ERR "del_segment"
+            ("theory \"" ^ s ^ "\" is sealed; segment delete refused")
+    else
+      upd_termsig (KernelSig.del_segment s)
 
 (*---------------------------------------------------------------------------*
  * Builtin constants. These are in every HOL signature, and it is            *
@@ -68,6 +83,11 @@ in
   val hil = Const (hil_id,hil_ty)
   val imp = Const (imp_id,imp_ty)
 end
+
+(* Seal "min" once its builtin types (fun, bool, ind) and constants
+   (=, @, ==>) are in place: nothing legitimate mints or retires
+   min-owned entries after this point. *)
+val _ = KernelSig.mark_sealed_thy "min"
 
 (*---------------------------------------------------------------------------*
     Useful functions to hide explicit substitutions

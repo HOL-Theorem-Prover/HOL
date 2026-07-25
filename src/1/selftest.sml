@@ -150,6 +150,7 @@ exception InternalDie of string
 fun test nm f x = f x orelse raise InternalDie nm
 fun oldconstants_test() = let
   val _ = tprint "Identity of old constants test"
+  val _ = new_theory "scratch"
   val tab = ref (Termtab.empty : thm Termtab.table)
   val new_definition = fn (s,t) =>
     let val th = new_definition(s,t)
@@ -1512,83 +1513,28 @@ in
   if ok then OK() else die "side condition leaked a captured bound variable"
 end
 
-(* Test for #1870: redefinition of bool constants via prim_specification.
-   This test must be last because prim_specification retires the old ?
-   constant, corrupting state for any subsequent code that uses ?. *)
-val _ = let
-  val _ = tprint "Testing for #1870 prim_specification soundness bug"
-  val old_F = prim_mk_const {Thy="bool", Name="F"}
-  val witness = mk_abs(mk_var("P", alpha --> bool),
-                       prim_mk_const{Thy="bool", Name="T"})
-  val q       = mk_var("q", type_of witness)
-  val step1   = EXISTS (mk_exists(q, mk_eq(q, witness)), witness)
-                       (REFL witness)
-  (* Redefining ? succeeds at the prim_specification level, but the
-     kernel no longer recognizes the new ? in its rules *)
-  val step2   = prim_specification "bool" ["?"] step1
-  val step2a  = INST_TYPE [alpha |-> bool] step2
-  val body    = mk_abs(mk_var("x", bool), old_F)
-  val step3   = TRANS (AP_THM step2a body)
-                      (BETA_CONV (rhs(concl(AP_THM step2a body))))
-  val step4   = EQ_MP (SYM step3) boolTheory.TRUTH
-  (* This should fail because the new ? is not the registered ? *)
-  val step5   = prim_specification "bool" ["c"] step4
-  val unsound = CCONTR (mk_var("p", bool)) step5
-in
-  if null (hyp unsound) then die "UNSOUND" else die "unexpected hyps"
-end handle HOL_ERR _ => OK();
+(* Regression test for #1870 and analogous cross-theory redefinition
+   attacks (see also the paste attached to #2027).  The old exploits
+   passed a target thyname directly to prim_specification /
+   prim_type_definition; the new API drops that argument and reads
+   the current theory from Thm-owned state.  The attacker's only
+   remaining Thm-level route is `Thm.setCT`, which refuses on any
+   name that has been sealed by a prior export or load. *)
+val _ = shouldfail
+  {checkexn    = is_struct_HOL_ERR "Thm",
+   printarg    = fn s => "Cross-theory mint into sealed " ^ s ^ " refused",
+   printresult = fn () => "<no exception>",
+   testfn      = Thm.setCT}
+  "bool"
 
-(* Test for #2026 *)
-val _ = let
-  val b  = Type.bool
-  val T0 = boolSyntax.T
-  val F0 = boolSyntax.F
-
-  val x = Term.mk_var ("eq_attack_x", b)
-  val y = Term.mk_var ("eq_attack_y", b)
-  val kF = Term.mk_abs (x, Term.mk_abs (y, F0))
-
-  (* Prove: |- ?e. e = (\x y. F) *)
-  val e = Term.mk_var ("eq_attack_witness", b --> b --> b)
-  val ex =
-      boolSyntax.mk_exists
-        (e, boolSyntax.mk_eq (e, kF))
-  val exth = Thm.EXISTS (ex, kF) (Thm.REFL kF)
-
-  (* Replaces min$= and returns, using the old primitive equality:
-     |- fake_equal = (\x y. F)
-   *)
-  val fake_def = Thm.prim_specification "min" ["="] exth
-  val fake_eq =
-      Term.prim_mk_const {Thy = "min", Name = "="}
-
-  val p = Term.mk_var ("eqspec_h_20260723", b)
-  val h = Term.list_mk_comb (fake_eq, [p, T0])
-
-  (* |- fake_equal p T = ((\x y. F) p) T *)
-  val d0 = Thm.AP_THM (Thm.AP_THM fake_def p) T0
-
-  (* |- ((\x y. F) p) T = (\y. F) T *)
-  val d1 =
-      Thm.AP_THM
-        (Thm.BETA_CONV (Term.mk_comb (kF, p)))
-        T0
-
-  (* |- (\y. F) T = F *)
-  val d2 =
-      Thm.BETA_CONV
-        (Term.mk_comb (Term.mk_abs (y, F0), T0))
-
-  val h_eq_F = Thm.TRANS (Thm.TRANS d0 d1) d2
-  val h_proves_F = Thm.EQ_MP h_eq_F (Thm.ASSUME h)
-in
-  shouldfail {
-    checkexn = is_struct_HOL_ERR "Thm",
-    printarg = K "Testing for #2026 gen_prim_specification/dest_eq bug",
-    printresult = thm_to_string,
-    testfn = snd o Thm.gen_prim_specification (Theory.current_theory ())
-  } h_proves_F
-end
+(* Regression test for #2026: attacker targeting min$=.  min is
+   sealed from kernel initialisation, so the setCT step raises. *)
+val _ = shouldfail
+  {checkexn    = is_struct_HOL_ERR "Thm",
+   printarg    = fn s => "Cross-theory mint into sealed " ^ s ^ " refused",
+   printresult = fn () => "<no exception>",
+   testfn      = Thm.setCT}
+  "min"
 
 (* Test for #2024 *)
 val _ = let

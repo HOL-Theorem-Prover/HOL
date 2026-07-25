@@ -1353,6 +1353,22 @@ fun mk_defn_thm (witness_tag, c, p) =
         in th end)
 
 (* ----------------------------------------------------------------------
+    Current-theory guard state (mirrors std-thm.ML; keep in sync).
+   ---------------------------------------------------------------------- *)
+
+fun is_sealed s   = KernelSig.is_sealed_thy s
+fun mark_sealed s = KernelSig.mark_sealed_thy s
+
+fun getCT () = Context.current_thy (Context.snapshot())
+
+fun setCT s =
+    if s = "min" orelse is_sealed s then
+      raise mk_HOL_ERR "Thm" "setCT"
+        ("cannot set current theory to sealed \"" ^ s ^ "\"")
+    else
+      Context.update (Context.map_current_thy (fn _ => SOME s))
+
+(* ----------------------------------------------------------------------
     Primitive Definition Principles
    ---------------------------------------------------------------------- *)
 
@@ -1360,6 +1376,12 @@ val ERR = mk_HOL_ERR "Thm"
 val TYDEF_ERR = ERR "prim_type_definition"
 val DEF_ERR   = ERR "new_definition"
 val SPEC_ERR  = ERR "new_specification"
+
+fun current_thy_or_die fname =
+    case getCT () of
+        NONE   => raise ERR fname
+                        "no current theory (kernel state uninitialised)"
+      | SOME s => s
 
 val TYDEF_FORM_ERR = TYDEF_ERR "expected a theorem of the form \"?x. P x\""
 val DEF_FORM_ERR   = DEF_ERR   "expected a term of the form \"v = M\""
@@ -1408,7 +1430,9 @@ fun check_tyvars body_tyvars ty f =
 fun okConstName cnm =
     CharVector.all (fn c => Char.isGraph c) cnm
 
-fun prim_type_definition (name as {Thy, Tyop}, thm) = let
+fun prim_type_definition (Tyop, thm) = let
+  val Thy       = current_thy_or_die "prim_type_definition"
+  val name      = {Thy = Thy, Tyop = Tyop}
   val c         = concl thm
   val _         = Term.uptodate_term c orelse
                   raise TYDEF_ERR "Witness theorem is out-of-date"
@@ -1465,7 +1489,8 @@ end
 fun bind thy s ty =
     Term.prim_new_const {Name = s, Thy = thy} ty
 
-fun prim_specification thyname cnames th = let
+fun prim_specification cnames th = let
+  val thyname   = current_thy_or_die "prim_specification"
   val con       = concl th
   val checked   = check_null_hyp th SPEC_ERR
   val checked   = check_free_vars con SPEC_ERR
@@ -1487,7 +1512,8 @@ in
   mk_defn_thm (tag th, subst sigma body, Def_spec_prf(th,map #residue sigma))
 end
 
-fun gen_prim_specification thyname th = let
+fun gen_prim_specification th = let
+  val thyname     = current_thy_or_die "gen_prim_specification"
   val hyps        = hypset th
   val body        = concl th
   val _ = Term.uptodate_term body orelse

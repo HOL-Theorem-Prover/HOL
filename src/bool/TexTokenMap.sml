@@ -44,10 +44,10 @@ struct
   val tokmap = ref Symtab.empty
   fun the_map() = !tokmap
 
-  fun temp_TeX_notation0 src thy {hol,TeX} =
+  fun temp_TeX_notation0 src {hol,TeX} =
       case Symtab.lookup (!tokmap) hol of
-        NONE => tokmap := Symtab.update (hol,{thy = thy,info = TeX}) (!tokmap)
-      | SOME {thy = oldthy, info = oldt} => let
+        NONE => tokmap := Symtab.update (hol,{src=src,info=TeX}) (!tokmap)
+      | SOME {src = oldsrc, info = oldt} => let
           fun ttoString (t,i) = "(\"" ^ String.toString t ^ "\", "^
                                 Int.toString i ^ ")"
         in
@@ -55,14 +55,13 @@ struct
             HOL_WARNING "TexTokenMap" "TeX_notation"
                         (src^" overrides \""^
                          String.toString hol^"\" (was "^
-                         ttoString oldt^", from "^oldthy^"); now \""^
+                         ttoString oldt^", from "^oldsrc^"); now \""^
                          ttoString TeX^"\"")
           else ();
-          tokmap := Symtab.update (hol,{thy = thy,info = TeX}) (!tokmap)
+          tokmap := Symtab.update (hol,{src=src,info=TeX}) (!tokmap)
         end
 
-  val temp_TeX_notation =
-      temp_TeX_notation0 "TeX_notation call" (current_theory())
+  fun temp_TeX_notation r = temp_TeX_notation0 "TeX_notation call" r
 
   fun TeX_notation record = let
   in
@@ -85,7 +84,7 @@ struct
                                            " appears corrupted.");
                               [])
       in
-        List.app (temp_TeX_notation0 ("Theory "^thyname) thyname) deltas
+        List.app (temp_TeX_notation0 ("Theory "^thyname)) deltas
       end
   end
 
