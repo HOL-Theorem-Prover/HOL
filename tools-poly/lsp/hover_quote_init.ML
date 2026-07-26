@@ -155,30 +155,34 @@ local
         | HLFree  {Name, Ty, ...} =>
             (Name, render_type env Ty, "*free variable*")
     in
-      "```\n" ^ name ^ " : " ^ tystr ^ "\n```\n\n" ^ tail
+      (* Parse.type_to_string already prefixes ``:`` (HOL type-
+         annotation convention), so we don't add another one. *)
+      "```\n" ^ name ^ " " ^ tystr ^ "\n```\n\n" ^ tail
     end
 in
 
-(* Strip leading/trailing HOL quotation delimiters (``‘``, ``’`` — each
-   a 3-byte UTF-8 sequence starting with 0xE2) plus surrounding
-   whitespace.  Returns (leadingBytes, strippedBody).  server.ML's
-   PQuote span covers the delimiters too; we need the body span to
-   feed the HOL parser. *)
+(* Strip leading/trailing HOL quotation delimiters (``‘`` = E2 80 98
+   and ``’`` = E2 80 99) plus surrounding whitespace.  Returns
+   (leadingBytes, strippedBody).  We must match the FULL 3-byte
+   sequence — checking only the leading 0xE2 would eat characters
+   like ``∀`` (E2 88 80), ``∧`` (E2 88 A7), ``⇒`` (E2 87 92). *)
 fun stripDelims s = let
   val n = String.size s
-  fun isQuoteByte c = Char.ord c = 226 (* 0xE2: 1st byte of ‘/’ *)
+  fun byteAt i = Char.ord (String.sub (s, i))
+  fun isQuoteAt i =
+    i + 2 < n andalso byteAt i = 226 andalso byteAt (i + 1) = 128 andalso
+    let val b = byteAt (i + 2) in b = 152 orelse b = 153 end
+  fun isQuoteEnd i =  (* three-byte sequence ending exactly at index i *)
+    i >= 3 andalso byteAt (i - 3) = 226 andalso byteAt (i - 2) = 128 andalso
+    let val b = byteAt (i - 1) in b = 152 orelse b = 153 end
   fun startOfBody i =
     if i >= n then i
-    else let val c = String.sub (s, i)
-    in
-      if isQuoteByte c andalso i + 2 < n then startOfBody (i + 3)
-      else if Char.isSpace c then startOfBody (i + 1)
-      else i
-    end
+    else if isQuoteAt i then startOfBody (i + 3)
+    else if Char.isSpace (String.sub (s, i)) then startOfBody (i + 1)
+    else i
   fun endOfBody i =
     if i <= 0 then 0
-    else if i >= 3 andalso isQuoteByte (String.sub (s, i - 3)) then
-      endOfBody (i - 3)
+    else if isQuoteEnd i then endOfBody (i - 3)
     else if Char.isSpace (String.sub (s, i - 1)) then endOfBody (i - 1)
     else i
   val a = startOfBody 0

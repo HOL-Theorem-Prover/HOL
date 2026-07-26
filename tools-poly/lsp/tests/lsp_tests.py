@@ -936,6 +936,84 @@ def test_hover_at_body_boundary_and_operators():
         c.close()
 
 
+def test_hover_across_utf8_binder_and_var():
+    """Hover across a body that mixes ``∀``, a bound variable, and an
+    infix operator whose UTF-8 byte width matters for cursor
+    resolution.  Regression for two bugs surfaced by the eglot log:
+
+    (a) `stripDelims` (in hover_quote_init.ML) only inspected the
+    first UTF-8 byte to detect quote delimiters, and ``E2`` is the
+    leading byte of ``∀`` (as well as ``‘`` / ``’``).  A leading
+    ``∀`` in the body was eaten, the parser saw a truncated term,
+    and every hover returned nil.
+
+    (b) `term_tokens.stdfinish` split a lexeme's Locn by codepoint
+    count applied to a byte-based `LocA` column.  For lexeme ``∀p``
+    it gave ``∀`` a 1-byte Locn and ``p`` a 3-byte Locn — hovers on
+    the ``∀`` symbol's own bytes (or on the binder ``p``) missed
+    the intended leaf and returned the enclosing operator instead."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/utf8_binder.sml"
+        # Line 3 = "Theorem bar: ∀p. p ∧ q ⇒ r"
+        # UTF-8 byte columns:
+        #   0..11 "Theorem bar:"  12 space  13..15 ∀  16 p (binder)
+        #   17 .  18 space  19 p (occurrence)  20 space  21..23 ∧
+        #   24 space  25 q  26 space  27..29 ⇒  30 space  31 r
+        src = ("Theory utf8_binder\n"
+               "Ancestors hol\n\n"
+               "Theorem bar: ∀p. p ∧ q ⇒ r\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+
+        def hover(id_, ch):
+            c.send({"jsonrpc":"2.0","id":id_,
+                    "method":"textDocument/hover",
+                    "params":{"textDocument":{"uri":uri},
+                              "position":{"line":3,"character":ch}}})
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == id_: return m
+                return None
+            reply = c.wait_until(got, 5)
+            assert_true(reply is not None, f"hover {id_} arrived")
+            r = reply.get("result")
+            assert_true(r is not None, f"hover on col {ch} non-null ({reply})")
+            return r["contents"]["value"]
+
+        # ∀ (byte 13, first byte of the 3-byte codepoint)
+        md = hover(401, 13)
+        assert_true("!" in md and "bool" in md,
+                    f"hover on ∀ identifies universal ({md!r})")
+
+        # Binder p (byte 16, immediately after ∀'s 3 bytes)
+        md = hover(402, 16)
+        assert_true("p " in md and "bound" in md,
+                    f"hover on binder p is 'bound' ({md!r})")
+
+        # Occurrence p (byte 19) — should also be bound after the ∀
+        md = hover(403, 19)
+        assert_true("p " in md and "bound" in md,
+                    f"hover on p occurrence is 'bound' ({md!r})")
+
+        # ⇒ (byte 27, first byte of the 3-byte codepoint)
+        md = hover(404, 27)
+        assert_true("==>" in md,
+                    f"hover on ⇒ identifies implication ({md!r})")
+
+        # Format sanity: no double colons.
+        assert_true(": :" not in md,
+                    f"no double colon in output ({md!r})")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -960,6 +1038,8 @@ TESTS = [
     ("hover_inside_theorem_body",    test_hover_inside_theorem_body),
     ("hover_at_body_boundary_and_operators",
                                      test_hover_at_body_boundary_and_operators),
+    ("hover_across_utf8_binder_and_var",
+                                     test_hover_across_utf8_binder_and_var),
 ]
 
 
