@@ -212,6 +212,22 @@ code even when you're not writing proofs — `foo_tac` vs `foo_conv` vs
 `foo_rule` tells you the function's *type signature shape* before you
 look at it.)
 
+## Commit history
+
+By default, work lands on `develop` directly, so aim for **short
+sequences of self-contained commits** — often one commit per logical
+unit, occasionally two or three when the split genuinely helps a
+reviewer.  Squash liberally: prefer `--fixup` + `git rebase --autosquash`
+during iteration, and squash the sequence down to its natural shape
+before signalling ready-to-push.  Ten review-fix commits chained onto
+a single logical change is noise, not history.
+
+The exception is an explicit **feature branch** that will be merged
+into `develop` as a series — those benefit from a longer, curated
+sequence.  The developer will call this out when it applies; unless
+they have, assume commits are going onto `develop` and keep the
+sequence tight.
+
 ## Repo geography
 
 - `src/` — the core system. Most maintenance work happens here.
