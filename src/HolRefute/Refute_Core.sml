@@ -1559,14 +1559,15 @@ structure Refute_Core = struct
   val quiet_mutex = Mutex.mutex ()
 
   fun refute_problem (cfg : config) problem =
-    if not (#quiet cfg) then refute_problem_unquiet cfg problem
-    else
-      (* Most output uses the Refute trace, but model-finder diagnostics also
-         use the independent message and warning channels.  These flags are
-         process-global, so quiet scopes must not overlap.  The standard
-         scoped Feedback combinators restore every flag after exceptions. *)
-      Multithreading.synchronized "Refute quiet output" quiet_mutex
-        (fn () =>
+    (* Most output uses the Refute trace, but model-finder diagnostics also
+       use the independent message and warning channels.  These flags are
+       process-global, so every call must be serialized against quiet scopes.
+       The standard scoped Feedback combinators restore every flag after
+       exceptions. *)
+    Multithreading.synchronized "Refute quiet output" quiet_mutex
+      (fn () =>
+        if not (#quiet cfg) then refute_problem_unquiet cfg problem
+        else
           Feedback.with_traces [("Refute", 0)]
             (Feedback.quiet_messages
               (Feedback.quiet_warnings

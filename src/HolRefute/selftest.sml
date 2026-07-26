@@ -10891,6 +10891,36 @@ val quiet_output_probe_backend : backend =
 
 val _ = register_backend quiet_output_probe_backend
 
+datatype quiet_scope_event = QuietStarted | QuietFinished | LoudStarted
+
+val quiet_scope_probe_enabled = ref false
+val quiet_scope_attempted =
+  Synchronized.var "Refute quiet scope attempted" false
+val quiet_scope_events =
+  Synchronized.var "Refute quiet scope events" ([] : quiet_scope_event list)
+
+fun record_quiet_scope_event event =
+  Synchronized.change quiet_scope_events (fn events => event :: events)
+
+val quiet_scope_probe_backend : backend =
+  {name = "refute-quiet-scope-probe", weight = ~91,
+   configured = fn () => !quiet_scope_probe_enabled,
+   requires = AnyGoal, executable_exception = NONE,
+   input = MonoInstances,
+   run = fn config => fn _ =>
+     if #quiet config then
+       (record_quiet_scope_event QuietStarted;
+        Synchronized.guarded_access quiet_scope_attempted
+          (fn true => SOME ((), true) | false => NONE);
+        OS.Process.sleep (Time.fromReal 0.05);
+        record_quiet_scope_event QuietFinished;
+        Unknown ["quiet scope probe"])
+     else
+       (record_quiet_scope_event LoudStarted;
+        Unknown ["loud scope probe"])}
+
+val _ = register_backend quiet_scope_probe_backend
+
 val unused_unknown_enabled = ref false
 val unused_timeout_enabled = ref false
 val unused_registry_enabled = ref false
@@ -15379,6 +15409,22 @@ fun narrowing_mixed_prefix_replay_is_certified () =
       | _ => false
   end
 
+fun narrowing_incomplete_universal_replay_is_certified () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+    val goal = ``?y : bool. (x : num) = 0 /\ y``
+    val closure = ``!x : num. ?y : bool. x = 0 /\ y``
+  in
+    case run_with_strategy Narrowing config goal of
+        Counterexample
+          [{certainty = Genuine, cert = SOME theorem, ...}] =>
+            null (Thm.hyp theorem) andalso
+            Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg closure)
+      | _ => false
+  end
+
 fun narrowing_existential_certify_opt_out () =
   let
     val config = default_config
@@ -15861,6 +15907,12 @@ val _ = require_msg
 val _ = require_msg
   (check_result narrowing_mixed_prefix_replay_is_certified)
   (fn () => "mixed universal/existential PNF replay was not certified")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result narrowing_incomplete_universal_replay_is_certified)
+  (fn () =>
+    "an incomplete universal witness with an exhaustive suffix was not " ^
+    "certified")
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_existential_certify_opt_out)
   (fn () => "certify=false did not skip existential replay")
@@ -16889,6 +16941,51 @@ fun quiet_restores_output_state_after_exception () =
 val _ = require_msg
   (check_result quiet_restores_output_state_after_exception) (fn () =>
   "quiet did not restore trace and output state after an exception")
+  (fn () => ()) ()
+
+fun quiet_scope_serializes_loud_calls () =
+  let
+    val saved_threads = Multithreading.max_threads ()
+    fun restore () =
+      (quiet_scope_probe_enabled := false;
+       Multithreading.max_threads_update saved_threads)
+    fun await_quiet_start () =
+      Synchronized.guarded_access quiet_scope_events
+        (fn events =>
+          if List.exists (fn QuietStarted => true | _ => false) events then
+            SOME ((), events)
+          else NONE)
+    fun successful (Exn.Res _) = true
+      | successful _ = false
+    fun run () =
+      let
+        val _ = Multithreading.max_threads_update
+          (Int.max (2, saved_threads))
+        val _ = quiet_scope_probe_enabled := true
+        val _ = Synchronized.change quiet_scope_attempted (K false)
+        val _ = Synchronized.change quiet_scope_events (K [])
+        val config = default_config
+          |> upd_backends (SOME ["refute-quiet-scope-probe"])
+          |> upd_sequential true
+        val quiet = Future.fork (fn () =>
+          ignore (Refute.refute (upd_quiet true config) ``T``))
+        val _ = await_quiet_start ()
+        val loud = Future.fork (fn () =>
+          (Synchronized.change quiet_scope_attempted (K true);
+           ignore (Refute.refute (upd_quiet false config) ``T``)))
+        val results = Future.join_results [quiet, loud]
+        val events = rev (Synchronized.value quiet_scope_events)
+      in
+        List.all successful results andalso
+        events = [QuietStarted, QuietFinished, LoudStarted]
+      end
+  in
+    Portable.finally restore run ()
+  end
+
+val _ = require_msg
+  (check_result quiet_scope_serializes_loud_calls) (fn () =>
+  "a loud refute call entered while a quiet output scope was active")
   (fn () => ()) ()
 
 fun uncertified_qc_is_genuine_and_decisive () =
@@ -19246,27 +19343,23 @@ fun forged_child_depth_degrades () =
       | _ => false
   end
 
-fun universal_metadata_degrades () =
+fun incomplete_universal_shape_certifies () =
   let
-    fun replay shape =
-      case Refute_Cert.certify_case_tree
-        {original = ``!b : bool. b``, evals = [], env = [],
-         run_depth = 0,
-         case_tree = Refute_Eval.CaseUniversal
-           {shape = shape, witness = boolSyntax.F,
-            subtree = Refute_Eval.CaseLeaf},
-         cex = make_cex true} of
-          Refute_Cert.Potential _ => true
-        | _ => false
-    val incomplete = Refute_Eval.CaseShape
-      {depth = 0, complete = false,
-       constructors =
-         [{id = 0, fields = []}, {id = 1, fields = []}]}
-    val wrong_constructors = Refute_Eval.CaseShape
-      {depth = 0, complete = true,
-       constructors = [{id = 0, fields = []}]}
+    val goal = ``!x : num. x = 0``
+    val shape = Refute_Narrow.replay_shape
+      (Refute_Narrow.shape_of 2 ``:num``)
+    val tree = Refute_Eval.CaseUniversal
+      {shape = shape, witness = ``1 : num``,
+       subtree = Refute_Eval.CaseLeaf}
   in
-    replay incomplete andalso replay wrong_constructors
+    case Refute_Cert.certify_case_tree
+      {original = goal, evals = [], env = [], run_depth = 2,
+       case_tree = tree, cex = make_cex true} of
+        Refute_Cert.Certified
+          {certainty = Genuine, cert = SOME theorem, ...} =>
+            null (Thm.hyp theorem) andalso
+            Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg goal)
+      | _ => false
   end
 
 val _ = require_msg (check_result incomplete_case_tree_degrades) (fn () =>
@@ -19283,9 +19376,12 @@ val _ = require_msg (check_result (fn () =>
   malformed_case_tree_degrades () andalso
   incomplete_metadata_degrades () andalso
   forged_root_depth_degrades () andalso
-  forged_child_depth_degrades () andalso
-  universal_metadata_degrades ())) (fn () =>
-  "malformed, depth-forged, or universal metadata passed replay")
+  forged_child_depth_degrades ())) (fn () =>
+  "malformed or depth-forged existential metadata passed replay")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result incomplete_universal_shape_certifies) (fn () =>
+  "an incomplete universal search shape blocked witness replay")
   (fn () => ()) ()
 
 fun false_positive_is_discarded () =

@@ -149,10 +149,12 @@ structure Refute_Cert = struct
     handle _ => "unknown proof failure"
 
   (* Replay never infers exhaustiveness from a successful simplification.
-     Every quantified node's frozen shape is checked exactly; existential
-     pattern covers are checked too.  Only an acyclic TypeBase constructor
-     tree can be complete, so numeric prefixes, recursive truncations, and
-     custom enumerations fail closed. *)
+     Every existential node's frozen shape and pattern cover are checked
+     exactly.  Universal nodes need only one well-typed witness, so their
+     possibly incomplete search shape is irrelevant to the proof.  Only an
+     acyclic TypeBase constructor tree can support an exhaustive cover, so
+     numeric prefixes, recursive truncations, and custom enumerations fail
+     closed at existential nodes. *)
   fun certify_case_tree
         {original, evals, env, run_depth, case_tree, cex} =
     let
@@ -174,7 +176,7 @@ structure Refute_Cert = struct
       fun constructor_arguments constructor =
         #1 (boolSyntax.strip_fun (Term.type_of constructor))
 
-      fun validate_shape ancestors expected_depth ty
+      fun validate_exhaustive_shape ancestors expected_depth ty
             (shape as Refute_Eval.CaseShape
               {depth, complete, constructors}) =
         let
@@ -203,7 +205,7 @@ structure Refute_Cert = struct
             in
               ListPair.appEq
                 (fn (field_ty, field_shape) =>
-                  validate_shape (ty :: ancestors) child_depth
+                  validate_exhaustive_shape (ty :: ancestors) child_depth
                     field_ty field_shape)
                 (argument_types, fields)
             end
@@ -409,11 +411,10 @@ structure Refute_Cert = struct
                 ("leaf EVAL did not produce F: " ^ head_name rhs)
             end
         | prove_neg formula
-            (Refute_Eval.CaseUniversal {shape, witness, subtree}) =
+            (Refute_Eval.CaseUniversal {witness, subtree, ...}) =
             let
               val (variable, body) = boolSyntax.dest_forall formula
               val variable_ty = Term.type_of variable
-              val _ = validate_shape [] run_depth variable_ty shape
               val _ = if same_type variable_ty (Term.type_of witness) then ()
                 else raise Fail "universal witness type mismatch"
               val instance = Term.subst
@@ -433,7 +434,7 @@ structure Refute_Cert = struct
                   raise Fail "existential node has no branches"
                 else ()
               val (variable, body) = boolSyntax.dest_exists formula
-              val _ = validate_shape [] run_depth
+              val _ = validate_exhaustive_shape [] run_depth
                 (Term.type_of variable) shape
               val _ = validate_cover shape (Term.type_of variable) branches
               fun branch_refutation (_, pattern, subtree) =
