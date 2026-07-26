@@ -1014,6 +1014,64 @@ def test_hover_across_utf8_binder_and_var():
         c.close()
 
 
+def test_hover_inside_definition_body():
+    """Hover inside a Definition body works the same way as inside a
+    Theorem body.  Regression for the synthetic termination-option
+    arg bug: expandDec for HOLDefinition wrapped the quotation in
+    `App(_, mkIdent(definition_, "NONE"))`, giving the outer App
+    span `(definition_, definition_+4)` and hiding the body's
+    PQuote node behind a sibling magicBind binding that findChild
+    picked first.  Fix: anchor termOpt at `stop` so App's expStop
+    covers the body."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/defn_hover.sml"
+        # Line 3 = "Definition foo:"
+        # Line 4 = "  f x y = case x of"
+        # Line 6 = "          | t::ts => LENGTH ts + 6"
+        src = ("Theory t\n"
+               "Ancestors list arithmetic\n\n"
+               "Definition foo:\n"
+               "  f x y = case x of\n"
+               "            [] => 3\n"
+               "          | t::ts => LENGTH ts + 6\n"
+               "End\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+
+        def hover(id_, line, ch):
+            c.send({"jsonrpc":"2.0","id":id_,
+                    "method":"textDocument/hover",
+                    "params":{"textDocument":{"uri":uri},
+                              "position":{"line":line,"character":ch}}})
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == id_: return m
+                return None
+            reply = c.wait_until(got, 5)
+            assert_true(reply is not None, f"hover {id_} arrived")
+            r = reply.get("result")
+            assert_true(r is not None, f"hover {id_} non-null result")
+            return r["contents"]["value"]
+
+        # x is a bound argument of f (Definition body line 4).
+        md = hover(500, 4, 4)
+        assert_true("x " in md and "list" in md,
+                    f"hover on x resolves as list-typed ({md!r})")
+        assert_true("string" not in md,
+                    f"hover on x isn't the SML `string` walk-up ({md!r})")
+
+        # LENGTH is a constant (list theory).  Line 6 char 21 = `L`.
+        md = hover(501, 6, 21)
+        assert_true("LENGTH" in md and "num" in md,
+                    f"hover on LENGTH identifies the constant ({md!r})")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -1040,6 +1098,7 @@ TESTS = [
                                      test_hover_at_body_boundary_and_operators),
     ("hover_across_utf8_binder_and_var",
                                      test_hover_across_utf8_binder_and_var),
+    ("hover_inside_definition_body", test_hover_inside_definition_body),
 ]
 
 

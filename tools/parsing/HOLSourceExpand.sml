@@ -481,9 +481,17 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val e = mkLocString (definition_, "TotalDefn.qDefine", "TotalDefn.located_qDefine") fileline
     val e = App (e, mkNameAttrs mkKval id attrs)
     val e = App (e, expandQuote definition_ stop quote)
+    (* Anchor the synthetic termination-option arg PAST the body so
+       the enclosing App's expStop covers the quotation.  Otherwise
+       `termOpt = mkIdent(definition_, "NONE")` at the `Definition`
+       keyword position gives the outer App span
+       (definition_, definition_ + 4), and the body's PQuote node
+       (which sits under this App) becomes unreachable via
+       builtNavigateTo — findChild picks the sibling magicBind
+       binding whose synthetic mkString extends past the body. *)
     val e = App (e, case termination of
-      NONE => mkIdent (definition_, "NONE")
-    | SOME {tac, ...} => App (mkIdent (definition_, "SOME"), expandExp false tac))
+      NONE => mkIdent (stop, "NONE")
+    | SOME {tac, ...} => App (mkIdent (stop, "SOME"), expandExp false tac))
     val dec' = magicBind indThm [valPat definition_ (mkIdent id) e]
     in DecExpansion {orig = dec, result = rev dec'} end
   | expandDec _ (dec as HOLDatatype {datatype_, quote, stop, ...}) = let
