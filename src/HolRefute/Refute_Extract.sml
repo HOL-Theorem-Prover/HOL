@@ -1623,138 +1623,47 @@ structure Refute_Extract = struct
       (fn () => strict_primitive context head argument_terms arguments)
       (fn () => lazy_primitive context head argument_terms arguments)
 
+  datatype term_form =
+      FVar | FCond | FLet | FNumeral | FIntLit | FChar | FString
+    | FWord | FPair | FList | FPabs | FAbs | FOne | FRecord | FCase
+    | FApp
+
+  fun classify term =
+    if Term.is_var term then FVar
+    else if boolSyntax.is_cond term then FCond
+    else if boolSyntax.is_let term then FLet
+    else if Literal.is_numeral term then FNumeral
+    else if intSyntax.is_int_literal term then FIntLit
+    else if Literal.is_char_lit term then FChar
+    else if Literal.is_string_lit term then FString
+    else if wordsSyntax.is_word_literal term then FWord
+    else if pairSyntax.is_pair term then FPair
+    else if listSyntax.is_list term then FList
+    else if pairSyntax.is_pabs term then FPabs
+    else if Term.is_abs term then FAbs
+    else if oneSyntax.is_one term then FOne
+    else if TypeBase.is_record term then FRecord
+    else if TypeBase.is_case term then FCase
+    else FApp
+
   fun expression context term =
-    choose (context_mode context)
-      (fn () => strict_expression context term)
-      (fn () => lazy_expression context term)
+    case classify term of
+        FLet => choose (context_mode context)
+          (fn () => strict_let_expression context term)
+          (fn () => lazy_let_expression context term)
+      | FPabs => choose (context_mode context)
+          (fn () => strict_pabs_expression context term)
+          (fn () => lazy_pabs_expression context term)
+      | FCase => choose (context_mode context)
+          (fn () => strict_case_expression context term)
+          (fn () => lazy_case_expression context term)
+      | form => common_expression context form term
 
-  and strict_expression context term =
-    if Term.is_var term then variable_name term
-    else if boolSyntax.is_cond term then
-      let val (condition, left, right) = boolSyntax.dest_cond term
-      in
-        parens ("if " ^ expression context condition ^ " then " ^
-          expression context left ^ " else " ^ expression context right)
-      end
-    else if boolSyntax.is_let term then
-      let
-        val (groups, body) = pairSyntax.strip_anylet term
-        fun binding (left, right) =
-          "val " ^ pattern context left ^ " = " ^ expression context right
-        fun group bindings = join "\n" (List.map binding bindings)
-      in
-        parens ("let\n" ^ join "\n" (List.map group groups) ^ "\nin " ^
-                expression context body ^ "\nend")
-      end
-    else if Literal.is_numeral term then
-      num_literal (Literal.relaxed_dest_numeral term)
-    else if intSyntax.is_int_literal term then
-      int_literal (intSyntax.int_of_term term)
-    else if Literal.is_char_lit term then
-      "#" ^ quote (String.str (Literal.dest_char_lit term))
-    else if Literal.is_string_lit term then
-      quote (Literal.relaxed_dest_string_lit term)
-    else if wordsSyntax.is_word_literal term then
-      num_literal (wordsSyntax.dest_word_literal term)
-    else if pairSyntax.is_pair term then
-      let val (left, right) = pairSyntax.dest_pair term
-      in parens (expression context left ^ ", " ^ expression context right)
-      end
-    else if listSyntax.is_list term andalso not (is_char_list
-      (Term.type_of term)) then
-      let val (elements, _) = listSyntax.dest_list term
-      in "[" ^ join ", " (List.map (expression context) elements) ^ "]" end
-    else if pairSyntax.is_pabs term then
-      let val (argument, body) = pairSyntax.dest_pabs term
-      in parens ("fn " ^ pattern context argument ^ " => " ^
-                 expression context body)
-      end
-    else if Term.is_abs term then
-      let val (argument, body) = Term.dest_abs term
-      in parens ("fn " ^ variable_name argument ^ " => " ^
-                 expression context body)
-      end
-    else if oneSyntax.is_one term then "()"
-    else if TypeBase.is_record term then
-      let
-        val (record_ty, fields) = TypeBase.dest_record term
-        val constructor = hd (TypeBase.constructors_of record_ty)
-      in
-        constructor_expression context constructor
-          (List.map (expression context o #2) fields)
-      end
-    else if TypeBase.is_case term then
-      let
-        val (scrutinee, rows) = TypeBase.strip_case term
-        fun row (pat, rhs) = pattern context pat ^ " => " ^
-          expression context rhs
-        fun string_rows () =
-          let
-            fun classify (pat, rhs) =
-              let val (head, arguments) = boolSyntax.strip_comb pat
-              in
-                case kname head of
-                  ("list", "NIL") => SOME (true, arguments, rhs)
-                | ("list", "CONS") => SOME (false, arguments, rhs)
-                | _ => NONE
-              end
-            val classified = List.mapPartial classify rows
-            val nil_row = List.find #1 classified
-            val cons_row = List.find (not o #1) classified
-          in
-            case (nil_row, cons_row) of
-              (SOME (_, _, nil_rhs), SOME (_, variables, cons_rhs)) =>
-                (case variables of
-                   [head, tail] =>
-                     parens ("if String.size " ^
-                       parens (expression context scrutinee) ^
-                       " = 0 then " ^ expression context nil_rhs ^
-                       " else let val " ^ pattern context head ^
-                       " = " ^ Refute_EvalSML.char_list_head_source
-                         (expression context scrutinee) ^
-                       " val " ^ pattern context tail ^
-                       " = " ^ Refute_EvalSML.char_list_tail_source
-                         (expression context scrutinee) ^
-                       " in " ^ expression context cons_rhs ^
-                       " end")
-                 | _ => reject "malformed string case")
-            | _ => reject "malformed string case"
-          end
-      in
-        if is_char_list (Term.type_of scrutinee) then string_rows ()
-        else parens ("case " ^ expression context scrutinee ^ " of " ^
-          join " | " (List.map row rows))
-      end
-    else
-      let
-        val (head, argument_terms) = boolSyntax.strip_comb term
-        val arguments = List.map (expression context) argument_terms
-      in
-        if Term.is_const head then
-          (case primitive context head argument_terms arguments of
-             SOME result => result
-           | NONE =>
-               if TypeBase.is_constructor head then
-                 constructor_expression context head arguments
-               else
-                 let
-                   val name = ensure_definition context head
-                   val (domains, _) = boolSyntax.strip_fun (Term.type_of head)
-                   val base = if null domains then name ^ " ()" else name
-                 in
-                   List.foldl (fn (argument, result) =>
-                     parens (result ^ " " ^ parens argument)) base arguments
-                 end)
-        else
-          List.foldl (fn (argument, result) =>
-            parens (result ^ " " ^ parens argument))
-            (expression context head) arguments
-      end
-
-  and lazy_expression context term =
+  and common_expression context form term =
     let
       val {delay, force, defer, apply, ...} =
         context_operations context
+
       fun named_constructor ty wanted =
         let
           val _ = ignore (ensure_type context ty)
@@ -1763,6 +1672,7 @@ structure Refute_Extract = struct
           #1 (valOf (List.find (fn (constructor, _, _) =>
             kname constructor = wanted) (#constructors info)))
         end
+
       fun list_value ty elements =
         let
           val nil_constructor = named_constructor ty ("list", "NIL")
@@ -1773,145 +1683,299 @@ structure Refute_Extract = struct
             constructor_expression context cons_constructor [element, tail])
             empty elements
         end
+
+      fun strict_char_list_value ty elements =
+        let
+          val constructors = map (TypeBasePure.cinst ty)
+            (TypeBase.constructors_of ty)
+          fun named wanted =
+            valOf (List.find (fn constructor =>
+              kname constructor = wanted) constructors)
+          val nil_constructor = named ("list", "NIL")
+          val cons_constructor = named ("list", "CONS")
+          val empty = constructor_expression context nil_constructor []
+        in
+          List.foldr (fn (element, tail) =>
+            constructor_expression context cons_constructor [element, tail])
+            empty elements
+        end
+
       fun application head arguments =
         List.foldl (fn (argument, result) =>
           apply result argument) head arguments
-    in
-      if Term.is_var term then variable_name term
-      else if boolSyntax.is_cond term then
-        let val (condition, left, right) = boolSyntax.dest_cond term
-        in
-          defer
-            (parens ("if " ^ force (expression context condition) ^
-              " then " ^ expression context left ^ " else " ^
-              expression context right))
-        end
-      else if boolSyntax.is_let term then
-        let
-          val (groups, body) = pairSyntax.strip_anylet term
-          fun compile_groups [] = expression context body
-            | compile_groups (bindings :: rest) =
-                let
-                  val values = List.map (fn _ =>
-                    fresh_pattern context "refute_lazy_let_") bindings
-                  val declarations = ListPair.map
-                    (fn ((_, right), value) =>
-                      "val " ^ value ^ " = " ^ expression context right)
-                    (bindings, values)
-                  val matched = List.foldr
-                    (fn (((left, _), value), success) =>
-                      lazy_match_pattern context left value success
-                        "(raise Match)")
-                    (compile_groups rest)
-                    (ListPair.zip (bindings, values))
-                in
-                  parens ("let\n" ^ join "\n" declarations ^ "\nin " ^
-                    matched ^ "\nend")
-                end
-        in
-          defer (compile_groups groups)
-        end
-      else if Literal.is_numeral term then
-        delay (num_literal (Literal.relaxed_dest_numeral term))
-      else if intSyntax.is_int_literal term then
-        delay (int_literal (intSyntax.int_of_term term))
-      else if Literal.is_char_lit term then
-        delay ("#" ^ quote (String.str (Literal.dest_char_lit term)))
-      else if Literal.is_string_lit term then
-        let
-          val chars = List.map (fn character =>
-            delay ("#" ^ quote (String.str character)))
-            (String.explode (Literal.relaxed_dest_string_lit term))
-        in
-          list_value stringSyntax.string_ty chars
-        end
-      else if wordsSyntax.is_word_literal term then
-        delay (num_literal (wordsSyntax.dest_word_literal term))
-      else if pairSyntax.is_pair term then
-        let
-          val (left, right) = pairSyntax.dest_pair term
-          val ty = Term.type_of term
-          val constructor = TypeBasePure.cinst ty
-            (hd (TypeBase.constructors_of ty))
-        in
-          constructor_expression context constructor
-            [expression context left, expression context right]
-        end
-      else if listSyntax.is_list term then
-        let val (elements, ty) = listSyntax.dest_list term
-        in list_value (Term.type_of term)
-          (List.map (expression context) elements) end
-      else if pairSyntax.is_pabs term then
-        let
-          val (argument, body) = pairSyntax.dest_pabs term
-          val argument_name = fresh_pattern context
-            "refute_lazy_pair_argument_"
-          val matched = lazy_match_pattern context argument argument_name
-            (expression context body) "(raise Match)"
-        in
-          delay ("fn " ^ argument_name ^ " => " ^ matched)
-        end
-      else if Term.is_abs term then
-        let val (argument, body) = Term.dest_abs term
-        in
-          delay ("fn " ^ variable_name argument ^ " => " ^
-            expression context body)
-        end
-      else if oneSyntax.is_one term then delay "()"
-      else if TypeBase.is_record term then
-        let
-          val (record_ty, fields) = TypeBase.dest_record term
-          val constructor = hd (TypeBase.constructors_of record_ty)
-        in
-          constructor_expression context constructor
-            (List.map (expression context o #2) fields)
-        end
-      else if TypeBase.is_case term then
-        let
-          val (scrutinee, rows) = TypeBase.strip_case term
-          val value = fresh_pattern context "refute_lazy_scrutinee_"
-          fun dispatch [] = "(raise Match)"
-            | dispatch ((pat, rhs) :: rest) =
-                let
-                  val next = fresh_pattern context "refute_lazy_next_"
-                  val failure = next ^ " ()"
-                in
-                  parens ("let fun " ^ next ^ " () = " ^ dispatch rest ^
-                    " in " ^ lazy_match_pattern context pat value
-                      (expression context rhs) failure ^ " end")
-                end
-        in
-          defer
-            (parens ("let val " ^ value ^ " = " ^
-              expression context scrutinee ^ "\nin " ^ dispatch rows ^
-              "\nend"))
-        end
-      else
+
+      fun application_expression () =
         let
           val (head, argument_terms) = boolSyntax.strip_comb term
           val arguments = List.map (expression context) argument_terms
         in
           if Term.is_const head then
             (case primitive context head argument_terms arguments of
-               SOME result => result
-             | NONE =>
-                 if TypeBase.is_constructor head then
-                   constructor_expression context head arguments
-                 else
-                   let
-                     val name = ensure_definition context head
-                     val (domains, _) =
-                       boolSyntax.strip_fun (Term.type_of head)
-                     fun invoke values = defer
-                       (if null values then name ^ " ()"
-                        else name ^ " " ^
-                          join " " (List.map parens values))
-                   in
-                     lazy_with_arity context arguments
-                       (length domains) invoke
-                   end)
-          else application (expression context head) arguments
+                 SOME result => result
+               | NONE =>
+                   if TypeBase.is_constructor head then
+                     constructor_expression context head arguments
+                   else
+                     let
+                       val name = ensure_definition context head
+                       val (domains, _) =
+                         boolSyntax.strip_fun (Term.type_of head)
+                     in
+                       choose (context_mode context)
+                         (fn () =>
+                           let
+                             val base =
+                               if null domains then name ^ " ()" else name
+                           in
+                             List.foldl (fn (argument, result) =>
+                               parens (result ^ " " ^ parens argument))
+                               base arguments
+                           end)
+                         (fn () =>
+                           let
+                             fun invoke values = defer
+                               (if null values then name ^ " ()"
+                                else name ^ " " ^
+                                  join " " (List.map parens values))
+                           in
+                             lazy_with_arity context arguments
+                               (length domains) invoke
+                           end)
+                     end)
+          else
+            choose (context_mode context)
+              (fn () =>
+                List.foldl (fn (argument, result) =>
+                  parens (result ^ " " ^ parens argument))
+                  (expression context head) arguments)
+              (fn () =>
+                application (expression context head) arguments)
         end
+    in
+      case form of
+          FVar => variable_name term
+        | FCond =>
+            let val (condition, left, right) = boolSyntax.dest_cond term
+            in
+              choose (context_mode context)
+                (fn () =>
+                  parens ("if " ^ expression context condition ^ " then " ^
+                    expression context left ^ " else " ^
+                    expression context right))
+                (fn () =>
+                  defer
+                    (parens ("if " ^ force (expression context condition) ^
+                      " then " ^ expression context left ^ " else " ^
+                      expression context right)))
+            end
+        | FNumeral =>
+            choose (context_mode context)
+              (fn () => num_literal (Literal.relaxed_dest_numeral term))
+              (fn () =>
+                delay (num_literal (Literal.relaxed_dest_numeral term)))
+        | FIntLit =>
+            choose (context_mode context)
+              (fn () => int_literal (intSyntax.int_of_term term))
+              (fn () => delay (int_literal (intSyntax.int_of_term term)))
+        | FChar =>
+            let
+              val source =
+                "#" ^ quote (String.str (Literal.dest_char_lit term))
+            in
+              choose (context_mode context)
+                (fn () => source) (fn () => delay source)
+            end
+        | FString =>
+            choose (context_mode context)
+              (fn () => quote (Literal.relaxed_dest_string_lit term))
+              (fn () =>
+                let
+                  val chars = List.map (fn character =>
+                    delay ("#" ^ quote (String.str character)))
+                    (String.explode
+                      (Literal.relaxed_dest_string_lit term))
+                in
+                  list_value stringSyntax.string_ty chars
+                end)
+        | FWord =>
+            choose (context_mode context)
+              (fn () => num_literal (wordsSyntax.dest_word_literal term))
+              (fn () =>
+                delay (num_literal (wordsSyntax.dest_word_literal term)))
+        | FPair =>
+            let
+              val (left, right) = pairSyntax.dest_pair term
+            in
+              choose (context_mode context)
+                (fn () => parens (expression context left ^ ", " ^
+                  expression context right))
+                (fn () =>
+                  let
+                    val ty = Term.type_of term
+                    val constructor = TypeBasePure.cinst ty
+                      (hd (TypeBase.constructors_of ty))
+                  in
+                    constructor_expression context constructor
+                      [expression context left, expression context right]
+                  end)
+            end
+        | FList =>
+            let
+              val (elements, _) = listSyntax.dest_list term
+              val compiled = List.map (expression context) elements
+            in
+              choose (context_mode context)
+                (fn () =>
+                  if is_char_list (Term.type_of term) then
+                    strict_char_list_value (Term.type_of term) compiled
+                  else "[" ^ join ", " compiled ^ "]")
+                (fn () => list_value (Term.type_of term) compiled)
+            end
+        | FAbs =>
+            let val (argument, body) = Term.dest_abs term
+            in
+              choose (context_mode context)
+                (fn () => parens ("fn " ^ variable_name argument ^ " => " ^
+                  expression context body))
+                (fn () => delay ("fn " ^ variable_name argument ^ " => " ^
+                  expression context body))
+            end
+        | FOne => choose (context_mode context)
+            (fn () => "()") (fn () => delay "()")
+        | FRecord =>
+            let
+              val (record_ty, fields) = TypeBase.dest_record term
+              val constructor = hd (TypeBase.constructors_of record_ty)
+            in
+              constructor_expression context constructor
+                (List.map (expression context o #2) fields)
+            end
+        | FApp => application_expression ()
+        | FLet => raise Fail "common let expression"
+        | FPabs => raise Fail "common paired abstraction"
+        | FCase => raise Fail "common case expression"
+    end
+
+  and strict_let_expression context term =
+    let
+      val (groups, body) = pairSyntax.strip_anylet term
+      fun binding (left, right) =
+        "val " ^ pattern context left ^ " = " ^ expression context right
+      fun group bindings = join "\n" (List.map binding bindings)
+    in
+      parens ("let\n" ^ join "\n" (List.map group groups) ^ "\nin " ^
+        expression context body ^ "\nend")
+    end
+
+  and lazy_let_expression context term =
+    let
+      val {defer, ...} = context_operations context
+      val (groups, body) = pairSyntax.strip_anylet term
+      fun compile_groups [] = expression context body
+        | compile_groups (bindings :: rest) =
+            let
+              val values = List.map (fn _ =>
+                fresh_pattern context "refute_lazy_let_") bindings
+              val declarations = ListPair.map
+                (fn ((_, right), value) =>
+                  "val " ^ value ^ " = " ^ expression context right)
+                (bindings, values)
+              val matched = List.foldr
+                (fn (((left, _), value), success) =>
+                  lazy_match_pattern context left value success
+                    "(raise Match)")
+                (compile_groups rest)
+                (ListPair.zip (bindings, values))
+            in
+              parens ("let\n" ^ join "\n" declarations ^ "\nin " ^
+                matched ^ "\nend")
+            end
+    in
+      defer (compile_groups groups)
+    end
+
+  and strict_pabs_expression context term =
+    let val (argument, body) = pairSyntax.dest_pabs term
+    in
+      parens ("fn " ^ pattern context argument ^ " => " ^
+        expression context body)
+    end
+
+  and lazy_pabs_expression context term =
+    let
+      val {delay, ...} = context_operations context
+      val (argument, body) = pairSyntax.dest_pabs term
+      val argument_name = fresh_pattern context
+        "refute_lazy_pair_argument_"
+      val matched = lazy_match_pattern context argument argument_name
+        (expression context body) "(raise Match)"
+    in
+      delay ("fn " ^ argument_name ^ " => " ^ matched)
+    end
+
+  and strict_case_expression context term =
+    let
+      val (scrutinee, rows) = TypeBase.strip_case term
+      fun row (pat, rhs) = pattern context pat ^ " => " ^
+        expression context rhs
+      fun string_rows () =
+        let
+          fun classify_row (pat, rhs) =
+            let val (head, arguments) = boolSyntax.strip_comb pat
+            in
+              case kname head of
+                  ("list", "NIL") => SOME (true, arguments, rhs)
+                | ("list", "CONS") => SOME (false, arguments, rhs)
+                | _ => NONE
+            end
+          val classified = List.mapPartial classify_row rows
+          val nil_row = List.find #1 classified
+          val cons_row = List.find (not o #1) classified
+        in
+          case (nil_row, cons_row) of
+              (SOME (_, _, nil_rhs), SOME (_, variables, cons_rhs)) =>
+                (case variables of
+                     [head, tail] =>
+                       parens ("if String.size " ^
+                         parens (expression context scrutinee) ^
+                         " = 0 then " ^ expression context nil_rhs ^
+                         " else let val " ^ pattern context head ^
+                         " = " ^ Refute_EvalSML.char_list_head_source
+                           (expression context scrutinee) ^
+                         " val " ^ pattern context tail ^
+                         " = " ^ Refute_EvalSML.char_list_tail_source
+                           (expression context scrutinee) ^
+                         " in " ^ expression context cons_rhs ^
+                         " end")
+                   | _ => reject "malformed string case")
+            | _ => reject "malformed string case"
+        end
+    in
+      if is_char_list (Term.type_of scrutinee) then string_rows ()
+      else parens ("case " ^ expression context scrutinee ^ " of " ^
+        join " | " (List.map row rows))
+    end
+
+  and lazy_case_expression context term =
+    let
+      val {defer, ...} = context_operations context
+      val (scrutinee, rows) = TypeBase.strip_case term
+      val value = fresh_pattern context "refute_lazy_scrutinee_"
+      fun dispatch [] = "(raise Match)"
+        | dispatch ((pat, rhs) :: rest) =
+            let
+              val next = fresh_pattern context "refute_lazy_next_"
+              val failure = next ^ " ()"
+            in
+              parens ("let fun " ^ next ^ " () = " ^ dispatch rest ^
+                " in " ^ lazy_match_pattern context pat value
+                  (expression context rhs) failure ^ " end")
+            end
+    in
+      defer
+        (parens ("let val " ^ value ^ " = " ^
+          expression context scrutinee ^ "\nin " ^ dispatch rows ^
+          "\nend"))
     end
 
   (* Match one HOL pattern against a suspended value.  Constructor spines and

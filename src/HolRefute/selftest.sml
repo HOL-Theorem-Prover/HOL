@@ -12041,6 +12041,12 @@ fun lazy_generated_field_keeps_path () =
       "   handle Refute_EvalSML.Hole position =>\n" ^
       "     position = [12, 1] end")
 
+fun lazy_char_list_literal_keeps_element_lazy () =
+  compile_lazy_extracted ``\c : char. NULL [c]``
+    (fn (structure_name, entry, _) =>
+      "let val hole = " ^ structure_name ^ ".refute_hole [12, 2]\n" ^
+      "in not (Susp.force (Susp.force (" ^ entry ^ ") hole)) end")
+
 fun lazy_generated_fields_defer_computations () =
   let
     fun untouched term = compile_lazy_extracted term
@@ -12207,6 +12213,10 @@ val _ = require_msg (check_result lazy_generated_field_is_not_forced)
   (fn () => "NULL forced its generated HD field") (fn () => ()) ()
 val _ = require_msg (check_result lazy_generated_field_keeps_path) (fn () =>
   "a demanded generated field lost its Hole path") (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_char_list_literal_keeps_element_lazy) (fn () =>
+  "a lazy char-list literal forced its suspended element")
+  (fn () => ()) ()
 val _ = require_msg
   (check_result lazy_generated_fields_defer_computations) (fn () =>
   "constructor construction evaluated a generated field computation")
