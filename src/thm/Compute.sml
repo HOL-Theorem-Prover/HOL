@@ -442,49 +442,56 @@ local
   fun APP3 a b c d tm =
     case total (((dest_comb ## I) o dest_comb ## I) o dest_comb) tm of
       SOME (((x,y),z),w) => a x andalso b y andalso c z andalso d w
-    | _ => false;
+    | _ => false
+  fun check_let let_tm ty eqn_tm =
+      let val let_ty = (ty --> ty) --> (ty --> ty)
+      in
+        type_of let_tm = let_ty andalso
+        aconv eqn_tm let_tm
+      end
+  fun check_cond cond_tm eqn_tm = same_const cond_tm eqn_tm
   fun mk_recs (ct : ctsyntax) =
     let
       fun var n t tm = total dest_var tm = SOME (n, t)
-      val T = same_const (#truth_tm ct)
-      and F = same_const (#false_tm ct)
+      val T = aconv (#truth_tm ct)
+      and F = aconv (#false_tm ct)
       val N_ = var "n" (#num_type ct)
       val M_ = var "m" (#num_type ct)
       val P_ = var "p" (#cval_type ct)
       val Q_ = var "q" (#cval_type ct)
       val R_ = var "r" (#cval_type ct)
       val S_ = var "s" (#cval_type ct)
-      val F_ = var "f" (alpha --> beta)
+      val F_ = var "f" (#cval_type ct --> #cval_type ct)
       val A_ = var "a" alpha
       val B_ = var "b" alpha
-      val X_ = var "x" alpha
-      val COND = APP3 (same_const (#cond_tm ct))
-      val NUMERAL = APP1 (same_const (#numeral_tm ct))
-      val ALT_ZERO = same_const (#alt_zero_tm ct)
-      val ZERO = same_const (#zero_tm ct)
-      val BIT1 = APP1 (same_const (#bit1_tm ct))
-      val BIT2 = APP1 (same_const (#bit2_tm ct))
-      val SUC = APP1 (same_const (#suc_tm ct))
-      val ADD = APP2 (same_const (#add_tm ct))
-      val SUB = APP2 (same_const (#sub_tm ct))
-      val MUL = APP2 (same_const (#mul_tm ct))
-      val DIV = APP2 (same_const (#div_tm ct))
-      val MOD = APP2 (same_const (#mod_tm ct))
-      val LT = APP2 (same_const (#lt_tm ct))
-      val CV_PAIR = APP2 (same_const (#cv_pair_tm ct))
-      val CV_NUM = APP1 (same_const (#cv_num_tm ct))
-      val CV_FST = APP1 (same_const (#cv_fst_tm ct))
-      val CV_SND = APP1 (same_const (#cv_snd_tm ct))
-      val CV_ISPAIR = APP1 (same_const (#cv_ispair_tm ct))
-      val CV_ADD = APP2 (same_const (#cv_add_tm ct))
-      val CV_SUB = APP2 (same_const (#cv_sub_tm ct))
-      val CV_MUL = APP2 (same_const (#cv_mul_tm ct))
-      val CV_DIV = APP2 (same_const (#cv_div_tm ct))
-      val CV_MOD = APP2 (same_const (#cv_mod_tm ct))
-      val CV_LT = APP2 (same_const (#cv_lt_tm ct))
-      val CV_IF = APP3 (same_const (#cv_if_tm ct))
-      val CV_EQ = APP2 (same_const (#cv_eq_tm ct))
-      val LET = APP2 (same_const (#let_tm ct))
+      val X_ = var "x" (#cval_type ct)
+      val COND = APP3 (check_cond (#cond_tm ct))
+      val NUMERAL = APP1 (aconv (#numeral_tm ct))
+      val ALT_ZERO = aconv (#alt_zero_tm ct)
+      val ZERO = aconv (#zero_tm ct)
+      val BIT1 = APP1 (aconv (#bit1_tm ct))
+      val BIT2 = APP1 (aconv (#bit2_tm ct))
+      val SUC = APP1 (aconv (#suc_tm ct))
+      val ADD = APP2 (aconv (#add_tm ct))
+      val SUB = APP2 (aconv (#sub_tm ct))
+      val MUL = APP2 (aconv (#mul_tm ct))
+      val DIV = APP2 (aconv (#div_tm ct))
+      val MOD = APP2 (aconv (#mod_tm ct))
+      val LT = APP2 (aconv (#lt_tm ct))
+      val CV_PAIR = APP2 (aconv (#cv_pair_tm ct))
+      val CV_NUM = APP1 (aconv (#cv_num_tm ct))
+      val CV_FST = APP1 (aconv (#cv_fst_tm ct))
+      val CV_SND = APP1 (aconv (#cv_snd_tm ct))
+      val CV_ISPAIR = APP1 (aconv (#cv_ispair_tm ct))
+      val CV_ADD = APP2 (aconv (#cv_add_tm ct))
+      val CV_SUB = APP2 (aconv (#cv_sub_tm ct))
+      val CV_MUL = APP2 (aconv (#cv_mul_tm ct))
+      val CV_DIV = APP2 (aconv (#cv_div_tm ct))
+      val CV_MOD = APP2 (aconv (#cv_mod_tm ct))
+      val CV_LT = APP2 (aconv (#cv_lt_tm ct))
+      val CV_IF = APP3 (aconv (#cv_if_tm ct))
+      val CV_EQ = APP2 (aconv (#cv_eq_tm ct))
+      val LET = APP2 (check_let (#let_tm ct) (#cval_type ct))
     in
       [("alt_zero",   ALT_ZERO === ZERO),
        ("cond_T",     COND T A_ B_ === A_),
