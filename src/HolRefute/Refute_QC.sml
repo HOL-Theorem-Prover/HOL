@@ -1136,6 +1136,8 @@ structure Refute_QC = struct
       run = fn config =>
         strategy_run (Random {seed = strategy_seed config}) config }
 
+  fun qc_backend_names () = ["exhaustive", "random", "narrowing"]
+
   fun register_backends () =
     (Refute_EvalSML.register_substrate
        {preflight = Refute_Extract.native_preflight,

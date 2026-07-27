@@ -70,7 +70,7 @@ structure Refute :> Refute = struct
     handle Timeout.TIMEOUT _ => NONE
 
   fun qc_only config = Refute_Core.upd_backends
-    (SOME ["exhaustive", "random"]) config
+    (SOME (Refute_QC.qc_backend_names ())) config
 
   (* The option distinguishes the QC-only convenience from an explicitly
      supplied configuration whose [backends = NONE] means the full registry. *)

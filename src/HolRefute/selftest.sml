@@ -15139,13 +15139,15 @@ fun narrowing_registration_is_pinned () =
     val names = map #name (registered_backends ())
     fun position name = Lib.index (fn other => other = name) names
   in
-    case lookup_backend "narrowing" of
-        SOME backend =>
-          #weight backend = 40 andalso #configured backend () andalso
-          position "exhaustive" < position "random" andalso
-          position "random" < position "narrowing" andalso
-          position "narrowing" < position "kodkod"
-      | NONE => false
+    Refute_QC.qc_backend_names () =
+      ["exhaustive", "random", "narrowing"] andalso
+    (case lookup_backend "narrowing" of
+         SOME backend =>
+           #weight backend = 40 andalso #configured backend () andalso
+           position "exhaustive" < position "random" andalso
+           position "random" < position "narrowing" andalso
+           position "narrowing" < position "kodkod"
+       | NONE => false)
   end
 
 fun narrowing_ground_hit_is_certified () =
@@ -18259,7 +18261,7 @@ fun corpus_smart_quantifiers () =
 fun corpus_default_quickcheck () =
   let
     val config =
-      upd_backends (SOME ["exhaustive", "random"]) (!the_config)
+      upd_backends (SOME (Refute_QC.qc_backend_names ())) (!the_config)
     fun check name tm =
       tc {name = "Refute default quickcheck: " ^ name,
           cfg = config, tm = tm, expect = ExpectGenuine}
