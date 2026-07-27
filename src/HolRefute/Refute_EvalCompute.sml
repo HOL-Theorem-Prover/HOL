@@ -674,13 +674,12 @@ structure Refute_EvalCompute = struct
             case spec of
                 Refute_Gen.GenEnum _ => ()
               | Refute_Gen.GenNum (Refute_Gen.Word width) =>
-                  (case strategy of
-                     Random _ =>
+                  ground_strategy strategy
+                    {exhaustive = fn () => (),
+                     random = fn _ =>
                        if width <= 32 then ()
                        else add (no_generator_reason ty
-                         "word width exceeds rand_below's 32-bit bound")
-                   | Exhaustive => ()
-                   )
+                         "word width exceeds rand_below's 32-bit bound")}
               | Refute_Gen.GenNum _ => ()
               | Refute_Gen.GenFun (dom, rng) =>
                   (validate_type dom; validate_type rng)
@@ -688,16 +687,15 @@ structure Refute_EvalCompute = struct
                   List.app validate_type
                     (List.concat (List.map #2 constrs))
               | Refute_Gen.GenCustom {enumerate, random} =>
-                  (case strategy of
-                     Exhaustive =>
+                  ground_strategy strategy
+                    {exhaustive = fn () =>
                        if Option.isSome enumerate then ()
                        else add (no_generator_reason ty
-                         "custom generator has no enumeration arm")
-                   | Random _ =>
+                         "custom generator has no enumeration arm"),
+                     random = fn _ =>
                        if Option.isSome random then ()
                        else add (no_generator_reason ty
-                         "custom generator has no random arm")
-                   )
+                         "custom generator has no random arm")}
           end
           handle Refute_Gen.NoGenerator (missing_ty, why) =>
             add (no_generator_reason missing_ty why)
@@ -725,25 +723,27 @@ structure Refute_EvalCompute = struct
       rev (!reasons)
     end
 
-  fun compile (config : Refute_Core.config) strategy (Plans plans) =
-    let
-            (* Both testing strategies share the enumerator preparation and
-               validation; only the loop built from the result differs. *)
-            fun attempt build =
-              (let
-                 val programs = prepare_enums strategy plans
-               in
-                 case validation_reasons strategy plans programs of
-                     [] => Compiled (build programs)
-                   | reasons => Inapplicable reasons
-               end)
-              handle EnumInvalid reason => Inapplicable [reason]
-    in
-      case strategy of
-          Exhaustive => attempt (exhaustive_compile config plans)
-        | Random {seed} =>
-            attempt (fn _ => random_compile plans (ref seed))
-    end
+  fun compile (config : Refute_Core.config) strategy problem =
+    with_plans problem (fn plans =>
+      let
+        (* Both testing strategies share the enumerator preparation and
+           validation; only the loop built from the result differs. *)
+        fun attempt build =
+          (let
+             val programs = prepare_enums strategy plans
+           in
+             case validation_reasons strategy plans programs of
+                 [] => Compiled (build programs)
+               | reasons => Inapplicable reasons
+           end)
+          handle EnumInvalid reason => Inapplicable [reason]
+      in
+        ground_strategy strategy
+          {exhaustive = fn () =>
+             attempt (exhaustive_compile config plans),
+           random = fn seed =>
+             attempt (fn _ => random_compile plans (ref seed))}
+      end)
 
   val compute_substrate : substrate =
     { name = "compute",

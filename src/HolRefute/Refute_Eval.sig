@@ -63,6 +63,11 @@ signature Refute_Eval = sig
     | Random of {seed : IntInf.int}
     | Narrowing
 
+  val ground_strategy :
+    strategy ->
+    {exhaustive : unit -> 'a, random : IntInf.int -> 'a} -> 'a
+  val with_plans : qc_problem -> (plan list -> 'a) -> 'a
+
   type run_input =
     { genuine_only : bool,
       card : int,

@@ -59,6 +59,20 @@ structure Refute_Eval :> Refute_Eval = struct
     | Random of {seed : IntInf.int}
     | Narrowing
 
+  (* Substrate selection checks [accepts] before calling [compile].
+     These helpers make that invariant explicit inside ground-only
+     compilers, without duplicating applicability guards in each one. *)
+  fun ground_strategy Exhaustive {exhaustive, random = _} =
+        exhaustive ()
+    | ground_strategy (Random {seed}) {exhaustive = _, random} =
+        random seed
+    | ground_strategy Narrowing _ =
+        raise Fail "Refute_Eval.ground_strategy: capability invariant"
+
+  fun with_plans (Plans plans) body = body plans
+    | with_plans (Pnf _) _ =
+        raise Fail "Refute_Eval.with_plans: capability invariant"
+
   type run_input =
     { genuine_only : bool,
       card : int,

@@ -118,6 +118,9 @@ structure Refute_Cert_Narrow = struct
 
       fun validate_cover shape ty branches =
         let
+          (* Poly/ML equality short-circuits on the shared shape DAG's
+             pointer-identical nodes, so keep this small local assoc list.
+             Constructor lookup above is separately memoized by type. *)
           val size_cache =
             ref ([] :
               (Refute_Eval.case_shape * Arbnum.num) list)

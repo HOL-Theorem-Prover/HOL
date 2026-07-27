@@ -1490,8 +1490,8 @@ structure Refute_EvalCv = struct
       val prefix = fresh_prefix ()
       val payloads = plan_payloads plan
     in
-        case strategy of
-          Refute_Eval.Exhaustive =>
+      Refute_Eval.ground_strategy strategy
+        {exhaustive = fn () =>
             let
               val uses_enum = Refute_Eval.plan_uses_enum plan
               val program =
@@ -1536,8 +1536,8 @@ structure Refute_EvalCv = struct
                 end
             in
               run
-            end
-        | Refute_Eval.Random _ =>
+            end,
+         random = fn _ =>
             let
               val program = define_random prefix payloads plan generators
               val evaluate = evaluator_for
@@ -1573,7 +1573,7 @@ structure Refute_EvalCv = struct
                 end
             in
               run
-            end
+            end}
     end
 
   fun compile_plans (config : Refute_Core.config) strategy plans =
@@ -1589,9 +1589,8 @@ structure Refute_EvalCv = struct
           | SOME name => raise Precondition name
       val last_stats = ref []
       val state_ref = ref
-        (case strategy of
-             Refute_Eval.Exhaustive => 0
-           | Refute_Eval.Random {seed} => seed)
+        (Refute_Eval.ground_strategy strategy
+          {exhaustive = fn () => 0, random = fn seed => seed})
       val runners = ref ([] : (int * card_runner) list)
       val active : unit Refute_EvalEnum.held_bracket =
         Refute_EvalEnum.held_bracket (fn () => runners := [])
@@ -1623,9 +1622,9 @@ structure Refute_EvalCv = struct
           val _ = start ()
           val result = runner (#card input) input
           val tests =
-            case strategy of
-                Refute_Eval.Exhaustive => 0
-              | Refute_Eval.Random _ => Int.max (0, #draws input)
+            Refute_Eval.ground_strategy strategy
+              {exhaustive = fn () => 0,
+               random = fn _ => Int.max (0, #draws input)}
           val _ = last_stats := [("tests", tests), ("match_failures", 0)]
         in
           result
@@ -1655,8 +1654,9 @@ structure Refute_EvalCv = struct
          | Feedback.HOL_ERR error =>
              Refute_Eval.Inapplicable [hol_error_reason error]
 
-  fun compile config strategy (Refute_Eval.Plans plans) =
-    compile_plans config strategy plans
+  fun compile config strategy problem =
+    Refute_Eval.with_plans problem (fn plans =>
+      compile_plans config strategy plans)
 
   (* Selftest-only stream hook.  Supported plans run through the production
      cv loop.  Values outside its first-order result fragment still take
