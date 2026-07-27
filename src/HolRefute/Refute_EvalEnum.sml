@@ -56,10 +56,7 @@ structure Refute_EvalEnum = struct
 
   fun mode_shape relation mode = mode_shape_with reject relation mode
 
-  fun same_types left right =
-    length left = length right andalso
-    ListPair.allEq (fn (first, second) =>
-      Util.same_type first second) (left, right)
+  val same_types = Lib.list_eq Util.same_type
 
   fun special_literal tm =
     Literal.is_numeral tm orelse intSyntax.is_int_literal tm orelse
@@ -82,7 +79,7 @@ structure Refute_EvalEnum = struct
         if List.all (vars_bound bound) terms then ()
         else rejected (label ^ " uses an unbound variable")
       fun fresh_in bound variable =
-        not (List.exists (fn old => Term.aconv old variable) bound)
+        not (Util.aconv_member variable bound)
 
       fun validate_executable label consumed terms =
         let
@@ -359,27 +356,21 @@ structure Refute_EvalEnum = struct
 
   fun generator_types programs =
     List.foldl (fn (ty, result) =>
-      if List.exists (Util.same_type ty) result then result else result @ [ty])
+      if Util.member_type ty result then result else result @ [ty])
       [] (List.concat (map Refute_SmartGen.enumerator_gen_types programs))
 
   fun tuple_type [] = Type.bool
-    | tuple_type [ty] = ty
-    | tuple_type (ty :: tys) =
-        pairSyntax.mk_prod (ty, tuple_type tys)
+    | tuple_type tys = pairSyntax.list_mk_prod tys
 
   fun pack_terms [] = boolSyntax.T
-    | pack_terms [tm] = tm
-    | pack_terms (tm :: terms) =
-        pairSyntax.mk_pair (tm, pack_terms terms)
+    | pack_terms terms = pairSyntax.list_mk_pair terms
 
   fun unpack_terms [] _ = []
     | unpack_terms [_] tm = [tm]
     | unpack_terms (_ :: tys) tm =
         pairSyntax.mk_fst tm :: unpack_terms tys (pairSyntax.mk_snd tm)
 
-  fun substitute env tm =
-    Term.subst (map (fn (redex, residue) =>
-      {redex = redex, residue = residue}) env) tm
+  fun substitute env tm = Term.subst (map (op |->) env) tm
 
   (* Compile [patterns] against [values] into a nest of case terms and
      equality tests, calling [success] with [environment] extended by the

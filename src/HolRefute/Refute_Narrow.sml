@@ -1,6 +1,7 @@
 structure Refute_Narrow = struct
   type hol_type = Type.hol_type
   type position = int list
+  structure Util = Refute_Util
 
   (* Alternative IDs are local to one immutable shape.  Exact enumerated
      values live only in meta-level shapes; narrowing terms carry local IDs.
@@ -708,10 +709,6 @@ structure Refute_Narrow = struct
                      | _ => raise InvalidPath)
                    (alltermlist_of [index] ([], tree)))
 
-  (* Keep the executable-spec spelling available to make audits against the
-     Haskell extraction routine direct. *)
-  val exampleOf = example_of
-
   fun replay_shape shape =
     let
       fun project current =
@@ -819,8 +816,15 @@ structure Refute_Narrow = struct
       GSYM boolTheory.RIGHT_FORALL_IMP_THM,
       GSYM boolTheory.RIGHT_EXISTS_IMP_THM ]
 
+  val rhs_of = boolSyntax.rhs o Thm.concl
+
   fun prenex_conversion tm =
     let
+      (* [REWRITE_CONV] builds its Ho_Net when applied to the theorem list,
+         so bind it once rather than per normalization round.  Keeping it
+         out of a top-level val also keeps the net off the load path. *)
+      val rewrite_conv = Ho_Rewrite.REWRITE_CONV prenex_rewrites
+
       fun step tm =
         let
           val beta =
@@ -828,7 +832,7 @@ structure Refute_Narrow = struct
              handle UNCHANGED => Thm.REFL tm)
           val reduced = rhs_of beta
           val rewrite =
-            (Ho_Rewrite.REWRITE_CONV prenex_rewrites reduced
+            (rewrite_conv reduced
              handle UNCHANGED => Thm.REFL reduced)
         in
           Thm.TRANS beta rewrite
@@ -846,8 +850,6 @@ structure Refute_Narrow = struct
     in
       normalize tm (Thm.REFL tm)
     end
-
-  and rhs_of theorem = #2 (boolSyntax.dest_eq (Thm.concl theorem))
 
   fun prenex tm = rhs_of (prenex_conversion tm)
 
@@ -889,8 +891,6 @@ structure Refute_Narrow = struct
   fun is_function_type ty = Option.isSome (Lib.total Type.dom_rng ty)
 
   fun is_product_type ty = Option.isSome (Lib.total pairSyntax.dest_prod ty)
-
-  fun same_type left right = Type.compare (left, right) = EQUAL
 
   fun finitize_type ty =
     case Lib.total Type.dom_rng ty of
@@ -966,7 +966,7 @@ structure Refute_Narrow = struct
         let
           val (ty, restore) = transform (Term.type_of variable)
           val replacement =
-            if same_type ty (Term.type_of variable) then variable
+            if Util.same_type ty (Term.type_of variable) then variable
             else Term.variant avoid
               (Term.mk_var (fst (Term.dest_var variable), ty))
         in
@@ -1014,7 +1014,7 @@ structure Refute_Narrow = struct
      transformed node, so translate the marker before inspecting a datatype
      constructor. *)
   fun eval_finite_functions_as original_ty value =
-    if not (same_type (Term.type_of value)
+    if not (Util.same_type (Term.type_of value)
               (finitize_type original_ty)) then
       malformed_value original_ty value
     else if Refute_ModelFinder_Names.is_irrelevant_marker value then

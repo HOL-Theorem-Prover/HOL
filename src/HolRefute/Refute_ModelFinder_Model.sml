@@ -282,6 +282,10 @@ fun postprocess_term snapshot term =
     if null (#entries snapshot) then term else descend term
   end
 
+(* [raw_constructor_name] deliberately covers reconstructed variables as well
+   as constants: the atom reaching this postprocessor is usually a variable
+   whose stripped name is the mangled constant, so a [dest_thy_const] test
+   here would silently stop matching. *)
 fun frac_atom_to_rat term =
   case HolKernel.strip_comb term of
       (constructor, [pair]) =>

@@ -16,26 +16,21 @@ structure Refute_Unused :> REFUTE_UNUSED = struct
   type checked =
     {result : string * int list list option, skipped : int}
 
-  fun member x = List.exists (fn y => x = y)
-
-  fun subset (left, right) = List.all (fn x => member x right) left
-
-  fun same_set (left, right) =
-    length left = length right andalso subset (left, right)
+  fun subset (left, right) = List.all (fn x => Lib.mem x right) left
 
   fun insert_index x indexes =
-    if member x indexes then indexes
+    if Lib.mem x indexes then indexes
     else Listsort.sort Int.compare (x :: indexes)
 
   fun insert_set set sets =
-    if List.exists (fn old => same_set (set, old)) sets then sets
+    if List.exists (fn old => Lib.set_eq set old) sets then sets
     else sets @ [set]
 
   fun build indexes sets =
     let
       fun extend (set, result) =
         List.foldl (fn (index, acc) =>
-          if member index set then acc
+          if Lib.mem index set then acc
           else insert_set (insert_index index set) acc) result indexes
     in
       List.foldl extend [] sets
@@ -51,10 +46,9 @@ structure Refute_Unused :> REFUTE_UNUSED = struct
   fun drop_indexes indexes terms =
     let
       fun keep (index, term) =
-        if member index indexes then NONE else SOME term
+        if Lib.mem index indexes then NONE else SOME term
     in
-      List.mapPartial keep (ListPair.zip
-        (List.tabulate (length terms, fn index => index), terms))
+      List.mapPartial keep (Lib.enumerate 0 terms)
     end
 
   (* Backend selection is deliberately not changed here.  The public facade
@@ -92,7 +86,7 @@ structure Refute_Unused :> REFUTE_UNUSED = struct
         {result = (name, NONE), skipped = 0}
       else
         let
-          val indexes = List.tabulate (length premises, fn index => index)
+          val indexes = Lib.upto 0 (length premises - 1)
           val singles = List.filter (droppable o (fn index => [index]))
             indexes
           (* [grow] conses each new level, as upstream's [do_while] does.

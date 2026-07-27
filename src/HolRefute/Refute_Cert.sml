@@ -1,5 +1,6 @@
 structure Refute_Cert = struct
   type term = Term.term
+  structure Util = Refute_Util
 
   datatype result =
       Certified of Refute_Core.counterexample
@@ -164,7 +165,6 @@ structure Refute_Cert = struct
       val prenex_equality = Refute_Narrow.prenex_conversion closure
       val pnf = rhs_of prenex_equality
 
-      fun same_type left right = Type.compare (left, right) = EQUAL
 
       fun constructors_of ty =
         case TypeBase.fetch ty of
@@ -184,7 +184,7 @@ structure Refute_Cert = struct
             else raise Fail "quantified domain metadata is incomplete"
           val _ = if depth = expected_depth andalso depth >= 0 then ()
             else raise Fail "case-tree depth metadata mismatch"
-          val _ = if List.exists (same_type ty) ancestors then
+          val _ = if List.exists (Util.same_type ty) ancestors then
               raise Fail "recursive quantified domain is depth-truncated"
             else ()
           val actual = constructors_of ty
@@ -215,7 +215,8 @@ structure Refute_Cert = struct
         end
 
       fun validate_term ty Refute_Eval.CaseVariable tm =
-            if Term.is_var tm andalso same_type (Term.type_of tm) ty then ()
+            if Term.is_var tm andalso
+               Util.same_type (Term.type_of tm) ty then ()
             else raise Fail "case variable pattern does not match its term"
         | validate_term ty
             (Refute_Eval.CaseConstructor (id, patterns)) tm =
@@ -415,7 +416,8 @@ structure Refute_Cert = struct
             let
               val (variable, body) = boolSyntax.dest_forall formula
               val variable_ty = Term.type_of variable
-              val _ = if same_type variable_ty (Term.type_of witness) then ()
+              val _ =
+                if Util.same_type variable_ty (Term.type_of witness) then ()
                 else raise Fail "universal witness type mismatch"
               val instance = Term.subst
                 [{redex = variable, residue = witness}] body

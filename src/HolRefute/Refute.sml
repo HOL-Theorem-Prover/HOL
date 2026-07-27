@@ -86,9 +86,7 @@ structure Refute :> Refute = struct
   fun print_unused_assms config theory =
     Refute_Unused.print_unused_assms (unused_config config) theory
 
-  fun quickcheck tm = refute
-    (Refute_Core.upd_backends (SOME ["exhaustive", "random"])
-      (!Refute_Core.the_config)) tm
+  fun quickcheck tm = refute (qc_only (!Refute_Core.the_config)) tm
 
   fun nitpick tm = refute
     (Refute_Core.upd_backends (SOME ["kodkod"])

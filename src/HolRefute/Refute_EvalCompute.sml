@@ -251,7 +251,8 @@ structure Refute_EvalCompute = struct
                    SOME (program, ins) =>
                      let val inputs = List.map (eval_rhs env) ins
                      in
-                       complete := false;
+                       (* [complete] already starts false for any plan that
+                          mentions Enum or SmartGuard. *)
                        if List.all Option.isSome inputs then
                          each (enum_values program (List.map valOf inputs))
                            (fn _ => visit env genuine cont)
@@ -268,7 +269,6 @@ structure Refute_EvalCompute = struct
           | Enum {rel, mode, ins, outs, cont, ...} =>
               let
                 val inputs = List.map (eval_rhs env) ins
-                val _ = complete := false
               in
                 if List.all Option.isSome inputs then
                   let
@@ -698,7 +698,7 @@ structure Refute_EvalCompute = struct
         else reasons := reason :: !reasons
 
       fun validate_type ty =
-        if List.exists (Util.same_type ty) (!seen) then ()
+        if Util.member_type ty (!seen) then ()
         else
           let
             val _ = seen := ty :: !seen

@@ -18,9 +18,9 @@ structure Refute_SmartGen = struct
 
   datatype pattern = Wild | Constructor of term * pattern list
 
-  fun same_term left right = Term.aconv left right
+  val same_term = Term.aconv
 
-  fun member_term term = List.exists (same_term term)
+  val member_term = Lib.op_mem Term.aconv
 
   fun distinct_terms [] = true
     | distinct_terms (term :: rest) =
@@ -513,17 +513,6 @@ structure Refute_SmartGen = struct
       mode_of (head derivation)
     end
 
-  fun is_all_input mode =
-    let
-      fun input (Fun _) = true
-        | input (Pair (left, right)) = input left andalso input right
-        | input Input = true
-        | input Output = false
-        | input Bool = true
-    in
-      List.all input (strip_mode mode)
-    end
-
   fun mode_string Bool = "bool"
     | mode_string Input = "i"
     | mode_string Output = "o"
@@ -568,8 +557,6 @@ structure Refute_SmartGen = struct
         []
     end
     handle Feedback.HOL_ERR _ => []
-
-  fun same_mode left right = eq_mode (left, right)
 
   fun compare_score
         ({missing = left_missing, functional = left_functional,
@@ -690,10 +677,6 @@ structure Refute_SmartGen = struct
     let val (head, _) = HolKernel.strip_comb premise
     in if Term.is_const head then SOME head else NONE end
     handle Feedback.HOL_ERR _ => NONE
-
-  fun direct_call premise =
-    not (boolSyntax.is_neg premise) andalso
-    case premise_head premise of SOME _ => true | NONE => false
 
   fun modes_of table external relation =
     case lookup_assoc relation table of
@@ -1214,7 +1197,6 @@ structure Refute_SmartGen = struct
     ("Refute_SmartGen.enumerators", invalidate_enumerator_cache)
 
   fun clear_enumerator_cache () = invalidate_enumerator_cache ()
-  fun enumerator_cache_size () = length (!enumerator_cache)
 
   fun relation_modes_for relation
         ({relations, ...} : inference_result) =
@@ -1263,21 +1245,4 @@ structure Refute_SmartGen = struct
     end
     handle Feedback.HOL_ERR _ => []
 
-  fun best_goal_mode known call inference =
-    let
-      fun least candidate NONE = SOME candidate
-        | least (candidate as {score, ...} : goal_mode)
-            (current as SOME ({score = old, ...} : goal_mode)) =
-            if compare_score (score, old) = LESS then SOME candidate
-            else current
-    in
-      List.foldl (fn (candidate, result) => least candidate result) NONE
-        (goal_modes_for_call known call inference)
-    end
-
-  (* Compatibility helper for clients that require already-bound inputs. *)
-  fun mode_for_call known call inference =
-    case best_goal_mode known call inference of
-        SOME {mode, ins, outs, missing = [], ...} => SOME (mode, ins, outs)
-      | _ => NONE
 end

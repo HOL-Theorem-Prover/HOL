@@ -14,7 +14,6 @@ structure Refute_EvalCv = struct
     {ty : hol_type, exhaustive : term, random : term}
 
   exception Unsupported of string
-  exception CleanupFailed = Refute_EvalEnum.CleanupFailed
 
   val theory_mutex = Refute_EvalEnum.theory_mutex
 
@@ -24,7 +23,6 @@ structure Refute_EvalCv = struct
   type snapshot = Refute_EvalEnum.snapshot
   type theory_bracket = Refute_EvalEnum.theory_bracket
   val snapshot = Refute_EvalEnum.snapshot
-  val revert = Refute_EvalEnum.revert
   val open_theory_bracket = Refute_EvalEnum.open_theory_bracket
   val close_theory_bracket = Refute_EvalEnum.close_theory_bracket
   val with_clean_theory = Refute_EvalEnum.with_clean_theory
@@ -149,7 +147,7 @@ structure Refute_EvalCv = struct
     let
       val seen = ref ([] : hol_type list)
       fun visit ty =
-        if List.exists (Util.same_type ty) (!seen) then ()
+        if Util.member_type ty (!seen) then ()
         else
           let
             val _ = seen := ty :: !seen
@@ -164,7 +162,7 @@ structure Refute_EvalCv = struct
                       fun nested ((_, arguments), flags) =
                         List.exists (fn (argument, is_recursive) =>
                           is_recursive andalso
-                          not (List.exists (Util.same_type argument) family))
+                          not (Util.member_type argument family))
                           (ListPair.zip (arguments, flags))
                       val _ =
                         if List.exists nested
@@ -909,7 +907,7 @@ structure Refute_EvalCv = struct
 
   fun distinct_types types =
     rev (List.foldl (fn (ty, result) =>
-      if List.exists (Util.same_type ty) result then result else ty :: result)
+      if Util.member_type ty result then result else ty :: result)
       [] types)
 
   fun plan_variables plan =

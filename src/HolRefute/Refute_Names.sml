@@ -100,7 +100,7 @@ structure Refute_ModelFinder_Names = struct
           else String.extract (suffix, 0, SOME (length - 1))
       in
         length > 1 andalso String.isSuffix name_sep suffix andalso
-        List.all Char.isDigit (String.explode digits)
+        Lib.str_all Char.isDigit digits
       end
 
   fun is_bound_var_name name = is_indexed_var_name bound_var_prefix name

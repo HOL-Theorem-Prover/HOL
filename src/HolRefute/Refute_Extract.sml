@@ -329,7 +329,7 @@ structure Refute_Extract = struct
 
   fun equality_name (context as {equalities, ...} : context) ty =
     (ignore (ensure_type context ty);
-     if List.exists (Util.same_type ty) (!equalities) then ()
+     if Util.member_type ty (!equalities) then ()
      else equalities := ty :: !equalities;
      case lookup_type context ty of
        SOME (_, name) => name
@@ -355,7 +355,7 @@ structure Refute_Extract = struct
   fun reachable context source target =
     let
       fun visit seen ty =
-        if List.exists (Util.same_type ty) seen then false
+        if Util.member_type ty seen then false
         else if Util.same_type ty target then true
         else
           case lookup_datatype context ty of
@@ -613,7 +613,7 @@ structure Refute_Extract = struct
       val ops = context_operations context
       fun discover seen =
         case List.find (fn ty =>
-          not (List.exists (Util.same_type ty) seen))
+          not (Util.member_type ty seen))
           (!(#equalities context)) of
             NONE => ()
           | SOME ty =>
@@ -635,7 +635,7 @@ structure Refute_Extract = struct
           val _ = discover []
           val requested = !(#equalities context)
           val types = List.filter (fn (ty, _, _) =>
-            List.exists (Util.same_type ty) requested)
+            Util.member_type ty requested)
             (rev (!(#types context)))
         in
           declarations types
@@ -2362,8 +2362,7 @@ structure Refute_Extract = struct
             let
               val bound = map #1 environment
               val output_variables = List.foldl (fn (variable, result) =>
-                if List.exists (fn old => Term.aconv old variable)
-                     (bound @ result)
+                if Util.aconv_member variable (bound @ result)
                 then result else result @ [variable]) []
                 (List.concat (map Term.free_vars_lr outs))
               val safe = map fresh_bound output_variables
@@ -2525,7 +2524,7 @@ structure Refute_Extract = struct
                   | Refute_SmartGen.CpsGenerate variable => [variable]
               val terms = ins @ List.concat (map premise_terms premises) @ outs
               val variables = List.foldl (fn (variable, result) =>
-                if List.exists (fn old => Term.aconv old variable) result
+                if Util.aconv_member variable result
                 then result else result @ [variable]) []
                 (List.concat (map Term.free_vars_lr terms))
               val renamed = map fresh_enum_local variables
@@ -2582,7 +2581,7 @@ structure Refute_Extract = struct
       val validated = ref ([] : hol_type list)
 
       fun validate_type root ty =
-        if List.exists (Util.same_type ty) (!validated) then ()
+        if Util.member_type ty (!validated) then ()
         else
           let
             val _ = validated := ty :: !validated
@@ -2626,7 +2625,7 @@ structure Refute_Extract = struct
 
       fun close_types [] seen = rev seen
         | close_types (ty :: rest) seen =
-            if List.exists (Util.same_type ty) seen then close_types rest seen
+            if Util.member_type ty seen then close_types rest seen
             else close_types (dependencies ty @ rest) (ty :: seen)
 
       val generator_types = close_types root_types []
@@ -3134,7 +3133,7 @@ structure Refute_Extract = struct
                   else smart_reject "enumerator output arity mismatch"
           val bound = map #1 environment
           fun known seen variable =
-            List.exists (fn old => Term.aconv old variable) (bound @ seen)
+            Util.aconv_member variable (bound @ seen)
           fun constructor_result constructor =
             #2 (boolSyntax.strip_fun (Term.type_of constructor))
           fun special_name tm name =
@@ -3734,16 +3733,6 @@ structure Refute_Extract = struct
       {source = source, entry = entry}
     end
 
-  (* This is the substrate-side test seam, not a narrowing engine.  It lets
-     the engine tasks compile a lazy property and supplies a focused unit-test
-     entry point while shapes and refinement still live out of tree. *)
-  fun extract_lazy_tests config plans =
-    let val {source, entry, ...} =
-      extract_tests_with Lazy config Refute_Eval.Narrowing plans
-    in
-      {source = source, entry = entry}
-    end
-
   (* Compile the first-order bridge between generic narrowing terms and the
      lazy extracted property.  Shapes and search live in Refute_Narrow; only
      these heterogeneously typed conversion functions must be generated. *)
@@ -3811,7 +3800,7 @@ structure Refute_Extract = struct
 
       fun close_types [] seen = rev seen
         | close_types (ty :: rest) seen =
-            if List.exists (Util.same_type ty) seen then
+            if Util.member_type ty seen then
               close_types rest seen
             else
               close_types (dependencies ty @ rest) (ty :: seen)
@@ -4309,6 +4298,7 @@ structure Refute_Extract = struct
                  Refute_EvalSML.ExtractionFailed reasons
              | Interrupt => raise Interrupt)
 
+  (* [Refute_QC.register_backends] owns the substrate set and registers the
+     native substrate; only the extractor hook is installed here. *)
   val _ = install_extractor ()
-  val _ = Refute_EvalSML.register_substrate native_preflight
 end

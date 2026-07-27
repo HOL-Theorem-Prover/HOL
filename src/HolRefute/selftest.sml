@@ -15832,7 +15832,7 @@ fun narrowing_product_is_integrated () =
                      Term.aconv variable
                        ``p : (bool -> bool) # bool`` andalso
                      pairSyntax.is_pair value andalso
-                     same_type (Term.type_of value)
+                     Refute_Util.same_type (Term.type_of value)
                        ``:(bool -> bool) # bool`` andalso
                      not (null (#1 (combinSyntax.strip_update
                        (#1 (pairSyntax.dest_pair value)))))
