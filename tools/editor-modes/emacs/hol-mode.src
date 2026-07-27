@@ -1484,11 +1484,12 @@ If no visible HOL window exists, creates a new window to the right with 83 colum
                         (point-max)
                       (cdr begin-end)))
              (bare (hol--region-has-bare-theory-p (car begin-end) limit)))
-        (if bare (let ((hol-bare-p t))
-                   (message "Using hol --bare")
-                   (sleep-for 2)
-                   (funcall starter))
-          (funcall starter)))
+        (save-current-buffer
+          (if bare (let ((hol-bare-p t))
+                     (message "Using hol --bare")
+                     (sleep-for 2)
+                     (funcall starter))
+            (funcall starter))))
       (if (region-active-p) nil
         (push-mark (point-min))
         (activate-mark t))
