@@ -11655,6 +11655,8 @@ val _ = require_msg (check_result option_shape) (fn () =>
 val _ = Datatype.Datatype `rg_rose = RGLeaf | RGNode ((rg_rose) list)`
 val _ = Datatype.Datatype
   `rg_tree = RGTip num | RGBin rg_tree rg_tree`
+val _ = Datatype.Datatype
+  `rg_binary = RGBLeaf | RGBNode rg_binary rg_binary`
 val _ = Datatype.Datatype `rg_left = RGLeft | RGToRight rg_right;
                            rg_right = RGRight rg_left`
 val _ = Datatype.Datatype `rg_record = <| rg_field : num |>`
@@ -13707,6 +13709,34 @@ val _ = require_msg
   (check_result fresh_plain_pnf_compiles_are_isolated) (fn () =>
   "plain and PNF compiles crossed or retained fresh custom alternatives: " ^
   !fresh_isolation_mismatch)
+  (fn () => ()) ()
+
+fun raised_binary_narrowing_source_is_shared () =
+  let
+    val tables_before = term_table_count ()
+    val variable = Term.mk_var ("raised_binary", ``:rg_binary``)
+    val config = default_config |> upd_size 18
+    val {source, entry, table} =
+      extract_narrowing config [(Forall, variable)] boolSyntax.F
+    fun body () =
+      size source < 250000 andalso
+      String.isSubstring "val narrow_shape_18_0" source andalso
+      String.isSubstring
+        "Vector.fromList [narrow_shape_18_0]" source andalso
+      (case compile_install source entry of
+           Installed dispatch =>
+             Option.isSome
+               (#hit (dispatch 1 true 18 0 (0 : IntInf.int)))
+         | CompileError _ => false)
+    val result = Portable.finally
+      (fn () => unregister_term_tables table) body ()
+  in
+    result andalso term_table_count () = tables_before
+  end
+
+val _ = require_msg
+  (check_result raised_binary_narrowing_source_is_shared) (fn () =>
+  "raised-depth binary narrowing did not retain a shared linear shape DAG")
   (fn () => ()) ()
 
 val abstract_ty = ``:rg_record``

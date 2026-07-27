@@ -1141,20 +1141,14 @@ structure Refute_EvalCv = struct
 
       fun smart_guard_values predicate version env =
         let
-          val (relation, arguments) = HolKernel.strip_comb predicate
-          fun suitable {program = {relation = other, mode,
-                version = found, ...}, ...} =
-            Refute_SmartGen.same_relation relation other andalso
-            Refute_SmartGen.same_program_version (version, found) andalso
-            (case Refute_SmartGen.top_level_parts mode arguments of
-                 SOME (_, []) => true | _ => false)
-          val data = case List.find suitable enumerators of
+          val programs = map #program enumerators
+          val (program, ins) =
+            case Refute_EvalEnum.smart_guard_lookup
+                {relation = predicate, version = version} programs of
               SOME found => found
             | NONE => raise Unsupported "stale smart Guard"
-          val (ins, _) = valOf (Refute_SmartGen.top_level_parts
-            (#mode (#program data)) arguments)
         in
-          enum_values relation (#mode (#program data))
+          enum_values (#relation program) (#mode program)
             (map (substitute env) ins)
         end
 

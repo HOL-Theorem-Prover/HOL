@@ -81,6 +81,7 @@ structure Refute_Extract = struct
   fun quote text = Portable.mlquote text
 
   val join = String.concatWith
+  val integer = Int.toString
 
   fun parens text = "(" ^ text ^ ")"
 
@@ -103,29 +104,21 @@ structure Refute_Extract = struct
     lazy_defer (parens (lazy_force function ^ " " ^ parens argument))
 
   type mode_operations =
-    { suspend : string -> string,
-      force : string -> string,
+    { force : string -> string,
       delay : string -> string,
       defer : string -> string,
       apply : string -> string -> string,
-      wrap_type : ml_ty -> ml_ty,
-      algebraic :
-        (unit -> string option) -> (unit -> string option) -> string option }
+      wrap_type : ml_ty -> ml_ty }
 
   fun operations Strict : mode_operations =
-        {suspend = Lib.I, force = Lib.I, delay = Lib.I, defer = Lib.I,
-         apply = strict_apply, wrap_type = Lib.I,
-         algebraic = fn strict => fn _ => strict ()}
+        {force = Lib.I, delay = Lib.I, defer = Lib.I,
+         apply = strict_apply, wrap_type = Lib.I}
     | operations Lazy =
-        {suspend = lazy_delay, force = lazy_force, delay = lazy_delay,
-         defer = lazy_defer, apply = lazy_apply, wrap_type = MLSusp,
-         algebraic = fn _ => fn lazy => lazy ()}
+        {force = lazy_force, delay = lazy_delay, defer = lazy_defer,
+         apply = lazy_apply, wrap_type = MLSusp}
 
-  fun choose operations strict lazy =
-    case #algebraic operations
-      (fn () => SOME (strict ())) (fn () => SOME (lazy ())) of
-        SOME result => result
-      | NONE => raise Fail "Refute_Extract: mode choice returned NONE"
+  fun choose Strict strict _ = strict ()
+    | choose Lazy _ lazy = lazy ()
 
   fun type_name ty =
     Hol_pp.type_to_string ty
@@ -139,7 +132,8 @@ structure Refute_Extract = struct
       constructors : (term * hol_type list * string) list }
 
   type context =
-    { operations : mode_operations,
+    { mode : extraction_mode,
+      operations : mode_operations,
       datatypes : datatype_desc list ref,
       types : (hol_type * ml_ty * string) list ref,
       equalities : hol_type list ref,
@@ -154,7 +148,8 @@ structure Refute_Extract = struct
       next_pattern : int ref }
 
   fun new_context mode : context =
-    { operations = operations mode,
+    { mode = mode,
+      operations = operations mode,
       datatypes = ref [],
       types = ref [],
       equalities = ref [],
@@ -168,6 +163,7 @@ structure Refute_Extract = struct
       next_pattern = ref 0 }
 
   fun context_operations ({operations, ...} : context) = operations
+  fun context_mode ({mode, ...} : context) = mode
 
   fun lookup_type ({types, ...} : context) ty =
     case List.find (fn (other, _, _) => Util.same_type other ty) (!types) of
@@ -210,9 +206,8 @@ structure Refute_Extract = struct
       val ops = context_operations context
       val wrap_type = #wrap_type ops
       fun algebraic strict =
-        case wrap_type strict of
-            MLSusp _ => NONE
-          | wrapped => SOME wrapped
+        choose (context_mode context)
+          (fn () => SOME strict) (fn () => NONE)
     in
       if Type.is_vartype ty then
         SOME (wrap_type (MLVar (clean_name (Type.dest_vartype ty))))
@@ -434,7 +429,7 @@ structure Refute_Extract = struct
       val ops = context_operations context
       fun nonenumerable () =
         reject ("function equality has non-enumerable domain " ^ type_name ty)
-      val delayed = #suspend ops
+      val delayed = #delay ops
       fun constructor_values (_, arguments, name) =
         let
           fun build [] variables =
@@ -476,7 +471,7 @@ structure Refute_Extract = struct
           ", fn n => " ^ delayed "(IntInf.fromInt n)" ^ ")"
         end
       else
-        choose ops
+        choose (context_mode context)
           (fn () =>
             case Lib.total optionSyntax.dest_option ty of
                 SOME element =>
@@ -516,7 +511,7 @@ structure Refute_Extract = struct
           "String.compare (" ^ left_value ^ ", " ^ right_value ^
           ") = EQUAL"
       | MLUnit =>
-          choose ops
+          choose (context_mode context)
             (fn () => "true")
             (fn () =>
               "let val _ = " ^ left_value ^ " val _ = " ^ right_value ^
@@ -561,7 +556,7 @@ structure Refute_Extract = struct
               right_fun ^ " z)) " ^
               parens (enum_expression context domain_ty)
           in
-            choose ops
+            choose (context_mode context)
               (fn () => body left right)
               (fn () =>
                 "let val left_fun = " ^ left_value ^
@@ -641,7 +636,7 @@ structure Refute_Extract = struct
           declarations types
         end
     in
-      choose ops strict lazy
+      choose (context_mode context) strict lazy
     end
 
   val prelude =
@@ -979,7 +974,7 @@ structure Refute_Extract = struct
           | NONE => reject ("unknown lazy constructor " ^
                             kname_text (kname constructor))
     in
-      choose ops strict lazy
+      choose (context_mode context) strict lazy
     end
 
   fun pattern context term =
@@ -1006,7 +1001,7 @@ structure Refute_Extract = struct
         val (head, arguments) = boolSyntax.strip_comb term
       in
         if Term.is_const head andalso TypeBase.is_constructor head then
-          choose (context_operations context)
+          choose (context_mode context)
             (fn () => constructor_expression context head
               (List.map (pattern context) arguments))
             (fn () =>
@@ -1624,12 +1619,12 @@ structure Refute_Extract = struct
     end
 
   fun primitive context head argument_terms arguments =
-    #algebraic (context_operations context)
+    choose (context_mode context)
       (fn () => strict_primitive context head argument_terms arguments)
       (fn () => lazy_primitive context head argument_terms arguments)
 
   fun expression context term =
-    choose (context_operations context)
+    choose (context_mode context)
       (fn () => strict_expression context term)
       (fn () => lazy_expression context term)
 
@@ -2141,7 +2136,7 @@ structure Refute_Extract = struct
     end
 
   fun definition_clause context item =
-    choose (context_operations context)
+    choose (context_mode context)
       (fn () => strict_definition_clause context item)
       (fn () => lazy_definition_clause context item)
 
@@ -2238,7 +2233,7 @@ structure Refute_Extract = struct
 
   fun source_prefix context =
     prelude ^ "\n" ^
-    choose (context_operations context)
+    choose (context_mode context)
       (fn () => "")
       (fn () =>
         "fun refute_hole position = Refute_EvalSML.lazy_hole position\n\n") ^
@@ -2564,7 +2559,6 @@ structure Refute_Extract = struct
 
       fun constructor_index tm = index_term constructor_terms tm
       fun raw_index tm = index_term raw_terms tm
-      fun integer value = Int.toString value
       fun intinf value =
         "(valOf (IntInf.fromString " ^ quote (IntInf.toString value) ^ ") " ^
         ": IntInf.int)"
@@ -3760,7 +3754,6 @@ structure Refute_Extract = struct
               end
       fun constructor_index tm = index_term constructor_terms tm
       fun raw_index tm = index_term raw_terms tm
-      fun integer value = Int.toString value
       fun term_list values = "[" ^ join ", " values ^ "]"
 
       (* Finitization belongs to the narrowing instance, after prenexing but
@@ -3808,9 +3801,10 @@ structure Refute_Extract = struct
       val _ = List.app (fn ty => ignore (ensure_type context ty)) types
       val _ = ignore (ensure_type context Type.bool)
       val maximum_depth = Int.max (0, #size (#qc config))
+      val shape_memo = Refute_Narrow.new_shape_memo ()
 
       fun checked_shape depth ty =
-        Refute_Narrow.shape_of depth ty
+        Refute_Narrow.shape_of_with shape_memo depth ty
         handle Refute_Narrow.ShapeFailure (offending_ty, reason) =>
           reject (Refute_Narrow.inapplicable_message offending_ty reason)
 
@@ -3840,7 +3834,6 @@ structure Refute_Extract = struct
         (Lib.enumerate 0 types)
       fun witness_index ty = raw_index (List.nth (witnesses, type_index ty))
 
-      fun lazy body = "Susp.delay (fn () => " ^ body ^ ")"
       fun around_zero index =
         "(if " ^ index ^ " = 0 then 0 else if " ^ index ^
         " mod 2 = 1 then (" ^ index ^ " + 1) div 2 else ~(" ^
@@ -3848,15 +3841,16 @@ structure Refute_Extract = struct
 
       fun primitive_value kind index =
         case kind of
-            Refute_Gen.Num => lazy ("IntInf.fromInt " ^ index)
+            Refute_Gen.Num => lazy_delay ("IntInf.fromInt " ^ index)
           | Refute_Gen.Int =>
-              lazy ("IntInf.fromInt " ^ around_zero index)
-          | Refute_Gen.Char => lazy ("Char.chr " ^ index)
-          | Refute_Gen.Word _ => lazy ("IntInf.fromInt " ^ index)
+              lazy_delay ("IntInf.fromInt " ^ around_zero index)
+          | Refute_Gen.Char => lazy_delay ("Char.chr " ^ index)
+          | Refute_Gen.Word _ =>
+              lazy_delay ("IntInf.fromInt " ^ index)
 
       fun constructor_pattern index arguments =
         "(" ^ integer index ^ ", " ^
-        term_list (map (fn argument => argument) arguments) ^ ")"
+        term_list arguments ^ ")"
 
       fun exact_case render ty =
         let
@@ -3900,13 +3894,14 @@ structure Refute_Extract = struct
           | _ => raise Fail "validated narrowing conversion"
 
       fun reconstruction_case recurse ty =
-        case Refute_Gen.spec_of ty of
-            Refute_Gen.GenEnum _ =>
-              exact_case (fn value =>
-                "Refute_EvalSML.raw_term " ^ integer (raw_index value)) ty
-          | Refute_Gen.GenNum _ =>
-              exact_case (fn value =>
-                "Refute_EvalSML.raw_term " ^ integer (raw_index value)) ty
+        let
+          fun exact () =
+            exact_case (fn value =>
+              "Refute_EvalSML.raw_term " ^ integer (raw_index value)) ty
+        in
+          case Refute_Gen.spec_of ty of
+            Refute_Gen.GenEnum _ => exact ()
+          | Refute_Gen.GenNum _ => exact ()
           | Refute_Gen.GenDatatype {constrs, ...} =>
               let
                 fun branch (index, (constructor, argument_types)) =
@@ -3928,45 +3923,71 @@ structure Refute_Extract = struct
                 join "\n       | " (map branch (Lib.enumerate 0 constrs)) ^
                 "\n       | _ => raise Match)"
               end
-          | Refute_Gen.GenCustom {enumerate = SOME _, ...} =>
-              exact_case (fn value =>
-                "Refute_EvalSML.raw_term " ^ integer (raw_index value)) ty
+          | Refute_Gen.GenCustom {enumerate = SOME _, ...} => exact ()
           | _ => raise Fail "validated narrowing reconstruction"
+        end
 
-      fun conversion_declaration (index, ty) =
-        (if index = 0 then "fun " else "and ") ^ conv_name ty ^
+      fun narrow_declaration {name_of, variable_arm, body} (index, ty) =
+        (if index = 0 then "fun " else "and ") ^ name_of ty ^
         " depth narrowing_term =\n  case narrowing_term of\n" ^
-        "      Refute_Narrow.Narrowing_variable (position, _) =>\n" ^
-        "        Refute_EvalSML.lazy_hole position\n" ^
+        "      Refute_Narrow.Narrowing_variable " ^ variable_arm ty ^ "\n" ^
         "    | Refute_Narrow.Narrowing_constructor " ^
-        "(constructor, arguments) =>\n        " ^ conversion_case ty
+        "(constructor, arguments) =>\n        " ^ body ty
 
-      fun reconstruction_declaration (index, ty) =
-        (if index = 0 then "fun " else "and ") ^ recon_name ty ^
-        " depth narrowing_term =\n  case narrowing_term of\n" ^
-        "      Refute_Narrow.Narrowing_variable _ =>\n" ^
-        "        Refute_EvalSML.hole_term " ^ integer (witness_index ty) ^
-        "\n    | Refute_Narrow.Narrowing_constructor " ^
-        "(constructor, arguments) =>\n        " ^
-        reconstruction_case recon_name ty
+      val conversion_declaration = narrow_declaration
+        {name_of = conv_name,
+         variable_arm = fn _ =>
+           "(position, _) =>\n        Refute_EvalSML.lazy_hole position",
+         body = conversion_case}
 
-      fun replay_reconstruction_declaration (index, ty) =
-        (if index = 0 then "fun " else "and ") ^ replay_recon_name ty ^
-        " depth narrowing_term =\n  case narrowing_term of\n" ^
-        "      Refute_Narrow.Narrowing_variable (position, _) =>\n" ^
-        "        Refute_EvalSML.replay_variable " ^
-        integer (witness_index ty) ^ " position\n" ^
-        "    | Refute_Narrow.Narrowing_constructor " ^
-        "(constructor, arguments) =>\n        " ^
-        reconstruction_case replay_recon_name ty
+      val reconstruction_declaration = narrow_declaration
+        {name_of = recon_name,
+         variable_arm = fn ty =>
+           "_ =>\n        Refute_EvalSML.hole_term " ^
+           integer (witness_index ty),
+         body = reconstruction_case recon_name}
 
-      fun shape_source
+      val replay_reconstruction_declaration = narrow_declaration
+        {name_of = replay_recon_name,
+         variable_arm = fn ty =>
+           "(position, _) =>\n        Refute_EvalSML.replay_variable " ^
+           integer (witness_index ty) ^ " position",
+         body = reconstruction_case replay_recon_name}
+
+      fun shape_name depth ty =
+        "narrow_shape_" ^ integer depth ^ "_" ^ integer (type_index ty)
+
+      fun shape_source row_depth ty
             (Refute_Narrow.Narrowing_sum_of_products
               {depth, complete, syntactic_complete, alternatives}) =
         let
+          val _ =
+            if depth = row_depth then ()
+            else raise Fail "narrowing shape depth mismatch"
+          val _ =
+            if row_depth < 0 then
+              raise Fail "negative narrowing shape depth"
+            else ()
+          fun argument_types id =
+            case Refute_Gen.spec_of ty of
+                Refute_Gen.GenDatatype {constrs, ...} =>
+                  #2 (List.nth (constrs, id))
+              | _ => []
           fun alternative_source {id, arguments, ...} =
-            "{id = " ^ integer id ^ ", exact = NONE" ^
-            ", arguments = " ^ term_list (map shape_source arguments) ^ "}"
+            let
+              val argument_types = argument_types id
+              val _ =
+                if length argument_types = length arguments then ()
+                else raise Fail "narrowing shape argument mismatch"
+              val _ =
+                if null arguments orelse row_depth > 0 then ()
+                else raise Fail "narrowing shape underflow"
+            in
+              "{id = " ^ integer id ^ ", exact = NONE" ^
+              ", arguments = " ^
+              term_list
+                (map (shape_name (row_depth - 1)) argument_types) ^ "}"
+            end
         in
           "Refute_Narrow.Narrowing_sum_of_products " ^
           "{depth = " ^ integer depth ^
@@ -3976,13 +3997,24 @@ structure Refute_Extract = struct
           ", alternatives = " ^
           term_list (map alternative_source alternatives) ^ "}"
         end
-      fun shape_row_source row = term_list (map shape_source row)
+
+      fun shape_binding depth (ty, shape) =
+        "val " ^ shape_name depth ty ^ " =\n  " ^
+        shape_source depth ty shape ^ "\n"
+      val shape_bindings =
+        join "" (List.concat (map (fn (depth, row) =>
+          map (shape_binding depth) (ListPair.zip (types, row)))
+          (Lib.enumerate 0 shape_rows)))
+      fun shape_row_source depth =
+        "Vector.fromList " ^ term_list (map (shape_name depth) types)
       val shape_declaration =
-        "fun narrow_shapes depth =\n  case depth of\n      " ^
-        join "\n    | " (map (fn (depth, row) =>
-          integer depth ^ " => " ^ shape_row_source row)
-          (Lib.enumerate 0 shape_rows)) ^
-        "\n    | _ => raise Subscript\n"
+        shape_bindings ^
+        "val narrow_shape_rows = Vector.fromList " ^
+        term_list (map shape_row_source
+          (List.tabulate (maximum_depth + 1, Lib.I))) ^ "\n" ^
+        "fun narrow_shape depth type_index =\n" ^
+        "  Vector.sub (Vector.sub (narrow_shape_rows, depth), " ^
+        "type_index)\n"
       val conversions = join "\n"
         (map conversion_declaration (Lib.enumerate 0 types)) ^ "\n"
       val reconstructions = join "\n"
@@ -3999,8 +4031,8 @@ structure Refute_Extract = struct
           val narrowing_term =
             if grounded then
               "valOf (Refute_Narrow.first_completion " ^
-              "(List.nth (narrow_shapes depth, " ^
-              integer (type_index ty) ^ ")) (" ^ argument ^ "))"
+              "(narrow_shape depth " ^ integer (type_index ty) ^
+              ") (" ^ argument ^ "))"
             else argument
           val rebuilt = recon_name ty ^ " depth (" ^ narrowing_term ^ ")"
         in
@@ -4030,8 +4062,8 @@ structure Refute_Extract = struct
       val ground_bindings = map (binding true) indexed_prefix
       fun groundable (index, ((_, variable), _)) =
         "Option.isSome (Refute_Narrow.first_completion " ^
-        "(List.nth (narrow_shapes depth, " ^
-        integer (type_index (Term.type_of variable)) ^ ")) " ^
+        "(narrow_shape depth " ^
+        integer (type_index (Term.type_of variable)) ^ ") " ^
         "(List.nth (arguments, " ^ integer index ^ ")))"
       val groundability = map groundable indexed_prefix
       val environment_source = term_list bindings
@@ -4068,8 +4100,8 @@ structure Refute_Extract = struct
         " depth (List.nth (arguments, " ^ integer index ^ "))")
         (Lib.enumerate 0 prefix)
       val shapes = map (fn (_, variable) =>
-        "List.nth (narrow_shapes depth, " ^
-        integer (type_index (Term.type_of variable)) ^ ")") prefix
+        "narrow_shape depth " ^
+        integer (type_index (Term.type_of variable))) prefix
       val initial_arguments = term_list (map (fn (index, shape) =>
         "Refute_Narrow.Narrowing_variable ([" ^ integer index ^
         "], " ^ shape ^ ")") (Lib.enumerate 0 shapes))

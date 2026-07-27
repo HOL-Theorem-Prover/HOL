@@ -200,24 +200,21 @@ structure Refute_Narrow = struct
           Tyop = "cfun" orelse Tyop = "ffun"
       | _ => false
 
+  fun shape_key_compare ((depth1, ty1), (depth2, ty2)) =
+    case Int.compare (depth1, depth2) of
+        EQUAL => Type.compare (ty1, ty2)
+      | order => order
+
+  fun new_shape_memo () = ref (Redblackmap.mkDict shape_key_compare)
+
   (* Shapes use the same depth convention as Quickcheck narrowing: nullary
      constructors remain available at depth zero, while every constructor
      argument consumes one level.  A constructor with an empty argument
-     shape is itself omitted (the upstream "shallow" test). *)
-  fun shape_of depth ty =
+     shape is itself omitted (the upstream "shallow" test).  Callers deriving
+     a family of shapes can share [derived] across every root. *)
+  fun shape_of_with derived depth ty =
     let
       val depth = Int.max (0, depth)
-
-      (* A constructor with several recursive arguments makes [derive] visit
-         the same (depth, type) pair once per argument, so the naive walk is
-         exponential in the depth.  A shape depends on nothing but that pair,
-         so one cache per call collapses it. *)
-      fun key_compare ((depth1, ty1), (depth2, ty2)) =
-        case Int.compare (depth1, depth2) of
-            EQUAL => Type.compare (ty1, ty2)
-          | order => order
-      val derived = ref (Redblackmap.mkDict key_compare)
-
       fun derive depth ty =
         case Redblackmap.peek (!derived, (depth, ty)) of
             SOME shape => shape
@@ -297,6 +294,8 @@ structure Refute_Narrow = struct
     end
     handle Refute_Gen.NoGenerator (offending_ty, reason) =>
       shape_failure offending_ty reason
+
+  fun shape_of depth ty = shape_of_with (new_shape_memo ()) depth ty
 
   fun inapplicable_message ty reason =
     "narrowing is inapplicable for " ^ Parse.type_to_string ty ^

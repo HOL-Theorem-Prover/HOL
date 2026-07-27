@@ -28,6 +28,36 @@ structure Refute_EvalEnum = struct
     Refute_SmartGen.eq_mode (left_mode, right_mode) andalso
     Refute_SmartGen.same_program_version (left_version, right_version)
 
+  fun find_by_mode key_projection relation mode items =
+    List.find (fn item =>
+      let
+        val {relation = other, mode = other_mode, ...} :
+          Refute_SmartGen.enumerator = key_projection item
+      in
+        Refute_SmartGen.same_relation relation other andalso
+        Refute_SmartGen.eq_mode (mode, other_mode)
+      end) items
+
+  fun smart_guard_lookup {relation = predicate, version} programs =
+    let
+      val (relation, arguments) = HolKernel.strip_comb predicate
+      fun inspect [] = NONE
+        | inspect (program :: rest) =
+            if Refute_SmartGen.same_relation
+                 relation (#relation program) andalso
+               Refute_SmartGen.same_program_version
+                 (version, #version program)
+            then
+              (case Refute_SmartGen.top_level_parts
+                      (#mode program) arguments of
+                   SOME (ins, []) => SOME (program, ins)
+                 | _ => inspect rest)
+            else inspect rest
+    in
+      inspect programs
+    end
+    handle Feedback.HOL_ERR _ => NONE
+
   fun mode_shape_with reject relation mode =
     let
       fun rejected message =
@@ -119,10 +149,7 @@ structure Refute_EvalEnum = struct
         else rejected (label ^ " does not have type bool")
 
       fun program_for relation mode =
-        case List.find (fn ({relation = other, mode = other_mode, ...} :
-            Refute_SmartGen.enumerator) =>
-          Refute_SmartGen.same_relation relation other andalso
-          Refute_SmartGen.eq_mode (mode, other_mode)) programs of
+        case find_by_mode Lib.I relation mode programs of
             SOME program => program
           | NONE => rejected "enumerator dependency is absent"
 
@@ -212,22 +239,12 @@ structure Refute_EvalEnum = struct
                validate_plan next bound)
           | Refute_Eval.SmartGuard {predicate, version, cont} =>
               let
-                val (relation, arguments) = HolKernel.strip_comb predicate
-                fun suitable program =
-                  if Refute_SmartGen.same_relation
-                       relation (#relation program) andalso
-                     Refute_SmartGen.same_program_version
-                       (version, #version program) then
-                    (case Refute_SmartGen.top_level_parts
-                            (#mode program) arguments of
-                         SOME (ins, []) => SOME ins
-                       | _ => NONE)
-                  else NONE
                 val (program, ins) =
-                  case List.mapPartial (fn program => Option.map
-                    (fn ins => (program, ins)) (suitable program)) programs of
-                      found :: _ => found
-                    | [] => rejected "stale or non-all-input smart Guard"
+                  case smart_guard_lookup
+                      {relation = predicate, version = version} programs of
+                      SOME found => found
+                    | NONE => rejected
+                        "stale or non-all-input smart Guard"
               in
                 require_bound "smart Guard" bound [predicate];
                 require_bound "smart Guard input" bound ins;
@@ -269,10 +286,8 @@ structure Refute_EvalEnum = struct
       val entries = Refute_SmartGen.enumerator_snapshot ()
 
       fun lookup relation mode =
-        Option.map #program (List.find (fn {program = {relation = other,
-            mode = other_mode, ...}, ...} =>
-          Refute_SmartGen.same_relation relation other andalso
-          Refute_SmartGen.eq_mode (mode, other_mode)) entries)
+        Option.map #program
+          (find_by_mode #program relation mode entries)
 
       fun top_program relation mode version =
         case lookup relation mode of
@@ -307,24 +322,15 @@ structure Refute_EvalEnum = struct
 
       fun all_input predicate version programs =
         let
-          val (relation, arguments) = HolKernel.strip_comb predicate
-          fun suitable program =
-            Refute_SmartGen.same_relation relation (#relation program) andalso
-            Refute_SmartGen.same_program_version
-              (version, #version program) andalso
-            (case Refute_SmartGen.top_level_parts
-                    (#mode program) arguments of
-                 SOME (_, []) => true
-               | _ => false)
           val program =
-            case List.find suitable (map #program entries) of
-                SOME found => found
+            case smart_guard_lookup
+                {relation = predicate, version = version}
+                (map #program entries) of
+                SOME (found, _) => found
               | NONE => reject "stale or non-all-input smart Guard"
         in
           closure program programs
         end
-        handle Feedback.HOL_ERR _ =>
-          reject "stale or non-all-input smart Guard"
 
       fun collect current programs =
         case current of
@@ -469,10 +475,7 @@ structure Refute_EvalEnum = struct
         val skeletons = Lib.mapi (fn index => fn program =>
           skeleton (index, program)) programs
         fun lookup relation mode =
-          case List.find (fn {program = {relation = other,
-              mode = other_mode, ...}, ...} =>
-            Refute_SmartGen.same_relation relation other andalso
-            Refute_SmartGen.eq_mode (mode, other_mode)) skeletons of
+          case find_by_mode #program relation mode skeletons of
               SOME found => found
             | NONE => reject "enumerator dependency is absent"
         val gen_formals = Lib.mapi (fn index => fn ty =>
@@ -565,10 +568,9 @@ structure Refute_EvalEnum = struct
       end
 
   fun enumerator_for enumerators relation mode =
-    case List.find (fn ({program = {relation = other,
-        mode = other_mode, ...}, ...} : hol_enumerator) =>
-      Refute_SmartGen.same_relation relation other andalso
-      Refute_SmartGen.eq_mode (mode, other_mode)) enumerators of
+    case find_by_mode
+        (fn (item : hol_enumerator) => #program item)
+        relation mode enumerators of
         SOME found => found
       | NONE => reject "enumerator dependency is absent"
 

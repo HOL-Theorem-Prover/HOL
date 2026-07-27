@@ -176,30 +176,14 @@ structure Refute_EvalCompute = struct
     end
 
   fun enum_program_for programs relation mode =
-    case List.find (fn ({relation = other, mode = other_mode, ...} :
-        Refute_SmartGen.enumerator) =>
-      Refute_SmartGen.same_relation relation other andalso
-      Refute_SmartGen.eq_mode (mode, other_mode)) programs of
+    case Refute_EvalEnum.find_by_mode Lib.I relation mode programs of
         SOME program => program
       | NONE => raise EnumInvalid
           "smart plan: enumerator dependency is absent"
 
   fun smart_guard_program programs predicate version =
-    let
-      val (relation, arguments) = HolKernel.strip_comb predicate
-      fun suitable (program as {relation = other, mode,
-            version = found, ...} : Refute_SmartGen.enumerator) =
-        Refute_SmartGen.same_relation relation other andalso
-        Refute_SmartGen.same_program_version (version, found) andalso
-        (case Refute_SmartGen.top_level_parts mode arguments of
-             SOME (_, []) => true | _ => false)
-    in
-      case List.find suitable programs of
-          NONE => NONE
-        | SOME program =>
-            Option.map (fn (ins, _) => (program, ins))
-              (Refute_SmartGen.top_level_parts (#mode program) arguments)
-    end
+    Refute_EvalEnum.smart_guard_lookup
+      {relation = predicate, version = version} programs
 
   (* Filtering ignored candidates belongs here rather than in a driver:
      other substrates use different retry protocols. *)
