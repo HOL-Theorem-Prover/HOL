@@ -25,8 +25,10 @@ selftest.uo: Refute_SmartGen.uo Refute_Narrow.uo Refute_PropSat.uo \
 # dependency is declared explicitly.
 Refute_Gen.uo: Refute_Util.uo
 Refute_Core.uo: Refute_ModelFinder_Names.uo
-Refute_Cert.uo: Refute_Util.uo
+Refute_Cert_Narrow.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo
 Refute_Narrow.uo: Refute_Util.uo Refute_Gen.uo Refute_ModelFinder_Names.uo
+Refute_QC.uo: Refute_Cert_Narrow.uo
+Refute_QC_Narrow.uo: Refute_QC.uo Refute_Narrow.uo
 Refute_EvalEnum.uo: Refute_Util.uo
 Refute_EvalCompute.uo: Refute_Util.uo Refute_EvalEnum.uo
 Refute_EvalCv.uo: Refute_Util.uo Refute_EvalEnum.uo
@@ -54,7 +56,7 @@ Refute_ModelFinder.uo: Refute_ModelFinder_Preproc.uo \
 # The unused-assumption engine is kept below the facade so its probes can
 # call the core without introducing a Refute -> Refute_Unused cycle.
 Refute_Unused.uo: Refute_Core.uo
-Refute.uo: Refute_Unused.uo Refute_ModelFinder.uo
+Refute.uo: Refute_Unused.uo Refute_ModelFinder.uo Refute_QC_Narrow.uo
 
 ifdef POLY
 selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \

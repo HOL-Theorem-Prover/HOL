@@ -49,9 +49,12 @@ higher-order domains.  Counterexamples reconstruct `ffun` values as HOL
 type inapplicability diagnostic.
 
 Execution substrates are untrusted accelerators.  When `certify=true` (the
-default), a QC candidate becomes `Genuine` only after Refute_Cert re-evaluates
-its instantiated proposition with computeLib and constructs a theorem
-certifying its negation.  With `certify=false`, Refute skips that QC
+default), an exhaustive or random QC candidate becomes `Genuine` only after
+Refute_Cert re-evaluates its instantiated proposition with computeLib and
+constructs a theorem certifying its negation.  Native narrowing uses
+Refute_Cert_Narrow to replay its recorded case tree; ground and partial
+candidates fall back to Refute_Cert evaluation.  With `certify=false`,
+Refute skips that QC
 certification: a QC hit otherwise eligible for `Genuine` remains `Genuine`,
 but has `cert = NONE` and is reported as uncertified.  Disabling certification
 does not promote candidates already known to be stuck or incomplete.  The
@@ -88,7 +91,9 @@ Module layout:
 * Refute_EvalCompute, Refute_EvalCv, and Refute_EvalSML: substrates.
 * Refute_Extract: in-memory HOL-to-SML extraction for NativeSML.
 * Refute_QC: QC test planning and random/exhaustive execution.
+* Refute_QC_Narrow: native narrowing compilation and scheduled execution.
 * Refute_Cert: EVAL-based counterexample certification.
+* Refute_Cert_Narrow: narrowing case-tree validation and proof replay.
 * Refute_Forl and Refute_ForlSat: the FORL/Kodkodi process bridge and SAT
   solver configuration.
 * Refute_ModelFinder and Refute_ModelFinder_*: preprocessing, scope and

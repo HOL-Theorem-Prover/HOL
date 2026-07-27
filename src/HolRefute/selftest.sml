@@ -15175,7 +15175,12 @@ val _ = require_msg (check_result (fn () =>
   (fn () => ()) ()
 
 fun run_with_strategy strategy config goal =
-  strategy_run strategy config (qc_instances config goal)
+  let val instances = qc_instances config goal
+  in
+    case strategy of
+        Narrowing => Refute_QC_Narrow.run config instances
+      | _ => strategy_run strategy config instances
+  end
 
 fun selected_substrate expected result =
   case result of
@@ -15354,7 +15359,7 @@ fun narrowing_wide_enum_replay_is_certified () =
       {shape = Refute_Narrow.replay_shape
          (Refute_Narrow.shape_of 0 ty),
        branches = branches}
-    val result = Refute_Cert.certify_case_tree
+    val result = Refute_Cert_Narrow.certify_case_tree
       {original = goal, evals = [], env = [], run_depth = 0,
        case_tree = tree, cex = make_cex true}
   in
@@ -15390,7 +15395,7 @@ fun narrowing_nested_replay_uses_fallback () =
       {shape = Refute_Narrow.replay_shape
          (Refute_Narrow.shape_of 2 ty),
        branches = branches}
-    val result = Refute_Cert.certify_case_tree
+    val result = Refute_Cert_Narrow.certify_case_tree
       {original = goal, evals = [], env = [], run_depth = 2,
        case_tree = tree, cex = make_cex true}
   in
@@ -15883,11 +15888,11 @@ fun narrowing_ceiling_is_pinned () =
     val universal = qc_instances default_config ``(b : bool)``
     val existential = qc_instances default_config ``?n : num. n < 0``
   in
-    Refute_QC.narrowing_certainty_ceiling default_config universal =
+    Refute_QC_Narrow.certainty_ceiling default_config universal =
       Genuine andalso
-    Refute_QC.narrowing_certainty_ceiling default_config existential =
+    Refute_QC_Narrow.certainty_ceiling default_config existential =
       Genuine andalso
-    Refute_QC.narrowing_certainty_ceiling
+    Refute_QC_Narrow.certainty_ceiling
       (upd_certify false default_config) existential = Genuine
   end
 
@@ -19196,7 +19201,7 @@ val replay_bool_shape = Refute_Eval.CaseShape
      [{id = 0, fields = []}, {id = 1, fields = []}]}
 
 fun replay_degraded tree =
-  case Refute_Cert.certify_case_tree
+  case Refute_Cert_Narrow.certify_case_tree
     { original = ``?b : bool. b /\ ~b``,
       evals = [], env = [], run_depth = 0, case_tree = tree,
       cex = make_cex true } of
@@ -19206,7 +19211,7 @@ fun replay_degraded tree =
     | _ => false
 
 fun replay_failure_reason tree =
-  case Refute_Cert.certify_case_tree
+  case Refute_Cert_Narrow.certify_case_tree
     { original = ``?b : bool. b /\ ~b``,
       evals = [], env = [], run_depth = 0, case_tree = tree,
       cex = make_cex true } of
@@ -19224,7 +19229,7 @@ fun cover_failure_has_message expected tree =
     SOME (replay_failure_prefix ^ expected ^ "\"")
 
 fun incomplete_case_tree_degrades () =
-  case Refute_Cert.certify_case_tree
+  case Refute_Cert_Narrow.certify_case_tree
     { original = ``?b : bool. b``,
       evals = [], env = [], run_depth = 0,
       case_tree = Refute_Eval.CaseExistential
@@ -19291,7 +19296,7 @@ fun wide_case_cover_certifies () =
          [(Refute_Eval.CaseVariable, variable,
            Refute_Eval.CaseLeaf)]}
   in
-    case Refute_Cert.certify_case_tree
+    case Refute_Cert_Narrow.certify_case_tree
       {original = goal, evals = [], env = [], run_depth = 1,
        case_tree = tree, cex = make_cex true} of
         Refute_Cert.Certified
@@ -19353,7 +19358,7 @@ fun forged_child_depth_degrades () =
          [(Refute_Eval.CaseConstructor (0, []),
            optionSyntax.mk_none ``:bool``, Refute_Eval.CaseLeaf)]}
   in
-    case Refute_Cert.certify_case_tree
+    case Refute_Cert_Narrow.certify_case_tree
       {original = ``?x : bool option. F``, evals = [], env = [],
        run_depth = 1, case_tree = tree, cex = make_cex true} of
         Refute_Cert.Potential _ => true
@@ -19369,7 +19374,7 @@ fun incomplete_universal_shape_certifies () =
       {shape = shape, witness = ``1 : num``,
        subtree = Refute_Eval.CaseLeaf}
   in
-    case Refute_Cert.certify_case_tree
+    case Refute_Cert_Narrow.certify_case_tree
       {original = goal, evals = [], env = [], run_depth = 2,
        case_tree = tree, cex = make_cex true} of
         Refute_Cert.Certified

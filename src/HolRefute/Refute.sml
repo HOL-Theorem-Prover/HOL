@@ -28,6 +28,7 @@ structure Refute :> Refute = struct
      implementation units dependencies of [load "Refute"]. *)
   val () = Refute_Extract.install_extractor ()
   val () = Refute_QC.register_backends ()
+  val () = Refute_QC_Narrow.register_backend ()
   val () = Refute_ModelFinder.register_backends ()
   (* M5-D11: the normalization-faithfulness corpus is green, so rational
      Frac encoding and display are part of the default session setup. *)
