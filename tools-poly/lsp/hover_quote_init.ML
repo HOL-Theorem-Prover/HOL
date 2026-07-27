@@ -189,17 +189,70 @@ fun stripDelims s = let
   val b = endOfBody n
   in (a, String.substring (s, a, Int.max (0, b - a))) end
 
+(* Find byte ranges `[…:]` in a body — HOL's DefinitionLabel syntax.
+   Returns (label_start, label_end_exclusive) pairs.  Labels are
+   only produced by Inductive/CoInductive expansions; other quote
+   bodies have none and this returns []. *)
+fun labelRanges body = let
+  val n = String.size body
+  fun scan i acc =
+    if i >= n then rev acc
+    else if String.sub (body, i) = #"[" then
+      (case matchLabel (i + 1) of
+         NONE => scan (i + 1) acc
+       | SOME e => scan e ((i, e) :: acc))
+    else scan (i + 1) acc
+  and matchLabel j =  (* find `:]` at or after j, returning j' AFTER `:]` *)
+    if j + 1 >= n then NONE
+    else let val c = String.sub (body, j)
+    in if c = #":" andalso String.sub (body, j + 1) = #"]" then SOME (j + 2)
+       else if c = #"[" then
+         (* Allow one nested `[…]` (e.g. `[nm[attrs]:]`) *)
+         (case findClose (j + 1) of
+            NONE => NONE
+          | SOME k => matchLabel (k + 1))
+       else if c = #"]" orelse c = #"\n" then NONE
+       else matchLabel (j + 1)
+    end
+  and findClose j =
+    if j >= n then NONE
+    else let val c = String.sub (body, j)
+    in if c = #"]" then SOME j
+       else if c = #"\n" then NONE
+       else findClose (j + 1)
+    end
+  in scan 0 [] end
+
+(* For a body possibly containing DefinitionLabels, find the region
+   (label-free substring) that contains `t` — a body-relative byte
+   offset.  Returns (region_start_in_body, region_string).  If the
+   cursor lands ON a label itself, returns an empty region. *)
+fun findRegion body t = let
+  val n = String.size body
+  fun step prevEnd [] = (prevEnd, n)
+    | step prevEnd ((ls, le) :: rest) =
+      if ls > t then (prevEnd, ls)
+      else if le > t then (le, le)  (* cursor inside a label *)
+      else step le rest
+  val (a, b) = step 0 (labelRanges body)
+  in (a, String.substring (body, a, Int.max (0, b - a))) end
+
 val () = LSPExtension.hoverQuotation :=
   (fn ({lines, ...} : LSPExtension.hover_context,
        {quote, quoteStart, target}) =>
     let
       val (leadBytes, body) = stripDelims quote
       val bodyStart = quoteStart + leadBytes
-      val (startLine, startCol) = LSPExtension.getLineCol lines bodyStart
+      (* Split on `[…:]` labels (Inductive rules) so we parse just the
+         label-free region containing the cursor; other bodies have no
+         labels and get parsed whole. *)
+      val (regionOffset, region) = findRegion body (target - bodyStart)
+      val regionStart = bodyStart + regionOffset
+      val (startLine, startCol) = LSPExtension.getLineCol lines regionStart
       val pragma =
         "(*#loc " ^ Int.toString (startLine + 1) ^ " " ^
         Int.toString (startCol + 1) ^ "*)"
-      val src = pragma ^ body
+      val src = pragma ^ region
     in
       case parse_quote src of
         NONE => []

@@ -1072,6 +1072,73 @@ def test_hover_inside_definition_body():
         c.close()
 
 
+def test_hover_inside_inductive_body():
+    """Hover inside an Inductive body's rules.  Two structural
+    fixes are needed to make this work:
+
+    - HOLSourceExpand for HOLInductiveDecl builds its own List
+      inline (not via expandQuote), with `mkList (inductive_, …)`
+      giving left=stop=inductive_ (zero-width) and no
+      ExpExpansion(HOLQuote, …) wrapper.  Fix: give the List a
+      body-precise span from the qdecl positions and wrap in
+      ExpExpansion so the annotator adds PQuote.
+
+    - The extracted body contains DefinitionLabels (`[nil:]`,
+      `[cons:]`) that HOL's Parse.Term can't parse.  hover_quote_init's
+      callback now splits the body on `[…:]` regions and parses only
+      the region containing the cursor.
+    """
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/ind_hover.sml"
+        # Line 3 = "Inductive foo:"
+        # Line 4 = "[nil:]  foo []"
+        #           01234567890123
+        # Line 5 = "[cons:] !x xs. foo xs ==> foo (x :: xs)"
+        #           0         1         2         3
+        #           0123456789012345678901234567890123456789
+        src = ("Theory t\nAncestors list arithmetic\n\n"
+               "Inductive foo:\n"
+               "[nil:]  foo []\n"
+               "[cons:] !x xs. foo xs ==> foo (x :: xs)\n"
+               "End\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+
+        def hover(id_, line, ch):
+            c.send({"jsonrpc":"2.0","id":id_,
+                    "method":"textDocument/hover",
+                    "params":{"textDocument":{"uri":uri},
+                              "position":{"line":line,"character":ch}}})
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == id_: return m
+                return None
+            reply = c.wait_until(got, 5)
+            assert_true(reply is not None, f"hover {id_} arrived")
+            r = reply.get("result")
+            assert_true(r is not None, f"hover {id_} non-null result ({reply})")
+            return r["contents"]["value"]
+
+        # foo (rule nil) — the relation being defined.
+        md = hover(600, 4, 8)
+        assert_true("foo " in md and "list" in md,
+                    f"hover on foo (rule nil) identifies it ({md!r})")
+        # bound x in cons rule (line 5 char 9).
+        md = hover(601, 5, 9)
+        assert_true("x " in md and "bound" in md,
+                    f"hover on x is bound ({md!r})")
+        # LENGTH-like constant: `foo` in cons rule body (line 5 char 15).
+        md = hover(602, 5, 15)
+        assert_true("foo " in md,
+                    f"hover on body-foo identifies ({md!r})")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -1099,6 +1166,7 @@ TESTS = [
     ("hover_across_utf8_binder_and_var",
                                      test_hover_across_utf8_binder_and_var),
     ("hover_inside_definition_body", test_hover_inside_definition_body),
+    ("hover_inside_inductive_body",  test_hover_inside_inductive_body),
 ]
 
 

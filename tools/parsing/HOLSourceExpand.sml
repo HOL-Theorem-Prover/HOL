@@ -519,7 +519,22 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
         else split (SOME lab) [] r (mk l :: qs, olab :: labs)
       | split olab l (d :: r) qs = split olab (d :: l) r qs
     val (quotes, conjs) = split NONE [] quote ([], [])
-    val quote = mkList (inductive_, mkQ "(" :: tl (List.concat quotes) @ [mkQ ")"])
+    (* Give the synthesised quote-list a body-precise span and wrap
+       in ExpExpansion(HOLQuote, ...) so the LSP annotator adds
+       PQuote to the body — same trick as `expandQuote` for the
+       other HOL* declarations.  Without this, mkList's default
+       left=stop=inductive_ yields a zero-width span and body
+       hovers fall through to the SML tree walk. *)
+    val (bodyStart, bodyEnd) = case quote of
+        [] => (inductive_, inductive_)
+      | _ => (qdStart (hd quote), qdStop (List.last quote))
+    val elems = {args = mkQ "(" :: tl (List.concat quotes) @ [mkQ ")"],
+                 seps = [], stop = bodyEnd}
+    val quoteList = List {left = bodyStart, elems = elems,
+                          right = NONE, stop = bodyEnd}
+    val quoteOrig = HOLQuote {head = (bodyStart, ""), quote = quote,
+                              end_tok = NONE, stop = bodyEnd}
+    val quote = ExpExpansion {orig = quoteOrig, result = quoteList}
     fun mkStem x = (id, stem ^ x)
     val pat = mkTuple (inductive_, map (mkIdent o mkStem) ["_rules", indSuffix, "_cases"])
     val e = App (App (mkIdent (inductive_, entryPoint), mkString (id, stem)), quote)
