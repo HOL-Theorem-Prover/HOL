@@ -701,7 +701,7 @@ structure Refute_QC = struct
   (* Gate preflight and execution must walk this same registry snapshot and
      apply the same Auto fallthrough.  In particular, a higher-priority
      custom substrate cannot be skipped while a built-in opens the gate. *)
-  fun select_registered config report attempt =
+  fun select_registered config report problem attempt =
     case ordered_substrate_candidates config of
         CandidatesUnavailable reasons => SelectionFailed reasons
       | Candidates {explicit, substrates} =>
@@ -711,7 +711,11 @@ structure Refute_QC = struct
               | failed reasons = reasons
             fun try [] reasons = SelectionFailed (failed reasons)
               | try (substrate :: rest) reasons =
-                  (case attempt substrate of
+                  (case if #accepts substrate problem then
+                          attempt substrate
+                        else
+                          Inapplicable
+                            ["substrate does not accept this problem"] of
                        Compiled test =>
                          (if report then
                             say_selected (#name substrate) explicit
@@ -747,11 +751,11 @@ structure Refute_QC = struct
      applies the Auto fallthrough, so there is nothing left to dispatch on
      here. *)
   fun compile_selected config strategy problem =
-    select_registered config true (fn substrate =>
+    select_registered config true problem (fn substrate =>
       #compile substrate config strategy problem)
 
   fun compile_smart_selected config report strategy plans evals =
-    select_registered config report (fn substrate =>
+    select_registered config report (Plans plans) (fn substrate =>
       preflight_substrate substrate config strategy plans evals)
 
   fun selected_smart_preflight config strategy plans evals =

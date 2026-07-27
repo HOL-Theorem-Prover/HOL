@@ -696,7 +696,7 @@ structure Refute_EvalCompute = struct
                        else add (no_generator_reason ty
                          "word width exceeds rand_below's 32-bit bound")
                    | Exhaustive => ()
-                   | Narrowing => ())
+                   )
               | Refute_Gen.GenNum _ => ()
               | Refute_Gen.GenFun (dom, rng) =>
                   (validate_type dom; validate_type rng)
@@ -713,7 +713,7 @@ structure Refute_EvalCompute = struct
                        if Option.isSome random then ()
                        else add (no_generator_reason ty
                          "custom generator has no random arm")
-                   | Narrowing => ())
+                   )
           end
           handle Refute_Gen.NoGenerator (missing_ty, why) =>
             add (no_generator_reason missing_ty why)
@@ -741,12 +741,8 @@ structure Refute_EvalCompute = struct
       rev (!reasons)
     end
 
-  fun compile (config : Refute_Core.config) strategy problem =
-    case problem of
-        Pnf _ =>
-          Inapplicable ["narrowing requires the native substrate"]
-      | Plans plans =>
-          let
+  fun compile (config : Refute_Core.config) strategy (Plans plans) =
+    let
             (* Both testing strategies share the enumerator preparation and
                validation; only the loop built from the result differs. *)
             fun attempt build =
@@ -758,17 +754,17 @@ structure Refute_EvalCompute = struct
                    | reasons => Inapplicable reasons
                end)
               handle EnumInvalid reason => Inapplicable [reason]
-          in
-            case strategy of
-                Narrowing => Inapplicable ["narrowing is not installed"]
-              | Exhaustive => attempt (exhaustive_compile config plans)
-              | Random {seed} =>
-                  attempt (fn _ => random_compile plans (ref seed))
-          end
+    in
+      case strategy of
+          Exhaustive => attempt (exhaustive_compile config plans)
+        | Random {seed} =>
+            attempt (fn _ => random_compile plans (ref seed))
+    end
 
   val compute_substrate : substrate =
     { name = "compute",
       priority = 30,
+      accepts = (fn Plans _ => true | Pnf _ => false),
       preflight = NONE,
       compile = compile }
 

@@ -12156,7 +12156,7 @@ fun lazy_definition_and_constructor_literals () =
   compile_lazy_extracted ``rx_sum [1; 2; 3] = 6``
     (fn (_, entry, _) => "Susp.force (" ^ entry ^ ")")
 
-fun lazy_hook_seam_and_rejection () =
+fun lazy_hook_seam () =
   let
     val original = !extract_tests_hook
     val modes = ref ([] : Refute_EvalSML.extraction_mode list)
@@ -12166,8 +12166,6 @@ fun lazy_hook_seam_and_rejection () =
     val captured = Exn.capture (fn () =>
       (!extract_tests_hook) LazyExtraction default_config Narrowing
         (Plans [Test boolSyntax.T])) ()
-    val rejected = Refute_EvalSML.compile default_config Narrowing
-      (Plans [Test boolSyntax.T])
     val _ = extract_tests_hook := original
     val direct = Exn.release captured
     val seam_ok =
@@ -12183,14 +12181,8 @@ fun lazy_hook_seam_and_rejection () =
                   Exn.Res (Installed _) => true
                 | _ => false
             end
-    val rejection_ok =
-      case rejected of
-          Inapplicable [reason] =>
-            reason = "narrowing requires a prenex problem"
-        | Inapplicable _ => false
-        | Compiled test => (#close test (); false)
   in
-    seam_ok andalso rejection_ok andalso !modes = [LazyExtraction]
+    seam_ok andalso !modes = [LazyExtraction]
   end
 
 fun lazy_deadline_during_force_cleans_up () =
@@ -12261,8 +12253,8 @@ val _ = require_msg
   (check_result lazy_definition_and_constructor_literals) (fn () =>
   "lazy extraction failed across a recursive definition")
   (fn () => ()) ()
-val _ = require_msg (check_result lazy_hook_seam_and_rejection) (fn () =>
-  "the direct lazy hook seam or narrowing rejection failed")
+val _ = require_msg (check_result lazy_hook_seam) (fn () =>
+  "the direct lazy hook seam failed")
   (fn () => ()) ()
 val _ = require_msg (check_result lazy_deadline_during_force_cleans_up)
   (fn () => "a deadline during lazy forcing leaked native hook state")
@@ -14326,13 +14318,16 @@ val _ = require_msg
 fun dummy_compile _ _ _ = Inapplicable ["dummy substrate"]
 
 val seam_alpha : substrate =
-  {name = "refute-seam-alpha", priority = 50, preflight = NONE,
+  {name = "refute-seam-alpha", priority = 50, accepts = fn _ => true,
+   preflight = NONE,
    compile = dummy_compile}
 val seam_beta : substrate =
-  {name = "refute-seam-beta", priority = 40, preflight = NONE,
+  {name = "refute-seam-beta", priority = 40, accepts = fn _ => true,
+   preflight = NONE,
    compile = dummy_compile}
 val seam_alpha_replacement : substrate =
-  {name = "refute-seam-alpha", priority = 35, preflight = NONE,
+  {name = "refute-seam-alpha", priority = 35, accepts = fn _ => true,
+   preflight = NONE,
    compile = dummy_compile}
 
 val _ = register_substrate seam_alpha
@@ -14357,9 +14352,11 @@ fun substrate_owned_preflight_is_honored () =
     fun preflight _ _ _ _ = ["declared substrate preflight"]
     val substrate : Refute.substrate =
       {name = "refute-seam-preflight", priority = 60,
+       accepts = fn _ => true,
        preflight = SOME preflight, compile = compile}
     val restore : Refute.substrate =
       {name = "refute-seam-preflight", priority = 60,
+       accepts = fn _ => true,
        preflight = NONE, compile = dummy_compile}
     fun body () =
       (register_substrate substrate;
@@ -14376,7 +14373,8 @@ val _ = require_msg
   (fn () => ()) ()
 
 val public_seam : Refute.substrate =
-  {name = "refute-public-seam", priority = 45, preflight = NONE,
+  {name = "refute-public-seam", priority = 45, accepts = fn _ => true,
+   preflight = NONE,
    compile = dummy_compile}
 val _ = Refute.register_substrate public_seam
 
@@ -14393,10 +14391,12 @@ fun higher_priority_custom_opens_smart_gate () =
       (compile_count := !compile_count + 1;
        Refute_EvalCompute.compile config strategy problem)
     val custom : substrate =
-      {name = "refute-smart-custom", priority = 5, preflight = NONE,
+      {name = "refute-smart-custom", priority = 5,
+       accepts = fn _ => true, preflight = NONE,
        compile = compile}
     val restore : substrate =
       {name = "refute-smart-custom", priority = 50,
+       accepts = fn _ => true,
        preflight = NONE,
        compile = dummy_compile}
     val config = default_config
@@ -15135,27 +15135,30 @@ fun pnf_seam_dispatches_only_to_native () =
     val x = Term.mk_var ("x", ``:bool``)
     val problem = Pnf
       {prefix = [(Forall, x), (Exists, x)], body = boolSyntax.T}
-    fun rejected expected compile =
-      case compile default_config Narrowing problem of
-          Inapplicable [reason] => reason = expected
-        | Inapplicable _ => false
-        | Compiled test => (#close test (); false)
-    val native =
-      case Refute_EvalSML.compile default_config Narrowing problem of
-          Compiled test => (#close test (); true)
-        | Inapplicable _ => false
+    fun named name = valOf (List.find
+      (fn substrate => #name substrate = name) (get_substrates ()))
+    val native = named "native"
+    val cv = named "cv"
+    val compute = named "compute"
+    val explicit_cv = upd_substrate Cv default_config
+    val goal = ``?b : bool. b /\ ~b``
+    val cv_result = Refute_QC_Narrow.run explicit_cv
+      (qc_instances explicit_cv goal)
   in
-    native andalso
-    rejected "narrowing requires the native substrate"
-      Refute_EvalCv.compile andalso
-    rejected "narrowing requires the native substrate"
-      Refute_EvalCompute.compile
+    #accepts native problem andalso
+    not (#accepts cv problem) andalso
+    not (#accepts compute problem) andalso
+    (case cv_result of
+         Unknown reasons =>
+           List.exists (fn reason =>
+             reason = "substrate does not accept this problem") reasons
+       | _ => false)
   end
 
 val _ = tprint "Refute qc problem seam"
 val _ = require_msg (check_result pnf_seam_dispatches_only_to_native)
   (fn () =>
-  "Pnf did not dispatch exclusively to the native substrate")
+  "Pnf capability dispatch or explicit Cv rejection failed")
   (fn () => ()) ()
 
 fun explicit_cv_is_available strategy =
@@ -15483,6 +15486,7 @@ fun narrowing_replay_failure_is_retained () =
        close = fn () => (), max_chunk = NONE, last_stats = stats}
     val broken : substrate =
       {name = "native", priority = #priority native,
+       accepts = #accepts native,
        preflight = #preflight native, compile = compile}
     val config = default_config
       |> upd_substrate NativeSML
@@ -15524,6 +15528,7 @@ fun narrowing_genuine_only_never_returns_replay_potential () =
        close = fn () => (), max_chunk = NONE, last_stats = stats}
     val broken : substrate =
       {name = "native", priority = #priority native,
+       accepts = #accepts native,
        preflight = #preflight native, compile = compile}
     val base = default_config
       |> upd_substrate NativeSML
@@ -15561,6 +15566,7 @@ fun upgraded_genuine_retry_not_suppressed () =
        close = fn () => (), max_chunk = NONE, last_stats = stats}
     val retrying : substrate =
       {name = "native", priority = #priority native,
+       accepts = #accepts native,
        preflight = #preflight native, compile = compile}
     val config = default_config |> upd_substrate NativeSML
     fun body () =
@@ -15598,6 +15604,7 @@ fun different_grounding_retry_not_suppressed () =
        close = fn () => (), max_chunk = NONE, last_stats = stats}
     val retrying : substrate =
       {name = "native", priority = #priority native,
+       accepts = #accepts native,
        preflight = #preflight native, compile = compile}
     val config = default_config
       |> upd_substrate NativeSML
@@ -15704,6 +15711,7 @@ fun narrowing_incomplete_domain_can_be_certified () =
        close = fn () => (), max_chunk = NONE, last_stats = stats}
     val approximate : substrate =
       {name = "native", priority = #priority native,
+       accepts = #accepts native,
        preflight = #preflight native, compile = compile}
     val config = default_config
       |> upd_substrate NativeSML
@@ -17171,6 +17179,7 @@ fun gave_up_reason_is_plumbed () =
        max_chunk = NONE, last_stats = last_stats}
     val replacement : substrate =
       {name = "compute", priority = 30,
+       accepts = #accepts original,
        preflight = #preflight original,
        compile = fn _ => fn _ => fn _ => Compiled test}
     val config = upd_substrate Compute default_config
@@ -18121,6 +18130,7 @@ fun cv_timeout_is_healthy () =
        last_stats = #last_stats compiled}
     val replacement : substrate =
       {name = "cv", priority = #priority original,
+       accepts = #accepts original,
        preflight = #preflight original,
        compile = fn _ => fn _ => fn _ => Compiled replacement_test}
     val _ = register_substrate replacement
@@ -18178,6 +18188,7 @@ fun cv_dual_run_is_clean sequential goal sound =
        last_stats = #last_stats test}
     val replacement : substrate =
       {name = "cv", priority = #priority original,
+       accepts = #accepts original,
        preflight = #preflight original,
        compile = fn config => fn strategy => fn problem =>
          case #compile original config strategy problem of

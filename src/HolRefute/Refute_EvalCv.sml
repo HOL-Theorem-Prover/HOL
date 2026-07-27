@@ -1440,8 +1440,6 @@ structure Refute_EvalCv = struct
             in
               run
             end
-        | Refute_Eval.Narrowing =>
-            raise Unsupported "narrowing is not installed"
     end
 
   fun compile_plans (config : Refute_Core.config) strategy plans =
@@ -1459,8 +1457,7 @@ structure Refute_EvalCv = struct
       val state_ref = ref
         (case strategy of
              Refute_Eval.Exhaustive => 0
-           | Refute_Eval.Random {seed} => seed
-           | Refute_Eval.Narrowing => 0)
+           | Refute_Eval.Random {seed} => seed)
       val runners = ref ([] : (int * card_runner) list)
       val active : unit Refute_EvalEnum.held_bracket =
         Refute_EvalEnum.held_bracket (fn () => runners := [])
@@ -1495,7 +1492,6 @@ structure Refute_EvalCv = struct
             case strategy of
                 Refute_Eval.Exhaustive => 0
               | Refute_Eval.Random _ => Int.max (0, #draws input)
-              | Refute_Eval.Narrowing => 0
           val _ = last_stats := [("tests", tests), ("match_failures", 0)]
         in
           result
@@ -1525,16 +1521,8 @@ structure Refute_EvalCv = struct
          | Feedback.HOL_ERR error =>
              Refute_Eval.Inapplicable [hol_error_reason error]
 
-  fun compile config strategy problem =
-    case problem of
-        Refute_Eval.Pnf _ =>
-          Refute_Eval.Inapplicable
-            ["narrowing requires the native substrate"]
-      | Refute_Eval.Plans plans =>
-          (case strategy of
-               Refute_Eval.Narrowing =>
-                 Refute_Eval.Inapplicable ["narrowing is not installed"]
-             | _ => compile_plans config strategy plans)
+  fun compile config strategy (Refute_Eval.Plans plans) =
+    compile_plans config strategy plans
 
   (* Selftest-only stream hook.  Supported plans run through the production
      cv loop.  Values outside its first-order result fragment still take
@@ -1626,7 +1614,10 @@ structure Refute_EvalCv = struct
     end
 
   val cv_substrate : Refute_Eval.substrate =
-    {name = "cv", priority = 20, preflight = NONE, compile = compile}
+    {name = "cv", priority = 20,
+     accepts =
+       (fn Refute_Eval.Plans _ => true | Refute_Eval.Pnf _ => false),
+     preflight = NONE, compile = compile}
 
   fun register_substrate () =
     Refute_Eval.register_substrate cv_substrate

@@ -4286,11 +4286,7 @@ structure Refute_Extract = struct
               Refute_Eval.Plans plans =>
                 extract_tests_with mode config strategy plans
             | Refute_Eval.Pnf {prefix, body} =>
-                if strategy = Refute_Eval.Narrowing andalso mode = Lazy then
-                  extract_narrowing config prefix body
-                else
-                  raise NotExtractable
-                    ["narrowing requires the native lazy substrate"]
+                extract_narrowing config prefix body
         in
           Refute_EvalSML.Extracted extracted
         end

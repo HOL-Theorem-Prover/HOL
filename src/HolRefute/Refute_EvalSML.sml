@@ -508,17 +508,7 @@ structure Refute_EvalSML = struct
         end) ()
 
   fun compile config strategy problem =
-    case (strategy, problem) of
-        (Refute_Eval.Narrowing, Refute_Eval.Pnf _) =>
-          compile_problem config strategy problem
-      | (Refute_Eval.Narrowing, Refute_Eval.Plans _) =>
-          Refute_Eval.Inapplicable
-            ["narrowing requires a prenex problem"]
-      | (_, Refute_Eval.Pnf _) =>
-          Refute_Eval.Inapplicable
-            ["narrowing requires the native substrate"]
-      | (_, Refute_Eval.Plans _) =>
-          compile_problem config strategy problem
+    compile_problem config strategy problem
 
   fun dump_native_random_candidates {plan, seed, size, count} =
     case compile Refute_Core.default_config
@@ -531,6 +521,7 @@ structure Refute_EvalSML = struct
 
   fun native_substrate preflight : Refute_Eval.substrate =
     {name = "native", priority = 10,
+     accepts = fn _ => true,
      preflight = SOME preflight,
      compile = compile}
 
