@@ -9,12 +9,31 @@ struct
 open HolKernel Parse boolLib combinTheory simpLib
      normalFormsTheory normalForms folMapping;
 
-structure Parse = struct
-  open Parse
-  val SOME normalForms_grammars = grammarDB {thyname="normalForms"}
-  val (Type,Term) = parse_from_grammars normalForms_grammars
-end
-open Parse
+(* Fix the grammar used by this file.
+
+   The equality axioms below are proved as this structure loads, and each
+   states its goal and the terms for its ASM_CASES_TAC steps as separate
+   quotations.  Pinning Parse.Term to the normalForms grammar --- which is
+   what used to be done here --- covers only the parsing of those
+   quotations.  It is not enough, because GEN_TAC chooses bound-variable
+   names apart from the constants of the *ambient* grammar.  So a theory
+   defining a constant named like one of those variables, loaded before
+   this file, leaves GEN_TAC renaming the goal's variable while the
+   separately parsed case-split term keeps the original name: the split no
+   longer matches the goal and the proof fails.
+
+   cv_compute_unsoundTheory's `g` does this to EQ_COMB.  To reproduce,
+   revert to pinning Parse.Term and, from a directory where that theory is
+   on the load path, run in a bare hol:
+
+     load "cv_compute_unsoundTheory"; load "folTools";
+
+   It is load order that matters, not the kernel or the ML implementation.
+   Setting the grammar for the whole file keeps the tactics and the parser
+   in agreement. *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars
+          (valOf (Parse.grammarDB {thyname="normalForms"}))
 
 type 'a pp       = 'a mlibUseful.pp;
 type 'a stream   = 'a mlibStream.stream;
@@ -611,5 +630,7 @@ local
 in
   val tptp_read = fol_to_hol o mlibTptp.read;
 end;
+
+val _ = Parse.temp_set_grammars ambient_grammars;
 
 end
