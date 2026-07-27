@@ -10827,7 +10827,6 @@ fun dummy_backend name weight : backend =
     weight = weight,
     configured = fn () => true,
     requires = ExecutableGoal,
-    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ => Unknown [] }
 
@@ -10840,7 +10839,6 @@ val public_any_goal_backend : Refute.backend =
     weight = ~95,
     configured = fn () => false,
     requires = Refute.AnyGoal,
-    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ => Unknown [] }
 
@@ -10857,7 +10855,7 @@ val poly_input_seen = ref ([] : instance list)
 val mono_input_backend : backend =
   {name = "refute-input-mono", weight = ~94,
    configured = fn () => !input_dispatch_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = MonoInstances,
    run = fn _ => fn instances =>
      (mono_input_seen := instances; Unknown ["mono input pin"])}
@@ -10865,7 +10863,7 @@ val mono_input_backend : backend =
 val poly_input_backend : backend =
   {name = "refute-input-poly", weight = ~93,
    configured = fn () => !input_dispatch_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = PolyOriginal,
    run = fn _ => fn instances =>
      (poly_input_seen := instances; Unknown ["poly input pin"])}
@@ -10878,7 +10876,7 @@ val quiet_output_probe_enabled = ref false
 val quiet_output_probe_backend : backend =
   {name = "refute-quiet-output-probe", weight = ~92,
    configured = fn () => !quiet_output_probe_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = MonoInstances,
    run = fn _ => fn _ =>
      let
@@ -10905,7 +10903,7 @@ fun record_quiet_scope_event event =
 val quiet_scope_probe_backend : backend =
   {name = "refute-quiet-scope-probe", weight = ~91,
    configured = fn () => !quiet_scope_probe_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = MonoInstances,
    run = fn config => fn _ =>
      if #quiet config then
@@ -10931,14 +10929,14 @@ val unused_profile_seen = ref false
 val unused_unknown_backend : backend =
   {name = "refute-unused-unknown", weight = ~91,
    configured = fn () => !unused_unknown_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = MonoInstances,
    run = fn _ => fn _ => Unknown ["unused-assumption probe pin"]}
 
 val unused_timeout_backend : backend =
   {name = "refute-unused-timeout", weight = ~90,
    configured = fn () => !unused_timeout_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = MonoInstances,
    run = fn _ => fn _ =>
      (OS.Process.sleep (Time.fromReal 0.05); NoCounterexample)}
@@ -10946,7 +10944,7 @@ val unused_timeout_backend : backend =
 val unused_registry_backend : backend =
   {name = "refute-unused-future-registry", weight = ~89,
    configured = fn () => !unused_registry_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = MonoInstances,
    run = fn _ => fn _ =>
      (unused_registry_seen := true; Unknown ["full registry pin"])}
@@ -10954,7 +10952,7 @@ val unused_registry_backend : backend =
 val unused_profile_backend : backend =
   {name = "refute-unused-profile", weight = ~88,
    configured = fn () => !unused_profile_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = MonoInstances,
    run = fn config => fn _ =>
      (unused_profile_seen :=
@@ -10989,7 +10987,7 @@ fun leave_unused_sweep () =
 val unused_sweep_backend : backend =
   {name = "refute-unused-sequential-sweep", weight = ~87,
    configured = unused_sweep_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = MonoInstances,
    run = fn _ => fn _ =>
      let
@@ -11012,7 +11010,7 @@ val try_profile_seen = ref false
 val try_profile_backend : backend =
   {name = "refute-try-profile", weight = ~91,
    configured = fn () => !try_profile_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = MonoInstances,
    run = fn config => fn _ =>
      let
@@ -11044,7 +11042,7 @@ val try_budget_backend_delay = Time.fromReal 1.0
 val try_budget_first_backend : backend =
   {name = "refute-try-budget-first", weight = ~90,
    configured = fn () => !try_budget_first_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = MonoInstances,
    run = fn _ => fn _ =>
      (OS.Process.sleep try_budget_backend_delay;
@@ -11054,7 +11052,7 @@ val try_budget_first_backend : backend =
 val try_budget_second_backend : backend =
   {name = "refute-try-budget-second", weight = ~89,
    configured = fn () => !try_budget_second_enabled,
-   requires = AnyGoal, executable_exception = NONE,
+   requires = AnyGoal,
    input = MonoInstances,
    run = fn _ => fn _ =>
      (Synchronized.change try_budget_progress (K TryBudgetSecondStarted);
@@ -11401,7 +11399,6 @@ val race_potential_backend : backend =
     weight = 50,
     configured = fn () => !race_potential_enabled,
     requires = AnyGoal,
-    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ =>
       (mark_race_potential_started ();
@@ -11414,7 +11411,6 @@ val race_quasi_backend : backend =
     weight = 50,
     configured = fn () => !race_quasi_enabled,
     requires = AnyGoal,
-    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ =>
       (mark_race_potential_started ();
@@ -11427,7 +11423,6 @@ val race_genuine_backend : backend =
     weight = 20,
     configured = fn () => !race_genuine_enabled,
     requires = ExecutableGoal,
-    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ =>
       (wait_for_race_potential ();
@@ -11440,7 +11435,6 @@ val race_slow_quasi_backend : backend =
     weight = 55,
     configured = fn () => !race_slow_quasi_enabled,
     requires = AnyGoal,
-    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ =>
       (race_slow_quasi_started := true;
@@ -11456,7 +11450,6 @@ fun potential_backend name weight enabled : backend =
     weight = weight,
     configured = fn () => !enabled,
     requires = AnyGoal,
-    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn _ =>
       Counterexample
@@ -14016,7 +14009,6 @@ val any_goal_stub : backend =
     weight = ~99,
     configured = fn () => !any_goal_stub_enabled,
     requires = AnyGoal,
-    executable_exception = NONE,
     input = MonoInstances,
     run = fn _ => fn instances =>
       (any_goal_stub_received :=
@@ -14400,13 +14392,10 @@ fun higher_priority_custom_opens_smart_gate () =
        preflight = NONE,
        compile = dummy_compile}
     val config = default_config
+      |> upd_backends (SOME ["exhaustive"])
       |> upd_certify false
       |> upd_depth 4
       |> upd_size 1
-    val instance : instance =
-      {original = smartgen_linear_goal, goal = smartgen_linear_goal,
-       qc_gate = SOME ["custom smart gate pin"], evals = [], card = 1,
-       size_matters = true}
     fun selected result =
       case result of
           Counterexample (cex :: _) =>
@@ -14415,13 +14404,9 @@ fun higher_priority_custom_opens_smart_gate () =
     fun body () =
       let
         val _ = register_substrate custom
-        val plan = compile_plan config smartgen_linear_goal
-        val preflight = selected_smart_preflight config Exhaustive [plan] []
-        val preflight_count = !compile_count
-        val result = strategy_run Exhaustive config [instance]
+        val result = Refute_Core.refute config smartgen_linear_goal
       in
-        null preflight andalso preflight_count = 1 andalso
-        !compile_count = 2 andalso selected result
+        !compile_count = 1 andalso selected result
       end
   in
     Portable.finally (fn () => register_substrate restore) body ()
@@ -14429,7 +14414,7 @@ fun higher_priority_custom_opens_smart_gate () =
 
 val _ = require_msg
   (check_result higher_priority_custom_opens_smart_gate) (fn () =>
-  "Auto did not preflight and retain its higher-priority custom substrate")
+  "the smart gate did not reuse its higher-priority custom compilation")
   (fn () => ()) ()
 
 fun qc_problem goal : problem = {goal = goal, assumptions = [], evals = []}
@@ -14667,12 +14652,12 @@ val _ = require_msg
   "smart gate preflight consumed an unrelated nonexec goal or eval")
   (fn () => ()) ()
 
-fun backend_without_executable_exception_stays_gated () =
+fun executable_requirement_stays_gated () =
   let
     val ran = ref false
     val backend : backend =
       {name = "exhaustive", weight = 20, configured = fn () => true,
-       requires = ExecutableGoal, executable_exception = NONE,
+       requires = ExecutableGoal,
        input = MonoInstances,
        run = fn _ => fn _ => (ran := true; Unknown ["unexpected run"])}
     val config = default_config
@@ -14694,8 +14679,8 @@ fun backend_without_executable_exception_stays_gated () =
   end
 
 val _ = require_msg
-  (check_result backend_without_executable_exception_stays_gated) (fn () =>
-  "a backend without an executable exception bypassed the QC gate")
+  (check_result executable_requirement_stays_gated) (fn () =>
+  "an executable-only backend bypassed the QC gate")
   (fn () => ()) ()
 
 fun smartgen_preflight_interrupt_propagates () =
@@ -14703,127 +14688,23 @@ fun smartgen_preflight_interrupt_propagates () =
     val config = default_config
       |> Refute.upd_substrate Refute.NativeSML
       |> Refute.upd_certify false
-    val plan = compile_plan config smartgen_linear_goal
     val instance : instance =
       {original = smartgen_linear_goal, goal = smartgen_linear_goal,
        qc_gate = SOME ["interrupt propagation pin"], evals = [], card = 1,
        size_matters = true}
     val tables_before = term_table_count ()
-    val preflight_interrupt =
-      ((ignore (native_preflight_with (fn _ => raise Interrupt)
-          config Exhaustive [plan] []); false)
-       handle Interrupt => true)
     fun interrupting_preflight _ _ _ _ = raise Interrupt
     val gate_interrupt =
       ((ignore (smart_gate_override_with interrupting_preflight config
           [instance]); false)
        handle Interrupt => true)
   in
-    preflight_interrupt andalso gate_interrupt andalso
-    term_table_count () = tables_before
+    gate_interrupt andalso term_table_count () = tables_before
   end
 
 val _ = require_msg
   (check_result smartgen_preflight_interrupt_propagates) (fn () =>
-  "native preflight or smart gate swallowed Interrupt or leaked its table")
-  (fn () => ()) ()
-
-fun smartgen_concurrent_preflights_are_isolated () =
-  let
-    val saved_threads = Multithreading.max_threads ()
-    fun restore_threads () =
-      Multithreading.max_threads_update saved_threads
-    fun body () =
-      let
-        val _ = Multithreading.max_threads_update
-          (Int.max (2, saved_threads))
-        val config = default_config
-          |> Refute.upd_substrate Refute.NativeSML
-          |> Refute.upd_certify false
-        val plans = [compile_plan config smartgen_linear_goal]
-        val left_id = Synchronized.var "Refute preflight left ID"
-          (NONE : int option)
-        val right_id = Synchronized.var "Refute preflight right ID"
-          (NONE : int option)
-        val release_left = Synchronized.var
-          "Refute preflight release left" false
-        val release_right = Synchronized.var
-          "Refute preflight release right" false
-        val workers = ref ([] : string list Future.future list)
-        fun table_ids () = Multithreading.synchronized
-          "Refute preflight table IDs" table_mutex
-          (fn () => map #1 (!term_tables))
-        fun same_ids left right =
-          length left = length right andalso
-          List.all (fn id => Lib.mem id right) left
-        val tables_before = table_ids ()
-        fun registration_hook id_slot release_slot id =
-          (Synchronized.change id_slot (fn _ => SOME id);
-           Synchronized.guarded_access release_slot
-             (fn true => SOME ((), true) | false => NONE))
-        fun await_id id_slot =
-          Synchronized.guarded_access id_slot
-            (fn NONE => NONE
-              | SOME id => SOME (id, SOME id))
-        fun release slot = Synchronized.change slot (fn _ => true)
-        fun release_all () =
-          (release release_left; release release_right)
-        fun fork_worker action = Thread_Attributes.uninterruptible
-          (fn _ => fn () =>
-            let val worker = Future.fork action
-            in workers := worker :: !workers; worker end) ()
-        fun drain_workers () =
-          let
-            val current = !workers
-            val _ = release_all ()
-            val _ = List.app (fn worker =>
-              if Future.is_finished worker then ()
-              else Future.cancel worker) current
-          in
-            ignore (Future.join_results current)
-          end
-        fun run () =
-          let
-            val left = fork_worker (fn () =>
-              native_preflight_with
-                (registration_hook left_id release_left)
-                config Exhaustive plans [])
-            val right = fork_worker (fn () =>
-              native_preflight_with
-                (registration_hook right_id release_right)
-                config Exhaustive plans [])
-            val left_table = await_id left_id
-            val right_table = await_id right_id
-            val overlap = left_table <> right_table andalso
-              same_ids (left_table :: right_table :: tables_before)
-                (table_ids ())
-            val _ = release release_left
-            val left_result = Future.join_result left
-            val left_clean =
-              same_ids (right_table :: tables_before) (table_ids ())
-            val _ = release release_right
-            val right_result = Future.join_result right
-            fun successful (Exn.Res []) = true
-              | successful _ = false
-          in
-            overlap andalso successful left_result andalso left_clean andalso
-            successful right_result
-          end
-        val completed =
-          (Portable.finally drain_workers (fn () =>
-             Timeout.apply (Time.fromSeconds 10) run ()) ()
-           handle Timeout.TIMEOUT _ => false)
-        val clean = same_ids tables_before (table_ids ())
-      in
-        completed andalso clean
-      end
-  in
-    Portable.finally restore_threads body ()
-  end
-
-val _ = require_msg
-  (check_result smartgen_concurrent_preflights_are_isolated) (fn () =>
-  "concurrent native preflights deadlocked, crossed, or leaked term tables")
+  "the smart gate swallowed Interrupt or leaked its table")
   (fn () => ()) ()
 
 fun smartgen_mutual_string_and_hygiene_native () =
@@ -19576,7 +19457,6 @@ fun nitpick_preset_pin () =
     val backend : backend =
       {name = "kodkod", weight = 50, configured = fn () => true,
        requires = AnyGoal,
-       executable_exception = NONE,
        input = PolyOriginal,
        run = fn config => fn _ =>
          (selected := (#backends config = SOME ["kodkod"]);
@@ -19591,7 +19471,7 @@ fun kodkod_not_configured_pin () =
   let
     val backend : backend =
       {name = "kodkod", weight = 50, configured = fn () => false,
-       requires = AnyGoal, executable_exception = NONE,
+       requires = AnyGoal,
        input = PolyOriginal,
        run = fn _ => fn _ => Unknown []}
   in

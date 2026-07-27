@@ -212,7 +212,6 @@ structure Refute_QC_Narrow = struct
      weight = 40,
      configured = fn () => true,
      requires = Refute_Core.AnyGoal,
-     executable_exception = NONE,
      input = Refute_Core.MonoInstances,
      run = run}
 

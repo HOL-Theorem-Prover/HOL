@@ -135,7 +135,10 @@ structure Refute_Core = struct
       card : int,
       size_matters : bool }
 
-  datatype requirement = ExecutableGoal | AnyGoal
+  datatype requirement =
+      AnyGoal
+    | ExecutableGoal
+    | ExecutableGoalUnless of config -> instance list -> bool
   datatype goal_form = MonoInstances | PolyOriginal
 
   type backend =
@@ -143,7 +146,6 @@ structure Refute_Core = struct
       weight : int,
       configured : unit -> bool,
       requires : requirement,
-      executable_exception : (config -> instance list -> bool) option,
       input : goal_form,
       run : config -> instance list -> outcome }
 
@@ -1432,11 +1434,9 @@ structure Refute_Core = struct
   fun meets_requirement cfg executable (backend : backend) instances =
     case #requires backend of
         AnyGoal => true
-      | ExecutableGoal =>
-          executable orelse
-          (case #executable_exception backend of
-               NONE => false
-             | SOME predicate => predicate cfg instances)
+      | ExecutableGoal => executable
+      | ExecutableGoalUnless predicate =>
+          executable orelse predicate cfg instances
 
   fun certainty_expectation Genuine = ExpectGenuine
     | certainty_expectation (QuasiGenuine _) = ExpectQuasiGenuine

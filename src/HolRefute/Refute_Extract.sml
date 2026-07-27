@@ -4200,24 +4200,10 @@ structure Refute_Extract = struct
         end
     end
 
-  fun safe_exception_text error =
-    ((case General.exnMessage error of
-          "" => "unknown extraction exception"
-        | text => text)
-     handle Interrupt => raise Interrupt
-          | _ => "unknown extraction exception")
-
-  (* This is the same extraction and scope validator used by native compile,
-     run over the complete plan set.  Evaluation terms are
-     not executable plan nodes, so validate them separately without granting
-     the smart-Guard relation exception.  Each extraction returns its exact
-     table ID: concurrent preflights and compiles therefore clean only their
-     own registrations, without nesting the non-recursive compile mutex.
-
-     The registration callback is a private test seam.  The production entry
-     point supplies an inert callback, so it cannot change normal behavior. *)
-  fun native_preflight_with registration_callback config strategy plans
-      evals =
+  (* Plan extraction is the substrate compile itself.  Preflight contributes
+     only validation of evaluation terms, which are not executable plan
+     nodes and therefore cannot use the smart-Guard relation exception. *)
+  fun native_preflight _ _ _ evals =
     let
       fun validate_eval tm =
         let
@@ -4236,44 +4222,16 @@ structure Refute_Extract = struct
           ignore (extract_term tm)
         end
 
-      fun report (result, cleanup_result) =
-        case (result, cleanup_result) of
-            (Exn.Exn Interrupt, _) => raise Interrupt
-          | (_, Exn.Exn Interrupt) => raise Interrupt
-          | (Exn.Res _, Exn.Res _) => []
-          | (Exn.Exn (NotExtractable reasons), Exn.Res _) => reasons
-          | (Exn.Exn error, Exn.Res _) =>
-              ["native preflight: " ^ safe_exception_text error]
-          | (Exn.Res _, Exn.Exn error) =>
-              ["native preflight cleanup: " ^ safe_exception_text error]
-          | (Exn.Exn (NotExtractable reasons), Exn.Exn error) =>
-              reasons @
-              ["native preflight cleanup: " ^ safe_exception_text error]
-          | (Exn.Exn error, Exn.Exn cleanup_error) =>
-              ["native preflight: " ^ safe_exception_text error,
-               "native preflight cleanup: " ^
-                 safe_exception_text cleanup_error]
     in
-      case Exn.capture (fn () =>
-          extract_tests_with Strict config strategy plans) () of
-          Exn.Exn Interrupt => raise Interrupt
-        | Exn.Exn (NotExtractable reasons) => reasons
-        | Exn.Exn error =>
-            ["native preflight: " ^ safe_exception_text error]
-        | Exn.Res {table, ...} =>
-            let
-              val result = Exn.capture (fn () =>
-                (registration_callback table;
-                 List.app validate_eval evals)) ()
-              val cleanup_result = Exn.capture
-                Refute_EvalSML.unregister_term_tables table
-            in
-              report (result, cleanup_result)
-            end
+      (List.app validate_eval evals; [])
     end
-
-  fun native_preflight config strategy plans evals =
-    native_preflight_with (fn _ => ()) config strategy plans evals
+    handle Interrupt => raise Interrupt
+         | NotExtractable reasons => reasons
+         | error =>
+             ["native preflight: " ^
+              (case General.exnMessage error of
+                   "" => "unknown validation exception"
+                 | text => text)]
 
   fun install_extractor () =
     Refute_EvalSML.extract_tests_hook :=
