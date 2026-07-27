@@ -356,10 +356,11 @@ fun main() =
                     handle OS.SysErr _ => p
     val scan_dirs =
         List.map resolve
-          (if not (null args) then args
-           else case cfg_opt of
-                    SOME cfg => [#root cfg]
-                  | NONE => [OS.FileSys.getDir()])
+          (case (args, cfg_opt) of
+               (_ :: _, _) => args
+             | ([], SOME cfg) =>
+                 if null (#includes cfg) then [#root cfg] else #includes cfg
+             | ([], NONE) => [OS.FileSys.getDir()])
   in
     if #help opts then succeed (usage_str())
     else

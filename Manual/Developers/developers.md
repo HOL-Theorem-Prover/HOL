@@ -275,7 +275,7 @@ Unless otherwise noted, they are built by the configuration process.
 
 `h4pedant`
 :   Our tool for enforcing code style ([as documented below](#coding-standardsrequirements)).
-    The command-line specifies the directories to scan, and options dictate which requirements are enforced/checked for.
+    The directories to scan come from positional command-line arguments or, when none are given, from the `[h4pedant]` section of the enclosing `holproject.toml` (see the *Description* manual); options dictate which requirements are enforced/checked for.
     The enforcing of style is done by the `Holmakefile` in `src/portableML/testsrc`.
     The executable is in `tools/h4pedant`.
 
