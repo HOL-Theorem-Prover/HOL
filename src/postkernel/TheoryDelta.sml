@@ -3,7 +3,9 @@ struct
 
  type thminfo = DB_dtype.thminfo
  datatype t =
-   NewTheory of {oldseg: string, newseg: string}
+   (* oldseg is NONE when no segment was open, so that a first
+      new_theory is distinguishable from a restart of the same name *)
+   NewTheory of {oldseg: string option, newseg: string}
  | ExportTheory of string
  | TheoryLoaded of string
  | NewConstant of KernelSig.kernelname
@@ -44,8 +46,11 @@ in
 fun toString t =
     case t of
       NewTheory {oldseg,newseg} =>
-      String.concat ["NewTheory{oldseg = ", Lib.quote oldseg, ", ",
-                     "newseg = ", Lib.quote newseg, "}"]
+      String.concat ["NewTheory{oldseg = ",
+                     case oldseg of
+                         NONE => "NONE"
+                       | SOME s => "SOME " ^ Lib.quote s,
+                     ", newseg = ", Lib.quote newseg, "}"]
     | ExportTheory s => sOp "ExportTheory" s
     | TheoryLoaded s => sOp "TheoryLoaded" s
     | NewConstant n => ksOp "NewConstant" n

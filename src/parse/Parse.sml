@@ -1242,10 +1242,8 @@ val TOK = term_grammar.RE o term_grammar.TOK
 
   val _ = Theory.register_hook
               ("Parse.clear_consts_from_grammar",
-               fn TheoryDelta.NewTheory{oldseg,newseg} =>
-                  if oldseg = newseg then
-                    clear_thy_consts_from_grammar oldseg
-                  else ()
+               fn TheoryDelta.NewTheory{oldseg = SOME s,newseg} =>
+                  if s = newseg then clear_thy_consts_from_grammar s else ()
                 | _ => ())
 
 end

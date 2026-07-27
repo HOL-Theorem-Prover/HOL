@@ -1214,8 +1214,7 @@ fun new_theory str =
              " is not permitted as a theory name.")
     else let
         val prev = Thm.getCT()
-        val oldseg = getOpt (prev, "scratch")
-        val tdelta = TheoryDelta.NewTheory{oldseg=oldseg,newseg=str}
+        val tdelta = TheoryDelta.NewTheory{oldseg=prev,newseg=str}
         fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
                          makeCT fresh_segment;
                          Thm.setCT str;
