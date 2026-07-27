@@ -1702,11 +1702,8 @@ fun with_quotient_typedef_registries_restored body =
     val saved_quotient_scan_theories =
       !MFH.quotient_harvest_scan_theories
     val saved_typedef_scan_theories = !MFH.typedef_harvest_scan_theories
-    val saved_index_scans = !MFH.harvest_index_theory_scan_count
     val saved_index_scan_theories =
       !MFH.harvest_index_theory_scan_theories
-    val saved_ancestry_scans = !MFH.harvest_global_ancestry_scan_count
-    val saved_constant_scans = !MFH.harvest_global_constant_scan_count
     fun restore () =
       (MFH.quotient_registry := saved_quotients;
        MFH.typedef_registry := saved_typedefs;
@@ -1717,11 +1714,8 @@ fun with_quotient_typedef_registries_restored body =
        MFH.quotient_harvest_scan_theories :=
          saved_quotient_scan_theories;
        MFH.typedef_harvest_scan_theories := saved_typedef_scan_theories;
-       MFH.harvest_index_theory_scan_count := saved_index_scans;
        MFH.harvest_index_theory_scan_theories :=
-         saved_index_scan_theories;
-       MFH.harvest_global_ancestry_scan_count := saved_ancestry_scans;
-       MFH.harvest_global_constant_scan_count := saved_constant_scans)
+         saved_index_scan_theories)
   in
     Portable.finally restore body ()
   end
@@ -1732,6 +1726,7 @@ fun with_harvest_indexes_restored body =
     val saved_stale = !MFH.harvest_session_index_stale
     val saved_rebuilds = !MFH.harvest_session_rebuild_count
     val saved_bindings = !MFH.harvest_binding_index
+    val saved_theory_bindings = !MFH.harvest_theory_bindings
     val saved_generations = !MFH.harvest_operator_generations
     val saved_generation = !MFH.harvest_operator_generation
     fun restore () =
@@ -1739,6 +1734,7 @@ fun with_harvest_indexes_restored body =
        MFH.harvest_session_index_stale := saved_stale;
        MFH.harvest_session_rebuild_count := saved_rebuilds;
        MFH.harvest_binding_index := saved_bindings;
+       MFH.harvest_theory_bindings := saved_theory_bindings;
        MFH.harvest_operator_generations := saved_generations;
        MFH.harvest_operator_generation := saved_generation)
   in
@@ -1767,6 +1763,9 @@ fun harvest_session_rebuild_is_deferred () =
     val _ = MFH.harvest_session_index_stale := false
     val _ = MFH.harvest_session_rebuild_count := 0
     val _ = MFH.harvest_binding_index := KNametab.empty
+    val _ = MFH.harvest_theory_bindings := Symtab.empty
+    val _ = MFH.remove_harvest_theory "missingTheory"
+    val empty_removal_clean = not (!MFH.harvest_session_index_stale)
     val _ = note "zetaTheory" "third"
     val _ = note "alphaTheory" "first"
     val _ = note "middleTheory" "second"
@@ -1778,8 +1777,13 @@ fun harvest_session_rebuild_is_deferred () =
     val rebuilt = entry ()
     val same_after_rebuild = same_entry incremental rebuilt
     val _ = MFH.harvest_session_rebuild_count := 0
-    val _ = MFH.remove_harvest_binding "zetaTheory" "third"
+    val _ = MFH.remove_harvest_theory "zetaTheory"
     val _ = MFH.remove_harvest_binding "middleTheory" "second"
+    val targeted_removal =
+      not (Option.isSome (KNametab.lookup (!MFH.harvest_binding_index)
+        {Thy = "zetaTheory", Name = "third"})) andalso
+      Option.isSome (KNametab.lookup (!MFH.harvest_binding_index)
+        {Thy = "alphaTheory", Name = "first"})
     val deferred = !MFH.harvest_session_rebuild_count = 0
     val lazy_entry = entry ()
     val rebuilt_once = !MFH.harvest_session_rebuild_count = 1
@@ -1788,11 +1792,10 @@ fun harvest_session_rebuild_is_deferred () =
     val _ = MFH.rebuild_harvest_session_index ()
     val eager_entry = entry ()
   in
-    incremental_order andalso same_after_rebuild andalso deferred andalso
+    empty_removal_clean andalso incremental_order andalso
+    same_after_rebuild andalso targeted_removal andalso deferred andalso
     rebuilt_once andalso still_once andalso
-    same_entry lazy_entry eager_entry andalso
-    !MFH.harvest_global_ancestry_scan_count = 0 andalso
-    !MFH.harvest_global_constant_scan_count = 0
+    same_entry lazy_entry eager_entry
   end)
 
 val _ = require_msg
@@ -2417,16 +2420,11 @@ fun mf_lazy_db_harvest_guards_and_cache () =
     val first_miss = missed miss_goal
     val scans = (!MFH.quotient_harvest_scan_count,
                  !MFH.typedef_harvest_scan_count)
-    val discovery_scans = (!MFH.harvest_index_theory_scan_count,
-      !MFH.harvest_global_ancestry_scan_count,
-      !MFH.harvest_global_constant_scan_count)
+    val discovery_scans = MFH.harvest_index_theory_scan_count ()
     val second_miss = missed miss_wrapper_goal
     val cached = scans = (!MFH.quotient_harvest_scan_count,
                           !MFH.typedef_harvest_scan_count) andalso
-      discovery_scans = (!MFH.harvest_index_theory_scan_count,
-        !MFH.harvest_global_ancestry_scan_count,
-        !MFH.harvest_global_constant_scan_count) andalso
-      #2 discovery_scans = 0 andalso #3 discovery_scans = 0
+      discovery_scans = MFH.harvest_index_theory_scan_count ()
     val pure_message =
       MFH.unregistered_typedef_reason [miss_goal] = SOME expected
     val dynamic_name = "zoo_unharvested_dynamic_absrep"

@@ -1763,30 +1763,29 @@ structure Refute_ModelFinder_HOL = struct
   val harvest_session_rebuild_count = ref 0
   val harvest_binding_index =
     ref (KNametab.empty : harvest_binding KNametab.table)
+  val harvest_theory_bindings =
+    ref (Symtab.empty : string list Symtab.table)
   val harvest_operator_generations =
     ref (KNametab.empty : int KNametab.table)
   val harvest_operator_generation = ref 0
   val harvest_indexed_theories =
     ref (Symtab.empty : unit Symtab.table)
-  val harvest_index_theory_scan_count = ref 0
+  val harvest_pending_theories = ref ([] : string list)
   val harvest_index_theory_scan_theories = ref ([] : string list)
-
-  (* These instrumentation pins stay at zero.  Their explicit presence makes
-     a regression to the old global discovery operations visible in tests. *)
-  val harvest_global_ancestry_scan_count = ref 0
-  val harvest_global_constant_scan_count = ref 0
 
   val harvest_db_generation = ref 0
   val harvest_theory_generations =
     ref (Symtab.empty : int Symtab.table)
 
-  fun scan_harvest_theorems counter scan_log theory =
+  fun scan_harvest_theorems scan_log theory =
     (* Constant specifications (including define_new_type_bijections) are
        stored in HOL4's definition class, whereas quotient saves are ordinary
        theorems.  DB.thms covers both persisted classes. *)
-    (counter := !counter + 1;
-     scan_log := !scan_log @ [theory];
+    (scan_log := theory :: !scan_log;
      DB.thms theory)
+
+  fun harvest_index_theory_scan_count () =
+    length (!harvest_index_theory_scan_theories)
 
   fun add_string value values =
     if List.exists (fn old => old = value) values then values
@@ -1904,6 +1903,29 @@ structure Refute_ModelFinder_HOL = struct
           (!harvest_operator_generations) operators
       end
 
+  fun note_harvest_theory_binding theory name =
+    let
+      val names = Option.getOpt
+        (Symtab.lookup (!harvest_theory_bindings) theory, [])
+    in
+      harvest_theory_bindings := Symtab.update
+        (theory, name :: names) (!harvest_theory_bindings)
+    end
+
+  fun forget_harvest_theory_binding theory name =
+    case Symtab.lookup (!harvest_theory_bindings) theory of
+        NONE => ()
+      | SOME names =>
+          let val remaining = List.filter (fn old => old <> name) names
+          in
+            harvest_theory_bindings :=
+              if null remaining then
+                Symtab.delete_safe theory (!harvest_theory_bindings)
+              else
+                Symtab.update (theory, remaining)
+                  (!harvest_theory_bindings)
+          end
+
   fun remove_harvest_binding theory name =
     let val key = {Thy = theory, Name = name}
     in
@@ -1913,16 +1935,24 @@ structure Refute_ModelFinder_HOL = struct
             (note_harvest_operator_changes (binding_operators old);
              harvest_binding_index := KNametab.delete key
                (!harvest_binding_index);
+             forget_harvest_theory_binding theory name;
              harvest_session_index_stale := true)
     end
 
   fun remove_harvest_theory theory =
     let
-      fun partition (key, binding : harvest_binding) (kept, removed) =
-        if #theory binding = theory then (kept, binding :: removed)
-        else (KNametab.update (key, binding) kept, removed)
-      val (kept, removed) = KNametab.fold partition
-        (!harvest_binding_index) (KNametab.empty, [])
+      fun remove (name, (table, removed)) =
+        let val key = {Thy = theory, Name = name}
+        in
+          case KNametab.lookup table key of
+              NONE => (table, removed)
+            | SOME binding =>
+                (KNametab.delete key table, binding :: removed)
+        end
+      val names = Option.getOpt
+        (Symtab.lookup (!harvest_theory_bindings) theory, [])
+      val (kept, removed) =
+        List.foldl remove (!harvest_binding_index, []) names
       val operators = rev (List.foldl (fn (binding, result) =>
         List.foldl (fn (operator, operators) =>
           add_type_operator operator operators) result
@@ -1930,7 +1960,9 @@ structure Refute_ModelFinder_HOL = struct
       val _ = note_harvest_operator_changes operators
     in
       harvest_binding_index := kept;
-      harvest_session_index_stale := true
+      harvest_theory_bindings :=
+        Symtab.delete_safe theory (!harvest_theory_bindings);
+      if null removed then () else harvest_session_index_stale := true
     end
 
   fun note_harvest_binding theory (name, theorem) =
@@ -1947,6 +1979,8 @@ structure Refute_ModelFinder_HOL = struct
           Option.isSome (KNametab.lookup (!harvest_binding_index) key)
         val _ = harvest_binding_index :=
           KNametab.update (key, binding) (!harvest_binding_index)
+        val _ =
+          if replacing then () else note_harvest_theory_binding theory name
         val _ = note_harvest_operator_changes
           (binding_operators binding)
       in
@@ -1957,8 +1991,8 @@ structure Refute_ModelFinder_HOL = struct
 
   fun index_harvest_theory theory =
     let
-      val theorems = scan_harvest_theorems harvest_index_theory_scan_count
-        harvest_index_theory_scan_theories theory
+      val theorems =
+        scan_harvest_theorems harvest_index_theory_scan_theories theory
       val _ = remove_harvest_theory theory
       val _ = List.app (note_harvest_binding theory) theorems
     in
@@ -1980,6 +2014,11 @@ structure Refute_ModelFinder_HOL = struct
       let
         fun current () = Theory.current_theory ()
         fun changed theory = note_harvest_db_change theory
+        fun invalidate theory =
+          (changed theory;
+           harvest_indexed_theories :=
+             Symtab.delete_safe theory (!harvest_indexed_theories);
+           harvest_pending_theories := theory :: !harvest_pending_theories)
         fun add theory named_theorem =
           (changed theory; note_harvest_binding theory named_theorem)
       in
@@ -2000,9 +2039,9 @@ structure Refute_ModelFinder_HOL = struct
           | TheoryDelta.NewTheory {oldseg, newseg} =>
               (changed oldseg; changed newseg)
           | TheoryDelta.ExportTheory theory =>
-              (changed theory; index_harvest_theory theory)
+              invalidate theory
           | TheoryDelta.TheoryLoaded theory =>
-              (changed theory; index_harvest_theory theory)
+              invalidate theory
           | _ => ()
       end)
 
@@ -2656,10 +2695,19 @@ structure Refute_ModelFinder_HOL = struct
     then ()
     else index_harvest_theory theory
 
+  fun seed_pending_harvest_theories () =
+    let
+      val pending = rev (!harvest_pending_theories)
+      val _ = harvest_pending_theories := []
+    in
+      List.app seed_harvest_theory pending
+    end
+
   fun indexed_harvest_theories ty =
     let
       val operator = type_operator_of ty
       val home = #Thy operator
+      val _ = seed_pending_harvest_theories ()
       val _ = seed_harvest_theory home
       val {constant_theories = direct_constants, ...} =
         harvest_index_entry operator
@@ -3390,8 +3438,9 @@ structure Refute_ModelFinder_HOL = struct
       fun scan [] = false
         | scan (theory :: rest) =
             List.exists (quotient_candidate operator o #2)
-              (scan_harvest_theorems quotient_harvest_scan_count
-                 quotient_harvest_scan_theories theory)
+              (quotient_harvest_scan_count :=
+                 !quotient_harvest_scan_count + 1;
+               scan_harvest_theorems quotient_harvest_scan_theories theory)
             orelse scan rest
       fun fast () =
         case Lib.total (DB.fetch (#Thy operator))
@@ -3425,8 +3474,9 @@ structure Refute_ModelFinder_HOL = struct
       fun scan [] = false
         | scan (theory :: rest) =
             List.exists (typedef_candidate operator o #2)
-              (scan_harvest_theorems typedef_harvest_scan_count
-                 typedef_harvest_scan_theories theory)
+              (typedef_harvest_scan_count :=
+                 !typedef_harvest_scan_count + 1;
+               scan_harvest_theorems typedef_harvest_scan_theories theory)
             orelse scan rest
       val incompatible =
         is_interpreted_type ty orelse is_codatatype ty orelse
