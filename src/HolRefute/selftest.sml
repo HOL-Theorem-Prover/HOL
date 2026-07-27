@@ -13234,12 +13234,19 @@ fun same_narrow_tree (Leaf left, Leaf right) = left = right
       same_narrow_tree (left_subtree, right_subtree)
   | same_narrow_tree
       (Constructor (left_quantifier, left_value, left_position, left_shape,
-         left_branches),
+         left_pending, left_branches),
        Constructor (right_quantifier, right_value, right_position, right_shape,
-         right_branches)) =
+         right_pending, right_branches)) =
       left_quantifier = right_quantifier andalso left_value = right_value andalso
       left_position = right_position andalso
       same_narrow_shape (left_shape, right_shape) andalso
+      (case (left_pending, right_pending) of
+           (NONE, NONE) => true
+         | (SOME (left_index, left_id, left_tree),
+            SOME (right_index, right_id, right_tree)) =>
+             left_index = right_index andalso left_id = right_id andalso
+             same_narrow_tree (left_tree, right_tree)
+         | _ => false) andalso
       ListPair.allEq (fn ((left_id, left_tree), (right_id, right_tree)) =>
         left_id = right_id andalso
         same_narrow_tree (left_tree, right_tree))
@@ -13255,9 +13262,11 @@ fun pnf_tree_goldens () =
     val refined_existential = refine_tree (find existential) [0] existential
     val expected_universal = Constructor
       (Universal, Unevaluated, [0], pnf_bool_shape,
+       SOME (0, 0, Leaf Unevaluated),
        [(0, Leaf Unevaluated), (1, Leaf Unevaluated)])
     val expected_existential = Constructor
       (Existential, Unevaluated, [0], pnf_bool_shape,
+       SOME (0, 0, Leaf Unevaluated),
        [(0, Leaf Unevaluated), (1, Leaf Unevaluated)])
     val universal_update =
       update (find refined_universal) false_value refined_universal
@@ -13270,11 +13279,13 @@ fun pnf_tree_goldens () =
       (universal_update,
        Constructor
          (Universal, false_value, [0], pnf_bool_shape,
+          SOME (1, 1, Leaf Unevaluated),
           [(0, Leaf false_value), (1, Leaf Unevaluated)])) andalso
     same_narrow_tree
       (existential_update,
        Constructor
          (Existential, Unevaluated, [0], pnf_bool_shape,
+          SOME (1, 1, Leaf Unevaluated),
           [(0, Leaf false_value), (1, Leaf Unevaluated)])) andalso
     same_narrow_terms
       (terms_of [] [C ([0], 1, 1)],
@@ -13394,6 +13405,7 @@ fun universal_prefers_genuine_false () =
     val genuine = Eval {result = false, potential = false}
     val tree = Constructor
       (Universal, genuine, [0], pnf_bool_shape,
+       NONE,
        [(0, Leaf potential), (1, Leaf genuine)])
   in
     case example_of 0 tree of
@@ -15185,7 +15197,7 @@ fun renamed_narrowing_uses_typed_certification_path () =
     val _ = record_candidate_with display
       {config = default_config, strategy = Narrowing, substrate = "stub",
        instance = instance, stats = [], counterexamples = counterexamples,
-       discarded = discarded, run_depth = SOME 0,
+       discarded = discarded, run_depth = SOME 0, pnf_prefix = SOME [],
        retain_replay_potential = fn _ => (),
        retry = fn _ => fn _ => (),
        retry_potential = fn _ => fn _ => ()}

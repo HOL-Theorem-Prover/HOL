@@ -131,14 +131,14 @@ structure Refute_EvalCompute = struct
   fun match_enum_terms environment patterns values =
     let
       fun match_term additions pattern value =
-        let val bound = additions @ environment
-        in
-          if Term.is_var pattern then
+        if Term.is_var pattern then
+          let val bound = additions @ environment in
             (case List.find (fn (old, _) => Term.aconv old pattern) bound of
                  SOME (_, old_value) =>
                    if Term.aconv old_value value then SOME additions else NONE
-               | NONE => SOME (additions @ [(pattern, value)]))
-          else if Util.same_type (Term.type_of pattern) numSyntax.num andalso
+               | NONE => SOME ((pattern, value) :: additions))
+          end
+        else if Util.same_type (Term.type_of pattern) numSyntax.num andalso
                   numSyntax.is_numeral value andalso
                   numSyntax.is_suc pattern then
             let val number = numSyntax.dest_numeral value
@@ -157,12 +157,13 @@ structure Refute_EvalCompute = struct
                     match_many additions pattern_args value_args
                   else NONE
               | _ =>
-                  (case eval_rhs bound pattern of
-                       SOME expected =>
-                         if Term.aconv expected value
-                         then SOME additions else NONE
-                     | NONE => NONE)
-        end
+                  let val bound = additions @ environment in
+                    case eval_rhs bound pattern of
+                        SOME expected =>
+                          if Term.aconv expected value
+                          then SOME additions else NONE
+                      | NONE => NONE
+                  end
       and match_many additions [] [] = SOME additions
         | match_many additions (pattern :: rest) (value :: values) =
             (case match_term additions pattern value of
@@ -170,7 +171,7 @@ structure Refute_EvalCompute = struct
                | NONE => NONE)
         | match_many _ _ _ = NONE
     in
-      Option.map (fn additions => additions @ environment)
+      Option.map (fn additions => rev additions @ environment)
         (match_many [] patterns values)
     end
 
@@ -331,8 +332,11 @@ structure Refute_EvalCompute = struct
   fun exhaustive_compile (config : Refute_Core.config) plans programs =
     let
       val last_stats = ref []
+      val enum_cache =
+        ref ([] :
+          (int * (Refute_EvalEnum.definition * term list)) list)
       val active : Refute_EvalEnum.definition Refute_EvalEnum.held_bracket =
-        Refute_EvalEnum.held_bracket (fn () => ())
+        Refute_EvalEnum.held_bracket (fn () => enum_cache := [])
       val prefix = Refute_EvalEnum.fresh_prefix "refute_compute_enum_"
 
       fun close () = Refute_EvalEnum.close_held_bracket active
@@ -343,12 +347,23 @@ structure Refute_EvalCompute = struct
 
       fun enum_values size program inputs =
         let
-          val data = start ()
+          val (data, generators) =
+            case List.find (fn (cached_size, _) => cached_size = size)
+                (!enum_cache) of
+                SOME (_, cached) => cached
+              | NONE =>
+                  let
+                    val data = start ()
+                    val generators = map (fn ty =>
+                      listSyntax.mk_list (exhaustive_terms ty size, ty))
+                      (#generator_types data)
+                    val cached = (data, generators)
+                    val _ = enum_cache := (size, cached) :: !enum_cache
+                  in
+                    cached
+                  end
           val enumerator = Refute_EvalEnum.enumerator_for
             (#enumerators data) (#relation program) (#mode program)
-          val generators = map (fn ty =>
-            listSyntax.mk_list (exhaustive_terms ty size, ty))
-            (#generator_types data)
           val application = Refute_EvalEnum.application enumerator
             generators inputs (Int.max (0, #depth (#qc config)))
           val value =

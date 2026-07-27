@@ -48,7 +48,7 @@ structure Refute_Narrow = struct
         pnf_quantifier * truth * position * narrowing_type * tree
     | Constructor of
         pnf_quantifier * truth * position * narrowing_type *
-        (int * tree) list
+        (int * int * tree) option * (int * tree) list
 
   datatype edge =
       V of position * narrowing_type
@@ -397,7 +397,7 @@ structure Refute_Narrow = struct
 
   fun value_of (Leaf result) = result
     | value_of (Variable (_, result, _, _, _)) = result
-    | value_of (Constructor (_, result, _, _, _)) = result
+    | value_of (Constructor (_, result, _, _, _, _)) = result
 
   fun ball branches =
     List.foldl (fn ((_, subtree), result) =>
@@ -420,6 +420,21 @@ structure Refute_Narrow = struct
         incomplete_false shape result
     | variable_value Universal _ result = result
 
+  fun is_unevaluated Unevaluated = true
+    | is_unevaluated _ = false
+
+  fun first_unevaluated branches =
+    let
+      fun find _ [] = NONE
+        | find index ((id, subtree) :: rest) =
+            if is_unevaluated (value_of subtree) then
+              SOME (index, id, subtree)
+            else
+              find (index + 1) rest
+    in
+      find 0 branches
+    end
+
   fun position_of (V (position, _)) = position
     | position_of (C (position, _, _)) = position
 
@@ -430,14 +445,76 @@ structure Refute_Narrow = struct
   fun find (Leaf Unevaluated) = []
     | find (Variable (_, _, position, ty, subtree)) =
         V (position, ty) :: find subtree
-    | find (Constructor (_, _, position, shape, branches)) =
-        (case first_index
-           (fn (_, subtree) => value_of subtree = Unevaluated) branches of
-             SOME index =>
-               let val (id, subtree) = List.nth (branches, index)
-               in C (position, index, id) :: find subtree end
+    | find (Constructor (_, _, position, _, pending, _)) =
+        (case pending of
+             SOME (index, id, subtree) =>
+               C (position, index, id) :: find subtree
            | NONE => raise NoUnevaluated)
     | find _ = raise NoUnevaluated
+
+  fun update_branch quantifier shape target transform branches =
+    let
+      val initial =
+        case quantifier of
+            Universal => Eval {result = true, potential = false}
+          | Existential => Eval {result = false, potential = false}
+      fun combine Universal (aggregate, value) = conj (aggregate, value)
+        | combine Existential (aggregate, value) = disj (aggregate, value)
+      fun loop _ [] found reversed aggregate pending =
+            if not found then raise InvalidPath
+            else
+              let
+                val aggregate =
+                  case quantifier of
+                      Universal => aggregate
+                    | Existential => incomplete_false shape aggregate
+              in
+                (aggregate, pending, rev reversed)
+              end
+        | loop index ((id, subtree) :: rest) found reversed aggregate
+              pending =
+            let
+              val selected = index = target
+              val subtree' = if selected then transform subtree else subtree
+              val pending' =
+                case pending of
+                    SOME _ => pending
+                  | NONE =>
+                      if is_unevaluated (value_of subtree') then
+                        SOME (index, id, subtree')
+                      else NONE
+              val aggregate' =
+                combine quantifier (aggregate, value_of subtree')
+            in
+              loop (index + 1) rest (found orelse selected)
+                ((id, subtree') :: reversed) aggregate' pending'
+            end
+    in
+      loop 0 branches false [] initial NONE
+    end
+
+  fun replace_branch target transform branches =
+    let
+      fun loop _ [] found reversed pending =
+            if found then (pending, rev reversed) else raise InvalidPath
+        | loop index ((id, subtree) :: rest) found reversed pending =
+            let
+              val selected = index = target
+              val subtree' = if selected then transform subtree else subtree
+              val pending' =
+                case pending of
+                    SOME _ => pending
+                  | NONE =>
+                      if is_unevaluated (value_of subtree') then
+                        SOME (index, id, subtree')
+                      else NONE
+            in
+              loop (index + 1) rest (found orelse selected)
+                ((id, subtree') :: reversed) pending'
+            end
+    in
+      loop 0 branches false [] NONE
+    end
 
   fun update [] result (Leaf _) = Leaf result
     | update (V _ :: edges) result
@@ -450,19 +527,14 @@ structure Refute_Narrow = struct
              position, ty, subtree')
         end
     | update (C (_, index, _) :: edges) result
-        (Constructor (quantifier, _, position, shape, branches)) =
+        (Constructor (quantifier, _, position, shape, _, branches)) =
         let
-          val (id, subtree) = List.nth (branches, index)
-            handle Subscript => raise InvalidPath
-          val subtree' = update edges result subtree
-          val branches' = List.take (branches, index) @
-            ((id, subtree') :: List.drop (branches, index + 1))
-          val aggregate =
-            case quantifier of
-                Universal => ball branches'
-              | Existential => bexists shape branches'
+          val (aggregate, pending, branches') =
+            update_branch quantifier shape index
+              (update edges result) branches
         in
-          Constructor (quantifier, aggregate, position, shape, branches')
+          Constructor
+            (quantifier, aggregate, position, shape, pending, branches')
         end
     | update _ _ _ = raise InvalidPath
 
@@ -473,16 +545,14 @@ structure Refute_Narrow = struct
           (quantifier, result, position, ty,
            replace_tree replacement edges subtree)
     | replace_tree replacement (C (_, index, _) :: edges)
-        (Constructor (quantifier, result, position, shape, branches)) =
+        (Constructor
+          (quantifier, result, position, shape, _, branches)) =
         let
-          val (id, subtree) = List.nth (branches, index)
-            handle Subscript => raise InvalidPath
-          val subtree' = replace_tree replacement edges subtree
+          val (pending, branches') = replace_branch index
+            (replace_tree replacement edges) branches
         in
           Constructor
-            (quantifier, result, position, shape,
-             List.take (branches, index) @
-               ((id, subtree') :: List.drop (branches, index + 1)))
+            (quantifier, result, position, shape, pending, branches')
         end
     | replace_tree _ _ _ = raise InvalidPath
 
@@ -503,10 +573,11 @@ structure Refute_Narrow = struct
                    Variable
                      (quantifier, result, position @ [index], ty, rest))
                    subtree (indexed_map I (#arguments alternative)))
+              val branches = List.map branch (products_of shape)
             in
               Constructor
                 (quantifier, result, position, shape,
-                 List.map branch (products_of shape))
+                 first_unevaluated branches, branches)
             end
         | refine_variable _ = raise InvalidPath
     in
@@ -577,7 +648,7 @@ structure Refute_Narrow = struct
                     update path Unknown tree
           val tests' = tests + 1
         in
-          if value_of tree' = Unevaluated then loop tree' tests'
+          if is_unevaluated (value_of tree') then loop tree' tests'
           else (tree', tests')
         end
     in
@@ -606,7 +677,8 @@ structure Refute_Narrow = struct
           [(terms,
             Variable (quantifier, result, position, ty, subtree))]
     | termlists_of select prefix
-        (terms, Constructor (quantifier, result, position, shape, branches)) =
+        (terms, Constructor
+          (quantifier, result, position, shape, pending, branches)) =
         if is_prefix prefix position then
           let
             fun fixpoint argument state =
@@ -634,7 +706,8 @@ structure Refute_Narrow = struct
           end
         else
           [(terms,
-            Constructor (quantifier, result, position, shape, branches))]
+            Constructor
+              (quantifier, result, position, shape, pending, branches))]
 
   fun choose_one branches =
     let
@@ -659,11 +732,11 @@ structure Refute_Narrow = struct
   val alltermlist_of = termlists_of choose_all
 
   fun quantifier_of (Variable (quantifier, _, _, _, _)) = quantifier
-    | quantifier_of (Constructor (quantifier, _, _, _, _)) = quantifier
+    | quantifier_of (Constructor (quantifier, _, _, _, _, _)) = quantifier
     | quantifier_of (Leaf _) = raise InvalidPath
 
   fun shape_of_tree (Variable (_, _, _, shape, _)) = shape
-    | shape_of_tree (Constructor (_, _, _, shape, _)) = shape
+    | shape_of_tree (Constructor (_, _, _, shape, _, _)) = shape
     | shape_of_tree (Leaf _) = raise InvalidPath
 
   fun example_of _ (Leaf _) = EmptyExample

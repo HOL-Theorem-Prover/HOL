@@ -43,6 +43,17 @@ structure Refute_QC = struct
       loop types avoid_variables []
     end
 
+  type analysis =
+    {result : SmartGen.inference_result option,
+     trigger : bool, reason : string option}
+
+  type plan_cache =
+    {smart_context : MFH.mf_context option option ref,
+     analyses : (term * analysis) list ref}
+
+  fun new_plan_cache () : plan_cache =
+    {smart_context = ref NONE, analyses = ref []}
+
   (*
      Plan compilation, ported from exhaustive_generators.ML:260--315.
 
@@ -64,13 +75,14 @@ structure Refute_QC = struct
        gen_all (frees a \\ bound)
          (Guard (a, compile concl (frees a U bound) rest))
   *)
-  fun compile_plan (config : Refute_Core.config) goal =
+  fun compile_plan_with
+        ({smart_context = smart_context_cache, analyses} : plan_cache)
+        (config : Refute_Core.config) goal =
     let
       val (assumptions, conclusion) = boolSyntax.strip_imp goal
       (* Building a model-finder context scans the whole theory ancestry,
          so pay for it only once a premise actually reaches mode inference:
          goals without relational premises never need it. *)
-      val smart_context_cache = ref NONE
       fun smart_context () =
         case !smart_context_cache of
             SOME cached => cached
@@ -83,11 +95,6 @@ structure Refute_QC = struct
               in
                 smart_context_cache := SOME built; built
               end
-      type analysis =
-        {result : SmartGen.inference_result option,
-         trigger : bool, reason : string option}
-      val analyses = ref ([] : (term * analysis) list)
-
       fun vars_of bound tm = subtract_terms (Term.free_vars_lr tm) bound
 
       fun premise_head premise =
@@ -389,6 +396,9 @@ structure Refute_QC = struct
         gen_all (Term.free_vars_lr goal) (Test goal)
     end
 
+  fun compile_plan config goal =
+    compile_plan_with (new_plan_cache ()) config goal
+
   fun pp_plan plan =
     let
       fun indent depth = String.implode (List.tabulate (depth, fn _ => #" "))
@@ -496,12 +506,8 @@ structure Refute_QC = struct
       (#2 (boolSyntax.strip_forall (#original instance)))
 
   (* Report against the same prenex form the narrowing compiler consumed. *)
-  fun pnf_case_bindings instance tree =
-    let
-      val (prefix, _) = Refute_Narrow.pnf_of (narrowing_goal instance)
-    in
-      Refute_Narrow.case_bindings prefix tree
-    end
+  fun pnf_case_bindings prefix tree =
+    Refute_Narrow.case_bindings prefix tree
 
   fun strategy_name Exhaustive = "exhaustive"
     | strategy_name (Random _) = "random"
@@ -516,6 +522,7 @@ structure Refute_QC = struct
          counterexamples : Refute_Core.counterexample list ref,
          discarded : int ref,
          run_depth : int option,
+         pnf_prefix : (quant * term) list option,
          retain_replay_potential : Refute_Core.counterexample -> unit,
          retry : bool -> candidate list -> unit,
          retry_potential : bool -> candidate list -> unit}
@@ -527,8 +534,9 @@ structure Refute_QC = struct
             (Term.free_vars_lr (#goal instance)))
         env
       val report_bindings =
-        case (case_tree, genuine) of
-            (SOME tree, true) => pnf_case_bindings instance tree
+        case (pnf_prefix, case_tree, genuine) of
+            (SOME prefix, SOME tree, true) =>
+              pnf_case_bindings prefix tree
           | _ => bindings
       val cex : Refute_Core.counterexample =
         { backend = display_name strategy,
@@ -552,7 +560,7 @@ structure Refute_QC = struct
       val partial_universal =
         narrowing andalso has_hole andalso
         not (Refute_Narrow.contains_existentials
-          (#1 (Refute_Narrow.pnf_of (#goal instance))))
+          (Option.getOpt (pnf_prefix, [])))
       fun keep_potential potential =
         if #abort_potential config andalso not genuine_only then
           (counterexamples := potential :: !counterexamples; true)
@@ -785,8 +793,9 @@ structure Refute_QC = struct
   fun smart_gate_override_with preflight (config : Refute_Core.config)
         instances =
     let
+      val cache = new_plan_cache ()
       val plans = map (fn (instance : Refute_Core.instance) =>
-        compile_plan config (#goal instance)) instances
+        compile_plan_with cache config (#goal instance)) instances
       val gated_plans = List.mapPartial
         (fn (instance, plan) =>
           case #qc_gate instance of NONE => NONE | SOME _ => SOME plan)
@@ -847,9 +856,11 @@ structure Refute_QC = struct
         case Refute_Narrow.select_for_config config
           (narrowing_goal instance) of
             (Refute_Narrow.PlainRefusal reasons, _) =>
-              SelectionFailed reasons
-          | (_, problem) => compile_selected config Narrowing problem
-      fun selected_tests selected = map #3 selected
+              (NONE, SelectionFailed reasons)
+          | (_, problem as Pnf {prefix, ...}) =>
+              (SOME prefix, compile_selected config Narrowing problem)
+          | _ => raise Fail "narrowing selection did not produce PNF"
+      fun selected_tests selected = map #4 selected
       fun preserve_error error selected =
         let
           val cleanup = Exn.capture close_tests (selected_tests selected)
@@ -862,16 +873,16 @@ structure Refute_QC = struct
       fun loop [] selected =
             let
               val entries = rev selected
-              val names = map #2 entries
+              val names = map #3 entries
               val compiled = selected_tests entries
               val last_stats = ref []
               val closed = ref false
               fun run input =
                 let
                   val test =
-                    case List.find (fn (card, _, _) => card = #card input)
+                    case List.find (fn (card, _, _, _) => card = #card input)
                       entries of
-                        SOME (_, _, found) => found
+                        SOME (_, _, _, found) => found
                       | NONE => raise Subscript
                   val result = #run test
                     {genuine_only = #genuine_only input, card = 1,
@@ -889,17 +900,21 @@ structure Refute_QC = struct
                     [single] => single
                   | _ => "native"
             in
-              Selected (name,
-                {run = run, close = close, max_chunk = NONE,
-                 last_stats = last_stats})
+              (Selected (name,
+                 {run = run, close = close, max_chunk = NONE,
+                  last_stats = last_stats}),
+               map (fn (card, prefix, _, _) => (card, prefix)) entries)
             end
         | loop (instance :: rest) selected =
             (case Exn.capture compile_one instance of
-                 Exn.Res (Selected (name, test)) =>
-                   loop rest ((#card instance, name, test) :: selected)
-               | Exn.Res (SelectionFailed reasons) =>
+                 Exn.Res (SOME prefix, Selected (name, test)) =>
+                   loop rest
+                     ((#card instance, prefix, name, test) :: selected)
+               | Exn.Res (_, SelectionFailed reasons) =>
                    (close_tests (selected_tests selected);
-                    SelectionFailed reasons)
+                    (SelectionFailed reasons, []))
+               | Exn.Res (NONE, Selected _) =>
+                   raise Fail "narrowing selection lost its PNF prefix"
                | Exn.Exn error => preserve_error error selected)
     in
       loop instances []
@@ -914,10 +929,12 @@ structure Refute_QC = struct
         case strategy of
             Random _ => Refute_Core.upd_smart_generators false config
           | _ => config
+      val cache = new_plan_cache ()
       val plans =
         if strategy = Narrowing then map (Test o #goal) instances
         else List.map
-          (fn instance => compile_plan plan_config (#goal instance)) instances
+          (fn instance =>
+            compile_plan_with cache plan_config (#goal instance)) instances
       val _ =
         if strategy = Narrowing orelse
            not (Refute_Core.Private.enabled 3) then ()
@@ -958,13 +975,18 @@ structure Refute_QC = struct
           (if can_preflight orelse is_random strategy then []
            else
              ["smart generators require an Enum-capable exhaustive substrate"])
-      val selection =
+      val (selection, narrowing_prefixes) =
         if strategy = Narrowing then
           compile_narrowing_instances config instances
         else
-          case smart_selection of
-              SOME selected => selected
-            | NONE => compile_selected config strategy (Plans plans)
+          ((case smart_selection of
+                SOME selected => selected
+              | NONE => compile_selected config strategy (Plans plans)), [])
+      fun narrowing_prefix card =
+        case List.find (fn (other, _) => other = card)
+            narrowing_prefixes of
+            SOME (_, prefix) => prefix
+          | NONE => raise Fail "narrowing instance lost its PNF prefix"
     in
       if not (null gate_reasons) then Refute_Core.Unknown gate_reasons
       else case selection of
@@ -1030,6 +1052,10 @@ structure Refute_QC = struct
                             discarded = discarded,
                             run_depth =
                               if strategy = Narrowing then SOME size
+                              else NONE,
+                            pnf_prefix =
+                              if strategy = Narrowing then
+                                SOME (narrowing_prefix card)
                               else NONE,
                             (* Only replay failures accepted by the ordinary
                                keep-potential policy may enter the fallback;

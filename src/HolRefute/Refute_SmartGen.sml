@@ -680,7 +680,7 @@ structure Refute_SmartGen = struct
 
   fun modes_of table external relation =
     case lookup_assoc relation table of
-        SOME modes => SOME modes
+        SOME modes => SOME (map (fn (mode, _, needs) => (mode, needs)) modes)
       | NONE =>
           (case lookup_assoc relation external of
                SOME (Compiled {modes, ...}) => SOME modes
@@ -908,28 +908,27 @@ structure Refute_SmartGen = struct
         modes =
     let
       val clauses = clauses_for relation clauses
-      fun check (mode, _) =
-        let
-          val results = map (check_clause reorder members external table
-            relation mode) clauses
-        in
-          if not (null clauses) andalso List.all Option.isSome results then
-            let
-              val checked = List.mapPartial (fn value => value) results
-              val needs = List.exists #needs_generator checked
-            in
-              SOME (mode, needs)
-            end
-          else NONE
-        end
+      fun check_clauses _ [] checked = SOME (rev checked)
+        | check_clauses mode (clause :: rest) checked =
+            (case check_clause reorder members external table relation mode
+                    clause of
+                 NONE => NONE
+               | SOME result =>
+                   check_clauses mode rest (result :: checked))
+      fun check (mode, _, _) =
+        if null clauses then NONE
+        else
+          Option.map (fn checked =>
+            (mode, checked, List.exists #needs_generator checked))
+            (check_clauses mode clauses [])
     in
       List.mapPartial check modes
     end
 
   fun same_mode_infos left right =
     length left = length right andalso
-    ListPair.allEq (fn ((left_mode, left_random),
-                        (right_mode, right_random)) =>
+    ListPair.allEq (fn ((left_mode, _, left_random),
+                        (right_mode, _, right_random)) =>
       eq_mode (left_mode, right_mode) andalso
       left_random = right_random) (left, right)
 
@@ -962,31 +961,19 @@ structure Refute_SmartGen = struct
         map HigherOrderParameters higher_order @
         map CrossGroupReference (distinct_relations cross)
       val start = map (fn relation =>
-        (relation, map (fn mode => (mode, false))
+        (relation, map (fn mode => (mode, [], false))
           (all_modes_for relation))) members
       fun iteration table = map (fn (relation, modes) =>
         (relation, check_relation reorder_premises members external
           clauses table relation modes)) table
       fun fixpoint table =
         let val next = iteration table
-        in if same_mode_table table next then table else fixpoint next end
+        in if same_mode_table table next then next else fixpoint next end
       val stable =
         if null higher_order then fixpoint start
         else map (fn relation => (relation, [])) members
-      fun materialize (relation, modes) =
-        let
-          val clauses = clauses_for relation clauses
-          fun one (mode, needs) =
-            let
-              val checked = List.mapPartial
-                (check_clause reorder_premises members external stable
-                  relation mode) clauses
-            in
-              (mode, checked, needs)
-            end
-        in
-          {relation = relation, modes = map one modes} : relation_modes
-        end
+      fun materialize (relation, modes) : relation_modes =
+        {relation = relation, modes = modes}
     in
       {relations = map materialize stable, degradation = degradation}
     end

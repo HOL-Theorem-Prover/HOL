@@ -165,13 +165,26 @@ structure Refute_Cert = struct
       val prenex_equality = Refute_Narrow.prenex_conversion closure
       val pnf = rhs_of prenex_equality
 
-
+      val constructor_cache =
+        ref (Redblackmap.mkDict Type.compare :
+          (Type.hol_type, term list) Redblackmap.dict)
       fun constructors_of ty =
-        case TypeBase.fetch ty of
-            NONE => raise Fail "quantified type has no TypeBase nchotomy"
-          | SOME info =>
-              map (TypeBasePure.cinst ty)
-                (TypeBasePure.constructors_of info)
+        case Redblackmap.peek (!constructor_cache, ty) of
+            SOME constructors => constructors
+          | NONE =>
+              (case TypeBase.fetch ty of
+                   NONE =>
+                     raise Fail "quantified type has no TypeBase nchotomy"
+                 | SOME info =>
+                     let
+                       val constructors = map (TypeBasePure.cinst ty)
+                         (TypeBasePure.constructors_of info)
+                       val _ = constructor_cache :=
+                         Redblackmap.insert
+                           (!constructor_cache, ty, constructors)
+                     in
+                       constructors
+                     end)
 
       fun constructor_arguments constructor =
         #1 (boolSyntax.strip_fun (Term.type_of constructor))
