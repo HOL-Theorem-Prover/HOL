@@ -12,6 +12,25 @@ val _ = cv_trans refuteTheory.rand_next_def
 val _ = cv_trans refuteTheory.rand_out_def
 val _ = cv_trans refuteTheory.rand_below_def
 
+(* cv translation deliberately rejects higher-order parameters.  Enum search
+   uses [first_hit] only with the singleton candidate function, so expose and
+   translate that first-order specialization here. *)
+Definition refute_cv_first_hit_def:
+  refute_cv_first_hit [] (n : num) = (n, NONE) /\
+  refute_cv_first_hit (x :: xs) n =
+    if n = 0 then (n, SOME x)
+    else refute_cv_first_hit xs (n - 1)
+End
+
+Theorem refute_cv_first_hit_eq:
+  refute_cv_first_hit xs n = first_hit (\x. [x]) xs n
+Proof
+  qid_spec_tac `n` >>
+  Induct_on `xs` >> simp [refute_cv_first_hit_def, first_hit_def]
+QED
+
+val _ = cv_trans refute_cv_first_hit_def
+
 (* Numeric generators. *)
 Definition refute_cv_num_range_def:
   refute_cv_num_range 0 acc = 0 :: acc /\

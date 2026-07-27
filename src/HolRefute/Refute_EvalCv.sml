@@ -1003,6 +1003,9 @@ structure Refute_EvalCv = struct
     Term.subst (List.map (fn (redex, residue) =>
       {redex = redex, residue = residue}) env) tm
 
+  fun env_parameters env =
+    Util.distinct_terms (List.map #2 (rev env))
+
   fun result_type variables =
     pairSyntax.mk_prod
       (numSyntax.num, optionSyntax.mk_option (env_type variables))
@@ -1115,13 +1118,135 @@ structure Refute_EvalCv = struct
 
   type loop_program =
     {variables : term list, result_ty : hol_type,
-     application : int -> term}
+     application : int -> int -> term}
 
-  fun define_exhaustive prefix payloads plan generators programs enum_fuel =
+  fun define_exhaustive_search prefix payloads plan generators =
+    let
+      val variables = plan_variables plan
+      val result_ty = result_type variables
+      val size = named_variable (prefix ^ "size") numSyntax.num
+
+      fun build current env skip =
+        case current of
+            Refute_Eval.Prune => no_hit variables skip
+          | Refute_Eval.Test tm =>
+              boolSyntax.mk_cond
+                (substitute env tm, no_hit variables skip,
+                 boolSyntax.mk_cond
+                   (boolSyntax.mk_eq (skip, numeral 0),
+                    hit variables (numeral 0) env,
+                    no_hit variables
+                      (numSyntax.mk_minus (skip, numeral 1))))
+          | Refute_Eval.Guard (tm, next) =>
+              boolSyntax.mk_cond
+                (substitute env tm, build next env skip,
+                 no_hit variables skip)
+          | Refute_Eval.SmartGuard {predicate, cont, ...} =>
+              boolSyntax.mk_cond
+                (substitute env predicate, build cont env skip,
+                 no_hit variables skip)
+          | Refute_Eval.Enum _ =>
+              raise Unsupported "Enum requires list compilation"
+          | Refute_Eval.Bind (variable, tm, _, next) =>
+              let
+                val value = named_variable
+                  (fresh_prefix () ^ "bound") (Term.type_of variable)
+              in
+                boolSyntax.mk_let
+                  (Term.mk_abs
+                    (value, build next ((variable, value) :: env) skip),
+                   substitute env tm)
+              end
+          | Refute_Eval.Split (scrutinee, branches) =>
+              make_split scrutinee branches env (no_hit variables skip)
+                (fn next => fn branch_env =>
+                  build next branch_env skip)
+          | Refute_Eval.Gen (variable, next) =>
+              let
+                val stem = fresh_prefix ()
+                val ty = Term.type_of variable
+                val list_ty = listSyntax.mk_list_type ty
+                val head = named_variable (stem ^ "head") ty
+                val tail = named_variable (stem ^ "tail") list_ty
+                val current_parameters = env_parameters env
+                val helper_ty = function_type
+                  (list_ty :: numSyntax.num ::
+                   List.map Term.type_of current_parameters @
+                   [numSyntax.num], result_type variables)
+                val helper = named_variable (stem ^ "find") helper_ty
+                fun helper_call list counter =
+                  Term.list_mk_comb
+                    (helper, list :: size ::
+                     current_parameters @ [counter])
+                val nil_lhs = helper_call
+                  (listSyntax.mk_list ([], ty)) skip
+                val nil_eq = boolSyntax.mk_eq
+                  (nil_lhs, no_hit variables skip)
+                val attempt = build next
+                  ((variable, head) :: env) skip
+                val remaining = named_variable
+                  (stem ^ "remaining") numSyntax.num
+                val found = named_variable
+                  (stem ^ "found") (env_type variables)
+                val recurse = helper_call tail remaining
+                val return_found = pairSyntax.mk_pair
+                  (remaining, optionSyntax.mk_some found)
+                val answer = named_variable (stem ^ "answer")
+                  (optionSyntax.mk_option (env_type variables))
+                val after_attempt = pairSyntax.mk_plet
+                  (pairSyntax.mk_pair (remaining, answer),
+                   attempt,
+                   make_option_case answer recurse found return_found)
+                val cons_lhs = helper_call
+                  (listSyntax.mk_cons (head, tail)) skip
+                val definition = TotalDefn.Define
+                  [HOLPP.ANTIQUOTE
+                    (boolSyntax.mk_conj
+                      (nil_eq,
+                       boolSyntax.mk_eq (cons_lhs, after_attempt)))]
+                val _ = translate_checked prefix payloads definition
+                val helper_constant = definition_head definition
+                val exhaustive = #exhaustive
+                  (generator_for ty generators)
+              in
+                Term.list_mk_comb
+                  (helper_constant,
+                   Term.mk_comb (exhaustive, size) :: size ::
+                   current_parameters @ [skip])
+              end
+
+      val skip = named_variable (prefix ^ "skip") numSyntax.num
+      val loop_var = named_variable (prefix ^ "loop")
+        (function_type
+          ([numSyntax.num, numSyntax.num], result_ty))
+      val body = build plan [] skip
+      val loop_definition = TotalDefn.Define
+        [HOLPP.ANTIQUOTE
+          (boolSyntax.mk_eq
+            (Term.list_mk_comb (loop_var, [size, skip]), body))]
+      val _ =
+        if Refute_Core.Private.enabled 3 then
+          Refute_Core.Private.say 3
+            ("Refute synthesized HOL loop:\n" ^
+             Parse.thm_to_string loop_definition ^ "\n")
+        else ()
+      val _ = translate_checked prefix payloads loop_definition
+      val loop = definition_head loop_definition
+      fun application size_value skip_value =
+        Term.list_mk_comb
+          (loop, [numeral size_value, numeral skip_value])
+    in
+      {variables = variables, result_ty = result_ty,
+       application = application}
+    end
+
+  fun define_exhaustive_enum prefix payloads plan generators programs
+      enum_fuel =
     let
       val variables = plan_variables plan
       val value_ty = env_type variables
-      val result_ty = listSyntax.mk_list_type value_ty
+      val list_result_ty = listSyntax.mk_list_type value_ty
+      val result_ty = result_type variables
       val size = named_variable (prefix ^ "size") numSyntax.num
       val enum_definition = define_enumerators prefix payloads programs
       val enumerators = #enumerators enum_definition
@@ -1204,7 +1329,7 @@ structure Refute_EvalCv = struct
               end
 
       val loop_var = named_variable (prefix ^ "loop")
-        (function_type ([numSyntax.num], result_ty))
+        (function_type ([numSyntax.num], list_result_ty))
       val loop_definition = TotalDefn.Define
         [HOLPP.ANTIQUOTE (boolSyntax.mk_eq
           (Term.mk_comb (loop_var, size), build plan []))]
@@ -1215,8 +1340,10 @@ structure Refute_EvalCv = struct
         else ()
       val _ = translate_checked prefix payloads loop_definition
       val loop = definition_head loop_definition
-      fun application size_value =
-        Term.mk_comb (loop, numeral size_value)
+      fun application size_value skip_value =
+        HolKernel.list_mk_icomb ``refute_cv$refute_cv_first_hit``
+          [Term.mk_comb (loop, numeral size_value),
+           numeral skip_value]
     in
       {variables = variables, result_ty = result_ty,
        application = application}
@@ -1363,36 +1490,49 @@ structure Refute_EvalCv = struct
       val prefix = fresh_prefix ()
       val payloads = plan_payloads plan
     in
-      case strategy of
+        case strategy of
           Refute_Eval.Exhaustive =>
             let
-              val program = define_exhaustive prefix payloads plan generators
-                programs enum_fuel
+              val uses_enum = Refute_Eval.plan_uses_enum plan
+              val program =
+                if uses_enum then
+                  define_exhaustive_enum prefix payloads plan generators
+                    programs enum_fuel
+                else
+                  define_exhaustive_search prefix payloads plan generators
               val evaluate = evaluator_for
-                (fn () => #application program 0) (#result_ty program)
+                (fn () => #application program 0 0) (#result_ty program)
               val complete =
-                not (Refute_Eval.plan_uses_enum plan) andalso
+                not uses_enum andalso
                 List.all (Option.isSome o Refute_Gen.enumerate)
                   (plan_generator_types plan)
               fun run {size, ignored, ...} =
                 let
-                  val decoded = evaluate
-                    (#application program (Int.max (0, size)))
-                  val (values, _) = listSyntax.dest_list decoded
-                  fun candidate value =
+                  val bounded_size = Int.max (0, size)
+                  fun search skip =
                     let
-                      val found =
-                        {env = decode_env (#variables program) value,
-                         ground_env = NONE, case_tree = NONE,
-                         genuine = true, run_depth = NONE}
+                      val decoded = evaluate
+                        (#application program bounded_size skip)
+                      val (_, answer) = pairSyntax.dest_pair decoded
                     in
-                      if Refute_Eval.ignored_candidate found ignored then NONE
-                      else SOME found
+                      if optionSyntax.is_none answer then
+                        Refute_Eval.Exhausted {complete = complete}
+                      else
+                        let
+                          val found =
+                            {env = decode_env (#variables program)
+                               (optionSyntax.dest_some answer),
+                             ground_env = NONE, case_tree = NONE,
+                             genuine = true, run_depth = NONE}
+                        in
+                          if uses_enum andalso
+                             Refute_Eval.ignored_candidate found ignored
+                          then search (skip + 1)
+                          else Refute_Eval.CexFound found
+                        end
                     end
                 in
-                  case Lib.get_first candidate values of
-                      SOME found => Refute_Eval.CexFound found
-                    | NONE => Refute_Eval.Exhausted {complete = complete}
+                  search (if uses_enum then 0 else length ignored)
                 end
             in
               run

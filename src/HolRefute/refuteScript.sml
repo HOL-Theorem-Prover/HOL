@@ -39,6 +39,18 @@ Definition rand_below_def:
     in ((rand_out s' * n) DIV 4294967296, s')
 End
 
+(* Strict, left-to-right candidate search.  The counter skips previously
+   reported hits without materializing the remaining result stream. *)
+Definition first_hit_def:
+  first_hit f [] (n : num) = (n, NONE) /\
+  first_hit f (x :: xs) n =
+    case f x of
+      [] => first_hit f xs n
+    | y :: _ =>
+        if n = 0 then (n, SOME y)
+        else first_hit f xs (n - 1)
+End
+
 (* Part 3: static model-finder support.  These constants intentionally have
    no defining equations: the nut translation gives them their model-finder
    meaning.  In particular, asserting is_unknown unknown would add logical
