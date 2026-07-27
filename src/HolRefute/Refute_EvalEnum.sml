@@ -399,20 +399,12 @@ structure Refute_EvalEnum = struct
                 SOME (wanted, pattern_args) =>
                   let
                     val ty = Term.type_of value
-                    val constructors = TypeBase.constructors_of ty
-                    val raw_case = TypeBase.case_const_of ty
-                    val raw_ty = hd (#1 (boolSyntax.strip_fun
-                      (Term.type_of raw_case)))
-                    val case_constant = Term.inst
-                      (Type.match_type raw_ty ty) raw_case
-                    val (case_domains, _) = boolSyntax.strip_fun
-                      (Term.type_of case_constant)
-                    val branch_types = List.take
-                      (tl case_domains, length constructors)
-                    fun branch (constructor, branch_ty) =
+                    val constructors = map (TypeBasePure.cinst ty)
+                      (TypeBase.constructors_of ty)
+                    fun branch constructor =
                       let
                         val (argument_types, _) =
-                          boolSyntax.strip_fun branch_ty
+                          boolSyntax.strip_fun (Term.type_of constructor)
                         val arguments = map fresh argument_types
                         val body =
                           if Term.same_const constructor wanted andalso
@@ -421,12 +413,10 @@ structure Refute_EvalEnum = struct
                               continue
                           else failure
                       in
-                        Term.list_mk_abs (arguments, body)
+                        (Term.list_mk_comb (constructor, arguments), body)
                       end
                   in
-                    HolKernel.list_mk_icomb case_constant
-                      (value :: ListPair.mapEq branch
-                        (constructors, branch_types))
+                    TypeBase.mk_case (value, map branch constructors)
                   end
               | NONE =>
                   boolSyntax.mk_cond
@@ -587,8 +577,6 @@ structure Refute_EvalEnum = struct
     Term.list_mk_comb (function,
       generator_values @ inputs @ [numSyntax.term_of_int fuel])
 
-  val has_enum = Refute_Eval.plan_uses_enum
-
   (* Shared process-global theory bracket.  Compute definitions and cv
      translations must serialize against one another. *)
   val theory_mutex = Mutex.mutex ()
@@ -665,6 +653,70 @@ structure Refute_EvalEnum = struct
           Exn.Res _ => ()
         | Exn.Exn error => raise CleanupFailed error
     end
+
+  datatype 'a held_state =
+      HeldIdle
+    | HeldOpen of theory_bracket
+    | HeldReady of theory_bracket * 'a
+
+  datatype 'a held_bracket = HeldBracket of
+    {state : 'a held_state ref, teardown : unit -> unit}
+
+  fun held_bracket teardown =
+    HeldBracket {state = ref HeldIdle, teardown = teardown}
+
+  fun close_held_bracket (HeldBracket {state, teardown}) =
+    case !state of
+        HeldIdle => ()
+      | current =>
+          Thread_Attributes.uninterruptible
+            (fn _ => fn () =>
+              let
+                val bracket =
+                  case current of
+                      HeldOpen bracket => bracket
+                    | HeldReady (bracket, _) => bracket
+                    | HeldIdle =>
+                        raise Fail
+                          "Refute_EvalEnum.close_held_bracket: idle bracket"
+                val cleanup = Exn.capture close_theory_bracket bracket
+                val extra_cleanup = Exn.capture teardown ()
+                val _ = state := HeldIdle
+                val _ = Mutex.unlock theory_mutex
+                val _ = Exn.release cleanup
+              in
+                Exn.release extra_cleanup
+              end) ()
+
+  fun start_held_bracket
+        (held as HeldBracket {state, ...}) build =
+    case !state of
+        HeldReady (_, value) => value
+      | HeldOpen _ =>
+          raise Fail "Refute_EvalEnum.start_held_bracket: incomplete start"
+      | HeldIdle =>
+          Thread_Attributes.uninterruptible
+            (fn restore_attributes => fn () =>
+              let
+                val _ = Mutex.lock theory_mutex
+                val opened = Exn.capture open_theory_bracket ()
+              in
+                case opened of
+                    Exn.Exn error =>
+                      (Mutex.unlock theory_mutex; raise error)
+                  | Exn.Res bracket =>
+                      let
+                        val _ = state := HeldOpen bracket
+                        val result =
+                          Exn.capture (restore_attributes build) ()
+                      in
+                        case result of
+                            Exn.Res value =>
+                              (state := HeldReady (bracket, value); value)
+                          | Exn.Exn error =>
+                              (close_held_bracket held; raise error)
+                      end
+              end) ()
 
   fun with_clean_theory body =
     Multithreading.synchronized "Refute evaluator theory" theory_mutex

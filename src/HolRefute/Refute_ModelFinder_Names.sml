@@ -363,7 +363,3 @@ structure Refute_ModelFinder_Names = struct
       (renamed, rev renaming, type_substitutions)
     end
 end
-
-(* File-name alias for script `Libs`; the M3 public module identity remains
-   Refute_ModelFinder_Names. *)
-structure Refute_Names = Refute_ModelFinder_Names

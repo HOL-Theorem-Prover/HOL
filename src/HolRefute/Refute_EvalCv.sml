@@ -15,16 +15,11 @@ structure Refute_EvalCv = struct
 
   exception Unsupported of string
 
-  val theory_mutex = Refute_EvalEnum.theory_mutex
-
   fun fresh_prefix () =
     Refute_EvalEnum.fresh_prefix "refute_cv_"
 
   type snapshot = Refute_EvalEnum.snapshot
-  type theory_bracket = Refute_EvalEnum.theory_bracket
   val snapshot = Refute_EvalEnum.snapshot
-  val open_theory_bracket = Refute_EvalEnum.open_theory_bracket
-  val close_theory_bracket = Refute_EvalEnum.close_theory_bracket
   val with_clean_theory = Refute_EvalEnum.with_clean_theory
 
   fun map_index function = Lib.mapi (fn index => fn value =>
@@ -1382,7 +1377,7 @@ structure Refute_EvalCv = struct
               val evaluate = evaluator_for
                 (fn () => #application program 0) (#result_ty program)
               val complete =
-                not (Refute_EvalEnum.has_enum plan) andalso
+                not (Refute_Eval.plan_uses_enum plan) andalso
                 List.all (Option.isSome o Refute_Gen.enumerate)
                   (plan_generator_types plan)
               fun run {size, ignored, ...} =
@@ -1466,33 +1461,14 @@ structure Refute_EvalCv = struct
              Refute_Eval.Exhaustive => 0
            | Refute_Eval.Random {seed} => seed
            | Refute_Eval.Narrowing => 0)
-      val active = ref (NONE : theory_bracket option)
       val runners = ref ([] : (int * card_runner) list)
+      val active : unit Refute_EvalEnum.held_bracket =
+        Refute_EvalEnum.held_bracket (fn () => runners := [])
 
-      fun close () =
-        case !active of
-            NONE => ()
-          | SOME bracket =>
-              Thread_Attributes.uninterruptible
-                (fn _ => fn () =>
-                  let
-                    val cleanup_result =
-                      Exn.capture close_theory_bracket bracket
-                    val _ = runners := []
-                    val _ = active := NONE
-                    val _ = Mutex.unlock theory_mutex
-                  in
-                    Exn.release cleanup_result
-                  end) ()
+      fun close () = Refute_EvalEnum.close_held_bracket active
 
       fun start () =
-        case !active of
-            SOME _ => ()
-          | NONE =>
-              Thread_Attributes.uninterruptible
-                (fn _ => fn () =>
-                  (Mutex.lock theory_mutex;
-                   active := SOME (open_theory_bracket ()))) ()
+        Refute_EvalEnum.start_held_bracket active (fn () => ())
 
       fun runner card =
         case List.find (fn (old_card, _) => old_card = card) (!runners) of

@@ -2,7 +2,7 @@ Theory refuteTableZoo
 Ancestors
   refute ltree itreeTau fixedPoint
 Libs
-  TotalDefn Refute_Names Refute_Core quotient Omega
+  TotalDefn Refute_ModelFinder_Names Refute_Core quotient Omega
 
 Datatype:
   zoo_tree = ZooLeaf num | ZooNode zoo_tree zoo_tree

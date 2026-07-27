@@ -194,32 +194,18 @@ fun matching_postprocessors
   let
     val matches = List.filter (fn {pattern, ...} =>
       pattern_matches pattern actual) entries
-    fun before ({serial = left, ...} : term_postprocessor_entry)
-          ({serial = right, ...} : term_postprocessor_entry) = left < right
-    fun take_first candidate [] = (candidate, [])
-      | take_first candidate (entry :: rest) =
-          let val (chosen, others) = take_first entry rest in
-            if before candidate chosen then (candidate, chosen :: others)
-            else (chosen, candidate :: others)
-          end
-    fun has_more_general
-          (candidate : term_postprocessor_entry)
-          (other : term_postprocessor_entry) =
-      strictly_more_general (#pattern other) (#pattern candidate)
-    fun order ([] : term_postprocessor_entry list) result = rev result
-      | order remaining result =
-          let
-            val candidates = List.filter (fn candidate =>
-              not (List.exists (has_more_general candidate) remaining))
-              remaining
-            val (chosen, _) = take_first (hd candidates) (tl candidates)
-            val rest = List.filter (fn entry =>
-              #serial entry <> #serial chosen) remaining
-          in
-            order rest (#postprocessor chosen :: result)
-          end
+    fun generality ({pattern, ...} : term_postprocessor_entry) =
+      length (List.filter (fn {pattern = other, ...} =>
+        strictly_more_general other pattern) matches)
+    fun key (entry : term_postprocessor_entry) =
+      (generality entry, #serial entry, #postprocessor entry)
+    fun compare ((left_generality, left_serial, _),
+          (right_generality, right_serial, _)) =
+      case Int.compare (left_generality, right_generality) of
+          EQUAL => Int.compare (left_serial, right_serial)
+        | order => order
   in
-    order matches []
+    map #3 (Listsort.sort compare (map key matches))
   end
 
 fun safe_postprocess postprocessor candidate =
@@ -242,25 +228,28 @@ fun composed_postprocessor snapshot ty =
 fun lookup_term_postprocessor ty =
   composed_postprocessor (snapshot_term_postprocessors ()) ty
 
+fun insert_postprocessor pattern postprocessor
+      ({entries, next_serial} : term_postprocessor_snapshot) =
+  let
+    fun replace [] =
+          ([{pattern = pattern, postprocessor = postprocessor,
+             serial = next_serial}], next_serial + 1)
+      | replace ((entry as {pattern = old, serial, ...}) :: rest) =
+          if same_pattern old pattern then
+            ({pattern = pattern, postprocessor = postprocessor,
+              serial = serial} :: rest, next_serial)
+          else
+            let val (tail, next) = replace rest
+            in (entry :: tail, next) end
+    val (entries, next_serial) = replace entries
+  in
+    {entries = entries, next_serial = next_serial}
+  end
+
 fun register_term_postprocessor pattern postprocessor =
   with_term_postprocessor_lock (fn () =>
-    let
-      val {entries, next_serial} = !term_postprocessors
-      fun replace [] =
-            ([{pattern = pattern, postprocessor = postprocessor,
-               serial = next_serial}], next_serial + 1)
-        | replace ((entry as {pattern = old, serial, ...}) :: rest) =
-            if same_pattern old pattern then
-              ({pattern = pattern, postprocessor = postprocessor,
-                serial = serial} :: rest, next_serial)
-            else
-              let val (tail, next) = replace rest
-              in (entry :: tail, next) end
-      val (entries, next_serial) = replace entries
-    in
-      term_postprocessors :=
-        {entries = entries, next_serial = next_serial}
-    end)
+    term_postprocessors :=
+      insert_postprocessor pattern postprocessor (!term_postprocessors))
 
 fun postprocess_term snapshot term =
   let
@@ -317,17 +306,8 @@ fun prepare_rat_term_postprocessor () =
   let
     val pattern = Type.mk_thy_type
       {Thy = "rat", Tyop = "rat", Args = []}
-    val {entries, next_serial} = !term_postprocessors
-    fun other {pattern = old, ...} = not (same_pattern old pattern)
-    val previous = List.find (fn {pattern = old, ...} =>
-      same_pattern old pattern) entries
-    val serial =
-      case previous of SOME {serial, ...} => serial | NONE => next_serial
-    val next = if Option.isSome previous then next_serial else next_serial + 1
-    val updated =
-      {entries = {pattern = pattern, postprocessor = frac_atom_to_rat,
-                  serial = serial} :: List.filter other entries,
-       next_serial = next}
+    val updated = insert_postprocessor pattern frac_atom_to_rat
+      (!term_postprocessors)
   in
     fn () => term_postprocessors := updated
   end

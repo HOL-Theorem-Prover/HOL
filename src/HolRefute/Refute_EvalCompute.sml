@@ -204,7 +204,7 @@ structure Refute_EvalCompute = struct
      other substrates use different retry protocols. *)
   fun traverse enum_values programs gen genuine_only ignored plan =
     let
-      val complete = ref (not (Refute_EvalEnum.has_enum plan))
+      val complete = ref (not (Refute_Eval.plan_uses_enum plan))
       val match_failures = ref 0
       val tests = ref 0
 
@@ -331,47 +331,15 @@ structure Refute_EvalCompute = struct
   fun exhaustive_compile (config : Refute_Core.config) plans programs =
     let
       val last_stats = ref []
-      val active = ref (NONE : Refute_EvalEnum.theory_bracket option)
-      val definition = ref
-        (NONE : Refute_EvalEnum.definition option)
+      val active : Refute_EvalEnum.definition Refute_EvalEnum.held_bracket =
+        Refute_EvalEnum.held_bracket (fn () => ())
       val prefix = Refute_EvalEnum.fresh_prefix "refute_compute_enum_"
 
-      fun close () =
-        case !active of
-            NONE => ()
-          | SOME bracket =>
-              Thread_Attributes.uninterruptible
-                (fn _ => fn () =>
-                  let
-                    val cleanup = Exn.capture
-                      Refute_EvalEnum.close_theory_bracket bracket
-                    val _ = definition := NONE
-                    val _ = active := NONE
-                    val _ = Mutex.unlock Refute_EvalEnum.theory_mutex
-                  in
-                    Exn.release cleanup
-                  end) ()
+      fun close () = Refute_EvalEnum.close_held_bracket active
 
-      fun start () =
-        case !definition of
-            SOME data => data
-          | NONE =>
-              Thread_Attributes.uninterruptible
-                (fn restore_attributes => fn () =>
-                  let
-                    val _ = Mutex.lock Refute_EvalEnum.theory_mutex
-                    val bracket = Refute_EvalEnum.open_theory_bracket ()
-                    val _ = active := SOME bracket
-                    val result = Exn.capture (restore_attributes (fn () =>
-                      Refute_EvalEnum.define
-                        {prefix = prefix, programs = programs,
-                         after_define = fn _ => ()})) ()
-                  in
-                    case result of
-                        Exn.Res data => (definition := SOME data; data)
-                      | Exn.Exn error =>
-                          (close (); raise error)
-                  end) ()
+      fun start () = Refute_EvalEnum.start_held_bracket active (fn () =>
+        Refute_EvalEnum.define
+          {prefix = prefix, programs = programs, after_define = fn _ => ()})
 
       fun enum_values size program inputs =
         let

@@ -657,8 +657,6 @@ structure Refute_QC = struct
       | Enum _ => true
       | Prune => false
 
-  val plan_uses_smart = Refute_Eval.plan_uses_enum
-
   fun eval_preflight evals =
     let
       val constants = Refute_Core.nonexecutable_constants evals
@@ -798,7 +796,8 @@ structure Refute_QC = struct
           instances)
     in
       #smart_generators (#qc config) andalso
-      not (null gated_plans) andalso List.all plan_uses_smart gated_plans andalso
+      not (null gated_plans) andalso
+      List.all Refute_Eval.plan_uses_enum gated_plans andalso
       null (preflight config Exhaustive plans evals)
     end
     handle Interrupt => raise Interrupt
@@ -936,7 +935,8 @@ structure Refute_QC = struct
         (List.mapPartial (fn (instance : Refute_Core.instance) =>
           #qc_gate instance) instances)
       val every_gated_plan_is_smart = List.all (fn (instance, plan) =>
-        not (Option.isSome (#qc_gate instance)) orelse plan_uses_smart plan)
+        not (Option.isSome (#qc_gate instance)) orelse
+        Refute_Eval.plan_uses_enum plan)
         paired
       val can_preflight = gated andalso strategy = Exhaustive andalso
         #smart_generators (#qc config) andalso every_gated_plan_is_smart

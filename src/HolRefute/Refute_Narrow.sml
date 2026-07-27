@@ -144,11 +144,6 @@ structure Refute_Narrow = struct
            handle Subscript => raise InvalidPosition (index :: position))
     | refineList _ [] = raise InvalidPosition []
 
-  fun cartesian [] = [[]]
-    | cartesian (values :: rest) =
-        List.concat (List.map (fn value =>
-          List.map (fn tail => value :: tail) (cartesian rest)) values)
-
   (* Grounding needs only the lexicographically first completion.  Upstream
      enumerates all of them (Narrowing_Engine.hs:27-29) and takes the head,
      which is free under Haskell's laziness and catastrophic under Poly/ML's
@@ -600,65 +595,24 @@ structure Refute_Narrow = struct
     length prefix <= length position andalso
     prefix = List.take (position, length prefix)
 
-  fun termlist_of prefix (terms, Leaf result) =
-        (terms, Leaf result)
-    | termlist_of prefix
-        (terms, Variable (quantifier, result, position, ty, subtree)) =
-        if is_prefix prefix position then
-          termlist_of prefix
-            (terms @ [Narrowing_variable (position, ty)], subtree)
-        else
-          (terms,
-           Variable (quantifier, result, position, ty, subtree))
-    | termlist_of prefix
-        (terms, Constructor (quantifier, result, position, shape, branches)) =
-        if is_prefix prefix position then
-          let
-            val index =
-              case first_index (is_genuine_false o value_of o #2) branches of
-                  SOME index => index
-                | NONE =>
-                    (case first_index (is_false o value_of o #2) branches of
-                         SOME index => index
-                       | NONE => raise InvalidPath)
-            val (id, selected) = List.nth (branches, index)
-            fun fixpoint argument state =
-              let
-                val next =
-                  termlist_of (position @ [argument]) state
-              in
-                if length (#1 next) = length (#1 state) then state
-                else fixpoint (argument + 1) next
-              end
-            val (arguments, residual) = fixpoint 0 ([], selected)
-          in
-            (terms @ [Narrowing_constructor (id, arguments)], residual)
-          end
-        else
-          (terms,
-           Constructor (quantifier, result, position, shape, branches))
-
-  fun alltermlist_of prefix (terms, Leaf result) =
+  fun termlists_of select prefix (terms, Leaf result) =
         [(terms, Leaf result)]
-    | alltermlist_of prefix
+    | termlists_of select prefix
         (terms, Variable (quantifier, result, position, ty, subtree)) =
         if is_prefix prefix position then
-          alltermlist_of prefix
+          termlists_of select prefix
             (terms @ [Narrowing_variable (position, ty)], subtree)
         else
           [(terms,
             Variable (quantifier, result, position, ty, subtree))]
-    | alltermlist_of prefix
+    | termlists_of select prefix
         (terms, Constructor (quantifier, result, position, shape, branches)) =
         if is_prefix prefix position then
           let
-            val false_branches = List.filter
-              (fn (_, subtree) => is_false (value_of subtree)) branches
-
             fun fixpoint argument state =
               let
                 val next =
-                  alltermlist_of (position @ [argument]) state
+                  termlists_of select (position @ [argument]) state
               in
                 case next of
                     [single] =>
@@ -676,11 +630,33 @@ structure Refute_Narrow = struct
                 (terms @ [Narrowing_constructor (id, arguments)], residual))
                 (fixpoint 0 ([], subtree))
           in
-            List.concat (List.map extract false_branches)
+            List.concat (List.map extract (select branches))
           end
         else
           [(terms,
             Constructor (quantifier, result, position, shape, branches))]
+
+  fun choose_one branches =
+    let
+      fun choose predicate =
+        Option.map (fn index => List.nth (branches, index))
+          (first_index (predicate o value_of o #2) branches)
+    in
+      case choose is_genuine_false of
+          SOME branch => [branch]
+        | NONE =>
+            (case choose is_false of
+                 SOME branch => [branch]
+               | NONE => raise InvalidPath)
+    end
+
+  fun choose_all branches =
+    List.filter (is_false o value_of o #2) branches
+
+  fun termlist_of prefix state =
+    hd (termlists_of choose_one prefix state)
+
+  val alltermlist_of = termlists_of choose_all
 
   fun quantifier_of (Variable (quantifier, _, _, _, _)) = quantifier
     | quantifier_of (Constructor (quantifier, _, _, _, _)) = quantifier

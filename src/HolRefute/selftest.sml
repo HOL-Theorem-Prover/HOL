@@ -12777,6 +12777,11 @@ fun narrowing_position_algebra () =
    strict hand-rolled optimisation of [hd o all_completions]; this is the
    reference that optimisation is checked against.  The engine itself must
    never enumerate completions -- see the comment on [first_completion]. *)
+fun cartesian [] = [[]]
+  | cartesian (values :: rest) =
+      List.concat (List.map (fn value =>
+        List.map (fn tail => value :: tail) (cartesian rest)) values)
+
 fun all_completions (Narrowing_constructor (id, arguments)) =
       List.map (fn completed => Narrowing_constructor (id, completed))
         (cartesian (List.map all_completions arguments))
