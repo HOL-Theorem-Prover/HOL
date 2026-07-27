@@ -1137,7 +1137,9 @@ structure Refute_QC = struct
         strategy_run (Random {seed = strategy_seed config}) config }
 
   fun register_backends () =
-    (Refute_EvalSML.register_substrate Refute_Extract.native_preflight;
+    (Refute_EvalSML.register_substrate
+       {preflight = Refute_Extract.native_preflight,
+        extract = Refute_Extract.extract_problem};
      Refute_EvalCompute.register_substrate ();
      Refute_EvalCv.register_substrate ();
      Refute_Core.register_backend exhaustive_backend;

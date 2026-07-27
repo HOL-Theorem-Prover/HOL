@@ -23,10 +23,9 @@ structure Refute :> Refute = struct
   type rng = Refute_Gen.rng
   type term_postprocessor = term -> term
 
-  (* Install the native extractor and register the built-in backends through
-     this public entry point.  These explicit references also make both
+  (* Register the built-in backends through this public entry point.
+     Refute_QC passes the native extractor explicitly, making both
      implementation units dependencies of [load "Refute"]. *)
-  val () = Refute_Extract.install_extractor ()
   val () = Refute_QC.register_backends ()
   val () = Refute_QC_Narrow.register_backend ()
   val () = Refute_ModelFinder.register_backends ()

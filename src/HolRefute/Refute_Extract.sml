@@ -4233,26 +4233,20 @@ structure Refute_Extract = struct
                    "" => "unknown validation exception"
                  | text => text)]
 
-  fun install_extractor () =
-    Refute_EvalSML.extract_tests_hook :=
-      (fn extraction_mode => fn config => fn strategy => fn problem =>
-        let
-          val mode = case extraction_mode of
-              Refute_EvalSML.StrictExtraction => Strict
-            | Refute_EvalSML.LazyExtraction => Lazy
-          val extracted = case problem of
-              Refute_Eval.Plans plans =>
-                extract_tests_with mode config strategy plans
-            | Refute_Eval.Pnf {prefix, body} =>
-                extract_narrowing config prefix body
-        in
-          Refute_EvalSML.Extracted extracted
-        end
-        handle NotExtractable reasons =>
-                 Refute_EvalSML.ExtractionFailed reasons
-             | Interrupt => raise Interrupt)
-
-  (* [Refute_QC.register_backends] owns the substrate set and registers the
-     native substrate; only the extractor hook is installed here. *)
-  val _ = install_extractor ()
+  fun extract_problem extraction_mode config strategy problem =
+    let
+      val mode = case extraction_mode of
+          Refute_EvalSML.StrictExtraction => Strict
+        | Refute_EvalSML.LazyExtraction => Lazy
+      val extracted = case problem of
+          Refute_Eval.Plans plans =>
+            extract_tests_with mode config strategy plans
+        | Refute_Eval.Pnf {prefix, body} =>
+            extract_narrowing config prefix body
+    in
+      Refute_EvalSML.Extracted extracted
+    end
+    handle NotExtractable reasons =>
+             Refute_EvalSML.ExtractionFailed reasons
+         | Interrupt => raise Interrupt
 end

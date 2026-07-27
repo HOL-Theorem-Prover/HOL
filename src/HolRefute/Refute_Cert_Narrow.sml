@@ -202,7 +202,7 @@ structure Refute_Cert_Narrow = struct
         in
           SOME (Thy ^ "$" ^ Name)
         end
-        handle HOL_ERR _ => NONE
+        handle Feedback.HOL_ERR _ => NONE
 
       fun refutation_index patterned_refutations =
         let
@@ -243,8 +243,8 @@ structure Refute_Cert_Narrow = struct
       fun close_from index refutations (goal as (_, conclusion)) =
         let
           fun accept theorem =
-            SOME (MATCH_ACCEPT_TAC theorem goal)
-            handle HOL_ERR _ => NONE
+            SOME (Tactic.MATCH_ACCEPT_TAC theorem goal)
+            handle Feedback.HOL_ERR _ => NONE
           fun scan () = Lib.get_first accept refutations
           (* [validate_cover] has proved the patterns disjoint and
              exhaustive, so at most one refutation can close this leaf.
@@ -274,8 +274,10 @@ structure Refute_Cert_Narrow = struct
                 val nchotomy = TypeBase.nchotomy_of
                   (Term.type_of variable)
               in
-                (STRUCT_CASES_TAC (Drule.ISPEC variable nchotomy) THEN
-                 close_from index refutations) goal
+                Tactical.THEN
+                  (Tactic.STRUCT_CASES_TAC
+                     (Drule.ISPEC variable nchotomy),
+                   close_from index refutations) goal
               end
         end
 
@@ -327,9 +329,11 @@ structure Refute_Cert_Narrow = struct
               val all_negated = boolSyntax.mk_forall
                 (variable, boolSyntax.mk_neg body)
               val exhaustive = Tactical.prove
-                (all_negated, GEN_TAC THEN close_from index refutations)
-              val conversion = CONV_RULE
-                (DEPTH_CONV BETA_CONV)
+                (all_negated,
+                 Tactical.THEN
+                   (Tactic.GEN_TAC, close_from index refutations))
+              val conversion = Conv.CONV_RULE
+                (Conv.DEPTH_CONV Thm.BETA_CONV)
                 (Drule.ISPEC (Term.mk_abs (variable, body))
                   boolTheory.NOT_EXISTS_THM)
               val target = rhs_of conversion

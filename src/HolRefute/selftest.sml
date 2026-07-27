@@ -12149,20 +12149,13 @@ fun lazy_definition_and_constructor_literals () =
   compile_lazy_extracted ``rx_sum [1; 2; 3] = 6``
     (fn (_, entry, _) => "Susp.force (" ^ entry ^ ")")
 
-fun lazy_hook_seam () =
+fun lazy_extractor_seam () =
   let
-    val original = !extract_tests_hook
-    val modes = ref ([] : Refute_EvalSML.extraction_mode list)
-    fun observing mode config strategy problem =
-      (modes := mode :: !modes; original mode config strategy problem)
-    val _ = extract_tests_hook := observing
-    val captured = Exn.capture (fn () =>
-      (!extract_tests_hook) LazyExtraction default_config Narrowing
-        (Plans [Test boolSyntax.T])) ()
-    val _ = extract_tests_hook := original
-    val direct = Exn.release captured
-    val seam_ok =
-      case direct of
+    val extracted =
+      Refute_Extract.extract_problem LazyExtraction default_config Narrowing
+        (Plans [Test boolSyntax.T])
+  in
+    case extracted of
           ExtractionFailed _ => false
         | Extracted {source, entry, table} =>
             let
@@ -12174,8 +12167,6 @@ fun lazy_hook_seam () =
                   Exn.Res (Installed _) => true
                 | _ => false
             end
-  in
-    seam_ok andalso !modes = [LazyExtraction]
   end
 
 fun lazy_deadline_during_force_cleans_up () =
@@ -12246,8 +12237,8 @@ val _ = require_msg
   (check_result lazy_definition_and_constructor_literals) (fn () =>
   "lazy extraction failed across a recursive definition")
   (fn () => ()) ()
-val _ = require_msg (check_result lazy_hook_seam) (fn () =>
-  "the direct lazy hook seam failed")
+val _ = require_msg (check_result lazy_extractor_seam) (fn () =>
+  "the direct lazy extractor seam failed")
   (fn () => ()) ()
 val _ = require_msg (check_result lazy_deadline_during_force_cleans_up)
   (fn () => "a deadline during lazy forcing leaked native hook state")
@@ -14612,7 +14603,8 @@ fun smartgen_plain_all_input_native () =
     val plan = compile_plan config
       ``(n : num) = 0 ==> zoo_sg_linear n ==> F``
   in
-    case Refute_EvalSML.compile config Exhaustive (Plans [plan]) of
+    case Refute_EvalSML.compile_with Refute_Extract.extract_problem
+        config Exhaustive (Plans [plan]) of
         Compiled test =>
           let
             val result = #run test
@@ -14753,7 +14745,7 @@ fun smartgen_ir_validation_and_theory_footprint () =
     fun rejected candidate fragment =
       List.all (fn compile => rejected_by compile candidate fragment)
         [Refute_EvalCompute.compile, Refute_EvalCv.compile,
-         Refute_EvalSML.compile]
+         Refute_EvalSML.compile_with Refute_Extract.extract_problem]
     val malformed_ok = rejected malformed "smart plan:"
     val _ = SG.clear_enumerator_cache ()
     val absent_ok = rejected plan "missing top-level enumerator"
@@ -17677,8 +17669,8 @@ fun native_custom_is_inapplicable () =
     val variable = Term.mk_var ("native_custom", ``:rg_record``)
     val plan = Gen (variable, Test boolSyntax.T)
     fun rejected strategy =
-      case Refute_EvalSML.compile default_config strategy
-        (Plans [plan]) of
+      case Refute_EvalSML.compile_with Refute_Extract.extract_problem
+          default_config strategy (Plans [plan]) of
           Inapplicable reasons =>
             List.exists (String.isPrefix
               "custom generator registered for :rg_record") reasons
@@ -17689,7 +17681,6 @@ fun native_custom_is_inapplicable () =
 
 fun native_compile_error_is_reason () =
   let
-    val original = !extract_tests_hook
     val table_count_before = term_table_count ()
     fun broken _ _ _ _ =
       let val table = register_term_tables [] []
@@ -17697,10 +17688,9 @@ fun native_compile_error_is_reason () =
         Extracted
           {source = "val refute_broken =", entry = "()", table = table}
       end
-    val _ = extract_tests_hook := broken
     val captured = Exn.capture (fn () =>
-      Refute_EvalSML.compile default_config Exhaustive (Plans [])) ()
-    val _ = extract_tests_hook := original
+      Refute_EvalSML.compile_with broken default_config Exhaustive
+        (Plans [])) ()
   in
     case captured of
         Exn.Res (Inapplicable [reason]) =>
@@ -17715,8 +17705,8 @@ fun native_ignored_filter_resumes () =
     val variable = Term.mk_var ("native_ignored", ``:bool``)
     val plan = Gen (variable, Test boolSyntax.F)
     fun exhaustive () =
-      case Refute_EvalSML.compile default_config Exhaustive
-          (Plans [plan]) of
+      case Refute_EvalSML.compile_with Refute_Extract.extract_problem
+          default_config Exhaustive (Plans [plan]) of
           Inapplicable _ => false
         | Compiled test =>
             let
@@ -17740,8 +17730,8 @@ fun native_ignored_filter_resumes () =
     val number = Term.mk_var ("native_random_ignored", ``:num``)
     val random_plan = Gen (number, Test boolSyntax.F)
     fun random () =
-      case Refute_EvalSML.compile default_config (Random {seed = 1})
-          (Plans [random_plan]) of
+      case Refute_EvalSML.compile_with Refute_Extract.extract_problem
+          default_config (Random {seed = 1}) (Plans [random_plan]) of
           Inapplicable _ => false
         | Compiled test =>
             let
@@ -17779,7 +17769,8 @@ fun native_timeout_is_healthy () =
     val short = upd_timeout 0.05 default_config
     val started = Time.now ()
     val timed =
-      case Refute_EvalSML.compile short Exhaustive (Plans [huge]) of
+      case Refute_EvalSML.compile_with Refute_Extract.extract_problem
+          short Exhaustive (Plans [huge]) of
           Inapplicable _ => false
         | Compiled test =>
             let
@@ -17792,8 +17783,8 @@ fun native_timeout_is_healthy () =
             end
     val elapsed = Time.toReal (Time.- (Time.now (), started))
     val healthy =
-      case Refute_EvalSML.compile default_config Exhaustive
-          (Plans [Test boolSyntax.F]) of
+      case Refute_EvalSML.compile_with Refute_Extract.extract_problem
+          default_config Exhaustive (Plans [Test boolSyntax.F]) of
           Inapplicable _ => false
         | Compiled test =>
             let
@@ -17813,8 +17804,8 @@ fun native_benchmark () =
     val plan = compile_plan default_config
       ``REVERSE (REVERSE (xs : num list)) = xs``
   in
-    case Refute_EvalSML.compile default_config Exhaustive
-        (Plans [plan]) of
+    case Refute_EvalSML.compile_with Refute_Extract.extract_problem
+        default_config Exhaustive (Plans [plan]) of
         Inapplicable _ => false
       | Compiled test =>
           let
@@ -18750,7 +18741,7 @@ fun enum_solution_stream_conformance () =
       |> Refute.upd_size 1
     val compilers =
       [Refute_EvalCompute.compile, Refute_EvalCv.compile,
-       Refute_EvalSML.compile]
+       Refute_EvalSML.compile_with Refute_Extract.extract_problem]
 
     fun compile_all_with selected_config plan = map (fn substrate =>
       case substrate selected_config Exhaustive (Plans [plan]) of
@@ -18893,7 +18884,7 @@ fun enum_terminal_incompleteness () =
        ``(n : num) = 0 ==> zoo_sg_linear n ==> T``]
     val compilers =
       [Refute_EvalCompute.compile, Refute_EvalCv.compile,
-       Refute_EvalSML.compile]
+       Refute_EvalSML.compile_with Refute_Extract.extract_problem]
     fun compile plan substrate =
       case substrate config Exhaustive (Plans [plan]) of
           Inapplicable reasons =>
@@ -18971,7 +18962,8 @@ fun stream_conformance () =
         val arguments =
           {plan = plan, seed = IntInf.fromInt seed, size = 2, count = 5}
         val compute = Refute_EvalCompute.dump_random_candidates arguments
-        val native = Refute_EvalSML.dump_native_random_candidates arguments
+        val native = Refute_EvalSML.dump_native_random_candidates
+          Refute_Extract.extract_problem arguments
         val cv = Refute_EvalCv.dump_cv_random_candidates arguments
       in
         if same_candidate_stream compute native andalso

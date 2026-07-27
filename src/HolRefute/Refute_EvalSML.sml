@@ -52,12 +52,9 @@ structure Refute_EvalSML = struct
       Extracted of {source : string, entry : string, table : int}
     | ExtractionFailed of string list
 
-  val extract_tests_hook = ref
-    (fn (_ : extraction_mode) =>
-      fn (_ : Refute_Core.config) =>
-      fn (_ : Refute_Eval.strategy) =>
-      fn (_ : Refute_Eval.qc_problem) =>
-        ExtractionFailed ["native: extractor is not installed"])
+  type extractor =
+    extraction_mode -> Refute_Core.config -> Refute_Eval.strategy ->
+    Refute_Eval.qc_problem -> extraction_result
 
   fun note_force () =
     reconstruction_forces := !reconstruction_forces + 1
@@ -396,7 +393,7 @@ structure Refute_EvalSML = struct
       else raise Deadline
     end
 
-  fun compile_locked (config : Refute_Core.config) strategy problem =
+  fun compile_locked extract (config : Refute_Core.config) strategy problem =
     let
       val started = Time.now ()
       val timeout = Time.fromReal (Real.max (0.0, #timeout config))
@@ -405,7 +402,7 @@ structure Refute_EvalSML = struct
         case strategy of
             Refute_Eval.Narrowing => LazyExtraction
           | _ => StrictExtraction
-      val extracted = (!extract_tests_hook) mode config strategy problem
+      val extracted = extract mode config strategy problem
     in
       case extracted of
           ExtractionFailed reasons => Refute_Eval.Inapplicable reasons
@@ -495,23 +492,24 @@ structure Refute_EvalSML = struct
                Refute_Eval.Inapplicable [reason]
              end
 
-  fun compile_problem config strategy problem =
+  fun compile_problem extract config strategy problem =
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
         let
           val _ = Mutex.lock goal_compile_mutex
           val result = Exn.capture
-            (restore (fn () => compile_locked config strategy problem)) ()
+            (restore
+              (fn () => compile_locked extract config strategy problem)) ()
           val _ = Mutex.unlock goal_compile_mutex
         in
           Exn.release result
         end) ()
 
-  fun compile config strategy problem =
-    compile_problem config strategy problem
+  fun compile_with extract config strategy problem =
+    compile_problem extract config strategy problem
 
-  fun dump_native_random_candidates {plan, seed, size, count} =
-    case compile Refute_Core.default_config
+  fun dump_native_random_candidates extract {plan, seed, size, count} =
+    case compile_with extract Refute_Core.default_config
         (Refute_Eval.Random {seed = seed})
         (Refute_Eval.Plans [Refute_Eval.dump_plan plan]) of
         Refute_Eval.Inapplicable reasons =>
@@ -519,12 +517,12 @@ structure Refute_EvalSML = struct
       | Refute_Eval.Compiled test =>
           Refute_Eval.dump_stream test {size = size, count = count}
 
-  fun native_substrate preflight : Refute_Eval.substrate =
+  fun native_substrate {preflight, extract} : Refute_Eval.substrate =
     {name = "native", priority = 10,
      accepts = fn _ => true,
      preflight = SOME preflight,
-     compile = compile}
+     compile = compile_with extract}
 
-  fun register_substrate preflight =
-    Refute_Eval.register_substrate (native_substrate preflight)
+  fun register_substrate dependencies =
+    Refute_Eval.register_substrate (native_substrate dependencies)
 end

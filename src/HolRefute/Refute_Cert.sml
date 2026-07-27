@@ -14,7 +14,7 @@ structure Refute_Cert = struct
 
   fun conform_conclusion label expected theorem =
     Thm.EQ_MP (Thm.ALPHA (Thm.concl theorem) expected) theorem
-    handle HOL_ERR _ => raise Fail
+    handle Feedback.HOL_ERR _ => raise Fail
       (label ^ " conclusion mismatch: " ^
        Parse.term_to_string (Thm.concl theorem) ^ " versus " ^
        Parse.term_to_string expected)

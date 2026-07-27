@@ -254,7 +254,7 @@ structure Refute_Narrow = struct
                             NONE
                         end
                 val alternatives = List.mapPartial constructor_shape
-                  (indexed_map I constrs)
+                  (indexed_map Lib.I constrs)
                 val syntactic_complete =
                   length alternatives = length constrs andalso
                   List.all
@@ -572,7 +572,7 @@ structure Refute_Narrow = struct
                  List.foldr (fn ((index, ty), rest) =>
                    Variable
                      (quantifier, result, position @ [index], ty, rest))
-                   subtree (indexed_map I (#arguments alternative)))
+                   subtree (indexed_map Lib.I (#arguments alternative)))
               val branches = List.map branch (products_of shape)
             in
               Constructor
@@ -854,16 +854,16 @@ structure Refute_Narrow = struct
       boolTheory.NOT_EXISTS_THM,
       boolTheory.LEFT_AND_FORALL_THM,
       boolTheory.RIGHT_AND_FORALL_THM,
-      GSYM boolTheory.LEFT_EXISTS_AND_THM,
-      GSYM boolTheory.RIGHT_EXISTS_AND_THM,
-      GSYM boolTheory.LEFT_FORALL_OR_THM,
-      GSYM boolTheory.RIGHT_FORALL_OR_THM,
+      Conv.GSYM boolTheory.LEFT_EXISTS_AND_THM,
+      Conv.GSYM boolTheory.RIGHT_EXISTS_AND_THM,
+      Conv.GSYM boolTheory.LEFT_FORALL_OR_THM,
+      Conv.GSYM boolTheory.RIGHT_FORALL_OR_THM,
       boolTheory.LEFT_OR_EXISTS_THM,
       boolTheory.RIGHT_OR_EXISTS_THM,
-      GSYM boolTheory.LEFT_FORALL_IMP_THM,
-      GSYM boolTheory.LEFT_EXISTS_IMP_THM,
-      GSYM boolTheory.RIGHT_FORALL_IMP_THM,
-      GSYM boolTheory.RIGHT_EXISTS_IMP_THM ]
+      Conv.GSYM boolTheory.LEFT_FORALL_IMP_THM,
+      Conv.GSYM boolTheory.LEFT_EXISTS_IMP_THM,
+      Conv.GSYM boolTheory.RIGHT_FORALL_IMP_THM,
+      Conv.GSYM boolTheory.RIGHT_EXISTS_IMP_THM ]
 
   val rhs_of = boolSyntax.rhs o Thm.concl
 
@@ -877,12 +877,12 @@ structure Refute_Narrow = struct
       fun step tm =
         let
           val beta =
-            (DEPTH_CONV BETA_CONV tm
-             handle UNCHANGED => Thm.REFL tm)
+            (Conv.DEPTH_CONV Thm.BETA_CONV tm
+             handle Conv.UNCHANGED => Thm.REFL tm)
           val reduced = rhs_of beta
           val rewrite =
             (rewrite_conv reduced
-             handle UNCHANGED => Thm.REFL reduced)
+             handle Conv.UNCHANGED => Thm.REFL reduced)
         in
           Thm.TRANS beta rewrite
         end
@@ -1017,7 +1017,7 @@ structure Refute_Narrow = struct
           val replacement =
             if Util.same_type ty (Term.type_of variable) then variable
             else Term.variant avoid
-              (Term.mk_var (fst (Term.dest_var variable), ty))
+              (Term.mk_var (Lib.fst (Term.dest_var variable), ty))
         in
           ((quantifier, replacement),
            {redex = variable, residue = restore replacement},
@@ -1046,7 +1046,7 @@ structure Refute_Narrow = struct
       if Thy = "refute" andalso Name = expected then SOME arguments
       else NONE
     end
-    handle HOL_ERR _ => NONE
+    handle Feedback.HOL_ERR _ => NONE
 
   fun update_function point value base =
     Term.mk_comb (combinSyntax.mk_update (point, value), base)
