@@ -1549,3 +1549,30 @@ in
     testfn = Term.read_raw (Vector.fromList [k])
   } "%0$0@"
 end
+
+(* Restarting a segment fires Parse.clear_consts_from_grammar, which must
+   drop the zapped segment's constants from the overload map even when the
+   map holds a pattern overload.  Must stay last in the file: it retires
+   the constants of whatever segment the tests above have been using. *)
+val _ = let
+  val _ = tprint "Segment restart clears the zapped segment's consts"
+  fun overloaded s =
+      Overload.is_overloaded (term_grammar.overload_info (term_grammar())) s
+  val thy = current_theory()
+  val _ = temp_overload_on ("chc_ovl", nc ("chc", bool))
+  val _ = temp_overload_on ("chc_cmp", ``\x y. x /\ y``)
+  val _ = if overloaded "chc_ovl" then () else die "chc_ovl not installed"
+  val warnings = ref ([] : string list)
+  val _ = Lib.with_flag
+            (Feedback.WARNING_outstream, fn s => warnings := s :: !warnings)
+            (Feedback.quiet_messages new_theory) thy
+in
+  if not (null (!warnings)) then
+    die ("restart hook warned:\n" ^ String.concatWith "\n" (!warnings))
+  else if overloaded "chc_ovl" then
+    die "restart left the retired constant overloaded"
+  (* bug #851064: the stale entry made the bare name unparseable *)
+  else if not (is_var (Parse.Term [QUOTE "chc"])) then
+    die "retired constant still reachable from the term parser"
+  else OK()
+end

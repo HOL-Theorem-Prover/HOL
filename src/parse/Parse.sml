@@ -1207,17 +1207,17 @@ val TOK = term_grammar.RE o term_grammar.TOK
    as the theory segment we were in anyway, then arrange that
    constants from this segment in the overload info section are removed.
 
-   This needs to be done because no such constant can exist any more *)
+   This needs to be done because no such constant can exist any more.
+
+   Note that actual_ops holds terms, and that since overloading to a
+   pattern they need not be constants. *)
 
   fun clear_thy_consts_from_oinfo thy oinfo = let
     val all_parse_consts = Overload.oinfo_ops oinfo
     fun bad_parse_guy (nm, {actual_ops, ...}) = let
-      fun bad_guy t = let
-        val {Name,Thy,...} = dest_thy_const t
-      in
-        if Thy = thy then SOME (nm, {Name = Name, Thy = Thy})
-        else NONE
-      end
+      fun bad_guy t =
+          if Lib.total (#Thy o dest_thy_const) t = SOME thy then SOME (nm, t)
+          else NONE
     in
       List.mapPartial bad_guy actual_ops
     end
@@ -1226,9 +1226,15 @@ val TOK = term_grammar.RE o term_grammar.TOK
     fun bad_print_guy (x as {Name,Thy}, nm) =
         if Thy = thy then SOME (nm, x) else NONE
     val prints_to_remove = List.mapPartial bad_print_guy all_print_consts
-    fun foldthis ((nm, r), oi) = Overload.remove_mapping nm r oi
+    (* Removal is by term on the parse side because this hook runs after
+       zapCT: remove_mapping would rebuild the constant with prim_mk_const,
+       which can no longer find the segment.  print_map hands back records
+       rather than terms, but it filters on uptodate_term, so it never
+       offers a zapped constant and rm_print is never reached from here. *)
+    fun rm_parse ((nm, t), oi) = Overload.gen_remove_mapping nm t oi
+    fun rm_print ((nm, r), oi) = Overload.remove_mapping nm r oi
   in
-    foldl foldthis (foldl foldthis oinfo parses_to_remove) prints_to_remove
+    foldl rm_print (foldl rm_parse oinfo parses_to_remove) prints_to_remove
   end
 
   fun clear_thy_consts_from_grammar thy = let
