@@ -300,6 +300,9 @@ in
           SOME (i, _) => App (i, List.map (dest_cexp ct bvs fns) xs)
         | _ => raise ERR "dest_cexp"
                          ("could not find equation for: " ^ fst (dest_const f))
+  val dest_cexp = fn ct => fn bvs => fn fns => fn tm =>
+    if type_of tm = #cval_type ct then dest_cexp ct bvs fns tm
+    else raise ERR "dest_cexp" "term is not a compute value"
 end (* local *)
 
 (* -------------------------------------------------------------------------
