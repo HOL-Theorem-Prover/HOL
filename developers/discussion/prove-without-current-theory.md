@@ -154,18 +154,48 @@ Step 2 in progress.  Companion `fooContextScript.sml` files exist for:
 
   - `src/metis/folTools.sml`      → `folToolsContextScript.sml`
   - `src/metis/folMapping.sml`    → `folMappingContextScript.sml`
+  - `src/metis/normalForms.sml`   → `normalFormsContextScript.sml`
   - `src/refute/Canon.sml`        → `canonContextScript.sml`
+  - `src/meson/src/Canon_Port.sml`→ `Canon_Port_ContextScript.sml`
+  - `src/meson/src/mesonLib.sml`  → `mesonLibContextScript.sml`
+  - `src/IndDef/InductiveDefinition.sml` → `InductiveDefinitionContextScript.sml`
+  - `src/simp/src/boolSimps.sml`  → `boolSimpsContextScript.sml`
+  - `src/coretypes/pairTools.sml` → `pairToolsContextScript.sml`
+  - `src/num/reduce/src/Boolconv.sml` → `BoolconvContextScript.sml`
+  - `src/num/arith/src/Sub_and_cond.sml` → `SubAndCondContextScript.sml`
+  - `src/num/theories/Num_conv.sml` → `NumConvContextScript.sml`
 
-Post-fix, `metis-selftest` warnings dropped from 76 to 57, and each
-downstream theory build in `src/coretypes/` lost ~20 warnings.  Files
-still on the todo list (from largest impact down):
+Grammar guards in those files whose sole purpose was to insulate the
+load-time proofs went with the proofs.  One exception: Boolconv keeps
+its `Parse.temp_set_grammars` bracket because it also calls
+`ParseExtras.temp_loose_equality`, whose ambient effect the bracket is
+still scoping.
 
-  - `src/metis/normalForms.sml` (many `prove(t, TAUT_TAC)` sites)
-  - `src/meson/src/Canon_Port.sml` (`APP_CONV` alone accounts for the
-    72 x `∀f x. f x = I f x` firings that were the plan's top row)
-  - `src/IndDef/InductiveDefinition.sml` (four MONO_* theorems, ~38x
-    each in the census)
-  - the remainder of the 77-file list.
+Core-build census after these changes:
+
+| measure                                             | count |
+|-----------------------------------------------------|-------|
+| `TAC_PROOF` calls with no current theory             | 282   |
+| distinct goals among them                            | 82    |
+| log files still carrying at least one                | 27    |
+
+Down from 2386 / 176 / 57 in the baseline.  Largest remaining
+concentrations:
+
+  - `src/num/theories/cv_compute/soundness_check/soundness_check-selftest.log`
+    (38 warnings, all from the selftest's own load-time proves --- these
+    are selftests directly proving without a segment, a different class
+    of offender from the library-load-time case).
+  - `src/pattern_matches/pattern-selftest.log` (17)
+  - `src/boss/holTheory` and `src/boss/boss-selftest.log` (17 each,
+    from libraries loaded by bossLib).
+  - `src/1/selftest.log` (17, tests proving without a segment).
+
+The most repeated remaining goals point at pending library fixes
+elsewhere in the tree (`quantHeuristicsLib`'s GUESS_EXISTS_GAP,
+various tautological helpers still living in top-level `val` sites,
+and a handful of INST-heavy `prove(mk_eq ...)` idioms).  See the
+77-file list for context; most of the survivors are on it.
 
 ## Longer term
 
