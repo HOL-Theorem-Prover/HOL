@@ -2,14 +2,9 @@ structure boolSimps :> boolSimps =
 struct
 
 open HolKernel boolLib liteLib simpLib pureSimps
-     Ho_Rewrite tautLib Parse;
+     Ho_Rewrite tautLib Parse boolSimpsContextTheory;
 
 infix THENQC
-
-(* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val SOME combin_grammars = grammarDB {thyname="combin"}
-val _ = Parse.temp_set_grammars combin_grammars
 
 fun BETA_CONVS tm = (RATOR_CONV BETA_CONVS THENQC BETA_CONV) tm
 
@@ -42,13 +37,7 @@ val ETA_ss = SSFRAG {name = SOME "ETA",
     literal_case_ss
    ---------------------------------------------------------------------- *)
 
- val literal_cong = prove(
-   ``(v:'a = v') ==> (literal_case (f:'a -> 'b) v = literal_case f (I v'))``,
-   DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC [literal_case_THM, combinTheory.I_THM])
-
-val literal_I_thm = prove(
-  ``literal_case (f : 'a -> 'b) (I x) = f x``,
-  REWRITE_TAC [combinTheory.I_THM, literal_case_THM]);
+(* literal_cong, literal_I_thm from boolSimpsContextTheory *)
 
 val literal_case_ss =
     SSFRAG {
@@ -179,13 +168,7 @@ val UNWIND_ss = SSFRAG
     LET_ss
    ---------------------------------------------------------------------- *)
 
- val let_cong = prove(
-   ``(v:'a = v') ==> (LET (f:'a -> 'b) v = LET f (I v'))``,
-   DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC [LET_THM, combinTheory.I_THM])
-
-val let_I_thm = prove(
-  ``LET (f : 'a -> 'b) (I x) = f x``,
-  REWRITE_TAC [combinTheory.I_THM, LET_THM]);
+(* let_cong, let_I_thm from boolSimpsContextTheory *)
 
 val LET_ss =
     SSFRAG {name = SOME"LET",
@@ -232,13 +215,7 @@ val bool_ss = pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss
  * ---------------------------------------------------------------------- *)
 
 
-val NESTED_COND = prove(
-  ``!p (q:'a) (r:'a) s.
-          (COND p (COND p q r) s = COND p q s) /\
-          (COND p q (COND p r s) = COND p q s) /\
-          (COND p (COND (~p) q r) s = COND p r s) /\
-          (COND p q (COND (~p) r s) = COND p q r)``,
-  REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []);
+(* NESTED_COND from boolSimpsContextTheory *)
 
 fun celim_rand_CONV tm = let
   val (Rator, Rand) = Term.dest_comb tm
@@ -417,7 +394,6 @@ val SimpRHS = SimpR boolSyntax.equality
 
 
 
-val _ = Parse.temp_set_grammars ambient_grammars;
 
 end (* struct *)
 
