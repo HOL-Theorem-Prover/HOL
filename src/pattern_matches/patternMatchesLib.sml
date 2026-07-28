@@ -2233,14 +2233,8 @@ val t = ``
 
 local
 
-  val case_dist_exists_thm = prove (``!Q. (
-    (!(x:'a). Q x) ==>
-    !P. (?x. P x) = (?x. Q x /\ P x))``,
-  SIMP_TAC std_ss []);
-
-  val label_over_or_thm = prove (
-    ``(lbl :- (t1 \/ t2)) <=> (lbl :- t1) \/ (lbl :- t2)``,
-    REWRITE_TAC[markerTheory.label_def]);
+  val case_dist_exists_thm = patternMatchesTheory.case_dist_exists_thm
+  val label_over_or_thm    = patternMatchesTheory.label_over_or_thm
 
   fun find_nchotomy_for_cols db col_heu cols = let
     val _ = if (List.null cols) then
@@ -3020,9 +3014,9 @@ val PMATCH_IS_EXHAUSTIVE_CHECK = PMATCH_IS_EXHAUSTIVE_CHECK_GEN []
 
 
 local
-  val EQ_F_ELIM = prove (``!b. F ==> b``, PROVE_TAC[])
-  val EQ_T_ELIM = prove (``!b. (b = T) ==> ~F ==> b``, PROVE_TAC[])
-  val EQ_O_ELIM = prove (``!b1 b2. (b1 = b2) ==> b2 ==> b1``, PROVE_TAC[])
+  val EQ_F_ELIM = patternMatchesTheory.EQ_F_ELIM
+  val EQ_T_ELIM = patternMatchesTheory.EQ_T_ELIM
+  val EQ_O_ELIM = patternMatchesTheory.EQ_O_ELIM
 
 in
 

@@ -1683,3 +1683,25 @@ Theorem COND_CONG_APPLY:
   (if (x:'a) = c then (ff x):'b else ff x) = (if x = c then ff c else ff x)
 Proof ASM_CASES_TAC ``x:'a = c`` THEN ASM_REWRITE_TAC[]
 QED
+
+Theorem case_dist_exists_thm:
+  !Q. (!(x:'a). Q x) ==> !P. (?x. P x) <=> (?x. Q x /\ P x)
+Proof SIMP_TAC std_ss []
+QED
+
+Theorem label_over_or_thm:
+  (lbl :- (t1 \/ t2)) <=> (lbl :- t1) \/ (lbl :- t2)
+Proof REWRITE_TAC [markerTheory.label_def]
+QED
+
+Theorem EQ_F_ELIM:  !b. F ==> b
+Proof PROVE_TAC[]
+QED
+
+Theorem EQ_T_ELIM:  !b. (b <=> T) ==> ~F ==> b
+Proof PROVE_TAC[]
+QED
+
+Theorem EQ_O_ELIM:  !b1 b2. (b1 <=> b2) ==> b2 ==> b1
+Proof PROVE_TAC[]
+QED
