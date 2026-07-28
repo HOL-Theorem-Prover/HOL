@@ -24,9 +24,6 @@ fun fupdkey m f k dflt =
         NONE => Map.insert(m,k,dflt)
       | SOME v => Map.insert(m,k,f v)
 
-fun lmap_insert k v m =
-    fupdkey m (fn l => v::l) k [v]
-
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 val loggingdir = ".hol/logs"
@@ -46,14 +43,6 @@ fun is_multidir gdi =
     Map.numItems gdi > 1 orelse
     (Map.numItems gdi = 1 andalso
      Binarymap.peek(gdi, hmdir.curdir()) = NONE)
-
-fun build_predmap g =
-    let
-      fun foldthis (n, nI) A =
-          List.foldl (fn ((sn,_), A) => lmap_insert sn n A) A (#dependencies nI)
-    in
-      HM_DepGraph.fold foldthis g (Binarymap.mkDict node_compare)
-    end
 
 
 
@@ -192,6 +181,20 @@ fun graphbuild optinfo g =
       {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", s], env = env}
 
     val tgtcomplete = tgtcompletion_cb dirmap
+
+    (* Missing target-times file → cost_of returns 0.0 everywhere →
+       every cp_weight is 0.0 → find_best_runnable_pred ties on
+       node_id and behaves identically to the pre-HLFET picker. *)
+    val times = target_times.load
+                  { root = HMProject.find_root
+                             { start = OS.FileSys.getDir() } }
+    fun cost_of (nI : GraphExtra.t nodeInfo) =
+        case #command nI of
+            BuiltInCmd (BIC_BuildScript fp, _) =>
+              target_times.theory_cost times fp
+          | _ => 0.0
+    val cp_weight = HM_DepGraph.compute_cp_weights cost_of g
+
     fun really_needed nI = #status nI = Pending{needed=true}
     fun b2n true = 1 | b2n false = 0
     fun count_theories_needed0 (A as (thys,nd)) ns =
@@ -216,11 +219,11 @@ fun graphbuild optinfo g =
                 NONE => true
               | SOME n => jobs_running < n
       in
-      case (ok,find_runnable_pred has_capacity g) of
+      case (ok,find_best_runnable_pred cp_weight has_capacity g) of
           (false, _) => (release_all_locks(); GiveUpAndDie (g, false))
        |  (true, NONE) =>
           (* Do NOT release_all_locks here: NoMoreJobs fires after every
-             dispatch cycle when find_runnable_pred has nothing more to
+             dispatch cycle when the picker has nothing more to
              hand out *for now* -- either because no node's deps are
              ready, or because every ready node's LOCAL_PARALLELISM_LIMIT
              is at its cap.  Workers we already dispatched are still

@@ -48,6 +48,7 @@ DIRNAMES = \
   gh1993-lib \
   ignore_errors/j1 \
   qfreadTheoremsyntax \
+  target_times \
   use-fnf \
   time-logging \
   dashC_works \

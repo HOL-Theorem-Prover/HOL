@@ -80,6 +80,20 @@ sig
        times across successive scheduler turns and on each
        candidate. *)
 
+  val find_best_runnable_pred :
+      (node -> real) -> ('a nodeInfo -> bool) -> 'a t ->
+      (node * 'a nodeInfo) option
+    (* Ties on the smallest node id: with score ≡ 0 the result is
+       identical to `find_runnable_pred`. *)
+
+  val successor_map : 'a t -> (node, node list) Binarymap.dict
+    (* Inverse of `#dependencies`. *)
+
+  val compute_cp_weights :
+      ('a nodeInfo -> real) -> 'a t -> (node -> real)
+    (* Critical-path weight lookup: `cp n = cost n + max cp m` over
+       successors `m`.  Unknown nodes score 0.0. *)
+
   val toString : 'a t -> string
   val toJSONString : 'a t -> string
 
