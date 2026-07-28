@@ -9,7 +9,8 @@ struct
 
 open HolKernel Parse boolLib BasicProvers;
 
-open Susp Hol_pp metisLib simpLib pairTheory (* res_quanTools *) numLib;
+open Susp Hol_pp metisLib simpLib pairTheory pred_setTheory
+     (* res_quanTools *) numLib;
 
 infixr 0 oo THENR ORELSER ## thenf orelsef;
 
@@ -684,8 +685,7 @@ fun var_match vars tm tm' =
 (* |- !f g. f = g <=> !x. f x = g x *)
 val FUN_EQ = FUN_EQ_THM;
 
-val SET_EQ = prove (“!s t :'a -> bool. (s = t) <=> (!x. x IN s <=> x IN t)”,
-                    SIMP_TAC bool_ss [IN_DEF, FUN_EQ_THM]);
+val SET_EQ = pred_setTheory.EXTENSION;
 
 val hyps = foldl (fn (h,t) => tunion (hyp h) t) [];
 

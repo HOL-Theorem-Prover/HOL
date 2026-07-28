@@ -16,7 +16,7 @@ Ancestors
   relation option
 Libs
   HolKernel Parse boolLib BasicProvers Prim_rec pairLib numLib
-  hurdUtils tautLib pureSimps metisLib mesonLib simpLib boolSimps
+  tautLib pureSimps metisLib mesonLib simpLib boolSimps
   TotalDefn pred_setpp[qualified]
 
 open Unicode
@@ -32,6 +32,12 @@ val qabbrev_tac = Q.ABBREV_TAC;
 val qid_spec_tac = Q.ID_SPEC_TAC;
 val qexists_tac = Q.EXISTS_TAC;
 val rename1 = Q.RENAME1_TAC;
+
+(* Small helpers previously drawn from hurdUtils.  Local because pulling in
+   hurdUtils would produce a dependency cycle. *)
+fun K_TAC _ = ALL_TAC
+val KILL_TAC = POP_ASSUM_LIST K_TAC
+val Rewr' = DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
 
 (* don't eta-contract these; that will force tactics to use one fixed version
    of srw_ss() *)
@@ -1060,14 +1066,14 @@ Theorem DISJOINT_DIFFS:
        DISJOINT (g m) (g n)
 Proof
    RW_TAC std_ss []
-   >> Know `SUC m <= n \/ SUC n <= m` >- DECIDE_TAC
+   >> Q_TAC KNOW_TAC `SUC m <= n \/ SUC n <= m` >- DECIDE_TAC
    >> REWRITE_TAC [LESS_EQ_EXISTS]
    >> STRIP_TAC >|
-   [Know `f (SUC m) SUBSET f n` >- PROVE_TAC [SUBSET_ADD]
+   [Q_TAC KNOW_TAC `f (SUC m) SUBSET f n` >- PROVE_TAC [SUBSET_ADD]
     >> RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER,
                       NOT_IN_EMPTY, IN_DIFF, SUBSET_DEF]
     >> PROVE_TAC [],
-    Know `f (SUC n) SUBSET f m` >- PROVE_TAC [SUBSET_ADD]
+    Q_TAC KNOW_TAC `f (SUC n) SUBSET f m` >- PROVE_TAC [SUBSET_ADD]
     >> RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER,
                       NOT_IN_EMPTY, IN_DIFF, SUBSET_DEF]
     >> PROVE_TAC []]
@@ -2162,7 +2168,7 @@ Theorem SURJ_IMP_INJ:
      !s t. (?f. SURJ f s t) ==> (?g. INJ g t s)
 Proof
    RW_TAC std_ss [SURJ_DEF, INJ_DEF]
-   >> Suff `?g. !x. x IN t ==> g x IN s /\ (f (g x) = x)`
+   >> Q_TAC SUFF_TAC `?g. !x. x IN t ==> g x IN s /\ (f (g x) = x)`
    >- PROVE_TAC []
    >> Q.EXISTS_TAC `\y. @x. x IN s /\ (f x = y)`
    >> POP_ASSUM MP_TAC
@@ -2237,7 +2243,7 @@ Theorem BIJ_SYM_IMP:
      !s t. (?f. BIJ f s t) ==> (?g. BIJ g t s)
 Proof
    RW_TAC std_ss [BIJ_DEF, SURJ_DEF, INJ_DEF]
-   >> Suff `?(g : 'b -> 'a). !x. x IN t ==> g x IN s /\ (f (g x) = x)`
+   >> Q_TAC SUFF_TAC `?(g : 'b -> 'a). !x. x IN t ==> g x IN s /\ (f (g x) = x)`
    >- (rpt STRIP_TAC
        >> Q.EXISTS_TAC `g`
        >> RW_TAC std_ss []
@@ -2585,11 +2591,11 @@ Theorem SCHROEDER_BERNSTEIN_AUTO:
 Proof
     RW_TAC std_ss [INJ_DEF]
  >> Q.EXISTS_TAC `\x. if x IN (schroeder_close f (s DIFF t)) then f x else x`
- >> Know `(s DIFF (schroeder_close f (s DIFF t))) SUBSET t`
+ >> Q_TAC KNOW_TAC `(s DIFF (schroeder_close f (s DIFF t))) SUBSET t`
  >- ( RW_TAC std_ss [SUBSET_DEF, IN_DIFF] \\
-      Suff `~(x IN s DIFF t)` >- RW_TAC std_ss [IN_DIFF] \\
+      Q_TAC SUFF_TAC `~(x IN s DIFF t)` >- RW_TAC std_ss [IN_DIFF] \\
       PROVE_TAC [SCHROEDER_CLOSE_SUBSET, SUBSET_DEF] )
- >> Know `schroeder_close f (s DIFF t) SUBSET s`
+ >> Q_TAC KNOW_TAC `schroeder_close f (s DIFF t) SUBSET s`
  >- ( MATCH_MP_TAC SCHROEDER_CLOSE_SET \\
       RW_TAC std_ss [SUBSET_DEF, IN_DIFF, IN_FUNSET] \\
       PROVE_TAC [SUBSET_DEF] )
@@ -2650,7 +2656,7 @@ Theorem BIJ_ALT:
 Proof
     RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, EXISTS_UNIQUE_ALT]
  >> RW_TAC std_ss [IN_FUNSET, IN_DFUNSET, GSYM CONJ_ASSOC]
- >> Know `!a b c. (a ==> (b = c)) ==> (a /\ b <=> a /\ c)` >- PROVE_TAC []
+ >> Q_TAC KNOW_TAC `!a b c. (a ==> (b = c)) ==> (a /\ b <=> a /\ c)` >- PROVE_TAC []
  >> DISCH_THEN MATCH_MP_TAC
  >> REPEAT (STRIP_TAC ORELSE EQ_TAC) (* 4 sub-goals here *)
  >| [ (* goal 1 (of 4) *)
@@ -3710,7 +3716,7 @@ Theorem BIJ_FINITE_SUBSET:
 Proof
   Induct_on ‘FINITE’
    >> RW_TAC std_ss [EMPTY_SUBSET, NOT_IN_EMPTY, INSERT_SUBSET, IN_INSERT]
-   >> Know `?!k. f k = e`
+   >> Q_TAC KNOW_TAC `?!k. f k = e`
    >- ( Q.PAT_X_ASSUM `BIJ a b c` MP_TAC \\
         RW_TAC std_ss [BIJ_ALT] \\
         ASSUME_TAC (INST_TYPE [``:'a`` |-> ``:num``] IN_UNIV) \\
@@ -3722,7 +3728,7 @@ Proof
    >> `!m n k. MAX m n <= k <=> m <= k /\ n <= k` by RW_TAC arith_ss [MAX_DEF]
    >> RW_TAC std_ss []
    >> STRIP_TAC
-   >> Know `n = k` >- PROVE_TAC []
+   >> Q_TAC KNOW_TAC `n = k` >- PROVE_TAC []
    >> DECIDE_TAC
 QED
 
@@ -3740,7 +3746,7 @@ Proof
  >> MP_TAC (Q.SPECL [`f`, `e`, `s`, `t`] BIJ_INSERT_IMP)
  >> ASM_REWRITE_TAC []
  >> STRIP_TAC
- >> Know `FINITE u` >- PROVE_TAC []
+ >> Q_TAC KNOW_TAC `FINITE u` >- PROVE_TAC []
  >> STRIP_TAC
  >> CONJ_TAC >- PROVE_TAC [FINITE_INSERT]
  >> Q.PAT_X_ASSUM `f e INSERT u = t` (fn th => RW_TAC std_ss [SYM th])
@@ -4126,7 +4132,7 @@ Proof
   STRIP_TAC THEN
   rename1 ‘t a HAS_SIZE n’ THEN
   REWRITE_TAC[MULT_CLAUSES] THEN
-  Suff ‘{(x,y) | (x = a \/ x IN s) /\ y IN t(x)} =
+  Q_TAC SUFF_TAC ‘{(x,y) | (x = a \/ x IN s) /\ y IN t(x)} =
         {(x,y) | x IN s /\ y IN t(x)} UNION
         IMAGE (\y. (a,y)) (t a)’
   >- (Rewr' \\
@@ -4622,7 +4628,7 @@ Proof
        >> RW_TAC std_ss [COUNT_ZERO, NOT_IN_EMPTY])
    >> Q.EXISTS_TAC `\m. if m = n then e else c m`
    >> Q.EXISTS_TAC `SUC n`
-   >> Know `!x. x IN count n ==> ~(x = n)`
+   >> Q_TAC KNOW_TAC `!x. x IN count n ==> ~(x = n)`
    >- RW_TAC arith_ss [IN_COUNT]
    >> RW_TAC std_ss [COUNT_SUC, IN_INSERT]
    >> PROVE_TAC []
@@ -4855,9 +4861,9 @@ Theorem BIGUNION_IMAGE_SUBSET :
 Proof
     RW_TAC std_ss [BIGUNION_SUBSET, IN_IMAGE]
  >> reverse EQ_TAC >> rw []
- >- (FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >- (FIRST_X_ASSUM MATCH_MP_TAC >> ASM_REWRITE_TAC [])
  >> FIRST_X_ASSUM MATCH_MP_TAC
- >> Q.EXISTS_TAC ‘x’ >> art []
+ >> Q.EXISTS_TAC ‘x’ >> ASM_REWRITE_TAC []
 QED
 
 Theorem BIGUNION_IMAGE_UNIV:
@@ -4970,7 +4976,7 @@ Proof
    >> RW_TAC std_ss []
    >> REVERSE (Cases_on `x' < n`) >- PROVE_TAC []
    >> RW_TAC std_ss []
-   >> Know `~(x':num = n)` >- DECIDE_TAC
+   >> Q_TAC KNOW_TAC `~(x':num = n)` >- DECIDE_TAC
    >> PROVE_TAC []
 QED
 
@@ -8394,7 +8400,7 @@ Proof
       ASSUME_TAC num_countable \\
       `countable (IMAGE f (UNIV :num set))` by PROVE_TAC [image_countable] \\
       ASSUME_TAC (INST_TYPE [``:'a`` |-> ``:num``] IN_UNIV) \\
-      Know `s SUBSET (IMAGE f (UNIV :num set))` >| (* 2 sub-goals here *)
+      Q_TAC KNOW_TAC `s SUBSET (IMAGE f (UNIV :num set))` >| (* 2 sub-goals here *)
       [ (* goal 2.1 (of 2) *)
         REWRITE_TAC [SUBSET_DEF, IN_IMAGE] \\
         rpt STRIP_TAC >> PROVE_TAC [],
@@ -8672,7 +8678,7 @@ Theorem INFINITE_EXPLICIT_ENUMERATE:
      !s. INFINITE s ==> INJ (\n :num. CHOICE (FUNPOW REST n s)) UNIV s
 Proof
    RW_TAC std_ss [INJ_DEF, IN_UNIV]
-   >- (Suff `CHOICE (FUNPOW REST n s) IN FUNPOW REST n s`
+   >- (Q_TAC SUFF_TAC `CHOICE (FUNPOW REST n s) IN FUNPOW REST n s`
        >- PROVE_TAC [SUBSET_DEF, EXPLICIT_ENUMERATE_MONO]
        >> RW_TAC std_ss [GSYM CHOICE_DEF, EXPLICIT_ENUMERATE_NOT_EMPTY])
    >> rpt (POP_ASSUM MP_TAC)
@@ -8682,24 +8688,24 @@ Proof
    >> (Induct >> Cases) >|
    [PROVE_TAC [],
     rpt STRIP_TAC
-    >> Suff `~(CHOICE (FUNPOW REST 0 s) IN FUNPOW REST (SUC n) s)`
+    >> Q_TAC SUFF_TAC `~(CHOICE (FUNPOW REST 0 s) IN FUNPOW REST (SUC n) s)`
     >- (RW_TAC std_ss []
         >> MATCH_MP_TAC CHOICE_DEF
         >> PROVE_TAC [EXPLICIT_ENUMERATE_NOT_EMPTY])
     >> POP_ASSUM K_TAC
     >> RW_TAC std_ss [FUNPOW]
-    >> Suff `~(CHOICE s IN REST s)`
+    >> Q_TAC SUFF_TAC `~(CHOICE s IN REST s)`
     >- PROVE_TAC [SUBSET_DEF, EXPLICIT_ENUMERATE_MONO]
     >> PROVE_TAC [CHOICE_NOT_IN_REST],
     rpt STRIP_TAC
     >> POP_ASSUM (ASSUME_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ])
-    >> Suff `~(CHOICE (FUNPOW REST 0 s) IN FUNPOW REST (SUC x) s)`
+    >> Q_TAC SUFF_TAC `~(CHOICE (FUNPOW REST 0 s) IN FUNPOW REST (SUC x) s)`
     >- (RW_TAC std_ss []
         >> MATCH_MP_TAC CHOICE_DEF
         >> PROVE_TAC [EXPLICIT_ENUMERATE_NOT_EMPTY])
     >> POP_ASSUM K_TAC
     >> RW_TAC std_ss [FUNPOW]
-    >> Suff `~(CHOICE s IN REST s)`
+    >> Q_TAC SUFF_TAC `~(CHOICE s IN REST s)`
     >- PROVE_TAC [SUBSET_DEF, EXPLICIT_ENUMERATE_MONO]
     >> PROVE_TAC [CHOICE_NOT_IN_REST],
     RW_TAC std_ss [FUNPOW]
@@ -8735,7 +8741,7 @@ Proof
    >> RW_TAC std_ss [GSYM ENUMERATE]
    >> MATCH_MP_TAC BIJ_INJ_SURJ
    >> REVERSE CONJ_TAC
-   >- (Know `~(s = {})` >- PROVE_TAC [FINITE_EMPTY]
+   >- (Q_TAC KNOW_TAC `~(s = {})` >- PROVE_TAC [FINITE_EMPTY]
        >> RW_TAC std_ss [GSYM MEMBER_NOT_EMPTY]
        >> Q.EXISTS_TAC `\n. if f n IN s then f n else x`
        >> RW_TAC std_ss [SURJ_DEF, IN_UNIV]
@@ -8951,7 +8957,7 @@ End
 Theorem PREIMAGE_ALT:
   !f s. PREIMAGE f s = s o f
 Proof
-    Know `!x f s. x IN (s o f) <=> f x IN s`
+    Q_TAC KNOW_TAC `!x f s. x IN (s o f) <=> f x IN s`
  >- RW_TAC std_ss [SPECIFICATION, o_THM]
  >> RW_TAC std_ss [PREIMAGE_def, EXTENSION, GSPECIFICATION]
 QED
@@ -9116,7 +9122,7 @@ Proof
  >> Cases_on `f N`
  >> REWRITE_TAC [prim_recTheory.LESS_THM]
  >> Q.EXISTS_TAC `SUC (MAX k (MAX q r))`
- >> Know `!a b. a < SUC b <=> a <= b`
+ >> Q_TAC KNOW_TAC `!a b. a < SUC b <=> a <= b`
  >- (KILL_TAC >> DECIDE_TAC)
  >> RW_TAC std_ss []
  >> RW_TAC std_ss []
@@ -9141,7 +9147,7 @@ Proof
  >> RW_TAC std_ss []
  >> Q.EXISTS_TAC `y`
  >> RW_TAC std_ss []
- >> Suff `~(N <= y)` >- DECIDE_TAC
+ >> Q_TAC SUFF_TAC `~(N <= y)` >- DECIDE_TAC
  >> PROVE_TAC []
 QED
 
