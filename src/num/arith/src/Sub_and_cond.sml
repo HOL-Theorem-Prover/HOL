@@ -18,7 +18,7 @@
 
 structure Sub_and_cond :> Sub_and_cond =
 struct
-  open Arbint HolKernel Parse boolLib Thm_convs
+  open Arbint HolKernel Parse boolLib Thm_convs SubAndCondContextTheory
 
 val COND_ABS       = boolTheory.COND_ABS;
 val TOP_DEPTH_CONV = Conv.TOP_DEPTH_CONV;
@@ -224,14 +224,7 @@ fun TB c t =
   if Type.compare(type_of t, bool) = EQUAL then NO_CONV t
   else c t
 
-val CASES_ELIM = let
-  val p = mk_var("p", bool)
-  val P = mk_var("P", bool --> bool)
-in
-  prove(mk_eq(mk_comb(P, p),
-              mk_conj(mk_imp(p,mk_comb(P,T)), mk_imp(mk_neg p,mk_comb(P,F)))),
-        ASM_CASES_TAC p THEN ASM_REWRITE_TAC[])
-end
+val CASES_ELIM = SPEC_ALL SubAndCondContextTheory.CASES_ELIM
 local
 val simplify = REWR_CONV CASES_ELIM THENC
                BINOP_CONV (RAND_CONV BETA_CONV) THENC
