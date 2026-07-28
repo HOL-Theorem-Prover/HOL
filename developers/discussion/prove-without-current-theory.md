@@ -127,13 +127,45 @@ The static list of files was produced with
 
   1. Add the check to `TAC_PROOF` as a warning, ideally behind a trace
      so it can be silenced.
-  2. Work down the file list.  For each, either move the proof behind a
-     function that runs when first needed, or give the structure an
-     explicit segment.  Several files already carry a hand-rolled
-     grammar guard (`Canon.sml`, `Extract.sml`, `folTools.sml`) --- that
-     guard is a symptom of this problem and can go once the proof no
-     longer happens at load time.
+  2. Work down the file list.  For each, either move the proof into a
+     companion `fooContextScript.sml` background theory that `foo.sml`
+     imports (preferred, especially when the theorem is non-trivial),
+     or replace the tactic proof with a forward proof using only
+     primitive rules (fine for one-liners).  Several files already
+     carry a hand-rolled grammar guard (`Canon.sml`, `Extract.sml`,
+     `folTools.sml`) --- that guard is a symptom of this problem and
+     can go once the proof no longer happens at load time.
   3. Flip the warning to an error.
+
+Files baked into `hol.state0` (in particular the src/1 residents:
+`boolLib.sml`, `Drule.sml`, `newtypeTools.sml`, `Prim_rec.sml`,
+`Tactic.sml`, `TypeBasePure.sml`) are exempt from the cleanup: their
+load-time proofs run once during heap construction and are never
+re-executed under a varying ambient state, so they cannot exhibit the
+bug the check exists to catch.
+
+## Progress
+
+Step 1 landed: `TAC_PROOF` warns when `Thm.getCT () = NONE`, controlled
+by the trace `"TAC_PROOF requires current theory"` (default 1, max 1).
+Trace `0` silences it.
+
+Step 2 in progress.  Companion `fooContextScript.sml` files exist for:
+
+  - `src/metis/folTools.sml`      → `folToolsContextScript.sml`
+  - `src/metis/folMapping.sml`    → `folMappingContextScript.sml`
+  - `src/refute/Canon.sml`        → `canonContextScript.sml`
+
+Post-fix, `metis-selftest` warnings dropped from 76 to 57, and each
+downstream theory build in `src/coretypes/` lost ~20 warnings.  Files
+still on the todo list (from largest impact down):
+
+  - `src/metis/normalForms.sml` (many `prove(t, TAUT_TAC)` sites)
+  - `src/meson/src/Canon_Port.sml` (`APP_CONV` alone accounts for the
+    72 x `∀f x. f x = I f x` firings that were the plan's top row)
+  - `src/IndDef/InductiveDefinition.sml` (four MONO_* theorems, ~38x
+    each in the census)
+  - the remainder of the 77-file list.
 
 ## Longer term
 

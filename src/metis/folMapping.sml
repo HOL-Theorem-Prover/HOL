@@ -6,7 +6,7 @@
 structure folMapping :> folMapping =
 struct
 
-open HolKernel Parse boolLib;
+open HolKernel Parse boolLib folMappingContextTheory;
 
 infix THENR ## |->;
 
@@ -227,38 +227,6 @@ try sync_vars [``LENGTH (x:'b list) <= 0``, ``x:'a``, ``HD x = 3``];
 prepare_list_mk_comb (``LENGTH``, [``[3; 4]``]);
 try unify_list_mk_comb (``COND``, new_tyvars [``HD x``, ``CONS x``, ``I``]);
 *)
-
-(* ------------------------------------------------------------------------- *)
-(* Worker theorems for first-order proof translation.                        *)
-(* ------------------------------------------------------------------------- *)
-
-val HIDE_LITERAL = prove
-  (``!a. a ==> ~a ==> F``,
-   tautLib.TAUT_TAC);
-
-val SHOW_LITERAL = prove
-  (``!x. (~x ==> F) ==> x``,
-   tautLib.TAUT_TAC);
-
-val INITIALIZE_CLAUSE = prove
-  (``!a b. a \/ b ==> ~a ==> b``,
-   tautLib.TAUT_TAC);
-
-val FINALIZE_CLAUSE = prove
-  (``!a b. (~a ==> b) ==> (a \/ b)``,
-   tautLib.TAUT_TAC);
-
-val RESOLUTION = prove
-  (``!a. a /\ ~a ==> F``,
-   tautLib.TAUT_TAC);
-
-val EQUAL_STEP = prove
-  (``!a b c. ((a ==> (b = c)) /\ b) ==> ~a \/ c``,
-   tautLib.TAUT_TAC);
-
-val EXCLUDED_MIDDLE' = prove
-  (``!t. ~t \/ t``,
-   tautLib.TAUT_TAC);
 
 (* ------------------------------------------------------------------------- *)
 (* Operations on HOL literals and clauses.                                   *)
