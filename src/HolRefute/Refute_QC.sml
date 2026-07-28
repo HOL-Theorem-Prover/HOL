@@ -4,11 +4,9 @@ structure Refute_QC = struct
   structure SmartGen = Refute_SmartGen
   structure MFH = Refute_ModelFinder_HOL
 
-  fun member tm = List.exists (fn other => Term.aconv tm other)
+  val member = Refute_Util.aconv_member
 
-  fun union_terms left right =
-    List.rev (List.foldl (fn (tm, acc) =>
-      if member tm acc then acc else tm :: acc) (List.rev left) right)
+  val union_terms = Refute_Util.union_terms
 
   fun subtract_terms left right =
     List.filter (fn tm => not (member tm right)) left
@@ -513,12 +511,19 @@ structure Refute_QC = struct
             (SOME prefix, SOME tree, true) =>
               pnf_case_bindings prefix tree
           | _ => bindings
+      val narrowing =
+        case strategy of Narrowing => true | _ => false
+      (* The plan substrates build their environment by consing, so goal
+         order is recovered by reversing.  Narrowing reports against the
+         prenex prefix, which is already in goal order. *)
+      val ordered_bindings =
+        if narrowing then report_bindings else rev report_bindings
       val cex : Refute_Core.counterexample =
         { backend = display_name strategy,
           substrate = substrate,
           certainty = if genuine then Refute_Core.Potential []
             else Refute_Core.Potential ["evaluation stuck during testing"],
-          bindings = rev report_bindings,
+          bindings = ordered_bindings,
           evals = [], cert = NONE, scope = NONE, model = NONE,
           stats = stats }
       val next =
@@ -530,8 +535,6 @@ structure Refute_QC = struct
           | NONE => false
       val has_hole = List.exists
         (Refute_ModelFinder_Names.contains_irrelevant_marker o #2) env
-      val narrowing =
-        case strategy of Narrowing => true | _ => false
       val partial_universal =
         narrowing andalso has_hole andalso
         not (Refute_Narrow.contains_existentials
@@ -980,7 +983,11 @@ structure Refute_QC = struct
             SOME selected => selected
           | NONE => compile_selected config strategy (Plans plans)
     in
-      if not (null gate_reasons) then Refute_Core.Unknown gate_reasons
+      (* [selection] may already hold a compiled test even when the gate
+         reasons veto the run, so release it before reporting. *)
+      if not (null gate_reasons) then
+        (ignore (Exn.capture close_selection selection);
+         Refute_Core.Unknown gate_reasons)
       else case selection of
           SelectionFailed reasons => Refute_Core.Unknown reasons
         | Selected (substrate, compiled) =>
@@ -1145,7 +1152,8 @@ structure Refute_QC = struct
      Refute_EvalCompute.register_substrate ();
      Refute_EvalCv.register_substrate ();
      Refute_Core.register_backend exhaustive_backend;
-     Refute_Core.register_backend random_backend)
+     Refute_Core.register_backend random_backend;
+     Refute_Core.register_run_release clear_smart_gate_cache)
 
   val _ = register_backends ()
 end

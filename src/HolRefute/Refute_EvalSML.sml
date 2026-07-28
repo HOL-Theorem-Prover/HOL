@@ -205,64 +205,44 @@ structure Refute_EvalSML = struct
       boolSyntax.rhs (Thm.concl theorem)
     end
 
-  fun reconstruction_arg constructor_index argument_index rebuild () =
+  (* The reconstruction and split paths differ only in where the value comes
+     from.  A char-list CONS reaches here as a string literal, which has to
+     be taken apart textually rather than by [strip_comb]; a value that is
+     not a literal falls back to the ordinary destructuring. *)
+  fun constructor_argument constructor_index argument_index value =
     let
-      val value = rebuild ()
       val expected = Vector.sub (!constructors, constructor_index)
       val expected_name =
         let val {Thy, Name, ...} = Term.dest_thy_const expected
         in (Thy, Name) end
-      val string_cons = expected_name = ("list", "CONS") andalso
-        is_char_list_type (Term.type_of value)
+      val string_parts =
+        if expected_name = ("list", "CONS") andalso
+           is_char_list_type (Term.type_of value) then
+          Lib.total char_list_value_parts value
+        else NONE
     in
-      if string_cons then
-        (case char_list_value_parts value of
-             NONE => raise Stuck "empty string reconstruction"
-           | SOME (head, tail) =>
-               if argument_index = 0 then char_term head
-               else if argument_index = 1 then string_term tail
-               else raise Subscript)
-      else
-        let val (constructor, arguments) = boolSyntax.strip_comb value
-        in
-          if Term.same_const constructor expected then
-            List.nth (arguments, argument_index)
-          else raise Stuck "constructor reconstruction mismatch"
-        end
+      case string_parts of
+          SOME NONE => raise Stuck "empty string reconstruction"
+        | SOME (SOME (head, tail)) =>
+            if argument_index = 0 then char_term head
+            else if argument_index = 1 then string_term tail
+            else raise Subscript
+        | NONE =>
+            let val (constructor, arguments) = boolSyntax.strip_comb value
+            in
+              if Term.same_const constructor expected then
+                List.nth (arguments, argument_index)
+              else raise Stuck "constructor reconstruction mismatch"
+            end
     end
+
+  fun reconstruction_arg constructor_index argument_index rebuild () =
+    constructor_argument constructor_index argument_index (rebuild ())
 
   fun split_term constructor_index argument_index expression_index
       environment =
-    let
-      val value = eval_term expression_index environment
-      val expected = Vector.sub (!constructors, constructor_index)
-      val expected_name =
-        let val {Thy, Name, ...} = Term.dest_thy_const expected
-        in (Thy, Name) end
-      val expected_result =
-        #2 (boolSyntax.strip_fun (Term.type_of expected))
-      val string_cons = expected_name = ("list", "CONS") andalso
-        is_char_list_type expected_result
-      fun ordinary () =
-        let val (constructor, arguments) = boolSyntax.strip_comb value
-        in
-          if Term.same_const constructor expected then
-            List.nth (arguments, argument_index)
-          else
-            raise Stuck "constructor reconstruction mismatch"
-        end
-      fun string_argument () =
-        case char_list_value_parts value of
-            SOME (head, tail) =>
-              if expected_name <> ("list", "CONS") then
-                raise Stuck "string reconstruction mismatch"
-              else if argument_index = 0 then char_term head
-              else if argument_index = 1 then string_term tail
-              else raise Subscript
-          | NONE => raise Stuck "string reconstruction mismatch"
-    in
-      if string_cons then string_argument () else ordinary ()
-    end
+    constructor_argument constructor_index argument_index
+      (eval_term expression_index environment)
 
   fun pretty_string pretty =
     let

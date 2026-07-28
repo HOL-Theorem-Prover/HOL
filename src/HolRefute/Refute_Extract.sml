@@ -2451,20 +2451,9 @@ structure Refute_Extract = struct
           reject "native: narrowing engine is not installed"
         else ()
 
-      fun same_program
-            ({relation = left, mode = left_mode, version = left_version, ...} :
-              Refute_SmartGen.enumerator)
-            ({relation = right, mode = right_mode,
-              version = right_version, ...} :
-              Refute_SmartGen.enumerator) =
-        Refute_SmartGen.same_relation left right andalso
-        Refute_SmartGen.eq_mode (left_mode, right_mode) andalso
-        Refute_SmartGen.same_program_version
-          (left_version, right_version)
+      fun smart_reject message = reject ("smart plan: " ^ message)
 
-      fun add_program program programs =
-        if List.exists (same_program program) programs then programs
-        else programs @ [program]
+      val same_program = Refute_EvalEnum.same_program
 
       fun cached_all_input predicate expected_version =
         if not (#smart_generators (#qc config)) orelse
@@ -2490,70 +2479,28 @@ structure Refute_Extract = struct
           end
         handle Feedback.HOL_ERR _ => NONE
 
-      fun program_closure current programs =
-        let
-          val programs = add_program current programs
-          val {clauses, ...} = current
-          fun called (Refute_SmartGen.CpsClause {premises, ...}) =
-            List.mapPartial (fn Refute_SmartGen.CpsCall
-                {rel, mode, ...} =>
-                  (case Refute_SmartGen.enumerator_for_in
-                       enum_cache rel mode of
-                       SOME program => SOME program
-                     | NONE => reject
-                         "smart plan: missing recursive enumerator dependency")
-              | _ => NONE) premises
-          fun visit program result =
-            if List.exists (same_program program) result then result
-            else program_closure program result
-        in
-          List.foldl (fn (program, result) => visit program result)
-            programs (List.concat (map called clauses))
-        end
+      fun enum_dependency rel mode =
+        Refute_SmartGen.enumerator_for_in enum_cache rel mode
 
-      fun collect_programs current programs =
-        case current of
-            Test _ => programs
-          | Gen (_, next) => collect_programs next programs
-          | Bind (_, _, fallback, next) =>
-              collect_programs next
-                (case fallback of NONE => programs
-                 | SOME other => collect_programs other programs)
-          | Split (_, branches) =>
-              List.foldl (fn ((_, _, next), result) =>
-                collect_programs next result) programs branches
-          | Guard (_, next) => collect_programs next programs
-          | SmartGuard {predicate, version, cont} =>
-              let
-                val program =
-                  case cached_all_input predicate version of
-                      SOME (found, _) => found
-                    | NONE => reject
-                        "smart plan: stale or non-all-input smart Guard"
-              in
-                collect_programs cont (program_closure program programs)
-              end
-          | Enum {rel, mode, version, cont, ...} =>
-              let
-                val program =
-                  case Refute_SmartGen.enumerator_for_in
-                    enum_cache rel mode of
-                      SOME found =>
-                        if Refute_SmartGen.same_program_version
-                             (version, #version found)
-                        then found
-                        else reject "smart plan: stale Enum version"
-                    | NONE => reject
-                        "smart plan: missing top-level enumerator program"
-              in
-                collect_programs cont (program_closure program programs)
-              end
-          | Prune => programs
+      fun top_program rel mode version =
+        case enum_dependency rel mode of
+            SOME found =>
+              if Refute_SmartGen.same_program_version
+                   (version, #version found)
+              then found
+              else smart_reject "stale Enum version"
+          | NONE => smart_reject "missing top-level enumerator program"
+
+      fun guard_program predicate version =
+        case cached_all_input predicate version of
+            SOME (found, _) => found
+          | NONE => smart_reject "stale or non-all-input smart Guard"
+
+      val collect_programs = Refute_EvalEnum.collect_programs
+        smart_reject enum_dependency top_program guard_program
 
       val enum_programs = List.foldl (fn (plan, programs) =>
         collect_programs plan programs) [] plans
-
-      fun smart_reject message = reject ("smart plan: " ^ message)
 
       val _ = Refute_EvalEnum.validate
         smart_reject enum_programs plans

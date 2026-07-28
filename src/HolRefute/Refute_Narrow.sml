@@ -398,22 +398,11 @@ structure Refute_Narrow = struct
     | value_of (Variable (_, result, _, _, _)) = result
     | value_of (Constructor (_, result, _, _, _, _)) = result
 
-  fun ball branches =
-    List.foldl (fn ((_, subtree), result) =>
-      conj (result, value_of subtree))
-      (Eval {result = true, potential = false}) branches
-
   fun incomplete_false shape
         (Eval {result = false, potential}) =
         Eval {result = false,
               potential = potential orelse not (shape_complete shape)}
     | incomplete_false _ truth = truth
-
-  fun bexists shape branches =
-    incomplete_false shape
-      (List.foldl (fn ((_, subtree), result) =>
-        disj (result, value_of subtree))
-        (Eval {result = false, potential = false}) branches)
 
   fun variable_value Existential shape result =
         incomplete_false shape result

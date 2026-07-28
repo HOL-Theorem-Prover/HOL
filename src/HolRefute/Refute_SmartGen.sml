@@ -20,7 +20,7 @@ structure Refute_SmartGen = struct
 
   val same_term = Term.aconv
 
-  val member_term = Lib.op_mem Term.aconv
+  val member_term = Refute_Util.aconv_member
 
   fun distinct_terms [] = true
     | distinct_terms (term :: rest) =
@@ -591,10 +591,7 @@ structure Refute_SmartGen = struct
       length (List.filter has_output (strip_mode mode))
     end
 
-  fun union_terms left right =
-    List.foldl (fn (term, result) =>
-      if member_term term result then result else result @ [term])
-      left right
+  val union_terms = Refute_Util.union_terms
 
   fun missing_vars known term =
     List.filter (fn variable => not (member_term variable known))

@@ -37,6 +37,8 @@ This file provides guidance to coding agents when working with the HolRefute pro
 - Trust model: substrates are untrusted accelerators.  A counterexample
   becomes `Genuine` only after `Refute_Cert` re-evaluates the instantiated
   proposition with computeLib and proves its negation.  No oracle tags.
+  The sole opt-out is `upd_certify false` (default `true`): QC hits are
+  then `Genuine` with `cert = NONE` and print as uncertified.
 - Substrate selection: `Auto` falls through inapplicable substrates
   (NativeSML, then Cv, then Compute); an explicitly selected substrate
   never falls through — inapplicability reports `Unknown`.
@@ -52,7 +54,7 @@ This file provides guidance to coding agents when working with the HolRefute pro
   path (success, failure, timeout, interrupt); if safe cleanup is
   unavailable, report inapplicable instead.  `theory_tests/refuteCvClean*`
   check this.
-- Ancestry split: refuteTheory (parents: real, sorting, words) must stay
+- Ancestry split: refuteTheory (parents: real, sorting, words, rat) must stay
   cv-free; refute_cvTheory (parents: refute, cv_std) holds the cv
   translations.  The Holmakefile builds `refuteheap` separately to keep
   this split, and the selftest asserts the exact parent sets.

@@ -14737,6 +14737,52 @@ val _ = require_msg
   "the smart gate swallowed Interrupt or leaked its table")
   (fn () => ()) ()
 
+(* The gate compiles its trial test while deciding eligibility, before any
+   backend runs.  A lighter backend that decides the problem first leaves the
+   exhaustive backend unrun, so nothing reclaims the parked test unless the
+   run releases it. *)
+val gate_release_stub_enabled = ref false
+
+val gate_release_stub : backend =
+  { name = "refute-gate-release-stub",
+    weight = 1,
+    configured = fn () => !gate_release_stub_enabled,
+    requires = AnyGoal,
+    input = MonoInstances,
+    run = fn _ => fn _ =>
+      Counterexample
+        [{backend = "refute-gate-release-stub", substrate = "stub",
+          certainty = Genuine, bindings = [], evals = [], cert = NONE,
+          scope = NONE, model = NONE, stats = []}] }
+
+val _ = register_backend gate_release_stub
+
+fun smartgen_gate_release_survives_unrun_exhaustive () =
+  let
+    val config = default_config
+      |> upd_backends (SOME ["exhaustive", "refute-gate-release-stub"])
+      |> upd_substrate NativeSML
+      |> upd_sequential true
+      |> upd_certify false
+      |> upd_quiet true
+    val tables_before = term_table_count ()
+    val _ = gate_release_stub_enabled := true
+    val captured = Exn.capture (fn () =>
+      refute_problem config (qc_problem smartgen_linear_goal)) ()
+    val _ = gate_release_stub_enabled := false
+  in
+    (case Exn.release captured of
+         Counterexample ({backend = "refute-gate-release-stub", ...} :: _) =>
+           true
+       | _ => false) andalso
+    term_table_count () = tables_before
+  end
+
+val _ = require_msg
+  (check_result smartgen_gate_release_survives_unrun_exhaustive) (fn () =>
+  "the smart gate leaked its compiled test when exhaustive never ran")
+  (fn () => ()) ()
+
 fun smartgen_mutual_string_and_hygiene_native () =
   let
     fun run goal depth =
@@ -15940,13 +15986,13 @@ fun narrowing_bindings expected (cex : counterexample) =
 
 fun narrowing_map_display cex =
   narrowing_bindings
-    "  g = λx. F\n  xs = _::_\n  f = λx. T" cex andalso
+    "  f = λx. T\n  xs = _::_\n  g = λx. F" cex andalso
   format_evals (#evals cex) =
     "  MAP f xs = [T]\n  MAP g xs = [F]"
 
 fun narrowing_higher_order_display cex =
   narrowing_bindings
-    "  funop = λx x. []\n  xs = _::_\n  f = _" cex andalso
+    "  f = _\n  xs = _::_\n  funop = λx x. []" cex andalso
   format_evals (#evals cex) =
     "  MAP f xs = [T]\n  funop f xs = []"
 
@@ -16122,24 +16168,24 @@ fun narrowing_expected_bindings name =
   else if String.isPrefix "05 " name then SOME "  x = 3"
   else if String.isPrefix "06 " name then SOME "  x = 4"
   else if String.isPrefix "07 " name then SOME "  ws = [0; 0; 1]"
-  else if String.isPrefix "08 " name then SOME "  xs = [0; 0]\n  x = 0"
+  else if String.isPrefix "08 " name then SOME "  x = 0\n  xs = [0; 0]"
   else if String.isPrefix "09 " name then SOME
-    "  z' = 1\n  ys = []\n  y = 0\n  xs = [0]\n  f = λx. 0"
+    "  f = λx. 0\n  xs = [0]\n  y = 0\n  ys = []\n  z' = 1"
   else if String.isPrefix "10 " name then SOME
-    "  ys = []\n  xs = []\n  a = 0"
+    "  a = 0\n  xs = []\n  ys = []"
   else if String.isPrefix "11 " name then SOME "  xs = [1; 0]"
   else if String.isPrefix "21 " name then SOME
-    "  ys = [1]\n  xs = [0]"
+    "  xs = [0]\n  ys = [1]"
   else if String.isPrefix "22 " name then SOME
-    "  ys = [0]\n  xs = [1]"
+    "  xs = [1]\n  ys = [0]"
   else if String.isPrefix "23 " name orelse
-          String.isPrefix "24 " name then SOME "  x = _\n  xs = []"
+          String.isPrefix "24 " name then SOME "  xs = []\n  x = _"
   else if String.isPrefix "25 " name then SOME
-    "  y = _\n  x = _\n  xs = []"
+    "  xs = []\n  x = _\n  y = _"
   else if String.isPrefix "26 " name then SOME
-    "  ys = []\n  xs = []"
+    "  xs = []\n  ys = []"
   else if String.isPrefix "27 " name then SOME
-    "  xs = []\n  f = _"
+    "  f = _\n  xs = []"
   else NONE
 
 fun narrowing_potential_reason name =

@@ -984,6 +984,19 @@ structure Refute_Core = struct
 
   val backend_registry : (string * backend_registration) list ref = ref []
 
+  (* Deciding whether a backend is eligible can compile and park resources
+     (the QC smart-generator gate compiles a trial test).  A backend that is
+     never run, or is killed by the parallel race, cannot release them
+     itself, so holders register a run-scoped release here; it runs on every
+     exit path of [refute_problem_unquiet]. *)
+  val run_releases : (unit -> unit) list ref = ref []
+
+  fun register_run_release release =
+    run_releases := !run_releases @ [release]
+
+  fun release_run_resources () =
+    List.app (fn release => ignore (Exn.capture release ())) (!run_releases)
+
   fun backend_before (left : string * backend_registration)
       (right : string * backend_registration) =
     #weight (#backend (#2 left)) < #weight (#backend (#2 right)) orelse
@@ -1546,12 +1559,16 @@ structure Refute_Core = struct
                              end)
             end
         end
+      fun attempt () =
+        execute ()
+        handle Refute_Gen.NoGenerator pair =>
+          Unknown [no_generator_reason pair]
+             | Interrupt => raise Interrupt
+             | e => Unknown [exception_reason e]
       val result =
-        (execute ()
-         handle Refute_Gen.NoGenerator pair =>
-           Unknown [no_generator_reason pair]
-              | Interrupt => raise Interrupt
-              | e => Unknown [exception_reason e])
+        (attempt ()
+         handle e => (release_run_resources (); raise e))
+      val _ = release_run_resources ()
     in
       finish result
     end

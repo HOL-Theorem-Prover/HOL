@@ -110,7 +110,7 @@ The public entry points are:
 | `refute cfg tm` | Search for a counterexample to `tm` with `cfg`, print the result unless quiet, and return the structured `outcome`. |
 | `refute_goal cfg (asms, tm)` | Search the goal whose assumptions are `asms` and conclusion is `tm`. |
 | `REFUTE_TAC` | Inspect a tactic goal using `!the_config`.  A counterexample raises a `Refute.REFUTE_TAC` HOL error containing the report; otherwise the tactic leaves the goal unchanged. |
-| `quickcheck tm` | Use `!the_config`, but select only the `exhaustive` and `random` backends. |
+| `quickcheck tm` | Use `!the_config`, but select only the Quickcheck backends `exhaustive`, `random`, and `narrowing`. |
 | `nitpick tm` | Use `!the_config`, but select only the `kodkod` model-finder backend. |
 | `try_refute cfg goal` | Run quietly and return `SOME (backend, outcome)` only for a counterexample, or `NONE` for a miss, timeout, or inconclusive search. |
 | `find_unused_assms cfgopt thy` | Probe the named theory and return possible unused-assumption sets. |

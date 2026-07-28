@@ -13,7 +13,10 @@ Quietly probes a goal for use by other automation.
 `Refute.try_refute cfg goal` preserves `cfg`'s backend selection but
 forces sequential execution, random seed 42, `NoExpectation`, and quiet
 mode.  Its `timeout` is an outer budget for the whole call rather than a
-fresh budget for every backend.
+fresh budget for every backend.  The budget covers the search itself:
+Refute serializes calls on one process-global lock, so a call queued
+behind another thread's search waits for that search to finish before its
+own budget can expire.
 
 The result is `SOME (backend, outcome)` exactly when the search returns a
 nonempty `Counterexample`; `backend` is the name recorded by the first

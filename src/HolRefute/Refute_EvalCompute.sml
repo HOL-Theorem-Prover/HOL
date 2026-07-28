@@ -238,9 +238,14 @@ structure Refute_EvalCompute = struct
                      in
                        (* [complete] already starts false for any plan that
                           mentions Enum or SmartGuard. *)
+                       (* A smart Guard binds no outputs, so it is an
+                          existence test: the continuation runs once, as on
+                          the cv and native substrates. *)
                        if List.all Option.isSome inputs then
-                         each (enum_values program (List.map valOf inputs))
-                           (fn _ => visit env genuine cont)
+                         if null (enum_values program
+                                    (List.map valOf inputs)) then
+                           Continue
+                         else visit env genuine cont
                        else Continue
                      end
                  | NONE =>

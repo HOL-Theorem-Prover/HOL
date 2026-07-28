@@ -227,6 +227,14 @@ structure Refute_Eval :> Refute_Eval = struct
         same_env first second
     | same_optional_env _ _ = false
 
+  (* [run_depth] is part of candidate identity on purpose: narrowing carries
+     its ignore list forward to the next scheduled depth, and the same
+     bindings found deeper are a fresh opportunity, not a repeat — a
+     depth-truncated case tree may be complete at depth + 1 and certify
+     there.  So an entry stored at depth d deliberately does not suppress
+     the same candidate at depth d + 1; within one depth the list still
+     does its job.  (Tree-carrying candidates are already discriminated by
+     [same_case_tree], since CaseShape records the depth.) *)
   fun same_candidate first second =
     same_env (#env first) (#env second) andalso
     same_optional_env (#ground_env first) (#ground_env second) andalso

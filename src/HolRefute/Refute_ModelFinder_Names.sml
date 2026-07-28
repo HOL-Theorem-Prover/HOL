@@ -234,11 +234,8 @@ structure Refute_ModelFinder_Names = struct
      must be varied at the shared front-end boundary. *)
   fun rename_irrelevant_collisions terms =
     let
-      val frees = List.concat (map Term.free_vars_lr terms)
-      fun add (variable, result) =
-        if List.exists (fn old => Term.aconv old variable) result then result
-        else variable :: result
-      val frees = rev (List.foldl add [] frees)
+      val frees =
+        Refute_Util.distinct_terms (List.concat (map Term.free_vars_lr terms))
       fun rename (variable, (avoids, substitutions, renaming)) =
         if is_irrelevant_marker variable then
           let

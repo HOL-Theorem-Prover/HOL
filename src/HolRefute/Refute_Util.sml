@@ -15,6 +15,7 @@ signature REFUTE_UTIL = sig
     Type.hol_type -> Type.hol_type list -> Type.hol_type list
   val aconv_member : Term.term -> Term.term list -> bool
   val distinct_terms : Term.term list -> Term.term list
+  val union_terms : Term.term list -> Term.term list -> Term.term list
 end
 
 structure Refute_Util :> REFUTE_UTIL = struct
@@ -27,4 +28,10 @@ structure Refute_Util :> REFUTE_UTIL = struct
   fun distinct_terms terms =
     List.rev (List.foldl (fn (term, result) =>
       if aconv_member term result then result else term :: result) [] terms)
+
+  (* Left order is preserved; new right elements are appended in order. *)
+  fun union_terms left right =
+    List.rev (List.foldl (fn (term, result) =>
+      if aconv_member term result then result else term :: result)
+      (List.rev left) right)
 end

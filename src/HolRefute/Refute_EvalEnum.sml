@@ -58,6 +58,58 @@ structure Refute_EvalEnum = struct
     end
     handle Feedback.HOL_ERR _ => NONE
 
+  (* Dependency closure of an enumerator program.  The native extractor
+     resolves programs from its own snapshot and gates smart Guards
+     differently from the compute/cv path, so the lookups are parameters;
+     [reject] raises, and its result is only wrapped to keep one type. *)
+  fun program_closure reject dependency program programs =
+    let
+      fun visit program programs =
+        if List.exists (same_program program) programs then programs
+        else
+          let
+            val programs = programs @ [program]
+            fun calls (Refute_SmartGen.CpsClause {premises, ...}) =
+              List.mapPartial
+                (fn Refute_SmartGen.CpsCall {rel, mode, ...} =>
+                      (case dependency rel mode of
+                           SOME found => SOME found
+                         | NONE => SOME (reject
+                             "missing recursive enumerator dependency"))
+                  | _ => NONE) premises
+          in
+            List.foldl (fn (found, result) => visit found result) programs
+              (List.concat (map calls (#clauses program)))
+          end
+    in
+      visit program programs
+    end
+
+  (* Every enumerator program a plan needs, in dependency-closed order. *)
+  fun collect_programs reject dependency top_program guard_program =
+    let
+      val closure = program_closure reject dependency
+      fun collect current programs =
+        case current of
+            Refute_Eval.Test _ => programs
+          | Refute_Eval.Gen (_, next) => collect next programs
+          | Refute_Eval.Bind (_, _, fallback, next) =>
+              collect next (case fallback of NONE => programs
+                | SOME alternative => collect alternative programs)
+          | Refute_Eval.Split (_, branches) =>
+              List.foldl (fn ((_, _, next), result) =>
+                collect next result) programs branches
+          | Refute_Eval.Guard (_, next) => collect next programs
+          | Refute_Eval.SmartGuard {predicate, version, cont} =>
+              collect cont
+                (closure (guard_program predicate version) programs)
+          | Refute_Eval.Enum {rel, mode, version, cont, ...} =>
+              collect cont (closure (top_program rel mode version) programs)
+          | Refute_Eval.Prune => programs
+    in
+      collect
+    end
+
   fun mode_shape_with reject relation mode =
     let
       fun rejected message =
@@ -297,57 +349,14 @@ structure Refute_EvalEnum = struct
               then program else reject "stale Enum version"
           | NONE => reject "missing top-level enumerator program"
 
-      fun add program programs =
-        if List.exists (same_program program) programs then programs
-        else programs @ [program]
+      fun guard_program predicate version =
+        case smart_guard_lookup
+            {relation = predicate, version = version}
+            (map #program entries) of
+            SOME (found, _) => found
+          | NONE => reject "stale or non-all-input smart Guard"
 
-      fun closure program programs =
-        if List.exists (same_program program) programs then programs
-        else
-          let
-            val programs = add program programs
-            fun calls (Refute_SmartGen.CpsClause {premises, ...}) =
-              List.mapPartial (fn Refute_SmartGen.CpsCall
-                    {rel, mode, ...} =>
-                    (case lookup rel mode of
-                         SOME dependency => SOME dependency
-                       | NONE => reject
-                           "missing recursive enumerator dependency")
-                | _ => NONE) premises
-          in
-            List.foldl (fn (dependency, result) =>
-              closure dependency result) programs
-              (List.concat (map calls (#clauses program)))
-          end
-
-      fun all_input predicate version programs =
-        let
-          val program =
-            case smart_guard_lookup
-                {relation = predicate, version = version}
-                (map #program entries) of
-                SOME (found, _) => found
-              | NONE => reject "stale or non-all-input smart Guard"
-        in
-          closure program programs
-        end
-
-      fun collect current programs =
-        case current of
-            Refute_Eval.Test _ => programs
-          | Refute_Eval.Gen (_, next) => collect next programs
-          | Refute_Eval.Bind (_, _, fallback, next) =>
-              collect next (case fallback of NONE => programs
-                | SOME alternative => collect alternative programs)
-          | Refute_Eval.Split (_, branches) =>
-              List.foldl (fn ((_, _, next), result) =>
-                collect next result) programs branches
-          | Refute_Eval.Guard (_, next) => collect next programs
-          | Refute_Eval.SmartGuard {predicate, version, cont} =>
-              collect cont (all_input predicate version programs)
-          | Refute_Eval.Enum {rel, mode, version, cont, ...} =>
-              collect cont (closure (top_program rel mode version) programs)
-          | Refute_Eval.Prune => programs
+      val collect = collect_programs reject lookup top_program guard_program
 
       val programs = List.foldl (fn (plan, result) => collect plan result)
         [] plans
