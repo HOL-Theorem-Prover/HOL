@@ -230,31 +230,31 @@ local
               SOME (LET (s,bndexp,letbod))
             end
         | _ => NONE
-      else if same_const f (#cv_if_tm ct) then
+      else if aconv f (#cv_if_tm ct) then
         case args of [x,y,z] => SOME (IF (x,y,z)) | _ => NONE
-      else if same_const f (#cv_pair_tm ct) then
+      else if aconv f (#cv_pair_tm ct) then
         case args of [x,y] => SOME (PAIR (x,y)) | _ => NONE
-      else if same_const f (#cv_fst_tm ct) then
+      else if aconv f (#cv_fst_tm ct) then
         case args of [x] => SOME (FST x) | _ => NONE
-      else if same_const f (#cv_snd_tm ct) then
+      else if aconv f (#cv_snd_tm ct) then
         case args of [x] => SOME (SND x) | _ => NONE
-      else if same_const f (#cv_ispair_tm ct) then
+      else if aconv f (#cv_ispair_tm ct) then
         case args of [x] => SOME (ISPAIR x) | _ => NONE
-      else if same_const f (#cv_add_tm ct) then
+      else if aconv f (#cv_add_tm ct) then
         case args of [x,y] => SOME (ADD (x,y)) | _ => NONE
-      else if same_const f (#cv_sub_tm ct) then
+      else if aconv f (#cv_sub_tm ct) then
         case args of [x,y] => SOME (SUB (x,y)) | _ => NONE
-      else if same_const f (#cv_mul_tm ct) then
+      else if aconv f (#cv_mul_tm ct) then
         case args of [x,y] => SOME (MUL (x,y)) | _ => NONE
-      else if same_const f (#cv_div_tm ct) then
+      else if aconv f (#cv_div_tm ct) then
         case args of [x,y] => SOME (DIV (x,y)) | _ => NONE
-      else if same_const f (#cv_mod_tm ct) then
+      else if aconv f (#cv_mod_tm ct) then
         case args of [x,y] => SOME (MOD (x,y)) | _ => NONE
-      else if same_const f (#cv_lt_tm ct) then
+      else if aconv f (#cv_lt_tm ct) then
         case args of [x,y] => SOME (LE (x,y)) | _ => NONE
-      else if same_const f (#cv_eq_tm ct) then
+      else if aconv f (#cv_eq_tm ct) then
         case args of [x,y] => SOME (EQ (x,y)) | _ => NONE
-      else if same_const f (#cv_num_tm ct) then
+      else if aconv f (#cv_num_tm ct) then
         case args of [x] => Option.map NUM (total (dest_numeral ct) x)
                    | _ => NONE
       else if is_var f then
