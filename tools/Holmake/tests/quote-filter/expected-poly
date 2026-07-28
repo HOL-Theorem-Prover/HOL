@@ -44,11 +44,11 @@ compile_rel_Ret = boolLib.save_thm ( "compile_rel_Ret" , Drule.cj 2 compile_rel_
 ; 
 
 
-val next_sym_def = TotalDefn.qDefine "next_sym_def" [ QUOTE " (*#loc 47 25*)\n     foo = isPREFIX \"(*\" (c::str)\n" ] 
+val next_sym_def = TotalDefn.qDefine "next_sym_def" [ QUOTE " (*#loc 47 25*)\n     foo = isPREFIX \"(*\" (c::str)\n" ] ( SOME 
 
 
-
-( SOME ( WF_REL_TAC [ QUOTE " (*#loc 50 15*)measure (LENGTH o FST) " ] THEN REPEAT STRIP_TAC ) ) val _ = CompilerSpecific.quietbind "val next_sym_ind = DB.fetch \"-\" \"next_sym_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;" ; 
+( WF_REL_TAC [ QUOTE " (*#loc 50 15*)measure (LENGTH o FST) " ] THEN REPEAT STRIP_TAC ) ) val _ = CompilerSpecific.quietbind "val next_sym_ind = DB.fetch \"-\" \"next_sym_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;" 
+; 
 
 val it = Parse.Term [ QUOTE " (*#loc 53 4*)f \226\128\185foo\"\226\128\186" ] ; 
 
