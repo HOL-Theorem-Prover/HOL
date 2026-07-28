@@ -310,7 +310,8 @@ val watch_list_init =
   ["mk_fp_encoding"] @
   ["Hol_reln","xHol_reln","Hol_mono_reln","add_mono_thm","export_mono",
    "add_rule_induction","export_rule_induction"] @
-  ["Hol_coreln","xHol_coreln","Hol_mono_coreln","new_coinductive_definition"] @
+  ["Hol_coreln","xHol_coreln","Hol_mono_coreln","new_coinductive_definition",
+   "add_coinduction","export_coinduction"] @
   ["new_list_rec_definition"] @
   ["define_new_type_bijections"] @
   ["new_binder_definition"] @

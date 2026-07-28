@@ -160,17 +160,18 @@ fun new_coinductive_definition monoset stem (tm,clocs) =
 
 (* ------------------------------------------------------------------------- *)
 
-type coinduction_map = keyed_thm_map
+type coinduction_map = KeyedThmSet.keyed_thm_map
 
-val coinduction_set = export_keyed_thm_set
-  {settype = "coinduction", clause_key = #2,
-   error_structure = "CoIndDefLib", error_function = "add_coinduction"}
+(* In a coinduction theorem the relation heads the clause conclusion:
+   the clauses look like  !x. P x ==> R x *)
+val coinduction_set = KeyedThmSet.new
+  {settype = "coinduction", key_part = KeyedThmSet.Conclusion}
 
-val add_coinduction = keyed_add coinduction_set
-val export_coinduction = keyed_export coinduction_set
-val thy_coinductions = keyed_thy_thms coinduction_set
-val coinduction_map = keyed_map coinduction_set
-val coinduction_map_by_theory = keyed_map_by_theory coinduction_set
+val add_coinduction = KeyedThmSet.add coinduction_set
+val export_coinduction = KeyedThmSet.export_thm coinduction_set
+val thy_coinductions = KeyedThmSet.thy_thms coinduction_set
+val coinduction_map = KeyedThmSet.get_map coinduction_set
+val coinduction_map_by_theory = KeyedThmSet.map_by_theory coinduction_set
 
 fun save_theorems name (rules, coind, strong_ind, cases) = let
 in
