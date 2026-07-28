@@ -8377,8 +8377,8 @@ fun mf_model_certification_protocol () =
        reconstruction = reconstructed, cex = base, sound = false,
        genuine_means_genuine = false, reasons = []}
     val sound_discarded = MFM.certify
-      (* PLAN_M3 section 13.3: exercise the exact telemetry path for a
-         sound model rejected by executable certification. *)
+      (* exercise the exact telemetry path for a sound model rejected by
+         executable certification *)
       {executable = true, original = ``T``, eval_terms = [],
        reconstruction = reconstructed, cex = base, sound = true,
        genuine_means_genuine = true, reasons = []}
@@ -9532,8 +9532,8 @@ local
         else
           true
 
-  (* PLAN_M3 section 16: cancel a live, delayed solve and pin the actual
-     Kodkodi JVM by PID until the launcher's cleanup has removed it. *)
+  (* Cancel a live, delayed solve and pin the actual Kodkodi JVM by PID
+     until the launcher's cleanup has removed it. *)
   fun interrupt_smoke () =
     let
       val baseline = kodkodi_pids ()
@@ -11882,16 +11882,16 @@ fun extraction_agrees term = compile_extracted term = evaluated_bool term
 
 fun extraction_source_goldens () =
   let
-    (* Captured before the mode-operation refactor.  Pair the byte count with
-       the digest so whitespace-only changes are part of the contract. *)
+    (* Pair the byte count with the digest so whitespace-only changes are
+       part of the contract. *)
     val term = ``NULL [HD [1; 2]]``
     val strict = #source (Refute_Extract.extract_term term)
     val lazy = #source (Refute_Extract.extract_lazy_term term)
   in
-    size strict = 3237 andalso
-    Portable.md5sum strict = "+Laya5NxShiHPB8cFqsi9g" andalso
-    size lazy = 3842 andalso
-    Portable.md5sum lazy = "qXJimoP7xWnOa2c1TE0vpA"
+    size strict = 3363 andalso
+    Portable.md5sum strict = "mzEvXenVl9xTc8mgTg+KQQ" andalso
+    size lazy = 3968 andalso
+    Portable.md5sum lazy = "oWa8N4JbsCfVJ1OxtJU50A"
   end
 
 val _ = tprint "Refute extraction type and constant layers"
@@ -12491,6 +12491,19 @@ fun wide_word_extraction_checks () =
     exhaustive_ok andalso random_rejected
   end
 
+(* a shift wider than the word must be answered without materializing the
+   unnormalized product; before the guard this allocated ~125MB per
+   candidate *)
+fun huge_shift_extraction_checks () =
+  let
+    val shifted = Term.mk_var ("shifted", ``:word8``)
+    val plan = Gen (shifted, Test ``^shifted << 1000000000 = 0w``)
+  in
+    case generated_env (generated_result Exhaustive plan 3 0 1) of
+        NONE => true
+      | SOME _ => false
+  end
+
 fun guard_scaling_checks () =
   let
     val flag = Term.mk_var ("guard_flag", ``:bool``)
@@ -12599,6 +12612,9 @@ val _ = require_msg (check_result generated_completeness_checks) (fn () =>
   (fn () => ()) ()
 val _ = require_msg (check_result wide_word_extraction_checks) (fn () =>
   "wide-word extraction overflowed or ignored the random bound")
+  (fn () => ()) ()
+val _ = require_msg (check_result huge_shift_extraction_checks) (fn () =>
+  "an extracted word shift wider than the word did not normalize to zero")
   (fn () => ()) ()
 val _ = require_msg (check_result guard_scaling_checks) (fn () =>
   "guarded plan extraction duplicated continuations")
@@ -16113,8 +16129,8 @@ val narrowing_needles : narrowing_needle list =
    {name = "27 HD map theorem", size = 2,
     goal = ``HD (MAP (f : num -> num) xs) = f (HD xs)``,
     inspect = narrowing_needle_any},
-   (* PLAN_M5 11.1 adds exact display/certification needles not present as
-      standalone commands in the upstream file. *)
+   (* Cases 28 onwards are exact display/certification needles with no
+      standalone command in the upstream file. *)
    {name = "28 partial product hole", size = 1,
     goal = ``FST (p : bool # bool)``, inspect = narrowing_product_display},
    {name = "29 ffun UPDATE", size = 2,
@@ -18548,12 +18564,33 @@ fun corpus_parlist () =
     check_corpus "Refute corpus: ParList get_first" (fn () =>
       ParList.get_first (fn n => if n = 2 then SOME n else NONE) [1, 2, 3]
         = SOME 2);
+    check_corpus "Refute corpus: ParList get_first passes on Interrupt"
+      (fn () =>
+        ((ParList.get_first
+            (fn n => if n = 1 then raise Interrupt else SOME n) [1, 2];
+          false)
+         handle Interrupt => true));
     check_corpus "Refute corpus: ParList get_some" (fn () =>
       case ParList.get_some (fn n =>
         if n = 2 orelse n = 3 then SOME n else NONE) [1, 2, 3] of
           SOME 2 => true
         | SOME 3 => true
         | _ => false);
+    (* A losing worker may be inside an uninterruptible section holding the
+       theory mutex, so it must be allowed to unwind rather than killed. *)
+    check_corpus "Refute corpus: ParList get_some lets a loser unwind"
+      (fn () =>
+        let
+          val unwound = ref false
+          fun body 0 = (OS.Process.sleep (Time.fromReal 0.05); SOME 0)
+            | body _ =
+                (Thread_Attributes.uninterruptible (fn _ => fn () =>
+                   (OS.Process.sleep (Time.fromReal 1.5);
+                    unwound := true)) ();
+                 NONE)
+        in
+          ParList.get_some body [0, 1] = SOME 0 andalso !unwound
+        end);
     check_corpus "Refute corpus: parallel counterexample outcome" (fn () =>
       same cex_goal);
     check_corpus "Refute corpus: parallel sound outcome" (fn () =>
@@ -19567,9 +19604,9 @@ val _ = require_msg (check_result nitpick_preset_pin) (fn () =>
 val _ = require_msg (check_result kodkod_not_configured_pin) (fn () =>
   "the kodkod not-configured outcome changed") (fn () => ()) ()
 
-(* PLAN_M3 section 13.2: this is the public, expect-driven MF acceptance
-   corpus.  Keep it separate from the JVM-free unit tests above: a missing
-   Kodkodi installation skips this whole block, exactly like HolSmt's live
+(* This is the public, expect-driven MF acceptance corpus.  Keep it
+   separate from the JVM-free unit tests above: a missing Kodkodi
+   installation skips this whole block, exactly like HolSmt's live
    solver tests.
 
    Supplemental audit (2026-07-21): the feature suites already pin
@@ -19582,8 +19619,9 @@ val _ = require_msg (check_result kodkod_not_configured_pin) (fn () =>
    pins here.  mf_atoms_finitize_acceptance below supplies the two missing
    live smokes.  On the prepared host the 2026-07-21 timing run measured
    270.76 s for run_level2_mf_corpus and 402.80 s for the complete level-2
-   selftest executable.  No cases were re-tiered: both remain below
-   M4-D11's approximately ten-minute threshold. *)
+   selftest executable.  No cases were re-tiered: both remain below the
+   approximately ten-minute threshold at which a case moves out of the
+   level-2 suite. *)
 
 datatype mf_cert_pin = MfCertSome | MfCertNone | MfCertIgnored
 
@@ -20599,7 +20637,7 @@ val mf_typedef_fst_mutated =
 
 (* The two card-1 one_or_two cases and the two-value bounded case are
    upstream's flagged unfortunate potentials.  This port proves no
-   counterexample at those scopes, so M4-D11 re-baselines them exactly to
+   counterexample at those scopes, so they are re-baselined exactly to
    None rather than applying the Genuine/Potential-only loose policy. *)
 val mf_typedef_nits_cases =
   [mf_acceptance_invocation "Typedef_Nits 01 three equality"
@@ -21358,8 +21396,8 @@ val mf_acceptance_groups =
    mf_manual_nits_group, mf_hotel_nits_group,
    mf_refusal_flip_group, mf_relation_argument_order_group]
 
-(* PLAN_M3 section 13.3: both engines run sequentially on the same
-   executable finite-scope goals.  Bindings are deliberately ignored. *)
+(* Both engines run sequentially on the same executable finite-scope
+   goals.  Bindings are deliberately ignored. *)
 type mf_differential_case =
   {name : string, tm : term, counterexample : bool,
    configurations : (string * (Refute.config -> Refute.config)) list}

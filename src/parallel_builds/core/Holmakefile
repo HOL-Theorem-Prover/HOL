@@ -25,7 +25,12 @@ INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))
 
 ifdef POLY
 INCLUDES += ../../floating-point/native
+
+# HolRefute INCLUDEs num/theories/cv_compute/automation, which is kept out
+# of the otknl build above.
+ifneq ($(KERNELID),otknl)
 INCLUDES += ../../HolRefute
+endif
 endif
 
 ifdef HOLSELFTESTLEVEL

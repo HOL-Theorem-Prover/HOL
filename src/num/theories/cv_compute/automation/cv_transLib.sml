@@ -676,12 +676,14 @@ fun cv_trans_opt_pre def = let
   val res = cv_trans_no_loop true NONE NONE def
   in if aconv (concl res) T then NONE else SOME res end
 
-fun cv_trans def =
-  case cv_trans_opt_pre def of
-    NONE => ()
-  | SOME _ =>
-      failwith ("Precondition generated! " ^
-                "Use `cv_trans_pre` instead of `cv_trans`.")
+(* Not via cv_trans_opt_pre: reporting a precondition means defining the
+   <name>_pre relation and storing the guarded [cv_rep] theorem, which must
+   not happen on a path that goes on to fail. *)
+fun cv_trans def = let
+  val res = cv_trans_no_loop false NONE NONE def
+  in if aconv (concl res) T then () else
+       failwith ("Precondition generated! " ^
+                 "Use `cv_trans_pre` instead of `cv_trans`.") end
 
 fun cv_trans_pre pre_name def = let
   val res = cv_trans_no_loop false (SOME pre_name) NONE def
@@ -876,12 +878,12 @@ fun cv_auto_trans_opt_pre def = let
   val res = cv_trans_loop true NONE NONE [Def def]
   in if aconv (concl res) T then NONE else SOME res end
 
-fun cv_auto_trans def =
-  case cv_auto_trans_opt_pre def of
-    NONE => ()
-  | SOME _ =>
-      failwith ("Precondition generated! " ^
-                "Use `cv_trans_pre` instead of `cv_trans`.")
+(* Not via cv_auto_trans_opt_pre; see the comment on cv_trans. *)
+fun cv_auto_trans def = let
+  val res = cv_trans_loop false NONE NONE [Def def]
+  in if aconv (concl res) T then () else
+       failwith ("Precondition generated! " ^
+                 "Use `cv_trans_pre` instead of `cv_trans`.") end
 
 fun cv_auto_trans_pre pre_name def = let
   val res = cv_trans_loop false (SOME pre_name) NONE [Def def]

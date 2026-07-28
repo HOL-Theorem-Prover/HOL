@@ -69,13 +69,16 @@ fun test_for_failure f x =
     NONE => ()
   | SOME _ => failwith "unexpected success";
 
-fun expect_legacy_precondition f x =
-  (f x; failwith "expected a generated precondition")
-  handle Feedback.HOL_ERR error =>
-    if Feedback.message_of error =
-         "Precondition generated! Use `cv_trans_pre` instead of `cv_trans`."
-    then ()
-    else raise Feedback.HOL_ERR error;
+(* Only the *_opt_pre entry points may define a <name>_pre relation and save
+   the guarded [cv_rep] theorem; a cv_trans that goes on to fail must leave
+   neither behind. *)
+fun expect_no_pre_residue f x pre_name cv_thm_name = let
+  val _ = test_for_failure f x
+  val _ = null (Term.decls pre_name) orelse
+          failwith ("failed translation defined " ^ pre_name)
+  val _ = not (can (DB.fetch (current_theory())) cv_thm_name) orelse
+          failwith ("failed translation stored " ^ cv_thm_name)
+  in () end;
 
 val _ = Datatype `
   xx_yy = XX xx_yy | YY (xx_yy list)
@@ -180,7 +183,15 @@ val legacy_pre_hd_def = Define `
   legacy_pre_hd (xs:num list) = HD xs
 `
 
-val _ = expect_legacy_precondition cv_trans legacy_pre_hd_def;
+val _ = expect_no_pre_residue cv_trans legacy_pre_hd_def
+          "legacy_pre_hd_pre" "cv_legacy_pre_hd_thm";
+
+val legacy_auto_pre_hd_def = Define `
+  legacy_auto_pre_hd (xs:num list) = HD xs
+`
+
+val _ = expect_no_pre_residue cv_auto_trans legacy_auto_pre_hd_def
+          "legacy_auto_pre_hd_pre" "cv_legacy_auto_pre_hd_thm";
 
 val risky_def = Define `
   risky n = if n = 0 then ARB else n+1:num

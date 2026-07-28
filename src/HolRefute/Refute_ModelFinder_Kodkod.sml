@@ -979,8 +979,8 @@ fun gt ({kk_subset, kk_join, kk_closure, ...} : kodkod_constrs)
     (kk_join right (kk_closure
       (Rel (MFP.suc_rel_for_atom_seq sequence))))
 
-(* [deviation] PLAN_M3 decision 29: Always tabulate the datatype successor
-   order.  This makes the cycle-breaking bounds and symmetry-breaking order
+(* [deviation from upstream] Always tabulate the datatype successor order.
+   This makes the cycle-breaking bounds and symmetry-breaking order
    identical and avoids the upstream incompatible-orders spurious model. *)
 fun should_tabulate_suc_for_type _ _ = true
 
@@ -1895,9 +1895,9 @@ fun kodkod_formula_from_nut offsets
                      (Util.flip_polarity polarity) first)
                | MFNT.Op1 (MFNT.Finite, _, _, first) =>
                    if MFR.is_opt_rep (MFNT.rep_of first) then
-                     (* [deviation] PLAN_M3 decision 30: FINITE on an
-                        optional set is the three-valued unknown Boolean,
-                        never an affirmative fact in a sound problem. *)
+                     (* [deviation from upstream] FINITE on an optional
+                        set is the three-valued unknown Boolean, never an
+                        affirmative fact in a sound problem. *)
                      unknown_formula polarity candidate
                    else
                      (case polarity of
@@ -2333,8 +2333,8 @@ fun kodkod_formula_from_nut offsets
         | MFNT.Op1 (MFNT.Not, _, representation, first) =>
             kk_not3 (to_rep representation first)
         | MFNT.Op1 (MFNT.Finite, _, MFR.Opt (MFR.Atom _), _) =>
-            (* [deviation] PLAN_M3 decision 30: the relational form of
-               unknown FINITE is the empty optional Boolean atom. *)
+            (* [deviation from upstream] the relational form of unknown
+               FINITE is the empty optional Boolean atom. *)
             KK.None
         | MFNT.Op1 (MFNT.Converse, _, representation, first) =>
             let
@@ -3184,7 +3184,7 @@ fun assemble_problem params unsound scope =
 fun assemble_problem_pair params scope =
   (assemble_problem params false scope, assemble_problem params true scope)
 
-(* Upstream to_set_bool_op and kk_vect_set_bool_op are dead under the M3
-   closure proof and are intentionally omitted (PLAN_M3 decision 31). *)
+(* Upstream to_set_bool_op and kk_vect_set_bool_op are intentionally
+   omitted: no representation reachable in this port dispatches to them. *)
 
 end

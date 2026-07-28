@@ -363,6 +363,6 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
   val aconv_member = Refute_Util.aconv_member
   val distinct_terms = Refute_Util.distinct_terms
 
-  (* Prefix ownership moves to Refute_ModelFinder_Names (PLAN_M3 M3-D5). *)
+  (* Prefix ownership belongs to Refute_ModelFinder_Names. *)
   (* Upstream Pretty/PIDE, parsing, type, tactic, hash, and spy helpers drop. *)
 end

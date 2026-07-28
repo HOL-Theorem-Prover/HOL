@@ -90,7 +90,7 @@ structure Refute_ModelFinder_HOL = struct
      constr_cache : (hol_type * term list) list ref}
 
   (* Upstream's ground theorem hash and vestigial unrolled-predicate ref are
-     deliberately absent (PLAN_M3 minor decision 22). *)
+     deliberately absent: nothing in this port reads either. *)
 
   fun err function message =
     Feedback.mk_HOL_ERR "Refute_ModelFinder_HOL" function message
@@ -730,13 +730,13 @@ structure Refute_ModelFinder_HOL = struct
     if theory = Theory.current_theory () then Theory.current_axioms ()
     else DB.axioms theory
 
-  (* PLAN_M3 section 13.2: bracketed tools may transiently register
-     a DefnBase presentation and then delete its scratch constant.  The
-     DefnBase store retains such entries, and current_userdefs reconstructs
-     every presentation with prim_mk_const, so one stale entry makes an
-     otherwise unrelated later MF run fail.  Discover presentations through
-     the live constant table instead, so lookup_userdef is called only on
-     constants that still exist. *)
+  (* Bracketed tools may transiently register a DefnBase presentation and
+     then delete its scratch constant.  The DefnBase store retains such
+     entries, and current_userdefs reconstructs every presentation with
+     prim_mk_const, so one stale entry makes an otherwise unrelated later
+     MF run fail.  Discover presentations through the live constant table
+     instead, so lookup_userdef is called only on constants that still
+     exist. *)
   fun live_userdefs () =
     List.mapPartial (fn constant =>
       DefnBase.lookup_userdef constant handle HOL_ERR _ => NONE)

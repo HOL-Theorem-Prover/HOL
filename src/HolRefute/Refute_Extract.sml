@@ -676,7 +676,8 @@ structure Refute_Extract = struct
     "  else Char.chr (IntInf.toInt n)\n" ^
     "fun refute_nth xs n =\n" ^
     "  (List.nth (xs, IntInf.toInt n)\n" ^
-    "   handle _ => raise Refute_EvalSML.Stuck \"EL\")\n" ^
+    "   handle Interrupt => raise Interrupt\n" ^
+    "        | _ => raise Refute_EvalSML.Stuck \"EL\")\n" ^
     "fun refute_foldr f z [] = z\n" ^
     "  | refute_foldr f z (x :: xs) = f x (refute_foldr f z xs)\n" ^
     "fun refute_foldl f z [] = z\n" ^
@@ -700,9 +701,13 @@ structure Refute_Extract = struct
     "      (refute_signed width b))\n" ^
     "fun refute_shift amount =\n" ^
     "  (Word.fromInt (IntInf.toInt amount)\n" ^
-    "   handle _ => raise Refute_EvalSML.Stuck \"word shift\")\n" ^
+    "   handle Interrupt => raise Interrupt\n" ^
+    "        | _ => raise Refute_EvalSML.Stuck \"word shift\")\n" ^
+    (* the guard keeps the shift from materializing an enormous integer
+       that refute_norm would immediately reduce to 0 *)
     "fun refute_word_lsl width value amount =\n" ^
-    "  refute_norm width (IntInf.<< (value, refute_shift amount))\n" ^
+    "  if amount >= IntInf.fromInt width then 0\n" ^
+    "  else refute_norm width (IntInf.<< (value, refute_shift amount))\n" ^
     "fun refute_word_lsr width value amount =\n" ^
     "  IntInf.~>> (refute_norm width value, refute_shift amount)\n" ^
     "fun refute_word_asr width value amount =\n" ^
@@ -1314,7 +1319,8 @@ structure Refute_Extract = struct
           case values of [n, xs] =>
             if string_argument 1 then
               "(String.sub (" ^ xs ^ ", IntInf.toInt " ^ n ^ ") " ^
-              "handle _ => raise Refute_EvalSML.Stuck \"EL\")"
+              "handle Interrupt => raise Interrupt " ^
+              "| _ => raise Refute_EvalSML.Stuck \"EL\")"
             else "refute_nth " ^ xs ^ " " ^ n
           | _ => raise Fail "EL"))
       | ("list", "LAST") => SOME (call "refute_last" 1 arguments)
@@ -2220,18 +2226,29 @@ structure Refute_Extract = struct
           clause
         end
 
+  (* Compiling a clause can register further definitions, so each round
+     picks up whatever was prepended since the last one.  Counting the
+     entries already drained keeps that cheap: the list is append-only and
+     carries no duplicates, so the new items are exactly its fresh prefix,
+     and no term comparison is needed to recognize them. *)
   fun drain_definitions context =
     let
-      fun loop processed =
-        case List.find (fn (constant, _, _) =>
-          not (List.exists (same_term constant) processed))
-          (rev (!(#definitions context))) of
-          NONE => ()
-        | SOME (item as (constant, _, _)) =>
-            (ignore (cached_definition_clause context item);
-             loop (constant :: processed))
+      fun loop drained =
+        let
+          val current = !(#definitions context)
+          val available = length current
+        in
+          if available <= drained then ()
+          else
+            let
+              val fresh = rev (List.take (current, available - drained))
+            in
+              List.app (ignore o cached_definition_clause context) fresh;
+              loop available
+            end
+        end
     in
-      loop []
+      loop 0
     end
 
   fun definition_declarations context =

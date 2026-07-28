@@ -1213,9 +1213,9 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                       MFR.best_opt_set_rep_for_type scope ty
                     else MFR.best_non_opt_set_rep_for_type scope ty
                 in
-                  (* [deviation] PLAN_M3 decision 30: optional FINITE is
-                     the same unknown Boolean as Cst Unknown, including
-                     the unsound sibling's polarity flip. *)
+                  (* [deviation from upstream] optional FINITE is the same
+                     unknown Boolean as Cst Unknown, including the unsound
+                     sibling's polarity flip. *)
                   if operator = Finite andalso optional andalso
                      polarity <> Util.Neut
                   then unknown_boolean Unknown ty polarity

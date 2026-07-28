@@ -5,24 +5,35 @@ fun get_first f =
   let
     fun first [] = NONE
       | first (x :: xs) =
-          (case (f x handle _ => NONE) of
+          (case (f x handle Interrupt => raise Interrupt | _ => NONE) of
              SOME y => SOME y
            | NONE => first xs)
   in
     first
   end;
 
-fun interruptkill thread =
+(* Losing workers are interrupted, never killed.  A worker can hold a
+   process-global lock across an uninterruptible section (Refute's theory
+   bracket is one), and Thread.kill terminates without unwinding, so a kill
+   would leak that lock for the rest of the session.  A worker that has not
+   exited when the grace period runs out is left to finish on its own. *)
+val grace = Time.fromReal 5.0;
+
+fun stop_threads threads =
   let
-    val _ = Standard_Thread.interrupt_unsynchronized thread
-    fun wait 0 =
-          if Thread.isActive thread then Thread.kill thread else ()
-      | wait n =
-          if Thread.isActive thread then
-            (OS.Process.sleep (Time.fromReal 0.001); wait (n - 1))
-          else ()
+    val _ = List.app Standard_Thread.interrupt_unsynchronized threads
+    val deadline = Time.now () + grace
+    fun await thread =
+      if not (Thread.isActive thread) then true
+      else if Time.now () >= deadline then false
+      else (OS.Process.sleep (Time.fromReal 0.001); await thread)
+    val stragglers = List.length (List.filter (not o await) threads)
   in
-    wait 1000
+    if stragglers = 0 then ()
+    else
+      Multithreading.tracing 1 (fn () =>
+        "ParList.get_some: " ^ Int.toString stragglers ^
+        " worker(s) still running after " ^ Time.toString grace ^ "s")
   end;
 
 fun get_some f [] = NONE
@@ -34,6 +45,7 @@ fun get_some f [] = NONE
         val answer = ref NONE;
         val remaining = ref (List.length xs);
         val winner = ref (NONE: int option);
+        val forked = ref ([] : (int * Thread.thread) list);
 
         fun synchronized e =
           Multithreading.synchronized "ParList.get_some" lock e;
@@ -51,7 +63,10 @@ fun get_some f [] = NONE
                ConditionVar.signal ready
              else ()));
 
-        fun fork_all _ [] = []
+        (* Record each thread as it appears, so a failed fork - and any
+           exception out of the wait below - can still stop the workers
+           already running. *)
+        fun fork_all _ [] = ()
           | fork_all n (x :: rest) =
               let
                 val thread =
@@ -59,9 +74,14 @@ fun get_some f [] = NONE
                     {name = "ParList.get_some", stack_limit = NONE,
                      interrupts = true}
                     (fn () => publish n (f x handle _ => NONE));
+                val _ = forked := (n, thread) :: !forked
               in
-                (n, thread) :: fork_all (n + 1) rest
+                fork_all (n + 1) rest
               end;
+
+        fun stop keep =
+          stop_threads (List.map #2
+            (List.filter (fn (n, _) => keep <> SOME n) (!forked)));
 
         fun await () =
           synchronized (fn () =>
@@ -71,18 +91,17 @@ fun get_some f [] = NONE
                    SOME y => SOME y
                  | NONE =>
                      if !remaining = 0 then NONE
-                     else (ConditionVar.wait (ready, lock); wait ()));
+                     else
+                       (ignore (Exn.release
+                          (Multithreading.sync_wait NONE ready lock));
+                        wait ()));
             in
               wait ()
             end);
 
-        val workers = fork_all 0 xs;
-        val result = await ();
-        fun stop (n, thread) =
-          (case !winner of
-             SOME m => if n = m then () else interruptkill thread
-           | NONE => ());
-        val _ = (case result of SOME _ => List.app stop workers | NONE => ());
+        val _ = fork_all 0 xs handle exn => (stop NONE; raise exn);
+        val result = await () handle exn => (stop NONE; raise exn);
+        val _ = stop (!winner);
       in
         result
       end;

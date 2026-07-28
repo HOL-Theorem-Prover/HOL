@@ -404,7 +404,7 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
             val domain = best_one_rep_for_type scope domain_ty
             val range = best_non_opt_set_rep_for_type scope range_ty
           in
-            (* PLAN_M3 section 9: cardinality two does not imply Boolean.
+            (* Cardinality two does not imply Boolean.
                In particular, a num range at card 2 must remain an Atom;
                only an actual Boolean range uses Formula. *)
             Func (domain,

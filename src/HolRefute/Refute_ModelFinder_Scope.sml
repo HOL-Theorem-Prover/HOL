@@ -51,8 +51,8 @@ structure Refute_ModelFinder_Scope = struct
   val linearity = 5
   val max_bits = 31
 
-  (* PLAN_M3 minor decision 22: pseudo_frees is deliberately absent;
-     its only consumer hardwires the vestigial upstream list to []. *)
+  (* pseudo_frees is deliberately absent; its only consumer hardwires the
+     vestigial upstream list to []. *)
 
   fun err function message =
     Feedback.mk_HOL_ERR "Refute_ModelFinder_Scope" function message
