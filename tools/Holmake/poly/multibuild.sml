@@ -319,6 +319,47 @@ fun graphbuild optinfo g =
                   let
                     val _ = diag ("Setting up for target >" ^ target_s ^
                                   "< with bic " ^ bic_toString bic)
+                    (* Deps induced by `local open ... in end` in a
+                       generated `<name>Theory.sml` (e.g. from
+                       `add_ML_dependency`) can only be discovered once
+                       the BuildScript has produced the file.  Rescan
+                       on completion and add edges to `<name>Theory.uo`
+                       so downstream compiles wait for the runtime-loaded
+                       module before dispatching. *)
+                    val resolve = hm_target.filestr_to_tgt_in_dir (#dir nI)
+                    fun rescan_from s g =
+                        case HM_DepGraph.target_node g (resolve (s ^ "Theory.uo")) of
+                            NONE => g
+                          | SOME uo_n =>
+                            let
+                              val {preincludes, includes} = incinfo
+                              val {deps = extras, ...} =
+                                  Holdep.main
+                                    {assumes = [], includes = preincludes @ includes,
+                                     diag = fn f => diag (f ()),
+                                     fname = s ^ "Theory.sml"}
+                                (* Holdep.main HFS-munges internally, so
+                                   pass the un-munged pathname. *)
+                            in
+                              List.foldl
+                                (fn (str, g_acc) =>
+                                    let val dt = resolve str
+                                    in case HM_DepGraph.target_node g_acc dt of
+                                           NONE => g_acc
+                                         | SOME dn =>
+                                           HM_DepGraph.add_dependency
+                                             uo_n (dn, dt) g_acc
+                                    end)
+                                g extras
+                            end
+                    fun rescan_theory_deps g =
+                        case bic of
+                            BIC_BuildScript s =>
+                              (rescan_from s g
+                               handle IO.Io _ => g
+                                    | OS.SysErr _ => g
+                                    | Holdep.Holdep_Error _ => g)
+                          | _ => g
                     fun bresk bres g =
                       case bres of
                           BR_OK => k true g
@@ -349,7 +390,8 @@ fun graphbuild optinfo g =
                                    Poly's load step. *)
                                 val ok2 = job_kont (fn s => ()) (b2res b)
                                 val _ = release_target_lock nI
-                                val g' = if ok2 then updall Succeeded g
+                                val g' = if ok2 then
+                                           updall Succeeded (rescan_theory_deps g)
                                          else updall RealFail g
                                 val marker = HM_Progress.note_completion
                                                  g' ok2 (#command nI)

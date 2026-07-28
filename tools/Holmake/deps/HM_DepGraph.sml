@@ -58,6 +58,16 @@ fun fupdStatus f (nI: 'a nodeInfo) : 'a nodeInfo =
      mtime = mtime, local_parallelism_limit = local_parallelism_limit}
   end
 
+fun fupdDependencies f (nI: 'a nodeInfo) : 'a nodeInfo =
+  let
+    val {target,command,status,dependencies,seqnum,phony,dir,extra,mtime,
+         local_parallelism_limit} = nI
+  in
+    {target = target, status = status, command = command, seqnum = seqnum,
+     dependencies = f dependencies, phony = phony, dir = dir, extra = extra,
+     mtime = mtime, local_parallelism_limit = local_parallelism_limit}
+  end
+
 fun setStatus s = fupdStatus (fn _ => s)
 
 val node_compare = Int.compare
@@ -188,6 +198,18 @@ fun updnode_fully (n, nInfo) (g : 'a t) : 'a t =
       | SOME old_nI =>
         bump_built_count (old_nI, #status nInfo)
           (fupd_nodes (fn m => Map.insert(m, n, nInfo)) g)
+
+fun add_dependency n (dn, dt) (g : 'a t) : 'a t =
+    case peeknode g n of
+        NONE => raise NoSuchNode
+      | SOME nI =>
+        if List.exists (fn (m,_) => m = dn) (#dependencies nI) then g
+        else
+          fupd_nodes
+            (fn m =>
+                Map.insert(m, n,
+                           fupdDependencies (fn ds => (dn, dt) :: ds) nI))
+            g
 
 (* Three-way probe so `find_runnable_pred`'s scan can terminate on the
    first NoNode without a second peeknode. *)

@@ -47,6 +47,12 @@ sig
   val updnode_tgtstatus : node * target_status -> 'a t -> 'a t
   val updnode_fully : node * 'a nodeInfo -> 'a t -> 'a t
 
+  val add_dependency : node -> (node * dep) -> 'a t -> 'a t
+    (* Append (dep_node, dep_target) to `node`'s `#dependencies` list.
+       No-op if the edge already exists.  Used by `multibuild` to
+       record deps discovered during dispatch (see the post-BIC_BuildScript
+       rescan of generated `*Theory.sml`). *)
+
   (* File-hash memo (used by HM_Cachekey to avoid re-hashing shared
      dependencies during a single Holmake invocation). *)
   val peek_file_hash : 'a t -> dep -> string option
