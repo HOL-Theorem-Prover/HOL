@@ -107,10 +107,7 @@ fun does_conv_loop thm = let
 (* Simpset to evaluate PMATCH_ROWS             *)
 (***********************************************)
 
-val PAIR_EQ_COLLAPSE = prove (
-  ``(((FST x = (a:'a)) /\ (SND x = (b:'b))) = (x = (a, b)))``,
-  STRUCT_CASES_TAC (SPEC ``x:'a#'b`` pairTheory.pair_CASES) THEN
-  SIMP_TAC std_ss []);
+val PAIR_EQ_COLLAPSE = patternMatchesTheory.PAIR_EQ_COLLAPSE
 
 fun is_FST_eq x t = let
   val (l, r) = dest_eq t
@@ -502,9 +499,7 @@ end
    case-splits and evaluation. This allows to
    define some conversions then. *)
 
-val COND_CONG_STOP = prove (``
-  (c = c') ==> ((if c then x else y:'a) = (if c' then x else y))``,
-SIMP_TAC std_ss [])
+val COND_CONG_STOP = patternMatchesTheory.COND_CONG_STOP
 
 fun case_pmatch_eq_prove t t' = let
   val tm = mk_eq (t, t')
@@ -2036,9 +2031,7 @@ val t = ``case (a,x,xs) of
 fun literal_case_CONV c tt = if boolSyntax.is_literal_case tt then
    RATOR_CONV (RAND_CONV (ABS_CONV c)) tt else c tt
 
-val literal_cong_stop = prove(
-   ``(v = v') ==> (literal_case (f:'a -> 'b) v = literal_case f v')``,
-   SIMP_TAC std_ss [])
+val literal_cong_stop = patternMatchesTheory.literal_cong_stop
 
 fun PMATCH_CASE_SPLIT_AUX rc_arg col_no expand_thm t = let
   val (v, rows) = dest_PMATCH t
@@ -2976,7 +2969,7 @@ val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK =
   PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GEN [];
 
 
-val IMP_TO_EQ_THM = prove (``!P Q. (P ==> Q) ==> (~P ==> ~Q) ==> (Q <=> P)``, PROVE_TAC[])
+val IMP_TO_EQ_THM = patternMatchesTheory.IMP_TO_EQ_THM
 
 fun PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGEN db col_heu rc_arg t = let
   val thm0 = PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t
@@ -3068,7 +3061,7 @@ val rc_arg = ([], NONE)
 *)
 
 
-val neg_imp_rewr = prove (``(~A ==> B) = (~B ==> A)``, tautLib.PTAUT_TAC);
+val neg_imp_rewr = patternMatchesTheory.neg_imp_rewr
 
 fun nchotomy_PMATCH_ROW_COND_EX_CONSEQ_CONV_GEN rc_arg db col_heu tt = let
   (* destruct everything *)
@@ -3297,8 +3290,7 @@ val try_exh = true
 
 
 local
-val IMP_AUX_THM = prove (``(P ==> (X <=> Y)) <=>
-   ((P ==> X) <=> (P ==> Y))``, PROVE_TAC[])
+val IMP_AUX_THM = patternMatchesTheory.IMP_AUX_THM
 in
 fun SIMPLE_IMP_COND_REWRITE_CONV thm tt = let
   val (pre, post) = dest_imp tt
