@@ -19,6 +19,7 @@ val _ = use "../src/portableML/json/JSONParser.sig";
 val _ = use "../src/portableML/json/JSONParser.sml";
 val _ = use "../src/portableML/json/JSONDecode.sig";
 val _ = use "../src/portableML/json/JSONDecode.sml";
+val _ = use "lsp/lsp_namespace.ML";
 val _ = use "lsp/holide.ML";
 val _ = use "lsp/server.ML";
 
@@ -577,7 +578,8 @@ in
           "let val snap = Context.snapshot () \
           \    val restoreLoaded = Meta.snapshotLoaded () in \
           \  LSPExtension.resetForCompile := \
-          \    (fn () => (Context.restore snap; restoreLoaded ())) \
+          \    (fn () => (Context.restore snap; restoreLoaded (); \
+          \               LSPNameSpace.clearFileLayer ())) \
           \end";
         (* Cheat every tactic proof: return an oracle-tagged theorem
            for the goal instead of running the tactic.  Same hook that

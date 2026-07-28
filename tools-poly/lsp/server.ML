@@ -857,7 +857,12 @@ fun start {diag} = let
                 NONE => false
               | SOME (HOL_IDE.Built (_, declProps, _), _) => lookRefs declProps
           end
-        val value = if isGlobalId then #lookupVal PolyML.globalNameSpace id else NONE
+        (* Lookup via the LSP file layer, not `globalNameSpace`, so
+           hovers on a deleted `val foo = …` return NONE instead of
+           the retained Poly/ML binding.  The layer falls through to
+           `globalNameSpace` for bindings from the LSP-boot session
+           (bossLib etc.). *)
+        val value = if isGlobalId then #lookupVal LSPNameSpace.fileNS id else NONE
         in (SOME id, value, help) end
       open PolyML
       val ty = Option.map (fn ty =>

@@ -1072,6 +1072,69 @@ def test_hover_inside_definition_body():
         c.close()
 
 
+def test_stale_sml_binding_dropped():
+    """Deleting a `val foo = …` line and recompiling must remove foo
+    from what later hovers and later files see.  Before the
+    LSPNameSpace file-layer, Poly/ML's `globalNameSpace` retained
+    the binding across compiles because there's no `#deleteVal` —
+    hovering at the deleted position still returned the retained
+    Values.value, and a fresh file referencing `foo` still compiled."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/stale.sml"
+        _did_open(c, uri, "Theory stale\n\nval myfoo = 42\n", 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "first compileCompleted")
+
+        def hover(id_, line, ch):
+            c.send({"jsonrpc":"2.0","id":id_,
+                    "method":"textDocument/hover",
+                    "params":{"textDocument":{"uri":uri},
+                              "position":{"line":line,"character":ch}}})
+            def got(cl):
+                with cl.msgs_lock:
+                    for m in cl.msgs:
+                        if m.get("id") == id_: return m
+                return None
+            return c.wait_until(got, 5)
+
+        # Hover on `myfoo` — should identify the int binding.
+        r = hover(700, 2, 6)
+        v = (r.get("result") or {}).get("contents", {}).get("value") \
+            if r and r.get("result") else None
+        assert_true(v is not None and "myfoo" in v and "int" in v,
+                    f"first hover on myfoo shows int ({v!r})")
+
+        # Delete the val decl and recompile.
+        idx = c.total_msgs()
+        _did_change_full(c, uri, "Theory stale\n\n\n", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx),
+                    "second compileCompleted")
+
+        # Open a fresh file that references myfoo — should NOT resolve.
+        idx = c.total_msgs()
+        uri2 = "file:///tmp/staleref.sml"
+        _did_open(c, uri2,
+                  "Theory staleref\n\nval z = myfoo + 1\n", 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx),
+                    "refstale compileCompleted")
+        msgs, _ = c.messages_since(0)
+        latest = None
+        for m in msgs:
+            if m.get("method") == "textDocument/publishDiagnostics":
+                p = m["params"]
+                if p["uri"] == uri2:
+                    latest = p
+        diags = (latest or {}).get("diagnostics", [])
+        assert_true(any("myfoo" in d.get("message", "")
+                        and "not been declared" in d.get("message", "")
+                        for d in diags),
+                    f"stale myfoo is undeclared in a new file ({diags})")
+    finally:
+        c.close()
+
+
 def test_hover_inside_inductive_body():
     """Hover inside an Inductive body's rules.  Two structural
     fixes are needed to make this work:
@@ -1167,6 +1230,7 @@ TESTS = [
                                      test_hover_across_utf8_binder_and_var),
     ("hover_inside_definition_body", test_hover_inside_definition_body),
     ("hover_inside_inductive_body",  test_hover_inside_inductive_body),
+    ("stale_sml_binding_dropped",    test_stale_sml_binding_dropped),
 ]
 
 

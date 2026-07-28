@@ -718,7 +718,12 @@ fun initialize {
   fun codeFn NONE () = ()
     | codeFn (SOME code) () = let
       val {fixes, values, structures, signatures, functors, types} = code ()
-      fun enter f = app (f PolyML.globalNameSpace)
+      (* Route compile-produced bindings through the interposed file
+         layer instead of `PolyML.globalNameSpace`.  See
+         `lsp_namespace.ML` — this lets us drop stale bindings on the
+         next `resetForCompile` when the user deletes a `val` from
+         the file. *)
+      fun enter f = app (f LSPNameSpace.fileNS)
       in enter #enterFix fixes; enter #enterType types; enter #enterSig signatures;
         enter #enterStruct structures; enter #enterFunct functors; enter #enterVal values end
   fun getOffset () =
@@ -738,6 +743,12 @@ fun initialize {
     CPLineNo getTokIdx,
     CPLineOffset getOffset,
     CPPrintInAlphabeticalOrder false,
+    (* The interposed file layer so the compiler resolves references
+       to file-local bindings via `LSPNameSpace.fileNS`, and future
+       compiles see whatever the current one entered until we clear.
+       Together with `codeFn`'s enter through the same layer, this
+       makes it possible to drop stale bindings between compiles. *)
+    CPNameSpace LSPNameSpace.fileNS,
     CPBindingSeq (fn () => (fn n => n before serial := n + 1) (!serial))];
   (* Optional stack-trace on runtime exceptions from the compiled unit.
      PolyML.Exception.exception_trace prints a backtrace to stdErr and
