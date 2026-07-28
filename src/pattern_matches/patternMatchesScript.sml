@@ -1705,3 +1705,8 @@ QED
 Theorem EQ_O_ELIM:  !b1 b2. (b1 <=> b2) ==> b2 ==> b1
 Proof PROVE_TAC[]
 QED
+
+Theorem simple_imp_thm:
+  !X Y X'. (Y ==> (X <=> X')) ==> ((X ==> ~Y) <=> (X' ==> ~Y))
+Proof PROVE_TAC[]
+QED

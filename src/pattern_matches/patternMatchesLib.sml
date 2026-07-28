@@ -2675,8 +2675,7 @@ end
    val (tts, _) = (listSyntax.dest_list o rand o concl) thm
    val tt = el 2 tts *)
 
-val simple_imp_thm  = prove ( ``!X Y X'. ((Y ==> (X = X')) ==> ((X ==> ~Y) = (X' ==> ~Y)))``,
-PROVE_TAC[])
+val simple_imp_thm = patternMatchesTheory.simple_imp_thm
 
 fun SIMPLIFY_REDUNDANT_ROWS_INFO_AUX rc_arg tt = let
   val (pre, cc_neg) = dest_imp tt
