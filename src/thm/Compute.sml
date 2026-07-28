@@ -625,6 +625,10 @@ fun term_compute {cval_terms, cval_type, num_type, char_eqns } =
       cv_eq_tm = get "cv_eq",
       cval_type = cval_type,
       num_type = num_type }
+    val _ = case Lib.total Type.dest_thy_type cval_type of
+                NONE => raise ERR "compute" "cv-type may not be a variable"
+              | SOME {Args, ...} => null Args orelse
+                                    raise ERR "compute" "cv-type must be atomic"
     val _ = check_thms ct char_eqns
     val cv_to_term = make_cv_to_term ct
   in
