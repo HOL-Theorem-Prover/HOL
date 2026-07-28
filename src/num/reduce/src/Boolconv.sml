@@ -20,14 +20,11 @@
 structure Boolconv :> Boolconv =
 struct
 
-open HolKernel Parse boolLib;
+open HolKernel Parse boolLib BoolconvContextTheory;
 
 val ERR = mk_HOL_ERR "Boolconv";
 fun failwith function = raise (ERR function "");
 
-val ambient_grammars = Parse.current_grammars();
-val SOME bool_grammars = Parse.grammarDB {thyname="bool"}
-val _ = Parse.temp_set_grammars bool_grammars
 val _ = ParseExtras.temp_loose_equality()
 
 val zv    = mk_var("z",bool)
@@ -39,9 +36,7 @@ and beqop = inst [alpha |->bool] equality;
 (* NOT_CONV "~~t" = |- ~~t = t                                           *)
 (*-----------------------------------------------------------------------*)
 
-local val [c1,c2,c3] = CONJUNCTS
-        (Tactical.prove(“(~T = F) /\ (~F = T) /\ (!t. ~~t = t)”,
-               REWRITE_TAC[NOT_CLAUSES]))
+local val [c1,c2,c3] = CONJUNCTS BOOLCONV_NOT
 in
 fun NOT_CONV tm =
  let val xn = dest_neg tm
@@ -59,11 +54,7 @@ end;
 (* AND_CONV "t /\ t" = |- t /\ t = t                                     *)
 (*-----------------------------------------------------------------------*)
 
-local val [c1,c2,c3,c4,c5] = CONJUNCTS
-       (Tactical.prove
-        (Term`(!t. T /\ t = t) /\ (!t. t /\ T = t) /\
-              (!t. F /\ t = F) /\ (!t. t /\ F = F) /\ (!t. t /\ t = t)`,
-               REWRITE_TAC[AND_CLAUSES]))
+local val [c1,c2,c3,c4,c5] = CONJUNCTS BOOLCONV_AND
 in
 fun AND_CONV tm =
  let val (xn,yn) = with_exn dest_conj tm (ERR "AND_CONV" "")
@@ -84,11 +75,7 @@ fun AND_CONV tm =
 (* OR_CONV "t \/ t" = |- t \/ t = t                                      *)
 (*-----------------------------------------------------------------------*)
 
-local val [c1,c2,c3,c4,c5] = CONJUNCTS
-        (Tactical.prove
-         (Term`(!t. T \/ t = T) /\ (!t. t \/ T = T) /\ (!t. F \/ t = t) /\
-                   (!t. t \/ F = t) /\ (!t. t \/ t = t)`,
-          REWRITE_TAC[OR_CLAUSES]))
+local val [c1,c2,c3,c4,c5] = CONJUNCTS BOOLCONV_OR
 in
 fun OR_CONV tm =
  let val (xn,yn) = with_exn dest_disj tm (ERR "OR_CONV" "")
@@ -109,11 +96,7 @@ end;
 (* IMP_CONV "t ==> t" = |- t ==> t = T                                   *)
 (*-----------------------------------------------------------------------*)
 
-local val [c1,c2,c3,c4,c5] = CONJUNCTS
-        (Tactical.prove(
-          Term`(!t. (T ==> t) = t) /\ (!t. (t ==> T) = T) /\
-               (!t. (F ==> t) = T) /\ (!t. (t ==> F) = ~t) /\
-               (!t. (t ==> t) = T)`, REWRITE_TAC[IMP_CLAUSES]))
+local val [c1,c2,c3,c4,c5] = CONJUNCTS BOOLCONV_IMP
 in
 fun IMP_CONV tm =
  let val (xn,yn) = with_exn dest_imp tm (ERR "IMP_CONV" "")
@@ -134,11 +117,7 @@ end;
 (* BEQ_CONV "t = t" = |- t = t = T                                       *)
 (*-----------------------------------------------------------------------*)
 
-local val [c1,c2,c3,c4,c5] = CONJUNCTS
-       (Tactical.prove
-        (Term`(!t. (T = t) = t) /\ (!t. (t = T) = t) /\ (!t. (F = t) = ~t) /\
-                   (!t. (t = F) = ~t) /\ (!t:bool. (t = t) = T)`,
-               REWRITE_TAC[EQ_CLAUSES]))
+local val [c1,c2,c3,c4,c5] = CONJUNCTS BOOLCONV_BEQ
 in
 fun BEQ_CONV tm =
  let val (xn,yn) = with_exn dest_eq tm (ERR "BEQ_CONV" "")
@@ -156,11 +135,7 @@ end;
 (* COND_CONV "b => t  | t"  = |- (b => t | t)   = t                      *)
 (*-----------------------------------------------------------------------*)
 
-local val [c1,c2,c3] = CONJUNCTS
-        (Tactical.prove(Term`(!t1 t2. (if T then t1 else t2) = (t1:'a)) /\
-                             (!t1 t2. (if F then t1 else t2) = (t2:'a)) /\
-                             (!b t.   (if b then t else t) = (t:'a))`,
-               REWRITE_TAC[COND_CLAUSES, COND_ID]))
+local val [c1,c2,c3] = CONJUNCTS BOOLCONV_COND
 in
 fun COND_CONV tm =
  let val (b,t1,t2) = with_exn dest_cond tm (ERR "COND_CONV" "")
@@ -170,7 +145,5 @@ fun COND_CONV tm =
     failwith "COND_CONV"
  end
 end;
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end
