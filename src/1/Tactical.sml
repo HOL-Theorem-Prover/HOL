@@ -27,12 +27,27 @@ fun empty th [] = th
  * we should do this check in the hypotheses of the goal as well.
  *---------------------------------------------------------------------------*)
 
+val notheory_warning = ref 1
+val _ = Feedback.register_trace
+          ("TAC_PROOF requires current theory", notheory_warning, 1)
+
+fun warn_if_no_current_theory (_, t) =
+    if !notheory_warning > 0 then
+      case Thm.getCT() of
+          NONE =>
+            Feedback.HOL_WARNING "Tactical" "TAC_PROOF"
+              ("no current theory when proving: " ^
+               (Parse.term_to_string t handle _ => "<unprintable goal>"))
+        | SOME _ => ()
+    else ()
+
 local
    val unsolved_list = ref ([]: goal list)
 in
    fun unsolved () = !unsolved_list
    fun TAC_PROOF (g, tac) =
-      case tac g of
+      (warn_if_no_current_theory g;
+       case tac g of
          ([], p) =>
              (let
                  val thm = p []
@@ -43,7 +58,7 @@ in
                  else EQ_MP (ALPHA c (snd g)) thm
               end
               handle e => raise ERR "TAC_PROOF" "Can't alpha convert")
-       | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals")
+       | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals"))
 end
 
 fun default_prover (t, tac) = TAC_PROOF(([], t), tac)
