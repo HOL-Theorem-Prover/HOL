@@ -391,6 +391,15 @@ Proof
   SIMP_TAC bool_ss [ISO, FUN_EQ_THM] THEN MESON_TAC[]
 QED
 
+(* Lemma consumed by DE_EXISTENTIALIZE_RULE in ind_types.sml. *)
+Theorem DE_EXISTENTIALIZE_PTH:
+  $? P ==> (c:'a = $@ P) ==> P c
+Proof
+  CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV (GSYM ETA_AX)))) THEN
+  DISCH_TAC THEN DISCH_THEN SUBST1_TAC THEN
+  MATCH_MP_TAC SELECT_AX THEN POP_ASSUM ACCEPT_TAC
+QED
+
 (* ----------------------------------------------------------------------
     Remove constants from top-level name-space
    ---------------------------------------------------------------------- *)
