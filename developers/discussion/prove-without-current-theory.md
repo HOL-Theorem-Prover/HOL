@@ -164,10 +164,30 @@ Step 2 in progress.  Companion `fooContextScript.sml` files exist for:
   - `src/num/reduce/src/Boolconv.sml` → `BoolconvContextScript.sml`
   - `src/num/arith/src/Sub_and_cond.sml` → `SubAndCondContextScript.sml`
   - `src/num/theories/Num_conv.sml` → `NumConvContextScript.sml`
+  - `src/datatype/EnumType.sml`   → `EnumTypeContextScript.sml`
 
-Grammar guards in those files whose sole purpose was to insulate the
-load-time proofs went with the proofs.  One exception: Boolconv keeps
-its `Parse.temp_set_grammars` bracket because it also calls
+For libraries that already carried a companion script, the theorems
+went into that script rather than a new one:
+
+  - `src/quantHeuristics/quantHeuristicsLibParameters.sml` and
+    `quantHeuristicsTools.sml` → `quantHeuristicsScript.sml` and
+    `ConseqConvScript.sml`.
+  - `src/pattern_matches/patternMatchesLib.sml` and
+    `constrFamiliesLib.sml` → `patternMatchesScript.sml`.
+  - `src/datatype/ind_types.sml` → `ind_typeScript.sml`.
+
+Two build-order flips also went in:
+
+  - `src/pred_set/src/hurdUtils.sml` used to hand-prove `SET_EQ` because
+    it sat below `pred_setTheory` in the build order.  Removed
+    `hurdUtils` from `pred_setScript`'s `Libs` (inlining the tiny
+    `K_TAC` / `KILL_TAC` / `Rewr'` / `art` helpers it drew from there,
+    and expanding `Know`/`Suff` to `Q_TAC KNOW_TAC` / `Q_TAC SUFF_TAC`),
+    then aliased `SET_EQ` to `pred_setTheory.EXTENSION`.
+
+Grammar guards in the fixed files whose sole purpose was to insulate
+the load-time proofs went with the proofs.  One exception: Boolconv
+keeps its `Parse.temp_set_grammars` bracket because it also calls
 `ParseExtras.temp_loose_equality`, whose ambient effect the bracket is
 still scoping.
 
@@ -175,27 +195,27 @@ Core-build census after these changes:
 
 | measure                                             | count |
 |-----------------------------------------------------|-------|
-| `TAC_PROOF` calls with no current theory             | 282   |
-| distinct goals among them                            | 82    |
-| log files still carrying at least one                | 27    |
+| `TAC_PROOF` calls with no current theory             | 144   |
+| distinct goals among them                            | 64    |
+| log files still carrying at least one                |   6   |
 
-Down from 2386 / 176 / 57 in the baseline.  Largest remaining
-concentrations:
+Down from 2386 / 176 / 57 in the baseline.  The library-load-time
+class of offender is essentially clean; the remainder splits into:
 
-  - `src/num/theories/cv_compute/soundness_check/soundness_check-selftest.log`
-    (38 warnings, all from the selftest's own load-time proves --- these
-    are selftests directly proving without a segment, a different class
-    of offender from the library-load-time case).
-  - `src/pattern_matches/pattern-selftest.log` (17)
-  - `src/boss/holTheory` and `src/boss/boss-selftest.log` (17 each,
-    from libraries loaded by bossLib).
-  - `src/1/selftest.log` (17, tests proving without a segment).
+  - `soundness_check-selftest.log` (38): the selftest itself proves
+    without a segment.
+  - `src/1/selftest.log` (17): ditto.
+  - `bin/hol.state0` log (14): warnings from the state-building phase,
+    hitting boolLib and friends — exempt as they run once during heap
+    construction.
+  - `simp-selftest.log` (3), datatype `theory_tests` (1 each): more
+    selftest-in-place prove sites.
 
-The most repeated remaining goals point at pending library fixes
-elsewhere in the tree (`quantHeuristicsLib`'s GUESS_EXISTS_GAP,
-various tautological helpers still living in top-level `val` sites,
-and a handful of INST-heavy `prove(mk_eq ...)` idioms).  See the
-77-file list for context; most of the survivors are on it.
+The selftest cases are a different class from the library-load-time
+one this file started with: each is a test file directly calling `prove`
+without opening a segment.  Fixing them means either wrapping the test
+in a scratch theory or promoting the tactic proof to a proper Script.
+Left for a follow-up.
 
 ## Longer term
 
