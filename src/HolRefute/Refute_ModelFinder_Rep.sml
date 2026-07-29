@@ -148,7 +148,7 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
           ("Refute_ModelFinder_Rep.min_univ_card_of_rep", [Any])
     | min_univ_card_of_rep (Formula _) = 0
     | min_univ_card_of_rep (Atom (cardinality, offset)) =
-        cardinality + offset + 1
+        cardinality + offset
     | min_univ_card_of_rep (Struct representations) =
         List.foldl Int.max 0
           (map min_univ_card_of_rep representations)
