@@ -732,7 +732,7 @@ datatype task = Def of thm | Abbr of thm;
 fun total_cv_trans report_pre allow_pre term_opt def is_last =
   (if is_last then (Res (cv_trans_any report_pre allow_pre term_opt def))
               else (Res (case cv_trans_simple_constant def of
-                      NONE => cv_trans_any false NONE NONE def
+                      NONE => cv_trans_any report_pre NONE NONE def
                     | SOME res => res)))
   handle NeedsTranslation (_, tm) => Needs tm;
 
