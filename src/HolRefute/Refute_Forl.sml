@@ -1151,9 +1151,9 @@ structure Refute_Forl :> REFUTE_FORL = struct
           val outcome = read_section_body outcome_marker section
           val rest = Substring.triml (String.size outcome_marker) section
         in
-          if String.isSuffix "UNSATISFIABLE" outcome then
+          if outcome = "UNSATISFIABLE" then
             read_next_outcomes index (rest, sat, index :: unsat)
-          else if String.isSuffix "SATISFIABLE" outcome then
+          else if outcome = "SATISFIABLE" then
             let
               (* An instance belongs to this problem only.  Do not let a
                  missing marker consume the next problem's model. *)
