@@ -630,7 +630,9 @@ structure Refute_Narrow = struct
                   update path
                     (Eval {result = result, potential = not genuine}) tree
               | NeedsRefinement position =>
-                  if length position < depth then
+                  (* Root positions have length one, while [depth] counts
+                     refinements below that root. *)
+                  if length position <= depth + 1 then
                     refine_tree path position tree
                   else
                     update path Unknown tree
