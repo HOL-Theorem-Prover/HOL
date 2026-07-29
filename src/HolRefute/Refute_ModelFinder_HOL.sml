@@ -3408,6 +3408,13 @@ structure Refute_ModelFinder_HOL = struct
 
   fun is_typedef ty = Option.isSome (typedef_for_type ty)
 
+  (* A restricted typedef is not cardinality-monotonic: increasing its
+     representation scope need not increase the abstract carrier. *)
+  fun is_univ_typedef ty =
+    case typedef_for_type ty of
+        SOME {univ, ...} => univ
+      | NONE => false
+
   fun quotient_relation_for_type ty =
     case quotient_for_type ty of
         SOME {qty, rty, abs, rep, equiv_thm, ...} =>

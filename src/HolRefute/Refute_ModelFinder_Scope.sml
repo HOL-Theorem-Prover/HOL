@@ -781,7 +781,8 @@ structure Refute_ModelFinder_Scope = struct
     Option.isSome (MFH.word_dimension ty)
 
   fun is_type_fundamentally_monotonic ty =
-    (MFH.is_data_type ty andalso not (MFH.is_quot_type ty)) orelse
+    (MFH.is_data_type ty andalso not (MFH.is_quot_type ty) andalso
+     (not (MFH.is_typedef ty) orelse MFH.is_univ_typedef ty)) orelse
     is_number_type ty
 
   (* M3 has no monotonicity calculus.  Returning false is exactly
