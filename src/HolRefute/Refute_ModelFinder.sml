@@ -573,9 +573,13 @@ fun run_instance deadline started (config : Refute_Core.config)
         val sound = not (#unsound extension)
         val scope_has_codatatype =
           List.exists #co (#data_types (#scope extension))
+        val weakened = !(#semantic_weakening context)
         val reasons = if sound then
             authenticity_reasons mf got_all_mono_user_axioms
-              no_poly_user_axioms (#codatatypes_ok reconstructed)
+              no_poly_user_axioms (#codatatypes_ok reconstructed) @
+            (if weakened then
+               ["formula was semantically weakened by whack or ersatz"]
+             else [])
           else []
       in
         case MFM.certify
@@ -585,7 +589,7 @@ fun run_instance deadline started (config : Refute_Core.config)
            reconstruction = reconstructed,
            cex = make_base problem,
            sound = sound,
-           genuine_means_genuine = genuine_formula,
+           genuine_means_genuine = genuine_formula andalso not weakened,
            reasons = reasons} of
             MFM.Drop => NONE
           | MFM.Keep semantic_cex =>
