@@ -1571,8 +1571,6 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
   val harmless_consts =
     ["prim_rec$<", "arithmetic$<=", "integer$int_lt",
      "integer$int_le"]
-  val bounteous_consts = ["refute$bisim", "bisim"]
-
   fun term_name term =
     if Term.is_const term then
       let val {Thy, Name, ...} = Term.dest_thy_const term
@@ -1595,12 +1593,9 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
       (* A built-in-only axiom can still constrain cardinality (for example,
          universal equality).  Do not let an empty nonbuiltins list make the
          harmless-constant test succeed vacuously. *)
-      (not (null nonbuiltins) andalso
-       List.all (fn candidate => List.exists (fn harmless =>
-         canonical candidate = harmless) harmless_consts) nonbuiltins) orelse
-      List.exists (fn candidate => List.exists (fn bounteous =>
-        term_name candidate = bounteous orelse
-        canonical candidate = bounteous) bounteous_consts) constants
+      not (null nonbuiltins) andalso
+      List.all (fn candidate => List.exists (fn harmless =>
+        canonical candidate = harmless) harmless_consts) nonbuiltins
     end
 
   fun consider_nondefinitional_axiom mdata term accum =
