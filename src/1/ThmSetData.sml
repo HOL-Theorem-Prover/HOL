@@ -274,12 +274,12 @@ fun export_with_ancestry
                  steps succeed.  Recording an invalid delta poisons every
                  descendant; publishing before a failed recording leaves a
                  session-only theorem-set entry. *)
-              let val value = raw_apply_global d
-                (#get_global_value fullresult ())
-              in
-                #record_delta fullresult d;
-                #update_global_value fullresult (K value)
-              end
+              #update_global_value fullresult (fn current =>
+                let val value = raw_apply_global d current
+                in
+                  #record_delta fullresult d;
+                  value
+                end)
             end
           else raise ERR "store_attrfun"
                      ("Arguments not allowed for attribute " ^ attrname)

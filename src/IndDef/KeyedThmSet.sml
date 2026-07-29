@@ -74,12 +74,14 @@ fun new {settype, key_part} =
        a bad descendant delta nor a process-local entry when persistence
        rejects the update. *)
     fun export_thm name =
-      let
-        val delta = ThmSetData.mk_add name
-        val value = apply_delta0 "export_thm" delta (get_global_value ())
+      let val delta = ThmSetData.mk_add name
       in
-        record_delta delta;
-        update_global_value (K value)
+        update_global_value (fn current =>
+          let val value = apply_delta0 "export_thm" delta current
+          in
+            record_delta delta;
+            value
+          end)
       end
     fun thy_thms thyname =
       ThmSetData.added_thms (get_deltas {thyname = thyname})
