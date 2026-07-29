@@ -616,7 +616,8 @@ structure Refute_Core = struct
   fun normalize tm =
     #2 (boolSyntax.dest_eq (Thm.concl
       (Ho_Rewrite.REWRITE_CONV normal_rewrites tm)))
-    handle _ => tm
+    handle Interrupt => raise Interrupt
+         | _ => tm
 
   fun expand_quantifiers tm =
     let
