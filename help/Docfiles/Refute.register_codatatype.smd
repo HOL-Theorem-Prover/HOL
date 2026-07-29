@@ -19,18 +19,19 @@ types, infers the case constant's unique scrutinee position, and checks
 each remaining argument against the corresponding constructor branch.
 Type-operator parameters must be distinct type variables.
 
-Registrations are session-local.  A later valid registration for the same
-type operator replaces the old one and an explicit registration shadows a
-built-in lazy registration.  Built-ins cover `llist`, `ltree`, `itree`,
-`itreeTau`, `lbtree`, and `path` when their theories are available.
+Registrations are session-local.  Refute accepts only its audited built-in
+codatatype descriptions, since constructor/case shape alone cannot
+separate an inductive datatype from codatatype.  Built-ins cover `llist`,
+`ltree`, `itree`, `itreeTau`, `lbtree`, and `path` when their theories are
+available.
 
 ### Failure
 
 Fails for an empty or duplicate constructor list, nonconstant terms,
 wrong constructor results or case branches, ambiguous or absent
 scrutinee position, interpreted or function types, malformed type
-parameters, or an incompatible quotient, typedef, or fraction
-classification.
+parameters, an unverified codatatype description, or an incompatible
+quotient, typedef, or fraction classification.
 
 ### See also
 
