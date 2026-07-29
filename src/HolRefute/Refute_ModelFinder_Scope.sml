@@ -656,17 +656,14 @@ structure Refute_ModelFinder_Scope = struct
       val self_rec = num_self_recs > 0
       fun is_complete facto = has_exact_card context facto
         finitizable_data_types card_assigns ty
-      fun binder_types argument_ty =
-        #1 (boolSyntax.strip_fun argument_ty)
       fun is_concrete facto =
         MFH.is_bitword_type ty orelse
-        (* FIXME: looks wrong; other types than just functions might be
-           abstract. "is_complete" is also suspicious. *)
+        (* Exactness must hold for every constructor field, not just a
+           function's domain.  In particular, an abstract ordinary field or
+           function codomain makes the datatype encoding inexact. *)
         List.all (has_exact_card context facto finitizable_data_types
           card_assigns)
-          (List.concat (map binder_types
-            (List.concat
-              (map MFH.constructor_arg_types constructors))))
+          (List.concat (map MFH.constructor_arg_types constructors))
       val complete = Util.pair_from_fun is_complete
       val concrete = Util.pair_from_fun is_concrete
       fun sum_dom_cards maximum =
