@@ -1397,9 +1397,9 @@ structure Refute_Forl :> REFUTE_FORL = struct
   fun path_exists path =
     ((ignore (Posix.FileSys.lstat path); true) handle OS.SysErr _ => false)
 
-  fun make_private_temp_directory () =
+  fun make_private_directory root =
     let
-      val root = temp_root ()
+      val root = OS.FileSys.fullPath root
       fun create 0 = raise Fail "unable to create a private Kodkodi directory"
         | create attempts =
             let
@@ -1531,7 +1531,12 @@ structure Refute_Forl :> REFUTE_FORL = struct
         let
           val directory =
             if overlord then OS.FileSys.getDir ()
-            else make_private_temp_directory ()
+            else make_private_directory (temp_root ())
+          (* Debug/overlord mode retains artifacts, but must not share the
+             traditional fixed names with another invocation. *)
+          val directory =
+            if overlord then make_private_directory (OS.FileSys.getDir ())
+            else directory
           val stem = "kodkodi"
           val input_path = path_for directory stem "kki"
           val output_path = path_for directory stem "out"
