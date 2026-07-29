@@ -761,15 +761,18 @@ structure Refute_ModelFinder_Scope = struct
       val combination_ranks = map (fn rank => (rank, 0)) ranks
       val selected = all_combinations_ordered_smartly_at_most max_scopes
         combination_ranks
-      val descriptions = List.mapPartial
+      (* A selected combination can be invalid (notably a disabled
+         bisimulation depth maps to a zero-cardinality iterator).  Omitting it
+         is not an exhaustive check, so include it in the skipped count. *)
+      val selected_descriptions = List.mapPartial
         (scope_descriptor_from_combination context binarize blocks) selected
       val descriptions =
-        if length descriptions <= distinct_threshold then
-          distinct_descriptions descriptions
-        else descriptions
+        if length selected_descriptions <= distinct_threshold then
+          distinct_descriptions selected_descriptions
+        else selected_descriptions
     in
       (saturated_int (number_of_combinations combination_ranks -
-         IntInf.fromInt (length selected)),
+         IntInf.fromInt (length selected_descriptions)),
        map (scope_from_descriptor context binarize deep_data_types
          finitizable_data_types) descriptions)
     end
