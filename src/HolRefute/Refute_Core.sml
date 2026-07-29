@@ -288,7 +288,9 @@ structure Refute_Core = struct
   fun upd_evals value = change_config (ConfigEvals value)
   fun upd_expect value = change_config (ConfigExpect value)
   fun upd_max_counterexamples value =
-    change_config (ConfigMaxCounterexamples value)
+    if value >= 1 then change_config (ConfigMaxCounterexamples value)
+    else raise Feedback.mk_HOL_ERR "Refute_Core" "upd_max_counterexamples"
+      "max_counterexamples: must be at least 1"
   fun upd_tag value = change_config (ConfigTag value)
 
   fun upd_qc value (cfg : config) = map_qc (fn _ => value) cfg
@@ -1558,6 +1560,17 @@ structure Refute_Core = struct
       fun execute () =
         let
           val configured = selected_backend_registrations (#backends cfg)
+          val unknown =
+            case #backends cfg of
+                NONE => []
+              | SOME names => List.filter (fn name =>
+                  Option.isNone (lookup_backend name)) names
+        in
+          if not (null unknown) then
+            Unknown (map (fn name => "unknown requested backend: " ^ name)
+              unknown)
+          else
+            let
           val forms = preprocess_forms cfg problem
           fun registration_instances registration =
             instances_for_form (#input (#backend registration)) forms
@@ -1629,6 +1642,7 @@ structure Refute_Core = struct
                                    ["all selected backends returned no result"]
                                else Unknown reasons
                              end)
+            end
             end
         end
       fun attempt () =
