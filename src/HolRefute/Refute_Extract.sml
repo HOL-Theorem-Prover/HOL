@@ -1560,11 +1560,16 @@ structure Refute_Extract = struct
                     " (left, right) => " ^ fields))
               end
           | _ => raise Fail "lazy pair selector")
-      fun list_case value nil_body cons_body =
+      fun list_info () =
         let
           val ty = #1 (Type.dom_rng (Term.type_of head))
           val _ = ignore (ensure_type context ty)
-          val info = valOf (lookup_datatype context ty)
+        in
+          valOf (lookup_datatype context ty)
+        end
+      fun list_case value nil_body cons_body =
+        let
+          val info = list_info ()
           fun named name = valOf (List.find (fn (constructor, _, _) =>
             kname constructor = ("list", name)) (#constructors info))
           val (_, _, nil_name) = named "NIL"
@@ -1573,6 +1578,13 @@ structure Refute_Extract = struct
           "(case " ^ force value ^ " of " ^ nil_name ^ " => " ^ nil_body ^
           " | " ^ cons_name ^ " (refute_head, refute_tail) => " ^ cons_body ^
           ")"
+        end
+      fun lazy_list_nil () =
+        let
+          val info = list_info ()
+        in
+          #3 (valOf (List.find (fn (constructor, _, _) =>
+            kname constructor = ("list", "NIL")) (#constructors info)))
         end
     in
       case key of
@@ -1622,8 +1634,8 @@ structure Refute_Extract = struct
             | _ => raise Fail "lazy HD"))
         | ("list", "TL") =>
             SOME (lazy_with_arity context arguments 1 (fn values =>
-            case values of [value] => defer (list_case value "[]"
-              "refute_tail")
+            case values of [value] => defer (list_case value
+              (delay (lazy_list_nil ())) "refute_tail")
             | _ => raise Fail "lazy TL"))
         | ("option", "THE") =>
             let
@@ -1632,6 +1644,7 @@ structure Refute_Extract = struct
                     [value] =>
                       let
                         val ty = #1 (Type.dom_rng (Term.type_of head))
+                        val _ = ignore (ensure_type context ty)
                         val info = valOf (lookup_datatype context ty)
                         fun named name = #3 (valOf (List.find
                           (fn (constructor, _, _) =>
