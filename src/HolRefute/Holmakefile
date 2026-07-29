@@ -91,6 +91,7 @@ FORL_TRANSCRIPTS = tests/kodkodi-sat.stdout \
                    tests/kodkodi-error.stdout \
                    tests/kodkodi-error.stderr
 
+.PHONY: holrefute-selftest.log
 holrefute-selftest.log: selftest.exe $(FORL_GOLDENS) $(FORL_TRANSCRIPTS)
 	$(tee ./selftest.exe 2>&1,$@)
 
@@ -101,6 +102,7 @@ all: theory-tests
 .PHONY: theory-tests
 
 theory-tests: selftest.exe
+	$(HOLDIR)/bin/Holmake -C theory_tests clean
 	$(HOLDIR)/bin/Holmake -C theory_tests --no_prereqs
 endif
 endif
