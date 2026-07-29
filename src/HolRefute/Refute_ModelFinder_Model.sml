@@ -1907,8 +1907,7 @@ fun certification_copy scope types original eval_terms bindings =
                     SOME (_, atoms, _) =>
                       if length atoms = card then
                         SOME (ListPair.mapEq (fn (atom, index) =>
-                          {redex = Term.inst theta atom,
-                           residue = rf_constructor card index})
+                          (atom, rf_constructor card index))
                           (atoms, Portable.upto 1 card))
                       else NONE
                   | NONE => NONE
@@ -1920,10 +1919,39 @@ fun certification_copy scope types original eval_terms bindings =
             in
               case collect_atoms rows of
                   NONE => NONE
-                | SOME atoms =>
+                | SOME atom_images =>
                     let
-                      fun copy_value value = Term.subst atoms
-                        (Term.inst theta (replace_irrelevant value))
+                      (* Do not form atom-substitution keys after [theta]:
+                         distinct type variables of equal cardinality then
+                         share an rf type and can have identically named
+                         atoms.  Temporary source-typed variables preserve
+                         their identities through instantiation. *)
+                      val avoids = List.concat
+                        (map Term.all_vars
+                          (original :: eval_terms @
+                           List.concat (map (fn (left, right) =>
+                             [left, right]) bindings))) @
+                        map #1 atom_images
+                      fun fresh_atoms [] _ _ source target =
+                            (rev source, rev target)
+                        | fresh_atoms ((atom, image) :: rest) serial avoids
+                            source target =
+                            let val temporary = Term.variant avoids
+                              (Term.mk_var
+                                (MFN.reserved_prefix ^ "cert_atom" ^
+                                 Int.toString serial, Term.type_of atom))
+                            in
+                              fresh_atoms rest (serial + 1)
+                                (temporary :: avoids)
+                                ({redex = atom, residue = temporary} :: source)
+                                ({redex = Term.inst theta temporary,
+                                  residue = image} :: target)
+                            end
+                      val (source_atoms, target_atoms) =
+                        fresh_atoms atom_images 0 avoids [] []
+                      fun copy_value value = Term.subst target_atoms
+                        (Term.inst theta
+                          (Term.subst source_atoms (replace_irrelevant value)))
                       val env = map (fn (variable, value) =>
                         (Term.inst theta variable, copy_value value)) bindings
                     in
