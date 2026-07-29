@@ -331,12 +331,17 @@ fun register_frac_type_rat () =
    that numbering an atom is a pair of lookups rather than a scan. *)
 type atom_pool =
   {counts : (hol_type, int) Redblackmap.dict,
-   numbers : (hol_type * int, int) Redblackmap.dict} ref
+   numbers : (hol_type * int, int) Redblackmap.dict,
+   terms : (hol_type * int, term) Redblackmap.dict,
+   used : (hol_type, term list) Redblackmap.dict} ref
 
 fun new_atom_pool () : atom_pool =
   ref {counts = Redblackmap.mkDict Type.compare,
        numbers = Redblackmap.mkDict
-         (Portable.pair_compare (Type.compare, Int.compare))}
+         (Portable.pair_compare (Type.compare, Int.compare)),
+       terms = Redblackmap.mkDict
+         (Portable.pair_compare (Type.compare, Int.compare)),
+       used = Redblackmap.mkDict Type.compare}
 
 type context =
   {scope : scope,
@@ -413,12 +418,34 @@ fun atom_number (pool : atom_pool) ty atom =
 fun atom_term ({atoms, pool, ...} : context) ty atom =
   let
     val number = atom_number pool ty atom
+    val {terms, used, ...} = !pool
+    val key = (ty, number)
     val overrides = type_atom_names atoms ty
+    val requested =
+      if number <= length overrides then
+        Term.mk_var (List.nth (overrides, number - 1), ty)
+      else
+        MFN.fake_atom number ty
   in
-    if number <= length overrides then
-      Term.mk_var (List.nth (overrides, number - 1), ty)
-    else
-      MFN.fake_atom number ty
+    case Redblackmap.peek (terms, key) of
+        SOME assigned => assigned
+      | NONE =>
+          let
+            (* Names in [upd_atoms] are preferences, not identities.  A
+               per-type freshening cache makes every solver atom distinct,
+               including duplicate overrides and fallback-name collisions. *)
+            val avoids = Term.mk_var ("?", ty) ::
+              Option.getOpt (Redblackmap.peek (used, ty), [])
+            val assigned = Term.variant avoids requested
+            val _ = pool :=
+              {counts = #counts (!pool), numbers = #numbers (!pool),
+               terms = Redblackmap.insert (terms, key, assigned),
+               used = Redblackmap.insert
+                 (used, ty, assigned :: Option.getOpt
+                   (Redblackmap.peek (used, ty), []))}
+          in
+            assigned
+          end
   end
 
 (* Schwartzian transform: one pretty-printer call per element instead of
