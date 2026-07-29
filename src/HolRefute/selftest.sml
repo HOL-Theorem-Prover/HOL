@@ -8422,16 +8422,18 @@ fun mf_model_certification_protocol () =
            ["certification refuted the model — please report"], ...} => true
        | _ => false) andalso
     (case fallback of
-         MFM.Keep {certainty = QuasiGenuine
-           ["Try again with wf = true"], cert = NONE, ...} => true
+         MFM.Keep {certainty = Potential
+           ["untrusted Kodkodi model; no HOL certificate",
+            "Try again with wf = true"], cert = NONE, ...} => true
        | _ => false) andalso
     (case codata_fallback of
-         MFM.Keep {certainty = QuasiGenuine [reason], ...} =>
-           String.isSubstring "bisim_depth" reason
+         MFM.Keep {certainty = Potential reasons, ...} =>
+           List.exists (String.isSubstring "bisim_depth") reasons
        | _ => false) andalso smart_genuine andalso
     (case forced_fallback of
-         MFM.Keep {certainty = QuasiGenuine
-           ["Try again with \"finitize\" set to \"smart\" or \"false\""],
+         MFM.Keep {certainty = Potential
+           ["untrusted Kodkodi model; no HOL certificate",
+            "Try again with \"finitize\" set to \"smart\" or \"false\""],
            cert = NONE, ...} => true
        | _ => false)
   end
@@ -8449,7 +8451,7 @@ fun mf_polymorphic_model_protocol () =
     val original = boolSyntax.mk_eq (x, y)
     val reconstructed : MFM.reconstruction =
       {bindings = [(x, a1), (y, a2)], evals = [], skolems = [],
-       consts = [], types = [], codatatypes_ok = true}
+       consts = [], types = [(ty, [a1, a2], true)], codatatypes_ok = true}
     fun base card : counterexample =
       {backend = "kodkod", substrate = "kodkod",
        certainty = Refute_Core.Potential [], bindings = [], evals = [],
@@ -8475,7 +8477,7 @@ fun mf_polymorphic_model_protocol () =
            variable_named "a1" left andalso variable_named "a2" right
        | _ => false) andalso
     (case large of
-         MFM.Keep {certainty = Genuine, cert = NONE, ...} => true
+         MFM.Keep {certainty = Potential _, cert = NONE, ...} => true
        | _ => false) andalso
     (case displayed of
          [(reported_ty, [left, right], true)] =>
