@@ -6351,3 +6351,319 @@ val _ =
 
 Definition n2w_itself_def:   n2w_itself (n, (:'a)) = (n2w n): 'a word
 End
+
+(* ------------------------------------------------------------------------- *)
+(* Lemmas wordsLib formerly proved as it loaded.                             *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem w2n_n2w_compute:
+  !n. w2n ((n2w n) : 'a word) =
+      if n < dimword(:'a) then n else n MOD dimword(:'a)
+Proof
+  BasicProvers.PRIM_SRW_TAC arith_ss [boolSimps.LET_ss] [w2n_n2w]
+QED
+
+Theorem word_2comp_compute:
+  !n. word_2comp (n2w n) : 'a word =
+        let x = n MOD dimword (:'a) in
+          if x = 0 then 0w else n2w (dimword (:'a) - x)
+Proof
+  BasicProvers.PRIM_SRW_TAC arith_ss [boolSimps.LET_ss] [word_2comp_n2w,n2w_11]
+QED
+
+Theorem word_lsl_compute:
+  !n m. (n2w m : 'a word) << n =
+        if dimindex(:'a) - 1 < n then 0w
+        else n2w ((m * 2 ** n) MOD dimword(:'a))
+Proof
+  REWRITE_TAC [word_lsl_n2w, n2w_mod]
+QED
+
+Theorem ROL_ROR_MOD_RWT:
+  !n w:'a word. dimindex (:'a) <= n ==>
+    (word_rol w n = word_rol w (n MOD dimindex (:'a))) /\
+    (word_ror w n = word_ror w (n MOD dimindex (:'a)))
+Proof
+  BasicProvers.PRIM_SRW_TAC arith_ss [] [Once (GSYM ROL_MOD), Once (GSYM ROR_MOD)]
+QED
+
+Theorem ASR_ROR_ROL_UINT_MAX:
+  (!m n. (n2w n = -1w: 'a word) ==> (n2w n >> m = -1w: 'a word)) /\
+  (!m n. (n2w n = -1w: 'a word) ==> (n2w n #>> m = -1w: 'a word)) /\
+  (!m n. (n2w n = -1w: 'a word) ==> (n2w n #<< m = -1w: 'a word))
+Proof
+  SIMP_TAC std_ss [WORD_NEG_1, ASR_UINT_MAX, ROR_UINT_MAX, word_rol_def]
+QED
+
+Theorem word_eq_imp_num_eq:
+  !m n. (n2w m = n2w n : 'a word) /\
+        m < dimword(:'a) /\ n < dimword(:'a) ==> (m = n)
+Proof SRW_TAC [] [n2w_11] THEN FULL_SIMP_TAC arith_ss []
+QED
+
+Theorem word_lt_imp_num_lt:
+  !m n. (n2w m) <+ (n2w n : 'a word) /\
+        m < dimword(:'a) /\ n < dimword(:'a) ==> (m < n)
+Proof SRW_TAC [] [word_lo_n2w] THEN FULL_SIMP_TAC arith_ss []
+QED
+
+Theorem word_ls_imp_num_ls:
+  !m n. (n2w m) <=+ (n2w n : 'a word) /\
+        m < dimword(:'a) /\ n < dimword(:'a) ==> (m <= n)
+Proof SRW_TAC [] [word_ls_n2w] THEN FULL_SIMP_TAC arith_ss []
+QED
+
+Theorem word_n2w_le:
+  !a. w2n (n2w a :'a word) <= a MOD dimword(:'a)
+Proof SIMP_TAC std_ss [w2n_n2w]
+QED
+
+Theorem word_n2w_le2:
+  !a. w2n (n2w a :'a word) <= a
+Proof SIMP_TAC std_ss [w2n_n2w, bitTheory.MOD_LEQ, ZERO_LT_dimword]
+QED
+
+Theorem word_extract_le:
+  !a:'a word h l. w2n ((h >< l) a : 'b word) <= w2n a
+Proof
+  Cases THEN SRW_TAC [] [word_extract_n2w,w2n_n2w]
+  THEN SRW_TAC [] [bitTheory.BITS_COMP_THM2, MOD_DIMINDEX]
+  THEN SRW_TAC [] [arithmeticTheory.MIN_DEF, bitTheory.BITS_LEQ]
+QED
+
+Theorem word_add_le:
+  !a:'a word b. w2n (a + b) <= w2n a + w2n b
+Proof
+  Cases THEN Cases THEN
+  SIMP_TAC std_ss [bitTheory.MOD_LEQ, word_add_def, w2n_n2w, ZERO_LT_dimword]
+QED
+
+Theorem word_mul_le:
+  !a:'a word b. w2n (a * b) <= w2n a * w2n b
+Proof
+  Cases THEN Cases THEN
+  SIMP_TAC std_ss [bitTheory.MOD_LEQ, word_mul_def, w2n_n2w, ZERO_LT_dimword]
+QED
+
+Theorem word_lsl_le:
+  !a:'a word b. w2n (a << b) <= w2n a * 2 ** b
+Proof
+  Cases THEN SRW_TAC [] [word_lsl_n2w, w2n_n2w,
+                         bitTheory.MOD_LEQ, ZERO_LT_dimword]
+QED
+
+Theorem word_div_le:
+  !a:'a word b. 0 < b MOD dimword (:'a) ==>
+                w2n (a // n2w b) <= w2n a DIV (b MOD dimword (:'a))
+Proof
+  Cases THEN STRIP_TAC THEN Cases_on `b MOD dimword (:'a) = 1`
+  THENL
+    [SRW_TAC [numSimps.ARITH_ss] [word_div_def, w2n_n2w],
+     Cases_on `n = 0` THEN
+     SRW_TAC [numSimps.ARITH_ss] [word_div_def, w2n_n2w,
+       arithmeticTheory.ZERO_DIV, bitTheory.MOD_LEQ, ZERO_LT_dimword]]
+QED
+
+Theorem word_div_le2_lem:
+  !n. 0 < (SUC (2 * n)) MOD dimword (:'a)
+Proof
+  SRW_TAC [] [arithmeticTheory.ADD1, bitTheory.MOD_PLUS_1, ZERO_LT_dimword,
+              DECIDE ``0n < n <=> (n <> 0)``]
+  THEN STRIP_ASSUME_TAC EXISTS_HB
+  THEN ASM_SIMP_TAC arith_ss
+       [arithmeticTheory.EXP, GSYM arithmeticTheory.MOD_COMMON_FACTOR,
+        bitTheory.ZERO_LT_TWOEXP, dimword_def, GSYM arithmeticTheory.ADD1]
+  THEN `ODD (SUC (2 * (n MOD 2 ** m)))`
+    by (REWRITE_TAC [arithmeticTheory.ODD_EXISTS]
+       THEN Q.EXISTS_TAC `n MOD 2 ** m` THEN REWRITE_TAC [])
+  THEN RULE_ASSUM_TAC (SIMP_RULE std_ss
+         [arithmeticTheory.ODD_EVEN, arithmeticTheory.EVEN_EXISTS])
+  THEN POP_ASSUM (Q.SPEC_THEN `2 ** m` ASSUME_TAC)
+  THEN ASM_REWRITE_TAC []
+QED
+
+Theorem word_div_le2:
+  !a:'a word b. ODD b ==> w2n (a // n2w b) <= w2n a
+Proof
+  Cases THEN REPEAT STRIP_TAC
+  THEN IMP_RES_TAC (CONJUNCT2 (SPEC_ALL arithmeticTheory.EVEN_ODD_EXISTS))
+  THEN POP_ASSUM SUBST1_TAC
+  THEN SRW_TAC [numSimps.ARITH_ss] [word_div_def, w2n_n2w]
+  THEN `n DIV (SUC (2 * m) MOD dimword (:'a)) <= n`
+    by SIMP_TAC std_ss [arithmeticTheory.DIV_LESS_EQ, word_div_le2_lem]
+  THEN SRW_TAC [numSimps.ARITH_ss] []
+QED
+
+Theorem word_extract_order1:
+  !a : 'a word b h l. w2n a < b ==> w2n ((h >< l) a : 'b word) < b
+Proof
+  REPEAT STRIP_TAC
+  THEN Q.SPECL_THEN [`w2n ((h >< l) a : 'b word)`, `w2n a`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+  THEN ASM_REWRITE_TAC [word_extract_le]
+QED
+
+Theorem word_extract_order2:
+  !a : 'a word b h l. w2n a <= b ==> w2n ((h >< l) a : 'b word) <= b
+Proof
+  REPEAT STRIP_TAC
+  THEN Q.SPECL_THEN [`w2n ((h >< l) a : 'b word)`, `w2n a`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+  THEN ASM_REWRITE_TAC [word_extract_le]
+QED
+
+Theorem word_add_order1:
+  !a : 'a word b m n. w2n a <= m /\ w2n b <= n ==> w2n (a + b) <= m + n
+Proof
+  REPEAT STRIP_TAC
+  THEN `w2n a + w2n b <= m + n` by DECIDE_TAC
+  THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+  THEN ASM_REWRITE_TAC [word_add_le]
+QED
+
+Theorem word_add_order2:
+  !a : 'a word b m n. w2n a <= m /\ w2n b < n ==> w2n (a + b) < m + n
+Proof
+  REPEAT STRIP_TAC
+  THEN `w2n a + w2n b < m + n` by DECIDE_TAC
+  THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
+       MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+  THEN ASM_REWRITE_TAC [word_add_le]
+QED
+
+Theorem word_add_order3:
+  !a : 'a word b m n. w2n a < m /\ w2n b <= n ==> w2n (a + b) < m + n
+Proof
+  REPEAT STRIP_TAC
+  THEN `w2n a + w2n b < m + n` by DECIDE_TAC
+  THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
+       MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+  THEN ASM_REWRITE_TAC [word_add_le]
+QED
+
+Theorem word_add_order4:
+  !a : 'a word b m n. w2n a < m /\ w2n b < n ==> w2n (a + b) < m + n - 1
+Proof
+  REPEAT STRIP_TAC
+  THEN `w2n a + w2n b < m + n - 1` by DECIDE_TAC
+  THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
+       MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+  THEN ASM_REWRITE_TAC [word_add_le]
+QED
+
+Theorem word_mul_order1:
+  !a : 'a word b m n. w2n a <= m /\ w2n b <= n ==> w2n (a * b) <= m * n
+Proof
+  REPEAT STRIP_TAC
+  THEN `w2n a * w2n b <= m * n`
+    by ASM_SIMP_TAC std_ss [arithmeticTheory.LESS_MONO_MULT2]
+  THEN Q.SPECL_THEN [`w2n (a * b)`, `w2n a * w2n b`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+  THEN ASM_REWRITE_TAC [word_mul_le]
+QED
+
+Theorem word_mul_order2:
+  !a : 'a word b m n. w2n a <= m /\ w2n b < n ==> w2n (a * b) <= m * n
+Proof
+  REPEAT STRIP_TAC
+  THEN `w2n a * w2n b <= m * n`
+    by ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_MONO_MULT2]
+  THEN Q.SPECL_THEN [`w2n (a * b)`, `w2n a * w2n b`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+  THEN ASM_SIMP_TAC arith_ss [word_mul_le]
+QED
+
+Theorem word_mul_order3:
+  !a : 'a word b m n. w2n a < m /\ w2n b <= n ==> w2n (a * b) <= m * n
+Proof
+  REPEAT STRIP_TAC
+  THEN `w2n a * w2n b <= m * n`
+    by ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_MONO_MULT2]
+  THEN Q.SPECL_THEN [`w2n (a * b)`, `w2n a * w2n b`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+  THEN ASM_SIMP_TAC arith_ss [word_mul_le]
+QED
+
+Theorem word_mul_order4:
+  !a : 'a word b m n. w2n a < m /\ w2n b < n ==> w2n (a * b) <= m * n
+Proof
+  REPEAT STRIP_TAC
+  THEN `w2n a * w2n b <= m * n`
+    by ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_MONO_MULT2]
+  THEN Q.SPECL_THEN [`w2n (a * b)`, `w2n a * w2n b`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+  THEN ASM_SIMP_TAC arith_ss [word_mul_le]
+QED
+
+Theorem word_lsl_order1:
+  !a:'a word b n. w2n a < n ==> w2n (a << b) < n * 2 ** b
+Proof
+  REPEAT STRIP_TAC
+  THEN Q.SPECL_THEN [`w2n (a << b)`, `w2n a * 2 ** b`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+  THEN ASM_REWRITE_TAC [arithmeticTheory.LT_MULT_RCANCEL,
+         bitTheory.ZERO_LT_TWOEXP, word_lsl_le]
+QED
+
+Theorem word_lsl_order2:
+  !a:'a word b n. w2n a <= n ==> w2n (a << b) <= n * 2 ** b
+Proof
+  REPEAT STRIP_TAC
+  THEN Q.SPECL_THEN [`w2n (a << b)`, `w2n a * 2 ** b`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+  THEN ASM_REWRITE_TAC [arithmeticTheory.LE_MULT_RCANCEL,
+         bitTheory.ZERO_LT_TWOEXP, word_lsl_le]
+QED
+
+Theorem word_div_order1:
+  !a:'a word b n.
+    0 < b /\ b < dimword (:'a) /\ w2n a <= n ==>
+    w2n (a // n2w b) <= n DIV b
+Proof
+  REPEAT STRIP_TAC
+  THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a DIV (b MOD dimword (:'a))`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+  THEN ASM_SIMP_TAC arith_ss [arithmeticTheory.DIV_LE_MONOTONE,
+         word_div_le |> SPEC_ALL |> Q.DISCH `b < dimword (:'a)`
+                     |> SIMP_RULE arith_ss []]
+QED
+
+Theorem word_div_order2:
+  !a:'a word b n.
+    0 < b /\ b < dimword (:'a) /\ w2n a < n ==>
+    w2n (a // n2w b) <= n DIV b
+Proof
+  REPEAT STRIP_TAC
+  THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a DIV (b MOD dimword (:'a))`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+  THEN ASM_SIMP_TAC arith_ss [arithmeticTheory.DIV_LE_MONOTONE,
+         word_div_le |> SPEC_ALL |> Q.DISCH `b < dimword (:'a)`
+                     |> SIMP_RULE arith_ss []]
+QED
+
+Theorem word_div_order3:
+  !a:'a word b n. ODD b /\ w2n a <= n ==> w2n (a // n2w b) <= n
+Proof
+  REPEAT STRIP_TAC
+  THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
+  THEN ASM_SIMP_TAC std_ss [word_div_le2]
+QED
+
+Theorem word_div_order4:
+  !a:'a word b n. ODD b /\ w2n a < n ==> w2n (a // n2w b) < n
+Proof
+  REPEAT STRIP_TAC
+  THEN Q.SPECL_THEN [`w2n (a // n2w b)`, `w2n a`]
+         MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
+  THEN ASM_SIMP_TAC std_ss [word_div_le2]
+QED
+
+Theorem EXISTS_NUMBER:
+  !P. (?w:'a word. P (w2n w)) <=> (?n. n < dimword(:'a) /\ P n)
+Proof
+  STRIP_TAC THEN EQ_TAC THEN SRW_TAC [] []
+    THENL [Q.EXISTS_TAC `w2n w`, Q.EXISTS_TAC `n2w n`]
+    THEN ASM_SIMP_TAC std_ss [w2n_lt, w2n_n2w]
+QED
