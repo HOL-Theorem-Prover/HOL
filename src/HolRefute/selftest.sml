@@ -19518,7 +19518,9 @@ fun facade_expectation () =
       (Refute.upd_expect Refute.ExpectNone
         (Refute.upd_backends (SOME ["exhaustive"]) default_config))
       ``(x : num) - y + y = x``); false)
-   handle _ => true)
+   handle HOL_ERR error =>
+     Feedback.top_structure_of error = "Refute" andalso
+     Feedback.top_function_of error = "expect")
 
 fun facade_parallel () =
   case Refute.refute
@@ -19531,7 +19533,9 @@ fun facade_parallel () =
 fun facade_tactic_fails () =
   ((ignore (Refute.REFUTE_TAC
       ([], ``(x : num) - y + y = x``)); false)
-   handle _ => true)
+   handle HOL_ERR error =>
+     Feedback.top_structure_of error = "Refute" andalso
+     Feedback.top_function_of error = "REFUTE_TAC")
 
 fun facade_tactic_allows_unknown () =
   ((ignore (Refute.REFUTE_TAC ([], ``(x : ind) = x``)); true)
