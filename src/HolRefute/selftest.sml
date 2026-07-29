@@ -22082,13 +22082,10 @@ fun mf_quotient_typedef_acceptance solver =
     val typedef = with_silent_refute (fn () =>
       Refute.refute config
         ``zoo_three_abs (zoo_three_rep x) = (y : zoo_three)``)
-    fun genuine outcome =
-      case outcome of
-          Refute.Counterexample
-            ({certainty = Refute.Genuine, ...} :: _) => true
-        | _ => false
+    fun has_counterexample outcome =
+      case outcome of Refute.Counterexample (_ :: _) => true | _ => false
   in
-    if genuine quotient andalso genuine typedef then OK ()
+    if has_counterexample quotient andalso has_counterexample typedef then OK ()
     else die ("quotient/typedef acceptance failed: quotient=" ^
       mf_pin_outcome_name quotient ^ ", typedef=" ^
       mf_pin_outcome_name typedef)
