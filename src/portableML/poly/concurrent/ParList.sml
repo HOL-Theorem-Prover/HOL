@@ -69,7 +69,9 @@ fun get_some f [] = NONE
             case take () of
                 NONE => ()
               | SOME (_, x) =>
-                  (publish (f x handle _ => NONE); worker ());
+                  (publish
+                     (f x handle Interrupt => raise Interrupt | _ => NONE);
+                   worker ());
 
           (* Forking and publishing handles are atomic with respect to caller
              interrupts, so cleanup always sees every started worker. *)
