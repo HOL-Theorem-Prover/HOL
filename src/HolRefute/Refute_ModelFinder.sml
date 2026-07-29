@@ -709,9 +709,9 @@ fun run_instance deadline started (config : Refute_Core.config)
                            a later liberal model (which could be merely
                            Potential), and consume exactly one genuine slot
                            before dropping the remaining unsound problems. *)
-                        fun reconstruct_until_genuine _ [] = (false, 0)
-                          | reconstruct_until_genuine 0 _ = (false, 0)
-                          | reconstruct_until_genuine remaining
+                        fun reconstruct_until_genuine _ 0 _ = (false, 0)
+                          | reconstruct_until_genuine _ _ [] = (false, 0)
+                          | reconstruct_until_genuine potential remaining
                               ((index, bounds) :: models) =
                               (case reconstruct
                                   (List.nth (problems, index)) bounds of
@@ -720,20 +720,27 @@ fun run_instance deadline started (config : Refute_Core.config)
                                      then (keep_counterexample cex; (true, 1))
                                      else
                                        let
+                                         val keep = potential > 0
                                          val (promoted, kept) =
                                            reconstruct_until_genuine
+                                             (if keep then potential - 1
+                                              else potential)
                                              (remaining - 1) models
-                                         val _ = keep_counterexample cex
+                                         val _ = if keep then
+                                           keep_counterexample cex else ()
                                        in
-                                         (promoted, kept + 1)
+                                         (promoted, kept + (if keep then 1
+                                                           else 0))
                                        end
                                  | NONE =>
-                                     reconstruct_until_genuine
-                                       remaining models)
-                        (* A solver may over-deliver.  Scan past failed
-                           reconstructions, but charge only usable models. *)
+                                     reconstruct_until_genuine potential
+                                       (remaining - 1) models)
+                        (* A liberal problem can nevertheless reconstruct to
+                           a genuine counterexample.  Scan enough results for
+                           both quotas, but retain potential results only up
+                           to their own quota. *)
                         val (promoted, kept) = reconstruct_until_genuine
-                          max_potential liberal
+                          max_potential (max_potential + max_genuine) liberal
                         val found = found_really_genuine orelse promoted
                         val (max_potential, max_genuine) =
                           liberal_budget_after_models
@@ -909,7 +916,7 @@ fun run_instance deadline started (config : Refute_Core.config)
         val (_, max_potential, max_genuine, donno) = state
         val flags =
           (if max_genuine > 0 then [false] else []) @
-          (if max_potential > 0 then [true] else [])
+          (if max_potential > 0 orelse max_genuine > 0 then [true] else [])
         val (problems, donno) = List.foldl (fn (scope, result) =>
           add_problem flags scope result) ([], donno) scope_batch
         val _ = last_donno := donno
