@@ -1176,7 +1176,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     val total =
                       not (MFH.is_bitword_type (domain_type ty)) andalso
                       (if constant = NatToInt then
-                         MFP.max_int_for_card range_card >= domain_card + 1
+                         MFP.max_int_for_card range_card >= domain_card - 1
                        else
                          MFP.max_int_for_card domain_card < range_card)
                     val range = MFR.Atom (range_card, range_offset)
