@@ -349,6 +349,7 @@ type context =
    sel_names : nut list,
    rel_table : nut MFNT.NameTable.table,
    bounds : raw_bound list,
+   atom_avoids : term list,
    pool : atom_pool}
 
 fun err function message =
@@ -415,7 +416,7 @@ fun atom_number (pool : atom_pool) ty atom =
           end
   end
 
-fun atom_term ({atoms, pool, ...} : context) ty atom =
+fun atom_term ({atoms, atom_avoids, pool, ...} : context) ty atom =
   let
     val number = atom_number pool ty atom
     val {terms, used, ...} = !pool
@@ -434,7 +435,7 @@ fun atom_term ({atoms, pool, ...} : context) ty atom =
             (* Names in [upd_atoms] are preferences, not identities.  A
                per-type freshening cache makes every solver atom distinct,
                including duplicate overrides and fallback-name collisions. *)
-            val avoids = Term.mk_var ("?", ty) ::
+            val avoids = Term.mk_var ("?", ty) :: atom_avoids @
               Option.getOpt (Redblackmap.peek (used, ty), [])
             val assigned = Term.variant avoids requested
             val _ = pool :=
@@ -805,7 +806,8 @@ fun term_for_rep {scope, atoms, sel_names, rel_table, bounds, maybe_opt,
                   ty, representation, tuples} =
   reconstruct_term
     {scope = scope, atoms = atoms, sel_names = sel_names,
-     rel_table = rel_table, bounds = bounds, pool = new_atom_pool ()}
+     rel_table = rel_table, bounds = bounds, atom_avoids = [],
+     pool = new_atom_pool ()}
     maybe_opt ty representation tuples
 
 fun same_free name ty term =
@@ -1589,7 +1591,10 @@ fun reconstruct_with formatting
     val postprocessors = snapshot_term_postprocessors ()
     val context =
       {scope = scope, atoms = atoms, sel_names = sel_names,
-       rel_table = rel_table, bounds = bounds, pool = new_atom_pool ()}
+       rel_table = rel_table, bounds = bounds,
+       atom_avoids = List.concat
+         (map Term.free_vars_lr (real_frees @ eval_terms)),
+       pool = new_atom_pool ()}
 
     fun decode name =
       case MFNT.rep_of name of
