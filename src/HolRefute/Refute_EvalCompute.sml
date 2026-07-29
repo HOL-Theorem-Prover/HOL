@@ -473,8 +473,12 @@ structure Refute_EvalCompute = struct
               random_value_with draw custom (Refute_Gen.spec_of ty)
                 {budget = Int.max (0, budget - 1), size = size} state
             else
-              random_entry_with draw custom (Refute_Gen.spec_of ty)
-                size state
+              (* Preserve the current constructor budget through wrappers
+                 such as option.  Resetting it to [size] here lets an
+                 indirect recursive field evade the direct-recursion check. *)
+              random_value_with draw custom (Refute_Gen.spec_of ty)
+                {budget = Int.max (Refute_Gen.own_floor
+                   (Refute_Gen.spec_of ty), budget), size = size} state
           val (values, final) =
             random_args_with draw custom tys recursive budget size next
         in
