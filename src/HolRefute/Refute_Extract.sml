@@ -3804,11 +3804,19 @@ structure Refute_Extract = struct
         end
     end
 
+  (* Direct extraction used to discard its table identifier, leaving callers
+     unable to release the vectors retained by generated code.  Keep source
+     compatibility while returning an idempotent owner close operation. *)
   fun extract_tests config strategy plans =
-    let val {source, entry, ...} =
-      extract_tests_with Strict config strategy plans
+    let
+      val {source, entry, table} =
+        extract_tests_with Strict config strategy plans
+      val closed = ref false
+      fun close () =
+        if !closed then ()
+        else (closed := true; Refute_EvalSML.unregister_term_tables table)
     in
-      {source = source, entry = entry}
+      {source = source, entry = entry, table = table, close = close}
     end
 
   (* Compile the first-order bridge between generic narrowing terms and the
