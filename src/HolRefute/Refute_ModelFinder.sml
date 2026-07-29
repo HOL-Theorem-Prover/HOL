@@ -673,6 +673,7 @@ fun run_instance deadline started (config : Refute_Core.config)
                ["formula was semantically weakened by whack or ersatz"]
              else [])
           else []
+        fun discard () = if sound then discarded_sound_model := true else ()
       in
         case MFM.certify
           {executable = executable andalso not scope_has_codatatype,
@@ -683,7 +684,7 @@ fun run_instance deadline started (config : Refute_Core.config)
            sound = sound,
            genuine_means_genuine = genuine_formula andalso not weakened,
            reasons = reasons} of
-            MFM.Drop => NONE
+            MFM.Drop => (discard (); NONE)
           | MFM.Keep semantic_cex =>
               let val cex =
                 MFM.display_counterexample postprocessors displayed
@@ -691,7 +692,7 @@ fun run_instance deadline started (config : Refute_Core.config)
               in
                 if #genuine_only config andalso
                    certainty_is_potential (#certainty cex)
-                then NONE
+                then (discard (); NONE)
                 else SOME cex
               end
       end
