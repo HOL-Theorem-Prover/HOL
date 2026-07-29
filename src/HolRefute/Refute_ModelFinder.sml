@@ -629,12 +629,24 @@ fun run_instance deadline started (config : Refute_Core.config)
             case KK.solve_any_problem (#debug mf) (#overlord mf) deadline
                 (#max_threads mf) max_solutions (map raw_problem problems) of
                 KK.Normal ([], unsat_indices, warning) =>
-                  (update_checked problems unsat_indices;
-                   if warning = "" then () else
-                     Refute_Core.Private.say 1
-                       ("Kodkod warning: " ^ warning ^ "\n");
-                   (found_really_genuine, max_potential,
-                    max_genuine, donno))
+                  let
+                    val all_reported_unsat = List.all
+                      (fn index => List.exists (fn reported =>
+                        reported = index) unsat_indices)
+                      (Portable.upto 0 (length problems - 1))
+                  in
+                    update_checked problems unsat_indices;
+                    if warning = "" then () else
+                      Refute_Core.Private.say 1
+                        ("Kodkod warning: " ^ warning ^ "\n");
+                    if all_reported_unsat then
+                      (found_really_genuine, max_potential,
+                       max_genuine, donno)
+                    else
+                      (add_error "Kodkodi returned an incomplete result";
+                       (found_really_genuine, max_potential,
+                        max_genuine, donno + 1))
+                  end
               | KK.Normal (sat_models, unsat_indices, warning) =>
                   let
                     val _ = if warning = "" then () else

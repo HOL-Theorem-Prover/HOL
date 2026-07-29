@@ -1492,7 +1492,13 @@ structure Refute_Forl :> REFUTE_FORL = struct
           in
             (kept, List.map #1 dropped)
           end
-      fun reindex index = #1 (List.nth (indexed_problems, index))
+      fun reindex index =
+        if index >= 0 andalso index < length indexed_problems then
+          #1 (List.nth (indexed_problems, index))
+        else
+          raise SYNTAX
+            ("Refute_Forl.uncached_solve_any_problem",
+             "problem index out of range")
       val milliseconds =
         Time.toMilliseconds (deadline - Time.now ()) - fudge_milliseconds
       val solve_all = max_solutions > 1
