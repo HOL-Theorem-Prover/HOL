@@ -264,11 +264,53 @@ fun valid_instance (problem : KK.problem) assignments =
         length tuple = arity andalso
         List.all (fn atom => atom >= 0 andalso atom < #univ_card problem)
           tuple) tuples
+    fun tuple_atoms (KK.Tuple atoms) = SOME atoms
+      | tuple_atoms _ = NONE
+    fun tuples_of (KK.TupleSet tuples) =
+          Option.map (fn _ => List.mapPartial tuple_atoms tuples)
+            (List.foldl (fn (tuple, result) =>
+              case (tuple_atoms tuple, result) of
+                  (SOME _, SOME ()) => SOME ()
+                | _ => NONE) (SOME ()) tuples)
+      | tuples_of (KK.TupleAtomSeq (count, first)) =
+          if count < 0 then NONE
+          else SOME (map (fn atom => [atom])
+            (Portable.upto first (first + count - 1)))
+      | tuples_of (KK.TupleUnion (left, right)) =
+          (case (tuples_of left, tuples_of right) of
+               (SOME left, SOME right) => SOME (left @ right)
+             | _ => NONE)
+      | tuples_of (KK.TupleProduct (left, right)) =
+          (case (tuples_of left, tuples_of right) of
+               (SOME left, SOME right) => SOME
+                 (List.concat (map (fn xs => map (fn ys => xs @ ys) right)
+                   left))
+             | _ => NONE)
+      | tuples_of _ = NONE
+    fun subset left right =
+      List.all (fn tuple => List.exists (fn other => other = tuple) right)
+        left
+    fun assignment relation =
+      Option.map #2 (List.find (fn (other, _) => other = relation)
+        assignments)
+    fun valid_bound (relations, sets) =
+      let
+        fun valid_relation relation =
+          case (assignment relation, map tuples_of sets) of
+              (SOME actual, [SOME exact]) =>
+                subset actual exact andalso subset exact actual
+            | (SOME actual, [SOME lower, SOME upper]) =>
+                subset lower actual andalso subset actual upper
+            | _ => false
+      in
+        List.all valid_relation relations
+      end
     val relations = map #1 assignments
   in
     length assignments = length expected andalso distinct relations andalso
     List.all (fn relation => member relation relations) expected andalso
-    List.all valid_assignment assignments
+    List.all valid_assignment assignments andalso
+    List.all valid_bound (#bounds problem)
   end
 
 fun rich_problems_equivalent (left : rich_problem, right : rich_problem) =
