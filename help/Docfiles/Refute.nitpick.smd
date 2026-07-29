@@ -16,9 +16,9 @@ encoding options, output controls, quiet mode, and expectations.
 
 The `kodkod` backend is configured only when the external Kodkodi
 component is available.  If it is unavailable, the result is `Unknown`
-with a no-configured-backend reason.  A finite model may be `Genuine`
-without a HOL certificate; clients requiring a theorem must inspect the
-counterexample's `cert` field.
+with a no-configured-backend reason.  An uncertified reconstructed Kodkodi
+model is `Potential`; a Kodkodi result marked `Genuine` carries a HOL
+certificate in its `cert` field.
 
 ### See also
 
