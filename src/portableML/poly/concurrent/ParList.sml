@@ -101,11 +101,19 @@ fun get_some f [] = NONE
               wait ()
             end);
 
-        val _ = fork_all 0 xs handle exn => (stop NONE; raise exn);
-        val result = await () handle exn => (stop NONE; raise exn);
-        val _ = stop (!winner);
       in
-        result
+        (* Forking and waiting remain interruptible, but once either has
+           returned or raised, keep interrupts masked until every worker has
+           been reaped.  In particular, there is no gap after [await] in
+           which a losing worker can outlive this call. *)
+        Thread_Attributes.uninterruptible (fn restore => fn () =>
+          let
+            val result = Exn.capture
+              (restore (fn () => (fork_all 0 xs; await ())) ()
+            val _ = stop (!winner)
+          in
+            Exn.release result
+          end) ()
       end;
 
 end;
