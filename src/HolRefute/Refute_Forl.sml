@@ -1279,6 +1279,8 @@ structure Refute_Forl :> REFUTE_FORL = struct
              (if directory = "" then "." else directory, executable))
          (path_entries ())))
 
+  fun setsid_executable () = find_on_path "setsid"
+
   fun java_executable () =
     let
       val explicit = getenv "HOL4_JAVA_EXECUTABLE"
@@ -1311,10 +1313,10 @@ structure Refute_Forl :> REFUTE_FORL = struct
            shell command, not necessarily a single pathname, and must be
            passed to the shell verbatim below.  Do not probe it here: loading
            this module must never start a JVM or launcher. *)
-        if override <> "" then true
-        else
-          component_is_complete (getenv "HOL4_KODKODI") andalso
-          Option.isSome (java_executable ())
+        Option.isSome (setsid_executable ()) andalso
+        (if override <> "" then true
+         else component_is_complete (getenv "HOL4_KODKODI") andalso
+              Option.isSome (java_executable ()))
       end
 
   val configured =
@@ -1457,14 +1459,15 @@ structure Refute_Forl :> REFUTE_FORL = struct
         (* Put the launcher and all of its descendants in a fresh session.
            The supervising shell forwards cancellation to that process group
            before it exits, so a wrapper cannot orphan its JVM or SAT child. *)
+        val setsid = valOf (setsid_executable ())
         val supervised =
           (* A cooperative TERM alone is not a cleanup bound: a launcher,
              JVM, or SAT descendant may ignore it.  Escalate the isolated
              child process group before waiting for the supervisor. *)
           "trap 'kill -TERM -$child 2>/dev/null; sleep 1; " ^
           "kill -KILL -$child 2>/dev/null; wait \"$child\"; exit 130' " ^
-          "TERM INT; setsid /bin/sh -c " ^ shell_quote command ^
-          " & child=$!; wait \"$child\""
+          "TERM INT; " ^ shell_quote setsid ^ " /bin/sh -c " ^
+          shell_quote command ^ " & child=$!; wait \"$child\""
         val process = Unix.execute ("/bin/sh", ["-c", supervised])
         val reaped = ref false
         fun reap () =
