@@ -1541,9 +1541,11 @@ structure Refute_Forl :> REFUTE_FORL = struct
                 (if max_threads > 0 then
                    ["-max-threads", Int.toString max_threads]
                  else [])
+              (* Keep the caller's working directory for a shell-command
+                 override such as [./kodkodi].  The private paths below are
+                 already absolute, so changing directory is unnecessary. *)
               val command =
-                "cd " ^ shell_quote directory ^ " && exec " ^
-                launcher_command () ^ " " ^
+                "exec " ^ launcher_command () ^ " " ^
                 String.concatWith " " arguments ^ " < " ^
                 shell_quote input_path ^ " > " ^ shell_quote output_path ^
                 " 2> " ^ shell_quote error_path
