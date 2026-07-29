@@ -19,9 +19,11 @@ structure Refute_QC_Narrow = struct
       Listsort.sort compare entries
     end
 
+  (* Compile the same closed formula that certificate replay reconstructs.
+     In particular, leading explicit universals are part of the PNF prefix;
+     stripping them here makes replay consume a different case tree. *)
   fun narrowing_goal (instance : Refute_Core.instance) =
-    Refute_Core.normalize
-      (#2 (boolSyntax.strip_forall (#original instance)))
+    Refute_Core.normalize (#2 (Refute_Cert.closure_of (#original instance)))
 
   (* A narrowing problem is one PNF formula rather than a list of plans.
      Compile each monomorphic/cardinality instance independently and
