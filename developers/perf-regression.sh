@@ -58,7 +58,7 @@ build_mode=full
 refresh_a=
 refresh_b=
 keep_wt=
-cache_dir="$holdir/tools/build-logs/perfcache"
+cache_dir="$holdir/tools-poly/build-logs/perfcache"
 scratch_dir=
 
 while [ $# -gt 0 ]; do
@@ -123,7 +123,7 @@ esac
 # Build a fresh log for one SHA into $cache_dir/$sha.log.
 build_at_sha() {
     local sha=$1
-    local target="$cache_dir/$sha.log"
+    local target="$cache_dir/${build_mode}-$sha.log"
     local wt="$scratch_dir/$sha"
 
     echo
@@ -139,7 +139,7 @@ build_at_sha() {
     before=$(mktemp)
     after=$(mktemp)
     trap 'rm -f "$before" "$after"' RETURN
-    ls -1 "$wt/tools/build-logs" 2>/dev/null | sort > "$before" || true
+    ls -1 "$wt/tools-poly/build-logs" 2>/dev/null | sort > "$before" || true
 
     (
         cd "$wt"
@@ -147,7 +147,7 @@ build_at_sha() {
         bin/build "${build_argv[@]}"
     )
 
-    ls -1 "$wt/tools/build-logs" | sort > "$after"
+    ls -1 "$wt/tools-poly/build-logs" | sort > "$after"
 
     # A successful build renames current-build-log to
     # <host><timestamp>[-kernel]; that's the one new file we want.
@@ -158,12 +158,12 @@ build_at_sha() {
              | head -n1 || true)
     if [ -z "$newlog" ]; then
         echo "error: build finished but no new log appeared under" >&2
-        echo "  $wt/tools/build-logs/" >&2
+        echo "  $wt/tools-poly/build-logs/" >&2
         echo "(bin/build normally renames current-build-log on success)." >&2
         exit 1
     fi
 
-    cp "$wt/tools/build-logs/$newlog" "$target"
+    cp "$wt/tools-poly/build-logs/$newlog" "$target"
     echo "Cached log for $sha at $target"
 
     if [ -z "$keep_wt" ]; then
@@ -174,7 +174,7 @@ build_at_sha() {
 ensure_log() {
     local sha=$1
     local refresh=$2
-    if [ -n "$refresh" ] || [ ! -f "$cache_dir/$sha.log" ]; then
+    if [ -n "$refresh" ] || [ ! -f "$cache_dir/${build_mode}-$sha.log" ]; then
         build_at_sha "$sha"
     else
         echo "Using cached log for $sha at $cache_dir/$sha.log"
