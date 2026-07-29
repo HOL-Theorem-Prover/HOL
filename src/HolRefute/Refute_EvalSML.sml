@@ -390,7 +390,7 @@ structure Refute_EvalSML = struct
       case extracted of
           ExtractionFailed reasons => Refute_Eval.Inapplicable reasons
         | Extracted {source, entry, table} =>
-          let
+          (let
             val _ =
               if Refute_Core.Private.enabled 3 then
                 Refute_Core.Private.say 3
@@ -464,7 +464,8 @@ structure Refute_EvalSML = struct
                 {run = run, close = close, max_chunk = NONE,
                  last_stats = last_stats}
             end
-          end
+          end)
+          handle error => (unregister_term_tables table; raise error)
     end
     handle Interrupt => raise Interrupt
          | error =>
