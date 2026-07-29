@@ -102,6 +102,7 @@ signature Refute_Eval = sig
   val checked_rand_below :
     IntInf.int -> IntInf.int -> IntInf.int * IntInf.int
   val normalize_seed : IntInf.int -> IntInf.int
+  val take_session_seed : unit -> IntInf.int
   val session_seed : IntInf.int ref
 
   val plan_gen_types : plan -> Type.hol_type list

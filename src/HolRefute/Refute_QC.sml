@@ -923,13 +923,7 @@ structure Refute_QC = struct
   fun strategy_seed (config : Refute_Core.config) =
     case #seed (#qc config) of
         SOME seed => normalize_seed (IntInf.fromInt seed)
-      | NONE =>
-          let
-            val seed = !session_seed
-            val _ = session_seed := rand_next seed
-          in
-            seed
-          end
+      | NONE => take_session_seed ()
 
   fun is_random (Random _) = true
     | is_random Exhaustive = false

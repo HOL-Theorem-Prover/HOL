@@ -128,6 +128,20 @@ structure Refute_Eval :> Refute_Eval = struct
   val rand_below_limit = rand_output_divisor
 
   val session_seed : IntInf.int ref = ref 42
+  val session_seed_mutex = Mutex.mutex ()
+
+  (* Reserving an implicit seed advances the session stream exactly once.
+     Refute invocations may be reentrant, so the ordinary output mutex is
+     not sufficient protection for this mutable stream. *)
+  fun take_session_seed () =
+    Multithreading.synchronized "Refute random seed" session_seed_mutex
+      (fn () =>
+        let
+          val seed = !session_seed
+          val _ = session_seed := rand_next seed
+        in
+          seed
+        end)
 
   (* Preorder, may contain duplicates; callers dedup as needed. *)
   fun plan_gen_types plan =
