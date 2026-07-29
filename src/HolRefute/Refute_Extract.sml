@@ -711,9 +711,12 @@ structure Refute_Extract = struct
     "  if amount >= IntInf.fromInt width then 0\n" ^
     "  else refute_norm width (IntInf.<< (value, refute_shift amount))\n" ^
     "fun refute_word_lsr width value amount =\n" ^
-    "  IntInf.~>> (refute_norm width value, refute_shift amount)\n" ^
+    "  if amount >= IntInf.fromInt width then 0\n" ^
+    "  else IntInf.~>> (refute_norm width value, refute_shift amount)\n" ^
     "fun refute_word_asr width value amount =\n" ^
-    "  refute_norm width\n" ^
+    "  if amount >= IntInf.fromInt width then\n" ^
+    "    if refute_signed width value < 0 then refute_norm width ~1 else 0\n" ^
+    "  else refute_norm width\n" ^
     "    (IntInf.~>> (refute_signed width value, refute_shift amount))\n" ^
     "fun refute_last [] = raise Refute_EvalSML.Stuck \"LAST []\"\n" ^
     "  | refute_last [x] = x\n" ^
@@ -1275,7 +1278,10 @@ structure Refute_Extract = struct
           | _ => raise Fail "TL"))
       | ("list", "APPEND") =>
           SOME (binary (if string_list () then "^" else "@") arguments)
-      | ("list", "FLAT") => SOME (call "List.concat" 1 arguments)
+      | ("list", "FLAT") => SOME (call
+          (if is_char_list (listSyntax.dest_list_type (list_domain ())) then
+             "String.concat"
+           else "List.concat") 1 arguments)
       | ("list", "LENGTH") => SOME (with_arity arguments 1 (fn values =>
           case values of [a] =>
             "IntInf.fromInt (" ^
@@ -1311,8 +1317,18 @@ structure Refute_Extract = struct
             parens (if string_argument 1 then
               "String.explode " ^ parens xs else xs)
           | _ => raise Fail "EXISTS"))
-      | ("list", "FOLDR") => SOME (call "refute_foldr" 3 arguments)
-      | ("list", "FOLDL") => SOME (call "refute_foldl" 3 arguments)
+      | ("list", "FOLDR") => SOME (with_arity arguments 3 (fn values =>
+          case values of [f, z, xs] =>
+            "refute_foldr " ^ f ^ " " ^ z ^ " " ^
+            parens (if string_argument 2 then
+              "String.explode " ^ parens xs else xs)
+          | _ => raise Fail "FOLDR"))
+      | ("list", "FOLDL") => SOME (with_arity arguments 3 (fn values =>
+          case values of [f, z, xs] =>
+            "refute_foldl " ^ f ^ " " ^ z ^ " " ^
+            parens (if string_argument 2 then
+              "String.explode " ^ parens xs else xs)
+          | _ => raise Fail "FOLDL"))
       | ("list", "REVERSE") =>
           SOME (call (if string_list () then
             "(String.implode o List.rev o String.explode)" else "List.rev")
