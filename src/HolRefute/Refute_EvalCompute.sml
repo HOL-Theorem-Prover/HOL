@@ -17,6 +17,16 @@ structure Refute_EvalCompute = struct
           else IsStuck
       | NONE => IsStuck
 
+  fun bounded_power_of_two width limit =
+    let
+      fun loop 0 total = total
+        | loop remaining total =
+            if total >= limit orelse total > limit div 2 then limit
+            else loop (remaining - 1) (2 * total)
+    in
+      if width <= 0 then 1 else loop width 1
+    end
+
   fun numeric_terms Refute_Gen.Num size =
         List.tabulate (Int.max (0, size) + 1, numSyntax.term_of_int)
     | numeric_terms Refute_Gen.Int size =
@@ -27,9 +37,11 @@ structure Refute_EvalCompute = struct
         List.tabulate (Refute_Gen.enum_cap,
           fn index => stringSyntax.mk_chr (numSyntax.term_of_int index))
     | numeric_terms (Refute_Gen.Word width) size =
-        List.tabulate (Int.min (Int.max (0, size),
-          Int.max (0, Refute_Gen.int_power 2 width - 1)) + 1,
-          fn index => wordsSyntax.mk_wordii (index, width))
+        let val count = bounded_power_of_two width (Int.max (0, size) + 1)
+        in
+          List.tabulate (count,
+            fn index => wordsSyntax.mk_wordii (index, width))
+        end
 
   (* First hit over a value list: run the continuation until it answers. *)
   fun each values continuation =

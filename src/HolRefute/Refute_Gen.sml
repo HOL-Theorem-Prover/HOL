@@ -426,8 +426,16 @@ structure Refute_Gen = struct
     end
 
   fun cap_power base exponent =
-    if exponent < 0 then NONE
-    else cap_product (List.tabulate (exponent, fn _ => SOME base))
+    let
+      fun loop 0 total = SOME total
+        | loop remaining total =
+            if base < 0 orelse total > enum_cap div base then NONE
+            else loop (remaining - 1) (base * total)
+    in
+      if exponent < 0 orelse base < 0 then NONE
+      else if base = 0 then SOME (if exponent = 0 then 1 else 0)
+      else loop exponent 1
+    end
 
   fun int_power base exponent =
     let
