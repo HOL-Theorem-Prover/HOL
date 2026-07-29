@@ -111,7 +111,7 @@ fun get_some f [] = NONE
           Thread_Attributes.uninterruptible (fn restore => fn () =>
             let
               val result = Exn.capture
-                (restore (fn () => (fork_workers workers; await ())) ())
+                (restore (fn () => (fork_workers workers; await ()))) ()
               val _ = stop_threads (!forked)
             in
               Exn.release result
