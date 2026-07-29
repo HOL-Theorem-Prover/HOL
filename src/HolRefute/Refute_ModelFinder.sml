@@ -638,14 +638,15 @@ fun run_instance deadline started (config : Refute_Core.config)
                 if #genuine_only config andalso
                    certainty_is_potential (#certainty cex)
                 then NONE
-                else
-                  (counterexamples := cex :: !counterexamples;
-                   if certainty_is_potential (#certainty cex) then
-                     met_potential := !met_potential + 1
-                   else ();
-                   SOME cex)
+                else SOME cex
               end
       end
+
+    fun keep_counterexample cex =
+      (counterexamples := cex :: !counterexamples;
+       if certainty_is_potential (#certainty cex) then
+         met_potential := !met_potential + 1
+       else ())
 
     fun solve_any_problem state first_time problems =
       let
@@ -716,12 +717,13 @@ fun run_instance deadline started (config : Refute_Core.config)
                                   (List.nth (problems, index)) bounds of
                                    SOME cex =>
                                      if certainty_is_genuine (#certainty cex)
-                                     then (true, 1)
+                                     then (keep_counterexample cex; (true, 1))
                                      else
                                        let
                                          val (promoted, kept) =
                                            reconstruct_until_genuine
                                              (remaining - 1) models
+                                         val _ = keep_counterexample cex
                                        in
                                          (promoted, kept + 1)
                                        end
@@ -779,23 +781,44 @@ fun run_instance deadline started (config : Refute_Core.config)
                       end
                     else
                       let
-                        val attempted = take_at_most max_genuine conservative
-                        val results = List.mapPartial (fn (index, bounds) =>
-                          reconstruct (List.nth (problems, index)) bounds)
-                          attempted
-                        val kept = length results
-                        val _ = if kept < length attempted then
-                                  discarded_sound_model := true
-                                else ()
+                        (* Reconstruction can only establish genuineness by
+                           producing a certificate.  Charge the model to the
+                           certainty it actually has, rather than to the
+                           sound solver problem that yielded it. *)
+                        val attempted = take_at_most
+                          (max_potential + max_genuine) conservative
+                        fun harvest potential genuine kept [] =
+                              (potential, genuine, kept)
+                          | harvest potential genuine kept
+                              ((index, bounds) :: models) =
+                              (case reconstruct
+                                (List.nth (problems, index)) bounds of
+                                   NONE =>
+                                     harvest potential genuine kept models
+                                 | SOME cex =>
+                                     if certainty_is_genuine (#certainty cex)
+                                     then
+                                       if genuine <= 0 then
+                                         harvest potential genuine kept models
+                                       else
+                                         (keep_counterexample cex;
+                                          harvest potential (genuine - 1)
+                                            (cex :: kept) models)
+                                     else if potential <= 0 then
+                                       harvest potential genuine kept models
+                                     else
+                                       (keep_counterexample cex;
+                                        harvest (potential - 1) genuine
+                                          (cex :: kept) models))
+                        val (max_potential, max_genuine, results) =
+                          harvest max_potential max_genuine [] attempted
                         val found = found_really_genuine orelse
                           List.exists
                             (certainty_is_genuine o #certainty) results
-                        val max_genuine = max_genuine - kept
                         (* A sound model that only reconstructs as quasi does
                            not establish a theorem, so it cannot suppress the
                            later potential/unsound search. *)
-                        val max_potential =
-                          if found then 0 else max_potential
+                        val max_potential = if found then 0 else max_potential
                         val _ = latest_state :=
                           (found, max_potential, max_genuine, donno)
                       in
