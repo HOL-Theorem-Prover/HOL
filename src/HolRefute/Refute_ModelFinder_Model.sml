@@ -376,18 +376,24 @@ fun tuples_for_nickname (context as {sel_names, ...} : context) nickname =
     | NONE => []
 
 fun type_atom_names atoms ty =
-  case List.find (fn (pattern, _) =>
-         case pattern of
-             SOME pattern_ty =>
-               Util.same_type pattern_ty ty orelse
-               Lib.can (Type.match_type pattern_ty) ty
-           | NONE => false) atoms of
-      SOME (_, names) => names
-    | NONE =>
-        (case List.find (fn (pattern, _) => not (Option.isSome pattern))
-                        atoms of
-             SOME (_, names) => names
-           | NONE => [])
+  let
+    fun exact (SOME pattern_ty, _) = Util.same_type pattern_ty ty
+      | exact _ = false
+    fun matches (SOME pattern_ty, _) =
+          Lib.can (Type.match_type pattern_ty) ty
+      | matches _ = false
+    fun fallback (pattern, _) = not (Option.isSome pattern)
+  in
+    case List.find exact atoms of
+        SOME (_, names) => names
+      | NONE =>
+          (case List.find matches atoms of
+               SOME (_, names) => names
+             | NONE =>
+                 (case List.find fallback atoms of
+                      SOME (_, names) => names
+                    | NONE => []))
+  end
 
 fun atom_number (pool : atom_pool) ty atom =
   let val {counts, numbers} = !pool in
