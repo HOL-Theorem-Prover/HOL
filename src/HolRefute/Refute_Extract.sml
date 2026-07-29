@@ -1923,12 +1923,14 @@ structure Refute_Extract = struct
     let
       val (groups, body) = pairSyntax.strip_anylet term
       fun binding (left, right) =
-        "val " ^ pattern context left ^ " = " ^ expression context right
+        pattern context left ^ " = " ^ expression context right
       (* A binding group from [strip_anylet] is simultaneous.  SML's
          [val ... and ...] preserves that scope, whereas separate [val]
          declarations would let later right-hand sides capture earlier
          bindings. *)
-      fun group bindings = join "\nand " (List.map binding bindings)
+      fun group [] = ""
+        | group (first :: rest) =
+            "val " ^ binding first ^ join "\nand " (List.map binding rest)
     in
       parens ("let\n" ^ join "\n" (List.map group groups) ^ "\nin " ^
         expression context body ^ "\nend")
