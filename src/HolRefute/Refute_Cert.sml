@@ -107,10 +107,19 @@ structure Refute_Cert = struct
                         assumed_instance
                       val certificate = Thm.NOT_INTRO
                         (Thm.DISCH closure falsehood)
-                      val values = map (fn tm => (tm, eval_term env tm)) evals
                     in
-                      Certified (replace cex Refute_Core.Genuine values
-                        (SOME certificate))
+                      if null (Thm.hyp certificate) then
+                        let val values = map (fn tm =>
+                          (tm, eval_term env tm)) evals
+                        in
+                          Certified (replace cex Refute_Core.Genuine values
+                            (SOME certificate))
+                        end
+                      else
+                        Potential (replace cex
+                          (Refute_Core.Potential
+                            ["certificate retained hypotheses"])
+                          [] NONE)
                     end)
     end
 
