@@ -301,16 +301,22 @@ fun kodkod_constrs optim nat_card int_card main_j0 =
     val exists_empty_decl =
       List.exists (fn DeclOne (_, None) => true | _ => false)
 
-    fun s_all _ True = True
-      | s_all _ False = False
-      | s_all [] f = f
-      | s_all ds (All (ds', f)) = s_all (ds @ ds') f
-      | s_all ds f = if exists_empty_decl ds then True else All (ds, f)
-    fun s_exist _ True = True
-      | s_exist _ False = False
-      | s_exist [] f = f
-      | s_exist ds (Exist (ds', f)) = s_exist (ds @ ds') f
-      | s_exist ds f = if exists_empty_decl ds then False else Exist (ds, f)
+    (* An empty declaration determines a quantified formula regardless of
+       its body.  Check it before folding a constant body. *)
+    fun s_all ds f =
+      if exists_empty_decl ds then True
+      else case f of
+          True => True
+        | False => False
+        | All (ds', f') => s_all (ds @ ds') f'
+        | _ => if null ds then f else All (ds, f)
+    fun s_exist ds f =
+      if exists_empty_decl ds then False
+      else case f of
+          True => True
+        | False => False
+        | Exist (ds', f') => s_exist (ds @ ds') f'
+        | _ => if null ds then f else Exist (ds, f)
 
     fun s_formula_let _ True = True
       | s_formula_let _ False = False
@@ -501,12 +507,6 @@ fun kodkod_constrs optim nat_card int_card main_j0 =
       | s_join r (Product (None, None)) = empty_n_ary_rel (arity_of_rel_expr r)
       | s_join Iden r2 = r2
       | s_join r1 Iden = r1
-      | s_join (Product (r1, r2)) Univ =
-        if arity_of_rel_expr r2 = 1 then r1
-        else Product (r1, s_join r2 Univ)
-      | s_join Univ (Product (r1, r2)) =
-        if arity_of_rel_expr r1 = 1 then r2
-        else Product (s_join Univ r1, r2)
       | s_join r1 (r2 as Product (r21, r22)) =
         if arity_of_rel_expr r1 = 1 then
           case rel_expr_intersects r1 r21 of
