@@ -273,7 +273,12 @@ structure Refute_Core = struct
   fun map_qc f (cfg : config) = change_config (ConfigQc (f (#qc cfg))) cfg
   fun map_mf f (cfg : config) = change_config (ConfigMf (f (#mf cfg))) cfg
 
-  fun upd_timeout value = change_config (ConfigTimeout value)
+  fun upd_timeout value =
+    if Real.isFinite value andalso value >= 0.0 then
+      change_config (ConfigTimeout value)
+    else
+      raise Feedback.mk_HOL_ERR "Refute_Core" "upd_timeout"
+        "timeout: must be a nonnegative finite real"
   fun upd_backends value = change_config (ConfigBackends value)
   fun upd_sequential value = change_config (ConfigSequential value)
   fun upd_genuine_only value = change_config (ConfigGenuineOnly value)
@@ -438,7 +443,7 @@ structure Refute_Core = struct
                 "combined solution budget is too large"
               else ()
           | NONE => ()
-      val _ = if Real.isNan (#tac_timeout mf) orelse
+      val _ = if not (Real.isFinite (#tac_timeout mf)) orelse
                      #tac_timeout mf < 0.0 then
                 range_error "tac_timeout" "must be a nonnegative finite real"
               else ()
