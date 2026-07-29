@@ -61,5 +61,6 @@ in
   (* TOML library is loaded earlier (poly-init.ML), so that holpathdb
      can parse holproject.toml.  Do not re-load here. *)
   appcore "HMProject";
-  appcore "target_times"
+  myuse coredir "target_times.sig";
+  myuse (hmakedir ++ "poly") "target_times.sml"
 end;
