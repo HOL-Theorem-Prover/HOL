@@ -24,8 +24,10 @@ type backend =
 Registrations are session-local.  A later backend with the same `name`
 replaces the old one.  Eligible backends are ordered by increasing
 `weight`, then name.  `configured` is queried when selecting a search;
-`requires` is `ExecutableGoal` or `AnyGoal`, and `input` requests either
-`MonoInstances` or `PolyOriginal` instances.
+`requires` is `AnyGoal`, `ExecutableGoal`, or
+`ExecutableGoalUnless predicate`.  The last accepts an executable goal or,
+when `predicate cfg instances` is true, a non-executable one.  `input`
+requests either `MonoInstances` or `PolyOriginal` instances.
 
 `register_backend backend` assigns the conservative certainty ceiling
 `Genuine`.  This is safe for every backend but may make a race wait after
