@@ -329,7 +329,7 @@ structure Refute_ModelFinder_Scope = struct
             left < right orelse (left = right andalso lex_before lefts rights)
         | lex_before _ _ = raise Util.BAD
             ("Refute_ModelFinder_Scope.lex_before", "unequal lengths")
-      fun before left right =
+      fun comes_before left right =
         combination_cost left < combination_cost right orelse
         (combination_cost left = combination_cost right andalso
          lex_before left right)
@@ -344,7 +344,7 @@ structure Refute_ModelFinder_Scope = struct
         | merge left Empty = left
         | merge (left as Node (_, left_value, left_left, left_right))
             (right as Node (_, right_value, right_left, right_right)) =
-            if before left_value right_value then
+            if comes_before left_value right_value then
               make left_value left_left (merge left_right right)
             else
               make right_value right_left (merge left right_right)
