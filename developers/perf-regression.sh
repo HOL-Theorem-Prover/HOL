@@ -42,14 +42,18 @@ Options:
   --refresh-a       rebuild for REF_A only
   --refresh-b       rebuild for REF_B only
   --cache DIR       cache directory for per-SHA logs
-                    (default: tools/build-logs/perfcache)
-  --scratch DIR     parent directory for temporary worktrees
-                    (default: <cache-dir>/wt)
-  --keep-worktrees  don't remove the throw-away worktrees after building
+                    (default: tools-poly/build-logs/perfcache)
+  --scratch DIR     where kept worktrees are moved after the build
+                    (default: <cache-dir>/wt); only relevant with
+                    --keep-worktrees
+  --keep-worktrees  after each build, move the worktree from its
+                    temporary location under \$TMPDIR to
+                    <scratch-dir>/<sha> instead of removing it
   -h, --help        show this help
 
-The cache and scratch dirs default under tools/build-logs/, which is
-already git-ignored.
+The build worktree is always created under \$TMPDIR so an outer
+holproject.toml at HOLDIR doesn't leak into the build.  The cache
+dir defaults under tools-poly/build-logs/, which is git-ignored.
 EOF
     exit "${1:-0}"
 }
@@ -120,19 +124,22 @@ case $build_mode in
     core) build_argv=(-t --seq=tools/sequences/upto-parallel) ;;
 esac
 
-# Build a fresh log for one SHA into $cache_dir/$sha.log.
+# Build a fresh log for one SHA into $cache_dir/${build_mode}-$sha.log.
+# The worktree is created under $TMPDIR so Holmake in the build tree
+# doesn't discover HOLDIR's holproject.toml by walking up.  With
+# --keep-worktrees the tree is moved to $scratch_dir/$sha after the
+# build; otherwise it's removed.
 build_at_sha() {
     local sha=$1
     local target="$cache_dir/${build_mode}-$sha.log"
-    local wt="$scratch_dir/$sha"
+
+    local tmpparent wt
+    tmpparent=$(mktemp -d)
+    wt="$tmpparent/wt"
 
     echo
     echo "== Building $sha in $wt =="
 
-    if [ -e "$wt" ]; then
-        echo "Removing stale worktree at $wt"
-        git -C "$holdir" worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
-    fi
     git -C "$holdir" worktree add --detach "$wt" "$sha"
 
     local before after
@@ -167,9 +174,18 @@ build_at_sha() {
 
     rm -f "$before" "$after"
 
-    if [ -z "$keep_wt" ]; then
+    if [ -n "$keep_wt" ]; then
+        local keep_dir="$scratch_dir/$sha"
+        if [ -e "$keep_dir" ]; then
+            git -C "$holdir" worktree remove --force "$keep_dir" 2>/dev/null \
+              || rm -rf "$keep_dir"
+        fi
+        git -C "$holdir" worktree move "$wt" "$keep_dir"
+        echo "Kept worktree at $keep_dir"
+    else
         git -C "$holdir" worktree remove --force "$wt"
     fi
+    rmdir "$tmpparent" 2>/dev/null || true
 }
 
 ensure_log() {
@@ -189,12 +205,11 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
 exclude_file="$tmpdir/excluded-theories"
+# Log keys are <rel-path-from-HOLDIR>/<bare-thyname> (no "Theory" suffix,
+# see maybe_log_time_to_disk in src/postkernel/Theory.sml); rewrite each
+# changed *Script.sml path into that form so filter_log's $1-lookup matches.
 git -C "$holdir" diff --name-only "$sha_a" "$sha_b" -- '*Script.sml' \
-  | awk -F/ 'NF > 0 {
-        fname = $NF
-        sub(/Script\.sml$/, "Theory", fname)
-        print fname
-    }' \
+  | awk 'sub(/Script\.sml$/, "")' \
   | sort -u > "$exclude_file"
 
 n_excluded=$(wc -l < "$exclude_file" | tr -d ' ')
@@ -207,13 +222,19 @@ else
 fi
 
 filter_log() {
+    # tools/Holmake/tests/** theories are always dropped: Holmake
+    # selftests build them repeatedly during one bin/build run, which
+    # comparelogs then poisons as duplicate entries.
+    #
     # An empty exclude_file breaks the 'NR==FNR' idiom (awk keeps NR=FNR
     # when a file yields no records), so short-circuit on the empty case.
     if [ -s "$exclude_file" ]; then
-        awk 'NR==FNR { skip[$1]=1; next } !($1 in skip)' \
+        awk 'NR==FNR { skip[$1]=1; next }
+             $1 ~ /^tools\/Holmake\/tests\// { next }
+             !($1 in skip)' \
             "$exclude_file" "$1" > "$2"
     else
-        cp "$1" "$2"
+        awk '$1 !~ /^tools\/Holmake\/tests\//' "$1" > "$2"
     fi
 }
 
