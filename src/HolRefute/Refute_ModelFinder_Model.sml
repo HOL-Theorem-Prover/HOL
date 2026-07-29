@@ -402,7 +402,7 @@ fun type_atom_names atoms ty =
   end
 
 fun atom_number (pool : atom_pool) ty atom =
-  let val {counts, numbers} = !pool in
+  let val {counts, numbers, terms, used} = !pool in
     case Redblackmap.peek (numbers, (ty, atom)) of
         SOME number => number
       | NONE =>
@@ -410,7 +410,8 @@ fun atom_number (pool : atom_pool) ty atom =
             val number = 1 + Option.getOpt (Redblackmap.peek (counts, ty), 0)
             val _ = pool :=
               {counts = Redblackmap.insert (counts, ty, number),
-               numbers = Redblackmap.insert (numbers, (ty, atom), number)}
+               numbers = Redblackmap.insert (numbers, (ty, atom), number),
+               terms = terms, used = used}
           in
             number
           end
