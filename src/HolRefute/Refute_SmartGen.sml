@@ -1053,6 +1053,13 @@ structure Refute_SmartGen = struct
      install a same-named constant with an identical printed payload.  Keep a
      session-opaque generation plus a deterministic inference fingerprint and
      bind every compiled plan to that pair. *)
+  (* The cache and its generation are one mutable state: invalidation must
+     not race a compilation publishing entries from the old generation. *)
+  val enumerator_cache_mutex = Mutex.mutex ()
+  fun synchronized_cache f =
+    Multithreading.synchronized "Refute_SmartGen.enumerator_cache"
+      enumerator_cache_mutex f
+
   abstype program_version = ProgramVersion of
     {generation : int, fingerprint : string}
   with
@@ -1061,9 +1068,12 @@ structure Refute_SmartGen = struct
     fun same_program_version
           (ProgramVersion left, ProgramVersion right) = left = right
 
-    fun current_program_version
+    fun current_program_version_raw
           (ProgramVersion {generation, ...}) =
       generation = !source_generation
+
+    fun current_program_version version =
+      synchronized_cache (fn () => current_program_version_raw version)
 
     fun new_program_version fingerprint = ProgramVersion
       {generation = !source_generation, fingerprint = fingerprint}
@@ -1163,33 +1173,46 @@ structure Refute_SmartGen = struct
      obsolete per-mode program behind. *)
   fun cache_inference ({relations, ...} : inference_result) =
     let
-      val version = new_program_version (inference_fingerprint relations)
+      val version = synchronized_cache (fn () =>
+        new_program_version (inference_fingerprint relations))
       val programs = List.concat (map (compile_relation version) relations)
       val fresh = map (fn program as {relation, mode, ...} =>
         {relation = relation, mode = mode, program = program}) programs
-      val retained = List.filter (fn {relation, ...} =>
-        not (relation_in relations relation)) (!enumerator_cache)
     in
-      enumerator_cache := fresh @ retained
+      synchronized_cache (fn () =>
+        if current_program_version_raw version then
+          let val retained = List.filter (fn {relation, ...} =>
+            not (relation_in relations relation)) (!enumerator_cache)
+          in enumerator_cache := fresh @ retained end
+        else ())
     end
 
-  fun program_is_fresh ({relation, version, ...} : enumerator) =
-    current_program_version version andalso Theory.uptodate_term relation
+  fun program_is_fresh_unlocked ({relation, version, ...} : enumerator) =
+    current_program_version_raw version andalso Theory.uptodate_term relation
 
-  fun enumerator_for_in entries relation mode =
+  fun program_is_fresh program =
+    synchronized_cache (fn () => program_is_fresh_unlocked program)
+
+  fun enumerator_for_with is_fresh entries relation mode =
     case List.find (same_enumerator_key relation mode) entries of
         SOME {program, ...} =>
-          if program_is_fresh program then SOME program else NONE
+          if is_fresh program then SOME program else NONE
       | NONE => NONE
 
+  fun enumerator_for_in entries relation mode =
+    enumerator_for_with program_is_fresh entries relation mode
+
   fun enumerator_for relation mode =
-    enumerator_for_in (!enumerator_cache) relation mode
+    synchronized_cache (fn () =>
+      enumerator_for_with program_is_fresh_unlocked (!enumerator_cache)
+        relation mode)
 
   (* A compile invocation takes this immutable value once.  Code extraction
      must resolve the complete recursive closure from that value, never from
      the mutable session cache. *)
   fun enumerator_snapshot () =
-    List.filter (program_is_fresh o #program) (!enumerator_cache)
+    synchronized_cache (fn () =>
+      List.filter (program_is_fresh_unlocked o #program) (!enumerator_cache))
 
   fun enumerator_gen_types ({clauses, ...} : enumerator) =
     List.concat (map (fn CpsClause {premises, ...} =>
@@ -1197,7 +1220,8 @@ structure Refute_SmartGen = struct
         SOME (Term.type_of variable) | _ => NONE) premises) clauses)
 
   fun invalidate_enumerator_cache _ =
-    (advance_source_generation (); enumerator_cache := [])
+    synchronized_cache (fn () =>
+      (advance_source_generation (); enumerator_cache := []))
 
   val _ = Theory.register_hook
     ("Refute_SmartGen.enumerators", invalidate_enumerator_cache)
