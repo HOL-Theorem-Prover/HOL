@@ -898,7 +898,22 @@ structure Refute_Extract = struct
                         kname_text (kname constant))
           end
 
-  fun variable_name variable = clean_name (#1 (Term.dest_var variable))
+  fun type_key ty =
+    case Lib.total Type.dest_vartype ty of
+        SOME name => "var:" ^ name
+      | NONE =>
+          let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+          in
+            "op:" ^ Thy ^ ":" ^ Tyop ^ "[" ^
+            String.concatWith "," (List.map type_key Args) ^ "]"
+          end
+
+  (* HOL variables are identified by both name and type.  The latter matters
+     even when their extracted SML representations coincide, e.g. [num] and
+     [int] are both [IntInf.int]. *)
+  fun variable_name variable =
+    let val (name, ty) = Term.dest_var variable
+    in clean_name (name ^ "\000" ^ type_key ty) end
 
   fun with_arity arguments arity build =
     let
