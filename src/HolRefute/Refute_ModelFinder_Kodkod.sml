@@ -2297,29 +2297,36 @@ fun kodkod_formula_from_nut offsets
             if has_function_type MFH.signed_bitword_type
                  MFH.unsigned_bitword_type ty then
               to_bit_word_unary_op ty representation (fn integer =>
-                KK.IntIf (KK.LE (integer, KK.Num 0), KK.Num 0, integer))
+                KK.IntIf (KK.LT (integer, KK.Num 0),
+                  KK.Sub (KK.Num 0, integer), integer))
             else if has_function_type MFH.int_type MFH.num_type ty then
               (case representation of
                    MFR.Func
                      (MFR.Atom (int_card, int_offset), nat_rep) =>
                      let
-                       val absolute_card =
+                       val nonnegative_card =
                          MFP.max_int_for_card int_card + 1
                        val (nat_card, nat_offset) =
                          the_single (MFR.atom_schema_of_rep nat_rep)
-                       val overlap = Int.min (nat_card, absolute_card)
+                       val overlap = Int.min (nat_card, nonnegative_card)
+                       val negative_count =
+                         Int.max (0,
+                           Int.min (int_card - nonnegative_card,
+                             nat_card - 1))
+                       val nonnegative =
+                         kk_intersect KK.Iden
+                           (kk_product
+                             (KK.AtomSeq (overlap, int_offset)) KK.Univ)
+                       fun negative value =
+                         kk_product
+                           (KK.Atom (int_offset + int_card - value))
+                           (KK.Atom (nat_offset + value))
                      in
                        if nat_offset = int_offset then
-                         kk_union
-                           (kk_product
-                             (KK.AtomSeq
-                               (int_card - absolute_card,
-                                int_offset + absolute_card))
-                             (KK.Atom nat_offset))
-                           (kk_intersect KK.Iden
-                             (kk_product
-                               (KK.AtomSeq (overlap, int_offset))
-                               KK.Univ))
+                         List.foldl (fn (pair, relation) =>
+                           kk_union pair relation) nonnegative
+                           (List.tabulate
+                             (negative_count, fn index => negative (index + 1)))
                        else
                          raise Util.BAD
                            ("Refute_ModelFinder_Kodkod.to_r (IntToNat)",
