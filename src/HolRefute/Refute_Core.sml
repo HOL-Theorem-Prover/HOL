@@ -370,6 +370,14 @@ structure Refute_Core = struct
 
   fun validate_mf_config (mf : mf_config) =
     let
+      fun valid_rows field minimum rows =
+        if null rows orelse List.exists (fn (_, values) =>
+             null values orelse List.exists (fn value => value < minimum)
+               values) rows then
+          range_error field "rows must be nonempty and values in range"
+        else ()
+      val _ = valid_rows "card" 1 (#card mf)
+      val _ = valid_rows "max" (~1) (#max mf)
       val _ = List.app (fn (NONE, _) => ()
                          | (SOME key, _) =>
           if Term.is_const key orelse Term.is_var key then ()
@@ -398,6 +406,19 @@ structure Refute_Core = struct
               else ()
       val _ = if #max_potential mf < 0 then
                 range_error "max_potential" "must not be negative"
+              else ()
+      val _ =
+        case Int.maxInt of
+            SOME maximum =>
+              if IntInf.fromInt (#max_potential mf) +
+                 IntInf.fromInt (#max_genuine mf) > IntInf.fromInt maximum
+              then range_error "max_potential"
+                "combined solution budget is too large"
+              else ()
+          | NONE => ()
+      val _ = if Real.isNan (#tac_timeout mf) orelse
+                     #tac_timeout mf < 0.0 then
+                range_error "tac_timeout" "must be a nonnegative finite real"
               else ()
     in
       mf
