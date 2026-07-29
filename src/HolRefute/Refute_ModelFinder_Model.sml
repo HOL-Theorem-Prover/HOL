@@ -1957,7 +1957,7 @@ fun certify {executable, original, eval_terms,
                     Refute_Core.Private.say 1
                       "Refute warning: certification refuted the model\n"
                   else ();
-                  Drop)
+                  Drop))
   end
 
 end
