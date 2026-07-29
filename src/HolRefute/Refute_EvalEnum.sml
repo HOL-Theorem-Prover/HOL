@@ -632,15 +632,29 @@ structure Refute_EvalEnum = struct
           (Redblackset.empty String.compare, base)
         in List.filter (fn name =>
           not (Redblackset.member (known, name))) current end
+      (* Cleanup must be best-effort: one stale or hook-rejected artifact
+         must not prevent retirement of the rest of this private bracket. *)
+      val first_error = ref NONE
+      fun attempt action =
+        case Exn.capture action () of
+            Exn.Res _ => ()
+          | Exn.Exn error =>
+              if Option.isSome (!first_error) then ()
+              else first_error := SOME error
+      fun delete deletion names = List.app (fn name =>
+        attempt (fn () => deletion name)) names
+      val _ = delete Theory.delete_binding
+        (additions (#bindings after) (#bindings baseline))
+      val _ = delete Theory.delete_const
+        (additions (#constants after) (#constants baseline))
+      val _ = delete Theory.delete_type
+        (additions (#types after) (#types baseline))
+      val _ = attempt Theory.scrub
+      val _ = attempt cv_memLib.prune_stale_entries
     in
-      List.app Theory.delete_type
-        (additions (#types after) (#types baseline));
-      List.app Theory.delete_const
-        (additions (#constants after) (#constants baseline));
-      List.app Theory.delete_binding
-        (additions (#bindings after) (#bindings baseline));
-      Theory.scrub ();
-      cv_memLib.prune_stale_entries ()
+      case !first_error of
+          NONE => ()
+        | SOME error => raise error
     end
 
   type theory_bracket =
