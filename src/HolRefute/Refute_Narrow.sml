@@ -235,7 +235,7 @@ structure Refute_Narrow = struct
                  Cert_Narrow cannot construct. *)
               flat_shape depth false
                 (Refute_Gen.narrowing_terms kind depth)
-          | Refute_Gen.GenDatatype {constrs, ...} =>
+          | Refute_Gen.GenDatatype {constrs, exhaustive, ...} =>
               let
                 fun constructor_shape
                       (index, (_, [])) =
@@ -266,7 +266,7 @@ structure Refute_Narrow = struct
                    incompleteness propagates through products and other
                    containing datatypes via their argument shapes. *)
                 val complete =
-                  syntactic_complete andalso
+                  exhaustive andalso syntactic_complete andalso
                   not (is_finitization_approximation ty) andalso
                   List.all (List.all shape_complete o #arguments)
                     alternatives
@@ -1135,7 +1135,14 @@ structure Refute_Narrow = struct
       PlainEngine
 
   fun select_for_config (config : Refute_Core.config) tm =
-    let val (prefix, body) = pnf_of tm
+    let
+      fun guard variable body =
+        case Refute_Gen.predicate_of (Term.type_of variable) of
+            NONE => body
+          | SOME predicate => boolSyntax.mk_imp
+              (Term.mk_comb (predicate, variable), body)
+      val guarded = List.foldr guard tm (Term.free_vars_lr tm)
+      val (prefix, body) = pnf_of guarded
     in
       (select_engine (#allow_existentials (#qc config)) prefix,
        Refute_Eval.Pnf {prefix = prefix, body = body})
