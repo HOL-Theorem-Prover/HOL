@@ -19,14 +19,15 @@ fun get_first f =
    return while such a worker is still running: the caller may otherwise
    restore process-global state beneath it. *)
 fun stop_threads threads =
-  let
-    val _ = List.app Standard_Thread.interrupt_unsynchronized threads
-    fun await thread =
-      if not (Thread.isActive thread) then ()
-      else (OS.Process.sleep (Time.fromReal 0.001); await thread)
-  in
-    List.app await threads
-  end;
+  Thread_Attributes.uninterruptible (fn _ => fn () =>
+    let
+      val _ = List.app Standard_Thread.interrupt_unsynchronized threads
+      fun await thread =
+        if not (Thread.isActive thread) then ()
+        else (OS.Process.sleep (Time.fromReal 0.001); await thread)
+    in
+      List.app await threads
+    end) ();
 
 fun get_some f [] = NONE
   | get_some f [x] = get_first f [x]
@@ -58,21 +59,27 @@ fun get_some f [] = NONE
         (* Record each thread as it appears, so a failed fork - and any
            exception out of the wait below - can still stop the workers
            already running. *)
+        fun fork_one n x =
+          (* Forking and publishing its handle must be atomic with respect
+             to caller interrupts, otherwise cleanup cannot find this worker. *)
+          Thread_Attributes.uninterruptible (fn _ => fn () =>
+            let
+              val thread =
+                Standard_Thread.fork
+                  {name = "ParList.get_some", stack_limit = NONE,
+                   interrupts = false}
+                  (fn () =>
+                    Thread_Attributes.with_attributes
+                      Thread_Attributes.private_interrupts
+                      (fn _ => publish n (f x handle _ => NONE)));
+              val _ = forked := (n, thread) :: !forked
+            in
+              ()
+            end) ();
+
         fun fork_all _ [] = ()
           | fork_all n (x :: rest) =
-              let
-                val thread =
-                  Standard_Thread.fork
-                    {name = "ParList.get_some", stack_limit = NONE,
-                     interrupts = false}
-                    (fn () =>
-                      Thread_Attributes.with_attributes
-                        Thread_Attributes.private_interrupts
-                        (fn _ => publish n (f x handle _ => NONE)));
-                val _ = forked := (n, thread) :: !forked
-              in
-                fork_all (n + 1) rest
-              end;
+              (fork_one n x; fork_all (n + 1) rest);
 
         fun stop keep =
           stop_threads (List.map #2
