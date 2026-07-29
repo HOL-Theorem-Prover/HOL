@@ -401,9 +401,11 @@ structure Refute_ModelFinder_Scope = struct
               loop (remaining - 1) next (combination :: result)
             end
     in
-      loop (Int.max (0, count))
-        (List.foldl (fn (combination, heap) => insert combination heap)
-          Empty initial) []
+      if List.exists (fn (rank, _) => rank <= 0) ranks then []
+      else
+        loop (Int.max (0, count))
+          (List.foldl (fn (combination, heap) => insert combination heap)
+            Empty initial) []
     end
 
   fun number_of_combinations ranks =
