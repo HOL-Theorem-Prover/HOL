@@ -342,16 +342,16 @@ adds an oracle tag.
 The fields `certainty` and `cert` deliberately answer different
 questions.  `Genuine` says that the backend's semantic conditions for a
 real counterexample hold.  `cert = SOME thm` says that Refute additionally
-constructed a HOL theorem.  A sound finite model from the model finder
-can therefore be `Genuine` with `cert = NONE`; this is printed as
-`Certification: uncertified`.  Models whose encoding relies on an
-approximation are instead `QuasiGenuine reasons` or `Potential reasons`.
+constructed a HOL theorem.  An uncertified model-finder reconstruction
+is `Potential`; a model-finder result is `Genuine` only with
+`cert = SOME thm`.  Models whose encoding relies on an approximation are
+also `QuasiGenuine reasons` or `Potential reasons`.
 The backend and substrate fields make clear whether a report came from
 MF, narrowing, or executable QC.
 
 Setting `certify = false` skips all QC EVAL and replay certification.  A
-QC hit remains `Genuine`, but has `cert = NONE` and gets the same explicit
-uncertified marker as a genuine MF result:
+QC hit remains `Genuine`, but has `cert = NONE` and gets an explicit
+uncertified marker:
 
 ```{=latex}
 \begin{session}

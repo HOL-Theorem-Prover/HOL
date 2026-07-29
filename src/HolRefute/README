@@ -57,11 +57,11 @@ candidates fall back to Refute_Cert evaluation.  With `certify=false`,
 Refute skips that QC
 certification: a QC hit otherwise eligible for `Genuine` remains `Genuine`,
 but has `cert = NONE` and is reported as uncertified.  Disabling certification
-does not promote candidates already known to be stuck or incomplete.  The
-model finder can independently classify a sound finite model as `Genuine`
-when its genuineness conditions hold even if the goal is not certifiable; in
-that case `cert = NONE`.  Thus `certainty` records the semantic strength of
-the result, while `cert` records whether Refute constructed a HOL theorem.
+does not promote candidates already known to be stuck or incomplete.  An
+uncertified model-finder reconstruction remains `Potential`; a model-finder
+result is `Genuine` only when Refute constructed a HOL certificate.  Thus
+`certainty` records the semantic strength of the result, while `cert` records
+whether Refute constructed a HOL theorem.
 Refute uses no oracle tags.  Cv performs all per-call definitions and
 translations inside a full theory snapshot/revert bracket.  Success,
 failure, timeout, and interruption paths leave no Refute-created type,
