@@ -1034,6 +1034,10 @@ structure Refute_Core = struct
     end
 
   val backend_registry : (string * backend_registration) list ref = ref []
+  val registry_mutex = Mutex.mutex ()
+
+  fun synchronized_registry f =
+    Multithreading.synchronized "Refute_Core.registry" registry_mutex f
 
   (* Deciding whether a backend is eligible can compile and park resources
      (the QC smart-generator gate compiles a trial test).  A backend that is
@@ -1059,11 +1063,13 @@ structure Refute_Core = struct
     end
 
   fun register_run_release name release =
-    run_releases :=
-      List.filter (fn (old_name, _) => old_name <> name) (!run_releases) @
-      [(name, release)]
+    synchronized_registry (fn () =>
+      run_releases :=
+        List.filter (fn (old_name, _) => old_name <> name) (!run_releases) @
+        [(name, release)])
 
-  fun release_run_resources () = release_actions (!run_releases)
+  fun release_run_resources () =
+    release_actions (synchronized_registry (fn () => !run_releases))
 
   fun backend_before (left : string * backend_registration)
       (right : string * backend_registration) =
@@ -1077,27 +1083,31 @@ structure Refute_Core = struct
         else other :: insert_backend entry rest
 
   fun register_backend_with_ceiling backend certainty_ceiling =
-    let
-      val without_old =
-        List.filter (fn (name, _) => name <> #name backend) (!backend_registry)
-      val registration =
-        {backend = backend, certainty_ceiling = certainty_ceiling}
-      val entry = (#name backend, registration)
-    in
-      backend_registry := insert_backend entry without_old
-    end
+    synchronized_registry (fn () =>
+      let
+        val without_old =
+          List.filter (fn (name, _) => name <> #name backend)
+            (!backend_registry)
+        val registration =
+          {backend = backend, certainty_ceiling = certainty_ceiling}
+        val entry = (#name backend, registration)
+      in
+        backend_registry := insert_backend entry without_old
+      end)
 
   fun register_backend backend =
     (* Preserve source compatibility and safety for backends that do not
        opt into a tighter, configuration-sensitive declaration. *)
     register_backend_with_ceiling backend (fn _ => fn _ => Genuine)
 
-  fun registered_backends () = map (#backend o #2) (!backend_registry)
+  fun registered_backends () =
+    synchronized_registry (fn () => map (#backend o #2) (!backend_registry))
 
   fun lookup_backend name =
-    Option.map (#backend o #2)
-      (List.find (fn (registered, _) => registered = name)
-        (!backend_registry))
+    synchronized_registry (fn () =>
+      Option.map (#backend o #2)
+        (List.find (fn (registered, _) => registered = name)
+          (!backend_registry)))
 
   fun selected_backend_registrations names =
     let
@@ -1107,9 +1117,12 @@ structure Refute_Core = struct
           | SOME wanted => List.exists
               (fn name => name = #name (#backend registration)) wanted
     in
-      map #2 (List.filter (fn (_, registration) =>
-        requested registration andalso
-        (#configured (#backend registration)) ()) (!backend_registry))
+      let val snapshot = synchronized_registry (fn () => !backend_registry)
+      in
+        map #2 (List.filter (fn (_, registration) =>
+          requested registration andalso
+          (#configured (#backend registration)) ()) snapshot)
+      end
     end
 
   fun selected_backends names =

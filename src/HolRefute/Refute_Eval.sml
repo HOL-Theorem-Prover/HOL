@@ -312,6 +312,10 @@ structure Refute_Eval :> Refute_Eval = struct
     end
 
   val substrate_registry : substrate list ref = ref []
+  val substrate_mutex = Mutex.mutex ()
+
+  fun synchronized_substrates f =
+    Multithreading.synchronized "Refute_Eval.substrates" substrate_mutex f
 
   fun substrate_before (left : substrate) (right : substrate) =
     #priority left < #priority right orelse
@@ -324,13 +328,15 @@ structure Refute_Eval :> Refute_Eval = struct
         else other :: insert substrate rest
 
   fun register_substrate substrate =
-    let
-      val remaining = List.filter
-        (fn registered => #name registered <> #name substrate)
-        (!substrate_registry)
-    in
-      substrate_registry := insert substrate remaining
-    end
+    synchronized_substrates (fn () =>
+      let
+        val remaining = List.filter
+          (fn registered => #name registered <> #name substrate)
+          (!substrate_registry)
+      in
+        substrate_registry := insert substrate remaining
+      end)
 
-  fun get_substrates () = !substrate_registry
+  fun get_substrates () =
+    synchronized_substrates (fn () => !substrate_registry)
 end
