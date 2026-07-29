@@ -22121,13 +22121,13 @@ fun mf_atoms_finitize_acceptance solver =
         finitize_goal)
     fun has_counterexample (Refute.Counterexample (_ :: _)) = true
       | has_counterexample _ = false
-    val custom_atoms_uncertified =
+    val custom_atoms_certified =
       case atoms of
           Refute.Counterexample
-            ({certainty = Refute.Genuine, cert = NONE, ...} :: _) => true
+            ({certainty = Refute.Genuine, cert = SOME _, ...} :: _) => true
         | _ => false
   in
-    if atom_rows_ok andalso custom_atoms_uncertified andalso
+    if atom_rows_ok andalso custom_atoms_certified andalso
        has_counterexample smart andalso has_counterexample forced then OK ()
     else die ("atoms/finitize acceptance failed: atoms=" ^
       mf_pin_outcome_name atoms ^ ", smart=" ^
