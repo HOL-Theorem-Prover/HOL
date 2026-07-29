@@ -6667,3 +6667,12 @@ Proof
     THENL [Q.EXISTS_TAC `w2n w`, Q.EXISTS_TAC `n2w n`]
     THEN ASM_SIMP_TAC std_ss [w2n_lt, w2n_n2w]
 QED
+
+Theorem NEG_EQ_0:
+  (!w:'a word. (-1w * w = 0w) <=> (w = 0w)) /\
+  (!w:'a word. (0w = -1w * w) <=> (w = 0w))
+Proof
+  CONJ_TAC THEN GEN_TAC THEN
+  ONCE_REWRITE_TAC [GSYM WORD_NEG_MUL] THEN
+  METIS_TAC [WORD_NEG_EQ_0]
+QED

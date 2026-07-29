@@ -648,9 +648,7 @@ val word_mult_clauses =
 
 val WORD_MULT_LEFT_1 = List.nth (word_mult_clauses, 2)
 
-val NEG_EQ_0 = trace ("metis", 0) (METIS_PROVE [WORD_NEG_MUL, WORD_NEG_EQ_0])
-   ``(!w:'a word. (-1w * w = 0w) = (w = 0w)) /\
-     (!w:'a word. (0w = -1w * w) = (w = 0w))``
+val NEG_EQ_0 = wordsTheory.NEG_EQ_0
 
 (* ------------------------------------------------------------------------- *)
 
