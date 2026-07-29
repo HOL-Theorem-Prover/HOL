@@ -1452,7 +1452,14 @@ structure Refute_Forl :> REFUTE_FORL = struct
   fun run_child command =
     Thread_Attributes.uninterruptible (fn restore_interrupts => fn () =>
       let
-        val process = Unix.execute ("/bin/sh", ["-c", command])
+        (* Put the launcher and all of its descendants in a fresh session.
+           The supervising shell forwards cancellation to that process group
+           before it exits, so a wrapper cannot orphan its JVM or SAT child. *)
+        val supervised =
+          "trap 'kill -TERM -$child 2>/dev/null; wait \"$child\"; " ^
+          "exit 130' TERM INT; setsid /bin/sh -c " ^ shell_quote command ^
+          " & child=$!; wait \"$child\""
+        val process = Unix.execute ("/bin/sh", ["-c", supervised])
         val reaped = ref false
         fun reap () =
           let val status = Unix.reap process
@@ -1460,7 +1467,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
         fun terminate () =
           if !reaped then ()
           else
-            ((Unix.kill (process, Posix.Signal.kill) handle _ => ());
+            ((Unix.kill (process, Posix.Signal.term) handle _ => ());
              (ignore (reap ()) handle _ => ()))
         fun wait () = exit_code (reap ())
       in
