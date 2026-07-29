@@ -668,7 +668,7 @@ structure Refute_Extract = struct
     "     else normalized - modulus end\n" ^
     "fun refute_hd [] = raise Refute_EvalSML.Stuck \"HD []\"\n" ^
     "  | refute_hd (x :: _) = x\n" ^
-    "fun refute_tl [] = raise Refute_EvalSML.Stuck \"TL []\"\n" ^
+    "fun refute_tl [] = []\n" ^
     "  | refute_tl (_ :: xs) = xs\n" ^
     "fun refute_the NONE = raise Refute_EvalSML.Stuck \"THE NONE\"\n" ^
     "  | refute_the (SOME x) = x\n" ^
@@ -694,12 +694,12 @@ structure Refute_Extract = struct
     "fun refute_word_mod width a b =\n" ^
     "  refute_norm width (refute_num_mod a b)\n" ^
     "fun refute_word_quot width a b =\n" ^
-    "  refute_norm width\n" ^
+    "  if refute_norm width b = 0 then 0 else refute_norm width\n" ^
     "    (refute_int_quot (refute_signed width a)\n" ^
     "      (refute_signed width b))\n" ^
     "fun refute_word_rem width a b =\n" ^
-    "  refute_norm width\n" ^
-    "    (refute_int_rem (refute_signed width a)\n" ^
+    "  if refute_norm width b = 0 then refute_norm width a else\n" ^
+    "    refute_norm width (refute_int_rem (refute_signed width a)\n" ^
     "      (refute_signed width b))\n" ^
     "fun refute_shift amount =\n" ^
     "  (Word.fromInt (IntInf.toInt amount)\n" ^
@@ -721,7 +721,7 @@ structure Refute_Extract = struct
     "fun refute_last [] = raise Refute_EvalSML.Stuck \"LAST []\"\n" ^
     "  | refute_last [x] = x\n" ^
     "  | refute_last (_ :: xs) = refute_last xs\n" ^
-    "fun refute_front [] = raise Refute_EvalSML.Stuck \"FRONT []\"\n" ^
+    "fun refute_front [] = []\n" ^
     "  | refute_front [_] = []\n" ^
     "  | refute_front (x :: xs) = x :: refute_front xs\n"
 
@@ -1271,9 +1271,7 @@ structure Refute_Extract = struct
           | _ => raise Fail "HD"))
       | ("list", "TL") => SOME (with_arity arguments 1 (fn values =>
           case values of [a] =>
-            if string_list () then parens ("if String.size " ^ parens a ^
-              " = 0 then raise Refute_EvalSML.Stuck \"TL []\" " ^
-              "else " ^ Refute_EvalSML.char_list_tail_source a)
+            if string_list () then Refute_EvalSML.char_list_tail_source a
             else "refute_tl " ^ parens a
           | _ => raise Fail "TL"))
       | ("list", "APPEND") =>
@@ -1624,8 +1622,8 @@ structure Refute_Extract = struct
             | _ => raise Fail "lazy HD"))
         | ("list", "TL") =>
             SOME (lazy_with_arity context arguments 1 (fn values =>
-            case values of [value] => defer (list_case value
-              "(raise Refute_EvalSML.Stuck \"TL []\")" "refute_tail")
+            case values of [value] => defer (list_case value "[]"
+              "refute_tail")
             | _ => raise Fail "lazy TL"))
         | ("option", "THE") =>
             let
