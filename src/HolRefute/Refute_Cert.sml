@@ -132,6 +132,7 @@ structure Refute_Cert = struct
       case certify
         {original = original, evals = evals, env = grounded, cex = cex} of
           result as Certified _ => result
+        | Discarded => Discarded
         | _ => grounding_failure cex
     end
     handle Interrupt => raise Interrupt
