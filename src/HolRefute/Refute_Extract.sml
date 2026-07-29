@@ -3112,9 +3112,11 @@ structure Refute_Extract = struct
         "   NONE => " ^ failure ^ "\n" ^
         " | SOME refute_value => "
 
-      (* One Split emitter serves both plan compilers; only the recursive
-         compile and the match-failure expression differ. *)
-      fun split_case recurse failure tm branches environment =
+      (* One Split emitter serves both plan compilers.  An unlisted
+         constructor means that the premise which introduced the split is
+         false; a stuck scrutinee, however, makes enumeration incomplete. *)
+      fun split_case recurse stuck_failure unmatched_failure tm branches
+          environment =
         let
           val expression_index = raw_index tm
           val prior_environment = environment
@@ -3141,10 +3143,10 @@ structure Refute_Extract = struct
           fun string_body () =
             let
               val nil_body = case string_entry "NIL" of
-                  NONE => failure
+                  NONE => unmatched_failure
                 | SOME entry => branch_body entry
               val cons_body = case string_entry "CONS" of
-                  NONE => failure
+                  NONE => unmatched_failure
                 | SOME (entry as (_, variables, _)) =>
                     (case List.map variable_name variables of
                        [head, tail] =>
@@ -3164,9 +3166,9 @@ structure Refute_Extract = struct
             if is_char_list (Term.type_of tm) then string_body ()
             else "case refute_value of\n" ^
               join "\n | " (List.map branch branches) ^
-              "\n | _ => " ^ failure
+              "\n | _ => " ^ unmatched_failure
         in
-          safe_value (evaluated_expression tm) failure ^ split_body ^ ")"
+          safe_value (evaluated_expression tm) stuck_failure ^ split_body ^ ")"
         end
 
       fun enum_name program =
@@ -3553,7 +3555,7 @@ structure Refute_Extract = struct
                   genuine_only)
               (parens ("complete := false; match_failures := " ^
                  "!match_failures + 1; RefuteContinue"))
-              tm branches environment
+              "RefuteContinue" tm branches environment
         | Gen (variable, next) =>
             let
               val value = variable_name variable
@@ -3643,7 +3645,7 @@ structure Refute_Extract = struct
                 ("complete := false; match_failures := " ^
                  "!match_failures + 1; " ^
                  parens ("RefuteContinue, " ^ state)))
-              tm branches environment
+              (parens ("RefuteContinue, " ^ state)) tm branches environment
         | Gen (variable, next) =>
             let
               val value = variable_name variable

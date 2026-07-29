@@ -307,10 +307,9 @@ structure Refute_EvalCompute = struct
                             (case List.find (fn (expected, variables, _) =>
                               Term.same_const expected constructor andalso
                               length variables = length args) branches of
-                                 NONE =>
-                                   (complete := false;
-                                    match_failures := !match_failures + 1;
-                                    Continue)
+                                 (* A partial split is the false constructor
+                                    premise, not an evaluator failure. *)
+                                 NONE => Continue
                                | SOME (_, variables, next) =>
                                    visit
                                      (ListPair.zip (variables, args) @ env)
