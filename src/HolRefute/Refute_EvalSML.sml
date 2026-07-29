@@ -157,7 +157,8 @@ structure Refute_EvalSML = struct
     "String.sub (" ^ value ^ ", 0)"
 
   fun char_list_tail_source value =
-    "String.extract (" ^ value ^ ", 1, NONE)"
+    "(if String.size (" ^ value ^ ") = 0 then \"\" else " ^
+    "String.extract (" ^ value ^ ", 1, NONE))"
 
   fun char_list_value_parts value =
     let val text = Literal.relaxed_dest_string_lit value
