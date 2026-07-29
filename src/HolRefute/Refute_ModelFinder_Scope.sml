@@ -608,8 +608,8 @@ structure Refute_ModelFinder_Scope = struct
        ofs = offset_table_for_card_assigns data_types card_assigns}
     end
 
-  (* FIXME: This is the upstream fun/pair card-row repair, bug-for-bug.
-     It scans only mono_types, so a matching nonmonotonic row is dropped. *)
+  (* Function and pair rows must be expanded for every analyzed type,
+     including types classified as nonmonotonic. *)
   fun repair_cards_assigns_wrt_boxing_etc _ [] = []
     | repair_cards_assigns_wrt_boxing_etc mono_types
         ((SOME ty, candidates) :: assigns) =
@@ -656,7 +656,8 @@ structure Refute_ModelFinder_Scope = struct
         finitizable_data_types =
     let
       val cards_assigns =
-        repair_cards_assigns_wrt_boxing_etc mono_types cards_assigns
+        repair_cards_assigns_wrt_boxing_etc
+          (mono_types @ nonmono_types) cards_assigns
       val blocks = blocks_for_types context binarize cards_assigns
         maxes_assigns iters_assigns bitss bisim_depths mono_types
         nonmono_types
