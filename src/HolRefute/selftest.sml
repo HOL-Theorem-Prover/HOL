@@ -11232,7 +11232,7 @@ val _ = require_msg
   "reachable certainty ignored a backend declaration")
   (fn () => ()) ()
 
-fun kodkod_ceiling_preserves_uncertified_genuine () =
+fun kodkod_ceiling_matches_certification_reachability () =
   let
     val executable = [ceiling_executable_instance]
     val gated = [ceiling_gated_instance]
@@ -11247,18 +11247,18 @@ fun kodkod_ceiling_preserves_uncertified_genuine () =
     same_certainty_class Genuine
       (Refute_ModelFinder.kodkod_certainty_ceiling
         default_config executable) andalso
-    same_certainty_class Genuine
+    same_certainty_class (Refute_Core.Potential [])
       (Refute_ModelFinder.kodkod_certainty_ceiling satisfy executable) andalso
-    same_certainty_class Genuine
+    same_certainty_class (Refute_Core.Potential [])
       (Refute_ModelFinder.kodkod_certainty_ceiling default_config gated) andalso
-    same_certainty_class (QuasiGenuine [])
+    same_certainty_class (Refute_Core.Potential [])
       (Refute_ModelFinder.kodkod_certainty_ceiling quasi_satisfy
         executable) andalso
-    same_certainty_class (QuasiGenuine [])
+    same_certainty_class (Refute_Core.Potential [])
       (Refute_ModelFinder.kodkod_certainty_ceiling quasi gated) andalso
-    same_certainty_class (QuasiGenuine [])
+    same_certainty_class (Refute_Core.Potential [])
       (Refute_ModelFinder.kodkod_certainty_ceiling total gated) andalso
-    same_certainty_class (QuasiGenuine [])
+    same_certainty_class (Refute_Core.Potential [])
       (Refute_ModelFinder.kodkod_certainty_ceiling forced_finitize
         gated) andalso
     same_certainty_class Genuine
@@ -11266,8 +11266,8 @@ fun kodkod_ceiling_preserves_uncertified_genuine () =
   end
 
 val _ = require_msg
-  (check_result kodkod_ceiling_preserves_uncertified_genuine) (fn () =>
-  "the kodkod certainty ceiling disagreed with reachable outcomes")
+  (check_result kodkod_ceiling_matches_certification_reachability) (fn () =>
+  "the kodkod certainty ceiling disagreed with certification reachability")
   (fn () => ()) ()
 
 val _ = tprint "Refute core silent report"
