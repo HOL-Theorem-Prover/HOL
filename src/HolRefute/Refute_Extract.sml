@@ -3758,7 +3758,8 @@ structure Refute_Extract = struct
             "    genuine_only size draws state\n" ^
             "fun protected_dispatch card genuine_only size draws state =\n" ^
             "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
-            "    let val answer = dispatch card genuine_only size draws state\n" ^
+            "    let val answer = dispatch card genuine_only size " ^
+            "draws state\n" ^
             "        val hit = Option.map\n" ^
             "          (fn (environment, grounding, case_tree, genuine) =>\n" ^
             "          (List.map (fn (index, rebuild) =>\n" ^
@@ -4273,7 +4274,8 @@ structure Refute_Extract = struct
             "  end\n" ^
             "fun protected_dispatch card genuine_only depth draws state =\n" ^
             "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
-            "    let val answer = dispatch card genuine_only depth draws state\n" ^
+            "    let val answer = dispatch card genuine_only depth " ^
+            "draws state\n" ^
             "        val hit = Option.map\n" ^
             "          (fn (environment, grounding, case_tree, genuine) =>\n" ^
             "          (List.map (fn (index, rebuild) =>\n" ^

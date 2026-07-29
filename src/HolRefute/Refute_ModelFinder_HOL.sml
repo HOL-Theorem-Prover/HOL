@@ -432,7 +432,8 @@ structure Refute_ModelFinder_HOL = struct
      a HOL constant.  All such occurrences, including the synthetic typedef's
      abs/rep pair, must nevertheless denote one reserved constant layer.
      A different layer string here creates a second Kodkod relation with the
-     same printed raw name and disconnects the carrier axioms from operations. *)
+     same printed raw name and disconnects the carrier axioms from
+     operations. *)
   fun retype_frac_constant term ty = retype_constant "frac" term ty
 
   fun specialize_frac_prop target wanted prop =
@@ -2390,7 +2391,8 @@ structure Refute_ModelFinder_HOL = struct
           "representation type has unbound type variables"
       val _ =
         if Option.isSome (codatatype_for (type_operator_of qty)) orelse
-           has_type_operator (type_operator_of o #ty) typedef_registry qty orelse
+           has_type_operator (type_operator_of o #ty) typedef_registry qty
+             orelse
            has_type_operator #tyop frac_registry qty orelse
            raw_free_datatype qty then
           raise err "register_quotient"
@@ -2542,7 +2544,8 @@ structure Refute_ModelFinder_HOL = struct
           "representation type has unbound type variables"
       val _ =
         if Option.isSome (codatatype_for (type_operator_of ty)) orelse
-           has_type_operator (type_operator_of o #qty) quotient_registry ty orelse
+           has_type_operator (type_operator_of o #qty) quotient_registry ty
+             orelse
            has_type_operator #tyop frac_registry ty orelse
            raw_free_datatype ty then
           raise err "register_typedef"

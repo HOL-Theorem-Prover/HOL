@@ -114,7 +114,8 @@ structure Refute_EvalEnum = struct
     let
       fun rejected message =
         (reject message;
-         raise Fail "Refute_EvalEnum.mode_shape_with: rejecting function returned")
+         raise Fail
+           "Refute_EvalEnum.mode_shape_with: rejecting function returned")
     in
       (let
          val _ = if Term.is_const relation then ()

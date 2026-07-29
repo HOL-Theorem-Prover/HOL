@@ -8155,7 +8155,8 @@ fun mf_model_codatatype_cycles_and_recheck () =
                        #1 (Term.dest_var omega) =
                          MFN.cyclic_co_val_name andalso
                        MFN.cyclic_co_val_name_ascii = "w" andalso
-                       Term.aconv left omega andalso Term.aconv head cons andalso
+                       Term.aconv left omega andalso
+                      Term.aconv head cons andalso
                        length args = 2 andalso
                        Term.aconv (List.nth (args, 1)) omega
                      end
@@ -13231,7 +13232,8 @@ fun same_narrow_tree (Leaf left, Leaf right) = left = right
          left_subtree),
        Variable (right_quantifier, right_value, right_position, right_shape,
          right_subtree)) =
-      left_quantifier = right_quantifier andalso left_value = right_value andalso
+      left_quantifier = right_quantifier andalso
+      left_value = right_value andalso
       left_position = right_position andalso
       same_narrow_shape (left_shape, right_shape) andalso
       same_narrow_tree (left_subtree, right_subtree)
@@ -13240,7 +13242,8 @@ fun same_narrow_tree (Leaf left, Leaf right) = left = right
          left_pending, left_branches),
        Constructor (right_quantifier, right_value, right_position, right_shape,
          right_pending, right_branches)) =
-      left_quantifier = right_quantifier andalso left_value = right_value andalso
+      left_quantifier = right_quantifier andalso
+      left_value = right_value andalso
       left_position = right_position andalso
       same_narrow_shape (left_shape, right_shape) andalso
       (case (left_pending, right_pending) of
