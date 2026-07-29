@@ -4,29 +4,12 @@ signature Refute = sig
   type hol_type = Type.hol_type
   type goal = term list * term
 
-  datatype certainty = Genuine | QuasiGenuine of string list
-                     | Potential of string list
-  type model_report =
-    { skolems : (string * term) list,
-      consts : (term * string * term) list,
-      types : (hol_type * term list * bool) list }
-  type counterexample =
-    { backend : string,
-      substrate : string,
-      certainty : certainty,
-      bindings : (term * term) list,
-      evals : (term * term) list,
-      cert : thm option,
-      scope : (hol_type * int) list option,
-      model : model_report option,
-      stats : (string * int) list }
-  datatype outcome = Counterexample of counterexample list
-                   | NoCounterexample
-                   | Unknown of string list
-  datatype expectation = NoExpectation | ExpectNone | ExpectUnknown
-                       | ExpectCex | ExpectGenuine | ExpectQuasiGenuine
-                       | ExpectPotential
-  datatype substrate_choice = Auto | Compute | Cv | NativeSML
+  datatype certainty = datatype Refute_Core.certainty
+  type model_report = Refute_Core.model_report
+  type counterexample = Refute_Core.counterexample
+  datatype outcome = datatype Refute_Core.outcome
+  datatype expectation = datatype Refute_Core.expectation
+  datatype substrate_choice = datatype Refute_Core.substrate_choice
   datatype requirement = datatype Refute_Core.requirement
   datatype goal_form = datatype Refute_Core.goal_form
   type qc_config = Refute_Core.qc_config
