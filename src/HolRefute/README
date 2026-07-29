@@ -148,9 +148,10 @@ Registrations are session-local ML state and create no theory content:
   not part of this API.  Lazy built-ins cover `llist`, `ltree`, `itree`,
   `itreeTau`, `lbtree`, and `path` when their theories are present.
 * `Refute.register_quotient {qty, rty, abs, rep, equiv_thm, partial}`
-  registers the abstract and representation types and constants.  The
-  theorem shape determines whether the sound partial encoding is required;
-  the legacy `partial` field is retained for source compatibility.
+  registers the abstract and representation types and constants.  `equiv_thm`
+  must be a hypothesis-free `QUOTIENT equiv abs rep` theorem; Refute always
+  uses the sound partial encoding.  The legacy `partial` field is retained
+  for source compatibility.
 * `Refute.register_typedef {ty, abs, rep, absrep_thm}` registers an existing
   HOL typedef.  `absrep_thm` must be its exported conjunction of the two
   bijection laws and must agree with the type's `<tyop>_TY_DEF` theorem.

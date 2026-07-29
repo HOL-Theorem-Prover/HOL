@@ -580,9 +580,9 @@ replaces the old one.
 * `register_typedef {ty, abs, rep, absrep_thm}` registers existing Abs and
   Rep constants and the exported bijection conjunction.
   `register_quotient {qty, rty, abs, rep, equiv_thm, partial}` registers
-  an existing quotient; the theorem shape determines whether the sound
-  partial encoding is needed, while `partial` remains for source
-  compatibility.
+  an existing quotient.  `equiv_thm` must be a hypothesis-free
+  `QUOTIENT equiv abs rep` theorem and Refute always uses the sound partial
+  encoding; `partial` remains for source compatibility.
 * `register_frac_type {tyop, ersatz}` supplies a fraction representation
   and replacements.  `register_frac_type_rat ()` idempotently restores
   the built-in rational registration.  `register_ersatz` adds an
@@ -602,8 +602,8 @@ Structural registrations require distinct type variables as parameters
 and existing constants for constructors, case operators, Abs, and Rep.
 The model finder also attempts a lazy, validated database harvest when it
 first encounters an unregistered typedef or quotient; explicit
-registration remains useful when a nonstandard theorem shape cannot be
-recovered.
+registration remains useful when automatic harvesting cannot recover an
+otherwise standard `QUOTIENT` bridge.
 
 ### Installing Kodkodi
 
