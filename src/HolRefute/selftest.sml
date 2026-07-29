@@ -11888,10 +11888,10 @@ fun extraction_source_goldens () =
     val strict = #source (Refute_Extract.extract_term term)
     val lazy = #source (Refute_Extract.extract_lazy_term term)
   in
-    size strict = 3363 andalso
-    Portable.md5sum strict = "mzEvXenVl9xTc8mgTg+KQQ" andalso
-    size lazy = 3968 andalso
-    Portable.md5sum lazy = "oWa8N4JbsCfVJ1OxtJU50A"
+    size strict = 3359 andalso
+    Portable.md5sum strict = "2st9tl2nIi5zdsWzJ3CKlg" andalso
+    size lazy = 3964 andalso
+    Portable.md5sum lazy = "DPOY0pGp/J+ylkzsGVK28g"
   end
 
 val _ = tprint "Refute extraction type and constant layers"
@@ -11951,12 +11951,11 @@ val _ = require_msg (check_result mutual_definition_group_is_emitted)
   (fn () => "a mutual definition was not emitted with fun/and")
   (fn () => ()) ()
 
-fun extracted_div_zero_is_stuck () =
-  compile_extracted_with ``1 DIV 0 = 0`` (fn entry =>
-    "(" ^ entry ^ "; false) handle Refute_EvalSML.Stuck _ => true")
+fun extracted_nat_div_mod_zero () =
+  compile_extracted ``17 DIV 0 = 0 /\ 17 MOD 0 = 17``
 
-val _ = require_msg (check_result extracted_div_zero_is_stuck) (fn () =>
-  "extracted DIV 0 did not raise Refute_EvalSML.Stuck")
+val _ = require_msg (check_result extracted_nat_div_mod_zero) (fn () =>
+  "extracted natural DIV or MOD did not follow HOL's zero convention")
   (fn () => ()) ()
 
 fun extracted_missing_clause_is_match () =

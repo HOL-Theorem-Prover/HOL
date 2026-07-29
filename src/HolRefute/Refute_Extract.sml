@@ -645,8 +645,8 @@ structure Refute_Extract = struct
     "fun refute_num_sub a b = if a < b then 0 else a - b\n" ^
     "fun refute_nonzero who b =\n" ^
     "  if b = 0 then raise Refute_EvalSML.Stuck who else b\n" ^
-    "fun refute_num_div a b = IntInf.div (a, refute_nonzero \"DIV 0\" b)\n" ^
-    "fun refute_num_mod a b = IntInf.mod (a, refute_nonzero \"MOD 0\" b)\n" ^
+    "fun refute_num_div a b = if b = 0 then 0 else IntInf.div (a, b)\n" ^
+    "fun refute_num_mod a b = if b = 0 then a else IntInf.mod (a, b)\n" ^
     "fun refute_int_div a b =\n" ^
     "  IntInf.div (a, refute_nonzero \"int_div 0\" b)\n" ^
     "fun refute_int_mod a b =\n" ^
