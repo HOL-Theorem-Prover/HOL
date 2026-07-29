@@ -1460,7 +1460,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
         fun terminate () =
           if !reaped then ()
           else
-            ((Unix.kill (process, Posix.Signal.term) handle _ => ());
+            ((Unix.kill (process, Posix.Signal.kill) handle _ => ());
              (ignore (reap ()) handle _ => ()))
         fun wait () = exit_code (reap ())
       in
