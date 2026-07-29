@@ -162,10 +162,9 @@ structure Refute_QC_Narrow = struct
                                  (* There is no later entry at the final
                                     depth on which saved retry state could
                                     run.  Retry its remaining candidates now. *)
-                                 if size >= Int.max (0, #size (#qc config)) then
-                                   one (card, size) go ig
-                                 else
-                                   state_for card := (go, ig)
+                                 (if size >= Int.max (0, (#size (#qc config)))
+                                  then one (card, size) go ig
+                                  else state_for card := (go, ig)) }
                               {env = env, ground_env = ground_env,
                                case_tree = case_tree, genuine = genuine,
                                genuine_only = genuine_only,
