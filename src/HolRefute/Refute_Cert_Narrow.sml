@@ -26,7 +26,14 @@ structure Refute_Cert_Narrow = struct
       val _ = if run_depth >= 0 then ()
         else raise Fail "negative narrowing run depth"
       val (_, closure, _) = closure_of original
-      val prenex_equality = Refute_Narrow.prenex_conversion closure
+      (* Keep replay on exactly the formula compiled by Refute_QC_Narrow.
+         Retain both conversions so its certificate still proves the
+         negation of the caller's unnormalised closure. *)
+      val normalized_equality =
+        Ho_Rewrite.REWRITE_CONV Refute_Core.normal_rewrites closure
+        handle Interrupt => raise Interrupt | _ => Thm.REFL closure
+      val normalized = rhs_of normalized_equality
+      val prenex_equality = Refute_Narrow.prenex_conversion normalized
       val pnf = rhs_of prenex_equality
 
       val constructor_cache =
@@ -347,10 +354,16 @@ structure Refute_Cert_Narrow = struct
             end
 
       val replayed = prove_neg pnf case_tree
-      val negated_equality = Thm.AP_TERM boolSyntax.negation prenex_equality
+      val prenex_negated_equality =
+        Thm.AP_TERM boolSyntax.negation prenex_equality
       val replayed = conform_conclusion
-        "prenex" (rhs_of negated_equality) replayed
-      val certificate = Thm.EQ_MP (Thm.SYM negated_equality) replayed
+        "prenex" (rhs_of prenex_negated_equality) replayed
+      val normalized_certificate =
+        Thm.EQ_MP (Thm.SYM prenex_negated_equality) replayed
+      val normalized_negated_equality =
+        Thm.AP_TERM boolSyntax.negation normalized_equality
+      val certificate = Thm.EQ_MP (Thm.SYM normalized_negated_equality)
+        normalized_certificate
       val _ = if null (Thm.hyp certificate) then ()
         else raise Fail "replay certificate retained hypotheses"
       val values = map (fn tm => (tm, eval_term env tm)) evals
