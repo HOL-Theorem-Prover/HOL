@@ -1,0 +1,7 @@
+## `export_refute_psimp`
+
+``` hol4
+Refute.export_refute_psimp : string -> unit
+```
+
+Exports the named theorem to the persistent Refute preprocessing simplifier set.

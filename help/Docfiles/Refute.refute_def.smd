@@ -1,0 +1,8 @@
+## `refute_def`
+
+``` hol4
+Refute.refute_def : term -> outcome
+```
+
+Refutes a definition or theorem term using the current Refute configuration.
+See [`Refute.refute`](#Refute.refute).

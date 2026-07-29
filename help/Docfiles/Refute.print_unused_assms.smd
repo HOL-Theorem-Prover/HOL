@@ -1,0 +1,7 @@
+## `print_unused_assms`
+
+``` hol4
+Refute.print_unused_assms : config option -> string option -> unit
+```
+
+Prints unused-assumption information for the selected theorem or theory.

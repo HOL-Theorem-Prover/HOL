@@ -1,0 +1,7 @@
+## `export_refute_unfold`
+
+``` hol4
+Refute.export_refute_unfold : string -> unit
+```
+
+Exports the named theorem to the persistent Refute unfolding set.

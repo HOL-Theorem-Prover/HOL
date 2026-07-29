@@ -1,0 +1,9 @@
+## `check_unused_assms`
+
+``` hol4
+Refute.check_unused_assms :
+  config option -> string * thm -> string * int list list option
+```
+
+Checks a named theorem for unused assumptions.  `NONE` derives a QC-only
+configuration from `Refute.the_config`; `SOME` supplies the base configuration.

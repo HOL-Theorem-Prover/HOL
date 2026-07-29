@@ -1,0 +1,10 @@
+## `abstract_generator`
+
+``` hol4
+Refute.abstract_generator :
+  {ty : hol_type, constructors : term list, pred : term option} -> unit
+```
+
+Registers constructor-shaped values for counterexample discovery.  This is an
+incomplete generator registration: it can find examples but cannot establish
+exhaustive `NoCounterexample` results.
