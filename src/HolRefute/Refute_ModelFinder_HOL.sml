@@ -2357,10 +2357,11 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun quotient_theorem_info theorem supplied_abs supplied_rep =
-    (dest_total_equivalence theorem, false)
-    handle HOL_ERR _ =>
-      let
-        val (raw_relation, theorem_abs, theorem_rep) =
+    let
+      (* A total equivalence theorem mentions only the representation
+         relation; it cannot identify arbitrary supplied Abs/Rep constants.
+         The QUOTIENT bridge below is the required association proof. *)
+      val (raw_relation, theorem_abs, theorem_rep) =
           dest_bare_quotient theorem
         val theta = Type.match_type (Term.type_of theorem_abs)
           (Term.type_of supplied_abs)
