@@ -1639,6 +1639,7 @@ structure Refute_EvalCv = struct
         (start ();
          List.app (fn card => ignore (runner card))
            (Portable.upto 1 (length plans)))
+        handle e => (close (); raise e)
 
       fun run input =
         let
