@@ -1088,7 +1088,8 @@ structure Refute_Core = struct
               let
                 val name = "refute$quotdisplay$" ^ Int.toString index ^
                   "$value"
-                val placeholder = Term.mk_var (name, Term.type_of candidate)
+                val placeholder = Term.variant (Term.all_vars term)
+                  (Term.mk_var (name, Term.type_of candidate))
               in
                 (placeholder, index + 1,
                  (placeholder, delimit (format_term argument)) :: replacements)
