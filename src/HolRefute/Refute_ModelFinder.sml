@@ -50,8 +50,6 @@ type rich_problem = MFK.rich_problem
 
 val max_unsound_delay_ms = 200
 val max_unsound_delay_percent = 2
-val deadline_margin = 1.0
-
 fun elapsed_msec start =
   LargeInt.toInt (Time.toMilliseconds (Time.now () - start))
   handle _ => 0
@@ -745,7 +743,7 @@ fun run_instance deadline started (config : Refute_Core.config)
                         val _ = latest_state :=
                           (found, max_potential, max_genuine, donno)
                       in
-                        if max_genuine <= 0 then
+                        if max_genuine <= 0 andalso max_potential <= 0 then
                           (found, 0, 0, donno)
                         else
                           let
@@ -1035,7 +1033,7 @@ fun kodkod_certainty_ceiling (config : Refute_Core.config) instances =
 fun run config instances =
   let
     val started = Time.now ()
-    val budget = Real.max (0.0, #timeout config - deadline_margin)
+    val budget = Real.max (0.0, #timeout config)
     val deadline = started + Time.fromReal budget
     val ordered = Listsort.sort (fn (left, right) =>
       Int.compare (#card left, #card right)) instances
