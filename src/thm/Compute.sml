@@ -64,13 +64,6 @@ in
   val strip_comb = strip_comb [];
 end (* local *)
 
-(* Term does not export dest_eq: *)
-
-fun dest_eq tm =
-  case total (((same_const equality ## I) o dest_comb ## I) o dest_comb) tm of
-    SOME ((true,l),r) => (l,r)
-  | _ => raise ERR "dest_eq" "term is not an equality";
-
 (* -------------------------------------------------------------------------
  * Interpreter for compute expressions.
  * ------------------------------------------------------------------------- *)
@@ -168,11 +161,11 @@ end (* local *)
  * ------------------------------------------------------------------------- *)
 
 fun dest_zero ({alt_zero_tm, zero_tm, ...}:ctsyntax) tm =
-  if same_const alt_zero_tm tm orelse same_const zero_tm tm then Arbnum.zero
+  if aconv alt_zero_tm tm orelse aconv zero_tm tm then Arbnum.zero
   else raise ERR "" ""
 
 fun dest_app tm1 tm =
-  case total ((same_const tm1 ## I) o dest_comb) tm of
+  case total ((aconv tm1 ## I) o dest_comb) tm of
     SOME (true, n) => n
   | _ => raise ERR "" "";
 
@@ -296,13 +289,10 @@ in
     | EQ (x,y) => mk_binop Eq (dest_cexp ct bvs fns x)
                               (dest_cexp ct bvs fns y)
     | APP (f,xs) =>
-        case Vector.findi (same_const f o fst o snd) fns of
+        case Vector.findi (aconv f o fst o snd) fns of
           SOME (i, _) => App (i, List.map (dest_cexp ct bvs fns) xs)
         | _ => raise ERR "dest_cexp"
                          ("could not find equation for: " ^ fst (dest_const f))
-  val dest_cexp = fn ct => fn bvs => fn fns => fn tm =>
-    if type_of tm = #cval_type ct then dest_cexp ct bvs fns tm
-    else raise ERR "dest_cexp" "term is not a compute value"
 end (* local *)
 
 (* -------------------------------------------------------------------------
@@ -446,12 +436,6 @@ local
     case total (((dest_comb ## I) o dest_comb ## I) o dest_comb) tm of
       SOME (((x,y),z),w) => a x andalso b y andalso c z andalso d w
     | _ => false
-  fun check_let let_tm ty eqn_tm =
-      let val let_ty = (ty --> ty) --> (ty --> ty)
-      in
-        type_of let_tm = let_ty andalso
-        aconv eqn_tm let_tm
-      end
   fun check_cond cond_tm eqn_tm = same_const cond_tm eqn_tm
   fun mk_recs (ct : ctsyntax) =
     let
@@ -494,7 +478,7 @@ local
       val CV_LT = APP2 (aconv (#cv_lt_tm ct))
       val CV_IF = APP3 (aconv (#cv_if_tm ct))
       val CV_EQ = APP2 (aconv (#cv_eq_tm ct))
-      val LET = APP2 (check_let (#let_tm ct) (#cval_type ct))
+      val LET = APP2 (aconv (#let_tm ct))
     in
       [("alt_zero",   ALT_ZERO === ZERO),
        ("cond_T",     COND T A_ B_ === A_),
