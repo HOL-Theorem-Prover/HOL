@@ -123,7 +123,7 @@ are:
 | `upd_whack` | `[]` | constants whose definitions are ignored |
 | `upd_need` | `NONE` | values that must occur in the model |
 | `upd_tac_timeout` | `0.5` seconds | inner tactic timeout |
-| `upd_format` | default row `[1]` | displayed model-value depth |
+| `upd_format` | fallback `[1]` | group curried model-function arguments into tuples |
 | `upd_max_potential` | `1` | maximum potential models returned |
 | `upd_max_genuine` | `1` | maximum genuine models returned |
 | `upd_merge_type_vars` | `false` | fuse all MF type-variable scopes |

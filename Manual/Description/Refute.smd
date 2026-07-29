@@ -524,7 +524,7 @@ row value of `NONE` asks Refute to choose, while `SOME true` or
 | `upd_max_potential` | `1` | Global budget for potential models. |
 | `upd_max_genuine` | `1` | Global budget for genuine models. |
 | `upd_atoms` | fallback `[]` | Preferred printed atom names by type. |
-| `upd_format` | fallback `[1]` | Model-value display depth by constant. |
+| `upd_format` | fallback `[1]` | Group curried model-function arguments into tuples. |
 | `upd_show_types` | `false` | Include interpreted type universes in models. |
 | `upd_show_skolems` | `true` | Include Skolem values. |
 | `upd_show_consts` | `false` | Include reconstructed constant tables. |
