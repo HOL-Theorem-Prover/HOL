@@ -36,6 +36,7 @@ fun get_some f [] = NONE
           val lock = Mutex.mutex ();
           val ready = ConditionVar.conditionVar ();
           val answer = ref NONE;
+          val interrupted = ref false;
           val remaining = ref (List.length xs);
           val pending = ref (ListPair.zip
             (List.tabulate (List.length xs, fn n => n), xs));
@@ -50,18 +51,25 @@ fun get_some f [] = NONE
               case !answer of
                   SOME _ => NONE
                 | NONE =>
-                    (case !pending of
-                         [] => NONE
-                       | job :: rest => (pending := rest; SOME job)));
+                    if !interrupted then NONE
+                    else
+                      (case !pending of
+                           [] => NONE
+                         | job :: rest => (pending := rest; SOME job)));
 
-          fun publish result =
+          fun publish (result, was_interrupted) =
             synchronized (fn () =>
-              (case result of
-                 SOME y =>
-                   (case !answer of NONE => answer := SOME y | SOME _ => ())
-               | NONE => ();
+              (if was_interrupted then interrupted := true
+               else
+                 case result of
+                     SOME y =>
+                       (case !answer of
+                            NONE => answer := SOME y
+                          | SOME _ => ())
+                   | NONE => ();
                remaining := !remaining - 1;
-               if isSome (!answer) orelse !remaining = 0 then
+               if isSome (!answer) orelse !interrupted orelse
+                  !remaining = 0 then
                  ConditionVar.signal ready
                else ()));
 
@@ -69,9 +77,19 @@ fun get_some f [] = NONE
             case take () of
                 NONE => ()
               | SOME (_, x) =>
-                  (publish
-                     (f x handle Interrupt => raise Interrupt | _ => NONE);
-                   worker ());
+                  let
+                    (* Every claimed job must be published.  In particular,
+                       letting [Interrupt] escape here would leave [remaining]
+                       positive and make the parent wait forever. *)
+                    val result = Exn.capture f x
+                    val _ =
+                      case result of
+                          Exn.Res value => publish (value, false)
+                        | Exn.Exn Interrupt => publish (NONE, true)
+                        | Exn.Exn _ => publish (NONE, false)
+                  in
+                    worker ()
+                  end;
 
           (* Forking and publishing handles are atomic with respect to caller
              interrupts, so cleanup always sees every started worker. *)
@@ -99,7 +117,8 @@ fun get_some f [] = NONE
                   case !answer of
                       SOME y => SOME y
                     | NONE =>
-                        if !remaining = 0 then NONE
+                        if !interrupted then raise Interrupt
+                        else if !remaining = 0 then NONE
                         else
                           (ignore (Exn.release
                              (Multithreading.sync_wait NONE ready lock));
