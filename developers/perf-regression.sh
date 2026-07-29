@@ -49,6 +49,9 @@ Options:
   --keep-worktrees  after each build, move the worktree from its
                     temporary location under \$TMPDIR to
                     <scratch-dir>/<sha> instead of removing it
+  --include-changed compare rows even for theories whose *Script.sml
+                    differs between the refs (by default they are
+                    omitted, since their build times aren't comparable)
   -h, --help        show this help
 
 The build worktree is always created under \$TMPDIR so an outer
@@ -62,22 +65,24 @@ build_mode=full
 refresh_a=
 refresh_b=
 keep_wt=
+include_changed=
 cache_dir="$holdir/tools-poly/build-logs/perfcache"
 scratch_dir=
 
 while [ $# -gt 0 ]; do
     case $1 in
-        --core)            build_mode=core; shift ;;
-        --refresh)         refresh_a=1; refresh_b=1; shift ;;
-        --refresh-a)       refresh_a=1; shift ;;
-        --refresh-b)       refresh_b=1; shift ;;
-        --cache)           cache_dir=$2; shift 2 ;;
-        --scratch)         scratch_dir=$2; shift 2 ;;
-        --keep-worktrees)  keep_wt=1; shift ;;
-        -h|--help)         usage 0 ;;
-        --)                shift; break ;;
-        -*)                echo "Unknown option: $1" >&2; usage 1 ;;
-        *)                 break ;;
+        --core)             build_mode=core; shift ;;
+        --refresh)          refresh_a=1; refresh_b=1; shift ;;
+        --refresh-a)        refresh_a=1; shift ;;
+        --refresh-b)        refresh_b=1; shift ;;
+        --cache)            cache_dir=$2; shift 2 ;;
+        --scratch)          scratch_dir=$2; shift 2 ;;
+        --keep-worktrees)   keep_wt=1; shift ;;
+        --include-changed)  include_changed=1; shift ;;
+        -h|--help)          usage 0 ;;
+        --)                 shift; break ;;
+        -*)                 echo "Unknown option: $1" >&2; usage 1 ;;
+        *)                  break ;;
     esac
 done
 
@@ -205,20 +210,25 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
 exclude_file="$tmpdir/excluded-theories"
-# Log keys are <rel-path-from-HOLDIR>/<bare-thyname> (no "Theory" suffix,
-# see maybe_log_time_to_disk in src/postkernel/Theory.sml); rewrite each
-# changed *Script.sml path into that form so filter_log's $1-lookup matches.
-git -C "$holdir" diff --name-only "$sha_a" "$sha_b" -- '*Script.sml' \
-  | awk 'sub(/Script\.sml$/, "")' \
-  | sort -u > "$exclude_file"
-
-n_excluded=$(wc -l < "$exclude_file" | tr -d ' ')
 echo
-if [ "$n_excluded" -gt 0 ]; then
-    echo "Excluding $n_excluded script(s) whose *Script.sml changed between refs:"
-    sed 's/^/  /' "$exclude_file"
+if [ -n "$include_changed" ]; then
+    : > "$exclude_file"
+    echo "Not omitting theories with changed scripts (--include-changed)."
 else
-    echo "No *Script.sml files changed between refs; comparing all rows."
+    # Log keys are <rel-path-from-HOLDIR>/<bare-thyname> (no "Theory" suffix,
+    # see maybe_log_time_to_disk in src/postkernel/Theory.sml); rewrite each
+    # changed *Script.sml path into that form so filter_log's $1-lookup matches.
+    git -C "$holdir" diff --name-only "$sha_a" "$sha_b" -- '*Script.sml' \
+      | awk 'sub(/Script\.sml$/, "")' \
+      | sort -u > "$exclude_file"
+
+    n_excluded=$(wc -l < "$exclude_file" | tr -d ' ')
+    if [ "$n_excluded" -gt 0 ]; then
+        echo "Excluding $n_excluded script(s) whose *Script.sml changed between refs:"
+        sed 's/^/  /' "$exclude_file"
+    else
+        echo "No *Script.sml files changed between refs; comparing all rows."
+    fi
 fi
 
 filter_log() {
