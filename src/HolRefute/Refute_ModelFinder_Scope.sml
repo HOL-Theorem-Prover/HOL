@@ -320,6 +320,103 @@ structure Refute_ModelFinder_Scope = struct
     |> Lib.sort (fn (left, _) => fn (right, _) => left <= right)
     |> map #2
 
+  fun all_combinations_ordered_smartly_at_most count ranks =
+    let
+      datatype heap = Empty | Node of int * int list * heap * heap
+
+      fun lex_before [] [] = false
+        | lex_before (left :: lefts) (right :: rights) =
+            left < right orelse (left = right andalso lex_before lefts rights)
+        | lex_before _ _ = raise Util.BAD
+            ("Refute_ModelFinder_Scope.lex_before", "unequal lengths")
+      fun before left right =
+        combination_cost left < combination_cost right orelse
+        (combination_cost left = combination_cost right andalso
+         lex_before left right)
+      fun rank Empty = 0
+        | rank (Node (rank, _, _, _)) = rank
+      fun make value left right =
+        if rank left < rank right then
+          Node (rank left + 1, value, right, left)
+        else
+          Node (rank right + 1, value, left, right)
+      fun merge Empty right = right
+        | merge left Empty = left
+        | merge (left as Node (_, left_value, left_left, left_right))
+            (right as Node (_, right_value, right_left, right_right)) =
+            if before left_value right_value then
+              make left_value left_left (merge left_right right)
+            else
+              make right_value right_left (merge left right_right)
+      fun insert value heap = merge (Node (1, value, Empty, Empty)) heap
+      fun is_synchronized combination =
+        case combination of
+            [] => true
+          | value :: values =>
+              value < sync_threshold andalso
+              List.all (fn other => other = value) values
+      fun baseline () = map #2 ranks
+      fun valid_sync value =
+        List.all (fn (rank, offset) =>
+          value >= offset andalso value < offset + rank) ranks
+      fun children combination =
+        let
+          fun build _ [] [] = []
+            | build left ((rank, offset) :: ranks) (value :: values) =
+                let
+                  val rest_at_offsets = ListPair.allEq
+                    (fn (other, (_, other_offset)) => other = other_offset)
+                    (values, ranks)
+                  val this =
+                    if value + 1 < offset + rank andalso rest_at_offsets then
+                      [rev left @ (value + 1 :: values)]
+                    else []
+                in
+                  this @ build (value :: left) ranks values
+                end
+            | build _ _ _ = raise Util.BAD
+                ("Refute_ModelFinder_Scope.children", "unequal lengths")
+        in
+          List.filter (not o is_synchronized) (build [] ranks combination)
+        end
+      val initial =
+        if null ranks then [[]]
+        else
+          let
+            val synced = List.mapPartial (fn value =>
+              if valid_sync value then SOME (map (fn _ => value) ranks)
+              else NONE) (Util.index_seq 0 sync_threshold)
+            val base = baseline ()
+          in
+            if is_synchronized base then synced else base :: synced
+          end
+      fun loop 0 _ result = rev result
+        | loop _ Empty result = rev result
+        | loop remaining (Node (_, combination, left, right)) result =
+            let
+              val rest = merge left right
+              val next = List.foldl (fn (child, heap) => insert child heap)
+                rest (children combination)
+            in
+              loop (remaining - 1) next (combination :: result)
+            end
+    in
+      loop (Int.max (0, count))
+        (List.foldl (fn (combination, heap) => insert combination heap)
+          Empty initial) []
+    end
+
+  fun number_of_combinations ranks =
+    List.foldl (fn ((rank, _), total) =>
+      total * IntInf.fromInt (Int.max (0, rank))) (1 : IntInf.int) ranks
+
+  fun saturated_int integer =
+    case Int.maxInt of
+        SOME maximum =>
+          if integer > IntInf.fromInt maximum then maximum
+          else IntInf.toInt integer
+      | NONE => IntInf.toInt integer
+
   fun is_self_recursive_constr_type constructor_ty =
     let val body = #2 (boolSyntax.strip_fun constructor_ty)
     in
@@ -662,9 +759,9 @@ structure Refute_ModelFinder_Scope = struct
         maxes_assigns iters_assigns bitss bisim_depths mono_types
         nonmono_types
       val ranks = map rank_of_block blocks
-      val all = all_combinations_ordered_smartly
-        (map (fn rank => (rank, 0)) ranks)
-      val selected = take_at_most max_scopes all
+      val combination_ranks = map (fn rank => (rank, 0)) ranks
+      val selected = all_combinations_ordered_smartly_at_most max_scopes
+        combination_ranks
       val descriptions = List.mapPartial
         (scope_descriptor_from_combination context binarize blocks) selected
       val descriptions =
@@ -672,7 +769,8 @@ structure Refute_ModelFinder_Scope = struct
           distinct_descriptions descriptions
         else descriptions
     in
-      (length all - length selected,
+      (saturated_int (number_of_combinations combination_ranks -
+         IntInf.fromInt (length selected)),
        map (scope_from_descriptor context binarize deep_data_types
          finitizable_data_types) descriptions)
     end
