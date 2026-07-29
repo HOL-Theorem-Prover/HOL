@@ -16,6 +16,7 @@ structure Refute_Gen = struct
   datatype genspec =
       GenDatatype of
         { constrs : (term * hol_type list) list,
+          exhaustive : bool,
           recursive : bool list list,
           min_size : int list list,
           family : hol_type list }
@@ -300,6 +301,7 @@ structure Refute_Gen = struct
               else
                 GenDatatype
                   { constrs = constrs,
+                    exhaustive = true,
                     recursive = recursive,
                     min_size = min_size,
                     family = family }
@@ -368,6 +370,7 @@ structure Refute_Gen = struct
       val spec =
         GenDatatype
           { constrs = constrs,
+            exhaustive = false,
             recursive = recursive,
             min_size = min_size,
             family = [ty] }
@@ -511,8 +514,9 @@ structure Refute_Gen = struct
             (case (cardinality dom, cardinality rng) of
                (SOME dom_card, SOME rng_card) => cap_power rng_card dom_card
              | _ => NONE)
-        | from_spec (GenDatatype {constrs, recursive, ...}) =
-            datatype_cardinality (constrs, recursive)
+        | from_spec (GenDatatype {constrs, exhaustive, recursive, ...}) =
+            if exhaustive then datatype_cardinality (constrs, recursive)
+            else NONE
         | from_spec (GenCustom _) = NONE
     in
       let
