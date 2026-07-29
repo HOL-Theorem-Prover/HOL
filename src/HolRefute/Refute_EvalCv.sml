@@ -1551,7 +1551,7 @@ structure Refute_EvalCv = struct
                 (fn () => #application program 0 0 (!state_ref))
                 (#result_ty program)
               val complete = null (plan_generator_types plan)
-              fun run {size, draws, ...} =
+              fun run {size, draws, ignored, ...} =
                 let
                   val decoded = evaluate
                     (#application program (Int.max (0, draws))
