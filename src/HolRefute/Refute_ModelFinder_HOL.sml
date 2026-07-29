@@ -3758,12 +3758,34 @@ structure Refute_ModelFinder_HOL = struct
         | NONE => candidate domain range
     end handle HOL_ERR _ => NONE
 
+  (* A typedef need not occur through Abs or Rep: it can occur solely in a
+     variable, binder, or equality.  Search every type in the term tree (and
+     all type arguments) before scopes are constructed. *)
   fun first_unregistered_typedef terms =
     let
+      fun type_parts ty =
+        #2 (Type.dest_type ty) handle HOL_ERR _ => []
+      fun types_beneath ty = ty :: List.concat (map types_beneath
+        (type_parts ty))
+      fun candidate ty =
+        if is_interpreted_type ty orelse is_codatatype ty orelse
+           is_quot_type ty orelse is_typedef ty orelse
+           is_raw_free_datatype ty then NONE
+        else
+          case raw_typedef_data ty of
+              SOME _ => SOME ty
+            | NONE => NONE
+      val subterms = List.concat
+        (map (HolKernel.find_terms (K true)) terms)
+      val types = List.concat (map (types_beneath o Term.type_of) subterms)
       val constants = List.concat
         (map (HolKernel.find_terms Term.is_const) terms)
     in
-      get_first unregistered_typedef_type constants
+      (* Retain the morphism-specialized check as a fallback for unusual
+         polymorphic constant instantiations. *)
+      case get_first candidate types of
+          SOME ty => SOME ty
+        | NONE => get_first unregistered_typedef_type constants
     end
 
   fun unregistered_typedef_reason terms =
