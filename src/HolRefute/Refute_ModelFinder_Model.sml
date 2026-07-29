@@ -1367,7 +1367,8 @@ fun format_fun target_ty term =
                      if MFH.is_boolean_type source_range then
                        let
                          val groups = grouped
-                           (map (fn element => (element, boolSyntax.T)) elements)
+                           (map (fn element =>
+                             (element, boolSyntax.T)) elements)
                          val outer_base = make_literal_set right_ty []
                        in
                          make_display_fun left_ty outer_base

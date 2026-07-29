@@ -122,7 +122,8 @@ structure Refute_QC = struct
                   case smart_context () of
                       NONE => {result = NONE, trigger = false, reason = NONE}
                     | SOME context =>
-                        (case MFH.instantiated_fixpoint_group context relation of
+                        (case MFH.instantiated_fixpoint_group context
+                              relation of
                              SOME {members, rules, ...} =>
                                (case SmartGen.infer_scc
                                   {members = members, rules = rules,

@@ -748,8 +748,8 @@ structure Refute_ModelFinder_Scope = struct
       else value :: result) [] values)
 
   fun all_scopes context binarize cards_assigns maxes_assigns
-        iters_assigns bitss bisim_depths mono_types nonmono_types deep_data_types
-        finitizable_data_types =
+        iters_assigns bitss bisim_depths mono_types nonmono_types
+        deep_data_types finitizable_data_types =
     let
       val cards_assigns =
         repair_cards_assigns_wrt_boxing_etc
