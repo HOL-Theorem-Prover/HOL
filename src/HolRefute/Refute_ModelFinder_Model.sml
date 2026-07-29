@@ -1870,7 +1870,7 @@ fun rf_constructor card serial =
    the static rf_k enum and its displayed fake atoms are transported to the
    corresponding constructors.  The reconstructed model itself remains
    polymorphic, so none of these rf terms escape into model display. *)
-fun certification_copy scope original eval_terms bindings =
+fun certification_copy scope types original eval_terms bindings =
   let
     val tyvars = Lib.U (map Term.type_vars_in_term
       (original :: eval_terms @
@@ -1889,14 +1889,6 @@ fun certification_copy scope original eval_terms bindings =
                    SOME ((tyvar, card) :: rows)
                  else NONE
              | _ => NONE)
-    fun atom_substitutions (tyvar, card) =
-      let
-        val ty = rf_type card
-      in
-        List.tabulate (card, fn index =>
-          {redex = MFN.fake_atom (index + 1) ty,
-           residue = rf_constructor card (index + 1)})
-      end
   in
     if null tyvars then
       Option.map (fn env =>
@@ -1909,18 +1901,39 @@ fun certification_copy scope original eval_terms bindings =
             let
               val theta = map (fn (tyvar, card) =>
                 {redex = tyvar, residue = rf_type card}) rows
-              val atoms = List.concat (map atom_substitutions rows)
-              fun copy_value value = Term.subst atoms
-                (Term.inst theta (replace_irrelevant value))
-              val env = map (fn (variable, value) =>
-                (Term.inst theta variable, copy_value value)) bindings
+              fun atom_substitutions (tyvar, card) =
+                case List.find (fn (other, _, _) =>
+                    Util.same_type tyvar other) types of
+                    SOME (_, atoms, _) =>
+                      if length atoms = card then
+                        SOME (ListPair.mapEq (fn (atom, index) =>
+                          {redex = Term.inst theta atom,
+                           residue = rf_constructor card index})
+                          (atoms, Portable.upto 1 card))
+                      else NONE
+                  | NONE => NONE
+              fun collect_atoms [] = SOME []
+                | collect (row :: rest) =
+                    (case (atom_substitutions row, collect_atoms rest) of
+                         (SOME atoms, SOME others) => SOME (atoms @ others)
+                       | _ => NONE)
             in
-              if List.all (null o Term.free_vars_lr o #2) env then
-                SOME
-                  {original = Term.inst theta original,
-                   eval_terms = map (Term.inst theta) eval_terms,
-                   env = env, polymorphic = true}
-              else NONE
+              case collect_atoms rows of
+                  NONE => NONE
+                | SOME atoms =>
+                    let
+                      fun copy_value value = Term.subst atoms
+                        (Term.inst theta (replace_irrelevant value))
+                      val env = map (fn (variable, value) =>
+                        (Term.inst theta variable, copy_value value)) bindings
+                    in
+                      if List.all (null o Term.free_vars_lr o #2) env then
+                        SOME
+                          {original = Term.inst theta original,
+                           eval_terms = map (Term.inst theta) eval_terms,
+                           env = env, polymorphic = true}
+                      else NONE
+                    end
             end
   end
 
@@ -1962,7 +1975,7 @@ fun certify {executable, original, eval_terms,
              reconstruction = reconstructed, cex, sound,
              genuine_means_genuine = genuine, reasons} =
   let
-    val {bindings, evals, codatatypes_ok, ...} = reconstructed
+    val {bindings, evals, types, codatatypes_ok, ...} = reconstructed
     val genuine = genuine andalso codatatypes_ok
     val model = SOME (model_report reconstructed)
     (* Kodkodi is an accelerator, not a proof oracle.  A reconstructed
@@ -1975,7 +1988,8 @@ fun certify {executable, original, eval_terms,
       bindings evals NONE model
   in
     case if executable andalso codatatypes_ok then
-           certification_copy (#scope cex) original eval_terms bindings
+           certification_copy (#scope cex) types original eval_terms
+             bindings
          else NONE of
         NONE => Keep base
       | SOME {original = cert_original, eval_terms = cert_evals,
