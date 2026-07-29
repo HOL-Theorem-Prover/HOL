@@ -1959,7 +1959,13 @@ fun certify {executable, original, eval_terms,
     val {bindings, evals, codatatypes_ok, ...} = reconstructed
     val genuine = genuine andalso codatatypes_ok
     val model = SOME (model_report reconstructed)
-    val base = replace_cex cex (fallback_certainty sound genuine reasons)
+    (* Kodkodi is an accelerator, not a proof oracle.  A reconstructed
+       assignment remains Potential until Refute_Cert establishes the HOL
+       counterexample; translation-side soundness flags cannot validate an
+       untrusted solver's formula or bounds. *)
+    val base = replace_cex cex
+      (Refute_Core.Potential
+        ("untrusted Kodkodi model; no HOL certificate" :: reasons))
       bindings evals NONE model
   in
     case if executable andalso codatatypes_ok then
