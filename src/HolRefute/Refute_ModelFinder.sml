@@ -666,8 +666,9 @@ fun run_instance deadline started (config : Refute_Core.config)
                            a later liberal model (which could be merely
                            Potential), and consume exactly one genuine slot
                            before dropping the remaining unsound problems. *)
-                        fun reconstruct_until_genuine [] = (false, 0)
-                          | reconstruct_until_genuine
+                        fun reconstruct_until_genuine _ [] = (false, 0)
+                          | reconstruct_until_genuine 0 _ = (false, 0)
+                          | reconstruct_until_genuine remaining
                               ((index, bounds) :: models) =
                               (case reconstruct
                                   (List.nth (problems, index)) bounds of
@@ -677,26 +678,24 @@ fun run_instance deadline started (config : Refute_Core.config)
                                      else
                                        let
                                          val (promoted, kept) =
-                                           reconstruct_until_genuine models
+                                           reconstruct_until_genuine
+                                             (remaining - 1) models
                                        in
                                          (promoted, kept + 1)
                                        end
-                                 | NONE => reconstruct_until_genuine models)
+                                 | NONE =>
+                                     reconstruct_until_genuine
+                                       remaining models)
+                        (* A solver may over-deliver.  Scan past failed
+                           reconstructions, but charge only usable models. *)
                         val (promoted, kept) = reconstruct_until_genuine
-                          (take_at_most max_potential liberal)
+                          max_potential liberal
                         val found = found_really_genuine orelse promoted
-                        (* Port the upstream over-delivery behavior
-                           bug-for-bug in incremental mode: even unprinted
-                           liberal models consume potential slots; recursive
-                           entry clamps at zero.  At the degenerate M3
-                           boundary, only reconstructed models consume the
-                           single slot.
-                           See [m4-driver section 7 Q5]. *)
                         val (max_potential, max_genuine) =
                           liberal_budget_after_models
                             {max_potential = max_potential,
                              max_genuine = max_genuine,
-                             delivered = length liberal,
+                             delivered = kept,
                              kept = kept, promoted = promoted,
                              incremental = incremental}
                         val _ = latest_state :=
