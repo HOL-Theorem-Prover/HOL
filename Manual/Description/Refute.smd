@@ -572,10 +572,11 @@ replaces the old one.
   a configuration- and instance-sensitive certainty ceiling.  The
   callback must overestimate: an underestimate can stop a race before a
   stronger result and violates the contract.
-* `register_codatatype {tyop, case_const, constructors}` describes an
-  existing codatatype.  Constructor, branch, and scrutinee types are
-  checked.  Built-in lazy registrations cover `llist`, `ltree`, `itree`,
-  `itreeTau`, `lbtree`, and `path` when their theories are present.
+* `register_codatatype {tyop, case_const, constructors}` validates or
+  refreshes an audited built-in codatatype registration.  User-defined
+  codatatypes cannot yet be registered, because their coinduction witness is
+  not part of this API.  Built-in lazy registrations cover `llist`, `ltree`,
+  `itree`, `itreeTau`, `lbtree`, and `path` when their theories are present.
 * `register_typedef {ty, abs, rep, absrep_thm}` registers existing Abs and
   Rep constants and the exported bijection conjunction.
   `register_quotient {qty, rty, abs, rep, equiv_thm, partial}` registers

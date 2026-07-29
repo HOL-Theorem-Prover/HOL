@@ -142,11 +142,10 @@ different cardinalities.
 
 Registrations are session-local ML state and create no theory content:
 
-* `Refute.register_codatatype {tyop, case_const, constructors}` registers a
-  genuine type operator, its case constant, and its distinct constructors.
-  Registration checks the constructor and branch types and requires a unique
-  codatatype scrutinee argument; both scrutinee-first and scrutinee-last case
-  constants are supported.  Lazy built-ins cover `llist`, `ltree`, `itree`,
+* `Refute.register_codatatype {tyop, case_const, constructors}` validates or
+  refreshes an audited built-in codatatype registration.  User-defined
+  codatatypes cannot yet be registered, because their coinduction witness is
+  not part of this API.  Lazy built-ins cover `llist`, `ltree`, `itree`,
   `itreeTau`, `lbtree`, and `path` when their theories are present.
 * `Refute.register_quotient {qty, rty, abs, rep, equiv_thm, partial}`
   registers the abstract and representation types and constants.  The

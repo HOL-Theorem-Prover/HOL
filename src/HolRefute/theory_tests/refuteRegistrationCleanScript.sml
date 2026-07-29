@@ -4,11 +4,6 @@ Ancestors
 Libs
   Refute
 
-val _ = Refute.register_codatatype
-  {tyop = {Thy = "refuteTableZoo", Tyop = "zoo_tree"},
-   case_const = ``zoo_tree_CASE``,
-   constructors = [``ZooLeaf``, ``ZooNode``]};
-
 val _ = Refute.register_typedef
   {ty = ``:zoo_three``, abs = ``zoo_three_abs``, rep = ``zoo_three_rep``,
    absrep_thm = zoo_three_absrep};
