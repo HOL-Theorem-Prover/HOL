@@ -2253,6 +2253,21 @@ structure Refute_ModelFinder_HOL = struct
         validate_codatatype_shape registration
       val result_ty = #2 (boolSyntax.strip_fun
         (Term.type_of (hd constructors)))
+      (* Constructor/case types cannot distinguish inductive data from
+         codata.  Until a registration carries a checked coinduction
+         witness, accept only the audited built-in codata descriptions;
+         treating an arbitrary TypeBase datatype as codata removes its
+         acyclicity constraints. *)
+      val _ =
+        case builtin_codatatype_for tyop of
+            SOME {case_const, constructors = builtin_constructors, ...} =>
+              if Term.aconv case_const (#case_const normalized) andalso
+                 ListPair.allEq Term.aconv
+                   (builtin_constructors, constructors) then ()
+              else raise err "register_codatatype"
+                "registration disagrees with the built-in codatatype"
+          | NONE => raise err "register_codatatype"
+            "unverified codatatype registration requires a coinduction witness"
       val _ = if has_type_operator (type_operator_of o #qty)
                        quotient_registry result_ty orelse
                      has_type_operator (type_operator_of o #ty)
