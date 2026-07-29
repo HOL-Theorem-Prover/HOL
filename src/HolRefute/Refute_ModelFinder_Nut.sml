@@ -281,7 +281,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
     handle NUT _ => false
 
   fun is_eval_name nut =
-    String.isPrefix MFN.eval_prefix (nickname_of nut)
+    Option.isSome (MFN.eval_index (nickname_of nut))
     handle NUT _ => false
 
   fun is_Cst constant (Cst (other, _, _)) = constant = other

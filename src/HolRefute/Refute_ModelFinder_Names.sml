@@ -34,6 +34,18 @@ structure Refute_ModelFinder_Names = struct
   fun drop_prefix prefix string =
     String.extract (string, size prefix, NONE)
 
+  fun eval_index name =
+    if String.isPrefix eval_prefix name then
+      let val suffix = drop_prefix eval_prefix name
+      in
+        case Int.fromString suffix of
+            SOME index =>
+              if index >= 0 andalso Int.toString index = suffix then SOME index
+              else NONE
+          | NONE => NONE
+      end
+    else NONE
+
   fun strip_first_name_sep string =
     let
       val (left, right) =

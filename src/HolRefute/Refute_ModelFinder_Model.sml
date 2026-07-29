@@ -1497,11 +1497,7 @@ fun assignment_operator name =
   else if MFN.is_lbfp_name name then "≥"
   else "="
 
-fun eval_index name =
-  if String.isPrefix MFN.eval_prefix name then
-    Int.fromString (String.extract (name, size MFN.eval_prefix, NONE))
-  else
-    NONE
+fun eval_index name = MFN.eval_index name
 
 fun is_safe_the term =
   case Lib.total Term.dest_thy_const term of
