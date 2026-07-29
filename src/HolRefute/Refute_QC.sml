@@ -995,10 +995,15 @@ structure Refute_QC = struct
               fun selected_body () =
                 let
                   val entries = schedule instances (#size (#qc config))
+              (* A random plan with no generators is exhaustive only after
+                 there is an entry on which to run it.  In particular, zero
+                 iterations and an empty instance set must not turn a
+                 vacuous List.all into a proof of exhaustiveness. *)
               val complete = ref
-                (if is_random strategy then
-                   List.all (not o plan_has_gen) plans
-                 else not (null entries))
+                (not (null entries) andalso
+                 (if is_random strategy then
+                    List.all (not o plan_has_gen) plans
+                  else true))
               val counterexamples = ref []
               val replay_potential = ref NONE
               val discarded = ref 0
