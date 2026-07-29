@@ -342,7 +342,29 @@ structure Refute_Core = struct
       reorder_premises = (case update of QcReorderPremises value => value
                           | _ => #reorder_premises qc) }
 
-  fun update_qc update = map_qc (change_qc update)
+  fun validate_qc_config (qc : qc_config) =
+    let
+      fun invalid field = raise Feedback.mk_HOL_ERR "Refute_Core"
+        "validate_qc_config" (field ^ ": must be a bounded nonnegative integer")
+      val _ = if #size qc < 0 then invalid "size" else ()
+      val _ =
+        case Int.maxInt of
+            SOME maximum => if #size qc = maximum then invalid "size" else ()
+          | NONE => ()
+      val _ = if #iterations qc < 0 then invalid "iterations" else ()
+      val _ = if #depth qc < 0 then invalid "depth" else ()
+      val _ = if #finite_type_size qc < 0 then invalid "finite_type_size"
+              else ()
+    in
+      qc
+    end
+
+  (* Rebind the record replacement updater too, so callers cannot bypass
+     the scalar updater checks with [upd_qc]. *)
+  fun upd_qc value (cfg : config) =
+    map_qc (fn _ => validate_qc_config value) cfg
+
+  fun update_qc update = map_qc (validate_qc_config o change_qc update)
 
   fun upd_size value = update_qc (QcSize value)
   fun upd_iterations value = update_qc (QcIterations value)
