@@ -229,8 +229,27 @@ structure Refute_Narrow = struct
         case Refute_Gen.spec_of ty of
             Refute_Gen.GenEnum values => flat_shape depth true values
           | Refute_Gen.GenNum kind =>
-              flat_shape depth false
-                (Refute_Gen.narrowing_terms kind depth)
+              let
+                fun word_complete width =
+                  let
+                    (* Keep the bound saturated: [2 * maximum + 1] is
+                       formed only after proving it fits beneath [depth]. *)
+                    fun loop 0 maximum = maximum <= depth
+                      | loop remaining maximum =
+                          if maximum > (depth - 1) div 2 then false
+                          else loop (remaining - 1) (2 * maximum + 1)
+                  in
+                    if width <= 0 then true else loop width 0
+                  end
+                val complete =
+                  case kind of
+                      Refute_Gen.Char => true
+                    | Refute_Gen.Word width => word_complete width
+                    | _ => false
+              in
+                flat_shape depth complete
+                  (Refute_Gen.narrowing_terms kind depth)
+              end
           | Refute_Gen.GenDatatype {constrs, ...} =>
               let
                 fun constructor_shape
