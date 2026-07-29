@@ -41,7 +41,6 @@ structure Refute_EvalSML = struct
   val native_mutex = Mutex.mutex ()
   val compiler_mutex = Mutex.mutex ()
   val goal_compile_mutex = Mutex.mutex ()
-  val compile_serial = ref 0
   val reconstruction_forces = ref 0
 
   datatype install_result =
