@@ -77,6 +77,13 @@ structure Refute_EvalCv = struct
       (List.find (fn (entry_ty, _) => Util.same_type entry_ty ty)
         generator_table)
 
+  fun table_random_aux ty =
+    if Util.same_type ty ``:num list`` then
+      SOME ``refute_cv$refute_cv_rnd_num_list_aux``
+    else if Util.same_type ty ``:string`` then
+      SOME ``refute_cv$refute_cv_rnd_string_aux``
+    else NONE
+
   fun registered ty entries =
     List.exists (fn (entry_ty, _) => Util.same_type entry_ty ty) entries
 
@@ -311,7 +318,7 @@ structure Refute_EvalCv = struct
         case table_generator ty of
             SOME {exhaustive, random, ...} =>
               {exhaustive = exhaustive, random = random,
-               random_aux = NONE}
+               random_aux = table_random_aux ty}
           | NONE =>
               let val data = find_vars ty
               in
@@ -449,9 +456,10 @@ structure Refute_EvalCv = struct
             | SOME aux =>
                 let
                   val actual_budget =
-                    if recursive then budget
+                    if recursive then numSyntax.mk_minus (budget, numeral 1)
                     else numSyntax.mk_max
-                      (numeral (recipe_floor (find_recipe ty)), size)
+                      (numeral (Refute_Gen.own_floor
+                        (Refute_Gen.spec_of ty)), budget)
                 in
                   Term.list_mk_comb
                     (aux, [actual_budget, size, state])
@@ -531,9 +539,8 @@ structure Refute_EvalCv = struct
                 (flags :: more_flags) (floors :: more_floors) =
                 let
                   val weight = weight_term budget flags floors
-                  val branch = draw_arguments constructor args flags
-                    (numSyntax.mk_minus (budget, numeral 1)) size
-                    (Term.mk_var ("state1", numSyntax.num))
+                  val branch = draw_arguments constructor args flags budget
+                    size (Term.mk_var ("state1", numSyntax.num))
                 in
                   (weight, branch) ::
                     entries rest more_flags more_floors

@@ -2922,7 +2922,9 @@ structure Refute_Extract = struct
               val next = "state_" ^ integer number
               val call = if flag then generator_name "rnd_aux_" ty ^ " " ^
                 "(Int.max (0, " ^ budget ^ " - 1)) " ^ size ^ " " ^ state
-                else generator_name "rnd_" ty ^ " " ^ size ^ " " ^ state
+                else generator_name "rnd_aux_" ty ^ " " ^
+                  "(Int.max (" ^ integer (floor_for ty) ^ ", " ^ budget ^ ")) " ^
+                  size ^ " " ^ state
             in
               "let val (" ^ generated ^ ", " ^ next ^ ") = " ^ call ^
               " in " ^ random_arguments tys flags budget size next
