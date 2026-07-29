@@ -1632,6 +1632,14 @@ structure Refute_EvalCv = struct
                 run
               end
 
+      (* Generator synthesis, definitions, and cv translation are
+         applicability checks, not evaluation results.  Force them while
+         Auto can still select the next substrate. *)
+      val _ =
+        (start ();
+         List.app (fn card => ignore (runner card))
+           (Portable.upto 1 (length plans)))
+
       fun run input =
         let
           val _ = start ()
