@@ -15,25 +15,17 @@ fun get_first f =
 (* Losing workers are interrupted, never killed.  A worker can hold a
    process-global lock across an uninterruptible section (Refute's theory
    bracket is one), and Thread.kill terminates without unwinding, so a kill
-   would leak that lock for the rest of the session.  A worker that has not
-   exited when the grace period runs out is left to finish on its own. *)
-val grace = Time.fromReal 5.0;
-
+   would leak that lock for the rest of the session.  In particular, do not
+   return while such a worker is still running: the caller may otherwise
+   restore process-global state beneath it. *)
 fun stop_threads threads =
   let
     val _ = List.app Standard_Thread.interrupt_unsynchronized threads
-    val deadline = Time.now () + grace
     fun await thread =
-      if not (Thread.isActive thread) then true
-      else if Time.now () >= deadline then false
+      if not (Thread.isActive thread) then ()
       else (OS.Process.sleep (Time.fromReal 0.001); await thread)
-    val stragglers = List.length (List.filter (not o await) threads)
   in
-    if stragglers = 0 then ()
-    else
-      Multithreading.tracing 1 (fn () =>
-        "ParList.get_some: " ^ Int.toString stragglers ^
-        " worker(s) still running after " ^ Time.toString grace ^ "s")
+    List.app await threads
   end;
 
 fun get_some f [] = NONE
