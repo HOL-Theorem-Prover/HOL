@@ -54,17 +54,19 @@ structure Refute_Extract = struct
   fun fix_reserved name =
     if Lib.mem name reserved then name ^ "_" else name
 
+  (* SML names generated for binders must not identify distinct HOL names.
+     Prefix every name and escape every non-alphanumeric character, including
+     underscore and apostrophe, so the result is also always an SML value id. *)
   fun clean_name name =
     let
       fun clean character =
-        if Char.isAlphaNum character orelse character = #"_" orelse
-           character = #"'" then character
-        else #"_"
-      val cleaned = String.map clean name
+        if Char.isAlpha character orelse Char.isDigit character then
+          String.str character
+        else if character = #"_" then "_u"
+        else if character = #"'" then "_p"
+        else "_x" ^ Int.fmt StringCvt.HEX (Char.ord character) ^ "_"
     in
-      if cleaned = "" then "x"
-      else if Char.isDigit (String.sub (cleaned, 0)) then "x_" ^ cleaned
-      else fix_reserved cleaned
+      fix_reserved ("v_" ^ String.concat (map clean (String.explode name)))
     end
 
   fun upper_name name = "C_" ^ clean_name name
