@@ -64,8 +64,11 @@ fun get_some f [] = NONE
                 val thread =
                   Standard_Thread.fork
                     {name = "ParList.get_some", stack_limit = NONE,
-                     interrupts = true}
-                    (fn () => publish n (f x handle _ => NONE));
+                     interrupts = false}
+                    (fn () =>
+                      Thread_Attributes.with_attributes
+                        Thread_Attributes.private_interrupts
+                        (fn _ => publish n (f x handle _ => NONE)));
                 val _ = forked := (n, thread) :: !forked
               in
                 fork_all (n + 1) rest
