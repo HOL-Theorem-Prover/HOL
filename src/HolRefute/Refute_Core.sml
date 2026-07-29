@@ -990,13 +990,18 @@ structure Refute_Core = struct
      never run, or is killed by the parallel race, cannot release them
      itself, so holders register a run-scoped release here; it runs on every
      exit path of [refute_problem_unquiet]. *)
-  val run_releases : (unit -> unit) list ref = ref []
+  val run_releases : (string * (unit -> unit)) list ref = ref []
 
-  fun register_run_release release =
-    run_releases := !run_releases @ [release]
+  (* Registrations are made when implementation units are loaded, so give
+     releases stable names and replace an old registration on reload. *)
+  fun register_run_release name release =
+    run_releases :=
+      List.filter (fn (old_name, _) => old_name <> name) (!run_releases) @
+      [(name, release)]
 
   fun release_run_resources () =
-    List.app (fn release => ignore (Exn.capture release ())) (!run_releases)
+    List.app (fn (_, release) => ignore (Exn.capture release ()))
+      (!run_releases)
 
   fun backend_before (left : string * backend_registration)
       (right : string * backend_registration) =

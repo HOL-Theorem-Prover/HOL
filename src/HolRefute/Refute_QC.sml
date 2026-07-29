@@ -1172,7 +1172,8 @@ structure Refute_QC = struct
      Refute_EvalCv.register_substrate ();
      Refute_Core.register_backend exhaustive_backend;
      Refute_Core.register_backend random_backend;
-     Refute_Core.register_run_release clear_smart_gate_cache)
+     Refute_Core.register_run_release "qc-smart-gate-cache"
+       clear_smart_gate_cache)
 
   val _ = register_backends ()
 end
