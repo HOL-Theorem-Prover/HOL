@@ -670,8 +670,17 @@ structure Refute_QC = struct
       Selected of string * compiled_test
     | SelectionFailed of string list
 
+  (* A smart-gate compilation owns backend resources.  Calls can re-enter
+     Refute, so cache it by the dynamically propagated call token rather
+     than in one process-global slot. *)
   val smart_gate_cache =
-    ref (NONE : (plan list * selected_compile) option)
+    ref ([] : (unit ref * plan list * selected_compile) list)
+  val smart_gate_mutex = Mutex.mutex ()
+
+  fun smart_gate_context () =
+    case Thread_Data.get Refute_Core.active_refute_context of
+        SOME context => context
+      | NONE => raise Fail "Refute_QC: no active Refute call"
 
   fun same_terms left right =
     length left = length right andalso
@@ -739,23 +748,46 @@ structure Refute_QC = struct
   fun close_selection (SelectionFailed _) = ()
     | close_selection (Selected (_, test)) = #close test ()
 
+  fun same_smart_gate_context (left, right) =
+    Portable.pointer_eq (left, right)
+
+  fun remove_smart_gate_selection context =
+    Multithreading.synchronized "Refute smart gate cache" smart_gate_mutex
+      (fn () =>
+        let
+          fun remove [] kept = (NONE, List.rev kept)
+            | remove ((entry as (old_context, plans, selection)) :: rest) kept =
+                if same_smart_gate_context (context, old_context) then
+                  (SOME (plans, selection), List.revAppend (kept, rest))
+                else remove rest (entry :: kept)
+          val (selection, cache) = remove (!smart_gate_cache) []
+          val _ = smart_gate_cache := cache
+        in
+          selection
+        end)
+
   fun clear_smart_gate_cache () =
-    case !smart_gate_cache of
+    case remove_smart_gate_selection (smart_gate_context ()) of
         NONE => ()
-      | SOME (_, selection) =>
-          (smart_gate_cache := NONE; close_selection selection)
+      | SOME (_, selection) => close_selection selection
 
   fun store_smart_gate_selection plans selection =
-    (clear_smart_gate_cache ();
-     smart_gate_cache := SOME (plans, selection))
+    let
+      val context = smart_gate_context ()
+      val old = remove_smart_gate_selection context
+      val _ = Option.app (close_selection o #2) old
+    in
+      Multithreading.synchronized "Refute smart gate cache" smart_gate_mutex
+        (fn () => smart_gate_cache :=
+          (context, plans, selection) :: !smart_gate_cache)
+    end
 
   fun take_smart_gate_selection plans =
-    case !smart_gate_cache of
+    case remove_smart_gate_selection (smart_gate_context ()) of
         NONE => NONE
       | SOME (cached_plans, selection) =>
-          (smart_gate_cache := NONE;
-           if same_plans cached_plans plans then SOME selection
-           else (close_selection selection; NONE))
+          if same_plans cached_plans plans then SOME selection
+          else (close_selection selection; NONE)
 
   datatype substrate_candidates =
       Candidates of {explicit : bool, substrates : substrate list}

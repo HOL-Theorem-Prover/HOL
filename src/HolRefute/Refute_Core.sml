@@ -1605,16 +1605,17 @@ structure Refute_Core = struct
             (Feedback.quiet_messages
               (Feedback.quiet_warnings
                 (refute_problem_unquiet cfg))) problem
+      (* A callback can re-enter Refute from a backend worker.  Its child
+         call needs separate run resources, but must not reacquire the
+         non-recursive output mutex. *)
+      fun in_context () =
+        Thread_Data.setmp active_refute_context (SOME (ref ())) run ()
     in
-      (* A callback can re-enter Refute from a backend worker.  Propagate the
-         logical call context to workers, so it inherits the enclosing quiet
-         scope instead of attempting to acquire this non-recursive mutex. *)
       case Thread_Data.get active_refute_context of
-          SOME _ => refute_problem_unquiet cfg problem
+          SOME _ => in_context ()
         | NONE =>
             Multithreading.synchronized "Refute quiet output" quiet_mutex
-              (fn () => Thread_Data.setmp active_refute_context
-                (SOME (ref ())) run ())
+              in_context
     end
 
   fun refute cfg tm =
