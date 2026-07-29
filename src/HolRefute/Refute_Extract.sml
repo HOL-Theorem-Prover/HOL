@@ -1323,14 +1323,27 @@ structure Refute_Extract = struct
               "| _ => raise Refute_EvalSML.Stuck \"EL\")"
             else "refute_nth " ^ xs ^ " " ^ n
           | _ => raise Fail "EL"))
-      | ("list", "LAST") => SOME (call "refute_last" 1 arguments)
-      | ("list", "FRONT") => SOME (call "refute_front" 1 arguments)
+      | ("list", "LAST") =>
+          SOME (call (if string_list () then
+            "(refute_last o String.explode)" else "refute_last")
+            1 arguments)
+      | ("list", "FRONT") =>
+          SOME (call (if string_list () then
+            "(String.implode o refute_front o String.explode)"
+            else "refute_front") 1 arguments)
       | ("list", "SNOC") => SOME (with_arity arguments 2 (fn values =>
-          case values of [x, xs] => xs ^ " @ [" ^ x ^ "]"
+          case values of [x, xs] =>
+            if string_argument 1 then
+              parens (xs ^ " ^ String.str " ^ parens x)
+            else parens (xs ^ " @ [" ^ x ^ "]")
           | _ => raise Fail "SNOC"))
       | ("list", "ALL_DISTINCT") =>
-          SOME (call ("refute_all_distinct " ^ list_eq_argument ())
-            1 arguments)
+          SOME (with_arity arguments 1 (fn values =>
+            case values of [xs] =>
+              "refute_all_distinct " ^ list_eq_argument () ^ " " ^
+              parens (if string_list () then
+                "String.explode " ^ parens xs else xs)
+            | _ => raise Fail "ALL_DISTINCT"))
       | ("option", "THE") => SOME (call "refute_the" 1 arguments)
       | ("option", "IS_SOME") => SOME (with_arity arguments 1 (fn values =>
           case values of [a] => parens ("case " ^ a ^

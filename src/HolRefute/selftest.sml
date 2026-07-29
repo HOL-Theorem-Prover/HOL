@@ -17766,6 +17766,28 @@ fun native_smoke () =
     List.all strategies goals
   end
 
+fun native_char_list_primitives () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_smart_generators false
+      |> upd_iterations 100
+      |> upd_size 3
+    val goals =
+      [``!s : string. SNOC #"a" s = s``,
+       ``!s : string. s <> [] ==> LAST s = #"a"``,
+       ``!s : string. s <> [] ==> FRONT s = s``,
+       ``!s : string. ALL_DISTINCT s ==> LENGTH s < 2``]
+    fun succeeds goal =
+      case run_with_strategy Exhaustive config goal of
+          Counterexample
+            ({substrate = "native", certainty = Genuine,
+              cert = SOME _, ...} :: _) => true
+        | _ => false
+  in
+    List.all succeeds goals
+  end
+
 fun native_custom_is_inapplicable () =
   let
     val variable = Term.mk_var ("native_custom", ``:rg_record``)
@@ -17858,10 +17880,12 @@ fun native_ignored_filter_resumes () =
 
 val _ = tprint "Refute native substrate smoke"
 val _ = require_msg (check_result (fn () =>
-  native_smoke () andalso native_custom_is_inapplicable () andalso
+  native_smoke () andalso native_char_list_primitives () andalso
+  native_custom_is_inapplicable () andalso
   native_compile_error_is_reason () andalso
   native_ignored_filter_resumes ())) (fn () =>
-  "the native harness disagreed, accepted a custom generator, or crashed")
+  "the native harness disagreed, mishandled char lists, accepted a custom " ^
+  "generator, or crashed")
   (fn () => ()) ()
 
 fun native_timeout_is_healthy () =
@@ -21758,6 +21782,7 @@ fun mf_mono_driver_scope_fusion solver =
     val goal = ``p (x : 'a) /\ q (y : 'b)``
     val base = mf_acceptance_config solver
       |> Refute.upd_card [(NONE, [1, 2, 3])]
+      |> Refute.upd_tac_timeout 5.0
     fun run config = #1 (capture_refute_messages 2 (fn () =>
       Refute.refute config goal))
     fun scopes outcome =
