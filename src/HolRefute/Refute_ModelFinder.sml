@@ -248,6 +248,31 @@ fun liberal_budget_after_models
 
 fun raw_problem (problem, _ : MFK.problem_metadata) = problem
 
+(* Kodkodi's textual instance format is syntactic only.  Check the instance
+   against the emitted bound schema before reconstruction: absent relations
+   otherwise decode as empty relations. *)
+fun valid_instance (problem : KK.problem) assignments =
+  let
+    val expected = List.concat (map #1 (#bounds problem))
+    fun member relation = List.exists (fn other => other = relation)
+    fun distinct relations =
+      case relations of
+          [] => true
+        | relation :: rest => not (member relation rest) andalso
+          distinct rest
+    fun valid_assignment ((arity, relation), tuples) =
+      member (arity, relation) expected andalso
+      List.all (fn tuple =>
+        length tuple = arity andalso
+        List.all (fn atom => atom >= 0 andalso atom < #univ_card problem)
+          tuple) tuples
+    val relations = map #1 assignments
+  in
+    length assignments = length expected andalso distinct relations andalso
+    List.all (fn relation => member relation relations) expected andalso
+    List.all valid_assignment assignments
+  end
+
 fun rich_problems_equivalent (left : rich_problem, right : rich_problem) =
   #unsound (metadata left) = #unsound (metadata right) andalso
   MFS.scopes_equivalent
@@ -545,6 +570,11 @@ fun run_instance deadline started (config : Refute_Core.config)
        model = NONE, stats = []}
 
     fun reconstruct problem bounds =
+      if not (valid_instance (raw_problem problem) bounds) then
+        (discarded_sound_model := true;
+         add_error "Kodkodi returned a malformed model instance";
+         NONE)
+      else
       let
         val extension = metadata problem
         val arguments =
