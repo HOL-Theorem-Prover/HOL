@@ -1456,8 +1456,12 @@ structure Refute_Forl :> REFUTE_FORL = struct
            The supervising shell forwards cancellation to that process group
            before it exits, so a wrapper cannot orphan its JVM or SAT child. *)
         val supervised =
-          "trap 'kill -TERM -$child 2>/dev/null; wait \"$child\"; " ^
-          "exit 130' TERM INT; setsid /bin/sh -c " ^ shell_quote command ^
+          (* A cooperative TERM alone is not a cleanup bound: a launcher,
+             JVM, or SAT descendant may ignore it.  Escalate the isolated
+             child process group before waiting for the supervisor. *)
+          "trap 'kill -TERM -$child 2>/dev/null; sleep 1; " ^
+          "kill -KILL -$child 2>/dev/null; wait \"$child\"; exit 130' " ^
+          "TERM INT; setsid /bin/sh -c " ^ shell_quote command ^
           " & child=$!; wait \"$child\""
         val process = Unix.execute ("/bin/sh", ["-c", supervised])
         val reaped = ref false
