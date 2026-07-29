@@ -325,6 +325,16 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
        update_global_value = update_global_value}
     end
 
+(* Keep persistence and publication in one interrupt-masked Sref update.
+   The callback is restored only while it validates and computes the next
+   value; an interrupt can therefore leave neither half of the update behind. *)
+fun update_global_value_and_record (fr : ('delta,'value)fullresult)
+      delta f =
+  Thread_Attributes.uninterruptible (fn restore => fn () =>
+    #update_global_value fr (fn current =>
+      let val value = restore f current
+      in #record_delta fr delta; value end)) ()
+
 fun with_temp_value (fr:('delta,'value)fullresult) v =
     Portable.genwith_flag ({ get = #get_global_value fr,
                              set = #update_global_value fr o K }, v)

@@ -274,12 +274,8 @@ fun export_with_ancestry
                  steps succeed.  Recording an invalid delta poisons every
                  descendant; publishing before a failed recording leaves a
                  session-only theorem-set entry. *)
-              #update_global_value fullresult (fn current =>
-                let val value = raw_apply_global d current
-                in
-                  #record_delta fullresult d;
-                  value
-                end)
+              AncestryData.update_global_value_and_record fullresult d
+                (raw_apply_global d)
             end
           else raise ERR "store_attrfun"
                      ("Arguments not allowed for attribute " ^ attrname)
@@ -338,9 +334,15 @@ fun export_simple_dictionary {settype,initial} =
     in
       {merge = #merge res, DB = #DB res,
        temp_exclude = temp_exclude,
-       exclude = (fn s => (temp_exclude s; #record_delta res (REMOVE s))),
+       exclude = (fn s =>
+         AncestryData.update_global_value_and_record res (REMOVE s)
+           (apply_delta (REMOVE s))),
        temp_export = temp_export,
-       export = (fn s => (temp_export s; #record_delta res (mk_add s))),
+       export = (fn s =>
+         let val delta = mk_add s
+         in AncestryData.update_global_value_and_record res delta
+              (apply_delta delta)
+         end),
        getDB = getDB,
        get_thms = (fn db => Symtab.fold (fn (_,th) => fn A => th::A) db []) o
                   getDB,
@@ -381,9 +383,15 @@ fun export_alist {settype,initial} =
     in
       {merge = #merge res, DB = #DB res,
        temp_exclude = temp_exclude,
-       exclude = (fn s => (temp_exclude s; #record_delta res (REMOVE s))),
+       exclude = (fn s =>
+         AncestryData.update_global_value_and_record res (REMOVE s)
+           (apply_delta (REMOVE s))),
        temp_export = temp_export,
-       export = (fn s => (temp_export s; #record_delta res (mk_add s))),
+       export = (fn s =>
+         let val delta = mk_add s
+         in AncestryData.update_global_value_and_record res delta
+              (apply_delta delta)
+         end),
        getDB = getDB,
        get_thms = List.foldr (fn ((_,th),A) => th::A) [] o getDB,
        temp_setDB = updgv o K}
@@ -419,7 +427,11 @@ fun export_list {settype,initial} =
       {merge = #merge res, DB = #DB res,
        temp_exclude = temp_exclude,
        temp_export = temp_export,
-       export = (fn s => (temp_export s; #record_delta res (mk_add s))),
+       export = (fn s =>
+         let val delta = mk_add s
+         in AncestryData.update_global_value_and_record res delta
+              (apply_delta delta)
+         end),
        getDB = getDB,
        temp_setDB = updgv o K}
     end
