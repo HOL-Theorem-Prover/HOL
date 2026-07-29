@@ -5,9 +5,12 @@ fun get_first f =
   let
     fun first [] = NONE
       | first (x :: xs) =
-          (case (f x handle Interrupt => raise Interrupt | _ => NONE) of
-             SOME y => SOME y
-           | NONE => first xs)
+          (case Exn.capture f x of
+               Exn.Res (SOME y) => SOME y
+             | Exn.Res NONE => first xs
+             | Exn.Exn error =>
+                 if Exn.is_interrupt error then Exn.reraise error
+                 else first xs)
   in
     first
   end;
@@ -85,8 +88,8 @@ fun get_some f [] = NONE
                     val _ =
                       case result of
                           Exn.Res value => publish (value, false)
-                        | Exn.Exn Interrupt => publish (NONE, true)
-                        | Exn.Exn _ => publish (NONE, false)
+                        | Exn.Exn error =>
+                            publish (NONE, Exn.is_interrupt error)
                   in
                     worker ()
                   end;
