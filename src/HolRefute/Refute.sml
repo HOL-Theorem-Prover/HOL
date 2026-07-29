@@ -69,6 +69,7 @@ structure Refute :> Refute = struct
         | _ => NONE
     end
     handle Timeout.TIMEOUT _ => NONE
+         | Time => NONE
 
   fun qc_only config = Refute_Core.upd_backends
     (SOME (Refute_QC.qc_backend_names ())) config
