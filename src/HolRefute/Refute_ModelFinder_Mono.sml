@@ -1592,8 +1592,12 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
         (not o MFH.is_built_in_const) constants
       fun canonical candidate = MFN.original_name (term_name candidate)
     in
-      List.all (fn candidate => List.exists (fn harmless =>
-        canonical candidate = harmless) harmless_consts) nonbuiltins orelse
+      (* A built-in-only axiom can still constrain cardinality (for example,
+         universal equality).  Do not let an empty nonbuiltins list make the
+         harmless-constant test succeed vacuously. *)
+      (not (null nonbuiltins) andalso
+       List.all (fn candidate => List.exists (fn harmless =>
+         canonical candidate = harmless) harmless_consts) nonbuiltins) orelse
       List.exists (fn candidate => List.exists (fn bounteous =>
         term_name candidate = bounteous orelse
         canonical candidate = bounteous) bounteous_consts) constants
