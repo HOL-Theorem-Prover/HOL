@@ -1575,10 +1575,19 @@ structure Refute_Core = struct
           fun registration_instances registration =
             instances_for_form (#input (#backend registration)) forms
           fun registration_is_eligible registration =
-            let val instances = registration_instances registration
+            let
+              val instances = registration_instances registration
+              val timeout =
+                if #timeout cfg <= 0.0 then Time.fromReal 0.0
+                else Time.fromReal (#timeout cfg)
             in
-              meets_requirement cfg (instances_are_executable instances)
-                (#backend registration) instances
+              (* Smart-generator admission may compile an entire trial plan.
+                 It is backend work too, so it must not escape the configured
+                 backend deadline. *)
+              (Timeout.apply timeout (fn () =>
+                 meets_requirement cfg (instances_are_executable instances)
+                   (#backend registration) instances) ()
+               handle Timeout.TIMEOUT _ => false)
             end
           (* Deciding eligibility can run a whole trial substrate compile
              (the smart-generator gate), so decide it once per registration

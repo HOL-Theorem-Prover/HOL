@@ -530,6 +530,20 @@ structure Refute_SmartGen = struct
                  List.exists contains_function_type arguments
              | NONE => false)
 
+  val max_mode_space = 256
+
+  fun argument_mode_count ty =
+    case Lib.total pairSyntax.dest_prod ty of
+        SOME (left, right) =>
+          let val left_count = argument_mode_count left
+              val right_count = argument_mode_count right
+          in
+            if left_count > max_mode_space div right_count then
+              max_mode_space + 1
+            else left_count * right_count
+          end
+      | NONE => 2
+
   fun argument_modes ty =
     case Lib.total pairSyntax.dest_prod ty of
         SOME (left, right) =>
@@ -543,8 +557,16 @@ structure Refute_SmartGen = struct
       val (domains, range) = boolSyntax.strip_fun (Term.type_of relation)
     in
       if range = Type.bool andalso
-         not (List.exists contains_function_type domains) then
+         not (List.exists contains_function_type domains) andalso
+         List.foldl (fn (domain, count) =>
+           let val modes = argument_mode_count domain
+           in
+             if count > max_mode_space div modes then max_mode_space + 1
+             else count * modes
+           end) 1 domains <= max_mode_space then
         let
+          (* Never materialize an exponential mode space.  Returning no modes
+             safely degrades to the ordinary generator/guard plan. *)
           fun product [] = [[]]
             | product (choices :: rest) =
                 List.concat (map (fn choice =>
