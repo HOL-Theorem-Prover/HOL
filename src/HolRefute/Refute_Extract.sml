@@ -2656,10 +2656,7 @@ structure Refute_Extract = struct
       fun term_list items = "[" ^ join ", " items ^ "]"
       fun maximum values = List.foldl Int.max 0 values
 
-      fun custom_type ty =
-        Option.isSome (Refute_Gen.generator_of ty) orelse
-        List.exists (fn (other, _) => Util.same_type other ty)
-          (!(Refute_Gen.abstract_specs))
+      fun custom_type ty = Refute_Gen.has_registered_generator ty
 
       val validated = ref ([] : hol_type list)
 

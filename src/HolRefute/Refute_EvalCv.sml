@@ -121,10 +121,8 @@ structure Refute_EvalCv = struct
 
   fun check_in_fragment ty =
     if Type.is_vartype ty then unsupported ty "unresolved type variable"
-    else if registered ty (!Refute_Gen.user_generators) then
-      unsupported ty "custom generator registered"
-    else if registered ty (!Refute_Gen.abstract_specs) then
-      unsupported ty "abstract generator registered"
+    else if Refute_Gen.has_registered_generator ty then
+      unsupported ty "custom or abstract generator registered"
     else ()
 
   fun recipe_of ty =
