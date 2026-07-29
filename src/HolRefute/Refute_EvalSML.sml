@@ -101,17 +101,22 @@ structure Refute_EvalSML = struct
       (fn restore => fn () =>
         let
           val _ = Mutex.lock table_mutex
-          val (_, constructor_table, term_table) =
-            valOf (List.find (fn (index, _, _) => index = serial)
-              (!term_tables))
-          val old_constructors = !constructors
-          val old_terms = !raw_terms
-          val result = Exn.capture (restore (fn () =>
-            (constructors := constructor_table;
-             raw_terms := term_table;
-             action ()))) ()
-          val _ = constructors := old_constructors
-          val _ = raw_terms := old_terms
+          val result = Exn.capture (fn () =>
+            let
+              val (_, constructor_table, term_table) =
+                valOf (List.find (fn (index, _, _) => index = serial)
+                  (!term_tables))
+              val old_constructors = !constructors
+              val old_terms = !raw_terms
+              val action_result = Exn.capture (restore (fn () =>
+                (constructors := constructor_table;
+                 raw_terms := term_table;
+                 action ()))) ()
+              val _ = constructors := old_constructors
+              val _ = raw_terms := old_terms
+            in
+              Exn.release action_result
+            end) ()
           val _ = Mutex.unlock table_mutex
         in
           Exn.release result
@@ -259,9 +264,9 @@ structure Refute_EvalSML = struct
 
   fun compiler_errors source entry =
     let
-      val serial = !compile_serial
-      val _ = compile_serial := serial + 1
-      val structure_name = "RefuteNative_" ^ Int.toString serial
+      (* Rebinding this private compilation slot releases the previous
+         namespace binding once its dispatch is no longer retained. *)
+      val structure_name = "RefuteNative"
       val program =
         "structure " ^ structure_name ^ " = struct\n" ^ source ^
         "end\nval _ = " ^ structure_name ^ "." ^ entry ^ "\n"
@@ -298,10 +303,8 @@ structure Refute_EvalSML = struct
                   else !chunks)
     end
 
-  (* Poly/ML enters each generated structure in the global namespace.
-     Gensymming makes one compile safe, but the shadowed structures retain
-     a bounded amount of memory per goal-set; process isolation is the only
-     in-tree way to reclaim those bindings. *)
+  (* Poly/ML enters generated structures in the global namespace.  Rebind
+     one private slot instead of accumulating a fresh top-level name. *)
   fun compile_install source entry =
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
