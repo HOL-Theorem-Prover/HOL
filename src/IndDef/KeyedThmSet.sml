@@ -70,13 +70,16 @@ fun new {settype, key_part} =
                      initial_value = KNametab.empty,
                      apply_delta = apply_delta0 "apply_delta"}}
     fun add theorem = update_global_value (add0 "add" theorem)
-    (* Update before recording: if the theorem is malformed the update
-       raises and no delta is left behind to break descendant theories. *)
+    (* Validate first, persist next, and publish last.  This leaves neither
+       a bad descendant delta nor a process-local entry when persistence
+       rejects the update. *)
     fun export_thm name =
-      let val delta = ThmSetData.mk_add name
+      let
+        val delta = ThmSetData.mk_add name
+        val value = apply_delta0 "export_thm" delta (get_global_value ())
       in
-        update_global_value (apply_delta0 "export_thm" delta);
-        record_delta delta
+        record_delta delta;
+        update_global_value (K value)
       end
     fun thy_thms thyname =
       ThmSetData.added_thms (get_deltas {thyname = thyname})

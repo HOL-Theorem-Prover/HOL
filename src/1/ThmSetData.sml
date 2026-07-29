@@ -270,15 +270,16 @@ fun export_with_ancestry
           if null args then
             let val d = rADD(lift name)
             in
-              (* Apply before recording, as new_exporter's export does.
-                 A set-type whose apply_to_global rejects ill-formed
-                 theorems raises here; recording first would leave a
-                 delta in the theory that is guaranteed to raise again
-                 every time a descendant theory loads it.  Sref.update
-                 leaves the global value untouched when its function
-                 raises, so nothing is half-applied either. *)
-              #update_global_value fullresult (raw_apply_global d);
-              #record_delta fullresult d
+              (* Validate first, then persist, and publish only after both
+                 steps succeed.  Recording an invalid delta poisons every
+                 descendant; publishing before a failed recording leaves a
+                 session-only theorem-set entry. *)
+              let val value = raw_apply_global d
+                (#get_global_value fullresult ())
+              in
+                #record_delta fullresult d;
+                #update_global_value fullresult (K value)
+              end
             end
           else raise ERR "store_attrfun"
                      ("Arguments not allowed for attribute " ^ attrname)
