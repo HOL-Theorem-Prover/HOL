@@ -138,7 +138,6 @@ build_at_sha() {
     local before after
     before=$(mktemp)
     after=$(mktemp)
-    trap 'rm -f "$before" "$after"' RETURN
     ls -1 "$wt/tools-poly/build-logs" 2>/dev/null | sort > "$before" || true
 
     (
@@ -166,6 +165,8 @@ build_at_sha() {
     cp "$wt/tools-poly/build-logs/$newlog" "$target"
     echo "Cached log for $sha at $target"
 
+    rm -f "$before" "$after"
+
     if [ -z "$keep_wt" ]; then
         git -C "$holdir" worktree remove --force "$wt"
     fi
@@ -177,7 +178,7 @@ ensure_log() {
     if [ -n "$refresh" ] || [ ! -f "$cache_dir/${build_mode}-$sha.log" ]; then
         build_at_sha "$sha"
     else
-        echo "Using cached log for $sha at $cache_dir/$sha.log"
+        echo "Using cached log for $sha at $cache_dir/${build_mode}-$sha.log"
     fi
 }
 
@@ -224,8 +225,8 @@ if [ "$sname_a" = "$sname_b" ]; then
 fi
 filtered_a="$tmpdir/$sname_a.log"
 filtered_b="$tmpdir/$sname_b.log"
-filter_log "$cache_dir/$sha_a.log" "$filtered_a"
-filter_log "$cache_dir/$sha_b.log" "$filtered_b"
+filter_log "$cache_dir/${build_mode}-$sha_a.log" "$filtered_a"
+filter_log "$cache_dir/${build_mode}-$sha_b.log" "$filtered_b"
 
 echo
 "$comparelogs" -d "$filtered_a" "$filtered_b"
