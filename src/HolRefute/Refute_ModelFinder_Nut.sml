@@ -467,6 +467,12 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
 
   fun nut_from_term context equality term =
     let
+      fun int_of_numeral integer =
+        Arbint.toInt integer
+        handle Overflow =>
+          raise Util.TOO_LARGE
+            ("Refute_ModelFinder_Nut.nut_from_term",
+             "numeral does not fit in int")
       (* HOL4 binders expose named variables.  The environment records their
          de Bruijn levels, preserving Nitpick's BoundName convention. *)
       fun aux ambient environment candidate =
@@ -581,7 +587,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
             | NONE =>
               (case MFH.numeral_value candidate of
                    SOME integer =>
-                     Cst (Num (Arbint.toInt integer),
+                     Cst (Num (int_of_numeral integer),
                        Term.type_of candidate, MFR.Any)
                  | NONE =>
               if boolSyntax.is_forall candidate then

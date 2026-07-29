@@ -168,13 +168,19 @@ structure Refute_ModelFinder_Preproc = struct
 
   fun binarize_nat_and_int_in_term original =
     let
+      fun int_of_numeral value =
+        Arbint.toInt value
+        handle Overflow =>
+          raise Util.TOO_LARGE
+            ("Refute_ModelFinder_Preproc.binarize_nat_and_int_in_term",
+             "numeral does not fit in int")
       fun lookup variable [] = NONE
         | lookup variable ((old, replacement) :: rest) =
             if Term.aconv variable old then SOME replacement
             else lookup variable rest
       fun recurse environment candidate =
         case MFH.numeral_value candidate of
-            SOME value => MFN.mk_numeral (Arbint.toInt value)
+            SOME value => MFN.mk_numeral (int_of_numeral value)
               (MFH.binarize_nat_and_int_in_type (Term.type_of candidate))
           | NONE =>
               if Term.is_abs candidate then

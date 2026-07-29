@@ -116,13 +116,24 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
     | is_opt_rep (Opt _) = true
     | is_opt_rep _ = false
 
+  fun safe_product location first second =
+    first * second
+    handle Overflow =>
+      raise Util.TOO_LARGE (location, "result does not fit in int")
+
+  fun safe_sum location first second =
+    first + second
+    handle Overflow =>
+      raise Util.TOO_LARGE (location, "result does not fit in int")
+
   fun card_of_rep Any =
         raise REP ("Refute_ModelFinder_Rep.card_of_rep", [Any])
     | card_of_rep (Formula _) = 2
     | card_of_rep (Atom (cardinality, _)) = cardinality
     | card_of_rep (Struct representations) =
         List.foldl (fn (representation, result) =>
-          result * card_of_rep representation) 1 representations
+          safe_product "Refute_ModelFinder_Rep.card_of_rep" result
+            (card_of_rep representation)) 1 representations
     | card_of_rep (Vect (cardinality, representation)) =
         Util.reasonable_power (card_of_rep representation) cardinality
     | card_of_rep (Func (domain, range)) =
@@ -135,11 +146,14 @@ structure Refute_ModelFinder_Rep :> REFUTE_MODEL_FINDER_REP = struct
     | arity_of_rep (Atom _) = 1
     | arity_of_rep (Struct representations) =
         List.foldl (fn (representation, result) =>
-          result + arity_of_rep representation) 0 representations
+          safe_sum "Refute_ModelFinder_Rep.arity_of_rep" result
+            (arity_of_rep representation)) 0 representations
     | arity_of_rep (Vect (cardinality, representation)) =
-        cardinality * arity_of_rep representation
+        safe_product "Refute_ModelFinder_Rep.arity_of_rep" cardinality
+          (arity_of_rep representation)
     | arity_of_rep (Func (domain, range)) =
-        arity_of_rep domain + arity_of_rep range
+        safe_sum "Refute_ModelFinder_Rep.arity_of_rep" (arity_of_rep domain)
+          (arity_of_rep range)
     | arity_of_rep (Opt representation) =
         arity_of_rep representation
 
