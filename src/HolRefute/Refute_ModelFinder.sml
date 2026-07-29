@@ -265,6 +265,18 @@ fun valid_instance (problem : KK.problem) assignments =
         List.all (fn atom => atom >= 0 andalso atom < #univ_card problem)
           tuple) tuples
     fun tuple_atoms (KK.Tuple atoms) = SOME atoms
+      | tuple_atoms (KK.TupleIndex (arity, index)) =
+          let
+            fun decode 0 0 atoms = SOME atoms
+              | decode 0 _ _ = NONE
+              | decode count number atoms =
+                  decode (count - 1) (number div #univ_card problem)
+                    ((number mod #univ_card problem) :: atoms)
+          in
+            if arity < 0 orelse index < 0 orelse #univ_card problem <= 0
+            then NONE
+            else decode arity index []
+          end
       | tuple_atoms _ = NONE
     fun tuples_of (KK.TupleSet tuples) =
           Option.map (fn _ => List.mapPartial tuple_atoms tuples)
