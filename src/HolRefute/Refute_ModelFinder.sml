@@ -905,7 +905,9 @@ fun run_instance deadline started (config : Refute_Core.config)
             val next as (_, _, max_genuine, _) =
               run_batch (null rest) batch state
           in
-            if max_genuine > 0 then run_batches rest next else next
+            if max_genuine > 0 orelse #2 next > 0 then
+              run_batches rest next
+            else next
           end
 
     fun problem_count problems scope = length (List.filter (fn problem =>
@@ -1066,13 +1068,14 @@ fun run config instances =
                   budget instance
                 handle Util.NOT_SUPPORTED reason =>
                   (Refute_Core.Unknown [reason], budget)
-              val (_, max_genuine) = next_budget
+              val (max_potential, max_genuine) = next_budget
             in
               case result of
                   Refute_Core.Counterexample more =>
                     let val combined = cexs @ more
                     in
-                      if max_genuine <= 0 orelse #abort_potential config then
+                      if (max_genuine <= 0 andalso max_potential <= 0) orelse
+                         #abort_potential config then
                         Refute_Core.Counterexample combined
                       else
                         search rest combined reasons false next_budget
