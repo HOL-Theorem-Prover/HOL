@@ -1085,12 +1085,11 @@ structure Refute_QC = struct
                        length (!counterexamples) >= target then ()
                     else
                       let
-                        val draws =
-                          if target > 1 then 1
-                          else
-                            case #max_chunk compiled of
-                                NONE => !budget
-                              | SOME chunk => Int.min (chunk, !budget)
+                        (* A substrate may stop after its first hit without
+                           reporting how many draws it consumed.  Run one
+                           draw at a time so a rejected hit leaves every
+                           unused iteration available for certification. *)
+                        val draws = 1
                         val _ = budget := !budget - draws
                         val reasons_before = length (!gave_up)
                         val _ = one entry draws (#genuine_only config) []
