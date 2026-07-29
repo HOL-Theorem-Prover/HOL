@@ -836,6 +836,35 @@ structure Refute_Narrow = struct
         term :: leading_universals (count - 1) rest
     | leading_universals _ _ = []
 
+  (* Enumerate the counterexamples represented by a decided PNF tree.  A
+     universal chooses one false branch, while an existential needs a false
+     branch for every constructor.  Keeping these alternatives explicit lets
+     callers reject an already reported candidate without discarding another
+     witness at the same depth. *)
+  fun examples_of _ (Leaf _) = [EmptyExample]
+    | examples_of index tree =
+        let
+          val terms = alltermlist_of [index] ([], tree)
+          fun sequence [] = [[]]
+            | sequence (choices :: rest) =
+                List.concat (map (fn choice =>
+                  map (fn others => choice :: others) (sequence rest))
+                  choices)
+          fun next (term, residual) =
+            map (fn example => (term, example))
+              (examples_of (index + 1) residual)
+        in
+          case quantifier_of tree of
+              Universal =>
+                List.concat (map (fn (term, residual) =>
+                  map (fn example =>
+                    UnivExample (shape_of_tree tree, term, example))
+                    (examples_of (index + 1) residual)) terms)
+            | Existential =>
+                map (fn branches => ExExample (shape_of_tree tree, branches))
+                  (sequence (map next terms))
+        end
+
   fun refute_pnf genuine_only depth evaluate initial_tree =
     let
       val (tree, tests) =
@@ -846,6 +875,30 @@ structure Refute_Narrow = struct
             PnfCounterexample
               {genuine = not potential, example = example_of 0 tree,
                tree = tree, tests = tests}
+        | truth => PnfExhausted {truth = truth, tree = tree, tests = tests}
+    end
+
+  fun refute_pnf_avoiding genuine_only depth evaluate accept initial_tree =
+    let
+      val (tree, tests) = refute evaluate genuine_only depth initial_tree
+      fun select [] = PnfExhausted
+            {truth = value_of tree, tree = tree, tests = tests}
+        | select (example :: rest) =
+            let val potential =
+              case value_of tree of
+                  Eval {potential, ...} => potential
+                | _ => raise InvalidPath
+            in
+              if accept {genuine = not potential, example = example,
+                         tree = tree} then
+                PnfCounterexample
+                  {genuine = not potential, example = example,
+                   tree = tree, tests = tests}
+              else select rest
+            end
+    in
+      case value_of tree of
+          Eval {result = false, ...} => select (examples_of 0 tree)
         | truth => PnfExhausted {truth = truth, tree = tree, tests = tests}
     end
 

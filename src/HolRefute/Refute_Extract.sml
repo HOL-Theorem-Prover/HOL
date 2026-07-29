@@ -4247,8 +4247,17 @@ structure Refute_Extract = struct
       val engine =
         if has_existential then
           "val initial = Refute_Narrow.tree_of " ^ tree_prefix ^ "\n" ^
-          "val result = Refute_Narrow.refute_pnf genuine_only depth\n" ^
-          "  (narrow_evaluate depth) initial\n" ^
+          "val result = Refute_Narrow.refute_pnf_avoiding genuine_only\n" ^
+          "  depth (narrow_evaluate depth)\n" ^
+          "  (fn {genuine, example, ...} =>\n" ^
+          "    let\n" ^
+          "      val arguments = Refute_Narrow.leading_universals " ^
+          integer leading_count ^ " example\n" ^
+          "      val replay = Refute_Narrow.replay_of_example\n" ^
+          "        (replay_rebuild depth) example\n" ^
+          "    in not ((!Refute_EvalSML.ignored_filter)\n" ^
+          "      (candidate depth arguments (SOME replay) genuine)) end)\n" ^
+          "  initial\n" ^
           "val (hit, tests) =\n" ^
           "  case result of\n" ^
           "      Refute_Narrow.PnfCounterexample\n" ^
@@ -4258,7 +4267,7 @@ structure Refute_Extract = struct
           integer leading_count ^ " example\n" ^
           "          val replay = Refute_Narrow.replay_of_example\n" ^
           "            (replay_rebuild depth) example\n" ^
-          "        in (make_hit depth arguments (SOME replay) genuine,\n" ^
+          "        in (SOME (candidate depth arguments (SOME replay) genuine),\n" ^
           "            tests) end\n" ^
           "    | Refute_Narrow.PnfExhausted {tests, ...} => (NONE, tests)\n"
         else
