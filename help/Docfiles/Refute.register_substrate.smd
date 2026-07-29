@@ -15,6 +15,10 @@ The public type is an alias for this record:
 type substrate =
   {name : string,
    priority : int,
+   accepts : Refute_Eval.qc_problem -> bool,
+   preflight :
+     (Refute_Core.config -> Refute_Eval.strategy ->
+      Refute_Eval.plan list -> term list -> string list) option,
    compile : Refute_Core.config -> Refute_Eval.strategy ->
      Refute_Eval.qc_problem -> Refute_Eval.compile_result}
 ```

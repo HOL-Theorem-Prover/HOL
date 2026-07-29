@@ -563,8 +563,8 @@ replaces the old one.
   `abstract_generator {ty, constructors, pred}` instead describes an
   abstract type through existing constructor terms and an optional
   predicate.
-* `register_substrate {name, priority, compile}` extends or replaces the
-  executable substrate ladder.  A substrate must compile the common plan
+* `register_substrate {name, priority, accepts, preflight, compile}`
+  extends or replaces the executable substrate ladder.  A substrate must compile the common plan
   and preserve candidate order and cleanup; returning `Inapplicable`
   allows `Auto` to continue.
 * `register_backend backend` adds or replaces a weighted backend.
