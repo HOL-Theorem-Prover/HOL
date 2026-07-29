@@ -278,11 +278,13 @@ structure Refute_Narrow = struct
               end
           | Refute_Gen.GenFun _ =>
               shape_failure ty "function types require finitization"
-          | Refute_Gen.GenCustom {enumerate = SOME enumerate, ...} =>
+          | Refute_Gen.GenCustom (custom_ty,
+              {enumerate = SOME enumerate, ...}) =>
               let
                 val values = enumerate depth
                 val _ = if List.all (fn value =>
-                    Type.compare (Term.type_of value, ty) = EQUAL) values
+                    Type.compare (Term.type_of value, custom_ty) = EQUAL)
+                    values
                   then ()
                   else shape_failure ty
                     "custom exhaustive enumeration returned a mistyped value"

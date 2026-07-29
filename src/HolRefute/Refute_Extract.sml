@@ -3889,7 +3889,7 @@ structure Refute_Extract = struct
           | Refute_Gen.GenFun _ =>
               reject ("narrowing cannot generate function type " ^
                 type_name ty ^ " before finitization")
-          | Refute_Gen.GenCustom {enumerate = SOME _, ...} => []
+          | Refute_Gen.GenCustom (_, {enumerate = SOME _, ...}) => []
           | Refute_Gen.GenCustom _ =>
               reject ("narrowing custom generator for " ^ type_name ty ^
                 " has no exhaustive enumeration")
@@ -3996,7 +3996,7 @@ structure Refute_Extract = struct
                 join "\n       | " (map branch (Lib.enumerate 0 constrs)) ^
                 "\n       | _ => raise Match)"
               end
-          | Refute_Gen.GenCustom {enumerate = SOME _, ...} =>
+          | Refute_Gen.GenCustom (_, {enumerate = SOME _, ...}) =>
               exact_case (expression context) ty
           | _ => raise Fail "validated narrowing conversion"
 
@@ -4030,7 +4030,7 @@ structure Refute_Extract = struct
                 join "\n       | " (map branch (Lib.enumerate 0 constrs)) ^
                 "\n       | _ => raise Match)"
               end
-          | Refute_Gen.GenCustom {enumerate = SOME _, ...} => exact ()
+          | Refute_Gen.GenCustom (_, {enumerate = SOME _, ...}) => exact ()
           | _ => raise Fail "validated narrowing reconstruction"
         end
 

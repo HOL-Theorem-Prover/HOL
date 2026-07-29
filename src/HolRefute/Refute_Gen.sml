@@ -23,7 +23,7 @@ structure Refute_Gen = struct
     | GenEnum of term list
     | GenNum of numkind
     | GenFun of hol_type * hol_type
-    | GenCustom of custom_gen
+    | GenCustom of hol_type * custom_gen
 
   exception NoGenerator of hol_type * string
 
@@ -194,7 +194,7 @@ structure Refute_Gen = struct
 
   fun spec_of ty =
     case generator_of ty of
-      SOME generator => GenCustom generator
+      SOME generator => GenCustom (ty, generator)
     | NONE =>
         (case lookup_type (!abstract_specs) ty of
            SOME spec => spec

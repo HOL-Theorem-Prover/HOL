@@ -48,6 +48,13 @@ structure Refute_EvalCompute = struct
             fn index => wordsSyntax.mk_wordii (index, width))
         end
 
+  fun checked_custom_value expected value =
+    if Util.same_type (Term.type_of value) expected then value
+    else
+      raise Fail ("Refute_EvalCompute: custom generator for " ^
+        Parse.type_to_string expected ^ " returned a value of type " ^
+        Parse.type_to_string (Term.type_of value))
+
   (* First hit over a value list: run the continuation until it answers. *)
   fun each values continuation =
     List.foldl (fn (value, result) =>
@@ -94,8 +101,8 @@ structure Refute_EvalCompute = struct
         Refute_Gen.GenEnum values => each values continuation
       | Refute_Gen.GenNum kind =>
           each (numeric_terms kind size) continuation
-      | Refute_Gen.GenCustom {enumerate = SOME enum, ...} =>
-          each (enum size) continuation
+      | Refute_Gen.GenCustom (ty, {enumerate = SOME enum, ...}) =>
+          each (List.map (checked_custom_value ty) (enum size)) continuation
       | Refute_Gen.GenCustom _ => Continue
       | Refute_Gen.GenDatatype {constrs, ...} =>
           if size <= 0 then Continue
@@ -536,7 +543,9 @@ structure Refute_EvalCompute = struct
               (List.nth (values, IntInf.toInt choice), next)
             end
       | Refute_Gen.GenNum kind => random_number_with draw kind size state
-      | Refute_Gen.GenCustom {random, ...} => custom random size state
+      | Refute_Gen.GenCustom (ty, {random, ...}) =>
+          let val (value, next) = custom random size state
+          in (checked_custom_value ty value, next) end
       | Refute_Gen.GenFun (dom, rng_ty) =>
           random_function_with draw custom dom rng_ty size state
       | Refute_Gen.GenDatatype {constrs, recursive, min_size, ...} =>
@@ -711,7 +720,7 @@ structure Refute_EvalCompute = struct
               | Refute_Gen.GenDatatype {constrs, ...} =>
                   List.app validate_type
                     (List.concat (List.map #2 constrs))
-              | Refute_Gen.GenCustom {enumerate, random} =>
+              | Refute_Gen.GenCustom (_, {enumerate, random}) =>
                   ground_strategy strategy
                     {exhaustive = fn () =>
                        if Option.isSome enumerate then ()

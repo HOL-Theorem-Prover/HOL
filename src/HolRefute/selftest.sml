@@ -13585,7 +13585,7 @@ val _ = require_msg (check_result (fn () =>
 
 fun custom_random_threads_state () =
   let
-    val (_, final) = random_value (GenCustom finite_custom)
+    val (_, final) = random_value (GenCustom (``:ind``, finite_custom))
       {budget = 1, size = 1} 7
   in
     final = rand_next 7
