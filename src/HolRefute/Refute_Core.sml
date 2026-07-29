@@ -994,14 +994,26 @@ structure Refute_Core = struct
 
   (* Registrations are made when implementation units are loaded, so give
      releases stable names and replace an old registration on reload. *)
+  fun release_actions actions =
+    let
+      fun release ((_, close), NONE) =
+            (case Exn.capture close () of
+                 Exn.Res _ => NONE
+               | Exn.Exn error => SOME error)
+        | release ((_, close), first) =
+            (ignore (Exn.capture close ()); first)
+    in
+      case List.foldl release NONE actions of
+          NONE => ()
+        | SOME error => raise error
+    end
+
   fun register_run_release name release =
     run_releases :=
       List.filter (fn (old_name, _) => old_name <> name) (!run_releases) @
       [(name, release)]
 
-  fun release_run_resources () =
-    List.app (fn (_, release) => ignore (Exn.capture release ()))
-      (!run_releases)
+  fun release_run_resources () = release_actions (!run_releases)
 
   fun backend_before (left : string * backend_registration)
       (right : string * backend_registration) =
@@ -1577,10 +1589,7 @@ structure Refute_Core = struct
           Unknown [no_generator_reason pair]
              | Interrupt => raise Interrupt
              | e => Unknown [exception_reason e]
-      val result =
-        (attempt ()
-         handle e => (release_run_resources (); raise e))
-      val _ = release_run_resources ()
+      val result = Portable.finally release_run_resources attempt ()
     in
       finish result
     end
