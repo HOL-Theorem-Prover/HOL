@@ -1384,7 +1384,10 @@ structure Refute_Core = struct
   fun no_generator_reason (ty, reason) =
     "no generator for " ^ Parse.type_to_string ty ^ ": " ^ reason
 
-  fun run_backend (cfg : config) ceiling forms (backend, result_ref) =
+  val active_refute_context : unit ref Thread_Data.var = Thread_Data.var ()
+
+  fun run_backend context (cfg : config) ceiling forms (backend, result_ref) =
+    Thread_Data.setmp active_refute_context context (fn () =>
     let
       val name = #name backend
       val instances = instances_for_form (#input backend) forms
@@ -1405,7 +1408,7 @@ structure Refute_Core = struct
       val _ = result_ref := SOME result
     in
       if decisive cfg ceiling result then SOME result else NONE
-    end
+    end) ()
 
   fun unknown_results jobs =
     let
@@ -1541,10 +1544,12 @@ structure Refute_Core = struct
               val winner =
                 if #sequential cfg then
                   ParList.get_first
-                    (run_backend cfg ceiling forms) jobs
+                    (run_backend (Thread_Data.get active_refute_context)
+                      cfg ceiling forms) jobs
                 else
                   ParList.get_some
-                    (run_backend cfg ceiling forms) jobs
+                    (run_backend (Thread_Data.get active_refute_context)
+                      cfg ceiling forms) jobs
             in
               case winner of
                   SOME result => result
@@ -1583,19 +1588,25 @@ structure Refute_Core = struct
   val quiet_mutex = Mutex.mutex ()
 
   fun refute_problem (cfg : config) problem =
-    (* Most output uses the Refute trace, but model-finder diagnostics also
-       use the independent message and warning channels.  These flags are
-       process-global, so every call must be serialized against quiet scopes.
-       The standard scoped Feedback combinators restore every flag after
-       exceptions. *)
-    Multithreading.synchronized "Refute quiet output" quiet_mutex
-      (fn () =>
+    let
+      fun run () =
         if not (#quiet cfg) then refute_problem_unquiet cfg problem
         else
           Feedback.with_traces [("Refute", 0)]
             (Feedback.quiet_messages
               (Feedback.quiet_warnings
-                (refute_problem_unquiet cfg))) problem)
+                (refute_problem_unquiet cfg))) problem
+    in
+      (* A callback can re-enter Refute from a backend worker.  Propagate the
+         logical call context to workers, so it inherits the enclosing quiet
+         scope instead of attempting to acquire this non-recursive mutex. *)
+      case Thread_Data.get active_refute_context of
+          SOME _ => refute_problem_unquiet cfg problem
+        | NONE =>
+            Multithreading.synchronized "Refute quiet output" quiet_mutex
+              (fn () => Thread_Data.setmp active_refute_context
+                (SOME (ref ())) run ())
+    end
 
   fun refute cfg tm =
     refute_problem cfg {goal = tm, assumptions = [], evals = []}
