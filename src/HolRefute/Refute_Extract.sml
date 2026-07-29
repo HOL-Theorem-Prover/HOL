@@ -2781,10 +2781,15 @@ structure Refute_Extract = struct
             pair ("Char.chr n")
               (thunk "Refute_EvalSML.char_term (Char.chr n)") ^ ")"
         | Refute_Gen.Word width =>
-            "refute_range 0 (IntInf.toInt (IntInf.min " ^
-            "(IntInf.fromInt (Int.max (0, size)), " ^
-            "IntInf.pow (2, " ^ integer width ^ ") - 1))) (fn n => " ^
-            pair ("IntInf.fromInt n")
+            "refute_range 0 " ^
+            (if width <= 8 then
+               "(IntInf.toInt (IntInf.pow (2, " ^ integer width ^
+               ") - 1))"
+             else
+               "(IntInf.toInt (IntInf.min " ^
+               "(IntInf.fromInt (Int.max (0, size)), " ^
+               "IntInf.pow (2, " ^ integer width ^ ") - 1)))") ^
+            " (fn n => " ^ pair ("IntInf.fromInt n")
               (thunk ("Refute_EvalSML.word_term " ^ integer width ^
                 " (IntInf.fromInt n)")) ^ ")"
 

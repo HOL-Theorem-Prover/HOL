@@ -37,7 +37,12 @@ structure Refute_EvalCompute = struct
         List.tabulate (Refute_Gen.enum_cap,
           fn index => stringSyntax.mk_chr (numSyntax.term_of_int index))
     | numeric_terms (Refute_Gen.Word width) size =
-        let val count = bounded_power_of_two width (Int.max (0, size) + 1)
+        let
+          (* Finite word types within the enumeration cap are enums even
+             when nested below a datatype constructor. *)
+          val count = if width <= 8 then bounded_power_of_two width 257
+                      else bounded_power_of_two width
+                        (Int.max (0, size) + 1)
         in
           List.tabulate (count,
             fn index => wordsSyntax.mk_wordii (index, width))
