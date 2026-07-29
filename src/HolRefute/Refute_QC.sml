@@ -1014,7 +1014,7 @@ structure Refute_QC = struct
                 (if !discarded = 0 then []
                  else [("discarded", !discarded)]) @
                 [("size", size), ("card", card), ("msec", msec)]
-              fun one (card, size) draws genuine_only ignored =
+              fun one (card, size) draws genuine_only ignored retry_budget =
                 let
                   val start = Time.now ()
                   val result = #run compiled
@@ -1048,9 +1048,23 @@ structure Refute_QC = struct
                             retain_replay_potential = fn potential =>
                               replay_potential := SOME potential,
                             retry = fn go => fn ig =>
-                              one (card, size) draws go ig,
+                              (case retry_budget of
+                                  NONE => one (card, size) draws go ig NONE
+                                | SOME budget =>
+                                    if !budget <= 0 then complete := false
+                                    else
+                                      (budget := !budget - 1;
+                                       one (card, size) 1 go ig
+                                         retry_budget)),
                             retry_potential = fn go => fn ig =>
-                              one (card, size) draws go ig }
+                              (case retry_budget of
+                                  NONE => one (card, size) draws go ig NONE
+                                | SOME budget =>
+                                    if !budget <= 0 then complete := false
+                                    else
+                                      (budget := !budget - 1;
+                                       one (card, size) 1 go ig
+                                         retry_budget)) }
                           { env = env,
                             ground_env = ground_env,
                             case_tree = case_tree,
@@ -1063,30 +1077,31 @@ structure Refute_QC = struct
                   val started = Time.now ()
                   val total = bounded_size (#iterations (#qc config))
                   val target = Int.max (1, #max_counterexamples config)
-                  fun chunks 0 = ()
-                    | chunks remaining =
-                        if length (!counterexamples) >= target then ()
-                        else
-                          let
-                            val draws =
-                              if target > 1 then 1
-                              else
-                                case #max_chunk compiled of
-                                    NONE => remaining
-                                  | SOME chunk =>
-                                      Int.min (chunk, remaining)
-                            val reasons_before = length (!gave_up)
-                            val _ = one entry draws
-                              (#genuine_only config) []
-                          in
-                            if length (!gave_up) > reasons_before then ()
-                            else chunks (remaining - draws)
-                          end
+                  (* Retries are random draws too.  Charge both initial
+                     chunks and certification retries to this one budget. *)
+                  val budget = ref total
+                  fun chunks () =
+                    if !budget <= 0 orelse
+                       length (!counterexamples) >= target then ()
+                    else
+                      let
+                        val draws =
+                          if target > 1 then 1
+                          else
+                            case #max_chunk compiled of
+                                NONE => !budget
+                              | SOME chunk => Int.min (chunk, !budget)
+                        val _ = budget := !budget - draws
+                        val reasons_before = length (!gave_up)
+                        val _ = one entry draws (#genuine_only config) []
+                          (SOME budget)
+                      in
+                        if length (!gave_up) > reasons_before then ()
+                        else chunks ()
+                      end
                   val _ =
-                    if is_random strategy then
-                      if total = 0 then ()
-                      else chunks total
-                    else one entry 0 (#genuine_only config) []
+                    if is_random strategy then chunks ()
+                    else one entry 0 (#genuine_only config) [] NONE
                   val (card, size) = entry
                   val backend = strategy_name strategy
                   val elapsed = elapsed_msec started
