@@ -563,7 +563,11 @@ structure Refute_Narrow = struct
                    subtree (indexed_map Lib.I (#arguments alternative)))
               val branches = List.map branch (products_of shape)
             in
-              Constructor
+              (* At a shallow scheduled depth a type can have no inhabitable
+                 shape.  It is not an unevaluated constructor node: mark this
+                 attempt inconclusive so the next depth is still tried. *)
+              if null branches then Leaf Unknown
+              else Constructor
                 (quantifier, result, position, shape,
                  first_unevaluated branches, branches)
             end
