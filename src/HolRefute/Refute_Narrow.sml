@@ -528,19 +528,24 @@ structure Refute_Narrow = struct
 
   fun replace_tree replacement [] subtree = replacement subtree
     | replace_tree replacement (V _ :: edges)
-        (Variable (quantifier, result, position, ty, subtree)) =
-        Variable
-          (quantifier, result, position, ty,
-           replace_tree replacement edges subtree)
+        (Variable (quantifier, _, position, ty, subtree)) =
+        let
+          val subtree' = replace_tree replacement edges subtree
+        in
+          Variable
+            (quantifier, variable_value quantifier ty (value_of subtree'),
+             position, ty, subtree')
+        end
     | replace_tree replacement (C (_, index, _) :: edges)
         (Constructor
-          (quantifier, result, position, shape, _, branches)) =
+          (quantifier, _, position, shape, _, branches)) =
         let
-          val (pending, branches') = replace_branch index
-            (replace_tree replacement edges) branches
+          val (aggregate, pending, branches') =
+            update_branch quantifier shape index
+              (replace_tree replacement edges) branches
         in
           Constructor
-            (quantifier, result, position, shape, pending, branches')
+            (quantifier, aggregate, position, shape, pending, branches')
         end
     | replace_tree _ _ _ = raise InvalidPath
 
