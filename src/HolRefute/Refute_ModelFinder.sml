@@ -357,8 +357,18 @@ fun prepare_instance_input (instance : Refute_Core.instance) =
     fun rename term = term
       |> Term.subst renaming_subst
       |> Term.inst type_renaming
+    fun rename_eval term =
+      let
+        val prepared = rename term
+        (* Eval expressions introduce generated [refute$evalN] names too.
+           Sanitize their own reserved frees before placeholders are made. *)
+        val (renamed, _, _) = MFN.rename_colliding_goal_vars
+          (MFN.reserved_frees prepared) prepared
+      in
+        renamed
+      end
   in
-    (original, map rename (#evals instance))
+    (original, map rename_eval (#evals instance))
   end
 
 (* A quotient package type also has a kernel typedef theorem, so the raw
