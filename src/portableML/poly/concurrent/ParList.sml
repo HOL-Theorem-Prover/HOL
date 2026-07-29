@@ -15,9 +15,7 @@ fun get_first f =
 (* Losing workers are interrupted, never killed.  A worker can hold a
    process-global lock across an uninterruptible section (Refute's theory
    bracket is one), and Thread.kill terminates without unwinding, so a kill
-   would leak that lock for the rest of the session.  In particular, do not
-   return while such a worker is still running: the caller may otherwise
-   restore process-global state beneath it. *)
+   would leak that lock for the rest of the session. *)
 fun stop_threads threads =
   Thread_Attributes.uninterruptible (fn _ => fn () =>
     let
@@ -32,88 +30,92 @@ fun stop_threads threads =
 fun get_some f [] = NONE
   | get_some f [x] = get_first f [x]
   | get_some f xs =
-      let
-        val lock = Mutex.mutex ();
-        val ready = ConditionVar.conditionVar ();
-        val answer = ref NONE;
-        val remaining = ref (List.length xs);
-        val winner = ref (NONE: int option);
-        val forked = ref ([] : (int * Thread.thread) list);
+      if Multithreading.max_threads () <= 1 then get_first f xs
+      else
+        let
+          val lock = Mutex.mutex ();
+          val ready = ConditionVar.conditionVar ();
+          val answer = ref NONE;
+          val remaining = ref (List.length xs);
+          val pending = ref (ListPair.zip
+            (List.tabulate (List.length xs, fn n => n), xs));
+          val forked = ref ([] : Thread.thread list);
+          val workers = Int.min (List.length xs, Multithreading.max_threads ());
 
-        fun synchronized e =
-          Multithreading.synchronized "ParList.get_some" lock e;
+          fun synchronized e =
+            Multithreading.synchronized "ParList.get_some" lock e;
 
-        fun publish n result =
-          synchronized (fn () =>
-            (case result of
-               SOME y =>
-                 (case !answer of
-                    NONE => (answer := SOME y; winner := SOME n)
-                  | SOME _ => ())
-             | NONE => ();
-             remaining := !remaining - 1;
-             if isSome (!answer) orelse !remaining = 0 then
-               ConditionVar.signal ready
-             else ()));
+          fun take () =
+            synchronized (fn () =>
+              case !answer of
+                  SOME _ => NONE
+                | NONE =>
+                    (case !pending of
+                         [] => NONE
+                       | job :: rest => (pending := rest; SOME job)));
 
-        (* Record each thread as it appears, so a failed fork - and any
-           exception out of the wait below - can still stop the workers
-           already running. *)
-        fun fork_one n x =
-          (* Forking and publishing its handle must be atomic with respect
-             to caller interrupts, otherwise cleanup cannot find this worker. *)
-          Thread_Attributes.uninterruptible (fn _ => fn () =>
+          fun publish result =
+            synchronized (fn () =>
+              (case result of
+                 SOME y =>
+                   (case !answer of NONE => answer := SOME y | SOME _ => ())
+               | NONE => ();
+               remaining := !remaining - 1;
+               if isSome (!answer) orelse !remaining = 0 then
+                 ConditionVar.signal ready
+               else ()));
+
+          fun worker () =
+            case take () of
+                NONE => ()
+              | SOME (_, x) =>
+                  (publish (f x handle _ => NONE); worker ());
+
+          (* Forking and publishing handles are atomic with respect to caller
+             interrupts, so cleanup always sees every started worker. *)
+          fun fork_one () =
+            Thread_Attributes.uninterruptible (fn _ => fn () =>
+              let
+                val thread =
+                  Standard_Thread.fork
+                    {name = "ParList.get_some", stack_limit = NONE,
+                     interrupts = false}
+                    (fn () => Thread_Attributes.with_attributes
+                      Thread_Attributes.private_interrupts (fn _ => worker ()));
+                val _ = forked := thread :: !forked
+              in
+                ()
+              end) ();
+
+          fun fork_workers 0 = ()
+            | fork_workers count = (fork_one (); fork_workers (count - 1));
+
+          fun await () =
+            synchronized (fn () =>
+              let
+                fun wait () =
+                  case !answer of
+                      SOME y => SOME y
+                    | NONE =>
+                        if !remaining = 0 then NONE
+                        else
+                          (ignore (Exn.release
+                             (Multithreading.sync_wait NONE ready lock));
+                           wait ())
+              in
+                wait ()
+              end);
+        in
+          (* Once wait has returned or raised, mask interrupts until every
+             local worker has unwound; no loser can outlive this race. *)
+          Thread_Attributes.uninterruptible (fn restore => fn () =>
             let
-              val thread =
-                Standard_Thread.fork
-                  {name = "ParList.get_some", stack_limit = NONE,
-                   interrupts = false}
-                  (fn () =>
-                    Thread_Attributes.with_attributes
-                      Thread_Attributes.private_interrupts
-                      (fn _ => publish n (f x handle _ => NONE)));
-              val _ = forked := (n, thread) :: !forked
+              val result = Exn.capture
+                (restore (fn () => (fork_workers workers; await ())) ())
+              val _ = stop_threads (!forked)
             in
-              ()
-            end) ();
-
-        fun fork_all _ [] = ()
-          | fork_all n (x :: rest) =
-              (fork_one n x; fork_all (n + 1) rest);
-
-        fun stop keep =
-          stop_threads (List.map #2
-            (List.filter (fn (n, _) => keep <> SOME n) (!forked)));
-
-        fun await () =
-          synchronized (fn () =>
-            let
-              fun wait () =
-                (case !answer of
-                   SOME y => SOME y
-                 | NONE =>
-                     if !remaining = 0 then NONE
-                     else
-                       (ignore (Exn.release
-                          (Multithreading.sync_wait NONE ready lock));
-                        wait ()));
-            in
-              wait ()
-            end);
-
-      in
-        (* Forking and waiting remain interruptible, but once either has
-           returned or raised, keep interrupts masked until every worker has
-           been reaped.  In particular, there is no gap after [await] in
-           which a losing worker can outlive this call. *)
-        Thread_Attributes.uninterruptible (fn restore => fn () =>
-          let
-            val result = Exn.capture
-              (restore (fn () => (fork_all 0 xs; await ())) ()
-            val _ = stop (!winner)
-          in
-            Exn.release result
-          end) ()
-      end;
+              Exn.release result
+            end) ()
+        end;
 
 end;
