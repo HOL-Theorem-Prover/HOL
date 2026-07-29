@@ -783,25 +783,35 @@ fun run_instance deadline started (config : Refute_Core.config)
                           List.exists
                             (certainty_is_genuine o #certainty) results
                         val max_genuine = max_genuine - kept
+                        (* A sound model that only reconstructs as quasi does
+                           not establish a theorem, so it cannot suppress the
+                           later potential/unsound search. *)
+                        val max_potential =
+                          if found then 0 else max_potential
                         val _ = latest_state :=
-                          (found, 0, max_genuine, donno)
+                          (found, max_potential, max_genuine, donno)
                       in
                         (* Upstream harvests sound models for at most two
                            rounds per incremental batch.  Keep the M3 1/1
                            path unchanged, where [first_time] was ignored. *)
-                        if max_genuine <= 0 orelse
-                           (incremental andalso not first_time) then
-                          (found, 0, max_genuine, donno)
+                        if (max_genuine <= 0 andalso max_potential <= 0) orelse
+                           (incremental andalso not first_time andalso
+                            max_potential <= 0) then
+                          (found, max_potential, max_genuine, donno)
                         else
                           let
                             val bye = distinct_ints
                               (map #1 sat_models @ unsat_indices)
                             val remaining_problems =
                               Util.filter_out_indices bye problems
-                              |> List.filter (not o #unsound o metadata)
+                              |> (fn values =>
+                                if max_potential <= 0 then
+                                  List.filter (not o #unsound o metadata)
+                                    values
+                                else values)
                           in
                             solve_any_problem
-                              (found, 0, max_genuine, donno)
+                              (found, max_potential, max_genuine, donno)
                               false remaining_problems
                           end
                       end
