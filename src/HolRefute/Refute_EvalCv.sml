@@ -1532,14 +1532,16 @@ structure Refute_EvalCv = struct
                              ground_env = NONE, case_tree = NONE,
                              genuine = true, run_depth = NONE}
                         in
-                          if uses_enum andalso
-                             Refute_Eval.ignored_candidate found ignored
-                          then search (skip + 1)
+                          if Refute_Eval.ignored_candidate found ignored then
+                            search (skip + 1)
                           else Refute_Eval.CexFound found
                         end
                     end
                 in
-                  search (if uses_enum then 0 else length ignored)
+                  (* The skip argument denotes candidates in this particular
+                     stream, not entries in the caller's structural ignore
+                     list. *)
+                  search 0
                 end
             in
               run
@@ -1572,10 +1574,16 @@ structure Refute_EvalCv = struct
                       val _ = state_ref := Arbnum.toLargeInt
                         (numSyntax.dest_numeral state_tm)
                     in
-                      Refute_Eval.CexFound
-                        {env = decode_env (#variables program) value,
-                         ground_env = NONE, case_tree = NONE,
-                         genuine = true, run_depth = NONE}
+                      let
+                        val found =
+                          {env = decode_env (#variables program) value,
+                           ground_env = NONE, case_tree = NONE,
+                           genuine = true, run_depth = NONE}
+                      in
+                        if Refute_Eval.ignored_candidate found ignored then
+                          Refute_Eval.Exhausted {complete = false}
+                        else Refute_Eval.CexFound found
+                      end
                     end
                 end
             in
