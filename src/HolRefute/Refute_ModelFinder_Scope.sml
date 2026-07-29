@@ -267,8 +267,8 @@ structure Refute_ModelFinder_Scope = struct
   fun block_for_type context binarize cards_assigns maxes_assigns
         iters_assigns bitss bisim_depths ty =
     if MFH.is_bisim_iterator_type ty then
-      [(Card ty, map (fn depth => Int.max (0, depth) + 1)
-        bisim_depths)]
+      [(Card ty, map (fn depth =>
+          if depth < 0 then 0 else depth + 1) bisim_depths)]
     else if MFH.is_fp_iterator_type ty then
       (case MFH.iterator_info_for_type context ty of
            SOME {preds, ...} =>
