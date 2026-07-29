@@ -1950,19 +1950,14 @@ fun certify {executable, original, eval_terms,
                  Keep (replace_cex potential (#certainty potential) bindings
                    evals NONE model)
              | Refute_Cert.Discarded =>
-                 if sound then
-                   let
-                     val reason =
-                       "certification refuted the model — please report"
-                     val _ = Refute_Core.Private.say 1
-                       ("Refute warning: " ^ reason ^ "\n")
-                   in
-                     Keep (replace_cex base
-                       (Refute_Core.Potential [reason]) bindings evals NONE
-                       model)
-                   end
-                 else
-                   Drop)
+                 (* Kernel evaluation has established that this assignment
+                    does not falsify the goal; it cannot be a counterexample
+                    at any certainty level. *)
+                 (if sound then
+                    Refute_Core.Private.say 1
+                      "Refute warning: certification refuted the model\n"
+                  else ();
+                  Drop)
   end
 
 end
