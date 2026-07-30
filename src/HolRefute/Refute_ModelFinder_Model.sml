@@ -2023,7 +2023,7 @@ fun certify {executable, original, eval_terms,
                     the kernel certificate.  Decoded solver values are
                     useful reconstruction data, but are not certificates. *)
                  Keep (replace_cex certified Refute_Core.Genuine bindings
-                   (#evals certified) (#cert certified) model)
+                   (#evals certified) (#cert certified) NONE)
              | Refute_Cert.Potential potential =>
                  Keep (replace_cex potential (#certainty potential) bindings
                    evals NONE model)
