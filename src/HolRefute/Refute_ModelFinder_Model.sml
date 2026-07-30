@@ -493,7 +493,7 @@ fun make_set ({scope, ...} : context) maybe_opt actual_element_ty
   let
     val present = map #1 (List.filter
       (fn (_, value) => Term.aconv value boolSyntax.T) pairs)
-    val all_unknown = not (null pairs) andalso List.all
+    val has_unknown = List.exists
       (fn (_, value) =>
         not (Term.aconv value boolSyntax.T) andalso
         not (Term.aconv value boolSyntax.F)) pairs
@@ -506,7 +506,10 @@ fun make_set ({scope, ...} : context) maybe_opt actual_element_ty
         present
     fun insert (element, set) = pred_setSyntax.mk_insert (element, set)
   in
-    if all_unknown then
+    (* An exact set asserts every omitted member is absent.  Retaining the
+       true tuples while discarding unknown memberships would therefore make
+       a solver partiality look like a negative fact. *)
+    if has_unknown then
       MFN.unknown_marker (pred_setSyntax.mk_set_type display_element_ty)
     else
       List.foldr insert (pred_setSyntax.mk_empty display_element_ty) elements
