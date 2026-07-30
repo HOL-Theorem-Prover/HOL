@@ -841,7 +841,10 @@ structure Refute_Narrow = struct
      branch for every constructor.  Keeping these alternatives explicit lets
      callers reject an already reported candidate without discarding another
      witness at the same depth. *)
-  fun examples_of _ (Leaf _) = [EmptyExample]
+  fun examples_of _ (Leaf truth) =
+        (case truth of
+             Eval {result = false, potential} => [(EmptyExample, not potential)]
+           | _ => raise InvalidPath)
     | examples_of index tree =
         let
           val terms = alltermlist_of [index] ([], tree)
@@ -851,17 +854,20 @@ structure Refute_Narrow = struct
                   map (fn others => choice :: others) (sequence rest))
                   choices)
           fun next (term, residual) =
-            map (fn example => (term, example))
+            map (fn (example, genuine) => (term, example, genuine))
               (examples_of (index + 1) residual)
         in
           case quantifier_of tree of
               Universal =>
                 List.concat (map (fn (term, residual) =>
-                  map (fn example =>
-                    UnivExample (shape_of_tree tree, term, example))
+                  map (fn (example, genuine) =>
+                    (UnivExample (shape_of_tree tree, term, example), genuine))
                     (examples_of (index + 1) residual)) terms)
             | Existential =>
-                map (fn branches => ExExample (shape_of_tree tree, branches))
+                map (fn branches =>
+                  (ExExample (shape_of_tree tree,
+                     map (fn (term, example, _) => (term, example)) branches),
+                   List.all (fn (_, _, genuine) => genuine) branches))
                   (sequence (map next terms))
         end
 
@@ -883,19 +889,14 @@ structure Refute_Narrow = struct
       val (tree, tests) = refute evaluate genuine_only depth initial_tree
       fun select [] = PnfExhausted
             {truth = value_of tree, tree = tree, tests = tests}
-        | select (example :: rest) =
-            let val potential =
-              case value_of tree of
-                  Eval {potential, ...} => potential
-                | _ => raise InvalidPath
-            in
-              if accept {genuine = not potential, example = example,
-                         tree = tree} then
-                PnfCounterexample
-                  {genuine = not potential, example = example,
-                   tree = tree, tests = tests}
-              else select rest
-            end
+        | select ((example, genuine) :: rest) =
+            if (not genuine_only orelse genuine) andalso
+               accept {genuine = genuine, example = example, tree = tree} then
+              PnfCounterexample
+                {genuine = genuine, example = example, tree = tree,
+                 tests = tests}
+            else
+              select rest
     in
       case value_of tree of
           Eval {result = false, ...} => select (examples_of 0 tree)
