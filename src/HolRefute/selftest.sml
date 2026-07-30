@@ -10814,13 +10814,13 @@ val _ = List.app range_guard_is_pinned
       Refute.upd_bits [0] Refute.default_config),
    ("bits", "values must lie between 1 and 31", fn () =>
       Refute.upd_bits [32] Refute.default_config),
-   ("iter", "rows must contain nonnegative values", fn () =>
+   ("iter", "rows must contain values with a representable successor", fn () =>
       Refute.upd_iter [] Refute.default_config),
-   ("iter", "rows must contain nonnegative values", fn () =>
+   ("iter", "rows must contain values with a representable successor", fn () =>
       Refute.upd_iter [(NONE, [~1])] Refute.default_config),
-   ("bisim_depth", "values must be -1 or nonnegative", fn () =>
+   ("bisim_depth", "values must be -1 or have a representable successor", fn () =>
       Refute.upd_bisim_depth [] Refute.default_config),
-   ("bisim_depth", "values must be -1 or nonnegative", fn () =>
+   ("bisim_depth", "values must be -1 or have a representable successor", fn () =>
       Refute.upd_bisim_depth [~2] Refute.default_config)]
 
 val _ = tprint "Refute core backend registry"
