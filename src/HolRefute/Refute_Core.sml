@@ -367,7 +367,11 @@ structure Refute_Core = struct
       val _ = bounded "size" (#size qc)
       val _ = if #iterations qc < 0 then invalid "iterations" else ()
       val _ = bounded "depth" (#depth qc)
-      val _ = bounded "finite_type_size" (#finite_type_size qc)
+      val _ =
+        if #finite_type_size qc < 1 orelse #finite_type_size qc > 6 then
+          raise Feedback.mk_HOL_ERR "Refute_Core" "validate_qc_config"
+            "finite_type_size: must lie between 1 and 6"
+        else ()
     in
       qc
     end
@@ -819,12 +823,9 @@ structure Refute_Core = struct
     Type.mk_thy_type
       { Thy = "refute", Tyop = "rf" ^ Int.toString number, Args = [] }
 
-  fun clamped_finite_type_size size = Int.max (1, Int.min (6, size))
-
   fun monomorphic_types qc =
     if #finite_types qc then
-      List.tabulate (clamped_finite_type_size (#finite_type_size qc),
-        fn index => rf_type (index + 1))
+      List.tabulate (#finite_type_size qc, fn index => rf_type (index + 1))
     else
       #default_type qc
 
