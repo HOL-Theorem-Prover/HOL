@@ -22292,25 +22292,26 @@ fun run_mf_acceptance () =
          zoo_bounded_registration, zoo_check_registration]
       val _ = Refute.register_quotient zoo_manual_my_int_registration
       val solvers = Refute_ForlSat.configured_sat_solvers false
+      fun run_full solver =
+        let
+          val _ = List.app (run_timed_mf_group solver "") mf_acceptance_groups
+          val _ = mf_codatatype_acceptance solver
+          val _ = mf_quotient_typedef_acceptance solver
+          val _ = mf_atoms_finitize_acceptance solver
+          val _ = mf_need_acceptance solver
+          val _ = mf_merge_type_vars_acceptance solver
+          val _ = mf_frac_acceptance solver
+        in
+          ()
+        end
       val _ =
-        if Lib.mem "MiniSat_JNI" solvers then
-          let
-            val _ = List.app (run_timed_mf_group "MiniSat_JNI" "")
-              mf_acceptance_groups
-            val _ = mf_codatatype_acceptance "MiniSat_JNI"
-            val _ = mf_quotient_typedef_acceptance "MiniSat_JNI"
-            val _ = mf_atoms_finitize_acceptance "MiniSat_JNI"
-            val _ = mf_need_acceptance "MiniSat_JNI"
-            val _ = mf_merge_type_vars_acceptance "MiniSat_JNI"
-            val _ = mf_frac_acceptance "MiniSat_JNI"
-          in
-            ()
-          end
-        else
-          print "(MiniSat_JNI unavailable, full MF corpus skipped.)\n"
+        if Lib.mem "MiniSat_JNI" solvers then run_full "MiniSat_JNI"
+        else print "(MiniSat_JNI unavailable, full MF corpus skipped.)\n"
+      val _ =
+        if Lib.mem "SAT4J" solvers then run_full "SAT4J"
+        else print "(SAT4J unavailable, full MF corpus skipped.)\n"
     in
-      List.app (run_timed_mf_group "SAT4J" " smoke")
-        mf_acceptance_groups
+      ()
     end)
 
 fun run_level2_mf_corpus () =
