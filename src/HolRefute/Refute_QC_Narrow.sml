@@ -209,9 +209,12 @@ structure Refute_QC_Narrow = struct
               val body_result = Exn.capture selected_body ()
               val close_result = Exn.capture (#close compiled) ()
             in
-              case close_result of
-                  Exn.Res _ => Exn.release body_result
-                | Exn.Exn error => raise error
+              (* Cleanup still runs after every search result, but must not
+                 replace the backend failure (especially an interrupt or
+                 timeout) that caused the cleanup. *)
+              case body_result of
+                  Exn.Exn error => raise error
+                | Exn.Res value => (Exn.release close_result; value)
             end
     end
 
