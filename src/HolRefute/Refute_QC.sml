@@ -1060,7 +1060,12 @@ structure Refute_QC = struct
                     | CexFound
                         {env, ground_env, case_tree, genuine, ...} =>
                         let
-                          val discarded_before = !discarded
+                          (* A candidate which needs replay or certification
+                             is not evidence that this finite search was
+                             exhaustive.  It may become a genuine result,
+                             but if retries continue, NoCounterexample must
+                             remain unavailable. *)
+                          val _ = complete := false
                           val _ = record_candidate
                           { config = config,
                             strategy = strategy,
@@ -1100,13 +1105,6 @@ structure Refute_QC = struct
                             genuine = genuine,
                             genuine_only = genuine_only,
                             ignored = ignored }
-                          (* A rejected candidate prevents a completeness
-                             claim even if every executable tuple was tried:
-                             preprocessing and certification need not agree
-                             (for example on function equality). *)
-                          val _ = if !discarded > discarded_before then
-                            complete := false
-                          else ()
                         in
                           ()
                         end
