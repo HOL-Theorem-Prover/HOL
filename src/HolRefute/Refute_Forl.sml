@@ -1283,7 +1283,10 @@ structure Refute_Forl :> REFUTE_FORL = struct
          (path_entries ())))
 
   fun setsid_executable () = find_on_path "setsid"
-  fun sleep_executable () = find_on_path "sleep"
+  (* Cancellation must not depend on a PATH-resolved [sleep] wrapper. *)
+  fun sleep_executable () =
+    let val sleep = "/bin/sleep"
+    in if executable_file sleep then SOME sleep else NONE end
 
   fun java_executable () =
     let
