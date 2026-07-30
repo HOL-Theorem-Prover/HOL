@@ -273,12 +273,16 @@ structure Refute_Core = struct
   fun map_qc f (cfg : config) = change_config (ConfigQc (f (#qc cfg))) cfg
   fun map_mf f (cfg : config) = change_config (ConfigMf (f (#mf cfg))) cfg
 
+  fun time_is_representable value =
+    (ignore (Time.fromReal value); true) handle Time => false
+
   fun upd_timeout value =
-    if Real.isFinite value andalso value >= 0.0 then
+    if Real.isFinite value andalso value >= 0.0 andalso
+       time_is_representable value then
       change_config (ConfigTimeout value)
     else
       raise Feedback.mk_HOL_ERR "Refute_Core" "upd_timeout"
-        "timeout: must be a nonnegative finite real"
+        "timeout: must be a nonnegative representable real"
   fun upd_backends value = change_config (ConfigBackends value)
   fun upd_sequential value = change_config (ConfigSequential value)
   fun upd_genuine_only value = change_config (ConfigGenuineOnly value)
@@ -353,15 +357,17 @@ structure Refute_Core = struct
     let
       fun invalid field = raise Feedback.mk_HOL_ERR "Refute_Core"
         "validate_qc_config" (field ^ ": must be a bounded nonnegative integer")
-      val _ = if #size qc < 0 then invalid "size" else ()
-      val _ =
-        case Int.maxInt of
-            SOME maximum => if #size qc = maximum then invalid "size" else ()
-          | NONE => ()
+      fun bounded field value =
+        if value < 0 then invalid field
+        else
+          case Int.maxInt of
+              SOME maximum =>
+                if value > maximum div 2 then invalid field else ()
+            | NONE => ()
+      val _ = bounded "size" (#size qc)
       val _ = if #iterations qc < 0 then invalid "iterations" else ()
-      val _ = if #depth qc < 0 then invalid "depth" else ()
-      val _ = if #finite_type_size qc < 0 then invalid "finite_type_size"
-              else ()
+      val _ = bounded "depth" (#depth qc)
+      val _ = bounded "finite_type_size" (#finite_type_size qc)
     in
       qc
     end
@@ -446,8 +452,22 @@ structure Refute_Core = struct
               else ()
           | NONE => ()
       val _ = if not (Real.isFinite (#tac_timeout mf)) orelse
-                     #tac_timeout mf < 0.0 then
-                range_error "tac_timeout" "must be a nonnegative finite real"
+                     #tac_timeout mf < 0.0 orelse
+                     not (time_is_representable (#tac_timeout mf)) then
+                range_error "tac_timeout"
+                  "must be a nonnegative representable real"
+              else ()
+      val _ = if #batch_size mf < 1 then
+                range_error "batch_size" "must be at least 1"
+              else ()
+      val _ = if #datatype_sym_break mf < 0 then
+                range_error "datatype_sym_break" "must not be negative"
+              else ()
+      val _ = if #kodkod_sym_break mf < 0 then
+                range_error "kodkod_sym_break" "must not be negative"
+              else ()
+      val _ = if #max_threads mf < 1 then
+                range_error "max_threads" "must be at least 1"
               else ()
     in
       mf
