@@ -15,7 +15,7 @@
 structure Net :> Net =
 struct
 
-open Lib Feedback KernelTypes
+open Lib Feedback Type_dtype KernelTypes
 
 val ERR = mk_HOL_ERR "Net";
 

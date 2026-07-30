@@ -3,6 +3,8 @@
 (* HolSmtLib tests *)
 open HolKernel Parse boolLib bossLib;
 
+val _ = new_theory "scratch"
+
 val _ = print "Testing HolSmtLib\n"
 
 (*****************************************************************************)
@@ -67,7 +69,9 @@ fun expect_thm check_oracles name smt_tac t =
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
         term_with_types t ^ "': theorem differs (" ^
         Hol_pp.thm_to_string thm ^ ")");
-    if check_oracles then Library.check_oracle_tags name thm else ()
+    if check_oracles then
+      Library.check_oracle_tags (Option.getOpt (Thm.getCT (), "-")) name thm
+    else ()
   end
 
 (* unprovable terms: satisfiability expected *)

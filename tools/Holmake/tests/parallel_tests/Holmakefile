@@ -63,14 +63,15 @@ DIRNAMES += cache_reflink \
             depchain_heap/dir2 \
             dirlock \
             dumpheap \
+            gh1979 \
             heap-size \
-            ignore_errors/j4 \
             hollogs \
+            ignore_errors/j4 \
             issue1903 \
             json-strings \
             local_parallelism_limit \
-            gh1979 \
-            projfile_module
+            projfile_module \
+	    target_times
 endif
 
 

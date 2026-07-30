@@ -629,11 +629,7 @@ fun lookup_constructorFamilies_for_type (db : pmatch_compile_db) ty = let
 
   fun is_old_fam (ty, cf) = let
      val (_, cl) = constructorFamily_get_constructors cf
-     fun is_old_const c = let
-       val (cn, _)  = dest_const c
-     in
-       String.isSuffix "<-old" cn
-     end handle HOL_ERR _ => false
+     fun is_old_const c = not (Term.uptodate_term c)
   in
      (List.exists (fn (c, _) => is_old_const c) cl) orelse
      (is_old_const (#case_const cf))

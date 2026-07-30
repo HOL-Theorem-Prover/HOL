@@ -252,8 +252,11 @@ struct
     " [" ^ hyps_contents ^ "] |- " ^ term_to_string (Thm.concl thm)
   end
 
-  fun check_oracle_tags name thm =
-    if Sanity.check_tags ((Theory.current_theory (), name), thm) then
+  (* srcname is only a label for Sanity's report; the caller supplies it
+     because there need not be a current theory to name --- HolSmtLib
+     probes the solvers as it loads, before any segment is open *)
+  fun check_oracle_tags srcname name thm =
+    if Sanity.check_tags ((srcname, name), thm) then
       raise Feedback.mk_HOL_ERR "HolSmtLib" "check_oracle_tags"
         ("solver '" ^ name ^ "' produced unexpected oracle/axiom tags: " ^
          thm_to_string thm)

@@ -1,6 +1,8 @@
 open HolKernel Parse boolLib testutils
 open bagTheory
 
+val _ = new_theory "scratch"
+
 fun pairpr (p1,p2) (x,y) = "(" ^ p1 x ^ "," ^ p2 y ^ ")"
 fun listpr p xs = "[" ^ String.concatWith "," (map p xs) ^ "]"
 

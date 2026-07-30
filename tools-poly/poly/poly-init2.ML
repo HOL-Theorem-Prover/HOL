@@ -180,6 +180,13 @@ in
     fun loaded () = Binaryset.listItems (!loadedMods);
     fun fakeload s =
         loadedMods := Binaryset.add(!loadedMods,s)
+    (* Snapshot / restore of the load-tracking set.  Used by the LSP
+       to keep loadedMods in sync with Context: on Context.restore
+       ancestor theory data disappears from the graph, so their entries
+       must also come out of loadedMods or subsequent `load`s see them
+       as already-loaded and skip re-populating the graph.  *)
+    fun snapshotLoaded () = let val s = !loadedMods
+                            in fn () => loadedMods := s end
     fun findMod modname = findUo (modname ^ ".uo") ("." :: !loadPath)
     fun fileDirMap () = !loadpathdb
   end;

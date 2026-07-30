@@ -9,6 +9,6 @@ fun add_combin_compset compset =
                 APP_DEF,APPLY_UPDATE_THM]
           |> (fn cs => set_skip cs combinSyntax.K_tm (SOME 1))
 
-val () = the_compset := add_combin_compset (!the_compset)
+val () = upd_compset add_combin_compset
 
 end

@@ -1,5 +1,7 @@
 open HolKernel Parse bossLib boolLib;
 
+val _ = new_theory "scratch"
+
 open simpLib realSimps Diff transcTheory isqrtLib;
 
 open testutils;

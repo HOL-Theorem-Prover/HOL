@@ -168,12 +168,20 @@ fun force_const r name =
 
 (* Registration helpers *)
 fun check_def_thm fname th =
-  (if null (hyp th) then ()
-   else ERR fname "definition theorem must have no hypotheses";
-   let val (lhs, rhs, _) = Term.dest_eq_ty (concl th)
-   in (lhs, rhs)
-   end
-   handle HOL_ERR _ => ERR fname "definition not an equation")
+    let
+      val _ = null (hyp th) orelse
+              ERR fname "definition theorem must have no hypotheses"
+      val t = tag th
+      val t = Tag.isEmpty t orelse Tag.isDisk t orelse
+              ERR fname "definition theorem cannot be tagged"
+      val (lhs, rhs, _) = Term.dest_eq_ty (concl th)
+                          handle HOL_ERR _ =>
+                                 ERR fname "definition not an equation"
+      val _ = Term.is_const lhs orelse
+              ERR fname "LHS of definition theorem must be a constant"
+    in
+      (lhs, rhs)
+    end
 
 fun register_once r fname th expected_rhs =
   case !r of
@@ -1345,6 +1353,22 @@ fun mk_defn_thm (witness_tag, c, p) =
         in th end)
 
 (* ----------------------------------------------------------------------
+    Current-theory guard state (mirrors std-thm.ML; keep in sync).
+   ---------------------------------------------------------------------- *)
+
+fun is_sealed s   = KernelSig.is_sealed_thy s
+fun mark_sealed s = KernelSig.mark_sealed_thy s
+
+fun getCT () = Context.current_thy (Context.snapshot())
+
+fun setCT s =
+    if s = "min" orelse is_sealed s then
+      raise mk_HOL_ERR "Thm" "setCT"
+        ("cannot set current theory to sealed \"" ^ s ^ "\"")
+    else
+      Context.update (Context.map_current_thy (fn _ => SOME s))
+
+(* ----------------------------------------------------------------------
     Primitive Definition Principles
    ---------------------------------------------------------------------- *)
 
@@ -1352,6 +1376,12 @@ val ERR = mk_HOL_ERR "Thm"
 val TYDEF_ERR = ERR "prim_type_definition"
 val DEF_ERR   = ERR "new_definition"
 val SPEC_ERR  = ERR "new_specification"
+
+fun current_thy_or_die fname =
+    case getCT () of
+        NONE   => raise ERR fname
+                        "no current theory (kernel state uninitialised)"
+      | SOME s => s
 
 val TYDEF_FORM_ERR = TYDEF_ERR "expected a theorem of the form \"?x. P x\""
 val DEF_FORM_ERR   = DEF_ERR   "expected a term of the form \"v = M\""
@@ -1361,20 +1391,6 @@ fun mk_exists (absrec as (Bvar,_)) =
   let val ec = force_const exists_const "mk_exists"
   in mk_comb(inst[alpha |-> type_of Bvar] ec, mk_abs absrec)
   end
-
-fun dest_eq M =
-  let val (Rator,r) = dest_comb M
-      val (eq,l) = dest_comb Rator
-  in case dest_thy_const eq
-      of {Name="=",Thy="min",...} => (l,r)
-       | _ => raise ERR "dest_eq" "not an equality"
-  end;
-
-fun mk_eq (lhs,rhs) =
- let val ty = type_of lhs
-     val eq = mk_thy_const{Name="=",Thy="min",Ty=ty-->ty-->bool}
- in list_mk_comb(eq,[lhs,rhs])
- end;
 
 fun nstrip_exists 0 t = ([],t)
   | nstrip_exists n t =
@@ -1414,7 +1430,9 @@ fun check_tyvars body_tyvars ty f =
 fun okConstName cnm =
     CharVector.all (fn c => Char.isGraph c) cnm
 
-fun prim_type_definition (name as {Thy, Tyop}, thm) = let
+fun prim_type_definition (Tyop, thm) = let
+  val Thy       = current_thy_or_die "prim_type_definition"
+  val name      = {Thy = Thy, Tyop = Tyop}
   val c         = concl thm
   val _         = Term.uptodate_term c orelse
                   raise TYDEF_ERR "Witness theorem is out-of-date"
@@ -1471,7 +1489,8 @@ end
 fun bind thy s ty =
     Term.prim_new_const {Name = s, Thy = thy} ty
 
-fun prim_specification thyname cnames th = let
+fun prim_specification cnames th = let
+  val thyname   = current_thy_or_die "prim_specification"
   val con       = concl th
   val checked   = check_null_hyp th SPEC_ERR
   val checked   = check_free_vars con SPEC_ERR
@@ -1493,7 +1512,8 @@ in
   mk_defn_thm (tag th, subst sigma body, Def_spec_prf(th,map #residue sigma))
 end
 
-fun gen_prim_specification thyname th = let
+fun gen_prim_specification th = let
+  val thyname     = current_thy_or_die "gen_prim_specification"
   val hyps        = hypset th
   val body        = concl th
   val _ = Term.uptodate_term body orelse

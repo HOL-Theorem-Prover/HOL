@@ -22,7 +22,8 @@ val cval_terms = [
     ("truth", boolSyntax.T),
     ("false", boolSyntax.F),
     ("cond", boolSyntax.conditional),
-    ("let", boolSyntax.let_tm),
+    ("let", inst [alpha |-> cvSyntax.cv, beta |-> cvSyntax.cv]
+                 boolSyntax.let_tm),
     ("alt_zero", numSyntax.alt_zero_tm),
     ("zero", numSyntax.zero_tm),
     ("suc", numSyntax.suc_tm),
@@ -64,6 +65,8 @@ val q = mk_var ("q", cvSyntax.cv);
 val r = mk_var ("r", cvSyntax.cv);
 val s = mk_var ("s", cvSyntax.cv);
 
+val LET_THM_cv =
+    LET_THM |> INST_TYPE [alpha |-> cvSyntax.cv, beta |-> cvSyntax.cv]
 val char_eqns = [
   ("alt_zero", arithmeticTheory.ALT_ZERO),
   ("cond_T", CONJUNCT1 (SPECL [a,b] COND_CLAUSES)),
@@ -120,7 +123,7 @@ val char_eqns = [
   ("cv_ispair1", SPEC_ALL (cj 1 cv_ispair_def)),
   ("cv_ispair2", SPEC_ALL (cj 2 cv_ispair_def)),
   ("cv_eq", SPEC_ALL cv_eq_def),
-  ("let", SPEC_ALL LET_THM)
+  ("let", LET_THM_cv |> SPEC_ALL)
   ];
 
 (* -------------------------------------------------------------------------

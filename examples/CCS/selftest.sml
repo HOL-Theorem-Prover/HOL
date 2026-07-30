@@ -1,5 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
+val _ = new_theory "scratch"
+
 open pred_setTheory relationTheory pairTheory sumTheory listTheory;
 open prim_recTheory arithmeticTheory combinTheory stringTheory;
 

@@ -1,5 +1,7 @@
 open HolKernel Parse boolLib bossLib testutils miller_rabinTools
 
+val _ = new_theory "scratch"
+
 val prime_t = prim_mk_const{Name = "prime", Thy = "divides"}
 
 datatype t = N of int | T of int

@@ -30,7 +30,9 @@ sig
   val CBVn_CONV       : int -> compset -> conv
   val WEAK_CBV_CONV   : compset -> conv
 
-  val the_compset     : compset ref
+  val the_compset     : unit -> compset
+  val put_compset     : compset -> unit
+  val upd_compset     : (compset -> compset) -> unit
   val add_funs        : thm list -> unit
   val add_convs       : (term * int * conv) list -> unit
 

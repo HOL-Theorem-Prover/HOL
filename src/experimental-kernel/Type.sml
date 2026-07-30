@@ -1,26 +1,42 @@
 structure Type :> Type =
 struct
 
-open Feedback Lib KernelTypes
+open Feedback Lib Type_dtype KernelTypes
 
 infix |->
 infixr -->
 
+type hol_type = Type_dtype.hol_type
+
 val WARN = HOL_WARNING "Type"
 val ERR = mk_HOL_ERR "Type"
 
-type type_key = {Thy : string, Tyop : string }
-type type_info = KernelSig.kernelid * int
+fun typesig () = Context.typesig (Context.snapshot())
+fun upd_typesig f = Context.update (Context.map_typesig f)
+fun genupd_typesig f =
+    Context.gen_update (fn c =>
+      let val (new, r) = f (Context.typesig c)
+      in (Context.map_typesig (fn _ => new) c, r) end)
 
-val operator_table = KernelSig.new_table()
+fun type_epoch () = KernelSig.symtab_epoch (typesig())
+fun display_name_of_id id = KernelSig.display_name_of_id (typesig()) id
 
 fun prim_delete_type (k as {Thy, Tyop}) =
-    ignore (KernelSig.retire_name(operator_table, {Thy = Thy, Name = Tyop}))
+    if KernelSig.is_sealed_thy Thy then
+      raise ERR "prim_delete_type"
+            ("target theory \"" ^ Thy ^
+             "\" is sealed; cross-theory deletes are refused")
+    else
+      upd_typesig (#1 o KernelSig.retire_name {Thy = Thy, Name = Tyop})
 
 fun prim_new_type {Thy,Tyop} n = let
   val _ = n >= 0 orelse failwith "invalid arity"
+  val _ = not (KernelSig.is_sealed_thy Thy) orelse
+          raise ERR "prim_new_type"
+                ("target theory \"" ^ Thy ^
+                 "\" is sealed; cross-theory mints are refused")
 in
-  ignore (KernelSig.insert(operator_table,{Thy=Thy,Name=Tyop},n))
+  upd_typesig (#1 o KernelSig.insert ({Thy=Thy,Name=Tyop}, n))
 end
 
 fun thy_types s = let
@@ -28,23 +44,39 @@ fun thy_types s = let
       if #Thy kn = s then (#Name kn, arity) :: acc
       else acc
 in
-  KernelSig.foldl foldthis [] operator_table
+  KernelSig.foldl foldthis [] (typesig())
 end
 
-fun del_segment s = KernelSig.del_segment(operator_table, s)
+fun del_segment s =
+    if KernelSig.is_sealed_thy s then
+      raise ERR "del_segment"
+            ("theory \"" ^ s ^ "\" is sealed; segment delete refused")
+    else
+      upd_typesig (KernelSig.del_segment s)
 
-fun minseg s = {Thy = "min", Tyop = s}
-val _ = prim_new_type (minseg "fun") 2
-val _ = prim_new_type (minseg "bool") 0
-val _ = prim_new_type (minseg "ind") 0
+(*---------------------------------------------------------------------------*
+ * Builtin type operators (fun, bool, ind). These are in every HOL           *
+ * signature, and it is convenient to nail them down here.                   *
+ *---------------------------------------------------------------------------*)
 
-val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
+local
+  fun insert knm_aty = genupd_typesig (KernelSig.insert knm_aty)
+in
+val fun_tyid  = insert({Thy = "min", Name = "fun"},  2)
+val fun_tyc   = (fun_tyid, 2)
+val bool_tyid = insert({Thy = "min", Name = "bool"}, 0)
+val ind_tyid  = insert({Thy = "min", Name = "ind"},  0)
+end
+
+val bool = Tyapp ((bool_tyid, 0), [])
+val ind  = Tyapp ((ind_tyid,  0), [])
 
 fun uptodate_kname knm =
-    KernelSig.isSuccess(KernelSig.peek(operator_table, knm))
+    KernelSig.isSuccess (KernelSig.peek (typesig(), knm))
 fun uptodate_type (Tyv s) = true
-  | uptodate_type (Tyapp(info, args)) = KernelSig.uptodate_id info andalso
-                                        List.all uptodate_type args
+  | uptodate_type (Tyapp((info,_), args)) =
+    KernelSig.uptodate_id (typesig()) info andalso
+    List.all uptodate_type args
 
 fun dest_vartype (Tyv s) = s
   | dest_vartype _ = raise ERR "dest_vartype" "Type not a vartype"
@@ -63,7 +95,7 @@ fun is_gen_tyvar (Tyv name) = String.isPrefix gen_tyvar_prefix name
   | is_gen_tyvar _ = false;
 
 fun first_decl caller s = let
-  val possibilities = KernelSig.listName operator_table s
+  val possibilities = KernelSig.listName (typesig()) s
 in
   case possibilities of
     [] => raise ERR caller ("No such type: "^s)
@@ -71,43 +103,44 @@ in
   | x::xs => (WARN caller ("More than one possibility for "^s); #2 x)
 end
 
-fun mk_type (opname, args) = let
-  val (id,aty) = first_decl "mk_type" opname
-in
-  if length args = aty then
-    Tyapp (id, args)
-  else
-    raise ERR "mk_type"
-              ("Expecting "^Int.toString aty^" arguments for "^opname)
-end
+fun make_type (tyc as (_,arity)) Args (fnstr,name) =
+    if arity = length Args then Tyapp(tyc,Args)
+    else raise ERR fnstr
+         (String.concat
+            [name," needs ", int_to_string arity,
+             " arguments, but was given ", int_to_string(length Args)])
 
-val bool = mk_type("bool", [])
-val ind = mk_type("ind", [])
+fun mk_type (opname, args) =
+    make_type (first_decl "mk_type" opname) args ("mk_type", opname)
 
 fun is_type (Tyapp _) = true | is_type _ = false
 
 fun mk_thy_type {Thy, Tyop, Args} =
     let
       open KernelSig
+      val knm = {Thy=Thy, Name = Tyop}
     in
-      case peek(operator_table, {Thy = Thy, Name = Tyop}) of
+      case peek(typesig(), knm) of
           Failure (NoSuchThy _) =>
           raise ERR "mk_thy_type" ("theory " ^ Thy ^ " is not in ancestry")
         | Failure _ =>
           raise ERR "mk_thy_type"
                 ("the type operator "^quote Tyop^
                  " has not been declared in theory "^quote Thy^".")
-        | Success (i,arity) =>
-          if arity = length Args then Tyapp(i, Args)
-          else raise ERR "mk_thy_type" ("Expecting "^Int.toString arity^
-                                        " arguments for "^Tyop)
+        | Success const =>
+          make_type const Args ("mk_thy_type", name_toString knm)
     end
 
+fun dest_thy_typeid (Tyv _) =
+    raise ERR "dest_thy_typeid" "Type a variable"
+  | dest_thy_typeid (Tyapp((tyc,_), args)) =
+    {Thy = KernelSig.seg_of tyc, Tyop = tyc, Args = args}
+
+(* Skips the uptodate/display check — see the corresponding note in
+   src/0/Type.sml. *)
 fun dest_thy_type (Tyv _) = raise ERR "dest_thy_type" "Type a variable"
-  | dest_thy_type (Tyapp(id, args)) =
-    let open KernelSig in
-      {Thy = seg_of id, Tyop = display_name_of_id id, Args = args}
-    end
+  | dest_thy_type (Tyapp((tyc,_), args)) =
+    {Thy = KernelSig.seg_of tyc, Tyop = KernelSig.name_of tyc, Args = args}
 
 fun dest_type (ty as Tyapp _) =
     let val {Tyop,Args,...} = dest_thy_type ty
@@ -120,37 +153,27 @@ fun decls s = let
   fun foldthis ({Thy,Name},v,acc) = if Name = s then {Thy=Thy,Tyop=Name}::acc
                                     else acc
 in
-  KernelSig.foldl foldthis [] operator_table
+  KernelSig.foldl foldthis [] (typesig())
 end
 
 fun op_arity {Thy,Tyop} =
-    case KernelSig.peek(operator_table, {Thy=Thy,Name=Tyop}) of
+    case KernelSig.peek(typesig(), {Thy=Thy,Name=Tyop}) of
         KernelSig.Success(_,i) => SOME i
       | _ => NONE
 
 fun compare (Tyv s1, Tyv s2) = String.compare(s1, s2)
   | compare (Tyv _, _) = LESS
   | compare (Tyapp _, Tyv _) = GREATER
-  | compare (Tyapp(i, iargs), Tyapp(j, jargs)) = let
-    in
+  | compare (Tyapp((i,_), iargs), Tyapp((j,_), jargs)) =
       case KernelSig.id_compare(i,j) of
         EQUAL => Lib.list_compare compare (iargs, jargs)
       | x => x
-    end
 
 val empty_tyset = HOLset.empty compare
 
 (*---------------------------------------------------------------------------*
  * The variables in a type.                                                  *
  *---------------------------------------------------------------------------*)
-
-(*
-fun type_vars_set acc [] = acc
-  | type_vars_set acc ((t as Tyv s) :: rest) =
-      type_vars_set (HOLset.add(acc, t)) rest
-  | type_vars_set acc (Tyapp(_, args) :: rest) =
-      type_vars_set acc (args @ rest)
-*)
 
 fun type_vars_acc (Tyapp(_,Args)) vlist = type_varsl_acc Args vlist
   | type_vars_acc v vlist = Lib.insert v vlist
@@ -172,12 +195,13 @@ fun type_var_in v =
 
 val polymorphic = exists_tyvar (fn _ => true)
 
-fun (ty1 --> ty2) = Tyapp(funref, [ty1, ty2])
+fun (ty1 --> ty2) = Tyapp(fun_tyc, [ty1, ty2])
 
 fun dom_rng (Tyv _)  = raise ERR "dom_rng" "Type a variable"
-  | dom_rng (Tyapp(i, args)) = if i = funref then (hd args, hd (tl args))
-                               else raise ERR "dom_rng"
-                                              "Type not a function type"
+  | dom_rng (Tyapp(tyc, [X,Y])) =
+      if tyc = fun_tyc then (X, Y)
+      else raise ERR "dom_rng" "Type not a function type"
+  | dom_rng _ = raise ERR "dom_rng" "Type not a function type"
 
 val alpha  = Tyv "'a"
 val beta   = Tyv "'b";
@@ -211,9 +235,6 @@ fun ty_sub [] _ = SAME
 
 fun type_subst theta = delta_apply (ty_sub theta)
 
-(* val type_subst0 = type_subst
-fun type_subst theta = Profile.profile "type_subst" (type_subst0 theta) *)
-
 
 local
   fun MERR s = raise ERR "raw_match_type" s
@@ -233,16 +254,7 @@ fun tymatch [] [] Sids = Sids
                else MERR "different tyops"
   | tymatch any other thing = MERR "different constructors"
 end
-(*
-fun raw_match_type (v as Tyv _) ty (Sids as (S,ids)) =
-       (case lookup v ids S
-         of NONE => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
-          | SOME ty1 => if ty1=ty then Sids else MERR "double bind")
-  | raw_match_type (Tyapp(c1,A1)) (Tyapp(c2,A2)) Sids =
-       if c1=c2 then rev_itlist2 raw_match_type A1 A2 Sids
-                else MERR "different tyops"
-  | raw_match_type _ _ _ = MERR "different constructors"
-*)
+
 fun raw_match_type pat ob Sids = tymatch [pat] [ob] Sids
 
 fun match_type_restr fixed pat ob  = fst (raw_match_type pat ob ([],fixed))

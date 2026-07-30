@@ -61,7 +61,17 @@ fun dest_rewrites(RW{thms, ...}) = thms
 
 val empty_rewrites = RW{thms = [],  net = Ho_Net.empty}
 
-val implicit = ref empty_rewrites;
+local
+  val implicit_slot : rewrites Context.Data.slot =
+      Context.Data.new
+        {name = "Ho_Rewrite.implicit",
+         empty = empty_rewrites,
+         pp = fn _ => "<Ho_Rewrite.implicit>"}
+in
+  fun implicit () = Context.Data.get implicit_slot (Context.snapshot())
+  val set_implicit = Context.Data.write implicit_slot
+  val upd_implicit = Context.Data.modify implicit_slot
+end
 
 fun add_rewrites (RW{thms,net}) thl =
   RW{thms = thms@thl,
@@ -70,9 +80,9 @@ fun add_rewrites (RW{thms,net}) thl =
                      lhs(concl th), Conv.HO_REWR_CONV th))
         (itlist (append o mk_rewrites) thl [])) net}
 
-fun implicit_rewrites() = #thms ((fn (RW x) => x) (!implicit));
-fun set_implicit_rewrites thl = implicit := add_rewrites empty_rewrites thl;
-fun add_implicit_rewrites thl = implicit := add_rewrites (!implicit) thl;
+fun implicit_rewrites() = #thms ((fn (RW x) => x) (implicit()));
+fun set_implicit_rewrites thl = set_implicit (add_rewrites empty_rewrites thl)
+fun add_implicit_rewrites thl = upd_implicit (fn r => add_rewrites r thl)
 
 fun stringulate _ [] = []
   | stringulate f [x] = [f x]
@@ -115,13 +125,13 @@ fun GEN_REWRITE_CONV' rw_func rws thl =
 
 val PURE_REWRITE_CONV      = GEN_REWRITE_CONV' TOP_DEPTH_CONV empty_rewrites
 val PURE_ONCE_REWRITE_CONV = GEN_REWRITE_CONV' ONCE_DEPTH_CONV empty_rewrites
-fun REWRITE_CONV thl       = GEN_REWRITE_CONV' TOP_DEPTH_CONV (!implicit) thl
-fun ONCE_REWRITE_CONV thl  = GEN_REWRITE_CONV' ONCE_DEPTH_CONV (!implicit) thl
+fun REWRITE_CONV thl       = GEN_REWRITE_CONV' TOP_DEPTH_CONV (implicit()) thl
+fun ONCE_REWRITE_CONV thl  = GEN_REWRITE_CONV' ONCE_DEPTH_CONV (implicit()) thl
 fun GEN_REWRITE_RULE f rws = CONV_RULE o GEN_REWRITE_CONV' f rws;
 val PURE_REWRITE_RULE      = GEN_REWRITE_RULE TOP_DEPTH_CONV empty_rewrites
 val PURE_ONCE_REWRITE_RULE = GEN_REWRITE_RULE ONCE_DEPTH_CONV empty_rewrites
-fun REWRITE_RULE thl       = GEN_REWRITE_RULE TOP_DEPTH_CONV (!implicit) thl
-fun ONCE_REWRITE_RULE thl  = GEN_REWRITE_RULE ONCE_DEPTH_CONV (!implicit) thl;
+fun REWRITE_RULE thl       = GEN_REWRITE_RULE TOP_DEPTH_CONV (implicit()) thl
+fun ONCE_REWRITE_RULE thl  = GEN_REWRITE_RULE ONCE_DEPTH_CONV (implicit()) thl;
 
 fun PURE_ASM_REWRITE_RULE L th = PURE_REWRITE_RULE((map ASSUME(hyp th))@L) th
 fun PURE_ONCE_ASM_REWRITE_RULE L th =
@@ -132,8 +142,8 @@ fun ONCE_ASM_REWRITE_RULE L th = ONCE_REWRITE_RULE((map ASSUME(hyp th))@ L) th
 fun GEN_REWRITE_TAC f rws = CONV_TAC o GEN_REWRITE_CONV' f rws
 val PURE_REWRITE_TAC = GEN_REWRITE_TAC TOP_DEPTH_CONV empty_rewrites
 val PURE_ONCE_REWRITE_TAC = GEN_REWRITE_TAC ONCE_DEPTH_CONV empty_rewrites
-fun REWRITE_TAC thl = GEN_REWRITE_TAC TOP_DEPTH_CONV (!implicit) thl
-fun ONCE_REWRITE_TAC thl = GEN_REWRITE_TAC ONCE_DEPTH_CONV (!implicit) thl
+fun REWRITE_TAC thl = GEN_REWRITE_TAC TOP_DEPTH_CONV (implicit()) thl
+fun ONCE_REWRITE_TAC thl = GEN_REWRITE_TAC ONCE_DEPTH_CONV (implicit()) thl
 fun PURE_ASM_REWRITE_TAC L = ASSUM_LIST (fn l => PURE_REWRITE_TAC (l @ L))
 fun ASM_REWRITE_TAC thl = ASSUM_LIST (fn asl => REWRITE_TAC (asl @ thl))
 fun PURE_ONCE_ASM_REWRITE_TAC L = ASSUM_LIST(fn l=>PURE_ONCE_REWRITE_TAC(l@L))

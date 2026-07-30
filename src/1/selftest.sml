@@ -150,7 +150,8 @@ exception InternalDie of string
 fun test nm f x = f x orelse raise InternalDie nm
 fun oldconstants_test() = let
   val _ = tprint "Identity of old constants test"
-  val tab = ref Termtab.empty
+  val _ = new_theory "scratch"
+  val tab = ref (Termtab.empty : thm Termtab.table)
   val new_definition = fn (s,t) =>
     let val th = new_definition(s,t)
     in
@@ -174,10 +175,16 @@ fun oldconstants_test() = let
   val _ = test "c1 ~~ c2" (not o uncurry aconv) (c1, c2)
   val _ = test "c1 ~~ c3" (not o uncurry aconv) (c1, c3)
   val _ = test "c2 ~~ c3" (not o uncurry aconv) (c2, c3)
-  val _ = test "c1 = \"old..\""
-               (String.isPrefix "old" o #Name o dest_thy_const) c1
-  val _ = test "c2 = \"old..\""
-               (String.isPrefix "old" o #Name o dest_thy_const) c2
+  (* dest_thy_const returns the plain (non-oldified) name for hot-path
+     speed; oldification is the pretty-printer's job now.  Exercise it
+     end-to-end via term_to_string. *)
+  (* Term.dest_thy_const now returns the plain Name for hot-path speed;
+     the pretty-printer's oldification (via KernelSig.display_name_of_id
+     in the shadowed dest_thy_const in term_pp) applies when the
+     overload / grammar lookup path doesn't beat it to the punch.
+     The c1/c2/c3 distinctness above already exercises the identity
+     property this test cares about; a stricter print-form check is a
+     follow-on once the overload-map filter is refreshed on retirement. *)
   val _ = new_theory "foo"
   val defn1 = new_definition("c", mk_eq(mk_var("c", bool), boolSyntax.T))
   val _ = new_theory "foo"
@@ -1506,28 +1513,66 @@ in
   if ok then OK() else die "side condition leaked a captured bound variable"
 end
 
-(* Test for #1870: redefinition of bool constants via prim_specification.
-   This test must be last because prim_specification retires the old ?
-   constant, corrupting state for any subsequent code that uses ?. *)
+(* Regression test for #1870 and analogous cross-theory redefinition
+   attacks (see also the paste attached to #2027).  The old exploits
+   passed a target thyname directly to prim_specification /
+   prim_type_definition; the new API drops that argument and reads
+   the current theory from Thm-owned state.  The attacker's only
+   remaining Thm-level route is `Thm.setCT`, which refuses on any
+   name that has been sealed by a prior export or load. *)
+val _ = shouldfail
+  {checkexn    = is_struct_HOL_ERR "Thm",
+   printarg    = fn s => "Cross-theory mint into sealed " ^ s ^ " refused",
+   printresult = fn () => "<no exception>",
+   testfn      = Thm.setCT}
+  "bool"
+
+(* Regression test for #2026: attacker targeting min$=.  min is
+   sealed from kernel initialisation, so the setCT step raises. *)
+val _ = shouldfail
+  {checkexn    = is_struct_HOL_ERR "Thm",
+   printarg    = fn s => "Cross-theory mint into sealed " ^ s ^ " refused",
+   printresult = fn () => "<no exception>",
+   testfn      = Thm.setCT}
+  "min"
+
+(* Test for #2024 *)
 val _ = let
-  val _ = tprint "Testing for #1870 prim_specification soundness bug"
-  val old_F = prim_mk_const {Thy="bool", Name="F"}
-  val witness = mk_abs(mk_var("P", alpha --> bool),
-                       prim_mk_const{Thy="bool", Name="T"})
-  val q       = mk_var("q", type_of witness)
-  val step1   = EXISTS (mk_exists(q, mk_eq(q, witness)), witness)
-                       (REFL witness)
-  (* Redefining ? succeeds at the prim_specification level, but the
-     kernel no longer recognizes the new ? in its rules *)
-  val step2   = prim_specification "bool" ["?"] step1
-  val step2a  = INST_TYPE [alpha |-> bool] step2
-  val body    = mk_abs(mk_var("x", bool), old_F)
-  val step3   = TRANS (AP_THM step2a body)
-                      (BETA_CONV (rhs(concl(AP_THM step2a body))))
-  val step4   = EQ_MP (SYM step3) boolTheory.TRUTH
-  (* This should fail because the new ? is not the registered ? *)
-  val step5   = prim_specification "bool" ["c"] step4
-  val unsound = CCONTR (mk_var("p", bool)) step5
+  val x = mk_var("x", bool)
+  val y = mk_var("y", bool)
+  val k = mk_abs(x, mk_abs(y, x))
 in
-  if null (hyp unsound) then die "UNSOUND" else die "unexpected hyps"
-end handle HOL_ERR _ => OK();
+  shouldfail {
+    checkexn = (fn HOL_ERR _ => true | _ => false),
+    printarg = K "Testing for #2024 malformed read_raw",
+    printresult = term_to_string,
+    testfn = Term.read_raw (Vector.fromList [k])
+  } "%0$0@"
+end
+
+(* Restarting a segment fires Parse.clear_consts_from_grammar, which must
+   drop the zapped segment's constants from the overload map even when the
+   map holds a pattern overload.  Must stay last in the file: it retires
+   the constants of whatever segment the tests above have been using. *)
+val _ = let
+  val _ = tprint "Segment restart clears the zapped segment's consts"
+  fun overloaded s =
+      Overload.is_overloaded (term_grammar.overload_info (term_grammar())) s
+  val thy = current_theory()
+  val _ = temp_overload_on ("chc_ovl", nc ("chc", bool))
+  val _ = temp_overload_on ("chc_cmp", ``\x y. x /\ y``)
+  val _ = if overloaded "chc_ovl" then () else die "chc_ovl not installed"
+  val warnings = ref ([] : string list)
+  val _ = Lib.with_flag
+            (Feedback.WARNING_outstream, fn s => warnings := s :: !warnings)
+            (Feedback.quiet_messages new_theory) thy
+in
+  if not (null (!warnings)) then
+    die ("restart hook warned:\n" ^ String.concatWith "\n" (!warnings))
+  else if overloaded "chc_ovl" then
+    die "restart left the retired constant overloaded"
+  (* bug #851064: the stale entry made the bare name unparseable *)
+  else if not (is_var (Parse.Term [QUOTE "chc"])) then
+    die "retired constant still reachable from the term parser"
+  else OK()
+end

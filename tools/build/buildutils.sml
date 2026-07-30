@@ -580,6 +580,30 @@ fun cleanAll HOLDIR dirname =
 fun cleanForReloc HOLDIR dirname =
     moveTo dirname (maybe_gmakeclean dirname (fn () => cleanForReloc0 HOLDIR))
 
+(* Holmake and its supporting tech under tools/Holmake are built by
+   configure, not by the build sequence, so `clean` must leave them
+   alone: stripping e.g. tools/Holmake/core/Holmake_tools.uo makes the
+   next Moscow ML build fail (nothing in the sequence can remake it,
+   and src/parse/testutils.sml needs it via sigobj).  The tests subtree
+   is ordinary buildable material and is still cleaned.
+
+   Paths are canonicalised (.. and symlinks resolved) and compared by
+   arc so the check is robust to however a Holmakefile spelled its
+   INCLUDES; moveTo only lexically absolutises them. *)
+fun is_holmake_infra HOLDIR d =
+    let
+      fun canonical p = OS.FileSys.fullPath p handle OS.SysErr _ => normPath p
+      fun arcs_of p = #arcs (Path.fromString (canonical p))
+      fun is_prefix [] _ = true
+        | is_prefix _ [] = false
+        | is_prefix (x::xs) (y::ys) = x = y andalso is_prefix xs ys
+      val darcs = arcs_of d
+      val infra = arcs_of (fullPath [HOLDIR, "tools", "Holmake"])
+      val infra_tests = arcs_of (fullPath [HOLDIR, "tools", "Holmake", "tests"])
+    in
+      is_prefix infra darcs andalso not (is_prefix infra_tests darcs)
+    end
+
 fun clean_dirs {HOLDIR,action} dirs = let
   val seen = Binaryset.empty String.compare
   fun recurse sofar todo =
@@ -587,7 +611,8 @@ fun clean_dirs {HOLDIR,action} dirs = let
         [] => ()
       | d::ds => let
         in
-          if Binaryset.member(sofar, d) then recurse sofar ds
+          if Binaryset.member(sofar, d) orelse is_holmake_infra HOLDIR d then
+            recurse sofar ds
           else let
               val newincludes = action HOLDIR d
             in
@@ -978,6 +1003,48 @@ fun which arg =
         in first paths end
   end
 
+(* Oldest mdbook we can render the manuals with.  The floor is set by
+   Manual/theme/index.hbs, a vendored copy of the mdbook 0.5.x default
+   theme: it uses the {{fa ...}} FontAwesome Handlebars helper (and the
+   mdbook-menu-bar / mdbook-sidebar element ids), all introduced in
+   mdbook 0.5.0.  An older mdbook aborts rendering index.hbs with
+   "Helper not found fa".  Bump this if the theme comes to rely on a
+   newer feature. *)
+val min_mdbook = (0, 5, 0)
+
+fun mdbook_verstr (a,b,c) =
+    Int.toString a ^ "." ^ Int.toString b ^ "." ^ Int.toString c
+
+(* SML's < / >= aren't polymorphic, so compare the triples by hand. *)
+fun mdbook_ge ((a1,b1,c1), (a2,b2,c2)) =
+    a1 > a2 orelse
+    (a1 = a2 andalso (b1 > b2 orelse (b1 = b2 andalso c1 >= c2)))
+
+(* Ask `mdbook --version` (output looks like "mdbook v0.5.2") and pull
+   out the leading MAJOR.MINOR.PATCH.  NONE if mdbook can't be run or
+   prints nothing version-shaped. *)
+fun mdbook_version () =
+  let
+    val tmp = OS.FileSys.tmpName ()
+    val ran = OS.Process.isSuccess
+                (OS.Process.system ("mdbook --version > " ^ quote tmp))
+  in
+    if not ran then (safedelete tmp; NONE)
+    else
+      let
+        val is = TextIO.openIn tmp
+        val s = TextIO.inputAll is before TextIO.closeIn is
+        val () = safedelete tmp
+        val nums = List.mapPartial Int.fromString
+                     (String.tokens (not o Char.isDigit) s)
+      in
+        case nums of
+            (a :: b :: c :: _) => SOME (a, b, c)
+          | [a, b] => SOME (a, b, 0)
+          | _ => NONE
+      end handle IO.Io _ => (safedelete tmp; NONE)
+  end
+
 fun build_help {graph, no_mdbook, no_helpdocs} =
  (* Skip the theory graph alongside any other doc-build skip:
     `--no-mdbook` and `--no-helpdocs` are the only ways to opt out
@@ -1005,7 +1072,26 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
      val mdbook_present = poly andalso
                           (case which "mdbook" of SOME _ => true
                                                 | NONE => false)
-     val use_mdbook = poly andalso not no_mdbook andalso mdbook_present
+     val mdbook_ver = if mdbook_present then mdbook_version () else NONE
+     val mdbook_new_enough =
+         case mdbook_ver of
+             SOME v => mdbook_ge (v, min_mdbook)
+           | NONE => false
+     val mdbook_desc =
+         case mdbook_ver of
+             SOME v => "v" ^ mdbook_verstr v ^ " is too old"
+           | NONE => "version could not be determined"
+     (* Present but too old (or unreadable version) => warn and fall
+        back rather than aborting the whole doc build on a template
+        error deep inside mdbook. *)
+     val () =
+         if mdbook_present andalso not no_mdbook andalso not mdbook_new_enough
+         then
+           (WARN ("mdbook " ^ mdbook_desc ^ "; the manuals need mdbook >= " ^
+                  mdbook_verstr min_mdbook ^ ".");
+            WARN "Falling back to per-entry HTML for the Reference manual.")
+         else ()
+     val use_mdbook = poly andalso not no_mdbook andalso mdbook_new_enough
      val use_html_fallback = poly andalso not use_mdbook
 
      (* URL bases relative to Manual/book/htmlsigs/<struct>.html (where
@@ -1373,7 +1459,11 @@ in
   else warn "Couldn't make or use build-logs directory"
 end handle IO.Io _ => warn "Couldn't set up build-logs"
 
-fun finish_logging buildok = let
+fun abort_logging () =
+    if HOLFileSys.access(logfilename, []) then safedelete logfilename
+    else ()
+
+fun finish_logging {buildok, selftest_level} = let
 in
   if HOLFileSys.access(logfilename, []) then
     if buildok then let
@@ -1381,13 +1471,17 @@ in
         val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
         val knl = read_kernelid ()
         val knl_suffix = if knl = "" then "" else "-" ^ knl
-        val newname = hostname^timestamp^knl_suffix
+        val stlvl_suffix = "-t" ^ Int.toString selftest_level
+        val newname = hostname^timestamp^knl_suffix^stlvl_suffix
         val newpath = fullPath [logdir, newname]
       in
         HOLFileSys.rename {old = logfilename, new = newpath};
-        checkRegressions.run {logdir = logdir, latest = newpath, kernel = knl}
+        checkRegressions.run {logdir = logdir, latest = newpath, kernel = knl};
+        (* HOL's governing holproject.toml lives at HOLDIR. *)
+        target_times.merge_from_log { root = Systeml.HOLDIR,
+                                      log_path = newpath }
       end
-    else safedelete logfilename
+    else abort_logging ()
   else ()
 end handle IO.Io _ => warn "Had problems making permanent record of build log"
 
@@ -1409,9 +1503,9 @@ fun Holmake sysl isSuccess extra_args analyse_failstatus selftest_level dir =
       end
     end
 
-val () = OS.Process.atExit (fn () => finish_logging false)
-        (* this will do nothing if finish_logging happened normally first;
-           otherwise the log's bad version will be recorded *)
+val () = OS.Process.atExit abort_logging
+        (* No-op if finish_logging{buildok=true,...} already renamed the
+           log; otherwise cleans up the in-progress log file. *)
 
 
 

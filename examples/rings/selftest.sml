@@ -1,5 +1,7 @@
 open HolKernel Parse boolLib bossLib
 
+val _ = new_theory "scratch"
+
 open testutils
 
 open arithmeticTheory EVAL_ringLib EVAL_numRingLib integerRingLib ratRingLib;

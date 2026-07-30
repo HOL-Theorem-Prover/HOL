@@ -18,6 +18,7 @@ sig
     val domrngs : t -> thm list
     val atomic_termnet : t -> (string * term) Net.net
     val check_for_atom : t -> term -> bool
+    val depth_of : t -> int
   end
 
   val prove_relation_thm : ruledb.t -> bool -> term -> term -> thm
@@ -34,8 +35,9 @@ sig
   val transfer_tm : int -> config -> ruledb.t -> term -> thm
   val transfer_thm : int -> config -> ruledb.t -> thm -> thm
 
-  val global_ruledb : unit -> ruledb.t
-  val default_depth : int Sref.t
+  val global_ruledb    : unit -> ruledb.t
+  val default_depth    : unit -> int
+  val set_default_depth: int -> unit
 
   val add_rule : string -> unit
   val add_safe : string -> unit

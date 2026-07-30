@@ -64,13 +64,6 @@ in
   val strip_comb = strip_comb [];
 end (* local *)
 
-(* Term does not export dest_eq: *)
-
-fun dest_eq tm =
-  case total (((same_const equality ## I) o dest_comb ## I) o dest_comb) tm of
-    SOME ((true,l),r) => (l,r)
-  | _ => raise ERR "dest_eq" "term is not an equality";
-
 (* -------------------------------------------------------------------------
  * Interpreter for compute expressions.
  * ------------------------------------------------------------------------- *)
@@ -168,11 +161,11 @@ end (* local *)
  * ------------------------------------------------------------------------- *)
 
 fun dest_zero ({alt_zero_tm, zero_tm, ...}:ctsyntax) tm =
-  if same_const alt_zero_tm tm orelse same_const zero_tm tm then Arbnum.zero
+  if aconv alt_zero_tm tm orelse aconv zero_tm tm then Arbnum.zero
   else raise ERR "" ""
 
 fun dest_app tm1 tm =
-  case total ((same_const tm1 ## I) o dest_comb) tm of
+  case total ((aconv tm1 ## I) o dest_comb) tm of
     SOME (true, n) => n
   | _ => raise ERR "" "";
 
@@ -230,31 +223,31 @@ local
               SOME (LET (s,bndexp,letbod))
             end
         | _ => NONE
-      else if same_const f (#cv_if_tm ct) then
+      else if aconv f (#cv_if_tm ct) then
         case args of [x,y,z] => SOME (IF (x,y,z)) | _ => NONE
-      else if same_const f (#cv_pair_tm ct) then
+      else if aconv f (#cv_pair_tm ct) then
         case args of [x,y] => SOME (PAIR (x,y)) | _ => NONE
-      else if same_const f (#cv_fst_tm ct) then
+      else if aconv f (#cv_fst_tm ct) then
         case args of [x] => SOME (FST x) | _ => NONE
-      else if same_const f (#cv_snd_tm ct) then
+      else if aconv f (#cv_snd_tm ct) then
         case args of [x] => SOME (SND x) | _ => NONE
-      else if same_const f (#cv_ispair_tm ct) then
+      else if aconv f (#cv_ispair_tm ct) then
         case args of [x] => SOME (ISPAIR x) | _ => NONE
-      else if same_const f (#cv_add_tm ct) then
+      else if aconv f (#cv_add_tm ct) then
         case args of [x,y] => SOME (ADD (x,y)) | _ => NONE
-      else if same_const f (#cv_sub_tm ct) then
+      else if aconv f (#cv_sub_tm ct) then
         case args of [x,y] => SOME (SUB (x,y)) | _ => NONE
-      else if same_const f (#cv_mul_tm ct) then
+      else if aconv f (#cv_mul_tm ct) then
         case args of [x,y] => SOME (MUL (x,y)) | _ => NONE
-      else if same_const f (#cv_div_tm ct) then
+      else if aconv f (#cv_div_tm ct) then
         case args of [x,y] => SOME (DIV (x,y)) | _ => NONE
-      else if same_const f (#cv_mod_tm ct) then
+      else if aconv f (#cv_mod_tm ct) then
         case args of [x,y] => SOME (MOD (x,y)) | _ => NONE
-      else if same_const f (#cv_lt_tm ct) then
+      else if aconv f (#cv_lt_tm ct) then
         case args of [x,y] => SOME (LE (x,y)) | _ => NONE
-      else if same_const f (#cv_eq_tm ct) then
+      else if aconv f (#cv_eq_tm ct) then
         case args of [x,y] => SOME (EQ (x,y)) | _ => NONE
-      else if same_const f (#cv_num_tm ct) then
+      else if aconv f (#cv_num_tm ct) then
         case args of [x] => Option.map NUM (total (dest_numeral ct) x)
                    | _ => NONE
       else if is_var f then
@@ -296,7 +289,7 @@ in
     | EQ (x,y) => mk_binop Eq (dest_cexp ct bvs fns x)
                               (dest_cexp ct bvs fns y)
     | APP (f,xs) =>
-        case Vector.findi (same_const f o fst o snd) fns of
+        case Vector.findi (aconv f o fst o snd) fns of
           SOME (i, _) => App (i, List.map (dest_cexp ct bvs fns) xs)
         | _ => raise ERR "dest_cexp"
                          ("could not find equation for: " ^ fst (dest_const f))
@@ -442,49 +435,50 @@ local
   fun APP3 a b c d tm =
     case total (((dest_comb ## I) o dest_comb ## I) o dest_comb) tm of
       SOME (((x,y),z),w) => a x andalso b y andalso c z andalso d w
-    | _ => false;
+    | _ => false
+  fun check_cond cond_tm eqn_tm = same_const cond_tm eqn_tm
   fun mk_recs (ct : ctsyntax) =
     let
       fun var n t tm = total dest_var tm = SOME (n, t)
-      val T = same_const (#truth_tm ct)
-      and F = same_const (#false_tm ct)
+      val T = aconv (#truth_tm ct)
+      and F = aconv (#false_tm ct)
       val N_ = var "n" (#num_type ct)
       val M_ = var "m" (#num_type ct)
       val P_ = var "p" (#cval_type ct)
       val Q_ = var "q" (#cval_type ct)
       val R_ = var "r" (#cval_type ct)
       val S_ = var "s" (#cval_type ct)
-      val F_ = var "f" (alpha --> beta)
+      val F_ = var "f" (#cval_type ct --> #cval_type ct)
       val A_ = var "a" alpha
       val B_ = var "b" alpha
-      val X_ = var "x" alpha
-      val COND = APP3 (same_const (#cond_tm ct))
-      val NUMERAL = APP1 (same_const (#numeral_tm ct))
-      val ALT_ZERO = same_const (#alt_zero_tm ct)
-      val ZERO = same_const (#zero_tm ct)
-      val BIT1 = APP1 (same_const (#bit1_tm ct))
-      val BIT2 = APP1 (same_const (#bit2_tm ct))
-      val SUC = APP1 (same_const (#suc_tm ct))
-      val ADD = APP2 (same_const (#add_tm ct))
-      val SUB = APP2 (same_const (#sub_tm ct))
-      val MUL = APP2 (same_const (#mul_tm ct))
-      val DIV = APP2 (same_const (#div_tm ct))
-      val MOD = APP2 (same_const (#mod_tm ct))
-      val LT = APP2 (same_const (#lt_tm ct))
-      val CV_PAIR = APP2 (same_const (#cv_pair_tm ct))
-      val CV_NUM = APP1 (same_const (#cv_num_tm ct))
-      val CV_FST = APP1 (same_const (#cv_fst_tm ct))
-      val CV_SND = APP1 (same_const (#cv_snd_tm ct))
-      val CV_ISPAIR = APP1 (same_const (#cv_ispair_tm ct))
-      val CV_ADD = APP2 (same_const (#cv_add_tm ct))
-      val CV_SUB = APP2 (same_const (#cv_sub_tm ct))
-      val CV_MUL = APP2 (same_const (#cv_mul_tm ct))
-      val CV_DIV = APP2 (same_const (#cv_div_tm ct))
-      val CV_MOD = APP2 (same_const (#cv_mod_tm ct))
-      val CV_LT = APP2 (same_const (#cv_lt_tm ct))
-      val CV_IF = APP3 (same_const (#cv_if_tm ct))
-      val CV_EQ = APP2 (same_const (#cv_eq_tm ct))
-      val LET = APP2 (same_const (#let_tm ct))
+      val X_ = var "x" (#cval_type ct)
+      val COND = APP3 (check_cond (#cond_tm ct))
+      val NUMERAL = APP1 (aconv (#numeral_tm ct))
+      val ALT_ZERO = aconv (#alt_zero_tm ct)
+      val ZERO = aconv (#zero_tm ct)
+      val BIT1 = APP1 (aconv (#bit1_tm ct))
+      val BIT2 = APP1 (aconv (#bit2_tm ct))
+      val SUC = APP1 (aconv (#suc_tm ct))
+      val ADD = APP2 (aconv (#add_tm ct))
+      val SUB = APP2 (aconv (#sub_tm ct))
+      val MUL = APP2 (aconv (#mul_tm ct))
+      val DIV = APP2 (aconv (#div_tm ct))
+      val MOD = APP2 (aconv (#mod_tm ct))
+      val LT = APP2 (aconv (#lt_tm ct))
+      val CV_PAIR = APP2 (aconv (#cv_pair_tm ct))
+      val CV_NUM = APP1 (aconv (#cv_num_tm ct))
+      val CV_FST = APP1 (aconv (#cv_fst_tm ct))
+      val CV_SND = APP1 (aconv (#cv_snd_tm ct))
+      val CV_ISPAIR = APP1 (aconv (#cv_ispair_tm ct))
+      val CV_ADD = APP2 (aconv (#cv_add_tm ct))
+      val CV_SUB = APP2 (aconv (#cv_sub_tm ct))
+      val CV_MUL = APP2 (aconv (#cv_mul_tm ct))
+      val CV_DIV = APP2 (aconv (#cv_div_tm ct))
+      val CV_MOD = APP2 (aconv (#cv_mod_tm ct))
+      val CV_LT = APP2 (aconv (#cv_lt_tm ct))
+      val CV_IF = APP3 (aconv (#cv_if_tm ct))
+      val CV_EQ = APP2 (aconv (#cv_eq_tm ct))
+      val LET = APP2 (aconv (#let_tm ct))
     in
       [("alt_zero",   ALT_ZERO === ZERO),
        ("cond_T",     COND T A_ B_ === A_),
@@ -618,6 +612,10 @@ fun term_compute {cval_terms, cval_type, num_type, char_eqns } =
       cv_eq_tm = get "cv_eq",
       cval_type = cval_type,
       num_type = num_type }
+    val _ = case Lib.total Type.dest_thy_type cval_type of
+                NONE => raise ERR "compute" "cv-type may not be a variable"
+              | SOME {Args, ...} => null Args orelse
+                                    raise ERR "compute" "cv-type must be atomic"
     val _ = check_thms ct char_eqns
     val cv_to_term = make_cv_to_term ct
   in

@@ -92,10 +92,15 @@ val itself_info = tweak_tyi itself_info0
  *--------------------------------------------------------------------------*)
 
 local
-  val update_fns = ref ([]:(tyinfo -> tyinfo) list)
+  val update_fns_slot : (tyinfo -> tyinfo) list Context.Data.slot =
+      Context.Data.new
+        {name = "TypeBase.update_fns", empty = [],
+         pp = fn _ => "<TypeBase.update_fns>"}
 in
-  fun register_update_fn f = (update_fns := !update_fns @ [f])
-  fun apply_update_fns tyi = list_compose (!update_fns) tyi
+  fun register_update_fn f =
+      Context.Data.modify update_fns_slot (fn fs => fs @ [f])
+  fun apply_update_fns tyi =
+      list_compose (Context.Data.get update_fns_slot (Context.snapshot())) tyi
 end;
 
 fun apply_delta tyi tyb = TypeBasePure.insert tyb (tweak_tyi tyi)

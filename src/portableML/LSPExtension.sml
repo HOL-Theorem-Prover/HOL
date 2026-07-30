@@ -121,5 +121,7 @@ val gotoDefinition = ref (fn _ => [])
 val hover = ref (fn _ => [])
 val fixupTheoremLink = ref (fn _ => NONE)
 val helpLookup = ref (fn _ => [])
+val thmLookup : (string -> string option) ref = ref (fn _ => NONE)
+val resetForCompile : (unit -> unit) ref = ref (fn () => ())
 
 end

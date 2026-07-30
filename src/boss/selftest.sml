@@ -1,6 +1,8 @@
 open HolKernel Parse boolLib bossLib DB
 open testutils
 
+val _ = new_theory "scratch"
+
 val _ = print "\n"
 
 val goal_compare = pair_compare(list_compare Term.compare, Term.compare)

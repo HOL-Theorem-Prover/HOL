@@ -72,10 +72,19 @@ fun doProofAttrs p (SOME {attrs = {args = kvs, seps=_, stop=_}, left=_, right=_,
   | doProofAttrs _ _ tac = tac
 
 fun wrapTac (p, tac) = let
-  val dummy = mkIdent (p, "HOL__GOAL__foo")
+  (* Both dummies sit at expStop tac (just past the tac body).  The
+     dummy name is a single character so its synthetic span is only
+     one byte wide — it doesn't overlap with any real source token
+     the user might hover.  A 14-character name would extend into
+     the tac's own source range and intercept navigation on tactic
+     identifiers. *)
+  val tacEnd = expStop tac
+  val patDummy = mkIdent (tacEnd, "g")
+  val expDummy = mkIdent (tacEnd, "g")
   in Fn {fn_ = p,
-       elems = [{bar = NONE, pat = dummy, arrow = NONE, exp = App (tac, dummy)}],
-       stop = expStop tac} end
+       elems = [{bar = NONE, pat = patDummy, arrow = NONE,
+                 exp = App (tac, expDummy)}],
+       stop = expStop expDummy} end
 
 fun valPat pos pat e = let
   val s = {rec_ = NONE, pat = pat, eq = SOME {eq = pos, exp = e}}
@@ -529,11 +538,29 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       attrs, colon = _, quote, proof_, tac, qed_ = _, stop}) = let
     val fileline = fileline (#1 id)
     val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
-    val quote = expandQuote theorem_ stop quote
-    val tac = wrapTac (theorem_, expandExp false tac)
+    (* Anchor the synthetic quote and tac args at DISTINCT source
+       positions so their spans don't overlap.  If they both start at
+       theorem_ and both extend past the tactic identifiers, the
+       navigator's `findChild` (which picks the FIRST covering child)
+       resolves cursor hovers inside Proof-QED to the quote arg and
+       reports its `term frag list` SML type instead of descending
+       into the tac.  Use the `Proof` keyword position (if present) as
+       the boundary; else fall back to the tac's own start. *)
+    val tacAnchor = case proof_ of
+        SOME {proof_ = p, ...} => p
+      | NONE => expStart tac
+    val quote = expandQuote theorem_ tacAnchor quote
+    val tac = wrapTac (tacAnchor, expandExp false tac)
     val tac = case proof_ of SOME {proof_, attrs} => doProofAttrs proof_ attrs tac | _ => tac
     val e = mkLocString (theorem_, "Q.store_thm", "Q.store_thm_at") fileline
-    val e = App (e, mkTuple (theorem_, [nameAttrs, quote, tac]))
+    (* Give the synthetic tuple a real stop so the resulting Built
+       parent covers its children.  mkTuple's default (stop = anchor
+       position = theorem_) yields a zero-width parent over tac's
+       identifiers, blocking hover-navigation inside Proof-QED. *)
+    val tupleStop = expStop tac
+    val args = {args = [nameAttrs, quote, tac], seps = [], stop = tupleStop}
+    val tuple = Tuple {left = theorem_, elems = args, right = NONE, stop = tupleStop}
+    val e = App (e, tuple)
     in DecExpansion {orig = dec, result = [valPat theorem_ (mkIdent id) e]} end
   | expandDec _ (dec as HOLResume {resume_, id, attrs, tac, ...}) = let
     val (label, rest) = case (case attrs of NONE => [] | SOME v => #args (#attrs v)) of

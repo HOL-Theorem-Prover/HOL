@@ -1,4 +1,6 @@
 open HolKernel Parse boolLib
+
+val _ = new_theory "scratch"
 open ListConv1
 
 open testutils

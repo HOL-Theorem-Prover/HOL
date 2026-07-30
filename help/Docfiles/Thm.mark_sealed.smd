@@ -1,0 +1,37 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `mark_sealed`
+
+``` hol4
+Thm.mark_sealed : string -> unit
+```
+
+------------------------------------------------------------------------
+
+Marks a theory as *sealed* for the remainder of the session.
+
+A sealed theory is locked against further change: subsequent
+`Term.prim_new_const`, `Type.prim_new_type`, `Term.prim_delete_const`,
+`Type.prim_delete_type` and `Theory.del_segment` calls targeting it
+raise, and `Thm.setCT` refuses to install it as the current theory.
+
+`Thm.mark_sealed` is called by `Theory.export_theory` (when a segment
+is committed to disk) and by the theory-load machinery (when a
+pre-built theory is loaded into the session).  It should not normally
+be called by user code.
+
+Sealing is monotone: once a theory has been sealed, there is no
+sanctioned way to unseal it in the same session.  Combined with
+`Thm.setCT`'s refusal to enter a sealed theory, this means the only
+way to be in a sealed theory is to have entered it while it was still
+open and sealed it afterwards --- at which point the definitional
+rules no longer accept mints into it either.
+
+### Failure
+
+Never fails.
+
+### See also
+
+[`Thm.is_sealed`](#Thm.is_sealed),
+[`Thm.setCT`](#Thm.setCT),
+[`Theory.export_theory`](#Theory.export_theory)

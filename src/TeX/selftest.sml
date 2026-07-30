@@ -2,6 +2,8 @@ open HolKernel boolLib bossLib Parse
 open EmitTeX combinSyntax PP
 open testutils
 
+val _ = new_theory "scratch"
+
 val errcount = ref 0
 val _ = diemode := Remember errcount
 

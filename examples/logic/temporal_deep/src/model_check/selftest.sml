@@ -1,5 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
+val _ = new_theory "scratch"
+
 open modelCheckLib testutils;
 
 (* To run this test, the environment variable HOL4_SMV_EXECUTABLE must be set to

@@ -61,6 +61,8 @@ hmf/ReadHMF.sml
 ../../src/portableML/json/JSONUtil.sml
 core/HMProject.sig
 core/HMProject.sml
+core/target_times.sig
+poly/target_times.sml
 ../util/GetOpt.sig
 ../util/GetOpt.sml
 ../util/FunctionalRecordUpdate.sml

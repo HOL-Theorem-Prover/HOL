@@ -16,22 +16,30 @@ type tacmodifier = Manager.tacmodifier
 val chatting = goalStack.chatting;
 fun say s = if !chatting then Lib.say s else ();
 
-val the_proofs = ref (Manager.initial_proofs());
-
-fun proofs() = !the_proofs;
+local
+  val proofs_slot : Manager.proofs Context.Data.slot =
+      Context.Data.new
+        {name = "proofmanager.proofs",
+         empty = Manager.initial_proofs(),
+         pp = fn _ => "<proofs>"}
+in
+  fun proofs () = Context.Data.get proofs_slot (Context.snapshot())
+  val put_proofs = Context.Data.write proofs_slot
+  val upd_proofs = Context.Data.modify proofs_slot
+end
 fun top_proof() = Manager.current_proof(proofs());
 
 
 fun new_goalstack g tm f =
-   (the_proofs := Manager.add (Manager.new_goalstack g tm f) (proofs());
+   (upd_proofs (Manager.add (Manager.new_goalstack g tm f));
     proofs());
 
 fun new_goaltree g tm =
-   (the_proofs := Manager.add (Manager.new_goaltree g tm) (proofs());
+   (upd_proofs (Manager.add (Manager.new_goaltree g tm));
     proofs());
 
 fun new_goalfrag g tm =
-   (the_proofs := Manager.add (Manager.new_goalfrag g tm) (proofs());
+   (upd_proofs (Manager.add (Manager.new_goalfrag g tm));
     proofs());
 
 fun set_goal g = new_goalstack g Manager.id_tacm Lib.I;
@@ -43,39 +51,39 @@ fun gt q = set_goaltree([],Parse.Term q);
 fun gf q = set_goalfrag([],Parse.Term q);
 
 fun add g = (say"Adding new proof..\n";
-             the_proofs := Manager.add g (proofs());
+             upd_proofs (Manager.add g);
              proofs());
 
 fun backup () =
-   (the_proofs := Manager.hd_opr Manager.backup (proofs());
+   (upd_proofs (Manager.hd_opr Manager.backup);
     top_proof());
 
 fun redo () =
-   (the_proofs := Manager.hd_opr Manager.redo (proofs());
+   (upd_proofs (Manager.hd_opr Manager.redo);
     top_proof());
 
 fun restore () =
-   (the_proofs := Manager.hd_opr Manager.restore (proofs());
+   (upd_proofs (Manager.hd_opr Manager.restore);
     top_proof());
 
 fun save () =
-   (the_proofs := Manager.hd_opr Manager.save (proofs());
+   (upd_proofs (Manager.hd_opr Manager.save);
     top_proof());
 
 val b = backup;
 val rd = redo;
 
 fun set_backup i =
-  (the_proofs := Manager.hd_opr (Manager.set_backup i) (proofs()));
+  upd_proofs (Manager.hd_opr (Manager.set_backup i));
 
 fun forget_history () =
-  (the_proofs := Manager.hd_opr (Manager.forget_history) (proofs()));
+  upd_proofs (Manager.hd_opr Manager.forget_history);
 
 fun restart() =
-   (the_proofs := Manager.hd_opr Manager.restart (proofs());
+   (upd_proofs (Manager.hd_opr Manager.restart);
     top_proof());
 
-local fun primdrop() = (the_proofs := Manager.drop (proofs()));
+local fun primdrop() = upd_proofs Manager.drop;
 in
 fun drop() = (primdrop(); say"OK..\n"; proofs())
         handle Manager.NO_PROOFS => proofs()
@@ -85,41 +93,43 @@ fun dropn i =
 end;
 
 fun drop_all () =
-    (the_proofs := Manager.initial_proofs(); !the_proofs)
+    let val v = Manager.initial_proofs()
+    in put_proofs v; v
+    end
 
 fun expandf tac =
    (say "OK..\n";
-    the_proofs := Manager.hd_opr (Manager.expandf tac) (proofs());
+    upd_proofs (Manager.hd_opr (Manager.expandf tac));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
 fun expand tac =
    (say "OK..\n";
-    the_proofs := Manager.hd_opr (Manager.expand tac) (proofs());
+    upd_proofs (Manager.hd_opr (Manager.expand tac));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
 fun expand_listf ltac =
    (say "OK..\n";
-    the_proofs := Manager.hd_opr (Manager.expand_listf ltac) (proofs());
+    upd_proofs (Manager.hd_opr (Manager.expand_listf ltac));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
 fun expand_list ltac =
    (say "OK..\n";
-    the_proofs := Manager.hd_opr (Manager.expand_list ltac) (proofs());
+    upd_proofs (Manager.hd_opr (Manager.expand_list ltac));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
 fun expand_frag ftac =
    (say "OK..\n";
-    the_proofs := Manager.hd_opr (Manager.expand_frag ftac) (proofs());
+    upd_proofs (Manager.hd_opr (Manager.expand_frag ftac));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
 fun expandv (s,tac) =
    (say "OK..\n";
-    the_proofs := Manager.hd_opr (Manager.expandv (s,tac)) (proofs());
+    upd_proofs (Manager.hd_opr (Manager.expandv (s,tac)));
     top_proof())
   handle e => Feedback.display_uncaught e;
 
@@ -144,17 +154,17 @@ fun p () = Manager.hd_proj I (proofs())
 val status = proofs;
 
 fun flatn i =
-  (the_proofs := Manager.hd_opr (Manager.flatn i) (proofs());
+  (upd_proofs (Manager.hd_opr (Manager.flatn i));
    top_proof());
 
 fun rotate i =
-  (the_proofs := Manager.hd_opr (Manager.rotate i) (proofs());
+  (upd_proofs (Manager.hd_opr (Manager.rotate i));
    top_proof());
 
 val r = rotate;
 
 fun rotate_proofs i =
-   (the_proofs := Manager.rotate_proofs i (proofs());
+   (upd_proofs (Manager.rotate_proofs i);
     proofs());
 
 val R = rotate_proofs;

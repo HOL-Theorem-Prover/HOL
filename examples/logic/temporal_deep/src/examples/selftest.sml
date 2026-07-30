@@ -1,5 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
+val _ = new_theory "scratch"
+
 open full_ltlTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      symbolic_semi_automatonTheory
      temporal_deep_mixedTheory rltlTheory

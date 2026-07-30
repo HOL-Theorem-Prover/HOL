@@ -54,7 +54,8 @@ sig
   val mk_tacmod : string -> Manager.tacmodifier
 
   val make_simpset_derived_value :
-      (simpset -> 'a -> 'a) -> 'a -> {get : unit -> 'a, set : 'a -> unit}
+      string -> (simpset -> 'a -> 'a) -> 'a ->
+      {get : unit -> 'a, set : 'a -> unit}
 
   (* LET and Abbrev manoeuvres *)
   val LET_ELIM_TAC    : tactic

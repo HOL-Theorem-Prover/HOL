@@ -19,8 +19,8 @@ val _ = use "../src/portableML/json/JSONParser.sig";
 val _ = use "../src/portableML/json/JSONParser.sml";
 val _ = use "../src/portableML/json/JSONDecode.sig";
 val _ = use "../src/portableML/json/JSONDecode.sml";
-val _ = use "holide.ML";
-val _ = use "lsp-server.ML";
+val _ = use "lsp/holide.ML";
+val _ = use "lsp/server.ML";
 
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
@@ -520,8 +520,107 @@ in
                {fnname = fnname, output_exe = s, keep_temp_files = debug})
       end
     | LSP =>
-      let in
+      let
+        (* Compile a source string through PolyML.compiler, looping
+           until the reader is exhausted (PolyML consumes one top-level
+           declaration per call).  Diagnostics go to stderr tagged
+           [LSP-init] since stdout is owned by the JSON-RPC framing. *)
+        fun evalString s = let
+          val i = ref 0
+          fun read () = (SOME (String.sub (s, !i)) before i := !i + 1)
+                        handle Subscript => NONE
+          fun err {message, hard, ...} =
+            (TextIO.output (TextIO.stdErr,
+               "[LSP-init] " ^ (if hard then "ERROR" else "warning") ^ ": ");
+             PolyML.prettyPrint (fn s => TextIO.output (TextIO.stdErr, s), 80) message;
+             TextIO.output (TextIO.stdErr, "\n");
+             TextIO.flushOut TextIO.stdErr)
+          fun runall () =
+            if !i >= String.size s then ()
+            else (PolyML.compiler
+                    (read, [PolyML.Compiler.CPErrorMessageProc err]) ();
+                  runall ())
+        in runall () end
+      in
         QUse.failOnError := false; (* heap may carry true from BUILDHEAP *)
+        (* Setup that references hol.state bindings not in hol.ML's
+           compile-time namespace: Globals.interactive (so uncaught
+           HOL_ERRs don't call OS.Process.exit via Feedback.render_exn's
+           batch-mode branch), and the Feedback streams which default
+           to stdout — that's the JSON-RPC wire, so redirect to stderr. *)
+        evalString
+          "Globals.interactive := true; \
+          \Feedback.MESG_outstream := \
+          \  (fn s => (TextIO.output (TextIO.stdErr, s); \
+          \            TextIO.flushOut TextIO.stdErr)); \
+          \Feedback.WARNING_outstream := \
+          \  (fn s => (TextIO.output (TextIO.stdErr, s); \
+          \            TextIO.flushOut TextIO.stdErr)); \
+          \Feedback.INFO_outstream := \
+          \  (fn s => (TextIO.output (TextIO.stdErr, s); \
+          \            TextIO.flushOut TextIO.stdErr))";
+        (* Load HOL_Interactive so the parser's open-rewriting works
+           on Script.sml files (issue #1865). *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/holinteractive.ML"));
+        (* CompilerSpecific is baked into hol.state via poly-init.ML;
+           the load system doesn't know that, so fake-load it to stop
+           holdep from complaining when it appears in Q-filter-expanded
+           Script.sml output. *)
+        Meta.fakeload "CompilerSpecific";
+        (* Snapshot the clean Context now and install a hook that
+           restores it before each LSP compile.  Without this, each
+           didChange inherits the previous compile's theory (new_theory
+           retires the constants but leaves stale theorems in DB),
+           producing a flood of "is out-of-date!" errors. *)
+        evalString
+          "let val snap = Context.snapshot () \
+          \    val restoreLoaded = Meta.snapshotLoaded () in \
+          \  LSPExtension.resetForCompile := \
+          \    (fn () => (Context.restore snap; restoreLoaded ())) \
+          \end";
+        (* Cheat every tactic proof: return an oracle-tagged theorem
+           for the goal instead of running the tactic.  Same hook that
+           fastbuild (Holmake --fast) uses.  The tag identifies theorems
+           whose proofs were skipped in an LSP session. *)
+        evalString
+          "Tactical.set_prover \
+          \  (fn (g, _) => Thm.mk_oracle_thm \"lsp_compile_skip\" g)";
+        (* Wire LSPExtension.thmLookup to DB + Parse so the hover
+           handler can render a theorem's statement when the cursor
+           lands on an SML identifier of type thm.  Handles bare names
+           and dotted references like arithmeticTheory.ADD_COMM (with
+           the -Theory suffix stripped for DB.fetch). *)
+        evalString
+          "LSPExtension.thmLookup := (fn id => \
+          \  let \
+          \    fun findLast i c = \
+          \      if i < 0 then ~1 \
+          \      else if String.sub (id, i) = c then i \
+          \      else findLast (i - 1) c \
+          \    val dot = findLast (String.size id - 1) #\".\" \
+          \    fun matchExact name = \
+          \      List.mapPartial \
+          \        (fn ((_, n), (th, _)) => \
+          \           if n = name then SOME th else NONE) \
+          \        (DB.find_all name) \
+          \    val thm_opt = \
+          \      if dot < 0 then \
+          \        (case matchExact id of th :: _ => SOME th | [] => NONE) \
+          \      else \
+          \        let val prefix = String.substring (id, 0, dot) \
+          \            val name = String.extract (id, dot + 1, NONE) \
+          \            val thy = \
+          \              if String.isSuffix \"Theory\" prefix \
+          \              then String.substring \
+          \                     (prefix, 0, String.size prefix - 6) \
+          \              else prefix \
+          \        in SOME (DB.fetch thy name) handle _ => \
+          \          (case matchExact name of \
+          \             th :: _ => SOME th | [] => NONE) \
+          \        end \
+          \  in Option.map Parse.thm_to_string thm_opt end \
+          \  handle _ => NONE)";
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;

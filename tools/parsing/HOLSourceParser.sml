@@ -193,6 +193,17 @@ fun parseSML file read parseError: scope -> result = let
   fun identKind start = let
     val s = ident start
     fun holKw () = if colZero start then HolKeyword else Regular
+    (* `Datatype' at column zero introduces a `Datatype: ... End'
+       declaration only when a colon follows (after non-newline whitespace);
+       otherwise it is the ordinary bossLib.Datatype function applied to a
+       quotation -- e.g. an old-style `Datatype `...`` -- and must stay
+       Regular so it parses as an expression. *)
+    fun holKwColon () =
+        let fun toColon i = case getch (!pos + i) of
+                  #" " => toColon (i + 1)
+                | #"\t" => toColon (i + 1)
+                | c => c = #":"
+        in if colZero start andalso toColon 0 then HolKeyword else Regular end
     in (s, case s of
         ":" => Keyword | ":>" => Keyword | "|" => Keyword | "=" => Keyword | "=>" => Keyword
       | "->" => Keyword | "#" => Keyword | "abstype" => Keyword | "and" => Keyword
@@ -207,7 +218,7 @@ fun parseSML file read parseError: scope -> result = let
       | "include" => Keyword | "sharing" => Keyword | "sig" => Keyword | "signature" => Keyword
       | "struct" => Keyword | "structure" => Keyword | "where" => Keyword
 
-      | "Datatype" => holKw () | "Type" => holKw () | "Overload" => holKw ()
+      | "Datatype" => holKwColon () | "Type" => holKw () | "Overload" => holKw ()
       | "Definition" => holKw () | "Theorem" => holKw () | "Triviality" => holKw ()
       | "Quote" => holKw () | "Inductive" => holKw () | "CoInductive" => holKw ()
       | "Proof" => holKw () | "QED" => holKw () | "Termination" => holKw () | "End" => holKw ()

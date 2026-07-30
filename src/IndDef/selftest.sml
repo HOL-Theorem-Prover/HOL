@@ -2,6 +2,8 @@ open HolKernel Parse boolLib IndDefLib
 
 open testutils
 
+val _ = new_theory "scratch"
+
 val _ = Feedback.set_trace "Theory.allow_rebinds" 1
 
 fun checkhyps th = if null (hyp th) then ()
