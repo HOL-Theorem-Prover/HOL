@@ -466,8 +466,8 @@ structure Refute_Core = struct
       val _ = if #kodkod_sym_break mf < 0 then
                 range_error "kodkod_sym_break" "must not be negative"
               else ()
-      val _ = if #max_threads mf < 1 then
-                range_error "max_threads" "must be at least 1"
+      val _ = if #max_threads mf < 0 then
+                range_error "max_threads" "must not be negative"
               else ()
     in
       mf
