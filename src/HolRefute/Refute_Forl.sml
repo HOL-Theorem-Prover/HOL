@@ -1601,9 +1601,13 @@ structure Refute_Forl :> REFUTE_FORL = struct
               if not (null solutions) orelse code = 0 then
                 Normal (solutions, unsat, message)
               else if code = 2 then TimedOut unsat
-              else if code = 130 then Exn.interrupt ()
+              (* A returned status is solver/launcher data.  A real HOL
+                 interrupt is reraised by [run_child]'s cleanup handler,
+                 so do not let a launcher forged 130 abort the caller. *)
               else Error
-                (if message = "" then "Unknown error" else message,
+                (if message = "" then
+                   "Kodkodi launcher exited with status " ^ Int.toString code
+                 else message,
                  unsat)
             end
         in
