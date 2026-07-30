@@ -108,6 +108,8 @@ structure Refute_Gen = struct
         synchronized_registry (fn () =>
           (user_generators :=
              (ty, generator) :: remove_type ty (!user_generators);
+           abstract_specs := remove_type ty (!abstract_specs);
+           abstract_predicates := remove_type ty (!abstract_predicates);
            registry_generation := !registry_generation + 1;
            spec_cache := Redblackmap.mkDict Type.compare;
            cardinality_cache := Redblackmap.mkDict Type.compare;
@@ -431,7 +433,8 @@ structure Refute_Gen = struct
               else ()
             end
       val _ = synchronized_registry (fn () =>
-        (abstract_specs := (ty, spec) :: remove_type ty (!abstract_specs);
+        (user_generators := remove_type ty (!user_generators);
+         abstract_specs := (ty, spec) :: remove_type ty (!abstract_specs);
          (case pred of
               NONE =>
                 abstract_predicates :=
