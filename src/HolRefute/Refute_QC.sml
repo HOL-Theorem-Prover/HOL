@@ -1029,6 +1029,7 @@ structure Refute_QC = struct
               val complete = ref
                 (not (null entries) andalso
                  (if is_random strategy then
+                    bounded_size (#iterations (#qc config)) > 0 andalso
                     List.all (not o plan_has_gen) plans
                   else true))
               val counterexamples = ref []
