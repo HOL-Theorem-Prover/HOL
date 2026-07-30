@@ -1749,7 +1749,9 @@ structure Refute_Core = struct
         Thread_Data.setmp active_refute_context (SOME (ref ())) run ()
     in
       case Thread_Data.get active_refute_context of
-          SOME _ => refute_problem_unquiet cfg problem
+          (* The surrounding call already owns the global output scope, but
+             a reentrant request must still apply its own [quiet] setting. *)
+          SOME _ => run ()
         | NONE =>
             Multithreading.synchronized "Refute quiet output" quiet_mutex
               in_context
