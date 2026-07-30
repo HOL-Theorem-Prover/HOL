@@ -1036,10 +1036,13 @@ fun run_instance deadline started (config : Refute_Core.config)
       let
         val (_, max_potential, max_genuine, donno) = state
         val cexs = rev (!counterexamples)
+        val has_genuine = List.exists
+          (certainty_is_genuine o #certainty) cexs
         val outcome =
-          (* Keep the M3/upstream inconclusive-result precedence when the
-             genuine budget is still open, even if a potential was kept. *)
-          if donno > 0 andalso max_genuine > 0 then
+          (* An inconclusive later scope cannot retract a model already
+             certified by HOL.  Potential results retain upstream's
+             inconclusive-result precedence while the genuine budget is open. *)
+          if donno > 0 andalso max_genuine > 0 andalso not has_genuine then
             Refute_Core.Unknown
               (accounting_reason "model search was inconclusive" ::
                !error_reasons)
