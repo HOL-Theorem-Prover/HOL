@@ -12647,8 +12647,8 @@ val _ = require_msg (check_result (fn () =>
         [``:rg_left``, ``:rg_right``]
   in String.isSubstring "datatype" source andalso
      String.isSubstring "and refute_ty_" source andalso
-     String.isSubstring "eq_refute_" source end)) (fn () =>
-  "mutual datatype or structural equality declarations were not emitted")
+     not (String.isSubstring "eq_refute_" source) end)) (fn () =>
+  "type-only extraction emitted unnecessary structural equality")
   (fn () => ()) ()
 
 val _ = require_msg (check_result (fn () =>

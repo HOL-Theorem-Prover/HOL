@@ -2426,7 +2426,9 @@ structure Refute_Extract = struct
     let
       val context = new_context mode
       val mltypes = List.map (ensure_type context) types
-      val _ = List.app (fn ty => ignore (equality_name context ty)) types
+      (* This utility describes representation types only.  Requesting
+         equality here can make a perfectly extractable function type fail:
+         structural function equality would need to enumerate its domain. *)
       val source = source_prefix context
       val ml_type =
         case mltypes of
