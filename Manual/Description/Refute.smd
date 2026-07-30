@@ -608,7 +608,9 @@ otherwise standard `QUOTIENT` bridge.
 ### Installing Kodkodi
 
 The three native QC backends need no external solver.  The `kodkod`
-backend is Unix-only and requires Java and Kodkodi 1.5.7.  Obtain
+backend is Unix-only and requires Java, the standard Unix `setsid` utility,
+and Kodkodi 1.5.7.  `setsid` isolates the launched process group so Refute
+can reliably terminate it.  Obtain
 `kodkodi-1.5.7.tar.gz` from the Isabelle components mirror at
 <https://isabelle.in.tum.de/components/>, unpack it, and set
 `HOL4_KODKODI` to the component directory.  Its `jar` directory must

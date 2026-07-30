@@ -177,7 +177,8 @@ Abs, rep, case, and constructor terms must be existing constants.  A later
 compatible registration for the same type operator replaces the session
 entry.
 
-Kodkodi support is Unix-only and requires a Java runtime.  Obtain
+Kodkodi support is Unix-only and requires a Java runtime plus the standard
+Unix `setsid` utility (used to isolate and clean up its process group).  Obtain
 `kodkodi-1.5.7.tar.gz` from the Isabelle components mirror at
 <https://isabelle.in.tum.de/components/> and unpack it locally.  Set
 `HOL4_KODKODI` to the resulting `kodkodi-1.5.7` component directory.  Its
