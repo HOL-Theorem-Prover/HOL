@@ -9170,7 +9170,7 @@ local
      Mod (Num 8, Mod (Num 4, Num 3)),
      Cardinality (Union (Rel (1, 0), Rel (1, 1))),
      SetSum (Rel (1, 0)),
-     BitOr (Num 1, BitOr (Num 2, Num 3)),
+     BitOr (Num 1, BitAnd (Num 2, Num 3)),
      BitXor (BitXor (Num 1, Num 2), Num 3),
      BitAnd (Num 1, BitAnd (Num 2, Num 3)),
      BitNot (Add (Num 1, Num 2)),

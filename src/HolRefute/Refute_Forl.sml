@@ -942,12 +942,15 @@ structure Refute_Forl :> REFUTE_FORL = struct
               | Cardinality relation =>
                   (out "#("; out_r relation 0; out ")")
               | SetSum relation => (out "sum("; out_r relation 0; out ")")
+              (* Kodkodi gives all bitwise binary operators one,
+                 left-associative precedence.  Parenthesize the right
+                 operand to retain this AST's grouping across mixed ops. *)
               | BitOr (left, right) =>
-                  (out_i left prec; out " | "; out_i right prec)
+                  (out_i left prec; out " | "; out_i right (prec + 1))
               | BitXor (left, right) =>
-                  (out_i left prec; out " ^ "; out_i right prec)
+                  (out_i left prec; out " ^ "; out_i right (prec + 1))
               | BitAnd (left, right) =>
-                  (out_i left prec; out " & "; out_i right prec)
+                  (out_i left prec; out " & "; out_i right (prec + 1))
               | BitNot body => (out "~"; out_i body prec)
               | Neg body => (out "-"; out_i body prec)
               | Absolute body => (out "abs "; out_i body prec)
