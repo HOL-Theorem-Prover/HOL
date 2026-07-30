@@ -1987,37 +1987,24 @@ structure Refute_Extract = struct
       val (scrutinee, rows) = TypeBase.strip_case term
       fun row (pat, rhs) = pattern context pat ^ " => " ^
         expression context rhs
+      (* Strings are represented as ML strings, not ML lists.  Compile their
+         rows through the observation matcher so literal and nested patterns
+         preserve source order without emitting string expressions as SML
+         patterns. *)
       fun string_rows () =
         let
-          fun classify_row (pat, rhs) =
-            let val (head, arguments) = boolSyntax.strip_comb pat
-            in
-              case kname head of
-                  ("list", "NIL") => SOME (true, arguments, rhs)
-                | ("list", "CONS") => SOME (false, arguments, rhs)
-                | _ => NONE
-            end
-          val classified = List.mapPartial classify_row rows
-          val nil_row = List.find #1 classified
-          val cons_row = List.find (not o #1) classified
+          val value = fresh_pattern context "refute_string_scrutinee_"
+          fun dispatch [] = "(raise Match)"
+            | dispatch ((pat, rhs) :: rest) =
+                let val next = fresh_pattern context "refute_string_next_"
+                in
+                  "let fun " ^ next ^ " () = " ^ dispatch rest ^ " in " ^
+                  lazy_match_pattern context pat value
+                    (expression context rhs) (next ^ " ()") ^ " end"
+                end
         in
-          case (nil_row, cons_row) of
-              (SOME (_, _, nil_rhs), SOME (_, variables, cons_rhs)) =>
-                (case variables of
-                     [head, tail] =>
-                       parens ("if String.size " ^
-                         parens (expression context scrutinee) ^
-                         " = 0 then " ^ expression context nil_rhs ^
-                         " else let val " ^ pattern context head ^
-                         " = " ^ Refute_EvalSML.char_list_head_source
-                           (expression context scrutinee) ^
-                         " val " ^ pattern context tail ^
-                         " = " ^ Refute_EvalSML.char_list_tail_source
-                           (expression context scrutinee) ^
-                         " in " ^ expression context cons_rhs ^
-                         " end")
-                   | _ => reject "malformed string case")
-            | _ => reject "malformed string case"
+          parens ("let val " ^ value ^ " = " ^ expression context scrutinee ^
+            " in " ^ dispatch rows ^ " end")
         end
     in
       if is_char_list (Term.type_of scrutinee) then string_rows ()
@@ -2075,8 +2062,32 @@ structure Refute_Extract = struct
     else
       let
         val (head, arguments) = boolSyntax.strip_comb tm
+        val char_list = is_char_list (Term.type_of tm)
       in
-        if Term.is_const head andalso kname head = ("num", "SUC") then
+        if Term.is_const head andalso kname head = ("list", "NIL") andalso
+           char_list then
+          "if String.size " ^ parens (force value) ^ " = 0 then " ^
+          success ^ " else " ^ failure
+        else if Term.is_const head andalso
+                kname head = ("list", "CONS") andalso char_list then
+          (case arguments of
+               [first, rest] =>
+                 let
+                   val text = fresh_pattern context "refute_lazy_string_"
+                   val head_value = delay
+                     ("String.sub " ^ parens (text ^ ", 0"))
+                   val tail_value = delay
+                     ("String.extract " ^ parens (text ^ ", 1, NONE"))
+                   val body = lazy_match_pattern context first head_value
+                     (lazy_match_pattern context rest tail_value success failure)
+                     failure
+                 in
+                   "let val " ^ text ^ " = " ^ force value ^ " in if " ^
+                   "String.size " ^ text ^ " > 0 then " ^ body ^
+                   " else " ^ failure ^ " end"
+                 end
+             | _ => reject "malformed string CONS pattern")
+        else if Term.is_const head andalso kname head = ("num", "SUC") then
           (case arguments of
                [argument] =>
                  let
@@ -2269,9 +2280,10 @@ structure Refute_Extract = struct
     end
 
   fun definition_clause context item =
-    choose (context_mode context)
-      (fn () => strict_definition_clause context item)
-      (fn () => lazy_definition_clause context item)
+    (* The observation matcher also serves strict extraction: its strict
+       operations are identities.  In particular this avoids rendering a
+       char-list CONS expression as an SML pattern in definition clauses. *)
+    lazy_definition_clause context item
 
   (* Compiling a clause is the expensive part of extraction and its text
      is final once produced (names are fixed at registration), so the
@@ -3369,15 +3381,19 @@ structure Refute_Extract = struct
               parens ("#1 " ^ parens name) ^ " " ^
               parens (expression context tm)
           val checks = guards @ ListPair.mapEq residual (terms, generated)
+          fun with_bindings body =
+            if null bindings then body
+            else "let " ^ join "\n    " bindings ^ "\nin " ^ body ^ " end"
+          (* A char-list head binding contains [String.sub].  It must be
+             delayed until after the nonempty guard rather than evaluated by
+             an enclosing let before short-circuiting the checks. *)
           val body =
-            if null checks then success (additions @ environment)
+            if null checks then with_bindings (success (additions @ environment))
             else
               safe_value (join " andalso " (map parens checks)) failure ^
               "if refute_value then " ^
-              success (additions @ environment) ^ " else " ^ failure ^ ")"
-          val body =
-            if null bindings then body
-            else "let " ^ join "\n    " bindings ^ "\nin " ^ body ^ " end"
+              with_bindings (success (additions @ environment)) ^
+              " else " ^ failure ^ ")"
         in
           "(case " ^ value_text ^ " of " ^ pattern_text ^ " => " ^
           body ^ " | _ => " ^ failure ^ ")"
