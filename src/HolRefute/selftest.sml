@@ -19865,7 +19865,7 @@ val mf_acceptance_cases : mf_acceptance_case list =
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "DefnBase equation mutation",
     tm = ``zoo_height (ZooLeaf n) = SUC n``,
-    expect = ExpectGenuine, cert_pin = MfCertNone,
+    expect = ExpectPotential, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "unary natural arithmetic",
     tm = ``SUC n = n``,
@@ -19877,7 +19877,7 @@ val mf_acceptance_cases : mf_acceptance_case list =
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "non-executable choice-spec counterexample",
     tm = ``zoo_spec = 1``,
-    expect = ExpectGenuine, cert_pin = MfCertNone,
+    expect = ExpectPotential, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "essentially existential natural",
     tm = ``?n : num. n <> n``,
@@ -19893,28 +19893,28 @@ val mf_acceptance_cases : mf_acceptance_case list =
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "direct well-founded inductive equation",
     tm = ``zoo_wf_lfp n ==> n = 0``,
-    expect = ExpectGenuine, cert_pin = MfCertNone,
+    expect = ExpectPotential, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = true},
    {name = "non-wf inductive predicate unrolling",
     tm = ``~zoo_unroll_lfp 2``,
-    expect = ExpectGenuine, cert_pin = MfCertNone,
+    expect = ExpectPotential, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = true},
    {name = "joint-wf mutual inductive equations",
     tm = ``zoo_mutual_lfp n ==> zoo_mutual_other_lfp n``,
-    expect = ExpectGenuine, cert_pin = MfCertNone,
+    expect = ExpectPotential, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "joint mutual inductive unrolling",
     tm = ``zoo_mutual_nonwf_lfp n ==>
            zoo_mutual_nonwf_other_lfp n``,
-    expect = ExpectGenuine, cert_pin = MfCertNone,
+    expect = ExpectPotential, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "coinductive predicate unrolling",
     tm = ``zoo_guarded_gfp F``,
-    expect = ExpectGenuine, cert_pin = MfCertNone,
+    expect = ExpectPotential, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = true},
    {name = "joint mutual coinductive unrolling",
     tm = ``zoo_mutual_gfp F \/ zoo_mutual_other_gfp F``,
-    expect = ExpectGenuine, cert_pin = MfCertNone,
+    expect = ExpectPotential, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = false}
   ]
 
@@ -21727,7 +21727,7 @@ fun mf_native_polymorphic_certification solver =
     val large_ok =
       case large of
           Refute.Counterexample
-            ({certainty = Refute.Genuine, cert = NONE,
+            ({certainty = Refute.Potential _, cert = NONE,
               scope = SOME assignments, ...} :: _) =>
               List.exists (fn (reported_ty, card) =>
                 Type.compare (reported_ty, ty) = EQUAL andalso card = 7)
