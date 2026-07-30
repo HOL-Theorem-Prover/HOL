@@ -217,9 +217,13 @@ with cases-theorem order and the first explicit row deciding it.
 need different cardinalities for the original variables.
 
 MF updaters validate the resulting MF sub-record.  In particular,
-`bits` must be nonempty and between 1 and 31, each `iter` row must be
-nonempty and nonnegative, `bisim_depth` values must be at least `~1`,
-`max_genuine` must be positive, and `max_potential` nonnegative.
+`bits` must be nonempty and between 1 and 31.  Every `iter` row must be
+nonempty, nonnegative, and have a representable successor; every
+nonnegative `bisim_depth` must likewise have a representable successor.
+A `bisim_depth` row cannot mix `~1` (disabled) with nonnegative depths.
+The non-fallback keys of `max`, `wf`, and `iter` must be constants or
+variables.  `max_genuine` must be positive and `max_potential`
+nonnegative.
 
 ### See also
 
