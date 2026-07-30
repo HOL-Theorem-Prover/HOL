@@ -187,8 +187,12 @@ structure Refute_ModelFinder_Preproc = struct
                 let
                   val (variable, body) = Term.dest_abs candidate
                   val (name, ty) = Term.dest_var variable
-                  val replacement = Term.mk_var
-                    (name, MFH.binarize_nat_and_int_in_type ty)
+                  (* Retyping a binder can otherwise capture a free variable
+                     with the same name at its new representation type. *)
+                  val replacement = Term.variant
+                    (Term.all_vars original @ map #2 environment)
+                    (Term.mk_var
+                      (name, MFH.binarize_nat_and_int_in_type ty))
                 in
                   Term.mk_abs (replacement,
                     recurse ((variable, replacement) :: environment) body)
@@ -2175,7 +2179,12 @@ structure Refute_ModelFinder_Preproc = struct
       fun rebind environment variable new_ty body =
         let
           val (name, _) = Term.dest_var variable
-          val variable' = Term.mk_var (name, new_ty)
+          (* A changed binder type may coincide with a free representation
+             variable.  Also avoid replacements of outer binders whose
+             formerly distinct types collapse under boxing. *)
+          val variable' = Term.variant
+            (Term.all_vars original @ map #2 environment)
+            (Term.mk_var (name, new_ty))
         in (variable', body, (variable, variable') :: environment) end
       fun quantifier environment polarity existential candidate =
         let
