@@ -1,6 +1,6 @@
 Theory cooper
 Ancestors
-  integer int_arith
+  integer int_arith list
 
 Theorem elim_le[unlisted] = GSYM INT_NOT_LT;
 
@@ -134,3 +134,28 @@ Theorem NOT_NOT[unlisted] = tautLib.TAUT_PROVE ``~~p:bool = p``;
 
 Theorem K_THM'[unlisted] =
   INST_TYPE [(alpha |-> bool), (beta |-> ``:int``)] combinTheory.K_THM;
+
+(* MEM helpers CooperCore.sml formerly proved as it loaded. *)
+
+Theorem MEM_base_poly:  !e:'a l. MEM e (e::l)
+Proof REWRITE_TAC [listTheory.MEM]
+QED
+
+Theorem MEM_build_poly:  !l1 e1:'a e2. MEM e1 l1 ==> MEM e1 (e2::l1)
+Proof REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [listTheory.MEM]
+QED
+
+Theorem mem_nilP_poly:  !P. (?x:'a. MEM x [] /\ P x) <=> F
+Proof REWRITE_TAC [listTheory.MEM]
+QED
+
+Theorem mem_singP_poly:  !P y. (?x:'a. MEM x [y] /\ P x) <=> P y
+Proof simpLib.SIMP_TAC boolSimps.bool_ss [listTheory.MEM]
+QED
+
+Theorem mem_consP_poly:
+  !P h t. (?x:'a. MEM x (h :: t) /\ P x) <=> P h \/ (?x. MEM x t /\ P x)
+Proof
+  simpLib.SIMP_TAC boolSimps.bool_ss
+    [listTheory.MEM, RIGHT_AND_OVER_OR, EXISTS_OR_THM]
+QED
