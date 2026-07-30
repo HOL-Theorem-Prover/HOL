@@ -1834,7 +1834,7 @@ Theorem OR_CONG = ((* this proof is from boolScript.sml *)
 val exists_refl = hd(amatch ``?x. x = a``)
 
 (* |- ?rep. TYPE_DEFINITION ($= ARB) rep *)
-val itself_tydef = prim_type_definition({Thy="prove_base_assums",Tyop="itself"},
+val itself_tydef = prim_type_definition("itself",
   SPEC boolSyntax.arb exists_refl |> CONV_RULE(QUANT_CONV SYM_CONV))
 
 val _ = Parse.hide "the_value";

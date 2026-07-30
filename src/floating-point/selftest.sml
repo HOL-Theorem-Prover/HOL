@@ -1,5 +1,7 @@
 open HolKernel boolLib testutils bossLib binary_ieeeLib
 
+val _ = new_theory "scratch"
+
 local open fp64Syntax in end
 open fp16Syntax
 

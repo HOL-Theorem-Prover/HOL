@@ -6,12 +6,6 @@ structure Map = OpenTheoryMap.Map
 
 val ERR = Feedback.mk_HOL_ERR "Logging"
 
-fun uptodate_const Thy Name =
-  Theory.uptodate_term (Term.prim_mk_const {Thy=Thy,Name=Name})
-  handle Feedback.HOL_ERR (Feedback.HOL_ERROR {
-    origins = {origin_function="prim_mk_const",...}::_,...
-  }) => false
-
 val verbosity = ref 0
 val _ = Feedback.register_trace("opentheory logging",verbosity,5)
 
@@ -215,20 +209,12 @@ val (log_term, log_thm, log_clear,
     in () end
   end
 
-  fun strip_old s = let
-    open Substring
-    val s = triml 3 (trimr 5 (full s))
-    val (_,s) = splitl Char.isDigit s
-    val s = triml 2 s
-  in string s end
-
   fun log_term tm = let
     val ob = OTerm tm
   in if saved ob then () else let
     open Term Feedback
     val _ = let
       val {Thy,Name,Ty} = dest_thy_const tm
-      val Name = if uptodate_const Thy Name then Name else strip_old Name
       val _ = log_const {Thy=Thy,Name=Name}
       val _ = log_type Ty
       val _ = log_command "constTerm"
@@ -440,7 +426,6 @@ val (log_term, log_thm, log_clear,
       in () end
     | Def_const_prf (t,ctm) => let
       val {Thy,Name,...} = dest_thy_const ctm
-      val Name = if uptodate_const Thy Name then Name else strip_old Name
       val c = {Thy=Thy,Name=Name}
       val _ = log_const_name c
       val _ = log_term t
@@ -655,8 +640,6 @@ val (log_term, log_thm, log_clear,
       in () end
     | Def_const_list_prf (th,cs) => let
       val nvars = map (fn c => let val {Thy,Name,Ty} = dest_thy_const c
-                                   val Name = if uptodate_const Thy Name
-                                              then Name else strip_old Name
                                in ({Thy=Thy,Name=Name},mk_var(Name,Ty)) end) cs
       val _ = log_list (log_pair (log_const_name, log_var)) nvars
       val _ = log_thm th
@@ -671,7 +654,6 @@ val (log_term, log_thm, log_clear,
       in () end
     | Def_tyop_prf (tyvars,th,aty) => let
       val {Thy,Tyop,...} = Type.dest_thy_type aty
-      val Tyop = if Type.uptodate_type aty then Tyop else strip_old Tyop
       val name = {Thy=Thy,Tyop=Tyop}
       val n = log_tyop_name name
       val (ns,n) = n

@@ -1,4 +1,6 @@
 open HolKernel Parse boolLib bossLib
+
+val _ = new_theory "scratch"
 open md5Theory testutils wordsLib
 
 fun md5 str = let

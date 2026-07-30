@@ -1,5 +1,7 @@
 open arithmeticTheory HolKernel boolLib Parse testutils
 
+val _ = new_theory "scratch"
+
 fun fail() = die "FAILED\n"
 
 val _ = tprint "Testing that I can parse num$0"

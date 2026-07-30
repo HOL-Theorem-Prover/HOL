@@ -310,6 +310,13 @@ fun stdioConnection (): connection = let
     val _ = Thread.fork (readerThread, [])
     in fn () => Channel.recv recv end
 
+  (* Hijack the real stdOut for our JSON-RPC frames, and re-point
+     TextIO.stdOut at TextIO.stdErr so USER code that writes via
+     TextIO.stdOut (e.g. `val _ = print "..."` at top level in a HOL
+     script) doesn't corrupt the wire. *)
+  val lspOut = TextIO.getOutstream TextIO.stdOut
+  val () = TextIO.setOutstream (TextIO.stdOut,
+                                TextIO.getOutstream TextIO.stdErr)
   val send = let
     val (send, recv) = Channel.channel ()
     fun writerThread () = let
@@ -318,9 +325,17 @@ fun stdioConnection (): connection = let
       val () = encMessage msg (fn s => buf := s :: !buf)
       fun write (n, a :: buf, acc) = write (n + size a, buf, a :: acc)
         | write (n, [], acc) =
-          TextIO.output (TextIO.stdOut,
+          TextIO.StreamIO.output (lspOut,
             String.concat ("Content-Length: " :: Int.toString n :: "\r\n\r\n" :: acc))
-      in write (0, !buf, []); writerThread () end
+      in write (0, !buf, []); TextIO.StreamIO.flushOut lspOut;
+         writerThread () end
+       (* An encode-time exception must not kill the writer: the
+          channel would stay Full and every send would hang. *)
+       handle e => (
+         TextIO.output (TextIO.stdErr,
+           "[LSP-writer] dropping message; encode raised: " ^ exnMessage e ^ "\n");
+         TextIO.flushOut TextIO.stdErr;
+         writerThread ())
     val _ = Thread.fork (writerThread, [])
     in Channel.send send end
   in {send = send, recv = recv} end
@@ -381,7 +396,14 @@ fun start {diag} = let
   val _ = PolyML.print_depth 100
   val conn as {send, recv} = stdioConnection ()
   val _ (*clientCapabilities*) = initialize conn (concat [
-    "{\"textDocumentSync\":1", (* 1 = Full *)
+    "{\"textDocumentSync\":2", (* 2 = Incremental; applyEdit supports it *)
+    (* LSP 3.17 offset encoding.  Server-side buffers and fromLineCol
+       count bytes, so ask the client for UTF-8 positions.  Without this
+       eglot defaults to UTF-16 code units, and edits crossing multi-
+       byte characters (e.g. `⇒`, `∧`) land mid-codepoint and corrupt
+       the buffer — surfaces as a HOL "Lexical error" on the first byte
+       of the split character. *)
+    ",\"positionEncoding\":\"utf-8\"",
     ",\"hoverProvider\":true",
     ",\"definitionProvider\":true",
     ",\"referencesProvider\":true",
@@ -427,6 +449,13 @@ fun start {diag} = let
   val elabOnRef = ref ElabOnChange
   val holdepMode = ref HoldepQuiet
 
+  (* Server-initiated request ids and progress tokens for
+     window/workDoneProgress. *)
+  val nextRequestId = ref 100000
+  fun allocRequestId () =
+      !nextRequestId before nextRequestId := !nextRequestId + 1
+  val progressIdCounter = ref 0
+
   datatype report =
     Error of {hard: bool, pos: range, msg: encode}
   | CompilerOut of int * string list
@@ -455,10 +484,17 @@ fun start {diag} = let
     {done = done, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
 
   type text_data = {text: string, version: int, lines: lines}
-  type compile_data = {parse: parse_data ref, text: text_data, thread: Thread.thread}
+  type compile_data = {parse: parse_data ref, text: text_data,
+                       thread: Thread.thread, cancelled: bool ref}
   type file_data = {
     compile: compile_data option ref,
-    lastTrees: {parse: parse_data, text: text_data} ref}
+    lastTrees: {parse: parse_data, text: text_data} ref,
+    (* debounce epoch: incremented on didChange and at startCompile
+       entry.  scheduleCompile's forked thread captures the epoch and
+       only fires startCompile if its epoch still matches when it
+       wakes up.  Rapid-fire edits fork many threads but only the
+       last (whose epoch survives to wake time) actually compiles. *)
+    debounce: int ref}
   local
     val mutex = Mutex.mutex ()
     val fileInfo = ref (Binarymap.mkDict String.compare: (string, file_data) Binarymap.dict)
@@ -473,13 +509,28 @@ fun start {diag} = let
 
   fun newFile text version = let
     val text = {text = text, version = version, lines = mkLineCounter text}
-    in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text}} end
+    in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
+        debounce = ref 0} end
 
+  (* Cooperative cancel: signal the flag, which the compile thread
+     checks at each Progress event and raises Thread.Interrupt.  We
+     can't use Thread.interrupt directly for two reasons: the compile
+     thread runs InterruptDefer (so Poly wouldn't deliver it), and
+     HOL's tactic-level `handle _ =>` would swallow it mid-proof
+     without stopping the wider compile.
+
+     stopCompile does NOT wait for the thread to exit — it's called
+     from the recv thread on every didChange, and a stuck compile
+     (e.g., HOL's parser recovering from an unterminated `Theorem`)
+     would otherwise block recv, freezing hover requests and further
+     didChanges.  The `cancelled` flag doubles as a "no longer
+     current" marker: the compile thread checks it before writing
+     lastTrees so a stale finish can't clobber the new state. *)
   fun stopCompile r = case !r of
     NONE => ()
-  | SOME {thread, ...} => (r := NONE; Thread.interrupt thread)
+  | SOME {cancelled, ...} => (r := NONE; cancelled := true)
 
-  fun applyEdit ({compile, lastTrees}:file_data) version changes = let
+  fun applyEdit ({compile, lastTrees, ...}:file_data) version changes = let
     val _ = stopCompile compile
     fun getLines text NONE = mkLineCounter text
       | getLines _ (SOME lines) = lines
@@ -543,11 +594,19 @@ fun start {diag} = let
       builtTree = builtTree }
     in lastPos := size code end
 
-  fun startCompile uri ({compile, lastTrees}:file_data) =
+  fun startCompile uri ({compile, lastTrees, debounce}:file_data) = (
+    (* Invalidate any pending scheduleCompile thread: their epoch
+       check will see the new value and self-abort. *)
+    debounce := !debounce + 1;
+    (* Restore the LSP-startup Context snapshot so this compile runs
+       against a clean HOL state (no residual theories / stale DB
+       entries from the previous compile of this or another file). *)
+    !LSPExtension.resetForCompile ();
     if #done (#parse (!lastTrees)) then () else let
     val _ = stopCompile compile
     val {text as {lines, ...}, parse = {diags = oldDiags, ...}} = !lastTrees
     val trees = ref (emptyParseData 8)
+    val cancelled = ref false
 
     fun compileThread () = ((let
       fun encDiag (Error {hard, pos, msg}) print = (
@@ -596,27 +655,78 @@ fun start {diag} = let
         val n = DArray.size oldDiags
         val newDiags = DArray.clone (diags, DArray.size diags + n)
         fun loop i = if i >= n then () else let
-          val x = DArray.sub (diags, i)
+          val x = DArray.sub (oldDiags, i)
           val keep = case x of Error {pos = (start, _), ...} => start >= pos | _ => true
           in if keep then DArray.push (newDiags, x) else (); loop (i+1) end
         in loop 0; DArray.replace (oldDiags, newDiags) end
 
-      fun sendDiags () =
-        send (mkNotif "textDocument/publishDiagnostics" (fn print => (
-          print "{\"uri\":"; encString uri print;
-          print ",\"version\":"; encInt (#version text) print;
-          print ",\"diagnostics\":"; encDArray encDiag oldDiags print;
-          print "}")))
+      (* Only emit publishDiagnostics when the accumulated list has
+         actually changed size since the last emit.  Progress events
+         far past the point where an error was found still update
+         `oldDiags` (by re-merging), but if the size didn't change,
+         re-sending is pure noise for the client's log. *)
+      val lastSentSize = ref ~1
+      (* Snapshot oldDiags for the writer thread.  A live reference
+         races updateDiags on the next Progress event: DArray.replace
+         mid-encode makes encDArray raise Subscript, which kills the
+         writer and jams every subsequent send. *)
+      fun sendDiags () = let val n = DArray.size oldDiags
+        in if n = !lastSentSize then () else (
+          lastSentSize := n;
+          let val snapshot = DArray.clone (oldDiags, n) in
+          send (mkNotif "textDocument/publishDiagnostics" (fn print => (
+            print "{\"uri\":"; encString uri print;
+            print ",\"version\":"; encInt (#version text) print;
+            print ",\"diagnostics\":"; encDArray encDiag snapshot print;
+            print "}"))) end)
+        end
+
+      (* Standard LSP window/workDoneProgress: gives eglot a
+         mode-line spinner + percentage while the compile runs. *)
+      val totalSize = size (#text text)
+      (* Token is a bare integer; some clients (eglot) concatenate
+         title and token when reporting, so we keep the token free of
+         label-like text. *)
+      val progressToken = Int.toString (!progressIdCounter)
+        before progressIdCounter := !progressIdCounter + 1
+      val () = send (Request {
+        id = Id (allocRequestId ()),
+        method = "window/workDoneProgress/create",
+        params = fn print => (
+          print "{\"token\":"; encString progressToken print; print "}")})
+      val () = send (mkNotif "$/progress" (fn print => (
+        print "{\"token\":"; encString progressToken print;
+        print ",\"value\":{\"kind\":\"begin\",\"title\":\"HOL compile\",";
+        print "\"cancellable\":false,\"percentage\":0,\"message\":";
+        encString (OS.Path.file uri) print;
+        print "}}")))
+      val lastReportedPct = ref 0
+      fun sendProgressReport pos =
+        if totalSize <= 0 then () else let
+          val pct = FixedInt.toInt (FixedInt.fromInt pos * 100 div FixedInt.fromInt totalSize)
+          in if pct <= !lastReportedPct then () else (
+            lastReportedPct := pct;
+            send (mkNotif "$/progress" (fn print => (
+              print "{\"token\":"; encString progressToken print;
+              print ",\"value\":{\"kind\":\"report\",\"percentage\":";
+              encInt pct print; print "}}"))))
+          end
+      fun sendProgressEnd () =
+        send (mkNotif "$/progress" (fn print => (
+          print "{\"token\":"; encString progressToken print;
+          print ",\"value\":{\"kind\":\"end\"}}")))
 
       val ls = ref (beforeCompile ())
       val lastPos = ref 0
       fun process (Progress i) = (
+          if !cancelled then raise Thread.Interrupt else ();
           trees := setParsePos i (!trees);
           afterCompile (!lastPos before lastPos := i, i) (!ls);
           send (mkNotif "$/compileProgress" (fn print => (
             print "{\"uri\":"; encString uri print;
             print ",\"pos\":"; encPosLC lines i print;
             print "}")));
+          sendProgressReport i;
           updateDiags i;
           sendDiags ();
           ls := beforeCompile ())
@@ -626,21 +736,52 @@ fun start {diag} = let
         | process Interrupted = raise Bind
         | process (msg as Error _) = DArray.push (#diags (!trees), msg)
       fun processBuiltTree t = trees := addBuiltTree t (!trees)
-      in
+      in (
         compileForReport uri (#text text) lastPos processBuiltTree process;
         afterCompile (!lastPos, size (#text text)) (!ls);
-        send (mkNotif "$/compileCompleted" (fn print => (
-          print "{\"uri\":"; encString uri print; print "}")));
-        lastTrees := {text = text, parse = setParseDone (size (#text text)) (!trees)}
-      end
-      handle Thread.Interrupt =>
+        (* stopCompile no longer waits for the thread to exit, so
+           we might land here on a stale thread whose applyEdit has
+           already superseded the buffer we compiled.  Emit the
+           completion events only if we're still current; otherwise
+           the fresh compile that replaced us owns lastTrees. *)
+        if !cancelled then () else (
+          sendProgressEnd ();
+          send (mkNotif "$/compileCompleted" (fn print => (
+            print "{\"uri\":"; encString uri print; print "}")));
+          lastTrees := {text = text,
+                        parse = setParseDone (size (#text text)) (!trees)})
+      ) handle Thread.Interrupt => (
+        sendProgressEnd ();
         send (mkNotif "$/compileInterrupted" (fn print => (
-          print "{\"uri\":"; encString uri print; print "}"))));
-      compile := NONE)
+          print "{\"uri\":"; encString uri print; print "}"))))
+           | e => (
+        logMessage ("compile aborted: " ^ exnMessage e);
+        sendProgressEnd ();
+        send (mkNotif "$/compileInterrupted" (fn print => (
+          print "{\"uri\":"; encString uri print; print "}"))))
+      end);
+      (* Don't clobber `compile` here — stopCompile may have moved on
+         and started another compile that installed a fresh SOME.
+         The `cancelled` flag already fences correctness. *)
+      ())
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
-    in compile := SOME {parse = trees, text = text, thread = thread} end
+    in compile := SOME {parse = trees, text = text, thread = thread,
+                        cancelled = cancelled} end)
 
-  fun getState {compile, lastTrees} endTarget = let
+  (* Fire a compile after a debounce delay: rapid didChange bursts
+     collapse to one compile. *)
+  fun scheduleCompile uri (v as {debounce, ...}: file_data) = let
+    val () = debounce := !debounce + 1
+    val myEpoch = !debounce
+    val debounce_ms = Time.fromMilliseconds 300
+    in Thread.fork (fn () =>
+        ((OS.Process.sleep debounce_ms;
+          if !debounce = myEpoch then startCompile uri v else ())
+         handle _ => ()),
+        []); ()
+    end
+
+  fun getState {compile, lastTrees, ...} endTarget = let
     fun getIfValid {parse as {pos, ...}, text} =
       if pos > 0 then let
         val offset = fromLineCol (#lines text) endTarget
@@ -727,13 +868,34 @@ fun start {diag} = let
           case NameSpace.Values.print (value, printDepth) of
             PrettyString "" => NONE
           | otherwise => SOME otherwise
-      val out = case (id, ty, value) of
-          (_, NONE, NONE) => []
-        | (NONE, SOME ty, NONE) => [typeHover (loc, ty)]
-        | (SOME id, SOME ty, NONE) =>
+      (* Values of type `thm` are opaque to PolyML.NameSpace.Values;
+         the SML-side hover would show only "val name: thm = ?".
+         When DB has a theorem by this name, replace the standard
+         value-print with the theorem statement (rendered by
+         Parse.thm_to_string on the LSP-init hook). *)
+      val thmMd = case id of
+          NONE => NONE
+        | SOME id => (!LSPExtension.thmLookup id handle _ => NONE)
+      val out = case (id, ty, value, thmMd) of
+          (_, NONE, NONE, _) => []
+        | (NONE, SOME ty, NONE, _) => [typeHover (loc, ty)]
+        | (SOME id, SOME ty, _, SOME md) => let
+          (* Theorem: "val id: thm\n\n<statement>" as one markdown block.
+             ppToString may leave a trailing newline; strip it before
+             appending the separator so we get exactly one blank line. *)
+          fun rtrim s = let
+            val n = size s
+            fun k i = if i > 0 andalso Char.contains "\n\r " (String.sub (s, i-1))
+                      then k (i-1) else i
+            in String.substring (s, 0, k n) end
+          in [{range = SOME (locToRange loc),
+               markdown = "val " ^ id ^ ": " ^ rtrim (ppToString ty)
+                          ^ "\n\n" ^ md}]
+          end
+        | (SOME id, SOME ty, NONE, NONE) =>
           [typeHover (loc, PrettyBlock(0, true, [],
             [PrettyString ("val " ^ id ^ ":"), PrettyBreak(1, 2), ty]))]
-        | (id, ty, SOME value) =>
+        | (id, ty, SOME value, NONE) =>
           [typeHover (loc, PrettyBlock(2, true, [], [
             PrettyBlock(0, false, [],
               (case ty of
@@ -743,6 +905,7 @@ fun start {diag} = let
                   PrettyBreak(1, 2), ty])
               @ [PrettyBreak(1, 2), PrettyString "="]),
              PrettyBreak(1, 0), value]))]
+        | _ => []
       in thyHov @ help @ out end
     fun fromTree NONE = []
       | fromTree (pt as (SOME (HOL_IDE.Built ((s, e), props, _), _))) =
@@ -918,18 +1081,23 @@ fun start {diag} = let
       in app (fn (j,th) => if j = id then Thread.interrupt th else ()) (jobs I) end
     | Notification {method = "textDocument/didOpen", params} => let
       val {uri, text, version} = JSONDecode.decode textDocumentParams params
-      val v = withFileInfo (fn fileInfo =>
+      val (v, existed) = withFileInfo (fn fileInfo =>
         case Binarymap.peek (fileInfo, uri) of
-          SOME v => (fileInfo, SOME v)
-        | NONE => (Binarymap.insert (fileInfo, uri, newFile text version), NONE))
-      in case v of NONE => () | SOME v => applyEdit v version [{range = NONE, text = text}] end
+          SOME v => (fileInfo, (v, true))
+        | NONE => let val v = newFile text version
+                  in (Binarymap.insert (fileInfo, uri, v), (v, false)) end)
+      val () = if existed then applyEdit v version [{range = NONE, text = text}]
+               else ()
+      in if !elabOnRef = ElabOnChange then startCompile uri v else () end
     | Notification {method = "textDocument/didChange", params} => let
       val {uri, version, changes} = JSONDecode.decode didChangeParams params
       val _ = case withFileInfo (fn fileInfo => (fileInfo, Binarymap.peek (fileInfo, uri))) of
         NONE => ()
       | SOME v => (
         applyEdit v version changes;
-        if !elabOnRef = ElabOnChange then startCompile uri v else ())
+        (* Debounce so keystroke bursts don't kick off a compile per
+           character; only the last edit in a 300 ms window fires. *)
+        if !elabOnRef = ElabOnChange then scheduleCompile uri v else ())
       in () end
     | Notification {method = "textDocument/didClose", params} => let
       val uri = JSONDecode.decode textDocumentId params

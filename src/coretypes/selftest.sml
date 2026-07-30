@@ -2,6 +2,8 @@ open HolKernel Parse boolLib testutils
 open pairTheory sumTheory optionTheory optionSyntax
 open simpLib BasicProvers boolSimps
 
+val _ = new_theory "scratch"
+
 val _ = set_trace "Unicode" 0
 
 (* testing for sums *)

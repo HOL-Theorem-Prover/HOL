@@ -47,6 +47,12 @@ sig
   val updnode_tgtstatus : node * target_status -> 'a t -> 'a t
   val updnode_fully : node * 'a nodeInfo -> 'a t -> 'a t
 
+  val add_dependency : node -> (node * dep) -> 'a t -> 'a t
+    (* Append (dep_node, dep_target) to `node`'s `#dependencies` list.
+       No-op if the edge already exists.  Used by `multibuild` to
+       record deps discovered during dispatch (see the post-BIC_BuildScript
+       rescan of generated `*Theory.sml`). *)
+
   (* File-hash memo (used by HM_Cachekey to avoid re-hashing shared
      dependencies during a single Holmake invocation). *)
   val peek_file_hash : 'a t -> dep -> string option
@@ -79,6 +85,20 @@ sig
        free of observable side effects -- it may be invoked many
        times across successive scheduler turns and on each
        candidate. *)
+
+  val find_best_runnable_pred :
+      (node -> real) -> ('a nodeInfo -> bool) -> 'a t ->
+      (node * 'a nodeInfo) option
+    (* Ties on the smallest node id: with score ≡ 0 the result is
+       identical to `find_runnable_pred`. *)
+
+  val successor_map : 'a t -> (node, node list) Binarymap.dict
+    (* Inverse of `#dependencies`. *)
+
+  val compute_cp_weights :
+      ('a nodeInfo -> real) -> 'a t -> (node -> real)
+    (* Critical-path weight lookup: `cp n = cost n + max cp m` over
+       successors `m`.  Unknown nodes score 0.0. *)
 
   val toString : 'a t -> string
   val toJSONString : 'a t -> string

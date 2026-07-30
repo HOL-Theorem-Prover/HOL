@@ -1953,25 +1953,38 @@ fun count_needed_theories depgraph =
         depgraph 0
     end
 
+fun print_dispatch_order depgraph =
+    (* Without a populated target-times cache all costs are 0 and the
+       printed order collapses to insertion (node-id) order, matching
+       what Holmake would attempt at `-j 1`. *)
+    let
+      val times = target_times.load
+                    { root = HMProject.find_root
+                               { start = OS.FileSys.getDir() } }
+      fun cost_of (nI : 'a HM_DepGraph.nodeInfo) =
+          case #command nI of
+              HM_DepGraph.BuiltInCmd
+                (HM_DepGraph.BIC_BuildScript fp, _) =>
+                target_times.theory_cost times fp
+            | _ => 0.0
+      val cp_weight = HM_DepGraph.compute_cp_weights cost_of depgraph
+      fun loop g =
+          case HM_DepGraph.find_best_runnable_pred
+                 cp_weight (fn _ => true) g of
+              NONE => ()
+            | SOME (n, nI) =>
+              (info (hmdir.pretty_dir (#dir nI) ^ " - " ^
+                     Holmake_tools.fromFile
+                       (hm_target.filepart (#target nI)));
+               loop (HM_DepGraph.updnode_tgtstatus
+                       (n, HM_DepGraph.Succeeded) g))
+    in
+      loop depgraph
+    end
+
 fun dispatch_built_graph depgraph =
     if cline_nobuild then
-      let val _ = print ("Dependency graph" ^
-                         HM_DepGraph.toString depgraph ^
-                         "\n\nTop-sorted:\n")
-          val sorted = HM_DepGraph.topo_sort depgraph
-          fun pr n =
-              case HM_DepGraph.peeknode depgraph n of
-                  NONE => die ("No node " ^ HM_DepGraph.node_toString n)
-                | SOME nI =>
-                  case #status nI of
-                      Pending {needed = true} =>
-                      print (hmdir.pretty_dir (#dir nI) ^ " - " ^
-                             hm_target.toString (#target nI) ^ "\n")
-                    | _ => ()
-      in
-        app pr sorted;
-        OS.Process.success
-      end
+      (print_dispatch_order depgraph; OS.Process.success)
     else if show_json then (
       info (HM_DepGraph.toJSONString depgraph);
       OS.Process.exit OS.Process.success
@@ -2147,8 +2160,7 @@ fun work() =
         val _ = check_targets_are_in_graph depgraph targets
       in
         if cline_nobuild then
-          (print ("Dependency graph" ^ HM_DepGraph.toString depgraph);
-           OS.Process.success)
+          (print_dispatch_order depgraph; OS.Process.success)
         else
           (HM_Progress.init info (count_needed_theories depgraph);
            postmortem finish_logging outputfns (build_graph depgraph)

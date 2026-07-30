@@ -2,6 +2,8 @@ open HolKernel boolLib tacticToe tttEval
 open tttSetup tttUnfold tttSearch tttRecord
 open testutils
 
+val _ = new_theory "scratch"
+
 val _ = print "\n"
 
 fun check msg b =

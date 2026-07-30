@@ -1,6 +1,8 @@
 open HolKernel Parse boolLib bossLib;
 open blastLib testutils
 
+val _ = new_theory "scratch"
+
 (*
   fun die s = (print (s ^ "\n"); raise ERR "" "")
 *)

@@ -1,5 +1,8 @@
 (* tests for string and character parsing *)
 open HolKernel Parse boolLib bossLib testutils
+
+val _ = new_theory "scratch"
+
 fun q (QUOTE s) = "Q\"" ^ String.toString s ^ "\""
   | q (ANTIQUOTE a) = "AQ"
 

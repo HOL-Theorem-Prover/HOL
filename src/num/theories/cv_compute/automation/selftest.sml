@@ -4,6 +4,8 @@ open cv_string_fmapTheory;
 open cv_typeTheory cv_typeLib cv_repLib cv_transLib;
 open arithmeticTheory integerTheory wordsTheory sptreeTheory wordsLib;
 
+val _ = new_theory "scratch"
+
 (*---------------------------------------------------------------------------*
   Testing only cv_type
  *---------------------------------------------------------------------------*)

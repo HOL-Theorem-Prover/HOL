@@ -30,6 +30,10 @@ sig
   (* string/path manipulations *)
   val normPath : string -> string
   val fullPath : string list -> string
+  val rel_to_holdir : string -> string
+    (* Strip a leading `Systeml.HOLDIR` from `d`.  `HOLDIR` itself
+       yields `""`; a path not under `HOLDIR` is returned unchanged.
+       Same convention as `thy_log_key` in `src/postkernel/Theory.sml`. *)
   val spacify : string list -> string
   val nspaces : (string -> unit) -> int -> unit
   val collapse_bslash_lines : string -> string

@@ -10,6 +10,8 @@ The HOL manuals (Description, Tutorial, ...) are built from a single set of `.sm
 
   - A PDF via `pandoc` + `latexmk`, for archival / cite-able use.
   - An mdbook HTML site via [`mdbook`](https://rust-lang.github.io/mdBook/), for online browsing.
+    Requires **mdbook >= 0.5.0**: the shared page template (`Manual/theme/index.hbs`) is a copy of the mdbook 0.5.x default theme and uses the `{{fa ...}}` FontAwesome helper introduced in 0.5.0.
+    `bin/build` checks `mdbook --version` and, on an older (or unreadable) mdbook, warns and falls back to the per-entry HTML reference rather than aborting.
 
 Both formats are driven by the same `.smd` ("scripted markdown") source files, which are an extension of CommonMark.
 The extensions are interpreted by the `polyscripter` tool, which runs an embedded Poly/ML session to evaluate HOL fragments inline and splice their pretty-printed output back into the document.

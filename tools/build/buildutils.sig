@@ -79,7 +79,11 @@ sig
 
   val make_buildstamp : unit -> unit
   val setup_logfile : unit -> unit
-  val finish_logging : bool -> unit
+  val finish_logging : {buildok : bool, selftest_level : int} -> unit
+    (* On buildok=true the current-build-log is renamed
+       `<host>-<timestamp>-<kernel>-t<level>` and merged into the
+       canonical `<HOLDIR>/.hol/build-logs/target-times` cache.
+       On buildok=false the in-progress log is discarded. *)
 
   val Holmake : (string -> string list -> 'a) -> ('a -> bool) ->
                 (unit -> string list) ->

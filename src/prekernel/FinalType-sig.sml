@@ -3,6 +3,8 @@ sig
 
  eqtype hol_type
 
+ val type_epoch    : unit -> int
+ val display_name_of_id : KernelSig.kernelid -> string
  val mk_vartype    : string -> hol_type
  val gen_tyvar     : unit -> hol_type
  val dest_vartype  : hol_type -> string
@@ -14,6 +16,9 @@ sig
  val is_type       : hol_type -> bool
  val mk_thy_type   : {Thy:string, Tyop:string, Args:hol_type list} -> hol_type
  val dest_thy_type : hol_type -> {Thy:string, Tyop:string, Args:hol_type list}
+ val dest_thy_typeid
+                   : hol_type -> {Thy:string, Tyop:KernelSig.kernelid,
+                                  Args:hol_type list}
 
  val decls         : string -> {Thy:string, Tyop:string} list
  val op_arity      : {Thy:string, Tyop:string} -> int option

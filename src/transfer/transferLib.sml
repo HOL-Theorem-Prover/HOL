@@ -81,32 +81,34 @@ type t = {
   safe : thm Net.net,
   bad : term Net.net,
   atomic_terms : (string * term) Net.net,
-  DOMRNG_ss : thm list
+  DOMRNG_ss : thm list,
+  default_depth : int
 }
 
 val empty_rdb : t =
    {left = Net.empty, right = Net.empty, safe = Net.empty, bad = Net.empty,
-    DOMRNG_ss = [], atomic_terms = Net.empty}
+    DOMRNG_ss = [], atomic_terms = Net.empty, default_depth = 4}
 
 fun safenet (t:t) = #safe t
 fun badnet (t:t) = #bad t
 fun domrngs (t:t) = #DOMRNG_ss t
 fun atomic_termnet (t:t) = #atomic_terms t
+fun depth_of (t:t) = #default_depth t
 
 (* fupdates *)
 open FunctionalRecordUpdate
-fun mkUp z = makeUpdate6 z
+fun mkUp z = makeUpdate7 z
 fun update_T z = let
-  fun from atomic_terms bad DOMRNG_ss left right safe =
-    {atomic_terms = atomic_terms, bad = bad, DOMRNG_ss = DOMRNG_ss, left = left,
-     right = right, safe = safe}
+  fun from atomic_terms bad DOMRNG_ss default_depth left right safe =
+    {atomic_terms = atomic_terms, bad = bad, DOMRNG_ss = DOMRNG_ss,
+     default_depth = default_depth, left = left, right = right, safe = safe}
   (* fields in reverse order to above *)
-  fun from' safe right left DOMRNG_ss bad atomic_terms =
-    {atomic_terms = atomic_terms, bad = bad, DOMRNG_ss = DOMRNG_ss, left = left,
-     right = right, safe = safe}
+  fun from' safe right left default_depth DOMRNG_ss bad atomic_terms =
+    {atomic_terms = atomic_terms, bad = bad, DOMRNG_ss = DOMRNG_ss,
+     default_depth = default_depth, left = left, right = right, safe = safe}
   (* first order *)
-  fun to f {atomic_terms, bad, DOMRNG_ss, left, right, safe} =
-      f atomic_terms bad DOMRNG_ss left right safe
+  fun to f {atomic_terms, bad, DOMRNG_ss, default_depth, left, right, safe} =
+      f atomic_terms bad DOMRNG_ss default_depth left right safe
 in
   mkUp (from, from', to)
 end z
@@ -118,6 +120,8 @@ fun fupd_bad f (t:t) : t = update_T t (U #bad (f (#bad t))) $$
 fun fupd_left f (t:t) : t = update_T t (U #left (f (#left t))) $$
 fun fupd_right f (t:t) : t = update_T t (U #right (f (#right t))) $$
 fun fupd_safe f (t:t) : t = update_T t (U #safe (f (#safe t))) $$
+fun fupd_default_depth f (t:t) : t =
+    update_T t (U #default_depth (f (#default_depth t))) $$
 
 fun addrule0 (th, r) =
     let
@@ -707,13 +711,25 @@ fun is_flipimp t =
       same_const impp boolSyntax.implication
     end handle HOL_ERR _ => false
 
-val default_depth = Sref.new 4
-val the_ruledb = Sref.new ruledb
+local
+  val ruledb_slot : ruledb.t Context.Data.slot =
+      Context.Data.new
+        {name = "transferLib.ruledb",
+         empty = ruledb,
+         pp = fn _ => "<transferLib.ruledb>"}
+in
+  fun global_ruledb () = Context.Data.get ruledb_slot (Context.snapshot())
+  val upd_ruledb = Context.Data.modify ruledb_slot
+end
+
+fun default_depth () = ruledb.depth_of (global_ruledb ())
+fun set_default_depth n = upd_ruledb (ruledb.fupd_default_depth (K n))
+
 fun xfer_tac cleftp hints (g as (asl,c)) =
     let
-      val th = transfer_tm (Sref.value default_depth)
+      val th = transfer_tm (default_depth ())
                            {hints = hints, cleftp = cleftp, force_imp = false}
-                           (Sref.value the_ruledb) c
+                           (global_ruledb ()) c
       val (is_imp', impc, impa, imp_munge, eql, eqr, eqmunge) =
           if cleftp then
             (is_flipimp, lhand, rand, CONV_RULE (REWR_CONV combinTheory.C_THM),
@@ -746,20 +762,20 @@ fun xfer_fwd_tac hs = SPEC_ALL_TAC >> xfer_tac true hs
 
 open ruledb
 fun not_ceq th1 th2 = concl th1 !~ concl th2
-fun temp_add_rule th = Sref.update the_ruledb (addrule th)
+fun temp_add_rule th = upd_ruledb (addrule th)
 fun temp_add_safe th =
-    Sref.update the_ruledb
+    upd_ruledb
             (addsafe (UNDISCH_ALL (PURE_REWRITE_RULE[GSYM AND_IMP_INTRO] th)))
-fun temp_add_simp th = Sref.update the_ruledb (add_domrng th)
+fun temp_add_simp th = upd_ruledb (add_domrng th)
 fun temp_remove_rule th =
-    Sref.update the_ruledb (fupd_left (Net.filter (not_ceq th)) o
+    upd_ruledb (fupd_left (Net.filter (not_ceq th)) o
                             fupd_right (Net.filter (not_ceq th)))
 fun temp_remove_safe th =
-    Sref.update the_ruledb (fupd_left (Net.filter (not_ceq th)) o
+    upd_ruledb (fupd_left (Net.filter (not_ceq th)) o
                             fupd_right (Net.filter (not_ceq th)))
 fun delsimp th rwts = List.filter (not_ceq th) rwts
 fun temp_remove_simp th =
-    Sref.update the_ruledb (fupd_DOMRNG_ss (delsimp th))
+    upd_ruledb (fupd_DOMRNG_ss (delsimp th))
 
 fun name_to_thm n =
     case String.fields (equal #".") n of
@@ -820,17 +836,15 @@ val adresult = AncestryData.fullmake {
                   thy_finaliser = NONE,
                   apply_to_global =
                   fn d => fn l => (ATM_apply_delta d l before
-                                   Sref.update the_ruledb (apply_to_ruledb d))}
+                                   upd_ruledb (apply_to_ruledb d))}
     }
 
 fun temp_add_atomic_term nmt =
-    Sref.update the_ruledb (apply_to_ruledb (ADD nmt))
+    upd_ruledb (apply_to_ruledb (ADD nmt))
 fun add_atomic_term nmt =
       (#record_delta adresult (ADD nmt);
        temp_add_atomic_term nmt)
 val atomic_terms = #get_global_value adresult
-
-fun global_ruledb() = Sref.value the_ruledb
 
 
 end (* struct *)

@@ -1,6 +1,9 @@
 HOLHEAP = $(HOLDIR)/bin/hol.state0
 EXTRA_CLEANS = soundness_check-selftest.log selftest.exe
 
+all: $(DEFAULT_TARGETS) soundness_check-selftest.log
+.PHONY: all
+
 soundness_check-selftest.log: selftest.exe
 	$(tee ./$<,$@)
 

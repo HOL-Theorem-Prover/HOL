@@ -60,5 +60,7 @@ in
   app appjson ["JSONParser", "JSONUtil"];
   (* TOML library is loaded earlier (poly-init.ML), so that holpathdb
      can parse holproject.toml.  Do not re-load here. *)
-  appcore "HMProject"
+  appcore "HMProject";
+  myuse coredir "target_times.sig";
+  myuse (hmakedir ++ "poly") "target_times.sml"
 end;

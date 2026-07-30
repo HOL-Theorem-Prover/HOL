@@ -52,6 +52,12 @@ Unsynchronized.sml
 ../HOLset.sml
 ../mosml/concurrent/Sref.sig
 ../mosml/concurrent/Sref.sml
+../mosml/concurrent/Lock.sig
+../mosml/concurrent/Lock.sml
+../mosml/concurrent/RWLock.sig
+../mosml/concurrent/RWLock.sml
+../UniversalType.sig
+../UniversalType.sml
 ../seq.sig
 ../seq.sml
 ../DArray.sig

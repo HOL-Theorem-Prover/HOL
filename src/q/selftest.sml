@@ -1,5 +1,7 @@
 open Parse boolLib HolKernel testutils
 
+val _ = new_theory "scratch"
+
 val _ = tprint "Testing Q.EXISTS ... "
 val _ = require (check_result (fn _ => true))
                 (Q.EXISTS (`?f. f T T = T`, `$/\`))

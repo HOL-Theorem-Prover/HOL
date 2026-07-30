@@ -100,14 +100,23 @@ type exportfns =
 
 type tabledata = ({thyname:string}->setdelta list) * exportfns
 
-val data_map = ref (Symtab.empty : tabledata Symtab.table)
+local
+  val data_map_slot : tabledata Symtab.table Context.Data.slot =
+      Context.Data.new
+        {name = "ThmSetData.data_map", empty = Symtab.empty,
+         pp = fn _ => "<ThmSetData.data_map>"}
+in
+  fun data_map () =
+      Context.Data.get data_map_slot (Context.snapshot())
+  val upd_data_map = Context.Data.modify data_map_slot
+end
 
-fun data_exportfns {settype = s} = Option.map #2 (Symtab.lookup (!data_map) s)
+fun data_exportfns {settype = s} = Option.map #2 (Symtab.lookup (data_map ()) s)
 
-fun all_set_types () = Symtab.keys (!data_map)
+fun all_set_types () = Symtab.keys (data_map ())
 
 fun theory_data {settype = key, thy} =
-    case Symtab.lookup (!data_map) key of
+    case Symtab.lookup (data_map ()) key of
       NONE => raise mk_HOL_ERR "ThmSetData" "theory_data"
                     ("No ThmSetData with name "^Lib.quote key)
     | SOME (sdf,_) => sdf {thyname=thy}
@@ -177,11 +186,13 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
      stored theorem), skip the scan when retire_epoch is unchanged since
      our last scan.  Name-based events (NewBinding/DelBinding via
      neqbinding) must still scan since they're unrelated to retires. *)
-  val last_scan_epoch = ref ~1
+  val last_scan_epoch = ref []
   fun check_thydelta (arg as (_, td)) =
-    case KernelSig.retire_epoch () of cur =>
-    if retire_memoable td andalso !last_scan_epoch = cur then NONE
-    else revise_data (hook td) arg before last_scan_epoch := cur
+      let val cur = [Type.type_epoch(), Term.term_epoch()]
+      in
+        if retire_memoable td andalso !last_scan_epoch = cur then NONE
+        else revise_data (hook td) arg before last_scan_epoch := cur
+      end
 
 
   val {export = export_deltasexp, segment_data, ...} =
@@ -224,7 +235,7 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
       else raise ERR "local_attrfun"
                  ("Arguments not allowed for attribute " ^ attrname)
 in
-  data_map := Symtab.update(name,(segdata, efns)) (!data_map);
+  upd_data_map (Symtab.update(name,(segdata, efns)));
   ThmAttribute.register_attribute (
     name, {storedf = store_attrfun, localf = local_attrfun}
   );
@@ -290,7 +301,7 @@ fun export_with_ancestry
       val efns = {add = efn_add, remove = efn_remove}
       val get_fulldeltas = map cook o #get_deltas fullresult
     in
-      data_map := Symtab.update(settype, (get_fulldeltas, efns)) (!data_map);
+      upd_data_map (Symtab.update(settype, (get_fulldeltas, efns)));
       ThmAttribute.register_attribute (
         settype, {storedf = store_attrfun, localf = local_attrfun}
       );

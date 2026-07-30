@@ -2,6 +2,8 @@ open simpLib Parse HolKernel boolLib
 
 open testutils
 
+val _ = new_theory "scratch"
+
 val pr = tprint
 
 val ss = simpLib.empty_ss ++ numSimps.REDUCE_ss

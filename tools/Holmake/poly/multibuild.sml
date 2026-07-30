@@ -24,9 +24,6 @@ fun fupdkey m f k dflt =
         NONE => Map.insert(m,k,dflt)
       | SOME v => Map.insert(m,k,f v)
 
-fun lmap_insert k v m =
-    fupdkey m (fn l => v::l) k [v]
-
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 val loggingdir = ".hol/logs"
@@ -46,14 +43,6 @@ fun is_multidir gdi =
     Map.numItems gdi > 1 orelse
     (Map.numItems gdi = 1 andalso
      Binarymap.peek(gdi, hmdir.curdir()) = NONE)
-
-fun build_predmap g =
-    let
-      fun foldthis (n, nI) A =
-          List.foldl (fn ((sn,_), A) => lmap_insert sn n A) A (#dependencies nI)
-    in
-      HM_DepGraph.fold foldthis g (Binarymap.mkDict node_compare)
-    end
 
 
 
@@ -192,6 +181,20 @@ fun graphbuild optinfo g =
       {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", s], env = env}
 
     val tgtcomplete = tgtcompletion_cb dirmap
+
+    (* Missing target-times file → cost_of returns 0.0 everywhere →
+       every cp_weight is 0.0 → find_best_runnable_pred ties on
+       node_id and behaves identically to the pre-HLFET picker. *)
+    val times = target_times.load
+                  { root = HMProject.find_root
+                             { start = OS.FileSys.getDir() } }
+    fun cost_of (nI : GraphExtra.t nodeInfo) =
+        case #command nI of
+            BuiltInCmd (BIC_BuildScript fp, _) =>
+              target_times.theory_cost times fp
+          | _ => 0.0
+    val cp_weight = HM_DepGraph.compute_cp_weights cost_of g
+
     fun really_needed nI = #status nI = Pending{needed=true}
     fun b2n true = 1 | b2n false = 0
     fun count_theories_needed0 (A as (thys,nd)) ns =
@@ -216,11 +219,11 @@ fun graphbuild optinfo g =
                 NONE => true
               | SOME n => jobs_running < n
       in
-      case (ok,find_runnable_pred has_capacity g) of
+      case (ok,find_best_runnable_pred cp_weight has_capacity g) of
           (false, _) => (release_all_locks(); GiveUpAndDie (g, false))
        |  (true, NONE) =>
           (* Do NOT release_all_locks here: NoMoreJobs fires after every
-             dispatch cycle when find_runnable_pred has nothing more to
+             dispatch cycle when the picker has nothing more to
              hand out *for now* -- either because no node's deps are
              ready, or because every ready node's LOCAL_PARALLELISM_LIMIT
              is at its cap.  Workers we already dispatched are still
@@ -316,6 +319,47 @@ fun graphbuild optinfo g =
                   let
                     val _ = diag ("Setting up for target >" ^ target_s ^
                                   "< with bic " ^ bic_toString bic)
+                    (* Deps induced by `local open ... in end` in a
+                       generated `<name>Theory.sml` (e.g. from
+                       `add_ML_dependency`) can only be discovered once
+                       the BuildScript has produced the file.  Rescan
+                       on completion and add edges to `<name>Theory.uo`
+                       so downstream compiles wait for the runtime-loaded
+                       module before dispatching. *)
+                    val resolve = hm_target.filestr_to_tgt_in_dir (#dir nI)
+                    fun rescan_from s g =
+                        case HM_DepGraph.target_node g (resolve (s ^ "Theory.uo")) of
+                            NONE => g
+                          | SOME uo_n =>
+                            let
+                              val {preincludes, includes} = incinfo
+                              val {deps = extras, ...} =
+                                  Holdep.main
+                                    {assumes = [], includes = preincludes @ includes,
+                                     diag = fn f => diag (f ()),
+                                     fname = s ^ "Theory.sml"}
+                                (* Holdep.main HFS-munges internally, so
+                                   pass the un-munged pathname. *)
+                            in
+                              List.foldl
+                                (fn (str, g_acc) =>
+                                    let val dt = resolve str
+                                    in case HM_DepGraph.target_node g_acc dt of
+                                           NONE => g_acc
+                                         | SOME dn =>
+                                           HM_DepGraph.add_dependency
+                                             uo_n (dn, dt) g_acc
+                                    end)
+                                g extras
+                            end
+                    fun rescan_theory_deps g =
+                        case bic of
+                            BIC_BuildScript s =>
+                              (rescan_from s g
+                               handle IO.Io _ => g
+                                    | OS.SysErr _ => g
+                                    | Holdep.Holdep_Error _ => g)
+                          | _ => g
                     fun bresk bres g =
                       case bres of
                           BR_OK => k true g
@@ -346,7 +390,8 @@ fun graphbuild optinfo g =
                                    Poly's load step. *)
                                 val ok2 = job_kont (fn s => ()) (b2res b)
                                 val _ = release_target_lock nI
-                                val g' = if ok2 then updall Succeeded g
+                                val g' = if ok2 then
+                                           updall Succeeded (rescan_theory_deps g)
                                          else updall RealFail g
                                 val marker = HM_Progress.note_completion
                                                  g' ok2 (#command nI)

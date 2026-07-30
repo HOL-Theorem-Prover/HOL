@@ -11,6 +11,37 @@ val PP_ERR = mk_HOL_ERR "term_pp";
 
 fun PRINT s = print (s ^ "\n")
 fun LEN l = Int.toString (length l)
+
+(* Pretty-printer variants of Term.dest_thy_const / Type.dest_thy_type:
+   apply Globals.oldify to Name/Tyop when the underlying constant or
+   type-op has been retired, so retired constants don't match the
+   special-syntax hooks below and print with an "old"-tagged name.
+   Term.dest_thy_const / Type.dest_thy_type now skip this check
+   because they sit on the hot path (BloomApprox term hashing, kernel
+   sdest_monop/binop, is-a-specific-constant checks, etc.).
+
+   Call through Term.display_name_of_id / Type.display_name_of_id
+   (exposed in FinalTerm / FinalType) so this works uniformly under
+   both --stdknl (which uses Context.termsig / typesig's baked field)
+   and --expk (which uses its own Context.Data slot). *)
+fun dest_thy_const t =
+    let val {Thy, Name = id, Ty} = Term.dest_thy_constid t
+    in {Thy = Thy, Name = Term.display_name_of_id id, Ty = Ty}
+    end
+
+fun dest_thy_type ty =
+    let val {Thy, Tyop = id, Args} = Type.dest_thy_typeid ty
+    in {Thy = Thy, Tyop = Type.display_name_of_id id, Args = Args}
+    end
+
+(* Term.dest_term's CONST case calls Term.dest_thy_const, which is fast
+   and returns plain (non-oldified) names.  For pretty-printing we want
+   the oldified name so retired constants print with an "old"-tag; use
+   the shadowed dest_thy_const above. *)
+fun dest_term t =
+    case Term.dest_term t of
+        CONST _ => CONST (dest_thy_const t)
+      | other => other
 fun option_to_string p NONE = "NONE"
   | option_to_string p (SOME x) = "SOME(" ^ p x ^ ")"
 

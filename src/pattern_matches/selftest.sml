@@ -4,6 +4,8 @@ open quantHeuristicsLib simpLib boolSimps listTheory
 open BasicProvers
 open testutils
 
+val _ = new_theory "scratch"
+
 
 val hard_fail = true;
 val _ = testutils.diemode := ProcessExit

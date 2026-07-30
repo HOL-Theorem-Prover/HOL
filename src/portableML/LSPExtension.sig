@@ -61,4 +61,18 @@ val fixupTheoremLink:
 
 val helpLookup: (string * (string -> bool) -> string list) ref
 
+(* Given an SML identifier name (possibly dotted, e.g.
+   "arithmeticTheory.ADD_COMM" or bare "plus_comm"), return a
+   pretty-printed theorem statement if the name resolves to a theorem
+   in the current DB.  Default no-op; the LSP runtime init installs a
+   version that calls DB.lookup + Parse.thm_to_string. *)
+val thmLookup: (string -> string option) ref
+
+(* Called at the start of each LSP compile pass.  Intended to restore
+   the HOL Context to a snapshot taken at LSP startup, so recompiles
+   run against a clean state (no accumulated theorems / retired
+   constants / stale DB entries).  Default is a no-op; installed by
+   the LSP runtime init in tools-poly/hol.ML. *)
+val resetForCompile: (unit -> unit) ref
+
 end;

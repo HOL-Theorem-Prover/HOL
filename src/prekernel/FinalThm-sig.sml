@@ -119,10 +119,30 @@ sig
   val register_disj            : thm -> unit
   val register_type_definition : thm -> unit
 
+  (* Current-theory guard: definitional rules mint fresh constants into
+     the *current* theory only.  The current theory is threaded through
+     Thm-owned state below rather than accepted as a parameter, so
+     callers cannot direct a mint into a different theory's segment.
+
+     `setCT` is the sanctioned setter, invoked by `Theory.new_theory`;
+     it refuses to move the current theory to a sealed one. *)
+  val setCT       : string -> unit
+  val getCT       : unit -> string option
+
+  (* Sealed theories are locked against further change.  A theory
+     becomes sealed on export or on load-from-disk and stays sealed
+     for the rest of the session.  `setCT` refuses to enter a sealed
+     theory, so the only way to be *in* one is to have entered it
+     while it was still open and sealed it afterwards --- at which
+     point the definitional rules below cease to accept new mints
+     into it either. *)
+  val mark_sealed : string -> unit
+  val is_sealed   : string -> bool
+
   (* definitional rules of inference *)
-  val prim_type_definition : {Thy : string, Tyop : string} * thm -> thm
-  val prim_specification : string -> string list -> thm -> thm
-  val gen_prim_specification : string -> thm -> string list * thm
+  val prim_type_definition : string * thm -> thm
+  val prim_specification : string list -> thm -> thm
+  val gen_prim_specification : thm -> string list * thm
 
   (* Fetching theorems from disk *)
 

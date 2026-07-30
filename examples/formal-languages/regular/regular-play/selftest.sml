@@ -10,6 +10,8 @@
 
 open HolKernel Parse boolLib bossLib;
 
+val _ = new_theory "scratch"
+
 
 open regexSemanticsTheory;
 open regexExecutableTheory;

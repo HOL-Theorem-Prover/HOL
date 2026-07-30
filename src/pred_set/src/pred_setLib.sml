@@ -108,7 +108,7 @@ in
     end
 end
 
-val () = computeLib.the_compset := add_pred_set_compset (!computeLib.the_compset)
+val () = computeLib.upd_compset add_pred_set_compset
 
 
 end
