@@ -2027,8 +2027,7 @@ fun certify {executable, original, eval_terms,
                cex = base} of
                Refute_Cert.Certified certified =>
                  Keep (replace_cex certified Refute_Core.Genuine bindings
-                   (if polymorphic then evals
-                    else merge_evals evals (#evals certified))
+                   (merge_evals evals (#evals certified))
                    (#cert certified) model)
              | Refute_Cert.Potential potential =>
                  Keep (replace_cex potential (#certainty potential) bindings
