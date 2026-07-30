@@ -1283,6 +1283,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
          (path_entries ())))
 
   fun setsid_executable () = find_on_path "setsid"
+  fun sleep_executable () = find_on_path "sleep"
 
   fun java_executable () =
     let
@@ -1317,6 +1318,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
            passed to the shell verbatim below.  Do not probe it here: loading
            this module must never start a JVM or launcher. *)
         Option.isSome (setsid_executable ()) andalso
+        Option.isSome (sleep_executable ()) andalso
         (if override <> "" then true
          else component_is_complete (getenv "HOL4_KODKODI") andalso
               Option.isSome (java_executable ()))
@@ -1463,14 +1465,19 @@ structure Refute_Forl :> REFUTE_FORL = struct
            The supervising shell forwards cancellation to that process group
            before it exits, so a wrapper cannot orphan its JVM or SAT child. *)
         val setsid = valOf (setsid_executable ())
+        val sleep = valOf (sleep_executable ())
         val supervised =
-          (* A cooperative TERM alone is not a cleanup bound: a launcher,
-             JVM, or SAT descendant may ignore it.  Escalate the isolated
-             child process group before waiting for the supervisor. *)
-          "trap 'kill -TERM -$child 2>/dev/null; sleep 1; " ^
-          "kill -KILL -$child 2>/dev/null; wait \"$child\"; exit 130' " ^
-          "TERM INT; " ^ shell_quote setsid ^ " /bin/sh -c " ^
-          shell_quote command ^ " & child=$!; wait \"$child\""
+          (* The watchdog also bounds the supervisor's trap.  In particular,
+             a stopped child can otherwise leave its [wait] (and hence the
+             masked ML-side reap) blocked forever. *)
+          "timer=" ^ shell_quote sleep ^ "; trap '" ^
+          "kill -TERM -$child 2>/dev/null; " ^
+          "(\"$timer\" 1; kill -KILL -$child 2>/dev/null; " ^
+          "kill -KILL $$ 2>/dev/null) & watchdog=$!; " ^
+          "wait \"$child\"; kill \"$watchdog\" 2>/dev/null; " ^
+          "wait \"$watchdog\" 2>/dev/null; exit 130' TERM INT; " ^
+          shell_quote setsid ^ " /bin/sh -c " ^ shell_quote command ^
+          " & child=$!; wait \"$child\""
         val process = Unix.execute ("/bin/sh", ["-c", supervised])
         val reaped = ref false
         fun reap () =
