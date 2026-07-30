@@ -10,6 +10,7 @@ struct
 open HolKernel Parse boolLib BasicProvers;
 
 open Susp Hol_pp metisLib simpLib pairTheory pred_setTheory
+     hurdUtilsContextTheory
      (* res_quanTools *) numLib;
 
 infixr 0 oo THENR ORELSER ## thenf orelsef;
@@ -749,8 +750,6 @@ fun N_BETA_CONV 0 = QCONV ALL_CONV
   | N_BETA_CONV n = RATOR_CONV (N_BETA_CONV (n - 1)) THENC TRYC BETA_CONV;
 
 local
-  val EQ_NEG_T = DECIDE ``!a. (~a = T) <=> (a = F)``
-  val EQ_NEG_F = DECIDE ``!a. (~a = F) <=> (a = T)``
   val EQ_NEG_T_CONV = REWR_CONV EQ_NEG_T
   val EQ_NEG_F_CONV = REWR_CONV EQ_NEG_F
 in
@@ -964,11 +963,7 @@ val POP_ORW = POP_ASSUM (ONCE_REWRITE_TAC o wrap);
 (* the form (asms, A) and (asms, A ==> B)                                *)
 (* --------------------------------------------------------------------- *)
 
-local
-  val th = DECIDE ``!a b. a /\ (a ==> b) ==> a /\ b``;
-in
-  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
-end;
+val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC STRONG_CONJ_lem >> CONJ_TAC;
 
 (* --------------------------------------------------------------------- *)
 (* STRONG_DISJ_TAC : tactic                                              *)
