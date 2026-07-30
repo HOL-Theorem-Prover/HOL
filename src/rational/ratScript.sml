@@ -4130,6 +4130,26 @@ Proof
 QED
 
 
+(* Rational-addition AC helpers ratLib formerly proved at load time. *)
+
+Theorem RAT_ADD_ASSOC_COMM_L:
+  !x y z:rat. (x + y) + z = (x + z) + y
+Proof
+  REPEAT GEN_TAC THEN
+  CONV_TAC (BINOP_CONV (REWR_CONV (GSYM RAT_ADD_ASSOC))) THEN
+  CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV RAT_ADD_COMM))) THEN
+  REFL_TAC
+QED
+
+Theorem RAT_ADD_ASSOC_COMM_R:
+  !x y z:rat. x + (y + z) = y + (x + z)
+Proof
+  REPEAT GEN_TAC THEN
+  CONV_TAC (BINOP_CONV (REWR_CONV RAT_ADD_ASSOC)) THEN
+  CONV_TAC (LAND_CONV (LAND_CONV (REWR_CONV RAT_ADD_COMM))) THEN
+  REFL_TAC
+QED
+
 (*==========================================================================
  * end of theory
  *==========================================================================*)

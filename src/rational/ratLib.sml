@@ -501,18 +501,8 @@ fun mk_rvar s = mk_var(s, rat_ty);
 val x = mk_rvar "x"
 val y = mk_rvar "y"
 val z = mk_rvar "z"
-val l_asscomm = prove(
-  mk_eq(mk_rat_add(mk_rat_add(x,y), z),
-        mk_rat_add(mk_rat_add(x,z), y)),
-  CONV_TAC (BINOP_CONV (REWR_CONV (GSYM ratTheory.RAT_ADD_ASSOC))) >>
-  CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV ratTheory.RAT_ADD_COMM))) >>
-  REFL_TAC);
-val r_asscomm = prove(
-  mk_eq(mk_rat_add(x, mk_rat_add(y, z)),
-        mk_rat_add(y, mk_rat_add(x,z))),
-  CONV_TAC (BINOP_CONV (REWR_CONV ratTheory.RAT_ADD_ASSOC)) >>
-  CONV_TAC (LAND_CONV (LAND_CONV (REWR_CONV ratTheory.RAT_ADD_COMM))) >>
-  REFL_TAC);
+val l_asscomm = SPECL [x, y, z] ratTheory.RAT_ADD_ASSOC_COMM_L
+val r_asscomm = SPECL [x, y, z] ratTheory.RAT_ADD_ASSOC_COMM_R
 
 val one_r = ratSyntax.mk_rat_of_num (numSyntax.mk_numeral Arbnum.one)
 
