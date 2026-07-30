@@ -1059,7 +1059,9 @@ structure Refute_QC = struct
                         (complete := false; add_reason reason gave_up)
                     | CexFound
                         {env, ground_env, case_tree, genuine, ...} =>
-                        record_candidate
+                        let
+                          val discarded_before = !discarded
+                          val _ = record_candidate
                           { config = config,
                             strategy = strategy,
                             substrate = substrate,
@@ -1098,6 +1100,16 @@ structure Refute_QC = struct
                             genuine = genuine,
                             genuine_only = genuine_only,
                             ignored = ignored }
+                          (* A rejected candidate prevents a completeness
+                             claim even if every executable tuple was tried:
+                             preprocessing and certification need not agree
+                             (for example on function equality). *)
+                          val _ = if !discarded > discarded_before then
+                            complete := false
+                          else ()
+                        in
+                          ()
+                        end
                 end
               fun run_entry entry =
                 let
