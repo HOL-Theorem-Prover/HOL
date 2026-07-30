@@ -57,9 +57,13 @@ structure Refute_Cert = struct
     end
 
   fun eval_term env tm =
-    ((let val theorem = eval (instantiate env tm)
-      in if null (Thm.hyp theorem) andalso trusted theorem then rhs_of theorem
-         else Term.mk_var ("?", Term.type_of tm)
+    ((let
+        val input = instantiate env tm
+        val theorem = eval input
+      in
+        if null (Term.free_vars input) andalso null (Thm.hyp theorem) andalso
+           trusted theorem then rhs_of theorem
+        else Term.mk_var ("?", Term.type_of tm)
       end)
      handle Interrupt => raise Interrupt
           | _ => Term.mk_var ("?", Term.type_of tm))
