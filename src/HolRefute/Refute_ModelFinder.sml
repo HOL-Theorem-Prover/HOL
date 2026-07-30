@@ -278,6 +278,24 @@ fun valid_instance (problem : KK.problem) assignments =
             else decode arity index []
           end
       | tuple_atoms _ = NONE
+    fun tuple_in (KK.TupleSet tuples) tuple =
+          List.exists (fn candidate =>
+            case tuple_atoms candidate of
+                SOME atoms => atoms = tuple
+              | NONE => false) tuples
+      | tuple_in (KK.TupleAtomSeq (count, first)) tuple =
+          (case tuple of
+               [atom] => count >= 0 andalso atom >= first andalso
+                 atom < first + count
+             | _ => false)
+      | tuple_in (KK.TupleUnion (left, right)) tuple =
+          tuple_in left tuple orelse tuple_in right tuple
+      | tuple_in (KK.TupleProduct (left, right)) tuple =
+          List.exists (fn split =>
+            tuple_in left (List.take (tuple, split)) andalso
+            tuple_in right (List.drop (tuple, split)))
+            (Portable.upto 0 (length tuple))
+      | tuple_in _ _ = false
     fun tuples_of (KK.TupleSet tuples) =
           Option.map (fn _ => List.mapPartial tuple_atoms tuples)
             (List.foldl (fn (tuple, result) =>
@@ -339,11 +357,18 @@ fun valid_instance (problem : KK.problem) assignments =
     fun valid_bound (relations, sets) =
       let
         fun valid_relation relation =
-          case (assignment relation, map tuples_of sets) of
-              (SOME actual, [SOME exact]) =>
-                subset actual exact andalso subset exact actual
-            | (SOME actual, [SOME lower, SOME upper]) =>
-                subset lower actual andalso subset actual upper
+          case (assignment relation, sets) of
+              (SOME actual, [exact]) =>
+                (case tuples_of exact of
+                     SOME tuples =>
+                       subset actual tuples andalso subset tuples actual
+                   | NONE => false)
+            | (SOME actual, [lower, upper]) =>
+                (case tuples_of lower of
+                     SOME tuples =>
+                       subset tuples actual andalso
+                       List.all (tuple_in upper) actual
+                   | NONE => false)
             | _ => false
       in
         List.all valid_relation relations
