@@ -6051,6 +6051,28 @@ Proof
   METIS_TAC [ABS_REFL]
 QED
 
+(* Small realSimps helpers formerly proved at load time. *)
+
+Theorem num_eq_0:
+  ~(NUMERAL (BIT1 n) = 0n) /\ ~(NUMERAL (BIT2 n) = 0n)
+Proof
+  REWRITE_TAC [numeralTheory.numeral_distrib, numeralTheory.numeral_eq]
+QED
+
+Theorem ltnb12:
+  0 < NUMERAL (BIT1 n) /\ 0 < NUMERAL (BIT2 n)
+Proof
+  REWRITE_TAC [arithmeticTheory.NUMERAL_DEF,
+               arithmeticTheory.BIT1,
+               arithmeticTheory.BIT2,
+               arithmeticTheory.ADD_CLAUSES,
+               prim_recTheory.LESS_0]
+QED
+
+Theorem let_id:  LET (\n. n) x = x
+Proof SIMP_TAC boolSimps.bool_ss [LET_THM]
+QED
+
 (* Temporarily re-enable printing of numeral bits for help documents *)
 val _ = temp_remove_user_printer ("num.numeral_computations", “n:num”);
 
