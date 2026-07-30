@@ -205,10 +205,10 @@ fun INST_b3 t thm =
 val BCARRY_mp = REWRITE_RULE [bcarry_def] blastTheory.BCARRY_mp
 
 val BCARRY_mp_carry =
-   INST_b3 boolSyntax.T (DECIDE ``x /\ y \/ (x \/ y) /\ T = x \/ y``) BCARRY_mp
+   INST_b3 boolSyntax.T blastTheory.BCARRY_T_simp BCARRY_mp
 
 val BCARRY_mp_not_carry =
-   INST_b3 boolSyntax.F (DECIDE ``x /\ y \/ (x \/ y) /\ F = x /\ y``) BCARRY_mp
+   INST_b3 boolSyntax.F blastTheory.BCARRY_F_simp BCARRY_mp
 
 fun INST_b3 t thm =
    Thm.GENL [``x:num->bool``,``y:num->bool``, ``c:bool``, ``i:num``,
@@ -218,17 +218,17 @@ fun INST_b3 t thm =
 val BSUM_mp = REWRITE_RULE [bsum_def] blastTheory.BSUM_mp
 
 val BSUM_mp_carry =
-   INST_b3 boolSyntax.T (DECIDE ``((x = ~y) = ~T) = (x:bool = y)``) BSUM_mp
+   INST_b3 boolSyntax.T blastTheory.BSUM_T_simp BSUM_mp
 
 val BSUM_mp_not_carry =
-   INST_b3 boolSyntax.F (DECIDE ``((x = ~y) = ~F) = (x:bool = ~y)``) BSUM_mp
+   INST_b3 boolSyntax.F blastTheory.BSUM_F_simp BSUM_mp
 
 val rhs_rewrite =
    Conv.RIGHT_CONV_RULE
      (Rewrite.REWRITE_CONV
        [satTheory.AND_INV, Drule.EQF_INTRO boolTheory.NOT_AND,
-        DECIDE ``!b:bool. (b = ~b) = F``,
-        DECIDE ``!b:bool. (~b = b) = F``])
+        blastTheory.b_neq_neg_b,
+        blastTheory.neg_b_neq_b])
 
 (* --------------------------------------------------------------------
    mk_summation : returns theorems of the form  ``BSUM i x y c = exp``
@@ -609,7 +609,7 @@ local
   val word_bits_thm5 = word_bits_thm2 |> SPEC “0n” |> SIMP_RULE std_ss []
   val word_bits_thm6 = word_bits_thm2 |> SPECL [“l:num”,“dimindex(:'a) - 1”]
                        |> SIMP_RULE (arith_ss++boolSimps.CONJ_ss)
-                            [DECIDE ``a < b + (c + 1) = a <= b + c : num``]
+                            [blastTheory.lt_add_1_le]
                        |> GEN_ALL
 
   fun mk_word_eq_lit_thms ty =
@@ -843,7 +843,7 @@ fun non_prop_terms tm =
    end
 
 local
-   val lem = numLib.DECIDE ``!b. if b then T else T``
+   val lem = blastTheory.if_b_T_T
 in
    fun PROP_PROVE conv tm =
       let

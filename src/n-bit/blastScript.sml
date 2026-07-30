@@ -773,5 +773,40 @@ Theorem sw2sw_thm:
 Proof SRW_TAC [fcpLib.FCP_ss] [sw2sw, word_msb_def]
 QED
 
+(* Small boolean/arithmetic tautologies blastLib formerly derived via DECIDE
+   at load time. *)
+
+Theorem BCARRY_T_simp:  x /\ y \/ (x \/ y) /\ T <=> x \/ y
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem BCARRY_F_simp:  x /\ y \/ (x \/ y) /\ F <=> x /\ y
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem BSUM_T_simp:  ((x = ~y) = ~T) <=> (x:bool = y)
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem BSUM_F_simp:  ((x = ~y) = ~F) <=> (x:bool = ~y)
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem b_neq_neg_b:  !b:bool. (b = ~b) <=> F
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem neg_b_neq_b:  !b:bool. (~b = b) <=> F
+Proof tautLib.TAUT_TAC
+QED
+
+Theorem lt_add_1_le:  a < b + (c + 1) <=> a <= b + c : num
+Proof numLib.ARITH_TAC
+QED
+
+Theorem if_b_T_T:  !b. (if b then T else T) <=> T
+Proof GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []
+QED
+
 (* ------------------------------------------------------------------------- *)
 
