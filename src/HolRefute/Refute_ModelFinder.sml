@@ -1103,6 +1103,11 @@ fun run_instance deadline started (config : Refute_Core.config)
             Refute_Core.Unknown
               (accounting_reason "model search was inconclusive" ::
                !error_reasons)
+          else if !(#semantic_weakening context) then
+            Refute_Core.Unknown
+              (accounting_reason
+                 "formula was semantically weakened by whack or ersatz" ::
+               !error_reasons)
           else if max_genuine = original_max_genuine andalso
                   max_potential = original_max_potential then
             if skipped > 0 then
