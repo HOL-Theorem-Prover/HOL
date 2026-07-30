@@ -204,31 +204,44 @@ keeps its `Parse.temp_set_grammars` bracket because it also calls
 `ParseExtras.temp_loose_equality`, whose ambient effect the bracket is
 still scoping.
 
-Core-build census after these changes:
+Additional libraries cleaned during the extended pass:
+
+  - `src/n-bit/wordsLib.sml`, `blastLib.sml`, `fcpLib.sml` (34, 12, and
+    the `TypeBase.write` → `TypeBase.export` flip).
+  - `src/real/RealField.sml`, `realSimps.sml` (15 helpers plus
+    `num_eq_0`, `ltnb12`, `let_id`).
+  - `src/rational/schneiderUtils.sml`, `ratLib.sml`.
+  - `src/pred_set/src/hurdUtils.sml` (three DECIDEs).
+  - `src/bag/bagSimpleLib.sml`.
+  - `src/integer/CooperCore.sml`.
+  - `src/datatype/EnumType.sml`, `ind_types.sml`.
+
+Core-build census after all of the above:
 
 | measure                                             | count |
 |-----------------------------------------------------|-------|
-| `TAC_PROOF` calls with no current theory             | 144   |
-| distinct goals among them                            | 64    |
-| log files still carrying at least one                |   6   |
+| `TAC_PROOF` calls with no current theory             |     0 |
+| distinct goals among them                            |     0 |
+| Theory logs still carrying at least one              |     0 |
 
-Down from 2386 / 176 / 57 in the baseline.  The library-load-time
-class of offender is essentially clean; the remainder splits into:
+Full `-F` build census (once stale selftest/test-theory logs are
+excluded --- `bin/build -F` alone does not re-run selftests nor
+re-visit some `theory_tests`/`interactive_tests` directories, so their
+pre-fix logs linger): also 0 for the library-load-time class.  The
+Theory logs across `src/probability`, `src/floating-point`,
+`src/real`, `src/rational`, `src/pred_set`, `src/n-bit`,
+`src/integer`, `src/bag`, `src/finite_maps` are clean; the residuals
+come from the two exempt/deferred classes below.
 
-  - `soundness_check-selftest.log` (38): the selftest itself proves
-    without a segment.
-  - `src/1/selftest.log` (17): ditto.
-  - `bin/hol.state0` log (14): warnings from the state-building phase,
-    hitting boolLib and friends — exempt as they run once during heap
-    construction.
-  - `simp-selftest.log` (3), datatype `theory_tests` (1 each): more
-    selftest-in-place prove sites.
-
-The selftest cases are a different class from the library-load-time
-one this file started with: each is a test file directly calling `prove`
-without opening a segment.  Fixing them means either wrapping the test
-in a scratch theory or promoting the tactic proof to a proper Script.
-Left for a follow-up.
+  - `soundness_check-selftest.log` (38), `src/1/selftest.log` (17),
+    `simp-selftest.log` (3), datatype `theory_tests` (1 each):
+    selftest-in-place prove sites (the test file directly calls
+    `prove` without opening a segment).  Fixing them means wrapping
+    the test in a scratch theory or promoting the tactic proof to a
+    proper Script; left for a follow-up.
+  - `bin/hol.state0` log (14): warnings from the state-building
+    phase, hitting boolLib and friends --- exempt as they run once
+    during heap construction.
 
 ## Longer term
 
