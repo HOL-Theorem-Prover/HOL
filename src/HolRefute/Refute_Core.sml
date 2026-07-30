@@ -415,13 +415,17 @@ structure Refute_Core = struct
                values) rows then
           range_error field "rows must be nonempty and values in range"
         else ()
+      fun check_term_keys field rows =
+        List.app (fn (NONE, _) => ()
+                   | (SOME key, _) =>
+            if Term.is_const key orelse Term.is_var key then ()
+            else range_error field
+              ("row key must be a constant or variable; got: " ^
+               Parse.term_to_string key)) rows
       val _ = valid_rows "card" 1 (#card mf)
       val _ = valid_rows "max" (~1) (#max mf)
-      val _ = List.app (fn (NONE, _) => ()
-                         | (SOME key, _) =>
-          if Term.is_const key orelse Term.is_var key then ()
-          else range_error "max" ("row key must be a constant or variable; " ^
-            "got: " ^ Parse.term_to_string key)) (#max mf)
+      val _ = check_term_keys "max" (#max mf)
+      val _ = check_term_keys "wf" (#wf mf)
       val _ = if null (#bits mf) orelse
                      List.exists (fn bits => bits < 1 orelse bits > 31)
                        (#bits mf) then
@@ -439,6 +443,7 @@ structure Refute_Core = struct
               then range_error "iter"
                 "rows must contain values with a representable successor"
               else ()
+      val _ = check_term_keys "iter" (#iter mf)
       val _ = if null (#bisim_depth mf) orelse
                      List.exists (fn depth => depth < ~1 orelse
                        (depth >= 0 andalso not (can_increment depth)))

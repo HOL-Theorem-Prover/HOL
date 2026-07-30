@@ -10806,6 +10806,12 @@ val _ = List.app range_guard_is_pinned
   [("max", "row key must be a constant or variable; got: ZooLeaf 0",
      fn () => Refute.upd_max [(SOME ``ZooLeaf 0``, [1])]
        Refute.default_config),
+   ("wf", "row key must be a constant or variable; got: ZooLeaf 0",
+     fn () => Refute.upd_wf [(SOME ``ZooLeaf 0``, SOME true)]
+       Refute.default_config),
+   ("iter", "row key must be a constant or variable; got: ZooLeaf 0",
+     fn () => Refute.upd_iter [(SOME ``ZooLeaf 0``, [1])]
+       Refute.default_config),
    ("max_genuine", "must be at least 1", fn () =>
       Refute.upd_max_genuine 0 Refute.default_config),
    ("max_potential", "must not be negative", fn () =>
