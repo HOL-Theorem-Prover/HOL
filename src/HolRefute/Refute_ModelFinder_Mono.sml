@@ -1578,24 +1578,18 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
     else
       #1 (Term.dest_var term)
 
-  fun is_constant_like term =
-    Term.is_const term orelse
-    (Term.is_var term andalso
-     MFN.is_reserved_name (#1 (Term.dest_var term)))
-
   fun is_harmless_axiom term =
     let
-      val constants = HolKernel.find_terms is_constant_like term
-      val nonbuiltins = List.filter
-        (not o MFH.is_built_in_const) constants
+      (* Harmlessness applies to an arithmetic comparison as a whole, not to
+         every formula mentioning one.  In particular [0 < 1 /\ (!x y. x =
+         y)] contains no user constant other than [<], but its equality
+         conjunct imposes a cardinality constraint. *)
+      val (_, body) = boolSyntax.strip_forall term
+      val (head, _) = HolKernel.strip_comb body
       fun canonical candidate = MFN.original_name (term_name candidate)
     in
-      (* A built-in-only axiom can still constrain cardinality (for example,
-         universal equality).  Do not let an empty nonbuiltins list make the
-         harmless-constant test succeed vacuously. *)
-      not (null nonbuiltins) andalso
-      List.all (fn candidate => List.exists (fn harmless =>
-        canonical candidate = harmless) harmless_consts) nonbuiltins
+      Term.is_const head andalso
+      List.exists (fn harmless => canonical head = harmless) harmless_consts
     end
 
   fun consider_nondefinitional_axiom mdata term accum =
