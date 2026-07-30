@@ -17,3 +17,13 @@ Theorem RIGHT_ABSORB_DISJ:  !a b. a \/ b <=> (a /\ ~b) \/ b
 Proof
   REPEAT GEN_TAC THEN BOOL_CASES_TAC ``b:bool`` THEN REWRITE_TAC []
 QED
+
+Theorem LEFT_DISJ_TAC_lem:  !a b. a \/ b <=> ~b ==> a
+Proof
+  REPEAT GEN_TAC THEN BOOL_CASES_TAC ``a:bool`` THEN REWRITE_TAC []
+QED
+
+Theorem RIGHT_DISJ_TAC_lem:  !a b. a \/ b <=> ~a ==> b
+Proof
+  REPEAT GEN_TAC THEN BOOL_CASES_TAC ``a:bool`` THEN REWRITE_TAC []
+QED

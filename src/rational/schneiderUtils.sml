@@ -115,9 +115,7 @@ fun LEFT_NO_FORALL_TAC i t =
 (* ************************************************************ *)
 
 local
-val lem = TAC_PROOF(([],“!a b. a\/b <=> ~b==>a”),
-                REPEAT GEN_TAC THEN BOOL_CASES_TAC (“a:bool”)
-                THEN REWRITE_TAC[])
+val lem = LEFT_DISJ_TAC_lem
 in
 fun LEFT_DISJ_TAC (asm,g) =
     let
@@ -127,9 +125,7 @@ fun LEFT_DISJ_TAC (asm,g) =
 end
 
 local
-val lem = TAC_PROOF(([],“!a b. a\/b <=> ~a==>b”),
-                REPEAT GEN_TAC THEN BOOL_CASES_TAC (“a:bool”)
-                THEN REWRITE_TAC[])
+val lem = RIGHT_DISJ_TAC_lem
 in
 fun RIGHT_DISJ_TAC (asm,g) =
     let val (a,b) = dest_disj g
