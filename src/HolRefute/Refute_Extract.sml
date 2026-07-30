@@ -3380,19 +3380,25 @@ structure Refute_Extract = struct
             equality_name context (Term.type_of tm) ^ " " ^
               parens ("#1 " ^ parens name) ^ " " ^
               parens (expression context tm)
-          val checks = guards @ ListPair.mapEq residual (terms, generated)
+          val residuals = ListPair.mapEq residual (terms, generated)
           fun with_bindings body =
             if null bindings then body
             else "let " ^ join "\n    " bindings ^ "\nin " ^ body ^ " end"
-          (* A char-list head binding contains [String.sub].  It must be
-             delayed until after the nonempty guard rather than evaluated by
-             an enclosing let before short-circuiting the checks. *)
-          val body =
-            if null checks then with_bindings (success (additions @ environment))
+          val checked_success =
+            if null residuals then success (additions @ environment)
             else
-              safe_value (join " andalso " (map parens checks)) failure ^
-              "if refute_value then " ^
-              with_bindings (success (additions @ environment)) ^
+              safe_value (join " andalso " (map parens residuals)) failure ^
+              "if refute_value then " ^ success (additions @ environment) ^
+              " else " ^ failure ^ ")"
+          (* A char-list head binding contains [String.sub].  It must be
+             delayed until after the nonempty guard.  Residual checks, on
+             the other hand, can refer to fresh output variables, so run
+             them only after [with_bindings] has introduced those names. *)
+          val body =
+            if null guards then with_bindings checked_success
+            else
+              safe_value (join " andalso " (map parens guards)) failure ^
+              "if refute_value then " ^ with_bindings checked_success ^
               " else " ^ failure ^ ")"
         in
           "(case " ^ value_text ^ " of " ^ pattern_text ^ " => " ^
