@@ -1638,8 +1638,22 @@ structure Refute_ModelFinder_Preproc = struct
           end
         fun recurse bound candidate =
           if Term.is_abs candidate then
-            let val (variable, body) = Term.dest_abs candidate
-            in Term.mk_abs (variable, recurse (bound @ [variable]) body) end
+            let
+              val (variable, raw_body) = Term.dest_abs candidate
+              (* Bound-variable identity is represented by a HOL term below.
+                 Alpha-rename a shadowing binder before adding it to that
+                 environment, so selected_bounds cannot conflate its outer
+                 namesake with this local binding. *)
+              val (variable, body) =
+                if List.exists (Term.aconv variable) bound then
+                  let val fresh = Term.variant
+                    (bound @ Term.all_vars raw_body) variable
+                  in (fresh, substitute variable fresh raw_body) end
+                else
+                  (variable, raw_body)
+            in
+              Term.mk_abs (variable, recurse (bound @ [variable]) body)
+            end
           else if Term.is_comb candidate then
             let
               val (head, arguments) = HolKernel.strip_comb candidate
