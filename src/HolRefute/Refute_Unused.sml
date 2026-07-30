@@ -63,12 +63,18 @@ structure Refute_Unused :> REFUTE_UNUSED = struct
 
   fun check_detailed config (name, theorem) =
     let
-      val (_, body) = boolSyntax.strip_forall (Thm.concl theorem)
+      val (variables, body) = boolSyntax.strip_forall (Thm.concl theorem)
       val (premises, conclusion) = boolSyntax.strip_imp body
+      val hypotheses = Thm.hyp theorem
       val skipped = ref 0
       val config' = probe_config config
+      (* Only implication premises are candidates for removal, but theorem
+         hypotheses remain assumptions of every probe.  Reintroduce the
+         stripped binders as well: a hypothesis can mention one of them. *)
       fun conjecture indexes =
-        boolSyntax.list_mk_imp (drop_indexes indexes premises, conclusion)
+        boolSyntax.list_mk_forall (variables,
+          boolSyntax.list_mk_imp
+            (hypotheses @ drop_indexes indexes premises, conclusion))
       fun droppable indexes =
         case Refute_Core.refute config' (conjecture indexes) of
             Refute_Core.NoCounterexample => true
