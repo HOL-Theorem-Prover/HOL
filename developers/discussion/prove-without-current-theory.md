@@ -165,6 +165,7 @@ Step 2 in progress.  Companion `fooContextScript.sml` files exist for:
   - `src/num/arith/src/Sub_and_cond.sml` → `SubAndCondContextScript.sml`
   - `src/num/theories/Num_conv.sml` → `NumConvContextScript.sml`
   - `src/datatype/EnumType.sml`   → `EnumTypeContextScript.sml`
+  - `src/real/RealField.sml`      → `RealFieldContextScript.sml`
 
 For libraries that already carried a companion script, the theorems
 went into that script rather than a new one:
@@ -175,6 +176,18 @@ went into that script rather than a new one:
   - `src/pattern_matches/patternMatchesLib.sml` and
     `constrFamiliesLib.sml` → `patternMatchesScript.sml`.
   - `src/datatype/ind_types.sml` → `ind_typeScript.sml`.
+  - `src/n-bit/wordsLib.sml` and `blastLib.sml` → `wordsScript.sml`
+    and `blastScript.sml` (34 + 12 lemmas).
+  - `src/integer/CooperCore.sml` → `cooperScript.sml`
+    (5 polymorphic MEM helpers, INST_TYPE'd at consumer side).
+
+Two `TypeBase.write` → `TypeBase.export` conversions also went in:
+
+  - `src/n-bit/fcpScript.sml`: `gen_datatype_info` result was only
+    kept in the current process's TypeBase.  Switching to `export`
+    persists it in the theory data, matching what
+    `pair`/`sum`/`option`/`list` do; the `fcpLib` re-registration goes
+    away with its 80-warning-per-downstream case-lifting prove.
 
 Two build-order flips also went in:
 
