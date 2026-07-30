@@ -1587,25 +1587,22 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
       val (bound, body) = boolSyntax.strip_forall term
       val (head, _) = HolKernel.strip_comb body
       fun canonical candidate = MFN.original_name (term_name candidate)
-      fun built_in candidate =
+      fun built_in bound candidate =
         if Term.is_var candidate then
           List.exists (Term.aconv candidate) bound orelse
           MFH.is_built_in_const candidate
         else if Term.is_const candidate then MFH.is_built_in_const candidate
         else if Term.is_comb candidate then
           let val (function, argument) = Term.dest_comb candidate
-          in built_in function andalso built_in argument end
+          in built_in bound function andalso built_in bound argument end
         else if Term.is_abs candidate then
           let val (variable, abs_body) = Term.dest_abs candidate
-          in
-            List.exists (Term.aconv candidate) bound orelse
-            built_in abs_body
-          end
+          in built_in (variable :: bound) abs_body end
         else true
     in
       null (Term.type_vars_in_term term) andalso
       List.exists (fn harmless => canonical head = harmless) harmless_consts
-      andalso built_in body
+      andalso built_in bound body
     end
 
   fun consider_nondefinitional_axiom mdata term accum =
