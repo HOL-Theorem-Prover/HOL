@@ -2026,9 +2026,11 @@ fun certify {executable, original, eval_terms,
               {original = cert_original, evals = cert_evals, env = env,
                cex = base} of
                Refute_Cert.Certified certified =>
+                 (* A genuine result may display only values established by
+                    the kernel certificate.  Decoded solver values are
+                    useful reconstruction data, but are not certificates. *)
                  Keep (replace_cex certified Refute_Core.Genuine bindings
-                   (merge_evals evals (#evals certified))
-                   (#cert certified) model)
+                   (#evals certified) (#cert certified) model)
              | Refute_Cert.Potential potential =>
                  Keep (replace_cex potential (#certainty potential) bindings
                    evals NONE model)
