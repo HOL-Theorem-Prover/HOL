@@ -2041,91 +2041,111 @@ structure Refute_Extract = struct
      Keeping failure explicit also lets case rows and definition clauses share
      this compiler without relying on eager SML patterns. *)
   and lazy_match_pattern context tm value success failure =
+    lazy_match_pattern_with context [] tm value success failure
+
+  and lazy_match_pattern_with context initial_bound tm value success failure =
     let
       val {delay, force, ...} = context_operations context
-    in
-    if Term.is_var tm then
-      let val variable = variable_name tm
-      in
-        if variable = "_" then success
-        else "let val " ^ variable ^ " = " ^ value ^ " in " ^
-          success ^ " end"
-      end
-    else if Literal.is_numeral tm orelse intSyntax.is_int_literal tm orelse
-            Literal.is_char_lit tm orelse Literal.is_string_lit tm orelse
-            oneSyntax.is_one tm orelse Term.aconv tm boolSyntax.T orelse
-            Term.aconv tm boolSyntax.F orelse
-            wordsSyntax.is_word_literal tm then
-      "if " ^ equality_name context (Term.type_of tm) ^ " " ^
-        parens value ^ " " ^ parens (expression context tm) ^ " then " ^
-        success ^ " else " ^ failure
-    else
-      let
-        val (head, arguments) = boolSyntax.strip_comb tm
-        val char_list = is_char_list (Term.type_of tm)
-      in
-        if Term.is_const head andalso kname head = ("list", "NIL") andalso
-           char_list then
-          "if String.size " ^ parens (force value) ^ " = 0 then " ^
-          success ^ " else " ^ failure
-        else if Term.is_const head andalso
-                kname head = ("list", "CONS") andalso char_list then
-          (case arguments of
-               [first, rest] =>
-                 let
-                   val text = fresh_pattern context "refute_lazy_string_"
-                   val head_value = delay
-                     ("String.sub " ^ parens (text ^ ", 0"))
-                   val tail_value = delay
-                     ("String.extract " ^ parens (text ^ ", 1, NONE"))
-                   val body = lazy_match_pattern context first head_value
-                     (lazy_match_pattern context rest tail_value success failure)
-                     failure
-                 in
-                   "let val " ^ text ^ " = " ^ force value ^ " in if " ^
-                   "String.size " ^ text ^ " > 0 then " ^ body ^
-                   " else " ^ failure ^ " end"
-                 end
-             | _ => reject "malformed string CONS pattern")
-        else if Term.is_const head andalso kname head = ("num", "SUC") then
-          (case arguments of
-               [argument] =>
-                 let
-                   val raw = fresh_pattern context "refute_lazy_suc_"
-                   val predecessor = delay (parens (raw ^ " - 1"))
-                 in
-                   "let val " ^ raw ^ " = " ^ force value ^ " in " ^
-                   "if " ^ raw ^ " > 0 then " ^
-                   lazy_match_pattern context argument predecessor success
-                     failure ^ " else " ^ failure ^ " end"
-                 end
-             | _ => reject "malformed lazy SUC pattern")
-        else if Term.is_const head andalso TypeBase.is_constructor head then
-          let
-            val (_, _, constructor) =
-              case constructor_for context head of
-                  SOME found => found
-                | NONE => reject ("unknown lazy pattern constructor " ^
-                                  kname_text (kname head))
-            val children = List.map (fn _ =>
-              fresh_pattern context "refute_lazy_field_") arguments
-            fun payload [] = constructor
-              | payload [child] = constructor ^ " " ^ child
-              | payload fields = constructor ^ " (" ^
-                  join ", " fields ^ ")"
-            val body = List.foldr
-              (fn ((argument, child), rest) =>
-                lazy_match_pattern context argument child rest failure)
-              success (ListPair.zip (arguments, children))
+      fun variables pattern = Term.free_vars_lr pattern
+      fun match bound pattern matched success =
+        if Term.is_var pattern then
+          let val variable = variable_name pattern
           in
-            parens ("case " ^ force value ^ " of " ^
-              payload children ^ " => " ^ body ^ " | _ => " ^
-              failure)
+            if variable = "_" then success
+            else
+              case List.find (fn previous =>
+                     Term.aconv previous pattern) bound of
+                  SOME previous =>
+                    "if " ^ equality_name context (Term.type_of pattern) ^
+                    " " ^ parens matched ^ " " ^
+                    parens (variable_name previous) ^ " then " ^
+                    success ^ " else " ^ failure
+                | NONE => "let val " ^ variable ^ " = " ^ matched ^ " in " ^
+                    success ^ " end"
           end
+        else if Literal.is_numeral pattern orelse
+                intSyntax.is_int_literal pattern orelse
+                Literal.is_char_lit pattern orelse
+                Literal.is_string_lit pattern orelse oneSyntax.is_one pattern
+                orelse Term.aconv pattern boolSyntax.T orelse
+                Term.aconv pattern boolSyntax.F orelse
+                wordsSyntax.is_word_literal pattern then
+          "if " ^ equality_name context (Term.type_of pattern) ^ " " ^
+            parens matched ^ " " ^ parens (expression context pattern) ^
+            " then " ^ success ^ " else " ^ failure
         else
-          reject ("unsupported lazy pattern: " ^
-                  Parse.term_to_string tm)
-      end
+          let
+            val (head, arguments) = boolSyntax.strip_comb pattern
+            val char_list = is_char_list (Term.type_of pattern)
+            fun match_children bound [] [] = success
+              | match_children bound (argument :: arguments)
+                  (child :: children) =
+                  match bound argument child
+                    (match_children (bound @ variables argument) arguments
+                       children)
+              | match_children _ _ _ = raise Fail "malformed constructor"
+          in
+            if Term.is_const head andalso
+               kname head = ("list", "NIL") andalso char_list then
+              "if String.size " ^ parens (force matched) ^ " = 0 then " ^
+                success ^ " else " ^ failure
+            else if Term.is_const head andalso
+                    kname head = ("list", "CONS") andalso char_list then
+              (case arguments of
+                   [first, rest] =>
+                     let
+                       val text = fresh_pattern context "refute_lazy_string_"
+                       val head_value = delay
+                         ("String.sub " ^ parens (text ^ ", 0"))
+                       val tail_value = delay
+                         ("String.extract " ^ parens (text ^ ", 1, NONE"))
+                       val body = match bound first head_value
+                         (match (bound @ variables first) rest tail_value
+                            success)
+                     in
+                       "let val " ^ text ^ " = " ^ force matched ^
+                       " in if String.size " ^ text ^ " > 0 then " ^ body ^
+                       " else " ^ failure ^ " end"
+                     end
+                 | _ => reject "malformed string CONS pattern")
+            else if Term.is_const head andalso
+                    kname head = ("num", "SUC") then
+              (case arguments of
+                   [argument] =>
+                     let
+                       val raw = fresh_pattern context "refute_lazy_suc_"
+                       val predecessor = delay (parens (raw ^ " - 1"))
+                     in
+                       "let val " ^ raw ^ " = " ^ force matched ^ " in " ^
+                       "if " ^ raw ^ " > 0 then " ^
+                       match bound argument predecessor success ^
+                       " else " ^ failure ^ " end"
+                     end
+                 | _ => reject "malformed lazy SUC pattern")
+            else if Term.is_const head andalso TypeBase.is_constructor head then
+              let
+                val (_, _, constructor) =
+                  case constructor_for context head of
+                      SOME found => found
+                    | NONE => reject ("unknown lazy pattern constructor " ^
+                                      kname_text (kname head))
+                val children = List.map (fn _ =>
+                  fresh_pattern context "refute_lazy_field_") arguments
+                fun payload [] = constructor
+                  | payload [child] = constructor ^ " " ^ child
+                  | payload fields = constructor ^ " (" ^
+                      join ", " fields ^ ")"
+                val body = match_children bound arguments children
+              in
+                parens ("case " ^ force matched ^ " of " ^
+                  payload children ^ " => " ^ body ^ " | _ => " ^ failure)
+              end
+            else
+              reject ("unsupported lazy pattern: " ^
+                      Parse.term_to_string pattern)
+          end
+    in
+      match initial_bound tm value success
     end
 
   fun strict_definition_clause context (constant, name, theorem) =
@@ -2264,11 +2284,16 @@ structure Refute_Extract = struct
         | dispatch ((patterns, rhs) :: rest) =
             let
               val fallback = "refute_next ()"
-              val body = List.foldr
-                (fn ((pat, argument), success) =>
-                  lazy_match_pattern context pat argument success fallback)
-                (expression context rhs)
-                (ListPair.zip (patterns, arguments))
+              fun match_arguments bound [] [] = expression context rhs
+                | match_arguments bound (pattern :: patterns)
+                    (argument :: arguments) =
+                    lazy_match_pattern_with context bound pattern argument
+                      (match_arguments
+                         (bound @ Term.free_vars_lr pattern)
+                         patterns arguments)
+                      fallback
+                | match_arguments _ _ _ = raise Fail "malformed rule"
+              val body = match_arguments [] patterns arguments
             in
               "(let fun refute_next () = " ^ dispatch rest ^ " in " ^
               body ^ " end)"
