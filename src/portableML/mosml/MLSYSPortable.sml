@@ -23,7 +23,16 @@ in
 
 fun catch_SIGINT () = ignore (catch_interrupt true)
 
-fun uninterruptible f = f ()
+(* [sys_catch_break] controls delivery of SIGINT as [Interrupt].  Disable
+   delivery across a short state transition, and always restore it, so a
+   signal cannot split persistent recording from publication. *)
+fun uninterruptible f =
+  let
+    fun restore () = ignore (catch_interrupt true)
+    val _ = ignore (catch_interrupt false)
+  in
+    (f () before restore ()) handle error => (restore (); raise error)
+  end
 
 val md5sum = Mosml.md5sum
 val time = Mosml.time
