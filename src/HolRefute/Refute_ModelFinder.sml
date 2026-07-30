@@ -299,9 +299,40 @@ fun valid_instance (problem : KK.problem) assignments =
                    left))
              | _ => NONE)
       | tuples_of _ = NONE
+    (* Solver tuples and compact bound expansions can both be large.  Do not
+       turn a valid-instance check into a quadratic scan of those lists. *)
+    fun compare_tuple ([], []) = EQUAL
+      | compare_tuple ([], _) = LESS
+      | compare_tuple (_, []) = GREATER
+      | compare_tuple (left :: lefts, right :: rights) =
+          (case Int.compare (left, right) of
+               EQUAL => compare_tuple (lefts, rights)
+             | order => order)
+    fun sorted_set tuples =
+      let
+        fun drop_equal value (next :: rest) =
+              if compare_tuple (value, next) = EQUAL then
+                drop_equal value rest
+              else
+                next :: rest
+          | drop_equal _ [] = []
+        fun distinct [] = []
+          | distinct (value :: rest) = value :: distinct (drop_equal value rest)
+      in
+        distinct (Listsort.sort compare_tuple tuples)
+      end
     fun subset left right =
-      List.all (fn tuple => List.exists (fn other => other = tuple) right)
-        left
+      let
+        fun loop [] _ = true
+          | loop _ [] = false
+          | loop (one :: ones) (other :: others) =
+              (case compare_tuple (one, other) of
+                   LESS => false
+                 | EQUAL => loop ones others
+                 | GREATER => loop (one :: ones) others)
+      in
+        loop (sorted_set left) (sorted_set right)
+      end
     fun assignment relation =
       Option.map #2 (List.find (fn (other, _) => other = relation)
         assignments)
