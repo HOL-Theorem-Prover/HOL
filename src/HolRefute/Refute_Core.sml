@@ -427,15 +427,24 @@ structure Refute_Core = struct
                        (#bits mf) then
                 range_error "bits" "values must lie between 1 and 31"
               else ()
+      fun can_increment value =
+        case Int.maxInt of
+            SOME maximum => value < maximum
+          | NONE => true
       val _ = if null (#iter mf) orelse
                      List.exists (fn (_, values) => null values orelse
-                       List.exists (fn value => value < 0) values) (#iter mf)
-              then range_error "iter" "rows must contain nonnegative values"
+                       List.exists (fn value =>
+                         value < 0 orelse not (can_increment value)) values)
+                         (#iter mf)
+              then range_error "iter"
+                "rows must contain values with a representable successor"
               else ()
       val _ = if null (#bisim_depth mf) orelse
-                     List.exists (fn depth => depth < ~1) (#bisim_depth mf)
+                     List.exists (fn depth => depth < ~1 orelse
+                       (depth >= 0 andalso not (can_increment depth)))
+                       (#bisim_depth mf)
               then range_error "bisim_depth"
-                "values must be -1 or nonnegative"
+                "values must be -1 or have a representable successor"
               else ()
       (* A disabled depth requires a context without bisimulation axioms,
          whereas a nonnegative depth requires one with them.  They cannot
