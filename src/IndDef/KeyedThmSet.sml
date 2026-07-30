@@ -60,8 +60,8 @@ fun new {settype, key_part} =
     fun apply_delta0 origin (ThmSetData.ADD (_, theorem)) dict =
           add0 origin theorem dict
       | apply_delta0 _ _ dict = dict
-    val fullresult as
-          {update_global_value, get_deltas, get_global_value, DB, ...} =
+    val {update_global_value, record_delta, get_deltas, get_global_value,
+         DB, ...} =
       ThmSetData.export_with_ancestry {
         settype = settype,
         delta_ops = {apply_to_global = apply_delta0 "apply_delta",
@@ -70,13 +70,13 @@ fun new {settype, key_part} =
                      initial_value = KNametab.empty,
                      apply_delta = apply_delta0 "apply_delta"}}
     fun add theorem = update_global_value (add0 "add" theorem)
-    (* Validation is interruptible, but persistence and publication are one
-       masked commit, so the theory delta and live map cannot diverge. *)
+    (* Update before recording: if the theorem is malformed the update
+       raises and no delta is left behind to break descendant theories. *)
     fun export_thm name =
       let val delta = ThmSetData.mk_add name
       in
-        AncestryData.update_global_value_and_record fullresult delta
-          (apply_delta0 "export_thm" delta)
+        update_global_value (apply_delta0 "export_thm" delta);
+        record_delta delta
       end
     fun thy_thms thyname =
       ThmSetData.added_thms (get_deltas {thyname = thyname})

@@ -340,17 +340,6 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
        update_global_value = update_global_value}
     end
 
-(* Keep persistence and publication in one uninterruptible update.  The
-   portable primitive masks Poly/ML's asynchronous interrupts.  Other
-   runtimes may only preserve exception delivery, so the updater must remain
-   short, non-blocking, and safe to restart after an interrupt. *)
-fun update_global_value_and_record (fr : ('delta,'value)fullresult)
-      delta f =
-  Portable.uninterruptible (fn () =>
-    #update_global_value fr (fn current =>
-      let val value = f current
-      in #record_delta fr delta; value end))
-
 fun with_temp_value (fr:('delta,'value)fullresult) v =
     Portable.genwith_flag ({ get = #get_global_value fr,
                              set = #update_global_value fr o K }, v)

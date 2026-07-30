@@ -19,8 +19,6 @@ fun listDir s =
 
 fun catch_SIGINT () = ()
 
-fun uninterruptible f = f ()
-
 fun md5sum _ = raise Fail "md5sum not implemented"
 
 fun time f x =

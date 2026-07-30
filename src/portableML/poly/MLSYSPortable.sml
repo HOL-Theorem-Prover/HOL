@@ -19,9 +19,6 @@ fun ref_to_int (x: 'a ref) = 0 (* needs fixing *)
 
 fun catch_SIGINT () = ()
 
-fun uninterruptible f =
-  Thread_Attributes.uninterruptible (fn _ => f) ()
-
 fun md5sum s =
    let
       val mstate = MD5.update (MD5.init, Byte.stringToBytes s)

@@ -23,13 +23,6 @@ in
 
 fun catch_SIGINT () = ignore (catch_interrupt true)
 
-(* Moscow ML's [sys_catch_break false] restores SIGINT's default process
-   action; it does not block asynchronous delivery.  Never use it as a
-   pseudo-mask: a Ctrl-C must remain an [Interrupt] exception rather than
-   terminating the process.  Moscow ML has no portable signal-mask primitive,
-   so callers must keep these updates restartable. *)
-fun uninterruptible f = f ()
-
 val md5sum = Mosml.md5sum
 val time = Mosml.time
 
