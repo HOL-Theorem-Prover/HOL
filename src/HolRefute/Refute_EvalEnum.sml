@@ -593,6 +593,20 @@ structure Refute_EvalEnum = struct
      translations must serialize against one another. *)
   val theory_mutex = Mutex.mutex ()
 
+  (* Lock acquisition itself must admit timeout interrupts.  Once [trylock]
+     succeeds, interrupts remain masked until the caller has installed its
+     cleanup state, so no lock can be leaked in that small transition. *)
+  fun lock_interruptibly restore lock =
+    let
+      fun acquire () =
+        if Mutex.trylock lock then ()
+        else
+          (restore (fn () => OS.Process.sleep (Time.fromReal 0.01)) ();
+           acquire ())
+    in
+      acquire ()
+    end
+
   (* Prefix allocation is independent of the theory bracket: cv allocates
      local names while holding [theory_mutex], whereas compute allocates its
      definition prefix before the first run. *)
@@ -724,7 +738,7 @@ structure Refute_EvalEnum = struct
           Thread_Attributes.uninterruptible
             (fn restore_attributes => fn () =>
               let
-                val _ = Mutex.lock theory_mutex
+                val _ = lock_interruptibly restore_attributes theory_mutex
                 val opened = Exn.capture open_theory_bracket ()
               in
                 case opened of
@@ -745,14 +759,23 @@ structure Refute_EvalEnum = struct
               end) ()
 
   fun with_clean_theory body =
-    Multithreading.synchronized "Refute evaluator theory" theory_mutex
-      (fn () => Thread_Attributes.uninterruptible
-        (fn restore_attributes => fn () =>
-          let
-            val bracket = open_theory_bracket ()
-            val result = Exn.capture (restore_attributes body) ()
-            val _ = close_theory_bracket bracket
-          in
-            Exn.release result
-          end) ())
+    Thread_Attributes.uninterruptible
+      (fn restore_attributes => fn () =>
+        let
+          val _ = lock_interruptibly restore_attributes theory_mutex
+          val opened = Exn.capture open_theory_bracket ()
+        in
+          case opened of
+              Exn.Exn error => (Mutex.unlock theory_mutex; raise error)
+            | Exn.Res bracket =>
+                let
+                  val result = Exn.capture (restore_attributes body) ()
+                  val cleanup = Exn.capture close_theory_bracket bracket
+                  val _ = Mutex.unlock theory_mutex
+                in
+                  case result of
+                      Exn.Exn error => raise error
+                    | Exn.Res value => (Exn.release cleanup; value)
+                end
+        end) ()
 end

@@ -43,6 +43,20 @@ structure Refute_EvalSML = struct
   val goal_compile_mutex = Mutex.mutex ()
   val reconstruction_forces = ref 0
 
+  (* Do not block with interrupts masked: [Timeout.apply] cancels by raising
+     an interrupt.  The successful nonblocking acquisition occurs while
+     masked, which still makes installing cleanup state atomic. *)
+  fun lock_interruptibly restore lock =
+    let
+      fun acquire () =
+        if Mutex.trylock lock then ()
+        else
+          (restore (fn () => OS.Process.sleep (Time.fromReal 0.01)) ();
+           acquire ())
+    in
+      acquire ()
+    end
+
   datatype install_result =
       Installed of generated_dispatch
     | CompileError of string list
@@ -68,9 +82,9 @@ structure Refute_EvalSML = struct
 
   fun register_term_tables constructor_terms terms =
     Thread_Attributes.uninterruptible
-      (fn _ => fn () =>
+      (fn restore => fn () =>
         let
-          val _ = Mutex.lock table_mutex
+          val _ = lock_interruptibly restore table_mutex
           val serial = !table_serial
           val entry =
             (serial, Vector.fromList constructor_terms,
@@ -91,8 +105,8 @@ structure Refute_EvalSML = struct
           (!term_tables)
     in
       Thread_Attributes.uninterruptible
-        (fn _ => fn () =>
-          (Mutex.lock table_mutex;
+        (fn restore => fn () =>
+          (lock_interruptibly restore table_mutex;
            remove () before Mutex.unlock table_mutex)) ()
     end
 
@@ -100,7 +114,7 @@ structure Refute_EvalSML = struct
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
         let
-          val _ = Mutex.lock table_mutex
+          val _ = lock_interruptibly restore table_mutex
           val result = Exn.capture (fn () =>
             let
               val (_, constructor_table, term_table) =
@@ -309,7 +323,7 @@ structure Refute_EvalSML = struct
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
         let
-          val _ = Mutex.lock compiler_mutex
+          val _ = lock_interruptibly restore compiler_mutex
           val old_dispatch = !installed_dispatch
           val _ = installed_dispatch := NONE
           val result = Exn.capture (restore (fn () =>
@@ -354,7 +368,7 @@ structure Refute_EvalSML = struct
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
         let
-          val _ = Mutex.lock native_mutex
+          val _ = lock_interruptibly restore native_mutex
           val old_deadline = !deadline
           val old_filter = !ignored_filter
           val _ = deadline := SOME limit
@@ -480,7 +494,7 @@ structure Refute_EvalSML = struct
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
         let
-          val _ = Mutex.lock goal_compile_mutex
+          val _ = lock_interruptibly restore goal_compile_mutex
           val result = Exn.capture
             (restore
               (fn () => compile_locked extract config strategy problem)) ()
