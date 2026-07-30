@@ -1465,8 +1465,9 @@ structure Refute_Forl :> REFUTE_FORL = struct
     Thread_Attributes.uninterruptible (fn restore_interrupts => fn () =>
       let
         (* Put the launcher and all of its descendants in a fresh session.
-           The supervising shell forwards cancellation to that process group
-           before it exits, so a wrapper cannot orphan its JVM or SAT child. *)
+           The supervising shell terminates that process group before it
+           exits, even if a wrapper itself finishes normally, so it cannot
+           orphan its JVM or SAT child. *)
         val setsid = valOf (setsid_executable ())
         val sleep = valOf (sleep_executable ())
         val supervised =
@@ -1480,7 +1481,10 @@ structure Refute_Forl :> REFUTE_FORL = struct
           "wait \"$child\"; kill \"$watchdog\" 2>/dev/null; " ^
           "wait \"$watchdog\" 2>/dev/null; exit 130' TERM INT; " ^
           shell_quote setsid ^ " /bin/sh -c " ^ shell_quote command ^
-          " & child=$!; wait \"$child\""
+          " & child=$!; wait \"$child\"; status=$?; " ^
+          "kill -TERM -$child 2>/dev/null; " ^
+          "(\"$timer\" 1; kill -KILL -$child 2>/dev/null) & reaper=$!; " ^
+          "wait \"$reaper\" 2>/dev/null; exit \"$status\""
         val process = Unix.execute ("/bin/sh", ["-c", supervised])
         val reaped = ref false
         fun reap () =
