@@ -258,8 +258,13 @@ fun valid_instance (problem : KK.problem) assignments =
           [] => true
         | relation :: rest => not (member relation rest) andalso
           distinct rest
+    fun distinct_tuples [] = true
+      | distinct_tuples (tuple :: rest) =
+          not (List.exists (fn other => other = tuple) rest) andalso
+          distinct_tuples rest
     fun valid_assignment ((arity, relation), tuples) =
       member (arity, relation) expected andalso
+      distinct_tuples tuples andalso
       List.all (fn tuple =>
         length tuple = arity andalso
         List.all (fn atom => atom >= 0 andalso atom < #univ_card problem)
