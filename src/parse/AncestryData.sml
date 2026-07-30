@@ -325,14 +325,16 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
        update_global_value = update_global_value}
     end
 
-(* This is common parser code, also compiled by Moscow ML.  Keep the
-   transaction expressed through its portable update callback rather than
-   relying on Poly/ML's Thread_Attributes interface. *)
+(* Keep persistence and publication in one uninterruptible update.  The
+   portable primitive masks Poly/ML's asynchronous interrupts and is a direct
+   call on systems that have no such interrupts.  The updater must therefore
+   remain short and non-blocking. *)
 fun update_global_value_and_record (fr : ('delta,'value)fullresult)
       delta f =
-  #update_global_value fr (fn current =>
-    let val value = f current
-    in #record_delta fr delta; value end)
+  Portable.uninterruptible (fn () =>
+    #update_global_value fr (fn current =>
+      let val value = f current
+      in #record_delta fr delta; value end))
 
 fun with_temp_value (fr:('delta,'value)fullresult) v =
     Portable.genwith_flag ({ get = #get_global_value fr,

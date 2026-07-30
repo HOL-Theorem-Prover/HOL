@@ -43,6 +43,9 @@ sig
   val finally : (unit -> unit) -> ('a -> 'b) -> ('a -> 'b)
      (* first argument (the finally finisher) must terminate, and preferably
         quickly, or you may mask/hide user-generated Interrupt exceptions *)
+  val uninterruptible : (unit -> 'a) -> 'a
+     (* Run a short, non-blocking critical section without asynchronous
+        interrupts.  Systems without asynchronous interrupts run it directly. *)
 
   val list_of_singleton : 'a -> 'a list
   val single : 'a -> 'a list (* synonym of list_of_singleton *)

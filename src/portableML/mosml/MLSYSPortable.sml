@@ -23,6 +23,8 @@ in
 
 fun catch_SIGINT () = ignore (catch_interrupt true)
 
+fun uninterruptible f = f ()
+
 val md5sum = Mosml.md5sum
 val time = Mosml.time
 
