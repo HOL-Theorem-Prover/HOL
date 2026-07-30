@@ -881,15 +881,25 @@ structure Refute_Core = struct
             card = card,
             size_matters = instance_size_matters goal }
         end
-      fun monomorphic_instance (card, replacement) =
-        make_instance card (map (fn tyvar =>
-          {redex = tyvar, residue = replacement}) tyvars)
+      (* Each type variable needs an independent finite interpretation.
+         Using one replacement for all of them only explores the diagonal
+         (for example, rf2/rf2 but never rf2/rf3).  [card] is an extractor
+         dispatch index, rather than a type cardinality, so number each
+         product instance consecutively. *)
+      fun substitutions [] = [[]]
+        | substitutions (tyvar :: rest) =
+            List.concat (List.map (fn replacement =>
+              List.map (fn theta =>
+                {redex = tyvar, residue = replacement} :: theta)
+                (substitutions rest)) types)
+      val type_substitutions = substitutions tyvars
       val mono_instances =
         if null tyvars then [make_instance 1 []]
         else
-          List.map monomorphic_instance
+          List.map (fn (card, theta) => make_instance card theta)
             (ListPair.zip
-              (List.tabulate (length types, fn index => index + 1), types))
+              (List.tabulate (length type_substitutions,
+                 fn index => index + 1), type_substitutions))
       (* A monomorphic goal has literally the same backend input in both
          forms.  This is stronger than merely constructing an equivalent
          singleton and keeps the old front-end behaviour exact. *)
