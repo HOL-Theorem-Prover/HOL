@@ -841,34 +841,41 @@ structure Refute_Narrow = struct
      branch for every constructor.  Keeping these alternatives explicit lets
      callers reject an already reported candidate without discarding another
      witness at the same depth. *)
-  fun examples_of _ (Leaf truth) =
+  (* Visit PNF examples one at a time.  Existential branches form a
+     Cartesian product, but constructing that product eagerly can exhaust
+     memory before the caller has had a chance to accept its first member. *)
+  fun visit_examples _ (Leaf truth) visit =
         (case truth of
-             Eval {result = false, potential} => [(EmptyExample, not potential)]
+             Eval {result = false, potential} =>
+               visit (EmptyExample, not potential)
            | _ => raise InvalidPath)
-    | examples_of index tree =
+    | visit_examples index tree visit =
         let
           val terms = alltermlist_of [index] ([], tree)
-          fun sequence [] = [[]]
-            | sequence (choices :: rest) =
-                List.concat (map (fn choice =>
-                  map (fn others => choice :: others) (sequence rest))
-                  choices)
-          fun next (term, residual) =
-            map (fn (example, genuine) => (term, example, genuine))
-              (examples_of (index + 1) residual)
+          fun visit_all [] = false
+            | visit_all ((term, residual) :: rest) =
+                visit_examples (index + 1) residual
+                  (fn (example, genuine) =>
+                    visit (UnivExample (shape_of_tree tree, term, example),
+                     genuine)) orelse
+                visit_all rest
+          fun visit_product [] branches =
+                let
+                  val ordered = rev branches
+                  val example = ExExample (shape_of_tree tree,
+                    map (fn (term, example, _) => (term, example)) ordered)
+                  val genuine = List.all (fn (_, _, value) => value) ordered
+                in
+                  visit (example, genuine)
+                end
+            | visit_product ((term, residual) :: rest) branches =
+                visit_examples (index + 1) residual
+                  (fn (example, genuine) =>
+                    visit_product rest ((term, example, genuine) :: branches))
         in
           case quantifier_of tree of
-              Universal =>
-                List.concat (map (fn (term, residual) =>
-                  map (fn (example, genuine) =>
-                    (UnivExample (shape_of_tree tree, term, example), genuine))
-                    (examples_of (index + 1) residual)) terms)
-            | Existential =>
-                map (fn branches =>
-                  (ExExample (shape_of_tree tree,
-                     map (fn (term, example, _) => (term, example)) branches),
-                   List.all (fn (_, _, genuine) => genuine) branches))
-                  (sequence (map next terms))
+              Universal => visit_all terms
+            | Existential => visit_product terms []
         end
 
   fun refute_pnf genuine_only depth evaluate initial_tree =
@@ -887,19 +894,23 @@ structure Refute_Narrow = struct
   fun refute_pnf_avoiding genuine_only depth evaluate accept initial_tree =
     let
       val (tree, tests) = refute evaluate genuine_only depth initial_tree
-      fun select [] = PnfExhausted
-            {truth = value_of tree, tree = tree, tests = tests}
-        | select ((example, genuine) :: rest) =
-            if (not genuine_only orelse genuine) andalso
-               accept {genuine = genuine, example = example, tree = tree} then
-              PnfCounterexample
-                {genuine = genuine, example = example, tree = tree,
-                 tests = tests}
-            else
-              select rest
+      val selected = ref (NONE : (example * bool) option)
+      fun select (example, genuine) =
+        if (not genuine_only orelse genuine) andalso
+           accept {genuine = genuine, example = example, tree = tree} then
+          (selected := SOME (example, genuine); true)
+        else
+          false
     in
       case value_of tree of
-          Eval {result = false, ...} => select (examples_of 0 tree)
+          Eval {result = false, ...} =>
+            (case (visit_examples 0 tree select; !selected) of
+                 SOME (example, genuine) =>
+                   PnfCounterexample
+                     {genuine = genuine, example = example, tree = tree,
+                      tests = tests}
+               | NONE => PnfExhausted
+                   {truth = value_of tree, tree = tree, tests = tests})
         | truth => PnfExhausted {truth = truth, tree = tree, tests = tests}
     end
 
