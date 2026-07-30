@@ -433,6 +433,14 @@ structure Refute_Core = struct
               then range_error "bisim_depth"
                 "values must be -1 or nonnegative"
               else ()
+      (* A disabled depth requires a context without bisimulation axioms,
+         whereas a nonnegative depth requires one with them.  They cannot
+         share the preprocessing context used for one MF invocation. *)
+      val _ = if List.exists (fn depth => depth < 0) (#bisim_depth mf) andalso
+                     List.exists (fn depth => depth >= 0) (#bisim_depth mf)
+              then range_error "bisim_depth"
+                "do not mix -1 with nonnegative depths"
+              else ()
       (* A zero genuine budget makes the model finder return without ever
          calling the solver, which would otherwise be reported as "no
          counterexample" -- indistinguishable from an exhausted search. *)
