@@ -326,9 +326,9 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
     end
 
 (* Keep persistence and publication in one uninterruptible update.  The
-   portable primitive masks Poly/ML's asynchronous interrupts and is a direct
-   call on systems that have no such interrupts.  The updater must therefore
-   remain short and non-blocking. *)
+   portable primitive masks Poly/ML's asynchronous interrupts.  Other
+   runtimes may only preserve exception delivery, so the updater must remain
+   short, non-blocking, and safe to restart after an interrupt. *)
 fun update_global_value_and_record (fr : ('delta,'value)fullresult)
       delta f =
   Portable.uninterruptible (fn () =>

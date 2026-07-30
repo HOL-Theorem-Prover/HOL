@@ -23,16 +23,12 @@ in
 
 fun catch_SIGINT () = ignore (catch_interrupt true)
 
-(* [sys_catch_break] controls delivery of SIGINT as [Interrupt].  Disable
-   delivery across a short state transition, and always restore it, so a
-   signal cannot split persistent recording from publication. *)
-fun uninterruptible f =
-  let
-    fun restore () = ignore (catch_interrupt true)
-    val _ = ignore (catch_interrupt false)
-  in
-    (f () before restore ()) handle error => (restore (); raise error)
-  end
+(* Moscow ML's [sys_catch_break false] restores SIGINT's default process
+   action; it does not block asynchronous delivery.  Never use it as a
+   pseudo-mask: a Ctrl-C must remain an [Interrupt] exception rather than
+   terminating the process.  Moscow ML has no portable signal-mask primitive,
+   so callers must keep these updates restartable. *)
+fun uninterruptible f = f ()
 
 val md5sum = Mosml.md5sum
 val time = Mosml.time
