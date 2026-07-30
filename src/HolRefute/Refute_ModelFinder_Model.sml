@@ -1984,16 +1984,6 @@ fun replace_cex (cex : Refute_Core.counterexample) certainty bindings
    certainty = certainty, bindings = bindings, evals = evals,
    cert = cert, scope = #scope cex, model = model, stats = #stats cex}
 
-fun decoded_eval evals term =
-  Option.map #2 (List.find (fn (candidate, _) =>
-    Term.aconv candidate term) evals)
-
-fun merge_evals decoded exact = map (fn (term, value) =>
-  if is_unknown value orelse Term.aconv value term then
-    (term, Option.getOpt (decoded_eval decoded term, value))
-  else
-    (term, value)) exact
-
 fun fallback_certainty sound genuine reasons =
   if sound andalso genuine then Refute_Core.Genuine
   else if sound then Refute_Core.QuasiGenuine reasons
