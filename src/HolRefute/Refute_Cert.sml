@@ -12,6 +12,11 @@ structure Refute_Cert = struct
 
   val rhs_of = boolSyntax.rhs o Thm.concl
 
+  (* Disk theorems are checked kernel imports; every other oracle or axiom
+     tag crosses Refute's certification trust boundary. *)
+  fun trusted theorem =
+    Tag.isEmpty (Thm.tag theorem) orelse Tag.isDisk (Thm.tag theorem)
+
   fun conform_conclusion label expected theorem =
     Thm.EQ_MP (Thm.ALPHA (Thm.concl theorem) expected) theorem
     handle Feedback.HOL_ERR _ => raise Fail
@@ -53,7 +58,10 @@ structure Refute_Cert = struct
     end
 
   fun eval_term env tm =
-    (rhs_of (eval (instantiate env tm))
+    ((let val theorem = eval (instantiate env tm)
+      in if trusted theorem then rhs_of theorem
+         else Term.mk_var ("?", Term.type_of tm)
+      end)
      handle Interrupt => raise Interrupt
           | _ => Term.mk_var ("?", Term.type_of tm))
 
@@ -90,6 +98,11 @@ structure Refute_Cert = struct
               (Refute_Core.Potential
                 ["evaluation stuck on: " ^ head_name instance]) [] NONE)
         | SOME theorem =>
+            if not (trusted theorem) then
+              Potential (replace cex
+                (Refute_Core.Potential
+                  ["evaluation used an oracle or axiom theorem"]) [] NONE)
+            else
             (case rhs_of theorem of
                 rhs =>
                   if Term.aconv rhs boolSyntax.T then Discarded
@@ -108,7 +121,8 @@ structure Refute_Cert = struct
                       val certificate = Thm.NOT_INTRO
                         (Thm.DISCH closure falsehood)
                     in
-                      if null (Thm.hyp certificate) then
+                      if null (Thm.hyp certificate) andalso
+                         trusted certificate then
                         let val values = map (fn tm =>
                           (tm, eval_term env tm)) evals
                         in
@@ -118,7 +132,8 @@ structure Refute_Cert = struct
                       else
                         Potential (replace cex
                           (Refute_Core.Potential
-                            ["certificate retained hypotheses"])
+                            ["certificate retained hypotheses or an " ^
+                             "oracle/axiom tag"])
                           [] NONE)
                     end)
     end

@@ -294,6 +294,8 @@ structure Refute_Cert_Narrow = struct
       fun prove_neg formula Refute_Eval.CaseLeaf =
             let
               val theorem = eval_original formula
+              val _ = if trusted theorem then () else
+                raise Fail "leaf evaluation used an oracle or axiom theorem"
               val rhs = rhs_of theorem
             in
               if Term.aconv rhs boolSyntax.F then Drule.EQF_ELIM theorem
@@ -366,6 +368,8 @@ structure Refute_Cert_Narrow = struct
         normalized_certificate
       val _ = if null (Thm.hyp certificate) then ()
         else raise Fail "replay certificate retained hypotheses"
+      val _ = if trusted certificate then () else
+        raise Fail "replay certificate used an oracle or axiom theorem"
       val values = map (fn tm => (tm, eval_term env tm)) evals
     in
       Certified (replace cex Refute_Core.Genuine values (SOME certificate))
