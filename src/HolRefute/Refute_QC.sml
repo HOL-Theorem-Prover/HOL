@@ -746,8 +746,17 @@ structure Refute_QC = struct
     length left = length right andalso
     ListPair.allEq same_plan (left, right)
 
+  (* Substrates are public extension points.  A faulty cleanup callback must
+     not outlive a run forever; its small independent bound also ensures that
+     a prior timeout or interrupt remains the result reported to the caller. *)
+  val cleanup_timeout = Time.fromMilliseconds 100
+
+  fun bounded_close close =
+    Exn.capture (fn () => Timeout.apply cleanup_timeout close ()) ()
+
   fun close_selection (SelectionFailed _) = ()
-    | close_selection (Selected (_, test)) = #close test ()
+    | close_selection (Selected (_, test)) =
+        Exn.release (bounded_close (#close test))
 
   fun same_smart_gate_context (left, right) =
     Portable.pointer_eq (left, right)
@@ -932,11 +941,11 @@ structure Refute_QC = struct
   fun close_tests tests =
     let
       fun close ((test : compiled_test), NONE) =
-            (case Exn.capture (#close test) () of
+            (case bounded_close (#close test) of
                  Exn.Res _ => NONE
                | Exn.Exn error => SOME error)
         | close ((test : compiled_test), found) =
-            (ignore (Exn.capture (#close test) ()); found)
+            (ignore (bounded_close (#close test)); found)
     in
       case List.foldl close NONE tests of
           NONE => ()
@@ -1173,11 +1182,13 @@ structure Refute_QC = struct
                             (generic_reason :: !gave_up)
                 end
               val body_result = Exn.capture selected_body ()
-              val close_result = Exn.capture (#close compiled) ()
+              val close_result = bounded_close (#close compiled)
             in
-              case close_result of
-                  Exn.Res _ => Exn.release body_result
-                | Exn.Exn error => raise error
+              case body_result of
+                  Exn.Exn error =>
+                    (ignore close_result; Exn.reraise error)
+                | Exn.Res _ => Exn.release close_result before
+                    Exn.release body_result
             end
     end
 
