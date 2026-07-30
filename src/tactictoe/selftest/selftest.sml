@@ -376,6 +376,12 @@ val _ = check "stale held lock is reclaimed under registry lock"
      result before cleanup ()
    end)
 
+(* Removing the data file first makes the manifest scan report Missing_data,
+   so the record below has to do real work.  Without this the record is a
+   cache hit whenever the selftest runs twice against the same cache, and
+   the three checks that follow pass on the file the earlier run left. *)
+val _ = aiLib.remove_file (datafile ())
+
 val _ = passok "record ConseqConv tactic data"
   (fn () => ttt_record_opts [Scope (Theories ["ConseqConv"])])
 
