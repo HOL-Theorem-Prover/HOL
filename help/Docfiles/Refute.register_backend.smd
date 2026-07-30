@@ -21,6 +21,24 @@ type backend =
    run : config -> instance list -> outcome}
 ```
 
+The `run` result uses these public record shapes:
+
+``` hol4
+type model_report =
+  {skolems : (string * term) list,
+   consts : (term * string * term) list,
+   types : (hol_type * term list * bool) list}
+
+type counterexample =
+  {backend : string, substrate : string, certainty : certainty,
+   bindings : (term * term) list, evals : (term * term) list,
+   cert : thm option, scope : (hol_type * int) list option,
+   model : model_report option, stats : (string * int) list}
+```
+
+`outcome` is `Counterexample` of a list of these records,
+`NoCounterexample`, or `Unknown` of diagnostic strings.
+
 Registrations are session-local.  A later backend with the same `name`
 replaces the old one.  Eligible backends are ordered by increasing
 `weight`, then name.  `configured` is queried when selecting a search;
