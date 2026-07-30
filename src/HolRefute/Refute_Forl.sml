@@ -1487,6 +1487,13 @@ structure Refute_Forl :> REFUTE_FORL = struct
           handle error => (terminate (); Exn.reraise error)
       end) ()
 
+  (* The solver runs through a shell, so place a kernel-enforced output cap
+     on its stdout and stderr before it starts.  This bounds both temporary
+     storage and the later [TextIO.inputAll] parse.  POSIX [ulimit -f] is in
+     512-byte blocks. *)
+  val max_captured_output_bytes = 16 * 1024 * 1024
+  val max_captured_output_blocks = max_captured_output_bytes div 512
+
   val fudge_milliseconds = 250
 
   fun uncached_solve_any_problem overlord deadline max_threads
@@ -1569,7 +1576,8 @@ structure Refute_Forl :> REFUTE_FORL = struct
                  override such as [./kodkodi].  The private paths below are
                  already absolute, so changing directory is unnecessary. *)
               val command =
-                "exec " ^ launcher_command () ^ " " ^
+                "ulimit -f " ^ Int.toString max_captured_output_blocks ^
+                "; exec " ^ launcher_command () ^ " " ^
                 String.concatWith " " arguments ^ " < " ^
                 shell_quote input_path ^ " > " ^ shell_quote output_path ^
                 " 2> " ^ shell_quote error_path
