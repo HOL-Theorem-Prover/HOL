@@ -131,7 +131,7 @@ Proof
   qspec_then `p` strip_assume_tac path_cases >> rw []
 QED
 
-Theorem path_11 = CONJ stopped_at_11 pcons_11;
+Theorem path_11[local] = CONJ stopped_at_11 pcons_11
 
 Theorem FORALL_path:
   !P. (!p. P p) <=> (!x. P (stopped_at x)) /\ (!x r p. P (pcons x r p))
@@ -489,7 +489,7 @@ QED
 
 Theorem path_bisimulation_I =
   path_bisimulation |> SPEC_ALL |> PURE_ONCE_REWRITE_RULE [EQ_IMP_THM]
-                     |> CONJUNCT2 |> Q.GEN `p1` |> Q.GEN `p2`;
+                     |> CONJUNCT2 |> Q.GEN `p1` |> Q.GEN `p2`
 
 Overload "case" = “path_case”
 
