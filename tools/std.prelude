@@ -238,6 +238,13 @@ end;
 
 use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 
+(* Establish a working "scratch" segment for the interactive session.
+   Standalone mosml executables (selftests, FooScript.exe compiled with
+   `mosmlc -standalone`) do not load this prelude, so they leave
+   Thm.getCT as NONE and `current_theory ()` raises visibly on any
+   caller that forgot to open a segment first. *)
+val _ = Thm.setCT "scratch";
+
 (* Local variables: *)
 (* mode: sml *)
 (* end: *)

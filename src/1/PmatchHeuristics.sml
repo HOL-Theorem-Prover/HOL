@@ -315,11 +315,23 @@ end
       A reference to store the current heuristic_fun
  ----------------------------------------------------------------------------*)
 
-val pmatch_heuristic = ref default_heuristic_fun
+local
+  val pmatch_heuristic_slot : pmatch_heuristic_fun Context.Data.slot =
+      Context.Data.new
+        {name = "PmatchHeuristics.pmatch_heuristic",
+         empty = default_heuristic_fun,
+         pp = fn _ => "<pmatch_heuristic>"}
+in
+  fun pmatch_heuristic () =
+      Context.Data.get pmatch_heuristic_slot (Context.snapshot())
+  val set_pmatch_heuristic = Context.Data.write pmatch_heuristic_slot
+  fun with_pmatch_heuristic v f x =
+      Context.Data.with_slot_value pmatch_heuristic_slot v f x
+end
 val classic = ref false
 fun is_classic () = !classic
 
-fun set_heuristic_fun heu_fun = (pmatch_heuristic := heu_fun)
+fun set_heuristic_fun heu_fun = set_pmatch_heuristic heu_fun
 fun set_heuristic_list_size heuL = set_heuristic_fun (pmatch_heuristic_list pmatch_heuristic_size_cmp heuL)
 fun set_heuristic_list_cases heuL = set_heuristic_fun (pmatch_heuristic_list pmatch_heuristic_cases_cmp heuL)
 fun set_heuristic heu = set_heuristic_list_cases [heu]
@@ -338,12 +350,12 @@ fun set_classic_heuristic () =
 
 fun with_heuristic heu f =
    with_flag (classic, false)
-      (with_flag (pmatch_heuristic,
-                  pmatch_heuristic_list pmatch_heuristic_cases_cmp [heu]) f)
+      (with_pmatch_heuristic
+         (pmatch_heuristic_list pmatch_heuristic_cases_cmp [heu]) f)
 
 fun with_classic_heuristic f =
    with_flag (classic, true)
-      (with_flag (pmatch_heuristic, classic_heuristic_fun) f)
+      (with_pmatch_heuristic classic_heuristic_fun f)
 
 fun with_manual_heuristic choices =
    with_heuristic (pheu_manual choices)

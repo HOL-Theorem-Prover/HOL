@@ -1,0 +1,36 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `setCT`
+
+``` hol4
+Thm.setCT : string -> unit
+```
+
+------------------------------------------------------------------------
+
+Sets the *current theory* threaded through Thm's definition
+principles.
+
+The definition principles (`Thm.prim_type_definition`,
+`Thm.prim_specification`, `Thm.gen_prim_specification`) mint fresh
+constants into the current theory only; they read that theory from
+Thm-owned state rather than from a caller argument, so external code
+cannot direct a mint into a different theory's segment.
+
+`Thm.setCT` is the sanctioned setter.  It is called by
+`Theory.new_theory` (both the fresh-segment and restart branches) and
+should not normally be called directly by user code.
+
+### Failure
+
+Fails if the requested theory is `"min"` or has already been sealed
+(see [`Thm.mark_sealed`](#Thm.mark_sealed)).  A sealed theory is
+locked against further change; refusing to enter it here means the
+only way to be in a sealed theory is to have entered it while it was
+still open and sealed it afterwards.
+
+### See also
+
+[`Thm.getCT`](#Thm.getCT),
+[`Thm.mark_sealed`](#Thm.mark_sealed),
+[`Thm.is_sealed`](#Thm.is_sealed),
+[`Theory.new_theory`](#Theory.new_theory)

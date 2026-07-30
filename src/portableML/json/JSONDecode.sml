@@ -104,7 +104,7 @@ fun fieldO key (D valueDecoder) = D (fn jv =>
 fun fieldD key (D valueDecoder) dfltVal = D (fn jv =>
   case U.findField jv key of
     SOME NULL => dfltVal
-  | SOME jv' => valueDecoder jv
+  | SOME jv' => valueDecoder jv'
   | NONE => dfltVal)
 
 fun reqField key valueDecoder = seq (field key valueDecoder)

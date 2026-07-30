@@ -1,0 +1,29 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `getCT`
+
+``` hol4
+Thm.getCT : unit -> string option
+```
+
+------------------------------------------------------------------------
+
+Returns the *current theory* threaded through Thm's definition
+principles, or `NONE` if none has yet been set.
+
+Thm holds the current-theory name alongside its other state so that
+`Thm.prim_type_definition`, `Thm.prim_specification` and
+`Thm.gen_prim_specification` can read it without a caller argument.
+The value returned here is that name.
+
+At kernel startup the value is `NONE`; `Thm.setCT` (invoked from
+`Theory.new_theory`) sets it.  Until then the definition principles
+raise.
+
+### Failure
+
+Never fails.
+
+### See also
+
+[`Thm.setCT`](#Thm.setCT),
+[`Theory.current_theory`](#Theory.current_theory)

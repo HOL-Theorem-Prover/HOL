@@ -158,30 +158,40 @@ fun thyname_assoc x [] = raise ERR "thyname_assoc" "not found"
  ---------------------------------------------------------------------------*)
 
 structure Graph = struct type graph = (thyid * thyid list) list
-local val theGraph = ref [(min_thyid,[])]
+local
+  val graph_slot : (thyid * thyid list) list Context.Data.slot =
+      Context.Data.new
+        {name = "theory.graph",
+         empty = [(min_thyid,[])],
+         pp = fn _ => "<theory.graph>"}
+  fun read () = Context.Data.get graph_slot (Context.snapshot())
 in
-   fun add p = theGraph := (p :: !theGraph)
+   fun add p = Context.Data.modify graph_slot (fn g => p :: g)
    fun add_parent (n,newp) =
      let fun same (node,_) = thyid_eq node n
          fun addp(node,parents) = (node, op_union thyid_eq [newp] parents)
          fun ins (a::rst) = if same a then addp a::rst else a::ins rst
            | ins [] = raise ERR "Graph.add_parent.ins" "not found"
-     in theGraph := ins (!theGraph)
+     in Context.Data.modify graph_slot ins
      end
-   fun isin n = Lib.can (thyid_assoc n) (!theGraph);
-   fun parents_of n = thyid_assoc n (!theGraph);
+   fun isin n = Lib.can (thyid_assoc n) (read ());
+   fun parents_of n = thyid_assoc n (read ());
    fun ancestryl L =
-    let fun Anc P Q = rev_itlist
+    let val g = read ()
+        fun local_parents_of n = thyid_assoc n g
+        fun Anc P Q = rev_itlist
            (fn nde => fn A => if op_mem thyid_eq nde A then A
-             else Anc (parents_of nde handle HOL_ERR _ => []) (nde::A)) P Q
+             else Anc (local_parents_of nde handle HOL_ERR _ => []) (nde::A))
+           P Q
     in Anc L []
     end;
    fun fringe () =
-     let val all_parents = List.map #2 (!theGraph)
+     let val g = read ()
+         val all_parents = List.map #2 g
          fun is_parent y = Lib.exists (Lib.op_mem thyid_eq y) all_parents
-     in List.filter (not o is_parent) (List.map #1 (!theGraph))
+     in List.filter (not o is_parent) (List.map #1 g)
      end;
-   fun first P = Lib.first P (!theGraph)
+   fun first P = Lib.first P (read ())
 end
 end; (* structure Graph *)
 
@@ -215,24 +225,21 @@ fun fact_thm (s, (th, _)) = th
 
 type thminfo = DB_dtype.thminfo
 type segment =
-     {name    : string,
-      facts   : (thm * thminfo) Symtab.table,                 (* stored thms *)
+     {facts   : (thm * thminfo) Symtab.table,                 (* stored thms *)
       thydata : ThyDataMap,                             (* extra theory data *)
       mldeps  : string HOLset.set}
 local
   open FunctionalRecordUpdate
-  fun seg_mkUp z = makeUpdate4 z
+  fun seg_mkUp z = makeUpdate3 z
 in
   fun update_seg z = let
-    fun from facts mldeps name thydata =
-      {facts=facts, mldeps=mldeps,
-       name=name, thydata=thydata}
+    fun from facts mldeps thydata =
+      {facts=facts, mldeps=mldeps, thydata=thydata}
     (* fields in reverse order to above *)
-    fun from' thydata name mldeps facts =
-      {facts=facts, mldeps=mldeps,
-       name=name, thydata=thydata}
-    fun to f {facts, mldeps, name, thydata} =
-      f facts mldeps name thydata
+    fun from' thydata mldeps facts =
+      {facts=facts, mldeps=mldeps, thydata=thydata}
+    fun to f {facts, mldeps, thydata} =
+      f facts mldeps thydata
   in
     seg_mkUp (from, from', to)
   end z
@@ -241,30 +248,44 @@ in
 end (* local *)
 
 type metadata = {path: string, timestamp: Time.time}
-val metadata : metadata Symtab.table ref = ref Symtab.empty
-fun record_metadata thy md =
-  metadata := Symtab.update (thy, md) (!metadata)
-fun thy_timestamp thy = #timestamp (valOf (Symtab.lookup (!metadata) thy))
+local
+  val metadata_slot : metadata Symtab.table Context.Data.slot =
+      Context.Data.new
+        {name = "theory.metadata",
+         empty = Symtab.empty,
+         pp = fn _ => "<theory.metadata>"}
+in
+  fun metadata_lookup thy =
+      Symtab.lookup (Context.Data.get metadata_slot (Context.snapshot())) thy
+  fun record_metadata thy md =
+      Context.Data.modify metadata_slot (Symtab.update (thy, md))
+end
+fun thy_timestamp thy = #timestamp (valOf (metadata_lookup thy))
 
 
 (*---------------------------------------------------------------------------*
  *                 CREATE THE INITIAL THEORY SEGMENT.                        *
  *---------------------------------------------------------------------------*)
 
-fun empty_segment_value name =
-    {facts=Symtab.empty, name=name, thydata = empty_datamap,
+val fresh_segment : segment =
+    {facts=Symtab.empty, thydata = empty_datamap,
      mldeps = HOLset.empty String.compare}
 
-fun fresh_segment s :segment = empty_segment_value s
-
-local val CT = ref (fresh_segment "scratch")
+local
+  val segment_slot : segment Context.Data.slot =
+      Context.Data.new {name = "theory.segment",
+                        empty = fresh_segment,
+                        pp = fn _ => "<segment>"}
 in
-  fun theCT() = !CT
-  fun makeCT seg = CT := seg
+  fun theCT() = Context.Data.get segment_slot (Context.snapshot())
+  val makeCT = Context.Data.write segment_slot
 end;
 
-val CTname = #name o theCT;
-val current_theory = CTname;
+fun current_theory () =
+    case Thm.getCT() of
+        SOME s => s
+      | NONE => raise ERR "current_theory"
+                  "no current theory (kernel state uninitialised)"
 
 
 (*---------------------------------------------------------------------------*
@@ -289,7 +310,7 @@ fun thy_theorems (th:segment) = filter is_theorem (#facts th)
 fun thy_defns (th:segment)    = filter is_defn    (#facts th)
 end
 
-local fun norm_name "-" = CTname()
+local fun norm_name "-" = current_theory()
         | norm_name s = s
       fun grab_item style name alist =
         case Lib.assoc1 name alist
@@ -302,8 +323,10 @@ in
  val mod_time         = thy_timestamp o norm_name
  val types            = thy_types o norm_name
  val constants        = thy_constants o norm_name
- fun get_parents s    = if norm_name s = CTname()
-                         then Graph.fringe() else thy_parents s
+ fun get_parents "-"  = Graph.fringe()
+   | get_parents s    =
+       if (case Thm.getCT() of SOME ct => s = ct | NONE => false)
+       then Graph.fringe() else thy_parents s
  val parents          = map thyid_name o get_parents
  val ancestry         = map thyid_name o Graph.ancestryl o get_parents
  fun current_axioms() = cleaned (thy_axioms (theCT()))
@@ -316,10 +339,12 @@ end;
  * Is a segment empty?                                                       *
  *---------------------------------------------------------------------------*)
 
-fun empty_segment ({name=thyname,facts, ...}:segment) =
-  null (thy_types thyname) andalso
-  null (thy_constants thyname) andalso
-  Symtab.is_empty facts;
+fun empty_segment ({facts, ...}:segment) =
+    let val thyname = current_theory()
+    in null (thy_types thyname) andalso
+       null (thy_constants thyname) andalso
+       Symtab.is_empty facts
+    end;
 
 (*---------------------------------------------------------------------------*
  *              ADDING TO THE SEGMENT                                        *
@@ -396,10 +421,9 @@ fun del_binding name (s as {facts,...} : segment) =
    still be there, with its parents.
  ---------------------------------------------------------------------------*)
 
-fun zap_segment s (thy : segment) =
+fun zap_segment s (_ : segment) =
     (Type.del_segment s; Term.del_segment s;
-     empty_segment_value (#name thy)
-     )
+     fresh_segment)
 
 (*---------------------------------------------------------------------------
        Wrappers for functions that alter the segment.
@@ -425,12 +449,14 @@ in
   fun add_thmCT(s,th,v) = add_factCT(s, (th, v))
   val add_ML_dependency = inCT add_ML_dep
 
-  fun delete_type n     = (inCT del_type  (n,CTname());
-                           call_hooks
-                               (DelTypeOp{Name = n, Thy = CTname()}))
-  fun delete_const n    = (inCT del_const (n,CTname());
-                           call_hooks
-                               (DelConstant{Name = n, Thy = CTname()}))
+  fun delete_type n     = let val Thy = current_theory() in
+                            inCT del_type (n,Thy);
+                            call_hooks (DelTypeOp{Name = n, Thy = Thy})
+                          end
+  fun delete_const n    = let val Thy = current_theory() in
+                            inCT del_const (n,Thy);
+                            call_hooks (DelConstant{Name = n, Thy = Thy})
+                          end
 
   fun delete_binding s  = (inCT del_binding s; call_hooks (DelBinding s))
 
@@ -457,20 +483,24 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun new_type (Name,Arity) =
- (if Lexis.allowed_type_constant Name orelse
-     not (!Globals.checking_type_names)
-  then ()
-  else WARN "new_type" (Lib.quote Name^" is not a standard type name")
-  ; add_typeCT {name=Name, arity=Arity, theory = CTname()}
-  ; call_hooks (TheoryDelta.NewTypeOp {Name = Name, Thy = CTname()}));
+  let val Thy = current_theory() in
+    if Lexis.allowed_type_constant Name orelse
+       not (!Globals.checking_type_names)
+    then ()
+    else WARN "new_type" (Lib.quote Name^" is not a standard type name");
+    add_typeCT {name=Name, arity=Arity, theory = Thy};
+    call_hooks (TheoryDelta.NewTypeOp {Name = Name, Thy = Thy})
+  end
 
 fun new_constant (Name,Ty) =
-  (if Lexis.allowed_term_constant Name orelse
-      not (!Globals.checking_const_names)
-   then ()
-   else WARN "new_constant" (Lib.quote Name^" is not a standard constant name")
-   ; add_termCT {name=Name, theory=CTname(), htype=Ty}
-   ; call_hooks (TheoryDelta.NewConstant {Name = Name, Thy = CTname()}))
+  let val Thy = current_theory() in
+    if Lexis.allowed_term_constant Name orelse
+       not (!Globals.checking_const_names)
+    then ()
+    else WARN "new_constant" (Lib.quote Name^" is not a standard constant name");
+    add_termCT {name=Name, theory=Thy, htype=Ty};
+    call_hooks (TheoryDelta.NewConstant {Name = Name, Thy = Thy})
+  end
 
 (*---------------------------------------------------------------------------
      Install constants in the current theory, as part of loading a
@@ -503,16 +533,27 @@ fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
    proof trace replay (--thmsrc=tr), axiom theorems retain their nonces in
    tags (unlike disk_thm which strips them). This registry allows
    uptodate_axioms to find those axioms even though they're not in theCT(). *)
-val replayed_axioms : (string Nonce.t * term) list ref = ref []
+local
+  val replayed_axioms_slot :
+        (string Nonce.t * term) list Context.Data.slot =
+      Context.Data.new
+        {name = "theory.replayed_axioms",
+         empty = [],
+         pp = fn _ => "<theory.replayed_axioms>"}
+in
+  fun replayed_axioms () =
+      Context.Data.get replayed_axioms_slot (Context.snapshot())
+  val upd_replayed_axioms = Context.Data.modify replayed_axioms_slot
+end
 
 fun register_replayed_axiom th =
     case Tag.axioms_of (Thm.tag th) of
         [nonce] =>
           if not (HOLset.isEmpty (Thm.hypset th))
           then raise ERR "register_replayed_axiom" "theorem has hypotheses"
-          else if Lib.mem nonce (map #1 (!replayed_axioms))
+          else if Lib.mem nonce (map #1 (replayed_axioms ()))
           then raise ERR "register_replayed_axiom" "nonce already registered"
-          else replayed_axioms := (nonce, Thm.concl th) :: !replayed_axioms
+          else upd_replayed_axioms (fn xs => (nonce, Thm.concl th) :: xs)
       | [] => raise ERR "register_replayed_axiom" "no axiom nonce in tag"
       | _ => raise ERR "register_replayed_axiom" "multiple axiom nonces in tag"
 
@@ -522,7 +563,7 @@ fun uptodate_axioms [] = true
       fun get_axtag th = hd (Tag.axioms_of (tag th))
       val axs = map (fn (_,(th,_)) => (get_axtag th,concl th))
                     (thy_axioms(theCT()))
-      val all_axs = axs @ !replayed_axioms
+      val all_axs = axs @ replayed_axioms ()
     in
       (* tempting to call uptodate_thm here, but this would put us into a loop
          because axioms have themselves as tags, also unnecessary because
@@ -603,7 +644,7 @@ local
 in
   fun save_thm0 fnm fmsg (i as {private, loc}) (name, th) =
     let
-      val th' = save_dep (CTname ()) th
+      val th' = save_dep (current_theory()) th
     in
       check_name true (fnm, name)
       ; if uptodate_thm th' then
@@ -623,7 +664,7 @@ in
     let
       val rname  = Nonce.mk name
       val axiom  = Thm.mk_axiom_thm (rname, tm)
-      val axiom' = save_dep (CTname()) axiom
+      val axiom' = save_dep (current_theory()) axiom
     in
       check_name false (fnm,name)
       ; if uptodate_term tm then add_axiomCT (rname, axiom',loc)
@@ -635,7 +676,7 @@ in
 
   fun store_definition0 fnm (name, def, loc) =
     let
-      val def' = save_dep (CTname ()) def
+      val def' = save_dep (current_theory()) def
     in
       check_name true (fnm, name)
       ; uptodate_thm def' orelse raise DATED_ERR fnm name
@@ -703,11 +744,26 @@ struct
                   read : shared_readmaps -> HOLsexp.t -> t option,
                   write : shared_writemaps -> t -> HOLsexp.t,
                   terms : t -> term list, strings : t -> string list}
-  val allthydata : ThyDataMap Symtab.table ref = ref Symtab.empty
-  val dataops : DataOps Symtab.table ref = ref Symtab.empty
+  local
+    val allthydata_slot : ThyDataMap Symtab.table Context.Data.slot =
+        Context.Data.new {name = "theory.allthydata",
+                          empty = Symtab.empty,
+                          pp = fn _ => "<allthydata>"}
+    val dataops_slot : DataOps Symtab.table Context.Data.slot =
+        Context.Data.new {name = "theory.dataops",
+                          empty = Symtab.empty,
+                          pp = fn _ => "<dataops>"}
+  in
+    fun allthydata () =
+        Context.Data.get allthydata_slot (Context.snapshot())
+    val upd_allthydata = Context.Data.modify allthydata_slot
+    fun dataops () =
+        Context.Data.get dataops_slot (Context.snapshot())
+    val upd_dataops = Context.Data.modify dataops_slot
+  end
 
   fun segment_data {thy,thydataty} = let
-    val {thydata,name,...} = theCT()
+    val {thydata,...} = theCT()
     fun check_map m =
         case Symtab.lookup m thydataty of
           NONE => NONE
@@ -715,25 +771,25 @@ struct
         | SOME (Pending _) => raise ERR "segment_data"
                                         "Can't interpret pending loads"
   in
-    if name = thy then
+    if Thm.getCT() = SOME thy then
       (DPRINT
          (fn _ => "segment_data for " ^ thydataty ^
                   " coming from current_theory\n");
        check_map thydata)
     else
-      case Symtab.lookup (!allthydata) thy of
+      case Symtab.lookup (allthydata()) thy of
         NONE => NONE
       | SOME dmap => check_map dmap
   end
 
   fun segment_data_string (arg as {thy,thydataty}) =
-      case Symtab.lookup (!dataops) thydataty of
+      case Symtab.lookup (dataops()) thydataty of
           SOME {pp,...} => Option.map pp (segment_data arg)
         | NONE => raise Fail ("No pp-fn for "^thydataty)
   val sexp_string_dbg = HOLPP.pp_to_string 75 HOLsexp.printer
 
   fun write_data_update {thydataty,data} =
-      case Symtab.lookup (!dataops) thydataty of
+      case Symtab.lookup (dataops()) thydataty of
         NONE => raise ERR "write_data_update"
                           ("No operations defined for "^thydataty)
       | SOME {merge,pp,...} => let
@@ -768,7 +824,7 @@ struct
         end
 
   fun set_theory_data {thydataty,data} =
-      case Symtab.lookup (!dataops) thydataty of
+      case Symtab.lookup (dataops()) thydataty of
         NONE => raise ERR "set_theory_data"
                           ("No operations defined for "^thydataty)
       | SOME{pp,...} => let
@@ -785,14 +841,14 @@ struct
 
   fun temp_encoded_update (r as {thy,thydataty,data,shared_readmaps}) =
       let
-        val (s as {thydata, name, ...}) = theCT()
+        val (s as {thydata, ...}) = theCT()
         fun updatemap inmap = let
           val baddecode = ERR "temp_encoded_update"
                           ("Bad decode for "^thydataty^" (" ^
                            sexp_string_dbg data ^ ")" )
           val newdata =
               case (Symtab.lookup inmap thydataty,
-                    Symtab.lookup (!dataops) thydataty) of
+                    Symtab.lookup (dataops()) thydataty) of
                   (NONE, NONE) => Pending [(data,shared_readmaps)]
                 | (NONE, SOME {read,...}) =>
                   Loaded (valOf (read shared_readmaps data)
@@ -810,15 +866,15 @@ struct
           Symtab.update (thydataty, newdata) inmap
         end
   in
-    if thy = name then
+    if Thm.getCT() = SOME thy then
       makeCT (update_seg s (U #thydata (updatemap thydata)) $$)
     else let
       val newsubmap =
-          case Symtab.lookup (!allthydata) thy of
+          case Symtab.lookup (allthydata()) thy of
               NONE => updatemap empty_datamap
             | SOME dm => updatemap dm
     in
-      allthydata := Symtab.update (thy, newsubmap) (!allthydata)
+      upd_allthydata (Symtab.update (thy, newsubmap))
     end
   end
 
@@ -841,7 +897,7 @@ fun update_pending (m,r) thydataty = let
                                    (valOf (r tmrd1 d1)) (tl ds'))) inmap
         end
   fun foldthis (k,v) acc = Symtab.update (k, update1 v) acc
-  val _ = allthydata := Symtab.fold foldthis (!allthydata) Symtab.empty
+  val _ = upd_allthydata (fn m => Symtab.fold foldthis m Symtab.empty)
   val (seg as {thydata,...}) = theCT()
 in
   makeCT (update_seg seg (U #thydata (update1 thydata)) $$)
@@ -858,10 +914,10 @@ fun 'a new {thydataty, merge, read, write, terms, strings, pp} = let
   fun pp' t = pp (vdest t)
 in
   update_pending (merge',read') thydataty;
-  dataops := Symtab.update
-                (thydataty,
-                 {merge=merge', read=read', write=write',
-                  terms=terms', pp=pp', strings=strings'}) (!dataops);
+  upd_dataops (Symtab.update
+                 (thydataty,
+                  {merge=merge', read=read', write=write',
+                   terms=terms', pp=pp', strings=strings'}));
   (mk,dest)
 end
 
@@ -981,8 +1037,9 @@ in
   Tracing.export_proof {file = file, tag = Thm.SavedAnon n} th
 end
 fun export_theory_return_hash () = let
-  val _ = hooks_or_abort (TheoryDelta.ExportTheory (current_theory()))
-  val {name=thyname,facts,thydata,mldeps,...} = scrubCT()
+  val thyname = current_theory()
+  val _ = hooks_or_abort (TheoryDelta.ExportTheory thyname)
+  val {facts,thydata,mldeps,...} = scrubCT()
   fun foldthis (nm, (thm, info)) A =
       if is_temp_binding nm then A else (nm,thm,info)::A
   val all_thms = Symtab.fold foldthis facts []
@@ -993,7 +1050,7 @@ fun export_theory_return_hash () = let
                  parents = parent_names,
                  all_thms = all_thms}
   fun parent_doc_url pname =
-      case Symtab.lookup (!metadata) pname of
+      case metadata_lookup pname of
           NONE => NONE
         | SOME {path = parent_dat, ...} =>
           let val parent_src = OS.Path.dir parent_dat
@@ -1023,7 +1080,7 @@ fun export_theory_return_hash () = let
           Loaded t =>
           let
             val {write,terms,strings,...} =
-                case Symtab.lookup (!LoadableThyData.dataops) k of
+                case Symtab.lookup (LoadableThyData.dataops()) k of
                     SOME ops => ops
                   | NONE => raise ERR "export_theory"
                               ("Couldn't find thydata ops for "^k)
@@ -1105,6 +1162,7 @@ fun export_theory_return_hash () = let
                   mldeps    = #mldeps structthry }
             | _ => ());
            List.app commit_temp temps;
+           Thm.mark_sealed thyname;
            mesg "done.\n";
            if !report_times then
              (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^
@@ -1136,7 +1194,8 @@ end;
    ---------------------------------------------------------------------- *)
 
 fun load_complete thyname =
-    call_hooks (TheoryDelta.TheoryLoaded thyname)
+    (Thm.mark_sealed thyname;
+     call_hooks (TheoryDelta.TheoryLoaded thyname))
 
 
 (* ----------------------------------------------------------------------
@@ -1154,29 +1213,34 @@ fun new_theory str =
             ("proposed theory name "^Lib.quote str^
              " is not permitted as a theory name.")
     else let
-        val thy as {name=thyname, ...} = theCT()
-        val tdelta = TheoryDelta.NewTheory{oldseg=thyname,newseg=str}
+        val prev = Thm.getCT()
+        val tdelta = TheoryDelta.NewTheory{oldseg=prev,newseg=str}
         fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
-                         makeCT(fresh_segment str);
+                         makeCT fresh_segment;
+                         Thm.setCT str;
                          call_hooks tdelta)
         val _ =
             new_theory_time := total_cpu (Timer.checkCPUTimer Globals.hol_clock)
       in
-        if str=thyname then
-          (HOL_MESG("Restarting theory "^Lib.quote str);
-           zapCT str;
-           call_hooks tdelta)
-        else if mem str (ancestry thyname) then
-          raise ERR"new_theory" ("theory: "^Lib.quote str^" already exists.")
-        else if thyname="scratch" andalso empty_segment thy then
-          mk_thy()
-        else let
-          val hash = export_theory_return_hash ();
-          val thid = make_thyid(thyname, hash);
-          val () = Graph.add (thid, Graph.fringe())
-        in
-           mk_thy ()
-        end
+        case prev of
+            NONE => mk_thy ()
+          | SOME thyname =>
+            if str=thyname then
+              (HOL_MESG("Restarting theory "^Lib.quote str);
+               zapCT str;
+               Thm.setCT str;
+               call_hooks tdelta)
+            else if mem str (ancestry thyname) then
+              raise ERR"new_theory" ("theory: "^Lib.quote str^" already exists.")
+            else if thyname="scratch" andalso empty_segment (theCT()) then
+              mk_thy()
+            else let
+              val hash = export_theory_return_hash ();
+              val thid = make_thyid(thyname, hash);
+              val () = Graph.add (thid, Graph.fringe())
+            in
+               mk_thy ()
+            end
       end
 
 
@@ -1312,7 +1376,7 @@ fun check_name princ_name name =
 fun located_new_type_definition0 fnm (loc,name,thm) = let
   val Thy = current_theory()
   val _ = is_temp_binding name orelse check_name fnm name
-  val tydef = Thm.prim_type_definition({Thy = Thy, Tyop = name}, thm)
+  val tydef = Thm.prim_type_definition(name, thm)
  in
    gen_store_definition (name^"_TY_DEF", tydef,loc) before
    call_hooks (TheoryDelta.NewTypeOp{Name = name, Thy = Thy})
@@ -1328,7 +1392,7 @@ fun new_type_definition (name,witness) =
 (* gen_new_specification *)
 fun located_gen_new_specification0 fnm (loc, name, th) = let
   val thy = current_theory()
-  val (cnames,def) = Thm.gen_prim_specification thy th
+  val (cnames,def) = Thm.gen_prim_specification th
  in
   gen_store_definition (name, def,loc) before
   List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy=thy}))
@@ -1350,7 +1414,7 @@ fun located_new_specification0 fnm {name, constnames=cnames, witness=th,loc} =
       val thy   = current_theory()
       val _     = is_temp_binding name orelse
                   List.all (check_name fnm) cnames
-      val def   = Thm.prim_specification thy cnames th
+      val def   = Thm.prim_specification cnames th
       val final = gen_store_definition (name, def,loc)
     in
       List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy = thy}))
@@ -1375,7 +1439,7 @@ fun located_new_definition0 fnm {name,def=M,loc} =
                                        "Definition not an equality"
      val _           = is_temp_binding name orelse check_name fnm nm
      val Thy         = current_theory()
-     val (cn,def_th) = Thm.gen_prim_specification Thy (Thm.ASSUME eq)
+     val (cn,def_th) = Thm.gen_prim_specification (Thm.ASSUME eq)
      val Name        = case cn of [Name] => Name | _ => raise Match
  in
    gen_store_definition (name, post(V,def_th),loc) before

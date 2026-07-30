@@ -1,5 +1,7 @@
 open HolKernel Parse testutils logrootTheory simpLib numSimps BasicProvers
 
+val _ = new_theory "scratch"
+
 val LOG_t = prim_mk_const{Thy = "logroot", Name = "LOG"}
 fun test (b, n, answer) =
     let

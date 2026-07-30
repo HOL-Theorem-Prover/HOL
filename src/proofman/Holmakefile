@@ -51,7 +51,7 @@ $(ZEROSTATE): $(DEPS)
 	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) --poly -o $@ $(UOARGS) && \
 	rm -f $(protect $(HOLDIR)/bin/hol.state)
 
-$(MINSTATE): $(dprot $(HOLDIR)/bin/hol)
+$(MINSTATE): $(dprot $(HOLDIR)/bin/hol) $(dprot $(SIGOBJ)/HolKernel.uo)
 	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) --poly -o $@ \
 	$(protect $(SIGOBJ)/HolKernel)
 endif

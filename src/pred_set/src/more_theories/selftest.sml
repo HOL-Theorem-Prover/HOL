@@ -1,5 +1,7 @@
 open HolKernel Parse boolLib bossLib testutils countable_typesLib;
 
+val _ = new_theory "scratch"
+
 val Datatype = quietly Datatype
 val mk_countable = quietly mk_countable
 

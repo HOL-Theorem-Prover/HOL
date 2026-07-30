@@ -1,0 +1,25 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `is_sealed`
+
+``` hol4
+Thm.is_sealed : string -> bool
+```
+
+------------------------------------------------------------------------
+
+Tests whether a theory has been sealed in the current session.
+
+A sealed theory is locked against further change (see
+[`Thm.mark_sealed`](#Thm.mark_sealed) for the guarantee).  The theory
+`"min"` is sealed at kernel bootstrap; a user theory becomes sealed
+when `Theory.export_theory` writes it to disk or when the theory-load
+machinery loads a pre-built copy into the session.
+
+### Failure
+
+Never fails.
+
+### See also
+
+[`Thm.mark_sealed`](#Thm.mark_sealed),
+[`Thm.setCT`](#Thm.setCT)

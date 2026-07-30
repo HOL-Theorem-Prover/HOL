@@ -107,6 +107,14 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => OS.Path.concat (chunk,path)) slist);
 
+fun rel_to_holdir d =
+  let val h = Systeml.HOLDIR
+  in if d = h then ""
+     else if String.isPrefix (h ^ "/") d then
+       String.extract (d, String.size h + 1, NONE)
+     else d
+  end
+
 val spacify = String.concatWith " "
 fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
 fun collapse_bslash_lines s = let
@@ -1000,8 +1008,10 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
     Holdep.main {assumes = buildable_extras, diag = diag "holdep",
                  includes = includes, fname = fromFile arg}
     handle Holdep.Holdep_Error s =>
-             (warn ("Holdep failed: "^s); raise HolDepFailed)
-         | e => (warn ("Holdep exception: "^General.exnMessage e);
+             (warn ("Holdep failed on "^fromFile arg^": "^s);
+              raise HolDepFailed)
+         | e => (warn ("Holdep exception on "^fromFile arg^": "^
+                       General.exnMessage e);
                  raise HolDepFailed)
   val _ = createDirIfNecessary DEPDIR
   val outstr = openOut (normPath destination)

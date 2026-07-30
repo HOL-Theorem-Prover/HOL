@@ -129,8 +129,10 @@ in
   setup_logfile();
   upload_holmake_files (exns_link holmake_exns);
   build_src symlink
-    handle Interrupt => (finish_logging false; die "Interrupted");
-  finish_logging true;
+    handle Interrupt =>
+      (finish_logging {buildok = false, selftest_level = selftest_level};
+       die "Interrupted");
+  finish_logging {buildok = true, selftest_level = selftest_level};
   make_buildstamp();
   build_help {graph = build_theory_graph,
               no_mdbook = #no_mdbook cline_record,

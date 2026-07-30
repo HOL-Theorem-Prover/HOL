@@ -416,7 +416,7 @@ fun add_words_compset extras =
            wordsSyntax.uint_max_tm, wordsSyntax.int_min_tm,
            wordsSyntax.int_max_tm, pred_setSyntax.finite_tm])]) end
 
-val () = computeLib.the_compset := add_words_compset false (!computeLib.the_compset)
+val () = computeLib.upd_compset (add_words_compset false)
 
 val words_compset = computeLib.seal (add_words_compset true (computeLib.copy reduceLib.num_compset))
 

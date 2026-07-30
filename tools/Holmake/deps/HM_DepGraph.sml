@@ -58,6 +58,16 @@ fun fupdStatus f (nI: 'a nodeInfo) : 'a nodeInfo =
      mtime = mtime, local_parallelism_limit = local_parallelism_limit}
   end
 
+fun fupdDependencies f (nI: 'a nodeInfo) : 'a nodeInfo =
+  let
+    val {target,command,status,dependencies,seqnum,phony,dir,extra,mtime,
+         local_parallelism_limit} = nI
+  in
+    {target = target, status = status, command = command, seqnum = seqnum,
+     dependencies = f dependencies, phony = phony, dir = dir, extra = extra,
+     mtime = mtime, local_parallelism_limit = local_parallelism_limit}
+  end
+
 fun setStatus s = fupdStatus (fn _ => s)
 
 val node_compare = Int.compare
@@ -189,24 +199,62 @@ fun updnode_fully (n, nInfo) (g : 'a t) : 'a t =
         bump_built_count (old_nI, #status nInfo)
           (fupd_nodes (fn m => Map.insert(m, n, nInfo)) g)
 
+fun add_dependency n (dn, dt) (g : 'a t) : 'a t =
+    case peeknode g n of
+        NONE => raise NoSuchNode
+      | SOME nI =>
+        if List.exists (fn (m,_) => m = dn) (#dependencies nI) then g
+        else
+          fupd_nodes
+            (fn m =>
+                Map.insert(m, n,
+                           fupdDependencies (fn ds => (dn, dt) :: ds) nI))
+            g
+
+(* Three-way probe so `find_runnable_pred`'s scan can terminate on the
+   first NoNode without a second peeknode. *)
+datatype 'a probe = NoNode | NotRunnable | Runnable of 'a nodeInfo
+fun probe g P i =
+    case peeknode g i of
+        NONE => NoNode
+      | SOME nI =>
+        if #status nI = Pending{needed=true} andalso
+           List.all (fn (j,_) => #status (valOf (peeknode g j)) = Succeeded)
+                    (#dependencies nI) andalso
+           P nI
+        then Runnable nI
+        else NotRunnable
+
 fun find_runnable_pred P (g : 'a t) =
   let
-    fun hasSucceeded (i,_) = #status (valOf (peeknode g i)) = Succeeded
     (* relying on invariant that all nodes up to size are in map *)
     fun search i =
-      case peeknode g i of
-          NONE => NONE
-        | SOME nI =>
-          if #status nI = Pending{needed=true} andalso
-             List.all hasSucceeded (#dependencies nI) andalso
-             P nI
-          then SOME (i,nI)
-          else search (i + 1)
+      case probe g P i of
+          NoNode => NONE
+        | Runnable nI => SOME (i, nI)
+        | NotRunnable => search (i + 1)
   in
     search 0
   end
 
 fun find_runnable g = find_runnable_pred (fn _ => true) g
+
+fun find_best_runnable_pred (score : node -> real) P (g : 'a t) =
+  let
+    val n = size g
+    fun better (s, i, nI) NONE = SOME (s, i, nI)
+      | better (s, i, nI) (b as SOME (sb, _, _)) =
+          if Real.> (s, sb) then SOME (s, i, nI) else b
+    fun step (i, best) =
+        if i >= n then best
+        else case probe g P i of
+                 Runnable nI => step (i + 1, better (score i, i, nI) best)
+               | _ => step (i + 1, best)
+  in
+    case step (0, NONE) of
+        NONE => NONE
+      | SOME (_, i, nI) => SOME (i, nI)
+  end
 
 fun target_node (g:'a t) t = Map.peek(#target_map g,t)
 fun listNodes (g:'a t) = Map.foldr (fn (k,v,acc) => (k,v)::acc) [] (#nodes g)
@@ -442,5 +490,48 @@ fun topo_sort g =
     in
       recurse (Set.empty node_compare, unmarked, [])
     end
+
+fun successor_map g =
+    fold (fn (n, nI) => fn A =>
+            List.foldl (fn ((m, _), acc) => extend_map_list acc m n)
+                       A (#dependencies nI))
+         g (Map.mkDict node_compare)
+
+fun successors_of succs n =
+    case Map.peek (succs, n) of NONE => [] | SOME l => l
+
+fun compute_cp_weights (cost : 'a nodeInfo -> real) (g : 'a t) =
+  let
+    val succs = successor_map g
+    fun succs_of n = successors_of succs n
+    (* `topo_sort` returns sinks-first (head = nodes nothing else
+       depends on within the reachable set), so iterating head-to-
+       tail makes each node's successors' cp values already
+       available when we compute the node's own. *)
+    val order = topo_sort g
+    val cp_map =
+        List.foldl
+          (fn (n, m) =>
+              case peeknode g n of
+                  NONE => m
+                | SOME nI =>
+                  let
+                    val self = cost nI
+                    val ss = succs_of n
+                    val maxsucc =
+                      List.foldl
+                        (fn (j, best) =>
+                            case Map.peek(m, j) of
+                                NONE => best
+                              | SOME v => if v > best then v else best)
+                        0.0 ss
+                  in
+                    Map.insert(m, n, self + maxsucc)
+                  end)
+          (Map.mkDict node_compare)
+          order
+  in
+    fn n => case Map.peek(cp_map, n) of NONE => 0.0 | SOME v => v
+  end
 
 end

@@ -219,12 +219,15 @@ let
         val ids = list heap get_const_id b
         val () = if List.all (equal thyname) (List.map #1 ids) then ()
                  else raise Fail "Def_const_list thy"
-      in #2 (gen_prim_specification thyname (th a)) end
+        val () = if Thm.getCT () = SOME thyname then ()
+                 else Thm.setCT thyname
+      in #2 (gen_prim_specification (th a)) end
     | Def_const_prf (a, b) => let
         val (Thy,Name) = get_const_id b
         val rhs = tm a
         val thm = ASSUME (mk_eq(mk_var(Name, type_of rhs), rhs))
-        val (_, thm) = gen_prim_specification Thy thm
+        val () = if Thm.getCT () = SOME Thy then () else Thm.setCT Thy
+        val (_, thm) = gen_prim_specification thm
         val () = register_def Thy Name thm
       in thm end
     | Def_spec_prf (a, b) => let
@@ -232,14 +235,17 @@ let
         val () = if List.all (equal thyname) (List.map #1 ids) then ()
                  else raise Fail "Def_spec thy"
         val cnames = List.map #2 ids
-      in prim_specification thyname cnames (th a) end
+        val () = if Thm.getCT () = SOME thyname then ()
+                 else Thm.setCT thyname
+      in prim_specification cnames (th a) end
     | Def_tyop_prf (_, b, c) => let
         val (Thy,Tyop) = get_type_id c
         val thm = th b
         val () = if thyname = "bool"
                  then check_def tm_defs thyname "TYPE_DEFINITION"
                  else ()
-      in prim_type_definition ({Thy=Thy, Tyop=Tyop}, thm) end
+        val () = if Thm.getCT () = SOME Thy then () else Thm.setCT Thy
+      in prim_type_definition (Tyop, thm) end
     | Disk_prf (thy, b) => let
         val id = get_thm_id b
       in case Symtab.lookup (!trDB) thy of

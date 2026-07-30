@@ -1,4 +1,6 @@
 open HolKernel Parse boolLib simpLib bossLib
+
+val _ = new_theory "scratch"
 open testutils
 
 local

@@ -26,7 +26,8 @@ all: $(UOFILES)
 Overlay.uo: Overlay.sml Net.ui Thm.ui $(FTAGD) $(FTYPED) $(FTERMD) $(FTHMD)
 	$(HOLMOSMLC) -c -toplevel $(FTAG) $(FTYPE) $(FTERM) $(FTHM) Net.ui Overlay.sml
 
-Type.ui : Type.sig $(FTYPED) $(dprot $(SIGOBJ)/KernelSig.ui) $(LIBD)
+Type.ui : Type.sig $(FTYPED) $(dprot $(SIGOBJ)/KernelSig.ui) \
+          $(dprot $(SIGOBJ)/Type_dtype.uo) $(LIBD)
 	$(HOLMOSMLC) -c $(FTYPE) $<
 
 Term.ui: Term.sig $(FTERMD) Type.ui

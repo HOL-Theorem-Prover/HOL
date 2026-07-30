@@ -1,6 +1,8 @@
 open HolKernel Parse goalStack Tactic Tactical
 open testutils
 
+val _ = new_theory "scratch"
+
 val _ = set_trace "Unicode" 0
 
 val _ = goalStack.chatting := false

@@ -130,7 +130,8 @@ fun parent_onload extras {thyname,data = data_opt} =
                   val _ = delta_side_effects thyname uds
                   val v = rev_itlist apply_delta uds v0
                 in
-                  Sref.update value_table (Symtab.update (thyname,v))
+                  Context.Data.modify value_table
+                    (Symtab.update (thyname,v))
                 end
           end
     end
@@ -141,10 +142,14 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
     let
       open ThyDataSexp
       val {tag, apply_delta, initial_values, ...} = info
-      val value_table =
-          Sref.new (itlist Symtab.update initial_values Symtab.empty)
+      val value_table : 'value Symtab.table Context.Data.slot =
+          Context.Data.new
+            {name = "ancestry." ^ tag ^ ".values",
+             empty = itlist Symtab.update initial_values Symtab.empty,
+             pp = fn _ => "<ancestry." ^ tag ^ ".values>"}
       fun valueDB {thyname} =
-          Symtab.lookup (Sref.value value_table) thyname
+          Symtab.lookup (Context.Data.get value_table (Context.snapshot()))
+                        thyname
 
       (* calculates merged values in the "onload" hook *)
       val apply_delta_hook = ref (fn _ => NONE)
@@ -177,7 +182,8 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
           in
             (case vopt of
                 SOME v =>
-                Sref.update value_table (Symtab.update (current_theory(), v))
+                Context.Data.modify value_table
+                                    (Symtab.update (current_theory(), v))
               | NONE => ());
             vopt
           end
@@ -192,14 +198,11 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
     end
 
 fun gen_other_tds {tag,dec,enc,P} = let
-  val last_scan_epoch = ref ~1
-  (* Memoize only retire-sensitive events.  The scan's predicate P
-     (via ThmSetData.export_with_ancestry) composes retire checks with
-     DB.lookup, so it can change on *any* event that mutates the binding
-     table — NewBinding, UpdBinding, DelBinding.
-     When retire_epoch is unchanged and the event is one that only fires
-     after a retire (see TheoryDelta.retire_memoable), we know no
-     entry's P result can have changed since the last scan. *)
+  val last_scan_epoch = ref []
+  (* P is a retire-state predicate (kernel-side via retire_epoch, DB-side
+     via DB.fetch_knm which only transitions on DelBinding).  When
+     retire_epoch is unchanged and the event is retire_captured, no
+     stored delta's uptodate-status has moved. *)
   fun scan t =
     case t of
         ThyDataSexp.List raw_ds =>
@@ -219,10 +222,11 @@ fun gen_other_tds {tag,dec,enc,P} = let
         end
       | _ => raise ERR "gen_other_tds" ("Bad encoding (2) for tag: "^tag)
   in fn (t, thyevent) =>
-    case KernelSig.retire_epoch () of cur =>
-    if TheoryDelta.retire_memoable thyevent andalso !last_scan_epoch = cur
-    then NONE
-    else scan t before last_scan_epoch := cur
+        let val cur = [Type.type_epoch(), Term.term_epoch ()] in
+          if TheoryDelta.retire_captured thyevent andalso !last_scan_epoch = cur
+          then NONE
+          else scan t before last_scan_epoch := cur
+        end
   end
 
 type ('delta,'value) fullresult =
@@ -243,14 +247,24 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
       val {initial_values, tag, apply_delta, ...} = adinfo
 
       (* single global value *)
-      val global_value_ref = Sref.new initial_value
-      fun get_global_value () = Sref.value global_value_ref
-      fun update_global_value f = Sref.update global_value_ref f
+      val global_slot : 'value Context.Data.slot =
+          Context.Data.new
+            {name = "ancestry." ^ tag ^ ".global",
+             empty = initial_value,
+             pp = fn _ => "<ancestry." ^ tag ^ ".global>"}
+      fun get_global_value () =
+          Context.Data.get global_slot (Context.snapshot())
+      val update_global_value = Context.Data.modify global_slot
 
       (* table of values per theory *)
-      val value_table =
-          Sref.new (itlist Symtab.update initial_values Symtab.empty)
-      fun valueDB {thyname} = Symtab.lookup (Sref.value value_table) thyname
+      val value_table : 'value Symtab.table Context.Data.slot =
+          Context.Data.new
+            {name = "ancestry." ^ tag ^ ".values",
+             empty = itlist Symtab.update initial_values Symtab.empty,
+             pp = fn _ => "<ancestry." ^ tag ^ ".values>"}
+      fun valueDB {thyname} =
+          Symtab.lookup (Context.Data.get value_table (Context.snapshot()))
+                        thyname
 
       (* store deltas *)
       val {export = export_raw_delta, segment_data = get_raw_deltas,
@@ -305,7 +319,8 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
           in
             case vopt of
                 SOME v =>
-                (Sref.update value_table (Symtab.update (current_theory(), v));
+                (Context.Data.modify value_table
+                                     (Symtab.update (current_theory(), v));
                  update_global_value (K v))
               | NONE => ();
             vopt

@@ -1,4 +1,6 @@
 open HolKernel Parse boolLib bossLib sptreeSyntax sptreeLib testutils
+
+val _ = new_theory "scratch"
 open totoTheory  totoTacs tcTacs enumTacs fmapalTacs;
 open alist_treeLib patriciaLib
 

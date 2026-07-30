@@ -339,8 +339,13 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
    Theory hooks
    ---------------------------------------------------------------------- *)
 
+(* The scripts written by tttUnfold have their new_theory call replaced by
+   this one, and they run under `bin/hol run`, which leaves Thm.getCT as
+   NONE.  Open a scratch segment so that current_theory answers for the
+   replayed definitions and store_thm calls. *)
 fun start_record_thy thy =
   (
+  Thm.setCT "scratch";
   namethm_glob := dempty String.compare;
   print_endline "importing tactic data";
   tacdata_glob := create_tacdata ()

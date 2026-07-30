@@ -1,4 +1,6 @@
 open HolKernel Parse boolLib
+
+val _ = new_theory "scratch"
 open pred_setTheory generic_termsTheory binderLib nomsetTheory nomdatatype
 open testutils
 

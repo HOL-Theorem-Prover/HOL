@@ -24,7 +24,6 @@ src/coretypes
 src/tfl/src
 src/num/theories
 src/num/theories/cv_compute
-!src/num/theories/cv_compute/soundness_check
 
 # NOTE: otknl builds use the old Arithconv for proof constructions
 (stdknl)src/num/reduce/conv
@@ -35,6 +34,7 @@ src/num/theories/cv_compute
 src/num/reduce/src
 src/num/arith/src
 src/num
+!src/num/theories/cv_compute/soundness_check
 src/num/termination
 
 # A Poly/ML heap, numheap, is deposited in src/num/termination to

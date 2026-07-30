@@ -1,7 +1,7 @@
 structure Term :> Term =
 struct
 
-open Feedback Lib KernelTypes Type
+open Feedback Lib Type_dtype KernelTypes Type
 
 val kernelid = "expknl"
 
@@ -34,16 +34,35 @@ val compare_cinfo = KernelSig.id_compare
 val c2string = KernelSig.id_toString
 val id2string  = KernelSig.name_toString
 
-val const_table = KernelSig.new_table()
+fun termsig () = Context.termsig (Context.snapshot())
+fun upd_termsig f = Context.update (Context.map_termsig f)
+fun genupd_termsig f =
+    Context.gen_update (fn c =>
+      let val (new, r) = f (Context.termsig c)
+      in (Context.map_termsig (fn _ => new) c, r) end)
 
-fun prim_delete_const kn = ignore (KernelSig.retire_name(const_table, kn))
+fun term_epoch () = KernelSig.symtab_epoch (termsig())
+fun display_name_of_id id = KernelSig.display_name_of_id (termsig()) id
 
-fun inST s = KernelSig.nameExists const_table s
+fun prim_delete_const (kn as {Thy, Name}) =
+    if KernelSig.is_sealed_thy Thy then
+      raise ERR "prim_delete_const"
+            ("target theory \"" ^ Thy ^
+             "\" is sealed; cross-theory deletes are refused")
+    else
+      upd_termsig (#1 o KernelSig.retire_name kn)
+
+fun inST s = KernelSig.nameExists (termsig()) s
 
 fun prim_new_const (k as {Thy,Name}) ty = let
-  val id = KernelSig.insert(const_table, k, ty)
+  val _ = not (KernelSig.is_sealed_thy Thy) orelse
+          raise ERR "prim_new_const"
+                ("target theory \"" ^ Thy ^
+                 "\" is sealed; cross-theory mints are refused")
+  val hty = if Type.polymorphic ty then POLY ty else GRND ty
+  val id = genupd_termsig (KernelSig.insert (k, hty))
 in
-  Const(id, ty)
+  Const(id, hty)
 end
 
 fun uptodate_term tm = let
@@ -54,9 +73,10 @@ fun uptodate_term tm = let
         in
           case tm of
             Var(s, ty) => uptodate_type ty andalso recurse rest
-          | Const(info, ty) => KernelSig.uptodate_id info andalso
-                               uptodate_type ty andalso
-                               recurse rest
+          | Const(info, ty) =>
+              KernelSig.uptodate_id (termsig()) info andalso
+              uptodate_type (to_hol_type ty) andalso
+              recurse rest
           | App(f, x) => recurse (f::x::rest)
           | Abs(v, body) => recurse (v::body::rest)
         end
@@ -66,28 +86,36 @@ end
 
 fun thy_consts s = let
   fun f (k, info as (_, ty), acc) =
-      if #Thy k = s andalso Type.uptodate_type ty then Const info :: acc
+      if #Thy k = s andalso Type.uptodate_type (to_hol_type ty) then
+        Const info :: acc
       else acc
 in
-  KernelSig.foldl f [] const_table
+  KernelSig.foldl f [] (termsig())
 end
 
-fun del_segment s = KernelSig.del_segment(const_table, s)
+fun del_segment s =
+    if KernelSig.is_sealed_thy s then
+      raise ERR "del_segment"
+            ("theory \"" ^ s ^ "\" is sealed; segment delete refused")
+    else
+      upd_termsig (KernelSig.del_segment s)
 
-fun prim_decls s = KernelSig.listName const_table s
+fun prim_decls s = KernelSig.listName (termsig()) s
 
 fun decls s = let
   fun foldthis (k,cinfo as (_, v),acc) =
-      if #Name k = s andalso Type.uptodate_type v then Const cinfo::acc else acc
+      if #Name k = s andalso Type.uptodate_type (to_hol_type v) then
+        Const cinfo :: acc
+      else acc
 in
-  KernelSig.foldl foldthis  [] const_table
+  KernelSig.foldl foldthis [] (termsig())
 end
 
 fun all_consts () = let
   fun foldthis (_,cinfo as (_, v),acc) =
-      if Type.uptodate_type v then Const cinfo :: acc else acc
+      if Type.uptodate_type (to_hol_type v) then Const cinfo :: acc else acc
 in
-  KernelSig.foldl foldthis [] const_table
+  KernelSig.foldl foldthis [] (termsig())
 end
 
 
@@ -96,7 +124,7 @@ fun type_of t = let
       case t of
         Var(_, ty) => k ty
       | App(t1, t2) => ty_of t1 (fn ty => k (#2 (dom_rng ty)))
-      | Const(_, ty) => k ty
+      | Const(_, ty) => k (to_hol_type ty)
       | Abs(Var(_, ty1), t) => ty_of t (fn tty => k (ty1 --> tty))
       | _ => raise Fail "Catastrophic invariant failure"
 in
@@ -134,23 +162,33 @@ fun is_genvar (Var(Name,_)) = String.isPrefix genvar_prefix Name
 end;
 
 (* constructors - constants *)
+fun ground s = Lib.all (fn {redex,residue} => not (Type.polymorphic residue)) s
+
+fun create_const errstr (const as (_, GRND pat)) Ty =
+      if Ty = pat then Const const
+      else raise ERR errstr "not a type match"
+  | create_const errstr (const as (r, POLY pat)) Ty =
+      ((case Type.raw_match_type pat Ty ([],[]) of
+            ([],_) => Const const
+          | (S,[]) => Const(r, if ground S then GRND Ty else POLY Ty)
+          | (S, _) => Const(r, POLY Ty))
+        handle HOL_ERR _ =>
+          raise ERR errstr
+            ("Not a type instance: " ^ KernelSig.id_toString r))
+
 fun mk_const(s, ty) =
     case prim_decls s of
       [] => raise ERR "mk_const" ("No constant with name "^s)
-    | [(_, (id,basety))] => if can (match_type basety) ty then
-                         Const (id, ty)
-                       else raise ERR "mk_const"
-                                      ("Not a type instance: "^c2string id)
-    | (_, (id,basety))::_ =>
-         if can (match_type basety) ty then
-           (WARN "mk_const" (s^": more than one possibility"); Const (id,ty))
-         else raise ERR "mk_const" ("Not a type instance: "^ c2string id)
+    | [(_, const)] => create_const "mk_const" const ty
+    | (_, const)::_ =>
+        (WARN "mk_const" (s^": more than one possibility");
+         create_const "mk_const" const ty)
 
 fun prim_mk_const (k as {Thy, Name}) =
     let
       open KernelSig
     in
-      case peek(const_table, k) of
+      case peek(termsig(), k) of
           Failure (NoSuchThy _) =>
           raise ERR "prim_mk_const"
                 ("Theory segment " ^ Lib.quote Thy ^ " not in ancestry")
@@ -164,15 +202,12 @@ fun mk_thy_const {Thy,Name,Ty} = let
   open KernelSig
   val k = {Thy = Thy, Name = Name}
 in
-  case peek(const_table, k) of
+  case peek(termsig(), k) of
     Failure(NoSuchThy _) =>
       raise ERR "mk_thy_const" ("No such theory: " ^ Thy)
    | Failure _ =>
        raise ERR "mk_thy_const" (KernelSig.name_toString k ^ " not found")
-   | Success (id,basety) => if can (match_type basety) Ty then
-                              Const(id, Ty)
-                            else raise ERR "mk_thy_const"
-                                       ("Not a type instance: "^id2string k)
+   | Success c => create_const "mk_thy_const" c Ty
 end
 
 (* constructors - applications *)
@@ -210,11 +245,18 @@ fun mk_abs(v, body) =
 fun dest_var (Var p) = p
   | dest_var _ = raise ERR "dest_var" "Term not a variable"
 
+(* Deliberately skips the uptodate/display check — see the corresponding
+   note on dest_thy_const in src/0/Term.sml.  Pretty-printers that want
+   Globals.oldify decoration should call display_name_of_id directly. *)
 fun dest_thy_const (Const(id,ty)) =
       let open KernelSig in
-        {Thy = seg_of id, Name = display_name_of_id id, Ty = ty}
+        {Thy = seg_of id, Name = name_of id, Ty = to_hol_type ty}
       end
   | dest_thy_const _ = raise ERR"dest_thy_const" "not a const"
+
+fun dest_thy_constid (Const(id,ty)) =
+      {Thy = KernelSig.seg_of id, Name = id, Ty = to_hol_type ty}
+  | dest_thy_constid _ = raise ERR"dest_thy_constid" "not a const"
 
 fun dest_const (c as Const _) =
     let val {Name,Ty,...} = dest_thy_const c
@@ -355,7 +397,7 @@ fun compare p = let
         | (Const(cid1, ty1), Const(cid2, ty2)) => let
           in
             case compare_cinfo(cid1, cid2) of
-              EQUAL => Type.compare(ty1, ty2)
+              EQUAL => Type.compare(to_hol_type ty1, to_hol_type ty2)
             | x => x
           end
         | (Const _, _) => LESS
@@ -435,10 +477,11 @@ in
   occ
 end
 
-local fun tyV (Var(_, ty)) A = Type.type_vars_acc ty A
-        | tyV (Const(_, ty)) A = Type.type_vars_acc ty A
-        | tyV (App(f,x)) A = tyV x (tyV f A)
-        | tyV (Abs(x,b)) A = tyV b (tyV x A)
+local fun tyV (Var(_, ty)) A          = Type.type_vars_acc ty A
+        | tyV (Const(_, GRND _)) A    = A
+        | tyV (Const(_, POLY ty)) A   = Type.type_vars_acc ty A
+        | tyV (App(f,x)) A            = tyV x (tyV f A)
+        | tyV (Abs(x,b)) A            = tyV b (tyV x A)
 in
 fun type_vars_in_term tm = tyV tm []
 end;
@@ -730,9 +773,12 @@ local
   structure Map = struct open Redblackmap end
   fun inst1 theta ctxt t =
       case t of
-        (c as Const(r, ty)) => (case ty_sub theta ty of
-                                  SAME => raise Unchanged
-                                | DIFF ty => Const(r, ty))
+        (c as Const(_, GRND _)) => raise Unchanged
+      | (c as Const(r, POLY ty)) =>
+          (case ty_sub theta ty of
+              SAME => raise Unchanged
+            | DIFF ty' =>
+              Const(r, if Type.polymorphic ty' then POLY ty' else GRND ty'))
       | (v as Var(name,ty0)) => let
           val (changed, nv) = case ty_sub theta ty0 of
                                   SAME => (false, v)
@@ -957,9 +1003,19 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
                         else MERR "Bound var doesn't match"
           end
         | (Const(c1, ty1), Const(c2, ty2)) =>
-          if c1 <> c2 then MERR ("Different constants: "^c2string c1^" and "^
-                                 c2string c2)
-          else RM rest (tminfo, Type.raw_match_type ty1 ty2 tyS)
+          RM rest
+             (tminfo,
+              if c1 <> c2 then
+                MERR ("Different constants: "^c2string c1^" and "^c2string c2)
+              else
+                case (ty1, ty2) of
+                    (GRND _, POLY _) =>
+                      MERR "ground const vs. polymorphic const"
+                  | (GRND pat, GRND obj) =>
+                      if pat = obj then tyS
+                      else MERR "const-const with different (ground) types"
+                  | (POLY pat, GRND obj) => Type.raw_match_type pat obj tyS
+                  | (POLY pat, POLY obj) => Type.raw_match_type pat obj tyS)
         | (App(f1, x1), App(f2, x2)) =>
           RM (TMP (f1, f2) :: TMP (x1, x2) :: rest) theta0
         | (Abs(x1, bdy1), Abs(x2, bdy2)) => let
@@ -1052,12 +1108,25 @@ in
   prim_new_const k ((alpha --> bool) --> alpha)
 end
 
+(* Seal "min" once its builtin types (fun, bool, ind) and constants
+   (=, @, ==>) are in place: nothing legitimate mints or retires
+   min-owned entries after this point. *)
+val _ = KernelSig.mark_sealed_thy "min"
+
 fun dest_eq_ty t = let
   val (fx, y) = dest_comb t
   val (f, x) = dest_comb fx
 in
   if same_const f equality then (x, y, type_of x)
   else raise ERR "dest_eq_ty" "Term not an equality"
+end
+
+fun dest_eq t = let
+  val (fx, y) = dest_comb t
+  val (f, x) = dest_comb fx
+in
+  if same_const f equality then (x,y)
+  else raise ERR "dest_eq" "Term not an equality"
 end
 
 fun prim_mk_eq ty t1 t2 =
@@ -1122,6 +1191,8 @@ local
 datatype tok = lam | id of int | app of int
 open StringCvt
 
+val ERR = mk_HOL_ERR "Term" "read_raw"
+
 fun readtok (c : (char, cs) reader) cs = let
   val intread = Int.scan DEC c
 in
@@ -1143,11 +1214,11 @@ fun parse tmv c cs0 = let
   fun parse_term stk cur =
       case (stk, cur) of
           ([t], (NONE,cs)) => SOME (t, cs)
-        | ([], (NONE, _)) => raise Fail "raw_parse.eof: empty stack"
-        | (_, (NONE, _)) => raise Fail "raw_parse.eof: large stack"
+        | ([], (NONE, _)) => raise ERR "empty stack"
+        | (_, (NONE, _)) => raise ERR "large stack"
         | (body :: bvar :: stk, (SOME lam, cs')) =>
             parse_term (Abs(bvar,body) :: stk) (adv cs')
-        | (_, (SOME lam, _)) => raise Fail "raw_parse.abs: short stack"
+        | (_, (SOME lam, _)) => raise ERR "short stack"
         | (stk, (SOME (app i), cs')) => doapp i stk cs'
         | (stk, (SOME (id i), cs')) =>
             parse_term (Vector.sub(tmv, i) :: stk) (adv cs')
@@ -1156,16 +1227,44 @@ fun parse tmv c cs0 = let
       else
         case stk of
             x :: f :: stk => doapp (i - 1) (App(f,x) :: stk) cs
-          | _ => raise Fail "raw_parse.app: short stack"
+          | _ => raise ERR "short stack"
 in
   parse_term [] (adv cs0)
 end
 
+fun bvtype (Var (_, ty)) = ty
+  | bvtype _ = raise ERR "malformed abstraction"
+fun synth t =
+    case t of
+        Var(_, ty) => ty
+      | Const(_, ty) => to_hol_type ty
+      | Abs (bv, bod) => bvtype bv --> synth bod
+      | App(f,x) =>
+        let
+          val fty = synth f
+          val (dty, rty) = Type.dom_rng fty
+        in
+          check x dty ; rty
+        end
+and check tm expected =
+    case tm of
+        Abs(bv,bod) =>
+        let val (ed,er) = Type.dom_rng expected
+        in
+          if Type.compare(ed,bvtype bv) <> EQUAL then
+            raise ERR "Ill-typed"
+          else ();
+          check bod er
+        end
+      | _ => Type.compare(synth tm, expected) = EQUAL
 
 in
 
-fun read_raw tmv s =
-  valOf (scanString (parse tmv) s)
+fun read_raw tmv s = let val t = valOf (scanString (parse tmv) s)
+                         val _ = synth t
+                     in
+                       t
+                     end
 
 end (* local *)
 

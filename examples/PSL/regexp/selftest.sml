@@ -6,6 +6,8 @@
 
 open HolKernel Parse boolLib bossLib regexpLib;
 
+val _ = new_theory "scratch"
+
 (******************************************************************************
 * Set the trace level of the regular expression library:
 * 0: silent

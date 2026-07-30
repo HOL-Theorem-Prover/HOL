@@ -537,6 +537,7 @@ file still apply.
 [h4pedant]
 linelen = 80           # max line length; 0 disables the check
 unicode_ok = false     # if true, do not flag non-ASCII characters
+include = ["src"]      # subtrees that are in scope of the scan
 exclude = ["scratch"]  # subtrees to skip entirely
 
 [[h4pedant.dir]]
@@ -544,6 +545,16 @@ path = "src"
 unicode_ok = true
 linelen = 0
 ```
+
+`include` and `exclude` are lists of paths (relative to the
+project root, or absolute).  When `include` is non-empty and no
+positional directory arguments are given on the command line, the
+listed paths become the scan roots in place of the project root;
+`exclude` still prunes descent inside them.  Listing the same path
+in both `include` and `exclude` is a direct conflict and aborts
+`h4pedant` with a fatal error.  Positional directory arguments on
+the command line override the include list (excludes continue to
+apply to any subtrees named).
 
 The `[[h4pedant.dir]]` array entries are per-subdirectory overrides
 keyed by `path` (relative to the project root); each setting that

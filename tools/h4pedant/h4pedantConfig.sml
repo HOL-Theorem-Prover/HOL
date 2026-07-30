@@ -14,10 +14,12 @@ type per_dir_partial = { linelen : int option, unicode_ok : bool option }
 (* The whole loaded h4pedant config.  All paths are absolute and
    canonical.  `overrides` is the parsed `[[h4pedant.dir]]` array.
    `default` is the global `[h4pedant]` block, fallen back to the
-   built-in default. *)
+   built-in default.  `includes`, when non-empty, replaces the project
+   root as the set of scan roots (`exclude` still prunes descent). *)
 type config = {
   root : string,
   default : per_dir,
+  includes : string list,
   excludes : string list,
   overrides : (string * per_dir_partial) list
 }
@@ -67,14 +69,21 @@ fun parse_h4pedant_block proj_path root tbl =
       (fn () =>
           let
             val default = parse_default tbl
-            val exclude_rel =
-                Option.getOpt (HMProject.lookup_string_array
-                                 tbl ["exclude"], [])
-            val excludes = List.map (HMProject.abs_relative_to root)
-                                    exclude_rel
+            fun parse_path_list key =
+                List.map (HMProject.abs_relative_to root)
+                  (Option.getOpt (HMProject.lookup_string_array tbl [key], []))
+            val excludes = parse_path_list "exclude"
+            val includes = parse_path_list "include"
+            val () =
+                case List.find (fn p => List.exists (fn q => q = p) excludes)
+                               includes of
+                    NONE => ()
+                  | SOME p =>
+                      raise Fail
+                        ("`" ^ p ^ "` appears in both `include` and `exclude`")
             val overrides = parse_dir_array root tbl
           in
-            { default = default, excludes = excludes,
+            { default = default, includes = includes, excludes = excludes,
               overrides = overrides }
           end)
 
@@ -92,15 +101,16 @@ fun load { start : string } : config option =
                        handle e =>
                               raise Fail ("Failed to parse " ^ proj_path ^
                                           ": " ^ General.exnMessage e)
-            val { default, excludes, overrides } =
+            val { default, includes, excludes, overrides } =
                 case HMProject.lookup_table ptbl ["h4pedant"] of
                     NONE => { default = builtin_default,
-                              excludes = [],
+                              includes = [], excludes = [],
                               overrides = [] }
                   | SOME tbl => parse_h4pedant_block proj_path root tbl
           in
             SOME { root = root, default = default,
-                   excludes = excludes, overrides = overrides }
+                   includes = includes, excludes = excludes,
+                   overrides = overrides }
           end
 
 (* Path-prefix test, in canonicalised form.  Both arguments must be
