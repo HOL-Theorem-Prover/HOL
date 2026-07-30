@@ -923,7 +923,8 @@ fun run_instance deadline started (config : Refute_Core.config)
                                           harvest potential (genuine - 1)
                                             (cex :: kept) models)
                                      else if potential <= 0 then
-                                       harvest potential genuine kept models
+                                       (discarded_sound_model := true;
+                                        harvest potential genuine kept models)
                                      else
                                        (keep_counterexample cex;
                                         harvest (potential - 1) genuine
