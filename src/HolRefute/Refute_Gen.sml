@@ -423,9 +423,12 @@ structure Refute_Gen = struct
             let
               val (dom, rng) = dest_fun (Term.type_of predicate)
             in
-              if same_type (dom, ty) andalso same_type (rng, Type.bool)
-              then ()
-              else bad "predicate must have type ty -> bool"
+              if not (same_type (dom, ty) andalso
+                      same_type (rng, Type.bool)) then
+                bad "predicate must have type ty -> bool"
+              else if not (null (Term.free_vars_lr predicate)) then
+                bad "predicate must be closed"
+              else ()
             end
       val _ = synchronized_registry (fn () =>
         (abstract_specs := (ty, spec) :: remove_type ty (!abstract_specs);
