@@ -2362,14 +2362,19 @@ structure Refute_ModelFinder_HOL = struct
     else
       term
 
+  (* Naming both accepted shapes keeps the diagnostic actionable: neither
+     destructor alone can tell which one the caller was aiming at. *)
+  val unsupported_shape =
+    "equivalence theorem must be QUOTIENT R abs rep, or a total \
+    \equivalence !x y. R x y <=> (R x = R y)"
+
   fun dest_total_equivalence theorem =
     let
       val _ = if null (Thm.hyp theorem) then () else
         raise err "register_quotient" "equivalence theorem has hypotheses"
       val (variables, body) = boolSyntax.strip_forall (Thm.concl theorem)
       val _ = if length variables = 2 then () else
-        raise err "register_quotient"
-          "equivalence theorem has an unsupported shape"
+        raise err "register_quotient" unsupported_shape
       val x = List.nth (variables, 0)
       val y = List.nth (variables, 1)
       val (left, right) = boolSyntax.dest_eq body
@@ -2386,8 +2391,7 @@ structure Refute_ModelFinder_HOL = struct
            Term.aconv (List.nth (arguments, 1)) y andalso
            Term.aconv (hd x_arguments) x andalso
            Term.aconv (hd y_arguments) y then ()
-        else raise err "register_quotient"
-          "equivalence theorem has an unsupported shape"
+        else raise err "register_quotient" unsupported_shape
     in
       relation
     end
@@ -2400,19 +2404,25 @@ structure Refute_ModelFinder_HOL = struct
       val _ =
         if same_named {Thy = "quotient", Name = "QUOTIENT"} head andalso
            length arguments = 3 then ()
-        else raise err "register_quotient"
-          "equivalence theorem has an unsupported shape"
+        else raise err "register_quotient" unsupported_shape
     in
       (List.nth (arguments, 0), List.nth (arguments, 1),
        List.nth (arguments, 2))
     end
 
+  (* The head constant classifies the theorem: a QUOTIENT conclusion cannot
+     be a universally quantified equation and vice versa, so dispatching on
+     it keeps each shape's diagnostics its own.  Falling back to the total
+     branch after a failed QUOTIENT parse would instead misreport a
+     malformed QUOTIENT theorem as a malformed equivalence. *)
+  fun is_bare_quotient theorem =
+    let val (head, _) = HolKernel.strip_comb (Thm.concl theorem)
+    in same_named {Thy = "quotient", Name = "QUOTIENT"} head end
+
   fun quotient_theorem_info theorem supplied_abs supplied_rep =
-    let
-      (* A total equivalence theorem mentions only the representation
-         relation; it cannot identify arbitrary supplied Abs/Rep constants.
-         The QUOTIENT bridge below is the required association proof. *)
-      val (raw_relation, theorem_abs, theorem_rep) =
+    if is_bare_quotient theorem then
+      let
+        val (raw_relation, theorem_abs, theorem_rep) =
           dest_bare_quotient theorem
         val theta = Type.match_type (Term.type_of theorem_abs)
           (Term.type_of supplied_abs)
@@ -2429,6 +2439,12 @@ structure Refute_ModelFinder_HOL = struct
       in
         (relation, true)
       end
+    else
+      (* A total equivalence theorem mentions only the representation
+         relation; it cannot identify arbitrary supplied Abs/Rep constants,
+         so there is nothing to cross-check here.  Its totality also makes
+         the partial encoding's domain axiom redundant. *)
+      (dest_total_equivalence theorem, false)
 
   fun validate_registered_type function ty =
     let
@@ -4551,6 +4567,56 @@ structure Refute_ModelFinder_HOL = struct
     case typedef_for_rep rep of
         NONE => []
       | SOME {inverse_axioms, ...} => inverse_axioms
+
+  (* HOL4 states the second bijection law as the biconditional
+     [!r. P r <=> rep (abs r) = r], but the encoding cannot carry it: for
+     an [r] outside [P] the value [abs r] is unrepresented, so
+     [rep (abs r) = r] is unknown rather than false, the biconditional is
+     unknown rather than true, and no scope of a proper-subset typedef is
+     then satisfiable.  Guarding the equation by [P] keeps the half that
+     mentions only represented values, and the surjectivity of [rep]
+     restates the discarded half without naming [abs], so the abstract
+     carrier stays pinned to [P]'s extension rather than to some subset of
+     it.  Together with the membership axiom [!a. P (rep a)] emitted by
+     [optimized_typedef_axioms], the pair is equivalent to the
+     biconditional, so this trades no models either way.  A whole-type
+     typedef has [P r] equal to [T] and degenerates to [T ==> ...]. *)
+  fun guarded_inverse_axiom abs rep axiom =
+    let
+      val (variables, body) = boolSyntax.strip_forall axiom
+      val (raw_guard, equation) = boolSyntax.dest_eq body
+      val _ = if Term.type_of raw_guard = Type.bool then () else raise Match
+      val (represented, argument) = boolSyntax.dest_eq equation
+      val (rep_head, rep_arguments) = HolKernel.strip_comb represented
+      val _ = if length rep_arguments = 1 then () else raise Match
+      val (abs_head, abs_arguments) =
+        HolKernel.strip_comb (hd rep_arguments)
+      val _ =
+        if length abs_arguments = 1 andalso
+           same_registered_constant rep rep_head andalso
+           same_registered_constant abs abs_head andalso
+           Term.aconv (hd abs_arguments) argument then ()
+        else raise Match
+      val guard = beta_normalize raw_guard
+      val abstract = Term.variant (Term.all_vars axiom)
+        (Term.mk_var ("a", Term.type_of (hd rep_arguments)))
+      val onto = boolSyntax.mk_exists (abstract,
+        boolSyntax.mk_eq (Term.mk_comb (rep_head, abstract), argument))
+      fun close matrix = boolSyntax.list_mk_forall
+        (variables, boolSyntax.mk_imp (guard, matrix))
+    in
+      [close equation, close onto]
+    end
+    handle HOL_ERR _ => [axiom] | Match => [axiom]
+
+  (* The registration accessor above keeps returning the theorem's own
+     conjuncts; only the encoding sees the guarded restatement. *)
+  fun optimized_inverse_axioms_for_rep_fun rep =
+    case typedef_for_rep rep of
+        NONE => []
+      | SOME {abs, rep = registered, inverse_axioms, ...} =>
+          List.concat
+            (map (guarded_inverse_axiom abs registered) inverse_axioms)
 
   fun codatatype_bisim_axioms context ty =
     let

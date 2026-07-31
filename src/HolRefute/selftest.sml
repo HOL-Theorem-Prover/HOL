@@ -4616,6 +4616,43 @@ val _ = require_msg
     "quotient/typedef axioms, constructors, or unfolds changed")
   (fn () => ()) ()
 
+(* The encoding cannot take the exported biconditional
+   [P r <=> rep (abs r) = r] as it stands: for an [r] outside [P] the value
+   [abs r] is unrepresented, so the equation is unknown rather than false
+   and every proper-subset typedef scope came out unsatisfiable.  Pin the
+   guarded restatement plus the surjectivity of [rep] that replaces the
+   discarded half, the [T ==> ...] degenerate form a whole-type typedef
+   gets, and that the registration accessor still reports the theorem's own
+   conjuncts. *)
+fun mf_typedef_encoded_inverse_axioms () =
+  with_quotient_typedef_registries_restored (fn () => let
+    val _ = Refute.register_typedef zoo_three_registration
+    val _ = Refute.register_typedef zoo_univ_registration
+    val expected_three =
+      [``!a. zoo_three_abs (zoo_three_rep a) = a``,
+       ``!r. r < 3 ==> zoo_three_rep (zoo_three_abs r) = r``,
+       ``!r. r < 3 ==> ?a. zoo_three_rep a = r``]
+    val expected_univ =
+      [``!a. zoo_univ_abs (zoo_univ_rep a) = a``,
+       ``!r. T ==> zoo_univ_rep (zoo_univ_abs r) = r``,
+       ``!r. T ==> ?a. zoo_univ_rep a = r``]
+    fun same left right =
+      ListPair.allEq (fn (left, right) => Term.aconv left right)
+        (left, right)
+  in
+    same (MFH.optimized_inverse_axioms_for_rep_fun ``zoo_three_rep``)
+      expected_three andalso
+    same (MFH.optimized_inverse_axioms_for_rep_fun ``zoo_univ_rep``)
+      expected_univ andalso
+    same (MFH.inverse_axioms_for_rep_fun ``zoo_three_rep``)
+      (MFH.quantified_conjuncts zoo_three_absrep)
+  end)
+
+val _ = require_msg
+  (check_result mf_typedef_encoded_inverse_axioms) (fn () =>
+    "the encoded typedef inverse axioms changed")
+  (fn () => ()) ()
+
 fun mf_binarize_preproc_goldens () =
   let
     val context = fresh_mf_context ()
@@ -22392,6 +22429,28 @@ fun run_mf_acceptance () =
     in
       ()
     end)
+
+(* The user-visible half of the same defect, kept at level 1 because the
+   whole family of proper-subset typedefs was silently unrefutable: the
+   abstract type's own ABS/REP law found no model at any scope, while the
+   whole-type [zoo_univ] did.  One scope row of one goal, so it costs a few
+   seconds; the matrix-shaped typedef corpus stays at level 2. *)
+fun mf_proper_subset_typedef_has_a_model () =
+  not (Refute_Forl.is_configured ()) orelse
+  with_quotient_typedef_registries_restored (fn () => let
+    val _ = Refute.register_typedef zoo_three_registration
+    val outcome = with_silent_refute (fn () =>
+      Refute.refute (mf_acceptance_config "SAT4J")
+        ``zoo_three_abs (zoo_three_rep x) = (y : zoo_three)``)
+  in
+    case outcome of Refute.Counterexample (_ :: _) => true | _ => false
+  end)
+
+val _ = tprint "Refute MF: proper-subset typedef countermodel"
+val _ = require_msg
+  (check_result mf_proper_subset_typedef_has_a_model) (fn () =>
+    "a proper-subset typedef admitted no model at any scope")
+  (fn () => ()) ()
 
 fun run_level2_mf_corpus () =
   let

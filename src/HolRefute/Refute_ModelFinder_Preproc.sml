@@ -1925,7 +1925,7 @@ structure Refute_ModelFinder_Preproc = struct
               case MFH.typedef_for_type ty of
                   SOME {rep, ...} => List.foldl (fn (axiom, result) =>
                     add_axiom true depth axiom result) with_membership
-                    (MFH.inverse_axioms_for_rep_fun rep)
+                    (MFH.optimized_inverse_axioms_for_rep_fun rep)
                 | NONE => with_membership
             end
           else
@@ -1955,7 +1955,7 @@ structure Refute_ModelFinder_Preproc = struct
                       val with_inverses = List.foldl
                         (fn (axiom, result) =>
                           add_axiom true depth axiom result) next
-                        (MFH.inverse_axioms_for_rep_fun term)
+                        (MFH.optimized_inverse_axioms_for_rep_fun term)
                     in
                       add_axioms_for_term depth []
                         (MFH.mate_of_rep_fun term) with_inverses
