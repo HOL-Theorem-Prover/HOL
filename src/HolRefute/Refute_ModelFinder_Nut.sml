@@ -573,6 +573,29 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     is_named {Thy = "integer", Name = "int_div"} head then
               SOME Divide
             else NONE
+          fun is_numeral_skeleton head =
+            is_named {Thy = "arithmetic", Name = "NUMERAL"} head orelse
+            is_named {Thy = "arithmetic", Name = "BIT1"} head orelse
+            is_named {Thy = "arithmetic", Name = "BIT2"} head
+          fun expand_numeral_skeleton head arguments =
+            case arguments of
+                [] => MFH.eta_expand head 1
+              | argument :: rest =>
+                  let
+                    val expanded =
+                      if is_named {Thy = "arithmetic", Name = "NUMERAL"}
+                           head then
+                        argument
+                      else
+                        (* BIT1 n = 2n + 1 and BIT2 n = 2n + 2. *)
+                        numSyntax.mk_plus
+                          (numSyntax.mk_plus (argument, argument),
+                           numSyntax.term_of_int
+                             (if is_named {Thy = "arithmetic", Name = "BIT1"}
+                                head then 1 else 2))
+                  in
+                    Term.list_mk_comb (expanded, rest)
+                  end
           val (head, arguments) = HolKernel.strip_comb candidate
         in
           case MFH.iterator_marker_of_term context candidate of
@@ -767,6 +790,15 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                       null arguments andalso
                       Option.isSome (arithmetic_cst head) then
                 cst (valOf (arithmetic_cst head)) head
+              else if Term.is_const head andalso
+                      is_numeral_skeleton head then
+                (* A fully formed numeral was already recognized above, so
+                   what reaches here is a skeleton constructor applied to a
+                   non-literal, or standing alone as a function value.  The
+                   binary skeleton stays built in so that preprocessing
+                   cannot expand a literal into unary SUC chains; the
+                   arithmetic it denotes is supplied here instead. *)
+                sub (expand_numeral_skeleton head arguments)
               else if MFH.is_constr head then
                 do_construct head arguments
               else if Term.is_const head then

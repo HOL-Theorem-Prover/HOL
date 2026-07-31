@@ -6136,11 +6136,15 @@ fun mf_scope_offsets_and_facto_pairs () =
     MFS.spec_of_type scope ``:unit`` = (1, 4) andalso
     List.all degenerate_pair data_types andalso
     #complete list_spec = (false, true) andalso
-    #concrete list_spec = (true, true) andalso
+    (* Concreteness quantifies over the constructor argument types, so a
+       list of nums is not concrete while num itself is capped at an
+       inexact 2.  Only completeness is facto-sensitive here, and an
+       inconcrete type is exact under neither facto value. *)
+    #concrete list_spec = (false, false) andalso
     #complete host_spec = (false, true) andalso
     #concrete host_spec = (false, true) andalso
     not (MFS.is_exact_type (#data_types finitized) false list_ty) andalso
-    MFS.is_exact_type (#data_types finitized) true list_ty
+    not (MFS.is_exact_type (#data_types finitized) true list_ty)
   end
 
 val _ = require_msg (check_result mf_scope_offsets_and_facto_pairs) (fn () =>
@@ -6689,8 +6693,11 @@ fun mf_rep_arithmetic () =
     (MFR.Func (MFR.Atom (2, 0), MFR.Atom (3, 2))) = 9 andalso
   MFR.arity_of_rep
     (MFR.Func (MFR.Atom (2, 0), MFR.Atom (3, 2))) = 2 andalso
+  (* An Atom (k, j0) occupies universe indices j0 .. j0 + k - 1, so it needs
+     k + j0 atoms; a Struct needs the largest demand of its fields.  Here
+     Atom (3, 2) reaches index 4 and so needs 5, not 6. *)
   MFR.min_univ_card_of_rep
-    (MFR.Opt (MFR.Struct [MFR.Atom (2, 0), MFR.Atom (3, 2)])) = 6
+    (MFR.Opt (MFR.Struct [MFR.Atom (2, 0), MFR.Atom (3, 2)])) = 5
   andalso
   MFR.card_of_domain_from_rep 2 (MFR.Atom (16, 0)) = 4 andalso
   MFR.atom_schema_of_rep
@@ -7438,6 +7445,39 @@ fun mf_nut_term_goldens () =
 
 val _ = require_msg (check_result mf_nut_term_goldens) (fn () =>
   "model-finder nut_from_term golden changed")
+  (fn () => ()) ()
+
+(* The binary numeral skeleton belongs on the built-in table, which is what
+   unfolding, specialization, uncurrying, boxing and axiom collection all
+   consult: a literal that loses its skeleton is expanded into unary SUC
+   chains and is never a numeral again to any later stage.  A skeleton
+   constructor that is not part of a literal is therefore translated here,
+   by the arithmetic it denotes, rather than by leaving the table. *)
+fun mf_numeral_skeleton_translation () =
+  let
+    val context = fresh_mf_context ()
+    val numeral = Term.prim_mk_const {Thy = "arithmetic", Name = "NUMERAL"}
+    val bit1 = Term.prim_mk_const {Thy = "arithmetic", Name = "BIT1"}
+    val bit2 = Term.prim_mk_const {Thy = "arithmetic", Name = "BIT2"}
+    val n = ``n : num``
+    val literal = ``5 : num``
+    fun nut term = MFNT.nut_from_term context MFNT.Eq term
+  in
+    List.all MFH.is_never_unfold_const [numeral, bit1, bit2] andalso
+    Term.aconv (MFH.unfold_defs_in_term context literal) literal andalso
+    (case nut literal of
+         MFNT.Cst (MFNT.Num 5, _, _) => true
+       | _ => false) andalso
+    same_nut (nut (Term.mk_comb (numeral, n))) (nut n) andalso
+    same_nut (nut (Term.mk_comb (bit1, n))) (nut ``(n : num) + n + 1``)
+    andalso
+    same_nut (nut (Term.mk_comb (bit2, n))) (nut ``(n : num) + n + 2``)
+    andalso
+    List.all (Lib.can nut) [numeral, bit1, bit2]
+  end
+
+val _ = require_msg (check_result mf_numeral_skeleton_translation) (fn () =>
+  "numeral skeleton unfolding or partial-application translation changed")
   (fn () => ()) ()
 
 fun mf_nut_fixed_scope () =
@@ -8467,15 +8507,22 @@ fun mf_model_certification_protocol () =
       {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
        wfs = [], sound_finitizes = true, total_consts = NONE}
   in
+    (* A genuine model reports only what the kernel established: the
+       decoded solver value 7 is untrusted and must not reach the
+       evaluation, and the reconstruction report is dropped with it.
+       computeLib cannot reduce the underspecified HD [], so the
+       certificate leaves the term as its own value. *)
     (case certified of
-         MFM.Keep {certainty = Genuine, evals = [(_, value)],
-                   cert = SOME _, ...} => Term.aconv value ``7``
+         MFM.Keep {certainty = Genuine, evals = [(term, value)],
+                   cert = SOME _, model = NONE, ...} =>
+           Term.aconv term (#1 decoded_eval) andalso
+           Term.aconv value (#1 decoded_eval)
        | _ => false) andalso
     (case discarded of MFM.Drop => true | _ => false) andalso
-    (case sound_discarded of
-         MFM.Keep {certainty = Refute_Core.Potential
-           ["certification refuted the model — please report"], ...} => true
-       | _ => false) andalso
+    (* Kernel evaluation has established that the assignment does not
+       falsify the goal, so a sound model is dropped exactly like an
+       unsound one; the soundness flag only adds the warning. *)
+    (case sound_discarded of MFM.Drop => true | _ => false) andalso
     (case fallback of
          MFM.Keep {certainty = Potential
            ["untrusted Kodkodi model; no HOL certificate",
@@ -8556,9 +8603,12 @@ fun mf_merged_type_vars_rf_certification () =
     fun assignment variable =
       (variable, if var_name variable = "y" then a2 else a1)
     val bindings = map assignment (Term.free_vars_lr original)
+    (* Certification transports the atoms the reconstruction reports for
+       the type, not a synthesized fake-atom sequence, so the fixture must
+       carry the per-type row that MFM.reconstruct produces. *)
     val reconstructed : MFM.reconstruction =
       {bindings = bindings, evals = [], skolems = [], consts = [],
-       types = [], codatatypes_ok = true}
+       types = [(ty, [a1, a2], true)], codatatypes_ok = true}
     val base : counterexample =
       {backend = "kodkod", substrate = "kodkod",
        certainty = Refute_Core.Potential [], bindings = [], evals = [],

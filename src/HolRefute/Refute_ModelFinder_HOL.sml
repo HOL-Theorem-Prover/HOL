@@ -296,8 +296,16 @@ structure Refute_ModelFinder_HOL = struct
      ({Thy = "refute", Name = "norm_frac"}, 0),
      ({Thy = "num", Name = "SUC"}, 0),
      ({Thy = "integer", Name = "Num"}, 0),
-     (* Fully formed numeral syntax is recognized directly.  Its binary
-        constructors must remain ordinary constants when partially applied. *)
+     (* HOL4 numeral syntax is recognized directly.  Keeping its binary
+        skeleton built in prevents accidental expansion to unary terms:
+        unfolding, specialization, uncurrying, boxing and axiom collection
+        all key off the built-in table, and a numeral that loses its
+        skeleton is no longer a numeral to any of them.  A skeleton
+        constructor that is not part of a fully formed numeral is expanded
+        by the nut layer instead. *)
+     ({Thy = "arithmetic", Name = "NUMERAL"}, 0),
+     ({Thy = "arithmetic", Name = "BIT1"}, 0),
+     ({Thy = "arithmetic", Name = "BIT2"}, 0),
      ({Thy = "arithmetic", Name = "ZERO"}, 0)]
 
   val num_type = Type.mk_thy_type
