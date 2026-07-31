@@ -1219,9 +1219,31 @@ structure Refute_SmartGen = struct
       List.mapPartial (fn CpsGenerate variable =>
         SOME (Term.type_of variable) | _ => NONE) premises) clauses)
 
+  (* The evaluator brackets its own definitions and cv translations in a
+     theory snapshot/revert.  Those deltas say nothing about the relations
+     enumerators were inferred from: every constant the bracket adds is
+     private and freshly named, and the revert restores the baseline
+     exactly.  Retiring the cache on them loses programs a plan has
+     already promised -- planning records an Enum, the substrate then
+     defines something, and the next substrate compiled from the same plan
+     no longer finds the program.  Deltas are only ignored between
+     [enter_private_theory] and the matching [leave_private_theory], and
+     the evaluator holds HOL's single-mutator lock across exactly that
+     span, so no user theory change can hide inside it. *)
+  val private_theory_depth = ref 0
+
+  fun enter_private_theory () =
+    synchronized_cache (fn () =>
+      private_theory_depth := !private_theory_depth + 1)
+
+  fun leave_private_theory () =
+    synchronized_cache (fn () =>
+      private_theory_depth := Int.max (0, !private_theory_depth - 1))
+
   fun invalidate_enumerator_cache _ =
     synchronized_cache (fn () =>
-      (advance_source_generation (); enumerator_cache := []))
+      if !private_theory_depth > 0 then ()
+      else (advance_source_generation (); enumerator_cache := []))
 
   val _ = Theory.register_hook
     ("Refute_SmartGen.enumerators", invalidate_enumerator_cache)

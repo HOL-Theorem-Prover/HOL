@@ -17790,6 +17790,39 @@ val _ = require_msg (check_result nested_theory_bracket_is_reentrant)
   (fn () => "a nested Refute theory bracket deadlocked or leaked")
   (fn () => ()) ()
 
+(* Planning promises an enumerator: the Enum node names a program that a
+   substrate resolves in the session cache while compiling.  A theory
+   hook retires that cache, and the evaluator's own bracket is full of
+   theory deltas -- the definitions it makes, and the deletions its
+   revert performs.  Counting those as changes to the relations the
+   programs were inferred from broke the promise: every substrate
+   compiled from the plan after the first one to define anything failed
+   with "missing top-level enumerator program". *)
+fun bracket_preserves_enumerators () =
+  let
+    val config = default_config |> Refute.upd_depth 2
+    val plan = compile_plan config ``zoo_sg_linear (n : num) ==> F``
+    val _ = if contains_enum plan then ()
+      else raise Fail "enumerator survival plan has no Enum"
+    fun compiles () =
+      case Refute_EvalCompute.compile config Exhaustive (Plans [plan]) of
+          Compiled test => (#close test (); true)
+        | Inapplicable _ => false
+    (* Inside the bracket, as when a second substrate is compiled while
+       the first still holds one open. *)
+    val during = with_clean_theory (fn () =>
+      (make_bracket_artifacts "enum_survival"; compiles ()))
+    (* And once it has closed, since the revert deletes what it defined. *)
+    val after = compiles ()
+  in
+    during andalso after
+  end
+
+val _ = tprint "Refute enumerators survive the theory bracket"
+val _ = require_msg (check_result bracket_preserves_enumerators)
+  (fn () => "the evaluator theory bracket retired a planned enumerator")
+  (fn () => ()) ()
+
 fun enum_snapshot_restoration () =
   let
     val baseline = snapshot ()

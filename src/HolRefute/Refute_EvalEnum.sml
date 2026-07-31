@@ -723,9 +723,15 @@ structure Refute_EvalEnum = struct
     else
       let
         val _ = lock_interruptibly restore_attributes theory_mutex
+        (* Everything defined from here until the revert has finished is
+           the evaluator's own, so it must not retire the enumerator
+           programs the plan being compiled refers to. *)
+        val _ = Refute_SmartGen.enter_private_theory ()
       in
         case Exn.capture open_theory_bracket () of
-            Exn.Exn error => (Mutex.unlock theory_mutex; raise error)
+            Exn.Exn error =>
+              (Refute_SmartGen.leave_private_theory ();
+               Mutex.unlock theory_mutex; raise error)
           | Exn.Res bracket =>
               (bracket_open := SOME bracket;
                bracket_owner := SOME (Thread.self ());
@@ -747,6 +753,9 @@ structure Refute_EvalEnum = struct
           case bracket of
               NONE => Exn.Res ()
             | SOME bracket => Exn.capture close_theory_bracket bracket
+        (* After the revert, not before: the deletions it performs are
+           themselves theory deltas of the evaluator's own making. *)
+        val _ = Refute_SmartGen.leave_private_theory ()
         val _ = Mutex.unlock theory_mutex
       in
         cleanup
