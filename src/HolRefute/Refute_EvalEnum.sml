@@ -747,14 +747,24 @@ structure Refute_EvalEnum = struct
                   | Exn.Res bracket =>
                       let
                         val _ = state := HeldOpen bracket
-                        val result =
-                          Exn.capture (restore_attributes build) ()
+                        (* The interruptible lock acquisition above already
+                           fixes [restore_attributes] at unit, so the built
+                           value leaves the masked region through a slot
+                           rather than as the restored call's result. *)
+                        val slot = ref NONE
+                        val result = Exn.capture
+                          (restore_attributes
+                            (fn () => slot := SOME (build ()))) ()
                       in
-                        case result of
-                            Exn.Res value =>
+                        case (result, !slot) of
+                            (Exn.Res _, SOME value) =>
                               (state := HeldReady (bracket, value); value)
-                          | Exn.Exn error =>
+                          | (Exn.Exn error, _) =>
                               (close_held_bracket held; raise error)
+                          | (Exn.Res _, NONE) =>
+                              (close_held_bracket held;
+                               raise Fail "Refute_EvalEnum.\
+                                 \start_held_bracket: no value")
                       end
               end) ()
 
@@ -769,13 +779,23 @@ structure Refute_EvalEnum = struct
               Exn.Exn error => (Mutex.unlock theory_mutex; raise error)
             | Exn.Res bracket =>
                 let
-                  val result = Exn.capture (restore_attributes body) ()
+                  (* As in [start_held_bracket]: one restore type per
+                     [uninterruptible] call, so the body's value comes back
+                     through a slot. *)
+                  val slot = ref NONE
+                  val result = Exn.capture
+                    (restore_attributes (fn () => slot := SOME (body ()))) ()
                   val cleanup = Exn.capture close_theory_bracket bracket
                   val _ = Mutex.unlock theory_mutex
                 in
-                  case result of
-                      Exn.Exn error => raise error
-                    | Exn.Res value => (Exn.release cleanup; value)
+                  case (result, !slot) of
+                      (Exn.Exn error, _) => raise error
+                    | (Exn.Res _, SOME value) =>
+                        (Exn.release cleanup; value)
+                    | (Exn.Res _, NONE) =>
+                        (Exn.release cleanup;
+                         raise Fail
+                           "Refute_EvalEnum.with_clean_theory: no value")
                 end
         end) ()
 end

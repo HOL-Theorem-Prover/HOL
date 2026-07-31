@@ -1915,7 +1915,7 @@ fun certification_copy scope types original eval_terms bindings =
                       else NONE
                   | NONE => NONE
               fun collect_atoms [] = SOME []
-                | collect (row :: rest) =
+                | collect_atoms (row :: rest) =
                     (case (atom_substitutions row, collect_atoms rest) of
                          (SOME atoms, SOME others) => SOME (atoms @ others)
                        | _ => NONE)

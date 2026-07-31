@@ -134,7 +134,7 @@ structure Refute_QC_Narrow = struct
                     (if !discarded = 0 then []
                      else [("discarded", !discarded)]) @
                     [("size", size), ("card", card), ("msec", msec)]
-                  fun one (card, size) genuine_only ignored =
+                  fun one (card, size) genuine_only ignored budget =
                     let
                       val start = Time.now ()
                       val result = #run compiled
@@ -160,24 +160,40 @@ structure Refute_QC_Narrow = struct
                                retain_replay_potential = fn potential =>
                                  replay_potential := SOME potential,
                                retry = fn go => fn ig =>
-                                 one (card, size) go ig,
+                                 spend (card, size) go ig budget,
                                retry_potential = fn go => fn ig =>
                                  (* There is no later entry at the final
                                     depth on which saved retry state could
                                     run.  Retry its remaining candidates now. *)
                                  (if size >= Int.max (0, (#size (#qc config)))
-                                  then one (card, size) go ig
+                                  then spend (card, size) go ig budget
                                   else state_for card := (go, ig)) }
                               {env = env, ground_env = ground_env,
                                case_tree = case_tree, genuine = genuine,
                                genuine_only = genuine_only,
                                ignored = ignored}
                     end
+                  (* Rejecting a candidate resumes the same schedule entry
+                     with a longer ignore list.  A substrate whose next answer
+                     the longer list still fails to suppress would retry for
+                     ever, and no scheduled depth ends that by itself once the
+                     quantified domain is infinite.  So charge every retry at
+                     one entry to a single budget, as the random driver
+                     charges its certification retries to the iteration
+                     count. *)
+                  and spend entry genuine_only ignored budget =
+                    if !budget <= 0 then
+                      QC.add_reason "narrowing retry budget exhausted" gave_up
+                    else
+                      (budget := !budget - 1;
+                       one entry genuine_only ignored budget)
                   fun run_entry (entry as (card, size)) =
                     let
                       val started = Time.now ()
                       val (genuine_only, ignored) = !(state_for card)
-                      val _ = one entry genuine_only ignored
+                      val budget = ref
+                        (QC.bounded_size (#iterations (#qc config)))
+                      val _ = one entry genuine_only ignored budget
                       val elapsed = QC.elapsed_msec started
                       val _ = Refute_Core.Private.say 2
                         ("Refute schedule entry (backend: narrowing" ^

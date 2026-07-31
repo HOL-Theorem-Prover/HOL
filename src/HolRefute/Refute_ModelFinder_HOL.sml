@@ -2036,7 +2036,7 @@ structure Refute_ModelFinder_HOL = struct
                 (changed (current ());
                  remove_harvest_binding (current ()) name)
           | TheoryDelta.NewTheory {oldseg, newseg} =>
-              (changed oldseg; changed newseg)
+              (Option.app changed oldseg; changed newseg)
           | TheoryDelta.ExportTheory theory =>
               invalidate theory
           | TheoryDelta.TheoryLoaded theory =>
@@ -2047,9 +2047,14 @@ structure Refute_ModelFinder_HOL = struct
   val _ = Theory.register_hook ("Refute_ModelFinder_HOL.harvest_db",
                                 harvest_db_hook)
 
+  (* [bin/hol run] loads no prelude, so a script can reach [load "Refute"]
+     before any theory segment exists and the kernel then has no current
+     theory at all.  Ask for it the way [Theory.get_parents] does rather
+     than through [current_theory], which raises in that state; the
+     ancestry below goes through [Graph.fringe] and needs no segment. *)
   fun theory_is_available theory =
-    theory = Theory.current_theory () orelse
-    Lib.mem theory (Theory.ancestry "-")
+    (case Thm.getCT () of SOME current => theory = current | NONE => false)
+    orelse Lib.mem theory (Theory.ancestry "-")
 
   fun primitive_constant key = Term.prim_mk_const
     {Thy = #Thy key, Name = #Name key}
@@ -2121,6 +2126,51 @@ structure Refute_ModelFinder_HOL = struct
           else raise err function "constructor result types do not agree"
         end
       val constructors = map normalize_constructor constructors
+      (* Matching the scrutinee argument below pins down only the type
+         variables occurring in it, leaving the rest of the case constant's
+         variables - the case result above all - free to be captured by
+         [result_ty]'s.  The stored [llist_CASE] has type
+         [:'b llist -> 'a -> ('b -> 'b llist -> 'a) -> 'a], so matching its
+         scrutinee against [:'a llist] collapses the case result into the
+         element type, while a freshly parsed [llist_CASE] escapes unscathed;
+         the two descriptions would then no longer be [aconv].  Rename the
+         case constant apart from [result_ty] first, then rename whatever
+         survives the match by order of first appearance, so that two
+         descriptions of one codatatype differing only in the naming of their
+         type variables still normalize to the same term.  [result_ty]'s own
+         variables stay verbatim: the shape check compares the scrutinee
+         domain against [result_ty] itself. *)
+      val reserved = Type.type_vars result_ty
+      val prefix =
+        let
+          val names = map Type.dest_vartype reserved
+          fun widen prefix =
+            if List.exists (String.isPrefix prefix) names then
+              widen (prefix ^ "a")
+            else prefix
+        in
+          widen "'a"
+        end
+      fun rename variables term =
+        let
+          fun entry (variable, (index, theta)) =
+            (index + 1,
+             {redex = variable,
+              residue = Type.mk_vartype (prefix ^ Int.toString index)} ::
+             theta)
+        in
+          Term.inst (#2 (List.foldl entry (0, []) variables)) term
+        end
+      fun appearances (ty, seen) =
+        if Type.is_vartype ty then
+          if Lib.mem ty seen then seen else seen @ [ty]
+        else
+          List.foldl appearances seen (#Args (Type.dest_thy_type ty))
+      fun surviving term =
+        List.filter (fn variable => not (Lib.mem variable reserved))
+          (appearances (Term.type_of term, []))
+      val case_const =
+        rename (Type.type_vars (Term.type_of case_const)) case_const
       val (raw_domains, _) = boolSyntax.strip_fun (Term.type_of case_const)
       val _ = if length raw_domains = length constructors + 1 then () else
         raise err function
@@ -2131,7 +2181,8 @@ structure Refute_ModelFinder_HOL = struct
           val _ = if same_type_operator (type_operator_of raw_domain) tyop
                   then () else raise Match
           val theta = Type.match_type raw_domain result_ty
-          val normalized = Term.inst theta case_const
+          val instance = Term.inst theta case_const
+          val normalized = rename (surviving instance) instance
           val (domains, case_result) = boolSyntax.strip_fun
             (Term.type_of normalized)
           val branch_tys = remove_nth index domains
@@ -2262,7 +2313,7 @@ structure Refute_ModelFinder_HOL = struct
         case builtin_codatatype_for tyop of
             SOME {case_const, constructors = builtin_constructors, ...} =>
               if Term.aconv case_const (#case_const normalized) andalso
-                 ListPair.allEq Term.aconv
+                 ListPair.allEq (fn (left, right) => Term.aconv left right)
                    (builtin_constructors, constructors) then ()
               else raise err "register_codatatype"
                 "registration disagrees with the built-in codatatype"

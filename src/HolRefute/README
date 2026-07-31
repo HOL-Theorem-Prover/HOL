@@ -101,6 +101,12 @@ Module layout:
 * Refute_Unused: unused-assumption probes and theory sweeps.
 * Refute.sig and Refute.sml: the public API facade.
 
+The `examples/` directory holds worked interactive transcripts of the whole
+user-facing surface, from first steps to the model finder and the extension
+registries; `examples/README` indexes them.  They are session transcripts
+rather than theory scripts, so Holmake does not build them; run one with
+`bin/hol --holstate=src/HolRefute/refuteheap < examples/<file>`.
+
 Model-finder surface
 --------------------
 

@@ -251,7 +251,9 @@ fun raw_problem (problem, _ : MFK.problem_metadata) = problem
    otherwise decode as empty relations. *)
 fun valid_instance (problem : KK.problem) assignments =
   let
-    val expected = List.concat (map #1 (#bounds problem))
+    (* A declared bound pairs each relation index with its printed name;
+       an instance assignment carries the index alone. *)
+    val expected = List.concat (map (map #1 o #1) (#bounds problem))
     fun member relation = List.exists (fn other => other = relation)
     fun distinct relations =
       case relations of
@@ -376,7 +378,7 @@ fun valid_instance (problem : KK.problem) assignments =
                    | NONE => false)
             | _ => false
       in
-        List.all valid_relation relations
+        List.all valid_relation (map #1 relations)
       end
     val relations = map #1 assignments
   in

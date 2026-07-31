@@ -851,7 +851,13 @@ structure Refute_Narrow = struct
            | _ => raise InvalidPath)
     | visit_examples index tree visit =
         let
-          val terms = alltermlist_of [index] ([], tree)
+          (* One prefix position is requested, so each branch carries a
+             singleton term list, exactly as [example_of] assumes. *)
+          val terms = List.map (fn (terms, residual) =>
+              case terms of
+                  [term] => (term, residual)
+                | _ => raise InvalidPath)
+            (alltermlist_of [index] ([], tree))
           fun visit_all [] = false
             | visit_all ((term, residual) :: rest) =
                 visit_examples (index + 1) residual
@@ -864,7 +870,15 @@ structure Refute_Narrow = struct
                   val ordered = rev branches
                   val example = ExExample (shape_of_tree tree,
                     map (fn (term, example, _) => (term, example)) ordered)
-                  val genuine = List.all (fn (_, _, value) => value) ordered
+                  (* Refuting an existential means refuting every value of
+                     its domain, so a domain the shape only approximates
+                     leaves the example potential however genuine each
+                     branch is.  [incomplete_false] states the same rule for
+                     the tree cache [refute_pnf] reads; an example carries
+                     its own genuineness and so must repeat it here. *)
+                  val genuine =
+                    shape_complete (shape_of_tree tree) andalso
+                    List.all (fn (_, _, value) => value) ordered
                 in
                   visit (example, genuine)
                 end
@@ -1208,7 +1222,8 @@ structure Refute_Narrow = struct
             NONE => body
           | SOME predicate => boolSyntax.mk_imp
               (Term.mk_comb (predicate, variable), body)
-      val guarded = List.foldr guard tm (Term.free_vars_lr tm)
+      val guarded = List.foldr (fn (variable, body) => guard variable body)
+        tm (Term.free_vars_lr tm)
       val (prefix, body) = pnf_of guarded
     in
       (select_engine (#allow_existentials (#qc config)) prefix,

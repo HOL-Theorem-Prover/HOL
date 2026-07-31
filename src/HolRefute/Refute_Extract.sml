@@ -771,7 +771,7 @@ structure Refute_Extract = struct
       SOME listing => listing
     | NONE =>
         let
-          val listing = computeLib.listItems (!computeLib.the_compset)
+          val listing = computeLib.listItems (computeLib.the_compset ())
           val _ = items := SOME listing
         in
           listing

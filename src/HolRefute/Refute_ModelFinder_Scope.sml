@@ -633,6 +633,11 @@ structure Refute_ModelFinder_Scope = struct
        total = total} :: constrs
     end
 
+  (* [card_of_type] reports "no exact cardinality" by raising, and a
+     cardinality too large to fit in an int by TOO_LARGE; an unassigned :num
+     reaches here through the constructor fields of any data type over it.
+     Both answers are this predicate's own [false], as they already are in
+     [MFH.bounded_card_of_type], which guards the same call. *)
   fun has_exact_card context facto finitizable_data_types
         card_assigns ty =
     let val card = MFH.card_of_type card_assigns ty
@@ -640,7 +645,8 @@ structure Refute_ModelFinder_Scope = struct
       card = MFH.bounded_exact_card_of_type context
         (if facto then finitizable_data_types else [])
         (card + 1) 0 card_assigns ty
-    end
+    end handle HOL_ERR _ => false
+             | Refute_ModelFinder_Util.TOO_LARGE _ => false
 
   fun data_type_spec_from_scope_descriptor context binarize deep_data_types
         finitizable_data_types (desc as (card_assigns, _)) (ty, card) =

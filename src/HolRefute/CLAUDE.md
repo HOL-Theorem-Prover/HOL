@@ -75,4 +75,7 @@ This file provides guidance to coding agents when working with the HolRefute pro
   under `Holmake` at level >= 2 only, never from `selftest.exe`.
 - Don't validate by piping `.sml` into `bin/hol`; the harness only sees
   `selftest.sml`.
+- `examples/` are interactive transcripts, not tests: Holmake ignores them,
+  so a behaviour change means re-running each by hand
+  (`bin/hol --holstate=refuteheap < examples/<file>`) and fixing the prose.
 - Quality gate: `HOLSELFTESTLEVEL=2 Holmake` in `src/HolRefute/`.

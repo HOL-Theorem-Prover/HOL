@@ -1,4 +1,9 @@
-INCLUDES = $(HOLDIR)/src/portableML/poly/concurrent ../n-bit ../sort \
+# Multithreading, Future, Timeout and ParList come from
+# src/portableML/poly/concurrent, which the kernel band builds with
+# --poly_not_hol and links into sigobj.  Naming it in INCLUDES would make
+# Holmake rebuild it here with the overlay in scope, and the resulting
+# Sref -> Overlay dependency breaks the next kernel bootstrap in src/bool.
+INCLUDES = ../n-bit ../sort \
            ../real ../coalgebras ../finite_maps \
            ../pred_set/src/more_theories \
            $(HOLDIR)/src/num/theories/cv_compute \

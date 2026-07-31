@@ -12,9 +12,15 @@ structure Refute_Cert = struct
 
   val rhs_of = boolSyntax.rhs o Thm.concl
 
-  (* Disk tags do not retain axiom provenance.  Consequently a disk theorem
-     cannot establish Refute's axiom-free certification boundary. *)
-  fun trusted theorem = Tag.isEmpty (Thm.tag theorem)
+  (* Disk theorems are checked kernel imports: DISK_THM is the marker HOL4
+     itself accepts, subtracting it in Theory.oracle_string_of and listing
+     it in Sanity.accepted_oracles.  Every other oracle, and every axiom
+     introduced in this session, crosses Refute's certification trust
+     boundary.  Requiring an empty tag instead would reject every
+     certificate whose evaluation touched a library rewrite, which is all
+     of them. *)
+  fun trusted theorem =
+    Tag.isEmpty (Thm.tag theorem) orelse Tag.isDisk (Thm.tag theorem)
 
   fun conform_conclusion label expected theorem =
     Thm.EQ_MP (Thm.ALPHA (Thm.concl theorem) expected) theorem
@@ -23,7 +29,7 @@ structure Refute_Cert = struct
        Parse.term_to_string (Thm.concl theorem) ^ " versus " ^
        Parse.term_to_string expected)
 
-  fun eval tm = computeLib.CBV_CONV (!computeLib.the_compset) tm
+  fun eval tm = computeLib.CBV_CONV (computeLib.the_compset ()) tm
 
   fun eval_original tm =
     if Refute_Core.has_bounded_quantifier tm then

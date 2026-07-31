@@ -1187,8 +1187,10 @@ structure Refute_QC = struct
               case body_result of
                   Exn.Exn error =>
                     (ignore close_result; Exn.reraise error)
-                | Exn.Res _ => Exn.release close_result before
-                    Exn.release body_result
+                  (* Surface a close failure even on a successful search,
+                     then hand back the search's own outcome. *)
+                | Exn.Res _ =>
+                    (Exn.release close_result; Exn.release body_result)
             end
     end
 

@@ -110,11 +110,14 @@ structure Refute_EvalSML = struct
            remove () before Mutex.unlock table_mutex)) ()
     end
 
+  (* [restore] is fixed at unit by the interruptible lock acquisition, so
+     the action's value leaves the masked region through a slot. *)
   fun with_term_tables serial action =
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>
         let
           val _ = lock_interruptibly restore table_mutex
+          val slot = ref NONE
           val result = Exn.capture (fn () =>
             let
               val (_, constructor_table, term_table) =
@@ -125,15 +128,19 @@ structure Refute_EvalSML = struct
               val action_result = Exn.capture (restore (fn () =>
                 (constructors := constructor_table;
                  raw_terms := term_table;
-                 action ()))) ()
+                 slot := SOME (action ())))) ()
               val _ = constructors := old_constructors
               val _ = raw_terms := old_terms
             in
               Exn.release action_result
             end) ()
           val _ = Mutex.unlock table_mutex
+          val _ = Exn.release result
         in
-          Exn.release result
+          case !slot of
+              SOME value => value
+            | NONE => raise Fail
+                "Refute_EvalSML.with_term_tables: no value"
         end) ()
 
   fun wrap_reconstruction serial rebuild () =
@@ -326,21 +333,26 @@ structure Refute_EvalSML = struct
           val _ = lock_interruptibly restore compiler_mutex
           val old_dispatch = !installed_dispatch
           val _ = installed_dispatch := NONE
+          (* The lock acquisition above fixes [restore] at unit, so the
+             compiler's diagnosis comes back through a slot. *)
+          val slot = ref NONE
           val result = Exn.capture (restore (fn () =>
-            compiler_errors source entry)) ()
+            slot := SOME (compiler_errors source entry))) ()
           val answer =
-            case result of
-                Exn.Res NONE =>
+            case (result, !slot) of
+                (Exn.Res _, SOME NONE) =>
                   (case !installed_dispatch of
                        SOME dispatch => Installed dispatch
                      | NONE => CompileError
                          ["generated code did not install its dispatch"])
-              | Exn.Res (SOME errors) => CompileError errors
-              | Exn.Exn Interrupt =>
+              | (Exn.Res _, SOME (SOME errors)) => CompileError errors
+              | (Exn.Res _, NONE) =>
+                  CompileError ["compilation reported no diagnosis"]
+              | (Exn.Exn Interrupt, _) =>
                   (installed_dispatch := old_dispatch;
                    Mutex.unlock compiler_mutex;
                    raise Interrupt)
-              | Exn.Exn error => CompileError [exception_text error]
+              | (Exn.Exn error, _) => CompileError [exception_text error]
           val _ =
             (case answer of
                  Installed _ => ()
@@ -373,12 +385,20 @@ structure Refute_EvalSML = struct
           val old_filter = !ignored_filter
           val _ = deadline := SOME limit
           val _ = ignored_filter := ignored_hit run_depth ignored
-          val result = Exn.capture (restore action) ()
+          (* One restore type per [uninterruptible] call: the action's answer
+             travels through a slot, as in [with_term_tables]. *)
+          val slot = ref NONE
+          val result = Exn.capture
+            (restore (fn () => slot := SOME (action ()))) ()
           val _ = deadline := old_deadline
           val _ = ignored_filter := old_filter
           val _ = Mutex.unlock native_mutex
+          val _ = Exn.release result
         in
-          Exn.release result
+          case !slot of
+              SOME value => value
+            | NONE => raise Fail
+                "Refute_EvalSML.with_native_hooks: no value"
         end) ()
 
   fun positive_time time = Time.compare (time, Time.zeroTime) = GREATER
@@ -495,12 +515,20 @@ structure Refute_EvalSML = struct
       (fn restore => fn () =>
         let
           val _ = lock_interruptibly restore goal_compile_mutex
+          (* One restore type per [uninterruptible] call: the compilation
+             result travels through a slot, as in [with_term_tables]. *)
+          val slot = ref NONE
           val result = Exn.capture
-            (restore
-              (fn () => compile_locked extract config strategy problem)) ()
+            (restore (fn () =>
+              slot := SOME
+                (compile_locked extract config strategy problem))) ()
           val _ = Mutex.unlock goal_compile_mutex
+          val _ = Exn.release result
         in
-          Exn.release result
+          case !slot of
+              SOME value => value
+            | NONE => raise Fail
+                "Refute_EvalSML.compile_problem: no value"
         end) ()
 
   fun compile_with extract config strategy problem =

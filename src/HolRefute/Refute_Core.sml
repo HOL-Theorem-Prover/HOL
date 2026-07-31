@@ -804,7 +804,7 @@ structure Refute_Core = struct
 
   fun nonexecutable_constants terms =
     let
-      val comp_items = computeLib.listItems (!computeLib.the_compset)
+      val comp_items = computeLib.listItems (computeLib.the_compset ())
       val executable_keys =
         List.foldl (fn ((key, transforms), keys) =>
           if null transforms then keys else Redblackset.add (keys, key))
@@ -1630,7 +1630,7 @@ structure Refute_Core = struct
             case #backends cfg of
                 NONE => []
               | SOME names => List.filter (fn name =>
-                  Option.isNone (lookup_backend name)) names
+                  not (Option.isSome (lookup_backend name))) names
         in
           if not (null unknown) then
             Unknown (map (fn name => "unknown requested backend: " ^ name)

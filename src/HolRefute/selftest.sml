@@ -25,12 +25,30 @@ open Refute_QC
 open Refute_Core
 open cv_transLib
 
+(* selftest.exe runs under `bin/hol run`, which loads no prelude and so
+   leaves the kernel with no theory segment at all.  The Hol_reln and
+   Define calls below need one; open the same scratch segment that
+   tools-poly/prelude.ML opens for the interactive REPL. *)
+val _ = Thm.setCT "scratch"
+
 (* cv_std loads ratTheory, whose parser preference would otherwise make
    unannotated selftest numerals rationals. *)
 val _ = numLib.prefer_num ()
 
 val erc = ref 0
 val _ = diemode := Remember erc
+
+(* [testutils.timed] guards the function it runs, but not the predicate it
+   then applies, and the idiom used throughout this file does its work in
+   the predicate: [require_msg (check_result f) msg (fn () => ()) ()].  An
+   unexpected exception there escapes [Remember] and aborts the whole file,
+   hiding every later test.  Shadow [check_result] so a raising predicate
+   is one failed test, reporting what it raised, and the run goes on. *)
+fun check_result P =
+  testutils.check_result (fn r =>
+    P r handle Interrupt => raise Interrupt
+             | e => (print ("\n  raised: " ^ General.exnMessage e ^ "\n");
+                     false))
 
 val selftest_level =
   case OS.Process.getEnv "HOLSELFTESTLEVEL" of
@@ -11644,14 +11662,14 @@ val _ = check_gen "rf3" (fn GenEnum values => length values = 3 | _ => false)
 
 fun list_shape () =
   case datatype_info (spec_of ``:'a list``) of
-    SOME {constrs, recursive, min_size, family} =>
+    SOME {constrs, recursive, min_size, family, ...} =>
       length constrs = 2 andalso recursive = [[], [false, true]] andalso
       min_size = [[], [0, 1]] andalso length family = 1
   | NONE => false
 
 fun option_shape () =
   case datatype_info (spec_of ``:'a option``) of
-    SOME {constrs, recursive, min_size, family} =>
+    SOME {constrs, recursive, min_size, family, ...} =>
       length constrs = 2 andalso recursive = [[], [false]] andalso
       min_size = [[], [0]] andalso length family = 1
   | NONE => false
@@ -12285,7 +12303,7 @@ val _ = require_msg
 
 fun compile_extracted_tests strategy plans =
   let
-    val {source, entry} =
+    val {source, entry, ...} =
       Refute_Extract.extract_tests default_config strategy plans
   in
     case Refute_EvalSML.compile_install source entry of
@@ -13528,7 +13546,7 @@ val _ = require_msg (check_result (fn () =>
 
 fun eval_rhs tm =
   let
-    val theorem = computeLib.CBV_CONV (!computeLib.the_compset) tm
+    val theorem = computeLib.CBV_CONV (computeLib.the_compset ()) tm
   in
     #2 (boolSyntax.dest_eq (Thm.concl theorem))
   end
@@ -14474,6 +14492,16 @@ val _ = require_msg
   "the smart gate did not reuse its higher-priority custom compilation")
   (fn () => ()) ()
 
+(* The QC tests below enter the pipeline underneath [refute_problem], which
+   is where production installs the dynamically scoped call token that keys
+   the smart-gate compilation cache.  Mint one here and release the run
+   resources on the way out exactly as [refute_problem] does: a cache entry
+   left behind under a token nobody releases can never be found again, and
+   each one strands an unclosed [compiled_test]. *)
+fun in_refute_call body =
+  Thread_Data.setmp Refute_Core.active_refute_context (SOME (ref ()))
+    (Portable.finally Refute_Core.release_run_resources body) ()
+
 fun qc_problem goal : problem = {goal = goal, assumptions = [], evals = []}
 
 fun qc_instances config goal = preprocess config (qc_problem goal)
@@ -14483,7 +14511,8 @@ fun exhaustive config goal =
     val instances = qc_instances config goal
     val reasons = instance_gate_reasons instances
   in
-    if null reasons then strategy_run Exhaustive config instances
+    if null reasons then
+      in_refute_call (fn () => strategy_run Exhaustive config instances)
     else Unknown reasons
   end
 
@@ -14493,12 +14522,12 @@ fun has_binding predicate (Counterexample (cex :: _)) =
 
 fun smartgen_native_end_to_end () =
   let
-    val saved = !computeLib.the_compset
-    fun restore () = computeLib.the_compset := saved
+    val saved = computeLib.the_compset ()
+    fun restore () = computeLib.put_compset saved
     fun body () =
       let
-        val _ = computeLib.the_compset :=
-          computeLib.add_thms [zoo_sg_linear_compute] saved
+        val _ = computeLib.put_compset
+          (computeLib.add_thms [zoo_sg_linear_compute] saved)
         fun run depth = exhaustive
           (default_config
            |> Refute.upd_backends (SOME ["exhaustive"])
@@ -14572,12 +14601,12 @@ val _ = tprint "Refute SmartGen smart-payoff pins"
 
 fun smartgen_hol_reln_payoff () =
   let
-    val saved = !computeLib.the_compset
-    fun restore () = computeLib.the_compset := saved
+    val saved = computeLib.the_compset ()
+    fun restore () = computeLib.put_compset saved
     fun body () =
       let
-        val _ = computeLib.the_compset :=
-          computeLib.add_thms [zoo_sg_linear_compute] saved
+        val _ = computeLib.put_compset
+          (computeLib.add_thms [zoo_sg_linear_compute] saved)
         val goal = smartgen_linear_goal
         val config = default_config
           |> Refute.upd_backends (SOME ["exhaustive"])
@@ -14629,12 +14658,12 @@ val _ = require_msg (check_result smartgen_horn_payoff) (fn () =>
 
 fun smartgen_native_matches_duplicate_outputs () =
   let
-    val saved = !computeLib.the_compset
-    fun restore () = computeLib.the_compset := saved
+    val saved = computeLib.the_compset ()
+    fun restore () = computeLib.put_compset saved
     fun body () =
       let
-        val _ = computeLib.the_compset :=
-          computeLib.add_thms [zoo_sg_duplicate_compute] saved
+        val _ = computeLib.put_compset
+          (computeLib.add_thms [zoo_sg_duplicate_compute] saved)
         val result = exhaustive
           (default_config
            |> Refute.upd_backends (SOME ["exhaustive"])
@@ -14753,8 +14782,9 @@ fun smartgen_preflight_interrupt_propagates () =
     val tables_before = term_table_count ()
     fun interrupting_preflight _ _ _ _ = raise Interrupt
     val gate_interrupt =
-      ((ignore (smart_gate_override_with interrupting_preflight config
-          [instance]); false)
+      ((ignore (in_refute_call (fn () =>
+          smart_gate_override_with interrupting_preflight config
+            [instance])); false)
        handle Interrupt => true)
   in
     gate_interrupt andalso term_table_count () = tables_before
@@ -15127,8 +15157,8 @@ fun pnf_seam_dispatches_only_to_native () =
     val compute = named "compute"
     val explicit_cv = upd_substrate Cv default_config
     val goal = ``?b : bool. b /\ ~b``
-    val cv_result = Refute_QC_Narrow.run explicit_cv
-      (qc_instances explicit_cv goal)
+    val cv_result = in_refute_call (fn () =>
+      Refute_QC_Narrow.run explicit_cv (qc_instances explicit_cv goal))
   in
     #accepts native problem andalso
     not (#accepts cv problem) andalso
@@ -15151,7 +15181,7 @@ fun explicit_cv_is_available strategy =
     val config = upd_substrate Cv default_config
     val instances = qc_instances config ``T``
   in
-    case strategy_run strategy config instances of
+    case in_refute_call (fn () => strategy_run strategy config instances) of
         NoCounterexample => true
       | _ => false
   end
@@ -15165,9 +15195,10 @@ val _ = require_msg (check_result (fn () =>
 fun run_with_strategy strategy config goal =
   let val instances = qc_instances config goal
   in
-    case strategy of
-        Narrowing => Refute_QC_Narrow.run config instances
-      | _ => strategy_run strategy config instances
+    in_refute_call (fn () =>
+      case strategy of
+          Narrowing => Refute_QC_Narrow.run config instances
+        | _ => strategy_run strategy config instances)
   end
 
 fun selected_substrate expected result =
@@ -15187,7 +15218,7 @@ fun renamed_narrowing_uses_typed_certification_path () =
     fun display Narrowing = "renamed-narrowing"
       | display Exhaustive = "renamed-exhaustive"
       | display (Random _) = "renamed-random"
-    val _ = record_candidate_with display
+    val _ = in_refute_call (fn () => record_candidate_with display
       {config = default_config, strategy = Narrowing, substrate = "stub",
        instance = instance, stats = [], counterexamples = counterexamples,
        discarded = discarded, run_depth = SOME 0, pnf_prefix = SOME [],
@@ -15195,7 +15226,7 @@ fun renamed_narrowing_uses_typed_certification_path () =
        retry = fn _ => fn _ => (),
        retry_potential = fn _ => fn _ => ()}
       {env = [], ground_env = NONE, case_tree = SOME CaseLeaf,
-       genuine = false, genuine_only = false, ignored = []}
+       genuine = false, genuine_only = false, ignored = []})
   in
     case !counterexamples of
         [{backend = "renamed-narrowing", certainty = Genuine,
@@ -15685,6 +15716,26 @@ fun narrowing_true_existential_finitization_is_sound () =
     both 3 product_ffun
   end
 
+(* Every goal here is true, so nothing under the universal prefix may be
+   reported.  Narrowing does refute the existential at each scheduled depth,
+   but only over the numerals that depth enumerates, so the universal witness
+   it then selects rests on an approximation and stays potential.  The
+   certification opt-out has no say in that: the approximation is the
+   search's, not the certifier's. *)
+fun narrowing_true_forall_existential_is_sound () =
+  let
+    val numeric_successor = ``!x : num. ?y. y = SUC x``
+    val numeric_pair = ``!p : num # num. ?n. n = SUC (FST p + SND p)``
+    val numeric_list = ``!xs : num list. ?ys. ys = 0 :: xs``
+    fun both goal =
+      narrowing_finitization_never_genuine true 2 goal andalso
+      narrowing_finitization_never_genuine false 2 goal
+  in
+    both numeric_successor andalso
+    both numeric_pair andalso
+    both numeric_list
+  end
+
 fun narrowing_incomplete_domain_can_be_certified () =
   let
     val native = valOf (List.find (fn substrate =>
@@ -15962,6 +16013,11 @@ val _ = require_msg
   (check_result narrowing_true_existential_finitization_is_sound)
   (fn () =>
     "a true existential became Genuine from function finitization")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result narrowing_true_forall_existential_is_sound)
+  (fn () =>
+    "a true forall-exists goal became Genuine from a numeric approximation")
   (fn () => ()) ()
 val _ = require_msg
   (check_result narrowing_incomplete_domain_can_be_certified)
@@ -16536,6 +16592,25 @@ val _ = require_msg
   "an explicit inapplicable substrate fell back or lost its reason")
   (fn () => ()) ()
 
+(* The custom and abstract registries are disjoint, so a refusal that names
+   both leaves the user guessing which registration to go and look for. *)
+fun cv_names_the_registry_that_refused () =
+  let
+    fun refused fragment goal =
+      reason_contains ("cv: " ^ fragment)
+        (run_with_strategy Exhaustive (upd_substrate Cv default_config) goal)
+  in
+    refused ":rg_record - abstract generator registered"
+      auto_custom_goal andalso
+    refused ":rg_custom_matrix - custom generator registered"
+      ``(x : rg_custom_matrix) = RGCustomA``
+  end
+
+val _ = require_msg
+  (check_result cv_names_the_registry_that_refused) (fn () =>
+  "cv did not name the registry that refused the type")
+  (fn () => ()) ()
+
 fun capture_refute_messages level action =
   let
     val chunks = ref ([] : string list)
@@ -17080,12 +17155,12 @@ val _ = require_msg
 
 fun smartgen_random_plan_is_unchanged () =
   let
-    val saved = !computeLib.the_compset
-    fun restore () = computeLib.the_compset := saved
+    val saved = computeLib.the_compset ()
+    fun restore () = computeLib.put_compset saved
     fun body () =
       let
-        val _ = computeLib.the_compset :=
-          computeLib.add_thms [zoo_sg_linear_compute] saved
+        val _ = computeLib.put_compset
+          (computeLib.add_thms [zoo_sg_linear_compute] saved)
         val config = default_config
           |> upd_backends (SOME ["random"])
           |> upd_substrate NativeSML
@@ -17172,7 +17247,8 @@ fun gave_up_reason_is_plumbed () =
     val config = upd_substrate Compute default_config
     val instances = qc_instances config ``T``
     val _ = register_substrate replacement
-    val result = strategy_run Exhaustive config instances
+    val result =
+      in_refute_call (fn () => strategy_run Exhaustive config instances)
       handle e => (register_substrate original; raise e)
     val _ = register_substrate original
   in
@@ -17224,7 +17300,8 @@ fun random config goal =
     val reasons = instance_gate_reasons instances
   in
     if null reasons then
-      strategy_run (Random {seed = strategy_seed config}) config instances
+      in_refute_call (fn () =>
+        strategy_run (Random {seed = strategy_seed config}) config instances)
     else Unknown reasons
   end
 
@@ -17542,7 +17619,8 @@ fun enum_post_definition_failures_are_clean () =
           let
             val _ = hook := SOME fail
           in
-            ((ignore (strategy_run Exhaustive config instances); false)
+            ((ignore (in_refute_call (fn () =>
+                strategy_run Exhaustive config instances)); false)
              handle ForcedEnumPostDefinitionFailure => true)
           end
         val raised = Portable.finally restore_hook body ()
@@ -17713,7 +17791,8 @@ fun cv_result strategy choice goal =
       val instances = qc_instances config goal
       val reasons = instance_gate_reasons instances
     in
-      if null reasons then strategy_run strategy config instances
+      if null reasons then
+        in_refute_call (fn () => strategy_run strategy config instances)
       else Unknown reasons
     end
   end
@@ -21484,9 +21563,9 @@ val mf_differential_cases : mf_differential_case list =
 
 fun with_temporary_compute_thms thms body =
   let
-    val saved = !computeLib.the_compset
-    fun restore () = computeLib.the_compset := saved
-    val _ = computeLib.the_compset := computeLib.add_thms thms saved
+    val saved = computeLib.the_compset ()
+    fun restore () = computeLib.put_compset saved
+    val _ = computeLib.put_compset (computeLib.add_thms thms saved)
   in
     Portable.finally restore body ()
   end
