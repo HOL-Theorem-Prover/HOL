@@ -11954,10 +11954,10 @@ fun extraction_source_goldens () =
     val strict = #source (Refute_Extract.extract_term term)
     val lazy = #source (Refute_Extract.extract_lazy_term term)
   in
-    size strict = 3359 andalso
-    Portable.md5sum strict = "2st9tl2nIi5zdsWzJ3CKlg" andalso
-    size lazy = 3964 andalso
-    Portable.md5sum lazy = "DPOY0pGp/J+ylkzsGVK28g"
+    size strict = 3461 andalso
+    Portable.md5sum strict = "0aQ7JlTfK5mqqnodKFuVQw" andalso
+    size lazy = 4157 andalso
+    Portable.md5sum lazy = "vD3SxDOApV79pF0Iyl9hNg"
   end
 
 val _ = tprint "Refute extraction type and constant layers"
@@ -12030,6 +12030,19 @@ fun extracted_missing_clause_is_match () =
 
 val _ = require_msg (check_result extracted_missing_clause_is_match) (fn () =>
   "an extracted inexhaustive function did not raise Match")
+  (fn () => ()) ()
+
+(* Strict extraction keeps lists, options and pairs in their native SML
+   representations, so a definition matching on their constructors has no
+   generated datatype for the observation matcher to look up. *)
+fun extracted_native_constructor_patterns () =
+  compile_extracted
+    ``~rx_nested_false (SOME (SOME T)) /\ rx_zero_pair (0, 5) /\
+      rx_sum [1; 2] = 3``
+
+val _ = require_msg (check_result extracted_native_constructor_patterns)
+  (fn () =>
+    "a strict list, option or pair constructor pattern was not extractable")
   (fn () => ()) ()
 
 val _ = tprint "Refute lazy extraction"
@@ -12711,6 +12724,19 @@ val _ = require_msg (check_result (fn () =>
      not (String.isSubstring "eq_refute_" source) end)) (fn () =>
   "type-only extraction emitted unnecessary structural equality")
   (fn () => ()) ()
+
+(* Describing a function type must not drag in structural equality: an
+   arrow equality has to enumerate its domain, so emitting one per
+   registered type rejects types that extract perfectly well. *)
+val _ = require_msg (check_result (fn () =>
+  #ml_type (Refute_Extract.compile_type ``:num -> num``) =
+  "(IntInf.int -> IntInf.int)")) (fn () =>
+  "type-only extraction rejected a function type") (fn () => ()) ()
+
+(* A type variable prints as an SML type variable, quote included. *)
+val _ = require_msg (check_result (fn () =>
+  #ml_type (Refute_Extract.compile_type ``:'a``) = "'a")) (fn () =>
+  "type-only extraction mangled a type variable") (fn () => ()) ()
 
 val _ = require_msg (check_result (fn () =>
   case cached_spec ``:refute$rf3`` of NONE => true | SOME _ => false))

@@ -69,8 +69,25 @@ structure Refute_Extract = struct
       fix_reserved ("v_" ^ String.concat (map clean (String.explode name)))
     end
 
-  fun upper_name name = "C_" ^ clean_name name
-  fun lower_name name = "f_" ^ clean_name name
+  (* Generated datatype constructors, generated functions and SML type
+     variables carry no HOL binding, so they need legal characters rather
+     than injectivity: a fresh serial already separates the names Refute
+     mints, and escaping them only makes the emitted source unreadable. *)
+  fun sanitize_name name =
+    let
+      fun clean character =
+        if Char.isAlphaNum character orelse character = #"_" orelse
+           character = #"'" then character
+        else #"_"
+      val cleaned = String.map clean name
+    in
+      if cleaned = "" then "x"
+      else if Char.isDigit (String.sub (cleaned, 0)) then "x_" ^ cleaned
+      else fix_reserved cleaned
+    end
+
+  fun upper_name name = "C_" ^ sanitize_name name
+  fun lower_name name = "f_" ^ sanitize_name name
 
   fun same_term left right = Term.compare (left, right) = EQUAL
 
@@ -212,7 +229,9 @@ structure Refute_Extract = struct
           (fn () => SOME strict) (fn () => NONE)
     in
       if Type.is_vartype ty then
-        SOME (wrap_type (MLVar (clean_name (Type.dest_vartype ty))))
+        (* [MLVar] prints as an SML type variable, so its leading quote must
+           survive; the binder escaping would turn ['a] into a value id. *)
+        SOME (wrap_type (MLVar (sanitize_name (Type.dest_vartype ty))))
       else if Util.same_type ty Type.bool then SOME (wrap_type MLBool)
       else if Util.same_type ty numSyntax.num then SOME (wrap_type MLIntInf)
       else if Util.same_type ty intSyntax.int_ty then SOME (wrap_type MLIntInf)
@@ -626,19 +645,18 @@ structure Refute_Extract = struct
           | first :: rest =>
               join "\n" (one "fun" first :: List.map (one "and") rest) ^
               "\n"
-      fun strict () = declarations (rev (!(#types context)))
-      fun lazy () =
-        let
-          val _ = discover []
-          val requested = !(#equalities context)
-          val types = List.filter (fn (ty, _, _) =>
-            Util.member_type ty requested)
-            (rev (!(#types context)))
-        in
-          declarations types
-        end
+      (* Only a requested equality is declared, in either mode.  Emitting one
+         per registered type would make a representation-only compilation,
+         or any compilation that merely mentions a function type, fail on an
+         equality nobody asked for: [equality_body] on an arrow has to
+         enumerate its domain. *)
+      val _ = discover []
+      val requested = !(#equalities context)
+      val types = List.filter (fn (ty, _, _) =>
+        Util.member_type ty requested)
+        (rev (!(#types context)))
     in
-      choose (context_mode context) strict lazy
+      declarations types
     end
 
   val prelude =
@@ -2124,21 +2142,41 @@ structure Refute_Extract = struct
                  | _ => reject "malformed lazy SUC pattern")
             else if Term.is_const head andalso TypeBase.is_constructor head then
               let
-                val (_, _, constructor) =
-                  case constructor_for context head of
-                      SOME found => found
-                    | NONE => reject ("unknown lazy pattern constructor " ^
-                                      kname_text (kname head))
                 val children = List.map (fn _ =>
                   fresh_pattern context "refute_lazy_field_") arguments
-                fun payload [] = constructor
-                  | payload [child] = constructor ^ " " ^ child
-                  | payload fields = constructor ^ " (" ^
-                      join ", " fields ^ ")"
+                (* Strict extraction keeps lists, options and pairs in their
+                   native SML representations, so those constructors have no
+                   generated datatype to look up.  Observe them through the
+                   patterns the strict expression compiler emits; only the
+                   lazy representation makes every type a datatype. *)
+                fun native () =
+                  case (kname head, children) of
+                      (("list", "NIL"), []) => SOME "[]"
+                    | (("list", "CONS"), [first, rest]) =>
+                        SOME (parens (first ^ " :: " ^ rest))
+                    | (("option", "NONE"), []) => SOME "NONE"
+                    | (("option", "SOME"), [child]) => SOME ("SOME " ^ child)
+                    | (("pair", ","), [left, right]) =>
+                        SOME (parens (left ^ ", " ^ right))
+                    | _ => NONE
+                fun generated () =
+                  case constructor_for context head of
+                      SOME (_, _, constructor) =>
+                        (case children of
+                             [] => constructor
+                           | [child] => constructor ^ " " ^ child
+                           | fields => constructor ^ " (" ^
+                               join ", " fields ^ ")")
+                    | NONE => reject ("unknown lazy pattern constructor " ^
+                                      kname_text (kname head))
+                val payload =
+                  case choose (context_mode context) native (fn () => NONE) of
+                      SOME text => text
+                    | NONE => generated ()
                 val body = match_children bound arguments children
               in
                 parens ("case " ^ force matched ^ " of " ^
-                  payload children ^ " => " ^ body ^ " | _ => " ^ failure)
+                  payload ^ " => " ^ body ^ " | _ => " ^ failure)
               end
             else
               reject ("unsupported lazy pattern: " ^
