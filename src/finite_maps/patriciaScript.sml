@@ -1295,4 +1295,35 @@ Theorem PTREE_OF_NUMSET_RWT:
 Proof SRW_TAC [] [PTREE_OF_NUMSET_UNION, PTREE_OF_NUMSET_INSERT]
 QED
 
+Theorem DEPTH_ADD_THM:
+  (c1 = t) /\ (patricia$ADD t (k,d) = c2) ==> (patricia$ADD c1 (k,d) = c2)
+Proof SRW_TAC [] []
+QED
+
+Theorem DEPTH_REMOVE_THM:
+  (c1 = t) /\ (patricia$REMOVE t k = c2) ==> (patricia$REMOVE c1 k = c2)
+Proof SRW_TAC [] []
+QED
+
+Theorem DEPTH_INSERT_PTREE_THM:
+  (c1 = t) /\ (patricia$INSERT_PTREE k t = c2) ==>
+              (patricia$INSERT_PTREE k c1 = c2)
+Proof SRW_TAC [] []
+QED
+
+Theorem DEPTH_PEEK_THM:
+  (c1 = t) /\ (patricia$PEEK t k = c2) ==> (patricia$PEEK c1 k = c2)
+Proof SRW_TAC [] []
+QED
+
+Theorem DEPTH_ARI_CONG:
+  !f. (c1 = t) /\ (f k t = c2) ==> (f k c1 = c2)
+Proof SRW_TAC [] []
+QED
+
+Theorem DEPTH_CONG:
+  !f. (c1 = t) /\ (f t = c2) ==> (f c1 = c2)
+Proof SRW_TAC [] []
+QED
+
 (* ------------------------------------------------------------------------- *)

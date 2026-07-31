@@ -712,18 +712,9 @@ fun PTREE_OF_NUMSET_CONV tm =
 (* Conversion for applications of ADD, REMOVE and INSERT_PTREE (ARI)         *)
 (* ------------------------------------------------------------------------- *)
 
-val DEPTH_ADD_THM = Q.prove(
-   `(c1 = t) /\ (patricia$ADD t (k,d) = c2) ==> (patricia$ADD c1 (k,d) = c2)`,
-   SRW_TAC [] [])
-
-val DEPTH_REMOVE_THM = Q.prove(
-   `(c1 = t) /\ (patricia$REMOVE t k = c2) ==> (patricia$REMOVE c1 k = c2)`,
-   SRW_TAC [] [])
-
-val DEPTH_INSERT_PTREE_THM = Q.prove(
-   `(c1 = t) /\ (patricia$INSERT_PTREE k t = c2) ==>
-                (patricia$INSERT_PTREE k c1 = c2)`,
-   SRW_TAC [] [])
+val DEPTH_ADD_THM = patriciaTheory.DEPTH_ADD_THM
+val DEPTH_REMOVE_THM = patriciaTheory.DEPTH_REMOVE_THM
+val DEPTH_INSERT_PTREE_THM = patriciaTheory.DEPTH_INSERT_PTREE_THM
 
 fun DEPTH_ARI_CONV rwt tm =
    REWR_CONV rwt tm
@@ -946,9 +937,7 @@ fun PTREE_ARI_CONV tm =
             | NONE => create_ptree_definition (const_variant tm) tm
    end
 
-val DEPTH_PEEK_THM = Q.prove(
-   `(c1 = t) /\ (patricia$PEEK t k = c2) ==> (patricia$PEEK c1 k = c2)`,
-   SRW_TAC [] [])
+val DEPTH_PEEK_THM = patriciaTheory.DEPTH_PEEK_THM
 
 fun PTREE_PEEK_ARI_CONV tm =
    let
@@ -977,9 +966,7 @@ fun mk_ptree_conv2 dest mk conv d_thm tm =
       else conv tm
    end
 
-val thm = Q.prove(
-   `!f. (c1 = t) /\ (f k t = c2) ==> (f k c1 = c2)`,
-   SRW_TAC [] [])
+val thm = patriciaTheory.DEPTH_ARI_CONG
 
 val PTREE_IN_PTREE_ARI_CONV =
    mk_ptree_conv2 dest_in_ptree mk_in_ptree PTREE_IN_PTREE_CONV
@@ -993,9 +980,7 @@ val PTREE_EXISTS_LEAF_ARI_CONV =
    mk_ptree_conv2 dest_exists_leaf mk_exists_leaf (PTREE_EXISTS_LEAF_CONV EVAL)
      (Drule.ISPEC patriciaSyntax.exists_leaf_tm thm)
 
-val thm = Q.prove(
-   `!f. (c1 = t) /\ (f t = c2) ==> (f c1 = c2)`,
-   SRW_TAC [] [])
+val thm = patriciaTheory.DEPTH_CONG
 
 fun mk_ptree_conv dest mk conv d_thm tm =
    let
