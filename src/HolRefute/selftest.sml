@@ -11639,7 +11639,25 @@ val _ = register_backend_with_ceiling race_slow_quasi_backend
 val _ = register_backend merge_low_backend
 val _ = register_backend merge_high_backend
 
-fun potential_does_not_interrupt_genuine () =
+(* A losing backend can only be outrun where there is a second worker to
+   outrun it on.  [Multithreading.max_threads] is one in any session that
+   was not given [--mt], which is how `bin/hol run selftest` starts, and
+   [ParList.get_some] then degrades to a sequential walk.  The stubs below
+   have the genuine one wait for the potential one to start, so under that
+   degradation it can only burn the backend timeout and report nothing. *)
+fun with_raced_backends body =
+  let
+    val saved_threads = Multithreading.max_threads ()
+  in
+    Portable.finally
+      (fn () => Multithreading.max_threads_update saved_threads)
+      (fn () =>
+        (Multithreading.max_threads_update (Int.max (2, saved_threads));
+         body ()))
+      ()
+  end
+
+fun potential_does_not_interrupt_genuine () = with_raced_backends (fn () =>
   let
     val _ = reset_race ()
     val _ = race_potential_enabled := true
@@ -11660,14 +11678,14 @@ fun potential_does_not_interrupt_genuine () =
         Counterexample ({backend, certainty = Genuine, ...} :: _) =>
           backend = "refute-race-qc-genuine"
       | _ => false
-  end
+  end)
 
 val _ = require_msg
   (check_result potential_does_not_interrupt_genuine) (fn () =>
   "an MF-like Potential interrupted a QC Genuine result")
   (fn () => ()) ()
 
-fun quasi_does_not_interrupt_genuine () =
+fun quasi_does_not_interrupt_genuine () = with_raced_backends (fn () =>
   let
     val _ = reset_race ()
     val _ = race_quasi_enabled := true
@@ -11688,7 +11706,7 @@ fun quasi_does_not_interrupt_genuine () =
         Counterexample ({backend, certainty = Genuine, ...} :: _) =>
           backend = "refute-race-qc-genuine"
       | _ => false
-  end
+  end)
 
 val _ = require_msg
   (check_result quasi_does_not_interrupt_genuine) (fn () =>
@@ -13532,7 +13550,6 @@ fun pnf_engine_units () =
           Known {genuine = false, result = false}
       | mixed _ _ = Known {genuine = true, result = true}
     val potential = refute_pnf false 2 mixed mixed_tree
-    val depth_limited = refute_pnf false 1 mixed mixed_tree
     fun universal_pass _ [Narrowing_variable ([0], _)] =
           NeedsRefinement [0]
       | universal_pass _ [Narrowing_constructor _] =
@@ -13556,6 +13573,13 @@ fun pnf_engine_units () =
       | nested_hit _ _ = raise Fail "unexpected nested prefix"
     val nested = refute_pnf false 3 nested_hit
       (tree_of [(Universal, narrow_branch)])
+    (* The refinement bound admits exactly what the scheduled depth's shape
+       describes: [shape_of d] reaches term depth d, that is tree positions
+       of length d + 1.  At depth zero [narrow_branch]'s root therefore
+       refines and its constructor argument does not, leaving the branch
+       that needs it Unknown. *)
+    val depth_limited = refute_pnf false 0 nested_hit
+      (tree_of [(Universal, narrow_branch)])
     val expected_example =
       UnivExample
         (pnf_bool_shape, narrow_node pnf_bool_shape 0 [],
@@ -13574,7 +13598,7 @@ fun pnf_engine_units () =
        | _ => false) andalso
     (case depth_limited of
          PnfExhausted
-           {truth = Refute_Narrow.Unknown, tests = 1, ...} => true
+           {truth = Refute_Narrow.Unknown, tests = 3, ...} => true
        | _ => false) andalso
     (case exhausted of
          PnfExhausted
@@ -13735,12 +13759,18 @@ val _ = require_msg (check_result function_graphs_work) (fn () =>
   "function graphs did not EVAL on both boolean inputs") (fn () => ()) ()
 
 val empty_custom : custom_gen = {enumerate = NONE, random = NONE}
+(* [finite_custom] is registered for :ind below, so its values must have
+   that type: the substrates reject a generator that lies about its type
+   rather than let mistyped terms reach candidate building.  :ind has no
+   numeral syntax, and num$ZERO_REP is its one built-in inhabitant. *)
+val ind_value = Term.mk_thy_const
+  {Thy = "num", Name = "ZERO_REP", Ty = ``:ind``}
 fun custom_zero_random _ state =
   let val (_, next) = rand_below 1 state
-  in (``0``, next) end
+  in (ind_value, next) end
 
 val finite_custom : custom_gen =
-  {enumerate = SOME (fn _ => [``0``]),
+  {enumerate = SOME (fn _ => [ind_value]),
    random = SOME custom_zero_random}
 
 fun rejects_empty_custom () =
