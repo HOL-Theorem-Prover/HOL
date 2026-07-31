@@ -706,3 +706,7 @@ GEN_TAC THEN Induct THENL
    RES_TAC THEN ASM_REWRITE_TAC [TC_ITER]
 ]]]
 QED
+
+Theorem EMPTY_UNION_EQN:  !sd:'a set. sd = {} UNION sd
+Proof REWRITE_TAC [pred_setTheory.UNION_EMPTY]
+QED

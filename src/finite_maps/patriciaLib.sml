@@ -326,28 +326,7 @@ val PTREE_IN_PTREE_CONV =
 
 (* ------------------------------------------------------------------------- *)
 
-val BRANCHING_BIT_numeral = Q.prove(
-   `(BRANCHING_BIT 0 0 = 0) /\
-    (!x. BRANCHING_BIT 0 (NUMERAL (BIT1 x)) = 0) /\
-    (!x. BRANCHING_BIT (NUMERAL (BIT1 x)) 0 = 0) /\
-    (!x. BRANCHING_BIT 0 (NUMERAL (BIT2 x)) =
-         SUC (BRANCHING_BIT 0 (NUMERAL (SUC x)))) /\
-    (!x. BRANCHING_BIT (NUMERAL (BIT2 x)) 0 =
-         SUC (BRANCHING_BIT (NUMERAL (SUC x)) 0)) /\
-    (!x y. BRANCHING_BIT (NUMERAL (BIT1 x)) (NUMERAL (BIT1 y)) =
-           if x = y then 0 else SUC (BRANCHING_BIT (NUMERAL x) (NUMERAL y))) /\
-    (!x y. BRANCHING_BIT (NUMERAL (BIT2 x)) (NUMERAL (BIT2 y)) =
-           if x = y then 0
-           else SUC (BRANCHING_BIT (NUMERAL (SUC x)) (NUMERAL (SUC y)))) /\
-    (!x y. BRANCHING_BIT (NUMERAL (BIT1 x)) (NUMERAL (BIT2 y)) = 0) /\
-    (!x y. BRANCHING_BIT (NUMERAL (BIT2 x)) (NUMERAL (BIT1 y)) = 0)`,
-   REPEAT STRIP_TAC
-   THEN CONV_TAC
-          (LHS_CONV (ONCE_REWRITE_CONV [patriciaTheory.BRANCHING_BIT_def]))
-   THEN SIMP_TAC std_ss
-        [numeralTheory.numeral_distrib, numeralTheory.numeral_eq,
-         numeralTheory.numeral_evenodd, numeralTheory.numeral_div2]
-   )
+val BRANCHING_BIT_numeral = patriciaTheory.BRANCHING_BIT_numeral
 
 val BRANCHING_BIT_CONV =
    REWRITE_CONV [BRANCHING_BIT_numeral, numeralTheory.numeral_eq,
@@ -696,16 +675,7 @@ end
 val rhsc = rhs o concl
 val lhsc = lhs o concl
 
-val PTREE_OF_NUMSET_RWT = Q.prove(
-   `(!x t s y.
-      IS_PTREE t /\ FINITE s /\ (PTREE_OF_NUMSET t s = y) ==>
-      (PTREE_OF_NUMSET t (x INSERT s) = x INSERT_PTREE y)) /\
-    (!s1 s2 t y.
-      IS_PTREE t /\ FINITE s1 /\ FINITE s2 /\
-      (PTREE_OF_NUMSET t s1 = y) /\
-      (PTREE_OF_NUMSET y s2 = z) ==>
-      (PTREE_OF_NUMSET t (s1 UNION s2) = z))`,
-   SRW_TAC [] [PTREE_OF_NUMSET_UNION, PTREE_OF_NUMSET_INSERT])
+val PTREE_OF_NUMSET_RWT = patriciaTheory.PTREE_OF_NUMSET_RWT
 
 val ptee_of_numset_insert = CONJUNCT1 PTREE_OF_NUMSET_RWT
 val ptee_of_numset_union = CONJUNCT2 PTREE_OF_NUMSET_RWT
