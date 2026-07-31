@@ -2875,8 +2875,7 @@ end;
 (******************************************************************************)
 
 
-val case_split_thm = prove (Term `!c B.
-(B = ((c ==> B) /\ (~c ==> B)))`, Cases_on `c` THEN REWRITE_TAC[])
+val case_split_thm = generalHelpersTheory.case_split_thm
 
 fun case_split_heuristic___is_cond ttt =
 let
@@ -2972,9 +2971,7 @@ end;
 
 local
 
-val BAG_EVERY_INSERT_IMP = prove (Term
-   `!P b e. BAG_EVERY P b ==> (P (e:'a) ==> BAG_EVERY P (BAG_INSERT e b))`,
-   SIMP_TAC std_ss [BAG_EVERY_THM]);
+val BAG_EVERY_INSERT_IMP = generalHelpersTheory.BAG_EVERY_INSERT_IMP;
 
 
 fun VAR_RES_FRAME_SPLIT___strong_stack_proposition_to_split (entail_thm, imprecise_thm) =
@@ -3015,7 +3012,7 @@ in
 end handle HOL_ERR _ => (entail_thm, imprecise_thm)
 
 
-val IMP_CLAUSES_XT = prove (Term `!t. (t ==> T) = T`, REWRITE_TAC[]);
+val IMP_CLAUSES_XT = generalHelpersTheory.IMP_CLAUSES_XT;
 fun imp_true_simp t =
 let
    val (t1, t2) = dest_imp_only t
