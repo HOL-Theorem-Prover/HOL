@@ -385,12 +385,12 @@ fun main() = let
      - --bare: use hol.state0
      - --poly/--poly_not_hol: use no state (NONE)
      - --holstate=X: use X
-     - REPL mode with default: auto-detect using get_heap_name()
+     - REPL/LSP mode with default: auto-detect using get_heap_name()
      - Other modes: use specified state or default *)
   val base_state =
       if bare then SOME (OS.Path.concat(Systeml.HOLDIR, "bin/hol.state0"))
-      else if subcmd = REPL andalso base_state = SOME Systeml.DEFAULT_STATE then
-        (* Auto-detect heap for REPL mode when no explicit --holstate was given *)
+      else if (subcmd = REPL orelse subcmd = LSP)
+              andalso base_state = SOME Systeml.DEFAULT_STATE then
         SOME (get_heap_name())
       else
         (* Use explicitly specified state (including NONE for --poly) *)
