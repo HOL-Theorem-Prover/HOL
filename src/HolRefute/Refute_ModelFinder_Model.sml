@@ -1987,24 +1987,19 @@ fun replace_cex (cex : Refute_Core.counterexample) certainty bindings
    certainty = certainty, bindings = bindings, evals = evals,
    cert = cert, scope = #scope cex, model = model, stats = #stats cex}
 
-(* The genuine_means_genuine field records translation-side confidence
-   only.  It cannot raise a verdict, because Genuine is reserved for
-   models Refute_Cert has certified below, so it is deliberately unread
-   and retained for source compatibility.  Any fallback that derived a
-   certainty from it would silently promote uncertified solver output. *)
+fun fallback_certainty sound genuine reasons =
+  if sound andalso genuine then Refute_Core.Genuine
+  else if sound then Refute_Core.QuasiGenuine reasons
+  else Refute_Core.Potential reasons
+
 fun certify {executable, original, eval_terms,
              reconstruction = reconstructed, cex, sound,
-             genuine_means_genuine = _, reasons} =
+             genuine_means_genuine = genuine, reasons} =
   let
     val {bindings, evals, types, codatatypes_ok, ...} = reconstructed
+    val genuine = genuine andalso codatatypes_ok
     val model = SOME (model_report reconstructed)
-    (* Kodkodi is an accelerator, not a proof oracle.  A reconstructed
-       assignment remains Potential until Refute_Cert establishes the HOL
-       counterexample; translation-side soundness flags cannot validate an
-       untrusted solver's formula or bounds. *)
-    val base = replace_cex cex
-      (Refute_Core.Potential
-        ("untrusted Kodkodi model; no HOL certificate" :: reasons))
+    val base = replace_cex cex (fallback_certainty sound genuine reasons)
       bindings evals NONE model
   in
     case if executable andalso codatatypes_ok then

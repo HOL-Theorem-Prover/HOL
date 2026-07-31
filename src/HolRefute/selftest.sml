@@ -8526,19 +8526,19 @@ fun mf_model_certification_protocol () =
        falsify the goal, so a sound model is dropped exactly like an
        unsound one; the soundness flag only adds the warning. *)
     (case sound_discarded of MFM.Drop => true | _ => false) andalso
+    (* Certainty comes from the encoding, not from the certificate: a
+       sound but inexact model with no certificate is QuasiGenuine. *)
     (case fallback of
-         MFM.Keep {certainty = Potential
-           ["untrusted Kodkodi model; no HOL certificate",
-            "Try again with wf = true"], cert = NONE, ...} => true
+         MFM.Keep {certainty = QuasiGenuine
+           ["Try again with wf = true"], cert = NONE, ...} => true
        | _ => false) andalso
     (case codata_fallback of
-         MFM.Keep {certainty = Potential reasons, ...} =>
+         MFM.Keep {certainty = QuasiGenuine reasons, ...} =>
            List.exists (String.isSubstring "bisim_depth") reasons
        | _ => false) andalso smart_genuine andalso
     (case forced_fallback of
-         MFM.Keep {certainty = Potential
-           ["untrusted Kodkodi model; no HOL certificate",
-            "Try again with \"finitize\" set to \"smart\" or \"false\""],
+         MFM.Keep {certainty = QuasiGenuine
+           ["Try again with \"finitize\" set to \"smart\" or \"false\""],
            cert = NONE, ...} => true
        | _ => false)
   end
@@ -8581,8 +8581,11 @@ fun mf_polymorphic_model_protocol () =
                    bindings = [(_, left), (_, right)], ...} =>
            variable_named "a1" left andalso variable_named "a2" right
        | _ => false) andalso
+    (* The scope is too large for a certification copy, so no theorem is
+       built; the encoding is still sound and exact, so the verdict is
+       Genuine with cert = NONE. *)
     (case large of
-         MFM.Keep {certainty = Potential _, cert = NONE, ...} => true
+         MFM.Keep {certainty = Genuine, cert = NONE, ...} => true
        | _ => false) andalso
     (case displayed of
          [(reported_ty, [left, right], true)] =>
@@ -10053,15 +10056,17 @@ local
 
   (* The seven smokes that follow all refute goals over non-executable
      constants: the (co)inductive fixpoints of refuteTableZoo, RTC, inv,
-     and O have no computeLib evaluation, so Refute_Cert's re-evaluation
-     of the instantiated proposition gets stuck and no HOL certificate
-     can be built.  Per the trust model documented in README and
-     Manual/Description/Refute.smd, Kodkodi is an accelerator and not a
-     proof oracle: a model-finder result is Genuine only when Refute
-     constructed a HOL certificate, so an uncertified reconstruction
-     stays Potential.  Each test therefore pins that verdict and its
-     reason, and still requires that Kodkod found and reconstructed a
-     model, on top of its own scope and value checks. *)
+     and O have no computeLib evaluation, so Refute_Cert cannot build a
+     HOL certificate and cert stays NONE.  That does not lower the
+     verdict.  Certainty and cert are independent axes: certainty is the
+     semantic strength of the result, derived from the encoding's
+     soundness and exactness, while cert only records whether a HOL
+     theorem was also produced.  Refute trusts Kodkodi exactly as
+     Nitpick trusts Kodkod, so a sound and exact translation yields
+     Genuine whether or not a certificate exists, just as a QC hit does
+     under certify = false.  Each test therefore pins Genuine with
+     cert = NONE and a reconstructed model report, on top of its own
+     scope and value checks. *)
 
   fun mf_inductive_direct_equation_smoke () =
     let
@@ -10076,9 +10081,7 @@ local
     in
       case Refute.refute config ``zoo_wf_lfp n ==> n = 0`` of
           Refute.Counterexample
-            ({backend = "kodkod",
-              certainty = Refute.Potential
-                ["untrusted Kodkodi model; no HOL certificate"],
+            ({backend = "kodkod", certainty = Refute.Genuine,
               cert = NONE, model = SOME _, ...} :: _) => true
         | _ => false
     end
@@ -10105,9 +10108,7 @@ local
       case Refute.refute config ``~zoo_unroll_lfp 2`` of
           Refute.Counterexample
             ((counterexample as
-              {backend = "kodkod",
-               certainty = Refute.Potential
-                 ["untrusted Kodkodi model; no HOL certificate"],
+              {backend = "kodkod", certainty = Refute.Genuine,
                cert = NONE, model = SOME _, ...}) :: _) =>
               pinned counterexample
         | _ => false
@@ -10133,9 +10134,7 @@ local
       case Refute.refute config ``zoo_guarded_gfp F`` of
           Refute.Counterexample
             ((counterexample as
-              {backend = "kodkod",
-               certainty = Refute.Potential
-                 ["untrusted Kodkodi model; no HOL certificate"],
+              {backend = "kodkod", certainty = Refute.Genuine,
                cert = NONE, model = SOME _, ...}) :: _) =>
               pinned counterexample
         | _ => false
@@ -10156,9 +10155,7 @@ local
       case Refute.refute config
         ``zoo_mutual_gfp F \/ zoo_mutual_other_gfp F`` of
           Refute.Counterexample
-            ({backend = "kodkod",
-              certainty = Refute.Potential
-                ["untrusted Kodkodi model; no HOL certificate"],
+            ({backend = "kodkod", certainty = Refute.Genuine,
               cert = NONE, model = SOME _, ...} :: _) => true
         | _ => false
     end
@@ -10186,9 +10183,7 @@ local
       case Refute.refute config ``zoo_wf_lfp 2 ==> (2 : num) = 0`` of
           Refute.Counterexample
             ((counterexample as
-              {backend = "kodkod",
-               certainty = Refute.Potential
-                 ["untrusted Kodkodi model; no HOL certificate"],
+              {backend = "kodkod", certainty = Refute.Genuine,
                cert = NONE, model = SOME _, ...}) :: _) =>
               no_iterator counterexample
         | _ => false
@@ -10209,9 +10204,7 @@ local
       case Refute.refute config
         ``~RTC (\x : num. \y : num. x = 0 /\ y = 1) 0 1`` of
           Refute.Counterexample
-            ({backend = "kodkod",
-              certainty = Refute.Potential
-                ["untrusted Kodkodi model; no HOL certificate"],
+            ({backend = "kodkod", certainty = Refute.Genuine,
               cert = NONE, model = SOME _, ...} :: _) => true
         | _ => false
     end
@@ -10234,9 +10227,7 @@ local
     in
       case Refute.refute config goal of
           Refute.Counterexample
-            ({backend = "kodkod",
-              certainty = Refute.Potential
-                ["untrusted Kodkodi model; no HOL certificate"],
+            ({backend = "kodkod", certainty = Refute.Genuine,
               cert = NONE, model = SOME _, ...} :: _) => true
         | _ => false
     end
@@ -11430,7 +11421,7 @@ val _ = require_msg
   "reachable certainty ignored a backend declaration")
   (fn () => ()) ()
 
-fun kodkod_ceiling_matches_certification_reachability () =
+fun kodkod_ceiling_preserves_uncertified_genuine () =
   let
     val executable = [ceiling_executable_instance]
     val gated = [ceiling_gated_instance]
@@ -11445,18 +11436,18 @@ fun kodkod_ceiling_matches_certification_reachability () =
     same_certainty_class Genuine
       (Refute_ModelFinder.kodkod_certainty_ceiling
         default_config executable) andalso
-    same_certainty_class (Refute_Core.Potential [])
+    same_certainty_class Genuine
       (Refute_ModelFinder.kodkod_certainty_ceiling satisfy executable) andalso
-    same_certainty_class (Refute_Core.Potential [])
+    same_certainty_class Genuine
       (Refute_ModelFinder.kodkod_certainty_ceiling default_config gated) andalso
-    same_certainty_class (Refute_Core.Potential [])
+    same_certainty_class (QuasiGenuine [])
       (Refute_ModelFinder.kodkod_certainty_ceiling quasi_satisfy
         executable) andalso
-    same_certainty_class (Refute_Core.Potential [])
+    same_certainty_class (QuasiGenuine [])
       (Refute_ModelFinder.kodkod_certainty_ceiling quasi gated) andalso
-    same_certainty_class (Refute_Core.Potential [])
+    same_certainty_class (QuasiGenuine [])
       (Refute_ModelFinder.kodkod_certainty_ceiling total gated) andalso
-    same_certainty_class (Refute_Core.Potential [])
+    same_certainty_class (QuasiGenuine [])
       (Refute_ModelFinder.kodkod_certainty_ceiling forced_finitize
         gated) andalso
     same_certainty_class Genuine
@@ -11464,8 +11455,8 @@ fun kodkod_ceiling_matches_certification_reachability () =
   end
 
 val _ = require_msg
-  (check_result kodkod_ceiling_matches_certification_reachability) (fn () =>
-  "the kodkod certainty ceiling disagreed with certification reachability")
+  (check_result kodkod_ceiling_preserves_uncertified_genuine) (fn () =>
+  "the kodkod certainty ceiling disagreed with reachable outcomes")
   (fn () => ()) ()
 
 val _ = tprint "Refute core silent report"
@@ -20252,7 +20243,7 @@ val mf_acceptance_cases : mf_acceptance_case list =
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "DefnBase equation mutation",
     tm = ``zoo_height (ZooLeaf n) = SUC n``,
-    expect = ExpectPotential, cert_pin = MfCertNone,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "unary natural arithmetic",
     tm = ``SUC n = n``,
@@ -20264,7 +20255,7 @@ val mf_acceptance_cases : mf_acceptance_case list =
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "non-executable choice-spec counterexample",
     tm = ``zoo_spec = 1``,
-    expect = ExpectPotential, cert_pin = MfCertNone,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "essentially existential natural",
     tm = ``?n : num. n <> n``,
@@ -20280,28 +20271,28 @@ val mf_acceptance_cases : mf_acceptance_case list =
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "direct well-founded inductive equation",
     tm = ``zoo_wf_lfp n ==> n = 0``,
-    expect = ExpectPotential, cert_pin = MfCertNone,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = true},
    {name = "non-wf inductive predicate unrolling",
     tm = ``~zoo_unroll_lfp 2``,
-    expect = ExpectPotential, cert_pin = MfCertNone,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = true},
    {name = "joint-wf mutual inductive equations",
     tm = ``zoo_mutual_lfp n ==> zoo_mutual_other_lfp n``,
-    expect = ExpectPotential, cert_pin = MfCertNone,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "joint mutual inductive unrolling",
     tm = ``zoo_mutual_nonwf_lfp n ==>
            zoo_mutual_nonwf_other_lfp n``,
-    expect = ExpectPotential, cert_pin = MfCertNone,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "coinductive predicate unrolling",
     tm = ``zoo_guarded_gfp F``,
-    expect = ExpectPotential, cert_pin = MfCertNone,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = true},
    {name = "joint mutual coinductive unrolling",
     tm = ``zoo_mutual_gfp F \/ zoo_mutual_other_gfp F``,
-    expect = ExpectPotential, cert_pin = MfCertNone,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = false}
   ]
 
@@ -20376,21 +20367,21 @@ val mf_induct_nits_cases =
       mf_induct_auto_wf_nonwf_no_star,
     mf_acceptance_variants "Induct_Nits p1 predecessor"
       ``zoo_induct_p1 (n - 2) ==> zoo_induct_p1 n``
-      ExpectPotential MfCertNone mf_induct_auto_nonwf_no_star,
+      ExpectGenuine MfCertNone mf_induct_auto_nonwf_no_star,
     mf_acceptance_variants "Induct_Nits q1 predecessor"
       ``zoo_induct_q1 (n - 2) ==> zoo_induct_q1 n``
-      ExpectPotential MfCertNone mf_induct_auto_nonwf_no_star,
+      ExpectGenuine MfCertNone mf_induct_auto_nonwf_no_star,
     mf_acceptance_variants "Induct_Nits p2 = bottom"
       ``zoo_induct_p2 = (\n : num. F)`` ExpectNone MfCertIgnored
       mf_induct_auto_no_star,
     mf_acceptance_variants "Induct_Nits q2 = bottom"
-      ``zoo_induct_q2 = (\n : num. F)`` ExpectPotential MfCertNone
+      ``zoo_induct_q2 = (\n : num. F)`` ExpectGenuine MfCertNone
       mf_induct_auto_no_star @
       mf_acceptance_variants "Induct_Nits q2 = bottom"
         ``zoo_induct_q2 = (\n : num. F)`` ExpectQuasiGenuine
         MfCertIgnored [(" [wf]", mf_induct_wf true, true)],
     mf_acceptance_variants "Induct_Nits p2 = top"
-      ``zoo_induct_p2 = (\n : num. T)`` ExpectPotential MfCertNone
+      ``zoo_induct_p2 = (\n : num. T)`` ExpectGenuine MfCertNone
       mf_induct_auto_no_star,
     mf_acceptance_variants "Induct_Nits q2 = top"
       ``zoo_induct_q2 = (\n : num. T)`` ExpectNone MfCertIgnored
@@ -20399,17 +20390,17 @@ val mf_induct_nits_cases =
         ``zoo_induct_q2 = (\n : num. T)`` ExpectQuasiGenuine
         MfCertIgnored [(" [wf]", mf_induct_wf true, false)],
     mf_acceptance_variants "Induct_Nits p2 = q2"
-      ``zoo_induct_p2 = zoo_induct_q2`` ExpectPotential MfCertNone
+      ``zoo_induct_p2 = zoo_induct_q2`` ExpectGenuine MfCertNone
       mf_induct_auto_no_star,
     mf_acceptance_variants "Induct_Nits p2 n"
-      ``zoo_induct_p2 n`` ExpectPotential MfCertNone
+      ``zoo_induct_p2 n`` ExpectGenuine MfCertNone
       mf_induct_auto_no_star_no_specialize,
     mf_acceptance_variants "Induct_Nits q2 n"
       ``zoo_induct_q2 n`` ExpectNone MfCertIgnored mf_induct_auto_no_star,
     mf_acceptance_variants "Induct_Nits not p2 n"
       ``~zoo_induct_p2 n`` ExpectNone MfCertIgnored mf_induct_auto_no_star,
     mf_acceptance_variants "Induct_Nits not q2 n"
-      ``~zoo_induct_q2 n`` ExpectPotential MfCertNone
+      ``~zoo_induct_q2 n`` ExpectGenuine MfCertNone
       mf_induct_auto_no_star_no_specialize,
     mf_acceptance_variants "Induct_Nits p3 = q3"
       ``zoo_induct_p3 = zoo_induct_q3`` ExpectNone MfCertIgnored
@@ -20650,22 +20641,22 @@ val mf_special_nits_group : mf_acceptance_group =
 val mf_pattern_nits_cases =
   [mf_acceptance_invocation "Pattern_Nits unit case"
      ``(x : 'a) = (case (u : unit) of () => y)``
-     ExpectPotential MfCertNone true mf_same_config,
+     ExpectGenuine MfCertNone true mf_same_config,
    mf_acceptance_invocation "Pattern_Nits Boolean case"
      ``(x : 'a) = (case b of T => x | F => y)``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits pair case"
      ``(x : 'b) = (case (p : 'a # 'b) of (a, b) => b)``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits natural case"
      ``(x : num) = (case n of 0 => x | SUC m => m)``
      ExpectGenuine MfCertSome false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits option case"
      ``(x : 'a) = (case (opt : 'a option) of NONE => x | SOME y => y)``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits list case"
      ``(x : 'a) = (case (xs : 'a list) of [] => x | y :: ys => y)``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits nested case"
      ``(x : 'b) =
        (case (xs : ('a # 'b) option list) of
@@ -20677,29 +20668,29 @@ val mf_pattern_nits_cases =
                      case z of
                           NONE => x
                         | SOME p => case p of (a, b) => b)``
-     ExpectPotential MfCertNone true mf_same_config,
+     ExpectGenuine MfCertNone true mf_same_config,
    mf_acceptance_invocation "Pattern_Nits f1"
      ``(x : 'a) = zoo_pattern_f1 (y : 'a) u``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits f2"
      ``(x : 'a) = zoo_pattern_f2 x (y : 'a) b``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits f3"
      ``(x : 'b) = zoo_pattern_f3 (p : 'a # 'b)``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits f4"
      ``(x : num) = zoo_pattern_f4 x n``
      ExpectGenuine MfCertSome false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits f5"
      ``(x : 'a) = zoo_pattern_f5 x (opt : 'a option)``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits f6"
      ``(x : 'a) = zoo_pattern_f6 x (xs : 'a list)``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits f7"
      ``(x : 'b) =
        zoo_pattern_f7 x (xs : ('a # 'b) option list)``
-     ExpectPotential MfCertNone true mf_same_config,
+     ExpectGenuine MfCertNone true mf_same_config,
    mf_acceptance_invocation "Pattern_Nits unit constructor"
      ``(u : unit) = ()`` ExpectNone MfCertIgnored true mf_same_config,
    mf_acceptance_invocation "Pattern_Nits Boolean existential"
@@ -20709,17 +20700,17 @@ val mf_pattern_nits_cases =
      ExpectNone MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits SUC existential"
      ``?m : num. n = SUC m``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits SOME existential"
      ``?y : 'a. (x : 'a option) = SOME y``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits CONS existential"
      ``?y ys. (xs : 'a list) = y :: ys``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Pattern_Nits nested constructor existential"
      ``?y a b zs.
        (xs : ('a # 'b) option list) = y :: SOME (a, b) :: zs``
-     ExpectPotential MfCertNone true mf_same_config]
+     ExpectGenuine MfCertNone true mf_same_config]
 
 fun mf_pattern_nits_config config =
   config
@@ -21062,14 +21053,14 @@ val mf_typedef_fst_mutated =
    None rather than applying the Genuine/Potential-only loose policy. *)
 val mf_typedef_nits_cases =
   [mf_acceptance_invocation "Typedef_Nits 01 three equality"
-     ``(x : zoo_three) = y`` ExpectPotential MfCertNone true
+     ``(x : zoo_three) = y`` ExpectGenuine MfCertNone true
      mf_same_config,
    mf_acceptance_invocation "Typedef_Nits 02 unit one_or_two"
      ``(x : unit zoo_one_or_two) = y``
      ExpectNone MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Typedef_Nits 03 bool one_or_two"
      ``(x : bool zoo_one_or_two) = y``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Typedef_Nits 04 collapsed one_or_two"
      ``((ARB F : bool) <=> ARB T) ==>
        (x : bool zoo_one_or_two) = y``
@@ -21092,26 +21083,26 @@ val mf_typedef_nits_cases =
      ExpectNone MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Typedef_Nits 08 bool bounded"
      ``(x : bool zoo_bounded) = y``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Typedef_Nits 09 bool bounded has two values"
      ``(x : bool zoo_bounded) <> y ==> z = x \/ z = y``
      ExpectNone MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Typedef_Nits 10 pair-bool bounded"
      ``(x : (bool # bool) zoo_bounded) <> y ==> z = x \/ z = y``
-     ExpectPotential MfCertNone false (mf_typedef_cards [1, 2, 3, 4, 5]),
+     ExpectGenuine MfCertNone false (mf_typedef_cards [1, 2, 3, 4, 5]),
    mf_acceptance_invocation "Typedef_Nits 11 check membership"
      ``zoo_check_rep (zoo_check_abs n) = n ==> n < 2``
      ExpectNone MfCertIgnored false (mf_typedef_cards [1, 2, 3]),
    mf_acceptance_invocation "Typedef_Nits 12 check mutation"
      ``zoo_check_rep (zoo_check_abs n) = n ==> n < 1``
-     ExpectPotential MfCertNone false (mf_typedef_cards [1, 2, 3]),
+     ExpectGenuine MfCertNone false (mf_typedef_cards [1, 2, 3]),
    mf_acceptance_invocation
      "Typedef_Nits 13 swapped product representation [boxed]"
      mf_typedef_pair_swapped ExpectNone MfCertIgnored false
      (mf_typedef_cards [1, 2]),
    mf_acceptance_invocation
      "Typedef_Nits 13 swapped product representation [dont_box]"
-     mf_typedef_pair_swapped ExpectPotential MfCertNone true
+     mf_typedef_pair_swapped ExpectGenuine MfCertNone true
      mf_typedef_no_box,
    mf_acceptance_invocation
      "Typedef_Nits 14 mutated first projection [boxed]"
@@ -21119,7 +21110,7 @@ val mf_typedef_nits_cases =
      (mf_typedef_cards [1, 2]),
    mf_acceptance_invocation
      "Typedef_Nits 14 mutated first projection [dont_box]"
-     mf_typedef_fst_mutated ExpectPotential MfCertNone false
+     mf_typedef_fst_mutated ExpectGenuine MfCertNone false
      mf_typedef_no_box]
 
 fun mf_typedef_nits_config config =
@@ -21167,7 +21158,7 @@ val mf_core_nits_cases =
    mf_acceptance_invocation "Core_Nits mono inverse large cards"
      ``(?g : 'b -> 'a. !x : 'a. g (f x) = x) ==>
        !y : 'b. ?x : 'a. y = f x``
-     ExpectPotential MfCertNone false
+     ExpectGenuine MfCertNone false
      (fn config => Refute.upd_card
        [(SOME ``:'a``, [24]), (SOME ``:'b``, [25]), (NONE, [1])]
        config),
@@ -21196,7 +21187,7 @@ val mf_core_nits_cases =
    mf_acceptance_invocation "Core_Nits boxed quantifier mutation"
      ``!u : 'a -> 'b. ?v : 'c. !w : 'd. ?x : 'e -> 'f.
        f u v w x = f u (g u w) w (h u)``
-     ExpectPotential MfCertNone false
+     ExpectGenuine MfCertNone false
      (fn config => config |> mf_core_cards [1, 2] |> mf_core_no_box),
    mf_acceptance_invocation "Core_Nits quantifier one alternation"
      ``!x : 'a. ?y : 'b. f x y = f x (g x)``
@@ -21208,7 +21199,7 @@ val mf_core_nits_cases =
    mf_acceptance_invocation "Core_Nits quantifier mutation"
      ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd.
        f u v w x = f u (g u w) w (h u)``
-     ExpectPotential MfCertNone false (mf_core_cards [3]),
+     ExpectGenuine MfCertNone false (mf_core_cards [3]),
    mf_acceptance_invocation "Core_Nits quantifier three alternations"
      ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd. !y : 'e. ?z : 'f.
        f u v w x y z = f u (g u) w (h u w) y (k u w y)``
@@ -21216,11 +21207,11 @@ val mf_core_nits_cases =
    mf_acceptance_invocation "Core_Nits quantifier third dependency"
      ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd. !y : 'e. ?z : 'f.
        f u v w x y z = f u (g u) w (h u w y) y (k u w y)``
-     ExpectPotential MfCertNone false (mf_core_cards [1, 2]),
+     ExpectGenuine MfCertNone false (mf_core_cards [1, 2]),
    mf_acceptance_invocation "Core_Nits quantifier second dependency"
      ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd. !y : 'e. ?z : 'f.
        f u v w x y z = f u (g u w) w (h u w) y (k u w y)``
-     ExpectPotential MfCertNone false (mf_core_cards [1, 2]),
+     ExpectGenuine MfCertNone false (mf_core_cards [1, 2]),
    mf_acceptance_invocation "Core_Nits product quantifiers"
      ``!u : 'a # 'b. ?v : 'c. !w : 'd. ?x : 'e # 'f.
        f u v w x = f u (g u) w (h u w)``
@@ -21228,11 +21219,11 @@ val mf_core_nits_cases =
    mf_acceptance_invocation "Core_Nits product quantifier mutation"
      ``!u : 'a # 'b. ?v : 'c. !w : 'd. ?x : 'e # 'f.
        f u v w x = f u (g u w) w (h u)``
-     ExpectPotential MfCertNone false
+     ExpectGenuine MfCertNone false
      (fn config => config |> mf_core_cards [1, 2] |> mf_core_no_box),
    mf_acceptance_invocation "Core_Nits singleton if"
      ``!x : 'a. if (!y : 'a. x = y) then F else T``
-     ExpectPotential MfCertNone false (mf_core_cards [1]),
+     ExpectGenuine MfCertNone false (mf_core_cards [1]),
    mf_acceptance_invocation "Core_Nits nonsingleton if"
      ``!x : 'a. if (!y : 'a. x = y) then F else T``
      ExpectNone MfCertIgnored false (mf_core_cards [2, 3, 4, 5]),
@@ -21243,10 +21234,10 @@ val mf_core_nits_cases =
      ``let x = (!y : 'a # 'b. P y) in if x then x else ~x``
      ExpectNone MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Core_Nits subset"
-     ``(A : 'a set) SUBSET B`` ExpectPotential MfCertNone false
+     ``(A : 'a set) SUBSET B`` ExpectGenuine MfCertNone false
      (mf_core_cards [100]),
    mf_acceptance_invocation "Core_Nits self complement"
-     ``(A : 'a set) = COMPL A`` ExpectPotential MfCertNone false
+     ``(A : 'a set) = COMPL A`` ExpectGenuine MfCertNone false
      (mf_core_cards [10]),
    mf_acceptance_invocation "Core_Nits union complement"
      ``(A : 'a set) UNION COMPL A = UNIV``
@@ -21261,20 +21252,20 @@ val mf_core_nits_cases =
      ExpectNone MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Core_Nits ARB counterexample"
      ``(x : 'a) = ARB``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Core_Nits Eps bounded three [card 2]"
      ``($@ (\j : num. j > SUC 2 /\ j <= 3)) <> 0``
-     ExpectPotential MfCertNone false
+     ExpectGenuine MfCertNone false
      (fn config => config |> mf_core_num_card 2
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded three [card 6]"
      ``($@ (\j : num. j > SUC 2 /\ j <= 3)) <> 0``
-     ExpectPotential MfCertNone true
+     ExpectGenuine MfCertNone true
      (fn config => config |> mf_core_num_card 6
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded four nonzero [card 2]"
      ``($@ (\j : num. j > SUC 2 /\ j <= 4)) = x ==> x <> 0``
-     ExpectPotential MfCertNone false
+     ExpectGenuine MfCertNone false
      (fn config => config |> mf_core_num_card 2
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded four nonzero [card 6]"
@@ -21284,7 +21275,7 @@ val mf_core_nits_cases =
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded four exact [card 2]"
      ``($@ (\j : num. j > SUC 2 /\ j <= 4)) = x ==> x = 4``
-     ExpectPotential MfCertNone false
+     ExpectGenuine MfCertNone false
      (fn config => config |> mf_core_num_card 2
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded four exact [card 6]"
@@ -21294,7 +21285,7 @@ val mf_core_nits_cases =
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded five exact"
      ``($@ (\j : num. j > SUC 2 /\ j <= 5)) = x ==> x = 4``
-     ExpectPotential MfCertNone false (mf_core_num_card 6),
+     ExpectGenuine MfCertNone false (mf_core_num_card 6),
    mf_acceptance_invocation "Core_Nits Eps bounded five range"
      ``($@ (\j : num. j > SUC 2 /\ j <= 5)) = x ==>
        x = 4 \/ x = 5``
@@ -21324,14 +21315,14 @@ val mf_refute_nits_cases =
    mf_acceptance_invocation "Refute_Nits surjective gives inverse"
      ``(!y : 'b. ?x : 'a. y = f x) ==>
        ?g : 'b -> 'a. !x. g (f x) = x``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits inverse gives surjective"
      ``(?g : 'b -> 'a. !x. g (f x) = x) ==>
        !y : 'b. ?x. y = f x``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits choice unique mutation"
      ``(!x : 'a. ?y : 'b. P x y) ==> ?!f. !x. P x (f x)``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits choice"
      ``(!x : 'a. ?y : 'b. P x y) ==> ?f. !x. P x (f x)``
      ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
@@ -21339,14 +21330,14 @@ val mf_refute_nits_cases =
      ``(!x : 'a. ?!y : 'b. P x y) ==> ?!f. !x. P x (f x)``
      ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3]),
    mf_acceptance_invocation "Refute_Nits Eps value"
-     ``($@ (P : bool -> bool))`` ExpectPotential MfCertNone true
+     ``($@ (P : bool -> bool))`` ExpectGenuine MfCertNone true
      mf_same_config,
    mf_acceptance_invocation "Refute_Nits predicate of Eps"
      ``($@ (\n : num. n = 0)) = 1``
      ExpectPotential MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Refute_Nits Eps application"
      ``~Q ($@ (Q : num -> bool))``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits Eps equality"
      ``($@ (\x : num. x = y)) = z``
      ExpectPotential MfCertIgnored false mf_same_config,
@@ -21360,7 +21351,7 @@ val mf_refute_nits_cases =
      ``zoo_ref_t3_CASE (ZooRefE x) e = e x``
      ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
    mf_acceptance_invocation "Refute_Nits T3 recursor"
-     ``zoo_ref_t3_CASE x e = z`` ExpectPotential MfCertNone false
+     ``zoo_ref_t3_CASE x e = z`` ExpectGenuine MfCertNone false
      mf_same_config,
    mf_acceptance_invocation "Refute_Nits BinTree leaf equation"
      ``zoo_ref_rec_bintree l n (ZooRefLeaf x) = l x``
@@ -21399,33 +21390,33 @@ val mf_refute_nits_cases =
      ExpectGenuine MfCertSome false mf_same_config,
    mf_acceptance_invocation "Refute_Nits nested U"
      ``(x : 'a zoo_ref_u) = y``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits point record"
      ``(x : ('a, 'b) zoo_ref_point) = y``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits flat extended record"
      ``(x : ('a, 'b, 'c) zoo_ref_extpoint) = y``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits undefined inductive set"
      ``zoo_ref_undefined_set (x : 'a)``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits even-card inductive set"
      ``zoo_ref_even_card (ss : 'a set)``
-     ExpectPotential MfCertNone true mf_same_config,
+     ExpectGenuine MfCertNone true mf_same_config,
    mf_acceptance_invocation "Refute_Nits mutual even odd"
-     ``zoo_ref_odd n`` ExpectPotential MfCertNone false mf_same_config,
+     ``zoo_ref_odd n`` ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits abstract even odd"
      ``zoo_ref_a_odd f (x : 'a)``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits lfp equation"
      ``f (fixedPoint$lfp f) = fixedPoint$lfp f``
-     ExpectPotential MfCertNone false (mf_core_cards [2]),
+     ExpectGenuine MfCertNone false (mf_core_cards [2]),
    mf_acceptance_invocation "Refute_Nits gfp equation"
      ``f (fixedPoint$gfp f) = fixedPoint$gfp f``
-     ExpectPotential MfCertNone false (mf_core_cards [2]),
+     ExpectGenuine MfCertNone false (mf_core_cards [2]),
    mf_acceptance_invocation "Refute_Nits lfp gfp equality"
      ``fixedPoint$lfp f = fixedPoint$gfp f``
-     ExpectPotential MfCertNone false (mf_core_cards [2]),
+     ExpectGenuine MfCertNone false (mf_core_cards [2]),
    mf_acceptance_invocation "Refute_Nits empty cardinality"
      ``CARD (x : 'a set) = 0`` ExpectGenuine MfCertSome false
      mf_same_config,
@@ -21462,13 +21453,13 @@ val mf_manual_nits_cases =
   [mf_acceptance_invocation "Manual_Nits inverse surjective"
      ``(?g : 'b -> 'a. !x : 'a. g (f x) = x) ==>
        !y : 'b. ?x. y = f x``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Manual_Nits universal fixed point"
      ``?x : 'a. !f : 'a -> 'a. f x = x``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Manual_Nits reflexive not symmetric"
      ``(!x : 'a. r x x) ==> (!x y. r x y ==> r y x)``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Manual_Nits integer inequality"
      ``i <= j /\ n <= (m : int) ==>
        i * n + j * m <= i * m + j * n``
@@ -21491,7 +21482,7 @@ val mf_manual_nits_cases =
      ``x + y = (x : num)`` ExpectGenuine MfCertSome false
      (mf_manual_num_card 2),
    mf_acceptance_invocation "Manual_Nits HD append"
-     ``HD (xs ++ [y; y]) = HD xs`` ExpectPotential MfCertIgnored true
+     ``HD (xs ++ [y; y]) = HD xs`` ExpectGenuine MfCertIgnored true
      mf_same_config,
    mf_acceptance_invocation "Manual_Nits singleton lists"
      ``LENGTH xs = 1 /\ LENGTH ys = 1 ==> xs = ys``
@@ -21499,13 +21490,13 @@ val mf_manual_nits_cases =
    mf_acceptance_invocation "Manual_Nits typedef three"
      ``zoo_three_abs 0 IN X /\ zoo_three_abs 1 IN X ==>
        (c : zoo_three) IN X``
-     ExpectPotential MfCertNone false (Refute.upd_show_types true),
+     ExpectGenuine MfCertNone false (Refute.upd_show_types true),
    mf_acceptance_invocation "Manual_Nits quotient add"
      ``zoo_manual_add x y = zoo_manual_add x x``
-     ExpectPotential MfCertNone false (Refute.upd_show_types true),
+     ExpectGenuine MfCertNone false (Refute.upd_show_types true),
    mf_acceptance_invocation "Manual_Nits record selector"
      ``zoo_xc2 (p : zoo_point2d) = zoo_xc2 q``
-     ExpectPotential MfCertNone false (Refute.upd_show_types true),
+     ExpectGenuine MfCertNone false (Refute.upd_show_types true),
    mf_acceptance_invocation "Manual_Nits essentially existential even"
      ``?n. zoo_manual_even n /\ zoo_manual_even (SUC n)``
      ExpectPotential MfCertIgnored false
@@ -21513,31 +21504,31 @@ val mf_manual_nits_cases =
        |> Refute.upd_binary_ints (SOME false)),
    mf_acceptance_invocation "Manual_Nits bounded even"
      ``?n. n <= 49 /\ zoo_manual_even n /\ zoo_manual_even (SUC n)``
-     ExpectPotential MfCertNone false
+     ExpectGenuine MfCertNone false
      (fn config => config |> mf_manual_num_card 50
        |> Refute.upd_binary_ints (SOME false)),
    mf_acceptance_invocation "Manual_Nits non-wf even"
      ``?n. (n = 0 \/ n = 2 \/ n = 4 \/ n = 6 \/ n = 8) /\
        ~zoo_manual_even_alt n``
-     ExpectPotential MfCertNone false
+     ExpectGenuine MfCertNone false
      (fn config => config |> mf_manual_num_card 10
        |> Refute.upd_binary_ints (SOME false)),
    mf_acceptance_invocation "Manual_Nits non-wf even predecessor"
      ``zoo_manual_even_alt (n - 2) ==> zoo_manual_even_alt n``
-     ExpectPotential MfCertNone false (mf_manual_num_card 10),
+     ExpectGenuine MfCertNone false (mf_manual_num_card 10),
    mf_acceptance_invocation "Manual_Nits coinductive nats"
      ``zoo_manual_nats = (\n. n IN {0; 1; 2; 3; 4})``
-     ExpectPotential MfCertNone false (mf_manual_num_card 10),
+     ExpectGenuine MfCertNone false (mf_manual_num_card 10),
    mf_acceptance_invocation "Manual_Nits odd predecessor"
      ``zoo_manual_odd n ==> zoo_manual_odd (n - 2)``
-     ExpectPotential MfCertNone false (mf_manual_num_card 4),
+     ExpectGenuine MfCertNone false (mf_manual_num_card 4),
    mf_acceptance_invocation "Manual_Nits llist cyclic"
      ``(xs : num llist) <> llist$LCONS a xs``
-     ExpectPotential MfCertNone true mf_same_config,
+     ExpectGenuine MfCertNone true mf_same_config,
    mf_acceptance_invocation "Manual_Nits llist iterates"
      ``(xs = llist$LCONS (a : num) xs /\
         ys = zoo_manual_iterates (\b. a) b) ==> xs = ys``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Manual_Nits llist bisim disabled"
      mf_manual_bisim_goal ExpectQuasiGenuine MfCertIgnored true
      (fn config => config |> Refute.upd_bisim_depth [~1]
@@ -21567,7 +21558,7 @@ val mf_manual_nits_cases =
    mf_acceptance_invocation "Manual_Nits mono smart"
      ``(?g : 'a -> 'b. !x : 'b. g (f x) = x) ==>
        !y : 'a. ?x : 'b. y = f x``
-     ExpectPotential MfCertNone false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Manual_Nits AA dataset transforms"
      ``zoo_manual_dataset (zoo_manual_skew t) = zoo_manual_dataset t /\
        zoo_manual_dataset (zoo_manual_split t) = zoo_manual_dataset t``
@@ -21613,7 +21604,7 @@ val mf_hotel_nits_cases =
   [mf_acceptance_invocation "Hotel_Nits pinned cards [format = 2]"
      ``zoo_hotel_pinned s r g ==> zoo_hotel_safe s r ==>
        g IN zoo_hotel_isin s r ==> zoo_hotel_owns s r = SOME g``
-     ExpectPotential MfCertNone false mf_same_config]
+     ExpectGenuine MfCertNone false mf_same_config]
 
 val mf_hotel_nits_group : mf_acceptance_group =
   {name = "Hotel_Nits", configure = mf_hotel_nits_config,
@@ -21650,7 +21641,7 @@ val _ = require_msg (check_result (fn () =>
 val mf_refusal_flip_cases =
   [mf_acceptance_invocation "M4 refusal flip: RTC"
      ``RTC (r : num -> num -> bool) x y``
-     ExpectPotential MfCertNone true mf_same_config,
+     ExpectGenuine MfCertNone true mf_same_config,
    mf_acceptance_invocation "M4 refusal flip: GSPEC over RTC"
      ``x IN GSPEC (\n : num. (n, RTC r n x))``
      ExpectNone MfCertIgnored false mf_same_config]
@@ -22114,7 +22105,7 @@ fun mf_native_polymorphic_certification solver =
     val large_ok =
       case large of
           Refute.Counterexample
-            ({certainty = Refute.Potential _, cert = NONE,
+            ({certainty = Refute.Genuine, cert = NONE,
               scope = SOME assignments, ...} :: _) =>
               List.exists (fn (reported_ty, card) =>
                 Type.compare (reported_ty, ty) = EQUAL andalso card = 7)
@@ -22469,10 +22460,13 @@ fun mf_quotient_typedef_acceptance solver =
     val typedef = with_silent_refute (fn () =>
       Refute.refute config
         ``zoo_three_abs (zoo_three_rep x) = (y : zoo_three)``)
-    fun has_counterexample outcome =
-      case outcome of Refute.Counterexample (_ :: _) => true | _ => false
+    fun genuine outcome =
+      case outcome of
+          Refute.Counterexample
+            ({certainty = Refute.Genuine, ...} :: _) => true
+        | _ => false
   in
-    if has_counterexample quotient andalso has_counterexample typedef then OK ()
+    if genuine quotient andalso genuine typedef then OK ()
     else die ("quotient/typedef acceptance failed: quotient=" ^
       mf_pin_outcome_name quotient ^ ", typedef=" ^
       mf_pin_outcome_name typedef)

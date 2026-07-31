@@ -1171,11 +1171,27 @@ fun kodkod_certainty_ceiling (config : Refute_Core.config) instances =
     val certification_reachable =
       #falsify mf andalso
       List.exists Refute_Core.instance_is_executable instances
+    (* MFM.genuine_means_genuine also demands the two user-axiom conjuncts,
+       and both are functions of the theory ancestry alone, so the ceiling
+       can test them here rather than overestimating past them.  An
+       overestimate only costs an early stop, but here it costs every one:
+       a ceiling of Genuine that the fallback path can never reach leaves
+       Refute_Core.decisive permanently false. *)
+    val nondefs = MFH.all_nondefs_of ()
+    val (poly_nondefs, mono_nondefs) =
+      List.partition MFH.is_poly_term nondefs
+    val genuine_fallback_reachable =
+      List.all (fn (_, value) => value <> SOME true) (#wf mf) andalso
+      none_true (#finitize mf) andalso
+      #total_consts mf <> SOME true andalso
+      (#user_axioms mf = SOME true orelse null mono_nondefs) andalso
+      null poly_nondefs
   in
-    if certification_reachable then Refute_Core.Genuine
+    if certification_reachable orelse genuine_fallback_reachable then
+      Refute_Core.Genuine
     else
-      Refute_Core.Potential
-        ["model-finder configuration precludes certification"]
+      Refute_Core.QuasiGenuine
+        ["model-finder configuration precludes Genuine results"]
   end
 
 fun run config instances =

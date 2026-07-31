@@ -340,12 +340,19 @@ PNF existential hits by replaying their finite case tree.  Refute never
 adds an oracle tag.
 
 The fields `certainty` and `cert` deliberately answer different
-questions.  `Genuine` says that the backend's semantic conditions for a
-real counterexample hold.  `cert = SOME thm` says that Refute additionally
-constructed a HOL theorem.  An uncertified model-finder reconstruction
-is `Potential`; a model-finder result is `Genuine` only with
-`cert = SOME thm`.  Models whose encoding relies on an approximation are
-also `QuasiGenuine reasons` or `Potential reasons`.
+questions, and neither one determines the other.  `certainty` is the
+semantic strength of the result: `Genuine` says that the backend's
+semantic conditions for a real counterexample hold.  `cert = SOME thm`
+says only that Refute additionally constructed a HOL theorem.  For the
+model finder the certainty is decided by the encoding, not by the
+certificate: Refute trusts Kodkodi exactly as Isabelle/HOL's Nitpick
+trusts Kodkod, so a translation that is sound and exact yields
+`Genuine`, one resting on an approximation yields
+`QuasiGenuine reasons`, and an unsound one yields `Potential reasons`.
+A reconstructed model is therefore routinely `Genuine` with
+`cert = NONE`: the refuted goal often mentions constants `computeLib`
+cannot evaluate, so no theorem can be built, exactly as for an
+uncertified QC hit below.
 The backend and substrate fields make clear whether a report came from
 MF, narrowing, or executable QC.
 
