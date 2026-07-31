@@ -210,11 +210,22 @@ Additional libraries cleaned during the extended pass:
     the `TypeBase.write` → `TypeBase.export` flip).
   - `src/real/RealField.sml`, `realSimps.sml` (15 helpers plus
     `num_eq_0`, `ltnb12`, `let_id`).
-  - `src/rational/schneiderUtils.sml`, `ratLib.sml`.
+  - `src/rational/schneiderUtils.sml`, `ratLib.sml`, `ratReduce.sml`.
   - `src/pred_set/src/hurdUtils.sml` (three DECIDEs).
   - `src/bag/bagSimpleLib.sml`.
-  - `src/integer/CooperCore.sml`.
+  - `src/integer/CooperCore.sml`, `jrhCore.sml`.
   - `src/datatype/EnumType.sml`, `ind_types.sml`.
+  - `src/n-bit/bitstringLib.sml` (five helpers).
+  - `src/finite_maps/enumTacs.sml`, `tcTacs.sml`, `patriciaLib.sml`,
+    `flookupLib.sml`.
+  - `src/HolSmt/Library.sml` (TO_WORD_EXTRACT).
+  - `examples/algebra/ring/ringLib.sml`.
+  - `examples/arm/v7/arm_stepLib.sml`.
+  - `examples/separationLogic/src/vars_as_resourceFunctor.sml`,
+    `separationLogicLib.sml`, `holfoot/holfootLib.sml`.
+  - `examples/imperative/reflectOnFailure.sml` gained a leading
+    `new_theory "scratch"` to open a segment for the file's own
+    load-time proves.
 
 Core-build census after all of the above:
 
@@ -224,24 +235,24 @@ Core-build census after all of the above:
 | distinct goals among them                            |     0 |
 | Theory logs still carrying at least one              |     0 |
 
-Full `-F` build census (once stale selftest/test-theory logs are
-excluded --- `bin/build -F` alone does not re-run selftests nor
-re-visit some `theory_tests`/`interactive_tests` directories, so their
-pre-fix logs linger): also 0 for the library-load-time class.  The
-Theory logs across `src/probability`, `src/floating-point`,
-`src/real`, `src/rational`, `src/pred_set`, `src/n-bit`,
-`src/integer`, `src/bag`, `src/finite_maps` are clean; the residuals
-come from the two exempt/deferred classes below.
+Full `-F -t2` selftest census after the extended pass:
 
-  - `soundness_check-selftest.log` (38), `src/1/selftest.log` (17),
-    `simp-selftest.log` (3), datatype `theory_tests` (1 each):
-    selftest-in-place prove sites (the test file directly calls
-    `prove` without opening a segment).  Fixing them means wrapping
-    the test in a scratch theory or promoting the tactic proof to a
-    proper Script; left for a follow-up.
-  - `bin/hol.state0` log (14): warnings from the state-building
-    phase, hitting boolLib and friends --- exempt as they run once
-    during heap construction.
+  - `src/1/selftest.log` (14): boolLib/TypeBase-based warnings that
+    fire during a fresh selftest.exe start-up.  Exempt --- boolLib is
+    baked into `hol.state0`, so these can't fire at an awkward time in
+    real interactive use.
+  - `examples/logic/temporal_deep/src/examples/temporal_deep-selftest`
+    (4): fire from `ks_fair_emptyness___num___impl`'s runtime
+    `prove(?f. INJ f {...} UNIV, MATCH_MP_TAC NUM_FINITE_INJ_EXISTS
+    THEN REWRITE_TAC [...])`.  A forward-derivation replacement is
+    ready but the enclosing directory's `psl_lemmataTheory` has a
+    preexisting `COMPLEMENT_LETTER_Cases` proof failure that blocks
+    the selftest rebuild; carrying that as a separate issue.
+  - Everything else --- `integer-selftest`, `n-bit-selftest`,
+    `rational-selftest`, `finite-maps-selftest`, `holsmt-selftest`,
+    `ring-selftest`, `armv7-selftest`, `imperative-selftest`,
+    `holfoot-selftest`, and every Theory log across the core build
+    --- is warning-free for the library-load-time class.
 
 ## Longer term
 
