@@ -6136,15 +6136,18 @@ fun mf_scope_offsets_and_facto_pairs () =
     MFS.spec_of_type scope ``:unit`` = (1, 4) andalso
     List.all degenerate_pair data_types andalso
     #complete list_spec = (false, true) andalso
-    (* Concreteness quantifies over the constructor argument types, so a
-       list of nums is not concrete while num itself is capped at an
-       inexact 2.  Only completeness is facto-sensitive here, and an
-       inconcrete type is exact under neither facto value. *)
-    #concrete list_spec = (false, false) andalso
+    (* Concreteness asks whether an atom can conflate two values, so it
+       quantifies over the domains of function-typed constructor fields
+       only: [:num list] has none and stays concrete under both facto
+       values even though its [:num] is capped at an inexact 2.  The host
+       record's field is higher order, so its domain makes concreteness
+       facto-sensitive there.  Completeness is the property that asks
+       whether the whole type is covered. *)
+    #concrete list_spec = (true, true) andalso
     #complete host_spec = (false, true) andalso
     #concrete host_spec = (false, true) andalso
     not (MFS.is_exact_type (#data_types finitized) false list_ty) andalso
-    not (MFS.is_exact_type (#data_types finitized) true list_ty)
+    MFS.is_exact_type (#data_types finitized) true list_ty
   end
 
 val _ = require_msg (check_result mf_scope_offsets_and_facto_pairs) (fn () =>
@@ -8950,6 +8953,28 @@ val _ = require_msg
     "model-finder problem assembly did not skip an oversized scope")
   (fn () => ()) ()
 
+(* A sound problem approximates a positive equality by False only on a type
+   whose atoms may conflate values.  A data type with first-order fields
+   never does, however small its scope, so ``xs = [0]`` has to reach the
+   solver: translating it to False silently drops every counterexample that
+   pins a list to a literal, while the negated form still translates. *)
+fun mf_positive_datatype_equality_survives () =
+  let
+    val assignments = [(``:num list``, 3), (``:num``, 2)]
+    val deep = [``:num list``]
+    fun assembled term =
+      #formula (mf_assembled_problem term assignments deep)
+  in
+    assembled ``(xs : num list) = []`` <> Refute_Forl.False andalso
+    assembled ``(xs : num list) = [0]`` <> Refute_Forl.False andalso
+    assembled ``~((xs : num list) = [0])`` <> Refute_Forl.False
+  end
+
+val _ = require_msg
+  (check_result mf_positive_datatype_equality_survives) (fn () =>
+    "a positive data type equality was approximated away")
+  (fn () => ()) ()
+
 fun mf_binary_assembly_fixture bits term =
   let
     val context = MFH.context_with_binary_ints (fresh_mf_context ())
@@ -9962,6 +9987,31 @@ local
         | _ => false
     end
 
+  (* Whacking a constant weakens the formula the solver sees, which costs
+     the search the right to report that no model exists -- but not the
+     right to report one it did find.  Here the whacked constant is confined
+     to a tautology, so the kernel certifies the very same assignment, and a
+     certified counterexample can never be retracted by how the search
+     reached it. *)
+  fun mf_whack_keeps_its_counterexample () =
+    let
+      val solvers = Refute_ForlSat.configured_sat_solvers false
+      val solver =
+        if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
+      val config = default_config
+        |> upd_timeout 20.0
+        |> upd_backends (SOME ["kodkod"])
+        |> upd_sat_solver solver
+        |> upd_whack [``I : 'a -> 'a``]
+        |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
+    in
+      case Refute.refute config ``(n : num) = 0 /\ (I T \/ ~(I T))`` of
+          Refute.Counterexample
+            ({backend = "kodkod", certainty = Refute.Genuine,
+              cert = SOME _, ...} :: _) => true
+        | _ => false
+    end
+
   fun mf_whack_smoke () =
     let
       val solvers = Refute_ForlSat.configured_sat_solvers false
@@ -10261,6 +10311,12 @@ in
       require_msg (check_result mf_driver_smoke) (fn () =>
         "the gated model-finder smoke did not find a certified " ^
         "counterexample") (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_whack_keeps_its_counterexample) (fn () =>
+        "a weakened search retracted its certified counterexample")
+        (fn () => ()) ()
     else ()
   val _ =
     if bridge_configured then

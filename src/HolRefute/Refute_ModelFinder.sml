@@ -1110,7 +1110,12 @@ fun run_instance deadline started (config : Refute_Core.config)
             Refute_Core.Unknown
               (accounting_reason "model search was inconclusive" ::
                !error_reasons)
-          else if !(#semantic_weakening context) then
+          (* Weakening by whack or ersatz only invalidates the *absence* of a
+             model: an UNSAT weakened formula says nothing about the original
+             one.  A model that was found still carries the weakening in its
+             own reasons, and a HOL-certified one is independent of how the
+             search reached it, so neither may be retracted here. *)
+          else if !(#semantic_weakening context) andalso null cexs then
             Refute_Core.Unknown
               (accounting_reason
                  "formula was semantically weakened by whack or ersatz" ::
