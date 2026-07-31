@@ -1,6 +1,8 @@
 open HolKernel Parse boolLib simpLib
 open testutils boolSimps
 
+val _ = new_theory "scratch"
+
 val failcount = ref 0
 val _ = diemode := Remember failcount
 
