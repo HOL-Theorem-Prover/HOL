@@ -57,11 +57,26 @@ candidates fall back to Refute_Cert evaluation.  With `certify=false`,
 Refute skips that QC
 certification: a QC hit otherwise eligible for `Genuine` remains `Genuine`,
 but has `cert = NONE` and is reported as uncertified.  Disabling certification
-does not promote candidates already known to be stuck or incomplete.  An
-uncertified model-finder reconstruction remains `Potential`; a model-finder
-result is `Genuine` only when Refute constructed a HOL certificate.  Thus
+does not promote candidates already known to be stuck or incomplete.
 `certainty` records the semantic strength of the result, while `cert` records
-whether Refute constructed a HOL theorem.
+whether Refute constructed a HOL theorem.  The two are independent axes: a
+result may be `Genuine` with `cert = NONE`.
+
+SETTLED DECISION — do not revisit without the owner.  Refute trusts Kodkodi
+exactly as Isabelle/HOL's Nitpick trusts Kodkod, and must never be stricter.
+A model-finder verdict is decided by the *encoding*, not by whether a HOL
+theorem was built: `Refute_ModelFinder_Model.fallback_certainty` maps the
+translation's soundness and exactness flags onto `Genuine`, `QuasiGenuine`
+and `Potential`, mirroring Nitpick's genuine / quasi-genuine / potentially
+spurious.  A reconstructed model may therefore be `Genuine` with
+`cert = NONE`, exactly as a QC hit is under `certify=false`.  Requiring a
+certificate for a genuine model-finder result collapses the two axes, makes
+the model finder inconsistent with the QC path, and starves the
+`max_potential` budget so that found models are discarded and reported as
+`Unknown`.  That rule was introduced on 2026-07-29 (3948a7bed), its
+consequences re-baselined into the tests (2db19131b), and both were reverted;
+tests expecting `Genuine` with `cert = NONE` from kodkod are correct as
+written.
 Refute uses no oracle tags.  Cv performs all per-call definitions and
 translations inside a full theory snapshot/revert bracket.  Success,
 failure, timeout, and interruption paths leave no Refute-created type,

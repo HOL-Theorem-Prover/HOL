@@ -34,11 +34,19 @@ This file provides guidance to coding agents when working with the HolRefute pro
   registered substrate (`Refute_Eval.substrate`) compiles plans into a
   `compiled_test` and runs it; `Refute_Cert` certifies candidates.
   `Refute.sml` is a thin facade over `Refute_Core` orchestration.
-- Trust model: substrates are untrusted accelerators.  A counterexample
+- Trust model: substrates are untrusted accelerators.  A QC counterexample
   becomes `Genuine` only after `Refute_Cert` re-evaluates the instantiated
   proposition with computeLib and proves its negation.  No oracle tags.
   The sole opt-out is `upd_certify false` (default `true`): QC hits are
   then `Genuine` with `cert = NONE` and print as uncertified.
+- `certainty` and `cert` are independent axes: semantic strength vs. "a HOL
+  theorem exists".  `Genuine` with `cert = NONE` is valid and expected.
+- SETTLED, do not revisit: Refute trusts Kodkodi exactly as Nitpick trusts
+  Kodkod, and is never stricter.  Model-finder certainty comes from
+  `fallback_certainty` (encoding soundness/exactness), never from whether a
+  certificate was built.  Never require a certificate for a `Genuine` model,
+  and never "fix" a test expecting `Genuine, cert = NONE` from kodkod.  See
+  README; 3948a7bed and 2db19131b did this and were reverted.
 - Substrate selection: `Auto` falls through inapplicable substrates
   (NativeSML, then Cv, then Compute); an explicitly selected substrate
   never falls through — inapplicability reports `Unknown`.
