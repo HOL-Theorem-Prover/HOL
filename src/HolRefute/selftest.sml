@@ -18957,9 +18957,13 @@ fun corpus_parlist () =
         | SOME 3 => true
         | _ => false);
     (* A losing worker may be inside an uninterruptible section holding the
-       theory mutex, so it must be allowed to unwind rather than killed. *)
+       theory mutex, so it must be allowed to unwind rather than killed.
+       The loser needs a worker to lose on: [get_some] forks nothing at one
+       thread, and `bin/hol run selftest` starts there, so without raising
+       the count the degraded sequential walk answers from the winner alone
+       and never enters the section under test. *)
     check_corpus "Refute corpus: ParList get_some lets a loser unwind"
-      (fn () =>
+      (fn () => with_raced_backends (fn () =>
         let
           val unwound = ref false
           fun body 0 = (OS.Process.sleep (Time.fromReal 0.05); SOME 0)
@@ -18970,7 +18974,7 @@ fun corpus_parlist () =
                  NONE)
         in
           ParList.get_some body [0, 1] = SOME 0 andalso !unwound
-        end);
+        end));
     check_corpus "Refute corpus: parallel counterexample outcome" (fn () =>
       same cex_goal);
     check_corpus "Refute corpus: parallel sound outcome" (fn () =>
