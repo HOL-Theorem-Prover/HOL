@@ -4150,6 +4150,28 @@ Proof
   REFL_TAC
 QED
 
+Theorem RAT_DIV_NUMERAL_BIT1_SELF:
+  !x. &(NUMERAL (BIT1 x)) / &(NUMERAL (BIT1 x)) = 1
+Proof
+  GEN_TAC THEN MATCH_MP_TAC RAT_DIV_INV THEN
+  REWRITE_TAC [RAT_EQ_NUM_CALCULATE] THEN
+  REWRITE_TAC [arithmeticTheory.NUMERAL_DEF,
+               arithmeticTheory.BIT2,
+               arithmeticTheory.BIT1, numTheory.NOT_SUC,
+               arithmeticTheory.ADD_CLAUSES]
+QED
+
+Theorem RAT_DIV_NUMERAL_BIT2_SELF:
+  !x. &(NUMERAL (BIT2 x)) / &(NUMERAL (BIT2 x)) = 1
+Proof
+  GEN_TAC THEN MATCH_MP_TAC RAT_DIV_INV THEN
+  REWRITE_TAC [RAT_EQ_NUM_CALCULATE] THEN
+  REWRITE_TAC [arithmeticTheory.NUMERAL_DEF,
+               arithmeticTheory.BIT2,
+               arithmeticTheory.BIT1, numTheory.NOT_SUC,
+               arithmeticTheory.ADD_CLAUSES]
+QED
+
 (*==========================================================================
  * end of theory
  *==========================================================================*)
