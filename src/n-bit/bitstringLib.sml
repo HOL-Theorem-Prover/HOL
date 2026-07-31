@@ -98,25 +98,9 @@ end
 local
    open arithmeticTheory numeralTheory
 
-   val l2n_2_compute = prove(
-      “(l2n 2 [] = 0) /\
-       (!l. l2n 2 (0::l) = 2 * l2n 2 l) /\
-       (!l. l2n 2 (1::l) = 2 * l2n 2 l + 1)”,
-      simp_tac arith_ss [numposrepTheory.l2n_def])
-
-   val l2n_2_numeric = prove(
-      “(l2n 2 [] = ZERO) /\
-       (!l. l2n 2 (0::l) = numeral$iDUB (l2n 2 l)) /\
-       (!l. l2n 2 (1::l) = BIT1 (l2n 2 l))”,
-      qm
-       [l2n_2_compute, ALT_ZERO, ONE, ADD_ASSOC, BIT1, TIMES2, MULT_COMM, iDUB])
-
-   val num_from_bin_list_compute = prove(
-     “(num_from_bin_list [] = 0) /\
-      (!l. num_from_bin_list (0::l) = NUMERAL (l2n 2 $ REVERSE (0::l))) /\
-      (!l. num_from_bin_list (1::l) = NUMERAL (l2n 2 $ REVERSE (1::l)))”,
-      simp_tac list_ss [numposrepTheory.num_from_bin_list_def,
-                        numposrepTheory.l2n_def] >> qm [NUMERAL_DEF])
+   val l2n_2_compute = bitstringTheory.l2n_2_compute
+   val l2n_2_numeric = bitstringTheory.l2n_2_numeric
+   val num_from_bin_list_compute = bitstringTheory.num_from_bin_list_compute
 
    val cnv =
       Conv.REWR_CONV bitstringTheory.v2n_def
@@ -136,9 +120,7 @@ end
 (* Convert ``v2w [...]`` to ``n2w n`` *)
 
 local
-   val v2w_n2w_thm = prove(
-      “!l n. (v2n l = n) ==> (v2w l = n2w n : 'a word)”,
-      qm [bitstringTheory.ops_to_n2w])
+   val v2w_n2w_thm = bitstringTheory.v2w_n2w_thm
 in
    fun v2w_n2w_CONV tm =
       let
@@ -249,13 +231,7 @@ end
 *)
 
 local
-   val extract_v2w_cor = prove(
-     “!h l v.
-        (LENGTH v <= dimindex(:'a)) /\ (dimindex(:'b) = SUC h - l) /\
-        dimindex(:'b) <= dimindex(:'a) ==>
-        ((h >< l) (v2w v : 'a word) : 'b word =
-         v2w (fixwidth (dimindex(:'b)) (shiftr v l)))”,
-     qm [bitstringTheory.extract_v2w, bitstringTheory.field_def])
+   val extract_v2w_cor = bitstringTheory.extract_v2w_cor
    val shiftr_CONV =
      Conv.REWR_CONV bitstringTheory.shiftr_def
      THENC Conv.CHANGED_CONV (computeLib.CBV_CONV (listSimps.list_compset))
