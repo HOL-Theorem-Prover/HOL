@@ -694,10 +694,68 @@ structure Refute_EvalEnum = struct
         | Exn.Exn error => raise CleanupFailed error
     end
 
+  (* A compiled test holds its bracket from the first definition it makes
+     until [close], and lifetimes legitimately overlap: the cv substrate
+     opens its bracket while compiling (translation failures must surface
+     as inapplicability, not as an evaluation result), so a compute test
+     compiled from the same goal opens its own bracket, on the same
+     thread, before the cv test is closed.  With a plain mutex that
+     second open waits for a lock the caller itself holds and never
+     returns.  Entry is therefore re-entrant for the holding thread:
+     nested brackets share the outer baseline and only the outermost
+     close reverts, so the theory is clean again exactly when no bracket
+     is open.  Other threads still wait, because HOL's theory state
+     tolerates only one mutator at a time. *)
+  val bracket_owner = ref (NONE : Thread.thread option)
+  val bracket_depth = ref 0
+  val bracket_open = ref (NONE : theory_bracket option)
+
+  fun holds_theory_bracket () =
+    case !bracket_owner of
+        NONE => false
+      | SOME owner => Thread.equal (owner, Thread.self ())
+
+  (* Both of these must be called with interrupts masked, so that a lock
+     is never acquired or released without its bookkeeping. *)
+  fun enter_theory_bracket restore_attributes =
+    if holds_theory_bracket () then
+      bracket_depth := !bracket_depth + 1
+    else
+      let
+        val _ = lock_interruptibly restore_attributes theory_mutex
+      in
+        case Exn.capture open_theory_bracket () of
+            Exn.Exn error => (Mutex.unlock theory_mutex; raise error)
+          | Exn.Res bracket =>
+              (bracket_open := SOME bracket;
+               bracket_owner := SOME (Thread.self ());
+               bracket_depth := 1)
+      end
+
+  (* Returns the outermost close's cleanup outcome for the caller to
+     release once it has decided which exception wins. *)
+  fun leave_theory_bracket () =
+    if !bracket_depth > 1 then
+      (bracket_depth := !bracket_depth - 1; Exn.Res ())
+    else
+      let
+        val bracket = !bracket_open
+        val _ = bracket_open := NONE
+        val _ = bracket_depth := 0
+        val _ = bracket_owner := NONE
+        val cleanup =
+          case bracket of
+              NONE => Exn.Res ()
+            | SOME bracket => Exn.capture close_theory_bracket bracket
+        val _ = Mutex.unlock theory_mutex
+      in
+        cleanup
+      end
+
   datatype 'a held_state =
       HeldIdle
-    | HeldOpen of theory_bracket
-    | HeldReady of theory_bracket * 'a
+    | HeldOpen
+    | HeldReady of 'a
 
   datatype 'a held_bracket = HeldBracket of
     {state : 'a held_state ref, teardown : unit -> unit}
@@ -708,21 +766,13 @@ structure Refute_EvalEnum = struct
   fun close_held_bracket (HeldBracket {state, teardown}) =
     case !state of
         HeldIdle => ()
-      | current =>
+      | _ =>
           Thread_Attributes.uninterruptible
             (fn _ => fn () =>
               let
-                val bracket =
-                  case current of
-                      HeldOpen bracket => bracket
-                    | HeldReady (bracket, _) => bracket
-                    | HeldIdle =>
-                        raise Fail
-                          "Refute_EvalEnum.close_held_bracket: idle bracket"
-                val cleanup = Exn.capture close_theory_bracket bracket
+                val cleanup = leave_theory_bracket ()
                 val extra_cleanup = Exn.capture teardown ()
                 val _ = state := HeldIdle
-                val _ = Mutex.unlock theory_mutex
                 val _ = Exn.release cleanup
               in
                 Exn.release extra_cleanup
@@ -731,71 +781,55 @@ structure Refute_EvalEnum = struct
   fun start_held_bracket
         (held as HeldBracket {state, ...}) build =
     case !state of
-        HeldReady (_, value) => value
-      | HeldOpen _ =>
+        HeldReady value => value
+      | HeldOpen =>
           raise Fail "Refute_EvalEnum.start_held_bracket: incomplete start"
       | HeldIdle =>
           Thread_Attributes.uninterruptible
             (fn restore_attributes => fn () =>
               let
-                val _ = lock_interruptibly restore_attributes theory_mutex
-                val opened = Exn.capture open_theory_bracket ()
+                val _ = enter_theory_bracket restore_attributes
+                val _ = state := HeldOpen
+                (* [enter_theory_bracket] already fixes
+                   [restore_attributes] at unit, so the built value leaves
+                   the masked region through a slot rather than as the
+                   restored call's result. *)
+                val slot = ref NONE
+                val result = Exn.capture
+                  (restore_attributes
+                    (fn () => slot := SOME (build ()))) ()
               in
-                case opened of
-                    Exn.Exn error =>
-                      (Mutex.unlock theory_mutex; raise error)
-                  | Exn.Res bracket =>
-                      let
-                        val _ = state := HeldOpen bracket
-                        (* The interruptible lock acquisition above already
-                           fixes [restore_attributes] at unit, so the built
-                           value leaves the masked region through a slot
-                           rather than as the restored call's result. *)
-                        val slot = ref NONE
-                        val result = Exn.capture
-                          (restore_attributes
-                            (fn () => slot := SOME (build ()))) ()
-                      in
-                        case (result, !slot) of
-                            (Exn.Res _, SOME value) =>
-                              (state := HeldReady (bracket, value); value)
-                          | (Exn.Exn error, _) =>
-                              (close_held_bracket held; raise error)
-                          | (Exn.Res _, NONE) =>
-                              (close_held_bracket held;
-                               raise Fail "Refute_EvalEnum.\
-                                 \start_held_bracket: no value")
-                      end
+                case (result, !slot) of
+                    (Exn.Res _, SOME value) =>
+                      (state := HeldReady value; value)
+                  | (Exn.Exn error, _) =>
+                      (close_held_bracket held; raise error)
+                  | (Exn.Res _, NONE) =>
+                      (close_held_bracket held;
+                       raise Fail "Refute_EvalEnum.\
+                         \start_held_bracket: no value")
               end) ()
 
   fun with_clean_theory body =
     Thread_Attributes.uninterruptible
       (fn restore_attributes => fn () =>
         let
-          val _ = lock_interruptibly restore_attributes theory_mutex
-          val opened = Exn.capture open_theory_bracket ()
+          val _ = enter_theory_bracket restore_attributes
+          (* As in [start_held_bracket]: one restore type per
+             [uninterruptible] call, so the body's value comes back
+             through a slot. *)
+          val slot = ref NONE
+          val result = Exn.capture
+            (restore_attributes (fn () => slot := SOME (body ()))) ()
+          val cleanup = leave_theory_bracket ()
         in
-          case opened of
-              Exn.Exn error => (Mutex.unlock theory_mutex; raise error)
-            | Exn.Res bracket =>
-                let
-                  (* As in [start_held_bracket]: one restore type per
-                     [uninterruptible] call, so the body's value comes back
-                     through a slot. *)
-                  val slot = ref NONE
-                  val result = Exn.capture
-                    (restore_attributes (fn () => slot := SOME (body ()))) ()
-                  val cleanup = Exn.capture close_theory_bracket bracket
-                  val _ = Mutex.unlock theory_mutex
-                in
-                  case (result, !slot) of
-                      (Exn.Exn error, _) => raise error
-                    | (Exn.Res _, SOME value) =>
-                        (Exn.release cleanup; value)
-                    | (Exn.Res _, NONE) =>
-                        (Exn.release cleanup;
-                         raise Fail
-                           "Refute_EvalEnum.with_clean_theory: no value")
-                end
+          case (result, !slot) of
+              (Exn.Exn error, _) => raise error
+            | (Exn.Res _, SOME value) =>
+                (Exn.release cleanup; value)
+            | (Exn.Res _, NONE) =>
+                (Exn.release cleanup;
+                 raise Fail
+                   "Refute_EvalEnum.with_clean_theory: no value")
         end) ()
 end

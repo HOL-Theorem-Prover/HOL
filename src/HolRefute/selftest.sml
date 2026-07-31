@@ -17753,6 +17753,43 @@ val _ = require_msg (check_result (fn () =>
     "cv bracket left a theory artifact on a return or exception")
   (fn () => ()) ()
 
+(* Compiled-test lifetimes overlap: a cv test holds its bracket from
+   compile until close, so a compute test compiled from the same goal
+   opens a second bracket, on the same thread, while the first is still
+   open.  While the bracket was a plain mutex that second open waited on
+   a lock its own caller held and the session wedged with no output, so
+   the bound below reports a regression as a failure rather than as a
+   hang. *)
+fun nested_theory_bracket_is_reentrant () =
+  let
+    val baseline = snapshot ()
+    val held : unit Refute_EvalEnum.held_bracket =
+      Refute_EvalEnum.held_bracket (fn () => ())
+    fun body () =
+      let
+        val _ = Refute_EvalEnum.start_held_bracket held (fn () =>
+          make_bracket_artifacts "outer_held")
+        val inner = with_clean_theory (fn () =>
+          (make_bracket_artifacts "inner_nested"; 42))
+        (* A nested bracket shares the outer baseline, so its artifacts
+           retire with the outermost close and not before. *)
+        val nested_retained = not (same_snapshot baseline (snapshot ()))
+        val _ = Refute_EvalEnum.close_held_bracket held
+      in
+        inner = 42 andalso nested_retained
+      end
+    val completed =
+      Portable.finally (fn () => Refute_EvalEnum.close_held_bracket held)
+        (fn () => Timeout.apply (Time.fromReal 60.0) body ()) ()
+  in
+    completed andalso same_snapshot baseline (snapshot ())
+  end
+
+val _ = tprint "Refute nested theory bracket"
+val _ = require_msg (check_result nested_theory_bracket_is_reentrant)
+  (fn () => "a nested Refute theory bracket deadlocked or leaked")
+  (fn () => ()) ()
+
 fun enum_snapshot_restoration () =
   let
     val baseline = snapshot ()
