@@ -790,6 +790,19 @@ fun initialize {
     val startIdx = !idx
     val startTok = !curToken
     in
+      (* Advance `pos` to the current dec's start position before
+         reporting progress.  `toState` only updates `pos` on
+         PushSpan chunks, so a dec that begins with a leading Chunk
+         (e.g. filler newlines advancing to the dec's source line)
+         would leave `pos` at 0 — causing a runtime exception from
+         HOL kernel code (no `PolyML.Exception.exceptionLocation`
+         in the user file) to be pinned at byte 0 of the file
+         rather than at the dec it arose from. *)
+      (case !decsRef of
+         [] => ()
+       | dec :: _ =>
+         let val (s, _) = HOLSourceAST.decSpan dec
+         in if !pos < s then pos := s else () end);
       progress (!pos);
       case !curToken of
         (_, "") => ()

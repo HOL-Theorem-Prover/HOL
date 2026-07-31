@@ -559,8 +559,15 @@ fun start {diag} = let
 
   fun exnToReport i e = Error {hard = true,
     pos = case PolyML.Exception.exceptionLocation e of
-      NONE => (i, i)
-    | SOME l => locToRange l,
+      (* A HOL kernel exception (raised from Theory.new_theory or
+         similar) carries a location inside the HOL source that
+         raised it — mapping its byte offset via the current file's
+         `lines` table produces a nonsense line.  Trust the
+         location only when its `file` field is empty (meaning
+         "the anonymous compile unit we're currently feeding to
+         PolyML.compiler"). *)
+      SOME (l as {file = "", ...}) => locToRange l
+    | _ => (i, i),
     msg = encPretty textWidth (exceptionMessage e)}
 
   fun mergeInto msg buf =
