@@ -56,7 +56,9 @@ structure HolSmtLib :> HolSmtLib = struct
 
   val include_theorems = SmtLib.include_theorems
 
-  (* report whether solvers are available *)
+  (* report whether solvers are available.  The probe calls prove(T,...)
+     without a current theory, which would otherwise trip the
+     "TAC_PROOF requires current theory" warning at load time. *)
   val _ =
     let
       fun check_available prove_fn name =
@@ -68,23 +70,27 @@ structure HolSmtLib :> HolSmtLib = struct
         ignore (prove_fn boolSyntax.T)  (* should fail *)
           handle Feedback.HOL_ERR herr =>
             Feedback.HOL_MESG ("HolSmtLib: " ^ Feedback.message_of herr)
+      fun run () =
+        (
+          Feedback.set_trace "HolSmtLib" 0;
+          if CVC.is_configured () then (
+            check_available CVC_ORACLE_PROVE "cvc5 (oracle)";
+            check_available CVC_PROVE "cvc5 (with proofs)"
+          ) else
+            provoke_err CVC_ORACLE_PROVE;
+          if Yices.is_configured () then
+            check_available YICES_PROVE "Yices"
+          else
+            provoke_err YICES_PROVE;
+          if Z3.is_configured () then (
+            check_available Z3_ORACLE_PROVE "Z3 (oracle)";
+            check_available Z3_PROVE "Z3 (with proofs)"
+          ) else
+            provoke_err Z3_ORACLE_PROVE;
+          Feedback.reset_trace "HolSmtLib"
+        )
     in
-      Feedback.set_trace "HolSmtLib" 0;
-      if CVC.is_configured () then (
-        check_available CVC_ORACLE_PROVE "cvc5 (oracle)";
-        check_available CVC_PROVE "cvc5 (with proofs)"
-      ) else
-        provoke_err CVC_ORACLE_PROVE;
-      if Yices.is_configured () then
-        check_available YICES_PROVE "Yices"
-      else
-        provoke_err YICES_PROVE;
-      if Z3.is_configured () then (
-        check_available Z3_ORACLE_PROVE "Z3 (oracle)";
-        check_available Z3_PROVE "Z3 (with proofs)"
-      ) else
-        provoke_err Z3_ORACLE_PROVE;
-      Feedback.reset_trace "HolSmtLib"
+      Feedback.trace ("TAC_PROOF requires current theory", 0) run ()
     end
 
 end
