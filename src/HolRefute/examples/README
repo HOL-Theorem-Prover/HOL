@@ -1,0 +1,118 @@
+HolRefute by example
+====================
+
+Interactive transcripts covering the user-facing surface of HolRefute:
+counterexample search over executable definitions, native narrowing,
+the Kodkod model finder, the generator and display registries, the
+unused-assumption sweep, and the extension points.
+
+Each file is self-contained and meant to be read top to bottom.  Nothing
+here is built by Holmake; these are session transcripts, not theory
+scripts.
+
+
+Running them
+------------
+
+From this directory's parent (`src/HolRefute`), start a session with the
+Refute modules available and paste blocks into it:
+
+    ../../bin/hol --holstate=refuteheap
+
+or feed a whole file to that session:
+
+    ../../bin/hol --holstate=refuteheap < examples/01_first_steps.sml
+
+`refuteheap` is built by `Holmake` in `src/HolRefute`.  A plain
+`../../bin/hol` also works, at the cost of loading the theories the
+examples mention.
+
+Poly/ML only: the tree build skips HolRefute on other ML systems.
+
+Files 09 and 10 drive the model finder, which needs a Kodkodi 1.5.7
+component and a Java runtime:
+
+    export HOL4_KODKODI=/path/to/kodkodi-1.5.7
+
+Without it those calls report Unknown ("no configured backend"), which is
+the designed behaviour rather than a failure.  A few individual calls
+elsewhere reach for the model finder too — the set goal in 03, the
+probes in 08, sections 3 and 4 of 11 — and degrade the same way.
+Everything else runs with no external tools.
+
+
+The files
+---------
+
+01_first_steps.sml
+    refute, refute_def, refute_goal, refute_top, try_refute, quickcheck,
+    nitpick, REFUTE_TAC.  Goals with assumptions; using the proof
+    manager's current goal; branching on the returned outcome.
+
+02_verdicts_and_config.sml
+    Genuine, QuasiGenuine, Potential and Unknown; the certifying theorem
+    and how to opt out of it; evaluated terms; several counterexamples;
+    timeout, sequential execution, quiet mode, tags, trace levels;
+    expectations as assertions; changing the session default.
+
+03_datatypes_and_functions.sml
+    Conjectures about your own datatypes, records, options, pairs and
+    sets; the size bound and what "within the tested finite bounds"
+    means; polymorphic goals via finite types or a default type; nested
+    quantifiers.
+
+04_substrates_and_determinism.sml
+    NativeSML, Cv and Compute; Auto's priority order and fallthrough; why
+    an explicitly chosen substrate reports Unknown instead of switching;
+    exhaustive versus random search; seeds and cross-substrate
+    reproducibility; per-run statistics.
+
+05_smart_generators.sml
+    Hol_reln premises and Horn-shaped Boolean functions compiled into
+    enumerators; fuel via upd_depth and why fuel-bounded exhaustion is
+    always reported as incomplete; premise reordering; the same plan on
+    all three substrates.
+
+06_narrowing.sml
+    Function-valued counterexamples as UPDATE chains; partial
+    counterexamples with holes; refinement depth; refuting existential
+    goals; certification by case-tree replay.
+
+07_custom_generators.sml
+    register_generator with enumerating and random components;
+    abstract_generator for a type with an invariant; how a missing
+    invariant turns a true lemma into a false-looking one, and how
+    restricting generation fixes it.
+
+08_unused_assumptions.sml
+    check_unused_assms, find_unused_assms, print_unused_assms; reading
+    the maximal droppable sets; QC-only probes versus a configuration of
+    your own.
+
+09_model_finder.sml
+    nitpick and the kodkod backend: uninterpreted functions, sets and
+    relations; cardinality scopes; reading a model, with types, Skolem
+    constants, constants and argument grouping; several models at once;
+    models instead of counterexamples; whack, need and atoms; binary
+    integers; solver, batch size and threads; what Genuine means here.
+
+10_model_finder_advanced.sml
+    Inductive and coinductive predicates with unrolling depths;
+    codatatypes and bisimulation depth; registering a typedef and a
+    quotient of your own; display-only term postprocessors; merged
+    type-variable scopes; the translation knobs; debug output.
+
+11_extending_refute.sml
+    Registering a backend and its certainty ceiling; the refute_simp,
+    refute_psimp and refute_unfold theorem sets; ersatz constants; where
+    substrates plug in; restoring the built-in registrations.
+
+
+Further reading
+---------------
+
+`../README` documents the substrate model, the trust model, the full
+option table and the known limitations.  `../Refute.sig` is the public
+signature: everything used in these files appears there, except where a
+file explicitly reaches into an implementation module (noted at the
+point of use).
