@@ -10051,6 +10051,18 @@ local
       verdict plain = verdict whacked andalso unknown_eval whacked
     end
 
+  (* The seven smokes that follow all refute goals over non-executable
+     constants: the (co)inductive fixpoints of refuteTableZoo, RTC, inv,
+     and O have no computeLib evaluation, so Refute_Cert's re-evaluation
+     of the instantiated proposition gets stuck and no HOL certificate
+     can be built.  Per the trust model documented in README and
+     Manual/Description/Refute.smd, Kodkodi is an accelerator and not a
+     proof oracle: a model-finder result is Genuine only when Refute
+     constructed a HOL certificate, so an uncertified reconstruction
+     stays Potential.  Each test therefore pins that verdict and its
+     reason, and still requires that Kodkod found and reconstructed a
+     model, on top of its own scope and value checks. *)
+
   fun mf_inductive_direct_equation_smoke () =
     let
       val solvers = Refute_ForlSat.configured_sat_solvers false
@@ -10064,8 +10076,10 @@ local
     in
       case Refute.refute config ``zoo_wf_lfp n ==> n = 0`` of
           Refute.Counterexample
-            ({backend = "kodkod", certainty = Refute.Genuine,
-              cert = NONE, ...} :: _) => true
+            ({backend = "kodkod",
+              certainty = Refute.Potential
+                ["untrusted Kodkodi model; no HOL certificate"],
+              cert = NONE, model = SOME _, ...} :: _) => true
         | _ => false
     end
 
@@ -10091,8 +10105,11 @@ local
       case Refute.refute config ``~zoo_unroll_lfp 2`` of
           Refute.Counterexample
             ((counterexample as
-              {backend = "kodkod", certainty = Refute.Genuine,
-               cert = NONE, ...}) :: _) => pinned counterexample
+              {backend = "kodkod",
+               certainty = Refute.Potential
+                 ["untrusted Kodkodi model; no HOL certificate"],
+               cert = NONE, model = SOME _, ...}) :: _) =>
+              pinned counterexample
         | _ => false
     end
 
@@ -10116,8 +10133,11 @@ local
       case Refute.refute config ``zoo_guarded_gfp F`` of
           Refute.Counterexample
             ((counterexample as
-              {backend = "kodkod", certainty = Refute.Genuine,
-               cert = NONE, ...}) :: _) => pinned counterexample
+              {backend = "kodkod",
+               certainty = Refute.Potential
+                 ["untrusted Kodkodi model; no HOL certificate"],
+               cert = NONE, model = SOME _, ...}) :: _) =>
+              pinned counterexample
         | _ => false
     end
 
@@ -10136,8 +10156,10 @@ local
       case Refute.refute config
         ``zoo_mutual_gfp F \/ zoo_mutual_other_gfp F`` of
           Refute.Counterexample
-            ({backend = "kodkod", certainty = Refute.Genuine,
-              cert = NONE, ...} :: _) => true
+            ({backend = "kodkod",
+              certainty = Refute.Potential
+                ["untrusted Kodkodi model; no HOL certificate"],
+              cert = NONE, model = SOME _, ...} :: _) => true
         | _ => false
     end
 
@@ -10164,8 +10186,11 @@ local
       case Refute.refute config ``zoo_wf_lfp 2 ==> (2 : num) = 0`` of
           Refute.Counterexample
             ((counterexample as
-              {backend = "kodkod", certainty = Refute.Genuine,
-               cert = NONE, ...}) :: _) => no_iterator counterexample
+              {backend = "kodkod",
+               certainty = Refute.Potential
+                 ["untrusted Kodkodi model; no HOL certificate"],
+               cert = NONE, model = SOME _, ...}) :: _) =>
+              no_iterator counterexample
         | _ => false
     end
 
@@ -10184,8 +10209,10 @@ local
       case Refute.refute config
         ``~RTC (\x : num. \y : num. x = 0 /\ y = 1) 0 1`` of
           Refute.Counterexample
-            ({backend = "kodkod", certainty = Refute.Genuine, ...} :: _) =>
-              true
+            ({backend = "kodkod",
+              certainty = Refute.Potential
+                ["untrusted Kodkodi model; no HOL certificate"],
+              cert = NONE, model = SOME _, ...} :: _) => true
         | _ => false
     end
 
@@ -10207,8 +10234,10 @@ local
     in
       case Refute.refute config goal of
           Refute.Counterexample
-            ({backend = "kodkod", certainty = Refute.Genuine, ...} :: _) =>
-              true
+            ({backend = "kodkod",
+              certainty = Refute.Potential
+                ["untrusted Kodkodi model; no HOL certificate"],
+              cert = NONE, model = SOME _, ...} :: _) => true
         | _ => false
     end
 
