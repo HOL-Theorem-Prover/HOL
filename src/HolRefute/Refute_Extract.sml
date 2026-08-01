@@ -2167,7 +2167,7 @@ structure Refute_Extract = struct
                            | [child] => constructor ^ " " ^ child
                            | fields => constructor ^ " (" ^
                                join ", " fields ^ ")")
-                    | NONE => reject ("unknown lazy pattern constructor " ^
+                    | NONE => reject ("unknown pattern constructor " ^
                                       kname_text (kname head))
                 val payload =
                   case choose (context_mode context) native (fn () => NONE) of
@@ -2179,7 +2179,11 @@ structure Refute_Extract = struct
                   payload ^ " => " ^ body ^ " | _ => " ^ failure)
               end
             else
-              reject ("unsupported lazy pattern: " ^
+              (* This matcher serves strict extraction too, so its refusals
+                 must not blame lazy mode: [definition_clause] routes every
+                 clause here, and the strict expression compiler's own
+                 [pattern] refuses the same shape in the same words. *)
+              reject ("non-constructor pattern: " ^
                       Parse.term_to_string pattern)
           end
     in

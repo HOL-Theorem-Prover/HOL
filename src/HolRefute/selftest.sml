@@ -15425,6 +15425,48 @@ fun selected_substrate expected result =
       Counterexample (cex :: _) => #substrate cex = expected
     | _ => false
 
+(* [nub]'s equations mention MEM, which is an overload for [IN], and
+   pred_set stores GSPECIFICATION — an equation whose left-hand-side head
+   is [IN] — as that constant's user definition.  Extraction therefore has
+   to match the pattern [GSPEC f], and neither extraction mode supports set
+   comprehensions.  Both must refuse, and in the same words: definition
+   clauses always compile through the observation matcher, but exhaustive
+   and random extraction run it in strict mode, so a refusal blaming lazy
+   mode misdescribes them.  The refusal is the substrate's inapplicability
+   channel, so Auto has to fall through to a substrate that can. *)
+val gspec_pattern_goal = ``nub (xs : num list ++ ys) = nub xs ++ nub ys``
+
+fun native_gspec_pattern_is_inapplicable () =
+  let
+    val config = upd_size 4 (upd_substrate NativeSML default_config)
+    fun refused strategy =
+      case run_with_strategy strategy config gspec_pattern_goal of
+          Unknown reasons =>
+            List.exists (fn reason =>
+              reason = "non-constructor pattern: GSPEC f") reasons
+        | _ => false
+  in
+    refused Exhaustive andalso refused (Random {seed = 1})
+  end
+
+fun auto_falls_through_gspec_pattern () =
+  let
+    val config = upd_size 4 (upd_substrate Auto default_config)
+  in
+    case run_with_strategy Exhaustive config gspec_pattern_goal of
+        Counterexample (cex :: _) =>
+          #substrate cex <> "native" andalso #certainty cex = Genuine
+      | _ => false
+  end
+
+val _ = tprint "Refute native set-comprehension refusal"
+val _ = require_msg (check_result (fn () =>
+  native_gspec_pattern_is_inapplicable () andalso
+  auto_falls_through_gspec_pattern ())) (fn () =>
+  "the native substrate misreported a set-comprehension pattern, or Auto " ^
+  "failed to fall through to a substrate that handles it")
+  (fn () => ()) ()
+
 val _ = tprint "Refute narrowing backend"
 
 fun renamed_narrowing_uses_typed_certification_path () =
