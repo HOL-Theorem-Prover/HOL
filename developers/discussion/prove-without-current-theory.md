@@ -227,6 +227,25 @@ Additional libraries cleaned during the extended pass:
     `ks_fair_emptyness___num___impl`'s inline `prove(?f. INJ f {...}
     UNIV, ...)` is now a forward derivation built via `REWRITE_CONV`
     on `FINITE {...}` and `MATCH_MP NUM_FINITE_INJ_EXISTS`.
+  - `examples/miller/ho_prover/ho_proverTools.sml`: the 29-entry
+    `basic_rewrites` list and ten scattered `local val thm1 = prove`
+    sites now come from combinTheory / boolTheory / skiTheory
+    (extended with 6 SKI-algebra lemmas) and a new
+    ho_proverToolsContextTheory.
+  - `examples/miller/formalize/boolContext.sml`: 36 `basic_bool_rewrs`
+    now come from AND_CLAUSES / OR_CLAUSES / IMP_CLAUSES /
+    COND_CLAUSES / EQ_CLAUSES / NOT_CLAUSES / DE_MORGAN_THM plus a new
+    boolContextContextTheory.  neg_t/f_rewr consume CONJUNCTS
+    NOT_CLAUSES directly.  Note: the miller rewriter distinguishes
+    ⊢ (T ⇔ t) ⇔ t from ⊢ ∀t. ..., so the CONJUNCTS extractions run
+    through GEN_ALL.
+  - `examples/miller/formalize/numContext.sml`: five prove-list groups
+    (~60 arithmetic tautologies) now live in numContextContextTheory.
+
+Miller per-theory warning count drops from 143 to 0.  Total build
+census drops from 3422 warnings across 83 files to 1761 across 70 ---
+the residual is dominated by `examples/l3-machine-code`'s state-field
+simplifications.
   - `examples/imperative/reflectOnFailure.sml` gained a leading
     `new_theory "scratch"` to open a segment for the file's own
     load-time proves.  The two unit-test files (reflectOnFailure and
