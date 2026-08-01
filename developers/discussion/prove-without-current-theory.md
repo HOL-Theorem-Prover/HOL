@@ -227,6 +227,11 @@ Additional libraries cleaned during the extended pass:
     `ks_fair_emptyness___num___impl`'s inline `prove(?f. INJ f {...}
     UNIV, ...)` is now a forward derivation built via `REWRITE_CONV`
     on `FINITE {...}` and `MATCH_MP NUM_FINITE_INJ_EXISTS`.
+  - `examples/imperative/reflectOnFailure.sml` gained a leading
+    `new_theory "scratch"` to open a segment for the file's own
+    load-time proves.  The two unit-test files (reflectOnFailure and
+    necec2010) are linked into one selftest.exe, so a single
+    new_theory at the top of the first file is enough for both.
 
 Core-build census after all of the above:
 
@@ -242,17 +247,24 @@ Full `-F -t2` selftest census after the extended pass:
     fire during a fresh selftest.exe start-up.  Exempt --- boolLib is
     baked into `hol.state0`, so these can't fire at an awkward time in
     real interactive use.
-  - `examples/imperative/imperative-selftest.log` (13): fire from
-    reflectOnFailure/necec2010's own load-time `prove` calls.  A
-    leading `new_theory "scratch"` clears them but tips one of the
-    subsequent EVAL_TAC-heavy proofs from success into failure --- the
-    file structure assumes `getCT() = NONE`.  Left for a follow-up
-    that reshapes the tests rather than opens a segment.
   - Everything else --- `integer-selftest`, `n-bit-selftest`,
     `rational-selftest`, `finite-maps-selftest`, `holsmt-selftest`,
-    `ring-selftest`, `armv7-selftest`, `holfoot-selftest`,
-    `temporal_deep-selftest`, and every Theory log across the core
-    build --- is warning-free for the library-load-time class.
+    `ring-selftest`, `armv7-selftest`, `imperative-selftest`,
+    `holfoot-selftest`, `temporal_deep-selftest`, and every Theory
+    log across the core build --- is warning-free for the
+    library-load-time class.
+
+### Gotcha: `--holstate=hol.state0` on `bin/Holmake`
+
+If a directory's `Holmakefile` does not set `HOLHEAP`, the generated
+`selftest.exe` shell wrapper picks up whatever `--holstate` the
+Holmake invocation was given, defaulting to `bin/hol.state`.  Passing
+`--holstate=bin/hol.state0` (the bare kernel state) to `bin/Holmake -C
+<dir>` bakes that bare state into the *selftest binary itself*, and
+`hol.state0` is missing enough of the default compset for many
+EVAL_TAC-heavy proofs.  Fresh test failures that only appear under
+this shortcut are almost always this artefact; rebuild without the
+flag before treating them as real.
 
 ## Longer term
 
