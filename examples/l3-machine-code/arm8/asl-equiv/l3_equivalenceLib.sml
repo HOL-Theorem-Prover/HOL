@@ -9,12 +9,6 @@ open wordsTheory bitstringTheory integer_wordTheory finite_mapTheory listTheory
 open wordsLib optionLib combinLib
 open l3_equivalence_miscTheory l3_equivalence_lemmasTheory l3_equivalenceTheory
 
-val _ = set_grammar_ancestry [
-          "arm8_step", "arm8",
-          "armv86a_termination",
-          "l3_equivalence"
-          ];
-
 val _ = wordsLib.output_words_as_bin();
 val _ = wordsLib.guess_lengths();
 
