@@ -12267,6 +12267,21 @@ fun lazy_char_list_literal_keeps_element_lazy () =
       "let val hole = " ^ structure_name ^ ".refute_hole [12, 2]\n" ^
       "in not (Susp.force (Susp.force (" ^ entry ^ ") hole)) end")
 
+(* A char list is an ML string only in strict mode, so a lazy CONS pattern
+   over one has to be matched as the generated list datatype it actually
+   is.  Compiling the emitted source is the assertion: matching it as a
+   string emits String.size/String.sub against a datatype value, which does
+   not typecheck.  The holes then pin the usual lazy contract on top --
+   observing the spine may not force either field. *)
+fun lazy_char_list_pattern_matches_the_datatype () =
+  compile_lazy_extracted
+    ``\s : char list. case s of [] => F | c :: t => T``
+    (fn (structure_name, entry, cons) =>
+      "let val head = " ^ structure_name ^ ".refute_hole [12, 3]\n" ^
+      "    val tail = " ^ structure_name ^ ".refute_hole [12, 4]\n" ^
+      "    val value = " ^ lazy_cons cons "head" "tail" ^ "\n" ^
+      "in Susp.force (Susp.force (" ^ entry ^ ") value) end")
+
 fun lazy_generated_fields_defer_computations () =
   let
     fun untouched term = compile_lazy_extracted term
@@ -12436,6 +12451,10 @@ val _ = require_msg (check_result lazy_generated_field_keeps_path) (fn () =>
 val _ = require_msg
   (check_result lazy_char_list_literal_keeps_element_lazy) (fn () =>
   "a lazy char-list literal forced its suspended element")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_char_list_pattern_matches_the_datatype) (fn () =>
+  "a lazy char-list pattern was compiled against the string representation")
   (fn () => ()) ()
 val _ = require_msg
   (check_result lazy_generated_fields_defer_computations) (fn () =>

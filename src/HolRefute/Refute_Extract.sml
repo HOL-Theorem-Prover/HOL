@@ -701,7 +701,6 @@ structure Refute_Extract = struct
 
   fun equality_declarations context =
     let
-      val ops = context_operations context
       fun discover seen =
         case List.find (fn ty =>
           not (Util.member_type ty seen))
@@ -2179,7 +2178,15 @@ structure Refute_Extract = struct
         else
           let
             val (head, arguments) = boolSyntax.strip_comb pattern
-            val char_list = is_char_list (Term.type_of pattern)
+            (* A char list is an ML string in strict mode only:
+               [classify_primitive] offers [MLString] through [algebraic],
+               which is [NONE] in lazy mode, so a lazy char list is a
+               suspension of a generated list datatype and its constructors
+               have to be observed as such.  The type alone does not say
+               which, and testing it alone emitted [String.size] against a
+               datatype value -- generated SML that does not typecheck. *)
+            val char_list = is_char_list (Term.type_of pattern) andalso
+              choose (context_mode context) (fn () => true) (fn () => false)
             fun match_children bound [] [] = success
               | match_children bound (argument :: arguments)
                   (child :: children) =
@@ -2273,111 +2280,6 @@ structure Refute_Extract = struct
           end
     in
       match initial_bound tm value success
-    end
-
-  fun strict_definition_clause context (constant, name, theorem) =
-    let
-      val next_pattern = ref 0
-      fun fresh_pattern () =
-        let val number = !next_pattern
-            val _ = next_pattern := number + 1
-        in "refute_pattern_" ^ Int.toString number end
-      fun strip_suc count tm =
-        let val (head, arguments) = boolSyntax.strip_comb tm
-        in
-          if Term.is_const head andalso kname head = ("num", "SUC") then
-            case arguments of
-              [argument] => strip_suc (count + 1) argument
-            | _ => reject "malformed SUC pattern"
-          else
-            (count, tm)
-        end
-      fun compiled_pattern tm =
-        let val (successors, base) = strip_suc 0 tm
-        in
-          if successors = 0 then (pattern context tm, [], [])
-          else
-            let
-              val variable = fresh_pattern ()
-              val predecessor = parens (variable ^ " - " ^
-                Int.toString successors)
-              val lower_bound = variable ^ " >= " ^
-                Int.toString successors
-            in
-              if Term.is_var base then
-                let val base_name = variable_name base
-                    val bindings = if base_name = "_" then [] else
-                      ["val " ^ base_name ^ " = " ^ predecessor]
-                in (variable, [lower_bound], bindings) end
-              else if Literal.is_numeral base then
-                let val number = Literal.relaxed_dest_numeral base
-                in
-                  (variable,
-                   [lower_bound, predecessor ^ " = " ^
-                    Arbnum.toString number], [])
-                end
-              else
-                reject ("unsupported successor pattern: " ^
-                        Parse.term_to_string tm)
-            end
-        end
-      fun equation_info equation =
-        let
-          val (left, right) = boolSyntax.dest_eq equation
-            handle Feedback.HOL_ERR _ =>
-              reject ("non-equational rule for " ^
-                      kname_text (kname constant))
-          val (head, arguments) = boolSyntax.strip_comb left
-          val _ =
-            if Term.is_const head andalso Term.same_const head constant then ()
-            else reject ("rule has the wrong head for " ^
-                         kname_text (kname constant))
-          val patterns = List.map compiled_pattern arguments
-        in
-          { patterns = List.map #1 patterns,
-            guards = List.concat (List.map #2 patterns),
-            bindings = List.concat (List.map #3 patterns),
-            rhs = expression context right }
-        end
-      val equations = equations_of theorem
-      val infos = List.map equation_info equations
-      val _ =
-        if null infos then reject ("definition has no clauses for " ^
-          kname_text (kname constant)) else ()
-      val arity = length (#patterns (hd infos))
-      val _ =
-        if List.all (fn info => length (#patterns info) = arity) infos then ()
-        else reject ("definition has inconsistent arities for " ^
-                     kname_text (kname constant))
-      val arguments = List.tabulate (arity, fn index =>
-        "refute_argument_" ^ Int.toString index)
-      fun tuple [] = "()"
-        | tuple [item] = item
-        | tuple items = parens (join ", " items)
-      fun guarded {guards, bindings, rhs, ...} fallback =
-        let
-          val body = if null bindings then rhs else
-            parens ("let " ^ join " " bindings ^ " in " ^ rhs ^ " end")
-        in
-          if null guards then body
-          else parens ("if " ^ join " andalso " guards ^ " then " ^
-                       body ^ " else " ^ fallback)
-        end
-      fun dispatch [] = "(raise Match)"
-        | dispatch (info :: rest) =
-            let
-              val fallback = "refute_next ()"
-              val next = dispatch rest
-            in
-              parens ("let fun refute_next () = " ^ next ^ " in case " ^
-                tuple arguments ^ " of " ^ tuple (#patterns info) ^
-                " => " ^ guarded info fallback ^ " | _ => " ^
-                fallback ^ " end")
-            end
-      val lhs = if null arguments then name ^ " ()"
-                else name ^ " " ^ join " " arguments
-    in
-      lhs ^ " = " ^ dispatch infos
     end
 
   fun lazy_definition_clause context (constant, name, theorem) =
