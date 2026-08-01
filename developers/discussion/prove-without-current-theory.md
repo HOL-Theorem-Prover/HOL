@@ -223,9 +223,10 @@ Additional libraries cleaned during the extended pass:
   - `examples/arm/v7/arm_stepLib.sml`.
   - `examples/separationLogic/src/vars_as_resourceFunctor.sml`,
     `separationLogicLib.sml`, `holfoot/holfootLib.sml`.
-  - `examples/imperative/reflectOnFailure.sml` gained a leading
-    `new_theory "scratch"` to open a segment for the file's own
-    load-time proves.
+  - `examples/logic/temporal_deep/src/translations/translationsLib.sml`:
+    `ks_fair_emptyness___num___impl`'s inline `prove(?f. INJ f {...}
+    UNIV, ...)` is now a forward derivation built via `REWRITE_CONV`
+    on `FINITE {...}` and `MATCH_MP NUM_FINITE_INJ_EXISTS`.
 
 Core-build census after all of the above:
 
@@ -241,18 +242,17 @@ Full `-F -t2` selftest census after the extended pass:
     fire during a fresh selftest.exe start-up.  Exempt --- boolLib is
     baked into `hol.state0`, so these can't fire at an awkward time in
     real interactive use.
-  - `examples/logic/temporal_deep/src/examples/temporal_deep-selftest`
-    (4): fire from `ks_fair_emptyness___num___impl`'s runtime
-    `prove(?f. INJ f {...} UNIV, MATCH_MP_TAC NUM_FINITE_INJ_EXISTS
-    THEN REWRITE_TAC [...])`.  A forward-derivation replacement is
-    ready but the enclosing directory's `psl_lemmataTheory` has a
-    preexisting `COMPLEMENT_LETTER_Cases` proof failure that blocks
-    the selftest rebuild; carrying that as a separate issue.
+  - `examples/imperative/imperative-selftest.log` (13): fire from
+    reflectOnFailure/necec2010's own load-time `prove` calls.  A
+    leading `new_theory "scratch"` clears them but tips one of the
+    subsequent EVAL_TAC-heavy proofs from success into failure --- the
+    file structure assumes `getCT() = NONE`.  Left for a follow-up
+    that reshapes the tests rather than opens a segment.
   - Everything else --- `integer-selftest`, `n-bit-selftest`,
     `rational-selftest`, `finite-maps-selftest`, `holsmt-selftest`,
-    `ring-selftest`, `armv7-selftest`, `imperative-selftest`,
-    `holfoot-selftest`, and every Theory log across the core build
-    --- is warning-free for the library-load-time class.
+    `ring-selftest`, `armv7-selftest`, `holfoot-selftest`,
+    `temporal_deep-selftest`, and every Theory log across the core
+    build --- is warning-free for the library-load-time class.
 
 ## Longer term
 
