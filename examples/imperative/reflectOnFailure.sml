@@ -9,8 +9,6 @@ load "testutils";
 open HolKernel Parse boolLib bossLib ;
 open tautLib ptopTheory imperativeLib imperativeTheory ;
 
-val _ = new_theory "scratch"
-
 val _ = set_trace "Unicode" 0;
 
 val OK = testutils.OK
