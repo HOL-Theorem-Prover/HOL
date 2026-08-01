@@ -144,6 +144,6 @@ Tag.dest_tag (Thm.tag cert_thm);
 case refute (upd_quiet true (!the_config)) ``(f : num -> num) 0 = f 1`` of
     Counterexample (cex :: _) => (#backend cex, #substrate cex)
   | _ => ("none", "none");
-(* ==> ("exhaustive", "compute"): on this goal the enumerating backend   *)
+(* ==> ("exhaustive", "native"): on this goal the enumerating backend    *)
 (*     wins the race, and the narrowing answer of section 1 is the one   *)
 (*     you only see by selecting that backend                            *)

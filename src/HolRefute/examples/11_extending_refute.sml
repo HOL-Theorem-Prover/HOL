@@ -186,10 +186,15 @@ register_ersatz
 
 refute max_config ``!m n : num. m <= MAX m n``;
 (* ==> Refute found a counterexample (backend: kodkod, substrate:        *)
-(* ==>   kodkod): Scope: card num = 3, m = 2, n = 1, MIN m n = 1,        *)
+(* ==>   kodkod):                                                        *)
+(* ==>     Scope: card num = 3                                           *)
+(* ==>     Skolem constants:                                             *)
+(* ==>       m = 2                                                       *)
+(* ==>       n = 1                                                       *)
 (* ==>   Potential counterexample: evaluation stuck on: $<=              *)
 (*     A true theorem now looks refutable, because the solver was        *)
-(*     shown MIN where the goal says MAX.                                *)
+(*     shown MIN where the goal says MAX.  The model's constants, which  *)
+(*     [upd_show_consts true] would print, record MIN m n = 1.           *)
 (*                                                                       *)
 (* There is no deregistration hook: the entry above stays in force for    *)
 (* the rest of this session (see section 6).  In particular, do not try   *)
