@@ -17481,6 +17481,55 @@ val _ = require_msg (check_result gave_up_reason_is_plumbed) (fn () =>
   "a substrate GaveUp reason was not merged into Unknown")
   (fn () => ()) ()
 
+(* A substrate cleanup that ran to completion may not void the search's
+   verdict, however long it took.  The cleanup bound cancels by interrupting
+   this thread, so a close that must not be torn in half — Cv reverts its
+   theory snapshot masked, and takes upwards of 100ms doing it — cannot be
+   preempted at all: the interrupt only lands once the close has already
+   finished, and reporting it as a timeout used to escape the backend and be
+   charged to the backend's own deadline, discarding a counterexample the
+   search had found and certified. *)
+fun slow_masked_cleanup_keeps_the_verdict () =
+  let
+    val original = valOf (List.find (fn substrate =>
+      #name substrate = "compute") (get_substrates ()))
+    val closed = ref false
+    fun slow_close close () =
+      Thread_Attributes.uninterruptible (fn _ => fn () =>
+        let
+          val deadline = Time.now () + Time.fromMilliseconds 400
+          fun spin () = if Time.now () < deadline then spin () else ()
+        in
+          (close (); spin (); closed := true)
+        end) ()
+    fun compile config strategy problem =
+      case #compile original config strategy problem of
+          Compiled test =>
+            Compiled {run = #run test, close = slow_close (#close test),
+                      max_chunk = #max_chunk test,
+                      last_stats = #last_stats test}
+        | other => other
+    val replacement : substrate =
+      {name = "compute", priority = #priority original,
+       accepts = #accepts original, preflight = #preflight original,
+       compile = compile}
+    val config = upd_substrate Compute (upd_size 1 default_config)
+    val instances = qc_instances config ``(b : bool)``
+    val _ = register_substrate replacement
+    val result =
+      in_refute_call (fn () => strategy_run Exhaustive config instances)
+      handle e => (register_substrate original; raise e)
+    val _ = register_substrate original
+  in
+    !closed andalso
+    (case result of Counterexample (_ :: _) => true | _ => false)
+  end
+
+val _ = tprint "Refute slow masked cleanup keeps the verdict"
+val _ = require_msg (check_result slow_masked_cleanup_keeps_the_verdict)
+  (fn () => "a completed substrate cleanup was reported as a timeout")
+  (fn () => ()) ()
+
 fun smart_pruning_works () =
   let
     val base = upd_size 3 default_config

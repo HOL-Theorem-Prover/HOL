@@ -746,13 +746,42 @@ structure Refute_QC = struct
     length left = length right andalso
     ListPair.allEq same_plan (left, right)
 
-  (* Substrates are public extension points.  A faulty cleanup callback must
-     not outlive a run forever; its small independent bound also ensures that
-     a prior timeout or interrupt remains the result reported to the caller. *)
+  (* Substrates are public extension points, so a cleanup callback runs on
+     its own small independent interrupt budget: a run whose own deadline has
+     already expired must still report its own result rather than have the
+     pending interrupt abort the cleanup.
+
+     The budget classifies the cleanup, it does not preempt it.  Cleanup here
+     is work that may not be torn in half — Cv reverts its theory snapshot
+     inside [Thread_Attributes.uninterruptible], because a half-reverted
+     snapshot would strand Refute definitions in the user's theory, which is
+     exactly the invariant cleanup exists to keep.  [Timeout.apply] cancels by
+     interrupting this thread, and Poly/ML defers a masked thread's interrupt
+     until the mask ends, i.e. until after the cleanup has done all of its
+     work.  Expiry therefore only ever means "slow", never "cut short", and
+     reporting it as a failure fails a cleanup that in fact succeeded.
+     [strategy_run] releases the close result on the success path, so that
+     spurious [Timeout.TIMEOUT] escapes the backend and [run_backend] charges
+     it to the backend's own deadline, discarding a verdict the search had
+     already reached.  Recording completion inside the mask separates the two
+     cases: a cleanup that reached its end is a success however long it took,
+     and only one that never got there is reported. *)
   val cleanup_timeout = Time.fromMilliseconds 100
 
   fun bounded_close close =
-    Exn.capture (fn () => Timeout.apply cleanup_timeout close ()) ()
+    let
+      val finished = ref false
+      fun run_close () =
+        Thread_Attributes.uninterruptible
+          (fn _ => fn () => (close (); finished := true)) ()
+      val outcome =
+        Exn.capture (fn () => Timeout.apply cleanup_timeout run_close ()) ()
+    in
+      case outcome of
+          Exn.Exn (Timeout.TIMEOUT _) =>
+            if !finished then Exn.Res () else outcome
+        | _ => outcome
+    end
 
   fun close_selection (SelectionFailed _) = ()
     | close_selection (Selected (_, test)) =
