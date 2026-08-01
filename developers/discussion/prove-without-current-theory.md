@@ -234,13 +234,13 @@ Additional libraries cleaned during the extended pass:
     ho_proverToolsContextTheory.
   - `examples/miller/formalize/boolContext.sml`: 36 `basic_bool_rewrs`
     now come from AND_CLAUSES / OR_CLAUSES / IMP_CLAUSES /
-    COND_CLAUSES / EQ_CLAUSES / NOT_CLAUSES / DE_MORGAN_THM plus a new
-    boolContextContextTheory.  neg_t/f_rewr consume CONJUNCTS
-    NOT_CLAUSES directly.  Note: the miller rewriter distinguishes
-    ⊢ (T ⇔ t) ⇔ t from ⊢ ∀t. ..., so the CONJUNCTS extractions run
-    through GEN_ALL.
+    COND_CLAUSES / EQ_CLAUSES / NOT_CLAUSES / DE_MORGAN_THM plus nine
+    tautologies added to extra_boolTheory.  neg_t/f_rewr consume
+    CONJUNCTS NOT_CLAUSES directly.  Note: the miller rewriter
+    distinguishes ⊢ (T ⇔ t) ⇔ t from ⊢ ∀t. ..., so the CONJUNCTS
+    extractions run through GEN_ALL.
   - `examples/miller/formalize/numContext.sml`: five prove-list groups
-    (~60 arithmetic tautologies) now live in numContextContextTheory.
+    (~60 arithmetic tautologies) now live in extra_numTheory.
 
 Miller per-theory warning count drops from 143 to 0.  Total build
 census drops from 3422 warnings across 83 files to 1761 across 70 ---
