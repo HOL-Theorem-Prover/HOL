@@ -882,9 +882,11 @@ fun ks_fair_emptyness___num___impl thm ltl_type used_vars_num =
     val thm = SIMP_RULE std_ss [LEFT_FORALL_IMP_THM] thm
 
     val inj_exists_term = rand (rator (concl thm));
-    val inj_exists_thm = prove (inj_exists_term,
-                                MATCH_MP_TAC NUM_FINITE_INJ_EXISTS THEN
-                                REWRITE_TAC[FINITE_INSERT, FINITE_EMPTY])
+    val set_term = rand (rator (body (rand inj_exists_term)))
+    val finite_thm =
+      Drule.EQT_ELIM (REWRITE_CONV [FINITE_INSERT, FINITE_EMPTY]
+                                   (pred_setSyntax.mk_finite set_term))
+    val inj_exists_thm = MATCH_MP NUM_FINITE_INJ_EXISTS finite_thm
     val thm = REWRITE_RULE [inj_exists_thm] thm
   in
     (thm, enum_list used_vars_num var_list)
