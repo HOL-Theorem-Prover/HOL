@@ -590,16 +590,28 @@ structure Refute_EvalEnum = struct
       generator_values @ inputs @ [numSyntax.term_of_int fuel])
 
   (* Shared process-global theory bracket.  Compute definitions and cv
-     translations must serialize against one another. *)
-  val theory_mutex = Mutex.mutex ()
+     translations must serialize against one another.
 
-  (* Lock acquisition itself must admit timeout interrupts.  Once [trylock]
-     succeeds, interrupts remain masked until the caller has installed its
+     An ownerless binary lock rather than a [Mutex.mutex]: the bracket is
+     released by whichever thread runs the substrate's [close], and
+     [Refute_QC.bounded_close] runs a cleanup on a thread of its own, so
+     the releasing thread is not in general the one that took the lock.
+     Poly/ML leaves [Mutex.unlock] undefined in that case. *)
+  val theory_lock = Synchronized.var "Refute evaluator theory" false
+
+  fun try_lock_theory () =
+    Synchronized.change_result theory_lock
+      (fn held => (not held, true))
+
+  fun unlock_theory () = Synchronized.change theory_lock (fn _ => false)
+
+  (* Lock acquisition itself must admit timeout interrupts.  Once the lock
+     is taken, interrupts remain masked until the caller has installed its
      cleanup state, so no lock can be leaked in that small transition. *)
-  fun lock_interruptibly restore lock =
+  fun lock_interruptibly restore =
     let
       fun acquire () =
-        if Mutex.trylock lock then ()
+        if try_lock_theory () then ()
         else
           (restore (fn () => OS.Process.sleep (Time.fromReal 0.01)) ();
            acquire ())
@@ -608,7 +620,7 @@ structure Refute_EvalEnum = struct
     end
 
   (* Prefix allocation is independent of the theory bracket: cv allocates
-     local names while holding [theory_mutex], whereas compute allocates its
+     local names while holding [theory_lock], whereas compute allocates its
      definition prefix before the first run. *)
   val name_mutex = Mutex.mutex ()
   val name_serial = ref 0
@@ -722,7 +734,7 @@ structure Refute_EvalEnum = struct
       bracket_depth := !bracket_depth + 1
     else
       let
-        val _ = lock_interruptibly restore_attributes theory_mutex
+        val _ = lock_interruptibly restore_attributes
         (* Everything defined from here until the revert has finished is
            the evaluator's own, so it must not retire the enumerator
            programs the plan being compiled refers to. *)
@@ -731,7 +743,7 @@ structure Refute_EvalEnum = struct
         case Exn.capture open_theory_bracket () of
             Exn.Exn error =>
               (Refute_SmartGen.leave_private_theory ();
-               Mutex.unlock theory_mutex; raise error)
+               unlock_theory (); raise error)
           | Exn.Res bracket =>
               (bracket_open := SOME bracket;
                bracket_owner := SOME (Thread.self ());
@@ -756,7 +768,7 @@ structure Refute_EvalEnum = struct
         (* After the revert, not before: the deletions it performs are
            themselves theory deltas of the evaluator's own making. *)
         val _ = Refute_SmartGen.leave_private_theory ()
-        val _ = Mutex.unlock theory_mutex
+        val _ = unlock_theory ()
       in
         cleanup
       end

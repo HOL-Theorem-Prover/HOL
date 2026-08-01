@@ -17482,13 +17482,13 @@ val _ = require_msg (check_result gave_up_reason_is_plumbed) (fn () =>
   (fn () => ()) ()
 
 (* A substrate cleanup that ran to completion may not void the search's
-   verdict, however long it took.  The cleanup bound cancels by interrupting
-   this thread, so a close that must not be torn in half — Cv reverts its
-   theory snapshot masked, and takes upwards of 100ms doing it — cannot be
-   preempted at all: the interrupt only lands once the close has already
-   finished, and reporting it as a timeout used to escape the backend and be
-   charged to the backend's own deadline, discarding a counterexample the
-   search had found and certified. *)
+   verdict, however long it took.  A close that must not be torn in half —
+   Cv reverts its theory snapshot masked, and takes upwards of 100ms doing
+   it — cannot be preempted at all: an interrupt only lands once the close
+   has already finished, and the 100ms bound that then reported it as a
+   timeout escaped the backend and was charged to the backend's own
+   deadline, discarding a counterexample the search had found and certified.
+   This close both masks and outlasts that old bound. *)
 fun slow_masked_cleanup_keeps_the_verdict () =
   let
     val original = valOf (List.find (fn substrate =>
@@ -17528,6 +17528,65 @@ fun slow_masked_cleanup_keeps_the_verdict () =
 val _ = tprint "Refute slow masked cleanup keeps the verdict"
 val _ = require_msg (check_result slow_masked_cleanup_keeps_the_verdict)
   (fn () => "a completed substrate cleanup was reported as a timeout")
+  (fn () => ()) ()
+
+(* The other direction of the same bound: a cleanup that never returns must
+   not take the run with it.  Nothing interrupts it — it is abandoned, so
+   this close performs the real cleanup first and only then hangs, leaving
+   the theory bracket given back and no lock held.  Both spins are bounded
+   by their own deadlines, so a regression costs the suite its wait rather
+   than wedging it: without a bound the run blocks in the close until the
+   close's own deadline releases it, and then fails on the verdict below. *)
+fun spin_until flag deadline =
+  if !flag orelse Time.now () > deadline then ()
+  else (OS.Process.sleep (Time.fromMilliseconds 5);
+        spin_until flag deadline)
+
+fun stuck_cleanup_does_not_hang_the_run () =
+  let
+    val original = valOf (List.find (fn substrate =>
+      #name substrate = "compute") (get_substrates ()))
+    val release = ref false
+    val hung = ref false
+    val returned = ref false
+    fun stuck_close close () =
+      (close (); hung := true;
+       spin_until release (Time.now () + Time.fromSeconds 20);
+       returned := true)
+    fun compile config strategy problem =
+      case #compile original config strategy problem of
+          Compiled test =>
+            Compiled {run = #run test, close = stuck_close (#close test),
+                      max_chunk = #max_chunk test,
+                      last_stats = #last_stats test}
+        | other => other
+    val replacement : substrate =
+      {name = "compute", priority = #priority original,
+       accepts = #accepts original, preflight = #preflight original,
+       compile = compile}
+    val config = upd_substrate Compute (upd_size 1 default_config)
+    val instances = qc_instances config ``(b : bool)``
+    val bound = !cleanup_timeout
+    val _ = cleanup_timeout := Time.fromMilliseconds 200
+    val _ = register_substrate replacement
+    val result = Exn.capture
+      (fn () => in_refute_call (fn () => strategy_run Exhaustive config
+        instances)) ()
+    val _ = cleanup_timeout := bound
+    val _ = register_substrate original
+    (* Let the abandoned cleanup finish before the next test runs. *)
+    val _ = release := true
+    val _ = spin_until returned (Time.now () + Time.fromSeconds 20)
+  in
+    !hung andalso !returned andalso
+    (case result of
+         Exn.Exn (CleanupAbandoned _) => true
+       | _ => false)
+  end
+
+val _ = tprint "Refute stuck cleanup does not hang the run"
+val _ = require_msg (check_result stuck_cleanup_does_not_hang_the_run)
+  (fn () => "a substrate cleanup that never returns was waited on")
   (fn () => ()) ()
 
 fun smart_pruning_works () =

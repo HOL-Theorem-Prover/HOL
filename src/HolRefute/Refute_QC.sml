@@ -746,41 +746,74 @@ structure Refute_QC = struct
     length left = length right andalso
     ListPair.allEq same_plan (left, right)
 
-  (* Substrates are public extension points, so a cleanup callback runs on
-     its own small independent interrupt budget: a run whose own deadline has
-     already expired must still report its own result rather than have the
-     pending interrupt abort the cleanup.
+  (* Substrates are public extension points, so a cleanup callback gets a
+     thread and a deadline of its own.  Two properties have to hold at once.
 
-     The budget classifies the cleanup, it does not preempt it.  Cleanup here
+     A cleanup that runs to completion wins, however long it takes.  Cleanup
      is work that may not be torn in half — Cv reverts its theory snapshot
      inside [Thread_Attributes.uninterruptible], because a half-reverted
      snapshot would strand Refute definitions in the user's theory, which is
-     exactly the invariant cleanup exists to keep.  [Timeout.apply] cancels by
-     interrupting this thread, and Poly/ML defers a masked thread's interrupt
-     until the mask ends, i.e. until after the cleanup has done all of its
-     work.  Expiry therefore only ever means "slow", never "cut short", and
-     reporting it as a failure fails a cleanup that in fact succeeded.
-     [strategy_run] releases the close result on the success path, so that
-     spurious [Timeout.TIMEOUT] escapes the backend and [run_backend] charges
-     it to the backend's own deadline, discarding a verdict the search had
-     already reached.  Recording completion inside the mask separates the two
-     cases: a cleanup that reached its end is a success however long it took,
-     and only one that never got there is reported. *)
-  val cleanup_timeout = Time.fromMilliseconds 100
+     exactly the invariant cleanup exists to keep — and theory hygiene is the
+     stronger of the two invariants here.  Preemption was never on offer
+     anyway: [Timeout.apply] cancels by interrupting the calling thread, and
+     Poly/ML defers a masked thread's interrupt until the mask ends, i.e.
+     until after the cleanup has done all of its work, so its expiry could
+     only mislabel a cleanup that had in fact succeeded.  That spurious
+     [Timeout.TIMEOUT] escaped [strategy_run] into [run_backend], which
+     charged it to the backend's own deadline and discarded a verdict the
+     search had already reached.
+
+     A cleanup that never returns must not take the run down with it.  So the
+     cleanup runs on its own masked thread and the caller stops *waiting* on
+     it after [cleanup_timeout] rather than trying to interrupt it: control
+     always comes back, and a cleanup still in progress is reported as
+     [CleanupAbandoned] rather than as a search result.  The wait itself is
+     masked, so that a run whose own deadline has already expired reports its
+     own result instead of having the pending interrupt abort the cleanup.
+
+     An abandoned cleanup leaks its thread.  That is deliberate: Poly/ML
+     cannot cancel masked work, and cancelling it is precisely what must not
+     happen.  Such a thread keeps whatever the cleanup holds, including
+     [Refute_EvalEnum]'s theory lock, but that lock is taken by interruptible
+     polling and released without regard to which thread took it, so later
+     calls wait interruptibly instead of deadlocking.
+
+     The bound is generous because it now really does abandon work rather
+     than merely relabel it: a correct cv cleanup routinely costs 50-260ms,
+     so anything near that is a knife edge, whereas the only cost of a large
+     bound is how long a substrate that has already broken its contract can
+     stall one close.  A ref so that tests can shorten it. *)
+  val cleanup_timeout = ref (Time.fromSeconds 10)
+
+  exception CleanupAbandoned of string
 
   fun bounded_close close =
     let
-      val finished = ref false
-      fun run_close () =
-        Thread_Attributes.uninterruptible
-          (fn _ => fn () => (close (); finished := true)) ()
-      val outcome =
-        Exn.capture (fn () => Timeout.apply cleanup_timeout run_close ()) ()
+      val bound = !cleanup_timeout
+      val outcome = Synchronized.var "Refute substrate cleanup"
+        (NONE : unit Exn.result option)
+      fun body () =
+        let val result = Exn.capture close ()
+        in Synchronized.change outcome (fn _ => SOME result) end
+      val _ = Standard_Thread.fork
+        {name = "refute-cleanup", stack_limit = NONE, interrupts = false} body
+      val deadline = Time.now () + bound
+      (* One last look after the wait expires: a cleanup that completed as
+         the deadline passed has still completed, and reporting it would be
+         the old defect again, merely at a boundary rather than routinely. *)
+      val finished =
+        Thread_Attributes.uninterruptible (fn _ => fn () =>
+          case Synchronized.timed_access outcome (fn _ => SOME deadline)
+                 (Option.map (fn result => (result, SOME result))) of
+              SOME result => SOME result
+            | NONE => Synchronized.value outcome) ()
     in
-      case outcome of
-          Exn.Exn (Timeout.TIMEOUT _) =>
-            if !finished then Exn.Res () else outcome
-        | _ => outcome
+      case finished of
+          SOME result => result
+        | NONE =>
+            Exn.Exn (CleanupAbandoned
+              ("substrate cleanup did not return within " ^
+               Time.toString bound ^ "s and was abandoned"))
     end
 
   fun close_selection (SelectionFailed _) = ()
