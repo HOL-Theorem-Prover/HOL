@@ -16470,7 +16470,15 @@ fun narrowing_expected_bindings name =
   else if String.isPrefix "04 " name then SOME "  x = 2"
   else if String.isPrefix "05 " name then SOME "  x = 3"
   else if String.isPrefix "06 " name then SOME "  x = 4"
-  else if String.isPrefix "07 " name then SOME "  ws = [0; 0; 1]"
+  (* Depth 3 is the first scheduled depth holding a counterexample, and it
+     holds exactly one, so this witness is forced by the shape rather than
+     by the enumeration order.  A shape spends one level per constructor
+     argument, so a depth-3 [:num list] has elements drawn from {0,1,2},
+     {0,1} and {0}.  Every shorter reachable repeat ends in its repeated
+     element and so decomposes, and among the reachable [a; b; 0] only
+     [1; 1; 0] does not.  [0; 0; 1] is a counterexample too, but it is out
+     of reach until depth 4. *)
+  else if String.isPrefix "07 " name then SOME "  ws = [1; 1; 0]"
   else if String.isPrefix "08 " name then SOME "  x = 0\n  xs = [0; 0]"
   else if String.isPrefix "09 " name then SOME
     "  f = λx. 0\n  xs = [0]\n  y = 0\n  ys = []\n  z' = 1"
