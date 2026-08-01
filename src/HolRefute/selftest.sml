@@ -19428,9 +19428,20 @@ fun conform ({name, cfg, tm, inapplicable} : conformance_case) =
     List.app check_strategy strategies
   end
 
+(* [conform] compares the three substrates' outcomes literally, down to the
+   reasons of an Unknown, so any wall-clock input to a substrate's verdict
+   becomes a wall-clock input to the comparison.  The searches themselves
+   carry no such input: exhaustive stops at size 4 and random takes exactly
+   100 draws, so each substrate does a fixed amount of work and the budget
+   decides nothing that the matrix asserts.  It only decided which
+   substrate got to finish: cv compiles a theory and translates it where
+   compute merely evaluates, so on a loaded builder cv alone would exceed a
+   10-second budget and report "random timed out" against compute's
+   verdict, and the matrix would call that a substrate disagreement.  The
+   budget is a hang-guard; size it so that only a hang can reach it. *)
 fun conformance_config expectation =
   upd_expect expectation
-    (upd_timeout 10.0
+    (upd_timeout 300.0
       (upd_iterations 100
         (upd_size 4
           (upd_max_counterexamples 1 default_config))))
