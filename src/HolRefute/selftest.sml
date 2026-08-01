@@ -22970,6 +22970,46 @@ fun mf_merge_type_vars_acceptance solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
+(* HOL4's [integer$Num] is total and denotes the absolute value:
+   [Num i = @n. if 0 <= i then i = &n else i = -&n], so [Num (-3) = 3].
+   That is a deviation from Isabelle's [nat], which sends every negative
+   integer to 0, and it is what the non-bitword [IntToNat] arm of
+   [Refute_ModelFinder_Kodkod.to_r] encodes: the identity on the
+   non-negative atoms, plus one pair per representable negative atom
+   sending the atom for [-v] to the atom for [v].  [binary_ints] is off, so
+   :int is a run of atoms rather than a signed bit word and that arm is the
+   one reached; the bit-word arm above it is pinned by the binary-integer
+   backend goldens.  The upstream encoding would flip the first two
+   verdicts, and an arm that refused would make all five Unknown. *)
+fun mf_int_to_nat_acceptance solver =
+  let
+    val _ = tprint "Refute MF: Num on atom-represented integers"
+    val config = mf_acceptance_config solver
+      |> Refute.upd_binary_ints (SOME false)
+      |> Refute.upd_card [(NONE, [1, 2, 3, 4, 5, 6, 7, 8])]
+    fun outcome tm = with_silent_refute (fn () => Refute.refute config tm)
+    fun cex tm =
+      case outcome tm of
+          Refute.Counterexample (_ :: _) => true
+        | _ => false
+    fun none tm =
+      case outcome tm of Refute.NoCounterexample => true | _ => false
+    val cases =
+      [("negatives are not zero", cex,
+        ``!i : int. i < 0 ==> Num i = 0``),
+       ("negatives are absolute", none,
+        ``!i : int. Num (-i) = Num i``),
+       ("naturals round-trip", none, ``!n : num. Num (&n) = n``),
+       ("Num of -1 is 1", none, ``Num (-1 : int) = 1``),
+       ("Num of -1 is not 2", cex, ``Num (-1 : int) = 2``)]
+    val failed = List.filter (fn (_, holds, tm) => not (holds tm)) cases
+  in
+    if null failed then OK ()
+    else die ("Num acceptance failed: " ^
+      String.concatWith ", " (List.map #1 failed))
+  end
+  handle e => die (Feedback.exn_to_string e)
+
 fun run_timed_mf_group solver suffix
       ({name, configure, cases} : mf_acceptance_group) =
   let
@@ -23004,6 +23044,7 @@ fun run_mf_acceptance () =
           val _ = mf_atoms_finitize_acceptance solver
           val _ = mf_need_acceptance solver
           val _ = mf_merge_type_vars_acceptance solver
+          val _ = mf_int_to_nat_acceptance solver
           val _ = mf_frac_acceptance solver
         in
           ()

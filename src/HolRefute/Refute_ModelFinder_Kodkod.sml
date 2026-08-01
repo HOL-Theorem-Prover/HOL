@@ -2293,6 +2293,13 @@ fun kodkod_formula_from_nut offsets
                       [candidate]))
             else raise MFNT.NUT
               ("Refute_ModelFinder_Kodkod.to_r (NatToInt)", [candidate])
+        (* [deviation from upstream] HOL4's [integer$Num] is
+           [@n. if 0 <= i then i = &n else i = -&n], the absolute value,
+           where Isabelle's [nat] sends every negative integer to 0.  Both
+           arms below therefore mirror a negative argument onto its
+           magnitude rather than onto zero, and the non-bitword arm's
+           negative pairs are its only structural difference from
+           upstream's single [AtomSeq]-to-zero product. *)
         | MFNT.Cst (MFNT.IntToNat, ty, representation) =>
             if has_function_type MFH.signed_bitword_type
                  MFH.unsigned_bitword_type ty then
