@@ -1687,6 +1687,18 @@ structure Refute_Core = struct
               val jobs = map (fn registration =>
                 (#backend registration, ref NONE : outcome option ref))
                 selected
+              (* [ParList.get_some] walks the jobs sequentially whenever
+                 [Multithreading.max_threads ()] is one, which it is in any
+                 session not given the build [--mt] flag.  The results are
+                 the same either way, so this is a trace-level diagnostic
+                 rather than a warning. *)
+              val _ =
+                if #sequential cfg orelse Multithreading.max_threads () > 1
+                then ()
+                else Private.say 2
+                  ("Refute: backend racing requested, but the session " ^
+                   "thread count is 1, so the backends run sequentially " ^
+                   "(--mt or Multithreading.max_threads_update raises it)\n")
               val winner =
                 if #sequential cfg then
                   ParList.get_first

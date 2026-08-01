@@ -17548,6 +17548,51 @@ val _ = require_msg
   "trace level 2 omitted the executability-gate reason")
   (fn () => ()) ()
 
+(* [ParList.get_some] walks the jobs sequentially whenever the session
+   thread count is one, which it is unless the session was given [--mt].
+   The default [sequential = false] then races nothing, and trace level 2
+   says so. *)
+val racing_hint = "backend racing requested, but the session thread count is 1"
+
+fun sequential_degradation_is_reported () =
+  let
+    val saved_threads = Multithreading.max_threads ()
+    fun restore () = Multithreading.max_threads_update saved_threads
+    fun output_of level sequential =
+      let
+        val config = default_config
+          |> upd_backends (SOME ["exhaustive"])
+          |> upd_size 0
+          |> upd_timeout 10.0
+          |> upd_sequential sequential
+      in
+        #2 (capture_refute_messages level (fn () =>
+          refute config boolSyntax.T))
+      end
+    fun hinted level sequential =
+      String.isSubstring racing_hint (output_of level sequential)
+    fun body () =
+      let
+        val _ = Multithreading.max_threads_update 1
+        (* the diagnostic sits where the walk is chosen, which is reached
+           only once a backend has been selected *)
+        val reached = String.isSubstring "Refute backend started"
+          (output_of 2 false)
+      in
+        reached andalso hinted 2 false andalso
+        not (hinted 1 false) andalso not (hinted 2 true) andalso
+        with_raced_backends (fn () =>
+          Multithreading.max_threads () > 1 andalso not (hinted 2 false))
+      end
+  in
+    Portable.finally restore body ()
+  end
+
+val _ = require_msg
+  (check_result sequential_degradation_is_reported) (fn () =>
+  "the trace-level-2 sequential-degradation hint is missing or leaked")
+  (fn () => ()) ()
+
 fun smartgen_failure_reason_and_gate_output () =
   let
     val (_, fallback) = capture_refute_messages 2 (fn () =>

@@ -96,6 +96,14 @@ conservative ceiling `Genuine`.  A backend with a tighter bound can use
 bound: overestimating only forgoes an early stop, whereas underestimating can
 hide a stronger result and violates the backend contract.
 
+Racing also needs a session thread count above one.  It is set by the
+Holmake and build `--mt` flag, or directly by
+`Multithreading.max_threads_update`, and defaults to one; at one the
+parallel walk over the selected backends degrades to a sequential one.
+The default `upd_sequential false` therefore runs the backends one at a
+time unless threads are enabled.  Only the schedule differs, never the
+result; Refute reports the degradation at trace level 2 or higher.
+
 The unused-assumption facade consists of `check_unused_assms`,
 `find_unused_assms`, and `print_unused_assms`.  Each takes a `config option`
 first.  `NONE` derives a QC-only configuration from the current configuration;

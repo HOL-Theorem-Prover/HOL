@@ -53,6 +53,11 @@ This file provides guidance to coding agents when working with the HolRefute pro
 - Substrate selection: `Auto` falls through inapplicable substrates
   (NativeSML, then Cv, then Compute); an explicitly selected substrate
   never falls through — inapplicability reports `Unknown`.
+- Backend racing needs `Multithreading.max_threads () > 1`, raised only by the
+  build/Holmake `--mt` flag; at the default 1 `ParList.get_some` degrades and
+  `upd_sequential false` (the default) runs sequentially, reported at trace 2.
+  Rejected, do not redo: Refute raising the count itself; deleting the racing
+  path.
 - Determinism: one 64-bit PRNG (`rand_next`/`rand_out`/`rand_below`,
   defined in refuteTheory, mirrored in SML in `Refute_Eval`,
   cv-translated in `refute_cvScript.sml`).  All substrates must yield the
