@@ -53,11 +53,9 @@ val (even_rel_rules, even_rel_ind, even_rel_cases) = Hol_reln `
 (* ==>   ⊢ ∀a0. even_rel a0 ⇔ a0 = 0 ∨ ∃n. a0 = n + 2 ∧ even_rel n       *)
 (*                                                                       *)
 (* The `: num` is load-bearing.  Without it the numerals resolve to      *)
-(* :rat, and every goal below then comes back                            *)
-(*   Unknown ["kodkod: formula was semantically weakened by whack or     *)
-(*             ersatz after checking 4 of 4 scopes"]                     *)
-(* because rational arithmetic goes through the Frac ersatz encoding of  *)
-(* section 6.                                                            *)
+(* :rat, rational arithmetic goes through the Frac ersatz encoding of    *)
+(* section 6, and every goal below comes back NoCounterexample: the      *)
+(* scopes then hold a handful of rationals rather than 0, 1, 2.          *)
 
 val even_rel_pred = ``even_rel : num -> bool``;
 

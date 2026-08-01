@@ -165,10 +165,11 @@ refute
 (* Both names are given as Thy/Name records, so the substitution is exact  *)
 (* rather than by printed name.                                          *)
 (*                                                                       *)
-(* Nothing checks that the swap preserves meaning, so the model finder     *)
-(* records that a substitution happened: once a goal has been rewritten    *)
-(* this way it will not certify the *absence* of a counterexample.  The    *)
-(* deliberately wrong swap below makes that visible.                      *)
+(* Registering an entry asserts that the surrogate denotes the same      *)
+(* function as the constant it replaces; nothing checks that.  A         *)
+(* faithful substitution changes no model in either direction, so it     *)
+(* holds back no verdict — break the contract and the answer is simply   *)
+(* wrong, as the deliberate swap below shows.                            *)
 (* --------------------------------------------------------------------- *)
 
 val max_config =
@@ -184,8 +185,11 @@ register_ersatz
    replacement = {Thy = "arithmetic", Name = "MIN"}};
 
 refute max_config ``!m n : num. m <= MAX m n``;
-(* ==> Unknown ["kodkod: formula was semantically weakened by whack or   *)
-(* ==>          ersatz after checking 0 of 1 scopes"]                    *)
+(* ==> Refute found a counterexample (backend: kodkod, substrate:        *)
+(* ==>   kodkod): Scope: card num = 3, m = 2, n = 1, MIN m n = 1,        *)
+(* ==>   Potential counterexample: evaluation stuck on: $<=              *)
+(*     A true theorem now looks refutable, because the solver was        *)
+(*     shown MIN where the goal says MAX.                                *)
 (*                                                                       *)
 (* There is no deregistration hook: the entry above stays in force for    *)
 (* the rest of this session (see section 6).  In particular, do not try   *)

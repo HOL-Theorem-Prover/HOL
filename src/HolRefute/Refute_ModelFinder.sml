@@ -728,12 +728,12 @@ fun run_instance deadline started (config : Refute_Core.config)
         val sound = not (#unsound extension)
         val scope_has_codatatype =
           List.exists #co (#data_types (#scope extension))
-        val weakened = !(#semantic_weakening context)
+        val weakened = !(#whack_weakening context)
         val reasons = if sound then
             authenticity_reasons mf got_all_mono_user_axioms
               no_poly_user_axioms (#codatatypes_ok reconstructed) @
             (if weakened then
-               ["formula was semantically weakened by whack or ersatz"]
+               ["formula was semantically weakened by whack"]
              else [])
           else []
         fun discard () = if sound then discarded_sound_model := true else ()
@@ -1105,15 +1105,22 @@ fun run_instance deadline started (config : Refute_Core.config)
             Refute_Core.Unknown
               (accounting_reason "model search was inconclusive" ::
                !error_reasons)
-          (* Weakening by whack or ersatz only invalidates the *absence* of a
-             model: an UNSAT weakened formula says nothing about the original
-             one.  A model that was found still carries the weakening in its
-             own reasons, and a HOL-certified one is independent of how the
-             search reached it, so neither may be retracted here. *)
-          else if !(#semantic_weakening context) andalso null cexs then
+          (* Whacking replaces a term by [refute$unknown], which the
+             translation treats exactly like an unrepresentable value: at
+             positive polarity it becomes False and at negative polarity
+             True, and the liberal sibling of each problem flips that
+             choice.  An UNSAT weakened formula therefore still says
+             something about the original one, so this guard is
+             conservative rather than necessary; it is kept only for the
+             explicitly requested [whack] optimization, never for the
+             faithful ersatz substitutions that are on by default.  A model
+             that was found still carries the weakening in its own reasons,
+             and a HOL-certified one is independent of how the search
+             reached it, so neither may be retracted here. *)
+          else if !(#whack_weakening context) andalso null cexs then
             Refute_Core.Unknown
               (accounting_reason
-                 "formula was semantically weakened by whack or ersatz" ::
+                 "formula was semantically weakened by whack" ::
                !error_reasons)
           (* An untouched budget means the search delivered nothing, except
              when a sound problem yielded a model too weak to spend a

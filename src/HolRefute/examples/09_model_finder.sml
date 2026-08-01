@@ -214,12 +214,12 @@ refute (upd_falsify false (upd_card [(NONE, [2, 3])] mf))
 
 refute (upd_whack [``$+ : num -> num -> num``] (upd_card [(NONE, [3])] mf))
   ``(x : num) + y = y``;
-(* ==> Unknown ["kodkod: formula was semantically weakened by whack or    *)
-(*     ersatz after checking 1 of 1 scopes"].  Whacking [+] makes the     *)
-(*     translated formula weaker than the goal, so any model found says   *)
-(*     nothing about the goal and Refute reports no verdict at all.       *)
-(*     Whack is a translation-debugging tool, not a way to get answers    *)
-(*     about a constant the goal actually uses.                           *)
+(* ==> Unknown ["kodkod: formula was semantically weakened by whack      *)
+(*     after checking 1 of 1 scopes"].  Whacking [+] leaves the goal     *)
+(*     talking about a constant the translation no longer interprets,    *)
+(*     so the search gives up rather than call the absence of a model    *)
+(*     an answer.  Whack is a translation-debugging tool, not a way to   *)
+(*     get answers about a constant the goal actually uses.              *)
 
 refute (upd_need (SOME [``3 : num``]) (upd_card [(NONE, [5])] mf))
   ``(n : num) < 3``;

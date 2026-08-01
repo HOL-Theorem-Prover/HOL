@@ -22739,6 +22739,31 @@ val _ = require_msg
     "a sound but inexact model was charged to the potential budget")
   (fn () => ()) ()
 
+(* An ersatz entry substitutes a faithful surrogate -- CARD by card', each
+   rat operation by its normalized Frac counterpart -- so it changes no
+   model in either direction and may not be recorded as a semantic
+   weakening.  Recording it as one cost every scope-exhausting rat search
+   its [NoCounterexample], and that is every rat search there is, because
+   the Frac ersatz encoding is registered by default.  One true rat law
+   over the default registration reproduces it, so it stays at level 1. *)
+fun mf_ersatz_keeps_absence_conclusive () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = mf_acceptance_config (configured_mf_test_solver ())
+      |> mf_rat_soundness_config
+    val outcome = with_silent_refute (fn () =>
+      Refute.refute config
+        ``rat$rat_add x y = rat$rat_add y (x : rat$rat)``)
+  in
+    case outcome of Refute.NoCounterexample => true | _ => false
+  end
+
+val _ = tprint "Refute MF: ersatz keeps absence conclusive"
+val _ = require_msg
+  (check_result mf_ersatz_keeps_absence_conclusive) (fn () =>
+    "the default rat ersatz encoding made an exhausted search inconclusive")
+  (fn () => ()) ()
+
 fun run_level2_mf_corpus () =
   let
     val timer = Timer.startRealTimer ()

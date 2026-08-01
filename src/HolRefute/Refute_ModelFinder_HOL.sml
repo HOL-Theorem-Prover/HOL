@@ -84,7 +84,7 @@ structure Refute_ModelFinder_HOL = struct
      fixpoint_cache : fixpoint_cache ref,
      iterator_table : iterator_table,
      ersatz_table : ersatz list,
-     semantic_weakening : bool ref,
+     whack_weakening : bool ref,
      skolems : (string * string list) list ref,
      special_funs : special_fun list ref,
      wf_cache : wf_cache ref,
@@ -5006,7 +5006,7 @@ structure Refute_ModelFinder_HOL = struct
 
   fun unfold_defs_in_term
         (context as {case_names, ersatz_table, whacks, total_consts,
-                     semantic_weakening, ...} : mf_context) term =
+                     whack_weakening, ...} : mf_context) term =
     let
       fun whack_matches pattern candidate =
         case (Lib.total Term.dest_thy_const pattern,
@@ -5042,7 +5042,7 @@ structure Refute_ModelFinder_HOL = struct
                 retyped_frac_constant candidate then
           do_const depth candidate []
         else if whacked candidate then
-          (semantic_weakening := true;
+          (whack_weakening := true;
            unknown_value (Term.type_of candidate))
         else candidate
       and do_const depth constant arguments =
@@ -5224,7 +5224,7 @@ structure Refute_ModelFinder_HOL = struct
                             (constant, process_args depth arguments))))))
         in
           if whacked constant then
-            (semantic_weakening := true;
+            (whack_weakening := true;
              unknown_value (Term.type_of
                (Term.list_mk_comb (constant, arguments))))
           else if same_key key {Thy = "bool", Name = "LET"} orelse
@@ -5246,15 +5246,21 @@ structure Refute_ModelFinder_HOL = struct
                      process_args depth rest)
                | [] => do_term depth (eta_expand constant 1))
           else
+            (* An ersatz entry names a surrogate that denotes the same
+               function as the constant it replaces, chosen only because
+               the model finder can encode it: CARD as card', and each rat
+               operation as its normalized Frac counterpart, whose
+               faithfulness argument is recorded in refuteScript.  A
+               faithful substitution changes no model in either direction,
+               so it raises no weakening. *)
             case replacement_for ersatz_table constant of
                 SOME replacement =>
-                  (semantic_weakening := true;
                   if depth >= unfold_max_depth then
                     raise Refute_ModelFinder_Util.TOO_LARGE
                       ("Refute_ModelFinder_HOL.unfold_defs_in_term",
                        "too many nested replacements")
                   else
-                    do_const (depth + 1) replacement arguments)
+                    do_const (depth + 1) replacement arguments
               | NONE => ordinary ()
         end
     in
@@ -5276,7 +5282,7 @@ structure Refute_ModelFinder_HOL = struct
           needs, tac_timeout, evals, case_names, def_tables, nondef_table,
           nondefs, simp_table, psimp_table, choice_spec_table, intro_table,
           case_table, fixpoint_cache, iterator_table, ersatz_table,
-          semantic_weakening, skolems, special_funs, wf_cache, constr_cache,
+          whack_weakening, skolems, special_funs, wf_cache, constr_cache,
           ...}
          : mf_context) binary_ints : mf_context =
     {max_bisim_depth = max_bisim_depth, boxes = boxes, wfs = wfs,
@@ -5289,7 +5295,7 @@ structure Refute_ModelFinder_HOL = struct
      psimp_table = psimp_table, choice_spec_table = choice_spec_table,
      intro_table = intro_table, case_table = case_table,
      fixpoint_cache = fixpoint_cache, iterator_table = iterator_table,
-     ersatz_table = ersatz_table, semantic_weakening = semantic_weakening,
+     ersatz_table = ersatz_table, whack_weakening = whack_weakening,
      skolems = skolems, special_funs = special_funs, wf_cache = wf_cache,
      constr_cache = constr_cache}
 
@@ -5326,7 +5332,7 @@ structure Refute_ModelFinder_HOL = struct
        fixpoint_cache = ref [],
        iterator_table = ref [],
        ersatz_table = current_ersatz_table (),
-       semantic_weakening = ref false,
+       whack_weakening = ref false,
        skolems = ref [],
        special_funs = ref [],
        wf_cache = ref [],
