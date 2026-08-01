@@ -76,7 +76,12 @@ the model finder inconsistent with the QC path, and starves the
 `Unknown`.  That rule was introduced on 2026-07-29 (3948a7bed), its
 consequences re-baselined into the tests (2db19131b), and both were reverted;
 tests expecting `Genuine` with `cert = NONE` from kodkod are correct as
-written.
+written.  The same rule reappeared as a budget (92c24de7e) and was removed
+too: `max_potential` bounds models that may be spurious because their
+*encoding* is unsound, so only the liberal problems spend it.  Every model
+of a sound problem — quasi-genuine because the encoding is inexact, or
+merely `Potential` because kernel certification got stuck — is a real
+result and is charged to `max_genuine`.
 Refute uses no oracle tags.  Cv performs all per-call definitions and
 translations inside a full theory snapshot/revert bracket.  Success,
 failure, timeout, and interruption paths leave no Refute-created type,

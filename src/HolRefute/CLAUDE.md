@@ -46,7 +46,10 @@ This file provides guidance to coding agents when working with the HolRefute pro
   `fallback_certainty` (encoding soundness/exactness), never from whether a
   certificate was built.  Never require a certificate for a `Genuine` model,
   and never "fix" a test expecting `Genuine, cert = NONE` from kodkod.  See
-  README; 3948a7bed and 2db19131b did this and were reverted.
+  README; 3948a7bed and 2db19131b did this and were reverted, as was
+  92c24de7e, which did it as a budget.  `max_potential` bounds models whose
+  *encoding* is unsound, so only liberal problems spend it; every model of a
+  sound problem is charged to `max_genuine`.
 - Substrate selection: `Auto` falls through inapplicable substrates
   (NativeSML, then Cv, then Compute); an explicitly selected substrate
   never falls through — inapplicability reports `Unknown`.

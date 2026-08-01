@@ -22711,6 +22711,34 @@ val _ = require_msg
     "a proper-subset typedef admitted no model at any scope")
   (fn () => ()) ()
 
+(* [max_potential] bounds models that may be spurious because their
+   encoding is unsound.  A sound but inexact encoding yields a
+   quasi-genuine model, which is a real result: charging it to the
+   potential budget discarded the only model found and reported
+   [Unknown "every model found was discarded"] instead.  [wf = true]
+   forces the inexact well-founded encoding of [zoo_wf_lfp], so one goal
+   at one scope reproduces it; cheap enough to stay at level 1. *)
+fun mf_quasi_genuine_survives_zero_max_potential () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = mf_acceptance_config (configured_mf_test_solver ())
+      |> Refute.upd_wf [(NONE, SOME true)]
+      |> Refute.upd_max_potential 0
+    val outcome = with_silent_refute (fn () =>
+      Refute.refute config ``zoo_wf_lfp n ==> n = 0``)
+  in
+    case outcome of
+        Refute.Counterexample
+          ({certainty = Refute.QuasiGenuine _, ...} :: _) => true
+      | _ => false
+  end
+
+val _ = tprint "Refute MF: quasi-genuine model survives max_potential 0"
+val _ = require_msg
+  (check_result mf_quasi_genuine_survives_zero_max_potential) (fn () =>
+    "a sound but inexact model was charged to the potential budget")
+  (fn () => ()) ()
+
 fun run_level2_mf_corpus () =
   let
     val timer = Timer.startRealTimer ()

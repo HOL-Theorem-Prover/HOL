@@ -906,41 +906,36 @@ fun run_instance deadline started (config : Refute_Core.config)
                       end
                     else
                       let
-                        (* Reconstruction can only establish genuineness by
-                           producing a certificate.  Charge the model to the
-                           certainty it actually has, rather than to the
-                           sound solver problem that yielded it. *)
-                        val attempted = take_at_most
-                          (max_potential + max_genuine) conservative
-                        fun harvest potential genuine kept [] =
-                              (potential, genuine, kept)
-                          | harvest potential genuine kept
-                              ((index, bounds) :: models) =
+                        (* [max_potential] bounds models that may be
+                           spurious because the encoding behind them is
+                           unsound; only the liberal problems handled above
+                           spend it.  A sound problem's model is a real
+                           result whatever certainty reconstruction lands
+                           on (quasi-genuine for an inexact encoding,
+                           potential when kernel certification got stuck),
+                           so it is always reported, never discarded for
+                           want of potential budget.  Only a genuine model
+                           spends a [max_genuine] slot, exactly as upstream
+                           counts [num_genuine], so the search for one
+                           carries on past the weaker models it reported.
+                           [reconstruct] already raises
+                           [discarded_sound_model] on each of its own
+                           rejection paths. *)
+                        val attempted = take_at_most max_genuine conservative
+                        fun harvest kept [] = kept
+                          | harvest kept ((index, bounds) :: models) =
                               (case reconstruct
                                 (List.nth (problems, index)) bounds of
-                                   NONE =>
-                                     harvest potential genuine kept models
+                                   NONE => harvest kept models
                                  | SOME cex =>
-                                     if certainty_is_genuine (#certainty cex)
-                                     then
-                                       if genuine <= 0 then
-                                         harvest potential genuine kept models
-                                       else
-                                         (keep_counterexample cex;
-                                          harvest potential (genuine - 1)
-                                            (cex :: kept) models)
-                                     else if potential <= 0 then
-                                       (discarded_sound_model := true;
-                                        harvest potential genuine kept models)
-                                     else
-                                       (keep_counterexample cex;
-                                        harvest (potential - 1) genuine
-                                          (cex :: kept) models))
-                        val (max_potential, max_genuine, results) =
-                          harvest max_potential max_genuine [] attempted
+                                     (keep_counterexample cex;
+                                      harvest (cex :: kept) models))
+                        val results = harvest [] attempted
+                        val genuine_results = List.filter
+                          (certainty_is_genuine o #certainty) results
+                        val max_genuine = max_genuine - length genuine_results
                         val found = found_really_genuine orelse
-                          List.exists
-                            (certainty_is_genuine o #certainty) results
+                          not (null genuine_results)
                         (* A sound model that only reconstructs as quasi does
                            not establish a theorem, so it cannot suppress the
                            later potential/unsound search. *)
@@ -1120,7 +1115,11 @@ fun run_instance deadline started (config : Refute_Core.config)
               (accounting_reason
                  "formula was semantically weakened by whack or ersatz" ::
                !error_reasons)
-          else if max_genuine = original_max_genuine andalso
+          (* An untouched budget means the search delivered nothing, except
+             when a sound problem yielded a model too weak to spend a
+             genuine slot.  Such a model is still a result and must be
+             reported rather than read as an exhausted search. *)
+          else if null cexs andalso max_genuine = original_max_genuine andalso
                   max_potential = original_max_potential then
             if skipped > 0 then
               Refute_Core.Unknown
