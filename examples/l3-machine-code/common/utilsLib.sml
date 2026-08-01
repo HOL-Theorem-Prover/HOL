@@ -740,9 +740,13 @@ in
    fun mk_state_id_thm eqthm =
       let
          val ty = Term.type_of (fst (boolSyntax.dest_forall (Thm.concl eqthm)))
+         val {Tyop, Thy, ...} = Type.dest_thy_type ty
+         val accfupds = DB.fetch Thy (Tyop ^ "_accfupds")
+         val ss = simpLib.++ (boolSimps.bool_ss,
+                              simpLib.rewrites [eqthm, accfupds,
+                                                combinTheory.K_THM])
          fun mk_thm l =
             let
-               val {Tyop, Thy, ...} = Type.dest_thy_type ty
                val mk_f = mk_fupd Tyop
                val fns = update_fns ty
                fun get s = List.find (fn f => name f = mk_f s) fns
@@ -761,9 +765,10 @@ in
                                  in
                                     Term.mk_comb (f1, tm)
                                  end) s (tl l1)
-               val goal = boolSyntax.mk_eq (Term.mk_comb (id, after), after)
+               val lhs = Term.mk_comb (id, after)
+               val goal = boolSyntax.mk_eq (lhs, after)
             in
-               Drule.GEN_ALL (Tactical.prove (goal, bossLib.SRW_TAC [] [eqthm]))
+               Drule.GEN_ALL (Drule.EQT_ELIM (simpLib.SIMP_CONV ss [] goal))
             end
       in
          Drule.LIST_CONJ o List.map mk_thm
