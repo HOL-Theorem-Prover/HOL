@@ -36,9 +36,9 @@ component and a Java runtime:
 
 Without it those calls report Unknown ("no configured backend"), which is
 the designed behaviour rather than a failure.  A few individual calls
-elsewhere reach for the model finder too — the set goal in 03, the
-probes in 08, sections 3 and 4 of 11 — and degrade the same way.
-Everything else runs with no external tools.
+elsewhere reach for the model finder too — the last call of 01, section 4
+of 02, the set goal in 03, the probes in 08, sections 3 and 4 of 11 — and
+degrade the same way.  Everything else runs with no external tools.
 
 
 The files

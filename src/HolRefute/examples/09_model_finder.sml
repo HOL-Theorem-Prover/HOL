@@ -45,28 +45,30 @@ val mf = upd_backends (SOME ["kodkod"]) (!the_config);
 
 nitpick ``(f : bool -> num) b = 0``;
 (* ==> Refute found a counterexample (backend: kodkod, substrate: kodkod):*)
-(*       Scope: card num = 7                                             *)
-(*         f = (K _)⦇T ↦ 6; F ↦ 5⦈                                       *)
-(*         b = T                                                         *)
+(*       Scope: card num = 4                                             *)
+(*         f = (K _)⦇T ↦ 3; F ↦ 3⦈                                       *)
+(*         b = F                                                         *)
 (*       Certified: ⊢ ¬∀f b. f b = 0                                     *)
 (*     The [Scope:] line is the cardinality assignment the model lives    *)
 (*     in.  With the default row of cardinalities 1 to 10 the winning     *)
-(*     scope is a race: card num = 5 and card num = 9, with the matching  *)
+(*     scope is a race: card num = 2 and card num = 7, with the matching  *)
 (*     [f], are equally normal outcomes here.  The pinned scopes from      *)
 (*     section 4 on do reproduce exactly.                                 *)
 
 nitpick ``(n : num) IN (s : num set)``;
-(* ==> e.g. Scope: card num = 7, n = 5, s = {6},                         *)
-(*     Certified: ⊢ ¬∀n s. n ∈ s  (another run: card num = 1 with        *)
-(*     n = 0 and s = ∅)                                                  *)
+(* ==> e.g. Scope: card num = 4, n = 2, s = {3},                         *)
+(*     Certified: ⊢ ¬∀n s. n ∈ s  (another run: card num = 7 with        *)
+(*     n = 5 and s = {6})                                                *)
 
 nitpick ``(r : num -> num -> bool) x y ==> r y x``;
 (* ==> e.g. Scope: card num = 3                                          *)
 (*       r = (K ?)⦇2 ↦ {1}; 1 ↦ {0; 1}; 0 ↦ {2}⦈                         *)
 (*       x = 2, y = 1                                                    *)
-(*     but only "Potential counterexample: untrusted Kodkodi model; no    *)
-(*     HOL certificate" — an uninterpreted [r] cannot be evaluated, so    *)
-(*     nothing can be certified.  Section 11 comes back to this.          *)
+(*     and "Certification: uncertified".  The verdict is still Genuine:   *)
+(*     it follows from the encoding, which is sound and exact here, not    *)
+(*     from whether a theorem was built.  An uninterpreted [r] gives       *)
+(*     computeLib nothing to re-evaluate, so [cert] stays NONE.            *)
+(*     Section 11 comes back to this.                                      *)
 
 (* --------------------------------------------------------------------- *)
 (* 2.  Datatypes and arithmetic                                          *)
@@ -82,12 +84,13 @@ nitpick ``REVERSE (xs ++ ys : num list) = REVERSE xs ++ REVERSE ys``;
 (*     REVERSE xs ⧺ REVERSE ys = [4; 3], Certified.                      *)
 
 nitpick ``SUC n = n``;
-(* ==> e.g. Scope: card num = 1, n = 0,                                  *)
+(* ==> e.g. Scope: card num = 2, n = 1,                                  *)
 (*     Certified: ⊢ ¬∀n. SUC n = n                                       *)
 
 nitpick ``(i : int) + 1 = i``;
-(* ==> e.g. Scope: card int = 3, card num = 3, i = -1, but Potential:    *)
-(*     the unary integer encoding is not certifiable here.               *)
+(* ==> e.g. Scope: card int = 3, card num = 3, i = -1, Genuine but       *)
+(*     "Certification: uncertified": the unary integer encoding gives    *)
+(*     a sound model, and computeLib cannot replay it.                   *)
 
 (* --------------------------------------------------------------------- *)
 (* 3.  When there is no counterexample in the scope                      *)
@@ -124,8 +127,21 @@ refute (upd_card [(NONE, [3])] mf)
 
 refute (upd_card [(SOME ``:num``, [8]), (NONE, [2])] mf)
   ``(n : num) < 5``;
+(* ==> e.g. Scope: card unsigned_bit bitword = 8, card unsigned_bit = 6, *)
+(*     n = 58, Certified: ⊢ ¬∀n. n < 5                                   *)
+(*     The per-type row wins over the NONE fallback row — but with the   *)
+(*     default [binary_ints], which is "use them where they help", the   *)
+(*     8 arrives as the size of the binary carrier for :num rather than  *)
+(*     as a card num entry, and the witness is whichever value of that   *)
+(*     carrier the solver picked (58 here, 12 on another run).           *)
+(*     Section 9 is about that encoding.                                 *)
+
+refute
+  (mf |> upd_binary_ints (SOME false)
+      |> upd_card [(SOME ``:num``, [8]), (NONE, [2])])
+  ``(n : num) < 5``;
 (* ==> Scope: card num = 8, n = 7, Certified: ⊢ ¬∀n. n < 5               *)
-(*     The per-type row wins over the NONE fallback row.                 *)
+(*     Forcing the unary encoding puts the same row back on :num itself. *)
 
 (* --------------------------------------------------------------------- *)
 (* 5.  Reading the model                                                 *)
@@ -169,18 +185,28 @@ refute (upd_format [(NONE, [2])] (upd_card [(NONE, [2])] mf))
 (* to an incremental SAT solver when necessary.  They are the model-      *)
 (* finder budgets: [upd_max_counterexamples] governs the QC backends and  *)
 (* does not cap this list.                                               *)
+(*                                                                       *)
+(* The two budgets are not interchangeable.  [max_genuine] bounds the     *)
+(* models of a soundly encoded problem — every one of them, whatever      *)
+(* certainty its reconstruction lands on.  [max_potential] bounds only    *)
+(* the models that may be spurious because the *encoding* behind them is  *)
+(* unsound, so on a sound problem raising it changes nothing.             *)
 (* --------------------------------------------------------------------- *)
 
 refute (upd_max_genuine 3 (upd_card [(NONE, [3])] mf)) ``SUC n = n``;
 (* ==> three certified counterexamples in one report, all at             *)
 (*     Scope: card num = 3, with n = 1, n = 2 and n = 0.                 *)
 
-refute (upd_max_potential 3 (upd_card [(NONE, [3])] mf))
+refute (upd_max_genuine 3 (upd_card [(NONE, [3])] mf))
   ``(r : num -> num -> bool) x y ==> r y x``;
-(* ==> three Potential models, all at Scope: card num = 3 with x = 2 and *)
-(*     y = 1, differing in r: (K ?)⦇2 ↦ {0; 1}; 1 ↦ {1}; 0 ↦ {1}⦈, then  *)
+(* ==> three models, all at Scope: card num = 3 with x = 2 and y = 1,    *)
+(*     differing in r: (K ?)⦇2 ↦ {0; 1}; 1 ↦ {1}; 0 ↦ {1}⦈, then         *)
 (*     (K ?)⦇2 ↦ {1}; 1 ↦ {0; 1}; 0 ↦ {2}⦈, then                         *)
-(*     (K ?)⦇2 ↦ {1; 2}; 1 ↦ {0}; 0 ↦ {2}⦈.                              *)
+(*     (K ?)⦇2 ↦ {1; 2}; 1 ↦ {0}; 0 ↦ {2}⦈.  Each is Genuine and         *)
+(*     uncertified, as in section 1, so each spends a [max_genuine]      *)
+(*     slot; with [upd_max_potential 3] instead only the first comes     *)
+(*     back, because this encoding is sound and no potential budget is   *)
+(*     in play.                                                          *)
 
 (* --------------------------------------------------------------------- *)
 (* 7.  Models instead of counterexamples                                 *)
@@ -193,14 +219,19 @@ refute (upd_max_potential 3 (upd_card [(NONE, [3])] mf))
 
 refute (upd_falsify false (upd_card [(NONE, [2, 3])] mf))
   ``(r : 'a -> 'a -> bool) x y /\ ~r y x``;
-(* ==> Refute found a model (backend: kodkod, substrate: kodkod):        *)
+(* ==> e.g. Refute found a model (backend: kodkod, substrate: kodkod):   *)
 (*       Scope: card α = 2                                               *)
 (*         r = (K _)⦇a2 ↦ {a1; a2}; a1 ↦ ∅⦈                              *)
 (*         x = a2, y = a1                                                *)
-(*       Potential model: untrusted Kodkodi model; no HOL certificate    *)
-(*     "model" and "Potential model" replace the counterexample wording; *)
-(*     certification is switched off with falsify, so nothing here can    *)
-(*     become Genuine.                                                   *)
+(*       Certification: uncertified                                      *)
+(*     Both offered cardinalities admit a model, so which one is         *)
+(*     reported is another race.                                         *)
+(*     "model" replaces "counterexample" throughout the report.  There    *)
+(*     is nothing to certify — a certificate proves the negation of the  *)
+(*     goal, which is not what was asked for — so [cert] is NONE while    *)
+(*     the encoding still makes the verdict Genuine.  Had the            *)
+(*     reconstruction come out weaker, the report would have read         *)
+(*     "Potential model" rather than "Potential counterexample".          *)
 
 (* --------------------------------------------------------------------- *)
 (* 8.  Steering the search                                               *)
@@ -256,13 +287,13 @@ refute
       |> upd_bits [2, 3]
       |> upd_card [(NONE, [3])])
   ``(i : int) * 2 = i``;
-(* ==> e.g. Scope: card signed_bit bitword = 3,                          *)
-(*     card unsigned_bit bitword = 3, card signed_bit = 4,               *)
-(*     card unsigned_bit = 3, with i = 2 and a Potential verdict; the    *)
-(*     two bit cardinalities follow whichever width of [bits] wins.      *)
-(*     The scope line names the bitword types the binary encoding        *)
-(*     introduces, in place of card int.  Leaving the default bit row    *)
-(*     in place makes the same goal take about 20s.                      *)
+(* ==> e.g. Scope: card signed_bit bitword = 3, card signed_bit = 3,     *)
+(*     with i = 1 and "Certification: uncertified"; the bit cardinality  *)
+(*     follows whichever width of [bits] wins, so another run reports    *)
+(*     card signed_bit = 4 with i = 2.  The scope line names the bitword *)
+(*     types the binary encoding introduces, in place of card int.       *)
+(*     Leaving the default bit row in place makes the same goal take     *)
+(*     about 20s.                                                        *)
 
 (* --------------------------------------------------------------------- *)
 (* 10.  Solver and effort                                                *)
@@ -288,11 +319,18 @@ refute
 (* --------------------------------------------------------------------- *)
 (* 11.  Genuine, potential, and certificates                             *)
 (*                                                                       *)
-(* A model-finder verdict is Genuine only when Refute managed to build a  *)
-(* HOL certificate for it; an uncertified reconstruction stays Potential  *)
-(* and says why.  So [certainty] tells you the semantic strength and      *)
-(* [cert] tells you whether a theorem exists — they are not the same      *)
-(* field.                                                                *)
+(* A model-finder verdict is decided by the translation, never by         *)
+(* whether a theorem was built: the encoding's soundness and exactness    *)
+(* flags map onto Genuine, QuasiGenuine and Potential.  Refute trusts     *)
+(* Kodkodi here exactly as Isabelle's Nitpick trusts Kodkod.  So          *)
+(* [certainty] tells you the semantic strength and [cert] tells you       *)
+(* whether a HOL theorem exists — they are independent, and "genuine,     *)
+(* uncertified" is a normal answer rather than a hedge.  What does pull   *)
+(* a model down to Potential is a goal Refute did try to certify and got  *)
+(* stuck on: the kernel then contradicts nothing but confirms nothing     *)
+(* either, and its complaint replaces the encoding's verdict.  A goal     *)
+(* with nothing executable in it, like the relation of section 1, is      *)
+(* never taken to the kernel at all, so its encoding has the last word.   *)
 (* --------------------------------------------------------------------- *)
 
 fun verdict tm =
@@ -312,8 +350,13 @@ verdict ``SUC n = n``;
 (* ==> "genuine, certified": the witness evaluates, so Refute proved      *)
 (*     ⊢ ¬∀n. SUC n = n.                                                 *)
 
+verdict ``(r : num -> num -> bool) x y ==> r y x``;
+(* ==> "genuine, uncertified": section 1's relation again, seen through   *)
+(*     the two fields rather than through the report.                     *)
+
 verdict ``?n : num. n <> n``;
 (* ==> "potential: evaluation stuck on: $?": the goal is false, so any    *)
-(*     scope refutes it, but the negation of an existential over an       *)
-(*     infinite type is not something computeLib can settle, so no        *)
-(*     certificate exists and the verdict stays Potential.                *)
+(*     scope refutes it, and this one Refute does try to certify — but    *)
+(*     the negation of an existential over an infinite type is not        *)
+(*     something computeLib can settle, so the attempt reports where it   *)
+(*     stopped and the verdict follows it down to Potential.              *)
