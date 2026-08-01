@@ -21155,10 +21155,21 @@ val mf_typedef_pair_swapped =
 val mf_typedef_fst_mutated =
   ``FST (ABS_prod (\x y. x = a /\ y = b)) = b``
 
-(* The two card-1 one_or_two cases and the two-value bounded case are
-   upstream's flagged unfortunate potentials.  This port proves no
-   counterexample at those scopes, so they are re-baselined exactly to
-   None rather than applying the Genuine/Potential-only loose policy. *)
+(* [zoo_one_or_two]'s representation set is {ARB F, ARB T}, and ARB is an
+   undefined constant, so ARB F = ARB T is consistent: the type has one or
+   two elements depending on the model, and card 1 is a legitimate scope
+   rather than an infeasible one to reject.  Both card-1 distinctness cases
+   are therefore non-theorems whose countermodel lives at that scope and
+   nowhere else — 05 forces the collapse in its own hypothesis — so
+   expecting no counterexample there was wrong.  The model comes back
+   merely Potential because a proper-subset typedef counts as complete only
+   at the cardinality of its representation type, so the sound problem
+   keeps its unrepresented-value guard and only the liberal one is
+   satisfiable; that is upstream's verdict for these two as well, hence the
+   Genuine/Potential-only loose policy, which a sharper exactness calculus
+   would also satisfy.  The two-value bounded case (09) is a different
+   matter: it is a whole-type typedef over bool, so it really does have two
+   values, this port proves it, and it stays pinned exactly to None. *)
 val mf_typedef_nits_cases =
   [mf_acceptance_invocation "Typedef_Nits 01 three equality"
      ``(x : zoo_three) = y`` ExpectGenuine MfCertNone true
@@ -21173,15 +21184,17 @@ val mf_typedef_nits_cases =
      ``((ARB F : bool) <=> ARB T) ==>
        (x : bool zoo_one_or_two) = y``
      ExpectNone MfCertIgnored false mf_same_config,
-   mf_acceptance_invocation
-     "Typedef_Nits 05 collapsed one_or_two distinct [card = 1]"
-     ``((ARB F : bool) <=> ARB T) ==>
-       ?x y : bool zoo_one_or_two. x <> y``
-     ExpectNone MfCertIgnored false (mf_typedef_cards [1]),
-   mf_acceptance_invocation
-     "Typedef_Nits 06 one_or_two distinct [card = 1]"
-     ``?x y : bool zoo_one_or_two. x <> y``
-     ExpectNone MfCertIgnored false (mf_typedef_cards [1]),
+   mf_with_verdict_policy (MfUnfortunatePotential ExpectPotential)
+     (mf_acceptance_invocation
+        "Typedef_Nits 05 collapsed one_or_two distinct [card = 1]"
+        ``((ARB F : bool) <=> ARB T) ==>
+          ?x y : bool zoo_one_or_two. x <> y``
+        ExpectPotential MfCertIgnored false (mf_typedef_cards [1])),
+   mf_with_verdict_policy (MfUnfortunatePotential ExpectPotential)
+     (mf_acceptance_invocation
+        "Typedef_Nits 06 one_or_two distinct [card = 1]"
+        ``?x y : bool zoo_one_or_two. x <> y``
+        ExpectPotential MfCertIgnored false (mf_typedef_cards [1])),
    mf_acceptance_invocation
      "Typedef_Nits 06 one_or_two distinct [card = 2]"
      ``?x y : bool zoo_one_or_two. x <> y``
