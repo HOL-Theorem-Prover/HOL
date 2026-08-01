@@ -8,11 +8,13 @@ dependency, easy CI'ability, fast (target: <5 min total).
 Run:  python3 tools-poly/lsp/tests/lsp_tests.py [test_name ...]
 Exit code: 0 if all passed, 1 if any failed.
 """
-import subprocess, threading, time, json, os, sys, re, tempfile
+import subprocess, threading, time, json, os, sys, re, tempfile, shutil
 
 REPO = os.environ.get("HOL_LSP_TEST_REPO",
     "/repo/.claude/worktrees/lsp-project")
 HOL_BIN = f"{REPO}/bin/hol"
+DEFAULT_HEAP = f"{REPO}/bin/hol.state"
+HOL_STATE0 = f"{REPO}/bin/hol.state0"
 # Extra args passed to `bin/hol lsp`.  E.g. `HOL_LSP_ARGS=--bare` to test
 # against hol.state0 (relies on the LSP's own auto-loading to pull in
 # bossLib etc.).  Split on whitespace, no shell quoting.
@@ -22,9 +24,9 @@ LSP_ARGS = os.environ.get("HOL_LSP_ARGS", "").split()
 # LSP client — minimal, efficient, no O(N^2) buffer slicing.
 # ------------------------------------------------------------------
 class Client:
-    def __init__(self, cwd):
+    def __init__(self, cwd, args=None):
         self.p = subprocess.Popen(
-            [HOL_BIN, "lsp", *LSP_ARGS],
+            [HOL_BIN, "lsp", *(args if args is not None else LSP_ARGS)],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             cwd=cwd)
         self.buf = bytearray()
@@ -171,14 +173,14 @@ def _count_diag_events(client, uri):
                and m["params"]["diagnostics"])
 
 
-def _init(c, root=None):
+def _init(c, root=None, timeout=5):
     c.send({"jsonrpc":"2.0","id":1,"method":"initialize",
             "params":{"capabilities":{},"rootUri":f"file://{root or REPO}",
                       "processId":None}})
     def got_init_reply(cl):
         msgs, _ = cl.messages_since(0)
         return any(m.get("id") == 1 for m in msgs)
-    if not c.wait_until(got_init_reply, 5):
+    if not c.wait_until(got_init_reply, timeout):
         raise RuntimeError("initialize timed out")
     c.send({"jsonrpc":"2.0","method":"initialized","params":{}})
 
@@ -1202,6 +1204,72 @@ def test_hover_inside_inductive_body():
         c.close()
 
 
+def _wait_for_exit(p, timeout=10):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if p.poll() is not None: return True
+        time.sleep(0.1)
+    return False
+
+
+def test_heap_autodetect_from_holmakefile():
+    """A HOLHEAP path in the cwd's Holmakefile is picked up by the LSP
+    server's heap auto-detect (hol.ML get_heap_name).  Verified by
+    pointing HOLHEAP at a non-existent file: the server dies during
+    base-state load with a stderr message containing that path.
+    Without the auto-detect widening for LSP mode (task #9), the
+    server would silently load the default hol.state instead."""
+    d = tempfile.mkdtemp(prefix="lsp_heap_")
+    bogus = f"{d}/no_such_heap_deadbeef"
+    try:
+        with open(f"{d}/Holmakefile", "w") as f:
+            f.write(f"HOLHEAP = {bogus}\n")
+        c = Client(d, args=[])
+        try:
+            assert_true(_wait_for_exit(c.p, 15),
+                        f"server exited on bogus heap "
+                        f"(stderr tail: {c.stderr_text()[-400:]!r})")
+            assert_contains(c.stderr_text(), bogus,
+                            "stderr mentions the bogus HOLHEAP path")
+            assert_contains(c.stderr_text(), "Couldn't load HOL base-state",
+                            "stderr mentions the base-state load failure")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_heap_autodetect_no_holmakefile():
+    """With no Holmakefile in cwd, the server falls back to the default
+    hol.state and boots normally.  Verified via the initialize
+    handshake."""
+    d = tempfile.mkdtemp(prefix="lsp_heap_")
+    try:
+        c = Client(d, args=[])
+        try:
+            _init(c, timeout=30)
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_heap_autodetect_holmakefile_without_holheap():
+    """A Holmakefile without a HOLHEAP line also falls back to the
+    default hol.state.  Verified via the initialize handshake."""
+    d = tempfile.mkdtemp(prefix="lsp_heap_")
+    try:
+        with open(f"{d}/Holmakefile", "w") as f:
+            f.write("INCLUDES = /tmp/foo\n")
+        c = Client(d, args=[])
+        try:
+            _init(c, timeout=30)
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -1231,6 +1299,12 @@ TESTS = [
     ("hover_inside_definition_body", test_hover_inside_definition_body),
     ("hover_inside_inductive_body",  test_hover_inside_inductive_body),
     ("stale_sml_binding_dropped",    test_stale_sml_binding_dropped),
+    ("heap_autodetect_from_holmakefile",
+                                     test_heap_autodetect_from_holmakefile),
+    ("heap_autodetect_no_holmakefile",
+                                     test_heap_autodetect_no_holmakefile),
+    ("heap_autodetect_holmakefile_without_holheap",
+                                     test_heap_autodetect_holmakefile_without_holheap),
 ]
 
 
