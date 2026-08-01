@@ -51,9 +51,9 @@ val res_forall_rule =
 
 val beta_rewr = pattern_rewr (``(\x. (y : 'a -> 'b) x) z``, K (K BETA_CONV));
 val neg_t_rewr =
-  pattern_rewr (``~T``, K (K (REWR_CONV (ho_PROVE [] ``~T = F``))));
+  pattern_rewr (``~T``, K (K (REWR_CONV (List.nth (CONJUNCTS NOT_CLAUSES, 1)))));
 val neg_f_rewr =
-  pattern_rewr (``~F``, K (K (REWR_CONV (ho_PROVE [] ``~F = T``))));
+  pattern_rewr (``~F``, K (K (REWR_CONV (List.nth (CONJUNCTS NOT_CLAUSES, 2)))));
 
 val basic_bool_rewrs =
   let
