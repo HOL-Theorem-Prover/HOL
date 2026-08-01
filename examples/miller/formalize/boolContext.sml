@@ -15,7 +15,7 @@ open Parse
 
 open pairTheory pred_setTheory
      res_quanTheory hurdUtils ho_proverTools res_quanTools subtypeTools
-     subtypeTheory boolContextContextTheory;
+     subtypeTheory extra_boolTheory;
 
 nonfix THEN THENL ORELSE;
 
