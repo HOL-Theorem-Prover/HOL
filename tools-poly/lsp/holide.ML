@@ -51,7 +51,13 @@ val initialize:
        offset just past the dec's original-source span (from
        `HOLSourceAST.decSpan`).  Used by the LSP to take mid-file
        snapshots for incremental recompile. *)
-    onDecCompleted: int -> unit
+    onDecCompleted: int -> unit,
+    (* Skip `finish` / `emitBuilt` / `onDecCompleted` for decs whose
+       source span stops at or before this offset — they're presumed
+       already compiled and preserved via a snapshot restored before
+       this call.  The parser still walks every dec so its stateful
+       infix-scope tracking stays consistent. *)
+    startByte: int
   } -> unit
 
 val moveUp: subtree -> subtree
@@ -655,7 +661,7 @@ end
 
 fun initialize {
   text, filename, parseError, compilerOut, toplevelOut, progress, error,
-  runtimeExn, builtTree, onDecCompleted
+  runtimeExn, builtTree, onDecCompleted, startByte
 } = let
   datatype chunk
     = Chunk of string
@@ -829,15 +835,27 @@ fun initialize {
          | _ => () (* annotation can fail if trees are out of sync *)
   fun loop () = (
     DArray.clear queue;
-    if fetchDec () then () else (
-      idx := 0; spans := []; curToken := toState ();
-      finish ();
-      emitBuilt ();
-      ptRef := [];
-      (case !decsRef of
-         [] => ()
-       | dec :: _ => onDecCompleted (#2 (HOLSourceAST.decSpan dec)));
-      loop ()))
+    if fetchDec () then () else let
+      val stopByte =
+        case !decsRef of
+          [] => 0
+        | dec :: _ => #2 (HOLSourceAST.decSpan dec)
+    in
+      if stopByte <= startByte then
+        (* Skip compilation for pre-`startByte` decs — a resume
+           snapshot has already installed the state they'd produce.
+           Parser state (infix scope, etc.) was still updated by
+           `fetchDec` above, so downstream decs see a correct
+           context. *)
+        (ptRef := []; loop ())
+      else (
+        idx := 0; spans := []; curToken := toState ();
+        finish ();
+        emitBuilt ();
+        ptRef := [];
+        onDecCompleted stopByte;
+        loop ())
+    end)
   in loop () end;
 
 fun navigateTo NONE _ = NONE

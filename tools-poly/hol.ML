@@ -655,7 +655,7 @@ in
                 NONE => []
               | SOME _ => [("poly_decide_threadcount.uo", false)]) @
            objs);
-        LSPServer.start {diag = diag}
+        LSPServer.start {diag = diag, dbg = debug}
       end
     | REPL =>
       let in

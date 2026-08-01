@@ -204,6 +204,31 @@ def _did_change_full(c, uri, text, version):
                       "contentChanges":[{"text":text}]}})
 
 
+def _line_col_at(text, byte_offset):
+    """Byte offset → (line, character) using LSP positionEncoding=utf-8
+    (see 1cfd8db81)."""
+    prefix = text[:byte_offset]
+    if "\n" not in prefix:
+        return (0, byte_offset)
+    line = prefix.count("\n")
+    col = byte_offset - prefix.rfind("\n") - 1
+    return (line, col)
+
+
+def _did_change_incr(c, uri, old_text, byte_from, byte_to, insert, version):
+    """Send an incremental `didChange` with a range covering
+    `[byte_from, byte_to)` in `old_text`, replaced by `insert`."""
+    frm = _line_col_at(old_text, byte_from)
+    to  = _line_col_at(old_text, byte_to)
+    c.send({"jsonrpc":"2.0","method":"textDocument/didChange",
+            "params":{"textDocument":{"uri":uri,"version":version},
+                      "contentChanges":[{
+                          "range":{
+                            "start":{"line":frm[0], "character":frm[1]},
+                            "end":  {"line":to[0],  "character":to[1]}},
+                          "text":insert}]}})
+
+
 # ------------------------------------------------------------------
 # Assertions
 # ------------------------------------------------------------------
@@ -1277,6 +1302,195 @@ def test_heap_autodetect_holmakefile_without_holheap():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def _resume_events(client, since=0, uri=None):
+    msgs, _ = client.messages_since(since)
+    out = []
+    for m in msgs:
+        if m.get("method") != "$/compileResumedAt": continue
+        if uri is None or m["params"]["uri"] == uri:
+            out.append(m["params"])
+    return out
+
+
+def test_snapshot_resume_late_edit():
+    """After compiling a multi-dec script, an incremental `didChange`
+    near the end reuses a snapshot from an earlier dec: the resumed
+    compile emits `$/compileResumedAt` with pos > 0 and produces the
+    same v2 diagnostic set as v1 had."""
+    d = tempfile.mkdtemp(prefix="lsp_resume_")
+    try:
+        body = "\n".join(f"val x{i} = {i}" for i in range(20))
+        src = f"Theory resumescr\n\n{body}\n"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/resumescrScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+            v1_diags = _diag_count(c, uri)
+            assert_eq(len(_resume_events(c, uri=uri)), 0,
+                      "no resume event on first compile")
+
+            # Insert two blank lines just before `val x19`.
+            at = src.index("val x19")
+            idx_before = c.total_msgs()
+            _did_change_incr(c, uri, src, at, at, "\n\n", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx_before),
+                        "second compileCompleted")
+            resumes = _resume_events(c, since=idx_before, uri=uri)
+            assert_eq(len(resumes), 1,
+                      f"exactly one resume event on late edit ({resumes!r})")
+            assert_true(resumes[0]["pos"] > 0,
+                        f"resume pos > 0 ({resumes[0]})")
+            v2_diags = _diag_count(c, uri, ver=2)
+            assert_eq(len(v1_diags), len(v2_diags),
+                      f"diag count parity v1={len(v1_diags)} v2={len(v2_diags)}")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_snapshot_resume_early_edit_falls_back():
+    """An incremental `didChange` at byte 0 forces a full boot-restore
+    — all snapshots have endByte > 0, so none qualifies for resume."""
+    d = tempfile.mkdtemp(prefix="lsp_resume_")
+    try:
+        body = "\n".join(f"val x{i} = {i}" for i in range(20))
+        src = f"Theory resumescr2\n\n{body}\n"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/resumescr2Script.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+
+            # Prepend a comment via an incremental change at byte 0.
+            idx_before = c.total_msgs()
+            _did_change_incr(c, uri, src, 0, 0, "(* leading *)\n", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx_before),
+                        "second compileCompleted")
+            resumes = _resume_events(c, since=idx_before, uri=uri)
+            assert_eq(len(resumes), 0,
+                      f"no resume event on early edit ({resumes!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_snapshot_resume_full_text_replace_resets():
+    """A `didChange` with `range = null` (full-text replace) drops all
+    snapshots — no `$/compileResumedAt` fires on the next compile."""
+    d = tempfile.mkdtemp(prefix="lsp_resume_")
+    try:
+        body = "\n".join(f"val x{i} = {i}" for i in range(20))
+        src = f"Theory resumescr3\n\n{body}\n"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/resumescr3Script.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+
+            # Full-text replace: same body but +1 blank line at start.
+            edited = "\n" + src
+            idx_before = c.total_msgs()
+            # `_did_change_full` uses `range = null`.
+            _did_change_full(c, uri, edited, 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx_before),
+                        "second compileCompleted")
+            resumes = _resume_events(c, since=idx_before, uri=uri)
+            assert_eq(len(resumes), 0,
+                      f"no resume on full-text replace ({resumes!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_snapshot_resume_survives_grammar_delta():
+    """A script that mutates the parser grammar via `overload_on` in
+    an early dec, then uses the overload in a later dec: a resume
+    from a snapshot AFTER the overload must preserve the overload.
+    Tests that `Parse.invalidate_caches` in `restoreCompileSnap`
+    rebuilds the parser closures correctly."""
+    d = tempfile.mkdtemp(prefix="lsp_resume_")
+    try:
+        src = (
+            "Theory resumescr4\n\n"
+            "val _ = Parse.overload_on (\"+\", boolSyntax.disjunction)\n"
+            + "\n".join(f"val x{i} = {i}" for i in range(15))
+            + "\nval combined = ``T + F``\n"
+        )
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/resumescr4Script.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+            v1_diags = _diag_count(c, uri)
+
+            # Insert a blank line just before `val combined` via an
+            # incremental change; snapshot after `val x14` should be
+            # picked, and its restore must preserve the overload.
+            at = src.index("val combined")
+            idx_before = c.total_msgs()
+            _did_change_incr(c, uri, src, at, at, "\n\n", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx_before),
+                        "second compileCompleted")
+            v2_diags = _diag_count(c, uri, ver=2)
+            assert_eq(len(v1_diags), len(v2_diags),
+                      f"diag count parity v1={len(v1_diags)} v2={len(v2_diags)}")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_snapshot_resume_second_edit_after_completion():
+    """Two consecutive `didChange` edits: verify the second compile
+    still resumes from a snapshot taken during the first-triggered
+    compile."""
+    d = tempfile.mkdtemp(prefix="lsp_resume_")
+    try:
+        body = "\n".join(f"val x{i} = {i}" for i in range(20))
+        src = f"Theory resumescr5\n\n{body}\n"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/resumescr5Script.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+
+            at1 = src.index("val x19")
+            idx1 = c.total_msgs()
+            _did_change_incr(c, uri, src, at1, at1, "\n\n", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx1),
+                        "second compileCompleted")
+            assert_eq(len(_resume_events(c, since=idx1, uri=uri)), 1,
+                      "second compile resumed")
+
+            # The text now has "\n\n" before "val x19".
+            src_v2 = src[:at1] + "\n\n" + src[at1:]
+            at2 = src_v2.index("val x18")
+            idx2 = c.total_msgs()
+            _did_change_incr(c, uri, src_v2, at2, at2, "\n\n", 3)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx2),
+                        "third compileCompleted")
+            assert_eq(len(_resume_events(c, since=idx2, uri=uri)), 1,
+                      "third compile also resumed")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -1312,6 +1526,15 @@ TESTS = [
                                      test_heap_autodetect_no_holmakefile),
     ("heap_autodetect_holmakefile_without_holheap",
                                      test_heap_autodetect_holmakefile_without_holheap),
+    ("snapshot_resume_late_edit",    test_snapshot_resume_late_edit),
+    ("snapshot_resume_early_edit_falls_back",
+                                     test_snapshot_resume_early_edit_falls_back),
+    ("snapshot_resume_full_text_replace_resets",
+                                     test_snapshot_resume_full_text_replace_resets),
+    ("snapshot_resume_survives_grammar_delta",
+                                     test_snapshot_resume_survives_grammar_delta),
+    ("snapshot_resume_second_edit_after_completion",
+                                     test_snapshot_resume_second_edit_after_completion),
 ]
 
 

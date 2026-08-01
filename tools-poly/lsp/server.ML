@@ -1,6 +1,6 @@
 signature LSPServer =
 sig
-  val start : {diag: string -> unit} -> unit
+  val start : {diag: string -> unit, dbg: bool} -> unit
 end;
 
 (* load "JSONDecode"; *)
@@ -392,7 +392,7 @@ fun splitOn c s = let
       else loop i' j out
   in case String.size s of sz => loop sz sz [] end
 
-fun start {diag} = let
+fun start {diag, dbg} = let
   val _ = PolyML.print_depth 100
   val conn as {send, recv} = stdioConnection ()
   val _ (*clientCapabilities*) = initialize conn (concat [
@@ -526,7 +526,15 @@ fun start {diag} = let
        only fires startCompile if its epoch still matches when it
        wakes up.  Rapid-fire edits fork many threads but only the
        last (whose epoch survives to wake time) actually compiles. *)
-    debounce: int ref}
+    debounce: int ref,
+    (* Rolling minimum edit offset across `applyEdit` batches since
+       the last successful compile.  `startCompile` picks the largest
+       snapshot in `lastTrees.parse.declSnapshots` with `endByte <=
+       !minEditOffset` (falling back to a full boot-restore if none).
+       `NONE` means no edit info is available (fresh file, or a
+       previous compile completed and cleared it) — treated as 0
+       (full restart). *)
+    minEditOffset: int option ref}
   local
     val mutex = Mutex.mutex ()
     val fileInfo = ref (Binarymap.mkDict String.compare: (string, file_data) Binarymap.dict)
@@ -542,7 +550,7 @@ fun start {diag} = let
   fun newFile text version = let
     val text = {text = text, version = version, lines = mkLineCounter text}
     in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
-        debounce = ref 0} end
+        debounce = ref 0, minEditOffset = ref NONE} end
 
   (* Cooperative cancel: signal the flag, which the compile thread
      checks at each Progress event and raises Thread.Interrupt.  We
@@ -562,18 +570,25 @@ fun start {diag} = let
     NONE => ()
   | SOME {cancelled, ...} => (r := NONE; cancelled := true)
 
-  fun applyEdit ({compile, lastTrees, ...}:file_data) version changes = let
+  fun applyEdit ({compile, lastTrees, minEditOffset, ...}:file_data) version changes = let
     val _ = stopCompile compile
     fun getLines text NONE = mkLineCounter text
       | getLines _ (SOME lines) = lines
+    (* Push `off` into the rolling min-edit tracker; a later `startCompile`
+       consults this to decide whether to resume from a snapshot. *)
+    fun bumpMin off =
+      case !minEditOffset of
+        NONE => minEditOffset := SOME off
+      | SOME m => if off < m then minEditOffset := SOME off else ()
     (* The old `parse` value is carried through the fold so we can
        preserve its `declSnapshots` on each step (via
        `carryOverSnapshots`).  On a full-text replace (`range = NONE`)
        the snapshots become useless — their `endByte` offsets no
        longer index anything meaningful in the new text — so we drop
-       them explicitly. *)
+       them explicitly and push min-edit-offset to 0. *)
     fun applyText [] data = data
-      | applyText ({range = NONE, text}::cs) _ = applyText cs (emptyParseData 0, text, NONE)
+      | applyText ({range = NONE, text}::cs) _ =
+        (bumpMin 0; applyText cs (emptyParseData 0, text, NONE))
       | applyText ({range = SOME (from, to), text}::cs) (parse, base, lines) = let
         val lines = getLines base lines
         val (from, to) = (fromLineCol lines from, fromLineCol lines to)
@@ -581,6 +596,7 @@ fun start {diag} = let
           Substring.substring (base, 0, from),
           Substring.full text,
           Substring.substring (base, to, size base - to)]
+        val _ = bumpMin from
         in applyText cs (carryOverSnapshots parse, text, NONE) end
     val {parse, text = {text, lines, version = _}} = !lastTrees
     val (parse, text, lines) = applyText changes (parse, text, SOME lines)
@@ -625,7 +641,7 @@ fun start {diag} = let
       handle _ => []
     end
 
-  fun compileForReport uri code lastPos builtTree onDecCompleted report = let
+  fun compileForReport uri code startByte lastPos builtTree onDecCompleted report = let
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
@@ -637,21 +653,60 @@ fun start {diag} = let
         hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
       runtimeExn = fn e => report (exnToReport (!lastPos) e),
       builtTree = builtTree,
-      onDecCompleted = onDecCompleted }
+      onDecCompleted = onDecCompleted,
+      startByte = startByte }
     in lastPos := size code end
 
-  fun startCompile uri ({compile, lastTrees, debounce}:file_data) = (
+  fun startCompile uri ({compile, lastTrees, debounce, minEditOffset}:file_data) = (
     (* Invalidate any pending scheduleCompile thread: their epoch
        check will see the new value and self-abort. *)
     debounce := !debounce + 1;
-    (* Restore the LSP-startup Context snapshot so this compile runs
-       against a clean HOL state (no residual theories / stale DB
-       entries from the previous compile of this or another file). *)
-    !LSPExtension.resetForCompile ();
-    if #done (#parse (!lastTrees)) then () else let
+    if #done (#parse (!lastTrees)) then
+      (!LSPExtension.resetForCompile (); ())
+    else let
     val _ = stopCompile compile
-    val {text as {lines, ...}, parse = {diags = oldDiags, ...}} = !lastTrees
-    val trees = ref (emptyParseData 8)
+    val {text as {lines, ...}, parse = lastParse} = !lastTrees
+    val {declSnapshots = lastSnaps, diags = oldDiags, ...} = lastParse
+    (* Resume decision: pick the largest snapshot with `endByte <=
+       !minEditOffset`.  If none, do a full boot-restore starting at
+       byte 0. *)
+    val resumeSnap =
+      case !minEditOffset of
+        NONE => NONE
+      | SOME editOff =>
+        (* `declSnapshots` is newest-first, so the first match walking
+           the list is the largest `endByte <= editOff`. *)
+        List.find (fn (s:declSnapshot) => #endByte s <= editOff) lastSnaps
+    val (initialTrees, resumeStart, oldDiags) =
+      case resumeSnap of
+        NONE => (
+          !LSPExtension.resetForCompile ();
+          (emptyParseData 8, 0, oldDiags))
+      | SOME snap => let
+          val _ = !LSPExtension.restoreCompileSnap (#compileSnap snap)
+          val {endByte, builtTrees, diags = snapDiags, plugins,
+               ...} = snap
+          (* Seed `diags` with the frozen snapshot; leave `oldDiags`
+             empty so no post-`endByte` stale diagnostics from the
+             previous compile leak into the LSP publish stream. *)
+          val seededDiags = DArray.clone (snapDiags, DArray.size snapDiags)
+          val trees : parse_data = {
+            done = false, pos = endByte, builtTrees = builtTrees,
+            diags = seededDiags, plugins = plugins,
+            declSnapshots =
+              List.filter (fn (s':declSnapshot) => #endByte s' <= endByte)
+                          lastSnaps}
+          val emptyDiags = DArray.new (0, Completed)
+        in (trees, endByte, emptyDiags) end
+    val _ = minEditOffset := NONE
+    val _ = if dbg andalso resumeStart > 0 then
+              send (mkNotif "$/compileResumedAt" (fn print => (
+                print "{\"uri\":"; encString uri print;
+                print ",\"version\":"; encInt (#version text) print;
+                print ",\"pos\":"; encInt resumeStart print;
+                print "}")))
+            else ()
+    val trees = ref initialTrees
     val cancelled = ref false
 
     fun compileThread () = ((let
@@ -763,7 +818,7 @@ fun start {diag} = let
           print ",\"value\":{\"kind\":\"end\"}}")))
 
       val ls = ref (beforeCompile ())
-      val lastPos = ref 0
+      val lastPos = ref resumeStart
       fun process (Progress i) = (
           if !cancelled then raise Thread.Interrupt else ();
           trees := setParsePos i (!trees);
@@ -796,7 +851,7 @@ fun start {diag} = let
           compileSnap = !LSPExtension.captureCompileSnap ()}
         in trees := addDeclSnapshot snap (!trees) end
       in (
-        compileForReport uri (#text text) lastPos processBuiltTree captureSnap process;
+        compileForReport uri (#text text) resumeStart lastPos processBuiltTree captureSnap process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         (* stopCompile no longer waits for the thread to exit, so
            we might land here on a stale thread whose applyEdit has
@@ -1095,7 +1150,7 @@ fun start {diag} = let
       | encReport Completed print = print "{\"kind\":\"compileCompleted\"}"
       | encReport Interrupted print = print "{\"kind\":\"interrupted\"}"
 
-    val compile = compileForReport uri code (ref 0) (fn _ => ()) (fn _ => ())
+    val compile = compileForReport uri code 0 (ref 0) (fn _ => ()) (fn _ => ())
     in
       case incr of
         IncrNone => let
