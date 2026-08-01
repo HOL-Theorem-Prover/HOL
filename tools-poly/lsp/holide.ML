@@ -46,7 +46,12 @@ val initialize:
     progress: int -> unit,
     error: error -> unit,
     runtimeExn: exn -> unit,
-    builtTree: built -> unit
+    builtTree: built -> unit,
+    (* Called after each outer dec finishes compilation, with the byte
+       offset just past the dec's original-source span (from
+       `HOLSourceAST.decSpan`).  Used by the LSP to take mid-file
+       snapshots for incremental recompile. *)
+    onDecCompleted: int -> unit
   } -> unit
 
 val moveUp: subtree -> subtree
@@ -650,7 +655,7 @@ end
 
 fun initialize {
   text, filename, parseError, compilerOut, toplevelOut, progress, error,
-  runtimeExn, builtTree
+  runtimeExn, builtTree, onDecCompleted
 } = let
   datatype chunk
     = Chunk of string
@@ -829,6 +834,9 @@ fun initialize {
       finish ();
       emitBuilt ();
       ptRef := [];
+      (case !decsRef of
+         [] => ()
+       | dec :: _ => onDecCompleted (#2 (HOLSourceAST.decSpan dec)));
       loop ()))
   in loop () end;
 

@@ -464,24 +464,56 @@ fun start {diag} = let
   | Completed
   | Interrupted
 
+  (* Per-dec snapshot; see `parse_data.declSnapshots` below.  A resume
+     to `endByte` seeds the new compile with `builtTrees` and `plugins`
+     from this snapshot, restores HOL state via `compileSnap`, and
+     uses `diags` as the frozen prefix of the diagnostic list. *)
+  type declSnapshot = {
+    endByte     : int,
+    builtTrees  : HOL_IDE.built list,
+    diags       : report DArray.darray,
+    plugins     : plugin_data,
+    compileSnap : LSPExtension.compileSnap }
+
   type parse_data = {
     done: bool,
     pos: int,
     builtTrees: HOL_IDE.built list,
     diags: report DArray.darray,
-    plugins: plugin_data}
+    plugins: plugin_data,
+    (* Newest-first list of per-dec snapshots taken by the current /
+       last-completed compile.  Consulted by `startCompile` to resume
+       from the largest snapshot with `endByte <= minEditOffset`
+       instead of restarting from byte 0. *)
+    declSnapshots: declSnapshot list}
   fun emptyParseData n: parse_data = {
     done = false, pos = 0, builtTrees = [],
     diags = DArray.new (n, Completed),
-    plugins = emptyPluginData }
-  fun addBuiltTree t {done, pos, builtTrees, diags, plugins} =
-    {done = done, pos = pos, builtTrees = t :: builtTrees, diags = diags, plugins = plugins}
-  fun setParsePos pos {done, pos = _, builtTrees, diags, plugins} =
-    {done = done, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
-  fun setParseDone pos {done = _, pos = _, builtTrees, diags, plugins} =
-    {done = true, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
-  fun setPlugins plugins {done, pos, builtTrees, diags, plugins = _} =
-    {done = done, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
+    plugins = emptyPluginData,
+    declSnapshots = [] }
+  (* Preserve `declSnapshots` from `p` but zero the rest.  Used by
+     `applyEdit` so a `didChange` doesn't discard the snapshots the
+     previous compile computed. *)
+  fun carryOverSnapshots ({declSnapshots, ...}:parse_data): parse_data = {
+    done = false, pos = 0, builtTrees = [],
+    diags = DArray.new (0, Completed),
+    plugins = emptyPluginData,
+    declSnapshots = declSnapshots }
+  fun addBuiltTree t {done, pos, builtTrees, diags, plugins, declSnapshots} =
+    {done = done, pos = pos, builtTrees = t :: builtTrees, diags = diags,
+     plugins = plugins, declSnapshots = declSnapshots}
+  fun setParsePos pos {done, pos = _, builtTrees, diags, plugins, declSnapshots} =
+    {done = done, pos = pos, builtTrees = builtTrees, diags = diags,
+     plugins = plugins, declSnapshots = declSnapshots}
+  fun setParseDone pos {done = _, pos = _, builtTrees, diags, plugins, declSnapshots} =
+    {done = true, pos = pos, builtTrees = builtTrees, diags = diags,
+     plugins = plugins, declSnapshots = declSnapshots}
+  fun setPlugins plugins {done, pos, builtTrees, diags, plugins = _, declSnapshots} =
+    {done = done, pos = pos, builtTrees = builtTrees, diags = diags,
+     plugins = plugins, declSnapshots = declSnapshots}
+  fun addDeclSnapshot snap {done, pos, builtTrees, diags, plugins, declSnapshots} =
+    {done = done, pos = pos, builtTrees = builtTrees, diags = diags,
+     plugins = plugins, declSnapshots = snap :: declSnapshots}
 
   type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data,
@@ -534,16 +566,22 @@ fun start {diag} = let
     val _ = stopCompile compile
     fun getLines text NONE = mkLineCounter text
       | getLines _ (SOME lines) = lines
+    (* The old `parse` value is carried through the fold so we can
+       preserve its `declSnapshots` on each step (via
+       `carryOverSnapshots`).  On a full-text replace (`range = NONE`)
+       the snapshots become useless — their `endByte` offsets no
+       longer index anything meaningful in the new text — so we drop
+       them explicitly. *)
     fun applyText [] data = data
       | applyText ({range = NONE, text}::cs) _ = applyText cs (emptyParseData 0, text, NONE)
-      | applyText ({range = SOME (from, to), text}::cs) (_, base, lines) = let
+      | applyText ({range = SOME (from, to), text}::cs) (parse, base, lines) = let
         val lines = getLines base lines
         val (from, to) = (fromLineCol lines from, fromLineCol lines to)
         val text = Substring.concat [
           Substring.substring (base, 0, from),
           Substring.full text,
           Substring.substring (base, to, size base - to)]
-        in applyText cs (emptyParseData 0, text, NONE) end
+        in applyText cs (carryOverSnapshots parse, text, NONE) end
     val {parse, text = {text, lines, version = _}} = !lastTrees
     val (parse, text, lines) = applyText changes (parse, text, SOME lines)
     val text = {text = text, lines = getLines text lines, version = version}
@@ -587,7 +625,7 @@ fun start {diag} = let
       handle _ => []
     end
 
-  fun compileForReport uri code lastPos builtTree report = let
+  fun compileForReport uri code lastPos builtTree onDecCompleted report = let
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
@@ -598,7 +636,8 @@ fun start {diag} = let
       error = fn {hard, location, message, ...} => report (Error {
         hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
       runtimeExn = fn e => report (exnToReport (!lastPos) e),
-      builtTree = builtTree }
+      builtTree = builtTree,
+      onDecCompleted = onDecCompleted }
     in lastPos := size code end
 
   fun startCompile uri ({compile, lastTrees, debounce}:file_data) = (
@@ -743,8 +782,21 @@ fun start {diag} = let
         | process Interrupted = raise Bind
         | process (msg as Error _) = DArray.push (#diags (!trees), msg)
       fun processBuiltTree t = trees := addBuiltTree t (!trees)
+      (* After each outer dec finishes, freeze a snapshot for the LSP
+         to resume from on a later `didChange` with min-edit-offset >
+         endByte.  Cloning `diags` at capture time keeps the resume
+         seed independent of subsequent `updateDiags` mutations. *)
+      fun captureSnap endByte = let
+        val {builtTrees, plugins, diags, ...} = !trees
+        val snap = {
+          endByte = endByte,
+          builtTrees = builtTrees,
+          diags = DArray.clone (diags, DArray.size diags),
+          plugins = plugins,
+          compileSnap = !LSPExtension.captureCompileSnap ()}
+        in trees := addDeclSnapshot snap (!trees) end
       in (
-        compileForReport uri (#text text) lastPos processBuiltTree process;
+        compileForReport uri (#text text) lastPos processBuiltTree captureSnap process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         (* stopCompile no longer waits for the thread to exit, so
            we might land here on a stale thread whose applyEdit has
@@ -1043,7 +1095,7 @@ fun start {diag} = let
       | encReport Completed print = print "{\"kind\":\"compileCompleted\"}"
       | encReport Interrupted print = print "{\"kind\":\"interrupted\"}"
 
-    val compile = compileForReport uri code (ref 0) (fn _ => ())
+    val compile = compileForReport uri code (ref 0) (fn _ => ()) (fn _ => ())
     in
       case incr of
         IncrNone => let
