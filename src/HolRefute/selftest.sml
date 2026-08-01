@@ -15467,6 +15467,62 @@ val _ = require_msg (check_result (fn () =>
   "failed to fall through to a substrate that handles it")
   (fn () => ()) ()
 
+(* A function *variable* whose domain has no enumeration is generated, not
+   refused: the exhaustive generator layers point updates over a constant,
+   and the random one draws a default plus a list of points.  Only function
+   *equality* needs the domain enumerated, and that alone is refused with
+   "non-enumerable domain" — see [infinite_function_equality_is_rejected].
+   Both generator families are emitted whichever strategy is compiled, so
+   the random declaration has to be well-formed SML even for an exhaustive
+   plan; that is what the first check pins.  The goal below contains no
+   function equality, so native must decide it rather than report
+   inapplicable, and Auto must keep finding a counterexample either way. *)
+val function_lookup_goal =
+  ``(m : num -> num option) k = SOME (v : num) ==> m k = NONE``
+
+fun native_function_domain_generator_compiles () =
+  let
+    val variable = Term.mk_var ("gen_lookup", ``:num -> num option``)
+    val plan = Gen (variable, Test boolSyntax.F)
+    fun compiles strategy =
+      case Refute_EvalSML.compile_with Refute_Extract.extract_problem
+          default_config strategy (Plans [plan]) of
+          Inapplicable _ => false
+        | Compiled test => (#close test (); true)
+  in
+    compiles Exhaustive andalso compiles (Random {seed = 1})
+  end
+
+fun native_function_lookup_is_applicable () =
+  let
+    val config = upd_size 4 (upd_substrate NativeSML default_config)
+    fun solved strategy =
+      case run_with_strategy strategy config function_lookup_goal of
+          Counterexample (cex :: _) =>
+            #substrate cex = "native" andalso #certainty cex = Genuine
+        | _ => false
+  in
+    solved Exhaustive andalso solved (Random {seed = 1})
+  end
+
+fun auto_solves_function_lookup () =
+  let
+    val config = upd_size 4 (upd_substrate Auto default_config)
+  in
+    case run_with_strategy Exhaustive config function_lookup_goal of
+        Counterexample (cex :: _) => #certainty cex = Genuine
+      | _ => false
+  end
+
+val _ = tprint "Refute native non-enumerable function domain"
+val _ = require_msg (check_result (fn () =>
+  native_function_domain_generator_compiles () andalso
+  native_function_lookup_is_applicable () andalso
+  auto_solves_function_lookup ())) (fn () =>
+  "native emitted ill-formed SML for a function type with a non-enumerable " ^
+  "domain, refused a goal it can decide, or Auto found no counterexample")
+  (fn () => ()) ()
+
 val _ = tprint "Refute narrowing backend"
 
 fun renamed_narrowing_uses_typed_certification_path () =
@@ -19338,13 +19394,14 @@ val conformance_full_cases : conformance_case list =
    {name = "sorted insert", cfg = conform_cex_config,
     tm = ``SORTED $= (xs : num list) ==> SORTED $= (x :: xs)``,
     inapplicable = []},
+   (* Native generates a function variable over a non-enumerable domain; only
+      function equality needs that domain enumerated, and this goal has
+      none.  See "Refute native non-enumerable function domain" above. *)
    {name = "finite-map lookup", cfg = conform_cex_config,
     tm = ``(m : num -> num option) k = SOME (v : num) ==>
            m k = NONE``,
     inapplicable =
-      [(Cv, "cv: :num -> num option - function type in data position"),
-       (NativeSML,
-        "function equality has non-enumerable domain :num")]},
+      [(Cv, "cv: :num -> num option - function type in data position")]},
    {name = "polymorphic lists", cfg = conform_cex_config,
     tm = ``(xs : 'a list) = ys``, inapplicable = []},
    {name = "polymorphic card schedule", cfg = conform_cex_config,
