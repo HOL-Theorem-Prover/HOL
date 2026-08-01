@@ -20354,10 +20354,17 @@ fun mf_acceptance_base_config () =
     (Refute.upd_card [(NONE, [1, 2, 3, 4, 5, 6])]
       Refute.default_config)
 
+(* No acceptance case expects a timeout: every one pins an exact verdict,
+   so the budget is a hang-guard rather than part of what is asserted, and
+   a healthy run never spends more of it than the search needs.  At 30s it
+   was small enough to turn machine load into a verdict: the corpus reports
+   "kodkod timed out" as Unknown, and the acceptance, differential and
+   soundness harnesses all read that as a failed pin.  Sized from the
+   measured worst case instead -- see [Manual_Nits subst2] below. *)
 fun enforce_mf_acceptance_config solver config =
   Refute.upd_sat_solver solver
     (Refute.upd_max_threads 1
-      (Refute.upd_timeout 30.0
+      (Refute.upd_timeout 120.0
         (Refute.upd_sequential true
           (Refute.upd_backends (SOME ["kodkod"]) config))))
 
@@ -20457,10 +20464,19 @@ fun mf_acceptance_test solver group_config
       |> enforce_mf_acceptance_config solver
       |> Refute.upd_expect public_expectation
     val config =
-      (* This exhaustive ExpectNone case sits just above the shared
-         30-second corpus budget on slower builders. *)
+      (* The slowest case in the corpus, and the only one that needs more
+         than the shared budget.  Measured on a 32-core builder at load
+         ~24, card 4, one instance: the whole Refute-side pipeline --
+         preprocessing, nut translation, scope selection and Kodkod
+         assembly -- costs 0.17s (the time a re-run takes once
+         [Refute_Forl]'s one-slot problem cache answers the solve), and
+         the rest is the propositional solve alone: 67.0s and 67.5s on
+         SAT4J across two fresh sessions, 23.8s and 24.8s on MiniSat_JNI.
+         So this is a slow SAT problem, not a Refute-side regression, and
+         the bound has to clear the slower solver by enough that load
+         cannot decide the verdict. *)
       if name = "Manual_Nits subst2" then
-        Refute.upd_timeout 60.0 config
+        Refute.upd_timeout 240.0 config
       else config
     val outcome = with_silent_refute (fn () => Refute.refute config tm)
     val verdict_ok =
