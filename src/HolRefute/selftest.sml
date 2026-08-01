@@ -15523,6 +15523,80 @@ val _ = require_msg (check_result (fn () =>
   "domain, refused a goal it can decide, or Auto found no counterexample")
   (fn () => ()) ()
 
+(* Extraction builds SML as text, so a value spliced into an application
+   argument position has to be an atom.  [combin$UPDATE] used to splice its
+   point and its base bare, which is well formed only while the point is an
+   identifier.  A compound point is routine: the update chain below is
+   written by hand, and [Refute_Gen.function_terms] builds the same shape
+   whenever it enumerates a function type, using the domain's enumeration
+   terms as points.  Both generator families are emitted whichever strategy
+   is compiled, so this has to hold under Exhaustive and Random alike, and
+   the goal must be decided rather than merely not raise. *)
+val compound_update_goal =
+  ``((SOME 1 =+ T) (upd_f : num option -> bool)) NONE``
+
+fun native_decides_compound_update () =
+  let
+    val config = upd_size 3 (upd_substrate NativeSML default_config)
+    fun solved strategy =
+      case run_with_strategy strategy config compound_update_goal of
+          Counterexample (cex :: _) =>
+            #substrate cex = "native" andalso #certainty cex = Genuine
+        | _ => false
+  in
+    solved Exhaustive andalso solved (Random {seed = 1})
+  end
+
+(* The other reachable splice of the same class.  Equality between two
+   functions enumerates the domain, and [enum_expression] feeds each
+   constructor argument's enumeration to [List.map].  For a [zoo_pd] the
+   argument is a pair, whose enumeration is a [List.concat] application, so
+   splicing it bare passed [List.map] three arguments.  [zoo_pd]'s
+   enumeration is finite, so the arrow equality is generated rather than
+   refused — contrast [infinite_function_equality_is_rejected]. *)
+val zoo_predicate_ty = ``:(bool, bool) zoo_pd -> bool``
+
+fun native_compiles_datatype_function_equality () =
+  let
+    val left = Term.mk_var ("upd_zf", zoo_predicate_ty)
+    val right = Term.mk_var ("upd_zg", zoo_predicate_ty)
+    val plan =
+      Gen (left, Gen (right, Test (boolSyntax.mk_eq (left, right))))
+    fun compiles strategy =
+      case Refute_EvalSML.compile_with Refute_Extract.extract_problem
+          default_config strategy (Plans [plan]) of
+          Inapplicable _ => false
+        | Compiled test => (#close test (); true)
+  in
+    compiles Exhaustive andalso compiles (Random {seed = 1})
+  end
+
+(* [atom] is what makes those two positions safe, so its own reading of
+   "already an atom" has to be exact: two bracketed groups in a row are an
+   application, not an atom, and a bracket inside a string literal must not
+   balance one outside it. *)
+fun atom_brackets_exactly_the_non_atoms () =
+  let
+    fun unchanged text = Refute_Extract.atom text = text
+    fun bracketed text = Refute_Extract.atom text = "(" ^ text ^ ")"
+  in
+    List.all unchanged
+      ["x", "SOME", "256", "Refute_EvalSML.Stuck", "(f x)", "[a, b]", "[]",
+       "(\"(\")", "(fn x => (y))"] andalso
+    List.all bracketed
+      ["SOME (x)", "f x", "(a) (b)", "[a] @ [b]", "f \"(\"", "a + b",
+       "fn x => y", "#1 name"]
+  end
+
+val _ = tprint "Refute native application-argument splices"
+val _ = require_msg (check_result (fn () =>
+  atom_brackets_exactly_the_non_atoms () andalso
+  native_decides_compound_update () andalso
+  native_compiles_datatype_function_equality ())) (fn () =>
+  "native emitted ill-formed SML for a compound function update point or " ^
+  "for a datatype domain enumeration, or [atom] misread an atom")
+  (fn () => ()) ()
+
 val _ = tprint "Refute narrowing backend"
 
 fun renamed_narrowing_uses_typed_certification_path () =

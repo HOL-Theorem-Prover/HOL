@@ -104,6 +104,71 @@ structure Refute_Extract = struct
 
   fun parens text = "(" ^ text ^ ")"
 
+  (* A compiled value is generally not an atom: [constructor_expression]
+     returns [SOME (x)] and [C_Foo (x)], a partially applied primitive
+     returns an abstraction, [Susp.force (x)] is an application, and so
+     are most [strict_primitive] results.  Nearly every position accepts
+     that — infix operands, tuple and list components, case scrutinees and
+     application heads all parse as intended — but an application
+     *argument* does not: splicing [SOME (x)] after a function name
+     silently supplies two arguments where one was meant, and the emitted
+     program then fails to compile as a whole.  [atom] is the safe splice
+     for those positions.  It is the identity on text that is already an
+     atom, which is the common case (argument positions are usually filled
+     by a variable name), so trace dumps of the generated source do not
+     fill up with redundant brackets. *)
+  fun is_atom text =
+    let
+      val count = String.size text
+      (* [literal] resumes after a string body, so that a bracket inside
+         "..." can never balance a bracket outside it. *)
+      fun literal index =
+        if index >= count then NONE
+        else
+          case String.sub (text, index) of
+              #"\\" => literal (index + 2)
+            | #"\"" => SOME (index + 1)
+            | _ => literal (index + 1)
+      fun simple index =
+        index >= count orelse
+        let val character = String.sub (text, index)
+        in
+          (Char.isAlphaNum character orelse character = #"_" orelse
+           character = #"'" orelse character = #".") andalso
+          simple (index + 1)
+        end
+      fun scan opening closing index depth =
+        if index >= count then false
+        else
+          let val character = String.sub (text, index)
+          in
+            if character = #"\"" then
+              (case literal (index + 1) of
+                   NONE => false
+                 | SOME next => scan opening closing next depth)
+            else if character = #"#" andalso index + 1 < count andalso
+                    String.sub (text, index + 1) = #"\"" then
+              (case literal (index + 2) of
+                   NONE => false
+                 | SOME next => scan opening closing next depth)
+            else if character = opening then
+              scan opening closing (index + 1) (depth + 1)
+            else if character = closing then
+              (if depth = 1 then index = count - 1
+               else scan opening closing (index + 1) (depth - 1))
+            else scan opening closing (index + 1) depth
+          end
+      fun encloses opening closing =
+        count >= 2 andalso String.sub (text, 0) = opening andalso
+        scan opening closing 0 0
+    in
+      count > 0 andalso
+      (simple 0 orelse encloses #"(" #")" orelse encloses #"[" #"]" orelse
+       (String.sub (text, 0) = #"\"" andalso literal 1 = SOME count))
+    end
+
+  fun atom text = if is_atom text then text else parens text
+
   fun intinf_literal text =
     "(valOf (IntInf.fromString " ^ quote text ^ ") : IntInf.int)"
 
@@ -464,7 +529,7 @@ structure Refute_Extract = struct
                 in
                   "List.concat (List.map (fn " ^ variable ^ " => " ^
                   build rest (variables @ [variable]) ^ ") " ^
-                  enum_expression context argument ^ ")"
+                  atom (enum_expression context argument) ^ ")"
                 end
         in
           build arguments []
@@ -550,6 +615,16 @@ structure Refute_Extract = struct
             "((a1, a2), (b1, b2)) => " ^ eq_left ^ " a1 b1 andalso " ^
             eq_right ^ " a2 b2)"
           end
+      (* [MLList] cannot arise in lazy mode: [classify_primitive] routes
+         lists, options, tuples and strings through [algebraic], which is
+         [NONE] there, so a lazy list is an [MLSusp] of a generated
+         datatype and lands in [MLDatatype] below.  [left_value] and
+         [right_value] are therefore the identifiers [x] and [y] here, as
+         [force] is the identity in strict mode.  [atom] still guards the
+         two argument positions, so this arm does not silently become
+         wrong if lazy mode ever grows a native list representation;
+         [MLArrow] below solves the same problem by let-binding both
+         sides first. *)
       | MLList _ =>
           let
             val element = listSyntax.dest_list_type ty
@@ -557,7 +632,7 @@ structure Refute_Extract = struct
           in
             "let fun loop [] [] = true | loop (a :: as') (b :: bs') = " ^
             eq_element ^ " a b andalso loop as' bs' | loop _ _ = false " ^
-            "in loop " ^ left_value ^ " " ^ right_value ^ " end"
+            "in loop " ^ atom left_value ^ " " ^ atom right_value ^ " end"
           end
       | MLOption _ =>
           let
@@ -943,8 +1018,14 @@ structure Refute_Extract = struct
       val variables = List.tabulate (missing, fn index =>
         "refute_arg_" ^ Int.toString index)
       val body = build (initial @ variables)
-      val abstraction = List.foldr (fn (variable, result) =>
-        "fn " ^ variable ^ " => " ^ result) body variables
+      (* An under-applied primitive compiles to an abstraction, and a bare
+         [fn x => ...] is legal in neither the head nor the argument of an
+         application.  Bracket it here, once, so that no splice site has to
+         know that [with_arity] can hand it one. *)
+      val abstraction =
+        if null variables then body
+        else parens (List.foldr (fn (variable, result) =>
+          "fn " ^ variable ^ " => " ^ result) body variables)
     in
       List.foldl (fn (argument, result) =>
         parens (result ^ " " ^ parens argument)) abstraction extra
@@ -1050,9 +1131,13 @@ structure Refute_Extract = struct
             (fn () =>
               case constructor_for context head of
                   SOME (_, _, name) =>
+                    (* Unreachable today: [pattern] is only called from the
+                       strict let, paired-abstraction, case and definition
+                       compilers.  A nested constructor pattern would
+                       otherwise be spliced as [C1 C2 x]. *)
                     (case List.map (pattern context) arguments of
                          [] => name
-                       | [argument] => name ^ " " ^ argument
+                       | [argument] => name ^ " " ^ atom argument
                        | values => name ^ " (" ^ join ", " values ^ ")")
                 | NONE => reject ("unknown lazy pattern constructor " ^
                                   kname_text (kname head)))
@@ -1267,8 +1352,8 @@ structure Refute_Extract = struct
       | ("combin", "K") => SOME (with_arity arguments 2 (fn values =>
           case values of [left, _] => left | _ => raise Fail "K"))
       | ("combin", "o") => SOME (with_arity arguments 3 (fn values =>
-          case values of [f, g, x] => parens (f ^ " " ^ parens
-            (g ^ " " ^ parens x)) | _ => raise Fail "o"))
+          case values of [f, g, x] => parens (atom f ^ " " ^ parens
+            (atom g ^ " " ^ parens x)) | _ => raise Fail "o"))
       | ("combin", "UPDATE") =>
           let
             val domain = hd (#1 (boolSyntax.strip_fun
@@ -1278,17 +1363,17 @@ structure Refute_Extract = struct
             SOME (with_arity arguments 3 (fn values =>
               case values of [point, value, base] =>
                 parens ("fn refute_update_x => if " ^ equality ^
-                  " refute_update_x " ^ point ^ " then " ^ value ^
-                  " else " ^ base ^ " refute_update_x")
+                  " refute_update_x " ^ atom point ^ " then " ^ value ^
+                  " else " ^ atom base ^ " refute_update_x")
               | _ => raise Fail "UPDATE"))
           end
       | ("pair", "FST") => SOME (call "#1" 1 arguments)
       | ("pair", "SND") => SOME (call "#2" 1 arguments)
       | ("pair", "CURRY") => SOME (with_arity arguments 3 (fn values =>
-          case values of [f, a, b] => f ^ " " ^ parens (a ^ ", " ^ b)
+          case values of [f, a, b] => atom f ^ " " ^ parens (a ^ ", " ^ b)
           | _ => raise Fail "CURRY"))
       | ("pair", "UNCURRY") => SOME (with_arity arguments 2 (fn values =>
-          case values of [f, pair] => f ^ " " ^ parens pair
+          case values of [f, pair] => atom f ^ " " ^ parens pair
           | _ => raise Fail "UNCURRY"))
       | ("list", "NULL") => SOME (with_arity arguments 1 (fn values =>
           case values of [a] =>
@@ -1350,13 +1435,13 @@ structure Refute_Extract = struct
           | _ => raise Fail "EXISTS"))
       | ("list", "FOLDR") => SOME (with_arity arguments 3 (fn values =>
           case values of [f, z, xs] =>
-            "refute_foldr " ^ f ^ " " ^ z ^ " " ^
+            "refute_foldr " ^ atom f ^ " " ^ atom z ^ " " ^
             parens (if string_argument 2 then
               "String.explode " ^ parens xs else xs)
           | _ => raise Fail "FOLDR"))
       | ("list", "FOLDL") => SOME (with_arity arguments 3 (fn values =>
           case values of [f, z, xs] =>
-            "refute_foldl " ^ f ^ " " ^ z ^ " " ^
+            "refute_foldl " ^ atom f ^ " " ^ atom z ^ " " ^
             parens (if string_argument 2 then
               "String.explode " ^ parens xs else xs)
           | _ => raise Fail "FOLDL"))
@@ -1367,10 +1452,10 @@ structure Refute_Extract = struct
       | ("list", "EL") => SOME (with_arity arguments 2 (fn values =>
           case values of [n, xs] =>
             if string_argument 1 then
-              "(String.sub (" ^ xs ^ ", IntInf.toInt " ^ n ^ ") " ^
+              "(String.sub (" ^ xs ^ ", IntInf.toInt " ^ atom n ^ ") " ^
               "handle Interrupt => raise Interrupt " ^
               "| _ => raise Refute_EvalSML.Stuck \"EL\")"
-            else "refute_nth " ^ xs ^ " " ^ n
+            else "refute_nth " ^ atom xs ^ " " ^ atom n
           | _ => raise Fail "EL"))
       | ("list", "LAST") =>
           SOME (call (if string_list () then
@@ -1439,13 +1524,13 @@ structure Refute_Extract = struct
           let val width = word_result_width head argument_terms
           in SOME (with_arity arguments 2 (fn values =>
             case values of [a, b] => "refute_norm " ^ Int.toString width ^
-              " (refute_pow " ^ a ^ " " ^ b ^ ")"
+              " (refute_pow " ^ atom a ^ " " ^ atom b ^ ")"
             | _ => raise Fail "word_exp")) end
       | ("words", "word_1comp") =>
           let val width = word_result_width head argument_terms
           in SOME (with_arity arguments 1 (fn values =>
             case values of [a] => "refute_norm " ^ Int.toString width ^
-              " (IntInf.notb " ^ a ^ ")"
+              " (IntInf.notb " ^ atom a ^ ")"
             | _ => raise Fail "word_1comp")) end
       | ("words", "word_2comp") =>
           let val width = word_result_width head argument_terms
@@ -1497,7 +1582,7 @@ structure Refute_Extract = struct
           let val width = word_result_width head argument_terms
           in SOME (with_arity arguments 1 (fn values =>
             case values of [value] => "refute_signed " ^
-              Int.toString width ^ " " ^ value ^ " < 0"
+              Int.toString width ^ " " ^ atom value ^ " < 0"
             | _ => raise Fail "word_msb")) end
       | ("words", "word_lt") => SOME (compare true "<")
       | ("words", "word_le") => SOME (compare true "<=")
@@ -1521,7 +1606,7 @@ structure Refute_Extract = struct
             SOME (with_arity arguments 1 (fn values =>
               case values of [value] => "refute_norm " ^
                 Int.toString output_width ^ " (refute_signed " ^
-                Int.toString input_width ^ " " ^ value ^ ")"
+                Int.toString input_width ^ " " ^ atom value ^ ")"
               | _ => raise Fail "sw2sw"))
           end
       | ("integer_word", "i2w") =>
@@ -3114,7 +3199,7 @@ structure Refute_Extract = struct
             | NONE => "draw_points (Int.max (0, size)) after_default []"
           val point_state = case enum of
               SOME _ => "after_default"
-            | NONE => "(#2 points_result)"
+            | NONE => "#2 points_result"
           val point_values = case enum of
               SOME _ => points
             | NONE => "rev (#1 points_result)"
@@ -3146,7 +3231,7 @@ structure Refute_Extract = struct
           "      in values rest next graph'\n" ^
           "           ((point_term, value_term) :: updates) end\n" ^
           "  val graph = fn _ => #1 default_generated\n" ^
-          "in values points " ^ point_state ^ " graph [] end"
+          "in values points " ^ atom point_state ^ " graph [] end"
         end
 
       fun random_body ty =
