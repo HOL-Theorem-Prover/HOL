@@ -573,13 +573,32 @@ in
            restores it before each LSP compile.  Without this, each
            didChange inherits the previous compile's theory (new_theory
            retires the constants but leaves stale theorems in DB),
-           producing a flood of "is out-of-date!" errors. *)
+           producing a flood of "is out-of-date!" errors.
+
+           `captureCompileSnap` is the mid-compile companion used by
+           incremental resume: it captures Context + loaded modules +
+           the LSP namespace layer at a dec boundary; the returned
+           thunk restores each channel and forces
+           `Parse.invalidate_caches` so the parser closure caches
+           (`type_parser1`, `the_absyn_parser`, ...) rebuild against
+           the restored grammars.  The boot-restore path in
+           `resetForCompile` also calls `invalidate_caches`, fixing
+           a latent staleness between restore and the next grammar-
+           mutating dec. *)
         evalString
           "let val snap = Context.snapshot () \
           \    val restoreLoaded = Meta.snapshotLoaded () in \
           \  LSPExtension.resetForCompile := \
           \    (fn () => (Context.restore snap; restoreLoaded (); \
-          \               LSPNameSpace.clearFileLayer ())) \
+          \               LSPNameSpace.clearFileLayer (); \
+          \               Parse.invalidate_caches ())); \
+          \  LSPExtension.captureCompileSnap := \
+          \    (fn () => let val cSnap = Context.snapshot () \
+          \                  val loadedR = Meta.snapshotLoaded () \
+          \                  val nsR = LSPNameSpace.snapshotLayer () \
+          \              in fn () => (Context.restore cSnap; \
+          \                           loadedR (); nsR (); \
+          \                           Parse.invalidate_caches ()) end) \
           \end";
         (* Cheat every tactic proof: return an oracle-tagged theorem
            for the goal instead of running the tactic.  Same hook that

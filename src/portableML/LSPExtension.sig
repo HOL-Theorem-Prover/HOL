@@ -85,4 +85,19 @@ val thmLookup: (string -> string option) ref
    the LSP runtime init in tools-poly/hol.ML. *)
 val resetForCompile: (unit -> unit) ref
 
+(* Snapshot / restore of the per-compile state channels needed for
+   mid-file recompile resume: the HOL Context, the Poly/ML loaded-
+   modules set, and the LSP file-namespace layer (see
+   `lsp/lsp_namespace.ML`).  `captureCompileSnap ()` runs at a dec
+   boundary and returns a thunk that restores each channel and forces
+   `Parse.invalidate_caches` when applied.  `restoreCompileSnap` is
+   a small indirection so callers can apply it uniformly.  Defaults
+   are no-ops; installed by the LSP runtime init in tools-poly/hol.ML.
+   Concrete type is exposed (rather than opaque) because the runtime
+   wiring in `hol.ML` needs to construct one via `evalString`, which
+   sees the compilation-environment view of the sig. *)
+type compileSnap = unit -> unit
+val captureCompileSnap: (unit -> compileSnap) ref
+val restoreCompileSnap: (compileSnap -> unit) ref
+
 end;

@@ -21,6 +21,11 @@
 structure LSPNameSpace : sig
   val fileNS : PolyML.NameSpace.nameSpace
   val clearFileLayer : unit -> unit
+  (* Return a thunk that restores each of the six kind-tables to
+     their current contents.  Used by LSP mid-compile snapshots so a
+     resume at dec N re-installs the file-layer state that was live
+     at the end of dec N.  Symmetric to `Meta.snapshotLoaded`. *)
+  val snapshotLayer : unit -> unit -> unit
 end = struct
 
   fun mkTable () = ref (Binarymap.mkDict String.compare)
@@ -80,5 +85,13 @@ end = struct
   fun clearFileLayer () =
     (tblClear vTbl; tblClear tTbl; tblClear fTbl;
      tblClear sTbl; tblClear gTbl; tblClear nTbl)
+
+  fun snapshotLayer () = let
+    val v = !vTbl val t = !tTbl val f = !fTbl
+    val s = !sTbl val g = !gTbl val n = !nTbl
+  in
+    fn () => (vTbl := v; tTbl := t; fTbl := f;
+              sTbl := s; gTbl := g; nTbl := n)
+  end
 
 end;

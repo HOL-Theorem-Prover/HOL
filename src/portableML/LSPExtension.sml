@@ -125,4 +125,8 @@ val helpLookup = ref (fn _ => [])
 val thmLookup : (string -> string option) ref = ref (fn _ => NONE)
 val resetForCompile : (unit -> unit) ref = ref (fn () => ())
 
+type compileSnap = unit -> unit
+val captureCompileSnap : (unit -> compileSnap) ref = ref (fn () => (fn () => ()))
+val restoreCompileSnap : (compileSnap -> unit) ref = ref (fn f => f ())
+
 end
