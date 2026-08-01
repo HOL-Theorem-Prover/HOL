@@ -2602,3 +2602,48 @@ the surrounding text (as done by ‘hol-do-goal’ and
 
 (define-key global-map [menu-bar hol-menu hol-process hol-with-region]
   '("Start HOL & run to cursor" . hol-with-region))
+
+;; ---------------------------------------------------------------------
+;; LSP integration via eglot
+;; ---------------------------------------------------------------------
+;; `bin/hol lsp' starts an LSP server.  eglot spawns the server with
+;; cwd = project root; hol.ML's get_heap_name reads the Holmakefile in
+;; that cwd and boots the appropriate heap.  Holmakefiles are per-
+;; directory (they do NOT govern sub-directories), so the LSP project
+;; root is the buffer's own directory — no upward walk.
+;;
+;; Users opt in by calling `hol-lsp-enable' (e.g. from init.el):
+;;
+;;     (with-eval-after-load 'hol-mode (hol-lsp-enable))
+
+(defcustom hol-lsp-server-modes '(holscript-mode)
+  "Major modes to which `hol-lsp-enable' attaches the HOL LSP server."
+  :group 'hol
+  :type '(repeat symbol))
+
+(defun hol-lsp--project-try (dir)
+  "Treat DIR as the LSP project root when called from a HOL buffer."
+  (when (and buffer-file-name (memq major-mode hol-lsp-server-modes))
+    (cons 'hol-lsp-project dir)))
+
+(with-eval-after-load 'project
+  (cl-defmethod project-root ((p (head hol-lsp-project))) (cdr p)))
+
+(defun hol-lsp--setup-buffer ()
+  "Configure the current buffer to use the HOL LSP server via eglot."
+  (setq-local project-find-functions
+              (cons #'hol-lsp--project-try project-find-functions))
+  (when (fboundp 'eglot-ensure) (eglot-ensure)))
+
+(defun hol-lsp-enable ()
+  "Enable eglot-based HOL LSP for buffers in `hol-lsp-server-modes'.
+Registers `bin/hol lsp' as the server command and treats each
+buffer's own directory as its project root."
+  (interactive)
+  (with-eval-after-load 'eglot
+    (dolist (mode hol-lsp-server-modes)
+      (add-to-list 'eglot-server-programs
+                   `(,mode . (,hol-executable "lsp")))))
+  (dolist (mode hol-lsp-server-modes)
+    (add-hook (intern (concat (symbol-name mode) "-hook"))
+              #'hol-lsp--setup-buffer)))
