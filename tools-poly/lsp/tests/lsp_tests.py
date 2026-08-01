@@ -15,9 +15,16 @@ REPO = os.environ.get("HOL_LSP_TEST_REPO",
 HOL_BIN = f"{REPO}/bin/hol"
 DEFAULT_HEAP = f"{REPO}/bin/hol.state"
 HOL_STATE0 = f"{REPO}/bin/hol.state0"
-# Extra args passed to `bin/hol lsp`.  E.g. `HOL_LSP_ARGS=--bare` to test
-# against hol.state0 (relies on the LSP's own auto-loading to pull in
-# bossLib etc.).  Split on whitespace, no shell quoting.
+# Extra args passed to `bin/hol lsp`.  Split on whitespace, no shell
+# quoting.  Note: `HOL_LSP_ARGS=--bare` is NOT supported for this
+# suite.  Under hol.state0 the LSP auto-`use`s bossLib.uo on every
+# didChange (loadedMods gets reverted between compiles), and repeated
+# `.uo` execution creates fresh opaque type constructors that
+# conflict with those already installed in globalNameSpace — three
+# of the recompile tests then fail with hundreds of spurious
+# diagnostics.  Real editor sessions never hit this: task #9's
+# HOLHEAP auto-detect always resolves to a heap that already
+# contains bossLib.
 LSP_ARGS = os.environ.get("HOL_LSP_ARGS", "").split()
 
 # ------------------------------------------------------------------
