@@ -107,6 +107,14 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => OS.Path.concat (chunk,path)) slist);
 
+fun rel_to_holdir d =
+  let val h = Systeml.HOLDIR
+  in if d = h then ""
+     else if String.isPrefix (h ^ "/") d then
+       String.extract (d, String.size h + 1, NONE)
+     else d
+  end
+
 val spacify = String.concatWith " "
 fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
 fun collapse_bslash_lines s = let

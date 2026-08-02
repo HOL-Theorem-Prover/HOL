@@ -1459,7 +1459,11 @@ in
   else warn "Couldn't make or use build-logs directory"
 end handle IO.Io _ => warn "Couldn't set up build-logs"
 
-fun finish_logging buildok = let
+fun abort_logging () =
+    if HOLFileSys.access(logfilename, []) then safedelete logfilename
+    else ()
+
+fun finish_logging {buildok, selftest_level} = let
 in
   if HOLFileSys.access(logfilename, []) then
     if buildok then let
@@ -1467,13 +1471,17 @@ in
         val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
         val knl = read_kernelid ()
         val knl_suffix = if knl = "" then "" else "-" ^ knl
-        val newname = hostname^timestamp^knl_suffix
+        val stlvl_suffix = "-t" ^ Int.toString selftest_level
+        val newname = hostname^timestamp^knl_suffix^stlvl_suffix
         val newpath = fullPath [logdir, newname]
       in
         HOLFileSys.rename {old = logfilename, new = newpath};
-        checkRegressions.run {logdir = logdir, latest = newpath, kernel = knl}
+        checkRegressions.run {logdir = logdir, latest = newpath, kernel = knl};
+        (* HOL's governing holproject.toml lives at HOLDIR. *)
+        target_times.merge_from_log { root = Systeml.HOLDIR,
+                                      log_path = newpath }
       end
-    else safedelete logfilename
+    else abort_logging ()
   else ()
 end handle IO.Io _ => warn "Had problems making permanent record of build log"
 
@@ -1495,9 +1503,9 @@ fun Holmake sysl isSuccess extra_args analyse_failstatus selftest_level dir =
       end
     end
 
-val () = OS.Process.atExit (fn () => finish_logging false)
-        (* this will do nothing if finish_logging happened normally first;
-           otherwise the log's bad version will be recorded *)
+val () = OS.Process.atExit abort_logging
+        (* No-op if finish_logging{buildok=true,...} already renamed the
+           log; otherwise cleans up the in-progress log file. *)
 
 
 

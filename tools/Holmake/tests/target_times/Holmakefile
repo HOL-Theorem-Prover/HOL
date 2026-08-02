@@ -1,0 +1,10 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+
+target_times-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = target_times-selftest.log selftest.exe tmp-log tmp-root

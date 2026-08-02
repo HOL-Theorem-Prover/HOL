@@ -448,8 +448,10 @@ val _ =
     compile ["-I", "..", "-I", "../core", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "BuildCommand.sml";
     FileSys.chDir "../core";
     compile [] "HostName.sig";
+    compile [] "target_times.sig";
     FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../core"] "HostName.sml";
+    compile ["-I", "../core"] "target_times.sml";
     FileSys.chDir "../core";
     compile ["-I", "..", "-I", "../toml"] "HMProject.sig";
     compile ["-I", "..", "-I", "../toml"] "HMProject.sml";

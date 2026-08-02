@@ -156,8 +156,10 @@ in
   clean_sigobj();
   setup_logfile();
   build_src symlink
-    handle SML90.Interrupt => (finish_logging false; die "Interrupted");
-  finish_logging true;
+    handle SML90.Interrupt =>
+      (finish_logging {buildok = false, selftest_level = selftest_level};
+       die "Interrupted");
+  finish_logging {buildok = true, selftest_level = selftest_level};
   make_buildstamp();
   build_help {graph = build_theory_graph,
               no_mdbook = #no_mdbook cline_record,

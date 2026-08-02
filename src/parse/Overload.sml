@@ -414,6 +414,7 @@ fun strip_comb ((_, prmap): overload_info) namePred t = let
 
   fun test ((fvs, pat), (orig, nm, tstamp)) = let
     val _ = assert namePred nm
+    val _ = assert Theory.uptodate_term orig
     val tyvs = tmlist_tyvs fvs
     val tmset = HOLset.addList(empty_tmset, fvs)
     val ((tmi0,tmeq),(tyi0,tyeq)) = raw_match tyvs tmset pat t ([],[])

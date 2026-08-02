@@ -42,14 +42,21 @@ Options:
   --refresh-a       rebuild for REF_A only
   --refresh-b       rebuild for REF_B only
   --cache DIR       cache directory for per-SHA logs
-                    (default: tools/build-logs/perfcache)
-  --scratch DIR     parent directory for temporary worktrees
-                    (default: <cache-dir>/wt)
-  --keep-worktrees  don't remove the throw-away worktrees after building
+                    (default: tools-poly/build-logs/perfcache)
+  --scratch DIR     where kept worktrees are moved after the build
+                    (default: <cache-dir>/wt); only relevant with
+                    --keep-worktrees
+  --keep-worktrees  after each build, move the worktree from its
+                    temporary location under \$TMPDIR to
+                    <scratch-dir>/<sha> instead of removing it
+  --include-changed compare rows even for theories whose *Script.sml
+                    differs between the refs (by default they are
+                    omitted, since their build times aren't comparable)
   -h, --help        show this help
 
-The cache and scratch dirs default under tools/build-logs/, which is
-already git-ignored.
+The build worktree is always created under \$TMPDIR so an outer
+holproject.toml at HOLDIR doesn't leak into the build.  The cache
+dir defaults under tools-poly/build-logs/, which is git-ignored.
 EOF
     exit "${1:-0}"
 }
@@ -58,22 +65,24 @@ build_mode=full
 refresh_a=
 refresh_b=
 keep_wt=
-cache_dir="$holdir/tools/build-logs/perfcache"
+include_changed=
+cache_dir="$holdir/tools-poly/build-logs/perfcache"
 scratch_dir=
 
 while [ $# -gt 0 ]; do
     case $1 in
-        --core)            build_mode=core; shift ;;
-        --refresh)         refresh_a=1; refresh_b=1; shift ;;
-        --refresh-a)       refresh_a=1; shift ;;
-        --refresh-b)       refresh_b=1; shift ;;
-        --cache)           cache_dir=$2; shift 2 ;;
-        --scratch)         scratch_dir=$2; shift 2 ;;
-        --keep-worktrees)  keep_wt=1; shift ;;
-        -h|--help)         usage 0 ;;
-        --)                shift; break ;;
-        -*)                echo "Unknown option: $1" >&2; usage 1 ;;
-        *)                 break ;;
+        --core)             build_mode=core; shift ;;
+        --refresh)          refresh_a=1; refresh_b=1; shift ;;
+        --refresh-a)        refresh_a=1; shift ;;
+        --refresh-b)        refresh_b=1; shift ;;
+        --cache)            cache_dir=$2; shift 2 ;;
+        --scratch)          scratch_dir=$2; shift 2 ;;
+        --keep-worktrees)   keep_wt=1; shift ;;
+        --include-changed)  include_changed=1; shift ;;
+        -h|--help)          usage 0 ;;
+        --)                 shift; break ;;
+        -*)                 echo "Unknown option: $1" >&2; usage 1 ;;
+        *)                  break ;;
     esac
 done
 
@@ -120,26 +129,28 @@ case $build_mode in
     core) build_argv=(-t --seq=tools/sequences/upto-parallel) ;;
 esac
 
-# Build a fresh log for one SHA into $cache_dir/$sha.log.
+# Build a fresh log for one SHA into $cache_dir/${build_mode}-$sha.log.
+# The worktree is created under $TMPDIR so Holmake in the build tree
+# doesn't discover HOLDIR's holproject.toml by walking up.  With
+# --keep-worktrees the tree is moved to $scratch_dir/$sha after the
+# build; otherwise it's removed.
 build_at_sha() {
     local sha=$1
-    local target="$cache_dir/$sha.log"
-    local wt="$scratch_dir/$sha"
+    local target="$cache_dir/${build_mode}-$sha.log"
+
+    local tmpparent wt
+    tmpparent=$(mktemp -d)
+    wt="$tmpparent/wt"
 
     echo
     echo "== Building $sha in $wt =="
 
-    if [ -e "$wt" ]; then
-        echo "Removing stale worktree at $wt"
-        git -C "$holdir" worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
-    fi
     git -C "$holdir" worktree add --detach "$wt" "$sha"
 
     local before after
     before=$(mktemp)
     after=$(mktemp)
-    trap 'rm -f "$before" "$after"' RETURN
-    ls -1 "$wt/tools/build-logs" 2>/dev/null | sort > "$before" || true
+    ls -1 "$wt/tools-poly/build-logs" 2>/dev/null | sort > "$before" || true
 
     (
         cd "$wt"
@@ -147,7 +158,7 @@ build_at_sha() {
         bin/build "${build_argv[@]}"
     )
 
-    ls -1 "$wt/tools/build-logs" | sort > "$after"
+    ls -1 "$wt/tools-poly/build-logs" | sort > "$after"
 
     # A successful build renames current-build-log to
     # <host><timestamp>[-kernel]; that's the one new file we want.
@@ -158,26 +169,37 @@ build_at_sha() {
              | head -n1 || true)
     if [ -z "$newlog" ]; then
         echo "error: build finished but no new log appeared under" >&2
-        echo "  $wt/tools/build-logs/" >&2
+        echo "  $wt/tools-poly/build-logs/" >&2
         echo "(bin/build normally renames current-build-log on success)." >&2
         exit 1
     fi
 
-    cp "$wt/tools/build-logs/$newlog" "$target"
+    cp "$wt/tools-poly/build-logs/$newlog" "$target"
     echo "Cached log for $sha at $target"
 
-    if [ -z "$keep_wt" ]; then
+    rm -f "$before" "$after"
+
+    if [ -n "$keep_wt" ]; then
+        local keep_dir="$scratch_dir/$sha"
+        if [ -e "$keep_dir" ]; then
+            git -C "$holdir" worktree remove --force "$keep_dir" 2>/dev/null \
+              || rm -rf "$keep_dir"
+        fi
+        git -C "$holdir" worktree move "$wt" "$keep_dir"
+        echo "Kept worktree at $keep_dir"
+    else
         git -C "$holdir" worktree remove --force "$wt"
     fi
+    rmdir "$tmpparent" 2>/dev/null || true
 }
 
 ensure_log() {
     local sha=$1
     local refresh=$2
-    if [ -n "$refresh" ] || [ ! -f "$cache_dir/$sha.log" ]; then
+    if [ -n "$refresh" ] || [ ! -f "$cache_dir/${build_mode}-$sha.log" ]; then
         build_at_sha "$sha"
     else
-        echo "Using cached log for $sha at $cache_dir/$sha.log"
+        echo "Using cached log for $sha at $cache_dir/${build_mode}-$sha.log"
     fi
 }
 
@@ -188,31 +210,41 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
 exclude_file="$tmpdir/excluded-theories"
-git -C "$holdir" diff --name-only "$sha_a" "$sha_b" -- '*Script.sml' \
-  | awk -F/ 'NF > 0 {
-        fname = $NF
-        sub(/Script\.sml$/, "Theory", fname)
-        print fname
-    }' \
-  | sort -u > "$exclude_file"
-
-n_excluded=$(wc -l < "$exclude_file" | tr -d ' ')
 echo
-if [ "$n_excluded" -gt 0 ]; then
-    echo "Excluding $n_excluded script(s) whose *Script.sml changed between refs:"
-    sed 's/^/  /' "$exclude_file"
+if [ -n "$include_changed" ]; then
+    : > "$exclude_file"
+    echo "Not omitting theories with changed scripts (--include-changed)."
 else
-    echo "No *Script.sml files changed between refs; comparing all rows."
+    # Log keys are <rel-path-from-HOLDIR>/<bare-thyname> (no "Theory" suffix,
+    # see maybe_log_time_to_disk in src/postkernel/Theory.sml); rewrite each
+    # changed *Script.sml path into that form so filter_log's $1-lookup matches.
+    git -C "$holdir" diff --name-only "$sha_a" "$sha_b" -- '*Script.sml' \
+      | awk 'sub(/Script\.sml$/, "")' \
+      | sort -u > "$exclude_file"
+
+    n_excluded=$(wc -l < "$exclude_file" | tr -d ' ')
+    if [ "$n_excluded" -gt 0 ]; then
+        echo "Excluding $n_excluded script(s) whose *Script.sml changed between refs:"
+        sed 's/^/  /' "$exclude_file"
+    else
+        echo "No *Script.sml files changed between refs; comparing all rows."
+    fi
 fi
 
 filter_log() {
+    # tools/Holmake/tests/** theories are always dropped: Holmake
+    # selftests build them repeatedly during one bin/build run, which
+    # comparelogs then poisons as duplicate entries.
+    #
     # An empty exclude_file breaks the 'NR==FNR' idiom (awk keeps NR=FNR
     # when a file yields no records), so short-circuit on the empty case.
     if [ -s "$exclude_file" ]; then
-        awk 'NR==FNR { skip[$1]=1; next } !($1 in skip)' \
+        awk 'NR==FNR { skip[$1]=1; next }
+             $1 ~ /^tools\/Holmake\/tests\// { next }
+             !($1 in skip)' \
             "$exclude_file" "$1" > "$2"
     else
-        cp "$1" "$2"
+        awk '$1 !~ /^tools\/Holmake\/tests\//' "$1" > "$2"
     fi
 }
 
@@ -224,8 +256,8 @@ if [ "$sname_a" = "$sname_b" ]; then
 fi
 filtered_a="$tmpdir/$sname_a.log"
 filtered_b="$tmpdir/$sname_b.log"
-filter_log "$cache_dir/$sha_a.log" "$filtered_a"
-filter_log "$cache_dir/$sha_b.log" "$filtered_b"
+filter_log "$cache_dir/${build_mode}-$sha_a.log" "$filtered_a"
+filter_log "$cache_dir/${build_mode}-$sha_b.log" "$filtered_b"
 
 echo
 "$comparelogs" -d "$filtered_a" "$filtered_b"

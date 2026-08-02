@@ -1,1 +1,3 @@
+INCLUDES = ../../res_quan/src
+
 EXTRA_CLEANS = cfree_quotient.lst cfree_quotientTheory.html
