@@ -115,6 +115,36 @@ fun encGoalStateResponse ({theorem, step, goals}: goal_state_response) print = (
   print ",\"goals\":"; encArray encGoalState goals print;
   print "}")
 
+(* Given the buffer text and a cursor byte offset, return the enclosing
+   `Theorem NAME[attrs]: … Proof … QED` block (also `Triviality`) as a
+   `theorem_context`, or NONE if the cursor isn't inside one.
+
+   Drives HOLSourceParser over the current buffer text — same parser
+   the compile uses — so keyword matching, attribute brackets, strings
+   and comments are handled correctly.  parseDec streams decs one at a
+   time; we bail on the first matching HOLTheoremDecl. *)
+fun findEnclosingTheorem text cursor = let
+  val consumed = ref false
+  fun read _ = if !consumed then "" else (consumed := true; text)
+  fun errSink _ _ _ = ()  (* buffer may be mid-edit and mildly invalid *)
+  val {parseDec, ...} =
+    HOLSourceParser.parseSML "" read errSink HOLSourceParser.initialScope
+  fun loop () =
+    case parseDec () of
+      NONE => NONE
+    | SOME (HOLSourceAST.HOLTheoremDecl {
+              id = (_, name), colon,
+              proof_ = SOME {proof_, ...}, qed_ = SOME qed_, ...}) =>
+        if proof_ <= cursor andalso cursor <= qed_
+        then SOME {name = name,
+                   quote = String.substring (text, colon + 1,
+                                             Int.max (0, proof_ - colon - 1)),
+                   quoteStart = colon + 1,
+                   cursor = cursor}
+        else loop ()
+    | SOME _ => loop ()
+  in loop () end
+
 exception MalformedData
 
 datatype req_id = Id of int | Str of string
@@ -1129,8 +1159,10 @@ fun start {diag, dbg} = let
       in concat (DArray.toList mds) end
     val ctx = {uri = uri, lines = #lines text, plugins = plugins,
                ppToString = ppToString}
-    in !LSPExtension.goalStateAtPos (ctx, offset) end
-    handle Empty => NONE
+    in case findEnclosingTheorem (#text text) offset of
+         NONE => NONE
+       | SOME thm => !LSPExtension.goalStateAtPos (ctx, thm)
+    end handle Empty => NONE
 
   fun eval id {uri, code, incr, holdep} = let
     val lines = mkLineCounter code

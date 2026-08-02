@@ -65,13 +65,24 @@ val hoverQuotation:
   (hover_context *
    {quote: string, quoteStart: int, target: int} -> hover list) ref
 
-(* Goal-state at cursor for `$/hol/goalState`.  Default no-op;
-   the LSP runtime init hooks in a real implementation. *)
+(* Goal-state at cursor for `$/hol/goalState`.  Server locates the
+   enclosing `Theorem NAME: … Proof … QED` block by scanning the file
+   text and calls this hook with the raw statement quote and cursor
+   position; the hook parses the quote (against the live HOL Context)
+   and returns the goal-state to render.  Returns NONE if the cursor
+   isn't inside a proof body or the quote can't be parsed. *)
 type goal_state = {asms: string list, goal: string}
 type goal_state_response = {
   theorem: string, step: int, goals: goal_state list}
+type theorem_context = {
+  name: string,           (* theorem name, e.g. "foo" *)
+  quote: string,          (* raw text of the theorem statement *)
+  quoteStart: int,        (* file byte offset of the quote's start *)
+  cursor: int             (* cursor byte offset; used by later slices to
+                             locate the tactic step at the cursor *)
+}
 val goalStateAtPos:
-  (hover_context * int -> goal_state_response option) ref
+  (hover_context * theorem_context -> goal_state_response option) ref
 
 val fixupTheoremLink:
   ({start: int, stop: int, text: string, uri: string} ->

@@ -120,11 +120,14 @@ type hover_context = {
 type goal_state = {asms: string list, goal: string}
 type goal_state_response = {
   theorem: string, step: int, goals: goal_state list}
+type theorem_context = {
+  name: string, quote: string, quoteStart: int, cursor: int}
 
 val gotoDefinition = ref (fn _ => [])
 val hover = ref (fn _ => [])
 val hoverQuotation = ref (fn _ => [])
-val goalStateAtPos : (hover_context * int -> goal_state_response option) ref =
+val goalStateAtPos :
+    (hover_context * theorem_context -> goal_state_response option) ref =
   ref (fn _ => NONE)
 val fixupTheoremLink = ref (fn _ => NONE)
 val helpLookup = ref (fn _ => [])

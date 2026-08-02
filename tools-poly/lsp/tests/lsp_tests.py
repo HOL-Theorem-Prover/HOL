@@ -1491,43 +1491,120 @@ def test_snapshot_resume_second_edit_after_completion():
         shutil.rmtree(d, ignore_errors=True)
 
 
-def test_goalState_placeholder():
-    """Slice A: the `$/hol/goalState` request round-trips through the
-    server and returns null (the stub `LSPExtension.goalStateAtPos`
-    installed by goal_state_init.ML always returns NONE).  Slice B
-    replaces this with actual data; for now we're proving only the
-    protocol plumbing."""
+def _send_goalstate(c, req_id, uri, line, char):
+    c.send({"jsonrpc":"2.0","id":req_id,
+            "method":"$/hol/goalState",
+            "params":{"textDocument":{"uri":uri},
+                      "position":{"line":line,"character":char}}})
+    def got(cl):
+        with cl.msgs_lock:
+            for m in cl.msgs:
+                if m.get("id") == req_id: return m
+        return None
+    return c.wait_until(got, 5)
+
+
+def test_goalState_inside_proof():
+    """Slice B: cursor inside a `Proof … QED` block returns the enclosing
+    theorem's name and parsed statement as the initial goal (step 0, no
+    assumptions)."""
     c = Client("/tmp")
     try:
         _init(c, "/tmp")
-        uri = "file:///tmp/goalstate_placeholder.sml"
-        src = ("Theory goalstate_placeholder\n"
+        uri = "file:///tmp/goalstate_inside.sml"
+        src = ("Theory goalstate_inside\n"
                "Ancestors arithmetic\n\n"
-               "Theorem foo:\n"
-               "  T\n"
+               "Theorem plus_zero:\n"
+               "  !n:num. n + 0 = n\n"
                "Proof\n"
                "  rw[]\n"
                "QED\n")
         _did_open(c, uri, src, 1)
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted")
-        # Position inside the Proof body ("rw[]" on line 6).
-        c.send({"jsonrpc":"2.0","id":77,
-                "method":"$/hol/goalState",
-                "params":{"textDocument":{"uri":uri},
-                          "position":{"line":6,"character":3}}})
-        def got(cl):
-            with cl.msgs_lock:
-                for m in cl.msgs:
-                    if m.get("id") == 77: return m
-            return None
-        reply = c.wait_until(got, 5)
-        assert_true(reply is not None, "goalState reply arrived")
-        # Slice A: stub returns NONE → JSON null result.
-        assert_true("result" in reply,
-                    f"reply has a result field ({reply!r})")
-        assert_eq(reply["result"], None,
-                  "Slice A stub returns null")
+        # Line 6 = "  rw[]" — inside the Proof body.
+        reply = _send_goalstate(c, 101, uri, 6, 3)
+        assert_true(reply is not None, "reply arrived")
+        result = reply.get("result")
+        assert_true(result is not None,
+                    f"result populated ({reply!r})")
+        assert_eq(result.get("theorem"), "plus_zero", "theorem name")
+        assert_eq(result.get("step"), 0, "step index 0")
+        goals = result.get("goals")
+        assert_true(isinstance(goals, list) and len(goals) == 1,
+                    f"one goal ({goals!r})")
+        assert_eq(goals[0].get("asms"), [], "no assumptions initially")
+        goal_text = goals[0].get("goal", "")
+        assert_true("n + 0 = n" in goal_text or "n + 0" in goal_text,
+                    f"goal renders the theorem statement ({goal_text!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_outside_proof():
+    """Slice B: cursor outside any `Proof … QED` block returns null."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_outside.sml"
+        src = ("Theory goalstate_outside\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem foo:\n"
+               "  T\n"
+               "Proof\n"
+               "  rw[]\n"
+               "QED\n"
+               "\n"
+               "val x = 3\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 3 = "Theorem foo:" — before Proof.
+        r1 = _send_goalstate(c, 201, uri, 3, 4)
+        assert_eq(r1.get("result"), None,
+                  "cursor before Proof → null")
+        # Line 9 = "val x = 3" — after QED.
+        r2 = _send_goalstate(c, 202, uri, 9, 4)
+        assert_eq(r2.get("result"), None,
+                  "cursor after QED → null")
+    finally:
+        c.close()
+
+
+def test_goalState_between_two_theorems():
+    """Slice B: cursor between two `Theorem…QED` blocks returns null and
+    picks the right block when inside the second one."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_two.sml"
+        src = ("Theory goalstate_two\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem first:\n"
+               "  T\n"
+               "Proof\n"
+               "  rw[]\n"
+               "QED\n"
+               "\n"
+               "Theorem second:\n"
+               "  T /\\ T\n"
+               "Proof\n"
+               "  rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 8 = blank between the two theorems → null.
+        r_gap = _send_goalstate(c, 301, uri, 8, 0)
+        assert_eq(r_gap.get("result"), None,
+                  "cursor between two theorems → null")
+        # Line 12 = "  rw[]" inside the second theorem's Proof.
+        r_second = _send_goalstate(c, 302, uri, 12, 3)
+        result = r_second.get("result")
+        assert_true(result is not None,
+                    f"cursor inside second theorem populates result "
+                    f"({r_second!r})")
+        assert_eq(result.get("theorem"), "second", "picks second theorem")
     finally:
         c.close()
 
@@ -1576,7 +1653,10 @@ TESTS = [
                                      test_snapshot_resume_survives_grammar_delta),
     ("snapshot_resume_second_edit_after_completion",
                                      test_snapshot_resume_second_edit_after_completion),
-    ("goalState_placeholder",        test_goalState_placeholder),
+    ("goalState_inside_proof",       test_goalState_inside_proof),
+    ("goalState_outside_proof",      test_goalState_outside_proof),
+    ("goalState_between_two_theorems",
+                                     test_goalState_between_two_theorems),
 ]
 
 
