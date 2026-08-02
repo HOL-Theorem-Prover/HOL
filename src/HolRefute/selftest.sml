@@ -4258,17 +4258,48 @@ val _ = require_msg (check_result mono_relation_builtin_verdicts)
   (fn () => "inv/O monotonicity calculus verdict changed")
   (fn () => ()) ()
 
-fun mono_timeout_degrades () =
+(* Top level on purpose: declaring this inside the test below and handling
+   it there trips a Poly/ML code-generator bug, "InternalError:
+   findEntryInBlock: invalid address raised while compiling". *)
+exception MONO_NOT_ABANDONMENT
+
+(* This replaces [mono_timeout_degrades], which raced Timeout.apply
+   Time.zeroTime against the very analysis it timed and accepted "false"
+   from either arm.  Neither arm asserted anything about Refute: the
+   timeout arm caught an exception the test itself installed, and the
+   completed arm asserted formulas_monotonic ``!(x : 'a). P x`` = false,
+   contradicting the "mono forall" row above -- the analysis returns true
+   in about 30us.  So it passed only by winning the race, and lost it 1381
+   times in 20000 trials on a loaded 32-core box: the level-2 flake.
+   Widening the deadline cannot fix that.  A zero budget inside the
+   analysis still lost 6 of 2000 trials on a body 2000 times longer, so
+   whether a deadline is reached is not observable without a race.  What is
+   observable, and is the whole safety content, is the polarity: an
+   abandoned analysis degrades to false, never to true.  That decision is
+   Refute_ModelFinder.abandoned_mono_verdict, which the driver installs
+   around formulas_monotonic, and it needs no clock. *)
+fun mono_abandonment_degrades () =
   let
-    fun bounded () = Timeout.apply Time.zeroTime
-      (MFMono.formulas_monotonic mf_hol_context false ``:'a``)
-      ([``!(x : 'a). P x``], [])
+    val seen = ref ([] : (string * string) list)
+    fun report entry = seen := entry :: !seen
+    val timed_out = Refute_ModelFinder.abandoned_mono_verdict report
+      (Timeout.TIMEOUT (Time.fromReal 0.5))
+    val internal = Refute_ModelFinder.abandoned_mono_verdict report
+      (Refute_ModelFinder_Util.BAD
+        ("Refute_ModelFinder_Mono.dest_MFun", "alpha"))
+    val unrelated =
+      (Refute_ModelFinder.abandoned_mono_verdict report
+         MONO_NOT_ABANDONMENT;
+       false)
+      handle MONO_NOT_ABANDONMENT => true
   in
-    (bounded () handle Timeout.TIMEOUT _ => false) = false
+    not timed_out andalso not internal andalso unrelated andalso
+    !seen = [("Refute_ModelFinder_Mono.dest_MFun", "alpha"),
+             ("timeout", "")]
   end
 
-val _ = require_msg (check_result mono_timeout_degrades)
-  (fn () => "monotonicity timeout did not degrade to false")
+val _ = require_msg (check_result mono_abandonment_degrades)
+  (fn () => "an abandoned monotonicity analysis did not degrade to false")
   (fn () => ()) ()
 
 fun mono_shadowed_binders () =

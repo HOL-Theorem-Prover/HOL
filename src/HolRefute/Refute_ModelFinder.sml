@@ -20,6 +20,7 @@ signature REFUTE_MODEL_FINDER = sig
     Type.hol_type list -> Type.hol_type list
   val authenticity_reasons :
     Refute_Core.mf_config -> bool -> bool -> bool -> string list
+  val abandoned_mono_verdict : (string * string -> unit) -> exn -> bool
   val liberal_budget_after_models :
     {max_potential : int, max_genuine : int, delivered : int,
      kept : int, promoted : bool, incremental : bool} -> int * int
@@ -508,6 +509,23 @@ val scope_limit_hint =
   "scope limit reached; consider using \"mono\" or \"merge_type_vars\" " ^
   "to prevent this"
 
+(* A monotonicity analysis is abandoned two ways: it runs out of its tactic
+   budget, or the calculus hits an internal mtype mismatch and reports BAD.
+   Both must read as "not monotonic".  The verdict only ever removes work --
+   a monotonic type lets the scope search collapse cardinalities -- so
+   answering true on no evidence would let Refute skip a scope that can hold
+   a counterexample and report None unsoundly, whereas answering false costs
+   nothing but scopes.  Whether a deadline is reached is a wall-clock
+   question and untestable without a race; that abandonment degrades to
+   false is not, so the polarity lives here, in one named place a test can
+   call, rather than inline in a handler nothing can reach.  Anything else
+   is re-raised: only these two are abandonment. *)
+fun abandoned_mono_verdict report exn =
+  case exn of
+      Timeout.TIMEOUT _ => (report ("timeout", ""); false)
+    | Util.BAD (location, detail) => (report (location, detail); false)
+    | _ => raise exn
+
 fun run_instance deadline started (config : Refute_Core.config)
       incremental solver (initial_max_potential, initial_max_genuine)
       (instance : Refute_Core.instance) =
@@ -588,10 +606,10 @@ fun run_instance deadline started (config : Refute_Core.config)
                 (Timeout.apply (#tac_timeout context)
                    (MFMono.formulas_monotonic context binarize ty)
                    (nondef_ts, def_ts)
-                 handle Timeout.TIMEOUT _ =>
-                          (report_mono_failure "timeout" ty ""; false)
-                      | Util.BAD (location, detail) =>
-                          (report_mono_failure location ty detail; false))
+                 handle exn =>
+                   abandoned_mono_verdict
+                     (fn (kind, detail) =>
+                        report_mono_failure kind ty detail) exn)
               val _ = calculus_mono_cache :=
                 (ty, result) :: !calculus_mono_cache
             in
