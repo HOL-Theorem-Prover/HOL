@@ -117,9 +117,15 @@ type hover_context = {
   uri: string, lines: lines, plugins: plugin_data,
   ppToString: PrettyImpl.pretty -> string }
 
+type goal_state = {asms: string list, goal: string}
+type goal_state_response = {
+  theorem: string, step: int, goals: goal_state list}
+
 val gotoDefinition = ref (fn _ => [])
 val hover = ref (fn _ => [])
 val hoverQuotation = ref (fn _ => [])
+val goalStateAtPos : (hover_context * int -> goal_state_response option) ref =
+  ref (fn _ => NONE)
 val fixupTheoremLink = ref (fn _ => NONE)
 val helpLookup = ref (fn _ => [])
 val thmLookup : (string -> string option) ref = ref (fn _ => NONE)

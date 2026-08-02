@@ -104,6 +104,17 @@ fun encHover ({markdown, range}: hover) print = (
   | SOME range => (print ",\"range\":"; encRange encPosition range print);
   print "}")
 
+fun encGoalState ({asms, goal}: goal_state) print = (
+  print "{\"asms\":"; encArray encString asms print;
+  print ",\"goal\":"; encString goal print;
+  print "}")
+
+fun encGoalStateResponse ({theorem, step, goals}: goal_state_response) print = (
+  print "{\"theorem\":"; encString theorem print;
+  print ",\"step\":"; encInt step print;
+  print ",\"goals\":"; encArray encGoalState goals print;
+  print "}")
+
 exception MalformedData
 
 datatype req_id = Id of int | Str of string
@@ -1109,6 +1120,18 @@ fun start {diag, dbg} = let
     in case out of [] => f () | _ => out end
     handle Empty => []
 
+  fun goalStateAtPos uri v target = let
+    val ({plugins, ...}, text, offset) =
+      case getState v target of NONE => raise Empty | SOME s => s
+    fun ppToString pp = let
+      val mds = DArray.new (8, "")
+      val _ = PolyML.prettyPrint (fn s => DArray.push (mds, s), textWidth) pp
+      in concat (DArray.toList mds) end
+    val ctx = {uri = uri, lines = #lines text, plugins = plugins,
+               ppToString = ppToString}
+    in !LSPExtension.goalStateAtPos (ctx, offset) end
+    handle Empty => NONE
+
   fun eval id {uri, code, incr, holdep} = let
     val lines = mkLineCounter code
 
@@ -1218,6 +1241,13 @@ fun start {diag, dbg} = let
         send (mkResponse id (mkErr InvalidParams "json decode failed")))
     | Request {method = "$/eval", id, params} =>
       spawnJob id params evalParams (eval id)
+    | Request {method = "$/hol/goalState", id, params} =>
+      spawnJob id params textDocumentPositionParams (fn {uri, pos} => let
+        val resp = case withFileInfo (fn fileInfo =>
+              (fileInfo, Binarymap.peek (fileInfo, uri))) of
+            NONE => NONE
+          | SOME v => goalStateAtPos uri v pos
+        in Ok (encOrNull encGoalStateResponse resp) end)
     | Request {method, id, ...} =>
       send (mkResponse id (mkErr InvalidRequest ("unknown method: " ^ method)))
     | Notification {method = "$/cancelRequest", params} => let

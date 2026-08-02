@@ -1491,6 +1491,47 @@ def test_snapshot_resume_second_edit_after_completion():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_goalState_placeholder():
+    """Slice A: the `$/hol/goalState` request round-trips through the
+    server and returns null (the stub `LSPExtension.goalStateAtPos`
+    installed by goal_state_init.ML always returns NONE).  Slice B
+    replaces this with actual data; for now we're proving only the
+    protocol plumbing."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_placeholder.sml"
+        src = ("Theory goalstate_placeholder\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem foo:\n"
+               "  T\n"
+               "Proof\n"
+               "  rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Position inside the Proof body ("rw[]" on line 6).
+        c.send({"jsonrpc":"2.0","id":77,
+                "method":"$/hol/goalState",
+                "params":{"textDocument":{"uri":uri},
+                          "position":{"line":6,"character":3}}})
+        def got(cl):
+            with cl.msgs_lock:
+                for m in cl.msgs:
+                    if m.get("id") == 77: return m
+            return None
+        reply = c.wait_until(got, 5)
+        assert_true(reply is not None, "goalState reply arrived")
+        # Slice A: stub returns NONE → JSON null result.
+        assert_true("result" in reply,
+                    f"reply has a result field ({reply!r})")
+        assert_eq(reply["result"], None,
+                  "Slice A stub returns null")
+    finally:
+        c.close()
+
+
 TESTS = [
     ("smoke_handshake",              test_smoke_handshake),
     ("edit_across_multibyte",        test_edit_across_multibyte_char),
@@ -1535,6 +1576,7 @@ TESTS = [
                                      test_snapshot_resume_survives_grammar_delta),
     ("snapshot_resume_second_edit_after_completion",
                                      test_snapshot_resume_second_edit_after_completion),
+    ("goalState_placeholder",        test_goalState_placeholder),
 ]
 
 

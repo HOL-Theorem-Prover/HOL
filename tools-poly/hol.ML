@@ -646,6 +646,11 @@ in
            captured quote to a resolved Preterm and walks it. *)
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/hover_quote_init.ML"));
+        (* Goal-state at cursor inside a Proof-QED body.  Slice A
+           installs a stub returning NONE; later slices fill in the
+           goalFrag-based interpreter. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/goal_state_init.ML"));
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;

@@ -65,6 +65,14 @@ val hoverQuotation:
   (hover_context *
    {quote: string, quoteStart: int, target: int} -> hover list) ref
 
+(* Goal-state at cursor for `$/hol/goalState`.  Default no-op;
+   the LSP runtime init hooks in a real implementation. *)
+type goal_state = {asms: string list, goal: string}
+type goal_state_response = {
+  theorem: string, step: int, goals: goal_state list}
+val goalStateAtPos:
+  (hover_context * int -> goal_state_response option) ref
+
 val fixupTheoremLink:
   ({start: int, stop: int, text: string, uri: string} ->
    {file: string, line: int} option) ref
