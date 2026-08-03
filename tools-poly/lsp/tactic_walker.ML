@@ -33,17 +33,27 @@ val holder : Abbrev.tactic option ref = ref NONE
 
 fun compileTactic src = let
   val wrapped = "TacticWalker.holder := SOME (" ^ src ^ ");"
+  (* Run the HOL quotation filter over the wrapped source: backticks
+     become `[QUOTE …]`, so tactics like `Cases_on \`j < 0\`` reach
+     PolyML in the form it can parse.  Same pipeline the LSP file
+     compile uses. *)
+  val filtered = HOLSource.fromString
+                   {quietOpen = true, print = fn _ => ()} wrapped
   val i = ref 0
-  val n = String.size wrapped
+  val n = String.size filtered
   fun read () = if !i >= n then NONE
-                else SOME (String.sub (wrapped, !i)) before i := !i + 1
+                else SOME (String.sub (filtered, !i)) before i := !i + 1
   fun swallow _ = ()
   val () = holder := NONE
-  (* Resolve identifiers via the LSP's file namespace layer (which
-     wraps PolyML.globalNameSpace) — same layer the LSP's normal
-     compile uses, so identifiers visible to hover are visible here. *)
+  (* Resolve identifiers via the LSP's file namespace layer, same
+     layer the LSP's normal compile uses, so identifiers visible to
+     hover are visible here.  Swallow PolyML's own output streams so
+     the `val it = () : unit` chatter doesn't leak onto the LSP
+     server's stderr for every step. *)
   val _ = PolyML.compiler
              (read, [PolyML.Compiler.CPErrorMessageProc swallow,
+                     PolyML.Compiler.CPPrintStream swallow,
+                     PolyML.Compiler.CPOutStream swallow,
                      PolyML.Compiler.CPNameSpace LSPNameSpace.fileNS]) ()
           handle _ => ()
   in !holder end

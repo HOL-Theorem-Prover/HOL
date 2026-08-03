@@ -1688,6 +1688,45 @@ def test_goalState_step_advances_within_proof():
         c.close()
 
 
+def test_goalState_case_split_produces_two_subgoals():
+    """Slice D: after `Cases_on \\`p\\``, the goalstate should have two
+    subgoals — one with `p` as an assumption, one with `¬p`.  The tactic
+    source contains raw HOL backticks; TacticWalker.compileTactic must
+    pass those through the quotation filter before feeding to
+    PolyML.compiler, else the compile fails and the walker halts."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_cases_on.sml"
+        src = ("Theory goalstate_cases_on\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n < 5 ==> n + 0 = n\n"
+               "Proof\n"
+               "  REPEAT GEN_TAC THEN STRIP_TAC THEN\n"
+               "  Cases_on `n = 0` THEN\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 7 char 22 = the `N` of `THEN` immediately after
+        # `Cases_on \`n = 0\``.
+        r = _send_goalstate(c, 601, uri, 7, 22)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        goals = result.get("goals", [])
+        assert_eq(len(goals), 2, f"two subgoals after Cases_on ({goals!r})")
+        asms_flat = [a for g in goals for a in g.get("asms", [])]
+        assert_true(any("n = 0" in a for a in asms_flat),
+                    f"one branch has n = 0 ({asms_flat!r})")
+        assert_true(any("n ≠ 0" in a or "n <> 0" in a
+                        or "~(n = 0)" in a for a in asms_flat),
+                    f"other branch has ¬(n = 0) ({asms_flat!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_between_two_theorems():
     """Slice B: cursor between two `Theorem…QED` blocks returns null and
     picks the right block when inside the second one."""
@@ -1780,6 +1819,8 @@ TESTS = [
                                      test_goalState_between_two_theorems),
     ("goalState_step_advances_within_proof",
                                      test_goalState_step_advances_within_proof),
+    ("goalState_case_split_produces_two_subgoals",
+                                     test_goalState_case_split_produces_two_subgoals),
 ]
 
 

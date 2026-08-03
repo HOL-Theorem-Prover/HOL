@@ -59,9 +59,12 @@ fun compileToSteps (e: exp) : step list =
   (* Defensive: raw parseDec output has no ExpExpansion, but a
      post-expansion feed could deliver one. *)
   | ExpExpansion {orig, ...} => compileToSteps orig
-  | App (Ident {id = (_, "REPEAT"), ...}, body) =>
-      [OpenRepeat] @ compileToSteps body @ [CloseRepeat]
   | _ => [Expand (expSpan e)]
+  (* `REPEAT tac` is treated as one atomic Expand — decomposing into
+     open_repeat / expand / close_repeat runs the body just ONCE, not
+     iteratively, which is a semantic error.  goalFrag can't drive a
+     REPEAT one-iteration-at-a-time without more machinery.  Same for
+     any App(Ident, …) we don't recognise: run as-is. *)
 
 val wrapPrefix = "Theorem hol_lsp_wrap: T\nProof\n"
 val wrapPrefixLen = String.size wrapPrefix
@@ -132,7 +135,7 @@ in
   val _ = check ">> chain"         "tac1 >> tac2 >> tac3"        "EEE"
   val _ = check ">- nested parens" "tac1 >- (a >> b) >- (c >> d)"
                                                                  "E[EE)[EE)"
-  val _ = check "REPEAT compound"  "REPEAT (tac1 >> tac2)"       "REEr"
+  val _ = check "REPEAT atomic"    "REPEAT (tac1 >> tac2)"       "E"
   val _ = check "nested parens"    "((tac1))"                    "E"
   val _ = check "THENL opaque"     "tac1 THENL [b1, b2, b3]"     "L"
 end;
