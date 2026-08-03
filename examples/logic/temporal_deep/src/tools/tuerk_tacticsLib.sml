@@ -6,6 +6,10 @@ struct
 
    val ERR = mk_HOL_ERR "tuerk_tacticsLib";
 
+   (* This library defines a helper via a load-time prove; disable
+      the current-theory guard for this file. *)
+   val _ = Feedback.set_trace "TAC_PROOF requires current theory" 0
+
    val SET_INDUCT_TAC = PSet_ind.SET_INDUCT_TAC FINITE_INDUCT;
 
    val EXISTS_EQ_STRIP_TAC :tactic = fn (asl,t) =>

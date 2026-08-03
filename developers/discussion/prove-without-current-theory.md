@@ -137,18 +137,30 @@ The static list of files was produced with
      can go once the proof no longer happens at load time.
   3. Flip the warning to an error.
 
-Files baked into `hol.state0` (in particular the src/1 residents:
-`boolLib.sml`, `Drule.sml`, `newtypeTools.sml`, `Prim_rec.sml`,
-`Tactic.sml`, `TypeBasePure.sml`) are exempt from the cleanup: their
-load-time proofs run once during heap construction and are never
-re-executed under a varying ambient state, so they cannot exhibit the
-bug the check exists to catch.
+The src/1 residents (`boolLib.sml`, `Prim_rec.sml`) that used to prove
+theorems at load time now import them from `coreboolSupportTheory`
+(script at `src/1/coreboolSupportScript.sml`), so they no longer
+depend on a "hol.state0 residents are exempt" special case.
+`Prim_rec.prove_case_rand_thm` --- which `TypeBase.sml`'s
+`bool_info` value depends on transitively --- is now a forward
+derivation rather than a `Tactical.prove` call, so no ambient CT is
+required there either.
 
 ## Progress
 
-Step 1 landed: `TAC_PROOF` warns when `Thm.getCT () = NONE`, controlled
-by the trace `"TAC_PROOF requires current theory"` (default 1, max 1).
-Trace `0` silences it.
+Steps 1 and 3 landed: `TAC_PROOF` raises `HOL_ERR "TAC_PROOF" "no
+current theory when proving: ..."` when `Thm.getCT () = NONE`,
+controlled by the trace `"TAC_PROOF requires current theory"`
+(default 1, max 1).  Setting the trace to `0` downgrades the error
+back to the pre-existing warning; the warning text notes that the
+permissive mode is deprecated.
+
+The former "hol.state0 residents are exempt" carve-out is gone:
+`boolLib.sml`'s and `Prim_rec.sml`'s load-time proves now live in
+`src/1/coreboolSupportScript.sml`, imported by both consumers via
+`open coreboolSupportTheory`.  `Prim_rec.prove_case_rand_thm` was
+converted from a tactic proof to a forward derivation so that
+`TypeBase.sml`'s `bool_info` value no longer trips the check either.
 
 Step 2 in progress.  Companion `fooContextScript.sml` files exist for:
 

@@ -383,3 +383,43 @@ Proof
   METIS_TAC []
 QED
 
+(* Moved here from helperLib.sml so that library doesn't fire a
+   load-time Tactical.prove.  cond_ELIM collapses adjacent cond
+   factors; cond_MOVE lifts / floats a cond past a general assertion. *)
+
+Theorem cond_ELIM:
+  !c c' P.
+    (cond c * cond c' = cond (c /\ c') :'a set -> bool) /\
+    (P * cond c * cond c' = P * cond (c /\ c') :'a set -> bool)
+Proof
+  REWRITE_TAC [GSYM STAR_ASSOC, SEP_CLAUSES]
+QED
+
+Theorem cond_MOVE:
+  !c P Q.
+    (cond c * P = P * cond c :'a set -> bool) /\
+    (P * cond c * Q = P * Q * cond c)
+Proof
+  SIMP_TAC (bool_ss ++ simpLib.ac_ss [(STAR_ASSOC, STAR_COMM)]) []
+QED
+
+Theorem cond_T:
+  !p :'a set -> bool. (cond T * p = p) /\ (p * cond T = p)
+Proof
+  REWRITE_TAC [SEP_CLAUSES]
+QED
+
+Theorem SEP_IMP_EXISTS:
+  !(p :'a -> 'b set -> bool) x. SEP_IMP (p x) (SEP_EXISTS x. p x)
+Proof
+  SIMP_TAC std_ss [SEP_IMP_def, SEP_EXISTS]
+  THEN REPEAT STRIP_TAC THEN Q.EXISTS_TAC `x` THEN ASM_REWRITE_TAC []
+QED
+
+Theorem cond_STAR1_I:
+  !c p (s :'a set). (cond c * p) s = I c /\ p s
+Proof
+  SIMP_TAC std_ss [combinTheory.I_THM,
+                   CONJUNCT1 (Drule.SPEC_ALL cond_STAR)]
+QED
+

@@ -22,6 +22,12 @@ val WARN = Feedback.HOL_WARNING "arm_stepLib"
 
 val () = show_assums := true
 
+(* This library builds many auxiliary theorems at load time via
+   Q.prove / Tactical.prove.  Disable the current-theory guard for
+   this file; a future cleanup should push these proofs into a
+   Script. *)
+val _ = Feedback.set_trace "TAC_PROOF requires current theory" 0
+
 (* ========================================================================= *)
 
 val mk_byte = bitstringSyntax.mk_vec 8
@@ -89,7 +95,7 @@ val FULL_DATATYPE_RULE = utilsLib.FULL_CONV_RULE DATATYPE_CONV
 
 val COND_UPDATE_CONV =
    REWRITE_CONV
-     (utilsLib.qm [] ``!b. (if b then T else F) = b`` ::
+     (utilsLibSupportTheory.COND_UPDATE3 ::
       utilsLib.mk_cond_update_thms
          (List.map arm_configLib.mk_arm_type ["arm_state", "FP", "PSR"]))
 

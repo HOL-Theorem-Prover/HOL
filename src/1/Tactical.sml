@@ -27,26 +27,32 @@ fun empty th [] = th
  * we should do this check in the hypotheses of the goal as well.
  *---------------------------------------------------------------------------*)
 
-val notheory_warning = ref 1
+val notheory_action = ref 1
 val _ = Feedback.register_trace
-          ("TAC_PROOF requires current theory", notheory_warning, 1)
+          ("TAC_PROOF requires current theory", notheory_action, 1)
 
-fun warn_if_no_current_theory (_, t) =
-    if !notheory_warning > 0 then
-      case Thm.getCT() of
-          NONE =>
-            Feedback.HOL_WARNING "Tactical" "TAC_PROOF"
-              ("no current theory when proving: " ^
-               (Parse.term_to_string t handle _ => "<unprintable goal>"))
-        | SOME _ => ()
-    else ()
+fun check_current_theory (_, t) =
+    case Thm.getCT() of
+        SOME _ => ()
+      | NONE =>
+          let
+            val msg = "no current theory when proving: " ^
+                      (Parse.term_to_string t handle _ => "<unprintable goal>")
+          in
+            if !notheory_action > 0 then
+              raise ERR "TAC_PROOF" msg
+            else
+              Feedback.HOL_WARNING "Tactical" "TAC_PROOF"
+                (msg ^ " [proving without a current theory is deprecated \
+                       \and this permissive mode will be removed]")
+          end
 
 local
    val unsolved_list = ref ([]: goal list)
 in
    fun unsolved () = !unsolved_list
    fun TAC_PROOF (g, tac) =
-      (warn_if_no_current_theory g;
+      (check_current_theory g;
        case tac g of
          ([], p) =>
              (let

@@ -31,12 +31,23 @@ fun extract_preorder_const (Travrules.PREORDER(t,_,_)) = t
 (* Composable congruence set fragments                                       *)
 (*---------------------------------------------------------------------------*)
 
-val AP_TERM_THM = prove (``!f x. (f x x) ==>
-(!y. (x = y) ==> (f x y))``,
-  REPEAT STRIP_TAC THEN
-  POP_ASSUM (fn x=> ASSUME_TAC (GSYM x)) THEN
-  ASM_REWRITE_TAC[]
-);
+(* AP_TERM_THM : !f x. f x x ==> !y. x = y ==> f x y.
+   Derived forward via AP_TERM so we don't fire a load-time
+   Tactical.prove. *)
+val AP_TERM_THM =
+  let
+    val f = mk_var("f", ``:'a -> 'a -> bool``)
+    val x = mk_var("x", ``:'a``)
+    val y = mk_var("y", ``:'a``)
+    val f_x_x = list_mk_comb(f, [x, x])
+    val eqn = mk_eq(x, y)
+    val h1 = ASSUME f_x_x
+    val h2 = ASSUME eqn
+    val fx_eq = AP_TERM (mk_comb(f, x)) h2      (* [x=y] |- f x x = f x y *)
+    val fxy = EQ_MP fx_eq h1                    (* [f x x, x=y] |- f x y *)
+  in
+    fxy |> DISCH eqn |> GEN y |> DISCH f_x_x |> GEN x |> GEN f
+  end
 
 
 fun mk_preorder_refl preorders preorderTerm =

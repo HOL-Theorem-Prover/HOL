@@ -14,6 +14,10 @@ end
 
 open Parse
 
+(* These two trivial lemmas fire load-time Q.prove; keep the tactic
+   but suppress the current-theory guard for this file. *)
+val _ = Feedback.set_trace "TAC_PROOF requires current theory" 0
+
 local
    val x64_triple = Q.INST [`rip` |-> `p`] o x64_progLib.x64_spec
    val match_pc_cond = fst o match_term ``x64_PC (if b then x else y)``

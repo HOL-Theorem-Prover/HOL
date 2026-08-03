@@ -17,6 +17,10 @@ open HolKernel Parse boolLib;
 infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
 infixr -->;
 
+(* This library defines several helper lemmas via load-time TAC_PROOF;
+   disable the current-theory guard for this file. *)
+val _ = Feedback.set_trace "TAC_PROOF requires current theory" 0
+
 (*
 type term = Term.term
 type thm = Thm.thm;

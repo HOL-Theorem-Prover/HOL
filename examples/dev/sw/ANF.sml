@@ -98,13 +98,10 @@ val SimpThms = [Seq_def,Par_def,Ite_def,Rec_def];
 (*                                                                           *)
 (*****************************************************************************)
 
-val LET_SEQ_PAR_THM = Q.prove
-(`!f1 f2 f3. Seq (Par f1 f2) f3 = \x. let v = f2 x in f3 (f1 x,v)`,
- RW_TAC std_ss [Seq_def, Par_def, LET_DEF]);
-
-val SEQ_PAR_I_THM = Q.prove
-(`!f2 f3. Seq (Par (\x.x) f2) f3 = \x. let v = f2 x in f3 (x,v)`,
- RW_TAC std_ss [LET_SEQ_PAR_THM,combinTheory.I_THM]);
+(* LET_SEQ_PAR_THM and SEQ_PAR_I_THM live in compileTheory now; import
+   them here rather than firing a load-time Tactical.prove. *)
+val LET_SEQ_PAR_THM = compileTheory.LET_SEQ_PAR_THM
+val SEQ_PAR_I_THM = compileTheory.SEQ_PAR_I_THM
 
 
 fun is_word_literal tm =

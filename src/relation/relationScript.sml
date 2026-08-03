@@ -2093,6 +2093,34 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
+    RUNION and RINTER are monotone in each argument w.r.t. RSUBSET.
+   ---------------------------------------------------------------------- *)
+
+Theorem RUNION_MONOTONE_L:
+  R1 RSUBSET R3 ==> (R1 RUNION R2) RSUBSET (R3 RUNION R2)
+Proof
+  SRW_TAC [][RSUBSET, RUNION] THEN PROVE_TAC []
+QED
+
+Theorem RUNION_MONOTONE_R:
+  R2 RSUBSET R3 ==> (R1 RUNION R2) RSUBSET (R1 RUNION R3)
+Proof
+  SRW_TAC [][RSUBSET, RUNION] THEN PROVE_TAC []
+QED
+
+Theorem RINTER_MONOTONE_L:
+  R1 RSUBSET R3 ==> (R1 RINTER R2) RSUBSET (R3 RINTER R2)
+Proof
+  SRW_TAC [][RSUBSET, RINTER] THEN PROVE_TAC []
+QED
+
+Theorem RINTER_MONOTONE_R:
+  R2 RSUBSET R3 ==> (R1 RINTER R2) RSUBSET (R1 RINTER R3)
+Proof
+  SRW_TAC [][RSUBSET, RINTER] THEN PROVE_TAC []
+QED
+
+(* ----------------------------------------------------------------------
     relational complement
    ---------------------------------------------------------------------- *)
 

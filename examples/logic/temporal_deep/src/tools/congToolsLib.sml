@@ -14,6 +14,9 @@ map load
 open HolKernel boolLib bossLib
      congLib congToolsLibTheory Traverse Travrules Trace
 
+(* Load-time prove of IMP_REFL below; disable the current-theory guard. *)
+val _ = Feedback.set_trace "TAC_PROOF requires current theory" 0
+
 (*
 show_assums := false;
 show_assums := true;

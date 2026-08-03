@@ -1157,3 +1157,18 @@ Theorem Let:
 Proof
    RW_TAC std_ss [Let_def,Seq_def,Par_def,LET_DEF]
 QED
+
+(* Moved here from compile.sml (and its ANF.sml duplicate) so those
+   libraries no longer fire a load-time Tactical.prove. *)
+
+Theorem LET_SEQ_PAR_THM:
+  !f1 f2 f3. Seq (Par f1 f2) f3 = \x. let v = f2 x in f3 (f1 x, v)
+Proof
+  RW_TAC std_ss [Seq_def, Par_def, LET_DEF]
+QED
+
+Theorem SEQ_PAR_I_THM:
+  !f2 f3. Seq (Par (\x.x) f2) f3 = \x. let v = f2 x in f3 (x, v)
+Proof
+  RW_TAC std_ss [LET_SEQ_PAR_THM, combinTheory.I_THM]
+QED
