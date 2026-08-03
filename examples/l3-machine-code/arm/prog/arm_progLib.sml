@@ -81,17 +81,8 @@ val FPSCR_components =
   ["N", "Z", "C", "V", "AHP", "DN", "DZC", "DZE", "FZ", "IDC", "IDE", "IOC",
    "IOE", "IXC", "IXE", "OFC", "OFE", "QC", "RMode", "UFC", "UFE", "fpscr'rst"]
 
-val arm_frame =
-   stateLib.update_frame_state_thm arm_proj_def
-     (List.map (fn s => "CPSR." ^ s) PSR_components @
-      List.map (fn s => "FP.FPSCR." ^ s) FPSCR_components @
-      ["REG", "MEM", "FP.REG"])
-
-val arm_frame_hidden =
-   stateLib.update_hidden_frame_state_thm arm_proj_def
-      [``s with Encoding := x``,
-       ``s with CurrentCondition := x``,
-       ``s with undefined := x``]
+val arm_frame = arm_progTheory.arm_frame
+val arm_frame_hidden = arm_progTheory.arm_frame_hidden
 
 (* -- *)
 

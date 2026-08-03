@@ -14,9 +14,6 @@ map load
 open HolKernel boolLib bossLib
      congLib congToolsLibTheory Traverse Travrules Trace
 
-(* Load-time prove of IMP_REFL below; disable the current-theory guard. *)
-val _ = Feedback.set_trace "TAC_PROOF requires current theory" 0
-
 (*
 show_assums := false;
 show_assums := true;
@@ -26,7 +23,9 @@ quietdec := false;
 *)
 
 
-val IMP_REFL = prove (``!x. x ==> x``, SIMP_TAC std_ss []);
+(* |- !x. x ==> x, derived forward via SIMP_CONV + EQT_ELIM so we
+   don't fire a load-time Tactical.prove. *)
+val IMP_REFL = EQT_ELIM (simpLib.SIMP_CONV std_ss [] ``!x. x ==> x``);
 
 fun extract_preorder_trans (Travrules.PREORDER(_,TRANS,_)) = TRANS;
 fun extract_preorder_refl (Travrules.PREORDER(_,_,REFL)) = REFL;

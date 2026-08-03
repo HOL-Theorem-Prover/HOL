@@ -87,7 +87,8 @@ fun getBindingFor b1 b2 l [] = (false, false, ``dummy:num``)
       end;
 
 exception T_IMP_Error;
-val t_imp_elim_rwt = prove (``!x. (T ==> x) = x``, REWRITE_TAC[]);
+val t_imp_elim_rwt =
+  EQT_ELIM (simpLib.SIMP_CONV std_ss [] ``!x. (T ==> x) = x``);
 
 fun T_IMP_ELIM_RULE thm =
   (CONV_RULE (REWR_CONV t_imp_elim_rwt) thm) handle _ => (
@@ -745,7 +746,8 @@ local
     new_compset [
                 res_quanTheory.RES_FORALL_EMPTY,
                 RES_FORALL_INSERT,
-                prove (``!x:num n:num. x + n >= n``, DECIDE_TAC),
+                EQT_ELIM (simpLib.SIMP_CONV arith_ss []
+                            ``!x:num n:num. x + n >= n``),
                 AND_CLAUSES]
 
   val inj_thm_compset =

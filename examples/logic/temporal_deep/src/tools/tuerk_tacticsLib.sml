@@ -6,10 +6,6 @@ struct
 
    val ERR = mk_HOL_ERR "tuerk_tacticsLib";
 
-   (* This library defines a helper via a load-time prove; disable
-      the current-theory guard for this file. *)
-   val _ = Feedback.set_trace "TAC_PROOF requires current theory" 0
-
    val SET_INDUCT_TAC = PSet_ind.SET_INDUCT_TAC FINITE_INDUCT;
 
    val EXISTS_EQ_STRIP_TAC :tactic = fn (asl,t) =>
@@ -158,7 +154,12 @@ struct
    fun Q_SPECL_NO_ASSUM n [] = ALL_TAC
      | Q_SPECL_NO_ASSUM n (h::l) = (Q_SPEC_NO_ASSUM n h THEN Q_SPECL_NO_ASSUM 0 l);
 
-   val IMP_TO_EQ_TAC = MATCH_MP_TAC (prove (``(a = b) ==> (a ==> b)``, SIMP_TAC std_ss []));
+   (* |- (a = b) ==> (a ==> b), derived forward via SIMP_CONV +
+      EQT_ELIM so we don't fire a load-time Tactical.prove. *)
+   val IMP_TO_EQ_TAC =
+     MATCH_MP_TAC
+       (EQT_ELIM (simpLib.SIMP_CONV std_ss []
+                    ``(a = b) ==> (a ==> b)``));
 
    fun store_simp_thm(name,term,tac) = save_thm(name,
             SIMP_RULE std_ss [] (prove(term, tac)));

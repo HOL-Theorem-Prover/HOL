@@ -14,17 +14,19 @@ end
 
 open Parse
 
-(* These two trivial lemmas fire load-time Q.prove; keep the tactic
-   but suppress the current-theory guard for this file. *)
-val _ = Feedback.set_trace "TAC_PROOF requires current theory" 0
-
 local
    val x64_triple = Q.INST [`rip` |-> `p`] o x64_progLib.x64_spec
    val match_pc_cond = fst o match_term ``x64_PC (if b then x else y)``
-   val lemma1 = prove(``b ==> (x64_PC (if b then x else y) = x64_PC x)``,
-                      SIMP_TAC std_ss []);
-   val lemma2 = prove(``~b ==> (x64_PC (if b then x else y) = x64_PC y)``,
-                      SIMP_TAC std_ss []);
+   (* Forward-derive lemma{1,2} via SIMP_CONV + EQT_ELIM so we don't
+      fire a load-time Tactical.prove. *)
+   val lemma1 =
+     EQT_ELIM
+       (simpLib.SIMP_CONV std_ss []
+          ``b ==> (x64_PC (if b then x else y) = x64_PC x)``)
+   val lemma2 =
+     EQT_ELIM
+       (simpLib.SIMP_CONV std_ss []
+          ``~b ==> (x64_PC (if b then x else y) = x64_PC y)``)
    val lemma3 = SPEC_MOVE_COND |> GSYM |> REWRITE_RULE [GSYM precond_def]
    fun get_length th =
       let

@@ -63,13 +63,8 @@ val state_id =
        ["REG", "count", "pcinc"]
       ]
 
-val m0_frame =
-   stateLib.update_frame_state_thm m0_proj_def
-      ["PSR.N", "PSR.Z", "PSR.C", "PSR.V", "count", "REG", "MEM"]
-
-val m0_frame_hidden =
-   stateLib.update_hidden_frame_state_thm m0_proj_def
-      [``s with pcinc := x``]
+val m0_frame = m0_progTheory.m0_frame
+val m0_frame_hidden = m0_progTheory.m0_frame_hidden
 
 (* -- *)
 

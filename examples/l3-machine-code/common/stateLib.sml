@@ -93,6 +93,10 @@ local
    val rng_of = utilsLib.rng o Term.type_of
    val ty_name = #Tyop o Type.dest_thy_type o Term.type_of
 in
+   (* Caller must run this from a Script (or otherwise with a current
+      theory), since the per-conjunct proof fires Tactical.prove.
+      progScript files pre-compute these theorems and progLib files
+      read them back from their theory. *)
    fun update_frame_state_thm proj_def =
       let
          val tac =
@@ -147,13 +151,7 @@ in
                val r = Term.mk_abs (s, iter true s l)
                val thm = th |> Drule.ISPECL [f, u, r] |> SIMP_RULE (srw_ss()) []
                val p = fst (boolSyntax.dest_imp (Thm.concl thm))
-               (* p is a small `!b s a w. b <> f a ==> ...` goal that
-                  wants Cases over an enum datatype; keep the tactic
-                  proof and disable the current-theory check here.  A
-                  future cleanup should push this into a Script. *)
-               val p_thm =
-                  Feedback.trace ("TAC_PROOF requires current theory", 0)
-                     (fn () => Tactical.prove (p, tac)) ()
+               val p_thm = Tactical.prove (p, tac)
             in
                Drule.GEN_ALL (MATCH_MP thm p_thm)
             end
@@ -183,15 +181,15 @@ local
    fun prove_hidden thm u =
       let
          val p = utilsLib.get_function thm
-         val t = tac THEN FULL_SIMP_TAC (srw_ss()) [thm]
+         val goal = “!y s. FRAME_STATE ^p y ^u = FRAME_STATE ^p y s”
       in
-         Feedback.trace ("TAC_PROOF requires current theory", 0)
-           (fn () =>
-              Drule.GEN_ALL
-                (prove (“!y s. FRAME_STATE ^p y ^u = FRAME_STATE ^p y s”, t)))
-           ()
+         Tactical.prove (goal, tac THEN FULL_SIMP_TAC (srw_ss()) [thm])
       end
 in
+   (* Caller must run this from a Script (or otherwise with a current
+      theory), since `prove_hidden` fires Tactical.prove.  progScript
+      files pre-compute these theorems and progLib files read them
+      back from their theory. *)
    fun update_hidden_frame_state_thm proj_def =
       utilsLib.map_conv (prove_hidden proj_def)
 end
