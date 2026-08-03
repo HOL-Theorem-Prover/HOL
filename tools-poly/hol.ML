@@ -646,6 +646,10 @@ in
            captured quote to a resolved Preterm and walks it. *)
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/hover_quote_init.ML"));
+        (* Tactic-step compiler used by later slices to walk a Proof
+           body via goalFrag; also runs its selftest at load time. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/tactic_steps.ML"));
         (* Goal-state at cursor inside a Proof-QED body.  Slice A
            installs a stub returning NONE; later slices fill in the
            goalFrag-based interpreter. *)
