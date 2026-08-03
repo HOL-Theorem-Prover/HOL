@@ -78,8 +78,9 @@ type theorem_context = {
   name: string,           (* theorem name, e.g. "foo" *)
   quote: string,          (* raw text of the theorem statement *)
   quoteStart: int,        (* file byte offset of the quote's start *)
-  cursor: int             (* cursor byte offset; used by later slices to
-                             locate the tactic step at the cursor *)
+  tacText: string,        (* raw text between `Proof` and `QED` *)
+  tacStart: int,          (* file byte offset of `tacText` start *)
+  cursor: int             (* cursor byte offset (file coords) *)
 }
 val goalStateAtPos:
   (hover_context * theorem_context -> goal_state_response option) ref

@@ -1,13 +1,47 @@
-(* Given the enclosing Theorem's statement quote, parse it against the
-   live HOL Context and return it as the initial goal (step 0, no
-   assumptions).  Loaded AFTER HOL is initialised so Parse.Term is
-   available. *)
+(* LSPExtension.goalStateAtPos: given the enclosing Theorem's
+   statement quote and tactic body, walk the tactic stepwise via
+   goalFrag and return the goal-state at the cursor. *)
+
+local
+  fun ppGoal (asms, g) = {
+    asms = List.map Parse.term_to_string asms,
+    goal = Parse.term_to_string g
+  }
+
+  (* Count Expand/ExpandList steps whose end is strictly before the
+     cursor — the step-index the user sits at. *)
+  fun stepIndex (steps, cursor) = let
+    fun go [] n = n
+      | go (TacticSteps.Expand (_, e) :: rest) n =
+          if cursor < e then n else go rest (n + 1)
+      | go (TacticSteps.ExpandList (_, e) :: rest) n =
+          if cursor < e then n else go rest (n + 1)
+      | go (_ :: rest) n = go rest n
+    in go steps 0 end
+in
 
 val () = LSPExtension.goalStateAtPos :=
   (fn (_: LSPExtension.hover_context,
-       {name, quote, ...}: LSPExtension.theorem_context) =>
-    case Lib.total Parse.Term [QUOTE quote] of
-      NONE => NONE
-    | SOME tm =>
-      SOME {theorem = name, step = 0,
-            goals = [{asms = [], goal = Parse.term_to_string tm}]})
+       {name, quote, tacText, tacStart, cursor, ...}
+         : LSPExtension.theorem_context) => let
+    val initialGoal = Lib.total Parse.Term [QUOTE quote]
+    val steps = TacticSteps.stepsOfTacText
+                  {label = "goal_state", tacText = tacText}
+    val tacCursor = cursor - tacStart
+    in case (initialGoal, steps) of
+         (SOME tm, SOME sts) => let
+           val startState = goalFrag.new_goal ([], tm)
+           val finalState = TacticWalker.walkTo {
+             tacText = tacText, startState = startState,
+             steps = sts, cursor = tacCursor}
+           in SOME {theorem = name, step = stepIndex (sts, tacCursor),
+                    goals = List.map ppGoal (goalFrag.top_goals finalState)}
+           end
+       | (SOME tm, NONE) =>
+           (* Parser gave us no steps — fall back to the initial goal. *)
+           SOME {theorem = name, step = 0,
+                 goals = [{asms = [], goal = Parse.term_to_string tm}]}
+       | _ => NONE
+    end)
+
+end;

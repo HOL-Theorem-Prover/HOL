@@ -1644,6 +1644,50 @@ def test_goalState_outside_proof():
         c.close()
 
 
+def test_goalState_step_advances_within_proof():
+    """Slice D: cursor at successive positions inside a Proof body sees
+    the goal-state advance step-by-step.  Start of Proof body → initial
+    goal; after the first tactic runs → whatever it produced."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_step.sml"
+        # Theorem: `!n:num. n + 0 = n`.  Applying `gen_tac` drops the
+        # binder, leaving  `n + 0 = n`.
+        src = ("Theory goalstate_step\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem step_test:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  gen_tac >> rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 6 is "  gen_tac >> rw[]" (0-based).  Cursor at char 2
+        # (start of gen_tac) → step 0 (initial goal, binder still there).
+        r0 = _send_goalstate(c, 401, uri, 6, 2)
+        result0 = r0.get("result")
+        assert_true(result0 is not None,
+                    f"pre-gen_tac has a goal ({r0!r})")
+        goal0 = result0["goals"][0]["goal"]
+        assert_true("!" in goal0 or "∀" in goal0,
+                    f"initial goal still has the quantifier ({goal0!r})")
+        # Cursor at char 15 (past `>>`, on `rw[]`) → step 1, after
+        # gen_tac has run.  The universal binder is gone.
+        r1 = _send_goalstate(c, 402, uri, 6, 15)
+        result1 = r1.get("result")
+        assert_true(result1 is not None,
+                    f"pre-rw has a goal ({r1!r})")
+        step1 = result1.get("step")
+        assert_true(step1 >= 1, f"advanced past step 0 ({step1})")
+        goal1 = result1["goals"][0]["goal"]
+        assert_true("!" not in goal1 and "∀" not in goal1,
+                    f"quantifier stripped after gen_tac ({goal1!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_between_two_theorems():
     """Slice B: cursor between two `Theorem…QED` blocks returns null and
     picks the right block when inside the second one."""
@@ -1734,6 +1778,8 @@ TESTS = [
     ("goalState_outside_proof",      test_goalState_outside_proof),
     ("goalState_between_two_theorems",
                                      test_goalState_between_two_theorems),
+    ("goalState_step_advances_within_proof",
+                                     test_goalState_step_advances_within_proof),
 ]
 
 

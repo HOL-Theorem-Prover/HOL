@@ -133,14 +133,19 @@ fun findEnclosingTheorem text cursor = let
     case parseDec () of
       NONE => NONE
     | SOME (HOLSourceAST.HOLTheoremDecl {
-              id = (_, name), colon,
+              id = (_, name), colon, tac,
               proof_ = SOME {proof_, ...}, qed_ = SOME qed_, ...}) =>
         if proof_ <= cursor andalso cursor <= qed_
-        then SOME {name = name,
-                   quote = String.substring (text, colon + 1,
-                                             Int.max (0, proof_ - colon - 1)),
-                   quoteStart = colon + 1,
-                   cursor = cursor}
+        then let val (tacStart, tacEnd) = HOLSourceAST.expSpan tac
+        in SOME {name = name,
+                 quote = String.substring (text, colon + 1,
+                                           Int.max (0, proof_ - colon - 1)),
+                 quoteStart = colon + 1,
+                 tacText = String.substring (text, tacStart,
+                                             Int.max (0, tacEnd - tacStart)),
+                 tacStart = tacStart,
+                 cursor = cursor}
+        end
         else loop ()
     | SOME _ => loop ()
   in loop () end

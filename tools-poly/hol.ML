@@ -650,9 +650,10 @@ in
            body via goalFrag; also runs its selftest at load time. *)
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/tactic_steps.ML"));
-        (* Goal-state at cursor inside a Proof-QED body.  Slice A
-           installs a stub returning NONE; later slices fill in the
-           goalFrag-based interpreter. *)
+        (* goalFrag-based interpreter for the step stream. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/tactic_walker.ML"));
+        (* Goal-state at cursor inside a Proof-QED body. *)
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/goal_state_init.ML"));
         case #multithread options of
