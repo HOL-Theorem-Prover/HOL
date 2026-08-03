@@ -720,8 +720,9 @@ local
          [r, m, _, fp] => [r, m, fp]
        | _ => raise ERR "component_11" ""
    val sym_R_x_pc =
-      REWRITE_RULE [utilsLib.qm [] ``(a = RName_PC) = (RName_PC = a)``]
-         arm_stepTheory.R_x_pc
+      REWRITE_RULE
+        [Drule.ISPECL [``a: RName``, ``RName_PC``] boolTheory.EQ_SYM_EQ]
+        arm_stepTheory.R_x_pc
    val EXTRA_TAC =
       RULE_ASSUM_TAC (REWRITE_RULE [sym_R_x_pc, arm_stepTheory.R_x_pc])
       THEN ASM_REWRITE_TAC [boolTheory.DE_MORGAN_THM]
