@@ -2,28 +2,54 @@ TacticToe is a tactic-based prover.
 
 It searches for a proof by repeatedly applying suitable tactics for each goal state that it produces.
 
-SKIPPING RECORDING of the HOL4 standard library:
-  1) Download the file ttt_tacdata_kananaskis-14.tar.gz from
-     http://grid01.ciirc.cvut.cz/~thibault/
-  2) Extract it in your HOL/src/tactictoe directory.
-     This creates the directory HOL/src/tactictoe/ttt_tacdata.
-  3) Optionally download from the same location
-     "tnn_for_tactictoe" to a file "path_to_tnn"
-
-RECORDING all ancestor theories not recorded yet:
+RECORDING all ancestor theories with manifest-based cache validation:
   load "tttUnfold"; open tttUnfold;
   load "fooTheory";
   ttt_record (); (* takes about 8 hours for the full standard library *)
-  (* tip: use ttt_record_thy "foo" to only record the "foo" Theory *)
+  (* tip: use ttt_record_thy "foo" to record/update the "foo" Theory *)
+
+The recorder writes ttt_tacdata/MANIFEST under the TacticToe cache root
+($HOME/.cache/tactictoe by default, or HOL4_TACTICTOE_CACHE) with content
+hashes for each recorded theory and explicit tactic-data and TacticToe
+compatibility versions.
+Tactic-data files are stored under ttt_tacdata/data using an identity key
+derived from the theory name, Script.sml hash, ancestry version, tactic-data
+format version, and TacticToe version. Same-name theories from different
+projects therefore do not share data unless this full identity matches; old
+flat ttt_tacdata/<theory> files are not used for current manifest-validated
+loads. In particular, the old ttt_tacdata_kananaskis-14.tar.gz archive uses
+that incompatible flat layout and cannot be used to skip recording. The
+on-disk format and the identity key are owned by tttManifest:
+bump `tttManifest.format_version` when the on-disk format changes, and
+`tttManifest.tactictoe_version` when recorder, feature, or learning changes
+invalidate recorded data.
+The cache root can also be changed in ML after loading:
+  tttSetup.set_tactictoe_cache_dir "/path/to/tactictoe-cache";
+If TacticToe has already loaded tactic data, also clear the in-memory cache:
+  tacticToe.clean_ttt_tacdata_cache ();
+A theory is re-recorded when its Script.sml hash changes, when an ancestor was
+re-recorded in the same topological pass, when the data file hash no longer
+matches the manifest, or when either compatibility version changes. It logs
+every up-to-date, stale, recorded, skipped, and failed decision.
+
+Useful variants:
+  ttt_record_opts [Scope (Theories ["foo"]), DryRun true];
+  ttt_record_opts [Scope (Ancestry "foo"), Force true];
+  ttt_record_opts [Scope (Ancestry "foo"), Parallel 4];
+
+Recording publishes tactic data and thmdata through atomic renames, and
+recording runs use per-theory locks under ttt_tacdata/.locks plus a manifest
+lock, so concurrent readers never see a partially-written data file.
 
 WARNING: if fooTheory depends on structures not available in sigobj (or in the
-holstate), place a Holmakefile in the directory src/AI/sml_inspection/open
-(create it if it does not exist) with the line:
+holstate), arrange for the generated structure-open script to see those
+custom structures; for example, place a Holmakefile in the TacticToe scratch
+open directory with the line:
   INCLUDES = directory-of-the-custom-structures
 Otherwise, the tactics and arguments declared in those structures will not be
 recorded.
 
-DEFAULT USAGE (after RECORDING or SKIPPING RECORDING):
+DEFAULT USAGE (after RECORDING):
   load "tacticToe"; open tacticToe;
   ttt ([],``1+1=2``);
   tactictoe ``1+1=2``; (* alternatively *)
@@ -46,10 +72,10 @@ USAGE after failure:
   suggest ();
 
 CLEANING:
-  TacticToe depends on data stored in src/tactictoe/ttt_tacdata and
-  src/AI/sml_inspection/open.
-  It is usually necessary to remove these directories before re-recording.
-  This can be done by calling tttUnfold.ttt_clean_record ().
+  TacticToe depends on data stored in the TacticToe cache root
+  ($HOME/.cache/tactictoe by default, or HOL4_TACTICTOE_CACHE).
+  The manifest-based recorder re-records stale tactic data automatically.
+  To force a fresh cache, call tttUnfold.ttt_clean_record ().
 
 EXAMPLE: see examples in src/tactictoe/examples.
 
@@ -60,8 +86,10 @@ NOTES FOR DEVELOPERS:
   3) polyml values in src/tactictoe/src/tttUnfold.sml.
   Debugging directories:
   1) Output of the modified theory foo is can be found in
-     src/AI/sml_inspection/buildheap/buildheap_fooScript_ttt.
+     $HOME/.cache/tactictoe/tmp/<session>/sml_inspection/buildheap/
+     buildheap_fooScript_ttt.
      Set aiLib.debug_flag and to true or/and smlRedirect.hide_flag to false
      for more output.
-  2) A copy of the modified theory is saved under src/tactictoe/scripts
+  2) A copy of the modified theory is saved under
+     $HOME/.cache/tactictoe/log/scripts
      for further inspection.
