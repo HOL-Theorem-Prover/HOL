@@ -1038,7 +1038,11 @@ fun start {diag, dbg} = let
         | SOME id => (!LSPExtension.thmLookup id handle _ => NONE)
       val out = case (id, ty, value, thmMd) of
           (_, NONE, NONE, _) => []
-        | (NONE, SOME ty, NONE, _) => [typeHover (loc, ty)]
+        (* Type without an identifier is the walked-up enclosing
+           expression's type (`Conv.conv`, `Thm.thm -> Thm.thm`, …).
+           Never informative — the user's cursor missed a specific
+           name and we've fallen up.  Return nothing. *)
+        | (NONE, SOME _, NONE, _) => []
         | (SOME id, SOME ty, _, SOME md) => let
           (* Theorem: "val id: thm\n\n<statement>" as one markdown block.
              ppToString may leave a trailing newline; strip it before
@@ -1067,9 +1071,19 @@ fun start {diag, dbg} = let
              PrettyBreak(1, 0), value]))]
         | _ => []
       in thyHov @ help @ out end
+    fun crossesNewline (s, e) = let
+      val txt = #text text
+      fun loop i = i < e andalso
+                   (String.sub (txt, i) = #"\n" orelse loop (i + 1))
+      in loop s end
+    (* Suppress hover on any Built node whose span crosses a newline —
+       these are enclosing expressions (e.g. a whole `Proof … QED`
+       tactic body typing as `tactic`) whose SML type is uninformative.
+       Per-identifier / per-token nodes are single-line and unaffected. *)
     fun fromTree NONE = []
       | fromTree (pt as (SOME (HOL_IDE.Built ((s, e), props, _), _))) =
-        case process {startPosition = s, endPosition = e} props of
+        if crossesNewline (FixedInt.toInt s, FixedInt.toInt e) then []
+        else case process {startPosition = s, endPosition = e} props of
           [] => fromTree (HOL_IDE.builtMoveUp pt)
         | out => out
     val offset' = {startOffset = FixedInt.fromInt startOffset,

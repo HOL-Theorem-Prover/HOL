@@ -587,6 +587,79 @@ def test_diagnostic_dedup():
 # ------------------------------------------------------------------
 # Runner
 # ------------------------------------------------------------------
+def test_hover_type_only_no_identifier_is_null():
+    """Hover on a compound expression like `Conv (foo bar)` at a position
+    between identifiers should not fall up to the enclosing expression's
+    SML type ("Conv.conv", "Thm.thm -> Thm.thm", …).  Only per-identifier
+    hovers (with a name) are useful."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_typeonly.sml"
+        # Line 3: "val f = rw[SUB_0]"  — cursor at char 8 lands just
+        # after "= " on `r` of `rw` (an identifier, has a name → real
+        # hover) but at char 10 sits on `[` (whitespace/bracket, no
+        # identifier at this position; previously returned "thm list").
+        src = ("Theory hover_typeonly\n"
+               "Ancestors arithmetic\n"
+               "val f = rw[SUB_0]\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Char 10 = '[' bracket — no identifier at this position.
+        c.send({"jsonrpc":"2.0","id":52,"method":"textDocument/hover",
+                "params":{"textDocument":{"uri":uri},
+                          "position":{"line":2,"character":10}}})
+        def got(cl):
+            with cl.msgs_lock:
+                for m in cl.msgs:
+                    if m.get("id") == 52: return m
+            return None
+        reply = c.wait_until(got, 5)
+        assert_true(reply is not None, "hover reply arrived")
+        assert_eq(reply.get("result"), None,
+                  "hover on non-identifier position returns null")
+    finally:
+        c.close()
+
+
+def test_hover_on_proof_body_whitespace_is_null():
+    """Hover on whitespace inside a Proof-QED body should return null.
+    Previously the SML-side hover fell up to the enclosing tactic
+    expression and returned its type (`goal -> goal list * validation`),
+    which is never informative."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/proof_ws_hover.sml"
+        src = ("Theory proof_ws_hover\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem foo:\n"
+               "  T\n"
+               "Proof\n"
+               "  ARITH_TAC\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 5 = "Proof" — char 5 is just past the keyword, on
+        # whitespace.  Previously would give the tactic-type hover.
+        c.send({"jsonrpc":"2.0","id":51,"method":"textDocument/hover",
+                "params":{"textDocument":{"uri":uri},
+                          "position":{"line":5,"character":5}}})
+        def got(cl):
+            with cl.msgs_lock:
+                for m in cl.msgs:
+                    if m.get("id") == 51: return m
+            return None
+        reply = c.wait_until(got, 5)
+        assert_true(reply is not None, "hover reply arrived")
+        assert_eq(reply.get("result"), None,
+                  "hover on proof-body whitespace returns null")
+    finally:
+        c.close()
+
+
 def test_hover_inside_proof_qed():
     """Hover on SML identifiers inside a Theorem-Proof-QED block should
     resolve to their SML type.  Previously the DecExpansion wrapping
@@ -1629,6 +1702,10 @@ TESTS = [
     ("cheat_proofs_installed",       test_cheat_proofs_installed),
     ("thm_hover_shows_statement",    test_thm_hover_shows_statement),
     ("hover_inside_proof_qed",       test_hover_inside_proof_qed),
+    ("hover_on_proof_body_whitespace_is_null",
+                                     test_hover_on_proof_body_whitespace_is_null),
+    ("hover_type_only_no_identifier_is_null",
+                                     test_hover_type_only_no_identifier_is_null),
     ("hover_inside_term_quotation",  test_hover_inside_term_quotation),
     ("hover_inside_theorem_body",    test_hover_inside_theorem_body),
     ("hover_at_body_boundary_and_operators",
