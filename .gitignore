@@ -140,8 +140,8 @@ examples/l3-machine-code/**/*-heap
 *Script_ttt.sml
 *.tttsave
 /TAGS
-.claude
-.codex
-.pi
+/.claude/*
+!/.claude/skills/
+/.codex/
+/.pi/
 CLAUDE.local.md
-.agent-files
