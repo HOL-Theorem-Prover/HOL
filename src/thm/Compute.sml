@@ -214,7 +214,7 @@ local
     let
       val (f,args) = strip_comb tm
     in
-      if same_const f (#let_tm ct) then
+      if aconv f (#let_tm ct) then
         case args of
           [binder,bndexp] =>
             let
