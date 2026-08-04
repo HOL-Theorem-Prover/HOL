@@ -1688,6 +1688,38 @@ def test_goalState_step_advances_within_proof():
         c.close()
 
 
+def test_goalState_incomplete_proof_body():
+    """Slice G.1: a Theorem missing its QED (user still typing the
+    proof) still yields a goalState response for cursors inside the
+    in-progress Proof body — driving the live-editing UX."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/incomplete_proof.sml"
+        # No QED, no trailing content after the tactic body.
+        src = ("Theory incomplete_proof\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  gen_tac >> rw[]\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted (even with parse errors)")
+        # Line 6 = "  gen_tac >> rw[]"; cursor at char 2 = start of tactic.
+        r = _send_goalstate(c, 901, uri, 6, 2)
+        result = r.get("result")
+        assert_true(result is not None,
+                    f"in-progress proof yields a state ({r!r})")
+        assert_eq(result.get("theorem"), "t", "theorem name")
+        # step 0 = pre-first-tactic; initial goal still shows the ∀.
+        goal0 = result["goals"][0]["goal"]
+        assert_true("!" in goal0 or "∀" in goal0,
+                    f"pre-tactic goal still has quantifier ({goal0!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_cache_invalidates_on_tactic_edit():
     """Slice E: after editing the tactic body, the goal-state cache
     should invalidate — subsequent queries return the walk against the
@@ -1949,6 +1981,8 @@ TESTS = [
                                      test_goalState_step_advances_within_proof),
     ("goalState_case_split_produces_two_subgoals",
                                      test_goalState_case_split_produces_two_subgoals),
+    ("goalState_incomplete_proof_body",
+                                     test_goalState_incomplete_proof_body),
     ("goalState_cache_invalidates_on_tactic_edit",
                                      test_goalState_cache_invalidates_on_tactic_edit),
     ("goalState_cache_invalidates_on_upstream_change",

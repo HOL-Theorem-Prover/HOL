@@ -135,8 +135,13 @@ fun findEnclosingTheorem text cursor = let
       NONE => NONE
     | SOME (HOLSourceAST.HOLTheoremDecl {
               id = (_, name), colon, tac,
-              proof_ = SOME {proof_, ...}, qed_ = SOME qed_, ...}) =>
-        if proof_ <= cursor andalso cursor <= qed_
+              proof_ = SOME {proof_, ...}, qed_, stop, ...}) =>
+        (* An in-progress Proof-QED block has `qed_ = NONE`; treat the
+           dec's `stop` as the upper bound so the LSP can drive live
+           goal-state while the user is still typing the tactic body
+           (Slice G.1). *)
+        let val upperBound = case qed_ of SOME q => q | NONE => stop in
+        if proof_ <= cursor andalso cursor <= upperBound
         then let val (tacStart, tacEnd) = HOLSourceAST.expSpan tac
         in SOME {name = name,
                  quote = String.substring (text, colon + 1,
@@ -148,6 +153,7 @@ fun findEnclosingTheorem text cursor = let
                  cursor = cursor}
         end
         else loop ()
+        end
     | SOME _ => loop ()
   in loop () end
 
