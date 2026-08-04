@@ -90,21 +90,41 @@ type cacheEntry = {tacText: string, snapshots: snap list}
 type cacheMap = (string, cacheEntry) Binarymap.dict
 type cacheData = cacheMap ref
 
+(* Alias to the currently-active cache ref, set by `afterCompile`.
+   Used by the `resetForCompile` wrapping below so we can empty the
+   cache at compile-start without going through plugin_data (which
+   isn't accessible from that hook). *)
+val latestCacheRef : cacheData option ref = ref NONE
+
 val cacheTag : cacheData LSPExtension.tag =
   LSPExtension.registerPlugin false {
     name = "goalStateCache",
     init = fn _ => (),
     beforeCompile = fn () => (),
-    (* Reuse the same ref across compiles so entries survive
-       `didChange`; per-theorem invalidation happens via the tacText
-       check in `walkTo`.  Returning `SOME (ref emptyMap)` here would
-       wipe every theorem's snapshots on every compile, including for
-       theorems whose tactic body didn't change. *)
-    afterCompile = fn (_, prev) =>
-      SOME (case prev of
-              SOME r => r
-            | NONE => ref (Binarymap.mkDict String.compare))
+    (* Reuse the same ref across compiles so cache entries can survive
+       (they're invalidated by tacText comparison at query time).
+       Also alias the ref to a module-global so `resetForCompile` can
+       reach it. *)
+    afterCompile = fn (_, prev) => let
+      val r = case prev of
+                SOME r => r
+              | NONE => ref (Binarymap.mkDict String.compare)
+      val () = latestCacheRef := SOME r
+    in SOME r end
   }
+
+(* Wrap the LSP's existing `resetForCompile` to also empty the cache
+   at compile-start.  Between compiles, Context is stable and cache
+   entries remain valid; a new compile can change the Context (an
+   upstream redefinition, new Overload_on, …) making cached goalstates
+   stale even if a theorem's tacText hasn't changed. *)
+val () = let val prev = !LSPExtension.resetForCompile in
+  LSPExtension.resetForCompile := (fn () => (
+    case !latestCacheRef of
+      NONE => ()
+    | SOME r => r := Binarymap.mkDict String.compare;
+    prev ()))
+end
 
 (* Largest snapshot whose endByte ≤ cursor. *)
 fun bestSnap cursor =

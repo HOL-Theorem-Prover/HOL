@@ -1731,6 +1731,52 @@ def test_goalState_cache_invalidates_on_tactic_edit():
         c.close()
 
 
+def test_goalState_cache_invalidates_on_upstream_change():
+    """Slice E: editing an UPSTREAM definition (not the theorem's own
+    tactic body) still invalidates the cache — the compile-driven
+    `resetForCompile` hook clears the cache, so the next query walks
+    against the new HOL Context.  Without that clearing, the theorem's
+    unchanged tacText would let the stale post-unfold state stand."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/upstream_change.sml"
+        v1 = ("Theory upstream_change\n"
+              "Ancestors arithmetic\n\n"
+              "Definition foo_def:\n"
+              "  foo (n:num) = n + 1\n"
+              "End\n\n"
+              "Theorem t:\n"
+              "  foo 0 = 1\n"
+              "Proof\n"
+              "  rw[foo_def]\n"
+              "QED\n")
+        _did_open(c, uri, v1, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "v1 compileCompleted")
+        # Line 10 = `  rw[foo_def]`; cursor at char 13 (past the
+        # closing bracket) → state AFTER rw runs.  v1: rw unfolds to
+        # `0 + 1 = 1`, closes the goal.
+        r1 = _send_goalstate(c, 811, uri, 10, 13)
+        pretty1 = r1["result"]["pretty"]
+        # Change ONLY foo_def's body — not the theorem's tacText.
+        v2 = v1.replace("foo (n:num) = n + 1", "foo (n:num) = n + 999")
+        idx_before = c.total_msgs()
+        _did_change_full(c, uri, v2, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx_before),
+                    "v2 compileCompleted")
+        r2 = _send_goalstate(c, 812, uri, 10, 13)
+        pretty2 = r2["result"]["pretty"]
+        # v1's rw closes the goal (`0 + 1 = 1`); v2's leaves it open
+        # (`0 + 999 = 1`).  A stale cache would show v1's closed state
+        # for the v2 query.
+        assert_true(pretty1 != pretty2,
+                    f"pretty differs after upstream change\n"
+                    f"v1: {pretty1!r}\nv2: {pretty2!r}")
+    finally:
+        c.close()
+
+
 def test_goalState_case_split_produces_two_subgoals():
     """Slice D: after `Cases_on \\`p\\``, the goalstate should have two
     subgoals — one with `p` as an assumption, one with `¬p`.  The tactic
@@ -1866,6 +1912,8 @@ TESTS = [
                                      test_goalState_case_split_produces_two_subgoals),
     ("goalState_cache_invalidates_on_tactic_edit",
                                      test_goalState_cache_invalidates_on_tactic_edit),
+    ("goalState_cache_invalidates_on_upstream_change",
+                                     test_goalState_cache_invalidates_on_upstream_change),
 ]
 
 
