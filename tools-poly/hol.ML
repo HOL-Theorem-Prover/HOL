@@ -413,9 +413,6 @@ fun main() = let
   val original_die = die
   fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
   val allincs = ReadHMF.find_includes (OS.FileSys.getDir())
-  val _ = ReadHMF.extend_path_with_includes
-            {verbosity = 1 + (if debug then 1 else 0),
-             lpref = Meta.loadPath}
   val _ = diag ("allincs = ["^String.concatWith ", " allincs ^"]")
   val base_state = Option.map mkAbs base_state
   val output = Option.map mkAbs output
@@ -433,6 +430,11 @@ fun main() = let
                      PolyML.SaveState.loadState f
                      handle e => die ("Couldn't load HOL base-state "^f^": "^
                                       General.exnMessage e))
+  (* AFTER loadState — the saved state restores refs to their save-
+     time values and would otherwise wipe any earlier extension. *)
+  val _ = ReadHMF.extend_path_with_includes
+            {verbosity = 1 + (if debug then 1 else 0),
+             lpref = Meta.loadPath}
   val _ = buildheap_extra_data := extra_data
   val _ = diag ("Buildheap extra now = " ^
                 (case !buildheap_extra_data of
