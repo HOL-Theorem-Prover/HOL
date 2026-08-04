@@ -21,18 +21,34 @@ local
      stay off the interactive hot path. *)
   val walkerBudgetMs = 1500
 
+  fun logStderr s = (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
+
+  (* Runs `f` with the calling thread set to `private_interrupts`
+     (InterruptAsynchOnce), so the canary's `Thread.interrupt` lands
+     asynchronously at the next safe point instead of just setting a
+     flag that pure ML never polls.  Under spawnJob's default
+     `InterruptSynch`, METIS_TAC would never see the interrupt and
+     the walker would run forever — pinning the LSP at 100% CPU per
+     stuck query and blocking further auto-follow requests. *)
   fun withTimeout ms f = let
     val here = Thread.self ()
     val done = ref false
     val mtx = Mutex.mutex ()
     fun markDone () =
       (Mutex.lock mtx; done := true; Mutex.unlock mtx)
-    val _ = Thread.fork (fn () => (
+    fun canary () = (
       OS.Process.sleep (Time.fromMilliseconds ms);
       Mutex.lock mtx;
-      (if !done then () else Thread.interrupt here);
-      Mutex.unlock mtx), [])
-  in f () before markDone () end
+      (if !done then ()
+       else (logStderr ("goal-state walker exceeded " ^
+                        LargeInt.toString ms ^ "ms budget; interrupting\n");
+             Thread.interrupt here));
+      Mutex.unlock mtx)
+    val _ = Thread.fork (canary, [])
+  in Thread_Attributes.with_attributes
+       Thread_Attributes.private_interrupts (fn _ => f ())
+     before markDone ()
+  end
 
   fun ppGoal (asms, g) = {
     asms = List.map Parse.term_to_string asms,
