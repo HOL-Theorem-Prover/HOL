@@ -3,6 +3,37 @@
    goalFrag and return the goal-state at the cursor. *)
 
 local
+  (* Wall-clock budget on the walker.  Users routinely park their
+     cursor past the last tactic in a Proof block; that tactic is
+     often a closer (METIS_TAC, DECIDE_TAC, …) that takes seconds
+     to run.  Without a budget the walker executes it every time
+     the auto-follow request fires, and the LSP hangs.  The canary
+     Thread.interrupts this thread when the budget expires; the
+     walker's `Portable.Interrupt` handler catches, flushes its
+     snapshot cache, and returns the pre-step state.
+
+     `src/portableML/poly/concurrent/Timeout.sml` implements this
+     shape properly (with Event_Timer + race-safe cancel), but it
+     isn't linked into the LSP heap; the hand-rolled canary below
+     avoids the extra dependency.
+
+     Long enough that most closers complete, short enough that stalls
+     stay off the interactive hot path. *)
+  val walkerBudgetMs = 1500
+
+  fun withTimeout ms f = let
+    val here = Thread.self ()
+    val done = ref false
+    val mtx = Mutex.mutex ()
+    fun markDone () =
+      (Mutex.lock mtx; done := true; Mutex.unlock mtx)
+    val _ = Thread.fork (fn () => (
+      OS.Process.sleep (Time.fromMilliseconds ms);
+      Mutex.lock mtx;
+      (if !done then () else Thread.interrupt here);
+      Mutex.unlock mtx), [])
+  in f () before markDone () end
+
   fun ppGoal (asms, g) = {
     asms = List.map Parse.term_to_string asms,
     goal = Parse.term_to_string g
@@ -40,11 +71,12 @@ val () = LSPExtension.goalStateAtPos :=
     in case (initialGoal, steps) of
          (SOME tm, SOME sts) => let
            val startState = goalFrag.new_goal ([], tm)
-           val finalState = TacticWalker.walkTo {
-             plugins = plugins, theoremName = name,
-             theoremStart = quoteStart,
-             tacText = tacText, startState = startState,
-             steps = sts, cursor = tacCursor}
+           val finalState = withTimeout walkerBudgetMs (fn () =>
+             TacticWalker.walkTo {
+               plugins = plugins, theoremName = name,
+               theoremStart = quoteStart,
+               tacText = tacText, startState = startState,
+               steps = sts, cursor = tacCursor})
            in SOME {theorem = name, step = stepIndex (sts, tacCursor),
                     goals = List.map ppGoal (goalFrag.top_goals finalState),
                     pretty = ppState finalState}

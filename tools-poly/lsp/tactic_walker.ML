@@ -58,10 +58,18 @@ fun compileTactic src = let
                      PolyML.Compiler.CPPrintStream swallow,
                      PolyML.Compiler.CPOutStream swallow,
                      PolyML.Compiler.CPNameSpace LSPNameSpace.fileNS]) ()
-          handle _ => ()
+          handle Portable.Interrupt => raise Portable.Interrupt
+               | _ => ()
   in !holder end
 
-fun try f state = SOME (f state) handle _ => NONE
+(* NB: `try` deliberately does NOT swallow Portable.Interrupt (=
+   Thread.Interrupt).  Callers rely on interrupts propagating out of
+   the walker so a wall-clock budget can halt a slow tactic (e.g.
+   METIS_TAC) at the cursor's step and return the pre-step state
+   from the cache. *)
+fun try f state = SOME (f state)
+  handle Portable.Interrupt => raise Portable.Interrupt
+       | _ => NONE
 
 fun stepSpan (TacticSteps.Expand span)     = SOME span
   | stepSpan (TacticSteps.ExpandList span) = SOME span
@@ -178,13 +186,19 @@ fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
     | collect (step :: rest) idx state acc =
         if idx < resumeIdx then collect rest (idx + 1) state acc
         else if stopAt step then (state, acc)
-        else case applyStep tacText step state of
-               NONE => (state, acc)
-             | SOME newState =>
-               let val acc' = case snapOf idx step newState of
-                                NONE => acc
-                              | SOME s => s :: acc
-               in collect rest (idx + 1) newState acc' end
+        else (case applyStep tacText step state of
+                NONE => (state, acc)
+              | SOME newState =>
+                let val acc' = case snapOf idx step newState of
+                                 NONE => acc
+                               | SOME s => s :: acc
+                in collect rest (idx + 1) newState acc' end)
+             (* Wall-clock budget from `goal_state_init.ML` interrupts
+                this thread when a tactic (typically METIS_TAC) exceeds
+                the budget.  Treat the interrupt like a failed step:
+                halt with the pre-step state, cache what we already
+                walked, and let the caller return partial state. *)
+             handle Portable.Interrupt => (state, acc)
   val (finalState, newSnaps) = collect steps 0 resumeState []
   val _ = case (cacheRefOpt, newSnaps) of
       (SOME cacheRef, _::_) => let
