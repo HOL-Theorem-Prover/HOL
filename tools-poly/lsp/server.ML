@@ -709,7 +709,8 @@ fun start {diag, dbg} = let
        check will see the new value and self-abort. *)
     debounce := !debounce + 1;
     if #done (#parse (!lastTrees)) then
-      (!LSPExtension.resetForCompile (); ())
+      (!LSPExtension.notifyCompileStart (!minEditOffset);
+       !LSPExtension.resetForCompile (); ())
     else let
     val _ = stopCompile compile
     val {text as {lines, ...}, parse = lastParse} = !lastTrees
@@ -727,9 +728,11 @@ fun start {diag, dbg} = let
     val (initialTrees, resumeStart, oldDiags) =
       case resumeSnap of
         NONE => (
+          !LSPExtension.notifyCompileStart (!minEditOffset);
           !LSPExtension.resetForCompile ();
           (emptyParseData 8, 0, oldDiags))
       | SOME snap => let
+          val _ = !LSPExtension.notifyCompileStart (!minEditOffset)
           val _ = !LSPExtension.restoreCompileSnap (#compileSnap snap)
           val {endByte, builtTrees, diags = snapDiags, plugins,
                ...} = snap

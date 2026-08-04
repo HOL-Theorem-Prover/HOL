@@ -1777,6 +1777,45 @@ def test_goalState_cache_invalidates_on_upstream_change():
         c.close()
 
 
+def test_goalState_cache_preserved_when_edit_is_downstream():
+    """Slice E: editing content AFTER a theorem should not invalidate
+    that theorem's cache.  The partial-invalidate logic keyed on
+    `minEditOffset` keeps entries whose theoremStart is before the
+    edit.  We verify by comparing the goalState response before and
+    after a downstream-only edit — both should succeed and produce
+    the same goal-state text."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/downstream_edit.sml"
+        v1 = ("Theory downstream_edit\n"
+              "Ancestors arithmetic\n\n"
+              "Theorem t:\n"
+              "  !n:num. n + 0 = n\n"
+              "Proof\n"
+              "  gen_tac >> rw[]\n"
+              "QED\n\n"
+              "val downstream = 1\n")
+        _did_open(c, uri, v1, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "v1 compileCompleted")
+        r1 = _send_goalstate(c, 821, uri, 6, 15)  # after gen_tac
+        pretty1 = r1["result"]["pretty"]
+        # Change only content AFTER t — the theorem's dec is untouched.
+        v2 = v1.replace("val downstream = 1\n", "val downstream = 42\n")
+        idx_before = c.total_msgs()
+        _did_change_full(c, uri, v2, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx_before),
+                    "v2 compileCompleted")
+        r2 = _send_goalstate(c, 822, uri, 6, 15)
+        pretty2 = r2["result"]["pretty"]
+        assert_eq(pretty1, pretty2,
+                  "downstream edit leaves the theorem's goal state "
+                  "unchanged")
+    finally:
+        c.close()
+
+
 def test_goalState_case_split_produces_two_subgoals():
     """Slice D: after `Cases_on \\`p\\``, the goalstate should have two
     subgoals — one with `p` as an assumption, one with `¬p`.  The tactic
@@ -1914,6 +1953,8 @@ TESTS = [
                                      test_goalState_cache_invalidates_on_tactic_edit),
     ("goalState_cache_invalidates_on_upstream_change",
                                      test_goalState_cache_invalidates_on_upstream_change),
+    ("goalState_cache_preserved_when_edit_is_downstream",
+                                     test_goalState_cache_preserved_when_edit_is_downstream),
 ]
 
 

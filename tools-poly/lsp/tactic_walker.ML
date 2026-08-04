@@ -24,6 +24,7 @@ structure TacticWalker :> sig
   val walkTo : {
     plugins: LSPExtension.plugin_data,
     theoremName: string,
+    theoremStart: int,   (* file byte offset of the theorem's dec *)
     tacText: string,
     startState: goalFrag.goalstate,
     steps: TacticSteps.step list,
@@ -86,7 +87,10 @@ fun applyStep tacText step state = case stepSpan step of
     | _ => SOME state)  (* Expand/ExpandList handled above *)
 
 type snap = {stepIdx: int, endByte: int, state: goalFrag.goalstate}
-type cacheEntry = {tacText: string, snapshots: snap list}
+type cacheEntry = {
+  tacText: string,
+  theoremStart: int,  (* file byte offset where the theorem's dec begins *)
+  snapshots: snap list}
 type cacheMap = (string, cacheEntry) Binarymap.dict
 type cacheData = cacheMap ref
 
@@ -113,17 +117,28 @@ val cacheTag : cacheData LSPExtension.tag =
     in SOME r end
   }
 
-(* Wrap the LSP's existing `resetForCompile` to also empty the cache
-   at compile-start.  Between compiles, Context is stable and cache
-   entries remain valid; a new compile can change the Context (an
-   upstream redefinition, new Overload_on, …) making cached goalstates
-   stale even if a theorem's tacText hasn't changed. *)
-val () = let val prev = !LSPExtension.resetForCompile in
-  LSPExtension.resetForCompile := (fn () => (
-    case !latestCacheRef of
-      NONE => ()
-    | SOME r => r := Binarymap.mkDict String.compare;
-    prev ()))
+(* Chain into `notifyCompileStart` — fires at compile-start with the
+   buffer's `minEditOffset`.  Cache entries whose theorem begins at
+   or after the edit are downstream of the change and may reference a
+   stale HOL Context; drop them.  Entries strictly before the edit
+   are still valid — their Context is inherited from the snapshot or
+   from the unchanged file prefix, so their cached snapshots are
+   safe to reuse. *)
+val () = let val prev = !LSPExtension.notifyCompileStart in
+  LSPExtension.notifyCompileStart := (fn minEdit => (
+    (case (!latestCacheRef, minEdit) of
+       (SOME r, SOME edit) =>
+         r := Binarymap.foldl
+                (fn (name, entry, m) =>
+                  if #theoremStart entry >= edit then m
+                  else Binarymap.insert (m, name, entry))
+                (Binarymap.mkDict String.compare) (!r)
+     | (SOME r, NONE) =>
+         (* No pending edit but a compile is starting: full-file
+            didOpen or a manual re-compile.  Safest to drop all. *)
+         r := Binarymap.mkDict String.compare
+     | (NONE, _) => ());
+    prev minEdit))
 end
 
 (* Largest snapshot whose endByte ≤ cursor. *)
@@ -140,14 +155,15 @@ fun resumeFrom NONE _ startState = (0, startState, [])
   | resumeFrom (SOME cacheRef) {theoremName, tacText, cursor} startState =
       case Binarymap.peek (!cacheRef, theoremName) of
         NONE => (0, startState, [])
-      | SOME {tacText = t, snapshots} =>
+      | SOME {tacText = t, snapshots, ...} =>
           if t <> tacText then (0, startState, [])
           else case bestSnap cursor snapshots of
                  NONE => (0, startState, snapshots)
                | SOME {stepIdx, state, ...} =>
                    (stepIdx + 1, state, snapshots)
 
-fun walkTo {plugins, theoremName, tacText, startState, steps, cursor} = let
+fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
+            steps, cursor} = let
   val cacheRefOpt = LSPExtension.getPluginData (plugins, cacheTag)
   val (resumeIdx, resumeState, priorSnaps) =
     resumeFrom cacheRefOpt
@@ -181,7 +197,8 @@ fun walkTo {plugins, theoremName, tacText, startState, steps, cursor} = let
                         merged
       in cacheRef := Binarymap.insert
                        (!cacheRef, theoremName,
-                        {tacText = tacText, snapshots = deduped})
+                        {tacText = tacText, theoremStart = theoremStart,
+                         snapshots = deduped})
       end
     | _ => ()  (* no cache slot yet, or nothing new to store *)
   in finalState end

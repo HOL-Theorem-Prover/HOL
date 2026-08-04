@@ -112,6 +112,14 @@ val thmLookup: (string -> string option) ref
    the LSP runtime init in tools-poly/hol.ML. *)
 val resetForCompile: (unit -> unit) ref
 
+(* Called at the start of each LSP compile pass, alongside
+   `resetForCompile`.  The int-option argument is the buffer's
+   current `minEditOffset` — the minimum byte offset of any pending
+   edit — or NONE if no edit is pending.  Consumers use this to
+   invalidate downstream cached state without discarding entries
+   whose byte position is before the edit. *)
+val notifyCompileStart: (int option -> unit) ref
+
 (* Snapshot / restore of the per-compile state channels needed for
    mid-file recompile resume: the HOL Context, the Poly/ML loaded-
    modules set, and the LSP file-namespace layer (see

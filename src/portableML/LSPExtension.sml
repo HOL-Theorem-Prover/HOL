@@ -134,6 +134,7 @@ val fixupTheoremLink = ref (fn _ => NONE)
 val helpLookup = ref (fn _ => [])
 val thmLookup : (string -> string option) ref = ref (fn _ => NONE)
 val resetForCompile : (unit -> unit) ref = ref (fn () => ())
+val notifyCompileStart : (int option -> unit) ref = ref (fn _ => ())
 
 type compileSnap = unit -> unit
 val captureCompileSnap : (unit -> compileSnap) ref = ref (fn () => (fn () => ()))
