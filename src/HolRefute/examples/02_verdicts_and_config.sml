@@ -10,6 +10,7 @@
 (* ===================================================================== *)
 
 load "Refute";
+load "llistTheory";   (* one goal in section 8 *)
 open Refute;
 
 (* --------------------------------------------------------------------- *)
@@ -192,10 +193,103 @@ refute
 (* one you predicted.  This is how the test suites pin behaviour, and it *)
 (* is equally useful in a script that should fail loudly if a conjecture *)
 (* it assumed was false suddenly stops being refutable.                  *)
+(*                                                                       *)
+(* There are seven expectations:                                         *)
+(*                                                                       *)
+(*   NoExpectation       assert nothing.  The default, and what a call   *)
+(*                       carrying no [upd_expect] clause uses.           *)
+(*   ExpectCex           a counterexample was found, of any strength.    *)
+(*   ExpectNone          NoCounterexample: the search ran to completion  *)
+(*                       and reported there is nothing to find.          *)
+(*   ExpectGenuine       a counterexample whose strength is Genuine.     *)
+(*   ExpectQuasiGenuine  ... whose strength is QuasiGenuine.             *)
+(*   ExpectPotential     ... whose strength is Potential.                *)
+(*   ExpectUnknown       Unknown: no answer either way.                  *)
+(*                                                                       *)
+(* [ExpectCex] therefore asserts that something was found and says       *)
+(* nothing about how strong it is, while [ExpectGenuine],                *)
+(* [ExpectQuasiGenuine] and [ExpectPotential] each pin one rung of the   *)
+(* certainty ladder of section 3.  Pinning a rung is the stricter        *)
+(* assertion: a call that degrades from Genuine to Potential still       *)
+(* passes under [ExpectCex] and raises under [ExpectGenuine].  What is   *)
+(* compared is the best certainty among the counterexamples returned,    *)
+(* so a run that also collected weaker ones is judged on its strongest.  *)
 (* --------------------------------------------------------------------- *)
 
 refute (upd_expect ExpectGenuine (!the_config))
   ``(x : num) - y + y = x``;
+
+(* The three remaining rungs need goals that reach them.  [even_rel] is  *)
+(* an inductive predicate, and a Hol_reln constant carries no computeLib *)
+(* equations, so certification cannot evaluate the premise back and the  *)
+(* hit stops at Potential.  Section 1 of 05_smart_generators.sml is      *)
+(* where this predicate is the subject; here it is only a convenient     *)
+(* source of a Potential verdict.                                        *)
+
+val (even_rel_rules, even_rel_ind, even_rel_cases) = Hol_reln `
+  (even_rel 0) /\
+  (!n. even_rel n ==> even_rel (SUC (SUC n)))`;
+
+refute
+  (!the_config
+     |> upd_abort_potential true
+     |> upd_expect ExpectPotential)
+  ``even_rel n ==> n < 5``;
+(* ==> Counterexample n = 6 (backend exhaustive, substrate native,       *)
+(*     after 4 tests), certainty                                         *)
+(*     Potential ["evaluation stuck on: even_rel"]                       *)
+
+(* The very same call passes under [ExpectCex] as well: something was    *)
+(* found, which is all [ExpectCex] asks.                                 *)
+
+refute
+  (!the_config
+     |> upd_abort_potential true
+     |> upd_expect ExpectCex)
+  ``even_rel n ==> n < 5``;
+(* ==> the same Potential counterexample, and no exception               *)
+
+(* QuasiGenuine is a model-finder verdict: a model found with one of the *)
+(* soundness checks switched off.  [upd_bisim_depth [~1]] drops the      *)
+(* bisimulation recheck, so nothing compares two lazy lists              *)
+(* coinductively and the model below may be two names for one list;      *)
+(* the caveat printed with it says how to undo that.  Section 3 of       *)
+(* 10_model_finder_advanced.sml is where this is the subject.  Like the  *)
+(* calls in section 4 the call pins one Kodkodi thread and one           *)
+(* cardinality row, and it needs a Kodkodi component; without one it     *)
+(* reports Unknown ["no configured backend"].                            *)
+
+refute
+  (!the_config
+     |> upd_backends (SOME ["kodkod"])
+     |> upd_max_threads 1
+     |> upd_card [(NONE, [2])]
+     |> upd_bisim_depth [~1]
+     |> upd_expect ExpectQuasiGenuine)
+  ``(xs = llist$LCONS (a : num) xs /\ ys = llist$LCONS a ys) ==> xs = ys``;
+(* ==> Refute found a counterexample (backend: kodkod, substrate:        *)
+(*     kodkod):                                                          *)
+(*       Scope: card num llist = 2, card num = 2                         *)
+(*         xs = safe_The (λω. ω = 1:::ω)                                 *)
+(*         a = 1                                                         *)
+(*         ys = safe_The (λω. ω = 1:::ω)                                 *)
+(*       Quasi-genuine:                                                  *)
+(*         Try again with "bisim_depth" set to a nonnegative value       *)
+
+(* An Unknown is not a weak counterexample but the absence of one: the   *)
+(* exhaustive backend ran its schedule without reaching a witness and    *)
+(* without exhausting the space, so it declines to conclude anything.    *)
+(* The backend has to be pinned here, because left to itself the model   *)
+(* finder answers this goal Genuine with x = 26.                         *)
+
+refute
+  (!the_config
+     |> upd_backends (SOME ["exhaustive"])
+     |> upd_expect ExpectUnknown)
+  ``(x : num) < 20``;
+(* ==> Refute could not determine an answer                              *)
+(*     Reasons:                                                          *)
+(*       exhaustive: search space not exhausted                          *)
 
 (* Wrong prediction: the call raises Refute.expect.  The report is       *)
 (* printed first, then the exception carries the mismatch.               *)
@@ -252,3 +346,16 @@ the_config := (!the_config
                  |> upd_expect ExpectGenuine);
 refute_def ``(xs : num list) <> [] ==> HD xs = 0``;
 the_config := default_config;
+
+(* [default_config] is the blunt way back.  After 09_model_finder.sml    *)
+(* and 10_model_finder_advanced.sml, where one configuration carries     *)
+(* eight or ten model-finder knobs at once, undoing them a single        *)
+(* [upd_] at a time is error-prone, and [default_config] also discards   *)
+(* whatever else the session had set.  The two finer resets replace one  *)
+(* block and leave the rest of the configuration standing.               *)
+
+#size (#qc (upd_qc default_qc_config (!the_config)));
+(* ==> val it = 10: int                                                  *)
+
+#max_genuine (#mf (upd_mf default_mf_config (!the_config)));
+(* ==> val it = 1: int                                                   *)

@@ -130,8 +130,9 @@ Module layout:
 * Refute.sig and Refute.sml: the public API facade.
 
 The `examples/` directory holds worked interactive transcripts of the whole
-user-facing surface, from first steps to the model finder and the extension
-registries; `examples/README` indexes them.  They are session transcripts
+user-facing surface, from first steps to the model finder, the extension
+registries, and which library types each half of Refute can serve;
+`examples/README` indexes them.  They are session transcripts
 rather than theory scripts, so Holmake does not build them; run one with
 `bin/hol --holstate=src/HolRefute/refuteheap < examples/<file>`.
 
@@ -210,8 +211,10 @@ Registrations are session-local ML state and create no theory content:
   normalization-faithfulness corpus passed.  The idempotent
   `Refute.register_frac_type_rat ()` restores or refreshes both the encoding
   and the built-in transformation, which displays reconstructed Frac atoms
-  with `rat_cons`'s `//` syntax.  Support for `real` via Frac is deferred;
-  certification of real literals is a real blocker.
+  with `rat_cons`'s `//` syntax.  `examples/12_library_types.sml` works the
+  encoding through: what the shorthand registers, what an incomplete ersatz
+  table costs, and what restoring it looks like.  Support for `real` via
+  Frac is deferred; certification of real literals is a real blocker.
 
 Structural registration types use distinct type variables as parameters.
 Abs, rep, case, and constructor terms must be existing constants.  A later

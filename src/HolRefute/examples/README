@@ -4,7 +4,8 @@ HolRefute by example
 Interactive transcripts covering the user-facing surface of HolRefute:
 counterexample search over executable definitions, native narrowing,
 the Kodkod model finder, the generator and display registries, the
-unused-assumption sweep, and the extension points.
+unused-assumption sweep, the extension points, and which half of Refute
+serves which library type.
 
 Each file is self-contained and meant to be read top to bottom.  Nothing
 here is built by Holmake; these are session transcripts, not theory
@@ -29,8 +30,9 @@ examples mention.
 
 Poly/ML only: the tree build skips HolRefute on other ML systems.
 
-Files 09 and 10 drive the model finder, which needs a Kodkodi 1.5.7
-component and a Java runtime:
+Files 09 and 10 drive the model finder, and sections 4 and 5 of 12 are
+model-finder only.  The model finder needs a Kodkodi 1.5.7 component
+and a Java runtime:
 
     export HOL4_KODKODI=/path/to/kodkodi-1.5.7
 
@@ -44,18 +46,20 @@ carries on — `bin/hol` reading a file is a REPL, so the exception is
 printed and the next statement still runs — but the run is no longer
 clean.  That is the assertion working, not a fault.
 
-The reach is also wider than the two model-finder files.  At default
-settings NoCounterexample is a model-finder verdict: the QC backends can
-only report that they did not exhaust the search space, and it is kodkod
-that turns that into "no counterexample found within the tested finite
-bounds".  So a call whose transcript claims NoCounterexample needs
-Kodkodi even when its own reasons never mention it.
+The reach is also wider than the files that make the model finder their
+subject.  At default settings NoCounterexample is a model-finder
+verdict: the QC backends can only report that they did not exhaust the
+search space, and it is kodkod that turns that into "no counterexample
+found within the tested finite bounds".  So a call whose transcript
+claims NoCounterexample needs Kodkodi even when its own reasons never
+mention it.
 
 Measured by running each file with and without HOL4_KODKODI set:
 
     01  four calls: the NoCounterexample calls of sections 2, 4 and 5,
         and the nitpick of section 8
-    02  two calls, both in section 4
+    02  three calls: two in section 4, and the QuasiGenuine call of
+        section 8
     03  one call, the set goal of section 5
     08  the whole sweep: with Kodkodi it reports two theorems carrying
         superfluous assumptions, without it none, counting the
@@ -63,6 +67,11 @@ Measured by running each file with and without HOL4_KODKODI set:
     09  every call
     10  every call
     11  three calls: section 3, and both calls of section 4
+    12  nine calls: one in section 2, all three in section 4, all three
+        in section 5, and both in section 6.  Section 3's model-finder
+        call is a tenth that needs Kodkodi but does not raise, because
+        Unknown is what it expects either way; only the reason quoted
+        under it changes
 
 04, 05, 06 and 07 produce byte-identical output either way.  Everything
 else runs with no external tools.
@@ -130,9 +139,20 @@ The files
     type-variable scopes; the translation knobs; debug output.
 
 11_extending_refute.sml
-    Registering a backend and its certainty ceiling; the refute_simp,
-    refute_psimp and refute_unfold theorem sets; ersatz constants; where
-    substrates plug in; restoring the built-in registrations.
+    Registering a backend and its certainty ceiling; what the requires
+    and input fields of a backend decide; the refute_simp, refute_psimp
+    and refute_unfold theorem sets; ersatz constants; registering a
+    substrate of your own; restoring the built-in registrations.
+
+12_library_types.sml
+    Which half of Refute serves which library type.  Integers, served by
+    both; characters and strings, which only the quickcheck path
+    reaches; machine words, and the bare-numeral trap that looks like a
+    Refute failure but is HOL's type inference; rationals, which only
+    the model finder reaches, through the Frac encoding;
+    register_frac_type and what an incomplete ersatz table costs; and
+    finite maps as the documented edge, where an Unknown names the
+    missing capability rather than judging the conjecture.
 
 
 Further reading
@@ -144,3 +164,10 @@ signature: everything used in these files appears there, except where a
 file explicitly reaches into an implementation module.  Those are noted
 at the point of use, or — where one file has several, as 11 does — once
 at the head of the file.
+
+Two entries in that signature are deliberately exercised by nothing here.
+`upd_allow_function_inversion` and `upd_use_subtype` are reserved: no
+module outside `Refute_Core` reads them, and `show_config` prints both
+with a `(reserved)` marker.  There is no behaviour to demonstrate, so
+demonstrating them would mean inventing some.  Every other value in
+`../Refute.sig` appears in at least one file above.

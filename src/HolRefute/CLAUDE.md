@@ -98,8 +98,8 @@ This file provides guidance to coding agents when working with the HolRefute pro
   raises `Refute.expect` on the next run instead of going quiet; a changed
   binding, scope or runtime figure still only shows on inspection.  That
   run is a REPL: a raise does not stop it and the exit status stays 0, so
-  grep the captured output for `Exception`/`Refute.expect`.  The only two
-  expected are 01 §5's and 02 §8's, both deliberate.
+  grep the captured output for `Exception`/`Refute.expect`.  The only
+  three expected are 01 §5's, 02 §8's and 12 §3's, all deliberate.
 - Model-finder calls in `examples/` pin `upd_max_threads 1` and an explicit
   `upd_card` row, so quoted scopes and models are exact.  The sole
   exception is the opener of 09 §1, left racing on purpose and labelled;

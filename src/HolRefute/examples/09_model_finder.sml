@@ -18,12 +18,13 @@
 (*      ../../bin/hol --holstate=refuteheap \                            *)
 (*          < examples/09_model_finder.sml                               *)
 (*                                                                       *)
-(*  Around 105 seconds end to end on a busy 32-core host: 24 Kodkodi     *)
-(*  calls ranging from 0.2 to 11 seconds, median 3, about 86 of those    *)
-(*  seconds spent inside Kodkodi and much of a short call in JVM         *)
-(*  startup.  Read the figure as machine-dependent rather than as a      *)
-(*  promise — it moves with the host, the Java runtime, and whatever     *)
-(*  else the machine is doing.                                           *)
+(*  Around 46 seconds end to end on an otherwise idle 32-core host: 27   *)
+(*  Kodkodi calls ranging from 0.05 to 2.6 seconds, median 1.3, about    *)
+(*  35 of those seconds spent inside Kodkodi and most of the rest in     *)
+(*  session start-up and the JVM.  Read the figure as machine-dependent  *)
+(*  rather than as a promise — it moves with the host, the Java          *)
+(*  runtime, and whatever else the machine is doing, and it roughly      *)
+(*  doubles when the machine is busy.                                    *)
 (*                                                                       *)
 (*  Corpus convention: every model-finder call in examples/ pins its     *)
 (*  search with [upd_max_threads 1] and an explicit [upd_card] row, so   *)
@@ -138,7 +139,8 @@ refute (upd_expect ExpectNone (upd_card [(NONE, [2])] mf))
 (*                                                                       *)
 (* [upd_card] sets the candidate cardinalities, either for every type     *)
 (* (NONE key) or per type.  Small scopes are fast; large ones reach       *)
-(* counterexamples that need more elements.                              *)
+(* counterexamples that need more elements.  [upd_max] is its             *)
+(* per-constructor sibling, at the end of this section.                   *)
 (* --------------------------------------------------------------------- *)
 
 refute (upd_expect ExpectNone (upd_card [(NONE, [1, 2])] mf))
@@ -175,6 +177,43 @@ refute
   ``(n : num) < 5``;
 (* ==> Scope: card num = 8, n = 7, Certified: ⊢ ¬∀n. n < 5               *)
 (*     Forcing the unary encoding puts the same row back on :num itself. *)
+
+(* [upd_max] bounds a scope from the other side.  Its rows are keyed by   *)
+(* constructor rather than by type, and say how many values that          *)
+(* constructor may contribute to its type's carrier; ~1, the default, is  *)
+(* unbounded.  The constructor is written with its result type because    *)
+(* a row is matched by name and result type together.                    *)
+
+refute (upd_expect ExpectGenuine (upd_card [(NONE, [4])] mf))
+  ``LENGTH (xs : num list) < 2``;
+(* ==> Scope: card num list = 4, card num = 4                            *)
+(*       xs = [0; 0]                                                     *)
+(*     Certified: ⊢ ¬∀xs. LENGTH xs < 2                                  *)
+
+refute
+  (mf |> upd_card [(NONE, [4])]
+      |> upd_max [(SOME ``CONS : num -> num list -> num list``, [1])]
+      |> upd_expect ExpectNone)
+  ``LENGTH (xs : num list) < 2``;
+(* ==> NoCounterexample                                                  *)
+(*     One cons cell cannot build a two-element list, so bounding CONS   *)
+(*     removes the counterexample while leaving the requested            *)
+(*     cardinality alone — which is what [upd_card] on its own has no    *)
+(*     way to say.                                                       *)
+
+refute
+  (mf |> upd_card [(NONE, [4])]
+      |> upd_max [(SOME ``CONS : num -> num list -> num list``, [2])]
+      |> upd_expect ExpectGenuine)
+  ``LENGTH (xs : num list) < 2``;
+(* ==> Scope: card num list = 3, card num = 4                            *)
+(*       xs = [2; 0]                                                     *)
+(*     Certified: ⊢ ¬∀xs. LENGTH xs < 2                                  *)
+(*     Two cons cells are enough again, and the list carrier is now 3    *)
+(*     rather than the 4 that was asked for: two values from CONS plus   *)
+(*     [] is everything the type can hold under that bound.  That is     *)
+(*     what "contribute to its type's carrier" means — the bound is on   *)
+(*     the constructor, and the carrier follows.                         *)
 
 (* --------------------------------------------------------------------- *)
 (* 5.  Reading the model                                                 *)

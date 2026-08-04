@@ -359,3 +359,51 @@ refute
 (* ==> Refute could not determine an answer                              *)
 (*     Reasons:                                                          *)
 (*       exhaustive: search space not exhausted                          *)
+
+(* [optimise_equality] is the neighbouring knob, and the goal above is   *)
+(* a poor place to watch it work: turning it off there stops the run in  *)
+(* exactly the same place, Unknown ["exhaustive: search space not        *)
+(* exhausted"], because that goal leans on both levers at once.  A       *)
+(* scalar goal separates them.                                           *)
+
+refute
+  (!the_config
+     |> upd_backends (SOME ["exhaustive"])
+     |> upd_size 3
+     |> upd_expect ExpectGenuine)
+  ``(n : num) = 12 ==> F``;
+
+(* ==> Refute found a counterexample                                     *)
+(*     (backend: exhaustive, substrate: native, size 1):                 *)
+(*       n = 12                                                          *)
+(*     Certified: |- ~!n. n = 12 ==> F                                   *)
+
+refute
+  (!the_config
+     |> upd_backends (SOME ["exhaustive"])
+     |> upd_size 3
+     |> upd_optimise_equality false
+     |> upd_expect ExpectUnknown)
+  ``(n : num) = 12 ==> F``;
+
+(* ==> Refute could not determine an answer                              *)
+(*     Reasons:                                                          *)
+(*       exhaustive: search space not exhausted                          *)
+(*     val it = Unknown ["exhaustive: search space not exhausted"]       *)
+
+(* With the knob on, an equational assumption is solved rather than      *)
+(* tested.  The planner takes [n = 12], tries both orientations, and     *)
+(* keeps the one whose other side is a variable that does not occur in   *)
+(* the expression and has not been generated already; that variable is   *)
+(* then bound straight to the value of the expression, so a single test  *)
+(* settles the goal whatever the size bound is.  With the knob off the   *)
+(* assumption stays an ordinary guard over enumerated values of [n],     *)
+(* and a size 3 budget never enumerates as far as 12.                    *)
+
+(* The two knobs therefore sit at different places.                      *)
+(* [smart_quantifier] is about how a quantifier is translated: switched  *)
+(* off, the goal is not compiled into a plan at all but degenerates to   *)
+(* "generate every free variable, then test the whole formula".          *)
+(* [optimise_equality] is about how an equational assumption is used     *)
+(* once there is a plan to put it in.  The list goal above needs both,   *)
+(* which is why it makes a poor demonstration of either.                 *)
