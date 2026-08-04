@@ -15647,6 +15647,87 @@ val _ = require_msg (check_result (fn () =>
   "for a datatype domain enumeration, or [atom] misread an atom")
   (fn () => ()) ()
 
+(* A function witness is displayed as a lambda, so the name of its bound
+   variable is user-facing text.  Native extraction used to bind the
+   reconstructed constant function under the internal name it uses for the
+   argument, so the same witness printed as [\refute_function_argument. 0]
+   there and as [\x. 0] on compute. *)
+fun function_witness_binder_is_ordinary () =
+  let
+    val goal = ``(f : num -> num) x = x``
+    val variable = ``f : num -> num``
+    fun witness substrate =
+      case run_with_strategy Exhaustive
+             (upd_substrate substrate default_config) goal of
+          Counterexample (cex :: _) =>
+            Option.map #2 (List.find (fn (candidate, _) =>
+              Term.aconv candidate variable) (#bindings cex))
+        | _ => NONE
+  in
+    case (witness NativeSML, witness Compute) of
+        (SOME native, SOME compute) =>
+          List.all (fn value =>
+            not (String.isSubstring "refute_"
+              (Parse.term_to_string value))) [native, compute] andalso
+          Term.aconv native compute
+      | _ => false
+  end
+
+val _ = tprint "Refute function witness binder names"
+val _ = require_msg (check_result function_witness_binder_is_ordinary)
+  (fn () =>
+  "a function witness printed an internal binder name, or the substrates " ^
+  "disagreed about the witness")
+  (fn () => ()) ()
+
+(* A TypeBase entry is not always a datatype the generators can enumerate:
+   the finite-map entry has no constructors and no induction principle.
+   Reaching one threw out of [Refute_Gen.induction_key], and the outer
+   handler stringified the exception into the reason list, so the user was
+   shown a raw [Exception raised at TypeBasePure.induction_of0] dump.  A
+   reason is user-facing text and must never be one: it has to name what is
+   missing and what to do about it. *)
+val finite_map_goals =
+  [``FLOOKUP (fm : num |-> num) 0 = SOME 0``,
+   ``FDOM (fm : num |-> num) = {}``]
+
+fun finite_map_reason_is_a_diagnostic () =
+  let
+    fun diagnostic reason =
+      reason <> "" andalso
+      not (Char.isSpace (String.sub (reason, 0))) andalso
+      not (String.isSubstring "Exception" reason) andalso
+      not (String.isSubstring "induction_of0" reason) andalso
+      not (String.isSubstring "Match" reason)
+    fun reasons_of strategy goal =
+      case run_with_strategy strategy default_config goal of
+          Unknown reasons => reasons
+        | _ => []
+    fun reported strategy goal =
+      let val reasons = reasons_of strategy goal
+      in
+        not (null reasons) andalso List.all diagnostic reasons
+      end
+    (* The first goal is the one that reaches the generator lookup; the
+       second is refused earlier, over the set literal it is compared
+       against. *)
+    val generator_goal = hd finite_map_goals
+    fun actionable strategy =
+      List.exists (String.isSubstring "register a generator")
+        (reasons_of strategy generator_goal)
+  in
+    List.all (reported Exhaustive) finite_map_goals andalso
+    reported Narrowing generator_goal andalso
+    actionable Exhaustive andalso actionable Narrowing
+  end
+
+val _ = tprint "Refute finite-map generator refusal"
+val _ = require_msg (check_result finite_map_reason_is_a_diagnostic)
+  (fn () =>
+  "a finite-map goal reported no reason, or reported a raw exception dump " ^
+  "instead of an actionable generator diagnostic")
+  (fn () => ()) ()
+
 val _ = tprint "Refute narrowing backend"
 
 fun renamed_narrowing_uses_typed_certification_path () =

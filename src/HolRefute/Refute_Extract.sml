@@ -2930,8 +2930,10 @@ structure Refute_Extract = struct
           val domain_gen = generator_name "exh_" domain
           val range_gen = generator_name "exh_" range
           val equality = equality_name context domain
-          val variable = Term.mk_var
-            ("refute_function_argument", domain)
+          (* The reconstructed witness is displayed as a lambda, so this
+             name is user-facing; [Refute_EvalSML.fun_term] keeps it clear
+             of the body it ends up binding. *)
+          val variable = Term.mk_var ("x", domain)
           val variable_index = raw_index variable
           val update_value =
             pair
@@ -3092,8 +3094,8 @@ structure Refute_Extract = struct
           val domain_random = generator_name "rnd_" domain
           val range_random = generator_name "rnd_" range
           val equality = equality_name context domain
-          val variable = Term.mk_var
-            ("refute_function_argument", domain)
+          (* Displayed, exactly as in [exhaustive_function] above. *)
+          val variable = Term.mk_var ("x", domain)
           val variable_index = raw_index variable
           val enum = Refute_Gen.enumerate domain
           val points = case enum of
@@ -3959,18 +3961,22 @@ structure Refute_Extract = struct
       val prefix = ListPair.mapEq (fn ((quantifier, _), variable) =>
         (quantifier, variable)) (prefix, safe)
 
+      (* The brackets are load-bearing: an unbracketed [handle] binds to the
+         last arm of the [case], not to its scrutinee, which is what raises
+         here.  Without them the refusal below is dead and the missing
+         generator escapes as an exception instead. *)
       fun dependencies ty =
-        case Refute_Gen.spec_of ty of
-            Refute_Gen.GenDatatype {constrs, ...} =>
-              List.concat (map #2 constrs)
-          | Refute_Gen.GenFun _ =>
-              reject ("narrowing cannot generate function type " ^
-                type_name ty ^ " before finitization")
-          | Refute_Gen.GenCustom (_, {enumerate = SOME _, ...}) => []
-          | Refute_Gen.GenCustom _ =>
-              reject ("narrowing custom generator for " ^ type_name ty ^
-                " has no exhaustive enumeration")
-          | _ => []
+        (case Refute_Gen.spec_of ty of
+             Refute_Gen.GenDatatype {constrs, ...} =>
+               List.concat (map #2 constrs)
+           | Refute_Gen.GenFun _ =>
+               reject ("narrowing cannot generate function type " ^
+                 type_name ty ^ " before finitization")
+           | Refute_Gen.GenCustom (_, {enumerate = SOME _, ...}) => []
+           | Refute_Gen.GenCustom _ =>
+               reject ("narrowing custom generator for " ^ type_name ty ^
+                 " has no exhaustive enumeration")
+           | _ => [])
         handle Refute_Gen.NoGenerator (missing, reason) =>
           reject ("no narrowing generator for " ^ type_name missing ^
             " — " ^ reason)

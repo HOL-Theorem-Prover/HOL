@@ -181,10 +181,15 @@ structure Refute_Gen = struct
       List.map one (TypeBasePure.constructors_of info)
     end
 
+  (* Not every TypeBase entry has an induction principle -- the finite-map
+     and finite-set entries do not -- and [induction_of0] raises rather than
+     returning on those.  Key such an entry by its own name, as the [ORIG]
+     case already does, instead of letting the exception escape into a
+     reason string.  [same_family] below is total for the same reason. *)
   fun induction_key info =
-    case TypeBasePure.induction_of0 info of
-      TypeBasePure.COPY (key, _) => key
-    | TypeBasePure.ORIG _ => TypeBasePure.ty_name_of info
+    case Lib.total TypeBasePure.induction_of0 info of
+      SOME (TypeBasePure.COPY (key, _)) => key
+    | _ => TypeBasePure.ty_name_of info
 
   fun same_family key info =
     case Lib.total TypeBasePure.induction_of0 info of
@@ -314,9 +319,20 @@ structure Refute_Gen = struct
 
           fun datatype_spec info =
             let
+              (* A TypeBase entry need not describe a datatype: the
+                 finite-map entry, for one, lists no constructors, so there
+                 is nothing to build values from.  Refuse in the same words
+                 as the other missing-generator cases rather than returning
+                 an empty enumeration, which would make the type look
+                 uninhabited and the search look exhausted. *)
+              val constrs = constructor_data ty info
+              val _ =
+                if List.null constrs then
+                  raise NoGenerator
+                    (ty, "no constructors in TypeBase; register a generator")
+                else ()
               val family = family_of ty info
               val floors = family_floors family
-              val constrs = constructor_data ty info
               val recursive = List.map (fn (_, args) =>
                 List.map (type_mentions family) args) constrs
               val _ =

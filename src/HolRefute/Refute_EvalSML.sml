@@ -209,11 +209,16 @@ structure Refute_EvalSML = struct
     (note_force ();
      wordsSyntax.mk_wordi (Arbnum.fromLargeInt value, width))
 
+  (* The abstraction is the constant function returning [default], so the
+     binder is display only.  Vary it away from the free variables of the
+     body: extraction cannot know them, and a name they already use would
+     read as a capture. *)
   fun fun_term variable default updates =
     (note_force ();
      List.foldl (fn ((point, value), result) =>
        Term.mk_comb (combinSyntax.mk_update (point, value), result))
-       (Term.mk_abs (variable, default)) updates)
+       (Term.mk_abs (Term.variant (Term.free_vars default) variable, default))
+       updates)
 
   fun update_term point value base =
     (note_force ();
