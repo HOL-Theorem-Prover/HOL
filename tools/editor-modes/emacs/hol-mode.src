@@ -2617,8 +2617,12 @@ the surrounding text (as done by ‘hol-do-goal’ and
 ;;
 ;;     (with-eval-after-load 'hol-mode (hol-lsp-enable))
 
-(defcustom hol-lsp-server-modes '(holscript-mode)
-  "Major modes to which `hol-lsp-enable' attaches the HOL LSP server."
+(defcustom hol-lsp-server-modes '(holscript-mode holscript-ts-mode)
+  "Major modes recognised as HOL script buffers.  `hol-lsp-enable'
+attaches an eglot server for each; the auto-follow-cursor hook fires
+only in these modes.  `holscript-ts-mode' is not derived from
+`holscript-mode', so a single-mode default silently excluded users
+running the tree-sitter variant."
   :group 'hol
   :type '(repeat symbol))
 
@@ -2634,11 +2638,7 @@ the surrounding text (as done by ‘hol-do-goal’ and
   "Configure the current buffer to use the HOL LSP server via eglot."
   (setq-local project-find-functions
               (cons #'hol-lsp--project-try project-find-functions))
-  (when (fboundp 'eglot-ensure) (eglot-ensure))
-  ;; Auto-follow-cursor is opt-in via `hol-lsp-goals-follow-cursor';
-  ;; the hook checks that flag at fire time, so toggling the custom
-  ;; without re-entering the buffer takes effect immediately.
-  (add-hook 'post-command-hook #'hol-lsp--goals-schedule nil t))
+  (when (fboundp 'eglot-ensure) (eglot-ensure)))
 
 (defun hol-lsp-enable ()
   "Enable eglot-based HOL LSP for buffers in `hol-lsp-server-modes'.
@@ -2780,11 +2780,21 @@ seconds of idle time."
              (hol-lsp--render-goals result))))))))
 
 (defun hol-lsp--goals-schedule ()
-  "Post-command hook: reschedule the auto-follow refresh.  Cancels
-any pending timer so rapid cursor movement produces one query, not
-many."
-  (when hol-lsp-goals-follow-cursor
+  "Post-command hook: reschedule the auto-follow refresh if
+`hol-lsp-goals-follow-cursor' is on and we're in an eglot-managed
+HOL buffer.  Cancels any pending timer so rapid cursor movement
+produces one query, not many.
+
+Installed as a GLOBAL `post-command-hook' so toggling the custom
+takes effect immediately regardless of whether `hol-lsp-enable' was
+called for the current buffer.  Bails out cheaply in non-HOL
+buffers via the `memq' / server check."
+  (when (and hol-lsp-goals-follow-cursor
+             (memq major-mode hol-lsp-server-modes)
+             (hol-lsp--server))
     (when hol-lsp--goals-timer (cancel-timer hol-lsp--goals-timer))
     (setq hol-lsp--goals-timer
           (run-with-idle-timer hol-lsp-goals-follow-delay nil
                                #'hol-lsp--goals-tick (current-buffer)))))
+
+(add-hook 'post-command-hook #'hol-lsp--goals-schedule)
