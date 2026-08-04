@@ -53,46 +53,36 @@ fun compileTactic src = let
      hover are visible here.  Swallow PolyML's own output streams so
      the `val it = () : unit` chatter doesn't leak onto the LSP
      server's stderr for every step. *)
-  val _ = PolyML.compiler
+  val _ = Portable.total (fn () => PolyML.compiler
              (read, [PolyML.Compiler.CPErrorMessageProc swallow,
                      PolyML.Compiler.CPPrintStream swallow,
                      PolyML.Compiler.CPOutStream swallow,
-                     PolyML.Compiler.CPNameSpace LSPNameSpace.fileNS]) ()
-          handle Portable.Interrupt => raise Portable.Interrupt
-               | _ => ()
+                     PolyML.Compiler.CPNameSpace LSPNameSpace.fileNS]) ()) ()
   in !holder end
 
-(* NB: `try` deliberately does NOT swallow Portable.Interrupt (=
-   Thread.Interrupt).  Callers rely on interrupts propagating out of
-   the walker so a wall-clock budget can halt a slow tactic (e.g.
-   METIS_TAC) at the cursor's step and return the pre-step state
-   from the cache. *)
-fun try f state = SOME (f state)
-  handle Portable.Interrupt => raise Portable.Interrupt
-       | _ => NONE
-
-fun stepSpan (TacticSteps.Expand span)     = SOME span
-  | stepSpan (TacticSteps.ExpandList span) = SOME span
-  | stepSpan _                             = NONE
+fun expandSpan (TacticSteps.Expand span)     = SOME span
+  | expandSpan (TacticSteps.ExpandList span) = SOME span
+  | expandSpan _                             = NONE
 
 fun expandSrc tacText (s, e) state =
   case compileTactic (String.substring (tacText, s, e - s)) of
     NONE => NONE
-  | SOME tac => try (goalFrag.expand tac) state
+  | SOME tac => Portable.total (goalFrag.expand tac) state
 
-fun applyStep tacText step state = case stepSpan step of
+fun applyStep tacText step state = case expandSpan step of
     SOME span => expandSrc tacText span state
   | NONE => (case step of
-      TacticSteps.OpenParen   => try goalFrag.open_paren   state
-    | TacticSteps.CloseParen  => try goalFrag.close_paren  state
-    | TacticSteps.OpenThen1   => try goalFrag.open_then1   state
-    | TacticSteps.OpenFirst   => try goalFrag.open_first   state
-    | TacticSteps.NextFirst   => try goalFrag.next_first   state
-    | TacticSteps.CloseFirst  => try goalFrag.close_first  state
-    | TacticSteps.OpenRepeat  => try goalFrag.open_repeat  state
-    | TacticSteps.CloseRepeat => try goalFrag.close_repeat state
-    | TacticSteps.OpenNthGoal n => try (goalFrag.open_nth_goal n) state
-    | _ => SOME state)  (* Expand/ExpandList handled above *)
+      TacticSteps.OpenParen _   => Portable.total goalFrag.open_paren   state
+    | TacticSteps.CloseParen _  => Portable.total goalFrag.close_paren  state
+    | TacticSteps.OpenThen1 _   => Portable.total goalFrag.open_then1   state
+    | TacticSteps.OpenFirst _   => Portable.total goalFrag.open_first   state
+    | TacticSteps.NextFirst _   => Portable.total goalFrag.next_first   state
+    | TacticSteps.CloseFirst _  => Portable.total goalFrag.close_first  state
+    | TacticSteps.OpenRepeat _  => Portable.total goalFrag.open_repeat  state
+    | TacticSteps.CloseRepeat _ => Portable.total goalFrag.close_repeat state
+    | TacticSteps.OpenNthGoal (n, _) =>
+        Portable.total (goalFrag.open_nth_goal n) state
+    | _ => SOME state)
 
 type snap = {stepIdx: int, endByte: int, state: goalFrag.goalstate}
 type cacheEntry = {
@@ -177,11 +167,14 @@ fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
     resumeFrom cacheRefOpt
       {theoremName = theoremName, tacText = tacText, cursor = cursor}
       startState
-  fun stopAt step =
-    case stepSpan step of SOME (_, e) => cursor < e | NONE => false
+  (* Walker halts before applying a step whose stopPos is past the
+     cursor.  For Expand this is the end of the span; for markers
+     like OpenThen1 it is the position of the `>-` operator, so a
+     cursor between `EQ_TAC` and `>-` keeps both subgoals visible. *)
+  fun stopAt step = cursor < TacticSteps.stopPos step
   fun snapOf idx step newState =
     Option.map (fn (_, e) => {stepIdx = idx, endByte = e, state = newState})
-               (stepSpan step)
+               (expandSpan step)
   fun collect [] _ state acc = (state, acc)
     | collect (step :: rest) idx state acc =
         if idx < resumeIdx then collect rest (idx + 1) state acc

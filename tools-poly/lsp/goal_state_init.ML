@@ -3,37 +3,28 @@
    goalFrag and return the goal-state at the cursor. *)
 
 local
-  (* Wall-clock budget on the walker.  Users routinely park their
-     cursor past the last tactic in a Proof block; that tactic is
-     often a closer (METIS_TAC, DECIDE_TAC, …) that takes seconds
-     to run.  Without a budget the walker executes it every time
-     the auto-follow request fires, and the LSP hangs.  The canary
-     Thread.interrupts this thread when the budget expires; the
-     walker's `Portable.Interrupt` handler catches, flushes its
-     snapshot cache, and returns the pre-step state.
+  (* Wall-clock budget for the walker.  Users routinely park their
+     cursor past the last tactic in a Proof block; that closer is
+     often expensive (METIS_TAC, DECIDE_TAC, …), and without a budget
+     each auto-follow tick spawns a fresh walker that runs the whole
+     tactic — the LSP ends up pinned at 100% CPU per stuck query.
 
-     `src/portableML/poly/concurrent/Timeout.sml` implements this
-     shape properly (with Event_Timer + race-safe cancel), but it
-     isn't linked into the LSP heap; the hand-rolled canary below
-     avoids the extra dependency.
+     The canary Thread.interrupts the walker at the budget.  For the
+     interrupt to actually land inside pure ML like METIS_TAC we run
+     under `private_interrupts` (InterruptAsynchOnce) — spawnJob's
+     default (InterruptSynch) only fires interrupts at explicit
+     `Thread.testInterrupt` polls, which HOL tactics don't do.
 
-     Long enough that most closers complete, short enough that stalls
-     stay off the interactive hot path. *)
+     `src/portableML/poly/concurrent/Timeout.sml` implements the same
+     shape properly (Event_Timer + race-safe cancel) but isn't linked
+     into the LSP heap. *)
   val walkerBudgetMs = 1500
 
-  fun logStderr s = (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
+  fun logStderr s =
+    (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
 
-  (* Runs `f` with the calling thread set to `private_interrupts`
-     (InterruptAsynchOnce), so the canary's `Thread.interrupt` lands
-     asynchronously at the next safe point instead of just setting a
-     flag that pure ML never polls.  Under spawnJob's default
-     `InterruptSynch`, METIS_TAC would never see the interrupt and
-     the walker would run forever — pinning the LSP at 100% CPU per
-     stuck query and blocking further auto-follow requests. *)
-  (* Returns (result, timedOut) — timedOut = true means the canary
-     had to interrupt f() to unstick it, in which case `result` is
-     whatever partial state f() returned when its Interrupt handler
-     caught. *)
+  (* Returns (result, timedOut) — timedOut is true when the canary
+     had to interrupt f to unstick it. *)
   fun withTimeout ms f = let
     val here = Thread.self ()
     val done = ref false
