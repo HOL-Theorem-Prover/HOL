@@ -1,7 +1,9 @@
 (* Interpret a TacticSteps.step stream against a starting
    goalFrag.goalstate, applying each step and returning the state at
-   the cursor's step index.  The interpreter is decoupled from the
-   compile — it runs on demand, driven by the cursor. *)
+   the cursor's step index.  Snapshots each Expand's post-state into a
+   per-theorem cache stored in plugin_data, so subsequent queries in
+   the same theorem resume from the closest snapshot rather than
+   re-walking. *)
 
 structure TacticWalker :> sig
   (* Exposed because PolyML.compiler compiles at top level: `holder`
@@ -15,13 +17,13 @@ structure TacticWalker :> sig
      byte is > cursor, stops BEFORE applying — the "pre-state of the
      step under the cursor".  Markers (Open/Close) are always applied
      when reached.  Halts on the first step that fails to compile or
-     apply, returning the last successful state (so the user sees the
-     state as it was when their proof stopped working, rather than a
-     downstream tactic operating on stale state).
+     apply, returning the last successful state.
 
-     All byte offsets (`steps` spans, `cursor`) are relative to
-     `tacText`. *)
+     Cache invalidation is implicit: an entry with a different
+     `tacText` for the same theorem is replaced on the next walk. *)
   val walkTo : {
+    plugins: LSPExtension.plugin_data,
+    theoremName: string,
     tacText: string,
     startState: goalFrag.goalstate,
     steps: TacticSteps.step list,
@@ -34,7 +36,7 @@ val holder : Abbrev.tactic option ref = ref NONE
 fun compileTactic src = let
   val wrapped = "TacticWalker.holder := SOME (" ^ src ^ ");"
   (* Run the HOL quotation filter over the wrapped source: backticks
-     become `[QUOTE …]`, so tactics like `Cases_on \`j < 0\`` reach
+     become `[QUOTE …]`, so tactics like `Cases_on \`p\`` reach
      PolyML in the form it can parse.  Same pipeline the LSP file
      compile uses. *)
   val filtered = HOLSource.fromString
@@ -60,36 +62,108 @@ fun compileTactic src = let
 
 fun try f state = SOME (f state) handle _ => NONE
 
+fun stepSpan (TacticSteps.Expand span)     = SOME span
+  | stepSpan (TacticSteps.ExpandList span) = SOME span
+  | stepSpan _                             = NONE
+
 fun expandSrc tacText (s, e) state =
   case compileTactic (String.substring (tacText, s, e - s)) of
     NONE => NONE
   | SOME tac => try (goalFrag.expand tac) state
 
-fun applyStep tacText step state = case step of
-    TacticSteps.Expand span     => expandSrc tacText span state
-  | TacticSteps.ExpandList span => expandSrc tacText span state
-  | TacticSteps.OpenParen   => try goalFrag.open_paren   state
-  | TacticSteps.CloseParen  => try goalFrag.close_paren  state
-  | TacticSteps.OpenThen1   => try goalFrag.open_then1   state
-  | TacticSteps.OpenFirst   => try goalFrag.open_first   state
-  | TacticSteps.NextFirst   => try goalFrag.next_first   state
-  | TacticSteps.CloseFirst  => try goalFrag.close_first  state
-  | TacticSteps.OpenRepeat  => try goalFrag.open_repeat  state
-  | TacticSteps.CloseRepeat => try goalFrag.close_repeat state
-  | TacticSteps.OpenNthGoal n => try (goalFrag.open_nth_goal n) state
+fun applyStep tacText step state = case stepSpan step of
+    SOME span => expandSrc tacText span state
+  | NONE => (case step of
+      TacticSteps.OpenParen   => try goalFrag.open_paren   state
+    | TacticSteps.CloseParen  => try goalFrag.close_paren  state
+    | TacticSteps.OpenThen1   => try goalFrag.open_then1   state
+    | TacticSteps.OpenFirst   => try goalFrag.open_first   state
+    | TacticSteps.NextFirst   => try goalFrag.next_first   state
+    | TacticSteps.CloseFirst  => try goalFrag.close_first  state
+    | TacticSteps.OpenRepeat  => try goalFrag.open_repeat  state
+    | TacticSteps.CloseRepeat => try goalFrag.close_repeat state
+    | TacticSteps.OpenNthGoal n => try (goalFrag.open_nth_goal n) state
+    | _ => SOME state)  (* Expand/ExpandList handled above *)
 
-fun walkTo {tacText, startState, steps, cursor} = let
-  fun loop [] state = state
-    | loop (step :: rest) state = let
-        val stopHere = case step of
-            TacticSteps.Expand (_, e)     => cursor < e
-          | TacticSteps.ExpandList (_, e) => cursor < e
-          | _ => false
-        in if stopHere then state
-           else case applyStep tacText step state of
-                  NONE => state  (* step failed — halt, keep last good state *)
-                | SOME newState => loop rest newState
-        end
-  in loop steps startState end
+type snap = {stepIdx: int, endByte: int, state: goalFrag.goalstate}
+type cacheEntry = {tacText: string, snapshots: snap list}
+type cacheMap = (string, cacheEntry) Binarymap.dict
+type cacheData = cacheMap ref
+
+val cacheTag : cacheData LSPExtension.tag =
+  LSPExtension.registerPlugin false {
+    name = "goalStateCache",
+    init = fn _ => (),
+    beforeCompile = fn () => (),
+    (* Reuse the same ref across compiles so entries survive
+       `didChange`; per-theorem invalidation happens via the tacText
+       check in `walkTo`.  Returning `SOME (ref emptyMap)` here would
+       wipe every theorem's snapshots on every compile, including for
+       theorems whose tactic body didn't change. *)
+    afterCompile = fn (_, prev) =>
+      SOME (case prev of
+              SOME r => r
+            | NONE => ref (Binarymap.mkDict String.compare))
+  }
+
+(* Largest snapshot whose endByte ≤ cursor. *)
+fun bestSnap cursor =
+  List.foldl
+    (fn (s, acc) =>
+      if #endByte s > cursor then acc
+      else case acc of
+             NONE => SOME s
+           | SOME s' => if #endByte s > #endByte s' then SOME s else acc)
+    NONE
+
+fun resumeFrom NONE _ startState = (0, startState, [])
+  | resumeFrom (SOME cacheRef) {theoremName, tacText, cursor} startState =
+      case Binarymap.peek (!cacheRef, theoremName) of
+        NONE => (0, startState, [])
+      | SOME {tacText = t, snapshots} =>
+          if t <> tacText then (0, startState, [])
+          else case bestSnap cursor snapshots of
+                 NONE => (0, startState, snapshots)
+               | SOME {stepIdx, state, ...} =>
+                   (stepIdx + 1, state, snapshots)
+
+fun walkTo {plugins, theoremName, tacText, startState, steps, cursor} = let
+  val cacheRefOpt = LSPExtension.getPluginData (plugins, cacheTag)
+  val (resumeIdx, resumeState, priorSnaps) =
+    resumeFrom cacheRefOpt
+      {theoremName = theoremName, tacText = tacText, cursor = cursor}
+      startState
+  fun stopAt step =
+    case stepSpan step of SOME (_, e) => cursor < e | NONE => false
+  fun snapOf idx step newState =
+    Option.map (fn (_, e) => {stepIdx = idx, endByte = e, state = newState})
+               (stepSpan step)
+  fun collect [] _ state acc = (state, acc)
+    | collect (step :: rest) idx state acc =
+        if idx < resumeIdx then collect rest (idx + 1) state acc
+        else if stopAt step then (state, acc)
+        else case applyStep tacText step state of
+               NONE => (state, acc)
+             | SOME newState =>
+               let val acc' = case snapOf idx step newState of
+                                NONE => acc
+                              | SOME s => s :: acc
+               in collect rest (idx + 1) newState acc' end
+  val (finalState, newSnaps) = collect steps 0 resumeState []
+  val _ = case (cacheRefOpt, newSnaps) of
+      (SOME cacheRef, _::_) => let
+        (* Merge new snapshots into the cache, deduping by stepIdx so
+           a resumed walk that re-walks past an already-cached step
+           replaces rather than duplicates. *)
+        val merged = newSnaps @ priorSnaps
+        val deduped = Lib.op_mk_set
+                        (fn s1 => fn s2 => #stepIdx s1 = #stepIdx s2)
+                        merged
+      in cacheRef := Binarymap.insert
+                       (!cacheRef, theoremName,
+                        {tacText = tacText, snapshots = deduped})
+      end
+    | _ => ()  (* no cache slot yet, or nothing new to store *)
+  in finalState end
 
 end;

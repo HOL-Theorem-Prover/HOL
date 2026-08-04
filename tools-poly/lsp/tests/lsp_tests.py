@@ -1688,6 +1688,49 @@ def test_goalState_step_advances_within_proof():
         c.close()
 
 
+def test_goalState_cache_invalidates_on_tactic_edit():
+    """Slice E: after editing the tactic body, the goal-state cache
+    should invalidate — subsequent queries return the walk against the
+    edited tactic, not against the pre-edit cached snapshots."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_invalidate.sml"
+        # Initial proof: gen_tac >> rw[] — after gen_tac the quantifier
+        # is stripped.
+        v1 = ("Theory goalstate_invalidate\n"
+              "Ancestors arithmetic\n\n"
+              "Theorem t:\n"
+              "  !n:num. n + 0 = n\n"
+              "Proof\n"
+              "  gen_tac >> rw[]\n"
+              "QED\n")
+        _did_open(c, uri, v1, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "v1 compileCompleted")
+        # Query cursor past `>>` on rw[] — state = post gen_tac.
+        r1 = _send_goalstate(c, 701, uri, 6, 15)
+        goal1 = r1["result"]["goals"][0]["goal"]
+        assert_true("!" not in goal1 and "∀" not in goal1,
+                    f"v1 step 1 is post-gen_tac ({goal1!r})")
+        # Replace `gen_tac >> rw[]` with just `rw[]`.  Now step 0 is
+        # rw[]; cursor at the same position sits inside/past rw[].
+        v2 = v1.replace("  gen_tac >> rw[]\n", "  rw[]\n")
+        idx_before = c.total_msgs()
+        _did_change_full(c, uri, v2, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx_before),
+                    "v2 compileCompleted")
+        # Cursor on rw[] in the edited version; its pre-state has the
+        # full ∀-goal (no gen_tac ran to strip the binder).
+        r2 = _send_goalstate(c, 702, uri, 6, 2)
+        goal2 = r2["result"]["goals"][0]["goal"]
+        assert_true("!" in goal2 or "∀" in goal2,
+                    f"v2 pre-rw shows the original quantified goal, "
+                    f"not the stale post-gen_tac state ({goal2!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_case_split_produces_two_subgoals():
     """Slice D: after `Cases_on \\`p\\``, the goalstate should have two
     subgoals — one with `p` as an assumption, one with `¬p`.  The tactic
@@ -1821,6 +1864,8 @@ TESTS = [
                                      test_goalState_step_advances_within_proof),
     ("goalState_case_split_produces_two_subgoals",
                                      test_goalState_case_split_produces_two_subgoals),
+    ("goalState_cache_invalidates_on_tactic_edit",
+                                     test_goalState_cache_invalidates_on_tactic_edit),
 ]
 
 

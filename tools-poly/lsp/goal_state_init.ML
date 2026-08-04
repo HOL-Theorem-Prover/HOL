@@ -30,7 +30,7 @@ local
 in
 
 val () = LSPExtension.goalStateAtPos :=
-  (fn (_: LSPExtension.hover_context,
+  (fn ({plugins, ...}: LSPExtension.hover_context,
        {name, quote, tacText, tacStart, cursor, ...}
          : LSPExtension.theorem_context) => let
     val initialGoal = Lib.total Parse.Term [QUOTE quote]
@@ -41,6 +41,7 @@ val () = LSPExtension.goalStateAtPos :=
          (SOME tm, SOME sts) => let
            val startState = goalFrag.new_goal ([], tm)
            val finalState = TacticWalker.walkTo {
+             plugins = plugins, theoremName = name,
              tacText = tacText, startState = startState,
              steps = sts, cursor = tacCursor}
            in SOME {theorem = name, step = stepIndex (sts, tacCursor),
