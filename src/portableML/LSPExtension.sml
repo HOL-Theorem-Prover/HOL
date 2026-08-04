@@ -119,7 +119,8 @@ type hover_context = {
 
 type goal_state = {asms: string list, goal: string}
 type goal_state_response = {
-  theorem: string, step: int, goals: goal_state list, pretty: string}
+  theorem: string, step: int, goals: goal_state list, pretty: string,
+  partial: bool}
 type theorem_context = {
   name: string, quote: string, quoteStart: int,
   tacText: string, tacStart: int, cursor: int}

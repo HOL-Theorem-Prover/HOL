@@ -80,7 +80,12 @@ type goal_state_response = {
      separator).  Clients that just want to display the state
      verbatim should prefer this; `goals` remains for clients that
      want to render individual subgoals structurally. *)
-  pretty: string}
+  pretty: string,
+  (* true when the walker hit its wall-clock budget and returned the
+     state at whatever step it had reached — i.e. the state shown is
+     NOT necessarily the state at the cursor's step.  Clients should
+     surface this to the user (e.g. "walker timed out"). *)
+  partial: bool}
 type theorem_context = {
   name: string,           (* theorem name, e.g. "foo" *)
   quote: string,          (* raw text of the theorem statement *)

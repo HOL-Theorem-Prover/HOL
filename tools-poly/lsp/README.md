@@ -71,7 +71,8 @@ when the theorem statement can't be parsed).  Otherwise:
   "theorem": "<theorem name>",
   "step": <int>,
   "goals": [{"asms": ["<assumption>", ...], "goal": "<goal>"}, ...],
-  "pretty": "<full REPL-style render>"
+  "pretty": "<full REPL-style render>",
+  "partial": <bool>
 }
 ```
 
@@ -84,6 +85,12 @@ when the theorem statement can't be parsed).  Otherwise:
   via the VT100 backend, so bound / free variables carry ANSI colour
   escapes (`\x1B[…m`).  Clients that don't render ANSI can strip the
   escapes with `\x1B\[[0-9;]*m` or fall back to `goals`.
+- `partial` — `true` when the walker hit its wall-clock budget
+  before reaching the cursor's step; `goals` / `pretty` are then the
+  best-effort state at whichever step the walker had completed.
+  Clients should surface this to the user (e.g. append "(timed
+  out)" to the header) so a mid-walk state isn't mistaken for the
+  cursor's actual step.
 
 ### Client cookbook
 

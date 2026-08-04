@@ -30,9 +30,14 @@ local
      `InterruptSynch`, METIS_TAC would never see the interrupt and
      the walker would run forever — pinning the LSP at 100% CPU per
      stuck query and blocking further auto-follow requests. *)
+  (* Returns (result, timedOut) — timedOut = true means the canary
+     had to interrupt f() to unstick it, in which case `result` is
+     whatever partial state f() returned when its Interrupt handler
+     caught. *)
   fun withTimeout ms f = let
     val here = Thread.self ()
     val done = ref false
+    val timedOut = ref false
     val mtx = Mutex.mutex ()
     fun markDone () =
       (Mutex.lock mtx; done := true; Mutex.unlock mtx)
@@ -42,13 +47,14 @@ local
       (if !done then ()
        else (logStderr ("goal-state walker exceeded " ^
                         LargeInt.toString ms ^ "ms budget; interrupting\n");
+             timedOut := true;
              Thread.interrupt here));
       Mutex.unlock mtx)
     val _ = Thread.fork (canary, [])
-  in Thread_Attributes.with_attributes
-       Thread_Attributes.private_interrupts (fn _ => f ())
-     before markDone ()
-  end
+    val r = Thread_Attributes.with_attributes
+              Thread_Attributes.private_interrupts (fn _ => f ())
+    val () = markDone ()
+  in (r, !timedOut) end
 
   fun ppGoal (asms, g) = {
     asms = List.map Parse.term_to_string asms,
@@ -87,7 +93,7 @@ val () = LSPExtension.goalStateAtPos :=
     in case (initialGoal, steps) of
          (SOME tm, SOME sts) => let
            val startState = goalFrag.new_goal ([], tm)
-           val finalState = withTimeout walkerBudgetMs (fn () =>
+           val (finalState, partial) = withTimeout walkerBudgetMs (fn () =>
              TacticWalker.walkTo {
                plugins = plugins, theoremName = name,
                theoremStart = quoteStart,
@@ -95,14 +101,14 @@ val () = LSPExtension.goalStateAtPos :=
                steps = sts, cursor = tacCursor})
            in SOME {theorem = name, step = stepIndex (sts, tacCursor),
                     goals = List.map ppGoal (goalFrag.top_goals finalState),
-                    pretty = ppState finalState}
+                    pretty = ppState finalState, partial = partial}
            end
        | (SOME tm, NONE) => let
            (* Parser gave us no steps — fall back to the initial goal. *)
            val startState = goalFrag.new_goal ([], tm)
            in SOME {theorem = name, step = 0,
                     goals = [{asms = [], goal = Parse.term_to_string tm}],
-                    pretty = ppState startState}
+                    pretty = ppState startState, partial = false}
            end
        | _ => NONE
     end)
