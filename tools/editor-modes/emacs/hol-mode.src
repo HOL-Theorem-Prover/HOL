@@ -2685,30 +2685,18 @@ expose the private `eglot--path-to-uri'."
         (list :line (1- (line-number-at-pos))
               :character (hol-lsp--point-byte-in-line))))
 
-(defun hol-lsp--query ()
+(defun hol-lsp--query (&optional cancel-on-input)
   "Send `$/hol/goalState' synchronously; return parsed result or nil
-on any failure.  For user-initiated commands like
-`hol-lsp-show-goal-state' where blocking is acceptable."
+on any failure.  When CANCEL-ON-INPUT is non-nil, user input during
+the wait cancels the request and returns nil — used by auto-follow
+so a slow server never freezes emacs on a keystroke."
   (let ((server (hol-lsp--server)))
     (when (and server buffer-file-name)
       (condition-case nil
-          (jsonrpc-request server :$/hol/goalState (hol-lsp--goalstate-params))
+          (jsonrpc-request server :$/hol/goalState
+                           (hol-lsp--goalstate-params)
+                           :cancel-on-input cancel-on-input)
         (error nil)))))
-
-(defun hol-lsp--query-async (callback)
-  "Send `$/hol/goalState' asynchronously; invoke CALLBACK with the
-parsed result or nil.  Used by the auto-follow path so a slow server
-never freezes emacs on a keystroke."
-  (let ((server (hol-lsp--server)))
-    (if (not (and server buffer-file-name))
-        (funcall callback nil)
-      (condition-case nil
-          (jsonrpc-async-request
-           server :$/hol/goalState (hol-lsp--goalstate-params)
-           :success-fn (lambda (r) (funcall callback r))
-           :error-fn (lambda (_) (funcall callback nil))
-           :timeout-fn (lambda () (funcall callback nil)))
-        (error (funcall callback nil))))))
 
 (define-derived-mode hol-lsp-goals-mode special-mode "HOL Goals"
   "Major mode for the *HOL Goals* buffer populated by the HOL LSP.
@@ -2769,15 +2757,13 @@ seconds of idle time."
   "Pending idle timer for auto-following goals, or nil.")
 
 (defun hol-lsp--goals-tick (buf)
-  "Timer callback: async-query BUF's goal-state; render on response."
+  "Timer callback: query BUF's goal-state (cancel-on-input) and
+render on success."
   (setq hol-lsp--goals-timer nil)
   (when (buffer-live-p buf)
     (with-current-buffer buf
-      (hol-lsp--query-async
-       (lambda (result)
-         (when (and result (buffer-live-p buf))
-           (with-current-buffer buf
-             (hol-lsp--render-goals result))))))))
+      (let ((result (hol-lsp--query t)))
+        (when result (hol-lsp--render-goals result))))))
 
 (defun hol-lsp--goals-schedule ()
   "Post-command hook: reschedule the auto-follow refresh if
