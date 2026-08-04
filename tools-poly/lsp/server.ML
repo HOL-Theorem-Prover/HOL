@@ -109,10 +109,11 @@ fun encGoalState ({asms, goal}: goal_state) print = (
   print ",\"goal\":"; encString goal print;
   print "}")
 
-fun encGoalStateResponse ({theorem, step, goals}: goal_state_response) print = (
+fun encGoalStateResponse ({theorem, step, goals, pretty}: goal_state_response) print = (
   print "{\"theorem\":"; encString theorem print;
   print ",\"step\":"; encInt step print;
   print ",\"goals\":"; encArray encGoalState goals print;
+  print ",\"pretty\":"; encString pretty print;
   print "}")
 
 (* Given the buffer text and a cursor byte offset, return the enclosing

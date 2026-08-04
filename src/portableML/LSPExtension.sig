@@ -73,7 +73,14 @@ val hoverQuotation:
    isn't inside a proof body or the quote can't be parsed. *)
 type goal_state = {asms: string list, goal: string}
 type goal_state_response = {
-  theorem: string, step: int, goals: goal_state list}
+  theorem: string, step: int, goals: goal_state list,
+  (* Rendered form of the whole state — HOL's own `pp_goalstate`
+     pretty-print, matching the REPL's "N subgoals: … ⊨ …" layout
+     (no turnstile, blank-line-separated assumptions, `----`
+     separator).  Clients that just want to display the state
+     verbatim should prefer this; `goals` remains for clients that
+     want to render individual subgoals structurally. *)
+  pretty: string}
 type theorem_context = {
   name: string,           (* theorem name, e.g. "foo" *)
   quote: string,          (* raw text of the theorem statement *)
