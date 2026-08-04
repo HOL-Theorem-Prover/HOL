@@ -158,7 +158,7 @@ are:
 | `upd_finitize` | `[(NONE, NONE)]` | finitization selected by monotonicity |
 | `upd_whack` | `[]` | constants whose definitions are ignored |
 | `upd_need` | `NONE` | values that must occur in the model |
-| `upd_tac_timeout` | `0.5` seconds | inner tactic timeout |
+| `upd_tac_timeout` | `0.5` seconds | inner tactic budget; `0` skips |
 | `upd_format` | fallback `[1]` | group curried model-function arguments into tuples |
 | `upd_max_potential` | `1` | maximum potential models returned |
 | `upd_max_genuine` | `1` | maximum genuine models returned |
@@ -169,6 +169,13 @@ row is its fallback.  For smart Boolean rows, a `NONE` value asks Refute to
 choose; `SOME true` and `SOME false` force the choice.  A `max` row is keyed
 by constructor rather than by type: it bounds how many values that
 constructor may contribute to its type's carrier.
+`tac_timeout` bounds the two inner proof attempts the model finder makes
+per problem: the monotonicity calculus, and the well-foundedness proof for
+an inductive predicate.  Either one exceeding it is not an error; the
+answer degrades to "not monotonic" or "not well-founded", which costs
+scopes or precision but never soundness.  A budget of `0` is decided
+rather than timed, so it skips both attempts outright instead of racing
+them against a deadline that has already passed.
 The `max_potential` and `max_genuine` limits are global budgets.  Requesting
 more than one model forces an incremental SAT solver when necessary, and a
 genuine result ends the potential-model search.  With

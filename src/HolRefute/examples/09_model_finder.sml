@@ -395,9 +395,9 @@ refute
 (* only when their libraries or *_HOME variables are present.             *)
 (* [upd_batch_size] controls how many scopes go to the solver at a time,  *)
 (* [upd_max_threads] caps parallelism (0 = unrestricted), and             *)
-(* [upd_tac_timeout] bounds the inner tactic calls.  [mf] already sets   *)
-(* [upd_max_threads 1], as the corpus convention requires; the call      *)
-(* below repeats it to show the option in use.                           *)
+(* [upd_tac_timeout] bounds the inner tactic calls (0 skips them).        *)
+(* [mf] already sets [upd_max_threads 1], as the corpus convention        *)
+(* requires; the call below repeats it to show the option in use.         *)
 (* --------------------------------------------------------------------- *)
 
 refute

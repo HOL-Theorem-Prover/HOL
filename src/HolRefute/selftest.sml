@@ -2609,6 +2609,9 @@ fun mf_inductive_recognition_and_wf () =
     val after = mf_theory_footprint ()
     val parameterized_wf =
       MFH.is_well_founded_inductive_pred context parameterized
+    (* A spent budget is decided, not raced: Util.apply_within_budget never
+       starts the candidate proof, so this arm cannot come back true
+       because a timer thread was late.  See [spent_budget_is_not_raced]. *)
     val zero_config = Refute.upd_tac_timeout 0.0 default_config
     val zero_context = MFH.make_context (#mf zero_config) []
     val timed_out_cleanly =
@@ -4300,6 +4303,36 @@ fun mono_abandonment_degrades () =
 
 val _ = require_msg (check_result mono_abandonment_degrades)
   (fn () => "an abandoned monotonicity analysis did not degrade to false")
+  (fn () => ()) ()
+
+(* The companion to the polarity above: who decides that an analysis was
+   abandoned.  Timeout.apply raises only when the Event_Timer thread
+   interrupts the body first, so it answers "was the deadline reached"
+   with a race.  At a spent budget that race has a favourite but no
+   winner: the monotonicity calculus run at tac_timeout = 0.0 completed,
+   and fused the scope grid the caller was pinning at 9, in 1 of 12
+   measured runs -- the level-2 flake in [Refute MF monotonicity scope
+   fusion], and the same coin flip behind [zero_config] in the
+   well-foundedness suite above.  Util.apply_within_budget decides a spent
+   budget instead of timing it, so both callers are deterministic and this
+   pin needs no clock.  The positive arm carries the only deadline, on a
+   body that does no work; it is a hang-guard, and losing it means the
+   process stopped for a minute. *)
+fun spent_budget_is_not_raced () =
+  let
+    val ran = ref 0
+    fun work () = (ran := !ran + 1; true)
+    fun attempt budget =
+      SOME (Refute_ModelFinder_Util.apply_within_budget budget work ())
+      handle Timeout.TIMEOUT _ => NONE
+    val spent = attempt Time.zeroTime
+    val ample = attempt (Time.fromReal 60.0)
+  in
+    spent = NONE andalso ample = SOME true andalso !ran = 1
+  end
+
+val _ = require_msg (check_result spent_budget_is_not_raced)
+  (fn () => "a spent tactic budget raced its body instead of deciding")
   (fn () => ()) ()
 
 fun mono_shadowed_binders () =
@@ -22669,6 +22702,17 @@ fun mf_relation_scope_fusion solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
+(* The four runs partition the same 3x3 grid four ways: the calculus is
+   believed (3), blocked by a user row (9), given no budget (9), and forced
+   by a user row (3).  Only the tac_timeout = 0.0 run used to be a race --
+   Timeout.apply lets the body finish and be accepted if the timer thread
+   is late, which fused the grid to 3 in 1 of 12 measured runs and was the
+   level-2 flake here.  Util.apply_within_budget now decides a spent budget
+   rather than timing it, and [spent_budget_is_not_raced] pins that
+   directly.  The 5.0 s the other three runs carry is a hang-guard, not
+   part of what is asserted: sweeping the budget on this goal, 0.0001 s is
+   already enough for the calculus to fuse the grid, so the margin is four
+   orders of magnitude. *)
 fun mf_mono_driver_scope_fusion solver =
   let
     val _ = tprint "Refute MF monotonicity scope fusion"
@@ -22689,15 +22733,31 @@ fun mf_mono_driver_scope_fusion solver =
     val timed = run (Refute.upd_tac_timeout 0.0 base)
     val (forced, forced_output) = capture_refute_messages 2 (fn () =>
       Refute.refute (Refute.upd_mono [(NONE, SOME true)] base) goal)
-    val ok =
-      scopes smart = SOME 3 andalso scopes forced = SOME 3 andalso
-      scopes blocked = SOME 9 andalso scopes timed = SOME 9 andalso
-      String.isSubstring "passed the monotonicity" smart_output andalso
-      String.isSubstring "considered monotonic" forced_output andalso
-      String.isSubstring "might be able to skip some scopes" smart_output
+    (* Name the conjunct that broke: a bare "something regressed" here cost
+       a transcript dig to tell a lost race from a real partition change. *)
+    fun scope_complaint label expected outcome =
+      if scopes outcome = SOME expected then []
+      else [label ^ " scopes = " ^
+            (case scopes outcome of
+                 SOME count => Int.toString count
+               | NONE => "none (" ^ mf_pin_outcome_name outcome ^ ")") ^
+            ", expected " ^ Int.toString expected]
+    fun message_complaint label needle output =
+      if String.isSubstring needle output then []
+      else [label ^ " output never said \"" ^ needle ^ "\""]
+    val complaints =
+      scope_complaint "smart" 3 smart @
+      scope_complaint "blocked" 9 blocked @
+      scope_complaint "timed" 9 timed @
+      scope_complaint "forced" 3 forced @
+      message_complaint "smart" "passed the monotonicity" smart_output @
+      message_complaint "forced" "considered monotonic" forced_output @
+      message_complaint "smart" "might be able to skip some scopes"
+        smart_output
   in
-    if ok then OK ()
-    else die "driver mono partition, timeout, override, or message regressed"
+    if null complaints then OK ()
+    else die ("driver mono partition, budget, override, or message " ^
+      "regressed: " ^ String.concatWith "; " complaints)
   end
   handle e => die (Feedback.exn_to_string e)
 

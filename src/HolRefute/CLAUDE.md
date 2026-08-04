@@ -83,6 +83,11 @@ This file provides guidance to coding agents when working with the HolRefute pro
   `require_msg (check_result f) (fn () => "failure msg") (fn () => ()) ()`.
   `diemode := Remember erc` accumulates failures instead of aborting;
   `exit_count0 erc` turns the count into the exit status.
+- No wall clock in a verdict.  `Timeout.apply` raises only if its timer
+  thread beats the body, so "was the deadline reached" is unassertable.
+  A spent budget is decided by `Util.apply_within_budget`, degradation
+  polarity by `abandoned_mono_verdict`; test those, not the race.
+  Three level-2 flakes so far: 8f042b080, 757301f92, and `tac_timeout 0.0`.
 - Gate by cost on `selftest_level` (reads HOLSELFTESTLEVEL, default 1):
   cheap and targeted ungated; expensive or matrix-shaped behind
   `if selftest_level >= 2`.

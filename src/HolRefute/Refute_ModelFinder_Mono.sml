@@ -639,7 +639,7 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
         (* Deviation from upstream: with cdclite as the sole in-process
            solver, the 0.02 s probe followed by the same solver is skipped.
            We make one call under the remaining tac_timeout budget. *)
-        (case Timeout.apply tac_timeout PS.solve prop of
+        (case Util.apply_within_budget tac_timeout PS.solve prop of
              PS.SATISFIABLE assignments => finish assignments
            | PS.UNSATISFIABLE => NONE)
         handle Timeout.TIMEOUT _ => NONE

@@ -603,7 +603,7 @@ fun run_instance deadline started (config : Refute_Core.config)
         | NONE =>
             let
               val result =
-                (Timeout.apply (#tac_timeout context)
+                (Util.apply_within_budget (#tac_timeout context)
                    (MFMono.formulas_monotonic context binarize ty)
                    (nondef_ts, def_ts)
                  handle exn =>

@@ -45,6 +45,8 @@ signature REFUTE_MODEL_FINDER_UTIL = sig
   val string_of_time : Time.time -> string
   val nat_subscript : int -> string
 
+  val apply_within_budget : Time.time -> ('a -> 'b) -> 'a -> 'b
+
   val flip_polarity : polarity -> polarity
 
   val same_type : Type.hol_type -> Type.hol_type -> bool
@@ -350,6 +352,20 @@ structure Refute_ModelFinder_Util :> REFUTE_MODEL_FINDER_UTIL = struct
 
   (* HOL4 has no Isabelle print mode; model-finder names stay ASCII. *)
   val nat_subscript = signed_string_of_int
+
+  (* Timeout.apply raises only when the Event_Timer thread interrupts the
+     body before it returns, so an already-spent budget is a race rather
+     than a decision: the body may well finish first and be accepted.  On
+     this tree that is observable.  The monotonicity calculus run under
+     "tac_timeout = 0.0" completed, and fused the scope grid it was meant
+     to leave alone, in 1 of 12 measured runs.  A budget of zero means the
+     work does not get to start, so decide that here instead of asking a
+     timer to win a race it has no reason to win.  The exception is the
+     one the deadline itself would have raised, so callers need no second
+     abandonment path. *)
+  fun apply_within_budget budget work argument =
+    if Time.<= (budget, Time.zeroTime) then raise Timeout.TIMEOUT budget
+    else Timeout.apply budget work argument
 
   fun flip_polarity Pos = Neg
     | flip_polarity Neg = Pos

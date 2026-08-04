@@ -1552,7 +1552,7 @@ structure Refute_ModelFinder_HOL = struct
          TotalDefn.TC_SIMP_TAC (TotalDefn.termination_ss ()) []]
       fun prove () = ignore (TAC_PROOF (([], proposition), tactic))
     in
-      Timeout.apply timeout (fn () => (prove (); true)) ()
+      Util.apply_within_budget timeout (fn () => (prove (); true)) ()
     end
     handle Timeout.TIMEOUT _ => false
          | HOL_ERR _ => false
