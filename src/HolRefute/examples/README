@@ -34,11 +34,38 @@ component and a Java runtime:
 
     export HOL4_KODKODI=/path/to/kodkodi-1.5.7
 
-Without it those calls report Unknown ("no configured backend"), which is
-the designed behaviour rather than a failure.  A few individual calls
-elsewhere reach for the model finder too — the last call of 01, section 4
-of 02, the set goal in 03, the probes in 08, sections 3 and 4 of 11 — and
-degrade the same way.  Everything else runs with no external tools.
+Without it a model-finder call reports Unknown ("no configured backend").
+Two things follow from that, and neither is silent.
+
+Every call in these files asserts its own verdict with an `upd_expect`
+clause, so one that degrades to Unknown raises `Refute.expect` rather
+than quietly printing something other than what is quoted.  The session
+carries on — `bin/hol` reading a file is a REPL, so the exception is
+printed and the next statement still runs — but the run is no longer
+clean.  That is the assertion working, not a fault.
+
+The reach is also wider than the two model-finder files.  At default
+settings NoCounterexample is a model-finder verdict: the QC backends can
+only report that they did not exhaust the search space, and it is kodkod
+that turns that into "no counterexample found within the tested finite
+bounds".  So a call whose transcript claims NoCounterexample needs
+Kodkodi even when its own reasons never mention it.
+
+Measured by running each file with and without HOL4_KODKODI set:
+
+    01  four calls: the NoCounterexample calls of sections 2, 4 and 5,
+        and the nitpick of section 8
+    02  two calls, both in section 4
+    03  one call, the set goal of section 5
+    08  the whole sweep: with Kodkodi it reports two theorems carrying
+        superfluous assumptions, without it none, counting the
+        difference as skipped inconclusive probes rather than raising
+    09  every call
+    10  every call
+    11  three calls: section 3, and both calls of section 4
+
+04, 05, 06 and 07 produce byte-identical output either way.  Everything
+else runs with no external tools.
 
 
 The files
@@ -114,5 +141,6 @@ Further reading
 `../README` documents the substrate model, the trust model, the full
 option table and the known limitations.  `../Refute.sig` is the public
 signature: everything used in these files appears there, except where a
-file explicitly reaches into an implementation module (noted at the
-point of use).
+file explicitly reaches into an implementation module.  Those are noted
+at the point of use, or — where one file has several, as 11 does — once
+at the head of the file.

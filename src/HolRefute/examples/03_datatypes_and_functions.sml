@@ -18,10 +18,15 @@ open Refute;
 (* and cv-translates a fresh test loop per call — a screenful of       *)
 (* "Definition has been stored under ..." feedback every time.  None   *)
 (* of the points below depend on that, so pin the native substrate     *)
-(* once and keep the transcript readable.  Substrates are the actual   *)
-(* subject of 04_substrates_and_determinism.sml.                       *)
+(* once and keep the transcript readable.  It also carries the         *)
+(* expectation for the [refute_def] calls below, which take no         *)
+(* configuration argument; the explicit [refute] calls each override   *)
+(* it.  Substrates are the actual subject of                           *)
+(* 04_substrates_and_determinism.sml.                                  *)
 
-val _ = the_config := upd_substrate NativeSML (!the_config);
+val _ = the_config := (!the_config
+                         |> upd_substrate NativeSML
+                         |> upd_expect ExpectGenuine);
 
 (* --------------------------------------------------------------------- *)
 (* 1.  A binary search tree and two functions over it                    *)
@@ -150,16 +155,25 @@ refute_def ``FST (p : num # num) = SND p``;
 (* what settles this goal — it is the backend 09_model_finder.sml is     *)
 (* about, and the one call in this file that needs the Kodkodi component *)
 (* (without it the answer is Unknown).  [upd_genuine_only true] keeps    *)
-(* the report to the verdict that survives.                              *)
+(* the report to the verdict that survives.  The single Kodkodi thread   *)
+(* and the explicit cardinality row are the corpus convention for        *)
+(* model-finder calls — see the header of                                *)
+(* 10_model_finder_advanced.sml — and are what makes the scope and the   *)
+(* model quoted below exact instead of whichever scope won a race.       *)
 
-refute (upd_genuine_only true (!the_config)) ``(s : num set) UNION t = s``;
+refute
+  (!the_config
+     |> upd_genuine_only true
+     |> upd_max_threads 1
+     |> upd_card [(NONE, [2])]
+     |> upd_expect ExpectGenuine)
+  ``(s : num set) UNION t = s``;
 
 (* ==> Refute found a counterexample (backend: kodkod, substrate:        *)
-(*     kodkod).  The scope it settles on varies between runs; either way *)
-(*     [s] is a proper subset of [s UNION t], e.g.                       *)
-(*       Scope: card num = 4                                             *)
-(*       s = {3}                                                         *)
-(*       t = {0; 3}                                                      *)
+(*     kodkod), with [s] a proper subset of [s UNION t]:                 *)
+(*       Scope: card num = 2                                             *)
+(*       s = ∅                                                           *)
+(*       t = {0; 1}                                                      *)
 (*     Evaluated terms:                                                  *)
 (*       (s UNION t) x = ?                                               *)
 (*       s x = ?                                                         *)
@@ -176,7 +190,11 @@ refute (upd_genuine_only true (!the_config)) ``(s : num set) UNION t = s``;
 (* the bound finds it.                                                   *)
 (* --------------------------------------------------------------------- *)
 
-refute (upd_backends (SOME ["exhaustive"]) (!the_config)) ``(x : num) < 20``;
+refute
+  (!the_config
+     |> upd_backends (SOME ["exhaustive"])
+     |> upd_expect ExpectUnknown)
+  ``(x : num) < 20``;
 
 (* ==> Refute could not determine an answer                              *)
 (*     Reasons:                                                          *)
@@ -186,7 +204,8 @@ refute (upd_backends (SOME ["exhaustive"]) (!the_config)) ``(x : num) < 20``;
 refute
   (!the_config
      |> upd_backends (SOME ["exhaustive"])
-     |> upd_size 25)
+     |> upd_size 25
+     |> upd_expect ExpectGenuine)
   ``(x : num) < 20``;
 
 (* ==> Refute found a counterexample                                     *)
@@ -214,7 +233,8 @@ refute_def ``(xs : 'a list) ++ ys = ys ++ xs``;
 refute
   (!the_config
      |> upd_finite_types false
-     |> upd_default_type [``:num``])
+     |> upd_default_type [``:num``]
+     |> upd_expect ExpectGenuine)
   ``(xs : 'a list) ++ ys = ys ++ xs``;
 
 (* ==> the same conjecture, now instantiated at :num instead:            *)
@@ -225,7 +245,11 @@ refute
 (* [finite_type_size] caps how large the rfN types may get.  Two         *)
 (* elements are already enough to refute "all values are equal".         *)
 
-refute (upd_finite_type_size 2 (!the_config)) ``!x y : 'a. x = y``;
+refute
+  (!the_config
+     |> upd_finite_type_size 2
+     |> upd_expect ExpectGenuine)
+  ``!x y : 'a. x = y``;
 
 (* ==> Refute found a counterexample                                     *)
 (*     (backend: exhaustive, substrate: native, size 10):                *)
@@ -257,19 +281,39 @@ refute_def ``!x y : num. x + y = x``;
 (* Narrowing does find [xs = [0]], but to rule out every [ys] it can     *)
 (* only search the finitely many it refined, and it says so: the inner   *)
 (* existential was decided on an incomplete approximation.  That keeps   *)
-(* the candidate at Potential, and the run ends with the "within the     *)
-(* tested finite bounds" verdict rather than a counterexample.           *)
+(* the candidate at Potential, so nothing is returned as a               *)
+(* counterexample and the run ends Unknown, naming what stopped each     *)
+(* backend.                                                              *)
+(*                                                                       *)
+(* Both calls below name the three QC backends explicitly, which is what *)
+(* this section is about.  At default settings the model finder is       *)
+(* selected for this goal too and spends most of the whole-call budget   *)
+(* on it.  Finishing inside the timeout, it reports that it searched     *)
+(* every scope it was given and found nothing — "Refute: no              *)
+(* counterexample found within the tested finite bounds", a statement    *)
+(* about the bounds searched rather than about the conjecture — and that *)
+(* NoCounterexample outranks the reasons below.  Not finishing, it       *)
+(* leaves the Unknown shown here.  Naming the backends takes the         *)
+(* documented outcome off the clock.                                     *)
 
-refute_def ``!xs : num list. ?ys. xs = ys ++ ys``;
+refute
+  (!the_config
+     |> upd_backends (SOME ["exhaustive", "random", "narrowing"])
+     |> upd_expect ExpectUnknown)
+  ``!xs : num list. ?ys. xs = ys ++ ys``;
 
 (* ==> Refute found a counterexample                                     *)
 (*     (backend: narrowing, substrate: native, size 1):                  *)
 (*       xs = [0]                                                        *)
 (*     Potential counterexample:                                         *)
 (*       PNF testing used an incomplete finite approximation             *)
-(*     ...continuing search for a genuine counterexample                 *)
-(*     Refute: no counterexample found within the tested finite bounds   *)
-(*     val it = NoCounterexample                                         *)
+(*     …continuing search for a genuine counterexample                   *)
+(*     Refute could not determine an answer                              *)
+(*     Reasons:                                                          *)
+(*       not executable: unexpanded binder                               *)
+(*       narrowing: narrowing search exhausted                           *)
+(*     val it = Unknown ["not executable: unexpanded binder",            *)
+(*                       "narrowing: narrowing search exhausted"]        *)
 
 (* Opting out of certification does not rescue it.  [upd_certify false]  *)
 (* only skips the kernel check on a candidate that would otherwise pass  *)
@@ -277,10 +321,14 @@ refute_def ``!xs : num list. ?ys. xs = ys ++ ys``;
 (* promoted, so the same Potential report comes back.  That distinction  *)
 (* is the subject of 02_verdicts_and_config.sml.                         *)
 
-refute (upd_certify false (!the_config))
+refute
+  (!the_config
+     |> upd_backends (SOME ["exhaustive", "random", "narrowing"])
+     |> upd_certify false
+     |> upd_expect ExpectUnknown)
   ``!xs : num list. ?ys. xs = ys ++ ys``;
 
-(* ==> the same Potential report, and NoCounterexample again             *)
+(* ==> the same Potential report, and the same Unknown again             *)
 
 (* The smart-quantifier translation is a separate knob, and it is what   *)
 (* lets bounded exhaustive testing solve for a variable that an          *)
@@ -291,7 +339,8 @@ refute (upd_certify false (!the_config))
 refute
   (!the_config
      |> upd_backends (SOME ["exhaustive"])
-     |> upd_size 3)
+     |> upd_size 3
+     |> upd_expect ExpectGenuine)
   ``(xs : bool list) = REVERSE [T; T; T; T] ==> F``;
 
 (* ==> Refute found a counterexample                                     *)
@@ -303,7 +352,8 @@ refute
   (!the_config
      |> upd_backends (SOME ["exhaustive"])
      |> upd_size 3
-     |> upd_smart_quantifier false)
+     |> upd_smart_quantifier false
+     |> upd_expect ExpectUnknown)
   ``(xs : bool list) = REVERSE [T; T; T; T] ==> F``;
 
 (* ==> Refute could not determine an answer                              *)

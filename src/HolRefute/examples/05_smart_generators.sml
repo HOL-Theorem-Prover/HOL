@@ -39,7 +39,7 @@ val (even_rel_rules, even_rel_ind, even_rel_cases) = Hol_reln `
   (even_rel 0) /\
   (!n. even_rel n ==> even_rel (SUC (SUC n)))`;
 
-refute smart ``even_rel n ==> n < 5``;
+refute (upd_expect ExpectPotential smart) ``even_rel n ==> n < 5``;
 
 (* ==> Counterexample n = 6, backend exhaustive, substrate native,
        after 4 tests.  Its certainty is Potential ["evaluation stuck
@@ -59,12 +59,14 @@ refute smart ``even_rel n ==> n < 5``;
 (* goes quiet.                                                           *)
 (* --------------------------------------------------------------------- *)
 
-refute (upd_depth 2 smart) ``even_rel n ==> n < 5``;
+refute (upd_expect ExpectUnknown (upd_depth 2 smart))
+  ``even_rel n ==> n < 5``;
 
 (* ==> Unknown ["exhaustive: search space not exhausted"].  The
        enumeration runs out of fuel before it derives even_rel 6. *)
 
-refute (upd_depth 20 smart) ``even_rel n ==> n < 5``;
+refute (upd_expect ExpectPotential (upd_depth 20 smart))
+  ``even_rel n ==> n < 5``;
 
 (* ==> Counterexample n = 6 again, still after 4 tests: the extra fuel
        is a bound, not a schedule, so it costs nothing here. *)
@@ -79,7 +81,7 @@ refute (upd_depth 20 smart) ``even_rel n ==> n < 5``;
 (* gate is exactly what the smart plan did in section 1.                 *)
 (* --------------------------------------------------------------------- *)
 
-refute (upd_smart_generators false smart)
+refute (upd_expect ExpectUnknown (upd_smart_generators false smart))
   ``even_rel n ==> n < 5``;
 
 (* ==> Unknown ["not executable: even_rel"] *)
@@ -102,14 +104,14 @@ val (path_rules, path_ind, path_cases) = Hol_reln `
   (!x y z. edge x y /\ path y z ==> path x z)`;
 
 (* True: reachability only ever moves upwards.                           *)
-refute smart ``path x y ==> x <= y``;
+refute (upd_expect ExpectUnknown smart) ``path x y ==> x <= y``;
 
 (* ==> Unknown ["exhaustive: search space not exhausted"].  Nothing was
        refuted, and, fuel being what it is, that is as far as the
        report goes. *)
 
 (* False: 3 is reachable from 0.                                         *)
-refute smart ``path 0 y ==> y <= 2``;
+refute (upd_expect ExpectPotential smart) ``path 0 y ==> y <= 2``;
 
 (* ==> Counterexample y = 3, backend exhaustive, substrate native.
        Potential ["evaluation stuck on: path"], for the same reason as
@@ -124,7 +126,7 @@ refute smart ``path 0 y ==> y <= 2``;
 (* investigating why a plan behaves as it does.                          *)
 (* --------------------------------------------------------------------- *)
 
-refute (upd_reorder_premises false smart)
+refute (upd_expect ExpectPotential (upd_reorder_premises false smart))
   ``path 0 y ==> y <= 2``;
 
 (* ==> the same Counterexample y = 3.  On this goal the order written in
@@ -146,11 +148,19 @@ val sortedp_def = Define `
   (sortedp [x : num] = T) /\
   (sortedp (x :: y :: t) = (x <= y /\ sortedp (y :: t)))`;
 
+(* [refute_def] takes no configuration argument: it reads [the_config].
+   So this section states its expected verdict there, and puts the
+   session default back afterwards. *)
+
+val _ = the_config := upd_expect ExpectGenuine (!the_config);
+
 refute_def ``sortedp xs ==> LENGTH xs <= 3``;
 
 (* ==> Counterexample xs = [0; 0; 0; 0] after 11 tests, backend
        exhaustive, substrate native.  Genuine, with the certifying
        theorem |- ~!xs. sortedp xs ==> LENGTH xs <= 3. *)
+
+val _ = the_config := upd_expect NoExpectation (!the_config);
 
 (* --------------------------------------------------------------------- *)
 (* 7.  The same plan on every substrate                                  *)
@@ -166,7 +176,8 @@ fun smart_on substrate =
     (!the_config
        |> upd_substrate substrate
        |> upd_backends (SOME ["exhaustive"])
-       |> upd_quiet true)
+       |> upd_quiet true
+       |> upd_expect ExpectCex)
     ``sortedp xs ==> LENGTH xs <= 3``;
 
 map (fn substrate =>

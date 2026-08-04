@@ -25,15 +25,17 @@ val narrowing = upd_backends (SOME ["narrowing"]) (!the_config);
 (* which arguments matter.                                               *)
 (* --------------------------------------------------------------------- *)
 
-refute narrowing ``(f : num -> num) 0 = f 1``;
+refute (upd_expect ExpectGenuine narrowing) ``(f : num -> num) 0 = f 1``;
 (* ==> f = (λx. 0)⦇0 ↦ 1⦈, with evaluated terms f 0 = 1 and f 1 = 0,     *)
 (*     certified by  ⊢ ¬∀f. f 0 = f 1                                    *)
 
-refute narrowing ``MAP (f : num -> num) xs = xs``;
+refute (upd_expect ExpectGenuine narrowing)
+  ``MAP (f : num -> num) xs = xs``;
 (* ==> f = λx. 0 and xs = 1::_ : no argument of f is distinguished, so   *)
 (*     the function stays constant while the list is refined one cell    *)
 
-refute narrowing ``(f : num -> num) 0 < f 1 ==> f 1 < f 2``;
+refute (upd_expect ExpectGenuine narrowing)
+  ``(f : num -> num) 0 < f 1 ==> f 1 < f 2``;
 (* ==> f = (λx. 0)⦇1 ↦ 1⦈, which satisfies the premise (0 < 1) and       *)
 (*     falsifies the conclusion (1 < 0)                                  *)
 
@@ -45,7 +47,8 @@ refute narrowing ``(f : num -> num) 0 < f 1 ==> f 1 < f 2``;
 (* mainly to see what the representation is doing for you.               *)
 (* --------------------------------------------------------------------- *)
 
-refute (upd_finite_functions false narrowing) ``(f : num -> num) 0 = f 1``;
+refute (upd_expect ExpectUnknown (upd_finite_functions false narrowing))
+  ``(f : num -> num) 0 = f 1``;
 (* ==> Unknown ["narrowing: native: narrowing cannot generate function   *)
 (*     type :num -> num before finitization", ...]; the cv and compute   *)
 (*     substrates are tried next and decline the problem in turn         *)
@@ -59,7 +62,8 @@ refute (upd_finite_functions false narrowing) ``(f : num -> num) 0 = f 1``;
 (* [upd_evals] fills in a concrete representative alongside it.          *)
 (* --------------------------------------------------------------------- *)
 
-refute (upd_evals [``xs : num list``] narrowing) ``NULL (xs : num list)``;
+refute (upd_expect ExpectGenuine (upd_evals [``xs : num list``] narrowing))
+  ``NULL (xs : num list)``;
 (* ==> xs = _::_ , with the evaluated term xs = [0] as one witness of    *)
 (*     that shape; certified by  ⊢ ¬∀xs. NULL xs                         *)
 
@@ -73,11 +77,11 @@ refute (upd_evals [``xs : num list``] narrowing) ``NULL (xs : num list)``;
 
 val deep = ``LENGTH (xs : num list) <> 4``;
 
-refute (upd_size 2 narrowing) deep;
+refute (upd_expect ExpectUnknown (upd_size 2 narrowing)) deep;
 (* ==> Unknown ["narrowing: narrowing search exhausted"]: two levels of  *)
 (*     refinement cannot reach a four-element list                       *)
 
-refute (upd_size 6 narrowing) deep;
+refute (upd_expect ExpectGenuine (upd_size 6 narrowing)) deep;
 (* ==> xs = [_; _; _; _] , reported at size 4: the length is all the     *)
 (*     goal inspects, so none of the four elements is refined            *)
 
@@ -99,16 +103,17 @@ val code_def = Define `
   (code Red = 0n) /\ (code Green = 1n) /\ (code Blue = 4n)`;
 
 (* No colour has code 2.                                                 *)
-refute narrowing ``?c. code c = 2``;
+refute (upd_expect ExpectGenuine narrowing) ``?c. code c = 2``;
 (* ==> a counterexample with no bindings at all, certified by            *)
 (*     ⊢ ¬∃c. code c = 2 : the whole three-element domain was exhausted  *)
 
-refute (upd_allow_existentials false narrowing) ``?c. code c = 2``;
+refute (upd_expect ExpectUnknown (upd_allow_existentials false narrowing))
+  ``?c. code c = 2``;
 (* ==> Unknown ["narrowing: narrowing existential goals require          *)
 (*     allow_existentials"]                                              *)
 
 (* A witness does exist here, so there is nothing to report.             *)
-refute narrowing ``?c. code c = 1``;
+refute (upd_expect ExpectUnknown narrowing) ``?c. code c = 1``;
 (* ==> Unknown ["narrowing: narrowing search exhausted"]: failing to     *)
 (*     refute is reported as ignorance, not as a positive verdict        *)
 
@@ -122,7 +127,8 @@ refute narrowing ``?c. code c = 1``;
 (* --------------------------------------------------------------------- *)
 
 val cert_thm =
-  case refute (upd_quiet true narrowing) ``NULL (xs : num list)`` of
+  case refute (upd_expect ExpectGenuine (upd_quiet true narrowing))
+         ``NULL (xs : num list)`` of
       Counterexample ({cert = SOME theorem, ...} :: _) => theorem
     | _ => raise Fail "expected a certified narrowing counterexample";
 (* ==> val cert_thm = ⊢ ¬∀xs. NULL xs : the closed negation, although    *)
@@ -141,7 +147,8 @@ Tag.dest_tag (Thm.tag cert_thm);
 (* is how you see its answer specifically.                               *)
 (* --------------------------------------------------------------------- *)
 
-case refute (upd_quiet true (!the_config)) ``(f : num -> num) 0 = f 1`` of
+case refute (upd_expect ExpectCex (upd_quiet true (!the_config)))
+       ``(f : num -> num) 0 = f 1`` of
     Counterexample (cex :: _) => (#backend cex, #substrate cex)
   | _ => ("none", "none");
 (* ==> ("exhaustive", "native"): on this goal the enumerating backend    *)

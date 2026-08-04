@@ -146,6 +146,7 @@ are:
 
 | updater | default | meaning |
 | --- | --- | --- |
+| `upd_max` | `[(NONE, [~1])]` | constructor carrier bound; `~1` unbounded |
 | `upd_specialize` | `true` | specialize static higher-order arguments |
 | `upd_box` | `[(NONE, NONE)]` | box functions and pairs when useful |
 | `upd_binary_ints` | `NONE` | select binary integers when useful |
@@ -164,7 +165,9 @@ are:
 
 The default `iter` row is `[0,1,2,4,8,12,16,20,24,28]`.  A `NONE` key in a
 row is its fallback.  For smart Boolean rows, a `NONE` value asks Refute to
-choose; `SOME true` and `SOME false` force the choice.
+choose; `SOME true` and `SOME false` force the choice.  A `max` row is keyed
+by constructor rather than by type: it bounds how many values that
+constructor may contribute to its type's carrier.
 The `max_potential` and `max_genuine` limits are global budgets.  Requesting
 more than one model forces an incremental SAT solver when necessary, and a
 genuine result ends the potential-model search.  With

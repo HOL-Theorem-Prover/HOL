@@ -16,6 +16,13 @@
 load "Refute";
 open Refute;
 
+(* Every call below states the verdict it expects, so that a change in   *)
+(* behaviour raises Refute.expect instead of quietly outdating the       *)
+(* transcript.  [refute] and [refute_goal] take the [upd_expect] clause  *)
+(* directly; [refute_def], [refute_top], [REFUTE_TAC], [quickcheck] and  *)
+(* [nitpick] take no configuration argument at all, so the sections that *)
+(* exercise those set the expectation on [the_config] instead.           *)
+
 (* --------------------------------------------------------------------- *)
 (* 1.  A conjecture that is not a theorem                                *)
 (*                                                                       *)
@@ -23,6 +30,8 @@ open Refute;
 (* undo it.  [refute_def] runs the default configuration: every          *)
 (* registered backend, racing, 30-second budget.                         *)
 (* --------------------------------------------------------------------- *)
+
+val _ = the_config := upd_expect ExpectGenuine (!the_config);
 
 refute_def ``(x : num) - y + y = x``;
 
@@ -36,6 +45,8 @@ refute_def ``(x : num) - y + y = x``;
 (* Refute is a counterexample finder, not a prover: "no counterexample"  *)
 (* is evidence, not proof, and the report says so.                       *)
 (* --------------------------------------------------------------------- *)
+
+val _ = the_config := upd_expect ExpectNone (!the_config);
 
 refute_def ``(x : num) + y = y + x``;
 
@@ -51,6 +62,8 @@ refute_def ``(x : num) + y = y + x``;
 (* variable bindings, and (by default) a HOL theorem certifying the      *)
 (* negation of the instantiated conjecture.                              *)
 (* --------------------------------------------------------------------- *)
+
+val _ = the_config := upd_expect ExpectGenuine (!the_config);
 
 val outcome = refute_def ``EVEN (x + y) ==> EVEN (x : num)``;
 
@@ -73,12 +86,13 @@ case outcome of
 
 val guarded = ([``0 < (n : num)``], ``PRE n < n``);
 
-refute_goal (!the_config) guarded;
+refute_goal (upd_expect ExpectNone (!the_config)) guarded;
 
 (* ==> NoCounterexample: within the tested bounds every n satisfying     *)
 (*     0 < n also satisfies PRE n < n.                                   *)
 
-refute_goal (upd_no_assms true (!the_config)) guarded;
+refute_goal (upd_expect ExpectGenuine (upd_no_assms true (!the_config)))
+  guarded;
 
 (* ==> Counterexample n = 0, certified |- ~!n. PRE n < n: PRE 0 = 0 and  *)
 (*     0 < 0 is false, which is why the assumption was needed.           *)
@@ -95,6 +109,8 @@ refute_goal (upd_no_assms true (!the_config)) guarded;
 (* Fails: the goal is false for xs = [].  The handler prints the raised  *)
 (* HOL_ERR -- the only exception this file expects -- and returns TRUTH  *)
 (* so that the transcript can continue.                                  *)
+val _ = the_config := upd_expect ExpectGenuine (!the_config);
+
 TAC_PROOF (([], ``LENGTH (TL (xs : num list)) < LENGTH xs``), REFUTE_TAC)
   handle e => (Feedback.HOL_MESG (Feedback.exn_to_string e); TRUTH);
 
@@ -104,6 +120,8 @@ TAC_PROOF (([], ``LENGTH (TL (xs : num list)) < LENGTH xs``), REFUTE_TAC)
 (* Succeeds: no counterexample, so the guard steps aside and the real    *)
 (* tactic finishes the proof.  Truncating subtraction sinks section 1's  *)
 (* conjecture but not this one.                                          *)
+val _ = the_config := upd_expect ExpectNone (!the_config);
+
 TAC_PROOF (([], ``(x : num) - y <= x``), REFUTE_TAC THEN simp []);
 
 (* ==> |- x - y <= x                                                     *)
@@ -116,6 +134,8 @@ TAC_PROOF (([], ``(x : num) - y <= x``), REFUTE_TAC THEN simp []);
 (* split disposes of the empty list and leaves a subgoal that no tactic  *)
 (* could ever close, because the conjecture is false.                    *)
 (* --------------------------------------------------------------------- *)
+
+val _ = the_config := upd_expect ExpectGenuine (!the_config);
 
 g `!xs : num list. xs <> [] ==> HD xs <= LENGTH xs`;
 e (Cases_on `xs`);
@@ -138,6 +158,11 @@ drop ();
 (* timeout is a whole-call budget, and a goal with no counterexample     *)
 (* spends all of it, so five seconds is friendlier here than the         *)
 (* default thirty.                                                       *)
+(*                                                                       *)
+(* Ignoring the expectation is a contract rather than an accident: the   *)
+(* session default still carries the ExpectGenuine set in section 6, yet *)
+(* the second call below returns NONE without raising.  These are        *)
+(* therefore the only two calls in this file that assert no verdict.     *)
 (* --------------------------------------------------------------------- *)
 
 try_refute (upd_timeout 5.0 (!the_config))
@@ -164,22 +189,45 @@ try_refute (upd_timeout 5.0 (!the_config))
 (* by hand with [upd_backends].                                          *)
 (* --------------------------------------------------------------------- *)
 
+val session_default = !the_config;
+val _ = the_config := upd_expect ExpectGenuine (!the_config);
+
 quickcheck ``REVERSE (xs : num list) = xs``;
 
 (* ==> Counterexample xs = [0; 1] from the exhaustive backend.           *)
 
-refute (upd_backends (SOME ["exhaustive"]) (!the_config))
+refute
+  (upd_expect ExpectGenuine
+     (upd_backends (SOME ["exhaustive"]) (!the_config)))
   ``REVERSE (xs : num list) = xs``;
 
 (* ==> the same counterexample.  [quickcheck] is this call with all the  *)
 (*     QC backend names filled in for you; here only one of them is      *)
 (*     asked, and it is the one that answered above.                     *)
 
-(* Needs a Kodkodi installation; see 09_model_finder.sml.                *)
+(* Needs a Kodkodi installation; see 09_model_finder.sml.  Model-finder  *)
+(* calls in the corpus pin one Kodkodi thread and one cardinality row, so *)
+(* the quoted scope is exact rather than whichever scope won a race.     *)
+(* [nitpick] takes no configuration argument, so the pin goes on         *)
+(* [the_config] alongside the expectation.                               *)
+
+val _ = the_config :=
+  (!the_config |> upd_max_threads 1 |> upd_card [(NONE, [3])]);
+
 nitpick ``(f : bool -> num) b = 0``;
 
 (* ==> a Genuine kodkod counterexample, with the extra fields only the   *)
 (*     model finder fills in: a cardinality scope for :num, a model      *)
-(*     listing that type's atoms, and f as a finite update table.  The   *)
-(*     chosen scope and table vary from run to run.  Without a Kodkodi   *)
-(*     component this call reports Unknown instead; see examples/README. *)
+(*     listing that type's atoms, and f as a finite update table.        *)
+(*       Scope: card num = 3                                             *)
+(*         f = (K _)⦇T ↦ 2; F ↦ 1⦈                                       *)
+(*         b = F                                                         *)
+(*       Evaluated terms:                                                *)
+(*         f b = 1                                                       *)
+(*         0 = 0                                                         *)
+(*     Without a Kodkodi component this call reports Unknown instead --  *)
+(*     and the expectation set above then raises; see examples/README.   *)
+
+(* The session default is left as it was found: the expectation cleared, *)
+(* and the model-finder pins above dropped with it.                      *)
+val _ = the_config := upd_expect NoExpectation session_default;

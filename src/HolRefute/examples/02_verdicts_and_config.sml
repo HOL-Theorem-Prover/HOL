@@ -24,9 +24,13 @@ open Refute;
 (* theory file.                                                          *)
 (* --------------------------------------------------------------------- *)
 
+val _ = the_config := upd_expect ExpectGenuine (!the_config);
+
 val certified = refute_def ``(n : num) DIV 2 * 2 = n``;
 (* ==> n = 1                                                             *)
 (*     Certified: |- ~!n. n DIV 2 * 2 = n                                *)
+
+val _ = the_config := default_config;
 
 case certified of
     Counterexample ({cert = SOME theorem, ...} :: _) =>
@@ -44,7 +48,11 @@ case certified of
 (* candidates that are only Potential stay Potential.                    *)
 (* --------------------------------------------------------------------- *)
 
-refute (upd_certify false (!the_config)) ``(n : num) DIV 2 * 2 = n``;
+refute
+  (!the_config
+     |> upd_certify false
+     |> upd_expect ExpectGenuine)
+  ``(n : num) DIV 2 * 2 = n``;
 
 (* --------------------------------------------------------------------- *)
 (* 3.  The three certainty levels                                        *)
@@ -77,9 +85,23 @@ show_config ();
 (* [:ind] is infinite and carries no TypeBase enumeration, so the QC     *)
 (* backends decline; the reasons name the backend, the substrate it      *)
 (* tried, and what stopped it.                                           *)
+(*                                                                       *)
+(* All three calls below share one pinned configuration: a single        *)
+(* Kodkodi thread and a single cardinality row.  That is the corpus      *)
+(* convention for model-finder calls — see the header of                 *)
+(* 10_model_finder_advanced.sml — and it is what makes the scope and     *)
+(* the model quoted here exact instead of whichever scope won a race.    *)
 (* --------------------------------------------------------------------- *)
 
-refute (upd_backends (SOME ["exhaustive", "random"]) (!the_config))
+val ind_config =
+  !the_config
+    |> upd_max_threads 1
+    |> upd_card [(NONE, [2])];
+
+refute
+  (ind_config
+     |> upd_backends (SOME ["exhaustive", "random"])
+     |> upd_expect ExpectUnknown)
   ``(f : ind -> ind) x = x``;
 (* ==> Unknown, first reason: "exhaustive: native: no generator for      *)
 (*     :ind - no TypeBase information; register a generator"             *)
@@ -94,7 +116,7 @@ refute (upd_backends (SOME ["exhaustive", "random"]) (!the_config))
 (* component; without one the call reports                               *)
 (* Unknown ["no configured backend"] — see 09_model_finder.sml.)         *)
 
-refute_def ``(f : ind -> ind) x = x``;
+refute (upd_expect ExpectGenuine ind_config) ``(f : ind -> ind) x = x``;
 (* ==> Refute found a counterexample (backend: kodkod, substrate:        *)
 (*     kodkod):                                                          *)
 (*       Scope: card ind = 2                                             *)
@@ -107,7 +129,11 @@ refute_def ``(f : ind -> ind) x = x``;
 (* is section 4 of 09_model_finder.sml, where an abstract type leaves    *)
 (* the witness unevaluable, that shows a model the filter does drop.     *)
 
-refute (upd_genuine_only true (!the_config)) ``(f : ind -> ind) x = x``;
+refute
+  (ind_config
+     |> upd_genuine_only true
+     |> upd_expect ExpectGenuine)
+  ``(f : ind -> ind) x = x``;
 (* ==> the same Genuine, uncertified counterexample                      *)
 
 (* --------------------------------------------------------------------- *)
@@ -119,8 +145,9 @@ refute (upd_genuine_only true (!the_config)) ``(f : ind -> ind) x = x``;
 (* --------------------------------------------------------------------- *)
 
 refute
-  (upd_evals [``LENGTH (xs : num list)``, ``REVERSE (xs : num list)``]
-    (!the_config))
+  (!the_config
+     |> upd_evals [``LENGTH (xs : num list)``, ``REVERSE (xs : num list)``]
+     |> upd_expect ExpectGenuine)
   ``REVERSE (xs : num list) = xs``;
 
 (* --------------------------------------------------------------------- *)
@@ -132,7 +159,10 @@ refute
 (* per size, and they happen to differ.                                  *)
 (* --------------------------------------------------------------------- *)
 
-refute (upd_max_counterexamples 3 (!the_config))
+refute
+  (!the_config
+     |> upd_max_counterexamples 3
+     |> upd_expect ExpectGenuine)
   ``(xs : num list) ++ ys = ys ++ xs``;
 (* ==> three Genuine counterexamples: xs = [0] with ys = [1], [0; 1]     *)
 (*     and [0; 0; 1]                                                     *)
@@ -150,7 +180,8 @@ refute
   (!the_config
      |> upd_timeout 5.0
      |> upd_sequential true
-     |> upd_quiet true)
+     |> upd_quiet true
+     |> upd_expect ExpectGenuine)
   ``(x : num) * y = x + y``;
 (* ==> no report, just the returned Counterexample value                 *)
 
@@ -186,11 +217,23 @@ refute (upd_expect ExpectNone (!the_config)) ``(x : num) - y + y = x``
 
 Feedback.set_trace "Refute" 2;
 
-refute (upd_tag "  [attempt A]" (!the_config))
+refute
+  (!the_config
+     |> upd_tag "  [attempt A]"
+     |> upd_expect ExpectGenuine)
   ``REVERSE (xs : num list) = xs``;
-(* ==> Refute backend started (weight 20): exhaustive                    *)
+(* ==> Refute: backend racing requested, but the session thread count    *)
+(*     is 1, so the backends run sequentially (--mt or                   *)
+(*     Multithreading.max_threads_update raises it)                      *)
+(*     Refute backend started (weight 20): exhaustive                    *)
 (*     Refute substrate selection: selected native                       *)
 (*     ... Certified: |- ~!xs. REVERSE xs = xs  [attempt A]              *)
+(*                                                                       *)
+(* That first line is emitted on every trace-2 run of a session that was *)
+(* not given [--mt], which is every session started the way this file's  *)
+(* header shows.  It reports a schedule, not a problem: sequential and   *)
+(* raced runs return the same result.  04_substrates_and_determinism.sml *)
+(* is where scheduling is the subject.                                   *)
 
 Feedback.set_trace "Refute" 1;
 
@@ -203,6 +246,9 @@ Feedback.set_trace "Refute" 1;
 (* restore [default_config] when you are done.                           *)
 (* --------------------------------------------------------------------- *)
 
-the_config := (!the_config |> upd_timeout 10.0 |> upd_size 6);
+the_config := (!the_config
+                 |> upd_timeout 10.0
+                 |> upd_size 6
+                 |> upd_expect ExpectGenuine);
 refute_def ``(xs : num list) <> [] ==> HD xs = 0``;
 the_config := default_config;

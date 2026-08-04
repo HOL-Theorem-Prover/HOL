@@ -13,6 +13,18 @@
 load "Refute";
 open Refute;
 
+(* Extending Refute means touching the registries themselves, so this     *)
+(* file reaches into implementation modules more often than the rest of   *)
+(* the corpus does.  Noted once here rather than at each point of use:    *)
+(* Refute_Core.refute_simp (section 3), Refute_Eval.get_substrates        *)
+(* (section 5), and Refute_Core.registered_backends,                      *)
+(* Refute_QC.register_backends, Refute_QC_Narrow.register_backend and     *)
+(* Refute_ModelFinder.register_backends (section 6) belong to             *)
+(* implementation modules, not to Refute.sig.  The one other qualified    *)
+(* name below, the type Refute_Core.instance in section 1, is not a       *)
+(* reach: Refute.sig re-exports it as [instance].  Everything else used   *)
+(* here is in Refute.sig.                                                 *)
+
 (* --------------------------------------------------------------------- *)
 (* 1.  A backend is a record                                             *)
 (*                                                                       *)
@@ -52,16 +64,28 @@ register_backend demo_backend;
 (* The counterexample carries certainty Genuine with cert = NONE, so it   *)
 (* is reported as uncertified: the core believes a backend that claims    *)
 (* Genuine, it does not re-check the claim.                              *)
-refute (upd_backends (SOME ["demo"]) (!the_config)) ``F``;
+refute
+  (!the_config
+     |> upd_backends (SOME ["demo"])
+     |> upd_expect ExpectGenuine)
+  ``F``;
 (* ==> Refute found a counterexample (backend: demo, substrate: demo)    *)
 (* ==> Certification: uncertified                                        *)
 
-refute (upd_backends (SOME ["demo"]) (!the_config)) ``(x : num) = x``;
+refute
+  (!the_config
+     |> upd_backends (SOME ["demo"])
+     |> upd_expect ExpectUnknown)
+  ``(x : num) = x``;
 (* ==> Unknown ["demo: demo backend: goal is not literally F"]           *)
 
 (* Selecting a backend that was never registered is an error, not a       *)
 (* silent no-op.                                                         *)
-refute (upd_backends (SOME ["no-such-backend"]) (!the_config)) ``F``;
+refute
+  (!the_config
+     |> upd_backends (SOME ["no-such-backend"])
+     |> upd_expect ExpectUnknown)
+  ``F``;
 (* ==> Unknown ["unknown requested backend: no-such-backend"]            *)
 
 (* --------------------------------------------------------------------- *)
@@ -103,7 +127,11 @@ val weak_backend : backend =
 register_backend_with_ceiling weak_backend
   (fn _ => fn _ => Potential ["demo backend never certifies"]);
 
-refute (upd_backends (SOME ["weak-demo"]) (!the_config)) ``(x : num) = x``;
+refute
+  (!the_config
+     |> upd_backends (SOME ["weak-demo"])
+     |> upd_expect ExpectPotential)
+  ``(x : num) = x``;
 (* ==> Refute found a counterexample (backend: weak-demo, ...)           *)
 (* ==> Potential counterexample:                                         *)
 (* ==>   demo backend never certifies                                    *)
@@ -117,7 +145,8 @@ refute (upd_backends (SOME ["weak-demo"]) (!the_config)) ``(x : num) = x``;
 refute
   (!the_config
      |> upd_backends (SOME ["weak-demo"])
-     |> upd_genuine_only true)
+     |> upd_genuine_only true
+     |> upd_expect ExpectUnknown)
   ``(x : num) = x``;
 (* ==> Unknown ["weak-demo: weak-demo: genuine_only is set and nothing   *)
 (* ==>          here certifies"]                                         *)
@@ -152,10 +181,19 @@ List.exists (fn theorem =>
 refute
   (!the_config
      |> upd_backends (SOME ["kodkod"])
-     |> upd_card [(NONE, [3])])
+     |> upd_max_threads 1
+     |> upd_card [(NONE, [3])]
+     |> upd_expect ExpectGenuine)
   ``double n = n``;
 (* ==> Refute found a counterexample (backend: kodkod, substrate:        *)
-(* ==> kodkod): n = 1, Certified: |- ~!n. double n = n                   *)
+(*       kodkod):                                                        *)
+(*       Scope: card unsigned_bit bitword = 3, card unsigned_bit = 2     *)
+(*         n = 1                                                         *)
+(*       Certified: |- ~!n. double n = n                                 *)
+(*     The [upd_card] row bounds whatever types the translation builds,  *)
+(*     which here are the bitword types a binary representation of :num  *)
+(*     introduces rather than :num itself — the same substitution        *)
+(*     section 9 of 09_model_finder.sml shows for :int.                  *)
 
 (* --------------------------------------------------------------------- *)
 (* 4.  Ersatz constants                                                  *)
@@ -175,16 +213,17 @@ refute
 val max_config =
   !the_config
     |> upd_backends (SOME ["kodkod"])
+    |> upd_max_threads 1
     |> upd_card [(NONE, [3])];
 
-refute max_config ``!m n : num. m <= MAX m n``;
+refute (upd_expect ExpectNone max_config) ``!m n : num. m <= MAX m n``;
 (* ==> NoCounterexample (the theorem is true)                            *)
 
 register_ersatz
   {original = {Thy = "arithmetic", Name = "MAX"},
    replacement = {Thy = "arithmetic", Name = "MIN"}};
 
-refute max_config ``!m n : num. m <= MAX m n``;
+refute (upd_expect ExpectPotential max_config) ``!m n : num. m <= MAX m n``;
 (* ==> Refute found a counterexample (backend: kodkod, substrate:        *)
 (* ==>   kodkod):                                                        *)
 (* ==>     Scope: card num = 3                                           *)

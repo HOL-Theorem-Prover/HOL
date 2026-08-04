@@ -7,10 +7,19 @@
 (*  the display registry, which changes how models are printed without   *)
 (*  touching what is certified.                                          *)
 (*                                                                       *)
-(*  Needs Kodkodi (see 09_model_finder.sml).  About 30 seconds end to    *)
-(*  end: fifteen Kodkodi calls of roughly 1.3 seconds each, most of      *)
-(*  that the JVM.  It runs one Kodkodi thread, so the quoted outputs     *)
-(*  reproduce rather than racing between scopes.                         *)
+(*  Needs Kodkodi (see 09_model_finder.sml).  Around 70 seconds end to   *)
+(*  end on a busy 32-core host: 16 Kodkodi calls ranging from 1.5 to 6   *)
+(*  seconds, median 3, about 56 of those seconds spent inside Kodkodi    *)
+(*  and much of a short call in JVM startup.  Read the figure as         *)
+(*  machine-dependent rather than as a promise — it moves with the       *)
+(*  host, the Java runtime, and whatever else the machine is doing.      *)
+(*                                                                       *)
+(*  Every model-finder call in the corpus pins [upd_max_threads 1] and   *)
+(*  an explicit [upd_card] row, so that the scopes are tried smallest    *)
+(*  first and the quoted outputs reproduce instead of racing.  This      *)
+(*  file's [mf] below is where that convention comes from.  Exactly one  *)
+(*  call is deliberately left racing — the opener of section 1 of        *)
+(*  09_model_finder.sml — and says so.                                   *)
 (*                                                                       *)
 (*      ../../bin/hol --holstate=refuteheap \                            *)
 (*          < examples/10_model_finder_advanced.sml                      *)
@@ -64,7 +73,7 @@ val (even_rel_rules, even_rel_ind, even_rel_cases) = Hol_reln `
 
 val even_rel_pred = ``even_rel : num -> bool``;
 
-refute mf ``even_rel n ==> n = 0``;
+refute (upd_expect ExpectGenuine mf) ``even_rel n ==> n = 0``;
 (* ==> Refute found a counterexample (backend: kodkod, substrate:        *)
 (* ==>   kodkod, 1.2s):                                                  *)
 (* ==>   Scope: card num = 3                                             *)
@@ -75,13 +84,16 @@ refute mf ``even_rel n ==> n = 0``;
 (* and the bindings are quoted from here on.                             *)
 
 refute (mf |> upd_star_linear_preds false
-           |> upd_iter [(SOME even_rel_pred, [2]), (NONE, [0])])
+           |> upd_iter [(SOME even_rel_pred, [2]), (NONE, [0])]
+           |> upd_expect ExpectGenuine)
   ``~even_rel 2``;
 (* ==> Scope: card num = 3, uncertified.  The goal is closed, so the     *)
 (*     model has no bindings: the content is that 2 is reachable within  *)
 (*     two unrollings of the base clause.                                *)
 
-refute (upd_wf [(NONE, SOME false)] mf) ``even_rel n ==> n = 0``;
+refute (mf |> upd_wf [(NONE, SOME false)]
+           |> upd_expect ExpectGenuine)
+  ``even_rel n ==> n = 0``;
 (* ==> Scope: card num = 3, n = 2, uncertified.  Denying                 *)
 (*     well-foundedness switches to the unrolled approximation, which    *)
 (*     is visible in the model: it now reports                           *)
@@ -92,7 +104,9 @@ refute (upd_wf [(NONE, SOME false)] mf) ``even_rel n ==> n = 0``;
 (*     lower bound only makes the premise harder to satisfy, so the      *)
 (*     model it yields is still Genuine.                                 *)
 
-refute (upd_star_linear_preds false mf) ``even_rel n ==> n = 0``;
+refute (mf |> upd_star_linear_preds false
+           |> upd_expect ExpectGenuine)
+  ``even_rel n ==> n = 0``;
 (* ==> Scope: card num = 3, n = 2, uncertified.  Turning exact closure   *)
 (*     off costs nothing here; the predicate is still well-founded, so   *)
 (*     the direct equation is used either way.                           *)
@@ -111,13 +125,14 @@ val (always_rules, always_coind, always_cases) = Hol_coreln `
 (*     The greatest solution of that equation is {T}, so `always F` is   *)
 (*     false and the model finder should refute it.                      *)
 
-refute mf ``always F``;
+refute (upd_expect ExpectGenuine mf) ``always F``;
 (* ==> Scope: iter scratch$always = 0, uncertified.  The scope entry is  *)
 (*     the gfp iterator, not a cardinality: the model lives in the type  *)
 (*     :'refute$gfpit$scratch$always.  Closed goal, so no bindings; the  *)
 (*     model reports λi. always = K $?.                                  *)
 
-refute (upd_iter [(SOME ``always : bool -> bool``, [2]), (NONE, [0])] mf)
+refute (mf |> upd_iter [(SOME ``always : bool -> bool``, [2]), (NONE, [0])]
+           |> upd_expect ExpectGenuine)
   ``always F``;
 (* ==> the same counterexample, now at the pinned depth                  *)
 (*     Scope: iter scratch$always = 1, with stats reporting              *)
@@ -133,7 +148,8 @@ refute (upd_iter [(SOME ``always : bool -> bool``, [2]), (NONE, [0])] mf)
 (* iterator and skips the recheck.                                       *)
 (* --------------------------------------------------------------------- *)
 
-refute mf ``(xs : num llist) <> llist$LCONS a xs``;
+refute (upd_expect ExpectGenuine mf)
+  ``(xs : num llist) <> llist$LCONS a xs``;
 (* ==> Refute found a counterexample:                                    *)
 (* ==>   Scope: bisim_depth = 1, card num llist = 2, card num = 2        *)
 (* ==>     xs = safe_The (λω. ω = 0:::ω)                                 *)
@@ -145,7 +161,8 @@ refute mf ``(xs : num llist) <> llist$LCONS a xs``;
 (* $var$(refute$bisim), indexed by bisimulation depth.  The recheck is   *)
 (* what makes the encoding exact, so the verdict is Genuine.             *)
 
-refute (upd_bisim_depth [~1] mf)
+refute (mf |> upd_bisim_depth [~1]
+           |> upd_expect ExpectQuasiGenuine)
   ``(xs = llist$LCONS (a : num) xs /\ ys = llist$LCONS a ys) ==> xs = ys``;
 (* ==> two models, at the two cardinalities [mf] offers:                 *)
 (* ==>   Scope: card num llist = 2, card num = 2                         *)
@@ -175,7 +192,8 @@ register_codatatype
    constructors = [``lbtree$Lf``, ``lbtree$Nd``]};
 (* ==> val it = (): unit                                                 *)
 
-refute mf ``t = lbtree$Nd (a : num) t t ==> t = lbtree$Lf``;
+refute (upd_expect ExpectGenuine mf)
+  ``t = lbtree$Nd (a : num) t t ==> t = lbtree$Lf``;
 (* ==> Refute found a counterexample:                                    *)
 (* ==>   Scope: bisim_depth = 1, card num lbtree = 2, card num = 2       *)
 (* ==>     t = safe_The (λω. ω = Nd 0 ω ω)                               *)
@@ -211,7 +229,8 @@ register_typedef
    absrep_thm = mirror_absrep};
 (* ==> val it = (): unit                                                 *)
 
-refute (upd_card [(SOME ``:mirror``, [2]), (NONE, [2])] mf)
+refute (mf |> upd_card [(SOME ``:mirror``, [2]), (NONE, [2])]
+           |> upd_expect ExpectGenuine)
   ``mirror_rep (x : mirror) = 0``;
 (* ==> Refute found a counterexample:                                    *)
 (* ==>   Scope: card mirror = 2, card num = 2                            *)
@@ -253,7 +272,8 @@ register_quotient
    equiv_thm = par_quot, partial = false};
 (* ==> val it = (): unit                                                 *)
 
-refute (upd_card [(SOME ``:num``, [2]), (NONE, [2])] mf)
+refute (mf |> upd_card [(SOME ``:num``, [2]), (NONE, [2])]
+           |> upd_expect ExpectGenuine)
   ``(x : parity) = y``;
 (* ==> Refute found a counterexample:                                    *)
 (* ==>   Scope: card num = 2, card parity = 2                            *)
@@ -279,7 +299,7 @@ refute (upd_card [(SOME ``:num``, [2]), (NONE, [2])] mf)
 register_term_postprocessor ``:num``
   (fn tm => if numSyntax.is_numeral tm then ``SUC 0 * ^tm`` else tm);
 
-refute mf ``(n : num) < 1``;
+refute (upd_expect ExpectGenuine mf) ``(n : num) < 1``;
 (* ==> Refute found a counterexample:                                    *)
 (* ==>   Scope: card num = 2                                             *)
 (* ==>     n = SUC 0 * 1                                                 *)
@@ -311,7 +331,8 @@ register_term_postprocessor ``:num`` (fn tm => tm);
 (* models that need different cardinalities.                             *)
 (* --------------------------------------------------------------------- *)
 
-refute (upd_merge_type_vars true mf)
+refute (mf |> upd_merge_type_vars true
+           |> upd_expect ExpectGenuine)
   ``(f : 'a -> 'b) x = (g : 'a -> 'b) x``;
 (* ==> Refute found a counterexample:                                    *)
 (* ==>   Scope: card α = 2                                               *)
@@ -355,7 +376,8 @@ refute
       |> upd_user_axioms (SOME false)
       |> upd_peephole_optim false
       |> upd_datatype_sym_break 3
-      |> upd_kodkod_sym_break 10)
+      |> upd_kodkod_sym_break 10
+      |> upd_expect ExpectGenuine)
   ``xs <> [] ==> HD (xs : num list) = 0``;
 (* ==> Refute found a counterexample:                                    *)
 (* ==>   Scope: card num list = 2, card num = 2                          *)
@@ -381,7 +403,9 @@ refute
 (* diagnosing a translation, not for daily use.                          *)
 (* --------------------------------------------------------------------- *)
 
-refute (upd_debug true mf) ``SUC n = n``;
+refute (mf |> upd_debug true
+           |> upd_expect ExpectGenuine)
+  ``SUC n = n``;
 (* ==> Refute found a counterexample:                                    *)
 (* ==>   Scope: card num = 2                                             *)
 (* ==>     n = 1                                                         *)

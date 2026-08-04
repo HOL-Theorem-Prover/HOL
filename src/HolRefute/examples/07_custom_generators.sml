@@ -42,7 +42,7 @@ val flatten_def = Define `
   (flatten Leaf = []) /\
   (flatten (Branch l v r) = flatten l ++ [v] ++ flatten r)`;
 
-refute compute ``SORTED (<) (flatten t)``;
+refute (upd_expect ExpectGenuine compute) ``SORTED (<) (flatten t)``;
 (* ==> Counterexample: t = Branch Leaf 0 (Branch Leaf 0 Leaf)           *)
 
 (* --------------------------------------------------------------------- *)
@@ -86,12 +86,13 @@ val () = register_generator ``:btree`` search_trees;
 (* claims that its values exhaust the type -- a restricted search never  *)
 (* reports a completed one.  "Not refuted within the tested bounds" is   *)
 (* all you get, and all you should want: it is not a proof.              *)
-refute compute ``SORTED (<) (flatten t)``;
+refute (upd_expect ExpectUnknown compute) ``SORTED (<) (flatten t)``;
 (* ==> Unknown ["exhaustive: search space not exhausted"]                *)
 
 (* And a genuinely false conjecture about search trees still falls; the  *)
 (* witness below is [insertions [0]].                                    *)
-refute compute ``LENGTH (flatten (insert x t)) = LENGTH (flatten t) + 1``;
+refute (upd_expect ExpectGenuine compute)
+  ``LENGTH (flatten (insert x t)) = LENGTH (flatten t) + 1``;
 (* ==> Counterexample: x = 0, t = Branch Leaf 0 Leaf                    *)
 
 (* --------------------------------------------------------------------- *)
@@ -119,21 +120,22 @@ val trees_with_random : custom_gen =
 (* A later registration for the same type replaces the earlier one.      *)
 val () = register_generator ``:btree`` trees_with_random;
 
-fun random_refute quiet tm =
+fun random_refute expectation quiet tm =
   refute
     (compute
        |> upd_backends (SOME ["random"])
        |> upd_seed (SOME 1234)
        |> upd_iterations 50
-       |> upd_quiet quiet)
+       |> upd_quiet quiet
+       |> upd_expect expectation)
     tm;
 
 (* Every tree drawn is a search tree, so the random backend runs out of  *)
 (* its iteration budget without a hit.                                   *)
-random_refute false ``SORTED (<) (flatten t)``;
+random_refute ExpectUnknown false ``SORTED (<) (flatten t)``;
 (* ==> Unknown ["random: random search exhausted"]                       *)
 
-random_refute false
+random_refute ExpectGenuine false
   ``LENGTH (flatten (insert x t)) = LENGTH (flatten t) + 1``;
 (* ==> Counterexample: x = 1, t = Branch (Branch Leaf 0 Leaf) 1 Leaf     *)
 
@@ -145,7 +147,7 @@ fun witnesses outcome =
     | _ => [];
 
 fun random_witness () =
-  witnesses (random_refute true
+  witnesses (random_refute ExpectGenuine true
     ``LENGTH (flatten (insert x t)) = LENGTH (flatten t) + 1``);
 
 random_witness () = random_witness ();
@@ -163,7 +165,7 @@ random_witness () = random_witness ();
 val _ = Datatype `interval = <| lo : num ; hi : num |>`;
 
 (* Without the invariant, lo > hi intervals refute this at once.         *)
-refute compute ``(i : interval).lo <= i.hi``;
+refute (upd_expect ExpectGenuine compute) ``(i : interval).lo <= i.hi``;
 (* ==> Counterexample: i = interval 1 0                                  *)
 
 val interval_constructors =
@@ -175,12 +177,13 @@ val () = abstract_generator
    pred = SOME ``\i : interval. i.lo <= i.hi``};
 
 (* Now only well-formed intervals are generated, so nothing is found ... *)
-refute compute ``(i : interval).lo <= i.hi``;
+refute (upd_expect ExpectUnknown compute) ``(i : interval).lo <= i.hi``;
 (* ==> Unknown ["exhaustive: search space not exhausted"]                *)
 
 (* ... while a false claim about well-formed intervals still falls, and  *)
 (* its witness does satisfy the invariant.                               *)
-refute compute ``(i : interval).hi - i.lo <= 1``;
+refute (upd_expect ExpectGenuine compute)
+  ``(i : interval).hi - i.lo <= 1``;
 (* ==> Counterexample: i = interval 0 2                                  *)
 
 (* --------------------------------------------------------------------- *)
@@ -202,7 +205,7 @@ val () = abstract_generator
    constructors = interval_constructors,
    pred = NONE};
 
-refute compute ``(i : interval).lo <= i.hi``;
+refute (upd_expect ExpectGenuine compute) ``(i : interval).lo <= i.hi``;
 (* ==> Counterexample: i = interval 1 0                                  *)
 
 Theory.current_theory ();

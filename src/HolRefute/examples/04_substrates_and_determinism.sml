@@ -37,15 +37,15 @@ fun substrate_of outcome =
 val goal = ``REVERSE (xs : num list) = xs``;
 
 substrate_of (refute (upd_substrate NativeSML (upd_quiet true
-  (!the_config))) goal);
+  (upd_expect ExpectCex (!the_config)))) goal);
 (* ==> val it = "native": string *)
 
 substrate_of (refute (upd_substrate Cv (upd_quiet true
-  (!the_config))) goal);
+  (upd_expect ExpectCex (!the_config)))) goal);
 (* ==> val it = "cv": string *)
 
 substrate_of (refute (upd_substrate Compute (upd_quiet true
-  (!the_config))) goal);
+  (upd_expect ExpectCex (!the_config)))) goal);
 (* ==> val it = "compute": string *)
 
 (* --------------------------------------------------------------------- *)
@@ -56,10 +56,19 @@ substrate_of (refute (upd_substrate Compute (upd_quiet true
 (* At trace level 2 it names the substrate it settled on, and the reason *)
 (* for every one it skipped.  This goal needs no skips: NativeSML, the   *)
 (* first choice, runs it.  Section 3 shows a run with skips.             *)
+(*                                                                       *)
+(* Trace 2 opens by reporting that the backends will run sequentially:   *)
+(* racing needs more than one session thread, which only the build's     *)
+(* --mt flag (or Multithreading.max_threads_update) supplies.  A plain   *)
+(* session therefore always degrades to a sequence; only the schedule    *)
+(* differs, never the result.                                            *)
 (* --------------------------------------------------------------------- *)
 
 Feedback.set_trace "Refute" 2;
-refute (upd_substrate Auto (!the_config)) goal;
+refute (upd_expect ExpectGenuine (upd_substrate Auto (!the_config))) goal;
+(* ==> Refute: backend racing requested, but the session thread count    *)
+(*      is 1, so the backends run sequentially (--mt or                  *)
+(*      Multithreading.max_threads_update raises it)                     *)
 (* ==> Refute substrate selection: selected native                       *)
 (* ==> Counterexample xs = [0; 1], substrate = "native"                  *)
 Feedback.set_trace "Refute" 1;
@@ -80,7 +89,7 @@ val higher_order = ``(f : (num -> num) -> num) (\n. n) = 0``;
 
 val qc = upd_backends (SOME ["exhaustive", "random"]) (!the_config);
 
-refute (upd_substrate Cv qc) higher_order;
+refute (upd_expect ExpectUnknown (upd_substrate Cv qc)) higher_order;
 (* ==> Unknown                                                          *)
 (*      ["exhaustive: cv: :(num -> num) -> num - function type in data  *)
 (*        position",                                                    *)
@@ -88,7 +97,10 @@ refute (upd_substrate Cv qc) higher_order;
 (*        position"]                                                    *)
 
 Feedback.set_trace "Refute" 2;
-refute (upd_substrate Auto qc) higher_order;
+refute (upd_expect ExpectGenuine (upd_substrate Auto qc)) higher_order;
+(* ==> Refute: backend racing requested, but the session thread count   *)
+(*      is 1, so the backends run sequentially (--mt or                 *)
+(*      Multithreading.max_threads_update raises it)                    *)
 (* ==> native is inapplicable: function equality has non-enumerable     *)
 (*      domain :num                                                     *)
 (* ==> cv is inapplicable: cv: :(num -> num) -> num - function type in  *)
@@ -112,7 +124,8 @@ val far_out = ``(x : num) MOD 64 <> 37``;
 refute
   (!the_config
      |> upd_backends (SOME ["exhaustive"])
-     |> upd_size 20)
+     |> upd_size 20
+     |> upd_expect ExpectUnknown)
   far_out;
 (* ==> Unknown ["exhaustive: search space not exhausted"]: the bound     *)
 (*      never reaches x = 37                                             *)
@@ -120,7 +133,8 @@ refute
 refute
   (!the_config
      |> upd_backends (SOME ["exhaustive"])
-     |> upd_size 40)
+     |> upd_size 40
+     |> upd_expect ExpectGenuine)
   far_out;
 (* ==> Counterexample x = 37, found at size 37                           *)
 
@@ -128,7 +142,8 @@ refute
   (!the_config
      |> upd_backends (SOME ["random"])
      |> upd_iterations 2000
-     |> upd_size 200)
+     |> upd_size 200
+     |> upd_expect ExpectGenuine)
   far_out;
 (* ==> Counterexample x = 37, size 37, tests 1: the schedule climbs to   *)
 (*      that size and the draw hits immediately                          *)
@@ -154,7 +169,8 @@ fun stream_with seed substrate =
        |> upd_substrate substrate
        |> upd_seed seed
        |> upd_iterations 500
-       |> upd_quiet true)
+       |> upd_quiet true
+       |> upd_expect ExpectCex)
     ``(x : num) * y = y``);
 
 fun seeded substrate = stream_with (SOME 271828) substrate;
@@ -193,7 +209,8 @@ fun stats_of substrate =
        |> upd_substrate substrate
        |> upd_backends (SOME ["exhaustive"])
        |> upd_size 8
-       |> upd_quiet true)
+       |> upd_quiet true
+       |> upd_expect ExpectCex)
     ``REVERSE (xs : num list) = xs`` of
       Counterexample (cex :: _) => #stats cex
     | _ => [];
