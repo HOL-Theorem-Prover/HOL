@@ -84,7 +84,9 @@ fun select_tacfea tacdata gfea =
 val hh_use = ref false
 val hh_time = ref 30
 val hh_lemmas = ref NONE
-val atp_dir = ref (tactictoe_dir ^ "/provers")
+val atp_dir = ref ""
+fun atp_dir_of () =
+  if !atp_dir = "" then tactictoe_dir_of () ^ "/provers" else !atp_dir
 
 fun metis_avail () = quse_string "val _ = metisTools.METIS_TAC;"
 
@@ -140,7 +142,7 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
     val hho = if !hh_use then import_hh () else NONE
     fun predhh g =
       dfind g (!hh_cache) handle NotFound =>
-      let val r = (valOf hho) (!atp_dir) thmdata g in
+      let val r = (valOf hho) (atp_dir_of ()) thmdata g in
          hh_cache := dadd g r (!hh_cache); r
       end
     fun predthml g =
@@ -207,26 +209,31 @@ fun read_status status = case status of
    Interface
    ------------------------------------------------------------------------- *)
 
-val ttt_tacdata_cache = ref (dempty (list_compare String.compare))
+val tacdata_cache_compare =
+  cpl_compare String.compare
+    (cpl_compare (list_compare String.compare) String.compare)
+val ttt_tacdata_cache = ref (dempty tacdata_cache_compare)
 fun clean_ttt_tacdata_cache () =
-  ttt_tacdata_cache := dempty (list_compare String.compare)
+  ttt_tacdata_cache := dempty tacdata_cache_compare
 
 fun has_boolty x = type_of x = bool
 fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 
 val searchtree_glob = ref NONE
 
-fun tactictoe_aux vnno goal =
+fun tactictoe_aux vnno goal = with_tactictoe_cache (fn () =>
   if not (has_boolty_goal goal)
   then raise ERR "tactictoe" "type bool expected"
   else
   let
     val cthyl = current_theory () :: ancestry (current_theory ())
+    val cache_key =
+      (tactictoe_dir_of (), (cthyl,tttManifest.manifest_generation ()))
     val thmdata = hidef create_thmdata ()
     val tacdata =
-      dfind cthyl (!ttt_tacdata_cache) handle NotFound =>
+      dfind cache_key (!ttt_tacdata_cache) handle NotFound =>
       let val tacdata_aux = create_tacdata () in
-        ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
+        ttt_tacdata_cache := dadd cache_key tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
     val (proofstatus,tree) = hidef
@@ -235,7 +242,7 @@ fun tactictoe_aux vnno goal =
     val (staco,tac) = read_status proofstatus
   in
     tac
-  end
+  end)
 
 fun ttt goal = (tactictoe_aux NONE goal) goal
 
@@ -259,11 +266,11 @@ val confidence_tnn = eval_goal
    Proof suggestion
    ------------------------------------------------------------------------- *)
 
-fun suggest () =
+fun suggest () = with_tactictoe_cache (fn () =>
   let val s = suggest_proof (valOf (!searchtree_glob)) in
     print_endline s;
     hidef (tactic_of_sml (!ttt_search_time)) s
-  end
+  end)
 
 
 end (* struct *)

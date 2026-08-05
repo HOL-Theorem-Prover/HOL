@@ -15,7 +15,7 @@ include Abbrev
   val local_tag : 'a -> 'a
 
   (* Wrapping proof *)
-  val app_wrap_proof : string -> string -> tactic
+  val app_wrap_proof : string -> string -> string -> tactic
 
   (* Executing the wrapped proof *)
   val record_tactic : (tactic * string) -> tactic

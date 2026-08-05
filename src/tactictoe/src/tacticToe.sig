@@ -11,6 +11,7 @@ sig
     (string -> mlThmData.thmdata -> goal -> string list option) option ref
   val hh_time : int ref
   val atp_dir : string ref
+  val atp_dir_of : unit -> string
   val import_hh : unit ->
     (string -> mlThmData.thmdata -> goal -> string list option) option
 
