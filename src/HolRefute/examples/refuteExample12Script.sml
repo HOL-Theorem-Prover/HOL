@@ -8,22 +8,24 @@
 (*                                                                       *)
 (*  Sections 4 and 5 are model-finder only; sections 2 and 3 close with  *)
 (*  one model-finder call each, and section 6 with two.  All ten need a  *)
-(*  Kodkodi component (see 09_model_finder.sml).  Without one they       *)
+(*  Kodkodi component (see example 09).  Without one they       *)
 (*  answer Unknown ["no configured backend"], and the expectation each   *)
 (*  carries then raises Refute.expect — except in section 3, whose call  *)
 (*  expects an Unknown anyway.  See examples/README.                     *)
 (*                                                                       *)
-(*      ../../bin/hol --holstate=refuteheap \                            *)
-(*          < examples/12_library_types.sml                              *)
 (* ===================================================================== *)
 
-load "Refute";
-load "intLib";
+Theory refuteExample12
+Ancestors
+  refute finite_map
+Libs
+  Refute intLib wordsLib
+
 open Refute;
 
-(* [refuteheap] already parses every type below, so no further theory    *)
-(* has to be loaded to state the goals.  [intLib] is loaded for a        *)
-(* different reason: it is what puts integer arithmetic into computeLib. *)
+(* The [Ancestors] header loads the theories needed to state the goals.  *)
+(* [intLib] is an ML dependency for a different reason: it puts integer *)
+(* arithmetic into computeLib.                                          *)
 (* Without it section 1 answers Unknown ["not executable: $&"] instead   *)
 (* of testing anything, which is the general rule for the QC half — a    *)
 (* type is executable exactly as far as its evaluation theorems have     *)
@@ -32,9 +34,9 @@ open Refute;
 (* Two configurations serve the whole file.  [qc] is the enumerating     *)
 (* half.  Naming its two backends rather than taking the default keeps   *)
 (* the reason lists quoted below exactly as printed; narrowing is        *)
-(* 06_narrowing.sml's subject and contributes reasons of its own.  [mf]  *)
+(* example 06's subject and contributes reasons of its own.  [mf]  *)
 (* is the model finder, pinned to a single Kodkodi thread as the corpus  *)
-(* convention requires — see the header of 10_model_finder_advanced.sml  *)
+(* convention requires — see the header of example 10  *)
 (* — with every call adding its own explicit [upd_card] row.             *)
 
 val qc = upd_backends (SOME ["exhaustive", "random"]) (!the_config);
@@ -69,7 +71,7 @@ refute (upd_expect ExpectGenuine qc) ``(i : int) - j = j - i``;
 (*       j - i = 1                                                       *)
 (*     Certified: |- ~!i j. i - j = j - i                                *)
 
-(* Section 2 of 09_model_finder.sml puts the first of those goals to the *)
+(* Section 2 of example 09 puts the first of those goals to the *)
 (* model finder instead, at card int = 3, and section 9 there runs :int  *)
 (* through the binary encoding; neither is repeated here.  What is worth *)
 (* carrying away is the difference in the closing line.  The model       *)
@@ -91,7 +93,7 @@ refute (upd_expect ExpectGenuine qc) ``(s : string) ++ "a" = s``;
 
 (* The empty string is the smallest witness and the very first test      *)
 (* reaches it: the smallest-first enumeration that gives section 1 of    *)
-(* 01_first_steps.sml its x = 0.                                         *)
+(* example 01 its x = 0.                                         *)
 
 refute (upd_expect ExpectGenuine qc) ``ORD (c : char) < 60``;
 
@@ -105,7 +107,7 @@ refute (upd_expect ExpectGenuine qc) ``ORD (c : char) < 60``;
 (* is finite, 256 values, and the exhaustive backend walks the whole     *)
 (* carrier — 61 tests here — whatever size it is given.  Shrinking the   *)
 (* bound to 1 therefore changes nothing, which is the opposite of what   *)
-(* section 6 of 03_datatypes_and_functions.sml shows for the infinite    *)
+(* section 6 of example 03 shows for the infinite    *)
 (* :num, where size really is the reach.                                 *)
 
 refute (upd_expect ExpectGenuine (upd_size 1 qc)) ``ORD (c : char) < 60``;
@@ -153,9 +155,9 @@ refute (upd_expect ExpectGenuine qc) ``(w : word4) + 1w <> 0w``;
 (* from HOL's type inference before Refute is reached — it is not a      *)
 (* Refute failure, though it is the first thing a reader hits.  The      *)
 (* exception below is deliberate; it and the two in section 5 of         *)
-(* 01_first_steps.sml and section 8 of 02_verdicts_and_config.sml are    *)
+(* example 01 and section 8 of example 02 are    *)
 (* the only ones this corpus expects, and the handler prints it so that  *)
-(* the transcript carries on.  Section 5 of 06_narrowing.sml documents   *)
+(* the transcript carries on.  Section 5 of example 06 documents   *)
 (* the sibling trap, where bare :num numerals resolve to :rat instead.   *)
 
 refute (upd_expect ExpectGenuine qc) ``(w : word8) + 1 <> 0w``
@@ -181,7 +183,7 @@ refute (mf |> upd_card [(NONE, [2, 3])] |> upd_expect ExpectUnknown)
 (* Words are built on the cart typedef, which the model finder has not   *)
 (* harvested, and the report names both the missing registration and the *)
 (* function that would supply it — section 4 of                          *)
-(* 10_model_finder_advanced.sml is that function in use.  Registering    *)
+(* example 10 is that function in use.  Registering    *)
 (* cart is left to the reader: the QC path already answers word goals,   *)
 (* and answers them with a certificate.                                  *)
 
@@ -231,10 +233,10 @@ refute (mf |> upd_card [(NONE, [3])] |> upd_expect ExpectGenuine)
 (* scope and a num scope, because the encoding is built on them.  The // *)
 (* in the witnesses is not raw model output but the built-in term        *)
 (* postprocessor that [register_frac_type_rat] installs — the display    *)
-(* registry of section 6 of 10_model_finder_advanced.sml — and 1 // 2 is *)
+(* registry of section 6 of example 10 — and 1 // 2 is *)
 (* a genuine non-integer witness, which no :int scope could have         *)
 (* produced.  And every one of these is Genuine with cert = NONE.  That  *)
-(* is the pair of axes section 11 of 09_model_finder.sml separates, on a *)
+(* is the pair of axes section 11 of example 09 separates, on a *)
 (* type where the QC half cannot help at all: no certificate is to be    *)
 (* had here, and the verdict is full strength regardless, because it     *)
 (* follows from the encoding rather than from the kernel.                *)
@@ -250,7 +252,7 @@ refute (mf |> upd_card [(NONE, [3])] |> upd_expect ExpectGenuine)
 (*                                                                       *)
 (* Registering an ersatz table asserts that each surrogate denotes the   *)
 (* same function as the constant it replaces, and nothing checks that —  *)
-(* the same contract section 4 of 11_extending_refute.sml states for     *)
+(* the same contract section 4 of example 11 states for     *)
 (* [register_ersatz].  Step 2 breaks it deliberately.                    *)
 (* --------------------------------------------------------------------- *)
 
@@ -309,7 +311,7 @@ refute (mf |> upd_card [(NONE, [3])] |> upd_expect ExpectPotential)
 (* the verdict falls out of Genuine to Potential.                        *)
 (*                                                                       *)
 (* This is what [max_potential] is for.  Section 6 of                    *)
-(* 09_model_finder.sml explains that it bounds models whose *encoding*   *)
+(* example 09 explains that it bounds models whose *encoding*   *)
 (* is unsound, and that on a sound problem raising it changes nothing;   *)
 (* every problem in that file is sound, so the other case never shows.   *)
 (* Here the encoding really is unsound, and this is the model that would *)
@@ -375,14 +377,14 @@ refute (mf |> upd_card [(NONE, [2])]
 (* scrutiny — the goal is false, FEMPTY refutes it.  "Within the tested  *)
 (* finite bounds" is a claim about the bounds, and when a type is not    *)
 (* modelled the bounds are empty and the claim is worth nothing.  The    *)
-(* second call is section 7 of 09_model_finder.sml's [upd_falsify false] *)
-(* used as a diagnostic.                                                 *)
+(* second call uses example 09's [upd_falsify false]      *)
+(* diagnostic from section 7.                                           *)
 
 (* That is the closing lesson of the file.  An Unknown naming a missing  *)
 (* capability is how Refute reports the edge of what it can do.  It is   *)
 (* never a statement about the conjecture, and the reasons list is where *)
 (* to look for what would move the edge — a generator here, a typedef    *)
 (* registration in section 3, an ersatz table in section 5.  Section 4   *)
-(* of 02_verdicts_and_config.sml makes the same point for :ind, where    *)
+(* of example 02 makes the same point for :ind, where    *)
 (* the QC backends decline for want of a generator and the model finder  *)
 (* then answers the goal outright.                                       *)

@@ -6,11 +6,14 @@
 (*  happens when the one you asked for cannot run your goal, and how to  *)
 (*  make a random search repeatable.                                     *)
 (*                                                                       *)
-(*      ../../bin/hol --holstate=refuteheap \                            *)
-(*          < examples/04_substrates_and_determinism.sml                 *)
 (* ===================================================================== *)
 
-load "Refute";
+Theory refuteExample04
+Ancestors
+  refute
+Libs
+  Refute
+
 open Refute;
 
 (* --------------------------------------------------------------------- *)

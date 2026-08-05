@@ -8,11 +8,14 @@
 (*  the difference between finding a counterexample and testing          *)
 (*  nothing.                                                             *)
 (*                                                                       *)
-(*      ../../bin/hol --holstate=refuteheap \                            *)
-(*          < examples/05_smart_generators.sml                           *)
 (* ===================================================================== *)
 
-load "Refute";
+Theory refuteExample05
+Ancestors
+  refute
+Libs
+  Refute
+
 open Refute;
 
 (* Sections 1 to 5 pin the exhaustive backend, so that what you read is

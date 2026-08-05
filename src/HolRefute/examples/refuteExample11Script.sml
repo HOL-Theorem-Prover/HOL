@@ -6,11 +6,14 @@
 (*  the model finder preprocesses with, and the ersatz table that swaps    *)
 (*  one constant for another during translation.                          *)
 (*                                                                       *)
-(*      ../../bin/hol --holstate=refuteheap \                            *)
-(*          < examples/11_extending_refute.sml                           *)
 (* ===================================================================== *)
 
-load "Refute";
+Theory refuteExample11
+Ancestors
+  refute
+Libs
+  Refute
+
 open Refute;
 
 (* Extending Refute means touching the registries themselves, so this     *)
@@ -109,7 +112,7 @@ val exec_backend : backend =
 
 register_backend exec_backend;
 
-(* Section 8 of 03_datatypes_and_functions.sml uses this goal for the    *)
+(* Section 8 of example 03 uses this goal for the    *)
 (* same reason: its inner existential survives quantifier expansion, so  *)
 (* no instance is executable.                                            *)
 
@@ -345,7 +348,7 @@ refute
 (*     The [upd_card] row bounds whatever types the translation builds,  *)
 (*     which here are the bitword types a binary representation of :num  *)
 (*     introduces rather than :num itself — the same substitution        *)
-(*     section 9 of 09_model_finder.sml shows for :int.                  *)
+(*     section 9 of example 09 shows for :int.                  *)
 
 (* The other two sets are exported into the same way.  [TL] is           *)
 (* underspecified at the empty list exactly as [$@] is at a predicate    *)
@@ -462,7 +465,7 @@ map (fn substrate => (#name substrate, #priority substrate))
 (* ==> [("echo", 5), ("native", 10), ("cv", 20), ("compute", 30)]        *)
 
 (* Priority orders Auto, not registration time: 5 puts the newcomer      *)
-(* ahead of native, which section 2 of 04_substrates_and_determinism.sml *)
+(* ahead of native, which section 2 of example 04 *)
 (* shows winning this same goal in a stock session.  Trace level 2 names *)
 (* the substrate Auto settled on and every schedule entry it ran, and    *)
 (* the counterexample's own substrate field carries the registered name, *)

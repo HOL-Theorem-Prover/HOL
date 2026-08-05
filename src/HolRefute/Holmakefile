@@ -68,10 +68,9 @@ Refute.uo: Refute_Unused.uo Refute_ModelFinder.uo Refute_QC_Narrow.uo
 ifdef POLY
 selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
               refuteTableZooTheory.uo refuteUnusedTheory.uo \
-              refuteHarvestTheoremTheory.uo refuteheap
+              refuteHarvestTheoremTheory.uo
 	@printf '%s\n' '#!/bin/sh' 'set -e' \
-	  '$(HOLDIR)/bin/hol --gcthreads=1 run \
-	  --holstate=$(HOLDIR)/src/HolRefute/refuteheap selftest' \
+	  '$(HOLDIR)/bin/hol --gcthreads=1 run selftest' \
 	  'exit 0' > $@
 	@chmod +x $@
 else
@@ -116,29 +115,13 @@ endif
 
 EXTRA_CLEANS = selftest.exe holrefute-selftest.log
 
+.PHONY: examples
+examples: selftest.exe
+	$(HOLDIR)/bin/Holmake -C examples --no_prereqs
+
 ifdef HOLBUILD
 all: link-to-sigobj
 .PHONY: link-to-sigobj
 link-to-sigobj: $(DEFAULT_TARGETS)
 	$(HOL_LNSIGOBJ)
-endif
-
-ifdef POLY
-# Keep refuteTheory's ancestry cv-free.  The selftest wrapper above runs
-# refuteheap after the base and cv theories have been built separately.
-HOLHEAP = $(HOLDIR)/bin/hol.state
-EXTRA_CLEANS += refuteheap
-
-REFUTE_DEPS = boss/bossLib n-bit/wordsLib sort/sortingTheory \
-              real/realTheory \
-              num/theories/cv_compute/automation/cv_transLib \
-              num/theories/cv_compute/automation/cv_stdTheory
-BARE_DEPS = $(patsubst %,../%,$(REFUTE_DEPS))
-DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
-
-all: refuteheap selftest.exe
-
-refuteheap: $(DEPS) refuteTheory.uo
-	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) -F -o $@ \
-		-b $(dprot $(HOLDIR)/bin/hol.state) $(BARE_DEPS) refuteTheory
 endif

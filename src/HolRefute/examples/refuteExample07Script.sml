@@ -10,11 +10,14 @@
 (*  Custom and abstract generators are supported by the Compute           *)
 (*  substrate, so these examples select it explicitly.                    *)
 (*                                                                       *)
-(*      ../../bin/hol --holstate=refuteheap \                            *)
-(*          < examples/07_custom_generators.sml                          *)
 (* ===================================================================== *)
 
-load "Refute";
+Theory refuteExample07
+Ancestors
+  refute
+Libs
+  Refute
+
 open Refute;
 
 val compute = !the_config
@@ -187,7 +190,7 @@ refute (upd_expect ExpectGenuine compute)
 (* ==> Counterexample: i = interval 0 2                                  *)
 
 (* --------------------------------------------------------------------- *)
-(* 5.  Registrations are session state, not theory content               *)
+(* 5.  Registrations are ML state, not theory content                    *)
 (*                                                                       *)
 (* The datatypes and definitions above are theory content, but the       *)
 (* registries themselves are ML refs: nothing Refute-created reaches the  *)
@@ -195,7 +198,8 @@ refute (upd_expect ExpectGenuine compute)
 (* --------------------------------------------------------------------- *)
 
 List.filter (String.isSubstring "refute")
-  (map (#1 o Term.dest_const) (Theory.constants "scratch"));
+  (map (#1 o Term.dest_const)
+    (Theory.constants (Theory.current_theory ())));
 (* ==> [] : string list                                                  *)
 
 (* Undoing a restriction is just another registration: dropping [pred]   *)
@@ -209,4 +213,4 @@ refute (upd_expect ExpectGenuine compute) ``(i : interval).lo <= i.hi``;
 (* ==> Counterexample: i = interval 1 0                                  *)
 
 Theory.current_theory ();
-(* ==> "scratch"                                                         *)
+(* ==> "refuteExample07"                                                 *)

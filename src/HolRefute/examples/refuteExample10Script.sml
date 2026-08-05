@@ -7,7 +7,7 @@
 (*  the display registry, which changes how models are printed without   *)
 (*  touching what is certified.                                          *)
 (*                                                                       *)
-(*  Needs Kodkodi (see 09_model_finder.sml).  Around 32 seconds end to   *)
+(*  Needs Kodkodi (see example 09).  Around 32 seconds end to   *)
 (*  end on an otherwise idle 32-core host: 16 Kodkodi calls ranging      *)
 (*  from 1.3 to 2.6 seconds, median 1.3, about 24 of those seconds       *)
 (*  spent inside Kodkodi and most of the rest in session start-up and    *)
@@ -21,16 +21,16 @@
 (*  first and the quoted outputs reproduce instead of racing.  This      *)
 (*  file's [mf] below is where that convention comes from.  Exactly one  *)
 (*  call is deliberately left racing — the opener of section 1 of        *)
-(*  09_model_finder.sml — and says so.                                   *)
+(*  example 09 — and says so.                                   *)
 (*                                                                       *)
-(*      ../../bin/hol --holstate=refuteheap \                            *)
-(*          < examples/10_model_finder_advanced.sml                      *)
 (* ===================================================================== *)
 
-load "Refute";
-load "llistTheory";
-load "lbtreeTheory";
-load "quotientLib";
+Theory refuteExample10
+Ancestors
+  refute llist lbtree
+Libs
+  Refute quotientLib
+
 open Refute;
 open quotient;
 
@@ -59,7 +59,7 @@ val mf = !the_config
 (* so the models are Genuine with cert = NONE.  The one exception is     *)
 (* section 3's second call, where switching the bisimulation recheck off *)
 (* makes the encoding inexact and the models come back QuasiGenuine with *)
-(* the caveat attached.  The certainty ladder is in 09_model_finder.sml. *)
+(* the caveat attached.  The certainty ladder is in example 09. *)
 (* --------------------------------------------------------------------- *)
 
 val (even_rel_rules, even_rel_ind, even_rel_cases) = Hol_reln `
@@ -128,16 +128,16 @@ val (always_rules, always_coind, always_cases) = Hol_coreln `
 (*     false and the model finder should refute it.                      *)
 
 refute (upd_expect ExpectGenuine mf) ``always F``;
-(* ==> Scope: iter scratch$always = 0, uncertified.  The scope entry is  *)
+(* ==> Scope: iter refuteExample10$always = 0, uncertified.              *)
 (*     the gfp iterator, not a cardinality: the model lives in the type  *)
-(*     :'refute$gfpit$scratch$always.  Closed goal, so no bindings; the  *)
+(*     :'refute$gfpit$refuteExample10$always.  With a closed goal, the   *)
 (*     model reports λi. always = K $?.                                  *)
 
 refute (mf |> upd_iter [(SOME ``always : bool -> bool``, [2]), (NONE, [0])]
            |> upd_expect ExpectGenuine)
   ``always F``;
 (* ==> the same counterexample, now at the pinned depth                  *)
-(*     Scope: iter scratch$always = 1, with stats reporting              *)
+(*     Scope: iter refuteExample10$always = 1, with stats reporting      *)
 (*     ("scopes", 1) instead of ("scopes", 2).                           *)
 
 (* --------------------------------------------------------------------- *)

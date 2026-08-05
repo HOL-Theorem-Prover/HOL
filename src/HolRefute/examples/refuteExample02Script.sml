@@ -5,12 +5,14 @@
 (*  theorem is for, and the configuration knobs you reach for most:      *)
 (*  timeout, backends, evals, expectations, tags, and trace level.       *)
 (*                                                                       *)
-(*      ../../bin/hol --holstate=refuteheap \                            *)
-(*          < examples/02_verdicts_and_config.sml                        *)
 (* ===================================================================== *)
 
-load "Refute";
-load "llistTheory";   (* one goal in section 8 *)
+Theory refuteExample02
+Ancestors
+  refute llist
+Libs
+  Refute
+
 open Refute;
 
 (* --------------------------------------------------------------------- *)
@@ -68,8 +70,8 @@ refute
 (*                   lists why and the search continues.  A QC hit whose *)
 (*                   instantiated proposition will not evaluate back     *)
 (*                   lands here — see section 1 of                       *)
-(*                   05_smart_generators.sml — as does a model the       *)
-(*                   kernel got stuck on; 09_model_finder.sml is the     *)
+(*                   example 05 — as does a model the       *)
+(*                   kernel got stuck on; example 09 is the     *)
 (*                   full story.                                         *)
 (*                                                                       *)
 (* [upd_genuine_only true] suppresses everything weaker than Genuine,    *)
@@ -90,7 +92,7 @@ show_config ();
 (* All three calls below share one pinned configuration: a single        *)
 (* Kodkodi thread and a single cardinality row.  That is the corpus      *)
 (* convention for model-finder calls — see the header of                 *)
-(* 10_model_finder_advanced.sml — and it is what makes the scope and     *)
+(* example 10 — and it is what makes the scope and     *)
 (* the model quoted here exact instead of whichever scope won a race.    *)
 (* --------------------------------------------------------------------- *)
 
@@ -115,7 +117,7 @@ refute
 (* certificate accompanies it and the report ends "uncertified" — the    *)
 (* two axes of section 3 pulling apart.  (This needs a Kodkodi           *)
 (* component; without one the call reports                               *)
-(* Unknown ["no configured backend"] — see 09_model_finder.sml.)         *)
+(* Unknown ["no configured backend"] — see example 09.)         *)
 
 refute (upd_expect ExpectGenuine ind_config) ``(f : ind -> ind) x = x``;
 (* ==> Refute found a counterexample (backend: kodkod, substrate:        *)
@@ -127,7 +129,7 @@ refute (upd_expect ExpectGenuine ind_config) ``(f : ind -> ind) x = x``;
 
 (* [upd_genuine_only true] from section 3 therefore keeps it: it filters *)
 (* on certainty, not on cert, and this candidate is already Genuine.  It *)
-(* is section 4 of 09_model_finder.sml, where an abstract type leaves    *)
+(* is section 4 of example 09, where an abstract type leaves    *)
 (* the witness unevaluable, that shows a model the filter does drop.     *)
 
 refute
@@ -222,7 +224,7 @@ refute (upd_expect ExpectGenuine (!the_config))
 (* The three remaining rungs need goals that reach them.  [even_rel] is  *)
 (* an inductive predicate, and a Hol_reln constant carries no computeLib *)
 (* equations, so certification cannot evaluate the premise back and the  *)
-(* hit stops at Potential.  Section 1 of 05_smart_generators.sml is      *)
+(* hit stops at Potential.  Section 1 of example 05 is      *)
 (* where this predicate is the subject; here it is only a convenient     *)
 (* source of a Potential verdict.                                        *)
 
@@ -254,7 +256,7 @@ refute
 (* bisimulation recheck, so nothing compares two lazy lists              *)
 (* coinductively and the model below may be two names for one list;      *)
 (* the caveat printed with it says how to undo that.  Section 3 of       *)
-(* 10_model_finder_advanced.sml is where this is the subject.  Like the  *)
+(* example 10 is where this is the subject.  Like the  *)
 (* calls in section 4 the call pins one Kodkodi thread and one           *)
 (* cardinality row, and it needs a Kodkodi component; without one it     *)
 (* reports Unknown ["no configured backend"].                            *)
@@ -326,7 +328,7 @@ refute
 (* That first line is emitted on every trace-2 run of a session that was *)
 (* not given [--mt], which is every session started the way this file's  *)
 (* header shows.  It reports a schedule, not a problem: sequential and   *)
-(* raced runs return the same result.  04_substrates_and_determinism.sml *)
+(* raced runs return the same result.  example 04 *)
 (* is where scheduling is the subject.                                   *)
 
 Feedback.set_trace "Refute" 1;
@@ -347,8 +349,8 @@ the_config := (!the_config
 refute_def ``(xs : num list) <> [] ==> HD xs = 0``;
 the_config := default_config;
 
-(* [default_config] is the blunt way back.  After 09_model_finder.sml    *)
-(* and 10_model_finder_advanced.sml, where one configuration carries     *)
+(* [default_config] is the blunt way back.  After example 09    *)
+(* and example 10, where one configuration carries     *)
 (* eight or ten model-finder knobs at once, undoing them a single        *)
 (* [upd_] at a time is error-prone, and [default_config] also discards   *)
 (* whatever else the session had set.  The two finer resets replace one  *)

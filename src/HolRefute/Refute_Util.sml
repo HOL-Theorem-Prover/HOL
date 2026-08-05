@@ -3,8 +3,8 @@
  *
  * This module deliberately depends only on the HOL kernel (Type, Term,
  * List), so it can be loaded by both the substrate layer (compiled for
- * refuteTableZooTheory) and the model-finder layer (compiled later into
- * refuteheap).  Layer-specific utilities live in Refute_ModelFinder_Util,
+ * refuteTableZooTheory) and the model-finder layer.  Layer-specific
+ * utilities live in Refute_ModelFinder_Util,
  * which re-exports these for the model-finder modules' convenience.
  *)
 

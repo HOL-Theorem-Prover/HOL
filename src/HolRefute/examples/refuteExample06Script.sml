@@ -7,10 +7,14 @@
 (*  functions, counterexamples with holes in the irrelevant positions,   *)
 (*  and refutation of existential goals.                                 *)
 (*                                                                       *)
-(*      ../../bin/hol --holstate=refuteheap < examples/06_narrowing.sml  *)
 (* ===================================================================== *)
 
-load "Refute";
+Theory refuteExample06
+Ancestors
+  refute
+Libs
+  Refute
+
 open Refute;
 
 val narrowing = upd_backends (SOME ["narrowing"]) (!the_config);

@@ -7,11 +7,14 @@
 (*  removal.  That is exactly what this facade does, one theorem or one   *)
 (*  whole theory at a time.                                              *)
 (*                                                                       *)
-(*      ../../bin/hol --holstate=refuteheap \                            *)
-(*          < examples/08_unused_assumptions.sml                          *)
 (* ===================================================================== *)
 
-load "Refute";
+Theory refuteExample08
+Ancestors
+  refute
+Libs
+  Refute
+
 open Refute;
 
 (* --------------------------------------------------------------------- *)
@@ -20,7 +23,7 @@ open Refute;
 (* Saving them puts them in the theory database, which is where the       *)
 (* sweep in section 3 looks.  [save_thm] behaves the same way in an       *)
 (* interactive session as in a script: the sweep below reports "3 total"  *)
-(* theorems in the theory "scratch", so all three are visible.           *)
+(* theorems in refuteExample08, so all three are visible.                 *)
 (* --------------------------------------------------------------------- *)
 
 val tight = save_thm ("tight",
@@ -83,7 +86,7 @@ print_unused_assms (SOME probes) NONE;
 (* ==> padded: unnecessary assumption 1                                  *)
 (* ==>                                                                   *)
 (* ==> Checked 3 theorems with assumptions (3 total) in the theory       *)
-(* ==> "scratch"                                                         *)
+(* ==> "refuteExample08"                                                 *)
 (* ==> Skipped 0 inconclusive probes.                                    *)
 
 (* --------------------------------------------------------------------- *)
@@ -106,7 +109,7 @@ print_unused_assms NONE NONE;
 (* ==>                                                                   *)
 (* ==>                                                                   *)
 (* ==> Checked 3 theorems with assumptions (3 total) in the theory       *)
-(* ==> "scratch"                                                         *)
+(* ==> "refuteExample08"                                                 *)
 (* ==> Skipped 3 inconclusive probes.                                    *)
 (*                                                                       *)
 (* The skipped count is the honest reading of the empty report: three of  *)

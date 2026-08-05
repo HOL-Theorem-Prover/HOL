@@ -129,12 +129,11 @@ Module layout:
 * Refute_Unused: unused-assumption probes and theory sweeps.
 * Refute.sig and Refute.sml: the public API facade.
 
-The `examples/` directory holds worked interactive transcripts of the whole
+The `examples/` directory holds executable theory scripts covering the whole
 user-facing surface, from first steps to the model finder, the extension
 registries, and which library types each half of Refute can serve;
-`examples/README` indexes them.  They are session transcripts
-rather than theory scripts, so Holmake does not build them; run one with
-`bin/hol --holstate=src/HolRefute/refuteheap < examples/<file>`.
+`examples/README` indexes them.  Run `Holmake examples` here to build them
+with the standard HOL heap and their declared `Ancestors` and `Libs`.
 
 Model-finder surface
 --------------------
@@ -159,7 +158,7 @@ are:
 | `upd_whack` | `[]` | constants whose definitions are ignored |
 | `upd_need` | `NONE` | values that must occur in the model |
 | `upd_tac_timeout` | `0.5` seconds | inner tactic budget; `0` skips |
-| `upd_format` | fallback `[1]` | group curried model-function arguments into tuples |
+| `upd_format` | fallback `[1]` | group curried function arguments |
 | `upd_max_potential` | `1` | maximum potential models returned |
 | `upd_max_genuine` | `1` | maximum genuine models returned |
 | `upd_merge_type_vars` | `false` | fuse all MF type-variable scopes |
@@ -218,7 +217,7 @@ Registrations are session-local ML state and create no theory content:
   normalization-faithfulness corpus passed.  The idempotent
   `Refute.register_frac_type_rat ()` restores or refreshes both the encoding
   and the built-in transformation, which displays reconstructed Frac atoms
-  with `rat_cons`'s `//` syntax.  `examples/12_library_types.sml` works the
+  with `rat_cons`'s `//` syntax.  Example 12 works the
   encoding through: what the shorthand registers, what an incomplete ersatz
   table costs, and what restoring it looks like.  Support for `real` via
   Frac is deferred; certification of real literals is a real blocker.

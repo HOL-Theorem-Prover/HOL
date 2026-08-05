@@ -5,15 +5,15 @@
 (*  actually true?": refute, quickcheck, nitpick, REFUTE_TAC, and the    *)
 (*  goal-stack and try_refute wrappers.                                  *)
 (*                                                                       *)
-(*  Run the whole file:                                                  *)
-(*                                                                       *)
-(*      cd src/HolRefute                                                 *)
-(*      ../../bin/hol --holstate=refuteheap < examples/01_first_steps.sml *)
-(*                                                                       *)
-(*  or start the same session and paste the blocks one at a time.        *)
+(*  Build with: ../../bin/Holmake examples                               *)
 (* ===================================================================== *)
 
-load "Refute";
+Theory refuteExample01
+Ancestors
+  refute
+Libs
+  Refute proofManagerLib
+
 open Refute;
 
 (* Every call below states the verdict it expects, so that a change in   *)
@@ -205,7 +205,7 @@ refute
 (*     QC backend names filled in for you; here only one of them is      *)
 (*     asked, and it is the one that answered above.                     *)
 
-(* Needs a Kodkodi installation; see 09_model_finder.sml.  Model-finder  *)
+(* Needs a Kodkodi installation; see example 09.  Model-finder  *)
 (* calls in the corpus pin one Kodkodi thread and one cardinality row, so *)
 (* the quoted scope is exact rather than whichever scope won a race.     *)
 (* [nitpick] takes no configuration argument, so the pin goes on         *)

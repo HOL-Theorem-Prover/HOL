@@ -15,8 +15,6 @@
 (*  backend"], and the expectation each call carries then raises         *)
 (*  Refute.expect; see examples/README.                                  *)
 (*                                                                       *)
-(*      ../../bin/hol --holstate=refuteheap \                            *)
-(*          < examples/09_model_finder.sml                               *)
 (*                                                                       *)
 (*  Around 46 seconds end to end on an otherwise idle 32-core host: 27   *)
 (*  Kodkodi calls ranging from 0.05 to 2.6 seconds, median 1.3, about    *)
@@ -37,7 +35,12 @@
 (*  call after it reproduces exactly.                                    *)
 (* ===================================================================== *)
 
-load "Refute";
+Theory refuteExample09
+Ancestors
+  refute
+Libs
+  Refute
+
 open Refute;
 
 (* Is the model finder usable in this session?                           *)

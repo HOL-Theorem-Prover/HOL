@@ -10,6 +10,7 @@ open lbtreeTheory
 open pathTheory
 open refuteHarvestTheoremTheory
 local open finite_mapTheory finite_setTheory in end
+local open wordsLib in end
 open Refute_Core
 open Refute_Gen
 open Refute_Narrow

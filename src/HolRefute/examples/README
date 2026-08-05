@@ -1,32 +1,30 @@
 HolRefute by example
 ====================
 
-Interactive transcripts covering the user-facing surface of HolRefute:
+Executable theory examples covering the user-facing surface of HolRefute:
 counterexample search over executable definitions, native narrowing,
 the Kodkod model finder, the generator and display registries, the
 unused-assumption sweep, the extension points, and which half of Refute
 serves which library type.
 
-Each file is self-contained and meant to be read top to bottom.  Nothing
-here is built by Holmake; these are session transcripts, not theory
-scripts.
+Each file is a self-contained descendant of `refuteTheory`, declares its
+theory and ML dependencies, and is meant to be read top to bottom.  The
+`upd_expect` clauses make the prose examples executable checks.
 
 
 Running them
 ------------
 
-From this directory's parent (`src/HolRefute`), start a session with the
-Refute modules available and paste blocks into it:
+From this directory's parent (`src/HolRefute`), build every example with:
 
-    ../../bin/hol --holstate=refuteheap
+    ../../bin/Holmake examples
 
-or feed a whole file to that session:
+To build one example, run Holmake in this directory, for example:
 
-    ../../bin/hol --holstate=refuteheap < examples/01_first_steps.sml
+    ../../../bin/Holmake -C examples refuteExample01Theory.uo
 
-`refuteheap` is built by `Holmake` in `src/HolRefute`.  A plain
-`../../bin/hol` also works, at the cost of loading the theories the
-examples mention.
+The scripts use the standard HOL heap.  Their `Ancestors` and `Libs`
+headers load everything else explicitly.
 
 Poly/ML only: the tree build skips HolRefute on other ML systems.
 
@@ -41,10 +39,9 @@ Two things follow from that, and neither is silent.
 
 Every call in these files asserts its own verdict with an `upd_expect`
 clause, so one that degrades to Unknown raises `Refute.expect` rather
-than quietly printing something other than what is quoted.  The session
-carries on — `bin/hol` reading a file is a REPL, so the exception is
-printed and the next statement still runs — but the run is no longer
-clean.  That is the assertion working, not a fault.
+than quietly printing something other than what is quoted.  In a theory
+build that exception fails the target.  That is the assertion working,
+not a fault.
 
 The reach is also wider than the files that make the model finder their
 subject.  At default settings NoCounterexample is a model-finder
@@ -80,71 +77,71 @@ else runs with no external tools.
 The files
 ---------
 
-01_first_steps.sml
+refuteExample01Script.sml
     refute, refute_def, refute_goal, refute_top, try_refute, quickcheck,
     nitpick, REFUTE_TAC.  Goals with assumptions; using the proof
     manager's current goal; branching on the returned outcome.
 
-02_verdicts_and_config.sml
+refuteExample02Script.sml
     Genuine, QuasiGenuine, Potential and Unknown; the certifying theorem
     and how to opt out of it; evaluated terms; several counterexamples;
     timeout, sequential execution, quiet mode, tags, trace levels;
     expectations as assertions; changing the session default.
 
-03_datatypes_and_functions.sml
+refuteExample03Script.sml
     Conjectures about your own datatypes, records, options, pairs and
     sets; the size bound and what "within the tested finite bounds"
     means; polymorphic goals via finite types or a default type; nested
     quantifiers.
 
-04_substrates_and_determinism.sml
+refuteExample04Script.sml
     NativeSML, Cv and Compute; Auto's priority order and fallthrough; why
     an explicitly chosen substrate reports Unknown instead of switching;
     exhaustive versus random search; seeds and cross-substrate
     reproducibility; per-run statistics.
 
-05_smart_generators.sml
+refuteExample05Script.sml
     Hol_reln premises and Horn-shaped Boolean functions compiled into
     enumerators; fuel via upd_depth and why fuel-bounded exhaustion is
     always reported as incomplete; premise reordering; the same plan on
     all three substrates.
 
-06_narrowing.sml
+refuteExample06Script.sml
     Function-valued counterexamples as UPDATE chains; partial
     counterexamples with holes; refinement depth; refuting existential
     goals; certification by case-tree replay.
 
-07_custom_generators.sml
+refuteExample07Script.sml
     register_generator with enumerating and random components;
     abstract_generator for a type with an invariant; how a missing
     invariant turns a true lemma into a false-looking one, and how
     restricting generation fixes it.
 
-08_unused_assumptions.sml
+refuteExample08Script.sml
     check_unused_assms, find_unused_assms, print_unused_assms; reading
     the maximal droppable sets; QC-only probes versus a configuration of
     your own.
 
-09_model_finder.sml
+refuteExample09Script.sml
     nitpick and the kodkod backend: uninterpreted functions, sets and
     relations; cardinality scopes; reading a model, with types, Skolem
     constants, constants and argument grouping; several models at once;
     models instead of counterexamples; whack, need and atoms; binary
     integers; solver, batch size and threads; what Genuine means here.
 
-10_model_finder_advanced.sml
+refuteExample10Script.sml
     Inductive and coinductive predicates with unrolling depths;
     codatatypes and bisimulation depth; registering a typedef and a
     quotient of your own; display-only term postprocessors; merged
     type-variable scopes; the translation knobs; debug output.
 
-11_extending_refute.sml
+refuteExample11Script.sml
     Registering a backend and its certainty ceiling; what the requires
     and input fields of a backend decide; the refute_simp, refute_psimp
     and refute_unfold theorem sets; ersatz constants; registering a
     substrate of your own; restoring the built-in registrations.
 
-12_library_types.sml
+refuteExample12Script.sml
     Which half of Refute serves which library type.  Integers, served by
     both; characters and strings, which only the quickcheck path
     reaches; machine words, and the bare-numeral trap that looks like a

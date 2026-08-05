@@ -1,11 +1,12 @@
-This file provides guidance to coding agents when working with the HolRefute project code in this repository.
+This file provides guidance to coding agents working with HolRefute in this
+repository.
 
 `README` here documents the substrate model and module layout — read it first.
 
 ## Build & test
 
-- `Holmake` in this directory builds everything, including `refuteheap` and
-  `selftest.exe` (plain `Holmake`, boss-onwards band).  Poly/ML only; the
+- `Holmake` in this directory builds everything, including `selftest.exe`
+  (plain `Holmake`, boss-onwards band).  Poly/ML only; the
   tree build skips this directory on other MLs.
 - `HOLSELFTESTLEVEL=2 Holmake` also runs the selftest (output tees to
   `holrefute-selftest.log`) and `theory_tests/`.
@@ -14,8 +15,7 @@ This file provides guidance to coding agents when working with the HolRefute pro
   (cross-substrate conformance, Cv cleanliness, corpus).  `selftest.sml`
   is one program with `diemode := Remember` — there is no finer
   per-test selection.
-- Interactive session with all Refute modules loaded:
-  `bin/hol --holstate=src/HolRefute/refuteheap`.
+- Interactive session: start `bin/hol`, then run `load "Refute"`.
 - Quality gate: `HOLSELFTESTLEVEL=2 Holmake` here.  Level 2 is not optional —
   cross-substrate conformance, candidate-stream equality, and Cv cleanliness
   only run there.
@@ -72,8 +72,8 @@ This file provides guidance to coding agents when working with the HolRefute pro
   check this.
 - Ancestry split: refuteTheory (parents: real, sorting, words, rat) must stay
   cv-free; refute_cvTheory (parents: refute, cv_std) holds the cv
-  translations.  The Holmakefile builds `refuteheap` separately to keep
-  this split, and the selftest asserts the exact parent sets.
+  translations.  Their separate `Ancestors` declarations enforce the split,
+  and the selftest asserts the exact parent sets.
 
 ## Testing Guidelines
 
@@ -96,15 +96,13 @@ This file provides guidance to coding agents when working with the HolRefute pro
   under `Holmake` at level >= 2 only, never from `selftest.exe`.
 - Don't validate by piping `.sml` into `bin/hol`; the harness only sees
   `selftest.sml`.
-- `examples/` are interactive transcripts, not tests: Holmake ignores them,
-  so a behaviour change means re-running each by hand
-  (`bin/hol --holstate=refuteheap < examples/<file>`) and fixing the prose.
+- `examples/` are executable descendant theories.  Build them with
+  `Holmake examples` and fix the prose whenever behavior changes.
   Every call carries an `upd_expect` clause, so a changed verdict class
   raises `Refute.expect` on the next run instead of going quiet; a changed
-  binding, scope or runtime figure still only shows on inspection.  That
-  run is a REPL: a raise does not stop it and the exit status stays 0, so
-  grep the captured output for `Exception`/`Refute.expect`.  The only
-  three expected are 01 §5's, 02 §8's and 12 §3's, all deliberate.
+  binding, scope or runtime figure still only shows on inspection.  A raise
+  fails the theory build.  The three deliberately raised exceptions in
+  01 §5, 02 §8 and 12 §3 are handled inside their scripts.
 - Model-finder calls in `examples/` pin `upd_max_threads 1` and an explicit
   `upd_card` row, so quoted scopes and models are exact.  The sole
   exception is the opener of 09 §1, left racing on purpose and labelled;

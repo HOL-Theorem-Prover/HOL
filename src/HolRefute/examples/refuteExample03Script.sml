@@ -6,11 +6,14 @@
 (*  statements.  Also the two knobs that decide how far the search       *)
 (*  reaches: size and the treatment of type variables.                   *)
 (*                                                                       *)
-(*      ../../bin/hol --holstate=refuteheap \                            *)
-(*          < examples/03_datatypes_and_functions.sml                    *)
 (* ===================================================================== *)
 
-load "Refute";
+Theory refuteExample03
+Ancestors
+  refute
+Libs
+  Refute
+
 open Refute;
 
 (* The default substrate choice, Auto, lets each QC backend pick the   *)
@@ -22,7 +25,7 @@ open Refute;
 (* expectation for the [refute_def] calls below, which take no         *)
 (* configuration argument; the explicit [refute] calls each override   *)
 (* it.  Substrates are the actual subject of                           *)
-(* 04_substrates_and_determinism.sml.                                  *)
+(* example 04.                                  *)
 
 val _ = the_config := (!the_config
                          |> upd_substrate NativeSML
@@ -74,12 +77,12 @@ refute_def ``flatten (insert x t) = flatten t ++ [x]``;
 (* [flatten t] is sorted for search trees, but [t] here is an arbitrary  *)
 (* tree, and Refute happily builds an unsorted one.  This is the usual   *)
 (* way a "surely this holds" lemma turns out to need a hypothesis; see   *)
-(* 07_custom_generators.sml for how to restrict generation to the        *)
+(* example 07 for how to restrict generation to the        *)
 (* well-formed trees instead.                                            *)
 (*                                                                       *)
 (* The exhaustive backend reaches the smallest such tree first, so the   *)
 (* witness is a fully ground one.  Narrowing would report the same tree  *)
-(* with a hole in the subtree it never inspected; 06_narrowing.sml       *)
+(* with a hole in the subtree it never inspected; example 06       *)
 (* selects that backend by name to show it.                              *)
 (* --------------------------------------------------------------------- *)
 
@@ -152,13 +155,13 @@ refute_def ``FST (p : num # num) = SND p``;
 (* Sets are functions, and set comprehension is not executable: the QC   *)
 (* backends decline outright with "no extractable equations for constant *)
 (* pred_set$GSPEC" rather than testing anything.  The model finder is    *)
-(* what settles this goal — it is the backend 09_model_finder.sml is     *)
+(* what settles this goal — it is the backend example 09 is     *)
 (* about, and the one call in this file that needs the Kodkodi component *)
 (* (without it the answer is Unknown).  [upd_genuine_only true] keeps    *)
 (* the report to the verdict that survives.  The single Kodkodi thread   *)
 (* and the explicit cardinality row are the corpus convention for        *)
 (* model-finder calls — see the header of                                *)
-(* 10_model_finder_advanced.sml — and are what makes the scope and the   *)
+(* example 10 — and are what makes the scope and the   *)
 (* model quoted below exact instead of whichever scope won a race.       *)
 
 refute
@@ -319,7 +322,7 @@ refute
 (* only skips the kernel check on a candidate that would otherwise pass  *)
 (* it; a candidate already known to rest on an incomplete search is not  *)
 (* promoted, so the same Potential report comes back.  That distinction  *)
-(* is the subject of 02_verdicts_and_config.sml.                         *)
+(* is the subject of example 02.                         *)
 
 refute
   (!the_config
