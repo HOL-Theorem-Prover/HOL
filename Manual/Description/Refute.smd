@@ -15,10 +15,9 @@ The library is available on Poly/ML builds.  The following tested
 sequence starts an interactive session from the HOL source tree:
 
     cd src/HolRefute
-    ../../bin/hol --holstate=refuteheap
+    ../../bin/hol
 
-The heap contains Refute's base theories and dependencies; it does not
-preload the ML modules.  At the prompt, load the public facade explicitly:
+At the prompt, load the public facade explicitly:
 
     load "Refute"; open Refute;
 
