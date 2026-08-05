@@ -47,16 +47,22 @@ val holder : Abbrev.tactic option ref = ref NONE
 val compileCache: (string, Abbrev.tactic) Binarymap.dict ref =
   ref (Binarymap.mkDict String.compare)
 
-(* Log a stderr line when a single compile takes long enough to
-   contribute meaningfully to the walker's overall budget — helps
-   identify which tactic sources are hot when the walker times out. *)
-val slowCompileThresholdMs = 100
+(* Stderr line per Expand when total time (compile + goalFrag.expand)
+   crosses the threshold — separates the compile ms from the expand
+   ms so we can tell whether the walker's overhead is Poly compile
+   setup, tactic execution, or some third thing. *)
+val slowStepThresholdMs : LargeInt.int = 50
 
 fun logStderr s = (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
 
-fun compileTactic src =
+fun truncSrc src =
+  if String.size src > 60
+  then String.substring (src, 0, 57) ^ "..."
+  else src
+
+fun compileTactic src : Abbrev.tactic option * LargeInt.int =
   case Binarymap.peek (!compileCache, src) of
-    SOME tac => SOME tac
+    SOME tac => (SOME tac, 0)
   | NONE => let
       val wrapped = "TacticWalker.holder := SOME (" ^ src ^ ");"
       (* Run the HOL quotation filter over the wrapped source:
@@ -78,27 +84,32 @@ fun compileTactic src =
                          PolyML.Compiler.CPOutStream swallow,
                          PolyML.Compiler.CPNameSpace LSPNameSpace.fileNS]) ()) ()
       val elapsedMs = Time.toMilliseconds (Timer.checkRealTimer timer)
-      val () = if elapsedMs > slowCompileThresholdMs then
-                 logStderr ("tactic_walker: compile "
-                            ^ LargeInt.toString elapsedMs ^ "ms: "
-                            ^ (if String.size src > 60
-                               then String.substring (src, 0, 57) ^ "..."
-                               else src) ^ "\n")
-               else ()
       val () = case !holder of
                  SOME tac => compileCache :=
                              Binarymap.insert (!compileCache, src, tac)
                | NONE => ()
-      in !holder end
+      in (!holder, elapsedMs) end
 
 fun expandSpan (TacticSteps.Expand span)     = SOME span
   | expandSpan (TacticSteps.ExpandList span) = SOME span
   | expandSpan _                             = NONE
 
-fun expandSrc tacText (s, e) state =
-  case compileTactic (String.substring (tacText, s, e - s)) of
-    NONE => NONE
-  | SOME tac => Portable.total (goalFrag.expand tac) state
+fun expandSrc tacText (s, e) state = let
+  val src = String.substring (tacText, s, e - s)
+  val (tacOpt, compMs) = compileTactic src
+  in case tacOpt of
+       NONE => NONE
+     | SOME tac => let
+         val timer = Timer.startRealTimer ()
+         val stateOpt = Portable.total (goalFrag.expand tac) state
+         val execMs = Time.toMilliseconds (Timer.checkRealTimer timer)
+         val () = if compMs + execMs > slowStepThresholdMs then
+           logStderr ("tactic_walker: step compile="
+                      ^ LargeInt.toString compMs ^ "ms expand="
+                      ^ LargeInt.toString execMs ^ "ms: "
+                      ^ truncSrc src ^ "\n") else ()
+         in stateOpt end
+  end
 
 fun applyStep tacText step state = case expandSpan step of
     SOME span => expandSrc tacText span state
