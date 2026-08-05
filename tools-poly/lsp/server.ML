@@ -877,21 +877,24 @@ fun start {diag, dbg} = let
 
       val ls = ref (beforeCompile ())
       val lastPos = ref resumeStart
-      (* Abort a doomed header: if the file's `Libs` / `Ancestors`
+      (* Abort a doomed dec: if the file's `Libs` / `Ancestors`
          `open`s fail (e.g., a dependency of an external HOL project
          hasn't been built yet, so `open jrhUtils` fails at the top),
-         every subsequent dec references identifiers that never
-         entered scope and produces a cascade of "not declared"
-         errors.  The user experience is a slow trickle of hundreds
-         of diagnostics for what is really one broken open.  Once we
-         hit `headerErrorLimit` hard errors before *any* dec has
-         completed successfully, stop the compile — the accumulated
-         errors already tell the story, and further processing is
-         just noise. *)
-      val headerErrorLimit = 5
-      val headerErrors = ref 0
+         every subsequent name in the same dec-expansion produces a
+         "not declared" error.  The user experience is a slow trickle
+         of hundreds of diagnostics for what is really one broken
+         open.  Count hard errors between successive Progress events
+         (each Progress marks a completed outer dec).  If a single
+         dec fires `runOfErrorsLimit` hard errors without progressing,
+         the file's environment is broken — set the cancel flag and
+         raise Thread.Interrupt.  Real files with legitimate isolated
+         errors interleave them with progress and won't trigger. *)
+      val runOfErrorsLimit = 10
+      val runOfErrors = ref 0
+      val abortedByRunOfErrors = ref false
       fun process (Progress i) = (
           if !cancelled then raise Thread.Interrupt else ();
+          runOfErrors := 0;
           trees := setParsePos i (!trees);
           afterCompile (!lastPos before lastPos := i, i) (!ls);
           send (mkNotif "$/compileProgress" (fn print => (
@@ -908,16 +911,16 @@ fun start {diag, dbg} = let
         | process Interrupted = raise Bind
         | process (msg as Error {hard = true, ...}) = (
             DArray.push (#diags (!trees), msg);
-            if null (#builtTrees (!trees)) then (
-              headerErrors := !headerErrors + 1;
-              if !headerErrors >= headerErrorLimit then (
-                logMessage ("compile aborted after "
-                            ^ Int.toString (!headerErrors)
-                            ^ " errors before first successful dec: "
-                            ^ "likely a broken `open` in the header");
-                cancelled := true;
-                raise Thread.Interrupt)
-              else ()) else ())
+            runOfErrors := !runOfErrors + 1;
+            if !runOfErrors >= runOfErrorsLimit then (
+              logMessage ("compile aborted after "
+                          ^ Int.toString (!runOfErrors)
+                          ^ " errors from a single dec: "
+                          ^ "likely a broken `open` in the header");
+              abortedByRunOfErrors := true;
+              cancelled := true;
+              raise Thread.Interrupt)
+            else ())
         | process (msg as Error _) = DArray.push (#diags (!trees), msg)
       fun processBuiltTree t = trees := addBuiltTree t (!trees)
       (* After each outer dec finishes, freeze a snapshot for the LSP
@@ -949,7 +952,17 @@ fun start {diag, dbg} = let
                         parse = setParseDone (size (#text text)) (!trees)})
       ) handle Thread.Interrupt => (
         sendProgressEnd ();
-        send (mkNotif "$/compileInterrupted" (fn print => (
+        (* When the compile aborted because a single dec produced a
+           runaway cascade of errors, the diagnostics are complete
+           (up to the abort) and clients should treat the compile as
+           done, not interrupted.  A user-initiated cancel or a
+           didChange-driven stop remain compileInterrupted. *)
+        if !abortedByRunOfErrors then (
+          send (mkNotif "$/compileCompleted" (fn print => (
+            print "{\"uri\":"; encString uri print; print "}")));
+          lastTrees := {text = text,
+                        parse = setParseDone (size (#text text)) (!trees)})
+        else send (mkNotif "$/compileInterrupted" (fn print => (
           print "{\"uri\":"; encString uri print; print "}"))))
            | e => (
         logMessage ("compile aborted: " ^ exnMessage e);
