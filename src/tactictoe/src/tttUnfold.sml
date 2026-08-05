@@ -315,6 +315,7 @@ val name_thm_list =
 
 val prove_list = ["prove","TAC_PROOF"]
 
+
 val watch_list_init = watched_store_operations
 
 val watch_dict = dnew String.compare (map (fn x => (x,())) watch_list_init)
