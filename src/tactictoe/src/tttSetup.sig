@@ -5,8 +5,12 @@ sig
 
   (* directories *)
   val infix_file : string
-  val tactictoe_dir : string
-  val ttt_eval_dir : string
+  val set_tactictoe_cache_dir : string -> unit
+  val watched_store_operations : string list
+  val tactictoe_dir_of : unit -> string
+  val ttt_eval_dir_of : unit -> string
+  val tactictoe_scratch_dir_of : unit -> string
+  val with_tactictoe_cache : (unit -> 'a) -> 'a
 
   (* nearest neighbor predictor *)
   val ttt_thmlarg_radius : int ref

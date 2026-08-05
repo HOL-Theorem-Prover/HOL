@@ -4,16 +4,19 @@ all: $(DEFAULT_TARGETS) selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-# ttt_record_thy decides the recording worked by looking for the tacdata
-# file, so one left over from an earlier run makes this test pass without
-# the recording having to succeed.  It must not survive a clean.
-EXTRA_CLEANS = selftest.exe tactictoe2-selftest.log \
-               $(HOLDIR)/src/tactictoe/ttt_tacdata/ConseqConv
+# Points the recorder away from the user's real cache
+# ($XDG_CACHE_HOME/tactictoe) so the selftest neither reads nor writes it.
+SELFTEST_CACHE = $(HOLDIR)/src/tactictoe/selftest/.hol/tactictoe-cache
+
+# Everything the selftest records lands under SELFTEST_CACHE, in the build
+# tree rather than the user's cache, so a clean has to take it with it.
+# The trailing / is what lets Holmake remove a directory, recursively.
+EXTRA_CLEANS = selftest.exe tactictoe2-selftest.log $(SELFTEST_CACHE)/
 
 ifdef HOLSELFTESTLEVEL
 all: tactictoe2-selftest.log
 
 tactictoe2-selftest.log: selftest.exe
-	$(tee ./selftest.exe 2>&1, $@)
+	$(tee env HOL4_TACTICTOE_CACHE=$(SELFTEST_CACHE) ./selftest.exe 2>&1, $@)
 
 endif
