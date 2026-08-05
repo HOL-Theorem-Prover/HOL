@@ -877,6 +877,19 @@ fun start {diag, dbg} = let
 
       val ls = ref (beforeCompile ())
       val lastPos = ref resumeStart
+      (* Abort a doomed header: if the file's `Libs` / `Ancestors`
+         `open`s fail (e.g., a dependency of an external HOL project
+         hasn't been built yet, so `open jrhUtils` fails at the top),
+         every subsequent dec references identifiers that never
+         entered scope and produces a cascade of "not declared"
+         errors.  The user experience is a slow trickle of hundreds
+         of diagnostics for what is really one broken open.  Once we
+         hit `headerErrorLimit` hard errors before *any* dec has
+         completed successfully, stop the compile — the accumulated
+         errors already tell the story, and further processing is
+         just noise. *)
+      val headerErrorLimit = 5
+      val headerErrors = ref 0
       fun process (Progress i) = (
           if !cancelled then raise Thread.Interrupt else ();
           trees := setParsePos i (!trees);
@@ -893,6 +906,18 @@ fun start {diag, dbg} = let
         | process (ToplevelOut (_, ss)) = logMessage (concat (rev ss))
         | process Completed = raise Bind
         | process Interrupted = raise Bind
+        | process (msg as Error {hard = true, ...}) = (
+            DArray.push (#diags (!trees), msg);
+            if null (#builtTrees (!trees)) then (
+              headerErrors := !headerErrors + 1;
+              if !headerErrors >= headerErrorLimit then (
+                logMessage ("compile aborted after "
+                            ^ Int.toString (!headerErrors)
+                            ^ " errors before first successful dec: "
+                            ^ "likely a broken `open` in the header");
+                cancelled := true;
+                raise Thread.Interrupt)
+              else ()) else ())
         | process (msg as Error _) = DArray.push (#diags (!trees), msg)
       fun processBuiltTree t = trees := addBuiltTree t (!trees)
       (* After each outer dec finishes, freeze a snapshot for the LSP
