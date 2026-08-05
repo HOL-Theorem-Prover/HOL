@@ -149,16 +149,31 @@ fun bestSnap cursor =
            | SOME s' => if #endByte s > #endByte s' then SOME s else acc)
     NONE
 
+(* First byte position at which two strings differ (or their common
+   length if one is a prefix of the other).  Used to invalidate
+   only those snapshots whose walk crossed the edited region — a
+   change to `tac3` in `tac1 >> tac2 >> tac3` leaves the post-tac1
+   and post-tac2 snapshots valid, so the next walk resumes from
+   post-tac2 and applies only the new tac3. *)
+fun commonPrefixLen (a, b) = let
+  val n = Int.min (String.size a, String.size b)
+  fun go i = if i >= n orelse String.sub (a, i) <> String.sub (b, i) then i
+             else go (i + 1)
+  in go 0 end
+
 fun resumeFrom NONE _ startState = (0, startState, [])
   | resumeFrom (SOME cacheRef) {theoremName, tacText, cursor} startState =
       case Binarymap.peek (!cacheRef, theoremName) of
         NONE => (0, startState, [])
-      | SOME {tacText = t, snapshots, ...} =>
-          if t <> tacText then (0, startState, [])
-          else case bestSnap cursor snapshots of
-                 NONE => (0, startState, snapshots)
-               | SOME {stepIdx, state, ...} =>
-                   (stepIdx + 1, state, snapshots)
+      | SOME {tacText = t, snapshots, ...} => let
+          val validUpTo = if t = tacText then String.size t
+                          else commonPrefixLen (t, tacText)
+          val kept = List.filter (fn s => #endByte s <= validUpTo) snapshots
+          in case bestSnap cursor kept of
+               NONE => (0, startState, kept)
+             | SOME {stepIdx, state, ...} =>
+                 (stepIdx + 1, state, kept)
+          end
 
 fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
             steps, cursor} = let
