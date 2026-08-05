@@ -2705,26 +2705,35 @@ Inherits `special-mode' keys — `q' buries the window.")
 (defun hol-lsp--render-goals (result)
   "Render RESULT into *HOL Goals* and display it below the selected
 window.  Preserves ANSI colour escapes from the server's `pretty'
-field.  Structured `goals' render is a fallback for older servers."
+field.  Structured `goals' render is a fallback for older servers.
+When RESULT has :error set the buffer is cleared to just the header
+plus the error message, and the message is echoed via `message'
+too — a partial mid-walk state is complete for its own step but
+wrong for the cursor's step, so we surface the failure instead."
   (require 'ansi-color)
   (with-current-buffer (get-buffer-create "*HOL Goals*")
     (let ((inhibit-read-only t)
-          (pretty (plist-get result :pretty)))
+          (pretty (plist-get result :pretty))
+          (err (plist-get result :error)))
       (erase-buffer)
       (insert (format "%s — step %d\n\n"
                       (plist-get result :theorem)
                       (plist-get result :step)))
-      (if (and pretty (not (string-empty-p pretty)))
-          ;; Server rendered via goalFrag.pp_goalstate with the VT100
-          ;; backend — ANSI escapes classify bound / free vars.
-          ;; Insert then decode.
-          (let ((start (point)))
-            (insert pretty)
-            (ansi-color-apply-on-region start (point)))
+      (cond
+       (err
+        (insert err "\n")
+        (message "HOL goal-state: %s" err))
+       ((and pretty (not (string-empty-p pretty)))
+        ;; Server rendered via goalFrag.pp_goalstate with the VT100
+        ;; backend — ANSI escapes classify bound / free vars.
+        (let ((start (point)))
+          (insert pretty)
+          (ansi-color-apply-on-region start (point))))
+       (t
         (dolist (g (append (plist-get result :goals) nil))
           (dolist (a (append (plist-get g :asms) nil))
             (insert (format "  %s\n" a)))
-          (insert (format "⊢ %s\n\n" (plist-get g :goal))))))
+          (insert (format "⊢ %s\n\n" (plist-get g :goal)))))))
     (goto-char (point-min))
     (hol-lsp-goals-mode)
     (display-buffer (current-buffer)

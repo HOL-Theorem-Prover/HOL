@@ -71,7 +71,8 @@ when the theorem statement can't be parsed).  Otherwise:
   "theorem": "<theorem name>",
   "step": <int>,
   "goals": [{"asms": ["<assumption>", ...], "goal": "<goal>"}, ...],
-  "pretty": "<full REPL-style render>"
+  "pretty": "<full REPL-style render>",
+  "error": <string or null>
 }
 ```
 
@@ -84,13 +85,13 @@ when the theorem statement can't be parsed).  Otherwise:
   via the VT100 backend, so bound / free variables carry ANSI colour
   escapes (`\x1B[…m`).  Clients that don't render ANSI can strip the
   escapes with `\x1B\[[0-9;]*m` or fall back to `goals`.
-
-If the walker exceeds its wall-clock budget the response is `null`
-— a mid-walk partial state is complete for its own step but wrong
-for the cursor's step, so the server treats a timed-out walk as
-"no goal-state" rather than misleading the client.  A stderr line
-`goal-state walker exceeded Nms budget; interrupting` is emitted
-on the LSP process's stderr for visibility.
+- `error` — non-null when the walker gave up (e.g. wall-clock budget
+  exceeded); `goals` / `pretty` are empty and clients should render
+  the message in place of the state.  A mid-walk partial state is
+  complete for its own step but wrong for the cursor's step, so the
+  server refuses to send it and returns `error` instead.  A stderr
+  line `goal-state walker exceeded Nms budget; interrupting` is
+  also emitted for visibility.
 
 ### Client cookbook
 

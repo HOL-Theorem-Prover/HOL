@@ -80,7 +80,11 @@ type goal_state_response = {
      separator).  Clients that just want to display the state
      verbatim should prefer this; `goals` remains for clients that
      want to render individual subgoals structurally. *)
-  pretty: string}
+  pretty: string,
+  (* SOME msg when the walker gave up (e.g. wall-clock budget
+     exceeded).  When set, `goals`/`pretty` are empty and clients
+     should render the message in place of the goal state. *)
+  error: string option}
 type theorem_context = {
   name: string,           (* theorem name, e.g. "foo" *)
   quote: string,          (* raw text of the theorem statement *)

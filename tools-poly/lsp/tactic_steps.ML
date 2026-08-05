@@ -82,7 +82,14 @@ and compileToSteps (e: exp) : step list =
       | ">>"    => compileToSteps left @ compileToSteps right
       | ">-"    => then1Steps opPos left right
       | "THEN1" => then1Steps opPos left right
-      | "THENL" => [ExpandList (expSpan e)]
+      (* Walk left's inner steps individually, then treat the branch
+         list as an opaque terminator so the walker halts at the
+         `THENL` boundary rather than descending into a branch —
+         sub-branch stepping is deferred.  The ExpandList span is the
+         RHS `[b1, b2, …]`; compileTactic will fail to compile a bare
+         list as a tactic and the walker halts cleanly with the
+         post-left state. *)
+      | "THENL" => compileToSteps left @ [ExpandList (expSpan right)]
       | _       => [Expand (expSpan e)])
   | Parens {exp = e', ...} => compileToSteps e'
   (* Defensive: raw parseDec output has no ExpExpansion, but a
@@ -167,5 +174,5 @@ in
                                                                  "E[EE)[EE)"
   val _ = check "REPEAT atomic"    "REPEAT (tac1 >> tac2)"       "E"
   val _ = check "nested parens"    "((tac1))"                    "E"
-  val _ = check "THENL opaque"     "tac1 THENL [b1, b2, b3]"     "L"
+  val _ = check "THENL left+list"  "tac1 THENL [b1, b2, b3]"     "EL"
 end;

@@ -87,23 +87,28 @@ val () = LSPExtension.goalStateAtPos :=
     in case (initialGoal, steps) of
          (SOME tm, SOME sts) => let
            val startState = goalFrag.new_goal ([], tm)
+           val step = stepIndex (sts, tacCursor)
            in case withTimeout walkerBudgetMs (fn () =>
                     TacticWalker.walkTo {
                       plugins = plugins, theoremName = name,
                       theoremStart = quoteStart,
                       tacText = tacText, startState = startState,
                       steps = sts, cursor = tacCursor}) of
-                NONE => NONE
+                NONE => SOME
+                  {theorem = name, step = step,
+                   goals = [], pretty = "",
+                   error = SOME ("walker timed out (>"
+                                 ^ LargeInt.toString walkerBudgetMs ^ "ms)")}
               | SOME finalState => SOME
-                  {theorem = name, step = stepIndex (sts, tacCursor),
+                  {theorem = name, step = step,
                    goals = List.map ppGoal (goalFrag.top_goals finalState),
-                   pretty = ppState finalState}
+                   pretty = ppState finalState, error = NONE}
            end
        | (SOME tm, NONE) => let
            val startState = goalFrag.new_goal ([], tm)
            in SOME {theorem = name, step = 0,
                     goals = [{asms = [], goal = Parse.term_to_string tm}],
-                    pretty = ppState startState}
+                    pretty = ppState startState, error = NONE}
            end
        | _ => NONE
     end)
