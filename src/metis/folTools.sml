@@ -504,8 +504,6 @@ fun FOL_SOLVE solv lmap lim =
     val solver =
       timed_fn "solver initialization"
       (initialize_solver solv) {thms = thms, hyps = hyps, limit = lim}
-    fun exn_handler f x = f x
-      handle Time => raise ERR "FOL_SOLVER" "Time exception raised"
   in
     fn query =>
     let
@@ -515,7 +513,7 @@ fun FOL_SOLVE solv lmap lim =
       val () = save_fol_problem (thms, hyps, q)
       val lift = fol_thms_to_hol (#mapping_parm parm) (C assoc axioms) query
       val timed_lift = timed_fn "proof translation" lift
-      val timed_stream = map_thk (timed_fn "proof search" o exn_handler)
+      val timed_stream = map_thk (timed_fn "proof search")
     in
       eliminate consts
       (mlibStream.map timed_lift (timed_stream (fn () => solver q) ()))
