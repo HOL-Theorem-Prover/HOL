@@ -47,6 +47,13 @@ val holder : Abbrev.tactic option ref = ref NONE
 val compileCache: (string, Abbrev.tactic) Binarymap.dict ref =
   ref (Binarymap.mkDict String.compare)
 
+(* Log a stderr line when a single compile takes long enough to
+   contribute meaningfully to the walker's overall budget — helps
+   identify which tactic sources are hot when the walker times out. *)
+val slowCompileThresholdMs = 100
+
+fun logStderr s = (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
+
 fun compileTactic src =
   case Binarymap.peek (!compileCache, src) of
     SOME tac => SOME tac
@@ -64,11 +71,20 @@ fun compileTactic src =
                     else SOME (String.sub (filtered, !i)) before i := !i + 1
       fun swallow _ = ()
       val () = holder := NONE
+      val timer = Timer.startRealTimer ()
       val _ = Portable.total (fn () => PolyML.compiler
                  (read, [PolyML.Compiler.CPErrorMessageProc swallow,
                          PolyML.Compiler.CPPrintStream swallow,
                          PolyML.Compiler.CPOutStream swallow,
                          PolyML.Compiler.CPNameSpace LSPNameSpace.fileNS]) ()) ()
+      val elapsedMs = Time.toMilliseconds (Timer.checkRealTimer timer)
+      val () = if elapsedMs > slowCompileThresholdMs then
+                 logStderr ("tactic_walker: compile "
+                            ^ LargeInt.toString elapsedMs ^ "ms: "
+                            ^ (if String.size src > 60
+                               then String.substring (src, 0, 57) ^ "..."
+                               else src) ^ "\n")
+               else ()
       val () = case !holder of
                  SOME tac => compileCache :=
                              Binarymap.insert (!compileCache, src, tac)
