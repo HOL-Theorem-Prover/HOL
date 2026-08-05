@@ -1182,7 +1182,7 @@ fun start {diag, dbg} = let
     handle Empty => []
 
   fun goalStateAtPos uri v target = let
-    val ({plugins, ...}, text, offset) =
+    val ({plugins, declSnapshots, ...}, text, offset) =
       case getState v target of NONE => raise Empty | SOME s => s
     fun ppToString pp = let
       val mds = DArray.new (8, "")
@@ -1190,9 +1190,31 @@ fun start {diag, dbg} = let
       in concat (DArray.toList mds) end
     val ctx = {uri = uri, lines = #lines text, plugins = plugins,
                ppToString = ppToString}
+    (* Largest declSnapshot with endByte < theoremStart.  Restoring
+       this before invoking the walker means the walker's tactics
+       (in particular `simp[]` via `srw_ss()`) see the same Context
+       — including srw_ss extensions — that existed when the file
+       compile reached the theorem's dec.  Without this, later
+       `export_rewrites` in the same file skew simp's normal form
+       and slow tactics like METIS_TAC to a crawl. *)
+    fun snapBefore ts = List.foldl
+      (fn (s, best) =>
+        if #endByte s >= ts then best
+        else case best of
+               NONE => SOME s
+             | SOME b => if #endByte s > #endByte b then SOME s else best)
+      NONE declSnapshots
     in case findEnclosingTheorem (#text text) offset of
          NONE => NONE
-       | SOME thm => !LSPExtension.goalStateAtPos (ctx, thm)
+       | SOME (thm as {quoteStart, ...}) =>
+         let val restoreLater = !LSPExtension.captureCompileSnap ()
+             val () = case snapBefore quoteStart of
+               NONE => ()
+             | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
+             val r = !LSPExtension.goalStateAtPos (ctx, thm)
+                     handle e => (restoreLater (); raise e)
+             val () = restoreLater ()
+         in r end
     end handle Empty => NONE
 
   fun eval id {uri, code, incr, holdep} = let
