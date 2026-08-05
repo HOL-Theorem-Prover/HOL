@@ -1887,6 +1887,67 @@ def test_goalState_case_split_produces_two_subgoals():
         c.close()
 
 
+def test_goalState_walker_uses_theorem_position_context():
+    """Walker must apply the per-dec Context snapshot for the theorem
+    the cursor is inside, not the whole-file post-compile Context.
+    Otherwise `srw_ss()` entries registered LATER in the file leak
+    back into the walker's `simp[]` and change its normal form.
+
+    This file registers `test_pred_def` into srw_ss via a trailing
+    `BasicProvers.export_rewrites`.  At compile time (top-to-bottom)
+    the earlier theorem's `simp[]` doesn't have `test_pred` unfolded,
+    so the goal `test_pred 3 /\\ 2 + 2 = 4` reduces to `test_pred 3`
+    and the following `THEN1 REWRITE_TAC[test_pred_def]` discharges
+    it.  Under the buggy walker that runs against the whole-file
+    context, `simp[]` unfolds `test_pred` too, closes the goal
+    entirely, and the ensuing `THEN1` fails with no-subgoals.
+
+    Cursor is placed right after the `simp[]` line so the walker
+    halts before the `THEN1` marker.  Correct behaviour: exactly
+    one remaining subgoal `test_pred 3`.  Buggy behaviour: zero
+    subgoals (whole goal solved by simp)."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_context_snapshot.sml"
+        src = ("Theory goalstate_context_snapshot\n"
+               "Ancestors arithmetic\n\n"
+               "Definition test_pred_def:\n"
+               "  test_pred (x:num) = (x = 3)\n"
+               "End\n\n"
+               "Theorem test_earlier:\n"
+               "  test_pred 3 /\\ 2 + 2 = 4\n"
+               "Proof\n"
+               "  simp[]\n"
+               "  THEN1 REWRITE_TAC[test_pred_def]\n"
+               "QED\n\n"
+               "val _ = BasicProvers.export_rewrites [\"test_pred_def\"]\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Cursor at end of `  simp[]` (LSP line 10, char 8 = past `]`).
+        # Walker applies `simp[]` and stops before the OpenThen1
+        # marker at `THEN1`.
+        r = _send_goalstate(c, 501, uri, 10, 8)
+        result = r.get("result")
+        assert_true(result is not None,
+                    f"goalState succeeded ({r!r})")
+        err = result.get("error")
+        assert_true(err is None,
+                    f"walker did not time out or error ({err!r})")
+        goals = result.get("goals", [])
+        assert_eq(len(goals), 1,
+                  f"exactly one remaining subgoal — the walker's simp "
+                  f"did not close the goal via a later-registered "
+                  f"srw_ss entry ({goals!r})")
+        goal_text = goals[0].get("goal", "")
+        assert_true("test_pred 3" in goal_text,
+                    f"remaining subgoal is `test_pred 3` "
+                    f"({goal_text!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_between_two_theorems():
     """Slice B: cursor between two `Theorem…QED` blocks returns null and
     picks the right block when inside the second one."""
@@ -1981,6 +2042,8 @@ TESTS = [
                                      test_goalState_step_advances_within_proof),
     ("goalState_case_split_produces_two_subgoals",
                                      test_goalState_case_split_produces_two_subgoals),
+    ("goalState_walker_uses_theorem_position_context",
+                                     test_goalState_walker_uses_theorem_position_context),
     ("goalState_incomplete_proof_body",
                                      test_goalState_incomplete_proof_body),
     ("goalState_cache_invalidates_on_tactic_edit",
