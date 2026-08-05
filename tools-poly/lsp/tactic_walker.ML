@@ -34,31 +34,46 @@ end = struct
 
 val holder : Abbrev.tactic option ref = ref NONE
 
-fun compileTactic src = let
-  val wrapped = "TacticWalker.holder := SOME (" ^ src ^ ");"
-  (* Run the HOL quotation filter over the wrapped source: backticks
-     become `[QUOTE …]`, so tactics like `Cases_on \`p\`` reach
-     PolyML in the form it can parse.  Same pipeline the LSP file
-     compile uses. *)
-  val filtered = HOLSource.fromString
-                   {quietOpen = true, print = fn _ => ()} wrapped
-  val i = ref 0
-  val n = String.size filtered
-  fun read () = if !i >= n then NONE
-                else SOME (String.sub (filtered, !i)) before i := !i + 1
-  fun swallow _ = ()
-  val () = holder := NONE
-  (* Resolve identifiers via the LSP's file namespace layer, same
-     layer the LSP's normal compile uses, so identifiers visible to
-     hover are visible here.  Swallow PolyML's own output streams so
-     the `val it = () : unit` chatter doesn't leak onto the LSP
-     server's stderr for every step. *)
-  val _ = Portable.total (fn () => PolyML.compiler
-             (read, [PolyML.Compiler.CPErrorMessageProc swallow,
-                     PolyML.Compiler.CPPrintStream swallow,
-                     PolyML.Compiler.CPOutStream swallow,
-                     PolyML.Compiler.CPNameSpace LSPNameSpace.fileNS]) ()) ()
-  in !holder end
+(* Process-lifetime cache of compiled tactic values, keyed by their
+   source text.  Per-Expand `PolyML.compiler` invocation dominates
+   walker cost — the whole point of `hol-lsp-goals-follow-cursor` is
+   that auto-follow keystrokes should feel snappy, and re-running
+   the compile pipeline for every tactic on every keystroke does
+   not.  Keeping compiled values across compiles is safe for the
+   pure tactics HOL scripts typically use (GEN_TAC, REWRITE_TAC, …
+   bind to stable globalNameSpace slots); if a user genuinely
+   redefines a locally-referenced binding the compile itself will
+   flag the mismatch. *)
+val compileCache: (string, Abbrev.tactic) Binarymap.dict ref =
+  ref (Binarymap.mkDict String.compare)
+
+fun compileTactic src =
+  case Binarymap.peek (!compileCache, src) of
+    SOME tac => SOME tac
+  | NONE => let
+      val wrapped = "TacticWalker.holder := SOME (" ^ src ^ ");"
+      (* Run the HOL quotation filter over the wrapped source:
+         backticks become `[QUOTE …]`, so tactics like `Cases_on
+         \`p\`` reach PolyML in the form it can parse.  Same pipeline
+         the LSP file compile uses. *)
+      val filtered = HOLSource.fromString
+                       {quietOpen = true, print = fn _ => ()} wrapped
+      val i = ref 0
+      val n = String.size filtered
+      fun read () = if !i >= n then NONE
+                    else SOME (String.sub (filtered, !i)) before i := !i + 1
+      fun swallow _ = ()
+      val () = holder := NONE
+      val _ = Portable.total (fn () => PolyML.compiler
+                 (read, [PolyML.Compiler.CPErrorMessageProc swallow,
+                         PolyML.Compiler.CPPrintStream swallow,
+                         PolyML.Compiler.CPOutStream swallow,
+                         PolyML.Compiler.CPNameSpace LSPNameSpace.fileNS]) ()) ()
+      val () = case !holder of
+                 SOME tac => compileCache :=
+                             Binarymap.insert (!compileCache, src, tac)
+               | NONE => ()
+      in !holder end
 
 fun expandSpan (TacticSteps.Expand span)     = SOME span
   | expandSpan (TacticSteps.ExpandList span) = SOME span
