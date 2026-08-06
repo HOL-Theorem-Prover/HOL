@@ -5,6 +5,5 @@
 [poly]src/AI/proof_search
 [poly]src/AI/machine_learning
 [poly]src/tactictoe/src
-# next line relies on previous files being uploaded to sigobj
-[poly]src/tactictoe/selftest
+[poly]!!src/tactictoe/selftest
 [poly]src/holyhammer
