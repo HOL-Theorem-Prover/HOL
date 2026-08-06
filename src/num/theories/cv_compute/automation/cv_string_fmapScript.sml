@@ -151,6 +151,25 @@ Definition st_minus_def:
       mk_Branch c1 (st_minus t1 u1) (st_minus t2 u2)
 End
 
+Definition st_card_def:
+  st_card Nothing = 0:num ∧
+  st_card (Just x) = 1 ∧
+  st_card (Branch c t1 t2) = st_card t1 + st_card t2
+End
+
+Definition st_submap_def:
+  st_submap Nothing u = T ∧
+  st_submap (Just x) Nothing = F ∧
+  st_submap (Branch c t1 t2) Nothing = F ∧
+  st_submap (Just x) (Just y) = (x = y) ∧
+  st_submap (Just x) (Branch c u1 u2) = st_submap (Just x) u2 ∧
+  st_submap (Branch c t1 t2) (Just y) = F ∧
+  st_submap (Branch c1 t1 t2) (Branch c2 u1 u2) =
+    if ORD c1 < ORD c2 then F
+    else if ORD c2 < ORD c1 then st_submap (Branch c1 t1 t2) u2
+    else st_submap t1 u1 ∧ st_submap t2 u2
+End
+
 (* verification *)
 
 Definition st_flat_def:
@@ -907,6 +926,98 @@ Proof
   \\ gvs [] \\ rpt CASE_TAC \\ gvs []
 QED
 
+Theorem st_card_st_flat[local]:
+  ∀t. st_card t = LENGTH (st_flat t)
+Proof
+  Induct \\ gvs [st_card_def, st_flat_def]
+QED
+
+Theorem MEM_st_flat_lt[local]:
+  ∀t c k v.
+    st_sorted t ∧ (∀d t1 t2. t = Branch d t1 t2 ⇒ c < d) ∧
+    MEM (k,v) (st_flat t) ⇒
+    k = [] ∨ ∃d k'. k = STRING d k' ∧ c < d
+Proof
+  Induct \\ gvs [st_flat_def, st_sorted_def, MEM_MAP, EXISTS_PROD]
+  \\ rw [] \\ gvs []
+  \\ last_x_assum drule_all \\ rw [] \\ gvs [stringTheory.char_lt_def]
+QED
+
+Theorem MAP_FST_MAP_CONS[local]:
+  MAP FST (MAP (λ(k,v). (STRING c k,v)) l) = MAP (STRING c) (MAP FST l)
+Proof
+  gvs [MAP_MAP_o, combinTheory.o_DEF, LAMBDA_PROD]
+QED
+
+Theorem ALL_DISTINCT_st_flat[local]:
+  ∀t. st_sorted t ⇒ ALL_DISTINCT (MAP FST (st_flat t))
+Proof
+  Induct \\ gvs [st_flat_def, st_sorted_def]
+  \\ rw [MAP_FST_MAP_CONS, ALL_DISTINCT_APPEND]
+  >- (irule ALL_DISTINCT_MAP_INJ \\ gvs [])
+  \\ gvs [MEM_MAP] \\ rw []
+  \\ CCONTR_TAC \\ gvs [MEM_MAP, EXISTS_PROD]
+  \\ drule MEM_st_flat_lt \\ disch_then drule \\ gvs []
+  \\ Cases_on ‘y’ \\ gvs []
+  \\ first_assum $ irule_at Any \\ gvs [stringTheory.char_lt_def]
+QED
+
+Theorem st_submap_thm:
+  ∀t u.
+    st_sorted t ∧ st_sorted u ⇒
+    (st_submap t u ⇔ ∀k v. st_get t k = SOME v ⇒ st_get u k = SOME v)
+Proof
+  ho_match_mp_tac st_submap_ind \\ rpt strip_tac
+  \\ gvs [st_submap_def, st_get_def, st_sorted_def]
+  >- (qexists_tac ‘[]’ \\ gvs [st_get_def])
+  >- (irule st_sorted_not_Nothing_get \\ gvs [st_sorted_def])
+  >- (eq_tac \\ rw [] \\ gvs [st_get_def]
+      \\ first_x_assum (qspecl_then [‘[]’,‘x’] mp_tac) \\ gvs [st_get_def])
+  >- (eq_tac \\ rw [] \\ Cases_on ‘k’ \\ gvs [st_get_def]
+      \\ first_x_assum (qspecl_then [‘[]’,‘v’] mp_tac) \\ gvs [st_get_def])
+  >- (rename [‘Branch c l1 l2’]
+      \\ qspec_then ‘l1’ mp_tac st_sorted_not_Nothing_get \\ gvs [] \\ rw []
+      \\ qexists_tac ‘STRING c k’ \\ qexists_tac ‘v’
+      \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def])
+  \\ rename [‘st_get (Branch c1 l1 l2) _ = SOME _ ⇒
+              st_get (Branch c2 r1 r2) _ = SOME _’]
+  \\ Cases_on ‘ORD c1 < ORD c2’ \\ gvs []
+  >- (qspec_then ‘l1’ mp_tac st_sorted_not_Nothing_get \\ gvs [] \\ rw []
+      \\ qexists_tac ‘STRING c1 k’ \\ qexists_tac ‘v’
+      \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def])
+  \\ Cases_on ‘ORD c2 < ORD c1’ \\ gvs []
+  >- (‘∀k v. st_get (Branch c1 l1 l2) k = SOME v ⇒
+             st_get (Branch c2 r1 r2) k = st_get r2 k’ by
+        (Cases \\ gvs [st_get_def, stringTheory.char_lt_def,
+                       stringTheory.char_gt_def]
+         \\ rw [] \\ gvs [])
+      \\ eq_tac \\ rw [] \\ res_tac \\ gvs [])
+  \\ ‘c1 = c2’ by gvs [GSYM stringTheory.ORD_11] \\ gvs []
+  \\ ‘∀h rest. st_get_cons l2 h rest ≠ NONE ⇒ ORD c1 < ORD h’ by
+       (rpt strip_tac \\ CCONTR_TAC
+        \\ qspecl_then [‘l2’,‘h’,‘rest’] mp_tac st_get_cons_sorted_lt
+        \\ gvs [] \\ rw [] \\ gvs [stringTheory.char_lt_def])
+  \\ eq_tac \\ rw []
+  >- (Cases_on ‘k’
+      \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def]
+      >- (qpat_x_assum ‘∀k v. st_get l2 k = _ ⇒ _’
+            (qspecl_then [‘[]’,‘v’] mp_tac) \\ gvs [st_get_def])
+      \\ rw []
+      >- (qpat_x_assum ‘∀k v. st_get l2 k = _ ⇒ _’
+            (qspecl_then [‘STRING h t’,‘v’] mp_tac) \\ gvs [st_get_def])
+      \\ qpat_x_assum ‘∀k v. st_get l1 k = _ ⇒ _’
+           (qspecl_then [‘t’,‘v’] mp_tac) \\ gvs [st_get_def])
+  >- (first_x_assum (qspecl_then [‘STRING c1 k’,‘v’] mp_tac)
+      \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def])
+  \\ Cases_on ‘k’
+  >- (first_x_assum (qspecl_then [‘[]’,‘v’] mp_tac) \\ gvs [st_get_def])
+  \\ ‘ORD c1 < ORD h’ by
+       (qpat_x_assum ‘∀h rest. st_get_cons l2 h rest ≠ NONE ⇒ _’
+          (qspecl_then [‘h’,‘t’] mp_tac) \\ gvs [st_get_def])
+  \\ first_x_assum (qspecl_then [‘STRING h t’,‘v’] mp_tac)
+  \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def]
+QED
+
 val _ = cv_trans st_get_nil_def;
 val _ = cv_trans st_get_def;
 val _ = cv_trans st_make_def;
@@ -943,6 +1054,9 @@ val _ = cv_trans_rec st_inter_def
    \\ qspec_then ‘cv_snd x’ assume_tac cv_size_cv_fst_cv_snd
    \\ qspec_then ‘cv_snd y’ assume_tac cv_size_cv_fst_cv_snd
    \\ gvs []);
+
+val _ = cv_trans st_card_def;
+val _ = cv_trans st_submap_def;
 
 val _ = cv_trans_rec st_minus_def
   (WF_REL_TAC ‘measure $ λ(x,y). cv_size x + cv_size y’
@@ -1071,4 +1185,43 @@ Proof
   \\ DEP_REWRITE_TAC [st_get_st_minus]
   \\ gvs [st_get_st_sets, st_get_Nothing, st_sorted_def, option_case_id,
           finite_mapTheory.FLOOKUP_FMINUS]
+QED
+
+Theorem cv_rep_string_FCARD[cv_rep]:
+  Num (FCARD m) = cv_st_card (from_string_fmap f m)
+Proof
+  gvs [from_string_fmap_def, GSYM $ fetch "-" "cv_st_card_thm"]
+  \\ qmatch_goalsub_abbrev_tac ‘st_card t’
+  \\ ‘st_sorted t’ by gvs [Abbr‘t’]
+  \\ ‘ALOOKUP (st_flat t) = FLOOKUP m’ by
+       (gvs [FUN_EQ_THM] \\ rw []
+        \\ DEP_REWRITE_TAC [ALOOKUP_st_flat]
+        \\ gvs [Abbr‘t’, st_get_st_sets]
+        \\ CASE_TAC \\ gvs [])
+  \\ ‘∀x. MEM x (MAP FST (st_flat t)) ⇔ ALOOKUP (st_flat t) x ≠ NONE’ by
+       gvs [ALOOKUP_NONE]
+  \\ ‘FDOM m = set (MAP FST (st_flat t))’ by
+       (gvs [pred_setTheory.EXTENSION]
+        \\ gvs [finite_mapTheory.FLOOKUP_DEF] \\ rw [])
+  \\ gvs [st_card_st_flat, finite_mapTheory.FCARD_DEF]
+  \\ DEP_REWRITE_TAC [ALL_DISTINCT_CARD_LIST_TO_SET]
+  \\ gvs [ALL_DISTINCT_st_flat]
+QED
+
+val submap_lemma = cv_rep_for [] “st_submap t u” |> DISCH_ALL;
+
+Theorem cv_rep_string_SUBMAP[cv_rep]:
+  from_to f_a t_a ⇒
+  cv_rep T (cv_st_submap (from_string_fmap f_a m1) (from_string_fmap f_a m2))
+        b2c (m1 ⊑ m2)
+Proof
+  qsuff_tac ‘m1 ⊑ m2 ⇔ st_submap (st_sets Nothing (fmap_to_alist m1))
+                                 (st_sets Nothing (fmap_to_alist m2))’
+  >- (simp [from_string_fmap_def]
+      \\ mp_tac (submap_lemma |> Q.GENL [‘t’,‘u’]
+                   |> Q.SPECL [‘st_sets Nothing (fmap_to_alist m1)’,
+                               ‘st_sets Nothing (fmap_to_alist m2)’])
+      \\ fs [])
+  \\ DEP_REWRITE_TAC [st_submap_thm]
+  \\ gvs [st_get_st_sets, option_case_id, finite_mapTheory.SUBMAP_FLOOKUP_EQN]
 QED
