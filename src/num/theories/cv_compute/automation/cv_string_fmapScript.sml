@@ -4,7 +4,7 @@
 Theory cv_string_fmap
 Ancestors
   cv cv_type arithmetic words cv_rep cv_prim pair list option sum
-  alist indexedLists rich_list sptree finite_set cv_std
+  alist indexedLists rich_list sptree finite_set sorting cv_std
 Libs
   dep_rewrite cv_typeLib cv_repLib cv_transLib
 
@@ -168,6 +168,39 @@ Definition st_submap_def:
     if ORD c1 < ORD c2 then F
     else if ORD c2 < ORD c1 then st_submap (Branch c1 t1 t2) u2
     else st_submap t1 u1 ∧ st_submap t2 u2
+End
+
+Definition st_lex_def:
+  st_lex t = (case st_get_nil t of
+              | NONE => st_branches t
+              | SOME v => ("",v) :: st_branches t) ∧
+  st_branches Nothing = [] ∧
+  st_branches (Just x) = [] ∧
+  st_branches (Branch c t1 t2) =
+    MAP (λ(k,v). (STRING c k, v)) (st_lex t1) ++ st_branches t2
+Termination
+  WF_REL_TAC ‘measure (λx. case x of
+                           | INL t => str_trie_size (K 0) t * 2 + 1
+                           | INR t => str_trie_size (K 0) t * 2)’
+End
+
+Definition st_lex_acc_def:
+  st_lex_acc t rp acc =
+    (case st_get_nil t of
+     | NONE => st_branches_acc t rp acc
+     | SOME v => (REVERSE rp, v) :: st_branches_acc t rp acc) ∧
+  st_branches_acc Nothing rp acc = acc ∧
+  st_branches_acc (Just x) rp acc = acc ∧
+  st_branches_acc (Branch c t1 t2) rp acc =
+    st_lex_acc t1 (c::rp) (st_branches_acc t2 rp acc)
+Termination
+  WF_REL_TAC ‘measure (λx. case x of
+                           | INL (t,rp,acc) => str_trie_size (K 0) t * 2 + 1
+                           | INR (t,rp,acc) => str_trie_size (K 0) t * 2)’
+End
+
+Definition st_to_list_def:
+  st_to_list t = st_lex_acc t [] []
 End
 
 (* verification *)
@@ -1018,6 +1051,145 @@ Proof
   \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def]
 QED
 
+Theorem MEM_alookup[local]:
+  ∀l x. MEM x (MAP FST l) ⇔ ALOOKUP l x ≠ NONE
+Proof
+  gvs [ALOOKUP_NONE]
+QED
+
+Theorem ALOOKUP_MAP_STRING[local]:
+  ALOOKUP (MAP (λ(k,v). (STRING c k,v)) l) (STRING d rest) =
+    (if c = d then ALOOKUP l rest else NONE) ∧
+  ALOOKUP (MAP (λ(k,v). (STRING c k,v)) l) "" = NONE
+Proof
+  Induct_on ‘l’ \\ gvs [] \\ Cases \\ gvs [] \\ rw []
+QED
+
+Theorem ALOOKUP_st_lex:
+  (∀t:'a str_trie. st_sorted t ⇒ ∀k. ALOOKUP (st_lex t) k = st_get t k) ∧
+  (∀t:'a str_trie. st_sorted t ⇒
+     ∀k. ALOOKUP (st_branches t) k = if k = "" then NONE else st_get t k)
+Proof
+  ho_match_mp_tac st_lex_ind \\ rw [st_lex_def, st_get_def, st_sorted_def]
+  \\ Cases_on ‘k’
+  \\ gvs [ALOOKUP_APPEND, ALOOKUP_MAP_STRING, st_get_def]
+  \\ TRY (CASE_TAC \\ gvs [st_get_def] \\ NO_TAC)
+  \\ ‘∀d rest. ORD d ≤ ORD c ⇒ st_get_cons t' d rest = NONE’ by
+       (rw [] \\ irule st_get_cons_sorted_lt \\ gvs [] \\ rw []
+        \\ res_tac \\ gvs [stringTheory.char_lt_def])
+  \\ Cases_on ‘c = h’
+  \\ gvs [stringTheory.char_lt_def, stringTheory.char_gt_def]
+  >- (CASE_TAC \\ gvs [])
+  \\ rw [] \\ gvs []
+  \\ ‘ORD h = ORD c’ by DECIDE_TAC \\ gvs [stringTheory.ORD_11]
+QED
+
+Theorem st_lex_acc_thm[local]:
+  (∀t:'a str_trie rp acc. st_lex_acc t rp acc =
+     MAP (λ(k,v). (REVERSE rp ++ k, v)) (st_lex t) ++ acc) ∧
+  (∀t:'a str_trie rp acc. st_branches_acc t rp acc =
+     MAP (λ(k,v). (REVERSE rp ++ k, v)) (st_branches t) ++ acc)
+Proof
+  ho_match_mp_tac st_lex_acc_ind
+  \\ rw [st_lex_acc_def, st_lex_def]
+  \\ gvs [MAP_MAP_o, combinTheory.o_DEF, LAMBDA_PROD]
+  \\ CASE_TAC \\ gvs []
+QED
+
+Theorem st_to_list_thm:
+  st_to_list t = st_lex t
+Proof
+  gvs [st_to_list_def, st_lex_acc_thm, pairTheory.ELIM_UNCURRY]
+QED
+
+Theorem MEM_st_lex[local]:
+  ∀t k. st_sorted t ⇒
+    (MEM k (MAP FST (st_lex t)) ⇔ st_get t k ≠ NONE) ∧
+    (MEM k (MAP FST (st_branches t)) ⇔ k ≠ "" ∧ st_get t k ≠ NONE)
+Proof
+  rw [MEM_alookup] \\ gvs [ALOOKUP_st_lex] \\ rw [] \\ gvs []
+QED
+
+Theorem transitive_string_lt[local]:
+  transitive string_lt
+Proof
+  gvs [relationTheory.transitive_def]
+  \\ metis_tac [stringTheory.string_lt_trans]
+QED
+
+Theorem SORTED_MAP_STRING[local]:
+  ∀l. SORTED string_lt (MAP (STRING c) l) ⇔ SORTED string_lt l
+Proof
+  Induct \\ gvs [] \\ Cases_on ‘l’
+  \\ gvs [SORTED_DEF, stringTheory.string_lt_def, stringTheory.char_lt_def]
+QED
+
+Theorem SORTED_st_lex:
+  (∀t:'a str_trie. st_sorted t ⇒ SORTED string_lt (MAP FST (st_lex t))) ∧
+  (∀t:'a str_trie. st_sorted t ⇒ SORTED string_lt (MAP FST (st_branches t)))
+Proof
+  ho_match_mp_tac st_lex_ind \\ rw [st_lex_def, st_sorted_def]
+  \\ gvs [SORTED_APPEND, transitive_string_lt, MAP_FST_MAP_CONS,
+          SORTED_MAP_STRING]
+  >- (CASE_TAC \\ gvs [SORTED_EQ, transitive_string_lt] \\ rw []
+      \\ ‘y ≠ ""’ by (qspecl_then [‘t’,‘y’] mp_tac MEM_st_lex \\ gvs [])
+      \\ Cases_on ‘y’ \\ gvs [stringTheory.string_lt_def])
+  \\ ‘∀d rest. ORD d ≤ ORD c ⇒ st_get_cons t' d rest = NONE’ by
+       (rw [] \\ irule st_get_cons_sorted_lt \\ gvs [] \\ rw []
+        \\ res_tac \\ gvs [stringTheory.char_lt_def])
+  \\ ‘∀y. MEM y (MAP FST (st_branches t')) ⇒
+          ∃d k2. y = STRING d k2 ∧ char_lt c d’ by
+       (rw [] \\ qspecl_then [‘t'’,‘y’] mp_tac MEM_st_lex \\ gvs [] \\ rw []
+        \\ Cases_on ‘y’ \\ gvs []
+        \\ CCONTR_TAC \\ gvs [st_get_def, stringTheory.char_lt_def]
+        \\ ‘ORD h ≤ ORD c’ by DECIDE_TAC \\ res_tac \\ gvs [])
+  \\ rw [] \\ gvs [MEM_MAP] \\ res_tac
+  \\ gvs [stringTheory.string_lt_def]
+QED
+
+Theorem ALOOKUP_eq_NONE[local]:
+  ∀l k v k'. SORTED string_lt (MAP FST ((k,v)::l)) ∧ ¬string_lt k k' ⇒
+             ALOOKUP l k' = NONE
+Proof
+  rw [] \\ gvs [SORTED_EQ, transitive_string_lt]
+  \\ CCONTR_TAC \\ gvs [GSYM MEM_alookup]
+  \\ first_x_assum drule \\ gvs []
+QED
+
+Theorem sorted_alist_unique[local]:
+  ∀l1 l2. SORTED string_lt (MAP FST l1) ∧ SORTED string_lt (MAP FST l2) ∧
+          ALOOKUP l1 = ALOOKUP l2 ⇒ l1 = l2
+Proof
+  Induct \\ Cases_on ‘l2’ \\ gvs [] \\ strip_tac
+  >- (Cases_on ‘h’ \\ gvs [FUN_EQ_THM]
+      \\ first_x_assum (qspec_then ‘q’ mp_tac) \\ gvs [])
+  >- (rw [] \\ Cases_on ‘h’ \\ gvs [FUN_EQ_THM]
+      \\ first_x_assum (qspec_then ‘q’ mp_tac) \\ gvs [])
+  \\ Cases_on ‘h’ \\ Cases_on ‘h'’ \\ strip_tac \\ gvs []
+  \\ ‘q' = q’ by
+       (CCONTR_TAC
+        \\ ‘string_lt q' q ∨ string_lt q q'’ by
+             metis_tac [stringTheory.string_lt_cases]
+        \\ gvs [FUN_EQ_THM]
+        >- (first_x_assum (qspec_then ‘q'’ mp_tac) \\ gvs []
+            \\ qspecl_then [‘t’,‘q’,‘r’,‘q'’] mp_tac ALOOKUP_eq_NONE
+            \\ impl_tac >- (gvs [] \\ metis_tac [stringTheory.string_lt_antisym])
+            \\ gvs [])
+        \\ first_x_assum (qspec_then ‘q’ mp_tac) \\ gvs []
+        \\ qspecl_then [‘l1’,‘q'’,‘r'’,‘q’] mp_tac ALOOKUP_eq_NONE
+        \\ impl_tac >- (gvs [] \\ metis_tac [stringTheory.string_lt_antisym])
+        \\ gvs [])
+  \\ gvs [FUN_EQ_THM]
+  \\ ‘r' = r’ by (first_x_assum (qspec_then ‘q’ mp_tac) \\ gvs [])
+  \\ gvs []
+  \\ first_x_assum irule
+  \\ gvs [SORTED_EQ, transitive_string_lt] \\ rw []
+  \\ Cases_on ‘q = x’ \\ gvs []
+  >- (Cases_on ‘ALOOKUP l1 q’ \\ Cases_on ‘ALOOKUP t q’ \\ gvs [MEM_alookup]
+      \\ metis_tac [stringTheory.string_lt_nonrefl, optionTheory.NOT_SOME_NONE])
+  \\ first_x_assum (qspec_then ‘x’ mp_tac) \\ gvs []
+QED
+
 val _ = cv_trans st_get_nil_def;
 val _ = cv_trans st_get_def;
 val _ = cv_trans st_make_def;
@@ -1057,6 +1229,21 @@ val _ = cv_trans_rec st_inter_def
 
 val _ = cv_trans st_card_def;
 val _ = cv_trans st_submap_def;
+
+val st_lex_acc_pre_def = cv_trans_pre_rec "" st_lex_acc_def
+  (WF_REL_TAC ‘measure (λx. case x of
+                            | INL (cv,rp,acc) => cv_size cv * 2 + 1
+                            | INR (cv,rp,acc) => cv_size cv * 2)’
+   \\ cv_termination_tac);
+
+Theorem st_lex_acc_pre[cv_pre]:
+  (∀t:'a str_trie rp acc. st_lex_acc_pre t rp acc) ∧
+  (∀t:'a str_trie rp acc. st_branches_acc_pre t rp acc)
+Proof
+  ho_match_mp_tac st_lex_acc_ind \\ rw [] \\ simp [Once st_lex_acc_pre_def]
+QED
+
+val _ = cv_trans st_to_list_def;
 
 val _ = cv_trans_rec st_minus_def
   (WF_REL_TAC ‘measure $ λ(x,y). cv_size x + cv_size y’
@@ -1224,4 +1411,72 @@ Proof
       \\ fs [])
   \\ DEP_REWRITE_TAC [st_submap_thm]
   \\ gvs [st_get_st_sets, option_case_id, finite_mapTheory.SUBMAP_FLOOKUP_EQN]
+QED
+
+(* the entries of a finite map, listed in increasing order of the keys *)
+Definition fmap_to_sorted_list_def:
+  fmap_to_sorted_list m =
+    @l. ALOOKUP l = FLOOKUP m ∧ SORTED string_lt (MAP FST l)
+End
+
+Theorem fmap_to_sorted_list_eq:
+  ALOOKUP l = FLOOKUP m ∧ SORTED string_lt (MAP FST l) ⇒
+  fmap_to_sorted_list m = l
+Proof
+  rw [fmap_to_sorted_list_def] \\ SELECT_ELIM_TAC \\ rw []
+  >- (qexists_tac ‘l’ \\ gvs [])
+  \\ irule sorted_alist_unique \\ gvs []
+QED
+
+Theorem fmap_to_sorted_list_thm:
+  ALOOKUP (fmap_to_sorted_list m) = FLOOKUP m ∧
+  SORTED string_lt (MAP FST (fmap_to_sorted_list m))
+Proof
+  ‘∃l. ALOOKUP l = FLOOKUP m ∧ SORTED string_lt (MAP FST l)’ by
+    (qexists_tac ‘st_lex (st_sets Nothing (fmap_to_alist m))’
+     \\ qmatch_goalsub_abbrev_tac ‘st_lex t’
+     \\ ‘st_sorted t’ by gvs [Abbr‘t’]
+     \\ conj_tac
+     >- (gvs [FUN_EQ_THM] \\ rw []
+         \\ DEP_REWRITE_TAC [ALOOKUP_st_lex] \\ gvs [Abbr‘t’, st_get_st_sets]
+         \\ CASE_TAC \\ gvs [])
+     \\ irule (CONJUNCT1 SORTED_st_lex) \\ gvs [])
+  \\ gvs [fmap_to_sorted_list_def] \\ SELECT_ELIM_TAC \\ rw []
+  \\ metis_tac []
+QED
+
+Theorem LENGTH_fmap_to_sorted_list:
+  LENGTH (fmap_to_sorted_list m) = FCARD m
+Proof
+  strip_assume_tac fmap_to_sorted_list_thm
+  \\ ‘ALL_DISTINCT (MAP FST (fmap_to_sorted_list m))’ by
+       (qspec_then ‘string_lt’ mp_tac (GEN_ALL SORTED_ALL_DISTINCT)
+        \\ impl_tac
+        >- gvs [transitive_string_lt, relationTheory.irreflexive_def,
+                stringTheory.string_lt_nonrefl]
+        \\ disch_then irule \\ gvs [])
+  \\ ‘FDOM m = set (MAP FST (fmap_to_sorted_list m))’ by
+       (‘∀x. MEM x (MAP FST (fmap_to_sorted_list m)) ⇔
+             ALOOKUP (fmap_to_sorted_list m) x ≠ NONE’ by gvs [ALOOKUP_NONE]
+        \\ gvs [pred_setTheory.EXTENSION]
+        \\ gvs [finite_mapTheory.FLOOKUP_DEF] \\ rw [])
+  \\ gvs [finite_mapTheory.FCARD_DEF]
+  \\ DEP_REWRITE_TAC [ALL_DISTINCT_CARD_LIST_TO_SET] \\ gvs []
+QED
+
+Theorem cv_rep_string_fmap_to_sorted_list[cv_rep]:
+  from_list (from_pair (from_list from_char) f) (fmap_to_sorted_list m) =
+  cv_st_to_list (from_string_fmap f m)
+Proof
+  gvs [from_string_fmap_def, GSYM $ fetch "-" "cv_st_to_list_thm"]
+  \\ AP_TERM_TAC
+  \\ gvs [st_to_list_thm]
+  \\ irule fmap_to_sorted_list_eq
+  \\ qmatch_goalsub_abbrev_tac ‘st_lex t’
+  \\ ‘st_sorted t’ by gvs [Abbr‘t’]
+  \\ conj_tac
+  >- (gvs [FUN_EQ_THM] \\ rw []
+      \\ DEP_REWRITE_TAC [ALOOKUP_st_lex] \\ gvs [Abbr‘t’, st_get_st_sets]
+      \\ CASE_TAC \\ gvs [])
+  \\ irule (CONJUNCT1 SORTED_st_lex) \\ gvs []
 QED
