@@ -23,9 +23,25 @@ signature Refute = sig
   type rng = Refute_Gen.rng
   type term_postprocessor = term -> term
 
+  datatype backend_choice =
+      Exhaustive
+    | Random
+    | Narrowing
+    | ModelFinder
+    | RegisteredBackend of string
+
+  datatype search =
+      AllBackends
+    | QuickcheckBackends
+    | Only of backend_choice list
+
+  type config_update = config -> config
+
   val refute        : config -> term -> outcome
   val refute_def    : term -> outcome
+  val refute_with   : config_update list -> term -> outcome
   val refute_goal   : config -> goal -> outcome
+  val refute_goal_with : config_update list -> goal -> outcome
   val refute_top    : unit -> outcome
   val try_refute    : config -> goal -> (string * outcome) option
   (* [NONE] derives a QC-only configuration from [the_config].  [SOME cfg]
@@ -39,12 +55,15 @@ signature Refute = sig
   val print_unused_assms : config option -> string option -> unit
   val quickcheck    : term -> outcome
   val model_refute  : term -> outcome
-  (* Diagnostic tactics always print the ordinary outcome and return the
-     original goal unchanged.  The specialized tactics override only the
-     backend selection. *)
-  val REFUTE_TAC       : Abbrev.tactic
-  val QUICKCHECK_TAC   : Abbrev.tactic
-  val MODEL_REFUTE_TAC : Abbrev.tactic
+  (* Diagnostic tactics return the original goal unchanged.  The exact-config
+     form honours every field.  The update form reads [the_config] when the
+     tactic is applied, then applies its updates from left to right. *)
+  val REFUTE_CONFIG_TAC : config -> Abbrev.tactic
+  val REFUTE_TAC_WITH   : config_update list -> Abbrev.tactic
+  val REFUTE_TAC        : Abbrev.tactic
+  val QUICKCHECK_TAC    : Abbrev.tactic
+  val NARROWING_TAC     : Abbrev.tactic
+  val MODEL_REFUTE_TAC  : Abbrev.tactic
 
   val register_backend : backend -> unit
   (* The callback must upper-bound the certainty returned by the backend's
@@ -87,6 +106,9 @@ signature Refute = sig
   val default_config : config
   val the_config : config ref
   val show_config : unit -> unit
+  val upd_search : search -> config_update
+  val apply_updates : config_update list -> config -> config
+  val current_config : config_update list -> config
   val upd_timeout : real -> config -> config
   val upd_backends : string list option -> config -> config
   val upd_sequential : bool -> config -> config

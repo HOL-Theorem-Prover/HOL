@@ -107,10 +107,15 @@ The public entry points are:
 | Entry point | Behaviour |
 |---|---|
 | `refute cfg tm` | Search for a counterexample to `tm` with `cfg`, print the result unless quiet, and return the structured `outcome`. |
+| `refute_with updates tm` | Apply `updates` to `!the_config`, then search `tm`. |
 | `refute_goal cfg (asms, tm)` | Search the goal whose assumptions are `asms` and conclusion is `tm`. |
-| `REFUTE_TAC` | Inspect a tactic goal using `!the_config`, print the outcome, and leave the goal unchanged whether the result is a counterexample, bounded success, or inconclusive. |
-| `QUICKCHECK_TAC` | Like `REFUTE_TAC`, but select only the `exhaustive`, `random`, and `narrowing` backends. |
-| `MODEL_REFUTE_TAC` | Like `REFUTE_TAC`, but select only the `kodkod` finite-model backend. |
+| `refute_goal_with updates goal` | The goal form of `refute_with`. |
+| `REFUTE_TAC` | Inspect a tactic goal using `!the_config`, print the result, and leave the goal unchanged. |
+| `QUICKCHECK_TAC` | As `REFUTE_TAC`, selecting exhaustive, random, and narrowing search. |
+| `NARROWING_TAC` | As `REFUTE_TAC`, selecting only symbolic narrowing. |
+| `MODEL_REFUTE_TAC` | As `REFUTE_TAC`, selecting only the relational model finder. |
+| `REFUTE_TAC_WITH updates` | Apply per-call configuration updates and inspect the goal. |
+| `REFUTE_CONFIG_TAC cfg` | Inspect the goal with exactly `cfg`. |
 | `quickcheck tm` | Use `!the_config`, but select only the Quickcheck backends `exhaustive`, `random`, and `narrowing`. |
 | `model_refute tm` | Use `!the_config`, but select only the `kodkod` model-finder backend. |
 | `try_refute cfg goal` | Run quietly and return `SOME (backend, outcome)` only for a counterexample, or `NONE` for a miss, timeout, or inconclusive search. |
@@ -119,6 +124,68 @@ The public entry points are:
 There are also conveniences `refute_def tm`, which calls `refute
 !the_config tm`, and `refute_top ()`, which applies `refute_goal` to the
 current top goal.
+
+### Tactic interface and per-call selection
+
+Most users should start with the parameterless diagnostic tactic:
+
+```sml
+REFUTE_TAC
+```
+
+It tries every backend selected by the interactive configuration.  Use
+`QUICKCHECK_TAC`, `NARROWING_TAC`, or `MODEL_REFUTE_TAC` only when the
+search method or counterexample representation matters.  All four tactics
+print an outcome and return the original goal unchanged; they do not prove
+or admit it.
+
+Advanced calls can supply ordinary configuration updaters locally:
+
+```sml
+REFUTE_TAC_WITH
+  [upd_search (Only [Narrowing]),
+   upd_size 7,
+   upd_timeout 5.0]
+```
+
+The updates have type `config -> config` and are applied to `!the_config`
+from left to right.  Thus the last update of a field wins.  The global
+configuration is read when the tactic is applied, not when it is
+constructed.  The tactic honours every resulting field, including `quiet`
+and `expect`.
+
+For reproducible tools and regression tests, use an exact configuration:
+
+```sml
+REFUTE_CONFIG_TAC
+  (default_config
+     |> upd_search (Only [Narrowing])
+     |> upd_size 7)
+```
+
+The built-in backend names are represented by a typed interface:
+
+```sml
+datatype backend_choice =
+    Exhaustive
+  | Random
+  | Narrowing
+  | ModelFinder
+  | RegisteredBackend of string
+
+datatype search =
+    AllBackends
+  | QuickcheckBackends
+  | Only of backend_choice list
+```
+
+`RegisteredBackend name` selects an extension backend by its registered
+name.  `Only []` is rejected.  `upd_search` converts a `search` into a
+configuration updater.  `apply_updates updates cfg` constructs an exact
+configuration, while `current_config updates` applies the same list to the
+interactive configuration.  `refute_with` and `refute_goal_with` provide
+the same local-update convention for callers that consume structured
+outcomes.
 
 `try_refute` is intended for other automation.  It preserves the
 caller's backend selection but forces sequential execution, seed 42,
@@ -133,7 +200,7 @@ prints no Refute report:
 - Option.map #1
     (try_refute
        (default_config
-          |> upd_backends (SOME ["exhaustive"])
+          |> upd_search (Only [Exhaustive])
           |> upd_substrate Compute
           |> upd_size 4)
        ([], ``(n : num) < 3``));
@@ -146,7 +213,7 @@ prints no Refute report:
     - Option.map #1
         (try_refute
            (default_config
-              |> upd_backends (SOME ["exhaustive"])
+              |> upd_search (Only [Exhaustive])
               |> upd_substrate Compute
               |> upd_size 4)
            ([], ``(n : num) < 3``));
@@ -164,11 +231,14 @@ Four backends are registered by default, in increasing weight order:
 | 40 | `narrowing` | Native symbolic narrowing, including prenex existentials. |
 | 50 | `kodkod` | Relational finite-model search through Kodkodi. |
 
-With `backends = NONE`, every configured backend is selected.  Kodkod is
-simply absent from that set when its external component is not available.
-`SOME names` restricts the set.  Weights order sequential execution and
-break ties between results of equal certainty; in parallel mode they do
-not promise which process finishes first.
+`upd_search AllBackends` selects every configured backend;
+`QuickcheckBackends` selects exhaustive, random, and narrowing search; and
+`Only choices` selects exactly its nonempty list.  Kodkod is absent from an
+all-backend run when its external component is not available.  The older
+`upd_backends` string interface remains available for extension and
+compatibility code.  Weights order sequential execution and break ties
+between results of equal certainty; in parallel mode they do not promise
+which process finishes first.
 
 The default `sequential = false` races the selected backends.  A result
 stops the race only when its certainty reaches the best ceiling declared
@@ -215,7 +285,7 @@ For example:
 \begin{verbatim}
 - val cfg =
     default_config
-      |> upd_backends (SOME ["kodkod"])
+      |> upd_search (Only [ModelFinder])
       |> upd_sequential true
       |> upd_card [(NONE, [2])];
 (* configuration value omitted *)
@@ -234,7 +304,7 @@ For example:
 ```{=mdbook}
     - val cfg =
         default_config
-          |> upd_backends (SOME ["kodkod"])
+          |> upd_search (Only [ModelFinder])
           |> upd_sequential true
           |> upd_card [(NONE, [2])];
     (* configuration value omitted *)
@@ -289,7 +359,7 @@ same bound and reports an incomplete no-hit result.
 \begin{verbatim}
 - val cfg =
     default_config
-      |> upd_backends (SOME ["exhaustive"])
+      |> upd_search (Only [Exhaustive])
       |> upd_substrate Compute
       |> upd_sequential true
       |> upd_size 1
@@ -310,7 +380,7 @@ same bound and reports an incomplete no-hit result.
 ```{=mdbook}
     - val cfg =
         default_config
-          |> upd_backends (SOME ["exhaustive"])
+          |> upd_search (Only [Exhaustive])
           |> upd_substrate Compute
           |> upd_sequential true
           |> upd_size 1
@@ -453,7 +523,8 @@ usual idiom is:
 ```sml
 val cfg = Refute.default_config
   |> Refute.upd_timeout 5.0
-  |> Refute.upd_backends (SOME ["exhaustive", "narrowing"])
+  |> Refute.upd_search
+       (Refute.Only [Refute.Exhaustive, Refute.Narrowing])
   |> Refute.upd_size 7
 ```
 
@@ -461,12 +532,15 @@ val cfg = Refute.default_config
 `upd_qc` and `upd_mf` replace a complete sub-record; the individual
 updaters are generally less brittle.  `the_config : config ref` supplies
 the interactive defaults, and `show_config ()` prints its complete
-current value.  The common fields are:
+current value.  Prefer `REFUTE_TAC_WITH` for a one-off tactic call; mutate
+`the_config` only when changing persistent interactive defaults.  The
+common fields are:
 
 | Updater | Default | Meaning |
 |---|---:|---|
 | `upd_timeout` | `30.0` | Seconds allowed to each ordinary backend run. |
-| `upd_backends` | `NONE` | All configured backends, or exactly the names in `SOME`. |
+| `upd_search` | `AllBackends` | Typed selection of all, Quickcheck, or explicit backends. |
+| `upd_backends` | `NONE` | Low-level string selection retained for compatibility. |
 | `upd_sequential` | `false` | Run backends by weight instead of racing them. |
 | `upd_genuine_only` | `false` | Suppress potential results and continue looking for genuine ones. |
 | `upd_abort_potential` | `false` | Stop at the first counterexample regardless of certainty. |

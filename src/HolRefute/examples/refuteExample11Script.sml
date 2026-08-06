@@ -8,12 +8,13 @@ Libs
 
 open Refute
 
-(* This is the one example for tooling authors who need structured results.
-   Ordinary proof scripts should use REFUTE_TAC, QUICKCHECK_TAC, or
-   MODEL_REFUTE_TAC as shown in every other example. *)
+(* This is the one example for tooling authors who need structured results
+   or per-call configuration.  Ordinary proof scripts should start with
+   REFUTE_TAC and use a specialized tactic only when its search method
+   matters, as shown in the other examples. *)
 
-(* [quickcheck] and [model_refute] are convenient presets.  [refute] takes
-   an explicit configuration when an automation needs tighter control. *)
+(* [quickcheck] and [model_refute] are convenient presets.  [refute_with]
+   applies a local update list when an automation needs tighter control. *)
 
 val quickcheck_outcome =
   quickcheck ``(n : num) DIV 2 * 2 = n``
@@ -21,14 +22,32 @@ val quickcheck_outcome =
 val model_outcome =
   model_refute ``(f : bool -> bool) b = T``
 
-val automation_config =
-  default_config
-    |> upd_backends (SOME ["exhaustive"])
-    |> upd_quiet true
-    |> upd_expect ExpectGenuine
+val automation_updates =
+  [upd_search (Only [Exhaustive]),
+   upd_quiet true,
+   upd_expect ExpectGenuine]
 
 val configured_outcome =
-  refute automation_config ``REVERSE (xs : num list) = xs``
+  refute_with automation_updates ``REVERSE (xs : num list) = xs``
+
+(* An exact configuration is preferable when a tool must be independent of
+   the interactive [the_config].  Updates are applied from left to right. *)
+
+val automation_config =
+  default_config |> apply_updates automation_updates
+
+(* REFUTE_TAC_WITH exposes the same local-update convention to a diagnostic
+   tactic.  This deliberately false theorem remains buildable only because
+   [cheat] follows the diagnostic. *)
+
+Theorem advanced_per_call_narrowing:
+  LENGTH (xs : num list) <> 2
+Proof
+  REFUTE_TAC_WITH
+    [upd_search (Only [Narrowing]),
+     upd_size 2] >>
+  cheat
+QED
 
 (* Outcomes are datatypes, so automation can inspect bindings and optional
    kernel certificates without parsing the human-readable report. *)
@@ -47,7 +66,7 @@ val certified_counterexample =
 (* Goals can be supplied as an assumption list and conclusion. *)
 
 val goal_outcome =
-  refute_goal automation_config
+  refute_goal_with automation_updates
     ([``0 < (n : num)``], ``PRE n = n``)
 
 (* [try_refute] adds a formatted report and turns an inconclusive result

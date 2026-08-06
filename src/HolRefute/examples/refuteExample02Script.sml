@@ -30,16 +30,17 @@ Proof
   MODEL_REFUTE_TAC >> cheat
 QED
 
-(* REFUTE_TAC tries all configured backends, so it is the usual first
-   choice. *)
+(* NARROWING_TAC selects only symbolic narrowing.  It is useful when a
+   partial counterexample is more informative than a fully generated one. *)
 
 Theorem every_list_is_nonempty:
   (xs : num list) <> []
 Proof
-  REFUTE_TAC >> cheat
+  NARROWING_TAC >> cheat
 QED
 
-(* A refutation tactic is diagnostic: it never closes a true goal. *)
+(* REFUTE_TAC tries all configured backends, so it is the usual first choice.
+   A refutation tactic is diagnostic: it never closes a true goal. *)
 
 Theorem addition_commutes:
   x + y = y + (x : num)

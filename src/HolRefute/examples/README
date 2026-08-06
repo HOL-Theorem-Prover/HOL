@@ -6,6 +6,7 @@ are modern HOL4 theory scripts built around:
 
     REFUTE_TAC
     QUICKCHECK_TAC
+    NARROWING_TAC
     MODEL_REFUTE_TAC
 
 They state conjectures as theorems and invoke a diagnostic tactic in the
@@ -19,10 +20,13 @@ The `cheat` only admits the goal after the diagnostic has printed; it is not
 part of normal use.  When a conjecture is true, the diagnostic tactic is
 followed by an ordinary proof of the unchanged goal.
 
+`REFUTE_TAC` is the normal first choice.  The other three tactics select a
+particular search family or backend and are useful when that choice matters.
+
 Example 11 is deliberately the only exception.  It explains the SML-level
-automation API for tools that need configurations and structured outcomes.
-The other examples contain no direct calls to `refute`, `quickcheck`, or
-`model_refute`, and no SML `val` declarations.
+automation API for tools that need per-call configurations and structured
+outcomes.  The other examples contain no direct calls to `refute`,
+`quickcheck`, or `model_refute`, and no SML `val` declarations.
 
 
 Running the examples
@@ -50,10 +54,11 @@ The files
 ---------
 
 refuteExample01Script.sml
-    The normal proof-development workflow and all three tactics.
+    The normal proof-development workflow, starting with REFUTE_TAC.
 
 refuteExample02Script.sml
-    Choosing the general, executable-only, or model-finder-only tactic.
+    Choosing the general, executable-only, narrowing-only, or model-finder
+    tactic.
 
 refuteExample03Script.sml
     User-defined datatypes, recursive definitions, records, options, and
@@ -95,4 +100,5 @@ Further reading
 
 `../README` describes the backends, trust model, configuration, and known
 limitations.  The public SML interface is in `../Refute.sig`; tactic users
-normally need only the three tactic names shown above.
+normally need only `REFUTE_TAC` and occasionally one of its three
+specialized variants.

@@ -21,8 +21,9 @@ Proof
   REFUTE_TAC >> cheat
 QED
 
-(* REFUTE_TAC uses every configured backend.  QUICKCHECK_TAC restricts the
-   search to executable testing and narrowing. *)
+(* REFUTE_TAC uses every configured backend.  The specialized tactics are
+   useful only when the search method itself matters.  QUICKCHECK_TAC
+   restricts this call to executable testing and narrowing. *)
 
 Theorem not_every_list_is_a_palindrome:
   REVERSE (xs : num list) = xs

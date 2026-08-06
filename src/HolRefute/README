@@ -111,6 +111,64 @@ first.  `NONE` derives a QC-only configuration from the current configuration;
 Every individual probe forces a sequential, quiet, abort-potential,
 expectation-free profile.
 
+User interface
+--------------
+
+`REFUTE_TAC` is the normal proof-development interface.  It runs every
+selected backend, prints the result, and returns the original goal unchanged:
+
+    Proof
+      REFUTE_TAC >>
+      (* prove the unchanged goal *)
+    QED
+
+Three specialized tactics restrict only the search selection inherited from
+`the_config`:
+
+* `QUICKCHECK_TAC` selects exhaustive, random, and narrowing search;
+* `NARROWING_TAC` selects only native symbolic narrowing; and
+* `MODEL_REFUTE_TAC` selects only the relational model finder.
+
+Most proof scripts should use `REFUTE_TAC`.  The specialized names are useful
+when a particular counterexample shape or backend capability is wanted.
+
+Advanced callers can change options for one tactic application without
+mutating `the_config`:
+
+    REFUTE_TAC_WITH
+      [upd_search (Only [Narrowing]),
+       upd_size 7,
+       upd_timeout 5.0]
+
+The elements are ordinary `config -> config` updaters and are applied from
+left to right, so the last update of a field wins.  `REFUTE_TAC_WITH` reads
+`the_config` when the tactic is applied.  `REFUTE_CONFIG_TAC cfg` instead
+uses exactly `cfg`, which is preferable for reproducible tools and tests.
+Neither form silently changes `quiet` or `expect`.
+
+Backend selection is typed for the four built-ins:
+
+    datatype backend_choice =
+        Exhaustive
+      | Random
+      | Narrowing
+      | ModelFinder
+      | RegisteredBackend of string
+
+    datatype search =
+        AllBackends
+      | QuickcheckBackends
+      | Only of backend_choice list
+
+`RegisteredBackend` is the escape hatch for an extension registered under a
+string name.  `upd_backends` remains available for source compatibility and
+low-level registry code.
+
+The same per-call update list works outside the tactic layer through
+`refute_with` and `refute_goal_with`.  `apply_updates updates cfg` constructs
+an exact configuration, while `current_config updates` applies them to the
+current interactive configuration.
+
 Module layout:
 
 * Refute_Core: shared types, configuration, registry, and orchestration.

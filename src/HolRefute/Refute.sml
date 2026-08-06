@@ -23,6 +23,20 @@ structure Refute :> Refute = struct
   type rng = Refute_Gen.rng
   type term_postprocessor = term -> term
 
+  datatype backend_choice =
+      Exhaustive
+    | Random
+    | Narrowing
+    | ModelFinder
+    | RegisteredBackend of string
+
+  datatype search =
+      AllBackends
+    | QuickcheckBackends
+    | Only of backend_choice list
+
+  type config_update = config -> config
+
   (* Register the built-in backends through this public entry point.
      Refute_QC passes the native extractor explicitly, making both
      implementation units dependencies of [load "Refute"]. *)
@@ -37,9 +51,35 @@ structure Refute :> Refute = struct
   val refute = Refute_Core.refute
   fun refute_def tm = refute (!Refute_Core.the_config) tm
 
+  fun apply_updates updates config =
+    List.foldl (fn (update, current) => update current) config updates
+
+  fun current_config updates =
+    apply_updates updates (!Refute_Core.the_config)
+
+  fun backend_name Exhaustive = "exhaustive"
+    | backend_name Random = "random"
+    | backend_name Narrowing = "narrowing"
+    | backend_name ModelFinder = "kodkod"
+    | backend_name (RegisteredBackend name) = name
+
+  fun upd_search AllBackends = Refute_Core.upd_backends NONE
+    | upd_search QuickcheckBackends = Refute_Core.upd_backends
+        (SOME (Refute_QC.qc_backend_names ()))
+    | upd_search (Only []) =
+        raise Feedback.mk_HOL_ERR "Refute" "upd_search"
+          "Only requires at least one backend"
+    | upd_search (Only choices) =
+        Refute_Core.upd_backends (SOME (map backend_name choices))
+
+  fun refute_with updates tm = refute (current_config updates) tm
+
   fun refute_goal cfg (assumptions, goal) =
     Refute_Core.refute_problem cfg
       {goal = goal, assumptions = assumptions, evals = []}
+
+  fun refute_goal_with updates goal =
+    refute_goal (current_config updates) goal
 
   fun refute_top () = refute_goal (!Refute_Core.the_config)
     (proofManagerLib.top_goal ())
@@ -71,11 +111,9 @@ structure Refute :> Refute = struct
     handle Timeout.TIMEOUT _ => NONE
          | Time => NONE
 
-  fun qc_only config = Refute_Core.upd_backends
-    (SOME (Refute_QC.qc_backend_names ())) config
+  fun qc_only config = upd_search QuickcheckBackends config
 
-  fun mf_only config =
-    Refute_Core.upd_backends (SOME ["kodkod"]) config
+  fun mf_only config = upd_search (Only [ModelFinder]) config
 
   (* The option distinguishes the QC-only convenience from an explicitly
      supplied configuration whose [backends = NONE] means the full registry. *)
@@ -91,28 +129,31 @@ structure Refute :> Refute = struct
   fun print_unused_assms config theory =
     Refute_Unused.print_unused_assms (unused_config config) theory
 
-  fun quickcheck tm = refute (qc_only (!Refute_Core.the_config)) tm
+  fun quickcheck tm = refute_with [upd_search QuickcheckBackends] tm
 
-  fun model_refute tm = refute (mf_only (!Refute_Core.the_config)) tm
+  fun model_refute tm = refute_with [upd_search (Only [ModelFinder])] tm
 
-  fun diagnostic_tac config goal =
+  fun REFUTE_CONFIG_TAC config goal =
     let
-      val config' = config
-        |> Refute_Core.upd_quiet false
-        |> Refute_Core.upd_expect Refute_Core.NoExpectation
-      val _ = refute_goal config' goal
+      val _ = refute_goal config goal
     in
       Tactical.ALL_TAC goal
     end
 
+  fun REFUTE_TAC_WITH updates goal =
+    REFUTE_CONFIG_TAC (current_config updates) goal
+
   fun REFUTE_TAC goal =
-    diagnostic_tac (!Refute_Core.the_config) goal
+    REFUTE_TAC_WITH [] goal
 
   fun QUICKCHECK_TAC goal =
-    diagnostic_tac (qc_only (!Refute_Core.the_config)) goal
+    REFUTE_TAC_WITH [upd_search QuickcheckBackends] goal
+
+  fun NARROWING_TAC goal =
+    REFUTE_TAC_WITH [upd_search (Only [Narrowing])] goal
 
   fun MODEL_REFUTE_TAC goal =
-    diagnostic_tac (mf_only (!Refute_Core.the_config)) goal
+    REFUTE_TAC_WITH [upd_search (Only [ModelFinder])] goal
 
   val register_backend = Refute_Core.register_backend
   fun register_backend_with_ceiling backend ceiling =

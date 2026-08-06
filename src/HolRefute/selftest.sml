@@ -20490,6 +20490,14 @@ fun with_temporary_qc backend body =
     Portable.finally restore body ()
   end
 
+fun with_temporary_narrowing backend body =
+  let
+    fun restore () = Refute_QC_Narrow.register_backend ()
+    val _ = register_backend backend
+  in
+    Portable.finally restore body ()
+  end
+
 fun kodkod_registration_pin () =
   case lookup_backend "kodkod" of
       SOME backend =>
@@ -20558,6 +20566,75 @@ fun quickcheck_tactic_preset_pin () =
         (ignore (Refute.QUICKCHECK_TAC ([], ``T``)); !selected)))
   end
 
+fun typed_search_and_updates_pin () =
+  let
+    val selected = ref false
+    val backend : backend =
+      {name = "exhaustive", weight = 20, configured = fn () => true,
+       requires = AnyGoal,
+       input = MonoInstances,
+       run = fn config => fn _ =>
+         (selected :=
+            (#backends config = SOME ["exhaustive"] andalso
+             #size (#qc config) = 7 andalso #quiet config);
+          Unknown ["typed update pin"])}
+  in
+    with_temporary_qc backend (fn () =>
+      case Refute.refute_with
+          [Refute.upd_search (Refute.Only [Refute.Exhaustive]),
+           Refute.upd_size 2, Refute.upd_size 7, Refute.upd_quiet true]
+          ``T`` of
+          Refute.Unknown ["exhaustive: typed update pin"] => !selected
+        | _ => false)
+  end
+
+fun exact_config_tactic_pin () =
+  let
+    val selected = ref false
+    val backend : backend =
+      {name = "exhaustive", weight = 20, configured = fn () => true,
+       requires = AnyGoal,
+       input = MonoInstances,
+       run = fn config => fn _ =>
+         (selected :=
+            (#backends config = SOME ["exhaustive"] andalso
+             #quiet config andalso #expect config = ExpectUnknown);
+          Unknown ["exact config pin"])}
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
+      |> Refute.upd_quiet true
+      |> Refute.upd_expect Refute.ExpectUnknown
+  in
+    with_temporary_qc backend (fn () =>
+      case #1 (Refute.REFUTE_CONFIG_TAC config ([``T``], ``F``)) of
+          [([assumption], conclusion)] =>
+            !selected andalso aconv assumption ``T`` andalso
+            aconv conclusion ``F``
+        | _ => false)
+  end
+
+fun narrowing_tactic_preset_pin () =
+  let
+    val selected = ref false
+    val backend : backend =
+      {name = "narrowing", weight = 40, configured = fn () => true,
+       requires = AnyGoal,
+       input = MonoInstances,
+       run = fn config => fn _ =>
+         (selected := #backends config = SOME ["narrowing"];
+          Unknown ["narrowing tactic pin"])}
+  in
+    with_silent_refute (fn () =>
+      with_temporary_narrowing backend (fn () =>
+        (ignore (Refute.NARROWING_TAC ([], ``T``)); !selected)))
+  end
+
+fun empty_search_is_rejected () =
+  ((ignore (Refute.upd_search (Refute.Only [])); false)
+   handle HOL_ERR error =>
+     Feedback.top_structure_of error = "Refute" andalso
+     Feedback.top_function_of error = "upd_search")
+
 fun kodkod_not_configured_pin () =
   let
     val backend : backend =
@@ -20585,6 +20662,17 @@ val _ = require_msg (check_result model_refute_tactic_preset_pin) (fn () =>
 val _ = require_msg (check_result quickcheck_tactic_preset_pin) (fn () =>
   "QUICKCHECK_TAC did not use the quickcheck diagnostic configuration")
   (fn () => ()) ()
+val _ = require_msg (check_result typed_search_and_updates_pin) (fn () =>
+  "typed search selection or left-to-right config updates changed")
+  (fn () => ()) ()
+val _ = require_msg (check_result exact_config_tactic_pin) (fn () =>
+  "REFUTE_CONFIG_TAC did not honour its exact configuration")
+  (fn () => ()) ()
+val _ = require_msg (check_result narrowing_tactic_preset_pin) (fn () =>
+  "NARROWING_TAC did not select only the narrowing backend")
+  (fn () => ()) ()
+val _ = require_msg (check_result empty_search_is_rejected) (fn () =>
+  "upd_search accepted an empty Only selection") (fn () => ()) ()
 val _ = require_msg (check_result kodkod_not_configured_pin) (fn () =>
   "the kodkod not-configured outcome changed") (fn () => ()) ()
 
