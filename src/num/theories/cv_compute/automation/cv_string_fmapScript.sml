@@ -82,7 +82,9 @@ Definition st_del_nil_def[simp]:
 End
 
 Definition mk_Branch_def:
-  mk_Branch x t1 t2 = if t1 = Nothing then t2 else Branch x t1 t2
+  mk_Branch c Nothing t2 = t2 ∧
+  mk_Branch c (Just x) t2 = Branch c (Just x) t2 ∧
+  mk_Branch c (Branch a b d) t2 = Branch c (Branch a b d) t2
 End
 
 Definition st_del_cons_def:
@@ -117,6 +119,36 @@ Definition st_union_def:
       Branch c2 u1 (st_union (Branch c1 t1 t2) u2)
     else
       Branch c1 (st_union t1 u1) (st_union t2 u2)
+End
+
+Definition st_inter_def:
+  st_inter Nothing t = Nothing ∧
+  st_inter t Nothing = Nothing ∧
+  st_inter (Just x) (Just y) = Just x ∧
+  st_inter (Just x) (Branch c t1 t2) = st_inter (Just x) t2 ∧
+  st_inter (Branch c t1 t2) (Just x) = st_inter t2 (Just x) ∧
+  st_inter (Branch c1 t1 t2) (Branch c2 u1 u2) =
+    if ORD c1 < ORD c2 then
+      st_inter t2 (Branch c2 u1 u2)
+    else if ORD c2 < ORD c1 then
+      st_inter (Branch c1 t1 t2) u2
+    else
+      mk_Branch c1 (st_inter t1 u1) (st_inter t2 u2)
+End
+
+Definition st_minus_def:
+  st_minus Nothing t = Nothing ∧
+  st_minus t Nothing = t ∧
+  st_minus (Just x) (Just y) = Nothing ∧
+  st_minus (Just x) (Branch c t1 t2) = st_minus (Just x) t2 ∧
+  st_minus (Branch c t1 t2) (Just x) = Branch c t1 (st_minus t2 (Just x)) ∧
+  st_minus (Branch c1 t1 t2) (Branch c2 u1 u2) =
+    if ORD c1 < ORD c2 then
+      Branch c1 t1 (st_minus t2 (Branch c2 u1 u2))
+    else if ORD c2 < ORD c1 then
+      st_minus (Branch c1 t1 t2) u2
+    else
+      mk_Branch c1 (st_minus t1 u1) (st_minus t2 u2)
 End
 
 (* verification *)
@@ -439,12 +471,18 @@ Proof
   Cases_on`t'` \\ gvs[]
 QED
 
+Theorem mk_Branch_thm:
+  mk_Branch c t1 t2 = if t1 = Nothing then t2 else Branch c t1 t2
+Proof
+  Cases_on ‘t1’ \\ gvs [mk_Branch_def]
+QED
+
 Theorem st_sorted_mk_Branch:
   st_sorted (mk_Branch c t1 t2) ⇔
     st_sorted t1 ∧ st_sorted t2 ∧
     (t1 ≠ Nothing ⇒ ∀c' t1' t2'. t2 = Branch c' t1' t2' ⇒ c < c')
 Proof
-  rw [mk_Branch_def, st_sorted_def] \\ rw [] \\ eq_tac \\ rw []
+  rw [mk_Branch_thm, st_sorted_def] \\ rw [] \\ eq_tac \\ rw []
 QED
 
 Theorem st_del_cons_not_Branch_Nothing:
@@ -452,7 +490,7 @@ Theorem st_del_cons_not_Branch_Nothing:
     st_del_cons t x xs ≠ Branch c Nothing rest
 Proof
   Induct \\ rw [st_del_cons_def, st_sorted_def]
-  \\ gvs [mk_Branch_def, AllCaseEqs()]
+  \\ gvs [mk_Branch_thm, AllCaseEqs()]
   \\ gvs[stringTheory.char_gt_def, stringTheory.char_lt_def]
   \\ `ORD c = ORD x` by gvs[]
   \\ gvs[stringTheory.ORD_11]
@@ -471,7 +509,7 @@ Proof
   \\ BasicProvers.TOP_CASE_TAC \\ gvs[]
   \\ gvs[stringTheory.char_lt_def, stringTheory.char_gt_def]
   \\ rw[] \\ gvs[]
-  \\ gvs[mk_Branch_def, AllCaseEqs(), st_sorted_def]
+  \\ gvs[mk_Branch_thm, AllCaseEqs(), st_sorted_def]
   \\ Cases_on`s` \\ gvs[stringTheory.char_lt_def]
 QED
 
@@ -497,7 +535,7 @@ QED
 Theorem st_get_nil_mk_Branch[simp]:
   ∀c t1 t2. st_get_nil (mk_Branch c t1 t2) = st_get_nil t2
 Proof
-  rw [mk_Branch_def, st_get_nil_def]
+  rw [mk_Branch_thm, st_get_nil_def]
 QED
 
 Theorem st_get_cons_mk_Branch:
@@ -506,14 +544,14 @@ Theorem st_get_cons_mk_Branch:
     if t1 = Nothing then st_get_cons t2 x xs
     else st_get_cons (Branch c t1 t2) x xs
 Proof
-  rw [mk_Branch_def]
+  rw [mk_Branch_thm]
 QED
 
 Theorem st_get_nil_st_del_cons[simp]:
   ∀t x xs. st_get_nil (st_del_cons t x xs) = st_get_nil t
 Proof
   Induct \\ rw [st_del_cons_def, st_get_nil_def]
-  \\ gvs [st_get_nil_def, mk_Branch_def]
+  \\ gvs [st_get_nil_def, mk_Branch_thm]
 QED
 
 Theorem st_get_cons_st_del_cons:
@@ -690,6 +728,185 @@ Proof
   \\ rw [] \\ gvs [option_case_id]
 QED
 
+Theorem st_inter_Just_left[local]:
+  ∀u x. st_inter (Just x) u =
+        case st_get_nil u of
+        | NONE => Nothing
+        | SOME _ => Just x
+Proof
+  Induct \\ gvs [st_inter_def]
+QED
+
+Theorem st_inter_Just_right[local]:
+  ∀t x. st_inter t (Just x) =
+        case st_get_nil t of
+        | NONE => Nothing
+        | SOME y => Just y
+Proof
+  Induct \\ gvs [st_inter_def]
+QED
+
+Theorem st_inter_Branch_le[local]:
+  ∀t u c' t1 t2.
+    st_sorted t ∧ st_inter t u = Branch c' t1 t2 ⇒
+    ∃d s1 s2. t = Branch d s1 s2 ∧ ORD d ≤ ORD c'
+Proof
+  ho_match_mp_tac st_inter_ind \\ rpt strip_tac
+  \\ gvs [st_inter_def, st_inter_Just_left, st_inter_Just_right, AllCaseEqs()]
+  \\ gvs [st_sorted_def, mk_Branch_thm, AllCaseEqs()]
+  \\ gvs [stringTheory.char_lt_def]
+QED
+
+Theorem st_sorted_st_inter[simp]:
+  ∀t u.
+    st_sorted t ∧ st_sorted u ⇒
+    st_sorted (st_inter t u)
+Proof
+  ho_match_mp_tac st_inter_ind \\ rpt strip_tac
+  \\ gvs [st_inter_def, st_inter_Just_left, st_inter_Just_right, AllCaseEqs()]
+  \\ gvs [st_sorted_def]
+  \\ rw [st_sorted_mk_Branch]
+  \\ drule_all st_inter_Branch_le
+  \\ rw [] \\ gvs [stringTheory.char_lt_def]
+QED
+
+Theorem st_get_nil_st_inter:
+  ∀t u.
+    st_get_nil (st_inter t u) =
+    case st_get_nil u of
+    | NONE => NONE
+    | SOME _ => st_get_nil t
+Proof
+  ho_match_mp_tac st_inter_ind \\ rw [st_inter_def]
+  \\ CASE_TAC \\ gvs []
+QED
+
+Theorem st_get_st_inter:
+  ∀t1 t2 n.
+    st_sorted t1 ∧ st_sorted t2 ⇒
+    st_get (st_inter t1 t2) n =
+    case st_get t2 n of
+    | NONE => NONE
+    | SOME _ => st_get t1 n
+Proof
+  ho_match_mp_tac st_inter_ind \\ rpt strip_tac
+  \\ Cases_on ‘n’
+  \\ gvs [st_inter_def, st_get_def, st_get_nil_st_inter, option_case_id,
+          st_inter_Just_left, st_inter_Just_right]
+  \\ gvs [st_sorted_def]
+  >- (rpt CASE_TAC \\ gvs [st_get_def])
+  >- (rpt CASE_TAC \\ gvs [st_get_def])
+  >- (rpt CASE_TAC \\ gvs [st_get_def])
+  \\ rename [‘st_get_cons (if ORD c1 < ORD c2 then _ else _) h s’]
+  \\ Cases_on ‘ORD c1 < ORD c2’ \\ gvs []
+  >- (first_x_assum (qspec_then ‘STRING h s’ mp_tac)
+      \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def]
+      \\ rw [] \\ gvs [] \\ rpt CASE_TAC \\ gvs [])
+  \\ Cases_on ‘ORD c2 < ORD c1’ \\ gvs []
+  >- (first_x_assum (qspec_then ‘STRING h s’ mp_tac)
+      \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def]
+      \\ rw [] \\ gvs [] \\ rpt CASE_TAC \\ gvs [])
+  \\ ‘c1 = c2’ by gvs [GSYM stringTheory.ORD_11] \\ gvs []
+  \\ rename [‘st_get_cons (mk_Branch c (st_inter l1 r1) (st_inter l2 r2)) h s’]
+  \\ qpat_x_assum ‘∀n. st_get (st_inter l2 r2) n = _’
+       (qspec_then ‘STRING h s’ mp_tac)
+  \\ qpat_x_assum ‘∀n. st_get (st_inter l1 r1) n = _’
+       (qspec_then ‘s’ mp_tac)
+  \\ gvs [st_get_cons_mk_Branch, st_get_def,
+          stringTheory.char_lt_def, stringTheory.char_gt_def]
+  \\ rw [] \\ gvs []
+  \\ ‘st_get_cons l2 h s = NONE’ by
+       (irule st_get_cons_sorted_lt
+        \\ gvs [stringTheory.char_lt_def] \\ rw [] \\ res_tac \\ gvs [])
+  \\ gvs [] \\ rpt CASE_TAC \\ gvs []
+QED
+
+Theorem st_minus_Just_left[local]:
+  ∀u x. st_minus (Just x) u =
+        case st_get_nil u of
+        | NONE => Just x
+        | SOME _ => Nothing
+Proof
+  Induct \\ gvs [st_minus_def]
+QED
+
+Theorem st_minus_Branch_le[local]:
+  ∀t u c' t1 t2.
+    st_sorted t ∧ st_minus t u = Branch c' t1 t2 ⇒
+    ∃d s1 s2. t = Branch d s1 s2 ∧ ORD d ≤ ORD c'
+Proof
+  ho_match_mp_tac st_minus_ind \\ rpt strip_tac
+  \\ gvs [st_minus_def, st_minus_Just_left, AllCaseEqs()]
+  \\ gvs [st_sorted_def, mk_Branch_thm, AllCaseEqs()]
+  \\ gvs [stringTheory.char_lt_def]
+QED
+
+Theorem st_sorted_st_minus[simp]:
+  ∀t u.
+    st_sorted t ∧ st_sorted u ⇒
+    st_sorted (st_minus t u)
+Proof
+  ho_match_mp_tac st_minus_ind \\ rpt strip_tac
+  \\ gvs [st_minus_def, st_minus_Just_left, AllCaseEqs()]
+  \\ gvs [st_sorted_def]
+  \\ rw [st_sorted_mk_Branch, st_sorted_def]
+  \\ drule_all st_minus_Branch_le
+  \\ rw [] \\ gvs [stringTheory.char_lt_def]
+QED
+
+Theorem st_get_nil_st_minus:
+  ∀t u.
+    st_get_nil (st_minus t u) =
+    case st_get_nil u of
+    | NONE => st_get_nil t
+    | SOME _ => NONE
+Proof
+  ho_match_mp_tac st_minus_ind \\ rw [st_minus_def]
+  \\ CASE_TAC \\ gvs []
+QED
+
+Theorem st_get_st_minus:
+  ∀t1 t2 n.
+    st_sorted t1 ∧ st_sorted t2 ⇒
+    st_get (st_minus t1 t2) n =
+    case st_get t2 n of
+    | NONE => st_get t1 n
+    | SOME _ => NONE
+Proof
+  ho_match_mp_tac st_minus_ind \\ rpt strip_tac
+  \\ Cases_on ‘n’
+  \\ gvs [st_minus_def, st_get_def, st_get_nil_st_minus, option_case_id,
+          st_minus_Just_left]
+  \\ gvs [st_sorted_def]
+  >- (rpt CASE_TAC \\ gvs [st_get_def])
+  >- (rpt CASE_TAC \\ gvs [st_get_def])
+  >- (rename [‘st_get_cons (st_minus u (Just x)) h s’]
+      \\ first_x_assum (qspec_then ‘STRING h s’ mp_tac)
+      \\ gvs [st_get_def])
+  \\ rename [‘st_get_cons (if ORD c1 < ORD c2 then _ else _) h s’]
+  \\ Cases_on ‘ORD c1 < ORD c2’ \\ gvs []
+  >- (first_x_assum (qspec_then ‘STRING h s’ mp_tac)
+      \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def]
+      \\ rw [] \\ gvs [] \\ rpt CASE_TAC \\ gvs [])
+  \\ Cases_on ‘ORD c2 < ORD c1’ \\ gvs []
+  >- (first_x_assum (qspec_then ‘STRING h s’ mp_tac)
+      \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def]
+      \\ rw [] \\ gvs [] \\ rpt CASE_TAC \\ gvs [])
+  \\ ‘c1 = c2’ by gvs [GSYM stringTheory.ORD_11] \\ gvs []
+  \\ rename [‘st_get_cons (mk_Branch c (st_minus l1 r1) (st_minus l2 r2)) h s’]
+  \\ qpat_x_assum ‘∀n. st_get (st_minus l2 r2) n = _’
+       (qspec_then ‘STRING h s’ mp_tac)
+  \\ qpat_x_assum ‘∀n. st_get (st_minus l1 r1) n = _’
+       (qspec_then ‘s’ mp_tac)
+  \\ gvs [st_get_cons_mk_Branch, st_get_def,
+          stringTheory.char_lt_def, stringTheory.char_gt_def]
+  \\ rw [] \\ gvs []
+  \\ ‘st_get_cons l2 h s = NONE’ by
+       (irule st_get_cons_sorted_lt
+        \\ gvs [stringTheory.char_lt_def] \\ rw [] \\ res_tac \\ gvs [])
+  \\ gvs [] \\ rpt CASE_TAC \\ gvs []
+QED
+
 val _ = cv_trans st_get_nil_def;
 val _ = cv_trans st_get_def;
 val _ = cv_trans st_make_def;
@@ -708,6 +925,26 @@ Proof
 QED
 
 val _ = cv_trans_rec st_union_def
+  (WF_REL_TAC ‘measure $ λ(x,y). cv_size x + cv_size y’
+   \\ cv_termination_tac
+   \\ rename [‘cv_size (cv_snd (cv_snd x)) + (cv_size (cv_snd (cv_snd y)) + 5)’]
+   \\ qspec_then ‘x’ assume_tac cv_size_cv_fst_cv_snd
+   \\ qspec_then ‘y’ assume_tac cv_size_cv_fst_cv_snd
+   \\ qspec_then ‘cv_snd x’ assume_tac cv_size_cv_fst_cv_snd
+   \\ qspec_then ‘cv_snd y’ assume_tac cv_size_cv_fst_cv_snd
+   \\ gvs []);
+
+val _ = cv_trans_rec st_inter_def
+  (WF_REL_TAC ‘measure $ λ(x,y). cv_size x + cv_size y’
+   \\ cv_termination_tac
+   \\ rename [‘cv_size (cv_snd (cv_snd x)) + (cv_size (cv_snd (cv_snd y)) + 5)’]
+   \\ qspec_then ‘x’ assume_tac cv_size_cv_fst_cv_snd
+   \\ qspec_then ‘y’ assume_tac cv_size_cv_fst_cv_snd
+   \\ qspec_then ‘cv_snd x’ assume_tac cv_size_cv_fst_cv_snd
+   \\ qspec_then ‘cv_snd y’ assume_tac cv_size_cv_fst_cv_snd
+   \\ gvs []);
+
+val _ = cv_trans_rec st_minus_def
   (WF_REL_TAC ‘measure $ λ(x,y). cv_size x + cv_size y’
    \\ cv_termination_tac
    \\ rename [‘cv_size (cv_snd (cv_snd x)) + (cv_size (cv_snd (cv_snd y)) + 5)’]
@@ -783,13 +1020,10 @@ Proof
 QED
 
 Theorem cv_rep_string_DOMSUB[cv_rep]:
-  from_to f t ⇒
   from_string_fmap f (m \\ k) =
   cv_st_del (from_string_fmap f m) (from_list from_char k)
 Proof
-  rw[from_string_fmap_def]
-  \\ drule (GSYM (theorem "cv_st_del_thm" |> DISCH_ALL))
-  \\ simp [] \\ disch_then kall_tac
+  gvs [from_string_fmap_def, GSYM $ fetch "-" "cv_st_del_thm"]
   \\ AP_TERM_TAC
   \\ simp [st_del_st_sets, st_del_Nothing]
   \\ irule st_sets_eq \\ fs [finite_mapTheory.FLOOKUP_SIMP, FUN_EQ_THM]
@@ -809,4 +1043,32 @@ Proof
   \\ DEP_REWRITE_TAC [st_get_st_union]
   \\ gvs [st_get_st_sets, st_get_Nothing, st_sorted_def, option_case_id,
           finite_mapTheory.FLOOKUP_FUNION]
+QED
+
+Theorem cv_rep_string_FINTER[cv_rep]:
+  from_string_fmap f (FINTER m1 m2) =
+  cv_st_inter (from_string_fmap f m1) (from_string_fmap g m2)
+Proof
+  gvs [from_string_fmap_def, GSYM $ fetch "-" "cv_st_inter_thm"]
+  \\ AP_TERM_TAC
+  \\ irule st_sorted_st_get_eq
+  \\ irule_at Any st_sorted_st_inter
+  \\ rw [st_sorted_st_sets, st_sorted_def]
+  \\ DEP_REWRITE_TAC [st_get_st_inter]
+  \\ gvs [st_get_st_sets, st_get_Nothing, st_sorted_def, option_case_id,
+          finite_mapTheory.FLOOKUP_FINTER]
+QED
+
+Theorem cv_rep_string_FMINUS[cv_rep]:
+  from_string_fmap f (FMINUS m1 m2) =
+  cv_st_minus (from_string_fmap f m1) (from_string_fmap g m2)
+Proof
+  gvs [from_string_fmap_def, GSYM $ fetch "-" "cv_st_minus_thm"]
+  \\ AP_TERM_TAC
+  \\ irule st_sorted_st_get_eq
+  \\ irule_at Any st_sorted_st_minus
+  \\ rw [st_sorted_st_sets, st_sorted_def]
+  \\ DEP_REWRITE_TAC [st_get_st_minus]
+  \\ gvs [st_get_st_sets, st_get_Nothing, st_sorted_def, option_case_id,
+          finite_mapTheory.FLOOKUP_FMINUS]
 QED
