@@ -80,6 +80,7 @@ and compileToSteps (e: exp) : step list =
      (case name of
         "THEN"  => compileToSteps left @ compileToSteps right
       | ">>"    => compileToSteps left @ compileToSteps right
+      | "\\\\"  => compileToSteps left @ compileToSteps right
       | ">-"    => then1Steps opPos left right
       | "THEN1" => then1Steps opPos left right
       (* Walk left's inner steps individually, then treat the branch
@@ -90,6 +91,7 @@ and compileToSteps (e: exp) : step list =
          list as a tactic and the walker halts cleanly with the
          post-left state. *)
       | "THENL" => compileToSteps left @ [ExpandList (expSpan right)]
+      | ">|"    => compileToSteps left @ [ExpandList (expSpan right)]
       | _       => [Expand (expSpan e)])
   | Parens {exp = e', ...} => compileToSteps e'
   (* Defensive: raw parseDec output has no ExpExpansion, but a
@@ -170,9 +172,12 @@ in
   val _ = check "single leaf"      "ALL_TAC"                     "E"
   val _ = check "THEN chain"       "tac1 THEN tac2 THEN tac3"    "EEE"
   val _ = check ">> chain"         "tac1 >> tac2 >> tac3"        "EEE"
+  val _ = check "\\\\ chain"       "tac1 \\\\ tac2 \\\\ tac3"    "EEE"
   val _ = check ">- nested parens" "tac1 >- (a >> b) >- (c >> d)"
                                                                  "E[EE)[EE)"
+  val _ = check ">- with \\\\"     "tac1 >- (a \\\\ b \\\\ c)"   "E[EEE)"
   val _ = check "REPEAT atomic"    "REPEAT (tac1 >> tac2)"       "E"
   val _ = check "nested parens"    "((tac1))"                    "E"
   val _ = check "THENL left+list"  "tac1 THENL [b1, b2, b3]"     "EL"
+  val _ = check ">| left+list"     "tac1 >| [b1, b2, b3]"        "EL"
 end;

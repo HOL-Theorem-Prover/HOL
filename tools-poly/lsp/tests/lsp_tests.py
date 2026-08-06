@@ -1887,6 +1887,48 @@ def test_goalState_case_split_produces_two_subgoals():
         c.close()
 
 
+def test_goalState_walks_double_backslash_in_then1_block():
+    """Regression: `\\\\` (Tactical alias for `THEN`) inside a
+    `>-` / `THEN1` block must be recognised as a step-splitting
+    infix.  Otherwise the whole `a \\\\ b \\\\ c` chain compiles as
+    one atomic Expand and any cursor between its inner tactics
+    halts the walker at the pre-block state (post-OpenThen1, first
+    subgoal focused, no inner tactics applied).  Symptom Michael
+    reported on chap2Script.sml's `solvable_alt_closed` proof."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_bslash.sml"
+        # Line 7 is `  >- (ALL_TAC \\\\ ACCEPT_TAC TRUTH)`.  In the
+        # buffer that becomes `  >- (ALL_TAC \\ ACCEPT_TAC TRUTH)`.
+        src = ("Theory goalstate_bslash\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  T /\\ !n:num. n = n\n"
+               "Proof\n"
+               "  CONJ_TAC\n"
+               "  >- (ALL_TAC \\\\ ACCEPT_TAC TRUTH)\n"
+               "  >> gen_tac >> REFL_TAC\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Cursor at line 7 char 13 = right after `ALL_TAC `, before
+        # the `\\\\`.  With the fix the walker has CONJ_TAC and
+        # ALL_TAC as distinct Expand steps and reports step >= 2.
+        # Without the fix the whole chain is one Expand and step
+        # halts at 1.
+        r = _send_goalstate(c, 501, uri, 7, 13)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        step = result.get("step")
+        assert_true(step >= 2,
+                    f"walker advanced past ALL_TAC inside `\\\\` "
+                    f"chain, got step {step} ({result!r})")
+    finally:
+        c.close()
+
+
 def test_lsp_walks_file_includes_from_arbitrary_cwd():
     """Regression: when the LSP server is launched with cwd != the
     opened file's directory (as eglot typically does — cwd is the
@@ -2182,6 +2224,8 @@ TESTS = [
                                      test_goalState_case_split_produces_two_subgoals),
     ("goalState_walker_uses_theorem_position_context",
                                      test_goalState_walker_uses_theorem_position_context),
+    ("goalState_walks_double_backslash_in_then1_block",
+                                     test_goalState_walks_double_backslash_in_then1_block),
     ("lsp_walks_file_includes_from_arbitrary_cwd",
                                      test_lsp_walks_file_includes_from_arbitrary_cwd),
     ("lsp_holproject_preload_project_dirs",
