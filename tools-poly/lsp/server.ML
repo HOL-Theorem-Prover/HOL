@@ -447,6 +447,36 @@ fun splitOn c s = let
       else loop i' j out
   in case String.size s of sz => loop sz sz [] end
 
+(* Walk the Holmakefile INCLUDES chain rooted at `dir`, appending
+   every discovered directory to `Meta.loadPath`.  `extend_path_with_
+   includes` reads `getDir()`'s Holmakefile, so we chDir in and out. *)
+fun walkIncludesFrom dir = let
+  val saved = OS.FileSys.getDir()
+  fun restore () = OS.FileSys.chDir saved handle _ => ()
+in
+  (OS.FileSys.chDir dir;
+   ReadHMF.extend_path_with_includes
+     {verbosity = 0, lpref = Meta.loadPath};
+   restore ())
+  handle _ => restore ()
+end
+
+fun uriToPath uri =
+  if String.isPrefix "file://" uri
+  then SOME (String.extract (uri, 7, NONE)) else NONE
+
+(* On `didOpen` for a file the LSP hasn't seen before, walk that
+   file's directory's Holmakefile INCLUDES chain to augment
+   `Meta.loadPath`.  `hol.ML` already preloads project_dirs and
+   external_includes from cwd's `holproject.toml`; this handler
+   catches files whose INCLUDES chain isn't reachable from cwd's
+   holproject scope -- e.g. HOL4 dev where the top-level
+   `holproject.toml` has `holmake = false`, or files opened
+   outside any holproject entirely. *)
+fun augmentLoadPathForUri uri = case uriToPath uri of
+    NONE => ()
+  | SOME path => walkIncludesFrom (OS.Path.dir path)
+
 fun start {diag, dbg} = let
   val _ = PolyML.print_depth 100
   val conn as {send, recv} = stdioConnection ()
@@ -1384,7 +1414,7 @@ fun start {diag, dbg} = let
         | NONE => let val v = newFile text version
                   in (Binarymap.insert (fileInfo, uri, v), (v, false)) end)
       val () = if existed then applyEdit v version [{range = NONE, text = text}]
-               else ()
+               else augmentLoadPathForUri uri
       in if !elabOnRef = ElabOnChange then startCompile uri v else () end
     | Notification {method = "textDocument/didChange", params} => let
       val {uri, version, changes} = JSONDecode.decode didChangeParams params

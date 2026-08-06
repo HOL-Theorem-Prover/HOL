@@ -1887,6 +1887,144 @@ def test_goalState_case_split_produces_two_subgoals():
         c.close()
 
 
+def test_lsp_walks_file_includes_from_arbitrary_cwd():
+    """Regression: when the LSP server is launched with cwd != the
+    opened file's directory (as eglot typically does — cwd is the
+    project root, not the file), the file's Holmakefile INCLUDES
+    chain must still be walked so `Meta.loadPath` picks up sibling
+    directories that hold the file's `Ancestors` dependencies.
+
+    Before this was fixed, `ReadHMF.extend_path_with_includes` only
+    ran once at LSP boot against the server's cwd.  Opening a file
+    from anywhere else silently missed its `INCLUDES = ../lib` and
+    the compile spammed "Structure (fooLibTheory) has not been
+    declared" errors."""
+    root = tempfile.mkdtemp(prefix="lsp_incl_test_")
+    lib = os.path.join(root, "lib")
+    user = os.path.join(root, "user")
+    os.makedirs(lib); os.makedirs(user)
+    try:
+        # A minimal theory in lib/ — built via Holmake below.
+        with open(os.path.join(lib, "myLibScript.sml"), "w") as f:
+            f.write("Theory myLib\n"
+                    "Definition my_id_def:\n"
+                    "  my_id (x:num) = x\n"
+                    "End\n")
+        r = subprocess.run(
+            [f"{REPO}/bin/Holmake", "myLibTheory"],
+            cwd=lib, capture_output=True, text=True)
+        assert_true(r.returncode == 0,
+                    f"Holmake in {lib} succeeded ({r.stderr!r})")
+        # user/Holmakefile points at the sibling.
+        with open(os.path.join(user, "Holmakefile"), "w") as f:
+            f.write("INCLUDES = ../lib\n")
+        # user/uses_libScript.sml references myLib via Ancestors.
+        user_src = ("Theory uses_lib\n"
+                    "Ancestors myLib\n\n"
+                    "Theorem noop:\n"
+                    "  my_id (n:num) = n\n"
+                    "Proof\n"
+                    "  simp[my_id_def]\n"
+                    "QED\n")
+        user_file = os.path.join(user, "uses_libScript.sml")
+        with open(user_file, "w") as f:
+            f.write(user_src)
+        # LSP server cwd is /tmp — NOT user — so boot-time INCLUDES
+        # walk doesn't find `../lib`.  Whether the compile succeeds
+        # is entirely a question of whether the LSP re-walks INCLUDES
+        # per-file on didOpen.
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp")
+            uri = f"file://{user_file}"
+            _did_open(c, uri, user_src, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 30),
+                        "compileCompleted")
+            missing = []
+            with c.msgs_lock:
+                for m in c.msgs:
+                    if m.get("method") == "textDocument/publishDiagnostics":
+                        for d in m["params"].get("diagnostics", []):
+                            msg = d.get("message", "")
+                            if "myLib" in msg or "my_id" in msg:
+                                missing.append(msg)
+            assert_eq(missing, [],
+                      f"LSP should resolve ../lib INCLUDES for the "
+                      f"opened file, but produced diagnostics: "
+                      f"{missing!r}")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def test_lsp_holproject_preload_project_dirs():
+    """When `bin/hol` is launched inside a `holproject.toml
+    holmake = true` project, every discovered project_dir must end
+    up in `Meta.loadPath` — so a file whose own directory has no
+    `INCLUDES = ../…` chain can still `open` theories in sibling
+    project_dirs.
+
+    This is served by `hol.ML`'s boot-time HMProject preload (from
+    cwd), so the test launches with `Client(root)` matching eglot's
+    convention of starting the server with cwd = workspace root.
+
+    Isolated from the per-didOpen fallback: `user/` has no
+    Holmakefile, so `augmentLoadPathForUri` finds no INCLUDES to
+    walk.  Only the boot-time project scan can add `lib/` to
+    loadPath."""
+    root = tempfile.mkdtemp(prefix="lsp_hp_test_")
+    try:
+        with open(os.path.join(root, "holproject.toml"), "w") as f:
+            f.write("holmake = true\n")
+        lib = os.path.join(root, "lib")
+        user = os.path.join(root, "user")
+        os.makedirs(lib); os.makedirs(user)
+        with open(os.path.join(lib, "myLibScript.sml"), "w") as f:
+            f.write("Theory myLib\n"
+                    "Definition my_id_def:\n"
+                    "  my_id (x:num) = x\n"
+                    "End\n")
+        r = subprocess.run(
+            [f"{REPO}/bin/Holmake", "myLibTheory"],
+            cwd=lib, capture_output=True, text=True)
+        assert_true(r.returncode == 0,
+                    f"Holmake in {lib} succeeded ({r.stderr!r})")
+        user_src = ("Theory uses_lib\n"
+                    "Ancestors myLib\n\n"
+                    "Theorem noop:\n"
+                    "  my_id (n:num) = n\n"
+                    "Proof\n"
+                    "  simp[my_id_def]\n"
+                    "QED\n")
+        user_file = os.path.join(user, "uses_libScript.sml")
+        with open(user_file, "w") as f:
+            f.write(user_src)
+        # cwd = fixture root triggers hol.ML's boot-time HMProject
+        # preload; mirrors eglot's cwd = project root convention.
+        c = Client(root)
+        try:
+            _init(c, root)
+            _did_open(c, f"file://{user_file}", user_src, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 30),
+                        "compileCompleted")
+            missing = []
+            with c.msgs_lock:
+                for m in c.msgs:
+                    if m.get("method") == "textDocument/publishDiagnostics":
+                        for d in m["params"].get("diagnostics", []):
+                            msg = d.get("message", "")
+                            if "myLib" in msg or "my_id" in msg:
+                                missing.append(msg)
+            assert_eq(missing, [],
+                      f"holproject.toml preload should add every "
+                      f"project_dir to loadPath, got: {missing!r}")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
 def test_goalState_walker_uses_theorem_position_context():
     """Walker must apply the per-dec Context snapshot for the theorem
     the cursor is inside, not the whole-file post-compile Context.
@@ -2044,6 +2182,10 @@ TESTS = [
                                      test_goalState_case_split_produces_two_subgoals),
     ("goalState_walker_uses_theorem_position_context",
                                      test_goalState_walker_uses_theorem_position_context),
+    ("lsp_walks_file_includes_from_arbitrary_cwd",
+                                     test_lsp_walks_file_includes_from_arbitrary_cwd),
+    ("lsp_holproject_preload_project_dirs",
+                                     test_lsp_holproject_preload_project_dirs),
     ("goalState_incomplete_proof_body",
                                      test_goalState_incomplete_proof_body),
     ("goalState_cache_invalidates_on_tactic_edit",
