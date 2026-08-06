@@ -1173,7 +1173,8 @@ Proof
         \\ gvs [FUN_EQ_THM]
         >- (first_x_assum (qspec_then ‘q'’ mp_tac) \\ gvs []
             \\ qspecl_then [‘t’,‘q’,‘r’,‘q'’] mp_tac ALOOKUP_eq_NONE
-            \\ impl_tac >- (gvs [] \\ metis_tac [stringTheory.string_lt_antisym])
+            \\ impl_tac
+            >- (gvs [] \\ metis_tac [stringTheory.string_lt_antisym])
             \\ gvs [])
         \\ first_x_assum (qspec_then ‘q’ mp_tac) \\ gvs []
         \\ qspecl_then [‘l1’,‘q'’,‘r'’,‘q’] mp_tac ALOOKUP_eq_NONE
