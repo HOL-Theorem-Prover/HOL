@@ -419,6 +419,7 @@ end);
 <comment>"*)" => (dec comdepth; if !comdepth < 1 then Comment else continue());
 <comment>[^\n()*]{1,10} => (continue());
 
+<quote>{newline}"Proof"{alphaMLid_tailchar}+ => (continue());
 <quote>{ProofLine} => (ProofLine (yypos, yytext));
 <quote>{HOLSTRLITstart} => (let
   fun go () =

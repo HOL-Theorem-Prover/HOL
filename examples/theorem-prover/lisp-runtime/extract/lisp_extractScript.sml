@@ -544,7 +544,8 @@ val isTrue_if = save_thm("isTrue_if",LIST_CONJ
 
 Theorem isTrue_LISP_TEST:
     !b. isTrue (LISP_TEST b) = b
-ProofCases \\ EVAL_TAC
+Proof
+  Cases \\ EVAL_TAC
 QED
 
 Theorem isTrue_CLAUSES:

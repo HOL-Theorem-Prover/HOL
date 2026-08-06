@@ -2845,7 +2845,8 @@ QED
 
 Theorem fmap_EQ_UPTO___EQ[simp]:
   !vs f. (fmap_EQ_UPTO f f vs)
-ProofSIMP_TAC std_ss [fmap_EQ_UPTO_def]
+Proof
+  SIMP_TAC std_ss [fmap_EQ_UPTO_def]
 QED
 
 Theorem fmap_EQ_UPTO___FUPDATE_BOTH:

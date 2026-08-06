@@ -41,7 +41,8 @@ End
 
 Theorem option_apply_SOME:
     !x f. option_apply (SOME x) f = f x
-ProofSRW_TAC [] [option_apply_def]
+Proof
+  SRW_TAC [] [option_apply_def]
 QED
 
 Theorem option_then_assoc:
