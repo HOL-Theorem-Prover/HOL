@@ -1929,6 +1929,56 @@ def test_goalState_walks_double_backslash_in_then1_block():
         c.close()
 
 
+def test_goalState_walks_squiggle_selector():
+    """Regression: `>~` (Q.>~, a goal-selector by pattern) must
+    split the walker's step stream so cursor between the LHS
+    tactic and the `>~ pats` selector sees the post-LHS state.
+    Without this split, the whole `left >~ pats` compiled as one
+    atomic Expand and any cursor inside halted the walker at the
+    pre-`left` state.
+
+    The right operand of `>~` is a term-quote list, not a tactic,
+    so the walker synthesises `ALL_TAC >~ pats` at apply time."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_squiggle.sml"
+        #  0 Theory ...
+        #  1 Ancestors ...
+        #  2
+        #  3 Theorem t:
+        #  4   !n:num. n = 0 \/ 0 < n
+        #  5 Proof
+        #  6   gen_tac >> Cases_on `n`
+        #  7   >~ [`SUC m`] >- rw[]
+        #  8   >~ [`0`] >- rw[]
+        #  9 QED
+        src = ("Theory goalstate_squiggle\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n = 0 \\/ 0 < n\n"
+               "Proof\n"
+               "  gen_tac >> Cases_on `n`\n"
+               "  >~ [`SUC m`] >- rw[]\n"
+               "  >~ [`0`] >- rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Cursor at line 6 char 25 = just past `Cases_on ` \`n\``, before
+        # the newline.  With the fix the walker treats `>~` as a
+        # splitter and the step count is >= 2 (gen_tac + Cases_on).
+        r = _send_goalstate(c, 601, uri, 6, 25)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        step = result.get("step")
+        assert_true(step >= 2,
+                    f"walker advanced past Cases_on, before >~; "
+                    f"got step {step} ({result!r})")
+    finally:
+        c.close()
+
+
 def test_lsp_walks_file_includes_from_arbitrary_cwd():
     """Regression: when the LSP server is launched with cwd != the
     opened file's directory (as eglot typically does — cwd is the
@@ -2226,6 +2276,8 @@ TESTS = [
                                      test_goalState_walker_uses_theorem_position_context),
     ("goalState_walks_double_backslash_in_then1_block",
                                      test_goalState_walks_double_backslash_in_then1_block),
+    ("goalState_walks_squiggle_selector",
+                                     test_goalState_walks_squiggle_selector),
     ("lsp_walks_file_includes_from_arbitrary_cwd",
                                      test_lsp_walks_file_includes_from_arbitrary_cwd),
     ("lsp_holproject_preload_project_dirs",

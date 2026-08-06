@@ -77,6 +77,7 @@ fun compileTactic src =
 
 fun expandSpan (TacticSteps.Expand span)     = SOME span
   | expandSpan (TacticSteps.ExpandList span) = SOME span
+  | expandSpan (TacticSteps.GoalSelect span) = SOME span
   | expandSpan _                             = NONE
 
 fun expandSrc tacText (s, e) state =
@@ -84,20 +85,29 @@ fun expandSrc tacText (s, e) state =
     NONE => NONE
   | SOME tac => Portable.total (goalFrag.expand tac) state
 
-fun applyStep tacText step state = case expandSpan step of
-    SOME span => expandSrc tacText span state
-  | NONE => (case step of
-      TacticSteps.OpenParen _   => Portable.total goalFrag.open_paren   state
-    | TacticSteps.CloseParen _  => Portable.total goalFrag.close_paren  state
-    | TacticSteps.OpenThen1 _   => Portable.total goalFrag.open_then1   state
-    | TacticSteps.OpenFirst _   => Portable.total goalFrag.open_first   state
-    | TacticSteps.NextFirst _   => Portable.total goalFrag.next_first   state
-    | TacticSteps.CloseFirst _  => Portable.total goalFrag.close_first  state
-    | TacticSteps.OpenRepeat _  => Portable.total goalFrag.open_repeat  state
-    | TacticSteps.CloseRepeat _ => Portable.total goalFrag.close_repeat state
-    | TacticSteps.OpenNthGoal (n, _) =>
-        Portable.total (goalFrag.open_nth_goal n) state
-    | _ => SOME state)
+(* `>~ pats` / `>>~ pats` — the raw substring starts at the operator
+   (`>~` etc.) and isn't a valid tactic on its own.  Prefixing
+   `ALL_TAC ` turns it into `ALL_TAC >~ pats`, which applies the
+   goal-selector to the current focus with no other effect. *)
+fun expandGoalSelect tacText (s, e) state =
+  case compileTactic ("ALL_TAC " ^ String.substring (tacText, s, e - s)) of
+    NONE => NONE
+  | SOME tac => Portable.total (goalFrag.expand tac) state
+
+fun applyStep tacText step state = case step of
+    TacticSteps.Expand span     => expandSrc        tacText span state
+  | TacticSteps.ExpandList span => expandSrc        tacText span state
+  | TacticSteps.GoalSelect span => expandGoalSelect tacText span state
+  | TacticSteps.OpenParen _     => Portable.total goalFrag.open_paren   state
+  | TacticSteps.CloseParen _    => Portable.total goalFrag.close_paren  state
+  | TacticSteps.OpenThen1 _     => Portable.total goalFrag.open_then1   state
+  | TacticSteps.OpenFirst _     => Portable.total goalFrag.open_first   state
+  | TacticSteps.NextFirst _     => Portable.total goalFrag.next_first   state
+  | TacticSteps.CloseFirst _    => Portable.total goalFrag.close_first  state
+  | TacticSteps.OpenRepeat _    => Portable.total goalFrag.open_repeat  state
+  | TacticSteps.CloseRepeat _   => Portable.total goalFrag.close_repeat state
+  | TacticSteps.OpenNthGoal (n, _) =>
+      Portable.total (goalFrag.open_nth_goal n) state
 
 type snap = {stepIdx: int, endByte: int, state: goalFrag.goalstate}
 type cacheEntry = {

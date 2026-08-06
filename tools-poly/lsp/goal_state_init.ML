@@ -64,13 +64,15 @@ local
       (HOLPP.pp_to_string 75 goalFrag.pp_goalstate) st
     handle _ => ""
 
-  (* Count Expand/ExpandList steps whose end is strictly before the
-     cursor — the step-index the user sits at. *)
+  (* Count Expand/ExpandList/GoalSelect steps whose end is strictly
+     before the cursor — the step-index the user sits at. *)
   fun stepIndex (steps, cursor) = let
     fun go [] n = n
       | go (TacticSteps.Expand (_, e) :: rest) n =
           if cursor < e then n else go rest (n + 1)
       | go (TacticSteps.ExpandList (_, e) :: rest) n =
+          if cursor < e then n else go rest (n + 1)
+      | go (TacticSteps.GoalSelect (_, e) :: rest) n =
           if cursor < e then n else go rest (n + 1)
       | go (_ :: rest) n = go rest n
     in go steps 0 end

@@ -15,6 +15,13 @@ structure TacticSteps :> sig
   datatype step =
       Expand of int * int           (* byte-range of an atomic tactic *)
     | ExpandList of int * int       (* THENL / MAP_EVERY — opaque for now *)
+    (* `>~ pats` / `>>~ pats` split as [left steps, GoalSelect (opStart,
+       rightEnd)].  The right operand is a term-quote list, not a
+       tactic, so the walker can't compile `>~ [pat]` as a leaf;
+       instead it synthesises `"ALL_TAC " ^ tacText[opStart..rightEnd]`,
+       which is a valid tactic that applies the goal-selector on the
+       current focus. *)
+    | GoalSelect of int * int
     | OpenParen of int | CloseParen of int
     | OpenThen1 of int              (* >- / THEN1 *)
     | OpenFirst of int | NextFirst of int | CloseFirst of int
@@ -48,6 +55,7 @@ open HOLSourceAST
 datatype step =
     Expand of int * int
   | ExpandList of int * int
+  | GoalSelect of int * int
   | OpenParen of int | CloseParen of int
   | OpenThen1 of int
   | OpenFirst of int | NextFirst of int | CloseFirst of int
@@ -56,6 +64,7 @@ datatype step =
 
 fun stopPos (Expand (_, e))         = e
   | stopPos (ExpandList (_, e))     = e
+  | stopPos (GoalSelect (_, e))     = e
   | stopPos (OpenParen p)           = p
   | stopPos (CloseParen p)          = p
   | stopPos (OpenThen1 p)           = p
@@ -92,6 +101,18 @@ and compileToSteps (e: exp) : step list =
          post-left state. *)
       | "THENL" => compileToSteps left @ [ExpandList (expSpan right)]
       | ">|"    => compileToSteps left @ [ExpandList (expSpan right)]
+      (* `>~ pats` / `>>~ pats` — right operand is a term-quote list,
+         not a tactic.  Split so cursor between `left` and the
+         selector sees post-left state; the selector then applies as
+         a synthesised `ALL_TAC >~ pats` leaf via GoalSelect. *)
+      | ">~"    =>
+          let val (_, rightEnd) = expSpan right in
+            compileToSteps left @ [GoalSelect (opPos, rightEnd)]
+          end
+      | ">>~"   =>
+          let val (_, rightEnd) = expSpan right in
+            compileToSteps left @ [GoalSelect (opPos, rightEnd)]
+          end
       | _       => [Expand (expSpan e)])
   | Parens {exp = e', ...} => compileToSteps e'
   (* Defensive: raw parseDec output has no ExpExpansion, but a
@@ -122,6 +143,7 @@ fun parseTacText {label, tacText} = let
 fun shiftStep step = let val d = wrapPrefixLen in case step of
     Expand (s, e)     => Expand (s - d, e - d)
   | ExpandList (s, e) => ExpandList (s - d, e - d)
+  | GoalSelect (s, e) => GoalSelect (s - d, e - d)
   | OpenParen p       => OpenParen  (p - d)
   | CloseParen p      => CloseParen (p - d)
   | OpenThen1 p       => OpenThen1  (p - d)
@@ -151,6 +173,7 @@ local
   fun shape [] = ""
     | shape (TacticSteps.Expand _     :: r) = "E" ^ shape r
     | shape (TacticSteps.ExpandList _ :: r) = "L" ^ shape r
+    | shape (TacticSteps.GoalSelect _ :: r) = "G" ^ shape r
     | shape (TacticSteps.OpenParen _   :: r) = "(" ^ shape r
     | shape (TacticSteps.CloseParen _  :: r) = ")" ^ shape r
     | shape (TacticSteps.OpenThen1 _   :: r) = "[" ^ shape r
@@ -180,4 +203,7 @@ in
   val _ = check "nested parens"    "((tac1))"                    "E"
   val _ = check "THENL left+list"  "tac1 THENL [b1, b2, b3]"     "EL"
   val _ = check ">| left+list"     "tac1 >| [b1, b2, b3]"        "EL"
+  val _ = check ">~ selector"      "tac1 >~ [`P`]"               "EG"
+  val _ = check ">>~ selector"     "tac1 >>~ [`P`, `Q`]"         "EG"
+  val _ = check ">~ then >>"       "tac1 >~ [`P`] >> tac2"       "EGE"
 end;
