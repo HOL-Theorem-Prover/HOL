@@ -1,12 +1,8 @@
 (* HolRefute by example, 5: predicates in assumptions. *)
 
 Theory refuteExample05
-Ancestors
-  refute
 Libs
   Refute
-
-open Refute
 
 Inductive even_rel:
   even_rel 0 /\

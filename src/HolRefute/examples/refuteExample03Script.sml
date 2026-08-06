@@ -1,12 +1,8 @@
 (* HolRefute by example, 3: user-defined datatypes and definitions. *)
 
 Theory refuteExample03
-Ancestors
-  refute
 Libs
   Refute
-
-open Refute
 
 Datatype:
   btree = Leaf | Branch btree num btree

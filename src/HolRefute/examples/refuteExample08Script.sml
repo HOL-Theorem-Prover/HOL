@@ -1,12 +1,8 @@
 (* HolRefute by example, 8: developing and repairing statements. *)
 
 Theory refuteExample08
-Ancestors
-  refute
 Libs
   Refute
-
-open Refute
 
 (* Refuting an early draft often reveals a missing hypothesis. *)
 

@@ -1,12 +1,8 @@
 (* HolRefute by example, 6: narrowing and partial values. *)
 
 Theory refuteExample06
-Ancestors
-  refute
 Libs
   Refute
-
-open Refute
 
 (* NARROWING_TAC runs only symbolic narrowing.  Narrowing refines the parts
    of an input inspected by the conjecture, so reports may contain function

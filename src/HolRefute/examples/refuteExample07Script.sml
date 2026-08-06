@@ -2,11 +2,9 @@
 
 Theory refuteExample07
 Ancestors
-  refute
+  string
 Libs
   Refute
-
-open Refute
 
 Datatype:
   interval = <| lo : num; hi : num |>

@@ -1,12 +1,8 @@
 (* HolRefute by example, 10: structured finite models. *)
 
 Theory refuteExample10
-Ancestors
-  refute
 Libs
   Refute
-
-open Refute
 
 Datatype:
   node = RedNode | GreenNode | BlueNode

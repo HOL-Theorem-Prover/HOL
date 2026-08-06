@@ -1,12 +1,8 @@
 (* HolRefute by example, 9: finite model finding. *)
 
 Theory refuteExample09
-Ancestors
-  refute
 Libs
   Refute
-
-open Refute
 
 (* MODEL_REFUTE_TAC invokes only the Kodkod-backed finite model finder.
    It can assign finite interpretations to arbitrary functions, sets, and

@@ -1,12 +1,8 @@
 (* HolRefute by example, 11: SML-level automation. *)
 
 Theory refuteExample11
-Ancestors
-  refute
 Libs
   Refute
-
-open Refute
 
 (* This is the one example for tooling authors who need structured results
    or per-call configuration.  Ordinary proof scripts should start with

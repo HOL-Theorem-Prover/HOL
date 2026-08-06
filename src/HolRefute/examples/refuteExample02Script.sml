@@ -1,12 +1,8 @@
 (* HolRefute by example, 2: choosing a diagnostic tactic. *)
 
 Theory refuteExample02
-Ancestors
-  refute
 Libs
   Refute
-
-open Refute
 
 (* In an interactive proof, inspect the report printed by the diagnostic
    tactic.  [>> cheat] only keeps these deliberately false examples

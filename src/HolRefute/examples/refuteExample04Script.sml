@@ -1,12 +1,8 @@
 (* HolRefute by example, 4: assumptions and quantified conjectures. *)
 
 Theory refuteExample04
-Ancestors
-  refute
 Libs
   Refute
-
-open Refute
 
 (* The assumptions in the current goal constrain the counterexample. *)
 

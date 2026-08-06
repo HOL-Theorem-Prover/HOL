@@ -2,11 +2,9 @@
 
 Theory refuteExample12
 Ancestors
-  refute finite_map
+  integer string words rat finite_map
 Libs
   Refute intLib wordsLib
-
-open Refute
 
 (* The executable backends use the evaluation support loaded for each
    library type. *)

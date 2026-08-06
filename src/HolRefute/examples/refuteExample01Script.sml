@@ -3,12 +3,8 @@
 (* ===================================================================== *)
 
 Theory refuteExample01
-Ancestors
-  refute
 Libs
   Refute
-
-open Refute
 
 (* HolRefute is normally used while developing a theorem.  A diagnostic
    tactic prints its result and leaves the goal unchanged.  These executable
