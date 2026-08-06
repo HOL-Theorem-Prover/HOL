@@ -7,7 +7,7 @@
 
 `HolRefute` searches for finite counterexamples to HOL conjectures.  It
 combines Quickcheck-style execution, native narrowing, and a
-Nitpick-style finite model finder behind the `Refute` structure.  It is
+Kodkod-backed finite model finder behind the `Refute` structure.  It is
 intended for finding mistakes quickly; a report that no counterexample
 was found within the selected bounds is not a proof.
 
@@ -108,9 +108,11 @@ The public entry points are:
 |---|---|
 | `refute cfg tm` | Search for a counterexample to `tm` with `cfg`, print the result unless quiet, and return the structured `outcome`. |
 | `refute_goal cfg (asms, tm)` | Search the goal whose assumptions are `asms` and conclusion is `tm`. |
-| `REFUTE_TAC` | Inspect a tactic goal using `!the_config`.  A counterexample raises a `Refute.REFUTE_TAC` HOL error containing the report; otherwise the tactic leaves the goal unchanged. |
+| `REFUTE_TAC` | Inspect a tactic goal using `!the_config`, print the outcome, and leave the goal unchanged whether the result is a counterexample, bounded success, or inconclusive. |
+| `QUICKCHECK_TAC` | Like `REFUTE_TAC`, but select only the `exhaustive`, `random`, and `narrowing` backends. |
+| `MODEL_REFUTE_TAC` | Like `REFUTE_TAC`, but select only the `kodkod` finite-model backend. |
 | `quickcheck tm` | Use `!the_config`, but select only the Quickcheck backends `exhaustive`, `random`, and `narrowing`. |
-| `nitpick tm` | Use `!the_config`, but select only the `kodkod` model-finder backend. |
+| `model_refute tm` | Use `!the_config`, but select only the `kodkod` model-finder backend. |
 | `try_refute cfg goal` | Run quietly and return `SOME (backend, outcome)` only for a counterexample, or `NONE` for a miss, timeout, or inconclusive search. |
 | `find_unused_assms cfgopt thy` | Probe the named theory and return possible unused-assumption sets. |
 

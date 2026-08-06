@@ -19,8 +19,11 @@ A `config` is an immutable record.  Updaters take a new field value and
 return a function from the old configuration to the new one, so they are
 normally composed with `|>`.  `default_config` contains
 `default_qc_config` and `default_mf_config`.  `the_config` is the mutable
-interactive default used by `quickcheck`, `nitpick`, and `REFUTE_TAC`.
-`show_config ()` prints the complete value of `!the_config`.
+interactive default used by `quickcheck`, `model_refute`, `REFUTE_TAC`,
+`QUICKCHECK_TAC`, and `MODEL_REFUTE_TAC`.  `show_config ()` prints the
+complete value of `!the_config`.  The three tactics force `quiet = false`
+and `expect = NoExpectation`, because their contract is to print every
+ordinary outcome and return the original goal unchanged.
 
 ``` hol4
 val cfg = Refute.default_config
@@ -230,8 +233,10 @@ nonnegative.
 [`Refute.refute`](#Refute.refute),
 [`Refute.refute_goal`](#Refute.refute_goal),
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
+[`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
+[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
 [`Refute.quickcheck`](#Refute.quickcheck),
-[`Refute.nitpick`](#Refute.nitpick),
+[`Refute.model_refute`](#Refute.model_refute),
 [`Refute.try_refute`](#Refute.try_refute),
 [`Refute.find_unused_assms`](#Refute.find_unused_assms)
 

@@ -38,6 +38,6 @@ quotient, or fraction classification.
 [`Refute.register_quotient`](#Refute.register_quotient),
 [`Refute.register_codatatype`](#Refute.register_codatatype),
 [`Refute.register_frac_type`](#Refute.register_frac_type),
-[`Refute.nitpick`](#Refute.nitpick)
+[`Refute.model_refute`](#Refute.model_refute)
 
 Typedef encoding is described in \ref{Description:the-holrefute-library}.

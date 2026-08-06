@@ -22,13 +22,13 @@ configuration.  Narrowing accepts any goal, so it may be the only
 applicable backend on a goal the executable ones decline; a returned
 counterexample then records `"narrowing"` as its backend.  The
 `kodkod` model finder is not selected by this convenience entry point —
-use [`Refute.nitpick`](#Refute.nitpick) for that.
+use [`Refute.model_refute`](#Refute.model_refute) for that.
 
 ### See also
 
 [`Refute.config`](#Refute.config),
 [`Refute.refute`](#Refute.refute),
-[`Refute.nitpick`](#Refute.nitpick),
+[`Refute.model_refute`](#Refute.model_refute),
 [`Refute.register_generator`](#Refute.register_generator),
 [`Refute.register_substrate`](#Refute.register_substrate)
 

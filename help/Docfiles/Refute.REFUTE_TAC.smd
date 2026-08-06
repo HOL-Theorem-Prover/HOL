@@ -10,26 +10,28 @@ Refute.REFUTE_TAC : Abbrev.tactic
 Searches for a counterexample to the current tactic goal.
 
 `REFUTE_TAC` calls `Refute.refute_goal !Refute.the_config` on the supplied
-goal.  If Refute finds any counterexample, the tactic raises a
-`Refute.REFUTE_TAC` HOL error whose message is the formatted outcome.  If
-the result is `NoCounterexample` or `Unknown`, it applies `ALL_TAC` and
-leaves the goal unchanged.  Thus this is a diagnostic tactic, not a proof
-tactic: failure to find a counterexample never closes a goal.
+goal, using every backend selected by the current configuration.  It prints
+the resulting `Counterexample`, `NoCounterexample`, or `Unknown` report and
+then applies `ALL_TAC`, leaving the goal unchanged in every case.  Thus this
+is a diagnostic tactic, not a proof tactic: it never closes the goal and a
+counterexample is not represented as tactic failure.
 
-Normal reporting is controlled by `the_config`, including `quiet` and the
-`"Refute"` trace.
+The tactic forces reporting on and disables configured outcome expectations;
+the remaining search options come from `the_config`.
 
 ### Failure
 
-Fails deliberately when a counterexample is found.  A configured
-expectation mismatch can also raise a HOL error; interrupts are re-raised.
+Search errors and interrupts are re-raised.  Ordinary Refute outcomes do not
+make the tactic fail.
 
 ### See also
 
 [`Refute.config`](#Refute.config),
 [`Refute.refute`](#Refute.refute),
 [`Refute.refute_goal`](#Refute.refute_goal),
+[`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
+[`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
 [`Refute.quickcheck`](#Refute.quickcheck),
-[`Refute.nitpick`](#Refute.nitpick)
+[`Refute.model_refute`](#Refute.model_refute)
 
 The complete library guide is \ref{Description:the-holrefute-library}.

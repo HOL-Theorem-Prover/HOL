@@ -31,7 +31,7 @@ retyped is reported when model-finder preprocessing uses the row.
 [`Refute.register_frac_type`](#Refute.register_frac_type),
 [`Refute.register_frac_type_rat`](#Refute.register_frac_type_rat),
 [`Refute.register_term_postprocessor`](#Refute.register_term_postprocessor),
-[`Refute.nitpick`](#Refute.nitpick)
+[`Refute.model_refute`](#Refute.model_refute)
 
 Model-finder preprocessing is described in
 \ref{Description:the-holrefute-library}.

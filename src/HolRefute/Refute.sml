@@ -74,6 +74,9 @@ structure Refute :> Refute = struct
   fun qc_only config = Refute_Core.upd_backends
     (SOME (Refute_QC.qc_backend_names ())) config
 
+  fun mf_only config =
+    Refute_Core.upd_backends (SOME ["kodkod"]) config
+
   (* The option distinguishes the QC-only convenience from an explicitly
      supplied configuration whose [backends = NONE] means the full registry. *)
   fun unused_config NONE = qc_only (!Refute_Core.the_config)
@@ -90,17 +93,26 @@ structure Refute :> Refute = struct
 
   fun quickcheck tm = refute (qc_only (!Refute_Core.the_config)) tm
 
-  fun nitpick tm = refute
-    (Refute_Core.upd_backends (SOME ["kodkod"])
-      (!Refute_Core.the_config)) tm
+  fun model_refute tm = refute (mf_only (!Refute_Core.the_config)) tm
+
+  fun diagnostic_tac config goal =
+    let
+      val config' = config
+        |> Refute_Core.upd_quiet false
+        |> Refute_Core.upd_expect Refute_Core.NoExpectation
+      val _ = refute_goal config' goal
+    in
+      Tactical.ALL_TAC goal
+    end
 
   fun REFUTE_TAC goal =
-    case refute_goal (!Refute_Core.the_config) goal of
-        Refute_Core.Counterexample cexs =>
-          raise Feedback.mk_HOL_ERR "Refute" "REFUTE_TAC"
-            (Refute_Core.format_outcome (!Refute_Core.the_config)
-              (Refute_Core.Counterexample cexs))
-      | _ => Tactical.ALL_TAC goal
+    diagnostic_tac (!Refute_Core.the_config) goal
+
+  fun QUICKCHECK_TAC goal =
+    diagnostic_tac (qc_only (!Refute_Core.the_config)) goal
+
+  fun MODEL_REFUTE_TAC goal =
+    diagnostic_tac (mf_only (!Refute_Core.the_config)) goal
 
   val register_backend = Refute_Core.register_backend
   fun register_backend_with_ceiling backend ceiling =

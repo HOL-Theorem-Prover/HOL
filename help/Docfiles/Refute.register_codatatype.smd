@@ -38,6 +38,6 @@ quotient, typedef, or fraction classification.
 [`Refute.register_quotient`](#Refute.register_quotient),
 [`Refute.register_typedef`](#Refute.register_typedef),
 [`Refute.register_frac_type`](#Refute.register_frac_type),
-[`Refute.nitpick`](#Refute.nitpick)
+[`Refute.model_refute`](#Refute.model_refute)
 
 Codatatype bounds are described in \ref{Description:the-holrefute-library}.

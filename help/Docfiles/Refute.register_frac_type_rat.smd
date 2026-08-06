@@ -32,6 +32,6 @@ failure leaves both registries unchanged.
 [`Refute.register_frac_type`](#Refute.register_frac_type),
 [`Refute.register_ersatz`](#Refute.register_ersatz),
 [`Refute.register_term_postprocessor`](#Refute.register_term_postprocessor),
-[`Refute.nitpick`](#Refute.nitpick)
+[`Refute.model_refute`](#Refute.model_refute)
 
 Rational model display is described in \ref{Description:the-holrefute-library}.

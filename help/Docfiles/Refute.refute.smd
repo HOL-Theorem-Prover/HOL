@@ -35,7 +35,7 @@ preprocessing, and ordinary timeout failures are normally represented by
 [`Refute.refute_goal`](#Refute.refute_goal),
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
 [`Refute.quickcheck`](#Refute.quickcheck),
-[`Refute.nitpick`](#Refute.nitpick),
+[`Refute.model_refute`](#Refute.model_refute),
 [`Refute.try_refute`](#Refute.try_refute)
 
 The complete library guide is \ref{Description:the-holrefute-library}.

@@ -20423,12 +20423,14 @@ fun facade_parallel () =
       Refute.Counterexample _ => true
     | _ => false
 
-fun facade_tactic_fails () =
-  ((ignore (Refute.REFUTE_TAC
-      ([], ``(x : num) - y + y = x``)); false)
-   handle HOL_ERR error =>
-     Feedback.top_structure_of error = "Refute" andalso
-     Feedback.top_function_of error = "REFUTE_TAC")
+fun facade_tactic_preserves_refutable_goal () =
+  ((case #1 (Refute.REFUTE_TAC
+      ([``0 < (x : num)``], ``x - y + y = x``)) of
+        [([assumption], conclusion)] =>
+          aconv assumption ``0 < (x : num)`` andalso
+          aconv conclusion ``x - y + y = x``
+      | _ => false)
+   handle _ => false)
 
 fun facade_tactic_allows_unknown () =
   ((ignore (Refute.REFUTE_TAC ([], ``(x : ind) = x``)); true)
@@ -20453,8 +20455,9 @@ val _ = require_msg (check_result facade_expectation) (fn () =>
 val _ = require_msg (check_result facade_parallel) (fn () =>
   "the public parallel facade did not find a counterexample")
   (fn () => ()) ()
-val _ = require_msg (check_result facade_tactic_fails) (fn () =>
-  "REFUTE_TAC did not fail on a refutable goal") (fn () => ()) ()
+val _ = require_msg (check_result facade_tactic_preserves_refutable_goal)
+  (fn () => "REFUTE_TAC did not preserve a refutable goal")
+  (fn () => ()) ()
 val _ = require_msg (check_result facade_tactic_allows_unknown) (fn () =>
   "REFUTE_TAC blocked on an inconclusive goal") (fn () => ()) ()
 val _ = require_msg (check_result facade_assumptions) (fn () =>
@@ -20479,6 +20482,14 @@ fun with_temporary_kodkod backend body =
     Portable.finally restore body ()
   end
 
+fun with_temporary_qc backend body =
+  let
+    fun restore () = Refute_QC.register_backends ()
+    val _ = register_backend backend
+  in
+    Portable.finally restore body ()
+  end
+
 fun kodkod_registration_pin () =
   case lookup_backend "kodkod" of
       SOME backend =>
@@ -20488,7 +20499,7 @@ fun kodkod_registration_pin () =
         #configured backend () = Refute_Forl.is_configured ()
     | NONE => false
 
-fun nitpick_preset_pin () =
+fun model_refute_preset_pin () =
   let
     val selected = ref false
     val backend : backend =
@@ -20501,7 +20512,50 @@ fun nitpick_preset_pin () =
   in
     with_silent_refute (fn () =>
       with_temporary_kodkod backend (fn () =>
-        (ignore (Refute.nitpick ``T``); !selected)))
+        (ignore (Refute.model_refute ``T``); !selected)))
+  end
+
+fun model_refute_tactic_preset_pin () =
+  let
+    val selected = ref false
+    val backend : backend =
+      {name = "kodkod", weight = 50, configured = fn () => true,
+       requires = AnyGoal,
+       input = PolyOriginal,
+       run = fn config => fn _ =>
+         (selected :=
+            (#backends config = SOME ["kodkod"] andalso
+             not (#quiet config) andalso
+             #expect config = NoExpectation);
+          Counterexample [stub_cex "kodkod" Genuine])}
+  in
+    with_silent_refute (fn () =>
+      with_temporary_kodkod backend (fn () =>
+        case #1 (Refute.MODEL_REFUTE_TAC ([``T``], ``F``)) of
+            [([assumption], conclusion)] =>
+              !selected andalso aconv assumption ``T`` andalso
+              aconv conclusion ``F``
+          | _ => false))
+  end
+
+fun quickcheck_tactic_preset_pin () =
+  let
+    val selected = ref false
+    val names = Refute_QC.qc_backend_names ()
+    val backend : backend =
+      {name = "exhaustive", weight = 20, configured = fn () => true,
+       requires = AnyGoal,
+       input = MonoInstances,
+       run = fn config => fn _ =>
+         (selected :=
+            (#backends config = SOME names andalso
+             not (#quiet config) andalso
+             #expect config = NoExpectation);
+          Unknown ["preset pin"])}
+  in
+    with_silent_refute (fn () =>
+      with_temporary_qc backend (fn () =>
+        (ignore (Refute.QUICKCHECK_TAC ([], ``T``)); !selected)))
   end
 
 fun kodkod_not_configured_pin () =
@@ -20514,15 +20568,23 @@ fun kodkod_not_configured_pin () =
   in
     with_silent_refute (fn () =>
       with_temporary_kodkod backend (fn () =>
-        case Refute.nitpick ``T`` of
+        case Refute.model_refute ``T`` of
             Refute.Unknown ["no configured backend"] => true
           | _ => false))
   end
 
 val _ = require_msg (check_result kodkod_registration_pin) (fn () =>
   "the kodkod backend registration record changed") (fn () => ()) ()
-val _ = require_msg (check_result nitpick_preset_pin) (fn () =>
-  "Refute.nitpick did not select only the kodkod backend") (fn () => ()) ()
+val _ = require_msg (check_result model_refute_preset_pin) (fn () =>
+  "Refute.model_refute did not select only the kodkod backend")
+  (fn () => ()) ()
+val _ = require_msg (check_result model_refute_tactic_preset_pin) (fn () =>
+  "MODEL_REFUTE_TAC changed the goal, failed on a counterexample, or used " ^
+  "the wrong diagnostic configuration")
+  (fn () => ()) ()
+val _ = require_msg (check_result quickcheck_tactic_preset_pin) (fn () =>
+  "QUICKCHECK_TAC did not use the quickcheck diagnostic configuration")
+  (fn () => ()) ()
 val _ = require_msg (check_result kodkod_not_configured_pin) (fn () =>
   "the kodkod not-configured outcome changed") (fn () => ()) ()
 

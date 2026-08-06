@@ -1,21 +1,34 @@
 HolRefute by example
 ====================
 
-Executable theory examples covering the user-facing surface of HolRefute:
-counterexample search over executable definitions, native narrowing,
-the Kodkod model finder, the generator and display registries, the
-unused-assumption sweep, the extension points, and which half of Refute
-serves which library type.
+The main HolRefute interface is its proof tactics.  Examples 01--10 and 12
+are modern HOL4 theory scripts built around:
 
-Each file is a self-contained descendant of `refuteTheory`, declares its
-theory and ML dependencies, and is meant to be read top to bottom.  The
-`upd_expect` clauses make the prose examples executable checks.
+    REFUTE_TAC
+    QUICKCHECK_TAC
+    MODEL_REFUTE_TAC
+
+They state conjectures as theorems and invoke a diagnostic tactic in the
+proof.  A tactic prints its result and returns the original goal unchanged.
+In an interactive proof, inspect the report, repair the statement, and try
+again.  Deliberately false theorems in this executable corpus use:
+
+    REFUTE_TAC >> cheat
+
+The `cheat` only admits the goal after the diagnostic has printed; it is not
+part of normal use.  When a conjecture is true, the diagnostic tactic is
+followed by an ordinary proof of the unchanged goal.
+
+Example 11 is deliberately the only exception.  It explains the SML-level
+automation API for tools that need configurations and structured outcomes.
+The other examples contain no direct calls to `refute`, `quickcheck`, or
+`model_refute`, and no SML `val` declarations.
 
 
-Running them
-------------
+Running the examples
+--------------------
 
-From this directory's parent (`src/HolRefute`), build every example with:
+From `src/HolRefute`, build every example with:
 
     ../../bin/Holmake examples
 
@@ -23,148 +36,63 @@ To build one example, run Holmake in this directory, for example:
 
     ../../../bin/Holmake -C examples refuteExample01Theory.uo
 
-The scripts use the standard HOL heap.  Their `Ancestors` and `Libs`
-headers load everything else explicitly.
-
-Poly/ML only: the tree build skips HolRefute on other ML systems.
-
-Files 09 and 10 drive the model finder, and sections 4 and 5 of 12 are
-model-finder only.  The model finder needs a Kodkodi 1.5.7 component
-and a Java runtime:
+Examples 01, 02, 04, 09, 10, and 12 contain MODEL_REFUTE_TAC calls.  They
+need Kodkodi 1.5.7 and a Java runtime:
 
     export HOL4_KODKODI=/path/to/kodkodi-1.5.7
 
-Without it a model-finder call reports Unknown ("no configured backend").
-Two things follow from that, and neither is silent.
-
-Every call in these files asserts its own verdict with an `upd_expect`
-clause, so one that degrades to Unknown raises `Refute.expect` rather
-than quietly printing something other than what is quoted.  In a theory
-build that exception fails the target.  That is the assertion working,
-not a fault.
-
-The reach is also wider than the files that make the model finder their
-subject.  At default settings NoCounterexample is a model-finder
-verdict: the QC backends can only report that they did not exhaust the
-search space, and it is kodkod that turns that into "no counterexample
-found within the tested finite bounds".  So a call whose transcript
-claims NoCounterexample needs Kodkodi even when its own reasons never
-mention it.
-
-Measured by running each file with and without HOL4_KODKODI set:
-
-    01  four calls: the NoCounterexample calls of sections 2, 4 and 5,
-        and the nitpick of section 8
-    02  three calls: two in section 4, and the QuasiGenuine call of
-        section 8
-    03  one call, the set goal of section 5
-    08  the whole sweep: with Kodkodi it reports two theorems carrying
-        superfluous assumptions, without it none, counting the
-        difference as skipped inconclusive probes rather than raising
-    09  every call
-    10  every call
-    11  three calls: section 3, and both calls of section 4
-    12  nine calls: one in section 2, all three in section 4, all three
-        in section 5, and both in section 6.  Section 3's model-finder
-        call is a tenth that needs Kodkodi but does not raise, because
-        Unknown is what it expects either way; only the reason quoted
-        under it changes
-
-04, 05, 06 and 07 produce byte-identical output either way.  Everything
-else runs with no external tools.
+Without a configured model finder, MODEL_REFUTE_TAC reports an inconclusive
+search and still leaves the goal unchanged.  The deliberately false example
+theorems remain buildable because their following `cheat` admits that goal.
 
 
 The files
 ---------
 
 refuteExample01Script.sml
-    refute, refute_def, refute_goal, refute_top, try_refute, quickcheck,
-    nitpick, REFUTE_TAC.  Goals with assumptions; using the proof
-    manager's current goal; branching on the returned outcome.
+    The normal proof-development workflow and all three tactics.
 
 refuteExample02Script.sml
-    Genuine, QuasiGenuine, Potential and Unknown; the certifying theorem
-    and how to opt out of it; evaluated terms; several counterexamples;
-    timeout, sequential execution, quiet mode, tags, trace levels;
-    expectations as assertions; changing the session default.
+    Choosing the general, executable-only, or model-finder-only tactic.
 
 refuteExample03Script.sml
-    Conjectures about your own datatypes, records, options, pairs and
-    sets; the size bound and what "within the tested finite bounds"
-    means; polymorphic goals via finite types or a default type; nested
-    quantifiers.
+    User-defined datatypes, recursive definitions, records, options, and
+    pairs.
 
 refuteExample04Script.sml
-    NativeSML, Cv and Compute; Auto's priority order and fallthrough; why
-    an explicitly chosen substrate reports Unknown instead of switching;
-    exhaustive versus random search; seeds and cross-substrate
-    reproducibility; per-run statistics.
+    Assumptions, implicit and explicit quantifiers, and predicates.
 
 refuteExample05Script.sml
-    Hol_reln premises and Horn-shaped Boolean functions compiled into
-    enumerators; fuel via upd_depth and why fuel-bounded exhaustion is
-    always reported as incomplete; premise reordering; the same plan on
-    all three substrates.
+    Inductive and executable predicates used as assumptions.
 
 refuteExample06Script.sml
-    Function-valued counterexamples as UPDATE chains; partial
-    counterexamples with holes; refinement depth; refuting existential
-    goals; certification by case-tree replay.
+    Narrowing over functions and partially demanded values.
 
 refuteExample07Script.sml
-    register_generator with enumerating and random components;
-    abstract_generator for a type with an invariant; how a missing
-    invariant turns a true lemma into a false-looking one, and how
-    restricting generation fixes it.
+    Datatype invariants expressed as assumptions.
 
 refuteExample08Script.sml
-    check_unused_assms, find_unused_assms, print_unused_assms; reading
-    the maximal droppable sets; QC-only probes versus a configuration of
-    your own.
+    Using counterexamples to add missing hypotheses and spot unnecessary
+    ones.
 
 refuteExample09Script.sml
-    nitpick and the kodkod backend: uninterpreted functions, sets and
-    relations; cardinality scopes; reading a model, with types, Skolem
-    constants, constants and argument grouping; several models at once;
-    models instead of counterexamples; whack, need and atoms; binary
-    integers; solver, batch size and threads; what Genuine means here.
+    The finite model finder on functions, sets, and relations.
 
 refuteExample10Script.sml
-    Inductive and coinductive predicates with unrolling depths;
-    codatatypes and bisimulation depth; registering a typedef and a
-    quotient of your own; display-only term postprocessors; merged
-    type-variable scopes; the translation knobs; debug output.
+    Structured finite models for datatypes, inductive relations, and nested
+    quantifiers.
 
 refuteExample11Script.sml
-    Registering a backend and its certainty ceiling; what the requires
-    and input fields of a backend decide; the refute_simp, refute_psimp
-    and refute_unfold theorem sets; ersatz constants; registering a
-    substrate of your own; restoring the built-in registrations.
+    The sole SML-level automation example: configurations, outcomes,
+    certificates, goals, formatted results, and unused-assumption checks.
 
 refuteExample12Script.sml
-    Which half of Refute serves which library type.  Integers, served by
-    both; characters and strings, which only the quickcheck path
-    reaches; machine words, and the bare-numeral trap that looks like a
-    Refute failure but is HOL's type inference; rationals, which only
-    the model finder reaches, through the Frac encoding;
-    register_frac_type and what an incomplete ersatz table costs; and
-    finite maps as the documented edge, where an Unknown names the
-    missing capability rather than judging the conjecture.
+    Executable and relational support for standard-library types.
 
 
 Further reading
 ---------------
 
-`../README` documents the substrate model, the trust model, the full
-option table and the known limitations.  `../Refute.sig` is the public
-signature: everything used in these files appears there, except where a
-file explicitly reaches into an implementation module.  Those are noted
-at the point of use, or — where one file has several, as 11 does — once
-at the head of the file.
-
-Two entries in that signature are deliberately exercised by nothing here.
-`upd_allow_function_inversion` and `upd_use_subtype` are reserved: no
-module outside `Refute_Core` reads them, and `show_config` prints both
-with a `(reserved)` marker.  There is no behaviour to demonstrate, so
-demonstrating them would mean inventing some.  Every other value in
-`../Refute.sig` appears in at least one file above.
+`../README` describes the backends, trust model, configuration, and known
+limitations.  The public SML interface is in `../Refute.sig`; tactic users
+normally need only the three tactic names shown above.

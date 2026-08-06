@@ -1,233 +1,59 @@
 (* ===================================================================== *)
-(*  HolRefute by example, 1: first steps                                 *)
-(*                                                                       *)
-(*  Every entry point that answers the question "is this conjecture      *)
-(*  actually true?": refute, quickcheck, nitpick, REFUTE_TAC, and the    *)
-(*  goal-stack and try_refute wrappers.                                  *)
-(*                                                                       *)
-(*  Build with: ../../bin/Holmake examples                               *)
+(*  HolRefute by example, 1: proof-script workflow                       *)
 (* ===================================================================== *)
 
 Theory refuteExample01
 Ancestors
   refute
 Libs
-  Refute proofManagerLib
+  Refute
 
-open Refute;
+open Refute
 
-(* Every call below states the verdict it expects, so that a change in   *)
-(* behaviour raises Refute.expect instead of quietly outdating the       *)
-(* transcript.  [refute] and [refute_goal] take the [upd_expect] clause  *)
-(* directly; [refute_def], [refute_top], [REFUTE_TAC], [quickcheck] and  *)
-(* [nitpick] take no configuration argument at all, so the sections that *)
-(* exercise those set the expectation on [the_config] instead.           *)
+(* HolRefute is normally used while developing a theorem.  A diagnostic
+   tactic prints its result and leaves the goal unchanged.  These executable
+   examples use [>> cheat] only to admit deliberately false statements after
+   the diagnostic has run. *)
 
-(* --------------------------------------------------------------------- *)
-(* 1.  A conjecture that is not a theorem                                *)
-(*                                                                       *)
-(* Natural subtraction truncates at zero, so adding y back does not      *)
-(* undo it.  [refute_def] runs the default configuration: every          *)
-(* registered backend, racing, 30-second budget.                         *)
-(* --------------------------------------------------------------------- *)
+Theorem subtraction_does_not_cancel:
+  (x : num) - y + y = x
+Proof
+  REFUTE_TAC >> cheat
+QED
 
-val _ = the_config := upd_expect ExpectGenuine (!the_config);
+(* REFUTE_TAC uses every configured backend.  QUICKCHECK_TAC restricts the
+   search to executable testing and narrowing. *)
 
-refute_def ``(x : num) - y + y = x``;
+Theorem not_every_list_is_a_palindrome:
+  REVERSE (xs : num list) = xs
+Proof
+  QUICKCHECK_TAC >> cheat
+QED
 
-(* ==> Counterexample [{backend = "exhaustive", substrate = "native",    *)
-(*     bindings = [(x, 0), (y, 1)], certainty = Genuine,                 *)
-(*     cert = SOME |- ~!x y. x - y + y = x, ...}]                        *)
+(* MODEL_REFUTE_TAC uses only the finite relational model finder.  Unlike
+   executable testing, it can assign a table to an uninterpreted function. *)
 
-(* --------------------------------------------------------------------- *)
-(* 2.  A conjecture that survives                                        *)
-(*                                                                       *)
-(* Refute is a counterexample finder, not a prover: "no counterexample"  *)
-(* is evidence, not proof, and the report says so.                       *)
-(* --------------------------------------------------------------------- *)
+Theorem an_arbitrary_function_need_not_return_zero:
+  (f : bool -> num) b = 0
+Proof
+  MODEL_REFUTE_TAC >> cheat
+QED
 
-val _ = the_config := upd_expect ExpectNone (!the_config);
+(* Assumptions are part of the search problem. *)
 
-refute_def ``(x : num) + y = y + x``;
+Theorem tail_is_shorter:
+  xs <> [] ==> LENGTH (TL (xs : num list)) < LENGTH xs
+Proof
+  REFUTE_TAC >>
+  Cases_on `xs` >> simp []
+QED
 
-(* ==> NoCounterexample, reported as "no counterexample found within the *)
-(*     tested finite bounds" -- not "this is a theorem".                 *)
+(* A diagnostic tactic never proves a goal.  If it finds no counterexample,
+   it leaves the goal unchanged for the real proof tactic. *)
 
-(* --------------------------------------------------------------------- *)
-(* 3.  The outcome is an ML value                                        *)
-(*                                                                       *)
-(* [outcome] is Counterexample of counterexample list | NoCounterexample *)
-(* | Unknown of string list, so a script can branch on it.  Each         *)
-(* counterexample records the backend and substrate that found it, the   *)
-(* variable bindings, and (by default) a HOL theorem certifying the      *)
-(* negation of the instantiated conjecture.                              *)
-(* --------------------------------------------------------------------- *)
-
-val _ = the_config := upd_expect ExpectGenuine (!the_config);
-
-val outcome = refute_def ``EVEN (x + y) ==> EVEN (x : num)``;
-
-case outcome of
-    Counterexample (cex :: _) =>
-      (#backend cex, #substrate cex, #bindings cex, #cert cex)
-  | _ => raise Fail "expected a counterexample";
-
-(* ==> ("exhaustive", "native", [(x, 1), (y, 1)],                        *)
-(*      SOME |- ~!x y. EVEN (x + y) ==> EVEN x)                          *)
-
-(* --------------------------------------------------------------------- *)
-(* 4.  Goals with assumptions                                            *)
-(*                                                                       *)
-(* [refute_goal] takes a (term list * term) goal.  Refute then looks for *)
-(* an assignment that satisfies every assumption and still falsifies the *)
-(* conclusion, so assumptions cut the search down.  [upd_no_assms true]  *)
-(* drops them, which here exposes exactly the case the guard excluded.   *)
-(* --------------------------------------------------------------------- *)
-
-val guarded = ([``0 < (n : num)``], ``PRE n < n``);
-
-refute_goal (upd_expect ExpectNone (!the_config)) guarded;
-
-(* ==> NoCounterexample: within the tested bounds every n satisfying     *)
-(*     0 < n also satisfies PRE n < n.                                   *)
-
-refute_goal (upd_expect ExpectGenuine (upd_no_assms true (!the_config)))
-  guarded;
-
-(* ==> Counterexample n = 0, certified |- ~!n. PRE n < n: PRE 0 = 0 and  *)
-(*     0 < 0 is false, which is why the assumption was needed.           *)
-
-(* --------------------------------------------------------------------- *)
-(* 5.  REFUTE_TAC as a proof-time guard                                  *)
-(*                                                                       *)
-(* REFUTE_TAC fails, printing the counterexample, when the goal in front *)
-(* of it is refutable, and behaves like ALL_TAC otherwise.  Put it at    *)
-(* the head of a tactic you are unsure about instead of grinding away at *)
-(* an unprovable subgoal.                                                *)
-(* --------------------------------------------------------------------- *)
-
-(* Fails: the goal is false for xs = [].  The handler prints the raised  *)
-(* HOL_ERR -- the only exception this file expects -- and returns TRUTH  *)
-(* so that the transcript can continue.                                  *)
-val _ = the_config := upd_expect ExpectGenuine (!the_config);
-
-TAC_PROOF (([], ``LENGTH (TL (xs : num list)) < LENGTH xs``), REFUTE_TAC)
-  handle e => (Feedback.HOL_MESG (Feedback.exn_to_string e); TRUTH);
-
-(* ==> "Exception raised at Refute.REFUTE_TAC: Refute found a            *)
-(*     counterexample ... xs = []", then val it = |- T.                  *)
-
-(* Succeeds: no counterexample, so the guard steps aside and the real    *)
-(* tactic finishes the proof.  Truncating subtraction sinks section 1's  *)
-(* conjecture but not this one.                                          *)
-val _ = the_config := upd_expect ExpectNone (!the_config);
-
-TAC_PROOF (([], ``(x : num) - y <= x``), REFUTE_TAC THEN simp []);
-
-(* ==> |- x - y <= x                                                     *)
-
-(* --------------------------------------------------------------------- *)
-(* 6.  The interactive goal stack                                        *)
-(*                                                                       *)
-(* [refute_top ()] refutes whatever the proof manager currently shows,   *)
-(* so a stuck subgoal can be tested without retyping it.  Here the case  *)
-(* split disposes of the empty list and leaves a subgoal that no tactic  *)
-(* could ever close, because the conjecture is false.                    *)
-(* --------------------------------------------------------------------- *)
-
-val _ = the_config := upd_expect ExpectGenuine (!the_config);
-
-g `!xs : num list. xs <> [] ==> HD xs <= LENGTH xs`;
-e (Cases_on `xs`);
-e (simp []);
-refute_top ();
-
-(* ==> Counterexample h = 2, t = []: HD [2] = 2 exceeds LENGTH [2] = 1.  *)
-
-drop ();
-
-(* ==> "There are currently no proofs." -- the goal stack is clean again *)
-(*     for whatever you do next.                                         *)
-
-(* --------------------------------------------------------------------- *)
-(* 7.  try_refute: quiet, deterministic, for automation                  *)
-(*                                                                       *)
-(* [try_refute] is the entry point for tools.  It forces a sequential,   *)
-(* quiet, fixed-seed profile, ignores any expectation, and returns       *)
-(* SOME (backend, outcome) only when it actually found something.  Its   *)
-(* timeout is a whole-call budget, and a goal with no counterexample     *)
-(* spends all of it, so five seconds is friendlier here than the         *)
-(* default thirty.                                                       *)
-(*                                                                       *)
-(* Ignoring the expectation is a contract rather than an accident: the   *)
-(* session default still carries the ExpectGenuine set in section 6, yet *)
-(* the second call below returns NONE without raising.  These are        *)
-(* therefore the only two calls in this file that assert no verdict.     *)
-(* --------------------------------------------------------------------- *)
-
-try_refute (upd_timeout 5.0 (!the_config))
-  ([], ``(xs : num list) ++ ys = ys ++ xs``);
-
-(* ==> SOME ("exhaustive", Counterexample [{bindings = [(xs, [0]),       *)
-(*     (ys, [1])], evals = [(xs ++ ys, [0; 1]), (ys ++ xs, [1; 0])],     *)
-(*     ...}]).  Note that nothing was printed: try_refute is quiet.      *)
-
-try_refute (upd_timeout 5.0 (!the_config))
-  ([], ``(xs : num list) ++ [] = xs``);
-
-(* ==> NONE, after the five seconds.  "Found nothing" and "found a       *)
-(*     reason to stop looking" are the same answer here, which is why    *)
-(*     try_refute is for tools and [refute] is for the reader at the     *)
-(*     prompt.                                                           *)
-
-(* --------------------------------------------------------------------- *)
-(* 8.  Backend presets                                                   *)
-(*                                                                       *)
-(* [quickcheck] restricts the search to the executable QC backends;      *)
-(* [nitpick] restricts it to the Kodkod model finder.  Both are just     *)
-(* [refute] with a narrowed backend list, which you can also write out   *)
-(* by hand with [upd_backends].                                          *)
-(* --------------------------------------------------------------------- *)
-
-val session_default = !the_config;
-val _ = the_config := upd_expect ExpectGenuine (!the_config);
-
-quickcheck ``REVERSE (xs : num list) = xs``;
-
-(* ==> Counterexample xs = [0; 1] from the exhaustive backend.           *)
-
-refute
-  (upd_expect ExpectGenuine
-     (upd_backends (SOME ["exhaustive"]) (!the_config)))
-  ``REVERSE (xs : num list) = xs``;
-
-(* ==> the same counterexample.  [quickcheck] is this call with all the  *)
-(*     QC backend names filled in for you; here only one of them is      *)
-(*     asked, and it is the one that answered above.                     *)
-
-(* Needs a Kodkodi installation; see example 09.  Model-finder  *)
-(* calls in the corpus pin one Kodkodi thread and one cardinality row, so *)
-(* the quoted scope is exact rather than whichever scope won a race.     *)
-(* [nitpick] takes no configuration argument, so the pin goes on         *)
-(* [the_config] alongside the expectation.                               *)
-
-val _ = the_config :=
-  (!the_config |> upd_max_threads 1 |> upd_card [(NONE, [3])]);
-
-nitpick ``(f : bool -> num) b = 0``;
-
-(* ==> a Genuine kodkod counterexample, with the extra fields only the   *)
-(*     model finder fills in: a cardinality scope for :num, a model      *)
-(*     listing that type's atoms, and f as a finite update table.        *)
-(*       Scope: card num = 3                                             *)
-(*         f = (K _)⦇T ↦ 2; F ↦ 1⦈                                       *)
-(*         b = F                                                         *)
-(*       Evaluated terms:                                                *)
-(*         f b = 1                                                       *)
-(*         0 = 0                                                         *)
-(*     Without a Kodkodi component this call reports Unknown instead --  *)
-(*     and the expectation set above then raises; see examples/README.   *)
-
-(* The session default is left as it was found: the expectation cleared, *)
-(* and the model-finder pins above dropped with it.                      *)
-val _ = the_config := upd_expect NoExpectation session_default;
+Theorem subtraction_is_bounded:
+  (x : num) - y <= x
+Proof
+  REFUTE_TAC >>
+  simp []
+QED

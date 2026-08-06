@@ -38,8 +38,13 @@ signature Refute = sig
     config option -> string -> (string * int list list option) list
   val print_unused_assms : config option -> string option -> unit
   val quickcheck    : term -> outcome
-  val nitpick       : term -> outcome
-  val REFUTE_TAC    : Abbrev.tactic
+  val model_refute  : term -> outcome
+  (* Diagnostic tactics always print the ordinary outcome and return the
+     original goal unchanged.  The specialized tactics override only the
+     backend selection. *)
+  val REFUTE_TAC       : Abbrev.tactic
+  val QUICKCHECK_TAC   : Abbrev.tactic
+  val MODEL_REFUTE_TAC : Abbrev.tactic
 
   val register_backend : backend -> unit
   (* The callback must upper-bound the certainty returned by the backend's

@@ -35,6 +35,6 @@ composed callback for `ty`, if any.
 
 [`Refute.register_frac_type`](#Refute.register_frac_type),
 [`Refute.register_frac_type_rat`](#Refute.register_frac_type_rat),
-[`Refute.nitpick`](#Refute.nitpick)
+[`Refute.model_refute`](#Refute.model_refute)
 
 Model reconstruction is described in \ref{Description:the-holrefute-library}.

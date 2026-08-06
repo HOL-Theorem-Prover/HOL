@@ -1,0 +1,35 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `model_refute`
+
+``` hol4
+Refute.model_refute : term -> outcome
+```
+
+------------------------------------------------------------------------
+
+Runs Refute's finite model finder.
+
+`Refute.model_refute tm` calls `Refute.refute` using
+`!Refute.the_config` after forcing backend selection to
+`SOME ["kodkod"]`.  Every other field of the current configuration is
+preserved, including finite scopes, solver and encoding options, output
+controls, quiet mode, and expectations.
+
+The `kodkod` backend is configured only when the external Kodkodi
+component is available.  If it is unavailable, the result is `Unknown`
+with a no-configured-backend reason.  A reconstructed model's certainty is
+determined by the soundness and exactness of its encoding, independently of
+whether Refute constructs a HOL certificate.  Thus a Kodkodi result may be
+`Genuine` with `cert = NONE`; `cert = SOME thm` additionally records a HOL
+theorem certifying the counterexample.
+
+### See also
+
+[`Refute.config`](#Refute.config),
+[`Refute.refute`](#Refute.refute),
+[`Refute.quickcheck`](#Refute.quickcheck),
+[`Refute.register_codatatype`](#Refute.register_codatatype),
+[`Refute.register_quotient`](#Refute.register_quotient),
+[`Refute.register_typedef`](#Refute.register_typedef)
+
+The complete library guide is \ref{Description:the-holrefute-library}.
