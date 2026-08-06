@@ -61,24 +61,28 @@ QED
 Theorem COMBINE1:
     ((x1 = x2) ==> (t1 = t2)) /\ ((y1 = y2) ==> (u1 = u2)) ==>
     (((x1,y1) = (x2,y2)) ==> ((t1,u1) = (t2,u2)))
-Prooffs []
+Proof
+  fs []
 QED
 
 Theorem COMBINE2:
     ((x1 = x2) ==> (t1 = t2)) /\ ((u1 = u2)) ==>
     (((x1) = (x2)) ==> ((t1,u1) = (t2,u2)))
-Prooffs []
+Proof
+  fs []
 QED
 
 Theorem COMBINE3:
     ((t1 = t2)) /\ ((y1 = y2) ==> (u1 = u2)) ==>
     (((y1) = (y2)) ==> ((t1,u1) = (t2,u2)))
-Prooffs []
+Proof
+  fs []
 QED
 
 Theorem COMBINE4:
     (t1 = t2) /\ (u1 = u2) ==> ((t1,u1) = (t2,u2))
-Prooffs []
+Proof
+  fs []
 QED
 
 Definition DO_NOTHING_def:   DO_NOTHING x = x

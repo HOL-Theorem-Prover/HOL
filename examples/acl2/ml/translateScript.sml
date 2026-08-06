@@ -429,7 +429,8 @@ QED
 
 Theorem NOT_REWRITE:
       (|= not a) = ~|= a
-ProofRW_TAC std_ss [not_def,TRUTH_REWRITES,ite_def]
+Proof
+  RW_TAC std_ss [not_def,TRUTH_REWRITES,ite_def]
 QED
 
 (*****************************************************************************)
@@ -1315,7 +1316,8 @@ Proof
 QED
 
 Theorem RAT_EQUAL:  !a b. bool (a = b) = equal (rat a) (rat b)
-ProofRW_TAC std_ss [bool_def,equal_def,rat_def,RAT_LES_REF]
+Proof
+  RW_TAC std_ss [bool_def,equal_def,rat_def,RAT_LES_REF]
 QED
 
 (*****************************************************************************)
@@ -1323,7 +1325,8 @@ QED
 (*****************************************************************************)
 
 Theorem ACL2_NUMBERP_COM:  !a. |= acl2_numberp (num a)
-ProofRW_TAC std_ss [acl2_numberp_def,TRUTH_REWRITES]
+Proof
+  RW_TAC std_ss [acl2_numberp_def,TRUTH_REWRITES]
 QED
 
 Theorem ACL2_NUMBERP_ADD:  !a b. |= acl2_numberp (add a b)
@@ -1347,15 +1350,18 @@ Proof
 QED
 
 Theorem COM_ADD:  !a b. num (a + b) = add (num a) (num b)
-ProofRW_TAC std_ss [add_def]
+Proof
+  RW_TAC std_ss [add_def]
 QED
 
 Theorem COM_MULT:  !a b. num (a * b) = mult (num a) (num b)
-ProofRW_TAC std_ss [mult_def]
+Proof
+  RW_TAC std_ss [mult_def]
 QED
 
 Theorem COM_UNARY_MINUS:  !a. num (~a) = unary_minus (num a)
-ProofRW_TAC std_ss [unary_minus_def,COMPLEX_NEG_def]
+Proof
+  RW_TAC std_ss [unary_minus_def,COMPLEX_NEG_def]
 QED
 
 Theorem COM_SUB:  num (a - b) = add (num a) (unary_minus (num b))
@@ -1387,7 +1393,8 @@ Proof
 QED
 
 Theorem INT_IFIX:  ifix (int a) = int a
-ProofRW_TAC std_ss [ifix_def,ite_def,TRUTH_REWRITES,INTEGERP_INT]
+Proof
+  RW_TAC std_ss [ifix_def,ite_def,TRUTH_REWRITES,INTEGERP_INT]
 QED
 
 (*****************************************************************************)
@@ -1527,7 +1534,8 @@ Proof
 QED
 
 Theorem RAT_LT:  !a b. bool (a < b) = less (rat a) (rat b)
-ProofRW_TAC std_ss [bool_def,less_def,rat_def,RAT_LES_REF]
+Proof
+  RW_TAC std_ss [bool_def,less_def,rat_def,RAT_LES_REF]
 QED
 
 Theorem COM_LT:  bool (a < b) = less (num a) (num b)
@@ -1542,30 +1550,37 @@ Proof
 QED
 
 Theorem NAT_LE:  bool (a <= b) = not (less (nat b) (nat a))
-ProofRW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM NAT_LT,NOT_LESS]
+Proof
+  RW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM NAT_LT,NOT_LESS]
 QED
 
 Theorem INT_LE:  bool (a <= b) = not (less (int b) (int a))
-ProofRW_TAC int_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM INT_LT,INT_NOT_LT]
+Proof
+  RW_TAC int_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM INT_LT,INT_NOT_LT]
 QED
 
 Theorem RAT_LE:  bool (a <= b) = not (less (rat b) (rat a))
-ProofRW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM RAT_LT,RAT_LEQ_LES]
+Proof
+  RW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM RAT_LT,RAT_LEQ_LES]
 QED
 
 Theorem COM_LE:  bool (a <= b) = not (less (num b) (num a))
-ProofRW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM COM_LT,COM_NOT_LT]
+Proof
+  RW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM COM_LT,COM_NOT_LT]
 QED
 
 
 Theorem NAT_GE:  bool (a >= b) = bool (b <= a:num)
-ProofAP_TERM_TAC THEN DECIDE_TAC
+Proof
+  AP_TERM_TAC THEN DECIDE_TAC
 QED
 Theorem INT_GE:  bool (a >= b) = bool (b <= a:int)
-ProofAP_TERM_TAC THEN ARITH_TAC
+Proof
+  AP_TERM_TAC THEN ARITH_TAC
 QED
 Theorem RAT_GE:  bool (a >= b) = bool (b <= a:rat)
-ProofREWRITE_TAC [rat_geq_def]
+Proof
+  REWRITE_TAC [rat_geq_def]
 QED
 Theorem COM_GE:  bool (a >= b) = bool (b <= a:complex_rational)
 Proof
@@ -1575,13 +1590,16 @@ Proof
 QED
 
 Theorem NAT_GT:  bool (a > b) = bool (b < a:num)
-ProofAP_TERM_TAC THEN DECIDE_TAC
+Proof
+  AP_TERM_TAC THEN DECIDE_TAC
 QED
 Theorem INT_GT:  bool (a > b) = bool (b < a:int)
-ProofAP_TERM_TAC THEN ARITH_TAC
+Proof
+  AP_TERM_TAC THEN ARITH_TAC
 QED
 Theorem RAT_GT:  bool (a > b) = bool (b < a:rat)
-ProofREWRITE_TAC [rat_gre_def]
+Proof
+  REWRITE_TAC [rat_gre_def]
 QED
 Theorem COM_GT:  bool (a > b) = bool (b < a:complex_rational)
 Proof

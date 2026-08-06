@@ -127,7 +127,8 @@ val k2mw_mw2n = prove(
 
 Theorem LENGTH_k2mw:
     !k n. LENGTH (k2mw k n) = k
-ProofInduct \\ ASM_REWRITE_TAC [k2mw_def,LENGTH]
+Proof
+  Induct \\ ASM_REWRITE_TAC [k2mw_def,LENGTH]
 QED
 
 val k2mw_mod = prove(

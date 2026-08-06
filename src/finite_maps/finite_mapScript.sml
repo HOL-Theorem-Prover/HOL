@@ -2845,7 +2845,8 @@ QED
 
 Theorem fmap_EQ_UPTO___EQ[simp]:
   !vs f. (fmap_EQ_UPTO f f vs)
-ProofSIMP_TAC std_ss [fmap_EQ_UPTO_def]
+Proof
+  SIMP_TAC std_ss [fmap_EQ_UPTO_def]
 QED
 
 Theorem fmap_EQ_UPTO___FUPDATE_BOTH:
@@ -3556,6 +3557,18 @@ Theorem FDIFF_FMAP_MAP2:
 Proof
   rw[fmap_eq_flookup, FLOOKUP_FDIFF, FLOOKUP_FMAP_MAP2] >> rw[]
 QED
+
+(* ----------------------------------------------------------------------
+    FMINUS : ('a |-> 'b) -> ('a |-> 'c) -> ('a |-> 'b)
+
+    a variation on FDIFF where the set of keys to be removed from the
+    first argument is the domain (i.e., FDOM) of the second argument.
+  ---------------------------------------------------------------------- *)
+
+Definition FMINUS_def:
+  FMINUS fm1 fm2 = FDIFF fm1 (FDOM fm2)
+End
+
 
 Theorem FMERGE_WITH_KEY_FUNION_ALT:
   FMERGE_WITH_KEY f (FUNION m1 m2) m3 =

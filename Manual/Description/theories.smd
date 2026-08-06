@@ -4696,6 +4696,12 @@ alternate recursive presentation.
    ##thm FDIFF_FUPDATE
 ```
 
+There is one last, even more specialised, instance of `DRESTRICT` called `FMINUS`:
+
+```repl
+   ##thm FMINUS_def
+```
+
 **Union and sub-maps.**
 Unlike set union, the union of two finite maps (`FUNION`) is not
 symmetric: the domain of the first map takes precedence.  The

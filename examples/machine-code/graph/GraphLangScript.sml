@@ -2243,11 +2243,13 @@ Proof
 QED
 
 Theorem T_IMP:  (T ==> b) ==> b
-ProofSIMP_TAC std_ss []
+Proof
+  SIMP_TAC std_ss []
 QED
 
 Theorem EQ_T:  (x = T) ==> x
-ProofSIMP_TAC std_ss []
+Proof
+  SIMP_TAC std_ss []
 QED
 
 Theorem ret_lemma:
