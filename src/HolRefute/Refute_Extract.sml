@@ -3916,8 +3916,12 @@ structure Refute_Extract = struct
   (* Compile the first-order bridge between generic narrowing terms and the
      lazy extracted property.  Shapes and search live in Refute_Narrow; only
      these heterogeneously typed conversion functions must be generated. *)
-  fun extract_narrowing (config : Refute_Core.config) prefix body =
+  fun extract_narrowing_window (config : Refute_Core.config) {first, last}
+        prefix body =
     let
+      val _ =
+        if first >= 0 andalso last >= first then ()
+        else reject "invalid narrowing depth window"
       val context = new_context Lazy
       val constructor_terms =
         {list = ref ([] : term list), count = ref 0,
@@ -3990,7 +3994,6 @@ structure Refute_Extract = struct
       val types = close_types (map (Term.type_of o #2) prefix) []
       val _ = List.app (fn ty => ignore (ensure_type context ty)) types
       val _ = ignore (ensure_type context Type.bool)
-      val maximum_depth = Int.max (0, #size (#qc config))
       val shape_memo = Refute_Narrow.new_shape_memo ()
 
       fun checked_shape depth ty =
@@ -4002,19 +4005,42 @@ structure Refute_Extract = struct
          contain only local IDs and product structure.  The exact alternatives
          stay in these meta-level rows and generate an immutable compile-local
          reconstruction case; no custom enumerator is called at run time. *)
-      val shape_rows = List.tabulate (maximum_depth + 1, fn depth =>
-        map (checked_shape depth) types)
+      val shape_rows = List.tabulate (last - first + 1, fn index =>
+        map (checked_shape (first + index)) types)
 
       fun type_index ty = Lib.index (Util.same_type ty) types
       fun shapes_of ty = map (fn row =>
         List.nth (row, type_index ty)) shape_rows
+      fun argument_types ty id =
+        case Refute_Gen.spec_of ty of
+            Refute_Gen.GenDatatype {constrs, ...} =>
+              #2 (List.nth (constrs, id))
+          | _ => []
+      fun exact_entries_in target_ty ty
+            (shape as Refute_Narrow.Narrowing_sum_of_products
+              {depth, alternatives, ...}) =
+        let
+          fun one alternative =
+            (if Util.same_type target_ty ty then
+               case #exact alternative of
+                   SOME value => [((depth, #id alternative), value)]
+                 | NONE => []
+             else []) @
+            List.concat (ListPair.mapEq (fn (arg_ty, argument) =>
+              exact_entries_in target_ty arg_ty argument)
+              (argument_types ty (#id alternative), #arguments alternative))
+        in
+          List.concat (map one alternatives)
+        end
       fun exact_entries_of ty =
-        List.concat (map (fn (depth, shape) =>
-          List.mapPartial (fn alternative =>
-            Option.map (fn value =>
-              ((depth, #id alternative), value)) (#exact alternative))
-            (Refute_Narrow.products_of shape))
-          (Lib.enumerate 0 (shapes_of ty)))
+        List.rev (List.foldl (fn (entry as ((depth, id), _), result) =>
+          if List.exists (fn ((other_depth, other_id), _) =>
+               depth = other_depth andalso id = other_id) result then result
+          else entry :: result) []
+          (List.concat (map (fn row =>
+            List.concat (ListPair.mapEq (fn (row_ty, shape) =>
+              exact_entries_in ty row_ty shape) (types, row)))
+            shape_rows)))
       fun conv_name ty = "narrow_conv_" ^ integer (type_index ty)
       fun recon_name ty = "narrow_recon_" ^ integer (type_index ty)
       fun replay_recon_name ty =
@@ -4158,14 +4184,9 @@ structure Refute_Extract = struct
             if row_depth < 0 then
               raise Fail "negative narrowing shape depth"
             else ()
-          fun argument_types id =
-            case Refute_Gen.spec_of ty of
-                Refute_Gen.GenDatatype {constrs, ...} =>
-                  #2 (List.nth (constrs, id))
-              | _ => []
           fun alternative_source {id, arguments, ...} =
             let
-              val argument_types = argument_types id
+              val argument_types = argument_types ty id
               val _ =
                 if length argument_types = length arguments then ()
                 else raise Fail "narrowing shape argument mismatch"
@@ -4191,19 +4212,43 @@ structure Refute_Extract = struct
       fun shape_binding depth (ty, shape) =
         "val " ^ shape_name depth ty ^ " =\n  " ^
         shape_source depth ty shape ^ "\n"
+      fun add_shape ty
+            (shape as Refute_Narrow.Narrowing_sum_of_products
+              {depth, alternatives, ...}) result =
+        if List.exists (fn (other_depth, other_ty, _) =>
+             depth = other_depth andalso Util.same_type ty other_ty)
+             result then result
+        else
+          let
+            fun add_alternative (alternative, result) =
+              ListPair.foldlEq (fn (arg_ty, argument, accumulated) =>
+                add_shape arg_ty argument accumulated) result
+                (argument_types ty (#id alternative),
+                 #arguments alternative)
+          in
+            List.foldl add_alternative ((depth, ty, shape) :: result)
+              alternatives
+          end
+      val distinct_shapes = List.foldl (fn (row, result) =>
+        ListPair.foldlEq (fn (ty, shape, accumulated) =>
+          add_shape ty shape accumulated) result (types, row)) [] shape_rows
+      fun shape_entry_compare ((left, _, _), (right, _, _)) =
+        Int.compare (left, right)
       val shape_bindings =
-        join "" (List.concat (map (fn (depth, row) =>
-          map (shape_binding depth) (ListPair.zip (types, row)))
-          (Lib.enumerate 0 shape_rows)))
+        join "" (map (fn (depth, ty, shape) =>
+          shape_binding depth (ty, shape))
+          (Listsort.sort shape_entry_compare distinct_shapes))
       fun shape_row_source depth =
         "Vector.fromList " ^ term_list (map (shape_name depth) types)
       val shape_declaration =
         shape_bindings ^
         "val narrow_shape_rows = Vector.fromList " ^
         term_list (map shape_row_source
-          (List.tabulate (maximum_depth + 1, Lib.I))) ^ "\n" ^
+          (List.tabulate (last - first + 1, fn index => first + index))) ^
+        "\n" ^
         "fun narrow_shape depth type_index =\n" ^
-        "  Vector.sub (Vector.sub (narrow_shape_rows, depth), " ^
+        "  Vector.sub (Vector.sub (narrow_shape_rows, depth - " ^
+        integer first ^ "), " ^
         "type_index)\n"
       val conversions = join "\n"
         (map conversion_declaration (Lib.enumerate 0 types)) ^ "\n"
@@ -4430,6 +4475,23 @@ structure Refute_Extract = struct
             | (_, Exn.Exn Interrupt) => raise Interrupt
             | _ => Exn.reraise error
         end
+    end
+
+  val active_narrowing_window :
+    {first : int, last : int} Thread_Data.var = Thread_Data.var ()
+
+  fun with_narrowing_window window f argument =
+    Thread_Data.setmp active_narrowing_window (SOME window) f argument
+
+  fun extract_narrowing config prefix body =
+    let
+      val window =
+        case Thread_Data.get active_narrowing_window of
+            SOME selected => selected
+          | NONE =>
+              {first = 0, last = Int.max (0, #size (#qc config))}
+    in
+      extract_narrowing_window config window prefix body
     end
 
   (* Plan extraction is the substrate compile itself.  Preflight contributes

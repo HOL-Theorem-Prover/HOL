@@ -10,6 +10,7 @@ structure Refute :> Refute = struct
   datatype outcome = datatype Refute_Core.outcome
   datatype expectation = datatype Refute_Core.expectation
   datatype substrate_choice = datatype Refute_Core.substrate_choice
+  datatype bound_mode = datatype Refute_Core.bound_mode
   datatype requirement = datatype Refute_Core.requirement
   datatype goal_form = datatype Refute_Core.goal_form
   type qc_config = Refute_Core.qc_config
@@ -93,23 +94,16 @@ structure Refute :> Refute = struct
         |> Refute_Core.upd_seed (SOME try_seed)
         |> Refute_Core.upd_expect Refute_Core.NoExpectation
         |> Refute_Core.upd_quiet true
-      val budget =
-        if #timeout try_config <= 0.0 then Time.zeroTime
-        else Time.fromReal (#timeout try_config)
       fun run () = Refute_Core.refute_problem try_config
         {goal = goal, assumptions = assumptions, evals = []}
-      (* This outer limit is deliberately a whole-call budget.  Threading a
-         shared deadline into each backend, as Nitpick does, is a possible
-         future refinement that would let backends spend the remainder. *)
-      val result = Timeout.apply budget run ()
+      val result = run ()
     in
       case result of
           outcome as Refute_Core.Counterexample (cex :: _) =>
             SOME (#backend cex, outcome)
         | _ => NONE
     end
-    handle Timeout.TIMEOUT _ => NONE
-         | Time => NONE
+    handle Time => NONE
 
   fun qc_only config = upd_search QuickcheckBackends config
 
@@ -204,6 +198,7 @@ structure Refute :> Refute = struct
   val upd_tag = Refute_Core.upd_tag
   val upd_qc = Refute_Core.upd_qc
   val upd_size = Refute_Core.upd_size
+  val upd_iterative_size = Refute_Core.upd_iterative_size
   val upd_iterations = Refute_Core.upd_iterations
   val upd_depth = Refute_Core.upd_depth
   val upd_finite_types = Refute_Core.upd_finite_types
@@ -223,6 +218,7 @@ structure Refute :> Refute = struct
   val upd_reorder_premises = Refute_Core.upd_reorder_premises
   val upd_mf = Refute_Core.upd_mf
   val upd_card = Refute_Core.upd_card
+  val upd_iterative_card = Refute_Core.upd_iterative_card
   val upd_max = Refute_Core.upd_max
   val upd_mono = Refute_Core.upd_mono
   val upd_wf = Refute_Core.upd_wf

@@ -59,6 +59,15 @@ repository.
   process-global value.  `upd_sequential true` is the complete serial opt-out;
   backend-internal parallelism remains enabled, so oversubscription is an
   intentional possibility.
+- One Refute call owns one absolute search deadline.  The default is 10
+  seconds, and preprocessing, admission, every backend, native compilation,
+  and Kodkodi all consume the same remainder.  Cleanup is mandatory and may
+  finish after that deadline; timing itself is never a test verdict.
+- Default QC size and MF card bounds are iterative with initial window 10.
+  `upd_size` and `upd_card` always select `FixedBound`; only
+  `upd_iterative_size` and `upd_iterative_card` restore adaptive mode.  Do not
+  turn the 5000-scope materialization batch into a total search limit, and do
+  not report adaptive timeout as finite exhaustion.
 - Determinism: one 64-bit PRNG (`rand_next`/`rand_out`/`rand_below`,
   defined in refuteTheory, mirrored in SML in `Refute_Eval`,
   cv-translated in `refute_cvScript.sml`).  All substrates must yield the

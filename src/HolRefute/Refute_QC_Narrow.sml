@@ -29,7 +29,8 @@ structure Refute_QC_Narrow = struct
   (* A narrowing problem is one PNF formula rather than a list of plans.
      Compile each monomorphic/cardinality instance independently and
      multiplex the resulting native tests behind the depth scheduler. *)
-  fun compile_instances config instances =
+  fun compile_instances_window config window instances =
+    Refute_Extract.with_narrowing_window window (fn instances =>
     let
       fun compile_one instance =
         case Refute_Narrow.select_for_config config
@@ -98,141 +99,175 @@ structure Refute_QC_Narrow = struct
                | Exn.Exn error => preserve_error error selected)
     in
       loop instances []
-    end
+    end) instances
 
-  fun run (config : Refute_Core.config)
+  fun compile_instances config instances =
+    compile_instances_window config
+      {first = 0, last = Int.max (0, #size (#qc config))} instances
+
+  fun run_body (config : Refute_Core.config)
       (instances : Refute_Core.instance list) =
     let
-      val (selection, prefixes) = compile_instances config instances
-      fun prefix_for card =
-        case List.find (fn (other, _) => other = card) prefixes of
-            SOME (_, prefix) => prefix
-          | NONE => raise Fail "narrowing instance lost its PNF prefix"
-    in
-      case selection of
-          QC.SelectionFailed reasons => Refute_Core.Unknown reasons
-        | QC.Selected (substrate, compiled) =>
-            let
-              fun selected_body () =
-                let
-                  val entries = schedule instances (#size (#qc config))
-                  val counterexamples = ref []
-                  val replay_potential = ref NONE
-                  val discarded = ref 0
-                  val gave_up = ref []
-                  (* A plain potential switches this card to the next
-                     scheduled depth.  Certification discards alone retry
-                     within the depth that produced them. *)
-                  val states : (bool * candidate list) ref list =
-                    map (fn _ =>
-                      ref (#genuine_only config, [])) instances
-                  fun instance_for card =
-                    List.nth (instances, card - 1)
-                  fun state_for card = List.nth (states, card - 1)
-                  fun stats_for size card msec =
-                    !(#last_stats compiled) @
-                    (if !discarded = 0 then []
-                     else [("discarded", !discarded)]) @
-                    [("size", size), ("card", card), ("msec", msec)]
-                  fun one (card, size) genuine_only ignored budget =
-                    let
-                      val start = Time.now ()
-                      val result = #run compiled
-                        {genuine_only = genuine_only, card = card,
-                         size = size, draws = 0, ignored = ignored}
-                      val msec = QC.elapsed_msec start
-                    in
-                      case result of
-                          Exhausted _ => ()
-                        | GaveUp reason =>
-                            QC.add_reason reason gave_up
-                        | CexFound
-                            {env, ground_env, case_tree, genuine, ...} =>
-                            QC.record_candidate
-                              {config = config, strategy = Narrowing,
-                               substrate = substrate,
-                               instance = instance_for card,
-                               stats = stats_for size card msec,
-                               counterexamples = counterexamples,
-                               discarded = discarded,
-                               run_depth = SOME size,
-                               pnf_prefix = SOME (prefix_for card),
-                               retain_replay_potential = fn potential =>
-                                 replay_potential := SOME potential,
-                               retry = fn go => fn ig =>
-                                 spend (card, size) go ig budget,
-                               retry_potential = fn go => fn ig =>
-                                 (* There is no later entry at the final
-                                    depth on which saved retry state could
-                                    run.  Retry its remaining candidates now. *)
-                                 (if size >= Int.max (0, (#size (#qc config)))
-                                  then spend (card, size) go ig budget
-                                  else state_for card := (go, ig)) }
-                              {env = env, ground_env = ground_env,
-                               case_tree = case_tree, genuine = genuine,
-                               genuine_only = genuine_only,
-                               ignored = ignored}
-                    end
-                  (* Rejecting a candidate resumes the same schedule entry
-                     with a longer ignore list.  A substrate whose next answer
-                     the longer list still fails to suppress would retry for
-                     ever, and no scheduled depth ends that by itself once the
-                     quantified domain is infinite.  So charge every retry at
-                     one entry to a single budget, as the random driver
-                     charges its certification retries to the iteration
-                     count. *)
-                  and spend entry genuine_only ignored budget =
-                    if !budget <= 0 then
-                      QC.add_reason "narrowing retry budget exhausted" gave_up
-                    else
-                      (budget := !budget - 1;
-                       one entry genuine_only ignored budget)
-                  fun run_entry (entry as (card, size)) =
-                    let
-                      val started = Time.now ()
-                      val (genuine_only, ignored) = !(state_for card)
-                      val budget = ref
-                        (QC.bounded_size (#iterations (#qc config)))
-                      val _ = one entry genuine_only ignored budget
-                      val elapsed = QC.elapsed_msec started
-                      val _ = Refute_Core.Private.say 2
-                        ("Refute schedule entry (backend: narrowing" ^
-                         ", substrate: " ^ substrate ^ ", card " ^
-                         Int.toString card ^ ", size " ^
-                         Int.toString size ^ "): " ^
-                         Int.toString elapsed ^ "ms\n")
-                    in
-                      ()
-                    end
-                  fun search [] = ()
-                    | search (entry :: rest) =
-                        if length (!counterexamples) >=
-                          Int.max (1, #max_counterexamples config)
-                        then ()
-                        else (run_entry entry; search rest)
-                  val _ = search entries
-                in
-                  if not (null (!counterexamples)) then
-                    Refute_Core.Counterexample (rev (!counterexamples))
+      val qc = #qc config
+      val counterexamples = ref []
+      val replay_potential = ref NONE
+      val discarded = ref 0
+      val gave_up = ref []
+      val failed = ref false
+      val frontier = ref (NONE : int option)
+      (* Certification retry state outlives each compiled depth window. *)
+      val states : (bool * candidate list) ref list =
+        map (fn _ => ref (#genuine_only config, [])) instances
+      fun target_reached () =
+        length (!counterexamples) >=
+          Int.max (1, #max_counterexamples config)
+      fun instance_for card = List.nth (instances, card - 1)
+      fun state_for card = List.nth (states, card - 1)
+
+      fun run_window window entries terminal =
+        if Refute_Core.search_expired config orelse target_reached () then ()
+        else
+          let
+            val (selection, prefixes) =
+              compile_instances_window config window instances
+            fun prefix_for card =
+              case List.find (fn (other, _) => other = card) prefixes of
+                  SOME (_, prefix) => prefix
+                | NONE =>
+                    raise Fail "narrowing instance lost its PNF prefix"
+          in
+            case selection of
+                QC.SelectionFailed reasons =>
+                  (failed := true; List.app (fn reason =>
+                     QC.add_reason reason gave_up) reasons)
+              | QC.Selected (substrate, compiled) =>
+                  let
+                    fun stats_for size card msec =
+                      !(#last_stats compiled) @
+                      (if !discarded = 0 then []
+                       else [("discarded", !discarded)]) @
+                      [("size", size), ("card", card), ("msec", msec)]
+                    fun one (card, size) genuine_only ignored budget =
+                      let
+                        val start = Time.now ()
+                        val result = #run compiled
+                          {genuine_only = genuine_only, card = card,
+                           size = size, draws = 0, ignored = ignored}
+                        val msec = QC.elapsed_msec start
+                      in
+                        case result of
+                            Exhausted _ => ()
+                          | GaveUp reason => QC.add_reason reason gave_up
+                          | CexFound
+                              {env, ground_env, case_tree, genuine, ...} =>
+                              let
+                                val _ = QC.record_candidate
+                                {config = config, strategy = Narrowing,
+                                 substrate = substrate,
+                                 instance = instance_for card,
+                                 stats = stats_for size card msec,
+                                 counterexamples = counterexamples,
+                                 discarded = discarded,
+                                 run_depth = SOME size,
+                                 pnf_prefix = SOME (prefix_for card),
+                                 retain_replay_potential = fn potential =>
+                                   (replay_potential := SOME potential;
+                                    Refute_Core.publish_counterexamples
+                                      [potential]),
+                                 retry = fn go => fn ignored =>
+                                   spend (card, size) go ignored budget,
+                                 retry_potential = fn go => fn ignored =>
+                                   if terminal then
+                                     spend (card, size) go ignored budget
+                                   else state_for card := (go, ignored)}
+                                {env = env, ground_env = ground_env,
+                                 case_tree = case_tree, genuine = genuine,
+                                 genuine_only = genuine_only,
+                                 ignored = ignored}
+                                val _ = Refute_Core.publish_counterexamples
+                                  (rev (!counterexamples))
+                              in
+                                ()
+                              end
+                      end
+                    and spend entry genuine_only ignored budget =
+                      if !budget <= 0 then
+                        QC.add_reason "narrowing retry budget exhausted"
+                          gave_up
+                      else
+                        (budget := !budget - 1;
+                         one entry genuine_only ignored budget)
+                    fun run_entry (entry as (card, size)) =
+                      let
+                        val started = Time.now ()
+                        val (genuine_only, ignored) = !(state_for card)
+                        val budget = ref
+                          (QC.bounded_size (#iterations (#qc config)))
+                        val _ = one entry genuine_only ignored budget
+                        val elapsed = QC.elapsed_msec started
+                        val _ = frontier := SOME size
+                        val _ = Refute_Core.Private.say 2
+                          ("Refute schedule entry (backend: narrowing" ^
+                           ", substrate: " ^ substrate ^ ", card " ^
+                           Int.toString card ^ ", size " ^
+                           Int.toString size ^ "): " ^
+                           Int.toString elapsed ^ "ms\n")
+                      in
+                        ()
+                      end
+                    fun search [] = ()
+                      | search (entry :: rest) =
+                          if target_reached () orelse
+                             Refute_Core.search_expired config then ()
+                          else (run_entry entry; search rest)
+                    val body_result = Exn.capture search entries
+                    val close_result = Exn.capture (#close compiled) ()
+                  in
+                    case body_result of
+                        Exn.Exn error => raise error
+                      | Exn.Res () => Exn.release close_result
+                  end
+          end
+
+      val initial = Int.max (0, #size qc)
+      val _ =
+        case #size_mode qc of
+            Refute_Core.FixedBound =>
+              run_window {first = 0, last = initial}
+                (schedule instances initial) true
+          | Refute_Core.IterativeDeepening =>
+              let
+                fun entries_at depth =
+                  map (fn instance => (#card instance, depth)) instances
+                fun deepen depth =
+                  if !failed orelse target_reached () orelse
+                     Refute_Core.search_expired config then ()
                   else
-                    case !replay_potential of
-                        SOME potential =>
-                          Refute_Core.Counterexample [potential]
-                      | NONE =>
-                          Refute_Core.Unknown
-                            ("narrowing search exhausted" :: !gave_up)
-                end
-              val body_result = Exn.capture selected_body ()
-              val close_result = Exn.capture (#close compiled) ()
-            in
-              (* Cleanup still runs after every search result, but must not
-                 replace the backend failure (especially an interrupt or
-                 timeout) that caused the cleanup. *)
-              case body_result of
-                  Exn.Exn error => raise error
-                | Exn.Res value => (Exn.release close_result; value)
-            end
+                    (run_window {first = depth, last = depth}
+                       (entries_at depth) false;
+                     deepen (depth + 1))
+                val _ = run_window {first = 0, last = initial}
+                  (schedule instances initial) false
+              in
+                deepen (initial + 1)
+              end
+      val frontier_reason =
+        case !frontier of
+            NONE => []
+          | SOME depth =>
+              ["largest completed narrowing depth: " ^ Int.toString depth]
+    in
+      if not (null (!counterexamples)) then
+        Refute_Core.Counterexample (rev (!counterexamples))
+      else
+        case !replay_potential of
+            SOME potential => Refute_Core.Counterexample [potential]
+          | NONE => Refute_Core.Unknown
+              ("narrowing search exhausted" :: !gave_up @ frontier_reason)
     end
+
+  fun run config instances =
+    Refute_Core.with_search_context config (run_body config) instances
 
   val backend : Refute_Core.backend =
     {name = "narrowing",

@@ -408,6 +408,117 @@ structure Refute_ModelFinder_Scope = struct
             Empty initial) []
     end
 
+  datatype frontier_heap =
+      FrontierEmpty
+    | FrontierNode of int * int list * frontier_heap * frontier_heap
+
+  type combination_cursor =
+    {ranks : int option list,
+     heap : frontier_heap ref,
+     visited : (int list, unit) Redblackmap.dict ref}
+
+  fun frontier_lex_before [] [] = false
+    | frontier_lex_before (left :: lefts) (right :: rights) =
+        left < right orelse
+        (left = right andalso frontier_lex_before lefts rights)
+    | frontier_lex_before _ _ = raise Util.BAD
+        ("Refute_ModelFinder_Scope.frontier_lex_before",
+         "unequal lengths")
+
+  fun int_list_compare ([], []) = EQUAL
+    | int_list_compare (left :: lefts, right :: rights) =
+        (case Int.compare (left, right) of
+             EQUAL => int_list_compare (lefts, rights)
+           | order => order)
+    | int_list_compare _ = raise Util.BAD
+        ("Refute_ModelFinder_Scope.int_list_compare", "unequal lengths")
+
+  fun frontier_before left right =
+    combination_cost left < combination_cost right orelse
+    (combination_cost left = combination_cost right andalso
+     frontier_lex_before left right)
+
+  fun frontier_rank FrontierEmpty = 0
+    | frontier_rank (FrontierNode (rank, _, _, _)) = rank
+
+  fun frontier_make value left right =
+    if frontier_rank left < frontier_rank right then
+      FrontierNode (frontier_rank left + 1, value, right, left)
+    else
+      FrontierNode (frontier_rank right + 1, value, left, right)
+
+  fun frontier_merge FrontierEmpty right = right
+    | frontier_merge left FrontierEmpty = left
+    | frontier_merge
+        (left as FrontierNode (_, left_value, left_left, left_right))
+        (right as FrontierNode (_, right_value, right_left, right_right)) =
+        if frontier_before left_value right_value then
+          frontier_make left_value left_left
+            (frontier_merge left_right right)
+        else
+          frontier_make right_value right_left
+            (frontier_merge left right_right)
+
+  fun frontier_insert value heap =
+    frontier_merge (FrontierNode (1, value, FrontierEmpty, FrontierEmpty))
+      heap
+
+  fun coordinate_valid NONE _ = true
+    | coordinate_valid (SOME rank) coordinate = coordinate < rank
+
+  fun new_combination_cursor ranks =
+    let
+      fun valid combination =
+        ListPair.allEq (fn (rank, coordinate) =>
+          coordinate_valid rank coordinate) (ranks, combination)
+      val synchronized = List.mapPartial (fn coordinate =>
+        let val candidate = map (fn _ => coordinate) ranks
+        in if valid candidate then SOME candidate else NONE end)
+        (Util.index_seq 0 sync_threshold)
+      val baseline = map (fn _ => 0) ranks
+      val seeds = Lib.mk_set
+        (if List.exists (fn candidate => candidate = baseline) synchronized
+         then synchronized else baseline :: synchronized)
+      val viable = not (List.exists (fn SOME rank => rank <= 0
+                                      | NONE => false) ranks)
+    in
+      {ranks = ranks,
+       heap = ref (if viable then
+           List.foldl (fn (value, heap) => frontier_insert value heap)
+             FrontierEmpty seeds
+         else FrontierEmpty),
+       visited = ref (List.foldl (fn (seed, table) =>
+         Redblackmap.insert (table, seed, ()))
+         (Redblackmap.mkDict int_list_compare)
+         (if viable then seeds else []))}
+    end
+
+  fun combination_cursor_next
+        (cursor : combination_cursor) =
+    case !(#heap cursor) of
+        FrontierEmpty => NONE
+      | FrontierNode (_, combination, left, right) =>
+          let
+            val _ = #heap cursor := frontier_merge left right
+            fun add_child (index, coordinate) =
+              let
+                val next = List.take (combination, index) @
+                  (coordinate + 1 :: List.drop (combination, index + 1))
+                val rank = List.nth (#ranks cursor, index)
+              in
+                if coordinate_valid rank (coordinate + 1) andalso
+                   not (Option.isSome
+                     (Redblackmap.peek (!(#visited cursor), next))) then
+                  (#visited cursor := Redblackmap.insert
+                     (!(#visited cursor), next, ());
+                   #heap cursor := frontier_insert next (!(#heap cursor)))
+                else ()
+              end
+            val _ = List.app add_child (Lib.enumerate 0 combination)
+          in
+            SOME combination
+          end
+
   fun number_of_combinations ranks =
     List.foldl (fn ((rank, _), total) =>
       total * IntInf.fromInt (Int.max (0, rank))) (1 : IntInf.int) ranks
@@ -758,11 +869,145 @@ structure Refute_ModelFinder_Scope = struct
     same_card_assigns (left_cards, right_cards) andalso
     same_max_assigns (left_maxes, right_maxes)
 
+  fun list_compare compare ([], []) = EQUAL
+    | list_compare compare (left :: lefts, right :: rights) =
+        (case compare (left, right) of
+             EQUAL => list_compare compare (lefts, rights)
+           | order => order)
+    | list_compare _ _ = raise Util.BAD
+        ("Refute_ModelFinder_Scope.list_compare", "unequal lengths")
+
+  fun card_assignment_compare ((left_ty, left), (right_ty, right)) =
+    case Type.compare (left_ty, right_ty) of
+        EQUAL => Int.compare (left, right)
+      | order => order
+
+  fun max_assignment_compare ((left_tm, left), (right_tm, right)) =
+    case Term.compare (left_tm, right_tm) of
+        EQUAL => Int.compare (left, right)
+      | order => order
+
+  fun description_compare ((left_cards, left_maxes),
+        (right_cards, right_maxes)) =
+    case list_compare card_assignment_compare (left_cards, right_cards) of
+        EQUAL => list_compare max_assignment_compare
+          (left_maxes, right_maxes)
+      | order => order
+
   fun distinct_descriptions values =
     List.rev (List.foldl (fn (value, result) =>
       if List.exists (fn other =>
            same_description (other, value)) result then result
       else value :: result) [] values)
+
+  fun adaptive_card_type context ty =
+    not (MFH.is_iterator_type ty) andalso not (MFH.is_bit_type ty) andalso
+    (Type.is_vartype ty orelse not (MFH.is_finite_type context ty))
+
+  fun adaptive_row context (Card ty, _) = adaptive_card_type context ty
+    | adaptive_row _ (Max _, _) = false
+
+  fun project_adaptive_row _ false column row = project_row column row
+    | project_adaptive_row context true column
+        (row as (kind, candidates)) =
+        if adaptive_row context row then (kind, [column + 1])
+        else project_row column (kind, candidates)
+
+  fun project_adaptive_block context iterative (column, block) =
+    map (project_adaptive_row context iterative column) block
+
+  type scope_cursor =
+    {context : context,
+     binarize : bool,
+     blocks : block list,
+     iterative : bool,
+     combinations : combination_cursor,
+     deep_data_types : hol_type list,
+     finitizable_data_types : hol_type list,
+     emitted : (scope_desc, unit) Redblackmap.dict ref,
+     skipped : int ref,
+     emitted_count : int ref}
+
+  fun new_scope_cursor context binarize iterative cards_assigns maxes_assigns
+        iters_assigns bitss bisim_depths mono_types nonmono_types
+        deep_data_types finitizable_data_types =
+    let
+      val cards_assigns = repair_cards_assigns_wrt_boxing_etc
+        (mono_types @ nonmono_types) cards_assigns
+      val blocks = blocks_for_types context binarize cards_assigns
+        maxes_assigns iters_assigns bitss bisim_depths mono_types
+        nonmono_types
+      fun block_rank block =
+        if iterative andalso List.exists (adaptive_row context) block then NONE
+        else SOME (rank_of_block block)
+    in
+      {context = context, binarize = binarize, blocks = blocks,
+       iterative = iterative,
+       combinations = new_combination_cursor (map block_rank blocks),
+       deep_data_types = deep_data_types,
+       finitizable_data_types = finitizable_data_types,
+       emitted = ref (Redblackmap.mkDict description_compare),
+       skipped = ref 0, emitted_count = ref 0}
+    end
+
+  fun scope_cursor_batch_with_stop (cursor : scope_cursor) count stop =
+    let
+      val before_skipped = !(#skipped cursor)
+      fun next remaining scopes =
+        if stop () then (rev scopes, false, true)
+        else if remaining <= 0 then (rev scopes, false, false)
+        else
+          case combination_cursor_next (#combinations cursor) of
+              NONE => (rev scopes, true, false)
+            | SOME columns =>
+                let
+                  val rows = List.concat
+                    (ListPair.map
+                      (project_adaptive_block (#context cursor)
+                        (#iterative cursor))
+                      (columns, #blocks cursor))
+                  val descriptor = scope_descriptor_from_block rows
+                  val repaired = Option.map (fn cards =>
+                    (map (repair_iterator_assign (#context cursor) cards)
+                       cards, #2 descriptor))
+                    (repair_card_assigns (#context cursor)
+                      (#binarize cursor) descriptor)
+                in
+                  case repaired of
+                      NONE =>
+                        (#skipped cursor := !(#skipped cursor) + 1;
+                         next remaining scopes)
+                    | SOME description =>
+                        if Option.isSome (Redblackmap.peek
+                             (!(#emitted cursor), description)) then
+                          (#skipped cursor := !(#skipped cursor) + 1;
+                           next remaining scopes)
+                        else
+                          let
+                            val scope = scope_from_descriptor (#context cursor)
+                              (#binarize cursor) (#deep_data_types cursor)
+                              (#finitizable_data_types cursor) description
+                            val _ = #emitted cursor := Redblackmap.insert
+                              (!(#emitted cursor), description, ())
+                            val _ = #emitted_count cursor :=
+                              !(#emitted_count cursor) + 1
+                          in
+                            next (remaining - 1) (scope :: scopes)
+                          end
+                end
+      val (scopes, done, stopped) = next (Int.max (0, count)) []
+    in
+      {scopes = scopes, done = done,
+       stopped = stopped,
+       skipped = !(#skipped cursor) - before_skipped}
+    end
+
+  fun scope_cursor_batch cursor count =
+    scope_cursor_batch_with_stop cursor count (fn () => false)
+
+  fun scope_cursor_skipped (cursor : scope_cursor) = !(#skipped cursor)
+  fun scope_cursor_emitted (cursor : scope_cursor) =
+    !(#emitted_count cursor)
 
   fun all_scopes context binarize cards_assigns maxes_assigns
         iters_assigns bitss bisim_depths mono_types nonmono_types

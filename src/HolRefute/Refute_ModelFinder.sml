@@ -530,6 +530,7 @@ fun run_instance deadline started (config : Refute_Core.config)
       incremental solver (initial_max_potential, initial_max_genuine)
       (instance : Refute_Core.instance) =
   let
+    val _ = check_deadline deadline
     val mf = #mf config
     val sound_finitizes = none_true (#finitize mf)
     val (prepared_original, prepared_evals) =
@@ -549,6 +550,7 @@ fun run_instance deadline started (config : Refute_Core.config)
     val (nondef_ts, def_ts, need_ts, got_all_mono_user_axioms,
          no_poly_user_axioms, binarize) =
       MFP.preprocess_formulas context [] negated
+    val _ = check_deadline deadline
     (* A typedef morphism can enter through an unfolded wrapper even when it
        was absent from the surface goal.  Scan the complete preprocessed
        problem as well as the early surface-goal guard in [run]. *)
@@ -576,8 +578,8 @@ fun run_instance deadline started (config : Refute_Core.config)
       (MFN.is_sel o MFNT.nickname_of) const_names
     val all_types = ground_types context binarize
       (nondef_ts @ def_ts @ need_ts)
-    val unique_scope = List.all (fn (_, values) => length values = 1)
-      (#card mf)
+    val unique_scope = #card_mode mf = Refute_Core.FixedBound andalso
+      List.all (fn (_, values) => length values = 1) (#card mf)
     val calculus_mono_cache = ref ([] : (hol_type * bool) list)
     val _ =
       if #binary_ints mf = SOME true andalso not binarize andalso
@@ -602,6 +604,7 @@ fun run_instance deadline started (config : Refute_Core.config)
           SOME (_, result) => result
         | NONE =>
             let
+              val _ = check_deadline deadline
               val result =
                 (Util.apply_within_budget (#tac_timeout context)
                    (MFMono.formulas_monotonic context binarize ty)
@@ -610,6 +613,7 @@ fun run_instance deadline started (config : Refute_Core.config)
                    abandoned_mono_verdict
                      (fn (kind, detail) =>
                         report_mono_failure kind ty detail) exn)
+              val _ = check_deadline deadline
               val _ = calculus_mono_cache :=
                 (ty, result) :: !calculus_mono_cache
             in
@@ -655,13 +659,62 @@ fun run_instance deadline started (config : Refute_Core.config)
         ("The following type" ^ Util.plural_s_for_list finitizable_types ^
          " can use a more precise finite encoding: " ^
          String.concatWith ", " (map type_name finitizable_types) ^ "\n")
-    val (skipped, scopes) = MFS.all_scopes context binarize
-      (#card mf) (#max mf) (#iter mf) (#bits mf) (#bisim_depth mf)
-      mono_types nonmono_types
-      deep_types finitizable_types
+    val adaptive = #card_mode mf = Refute_Core.IterativeDeepening
+    val (fixed_skipped, fixed_scopes) =
+      if adaptive then (0, [])
+      else MFS.all_scopes context binarize
+        (#card mf) (#max mf) (#iter mf) (#bits mf) (#bisim_depth mf)
+        mono_types nonmono_types deep_types finitizable_types
+    val adaptive_cursor =
+      if adaptive then
+        SOME (MFS.new_scope_cursor context binarize true
+          (#card mf) (#max mf) (#iter mf) (#bits mf) (#bisim_depth mf)
+          mono_types nonmono_types deep_types finitizable_types)
+      else NONE
     val batch_size =
       if #debug mf then 1 else Int.max (1, #batch_size mf)
-    val batches = Util.chunk_list batch_size scopes
+    val pending_batches = ref (Util.chunk_list batch_size fixed_scopes)
+    val source_done = ref (not adaptive)
+    val fully_exhausted = ref false
+    val skipped = ref fixed_skipped
+    val scopes_emitted = ref (length fixed_scopes)
+    val batch_count = ref 0
+
+    fun refill_batches () =
+      case adaptive_cursor of
+          NONE => ()
+        | SOME cursor =>
+            let
+              val {scopes, done, stopped, skipped = newly_skipped} =
+                MFS.scope_cursor_batch_with_stop cursor MFS.max_scopes
+                  (fn () => Refute_Core.search_expired config)
+              val _ = skipped := !skipped + newly_skipped
+              val _ = scopes_emitted := !scopes_emitted + length scopes
+              val _ = pending_batches := Util.chunk_list batch_size scopes
+              val _ = source_done := done
+              val _ =
+                case rev scopes of
+                    [] => ()
+                  | (scope : MFS.scope) :: _ =>
+                      Refute_Core.Private.say 2
+                        ("Refute model scope frontier: " ^
+                         String.concatWith ", " (map (fn (ty, card) =>
+                           Parse.type_to_string ty ^ " = " ^
+                           Int.toString card) (#card_assigns scope)) ^ "\n")
+              val _ = if stopped then check_deadline deadline else ()
+            in
+              ()
+            end
+
+    fun next_scope_batch () =
+      case !pending_batches of
+          batch :: rest =>
+            (pending_batches := rest;
+             SOME (batch, !source_done andalso null rest))
+        | [] =>
+            if !source_done then (fully_exhausted := true; NONE)
+            else (check_deadline deadline; refill_batches ();
+                  next_scope_batch ())
     val real_frees = free_variables [original]
     val executable = not (Option.isSome (#qc_gate instance)) andalso
       #falsify mf andalso
@@ -780,6 +833,7 @@ fun run_instance deadline started (config : Refute_Core.config)
 
     fun keep_counterexample cex =
       (counterexamples := cex :: !counterexamples;
+       Refute_Core.publish_counterexamples (rev (!counterexamples));
        if certainty_is_potential (#certainty cex) then
          met_potential := !met_potential + 1
        else ())
@@ -942,12 +996,16 @@ fun run_instance deadline started (config : Refute_Core.config)
                         val attempted = take_at_most max_genuine conservative
                         fun harvest kept [] = kept
                           | harvest kept ((index, bounds) :: models) =
-                              (case reconstruct
-                                (List.nth (problems, index)) bounds of
-                                   NONE => harvest kept models
-                                 | SOME cex =>
-                                     (keep_counterexample cex;
-                                      harvest (cex :: kept) models))
+                              let
+                                val _ = check_deadline deadline
+                              in
+                                case reconstruct
+                                  (List.nth (problems, index)) bounds of
+                                     NONE => harvest kept models
+                                   | SOME cex =>
+                                       (keep_counterexample cex;
+                                        harvest (cex :: kept) models)
+                              end
                         val results = harvest [] attempted
                         val genuine_results = List.filter
                           (certainty_is_genuine o #certainty) results
@@ -1002,20 +1060,23 @@ fun run_instance deadline started (config : Refute_Core.config)
       let
         fun add unsound (kept, unknown) =
           let
-            val _ = check_deadline deadline
+              val _ = check_deadline deadline
           in
             case problem_for_scope deadline mf all_types solver
                 free_names nonsel_names nondef_us def_us need_us
                 unsound scope of
                 NONE => (kept, unknown + 1)
               | SOME problem =>
-                  (case rev kept of
-                       previous :: _ =>
-                         if KK.problems_equivalent
-                              (raw_problem previous, raw_problem problem)
-                         then (kept, unknown)
-                         else (kept @ [problem], unknown)
-                     | [] => ([problem], unknown))
+                  if rich_member problem (!generated_problems) then
+                    (kept, unknown)
+                  else
+                    (case rev kept of
+                         previous :: _ =>
+                           if KK.problems_equivalent
+                                (raw_problem previous, raw_problem problem)
+                           then (kept, unknown)
+                           else (kept @ [problem], unknown)
+                       | [] => ([problem], unknown))
           end
       in
         List.foldl (fn (flag, result) => add flag result)
@@ -1061,16 +1122,20 @@ fun run_instance deadline started (config : Refute_Core.config)
           (found, max_potential, max_genuine, donno) true problems
       end
 
-    fun run_batches [] state = state
-      | run_batches (batch :: rest) state =
-          let
-            val next as (_, _, max_genuine, _) =
-              run_batch (null rest) batch state
-          in
-            if max_genuine > 0 orelse #2 next > 0 then
-              run_batches rest next
-            else next
-          end
+    fun run_batches state =
+      case next_scope_batch () of
+          NONE => state
+        | SOME (batch, last) =>
+            let
+              val _ = batch_count := !batch_count + 1
+              val next as (_, _, max_genuine, _) =
+                run_batch last batch state
+              val _ = if last then fully_exhausted := true else ()
+            in
+              if (max_genuine > 0 orelse #2 next > 0) andalso not last then
+                run_batches next
+              else next
+            end
 
     fun problem_count problems scope = length (List.filter (fn problem =>
       MFS.scopes_equivalent (#scope (metadata problem), scope)) problems)
@@ -1086,11 +1151,11 @@ fun run_instance deadline started (config : Refute_Core.config)
     fun stats donno =
       [("msec", elapsed_msec started),
        ("card", #card instance),
-       ("scopes", length scopes),
-       ("scopes_skipped", skipped),
+       ("scopes", !scopes_emitted),
+       ("scopes_skipped", !skipped),
        ("scopes_checked", scopes_checked ()),
        ("problems", length (!generated_problems)),
-       ("batches", length batches),
+       ("batches", !batch_count),
        ("kodkod_calls", !kodkod_calls),
        ("donno", donno),
        ("met_potential", !met_potential)]
@@ -1107,7 +1172,22 @@ fun run_instance deadline started (config : Refute_Core.config)
 
     fun accounting_reason action =
       action ^ " after checking " ^ Int.toString (scopes_checked ()) ^
-      " of " ^ Int.toString (length scopes) ^ " scopes"
+      " of " ^ Int.toString (!scopes_emitted) ^ " emitted scopes"
+
+    fun frontier_reason () =
+      case rev (!generated_scopes) of
+          [] => []
+        | (scope : MFS.scope) :: _ =>
+            ["largest completed carrier assignment: " ^
+             String.concatWith ", " (map (fn (ty, card) =>
+               Parse.type_to_string ty ^ " = " ^ Int.toString card)
+               (#card_assigns scope))]
+
+    fun skipped_reason () =
+      if !skipped = 0 then []
+      else
+        [Int.toString (!skipped) ^
+         " invalid or duplicate scope candidates skipped"]
 
     fun finish state =
       let
@@ -1146,7 +1226,10 @@ fun run_instance deadline started (config : Refute_Core.config)
              reported rather than read as an exhausted search. *)
           else if null cexs andalso max_genuine = original_max_genuine andalso
                   max_potential = original_max_potential then
-            if skipped > 0 then
+            if not (!fully_exhausted) then
+              Refute_Core.Unknown
+                [accounting_reason "adaptive scope search not exhausted"]
+            else if not adaptive andalso !skipped > 0 then
               Refute_Core.Unknown
                 [accounting_reason scope_limit_hint]
             else if !discarded_sound_model then
@@ -1170,7 +1253,7 @@ fun run_instance deadline started (config : Refute_Core.config)
     fun remaining (_, max_potential, max_genuine, _) =
       (Int.max (0, max_potential), Int.max (0, max_genuine))
   in
-    let val final_state = run_batches batches initial
+    let val final_state = run_batches initial
     in
       (finish final_state, remaining final_state)
     end
@@ -1180,7 +1263,9 @@ fun run_instance deadline started (config : Refute_Core.config)
         val outcome =
           if not (null cexs) then Refute_Core.Counterexample cexs
           else
-            Refute_Core.Unknown [accounting_reason "kodkod timed out"]
+            Refute_Core.Unknown
+              (accounting_reason "kodkod timed out" ::
+               frontier_reason () @ skipped_reason ())
       in
         (finalize (!last_donno) outcome, remaining (!latest_state))
       end
@@ -1218,11 +1303,11 @@ fun kodkod_certainty_ceiling (config : Refute_Core.config) instances =
         ["model-finder configuration precludes Genuine results"]
   end
 
-fun run config instances =
+fun run_body config instances =
   let
-    val started = Time.now ()
-    val budget = Real.max (0.0, #timeout config)
-    val deadline = started + Time.fromReal budget
+    val search_context = Refute_Core.search_context_for config
+    val started = #started search_context
+    val deadline = #deadline search_context
     val ordered = Listsort.sort (fn (left, right) =>
       Int.compare (#card left, #card right)) instances
     val mf = #mf config
@@ -1277,6 +1362,9 @@ fun run config instances =
       | NONE => search ordered [] [] (not (null ordered))
           (initial_max_potential, initial_max_genuine)
   end
+
+fun run config instances =
+  Refute_Core.with_search_context config (run_body config) instances
 
 val kodkod_backend : Refute_Core.backend =
   {name = "kodkod", weight = 50,

@@ -56,8 +56,11 @@ structure Refute_Core = struct
 
   datatype substrate_choice = Auto | Compute | Cv | NativeSML
 
+  datatype bound_mode = FixedBound | IterativeDeepening
+
   type qc_config =
     { size : int,
+      size_mode : bound_mode,
       iterations : int,
       depth : int,
       finite_types : bool,
@@ -77,6 +80,7 @@ structure Refute_Core = struct
 
   type mf_config =
     { card : (hol_type option * int list) list,
+      card_mode : bound_mode,
       max : (term option * int list) list,
       mono : (hol_type option * bool option) list,
       wf : (term option * bool option) list,
@@ -160,6 +164,7 @@ structure Refute_Core = struct
 
   val default_qc_config : qc_config =
     { size = 10,
+      size_mode = IterativeDeepening,
       iterations = 100,
       depth = 10,
       finite_types = true,
@@ -179,6 +184,7 @@ structure Refute_Core = struct
 
   val default_mf_config : mf_config =
     { card = [(NONE, List.tabulate (10, fn n => n + 1))],
+      card_mode = IterativeDeepening,
       max = [(NONE, [~1])],
       mono = [(NONE, NONE)],
       wf = [(NONE, NONE)],
@@ -215,7 +221,7 @@ structure Refute_Core = struct
       merge_type_vars = false }
 
   val default_config : config =
-    { timeout = 30.0,
+    { timeout = 10.0,
       backends = NONE,
       sequential = false,
       genuine_only = false,
@@ -297,10 +303,8 @@ structure Refute_Core = struct
       "max_counterexamples: must be at least 1"
   fun upd_tag value = change_config (ConfigTag value)
 
-  fun upd_qc value (cfg : config) = map_qc (fn _ => value) cfg
-
   datatype qc_update =
-      QcSize of int
+      QcSize of int * bound_mode
     | QcIterations of int
     | QcDepth of int
     | QcFiniteTypes of bool
@@ -319,7 +323,9 @@ structure Refute_Core = struct
     | QcReorderPremises of bool
 
   fun change_qc update (qc : qc_config) =
-    { size = (case update of QcSize value => value | _ => #size qc),
+    { size = (case update of QcSize (value, _) => value | _ => #size qc),
+      size_mode =
+        (case update of QcSize (_, mode) => mode | _ => #size_mode qc),
       iterations = (case update of QcIterations value => value
                     | _ => #iterations qc),
       depth = (case update of QcDepth value => value | _ => #depth qc),
@@ -365,6 +371,14 @@ structure Refute_Core = struct
                 if value > maximum div 2 then invalid field else ()
             | NONE => ()
       val _ = bounded "size" (#size qc)
+      val _ =
+        case #size_mode qc of
+            FixedBound => ()
+          | IterativeDeepening =>
+              if #size qc >= 1 then ()
+              else raise Feedback.mk_HOL_ERR "Refute_Core"
+                "validate_qc_config"
+                "size: iterative initial window must be at least 1"
       val _ = if #iterations qc < 0 then invalid "iterations" else ()
       val _ = bounded "depth" (#depth qc)
       val _ =
@@ -383,7 +397,9 @@ structure Refute_Core = struct
 
   fun update_qc update = map_qc (validate_qc_config o change_qc update)
 
-  fun upd_size value = update_qc (QcSize value)
+  fun upd_size value = update_qc (QcSize (value, FixedBound))
+  fun upd_iterative_size value =
+    update_qc (QcSize (value, IterativeDeepening))
   fun upd_iterations value = update_qc (QcIterations value)
   fun upd_depth value = update_qc (QcDepth value)
   fun upd_finite_types value = update_qc (QcFiniteTypes value)
@@ -423,6 +439,15 @@ structure Refute_Core = struct
               ("row key must be a constant or variable; got: " ^
                Parse.term_to_string key)) rows
       val _ = valid_rows "card" 1 (#card mf)
+      fun is_prefix values =
+        values = List.tabulate (length values, fn index => index + 1)
+      val _ =
+        case #card_mode mf of
+            FixedBound => ()
+          | IterativeDeepening =>
+              if List.all (is_prefix o #2) (#card mf) then ()
+              else range_error "card"
+                "iterative rows must be consecutive prefixes [1, ..., n]"
       val _ = valid_rows "max" (~1) (#max mf)
       val _ = check_term_keys "max" (#max mf)
       val _ = check_term_keys "wf" (#wf mf)
@@ -500,7 +525,7 @@ structure Refute_Core = struct
     end
 
   datatype mf_update =
-      MfCard of (hol_type option * int list) list
+      MfCard of (hol_type option * int list) list * bound_mode
     | MfMax of (term option * int list) list
     | MfMono of (hol_type option * bool option) list
     | MfWf of (term option * bool option) list
@@ -537,7 +562,9 @@ structure Refute_Core = struct
     | MfMergeTypeVars of bool
 
   fun change_mf update (mf : mf_config) =
-    { card = (case update of MfCard value => value | _ => #card mf),
+    { card = (case update of MfCard (value, _) => value | _ => #card mf),
+      card_mode =
+        (case update of MfCard (_, mode) => mode | _ => #card_mode mf),
       max = (case update of MfMax value => value | _ => #max mf),
       mono = (case update of MfMono value => value | _ => #mono mf),
       wf = (case update of MfWf value => value | _ => #wf mf),
@@ -604,7 +631,9 @@ structure Refute_Core = struct
 
   fun update_mf update = map_mf (validate_mf_config o change_mf update)
 
-  fun upd_card value = update_mf (MfCard value)
+  fun upd_card value = update_mf (MfCard (value, FixedBound))
+  fun upd_iterative_card value =
+    update_mf (MfCard (value, IterativeDeepening))
   fun upd_max value = update_mf (MfMax value)
   fun upd_mono value = update_mf (MfMono value)
   fun upd_wf value = update_mf (MfWf value)
@@ -960,6 +989,9 @@ structure Refute_Core = struct
       | substrate_to_string Cv = "Cv"
       | substrate_to_string NativeSML = "NativeSML"
 
+    fun bound_mode_to_string FixedBound = "FixedBound"
+      | bound_mode_to_string IterativeDeepening = "IterativeDeepening"
+
     fun option_to_string f NONE = "NONE"
       | option_to_string f (SOME x) = "SOME " ^ f x
   end
@@ -1009,6 +1041,8 @@ structure Refute_Core = struct
           "max_counterexamples = " ^ Int.toString max_counterexamples ^ "\n",
           "tag = " ^ tag ^ "\n",
           "size = " ^ Int.toString (#size q) ^ "\n",
+          "size_mode = " ^ Private.bound_mode_to_string (#size_mode q) ^
+            "\n",
           "iterations = " ^ Int.toString (#iterations q) ^ "\n",
           "depth = " ^ Int.toString (#depth q) ^ "\n",
           "finite_types = " ^ Bool.toString (#finite_types q) ^
@@ -1039,6 +1073,8 @@ structure Refute_Core = struct
           "reorder_premises = " ^
             Bool.toString (#reorder_premises q) ^ "\n",
           "mf.card = " ^ type_ints (#card m) ^ "\n",
+          "mf.card_mode = " ^
+            Private.bound_mode_to_string (#card_mode m) ^ "\n",
           "mf.max = " ^ term_ints (#max m) ^ "\n",
           "mf.mono = " ^ type_bools (#mono m) ^ "\n",
           "mf.wf = " ^ term_bools (#wf m) ^ "\n",
@@ -1517,7 +1553,69 @@ structure Refute_Core = struct
   fun no_generator_reason (ty, reason) =
     "no generator for " ^ Parse.type_to_string ty ^ ": " ^ reason
 
+  type search_context =
+    { started : Time.time,
+      deadline : Time.time,
+      expired : unit -> bool,
+      remaining : unit -> Time.time }
+
+  fun make_search_context timeout : search_context =
+    let
+      val started = Time.now ()
+      val budget =
+        if timeout <= 0.0 then Time.zeroTime else Time.fromReal timeout
+      val deadline = started + budget
+      fun expired () = Time.now () >= deadline
+      fun remaining () =
+        let val now = Time.now ()
+        in if now >= deadline then Time.zeroTime else Time.- (deadline, now)
+        end
+    in
+      {started = started, deadline = deadline,
+       expired = expired, remaining = remaining}
+    end
+
   val active_refute_context : unit ref Thread_Data.var = Thread_Data.var ()
+  val active_search_context : search_context Thread_Data.var =
+    Thread_Data.var ()
+  val active_backend_result : outcome option ref Thread_Data.var =
+    Thread_Data.var ()
+
+  fun publish_counterexamples cexs =
+    if null cexs then ()
+    else
+      case Thread_Data.get active_backend_result of
+          NONE => ()
+        | SOME published =>
+            let
+              fun rank values =
+                Option.getOpt (Option.map certainty_rank
+                  (best_certainty values), 0)
+              val replace =
+                case !published of
+                    SOME (Counterexample old) =>
+                      rank cexs > rank old orelse
+                      (rank cexs = rank old andalso
+                       length cexs >= length old)
+                  | _ => true
+            in
+              if replace then published := SOME (Counterexample cexs)
+              else ()
+            end
+
+  fun search_context_for (cfg : config) =
+    case Thread_Data.get active_search_context of
+        SOME context => context
+      | NONE => make_search_context (#timeout cfg)
+
+  fun with_search_context (cfg : config) action argument =
+    case Thread_Data.get active_search_context of
+        SOME _ => action argument
+      | NONE => Thread_Data.setmp active_search_context
+          (SOME (make_search_context (#timeout cfg))) action argument
+
+  fun search_expired cfg = #expired (search_context_for cfg) ()
+  fun search_remaining cfg = #remaining (search_context_for cfg) ()
 
   datatype admission =
       Eligible of backend_registration
@@ -1525,29 +1623,33 @@ structure Refute_Core = struct
     | AdmissionTimeout of string
     | AdmissionError of string * exn
 
-  fun run_backend context (cfg : config) ceiling forms (backend, result_ref) =
+  fun run_backend context search_context (cfg : config) ceiling forms
+        (backend, result_ref) =
     Thread_Data.setmp active_refute_context context (fn () =>
+    Thread_Data.setmp active_search_context (SOME search_context) (fn () =>
     let
       val name = #name backend
       val instances = instances_for_form (#input backend) forms
-      val timeout =
-        if #timeout cfg <= 0.0 then Time.fromReal 0.0
-        else Time.fromReal (#timeout cfg)
       val _ = Private.say 2
         ("Refute backend started (weight " ^ Int.toString (#weight backend) ^
          "): " ^ name ^ "\n")
-      val result =
-        (Timeout.apply timeout (#run backend cfg) instances
-         handle Timeout.TIMEOUT _ =>
-           Unknown [name ^ " timed out"]
-              | Refute_Gen.NoGenerator pair =>
-                  Unknown [name ^ ": " ^ no_generator_reason pair]
-              | Interrupt => raise Interrupt
-              | e => Unknown [name ^ ": " ^ exception_reason e])
+      fun timed_run () = Timeout.apply (#remaining search_context ())
+        (#run backend cfg) instances
+      val result = Thread_Data.setmp active_backend_result
+        (SOME result_ref) (fn () =>
+          timed_run ()
+          handle Timeout.TIMEOUT _ =>
+            (case !result_ref of
+                 SOME (published as Counterexample _) => published
+               | _ => Unknown [name ^ " timed out"])
+               | Refute_Gen.NoGenerator pair =>
+                   Unknown [name ^ ": " ^ no_generator_reason pair]
+               | Interrupt => raise Interrupt
+               | e => Unknown [name ^ ": " ^ exception_reason e]) ()
       val _ = result_ref := SOME result
     in
       if decisive cfg ceiling result then SOME result else NONE
-    end) ()
+    end) ()) ()
 
   fun unknown_results jobs =
     let
@@ -1600,14 +1702,12 @@ structure Refute_Core = struct
       | ExecutableGoalUnless predicate =>
           executable orelse predicate cfg instances
 
-  fun admit_backend context (cfg : config) forms registration =
+  fun admit_backend context search_context (cfg : config) forms registration =
     Thread_Data.setmp active_refute_context context (fn () =>
+    Thread_Data.setmp active_search_context (SOME search_context) (fn () =>
       let
         val backend = #backend registration
         val name = #name backend
-        val timeout =
-          if #timeout cfg <= 0.0 then Time.fromReal 0.0
-          else Time.fromReal (#timeout cfg)
         fun attempt () =
           if not (#configured backend ()) then
             (Excluded registration, false)
@@ -1621,11 +1721,11 @@ structure Refute_Core = struct
               else (Excluded registration, true)
             end
       in
-        Timeout.apply timeout attempt ()
+        Timeout.apply (#remaining search_context ()) attempt ()
         handle Timeout.TIMEOUT _ => (AdmissionTimeout name, true)
              | Interrupt => raise Interrupt
              | error => (AdmissionError (name, error), true)
-      end) ()
+      end) ()) ()
 
   fun certainty_expectation Genuine = ExpectGenuine
     | certainty_expectation (QuasiGenuine _) = ExpectQuasiGenuine
@@ -1659,6 +1759,7 @@ structure Refute_Core = struct
 
   fun refute_problem_unquiet (cfg : config) (problem : problem) =
     let
+      val search_context = make_search_context (#timeout cfg)
       fun finish result =
         (report_outcome cfg result; check_expect cfg result; result)
       fun execute () =
@@ -1671,11 +1772,13 @@ structure Refute_Core = struct
               unknown)
           else
             let
-          val forms = preprocess_forms cfg problem
+          val forms = Timeout.apply (#remaining search_context ())
+            (preprocess_forms cfg) problem
           fun registration_instances registration =
             instances_for_form (#input (#backend registration)) forms
           val context = Thread_Data.get active_refute_context
-          fun admit registration = admit_backend context cfg forms registration
+          fun admit registration =
+            admit_backend context search_context cfg forms registration
           (* Admission may compile and park a complete smart-generator test.
              In the default profile every registration gets its own local
              worker, independently of the process-global thread count. *)
@@ -1717,8 +1820,13 @@ structure Refute_Core = struct
             ("Refute: QC backends excluded: " ^ reason ^ "\n"))
             excluded_reasons
         in
-          if not (null admission_errors) then Unknown admission_errors
+          if not (null admission_errors) then
+            Unknown (admission_errors @ excluded_reasons @
+              (if #expired search_context () then ["search timed out"]
+               else []))
           else if not configured then Unknown ["no configured backend"]
+          else if #expired search_context () then
+            Unknown (excluded_reasons @ ["search timed out"])
           else if null selected then Unknown excluded_reasons
           else
             let
@@ -1740,11 +1848,11 @@ structure Refute_Core = struct
                 if #sequential cfg then
                   ParList.get_first
                     (run_backend (Thread_Data.get active_refute_context)
-                      cfg ceiling forms) jobs
+                      search_context cfg ceiling forms) jobs
                 else
                   ParList.get_some_with_workers (length jobs)
                     (run_backend (Thread_Data.get active_refute_context)
-                      cfg ceiling forms) jobs
+                      search_context cfg ceiling forms) jobs
             in
               case winner of
                   SOME result => result
@@ -1756,8 +1864,11 @@ structure Refute_Core = struct
                              NoCounterexample
                            else
                              let
-                               val reasons =
-                                 excluded_reasons @ unknown_results jobs
+                               val reasons = excluded_reasons @
+                                 unknown_results jobs @
+                                 (if #expired search_context () then
+                                    ["search timed out"]
+                                  else [])
                              in
                                if null reasons then
                                  Unknown
@@ -1771,9 +1882,12 @@ structure Refute_Core = struct
         execute ()
         handle Refute_Gen.NoGenerator pair =>
           Unknown [no_generator_reason pair]
+             | Timeout.TIMEOUT _ => Unknown ["search timed out"]
              | Interrupt => raise Interrupt
              | e => Unknown [exception_reason e]
-      val result = Portable.finally release_run_resources attempt ()
+      val result = Thread_Data.setmp active_search_context
+        (SOME search_context)
+        (Portable.finally release_run_resources attempt) ()
     in
       finish result
     end

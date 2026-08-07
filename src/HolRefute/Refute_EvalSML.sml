@@ -417,9 +417,9 @@ structure Refute_EvalSML = struct
 
   fun compile_locked extract (config : Refute_Core.config) strategy problem =
     let
-      val started = Time.now ()
-      val timeout = Time.fromReal (Real.max (0.0, #timeout config))
-      val limit = Time.+ (started, timeout)
+      val search_context = Refute_Core.search_context_for config
+      val started = #started search_context
+      val limit = #deadline search_context
       val mode =
         case strategy of
             Refute_Eval.Narrowing => LazyExtraction

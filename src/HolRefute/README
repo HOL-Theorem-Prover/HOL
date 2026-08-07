@@ -11,6 +11,15 @@ execution substrates:
 * NativeSML extracts the executable fragment to SML and compiles the test
   loop in process.  It is the preferred fast substrate on Poly/ML.
 
+An unconfigured call has one 10-second search budget covering preprocessing,
+backend admission, compilation, testing, model translation, and solver calls.
+All concurrent backends share its absolute deadline.  Mandatory cleanup still
+runs after the budget expires, so the observed return time can be slightly
+longer.  The default QC size and model-finder card rows use iterative
+deepening: 10 is their initial window, not a terminal bound.  `upd_size` and
+`upd_card` deliberately select fixed bounds; use `upd_iterative_size` and
+`upd_iterative_card` to select a different initial adaptive window.
+
 Set a substrate with `Refute.upd_substrate`.  The default, `Auto`, walks all
 registered substrates in priority order; the built-in order is NativeSML,
 Cv, then Compute.  Auto falls through when a substrate is inapplicable.  An
@@ -41,7 +50,10 @@ environment equality, not by stream position.  Setting
 `upd_reorder_premises` controls mode-analysis reordering.
 
 Native narrowing is active by default as the `narrowing` backend.  It uses
-`size` as its refinement-depth bound and supports prenex existential goals.
+`size` as its initial refinement-depth window and supports prenex existential
+goals.  In fixed mode that window is the complete requested search; in
+iterative mode narrowing compiles later depths one at a time and releases each
+compiled window before advancing.
 `upd_finite_functions true` (the default) represents function inputs by
 finite `ffun` update chains, with `cfun` as the constant-only fallback for
 higher-order domains.  Counterexamples reconstruct `ffun` values as HOL
@@ -147,6 +159,19 @@ left to right, so the last update of a field wins.  `REFUTE_TAC_WITH` reads
 uses exactly `cfg`, which is preferable for reproducible tools and tests.
 Neither form silently changes `quiet` or `expect`.
 
+`upd_size n` and `upd_card rows` pin reproducible hard bounds.  Their
+iterative counterparts store an initial window and restore adaptive search.
+An iterative card row must be a consecutive prefix `[1, ..., n]`; sparse and
+per-type candidate lists remain available in fixed mode.  The public
+`qc_config` and `mf_config` records now include `size_mode` and `card_mode`.
+Code constructing those records literally must add the corresponding field;
+existing `#size` and `#card` selectors are unchanged.
+
+Only the primary size coordinates deepen.  Smart-generator `depth`, random
+`iterations`, `finite_type_size`, constructor `max`, binary `bits`, fixpoint
+`iter`, `bisim_depth`, result quotas, and `tac_timeout` remain independent
+fixed controls.
+
 Backend selection is typed for the four built-ins:
 
     datatype backend_choice =
@@ -205,6 +230,7 @@ are:
 
 | updater | default | meaning |
 | --- | --- | --- |
+| `upd_card` | adaptive 1--10 | carrier sizes; updater pins fixed |
 | `upd_max` | `[(NONE, [~1])]` | constructor carrier bound; `~1` unbounded |
 | `upd_specialize` | `true` | specialize static higher-order arguments |
 | `upd_box` | `[(NONE, NONE)]` | box functions and pairs when useful |

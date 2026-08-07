@@ -10,6 +10,7 @@ signature Refute = sig
   datatype outcome = datatype Refute_Core.outcome
   datatype expectation = datatype Refute_Core.expectation
   datatype substrate_choice = datatype Refute_Core.substrate_choice
+  datatype bound_mode = datatype Refute_Core.bound_mode
   datatype requirement = datatype Refute_Core.requirement
   datatype goal_form = datatype Refute_Core.goal_form
   type qc_config = Refute_Core.qc_config
@@ -122,6 +123,7 @@ signature Refute = sig
   val upd_tag : string -> config -> config
   val upd_qc : qc_config -> config -> config
   val upd_size : int -> config -> config
+  val upd_iterative_size : int -> config -> config
   val upd_iterations : int -> config -> config
   val upd_depth : int -> config -> config
   val upd_finite_types : bool -> config -> config
@@ -140,6 +142,8 @@ signature Refute = sig
   val upd_reorder_premises : bool -> config -> config
   val upd_mf : mf_config -> config -> config
   val upd_card : (hol_type option * int list) list -> config -> config
+  val upd_iterative_card :
+    (hol_type option * int list) list -> config -> config
   val upd_max : (term option * int list) list -> config -> config
   val upd_mono :
     (hol_type option * bool option) list -> config -> config

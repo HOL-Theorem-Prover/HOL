@@ -6174,6 +6174,56 @@ val _ = require_msg (check_result mf_scope_enumeration_order) (fn () =>
   "model-finder scope count or cost ordering changed")
   (fn () => ()) ()
 
+val mf_cursor_diagnostic = ref ""
+
+fun mf_adaptive_scope_cursor_resumes () =
+  let
+    val alpha = ``:'a``
+    val beta = ``:'b``
+    val cursor = MFS.new_scope_cursor mf_hol_context false true
+      [(NONE, MFS.default_cards)] [(NONE, [~1])] [(NONE, [0])] [] [~1]
+      [] [alpha, beta] [] []
+    val first = MFS.scope_cursor_batch cursor 2500
+    val second = MFS.scope_cursor_batch cursor 2500
+    val third = MFS.scope_cursor_batch cursor 2500
+    val scopes = #scopes first @ #scopes second @ #scopes third
+    fun assignment scope =
+      (valOf (MFH.assignment_lookup (#card_assigns scope) alpha),
+       valOf (MFH.assignment_lookup (#card_assigns scope) beta))
+    val assignments = map assignment scopes
+    val unique = Lib.mk_set assignments
+    val maximum_left = List.foldl (fn ((left, _), best) =>
+      Int.max (left, best)) 0 assignments
+    val maximum_right = List.foldl (fn ((_, right), best) =>
+      Int.max (right, best)) 0 assignments
+    val _ = mf_cursor_diagnostic :=
+      "lengths=" ^ String.concatWith ","
+        (map (Int.toString o length o #scopes) [first, second, third]) ^
+      ", unique=" ^ Int.toString (length unique) ^
+      ", max=" ^ Int.toString maximum_left ^ "/" ^
+        Int.toString maximum_right ^
+      ", emitted=" ^ Int.toString (MFS.scope_cursor_emitted cursor) ^
+      ", skipped=" ^ Int.toString (MFS.scope_cursor_skipped cursor)
+  in
+    length (#scopes first) = 2500 andalso
+    length (#scopes second) = 2500 andalso
+    length (#scopes third) = 2500 andalso
+    not (#done first) andalso not (#done second) andalso
+    not (#done third) andalso
+    length unique = length assignments andalso
+    List.exists (fn (left, right) => left > 10 andalso right > 10)
+      assignments andalso
+    hd (map assignment (#scopes second)) <>
+      hd (map assignment (#scopes first)) andalso
+    MFS.scope_cursor_emitted cursor = 7500 andalso
+    MFS.scope_cursor_skipped cursor = 0
+  end
+
+val _ = require_msg (check_result mf_adaptive_scope_cursor_resumes) (fn () =>
+  "adaptive scope cursor replayed, truncated, duplicated, or stayed at 10: " ^
+  !mf_cursor_diagnostic)
+  (fn () => ()) ()
+
 fun mf_scope_offsets_and_facto_pairs () =
   let
     val (_, scopes) = MFS.all_scopes mf_hol_context false
@@ -10631,6 +10681,7 @@ fun same_optional_terms NONE NONE = true
 
 fun same_mf (left : mf_config) (right : mf_config) =
   #card left = #card right andalso
+  #card_mode left = #card_mode right andalso
   same_term_assignments (#max left) (#max right) andalso
   #mono left = #mono right andalso
   same_bool_term_assignments (#wf left) (#wf right) andalso
@@ -10673,6 +10724,7 @@ fun size_update_is_local () =
     val after = #qc updated
   in
     #size after = 5 andalso
+    #size_mode after = FixedBound andalso
     #iterations after = #iterations original andalso
     #depth after = #depth original andalso
     #finite_types after = #finite_types original andalso
@@ -10705,7 +10757,36 @@ fun size_update_is_local () =
   end
 
 val _ = require_msg (check_result size_update_is_local) (fn () =>
-  "upd_size changed a field other than qc.size") (fn () => ()) ()
+  "upd_size did not pin qc.size or changed an unrelated field")
+  (fn () => ()) ()
+
+fun bound_modes_are_explicit () =
+  let
+    val fixed_size = upd_size 10 default_config
+    val iterative_size = upd_iterative_size 12 fixed_size
+    val fixed_card = upd_card (#card (#mf default_config)) default_config
+    val iterative_card = upd_iterative_card
+      [(NONE, [1, 2, 3])] fixed_card
+    fun rejected thunk =
+      (thunk (); false) handle HOL_ERR _ => true
+  in
+    #size_mode (#qc default_config) = IterativeDeepening andalso
+    #card_mode (#mf default_config) = IterativeDeepening andalso
+    #size_mode (#qc fixed_size) = FixedBound andalso
+    #size (#qc iterative_size) = 12 andalso
+    #size_mode (#qc iterative_size) = IterativeDeepening andalso
+    #card_mode (#mf fixed_card) = FixedBound andalso
+    #card_mode (#mf iterative_card) = IterativeDeepening andalso
+    rejected (fn () => ignore (upd_iterative_size 0 default_config)) andalso
+    rejected (fn () => ignore
+      (upd_iterative_card [(NONE, [1, 3])] default_config)) andalso
+    rejected (fn () => ignore
+      (upd_iterative_card [(NONE, [1, 2, 2])] default_config))
+  end
+
+val _ = require_msg (check_result bound_modes_are_explicit) (fn () =>
+  "fixed/iterative size or card updater semantics changed")
+  (fn () => ()) ()
 
 fun certify_and_quiet_defaults_are_pinned () =
   let
@@ -10758,7 +10839,7 @@ fun config_surface_snapshot () =
           (Lib.with_flag (the_config, config) show_config))) ()
     val actual = String.concat (rev (!chunks))
     val expected = String.concat
-      ["timeout = 30.0\n",
+      ["timeout = 10.0\n",
        "backends = NONE\n",
        "sequential = false\n",
        "genuine_only = false\n",
@@ -10770,6 +10851,7 @@ fun config_surface_snapshot () =
        "max_counterexamples = 1\n",
        "tag = \n",
        "size = 10\n",
+       "size_mode = IterativeDeepening\n",
        "iterations = 100\n",
        "depth = 10\n",
        "finite_types = true\n",
@@ -10787,6 +10869,7 @@ fun config_surface_snapshot () =
        "optimise_equality = true\n",
        "reorder_premises = true\n",
        "mf.card = [NONE => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]\n",
+       "mf.card_mode = IterativeDeepening\n",
        "mf.max = [NONE => [~1]]\n",
        "mf.mono = [NONE => NONE]\n",
        "mf.wf = [NONE => NONE]\n",
@@ -12107,8 +12190,9 @@ fun admission_timeout_is_ineligible_and_released () =
     val _ = admission_timeout_enabled := false
   in
     (case result of
-         Unknown [reason] =>
-           reason = "refute-admission-timeout admission timed out"
+         Unknown [reason, whole_call] =>
+           reason = "refute-admission-timeout admission timed out" andalso
+           whole_call = "search timed out"
        | _ => false) andalso
     !admission_release_count = 1
   end
@@ -12116,6 +12200,50 @@ fun admission_timeout_is_ineligible_and_released () =
 val _ = require_msg
   (check_result admission_timeout_is_ineligible_and_released) (fn () =>
   "an admission timeout changed polarity or lost its run-scoped release")
+  (fn () => ()) ()
+
+val shared_deadline_enabled = ref false
+val shared_deadlines = ref ([] : Time.time list)
+
+fun record_shared_deadline () =
+  case Thread_Data.get active_search_context of
+      SOME context => shared_deadlines := #deadline context :: !shared_deadlines
+    | NONE => raise Fail "missing active search context"
+
+val shared_deadline_backend : backend =
+  {name = "refute-shared-deadline", weight = ~77,
+   configured = fn () =>
+     if !shared_deadline_enabled then (record_shared_deadline (); true)
+     else false,
+   requires = ExecutableGoalUnless (fn _ => fn _ =>
+     (record_shared_deadline (); true)),
+   input = MonoInstances,
+   run = fn _ => fn _ =>
+     (record_shared_deadline (); Unknown ["deadline captured"])}
+
+val _ = register_backend shared_deadline_backend
+
+fun all_phases_share_one_deadline () =
+  let
+    val _ = shared_deadlines := []
+    val _ = shared_deadline_enabled := true
+    val config = default_config
+      |> upd_backends (SOME ["refute-shared-deadline"])
+      |> upd_sequential true
+      |> upd_quiet true
+    val result = refute config ``q (!n : num. n = 0)``
+    val _ = shared_deadline_enabled := false
+  in
+    (case result of Unknown _ => true | _ => false) andalso
+    (case !shared_deadlines of
+         first :: rest => length rest = 2 andalso
+           List.all (fn deadline =>
+             Time.compare (deadline, first) = EQUAL) rest
+       | _ => false)
+  end
+
+val _ = require_msg (check_result all_phases_share_one_deadline) (fn () =>
+  "admission and execution created different search deadlines")
   (fn () => ()) ()
 
 fun admission_errors_are_registry_ordered_and_released () =
@@ -14729,6 +14857,27 @@ fun compile_fresh_narrowing pnf =
            raise Fail (String.concat messages))
   end
 
+fun singleton_narrowing_window_is_relative () =
+  let
+    val value = Term.mk_var ("window_value", ``:num list``)
+    val tables_before = term_table_count ()
+    val {source, table, ...} = extract_narrowing_window
+      (upd_size 11 default_config) {first = 11, last = 11}
+      [(Forall, value)] boolSyntax.F
+    val relative = String.isSubstring "depth - 11" source
+    val has_window = String.isSubstring "narrow_shape_11_" source
+    val singleton_row = String.isSubstring
+      "val narrow_shape_rows = Vector.fromList [Vector.fromList" source
+    val _ = unregister_term_tables table
+  in
+    relative andalso has_window andalso singleton_row andalso
+    term_table_count () = tables_before
+  end
+
+val _ = require_msg (check_result singleton_narrowing_window_is_relative)
+  (fn () => "singleton narrowing extraction used an absolute depth vector")
+  (fn () => ()) ()
+
 fun generated_fresh_term (dispatch : generated_dispatch) =
   case #hit (dispatch 1 false 0 0 0) of
       SOME (_, SOME ((_, rebuild) :: _), _, true) => rebuild ()
@@ -15535,6 +15684,40 @@ fun qc_problem goal : problem = {goal = goal, assumptions = [], evals = []}
 
 fun qc_instances config goal = preprocess config (qc_problem goal)
 
+fun qc_schedule_cursors_are_lazy_and_fair () =
+  let
+    fun instance card matters : instance =
+      {original = boolSyntax.T, goal = boolSyntax.T, qc_gate = NONE,
+       evals = [], card = card, size_matters = matters}
+    val instances = map (fn card => instance card true) [1, 2, 3]
+    fun take 0 _ result = rev result
+      | take remaining cursor result =
+          case schedule_next cursor of
+              NONE => rev result
+            | SOME (entry, rest) => take (remaining - 1) rest
+                (entry :: result)
+    val fixed_entries = schedule instances 10
+    val fixed = take 100
+      (schedule_cursor instances 10 FixedBound) []
+    val adaptive = take 100
+      (schedule_cursor instances 10 IterativeDeepening) []
+    val no_size = map (fn card => instance card false) [1, 2, 3]
+    val finite_adaptive = take 10
+      (schedule_cursor no_size 10 IterativeDeepening) []
+  in
+    fixed = fixed_entries andalso
+    List.take (adaptive, length fixed_entries) = fixed_entries andalso
+    List.exists (fn (_, size) => size = 11) adaptive andalso
+    List.exists (fn (_, size) => size = 12) adaptive andalso
+    List.all (fn card => List.exists (fn (seen, size) =>
+      seen = card andalso size >= 12) adaptive) [1, 2, 3] andalso
+    finite_adaptive = [(1, 10), (2, 10), (3, 10)]
+  end
+
+val _ = require_msg (check_result qc_schedule_cursors_are_lazy_and_fair)
+  (fn () => "fixed/adaptive QC schedule ordering or fairness changed")
+  (fn () => ()) ()
+
 fun exhaustive config goal =
   let
     val instances = qc_instances config goal
@@ -15622,8 +15805,8 @@ fun smartgen_payoff_run config goal =
     (contains_enum smart_plan, generate_then_test, smart, plain)
   end
 
-fun normal_bounded_no_hit
-      (Refute.Unknown ["exhaustive: search space not exhausted"]) = true
+fun normal_bounded_no_hit (Refute.Unknown (reason :: _)) =
+      reason = "exhaustive: search space not exhausted"
   | normal_bounded_no_hit _ = false
 
 val _ = tprint "Refute SmartGen smart-payoff pins"
@@ -18636,11 +18819,16 @@ fun slow_masked_cleanup_keeps_the_verdict () =
       {name = "compute", priority = #priority original,
        accepts = #accepts original, preflight = #preflight original,
        compile = compile}
-    val config = upd_substrate Compute (upd_size 1 default_config)
-    val instances = qc_instances config ``(b : bool)``
+    val config = default_config
+      |> upd_backends (SOME ["exhaustive"])
+      |> upd_sequential true
+      |> upd_substrate Compute
+      |> upd_size 1
+      |> upd_timeout 0.25
+      |> upd_quiet true
     val _ = register_substrate replacement
     val result =
-      in_refute_call (fn () => strategy_run Exhaustive config instances)
+      refute config ``(b : bool)``
       handle e => (register_substrate original; raise e)
     val _ = register_substrate original
   in

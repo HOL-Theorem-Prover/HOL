@@ -461,6 +461,52 @@ structure Refute_QC = struct
         List.map (fn card => (card, size)) cards
     end
 
+  datatype schedule_cursor =
+      FixedSchedule of (int * int) list
+    | AdaptiveSchedule of
+        (int * int) list * (int * int) list
+
+  fun entry_before ((card1, size1), (card2, size2)) =
+    card1 + size1 < card2 + size2 orelse
+    (card1 + size1 = card2 + size2 andalso card1 < card2)
+
+  fun entry_compare (left, right) =
+    if entry_before (left, right) then LESS
+    else if entry_before (right, left) then GREATER
+    else EQUAL
+
+  fun insert_entry entry [] = [entry]
+    | insert_entry entry (first :: rest) =
+        if entry_before (entry, first) then entry :: first :: rest
+        else first :: insert_entry entry rest
+
+  fun schedule_cursor instances size mode =
+    let
+      val initial = schedule instances size
+      val size_matters = List.exists #size_matters instances
+    in
+      case mode of
+          Refute_Core.FixedBound => FixedSchedule initial
+        | Refute_Core.IterativeDeepening =>
+            if not size_matters then FixedSchedule initial
+            else
+              AdaptiveSchedule (initial,
+                Listsort.sort entry_compare
+                  (map (fn instance =>
+                    (#card instance, Int.max (0, size) + 1)) instances))
+    end
+
+  fun schedule_next (FixedSchedule []) = NONE
+    | schedule_next (FixedSchedule (entry :: rest)) =
+        SOME (entry, FixedSchedule rest)
+    | schedule_next (AdaptiveSchedule (entry :: rest, frontier)) =
+        SOME (entry, AdaptiveSchedule (rest, frontier))
+    | schedule_next (AdaptiveSchedule ([], [])) = NONE
+    | schedule_next
+        (AdaptiveSchedule ([], (entry as (card, size)) :: frontier)) =
+        SOME (entry, AdaptiveSchedule ([],
+          insert_entry (card, size + 1) frontier))
+
   fun elapsed_msec start =
     LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
     handle _ => 0
@@ -1014,9 +1060,9 @@ structure Refute_QC = struct
         | SOME error => raise error
     end
 
-  fun strategy_run Narrowing _ _ =
+  fun strategy_run_body Narrowing _ _ =
         raise Fail "narrowing is owned by Refute_QC_Narrow"
-    | strategy_run strategy (config : Refute_Core.config)
+    | strategy_run_body strategy (config : Refute_Core.config)
       (instances : Refute_Core.instance list) =
     let
       (* Smart generators are the positive exhaustive CPS compilation.
@@ -1092,13 +1138,19 @@ structure Refute_QC = struct
             let
               fun selected_body () =
                 let
-                  val entries = schedule instances (#size (#qc config))
+                  val qc = #qc config
+                  val cursor = schedule_cursor instances (#size qc)
+                    (#size_mode qc)
+                  val finite_schedule =
+                    #size_mode qc = Refute_Core.FixedBound orelse
+                    not (List.exists #size_matters instances)
               (* A random plan with no generators is exhaustive only after
                  there is an entry on which to run it.  In particular, zero
                  iterations and an empty instance set must not turn a
                  vacuous List.all into a proof of exhaustiveness. *)
               val complete = ref
-                (not (null entries) andalso
+                (Option.isSome (schedule_next cursor) andalso finite_schedule
+                 andalso
                  (if is_random strategy then
                     bounded_size (#iterations (#qc config)) > 0 andalso
                     List.all (not o plan_has_gen) plans
@@ -1107,6 +1159,7 @@ structure Refute_QC = struct
               val replay_potential = ref NONE
               val discarded = ref 0
               val gave_up = ref []
+              val frontier = ref (NONE : (int * int) option)
               fun instance_for card = List.nth (instances, card - 1)
               fun stats_for size card msec =
                 !(#last_stats compiled) @
@@ -1152,7 +1205,9 @@ structure Refute_QC = struct
                                keep-potential policy may enter the fallback;
                                genuine-only and continuing retries never do. *)
                             retain_replay_potential = fn potential =>
-                              replay_potential := SOME potential,
+                              (replay_potential := SOME potential;
+                               Refute_Core.publish_counterexamples
+                                 [potential]),
                             retry = fn go => fn ig =>
                               (case retry_budget of
                                   NONE => one (card, size) draws go ig NONE
@@ -1177,6 +1232,8 @@ structure Refute_QC = struct
                             genuine = genuine,
                             genuine_only = genuine_only,
                             ignored = ignored }
+                          val _ = Refute_Core.publish_counterexamples
+                            (rev (!counterexamples))
                         in
                           ()
                         end
@@ -1219,15 +1276,24 @@ structure Refute_QC = struct
                      Int.toString card ^ ", size " ^ Int.toString size ^
                      "): " ^ Int.toString elapsed ^ "ms\n")
                 in
-                  ()
+                  frontier := SOME entry
                 end
-              fun search [] = ()
-                | search (entry :: rest) =
-                    if length (!counterexamples) >=
-                      Int.max (1, #max_counterexamples config)
-                    then ()
-                    else (run_entry entry; search rest)
-              val _ = search entries
+              fun search current =
+                if length (!counterexamples) >=
+                     Int.max (1, #max_counterexamples config) orelse
+                   Refute_Core.search_expired config then ()
+                else
+                  case schedule_next current of
+                      NONE => ()
+                    | SOME (entry, rest) =>
+                        (run_entry entry; search rest)
+              val _ = search cursor
+              val frontier_reason =
+                case !frontier of
+                    NONE => []
+                  | SOME (card, size) =>
+                      ["largest completed QC entry: card " ^
+                       Int.toString card ^ ", size " ^ Int.toString size]
               val generic_reason =
                 if is_random strategy then "random search exhausted"
                 else "search space not exhausted"
@@ -1241,7 +1307,7 @@ structure Refute_QC = struct
                       | NONE =>
                           if !complete then Refute_Core.NoCounterexample
                           else Refute_Core.Unknown
-                            (generic_reason :: !gave_up)
+                            (generic_reason :: !gave_up @ frontier_reason)
                 end
               val body_result = Exn.capture selected_body ()
               val close_result = bounded_close (#close compiled)
@@ -1255,6 +1321,10 @@ structure Refute_QC = struct
                     (Exn.release close_result; Exn.release body_result)
             end
     end
+
+  fun strategy_run strategy config instances =
+    Refute_Core.with_search_context config
+      (strategy_run_body strategy config) instances
 
   val exhaustive_backend : Refute_Core.backend =
     { name = "exhaustive",
