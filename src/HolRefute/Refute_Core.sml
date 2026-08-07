@@ -1160,21 +1160,28 @@ structure Refute_Core = struct
         (List.find (fn (registered, _) => registered = name)
           (!backend_registry)))
 
-  fun selected_backend_registrations names =
+  fun resolve_backend_registrations names =
     let
+      val snapshot = synchronized_registry (fn () => !backend_registry)
       fun requested (registration : backend_registration) =
         case names of
             NONE => true
           | SOME wanted => List.exists
               (fn name => name = #name (#backend registration)) wanted
+      fun registered name =
+        List.exists (fn (registered, _) => registered = name) snapshot
+      val registrations = map #2
+        (List.filter (fn (_, registration) => requested registration) snapshot)
+      val unknown =
+        case names of
+            NONE => []
+          | SOME wanted => List.filter (not o registered) wanted
     in
-      let val snapshot = synchronized_registry (fn () => !backend_registry)
-      in
-        map #2 (List.filter (fn (_, registration) =>
-          requested registration andalso
-          (#configured (#backend registration)) ()) snapshot)
-      end
+      (registrations, unknown)
     end
+
+  fun selected_backend_registrations names =
+    #1 (resolve_backend_registrations names)
 
   fun selected_backends names =
     map #backend (selected_backend_registrations names)
@@ -1512,6 +1519,12 @@ structure Refute_Core = struct
 
   val active_refute_context : unit ref Thread_Data.var = Thread_Data.var ()
 
+  datatype admission =
+      Eligible of backend_registration
+    | Excluded of backend_registration
+    | AdmissionTimeout of string
+    | AdmissionError of string * exn
+
   fun run_backend context (cfg : config) ceiling forms (backend, result_ref) =
     Thread_Data.setmp active_refute_context context (fn () =>
     let
@@ -1587,6 +1600,33 @@ structure Refute_Core = struct
       | ExecutableGoalUnless predicate =>
           executable orelse predicate cfg instances
 
+  fun admit_backend context (cfg : config) forms registration =
+    Thread_Data.setmp active_refute_context context (fn () =>
+      let
+        val backend = #backend registration
+        val name = #name backend
+        val timeout =
+          if #timeout cfg <= 0.0 then Time.fromReal 0.0
+          else Time.fromReal (#timeout cfg)
+        fun attempt () =
+          if not (#configured backend ()) then
+            (Excluded registration, false)
+          else
+            let
+              val instances = instances_for_form (#input backend) forms
+            in
+              if meets_requirement cfg
+                   (instances_are_executable instances) backend instances
+              then (Eligible registration, true)
+              else (Excluded registration, true)
+            end
+      in
+        Timeout.apply timeout attempt ()
+        handle Timeout.TIMEOUT _ => (AdmissionTimeout name, true)
+             | Interrupt => raise Interrupt
+             | error => (AdmissionError (name, error), true)
+      end) ()
+
   fun certainty_expectation Genuine = ExpectGenuine
     | certainty_expectation (QuasiGenuine _) = ExpectQuasiGenuine
     | certainty_expectation (Potential _) = ExpectPotential
@@ -1623,12 +1663,8 @@ structure Refute_Core = struct
         (report_outcome cfg result; check_expect cfg result; result)
       fun execute () =
         let
-          val configured = selected_backend_registrations (#backends cfg)
-          val unknown =
-            case #backends cfg of
-                NONE => []
-              | SOME names => List.filter (fn name =>
-                  not (Option.isSome (lookup_backend name))) names
+          val (candidates, unknown) =
+            resolve_backend_registrations (#backends cfg)
         in
           if not (null unknown) then
             Unknown (map (fn name => "unknown requested backend: " ^ name)
@@ -1638,38 +1674,51 @@ structure Refute_Core = struct
           val forms = preprocess_forms cfg problem
           fun registration_instances registration =
             instances_for_form (#input (#backend registration)) forms
-          fun registration_is_eligible registration =
-            let
-              val instances = registration_instances registration
-              val timeout =
-                if #timeout cfg <= 0.0 then Time.fromReal 0.0
-                else Time.fromReal (#timeout cfg)
-            in
-              (* Smart-generator admission may compile an entire trial plan.
-                 It is backend work too, so it must not escape the configured
-                 backend deadline. *)
-              (Timeout.apply timeout (fn () =>
-                 meets_requirement cfg (instances_are_executable instances)
-                   (#backend registration) instances) ()
-               handle Timeout.TIMEOUT _ => false)
-            end
-          (* Deciding eligibility can run a whole trial substrate compile
-             (the smart-generator gate), so decide it once per registration
-             and partition that answer. *)
-          val eligibility = map (fn registration =>
-            (registration, registration_is_eligible registration)) configured
-          val selected = map #1 (List.filter #2 eligibility)
-          val excluded = map #1 (List.filter (not o #2) eligibility)
-          val excluded_reasons =
-            if null excluded then []
+          val context = Thread_Data.get active_refute_context
+          fun admit registration = admit_backend context cfg forms registration
+          (* Admission may compile and park a complete smart-generator test.
+             In the default profile every registration gets its own local
+             worker, independently of the process-global thread count. *)
+          val admissions =
+            if #sequential cfg then map admit candidates
             else
-              instance_gate_reasons
-                (List.concat (map registration_instances excluded))
+              case candidates of
+                  [] => []
+                | _ => ParList.map_with_workers (length candidates) admit
+                    candidates
+          val selected = List.mapPartial (fn (admission, _) =>
+            case admission of Eligible registration => SOME registration
+                            | _ => NONE) admissions
+          val configured = List.exists #2 admissions
+          fun add_reason (reason, reasons) =
+            if List.exists (fn old => old = reason) reasons then reasons
+            else reasons @ [reason]
+          fun add_reasons (more, reasons) =
+            List.foldl add_reason reasons more
+          fun admission_reasons ((admission, _), reasons) =
+            case admission of
+                Excluded registration =>
+                  add_reasons
+                    (instance_gate_reasons
+                       (registration_instances registration), reasons)
+              | AdmissionTimeout name =>
+                  add_reason (name ^ " admission timed out", reasons)
+              | _ => reasons
+          val excluded_reasons =
+            List.foldl admission_reasons [] admissions
+          fun admission_error (admission, _) =
+            case admission of
+                AdmissionError (name, error) =>
+                  SOME (name ^ ": " ^ exception_reason error)
+              | _ => NONE
+          val admission_errors =
+            List.mapPartial admission_error admissions
           val _ = List.app (fn reason => Private.say 2
             ("Refute: QC backends excluded: " ^ reason ^ "\n"))
             excluded_reasons
         in
-          if null configured then Unknown ["no configured backend"]
+          if not (null admission_errors) then Unknown admission_errors
+          else if not configured then Unknown ["no configured backend"]
           else if null selected then Unknown excluded_reasons
           else
             let
@@ -1687,25 +1736,13 @@ structure Refute_Core = struct
               val jobs = map (fn registration =>
                 (#backend registration, ref NONE : outcome option ref))
                 selected
-              (* [ParList.get_some] walks the jobs sequentially whenever
-                 [Multithreading.max_threads ()] is one, which it is in any
-                 session not given the build [--mt] flag.  The results are
-                 the same either way, so this is a trace-level diagnostic
-                 rather than a warning. *)
-              val _ =
-                if #sequential cfg orelse Multithreading.max_threads () > 1
-                then ()
-                else Private.say 2
-                  ("Refute: backend racing requested, but the session " ^
-                   "thread count is 1, so the backends run sequentially " ^
-                   "(--mt or Multithreading.max_threads_update raises it)\n")
               val winner =
                 if #sequential cfg then
                   ParList.get_first
                     (run_backend (Thread_Data.get active_refute_context)
                       cfg ceiling forms) jobs
                 else
-                  ParList.get_some
+                  ParList.get_some_with_workers (length jobs)
                     (run_backend (Thread_Data.get active_refute_context)
                       cfg ceiling forms) jobs
             in

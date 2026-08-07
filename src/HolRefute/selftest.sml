@@ -11606,6 +11606,747 @@ val _ = require_msg (check_result no_counterexample_snapshot) (fn () =>
 
 val _ = tprint "Refute reachable-certainty backend racing"
 
+fun with_global_thread_count count body =
+  let
+    val saved = Multithreading.max_threads ()
+  in
+    Portable.finally
+      (fn () => Multithreading.max_threads_update saved)
+      (fn () =>
+        (Multithreading.max_threads_update count; body ()))
+      ()
+  end
+
+val _ = tprint "Refute explicit-worker ParList contract"
+
+fun parlist_map_starts_every_worker () =
+  with_global_thread_count 1 (fn () =>
+    let
+      val lock = Mutex.mutex ()
+      val ready = ConditionVar.conditionVar ()
+      val arrived = ref 0
+      val active = ref 0
+      val maximum = ref 0
+      fun body value =
+        Multithreading.synchronized "ParList map barrier" lock (fn () =>
+          let
+            fun wait () =
+              if !arrived = 3 then ()
+              else (ConditionVar.wait (ready, lock); wait ())
+            val _ = arrived := !arrived + 1
+            val _ = active := !active + 1
+            val _ = maximum := Int.max (!maximum, !active)
+            val _ =
+              if !arrived = 3 then ConditionVar.broadcast ready else ()
+            val _ = wait ()
+            val _ = active := !active - 1
+          in
+            value * 10
+          end)
+      val result = ParList.map_with_workers 3 body [3, 1, 2]
+    in
+      result = [30, 10, 20] andalso !maximum = 3 andalso
+      Multithreading.max_threads () = 1
+    end)
+
+val _ = require_msg (check_result parlist_map_starts_every_worker) (fn () =>
+  "map_with_workers did not start one ordered worker per input at global 1")
+  (fn () => ()) ()
+
+fun parlist_winner_waits_for_loser_unwind () =
+  with_global_thread_count 1 (fn () =>
+    let
+      val lock = Mutex.mutex ()
+      val ready = ConditionVar.conditionVar ()
+      val loser_started = ref false
+      val unwound = ref false
+      fun await_loser () =
+        Multithreading.synchronized "ParList winner barrier" lock (fn () =>
+          let
+            fun wait () =
+              if !loser_started then ()
+              else (ConditionVar.wait (ready, lock); wait ())
+          in
+            wait ()
+          end)
+      fun await_interrupt () =
+        Multithreading.synchronized "ParList loser barrier" lock (fn () =>
+          let fun wait () = (ConditionVar.wait (ready, lock); wait ())
+          in wait () end)
+      fun body 0 = (await_loser (); SOME 0)
+        | body _ =
+            (Multithreading.synchronized "ParList loser start" lock (fn () =>
+               (loser_started := true; ConditionVar.broadcast ready));
+             Thread_Attributes.uninterruptible (fn restore => fn () =>
+               ((restore await_interrupt () handle Interrupt => ());
+                unwound := true)) ();
+             NONE)
+      val result = ParList.get_some_with_workers 2 body [0, 1]
+    in
+      result = SOME 0 andalso !unwound andalso
+      Multithreading.max_threads () = 1
+    end)
+
+val _ = require_msg
+  (check_result parlist_winner_waits_for_loser_unwind) (fn () =>
+  "get_some_with_workers returned before its interrupted loser unwound")
+  (fn () => ()) ()
+
+fun parlist_map_exception_order () =
+  let
+    val completed = Array.array (3, false)
+    fun body index =
+      (Array.update (completed, index, true);
+       if index = 0 then raise Fail "first"
+       else if index = 1 then raise Fail "second"
+       else index)
+    val first =
+      ((ignore (ParList.map_with_workers 3 body [0, 1, 2]); false)
+       handle Fail "first" => true | _ => false)
+  in
+    first andalso List.all (fn index => Array.sub (completed, index))
+      [0, 1, 2]
+  end
+
+val _ = require_msg (check_result parlist_map_exception_order) (fn () =>
+  "map_with_workers did not unwind all work or re-raise in input order")
+  (fn () => ()) ()
+
+fun parlist_worker_interrupt_unwinds () =
+  let
+    val lock = Mutex.mutex ()
+    val ready = ConditionVar.conditionVar ()
+    val other_started = ref false
+    val unwound = ref false
+    fun wait_for_other () =
+      Multithreading.synchronized "ParList interrupt barrier" lock (fn () =>
+        let
+          fun wait () =
+            if !other_started then ()
+            else (ConditionVar.wait (ready, lock); wait ())
+        in
+          wait ()
+        end)
+    fun wait_forever () =
+      Multithreading.synchronized "ParList interrupt loser" lock (fn () =>
+        let fun wait () = (ConditionVar.wait (ready, lock); wait ())
+        in wait () end)
+    fun body 0 = (wait_for_other (); raise Interrupt)
+      | body _ =
+          (Multithreading.synchronized "ParList interrupt start" lock (fn () =>
+             (other_started := true; ConditionVar.broadcast ready));
+           Thread_Attributes.uninterruptible (fn restore => fn () =>
+             ((restore wait_forever () handle Interrupt => ());
+              unwound := true)) ();
+           1)
+    val interrupted =
+      ((ignore (ParList.map_with_workers 2 body [0, 1]); false)
+       handle Interrupt => true)
+  in
+    interrupted andalso !unwound
+  end
+
+val _ = require_msg (check_result parlist_worker_interrupt_unwinds) (fn () =>
+  "a worker Interrupt escaped before the other local worker unwound")
+  (fn () => ()) ()
+
+fun parlist_caller_interrupt_unwinds () =
+  let
+    val lock = Mutex.mutex ()
+    val ready = ConditionVar.conditionVar ()
+    val started = ref 0
+    val unwound = ref 0
+    val caller_result = ref NONE
+    fun wait_forever () =
+      Multithreading.synchronized "ParList caller loser" lock (fn () =>
+        let fun wait () = (ConditionVar.wait (ready, lock); wait ())
+        in wait () end)
+    fun body value =
+      (Multithreading.synchronized "ParList caller start" lock (fn () =>
+         (started := !started + 1; ConditionVar.broadcast ready));
+       Thread_Attributes.uninterruptible (fn restore => fn () =>
+         ((restore wait_forever () handle Interrupt => ());
+          Multithreading.synchronized "ParList caller unwind" lock (fn () =>
+            (unwound := !unwound + 1; ConditionVar.broadcast ready)))) ();
+       value)
+    fun call () =
+      let
+        val result =
+          ((ignore (ParList.map_with_workers 2 body [0, 1]); false)
+           handle Interrupt => true)
+      in
+        Multithreading.synchronized "ParList caller result" lock (fn () =>
+          (caller_result := SOME result; ConditionVar.broadcast ready))
+      end
+    val caller = Standard_Thread.fork
+      {name = "ParList caller interrupt test", stack_limit = NONE,
+       interrupts = false}
+      (fn () => Thread_Attributes.with_attributes
+        Thread_Attributes.private_interrupts (fn _ => call ()))
+    val _ = Multithreading.synchronized "ParList caller wait" lock (fn () =>
+      let
+        fun wait () =
+          if !started = 2 then ()
+          else (ConditionVar.wait (ready, lock); wait ())
+      in
+        wait ()
+      end)
+    val _ = Standard_Thread.interrupt_unsynchronized caller
+    val _ = Standard_Thread.join caller
+  in
+    !caller_result = SOME true andalso !unwound = 2
+  end
+
+val _ = require_msg (check_result parlist_caller_interrupt_unwinds) (fn () =>
+  "a caller Interrupt returned before every local worker unwound")
+  (fn () => ()) ()
+
+fun parlist_partial_fork_failure_unwinds () =
+  let
+    val lock = Mutex.mutex ()
+    val ready = ConditionVar.conditionVar ()
+    val attempts = ref 0
+    val started = ref false
+    val unwound = ref false
+    fun wait_started () =
+      Multithreading.synchronized "ParList forced fork" lock (fn () =>
+        let
+          fun wait () =
+            if !started then ()
+            else (ConditionVar.wait (ready, lock); wait ())
+        in
+          wait ()
+        end)
+    fun hook () =
+      (attempts := !attempts + 1;
+       if !attempts = 2 then
+         (wait_started (); raise Fail "forced partial fork")
+       else ())
+    fun wait_forever () =
+      Multithreading.synchronized "ParList forced fork loser" lock (fn () =>
+        let fun wait () = (ConditionVar.wait (ready, lock); wait ())
+        in wait () end)
+    fun body value =
+      (Multithreading.synchronized "ParList forced fork start" lock (fn () =>
+         (started := true; ConditionVar.broadcast ready));
+       Thread_Attributes.uninterruptible (fn restore => fn () =>
+         ((restore wait_forever () handle Interrupt => ());
+          unwound := true)) ();
+       value)
+    fun run () =
+      let
+        val _ = ParList_Test.fork_hook := SOME hook
+        val failed =
+          ((ignore (ParList.map_with_workers 3 body [0, 1, 2]); false)
+           handle Fail "forced partial fork" => true | _ => false)
+      in
+        failed andalso !unwound
+      end
+  in
+    Portable.finally (fn () => ParList_Test.fork_hook := NONE) run ()
+  end
+
+val _ = require_msg
+  (check_result parlist_partial_fork_failure_unwinds) (fn () =>
+  "a partial ParList fork failure leaked an already-started worker")
+  (fn () => ()) ()
+
+fun parlist_boundary_contract () =
+  let
+    val caller = Thread.self ()
+    val inline = ref true
+    fun some n =
+      (inline := (!inline andalso Standard_Thread.is_self caller);
+       if n = 2 then SOME n else NONE)
+    val old_api = with_global_thread_count 1 (fn () =>
+      ParList.get_some some [1, 2] = SOME 2 andalso !inline)
+    val bad_map =
+      ((ignore (ParList.map_with_workers 0 (fn x => x) []); false)
+       handle Fail _ => true)
+    val bad_some =
+      ((ignore (ParList.get_some_with_workers ~1 SOME []); false)
+       handle Fail _ => true)
+  in
+    ParList.map_with_workers 1 (fn x => x + 1) [] = [] andalso
+    ParList.map_with_workers 4 (fn x => x + 1) [1] = [2] andalso
+    ParList.get_some_with_workers 1 SOME [] = NONE andalso
+    ParList.get_some_with_workers 4 SOME [3] = SOME 3 andalso
+    bad_map andalso bad_some andalso old_api
+  end
+
+val _ = require_msg (check_result parlist_boundary_contract) (fn () =>
+  "ParList boundary cases or get_some's global-one behavior changed")
+  (fn () => ()) ()
+
+datatype admission_test_phase =
+    AdmissionIdle
+  | ConfiguredParallel
+  | RequirementParallel
+  | ExecutionParallel
+  | AdmissionSerial
+
+val admission_test_mutex = Mutex.mutex ()
+val admission_test_ready = ConditionVar.conditionVar ()
+val admission_test_phase = ref AdmissionIdle
+val admission_test_enabled = ref false
+val admission_test_arrived = ref 0
+val admission_test_active = ref 0
+val admission_test_maximum = ref 0
+
+fun reset_admission_test phase =
+  Multithreading.synchronized "Refute admission reset" admission_test_mutex
+    (fn () =>
+      (admission_test_phase := phase;
+       admission_test_arrived := 0;
+       admission_test_active := 0;
+       admission_test_maximum := 0))
+
+fun admission_test_checkpoint parallel =
+  Multithreading.synchronized "Refute admission barrier"
+    admission_test_mutex (fn () =>
+      let
+        fun wait () =
+          if not parallel orelse !admission_test_arrived = 3 then ()
+          else
+            (ConditionVar.wait (admission_test_ready,
+               admission_test_mutex);
+             wait ())
+        val _ = admission_test_arrived := !admission_test_arrived + 1
+        val _ = admission_test_active := !admission_test_active + 1
+        val _ = admission_test_maximum :=
+          Int.max (!admission_test_maximum, !admission_test_active)
+        val _ =
+          if !admission_test_arrived = 3 then
+            ConditionVar.broadcast admission_test_ready
+          else ()
+        val _ = wait ()
+        val _ = admission_test_active := !admission_test_active - 1
+      in
+        ()
+      end)
+
+fun admission_test_configured () =
+  !admission_test_enabled andalso
+  (case !admission_test_phase of
+       ConfiguredParallel => (admission_test_checkpoint true; true)
+     | AdmissionSerial => (admission_test_checkpoint false; true)
+     | _ => true)
+
+fun admission_test_requirement _ _ =
+  ((case !admission_test_phase of
+        RequirementParallel => admission_test_checkpoint true
+      | AdmissionSerial => admission_test_checkpoint false
+      | _ => ());
+   true)
+
+fun admission_test_run name _ _ =
+  ((case !admission_test_phase of
+        ExecutionParallel => admission_test_checkpoint true
+      | _ => ());
+   Unknown [name ^ " completed"])
+
+fun admission_test_backend name weight : backend =
+  {name = name, weight = weight, configured = admission_test_configured,
+   requires = ExecutableGoalUnless admission_test_requirement,
+   input = MonoInstances, run = admission_test_run name}
+
+val admission_test_names =
+  ["refute-admission-alpha", "refute-admission-beta",
+   "refute-admission-gamma"]
+
+val _ = register_backend
+  (admission_test_backend "refute-admission-alpha" (~84))
+val _ = register_backend
+  (admission_test_backend "refute-admission-beta" (~83))
+val _ = register_backend
+  (admission_test_backend "refute-admission-gamma" (~82))
+
+fun run_admission_profile phase sequential goal =
+  with_global_thread_count 1 (fn () =>
+    let
+      val _ = reset_admission_test phase
+      val _ = admission_test_enabled := true
+      val config = default_config
+        |> upd_backends (SOME admission_test_names)
+        |> upd_sequential sequential
+        |> upd_quiet true
+        |> upd_timeout 5.0
+      val captured = Exn.capture (fn () => refute config goal) ()
+      val maximum = !admission_test_maximum
+      val arrived = !admission_test_arrived
+      val _ = admission_test_enabled := false
+      val _ = admission_test_phase := AdmissionIdle
+      val _ = ignore (Exn.release captured)
+    in
+      (maximum, arrived)
+    end)
+
+fun holrefute_admission_and_execution_are_local () =
+  let
+    val configured =
+      run_admission_profile ConfiguredParallel false boolSyntax.T
+    val requirement = run_admission_profile RequirementParallel false
+      ``q (!n : num. n = 0)``
+    val execution =
+      run_admission_profile ExecutionParallel false boolSyntax.T
+    val serial = run_admission_profile AdmissionSerial true
+      ``q (!n : num. n = 0)``
+  in
+    configured = (3, 3) andalso requirement = (3, 3) andalso
+    execution = (3, 3) andalso #1 serial = 1 andalso #2 serial = 6
+  end
+
+val _ = require_msg
+  (check_result holrefute_admission_and_execution_are_local) (fn () =>
+  "HolRefute did not locally parallelize both phases or serialize the opt-out")
+  (fn () => ()) ()
+
+val admission_exclusion_enabled = ref false
+val admission_timeout_enabled = ref false
+val admission_error_alpha_enabled = ref false
+val admission_error_beta_enabled = ref false
+val admission_release_count = ref 0
+val admission_error_mutex = Mutex.mutex ()
+val admission_error_ready = ConditionVar.conditionVar ()
+val admission_error_beta_started = ref false
+
+fun install_admission_release name =
+  let
+    val released = ref false
+  in
+    register_run_release ("selftest-" ^ name) (fn () =>
+      if !released then ()
+      else (released := true;
+            admission_release_count := !admission_release_count + 1))
+  end
+
+fun admission_exclusion _ _ =
+  (install_admission_release "admission-exclusion"; false)
+
+fun admission_timeout _ _ =
+  (install_admission_release "admission-timeout";
+   OS.Process.sleep (Time.fromReal 1.0);
+   true)
+
+fun admission_error_alpha _ _ =
+  (install_admission_release "admission-error-alpha";
+   Multithreading.synchronized "Refute admission error alpha"
+     admission_error_mutex (fn () =>
+       let
+         fun wait () =
+           if !admission_error_beta_started then ()
+           else
+             (ConditionVar.wait (admission_error_ready,
+                admission_error_mutex);
+              wait ())
+       in
+         wait ()
+       end);
+   raise Fail "admission alpha")
+
+fun admission_error_beta _ _ =
+  (install_admission_release "admission-error-beta";
+   Multithreading.synchronized "Refute admission error beta"
+     admission_error_mutex (fn () =>
+       (admission_error_beta_started := true;
+        ConditionVar.broadcast admission_error_ready));
+   raise Fail "admission beta")
+
+fun admission_failure_backend name weight enabled requirement : backend =
+  {name = name, weight = weight, configured = fn () => !enabled,
+   requires = ExecutableGoalUnless requirement, input = MonoInstances,
+   run = fn _ => fn _ => Unknown [name ^ " unexpectedly ran"]}
+
+val _ = register_backend (admission_failure_backend
+  "refute-admission-exclusion" (~81) admission_exclusion_enabled
+  admission_exclusion)
+val _ = register_backend (admission_failure_backend
+  "refute-admission-timeout" (~80) admission_timeout_enabled
+  admission_timeout)
+val _ = register_backend (admission_failure_backend
+  "refute-admission-error-alpha" (~79) admission_error_alpha_enabled
+  admission_error_alpha)
+val _ = register_backend (admission_failure_backend
+  "refute-admission-error-beta" (~78) admission_error_beta_enabled
+  admission_error_beta)
+
+fun quiet_failure_config names timeout = default_config
+  |> upd_backends (SOME names)
+  |> upd_sequential false
+  |> upd_quiet true
+  |> upd_timeout timeout
+
+fun admission_exclusion_is_ordered_and_released () =
+  let
+    val _ = admission_release_count := 0
+    val _ = admission_exclusion_enabled := true
+    val result = refute
+      (quiet_failure_config ["refute-admission-exclusion"] 5.0)
+      ``q (!n : num. n = 0)``
+    val _ = admission_exclusion_enabled := false
+  in
+    (case result of
+         Unknown reasons => List.exists (String.isSubstring
+           "not executable: unexpanded binder") reasons
+       | _ => false) andalso
+    !admission_release_count = 1
+  end
+
+val _ = require_msg
+  (check_result admission_exclusion_is_ordered_and_released) (fn () =>
+  "an admission exclusion lost its reason or run-scoped release")
+  (fn () => ()) ()
+
+fun admission_timeout_is_ineligible_and_released () =
+  let
+    val _ = admission_release_count := 0
+    val _ = admission_timeout_enabled := true
+    val result = refute
+      (quiet_failure_config ["refute-admission-timeout"] 0.05)
+      ``q (!n : num. n = 0)``
+    val _ = admission_timeout_enabled := false
+  in
+    (case result of
+         Unknown [reason] =>
+           reason = "refute-admission-timeout admission timed out"
+       | _ => false) andalso
+    !admission_release_count = 1
+  end
+
+val _ = require_msg
+  (check_result admission_timeout_is_ineligible_and_released) (fn () =>
+  "an admission timeout changed polarity or lost its run-scoped release")
+  (fn () => ()) ()
+
+fun admission_errors_are_registry_ordered_and_released () =
+  let
+    val _ = admission_release_count := 0
+    val _ = admission_error_beta_started := false
+    val _ = admission_error_alpha_enabled := true
+    val _ = admission_error_beta_enabled := true
+    val result = refute
+      (quiet_failure_config
+        ["refute-admission-error-alpha", "refute-admission-error-beta"] 5.0)
+      ``q (!n : num. n = 0)``
+    val _ = admission_error_alpha_enabled := false
+    val _ = admission_error_beta_enabled := false
+  in
+    (case result of
+         Unknown [alpha, beta] =>
+           String.isSubstring "refute-admission-error-alpha" alpha andalso
+           String.isSubstring "admission alpha" alpha andalso
+           String.isSubstring "refute-admission-error-beta" beta andalso
+           String.isSubstring "admission beta" beta
+       | _ => false) andalso
+    !admission_release_count = 2
+  end
+
+val _ = require_msg
+  (check_result admission_errors_are_registry_ordered_and_released) (fn () =>
+  "admission errors followed completion order or leaked a parked resource")
+  (fn () => ()) ()
+
+val reentrant_test_mutex = Mutex.mutex ()
+val reentrant_test_ready = ConditionVar.conditionVar ()
+val reentrant_outer_enabled = ref false
+val reentrant_other_enabled = ref false
+val reentrant_nested_enabled = ref false
+val reentrant_other_started = ref false
+val reentrant_nested_done = ref false
+val reentrant_nested_runs = ref 0
+
+val reentrant_nested_backend : backend =
+  {name = "refute-reentrant-nested", weight = ~77,
+   configured = fn () => !reentrant_nested_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn _ =>
+     (reentrant_nested_runs := !reentrant_nested_runs + 1;
+      Unknown ["nested completed"])}
+
+fun wait_for_reentrant_other () =
+  Multithreading.synchronized "Refute reentrant outer" reentrant_test_mutex
+    (fn () =>
+      let
+        fun wait () =
+          if !reentrant_other_started then ()
+          else (ConditionVar.wait (reentrant_test_ready,
+                  reentrant_test_mutex);
+                wait ())
+      in
+        wait ()
+      end)
+
+val reentrant_outer_backend : backend =
+  {name = "refute-reentrant-outer", weight = ~76,
+   configured = fn () => !reentrant_outer_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn _ =>
+     let
+       val _ = wait_for_reentrant_other ()
+       val nested_config = default_config
+         |> upd_backends (SOME ["refute-reentrant-nested"])
+         |> upd_sequential true
+         |> upd_quiet true
+       val nested = Exn.capture (fn () => refute nested_config boolSyntax.T) ()
+       val _ = Multithreading.synchronized "Refute reentrant done"
+         reentrant_test_mutex (fn () =>
+           (reentrant_nested_done := true;
+            ConditionVar.broadcast reentrant_test_ready))
+       val _ = ignore (Exn.release nested)
+     in
+       Unknown ["outer completed"]
+     end}
+
+val reentrant_other_backend : backend =
+  {name = "refute-reentrant-other", weight = ~75,
+   configured = fn () => !reentrant_other_enabled,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn _ =>
+     (Multithreading.synchronized "Refute reentrant other"
+        reentrant_test_mutex (fn () =>
+          let
+            fun wait () =
+              if !reentrant_nested_done then ()
+              else (ConditionVar.wait (reentrant_test_ready,
+                      reentrant_test_mutex);
+                    wait ())
+            val _ = reentrant_other_started := true
+            val _ = ConditionVar.broadcast reentrant_test_ready
+          in
+            wait ()
+          end);
+      Unknown ["other completed"])}
+
+val _ = register_backend reentrant_nested_backend
+val _ = register_backend reentrant_outer_backend
+val _ = register_backend reentrant_other_backend
+
+fun nested_quiet_refute_does_not_deadlock () =
+  with_global_thread_count 1 (fn () =>
+    let
+      val _ = reentrant_other_started := false
+      val _ = reentrant_nested_done := false
+      val _ = reentrant_nested_runs := 0
+      val _ = reentrant_outer_enabled := true
+      val _ = reentrant_other_enabled := true
+      val _ = reentrant_nested_enabled := true
+      val config = default_config
+        |> upd_backends
+          (SOME ["refute-reentrant-outer", "refute-reentrant-other"])
+        |> upd_sequential false
+        |> upd_quiet true
+        |> upd_timeout 5.0
+      val captured = Exn.capture (fn () => refute config boolSyntax.T) ()
+      val _ = reentrant_outer_enabled := false
+      val _ = reentrant_other_enabled := false
+      val _ = reentrant_nested_enabled := false
+      val result = Exn.release captured
+    in
+      (case result of Unknown _ => true | _ => false) andalso
+      !reentrant_nested_done andalso !reentrant_nested_runs = 1
+    end)
+
+val _ = require_msg (check_result nested_quiet_refute_does_not_deadlock)
+  (fn () => "a backend's nested quiet Refute call deadlocked or lost scope")
+  (fn () => ()) ()
+
+val admission_interrupt_mutex = Mutex.mutex ()
+val admission_interrupt_ready = ConditionVar.conditionVar ()
+val admission_interrupt_enabled = ref false
+val admission_interrupt_started = ref 0
+val admission_interrupt_unwound = ref 0
+
+fun admission_interrupt_configured name () =
+  if not (!admission_interrupt_enabled) then false
+  else
+    let
+      fun wait_forever () =
+        Multithreading.synchronized "Refute admission interrupt wait"
+          admission_interrupt_mutex (fn () =>
+            let
+              fun wait () =
+                (ConditionVar.wait (admission_interrupt_ready,
+                   admission_interrupt_mutex);
+                 wait ())
+            in
+              wait ()
+            end)
+      fun unwind () =
+        Multithreading.synchronized "Refute admission interrupt unwind"
+          admission_interrupt_mutex (fn () =>
+            (admission_interrupt_unwound :=
+               !admission_interrupt_unwound + 1;
+             ConditionVar.broadcast admission_interrupt_ready))
+      val _ = install_admission_release name
+      val _ = Multithreading.synchronized "Refute admission interrupt start"
+        admission_interrupt_mutex (fn () =>
+          (admission_interrupt_started := !admission_interrupt_started + 1;
+           ConditionVar.broadcast admission_interrupt_ready))
+    in
+      (Portable.finally unwind wait_forever (); true)
+    end
+
+fun admission_interrupt_backend name weight : backend =
+  {name = name, weight = weight,
+   configured = admission_interrupt_configured name,
+   requires = AnyGoal, input = MonoInstances,
+   run = fn _ => fn _ => Unknown ["interrupt backend unexpectedly ran"]}
+
+val admission_interrupt_names =
+  ["refute-admission-interrupt-alpha",
+   "refute-admission-interrupt-beta"]
+
+val _ = register_backend (admission_interrupt_backend
+  "refute-admission-interrupt-alpha" (~74))
+val _ = register_backend (admission_interrupt_backend
+  "refute-admission-interrupt-beta" (~73))
+
+fun holrefute_caller_interrupt_unwinds_admission () =
+  let
+    val caller_result = ref false
+    val _ = admission_release_count := 0
+    val _ = admission_interrupt_started := 0
+    val _ = admission_interrupt_unwound := 0
+    val _ = admission_interrupt_enabled := true
+    val config = default_config
+      |> upd_backends (SOME admission_interrupt_names)
+      |> upd_sequential false
+      |> upd_quiet true
+      |> upd_timeout 10.0
+    fun call () =
+      caller_result :=
+        ((ignore (refute config boolSyntax.T); false)
+         handle Interrupt => true)
+    val caller = Standard_Thread.fork
+      {name = "Refute admission caller interrupt test", stack_limit = NONE,
+       interrupts = false}
+      (fn () => Thread_Attributes.with_attributes
+        Thread_Attributes.private_interrupts (fn _ => call ()))
+    val _ = Multithreading.synchronized "Refute admission interrupt parent"
+      admission_interrupt_mutex (fn () =>
+        let
+          fun wait () =
+            if !admission_interrupt_started = 2 then ()
+            else
+              (ConditionVar.wait (admission_interrupt_ready,
+                 admission_interrupt_mutex);
+               wait ())
+        in
+          wait ()
+        end)
+    val _ = Standard_Thread.interrupt_unsynchronized caller
+    val _ = Standard_Thread.join caller
+    val _ = admission_interrupt_enabled := false
+  in
+    !caller_result andalso !admission_interrupt_unwound = 2 andalso
+    !admission_release_count = 2
+  end
+
+val _ = require_msg
+  (check_result holrefute_caller_interrupt_unwinds_admission) (fn () =>
+  "caller interruption leaked admission workers or run-scoped releases")
+  (fn () => ()) ()
+
 fun stub_cex backend certainty : counterexample =
   { backend = backend,
     substrate = "stub",
@@ -11724,25 +12465,8 @@ val _ = register_backend_with_ceiling race_slow_quasi_backend
 val _ = register_backend merge_low_backend
 val _ = register_backend merge_high_backend
 
-(* A losing backend can only be outrun where there is a second worker to
-   outrun it on.  [Multithreading.max_threads] is one in any session that
-   was not given [--mt], which is how `bin/hol run selftest` starts, and
-   [ParList.get_some] then degrades to a sequential walk.  The stubs below
-   have the genuine one wait for the potential one to start, so under that
-   degradation it can only burn the backend timeout and report nothing. *)
-fun with_raced_backends body =
-  let
-    val saved_threads = Multithreading.max_threads ()
-  in
-    Portable.finally
-      (fn () => Multithreading.max_threads_update saved_threads)
-      (fn () =>
-        (Multithreading.max_threads_update (Int.max (2, saved_threads));
-         body ()))
-      ()
-  end
-
-fun potential_does_not_interrupt_genuine () = with_raced_backends (fn () =>
+fun potential_does_not_interrupt_genuine () =
+  with_global_thread_count 1 (fn () =>
   let
     val _ = reset_race ()
     val _ = race_potential_enabled := true
@@ -11770,7 +12494,8 @@ val _ = require_msg
   "an MF-like Potential interrupted a QC Genuine result")
   (fn () => ()) ()
 
-fun quasi_does_not_interrupt_genuine () = with_raced_backends (fn () =>
+fun quasi_does_not_interrupt_genuine () =
+  with_global_thread_count 1 (fn () =>
   let
     val _ = reset_race ()
     val _ = race_quasi_enabled := true
@@ -11827,12 +12552,13 @@ val _ = require_msg
   (fn () => ()) ()
 
 fun potential_merge_uses_backend_weight () =
+  with_global_thread_count 1 (fn () =>
   let
     val _ = merge_low_enabled := true
     val _ = merge_high_enabled := true
     val config =
       upd_expect ExpectPotential
-        (upd_sequential true
+        (upd_sequential false
           (upd_backends
             (SOME ["refute-merge-potential-low",
                    "refute-merge-potential-high"])
@@ -11846,7 +12572,7 @@ fun potential_merge_uses_backend_weight () =
           ({backend, certainty = Refute_Core.Potential _, ...} :: _) =>
           backend = "refute-merge-potential-low"
       | _ => false
-  end
+  end)
 
 val _ = require_msg
   (check_result potential_merge_uses_backend_weight) (fn () =>
@@ -15144,6 +15870,34 @@ val _ = require_msg
   "the smart gate leaked its compiled test when exhaustive never ran")
   (fn () => ()) ()
 
+fun smartgen_gate_release_survives_admission_error () =
+  let
+    val config = default_config
+      |> upd_backends
+        (SOME ["exhaustive", "refute-admission-error-beta"])
+      |> upd_substrate NativeSML
+      |> upd_sequential false
+      |> upd_certify false
+      |> upd_quiet true
+      |> upd_timeout 5.0
+    val tables_before = term_table_count ()
+    val _ = admission_error_beta_started := false
+    val _ = admission_error_beta_enabled := true
+    val captured = Exn.capture (fn () =>
+      refute_problem config (qc_problem smartgen_linear_goal)) ()
+    val _ = admission_error_beta_enabled := false
+  in
+    (case Exn.release captured of
+         Unknown [reason] => String.isSubstring "admission beta" reason
+       | _ => false) andalso
+    term_table_count () = tables_before
+  end
+
+val _ = require_msg
+  (check_result smartgen_gate_release_survives_admission_error) (fn () =>
+  "a parallel admission error leaked the smart gate's parked compilation")
+  (fn () => ()) ()
+
 fun smartgen_mutual_string_and_hygiene_native () =
   let
     fun run goal depth =
@@ -17694,49 +18448,28 @@ val _ = require_msg
   "trace level 2 omitted the executability-gate reason")
   (fn () => ()) ()
 
-(* [ParList.get_some] walks the jobs sequentially whenever the session
-   thread count is one, which it is unless the session was given [--mt].
-   The default [sequential = false] then races nothing, and trace level 2
-   says so. *)
-val racing_hint = "backend racing requested, but the session thread count is 1"
+val obsolete_racing_hint =
+  "backend racing requested, but the session thread count is 1"
 
-fun sequential_degradation_is_reported () =
-  let
-    val saved_threads = Multithreading.max_threads ()
-    fun restore () = Multithreading.max_threads_update saved_threads
-    fun output_of level sequential =
-      let
-        val config = default_config
-          |> upd_backends (SOME ["exhaustive"])
-          |> upd_size 0
-          |> upd_timeout 10.0
-          |> upd_sequential sequential
-      in
-        #2 (capture_refute_messages level (fn () =>
-          refute config boolSyntax.T))
-      end
-    fun hinted level sequential =
-      String.isSubstring racing_hint (output_of level sequential)
-    fun body () =
-      let
-        val _ = Multithreading.max_threads_update 1
-        (* the diagnostic sits where the walk is chosen, which is reached
-           only once a backend has been selected *)
-        val reached = String.isSubstring "Refute backend started"
-          (output_of 2 false)
-      in
-        reached andalso hinted 2 false andalso
-        not (hinted 1 false) andalso not (hinted 2 true) andalso
-        with_raced_backends (fn () =>
-          Multithreading.max_threads () > 1 andalso not (hinted 2 false))
-      end
-  in
-    Portable.finally restore body ()
-  end
+fun local_racing_has_no_degradation_diagnostic () =
+  with_global_thread_count 1 (fn () =>
+    let
+      val config = default_config
+        |> upd_backends (SOME ["exhaustive"])
+        |> upd_size 0
+        |> upd_timeout 10.0
+        |> upd_sequential false
+      val (_, output) = capture_refute_messages 2 (fn () =>
+        refute config boolSyntax.T)
+    in
+      Multithreading.max_threads () = 1 andalso
+      String.isSubstring "Refute backend started" output andalso
+      not (String.isSubstring obsolete_racing_hint output)
+    end)
 
 val _ = require_msg
-  (check_result sequential_degradation_is_reported) (fn () =>
-  "the trace-level-2 sequential-degradation hint is missing or leaked")
+  (check_result local_racing_has_no_degradation_diagnostic) (fn () =>
+  "the obsolete thread-count degradation diagnostic is still emitted")
   (fn () => ()) ()
 
 fun smartgen_failure_reason_and_gate_output () =
@@ -19479,13 +20212,10 @@ fun corpus_parlist () =
         | SOME 3 => true
         | _ => false);
     (* A losing worker may be inside an uninterruptible section holding the
-       theory mutex, so it must be allowed to unwind rather than killed.
-       The loser needs a worker to lose on: [get_some] forks nothing at one
-       thread, and `bin/hol run selftest` starts there, so without raising
-       the count the degraded sequential walk answers from the winner alone
-       and never enters the section under test. *)
-    check_corpus "Refute corpus: ParList get_some lets a loser unwind"
-      (fn () => with_raced_backends (fn () =>
+       theory mutex, so it must be allowed to unwind rather than killed. *)
+    check_corpus
+      "Refute corpus: ParList get_some_with_workers lets a loser unwind"
+      (fn () => with_global_thread_count 1 (fn () =>
         let
           val unwound = ref false
           fun body 0 = (OS.Process.sleep (Time.fromReal 0.05); SOME 0)
@@ -19495,7 +20225,8 @@ fun corpus_parlist () =
                     unwound := true)) ();
                  NONE)
         in
-          ParList.get_some body [0, 1] = SOME 0 andalso !unwound
+          ParList.get_some_with_workers 2 body [0, 1] = SOME 0 andalso
+          !unwound
         end));
     check_corpus "Refute corpus: parallel counterexample outcome" (fn () =>
       same cex_goal);

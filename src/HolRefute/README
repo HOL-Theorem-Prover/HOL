@@ -96,13 +96,14 @@ conservative ceiling `Genuine`.  A backend with a tighter bound can use
 bound: overestimating only forgoes an early stop, whereas underestimating can
 hide a stronger result and violates the backend contract.
 
-Racing also needs a session thread count above one.  It is set by the
-Holmake and build `--mt` flag, or directly by
-`Multithreading.max_threads_update`, and defaults to one; at one the
-parallel walk over the selected backends degrades to a sequential one.
-The default `upd_sequential false` therefore runs the backends one at a
-time unless threads are enabled.  Only the schedule differs, never the
-result; Refute reports the degradation at trace level 2 or higher.
+Backend admission and execution use a worker pool local to each Refute call.
+The default `upd_sequential false` therefore starts one worker per selected
+backend even in an ordinary session whose process-global thread count is one.
+Refute does not change that global count, so unrelated HOL tools keep their
+usual scheduling policy.  `upd_sequential true` is the complete serial
+opt-out.  Top-level backend workers do not reduce a backend's own internal
+parallelism; in particular, the model finder's `max_threads = 0` retains its
+automatic Kodkod/Kodkodi setting, so the default can oversubscribe a machine.
 
 The unused-assumption facade consists of `check_unused_assms`,
 `find_unused_assms`, and `print_unused_assms`.  Each takes a `config option`
