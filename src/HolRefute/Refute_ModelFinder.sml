@@ -1083,24 +1083,19 @@ fun run_instance deadline started (config : Refute_Core.config)
           (problems, donno) flags
       end
 
-    fun trivially_false_warning () =
+    fun potential_only_warning () =
       let
         val (unsound, sound) = List.partition
           (#unsound o metadata) (!generated_problems)
       in
         if not (null sound) andalso
-           List.all (KK.is_problem_trivially_false o raw_problem) sound then
+           List.all (KK.is_problem_trivially_false o raw_problem) sound andalso
+           List.exists
+             (not o KK.is_problem_trivially_false o raw_problem) unsound
+        then
           Refute_Core.Private.say 1
-            ("Refute warning: the " ^
-             (if #falsify mf then "conjecture either holds"
-              else "formula is unsatisfiable") ^
-             " for the given scopes or lies outside the supported " ^
-             "fragment" ^
-             (if List.exists
-                  (not o KK.is_problem_trivially_false o raw_problem)
-                  unsound
-              then "; only potentially spurious models may be found"
-              else "") ^ "\n")
+            ("Refute warning: preprocessing left only potentially spurious " ^
+             "model-finder problems for the given scopes\n")
         else ()
       end
 
@@ -1115,7 +1110,7 @@ fun run_instance deadline started (config : Refute_Core.config)
         val _ = last_donno := donno
         val _ = generated_problems := !generated_problems @ problems
         val _ = generated_scopes := !generated_scopes @ scope_batch
-        val _ = if last then trivially_false_warning () else ()
+        val _ = if last then potential_only_warning () else ()
         val (found, max_potential, max_genuine, _) = state
       in
         solve_any_problem

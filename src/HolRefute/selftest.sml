@@ -8621,6 +8621,18 @@ fun mf_model_certification_protocol () =
          {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
           wfs = [], sound_finitizes = false, total_consts = NONE},
        reasons = forced_reasons}
+    val predicate = ``p : num -> bool``
+    val quantified_reconstruction : MFM.reconstruction =
+      {bindings = [(predicate, ``{31} : num set``)], evals = [],
+       skolems = [], consts = [], types = [], codatatypes_ok = true}
+    val quantified = ``(?x : num. p x) ==> !x. p x``
+    fun quantified_result sound genuine reasons = MFM.certify
+      {executable = true, original = quantified, eval_terms = [],
+       reconstruction = quantified_reconstruction, cex = base,
+       sound = sound, genuine_means_genuine = genuine, reasons = reasons}
+    val stuck_genuine = quantified_result true true []
+    val stuck_quasi = quantified_result true false ["inexact encoding"]
+    val stuck_potential = quantified_result false false []
     val smart_genuine = MFM.genuine_means_genuine
       {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
        wfs = [], sound_finitizes = true, total_consts = NONE}
@@ -8655,6 +8667,20 @@ fun mf_model_certification_protocol () =
          MFM.Keep {certainty = QuasiGenuine
            ["Try again with \"finitize\" set to \"smart\" or \"false\""],
            cert = NONE, ...} => true
+       | _ => false) andalso
+    (* Optional replay cannot lower the encoding-derived verdict.  The same
+       unbounded quantified proposition remains Potential only when it came
+       from the liberal encoding. *)
+    (case stuck_genuine of
+         MFM.Keep {certainty = Genuine, cert = NONE, model = SOME _, ...} =>
+           true
+       | _ => false) andalso
+    (case stuck_quasi of
+         MFM.Keep {certainty = QuasiGenuine ["inexact encoding"],
+                   cert = NONE, model = SOME _, ...} => true
+       | _ => false) andalso
+    (case stuck_potential of
+         MFM.Keep {certainty = Potential (_ :: _), cert = NONE, ...} => true
        | _ => false)
   end
 
@@ -10377,7 +10403,7 @@ local
         | _ => false
     end
 
-  fun mf_genuine_only_hides_potential () =
+  fun mf_genuine_only_keeps_uncertified_genuine () =
     let
       val solvers = Refute_ForlSat.configured_sat_solvers false
       val solver =
@@ -10390,9 +10416,9 @@ local
         |> upd_card [(NONE, [1])]
     in
       case Refute.refute config ``!b : bool. b`` of
-          Refute.Counterexample _ => false
-        | Refute.NoCounterexample => true
-        | Refute.Unknown _ => true
+          Refute.Counterexample
+            ({certainty = Refute.Genuine, cert = NONE, ...} :: _) => true
+        | _ => false
     end
 
   val _ =
@@ -10509,8 +10535,9 @@ in
     else ()
   val _ =
     if bridge_configured then
-      require_msg (check_result mf_genuine_only_hides_potential) (fn () =>
-        "the model finder returned Potential in genuine_only mode")
+      require_msg
+        (check_result mf_genuine_only_keeps_uncertified_genuine) (fn () =>
+        "genuine_only dropped an uncertified genuine model")
         (fn () => ()) ()
     else ()
   val _ =
@@ -11679,13 +11706,6 @@ fun mf_formatter_snapshot () =
 
 val _ = require_msg (check_result mf_formatter_snapshot) (fn () =>
   "model-finder formatter snapshot changed") (fn () => ()) ()
-
-fun no_counterexample_snapshot () =
-  format_outcome default_config NoCounterexample =
-    "Refute: no counterexample found within the tested finite bounds"
-
-val _ = require_msg (check_result no_counterexample_snapshot) (fn () =>
-  "bounded no-counterexample wording changed") (fn () => ()) ()
 
 val _ = tprint "Refute reachable-certainty backend racing"
 
@@ -21854,7 +21874,7 @@ val mf_acceptance_cases : mf_acceptance_case list =
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "essentially existential natural",
     tm = ``?n : num. n <> n``,
-    expect = ExpectPotential, cert_pin = MfCertIgnored,
+    expect = ExpectGenuine, cert_pin = MfCertNone,
     unknown_reason = NONE, sat4j_smoke = true},
    {name = "small-scope Boolean theorem",
     tm = ``!b : bool. b \/ ~b``,
@@ -22778,14 +22798,14 @@ val mf_core_nits_cases =
        |> mf_core_mono),
    mf_acceptance_invocation "Core_Nits boxed relation"
      ``(R : ('a # 'a) -> ('a # 'a) -> bool) (a, a) (a, a)``
-     ExpectPotential MfCertIgnored true (mf_core_cards [1]),
+     ExpectGenuine MfCertNone true (mf_core_cards [1]),
    mf_acceptance_invocation "Core_Nits relation dont_box"
      ``(R : ('a # 'a) -> ('a # 'a) -> bool) (a, a) (a, a)``
-     ExpectPotential MfCertIgnored false
+     ExpectGenuine MfCertNone false
      (fn config => config |> mf_core_cards [5] |> mf_core_no_box),
    mf_acceptance_invocation "Core_Nits function argument dont_box"
      ``(f : ('a -> 'a) -> 'b) (g : 'a -> 'a) = x``
-     ExpectPotential MfCertIgnored false
+     ExpectGenuine MfCertNone false
      (fn config => config |> mf_core_cards [3] |> mf_core_no_box),
    mf_acceptance_invocation "Core_Nits boxed quantifier sound"
      ``!u : 'a -> 'b. ?v : 'c. !w : 'd. ?x : 'e -> 'f.
@@ -22919,7 +22939,7 @@ val mf_refute_nits_cases =
      ExpectNone MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Refute_Nits weak drinker"
      ``(?x : 'a. f x = g x) ==> f = g``
-     ExpectPotential MfCertIgnored true mf_same_config,
+     ExpectGenuine MfCertNone true mf_same_config,
    mf_acceptance_invocation "Refute_Nits surjective gives inverse"
      ``(!y : 'b. ?x : 'a. y = f x) ==>
        ?g : 'b -> 'a. !x. g (f x) = x``
@@ -22942,19 +22962,19 @@ val mf_refute_nits_cases =
      mf_same_config,
    mf_acceptance_invocation "Refute_Nits predicate of Eps"
      ``($@ (\n : num. n = 0)) = 1``
-     ExpectPotential MfCertIgnored false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits Eps application"
      ``~Q ($@ (Q : num -> bool))``
      ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits Eps equality"
      ``($@ (\x : num. x = y)) = z``
-     ExpectPotential MfCertIgnored false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits Eps axiom"
      ``(?x : 'a. P x) ==> P ($@ P)`` ExpectNone MfCertIgnored false
      mf_same_config,
    mf_acceptance_invocation "Refute_Nits T3 constructor"
      ``(ZooRefE f : ('a, 'b) zoo_ref_t3) = ZooRefE g``
-     ExpectPotential MfCertIgnored false mf_same_config,
+     ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits T3 recursor equation"
      ``zoo_ref_t3_CASE (ZooRefE x) e = e x``
      ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
@@ -23867,9 +23887,9 @@ fun mf_incremental_genuine_models solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
-fun mf_incremental_potential_models solver =
+fun mf_incremental_uncertified_genuine_models solver =
   let
-    val _ = tprint "Refute MF incremental potential models"
+    val _ = tprint "Refute MF incremental uncertified genuine models"
     val config = mf_acceptance_config solver
       |> Refute.upd_card
            [(SOME ``:num``, [2]), (SOME ``:refute$rf3``, [3]),
@@ -23882,16 +23902,16 @@ fun mf_incremental_potential_models solver =
     val ok =
       case outcome of
           Refute.Counterexample cexs =>
-            not (null cexs) andalso length cexs <= 2 andalso
+            not (null cexs) andalso length cexs <= 1 andalso
             List.all (fn ({certainty, cert, stats, ...} :
                 Refute.counterexample) =>
-              (case certainty of Refute.Potential _ => true | _ => false)
-              andalso not (Option.isSome cert) andalso
-              lookup_stat "met_potential" stats = SOME (length cexs)) cexs
+              certainty = Refute.Genuine andalso
+              not (Option.isSome cert) andalso
+              lookup_stat "met_potential" stats = SOME 0) cexs
         | _ => false
   in
     if ok then OK ()
-    else die ("incremental potential-model pin failed: " ^
+    else die ("incremental uncertified genuine-model pin failed: " ^
       mf_pin_outcome_name outcome)
   end
   handle e => die (Feedback.exn_to_string e)
@@ -24006,7 +24026,7 @@ fun run_mf_core_suites () =
       mf_relation_scope_fusion solver;
       mf_mono_driver_scope_fusion solver;
       mf_incremental_genuine_models solver;
-      mf_incremental_potential_models solver;
+      mf_incremental_uncertified_genuine_models solver;
       mf_genuine_stops_potential solver;
       mf_sound_sat_checked_scope solver;
       mf_incremental_solver_selection ()

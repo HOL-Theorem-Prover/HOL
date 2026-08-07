@@ -1441,8 +1441,11 @@ structure Refute_Core = struct
       val model_word =
         if backend = "kodkod" andalso not (#falsify mf) then "model"
         else "counterexample"
-      val header = "Refute found a " ^ model_word ^ " (backend: " ^ backend ^
-        ", substrate: " ^ substrate ^ format_stats stats ^ "):"
+      val candidate_word =
+        case certainty of Potential _ => "candidate " | _ => ""
+      val header = "Refute found a " ^ candidate_word ^ model_word ^
+        " (backend: " ^ backend ^ ", substrate: " ^ substrate ^
+        format_stats stats ^ "):"
       val scope_text =
         if substrate = "kodkod" then format_scope scope else ""
       val binding_text =
@@ -1461,8 +1464,8 @@ structure Refute_Core = struct
             Genuine => ""
           | QuasiGenuine reasons => format_reasons "Quasi-genuine:" reasons
           | Potential reasons =>
-              format_reasons ("Potential " ^ model_word ^ ":") reasons ^
-              "\n…continuing search for a genuine " ^ model_word
+              format_reasons "Why this candidate is unconfirmed:" reasons ^
+              "\n…continuing search for a confirmed " ^ model_word
     in
       header ^ scope_text ^ binding_text ^ eval_text ^ model_text ^
       cert_text ^ certainty_text
@@ -1478,19 +1481,20 @@ structure Refute_Core = struct
 
   fun format_outcome (cfg : config) result =
     let
+      val target =
+        if backend_selected "kodkod" cfg andalso not (#falsify (#mf cfg))
+        then "model"
+        else "counterexample"
       val body =
         case result of
             Counterexample cexs =>
               String.concatWith "\n\n"
                 (map (format_counterexample (#mf cfg)) cexs)
           | NoCounterexample =>
-              "Refute: no " ^
-              (if backend_selected "kodkod" cfg andalso
-                  not (#falsify (#mf cfg))
-               then "model" else "counterexample") ^
-              " found within the tested finite bounds"
+              "Refute exhausted the tested finite bounds without finding a " ^
+              target
           | Unknown reasons =>
-              "Refute could not determine an answer" ^
+              "Refute did not find a " ^ target ^
               format_reasons "Reasons:" reasons
     in
       body ^ #tag cfg

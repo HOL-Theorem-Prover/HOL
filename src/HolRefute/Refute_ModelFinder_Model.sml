@@ -2019,8 +2019,21 @@ fun certify {executable, original, eval_terms,
                  Keep (replace_cex certified Refute_Core.Genuine bindings
                    (#evals certified) (#cert certified) NONE)
              | Refute_Cert.Potential potential =>
-                 Keep (replace_cex potential (#certainty potential) bindings
-                   evals NONE model)
+                 (case #certainty base of
+                      Refute_Core.Genuine => Keep base
+                    | Refute_Core.QuasiGenuine _ => Keep base
+                    | Refute_Core.Potential encoding_reasons =>
+                        let
+                          val certification_reasons =
+                            case #certainty potential of
+                                Refute_Core.Potential values => values
+                              | _ => []
+                        in
+                          Keep (replace_cex potential
+                            (Refute_Core.Potential
+                              (encoding_reasons @ certification_reasons))
+                            bindings evals NONE model)
+                        end)
              | Refute_Cert.Discarded =>
                  (* Kernel evaluation has established that this assignment
                     does not falsify the goal; it cannot be a counterexample

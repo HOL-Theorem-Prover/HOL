@@ -85,15 +85,17 @@ spurious.  A reconstructed model may therefore be `Genuine` with
 certificate for a genuine model-finder result collapses the two axes, makes
 the model finder inconsistent with the QC path, and starves the
 `max_potential` budget so that found models are discarded and reported as
-`Unknown`.  That rule was introduced on 2026-07-29 (3948a7bed), its
+`Unknown`.  A failed optional certification attempt likewise leaves the
+encoding-derived verdict unchanged.  The certificate-required rule was
+introduced on 2026-07-29 (3948a7bed), its
 consequences re-baselined into the tests (2db19131b), and both were reverted;
 tests expecting `Genuine` with `cert = NONE` from kodkod are correct as
 written.  The same rule reappeared as a budget (92c24de7e) and was removed
 too: `max_potential` bounds models that may be spurious because their
 *encoding* is unsound, so only the liberal problems spend it.  Every model
-of a sound problem — quasi-genuine because the encoding is inexact, or
-merely `Potential` because kernel certification got stuck — is a real
-result and is charged to `max_genuine`.
+of a sound problem is a real result — `Genuine` when the encoding is exact
+and `QuasiGenuine` when it is inexact — and is charged to `max_genuine`
+regardless of whether kernel certification succeeds.
 Refute uses no oracle tags.  Cv performs all per-call definitions and
 translations inside a full theory snapshot/revert bracket.  Success,
 failure, timeout, and interruption paths leave no Refute-created type,
