@@ -13,6 +13,10 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   type scope = Refute_ModelFinder_Scope.scope
   type raw_bound = Refute_Forl.raw_bound
 
+  type replay_hint =
+    {nickname : string,
+     value : term}
+
   type reconstruction =
     {bindings : (term * term) list,
      evals : (term * term) list,
@@ -98,6 +102,7 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      bounds : raw_bound list} ->
     {raw : reconstruction,
      displayed : reconstruction,
+     replay_hints : replay_hint list,
      postprocessors : term_postprocessor_snapshot}
 
   val model_report : reconstruction -> Refute_Core.model_report
@@ -120,10 +125,12 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      original : term,
      eval_terms : term list,
      reconstruction : reconstruction,
+     replay_hints : replay_hint list,
      cex : Refute_Core.counterexample,
      sound : bool,
      genuine_means_genuine : bool,
-     reasons : string list} -> verdict
+     reasons : string list,
+     deadline : Time.time option} -> verdict
 end
 
 structure Refute_ModelFinder_Model
@@ -137,14 +144,18 @@ structure MFNT = Refute_ModelFinder_Nut
 structure MFP = Refute_ModelFinder_Peephole
 structure MFR = Refute_ModelFinder_Rep
 structure MFS = Refute_ModelFinder_Scope
-structure Util = Refute_ModelFinder_Util
-
 type term = Term.term
 type hol_type = Type.hol_type
 type rep = MFR.rep
 type nut = MFNT.nut
 type scope = MFS.scope
 type raw_bound = Refute_Forl.raw_bound
+
+structure Util = Refute_ModelFinder_Util
+
+type replay_hint =
+  {nickname : string,
+   value : term}
 
 type reconstruction =
   {bindings : (term * term) list,
@@ -1644,7 +1655,7 @@ fun reconstruct_with formatting
               MFH.eta_contract (Term.list_mk_abs (variables, body))
             end
 
-    fun classify (name, ((evals, skolems, consts),
+    fun classify (name, ((evals, skolems, consts, replay_hints),
                          (display_evals, display_skolems,
                           display_consts))) =
       let
@@ -1663,7 +1674,9 @@ fun reconstruct_with formatting
       in
         if MFNT.is_skolem_name name then
           ((evals, (MFN.original_name nickname, ordinary_value) :: skolems,
-            consts),
+            consts,
+            {nickname = format_metadata_name nickname,
+             value = ordinary_value} :: replay_hints),
            (display_evals,
             (MFN.original_name nickname, display_value) :: display_skolems,
             display_consts))
@@ -1674,18 +1687,18 @@ fun reconstruct_with formatting
                   let val eval_term = List.nth (eval_terms, index)
                   in
                     (((eval_term, ordinary_value) :: evals,
-                      skolems, consts),
+                      skolems, consts, replay_hints),
                      ((eval_term, formatted_value eval_term ordinary_value) ::
                         display_evals,
                       display_skolems, display_consts))
                   end
                 else
-                  ((evals, skolems, consts),
+                  ((evals, skolems, consts, replay_hints),
                    (display_evals, display_skolems, display_consts))
             | NONE =>
                 ((evals, skolems,
                   (lhs, assignment_operator nickname, ordinary_value) ::
-                    consts),
+                    consts, replay_hints),
                  (display_evals, display_skolems,
                   (lhs, assignment_operator nickname, display_value) ::
                     display_consts))
@@ -1699,9 +1712,9 @@ fun reconstruct_with formatting
       end
 
     val displayed_names = List.filter (not o is_bisim_support) nonsel_names
-    val ((evals, skolems, consts),
+    val ((evals, skolems, consts, replay_hints),
          (display_evals, display_skolems, display_consts)) =
-      List.foldl classify (([], [], []), ([], [], [])) displayed_names
+      List.foldl classify (([], [], [], []), ([], [], [])) displayed_names
 
     fun values_for_type (spec : MFS.data_type_spec) =
       let
@@ -1779,6 +1792,7 @@ fun reconstruct_with formatting
             NONE => result display_bindings display_evals display_skolems
               display_consts types
           | SOME _ => displayed_result ()),
+     replay_hints = rev replay_hints,
      postprocessors = postprocessors}
   end
 
@@ -1873,11 +1887,16 @@ fun rf_constructor card serial =
    the static rf_k enum and its displayed fake atoms are transported to the
    corresponding constructors.  The reconstructed model itself remains
    polymorphic, so none of these rf terms escape into model display. *)
-fun certification_copy scope types original eval_terms bindings =
+fun certification_copy scope types original eval_terms bindings replay_hints =
   let
+    val hint_values = map #value replay_hints
+    val type_values = List.concat (map #2 types)
+    val copied_terms =
+      original :: eval_terms @
+      List.concat (map (fn (left, right) => [left, right]) bindings) @
+      hint_values @ type_values
     val tyvars = Lib.U (map Term.type_vars_in_term
-      (original :: eval_terms @
-       List.concat (map (fn (left, right) => [left, right]) bindings)))
+      copied_terms)
     fun scope_card ty =
       case scope of
           SOME assignments =>
@@ -1892,11 +1911,35 @@ fun certification_copy scope types original eval_terms bindings =
                    SOME ((tyvar, card) :: rows)
                  else NONE
              | _ => NONE)
+    fun add_unique (candidate, accumulated) =
+      if List.exists (fn old => Term.aconv old candidate) accumulated then
+        accumulated
+      else
+        accumulated @ [candidate]
+    fun optional_values copy values =
+      List.mapPartial (fn value =>
+        (case Lib.total copy value of
+             SOME copied =>
+               if null (Term.free_vars_lr copied) then SOME copied else NONE
+           | NONE => NONE)) values
+    fun finish copied_original copied_evals env copy polymorphic =
+      let
+        val initial = map #2 env
+        val copied_hints = optional_values copy hint_values
+        val copied_types = optional_values copy type_values
+        val pool = List.foldl add_unique initial
+          (copied_hints @ copied_types)
+        val hints = List.drop (pool, length initial)
+      in
+        SOME
+          {original = copied_original, eval_terms = copied_evals,
+           env = env, hints = hints, polymorphic = polymorphic}
+      end
   in
     if null tyvars then
-      Option.map (fn env =>
-        {original = original, eval_terms = eval_terms, env = env,
-         polymorphic = false}) (certification_env bindings)
+      (case certification_env bindings of
+           SOME env => finish original eval_terms env replace_irrelevant false
+         | NONE => NONE)
     else
       case collect tyvars of
           NONE => NONE
@@ -1929,11 +1972,8 @@ fun certification_copy scope types original eval_terms bindings =
                          share an rf type and can have identically named
                          atoms.  Temporary source-typed variables preserve
                          their identities through instantiation. *)
-                      val avoids = List.concat
-                        (map Term.all_vars
-                          (original :: eval_terms @
-                           List.concat (map (fn (left, right) =>
-                             [left, right]) bindings))) @
+                      val avoids =
+                        List.concat (map Term.all_vars copied_terms) @
                         map #1 atom_images
                       fun fresh_atoms [] _ _ source target =
                             (rev source, rev target)
@@ -1959,11 +1999,10 @@ fun certification_copy scope types original eval_terms bindings =
                         (Term.inst theta variable, copy_value value)) bindings
                     in
                       if List.all (null o Term.free_vars_lr o #2) env then
-                        SOME
-                          {original = Term.inst theta original,
-                           eval_terms = map (Term.inst theta) eval_terms,
-                           env = env, polymorphic = true}
-                      else NONE
+                        finish (Term.inst theta original)
+                          (map (Term.inst theta) eval_terms) env copy_value true
+                      else
+                        NONE
                     end
             end
   end
@@ -1993,8 +2032,8 @@ fun fallback_certainty sound genuine reasons =
   else Refute_Core.Potential reasons
 
 fun certify {executable, original, eval_terms,
-             reconstruction = reconstructed, cex, sound,
-             genuine_means_genuine = genuine, reasons} =
+             reconstruction = reconstructed, replay_hints, cex, sound,
+             genuine_means_genuine = genuine, reasons, deadline} =
   let
     val {bindings, evals, types, codatatypes_ok, ...} = reconstructed
     val genuine = genuine andalso codatatypes_ok
@@ -2004,37 +2043,34 @@ fun certify {executable, original, eval_terms,
   in
     case if executable andalso codatatypes_ok then
            certification_copy (#scope cex) types original eval_terms
-             bindings
+             bindings replay_hints
          else NONE of
         NONE => Keep base
       | SOME {original = cert_original, eval_terms = cert_evals,
-              env, polymorphic} =>
-          (case Refute_Cert.certify
-              {original = cert_original, evals = cert_evals, env = env,
-               cex = base} of
-               Refute_Cert.Certified certified =>
+              env, hints, polymorphic = _} =>
+          (case Refute_Cert_Model.certify
+              {original = cert_original, env = env, hints = hints,
+               fuel = 10000, deadline = deadline} of
+               Refute_Cert_Model.Certified certificate =>
                  (* A genuine result may display only values established by
                     the kernel certificate.  Decoded solver values are
                     useful reconstruction data, but are not certificates. *)
-                 Keep (replace_cex certified Refute_Core.Genuine bindings
-                   (#evals certified) (#cert certified) NONE)
-             | Refute_Cert.Potential potential =>
+                 let val values = map (fn tm =>
+                   (tm, Refute_Cert.eval_term env tm)) cert_evals
+                 in
+                   Keep (replace_cex base Refute_Core.Genuine bindings
+                     values (SOME certificate) NONE)
+                 end
+             | Refute_Cert_Model.NoCertificate reason =>
                  (case #certainty base of
                       Refute_Core.Genuine => Keep base
                     | Refute_Core.QuasiGenuine _ => Keep base
                     | Refute_Core.Potential encoding_reasons =>
-                        let
-                          val certification_reasons =
-                            case #certainty potential of
-                                Refute_Core.Potential values => values
-                              | _ => []
-                        in
-                          Keep (replace_cex potential
-                            (Refute_Core.Potential
-                              (encoding_reasons @ certification_reasons))
-                            bindings evals NONE model)
-                        end)
-             | Refute_Cert.Discarded =>
+                        Keep (replace_cex base
+                          (Refute_Core.Potential
+                            (encoding_reasons @ [reason]))
+                          bindings evals NONE model))
+             | Refute_Cert_Model.DiscardedByWholeFormulaEval =>
                  (* Kernel evaluation has established that this assignment
                     does not falsify the goal; it cannot be a counterexample
                     at any certainty level. *)

@@ -784,7 +784,8 @@ fun run_instance deadline started (config : Refute_Core.config)
            nonsel_names = #nonsel_names extension,
            rel_table = #rel_table extension,
            bounds = bounds}
-        val {raw = reconstructed, displayed, postprocessors} =
+        val {raw = reconstructed, displayed, replay_hints,
+             postprocessors} =
           MFM.reconstruct_both
           {context = context, formats = #format mf,
            scope = #scope arguments, atoms = #atoms arguments,
@@ -814,10 +815,12 @@ fun run_instance deadline started (config : Refute_Core.config)
            original = original,
            eval_terms = eval_terms,
            reconstruction = reconstructed,
+           replay_hints = replay_hints,
            cex = make_base problem,
            sound = sound,
            genuine_means_genuine = genuine_formula andalso not weakened,
-           reasons = reasons} of
+           reasons = reasons,
+           deadline = SOME deadline} of
             MFM.Drop => (discard (); NONE)
           | MFM.Keep semantic_cex =>
               let val cex =

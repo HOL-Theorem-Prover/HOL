@@ -8112,8 +8112,9 @@ fun mf_term_postprocessor_certification_isolation () =
        cert = NONE, scope = SOME [(``:num``, 2)], model = NONE, stats = []}
     val verdict = MFM.certify
       {executable = true, original = boolSyntax.mk_eq (x, ``0 : num``),
-       eval_terms = [], reconstruction = raw, cex = base, sound = false,
-       genuine_means_genuine = false, reasons = []}
+       eval_terms = [], reconstruction = raw, replay_hints = [],
+       cex = base, sound = false, genuine_means_genuine = false,
+       reasons = [], deadline = NONE}
   in
     separated andalso (case verdict of MFM.Drop => true | _ => false)
   end)
@@ -8570,6 +8571,41 @@ fun mf_model_certifiability_rules () =
 val _ = require_msg (check_result mf_model_certifiability_rules) (fn () =>
   "model certification eligibility rules changed") (fn () => ()) ()
 
+fun mf_replay_sidecar_preserves_generated_skolem () =
+  let
+    val ty = ``:num``
+    val scope = mf_translation_scope [(ty, 32)] []
+    val offset = MFS.offset_of_type (#ofs scope) ty
+    val representation = MFR.Atom (32, offset)
+    val generated = MFN.mk_skolem 0 1 "x" ty
+    val (nickname, _) = Term.dest_var generated
+    val skolem = MFNT.FreeName (nickname, ty, representation)
+    val (_, _, rel_table) = MFNT.rename_free_vars [skolem]
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+    val reconstructed = MFM.reconstruct_both
+      {context = mf_hol_context, formats = [], scope = scope,
+       atoms = [(NONE, [])], special_funs = [], real_frees = [],
+       eval_terms = [], free_names = [], sel_names = [],
+       nonsel_names = [skolem], rel_table = rel_table,
+       bounds = [(MFNT.the_rel rel_table skolem, [[offset + 31]])]}
+  in
+    (case #replay_hints reconstructed of
+         [{nickname = internal, value}] =>
+           internal = nickname andalso Term.aconv value ``31 : num``
+       | _ => false) andalso
+    (case #skolems (#raw reconstructed) of
+         [("x", value)] => Term.aconv value ``31 : num``
+       | _ => false) andalso
+    (case #skolems (#displayed reconstructed) of
+         [("x", value)] => Term.aconv value ``31 : num``
+       | _ => false)
+  end
+
+val _ = require_msg
+  (check_result mf_replay_sidecar_preserves_generated_skolem) (fn () =>
+    "raw Skolem replay identity was lost or leaked into model display")
+  (fn () => ()) ()
+
 fun mf_model_certification_protocol () =
   let
     val decoded_eval = (``HD ([] : num list)``, ``7``)
@@ -8585,22 +8621,24 @@ fun mf_model_certification_protocol () =
       {executable = true, original = ``F``,
        eval_terms = [#1 decoded_eval], reconstruction = reconstructed,
        cex = base, sound = false, genuine_means_genuine = false,
-       reasons = []}
+       replay_hints = [], reasons = [], deadline = NONE}
     val discarded = MFM.certify
       {executable = true, original = ``T``, eval_terms = [],
        reconstruction = reconstructed, cex = base, sound = false,
-       genuine_means_genuine = false, reasons = []}
+       genuine_means_genuine = false, replay_hints = [], reasons = [],
+       deadline = NONE}
     val sound_discarded = MFM.certify
       (* exercise the exact telemetry path for a sound model rejected by
          executable certification *)
       {executable = true, original = ``T``, eval_terms = [],
        reconstruction = reconstructed, cex = base, sound = true,
-       genuine_means_genuine = true, reasons = []}
+       genuine_means_genuine = true, replay_hints = [], reasons = [],
+       deadline = NONE}
     val fallback = MFM.certify
       {executable = false, original = ``F``, eval_terms = [],
        reconstruction = reconstructed, cex = base, sound = true,
-       genuine_means_genuine = false,
-       reasons = ["Try again with wf = true"]}
+       genuine_means_genuine = false, replay_hints = [],
+       reasons = ["Try again with wf = true"], deadline = NONE}
     val bad_codata : MFM.reconstruction =
       {bindings = [], evals = [], skolems = [], consts = [], types = [],
        codatatypes_ok = false}
@@ -8609,7 +8647,8 @@ fun mf_model_certification_protocol () =
     val codata_fallback = MFM.certify
       {executable = true, original = ``F``, eval_terms = [],
        reconstruction = bad_codata, cex = base, sound = true,
-       genuine_means_genuine = true, reasons = codata_reasons}
+       genuine_means_genuine = true, replay_hints = [],
+       reasons = codata_reasons, deadline = NONE}
     val forced_config = upd_finitize
       [(SOME ``:num list``, SOME true), (NONE, NONE)] default_config
     val forced_reasons = Refute_ModelFinder.authenticity_reasons
@@ -8620,19 +8659,33 @@ fun mf_model_certification_protocol () =
        genuine_means_genuine = MFM.genuine_means_genuine
          {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
           wfs = [], sound_finitizes = false, total_consts = NONE},
-       reasons = forced_reasons}
+       replay_hints = [], reasons = forced_reasons, deadline = NONE}
     val predicate = ``p : num -> bool``
     val quantified_reconstruction : MFM.reconstruction =
       {bindings = [(predicate, ``{31} : num set``)], evals = [],
        skolems = [], consts = [], types = [], codatatypes_ok = true}
     val quantified = ``(?x : num. p x) ==> !x. p x``
-    fun quantified_result sound genuine reasons = MFM.certify
+    fun quantified_result replay_hints sound genuine reasons = MFM.certify
       {executable = true, original = quantified, eval_terms = [],
        reconstruction = quantified_reconstruction, cex = base,
-       sound = sound, genuine_means_genuine = genuine, reasons = reasons}
-    val stuck_genuine = quantified_result true true []
-    val stuck_quasi = quantified_result true false ["inexact encoding"]
-    val stuck_potential = quantified_result false false []
+       replay_hints = replay_hints, sound = sound,
+       genuine_means_genuine = genuine, reasons = reasons,
+       deadline = NONE}
+    val stuck_genuine = quantified_result [] true true []
+    val stuck_quasi = quantified_result [] true false ["inexact encoding"]
+    val stuck_potential = quantified_result [] false false []
+    val replayed_liberal = quantified_result
+      [{nickname = "refute$sk0@1$x", value = ``31 : num``},
+       {nickname = "refute$sk0@2$x", value = ``30 : num``}]
+      false false []
+    val timed_out_genuine = MFM.certify
+      {executable = true, original = quantified, eval_terms = [],
+       reconstruction = quantified_reconstruction,
+       replay_hints =
+         [{nickname = "refute$sk0@1$x", value = ``31 : num``},
+          {nickname = "refute$sk0@2$x", value = ``30 : num``}],
+       cex = base, sound = true, genuine_means_genuine = true,
+       reasons = [], deadline = SOME Time.zeroTime}
     val smart_genuine = MFM.genuine_means_genuine
       {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
        wfs = [], sound_finitizes = true, total_consts = NONE}
@@ -8681,6 +8734,21 @@ fun mf_model_certification_protocol () =
        | _ => false) andalso
     (case stuck_potential of
          MFM.Keep {certainty = Potential (_ :: _), cert = NONE, ...} => true
+       | _ => false) andalso
+    (* A theorem independently upgrades even a liberal encoding. *)
+    (case replayed_liberal of
+         MFM.Keep {certainty = Genuine, cert = SOME theorem,
+                   model = NONE, ...} =>
+           null (Thm.hyp theorem) andalso
+           (Tag.isEmpty (Thm.tag theorem) orelse
+            Tag.isDisk (Thm.tag theorem)) andalso
+           Term.aconv (Thm.concl theorem)
+             ``~(!p : num -> bool.
+                   ((?x : num. p x) ==> !x. p x))``
+       | _ => false) andalso
+    (case timed_out_genuine of
+         MFM.Keep {certainty = Genuine, cert = NONE,
+                   model = SOME _, ...} => true
        | _ => false)
   end
 
@@ -8705,11 +8773,13 @@ fun mf_polymorphic_model_protocol () =
     val small = MFM.certify
       {executable = true, original = original, eval_terms = [],
        reconstruction = reconstructed, cex = base 2, sound = false,
-       genuine_means_genuine = false, reasons = []}
+       replay_hints = [], genuine_means_genuine = false, reasons = [],
+       deadline = NONE}
     val large = MFM.certify
       {executable = true, original = original, eval_terms = [],
        reconstruction = reconstructed, cex = base 7, sound = true,
-       genuine_means_genuine = true, reasons = []}
+       replay_hints = [], genuine_means_genuine = true, reasons = [],
+       deadline = NONE}
     val scope = mf_translation_scope [(ty, 2)] []
     val report = MFM.reconstruct
       {scope = scope, atoms = [], special_funs = [], real_frees = [],
@@ -8739,6 +8809,46 @@ val _ = require_msg (check_result mf_polymorphic_model_protocol) (fn () =>
   "polymorphic fake-atom display or rf certification changed")
   (fn () => ()) ()
 
+fun mf_polymorphic_skolem_replay () =
+  let
+    val ty = ``:'a``
+    val predicate = Term.mk_var
+      ("p", Type.mk_type ("fun", [ty, ``:bool``]))
+    val x = Term.mk_var ("x", ty)
+    val a1 = MFN.fake_atom 1 ty
+    val a2 = MFN.fake_atom 2 ty
+    val singleton = Term.mk_abs (x, boolSyntax.mk_eq (x, a1))
+    val quantified = boolSyntax.mk_imp
+      (boolSyntax.mk_exists (x, Term.mk_comb (predicate, x)),
+       boolSyntax.mk_forall (x, Term.mk_comb (predicate, x)))
+    val reconstructed : MFM.reconstruction =
+      {bindings = [(predicate, singleton)], evals = [], skolems = [],
+       consts = [], types = [(ty, [a1, a2], true)],
+       codatatypes_ok = true}
+    val base : counterexample =
+      {backend = "kodkod", substrate = "kodkod",
+       certainty = Refute_Core.Potential [], bindings = [], evals = [],
+       cert = NONE, scope = SOME [(ty, 2)], model = NONE, stats = []}
+    val replay_hints : MFM.replay_hint list =
+      [{nickname = "refute$sk0@1$x", value = a1},
+       {nickname = "refute$sk0@2$x", value = a2}]
+  in
+    case MFM.certify
+      {executable = true, original = quantified, eval_terms = [],
+       reconstruction = reconstructed, replay_hints = replay_hints,
+       cex = base, sound = false, genuine_means_genuine = false,
+       reasons = [], deadline = NONE} of
+        MFM.Keep {certainty = Genuine, cert = SOME theorem, ...} =>
+          null (Thm.hyp theorem) andalso
+          (Tag.isEmpty (Thm.tag theorem) orelse
+           Tag.isDisk (Thm.tag theorem))
+      | _ => false
+  end
+
+val _ = require_msg (check_result mf_polymorphic_skolem_replay) (fn () =>
+  "rf2 certification did not copy Skolem hints and fake atoms")
+  (fn () => ()) ()
+
 fun mf_merged_type_vars_rf_certification () =
   let
     val unmerged = ``(x : 'b) = y /\ (u : 'a) = v``
@@ -8764,7 +8874,8 @@ fun mf_merged_type_vars_rf_certification () =
     case MFM.certify
       {executable = true, original = original, eval_terms = [],
        reconstruction = reconstructed, cex = base, sound = false,
-       genuine_means_genuine = false, reasons = []} of
+       replay_hints = [], genuine_means_genuine = false, reasons = [],
+       deadline = NONE} of
         MFM.Keep {certainty = Genuine, cert = SOME _, ...} => true
       | _ => false
   end
@@ -21037,6 +21148,85 @@ val _ = require_msg (check_result upgrade_from_stuck_path) (fn () =>
   "certification did not upgrade a tainted candidate to Genuine")
   (fn () => ()) ()
 
+fun model_replay_certifies original env hints fuel =
+  case Refute_Cert_Model.certify
+    {original = original, env = env, hints = hints, fuel = fuel,
+     deadline = NONE} of
+      Refute_Cert_Model.Certified theorem =>
+        let val (_, closure, _) = Refute_Cert.closure_of original
+        in
+          null (Thm.hyp theorem) andalso
+          Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg closure) andalso
+          certificate_tag_clean theorem
+        end
+    | _ => false
+
+fun model_replay_fails original env hints fuel =
+  case Refute_Cert_Model.certify
+    {original = original, env = env, hints = hints, fuel = fuel,
+     deadline = NONE} of
+      Refute_Cert_Model.NoCertificate _ => true
+    | _ => false
+
+val replay_predicate = ``p : num -> bool``
+val replay_quantified = ``(?x : num. p x) ==> !x. p x``
+val replay_predicate_env = [(replay_predicate, ``{31} : num set``)]
+
+fun quantified_model_replay_is_certified () =
+  model_replay_certifies replay_quantified replay_predicate_env
+    [``31 : num``, ``30 : num``] 1000
+
+fun quantified_model_replay_requires_counterwitness () =
+  model_replay_fails replay_quantified replay_predicate_env
+    [``31 : num``] 1000
+
+fun quantified_model_replay_backtracks () =
+  model_replay_certifies replay_quantified replay_predicate_env
+    [``30 : num``, ``31 : num``] 1000
+
+fun quantified_model_replay_applies_dependent_hint () =
+  model_replay_certifies
+    ``?x : bool. !y : bool. y <> x`` [] [``\x : bool. x``] 1000
+
+fun quantified_model_replay_hints_fail_closed () =
+  List.all (fn hints => model_replay_fails replay_quantified
+    replay_predicate_env hints 1000)
+    [[``30 : num``], [``31 : num``, ``31 : num``],
+     [boolSyntax.T], []]
+
+fun quantified_model_replay_does_not_assume_bounded_model () =
+  model_replay_fails
+    ``?f : num -> bool. f = (\x. ~f x)`` [] [] 1000
+
+fun quantified_model_replay_fuel_is_bounded () =
+  model_replay_fails replay_quantified replay_predicate_env
+    [``31 : num``, ``30 : num``] 0
+
+fun quantified_model_replay_rejects_oracle_tags () =
+  let
+    val oracle = Thm.mk_oracle_thm "holrefute-selftest" ([], boolSyntax.T)
+  in
+    not (Refute_Cert.trusted oracle)
+  end
+
+val quantified_model_replay_checks =
+  [("motivating quantified replay", quantified_model_replay_is_certified),
+   ("omitted counterwitness",
+    quantified_model_replay_requires_counterwitness),
+   ("same-typed backtracking", quantified_model_replay_backtracks),
+   ("dependent function hint",
+    quantified_model_replay_applies_dependent_hint),
+   ("malformed or missing hints", quantified_model_replay_hints_fail_closed),
+   ("unbounded symbolic existential",
+    quantified_model_replay_does_not_assume_bounded_model),
+   ("fuel exhaustion", quantified_model_replay_fuel_is_bounded),
+   ("oracle-tag rejection", quantified_model_replay_rejects_oracle_tags)]
+
+val _ = List.app (fn (label, check) => require_msg
+  (check_result check) (fn () =>
+    "quantified model-certificate replay failed: " ^ label)
+  (fn () => ()) ()) quantified_model_replay_checks
+
 fun uncertifiable_grounding_has_pinned_reason () =
   let
     val variable = ``x : 'a``
@@ -21874,7 +22064,7 @@ val mf_acceptance_cases : mf_acceptance_case list =
     unknown_reason = NONE, sat4j_smoke = false},
    {name = "essentially existential natural",
     tm = ``?n : num. n <> n``,
-    expect = ExpectGenuine, cert_pin = MfCertNone,
+    expect = ExpectGenuine, cert_pin = MfCertSome,
     unknown_reason = NONE, sat4j_smoke = true},
    {name = "small-scope Boolean theorem",
     tm = ``!b : bool. b \/ ~b``,
@@ -21933,9 +22123,13 @@ val mf_same_config = fn (config : Refute.config) => config
 val mf_m3_acceptance_group : mf_acceptance_group =
   {name = "M3 baseline",
    configure = mf_same_config,
-   cases = List.map (fn acceptance_case =>
+   cases = List.map (fn acceptance_case as {name, ...} =>
      {acceptance_case = acceptance_case, configure = mf_same_config,
-      verdict_policy = MfExact}) mf_acceptance_cases}
+      verdict_policy =
+        if name = "essentially existential natural" then
+          MfCertifiedGenuine
+        else
+          MfExact}) mf_acceptance_cases}
 
 fun mf_induct_wf value config =
   Refute.upd_wf [(NONE, SOME value)] config
@@ -22798,11 +22992,13 @@ val mf_core_nits_cases =
        |> mf_core_mono),
    mf_acceptance_invocation "Core_Nits boxed relation"
      ``(R : ('a # 'a) -> ('a # 'a) -> bool) (a, a) (a, a)``
-     ExpectGenuine MfCertNone true (mf_core_cards [1]),
+     ExpectGenuine MfCertSome true (mf_core_cards [1])
+     |> mf_with_verdict_policy MfCertifiedGenuine,
    mf_acceptance_invocation "Core_Nits relation dont_box"
      ``(R : ('a # 'a) -> ('a # 'a) -> bool) (a, a) (a, a)``
-     ExpectGenuine MfCertNone false
-     (fn config => config |> mf_core_cards [5] |> mf_core_no_box),
+     ExpectGenuine MfCertSome false
+     (fn config => config |> mf_core_cards [5] |> mf_core_no_box)
+     |> mf_with_verdict_policy MfCertifiedGenuine,
    mf_acceptance_invocation "Core_Nits function argument dont_box"
      ``(f : ('a -> 'a) -> 'b) (g : 'a -> 'a) = x``
      ExpectGenuine MfCertNone false
@@ -22939,7 +23135,8 @@ val mf_refute_nits_cases =
      ExpectNone MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Refute_Nits weak drinker"
      ``(?x : 'a. f x = g x) ==> f = g``
-     ExpectGenuine MfCertNone true mf_same_config,
+     ExpectGenuine MfCertSome true mf_same_config
+     |> mf_with_verdict_policy MfCertifiedGenuine,
    mf_acceptance_invocation "Refute_Nits surjective gives inverse"
      ``(!y : 'b. ?x : 'a. y = f x) ==>
        ?g : 'b -> 'a. !x. g (f x) = x``
@@ -22962,13 +23159,15 @@ val mf_refute_nits_cases =
      mf_same_config,
    mf_acceptance_invocation "Refute_Nits predicate of Eps"
      ``($@ (\n : num. n = 0)) = 1``
-     ExpectGenuine MfCertNone false mf_same_config,
+     ExpectGenuine MfCertSome false mf_same_config
+     |> mf_with_verdict_policy MfCertifiedGenuine,
    mf_acceptance_invocation "Refute_Nits Eps application"
      ``~Q ($@ (Q : num -> bool))``
      ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits Eps equality"
      ``($@ (\x : num. x = y)) = z``
-     ExpectGenuine MfCertNone false mf_same_config,
+     ExpectGenuine MfCertSome false mf_same_config
+     |> mf_with_verdict_policy MfCertifiedGenuine,
    mf_acceptance_invocation "Refute_Nits Eps axiom"
      ``(?x : 'a. P x) ==> P ($@ P)`` ExpectNone MfCertIgnored false
      mf_same_config,
@@ -23887,9 +24086,9 @@ fun mf_incremental_genuine_models solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
-fun mf_incremental_uncertified_genuine_models solver =
+fun mf_incremental_quantified_genuine_models solver =
   let
-    val _ = tprint "Refute MF incremental uncertified genuine models"
+    val _ = tprint "Refute MF incremental quantified genuine models"
     val config = mf_acceptance_config solver
       |> Refute.upd_card
            [(SOME ``:num``, [2]), (SOME ``:refute$rf3``, [3]),
@@ -23906,12 +24105,14 @@ fun mf_incremental_uncertified_genuine_models solver =
             List.all (fn ({certainty, cert, stats, ...} :
                 Refute.counterexample) =>
               certainty = Refute.Genuine andalso
-              not (Option.isSome cert) andalso
+              (case cert of
+                   SOME theorem => certificate_tag_clean theorem
+                 | NONE => false) andalso
               lookup_stat "met_potential" stats = SOME 0) cexs
         | _ => false
   in
     if ok then OK ()
-    else die ("incremental uncertified genuine-model pin failed: " ^
+    else die ("incremental quantified genuine-model pin failed: " ^
       mf_pin_outcome_name outcome)
   end
   handle e => die (Feedback.exn_to_string e)
@@ -24026,7 +24227,7 @@ fun run_mf_core_suites () =
       mf_relation_scope_fusion solver;
       mf_mono_driver_scope_fusion solver;
       mf_incremental_genuine_models solver;
-      mf_incremental_uncertified_genuine_models solver;
+      mf_incremental_quantified_genuine_models solver;
       mf_genuine_stops_potential solver;
       mf_sound_sat_checked_scope solver;
       mf_incremental_solver_selection ()
@@ -24460,9 +24661,43 @@ val _ = require_msg
     "the default rat ersatz encoding made an exhausted search inconclusive")
   (fn () => ()) ()
 
+fun mf_quantified_model_replay_acceptance solver =
+  let
+    val _ = tprint "Refute MF: card-32 quantified certificate replay"
+    val goal = ``(?x : num. p x) ==> !x. p x``
+    val config = mf_acceptance_config solver
+      |> Refute.upd_batch_size 1
+      |> Refute.upd_card [(SOME ``:num``, [32]), (NONE, [1])]
+      |> Refute.upd_need (SOME [``30 : num``, ``31 : num``])
+      |> Refute.upd_max_potential 0
+      |> Refute.upd_max_genuine 1
+    val outcome = with_silent_refute (fn () => Refute.refute config goal)
+  in
+    case outcome of
+        Refute.Counterexample
+          ({certainty = Refute.Genuine, cert = SOME theorem, ...} :: _) =>
+            null (Thm.hyp theorem) andalso
+            certificate_tag_clean theorem andalso
+            Term.aconv (Thm.concl theorem)
+              ``~(!p : num -> bool.
+                   ((?x : num. p x) ==> !x. p x))``
+      | _ => false
+  end
+
+fun run_quantified_model_replay_acceptance () =
+  if not (Refute_Forl.is_configured ()) then
+    print "(Kodkodi not configured, quantified replay smoke skipped.)\n"
+  else
+    require_msg (check_result (fn () =>
+      mf_quantified_model_replay_acceptance
+        (configured_mf_test_solver ()))) (fn () =>
+      "card-32 quantified model did not yield a clean certificate")
+      (fn () => ()) ()
+
 fun run_level2_mf_corpus () =
   let
     val timer = Timer.startRealTimer ()
+    val _ = run_quantified_model_replay_acceptance ()
     val _ = run_mf_acceptance ()
     val _ = run_mf_core_suites ()
     val elapsed = Timer.checkRealTimer timer
