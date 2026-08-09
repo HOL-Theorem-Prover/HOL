@@ -97,10 +97,12 @@ structure Refute_Cert_Model = struct
   exception ReplayFailure of failure
   exception CandidateSuccess of Thm.thm
 
+  val replay_candidate_limit = 128
+
   fun default_policy fuel : policy =
     {total_fuel = Int.max (0, fuel),
-     max_generated_candidates = 128,
-     max_attempted_candidates = 128,
+     max_generated_candidates = replay_candidate_limit,
+     max_attempted_candidates = replay_candidate_limit,
      max_function_states = 256,
      max_constructor_depth = 2,
      max_constructor_width = 32,
@@ -121,8 +123,8 @@ structure Refute_Cert_Model = struct
          split_depth, branches, constructor_depth, constructor_width} :
         policy =
     {total_fuel = Int.max (0, fuel),
-     max_generated_candidates = 128,
-     max_attempted_candidates = 128,
+     max_generated_candidates = replay_candidate_limit,
+     max_attempted_candidates = replay_candidate_limit,
      max_function_states = 256,
      max_constructor_depth = Int.max (0, constructor_depth),
      max_constructor_width = Int.max (0, constructor_width),
@@ -162,6 +164,34 @@ structure Refute_Cert_Model = struct
        | SOME conclusion => Term.aconv (Thm.concl theorem) conclusion)
 
   val audit_theorem_for_test = theorem_acceptable
+
+  fun app_combinations_bounded limit emit choices =
+    let
+      val emitted = ref 0
+
+      fun combinations [] prefix =
+            if !emitted >= limit then ()
+            else
+              (emitted := !emitted + 1;
+               emit (rev prefix))
+        | combinations (options :: rest) prefix =
+            let
+              fun traverse [] = ()
+                | traverse (option :: remaining) =
+                    if !emitted >= limit then ()
+                    else
+                      (combinations rest (option :: prefix);
+                       traverse remaining)
+            in
+              traverse options
+            end
+    in
+      if limit <= 0 then () else combinations choices [];
+      !emitted
+    end
+
+  fun combination_count_for_test limit choices =
+    app_combinations_bounded limit (fn _ => ()) choices
 
   fun certify_detailed_rich {original, env, hints, policy, deadline} =
     let
@@ -601,11 +631,6 @@ structure Refute_Cert_Model = struct
                 then ()
                 else values := !values @ [value]
 
-              fun combinations [] prefix emit = emit (rev prefix)
-                | combinations (choices :: rest) prefix emit =
-                    List.app (fn choice =>
-                      combinations rest (choice :: prefix) emit) choices
-
               fun build depth =
                     (case constructor_info target of
                          NONE => ()
@@ -622,23 +647,19 @@ structure Refute_Cert_Model = struct
                                    else map (fn ty =>
                                      synth_values ty active (depth - 1))
                                      argument_types
-                                 val produced = ref 0
                                  fun emit arguments =
-                                   if !produced >= width then ()
-                                   else
-                                     let
-                                       val _ = produced := !produced + 1
-                                       val term =
-                                         Term.list_mk_comb
-                                           (constructor, arguments)
-                                       val _ = charge
-                                         "constructor synthesis" 0
-                                     in add term end
+                                   let
+                                     val term = Term.list_mk_comb
+                                       (constructor, arguments)
+                                     val _ = charge
+                                       "constructor synthesis" 0
+                                   in add term end
                                in
                                  if null argument_types then add constructor
                                  else if depth <= 0 then ()
                                  else if List.exists null choices then ()
-                                 else combinations choices [] emit
+                                 else ignore (app_combinations_bounded
+                                   width emit choices)
                                end
                            in
                              List.app one constructors

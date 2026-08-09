@@ -21452,6 +21452,19 @@ fun replay_provider_counters_are_pinned () =
     #applications first = #applications second
   end
 
+fun constructor_combination_width_is_hard_cap () =
+  Refute_Cert_Model.combination_count_for_test 32
+    (List.tabulate (40, fn _ => [false, true])) = 32
+
+fun certification_hint_preparation_is_bounded () =
+  let
+    val values = List.tabulate (4096, fn _ => boolSyntax.T)
+  in
+    MFM.certification_hint_count_for_test
+      [(``:bool``, values, true)] [] =
+      Refute_Cert_Model.replay_candidate_limit
+  end
+
 fun replay_rejects_injected_oracle () =
   let
     val oracle = Thm.mk_oracle_thm "holrefute-selftest"
@@ -21546,6 +21559,10 @@ val expanded_model_replay_checks =
     unsupported_inductions_are_not_attempted),
    ("exact provenance dependency ordering",
     replay_provenance_prefers_exact_dependencies),
+   ("constructor combination width hard cap",
+    constructor_combination_width_is_hard_cap),
+   ("bounded certification hint preparation",
+    certification_hint_preparation_is_bounded),
    ("deterministic provider counters", replay_provider_counters_are_pinned),
    ("injected oracle rejection", replay_rejects_injected_oracle)]
 

@@ -113,6 +113,8 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   val assignment_operator : string -> string
   val certification_env :
     (term * term) list -> (term * term) list option
+  val certification_hint_count_for_test :
+    (hol_type * term list * bool) list -> replay_hint list -> int
   val certifiable : bool -> (term * term) list -> bool
   val genuine_means_genuine :
     {got_all_mono_user_axioms : bool,
@@ -1911,6 +1913,50 @@ fun rf_constructor card serial =
     {Thy = "refute", Name = "rf" ^ Int.toString card ^ "_" ^
        Int.toString serial}
 
+fun take_up_to count values =
+  let
+    fun take 0 _ accumulated = rev accumulated
+      | take _ [] accumulated = rev accumulated
+      | take remaining (value :: rest) accumulated =
+          take (remaining - 1) rest (value :: accumulated)
+  in
+    if count <= 0 then [] else take count values []
+  end
+
+fun take_type_values count types =
+  let
+    fun take_row 0 _ accumulated = (0, accumulated)
+      | take_row remaining [] accumulated = (remaining, accumulated)
+      | take_row remaining (value :: rest) accumulated =
+          take_row (remaining - 1) rest (value :: accumulated)
+    fun take_types _ [] accumulated = rev accumulated
+      | take_types 0 _ accumulated = rev accumulated
+      | take_types remaining ((_, values, _) :: rest) accumulated =
+          let val (remaining, accumulated) =
+            take_row remaining values accumulated
+          in
+            take_types remaining rest accumulated
+          end
+  in
+    if count <= 0 then [] else take_types count types []
+  end
+
+fun certification_hint_inputs types replay_hints =
+  let
+    val limit = Refute_Cert_Model.replay_candidate_limit
+    val replay_hints = take_up_to limit replay_hints
+    val type_values = take_type_values (limit - length replay_hints) types
+  in
+    (replay_hints, type_values)
+  end
+
+fun certification_hint_count_for_test types replay_hints =
+  let val (replay_hints, type_values) =
+    certification_hint_inputs types replay_hints
+  in
+    length replay_hints + length type_values
+  end
+
 (* Certification is deliberately performed on a private, monomorphic copy.
    A native goal type variable with scope cardinality k is transported to
    the static rf_k enum and its displayed fake atoms are transported to the
@@ -1918,8 +1964,9 @@ fun rf_constructor card serial =
    polymorphic, so none of these rf terms escape into model display. *)
 fun certification_copy scope types original eval_terms bindings replay_hints =
   let
+    val (replay_hints, type_values) =
+      certification_hint_inputs types replay_hints
     val hint_values = map #value replay_hints
-    val type_values = List.concat (map #2 types)
     val copied_terms =
       original :: eval_terms @
       List.concat (map (fn (left, right) => [left, right]) bindings) @
@@ -1987,9 +2034,9 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
               (hint as {term, ...} : Refute_Cert_Model.replay_hint,
                accumulated) =
           if already_seen term accumulated then accumulated
-          else accumulated @ [hint]
-        val hints = List.foldl add_unique []
-          (copied_hints @ copied_types)
+          else hint :: accumulated
+        val hints = rev (List.foldl add_unique []
+          (copied_hints @ copied_types))
       in
         SOME
           {original = copied_original, eval_terms = copied_evals,
