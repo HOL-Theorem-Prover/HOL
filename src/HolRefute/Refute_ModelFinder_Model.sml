@@ -15,7 +15,8 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
 
   type replay_hint =
     {nickname : string,
-     value : term}
+     value : term,
+     provenance : Refute_Cert_Model.provenance option}
 
   type reconstruction =
     {bindings : (term * term) list,
@@ -155,7 +156,8 @@ structure Util = Refute_ModelFinder_Util
 
 type replay_hint =
   {nickname : string,
-   value : term}
+   value : term,
+   provenance : Refute_Cert_Model.provenance option}
 
 type reconstruction =
   {bindings : (term * term) list,
@@ -1604,6 +1606,10 @@ fun reconstruct_with formatting
        Raw terms below never consult it and remain suitable for
        certification. *)
     val postprocessors = snapshot_term_postprocessors ()
+    val skolem_infos =
+      case formatting of
+          SOME (format_context, _) => !(#skolems format_context)
+        | NONE => []
     val context =
       {scope = scope, atoms = atoms, sel_names = sel_names,
        rel_table = rel_table, bounds = bounds,
@@ -1655,6 +1661,28 @@ fun reconstruct_with formatting
               MFH.eta_contract (Term.list_mk_abs (variables, body))
             end
 
+    fun replay_provenance nickname =
+      let
+        val metadata_name = format_metadata_name nickname
+        fun matches ({generated_name, ...} : MFH.skolem_info) =
+          generated_name = metadata_name
+      in
+        case List.find matches skolem_infos of
+            NONE => NONE
+          | SOME ({origin, source_type, positive, dependencies,
+                   stage, ...} : MFH.skolem_info) =>
+              SOME
+                {origin = origin,
+                 source_type = source_type,
+                 positive = positive,
+                 dependencies = map (fn
+                   ({origin, source_type} : MFH.skolem_dependency) =>
+                     {origin = origin, source_type = source_type})
+                   dependencies,
+                 nickname = metadata_name,
+                 stage = stage}
+      end
+
     fun classify (name, ((evals, skolems, consts, replay_hints),
                          (display_evals, display_skolems,
                           display_consts))) =
@@ -1676,7 +1704,8 @@ fun reconstruct_with formatting
           ((evals, (MFN.original_name nickname, ordinary_value) :: skolems,
             consts,
             {nickname = format_metadata_name nickname,
-             value = ordinary_value} :: replay_hints),
+             value = ordinary_value,
+             provenance = replay_provenance nickname} :: replay_hints),
            (display_evals,
             (MFN.original_name nickname, display_value) :: display_skolems,
             display_consts))
@@ -1911,25 +1940,56 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
                    SOME ((tyvar, card) :: rows)
                  else NONE
              | _ => NONE)
-    fun add_unique (candidate, accumulated) =
-      if List.exists (fn old => Term.aconv old candidate) accumulated then
-        accumulated
-      else
-        accumulated @ [candidate]
     fun optional_values copy values =
       List.mapPartial (fn value =>
         (case Lib.total copy value of
              SOME copied =>
                if null (Term.free_vars_lr copied) then SOME copied else NONE
            | NONE => NONE)) values
-    fun finish copied_original copied_evals env copy polymorphic =
+    fun copy_provenance copy_type
+          (SOME ({origin, source_type, positive, dependencies,
+                  nickname, stage} : Refute_Cert_Model.provenance)) =
+          SOME
+            {origin = origin,
+             source_type = copy_type source_type,
+             positive = positive,
+             dependencies = map (fn
+               ({origin, source_type} : Refute_Cert_Model.dependency) =>
+                 {origin = origin, source_type = copy_type source_type})
+               dependencies,
+             nickname = nickname,
+             stage = stage}
+      | copy_provenance _ NONE = NONE
+    fun finish copied_original copied_evals env copy copy_type polymorphic =
       let
         val initial = map #2 env
-        val copied_hints = optional_values copy hint_values
-        val copied_types = optional_values copy type_values
-        val pool = List.foldl add_unique initial
+        val copied_hints = List.mapPartial (fn
+          ({value, provenance, ...} : replay_hint) =>
+            case Lib.total copy value of
+                SOME copied =>
+                  if null (Term.free_vars_lr copied) then
+                    SOME
+                      {term = copied,
+                       source = Refute_Cert_Model.SkolemValue,
+                       provenance = copy_provenance copy_type provenance}
+                  else NONE
+              | NONE => NONE) replay_hints
+        val copied_types = map (fn value =>
+          {term = value,
+           source = Refute_Cert_Model.TypeValue,
+           provenance = NONE}) (optional_values copy type_values)
+        fun already_seen term accumulated =
+          List.exists (fn old => Term.aconv old term) initial orelse
+          List.exists (fn
+            ({term = old, ...} : Refute_Cert_Model.replay_hint) =>
+              Term.aconv old term) accumulated
+        fun add_unique
+              (hint as {term, ...} : Refute_Cert_Model.replay_hint,
+               accumulated) =
+          if already_seen term accumulated then accumulated
+          else accumulated @ [hint]
+        val hints = List.foldl add_unique []
           (copied_hints @ copied_types)
-        val hints = List.drop (pool, length initial)
       in
         SOME
           {original = copied_original, eval_terms = copied_evals,
@@ -1938,7 +1998,8 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
   in
     if null tyvars then
       (case certification_env bindings of
-           SOME env => finish original eval_terms env replace_irrelevant false
+           SOME env => finish original eval_terms env replace_irrelevant
+             (fn ty => ty) false
          | NONE => NONE)
     else
       case collect tyvars of
@@ -2000,7 +2061,8 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
                     in
                       if List.all (null o Term.free_vars_lr o #2) env then
                         finish (Term.inst theta original)
-                          (map (Term.inst theta) eval_terms) env copy_value true
+                          (map (Term.inst theta) eval_terms) env copy_value
+                          (Type.type_subst theta) true
                       else
                         NONE
                     end
@@ -2048,9 +2110,26 @@ fun certify {executable, original, eval_terms,
         NONE => Keep base
       | SOME {original = cert_original, eval_terms = cert_evals,
               env, hints, polymorphic = _} =>
-          (case Refute_Cert_Model.certify
-              {original = cert_original, env = env, hints = hints,
-               fuel = 10000, deadline = deadline} of
+          let
+            val (replay, replay_diagnostics) =
+              Refute_Cert_Model.certify_detailed_rich
+                {original = cert_original, env = env, hints = hints,
+                 policy = Refute_Cert_Model.default_policy 10000,
+                 deadline = deadline}
+            fun trace_candidates () =
+              let
+                val candidates = #candidate_trace replay_diagnostics
+                val shown = if length candidates <= 16 then candidates
+                  else List.take (candidates, 16)
+                val suffix = if length candidates <= 16 then ""
+                  else ", ..."
+              in
+                HOL_MESG ("Refute model replay candidates: " ^
+                  String.concatWith ", " (map (fn (_, candidate, _) =>
+                    Parse.term_to_string candidate) shown) ^ suffix)
+              end
+          in
+          (case replay of
                Refute_Cert_Model.Certified certificate =>
                  (* A genuine result may display only values established by
                     the kernel certificate.  Decoded solver values are
@@ -2062,6 +2141,12 @@ fun certify {executable, original, eval_terms,
                      values (SOME certificate) NONE)
                  end
              | Refute_Cert_Model.NoCertificate reason =>
+                 let
+                   val _ = if current_trace "Refute" >= 2 then
+                       (HOL_MESG ("Refute model replay: " ^ reason);
+                        trace_candidates ())
+                     else ()
+                 in
                  (case #certainty base of
                       Refute_Core.Genuine => Keep base
                     | Refute_Core.QuasiGenuine _ => Keep base
@@ -2070,6 +2155,7 @@ fun certify {executable, original, eval_terms,
                           (Refute_Core.Potential
                             (encoding_reasons @ [reason]))
                           bindings evals NONE model))
+                 end
              | Refute_Cert_Model.DiscardedByWholeFormulaEval =>
                  (* Kernel evaluation has established that this assignment
                     does not falsify the goal; it cannot be a counterexample
@@ -2079,6 +2165,7 @@ fun certify {executable, original, eval_terms,
                       "Refute warning: certification refuted the model\n"
                   else ();
                   Drop))
+          end
   end
 
 end

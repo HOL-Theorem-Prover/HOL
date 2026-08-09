@@ -7,61 +7,270 @@ structure Refute_Cert_Model = struct
     | NoCertificate of string
     | DiscardedByWholeFormulaEval
 
-  exception ReplayFailure of string
-  exception ResourceExhausted of string
+  datatype failure_kind =
+      NoProof
+    | Unsupported
+    | MalformedInput
+    | TrustRejected
+    | FuelExhausted
+    | DeadlineExhausted
+    | InternalFailure
+
+  type failure =
+    {kind : failure_kind,
+     stage : string,
+     depth : int,
+     detail : string}
+
+  datatype candidate_source =
+      OrdinaryBinding
+    | ReconstructedSkolem
+    | ReconstructedTypeValue
+    | GenericHint
+    | ActiveVariable
+    | FunctionApplication
+    | SynthesizedConstructor
+
+  type dependency =
+    {origin : int,
+     source_type : Type.hol_type}
+  type provenance =
+    {origin : int,
+     source_type : Type.hol_type,
+     positive : bool,
+     dependencies : dependency list,
+     nickname : string,
+     stage : string}
+  datatype replay_hint_source =
+      SkolemValue
+    | TypeValue
+    | DirectHint
+  type replay_hint =
+    {term : term,
+     source : replay_hint_source,
+     provenance : provenance option}
+
+  type candidate =
+    {term : term,
+     source : candidate_source,
+     cost : int,
+     provenance : provenance option}
+
+  type policy =
+    {total_fuel : int,
+     max_generated_candidates : int,
+     max_attempted_candidates : int,
+     max_function_states : int,
+     max_constructor_depth : int,
+     max_constructor_width : int,
+     max_constructor_size : int,
+     max_split_depth : int,
+     max_case_branches : int,
+     max_inductions : int,
+     max_leaf_rounds : int,
+     enable_whole_formula : bool,
+     enable_cases : bool,
+     enable_induction : bool,
+     enable_synthesis : bool,
+     enable_taut : bool,
+     enable_omega : bool}
+
+  type diagnostics =
+    {nodes : int,
+     ordinary_bindings : int,
+     reconstructed_hints : int,
+     active_candidates : int,
+     applications : int,
+     constructor_terms : int,
+     attempted_candidates : int,
+     memo_hits : int,
+     case_branches : int,
+     induction_attempts : int,
+     leaf_attempts : int,
+     candidate_trace : (int * term * term) list,
+     generation_trace : (int * Type.hol_type * int) list,
+     backtracks : failure list,
+     consumed_fuel : int,
+     elapsed : Time.time,
+     failure : failure option}
+
+  exception ReplayFailure of failure
+  exception CandidateSuccess of Thm.thm
+
+  fun default_policy fuel : policy =
+    {total_fuel = Int.max (0, fuel),
+     max_generated_candidates = 128,
+     max_attempted_candidates = 128,
+     max_function_states = 256,
+     max_constructor_depth = 2,
+     max_constructor_width = 32,
+     max_constructor_size = 12,
+     max_split_depth = 1,
+     max_case_branches = 32,
+     max_inductions = 2,
+     max_leaf_rounds = 2,
+     enable_whole_formula = true,
+     enable_cases = true,
+     enable_induction = true,
+     enable_synthesis = true,
+     enable_taut = true,
+     enable_omega = true}
+
+  fun policy_for_test
+        {fuel, cases, induction, synthesis, taut, omega,
+         split_depth, branches, constructor_depth, constructor_width} :
+        policy =
+    {total_fuel = Int.max (0, fuel),
+     max_generated_candidates = 128,
+     max_attempted_candidates = 128,
+     max_function_states = 256,
+     max_constructor_depth = Int.max (0, constructor_depth),
+     max_constructor_width = Int.max (0, constructor_width),
+     max_constructor_size = 12,
+     max_split_depth = Int.max (0, split_depth),
+     max_case_branches = Int.max (0, branches),
+     max_inductions = 2,
+     max_leaf_rounds = 2,
+     enable_whole_formula = false,
+     enable_cases = cases,
+     enable_induction = induction,
+     enable_synthesis = synthesis,
+     enable_taut = taut,
+     enable_omega = omega}
+
+  fun failure_kind_name NoProof = "no-proof"
+    | failure_kind_name Unsupported = "unsupported"
+    | failure_kind_name MalformedInput = "malformed-input"
+    | failure_kind_name TrustRejected = "trust-rejected"
+    | failure_kind_name FuelExhausted = "fuel-exhausted"
+    | failure_kind_name DeadlineExhausted = "deadline-exhausted"
+    | failure_kind_name InternalFailure = "internal-failure"
+
+  fun render_failure ({kind, stage, depth, detail} : failure) =
+    "model replay [" ^ failure_kind_name kind ^ "] " ^ stage ^
+    " at depth " ^ Int.toString depth ^ ": " ^ detail
 
   fun error_text error =
     let val message = General.exnMessage error
     in if message = "" then "unknown proof failure" else message end
     handle _ => "unknown proof failure"
 
-  fun certify {original, env, hints, fuel, deadline} =
-    let
-      val remaining = ref (Int.max (0, fuel))
+  fun theorem_acceptable expected theorem =
+    null (Thm.hyp theorem) andalso trusted theorem andalso
+    (case expected of
+         NONE => true
+       | SOME conclusion => Term.aconv (Thm.concl theorem) conclusion)
 
-      fun check_resources operation =
+  val audit_theorem_for_test = theorem_acceptable
+
+  fun certify_detailed_rich {original, env, hints, policy, deadline} =
+    let
+      val hint_terms = map #term (hints : replay_hint list)
+      val start = Time.now ()
+      val remaining = ref (#total_fuel policy)
+      val nodes = ref 0
+      val ordinary_bindings = ref 0
+      val reconstructed_hints = ref 0
+      val active_candidates = ref 0
+      val applications = ref 0
+      val constructor_terms = ref 0
+      val attempted_candidates = ref 0
+      val memo_hits = ref 0
+      val case_branches = ref 0
+      val induction_attempts = ref 0
+      val leaf_attempts = ref 0
+      val generated_candidates = ref 0
+      val function_states = ref 0
+      val candidate_trace = ref ([] : (int * term * term) list)
+      val generation_trace = ref
+        ([] : (int * Type.hol_type * int) list)
+      val backtracks = ref ([] : failure list)
+
+      fun failure kind stage depth detail =
+        ReplayFailure
+          {kind = kind, stage = stage, depth = depth, detail = detail}
+
+      fun fail kind stage depth detail =
+        raise failure kind stage depth detail
+
+      fun check_deadline stage depth =
+        case deadline of
+            SOME limit =>
+              if Time.now () >= limit then
+                fail DeadlineExhausted stage depth
+                  "replay deadline exhausted"
+              else ()
+          | NONE => ()
+
+      fun charge stage depth =
         let
-          val _ =
-            case deadline of
-                SOME limit =>
-                  if Time.now () >= limit then
-                    raise ResourceExhausted "replay deadline exhausted"
-                  else ()
-              | NONE => ()
+          val _ = check_deadline stage depth
         in
           if !remaining <= 0 then
-            raise ResourceExhausted
-              ("replay fuel exhausted before " ^ operation)
+            fail FuelExhausted stage depth "replay fuel exhausted"
           else
             remaining := !remaining - 1
         end
 
-      fun checked theorem =
-        null (Thm.hyp theorem) andalso trusted theorem
-
-      fun simplify tm =
+      fun within_deadline stage depth operation input =
         let
-          val _ = check_resources "simplification"
-          val theorem =
-            simpLib.SIMP_CONV (BasicProvers.srw_ss ()) [] tm
-            handle Conv.UNCHANGED => Thm.REFL tm
+          val _ = check_deadline stage depth
+          val result =
+            case deadline of
+                NONE => operation input
+              | SOME limit =>
+                  let val allowance = Time.- (limit, Time.now ())
+                  in
+                    if Time.<= (allowance, Time.zeroTime) then
+                      fail DeadlineExhausted stage depth
+                        "replay deadline exhausted"
+                    else
+                      Timeout.apply allowance operation input
+                  end
+                  handle Timeout.TIMEOUT _ =>
+                    fail DeadlineExhausted stage depth
+                      "proof operation timed out"
+          val _ = check_deadline stage depth
         in
-          if checked theorem then SOME theorem else NONE
+          result
+        end
+
+      fun require_theorem stage depth expected theorem =
+        let val _ = check_deadline stage depth
+        in
+          if theorem_acceptable expected theorem then theorem
+          else fail TrustRejected stage depth
+            "theorem has hypotheses, an unacceptable tag, or a wrong endpoint"
+        end
+
+      fun optional_equality stage depth input operation =
+        let
+          val _ = charge stage depth
+          val theorem = within_deadline stage depth operation input
+        in
+          if theorem_acceptable
+               (SOME (boolSyntax.mk_eq (input, rhs_of theorem))) theorem
+          then SOME theorem
+          else NONE
         end
         handle Interrupt => raise Interrupt
-             | ResourceExhausted detail => raise ResourceExhausted detail
+             | ReplayFailure issue =>
+                 if #kind issue = DeadlineExhausted orelse
+                    #kind issue = FuelExhausted then
+                   raise ReplayFailure issue
+                 else NONE
              | _ => NONE
 
-      fun cbv tm =
-        let
-          val _ = check_resources "CBV evaluation"
-          val theorem = eval_original tm
-        in
-          if checked theorem then SOME theorem else NONE
-        end
-        handle Interrupt => raise Interrupt
-             | ResourceExhausted detail => raise ResourceExhausted detail
-             | _ => NONE
+      fun beta depth tm =
+        optional_equality "leaf beta/let normalization" depth tm
+          (Conv.DEPTH_CONV Thm.BETA_CONV)
+
+      fun cbv depth tm =
+        optional_equality "leaf CBV evaluation" depth tm eval_original
+
+      fun simplify depth tm =
+        optional_equality "leaf simplification" depth tm
+          (simpLib.SIMP_CONV (BasicProvers.srw_ss ()) [])
 
       fun decisive theorem =
         let val rhs = rhs_of theorem
@@ -70,31 +279,104 @@ structure Refute_Cert_Model = struct
           Term.aconv rhs boolSyntax.F
         end
 
-      fun evaluate tm =
+      fun compose stage depth first second =
         let
-          fun simplified () =
-            case simplify tm of
-                NONE => NONE
-              | SOME theorem =>
-                  let val reduced = rhs_of theorem
-                  in
-                    if decisive theorem then SOME theorem
-                    else
-                      case cbv reduced of
-                          SOME evaluated =>
-                            let val combined = Thm.TRANS theorem evaluated
-                            in
-                              if checked combined andalso decisive combined
-                              then SOME combined
-                              else NONE
-                            end
-                        | NONE => NONE
-                  end
+          val middle = rhs_of first
+          val left = #1 (boolSyntax.dest_eq (Thm.concl second))
+          val _ = if Term.aconv middle left then () else
+            fail InternalFailure stage depth
+              "conversion endpoints do not agree"
+          val theorem = Thm.TRANS first second
         in
-          case cbv tm of
+          require_theorem stage depth
+            (SOME (boolSyntax.mk_eq
+              (#1 (boolSyntax.dest_eq (Thm.concl first)), rhs_of second)))
+            theorem
+        end
+
+      fun equality_portfolio depth tm =
+        let
+          val seen = ref ([] : term list)
+          fun repeated candidate =
+            List.exists (fn old => Term.aconv old candidate) (!seen)
+          fun one conversion theorem =
+            case conversion depth (rhs_of theorem) of
+                NONE => theorem
+              | SOME next =>
+                  if Term.aconv (rhs_of next) (rhs_of theorem) then theorem
+                  else compose "leaf conversion composition" depth
+                    theorem next
+          fun round 0 theorem = theorem
+            | round count theorem =
+                let
+                  val current = rhs_of theorem
+                  val _ = seen := current :: !seen
+                  val theorem = one cbv theorem
+                  val theorem = one simplify theorem
+                  val theorem = one cbv theorem
+                  val next = rhs_of theorem
+                in
+                  if decisive theorem orelse Term.aconv current next orelse
+                     repeated next then theorem
+                  else round (count - 1) theorem
+                end
+          val initial =
+            case beta depth tm of
+                SOME theorem => theorem
+              | NONE => Thm.REFL tm
+          val theorem = round (#max_leaf_rounds policy) initial
+        in
+          if theorem_acceptable
+               (SOME (boolSyntax.mk_eq (tm, rhs_of theorem))) theorem
+          then SOME theorem
+          else NONE
+        end
+
+      fun prove_by_conversion stage depth conversion goal =
+        let
+          val _ = charge stage depth
+          val equality = within_deadline stage depth conversion goal
+          val equality = require_theorem stage depth
+            (SOME (boolSyntax.mk_eq (goal, boolSyntax.T))) equality
+          val theorem = Drule.EQT_ELIM equality
+        in
+          SOME (require_theorem stage depth (SOME goal) theorem)
+        end
+        handle Interrupt => raise Interrupt
+             | ReplayFailure issue =>
+                 if #kind issue = DeadlineExhausted orelse
+                    #kind issue = FuelExhausted then
+                   raise ReplayFailure issue
+                 else NONE
+             | _ => NONE
+
+      fun direct_leaf depth formula =
+        let
+          val _ = leaf_attempts := !leaf_attempts + 1
+        in
+          case equality_portfolio depth formula of
               SOME theorem =>
-                if decisive theorem then SOME theorem else simplified ()
-            | NONE => simplified ()
+                if Term.aconv (rhs_of theorem) boolSyntax.F then
+                  SOME (require_theorem "leaf equality elimination" depth
+                    (SOME (boolSyntax.mk_neg formula))
+                    (Drule.EQF_ELIM theorem))
+                else NONE
+            | NONE => NONE
+        end
+
+      fun decision_leaf depth formula =
+        let val goal = boolSyntax.mk_neg formula
+        in
+          case if #enable_taut policy then
+                 prove_by_conversion "propositional leaf" depth
+                   tautLib.TAUT_CONV goal
+               else NONE of
+              SOME theorem => SOME theorem
+            | NONE =>
+                if #enable_omega policy then
+                  prove_by_conversion "Presburger leaf" depth
+                    Omega.OMEGA_CONV goal
+                else NONE
         end
 
       val (variables, closure, body) = closure_of original
@@ -114,242 +396,827 @@ structure Refute_Cert_Model = struct
           val certificate = conform_conclusion
             "whole-formula replay" expected certificate
         in
-          if checked certificate then certificate
-          else raise ReplayFailure
-            "whole-formula certificate failed its trust checks"
+          require_theorem "whole-formula replay" 0
+            (SOME expected) certificate
         end
 
-      val fast = evaluate instance
-    in
-      case fast of
-          SOME theorem =>
-            if Term.aconv (rhs_of theorem) boolSyntax.F then
-              Certified (fast_certificate theorem)
-            else if Term.aconv (rhs_of theorem) boolSyntax.T andalso
-                    null (Term.free_vars_lr instance) then
-              DiscardedByWholeFormulaEval
+      fun whole_formula () =
+        case equality_portfolio 0 instance of
+            SOME theorem =>
+              if Term.aconv (rhs_of theorem) boolSyntax.F then
+                SOME (Certified (fast_certificate theorem))
+              else if Term.aconv (rhs_of theorem) boolSyntax.T andalso
+                      null (Term.free_vars_lr instance) then
+                SOME DiscardedByWholeFormulaEval
+              else NONE
+          | NONE => NONE
+
+      fun replay_pnf () =
+        let
+          val _ = charge "normalization" 0
+          val normalized_equality = within_deadline "normalization" 0
+            (fn tm =>
+              Ho_Rewrite.REWRITE_CONV Refute_Core.normal_rewrites tm
+              handle Conv.UNCHANGED => Thm.REFL tm) closure
+          val normalized_equality = require_theorem "normalization" 0
+            (SOME (boolSyntax.mk_eq
+              (closure, rhs_of normalized_equality))) normalized_equality
+          val normalized = rhs_of normalized_equality
+          val _ = charge "prenex conversion" 0
+          val prenex_equality = within_deadline "prenex conversion" 0
+            (fn tm => Refute_Narrow.prenex_conversion tm
+              handle Conv.UNCHANGED => Thm.REFL tm) normalized
+          val prenex_equality = require_theorem "prenex conversion" 0
+            (SOME (boolSyntax.mk_eq
+              (normalized, rhs_of prenex_equality))) prenex_equality
+          val pnf = rhs_of prenex_equality
+
+          fun strip tm =
+            if boolSyntax.is_forall tm then
+              strip (#2 (boolSyntax.dest_forall tm))
+            else if boolSyntax.is_exists tm then
+              strip (#2 (boolSyntax.dest_exists tm))
+            else tm
+          fun quantified tm =
+            boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
+          val matrix = strip pnf
+          val _ =
+            if null (HolKernel.find_terms quantified matrix) then ()
+            else fail MalformedInput "prenex conversion" 0
+              "a quantifier remains outside the prenex prefix"
+
+          fun add_term_unique (candidate, accumulated) =
+            if List.exists (fn old =>
+                 Term.aconv old candidate) accumulated then
+              accumulated
+            else accumulated @ [candidate]
+
+          val binding_pool = List.foldl add_term_unique [] (map #2 env)
+          fun add_hint_unique
+                (hint as {term, ...} : replay_hint, accumulated) =
+            if List.exists (fn ({term = old, ...} : replay_hint) =>
+                 Term.aconv old term) accumulated then accumulated
+            else accumulated @ [hint]
+          val hint_pool = List.foldl add_hint_unique [] hints
+          val hint_pool_terms = map #term hint_pool
+          val base_avoids = List.concat
+            (map Term.all_vars
+              (original :: map #1 env @ map #2 env @ hint_terms))
+
+          type split_row = term * int
+          type origin_row = term * int option
+          type replay_context =
+            {active : term list,
+             active_origins : origin_row list,
+             next_origin : int,
+             split_depths : split_row list,
+             induction_history : Type.hol_type list}
+
+          type failed_state =
+            {formula : term,
+             active_types : Type.hol_type list,
+             split_depths : int list,
+             cases_allowed : bool,
+             induction_allowed : bool,
+             induction_history : Type.hol_type list}
+
+          val failed = ref
+            (Redblackmap.mkDict String.compare :
+              (string, failed_state list) Redblackmap.dict)
+
+          fun abstract active tm = Term.list_mk_abs (active, tm)
+          fun same_types (left, right) =
+            length left = length right andalso
+            ListPair.allEq (fn (a, b) => Util.same_type a b)
+              (left, right)
+          fun depth_of rows variable =
+            case List.find (fn (old, _) =>
+              Term.aconv old variable) rows of
+                SOME (_, depth) => depth
+              | NONE => 0
+          fun state formula
+                ({active, split_depths, induction_history, ...} :
+                  replay_context) : failed_state =
+            {formula = abstract active formula,
+             active_types = map Term.type_of active,
+             split_depths = map (depth_of split_depths) active,
+             cases_allowed = #enable_cases policy,
+             induction_allowed = #enable_induction policy,
+             induction_history = induction_history}
+          fun same_state (left : failed_state) (right : failed_state) =
+            Term.aconv (#formula left) (#formula right) andalso
+            same_types (#active_types left, #active_types right) andalso
+            #split_depths left = #split_depths right andalso
+            #cases_allowed left = #cases_allowed right andalso
+            #induction_allowed left = #induction_allowed right andalso
+            same_types
+              (#induction_history left, #induction_history right)
+          fun fingerprint (current : failed_state) =
+            Parse.term_to_string (#formula current) ^ ":" ^
+            String.concatWith "," (map Int.toString
+              (#split_depths current)) ^ ":" ^
+            Bool.toString (#cases_allowed current) ^ ":" ^
+            Bool.toString (#induction_allowed current)
+          fun bucket current =
+            Option.getOpt
+              (Redblackmap.peek (!failed, fingerprint current), [])
+          fun seen current =
+            List.exists (fn old => same_state old current) (bucket current)
+          fun remember current =
+            if seen current then ()
+            else failed := Redblackmap.insert
+              (!failed, fingerprint current, current :: bucket current)
+
+          fun no_proof stage depth detail =
+            fail NoProof stage depth detail
+
+          fun is_no_proof ({kind, ...} : failure) = kind = NoProof
+
+          fun constructor_info ty =
+            if Refute_ModelFinder_HOL.is_codatatype ty then NONE
             else
-              replay_pnf
-                {original = original, closure = closure, expected = expected,
-                 env = env, hints = hints,
-                 check_resources = check_resources,
-                 evaluate = evaluate, checked = checked}
-        | NONE =>
-            replay_pnf
-              {original = original, closure = closure, expected = expected,
-               env = env, hints = hints,
-               check_resources = check_resources,
-               evaluate = evaluate, checked = checked}
-    end
-    handle Interrupt => raise Interrupt
-         | ResourceExhausted detail => NoCertificate detail
-         | ReplayFailure detail => NoCertificate detail
-         | error => NoCertificate (error_text error)
-
-  and replay_pnf
-        {original, closure, expected, env, hints,
-         check_resources, evaluate, checked} =
-    let
-      val _ = check_resources "normalization"
-      val normalized_equality =
-        Ho_Rewrite.REWRITE_CONV Refute_Core.normal_rewrites closure
-      val _ = if checked normalized_equality then () else
-        raise ReplayFailure "normalization failed its trust checks"
-      val normalized = rhs_of normalized_equality
-      val _ = check_resources "prenex conversion"
-      val prenex_equality = Refute_Narrow.prenex_conversion normalized
-      val _ = if checked prenex_equality then () else
-        raise ReplayFailure "prenex conversion failed its trust checks"
-      val pnf = rhs_of prenex_equality
-
-      fun strip tm =
-        if boolSyntax.is_forall tm then
-          strip (#2 (boolSyntax.dest_forall tm))
-        else if boolSyntax.is_exists tm then
-          strip (#2 (boolSyntax.dest_exists tm))
-        else tm
-      fun quantified tm =
-        boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
-      val matrix = strip pnf
-      val _ =
-        if null (HolKernel.find_terms quantified matrix) then ()
-        else raise ReplayFailure
-          "normalization left a quantifier outside the prenex prefix"
-
-      fun add_unique (candidate, accumulated) =
-        if List.exists (fn old => Term.aconv old candidate) accumulated then
-          accumulated
-        else accumulated @ [candidate]
-      val pool = List.foldl add_unique [] (map #2 env @ hints)
-      val base_avoids = List.concat
-        (map Term.all_vars (original :: map #1 env @ map #2 env @ hints))
-
-      type failed_state =
-        {formula : term,
-         active_types : Type.hol_type list,
-         candidates : term list}
-      val failed = ref ([] : failed_state list)
-
-      fun abstract active tm = Term.list_mk_abs (active, tm)
-      fun same_types (left, right) =
-        length left = length right andalso
-        ListPair.allEq (fn (a, b) => Util.same_type a b) (left, right)
-      fun same_terms (left, right) =
-        length left = length right andalso
-        ListPair.allEq (fn (a, b) => Term.aconv a b) (left, right)
-      fun state active formula candidates : failed_state =
-        {formula = abstract active formula,
-         active_types = map Term.type_of active,
-         candidates = map (abstract active) candidates}
-      fun same_state (left : failed_state) (right : failed_state) =
-        Term.aconv (#formula left) (#formula right) andalso
-        same_types (#active_types left, #active_types right) andalso
-        same_terms (#candidates left, #candidates right)
-      fun seen current =
-        List.exists (fn old => same_state old current) (!failed)
-      fun remember current =
-        if seen current then () else failed := current :: !failed
-
-      fun applications target active base =
-        let
-          fun walk current [] = []
-            | walk current (variable :: rest) =
-                (case Lib.total Type.dom_rng (Term.type_of current) of
-                     SOME (domain, _) =>
-                       if Util.same_type domain (Term.type_of variable) then
-                         let
-                           val _ = check_resources
-                             "candidate application generation"
-                           val applied = Term.mk_comb (current, variable)
-                           val here =
-                             if Util.same_type target
-                               (Term.type_of applied) then [applied]
-                             else []
-                         in
-                           here @ walk applied rest @ walk current rest
-                         end
-                       else walk current rest
-                   | NONE => [])
-        in
-          walk base active
-        end
-
-      fun candidates target active =
-        let
-          val direct = List.filter (fn candidate =>
-            Util.same_type target (Term.type_of candidate)) pool
-          val applied = List.concat (map (applications target active) pool)
-        in
-          List.foldl add_unique [] (direct @ applied)
-        end
-
-      fun prove_neg formula active =
-        let
-          val _ = check_resources "replay node"
-        in
-          if boolSyntax.is_forall formula then
-            let
-              val (variable, body) = boolSyntax.dest_forall formula
-              val witnesses = candidates (Term.type_of variable) active
-              val current = state active formula witnesses
-              val _ = if seen current then
-                  raise ReplayFailure "memoized replay failure"
-                else ()
-
-              fun attempt [] =
-                    (remember current;
-                     raise ReplayFailure
-                       "no witness candidate refuted a universal prefix")
-                | attempt (witness :: rest) =
-                    let
-                      val _ = check_resources "candidate branch"
-                      val instance = Term.subst
-                        [{redex = variable, residue = witness}] body
-                      val refutation = prove_neg instance active
-                      val assumed = Thm.ASSUME formula
-                      val assumed_instance = Drule.SPECL [witness] assumed
-                      val falsehood = Thm.MP (Thm.NOT_ELIM refutation)
-                        assumed_instance
-                      val theorem = Thm.NOT_INTRO
-                        (Thm.DISCH formula falsehood)
-                    in
-                      if checked theorem then theorem
-                      else raise ReplayFailure
-                        "universal replay failed its trust checks"
+              case TypeBase.fetch ty of
+                  NONE => NONE
+                | SOME info =>
+                    let val constructors = map (TypeBasePure.cinst ty)
+                      (TypeBasePure.constructors_of info)
+                    in if null constructors then NONE
+                       else SOME (info, constructors)
                     end
-                    handle Interrupt => raise Interrupt
-                         | ResourceExhausted detail =>
-                             raise ResourceExhausted detail
-                         | _ => attempt rest
-            in
-              attempt witnesses
-            end
-          else if boolSyntax.is_exists formula then
+            handle Feedback.HOL_ERR _ => NONE
+
+          fun candidate_size tm =
+            let fun size candidate =
+              let val (_, arguments) = boolSyntax.strip_comb candidate
+              in 1 + List.foldl (fn (argument, total) =>
+                   size argument + total) 0 arguments
+              end
+            in size tm end
+
+          fun bump_source OrdinaryBinding =
+                ordinary_bindings := !ordinary_bindings + 1
+            | bump_source ReconstructedSkolem =
+                reconstructed_hints := !reconstructed_hints + 1
+            | bump_source ReconstructedTypeValue =
+                reconstructed_hints := !reconstructed_hints + 1
+            | bump_source GenericHint =
+                reconstructed_hints := !reconstructed_hints + 1
+            | bump_source ActiveVariable =
+                active_candidates := !active_candidates + 1
+            | bump_source FunctionApplication =
+                applications := !applications + 1
+            | bump_source SynthesizedConstructor =
+                constructor_terms := !constructor_terms + 1
+
+          fun emit_candidate depth seen_terms attempt
+                (entry as {term, source, ...} : candidate) =
+            if List.exists (fn old => Term.aconv old term) (!seen_terms) then
+              ()
+            else if !generated_candidates >=
+                    #max_generated_candidates policy then
+              ()
+            else
+              let
+                val _ = generated_candidates := !generated_candidates + 1
+                val _ = bump_source source
+                val _ = seen_terms := term :: !seen_terms
+              in
+                attempt entry
+              end
+
+          fun pool_terms target active =
+            List.filter (fn candidate =>
+              Util.same_type target (Term.type_of candidate))
+              (binding_pool @ hint_pool_terms @ active)
+
+          fun synth_values target active max_depth =
             let
-              val current = state active formula []
-              val _ = if seen current then
-                  raise ReplayFailure "memoized replay failure"
-                else ()
-              val (variable, body) = boolSyntax.dest_exists formula
-              val avoids = base_avoids @ active @ Term.all_vars formula
-              val arbitrary = Term.variant avoids variable
-              val instance = Term.subst
-                [{redex = variable, residue = arbitrary}] body
-              val refutation =
-                (prove_neg instance (active @ [arbitrary])
-                 handle ReplayFailure detail =>
-                   (remember current; raise ReplayFailure detail))
-              val generalized = Thm.GEN arbitrary refutation
-              val conversion = Conv.CONV_RULE
-                (Conv.DEPTH_CONV Thm.BETA_CONV)
-                (Drule.ISPEC (Term.mk_abs (variable, body))
-                  boolTheory.NOT_EXISTS_THM)
-              val target = rhs_of conversion
-              val generalized = conform_conclusion
-                "existential replay" target generalized
-              val theorem = Thm.EQ_MP (Thm.SYM conversion) generalized
+              val values = ref (pool_terms target active)
+              val width = #max_constructor_width policy
+
+              fun add value =
+                if length (!values) >= width orelse
+                   candidate_size value > #max_constructor_size policy orelse
+                   List.exists (fn old => Term.aconv old value) (!values)
+                then ()
+                else values := !values @ [value]
+
+              fun combinations [] prefix emit = emit (rev prefix)
+                | combinations (choices :: rest) prefix emit =
+                    List.app (fn choice =>
+                      combinations rest (choice :: prefix) emit) choices
+
+              fun build depth =
+                    (case constructor_info target of
+                         NONE => ()
+                       | SOME (_, constructors) =>
+                           let
+                             fun one constructor =
+                               let
+                                 val (argument_types, _) =
+                                   boolSyntax.strip_fun
+                                     (Term.type_of constructor)
+                                 val choices =
+                                   if depth <= 0 andalso
+                                      not (null argument_types) then []
+                                   else map (fn ty =>
+                                     synth_values ty active (depth - 1))
+                                     argument_types
+                                 val produced = ref 0
+                                 fun emit arguments =
+                                   if !produced >= width then ()
+                                   else
+                                     let
+                                       val _ = produced := !produced + 1
+                                       val term =
+                                         Term.list_mk_comb
+                                           (constructor, arguments)
+                                       val _ = charge
+                                         "constructor synthesis" 0
+                                     in add term end
+                               in
+                                 if null argument_types then add constructor
+                                 else if depth <= 0 then ()
+                                 else if List.exists null choices then ()
+                                 else combinations choices [] emit
+                               end
+                           in
+                             List.app one constructors
+                           end)
             in
-              if checked theorem then theorem
-              else raise ReplayFailure
-                "existential replay failed its trust checks"
+              build max_depth;
+              !values
             end
-          else
+
+          fun generate_candidates depth target target_origin active
+                active_origins attempt =
             let
-              val current = state active formula []
-              val _ = if seen current then
-                  raise ReplayFailure "memoized replay failure"
-                else ()
-            in
-              case evaluate formula of
-                  SOME theorem =>
-                    if Term.aconv (rhs_of theorem) boolSyntax.F then
-                      Drule.EQF_ELIM theorem
+              val seen_terms = ref ([] : term list)
+              fun emit entry = emit_candidate depth seen_terms attempt entry
+              fun emit_terms source cost terms = List.app (fn term => emit
+                {term = term, source = source, cost = cost,
+                 provenance = NONE}) terms
+
+              val direct_bindings = List.filter (fn term =>
+                Util.same_type target (Term.type_of term)) binding_pool
+              fun matching_hints source = List.filter
+                (fn ({term, source = actual, ...} : replay_hint) =>
+                  source = actual andalso
+                  Util.same_type target (Term.type_of term)) hint_pool
+              val direct_skolems = matching_hints SkolemValue
+              val direct_types = matching_hints TypeValue
+              val direct_generic = matching_hints DirectHint
+              val direct_active = List.filter (fn term =>
+                Util.same_type target (Term.type_of term)) active
+              val _ = generation_trace :=
+                (depth, target,
+                 length direct_bindings + length direct_skolems +
+                 length direct_types + length direct_generic +
+                 length direct_active) :: !generation_trace
+
+              fun emit_hint candidate_source cost
+                    ({term, provenance, ...} : replay_hint) =
+                emit {term = term, source = candidate_source,
+                  cost = cost, provenance = provenance}
+
+              fun application_walk base current [] = ()
+                | application_walk base current (variable :: rest) =
+                    if !function_states >= #max_function_states policy then ()
                     else
-                      (remember current;
-                       raise ReplayFailure
-                         "replay leaf did not normalize to false")
-                | NONE =>
-                    (remember current;
-                     raise ReplayFailure
-                       "replay leaf could not be normalized")
+                      (case Lib.total Type.dom_rng
+                          (Term.type_of current) of
+                           NONE => ()
+                         | SOME (domain, _) =>
+                             if Util.same_type domain
+                                  (Term.type_of variable) then
+                               let
+                                 val _ = function_states :=
+                                   !function_states + 1
+                                 val _ = charge
+                                   "candidate application generation" depth
+                                 val applied =
+                                   Term.mk_comb (current, variable)
+                                 val _ =
+                                   if Util.same_type target
+                                        (Term.type_of applied) then
+                                     emit
+                                       {term = applied,
+                                        source = FunctionApplication,
+                                        cost = 2,
+                                        provenance = NONE}
+                                   else ()
+                               in
+                                 application_walk base applied rest;
+                                 application_walk base current rest
+                               end
+                             else application_walk base current rest)
+
+              fun applications_of base =
+                application_walk base base active
+
+              fun exact_dependency_arguments dependencies =
+                let
+                  fun find ({origin, source_type} : dependency) =
+                    case List.find (fn (variable, candidate_origin) =>
+                      candidate_origin = SOME origin andalso
+                      Util.same_type source_type
+                        (Term.type_of variable)) active_origins of
+                        SOME (variable, _) => SOME variable
+                      | NONE => NONE
+                  fun collect [] result = SOME (rev result)
+                    | collect (dependency :: rest) result =
+                        (case find dependency of
+                             SOME variable =>
+                               collect rest (variable :: result)
+                           | NONE => NONE)
+                in
+                  collect dependencies []
+                end
+
+              fun provenance_application
+                    ({term, provenance = SOME metadata, ...} : replay_hint) =
+                    if #origin metadata <> target_origin then ()
+                    else
+                    (case exact_dependency_arguments
+                        (#dependencies metadata) of
+                         NONE => ()
+                       | SOME arguments =>
+                           (case Lib.total Term.list_mk_comb
+                               (term, arguments) of
+                                SOME applied =>
+                                  if Util.same_type target
+                                       (Term.type_of applied) then
+                                    emit
+                                      {term = applied,
+                                       source = FunctionApplication,
+                                       cost = 1,
+                                       provenance = SOME metadata}
+                                  else ()
+                              | NONE => ()))
+                | provenance_application _ = ()
+
+              fun synthesized () =
+                if not (#enable_synthesis policy) then ()
+                else
+                  let
+                    val generated = synth_values target active
+                      (#max_constructor_depth policy)
+                    val new = List.filter (fn term =>
+                      not (List.exists (fn old => Term.aconv old term)
+                        (binding_pool @ hint_pool_terms @ active))) generated
+                  in
+                    emit_terms SynthesizedConstructor 3 new
+                  end
+            in
+              List.app (emit_hint ReconstructedSkolem 0)
+                (List.filter (fn
+                  ({provenance = SOME metadata, ...} : replay_hint) =>
+                    #origin metadata = target_origin
+                  | _ => false) direct_skolems);
+              emit_terms OrdinaryBinding 0 direct_bindings;
+              List.app (emit_hint ReconstructedSkolem 1) direct_skolems;
+              List.app (emit_hint ReconstructedTypeValue 0) direct_types;
+              List.app (emit_hint GenericHint 0) direct_generic;
+              emit_terms ActiveVariable 1 direct_active;
+              List.app provenance_application hint_pool;
+              List.app applications_of (binding_pool @ hint_pool_terms);
+              synthesized ()
             end
+
+          fun quantifier_free tm =
+            null (HolKernel.find_terms quantified tm)
+
+          fun contains_type target ty =
+            Util.same_type target ty orelse
+            (case Lib.total Type.dest_type ty of
+                 SOME (_, arguments) =>
+                   List.exists (contains_type target) arguments
+               | NONE => false)
+
+          fun regular_recursive_type ty constructors =
+            let
+              fun arguments constructor =
+                #1 (boolSyntax.strip_fun (Term.type_of constructor))
+              val all_arguments = List.concat (map arguments constructors)
+              val direct = List.exists (Util.same_type ty) all_arguments
+              val nested = List.exists (fn argument =>
+                not (Util.same_type ty argument) andalso
+                contains_type ty argument) all_arguments
+            in
+              direct andalso not nested
+            end
+
+          fun single_property_induction ty theorem =
+            let
+              val (_, conclusion) = boolSyntax.strip_forall
+                (Thm.concl theorem)
+              val (_, consequent) = boolSyntax.dest_imp conclusion
+              val (objects, property) = boolSyntax.strip_forall consequent
+              val (head, arguments) = boolSyntax.strip_comb property
+              val object_ty = Term.type_of (hd objects)
+              val type_matches = Option.isSome
+                (Lib.total (fn actual => Type.match_type actual ty)
+                  object_ty)
+            in
+              length objects = 1 andalso length arguments = 1 andalso
+              type_matches andalso
+              Term.aconv (hd arguments) (hd objects) andalso
+              Term.is_var head
+            end
+            handle Feedback.HOL_ERR _ => false
+
+          fun local_induction_tactic depth : Abbrev.tactic =
+            let
+              val introductions = Tactical.REPEAT
+                (Tactical.FIRST
+                  [Tactic.CONJ_TAC, Tactic.GEN_TAC])
+              val assumptions = Tactical.REPEAT Tactic.DISCH_TAC
+              val simplify_goal =
+                simpLib.ASM_SIMP_TAC (BasicProvers.srw_ss ()) []
+              val taut_goal =
+                if #enable_taut policy then
+                  Tactical.TRY tautLib.ASM_TAUT_TAC
+                else Tactical.ALL_TAC
+              val omega_goal =
+                if #enable_omega policy then
+                  Tactical.TRY Omega.OMEGA_TAC
+                else Tactical.ALL_TAC
+              fun account goal =
+                (charge "induction constructor obligation" depth;
+                 leaf_attempts := !leaf_attempts + 1;
+                 Tactical.EVERY
+                   [introductions, simplify_goal, assumptions,
+                    simplify_goal, taut_goal, omega_goal]
+                   goal)
+            in
+              account
+            end
+
+          fun prove_neg formula context depth =
+            let
+              val _ = charge "replay node" depth
+              val _ = nodes := !nodes + 1
+              val current = state formula context
+              val _ = if seen current then
+                  (memo_hits := !memo_hits + 1;
+                   no_proof "memoization" depth
+                     "state already failed with these strategy permissions")
+                else ()
+
+              fun ordinary () =
+                if boolSyntax.is_forall formula then
+                  let
+                    val (variable, body) = boolSyntax.dest_forall formula
+                    val target = Term.type_of variable
+
+                    fun attempt
+                          ({term = witness, ...} : candidate) =
+                      if !attempted_candidates >=
+                           #max_attempted_candidates policy then ()
+                      else
+                        let
+                          val _ = attempted_candidates :=
+                            !attempted_candidates + 1
+                          val _ = charge "candidate branch" depth
+                          val instance = Term.subst
+                            [{redex = variable, residue = witness}] body
+                          val _ = candidate_trace :=
+                            (depth, witness, instance) :: !candidate_trace
+                          val next : replay_context =
+                            {active = #active context,
+                             active_origins = #active_origins context,
+                             next_origin = #next_origin context + 1,
+                             split_depths = #split_depths context,
+                             induction_history =
+                               #induction_history context}
+                          val refutation =
+                            prove_neg instance next (depth + 1)
+                          val assumed = Thm.ASSUME formula
+                          val assumed_instance =
+                            Drule.SPECL [witness] assumed
+                          val falsehood = Thm.MP
+                            (Thm.NOT_ELIM refutation) assumed_instance
+                          val theorem = Thm.NOT_INTRO
+                            (Thm.DISCH formula falsehood)
+                          val theorem = require_theorem
+                            "universal replay" depth
+                            (SOME (boolSyntax.mk_neg formula)) theorem
+                        in
+                          raise CandidateSuccess theorem
+                        end
+                        handle ReplayFailure issue =>
+                          if is_no_proof issue then
+                            backtracks := issue :: !backtracks
+                          else raise ReplayFailure issue
+                  in
+                    (generate_candidates depth target (#next_origin context)
+                       (#active context) (#active_origins context) attempt;
+                     no_proof "universal replay" depth
+                       "no candidate refuted the universal prefix")
+                    handle CandidateSuccess theorem => theorem
+                  end
+                else if boolSyntax.is_exists formula then
+                  let
+                    val (variable, body) = boolSyntax.dest_exists formula
+                    val avoids = base_avoids @ #active context @
+                      Term.all_vars formula
+                    val arbitrary = Term.variant avoids variable
+                    val instance = Term.subst
+                      [{redex = variable, residue = arbitrary}] body
+                    val next : replay_context =
+                      {active = #active context @ [arbitrary],
+                       active_origins = #active_origins context @
+                         [(arbitrary, SOME (#next_origin context))],
+                       next_origin = #next_origin context + 1,
+                       split_depths = #split_depths context @
+                         [(arbitrary, 0)],
+                       induction_history = #induction_history context}
+                    val refutation = prove_neg instance next (depth + 1)
+                    val generalized = Thm.GEN arbitrary refutation
+                    val conversion = Conv.CONV_RULE
+                      (Conv.DEPTH_CONV Thm.BETA_CONV)
+                      (Drule.ISPEC (Term.mk_abs (variable, body))
+                        boolTheory.NOT_EXISTS_THM)
+                    val conversion = require_theorem
+                      "existential conversion" depth NONE conversion
+                    val target = rhs_of conversion
+                    val generalized = conform_conclusion
+                      "existential replay" target generalized
+                    val theorem = Thm.EQ_MP
+                      (Thm.SYM conversion) generalized
+                  in
+                    require_theorem "existential replay" depth
+                      (SOME (boolSyntax.mk_neg formula)) theorem
+                  end
+                else
+                  case direct_leaf depth formula of
+                      SOME theorem => theorem
+                    | NONE =>
+                        (case decision_leaf depth formula of
+                             SOME theorem => theorem
+                           | NONE => no_proof "leaf solving" depth
+                               "the residual was not proved false")
+
+              fun eligible_split variable =
+                Term.free_in variable formula andalso
+                depth_of (#split_depths context) variable <
+                  #max_split_depth policy andalso
+                Option.isSome (constructor_info (Term.type_of variable))
+
+              fun case_split variable =
+                let
+                  val ty = Term.type_of variable
+                  val variable_depth =
+                    depth_of (#split_depths context) variable
+                  val (info, constructors) =
+                    valOf (constructor_info ty)
+                  val nchotomy = TypeBasePure.nchotomy_of info
+                  val nchotomy = require_theorem "datatype nchotomy" depth
+                    NONE nchotomy
+                  val branch_count = length constructors
+                  val argument_count = List.foldl
+                    (fn (constructor, total) =>
+                      length (#1 (boolSyntax.strip_fun
+                        (Term.type_of constructor))) + total)
+                    0 constructors
+                  val _ =
+                    if !case_branches + branch_count <=
+                         #max_case_branches policy then ()
+                    else no_proof "structural case split" depth
+                      "case branch cap exhausted"
+                  val _ = List.app (fn _ => charge
+                    "case constructor argument" depth)
+                    (List.tabulate (argument_count, fn index => index))
+                  val split_theorem = Drule.ISPEC variable nchotomy
+                  val split_theorem = require_theorem
+                    "instantiated datatype nchotomy" depth NONE split_theorem
+
+                  fun branch (assumptions, goal) =
+                    let
+                      val _ = case_branches := !case_branches + 1
+                      val _ = charge "case branch" depth
+                      val positive = boolSyntax.dest_neg goal
+                      val frees = Term.free_vars_lr positive
+                      fun old_depth candidate =
+                        case List.find (fn old =>
+                          Term.aconv old candidate) (#active context) of
+                            SOME old =>
+                              depth_of (#split_depths context) old
+                          | NONE => variable_depth + 1
+                      val next : replay_context =
+                        {active = frees,
+                         active_origins = map (fn free =>
+                           case List.find (fn (old, _) =>
+                             Term.aconv old free)
+                               (#active_origins context) of
+                               SOME row => row
+                             | NONE => (free, NONE)) frees,
+                         next_origin = #next_origin context,
+                         split_depths = map (fn free =>
+                           (free, old_depth free)) frees,
+                         induction_history = #induction_history context}
+                      val theorem = prove_neg positive next (depth + 1)
+                    in
+                      Tactic.ACCEPT_TAC theorem (assumptions, goal)
+                    end
+                    handle Feedback.HOL_ERR _ =>
+                      no_proof "structural case branch" depth
+                        "generated branch did not match its replay theorem"
+
+                  val tactic = Tactical.THEN
+                    (Tactic.STRUCT_CASES_TAC split_theorem, branch)
+                  val theorem = within_deadline
+                    "structural case combination" depth
+                    (fn () => Tactical.TAC_PROOF
+                      (([], boolSyntax.mk_neg formula), tactic)) ()
+                in
+                  require_theorem "structural case combination" depth
+                    (SOME (boolSyntax.mk_neg formula)) theorem
+                end
+
+              fun try_cases [] = no_proof "structural case split" depth
+                    "no exhaustive split closed every branch"
+                | try_cases (variable :: rest) =
+                    (case_split variable
+                     handle ReplayFailure issue =>
+                       if is_no_proof issue then try_cases rest
+                       else raise ReplayFailure issue)
+
+              fun induction variable =
+                let
+                  val ty = Term.type_of variable
+                  val (_, constructors) = valOf (constructor_info ty)
+                  val _ =
+                    if quantifier_free formula then ()
+                    else no_proof "structural induction" depth
+                      "residual formula is not quantifier-free"
+                  val _ =
+                    if regular_recursive_type ty constructors then ()
+                    else no_proof "structural induction" depth
+                      "datatype is nonrecursive, mutual, or nested"
+                  val induction_theorem = TypeBase.induction_of ty
+                    handle Feedback.HOL_ERR _ => no_proof
+                      "structural induction" depth
+                      "datatype has no induction theorem"
+                  val induction_theorem = require_theorem
+                    "datatype induction theorem" depth NONE induction_theorem
+                  val _ =
+                    if single_property_induction ty induction_theorem then ()
+                    else no_proof "structural induction" depth
+                      "induction theorem is not single-property"
+                  val _ =
+                    if !induction_attempts < #max_inductions policy then ()
+                    else no_proof "structural induction" depth
+                      "induction attempt cap exhausted"
+                  val _ = induction_attempts := !induction_attempts + 1
+                  val _ = charge "structural induction" depth
+                  val generalized = boolSyntax.mk_forall
+                    (variable, boolSyntax.mk_neg formula)
+                  val tactic = Tactical.THEN
+                    (Tactic.HO_MATCH_MP_TAC induction_theorem,
+                     local_induction_tactic depth)
+                  val theorem = within_deadline
+                    "structural induction" depth
+                    (fn () => Tactical.TAC_PROOF
+                      (([], generalized), tactic)) ()
+                    handle Feedback.HOL_ERR _ => no_proof
+                      "structural induction" depth
+                      "a constructor obligation remained open"
+                  val theorem = require_theorem
+                    "completed structural induction" depth
+                    (SOME generalized) theorem
+                  val specialized = Drule.ISPEC variable theorem
+                in
+                  require_theorem "structural induction specialization"
+                    depth (SOME (boolSyntax.mk_neg formula)) specialized
+                end
+
+              fun try_inductions [] = no_proof "structural induction" depth
+                    "no admitted induction closed every constructor premise"
+                | try_inductions (variable :: rest) =
+                    if List.exists (Util.same_type (Term.type_of variable))
+                         (#induction_history context) orelse
+                       not (Term.free_in variable formula) orelse
+                       not (Option.isSome
+                         (constructor_info (Term.type_of variable))) then
+                      try_inductions rest
+                    else
+                      (induction variable
+                       handle ReplayFailure issue =>
+                         if is_no_proof issue then
+                           (backtracks := issue :: !backtracks;
+                            try_inductions rest)
+                         else raise ReplayFailure issue)
+
+              fun strategies () =
+                (ordinary ()
+                 handle ReplayFailure issue =>
+                   if not (is_no_proof issue) then raise ReplayFailure issue
+                   else if #enable_cases policy then
+                     (try_cases (List.filter eligible_split
+                        (#active context))
+                      handle ReplayFailure case_issue =>
+                        if not (is_no_proof case_issue) then
+                          raise ReplayFailure case_issue
+                        else if #enable_induction policy then
+                          try_inductions (#active context)
+                        else raise ReplayFailure issue)
+                   else if #enable_induction policy then
+                     try_inductions (#active context)
+                   else raise ReplayFailure issue)
+            in
+              strategies ()
+              handle ReplayFailure issue =>
+                if is_no_proof issue then
+                  (remember current; raise ReplayFailure issue)
+                else raise ReplayFailure issue
+            end
+
+          val initial_context : replay_context =
+            {active = [], active_origins = [], next_origin = 0,
+             split_depths = [], induction_history = []}
+          val replayed = prove_neg pnf initial_context 0
+          val prenex_negated_equality =
+            Thm.AP_TERM boolSyntax.negation prenex_equality
+          val replayed = conform_conclusion
+            "prenex replay" (rhs_of prenex_negated_equality) replayed
+          val normalized_certificate = Thm.EQ_MP
+            (Thm.SYM prenex_negated_equality) replayed
+          val normalized_negated_equality =
+            Thm.AP_TERM boolSyntax.negation normalized_equality
+          val certificate = Thm.EQ_MP
+            (Thm.SYM normalized_negated_equality) normalized_certificate
+          val certificate = conform_conclusion
+            "model replay" expected certificate
+          val certificate = require_theorem "final certificate audit" 0
+            (SOME expected) certificate
+        in
+          Certified certificate
         end
 
-      val replayed = prove_neg pnf []
-      val prenex_negated_equality =
-        Thm.AP_TERM boolSyntax.negation prenex_equality
-      val replayed = conform_conclusion
-        "prenex replay" (rhs_of prenex_negated_equality) replayed
-      val normalized_certificate =
-        Thm.EQ_MP (Thm.SYM prenex_negated_equality) replayed
-      val normalized_negated_equality =
-        Thm.AP_TERM boolSyntax.negation normalized_equality
-      val certificate = Thm.EQ_MP
-        (Thm.SYM normalized_negated_equality) normalized_certificate
-      val certificate = conform_conclusion
-        "model replay" expected certificate
+      fun snapshot issue : diagnostics =
+        {nodes = !nodes,
+         ordinary_bindings = !ordinary_bindings,
+         reconstructed_hints = !reconstructed_hints,
+         active_candidates = !active_candidates,
+         applications = !applications,
+         constructor_terms = !constructor_terms,
+         attempted_candidates = !attempted_candidates,
+         memo_hits = !memo_hits,
+         case_branches = !case_branches,
+         induction_attempts = !induction_attempts,
+         leaf_attempts = !leaf_attempts,
+         candidate_trace = rev (!candidate_trace),
+         generation_trace = rev (!generation_trace),
+         backtracks = rev (!backtracks),
+         consumed_fuel = #total_fuel policy - !remaining,
+         elapsed = Time.- (Time.now (), start),
+         failure = issue}
+
+      val reported_failure = ref (NONE : failure option)
+      val outcome =
+        ((case if #enable_whole_formula policy then whole_formula ()
+               else NONE of
+              SOME answer => answer
+            | NONE => replay_pnf ())
+         handle Interrupt => raise Interrupt
+              | ReplayFailure issue =>
+                  (reported_failure := SOME issue;
+                   NoCertificate (render_failure issue))
+              | error =>
+                  let val issue =
+                    {kind = InternalFailure,
+                     stage = "public boundary",
+                     depth = 0,
+                     detail = error_text error}
+                  in
+                    reported_failure := SOME issue;
+                    NoCertificate (render_failure issue)
+                  end)
     in
-      if checked certificate then Certified certificate
-      else NoCertificate "replay certificate failed its final trust checks"
+      (outcome, snapshot (!reported_failure))
     end
+
+  fun direct_hint term : replay_hint =
+    {term = term, source = DirectHint, provenance = NONE}
+
+  fun certify_detailed {original, env, hints, policy, deadline} =
+    certify_detailed_rich
+      {original = original, env = env, hints = map direct_hint hints,
+       policy = policy, deadline = deadline}
+
+  fun certify_rich_with_policy arguments =
+    #1 (certify_detailed_rich arguments)
+
+  fun certify_with_policy arguments = #1 (certify_detailed arguments)
+
+  fun certify_rich {original, env, hints, fuel, deadline} =
+    certify_rich_with_policy
+      {original = original, env = env, hints = hints,
+       policy = default_policy fuel, deadline = deadline}
+
+  fun certify {original, env, hints, fuel, deadline} =
+    certify_with_policy
+      {original = original, env = env, hints = hints,
+       policy = default_policy fuel, deadline = deadline}
 end

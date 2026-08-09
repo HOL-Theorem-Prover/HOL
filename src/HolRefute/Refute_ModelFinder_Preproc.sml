@@ -231,6 +231,7 @@ structure Refute_ModelFinder_Preproc = struct
   fun skolemize_term_and_more
         (context as {skolems, ...} : context) skolem_depth term =
     let
+      val next_origin = ref 0
       fun positive_existential polarity existential =
         case (polarity, existential) of
             (Util.Pos, true) => true
@@ -238,7 +239,9 @@ structure Refute_ModelFinder_Preproc = struct
           | _ => false
       (* Keep source binder names for model display, but distinct opened
          variables for de Bruijn-style dependency identity. *)
-      fun dependency_variable (variable, _) = variable
+      fun dependency_variable (variable, _, _) = variable
+      fun dependency_info (variable, _, origin) : MFH.skolem_dependency =
+        {origin = origin, source_type = Term.type_of variable}
       fun skolem_type dependencies result =
         boolSyntax.list_mk_fun
           (map (Term.type_of o dependency_variable) dependencies, result)
@@ -247,6 +250,8 @@ structure Refute_ModelFinder_Preproc = struct
            boolSyntax.is_exists candidate then
           let
             val existential = boolSyntax.is_exists candidate
+            val origin = !next_origin
+            val _ = next_origin := origin + 1
             val (raw_variable, raw_body) =
               if existential then boolSyntax.dest_exists candidate
               else boolSyntax.dest_forall candidate
@@ -265,7 +270,7 @@ structure Refute_ModelFinder_Preproc = struct
             fun keep () =
               let
                 val transformed = recurse
-                  (dependencies @ [(variable, original)])
+                  (dependencies @ [(variable, original, origin)])
                   (skolemizable andalso
                    not (is_higher_order_type (Term.type_of variable)))
                   polarity body
@@ -289,9 +294,17 @@ structure Refute_ModelFinder_Preproc = struct
                 val application = Term.list_mk_comb
                   (skolem, map dependency_variable dependencies)
                 val generated_name = variable_name skolem
-                val enclosing_names = rev (map #2 dependencies)
+                val info : MFH.skolem_info =
+                  {origin = origin,
+                   generated_name = generated_name,
+                   source_name = original,
+                   source_type = Term.type_of variable,
+                   positive = polarity = Util.Pos,
+                   dependencies = map dependency_info dependencies,
+                   arity = arity,
+                   stage = "source skolemization"}
                 val _ = skolems :=
-                  (generated_name, enclosing_names) :: !skolems
+                  info :: !skolems
                 val transformed = recurse dependencies skolemizable
                   polarity body
               in

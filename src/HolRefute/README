@@ -74,6 +74,26 @@ does not promote candidates already known to be stuck or incomplete.
 whether Refute constructed a HOL theorem.  The two are independent axes: a
 result may be `Genuine` with `cert = NONE`.
 
+Model-finder certification replays reconstructed values in the HOL kernel.
+It first prefers values with matching Skolem provenance, then ordinary model
+bindings and reconstructed type values.  If those do not close the negated
+goal, replay may use bounded constructor synthesis, exhaustive one-layer
+datatype cases, regular single-property datatype induction, propositional
+tautology proving, and Presburger arithmetic.  Lists, ordinary records and
+enums, and regular recursive datatypes such as `zoo_tree` are supported by
+these paths.  Every exported certificate has the exact negated closed goal,
+no hypotheses, and no untrusted oracle tag.
+
+Replay is deterministic and fail-closed.  Fuel, candidate, constructor,
+case-branch, induction, leaf-normalization, and deadline limits can make an
+otherwise real model remain uncertified.  Mutual and nested recursion,
+codatatype induction or coinduction, and abstract typedef or quotient
+transport remain unsupported unless a dedicated trusted theorem-backed path
+is present.  An unsuccessful replay never weakens the model finder's
+encoding-derived certainty.  The `qc.certify` setting controls Quickcheck
+candidate certification; it does not disable this optional model-finder
+replay.
+
 SETTLED DECISION — do not revisit without the owner.  Refute trusts Kodkodi
 exactly as Isabelle/HOL's Nitpick trusts Kodkod, and must never be stricter.
 A model-finder verdict is decided by the *encoding*, not by whether a HOL

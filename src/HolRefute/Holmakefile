@@ -32,7 +32,8 @@ Refute_Gen.uo: Refute_Util.uo
 Refute_Core.uo: Refute_ModelFinder_Names.uo
 Refute_ModelFinder_Names.uo: Refute_Util.uo
 Refute_Cert_Narrow.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo
-Refute_Cert_Model.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo
+Refute_Cert_Model.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo \
+                      Refute_ModelFinder_HOL.uo
 Refute_Narrow.uo: Refute_Util.uo Refute_Gen.uo Refute_ModelFinder_Names.uo
 Refute_SmartGen.uo: Refute_Util.uo
 Refute_QC.uo: Refute_Cert_Narrow.uo Refute_ModelFinder_HOL.uo

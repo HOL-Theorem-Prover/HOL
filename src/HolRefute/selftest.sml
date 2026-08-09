@@ -5323,6 +5323,28 @@ val _ = require_msg (check_result mf_box_uncurry_goldens) (fn () =>
   "model-finder boxing/uncurrying/card-transfer golden changed")
   (fn () => ()) ()
 
+fun mf_dependency_matches
+      ((expected_origin, expected_type),
+       ({origin, source_type} : MFH.skolem_dependency)) =
+  origin = expected_origin andalso
+  Type.compare (source_type, expected_type) = EQUAL
+
+fun mf_skolem_matches
+      (expected_origin, expected_generated, expected_source,
+       expected_type, expected_positive, expected_dependencies,
+       expected_arity)
+      ({origin, generated_name, source_name, source_type, positive,
+        dependencies, arity, stage} : MFH.skolem_info) =
+  origin = expected_origin andalso
+  generated_name = expected_generated andalso
+  source_name = expected_source andalso
+  Type.compare (source_type, expected_type) = EQUAL andalso
+  positive = expected_positive andalso
+  ListPair.allEq mf_dependency_matches
+    (expected_dependencies, dependencies) andalso
+  arity = expected_arity andalso
+  stage = "source skolemization"
+
 fun mf_preproc_skolem_golden () =
   let
     val context = fresh_mf_context ()
@@ -5387,14 +5409,20 @@ fun mf_preproc_skolem_golden () =
       [axiom] boolSyntax.T
   in
     Term.aconv actual expected andalso
-    metadata = [("refute$sk3@1$x", ["c", "b", "a"])] andalso
+    List.exists (mf_skolem_matches
+      (3, "refute$sk3@1$x", "x", ``:num``, true,
+       [(0, ``:num``), (1, ``:num``), (2, ``:num``)], 3)) metadata andalso
+    length metadata = 1 andalso
     ListPair.allEq (fn (result, golden) => Term.aconv result golden)
       (pipeline_terms, [expected_pipeline]) andalso
     null pipeline_defs andalso null pipeline_needs andalso
     pipeline_all_mono andalso pipeline_no_poly andalso
     not pipeline_binarize andalso
-    !(#skolems pipeline_context) =
-      [("refute$sk3@1$x", ["c", "b", "a"])] andalso
+    List.exists (mf_skolem_matches
+      (3, "refute$sk3@1$x", "x", ``:num``, true,
+       [(0, ``:num``), (1, ``:num``), (2, ``:num``)], 3))
+      (!(#skolems pipeline_context)) andalso
+    length (!(#skolems pipeline_context)) = 1 andalso
     Term.aconv unskolemized axiom andalso
     null (!(#skolems axiom_context)) andalso
     Term.aconv higher_order_result higher_order andalso
@@ -5403,13 +5431,19 @@ fun mf_preproc_skolem_golden () =
     Term.aconv negative_result
       (boolSyntax.mk_neg (Term.mk_comb (``p : num -> bool``,
         negative_skolem))) andalso
-    !(#skolems negative_context) = [("refute$sk0@1$x", [])] andalso
+    List.exists (mf_skolem_matches
+      (0, "refute$sk0@1$x", "x", ``:num``, false, [], 0))
+      (!(#skolems negative_context)) andalso
+    length (!(#skolems negative_context)) = 1 andalso
     Term.aconv neutral_result neutral_input andalso
     null (!(#skolems neutral_context)) andalso
     Term.aconv shadowed_input distinct_input andalso
     Term.aconv shadowed_result distinct_result andalso
-    !(#skolems shadowed_context) =
-      [("refute$sk2@1$y", ["x", "x"])] andalso
+    List.exists (mf_skolem_matches
+      (2, "refute$sk2@1$y", "y", ``:num``, true,
+       [(0, ``:num``), (1, ``:num``)], 2))
+      (!(#skolems shadowed_context)) andalso
+    length (!(#skolems shadowed_context)) = 1 andalso
     List.exists (Term.aconv axiom) collected andalso
     null (!(#skolems collected_context))
   end
@@ -5590,7 +5624,9 @@ fun mf_preproc_pipeline_shape () =
           (pattern_f : num list -> num list) (REVERSE xs) = xs``
   in
     length nondefinitions >= 1 andalso
-    skolems = [("refute$sk0@1$x", [])] andalso
+    List.exists (mf_skolem_matches
+      (0, "refute$sk0@1$x", "x", ``:num``, true, [], 0)) skolems andalso
+    length skolems = 1 andalso
     free_names = ["refute$sk0@1$x"] andalso
     Term.aconv preprocessed
       (boolSyntax.mk_eq (expected_skolem, ``3 : num``)) andalso
@@ -8574,6 +8610,9 @@ val _ = require_msg (check_result mf_model_certifiability_rules) (fn () =>
 fun mf_replay_sidecar_preserves_generated_skolem () =
   let
     val ty = ``:num``
+    val format_context = fresh_mf_context ()
+    val _ = MFP.skolemize_term_and_more format_context 3
+      ``~(!x : num. p x)``
     val scope = mf_translation_scope [(ty, 32)] []
     val offset = MFS.offset_of_type (#ofs scope) ty
     val representation = MFR.Atom (32, offset)
@@ -8583,15 +8622,25 @@ fun mf_replay_sidecar_preserves_generated_skolem () =
     val (_, _, rel_table) = MFNT.rename_free_vars [skolem]
       Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
     val reconstructed = MFM.reconstruct_both
-      {context = mf_hol_context, formats = [], scope = scope,
+      {context = format_context, formats = [], scope = scope,
        atoms = [(NONE, [])], special_funs = [], real_frees = [],
        eval_terms = [], free_names = [], sel_names = [],
        nonsel_names = [skolem], rel_table = rel_table,
        bounds = [(MFNT.the_rel rel_table skolem, [[offset + 31]])]}
   in
     (case #replay_hints reconstructed of
-         [{nickname = internal, value}] =>
-           internal = nickname andalso Term.aconv value ``31 : num``
+         [{nickname = internal, value,
+           provenance = SOME
+             {origin, source_type, positive, dependencies,
+              nickname = metadata_name, stage}}] =>
+           internal = nickname andalso
+           metadata_name = nickname andalso
+           origin = 0 andalso
+           Type.compare (source_type, ty) = EQUAL andalso
+           not positive andalso
+           null dependencies andalso
+           stage = "source skolemization" andalso
+           Term.aconv value ``31 : num``
        | _ => false) andalso
     (case #skolems (#raw reconstructed) of
          [("x", value)] => Term.aconv value ``31 : num``
@@ -8675,15 +8724,19 @@ fun mf_model_certification_protocol () =
     val stuck_quasi = quantified_result [] true false ["inexact encoding"]
     val stuck_potential = quantified_result [] false false []
     val replayed_liberal = quantified_result
-      [{nickname = "refute$sk0@1$x", value = ``31 : num``},
-       {nickname = "refute$sk0@2$x", value = ``30 : num``}]
+      [{nickname = "refute$sk0@1$x", value = ``31 : num``,
+        provenance = NONE},
+       {nickname = "refute$sk0@2$x", value = ``30 : num``,
+        provenance = NONE}]
       false false []
     val timed_out_genuine = MFM.certify
       {executable = true, original = quantified, eval_terms = [],
        reconstruction = quantified_reconstruction,
        replay_hints =
-         [{nickname = "refute$sk0@1$x", value = ``31 : num``},
-          {nickname = "refute$sk0@2$x", value = ``30 : num``}],
+         [{nickname = "refute$sk0@1$x", value = ``31 : num``,
+           provenance = NONE},
+          {nickname = "refute$sk0@2$x", value = ``30 : num``,
+           provenance = NONE}],
        cex = base, sound = true, genuine_means_genuine = true,
        reasons = [], deadline = SOME Time.zeroTime}
     val smart_genuine = MFM.genuine_means_genuine
@@ -8830,8 +8883,8 @@ fun mf_polymorphic_skolem_replay () =
        certainty = Refute_Core.Potential [], bindings = [], evals = [],
        cert = NONE, scope = SOME [(ty, 2)], model = NONE, stats = []}
     val replay_hints : MFM.replay_hint list =
-      [{nickname = "refute$sk0@1$x", value = a1},
-       {nickname = "refute$sk0@2$x", value = a2}]
+      [{nickname = "refute$sk0@1$x", value = a1, provenance = NONE},
+       {nickname = "refute$sk0@2$x", value = a2, provenance = NONE}]
   in
     case MFM.certify
       {executable = true, original = quantified, eval_terms = [],
@@ -10514,7 +10567,7 @@ local
         | _ => false
     end
 
-  fun mf_genuine_only_keeps_uncertified_genuine () =
+  fun mf_genuine_only_keeps_certified_genuine () =
     let
       val solvers = Refute_ForlSat.configured_sat_solvers false
       val solver =
@@ -10528,7 +10581,9 @@ local
     in
       case Refute.refute config ``!b : bool. b`` of
           Refute.Counterexample
-            ({certainty = Refute.Genuine, cert = NONE, ...} :: _) => true
+            ({certainty = Refute.Genuine, cert = SOME theorem, ...} :: _) =>
+              null (Thm.hyp theorem) andalso
+              Term.aconv (Thm.concl theorem) ``~(!b : bool. b)``
         | _ => false
     end
 
@@ -10647,8 +10702,8 @@ in
   val _ =
     if bridge_configured then
       require_msg
-        (check_result mf_genuine_only_keeps_uncertified_genuine) (fn () =>
-        "genuine_only dropped an uncertified genuine model")
+        (check_result mf_genuine_only_keeps_certified_genuine) (fn () =>
+        "genuine_only dropped or failed to certify a genuine model")
         (fn () => ()) ()
     else ()
   val _ =
@@ -12947,6 +13002,14 @@ val rx_rose_def = TotalDefn.Define
   `rx_rose RGLeaf = 0 /\
    rx_rose (RGNode []) = 1 /\
    rx_rose (RGNode (child :: children)) = SUC (rx_rose child)`
+
+val rx_rose_outer_true_def = TotalDefn.Define
+  `rx_rose_outer_true RGLeaf = T /\
+   rx_rose_outer_true (RGNode children) = T`
+
+val rx_left_outer_true_def = TotalDefn.Define
+  `rx_left_outer_true RGLeft = T /\
+   rx_left_outer_true (RGToRight right) = T`
 
 val rx_pair_case_def = TotalDefn.Define
   `rx_pair_case pair =
@@ -21148,17 +21211,20 @@ val _ = require_msg (check_result upgrade_from_stuck_path) (fn () =>
   "certification did not upgrade a tainted candidate to Genuine")
   (fn () => ()) ()
 
+fun certificate_audit original theorem =
+  let val (_, closure, _) = Refute_Cert.closure_of original
+  in
+    null (Thm.hyp theorem) andalso
+    Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg closure) andalso
+    certificate_tag_clean theorem
+  end
+
 fun model_replay_certifies original env hints fuel =
   case Refute_Cert_Model.certify
     {original = original, env = env, hints = hints, fuel = fuel,
      deadline = NONE} of
       Refute_Cert_Model.Certified theorem =>
-        let val (_, closure, _) = Refute_Cert.closure_of original
-        in
-          null (Thm.hyp theorem) andalso
-          Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg closure) andalso
-          certificate_tag_clean theorem
-        end
+        certificate_audit original theorem
     | _ => false
 
 fun model_replay_fails original env hints fuel =
@@ -21177,8 +21243,19 @@ fun quantified_model_replay_is_certified () =
     [``31 : num``, ``30 : num``] 1000
 
 fun quantified_model_replay_requires_counterwitness () =
-  model_replay_fails replay_quantified replay_predicate_env
-    [``31 : num``] 1000
+  let
+    val policy = Refute_Cert_Model.policy_for_test
+      {fuel = 1000, cases = false, induction = false,
+       synthesis = false, taut = true, omega = true,
+       split_depth = 0, branches = 0,
+       constructor_depth = 0, constructor_width = 0}
+  in
+    case Refute_Cert_Model.certify_with_policy
+      {original = replay_quantified, env = replay_predicate_env,
+       hints = [``31 : num``], policy = policy, deadline = NONE} of
+        Refute_Cert_Model.NoCertificate _ => true
+      | _ => false
+  end
 
 fun quantified_model_replay_backtracks () =
   model_replay_certifies replay_quantified replay_predicate_env
@@ -21189,14 +21266,38 @@ fun quantified_model_replay_applies_dependent_hint () =
     ``?x : bool. !y : bool. y <> x`` [] [``\x : bool. x``] 1000
 
 fun quantified_model_replay_hints_fail_closed () =
-  List.all (fn hints => model_replay_fails replay_quantified
-    replay_predicate_env hints 1000)
-    [[``30 : num``], [``31 : num``, ``31 : num``],
-     [boolSyntax.T], []]
+  let
+    val policy = Refute_Cert_Model.policy_for_test
+      {fuel = 1000, cases = false, induction = false,
+       synthesis = false, taut = true, omega = true,
+       split_depth = 0, branches = 0,
+       constructor_depth = 0, constructor_width = 0}
+    fun fails hints =
+      case Refute_Cert_Model.certify_with_policy
+        {original = replay_quantified, env = replay_predicate_env,
+         hints = hints, policy = policy, deadline = NONE} of
+          Refute_Cert_Model.NoCertificate _ => true
+        | _ => false
+  in
+    List.all fails
+      [[``30 : num``], [``31 : num``, ``31 : num``],
+       [boolSyntax.T], []]
+  end
 
 fun quantified_model_replay_does_not_assume_bounded_model () =
-  model_replay_fails
-    ``?f : num -> bool. f = (\x. ~f x)`` [] [] 1000
+  let
+    val policy = Refute_Cert_Model.policy_for_test
+      {fuel = 1000, cases = false, induction = false,
+       synthesis = false, taut = false, omega = false,
+       split_depth = 0, branches = 0,
+       constructor_depth = 0, constructor_width = 0}
+  in
+    case Refute_Cert_Model.certify_with_policy
+      {original = ``?f : num -> bool. f = (\x. ~f x)``,
+       env = [], hints = [], policy = policy, deadline = NONE} of
+        Refute_Cert_Model.NoCertificate _ => true
+      | _ => false
+  end
 
 fun quantified_model_replay_fuel_is_bounded () =
   model_replay_fails replay_quantified replay_predicate_env
@@ -21226,6 +21327,232 @@ val _ = List.app (fn (label, check) => require_msg
   (check_result check) (fn () =>
     "quantified model-certificate replay failed: " ^ label)
   (fn () => ()) ()) quantified_model_replay_checks
+
+fun replay_policy cases induction synthesis split_depth branches
+      constructor_depth constructor_width =
+  Refute_Cert_Model.policy_for_test
+    {fuel = 4000, cases = cases, induction = induction,
+     synthesis = synthesis, taut = true, omega = true,
+     split_depth = split_depth, branches = branches,
+     constructor_depth = constructor_depth,
+     constructor_width = constructor_width}
+
+fun model_replay_with_policy original env hints policy =
+  Refute_Cert_Model.certify_with_policy
+    {original = original, env = env, hints = hints,
+     policy = policy, deadline = NONE}
+
+fun model_replay_policy_certifies original env hints policy =
+  case model_replay_with_policy original env hints policy of
+      Refute_Cert_Model.Certified theorem =>
+        certificate_audit original theorem
+    | _ => false
+
+fun model_replay_policy_fails original env hints policy =
+  case model_replay_with_policy original env hints policy of
+      Refute_Cert_Model.NoCertificate _ => true
+    | _ => false
+
+val hint_only_policy = replay_policy false false false 0 0 0 0
+val case_only_policy = replay_policy true false false 1 16 0 0
+val induction_only_policy = replay_policy false true false 0 0 0 0
+val synthesis_only_policy = replay_policy false false true 0 0 2 32
+val leaf_only_policy = replay_policy false false false 0 0 0 0
+
+val replay_list_implication =
+  ``(?xs : num list. xs = [0]) ==>
+    !ys : num list. ys = [0]``
+val replay_tree_implication =
+  ``(?t : zoo_tree. t = ZooLeaf 0) ==>
+    !t. t = ZooLeaf 0``
+val replay_leaf = ``ZooLeaf 0``
+val replay_node = ``ZooNode (ZooLeaf 0) (ZooLeaf 0)``
+
+fun concrete_inductive_replay () =
+  List.all (fn (goal, hints) =>
+    model_replay_policy_certifies goal [] hints hint_only_policy)
+    [(``!xs : num list. xs = []``, [``[0] : num list``]),
+     (``!t : zoo_tree. t = ZooLeaf 0``, [replay_node]),
+     (replay_list_implication,
+      [``[0] : num list``, ``[] : num list``]),
+     (replay_list_implication,
+      [``[] : num list``, ``[0] : num list``]),
+     (replay_tree_implication, [replay_leaf, replay_node]),
+     (replay_tree_implication, [replay_node, replay_leaf])]
+
+fun concrete_inductive_hints_fail_closed () =
+  List.all (fn hints => model_replay_policy_fails
+    ``!xs : num list. xs = []`` [] hints hint_only_policy)
+    [[], [boolSyntax.T], [``[] : num list``, ``[] : num list``],
+     [``ARB : num list``]] andalso
+  List.all (fn hints => model_replay_policy_fails
+    ``!t : zoo_tree. t = ZooLeaf 0`` [] hints hint_only_policy)
+    [[], [``0 : num``], [replay_leaf, replay_leaf]]
+
+fun structural_case_replay () =
+  List.all (fn goal => model_replay_policy_certifies
+    goal [] [] case_only_policy)
+    [``?xs : num list. ~replay_list_case xs``,
+     ``?t : zoo_tree. ~replay_tree_case t``,
+     ``?r : zoo_record. ~replay_record_case r``,
+     ``?xs : num list. ?t : zoo_tree.
+         ~(replay_list_case xs /\ replay_tree_case t)``]
+
+fun structural_case_replay_fails_closed () =
+  let
+    val branch_limited = replay_policy true false false 1 1 0 0
+  in
+    model_replay_policy_fails
+      ``?xs : num list. ~replay_list_true xs`` [] []
+      case_only_policy andalso
+    model_replay_policy_fails
+      ``?xs : num list. ~replay_list_bad xs`` [] []
+      case_only_policy andalso
+    model_replay_policy_fails
+      ``?xs : num list. ~replay_list_case xs`` [] [] branch_limited
+  end
+
+fun structural_induction_replay () =
+  List.all (fn goal => model_replay_policy_certifies
+    goal [] [] induction_only_policy)
+    [``?xs : num list. ~replay_list_true xs``,
+     ``?t : zoo_tree. ~replay_tree_true t``]
+
+fun structural_induction_fails_closed () =
+  model_replay_policy_fails
+    ``?xs : num list. ~replay_list_bad xs`` [] []
+    induction_only_policy
+
+fun constructor_synthesis_replay () =
+  List.all (fn goal => model_replay_policy_certifies
+    goal [] [] synthesis_only_policy)
+    [``!x : num option. x = NONE``,
+     ``!xs : num list. xs = []``,
+     ``!t : zoo_tree. ?n. t = ZooLeaf n``,
+     ``?x : bool. !y : bool. y <> x``]
+
+fun trusted_leaf_portfolio_replay () =
+  List.all (fn goal => model_replay_policy_certifies
+    goal [] [] leaf_only_policy)
+    [``?a b : bool. (a ==> b) /\ a /\ ~b``,
+     ``?m n : num. m < n /\ n <= m``] andalso
+  model_replay_policy_fails ``T`` [] [] leaf_only_policy
+
+fun replay_provider_counters_are_pinned () =
+  let
+    fun run () = #2 (Refute_Cert_Model.certify_detailed
+      {original = ``!xs : num list. xs = []``, env = [], hints = [],
+       policy = synthesis_only_policy, deadline = NONE})
+    val first = run ()
+    val second = run ()
+  in
+    #constructor_terms first > 0 andalso
+    #constructor_terms first = #constructor_terms second andalso
+    #attempted_candidates first = #attempted_candidates second andalso
+    #applications first = #applications second
+  end
+
+fun replay_rejects_injected_oracle () =
+  let
+    val oracle = Thm.mk_oracle_thm "holrefute-selftest"
+      ([], ``~(!xs : num list. xs = [])``)
+  in
+    not (Refute_Cert_Model.audit_theorem_for_test
+      (SOME ``~(!xs : num list. xs = [])``) oracle)
+  end
+
+fun replay_resource_failures_are_classified () =
+  let
+    val zero_policy = Refute_Cert_Model.policy_for_test
+      {fuel = 0, cases = true, induction = true,
+       synthesis = true, taut = true, omega = true,
+       split_depth = 1, branches = 16,
+       constructor_depth = 2, constructor_width = 16}
+    val (_, zero_stats) = Refute_Cert_Model.certify_detailed
+      {original = ``!xs : num list. xs = []``, env = [], hints = [],
+       policy = zero_policy, deadline = NONE}
+    val (_, deadline_stats) = Refute_Cert_Model.certify_detailed
+      {original = ``!xs : num list. xs = []``, env = [], hints = [],
+       policy = synthesis_only_policy, deadline = SOME Time.zeroTime}
+  in
+    (case #failure zero_stats of
+         SOME {kind = Refute_Cert_Model.FuelExhausted, ...} => true
+       | _ => false) andalso
+    (case #failure deadline_stats of
+         SOME {kind = Refute_Cert_Model.DeadlineExhausted, ...} => true
+       | _ => false)
+  end
+
+fun unsupported_inductions_are_not_attempted () =
+  let
+    fun check goal =
+      let
+        val (result, stats) = Refute_Cert_Model.certify_detailed
+          {original = goal, env = [], hints = [],
+           policy = induction_only_policy, deadline = NONE}
+      in
+        (case result of
+             Refute_Cert_Model.NoCertificate _ => true
+           | _ => false) andalso
+        #induction_attempts stats = 0
+      end
+  in
+    check ``?t : rg_rose. ~rx_rose_outer_true t`` andalso
+    check ``?x : rg_left. ~rx_left_outer_true x`` andalso
+    check ``?xs : num llist.
+      llist_CASE xs F (\h t. F)``
+  end
+
+fun replay_provenance_prefers_exact_dependencies () =
+  let
+    val goal =
+      ``?a b : bool. !x : bool. x = b /\ (I a \/ ~I a)``
+    val function = ``\b : bool. ~b``
+    fun hint origin : Refute_Cert_Model.replay_hint =
+      {term = function, source = Refute_Cert_Model.SkolemValue,
+       provenance = SOME
+         {origin = origin, source_type = ``:bool``, positive = false,
+          dependencies = [{origin = 1, source_type = ``:bool``}],
+          nickname = "refute$sk2@1$x",
+          stage = "source skolemization"}}
+    fun run origin = Refute_Cert_Model.certify_detailed_rich
+      {original = goal, env = [], hints = [hint origin],
+       policy = hint_only_policy, deadline = NONE}
+    val (exact, exact_stats) = run 2
+    val (fallback, fallback_stats) = run 99
+    fun certified result =
+      case result of
+          Refute_Cert_Model.Certified theorem =>
+            certificate_audit goal theorem
+        | _ => false
+  in
+    certified exact andalso certified fallback andalso
+    #attempted_candidates exact_stats = 3 andalso
+    #attempted_candidates fallback_stats = 4
+  end
+
+val expanded_model_replay_checks =
+  [("concrete list/tree witnesses", concrete_inductive_replay),
+   ("missing and malformed datatype hints",
+    concrete_inductive_hints_fail_closed),
+   ("kernel structural cases", structural_case_replay),
+   ("incomplete structural cases", structural_case_replay_fails_closed),
+   ("regular structural induction", structural_induction_replay),
+   ("failed induction premise", structural_induction_fails_closed),
+   ("bounded constructor synthesis", constructor_synthesis_replay),
+   ("trusted leaf portfolio", trusted_leaf_portfolio_replay),
+   ("resource failure taxonomy", replay_resource_failures_are_classified),
+   ("nested, mutual, and codatatype induction boundary",
+    unsupported_inductions_are_not_attempted),
+   ("exact provenance dependency ordering",
+    replay_provenance_prefers_exact_dependencies),
+   ("deterministic provider counters", replay_provider_counters_are_pinned),
+   ("injected oracle rejection", replay_rejects_injected_oracle)]
+
+val _ = List.app (fn (label, check) => require_msg
+  (check_result check) (fn () =>
+    "expanded model-certificate replay failed: " ^ label)
+  (fn () => ()) ()) expanded_model_replay_checks
 
 fun uncertifiable_grounding_has_pinned_reason () =
   let
@@ -24684,15 +25011,62 @@ fun mf_quantified_model_replay_acceptance solver =
       | _ => false
   end
 
+fun mf_inductive_model_replay_acceptance solver =
+  let
+    fun run label goal cards needs =
+      let
+        val _ = tprint ("Refute MF: " ^ label ^ " certificate replay")
+        val timer = Timer.startRealTimer ()
+        val config = mf_acceptance_config solver
+          |> Refute.upd_batch_size 1
+          |> Refute.upd_card cards
+          |> Refute.upd_need (SOME needs)
+          |> Refute.upd_max_potential 0
+          |> Refute.upd_max_genuine 1
+        val outcome = with_silent_refute (fn () =>
+          Refute.refute config goal)
+        val elapsed = Timer.checkRealTimer timer
+        val _ = print ("Refute MF " ^ label ^ " replay: " ^
+          Time.fmt 2 elapsed ^ "s\n")
+      in
+        case outcome of
+            Refute.Counterexample
+              ({certainty = Refute.Genuine, cert = SOME theorem, ...} :: _) =>
+                certificate_audit goal theorem
+          | _ => false
+      end
+    val list_goal =
+      ``(?xs : num list. xs = [0]) ==>
+        !ys : num list. ys = [0]``
+    val tree_goal =
+      ``(?t : zoo_tree. t = ZooLeaf 0) ==>
+        !u : zoo_tree. u = ZooLeaf 0``
+    val list_ok = run "list"
+      list_goal
+      [(SOME ``:num list``, [2]), (SOME ``:num``, [1]), (NONE, [1])]
+      [``[0] : num list``, ``[] : num list``]
+    val tree_ok = run "tree"
+      tree_goal
+      [(SOME ``:zoo_tree``, [2]), (SOME ``:num``, [1]), (NONE, [1])]
+      [replay_leaf, replay_node]
+  in
+    list_ok andalso tree_ok
+  end
+
 fun run_quantified_model_replay_acceptance () =
   if not (Refute_Forl.is_configured ()) then
     print "(Kodkodi not configured, quantified replay smoke skipped.)\n"
-  else
+  else (
     require_msg (check_result (fn () =>
       mf_quantified_model_replay_acceptance
         (configured_mf_test_solver ()))) (fn () =>
       "card-32 quantified model did not yield a clean certificate")
-      (fn () => ()) ()
+      (fn () => ()) ();
+    require_msg (check_result (fn () =>
+      mf_inductive_model_replay_acceptance
+        (configured_mf_test_solver ()))) (fn () =>
+      "inductive list/tree models did not yield clean certificates")
+      (fn () => ()) ())
 
 fun run_level2_mf_corpus () =
   let

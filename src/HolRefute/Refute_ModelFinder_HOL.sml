@@ -17,6 +17,19 @@ structure Refute_ModelFinder_HOL = struct
      arg_tyss : hol_type list list, gfp : bool, token : string}
   type iterator_table = (hol_type * iterator_info) list ref
 
+  type skolem_dependency =
+    {origin : int,
+     source_type : hol_type}
+  type skolem_info =
+    {origin : int,
+     generated_name : string,
+     source_name : string,
+     source_type : hol_type,
+     positive : bool,
+     dependencies : skolem_dependency list,
+     arity : int,
+     stage : string}
+
   datatype fixpoint_kind = Lfp | Gfp | NoFp
 
   type fixpoint_group =
@@ -85,7 +98,7 @@ structure Refute_ModelFinder_HOL = struct
      iterator_table : iterator_table,
      ersatz_table : ersatz list,
      whack_weakening : bool ref,
-     skolems : (string * string list) list ref,
+     skolems : skolem_info list ref,
      special_funs : special_fun list ref,
      wf_cache : wf_cache ref,
      constr_cache : (hol_type * term list) list ref}

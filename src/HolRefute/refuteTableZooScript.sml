@@ -8,6 +8,40 @@ Datatype:
   zoo_tree = ZooLeaf num | ZooNode zoo_tree zoo_tree
 End
 
+(* Stable replay fixtures.  Their equations deliberately expose constructor
+   behavior only after a kernel case split or induction; a symbolic
+   scrutinee does not collapse by ordinary evaluation. *)
+Definition replay_list_case_def[simp]:
+  (replay_list_case ([] : num list) = T) /\
+  (replay_list_case (h :: t) = T)
+End
+
+Definition replay_tree_case_def[simp]:
+  (replay_tree_case (ZooLeaf n) = T) /\
+  (replay_tree_case (ZooNode left right) = T)
+End
+
+Definition replay_list_true_def[simp]:
+  (replay_list_true ([] : num list) = T) /\
+  (replay_list_true (h :: t) = replay_list_true t)
+End
+
+Definition replay_tree_true_def[simp]:
+  (replay_tree_true (ZooLeaf n) = T) /\
+  (replay_tree_true (ZooNode left right) =
+     (replay_tree_true left /\ replay_tree_true right))
+End
+
+Definition replay_list_tail_def[simp]:
+  (replay_list_tail p ([] : num list) = T) /\
+  (replay_list_tail p (h :: t) = p t)
+End
+
+Definition replay_list_bad_def[simp]:
+  (replay_list_bad ([] : num list) = T) /\
+  (replay_list_bad (h :: t) = F)
+End
+
 (* Executable source-side copies used to certify that the model finder's
    native relation inv/O ersatz operations preserve HOL4 argument order. *)
 Definition zoo_relation_inv_def:
@@ -21,6 +55,10 @@ End
 
 Datatype:
   zoo_record = <| zoo_num : num; zoo_bit : bool |>
+End
+
+Definition replay_record_case_def[simp]:
+  replay_record_case (zoo_record n bit) = T
 End
 
 Datatype:
