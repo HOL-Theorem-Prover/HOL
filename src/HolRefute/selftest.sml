@@ -5331,15 +5331,13 @@ fun mf_dependency_matches
 
 fun mf_skolem_matches
       (expected_origin, expected_generated, expected_source,
-       expected_type, expected_positive, expected_dependencies,
-       expected_arity)
-      ({origin, generated_name, source_name, source_type, positive,
+       expected_type, expected_dependencies, expected_arity)
+      ({origin, generated_name, source_name, source_type,
         dependencies, arity, stage} : MFH.skolem_info) =
   origin = expected_origin andalso
   generated_name = expected_generated andalso
   source_name = expected_source andalso
   Type.compare (source_type, expected_type) = EQUAL andalso
-  positive = expected_positive andalso
   ListPair.allEq mf_dependency_matches
     (expected_dependencies, dependencies) andalso
   arity = expected_arity andalso
@@ -5410,7 +5408,7 @@ fun mf_preproc_skolem_golden () =
   in
     Term.aconv actual expected andalso
     List.exists (mf_skolem_matches
-      (3, "refute$sk3@1$x", "x", ``:num``, true,
+      (3, "refute$sk3@1$x", "x", ``:num``,
        [(0, ``:num``), (1, ``:num``), (2, ``:num``)], 3)) metadata andalso
     length metadata = 1 andalso
     ListPair.allEq (fn (result, golden) => Term.aconv result golden)
@@ -5419,7 +5417,7 @@ fun mf_preproc_skolem_golden () =
     pipeline_all_mono andalso pipeline_no_poly andalso
     not pipeline_binarize andalso
     List.exists (mf_skolem_matches
-      (3, "refute$sk3@1$x", "x", ``:num``, true,
+      (3, "refute$sk3@1$x", "x", ``:num``,
        [(0, ``:num``), (1, ``:num``), (2, ``:num``)], 3))
       (!(#skolems pipeline_context)) andalso
     length (!(#skolems pipeline_context)) = 1 andalso
@@ -5432,7 +5430,7 @@ fun mf_preproc_skolem_golden () =
       (boolSyntax.mk_neg (Term.mk_comb (``p : num -> bool``,
         negative_skolem))) andalso
     List.exists (mf_skolem_matches
-      (0, "refute$sk0@1$x", "x", ``:num``, false, [], 0))
+      (0, "refute$sk0@1$x", "x", ``:num``, [], 0))
       (!(#skolems negative_context)) andalso
     length (!(#skolems negative_context)) = 1 andalso
     Term.aconv neutral_result neutral_input andalso
@@ -5440,7 +5438,7 @@ fun mf_preproc_skolem_golden () =
     Term.aconv shadowed_input distinct_input andalso
     Term.aconv shadowed_result distinct_result andalso
     List.exists (mf_skolem_matches
-      (2, "refute$sk2@1$y", "y", ``:num``, true,
+      (2, "refute$sk2@1$y", "y", ``:num``,
        [(0, ``:num``), (1, ``:num``)], 2))
       (!(#skolems shadowed_context)) andalso
     length (!(#skolems shadowed_context)) = 1 andalso
@@ -5625,7 +5623,7 @@ fun mf_preproc_pipeline_shape () =
   in
     length nondefinitions >= 1 andalso
     List.exists (mf_skolem_matches
-      (0, "refute$sk0@1$x", "x", ``:num``, true, [], 0)) skolems andalso
+      (0, "refute$sk0@1$x", "x", ``:num``, [], 0)) skolems andalso
     length skolems = 1 andalso
     free_names = ["refute$sk0@1$x"] andalso
     Term.aconv preprocessed
@@ -8629,16 +8627,15 @@ fun mf_replay_sidecar_preserves_generated_skolem () =
        bounds = [(MFNT.the_rel rel_table skolem, [[offset + 31]])]}
   in
     (case #replay_hints reconstructed of
-         [{nickname = internal, value,
-           provenance = SOME
-             {origin, source_type, positive, dependencies,
-              nickname = metadata_name, stage}}] =>
-           internal = nickname andalso
-           metadata_name = nickname andalso
+         [{value, provenance = SOME
+             {origin, generated_name, source_name, source_type,
+              dependencies, arity, stage}}] =>
+           generated_name = nickname andalso
+           source_name = "x" andalso
            origin = 0 andalso
            Type.compare (source_type, ty) = EQUAL andalso
-           not positive andalso
            null dependencies andalso
+           arity = 0 andalso
            stage = "source skolemization" andalso
            Term.aconv value ``31 : num``
        | _ => false) andalso
@@ -8724,19 +8721,15 @@ fun mf_model_certification_protocol () =
     val stuck_quasi = quantified_result [] true false ["inexact encoding"]
     val stuck_potential = quantified_result [] false false []
     val replayed_liberal = quantified_result
-      [{nickname = "refute$sk0@1$x", value = ``31 : num``,
-        provenance = NONE},
-       {nickname = "refute$sk0@2$x", value = ``30 : num``,
-        provenance = NONE}]
+      [{value = ``31 : num``, provenance = NONE},
+       {value = ``30 : num``, provenance = NONE}]
       false false []
     val timed_out_genuine = MFM.certify
       {executable = true, original = quantified, eval_terms = [],
        reconstruction = quantified_reconstruction,
        replay_hints =
-         [{nickname = "refute$sk0@1$x", value = ``31 : num``,
-           provenance = NONE},
-          {nickname = "refute$sk0@2$x", value = ``30 : num``,
-           provenance = NONE}],
+         [{value = ``31 : num``, provenance = NONE},
+          {value = ``30 : num``, provenance = NONE}],
        cex = base, sound = true, genuine_means_genuine = true,
        reasons = [], deadline = SOME Time.zeroTime}
     val smart_genuine = MFM.genuine_means_genuine
@@ -8883,8 +8876,8 @@ fun mf_polymorphic_skolem_replay () =
        certainty = Refute_Core.Potential [], bindings = [], evals = [],
        cert = NONE, scope = SOME [(ty, 2)], model = NONE, stats = []}
     val replay_hints : MFM.replay_hint list =
-      [{nickname = "refute$sk0@1$x", value = a1, provenance = NONE},
-       {nickname = "refute$sk0@2$x", value = a2, provenance = NONE}]
+      [{value = a1, provenance = NONE},
+       {value = a2, provenance = NONE}]
   in
     case MFM.certify
       {executable = true, original = quantified, eval_terms = [],
@@ -21543,9 +21536,10 @@ fun replay_provenance_prefers_exact_dependencies () =
     fun hint origin : Refute_Cert_Model.replay_hint =
       {term = function, source = Refute_Cert_Model.SkolemValue,
        provenance = SOME
-         {origin = origin, source_type = ``:bool``, positive = false,
+         {origin = origin, generated_name = "refute$sk2@1$x",
+          source_name = "x", source_type = ``:bool``,
           dependencies = [{origin = 1, source_type = ``:bool``}],
-          nickname = "refute$sk2@1$x",
+          arity = 1,
           stage = "source skolemization"}}
     fun run origin = Refute_Cert_Model.certify_detailed_rich
       {original = goal, env = [], hints = [hint origin],

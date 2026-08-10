@@ -299,7 +299,6 @@ structure Refute_ModelFinder_Preproc = struct
                    generated_name = generated_name,
                    source_name = original,
                    source_type = Term.type_of variable,
-                   positive = polarity = Util.Pos,
                    dependencies = map dependency_info dependencies,
                    arity = arity,
                    stage = "source skolemization"}

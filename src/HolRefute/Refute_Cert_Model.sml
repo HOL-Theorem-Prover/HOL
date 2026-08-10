@@ -2,6 +2,7 @@ structure Refute_Cert_Model = struct
   open Refute_Cert
   structure Util = Refute_Util
   structure MFH = Refute_ModelFinder_HOL
+  structure Skolem = Refute_Skolem
 
   datatype result =
       Certified of Thm.thm
@@ -32,16 +33,8 @@ structure Refute_Cert_Model = struct
     | FunctionApplication
     | SynthesizedConstructor
 
-  type dependency =
-    {origin : int,
-     source_type : Type.hol_type}
-  type provenance =
-    {origin : int,
-     source_type : Type.hol_type,
-     positive : bool,
-     dependencies : dependency list,
-     nickname : string,
-     stage : string}
+  type dependency = Skolem.dependency
+  type provenance = Skolem.info
   datatype replay_hint_source =
       SkolemValue
     | TypeValue

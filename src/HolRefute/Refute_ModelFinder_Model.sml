@@ -14,8 +14,7 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   type raw_bound = Refute_Forl.raw_bound
 
   type replay_hint =
-    {nickname : string,
-     value : term,
+    {value : term,
      provenance : Refute_Cert_Model.provenance option}
 
   type reconstruction =
@@ -157,8 +156,7 @@ type raw_bound = Refute_Forl.raw_bound
 structure Util = Refute_ModelFinder_Util
 
 type replay_hint =
-  {nickname : string,
-   value : term,
+  {value : term,
    provenance : Refute_Cert_Model.provenance option}
 
 type reconstruction =
@@ -1669,20 +1667,7 @@ fun reconstruct_with formatting
         fun matches ({generated_name, ...} : MFH.skolem_info) =
           generated_name = metadata_name
       in
-        case List.find matches skolem_infos of
-            NONE => NONE
-          | SOME ({origin, source_type, positive, dependencies,
-                   stage, ...} : MFH.skolem_info) =>
-              SOME
-                {origin = origin,
-                 source_type = source_type,
-                 positive = positive,
-                 dependencies = map (fn
-                   ({origin, source_type} : MFH.skolem_dependency) =>
-                     {origin = origin, source_type = source_type})
-                   dependencies,
-                 nickname = metadata_name,
-                 stage = stage}
+        List.find matches skolem_infos
       end
 
     fun classify (name, ((evals, skolems, consts, replay_hints),
@@ -1705,8 +1690,7 @@ fun reconstruct_with formatting
         if MFNT.is_skolem_name name then
           ((evals, (MFN.original_name nickname, ordinary_value) :: skolems,
             consts,
-            {nickname = format_metadata_name nickname,
-             value = ordinary_value,
+            {value = ordinary_value,
              provenance = replay_provenance nickname} :: replay_hints),
            (display_evals,
             (MFN.original_name nickname, display_value) :: display_skolems,
@@ -1966,20 +1950,8 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
              SOME copied =>
                if null (Term.free_vars_lr copied) then SOME copied else NONE
            | NONE => NONE)) values
-    fun copy_provenance copy_type
-          (SOME ({origin, source_type, positive, dependencies,
-                  nickname, stage} : Refute_Cert_Model.provenance)) =
-          SOME
-            {origin = origin,
-             source_type = copy_type source_type,
-             positive = positive,
-             dependencies = map (fn
-               ({origin, source_type} : Refute_Cert_Model.dependency) =>
-                 {origin = origin, source_type = copy_type source_type})
-               dependencies,
-             nickname = nickname,
-             stage = stage}
-      | copy_provenance _ NONE = NONE
+    fun copy_provenance copy_type provenance =
+      Option.map (Refute_Skolem.map_types copy_type) provenance
     fun finish copied_original copied_evals env copy copy_type =
       let
         val initial = map #2 env
