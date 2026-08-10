@@ -1184,10 +1184,10 @@ fun run_instance deadline started (config : Refute_Core.config)
       case rev (!generated_scopes) of
           [] => []
         | (scope : MFS.scope) :: _ =>
-            ["largest completed carrier assignment: " ^
-             String.concatWith ", " (map (fn (ty, card) =>
-               Parse.type_to_string ty ^ " = " ^ Int.toString card)
-               (#card_assigns scope))]
+            ["searched up to size: " ^
+             String.concatWith ", "
+               (map Refute_Core.format_scope_assignment
+                 (#card_assigns scope))]
 
     fun skipped_reason () =
       if !skipped = 0 then []

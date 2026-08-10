@@ -1322,12 +1322,30 @@ structure Refute_QC = struct
                     | SOME (entry, rest) =>
                         (run_entry entry; search rest)
               val _ = search cursor
+              (* The frontier names the diagonally largest completed
+                 schedule entry.  Type-variable cardinality only reaches
+                 users when several monomorphic instances compete, and a
+                 fixed-size search never reports its meaningless size. *)
               val frontier_reason =
                 case !frontier of
                     NONE => []
                   | SOME (card, size) =>
-                      ["largest completed QC entry: card " ^
-                       Int.toString card ^ ", size " ^ Int.toString size]
+                      let
+                        val size_matters =
+                          List.exists #size_matters instances
+                        val poly = length instances > 1
+                        val tyvar_part =
+                          " (type variables of size " ^
+                          Int.toString card ^ ")"
+                      in
+                        if size_matters then
+                          ["searched up to size " ^ Int.toString size ^
+                           (if poly then tyvar_part else "")]
+                        else if poly then
+                          ["searched type variables up to size " ^
+                           Int.toString card]
+                        else []
+                      end
               val generic_reason =
                 if is_random strategy then "random search exhausted"
                 else "search space not exhausted"

@@ -251,7 +251,7 @@ structure Refute_QC_Narrow = struct
         case !frontier of
             NONE => []
           | SOME depth =>
-              ["largest completed narrowing depth: " ^ Int.toString depth]
+              ["searched up to size " ^ Int.toString depth]
     in
       if not (null (!counterexamples)) then
         Refute_Core.Counterexample (rev (!counterexamples))
