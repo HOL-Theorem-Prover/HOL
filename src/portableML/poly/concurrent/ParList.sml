@@ -1,9 +1,10 @@
 (* Kept outside the public [ParList] signature so regression tests can force
-   a fork failure after some workers have started.  Production leaves it at
-   [NONE]. *)
+   a fork failure after some workers have started, or act from inside the
+   mandatory join's interrupt window.  Production leaves both at [NONE]. *)
 structure ParList_Test =
 struct
   val fork_hook = ref (NONE : (unit -> unit) option)
+  val join_hook = ref (NONE : (unit -> unit) option)
 end;
 
 structure ParList :> ParList =
@@ -23,20 +24,62 @@ fun get_first f =
     first
   end;
 
+(* Masking interrupts the plain way does not defer a Ctrl-C, it loses one.
+   Poly/ML retains a directed [Thread.interrupt] and delivers it when the
+   mask lifts, but HOL raises Ctrl-C as [Thread.broadcastInterrupt], and a
+   broadcast simply skips a thread whose broadcast flag is clear, recording
+   nothing; [Thread_Attributes.no_interrupts] clears that flag along with
+   the rest.  A wait that must run to completion therefore has to stay
+   observant while it waits.
+
+   [uninterruptible_wait f x] runs [f observe x] masked, as
+   [Thread_Attributes.uninterruptible] does, except that [observe g y] runs
+   [g y] under the caller's own attributes, so a broadcast arriving during
+   that step is delivered.  [observe] answers [SOME] with the result, or
+   records the interrupt and answers [NONE]; once one is recorded, later
+   steps run masked, one being all that is needed.  A recorded interrupt is
+   raised after [f] has returned, so the wait still runs to completion.  An
+   exception from [f] itself wins and the recorded interrupt is dropped: it
+   is [f]'s own outcome the caller is waiting on, and control is leaving for
+   the top level under either exception anyway. *)
+fun uninterruptible_wait f =
+  Thread_Attributes.uninterruptible (fn restore => fn x =>
+    let
+      val pending = ref false
+      fun observe g y =
+        if !pending then SOME (g y)
+        else
+          (SOME (restore g y)
+           handle Interrupt => (pending := true; NONE))
+      val result = Exn.capture (f observe) x
+    in
+      case result of
+          Exn.Res value => if !pending then raise Interrupt else value
+        | Exn.Exn _ => Exn.release result
+    end);
+
 (* Losing workers are interrupted, never killed.  A worker can hold a
    process-global lock across an uninterruptible section (Refute's theory
    bracket is one), and Thread.kill terminates without unwinding, so a kill
-   would leak that lock for the rest of the session. *)
-fun stop_threads threads =
-  Thread_Attributes.uninterruptible (fn _ => fn () =>
-    let
-      val _ = List.app Standard_Thread.interrupt_unsynchronized threads
-      fun await thread =
-        if not (Thread.isActive thread) then ()
-        else (OS.Process.sleep (Time.fromReal 0.001); await thread)
-    in
-      List.app await threads
-    end) ();
+   would leak that lock for the rest of the session.
+
+   The join is mandatory: a straggler outliving the call would go on
+   mutating state the caller has moved on from.  So the poll sleeps through
+   [observe] instead of under a plain mask -- the caller waits exactly as
+   long either way, but a Ctrl-C arriving mid-join is recorded rather than
+   lost.  The caller already holds the mask; this runs under it. *)
+fun stop_threads observe threads =
+  let
+    val _ = List.app Standard_Thread.interrupt_unsynchronized threads
+    fun poll () =
+      (Option.app (fn hook => hook ()) (!ParList_Test.join_hook);
+       OS.Process.sleep (Time.fromReal 0.001))
+    fun await thread =
+      if not (Thread.isActive thread) then ()
+      else (ignore (observe poll ()); await thread)
+  in
+    List.app await threads
+  end;
 
 (* Run a bounded set of local workers without consulting the process-global
    thread policy.  [publish] and [finished] are called with [lock] held.
@@ -129,14 +172,16 @@ fun run_workers name worker_count f xs publish finished =
         end);
   in
     (* Once waiting has returned or raised, mask interrupts until every local
-       worker has unwound; no loser can outlive the operation. *)
-    Thread_Attributes.uninterruptible (fn restore => fn () =>
+       worker has unwound; no loser can outlive the operation.  [observe]
+       covers both phases, so an interrupt in either is answered once the
+       join is done rather than dropped. *)
+    uninterruptible_wait (fn observe => fn () =>
       let
         val result = Exn.capture
-          (restore (fn () => (fork_workers initial; await ()))) ()
-        val _ = stop_threads (!forked)
+          (observe (fn () => (fork_workers initial; await ()))) ()
+        val _ = stop_threads observe (!forked)
       in
-        Exn.release result
+        ignore (Exn.release result)
       end) ()
   end;
 
