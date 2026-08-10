@@ -487,29 +487,6 @@ structure Refute_Narrow = struct
       loop 0 branches false [] initial NONE
     end
 
-  fun replace_branch target transform branches =
-    let
-      fun loop _ [] found reversed pending =
-            if found then (pending, rev reversed) else raise InvalidPath
-        | loop index ((id, subtree) :: rest) found reversed pending =
-            let
-              val selected = index = target
-              val subtree' = if selected then transform subtree else subtree
-              val pending' =
-                case pending of
-                    SOME _ => pending
-                  | NONE =>
-                      if is_unevaluated (value_of subtree') then
-                        SOME (index, id, subtree')
-                      else NONE
-            in
-              loop (index + 1) rest (found orelse selected)
-                ((id, subtree') :: reversed) pending'
-            end
-    in
-      loop 0 branches false [] NONE
-    end
-
   fun update [] result (Leaf _) = Leaf result
     | update (V _ :: edges) result
         (Variable (quantifier, _, position, ty, subtree)) =

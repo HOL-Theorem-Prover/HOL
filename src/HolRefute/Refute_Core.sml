@@ -1216,12 +1216,6 @@ structure Refute_Core = struct
       (registrations, unknown)
     end
 
-  fun selected_backend_registrations names =
-    #1 (resolve_backend_registrations names)
-
-  fun selected_backends names =
-    map #backend (selected_backend_registrations names)
-
   fun lookup_stat key stats =
     Option.map #2 (List.find (fn (name, _) => name = key) stats)
 
@@ -1619,7 +1613,6 @@ structure Refute_Core = struct
           (SOME (make_search_context (#timeout cfg))) action argument
 
   fun search_expired cfg = #expired (search_context_for cfg) ()
-  fun search_remaining cfg = #remaining (search_context_for cfg) ()
 
   datatype admission =
       Eligible of backend_registration

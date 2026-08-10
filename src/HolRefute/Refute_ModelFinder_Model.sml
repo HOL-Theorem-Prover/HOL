@@ -381,18 +381,10 @@ fun chop count values =
     else split count [] values
   end
 
-fun find_name names nickname =
-  List.find (fn name => MFNT.nickname_of name = nickname) names
-
 fun tuples_for_name ({rel_table, bounds, ...} : context) name =
   let val relation = MFNT.the_rel rel_table name
   in Option.getOpt (AList.lookup (op =) bounds relation, []) end
   handle MFNT.NUT _ => [[]]
-
-fun tuples_for_nickname (context as {sel_names, ...} : context) nickname =
-  case find_name sel_names nickname of
-      SOME name => tuples_for_name context name
-    | NONE => []
 
 fun type_atom_names atoms ty =
   let
@@ -826,11 +818,6 @@ fun term_for_rep {scope, atoms, sel_names, rel_table, bounds, maybe_opt,
      rel_table = rel_table, bounds = bounds, atom_avoids = [],
      pool = new_atom_pool ()}
     maybe_opt ty representation tuples
-
-fun same_free name ty term =
-  case Lib.total Term.dest_var term of
-      SOME (other, other_ty) => name = other andalso Util.same_type ty other_ty
-    | NONE => false
 
 fun free_name_for_term free_names term =
   let val (name, ty) = Term.dest_var term

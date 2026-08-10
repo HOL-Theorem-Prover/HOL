@@ -174,10 +174,6 @@ structure Refute_ModelFinder_Scope = struct
     same_data_type_specs (#data_types left, #data_types right) andalso
     same_card_assigns (#card_assigns left, #card_assigns right)
 
-  fun scope_less_eq (left : scope) (right : scope) =
-    ListPair.allEq (op <=)
-      (map #2 (#card_assigns left), map #2 (#card_assigns right))
-
   fun rank_of_row (_, candidates) = length candidates
 
   fun rank_of_block block =
@@ -253,9 +249,6 @@ structure Refute_ModelFinder_Scope = struct
                SOME candidates => candidates
              | NONE => raise err "lookup_group_iter_ints_assign"
                  "missing iterator assignment")
-
-  fun lookup_iter_ints_assign assigns predicate =
-    lookup_group_iter_ints_assign assigns [predicate]
 
   fun row_for_constr maxes_assigns constructor =
     SOME (Max constructor,
@@ -1063,9 +1056,6 @@ structure Refute_ModelFinder_Scope = struct
         SOME (SOME value) => value
       | _ => is_type_fundamentally_monotonic ty orelse
              actually_monotonic ty
-
-  fun is_type_monotonic monos ty =
-    is_type_monotonic_with is_type_actually_monotonic monos ty
 
   fun mono_partition_with actually_monotonic monos types =
     List.partition

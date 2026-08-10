@@ -1830,10 +1830,6 @@ fun has_function_type domain range ty =
         Util.same_type actual_range range
     | NONE => false
 
-fun m4_translation location =
-  raise Util.NOT_SUPPORTED
-    (location ^ ": feature not yet translated")
-
 fun bit_set_from_atom
       ({kk_join, ...} : kodkod_constrs) ty relation =
   kk_join relation

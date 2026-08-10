@@ -1609,36 +1609,15 @@ structure Refute_ModelFinder_Mono :> REFUTE_MODEL_FINDER_MONO = struct
     if is_harmless_axiom term then accum
     else consider_general_formula mdata Plus term accum
 
-  fun is_constructor_pattern bound term =
-    if List.exists (Term.aconv term) bound orelse
-       (Term.is_var term andalso
-        MFN.is_reserved_name (#1 (Term.dest_var term))) then
-      true
-    else
-      let val (head, arguments) = HolKernel.strip_comb term
-      in
-        MFH.is_nonfree_constr head andalso
-        List.all (is_constructor_pattern bound) arguments
-      end handle HOL_ERR _ => false
+  (* Wider than the leaf test preprocessing passes to the same skeleton;
+     see Refute_ModelFinder_HOL.is_constructor_pattern_gen. *)
+  fun is_reserved_leaf bound term =
+    List.exists (Term.aconv term) bound orelse
+    (Term.is_var term andalso
+     MFN.is_reserved_name (#1 (Term.dest_var term)))
 
-  fun is_constructor_pattern_formula term =
-    let
-      fun lhs variables candidate =
-        if boolSyntax.is_forall candidate then
-          let val (variable, body) = boolSyntax.dest_forall candidate
-          in lhs (variable :: variables) body end
-        else if boolSyntax.is_imp_only candidate then
-          lhs variables (#2 (boolSyntax.dest_imp candidate))
-        else
-          SOME (variables, #1 (boolSyntax.dest_eq candidate))
-          handle HOL_ERR _ => NONE
-    in
-      case lhs [] term of
-          SOME (variables, left) =>
-            List.all (is_constructor_pattern variables)
-              (#2 (HolKernel.strip_comb left))
-        | NONE => false
-    end
+  val is_constructor_pattern_formula =
+    MFH.is_constructor_pattern_formula_gen is_reserved_leaf
 
   fun consider_definitional_axiom
         (mdata as {max_fresh, ...} : mdata) term accum =

@@ -710,17 +710,10 @@ structure Refute_ModelFinder_Preproc = struct
       recurse [] [] term
     end
 
-  fun is_constructor_pattern bound term =
-    if is_bound_or_value_var bound term then
-      true
-    else
-      let
-        val (head, arguments) = HolKernel.strip_comb term
-      in
-        MFH.is_nonfree_constr head andalso
-        List.all (is_constructor_pattern bound) arguments
-      end
-      handle HOL_ERR _ => false
+  (* Shared with the monotonicity calculus, which passes a wider leaf
+     test; see Refute_ModelFinder_HOL.is_constructor_pattern_gen. *)
+  val is_constructor_pattern =
+    MFH.is_constructor_pattern_gen is_bound_or_value_var
 
   (* Pulled-out values are represented by free reserved variables in HOL4.
      Count only their free occurrences: a same-named abstraction binder is
@@ -1842,24 +1835,8 @@ structure Refute_ModelFinder_Preproc = struct
         SOME (left, right) => Term.aconv left right
       | NONE => false
 
-  fun is_constructor_pattern_formula term =
-    let
-      fun lhs variables candidate =
-        if boolSyntax.is_forall candidate then
-          let val (variable, body) = boolSyntax.dest_forall candidate
-          in lhs (variable :: variables) body end
-        else if boolSyntax.is_imp_only candidate then
-          lhs variables (#2 (boolSyntax.dest_imp candidate))
-        else
-          SOME (variables, #1 (boolSyntax.dest_eq candidate))
-          handle HOL_ERR _ => NONE
-    in
-      case lhs [] term of
-          SOME (variables, left) =>
-            List.all (is_constructor_pattern variables)
-              (#2 (HolKernel.strip_comb left))
-        | NONE => false
-    end
+  val is_constructor_pattern_formula =
+    MFH.is_constructor_pattern_formula_gen is_bound_or_value_var
 
   fun axioms_for_term
         (context as {user_axioms, evals, nondefs, nondef_table, ...}

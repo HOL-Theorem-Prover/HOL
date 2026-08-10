@@ -101,10 +101,6 @@ structure Refute_QC_Narrow = struct
       loop instances []
     end) instances
 
-  fun compile_instances config instances =
-    compile_instances_window config
-      {first = 0, last = Int.max (0, #size (#qc config))} instances
-
   fun run_body (config : Refute_Core.config)
       (instances : Refute_Core.instance list) =
     let

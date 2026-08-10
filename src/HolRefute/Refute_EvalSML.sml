@@ -74,12 +74,6 @@ structure Refute_EvalSML = struct
 
   fun reset_reconstruction_forces () = reconstruction_forces := 0
 
-  fun install_constructors terms =
-    constructors := Vector.fromList terms
-
-  fun install_raw_terms terms =
-    raw_terms := Vector.fromList terms
-
   fun register_term_tables constructor_terms terms =
     Thread_Attributes.uninterruptible
       (fn restore => fn () =>

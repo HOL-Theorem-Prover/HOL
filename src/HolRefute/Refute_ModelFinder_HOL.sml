@@ -1055,10 +1055,6 @@ structure Refute_ModelFinder_HOL = struct
     not (is_iterator_marker_const constant) andalso
     fixpoint_kind_of_const context constant <> NoFp
 
-  fun is_inductive_pred context constant =
-    is_raw_inductive_pred context constant orelse
-    is_fixpoint_bound_const constant
-
   fun is_mutually_inductive_pred context constant =
     case fixpoint_group_of_const context constant of
         SOME {members, ...} => length members > 1
@@ -3714,6 +3710,45 @@ structure Refute_ModelFinder_HOL = struct
     else
       reserved_constructor term
 
+  (* Isabelle reads a pattern leaf as a de Bruijn Bound.  HOL4 names its
+     binders, so each layer supplies its own leaf test, and the two tests
+     deliberately differ: preprocessing admits only the schematic families
+     (value, bound-standin and congruence vars), monotonicity admits every
+     reserved name, a strict superset.  Monotonicity therefore calls
+     strictly more axioms definitional -- a bare Skolem constant such as
+     "refute$sk0@1$x" is a pattern leaf there and not in preprocessing.
+     The divergence is unresolved; it is preserved here, not decided. *)
+  fun is_constructor_pattern_gen is_leaf bound term =
+    if is_leaf bound term then
+      true
+    else
+      let
+        val (head, arguments) = HolKernel.strip_comb term
+      in
+        is_nonfree_constr head andalso
+        List.all (is_constructor_pattern_gen is_leaf bound) arguments
+      end
+      handle HOL_ERR _ => false
+
+  fun is_constructor_pattern_formula_gen is_leaf term =
+    let
+      fun lhs variables candidate =
+        if boolSyntax.is_forall candidate then
+          let val (variable, body) = boolSyntax.dest_forall candidate
+          in lhs (variable :: variables) body end
+        else if boolSyntax.is_imp_only candidate then
+          lhs variables (#2 (boolSyntax.dest_imp candidate))
+        else
+          SOME (variables, #1 (boolSyntax.dest_eq candidate))
+          handle HOL_ERR _ => NONE
+    in
+      case lhs [] term of
+          SOME (variables, left) =>
+            List.all (is_constructor_pattern_gen is_leaf variables)
+              (#2 (HolKernel.strip_comb left))
+        | NONE => false
+    end
+
   (* A TypeBase pseudo-datatype may expose constructors other than the
      registered coconstructors.  They must not survive as unconstrained
      constants merely because the codatatype classification overrides the
@@ -3769,15 +3804,6 @@ structure Refute_ModelFinder_HOL = struct
         | NONE => NONE
     end handle HOL_ERR _ => NONE
 
-  fun typedef_for_abs constant =
-    let val (_, ty) = Type.dom_rng (Term.type_of constant)
-    in
-      case typedef_for_type ty of
-          SOME (info as {abs, ...}) =>
-            if same_registered_constant abs constant then SOME info else NONE
-        | NONE => NONE
-    end handle HOL_ERR _ => NONE
-
   fun typedef_for_rep constant =
     let val (ty, _) = Type.dom_rng (Term.type_of constant)
     in
@@ -3825,9 +3851,6 @@ structure Refute_ModelFinder_HOL = struct
         | NONE => NONE
     end handle HOL_ERR _ => NONE
 
-  fun is_quot_abs_fun term = Option.isSome (quotient_for_abs term)
-  fun is_quot_rep_fun term = Option.isSome (quotient_for_rep term)
-  fun is_abs_fun term = Option.isSome (typedef_for_abs term)
   fun is_rep_fun term = Option.isSome (typedef_for_rep term)
 
   fun mate_of_rep_fun term =
@@ -3937,9 +3960,6 @@ structure Refute_ModelFinder_HOL = struct
 
   fun is_exists_unique term =
     is_named_const {Thy = "bool", Name = "?!"} term
-
-  fun exists_unique_def () = Thm.concl (DB.fetch "bool"
-    "EXISTS_UNIQUE_DEF")
 
   fun relaxed_int_of_term term =
     case Lib.total intSyntax.dest_negated term of
