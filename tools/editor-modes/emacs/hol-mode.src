@@ -2736,9 +2736,15 @@ wrong for the cursor's step, so we surface the failure instead."
           (insert (format "⊢ %s\n\n" (plist-get g :goal)))))))
     (goto-char (point-min))
     (hol-lsp-goals-mode)
+    ;; inhibit-switch-frame: when the goals buffer has been moved to
+    ;; a separate frame (via user's `display-buffer-alist' or by hand),
+    ;; `display-buffer-reuse-window' finds it there and would otherwise
+    ;; raise+focus that frame on every auto-follow tick, defeating the
+    ;; user's attempt to edit the script file.
     (display-buffer (current-buffer)
-                    '(display-buffer-reuse-window
-                      display-buffer-below-selected))))
+                    '((display-buffer-reuse-window
+                       display-buffer-below-selected)
+                      (inhibit-switch-frame . t)))))
 
 (defun hol-lsp-show-goal-state ()
   "Ask the HOL LSP server for the goal-state at point.
