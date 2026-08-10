@@ -1517,9 +1517,9 @@ structure Refute_Forl :> REFUTE_FORL = struct
           "wait \"$watchdog\" 2>/dev/null; exit 130' TERM INT; " ^
           shell_quote setsid ^ " /bin/sh -c " ^ shell_quote command ^
           " & child=$!; wait \"$child\"; status=$?; " ^
-          "kill -TERM -$child 2>/dev/null; " ^
+          "if kill -TERM -$child 2>/dev/null; then " ^
           "(\"$timer\" 1; kill -KILL -$child 2>/dev/null) & reaper=$!; " ^
-          "wait \"$reaper\" 2>/dev/null; exit \"$status\""
+          "wait \"$reaper\" 2>/dev/null; fi; exit \"$status\""
         val process = Unix.execute ("/bin/sh", ["-c", supervised])
         val reaped = ref false
         fun reap () =
