@@ -213,6 +213,25 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
+Theorem ETS_CASES:
+  ETS ts tau p p' <=> p = p' ∨ ∃u. ts p tau u ∧ ETS ts tau u p'
+Proof
+  SRW_TAC[][ETS_def, Once RTC_CASES1]
+QED
+
+Theorem ETS_INDUCT[rule_induction]:
+  ∀P. (∀p. P p p) ∧ (
+    (∀p p' q. ts p tau p' ∧ P p' q ⇒ P p q) ∨
+    (∀p q' q. P p q' ∧ ts q' tau q ⇒ P p q)
+  ) ⇒ ∀p0 q0. ETS ts tau p0 q0 ⇒ P p0 q0
+Proof
+    GEN_TAC >> STRIP_TAC
+ >> REWRITE_TAC [ETS_def]
+ >| [HO_MATCH_MP_TAC RTC_INDUCT, HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1]
+ >> METIS_TAC []
+QED
+
+
 Theorem lemma1[local]:
     !R. (!p q.   ts p tau q ==> R p q) /\
         (!p.     R p p) /\
