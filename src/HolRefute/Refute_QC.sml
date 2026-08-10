@@ -509,7 +509,7 @@ structure Refute_QC = struct
 
   fun elapsed_msec start =
     LargeInt.toInt (Time.toMilliseconds (Time.- (Time.now (), start)))
-    handle _ => 0
+    handle Interrupt => raise Interrupt | _ => 0
 
   fun pnf_replay_eligible case_tree genuine =
     Option.isSome case_tree andalso genuine
@@ -813,12 +813,12 @@ structure Refute_QC = struct
      exactly the invariant cleanup exists to keep — and theory hygiene is the
      stronger of the two invariants here.  Preemption was never on offer
      anyway: [Timeout.apply] cancels by interrupting the calling thread, and
-     Poly/ML defers a masked thread's interrupt until the mask ends, i.e.
-     until after the cleanup has done all of its work, so its expiry could
-     only mislabel a cleanup that had in fact succeeded.  That spurious
-     [Timeout.TIMEOUT] escaped [strategy_run] into [run_backend], which
-     charged it to the backend's own deadline and discarded a verdict the
-     search had already reached.
+     Poly/ML defers a masked thread's directed interrupt until the mask
+     ends, i.e. until after the cleanup has done all of its work, so its
+     expiry could only mislabel a cleanup that had in fact succeeded.  That
+     spurious [Timeout.TIMEOUT] escaped [strategy_run] into [run_backend],
+     which charged it to the backend's own deadline and discarded a verdict
+     the search had already reached.
 
      A cleanup that never returns must not take the run down with it.  So the
      cleanup runs on its own masked thread and the caller stops *waiting* on
@@ -827,6 +827,16 @@ structure Refute_QC = struct
      [CleanupAbandoned] rather than as a search result.  The wait itself is
      masked, so that a run whose own deadline has already expired reports its
      own result instead of having the pending interrupt abort the cleanup.
+
+     Masked, but not deaf.  HOL's Ctrl-C is [Thread.broadcastInterrupt], and
+     a broadcast aimed at a thread that is not accepting one is dropped
+     outright rather than retained the way a directed interrupt is, so a
+     plain mask over a ten-second wait would silently eat the user's first
+     Ctrl-C.  The wait therefore steps through
+     [ParList.uninterruptible_wait]: the cleanup is still waited out in
+     full, and the interrupt is reported afterwards, as a result rather than
+     as a raise, so that a caller closing several tests still closes them
+     all before the interrupt surfaces.
 
      An abandoned cleanup leaks its thread.  That is deliberate: Poly/ML
      cannot cancel masked work, and cancelling it is precisely what must not
@@ -855,19 +865,32 @@ structure Refute_QC = struct
       val _ = Standard_Thread.fork
         {name = "refute-cleanup", stack_limit = NONE, interrupts = false} body
       val deadline = Time.now () + bound
+      fun attempt () =
+        Synchronized.timed_access outcome (fn _ => SOME deadline)
+          (Option.map (fn result => (result, SOME result)))
       (* One last look after the wait expires: a cleanup that completed as
          the deadline passed has still completed, and reporting it would be
          the old defect again, merely at a boundary rather than routinely. *)
-      val finished =
-        Thread_Attributes.uninterruptible (fn _ => fn () =>
-          case Synchronized.timed_access outcome (fn _ => SOME deadline)
-                 (Option.map (fn result => (result, SOME result))) of
-              SOME result => SOME result
-            | NONE => Synchronized.value outcome) ()
+      val finished = Exn.capture
+        (ParList.uninterruptible_wait (fn observe => fn () =>
+          let
+            (* An interrupt seen here is recorded, never allowed to cut the
+               wait short; the deadline is absolute, so resuming masked
+               leaves the bound exactly as it was. *)
+            fun wait () =
+              case observe attempt () of
+                  SOME answer => answer
+                | NONE => wait ()
+          in
+            case wait () of
+                SOME result => SOME result
+              | NONE => Synchronized.value outcome
+          end)) ()
     in
       case finished of
-          SOME result => result
-        | NONE =>
+          Exn.Exn error => Exn.Exn error
+        | Exn.Res (SOME result) => result
+        | Exn.Res NONE =>
             Exn.Exn (CleanupAbandoned
               ("substrate cleanup did not return within " ^
                Time.toString bound ^ "s and was abandoned"))

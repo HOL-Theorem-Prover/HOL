@@ -159,8 +159,11 @@ signature REFUTE_FORL = sig
   exception SYNTAX of string * string
 
   val extract_instance : string -> raw_bound list
+  (* The third component reports a transcript that stops mid-section, i.e.
+     one the solver was killed before it finished writing.  The solutions
+     and unsat indices returned beside it are the ones it did write. *)
   val parse_output : string ->
-    (int * raw_bound list) list * int list
+    (int * raw_bound list) list * int list * bool
   val first_error : string -> string
 
   val production_header : unit -> string
@@ -1125,10 +1128,34 @@ structure Refute_Forl :> REFUTE_FORL = struct
   val outcome_marker = "---OUTCOME---\n"
   val instance_marker = "---INSTANCE---\n"
 
+  (* Solver output is unbounded (the [ulimit -f] cap below is 16 MB) and
+     is not ours to quote at length.  A diagnostic that embeds any of it
+     shows an excerpt only. *)
+  val max_quoted_output = 80
+
+  fun quote_output text =
+    if String.size text <= max_quoted_output then text
+    else String.substring (text, 0, max_quoted_output) ^ "..."
+
+  (* Raised where the transcript stops in the middle of a section.  What
+     was written before that point is still sound, so [parse_output] keeps
+     it and reports the truncation rather than failing. *)
+  exception Truncated
+
+  (* Kodkodi terminates every section it finishes with a blank line, so a
+     section without one was cut short: the solver was killed by its own
+     [-max-msecs] deadline, by the output cap, or by a crash.  This must be
+     recognised here, because [Substring.position] returns the whole string
+     when the pattern is absent: the "body" would otherwise silently become
+     the entire rest of the transcript. *)
   fun read_section_body marker section =
-    Substring.string
-      (#1 (Substring.position "\n\n"
-        (Substring.triml (String.size marker) section)))
+    let
+      val body = Substring.triml (String.size marker) section
+      val (text, terminator) = Substring.position "\n\n" body
+    in
+      if Substring.isEmpty terminator then raise Truncated
+      else Substring.string text
+    end
 
   fun read_next_instance input =
     let val section = #2 (Substring.position instance_marker input)
@@ -1141,14 +1168,14 @@ structure Refute_Forl :> REFUTE_FORL = struct
         extract_instance (read_section_body instance_marker section)
     end
 
-  fun read_next_outcomes index (input, sat, unsat) =
+  fun read_next_outcomes index (input, sat, unsat, truncated) =
     let
       val (prefix, section) = Substring.position outcome_marker input
       val next_problem = #2 (Substring.position problem_marker prefix)
     in
       if Substring.isEmpty section orelse
          not (Substring.isEmpty next_problem) then
-        (input, sat, unsat)
+        (input, sat, unsat, truncated)
       else
         let
           val outcome = read_section_body outcome_marker section
@@ -1156,7 +1183,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
         in
           if outcome = "UNSATISFIABLE" orelse
              outcome = "TRIVIALLY_UNSATISFIABLE" then
-            read_next_outcomes index (rest, sat, index :: unsat)
+            read_next_outcomes index (rest, sat, index :: unsat, truncated)
           else if outcome = "SATISFIABLE" orelse
                   outcome = "TRIVIALLY_SATISFIABLE" then
             let
@@ -1166,20 +1193,24 @@ structure Refute_Forl :> REFUTE_FORL = struct
                 #1 (Substring.position problem_marker section)
             in
               read_next_outcomes index
-                (rest, (index, read_next_instance this_problem) :: sat, unsat)
+                (rest, (index, read_next_instance this_problem) :: sat,
+                 unsat, truncated)
             end
           else
             raise SYNTAX
               ("Refute_Forl.read_next_outcomes",
-               "unknown outcome \"" ^ outcome ^ "\"")
+               "unknown outcome \"" ^ quote_output outcome ^ "\"")
         end
+        (* Nothing legible follows a cut section, so stop on an empty
+           remainder and let the caller's exit status settle the run. *)
+        handle Truncated => (Substring.full "", sat, unsat, true)
     end
 
-  fun read_next_problems (input, sat, unsat) =
+  fun read_next_problems (input, sat, unsat, truncated) =
     let val section = #2 (Substring.position problem_marker input)
     in
       if Substring.isEmpty section then
-        (sat, unsat)
+        (sat, unsat, truncated)
       else
         let
           val after_marker =
@@ -1192,19 +1223,23 @@ structure Refute_Forl :> REFUTE_FORL = struct
               SOME one_based =>
                 read_next_problems
                   (read_next_outcomes (one_based - 1)
-                    (after_marker, sat, unsat))
+                    (after_marker, sat, unsat, truncated))
             | NONE =>
-                raise SYNTAX
-                  ("Refute_Forl.read_next_problems",
-                   "expected number after \"PROBLEM\"")
+                (* No delimiter after the number means the header itself
+                   was cut short, not that it is ill-formed. *)
+                if Substring.isSubstring " " after_marker then
+                  raise SYNTAX
+                    ("Refute_Forl.read_next_problems",
+                     "expected number after \"PROBLEM\"")
+                else (sat, unsat, true)
         end
     end
 
   fun parse_output text =
-    let val (sat, unsat) =
-      read_next_problems (Substring.full text, [], [])
+    let val (sat, unsat, truncated) =
+      read_next_problems (Substring.full text, [], [], false)
     in
-      (rev sat, rev unsat)
+      (rev sat, rev unsat, truncated)
     end
 
   fun trim_line text =
@@ -1242,7 +1277,7 @@ structure Refute_Forl :> REFUTE_FORL = struct
       val lines = List.map clean (trim_split_lines error_text)
     in
       case List.find (fn line => line <> "" andalso line <> "EXIT") lines of
-          SOME line => line
+          SOME line => quote_output line
         | NONE => ""
     end
 
@@ -1598,12 +1633,28 @@ structure Refute_Forl :> REFUTE_FORL = struct
               val code = run_child command
               val output = read_all output_path
               val errors = read_all error_path
-              val (solutions0, nontrivial_unsat0) = parse_output output
-              val solutions = List.map (fn (index, instance) =>
-                (reindex index, instance)) solutions0
-              val nontrivial_unsat = List.map reindex nontrivial_unsat0
+              (* The transcript is solver output: a run killed mid-write
+                 leaves it truncated, and a launcher of the caller's own
+                 choosing can put anything at all in it.  Neither may
+                 abort the search with a parse exception, so both become
+                 a bounded diagnostic here and the exit status below
+                 decides the verdict. *)
+              fun parsed () =
+                let
+                  val (solutions0, unsat0, truncated) = parse_output output
+                in
+                  (List.map (fn (index, instance) =>
+                     (reindex index, instance)) solutions0,
+                   List.map reindex unsat0,
+                   if truncated then "Kodkodi output was truncated" else "")
+                end
+                handle SYNTAX (_, reason) => ([], [], reason)
+              val (solutions, nontrivial_unsat, parse_message) = parsed ()
               val unsat = trivially_unsat @ nontrivial_unsat
-              val message = first_error errors
+              val solver_message = first_error errors
+              val message =
+                if solver_message <> "" then solver_message
+                else parse_message
               val _ =
                 if errors <> "" andalso
                    (Feedback.current_trace "Refute"

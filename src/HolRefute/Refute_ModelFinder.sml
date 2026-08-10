@@ -53,7 +53,7 @@ val max_unsound_delay_ms = 200
 val max_unsound_delay_percent = 2
 fun elapsed_msec start =
   LargeInt.toInt (Time.toMilliseconds (Time.now () - start))
-  handle _ => 0
+  handle Interrupt => raise Interrupt | _ => 0
 
 fun remaining deadline =
   if Time.now () >= deadline then Time.zeroTime
@@ -67,7 +67,7 @@ fun unsound_delay deadline =
   Int.max (0, Int.min (max_unsound_delay_ms,
     LargeInt.toInt (Time.toMilliseconds (remaining deadline)) *
       max_unsound_delay_percent div 100))
-  handle _ => 0
+  handle Interrupt => raise Interrupt | _ => 0
 
 fun type_arguments ty =
   if Type.is_vartype ty then []

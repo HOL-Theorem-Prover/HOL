@@ -206,7 +206,7 @@ structure Refute_Extract = struct
 
   fun type_name ty =
     Hol_pp.type_to_string ty
-    handle _ => "<unknown type>"
+    handle Interrupt => raise Interrupt | _ => "<unknown type>"
 
   fun reject message = raise NotExtractable [message]
 

@@ -25,7 +25,7 @@ structure Refute_Cert = struct
   fun replay_error_text error =
     let val message = General.exnMessage error
     in if message = "" then "unknown proof failure" else message end
-    handle _ => "unknown proof failure"
+    handle Interrupt => raise Interrupt | _ => "unknown proof failure"
 
   (* Disk theorems are checked kernel imports: DISK_THM is the marker HOL4
      itself accepts, subtracting it in Theory.oracle_string_of and listing
@@ -74,7 +74,8 @@ structure Refute_Cert = struct
               | [] => Parse.term_to_string candidate
         end
     in
-      visit tm handle _ => Parse.term_to_string tm
+      visit tm
+      handle Interrupt => raise Interrupt | _ => Parse.term_to_string tm
     end
 
   (* A bounded, theorem-producing evaluator shared by QC certification and

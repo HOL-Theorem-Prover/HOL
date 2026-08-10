@@ -305,10 +305,21 @@ structure Refute_Eval :> Refute_Eval = struct
                | GaveUp reason => raise Fail reason)
       val result = Exn.capture (fn () => loop (Int.max (0, count)) []) ()
       val close_result = Exn.capture (#close test) ()
+      (* As in the QC drivers: a close failure is surfaced on a successful
+         dump, but it never replaces the dump's own failure, which is the
+         diagnostic the caller came for; it is reported alongside instead.
+         A cleanup Interrupt still wins, as in [Refute_Extract]. *)
+      fun report cleanup =
+        Refute_Core.Private.say 1
+          ("Refute candidate dump cleanup failed: " ^
+           General.exnMessage cleanup ^ "\n")
     in
-      case close_result of
-          Exn.Res _ => Exn.release result
-        | Exn.Exn error => raise error
+      case (result, close_result) of
+          (Exn.Res _, _) => (Exn.release close_result; Exn.release result)
+        | (_, Exn.Exn Interrupt) => raise Interrupt
+        | (Exn.Exn error, Exn.Exn cleanup) =>
+            (report cleanup; Exn.reraise error)
+        | (Exn.Exn error, Exn.Res _) => Exn.reraise error
     end
 
   val substrate_registry : substrate list ref = ref []

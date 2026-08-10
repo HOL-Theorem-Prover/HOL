@@ -9761,30 +9761,74 @@ local
      ((1, 4), [[0]])]
 
   fun sat_transcript_parses () =
-    let val (solutions, unsat) =
+    let val (solutions, unsat, truncated) =
       parse_output (read_all "kodkodi-sat.stdout")
     in
       solutions =
         [(0, first_sat_instance), (0, second_sat_instance)] andalso
-      length solutions = 2 andalso null unsat
+      length solutions = 2 andalso null unsat andalso not truncated
     end
 
   fun unsat_transcript_parses () =
-    parse_output (read_all "kodkodi-unsat.stdout") = ([], [0])
+    parse_output (read_all "kodkodi-unsat.stdout") = ([], [0], false)
 
   fun mixed_batch_parses () =
     parse_output (read_all "kodkodi-batch.stdout") =
-      ([(0, [((1, 0), [[1]])]), (2, [])], [1])
+      ([(0, [((1, 0), [[1]])]), (2, [])], [1], false)
 
   fun timeout_and_error_transcripts_parse () =
-    parse_output (read_all "kodkodi-timeout.stdout") = ([], []) andalso
+    parse_output (read_all "kodkodi-timeout.stdout") = ([], [], false)
+      andalso
     first_error (read_all "kodkodi-timeout.stderr") =
       "Ran out of time" andalso
-    parse_output (read_all "kodkodi-error.stdout") = ([], []) andalso
+    parse_output (read_all "kodkodi-error.stdout") = ([], [], false) andalso
     first_error (read_all "kodkodi-error.stderr") =
       "No solver was specified" andalso
     first_error "\nEXIT\n" = "" andalso
     first_error " \nError: ignored.\n" = " "
+
+  val long_output = String.implode (List.tabulate (4096, fn _ => #"x"))
+
+  (* A batch transcript cut mid-write, as a killed solver leaves it:
+     problem 1 complete, problem 2's outcome section without its
+     terminating blank line. *)
+  val cut_batch_transcript =
+    "*** PROBLEM 1 ***\n" ^
+    "\n" ^
+    "---OUTCOME---\n" ^
+    "UNSATISFIABLE\n" ^
+    "\n" ^
+    "---STATS---\n" ^
+    "p cnf 12 24\n" ^
+    "\n" ^
+    "*** PROBLEM 2 ***\n" ^
+    "\n" ^
+    "---OUTCOME---\n" ^
+    "SATISFIABLE\n"
+
+  (* A killed solver leaves a section without its terminating blank line.
+     Everything written before the cut still counts, and the cut section
+     must not swallow the rest of the transcript. *)
+  fun truncated_transcript_stops_at_the_cut () =
+    parse_output cut_batch_transcript = ([], [0], true) andalso
+    parse_output ("*** PROBLEM 1 ***\n\n---OUTCOME---\n" ^ long_output) =
+      ([], [], true) andalso
+    parse_output ("*** PROBLEM 1 ***\n\n---OUTCOME---\nUNSATISFIABLE\n\n" ^
+      "*** PROBLEM ") = ([], [0], true)
+
+  (* Solver text quoted back in a diagnostic is excerpted, never dumped. *)
+  fun solver_text_in_diagnostics_is_bounded () =
+    let
+      val complete_section =
+        "*** PROBLEM 1 ***\n\n---OUTCOME---\n" ^ long_output ^ "\n\n"
+      val outcome_reason =
+        (ignore (parse_output complete_section); "")
+        handle SYNTAX (_, reason) => reason
+    in
+      String.isPrefix "unknown outcome" outcome_reason andalso
+      String.size outcome_reason < 200 andalso
+      String.size (first_error ("Error: " ^ long_output ^ "\n")) < 200
+    end
 
   fun malformed_instance_is_rejected () =
     let
@@ -9806,6 +9850,14 @@ in
   val _ = require_msg
     (check_result timeout_and_error_transcripts_parse) (fn () =>
     "Kodkodi timeout or stderr error filtering was incorrect")
+    (fn () => ()) ()
+  val _ = require_msg
+    (check_result truncated_transcript_stops_at_the_cut) (fn () =>
+    "a truncated Kodkodi transcript was misparsed")
+    (fn () => ()) ()
+  val _ = require_msg
+    (check_result solver_text_in_diagnostics_is_bounded) (fn () =>
+    "a Kodkodi diagnostic quoted unbounded solver output")
     (fn () => ()) ()
   val _ = require_msg (check_result malformed_instance_is_rejected) (fn () =>
     "an ill-formed Kodkodi instance was accepted") (fn () => ()) ()
@@ -12081,6 +12133,86 @@ val _ = require_msg (check_result parlist_caller_interrupt_unwinds) (fn () =>
   "a caller Interrupt returned before every local worker unwound")
   (fn () => ()) ()
 
+(* The neighbour above uses a *directed* interrupt, which Poly/ML retains
+   across a mask.  HOL's Ctrl-C is [Thread.broadcastInterrupt], which is
+   dropped rather than retained when it reaches a thread that is not
+   accepting broadcasts, so the mandatory join has to stay observant of
+   broadcasts while it waits or the user's first Ctrl-C is lost.
+
+   Every step is gated on a condition variable, never on elapsed time.
+   [ParList_Test.join_hook] fires from inside the join's observation window,
+   so the broadcast is issued when the caller is provably there rather than
+   at a moment the scheduler happens to pick; and the caller, alone among
+   the threads here, is the only one accepting broadcasts, so nothing else
+   in the process -- this thread included -- can be torn down by the
+   signal. *)
+fun parlist_join_observes_broadcast () =
+  let
+    val lock = Mutex.mutex ()
+    val ready = ConditionVar.conditionVar ()
+    val loser_masked = ref false
+    val joining = ref false
+    val released = ref false
+    val caller_result = ref (NONE : bool option)
+    fun sync e = Multithreading.synchronized "ParList broadcast join" lock e
+    fun announce flag = (flag := true; ConditionVar.broadcast ready)
+    fun wait_until flag =
+      let
+        fun wait () =
+          if !flag then () else (ConditionVar.wait (ready, lock); wait ())
+      in
+        wait ()
+      end
+    (* First poll only: report that the caller is inside the window, then
+       block there until the broadcast arrives. *)
+    fun hook () =
+      sync (fn () =>
+        if !joining then ()
+        else (announce joining; wait_until released))
+    (* The loser holds the join open, masked, until the broadcast is out;
+       the winner publishes only once the loser is masked, so the caller
+       cannot leave its interruptible phase before then. *)
+    fun body 0 = (sync (fn () => wait_until loser_masked); SOME 0)
+      | body _ =
+          (Thread_Attributes.uninterruptible (fn _ => fn () =>
+             sync (fn () => (announce loser_masked; wait_until released))) ();
+           NONE)
+    fun call () =
+      let
+        val interrupted =
+          ((ignore (ParList.get_some_with_workers 2 body [0, 1]); false)
+           handle Interrupt => true)
+      in
+        Thread_Attributes.uninterruptible (fn _ => fn () =>
+          sync (fn () =>
+            (caller_result := SOME interrupted;
+             ConditionVar.broadcast ready))) ()
+      end
+    fun run () =
+      let
+        val _ = ParList_Test.join_hook := SOME hook
+        val caller = Standard_Thread.fork
+          {name = "ParList broadcast join test", stack_limit = NONE,
+           interrupts = false}
+          (fn () => Thread_Attributes.with_attributes
+            Thread_Attributes.public_interrupts (fn _ => call ()))
+        val _ = sync (fn () => wait_until joining)
+        val _ = Thread.broadcastInterrupt ()
+        val _ = sync (fn () => announce released)
+        val _ = Standard_Thread.join caller
+      in
+        !caller_result = SOME true
+      end
+  in
+    Thread_Attributes.with_attributes Thread_Attributes.private_interrupts
+      (fn _ =>
+        Portable.finally (fn () => ParList_Test.join_hook := NONE) run ())
+  end
+
+val _ = require_msg (check_result parlist_join_observes_broadcast) (fn () =>
+  "a broadcast interrupt during the mandatory join was dropped")
+  (fn () => ()) ()
+
 fun parlist_partial_fork_failure_unwinds () =
   let
     val lock = Mutex.mutex ()
@@ -12908,7 +13040,7 @@ val _ = tprint "Refute refined expectations"
 
 fun expectation_accepts expectation outcome =
   ((check_expect (upd_expect expectation default_config) outcome; true)
-   handle _ => false)
+   handle Interrupt => raise Interrupt | _ => false)
 
 fun refined_expectations_hold () =
   let
@@ -19106,6 +19238,39 @@ val _ = require_msg (check_result stuck_cleanup_does_not_hang_the_run)
   (fn () => "a substrate cleanup that never returns was waited on")
   (fn () => ()) ()
 
+(* The candidate dump closes its test whatever happened, so both failures
+   can arrive together: a generator divergence surfaces as the dump's own
+   failure while the cv close reverts a theory it cannot fully revert.  The
+   dump's failure is what the cross-substrate comparison exists to report,
+   so it must survive the cleanup failure rather than be replaced by it.  A
+   close failure on a successful dump is still reported. *)
+fun dump_stream_keeps_the_primary_failure () =
+  let
+    fun stub run : compiled_test =
+      {run = fn _ => run, close = fn () => raise Fail "dump close failed",
+       max_chunk = NONE, last_stats = ref []}
+    fun dump test = Exn.capture (fn () =>
+      dump_stream test {size = 1, count = 1}) ()
+    val (gave_up, messages) = capture_refute_messages 1 (fn () =>
+      dump (stub (GaveUp "dump generator diverged")))
+    val found = dump (stub (CexFound
+      {env = [], ground_env = NONE, case_tree = NONE, genuine = true,
+       run_depth = NONE}))
+  in
+    (case gave_up of
+         Exn.Exn (Fail message) => message = "dump generator diverged"
+       | _ => false) andalso
+    String.isSubstring "dump close failed" messages andalso
+    (case found of
+         Exn.Exn (Fail message) => message = "dump close failed"
+       | _ => false)
+  end
+
+val _ = tprint "Refute candidate dump keeps its own failure"
+val _ = require_msg (check_result dump_stream_keeps_the_primary_failure)
+  (fn () => "a candidate dump failure was replaced by its cleanup failure")
+  (fn () => ()) ()
+
 fun smart_pruning_works () =
   let
     val base = upd_size 3 default_config
@@ -22082,11 +22247,11 @@ fun facade_tactic_preserves_refutable_goal () =
           aconv assumption ``0 < (x : num)`` andalso
           aconv conclusion ``x - y + y = x``
       | _ => false)
-   handle _ => false)
+   handle Interrupt => raise Interrupt | _ => false)
 
 fun facade_tactic_allows_unknown () =
   ((ignore (Refute.REFUTE_TAC ([], ``(x : ind) = x``)); true)
-   handle _ => false)
+   handle Interrupt => raise Interrupt | _ => false)
 
 fun facade_assumptions () =
   case (Refute.refute_goal
