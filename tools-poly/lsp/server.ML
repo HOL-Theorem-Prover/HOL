@@ -447,32 +447,40 @@ fun splitOn c s = let
       else loop i' j out
   in case String.size s of sz => loop sz sz [] end
 
-(* Walk the Holmakefile INCLUDES chain rooted at `dir`, appending
-   every discovered directory to `Meta.loadPath`.  `extend_path_with_
-   includes` reads `getDir()`'s Holmakefile, so we chDir in and out. *)
+(* `extend_path_with_includes` reads `getDir()`'s Holmakefile and
+   blindly appends its INCLUDES to `Meta.loadPath` with no dedup
+   against existing entries.  Cache each canonical dir we've
+   already walked so per-didOpen calls don't grow the load path
+   linearly in the number of opened files. *)
+val walkedDirs : string Binaryset.set ref =
+  ref (Binaryset.empty String.compare)
+
 fun walkIncludesFrom dir = let
-  val saved = OS.FileSys.getDir()
-  fun restore () = OS.FileSys.chDir saved handle _ => ()
+  val abs = OS.Path.mkAbsolute {path = dir, relativeTo = OS.FileSys.getDir()}
+             handle _ => dir
 in
-  (OS.FileSys.chDir dir;
-   ReadHMF.extend_path_with_includes
-     {verbosity = 0, lpref = Meta.loadPath};
-   restore ())
-  handle _ => restore ()
+  if Binaryset.member (!walkedDirs, abs) then ()
+  else let
+    val saved = OS.FileSys.getDir()
+    fun restore () = OS.FileSys.chDir saved handle _ => ()
+  in
+    (OS.FileSys.chDir dir;
+     ReadHMF.extend_path_with_includes
+       {verbosity = 0, lpref = Meta.loadPath};
+     walkedDirs := Binaryset.add (!walkedDirs, abs);
+     restore ())
+    handle _ => restore ()
+  end
 end
 
 fun uriToPath uri =
   if String.isPrefix "file://" uri
   then SOME (String.extract (uri, 7, NONE)) else NONE
 
-(* On `didOpen` for a file the LSP hasn't seen before, walk that
-   file's directory's Holmakefile INCLUDES chain to augment
-   `Meta.loadPath`.  `hol.ML` already preloads project_dirs and
-   external_includes from cwd's `holproject.toml`; this handler
-   catches files whose INCLUDES chain isn't reachable from cwd's
-   holproject scope -- e.g. HOL4 dev where the top-level
-   `holproject.toml` has `holmake = false`, or files opened
-   outside any holproject entirely. *)
+(* `hol.ML` at boot preloads project_dirs / external_includes from
+   cwd's `holproject.toml`; this handler catches files whose
+   Holmakefile chain isn't reached that way -- HOL4 dev under a
+   `holmake = false` toml, or files opened outside any holproject. *)
 fun augmentLoadPathForUri uri = case uriToPath uri of
     NONE => ()
   | SOME path => walkIncludesFrom (OS.Path.dir path)

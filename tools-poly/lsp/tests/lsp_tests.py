@@ -1888,13 +1888,10 @@ def test_goalState_case_split_produces_two_subgoals():
 
 
 def test_goalState_walks_double_backslash_in_then1_block():
-    """Regression: `\\\\` (Tactical alias for `THEN`) inside a
-    `>-` / `THEN1` block must be recognised as a step-splitting
-    infix.  Otherwise the whole `a \\\\ b \\\\ c` chain compiles as
-    one atomic Expand and any cursor between its inner tactics
-    halts the walker at the pre-block state (post-OpenThen1, first
-    subgoal focused, no inner tactics applied).  Symptom Michael
-    reported on chap2Script.sml's `solvable_alt_closed` proof."""
+    """`\\\\` (Tactical alias for `THEN`) inside a `>-` block must
+    split the walker's step stream so a cursor between the inner
+    tactics advances past what came before, not halts at the pre-
+    block state."""
     c = Client("/tmp")
     try:
         _init(c, "/tmp")
@@ -2039,17 +2036,11 @@ def test_goalState_walks_squiggle_selector():
 
 
 def test_lsp_walks_file_includes_from_arbitrary_cwd():
-    """Regression: when the LSP server is launched with cwd != the
-    opened file's directory (as eglot typically does — cwd is the
-    project root, not the file), the file's Holmakefile INCLUDES
-    chain must still be walked so `Meta.loadPath` picks up sibling
-    directories that hold the file's `Ancestors` dependencies.
-
-    Before this was fixed, `ReadHMF.extend_path_with_includes` only
-    ran once at LSP boot against the server's cwd.  Opening a file
-    from anywhere else silently missed its `INCLUDES = ../lib` and
-    the compile spammed "Structure (fooLibTheory) has not been
-    declared" errors."""
+    """When the LSP server is launched with cwd != the opened file's
+    directory (as eglot typically does — cwd is the project root),
+    the file's Holmakefile INCLUDES chain must still be walked so
+    `Meta.loadPath` picks up sibling directories that hold the
+    file's `Ancestors` dependencies."""
     root = tempfile.mkdtemp(prefix="lsp_incl_test_")
     lib = os.path.join(root, "lib")
     user = os.path.join(root, "user")

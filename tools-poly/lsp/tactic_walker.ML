@@ -80,24 +80,19 @@ fun expandSpan (TacticSteps.Expand span)     = SOME span
   | expandSpan (TacticSteps.GoalSelect span) = SOME span
   | expandSpan _                             = NONE
 
-fun expandSrc tacText (s, e) state =
-  case compileTactic (String.substring (tacText, s, e - s)) of
-    NONE => NONE
-  | SOME tac => Portable.total (goalFrag.expand tac) state
-
-(* `>~ pats` / `>>~ pats` — the raw substring starts at the operator
-   (`>~` etc.) and isn't a valid tactic on its own.  Prefixing
-   `ALL_TAC ` turns it into `ALL_TAC >~ pats`, which applies the
-   goal-selector to the current focus with no other effect. *)
-fun expandGoalSelect tacText (s, e) state =
-  case compileTactic ("ALL_TAC " ^ String.substring (tacText, s, e - s)) of
+(* GoalSelect passes the operator+RHS substring in `span` -- e.g.
+   `">~ [`pat`]"` -- which isn't a valid tactic on its own.  The
+   `"ALL_TAC "` prefix turns it into `ALL_TAC >~ [`pat`]`, applying
+   the selector to the current focus with no other effect. *)
+fun expandSrc prefix tacText (s, e) state =
+  case compileTactic (prefix ^ String.substring (tacText, s, e - s)) of
     NONE => NONE
   | SOME tac => Portable.total (goalFrag.expand tac) state
 
 fun applyStep tacText step state = case step of
-    TacticSteps.Expand span      => expandSrc        tacText span state
-  | TacticSteps.ExpandList span  => expandSrc        tacText span state
-  | TacticSteps.GoalSelect span  => expandGoalSelect tacText span state
+    TacticSteps.Expand span      => expandSrc ""         tacText span state
+  | TacticSteps.ExpandList span  => expandSrc ""         tacText span state
+  | TacticSteps.GoalSelect span  => expandSrc "ALL_TAC " tacText span state
   | TacticSteps.OpenParen _      => Portable.total goalFrag.open_paren    state
   | TacticSteps.CloseParen _     => Portable.total goalFrag.close_paren   state
   | TacticSteps.OpenThen1 _      => Portable.total goalFrag.open_then1    state
