@@ -207,6 +207,28 @@ in
   else ()
 end
 
+(* bin/hol is likewise compiled by configure and by no Holmakefile rule,
+   from tools-poly/hol.ML and from the Holmake sources it links against.
+   Neither check above reaches it: the sweep compares those sources with
+   bin/Holmake, so a tree whose Holmake is current can still be running
+   a hol built from different sources, and hol.ML is caught by nothing
+   at all.  A stale bin/hol misdirects the interactive load path and
+   fails tools/Holmake/tests/repl, which -t reaches while still inside
+   sequences/kernel -- so the whole selftest build stops there. *)
+val _ = let
+  val fP = fullPath
+  open HOLFileSys
+  val hol = fP [HOLDIR,"bin",xable_string "hol"]
+in
+  if access(hol, [A_READ, A_EXEC]) then
+    (check_against hol "tools-poly/hol.ML";
+     app_sml_files (check_against hol)
+                   {dirname = fP [HOLDIR, "tools-poly", "Holmake"]};
+     app_sml_files (check_against hol)
+                   {dirname = fP [HOLDIR, "tools", "Holmake"]})
+  else ()
+end
+
 
 
 
