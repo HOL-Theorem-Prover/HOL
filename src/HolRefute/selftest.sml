@@ -8215,6 +8215,60 @@ val _ = require_msg (check_result mf_model_datatype_golden) (fn () =>
   "datatype reconstruction from discriminator/selector tuples changed")
   (fn () => ()) ()
 
+(* Binary integers are decoded to their source types at the leaves.  A
+   surrounding datatype constructor must therefore be restored to its
+   source type before those leaves are applied to it. *)
+fun mf_model_binarized_datatype_golden () =
+  let
+    val context = MFH.context_with_binary_ints
+      (MFH.make_context Refute_Core.default_mf_config []) (SOME true)
+    val word_ty = MFH.unsigned_bitword_type
+    val list_ty = listSyntax.mk_list_type word_ty
+    val scope = MFS.scope_from_descriptor context true
+      [list_ty, word_ty] []
+      ([(list_ty, 2), (word_ty, 1),
+        (MFH.unsigned_bit_type, 1)], [])
+    val (sel_names, _) = MFNT.choose_reps_for_all_sels scope
+      MFNT.NameTable.empty
+    val (_, _, rel_table) = MFNT.rename_free_vars sel_names
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+    fun named nickname = valOf (List.find (fn name =>
+      MFNT.nickname_of name = nickname) sel_names)
+    fun relation nickname = MFNT.the_rel rel_table (named nickname)
+    val list_constructors =
+      MFH.binarized_and_boxed_data_type_constrs context true list_ty
+    val nil_id = MFH.constructor_name (List.nth (list_constructors, 0))
+    val cons_id = MFH.constructor_name (List.nth (list_constructors, 1))
+    val word_constructor = hd
+      (MFH.binarized_and_boxed_data_type_constrs context true word_ty)
+    val word_id = MFH.constructor_name word_constructor
+    val list_offset = MFS.offset_of_type (#ofs scope) list_ty
+    val word_offset = MFS.offset_of_type (#ofs scope) word_ty
+    val owner = list_offset + 1
+    val bounds =
+      [(relation (MFN.discr_prefix ^ nil_id), [[list_offset]]),
+       (relation (MFN.discr_prefix ^ cons_id), [[owner]]),
+       (relation (MFN.sel_prefix_for 0 ^ cons_id),
+        [[owner, word_offset]]),
+       (relation (MFN.sel_prefix_for 1 ^ cons_id),
+        [[owner, list_offset]]),
+       (relation (MFN.discr_prefix ^ word_id), [[word_offset]]),
+       (relation (MFN.sel_prefix_for 0 ^ word_id), [])]
+    val reconstructed = MFM.term_for_rep
+      {scope = scope, atoms = [(NONE, [])], sel_names = sel_names,
+       rel_table = rel_table, bounds = bounds, maybe_opt = false,
+       ty = list_ty, representation = MFR.Atom (2, list_offset),
+       tuples = [[owner]]}
+  in
+    Term.aconv reconstructed ``[0 : num]`` andalso
+    Term.type_of reconstructed = ``:num list``
+  end
+
+val _ = require_msg
+  (check_result mf_model_binarized_datatype_golden) (fn () =>
+    "nested binary values were not restored before datatype reconstruction")
+  (fn () => ()) ()
+
 fun mf_model_frac_display_golden () =
   with_frac_registry_restored (fn () => let
     val _ = Refute.register_frac_type_rat ()

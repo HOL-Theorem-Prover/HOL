@@ -714,8 +714,9 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
       let
         val ty = #typ spec
         val co = #co spec
+        val display_ty = MFH.unarize_unbox_etc_type ty
         val cycle = Term.mk_var
-          (MFN.reserved_prefix ^ "cycle" ^ Int.toString atom, ty)
+          (MFN.reserved_prefix ^ "cycle" ^ Int.toString atom, display_ty)
         val real_atom = atom + MFS.offset_of_type ofs ty
         fun name_for nickname =
           List.find (fn name =>
@@ -765,13 +766,13 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
           end
         fun safe_the body =
           let
-            val omega = Term.mk_var (MFN.cyclic_co_val_name, ty)
+            val omega = Term.mk_var (MFN.cyclic_co_val_name, display_ty)
             val unfolded = Term.subst [{redex = cycle, residue = omega}] body
             val predicate = Term.mk_abs
               (omega, boolSyntax.mk_eq (omega, unfolded))
             val choice = Term.mk_thy_const
               {Thy = "refute", Name = "safe_The",
-               Ty = Type.-->(Type.-->(ty, Type.bool), ty)}
+               Ty = Type.-->(Type.-->(display_ty, Type.bool), display_ty)}
           in
             Term.mk_comb (choice, predicate)
           end
@@ -800,7 +801,10 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               List.foldl rebuild ([], flat_values) argument_tys
             val _ = if null remaining then () else
               raise err "term_for_data_type" "unused selector values"
-            val value = Term.list_mk_comb (constructor, rev arguments)
+            (* Nested bitwords are already decoded to num or int. *)
+            val value = Term.list_mk_comb
+              (MFH.unarize_unbox_etc_term constructor,
+               map MFH.unarize_unbox_etc_term (rev arguments))
           in
             if co andalso Term.free_in cycle value then safe_the value
             else value
