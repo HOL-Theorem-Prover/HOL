@@ -34,11 +34,15 @@ repository.
   registered substrate (`Refute_Eval.substrate`) compiles plans into a
   `compiled_test` and runs it; `Refute_Cert` certifies candidates.
   `Refute.sml` is a thin facade over `Refute_Core` orchestration.
-- Trust model: substrates are untrusted accelerators.  A QC counterexample
-  becomes `Genuine` only after `Refute_Cert` re-evaluates the instantiated
-  proposition with computeLib and proves its negation.  No oracle tags.
-  The sole opt-out is `upd_certify false` (default `true`): QC hits are
-  then `Genuine` with `cert = NONE` and print as uncertified.
+- Trust model: QC certainty comes from the substrate's testing verdict;
+  certification is an independent, best-effort theorem audit.  With
+  `certify=true` (the default), `Refute_Cert` re-evaluates the instantiated
+  proposition with computeLib: proving it true discards the candidate,
+  proving it false attaches a theorem, and an inconclusive replay leaves the
+  substrate-derived certainty unchanged with `cert = NONE`.  With
+  `upd_certify false`, replay is skipped.  Candidates already known to be
+  stuck or incomplete during testing remain `Potential` in either mode.  No
+  oracle tags.
 - `certainty` and `cert` are independent axes: semantic strength vs. "a HOL
   theorem exists".  `Genuine` with `cert = NONE` is valid and expected.
 - SETTLED, do not revisit: Refute trusts Kodkodi exactly as Nitpick trusts
