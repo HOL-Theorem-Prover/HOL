@@ -323,9 +323,15 @@ val exp_size_alt_def = tDefine "exp_size_alt" `
   exp_size_alt (Op a0 a1 a2) = 1 + exp_sizes_alt a2 /\
   exp_sizes_alt [] = 0 /\
   exp_sizes_alt (x::xs) = exp_size_alt x + exp_sizes_alt xs`
- cheat
+ ALL_TAC
 
-val pre = cv_auto_trans_pre_rec "" exp_size_alt_def cheat;
+val pre =
+  cv_auto_trans_pre_rec "" exp_size_alt_def
+    (WF_REL_TAC ‘measure $ λx. case x of
+                               INL v => cv_size v
+                             | INR v => cv_size v’
+     \\ rw []
+     \\ cv_termination_tac);
 
 val can_raise_def = Define ` can_raise x = T `
 
