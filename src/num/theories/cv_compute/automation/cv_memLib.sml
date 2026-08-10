@@ -153,9 +153,18 @@ val (cv_from_to_thms, cv_from_to_add, cv_from_to_prune) =
                              insert_cv_from_to;
 
 (* For callers that delete constants/types from the current theory:
-   drop the theorem-set entries the deletion made stale. *)
+   drop the theorem-set entries the deletion made stale.  Gated on the
+   kernel's retire epoch, as in ThmSetData and AncestryData: an entry
+   goes out of date only when a constant or type operator it mentions
+   is retired, and every retirement stamps the epoch from a monotone
+   process-global counter, so an unchanged epoch means no entry can
+   have gone stale since the last sweep. *)
+val last_prune_epoch : int list ref = ref []
 fun prune_stale_entries () =
-  (cv_rep_prune (); cv_pre_prune (); cv_inline_prune ();
-   cv_from_to_prune ());
+  let val cur = [Type.type_epoch (), Term.term_epoch ()] in
+    if !last_prune_epoch = cur then ()
+    else (cv_rep_prune (); cv_pre_prune (); cv_inline_prune ();
+          cv_from_to_prune (); last_prune_epoch := cur)
+  end;
 
 end

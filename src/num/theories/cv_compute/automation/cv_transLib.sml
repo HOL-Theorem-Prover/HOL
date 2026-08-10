@@ -281,10 +281,7 @@ fun fix_missed_args th = let
   val s = map (fn (v,w) => v |-> mk_comb(from_for (type_of w),w)) zs
   in INST s th end
 
-fun lookup_ind_for_const hd_const =
-  case DefnBase.lookup_indn hd_const of
-    SOME (ind,_) => ind
-  | NONE => let
+fun fail_no_induction () = let
       val _ =
           cv_print Silent
           "\nERROR: failed to find a suitable induction theorem in DefnBase.\n"
@@ -295,19 +292,26 @@ fun lookup_ind_for_const hd_const =
 
 fun is_SOME (SOME _) = true | is_SOME _ = false;
 
+(* Shared by both paths of make_ind_thm below: the named-precondition
+   path (allow_pre is SOME) and the report-precondition fallback taken
+   when the precondition could not be proved.  The relation's name comes
+   from pre_def_tms, which the caller has already built. *)
+fun define_pre_relation defs pre_def_tms = let
+  val pre_def_tm = list_mk_conj pre_def_tms
+  val (pre_rules,pre_ind,pre_def) = Hol_reln [ANTIQUOTE pre_def_tm]
+  val pre_defs = pre_def |> CONJUNCTS
+  (* val pre_eq = hd pre_defs; val orig_def = hd defs *)
+  fun rename_pre_def orig_def pre_eq = let
+      val orig_args = orig_def |> concl |> lhs |> strip_comb |> snd
+      val renamed_pre_eq = pre_eq |> SPECL orig_args |> GENL orig_args
+    in renamed_pre_eq end
+    handle HOL_ERR _ => pre_eq
+  val renamed_pre_defs = map2 rename_pre_def defs pre_defs
+  in (pre_ind,LIST_CONJ renamed_pre_defs) end;
+
 fun make_ind_thm report_pre allow_pre hd_const defs pre_def_tms =
-  if is_SOME (allow_pre: string option) then let
-    val pre_def_tm = list_mk_conj pre_def_tms
-    val (pre_rules,pre_ind,pre_def) = Hol_reln [ANTIQUOTE pre_def_tm]
-    val pre_defs = pre_def |> CONJUNCTS
-    (* val pre_eq = hd pre_defs; val orig_def = hd defs *)
-    fun rename_pre_def orig_def pre_eq = let
-        val orig_args = orig_def |> concl |> lhs |> strip_comb |> snd
-        val renamed_pre_eq = pre_eq |> SPECL orig_args |> GENL orig_args
-      in renamed_pre_eq end
-      handle HOL_ERR _ => pre_eq
-    val renamed_pre_defs = map2 rename_pre_def defs pre_defs
-    in (pre_ind,LIST_CONJ renamed_pre_defs) end
+  if is_SOME (allow_pre: string option) then
+    define_pre_relation defs pre_def_tms
   else let
     fun process tm = let
       val (vs,x) = strip_forall tm
@@ -338,15 +342,15 @@ fun make_ind_thm report_pre allow_pre hd_const defs pre_def_tms =
         SOME th => (th,TRUTH)
       | NONE =>
         if report_pre then
-          make_ind_thm false (SOME "") hd_const defs pre_def_tms
-        else if not (is_SOME other_ind) then
-          (lookup_ind_for_const hd_const; failwith "unreachable")
+          define_pre_relation defs pre_def_tms
+        else if not (is_SOME other_ind) then fail_no_induction ()
         else let
-        val _ = cv_print Silent "\nERROR: failed to prove precondition.\n"
-        val _ = indent_print_term Silent "\n" "\n\n" ind_tm
-        val _ = cv_print Silent
-                "Stopping. Use cv_trans_pre instead (or one of its variants).\n"
-        in failwith "Could not prove a precondition." end
+          val _ = cv_print Silent "\nERROR: failed to prove precondition.\n"
+          val _ = indent_print_term Silent "\n" "\n\n" ind_tm
+          val _ = cv_print Silent
+                    "Stopping. Use cv_trans_pre instead (or one of its \
+                    \variants).\n"
+          in failwith "Could not prove a precondition." end
     end
 
 fun find_def_for const_tm =
@@ -729,10 +733,16 @@ datatype res = Res of thm | Needs of term;
 
 datatype task = Def of thm | Abbr of thm;
 
+(* Only the last (user-requested) definition may produce a precondition:
+   the results of the auxiliary translations are discarded by
+   cv_trans_loop, so an auxiliary allowed to report a precondition would
+   define <aux>_pre and store a guarded [cv_rep] theorem that no caller
+   ever hears about.  Hence both allow_pre and report_pre are dropped for
+   the non-final translations; do not forward them here. *)
 fun total_cv_trans report_pre allow_pre term_opt def is_last =
   (if is_last then (Res (cv_trans_any report_pre allow_pre term_opt def))
               else (Res (case cv_trans_simple_constant def of
-                      NONE => cv_trans_any report_pre NONE NONE def
+                      NONE => cv_trans_any false NONE NONE def
                     | SOME res => res)))
   handle NeedsTranslation (_, tm) => Needs tm;
 

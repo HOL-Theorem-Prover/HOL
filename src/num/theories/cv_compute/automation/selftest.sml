@@ -195,6 +195,25 @@ val legacy_auto_pre_hd_def = Define `
 val _ = expect_no_pre_residue cv_auto_trans legacy_auto_pre_hd_def
           "legacy_auto_pre_hd_pre" "cv_legacy_auto_pre_hd_thm";
 
+(* Reporting a precondition is only ever allowed for the definition the
+   user asked about.  cv_trans_loop discards the results of the auxiliary
+   translations it pulls in, so an auxiliary permitted to report one would
+   leave aux_hd_pre behind with nobody told about it.  The auxiliary must
+   fail loudly instead. *)
+val aux_hd_def = Define `
+  aux_hd (xs:num list) = HD xs
+`
+
+val uses_aux_hd_def = Define `
+  uses_aux_hd xs = aux_hd xs + 1:num
+`
+
+val _ = expect_no_pre_residue cv_auto_trans_opt_pre uses_aux_hd_def
+          "aux_hd_pre" "cv_aux_hd_thm";
+
+val _ = null (Term.decls "uses_aux_hd_pre") orelse
+        failwith "failed translation defined uses_aux_hd_pre";
+
 val risky_def = Define `
   risky n = if n = 0 then ARB else n+1:num
 `
@@ -420,3 +439,32 @@ val thy = fetch "-" "cv_str_fmap_test_thm"
             |> dest_thy_const |> #Thy;
 
 val _ = (thy = "cv_string_fmap") orelse fail();
+
+(*---------------------------------------------------------------------------*
+  prune_stale_entries is memoised on the kernel's retire epoch; a real
+  constant deletion must still make it drop the entries it invalidated.
+  Keep this last: it retires constants from the scratch theory.
+ *---------------------------------------------------------------------------*)
+
+val prune_gate_def = Define `
+  prune_gate_test (n:num) = n + 1
+`
+
+val () = cv_trans prune_gate_def;
+
+fun stale_cv_rep_entries () =
+  List.filter (not o Theory.uptodate_thm o snd) (cv_memLib.cv_rep_thms ());
+
+(* prime the memo, so the sweep below can only happen if the deletion
+   moves the epoch the gate reads *)
+val () = cv_memLib.prune_stale_entries ();
+val _ = null (stale_cv_rep_entries ()) orelse
+        failwith "prune_stale_entries left stale cv_rep entries";
+
+val () = Theory.delete_const "prune_gate_test";
+val _ = not (null (stale_cv_rep_entries ())) orelse
+        failwith "deleting prune_gate_test did not stale a cv_rep entry";
+
+val () = cv_memLib.prune_stale_entries ();
+val _ = null (stale_cv_rep_entries ()) orelse
+        failwith "prune_stale_entries skipped a needed sweep";
