@@ -1,6 +1,7 @@
 structure Refute_Cert_Model = struct
   open Refute_Cert
   structure Util = Refute_Util
+  structure MFH = Refute_ModelFinder_HOL
 
   datatype result =
       Certified of Thm.thm
@@ -53,7 +54,6 @@ structure Refute_Cert_Model = struct
   type candidate =
     {term : term,
      source : candidate_source,
-     cost : int,
      provenance : provenance option}
 
   type policy =
@@ -88,8 +88,6 @@ structure Refute_Cert_Model = struct
      induction_attempts : int,
      leaf_attempts : int,
      candidate_trace : (int * term * term) list,
-     generation_trace : (int * Type.hol_type * int) list,
-     backtracks : failure list,
      consumed_fuel : int,
      elapsed : Time.time,
      failure : failure option}
@@ -152,11 +150,6 @@ structure Refute_Cert_Model = struct
     "model replay [" ^ failure_kind_name kind ^ "] " ^ stage ^
     " at depth " ^ Int.toString depth ^ ": " ^ detail
 
-  fun error_text error =
-    let val message = General.exnMessage error
-    in if message = "" then "unknown proof failure" else message end
-    handle _ => "unknown proof failure"
-
   fun theorem_acceptable expected theorem =
     null (Thm.hyp theorem) andalso trusted theorem andalso
     (case expected of
@@ -212,9 +205,6 @@ structure Refute_Cert_Model = struct
       val generated_candidates = ref 0
       val function_states = ref 0
       val candidate_trace = ref ([] : (int * term * term) list)
-      val generation_trace = ref
-        ([] : (int * Type.hol_type * int) list)
-      val backtracks = ref ([] : failure list)
 
       fun failure kind stage depth detail =
         ReplayFailure
@@ -273,23 +263,30 @@ structure Refute_Cert_Model = struct
             "theorem has hypotheses, an unacceptable tag, or a wrong endpoint"
         end
 
-      fun optional_equality stage depth input operation =
-        let
-          val _ = charge stage depth
-          val theorem = within_deadline stage depth operation input
-        in
-          if theorem_acceptable
-               (SOME (boolSyntax.mk_eq (input, rhs_of theorem))) theorem
-          then SOME theorem
-          else NONE
-        end
+      fun resource_failure ({kind, ...} : failure) =
+        kind = DeadlineExhausted orelse kind = FuelExhausted
+
+      (* A speculative proof step reports its own failure as NONE, but a
+         spent budget belongs to the whole replay and keeps propagating. *)
+      fun optional attempt =
+        attempt ()
         handle Interrupt => raise Interrupt
              | ReplayFailure issue =>
-                 if #kind issue = DeadlineExhausted orelse
-                    #kind issue = FuelExhausted then
-                   raise ReplayFailure issue
+                 if resource_failure issue then raise ReplayFailure issue
                  else NONE
              | _ => NONE
+
+      fun optional_equality stage depth input operation =
+        optional (fn () =>
+          let
+            val _ = charge stage depth
+            val theorem = within_deadline stage depth operation input
+          in
+            if theorem_acceptable
+                 (SOME (boolSyntax.mk_eq (input, rhs_of theorem))) theorem
+            then SOME theorem
+            else NONE
+          end)
 
       fun beta depth tm =
         optional_equality "leaf beta/let normalization" depth tm
@@ -327,8 +324,7 @@ structure Refute_Cert_Model = struct
       fun equality_portfolio depth tm =
         let
           val seen = ref ([] : term list)
-          fun repeated candidate =
-            List.exists (fn old => Term.aconv old candidate) (!seen)
+          fun repeated candidate = Util.aconv_member candidate (!seen)
           fun one conversion theorem =
             case conversion depth (rhs_of theorem) of
                 NONE => theorem
@@ -363,22 +359,16 @@ structure Refute_Cert_Model = struct
         end
 
       fun prove_by_conversion stage depth conversion goal =
-        let
-          val _ = charge stage depth
-          val equality = within_deadline stage depth conversion goal
-          val equality = require_theorem stage depth
-            (SOME (boolSyntax.mk_eq (goal, boolSyntax.T))) equality
-          val theorem = Drule.EQT_ELIM equality
-        in
-          SOME (require_theorem stage depth (SOME goal) theorem)
-        end
-        handle Interrupt => raise Interrupt
-             | ReplayFailure issue =>
-                 if #kind issue = DeadlineExhausted orelse
-                    #kind issue = FuelExhausted then
-                   raise ReplayFailure issue
-                 else NONE
-             | _ => NONE
+        optional (fn () =>
+          let
+            val _ = charge stage depth
+            val equality = within_deadline stage depth conversion goal
+            val equality = require_theorem stage depth
+              (SOME (boolSyntax.mk_eq (goal, boolSyntax.T))) equality
+            val theorem = Drule.EQT_ELIM equality
+          in
+            SOME (require_theorem stage depth (SOME goal) theorem)
+          end)
 
       fun direct_leaf depth formula =
         let
@@ -461,37 +451,28 @@ structure Refute_Cert_Model = struct
               (normalized, rhs_of prenex_equality))) prenex_equality
           val pnf = rhs_of prenex_equality
 
-          fun strip tm =
-            if boolSyntax.is_forall tm then
-              strip (#2 (boolSyntax.dest_forall tm))
-            else if boolSyntax.is_exists tm then
-              strip (#2 (boolSyntax.dest_exists tm))
-            else tm
           fun quantified tm =
             boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
-          val matrix = strip pnf
+          fun quantifier_free tm =
+            not (Lib.can (HolKernel.find_term quantified) tm)
+          val matrix = #2 (Refute_Narrow.strip_quantifiers pnf)
           val _ =
-            if null (HolKernel.find_terms quantified matrix) then ()
+            if quantifier_free matrix then ()
             else fail MalformedInput "prenex conversion" 0
               "a quantifier remains outside the prenex prefix"
 
-          fun add_term_unique (candidate, accumulated) =
-            if List.exists (fn old =>
-                 Term.aconv old candidate) accumulated then
-              accumulated
-            else accumulated @ [candidate]
-
-          val binding_pool = List.foldl add_term_unique [] (map #2 env)
+          val binding_pool = Util.distinct_terms (map #2 env)
           fun add_hint_unique
                 (hint as {term, ...} : replay_hint, accumulated) =
             if List.exists (fn ({term = old, ...} : replay_hint) =>
                  Term.aconv old term) accumulated then accumulated
-            else accumulated @ [hint]
-          val hint_pool = List.foldl add_hint_unique [] hints
+            else hint :: accumulated
+          val hint_pool = rev (List.foldl add_hint_unique [] hints)
           val hint_pool_terms = map #term hint_pool
-          val base_avoids = List.concat
+          val pool_base = binding_pool @ hint_pool_terms
+          val base_avoids = Util.distinct_terms (List.concat
             (map Term.all_vars
-              (original :: map #1 env @ map #2 env @ hint_terms))
+              (original :: map #1 env @ map #2 env @ hint_terms)))
 
           type split_row = term * int
           type origin_row = term * int option
@@ -499,20 +480,21 @@ structure Refute_Cert_Model = struct
             {active : term list,
              active_origins : origin_row list,
              next_origin : int,
-             split_depths : split_row list,
-             induction_history : Type.hol_type list}
+             split_depths : split_row list}
 
           type failed_state =
             {formula : term,
              active_types : Type.hol_type list,
              split_depths : int list,
              cases_allowed : bool,
-             induction_allowed : bool,
-             induction_history : Type.hol_type list}
+             induction_allowed : bool}
 
+          (* Keyed on the abstracted formula alone: Term.compare is the
+             alpha-equivalence order that same_state's own aconv test uses,
+             so states that same_state identifies always share a bucket. *)
           val failed = ref
-            (Redblackmap.mkDict String.compare :
-              (string, failed_state list) Redblackmap.dict)
+            (Redblackmap.mkDict Term.compare :
+              (term, failed_state list) Redblackmap.dict)
 
           fun abstract active tm = Term.list_mk_abs (active, tm)
           fun same_types (left, right) =
@@ -520,50 +502,50 @@ structure Refute_Cert_Model = struct
             ListPair.allEq (fn (a, b) => Util.same_type a b)
               (left, right)
           fun depth_of rows variable =
-            case List.find (fn (old, _) =>
-              Term.aconv old variable) rows of
-                SOME (_, depth) => depth
-              | NONE => 0
+            Option.getOpt (Lib.op_assoc1 Term.aconv variable rows, 0)
           fun state formula
-                ({active, split_depths, induction_history, ...} :
-                  replay_context) : failed_state =
+                ({active, split_depths, ...} : replay_context)
+                : failed_state =
             {formula = abstract active formula,
              active_types = map Term.type_of active,
              split_depths = map (depth_of split_depths) active,
              cases_allowed = #enable_cases policy,
-             induction_allowed = #enable_induction policy,
-             induction_history = induction_history}
+             induction_allowed = #enable_induction policy}
           fun same_state (left : failed_state) (right : failed_state) =
             Term.aconv (#formula left) (#formula right) andalso
             same_types (#active_types left, #active_types right) andalso
             #split_depths left = #split_depths right andalso
             #cases_allowed left = #cases_allowed right andalso
-            #induction_allowed left = #induction_allowed right andalso
-            same_types
-              (#induction_history left, #induction_history right)
-          fun fingerprint (current : failed_state) =
-            Parse.term_to_string (#formula current) ^ ":" ^
-            String.concatWith "," (map Int.toString
-              (#split_depths current)) ^ ":" ^
-            Bool.toString (#cases_allowed current) ^ ":" ^
-            Bool.toString (#induction_allowed current)
+            #induction_allowed left = #induction_allowed right
           fun bucket current =
             Option.getOpt
-              (Redblackmap.peek (!failed, fingerprint current), [])
+              (Redblackmap.peek (!failed, #formula current), [])
           fun seen current =
             List.exists (fn old => same_state old current) (bucket current)
           fun remember current =
-            if seen current then ()
-            else failed := Redblackmap.insert
-              (!failed, fingerprint current, current :: bucket current)
+            let val existing = bucket current
+            in
+              if List.exists (fn old => same_state old current) existing then
+                ()
+              else failed := Redblackmap.insert
+                (!failed, #formula current, current :: existing)
+            end
 
           fun no_proof stage depth detail =
             fail NoProof stage depth detail
 
           fun is_no_proof ({kind, ...} : failure) = kind = NoProof
 
-          fun constructor_info ty =
-            if Refute_ModelFinder_HOL.is_codatatype ty then NONE
+          (* is_codatatype walks the theory ancestry and cinst rebuilds
+             every constructor, but a replay revisits the same handful of
+             types on every node, so the resolution is memoized. *)
+          val constructor_cache = ref
+            (Redblackmap.mkDict Type.compare :
+              (Type.hol_type,
+               (TypeBasePure.tyinfo * term list) option) Redblackmap.dict)
+
+          fun resolve_constructors ty =
+            if MFH.is_codatatype ty then NONE
             else
               case TypeBase.fetch ty of
                   NONE => NONE
@@ -574,6 +556,17 @@ structure Refute_Cert_Model = struct
                        else SOME (info, constructors)
                     end
             handle Feedback.HOL_ERR _ => NONE
+
+          fun constructor_info ty =
+            case Redblackmap.peek (!constructor_cache, ty) of
+                SOME resolved => resolved
+              | NONE =>
+                  let val resolved = resolve_constructors ty
+                  in
+                    constructor_cache :=
+                      Redblackmap.insert (!constructor_cache, ty, resolved);
+                    resolved
+                  end
 
           fun candidate_size tm =
             let fun size candidate =
@@ -598,10 +591,9 @@ structure Refute_Cert_Model = struct
             | bump_source SynthesizedConstructor =
                 constructor_terms := !constructor_terms + 1
 
-          fun emit_candidate depth seen_terms attempt
+          fun emit_candidate seen_terms attempt
                 (entry as {term, source, ...} : candidate) =
-            if List.exists (fn old => Term.aconv old term) (!seen_terms) then
-              ()
+            if HOLset.member (!seen_terms, term) then ()
             else if !generated_candidates >=
                     #max_generated_candidates policy then
               ()
@@ -609,7 +601,7 @@ structure Refute_Cert_Model = struct
               let
                 val _ = generated_candidates := !generated_candidates + 1
                 val _ = bump_source source
-                val _ = seen_terms := term :: !seen_terms
+                val _ = seen_terms := HOLset.add (!seen_terms, term)
               in
                 attempt entry
               end
@@ -617,19 +609,22 @@ structure Refute_Cert_Model = struct
           fun pool_terms target active =
             List.filter (fn candidate =>
               Util.same_type target (Term.type_of candidate))
-              (binding_pool @ hint_pool_terms @ active)
+              (pool_base @ active)
 
           fun synth_values target active max_depth =
             let
-              val values = ref (pool_terms target active)
+              (* Held in reverse and reversed on exit: emission order
+                 decides which witness is tried first. *)
+              val values = ref (rev (pool_terms target active))
+              val count = ref (length (!values))
               val width = #max_constructor_width policy
 
               fun add value =
-                if length (!values) >= width orelse
+                if !count >= width orelse
                    candidate_size value > #max_constructor_size policy orelse
-                   List.exists (fn old => Term.aconv old value) (!values)
+                   Util.aconv_member value (!values)
                 then ()
-                else values := !values @ [value]
+                else (values := value :: !values; count := !count + 1)
 
               fun build depth =
                     (case constructor_info target of
@@ -638,9 +633,8 @@ structure Refute_Cert_Model = struct
                            let
                              fun one constructor =
                                let
-                                 val (argument_types, _) =
-                                   boolSyntax.strip_fun
-                                     (Term.type_of constructor)
+                                 val argument_types =
+                                   MFH.constructor_arg_types constructor
                                  val choices =
                                    if depth <= 0 andalso
                                       not (null argument_types) then []
@@ -666,17 +660,16 @@ structure Refute_Cert_Model = struct
                            end)
             in
               build max_depth;
-              !values
+              rev (!values)
             end
 
           fun generate_candidates depth target target_origin active
                 active_origins attempt =
             let
-              val seen_terms = ref ([] : term list)
-              fun emit entry = emit_candidate depth seen_terms attempt entry
-              fun emit_terms source cost terms = List.app (fn term => emit
-                {term = term, source = source, cost = cost,
-                 provenance = NONE}) terms
+              val seen_terms = ref (HOLset.empty Term.compare)
+              fun emit entry = emit_candidate seen_terms attempt entry
+              fun emit_terms source terms = List.app (fn term => emit
+                {term = term, source = source, provenance = NONE}) terms
 
               val direct_bindings = List.filter (fn term =>
                 Util.same_type target (Term.type_of term)) binding_pool
@@ -689,19 +682,14 @@ structure Refute_Cert_Model = struct
               val direct_generic = matching_hints DirectHint
               val direct_active = List.filter (fn term =>
                 Util.same_type target (Term.type_of term)) active
-              val _ = generation_trace :=
-                (depth, target,
-                 length direct_bindings + length direct_skolems +
-                 length direct_types + length direct_generic +
-                 length direct_active) :: !generation_trace
 
-              fun emit_hint candidate_source cost
+              fun emit_hint candidate_source
                     ({term, provenance, ...} : replay_hint) =
                 emit {term = term, source = candidate_source,
-                  cost = cost, provenance = provenance}
+                  provenance = provenance}
 
-              fun application_walk base current [] = ()
-                | application_walk base current (variable :: rest) =
+              fun application_walk current [] = ()
+                | application_walk current (variable :: rest) =
                     if !function_states >= #max_function_states policy then ()
                     else
                       (case Lib.total Type.dom_rng
@@ -723,17 +711,15 @@ structure Refute_Cert_Model = struct
                                      emit
                                        {term = applied,
                                         source = FunctionApplication,
-                                        cost = 2,
                                         provenance = NONE}
                                    else ()
                                in
-                                 application_walk base applied rest;
-                                 application_walk base current rest
+                                 application_walk applied rest;
+                                 application_walk current rest
                                end
-                             else application_walk base current rest)
+                             else application_walk current rest)
 
-              fun applications_of base =
-                application_walk base base active
+              fun applications_of base = application_walk base active
 
               fun exact_dependency_arguments dependencies =
                 let
@@ -770,7 +756,6 @@ structure Refute_Cert_Model = struct
                                     emit
                                       {term = applied,
                                        source = FunctionApplication,
-                                       cost = 1,
                                        provenance = SOME metadata}
                                   else ()
                               | NONE => ()))
@@ -780,32 +765,29 @@ structure Refute_Cert_Model = struct
                 if not (#enable_synthesis policy) then ()
                 else
                   let
+                    val known = pool_base @ active
                     val generated = synth_values target active
                       (#max_constructor_depth policy)
                     val new = List.filter (fn term =>
-                      not (List.exists (fn old => Term.aconv old term)
-                        (binding_pool @ hint_pool_terms @ active))) generated
+                      not (Util.aconv_member term known)) generated
                   in
-                    emit_terms SynthesizedConstructor 3 new
+                    emit_terms SynthesizedConstructor new
                   end
             in
-              List.app (emit_hint ReconstructedSkolem 0)
+              List.app (emit_hint ReconstructedSkolem)
                 (List.filter (fn
                   ({provenance = SOME metadata, ...} : replay_hint) =>
                     #origin metadata = target_origin
                   | _ => false) direct_skolems);
-              emit_terms OrdinaryBinding 0 direct_bindings;
-              List.app (emit_hint ReconstructedSkolem 1) direct_skolems;
-              List.app (emit_hint ReconstructedTypeValue 0) direct_types;
-              List.app (emit_hint GenericHint 0) direct_generic;
-              emit_terms ActiveVariable 1 direct_active;
+              emit_terms OrdinaryBinding direct_bindings;
+              List.app (emit_hint ReconstructedSkolem) direct_skolems;
+              List.app (emit_hint ReconstructedTypeValue) direct_types;
+              List.app (emit_hint GenericHint) direct_generic;
+              emit_terms ActiveVariable direct_active;
               List.app provenance_application hint_pool;
-              List.app applications_of (binding_pool @ hint_pool_terms);
+              List.app applications_of pool_base;
               synthesized ()
             end
-
-          fun quantifier_free tm =
-            null (HolKernel.find_terms quantified tm)
 
           fun contains_type target ty =
             Util.same_type target ty orelse
@@ -816,9 +798,8 @@ structure Refute_Cert_Model = struct
 
           fun regular_recursive_type ty constructors =
             let
-              fun arguments constructor =
-                #1 (boolSyntax.strip_fun (Term.type_of constructor))
-              val all_arguments = List.concat (map arguments constructors)
+              val all_arguments =
+                List.concat (map MFH.constructor_arg_types constructors)
               val direct = List.exists (Util.same_type ty) all_arguments
               val nested = List.exists (fn argument =>
                 not (Util.same_type ty argument) andalso
@@ -907,9 +888,7 @@ structure Refute_Cert_Model = struct
                             {active = #active context,
                              active_origins = #active_origins context,
                              next_origin = #next_origin context + 1,
-                             split_depths = #split_depths context,
-                             induction_history =
-                               #induction_history context}
+                             split_depths = #split_depths context}
                           val refutation =
                             prove_neg instance next (depth + 1)
                           val assumed = Thm.ASSUME formula
@@ -926,8 +905,7 @@ structure Refute_Cert_Model = struct
                           raise CandidateSuccess theorem
                         end
                         handle ReplayFailure issue =>
-                          if is_no_proof issue then
-                            backtracks := issue :: !backtracks
+                          if is_no_proof issue then ()
                           else raise ReplayFailure issue
                   in
                     (generate_candidates depth target (#next_origin context)
@@ -950,8 +928,7 @@ structure Refute_Cert_Model = struct
                          [(arbitrary, SOME (#next_origin context))],
                        next_origin = #next_origin context + 1,
                        split_depths = #split_depths context @
-                         [(arbitrary, 0)],
-                       induction_history = #induction_history context}
+                         [(arbitrary, 0)]}
                     val refutation = prove_neg instance next (depth + 1)
                     val generalized = Thm.GEN arbitrary refutation
                     val conversion = Conv.CONV_RULE
@@ -997,8 +974,7 @@ structure Refute_Cert_Model = struct
                   val branch_count = length constructors
                   val argument_count = List.foldl
                     (fn (constructor, total) =>
-                      length (#1 (boolSyntax.strip_fun
-                        (Term.type_of constructor))) + total)
+                      length (MFH.constructor_arg_types constructor) + total)
                     0 constructors
                   val _ =
                     if !case_branches + branch_count <=
@@ -1019,23 +995,18 @@ structure Refute_Cert_Model = struct
                       val positive = boolSyntax.dest_neg goal
                       val frees = Term.free_vars_lr positive
                       fun old_depth candidate =
-                        case List.find (fn old =>
-                          Term.aconv old candidate) (#active context) of
-                            SOME old =>
-                              depth_of (#split_depths context) old
-                          | NONE => variable_depth + 1
+                        if Util.aconv_member candidate (#active context) then
+                          depth_of (#split_depths context) candidate
+                        else variable_depth + 1
                       val next : replay_context =
                         {active = frees,
                          active_origins = map (fn free =>
-                           case List.find (fn (old, _) =>
-                             Term.aconv old free)
-                               (#active_origins context) of
-                               SOME row => row
-                             | NONE => (free, NONE)) frees,
+                           (free,
+                            Option.join (Lib.op_assoc1 Term.aconv free
+                              (#active_origins context)))) frees,
                          next_origin = #next_origin context,
                          split_depths = map (fn free =>
-                           (free, old_depth free)) frees,
-                         induction_history = #induction_history context}
+                           (free, old_depth free)) frees}
                       val theorem = prove_neg positive next (depth + 1)
                     in
                       Tactic.ACCEPT_TAC theorem (assumptions, goal)
@@ -1115,18 +1086,14 @@ structure Refute_Cert_Model = struct
               fun try_inductions [] = no_proof "structural induction" depth
                     "no admitted induction closed every constructor premise"
                 | try_inductions (variable :: rest) =
-                    if List.exists (Util.same_type (Term.type_of variable))
-                         (#induction_history context) orelse
-                       not (Term.free_in variable formula) orelse
+                    if not (Term.free_in variable formula) orelse
                        not (Option.isSome
                          (constructor_info (Term.type_of variable))) then
                       try_inductions rest
                     else
                       (induction variable
                        handle ReplayFailure issue =>
-                         if is_no_proof issue then
-                           (backtracks := issue :: !backtracks;
-                            try_inductions rest)
+                         if is_no_proof issue then try_inductions rest
                          else raise ReplayFailure issue)
 
               fun strategies () =
@@ -1155,7 +1122,7 @@ structure Refute_Cert_Model = struct
 
           val initial_context : replay_context =
             {active = [], active_origins = [], next_origin = 0,
-             split_depths = [], induction_history = []}
+             split_depths = []}
           val replayed = prove_neg pnf initial_context 0
           val prenex_negated_equality =
             Thm.AP_TERM boolSyntax.negation prenex_equality
@@ -1188,8 +1155,6 @@ structure Refute_Cert_Model = struct
          induction_attempts = !induction_attempts,
          leaf_attempts = !leaf_attempts,
          candidate_trace = rev (!candidate_trace),
-         generation_trace = rev (!generation_trace),
-         backtracks = rev (!backtracks),
          consumed_fuel = #total_fuel policy - !remaining,
          elapsed = Time.- (Time.now (), start),
          failure = issue}
@@ -1209,7 +1174,7 @@ structure Refute_Cert_Model = struct
                     {kind = InternalFailure,
                      stage = "public boundary",
                      depth = 0,
-                     detail = error_text error}
+                     detail = replay_error_text error}
                   in
                     reported_failure := SOME issue;
                     NoCertificate (render_failure issue)
@@ -1226,15 +1191,7 @@ structure Refute_Cert_Model = struct
       {original = original, env = env, hints = map direct_hint hints,
        policy = policy, deadline = deadline}
 
-  fun certify_rich_with_policy arguments =
-    #1 (certify_detailed_rich arguments)
-
   fun certify_with_policy arguments = #1 (certify_detailed arguments)
-
-  fun certify_rich {original, env, hints, fuel, deadline} =
-    certify_rich_with_policy
-      {original = original, env = env, hints = hints,
-       policy = default_policy fuel, deadline = deadline}
 
   fun certify {original, env, hints, fuel, deadline} =
     certify_with_policy

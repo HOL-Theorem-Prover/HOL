@@ -12,6 +12,13 @@ structure Refute_Cert = struct
 
   val rhs_of = boolSyntax.rhs o Thm.concl
 
+  (* Shared by the narrowing and model replay engines: an exception raised
+     inside a replay step is reported by message, never propagated. *)
+  fun replay_error_text error =
+    let val message = General.exnMessage error
+    in if message = "" then "unknown proof failure" else message end
+    handle _ => "unknown proof failure"
+
   (* Disk theorems are checked kernel imports: DISK_THM is the marker HOL4
      itself accepts, subtracting it in Theory.oracle_string_of and listing
      it in Sanity.accepted_oracles.  Every other oracle, and every axiom

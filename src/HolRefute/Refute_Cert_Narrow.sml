@@ -8,11 +8,6 @@ structure Refute_Cert_Narrow = struct
         ["existential narrowing case-tree replay failed: " ^ detail])
       [] NONE)
 
-  fun replay_error_text error =
-    let val message = General.exnMessage error
-    in if message = "" then "unknown proof failure" else message end
-    handle _ => "unknown proof failure"
-
   (* Replay never infers exhaustiveness from a successful simplification.
      Every existential node's frozen shape and pattern cover are checked
      exactly.  Universal nodes need only one well-typed witness, so their

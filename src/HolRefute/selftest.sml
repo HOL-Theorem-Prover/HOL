@@ -21212,12 +21212,9 @@ val _ = require_msg (check_result upgrade_from_stuck_path) (fn () =>
   (fn () => ()) ()
 
 fun certificate_audit original theorem =
-  let val (_, closure, _) = Refute_Cert.closure_of original
-  in
-    null (Thm.hyp theorem) andalso
-    Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg closure) andalso
-    certificate_tag_clean theorem
-  end
+  null (Thm.hyp theorem) andalso
+  certifies_negated_closure original theorem andalso
+  certificate_tag_clean theorem
 
 fun model_replay_certifies original env hints fuel =
   case Refute_Cert_Model.certify
@@ -21238,24 +21235,27 @@ val replay_predicate = ``p : num -> bool``
 val replay_quantified = ``(?x : num. p x) ==> !x. p x``
 val replay_predicate_env = [(replay_predicate, ``{31} : num set``)]
 
+(* Hints alone: no case split, induction or synthesis, so a certificate
+   can only come from a supplied witness.  [decisions] enables both leaf
+   decision procedures together. *)
+fun bare_replay_policy decisions =
+  Refute_Cert_Model.policy_for_test
+    {fuel = 1000, cases = false, induction = false,
+     synthesis = false, taut = decisions, omega = decisions,
+     split_depth = 0, branches = 0,
+     constructor_depth = 0, constructor_width = 0}
+
 fun quantified_model_replay_is_certified () =
   model_replay_certifies replay_quantified replay_predicate_env
     [``31 : num``, ``30 : num``] 1000
 
 fun quantified_model_replay_requires_counterwitness () =
-  let
-    val policy = Refute_Cert_Model.policy_for_test
-      {fuel = 1000, cases = false, induction = false,
-       synthesis = false, taut = true, omega = true,
-       split_depth = 0, branches = 0,
-       constructor_depth = 0, constructor_width = 0}
-  in
-    case Refute_Cert_Model.certify_with_policy
-      {original = replay_quantified, env = replay_predicate_env,
-       hints = [``31 : num``], policy = policy, deadline = NONE} of
-        Refute_Cert_Model.NoCertificate _ => true
-      | _ => false
-  end
+  case Refute_Cert_Model.certify_with_policy
+    {original = replay_quantified, env = replay_predicate_env,
+     hints = [``31 : num``], policy = bare_replay_policy true,
+     deadline = NONE} of
+      Refute_Cert_Model.NoCertificate _ => true
+    | _ => false
 
 fun quantified_model_replay_backtracks () =
   model_replay_certifies replay_quantified replay_predicate_env
@@ -21267,11 +21267,7 @@ fun quantified_model_replay_applies_dependent_hint () =
 
 fun quantified_model_replay_hints_fail_closed () =
   let
-    val policy = Refute_Cert_Model.policy_for_test
-      {fuel = 1000, cases = false, induction = false,
-       synthesis = false, taut = true, omega = true,
-       split_depth = 0, branches = 0,
-       constructor_depth = 0, constructor_width = 0}
+    val policy = bare_replay_policy true
     fun fails hints =
       case Refute_Cert_Model.certify_with_policy
         {original = replay_quantified, env = replay_predicate_env,
@@ -21285,19 +21281,12 @@ fun quantified_model_replay_hints_fail_closed () =
   end
 
 fun quantified_model_replay_does_not_assume_bounded_model () =
-  let
-    val policy = Refute_Cert_Model.policy_for_test
-      {fuel = 1000, cases = false, induction = false,
-       synthesis = false, taut = false, omega = false,
-       split_depth = 0, branches = 0,
-       constructor_depth = 0, constructor_width = 0}
-  in
-    case Refute_Cert_Model.certify_with_policy
-      {original = ``?f : num -> bool. f = (\x. ~f x)``,
-       env = [], hints = [], policy = policy, deadline = NONE} of
-        Refute_Cert_Model.NoCertificate _ => true
-      | _ => false
-  end
+  case Refute_Cert_Model.certify_with_policy
+    {original = ``?f : num -> bool. f = (\x. ~f x)``,
+     env = [], hints = [], policy = bare_replay_policy false,
+     deadline = NONE} of
+      Refute_Cert_Model.NoCertificate _ => true
+    | _ => false
 
 fun quantified_model_replay_fuel_is_bounded () =
   model_replay_fails replay_quantified replay_predicate_env

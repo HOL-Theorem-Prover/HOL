@@ -1913,39 +1913,12 @@ fun rf_constructor card serial =
     {Thy = "refute", Name = "rf" ^ Int.toString card ^ "_" ^
        Int.toString serial}
 
-fun take_up_to count values =
-  let
-    fun take 0 _ accumulated = rev accumulated
-      | take _ [] accumulated = rev accumulated
-      | take remaining (value :: rest) accumulated =
-          take (remaining - 1) rest (value :: accumulated)
-  in
-    if count <= 0 then [] else take count values []
-  end
-
-fun take_type_values count types =
-  let
-    fun take_row 0 _ accumulated = (0, accumulated)
-      | take_row remaining [] accumulated = (remaining, accumulated)
-      | take_row remaining (value :: rest) accumulated =
-          take_row (remaining - 1) rest (value :: accumulated)
-    fun take_types _ [] accumulated = rev accumulated
-      | take_types 0 _ accumulated = rev accumulated
-      | take_types remaining ((_, values, _) :: rest) accumulated =
-          let val (remaining, accumulated) =
-            take_row remaining values accumulated
-          in
-            take_types remaining rest accumulated
-          end
-  in
-    if count <= 0 then [] else take_types count types []
-  end
-
 fun certification_hint_inputs types replay_hints =
   let
     val limit = Refute_Cert_Model.replay_candidate_limit
-    val replay_hints = take_up_to limit replay_hints
-    val type_values = take_type_values (limit - length replay_hints) types
+    val replay_hints = MFS.take_at_most limit replay_hints
+    val type_values = MFS.take_at_most (limit - length replay_hints)
+      (List.concat (map #2 types))
   in
     (replay_hints, type_values)
   end
@@ -2007,7 +1980,7 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
              nickname = nickname,
              stage = stage}
       | copy_provenance _ NONE = NONE
-    fun finish copied_original copied_evals env copy copy_type polymorphic =
+    fun finish copied_original copied_evals env copy copy_type =
       let
         val initial = map #2 env
         val copied_hints = List.mapPartial (fn
@@ -2026,7 +1999,7 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
            source = Refute_Cert_Model.TypeValue,
            provenance = NONE}) (optional_values copy type_values)
         fun already_seen term accumulated =
-          List.exists (fn old => Term.aconv old term) initial orelse
+          Util.aconv_member term initial orelse
           List.exists (fn
             ({term = old, ...} : Refute_Cert_Model.replay_hint) =>
               Term.aconv old term) accumulated
@@ -2040,13 +2013,13 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
       in
         SOME
           {original = copied_original, eval_terms = copied_evals,
-           env = env, hints = hints, polymorphic = polymorphic}
+           env = env, hints = hints}
       end
   in
     if null tyvars then
       (case certification_env bindings of
            SOME env => finish original eval_terms env replace_irrelevant
-             (fn ty => ty) false
+             (fn ty => ty)
          | NONE => NONE)
     else
       case collect tyvars of
@@ -2109,7 +2082,7 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
                       if List.all (null o Term.free_vars_lr o #2) env then
                         finish (Term.inst theta original)
                           (map (Term.inst theta) eval_terms) env copy_value
-                          (Type.type_subst theta) true
+                          (Type.type_subst theta)
                       else
                         NONE
                     end
@@ -2156,7 +2129,7 @@ fun certify {executable, original, eval_terms,
          else NONE of
         NONE => Keep base
       | SOME {original = cert_original, eval_terms = cert_evals,
-              env, hints, polymorphic = _} =>
+              env, hints} =>
           let
             val (replay, replay_diagnostics) =
               Refute_Cert_Model.certify_detailed_rich
