@@ -4361,6 +4361,16 @@ structure MFP = Refute_ModelFinder_Preproc
 fun fresh_mf_context () =
   MFH.make_context Refute_Core.default_mf_config []
 
+fun install_prefix_origins context original =
+  let
+    val (_, closure, _) = Refute_Cert.closure_of original
+    fun step conversion tm =
+      conversion tm handle Conv.UNCHANGED => Thm.REFL tm
+    val (_, _, pnf) = Refute_Cert.normalize_to_pnf step closure
+  in
+    #prefix_origins context := Refute_Skolem.prefix_binders pnf
+  end
+
 fun mf_codatatype_bisim_axiom_goldens () =
   let
     val ty = ``:num llist``
@@ -5345,10 +5355,11 @@ fun mf_skolem_matches
 
 fun mf_preproc_skolem_golden () =
   let
-    val context = fresh_mf_context ()
     val input =
       ``!a b c : num. ?x : num. !d : num. ?y : num.
           x = a + b + c /\ y = d``
+    val context = fresh_mf_context ()
+    val _ = install_prefix_origins context input
     val skolem = MFN.mk_skolem 3 1 "x"
       ``:num -> num -> num -> num``
     val expected =
@@ -5359,6 +5370,7 @@ fun mf_preproc_skolem_golden () =
     val actual = MFP.skolemize_term_and_more context 3 input
     val metadata = !(#skolems context)
     val pipeline_context = fresh_mf_context ()
+    val _ = install_prefix_origins pipeline_context input
     val (pipeline_terms, pipeline_defs, pipeline_needs,
          pipeline_all_mono, pipeline_no_poly, pipeline_binarize) =
       MFP.preprocess_formulas pipeline_context [] input
@@ -5385,6 +5397,7 @@ fun mf_preproc_skolem_golden () =
     val smart_result = MFP.skolemize_term_and_more smart_context 3
       ``(?w : num. T) /\ p``
     val negative_context = fresh_mf_context ()
+    val _ = install_prefix_origins negative_context ``!x : num. p x``
     val negative_skolem = MFN.mk_skolem 0 1 "x" ``:num``
     val negative_result = MFP.skolemize_term_and_more negative_context 3
       ``~(!x : num. p x)``
@@ -5395,11 +5408,13 @@ fun mf_preproc_skolem_golden () =
     val shadowed_context = fresh_mf_context ()
     val shadowed_input =
       ``!x : num. p x /\ !x : num. ?y : num. r x y``
+    val _ = install_prefix_origins shadowed_context shadowed_input
     val shadowed_result =
       MFP.skolemize_term_and_more shadowed_context 3 shadowed_input
     val distinct_context = fresh_mf_context ()
     val distinct_input =
       ``!a : num. p a /\ !b : num. ?y : num. r b y``
+    val _ = install_prefix_origins distinct_context distinct_input
     val distinct_result =
       MFP.skolemize_term_and_more distinct_context 3 distinct_input
     val collected_context = fresh_mf_context ()
@@ -5408,7 +5423,7 @@ fun mf_preproc_skolem_golden () =
   in
     Term.aconv actual expected andalso
     List.exists (mf_skolem_matches
-      (3, "refute$sk3@1$x", "x", ``:num``,
+      (SOME 3, "refute$sk3@1$x", "x", ``:num``,
        [(0, ``:num``), (1, ``:num``), (2, ``:num``)], 3)) metadata andalso
     length metadata = 1 andalso
     ListPair.allEq (fn (result, golden) => Term.aconv result golden)
@@ -5417,7 +5432,7 @@ fun mf_preproc_skolem_golden () =
     pipeline_all_mono andalso pipeline_no_poly andalso
     not pipeline_binarize andalso
     List.exists (mf_skolem_matches
-      (3, "refute$sk3@1$x", "x", ``:num``,
+      (SOME 3, "refute$sk3@1$x", "x", ``:num``,
        [(0, ``:num``), (1, ``:num``), (2, ``:num``)], 3))
       (!(#skolems pipeline_context)) andalso
     length (!(#skolems pipeline_context)) = 1 andalso
@@ -5430,7 +5445,7 @@ fun mf_preproc_skolem_golden () =
       (boolSyntax.mk_neg (Term.mk_comb (``p : num -> bool``,
         negative_skolem))) andalso
     List.exists (mf_skolem_matches
-      (0, "refute$sk0@1$x", "x", ``:num``, [], 0))
+      (SOME 0, "refute$sk0@1$x", "x", ``:num``, [], 0))
       (!(#skolems negative_context)) andalso
     length (!(#skolems negative_context)) = 1 andalso
     Term.aconv neutral_result neutral_input andalso
@@ -5438,8 +5453,7 @@ fun mf_preproc_skolem_golden () =
     Term.aconv shadowed_input distinct_input andalso
     Term.aconv shadowed_result distinct_result andalso
     List.exists (mf_skolem_matches
-      (2, "refute$sk2@1$y", "y", ``:num``,
-       [(0, ``:num``), (1, ``:num``)], 2))
+      (NONE, "refute$sk2@1$y", "y", ``:num``, [], 2))
       (!(#skolems shadowed_context)) andalso
     length (!(#skolems shadowed_context)) = 1 andalso
     List.exists (Term.aconv axiom) collected andalso
@@ -5583,6 +5597,7 @@ fun mf_preproc_pipeline_shape () =
   let
     val context = fresh_mf_context ()
     val goal = ``?x : num. x = 3``
+    val _ = install_prefix_origins context goal
     val (nondefinitions, _, _, _, _, _) =
       MFP.preprocess_formulas context [] goal
     val skolems = !(#skolems context)
@@ -5623,7 +5638,7 @@ fun mf_preproc_pipeline_shape () =
   in
     length nondefinitions >= 1 andalso
     List.exists (mf_skolem_matches
-      (0, "refute$sk0@1$x", "x", ``:num``, [], 0)) skolems andalso
+      (SOME 0, "refute$sk0@1$x", "x", ``:num``, [], 0)) skolems andalso
     length skolems = 1 andalso
     free_names = ["refute$sk0@1$x"] andalso
     Term.aconv preprocessed
@@ -8609,6 +8624,7 @@ fun mf_replay_sidecar_preserves_generated_skolem () =
   let
     val ty = ``:num``
     val format_context = fresh_mf_context ()
+    val _ = #prefix_origins format_context := [("x", ty)]
     val _ = MFP.skolemize_term_and_more format_context 3
       ``~(!x : num. p x)``
     val scope = mf_translation_scope [(ty, 32)] []
@@ -8632,7 +8648,7 @@ fun mf_replay_sidecar_preserves_generated_skolem () =
               dependencies, arity, stage}}] =>
            generated_name = nickname andalso
            source_name = "x" andalso
-           origin = 0 andalso
+           origin = SOME 0 andalso
            Type.compare (source_type, ty) = EQUAL andalso
            null dependencies andalso
            arity = 0 andalso
@@ -21536,7 +21552,7 @@ fun replay_provenance_prefers_exact_dependencies () =
     fun hint origin : Refute_Cert_Model.replay_hint =
       {term = function, source = Refute_Cert_Model.SkolemValue,
        provenance = SOME
-         {origin = origin, generated_name = "refute$sk2@1$x",
+         {origin = SOME origin, generated_name = "refute$sk2@1$x",
           source_name = "x", source_type = ``:bool``,
           dependencies = [{origin = 1, source_type = ``:bool``}],
           arity = 1,

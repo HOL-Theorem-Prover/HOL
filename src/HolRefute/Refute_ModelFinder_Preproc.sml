@@ -228,10 +228,18 @@ structure Refute_ModelFinder_Preproc = struct
                SOME {Args, ...} => List.exists is_higher_order_type Args
              | NONE => false)
 
-  fun skolemize_term_and_more
+  fun skolemize_term_with_origins prefix_origins
         (context as {skolems, ...} : context) skolem_depth term =
     let
-      val next_origin = ref 0
+      fun binder_origin name ty =
+        let
+          val matches = List.mapPartial (fn (index, (other, other_ty)) =>
+            if name = other andalso Type.compare (ty, other_ty) = EQUAL then
+              SOME index
+            else NONE) (Lib.enumerate 0 prefix_origins)
+        in
+          case matches of [index] => SOME index | _ => NONE
+        end
       fun positive_existential polarity existential =
         case (polarity, existential) of
             (Util.Pos, true) => true
@@ -240,8 +248,10 @@ structure Refute_ModelFinder_Preproc = struct
       (* Keep source binder names for model display, but distinct opened
          variables for de Bruijn-style dependency identity. *)
       fun dependency_variable (variable, _, _) = variable
-      fun dependency_info (variable, _, origin) : MFH.skolem_dependency =
-        {origin = origin, source_type = Term.type_of variable}
+      fun dependency_info (variable, _, SOME origin) =
+            SOME ({origin = origin, source_type = Term.type_of variable}
+              : MFH.skolem_dependency)
+        | dependency_info _ = NONE
       fun skolem_type dependencies result =
         boolSyntax.list_mk_fun
           (map (Term.type_of o dependency_variable) dependencies, result)
@@ -250,12 +260,11 @@ structure Refute_ModelFinder_Preproc = struct
            boolSyntax.is_exists candidate then
           let
             val existential = boolSyntax.is_exists candidate
-            val origin = !next_origin
-            val _ = next_origin := origin + 1
             val (raw_variable, raw_body) =
               if existential then boolSyntax.dest_exists candidate
               else boolSyntax.dest_forall candidate
             val original = variable_name raw_variable
+            val origin = binder_origin original (Term.type_of raw_variable)
             val occurs = Term.free_in raw_variable raw_body
             val dependency_variables = map dependency_variable dependencies
             val variable =
@@ -289,6 +298,13 @@ structure Refute_ModelFinder_Preproc = struct
               let
                 val serial = length (!skolems) + 1
                 val arity = length dependencies
+                val dependency_options = map dependency_info dependencies
+                val dependencies_resolved =
+                  List.all Option.isSome dependency_options
+                val origin = if dependencies_resolved then origin else NONE
+                val dependency_metadata =
+                  if dependencies_resolved then map valOf dependency_options
+                  else []
                 val skolem = MFN.mk_skolem arity serial original
                   (skolem_type dependencies (Term.type_of variable))
                 val application = Term.list_mk_comb
@@ -299,7 +315,7 @@ structure Refute_ModelFinder_Preproc = struct
                    generated_name = generated_name,
                    source_name = original,
                    source_type = Term.type_of variable,
-                   dependencies = map dependency_info dependencies,
+                   dependencies = dependency_metadata,
                    arity = arity,
                    stage = "source skolemization"}
                 val _ = skolems :=
@@ -424,6 +440,10 @@ structure Refute_ModelFinder_Preproc = struct
     in
       recurse [] true Util.Pos term
     end
+
+  fun skolemize_term_and_more
+        (context as {prefix_origins, ...} : context) skolem_depth term =
+    skolemize_term_with_origins (!prefix_origins) context skolem_depth term
 
   fun destroy_set_Collect term =
     if boolSyntax.is_IN term then
@@ -1868,7 +1888,7 @@ structure Refute_ModelFinder_Preproc = struct
              skolemization depth. *)
           val base = axiom
             |> MFH.unfold_defs_in_term context
-            |> skolemize_term_and_more context ~1
+            |> skolemize_term_with_origins [] context ~1
           val target = if definitional then def_set else nondef_set
         in
           if is_trivial_equation base orelse HOLset.member (target, base) then

@@ -540,7 +540,14 @@ fun run_instance deadline started (config : Refute_Core.config)
     val negated =
       if #falsify mf then boolSyntax.mk_imp (original, boolSyntax.F)
       else original
+    val (_, closure, _) = Refute_Cert.closure_of original
+    fun normalization_step conversion tm =
+      conversion tm handle Conv.UNCHANGED => Thm.REFL tm
+    val (_, _, pnf) =
+      Refute_Cert.normalize_to_pnf normalization_step closure
+    val prefix_origins = Refute_Skolem.prefix_binders pnf
     val context = MFH.make_context context_mf eval_terms
+    val _ = #prefix_origins context := prefix_origins
     val fixpoint_refusal = MFH.first_fixpoint_refusal context original
     val _ = if Option.isSome fixpoint_refusal then
         MFH.print_wf_cache context else ()

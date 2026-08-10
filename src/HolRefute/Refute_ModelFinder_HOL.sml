@@ -88,6 +88,7 @@ structure Refute_ModelFinder_HOL = struct
      iterator_table : iterator_table,
      ersatz_table : ersatz list,
      whack_weakening : bool ref,
+     prefix_origins : (string * hol_type) list ref,
      skolems : skolem_info list ref,
      special_funs : special_fun list ref,
      wf_cache : wf_cache ref,
@@ -5285,8 +5286,8 @@ structure Refute_ModelFinder_HOL = struct
           needs, tac_timeout, evals, case_names, def_tables, nondef_table,
           nondefs, simp_table, psimp_table, choice_spec_table, intro_table,
           case_table, fixpoint_cache, iterator_table, ersatz_table,
-          whack_weakening, skolems, special_funs, wf_cache, constr_cache,
-          ...}
+          whack_weakening, prefix_origins, skolems, special_funs, wf_cache,
+          constr_cache, ...}
          : mf_context) binary_ints : mf_context =
     {max_bisim_depth = max_bisim_depth, boxes = boxes, wfs = wfs,
      user_axioms = user_axioms, debug = debug, whacks = whacks,
@@ -5299,7 +5300,8 @@ structure Refute_ModelFinder_HOL = struct
      intro_table = intro_table, case_table = case_table,
      fixpoint_cache = fixpoint_cache, iterator_table = iterator_table,
      ersatz_table = ersatz_table, whack_weakening = whack_weakening,
-     skolems = skolems, special_funs = special_funs, wf_cache = wf_cache,
+     prefix_origins = prefix_origins, skolems = skolems,
+     special_funs = special_funs, wf_cache = wf_cache,
      constr_cache = constr_cache}
 
   fun make_context (mf : Refute_Core.mf_config) evals =
@@ -5336,6 +5338,7 @@ structure Refute_ModelFinder_HOL = struct
        iterator_table = ref [],
        ersatz_table = current_ersatz_table (),
        whack_weakening = ref false,
+       prefix_origins = ref [],
        skolems = ref [],
        special_funs = ref [],
        wf_cache = ref [],

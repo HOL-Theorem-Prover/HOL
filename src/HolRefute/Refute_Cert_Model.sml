@@ -662,7 +662,7 @@ structure Refute_Cert_Model = struct
 
               fun provenance_application
                     ({term, provenance = SOME metadata, ...} : replay_hint) =
-                    if #origin metadata <> target_origin then ()
+                    if #origin metadata <> SOME target_origin then ()
                     else
                     (case exact_dependency_arguments
                         (#dependencies metadata) of
@@ -697,7 +697,7 @@ structure Refute_Cert_Model = struct
               List.app (emit_hint ReconstructedSkolem)
                 (List.filter (fn
                   ({provenance = SOME metadata, ...} : replay_hint) =>
-                    #origin metadata = target_origin
+                    #origin metadata = SOME target_origin
                   | _ => false) direct_skolems);
               emit_terms OrdinaryBinding direct_bindings;
               List.app (emit_hint ReconstructedSkolem) direct_skolems;

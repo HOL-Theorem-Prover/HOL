@@ -63,7 +63,8 @@ Refute_ModelFinder.uo: Refute_ModelFinder_Preproc.uo \
                        Refute_ModelFinder_Nut.uo \
                        Refute_ModelFinder_Scope.uo \
                        Refute_ModelFinder_Mono.uo \
-                       Refute_ModelFinder_HOL.uo
+                       Refute_ModelFinder_HOL.uo Refute_Cert.uo \
+                       Refute_Skolem.uo
 
 # The unused-assumption engine is kept below the facade so its probes can
 # call the core without introducing a Refute -> Refute_Unused cycle.
