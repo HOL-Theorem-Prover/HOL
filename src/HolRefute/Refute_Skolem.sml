@@ -26,6 +26,41 @@ structure Refute_Skolem = struct
     else
       []
 
+  (* Prenex conversion may alpha-rename one of two source binders that had
+     the same name and type.  Preserve that ambiguity explicitly by adding
+     a duplicate lookup key after the real prefix; real indices do not move,
+     but name-based lookup can no longer select the wrong surviving name. *)
+  fun mark_source_ambiguities original prefix =
+    let
+      fun source_binders term =
+        if boolSyntax.is_forall term then
+          let val (variable, body) = boolSyntax.dest_forall term
+          in Term.dest_var variable :: source_binders body end
+        else if boolSyntax.is_exists term then
+          let val (variable, body) = boolSyntax.dest_exists term
+          in Term.dest_var variable :: source_binders body end
+        else if Term.is_comb term then
+          let val (left, right) = Term.dest_comb term
+          in source_binders left @ source_binders right end
+        else if Term.is_abs term then
+          source_binders (#2 (Term.dest_abs term))
+        else
+          []
+      fun same ((name, ty), (other, other_ty)) =
+        name = other andalso Type.compare (ty, other_ty) = EQUAL
+      val source = map Term.dest_var (Term.free_vars_lr original) @
+        source_binders original
+      fun ambiguous key =
+        length (List.filter (fn other => same (key, other)) source) > 1
+      fun add (key, keys) =
+        if not (ambiguous key) orelse
+           List.exists (fn old => same (key, old)) keys then keys
+        else key :: keys
+      val ambiguous = rev (List.foldl add [] source)
+    in
+      prefix @ ambiguous
+    end
+
   fun map_types copy_type
         ({origin, generated_name, source_name, source_type, dependencies,
           arity, stage} : info) : info =

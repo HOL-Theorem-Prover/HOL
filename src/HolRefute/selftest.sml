@@ -4361,14 +4361,16 @@ structure MFP = Refute_ModelFinder_Preproc
 fun fresh_mf_context () =
   MFH.make_context Refute_Core.default_mf_config []
 
-fun install_prefix_origins context original =
+fun install_prefix_origins (context : MFH.mf_context) original =
   let
     val (_, closure, _) = Refute_Cert.closure_of original
     fun step conversion tm =
       conversion tm handle Conv.UNCHANGED => Thm.REFL tm
     val (_, _, pnf) = Refute_Cert.normalize_to_pnf step closure
   in
-    #prefix_origins context := Refute_Skolem.prefix_binders pnf
+    #prefix_origins context :=
+      Refute_Skolem.mark_source_ambiguities original
+        (Refute_Skolem.prefix_binders pnf)
   end
 
 fun mf_codatatype_bisim_axiom_goldens () =
@@ -17934,12 +17936,13 @@ fun narrowing_genuine_result goal inspect outcome =
 
 fun narrowing_source_genuine name =
   List.exists (fn prefix => String.isPrefix prefix name)
-    ["01 ", "02 ", "11 ", "12 ", "13 ", "14 ", "15 ", "16 ",
+    ["01 ", "02 ", "06 ", "09 ", "10 ", "11 ", "12 ", "13 ",
+     "14 ", "15 ", "16 ",
      "17 ", "18 ", "19 ", "20 ", "21 ", "22 "]
 
 fun narrowing_source_potential name =
   List.exists (fn prefix => String.isPrefix prefix name)
-    ["03 ", "04 ", "05 ", "06 ", "07 ", "08 ", "09 ", "10 ",
+    ["03 ", "04 ", "05 ", "07 ", "08 ",
      "23 ", "24 ", "25 ", "26 ", "27 "]
 
 fun narrowing_expected_bindings name =
@@ -21544,33 +21547,129 @@ fun unsupported_inductions_are_not_attempted () =
       llist_CASE xs F (\h t. F)``
   end
 
+fun preprocessor_origin_numbering_agrees_with_replay () =
+  let
+    val original =
+      ``(z : num) = 0 /\ !a : num. ?b : num. b = a``
+    val context = fresh_mf_context ()
+    val _ = install_prefix_origins context original
+    val _ = MFP.preprocess_formulas context [] original
+    val prefix = !(#prefix_origins context)
+    fun expected ({source_name, source_type, ...} : MFH.skolem_info) =
+      let
+        val positions = List.mapPartial (fn (index, (name, ty)) =>
+          if name = source_name andalso
+             Type.compare (source_type, ty) = EQUAL then SOME index
+          else NONE) (Lib.enumerate 0 prefix)
+      in
+        case positions of [index] => SOME index | _ => NONE
+      end
+    val infos = !(#skolems context)
+  in
+    map #1 prefix = ["z", "a", "b"] andalso
+    not (null infos) andalso
+    List.all (fn info => #origin info = expected info) infos andalso
+    List.exists (fn ({source_name, origin, dependencies, ...}
+      : MFH.skolem_info) =>
+        source_name = "b" andalso origin = SOME 2 andalso
+        (case dependencies of
+             [{origin = 1, source_type}] =>
+               Type.compare (source_type, ``:num``) = EQUAL
+           | _ => false)) infos
+  end
+
+fun axiom_skolems_have_no_goal_origin () =
+  let
+    val goal_context = fresh_mf_context ()
+    val goal = ``?x : num. x = 0``
+    val _ = install_prefix_origins goal_context goal
+    val _ = MFP.skolemize_term_and_more goal_context 3 goal
+    val axiom_context = fresh_mf_context ()
+    val _ = MFP.skolemize_term_with_origins [] axiom_context 3
+      ``?w : num. w = 1``
+    val goal_infos = !(#skolems goal_context)
+    val axiom_infos = !(#skolems axiom_context)
+  in
+    map #origin goal_infos = [SOME 0] andalso
+    List.all (fn info => #origin info = NONE) axiom_infos andalso
+    not (null axiom_infos)
+  end
+
+fun ambiguous_origins_degrade_to_generic_hints () =
+  let
+    val context = fresh_mf_context ()
+    val _ = #prefix_origins context := [("x", ``:bool``), ("x", ``:bool``)]
+    val _ = MFP.skolemize_term_and_more context 3
+      ``(?x : bool. ~x) /\ (?x : bool. x)``
+    val infos = !(#skolems context)
+    val provenance = hd infos
+    val (result, _) = Refute_Cert_Model.certify_detailed_rich
+      {original = ``!b : bool. b``, env = [],
+       hints =
+         [{term = boolSyntax.F,
+           source = Refute_Cert_Model.SkolemValue,
+           provenance = SOME provenance}],
+       policy = hint_only_policy, deadline = NONE}
+  in
+    length infos = 2 andalso
+    List.all (fn info => #origin info = NONE) infos andalso
+    (case result of
+         Refute_Cert_Model.Certified theorem =>
+           certificate_audit ``!b : bool. b`` theorem
+       | _ => false)
+  end
+
 fun replay_provenance_prefers_exact_dependencies () =
   let
     val goal =
-      ``?a b : bool. !x : bool. x = b /\ (I a \/ ~I a)``
+      ``(?a : bool. I a \/ ~I a) /\
+        (?b : bool. !x : bool. x = b)``
+    val context = fresh_mf_context ()
+    val _ = install_prefix_origins context goal
+    val _ = MFP.preprocess_formulas context [] (boolSyntax.mk_neg goal)
+    val provenance = valOf (List.find (fn
+      ({source_name, ...} : MFH.skolem_info) => source_name = "x")
+      (!(#skolems context)))
     val function = ``\b : bool. ~b``
-    fun hint origin : Refute_Cert_Model.replay_hint =
+    fun with_origin origin
+          ({generated_name, source_name, source_type, dependencies,
+            arity, stage, ...} : MFH.skolem_info) : MFH.skolem_info =
+      {origin = origin, generated_name = generated_name,
+       source_name = source_name, source_type = source_type,
+       dependencies = dependencies, arity = arity, stage = stage}
+    fun hint metadata : Refute_Cert_Model.replay_hint =
       {term = function, source = Refute_Cert_Model.SkolemValue,
-       provenance = SOME
-         {origin = SOME origin, generated_name = "refute$sk2@1$x",
-          source_name = "x", source_type = ``:bool``,
-          dependencies = [{origin = 1, source_type = ``:bool``}],
-          arity = 1,
-          stage = "source skolemization"}}
-    fun run origin = Refute_Cert_Model.certify_detailed_rich
-      {original = goal, env = [], hints = [hint origin],
+       provenance = SOME metadata}
+    fun run metadata = Refute_Cert_Model.certify_detailed_rich
+      {original = goal, env = [], hints = [hint metadata],
        policy = hint_only_policy, deadline = NONE}
-    val (exact, exact_stats) = run 2
-    val (fallback, fallback_stats) = run 99
+    val (exact, exact_stats) = run provenance
+    val (fallback, fallback_stats) = run (with_origin NONE provenance)
     fun certified result =
       case result of
           Refute_Cert_Model.Certified theorem =>
             certificate_audit goal theorem
         | _ => false
+    val good =
+      #origin provenance = SOME 2 andalso
+      map #origin (#dependencies provenance) = [1] andalso
+      certified exact andalso certified fallback andalso
+      #attempted_candidates exact_stats = 3 andalso
+      #attempted_candidates fallback_stats = 4
+    val _ = if good then () else Feedback.HOL_MESG
+      ("exact provenance diagnostic: origin=" ^
+       (case #origin provenance of
+            SOME origin => Int.toString origin
+          | NONE => "NONE") ^ ", dependencies=" ^
+       String.concatWith ","
+         (map (Int.toString o #origin) (#dependencies provenance)) ^
+       ", exact=" ^ Int.toString (#attempted_candidates exact_stats) ^
+       ", fallback=" ^
+       Int.toString (#attempted_candidates fallback_stats) ^
+       ", exact certified=" ^ Bool.toString (certified exact) ^
+       ", fallback certified=" ^ Bool.toString (certified fallback))
   in
-    certified exact andalso certified fallback andalso
-    #attempted_candidates exact_stats = 3 andalso
-    #attempted_candidates fallback_stats = 4
+    good
   end
 
 val expanded_model_replay_checks =
@@ -21586,6 +21685,12 @@ val expanded_model_replay_checks =
    ("resource failure taxonomy", replay_resource_failures_are_classified),
    ("nested, mutual, and codatatype induction boundary",
     unsupported_inductions_are_not_attempted),
+   ("preprocessor/replay origin numbering",
+    preprocessor_origin_numbering_agrees_with_replay),
+   ("axiom Skolems lack goal origins",
+    axiom_skolems_have_no_goal_origin),
+   ("ambiguous origins use generic hints",
+    ambiguous_origins_degrade_to_generic_hints),
    ("exact provenance dependency ordering",
     replay_provenance_prefers_exact_dependencies),
    ("constructor combination width hard cap",

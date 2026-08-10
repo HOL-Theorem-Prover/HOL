@@ -650,11 +650,13 @@ structure Refute_QC = struct
                Refute_Cert.Certified certified =>
                  counterexamples := certified :: !counterexamples
              | Refute_Cert.Uncertified uncertified =>
-                 if incomplete_pnf then
+                 if incomplete_pnf orelse not genuine then
                    ignore (keep_potential (Refute_Cert.replace uncertified
                      (Refute_Core.Potential
-                       ["PNF testing used an incomplete finite " ^
-                        "approximation"])
+                       [if incomplete_pnf then
+                          "PNF testing used an incomplete finite " ^
+                          "approximation"
+                        else "evaluation stuck during testing"])
                      [] NONE))
                  else
                    counterexamples := uncertified :: !counterexamples

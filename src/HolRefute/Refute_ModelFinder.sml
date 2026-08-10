@@ -545,7 +545,8 @@ fun run_instance deadline started (config : Refute_Core.config)
       conversion tm handle Conv.UNCHANGED => Thm.REFL tm
     val (_, _, pnf) =
       Refute_Cert.normalize_to_pnf normalization_step closure
-    val prefix_origins = Refute_Skolem.prefix_binders pnf
+    val prefix_origins = Refute_Skolem.mark_source_ambiguities original
+      (Refute_Skolem.prefix_binders pnf)
     val context = MFH.make_context context_mf eval_terms
     val _ = #prefix_origins context := prefix_origins
     val fixpoint_refusal = MFH.first_fixpoint_refusal context original
