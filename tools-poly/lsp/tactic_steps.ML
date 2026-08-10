@@ -14,7 +14,8 @@ structure TacticSteps :> sig
      cursor is still before the split operator. *)
   datatype step =
       Expand of int * int           (* byte-range of an atomic tactic *)
-    | ExpandList of int * int       (* THENL / MAP_EVERY — opaque for now *)
+    | ExpandList of int * int       (* fallback when THENL's RHS isn't
+                                       a literal list (variable, App, …) *)
     (* `>~ pats` / `>>~ pats` split as [left steps, GoalSelect (opStart,
        rightEnd)].  The right operand is a term-quote list, not a
        tactic, so the walker can't compile `>~ [pat]` as a leaf;
@@ -27,6 +28,13 @@ structure TacticSteps :> sig
     | OpenFirst of int | NextFirst of int | CloseFirst of int
     | OpenRepeat of int | CloseRepeat of int
     | OpenNthGoal of int * int      (* n, activation byte *)
+    (* `THENL [b1, b2, …, bn]` / `>| [b1, …]` — the walker splits into
+       inner-branch steps.  `OpenTacsToLT` at the `[` focuses the first
+       subgoal; `NextTacsToLT` at each `,` completes the previous
+       branch and focuses the next; the trailing `CloseParen` at the
+       list's stop position finalises the list-tactic. *)
+    | OpenTacsToLT of int
+    | NextTacsToLT of int
   val compileToSteps: HOLSourceAST.exp -> step list
 
   (* Byte position at/after which the walker should apply the step —
@@ -61,6 +69,8 @@ datatype step =
   | OpenFirst of int | NextFirst of int | CloseFirst of int
   | OpenRepeat of int | CloseRepeat of int
   | OpenNthGoal of int * int
+  | OpenTacsToLT of int
+  | NextTacsToLT of int
 
 fun stopPos (Expand (_, e))         = e
   | stopPos (ExpandList (_, e))     = e
@@ -74,6 +84,8 @@ fun stopPos (Expand (_, e))         = e
   | stopPos (OpenRepeat p)          = p
   | stopPos (CloseRepeat p)         = p
   | stopPos (OpenNthGoal (_, p))    = p
+  | stopPos (OpenTacsToLT p)        = p
+  | stopPos (NextTacsToLT p)        = p
 
 (* Combinator names are matched bare — a qualified `Tactical.THEN`
    parses as an `App` rather than an `Infix` and lands in the generic
@@ -82,6 +94,45 @@ fun stopPos (Expand (_, e))         = e
 fun then1Steps opPos left right = let val (_, rightEnd) = expSpan right in
   compileToSteps left @ [OpenThen1 opPos]
                       @ compileToSteps right @ [CloseParen rightEnd]
+  end
+(* Descend into the `[b1, b2, …, bn]` right-hand side of THENL / `>|`.
+   Emits OpenTacsToLT at `[`, walks each branch's own step stream,
+   inserts NextTacsToLT at each `,` between branches, and a trailing
+   CloseParen at the list's stop position.  If the RHS isn't a
+   literal list -- e.g. `THENL bs` where `bs` is a variable, or an
+   `App` that produces a list -- falls back to a single opaque
+   ExpandList step so the walker halts cleanly at the whole-list
+   boundary. *)
+and thenlSteps left right =
+  let val leftSteps = compileToSteps left in
+  case right of
+    List {left = lbracket, elems = {args, seps, ...}, stop, ...} =>
+      let
+        (* Zip the argument list with the separator list.  For a
+           normal `[b1, b2, b3]` seps has n-1 entries (SOME p per `,`);
+           a trailing sep or a synthetic list can also occur, so we
+           tolerate both shortfall and surplus. *)
+        fun walk [] _ = []
+          | walk [b] _ = compileToSteps b
+          | walk (b :: bs) (SOME p :: ss) =
+              compileToSteps b @ [NextTacsToLT p] @ walk bs ss
+          | walk (b :: bs) (NONE :: ss) =
+              (* Parse-error-repaired missing sep.  Use end-of-`b`
+                 as the activation so the walker still splits. *)
+              let val (_, bEnd) = expSpan b in
+              compileToSteps b @ [NextTacsToLT bEnd] @ walk bs ss
+              end
+          | walk (b :: bs) [] =
+              (* Fewer seps than we have gaps.  Same fallback: end
+                 of the current branch. *)
+              let val (_, bEnd) = expSpan b in
+              compileToSteps b @ [NextTacsToLT bEnd] @ walk bs []
+              end
+      in
+        leftSteps @ [OpenTacsToLT lbracket] @ walk args seps
+                  @ [CloseParen stop]
+      end
+  | _ => leftSteps @ [ExpandList (expSpan right)]
   end
 and compileToSteps (e: exp) : step list =
   case e of
@@ -92,15 +143,8 @@ and compileToSteps (e: exp) : step list =
       | "\\\\"  => compileToSteps left @ compileToSteps right
       | ">-"    => then1Steps opPos left right
       | "THEN1" => then1Steps opPos left right
-      (* Walk left's inner steps individually, then treat the branch
-         list as an opaque terminator so the walker halts at the
-         `THENL` boundary rather than descending into a branch —
-         sub-branch stepping is deferred.  The ExpandList span is the
-         RHS `[b1, b2, …]`; compileTactic will fail to compile a bare
-         list as a tactic and the walker halts cleanly with the
-         post-left state. *)
-      | "THENL" => compileToSteps left @ [ExpandList (expSpan right)]
-      | ">|"    => compileToSteps left @ [ExpandList (expSpan right)]
+      | "THENL" => thenlSteps left right
+      | ">|"    => thenlSteps left right
       (* `>~ pats` / `>>~ pats` — right operand is a term-quote list,
          not a tactic.  Split so cursor between `left` and the
          selector sees post-left state; the selector then applies as
@@ -153,6 +197,8 @@ fun shiftStep step = let val d = wrapPrefixLen in case step of
   | OpenRepeat p      => OpenRepeat (p - d)
   | CloseRepeat p     => CloseRepeat (p - d)
   | OpenNthGoal (n, p) => OpenNthGoal (n, p - d)
+  | OpenTacsToLT p    => OpenTacsToLT (p - d)
+  | NextTacsToLT p    => NextTacsToLT (p - d)
   end
 
 fun stepsOfTacText args =
@@ -171,9 +217,9 @@ local
       SOME tac => tac
     | NONE => raise Fail ("parseTac: no HOLTheoremDecl in " ^ tacText)
   fun shape [] = ""
-    | shape (TacticSteps.Expand _     :: r) = "E" ^ shape r
-    | shape (TacticSteps.ExpandList _ :: r) = "L" ^ shape r
-    | shape (TacticSteps.GoalSelect _ :: r) = "G" ^ shape r
+    | shape (TacticSteps.Expand _      :: r) = "E" ^ shape r
+    | shape (TacticSteps.ExpandList _  :: r) = "L" ^ shape r
+    | shape (TacticSteps.GoalSelect _  :: r) = "G" ^ shape r
     | shape (TacticSteps.OpenParen _   :: r) = "(" ^ shape r
     | shape (TacticSteps.CloseParen _  :: r) = ")" ^ shape r
     | shape (TacticSteps.OpenThen1 _   :: r) = "[" ^ shape r
@@ -183,6 +229,8 @@ local
     | shape (TacticSteps.OpenRepeat _  :: r) = "R" ^ shape r
     | shape (TacticSteps.CloseRepeat _ :: r) = "r" ^ shape r
     | shape (TacticSteps.OpenNthGoal _ :: r) = "N" ^ shape r
+    | shape (TacticSteps.OpenTacsToLT _ :: r) = "T" ^ shape r
+    | shape (TacticSteps.NextTacsToLT _ :: r) = ";" ^ shape r
   fun check name tacText expected = let
     val steps = TacticSteps.compileToSteps (parseTac tacText)
     val got = shape steps
@@ -201,8 +249,10 @@ in
   val _ = check ">- with \\\\"     "tac1 >- (a \\\\ b \\\\ c)"   "E[EEE)"
   val _ = check "REPEAT atomic"    "REPEAT (tac1 >> tac2)"       "E"
   val _ = check "nested parens"    "((tac1))"                    "E"
-  val _ = check "THENL left+list"  "tac1 THENL [b1, b2, b3]"     "EL"
-  val _ = check ">| left+list"     "tac1 >| [b1, b2, b3]"        "EL"
+  val _ = check "THENL branches"   "tac1 THENL [b1, b2, b3]"     "ETE;E;E)"
+  val _ = check ">| branches"      "tac1 >| [b1, b2, b3]"        "ETE;E;E)"
+  val _ = check "THENL single"     "tac1 THENL [b1]"             "ETE)"
+  val _ = check "THENL var-rhs"    "tac1 THENL bs"               "EL"
   val _ = check ">~ selector"      "tac1 >~ [`P`]"               "EG"
   val _ = check ">>~ selector"     "tac1 >>~ [`P`, `Q`]"         "EG"
   val _ = check ">~ then >>"       "tac1 >~ [`P`] >> tac2"       "EGE"

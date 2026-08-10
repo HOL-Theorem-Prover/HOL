@@ -95,17 +95,19 @@ fun expandGoalSelect tacText (s, e) state =
   | SOME tac => Portable.total (goalFrag.expand tac) state
 
 fun applyStep tacText step state = case step of
-    TacticSteps.Expand span     => expandSrc        tacText span state
-  | TacticSteps.ExpandList span => expandSrc        tacText span state
-  | TacticSteps.GoalSelect span => expandGoalSelect tacText span state
-  | TacticSteps.OpenParen _     => Portable.total goalFrag.open_paren   state
-  | TacticSteps.CloseParen _    => Portable.total goalFrag.close_paren  state
-  | TacticSteps.OpenThen1 _     => Portable.total goalFrag.open_then1   state
-  | TacticSteps.OpenFirst _     => Portable.total goalFrag.open_first   state
-  | TacticSteps.NextFirst _     => Portable.total goalFrag.next_first   state
-  | TacticSteps.CloseFirst _    => Portable.total goalFrag.close_first  state
-  | TacticSteps.OpenRepeat _    => Portable.total goalFrag.open_repeat  state
-  | TacticSteps.CloseRepeat _   => Portable.total goalFrag.close_repeat state
+    TacticSteps.Expand span      => expandSrc        tacText span state
+  | TacticSteps.ExpandList span  => expandSrc        tacText span state
+  | TacticSteps.GoalSelect span  => expandGoalSelect tacText span state
+  | TacticSteps.OpenParen _      => Portable.total goalFrag.open_paren    state
+  | TacticSteps.CloseParen _     => Portable.total goalFrag.close_paren   state
+  | TacticSteps.OpenThen1 _      => Portable.total goalFrag.open_then1    state
+  | TacticSteps.OpenFirst _      => Portable.total goalFrag.open_first    state
+  | TacticSteps.NextFirst _      => Portable.total goalFrag.next_first    state
+  | TacticSteps.CloseFirst _     => Portable.total goalFrag.close_first   state
+  | TacticSteps.OpenRepeat _     => Portable.total goalFrag.open_repeat   state
+  | TacticSteps.CloseRepeat _    => Portable.total goalFrag.close_repeat  state
+  | TacticSteps.OpenTacsToLT _   => Portable.total goalFrag.open_tacs_to_lt state
+  | TacticSteps.NextTacsToLT _   => Portable.total goalFrag.next_tacs_to_lt state
   | TacticSteps.OpenNthGoal (n, _) =>
       Portable.total (goalFrag.open_nth_goal n) state
 

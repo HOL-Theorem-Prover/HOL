@@ -1929,6 +1929,65 @@ def test_goalState_walks_double_backslash_in_then1_block():
         c.close()
 
 
+def test_goalState_walks_thenl_branches():
+    """Regression: cursor inside a specific branch of a `THENL [b1,
+    b2, b3]` (or `>|` alias) list must resolve to the state that
+    focuses that branch's subgoal.  Before this the walker treated
+    the whole `[b1, …, bn]` as one opaque ExpandList and any cursor
+    inside halted at the post-left state, hiding the sub-branch
+    state entirely."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_thenl.sml"
+        #  0 Theory ...
+        #  1 Ancestors ...
+        #  2
+        #  3 Theorem t:
+        #  4   T /\ (!n:num. n = n) /\ (0 < 1)
+        #  5 Proof
+        #  6   REPEAT CONJ_TAC THENL [
+        #  7     ACCEPT_TAC TRUTH,
+        #  8     gen_tac >> REFL_TAC,
+        #  9     SIMP_TAC arith_ss []
+        # 10   ]
+        # 11 QED
+        src = ("Theory goalstate_thenl\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  T /\\ (!n:num. n = n) /\\ (0 < 1)\n"
+               "Proof\n"
+               "  REPEAT CONJ_TAC THENL [\n"
+               "    ACCEPT_TAC TRUTH,\n"
+               "    gen_tac >> REFL_TAC,\n"
+               "    SIMP_TAC arith_ss []\n"
+               "  ]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Cursor at line 8 char 15 = start of `REFL_TAC`.  With the
+        # fix the walker enters the THENL list, completes branch 1
+        # (ACCEPT_TAC TRUTH), advances to branch 2's subgoal
+        # (`!n:num. n = n`), applies `gen_tac`, and halts before
+        # REFL_TAC.  The current goal is `n = n` (quantifier gone).
+        r = _send_goalstate(c, 701, uri, 8, 15)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        goals = result.get("goals", [])
+        assert_eq(len(goals), 1,
+                  f"THENL focuses the current branch's subgoal "
+                  f"({goals!r})")
+        goal = goals[0].get("goal", "")
+        assert_true("n = n" in goal,
+                    f"branch 2's subgoal after gen_tac is n = n "
+                    f"({goal!r})")
+        assert_true("!" not in goal and "∀" not in goal,
+                    f"quantifier stripped by gen_tac ({goal!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_walks_squiggle_selector():
     """Regression: `>~` (Q.>~, a goal-selector by pattern) must
     split the walker's step stream so cursor between the LHS
@@ -2276,6 +2335,8 @@ TESTS = [
                                      test_goalState_walker_uses_theorem_position_context),
     ("goalState_walks_double_backslash_in_then1_block",
                                      test_goalState_walks_double_backslash_in_then1_block),
+    ("goalState_walks_thenl_branches",
+                                     test_goalState_walks_thenl_branches),
     ("goalState_walks_squiggle_selector",
                                      test_goalState_walks_squiggle_selector),
     ("lsp_walks_file_includes_from_arbitrary_cwd",
