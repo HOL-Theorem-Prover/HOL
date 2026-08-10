@@ -426,7 +426,8 @@ End
 
 Theorem I2N_NUM:
       !a b. i2n (& a) b = a MOD 2 ** b
-ProofRW_TAC int_ss [i2n_def]
+Proof
+  RW_TAC int_ss [i2n_def]
 QED
 
 val mod_p1_eq =

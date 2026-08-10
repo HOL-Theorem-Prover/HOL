@@ -22,6 +22,7 @@ val _ = export_rewrites["extNat.extnat_le_def","extNat.extnat_plus_def"]
 
 Theorem extnat_plus_inf[simp]:
  (NONE + c = NONE) ∧ (c + NONE = NONE)
-ProofCases_on`c` >> simp[]
+Proof
+  Cases_on`c` >> simp[]
 QED
 
