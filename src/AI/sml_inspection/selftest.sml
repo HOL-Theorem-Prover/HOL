@@ -15,4 +15,14 @@ local open aiLib smlTimeout in
   fun loop () = loop ();
   fun g () = (timeout 0.01 loop ()) handle FunctionTimeout => ();
   val (_,t2) = add_time g ();
+
+  val cleanup_done = ref false;
+  fun cleanup_worker () =
+    (loop () handle Interrupt =>
+      (OS.Process.sleep (Time.fromReal 0.05);
+       cleanup_done := true;
+       raise Interrupt));
+  val _ = (timeout 0.01 cleanup_worker () handle FunctionTimeout => ());
+  val _ = if !cleanup_done then ()
+          else raise Fail "timeout interrupted worker cleanup";
 end

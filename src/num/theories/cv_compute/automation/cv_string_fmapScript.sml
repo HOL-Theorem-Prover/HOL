@@ -104,6 +104,21 @@ Definition st_del_def[simp]:
   st_del t (x::xs) = st_del_cons t x xs
 End
 
+Definition st_union_def:
+  st_union Nothing t = t ∧
+  st_union t Nothing = t ∧
+  st_union (Just x) (Just y) = Just x ∧
+  st_union (Just x) (Branch c t1 t2) = Branch c t1 (st_union (Just x) t2) ∧
+  st_union (Branch c t1 t2) (Just x) = Branch c t1 (st_union t2 (Just x)) ∧
+  st_union (Branch c1 t1 t2) (Branch c2 u1 u2) =
+    if ORD c1 < ORD c2 then
+      Branch c1 t1 (st_union t2 (Branch c2 u1 u2))
+    else if ORD c2 < ORD c1 then
+      Branch c2 u1 (st_union (Branch c1 t1 t2) u2)
+    else
+      Branch c1 (st_union t1 u1) (st_union t2 u2)
+End
+
 (* verification *)
 
 Definition st_flat_def:
@@ -596,6 +611,85 @@ Proof
   \\ simp [st_sets_def]
 QED
 
+Theorem st_union_eq_Nothing[simp]:
+  st_union t u = Nothing ⇔ t = Nothing ∧ u = Nothing
+Proof
+  Cases_on ‘t’ \\ Cases_on ‘u’ \\ gvs [st_union_def] \\ rw []
+QED
+
+Theorem st_union_Branch:
+  ∀t u c t1 t2.
+    st_union t u = Branch c t1 t2 ⇒
+    (∃x y. t = Branch c x y) ∨ (∃x y. u = Branch c x y)
+Proof
+  Cases \\ Cases \\ gvs [st_union_def] \\ rw [] \\ gvs []
+QED
+
+Theorem st_sorted_st_union[simp]:
+  ∀t1 t2.
+    st_sorted t1 ∧ st_sorted t2 ⇒
+    st_sorted (st_union t1 t2)
+Proof
+  ho_match_mp_tac st_union_ind \\ rw [st_union_def, st_sorted_def]
+  \\ gvs [st_sorted_def]
+  \\ drule st_union_Branch \\ strip_tac \\ gvs []
+  \\ res_tac \\ gvs [stringTheory.char_lt_def]
+QED
+
+Theorem st_get_nil_st_union:
+  ∀t u.
+    st_get_nil (st_union t u) =
+    case st_get_nil t of
+    | SOME r => SOME r
+    | NONE => st_get_nil u
+Proof
+  ho_match_mp_tac st_union_ind \\ rw [st_union_def]
+  \\ CASE_TAC \\ gvs []
+QED
+
+Theorem option_case_id[local]:
+  (case x of NONE => NONE | SOME r => SOME r) = x
+Proof
+  Cases_on ‘x’ \\ gvs []
+QED
+
+Theorem st_get_st_union:
+  ∀t1 t2 n.
+    st_sorted t1 ∧ st_sorted t2 ⇒
+    st_get (st_union t1 t2) n =
+    case st_get t1 n of
+    | SOME r => SOME r
+    | NONE => st_get t2 n
+Proof
+  ho_match_mp_tac st_union_ind \\ rpt strip_tac
+  \\ Cases_on ‘n’
+  \\ gvs [st_union_def, st_get_def, st_get_nil_st_union, option_case_id]
+  \\ gvs [st_sorted_def]
+  >- (rename [‘st_get_cons (st_union (Just x) u) h s’]
+      \\ first_x_assum (qspec_then ‘STRING h s’ mp_tac)
+      \\ gvs [st_get_def])
+  >- (rename [‘st_get_cons (st_union u (Just x)) h s’]
+      \\ first_x_assum (qspec_then ‘STRING h s’ mp_tac)
+      \\ gvs [st_get_def, option_case_id])
+  \\ rename [‘st_get_cons (if ORD c1 < ORD c2 then _ else _) h s’]
+  \\ Cases_on ‘ORD c1 < ORD c2’ \\ gvs []
+  >- (first_x_assum (qspec_then ‘STRING h s’ mp_tac)
+      \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def]
+      \\ rw [] \\ gvs [option_case_id])
+  \\ Cases_on ‘ORD c2 < ORD c1’ \\ gvs []
+  >- (first_x_assum (qspec_then ‘STRING h s’ mp_tac)
+      \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def]
+      \\ rw [] \\ gvs [option_case_id])
+  \\ ‘c1 = c2’ by gvs [GSYM stringTheory.ORD_11] \\ gvs []
+  \\ rename [‘st_get_cons (Branch c (st_union l1 r1) (st_union l2 r2)) h s’]
+  \\ qpat_x_assum ‘∀n. st_get (st_union l2 r2) n = _’
+       (qspec_then ‘STRING h s’ mp_tac)
+  \\ qpat_x_assum ‘∀n. st_get (st_union l1 r1) n = _’
+       (qspec_then ‘s’ mp_tac)
+  \\ gvs [st_get_def, stringTheory.char_lt_def, stringTheory.char_gt_def]
+  \\ rw [] \\ gvs [option_case_id]
+QED
+
 val _ = cv_trans st_get_nil_def;
 val _ = cv_trans st_get_def;
 val _ = cv_trans st_make_def;
@@ -606,6 +700,22 @@ val _ = cv_trans st_del_nil_def;
 val _ = cv_trans mk_Branch_def;
 val _ = cv_trans st_del_cons_def;
 val _ = cv_trans st_del_def;
+
+Theorem cv_size_cv_fst_cv_snd[local]:
+  ∀x. cv_size (cv_fst x) + cv_size (cv_snd x) ≤ cv_size x
+Proof
+  Cases \\ gvs [cvTheory.cv_size_def, cvTheory.cv_fst_def, cvTheory.cv_snd_def]
+QED
+
+val _ = cv_trans_rec st_union_def
+  (WF_REL_TAC ‘measure $ λ(x,y). cv_size x + cv_size y’
+   \\ cv_termination_tac
+   \\ rename [‘cv_size (cv_snd (cv_snd x)) + (cv_size (cv_snd (cv_snd y)) + 5)’]
+   \\ qspec_then ‘x’ assume_tac cv_size_cv_fst_cv_snd
+   \\ qspec_then ‘y’ assume_tac cv_size_cv_fst_cv_snd
+   \\ qspec_then ‘cv_snd x’ assume_tac cv_size_cv_fst_cv_snd
+   \\ qspec_then ‘cv_snd y’ assume_tac cv_size_cv_fst_cv_snd
+   \\ gvs []);
 
 (*----------------------------------------------------------*
    string |-> 'a
@@ -685,4 +795,18 @@ Proof
   \\ irule st_sets_eq \\ fs [finite_mapTheory.FLOOKUP_SIMP, FUN_EQ_THM]
   \\ gvs [ALOOKUP_FILTER,finite_mapTheory.DOMSUB_FLOOKUP_THM]
   \\ rw []
+QED
+
+Theorem cv_rep_string_FUNION[cv_rep]:
+  from_string_fmap f (m1 ⊌ m2) =
+  cv_st_union (from_string_fmap f m1) (from_string_fmap f m2)
+Proof
+  gvs [from_string_fmap_def, GSYM $ fetch "-" "cv_st_union_thm"]
+  \\ AP_TERM_TAC
+  \\ irule st_sorted_st_get_eq
+  \\ irule_at Any st_sorted_st_union
+  \\ rw [st_sorted_st_sets, st_sorted_def]
+  \\ DEP_REWRITE_TAC [st_get_st_union]
+  \\ gvs [st_get_st_sets, st_get_Nothing, st_sorted_def, option_case_id,
+          finite_mapTheory.FLOOKUP_FUNION]
 QED

@@ -142,4 +142,6 @@ examples/l3-machine-code/**/*-heap
 /TAGS
 /.claude/*
 !/.claude/skills/
+/.codex/
+/.pi/
 CLAUDE.local.md

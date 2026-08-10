@@ -67,16 +67,85 @@ fun inter_increasing l1 l2 = case (l1,l2) of
 fun exists_file file = HOLFileSys.access (file, []);
 
 fun mkDir_err dir =
-  if exists_file dir then () else HOLFileSys.mkDir dir
+  if exists_file dir then () else
+  let val parent = OS.Path.dir dir in
+    if parent = dir orelse parent = "" orelse exists_file parent
+    then ()
+    else mkDir_err parent;
+    HOLFileSys.mkDir dir handle _ =>
+      if exists_file dir then () else raise ERR "mkDir_err" dir
+  end
+
+(* Cache root, following the same convention as the rest of HOL4
+   (see HM_Core_Cline): $XDG_CACHE_HOME if set, else $HOME/.cache.  A
+   missing default is not an error until a client actually needs it. *)
+fun get_nonempty_env env =
+  case OS.Process.getEnv env of SOME "" => NONE | value => value
+
+fun cache_root_opt () =
+  case get_nonempty_env "XDG_CACHE_HOME" of
+    SOME dir => SOME dir
+  | NONE =>
+    case get_nonempty_env "HOME" of
+      NONE => NONE
+    | SOME dir => SOME (dir ^ "/.cache")
+
+fun cache_root () =
+  case cache_root_opt () of
+    SOME dir => dir
+  | NONE => raise ERR "cache_root"
+      "neither XDG_CACHE_HOME nor HOME is set"
+
+fun home_cache_dir name = cache_root () ^ "/" ^ name
+
+fun tool_cache_dir env name =
+  case get_nonempty_env env of
+    SOME dir => dir
+  | NONE => home_cache_dir name
+
+fun tool_cache_dir_opt env name =
+  case get_nonempty_env env of
+    SOME dir => SOME dir
+  | NONE => Option.map (fn root => root ^ "/" ^ name) (cache_root_opt ())
+
+val tactictoe_default =
+  tool_cache_dir_opt "HOL4_TACTICTOE_CACHE" "tactictoe"
+
+(* The empty string represents an unconfigured optional directory.  Keep the
+   public refs string-valued for compatibility; accessors reject the sentinel
+   when an operation actually needs the directory. *)
+val tactictoe_cache_dir = ref (Option.getOpt (tactictoe_default, ""))
+
+(* Root for the throwaway files the SML-inspection machinery generates
+   (opened-structure dumps, generated scripts, heap and dependency
+   probes, redirected output).  Everything under it is derived from this
+   one ref, so a client that needs a private scratch area -- e.g. a
+   parallel TacticToe recording worker -- rebinds only this. *)
+val scratch_dir = ref
+  (case tool_cache_dir_opt "HOL4_SCRATCH" "hol4/scratch" of
+     SOME dir => dir
+   | NONE =>
+       case tactictoe_default of
+         SOME dir => dir ^ "/tmp/scratch"
+       | NONE => "")
+
+fun require_dir what dir =
+  if dir <> "" then dir else raise ERR what
+      "no cache directory configured and neither XDG_CACHE_HOME nor HOME is set"
+
+fun scratch_dir_of () = require_dir "scratch_dir_of" (!scratch_dir)
 
 fun remove_file file =
   if exists_file file then ignore (OS.FileSys.remove file) else ()
 
+fun shell_quote s =
+  "'" ^ String.translate (fn #"'" => "'\\''" | c => str c) s ^ "'"
+
 fun run_cmd cmd = ignore (OS.Process.system cmd)
 
 (* TODO: Use OS to change dir? *)
-fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
-fun clean_dir dir = (run_cmd ("rm -r " ^ dir); mkDir_err dir)
+fun cmd_in_dir dir cmd = run_cmd ("cd " ^ shell_quote dir ^ "; " ^ cmd)
+fun clean_dir dir = (run_cmd ("rm -rf " ^ shell_quote dir); mkDir_err dir)
 
 (* ------------------------------------------------------------------------
    Comparisons
@@ -1027,8 +1096,34 @@ fun write_texgraph file (s1,s2) l =
   writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);
 
 fun writel_atomic file sl =
-  (writel (file ^ "_temp") sl;
-   OS.FileSys.rename {old = file ^ "_temp", new=file})
+  let
+    val dir = OS.Path.dir file
+    val _ = if dir = "" then () else mkDir_err dir
+    val tmp = file ^ "." ^ Portable.unique_tmp_suffix () ^ ".tmp"
+  in
+    (writel tmp sl;
+     OS.FileSys.rename {old = tmp, new = file})
+    handle e => (remove_file tmp; raise e)
+  end
+
+(* Content hashes for cache identity.  SHA-1 is what the rest of HOL4
+   already uses for this (see HM_Cachekey and Theory.sml).  Note these are
+   unrelated to hash_string above, which is a feature hash. *)
+fun sha1_file file =
+  SHA1.sha1_file {filename = file}
+  handle Interrupt => raise Interrupt | _ => raise ERR "sha1_file" file
+
+fun sha1_string s =
+  let
+    val v = Byte.stringToBytes s
+    val n = Word8Vector.length v
+    fun reader (i,k) =
+      let val m = Int.min (k, n - i) in
+        (Word8VectorSlice.vector (Word8VectorSlice.slice (v,i,SOME m)), i + m)
+      end
+  in
+    SHA1.sha1String reader 0
+  end
 
 fun readl_rm file =
   let val sl = readl file in OS.FileSys.remove file; sl end
@@ -1327,12 +1422,13 @@ fun gamma_noise_gen alpha =
 
 fun sigobj_theories () =
   let
-    val ttt_code_dir = HOLDIR ^ "/src/tactictoe/code"
-    val _    = mkDir_err ttt_code_dir
-    val file = ttt_code_dir ^ "/theory_list"
+    val codedir = scratch_dir_of () ^ "/code"
+    val _    = mkDir_err codedir
+    val file = codedir ^ "/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"
-    val cmd0 = "cd " ^ sigdir
-    val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
+    val cmd0 = "cd " ^ shell_quote sigdir
+    val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^
+      shell_quote file
   in
     ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1 ^ "; "));
     readl file

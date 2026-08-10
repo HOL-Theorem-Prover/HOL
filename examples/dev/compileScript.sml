@@ -1120,12 +1120,14 @@ QED
 
 Theorem K_INTRO_THM:
     !u. (\v.u) = K u
-ProofRW_TAC std_ss [FUN_EQ_THM]
+Proof
+  RW_TAC std_ss [FUN_EQ_THM]
 QED
 
 Theorem I_INTRO_THM:
     (\v.v) = I
-ProofRW_TAC std_ss [FUN_EQ_THM]
+Proof
+  RW_TAC std_ss [FUN_EQ_THM]
 QED
 
 val _ = Parse.reveal "C";

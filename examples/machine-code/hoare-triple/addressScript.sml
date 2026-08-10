@@ -374,15 +374,18 @@ val tac =
 
 Theorem ALIGNED_add_1_and_3:
     !x. ALIGNED x ==> (x + 1w && 3w = 1w)
-Prooftac
+Proof
+  tac
 QED
 Theorem ALIGNED_add_2_and_3:
     !x. ALIGNED x ==> (x + 2w && 3w = 2w)
-Prooftac
+Proof
+  tac
 QED
 Theorem ALIGNED_add_3_and_3:
     !x. ALIGNED x ==> (x + 3w && 3w = 3w)
-Prooftac
+Proof
+  tac
 QED
 
 Theorem ALIGNED_ADD:

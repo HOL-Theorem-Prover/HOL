@@ -131,6 +131,20 @@ fun tactic_of_sml tim s =
     if b then !sml_tactic_glob else raise ERR "tactic_of_sml" s
   end
 
+(* Recording runs a previously successful source proof in a disposable HOL
+   subprocess.  Do not introduce a Poly/ML timeout thread while constructing
+   its instrumented tactic: a worker that fails to stop can outlive the
+   timeout and wedge the otherwise valid theory recording. *)
+fun tactic_of_sml_no_timeout s =
+  let
+    val tactic = mk_valid s
+    val b = quse_string
+      ("smlExecute.sml_tactic_glob := (" ^ tactic ^ ")")
+  in
+    if b then !sml_tactic_glob
+    else raise ERR "tactic_of_sml_no_timeout" s
+  end
+
 fun string_of_sml s =
   let
     val b = quse_string ("val _ = smlExecute.sml_string_glob := (" ^ s ^ " )")

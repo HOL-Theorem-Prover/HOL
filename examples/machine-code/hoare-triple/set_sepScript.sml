@@ -155,7 +155,8 @@ QED
 
 Theorem SEP_IMP_emp:
     !p. SEP_IMP emp p = p {}
-ProofSIMP_TAC std_ss [SEP_IMP_def,emp_def]
+Proof
+  SIMP_TAC std_ss [SEP_IMP_def,emp_def]
 QED
 
 Theorem SEP_IMP_cond:
