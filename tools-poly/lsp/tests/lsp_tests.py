@@ -1985,6 +1985,49 @@ def test_goalState_walks_thenl_branches():
         c.close()
 
 
+def test_goalState_thenl_context_line():
+    """When the walker's state is inside a `THENL` branch (Stashed
+    with a TacsToLT wrapper), `pp_goalstate` must surface which
+    branch the cursor is in via a `[branch k of n of THENL]`
+    context line -- otherwise the focused subgoal appears without
+    any indication that the previous branches are done."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_thenl_ctx.sml"
+        src = ("Theory goalstate_thenl_ctx\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  T /\\ (!n:num. n = n) /\\ (0 < 1)\n"
+               "Proof\n"
+               "  REPEAT CONJ_TAC THENL [\n"
+               "    ACCEPT_TAC TRUTH,\n"
+               "    gen_tac >> REFL_TAC,\n"
+               "    SIMP_TAC arith_ss []\n"
+               "  ]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 8 char 4 = start of branch 2's `gen_tac`.  Walker has
+        # just applied NextTacsToLT and focused on branch 2.
+        r = _send_goalstate(c, 811, uri, 8, 4)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        pretty = result.get("pretty", "")
+        assert_true("[branch 2 of 3 of THENL]" in pretty,
+                    f"expected [branch 2 of 3 of THENL] context, "
+                    f"got: {pretty!r}")
+        # Line 9 char 4 = start of branch 3's `SIMP_TAC`.
+        r = _send_goalstate(c, 812, uri, 9, 4)
+        pretty = r.get("result", {}).get("pretty", "")
+        assert_true("[branch 3 of 3 of THENL]" in pretty,
+                    f"expected [branch 3 of 3 of THENL] context, "
+                    f"got: {pretty!r}")
+    finally:
+        c.close()
+
+
 def test_goalState_thenl_end_shows_proved():
     """When the cursor sits after the last branch of a `THENL` list
     (all branches applied, close_paren pending), `pp_goalstate` must
@@ -2370,6 +2413,8 @@ TESTS = [
                                      test_goalState_walks_double_backslash_in_then1_block),
     ("goalState_walks_thenl_branches",
                                      test_goalState_walks_thenl_branches),
+    ("goalState_thenl_context_line",
+                                     test_goalState_thenl_context_line),
     ("goalState_thenl_end_shows_proved",
                                      test_goalState_thenl_end_shows_proved),
     ("goalState_walks_squiggle_selector",

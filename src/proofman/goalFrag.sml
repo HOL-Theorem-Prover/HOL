@@ -229,6 +229,25 @@ fun close_first_lt (n, g) = let
     | f _ = raise Bind
   in (n-2, applyN f (n-2) g) end
 
+(* Describe the open combinators that wrap the currently-focused
+   subgoal(s), so a step-walker like the LSP walker can render the
+   structural context (e.g. "branch 2 of 3 of THENL") alongside the
+   goal.  Walks the outer `Stashed` chain from the outermost open
+   combinator inward; wrappers not carried by `Stashed` (Try,
+   Repeat, Parallel, Done) are not currently described. *)
+fun context_lines (_, g) = let
+  fun kind_str (Then1 _) = "first subgoal of >-"
+    | kind_str (TacsToLT (acc, rest, _)) =
+        "branch " ^ Int.toString (length acc + 1) ^
+        " of " ^ Int.toString (length acc + 1 + length rest) ^
+        " of THENL"
+    | kind_str (NthGoal (lo, hi, _)) =
+        "subgoal " ^ Int.toString (length lo + 1) ^
+        " of " ^ Int.toString (length lo + 1 + length hi)
+  fun go (Stashed (inner, k)) acc = go inner (kind_str k :: acc)
+    | go _ acc = acc
+  in rev (go g []) end
+
 fun pp_goalstate gs = let
   open smpp
   val pr_goal = goalStack.pr_goal
@@ -237,6 +256,11 @@ fun pp_goalstate gs = let
     current_trace "Goalstack.other_subgoals_pretty_limit"
   val show_stack_subgoal_count =
     current_trace "Goalstack.show_stack_subgoal_count" = 1
+  val pp_context =
+    case context_lines gs of
+      [] => nothing
+    | ls => add_string ("[" ^ String.concatWith "] [" ls ^ "]") >>
+            add_newline >> add_newline
   in
     case top_goals gs of
       [] =>
@@ -269,6 +293,7 @@ fun pp_goalstate gs = let
       val size = List.foldl (fn (g,acc) => goalStack.goal_size g + acc) 0 pfx
       in
         block Portable.CONSISTENT 0 (
+          pp_context >>
           (if size > other_subgoals_pretty_limit then
             with_flag (Parse.current_backend, PPBackEnd.raw_terminal) start ()
           else start ()) >>
