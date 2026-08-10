@@ -16,19 +16,21 @@ the goal unchanged in every case.
 
 This is a diagnostic tactic, not a proof tactic: it never closes the goal
 and a counterexample is not represented as tactic failure.  The tactic
-forces reporting on and disables configured outcome expectations.  If
-Kodkodi is not configured, the search is `Unknown` and the goal is still
-left unchanged.
+honours every remaining configuration field, including `quiet` and
+`expect`.  If Kodkodi is not configured, the search is `Unknown` and the
+goal is still left unchanged.
 
 ### Failure
 
-Search errors and interrupts are re-raised.  Ordinary Refute outcomes do not
-make the tactic fail.
+A mismatch with a configured non-default expectation raises a HOL error.
+Interrupts are re-raised.  Ordinary Refute outcomes do not make the tactic
+fail.
 
 ### See also
 
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
 [`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
+[`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
 [`Refute.model_refute`](#Refute.model_refute),
 [`Refute.config`](#Refute.config)
 

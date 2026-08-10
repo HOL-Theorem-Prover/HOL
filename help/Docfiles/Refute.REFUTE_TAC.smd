@@ -16,13 +16,14 @@ then applies `ALL_TAC`, leaving the goal unchanged in every case.  Thus this
 is a diagnostic tactic, not a proof tactic: it never closes the goal and a
 counterexample is not represented as tactic failure.
 
-The tactic forces reporting on and disables configured outcome expectations;
-the remaining search options come from `the_config`.
+The tactic reads `the_config` when it is applied and honours every field,
+including `quiet` and `expect`.
 
 ### Failure
 
-Search errors and interrupts are re-raised.  Ordinary Refute outcomes do not
-make the tactic fail.
+A mismatch with a configured non-default expectation raises a HOL error.
+Interrupts are re-raised.  Ordinary Refute outcomes do not make the tactic
+fail.
 
 ### See also
 
@@ -30,6 +31,7 @@ make the tactic fail.
 [`Refute.refute`](#Refute.refute),
 [`Refute.refute_goal`](#Refute.refute_goal),
 [`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
+[`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
 [`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
 [`Refute.quickcheck`](#Refute.quickcheck),
 [`Refute.model_refute`](#Refute.model_refute)

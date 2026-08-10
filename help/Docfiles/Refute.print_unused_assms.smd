@@ -4,4 +4,6 @@
 Refute.print_unused_assms : config option -> string option -> unit
 ```
 
-Prints unused-assumption information for the selected theorem or theory.
+Prints unused-assumption information for the named theory, or for the
+current theory given `NONE`.
+See [`Refute.find_unused_assms`](#Refute.find_unused_assms).

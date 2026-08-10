@@ -4,5 +4,6 @@
 Refute.refute_def : term -> outcome
 ```
 
-Refutes a definition or theorem term using the current Refute configuration.
+Searches for a counterexample to a term using the interactive default
+configuration: `refute_def tm` abbreviates `refute (!the_config) tm`.
 See [`Refute.refute`](#Refute.refute).

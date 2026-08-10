@@ -20,15 +20,16 @@ return a function from the old configuration to the new one, so they are
 normally composed with `|>`.  `default_config` contains
 `default_qc_config` and `default_mf_config`.  `the_config` is the mutable
 interactive default used by `quickcheck`, `model_refute`, `REFUTE_TAC`,
-`QUICKCHECK_TAC`, and `MODEL_REFUTE_TAC`.  `show_config ()` prints the
-complete value of `!the_config`.  The three tactics force `quiet = false`
-and `expect = NoExpectation`, because their contract is to print every
-ordinary outcome and return the original goal unchanged.
+`QUICKCHECK_TAC`, `NARROWING_TAC`, and `MODEL_REFUTE_TAC`.
+`show_config ()` prints the complete value of `!the_config`.  The tactics
+read `the_config` when they are applied and honour every field, including
+`quiet` and `expect`; each returns the original goal unchanged.
 
 ``` hol4
 val cfg = Refute.default_config
   |> Refute.upd_timeout 5.0
-  |> Refute.upd_backends (SOME ["exhaustive", "narrowing"])
+  |> Refute.upd_search
+       (Refute.Only [Refute.Exhaustive, Refute.Narrowing])
   |> Refute.upd_size 7
 ```
 
@@ -36,6 +37,7 @@ val cfg = Refute.default_config
 
 ``` hol4
 Refute.upd_timeout : real -> config -> config
+Refute.upd_search : search -> config -> config
 Refute.upd_backends : string list option -> config -> config
 Refute.upd_sequential : bool -> config -> config
 Refute.upd_genuine_only : bool -> config -> config
@@ -52,7 +54,7 @@ Refute.upd_mf : mf_config -> config -> config
 
 | Field | Default | Meaning |
 |---|---:|---|
-| `timeout` | `30.0` | Seconds allowed to each ordinary backend run. |
+| `timeout` | `10.0` | Seconds in the whole-call search deadline. |
 | `backends` | `NONE` | All backends, or exactly the names in `SOME`. |
 | `sequential` | `false` | Run backends by weight instead of racing them. |
 | `genuine_only` | `false` | Request only genuine hits. |
@@ -64,6 +66,12 @@ Refute.upd_mf : mf_config -> config -> config
 | `max_counterexamples` | `1` | Maximum number of QC hits requested. |
 | `tag` | `""` | Append text to the formatted outcome. |
 
+The `timeout` is one absolute deadline for the whole call: preprocessing,
+backend admission, compilation, testing, and solver calls all consume the
+same remainder.  `upd_search` takes the typed `AllBackends`,
+`QuickcheckBackends`, or `Only choices` selection; `upd_backends` is the
+low-level string interface retained for compatibility.
+
 The expectation constructors are `NoExpectation`, `ExpectNone`,
 `ExpectUnknown`, `ExpectCex`, `ExpectGenuine`, `ExpectQuasiGenuine`, and
 `ExpectPotential`.  A mismatch raises a HOL error.  `upd_qc` and `upd_mf`
@@ -74,6 +82,7 @@ brittle.
 
 ``` hol4
 Refute.upd_size : int -> config -> config
+Refute.upd_iterative_size : int -> config -> config
 Refute.upd_iterations : int -> config -> config
 Refute.upd_depth : int -> config -> config
 Refute.upd_finite_types : bool -> config -> config
@@ -95,6 +104,7 @@ Refute.upd_reorder_premises : bool -> config -> config
 | Field | Default | Meaning |
 |---|---:|---|
 | `size` | `10` | Maximum generated size and narrowing refinement depth. |
+| `size_mode` | iterative | `upd_size` pins a fixed bound instead. |
 | `iterations` | `100` | Number of random draws. |
 | `depth` | `10` | Fixed smart-enumerator fuel for each plan. |
 | `finite_types` | `true` | Add small finite type instances. |
@@ -112,6 +122,11 @@ Refute.upd_reorder_premises : bool -> config -> config
 | `allow_function_inversion` | `false` | Reserved; currently has no consumer. |
 | `use_subtype` | `false` | Reserved; currently has no consumer. |
 
+The default `size_mode` is iterative deepening: `10` is an initial
+window, not a terminal bound, and testing deepens until the deadline.
+`upd_size` pins a fixed, reproducible bound, while `upd_iterative_size`
+sets a different initial window and restores adaptive deepening.
+
 `depth` is live: it is the fuel supplied to each smart enumerator, not a
 second scheduled search from zero to `depth`.  `allow_existentials`
 controls selection of the PNF narrowing engine, and `finite_functions`
@@ -123,6 +138,8 @@ a hit remains `Genuine` but has `cert = NONE`.
 
 ``` hol4
 Refute.upd_card :
+  (hol_type option * int list) list -> config -> config
+Refute.upd_iterative_card :
   (hol_type option * int list) list -> config -> config
 Refute.upd_max : (term option * int list) list -> config -> config
 Refute.upd_mono :
@@ -170,6 +187,7 @@ Refute.upd_merge_type_vars : bool -> config -> config
 | Field | Default | Meaning |
 |---|---:|---|
 | `card` | fallback `[1,...,10]` | Finite cardinalities by type. |
+| `card_mode` | iterative | `upd_card` pins fixed rows instead. |
 | `max` | fallback `[~1]` | Constructor multiplicities; `~1` is automatic. |
 | `mono` | fallback `NONE` | Automatic or forced monotonicity by type. |
 | `wf` | fallback `NONE` | Automatic or forced well-foundedness by constant. |
@@ -205,6 +223,11 @@ Refute.upd_merge_type_vars : bool -> config -> config
 | `need` | `NONE` | Terms whose values must occur in a model. |
 | `merge_type_vars` | `false` | Merge MF type-variable scopes. |
 
+The default `card_mode` is likewise iterative: the fallback row is an
+initial window that keeps growing until the deadline.  `upd_card` pins
+fixed rows, while `upd_iterative_card` restores adaptive scanning; an
+iterative row must be a consecutive prefix `[1, ..., n]`.
+
 For row-valued fields, a `NONE` key is the fallback and a `SOME` key is
 an override.  In a `format` row, the positive integers group consecutive
 curried arguments into tupled arguments for model display.  Thus `[2]`
@@ -234,6 +257,7 @@ nonnegative.
 [`Refute.refute_goal`](#Refute.refute_goal),
 [`Refute.REFUTE_TAC`](#Refute.REFUTE_TAC),
 [`Refute.QUICKCHECK_TAC`](#Refute.QUICKCHECK_TAC),
+[`Refute.NARROWING_TAC`](#Refute.NARROWING_TAC),
 [`Refute.MODEL_REFUTE_TAC`](#Refute.MODEL_REFUTE_TAC),
 [`Refute.quickcheck`](#Refute.quickcheck),
 [`Refute.model_refute`](#Refute.model_refute),

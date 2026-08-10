@@ -19,10 +19,11 @@ registry.  Every probe nevertheless forces sequential, quiet,
 abort-potential, expectation-free operation, and theorem probes are
 serial.
 
-Only a counterexample is decisive, so a probe that misses runs every
-selected backend to its own `timeout`.  Sweeping a large theory with the
-default `NONE` configuration is therefore appreciably slower than with
-`SOME cfg` naming a narrower backend set.
+Only a counterexample is decisive, and the default bounds deepen
+adaptively, so a probe that misses normally runs until its whole-call
+`timeout` expires.  Sweeping a large theory is therefore paced by
+`timeout`; supply `SOME cfg` with a smaller `timeout`, and fixed bounds
+where reproducibility matters, to speed it up.
 
 For each theorem, outer universal quantifiers are stripped and the
 left-to-right implication premises are indexed from zero.  Conjunctive

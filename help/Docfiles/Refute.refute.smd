@@ -15,12 +15,12 @@ by `cfg`, prints the formatted result unless `cfg.quiet` is true, checks
 `cfg.expect`, and returns the structured `outcome`.
 
 A `Counterexample` can contain `Genuine`, `QuasiGenuine`, or `Potential`
-results.  A `Genuine` result with `cert = SOME thm` proves that `tm` is false;
-when certification is disabled, a `Genuine` result has `cert = NONE` and is
-only executable evidence.  `NoCounterexample` only records exhaustion of a
-selected finite search, and
-`Unknown` carries reasons for inapplicability, timeout, or incomplete search;
-neither is a proof.  With the default `certify = true`, Quickcheck and
+results.  A `Genuine` result with `cert = SOME thm` proves that `tm` is
+false; one with `cert = NONE` (certification disabled, or its replay
+inconclusive) is evidence without a theorem.  `NoCounterexample` only
+records exhaustion of a selected finite search, and `Unknown` carries
+reasons for inapplicability, timeout, or incomplete search; neither is a
+proof.  With the default `certify = true`, Quickcheck and
 narrowing hits normally carry a HOL theorem in their `cert` field.
 
 ### Failure

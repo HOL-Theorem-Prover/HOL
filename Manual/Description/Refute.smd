@@ -30,9 +30,11 @@ interruption.
 ### A first counterexample
 
 The following is a static transcript from a Refute-enabled session.
-Timing fields are machine-dependent.  The configuration selects the
-portable `Compute` execution substrate to make the example independent
-of an external compiler.
+Timing fields are machine-dependent, and reports are re-wrapped for the
+page: an interactive session prints each one as a single
+`<<HOL message: ...>>` block.  The configuration selects the portable
+`Compute` execution substrate to make the example independent of an
+external compiler.
 
 ```{=latex}
 \begin{session}
@@ -189,9 +191,8 @@ outcomes.
 
 `try_refute` is intended for other automation.  It preserves the
 caller's backend selection but forces sequential execution, seed 42,
-`NoExpectation`, and quiet mode.  Unlike the ordinary per-backend timeout,
-its `timeout` is an outer whole-call budget.  Its result is structured;
-callers need not parse Refute's printed text.  For example, this call
+`NoExpectation`, and quiet mode.  Its result is structured; callers need
+not parse Refute's printed text.  For example, this call
 prints no Refute report:
 
 ```{=latex}
@@ -248,6 +249,11 @@ produce.  A backend registered through `register_backend` conservatively
 declares the ceiling `Genuine`; a backend with a tighter ceiling can use
 `register_backend_with_ceiling`.
 
+One call owns one absolute search deadline of `timeout` seconds.
+Preprocessing, backend admission, compilation, testing, and solver calls
+all consume the same remainder; mandatory cleanup may finish slightly
+after it.
+
 Exhaustive and random testing compile a common test-plan language onto
 one of three substrates:
 
@@ -266,7 +272,9 @@ For a fixed `seed`, all three consume the same specified 64-bit random
 stream.
 
 Narrowing is a native backend rather than another choice in this
-substrate ladder.  It searches refinement depths from 0 through `size`.
+substrate ladder.  It searches refinement depths upward from 0: a fixed
+`size` is its final depth, while the default iterative mode keeps
+deepening past the initial window until the deadline.
 Purely universal problems use plain narrowing; a prenex problem with an
 existential uses the PNF engine when `allow_existentials` is true.
 Function inputs are represented by finite update chains when
@@ -338,16 +346,6 @@ such an enumerator.  Premises may be reordered during mode analysis;
 `reorder_premises = false` disables that step.  If mode compilation is not
 possible, Refute safely falls back to generate-and-guard testing.
 
-A corpus-reach probe found that the only directly reachable distribution
-corpus is `src/HolRefute/selftest.sml`: no file elsewhere in `src` or
-`examples` invokes Refute.  The adopted payoff cases are its first-order
-`Hol_reln` goal `zoo_sg_linear n ==> n < 3` and the Horn-function
-`ALL_DISTINCT` example below.  Existing `SORTED` candidates degrade to
-guards because their relation argument is function-valued.  Other
-`ALL_DISTINCT` occurrences hide it inside equivalences, while promising
-first-order distribution relations lack a compact executable certification
-view or need heavier generators; those candidates are deferred.
-
 The practical difference is visible at small bounds.  At `size = 1` and
 `depth = 8`, the Horn-function premise in the following example directly
 generates a distinct list and finds a certified counterexample.  With
@@ -404,11 +402,14 @@ search happened not to find a hit.
 
 Execution substrates, generated SML, Kodkodi, and SAT solvers are
 untrusted accelerators.  With the default `certify = true`, a Quickcheck
-candidate is re-evaluated independently with `computeLib`; Refute returns
-`Genuine` only after constructing a theorem for the negated, closed
-instance.  Narrowing grounds partial hits before evaluation and certifies
-PNF existential hits by replaying their finite case tree.  Refute never
-adds an oracle tag.
+candidate is re-evaluated independently with `computeLib`.  A replay that
+proves the instantiated proposition true discards the candidate; one that
+proves it false attaches a theorem for the negated, closed instance; an
+inconclusive replay keeps the substrate-derived certainty with
+`cert = NONE`.  Certification is monotone: it only discards false
+positives or adds theorems, and never weakens a verdict.  Narrowing
+grounds partial hits before evaluation and certifies PNF existential hits
+by replaying their finite case tree.  Refute never adds an oracle tag.
 
 The fields `certainty` and `cert` deliberately answer different
 questions, and neither one determines the other.  `certainty` is the
@@ -420,9 +421,9 @@ certificate: Refute trusts Kodkodi exactly as Isabelle/HOL's Nitpick
 trusts Kodkod, so a translation that is sound and exact yields
 `Genuine`, one resting on an approximation yields
 `QuasiGenuine reasons`, and an unsound one yields `Potential reasons`.
-A reconstructed model is therefore routinely `Genuine` with
-`cert = NONE`: the refuted goal often mentions constants `computeLib`
-cannot evaluate, so no theorem can be built, exactly as for an
+The model finder additionally attempts a fail-closed kernel replay of
+reconstructed values; when that replay cannot close the negated goal,
+the result remains `Genuine` with `cert = NONE`, exactly as for an
 uncertified QC hit below.
 The backend and substrate fields make clear whether a report came from
 MF, narrowing, or executable QC.
@@ -538,7 +539,7 @@ common fields are:
 
 | Updater | Default | Meaning |
 |---|---:|---|
-| `upd_timeout` | `30.0` | Seconds allowed to each ordinary backend run. |
+| `upd_timeout` | `10.0` | Seconds in the whole-call search deadline. |
 | `upd_search` | `AllBackends` | Typed selection of all, Quickcheck, or explicit backends. |
 | `upd_backends` | `NONE` | Low-level string selection retained for compatibility. |
 | `upd_sequential` | `false` | Run backends by weight instead of racing them. |
@@ -559,7 +560,8 @@ raises a HOL error.  They are intended mainly for tests.
 
 | Updater | Default | Meaning |
 |---|---:|---|
-| `upd_size` | `10` | Maximum generated size and narrowing refinement depth. |
+| `upd_size` | `10` | Maximum generated size and narrowing refinement depth; pins a fixed bound. |
+| `upd_iterative_size` | default mode | Initial window for adaptive iterative deepening. |
 | `upd_iterations` | `100` | Random draws. |
 | `upd_depth` | `10` | Fixed smart-enumerator fuel for each plan. |
 | `upd_finite_types` | `true` | Add small fresh finite types when monomorphizing type variables. |
@@ -577,6 +579,11 @@ raises a HOL error.  They are intended mainly for tests.
 | `upd_allow_function_inversion` | `false` | Reserved; currently has no consumer. |
 | `upd_use_subtype` | `false` | Reserved; currently has no consumer. |
 
+The default size mode is iterative deepening: `10` is an initial window,
+not a terminal bound, and testing deepens until the deadline.  `upd_size`
+deliberately pins a fixed, reproducible bound, while `upd_iterative_size`
+sets a different initial window and restores adaptive deepening.
+
 The reserved annotations also appear in `show_config`; changing either
 reserved field has no effect.  In contrast, `depth` is live and is not a
 second 0-through-depth schedule loop.
@@ -590,7 +597,8 @@ row value of `NONE` asks Refute to choose, while `SOME true` or
 
 | Updater | Default | Meaning |
 |---|---:|---|
-| `upd_card` | fallback `[1,...,10]` | Candidate finite cardinalities by type. |
+| `upd_card` | fallback `[1,...,10]` | Candidate finite cardinalities by type; pins fixed rows. |
+| `upd_iterative_card` | default mode | Initial adaptive cardinality windows. |
 | `upd_max` | fallback `[~1]` | Maximum constructor multiplicities; `~1` means automatic. |
 | `upd_mono` | fallback `NONE` | Automatic or forced monotonicity classification by type. |
 | `upd_wf` | fallback `NONE` | Automatic or forced well-founded treatment by constant. |
@@ -625,6 +633,11 @@ row value of `NONE` asks Refute to choose, while `SOME true` or
 | `upd_whack` | `[]` | Constants whose definitions preprocessing should ignore. |
 | `upd_need` | `NONE` | Optional terms whose values must occur in a model. |
 | `upd_merge_type_vars` | `false` | Merge all MF type-variable scopes into the first variable. |
+
+Card rows are iterative by default: the fallback `[1,...,10]` is an
+initial window that keeps growing until the deadline.  `upd_card` pins
+fixed rows, while `upd_iterative_card` restores adaptive scanning; an
+iterative row must be a consecutive prefix `[1, ..., n]`.
 
 The default iterator row is `[0,1,2,4,8,12,16,20,24,28]`.  A mutual
 fixpoint group shares one row: members are considered in cases-theorem
