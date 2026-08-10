@@ -192,6 +192,21 @@ in
     die ("No Holmake executable in " ^ fP [HOLDIR, "bin"])
 end
 
+(* The quote filter's lexer is generated from tools/parsing/HolLex by
+   configure, and by no Holmakefile rule, so pulling in a grammar change
+   leaves a stale bin/unquote that silently mis-lexes the new syntax.
+   The app_sml_files sweep above cannot catch it: HolLex has no .sml
+   extension and does not live under tools/Holmake. *)
+val _ = let
+  val fP = fullPath
+  open HOLFileSys
+  val unquote = fP [HOLDIR,"bin",xable_string "unquote"]
+in
+  if access(unquote, [A_READ, A_EXEC]) then
+    check_against unquote "tools/parsing/HolLex"
+  else ()
+end
+
 
 
 
