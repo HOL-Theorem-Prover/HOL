@@ -3,6 +3,7 @@ structure Refute_Cert = struct
 
   datatype result =
       Certified of Refute_Core.counterexample
+    | Uncertified of Refute_Core.counterexample
     | Potential of Refute_Core.counterexample
     | Discarded
 
@@ -190,22 +191,16 @@ structure Refute_Cert = struct
       case (SOME (eval_original instance)
             handle Interrupt => raise Interrupt | _ => NONE) of
           NONE =>
-            Potential (replace cex
-              (Refute_Core.Potential
-                ["evaluation stuck on: " ^ head_name instance]) [] NONE)
+            Uncertified (replace cex Refute_Core.Genuine [] NONE)
         | SOME theorem =>
             if not (trusted theorem) then
-              Potential (replace cex
-                (Refute_Core.Potential
-                  ["evaluation used an oracle or axiom theorem"]) [] NONE)
+              Uncertified (replace cex Refute_Core.Genuine [] NONE)
             else
             (case rhs_of theorem of
                 rhs =>
                   if Term.aconv rhs boolSyntax.T then Discarded
                   else if not (Term.aconv rhs boolSyntax.F) then
-                    Potential (replace cex
-                      (Refute_Core.Potential
-                        ["evaluation stuck on: " ^ head_name rhs]) [] NONE)
+                    Uncertified (replace cex Refute_Core.Genuine [] NONE)
                   else
                     let
                       val negated_instance = Drule.EQF_ELIM theorem
@@ -222,11 +217,8 @@ structure Refute_Cert = struct
                             (SOME certificate))
                         end
                       else
-                        Potential (replace cex
-                          (Refute_Core.Potential
-                            ["certificate retained hypotheses or an " ^
-                             "oracle/axiom tag"])
-                          [] NONE)
+                        Uncertified
+                          (replace cex Refute_Core.Genuine [] NONE)
                     end)
     end
 
@@ -248,6 +240,7 @@ structure Refute_Cert = struct
       case certify
         {original = original, evals = evals, env = grounded, cex = cex} of
           result as Certified _ => result
+        | Uncertified _ => grounding_failure cex
         | Discarded => Discarded
         | _ => grounding_failure cex
     end

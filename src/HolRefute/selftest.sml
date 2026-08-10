@@ -21835,6 +21835,51 @@ fun false_positive_is_discarded () =
 val _ = require_msg (check_result false_positive_is_discarded) (fn () =>
   "certification did not discard an EVAL-true candidate") (fn () => ()) ()
 
+fun inconclusive_certification_is_monotone () =
+  let
+    val original = valOf (List.find (fn substrate =>
+      #name substrate = "compute") (get_substrates ()))
+    val candidate : candidate =
+      {env = [], ground_env = NONE, case_tree = NONE,
+       genuine = true, run_depth = NONE}
+    val test : compiled_test =
+      {run = fn _ => CexFound candidate, close = fn () => (),
+       max_chunk = NONE, last_stats = ref []}
+    val replacement : substrate =
+      {name = "compute", priority = #priority original,
+       accepts = #accepts original, preflight = #preflight original,
+       compile = fn _ => fn _ => fn _ => Compiled test}
+    val base = default_config
+      |> upd_backends (SOME ["exhaustive"])
+      |> upd_sequential true
+      |> upd_substrate Compute
+      |> upd_size 1
+      |> upd_quiet true
+    fun run certify = Refute.refute (upd_certify certify base)
+      ``HD ([] : bool list)``
+    fun body () =
+      let
+        val _ = register_substrate replacement
+        val enabled = run true
+        val disabled = run false
+      in
+        case (enabled, disabled) of
+            (Counterexample [left], Counterexample [right]) =>
+              #certainty left = Genuine andalso
+              #certainty right = Genuine andalso
+              not (Option.isSome (#cert left)) andalso
+              not (Option.isSome (#cert right))
+          | _ => false
+      end
+  in
+    Portable.finally (fn () => register_substrate original) body ()
+  end
+
+val _ = require_msg
+  (check_result inconclusive_certification_is_monotone) (fn () =>
+  "inconclusive certification weakened a clean substrate verdict")
+  (fn () => ()) ()
+
 val stuck_list_gen : custom_gen =
   { enumerate = SOME (fn _ => [``[] : num list``]), random = NONE }
 
