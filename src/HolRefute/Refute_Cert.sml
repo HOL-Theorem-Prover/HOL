@@ -13,6 +13,13 @@ structure Refute_Cert = struct
 
   val rhs_of = boolSyntax.rhs o Thm.concl
 
+  val default_leaf_rounds = 2
+
+  datatype instance_verdict =
+      InstanceFalse of Thm.thm
+    | InstanceTrue
+    | InstanceStuck of string
+
   (* Shared by the narrowing and model replay engines: an exception raised
      inside a replay step is reported by message, never propagated. *)
   fun replay_error_text error =
@@ -69,6 +76,75 @@ structure Refute_Cert = struct
     in
       visit tm handle _ => Parse.term_to_string tm
     end
+
+  (* A bounded, theorem-producing evaluator shared by QC certification and
+     model replay.  [step] supplies the caller's exception, resource,
+     deadline, and per-conversion audit policy. *)
+  fun equality_portfolio rounds step tm =
+    let
+      fun acceptable theorem =
+        null (Thm.hyp theorem) andalso trusted theorem andalso
+        let val (left, _) = boolSyntax.dest_eq (Thm.concl theorem)
+        in Term.aconv left tm end
+        handle Feedback.HOL_ERR _ => false
+
+      fun decisive theorem =
+        let val rhs = rhs_of theorem
+        in
+          Term.aconv rhs boolSyntax.T orelse
+          Term.aconv rhs boolSyntax.F
+        end
+
+      fun compose first second = Thm.TRANS first second
+
+      val seen = ref ([] : term list)
+      fun repeated candidate = Refute_Util.aconv_member candidate (!seen)
+      fun one label conversion theorem =
+        case step label (rhs_of theorem) conversion of
+            NONE => theorem
+          | SOME next =>
+              if Term.aconv (rhs_of next) (rhs_of theorem) then theorem
+              else compose theorem next
+      fun advance label conversion theorem =
+        if decisive theorem then theorem
+        else one label conversion theorem
+      fun round 0 theorem = theorem
+        | round count theorem =
+            let
+              val current = rhs_of theorem
+              val _ = seen := current :: !seen
+              val theorem = advance "leaf CBV evaluation" eval_original
+                theorem
+              val theorem = advance "leaf simplification"
+                (simpLib.SIMP_CONV (BasicProvers.srw_ss ()) []) theorem
+              val theorem = advance "leaf CBV evaluation" eval_original
+                theorem
+              val next = rhs_of theorem
+            in
+              if decisive theorem orelse Term.aconv current next orelse
+                 repeated next then theorem
+              else round (count - 1) theorem
+            end
+      val initial =
+        case step "leaf beta/let normalization" tm
+          (Conv.DEPTH_CONV Thm.BETA_CONV) of
+            SOME theorem => theorem
+          | NONE => Thm.REFL tm
+      val theorem = round rounds initial
+    in
+      if acceptable theorem then SOME theorem else NONE
+    end
+
+  fun evaluate_instance rounds step instance =
+    case equality_portfolio rounds step instance of
+        NONE => InstanceStuck (head_name instance)
+      | SOME theorem =>
+          let val rhs = rhs_of theorem
+          in
+            if Term.aconv rhs boolSyntax.F then InstanceFalse theorem
+            else if Term.aconv rhs boolSyntax.T then InstanceTrue
+            else InstanceStuck (head_name rhs)
+          end
 
   fun eval_term env tm =
     ((let
@@ -187,39 +263,30 @@ structure Refute_Cert = struct
     let
       val (variables, closure, body) = closure_of original
       val instance = instantiate env body
+      fun step _ input conversion =
+        SOME (conversion input)
+        handle Interrupt => raise Interrupt | _ => NONE
     in
-      case (SOME (eval_original instance)
-            handle Interrupt => raise Interrupt | _ => NONE) of
-          NONE =>
+      case evaluate_instance default_leaf_rounds step instance of
+          InstanceStuck _ =>
             Uncertified (replace cex Refute_Core.Genuine [] NONE)
-        | SOME theorem =>
-            if not (trusted theorem) then
-              Uncertified (replace cex Refute_Core.Genuine [] NONE)
-            else
-            (case rhs_of theorem of
-                rhs =>
-                  if Term.aconv rhs boolSyntax.T then Discarded
-                  else if not (Term.aconv rhs boolSyntax.F) then
-                    Uncertified (replace cex Refute_Core.Genuine [] NONE)
-                  else
-                    let
-                      val negated_instance = Drule.EQF_ELIM theorem
-                      val witnesses = map (instantiate env) variables
-                      val certificate = refute_forall closure witnesses
-                        negated_instance
-                    in
-                      if null (Thm.hyp certificate) andalso
-                         trusted certificate then
-                        let val values = map (fn tm =>
-                          (tm, eval_term env tm)) evals
-                        in
-                          Certified (replace cex Refute_Core.Genuine values
-                            (SOME certificate))
-                        end
-                      else
-                        Uncertified
-                          (replace cex Refute_Core.Genuine [] NONE)
-                    end)
+        | InstanceTrue => Discarded
+        | InstanceFalse theorem =>
+            let
+              val negated_instance = Drule.EQF_ELIM theorem
+              val witnesses = map (instantiate env) variables
+              val certificate = refute_forall closure witnesses
+                negated_instance
+            in
+              if null (Thm.hyp certificate) andalso trusted certificate then
+                let val values = map (fn tm => (tm, eval_term env tm)) evals
+                in
+                  Certified (replace cex Refute_Core.Genuine values
+                    (SOME certificate))
+                end
+              else
+                Uncertified (replace cex Refute_Core.Genuine [] NONE)
+            end
     end
 
   fun grounding_failure cex =

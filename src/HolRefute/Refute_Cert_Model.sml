@@ -288,77 +288,9 @@ structure Refute_Cert_Model = struct
             else NONE
           end)
 
-      fun beta depth tm =
-        optional_equality "leaf beta/let normalization" depth tm
-          (Conv.DEPTH_CONV Thm.BETA_CONV)
-
-      fun cbv depth tm =
-        optional_equality "leaf CBV evaluation" depth tm eval_original
-
-      fun simplify depth tm =
-        optional_equality "leaf simplification" depth tm
-          (simpLib.SIMP_CONV (BasicProvers.srw_ss ()) [])
-
-      fun decisive theorem =
-        let val rhs = rhs_of theorem
-        in
-          Term.aconv rhs boolSyntax.T orelse
-          Term.aconv rhs boolSyntax.F
-        end
-
-      fun compose stage depth first second =
-        let
-          val middle = rhs_of first
-          val left = #1 (boolSyntax.dest_eq (Thm.concl second))
-          val _ = if Term.aconv middle left then () else
-            fail InternalFailure stage depth
-              "conversion endpoints do not agree"
-          val theorem = Thm.TRANS first second
-        in
-          require_theorem stage depth
-            (SOME (boolSyntax.mk_eq
-              (#1 (boolSyntax.dest_eq (Thm.concl first)), rhs_of second)))
-            theorem
-        end
-
-      fun equality_portfolio depth tm =
-        let
-          val seen = ref ([] : term list)
-          fun repeated candidate = Util.aconv_member candidate (!seen)
-          fun one conversion theorem =
-            case conversion depth (rhs_of theorem) of
-                NONE => theorem
-              | SOME next =>
-                  if Term.aconv (rhs_of next) (rhs_of theorem) then theorem
-                  else compose "leaf conversion composition" depth
-                    theorem next
-          fun step conversion theorem =
-            if decisive theorem then theorem else one conversion theorem
-          fun round 0 theorem = theorem
-            | round count theorem =
-                let
-                  val current = rhs_of theorem
-                  val _ = seen := current :: !seen
-                  val theorem = step cbv theorem
-                  val theorem = step simplify theorem
-                  val theorem = step cbv theorem
-                  val next = rhs_of theorem
-                in
-                  if decisive theorem orelse Term.aconv current next orelse
-                     repeated next then theorem
-                  else round (count - 1) theorem
-                end
-          val initial =
-            case beta depth tm of
-                SOME theorem => theorem
-              | NONE => Thm.REFL tm
-          val theorem = round (#max_leaf_rounds policy) initial
-        in
-          if theorem_acceptable
-               (SOME (boolSyntax.mk_eq (tm, rhs_of theorem))) theorem
-          then SOME theorem
-          else NONE
-        end
+      fun portfolio depth tm =
+        equality_portfolio (#max_leaf_rounds policy)
+          (fn stage => optional_equality stage depth) tm
 
       fun prove_by_conversion stage depth conversion goal =
         optional (fn () =>
@@ -376,7 +308,7 @@ structure Refute_Cert_Model = struct
         let
           val _ = leaf_attempts := !leaf_attempts + 1
         in
-          case equality_portfolio depth formula of
+          case portfolio depth formula of
               SOME theorem =>
                 if Term.aconv (rhs_of theorem) boolSyntax.F then
                   SOME (require_theorem "leaf equality elimination" depth
@@ -418,15 +350,15 @@ structure Refute_Cert_Model = struct
         end
 
       fun whole_formula () =
-        case equality_portfolio 0 instance of
-            SOME theorem =>
-              if Term.aconv (rhs_of theorem) boolSyntax.F then
-                SOME (Certified (fast_certificate theorem))
-              else if Term.aconv (rhs_of theorem) boolSyntax.T andalso
-                      null (Term.free_vars_lr instance) then
+        case evaluate_instance (#max_leaf_rounds policy)
+          (fn stage => optional_equality stage 0) instance of
+            InstanceFalse theorem =>
+              SOME (Certified (fast_certificate theorem))
+          | InstanceTrue =>
+              if null (Term.free_vars_lr instance) then
                 SOME DiscardedByWholeFormulaEval
               else NONE
-          | NONE => NONE
+          | InstanceStuck _ => NONE
 
       fun replay_pnf () =
         let
