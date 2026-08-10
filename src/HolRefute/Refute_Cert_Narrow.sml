@@ -1,6 +1,7 @@
 structure Refute_Cert_Narrow = struct
   open Refute_Cert
   structure Util = Refute_Util
+  structure MFH = Refute_ModelFinder_HOL
 
   fun replay_failure cex detail =
     Potential (replace cex
@@ -24,36 +25,18 @@ structure Refute_Cert_Narrow = struct
       (* Keep replay on exactly the formula compiled by Refute_QC_Narrow.
          Retain both conversions so its certificate still proves the
          negation of the caller's unnormalised closure. *)
-      val normalized_equality =
-        Ho_Rewrite.REWRITE_CONV Refute_Core.normal_rewrites closure
-        handle Interrupt => raise Interrupt | _ => Thm.REFL closure
-      val normalized = rhs_of normalized_equality
-      val prenex_equality = Refute_Narrow.prenex_conversion normalized
-      val pnf = rhs_of prenex_equality
+      fun normalization_step conversion tm =
+        conversion tm
+        handle Interrupt => raise Interrupt | _ => Thm.REFL tm
+      val (normalized_equality, prenex_equality, pnf) =
+        normalize_to_pnf normalization_step closure
 
-      val constructor_cache =
-        ref (Redblackmap.mkDict Type.compare :
-          (Type.hol_type, term list) Redblackmap.dict)
+      val resolve_constructors = constructor_resolver ()
       fun constructors_of ty =
-        case Redblackmap.peek (!constructor_cache, ty) of
+        case resolve_constructors ty of
             SOME constructors => constructors
           | NONE =>
-              (case TypeBase.fetch ty of
-                   NONE =>
-                     raise Fail "quantified type has no TypeBase nchotomy"
-                 | SOME info =>
-                     let
-                       val constructors = map (TypeBasePure.cinst ty)
-                         (TypeBasePure.constructors_of info)
-                       val _ = constructor_cache :=
-                         Redblackmap.insert
-                           (!constructor_cache, ty, constructors)
-                     in
-                       constructors
-                     end)
-
-      fun constructor_arguments constructor =
-        #1 (boolSyntax.strip_fun (Term.type_of constructor))
+              raise Fail "quantified type has no TypeBase nchotomy"
 
       fun validate_exhaustive_shape ancestors expected_depth ty
             (shape as Refute_Eval.CaseShape
@@ -73,7 +56,7 @@ structure Refute_Cert_Narrow = struct
           fun one (index, (constructor, metadata)) =
             let
               val {id, fields} = metadata
-              val argument_types = constructor_arguments constructor
+              val argument_types = MFH.constructor_arg_types constructor
               val _ = if id = index then ()
                 else raise Fail "case-tree constructor identity mismatch"
               val _ = if length argument_types = length fields then ()
@@ -105,7 +88,7 @@ structure Refute_Cert_Narrow = struct
                 handle Subscript =>
                   raise Fail "case pattern constructor is out of range"
               val (head, arguments) = boolSyntax.strip_comb tm
-              val argument_types = constructor_arguments constructor
+              val argument_types = MFH.constructor_arg_types constructor
               val _ = if Term.aconv head constructor then ()
                 else raise Fail "case pattern constructor term mismatch"
               val _ = if length arguments = length patterns andalso
@@ -308,12 +291,8 @@ structure Refute_Cert_Narrow = struct
               val instance = Term.subst
                 [{redex = variable, residue = witness}] body
               val refutation = prove_neg instance subtree
-              val assumed = Thm.ASSUME formula
-              val assumed_instance = Drule.SPECL [witness] assumed
-              val falsehood = Thm.MP (Thm.NOT_ELIM refutation)
-                assumed_instance
             in
-              Thm.NOT_INTRO (Thm.DISCH formula falsehood)
+              refute_forall formula [witness] refutation
             end
         | prove_neg formula
             (Refute_Eval.CaseExistential {shape, branches}) =
@@ -339,28 +318,13 @@ structure Refute_Cert_Narrow = struct
                 (all_negated,
                  Tactical.THEN
                    (Tactic.GEN_TAC, close_from index refutations))
-              val conversion = Conv.CONV_RULE
-                (Conv.DEPTH_CONV Thm.BETA_CONV)
-                (Drule.ISPEC (Term.mk_abs (variable, body))
-                  boolTheory.NOT_EXISTS_THM)
-              val target = rhs_of conversion
-              val exhaustive = conform_conclusion
-                "existential" target exhaustive
             in
-              Thm.EQ_MP (Thm.SYM conversion) exhaustive
+              refute_exists "existential" variable body exhaustive
             end
 
       val replayed = prove_neg pnf case_tree
-      val prenex_negated_equality =
-        Thm.AP_TERM boolSyntax.negation prenex_equality
-      val replayed = conform_conclusion
-        "prenex" (rhs_of prenex_negated_equality) replayed
-      val normalized_certificate =
-        Thm.EQ_MP (Thm.SYM prenex_negated_equality) replayed
-      val normalized_negated_equality =
-        Thm.AP_TERM boolSyntax.negation normalized_equality
-      val certificate = Thm.EQ_MP (Thm.SYM normalized_negated_equality)
-        normalized_certificate
+      val certificate = undo_normalization "narrow replay"
+        (normalized_equality, prenex_equality) replayed
       val _ = if null (Thm.hyp certificate) then ()
         else raise Fail "replay certificate retained hypotheses"
       val _ = if trusted certificate then () else

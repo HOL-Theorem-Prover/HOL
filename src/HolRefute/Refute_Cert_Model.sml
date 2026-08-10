@@ -408,13 +408,8 @@ structure Refute_Cert_Model = struct
       fun fast_certificate theorem =
         let
           val negated_instance = Drule.EQF_ELIM theorem
-          val assumed = Thm.ASSUME closure
           val witnesses = map (instantiate env) variables
-          val assumed_instance = Drule.SPECL witnesses assumed
-          val falsehood = Thm.MP (Thm.NOT_ELIM negated_instance)
-            assumed_instance
-          val certificate = Thm.NOT_INTRO
-            (Thm.DISCH closure falsehood)
+          val certificate = refute_forall closure witnesses negated_instance
           val certificate = conform_conclusion
             "whole-formula replay" expected certificate
         in
@@ -435,23 +430,22 @@ structure Refute_Cert_Model = struct
 
       fun replay_pnf () =
         let
-          val _ = charge "normalization" 0
-          val normalized_equality = within_deadline "normalization" 0
-            (fn tm =>
-              Ho_Rewrite.REWRITE_CONV Refute_Core.normal_rewrites tm
-              handle Conv.UNCHANGED => Thm.REFL tm) closure
-          val normalized_equality = require_theorem "normalization" 0
-            (SOME (boolSyntax.mk_eq
-              (closure, rhs_of normalized_equality))) normalized_equality
-          val normalized = rhs_of normalized_equality
-          val _ = charge "prenex conversion" 0
-          val prenex_equality = within_deadline "prenex conversion" 0
-            (fn tm => Refute_Narrow.prenex_conversion tm
-              handle Conv.UNCHANGED => Thm.REFL tm) normalized
-          val prenex_equality = require_theorem "prenex conversion" 0
-            (SOME (boolSyntax.mk_eq
-              (normalized, rhs_of prenex_equality))) prenex_equality
-          val pnf = rhs_of prenex_equality
+          val normalization_stage = ref "normalization"
+          fun normalization_step conversion tm =
+            let
+              val stage = !normalization_stage
+              val _ = charge stage 0
+              val theorem = within_deadline stage 0
+                (fn input => conversion input
+                  handle Conv.UNCHANGED => Thm.REFL input) tm
+              val theorem = require_theorem stage 0
+                (SOME (boolSyntax.mk_eq (tm, rhs_of theorem))) theorem
+              val _ = normalization_stage := "prenex conversion"
+            in
+              theorem
+            end
+          val (normalized_equality, prenex_equality, pnf) =
+            normalize_to_pnf normalization_step closure
 
           fun quantified tm =
             boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
@@ -538,9 +532,10 @@ structure Refute_Cert_Model = struct
 
           fun is_no_proof ({kind, ...} : failure) = kind = NoProof
 
-          (* is_codatatype walks the theory ancestry and cinst rebuilds
-             every constructor, but a replay revisits the same handful of
-             types on every node, so the resolution is memoized. *)
+          (* is_codatatype walks the theory ancestry, so the model-specific
+             filter remains in this cache in front of the shared TypeBase
+             constructor resolver. *)
+          val resolve_typebase = constructor_resolver ()
           val constructor_cache = ref
             (Redblackmap.mkDict Type.compare :
               (Type.hol_type,
@@ -549,14 +544,12 @@ structure Refute_Cert_Model = struct
           fun resolve_constructors ty =
             if MFH.is_codatatype ty then NONE
             else
-              case TypeBase.fetch ty of
+              case resolve_typebase ty of
                   NONE => NONE
-                | SOME info =>
-                    let val constructors = map (TypeBasePure.cinst ty)
-                      (TypeBasePure.constructors_of info)
-                    in if null constructors then NONE
-                       else SOME (info, constructors)
-                    end
+                | SOME constructors =>
+                    if null constructors then NONE
+                    else Option.map (fn info => (info, constructors))
+                      (TypeBase.fetch ty)
             handle Feedback.HOL_ERR _ => NONE
 
           fun constructor_info ty =
@@ -893,13 +886,8 @@ structure Refute_Cert_Model = struct
                              split_depths = #split_depths context}
                           val refutation =
                             prove_neg instance next (depth + 1)
-                          val assumed = Thm.ASSUME formula
-                          val assumed_instance =
-                            Drule.SPECL [witness] assumed
-                          val falsehood = Thm.MP
-                            (Thm.NOT_ELIM refutation) assumed_instance
-                          val theorem = Thm.NOT_INTRO
-                            (Thm.DISCH formula falsehood)
+                          val theorem =
+                            refute_forall formula [witness] refutation
                           val theorem = require_theorem
                             "universal replay" depth
                             (SOME (boolSyntax.mk_neg formula)) theorem
@@ -933,17 +921,8 @@ structure Refute_Cert_Model = struct
                          [(arbitrary, 0)]}
                     val refutation = prove_neg instance next (depth + 1)
                     val generalized = Thm.GEN arbitrary refutation
-                    val conversion = Conv.CONV_RULE
-                      (Conv.DEPTH_CONV Thm.BETA_CONV)
-                      (Drule.ISPEC (Term.mk_abs (variable, body))
-                        boolTheory.NOT_EXISTS_THM)
-                    val conversion = require_theorem
-                      "existential conversion" depth NONE conversion
-                    val target = rhs_of conversion
-                    val generalized = conform_conclusion
-                      "existential replay" target generalized
-                    val theorem = Thm.EQ_MP
-                      (Thm.SYM conversion) generalized
+                    val theorem = refute_exists "existential replay"
+                      variable body generalized
                   in
                     require_theorem "existential replay" depth
                       (SOME (boolSyntax.mk_neg formula)) theorem
@@ -1126,16 +1105,8 @@ structure Refute_Cert_Model = struct
             {active = [], active_origins = [], next_origin = 0,
              split_depths = []}
           val replayed = prove_neg pnf initial_context 0
-          val prenex_negated_equality =
-            Thm.AP_TERM boolSyntax.negation prenex_equality
-          val replayed = conform_conclusion
-            "prenex replay" (rhs_of prenex_negated_equality) replayed
-          val normalized_certificate = Thm.EQ_MP
-            (Thm.SYM prenex_negated_equality) replayed
-          val normalized_negated_equality =
-            Thm.AP_TERM boolSyntax.negation normalized_equality
-          val certificate = Thm.EQ_MP
-            (Thm.SYM normalized_negated_equality) normalized_certificate
+          val certificate = undo_normalization "model replay"
+            (normalized_equality, prenex_equality) replayed
           val certificate = conform_conclusion
             "model replay" expected certificate
           val certificate = require_theorem "final certificate audit" 0

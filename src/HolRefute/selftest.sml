@@ -21299,6 +21299,34 @@ fun quantified_model_replay_rejects_oracle_tags () =
     not (Refute_Cert.trusted oracle)
   end
 
+fun shared_forall_derivation_is_audited () =
+  let
+    val witness = ``0 : num``
+    val formula = ``!x : num. F``
+    val refutation = Drule.EQF_ELIM (Thm.REFL boolSyntax.F)
+    val theorem = Refute_Cert.refute_forall formula [witness] refutation
+  in
+    Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg formula) andalso
+    null (Thm.hyp theorem) andalso
+    Refute_Cert.trusted theorem
+  end
+
+fun shared_exists_derivation_is_audited () =
+  let
+    val variable = ``x : num``
+    val body = boolSyntax.F
+    val generalized = Thm.GEN variable
+      (Drule.EQF_ELIM (Thm.REFL boolSyntax.F))
+    val theorem = Refute_Cert.refute_exists "selftest"
+      variable body generalized
+    val expected = boolSyntax.mk_neg
+      (boolSyntax.mk_exists (variable, body))
+  in
+    Term.aconv (Thm.concl theorem) expected andalso
+    null (Thm.hyp theorem) andalso
+    Refute_Cert.trusted theorem
+  end
+
 val quantified_model_replay_checks =
   [("motivating quantified replay", quantified_model_replay_is_certified),
    ("omitted counterwitness",
@@ -21310,7 +21338,9 @@ val quantified_model_replay_checks =
    ("unbounded symbolic existential",
     quantified_model_replay_does_not_assume_bounded_model),
    ("fuel exhaustion", quantified_model_replay_fuel_is_bounded),
-   ("oracle-tag rejection", quantified_model_replay_rejects_oracle_tags)]
+   ("oracle-tag rejection", quantified_model_replay_rejects_oracle_tags),
+   ("shared forall derivation", shared_forall_derivation_is_audited),
+   ("shared exists derivation", shared_exists_derivation_is_audited)]
 
 val _ = List.app (fn (label, check) => require_msg
   (check_result check) (fn () =>

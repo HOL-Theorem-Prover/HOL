@@ -91,6 +91,86 @@ structure Refute_Cert = struct
       (variables, boolSyntax.list_mk_forall (variables, body), body)
     end
 
+  (* Turn a refutation of one instance into a refutation of the universally
+     quantified formula whose prefix [witnesses] instantiate. *)
+  fun refute_forall formula witnesses refutation =
+    let
+      val assumed = Thm.ASSUME formula
+      val assumed_instance = Drule.SPECL witnesses assumed
+      val falsehood = Thm.MP (Thm.NOT_ELIM refutation) assumed_instance
+    in
+      Thm.NOT_INTRO (Thm.DISCH formula falsehood)
+    end
+
+  (* Turn a generalized refutation of [body] into a refutation of the
+     corresponding existential formula. *)
+  fun refute_exists label variable body generalized =
+    let
+      val conversion = Conv.CONV_RULE
+        (Conv.DEPTH_CONV Thm.BETA_CONV)
+        (Drule.ISPEC (Term.mk_abs (variable, body))
+          boolTheory.NOT_EXISTS_THM)
+      val target = rhs_of conversion
+      val generalized = conform_conclusion label target generalized
+    in
+      Thm.EQ_MP (Thm.SYM conversion) generalized
+    end
+
+  (* Keep the derivation shared while letting each caller retain its own
+     exception, budget, deadline, and audit policy for individual steps. *)
+  fun normalize_to_pnf step closure =
+    let
+      val normalized_equality = step
+        (Ho_Rewrite.REWRITE_CONV Refute_Core.normal_rewrites) closure
+      val normalized = rhs_of normalized_equality
+      val prenex_equality = step Refute_Narrow.prenex_conversion normalized
+    in
+      (normalized_equality, prenex_equality, rhs_of prenex_equality)
+    end
+
+  (* Undo the two equalities produced by [normalize_to_pnf] under negation. *)
+  fun undo_normalization label
+        (normalized_equality, prenex_equality) replayed =
+    let
+      val prenex_negated_equality =
+        Thm.AP_TERM boolSyntax.negation prenex_equality
+      val replayed = conform_conclusion
+        (label ^ " prenex") (rhs_of prenex_negated_equality) replayed
+      val normalized_certificate = Thm.EQ_MP
+        (Thm.SYM prenex_negated_equality) replayed
+      val normalized_negated_equality =
+        Thm.AP_TERM boolSyntax.negation normalized_equality
+    in
+      Thm.EQ_MP (Thm.SYM normalized_negated_equality)
+        normalized_certificate
+    end
+
+  (* One memoized TypeBase lookup belongs to each replay call: the theory
+     cannot change underneath it. *)
+  fun constructor_resolver () =
+    let
+      val cache = ref
+        (Redblackmap.mkDict Type.compare :
+          (Type.hol_type, term list option) Redblackmap.dict)
+      fun resolve ty =
+        case Redblackmap.peek (!cache, ty) of
+            SOME constructors => constructors
+          | NONE =>
+              let
+                val constructors =
+                  Option.map (fn info => map (TypeBasePure.cinst ty)
+                    (TypeBasePure.constructors_of info))
+                    (TypeBase.fetch ty)
+                  handle Feedback.HOL_ERR _ => NONE
+                val _ = cache :=
+                  Redblackmap.insert (!cache, ty, constructors)
+              in
+                constructors
+              end
+    in
+      resolve
+    end
+
   fun replace (cex : Refute_Core.counterexample) certainty evals cert =
     { backend = #backend cex,
       substrate = #substrate cex,
@@ -129,13 +209,9 @@ structure Refute_Cert = struct
                   else
                     let
                       val negated_instance = Drule.EQF_ELIM theorem
-                      val assumed = Thm.ASSUME closure
                       val witnesses = map (instantiate env) variables
-                      val assumed_instance = Drule.SPECL witnesses assumed
-                      val falsehood = Thm.MP (Thm.NOT_ELIM negated_instance)
-                        assumed_instance
-                      val certificate = Thm.NOT_INTRO
-                        (Thm.DISCH closure falsehood)
+                      val certificate = refute_forall closure witnesses
+                        negated_instance
                     in
                       if null (Thm.hyp certificate) andalso
                          trusted certificate then
