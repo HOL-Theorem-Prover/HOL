@@ -1985,6 +1985,48 @@ def test_goalState_walks_thenl_branches():
         c.close()
 
 
+def test_goalState_thenl_end_shows_proved():
+    """When the cursor sits after the last branch of a `THENL` list
+    (all branches applied, close_paren pending), `pp_goalstate` must
+    show "Initial goal proved." rather than "No subgoals but proof
+    incomplete."  Regression for goalFrag.close_paren's TacsToLT
+    case, which used to discard the final branch's result and leave
+    the outer validation with n-1 theorems for n branches."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_thenl_end.sml"
+        src = ("Theory goalstate_thenl_end\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  T /\\ (!n:num. n = n) /\\ (0 < 1)\n"
+               "Proof\n"
+               "  REPEAT CONJ_TAC THENL [\n"
+               "    ACCEPT_TAC TRUTH,\n"
+               "    gen_tac >> REFL_TAC,\n"
+               "    SIMP_TAC arith_ss []\n"
+               "  ]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 9 char 24 = right after `SIMP_TAC arith_ss []`, before
+        # the newline.  All three branches have applied; close_paren
+        # is the only remaining step.  Expect a proved-goal message.
+        r = _send_goalstate(c, 801, uri, 9, 24)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        pretty = result.get("pretty", "")
+        assert_true("Initial goal proved" in pretty,
+                    f"cursor after last branch shows proved-message, "
+                    f"got: {pretty!r}")
+        assert_true("No subgoals but proof incomplete" not in pretty,
+                    f"NOT the stale close_paren-failed message: "
+                    f"{pretty!r}")
+    finally:
+        c.close()
+
+
 def test_goalState_walks_squiggle_selector():
     """Regression: `>~` (Q.>~, a goal-selector by pattern) must
     split the walker's step stream so cursor between the LHS
@@ -2328,6 +2370,8 @@ TESTS = [
                                      test_goalState_walks_double_backslash_in_then1_block),
     ("goalState_walks_thenl_branches",
                                      test_goalState_walks_thenl_branches),
+    ("goalState_thenl_end_shows_proved",
+                                     test_goalState_thenl_end_shows_proved),
     ("goalState_walks_squiggle_selector",
                                      test_goalState_walks_squiggle_selector),
     ("lsp_walks_file_includes_from_arbitrary_cwd",

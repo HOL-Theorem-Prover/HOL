@@ -92,7 +92,11 @@ fun close_paren (n, g) = let
         (case asBase gs of
           ([], v) => Base (ss, fn ths => v' (v [] @ ths))
         | _ => raise ERR "THEN1" "first subgoal not solved by second tactic")
-      | TacsToLT (acc, [], v) => Base (concatMapV I (rev acc, v))
+      (* After n branches, acc holds n-1 entries (one per
+         next_tacs_to_lt call, all between branches).  The current
+         `gs` is the nth branch's result; include it before folding
+         so the outer validation `v` gets the full n theorems. *)
+      | TacsToLT (acc, [], v) => Base (concatMapV I (rev (asBase gs :: acc), v))
       | TacsToLT _ => raise ERR "TACS_TO_LT" "length mismatch"
       | NthGoal (lo, hi, v) => let
         val (gs', v') = asBase gs
