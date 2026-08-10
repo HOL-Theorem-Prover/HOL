@@ -446,22 +446,8 @@ val sgn_tm = “real_sgn :real -> real”;
 val max_tm = “max :real -> real -> real”;
 val min_tm = “min :real -> real -> real”;
 
-(* computeLib re-evaluates whatever a registered conversion hands back, so
-   one that reports success without changing its term sends CBV_CONV round
-   the same term forever.  Several of these are no-ops on an argument that
-   is already reduced: REAL_RAT_DIV_CONV rewrites x / y to x * inv y and
-   back, so it takes &1 / &3 to &1 / &3 and REAL_RAT_REDUCE_CONV does not
-   terminate on any term containing a non-integral rational literal.  The
-   guard therefore belongs on every entry rather than on the one operator
-   (negation) whose no-op was noticed first.
-
-   A conversion can report no progress two ways: return a reflexive
-   theorem, or raise UNCHANGED (as ALL_CONV, hence TRY_CONV, does).
-   CHANGED_CONV catches both -- it turns the raise into a HOL_ERR, which
-   is what reduce_cst looks for when moving on to the next rule -- so it
-   needs no QCHANGED_CONV around it.  QCHANGED_CONV alone would not do:
-   it catches only the raise and lets the reflexive theorem through,
-   which is the diverging mode. *)
+(* computeLib retries reflexive results and does not catch UNCHANGED.
+   CHANGED_CONV converts both no-progress cases to the HOL_ERR it expects. *)
 fun add_reduce_conv entry compset =
   let
     val (operator, arity, conv) = entry

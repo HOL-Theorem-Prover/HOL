@@ -430,19 +430,10 @@ val _ = require_msg (check_result (aconv expected2)) term_to_string
                     (quietly Parse.Term) ‘0 < x’
 val _ = temp_set_grammars grammars
 
-(* REAL_RAT_DIV_CONV rewrites x / y to x * inv y and back, so it is a
-   no-op on a rational literal already in lowest terms while still
-   reporting success.  computeLib re-evaluates whatever a registered
-   conversion returns, so before the compset guarded its entries this
-   made REAL_RAT_REDUCE_CONV diverge on every term containing such a
-   literal. *)
-val _ = let
-  val _ = tprint "REAL_RAT_REDUCE_CONV terminates on 1/3 * x"
-  val tm = ``&1 / &3 * (x:real)``
-in
-  if aconv (rhs (concl (QCONV REAL_RAT_REDUCE_CONV tm))) tm then OK()
-  else die "FAILED: unexpected reduction"
-end
+val _ = convtest("REAL_RAT_REDUCE_CONV terminates on 1/3 * x",
+                 QCONV REAL_RAT_REDUCE_CONV,
+                 ``&1 / &3 * (x:real)``,
+                 ``&1 / &3 * (x:real)``)
 
 val _ = convtest("REAL_RAT_REDUCE_CONV still adds rational literals",
                  REAL_RAT_REDUCE_CONV,
