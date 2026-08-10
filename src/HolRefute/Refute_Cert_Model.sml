@@ -332,14 +332,16 @@ structure Refute_Cert_Model = struct
                   if Term.aconv (rhs_of next) (rhs_of theorem) then theorem
                   else compose "leaf conversion composition" depth
                     theorem next
+          fun step conversion theorem =
+            if decisive theorem then theorem else one conversion theorem
           fun round 0 theorem = theorem
             | round count theorem =
                 let
                   val current = rhs_of theorem
                   val _ = seen := current :: !seen
-                  val theorem = one cbv theorem
-                  val theorem = one simplify theorem
-                  val theorem = one cbv theorem
+                  val theorem = step cbv theorem
+                  val theorem = step simplify theorem
+                  val theorem = step cbv theorem
                   val next = rhs_of theorem
                 in
                   if decisive theorem orelse Term.aconv current next orelse
