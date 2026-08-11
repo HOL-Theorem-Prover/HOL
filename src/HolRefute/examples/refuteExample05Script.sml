@@ -10,7 +10,7 @@ Inductive even_rel:
 End
 
 (* An inductive predicate is not directly executable, so QuickCheck may be
-   inconclusive.  The diagnostic then leaves the goal for the real proof. *)
+   inconclusive. *)
 
 Theorem generated_even_numbers_are_even:
   even_rel n ==> EVEN n
