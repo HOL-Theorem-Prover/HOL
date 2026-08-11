@@ -396,6 +396,13 @@ Proof
   simp[FORALL_SUM, FUN_EQ_THM]
 QED
 
+Theorem SUM_MAP_EQ:
+  ((f ++ g) v = INL x' <=> ∃x. v = INL x ∧ f x = x') ∧
+  ((f ++ g) v = INR y' <=> ∃y. v = INR y ∧ g y = y')
+Proof
+  Cases_on `v` >> simp[]
+QED
+
 Theorem SUM_MAP_o:
   (f ++ g) o (h ++ k) = (f o h) ++ (g o k)
 Proof
