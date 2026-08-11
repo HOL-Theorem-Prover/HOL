@@ -1013,16 +1013,37 @@ fun start {diag, dbg} = let
       (* After each outer dec finishes, freeze a snapshot for the LSP
          to resume from on a later `didChange` with min-edit-offset >
          endByte.  Cloning `diags` at capture time keeps the resume
-         seed independent of subsequent `updateDiags` mutations. *)
+         seed independent of subsequent `updateDiags` mutations.
+
+         Skip the snapshot if the just-finished dec added diagnostics
+         to `trees.diags`: an errored dec often reflects a partial
+         parse (e.g. `Theorem foo` still being typed, expanded as
+         `raise Fail "Theorem missing body"`), whose byte extent will
+         change once the user completes it -- resuming from that dec's
+         endByte then carries the stale diagnostic forward with no
+         chance of re-evaluation.  We still track `lastCapturedDiagSize'
+         so the next successful dec's clean snapshot fires.  Init
+         to the seed count so a resumed compile whose base already
+         carries diagnostics doesn't misclassify its first clean
+         dec as errored. *)
+      val lastCapturedDiagSize =
+        ref (DArray.size (#diags initialTrees))
       fun captureSnap endByte = let
         val {builtTrees, plugins, diags, ...} = !trees
-        val snap = {
-          endByte = endByte,
-          builtTrees = builtTrees,
-          diags = DArray.clone (diags, DArray.size diags),
-          plugins = plugins,
-          compileSnap = !LSPExtension.captureCompileSnap ()}
-        in trees := addDeclSnapshot snap (!trees) end
+        val n = DArray.size diags
+        in if n > !lastCapturedDiagSize
+           then lastCapturedDiagSize := n
+           else let
+             val snap = {
+               endByte = endByte,
+               builtTrees = builtTrees,
+               diags = DArray.clone (diags, n),
+               plugins = plugins,
+               compileSnap = !LSPExtension.captureCompileSnap ()}
+             in lastCapturedDiagSize := n;
+                trees := addDeclSnapshot snap (!trees)
+             end
+        end
       in (
         compileForReport uri (#text text) resumeStart lastPos processBuiltTree captureSnap process;
         afterCompile (!lastPos, size (#text text)) (!ls);

@@ -2028,6 +2028,67 @@ def test_goalState_thenl_context_line():
         c.close()
 
 
+def test_stale_diagnostic_from_partial_parse_clears_on_completion():
+    """A dec that fails to parse partway through user typing (e.g. a
+    `Theorem foo` with no body yet, or an unfinished `Anc...` line)
+    used to leave its diagnostic sticky: the resume snapshot at its
+    endByte carried the frozen error forward, and later compiles
+    seeded `trees.diags' with it -- no matter how the user completed
+    the dec.  Fix: don't snapshot decs that added diagnostics during
+    their own compile; a fresh recompile falls back to the previous
+    good snapshot (or the file start) and re-parses from scratch."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/stale_partial.sml"
+
+        def latest_diags():
+            with c.msgs_lock:
+                pubs = [m for m in c.msgs
+                        if m.get("method") == "textDocument/publishDiagnostics"
+                        and m["params"].get("uri") == uri]
+            return pubs[-1]["params"]["diagnostics"] if pubs else None
+
+        # --- Case A: partial `Anc` then complete to `Ancestors hol`. ---
+        _did_open(c, uri, "Theory qux\n", 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        idx = c.total_msgs()
+        _did_change_full(c, uri, "Theory qux\nAnc\n", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx), "c2")
+        d2 = latest_diags() or []
+        assert_true(any("Anc" in d.get("message", "") for d in d2),
+                    f"partial Anc emits a diagnostic ({d2!r})")
+        idx = c.total_msgs()
+        _did_change_full(c, uri, "Theory qux\nAncestors hol\n", 3)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx), "c3")
+        d3 = latest_diags() or []
+        assert_true(not any("Anc" in d.get("message", "") for d in d3),
+                    f"Anc diagnostic clears once Ancestors hol is typed "
+                    f"({d3!r})")
+
+        # --- Case B: partial `Theorem foo` then Proof/QED. ---
+        idx = c.total_msgs()
+        _did_change_full(c, uri,
+                          "Theory qux\nAncestors bool\nTheorem foo\n", 4)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx), "c4")
+        d4 = latest_diags() or []
+        assert_true(any("missing body" in d.get("message", "") for d in d4),
+                    f"partial Theorem emits missing-body diagnostic ({d4!r})")
+        idx = c.total_msgs()
+        _did_change_full(
+            c, uri,
+            "Theory qux\nAncestors bool\n"
+            "Theorem foo:\n  T\nProof\n  ACCEPT_TAC TRUTH\nQED\n", 5)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx), "c5")
+        d5 = latest_diags() or []
+        assert_true(not any("missing body" in d.get("message", "")
+                            for d in d5),
+                    f"missing-body diagnostic clears once Theorem completes "
+                    f"({d5!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_failed_tactic_publishes_diagnostic():
     """After a walker query that halts at a failed tactic, the server
     must publish a `textDocument/publishDiagnostics` covering the
@@ -2576,6 +2637,8 @@ TESTS = [
                                      test_goalState_failed_tactic_signals_error),
     ("goalState_failed_tactic_publishes_diagnostic",
                                      test_goalState_failed_tactic_publishes_diagnostic),
+    ("stale_diagnostic_from_partial_parse_clears_on_completion",
+                                     test_stale_diagnostic_from_partial_parse_clears_on_completion),
     ("goalState_focused_subgoal_solved_between_close_and_outer",
                                      test_goalState_focused_subgoal_solved_between_close_and_outer),
     ("goalState_thenl_end_shows_proved",
