@@ -82,9 +82,17 @@ type goal_state_response = {
      want to render individual subgoals structurally. *)
   pretty: string,
   (* SOME msg when the walker gave up (e.g. wall-clock budget
-     exceeded).  When set, `goals`/`pretty` are empty and clients
-     should render the message in place of the goal state. *)
-  error: string option}
+     exceeded) or halted at a failed tactic.  On timeout `goals`
+     and `pretty` are empty; on a failed tactic they hold the
+     pre-fail state so the client can render both the failure
+     signal and the state the walker halted at. *)
+  error: string option,
+  (* SOME (fileStart, fileEnd) when a specific leaf tactic
+     failed — the file byte range the client should surface as a
+     runtime diagnostic (LSP squiggle).  NONE when there is no
+     failure or the failure has no natural byte range (e.g. a
+     structural marker, or a timeout). *)
+  failedRange: (int * int) option}
 type theorem_context = {
   name: string,           (* theorem name, e.g. "foo" *)
   quote: string,          (* raw text of the theorem statement *)

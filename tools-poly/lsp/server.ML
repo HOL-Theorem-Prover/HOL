@@ -109,7 +109,7 @@ fun encGoalState ({asms, goal}: goal_state) print = (
   print ",\"goal\":"; encString goal print;
   print "}")
 
-fun encGoalStateResponse ({theorem, step, goals, pretty, error}
+fun encGoalStateResponse ({theorem, step, goals, pretty, error, failedRange}
                           : goal_state_response) print = (
   print "{\"theorem\":"; encString theorem print;
   print ",\"step\":"; encInt step print;
@@ -627,7 +627,14 @@ fun start {diag, dbg} = let
        `NONE` means no edit info is available (fresh file, or a
        previous compile completed and cleared it) — treated as 0
        (full restart). *)
-    minEditOffset: int option ref}
+    minEditOffset: int option ref,
+    (* Runtime-diagnostic squiggles the walker has observed since
+       the last compile: keyed by theorem name, value is the
+       Error report for the failed leaf.  Fresh compiles clear
+       these; a successful walker query for a theorem removes its
+       entry so a user-fix removes the squiggle without waiting
+       for the next compile. *)
+    walkerDiags: (string, report) Binarymap.dict ref}
   local
     val mutex = Mutex.mutex ()
     val fileInfo = ref (Binarymap.mkDict String.compare: (string, file_data) Binarymap.dict)
@@ -643,7 +650,8 @@ fun start {diag, dbg} = let
   fun newFile text version = let
     val text = {text = text, version = version, lines = mkLineCounter text}
     in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
-        debounce = ref 0, minEditOffset = ref NONE} end
+        debounce = ref 0, minEditOffset = ref NONE,
+        walkerDiags = ref (Binarymap.mkDict String.compare)} end
 
   (* Cooperative cancel: signal the flag, which the compile thread
      checks at each Progress event and raises Thread.Interrupt.  We
@@ -750,10 +758,42 @@ fun start {diag, dbg} = let
       startByte = startByte }
     in lastPos := size code end
 
-  fun startCompile uri ({compile, lastTrees, debounce, minEditOffset}:file_data) = (
+  (* Emit publishDiagnostics for `uri` combining the last-completed
+     compile's diagnostics and any walker-observed runtime squiggles.
+     Used from the goalState handler after it updates `walkerDiags` --
+     the compile-side has its own path that de-dupes on total-size. *)
+  fun publishAllDiagnostics uri
+                            ({lastTrees, walkerDiags, ...}:file_data) = let
+    val {text, parse} = !lastTrees
+    val {lines, version, ...} = text
+    val compileDiags = #diags parse
+    val wd = !walkerDiags
+    val total = DArray.size compileDiags + Binarymap.numItems wd
+    val snapshot = DArray.clone (compileDiags, total)
+    val _ = Binarymap.app (fn (_, r) => DArray.push (snapshot, r)) wd
+    fun encDiag (Error {hard, pos, msg}) print = (
+        print "{\"range\":"; encRangeLC lines pos print;
+        print ",\"severity\":";
+        encInt (if hard then ErrorSeverity else WarnSeverity) print;
+        print ",\"message\":"; msg print; print "}")
+      | encDiag _ _ = raise Fail "unexpected report kind"
+  in
+    send (mkNotif "textDocument/publishDiagnostics" (fn print => (
+      print "{\"uri\":"; encString uri print;
+      print ",\"version\":"; encInt version print;
+      print ",\"diagnostics\":"; encDArray encDiag snapshot print;
+      print "}")))
+  end
+
+  fun startCompile uri ({compile, lastTrees, debounce, minEditOffset,
+                         walkerDiags}:file_data) = (
     (* Invalidate any pending scheduleCompile thread: their epoch
        check will see the new value and self-abort. *)
     debounce := !debounce + 1;
+    (* Runtime squiggles from the walker are always stale w.r.t. the
+       new compile -- clear them so a fix removes squiggles even
+       before the user visits the theorem to re-run the walker. *)
+    walkerDiags := Binarymap.mkDict String.compare;
     if #done (#parse (!lastTrees)) then
       (!LSPExtension.notifyCompileStart (!minEditOffset);
        !LSPExtension.resetForCompile (); ())
@@ -858,19 +898,28 @@ fun start {diag, dbg} = let
         in loop 0; DArray.replace (oldDiags, newDiags) end
 
       (* Only emit publishDiagnostics when the accumulated list has
-         actually changed size since the last emit.  Progress events
+         actually changed size since the last emit -- Progress events
          far past the point where an error was found still update
          `oldDiags` (by re-merging), but if the size didn't change,
-         re-sending is pure noise for the client's log. *)
+         re-sending is pure noise for the client's log.  Both compile
+         diagnostics AND walker-detected runtime squiggles contribute
+         to the size we compare against. *)
       val lastSentSize = ref ~1
       (* Snapshot oldDiags for the writer thread.  A live reference
          races updateDiags on the next Progress event: DArray.replace
          mid-encode makes encDArray raise Subscript, which kills the
          writer and jams every subsequent send. *)
-      fun sendDiags () = let val n = DArray.size oldDiags
-        in if n = !lastSentSize then () else (
-          lastSentSize := n;
-          let val snapshot = DArray.clone (oldDiags, n) in
+      fun sendDiags () = let
+        val n = DArray.size oldDiags
+        val wd = !walkerDiags
+        val ws = Binarymap.numItems wd
+        val total = n + ws
+        in if total = !lastSentSize then () else (
+          lastSentSize := total;
+          let val snapshot = DArray.clone (oldDiags, total)
+              val _ = Binarymap.app
+                        (fn (_, r) => DArray.push (snapshot, r)) wd
+          in
           send (mkNotif "textDocument/publishDiagnostics" (fn print => (
             print "{\"uri\":"; encString uri print;
             print ",\"version\":"; encInt (#version text) print;
@@ -1404,10 +1453,35 @@ fun start {diag, dbg} = let
       spawnJob id params evalParams (eval id)
     | Request {method = "$/hol/goalState", id, params} =>
       spawnJob id params textDocumentPositionParams (fn {uri, pos} => let
-        val resp = case withFileInfo (fn fileInfo =>
+        val (v_opt, resp) = case withFileInfo (fn fileInfo =>
               (fileInfo, Binarymap.peek (fileInfo, uri))) of
-            NONE => NONE
-          | SOME v => goalStateAtPos uri v pos
+            NONE => (NONE, NONE)
+          | SOME v => (SOME v, goalStateAtPos uri v pos)
+        (* Fold the walker's failure/success into per-file walker
+           diagnostics keyed by theorem name so a user-fix removes
+           the squiggle without waiting for the next compile.  Emit
+           publishDiagnostics whenever the walker's slot changes. *)
+        val () = case (v_opt, resp) of
+            (SOME (v: file_data), SOME {theorem, failedRange, error, ...}) => let
+              val wd = !(#walkerDiags v)
+              val prev = Binarymap.peek (wd, theorem)
+              val next = case (failedRange, error) of
+                  (SOME (s, e), SOME msg) => SOME (Error {
+                    hard = true, pos = (s, e), msg = encString msg })
+                | _ => NONE
+              val changed = case (prev, next) of
+                  (NONE, NONE) => false
+                | (SOME _, NONE) => true
+                | (NONE, SOME _) => true
+                | _ => true  (* re-emit even if same theorem — text may differ *)
+              val () = case next of
+                  NONE => #walkerDiags v := Binarymap.foldl
+                    (fn (k, r, m) => if k = theorem then m
+                                     else Binarymap.insert (m, k, r))
+                    (Binarymap.mkDict String.compare) wd
+                | SOME r => #walkerDiags v := Binarymap.insert (wd, theorem, r)
+            in if changed then publishAllDiagnostics uri v else () end
+          | _ => ()
         in Ok (encOrNull encGoalStateResponse resp) end)
     | Request {method, id, ...} =>
       send (mkResponse id (mkErr InvalidRequest ("unknown method: " ^ method)))

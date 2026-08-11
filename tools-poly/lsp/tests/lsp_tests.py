@@ -2028,6 +2028,80 @@ def test_goalState_thenl_context_line():
         c.close()
 
 
+def test_goalState_failed_tactic_publishes_diagnostic():
+    """After a walker query that halts at a failed tactic, the server
+    must publish a `textDocument/publishDiagnostics` covering the
+    failed leaf's file range — so the client renders a runtime
+    squiggle in addition to the ⚠ message in the goals pane.  On a
+    subsequent didChange that fixes the tactic + a re-query, the
+    diagnostic is cleared."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_squiggle.sml"
+        src_broken = ("Theory goalstate_squiggle\n"
+                      "Ancestors bool\n\n"
+                      "Theorem bar: !p:bool. p /\\ q ==> r\n"
+                      "Proof\n"
+                      "  ACCEPT_TAC TRUTH\n"
+                      "QED\n")
+        _did_open(c, uri, src_broken, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted 1")
+        idx_before_query = c.total_msgs()
+        r = _send_goalstate(c, 3001, uri, 5, 18)
+        assert_true(r.get("result") is not None, f"got response ({r!r})")
+        # A publishDiagnostics arrives after the walker updates
+        # walkerDiags; wait briefly.
+        assert_true(c.wait_for_method("textDocument/publishDiagnostics",
+                                       5, idx_before_query),
+                    "walker publish after query")
+        msgs, _ = c.messages_since(0)
+        latest = None
+        for m in msgs[idx_before_query:]:
+            if m.get("method") == "textDocument/publishDiagnostics" \
+               and m["params"]["uri"] == uri:
+                latest = m["params"]["diagnostics"]
+        assert_true(latest is not None, "have walker diagnostics")
+        # Expect one runtime squiggle naming the failed tactic.
+        matched = [d for d in latest
+                   if "ACCEPT_TAC TRUTH" in d.get("message", "")]
+        assert_eq(len(matched), 1,
+                  f"one walker diagnostic for the failed tactic, "
+                  f"got: {latest!r}")
+        # Fix the proof (goal has no free vars now).  didChange +
+        # compileCompleted invalidates walkerDiags; re-query and
+        # confirm the diag is gone.
+        src_fixed = ("Theory goalstate_squiggle\n"
+                     "Ancestors bool\n\n"
+                     "Theorem bar: T\n"
+                     "Proof\n"
+                     "  ACCEPT_TAC TRUTH\n"
+                     "QED\n")
+        idx_before_change = c.total_msgs()
+        _did_change_full(c, uri, src_fixed, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30,
+                                       idx_before_change),
+                    "compileCompleted 2")
+        idx_before_requery = c.total_msgs()
+        r = _send_goalstate(c, 3002, uri, 5, 18)
+        assert_true(r.get("result") is not None,
+                    f"got response 2 ({r!r})")
+        msgs, _ = c.messages_since(0)
+        latest2 = None
+        for m in msgs:
+            if m.get("method") == "textDocument/publishDiagnostics" \
+               and m["params"]["uri"] == uri \
+               and m["params"].get("version") == 2:
+                latest2 = m["params"]["diagnostics"]
+        matched2 = [d for d in (latest2 or [])
+                    if "ACCEPT_TAC TRUTH" in d.get("message", "")]
+        assert_eq(len(matched2), 0,
+                  f"walker diagnostic cleared after fix, got: {latest2!r}")
+    finally:
+        c.close()
+
+
 def test_goalState_failed_tactic_signals_error():
     """When the walker halts because a tactic didn't apply -- the
     tactic compiled but its `goalFrag.expand` raised, or the tactic
@@ -2500,6 +2574,8 @@ TESTS = [
                                      test_goalState_thenl_context_line),
     ("goalState_failed_tactic_signals_error",
                                      test_goalState_failed_tactic_signals_error),
+    ("goalState_failed_tactic_publishes_diagnostic",
+                                     test_goalState_failed_tactic_publishes_diagnostic),
     ("goalState_focused_subgoal_solved_between_close_and_outer",
                                      test_goalState_focused_subgoal_solved_between_close_and_outer),
     ("goalState_thenl_end_shows_proved",

@@ -108,6 +108,14 @@ val () = LSPExtension.goalStateAtPos :=
              | _ =>
                  "Structural marker at byte "
                  ^ Int.toString (TacticSteps.stopPos step) ^ " failed"
+           (* File byte range of the failed step, if it has a natural
+              span; structural markers don't and get NONE. *)
+           fun failRange step =
+             case step of
+               TacticSteps.Expand (s, e)     => SOME (tacStart + s, tacStart + e)
+             | TacticSteps.ExpandList (s, e) => SOME (tacStart + s, tacStart + e)
+             | TacticSteps.GoalSelect (s, e) => SOME (tacStart + s, tacStart + e)
+             | _ => NONE
            in case withTimeout walkerBudgetMs (fn () =>
                     TacticWalker.walkTo {
                       plugins = plugins, theoremName = name,
@@ -118,18 +126,21 @@ val () = LSPExtension.goalStateAtPos :=
                   {theorem = name, step = step,
                    goals = [], pretty = "",
                    error = SOME ("walker timed out (>"
-                                 ^ LargeInt.toString walkerBudgetMs ^ "ms)")}
+                                 ^ LargeInt.toString walkerBudgetMs ^ "ms)"),
+                   failedRange = NONE}
               | SOME {state, failedAt} => SOME
                   {theorem = name, step = step,
                    goals = List.map ppGoal (goalFrag.top_goals state),
                    pretty = ppState state,
-                   error = Option.map failMsg failedAt}
+                   error = Option.map failMsg failedAt,
+                   failedRange = Option.mapPartial failRange failedAt}
            end
        | (SOME tm, NONE) => let
            val startState = goalFrag.new_goal ([], tm)
            in SOME {theorem = name, step = 0,
                     goals = [{asms = [], goal = Parse.term_to_string tm}],
-                    pretty = ppState startState, error = NONE}
+                    pretty = ppState startState, error = NONE,
+                    failedRange = NONE}
            end
        | _ => NONE
     end)
