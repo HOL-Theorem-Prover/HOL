@@ -29,7 +29,8 @@ structure TacticWalker :> sig
     startState: goalFrag.goalstate,
     steps: TacticSteps.step list,
     cursor: int
-  } -> goalFrag.goalstate
+  } -> { state: goalFrag.goalstate,
+         failedAt: TacticSteps.step option }
 end = struct
 
 val holder : Abbrev.tactic option ref = ref NONE
@@ -212,12 +213,12 @@ fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
   fun snapOf idx step newState =
     Option.map (fn (_, e) => {stepIdx = idx, endByte = e, state = newState})
                (expandSpan step)
-  fun collect [] _ state acc = (state, acc)
+  fun collect [] _ state acc = (state, acc, NONE)
     | collect (step :: rest) idx state acc =
         if idx < resumeIdx then collect rest (idx + 1) state acc
-        else if stopAt step then (state, acc)
+        else if stopAt step then (state, acc, NONE)
         else (case applyStep tacText step state of
-                NONE => (state, acc)
+                NONE => (state, acc, SOME step)
               | SOME newState =>
                 let val acc' = case snapOf idx step newState of
                                  NONE => acc
@@ -228,8 +229,8 @@ fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
                 the budget.  Treat the interrupt like a failed step:
                 halt with the pre-step state, cache what we already
                 walked, and let the caller return partial state. *)
-             handle Portable.Interrupt => (state, acc)
-  val (finalState, newSnaps) = collect steps 0 resumeState []
+             handle Portable.Interrupt => (state, acc, SOME step)
+  val (finalState, newSnaps, failedAt) = collect steps 0 resumeState []
   val _ = case (cacheRefOpt, newSnaps) of
       (SOME cacheRef, _::_) => let
         (* Merge new snapshots into the cache, deduping by stepIdx so
@@ -245,6 +246,6 @@ fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
                          snapshots = deduped})
       end
     | _ => ()  (* no cache slot yet, or nothing new to store *)
-  in finalState end
+  in {state = finalState, failedAt = failedAt} end
 
 end;

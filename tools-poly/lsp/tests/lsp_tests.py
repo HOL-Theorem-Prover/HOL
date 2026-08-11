@@ -2028,6 +2028,48 @@ def test_goalState_thenl_context_line():
         c.close()
 
 
+def test_goalState_failed_tactic_signals_error():
+    """When the walker halts because a tactic didn't apply -- the
+    tactic compiled but its `goalFrag.expand` raised, or the tactic
+    source didn't compile at all -- the response must set `error`
+    naming the failed leaf.  Otherwise the pre-step state is shown
+    with no indication anything went wrong, implying the tactic
+    ran and did nothing.
+
+    `bar`'s goal has free `q` and `r`, so `ACCEPT_TAC TRUTH` can't
+    unify `TRUTH : |- T` against `∀p. p ∧ q ⇒ r` and the walker
+    halts at that leaf."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_fail.sml"
+        src = ("Theory goalstate_fail\n"
+               "Ancestors bool\n\n"
+               "Theorem bar: !p:bool. p /\\ q ==> r\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 5 char 18 = just past `TRUTH`.  Walker has attempted
+        # `ACCEPT_TAC TRUTH`, it failed, walker halted with pre-
+        # step state + error.
+        r = _send_goalstate(c, 1101, uri, 5, 18)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        err = result.get("error")
+        assert_true(err is not None and "failed" in err.lower(),
+                    f"error field names the failed leaf: {err!r}")
+        assert_true("ACCEPT_TAC TRUTH" in (err or ""),
+                    f"error names the specific tactic: {err!r}")
+        pretty = result.get("pretty", "")
+        assert_true("p" in pretty and "q" in pretty and "r" in pretty,
+                    f"pre-fail state still visible: {pretty!r}")
+    finally:
+        c.close()
+
+
 def test_goalState_focused_subgoal_solved_between_close_and_outer():
     """When the cursor sits between a solved subgoal's last tactic
     and the paren-close that ends its `>-` block, the walker's state
@@ -2456,6 +2498,8 @@ TESTS = [
                                      test_goalState_walks_thenl_branches),
     ("goalState_thenl_context_line",
                                      test_goalState_thenl_context_line),
+    ("goalState_failed_tactic_signals_error",
+                                     test_goalState_failed_tactic_signals_error),
     ("goalState_focused_subgoal_solved_between_close_and_outer",
                                      test_goalState_focused_subgoal_solved_between_close_and_outer),
     ("goalState_thenl_end_shows_proved",

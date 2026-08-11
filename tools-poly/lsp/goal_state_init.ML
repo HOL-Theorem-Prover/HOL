@@ -90,6 +90,24 @@ val () = LSPExtension.goalStateAtPos :=
          (SOME tm, SOME sts) => let
            val startState = goalFrag.new_goal ([], tm)
            val step = stepIndex (sts, tacCursor)
+           (* Extract the leaf-tactic source for the failed step, if
+              any -- so the error message names WHICH tactic failed
+              rather than just reporting a byte offset. *)
+           fun failMsg step =
+             case step of
+               TacticSteps.Expand (s, e) =>
+                 "Tactic `" ^ String.substring (tacText, s, e - s)
+                 ^ "` failed to apply"
+             | TacticSteps.ExpandList (s, e) =>
+                 "Tactic list `" ^ String.substring (tacText, s, e - s)
+                 ^ "` failed to apply"
+             | TacticSteps.GoalSelect (s, e) =>
+                 "Selector `ALL_TAC "
+                 ^ String.substring (tacText, s, e - s)
+                 ^ "` failed to apply"
+             | _ =>
+                 "Structural marker at byte "
+                 ^ Int.toString (TacticSteps.stopPos step) ^ " failed"
            in case withTimeout walkerBudgetMs (fn () =>
                     TacticWalker.walkTo {
                       plugins = plugins, theoremName = name,
@@ -101,10 +119,11 @@ val () = LSPExtension.goalStateAtPos :=
                    goals = [], pretty = "",
                    error = SOME ("walker timed out (>"
                                  ^ LargeInt.toString walkerBudgetMs ^ "ms)")}
-              | SOME finalState => SOME
+              | SOME {state, failedAt} => SOME
                   {theorem = name, step = step,
-                   goals = List.map ppGoal (goalFrag.top_goals finalState),
-                   pretty = ppState finalState, error = NONE}
+                   goals = List.map ppGoal (goalFrag.top_goals state),
+                   pretty = ppState state,
+                   error = Option.map failMsg failedAt}
            end
        | (SOME tm, NONE) => let
            val startState = goalFrag.new_goal ([], tm)

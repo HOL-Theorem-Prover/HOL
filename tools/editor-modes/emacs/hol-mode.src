@@ -2719,10 +2719,14 @@ wrong for the cursor's step, so we surface the failure instead."
       (insert (format "%s — step %d\n\n"
                       (plist-get result :theorem)
                       (plist-get result :step)))
-      (cond
-       (err
-        (insert err "\n")
+      ;; Errors from the walker: prepend so the user sees the
+      ;; failure signal at the top, and still render the last-good
+      ;; state below (so they can tell WHERE the walker halted).
+      ;; Empty-goals + error (e.g. timeout) collapses to error-only.
+      (when err
+        (insert "⚠ " err "\n\n")
         (message "HOL goal-state: %s" err))
+      (cond
        ((and pretty (not (string-empty-p pretty)))
         ;; Server rendered via goalFrag.pp_goalstate with the VT100
         ;; backend — ANSI escapes classify bound / free vars.
