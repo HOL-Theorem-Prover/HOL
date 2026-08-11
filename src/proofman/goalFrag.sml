@@ -261,6 +261,18 @@ fun pp_goalstate gs = let
       [] => nothing
     | ls => add_string ("[" ^ String.concatWith "] [" ls ^ "]") >>
             add_newline >> add_newline
+  (* If the current focus is empty and the outer combinators can't
+     yet close cleanly, close them one at a time until goals become
+     visible again (or every close fails).  The user sees the state
+     that WILL be current once the pending close_paren steps fire,
+     so cursor positions just past a solved subgoal don't render as
+     the misleading "No subgoals but proof incomplete." message. *)
+  fun peek gs =
+    case total close_paren gs of
+      NONE => NONE
+    | SOME closed =>
+      if not (null (top_goals closed)) then SOME closed
+      else peek closed
   in
     case top_goals gs of
       [] =>
@@ -271,8 +283,17 @@ fun pp_goalstate gs = let
           add_newline >>
           lift Parse.pp_thm th)
       | NONE =>
-        add_string "No subgoals but proof incomplete (try close_paren)." >>
-        add_newline)
+        (case peek gs of
+          SOME closed =>
+            block Portable.CONSISTENT 0 (
+              pp_context >>
+              add_string
+                "Focused subgoal(s) solved; remaining after close:" >>
+              add_newline >> add_newline >>
+              pp_goalstate closed)
+        | NONE =>
+          add_string "No subgoals but proof incomplete (try close_paren)." >>
+          add_newline))
     | goals => let
       val (ellipsis_action, goals_to_print) =
         if length goals > show_nsubgoals then let

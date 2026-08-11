@@ -2028,6 +2028,47 @@ def test_goalState_thenl_context_line():
         c.close()
 
 
+def test_goalState_focused_subgoal_solved_between_close_and_outer():
+    """When the cursor sits between a solved subgoal's last tactic
+    and the paren-close that ends its `>-` block, the walker's state
+    has `top_goals = []` but the outer combinator hasn't yet closed.
+    Before: pp_goalstate reported "No subgoals but proof incomplete"
+    — misleading, since the current focus has been solved and only
+    the mechanical close remains.  After: pp_goalstate simulates the
+    close and shows the state that will be current once the outer
+    combinator finalises."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_then1_paren.sml"
+        src = ("Theory goalstate_then1_paren\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. (n = n) /\\ (0 < 1)\n"
+               "Proof\n"
+               "  gen_tac THEN CONJ_TAC THEN1\n"
+               "   (REFL_TAC) THEN\n"
+               "  SIMP_TAC arith_ss []\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 7 char 12 = at the `)` closing the THEN1 branch.
+        # First subgoal solved; the >- combinator still open.
+        r = _send_goalstate(c, 901, uri, 7, 12)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        pretty = result.get("pretty", "")
+        assert_true("No subgoals but proof incomplete" not in pretty,
+                    f"NOT the stale close-pending message: {pretty!r}")
+        assert_true("Focused subgoal(s) solved" in pretty,
+                    f"clearer solved message: {pretty!r}")
+        assert_true("0 < 1" in pretty,
+                    f"remaining subgoal visible: {pretty!r}")
+    finally:
+        c.close()
+
+
 def test_goalState_thenl_end_shows_proved():
     """When the cursor sits after the last branch of a `THENL` list
     (all branches applied, close_paren pending), `pp_goalstate` must
@@ -2415,6 +2456,8 @@ TESTS = [
                                      test_goalState_walks_thenl_branches),
     ("goalState_thenl_context_line",
                                      test_goalState_thenl_context_line),
+    ("goalState_focused_subgoal_solved_between_close_and_outer",
+                                     test_goalState_focused_subgoal_solved_between_close_and_outer),
     ("goalState_thenl_end_shows_proved",
                                      test_goalState_thenl_end_shows_proved),
     ("goalState_walks_squiggle_selector",
