@@ -2654,6 +2654,13 @@ under `hol-executable's directory when the subprocess can't run."
           (puthash abs heap hol-lsp--heap-cache)
           heap))))
 
+(defcustom hol-lsp-project-debug nil
+  "When non-nil, log each `hol-lsp--project-try' call to *Messages*
+so mis-routing can be diagnosed without instrumenting hol-mode.el
+by hand.  Off by default; the log is chatty (fires once per LSP
+lookup)."
+  :group 'hol :type 'boolean)
+
 (defun hol-lsp--project-try (dir)
   "Group HOL buffers into LSP projects keyed by the HOLHEAP their
 directory selects.  Two files whose Holmakefiles resolve to the
@@ -2664,11 +2671,20 @@ adjacent dirs pin `hol.state0' and downstream dirs use the full
 under `src/relation/' with the same server that had already loaded
 `relationTheory' as an ancestor for another buffer would surface
 sealed-theory errors on every edit."
-  (when (and buffer-file-name (memq major-mode hol-lsp-server-modes))
-    (let ((heap (hol-lsp--heap-for-dir dir)))
-      (unless (gethash heap hol-lsp--project-roots)
-        (puthash heap dir hol-lsp--project-roots))
-      (cons 'hol-lsp-project heap))))
+  (let ((match (and buffer-file-name
+                    (memq major-mode hol-lsp-server-modes))))
+    (when hol-lsp-project-debug
+      (message
+       "hol-lsp--project-try: dir=%s buffer=%s mode=%s file=%s match=%s"
+       dir (buffer-name) major-mode buffer-file-name (and match t)))
+    (when match
+      (let ((heap (hol-lsp--heap-for-dir dir)))
+        (unless (gethash heap hol-lsp--project-roots)
+          (puthash heap dir hol-lsp--project-roots))
+        (when hol-lsp-project-debug
+          (message "hol-lsp--project-try: heap=%s root=%s"
+                   heap (gethash heap hol-lsp--project-roots)))
+        (cons 'hol-lsp-project heap)))))
 
 (with-eval-after-load 'project
   (cl-defmethod project-root ((p (head hol-lsp-project)))
