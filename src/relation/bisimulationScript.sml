@@ -158,7 +158,7 @@ Proof
 QED
 
 Theorem BISIM_REL_strong_thm:
-  ∀ts. 
+  ∀ts.
   BISIM_REL ts p0 q0 <=> ∃R. R p0 q0 ∧
     (∀p q. R p q ⇒
       ∀l. (∀p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q')) ∧
@@ -174,7 +174,7 @@ Proof
 QED
 
 Theorem BISIM_REL_strong_coind:
-  ∀ts. 
+  ∀ts.
     (∀p q. R p q ⇒
       ∀l. (∀p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q')) ∧
            (∀q'. ts q l q' ⇒ ∃p'. ts p l p' ∧ (R p' q' ∨ BISIM_REL ts p' q')))
@@ -196,7 +196,7 @@ Proof
 QED
 
 Theorem BISIM_REL_sym_coind:
-  ∀ts. symmetric R ∧ 
+  ∀ts. symmetric R ∧
     (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ R p' q')
   ==> ∀p0 q0. R p0 q0 ==> BISIM_REL ts p0 q0
 Proof
@@ -218,7 +218,7 @@ Proof
 QED
 
 Theorem BISIM_REL_sym_strong_coind:
-  ∀ts. symmetric R ∧ 
+  ∀ts. symmetric R ∧
     (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
   ==> ∀p0 q0. R p0 q0 ==> BISIM_REL ts p0 q0
 Proof
