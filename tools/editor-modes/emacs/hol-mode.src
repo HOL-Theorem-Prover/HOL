@@ -2700,8 +2700,14 @@ sealed-theory errors on every edit."
 (defun hol-lsp-enable ()
   "Enable eglot-based HOL LSP for buffers in `hol-lsp-server-modes'.
 Registers `bin/hol lsp' as the server command and treats each
-buffer's own directory as its project root."
+buffer's HOLHEAP-clustered directory as its LSP project."
   (interactive)
+  ;; `hol-lsp--setup-buffer' references `project-find-functions',
+  ;; which the built-in `project' package defines; without loading
+  ;; it here, the first setup-buffer on a fresh emacs raises
+  ;; void-variable, our project-try never gets installed, and
+  ;; eglot falls back to project-try-vc (i.e. the git root).
+  (require 'project)
   (with-eval-after-load 'eglot
     (dolist (mode hol-lsp-server-modes)
       (add-to-list 'eglot-server-programs
