@@ -19,8 +19,9 @@ in the context of the current goal.
 
 ### Comments
 
-The `subgoal` tactic is also available via the name `sg`.
+The `subgoal` tactic is also available via the names `sg` and `have`.
 
 ### See also
 
-[`bossLib.by`](#bossLib.by), [`Q.SUBGOAL_THEN`](#Q.SUBGOAL_THEN)
+[`bossLib.by`](#bossLib.by), [`bossLib.have`](#bossLib.have),
+[`Q.SUBGOAL_THEN`](#Q.SUBGOAL_THEN)
