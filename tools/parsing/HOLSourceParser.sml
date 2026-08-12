@@ -798,7 +798,12 @@ fun parseSML file read parseError: scope -> result = let
     fun go i acc mismatches =
       case qtoken 0 of
         (p, EOF) => (
-         parseError (start, p) ("unclosed quotation" ^ mismatch_msg mismatches);
+         (* Report the diagnostic at the opening delimiter only, not
+            spanning to EOF.  A user still typing the theorem body /
+            definition RHS would otherwise get every character they
+            add red-squiggled until they close the quote -- unhelpful
+            for the "in-progress" case, which is the common one. *)
+         parseError (start, start) ("unclosed quotation" ^ mismatch_msg mismatches);
          (rev (push i p acc), p))
       | (p, StrongEndTk) => (
         if mem (ident p) s then ()

@@ -1335,9 +1335,16 @@ fun start {diag, dbg} = let
     in case out of [] => f () | _ => out end
     handle Empty => []
 
-  fun goalStateAtPos uri v target = let
-    val ({plugins, declSnapshots, ...}, text, offset) =
-      case getState v target of NONE => raise Empty | SOME s => s
+  (* Unlike `getState', goalStateAtPos doesn't gate on the compile
+     having reached the cursor -- the walker uses `declSnapshots'
+     (which survive `carryOverSnapshots') for Context and parses
+     the Proof body directly from the current buffer text.
+     Requiring `pos >= offset' would stall the auto-follow-cursor
+     pane for the ~300 ms debounce after every keystroke. *)
+  fun goalStateAtPos uri ({lastTrees, ...}:file_data) target = let
+    val {parse, text} = !lastTrees
+    val {plugins, declSnapshots, ...} = parse
+    val offset = fromLineCol (#lines text) target
     fun ppToString pp = let
       val mds = DArray.new (8, "")
       val _ = PolyML.prettyPrint (fn s => DArray.push (mds, s), textWidth) pp

@@ -2028,6 +2028,64 @@ def test_goalState_thenl_context_line():
         c.close()
 
 
+def test_unclosed_quotation_narrows_to_opening_delimiter():
+    """An unclosed HOL quotation at EOF reports a point diagnostic
+    at the opening delimiter, not a range spanning to EOF."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/unclosed.sml"
+        src = ("Theory unclosed\n"
+               "Ancestors bool\n\n"
+               "Definition foo:\n"
+               "  foo x = x /\\ x\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        diags = _diag_count(c, uri)
+        unclosed = [d for d in diags
+                    if "unclosed quotation" in d.get("message", "")]
+        assert_eq(len(unclosed), 1, f"one unclosed-quotation diag ({diags!r})")
+        rng = unclosed[0]["range"]
+        assert_eq(rng["start"], rng["end"],
+                  f"unclosed-quotation range is a point: {rng!r}")
+    finally:
+        c.close()
+
+
+def test_goalState_available_past_compile_pos():
+    """A `$/hol/goalState' issued between a didChange and the fresh
+    compile finishing must still return a valid result -- otherwise
+    the auto-follow-cursor pane goes stale for the 300 ms debounce."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goal_past_compile.sml"
+        base = ("Theory goal_past_compile\n"
+                "Ancestors bool\n\n"
+                "Theorem thm:\n"
+                "  T\n"
+                "Proof\n"
+                "  ACCEPT_TAC TRUTH\n"
+                "QED\n")
+        _did_open(c, uri, base, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        idx = c.total_msgs()
+        new_text = base.replace("ACCEPT_TAC TRUTH",
+                                "ACCEPT_TAC TRUTH >> ALL_TAC")
+        _did_change_full(c, uri, new_text, 2)
+        # Query goalState IMMEDIATELY (mid-debounce, before compile
+        # has had a chance to run).
+        r = _send_goalstate(c, 501, uri, 6, 30)
+        result = r.get("result")
+        assert_true(result is not None,
+                    f"goalState available past compile pos ({r!r})")
+        # Assumes step != None; the walker walked the current buffer.
+        assert_true(result.get("step") is not None,
+                    f"got a step count ({result!r})")
+    finally:
+        c.close()
+
+
 def test_stale_diags_dont_survive_char_by_char_typing():
     """A HOL Theory declaration expands to multiple SML decs at the
     same source-byte position (`Theory.new_theory <name>` plus
@@ -2735,6 +2793,10 @@ TESTS = [
                                      test_goalState_failed_tactic_publishes_diagnostic),
     ("stale_diags_dont_survive_char_by_char_typing",
                                      test_stale_diags_dont_survive_char_by_char_typing),
+    ("unclosed_quotation_narrows_to_opening_delimiter",
+                                     test_unclosed_quotation_narrows_to_opening_delimiter),
+    ("goalState_available_past_compile_pos",
+                                     test_goalState_available_past_compile_pos),
     ("runaway_errors_still_publish_diagnostics",
                                      test_runaway_errors_still_publish_diagnostics),
     ("stale_diagnostic_from_partial_parse_clears_on_completion",
