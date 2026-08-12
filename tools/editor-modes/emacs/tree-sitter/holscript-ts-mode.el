@@ -707,6 +707,23 @@ the parse can't reach a `cond_exp' — e.g. a mid-edit
           (setq depth (1+ depth)))))
       found)))
 
+(defun holscript-ts-mode--outermost-same-op-binary (node)
+  "Flatten a right-recursive same-operator `hol_binary_term' chain.
+Return the furthest `hol_binary_term' ancestor of NODE (or NODE
+itself) that shares NODE's operator text — so `p /\\ (q /\\ r)'
+walks up to the outer `/\\'-term.  Used as an indent anchor: a
+wrapped conjunct then aligns with the chain's first operand
+instead of the last mid-line one."
+  (let* ((op-node (treesit-node-child-by-field-name node "operator"))
+         (op-text (and op-node (treesit-node-text op-node t))))
+    (or (treesit-parent-while
+         node
+         (lambda (p)
+           (and (equal (treesit-node-type p) "hol_binary_term")
+                (let ((pop (treesit-node-child-by-field-name p "operator")))
+                  (and pop op-text (equal (treesit-node-text pop t) op-text))))))
+        node)))
+
 (defun holscript-ts-mode--line-starts-else-or-then-p (_node _parent bol)
   "Non-nil if the first non-whitespace text at BOL is `else' / `then'."
   (save-excursion
@@ -902,8 +919,15 @@ happens to have been absorbed upstream."
      ;; HOL term structure — align continuation lines to the column
      ;; of the governing HOL subtree.  A one-line `A ==> B' doesn't
      ;; change; a two-line `A ==>\n  B' pulls B back to A's column
-     ;; because they share the same parent `hol_binary_term'.
-     ((parent-is "\\`hol_binary_term\\'")         parent 0)
+     ;; because they share the same parent `hol_binary_term'.  For a
+     ;; right-recursive chain of the same operator (`p /\ q /\ r'),
+     ;; walk up to the outermost so a wrapped conjunct aligns with
+     ;; the *first* conjunct instead of the previous mid-line one.
+     ((parent-is "\\`hol_binary_term\\'")
+      ,(lambda (_n parent &rest _)
+         (treesit-node-start
+          (holscript-ts-mode--outermost-same-op-binary parent)))
+      0)
      ((parent-is "\\`hol_application\\'")         parent 0)
      ;; The body of a quantifier (`!x. BODY', `?y. BODY') on a
      ;; continuation line indents 2 to the right of the binder.

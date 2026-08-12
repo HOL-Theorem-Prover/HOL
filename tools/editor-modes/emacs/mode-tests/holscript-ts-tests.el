@@ -322,6 +322,25 @@ Theorem existing = TRUTH
 "
     (should (= 0 (holscript-ts-tests--indent-after-strip "^Theorem existing")))))
 
+;; --- Indent: same-operator conjunction chain --------------------------------
+
+(ert-deftest holscript-ts-indent-samop-chain-flattens ()
+  "Wrapped conjuncts in a same-operator /\\-chain align with the first.
+Even when the previous line packs several conjuncts (e.g. `p < q
+/\\ a * q < 0 /\\'), the next line's conjunct sits under the
+chain's first operand, not under the last mid-line one."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--fixture
+   "indentScript.sml"
+   (lambda ()
+     (dolist (target '("^ *q IN A /\\\\"
+                       "^ *p < q /\\\\"
+                       "^ *!i\\. i IN A"))
+       (goto-char (point-min))
+       (should (re-search-forward target nil t))
+       (beginning-of-line)
+       (should (= 15 (holscript-ts-tests--indent-line)))))))
+
 ;; --- Indent: quotation continuation -----------------------------------------
 
 (ert-deftest holscript-ts-indent-quotation-continuation-aligns-with-content ()
