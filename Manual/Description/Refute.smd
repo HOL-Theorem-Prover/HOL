@@ -100,9 +100,12 @@ datatype outcome =
 A `counterexample` records its `backend`, execution `substrate`,
 `certainty`, free-variable `bindings`, requested `evals`, optional
 certificate, optional finite `scope` and model, and statistics.
-`NoCounterexample` means only that a selected search completely exhausted
-the finite space it claimed to cover.  `Unknown` carries timeout,
-inapplicability, missing-generator, or incomplete-search reasons.
+`NoCounterexample` means that a selected search covered the whole relevant
+space: no counterexample is possible at any larger size.  The result is
+decisive and stops the concurrent backend pool.  A clean fixed-bound search
+that does not cover every relevant type is `Unknown`, with the tested scope
+frontier in its reasons.  `Unknown` also carries timeout, inapplicability,
+missing-generator, and other incomplete-search reasons.
 
 The public entry points are:
 
@@ -764,8 +767,9 @@ Counterexample search is bounded and incomplete.  In particular:
   local-component restrictions described above.
 
 A counterexample is useful evidence that a statement is false, especially
-when `cert = SOME thm`.  Conversely, `NoCounterexample` and `Unknown`
-should be read as guidance for changing bounds, generators, backends, or
-the conjecture—not as theorem-prover success.
+when `cert = SOME thm`.  `NoCounterexample` is the stronger diagnostic claim
+that the whole search space was covered, but it is not a HOL proof object.
+`Unknown` is only guidance for changing bounds, generators, backends, or the
+conjecture.
 
 \index{HolRefute|)}

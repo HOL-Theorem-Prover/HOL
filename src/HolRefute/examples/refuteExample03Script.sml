@@ -52,6 +52,11 @@ Proof
   QUICKCHECK_TAC >> cheat
 QED
 
+(* Simplification reduces the negated pair law to a constant formula.  The
+   model finder can therefore cover the whole space immediately; its
+   NoCounterexample result is decisive, so REFUTE_TAC does not wait for the
+   other backends before returning the unchanged goal. *)
+
 Theorem swapping_a_pair_twice:
   (SND (SND p, FST p), FST (SND p, FST p)) = (p : num # bool)
 Proof

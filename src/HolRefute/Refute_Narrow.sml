@@ -25,7 +25,7 @@ structure Refute_Narrow = struct
   datatype plain_result =
       PlainCounterexample of
         {genuine : bool, arguments : narrowing_term list, tests : int}
-    | PlainExhausted of {tests : int}
+    | PlainExhausted of {tests : int, complete : bool}
 
   datatype engine_selection =
       PlainEngine
@@ -65,7 +65,8 @@ structure Refute_Narrow = struct
   datatype pnf_result =
       PnfCounterexample of
         {genuine : bool, example : example, tree : tree, tests : int}
-    | PnfExhausted of {truth : truth, tree : tree, tests : int}
+    | PnfExhausted of
+        {truth : truth, tree : tree, tests : int, complete : bool}
 
   exception InvalidPosition of position
   exception InvalidPath
@@ -313,6 +314,11 @@ structure Refute_Narrow = struct
 
   fun all_ground arguments = List.all is_ground arguments
 
+  fun term_shape_complete (Narrowing_variable (_, shape)) =
+        shape_complete shape
+    | term_shape_complete (Narrowing_constructor (_, arguments)) =
+        List.all term_shape_complete arguments
+
   fun first_variable_position arguments =
     let
       fun in_term (Narrowing_variable (position, _)) = SOME position
@@ -333,32 +339,44 @@ structure Refute_Narrow = struct
      returning them to the driver as NONE would restart at the same root. *)
   fun refute_from genuine_only evaluate accept arguments tests =
     let
-      fun search [] count = PlainExhausted {tests = count}
+      fun preserve_complete complete
+            (PlainExhausted {tests, complete = rest_complete}) =
+            PlainExhausted
+              {tests = tests, complete = complete andalso rest_complete}
+        | preserve_complete _ result = result
+      fun search [] count = PlainExhausted {tests = count, complete = true}
         | search (refined :: rest) count =
             (case refute_from genuine_only evaluate accept refined count of
                  result as PlainCounterexample _ => result
-               | PlainExhausted {tests = count'} => search rest count')
+               | PlainExhausted {tests = count', complete} =>
+                   preserve_complete complete (search rest count'))
       fun continue count =
         case first_variable_position arguments of
-            NONE => PlainExhausted {tests = count}
+            NONE => PlainExhausted {tests = count, complete = true}
           | SOME position => search (refineList arguments position) count
     in
       case evaluate genuine_only arguments of
           Known {genuine, result = true} =>
-            PlainExhausted {tests = tests + 1}
+            PlainExhausted {tests = tests + 1, complete = genuine}
         | Known {genuine, result = false} =>
             if accept arguments genuine then
               PlainCounterexample
                 {genuine = genuine, arguments = arguments, tests = tests + 1}
             else
-              continue (tests + 1)
+              preserve_complete genuine (continue (tests + 1))
         | NeedsRefinement position =>
             search (refineList arguments position) (tests + 1)
     end
 
   fun refute_plain_avoiding genuine_only
         {arguments, evaluate, accept} =
-    refute_from genuine_only evaluate accept arguments 0
+    case refute_from genuine_only evaluate accept arguments 0 of
+        PlainExhausted {tests, complete} =>
+          PlainExhausted
+            {tests = tests,
+             complete = complete andalso
+               List.all term_shape_complete arguments}
+      | result => result
 
   (* Three-valued PNF refinement trees.  The Boolean tables are the upstream
      tables.  For decided values, potential tracks exactly the evidence needed
@@ -403,6 +421,24 @@ structure Refute_Narrow = struct
   fun value_of (Leaf result) = result
     | value_of (Variable (_, result, _, _, _)) = result
     | value_of (Constructor (_, result, _, _, _, _)) = result
+
+  fun decided (Eval _) = true
+    | decided _ = false
+
+  fun tree_complete (Leaf truth) = decided truth
+    | tree_complete (Variable (_, truth, _, shape, subtree)) =
+        decided truth andalso shape_complete shape andalso
+        tree_complete subtree
+    | tree_complete
+        (Constructor (_, truth, _, shape, pending, branches)) =
+        decided truth andalso shape_complete shape andalso
+        not (Option.isSome pending) andalso
+        List.all (tree_complete o #2) branches
+
+  fun pnf_complete tree =
+    case value_of tree of
+        Eval {result = true, potential = false} => tree_complete tree
+      | _ => false
 
   fun incomplete_false shape
         (Eval {result = false, potential}) =
@@ -879,7 +915,9 @@ structure Refute_Narrow = struct
             PnfCounterexample
               {genuine = not potential, example = example_of 0 tree,
                tree = tree, tests = tests}
-        | truth => PnfExhausted {truth = truth, tree = tree, tests = tests}
+        | truth => PnfExhausted
+            {truth = truth, tree = tree, tests = tests,
+             complete = pnf_complete tree}
     end
 
   fun refute_pnf_avoiding genuine_only depth evaluate accept initial_tree =
@@ -901,8 +939,11 @@ structure Refute_Narrow = struct
                      {genuine = genuine, example = example, tree = tree,
                       tests = tests}
                | NONE => PnfExhausted
-                   {truth = value_of tree, tree = tree, tests = tests})
-        | truth => PnfExhausted {truth = truth, tree = tree, tests = tests}
+                   {truth = value_of tree, tree = tree, tests = tests,
+                    complete = pnf_complete tree})
+        | truth => PnfExhausted
+            {truth = truth, tree = tree, tests = tests,
+             complete = pnf_complete tree}
     end
 
   (* HOL4's pull theorems are the reversed all_simps/ex_simps family used by

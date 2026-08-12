@@ -1485,8 +1485,8 @@ structure Refute_Core = struct
               String.concatWith "\n\n"
                 (map (format_counterexample (#mf cfg)) cexs)
           | NoCounterexample =>
-              "Refute exhausted the tested finite bounds without finding a " ^
-              target
+              "Refute searched the whole space: no " ^ target ^
+              " is possible"
           | Unknown reasons =>
               "Refute did not find a " ^ target ^
               format_reasons "Reasons:" reasons
@@ -1516,6 +1516,10 @@ structure Refute_Core = struct
               SOME certainty =>
                 certainty_rank certainty >= certainty_rank ceiling
             | NONE => false))
+    (* Totality outranks an in-flight Potential candidate.  A Genuine
+       counterexample racing this result would expose a soundness bug in one
+       of the backends; the ordinary first decisive result still wins. *)
+    | decisive _ _ NoCounterexample = true
     | decisive _ _ _ = false
 
   fun best_counterexample_result jobs =

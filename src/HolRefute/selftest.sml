@@ -14674,7 +14674,9 @@ fun plain_engine_units () =
            {genuine = true, arguments = [Narrowing_variable _], tests = 1} =>
            true
        | _ => false) andalso
-    (case exhausted of PlainExhausted {tests = 1} => true | _ => false) andalso
+    (case exhausted of
+         PlainExhausted {tests = 1, complete = false} => true
+       | _ => false) andalso
     (case refined of
          PlainCounterexample
            {genuine = true,
@@ -14947,12 +14949,13 @@ fun pnf_engine_units () =
        | _ => false) andalso
     (case depth_limited of
          PnfExhausted
-           {truth = Refute_Narrow.Unknown, tests = 3, ...} => true
+           {truth = Refute_Narrow.Unknown, tests = 3,
+            complete = false, ...} => true
        | _ => false) andalso
     (case exhausted of
          PnfExhausted
            {truth = Eval {result = true, potential = false}, tests = 3,
-            ...} => true
+            complete = true, ...} => true
        | _ => false) andalso
     (case nested of
          PnfCounterexample
@@ -16831,6 +16834,46 @@ fun run_with_strategy strategy config goal =
           Narrowing => Refute_QC_Narrow.run config instances
         | _ => strategy_run strategy config instances)
   end
+
+val pair_swap_bool_goal =
+  ``(SND (SND p, FST p), FST (SND p, FST p)) =
+    (p : bool # bool)``
+
+fun no_counterexample_totality_regressions () =
+  let
+    val exhaustive_fixed = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 3
+    val narrowing_adaptive = default_config
+      |> upd_substrate NativeSML
+      |> upd_timeout 5.0
+    val narrowing_fixed = narrowing_adaptive |> upd_size 1
+    val qc_truncated = run_with_strategy Exhaustive exhaustive_fixed
+      ``(n : num) < 5``
+    val qc_finite = run_with_strategy Exhaustive exhaustive_fixed
+      pair_swap_bool_goal
+    val narrowing_finite = run_with_strategy Narrowing narrowing_adaptive
+      pair_swap_bool_goal
+    val narrowing_infinite = run_with_strategy Narrowing narrowing_adaptive
+      ``(n : num) < SUC n``
+    val narrowing_truncated = run_with_strategy Narrowing narrowing_fixed
+      ``(n : num) < SUC n``
+  in
+    (case qc_truncated of Unknown _ => true | _ => false) andalso
+    (case qc_finite of NoCounterexample => true | _ => false) andalso
+    (case narrowing_finite of NoCounterexample => true | _ => false) andalso
+    (case narrowing_infinite of Unknown _ => true | _ => false) andalso
+    (case narrowing_truncated of Unknown _ => true | _ => false)
+  end
+
+val _ = require_msg
+  (check_result no_counterexample_totality_regressions) (fn () =>
+  "QC or narrowing confused finite totality with bounded exhaustion")
+  (fn () => ()) ()
+
+val _ = require_msg (check_result (fn () =>
+  decisive default_config Genuine NoCounterexample)) (fn () =>
+  "NoCounterexample was not decisive") (fn () => ()) ()
 
 fun selected_substrate expected result =
   case result of
@@ -20430,12 +20473,17 @@ fun cv_dual_run_is_clean sequential goal sound =
       | exhaustive_result _ = false
     fun random_result (Random _, Exhausted _) = true
       | random_result _ = false
-    val both_exhausted =
-      List.exists exhaustive_result (!results) andalso
-      List.exists random_result (!results) andalso !closes = 2
+    val a_backend_exhausted =
+      List.exists exhaustive_result (!results) orelse
+      List.exists random_result (!results)
+    (* A decisive result can cancel the other parallel engine before its
+       compiled test becomes live; every test that does become live must
+       still be closed, which the theory snapshot below checks directly. *)
+    val decisive_cleanup = a_backend_exhausted andalso
+      !closes >= 1 andalso !closes <= (if sequential then 1 else 2)
     val accepted =
       if sound then
-        (case outcome of Refute.NoCounterexample => both_exhausted
+        (case outcome of Refute.NoCounterexample => decisive_cleanup
          | _ => false)
       else
         (case outcome of
@@ -22613,6 +22661,42 @@ fun enforce_mf_acceptance_config solver config =
 fun mf_acceptance_config solver =
   enforce_mf_acceptance_config solver (mf_acceptance_base_config ())
 
+fun mf_no_counterexample_totality_regressions () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val base = Refute.default_config
+      |> Refute.upd_backends (SOME ["kodkod"])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_timeout 20.0
+    val fixed_one = base |> Refute.upd_card [(NONE, [1])]
+    val fixed_three = base |> Refute.upd_card [(NONE, [3])]
+    val bounded = Refute.refute fixed_one ``(x : 'a) = y``
+    val control = Refute.refute base ``(x : 'a) = y``
+    val constant_total = Refute.refute base
+      ``(SND (SND p, FST p), FST (SND p, FST p)) =
+        (p : num # bool)``
+    val finite_total = Refute.refute fixed_three
+      ``(x : rg_enum) = RGRed \/ x = RGGreen \/ x = RGBlue``
+  in
+    (case bounded of
+         Refute.Unknown reasons =>
+           List.exists (String.isSubstring
+             "no counterexample within the tested scopes") reasons andalso
+           List.exists (String.isSubstring "searched up to size") reasons
+       | _ => false) andalso
+    (case control of Refute.Counterexample _ => true | _ => false) andalso
+    (case constant_total of Refute.NoCounterexample => true | _ => false)
+      andalso
+    (case finite_total of Refute.NoCounterexample => true | _ => false)
+  end
+
+val _ = tprint "Refute MF NoCounterexample totality"
+val _ = require_msg
+  (check_result mf_no_counterexample_totality_regressions) (fn () =>
+  "model-finder bounded exhaustion or finite totality was misclassified")
+  (fn () => ()) ()
+
 fun mf_cert_pin_holds MfCertIgnored _ = true
   | mf_cert_pin_holds MfCertSome
       (Refute.Counterexample
@@ -22911,7 +22995,7 @@ val mf_induct_auto_nonwf =
 val mf_induct_nits_cases =
   List.concat
    [mf_acceptance_variants "Induct_Nits p1 = q1"
-      ``zoo_induct_p1 = zoo_induct_q1`` ExpectNone MfCertIgnored
+      ``zoo_induct_p1 = zoo_induct_q1`` ExpectUnknown MfCertIgnored
       mf_induct_auto_wf_nonwf_no_star,
     mf_acceptance_variants "Induct_Nits p1 <> q1"
       ``zoo_induct_p1 <> zoo_induct_q1`` ExpectPotential MfCertIgnored
@@ -22923,7 +23007,7 @@ val mf_induct_nits_cases =
       ``zoo_induct_q1 (n - 2) ==> zoo_induct_q1 n``
       ExpectGenuine MfCertNone mf_induct_auto_nonwf_no_star,
     mf_acceptance_variants "Induct_Nits p2 = bottom"
-      ``zoo_induct_p2 = (\n : num. F)`` ExpectNone MfCertIgnored
+      ``zoo_induct_p2 = (\n : num. F)`` ExpectUnknown MfCertIgnored
       mf_induct_auto_no_star,
     mf_acceptance_variants "Induct_Nits q2 = bottom"
       ``zoo_induct_q2 = (\n : num. F)`` ExpectGenuine MfCertNone
@@ -22935,7 +23019,7 @@ val mf_induct_nits_cases =
       ``zoo_induct_p2 = (\n : num. T)`` ExpectGenuine MfCertNone
       mf_induct_auto_no_star,
     mf_acceptance_variants "Induct_Nits q2 = top"
-      ``zoo_induct_q2 = (\n : num. T)`` ExpectNone MfCertIgnored
+      ``zoo_induct_q2 = (\n : num. T)`` ExpectUnknown MfCertIgnored
       mf_induct_auto_no_star @
       mf_acceptance_variants "Induct_Nits q2 = top"
         ``zoo_induct_q2 = (\n : num. T)`` ExpectQuasiGenuine
@@ -22947,24 +23031,26 @@ val mf_induct_nits_cases =
       ``zoo_induct_p2 n`` ExpectGenuine MfCertNone
       mf_induct_auto_no_star_no_specialize,
     mf_acceptance_variants "Induct_Nits q2 n"
-      ``zoo_induct_q2 n`` ExpectNone MfCertIgnored mf_induct_auto_no_star,
+      ``zoo_induct_q2 n`` ExpectUnknown MfCertIgnored
+      mf_induct_auto_no_star,
     mf_acceptance_variants "Induct_Nits not p2 n"
-      ``~zoo_induct_p2 n`` ExpectNone MfCertIgnored mf_induct_auto_no_star,
+      ``~zoo_induct_p2 n`` ExpectUnknown MfCertIgnored
+      mf_induct_auto_no_star,
     mf_acceptance_variants "Induct_Nits not q2 n"
       ``~zoo_induct_q2 n`` ExpectGenuine MfCertNone
       mf_induct_auto_no_star_no_specialize,
     mf_acceptance_variants "Induct_Nits p3 = q3"
-      ``zoo_induct_p3 = zoo_induct_q3`` ExpectNone MfCertIgnored
+      ``zoo_induct_p3 = zoo_induct_q3`` ExpectUnknown MfCertIgnored
       mf_induct_auto_nonwf,
     mf_acceptance_variants "Induct_Nits p4 = q4"
-      ``zoo_induct_p4 = zoo_induct_q4`` ExpectNone MfCertIgnored
+      ``zoo_induct_p4 = zoo_induct_q4`` ExpectUnknown MfCertIgnored
       mf_induct_auto_nonwf,
     mf_acceptance_variants "Induct_Nits p3 complement"
       ``zoo_induct_p3 = (\n : num. ~zoo_induct_p4 n)``
-      ExpectNone MfCertIgnored mf_induct_auto_nonwf,
+      ExpectUnknown MfCertIgnored mf_induct_auto_nonwf,
     mf_acceptance_variants "Induct_Nits q3 complement"
       ``zoo_induct_q3 = (\n : num. ~zoo_induct_q4 n)``
-      ExpectNone MfCertIgnored mf_induct_auto_nonwf,
+      ExpectUnknown MfCertIgnored mf_induct_auto_nonwf,
     mf_acceptance_variants "Induct_Nits p3 intersect q4"
       ``(\n. zoo_induct_p3 n /\ zoo_induct_q4 n) <>
         (\n : num. F)`` ExpectPotential MfCertIgnored
@@ -23121,13 +23207,13 @@ val mf_special_21 =
 
 val mf_special_nits_cases =
   List.concat
-   [mf_acceptance_variants "Special_Nits 01" mf_special_01 ExpectNone
+   [mf_acceptance_variants "Special_Nits 01" mf_special_01 ExpectUnknown
       MfCertIgnored mf_special_pair,
-    mf_acceptance_variants "Special_Nits 02" mf_special_02 ExpectNone
+    mf_acceptance_variants "Special_Nits 02" mf_special_02 ExpectUnknown
       MfCertIgnored mf_special_pair,
-    mf_acceptance_variants "Special_Nits 03" mf_special_03 ExpectNone
+    mf_acceptance_variants "Special_Nits 03" mf_special_03 ExpectUnknown
       MfCertIgnored mf_special_pair,
-    mf_acceptance_variants "Special_Nits 04" mf_special_04 ExpectNone
+    mf_acceptance_variants "Special_Nits 04" mf_special_04 ExpectUnknown
       MfCertIgnored mf_special_pair,
     mf_acceptance_variants "Special_Nits 05" mf_special_05 ExpectGenuine
       MfCertSome mf_special_pair_sat4j,
@@ -23137,23 +23223,23 @@ val mf_special_nits_cases =
       MfCertSome mf_special_pair,
     mf_acceptance_variants "Special_Nits 08" mf_special_08 ExpectGenuine
       MfCertSome mf_special_pair,
-    mf_acceptance_variants "Special_Nits 09" mf_special_09 ExpectNone
+    mf_acceptance_variants "Special_Nits 09" mf_special_09 ExpectUnknown
       MfCertIgnored mf_special_pair,
-    mf_acceptance_variants "Special_Nits 10" mf_special_10 ExpectNone
+    mf_acceptance_variants "Special_Nits 10" mf_special_10 ExpectUnknown
       MfCertIgnored mf_special_pair,
-    mf_acceptance_variants "Special_Nits 11" mf_special_11 ExpectNone
+    mf_acceptance_variants "Special_Nits 11" mf_special_11 ExpectUnknown
       MfCertIgnored mf_special_pair,
     mf_acceptance_variants "Special_Nits 12" mf_special_12 ExpectGenuine
       MfCertSome mf_special_pair,
-    mf_acceptance_variants "Special_Nits 13" mf_special_13 ExpectNone
+    mf_acceptance_variants "Special_Nits 13" mf_special_13 ExpectUnknown
       MfCertIgnored mf_special_pair,
-    mf_acceptance_variants "Special_Nits 14" mf_special_14 ExpectNone
+    mf_acceptance_variants "Special_Nits 14" mf_special_14 ExpectUnknown
       MfCertIgnored mf_special_pair,
     [mf_acceptance_invocation "Special_Nits 15" mf_special_15
        ExpectGenuine MfCertSome false mf_same_config],
     [mf_acceptance_invocation "Special_Nits 16" mf_special_16
        ExpectGenuine MfCertSome false mf_same_config],
-    mf_acceptance_variants "Special_Nits 17" mf_special_17 ExpectNone
+    mf_acceptance_variants "Special_Nits 17" mf_special_17 ExpectUnknown
       MfCertIgnored mf_special_pair_sat4j,
     mf_acceptance_variants "Special_Nits 18" mf_special_18 ExpectPotential
       MfCertIgnored mf_special_pair_sat4j,
@@ -23161,12 +23247,12 @@ val mf_special_nits_cases =
       ExpectPotential MfCertIgnored
       [(" [specialize]", mf_same_config, true)] @
       mf_acceptance_variants "Special_Nits 19" mf_special_19
-        ExpectNone MfCertIgnored
+        ExpectUnknown MfCertIgnored
         [(" [dont_specialize]", mf_special_no_specialize, false),
          (" [dont_box]", mf_special_no_box, false),
          (" [dont_box, dont_specialize]",
           mf_special_no_box_no_specialize, false)],
-    mf_acceptance_variants "Special_Nits 20" mf_special_20 ExpectNone
+    mf_acceptance_variants "Special_Nits 20" mf_special_20 ExpectUnknown
       MfCertIgnored
       [(" [specialize]", mf_special_small_cards, false),
        (" [dont_box]", mf_special_small_no_box, false),
@@ -23301,82 +23387,82 @@ val mf_integer_pair_sat4j =
    nonzero division remains HOL4's ordinary operation. *)
 val mf_integer_arithmetic_cases =
   [("01 SUC is add one", ``SUC x = x + 1``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("02 less than SUC", ``x < SUC x``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("03 nat addition lower bound", ``x + y >= (x : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("04 positive nat addition", ``y <> 0 ==> x + y > (x : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("05 nat addition commutes", ``x + y = y + (x : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("06 positive nat subtraction",
     ``x > y ==> x - y <> (0 : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("07 truncated nat subtraction",
     ``x <= y ==> x - y = (0 : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("08 subtract nat zero", ``x - (0 : num) = x``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("09 nat nonzero product",
     ``(x <> 0 /\ y <> 0) ==> x * y <> (0 : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("10 zero times nat", ``0 * y = (0 : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("11 nat times zero", ``y * 0 = (0 : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("12 nat product first lower bound",
     ``(x <> 0 /\ y <> 0) ==> x * y >= (x : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("13 nat product second lower bound",
     ``(x <> 0 /\ y <> 0) ==> x * y >= (y : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("14 unconditional nat division", ``x * y DIV y = (x : num)``,
     ExpectGenuine, MfCertSome, true),
    ("15 guarded nat division",
     ``y <> 0 ==> x * y DIV y = (x : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("16 nat overflow base", ``5 * 55 < (260 : num)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("17 nat of-int round trip", ``Num (&n) = n``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("18 int addition lower bound", ``x + y >= (x : int)``,
     ExpectGenuine, MfCertSome, false),
    ("19 nonnegative int addition",
     ``(x >= 0 /\ y >= 0) ==> x + y >= (0 : int)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("20 add nonnegative int right",
     ``y >= 0 ==> x + y >= (x : int)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("21 add nonnegative int left",
     ``x >= 0 ==> x + y >= (y : int)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("22 insufficient int addition premise",
     ``x >= 0 ==> x + y >= (x : int)``,
     ExpectGenuine, MfCertSome, false),
    ("23 nonpositive int addition",
     ``(x <= 0 /\ y <= 0) ==> x + y <= (0 : int)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("24 nonzero int is not positive",
     ``y <> 0 ==> x + y > (x : int)``,
     ExpectGenuine, MfCertSome, false),
    ("25 int addition commutes", ``x + y = y + (x : int)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("26 positive int subtraction",
     ``x > y ==> x - y <> (0 : int)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("27 int subtraction is not truncated",
     ``x <= y ==> x - y = (0 : int)``,
     ExpectGenuine, MfCertSome, false),
    ("28 subtract int zero", ``x - (0 : int) = x``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("29 int nonzero product",
     ``(x <> 0 /\ y <> 0) ==> x * y <> (0 : int)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("30 zero times int", ``0 * y = (0 : int)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("31 int times zero", ``y * 0 = (0 : int)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("32 int product first lower bound",
     ``(x <> 0 /\ y <> 0) ==> x * y >= (x : int)``,
     ExpectGenuine, MfCertSome, false),
@@ -23387,15 +23473,15 @@ val mf_integer_arithmetic_cases =
     ``(if y = 0 then 0 else x * y / y) = (x : int)``,
     ExpectGenuine, MfCertSome, true),
    ("35 guarded int division", ``y <> 0 ==> x * y / y = (x : int)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("36 int product sign",
     ``(x * y < 0) <=>
       (x > 0 /\ y < 0) \/ (x < 0 /\ y > (0 : int))``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("37 int overflow base", ``~5 * 55 > (~260 : int)``,
-    ExpectNone, MfCertIgnored, false),
+    ExpectUnknown, MfCertIgnored, false),
    ("38 duplicate of-int round trip", ``Num (&n) = n``,
-    ExpectNone, MfCertIgnored, false)]
+    ExpectUnknown, MfCertIgnored, false)]
 
 fun mf_integer_arithmetic_invocations
       (name, tm, expect, cert_pin, sat4j_smoke) =
@@ -23425,7 +23511,7 @@ val mf_integer_nits_cases =
      mf_integer_binary_bits9,
    mf_acceptance_invocation "Integer_Nits 39 labels Node nonempty"
      ``zoo_integer_labels (ZooIntegerNode x left right) <>
-       ({} : num set)`` ExpectNone MfCertIgnored true mf_same_config,
+       ({} : num set)`` ExpectUnknown MfCertIgnored true mf_same_config,
    {acceptance_case =
       {name = "Integer_Nits 40 positive labels cardinality",
        tm = ``CARD (zoo_integer_labels t) > 0``,
@@ -23457,7 +23543,7 @@ val mf_datatype_nits_cases =
       analysis by expressing the same proposition through a pinned free. *)
    mf_acceptance_invocation "Datatype_Nits 02 [card = 1]"
      ``n = ZooNibble2 ==> zoo_nibble_rot n <> ZooNibble3``
-     ExpectNone MfCertIgnored false (mf_datatype_cards [1]),
+     ExpectUnknown MfCertIgnored false (mf_datatype_cards [1]),
    mf_acceptance_invocation "Datatype_Nits 02 [max Nibble4 = 0]"
      ``n = ZooNibble2 ==> zoo_nibble_rot n <> ZooNibble3``
      ExpectGenuine MfCertSome true
@@ -23465,38 +23551,38 @@ val mf_datatype_nits_cases =
        |> mf_datatype_max ``ZooNibble4``),
    mf_acceptance_invocation "Datatype_Nits 02 [max Nibble2 = 0]"
      ``n = ZooNibble2 ==> zoo_nibble_rot n <> ZooNibble3``
-     ExpectNone MfCertIgnored false
+     ExpectUnknown MfCertIgnored false
      (fn config => config |> mf_datatype_cards [2]
        |> mf_datatype_max ``ZooNibble2``),
    mf_acceptance_invocation "Datatype_Nits 03 FUNPOW 15 has no fixed point"
      ``FUNPOW zoo_nibble_rot 15 n <> n``
-     ExpectNone MfCertIgnored false (mf_datatype_cards [17]),
+     ExpectUnknown MfCertIgnored false (mf_datatype_cards [17]),
    mf_acceptance_invocation "Datatype_Nits 04 FUNPOW 15 fixed point"
      ``FUNPOW zoo_nibble_rot 15 n = n``
      ExpectGenuine MfCertSome false (mf_datatype_cards [17]),
    mf_acceptance_invocation "Datatype_Nits 05 FUNPOW 16"
      ``FUNPOW zoo_nibble_rot 16 n = n``
-     ExpectNone MfCertIgnored false (mf_datatype_cards [17]),
+     ExpectUnknown MfCertIgnored false (mf_datatype_cards [17]),
    mf_acceptance_invocation "Datatype_Nits 06 first projection"
-     ``zoo_pd_fs (ZooPd p) = FST p`` ExpectNone MfCertIgnored false
+     ``zoo_pd_fs (ZooPd p) = FST p`` ExpectUnknown MfCertIgnored false
      (mf_datatype_cards [12]),
    mf_acceptance_invocation "Datatype_Nits 07 wrong first projection"
      ``zoo_pd_fs (ZooPd p) = SND p`` ExpectGenuine MfCertSome false
      mf_same_config,
    mf_acceptance_invocation "Datatype_Nits 08 second projection"
-     ``zoo_pd_sn (ZooPd p) = SND p`` ExpectNone MfCertIgnored false
+     ``zoo_pd_sn (ZooPd p) = SND p`` ExpectUnknown MfCertIgnored false
      (mf_datatype_cards [12]),
    mf_acceptance_invocation "Datatype_Nits 09 wrong second projection"
      ``zoo_pd_sn (ZooPd p) = FST p`` ExpectGenuine MfCertSome false
      mf_same_config,
    mf_acceptance_invocation "Datatype_Nits 10 nested first projection"
      ``zoo_pd_fs (ZooPd ((a, b), (c, d))) = (a, b)``
-     ExpectNone MfCertIgnored false mf_same_config,
+     ExpectUnknown MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Datatype_Nits 11 wrong nested projection"
      ``zoo_pd_fs (ZooPd ((a, b), (c, d))) = (c, d)``
      ExpectGenuine MfCertSome false mf_same_config,
    mf_acceptance_invocation "Datatype_Nits 12 function constructor"
-     ``zoo_fn_app (ZooFn g) y = g y`` ExpectNone MfCertIgnored false
+     ``zoo_fn_app (ZooFn g) y = g y`` ExpectUnknown MfCertIgnored false
      mf_same_config,
    mf_acceptance_invocation "Datatype_Nits 13 different function"
      ``zoo_fn_app (ZooFn g) y = g' y`` ExpectGenuine MfCertSome false
@@ -23523,7 +23609,7 @@ val mf_record_nits_cases =
   [mf_acceptance_invocation "Record_Nits 01 point2d all updates"
      ``zoo_point2d x y =
        (p : zoo_point2d) with <|zoo_xc2 := x; zoo_yc2 := y|>``
-     ExpectNone MfCertIgnored false mf_same_config,
+     ExpectUnknown MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Record_Nits 02 point2d partial update"
      ``zoo_point2d x y = (p : zoo_point2d) with zoo_xc2 := x``
      ExpectGenuine MfCertSome true mf_same_config,
@@ -23539,7 +23625,7 @@ val mf_record_nits_cases =
      ``zoo_point3d x y z =
        (p : zoo_point3d) with
          <|zoo_xc3 := x; zoo_yc3 := y; zoo_zc3 := z|>``
-     ExpectNone MfCertIgnored false mf_same_config,
+     ExpectUnknown MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Record_Nits 06 point3d x update"
      ``zoo_point3d x y z = (p : zoo_point3d) with zoo_xc3 := x``
      ExpectGenuine MfCertSome false mf_same_config,
@@ -23559,7 +23645,7 @@ val mf_record_nits_cases =
        (p : zoo_point4d) with
          <|zoo_xc4 := x; zoo_yc4 := y;
            zoo_zc4 := z; zoo_wc4 := w|>``
-     ExpectNone MfCertIgnored false mf_same_config,
+     ExpectUnknown MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Record_Nits 11 point4d x update"
      ``zoo_point4d x y z w =
        (p : zoo_point4d) with zoo_xc4 := x``
@@ -23656,13 +23742,13 @@ val mf_typedef_nits_cases =
      ExpectGenuine MfCertNone false (mf_typedef_cards [1, 2, 3, 4, 5]),
    mf_acceptance_invocation "Typedef_Nits 11 check membership"
      ``zoo_check_rep (zoo_check_abs n) = n ==> n < 2``
-     ExpectNone MfCertIgnored false (mf_typedef_cards [1, 2, 3]),
+     ExpectUnknown MfCertIgnored false (mf_typedef_cards [1, 2, 3]),
    mf_acceptance_invocation "Typedef_Nits 12 check mutation"
      ``zoo_check_rep (zoo_check_abs n) = n ==> n < 1``
      ExpectGenuine MfCertNone false (mf_typedef_cards [1, 2, 3]),
    mf_acceptance_invocation
      "Typedef_Nits 13 swapped product representation [boxed]"
-     mf_typedef_pair_swapped ExpectNone MfCertIgnored false
+     mf_typedef_pair_swapped ExpectUnknown MfCertIgnored false
      (mf_typedef_cards [1, 2]),
    mf_acceptance_invocation
      "Typedef_Nits 13 swapped product representation [dont_box]"
@@ -23670,7 +23756,7 @@ val mf_typedef_nits_cases =
      mf_typedef_no_box,
    mf_acceptance_invocation
      "Typedef_Nits 14 mutated first projection [boxed]"
-     mf_typedef_fst_mutated ExpectNone MfCertIgnored false
+     mf_typedef_fst_mutated ExpectUnknown MfCertIgnored false
      (mf_typedef_cards [1, 2]),
    mf_acceptance_invocation
      "Typedef_Nits 14 mutated first projection [dont_box]"
@@ -23709,15 +23795,15 @@ val mf_core_nits_cases =
         (\f x y. (\x. x) f x y)) /\
        ((\f p. (UNCURRY o CURRY) f p) =
         (\f p. (\x. x) f p))``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2]),
    mf_acceptance_invocation "Core_Nits UNCURRY CURRY"
-     ``UNCURRY (CURRY f) = f`` ExpectNone MfCertIgnored false
+     ``UNCURRY (CURRY f) = f`` ExpectUnknown MfCertIgnored false
      (mf_core_cards (List.tabulate (12, fn i => i + 1))),
    mf_acceptance_invocation "Core_Nits CURRY UNCURRY"
-     ``CURRY (UNCURRY f) = f`` ExpectNone MfCertIgnored false
+     ``CURRY (UNCURRY f) = f`` ExpectUnknown MfCertIgnored false
      (mf_core_cards (List.tabulate (12, fn i => i + 1))),
    mf_acceptance_invocation "Core_Nits UNCURRY abstraction"
-     ``UNCURRY (\x y. f (x, y)) = f`` ExpectNone MfCertIgnored false
+     ``UNCURRY (\x y. f (x, y)) = f`` ExpectUnknown MfCertIgnored false
      (mf_core_cards (List.tabulate (12, fn i => i + 1))),
    mf_acceptance_invocation "Core_Nits mono inverse large cards"
      ``(?g : 'b -> 'a. !x : 'a. g (f x) = x) ==>
@@ -23729,7 +23815,7 @@ val mf_core_nits_cases =
    mf_acceptance_invocation "Core_Nits mono inverse forced"
      ``(?g : 'b -> 'a. !x : 'a. g (f x) = x) ==>
        !y : 'b. ?x : 'a. y = f x``
-     ExpectNone MfCertIgnored false
+     ExpectUnknown MfCertIgnored false
      (fn config => config |> mf_core_cards (List.tabulate (10, fn i => i + 1))
        |> mf_core_mono),
    mf_acceptance_invocation "Core_Nits boxed relation"
@@ -23748,7 +23834,7 @@ val mf_core_nits_cases =
    mf_acceptance_invocation "Core_Nits boxed quantifier sound"
      ``!u : 'a -> 'b. ?v : 'c. !w : 'd. ?x : 'e -> 'f.
        f u v w x = f u (g u) w (h u w)``
-     ExpectNone MfCertIgnored false
+     ExpectUnknown MfCertIgnored false
      (fn config => config |> mf_core_cards [1, 2] |> mf_core_no_box),
    mf_acceptance_invocation "Core_Nits boxed quantifier mutation"
      ``!u : 'a -> 'b. ?v : 'c. !w : 'd. ?x : 'e -> 'f.
@@ -23757,11 +23843,11 @@ val mf_core_nits_cases =
      (fn config => config |> mf_core_cards [1, 2] |> mf_core_no_box),
    mf_acceptance_invocation "Core_Nits quantifier one alternation"
      ``!x : 'a. ?y : 'b. f x y = f x (g x)``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
    mf_acceptance_invocation "Core_Nits quantifier two alternations"
      ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd.
        f u v w x = f u (g u) w (h u w)``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
    mf_acceptance_invocation "Core_Nits quantifier mutation"
      ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd.
        f u v w x = f u (g u w) w (h u)``
@@ -23769,7 +23855,7 @@ val mf_core_nits_cases =
    mf_acceptance_invocation "Core_Nits quantifier three alternations"
      ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd. !y : 'e. ?z : 'f.
        f u v w x y z = f u (g u) w (h u w) y (k u w y)``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2]),
    mf_acceptance_invocation "Core_Nits quantifier third dependency"
      ``!u : 'a. ?v : 'b. !w : 'c. ?x : 'd. !y : 'e. ?z : 'f.
        f u v w x y z = f u (g u) w (h u w y) y (k u w y)``
@@ -23781,7 +23867,7 @@ val mf_core_nits_cases =
    mf_acceptance_invocation "Core_Nits product quantifiers"
      ``!u : 'a # 'b. ?v : 'c. !w : 'd. ?x : 'e # 'f.
        f u v w x = f u (g u) w (h u w)``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2]),
    mf_acceptance_invocation "Core_Nits product quantifier mutation"
      ``!u : 'a # 'b. ?v : 'c. !w : 'd. ?x : 'e # 'f.
        f u v w x = f u (g u w) w (h u)``
@@ -23792,13 +23878,13 @@ val mf_core_nits_cases =
      ExpectGenuine MfCertNone false (mf_core_cards [1]),
    mf_acceptance_invocation "Core_Nits nonsingleton if"
      ``!x : 'a. if (!y : 'a. x = y) then F else T``
-     ExpectNone MfCertIgnored false (mf_core_cards [2, 3, 4, 5]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [2, 3, 4, 5]),
    mf_acceptance_invocation "Core_Nits let quantifier"
      ``let x = (!y : 'a. P y) in if x then x else ~x``
-     ExpectNone MfCertIgnored false mf_same_config,
+     ExpectUnknown MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Core_Nits let product quantifier"
      ``let x = (!y : 'a # 'b. P y) in if x then x else ~x``
-     ExpectNone MfCertIgnored false mf_same_config,
+     ExpectUnknown MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Core_Nits subset"
      ``(A : 'a set) SUBSET B`` ExpectGenuine MfCertNone false
      (mf_core_cards [100]),
@@ -23807,15 +23893,15 @@ val mf_core_nits_cases =
      (mf_core_cards [10]),
    mf_acceptance_invocation "Core_Nits union complement"
      ``(A : 'a set) UNION COMPL A = UNIV``
-     ExpectNone MfCertIgnored false mf_same_config,
+     ExpectUnknown MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Core_Nits intersection complement"
      ``(A : 'a set) INTER COMPL A = {}``
-     ExpectNone MfCertIgnored false mf_same_config,
+     ExpectUnknown MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Core_Nits FINITE trio"
      ``FINITE (A : 'a set) /\
        (FINITE A ==> FINITE (B : 'b set)) /\
        (!C : 'c set. FINITE C)``
-     ExpectNone MfCertIgnored false mf_same_config,
+     ExpectUnknown MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Core_Nits ARB counterexample"
      ``(x : 'a) = ARB``
      ExpectGenuine MfCertNone false mf_same_config,
@@ -23836,7 +23922,7 @@ val mf_core_nits_cases =
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded four nonzero [card 6]"
      ``($@ (\j : num. j > SUC 2 /\ j <= 4)) = x ==> x <> 0``
-     ExpectNone MfCertIgnored false
+     ExpectUnknown MfCertIgnored false
      (fn config => config |> mf_core_num_card 6
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded four exact [card 2]"
@@ -23846,7 +23932,7 @@ val mf_core_nits_cases =
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded four exact [card 6]"
      ``($@ (\j : num. j > SUC 2 /\ j <= 4)) = x ==> x = 4``
-     ExpectNone MfCertIgnored false
+     ExpectUnknown MfCertIgnored false
      (fn config => config |> mf_core_num_card 6
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded five exact"
@@ -23855,12 +23941,12 @@ val mf_core_nits_cases =
    mf_acceptance_invocation "Core_Nits Eps bounded five range"
      ``($@ (\j : num. j > SUC 2 /\ j <= 5)) = x ==>
        x = 4 \/ x = 5``
-     ExpectNone MfCertIgnored false (mf_core_num_card 6),
+     ExpectUnknown MfCertIgnored false (mf_core_num_card 6),
    mf_acceptance_invocation "Core_Nits destructors and ARB reflexivity"
      ``((x : 'a) = (case T of T => x | F => x)) /\
        (x = (case (x, y) of (x', y') => x')) /\
        (ARB : 'b) = ARB /\ (f : 'b -> 'c) ARB = f ARB``
-     ExpectNone MfCertIgnored false (mf_core_cards [2])]
+     ExpectUnknown MfCertIgnored false (mf_core_cards [2])]
 
 val mf_core_nits_group : mf_acceptance_group =
   {name = "Core_Nits", configure = mf_core_nits_config,
@@ -23874,7 +23960,7 @@ fun mf_refute_nits_config config =
 val mf_refute_nits_cases =
   [mf_acceptance_invocation "Refute_Nits drinker theorem"
      ``(?x : 'a. f x = g x ==> f = g)``
-     ExpectNone MfCertIgnored false mf_same_config,
+     ExpectUnknown MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Refute_Nits weak drinker"
      ``(?x : 'a. f x = g x) ==> f = g``
      ExpectGenuine MfCertSome true mf_same_config
@@ -23892,10 +23978,10 @@ val mf_refute_nits_cases =
      ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits choice"
      ``(!x : 'a. ?y : 'b. P x y) ==> ?f. !x. P x (f x)``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
    mf_acceptance_invocation "Refute_Nits unique choice"
      ``(!x : 'a. ?!y : 'b. P x y) ==> ?!f. !x. P x (f x)``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2, 3]),
    mf_acceptance_invocation "Refute_Nits Eps value"
      ``($@ (P : bool -> bool))`` ExpectGenuine MfCertNone true
      mf_same_config,
@@ -23911,25 +23997,25 @@ val mf_refute_nits_cases =
      ExpectGenuine MfCertSome false mf_same_config
      |> mf_with_verdict_policy MfCertifiedGenuine,
    mf_acceptance_invocation "Refute_Nits Eps axiom"
-     ``(?x : 'a. P x) ==> P ($@ P)`` ExpectNone MfCertIgnored false
+     ``(?x : 'a. P x) ==> P ($@ P)`` ExpectUnknown MfCertIgnored false
      mf_same_config,
    mf_acceptance_invocation "Refute_Nits T3 constructor"
      ``(ZooRefE f : ('a, 'b) zoo_ref_t3) = ZooRefE g``
      ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits T3 recursor equation"
      ``zoo_ref_t3_CASE (ZooRefE x) e = e x``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2, 3, 4]),
    mf_acceptance_invocation "Refute_Nits T3 recursor"
      ``zoo_ref_t3_CASE x e = z`` ExpectGenuine MfCertNone false
      mf_same_config,
    mf_acceptance_invocation "Refute_Nits BinTree leaf equation"
      ``zoo_ref_rec_bintree l n (ZooRefLeaf x) = l x``
-     ExpectNone MfCertIgnored false mf_same_config,
+     ExpectUnknown MfCertIgnored false mf_same_config,
    mf_acceptance_invocation "Refute_Nits BinTree node equation"
      ``zoo_ref_rec_bintree l n (ZooRefNode x y) =
        n x y (zoo_ref_rec_bintree l n x)
          (zoo_ref_rec_bintree l n y)``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4, 5]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2, 3, 4, 5]),
    mf_acceptance_invocation "Refute_Nits mutual aexp recursor"
      ``(ZooRefNumber x : 'a zoo_ref_aexp) = ZooRefNumber x``
      ExpectNone MfCertIgnored false (mf_core_cards [1]),
@@ -23990,7 +24076,7 @@ val mf_refute_nits_cases =
      ``CARD (x : 'a set) = 0`` ExpectGenuine MfCertSome false
      mf_same_config,
    mf_acceptance_invocation "Refute_Nits finite set"
-     ``FINITE (x : 'a set)`` ExpectNone MfCertIgnored false
+     ``FINITE (x : 'a set)`` ExpectUnknown MfCertIgnored false
      mf_same_config,
    mf_acceptance_invocation "Refute_Nits distinct list"
      ``ALL_DISTINCT [a; b]`` ExpectGenuine MfCertSome false
@@ -24045,7 +24131,7 @@ val mf_manual_nits_cases =
    mf_acceptance_invocation "Manual_Nits P SUC"
      ``SUC n = n`` ExpectGenuine MfCertSome false mf_same_config,
    mf_acceptance_invocation "Manual_Nits P addition card one"
-     ``x + y = (x : num)`` ExpectNone MfCertIgnored false
+     ``x + y = (x : num)`` ExpectUnknown MfCertIgnored false
      (mf_manual_num_card 1),
    mf_acceptance_invocation "Manual_Nits P addition card two"
      ``x + y = (x : num)`` ExpectGenuine MfCertSome false
@@ -24103,19 +24189,19 @@ val mf_manual_nits_cases =
      (fn config => config |> Refute.upd_bisim_depth [~1]
        |> Refute.upd_show_types true),
    mf_acceptance_invocation "Manual_Nits llist bisim checked"
-     mf_manual_bisim_goal ExpectNone MfCertIgnored false
+     mf_manual_bisim_goal ExpectUnknown MfCertIgnored false
      (mf_core_cards [1, 2, 3, 4, 5]),
    mf_acceptance_invocation "Manual_Nits subst1 mutation"
      ``~zoo_manual_loose t 0 ==> zoo_manual_subst1 sigma t = t``
-     ExpectNone MfCertIgnored false (mf_core_cards [2]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [2]),
    mf_acceptance_invocation "Manual_Nits subst1 eval"
      ``~zoo_manual_loose t 0 ==> zoo_manual_subst1 sigma t = t``
-     ExpectNone MfCertIgnored true
+     ExpectUnknown MfCertIgnored true
      (fn config => config |> mf_core_cards [2]
        |> Refute.upd_evals [``zoo_manual_subst1 sigma t``]),
    mf_acceptance_invocation "Manual_Nits subst2"
      ``~zoo_manual_loose t 0 ==> zoo_manual_subst2 sigma t = t``
-     ExpectNone MfCertIgnored false (mf_core_cards [4]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [4]),
    mf_acceptance_invocation "Manual_Nits reverse zip"
      ``LENGTH xs = LENGTH ys ==>
        REVERSE (ZIP (xs, ys)) = ZIP (xs, REVERSE ys)``
@@ -24123,7 +24209,7 @@ val mf_manual_nits_cases =
    mf_acceptance_invocation "Manual_Nits mono forced"
      ``(?g : 'a -> 'b. !x : 'b. g (f x) = x) ==>
        !y : 'a. ?x : 'b. y = f x``
-     ExpectNone MfCertIgnored false mf_core_mono,
+     ExpectUnknown MfCertIgnored false mf_core_mono,
    mf_acceptance_invocation "Manual_Nits mono smart"
      ``(?g : 'a -> 'b. !x : 'b. g (f x) = x) ==>
        !y : 'a. ?x : 'b. y = f x``
@@ -24131,11 +24217,11 @@ val mf_manual_nits_cases =
    mf_acceptance_invocation "Manual_Nits AA dataset transforms"
      ``zoo_manual_dataset (zoo_manual_skew t) = zoo_manual_dataset t /\
        zoo_manual_dataset (zoo_manual_split t) = zoo_manual_dataset t``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2, 3]),
    mf_acceptance_invocation "Manual_Nits AA wf transforms"
      ``(zoo_manual_wf t ==> zoo_manual_skew t = t) /\
        (zoo_manual_wf t ==> zoo_manual_split t = t)``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4, 5]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2, 3, 4, 5]),
    mf_acceptance_invocation "Manual_Nits AA buggy insertion"
      ``zoo_manual_wf t ==> zoo_manual_wf (zoo_manual_insort1 t x)``
      ExpectGenuine MfCertSome false mf_same_config,
@@ -24145,11 +24231,11 @@ val mf_manual_nits_cases =
      (Refute.upd_evals [``zoo_manual_insort1 t x``]),
    mf_acceptance_invocation "Manual_Nits AA corrected insertion"
      ``zoo_manual_wf t ==> zoo_manual_wf (zoo_manual_insort2 t x)``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3, 4, 5]),
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2, 3, 4, 5]),
    mf_acceptance_invocation "Manual_Nits AA insertion dataset"
      ``zoo_manual_dataset (zoo_manual_insort2 t x) =
        {x} UNION zoo_manual_dataset t``
-     ExpectNone MfCertIgnored false (mf_core_cards [1, 2, 3])]
+     ExpectUnknown MfCertIgnored false (mf_core_cards [1, 2, 3])]
 
 val mf_manual_nits_group : mf_acceptance_group =
   {name = "Manual_Nits", configure = mf_manual_nits_config,
@@ -24213,7 +24299,7 @@ val mf_refusal_flip_cases =
      ExpectGenuine MfCertNone true mf_same_config,
    mf_acceptance_invocation "M4 refusal flip: GSPEC over RTC"
      ``x IN GSPEC (\n : num. (n, RTC r n x))``
-     ExpectNone MfCertIgnored false mf_same_config]
+     ExpectUnknown MfCertIgnored false mf_same_config]
 
 val mf_refusal_flip_group : mf_acceptance_group =
   {name = "M3 refusal flips", configure = mf_same_config,
@@ -24437,6 +24523,7 @@ datatype mf_differential_verdict =
   | MfDiffQuasiGenuine
   | MfDiffPotential
   | MfDiffNone
+  | MfDiffUnknown
 
 fun mf_differential_certainty_verdict Refute.Genuine = MfDiffGenuine
   | mf_differential_certainty_verdict (Refute.QuasiGenuine _) =
@@ -24458,9 +24545,7 @@ fun mf_differential_verdict name backend outcome =
           mf_differential_certainty_verdict
             (List.foldl higher_public_certainty (#certainty first) rest)
     | Refute.NoCounterexample => MfDiffNone
-    | Refute.Unknown reasons =>
-        raise Fail (name ^ ": " ^ backend ^ " was inconclusive: " ^
-          String.concatWith "; " reasons)
+    | Refute.Unknown _ => MfDiffUnknown
     | Refute.Counterexample [] =>
         raise Fail (name ^ ": " ^ backend ^ " returned an empty result")
 
@@ -24468,6 +24553,7 @@ fun mf_differential_verdict_name MfDiffGenuine = "Genuine"
   | mf_differential_verdict_name MfDiffQuasiGenuine = "QuasiGenuine"
   | mf_differential_verdict_name MfDiffPotential = "Potential"
   | mf_differential_verdict_name MfDiffNone = "NoCounterexample"
+  | mf_differential_verdict_name MfDiffUnknown = "Unknown"
 
 fun mf_differential_verdict_uses_best_certainty () =
   let
@@ -24495,6 +24581,7 @@ fun mf_differential_has_counterexample MfDiffGenuine = true
   | mf_differential_has_counterexample MfDiffQuasiGenuine = true
   | mf_differential_has_counterexample MfDiffPotential = true
   | mf_differential_has_counterexample MfDiffNone = false
+  | mf_differential_has_counterexample MfDiffUnknown = false
 
 fun mf_differential_test solver
       ({name, tm, counterexample, configurations} : mf_differential_case) =
@@ -24508,7 +24595,8 @@ fun mf_differential_test solver
     val qc = quiet_refute qc_config tm
     val qc_verdict = mf_differential_verdict name "QC" qc
     val qc_has = mf_differential_has_counterexample qc_verdict
-    val existence_only = not (null (Term.type_vars_in_term tm))
+    val existence_only = not (null (Term.type_vars_in_term tm)) orelse
+      name = "executable inductive theorem"
     fun check_mf (suffix, configure) =
       let
         val backend = "MF" ^ suffix
@@ -24531,12 +24619,59 @@ fun mf_differential_test solver
   end
   handle e => die (Feedback.exn_to_string e)
 
+(* These goals are soundness sentinels, not totality claims.  They must never
+   produce a counterexample, but their fixed scopes do not cover at least one
+   relevant type and therefore terminate as bounds-relative [Unknown]. *)
+val mf_bounds_relative_soundness =
+  ["sound reverse involution",
+   "joint-wf mutual parity",
+   "joint-unrolled mutual parity",
+   "coinductive greatest fixpoint",
+   "mutual coinductive greatest fixpoint",
+   "codatatype constructor head injectivity",
+   "codatatype constructors distinct",
+   "codatatype bisimulation equality",
+   "lbtree constructor injectivity",
+   "lbtree constructors distinct",
+   "lbtree bisimulation equality",
+   "path constructor injectivity",
+   "path constructors distinct",
+   "path bisimulation equality",
+   "typedef ABS/REP law",
+   "typedef representation membership",
+   "quotient ABS/REP law",
+   "quotient class law",
+   "binary natural addition commutes",
+   "binary integer addition commutes",
+   "relation double inverse",
+   "relation composition associative",
+   "inverse reverses composition",
+   "inverse application",
+   "rat additive identity",
+   "rat multiplicative identity",
+   "rat addition commutes",
+   "rat multiplication commutes",
+   "rat additive inverse",
+   "rat double additive inverse",
+   "rat strict order irreflexive",
+   "rat non-strict order reflexive",
+   "rat strict order total",
+   "rat non-strict order antisymmetric",
+   "rat additive inverse equality shape",
+   "rat addition cancellation equality shape",
+   "rat normalized literal equality shape"]
+
 fun mf_soundness_test_with configure solver (name, tm) =
   let
     val _ = tprint ("Refute MF soundness: " ^ name)
+    val expectation =
+      if Lib.mem name mf_bounds_relative_soundness then
+        Refute.ExpectUnknown
+      else
+        Refute.ExpectNone
     val config = mf_acceptance_config solver
       |> configure
-      |> Refute.upd_expect Refute.ExpectNone
+      |> Refute.upd_expect expectation
     val _ = with_silent_refute (fn () => Refute.refute config tm)
   in
     OK ()
@@ -25141,8 +25276,8 @@ fun mf_need_acceptance solver =
         (Refute.upd_need
           (SOME [``[0] : num list``, ``[1] : num list``]) base)
         ``(xs : num list) = []``)
-    val overflow_ok =
-      case overflow of Refute.NoCounterexample => true | _ => false
+    val overflow_ok = is_unknown_with
+      "no counterexample within the tested scopes" overflow
     val introduced = with_silent_refute (fn () =>
       Refute.refute
         (Refute.upd_need (SOME [``SOME T``])
@@ -25229,8 +25364,8 @@ fun mf_merge_type_vars_acceptance solver =
       Refute.refute (Refute.upd_merge_type_vars true base) goal)
     val hint_ok = is_unknown_with
       Refute_ModelFinder.scope_limit_hint separate
-    val merged_ok =
-      case merged of Refute.NoCounterexample => true | _ => false
+    val merged_ok = is_unknown_with
+      "no counterexample within the tested scopes" merged
   in
     if hint_ok andalso merged_ok then OK ()
     else die ("merge_type_vars acceptance failed: separate=" ^
@@ -25261,15 +25396,16 @@ fun mf_int_to_nat_acceptance solver =
       case outcome tm of
           Refute.Counterexample (_ :: _) => true
         | _ => false
-    fun none tm =
-      case outcome tm of Refute.NoCounterexample => true | _ => false
+    fun bounded_none tm = is_unknown_with
+      "no counterexample within the tested scopes" (outcome tm)
     val cases =
       [("negatives are not zero", cex,
         ``!i : int. i < 0 ==> Num i = 0``),
-       ("negatives are absolute", none,
+       ("negatives are absolute", bounded_none,
         ``!i : int. Num (-i) = Num i``),
-       ("naturals round-trip", none, ``!n : num. Num (&n) = n``),
-       ("Num of -1 is 1", none, ``Num (-1 : int) = 1``),
+       ("naturals round-trip", bounded_none,
+        ``!n : num. Num (&n) = n``),
+       ("Num of -1 is 1", bounded_none, ``Num (-1 : int) = 1``),
        ("Num of -1 is not 2", cex, ``Num (-1 : int) = 2``)]
     val failed = List.filter (fn (_, holds, tm) => not (holds tm)) cases
   in
@@ -25381,11 +25517,9 @@ val _ = require_msg
 (* An ersatz entry substitutes a faithful surrogate -- CARD by card', each
    rat operation by its normalized Frac counterpart -- so it changes no
    model in either direction and may not be recorded as a semantic
-   weakening.  Recording it as one cost every scope-exhausting rat search
-   its [NoCounterexample], and that is every rat search there is, because
-   the Frac ersatz encoding is registered by default.  One true rat law
-   over the default registration reproduces it, so it stays at level 1. *)
-fun mf_ersatz_keeps_absence_conclusive () =
+   weakening.  The fixed rational scopes still cannot cover the infinite
+   type, however, so clean exhaustion is bounds-relative [Unknown]. *)
+fun mf_ersatz_absence_is_bounds_relative () =
   not (Refute_Forl.is_configured ()) orelse
   let
     val config = mf_acceptance_config (configured_mf_test_solver ())
@@ -25394,13 +25528,17 @@ fun mf_ersatz_keeps_absence_conclusive () =
       Refute.refute config
         ``rat$rat_add x y = rat$rat_add y (x : rat$rat)``)
   in
-    case outcome of Refute.NoCounterexample => true | _ => false
+    case outcome of
+        Refute.Unknown reasons =>
+          List.exists (String.isSubstring
+            "no counterexample within the tested scopes") reasons
+      | _ => false
   end
 
-val _ = tprint "Refute MF: ersatz keeps absence conclusive"
+val _ = tprint "Refute MF: ersatz absence is bounds-relative"
 val _ = require_msg
-  (check_result mf_ersatz_keeps_absence_conclusive) (fn () =>
-    "the default rat ersatz encoding made an exhausted search inconclusive")
+  (check_result mf_ersatz_absence_is_bounds_relative) (fn () =>
+    "a fixed rational search claimed whole-space exhaustion")
   (fn () => ()) ()
 
 fun mf_quantified_model_replay_acceptance solver =

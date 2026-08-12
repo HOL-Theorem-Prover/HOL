@@ -111,6 +111,9 @@ structure Refute_QC_Narrow = struct
       val gave_up = ref []
       val failed = ref false
       val frontier = ref (NONE : int option)
+      val complete_entries = ref ([] : (int * int) list)
+      val incomplete_entries = ref ([] : (int * int) list)
+      val totally_exhausted_depth = ref (NONE : int option)
       (* Certification retry state outlives each compiled depth window. *)
       val states : (bool * candidate list) ref list =
         map (fn _ => ref (#genuine_only config, [])) instances
@@ -119,6 +122,20 @@ structure Refute_QC_Narrow = struct
           Int.max (1, #max_counterexamples config)
       fun instance_for card = List.nth (instances, card - 1)
       fun state_for card = List.nth (states, card - 1)
+      fun entry_member entry = List.exists (fn other => other = entry)
+        (!complete_entries)
+      fun entry_incomplete entry = List.exists (fn other => other = entry)
+        (!incomplete_entries)
+      fun record_complete entry =
+        if entry_member entry orelse entry_incomplete entry then ()
+        else complete_entries := entry :: !complete_entries
+      fun record_incomplete entry =
+        if entry_incomplete entry then ()
+        else incomplete_entries := entry :: !incomplete_entries
+      fun depth_complete depth =
+        not (null instances) andalso
+        List.all (fn instance => entry_member (#card instance, depth))
+          instances
 
       fun run_window window entries terminal =
         if Refute_Core.search_expired config orelse target_reached () then ()
@@ -152,11 +169,14 @@ structure Refute_QC_Narrow = struct
                         val msec = QC.elapsed_msec start
                       in
                         case result of
-                            Exhausted _ => ()
+                            Exhausted {complete} =>
+                              if complete then record_complete (card, size)
+                              else ()
                           | GaveUp reason => QC.add_reason reason gave_up
                           | CexFound
                               {env, ground_env, case_tree, genuine, ...} =>
                               let
+                                val _ = record_incomplete (card, size)
                                 val _ = QC.record_candidate
                                 {config = config, strategy = Narrowing,
                                  substrate = substrate,
@@ -202,6 +222,9 @@ structure Refute_QC_Narrow = struct
                         val _ = one entry genuine_only ignored budget
                         val elapsed = QC.elapsed_msec started
                         val _ = frontier := SOME size
+                        val _ = if depth_complete size then
+                            totally_exhausted_depth := SOME size
+                          else ()
                         val _ = Refute_Core.Private.say 2
                           ("Refute schedule entry (backend: narrowing" ^
                            ", substrate: " ^ substrate ^ ", card " ^
@@ -214,6 +237,7 @@ structure Refute_QC_Narrow = struct
                     fun search [] = ()
                       | search (entry :: rest) =
                           if target_reached () orelse
+                             Option.isSome (!totally_exhausted_depth) orelse
                              Refute_Core.search_expired config then ()
                           else (run_entry entry; search rest)
                     val body_result = Exn.capture search entries
@@ -237,6 +261,7 @@ structure Refute_QC_Narrow = struct
                   map (fn instance => (#card instance, depth)) instances
                 fun deepen depth =
                   if !failed orelse target_reached () orelse
+                     Option.isSome (!totally_exhausted_depth) orelse
                      Refute_Core.search_expired config then ()
                   else
                     (run_window {first = depth, last = depth}
@@ -258,8 +283,14 @@ structure Refute_QC_Narrow = struct
       else
         case !replay_potential of
             SOME potential => Refute_Core.Counterexample [potential]
-          | NONE => Refute_Core.Unknown
-              ("narrowing search exhausted" :: !gave_up @ frontier_reason)
+          | NONE =>
+              if Option.isSome (!totally_exhausted_depth) andalso
+                 not (!failed) andalso null (!gave_up) then
+                Refute_Core.NoCounterexample
+              else
+                Refute_Core.Unknown
+                  ("narrowing search exhausted" ::
+                   !gave_up @ frontier_reason)
     end
 
   fun run config instances =

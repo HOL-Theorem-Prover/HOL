@@ -4387,7 +4387,7 @@ structure Refute_Extract = struct
           "    in not ((!Refute_EvalSML.ignored_filter)\n" ^
           "      (candidate depth arguments (SOME replay) genuine)) end)\n" ^
           "  initial\n" ^
-          "val (hit, tests) =\n" ^
+          "val (hit, tests, complete) =\n" ^
           "  case result of\n" ^
           "      Refute_Narrow.PnfCounterexample\n" ^
           "        {genuine, example, tests, ...} =>\n" ^
@@ -4397,19 +4397,21 @@ structure Refute_Extract = struct
           "          val replay = Refute_Narrow.replay_of_example\n" ^
           "            (replay_rebuild depth) example\n" ^
           "        in (SOME (candidate depth arguments (SOME replay) genuine),\n" ^
-          "            tests) end\n" ^
-          "    | Refute_Narrow.PnfExhausted {tests, ...} => (NONE, tests)\n"
+          "            tests, false) end\n" ^
+          "    | Refute_Narrow.PnfExhausted {tests, complete, ...} =>\n" ^
+          "        (NONE, tests, complete)\n"
         else
           "val result = Refute_Narrow.refute_plain_avoiding genuine_only\n" ^
           "  {arguments = " ^ initial_arguments ^ ",\n" ^
           "   evaluate = narrow_evaluate depth,\n" ^
           "   accept = accept_hit depth genuine_only}\n" ^
-          "val (hit, tests) =\n" ^
+          "val (hit, tests, complete) =\n" ^
           "  case result of\n" ^
           "      Refute_Narrow.PlainCounterexample\n" ^
           "        {genuine, arguments, tests} =>\n" ^
-          "        (make_hit depth arguments NONE genuine, tests)\n" ^
-          "    | Refute_Narrow.PlainExhausted {tests} => (NONE, tests)\n"
+          "        (make_hit depth arguments NONE genuine, tests, false)\n" ^
+          "    | Refute_Narrow.PlainExhausted {tests, complete} =>\n" ^
+          "        (NONE, tests, complete)\n"
 
       val table_id = Refute_EvalSML.register_term_tables
         (rev (!(#list constructor_terms))) (rev (!(#list raw_terms)))
@@ -4433,7 +4435,7 @@ structure Refute_Extract = struct
             "fun dispatch card genuine_only depth draws state =\n" ^
             "  if card <> 1 then raise Subscript else\n" ^
             "  let\n    " ^ engine ^
-            "  in {hit = hit, complete = false, table = refute_table_id,\n" ^
+            "  in {hit = hit, complete = complete, table = refute_table_id,\n" ^
             "      state = state, tests = tests, match_failures = 0}\n" ^
             "  end\n" ^
             "fun protected_dispatch card genuine_only depth draws state =\n" ^

@@ -119,7 +119,7 @@ repository.
   01 §5, 02 §8 and 12 §3 are handled inside their scripts.
 - Model-finder calls in `examples/` pin `upd_max_threads 1` and an explicit
   `upd_card` row, so quoted scopes and models are exact.  The sole
-  exception is the opener of 09 §1, left racing on purpose and labelled;
-  `NoCounterexample` is a kodkod verdict, so calls claiming it need
-  Kodkodi even when their reasons never say so (`examples/README`).
+  exception is the opener of 09 §1, left racing on purpose and labelled.
+  `NoCounterexample` can also come from exhaustive QC or narrowing when a
+  finite generator space is completely covered (`examples/README`).
 - Quality gate: `HOLSELFTESTLEVEL=2 Holmake` in `src/HolRefute/`.

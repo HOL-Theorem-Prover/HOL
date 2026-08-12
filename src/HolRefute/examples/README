@@ -53,6 +53,8 @@ need Kodkodi 1.5.7 and a Java runtime:
 Without a configured model finder, MODEL_REFUTE_TAC reports an inconclusive
 search and still leaves the goal unchanged.  The deliberately false example
 theorems remain buildable because their following `cheat` admits that goal.
+`NoCounterexample` itself does not imply that Kodkodi ran: exhaustive QC and
+narrowing can also prove that a finite search space is completely covered.
 
 
 The files

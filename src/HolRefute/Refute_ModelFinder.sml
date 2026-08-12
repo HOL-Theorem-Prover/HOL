@@ -1146,13 +1146,31 @@ fun run_instance deadline started (config : Refute_Core.config)
     fun problem_count problems scope = length (List.filter (fn problem =>
       MFS.scopes_equivalent (#scope (metadata problem), scope)) problems)
 
-    fun scopes_checked () = length (List.filter (fn scope =>
+    fun scope_checked scope =
       let
         val generated = problem_count (!generated_problems) scope
         val checked = problem_count (!checked_problems) scope
       in
         generated > 0 andalso generated = checked
-      end) (!generated_scopes))
+      end
+
+    fun scopes_checked () =
+      length (List.filter scope_checked (!generated_scopes))
+
+    (* A clean finite scope frontier proves totality only when it covers the
+       actual types, not merely every scope the user requested.  A type
+       variable ranges over arbitrarily large finite types.  For ground
+       types, the scope metadata records both semantic completeness and
+       concreteness; forced, unsound finitization is deliberately excluded.
+       Empty [all_types] is the constant-formula case and is vacuously
+       covered once its (empty) frontier has been checked. *)
+    fun total_scope_search () =
+      !fully_exhausted andalso
+      not (List.exists Type.is_vartype all_types) andalso
+      List.all (fn ty => List.exists (fn scope =>
+        scope_checked scope andalso
+        MFS.is_exact_type (#data_types scope) sound_finitizes ty)
+        (!generated_scopes)) all_types
 
     fun stats donno =
       [("msec", elapsed_msec started),
@@ -1242,8 +1260,13 @@ fun run_instance deadline started (config : Refute_Core.config)
               Refute_Core.Unknown
                 (accounting_reason
                    "every model found was discarded" :: !error_reasons)
-            else
+            else if total_scope_search () then
               Refute_Core.NoCounterexample
+            else
+              Refute_Core.Unknown
+                (accounting_reason
+                   "no counterexample within the tested scopes" ::
+                 frontier_reason ())
           else if null cexs then
             Refute_Core.Unknown
               (accounting_reason "no usable model was reconstructed" ::

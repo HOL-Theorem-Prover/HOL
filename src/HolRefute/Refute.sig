@@ -7,7 +7,12 @@ signature Refute = sig
   datatype certainty = datatype Refute_Core.certainty
   type model_report = Refute_Core.model_report
   type counterexample = Refute_Core.counterexample
+  (* [NoCounterexample] says that the whole relevant space was covered and
+     no counterexample is possible.  A clean search limited to non-covering
+     bounds is [Unknown] and includes its frontier in the reasons. *)
   datatype outcome = datatype Refute_Core.outcome
+  (* [ExpectNone] matches only the whole-space outcome above;
+     [ExpectUnknown] is the appropriate pin for a bounds-relative miss. *)
   datatype expectation = datatype Refute_Core.expectation
   datatype substrate_choice = datatype Refute_Core.substrate_choice
   datatype bound_mode = datatype Refute_Core.bound_mode

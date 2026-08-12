@@ -20,6 +20,16 @@ deepening: 10 is their initial window, not a terminal bound.  `upd_size` and
 `upd_card` deliberately select fixed bounds; use `upd_iterative_size` and
 `upd_iterative_card` to select a different initial adaptive window.
 
+`NoCounterexample` is reserved for a search that covers the whole semantic
+space: no counterexample is possible at any larger size.  A clean fixed-bound
+search that does not cover every relevant type returns `Unknown`, with a
+reason such as `no counterexample within the tested scopes` and the searched
+frontier.  Exhaustive QC and narrowing can establish totality for finite
+generator spaces, and the model finder can do so for a constant preprocessed
+formula or exact finite scopes.  `NoCounterexample` is decisive in a backend
+race and stops the other searches, just like a counterexample at the declared
+certainty ceiling.
+
 Set a substrate with `Refute.upd_substrate`.  The default, `Auto`, walks all
 registered substrates in priority order; the built-in order is NativeSML,
 Cv, then Compute.  Auto falls through when a substrate is inapplicable.  An
@@ -125,10 +135,11 @@ failure, timeout, and interruption paths leave no Refute-created type,
 constant, theorem, or binding in the user's theory; if safe cleanup is
 unavailable, Cv reports that the goal is inapplicable instead.
 
-Backend races stop only when a result reaches the highest certainty that
-any selected backend declares reachable for the current configuration and
-instances.  `Refute.register_backend` gives existing backends the safe,
-conservative ceiling `Genuine`.  A backend with a tighter bound can use
+Backend races stop when a backend proves `NoCounterexample`, or when a
+counterexample reaches the highest certainty that any selected backend
+declares reachable for the current configuration and instances.
+`Refute.register_backend` gives existing backends the safe, conservative
+ceiling `Genuine`.  A backend with a tighter bound can use
 `Refute.register_backend_with_ceiling`.  Its callback must return an upper
 bound: overestimating only forgoes an early stop, whereas underestimating can
 hide a stronger result and violates the backend contract.
