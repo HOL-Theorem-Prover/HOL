@@ -758,10 +758,37 @@ fun start {diag, dbg} = let
       startByte = startByte }
     in lastPos := size code end
 
+  (* Materialise an `encode` (`(string -> unit) -> unit`) into a plain
+     string.  Used to build dedup keys for Error reports whose `msg`
+     is a pretty-printer callback. *)
+  fun encodeToString enc = let
+    val buf = ref []
+    fun sink s = buf := s :: !buf
+    val () = enc sink
+    in String.concat (rev (!buf)) end
+
+  (* Drop later Error reports whose (pos, msg) matches an earlier one.
+     A single mis-typed dec often triggers multiple parser recovery
+     passes each emitting the same "expected 'QED'" / "expected an
+     expression" pair -- users don't need to see them twice.  Non-
+     Error reports pass through unchanged. *)
+  fun dedupReports d = let
+    val seen = ref (Binaryset.empty String.compare)
+    val out = DArray.new (DArray.size d, Completed)
+    fun step r = case r of
+        Error {pos = (s, e), msg, ...} =>
+          let val k = Int.toString s ^ ":" ^ Int.toString e ^ ":"
+                      ^ encodeToString msg
+          in if Binaryset.member (!seen, k) then ()
+             else (seen := Binaryset.add (!seen, k);
+                   DArray.push (out, r))
+          end
+      | _ => DArray.push (out, r)
+    val () = DArray.app step d
+    in out end
+
   (* Emit publishDiagnostics for `uri` combining the last-completed
-     compile's diagnostics and any walker-observed runtime squiggles.
-     Used from the goalState handler after it updates `walkerDiags` --
-     the compile-side has its own path that de-dupes on total-size. *)
+     compile's diagnostics and any walker-observed runtime squiggles. *)
   fun publishAllDiagnostics uri
                             ({lastTrees, walkerDiags, ...}:file_data) = let
     val {text, parse} = !lastTrees
@@ -771,6 +798,7 @@ fun start {diag, dbg} = let
     val total = DArray.size compileDiags + Binarymap.numItems wd
     val snapshot = DArray.clone (compileDiags, total)
     val _ = Binarymap.app (fn (_, r) => DArray.push (snapshot, r)) wd
+    val snapshot = dedupReports snapshot
     fun encDiag (Error {hard, pos, msg}) print = (
         print "{\"range\":"; encRangeLC lines pos print;
         print ",\"severity\":";
@@ -919,6 +947,7 @@ fun start {diag, dbg} = let
           let val snapshot = DArray.clone (oldDiags, total)
               val _ = Binarymap.app
                         (fn (_, r) => DArray.push (snapshot, r)) wd
+              val snapshot = dedupReports snapshot
           in
           send (mkNotif "textDocument/publishDiagnostics" (fn print => (
             print "{\"uri\":"; encString uri print;

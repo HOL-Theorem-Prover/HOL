@@ -2028,6 +2028,33 @@ def test_goalState_thenl_context_line():
         c.close()
 
 
+def test_diagnostics_deduplicated_across_publish():
+    """A partial tactic body often triggers multiple parser recovery
+    passes that each emit the same "expected 'QED'" / "expected an
+    expression" pair.  Deduplicate before publishing so the client
+    sees each (range, message) once."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/dedup.sml"
+        # `simp[` with no closing bracket produces multiple duplicated
+        # "expected an expression" / "expected 'QED'" reports pre-dedup.
+        src = ("Theory dedup\nAncestors bool\n\nTheorem foo:\n  T\n"
+               "Proof\n  simp[")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        diags = _diag_count(c, uri)
+        keys = [(d["range"]["start"]["line"],
+                 d["range"]["start"]["character"],
+                 d["range"]["end"]["line"],
+                 d["range"]["end"]["character"],
+                 d["message"]) for d in diags]
+        assert_eq(len(keys), len(set(keys)),
+                  f"diagnostics deduplicated by (range, message): {keys!r}")
+    finally:
+        c.close()
+
+
 def test_unclosed_quotation_narrows_to_opening_delimiter():
     """An unclosed HOL quotation at EOF reports a point diagnostic
     at the opening delimiter, not a range spanning to EOF."""
@@ -2793,6 +2820,8 @@ TESTS = [
                                      test_goalState_failed_tactic_publishes_diagnostic),
     ("stale_diags_dont_survive_char_by_char_typing",
                                      test_stale_diags_dont_survive_char_by_char_typing),
+    ("diagnostics_deduplicated_across_publish",
+                                     test_diagnostics_deduplicated_across_publish),
     ("unclosed_quotation_narrows_to_opening_delimiter",
                                      test_unclosed_quotation_narrows_to_opening_delimiter),
     ("goalState_available_past_compile_pos",

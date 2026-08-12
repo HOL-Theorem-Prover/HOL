@@ -2755,6 +2755,13 @@ the wait cancels the request and returns nil — used by auto-follow
 so a slow server never freezes emacs on a keystroke."
   (let ((server (hol-lsp--server)))
     (when (and server buffer-file-name)
+      ;; eglot batches `didChange' at `eglot-send-changes-idle-time'
+      ;; (default 0.5 s), so if the user typed less than that ago the
+      ;; server still sees the previous buffer.  Flush pending changes
+      ;; before the query -- otherwise the reply reflects stale state
+      ;; and the pane doesn't update until the user jogs the cursor.
+      (when (fboundp 'eglot--signal-textDocument/didChange)
+        (ignore-errors (eglot--signal-textDocument/didChange)))
       (condition-case nil
           (jsonrpc-request server :$/hol/goalState
                            (hol-lsp--goalstate-params)
