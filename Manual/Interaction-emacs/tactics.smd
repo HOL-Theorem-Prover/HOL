@@ -144,7 +144,7 @@ e.g. for the goal
 ```
 
 we might want to prove `h n = g n` assuming `0 < n`.  We can start
-such a subproof by typing ``sg `h n = g n` ``.[^subgoal-binding]
+such a subproof by typing ``have `h n = g n` ``.[^subgoal-binding]
 
 [^subgoal-binding]: You can also use the emacs binding `M-h M-s`
 with the cursor inside the sub-goal.
@@ -165,15 +165,15 @@ The new goal stack:
 If `h n = g n` can be proved in one step, e.g. using
 `metis_tac [MY_LEMMA]`, then apply
 ``‘h n = g n’ by metis_tac [MY_LEMMA]`` instead of
-``sg `h n = g n` ``.  If the sub-goal requires multiple steps the
+``have `h n = g n` ``.  If the sub-goal requires multiple steps the
 tactic after the `by` will need to be parenthesised:
 ``‘goal’ by (tac₁ >> tac₂ ...)``.
 
 ## Proof by contradiction
 
-Use `CCONTR_TAC` to add the negation of the goal to the
-assumptions.  The task is then to prove that one of the
-assumptions of the goal is false.  One can e.g. add more
+Use `contr` to add the negation of the goal to the assumptions,
+with the negation pushed inwards.  The task is then to prove that
+one of the assumptions of the goal is false.  One can e.g. add more
 assumptions using ``‘...’ by ...``, described above, until one
 assumption is the negation of another assumption (and then apply
 `metis_tac []`).
