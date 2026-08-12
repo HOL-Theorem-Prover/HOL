@@ -9602,12 +9602,6 @@ QED
 
 (* Some theorems for relationTheory consts that require set operations *)
 
-Theorem equivalence_thm:
-  equivalence = reflexive ∩ symmetric ∩ transitive
-Proof
-  SRW_TAC[][FUN_EQ_THM, equivalence_def, SPECIFICATION, CONJ_ASSOC]
-QED
-
 Theorem rpreserves_inter:
   ∀f g b. rpreserves f b ∧ rpreserves g b ==> rpreserves (f ∩ g) b
 Proof
@@ -9631,7 +9625,8 @@ QED
 Theorem is_closure_op_equivalence_EQC[simp]:
   is_closure_op equivalence EQC
 Proof
-  SRW_TAC[][EQC_THM, equivalence_thm, GSYM INTER_ASSOC]
+  `equivalence = reflexive ∩ symmetric ∩ transitive` by SRW_TAC[][FUN_EQ_THM, equivalence_def, SPECIFICATION, CONJ_ASSOC]
+  >> SRW_TAC[][EQC_THM, GSYM INTER_ASSOC]
   >> HO_MATCH_MP_TAC is_closure_inter
   >> SRW_TAC[][rpreserves_inter, Once INTER_COMM, is_closure_inter]
 QED
