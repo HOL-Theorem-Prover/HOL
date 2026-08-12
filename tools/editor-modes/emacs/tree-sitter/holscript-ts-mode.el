@@ -687,10 +687,12 @@ fallback when the parse tree is already broken."
 (defun holscript-ts-mode--matching-if-pos (bol)
   "Position of the `if' matching an `else' or `then' at BOL, by
 backward text scan.  Each `else' seen going backward increments
-the count of unmatched `else's; each `if' balances one.  Returns
-nil if no matching `if' precedes BOL.  Used as a fallback when
-the parse can't reach a `cond_exp' — e.g. a mid-edit
-`if x then 10' with no `else' yet."
+the count of unmatched `else's; each `if' balances one.  A
+single-line `else if' (only whitespace between the keywords)
+counts as one chain step, so the anchor skips past it to the
+outer `if'.  Returns nil if no matching `if' precedes BOL.  Used
+as a fallback when the parse can't reach a `cond_exp' — e.g. a
+mid-edit `if x then 10' with no `else' yet."
   (save-excursion
     (goto-char bol)
     (skip-chars-forward " \t")
@@ -701,8 +703,15 @@ the parse can't reach a `cond_exp' — e.g. a mid-edit
                   (re-search-backward "\\_<\\(if\\|else\\)\\_>" nil t))
         (cond
          ((looking-at "if\\_>")
-          (setq depth (1- depth))
-          (when (zerop depth) (setq found (point))))
+          (let ((else-pos (save-excursion
+                            (skip-chars-backward " \t")
+                            (and (looking-back "\\_<else\\_>"
+                                               (line-beginning-position))
+                                 (match-beginning 0)))))
+            (if else-pos
+                (goto-char else-pos)
+              (setq depth (1- depth))
+              (when (zerop depth) (setq found (point))))))
          ((looking-at "else\\_>")
           (setq depth (1+ depth)))))
       found)))

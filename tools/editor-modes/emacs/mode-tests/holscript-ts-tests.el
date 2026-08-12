@@ -310,6 +310,48 @@ else
 "
     (should (= 8 (holscript-ts-tests--indent-after-strip "^else\\b")))))
 
+(ert-deftest holscript-ts-indent-chain-else-if-sml ()
+  "A chained `if p then _ else if q then _ else _' is one unit: the
+tail `else' aligns with the outermost `if', not the inner one from
+the `else if'."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "fun f p q =
+  if p then 1
+  else if q then 2
+else 3
+"
+    (should (= 2 (holscript-ts-tests--indent-after-strip "^else 3\\b")))))
+
+(ert-deftest holscript-ts-indent-nested-else-if-sml ()
+  "Breaking `else if' across a newline is a nested `if', not a chain:
+the tail `else' aligns with the inner `if', +2 from the outer."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "fun f p q =
+  if p then 1
+  else
+    if q then 2
+else 3
+"
+    (should (= 4 (holscript-ts-tests--indent-after-strip "^else 3\\b")))))
+
+(ert-deftest holscript-ts-indent-chain-else-if-hol ()
+  "The `else if' chain rule fires in HOL syntax too — a tail `else'
+inside a `Definition' body aligns with the outermost `if'."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "Theory foo
+Ancestors hol
+Libs boolLib
+
+Definition foo:
+f p q = if p then 1
+        else if q then 2
+else 3
+"
+    (should (= 8 (holscript-ts-tests--indent-after-strip "^else 3\\b")))))
+
 (ert-deftest holscript-ts-indent-following-theorem-stays-at-col-0 ()
   "A well-formed `Theorem …' after a broken `Definition' stays at
 column 0 — the block-keyword-line predicate falls through to a text
