@@ -307,7 +307,7 @@ Theorem ETS_INDUCT[rule_induction]:
     (∀p q' q. P p q' ∧ ts q' tau q ⇒ P p q)
   ) ⇒ ∀p0 q0. ETS ts tau p0 q0 ⇒ P p0 q0
 Proof
-    GEN_TAC >> STRIP_TAC
+    STRIP_TAC >> STRIP_TAC >> GEN_TAC >> STRIP_TAC
  >> REWRITE_TAC [ETS_def]
  >| [HO_MATCH_MP_TAC RTC_INDUCT, HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1]
  >> METIS_TAC []
