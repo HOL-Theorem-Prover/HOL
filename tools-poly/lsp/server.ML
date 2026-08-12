@@ -1044,6 +1044,15 @@ fun start {diag, dbg} = let
                 trees := addDeclSnapshot snap (!trees)
              end
         end
+      (* Flush any diagnostics accumulated since the last Progress.
+         Progress events drive `updateDiags` + `sendDiags`, so errors
+         from a dec that has been INTERRUPTED before its next Progress
+         (typically a `runOfErrorsLimit'-triggered abort in the middle
+         of a syntactically-broken tail) are still sitting in
+         `trees.diags' and haven't been merged into `oldDiags`.
+         Force a merge past end-of-file so those errors reach the
+         client. *)
+      fun flushDiags () = (updateDiags (size (#text text)); sendDiags ())
       in (
         compileForReport uri (#text text) resumeStart lastPos processBuiltTree captureSnap process;
         afterCompile (!lastPos, size (#text text)) (!ls);
@@ -1053,6 +1062,7 @@ fun start {diag, dbg} = let
            completion events only if we're still current; otherwise
            the fresh compile that replaced us owns lastTrees. *)
         if !cancelled then () else (
+          flushDiags ();
           sendProgressEnd ();
           send (mkNotif "$/compileCompleted" (fn print => (
             print "{\"uri\":"; encString uri print; print "}")));
@@ -1066,6 +1076,7 @@ fun start {diag, dbg} = let
            done, not interrupted.  A user-initiated cancel or a
            didChange-driven stop remain compileInterrupted. *)
         if !abortedByRunOfErrors then (
+          flushDiags ();
           send (mkNotif "$/compileCompleted" (fn print => (
             print "{\"uri\":"; encString uri print; print "}")));
           lastTrees := {text = text,

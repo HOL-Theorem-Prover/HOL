@@ -2028,6 +2028,58 @@ def test_goalState_thenl_context_line():
         c.close()
 
 
+def test_runaway_errors_still_publish_diagnostics():
+    """When a single dec produces the runOfErrorsLimit's worth of
+    errors and the compile is force-interrupted, the accumulated
+    diagnostics used to be stranded in `trees.diags' -- Progress
+    fired only at dec boundaries, and no boundary was reached
+    before the abort.  The client kept whatever diagnostics were
+    current before the edit and saw nothing new despite the file
+    being obviously broken.
+
+    Regression: paste in a syntactically-catastrophic tail (an
+    unbalanced HOL-quote closer that turns the rest of the file
+    into orphan SML) and assert several diagnostics land."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/runaway_errors.sml"
+
+        def latest():
+            with c.msgs_lock:
+                pubs = [m for m in c.msgs
+                        if m.get("method") == "textDocument/publishDiagnostics"
+                        and m["params"].get("uri") == uri]
+            return pubs[-1]["params"]["diagnostics"] if pubs else None
+
+        base = ("Theory runaway_errors\n"
+                "Ancestors bool\n\n"
+                "val s1 = “(p:bool)”\n")
+        _did_open(c, uri, base, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted baseline")
+        assert_eq(len(latest() or []), 0, "baseline: no diags")
+
+        # Inject a stray U+201D right after the opening U+201C, then
+        # follow with several lines of orphan SML.
+        idx = c.total_msgs()
+        broken = ("Theory runaway_errors\n"
+                  "Ancestors bool\n\n"
+                  "val s1 = “”(p:bool)”\n"
+                  "val s2 = 1 + 2 + this + is + all + broken + now\n"
+                  "val s3 = another + broken + line + here\n"
+                  "val s4 = yet + more + garbage + expressions\n")
+        _did_change_full(c, uri, broken, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx),
+                    "compileCompleted after break")
+        diags = latest() or []
+        assert_true(len(diags) >= 3,
+                    f"broken tail produces multiple diagnostics, "
+                    f"got {len(diags)}: {[d.get('message','')[:40] for d in diags]!r}")
+    finally:
+        c.close()
+
+
 def test_stale_diagnostic_from_partial_parse_clears_on_completion():
     """A dec that fails to parse partway through user typing (e.g. a
     `Theorem foo` with no body yet, or an unfinished `Anc...` line)
@@ -2637,6 +2689,8 @@ TESTS = [
                                      test_goalState_failed_tactic_signals_error),
     ("goalState_failed_tactic_publishes_diagnostic",
                                      test_goalState_failed_tactic_publishes_diagnostic),
+    ("runaway_errors_still_publish_diagnostics",
+                                     test_runaway_errors_still_publish_diagnostics),
     ("stale_diagnostic_from_partial_parse_clears_on_completion",
                                      test_stale_diagnostic_from_partial_parse_clears_on_completion),
     ("goalState_focused_subgoal_solved_between_close_and_outer",
