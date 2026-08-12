@@ -150,8 +150,8 @@ Theorem BISIM_REL_EQUIV_rules =
 
 Theorem BISIM_REL_ts:
   ∀ts.
-  (BISIM_REL ts p q ∧ ts p l p' ==> ∃q'. ts q l q' ∧ BISIM_REL ts p' q') ∧
-  (BISIM_REL ts p q ∧ ts q l q' ==> ∃p'. ts p l p' ∧ BISIM_REL ts p' q')
+  (∀p q l p'. BISIM_REL ts p q ∧ ts p l p' ==> ∃q'. ts q l q' ∧ BISIM_REL ts p' q') ∧
+  (∀p q l q'. BISIM_REL ts p q ∧ ts q l q' ==> ∃p'. ts p l p' ∧ BISIM_REL ts p' q')
 Proof
   SRW_TAC[][BISIM_REL_def]
   >> METIS_TAC[BISIM_def]
@@ -174,7 +174,7 @@ Proof
 QED
 
 Theorem BISIM_REL_strong_coind:
-  ∀ts.
+  ∀ts R.
     (∀p q. R p q ⇒
       ∀l. (∀p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q')) ∧
            (∀q'. ts q l q' ⇒ ∃p'. ts p l p' ∧ (R p' q' ∨ BISIM_REL ts p' q')))
@@ -186,7 +186,7 @@ Proof
 QED
 
 Theorem BISIM_REL_sym_thm:
-  ∀ts.
+  ∀ts R.
   BISIM_REL ts p0 q0 <=> ∃R. symmetric R ∧ R p0 q0 ∧
     (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ R p' q')
 Proof
@@ -196,7 +196,7 @@ Proof
 QED
 
 Theorem BISIM_REL_sym_coind:
-  ∀ts. symmetric R ∧
+  ∀ts R. symmetric R ∧
     (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ R p' q')
   ==> ∀p0 q0. R p0 q0 ==> BISIM_REL ts p0 q0
 Proof
@@ -206,7 +206,7 @@ Proof
 QED
 
 Theorem BISIM_REL_sym_strong_thm:
-  ∀ts.
+  ∀ts R.
   BISIM_REL ts p0 q0 <=> ∃R. symmetric R ∧ R p0 q0 ∧
     (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
 Proof
@@ -218,7 +218,7 @@ Proof
 QED
 
 Theorem BISIM_REL_sym_strong_coind:
-  ∀ts. symmetric R ∧
+  ∀ts R. symmetric R ∧
     (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
   ==> ∀p0 q0. R p0 q0 ==> BISIM_REL ts p0 q0
 Proof
@@ -296,13 +296,13 @@ Proof
 QED
 
 Theorem ETS_CASES:
-  ETS ts tau p p' <=> p = p' ∨ ∃u. ts p tau u ∧ ETS ts tau u p'
+  ∀ts tau p p'. ETS ts tau p p' <=> p = p' ∨ ∃u. ts p tau u ∧ ETS ts tau u p'
 Proof
   SRW_TAC[][ETS_def, Once RTC_CASES1]
 QED
 
 Theorem ETS_INDUCT[rule_induction]:
-  ∀P. (∀p. P p p) ∧ (
+  ∀ts tau P. (∀p. P p p) ∧ (
     (∀p p' q. ts p tau p' ∧ P p' q ⇒ P p q) ∨
     (∀p q' q. P p q' ∧ ts q' tau q ⇒ P p q)
   ) ⇒ ∀p0 q0. ETS ts tau p0 q0 ⇒ P p0 q0
@@ -495,10 +495,11 @@ Theorem WBISIM_REL_EQUIV_rules =
   |> SIMP_RULE bool_ss [equivalence_def, reflexive_def, symmetric_def, transitive_def];
 
 Theorem WBISIM_REL_ts:
-  (WBISIM_REL ts tau p q ∧ ts p l p' ∧ l ≠ tau ==> ∃q'. WTS ts tau q l q' ∧ WBISIM_REL ts tau p' q') ∧
-  (WBISIM_REL ts tau p q ∧ ts q l q' ∧ l ≠ tau ==> ∃p'. WTS ts tau p l p' ∧ WBISIM_REL ts tau p' q') ∧
-  (WBISIM_REL ts tau p q ∧ ts p tau p' ==> ∃q'. ETS ts tau q q' ∧ WBISIM_REL ts tau p' q') ∧
-  (WBISIM_REL ts tau p q ∧ ts q tau q' ==> ∃p'. ETS ts tau p p' ∧ WBISIM_REL ts tau p' q')
+  ∀ts tau.
+  (∀p q l p'. WBISIM_REL ts tau p q ∧ ts p l p' ∧ l ≠ tau ==> ∃q'. WTS ts tau q l q' ∧ WBISIM_REL ts tau p' q') ∧
+  (∀p q l q'. WBISIM_REL ts tau p q ∧ ts q l q' ∧ l ≠ tau ==> ∃p'. WTS ts tau p l p' ∧ WBISIM_REL ts tau p' q') ∧
+  (∀p q p'. WBISIM_REL ts tau p q ∧ ts p tau p' ==> ∃q'. ETS ts tau q q' ∧ WBISIM_REL ts tau p' q') ∧
+  (∀p q q'. WBISIM_REL ts tau p q ∧ ts q tau q' ==> ∃p'. ETS ts tau p p' ∧ WBISIM_REL ts tau p' q')
 Proof
   SRW_TAC[][WBISIM_REL_def]
   >> METIS_TAC[WBISIM_def]

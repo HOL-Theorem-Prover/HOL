@@ -2664,61 +2664,61 @@ QED
    ===========================================================================*)
 
 Theorem RUNION_RSUBSET:
-  P ∪ᵣ Q ⊆ᵣ R <=> P ⊆ᵣ R ∧ Q ⊆ᵣ R
+  ∀P Q R. P ∪ᵣ Q ⊆ᵣ R <=> P ⊆ᵣ R ∧ Q ⊆ᵣ R
 Proof
   SRW_TAC[][RUNION, RSUBSET] >> METIS_TAC[]
 QED
 
 Theorem RINTER_RSUBSET:
-  P ⊆ᵣ R ∨ Q ⊆ᵣ R ==> P ∩ᵣ Q ⊆ᵣ R
+  ∀P Q R. P ⊆ᵣ R ∨ Q ⊆ᵣ R ==> P ∩ᵣ Q ⊆ᵣ R
 Proof
   SRW_TAC[][RINTER, RSUBSET] >> METIS_TAC[]
 QED
 
 Theorem RSUBSET_RUNION:
-  R ⊆ᵣ P ∨ R ⊆ᵣ Q ==> R ⊆ᵣ P ∪ᵣ Q
+  ∀R P Q. R ⊆ᵣ P ∨ R ⊆ᵣ Q ==> R ⊆ᵣ P ∪ᵣ Q
 Proof
   SRW_TAC[][RUNION, RSUBSET] >> METIS_TAC[]
 QED
 
 Theorem RSUBSET_RINTER:
-  R ⊆ᵣ P ∩ᵣ Q <=> R ⊆ᵣ P ∧ R ⊆ᵣ Q
+  ∀R P Q. R ⊆ᵣ P ∩ᵣ Q <=> R ⊆ᵣ P ∧ R ⊆ᵣ Q
 Proof
   SRW_TAC[][RINTER, RSUBSET] >> METIS_TAC[]
 QED
 
 Theorem INV_RUNION:
-  (P ∪ᵣ Q)ᵀ = Pᵀ ∪ᵣ Qᵀ
+  ∀P Q. (P ∪ᵣ Q)ᵀ = Pᵀ ∪ᵣ Qᵀ
 Proof
   SRW_TAC[][FUN_EQ_THM, RUNION] >> METIS_TAC[]
 QED
 
 Theorem INV_RINTER:
-  (P ∩ᵣ Q)ᵀ = Pᵀ ∩ᵣ Qᵀ
+  ∀P Q. (P ∩ᵣ Q)ᵀ = Pᵀ ∩ᵣ Qᵀ
 Proof
   SRW_TAC[][FUN_EQ_THM, RINTER] >> METIS_TAC[]
 QED
 
 Theorem INV_RSUBSET:
-  Pᵀ ⊆ᵣ Q <=> P ⊆ᵣ Qᵀ
+  ∀P Q. Pᵀ ⊆ᵣ Q <=> P ⊆ᵣ Qᵀ
 Proof
   SRW_TAC[][EQ_IMP_THM, RSUBSET]
 QED
 
 Theorem SC_THM:
-  SC R = R ∪ᵣ Rᵀ
+  ∀R. SC R = R ∪ᵣ Rᵀ
 Proof
   SRW_TAC[][SC_DEF, FUN_EQ_THM, RUNION]
 QED
 
 Theorem SYMMETRIC_RUNION:
-  symmetric P ∧ symmetric Q ==> symmetric (P ∪ᵣ Q)
+  ∀P Q. symmetric P ∧ symmetric Q ==> symmetric (P ∪ᵣ Q)
 Proof
   SRW_TAC[][symmetric_def, RUNION]
 QED
 
 Theorem SYMMETRIC_RINTER:
-  symmetric P ∧ symmetric Q ==> symmetric (P ∩ᵣ Q)
+  ∀P Q. symmetric P ∧ symmetric Q ==> symmetric (P ∩ᵣ Q)
 Proof
   SRW_TAC[][symmetric_def, RINTER]
 QED
@@ -2732,7 +2732,7 @@ val rmonotone_def = new_definition(
 
 (* Used to convert existing theorems *)
 Theorem rmonotone_thm:
-  rmonotone b <=> ∀y x R Q. (∀x y. R x y ==> Q x y) ==> b R x y ==> b Q x y
+  ∀b. rmonotone b <=> ∀y x R Q. (∀x y. R x y ==> Q x y) ==> b R x y ==> b Q x y
 Proof
   SRW_TAC[][rmonotone_def, RSUBSET] >> METIS_TAC[]
 QED
@@ -2745,13 +2745,13 @@ Theorem rmonotone_closures[simp] =
   |> LIST_CONJ;
 
 Theorem rmonotone_RUNION:
-  rmonotone ($RUNION P)
+  ∀P. rmonotone ($RUNION P)
 Proof
   SRW_TAC[][rmonotone_def, RUNION_RSUBSET, RSUBSET_RUNION, RSUBSET_REFL]
 QED
 
 Theorem rmonotone_RINTER:
-  rmonotone ($RINTER P)
+  ∀P. rmonotone ($RINTER P)
 Proof
   SRW_TAC[][rmonotone_def, RINTER_RSUBSET, RSUBSET_RINTER, RSUBSET_REFL]
 QED
@@ -2764,7 +2764,7 @@ val rpreserves_def = new_definition(
 );
 
 Theorem rpreserves_o:
-  rpreserves f a ∧ rpreserves f b ==> rpreserves f (a o b)
+  ∀f a b. rpreserves f a ∧ rpreserves f b ==> rpreserves f (a o b)
 Proof
   SRW_TAC[][rpreserves_def]
 QED
@@ -2815,7 +2815,7 @@ val is_closure_op_def = new_definition(
 );
 
 Theorem is_closure_op_closed:
-  is_closure_op f C ==> f (C R)
+  ∀f C R. is_closure_op f C ==> f (C R)
 Proof
   SRW_TAC[][is_closure_op_def]
 QED
@@ -2843,7 +2843,7 @@ Proof
 QED
 
 Theorem RMONOTONE_IMP_CLOSURE_RSUBSET:
-  is_closure_op f C ∧ rmonotone b ∧ rpreserves f b ==> C (b R) ⊆ᵣ b (C R)
+  ∀f C b. is_closure_op f C ∧ rmonotone b ∧ rpreserves f b ==> C (b R) ⊆ᵣ b (C R)
 Proof
   SRW_TAC[][] >> drule $ iffLR is_closure_op_def >> STRIP_TAC
   >> LAST_X_ASSUM $ Q.SPEC_THEN `b R` MP_TAC >> SRW_TAC[][]

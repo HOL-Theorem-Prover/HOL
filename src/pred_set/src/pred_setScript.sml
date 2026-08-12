@@ -9609,13 +9609,14 @@ Proof
 QED
 
 Theorem rpreserves_inter:
-  rpreserves f b ∧ rpreserves g b ==> rpreserves (f ∩ g) b
+  ∀f g b. rpreserves f b ∧ rpreserves g b ==> rpreserves (f ∩ g) b
 Proof
   SRW_TAC[][rpreserves_def, SPECIFICATION]
 QED
 
 Theorem is_closure_inter:
-  is_closure_op f a ∧ is_closure_op g b ∧ rpreserves g a ==> is_closure_op (f ∩ g) (a o b)
+  ∀f g a b. is_closure_op f a ∧ is_closure_op g b ∧ rpreserves g a
+    ==> is_closure_op (f ∩ g) (a o b)
 Proof
   SRW_TAC[][is_closure_op_def, SPECIFICATION, rpreserves_def]
   >> METIS_TAC[RSUBSET_TRANS]
