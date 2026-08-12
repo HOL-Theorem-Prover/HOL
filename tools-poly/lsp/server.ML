@@ -1015,33 +1015,30 @@ fun start {diag, dbg} = let
          endByte.  Cloning `diags` at capture time keeps the resume
          seed independent of subsequent `updateDiags` mutations.
 
-         Skip the snapshot if the just-finished dec added diagnostics
-         to `trees.diags`: an errored dec often reflects a partial
-         parse (e.g. `Theorem foo` still being typed, expanded as
-         `raise Fail "Theorem missing body"`), whose byte extent will
-         change once the user completes it -- resuming from that dec's
-         endByte then carries the stale diagnostic forward with no
-         chance of re-evaluation.  We still track `lastCapturedDiagSize'
-         so the next successful dec's clean snapshot fires.  Init
-         to the seed count so a resumed compile whose base already
-         carries diagnostics doesn't misclassify its first clean
-         dec as errored. *)
-      val lastCapturedDiagSize =
-        ref (DArray.size (#diags initialTrees))
+         Skip if the cumulative `trees.diags' is non-empty at capture
+         time.  A partial-parse error early in the compile (e.g. a
+         `Theory foo` still being typed, whose expansion raises
+         `HOL_ERR "proposed theory name '' is not an identifier"' from
+         the trailing `Theory.new_theory ""') puts the file into a
+         "not yet valid" state whose subsequent decs' byte extents
+         will change once the user completes their edit.  Capturing
+         snapshots for the file's remaining decs would carry the
+         stale error forward across every subsequent didChange, since
+         resume-from-snapshot seeds `trees.diags' with the snapshot's
+         frozen contents.  Conservative: no snapshots until the
+         current compile has produced ZERO errors so far. *)
       fun captureSnap endByte = let
         val {builtTrees, plugins, diags, ...} = !trees
         val n = DArray.size diags
-        in if n > !lastCapturedDiagSize
-           then lastCapturedDiagSize := n
+        in if n > 0 then ()
            else let
              val snap = {
                endByte = endByte,
                builtTrees = builtTrees,
-               diags = DArray.clone (diags, n),
+               diags = DArray.new (0, Completed),
                plugins = plugins,
                compileSnap = !LSPExtension.captureCompileSnap ()}
-             in lastCapturedDiagSize := n;
-                trees := addDeclSnapshot snap (!trees)
+             in trees := addDeclSnapshot snap (!trees)
              end
         end
       (* Flush any diagnostics accumulated since the last Progress.

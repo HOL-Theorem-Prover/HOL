@@ -2028,6 +2028,50 @@ def test_goalState_thenl_context_line():
         c.close()
 
 
+def test_stale_diags_dont_survive_char_by_char_typing():
+    """A HOL Theory declaration expands to multiple SML decs at the
+    same source-byte position (`Theory.new_theory <name>` plus
+    `Parse.set_grammar_ancestry ...`).  When the user types the
+    declaration character-by-character, intermediate states like
+    `Theory ` (no name yet) fail on the first expanded dec but
+    the second, being an inert grammar-setup call, doesn't add
+    new errors -- so the resume-snapshot machinery used to
+    capture a snapshot whose frozen `diags' embedded the earlier
+    dec's error.  Every subsequent didChange resumed from that
+    snapshot and inherited the error, even once the user finished
+    typing a valid name.
+
+    Regression: type `Theory foo` one character at a time and
+    assert the final state carries no stale diagnostics."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/stale_theory.sml"
+        _did_open(c, uri, "", 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c0")
+        text = ""
+        for ch in "Theory foo":
+            idx = c.total_msgs()
+            _did_change_incr(c, uri, text, len(text), len(text), ch,
+                             len(text) + 2)
+            text = text + ch
+            assert_true(c.wait_for_method("$/compileCompleted", 30, idx),
+                        f"after typing {ch!r}")
+        with c.msgs_lock:
+            pubs = [m for m in c.msgs
+                    if m.get("method") == "textDocument/publishDiagnostics"
+                    and m["params"].get("uri") == uri]
+        final = pubs[-1]["params"]["diagnostics"] if pubs else []
+        stale = [d for d in final
+                 if "proposed theory name" in d.get("message", "")
+                 or "expected identifier" in d.get("message", "")]
+        assert_eq(stale, [],
+                  f"no stale theory-name errors after 'Theory foo': "
+                  f"{[d.get('message','')[:60] for d in final]!r}")
+    finally:
+        c.close()
+
+
 def test_runaway_errors_still_publish_diagnostics():
     """When a single dec produces the runOfErrorsLimit's worth of
     errors and the compile is force-interrupted, the accumulated
@@ -2689,6 +2733,8 @@ TESTS = [
                                      test_goalState_failed_tactic_signals_error),
     ("goalState_failed_tactic_publishes_diagnostic",
                                      test_goalState_failed_tactic_publishes_diagnostic),
+    ("stale_diags_dont_survive_char_by_char_typing",
+                                     test_stale_diags_dont_survive_char_by_char_typing),
     ("runaway_errors_still_publish_diagnostics",
                                      test_runaway_errors_still_publish_diagnostics),
     ("stale_diagnostic_from_partial_parse_clears_on_completion",
