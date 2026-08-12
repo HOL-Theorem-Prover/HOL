@@ -125,6 +125,16 @@ New features
     files* sub-section of *Maintaining HOL Formalizations with
     Holmake* in the Description manual.
 
+-   `bossLib` provides three new short names for common tactics:
+    `have ‘t’` states an intermediate result, leaving it as the
+    first subgoal and adding it (stripped) to the assumptions of
+    the other; it is the tactic already available as `sg`.
+    `suff ‘t’` replaces the goal with a sufficient condition,
+    leaving `t ==> goal` as the first subgoal; it is already
+    available as `qsuff_tac`; `contr` starts a proof by
+    contradiction, and is an abbreviation for
+    `SPOSE_NOT_THEN STRIP_ASSUME_TAC`.
+
 Bugs fixed
 ----------
 
@@ -195,13 +205,13 @@ Incompatibilities
     In particular, users are recommended to *not* directly open `realaxTheory` (an intermediate
     theory for constructing real numbers), in which all useful theorems should be also covered by
    `realTheory` (under same or different theorem names).
-  
+
 |  Old name       | New name           | Statements                                    |
 | --------------- | ------------------ | --------------------------------------------- |
 | `REAL_LE_SUP'`  | `REAL_LE_SUP2`     | `!s a b y. y IN s /\ a <= y /\ (!x. x IN s ==> x <= b) ==> a <= sup s` |
 | `REAL_LE_MUL'`  | `REAL_LE_MUL_NEG`  | `!x y. x <= 0 /\ y <= 0 ==> 0 <= x * y`       |
 | `REAL_LT_MUL'`  | `REAL_LT_MUL_NEG`  | `!x y. x < 0 /\ y < 0 ==> 0 < x * y`          |
-| `REAL_LT_LMUL'` | `REAL_LT_LMUL_NEG` | `!x y z. x < 0 ==> (x * y < x * z <=> z < y)` | 
+| `REAL_LT_LMUL'` | `REAL_LT_LMUL_NEG` | `!x y z. x < 0 ==> (x * y < x * z <=> z < y)` |
 | `REAL_LT_RMUL'` | `REAL_LT_RMUL_NEG` | `!x y z. z < 0 ==> (x * z < y * z <=> y < x)` |
 
 -   For better compatibility with HOL Light (making code-porting easier), arithmetic theory’s `GREATER_EQ` theorem (stating *m ≥ n ⇔ n ≤ m*) is now also available in that theory under the name `GE`.
