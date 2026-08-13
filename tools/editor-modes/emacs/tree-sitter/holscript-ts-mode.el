@@ -887,7 +887,9 @@ happens to have been absorbed upstream."
                          "~~" "!~" "Un" "Isct" "--" "IN" "-*"
                          "##" "?"))
                       "\\'")))
-      prev-line 0)
+      ,(lambda (_n parent bol)
+         (holscript-ts-mode--chain-continuation-anchor parent bol))
+      0)
      ((parent-is "\\`infix_exp\\'")                 parent 0)
      ;; SML let / in / end.
      ((node-is   "\\`in\\'")                        parent-bol 0)
