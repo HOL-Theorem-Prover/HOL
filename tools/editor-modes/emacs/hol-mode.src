@@ -1086,32 +1086,37 @@ Make-variable references are not expanded; the last assignment wins."
                (setq val (match-string 1)))
              val)))))
 
-(defun hol--executable-is-binary-p ()
-  "Non-nil when `hol-executable' is a native binary (i.e. Poly-built).
-The mosml `bin/hol' is a `#!'-prefixed shell wrapper that doesn't
-understand `heapname' or `--holstate='."
-  (and (stringp hol-executable)
-       (file-readable-p hol-executable)
-       (with-temp-buffer
-         (insert-file-contents-literally hol-executable nil 0 1)
-         (not (string= (buffer-string) "#")))))
+(defun hol--executable-is-binary-p (&optional path)
+  "Non-nil when PATH (default: `hol-executable') is a native binary
+(i.e. Poly-built).  The mosml `bin/hol' is a `#!'-prefixed shell
+wrapper that doesn't understand `heapname' or `--holstate='."
+  (let ((path (or path hol-executable)))
+    (and (stringp path)
+         (file-readable-p path)
+         (with-temp-buffer
+           (insert-file-contents-literally path nil 0 1)
+           (not (string= (buffer-string) "#"))))))
 
-(defun hol--default-heap (dir)
+(defun hol--default-heap (dir &optional hol-path)
   "Return absolute path of the heap `bin/hol' would load by default in DIR.
 Delegates to `hol heapname' so the answer matches `bin/hol's own
-resolution exactly.  Returns nil when emacs can't ask (mosml wrapper,
-missing executable, or subprocess failure)."
-  (when (and dir
-             (file-accessible-directory-p dir)
-             (hol--executable-is-binary-p)
-             (file-executable-p hol-executable))
-    (with-temp-buffer
-      (let ((default-directory (file-name-as-directory
-                                (expand-file-name dir))))
-        (when (eq 0 (ignore-errors
-                      (call-process hol-executable nil t nil "heapname")))
-          (let ((out (string-trim (buffer-string))))
-            (and (> (length out) 0) out)))))))
+resolution exactly.  HOL-PATH overrides `hol-executable' -- pass
+the file-specific `bin/hol' (e.g. from `.hol/make-deps/lastmaker')
+when the buffer belongs to a HOL install different from the one
+`hol-executable' names.  Returns nil when emacs can't ask (mosml
+wrapper, missing executable, or subprocess failure)."
+  (let ((hol-path (or hol-path hol-executable)))
+    (when (and dir
+               (file-accessible-directory-p dir)
+               (hol--executable-is-binary-p hol-path)
+               (file-executable-p hol-path))
+      (with-temp-buffer
+        (let ((default-directory (file-name-as-directory
+                                  (expand-file-name dir))))
+          (when (eq 0 (ignore-errors
+                        (call-process hol-path nil t nil "heapname")))
+            (let ((out (string-trim (buffer-string))))
+              (and (> (length out) 0) out))))))))
 
 (defun hol--candidate-heaps (dir)
   "Return absolute paths of dumped-heap files living directly in DIR.
@@ -2626,32 +2631,42 @@ running the tree-sitter variant."
   :group 'hol
   :type '(repeat symbol))
 
+(defvar hol-lsp--hol-cache (make-hash-table :test 'equal)
+  "Memo: absolute directory → `bin/hol' path this file should
+route to; delegates to `hol--find-alternate-executable'.")
+
 (defvar hol-lsp--heap-cache (make-hash-table :test 'equal)
-  "Cache: absolute directory path → absolute HOLHEAP path that
-`bin/hol' would auto-detect starting in that directory.  Populated
-lazily on `hol-lsp--project-try'; a `bin/hol heapname' subprocess
-runs once per never-before-seen directory.")
+  "Memo: (absolute-dir . bin/hol) → HOLHEAP that `bin/hol
+heapname' resolves to in that dir.  Two different `bin/hol' for
+the same dir must not collide, hence the pair key.")
 
 (defvar hol-lsp--project-roots (make-hash-table :test 'equal)
-  "Cache: absolute HOLHEAP path → the first buffer directory
-observed with that HOLHEAP.  Reused as the LSP server's cwd for
-subsequent buffers with the same HOLHEAP so they attach to the
-same eglot server; `bin/hol' loaded in that first-seen dir picks
-up the target HOLHEAP via `get_heap_name'.")
+  "Memo: (bin/hol . HOLHEAP) → the first buffer directory that
+resolved to that pair; reused as the LSP server's cwd for
+subsequent buffers sharing the pair.  A distinct HOL install or
+distinct HOLHEAP gets a distinct eglot server.")
+
+(defun hol-lsp--hol-for-dir (dir)
+  "Return the absolute `bin/hol' path serving LSP for DIR."
+  (let ((abs (expand-file-name dir)))
+    (or (gethash abs hol-lsp--hol-cache)
+        (let* ((default-directory (file-name-as-directory abs))
+               (alt (hol--find-alternate-executable abs hol-executable))
+               (hol (or (car-safe alt) hol-executable)))
+          (puthash abs hol hol-lsp--hol-cache)
+          hol))))
 
 (defun hol-lsp--heap-for-dir (dir)
   "Return the absolute HOLHEAP path `bin/hol' would auto-detect
-starting in DIR.  Delegates to `hol--default-heap' (which shells
-out to `bin/hol heapname' -- matches `get_heap_name' in `hol.ML'
-exactly) and caches the result.  Falls back to `bin/hol.state'
-under `hol-executable's directory when the subprocess can't run."
-  (let ((abs (expand-file-name dir)))
-    (or (gethash abs hol-lsp--heap-cache)
-        (let ((heap (or (hol--default-heap abs)
+starting in DIR, using the lastmaker-resolved `bin/hol' for DIR."
+  (let* ((abs (expand-file-name dir))
+         (hol (hol-lsp--hol-for-dir abs))
+         (key (cons abs hol)))
+    (or (gethash key hol-lsp--heap-cache)
+        (let ((heap (or (hol--default-heap abs hol)
                         (expand-file-name
-                         "hol.state"
-                         (file-name-directory hol-executable)))))
-          (puthash abs heap hol-lsp--heap-cache)
+                         "hol.state" (file-name-directory hol)))))
+          (puthash key heap hol-lsp--heap-cache)
           heap))))
 
 (defcustom hol-lsp-project-debug nil
@@ -2662,15 +2677,12 @@ lookup)."
   :group 'hol :type 'boolean)
 
 (defun hol-lsp--project-try (dir)
-  "Group HOL buffers into LSP projects keyed by the HOLHEAP their
-directory selects.  Two files whose Holmakefiles resolve to the
-same HOLHEAP share one eglot server; two files needing different
-HOLHEAPs (typical inside HOL itself and CakeML, where kernel-
-adjacent dirs pin `hol.state0' and downstream dirs use the full
-`hol.state') get separate servers.  Without this, opening a file
-under `src/relation/' with the same server that had already loaded
-`relationTheory' as an ancestor for another buffer would surface
-sealed-theory errors on every edit."
+  "Group HOL buffers into LSP projects keyed by (bin/hol, HOLHEAP).
+Two files whose lastmaker + Holmakefile resolve to the same pair
+share one eglot server; two files that need different HOLHEAPs
+(typical inside HOL itself and CakeML, where kernel-adjacent dirs
+pin `hol.state0' and downstream dirs use the full `hol.state') or
+that come from different HOL installs get separate servers."
   (let ((match (and buffer-file-name
                     (memq major-mode hol-lsp-server-modes))))
     (when hol-lsp-project-debug
@@ -2678,18 +2690,25 @@ sealed-theory errors on every edit."
        "hol-lsp--project-try: dir=%s buffer=%s mode=%s file=%s match=%s"
        dir (buffer-name) major-mode buffer-file-name (and match t)))
     (when match
-      (let ((heap (hol-lsp--heap-for-dir dir)))
-        (unless (gethash heap hol-lsp--project-roots)
-          (puthash heap dir hol-lsp--project-roots))
+      (let* ((hol (hol-lsp--hol-for-dir dir))
+             (heap (hol-lsp--heap-for-dir dir))
+             (key (cons hol heap)))
+        (unless (gethash key hol-lsp--project-roots)
+          (puthash key dir hol-lsp--project-roots))
         (when hol-lsp-project-debug
-          (message "hol-lsp--project-try: heap=%s root=%s"
-                   heap (gethash heap hol-lsp--project-roots)))
-        (cons 'hol-lsp-project heap)))))
+          (message "hol-lsp--project-try: hol=%s heap=%s root=%s"
+                   hol heap (gethash key hol-lsp--project-roots)))
+        (cons 'hol-lsp-project key)))))
 
 (with-eval-after-load 'project
   (cl-defmethod project-root ((p (head hol-lsp-project)))
     (or (gethash (cdr p) hol-lsp--project-roots)
         default-directory)))
+
+(defun hol-lsp--server-program (&rest _args)
+  "eglot-server-programs entry: return `(bin/hol lsp)' for the
+current buffer, honouring `.hol/make-deps/lastmaker'."
+  (list (hol-lsp--hol-for-dir default-directory) "lsp"))
 
 (defun hol-lsp--setup-buffer ()
   "Configure the current buffer to use the HOL LSP server via eglot."
@@ -2711,7 +2730,7 @@ buffer's HOLHEAP-clustered directory as its LSP project."
   (with-eval-after-load 'eglot
     (dolist (mode hol-lsp-server-modes)
       (add-to-list 'eglot-server-programs
-                   `(,mode . (,hol-executable "lsp")))))
+                   `(,mode . hol-lsp--server-program))))
   (dolist (mode hol-lsp-server-modes)
     (add-hook (intern (concat (symbol-name mode) "-hook"))
               #'hol-lsp--setup-buffer)))
