@@ -38,6 +38,8 @@ structure Refute_Core = struct
   datatype outcome =
       Counterexample of counterexample list
     | NoCounterexample
+    | Model of counterexample list
+    | NoModel
     | Unknown of string list
 
   type problem =
@@ -50,6 +52,8 @@ structure Refute_Core = struct
     | ExpectNone
     | ExpectUnknown
     | ExpectCex
+    | ExpectModel
+    | ExpectNoModel
     | ExpectGenuine
     | ExpectQuasiGenuine
     | ExpectPotential
@@ -966,6 +970,32 @@ structure Refute_Core = struct
         ({mono_instances, ...} : preprocessed_forms) = mono_instances
     | instances_for_form PolyOriginal {poly_original, ...} = poly_original
 
+  (* Exhausting the finitely many monomorphic QC proxies does not exhaust a
+     polymorphic HOL type.  Keep that miss bounds-relative at the common
+     backend boundary, before it can become a decisive whole-space result. *)
+  fun forms_are_polymorphic
+        ({poly_original, ...} : preprocessed_forms) =
+    List.exists (fn (instance : instance) =>
+      List.exists (not o null o Term.type_vars_in_term)
+        (#original instance :: #evals instance)) poly_original
+
+  fun preserve_polymorphic_bounds (backend : backend)
+        (forms : preprocessed_forms)
+        (instances : instance list) result =
+    case (#input backend, forms_are_polymorphic forms, result) of
+        (MonoInstances, true, NoCounterexample) =>
+          let
+            val cards = map (Int.toString o #card) instances
+          in
+            Unknown
+              ["polymorphic search covered only configured monomorphic " ^
+               "proxies" ^
+               (if null cards then ""
+                else " at indices " ^
+                  String.concatWith ", " cards)]
+          end
+      | _ => result
+
   structure Private = struct
     val trace = ref 1
     val _ = Feedback.register_trace ("Refute", trace, 4)
@@ -979,6 +1009,8 @@ structure Refute_Core = struct
       | expectation_to_string ExpectNone = "ExpectNone"
       | expectation_to_string ExpectUnknown = "ExpectUnknown"
       | expectation_to_string ExpectCex = "ExpectCex"
+      | expectation_to_string ExpectModel = "ExpectModel"
+      | expectation_to_string ExpectNoModel = "ExpectNoModel"
       | expectation_to_string ExpectGenuine = "ExpectGenuine"
       | expectation_to_string ExpectQuasiGenuine =
           "ExpectQuasiGenuine"
@@ -1428,16 +1460,13 @@ structure Refute_Core = struct
                format_term value) consts)
          else "")
 
-  fun format_counterexample (mf : mf_config) (cex : counterexample) =
+  fun format_witness noun (mf : mf_config) (cex : counterexample) =
     let
       val {backend, substrate, certainty, bindings, evals, cert, scope,
            model, stats} = cex
-      val model_word =
-        if backend = "kodkod" andalso not (#falsify mf) then "model"
-        else "counterexample"
       val candidate_word =
         case certainty of Potential _ => "candidate " | _ => ""
-      val header = "Refute found a " ^ candidate_word ^ model_word ^
+      val header = "Refute found a " ^ candidate_word ^ noun ^
         " (backend: " ^ backend ^ ", substrate: " ^ substrate ^
         format_stats stats ^ "):"
       val scope_text =
@@ -1459,36 +1488,29 @@ structure Refute_Core = struct
           | QuasiGenuine reasons => format_reasons "Quasi-genuine:" reasons
           | Potential reasons =>
               format_reasons "Why this candidate is unconfirmed:" reasons ^
-              "\n…continuing search for a confirmed " ^ model_word
+              "\n…continuing search for a confirmed " ^ noun
     in
       header ^ scope_text ^ binding_text ^ eval_text ^ model_text ^
       cert_text ^ certainty_text
     end
 
-  (* "falsify = false" is a model-finder-only setting, so the wording must
-     track whether kodkod was selected at all, not whether it was selected
-     exclusively; NONE selects every configured backend. *)
-  fun backend_selected name (cfg : config) =
-    case #backends cfg of
-        NONE => true
-      | SOME wanted => List.exists (fn chosen => chosen = name) wanted
-
   fun format_outcome (cfg : config) result =
     let
-      val target =
-        if backend_selected "kodkod" cfg andalso not (#falsify (#mf cfg))
-        then "model"
-        else "counterexample"
       val body =
         case result of
             Counterexample cexs =>
               String.concatWith "\n\n"
-                (map (format_counterexample (#mf cfg)) cexs)
+                (map (format_witness "counterexample" (#mf cfg)) cexs)
           | NoCounterexample =>
-              "Refute searched the whole space: no " ^ target ^
-              " is possible"
+              "Refute searched the whole space: no counterexample is " ^
+              "possible"
+          | Model models =>
+              String.concatWith "\n\n"
+                (map (format_witness "model" (#mf cfg)) models)
+          | NoModel =>
+              "Refute searched the whole space: no model is possible"
           | Unknown reasons =>
-              "Refute did not find a " ^ target ^
+              "Refute search was inconclusive" ^
               format_reasons "Reasons:" reasons
     in
       body ^ #tag cfg
@@ -1520,6 +1542,11 @@ structure Refute_Core = struct
        counterexample racing this result would expose a soundness bug in one
        of the backends; the ordinary first decisive result still wins. *)
     | decisive _ _ NoCounterexample = true
+    (* Model search is auxiliary when it is selected alongside refutation.
+       In particular, it must not preempt a QC counterexample or proof of
+       whole-space exhaustion. *)
+    | decisive _ _ (Model _) = false
+    | decisive _ _ NoModel = false
     | decisive _ _ _ = false
 
   fun best_counterexample_result jobs =
@@ -1549,6 +1576,32 @@ structure Refute_Core = struct
       case !result_ref of
           SOME NoCounterexample => true
         | _ => false) jobs
+
+  fun best_model_result jobs =
+    let
+      fun candidate (backend, result_ref) =
+        case !result_ref of
+            SOME (Model models) =>
+              Option.map (fn certainty =>
+                (backend, models, certainty_rank certainty))
+                (best_certainty models)
+          | _ => NONE
+      fun better ((backend, _, rank), (best_backend, _, best_rank)) =
+        rank > best_rank orelse
+        (rank = best_rank andalso
+         #weight backend < #weight best_backend)
+      fun choose (candidate, NONE) = SOME candidate
+        | choose (candidate, SOME best) =
+            SOME (if better (candidate, best) then candidate else best)
+    in
+      case List.foldl choose NONE (List.mapPartial candidate jobs) of
+          SOME (_, models, _) => SOME (Model models)
+        | NONE => NONE
+    end
+
+  fun has_no_model jobs =
+    List.exists (fn (_, result_ref) =>
+      case !result_ref of SOME NoModel => true | _ => false) jobs
 
   fun exception_reason e = Feedback.exn_to_string e
 
@@ -1583,8 +1636,8 @@ structure Refute_Core = struct
   val active_backend_result : outcome option ref Thread_Data.var =
     Thread_Data.var ()
 
-  fun publish_counterexamples cexs =
-    if null cexs then ()
+  fun publish_found make_result found =
+    if null found then ()
     else
       case Thread_Data.get active_backend_result of
           NONE => ()
@@ -1594,16 +1647,23 @@ structure Refute_Core = struct
                 Option.getOpt (Option.map certainty_rank
                   (best_certainty values), 0)
               val replace =
-                case !published of
-                    SOME (Counterexample old) =>
-                      rank cexs > rank old orelse
-                      (rank cexs = rank old andalso
-                       length cexs >= length old)
+                case (!published, make_result found) of
+                    (SOME (Counterexample old), Counterexample _) =>
+                      rank found > rank old orelse
+                      (rank found = rank old andalso
+                       length found >= length old)
+                  | (SOME (Model old), Model _) =>
+                      rank found > rank old orelse
+                      (rank found = rank old andalso
+                       length found >= length old)
                   | _ => true
             in
-              if replace then published := SOME (Counterexample cexs)
+              if replace then published := SOME (make_result found)
               else ()
             end
+
+  fun publish_counterexamples cexs = publish_found Counterexample cexs
+  fun publish_models models = publish_found Model models
 
   fun search_context_for (cfg : config) =
     case Thread_Data.get active_search_context of
@@ -1636,17 +1696,20 @@ structure Refute_Core = struct
          "): " ^ name ^ "\n")
       fun timed_run () = Timeout.apply (#remaining search_context ())
         (#run backend cfg) instances
-      val result = Thread_Data.setmp active_backend_result
+      val raw_result = Thread_Data.setmp active_backend_result
         (SOME result_ref) (fn () =>
           timed_run ()
           handle Timeout.TIMEOUT _ =>
             (case !result_ref of
                  SOME (published as Counterexample _) => published
+               | SOME (published as Model _) => published
                | _ => Unknown [name ^ " timed out"])
                | Refute_Gen.NoGenerator pair =>
                    Unknown [name ^ ": " ^ no_generator_reason pair]
                | Interrupt => raise Interrupt
                | e => Unknown [name ^ ": " ^ exception_reason e]) ()
+      val result = preserve_polymorphic_bounds backend forms instances
+        raw_result
       val _ = result_ref := SOME result
     in
       if decisive cfg ceiling result then SOME result else NONE
@@ -1738,14 +1801,23 @@ structure Refute_Core = struct
                (certainty_expectation certainty)
            | NONE => "ExpectCex")
     | actual_name NoCounterexample = "ExpectNone"
+    | actual_name (Model _) = "ExpectModel"
+    | actual_name NoModel = "ExpectNoModel"
     | actual_name (Unknown _) = "ExpectUnknown"
 
   fun expectation_holds NoExpectation _ = true
     | expectation_holds ExpectNone NoCounterexample = true
     | expectation_holds ExpectUnknown (Unknown _) = true
     | expectation_holds ExpectCex (Counterexample (_ :: _)) = true
+    | expectation_holds ExpectModel (Model (_ :: _)) = true
+    | expectation_holds ExpectNoModel NoModel = true
     | expectation_holds expectation (Counterexample cexs) =
         (case best_certainty cexs of
+             SOME certainty =>
+               expectation = certainty_expectation certainty
+           | NONE => false)
+    | expectation_holds expectation (Model models) =
+        (case best_certainty models of
              SOME certainty =>
                expectation = certainty_expectation certainty
            | NONE => false)
@@ -1845,6 +1917,26 @@ structure Refute_Core = struct
               val jobs = map (fn registration =>
                 (#backend registration, ref NONE : outcome option ref))
                 selected
+              fun noncounterexample_result () =
+                if has_no_counterexample jobs then NoCounterexample
+                else
+                  case best_model_result jobs of
+                      SOME result => result
+                    | NONE =>
+                        if has_no_model jobs then NoModel
+                        else
+                          let
+                            val reasons = excluded_reasons @
+                              unknown_results jobs @
+                              (if #expired search_context () then
+                                 ["search timed out"]
+                               else [])
+                          in
+                            if null reasons then
+                              Unknown
+                                ["all selected backends returned no result"]
+                            else Unknown reasons
+                          end
               val winner =
                 if #sequential cfg then
                   ParList.get_first
@@ -1860,22 +1952,7 @@ structure Refute_Core = struct
                 | NONE =>
                     (case best_counterexample_result jobs of
                          SOME result => result
-                       | NONE =>
-                           if has_no_counterexample jobs then
-                             NoCounterexample
-                           else
-                             let
-                               val reasons = excluded_reasons @
-                                 unknown_results jobs @
-                                 (if #expired search_context () then
-                                    ["search timed out"]
-                                  else [])
-                             in
-                               if null reasons then
-                                 Unknown
-                                   ["all selected backends returned no result"]
-                               else Unknown reasons
-                             end)
+                       | NONE => noncounterexample_result ())
             end
             end
         end

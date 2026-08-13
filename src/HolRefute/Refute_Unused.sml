@@ -79,6 +79,8 @@ structure Refute_Unused :> REFUTE_UNUSED = struct
         case Refute_Core.refute config' (conjecture indexes) of
             Refute_Core.NoCounterexample => true
           | Refute_Core.Counterexample _ => false
+          | Refute_Core.Model _ => false
+          | Refute_Core.NoModel => false
           | Refute_Core.Unknown _ =>
               (skipped := !skipped + 1; false)
       fun grow singles current levels =

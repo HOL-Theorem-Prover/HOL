@@ -94,6 +94,8 @@ The principal result type is:
 datatype outcome =
     Counterexample of counterexample list
   | NoCounterexample
+  | Model of counterexample list
+  | NoModel
   | Unknown of string list
 ```
 
@@ -106,6 +108,10 @@ decisive and stops the concurrent backend pool.  A clean fixed-bound search
 that does not cover every relevant type is `Unknown`, with the tested scope
 frontier in its reasons.  `Unknown` also carries timeout, inapplicability,
 missing-generator, and other incomplete-search reasons.
+Kodkod with `upd_falsify false` returns `Model` or `NoModel` instead;
+backend selection never changes the meaning of `Counterexample` or
+`NoCounterexample`.  Model search is auxiliary in a mixed backend run, so a
+decisive counterexample result can preempt it.
 
 The public entry points are:
 
@@ -555,7 +561,8 @@ common fields are:
 | `upd_max_counterexamples` | `1` | Maximum QC counterexamples requested. |
 | `upd_tag` | `""` | Text appended to the formatted outcome. |
 
-Expectations are `ExpectNone`, `ExpectUnknown`, `ExpectCex`,
+Expectations are `ExpectNone`, `ExpectUnknown`, `ExpectCex`, `ExpectModel`,
+`ExpectNoModel`,
 `ExpectGenuine`, `ExpectQuasiGenuine`, and `ExpectPotential`.  A mismatch
 raises a HOL error.  They are intended mainly for tests.
 

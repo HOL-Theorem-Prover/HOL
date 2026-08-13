@@ -9,10 +9,13 @@ signature Refute = sig
   type counterexample = Refute_Core.counterexample
   (* [NoCounterexample] says that the whole relevant space was covered and
      no counterexample is possible.  A clean search limited to non-covering
-     bounds is [Unknown] and includes its frontier in the reasons. *)
+     bounds is [Unknown] and includes its frontier in the reasons.
+     [Model] and [NoModel] are the distinct results of Kodkod model search;
+     backend choice never changes the meaning of another constructor. *)
   datatype outcome = datatype Refute_Core.outcome
   (* [ExpectNone] matches only the whole-space outcome above;
-     [ExpectUnknown] is the appropriate pin for a bounds-relative miss. *)
+     [ExpectUnknown] is the appropriate pin for a bounds-relative miss.
+     [ExpectModel] and [ExpectNoModel] pin model-search outcomes. *)
   datatype expectation = datatype Refute_Core.expectation
   datatype substrate_choice = datatype Refute_Core.substrate_choice
   datatype bound_mode = datatype Refute_Core.bound_mode

@@ -10463,6 +10463,8 @@ local
               ({certainty = Refute.Potential _, ...} :: _) => SOME 1
           | Refute.Counterexample [] => NONE
           | Refute.NoCounterexample => SOME 0
+          | Refute.Model _ => NONE
+          | Refute.NoModel => NONE
           | Refute.Unknown _ => NONE
       fun unknown_eval outcome =
         case outcome of
@@ -13102,6 +13104,7 @@ fun refined_expectations_hold () =
     val quasi = stub_cex "quasi" (QuasiGenuine [])
     val genuine = stub_cex "genuine" Genuine
     val mixed = Counterexample [potential, quasi]
+    val model = Model [genuine]
   in
     expectation_accepts ExpectCex mixed andalso
     expectation_accepts ExpectQuasiGenuine mixed andalso
@@ -13110,6 +13113,9 @@ fun refined_expectations_hold () =
     expectation_accepts ExpectGenuine
       (Counterexample [potential, genuine]) andalso
     expectation_accepts ExpectNone NoCounterexample andalso
+    expectation_accepts ExpectModel model andalso
+    expectation_accepts ExpectNoModel NoModel andalso
+    expectation_accepts ExpectGenuine model andalso
     expectation_accepts ExpectUnknown (Unknown ["stub"])
   end
 
@@ -13173,6 +13179,7 @@ val _ = Datatype.Datatype `rg_record = <| rg_field : num |>`
 val _ = Datatype.Datatype
   `rg_stream_record = <| rg_stream_field : num; rg_stream_flag : bool |>`
 val _ = Datatype.Datatype `rg_enum = RGRed | RGGreen | RGBlue`
+val _ = Datatype.Datatype `rg_triad = RGTriA | RGTriB | RGTriC`
 val _ = Datatype.Datatype
   `rg_octet = RGE0 | RGE1 | RGE2 | RGE3 |
               RGE4 | RGE5 | RGE6 | RGE7`
@@ -19499,6 +19506,8 @@ fun session_random_completes () =
     (case result of
          Counterexample _ => true
        | NoCounterexample => true
+       | Model _ => false
+       | NoModel => false
        | Unknown _ => true)
   end
 
@@ -20941,6 +20950,8 @@ fun certified_conformance_cex certify
 
 fun conformance_outcome_name (Refute.Counterexample _) = "Counterexample"
   | conformance_outcome_name Refute.NoCounterexample = "NoCounterexample"
+  | conformance_outcome_name (Refute.Model _) = "Model"
+  | conformance_outcome_name Refute.NoModel = "NoModel"
   | conformance_outcome_name (Refute.Unknown reasons) =
       "Unknown (" ^ String.concatWith "; " reasons ^ ")"
 
@@ -20948,6 +20959,10 @@ fun expectation_holds (config : config) expectation outcome =
   case expectation of
       ExpectCex =>
         (case outcome of Refute.Counterexample (_ :: _) => true | _ => false)
+    | ExpectModel =>
+        (case outcome of Refute.Model (_ :: _) => true | _ => false)
+    | ExpectNoModel =>
+        (case outcome of Refute.NoModel => true | _ => false)
     | ExpectGenuine =>
         certified_conformance_cex (#certify (#qc config)) outcome
     | ExpectQuasiGenuine =>
@@ -22276,6 +22291,8 @@ fun default_retries_potential () =
       Counterexample _ => false
     | Unknown _ => true
     | NoCounterexample => true
+    | Model _ => false
+    | NoModel => false
 
 fun abort_returns_potential () =
   case potential_only (upd_abort_potential true
@@ -22290,6 +22307,8 @@ fun genuine_only_hides_potential () =
       Counterexample _ => false
     | Unknown _ => true
     | NoCounterexample => true
+    | Model _ => false
+    | NoModel => false
 
 val _ = require_msg (check_result default_retries_potential) (fn () =>
   "the default flow returned a potential instead of retrying genuinely")
@@ -22569,6 +22588,53 @@ fun kodkod_not_configured_pin () =
           | _ => false))
   end
 
+fun polymorphic_qc_miss_stays_bounds_relative () =
+  let
+    val backend : backend =
+      {name = "exhaustive", weight = 20, configured = fn () => true,
+       requires = AnyGoal,
+       input = MonoInstances,
+       run = fn _ => fn _ => NoCounterexample}
+    val config = Refute.default_config
+      |> Refute.upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+  in
+    with_temporary_qc backend (fn () =>
+      case (Refute.refute config ``T``,
+            Refute.refute config ``(x : 'a) = x``) of
+          (Refute.NoCounterexample, Refute.Unknown reasons) =>
+            List.exists (String.isSubstring
+              ("polymorphic search covered only configured monomorphic " ^
+               "proxies")) reasons
+        | _ => false)
+  end
+
+fun no_counterexample_preempts_auxiliary_model_search () =
+  let
+    val model_started = ref false
+    val qc_backend : backend =
+      {name = "exhaustive", weight = 20, configured = fn () => true,
+       requires = AnyGoal, input = MonoInstances,
+       run = fn _ => fn _ => NoCounterexample}
+    val model_backend : backend =
+      {name = "kodkod", weight = 50, configured = fn () => true,
+       requires = AnyGoal, input = PolyOriginal,
+       run = fn _ => fn _ =>
+         (model_started := true; Model [stub_cex "kodkod" Genuine])}
+    val config = Refute.default_config
+      |> Refute.upd_backends (SOME ["exhaustive", "kodkod"])
+      |> Refute.upd_falsify false
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+  in
+    with_temporary_qc qc_backend (fn () =>
+      with_temporary_kodkod model_backend (fn () =>
+        case Refute.refute config ``T`` of
+            Refute.NoCounterexample => not (!model_started)
+          | _ => false))
+  end
+
 val _ = require_msg (check_result kodkod_registration_pin) (fn () =>
   "the kodkod backend registration record changed") (fn () => ()) ()
 val _ = require_msg (check_result model_refute_preset_pin) (fn () =>
@@ -22594,6 +22660,14 @@ val _ = require_msg (check_result empty_search_is_rejected) (fn () =>
   "upd_search accepted an empty Only selection") (fn () => ()) ()
 val _ = require_msg (check_result kodkod_not_configured_pin) (fn () =>
   "the kodkod not-configured outcome changed") (fn () => ()) ()
+val _ = require_msg
+  (check_result polymorphic_qc_miss_stays_bounds_relative) (fn () =>
+  "polymorphic QC proxy exhaustion became a whole-space result")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result no_counterexample_preempts_auxiliary_model_search) (fn () =>
+  "whole-space refutation did not preempt auxiliary model search")
+  (fn () => ()) ()
 
 (* This is the public, expect-driven MF acceptance corpus.  Keep it
    separate from the JVM-free unit tests above: a missing Kodkodi
@@ -22678,6 +22752,18 @@ fun mf_no_counterexample_totality_regressions () =
         (p : num # bool)``
     val finite_total = Refute.refute fixed_three
       ``(x : rg_enum) = RGRed \/ x = RGGreen \/ x = RGBlue``
+    val split_exact = base
+      |> Refute.upd_card
+           [(SOME ``:rg_enum``, [3, 1]),
+            (SOME ``:rg_triad``, [1, 3]), (NONE, [1, 1])]
+      |> Refute.upd_mono
+           [(SOME ``:rg_enum``, SOME true),
+            (SOME ``:rg_triad``, SOME true), (NONE, NONE)]
+    val split_totality = Refute.refute split_exact
+      ``(a1 : rg_enum) = a2 \/ a1 = a3 \/ a2 = a3 \/
+        (b1 : rg_triad) = b2 \/ b1 = b3 \/ b2 = b3``
+    val model_found = Refute.refute (Refute.upd_falsify false base) ``T``
+    val model_absent = Refute.refute (Refute.upd_falsify false base) ``F``
   in
     (case bounded of
          Refute.Unknown reasons =>
@@ -22689,6 +22775,12 @@ fun mf_no_counterexample_totality_regressions () =
     (case constant_total of Refute.NoCounterexample => true | _ => false)
       andalso
     (case finite_total of Refute.NoCounterexample => true | _ => false)
+      andalso
+    (case split_totality of Refute.Unknown _ => true | _ => false)
+      andalso
+    (case model_found of Refute.Model (_ :: _) => true | _ => false)
+      andalso
+    (case model_absent of Refute.NoModel => true | _ => false)
   end
 
 val _ = tprint "Refute MF NoCounterexample totality"
@@ -24546,6 +24638,12 @@ fun mf_differential_verdict name backend outcome =
             (List.foldl higher_public_certainty (#certainty first) rest)
     | Refute.NoCounterexample => MfDiffNone
     | Refute.Unknown _ => MfDiffUnknown
+    | Refute.Model _ =>
+        raise Fail (name ^ ": " ^ backend ^
+          " unexpectedly searched for a model")
+    | Refute.NoModel =>
+        raise Fail (name ^ ": " ^ backend ^
+          " unexpectedly searched for a model")
     | Refute.Counterexample [] =>
         raise Fail (name ^ ": " ^ backend ^ " returned an empty result")
 
@@ -25290,6 +25388,8 @@ fun mf_need_acceptance solver =
           Refute.Counterexample _ => 0
         | Refute.NoCounterexample => 1
         | Refute.Unknown _ => 2
+        | Refute.Model _ => 3
+        | Refute.NoModel => 4
     val samples =
       [(``(b : bool) \/ ~b``, 1), (``(xs : bool list) = []``, 0)]
     val none_ok = List.all (fn (goal, expected) =>

@@ -30,6 +30,11 @@ formula or exact finite scopes.  `NoCounterexample` is decisive in a backend
 race and stops the other searches, just like a counterexample at the declared
 certainty ceiling.
 
+Kodkod with `upd_falsify false` reports the distinct `Model` and `NoModel`
+outcomes.  Backend selection never changes the meaning of `Counterexample`
+or `NoCounterexample`.  In a mixed run model search is auxiliary, so a
+decisive refutation result can preempt it.
+
 Set a substrate with `Refute.upd_substrate`.  The default, `Auto`, walks all
 registered substrates in priority order; the built-in order is NativeSML,
 Cv, then Compute.  Auto falls through when a substrate is inapplicable.  An

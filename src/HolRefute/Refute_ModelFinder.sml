@@ -844,7 +844,8 @@ fun run_instance deadline started (config : Refute_Core.config)
 
     fun keep_counterexample cex =
       (counterexamples := cex :: !counterexamples;
-       Refute_Core.publish_counterexamples (rev (!counterexamples));
+       (if #falsify mf then Refute_Core.publish_counterexamples
+        else Refute_Core.publish_models) (rev (!counterexamples));
        if certainty_is_potential (#certainty cex) then
          met_potential := !met_potential + 1
        else ())
@@ -1167,10 +1168,10 @@ fun run_instance deadline started (config : Refute_Core.config)
     fun total_scope_search () =
       !fully_exhausted andalso
       not (List.exists Type.is_vartype all_types) andalso
-      List.all (fn ty => List.exists (fn scope =>
+      List.exists (fn scope =>
         scope_checked scope andalso
-        MFS.is_exact_type (#data_types scope) sound_finitizes ty)
-        (!generated_scopes)) all_types
+        List.all (MFS.is_exact_type (#data_types scope) sound_finitizes)
+          all_types) (!generated_scopes)
 
     fun stats donno =
       [("msec", elapsed_msec started),
@@ -1382,6 +1383,10 @@ fun run_body config instances =
                     end
                 | Refute_Core.NoCounterexample =>
                     search rest cexs reasons all_none next_budget
+                | Refute_Core.Model _ =>
+                    raise Fail "internal model result before classification"
+                | Refute_Core.NoModel =>
+                    raise Fail "internal no-model result before classification"
                 | Refute_Core.Unknown more =>
                     search rest cexs (reasons @ more) false next_budget
             end
@@ -1393,7 +1398,19 @@ fun run_body config instances =
   end
 
 fun run config instances =
-  Refute_Core.with_search_context config (run_body config) instances
+  let
+    val result =
+      Refute_Core.with_search_context config (run_body config) instances
+  in
+    if #falsify (#mf config) then result
+    else
+      case result of
+          Refute_Core.Counterexample models => Refute_Core.Model models
+        | Refute_Core.NoCounterexample => Refute_Core.NoModel
+        | Refute_Core.Model models => Refute_Core.Model models
+        | Refute_Core.NoModel => Refute_Core.NoModel
+        | Refute_Core.Unknown reasons => Refute_Core.Unknown reasons
+  end
 
 val kodkod_backend : Refute_Core.backend =
   {name = "kodkod", weight = 50,
