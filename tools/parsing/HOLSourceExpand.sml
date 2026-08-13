@@ -460,6 +460,19 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       in Infix {left = exclude_docs, id = (theory_, "before"), right = e} end
     in DecExpansion {orig = dec, result = [valWild theory_ e]} end
   | expandDec _ (dec as HOLDefinition {
+      definition_, id, attrs = _, colon = _, quote = _,
+      termination, end_ = NONE, stop = _}) = let
+    (* Skip `TotalDefn.qDefine` wrapping so wide type errors from a
+       partial body don't fire; still bind the SML name to a `thm`
+       placeholder so downstream references type-check. *)
+    val bind = valPat definition_ (mkIdent id)
+                 (mkIdent (definition_, "boolTheory.TRUTH"))
+    val extra = case termination of
+        NONE => []
+      | SOME {tac = ExpEmpty _, ...} => []
+      | SOME {tac, ...} => [valWild definition_ (expandExp false tac)]
+    in DecExpansion {orig = dec, result = bind :: extra} end
+  | expandDec _ (dec as HOLDefinition {
       definition_, id as (_, name), attrs, colon = _, quote, termination, end_ = _, stop}) = let
     val indThm = ref NONE
     val _ = app (fn
@@ -589,6 +602,20 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     | SOME {exp, ...} => expandExp false exp
     val dec' = valPat theorem_ (mkIdent id) (App (e, mkTuple (theorem_, [nameAttrs, rhs])))
     in DecExpansion {orig = dec, result = [dec']} end
+  | expandDec _ (dec as HOLTheoremDecl {
+      triv = _, theorem_, id, attrs = _, colon = _, quote = _,
+      proof_, tac, qed_ = NONE, stop = _}) = let
+    (* Skip `Q.store_thm` wrapping so a not-yet-`tactic` tac (e.g.
+       `Induct_on` still waiting for its argument) doesn't surface
+       as a wide wrapping-type error; standalone-compile the tac
+       to still catch real SML bugs inside it. *)
+    val bind = valPat theorem_ (mkIdent id)
+                 (mkIdent (theorem_, "boolTheory.TRUTH"))
+    val extra = case (proof_, tac) of
+        (NONE, _) => []
+      | (SOME _, ExpEmpty _) => []
+      | (SOME _, _) => [valWild theorem_ (expandExp false tac)]
+    in DecExpansion {orig = dec, result = bind :: extra} end
   | expandDec _ (dec as HOLTheoremDecl {
       triv, theorem_, id,
       attrs, colon = _, quote, proof_, tac, qed_ = _, stop}) = let

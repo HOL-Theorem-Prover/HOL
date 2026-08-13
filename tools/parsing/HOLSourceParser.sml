@@ -711,6 +711,21 @@ fun parseSML file read parseError: scope -> result = let
       case SOME (String.sub (kw, i)) handle Subscript => NONE of
         SOME c => ahead i = c andalso checkKW kw (i+1)
       | NONE => true
+    (* Whitelist of col-0 idents that close a quotation body:
+       intended closers plus every top-level decl keyword whose
+       appearance means the user has moved on. *)
+    fun isHolBodyStopKeyword s = case s of
+        "End" => true | "Termination" => true | "Proof" => true | "QED" => true
+      | "Theorem" => true | "Triviality" => true | "Definition" => true
+      | "Datatype" => true | "Type" => true | "Overload" => true
+      | "Quote" => true | "Inductive" => true | "CoInductive" => true
+      | "Theory" => true | "Resume" => true | "Finalise" => true
+      | "val" => true | "fun" => true | "structure" => true | "signature" => true
+      | "datatype" => true | "type" => true | "local" => true | "open" => true
+      | "include" => true | "exception" => true | "infix" => true
+      | "infixr" => true | "nonfix" => true | "abstype" => true
+      | "eqtype" => true | "functor" => true
+      | _ => false
 
     fun finishHOLString s p = let
       fun go s p first_mismatch = case cur () of
@@ -746,15 +761,6 @@ fun parseSML file read parseError: scope -> result = let
       | #"[" =>
         if cm = 0 andalso brack andalso colZero (!pos) then (!pos, (next (); OpenBrack))
         else (next (); qtoken cm)
-      | #"E" =>
-        if colZero (!pos) andalso checkKW "End" 1 then (!pos, (nextn 3; StrongEndTk))
-        else (next (); qtoken cm)
-      | #"T" =>
-        if colZero (!pos) andalso checkKW "Termination" 1 then (!pos, (nextn 11; StrongEndTk))
-        else (next (); qtoken cm)
-      | #"P" =>
-        if colZero (!pos) andalso checkKW "Proof" 1 then (!pos, (nextn 5; StrongEndTk))
-        else (next (); qtoken cm)
       | #"`" =>
         if ahead 1 = #"`" then (!pos, (nextn 2; EndTk))
         else (!pos, (next (); EndTk))
@@ -783,7 +789,16 @@ fun parseSML file read parseError: scope -> result = let
               (!pos - 1, (takeWhile isIdRest; AntiqIdent))
             else qtoken cm
         else qtoken cm)
-      | _ => (next (); qtoken cm)
+      | c =>
+        if cm = 0 andalso colZero (!pos) andalso Char.isAlpha c then let
+          val kwStart = !pos
+          val () = (next (); takeWhile isIdRest)
+          val id = ident kwStart
+          in
+            if isHolBodyStopKeyword id then (kwStart, StrongEndTk)
+            else qtoken cm
+          end
+        else (next (); qtoken cm)
 
     fun expected () = "expected [" ^ String.concatWith ", " s ^ "]"
 
@@ -798,16 +813,20 @@ fun parseSML file read parseError: scope -> result = let
     fun go i acc mismatches =
       case qtoken 0 of
         (p, EOF) => (
-         (* Report the diagnostic at the opening delimiter only, not
-            spanning to EOF.  A user still typing the theorem body /
-            definition RHS would otherwise get every character they
-            add red-squiggled until they close the quote -- unhelpful
-            for the "in-progress" case, which is the common one. *)
-         parseError (start, start) ("unclosed quotation" ^ mismatch_msg mismatches);
+         (* Point at the opening delimiter, not span-to-EOF, so an
+            in-progress body isn't underlined character-by-character. *)
+         parseError (Int.max (0, start - 1), start)
+                    ("unclosed quotation" ^ mismatch_msg mismatches);
          (rev (push i p acc), p))
       | (p, StrongEndTk) => (
         if mem (ident p) s then ()
-        else parseError (start, p) (expected () ^ mismatch_msg mismatches);
+        else (
+          parseError (p, !pos) (expected () ^ mismatch_msg mismatches);
+          (* Rewind so the outer parseDec sees the keyword as the
+             start of a fresh decl.  The matching-closer branch
+             above deliberately leaves `!pos` past the keyword
+             because callers advance from it. *)
+          pos := p);
         (rev (push i p acc), p))
       | (p, EndTk) => let
         val closing = ident p in

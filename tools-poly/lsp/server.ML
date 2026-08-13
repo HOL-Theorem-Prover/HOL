@@ -746,7 +746,12 @@ fun start {diag, dbg} = let
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
-      parseError = fn pos => fn s => report (Error {hard = true, pos = pos, msg = encString s}),
+      (* `unclosed quotation` / `expected ...` almost always mean an
+         in-progress edit; surface those as Warning, not Error. *)
+      parseError = fn pos => fn s => let
+        val soft = String.isSubstring "unclosed quotation" s
+                   orelse String.isSubstring "expected" s
+      in report (Error {hard = not soft, pos = pos, msg = encString s}) end,
       compilerOut = fn s => report (CompilerOut (!lastPos, [s])),
       toplevelOut = fn s => report (ToplevelOut (!lastPos, [s])),
       progress = fn i => (lastPos := i; report (Progress i)),

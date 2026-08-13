@@ -2073,8 +2073,123 @@ def test_unclosed_quotation_narrows_to_opening_delimiter():
                     if "unclosed quotation" in d.get("message", "")]
         assert_eq(len(unclosed), 1, f"one unclosed-quotation diag ({diags!r})")
         rng = unclosed[0]["range"]
-        assert_eq(rng["start"], rng["end"],
-                  f"unclosed-quotation range is a point: {rng!r}")
+        assert_true(rng["end"]["line"] == rng["start"]["line"] and
+                    rng["end"]["character"] - rng["start"]["character"] <= 2,
+                    f"unclosed-quotation range is narrow: {rng!r}")
+    finally:
+        c.close()
+
+
+def _diag_spans_at_most(d, n_lines):
+    return d["range"]["end"]["line"] - d["range"]["start"]["line"] <= n_lines
+
+
+def test_incomplete_definition_mid_file_stays_narrow():
+    """Inserting a fresh `Definition` block mid-file, still typing the
+    RHS with no `End` yet, must NOT paint the entire in-progress
+    fragment red — the diagnostic must be narrow, and the following
+    valid Theorem must still parse and compile normally."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/incomplete_def_midfile.sml"
+        # `Definition foo:` never reaches `End`; the following
+        # `Theorem after:` must still be recognised as a fresh decl
+        # rather than swallowed by the unclosed quotation.
+        src = ("Theory incomplete_def_midfile\n"
+               "Ancestors bool\n\n"
+               "Definition foo:\n"
+               "  foo x = x /\\ x\n"
+               "  /\\ x\n"
+               "\n"
+               "Theorem after:\n"
+               "  T\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        diags = _diag_count(c, uri)
+        wide = [d for d in diags if not _diag_spans_at_most(d, 1)]
+        assert_eq(wide, [],
+                  f"no diagnostic spans multiple lines: "
+                  f"{[(d['range'], d.get('message','')[:60]) for d in wide]!r}")
+        for d in diags:
+            # Any leak of "Theorem after" text into a diagnostic
+            # would signal the quotation swallowed the next decl.
+            assert_true("Theorem after" not in d.get("message", ""),
+                        f"'Theorem after' didn't leak into a diag: "
+                        f"{d.get('message','')[:80]!r}")
+    finally:
+        c.close()
+
+
+def test_incomplete_theorem_statement_mid_file_stays_narrow():
+    """A Theorem being written mid-file, statement quotation still
+    open, must not paint the whole in-progress block red -- and the
+    following valid decl must still compile."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/incomplete_thm_stmt_midfile.sml"
+        src = ("Theory incomplete_thm_stmt_midfile\n"
+               "Ancestors bool\n\n"
+               "Theorem in_progress[simp]:\n"
+               "  !x. x /\\ T = x\n"
+               "\n"
+               "Theorem after:\n"
+               "  T\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        diags = _diag_count(c, uri)
+        wide = [d for d in diags if not _diag_spans_at_most(d, 1)]
+        assert_eq(wide, [],
+                  f"no diagnostic spans multiple lines: "
+                  f"{[(d['range'], d.get('message','')[:60]) for d in wide]!r}")
+    finally:
+        c.close()
+
+
+def test_incomplete_proof_body_mid_file_stays_narrow():
+    """A Proof body being typed mid-file (no QED yet), followed by
+    a valid Theorem below, must not get a wide type-error squiggle
+    over the whole `Proof … <next>` fragment: e.g. a bare
+    `Induct_on` still waiting for its `` `t` `` argument used to
+    fire a wrapping-type error across the entire Proof block."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/incomplete_proof_midfile.sml"
+        src = ("Theory incomplete_proof_midfile\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem sm:\n"
+               "  !n. n + 0 = n\n"
+               "Proof\n"
+               "  Induct_on\n"
+               "\n"
+               "Theorem after:\n"
+               "  T\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30), "c1")
+        diags = _diag_count(c, uri)
+        wide = [d for d in diags if not _diag_spans_at_most(d, 1)]
+        assert_eq(wide, [],
+                  f"no diagnostic spans multiple lines: "
+                  f"{[(d['range'], d.get('message','')[:60]) for d in wide]!r}")
+        # The wrapping type error from `Q.store_thm (..., wrapTac Induct_on)`
+        # would mention `Type error` / `Can't unify` -- prove those are gone.
+        type_errs = [d for d in diags
+                     if "Type error" in d.get("message", "")
+                     or "Can't unify" in d.get("message", "")]
+        assert_eq(type_errs, [],
+                  f"no wide Q.store_thm wrapping type error: "
+                  f"{[d.get('message','')[:80] for d in type_errs]!r}")
     finally:
         c.close()
 
@@ -2824,6 +2939,12 @@ TESTS = [
                                      test_diagnostics_deduplicated_across_publish),
     ("unclosed_quotation_narrows_to_opening_delimiter",
                                      test_unclosed_quotation_narrows_to_opening_delimiter),
+    ("incomplete_definition_mid_file_stays_narrow",
+                                     test_incomplete_definition_mid_file_stays_narrow),
+    ("incomplete_theorem_statement_mid_file_stays_narrow",
+                                     test_incomplete_theorem_statement_mid_file_stays_narrow),
+    ("incomplete_proof_body_mid_file_stays_narrow",
+                                     test_incomplete_proof_body_mid_file_stays_narrow),
     ("goalState_available_past_compile_pos",
                                      test_goalState_available_past_compile_pos),
     ("runaway_errors_still_publish_diagnostics",
