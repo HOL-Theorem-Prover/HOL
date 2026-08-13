@@ -14,10 +14,14 @@ CMP = diff -a
 
 all: $(DEFAULT_TARGETS) check
 
+# Filter `check' from the child listing: the parallel-build monitor creates
+# each target's log file on StartJob, but the recipe process may run the
+# `ls' before that happens, so `check' is not reliably present.  The
+# base/$(LOGDIR) listing is unaffected -- `check' does not run in base.
 check: ls-child-expected ls-base-expected childTheory.uo
-	/bin/ls -1 $(LOGDIR) 2>&1 > ls-child-output && \
+	/bin/ls -1 $(LOGDIR) 2>&1 | grep -v '^check$$' > ls-child-output && \
           $(CMP) ls-child-expected ls-child-output
-	/bin/ls -1 base/$(LOGDIR) 2>&1 > ls-base-output && \
+	/bin/ls -1 base/$(LOGDIR) > ls-base-output 2>&1 && \
           $(CMP) ls-base-expected ls-base-output
 
 endif
