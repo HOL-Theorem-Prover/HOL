@@ -711,12 +711,13 @@ fun parseSML file read parseError: scope -> result = let
       case SOME (String.sub (kw, i)) handle Subscript => NONE of
         SOME c => ahead i = c andalso checkKW kw (i+1)
       | NONE => true
-    (* Whitelist of col-0 idents that close a quotation body:
-       intended closers plus every top-level decl keyword whose
-       appearance means the user has moved on. *)
-    fun isHolBodyStopKeyword s = case s of
+    (* Closers escape even an unfinished-comment body. *)
+    fun isHolBodyCloser s = case s of
         "End" => true | "Termination" => true | "Proof" => true | "QED" => true
-      | "Theorem" => true | "Triviality" => true | "Definition" => true
+      | _ => false
+    fun isHolBodyStopKeyword s =
+      isHolBodyCloser s orelse (case s of
+        "Theorem" => true | "Triviality" => true | "Definition" => true
       | "Datatype" => true | "Type" => true | "Overload" => true
       | "Quote" => true | "Inductive" => true | "CoInductive" => true
       | "Theory" => true | "Resume" => true | "Finalise" => true
@@ -725,7 +726,7 @@ fun parseSML file read parseError: scope -> result = let
       | "include" => true | "exception" => true | "infix" => true
       | "infixr" => true | "nonfix" => true | "abstype" => true
       | "eqtype" => true | "functor" => true
-      | _ => false
+      | _ => false)
 
     fun finishHOLString s p = let
       fun go s p first_mismatch = case cur () of
@@ -790,12 +791,14 @@ fun parseSML file read parseError: scope -> result = let
             else qtoken cm
         else qtoken cm)
       | c =>
-        if cm = 0 andalso colZero (!pos) andalso Char.isAlpha c then let
+        if colZero (!pos) andalso Char.isAlpha c then let
           val kwStart = !pos
           val () = (next (); takeWhile isIdRest)
           val id = ident kwStart
           in
-            if isHolBodyStopKeyword id then (kwStart, StrongEndTk)
+            if isHolBodyCloser id orelse
+               cm = 0 andalso isHolBodyStopKeyword id
+            then (kwStart, StrongEndTk)
             else qtoken cm
           end
         else (next (); qtoken cm)
