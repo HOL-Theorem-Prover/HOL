@@ -733,6 +733,31 @@ instead of the last mid-line one."
                   (and pop op-text (equal (treesit-node-text pop t) op-text))))))
         node)))
 
+(defun holscript-ts-mode--chain-continuation-anchor (parent bol)
+  "Anchor position for a chain-continuation line under PARENT.
+Return whichever of PARENT's start position or the previous line's
+first non-whitespace character sits at a higher column — so an
+inner `THEN'/`app_exp' that begins mid-line (after an outer `>-'
+or `>>' combinator) still anchors at its own first child, not at
+the outer combinator's column.  When PARENT starts on the current
+line, fall back to the previous line's column."
+  (let* ((parent-start (treesit-node-start parent))
+         (parent-col (and (< parent-start bol)
+                          (save-excursion
+                            (goto-char parent-start)
+                            (current-column))))
+         (prev-pos (save-excursion
+                     (goto-char bol)
+                     (forward-line -1)
+                     (skip-chars-forward " \t")
+                     (point)))
+         (prev-col (save-excursion
+                     (goto-char prev-pos)
+                     (current-column))))
+    (if (and parent-col (> parent-col prev-col))
+        parent-start
+      prev-pos)))
+
 (defun holscript-ts-mode--line-starts-else-or-then-p (_node _parent bol)
   "Non-nil if the first non-whitespace text at BOL is `else' / `then'."
   (save-excursion
@@ -812,15 +837,23 @@ happens to have been absorbed upstream."
      ;; Tactic chains: keep each tactic aligned with the first.
      ((parent-is "\\`tactic\\'")                    parent-bol 0)
      ;; Inside a THEN chain, align continuation lines with the
-     ;; previous line's first non-blank column.  The grammar keeps
-     ;; the whole chain as a single flat `THEN' node with atomic
-     ;; tactics and operator tokens as siblings; each atomic on its
-     ;; own line should sit at the same column as the previous.
-     ((parent-is "\\`THEN\\'")                      prev-line 0)
-     ;; SML application chains that span multiple lines.  Align
-     ;; with the previous line's first non-blank column so `|>'
-     ;; stacks under `|>'.
-     ((parent-is "\\`app_exp\\'")                   prev-line 0)
+     ;; previous line's first non-blank column — except when the
+     ;; chain itself begins mid-line (after an outer `>-' / `>>'
+     ;; combinator on the previous line), in which case anchor at
+     ;; the chain's first child instead of the outer combinator.
+     ((parent-is "\\`THEN\\'")
+      ,(lambda (_n parent bol)
+         (holscript-ts-mode--chain-continuation-anchor parent bol))
+      0)
+     ;; SML application chains that span multiple lines.  Same
+     ;; anchor rule as `THEN' above so a broken argument on its
+     ;; own line sits under the function's first-argument column
+     ;; rather than under an unrelated outer combinator that
+     ;; happens to open the previous line.
+     ((parent-is "\\`app_exp\\'")
+      ,(lambda (_n parent bol)
+         (holscript-ts-mode--chain-continuation-anchor parent bol))
+      0)
      ;; SML infix chains.  Three sub-cases:
      ;;   • `by' / `suffices_by' / `via' broken onto their own line
      ;;     (subgoal-introducing infixes): indent +2 under the left

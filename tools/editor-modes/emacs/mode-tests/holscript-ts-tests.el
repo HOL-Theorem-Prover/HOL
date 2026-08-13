@@ -352,6 +352,39 @@ else 3
 "
     (should (= 8 (holscript-ts-tests--indent-after-strip "^else 3\\b")))))
 
+(ert-deftest holscript-ts-indent-then-chain-under-outer-combinator ()
+  "A THEN-chain continuation inside `>- (...)' aligns with the
+chain's first tactic, not with the outer `>-' on the previous
+line."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "Theorem foo:
+  T
+Proof
+  strip_tac
+  >- (qpat_x_assum ‘_’ mp_tac
+      >> rw []
+     )
+QED
+"
+    (should (= 6 (holscript-ts-tests--indent-after-strip ">> rw \\[")))))
+
+(ert-deftest holscript-ts-indent-app-arg-under-function-not-outer-op ()
+  "An SML application's broken argument (a `paren_exp' on its own
+line) aligns with the function's column, not with an outer `>>'
+combinator on the previous line."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "Theorem foo:
+  T
+Proof
+  strip_tac
+  >> qpat_x_assum ‘_’
+       (mp_tac o SIMP_RULE bool_ss [])
+QED
+"
+    (should (= 5 (holscript-ts-tests--indent-after-strip "(mp_tac o")))))
+
 (ert-deftest holscript-ts-indent-following-theorem-stays-at-col-0 ()
   "A well-formed `Theorem …' after a broken `Definition' stays at
 column 0 — the block-keyword-line predicate falls through to a text
