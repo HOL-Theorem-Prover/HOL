@@ -162,16 +162,20 @@ local
     end
 in
   val _ = HOL_Interactive.print_banner print
-  val lpsize0 = length (!loadPath)
   val () =
     ( hol_use ("help" ++ "src-sml") "Database"
     ; hol_use ("tools-poly" ++ "poly") "Help"
-    ; ReadHMF.extend_path_with_includes {verbosity = 0, lpref = loadPath}
-    ; if length (!loadPath) <> lpsize0 then
-        print ("** Load path (see loadPath variable) now contains " ^
-               Int.toString (length (!loadPath)) ^
-               " entries\n** after consulting Holmakefiles\n\n")
-      else ()
+    (* Meta.loadPath is populated by hol.ML post-loadState -- from
+       cwd's Holmakefile INCLUDES and (if in a holproject.toml
+       scope) every project_dir + external_includes entry.  It
+       starts life (poly-init2.ML) as the singleton [sigobj], so
+       anything longer means those sources contributed. *)
+    ; (case !loadPath of
+           [_] => ()
+         | l => print ("** Load path (see loadPath variable) now contains " ^
+                       Int.toString (length l) ^ " entries\n" ^
+                       "** after consulting Holmakefiles and any " ^
+                       "holproject.toml\n\n"))
     ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()

@@ -310,6 +310,81 @@ else
 "
     (should (= 8 (holscript-ts-tests--indent-after-strip "^else\\b")))))
 
+(ert-deftest holscript-ts-indent-chain-else-if-sml ()
+  "A chained `if p then _ else if q then _ else _' is one unit: the
+tail `else' aligns with the outermost `if', not the inner one from
+the `else if'."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "fun f p q =
+  if p then 1
+  else if q then 2
+else 3
+"
+    (should (= 2 (holscript-ts-tests--indent-after-strip "^else 3\\b")))))
+
+(ert-deftest holscript-ts-indent-nested-else-if-sml ()
+  "Breaking `else if' across a newline is a nested `if', not a chain:
+the tail `else' aligns with the inner `if', +2 from the outer."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "fun f p q =
+  if p then 1
+  else
+    if q then 2
+else 3
+"
+    (should (= 4 (holscript-ts-tests--indent-after-strip "^else 3\\b")))))
+
+(ert-deftest holscript-ts-indent-chain-else-if-hol ()
+  "The `else if' chain rule fires in HOL syntax too — a tail `else'
+inside a `Definition' body aligns with the outermost `if'."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "Theory foo
+Ancestors hol
+Libs boolLib
+
+Definition foo:
+f p q = if p then 1
+        else if q then 2
+else 3
+"
+    (should (= 8 (holscript-ts-tests--indent-after-strip "^else 3\\b")))))
+
+(ert-deftest holscript-ts-indent-then-chain-under-outer-combinator ()
+  "A THEN-chain continuation inside `>- (...)' aligns with the
+chain's first tactic, not with the outer `>-' on the previous
+line."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "Theorem foo:
+  T
+Proof
+  strip_tac
+  >- (qpat_x_assum ‘_’ mp_tac
+      >> rw []
+     )
+QED
+"
+    (should (= 6 (holscript-ts-tests--indent-after-strip ">> rw \\[")))))
+
+(ert-deftest holscript-ts-indent-app-arg-under-function-not-outer-op ()
+  "An SML application's broken argument (a `paren_exp' on its own
+line) aligns with the function's column, not with an outer `>>'
+combinator on the previous line."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--with-string
+      "Theorem foo:
+  T
+Proof
+  strip_tac
+  >> qpat_x_assum ‘_’
+       (mp_tac o SIMP_RULE bool_ss [])
+QED
+"
+    (should (= 5 (holscript-ts-tests--indent-after-strip "(mp_tac o")))))
+
 (ert-deftest holscript-ts-indent-following-theorem-stays-at-col-0 ()
   "A well-formed `Theorem …' after a broken `Definition' stays at
 column 0 — the block-keyword-line predicate falls through to a text
@@ -321,6 +396,25 @@ f x y = if
 Theorem existing = TRUTH
 "
     (should (= 0 (holscript-ts-tests--indent-after-strip "^Theorem existing")))))
+
+;; --- Indent: same-operator conjunction chain --------------------------------
+
+(ert-deftest holscript-ts-indent-samop-chain-flattens ()
+  "Wrapped conjuncts in a same-operator /\\-chain align with the first.
+Even when the previous line packs several conjuncts (e.g. `p < q
+/\\ a * q < 0 /\\'), the next line's conjunct sits under the
+chain's first operand, not under the last mid-line one."
+  (skip-unless (holscript-ts-tests--preconds))
+  (holscript-ts-tests--fixture
+   "indentScript.sml"
+   (lambda ()
+     (dolist (target '("^ *q IN A /\\\\"
+                       "^ *p < q /\\\\"
+                       "^ *!i\\. i IN A"))
+       (goto-char (point-min))
+       (should (re-search-forward target nil t))
+       (beginning-of-line)
+       (should (= 15 (holscript-ts-tests--indent-line)))))))
 
 ;; --- Indent: quotation continuation -----------------------------------------
 

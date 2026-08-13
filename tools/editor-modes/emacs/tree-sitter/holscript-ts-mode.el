@@ -687,10 +687,12 @@ fallback when the parse tree is already broken."
 (defun holscript-ts-mode--matching-if-pos (bol)
   "Position of the `if' matching an `else' or `then' at BOL, by
 backward text scan.  Each `else' seen going backward increments
-the count of unmatched `else's; each `if' balances one.  Returns
-nil if no matching `if' precedes BOL.  Used as a fallback when
-the parse can't reach a `cond_exp' — e.g. a mid-edit
-`if x then 10' with no `else' yet."
+the count of unmatched `else's; each `if' balances one.  A
+single-line `else if' (only whitespace between the keywords)
+counts as one chain step, so the anchor skips past it to the
+outer `if'.  Returns nil if no matching `if' precedes BOL.  Used
+as a fallback when the parse can't reach a `cond_exp' — e.g. a
+mid-edit `if x then 10' with no `else' yet."
   (save-excursion
     (goto-char bol)
     (skip-chars-forward " \t")
@@ -701,11 +703,60 @@ the parse can't reach a `cond_exp' — e.g. a mid-edit
                   (re-search-backward "\\_<\\(if\\|else\\)\\_>" nil t))
         (cond
          ((looking-at "if\\_>")
-          (setq depth (1- depth))
-          (when (zerop depth) (setq found (point))))
+          (let ((else-pos (save-excursion
+                            (skip-chars-backward " \t")
+                            (and (looking-back "\\_<else\\_>"
+                                               (line-beginning-position))
+                                 (match-beginning 0)))))
+            (if else-pos
+                (goto-char else-pos)
+              (setq depth (1- depth))
+              (when (zerop depth) (setq found (point))))))
          ((looking-at "else\\_>")
           (setq depth (1+ depth)))))
       found)))
+
+(defun holscript-ts-mode--outermost-same-op-binary (node)
+  "Flatten a right-recursive same-operator `hol_binary_term' chain.
+Return the furthest `hol_binary_term' ancestor of NODE (or NODE
+itself) that shares NODE's operator text — so `p /\\ (q /\\ r)'
+walks up to the outer `/\\'-term.  Used as an indent anchor: a
+wrapped conjunct then aligns with the chain's first operand
+instead of the last mid-line one."
+  (let* ((op-node (treesit-node-child-by-field-name node "operator"))
+         (op-text (and op-node (treesit-node-text op-node t))))
+    (or (treesit-parent-while
+         node
+         (lambda (p)
+           (and (equal (treesit-node-type p) "hol_binary_term")
+                (let ((pop (treesit-node-child-by-field-name p "operator")))
+                  (and pop op-text (equal (treesit-node-text pop t) op-text))))))
+        node)))
+
+(defun holscript-ts-mode--chain-continuation-anchor (parent bol)
+  "Anchor position for a chain-continuation line under PARENT.
+Return whichever of PARENT's start position or the previous line's
+first non-whitespace character sits at a higher column — so an
+inner `THEN'/`app_exp' that begins mid-line (after an outer `>-'
+or `>>' combinator) still anchors at its own first child, not at
+the outer combinator's column.  When PARENT starts on the current
+line, fall back to the previous line's column."
+  (let* ((parent-start (treesit-node-start parent))
+         (parent-col (and (< parent-start bol)
+                          (save-excursion
+                            (goto-char parent-start)
+                            (current-column))))
+         (prev-pos (save-excursion
+                     (goto-char bol)
+                     (forward-line -1)
+                     (skip-chars-forward " \t")
+                     (point)))
+         (prev-col (save-excursion
+                     (goto-char prev-pos)
+                     (current-column))))
+    (if (and parent-col (> parent-col prev-col))
+        parent-start
+      prev-pos)))
 
 (defun holscript-ts-mode--line-starts-else-or-then-p (_node _parent bol)
   "Non-nil if the first non-whitespace text at BOL is `else' / `then'."
@@ -786,15 +837,23 @@ happens to have been absorbed upstream."
      ;; Tactic chains: keep each tactic aligned with the first.
      ((parent-is "\\`tactic\\'")                    parent-bol 0)
      ;; Inside a THEN chain, align continuation lines with the
-     ;; previous line's first non-blank column.  The grammar keeps
-     ;; the whole chain as a single flat `THEN' node with atomic
-     ;; tactics and operator tokens as siblings; each atomic on its
-     ;; own line should sit at the same column as the previous.
-     ((parent-is "\\`THEN\\'")                      prev-line 0)
-     ;; SML application chains that span multiple lines.  Align
-     ;; with the previous line's first non-blank column so `|>'
-     ;; stacks under `|>'.
-     ((parent-is "\\`app_exp\\'")                   prev-line 0)
+     ;; previous line's first non-blank column — except when the
+     ;; chain itself begins mid-line (after an outer `>-' / `>>'
+     ;; combinator on the previous line), in which case anchor at
+     ;; the chain's first child instead of the outer combinator.
+     ((parent-is "\\`THEN\\'")
+      ,(lambda (_n parent bol)
+         (holscript-ts-mode--chain-continuation-anchor parent bol))
+      0)
+     ;; SML application chains that span multiple lines.  Same
+     ;; anchor rule as `THEN' above so a broken argument on its
+     ;; own line sits under the function's first-argument column
+     ;; rather than under an unrelated outer combinator that
+     ;; happens to open the previous line.
+     ((parent-is "\\`app_exp\\'")
+      ,(lambda (_n parent bol)
+         (holscript-ts-mode--chain-continuation-anchor parent bol))
+      0)
      ;; SML infix chains.  Three sub-cases:
      ;;   • `by' / `suffices_by' / `via' broken onto their own line
      ;;     (subgoal-introducing infixes): indent +2 under the left
@@ -828,7 +887,9 @@ happens to have been absorbed upstream."
                          "~~" "!~" "Un" "Isct" "--" "IN" "-*"
                          "##" "?"))
                       "\\'")))
-      prev-line 0)
+      ,(lambda (_n parent bol)
+         (holscript-ts-mode--chain-continuation-anchor parent bol))
+      0)
      ((parent-is "\\`infix_exp\\'")                 parent 0)
      ;; SML let / in / end.
      ((node-is   "\\`in\\'")                        parent-bol 0)
@@ -902,8 +963,15 @@ happens to have been absorbed upstream."
      ;; HOL term structure — align continuation lines to the column
      ;; of the governing HOL subtree.  A one-line `A ==> B' doesn't
      ;; change; a two-line `A ==>\n  B' pulls B back to A's column
-     ;; because they share the same parent `hol_binary_term'.
-     ((parent-is "\\`hol_binary_term\\'")         parent 0)
+     ;; because they share the same parent `hol_binary_term'.  For a
+     ;; right-recursive chain of the same operator (`p /\ q /\ r'),
+     ;; walk up to the outermost so a wrapped conjunct aligns with
+     ;; the *first* conjunct instead of the previous mid-line one.
+     ((parent-is "\\`hol_binary_term\\'")
+      ,(lambda (_n parent &rest _)
+         (treesit-node-start
+          (holscript-ts-mode--outermost-same-op-binary parent)))
+      0)
      ((parent-is "\\`hol_application\\'")         parent 0)
      ;; The body of a quantifier (`!x. BODY', `?y. BODY') on a
      ;; continuation line indents 2 to the right of the binder.
@@ -1251,6 +1319,20 @@ sensible target.  Only uses primitives available in Emacs 29."
                 holscript-ts-mode--font-lock-settings)
     (setq-local treesit-font-lock-feature-list
                 holscript-ts-mode--font-lock-feature-list)
+    ;; Force treesit-font-lock's "fast mode" off.  In emacs 29,
+    ;; `treesit-query-capture' on a sub-node returned by
+    ;; `treesit--children-covering-range-recurse' silently drops any
+    ;; match whose node is the sub-node itself, so a rule like
+    ;; `(hol_thmstmt) @…' stops firing on a `hol_thmstmt' that fast
+    ;; mode happens to pick as its own root (small enough to fit
+    ;; under the 4x jit-lock-chunk-size threshold, but sitting under
+    ;; a larger `hol_theorem_with_proof' that fast mode recurses
+    ;; into).  The heuristic that turns fast mode on trips on any
+    ;; sufficiently deep/wide tree — e.g. a busy proof script — so
+    ;; large HOL files silently lose their theorem-statement
+    ;; highlighting under emacs 29.  Emacs 30 has the same private
+    ;; variable but the underlying bug is fixed there.
+    (setq-local treesit--font-lock-fast-mode nil)
 
     ;; Defun navigation
     (setq-local treesit-defun-type-regexp

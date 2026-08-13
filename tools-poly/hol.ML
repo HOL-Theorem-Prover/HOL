@@ -411,10 +411,24 @@ fun main() = let
   val warn = if qp then (fn _ => ()) else warn
   val original_die = die
   fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
-  val allincs = ReadHMF.find_includes (OS.FileSys.getDir())
-  val _ = ReadHMF.extend_path_with_includes
-            {verbosity = 1 + (if debug then 1 else 0),
-             lpref = Meta.loadPath}
+  val cwd_incs = ReadHMF.find_includes (OS.FileSys.getDir())
+  (* Under a `holproject.toml holmake = true` project, every
+     project_dir and every `external_includes` entry counts as
+     an implicit INCLUDES for the whole project.  buildheap's
+     .uo search (via `allincs`) and `Meta.loadPath` (used by
+     interactive `load`/`open`) both need these visible. *)
+  val project_incs =
+      case HMProject.find_root {start = OS.FileSys.getDir()} of
+          NONE => []
+        | SOME root =>
+            (let val cfg = HMProject.load {root = root}
+                 val dirs = if #holmake cfg then HMProject.discover_dirs cfg
+                            else []
+             in dirs @ #external_includes cfg end
+             handle Fail msg =>
+               (warn ("holproject.toml at " ^ root ^ " ignored: " ^ msg);
+                []))
+  val allincs = project_incs @ cwd_incs
   val _ = diag ("allincs = ["^String.concatWith ", " allincs ^"]")
   val base_state = Option.map mkAbs base_state
   val output = Option.map mkAbs output
@@ -432,6 +446,15 @@ fun main() = let
                      PolyML.SaveState.loadState f
                      handle e => die ("Couldn't load HOL base-state "^f^": "^
                                       General.exnMessage e))
+  (* AFTER loadState — the saved state restores refs to their save-
+     time values and would otherwise wipe any earlier extension.
+     Owns Meta.loadPath extension so prelude.ML doesn't have to,
+     and every subcommand (REPL, LSP, BUILDHEAP, ...) sees the
+     same paths. *)
+  val _ = ReadHMF.extend_path_with_includes
+            {verbosity = 1 + (if debug then 1 else 0),
+             lpref = Meta.loadPath}
+  val _ = Meta.loadPath := project_incs @ !Meta.loadPath
   val _ = buildheap_extra_data := extra_data
   val _ = diag ("Buildheap extra now = " ^
                 (case !buildheap_extra_data of
