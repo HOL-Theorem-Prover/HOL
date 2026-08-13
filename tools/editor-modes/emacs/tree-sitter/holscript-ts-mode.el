@@ -1319,6 +1319,20 @@ sensible target.  Only uses primitives available in Emacs 29."
                 holscript-ts-mode--font-lock-settings)
     (setq-local treesit-font-lock-feature-list
                 holscript-ts-mode--font-lock-feature-list)
+    ;; Force treesit-font-lock's "fast mode" off.  In emacs 29,
+    ;; `treesit-query-capture' on a sub-node returned by
+    ;; `treesit--children-covering-range-recurse' silently drops any
+    ;; match whose node is the sub-node itself, so a rule like
+    ;; `(hol_thmstmt) @…' stops firing on a `hol_thmstmt' that fast
+    ;; mode happens to pick as its own root (small enough to fit
+    ;; under the 4x jit-lock-chunk-size threshold, but sitting under
+    ;; a larger `hol_theorem_with_proof' that fast mode recurses
+    ;; into).  The heuristic that turns fast mode on trips on any
+    ;; sufficiently deep/wide tree — e.g. a busy proof script — so
+    ;; large HOL files silently lose their theorem-statement
+    ;; highlighting under emacs 29.  Emacs 30 has the same private
+    ;; variable but the underlying bug is fixed there.
+    (setq-local treesit--font-lock-fast-mode nil)
 
     ;; Defun navigation
     (setq-local treesit-defun-type-regexp
