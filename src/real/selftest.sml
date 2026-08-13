@@ -430,6 +430,16 @@ val _ = require_msg (check_result (aconv expected2)) term_to_string
                     (quietly Parse.Term) ‘0 < x’
 val _ = temp_set_grammars grammars
 
+val _ = convtest("REAL_RAT_REDUCE_CONV terminates on 1/3 * x",
+                 QCONV REAL_RAT_REDUCE_CONV,
+                 ``&1 / &3 * (x:real)``,
+                 ``&1 / &3 * (x:real)``)
+
+val _ = convtest("REAL_RAT_REDUCE_CONV still adds rational literals",
+                 REAL_RAT_REDUCE_CONV,
+                 ``&1 / &3 + &1 / &6 :real``,
+                 ``&1 / &2 :real``)
+
 (* tests for bitArithLib *)
 val _ = convtest("Testing karatsuba_conv on ``1 * 2``",
                   karatsuba_conv,

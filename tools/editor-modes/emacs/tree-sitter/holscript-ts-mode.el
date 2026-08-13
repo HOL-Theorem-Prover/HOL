@@ -687,10 +687,12 @@ fallback when the parse tree is already broken."
 (defun holscript-ts-mode--matching-if-pos (bol)
   "Position of the `if' matching an `else' or `then' at BOL, by
 backward text scan.  Each `else' seen going backward increments
-the count of unmatched `else's; each `if' balances one.  Returns
-nil if no matching `if' precedes BOL.  Used as a fallback when
-the parse can't reach a `cond_exp' — e.g. a mid-edit
-`if x then 10' with no `else' yet."
+the count of unmatched `else's; each `if' balances one.  A
+single-line `else if' (only whitespace between the keywords)
+counts as one chain step, so the anchor skips past it to the
+outer `if'.  Returns nil if no matching `if' precedes BOL.  Used
+as a fallback when the parse can't reach a `cond_exp' — e.g. a
+mid-edit `if x then 10' with no `else' yet."
   (save-excursion
     (goto-char bol)
     (skip-chars-forward " \t")
@@ -701,11 +703,35 @@ the parse can't reach a `cond_exp' — e.g. a mid-edit
                   (re-search-backward "\\_<\\(if\\|else\\)\\_>" nil t))
         (cond
          ((looking-at "if\\_>")
-          (setq depth (1- depth))
-          (when (zerop depth) (setq found (point))))
+          (let ((else-pos (save-excursion
+                            (skip-chars-backward " \t")
+                            (and (looking-back "\\_<else\\_>"
+                                               (line-beginning-position))
+                                 (match-beginning 0)))))
+            (if else-pos
+                (goto-char else-pos)
+              (setq depth (1- depth))
+              (when (zerop depth) (setq found (point))))))
          ((looking-at "else\\_>")
           (setq depth (1+ depth)))))
       found)))
+
+(defun holscript-ts-mode--outermost-same-op-binary (node)
+  "Flatten a right-recursive same-operator `hol_binary_term' chain.
+Return the furthest `hol_binary_term' ancestor of NODE (or NODE
+itself) that shares NODE's operator text — so `p /\\ (q /\\ r)'
+walks up to the outer `/\\'-term.  Used as an indent anchor: a
+wrapped conjunct then aligns with the chain's first operand
+instead of the last mid-line one."
+  (let* ((op-node (treesit-node-child-by-field-name node "operator"))
+         (op-text (and op-node (treesit-node-text op-node t))))
+    (or (treesit-parent-while
+         node
+         (lambda (p)
+           (and (equal (treesit-node-type p) "hol_binary_term")
+                (let ((pop (treesit-node-child-by-field-name p "operator")))
+                  (and pop op-text (equal (treesit-node-text pop t) op-text))))))
+        node)))
 
 (defun holscript-ts-mode--line-starts-else-or-then-p (_node _parent bol)
   "Non-nil if the first non-whitespace text at BOL is `else' / `then'."
@@ -902,8 +928,15 @@ happens to have been absorbed upstream."
      ;; HOL term structure — align continuation lines to the column
      ;; of the governing HOL subtree.  A one-line `A ==> B' doesn't
      ;; change; a two-line `A ==>\n  B' pulls B back to A's column
-     ;; because they share the same parent `hol_binary_term'.
-     ((parent-is "\\`hol_binary_term\\'")         parent 0)
+     ;; because they share the same parent `hol_binary_term'.  For a
+     ;; right-recursive chain of the same operator (`p /\ q /\ r'),
+     ;; walk up to the outermost so a wrapped conjunct aligns with
+     ;; the *first* conjunct instead of the previous mid-line one.
+     ((parent-is "\\`hol_binary_term\\'")
+      ,(lambda (_n parent &rest _)
+         (treesit-node-start
+          (holscript-ts-mode--outermost-same-op-binary parent)))
+      0)
      ((parent-is "\\`hol_application\\'")         parent 0)
      ;; The body of a quantifier (`!x. BODY', `?y. BODY') on a
      ;; continuation line indents 2 to the right of the binder.

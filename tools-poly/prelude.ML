@@ -167,7 +167,15 @@ in
     ; hol_use ("tools-poly" ++ "poly") "Help"
     (* Meta.loadPath is populated by hol.ML post-loadState -- from
        cwd's Holmakefile INCLUDES and (if in a holproject.toml
-       scope) every project_dir + external_includes entry. *)
+       scope) every project_dir + external_includes entry.  It
+       starts life (poly-init2.ML) as the singleton [sigobj], so
+       anything longer means those sources contributed. *)
+    ; (case !loadPath of
+           [_] => ()
+         | l => print ("** Load path (see loadPath variable) now contains " ^
+                       Int.toString (length l) ^ " entries\n" ^
+                       "** after consulting Holmakefiles and any " ^
+                       "holproject.toml\n\n"))
     ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()
