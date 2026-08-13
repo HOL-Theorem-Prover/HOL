@@ -2820,6 +2820,17 @@ Proof
   SRW_TAC[][is_closure_op_def]
 QED
 
+Theorem is_closure_op_rmonotone:
+  ∀f C. is_closure_op f C ==> rmonotone C
+Proof
+  SRW_TAC[][is_closure_op_def, rmonotone_def]
+  >> FIRST_ASSUM $ Q.SPEC_THEN `Q` MP_TAC
+  >> FIRST_X_ASSUM $ Q.SPEC_THEN `P` MP_TAC
+  >> SRW_TAC[][]
+  >> LAST_X_ASSUM $ Q.SPEC_THEN `C Q` MP_TAC
+  >> METIS_TAC[RSUBSET_TRANS]
+QED
+
 Theorem is_closure_op_reflexive_RC[simp]:
   is_closure_op reflexive RC
 Proof
@@ -2851,4 +2862,3 @@ Proof
   >- METIS_TAC[rpreserves_def, is_closure_op_closed]
   >> METIS_TAC[is_closure_op_def, rmonotone_def]
 QED
-
