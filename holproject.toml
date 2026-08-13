@@ -35,3 +35,7 @@ linelen = 80
 path = "examples/miller"
 linelen = 80
 
+[[h4pedant.dir]]
+path = "examples/generic_graphs"
+linelen = 80
+
