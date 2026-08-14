@@ -192,19 +192,17 @@ in
     die ("No Holmake executable in " ^ fP [HOLDIR, "bin"])
 end
 
-(* bin/hol is likewise compiled by configure and by no Holmakefile rule,
-   from tools-poly/hol.ML and from the Holmake sources it links against.
-   Neither check above reaches it: the sweep compares those sources with
-   bin/Holmake, so a tree whose Holmake is current can still be running
-   a hol built from different sources, and hol.ML is caught by nothing
-   at all.  A stale bin/hol misdirects the interactive load path and
-   fails tools/Holmake/tests/repl, which -t reaches while still inside
+(* bin/hol is compiled by configure and by no Holmakefile rule, from
+   tools-poly/hol.ML, the Holmake sources, and tools/parsing (the quote
+   filter is linked in rather than run as bin/unquote; HolLex.sml is
+   generated from HolLex by configure).  The sweep above compares those
+   sources against bin/Holmake only, so hol can be stale while Holmake
+   is current, and hol.ML is checked nowhere.  A stale bin/hol
+   misdirects the interactive load path and fails
+   tools/Holmake/tests/repl, which -t reaches while still inside
    sequences/kernel -- so the whole selftest build stops there.
-
-   tools/parsing is included because the quote filter is linked in, not
-   run as bin/unquote (HolLex.sml is generated from HolLex by
-   configure); Holmake embeds it too, but configure builds Holmake
-   before hol, so checking hol covers both. *)
+   Checking hol covers Holmake's embedded filter too: configure builds
+   Holmake first. *)
 val _ = let
   val fP = fullPath
   open HOLFileSys
