@@ -446,24 +446,33 @@ val sgn_tm = “real_sgn :real -> real”;
 val max_tm = “max :real -> real -> real”;
 val min_tm = “min :real -> real -> real”;
 
+(* computeLib retries reflexive results and does not catch UNCHANGED.
+   CHANGED_CONV converts both no-progress cases to the HOL_ERR it expects. *)
+fun add_reduce_conv entry compset =
+  let
+    val (operator, arity, conv) = entry
+  in
+    computeLib.add_conv (operator, arity, CHANGED_CONV conv) compset
+  end
+
 fun real_rat_compset () =
   reduceLib.num_compset
-  |> computeLib.add_conv (leq_tm,     2, REAL_RAT_LE_CONV)
-  |> computeLib.add_conv (less_tm,    2, REAL_RAT_LT_CONV)
-  |> computeLib.add_conv (geq_tm,     2, REAL_RAT_GE_CONV)
-  |> computeLib.add_conv (greater_tm, 2, REAL_RAT_GT_CONV)
-  |> computeLib.add_conv (real_eq_tm, 2, REAL_RAT_EQ_CONV)
-  |> computeLib.add_conv (negate_tm,  1, CHANGED_CONV REAL_RAT_NEG_CONV)
-  |> computeLib.add_conv (sgn_tm,     1, REAL_RAT_SGN_CONV)
-  |> computeLib.add_conv (absval_tm,  1, REAL_RAT_ABS_CONV)
-  |> computeLib.add_conv (inv_tm,     1, REAL_RAT_INV_CONV)
-  |> computeLib.add_conv (plus_tm,    2, REAL_RAT_ADD_CONV)
-  |> computeLib.add_conv (minus_tm,   2, REAL_RAT_SUB_CONV)
-  |> computeLib.add_conv (mult_tm,    2, REAL_RAT_MUL_CONV)
-  |> computeLib.add_conv (div_tm,     2, REAL_RAT_DIV_CONV)
-  |> computeLib.add_conv (exp_tm,     2, REAL_RAT_POW_CONV)
-  |> computeLib.add_conv (max_tm,     2, REAL_RAT_MAX_CONV)
-  |> computeLib.add_conv (min_tm,     2, REAL_RAT_MIN_CONV)
+  |> add_reduce_conv (leq_tm,     2, REAL_RAT_LE_CONV)
+  |> add_reduce_conv (less_tm,    2, REAL_RAT_LT_CONV)
+  |> add_reduce_conv (geq_tm,     2, REAL_RAT_GE_CONV)
+  |> add_reduce_conv (greater_tm, 2, REAL_RAT_GT_CONV)
+  |> add_reduce_conv (real_eq_tm, 2, REAL_RAT_EQ_CONV)
+  |> add_reduce_conv (negate_tm,  1, REAL_RAT_NEG_CONV)
+  |> add_reduce_conv (sgn_tm,     1, REAL_RAT_SGN_CONV)
+  |> add_reduce_conv (absval_tm,  1, REAL_RAT_ABS_CONV)
+  |> add_reduce_conv (inv_tm,     1, REAL_RAT_INV_CONV)
+  |> add_reduce_conv (plus_tm,    2, REAL_RAT_ADD_CONV)
+  |> add_reduce_conv (minus_tm,   2, REAL_RAT_SUB_CONV)
+  |> add_reduce_conv (mult_tm,    2, REAL_RAT_MUL_CONV)
+  |> add_reduce_conv (div_tm,     2, REAL_RAT_DIV_CONV)
+  |> add_reduce_conv (exp_tm,     2, REAL_RAT_POW_CONV)
+  |> add_reduce_conv (max_tm,     2, REAL_RAT_MAX_CONV)
+  |> add_reduce_conv (min_tm,     2, REAL_RAT_MIN_CONV)
 
 val REAL_RAT_REDUCE_CONV =
   (* ensure that REDUCE_CONV will look at all of a term, even

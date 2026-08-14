@@ -4696,10 +4696,12 @@ alternate recursive presentation.
    ##thm FDIFF_FUPDATE
 ```
 
-There is one last, even more specialised, instance of `DRESTRICT` called `FMINUS`:
+There are two, even more specialised, instances of `DRESTRICT`
+called `FMINUS` and `FINTER`:
 
 ```repl
    ##thm FMINUS_def
+   ##thm FINTER_def
 ```
 
 **Union and sub-maps.**
