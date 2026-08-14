@@ -17,6 +17,30 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
     {value : term,
      provenance : Refute_Cert_Model.provenance option}
 
+  datatype replay_hole_display =
+      DisplayUnknown
+    | DisplayIrrelevant
+    | DisplayUnrepresented
+    | DisplayFunctionFallback
+
+  datatype replay_hole_origin =
+      AnyRepresentation
+    | OptionalAbsent
+    | IncompleteFunctionFallback
+    | UnknownFunctionPoint
+    | PartialSetMembership
+    | UnrepresentedSetElement
+    | FunctionDefault
+
+  type replay_hole =
+    {id : int,
+     variable : term,
+     display : replay_hole_display,
+     origin : replay_hole_origin}
+
+  type replay_sidecar = {holes : replay_hole list}
+  val empty_replay_sidecar : replay_sidecar
+
   type reconstruction =
     {bindings : (term * term) list,
      evals : (term * term) list,
@@ -101,8 +125,10 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
      bounds : raw_bound list} ->
     {raw : reconstruction,
+     certification : reconstruction,
      displayed : reconstruction,
      replay_hints : replay_hint list,
+     replay_sidecar : replay_sidecar,
      postprocessors : term_postprocessor_snapshot}
 
   val model_report : reconstruction -> Refute_Core.model_report
@@ -112,8 +138,19 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   val assignment_operator : string -> string
   val certification_env :
     (term * term) list -> (term * term) list option
+  val certification_env_with_holes :
+    replay_sidecar -> (term * term) list -> (term * term) list option
   val certification_hint_count_for_test :
     (hol_type * term list * bool) list -> replay_hint list -> int
+  val certification_copy_for_test :
+    (hol_type * int) list option ->
+    (hol_type * term list * bool) list -> term -> term list ->
+    (term * term) list -> replay_hint list -> replay_sidecar ->
+    {original : term,
+     eval_terms : term list,
+     env : (term * term) list,
+     hints : Refute_Cert_Model.replay_hint list,
+     holes : term list} option
   val certifiable : bool -> (term * term) list -> bool
   val genuine_means_genuine :
     {got_all_mono_user_axioms : bool,
@@ -127,6 +164,8 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      original : term,
      eval_terms : term list,
      reconstruction : reconstruction,
+     certification : reconstruction,
+     replay_sidecar : replay_sidecar,
      replay_hints : replay_hint list,
      cex : Refute_Core.counterexample,
      sound : bool,
@@ -158,6 +197,30 @@ structure Util = Refute_ModelFinder_Util
 type replay_hint =
   {value : term,
    provenance : Refute_Cert_Model.provenance option}
+
+datatype replay_hole_display =
+    DisplayUnknown
+  | DisplayIrrelevant
+  | DisplayUnrepresented
+  | DisplayFunctionFallback
+
+datatype replay_hole_origin =
+    AnyRepresentation
+  | OptionalAbsent
+  | IncompleteFunctionFallback
+  | UnknownFunctionPoint
+  | PartialSetMembership
+  | UnrepresentedSetElement
+  | FunctionDefault
+
+type replay_hole =
+  {id : int,
+   variable : term,
+   display : replay_hole_display,
+   origin : replay_hole_origin}
+
+type replay_sidecar = {holes : replay_hole list}
+val empty_replay_sidecar : replay_sidecar = {holes = []}
 
 type reconstruction =
   {bindings : (term * term) list,
@@ -356,6 +419,13 @@ fun new_atom_pool () : atom_pool =
          (Portable.pair_compare (Type.compare, Int.compare)),
        used = Redblackmap.mkDict Type.compare}
 
+type replay_hole_pool =
+  {next : int,
+   holes : replay_hole list} ref
+
+fun new_replay_hole_pool () : replay_hole_pool =
+  ref {next = 0, holes = []}
+
 type context =
   {scope : scope,
    atoms : (hol_type option * string list) list,
@@ -363,10 +433,35 @@ type context =
    rel_table : nut MFNT.NameTable.table,
    bounds : raw_bound list,
    atom_avoids : term list,
-   pool : atom_pool}
+   pool : atom_pool,
+   replay_holes : replay_hole_pool}
 
 fun err function message =
   Feedback.mk_HOL_ERR "Refute_ModelFinder_Model" function message
+
+fun fresh_replay_hole ({replay_holes, ...} : context) display origin ty =
+  let
+    val {next, holes} = !replay_holes
+    val variable = MFN.mk_replay_hole next ty
+    val hole =
+      {id = next, variable = variable, display = display, origin = origin}
+  in
+    replay_holes := {next = next + 1, holes = hole :: holes};
+    variable
+  end
+
+fun set_replay_hole_origin ({replay_holes, ...} : context) variable origin =
+  let
+    val {next, holes} = !replay_holes
+    fun update (hole as
+          {id, variable = candidate, display, origin = old} : replay_hole) =
+      if Term.aconv candidate variable then
+        {id = id, variable = candidate, display = display, origin = origin}
+      else
+        hole
+  in
+    replay_holes := {next = next, holes = map update holes}
+  end
 
 fun member_tuple tuple = List.exists (fn other => other = tuple)
 
@@ -433,6 +528,11 @@ fun atom_term ({atoms, atom_avoids, pool, ...} : context) ty atom =
         Term.mk_var (List.nth (overrides, number - 1), ty)
       else
         MFN.fake_atom number ty
+    val requested =
+      if MFN.is_replay_hole_name (#1 (Term.dest_var requested)) then
+        Term.mk_var ("user$" ^ #1 (Term.dest_var requested), ty)
+      else
+        requested
   in
     case Redblackmap.peek (terms, key) of
         SOME assigned => assigned
@@ -472,28 +572,31 @@ fun sort_terms pairs =
     map #3 (Listsort.sort compare (tag 0 pairs))
   end
 
-fun is_unknown term =
-  Term.is_var term andalso #1 (Term.dest_var term) = "?"
-
 fun make_update (point, value) base =
   Term.mk_comb (combinSyntax.mk_update (point, value), base)
 
-fun make_fun ({scope, ...} : context) actual_domain_ty
+fun make_fun (context as {scope, ...} : context) actual_domain_ty
       display_domain_ty display_range_ty pairs =
   let
     val complete = MFS.is_complete_type (#data_types scope) false
       actual_domain_ty
-    val marker =
-      if complete then MFN.irrelevant_marker display_range_ty
-      else MFN.unknown_marker display_range_ty
-    val base = combinSyntax.mk_K_1 (marker, display_domain_ty)
-    val determined = List.filter (not o is_unknown o #2) pairs
+    val origin =
+      if complete then FunctionDefault else IncompleteFunctionFallback
+    (* A function-valued hole leaves different unspecified points
+       independent.  The public renderer restores the legacy [K ?]/[K _]
+       spelling and hides direct unknown-valued rows. *)
+    val base = fresh_replay_hole context DisplayFunctionFallback origin
+      (Type.-->(display_domain_ty, display_range_ty))
+    val _ = List.app (fn (_, value) =>
+      if MFN.is_replay_hole value then
+        set_replay_hole_origin context value UnknownFunctionPoint
+      else ()) pairs
   in
     List.foldl (fn (pair, result) => make_update pair result)
-      base (sort_terms determined)
+      base (sort_terms pairs)
   end
 
-fun make_set ({scope, ...} : context) maybe_opt actual_element_ty
+fun make_set (context as {scope, ...} : context) maybe_opt actual_element_ty
       display_element_ty pairs =
   let
     val present = map #1 (List.filter
@@ -506,7 +609,8 @@ fun make_set ({scope, ...} : context) maybe_opt actual_element_ty
       not (MFS.is_complete_type (#data_types scope) false actual_element_ty)
     val elements =
       if maybe_opt andalso incomplete then
-        present @ [MFN.unrepresented_marker_ascii display_element_ty]
+        present @ [fresh_replay_hole context DisplayUnrepresented
+          UnrepresentedSetElement display_element_ty]
       else
         present
     fun insert (element, set) = pred_setSyntax.mk_insert (element, set)
@@ -515,7 +619,8 @@ fun make_set ({scope, ...} : context) maybe_opt actual_element_ty
        true tuples while discarding unknown memberships would therefore make
        a solver partiality look like a negative fact. *)
     if has_unknown then
-      MFN.unknown_marker (pred_setSyntax.mk_set_type display_element_ty)
+      fresh_replay_hole context DisplayUnknown PartialSetMembership
+        (pred_setSyntax.mk_set_type display_element_ty)
     else
       List.foldr insert (pred_setSyntax.mk_empty display_element_ty) elements
   end
@@ -572,8 +677,8 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
 
     fun term_for_rep maybe_opt seen ty representation tuples =
       case (representation, tuples) of
-          (MFR.Any, _) => MFN.unknown_marker
-            (MFH.uniterize_unarize_unbox_etc_type ty)
+          (MFR.Any, _) => fresh_replay_hole context DisplayUnknown
+            AnyRepresentation (MFH.uniterize_unarize_unbox_etc_type ty)
         | (MFR.Formula _, _) =>
             if null tuples then boolSyntax.F else boolSyntax.T
         | (MFR.Atom (card, offset), [[atom]]) =>
@@ -605,9 +710,16 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
               val domains = List.tabulate (card, fn atom =>
                 MFH.unarize_unbox_etc_term
                   (term_for_atom seen domain_ty atom card))
-              val ranges = map (fn chunk =>
-                MFH.unarize_unbox_etc_term
-                  (term_for_rep true seen range_ty range_rep [chunk])) chunks
+              fun range chunk =
+                let
+                  val value = MFH.unarize_unbox_etc_term
+                    (term_for_rep true seen range_ty range_rep [chunk])
+                  val _ = case range_rep of
+                      MFR.Any => set_replay_hole_origin context value
+                        UnknownFunctionPoint
+                    | _ => ()
+                in value end
+              val ranges = map range chunks
             in
               if length domains <> length ranges then
                 raise err "term_for_rep" "malformed vector tuple"
@@ -650,17 +762,23 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
                 MFH.unarize_unbox_etc_term
                   (term_for_rep false seen domain_ty domain_rep [tuple]))
                 combinations
-              val ranges = map (fn tuple =>
-                MFH.unarize_unbox_etc_term
-                  (term_for_rep false seen range_ty range_rep
-                    (tails tuple)))
-                combinations
+              fun range tuple =
+                let
+                  val value = MFH.unarize_unbox_etc_term
+                    (term_for_rep false seen range_ty range_rep
+                      (tails tuple))
+                  val _ = case range_rep of
+                      MFR.Any => set_replay_hole_origin context value
+                        UnknownFunctionPoint
+                    | _ => ()
+                in value end
+              val ranges = map range combinations
             in
               make_fun_or_set context maybe_opt ty
                 (ListPair.zip (domains, ranges))
             end
-        | (MFR.Opt inner, []) => MFN.unknown_marker
-            (MFH.uniterize_unarize_unbox_etc_type ty)
+        | (MFR.Opt inner, []) => fresh_replay_hole context DisplayUnknown
+            OptionalAbsent (MFH.uniterize_unarize_unbox_etc_type ty)
         | (MFR.Opt inner, _) => term_for_rep true seen ty inner tuples
         | _ => raise err "term_for_rep"
             ("cannot decode " ^ MFR.string_for_rep representation ^
@@ -814,14 +932,6 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
     MFH.unarize_unbox_etc_term
       (term_for_rep maybe_opt [] ty representation tuples)
   end
-
-fun term_for_rep {scope, atoms, sel_names, rel_table, bounds, maybe_opt,
-                  ty, representation, tuples} =
-  reconstruct_term
-    {scope = scope, atoms = atoms, sel_names = sel_names,
-     rel_table = rel_table, bounds = bounds, atom_avoids = [],
-     pool = new_atom_pool ()}
-    maybe_opt ty representation tuples
 
 fun free_name_for_term free_names term =
   let val (name, ty) = Term.dest_var term
@@ -1589,13 +1699,102 @@ fun bisimilar_values _ 0 _ = true
           Term.aconv left right
       end
 
+fun replay_hole_for holes term =
+  if not (Term.is_var term) then NONE
+  else
+    let val name = #1 (Term.dest_var term)
+    in
+      List.find (fn ({variable, ...} : replay_hole) =>
+        #1 (Term.dest_var variable) = name) holes
+    end
+
+fun render_replay_holes holes term =
+  let
+    fun marker DisplayUnknown ty = MFN.unknown_marker ty
+      | marker DisplayIrrelevant ty = MFN.irrelevant_marker ty
+      | marker DisplayUnrepresented ty =
+          MFN.unrepresented_marker_ascii ty
+      | marker DisplayFunctionFallback _ =
+          raise err "render_replay_holes" "function hole used as scalar"
+
+    fun project occurrence
+          ({display = DisplayFunctionFallback, origin, ...} : replay_hole) =
+          let
+            val (domain_ty, range_ty) = Type.dom_rng (Term.type_of occurrence)
+            val body =
+              case origin of
+                  FunctionDefault => MFN.irrelevant_marker range_ty
+                | _ => MFN.unknown_marker range_ty
+          in
+            combinSyntax.mk_K_1 (body, domain_ty)
+          end
+      | project occurrence ({display, ...} : replay_hole) =
+          marker display (Term.type_of occurrence)
+
+    fun direct_unknown value =
+      case replay_hole_for holes value of
+          SOME ({display = DisplayUnknown, ...} : replay_hole) => true
+        | _ => false
+
+    fun render candidate =
+      case replay_hole_for holes candidate of
+          SOME hole => project candidate hole
+        | NONE =>
+            (case Lib.total combinSyntax.dest_update_comb candidate of
+                 SOME ((point, value), base) =>
+                   if direct_unknown value then render base
+                   else make_update (render point, render value) (render base)
+               | NONE =>
+                   if Term.is_abs candidate then
+                     let val (variable, body) = Term.dest_abs candidate
+                     in Term.mk_abs (variable, render body) end
+                   else
+                     (case Lib.total Term.dest_comb candidate of
+                          SOME (function, argument) =>
+                            Term.mk_comb (render function, render argument)
+                        | NONE => candidate))
+  in
+    render term
+  end
+
+fun reconstruction_terms
+      ({bindings, evals, skolems, consts, types, ...} : reconstruction) =
+  List.concat (map (fn (left, right) => [left, right]) bindings) @
+  List.concat (map (fn (left, right) => [left, right]) evals) @
+  map #2 skolems @
+  List.concat (map (fn (left, _, right) => [left, right]) consts) @
+  List.concat (map #2 types)
+
+fun sidecar_for holes reconstruction : replay_sidecar =
+  let
+    val frees = Refute_Util.distinct_terms
+      (List.concat (map Term.free_vars_lr
+        (reconstruction_terms reconstruction)))
+  in
+    {holes = List.filter (fn ({variable, ...} : replay_hole) =>
+       Util.aconv_member variable frees) holes}
+  end
+
+fun term_for_rep {scope, atoms, sel_names, rel_table, bounds, maybe_opt,
+                  ty, representation, tuples} =
+  let
+    val replay_holes = new_replay_hole_pool ()
+    val context =
+      {scope = scope, atoms = atoms, sel_names = sel_names,
+       rel_table = rel_table, bounds = bounds, atom_avoids = [],
+       pool = new_atom_pool (), replay_holes = replay_holes}
+    val private = reconstruct_term context maybe_opt ty representation tuples
+  in
+    render_replay_holes (rev (#holes (!replay_holes))) private
+  end
+
 fun reconstruct_with formatting
       {scope, atoms, special_funs, real_frees, eval_terms,
        free_names, sel_names, nonsel_names, rel_table, bounds} =
   let
-    (* One immutable callback snapshot governs the entire displayed model.
-       Raw terms below never consult it and remain suitable for
-       certification. *)
+    (* One immutable callback snapshot governs the displayed model.  The raw
+       public view never consults callbacks; certification uses its separate
+       private view containing sidecar-declared replay holes. *)
     val postprocessors = snapshot_term_postprocessors ()
     val skolem_infos =
       case formatting of
@@ -1606,11 +1805,15 @@ fun reconstruct_with formatting
        rel_table = rel_table, bounds = bounds,
        atom_avoids = List.concat
          (map Term.free_vars_lr (real_frees @ eval_terms)),
-       pool = new_atom_pool ()}
+       pool = new_atom_pool (), replay_holes = new_replay_hole_pool ()}
+
+    fun current_holes () = rev (#holes (!(#replay_holes context)))
+    fun public_value value = render_replay_holes (current_holes ()) value
 
     fun decode name =
       case MFNT.rep_of name of
-          MFR.Any => MFN.unknown_marker
+          MFR.Any => fresh_replay_hole context DisplayUnknown
+            AnyRepresentation
             (MFH.uniterize_unarize_unbox_etc_type (MFNT.type_of name))
         | representation => reconstruct_term context
             (not (MFNT.is_fully_representable_set name))
@@ -1625,8 +1828,12 @@ fun reconstruct_with formatting
 
     fun binding term =
       let val name = free_name_for_term free_names term
-          val value = decode name
-      in ((term, value), (term, formatted_value term value)) end
+          val private_value = decode name
+          val raw_value = public_value private_value
+      in
+        ((term, private_value), (term, raw_value),
+         (term, formatted_value term raw_value))
+      end
 
     fun curry_uncurried_value nickname display_ty value =
       case uncurry_info nickname of
@@ -1661,28 +1868,36 @@ fun reconstruct_with formatting
         List.find matches skolem_infos
       end
 
-    fun classify (name, ((evals, skolems, consts, replay_hints),
-                         (display_evals, display_skolems,
-                          display_consts))) =
+    fun classify (name,
+          ((cert_evals, cert_skolems, cert_consts, replay_hints),
+           (raw_evals, raw_skolems, raw_consts),
+           (display_evals, display_skolems, display_consts))) =
       let
         val nickname = MFNT.nickname_of name
-        val raw_value = decode name
+        val private_raw_value = decode name
+        val raw_value = public_value private_raw_value
         val lhs = lhs_for_constant special_funs nickname
           (MFNT.type_of name)
-        val ordinary_value = curry_uncurried_value nickname
+        val private_value = curry_uncurried_value nickname
+          (Term.type_of lhs) private_raw_value
+        val raw_value = curry_uncurried_value nickname
           (Term.type_of lhs) raw_value
         val display_value =
           case formatting of
-              NONE => ordinary_value
+              NONE => raw_value
             | SOME (format_context, formats) => format_fun
                 (format_term_type_for_name format_context formats special_funs
                   nickname lhs) raw_value
       in
         if MFNT.is_skolem_name name then
-          ((evals, (MFN.original_name nickname, ordinary_value) :: skolems,
-            consts,
-            {value = ordinary_value,
+          ((cert_evals,
+            (MFN.original_name nickname, private_value) :: cert_skolems,
+            cert_consts,
+            {value = private_value,
              provenance = replay_provenance nickname} :: replay_hints),
+           (raw_evals,
+            (MFN.original_name nickname, raw_value) :: raw_skolems,
+            raw_consts),
            (display_evals,
             (MFN.original_name nickname, display_value) :: display_skolems,
             display_consts))
@@ -1692,19 +1907,25 @@ fun reconstruct_with formatting
                 if index < length eval_terms then
                   let val eval_term = List.nth (eval_terms, index)
                   in
-                    (((eval_term, ordinary_value) :: evals,
-                      skolems, consts, replay_hints),
-                     ((eval_term, formatted_value eval_term ordinary_value) ::
+                    (((eval_term, private_value) :: cert_evals,
+                      cert_skolems, cert_consts, replay_hints),
+                     ((eval_term, raw_value) :: raw_evals,
+                      raw_skolems, raw_consts),
+                     ((eval_term, formatted_value eval_term raw_value) ::
                         display_evals,
                       display_skolems, display_consts))
                   end
                 else
-                  ((evals, skolems, consts, replay_hints),
+                  ((cert_evals, cert_skolems, cert_consts, replay_hints),
+                   (raw_evals, raw_skolems, raw_consts),
                    (display_evals, display_skolems, display_consts))
             | NONE =>
-                ((evals, skolems,
-                  (lhs, assignment_operator nickname, ordinary_value) ::
-                    consts, replay_hints),
+                ((cert_evals, cert_skolems,
+                  (lhs, assignment_operator nickname, private_value) ::
+                    cert_consts, replay_hints),
+                 (raw_evals, raw_skolems,
+                  (lhs, assignment_operator nickname, raw_value) ::
+                    raw_consts),
                  (display_evals, display_skolems,
                   (lhs, assignment_operator nickname, display_value) ::
                     display_consts))
@@ -1718,9 +1939,11 @@ fun reconstruct_with formatting
       end
 
     val displayed_names = List.filter (not o is_bisim_support) nonsel_names
-    val ((evals, skolems, consts, replay_hints),
+    val ((cert_evals, cert_skolems, cert_consts, replay_hints),
+         (raw_evals, raw_skolems, raw_consts),
          (display_evals, display_skolems, display_consts)) =
-      List.foldl classify (([], [], [], []), ([], [], [])) displayed_names
+      List.foldl classify
+        (([], [], [], []), ([], [], []), ([], [], [])) displayed_names
 
     fun values_for_type (spec : MFS.data_type_spec) =
       let
@@ -1756,7 +1979,9 @@ fun reconstruct_with formatting
     val report_types = deep_types @
       List.concat (map integer_type [MFH.num_type, MFH.int_type]) @
       List.concat (map type_variable_spec (#card_assigns scope))
-    val types = map values_for_type report_types
+    val cert_types = map values_for_type report_types
+    val raw_types = map (fn (ty, values, complete) =>
+      (ty, map public_value values, complete)) cert_types
     val codatatypes = List.filter #co (#data_types scope)
     val co_types = map #typ codatatypes
     val max_depth = List.foldl
@@ -1773,7 +1998,10 @@ fun reconstruct_with formatting
       end
     val codatatypes_ok = #bisim_depth scope >= 0 orelse
       List.all wellformed codatatypes
-    val (bindings, display_bindings) = ListPair.unzip (map binding real_frees)
+    val binding_views = map binding real_frees
+    val cert_bindings = map #1 binding_views
+    val raw_bindings = map #2 binding_views
+    val display_bindings = map #3 binding_views
     fun result bindings evals skolems consts types =
       {bindings = bindings, evals = rev evals, skolems = rev skolems,
        consts = rev consts, types = types, codatatypes_ok = codatatypes_ok}
@@ -1790,15 +2018,20 @@ fun reconstruct_with formatting
       (map process_pair display_evals)
       (map process_skolem display_skolems)
       (map process_const display_consts)
-      (map process_type types)
+      (map process_type raw_types)
+    val certification = result cert_bindings cert_evals cert_skolems
+      cert_consts cert_types
+    val sidecar = sidecar_for (current_holes ()) certification
   in
-    {raw = result bindings evals skolems consts types,
+    {raw = result raw_bindings raw_evals raw_skolems raw_consts raw_types,
+     certification = certification,
      displayed =
        (case formatting of
             NONE => result display_bindings display_evals display_skolems
-              display_consts types
+              display_consts raw_types
           | SOME _ => displayed_result ()),
      replay_hints = rev replay_hints,
+     replay_sidecar = sidecar,
      postprocessors = postprocessors}
   end
 
@@ -1817,6 +2050,9 @@ fun reconstruct_formatted arguments = #displayed (reconstruct_both arguments)
 
 fun model_report ({skolems, consts, types, ...} : reconstruction) =
   {skolems = skolems, consts = consts, types = types}
+
+fun is_unknown term =
+  Term.is_var term andalso #1 (Term.dest_var term) = "?"
 
 fun display_counterexample postprocessors
       (reconstructed : reconstruction)
@@ -1879,6 +2115,38 @@ fun certification_env bindings =
     else NONE
   end
 
+fun valid_replay_sidecar ({holes} : replay_sidecar) =
+  let
+    fun distinct eq values =
+      let
+        fun loop _ [] = true
+          | loop seen (value :: rest) =
+              not (List.exists (eq value) seen) andalso
+              loop (value :: seen) rest
+      in
+        loop [] values
+      end
+    val ids = map #id holes
+    val variables = map #variable holes
+  in
+    List.all (fn ({id, variable, ...} : replay_hole) =>
+      id >= 0 andalso Term.is_var variable andalso
+      #1 (Term.dest_var variable) = MFN.replay_hole_name id) holes andalso
+    distinct (fn left => fn right => left = right) ids andalso
+    distinct (fn left => fn right => Term.aconv left right) variables
+  end
+
+fun certification_env_with_holes (sidecar as {holes}) bindings =
+  let
+    val declared = map #variable holes
+    fun authorized value = List.all (fn free =>
+      Util.aconv_member free declared) (Term.free_vars_lr value)
+  in
+    if valid_replay_sidecar sidecar andalso List.all (authorized o #2) bindings
+    then SOME bindings
+    else NONE
+  end
+
 fun rf_type card =
   Type.mk_thy_type
     {Thy = "refute", Tyop = "rf" ^ Int.toString card, Args = []}
@@ -1910,7 +2178,8 @@ fun certification_hint_count_for_test types replay_hints =
    the static rf_k enum and its displayed fake atoms are transported to the
    corresponding constructors.  The reconstructed model itself remains
    polymorphic, so none of these rf terms escape into model display. *)
-fun certification_copy scope types original eval_terms bindings replay_hints =
+fun certification_copy scope types original eval_terms bindings replay_hints
+      (sidecar as {holes}) =
   let
     val (replay_hints, type_values) =
       certification_hint_inputs types replay_hints
@@ -1935,22 +2204,25 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
                    SOME ((tyvar, card) :: rows)
                  else NONE
              | _ => NONE)
-    fun optional_values copy values =
+    fun authorized declared value = List.all (fn free =>
+      Util.aconv_member free declared) (Term.free_vars_lr value)
+    fun optional_values copy declared values =
       List.mapPartial (fn value =>
         (case Lib.total copy value of
              SOME copied =>
-               if null (Term.free_vars_lr copied) then SOME copied else NONE
+               if authorized declared copied then SOME copied else NONE
            | NONE => NONE)) values
     fun copy_provenance copy_type provenance =
       Option.map (Refute_Skolem.map_types copy_type) provenance
-    fun finish copied_original copied_evals env copy copy_type =
+    fun finish copied_original copied_evals env copied_holes copy copy_type =
       let
         val initial = map #2 env
+        val declared = map #variable copied_holes
         val copied_hints = List.mapPartial (fn
           ({value, provenance, ...} : replay_hint) =>
             case Lib.total copy value of
                 SOME copied =>
-                  if null (Term.free_vars_lr copied) then
+                  if authorized declared copied then
                     SOME
                       {term = copied,
                        source = Refute_Cert_Model.SkolemValue,
@@ -1960,7 +2232,7 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
         val copied_types = map (fn value =>
           {term = value,
            source = Refute_Cert_Model.TypeValue,
-           provenance = NONE}) (optional_values copy type_values)
+           provenance = NONE}) (optional_values copy declared type_values)
         fun already_seen term accumulated =
           Util.aconv_member term initial orelse
           List.exists (fn
@@ -1976,12 +2248,20 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
       in
         SOME
           {original = copied_original, eval_terms = copied_evals,
-           env = env, hints = hints}
+           env = env, hints = hints, holes = declared}
       end
+    fun control_has_hole tm = List.exists (fn ({variable, ...} : replay_hole) =>
+      Term.free_in variable tm) holes
+    val sidecar_admissible =
+      valid_replay_sidecar sidecar andalso
+      not (control_has_hole original) andalso
+      List.all (not o control_has_hole) eval_terms andalso
+      List.all (not o control_has_hole o #1) bindings
   in
-    if null tyvars then
-      (case certification_env bindings of
-           SOME env => finish original eval_terms env replace_irrelevant
+    if not sidecar_admissible then NONE
+    else if null tyvars then
+      (case certification_env_with_holes sidecar bindings of
+           SOME env => finish original eval_terms env holes (fn value => value)
              (fn ty => ty)
          | NONE => NONE)
     else
@@ -2037,20 +2317,29 @@ fun certification_copy scope types original eval_terms bindings replay_hints =
                       val (source_atoms, target_atoms) =
                         fresh_atoms atom_images 0 avoids [] []
                       fun copy_value value = Term.subst target_atoms
-                        (Term.inst theta
-                          (Term.subst source_atoms (replace_irrelevant value)))
+                        (Term.inst theta (Term.subst source_atoms value))
                       val env = map (fn (variable, value) =>
                         (Term.inst theta variable, copy_value value)) bindings
+                      val copied_holes = map (fn
+                        ({id, variable, display, origin} : replay_hole) =>
+                          {id = id, variable = copy_value variable,
+                           display = display, origin = origin}) holes
+                      val copied_sidecar = {holes = copied_holes}
                     in
-                      if List.all (null o Term.free_vars_lr o #2) env then
+                      if Option.isSome
+                           (certification_env_with_holes copied_sidecar env)
+                      then
                         finish (Term.inst theta original)
-                          (map (Term.inst theta) eval_terms) env copy_value
+                          (map (Term.inst theta) eval_terms) env copied_holes
+                          copy_value
                           (Type.type_subst theta)
                       else
                         NONE
                     end
             end
   end
+
+val certification_copy_for_test = certification_copy
 
 fun certifiable executable bindings =
   executable andalso Option.isSome (certification_env bindings)
@@ -2077,26 +2366,33 @@ fun fallback_certainty sound genuine reasons =
   else Refute_Core.Potential reasons
 
 fun certify {executable, original, eval_terms,
-             reconstruction = reconstructed, replay_hints, cex, sound,
+             reconstruction = reconstructed,
+             certification = private_reconstruction, replay_sidecar,
+             replay_hints, cex, sound,
              genuine_means_genuine = genuine, reasons, deadline} =
   let
-    val {bindings, evals, types, codatatypes_ok, ...} = reconstructed
+    val {bindings, evals, codatatypes_ok, ...} = reconstructed
+    val {bindings = private_bindings, types = private_types,
+         codatatypes_ok = private_codatatypes_ok, ...} =
+      private_reconstruction
     val genuine = genuine andalso codatatypes_ok
     val model = SOME (model_report reconstructed)
     val base = replace_cex cex (fallback_certainty sound genuine reasons)
       bindings evals NONE model
   in
-    case if executable andalso codatatypes_ok then
-           certification_copy (#scope cex) types original eval_terms
-             bindings replay_hints
+    case if executable andalso codatatypes_ok andalso
+            private_codatatypes_ok then
+           certification_copy (#scope cex) private_types original eval_terms
+             private_bindings replay_hints replay_sidecar
          else NONE of
         NONE => Keep base
       | SOME {original = cert_original, eval_terms = cert_evals,
-              env, hints} =>
+              env, hints, holes} =>
           let
             val (replay, replay_diagnostics) =
-              Refute_Cert_Model.certify_detailed_rich
+              Refute_Cert_Model.certify_portfolio_detailed_rich
                 {original = cert_original, env = env, hints = hints,
+                 holes = holes,
                  policy = Refute_Cert_Model.default_policy 10000,
                  deadline = deadline}
             fun trace_candidates () =
@@ -2111,18 +2407,59 @@ fun certify {executable, original, eval_terms,
                   String.concatWith ", " (map (fn (_, candidate, _) =>
                     Parse.term_to_string candidate) shown) ^ suffix)
               end
+            fun trace_attempts () =
+              let
+                val sidecar_holes = #holes replay_sidecar
+                fun count origin = length (List.filter (fn
+                  ({origin = actual, ...} : replay_hole) =>
+                    actual = origin) sidecar_holes)
+                fun row (label, origin) =
+                  label ^ "=" ^ Int.toString (count origin)
+                val origins =
+                  [("any", AnyRepresentation),
+                   ("optional", OptionalAbsent),
+                   ("function-fallback", IncompleteFunctionFallback),
+                   ("function-point", UnknownFunctionPoint),
+                   ("set-membership", PartialSetMembership),
+                   ("set-unrepresented", UnrepresentedSetElement),
+                   ("function-default", FunctionDefault)]
+              in
+                HOL_MESG ("Refute model replay attempts: schematic=" ^
+                  Int.toString (#schematic_attempts replay_diagnostics) ^
+                  ", completions=" ^
+                  Int.toString (#completion_attempts replay_diagnostics) ^
+                  ", holes={" ^
+                  String.concatWith ", " (map row origins) ^ "}")
+              end
+            val _ = if current_trace "Refute" >= 2 then trace_attempts ()
+              else ()
           in
           (case replay of
-               Refute_Cert_Model.Certified certificate =>
+             Refute_Cert_Model.Certified certificate =>
                  (* A genuine result may display only values established by
                     the kernel certificate.  Decoded solver values are
                     useful reconstruction data, but are not certificates. *)
-                 let val values = map (fn tm =>
-                   (tm, Refute_Cert.eval_term env tm)) cert_evals
-                 in
-                   Keep (replace_cex base Refute_Core.Genuine bindings
-                     values (SOME certificate) NONE)
-                 end
+                 if List.exists (fn hole =>
+                      List.exists (Term.free_in hole)
+                        (Thm.concl certificate :: Thm.hyp certificate)) holes
+                 then Keep base
+                 else
+                   let
+                     val _ = MFN.assert_no_reserved_in_theorem
+                       "model replay" certificate
+                     fun safe_eval tm =
+                       let val value = Refute_Cert.eval_term env tm
+                       in
+                         if List.exists MFN.is_replay_hole
+                              (Term.free_vars_lr value)
+                         then NONE
+                         else SOME (tm, value)
+                       end
+                     val values = List.mapPartial safe_eval cert_evals
+                   in
+                     Keep (replace_cex base Refute_Core.Genuine bindings
+                       values (SOME certificate) NONE)
+                   end
              | Refute_Cert_Model.NoCertificate reason =>
                  let
                    val _ = if current_trace "Refute" >= 2 then

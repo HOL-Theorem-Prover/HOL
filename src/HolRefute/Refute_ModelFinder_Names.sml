@@ -24,6 +24,7 @@ structure Refute_ModelFinder_Names = struct
   val cong_var_prefix = reserved_prefix ^ "c"
   val uncurry_prefix = reserved_prefix ^ "unc"
   val eval_prefix = reserved_prefix ^ "eval"
+  val replay_hole_prefix = reserved_prefix ^ "replay_hole" ^ name_sep
   val iter_var_prefix = "i"
   val cyclic_co_val_name = "ω"
   val cyclic_co_val_name_ascii = "w"
@@ -224,6 +225,24 @@ structure Refute_ModelFinder_Names = struct
       raise err "mk_eval" "negative serial"
     else
       mk_reserved_var (eval_prefix ^ Int.toString serial) ty
+
+  fun replay_hole_name serial =
+    if serial < 0 then
+      raise err "replay_hole_name" "negative serial"
+    else
+      replay_hole_prefix ^ Int.toString serial
+
+  fun mk_replay_hole serial ty =
+    mk_reserved_var (replay_hole_name serial) ty
+
+  (* Namespace recognition is used only to prevent fabricated model atoms
+     from colliding with present or future replay holes.  Logical hole
+     authorization is deliberately sidecar-based, never prefix-based. *)
+  fun is_replay_hole_name name = String.isPrefix replay_hole_prefix name
+
+  fun is_replay_hole term =
+    Term.is_var term andalso
+    is_replay_hole_name (#1 (Term.dest_var term))
 
   fun unknown_marker ty = Term.mk_var ("?", ty)
   fun unrepresented_marker ty = Term.mk_var ("…", ty)

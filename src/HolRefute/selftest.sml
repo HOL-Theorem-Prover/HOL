@@ -679,6 +679,9 @@ fun mf_name_round_trips () =
     MFN.is_cong_var_name (var_name congruence) andalso
     var_name (MFN.mk_numeral 3 ty) = "refute$num$3" andalso
     var_name (MFN.mk_eval 4 ty) = "refute$eval4" andalso
+    var_name (MFN.mk_replay_hole 4 ty) = "refute$replay_hole$4" andalso
+    MFN.is_replay_hole (MFN.mk_replay_hole 4 ty) andalso
+    MFN.is_replay_hole_name "refute$replay_hole$999" andalso
     var_name (MFN.unknown_marker ty) = "?" andalso
     var_name (MFN.unrepresented_marker ty) = "…" andalso
     var_name (MFN.unrepresented_marker_ascii ty) = "..." andalso
@@ -7991,8 +7994,16 @@ fun mf_model_atom_override () =
        sel_names = [], rel_table = MFNT.NameTable.empty, bounds = [],
        maybe_opt = false, ty = alpha,
        representation = MFR.Atom (2, offset), tuples = [[offset + 1]]}
+    val requested_hole = MFN.replay_hole_name 0
+    val varied = MFM.term_for_rep
+      {scope = scope, atoms = [(SOME alpha, [requested_hole])],
+       sel_names = [], rel_table = MFNT.NameTable.empty, bounds = [],
+       maybe_opt = false, ty = alpha,
+       representation = MFR.Atom (2, offset), tuples = [[offset]]}
   in
-    variable_named "red" atom
+    variable_named "red" atom andalso
+    not (MFN.is_replay_hole varied) andalso
+    #1 (Term.dest_var varied) <> requested_hole
   end
 
 val _ = require_msg (check_result mf_model_atom_override) (fn () =>
@@ -8103,15 +8114,17 @@ fun mf_term_postprocessor_traversal () =
     val any_free = Term.mk_var ("any_free", any_ty)
     val any_name = MFNT.FreeName ("any_free", any_ty, MFR.Any)
     val any_scope = mf_translation_scope [(any_ty, 1)] []
-    val {raw, displayed, ...} = MFM.reconstruct_both
+    val {raw, certification, displayed, replay_sidecar, ...} =
+      MFM.reconstruct_both
       {context = mf_hol_context, formats = [], scope = any_scope,
        atoms = [(NONE, [])], special_funs = [], real_frees = [any_free],
        eval_terms = [], free_names = [any_name], sel_names = [],
        nonsel_names = [], rel_table = MFNT.NameTable.empty, bounds = []}
     val any_ok =
-      case (#bindings raw, #bindings displayed) of
-          ([(_, raw_value)], [(_, shown_value)]) =>
+      case (#bindings raw, #bindings certification, #bindings displayed) of
+          ([(_, raw_value)], [(_, private_value)], [(_, shown_value)]) =>
             variable_named "?" raw_value andalso
+            MFN.is_replay_hole private_value andalso
             variable_named "any-output" shown_value
         | _ => false
   in
@@ -8142,7 +8155,8 @@ fun mf_term_postprocessor_certification_isolation () =
        else ();
        ``1 : num``)
     val _ = Refute.register_term_postprocessor ``:num`` malicious
-    val {raw, displayed, ...} = MFM.reconstruct_both
+    val {raw, certification, displayed, replay_sidecar, ...} =
+      MFM.reconstruct_both
       {context = mf_hol_context, formats = [], scope = scope,
        atoms = [(NONE, [])], special_funs = [], real_frees = [x, y],
        eval_terms = [], free_names = [x_name, y_name], sel_names = [],
@@ -8163,7 +8177,9 @@ fun mf_term_postprocessor_certification_isolation () =
        cert = NONE, scope = SOME [(``:num``, 2)], model = NONE, stats = []}
     val verdict = MFM.certify
       {executable = true, original = boolSyntax.mk_eq (x, ``0 : num``),
-       eval_terms = [], reconstruction = raw, replay_hints = [],
+       eval_terms = [], reconstruction = raw,
+       certification = certification, replay_sidecar = replay_sidecar,
+       replay_hints = [],
        cex = base, sound = false, genuine_means_genuine = false,
        reasons = [], deadline = NONE}
   in
@@ -8676,6 +8692,73 @@ fun mf_model_certifiability_rules () =
 val _ = require_msg (check_result mf_model_certifiability_rules) (fn () =>
   "model certification eligibility rules changed") (fn () => ()) ()
 
+fun mf_hole_aware_certification_copy () =
+  let
+    val x = Term.mk_var ("copy_x", ``:num``)
+    val hole = MFN.mk_replay_hole 7 ``:num``
+    val undeclared = MFN.mk_replay_hole 8 ``:num``
+    val sidecar : MFM.replay_sidecar =
+      {holes = [{id = 7, variable = hole,
+                 display = MFM.DisplayUnknown,
+                 origin = MFM.AnyRepresentation}]}
+    val abstraction = Term.mk_abs
+      (Term.mk_var ("copy_bound", ``:num``), hole)
+    val application = numSyntax.mk_suc hole
+    val pair = pairSyntax.mk_pair (hole, ``0 : num``)
+    val set = pred_setSyntax.mk_insert
+      (hole, pred_setSyntax.mk_empty ``:num``)
+    val update = Term.mk_comb
+      (combinSyntax.mk_update (``0 : num``, hole),
+       combinSyntax.mk_K_1 (``0 : num``, ``:num``))
+    fun hint value : MFM.replay_hint =
+      {value = value, provenance = NONE}
+    val copied = MFM.certification_copy_for_test NONE
+      [(``:num # num``, [pair], false)] ``copy_x = 0`` []
+      [(x, hole)]
+      (map hint [abstraction, application, set, update]) sidecar
+    val rejected = MFM.certification_copy_for_test NONE [] ``copy_x = 0`` []
+      [(x, undeclared)] [] sidecar
+    val rejected_original = MFM.certification_copy_for_test NONE []
+      (boolSyntax.mk_eq (hole, ``0 : num``)) [] [(x, hole)] [] sidecar
+    val rejected_eval = MFM.certification_copy_for_test NONE []
+      ``copy_x = 0`` [hole] [(x, hole)] [] sidecar
+    val rejected_left = MFM.certification_copy_for_test NONE []
+      ``copy_x = 0`` [] [(hole, ``0 : num``)] [] sidecar
+    val alpha = ``:'a``
+    val poly_x = Term.mk_var ("poly_copy_x", alpha)
+    val poly_hole = MFN.mk_replay_hole 9 alpha
+    val poly_sidecar : MFM.replay_sidecar =
+      {holes = [{id = 9, variable = poly_hole,
+                 display = MFM.DisplayUnknown,
+                 origin = MFM.AnyRepresentation}]}
+    val poly = MFM.certification_copy_for_test (SOME [(alpha, 2)])
+      [(alpha, [MFN.fake_atom 1 alpha, MFN.fake_atom 2 alpha], true)]
+      (boolSyntax.mk_eq (poly_x, poly_x)) [] [(poly_x, poly_hole)] []
+      poly_sidecar
+  in
+    (case copied of
+         SOME {env = [(_, value)], hints, holes = [copied_hole], ...} =>
+           Term.aconv value copied_hole andalso length hints = 5 andalso
+           List.all (fn ({term, ...} : Refute_Cert_Model.replay_hint) =>
+             List.all (fn free => Term.aconv free copied_hole)
+               (Term.free_vars_lr term)) hints
+       | _ => false) andalso not (Option.isSome rejected) andalso
+    not (Option.isSome rejected_original) andalso
+    not (Option.isSome rejected_eval) andalso
+    not (Option.isSome rejected_left) andalso
+    (case poly of
+         SOME {env = [(copied_x, copied_hole)], holes = [declared], ...} =>
+           Term.aconv copied_hole declared andalso
+           Type.compare (Term.type_of copied_x,
+             Type.mk_thy_type
+               {Thy = "refute", Tyop = "rf2", Args = []}) = EQUAL
+       | _ => false)
+  end
+
+val _ = require_msg (check_result mf_hole_aware_certification_copy) (fn () =>
+  "declared holes were dropped or undeclared frees entered certification")
+  (fn () => ()) ()
+
 fun mf_replay_sidecar_preserves_generated_skolem () =
   let
     val ty = ``:num``
@@ -8724,6 +8807,284 @@ val _ = require_msg
     "raw Skolem replay identity was lost or leaked into model display")
   (fn () => ()) ()
 
+fun mf_replay_hole_identity_and_display () =
+  let
+    val left = Term.mk_var ("hole_left", ``:zoo_univ``)
+    val right = Term.mk_var ("hole_right", ``:zoo_univ``)
+    val names =
+      [MFNT.FreeName ("hole_left", ``:zoo_univ``, MFR.Any),
+       MFNT.FreeName ("hole_right", ``:zoo_univ``, MFR.Any)]
+    val scope = mf_translation_scope [(``:zoo_univ``, 1)] []
+    val reconstructed = MFM.reconstruct_both
+      {context = mf_hol_context, formats = [], scope = scope,
+       atoms = [(NONE, [])], special_funs = [], real_frees = [left, right],
+       eval_terms = [], free_names = names, sel_names = [],
+       nonsel_names = [], rel_table = MFNT.NameTable.empty, bounds = []}
+    val private_values = map #2 (#bindings (#certification reconstructed))
+    val public_values = map #2 (#bindings (#raw reconstructed))
+    val holes = #holes (#replay_sidecar reconstructed)
+    val source_question = Term.mk_var ("?", ``:num``)
+    val source_goal = boolSyntax.mk_eq (source_question, ``0 : num``)
+    val _ = MFN.assert_user_goal source_goal
+    fun private_name term = #1 (Term.dest_var term)
+  in
+    (case (private_values, holes) of
+         ([first, second], [first_hole, second_hole]) =>
+           not (Term.aconv first second) andalso
+           #id first_hole <> #id second_hole andalso
+           MFN.is_replay_hole first andalso MFN.is_replay_hole second andalso
+           private_name first <> private_name second
+       | _ => false) andalso
+    List.all (fn value => variable_named "?" value) public_values andalso
+    List.all (fn value => not (MFN.is_replay_hole value)) public_values andalso
+    Option.isSome (MFM.certification_env_with_holes
+      (#replay_sidecar reconstructed)
+      (#bindings (#certification reconstructed))) andalso
+    Option.isSome (MFM.certification_env_with_holes
+      MFM.empty_replay_sidecar [(source_question, ``0 : num``)]) andalso
+    var_name source_question = "?" andalso
+    not (Option.isSome (MFM.certification_env_with_holes
+      MFM.empty_replay_sidecar
+      (#bindings (#certification reconstructed))))
+  end
+
+val _ = require_msg (check_result mf_replay_hole_identity_and_display)
+  (fn () => "private replay-hole identity or public projection failed")
+  (fn () => ()) ()
+
+fun mf_replay_function_uncertainty () =
+  let
+    val scope = mf_translation_scope [(``:num``, 3)] []
+    val atom = MFR.Atom (3, 0)
+    val representation = MFR.Func (atom, MFR.Opt atom)
+    val variable = Term.mk_var ("partial_function", ``:num -> num``)
+    val name = MFNT.FreeName
+      ("partial_function", ``:num -> num``, representation)
+    val (_, _, rel_table) = MFNT.rename_free_vars [name]
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+    val reconstructed = MFM.reconstruct_both
+      {context = mf_hol_context, formats = [], scope = scope,
+       atoms = [(NONE, [])], special_funs = [], real_frees = [variable],
+       eval_terms = [], free_names = [name], sel_names = [],
+       nonsel_names = [], rel_table = rel_table,
+       bounds = [(MFNT.the_rel rel_table name, [[0, 1]])]}
+    val private = #2 (hd (#bindings (#certification reconstructed)))
+    val public = #2 (hd (#bindings (#raw reconstructed)))
+    val (private_updates, private_base) = combinSyntax.strip_update private
+    val (public_updates, public_base) = combinSyntax.strip_update public
+    val holes = #holes (#replay_sidecar reconstructed)
+    fun count origin = length (List.filter (fn
+      ({origin = actual, ...} : MFM.replay_hole) => actual = origin) holes)
+
+    val bool_offset = MFS.offset_of_type (#ofs scope) ``:bool``
+    val complete_representation = MFR.Func
+      (MFR.Atom (2, bool_offset), MFR.Opt atom)
+    val complete_variable =
+      Term.mk_var ("complete_function", ``:bool -> num``)
+    val complete_name = MFNT.FreeName
+      ("complete_function", ``:bool -> num``, complete_representation)
+    val (_, _, complete_rel_table) = MFNT.rename_free_vars [complete_name]
+      Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+    val complete = MFM.reconstruct_both
+      {context = mf_hol_context, formats = [], scope = scope,
+       atoms = [(NONE, [])], special_funs = [],
+       real_frees = [complete_variable], eval_terms = [],
+       free_names = [complete_name], sel_names = [], nonsel_names = [],
+       rel_table = complete_rel_table,
+       bounds = [(MFNT.the_rel complete_rel_table complete_name,
+         [[bool_offset, 1]])]}
+    val complete_private =
+      #2 (hd (#bindings (#certification complete)))
+    val complete_public = #2 (hd (#bindings (#raw complete)))
+    val (complete_private_updates, complete_private_base) =
+      combinSyntax.strip_update complete_private
+    val (complete_public_updates, complete_public_base) =
+      combinSyntax.strip_update complete_public
+    val complete_holes = #holes (#replay_sidecar complete)
+    fun complete_count origin = length (List.filter (fn
+      ({origin = actual, ...} : MFM.replay_hole) => actual = origin)
+      complete_holes)
+  in
+    length private_updates = 3 andalso length public_updates = 1 andalso
+    MFN.is_replay_hole private_base andalso
+    combinSyntax.is_K_1 public_base andalso
+    variable_named "?" (combinSyntax.dest_K_1 public_base) andalso
+    count MFM.UnknownFunctionPoint = 2 andalso
+    count MFM.IncompleteFunctionFallback = 1 andalso
+    length (Refute_Util.distinct_terms
+      (List.concat (map Term.free_vars_lr
+        (private_base :: map #2 private_updates)))) = 3 andalso
+    length complete_private_updates = 2 andalso
+    length complete_public_updates = 1 andalso
+    MFN.is_replay_hole complete_private_base andalso
+    combinSyntax.is_K_1 complete_public_base andalso
+    variable_named "_" (combinSyntax.dest_K_1 complete_public_base) andalso
+    complete_count MFM.UnknownFunctionPoint = 1 andalso
+    complete_count MFM.FunctionDefault = 1 andalso
+    length (Refute_Util.distinct_terms
+      (List.concat (map Term.free_vars_lr
+        (complete_private_base :: map #2 complete_private_updates)))) = 2
+  end
+
+val _ = require_msg (check_result mf_replay_function_uncertainty) (fn () =>
+  "function point holes or open fallback were lost during reconstruction")
+  (fn () => ()) ()
+
+fun mf_replay_optional_and_partial_set () =
+  let
+    val scope = mf_translation_scope [(``:num``, 3)] []
+    val atom = MFR.Atom (3, 0)
+    fun reconstruct variable representation tuples =
+      let
+        val (nickname, ty) = Term.dest_var variable
+        val name = MFNT.FreeName (nickname, ty, representation)
+        val (_, _, rel_table) = MFNT.rename_free_vars [name]
+          Refute_ModelFinder_Peephole.initial_pool MFNT.NameTable.empty
+      in
+        MFM.reconstruct_both
+          {context = mf_hol_context, formats = [], scope = scope,
+           atoms = [(NONE, [])], special_funs = [],
+           real_frees = [variable], eval_terms = [], free_names = [name],
+           sel_names = [], nonsel_names = [], rel_table = rel_table,
+           bounds = [(MFNT.the_rel rel_table name, tuples)]}
+      end
+    val absent = reconstruct (Term.mk_var ("absent", ``:num``))
+      (MFR.Opt atom) []
+    val bool_offset = MFS.offset_of_type (#ofs scope) ``:bool``
+    val partial = reconstruct (Term.mk_var ("partial", ``:num set``))
+      (MFR.Func (atom, MFR.Opt (MFR.Atom (2, bool_offset))))
+      [[0, bool_offset + 1]]
+    val unrepresented = reconstruct
+      (Term.mk_var ("unrepresented", ``:num set``))
+      (MFR.Opt (MFR.Func (atom, MFR.Formula
+        Refute_ModelFinder_Util.Neut))) [[0]]
+    val absent_private = #2 (hd (#bindings (#certification absent)))
+    val absent_public = #2 (hd (#bindings (#raw absent)))
+    val partial_private = #2 (hd (#bindings (#certification partial)))
+    val partial_public = #2 (hd (#bindings (#raw partial)))
+    val unrepresented_private = #2
+      (hd (#bindings (#certification unrepresented)))
+    val unrepresented_public = #2
+      (hd (#bindings (#raw unrepresented)))
+  in
+    MFN.is_replay_hole absent_private andalso
+    variable_named "?" absent_public andalso
+    (case #holes (#replay_sidecar absent) of
+         [{origin = MFM.OptionalAbsent, ...}] => true
+       | _ => false) andalso
+    MFN.is_replay_hole partial_private andalso
+    variable_named "?" partial_public andalso
+    (case #holes (#replay_sidecar partial) of
+         [{origin = MFM.PartialSetMembership, ...}] => true
+       | _ => false) andalso
+    List.exists MFN.is_replay_hole
+      (Term.free_vars_lr unrepresented_private) andalso
+    String.isSubstring "..." (Parse.term_to_string unrepresented_public)
+    andalso
+    (case #holes (#replay_sidecar unrepresented) of
+         [{origin = MFM.UnrepresentedSetElement, ...}] => true
+       | _ => false)
+  end
+
+val _ = require_msg (check_result mf_replay_optional_and_partial_set)
+  (fn () => "optional or partial-set replay provenance was lost")
+  (fn () => ()) ()
+
+fun mf_schematic_relation_replay () =
+  let
+    val relation = Term.mk_var ("r", ``:num -> num -> bool``)
+    val x = Term.mk_var ("x", ``:num``)
+    val y = Term.mk_var ("y", ``:num``)
+    val hole = MFN.mk_replay_hole 0 ``:num -> num -> bool``
+    fun update point value base = Term.mk_comb
+      (combinSyntax.mk_update (point, value), base)
+    val at_six = update ``5 : num`` boolSyntax.T
+      (combinSyntax.mk_K_1 (boolSyntax.F, ``:num``))
+    val at_five = update ``6 : num`` boolSyntax.F
+      (combinSyntax.mk_K_1 (boolSyntax.T, ``:num``))
+    val private_relation = update ``5 : num`` at_five
+      (update ``6 : num`` at_six hole)
+    val public_relation = update ``5 : num`` at_five
+      (update ``6 : num`` at_six
+        (combinSyntax.mk_K_1
+          (MFN.unknown_marker ``:num -> bool``, ``:num``)))
+    val private : MFM.reconstruction =
+      {bindings = [(relation, private_relation), (x, ``6 : num``),
+                   (y, ``5 : num``)],
+       evals = [], skolems = [], consts = [], types = [],
+       codatatypes_ok = true}
+    val public : MFM.reconstruction =
+      {bindings = [(relation, public_relation), (x, ``6 : num``),
+                   (y, ``5 : num``)],
+       evals = [], skolems = [], consts = [], types = [],
+       codatatypes_ok = true}
+    val sidecar : MFM.replay_sidecar =
+      {holes = [{id = 0, variable = hole,
+                 display = MFM.DisplayFunctionFallback,
+                 origin = MFM.IncompleteFunctionFallback}]}
+    val goal = boolSyntax.mk_imp
+      (Term.list_mk_comb (relation, [x, y]),
+       Term.list_mk_comb (relation, [y, x]))
+    val base : Refute_Core.counterexample =
+      {backend = "kodkod", substrate = "kodkod",
+       certainty = Refute_Core.Potential [], bindings = [], evals = [],
+       cert = NONE, scope = SOME [(``:num``, 7)], model = NONE, stats = []}
+  in
+    case MFM.certify
+      {executable = true, original = goal, eval_terms = [],
+       reconstruction = public, certification = private,
+       replay_sidecar = sidecar, replay_hints = [], cex = base,
+       sound = true, genuine_means_genuine = true, reasons = [],
+       deadline = NONE} of
+        MFM.Keep {certainty = Genuine, cert = SOME theorem,
+                  model = NONE, ...} =>
+          null (Thm.hyp theorem) andalso Refute_Cert.trusted theorem andalso
+          Term.aconv (Thm.concl theorem)
+            (boolSyntax.mk_neg (#2 (Refute_Cert.closure_of goal))) andalso
+          null (List.filter MFN.is_replay_hole
+            (Term.free_vars_lr (Thm.concl theorem)))
+      | _ => false
+  end
+
+val _ = require_msg (check_result mf_schematic_relation_replay) (fn () =>
+  "schematic replay did not certify the shadowed relation fallback")
+  (fn () => ()) ()
+
+fun mf_open_true_model_is_kept () =
+  let
+    val function = Term.mk_var ("open_true_f", ``:num -> num``)
+    val hole = MFN.mk_replay_hole 0 ``:num -> num``
+    val public : MFM.reconstruction =
+      {bindings = [(function, MFN.unknown_marker ``:num -> num``)],
+       evals = [], skolems = [], consts = [], types = [],
+       codatatypes_ok = true}
+    val private : MFM.reconstruction =
+      {bindings = [(function, hole)], evals = [], skolems = [], consts = [],
+       types = [], codatatypes_ok = true}
+    val sidecar : MFM.replay_sidecar =
+      {holes = [{id = 0, variable = hole,
+                 display = MFM.DisplayFunctionFallback,
+                 origin = MFM.IncompleteFunctionFallback}]}
+    val base : Refute_Core.counterexample =
+      {backend = "kodkod", substrate = "kodkod",
+       certainty = Refute_Core.Potential [], bindings = [], evals = [],
+       cert = NONE, scope = SOME [(``:num``, 2)], model = NONE, stats = []}
+  in
+    case MFM.certify
+      {executable = true, original = boolSyntax.mk_eq (function, function),
+       eval_terms = [], reconstruction = public, certification = private,
+       replay_sidecar = sidecar, replay_hints = [], cex = base,
+       sound = true, genuine_means_genuine = true, reasons = [],
+       deadline = NONE} of
+        MFM.Keep {certainty = Genuine, cert = NONE, model = SOME _, ...} =>
+          true
+      | _ => false
+  end
+
+val _ = require_msg (check_result mf_open_true_model_is_kept) (fn () =>
+  "truth of an open or chosen completion discarded the model")
+  (fn () => ()) ()
+
 fun mf_model_certification_protocol () =
   let
     val decoded_eval = (``HD ([] : num list)``, ``7``)
@@ -8738,23 +9099,31 @@ fun mf_model_certification_protocol () =
     val certified = MFM.certify
       {executable = true, original = ``F``,
        eval_terms = [#1 decoded_eval], reconstruction = reconstructed,
+       certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar,
        cex = base, sound = false, genuine_means_genuine = false,
        replay_hints = [], reasons = [], deadline = NONE}
     val discarded = MFM.certify
       {executable = true, original = ``T``, eval_terms = [],
-       reconstruction = reconstructed, cex = base, sound = false,
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar,
+       cex = base, sound = false,
        genuine_means_genuine = false, replay_hints = [], reasons = [],
        deadline = NONE}
     val sound_discarded = MFM.certify
       (* exercise the exact telemetry path for a sound model rejected by
          executable certification *)
       {executable = true, original = ``T``, eval_terms = [],
-       reconstruction = reconstructed, cex = base, sound = true,
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar,
+       cex = base, sound = true,
        genuine_means_genuine = true, replay_hints = [], reasons = [],
        deadline = NONE}
     val fallback = MFM.certify
       {executable = false, original = ``F``, eval_terms = [],
-       reconstruction = reconstructed, cex = base, sound = true,
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar,
+       cex = base, sound = true,
        genuine_means_genuine = false, replay_hints = [],
        reasons = ["Try again with wf = true"], deadline = NONE}
     val bad_codata : MFM.reconstruction =
@@ -8764,7 +9133,9 @@ fun mf_model_certification_protocol () =
       (#mf default_config) true true false
     val codata_fallback = MFM.certify
       {executable = true, original = ``F``, eval_terms = [],
-       reconstruction = bad_codata, cex = base, sound = true,
+       reconstruction = bad_codata, certification = bad_codata,
+       replay_sidecar = MFM.empty_replay_sidecar,
+       cex = base, sound = true,
        genuine_means_genuine = true, replay_hints = [],
        reasons = codata_reasons, deadline = NONE}
     val forced_config = upd_finitize
@@ -8773,7 +9144,9 @@ fun mf_model_certification_protocol () =
       (#mf forced_config) true true true
     val forced_fallback = MFM.certify
       {executable = false, original = ``F``, eval_terms = [],
-       reconstruction = reconstructed, cex = base, sound = true,
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar,
+       cex = base, sound = true,
        genuine_means_genuine = MFM.genuine_means_genuine
          {got_all_mono_user_axioms = true, no_poly_user_axioms = true,
           wfs = [], sound_finitizes = false, total_consts = NONE},
@@ -8785,7 +9158,9 @@ fun mf_model_certification_protocol () =
     val quantified = ``(?x : num. p x) ==> !x. p x``
     fun quantified_result replay_hints sound genuine reasons = MFM.certify
       {executable = true, original = quantified, eval_terms = [],
-       reconstruction = quantified_reconstruction, cex = base,
+       reconstruction = quantified_reconstruction,
+       certification = quantified_reconstruction,
+       replay_sidecar = MFM.empty_replay_sidecar, cex = base,
        replay_hints = replay_hints, sound = sound,
        genuine_means_genuine = genuine, reasons = reasons,
        deadline = NONE}
@@ -8799,6 +9174,8 @@ fun mf_model_certification_protocol () =
     val timed_out_genuine = MFM.certify
       {executable = true, original = quantified, eval_terms = [],
        reconstruction = quantified_reconstruction,
+       certification = quantified_reconstruction,
+       replay_sidecar = MFM.empty_replay_sidecar,
        replay_hints =
          [{value = ``31 : num``, provenance = NONE},
           {value = ``30 : num``, provenance = NONE}],
@@ -8890,12 +9267,16 @@ fun mf_polymorphic_model_protocol () =
        cert = NONE, scope = SOME [(ty, card)], model = NONE, stats = []}
     val small = MFM.certify
       {executable = true, original = original, eval_terms = [],
-       reconstruction = reconstructed, cex = base 2, sound = false,
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar,
+       cex = base 2, sound = false,
        replay_hints = [], genuine_means_genuine = false, reasons = [],
        deadline = NONE}
     val large = MFM.certify
       {executable = true, original = original, eval_terms = [],
-       reconstruction = reconstructed, cex = base 7, sound = true,
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar,
+       cex = base 7, sound = true,
        replay_hints = [], genuine_means_genuine = true, reasons = [],
        deadline = NONE}
     val scope = mf_translation_scope [(ty, 2)] []
@@ -8953,7 +9334,9 @@ fun mf_polymorphic_skolem_replay () =
   in
     case MFM.certify
       {executable = true, original = quantified, eval_terms = [],
-       reconstruction = reconstructed, replay_hints = replay_hints,
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar,
+       replay_hints = replay_hints,
        cex = base, sound = false, genuine_means_genuine = false,
        reasons = [], deadline = NONE} of
         MFM.Keep {certainty = Genuine, cert = SOME theorem, ...} =>
@@ -8991,7 +9374,9 @@ fun mf_merged_type_vars_rf_certification () =
   in
     case MFM.certify
       {executable = true, original = original, eval_terms = [],
-       reconstruction = reconstructed, cex = base, sound = false,
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar,
+       cex = base, sound = false,
        replay_hints = [], genuine_means_genuine = false, reasons = [],
        deadline = NONE} of
         MFM.Keep {certainty = Genuine, cert = SOME _, ...} => true
@@ -21765,6 +22150,72 @@ fun replay_provider_counters_are_pinned () =
     #applications first = #applications second
   end
 
+fun replay_completion_portfolio_policy () =
+  let
+    val boolean = Term.mk_var ("completion_p", ``:bool``)
+    val boolean_hole = MFN.mk_replay_hole 20 ``:bool``
+    val boolean_goal = boolean
+    val policy = Refute_Cert_Model.portfolio_policy_for_test
+      {fuel = 10000, candidates = 8, vectors = 16}
+    val (boolean_result, boolean_stats) =
+      Refute_Cert_Model.certify_portfolio_detailed_rich
+        {original = boolean_goal, env = [(boolean, boolean_hole)],
+         hints = [], holes = [boolean_hole], policy = policy,
+         deadline = NONE}
+
+    val x = Term.mk_var ("completion_x", ``:num``)
+    val y = Term.mk_var ("completion_y", ``:num``)
+    val x_hole = MFN.mk_replay_hole 21 ``:num``
+    val y_hole = MFN.mk_replay_hole 22 ``:num``
+    val equality = boolSyntax.mk_eq (x, y)
+    val (different_result, different_stats) =
+      Refute_Cert_Model.certify_portfolio_detailed_rich
+        {original = equality, env = [(x, x_hole), (y, y_hole)],
+         hints = [],
+         holes = [x_hole, y_hole], policy = policy, deadline = NONE}
+    val capped_policy = Refute_Cert_Model.portfolio_policy_for_test
+      {fuel = 10000, candidates = 1, vectors = 1}
+    val (capped_result, capped_stats) =
+      Refute_Cert_Model.certify_portfolio_detailed_rich
+        {original = boolean_goal, env = [(boolean, boolean_hole)],
+         hints = [], holes = [boolean_hole],
+         policy = capped_policy, deadline = NONE}
+    val zero_policy = Refute_Cert_Model.portfolio_policy_for_test
+      {fuel = 0, candidates = 8, vectors = 16}
+    val (zero_result, zero_stats) =
+      Refute_Cert_Model.certify_portfolio_detailed_rich
+        {original = boolean_goal, env = [(boolean, boolean_hole)],
+         hints = [], holes = [boolean_hole],
+         policy = zero_policy, deadline = NONE}
+    fun audited original theorem =
+      let val (_, closure, _) = Refute_Cert.closure_of original
+      in
+        null (Thm.hyp theorem) andalso Refute_Cert.trusted theorem andalso
+        Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg closure)
+      end
+  in
+    (case boolean_result of
+         Refute_Cert_Model.Certified theorem =>
+           audited boolean_goal theorem andalso
+           #completion_attempts boolean_stats >= 2
+       | _ => false) andalso
+    (case different_result of
+         Refute_Cert_Model.Certified theorem =>
+           audited equality theorem andalso
+           #completion_attempts different_stats >= 2
+       | _ => false) andalso
+    (case capped_result of
+         Refute_Cert_Model.NoCertificate _ =>
+           #completion_attempts capped_stats = 1
+       | _ => false) andalso
+    (case zero_result of
+         Refute_Cert_Model.NoCertificate _ =>
+           #consumed_fuel zero_stats = 0
+       | _ => false) andalso
+    #consumed_fuel boolean_stats <= 10000 andalso
+    #consumed_fuel different_stats <= 10000
+  end
+
 fun constructor_combination_width_is_hard_cap () =
   Refute_Cert_Model.combination_count_for_test 32
     (List.tabulate (40, fn _ => [false, true])) = 32
@@ -21782,9 +22233,13 @@ fun replay_rejects_injected_oracle () =
   let
     val oracle = Thm.mk_oracle_thm "holrefute-selftest"
       ([], ``~(!xs : num list. xs = [])``)
+    val hole = MFN.mk_replay_hole 99 ``:bool``
+    val assumed_hole = Thm.ASSUME (boolSyntax.mk_neg hole)
   in
     not (Refute_Cert_Model.audit_theorem_for_test
-      (SOME ``~(!xs : num list. xs = [])``) oracle)
+      (SOME ``~(!xs : num list. xs = [])``) oracle) andalso
+    not (Refute_Cert_Model.audit_theorem_for_test
+      (SOME (boolSyntax.mk_neg hole)) assumed_hole)
   end
 
 fun replay_resource_failures_are_classified () =
@@ -21980,6 +22435,7 @@ val expanded_model_replay_checks =
    ("bounded certification hint preparation",
     certification_hint_preparation_is_bounded),
    ("deterministic provider counters", replay_provider_counters_are_pinned),
+   ("shared-budget completion portfolio", replay_completion_portfolio_policy),
    ("injected oracle rejection", replay_rejects_injected_oracle)]
 
 val _ = List.app (fn (label, check) => require_msg
@@ -25664,6 +26120,35 @@ fun mf_quantified_model_replay_acceptance solver =
       | _ => false
   end
 
+fun mf_unknown_fallback_replay_acceptance solver =
+  let
+    val _ = tprint "Refute MF: open relation fallback certificate replay"
+    val goal = ``(r : num -> num -> bool) x y ==> r y x``
+    val config = mf_acceptance_config solver
+      |> Refute.upd_batch_size 1
+      |> Refute.upd_card [(SOME ``:num``, [7]), (NONE, [1])]
+      |> Refute.upd_max_potential 0
+      |> Refute.upd_max_genuine 1
+    val outcome = with_silent_refute (fn () => Refute.refute config goal)
+    fun has_unknown value = List.exists (fn free =>
+      Term.is_var free andalso #1 (Term.dest_var free) = "?")
+      (Term.free_vars_lr value)
+  in
+    case outcome of
+        Refute.Counterexample
+          ([cex as {backend = "kodkod", substrate = "kodkod",
+                    certainty = Refute.Genuine, cert = SOME theorem,
+                    scope = SOME scope, bindings, ...}]) =>
+            certificate_audit goal theorem andalso
+            List.exists (fn (ty, card) =>
+              Type.compare (ty, ``:num``) = EQUAL andalso card = 7) scope
+            andalso List.exists (has_unknown o #2) bindings andalso
+            String.isSubstring "Certified:" (format_outcome config outcome)
+            andalso not (String.isSubstring "Certification: uncertified"
+              (format_outcome config outcome))
+      | _ => false
+  end
+
 fun mf_inductive_model_replay_acceptance solver =
   let
     fun run label goal cards needs =
@@ -25714,6 +26199,11 @@ fun run_quantified_model_replay_acceptance () =
       mf_quantified_model_replay_acceptance
         (configured_mf_test_solver ()))) (fn () =>
       "card-32 quantified model did not yield a clean certificate")
+      (fn () => ()) ();
+    require_msg (check_result (fn () =>
+      mf_unknown_fallback_replay_acceptance
+        (configured_mf_test_solver ()))) (fn () =>
+      "open relation fallback did not yield a clean certificate")
       (fn () => ()) ();
     require_msg (check_result (fn () =>
       mf_inductive_model_replay_acceptance

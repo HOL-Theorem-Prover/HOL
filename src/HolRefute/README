@@ -102,6 +102,23 @@ enums, and regular recursive datatypes such as `zoo_tree` are supported by
 these paths.  Every exported certificate has the exact negated closed goal,
 no hypotheses, and no untrusted oracle tag.
 
+Partially reconstructed model-finder values have a separate private replay
+view.  Its `?`, `_`, and `...` fragments are fresh schematic variables with
+per-reconstruction provenance; the public raw and formatted models retain the
+traditional marker notation and never expose the private names.  Schematic
+values are witness candidates, not assumptions or claims that a finite scope
+exhausts a HOL type.  Replay can therefore certify a function update whose
+unknown fallback is not inspected, while the displayed fallback remains `?`.
+
+If schematic replay is stuck, a deterministic bounded portfolio may replace
+the remaining holes by typed closed candidates.  All attempts share one fuel
+budget and absolute deadline.  A false completion can yield an audited
+certificate, but a true chosen completion only causes replay to try the next
+candidate: it never discards the Kodkod model.  Whole-formula truth discards a
+model only in the exact initial attempt, when the instantiated formula is
+hole-free.  Exhausted, capped, or failed completion search preserves both the
+model and its encoding-derived certainty.
+
 Replay is deterministic and fail-closed.  Fuel, candidate, constructor,
 case-branch, induction, leaf-normalization, and deadline limits can make an
 otherwise real model remain uncertified.  Mutual and nested recursion,

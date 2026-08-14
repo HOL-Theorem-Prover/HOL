@@ -792,8 +792,8 @@ fun run_instance deadline started (config : Refute_Core.config)
            nonsel_names = #nonsel_names extension,
            rel_table = #rel_table extension,
            bounds = bounds}
-        val {raw = reconstructed, displayed, replay_hints,
-             postprocessors} =
+        val {raw = reconstructed, certification, displayed, replay_hints,
+             replay_sidecar, postprocessors} =
           MFM.reconstruct_both
           {context = context, formats = #format mf,
            scope = #scope arguments, atoms = #atoms arguments,
@@ -823,6 +823,8 @@ fun run_instance deadline started (config : Refute_Core.config)
            original = original,
            eval_terms = eval_terms,
            reconstruction = reconstructed,
+           certification = certification,
+           replay_sidecar = replay_sidecar,
            replay_hints = replay_hints,
            cex = make_base problem,
            sound = sound,
