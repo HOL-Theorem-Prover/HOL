@@ -1,0 +1,52 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `contr`
+
+``` hol4
+bossLib.contr : tactic
+```
+
+------------------------------------------------------------------------
+
+Initiate proof by contradiction.
+
+A call to `contr` is equivalent to a call to
+`SPOSE_NOT_THEN STRIP_ASSUME_TAC`. Given a goal `A ?- t`, it negates the
+conclusion `t`, pushes the negation inwards, and strips the result onto
+the assumptions, leaving `F` to be proved.
+
+### Failure
+
+Never fails.
+
+### Example
+
+Suppose the current goal is Euclid's theorem,
+
+``` hol4
+   ?- !m. ?n. prime n /\ m < n
+```
+
+Starting the proof with `CCONTR_TAC` would give the goal
+
+``` hol4
+   { ~!m. ?n. prime n /\ m < n } ?- F
+```
+
+whose assumption one would immediately want to simplify. A call to
+`contr` instead yields
+
+``` hol4
+   { !n. prime n ==> ~(m < n) } ?- F
+```
+
+### Comments
+
+Use `CCONTR_TAC` when the negated conclusion is wanted as it stands, or
+`SPOSE_NOT_THEN` when it should be passed to some theorem-tactic other
+than `STRIP_ASSUME_TAC`.
+
+### See also
+
+[`bossLib.SPOSE_NOT_THEN`](#bossLib.SPOSE_NOT_THEN),
+[`Tactic.CCONTR_TAC`](#Tactic.CCONTR_TAC),
+[`Tactic.STRIP_ASSUME_TAC`](#Tactic.STRIP_ASSUME_TAC)
