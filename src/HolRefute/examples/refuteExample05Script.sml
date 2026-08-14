@@ -41,3 +41,9 @@ Theorem every_sorted_list_has_at_most_three_elements:
 Proof
   QUICKCHECK_TAC >> cheat
 QED
+
+Theorem every_sorted_list_has_at_most_eight_elements:
+  sortedp xs ==> LENGTH xs <= 8
+Proof
+  MODEL_REFUTE_TAC >> cheat
+QED

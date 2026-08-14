@@ -2447,8 +2447,34 @@ fun certify {executable, original, eval_terms,
                    let
                      val _ = MFN.assert_no_reserved_in_theorem
                        "model replay" certificate
+                     fun source_skolem_binding
+                           ({term,
+                             source = Refute_Cert_Model.SkolemValue,
+                             provenance = SOME
+                               {origin = SOME _, source_name, source_type,
+                                dependencies = [], arity = 0, ...}}
+                            : Refute_Cert_Model.replay_hint) =
+                           if Util.same_type source_type (Term.type_of term)
+                           then SOME
+                             (Term.mk_var (source_name, source_type), term)
+                           else NONE
+                       | source_skolem_binding _ = NONE
+                     fun add_binding
+                           (binding as (variable, _), bindings) =
+                       if List.exists (fn (old, _) =>
+                            Term.aconv old variable) bindings
+                       then bindings
+                       else bindings @ [binding]
+                     (* Equation-side evaluation terms are formed after
+                        outer universal binders have been opened.  Replay
+                        knows their certified values as zero-arity Skolem
+                        hints, so restore that source-variable environment.
+                        Ambiguous source binders have no origin and are
+                        deliberately excluded by the pattern above. *)
+                     val eval_env = List.foldl add_binding env
+                       (List.mapPartial source_skolem_binding hints)
                      fun safe_eval tm =
-                       let val value = Refute_Cert.eval_term env tm
+                       let val value = Refute_Cert.eval_term eval_env tm
                        in
                          if List.exists MFN.is_replay_hole
                               (Term.free_vars_lr value)

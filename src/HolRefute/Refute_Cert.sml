@@ -151,8 +151,14 @@ structure Refute_Cert = struct
     ((let
         val input = instantiate env tm
         val theorem = eval input
+        val result = rhs_of theorem
       in
-        if null (Term.free_vars input) andalso null (Thm.hyp theorem) andalso
+        (* An open input can still have a closed, fully determined value.
+           This matters for a reconstructed function update whose unknown
+           fallback is not inspected at the evaluated point.  The trusted
+           equality proves that the result is independent of every free
+           fragment left on its input side. *)
+        if null (Term.free_vars result) andalso null (Thm.hyp theorem) andalso
            trusted theorem then rhs_of theorem
         else Term.mk_var ("?", Term.type_of tm)
       end)

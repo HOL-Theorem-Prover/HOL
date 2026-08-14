@@ -9050,6 +9050,58 @@ val _ = require_msg (check_result mf_schematic_relation_replay) (fn () =>
   "schematic replay did not certify the shadowed relation fallback")
   (fn () => ()) ()
 
+fun mf_quantified_function_evals_use_skolem_witness () =
+  let
+    val function = Term.mk_var ("f", ``:num -> num``)
+    val at_zero = Term.mk_comb (function, ``0 : num``)
+    val at_one = Term.mk_comb (function, ``1 : num``)
+    val hole = MFN.mk_replay_hole 0 ``:num -> num``
+    fun update point value base = Term.mk_comb
+      (combinSyntax.mk_update (point, value), base)
+    val witness = update ``1 : num`` ``0 : num``
+      (update ``0 : num`` ``2 : num`` hole)
+    val unknown = MFN.unknown_marker ``:num``
+    val public : MFM.reconstruction =
+      {bindings = [], evals = [(at_zero, unknown), (at_one, unknown)],
+       skolems = [], consts = [], types = [], codatatypes_ok = true}
+    val private = public
+    val sidecar : MFM.replay_sidecar =
+      {holes = [{id = 0, variable = hole,
+                 display = MFM.DisplayFunctionFallback,
+                 origin = MFM.IncompleteFunctionFallback}]}
+    val provenance : Refute_Skolem.info =
+      {origin = SOME 0,
+       generated_name = MFN.skolem_prefix_for 0 1 ^ "f",
+       source_name = "f", source_type = ``:num -> num``,
+       dependencies = [], arity = 0, stage = "source skolemization"}
+    val goal = boolSyntax.mk_forall
+      (function, boolSyntax.mk_eq (at_zero, at_one))
+    val base : Refute_Core.counterexample =
+      {backend = "kodkod", substrate = "kodkod",
+       certainty = Refute_Core.Potential [], bindings = [], evals = [],
+       cert = NONE, scope = SOME [(``:num``, 3)], model = NONE, stats = []}
+  in
+    case MFM.certify
+      {executable = true, original = goal,
+       eval_terms = [at_zero, at_one], reconstruction = public,
+       certification = private, replay_sidecar = sidecar,
+       replay_hints = [{value = witness, provenance = SOME provenance}],
+       cex = base, sound = true, genuine_means_genuine = true,
+       reasons = [], deadline = NONE} of
+        MFM.Keep {certainty = Genuine, cert = SOME theorem,
+                  evals = [(zero, zero_value), (one, one_value)], ...} =>
+          Term.aconv zero at_zero andalso Term.aconv zero_value ``2 : num``
+          andalso Term.aconv one at_one andalso
+          Term.aconv one_value ``0 : num`` andalso
+          Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg goal)
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result mf_quantified_function_evals_use_skolem_witness) (fn () =>
+    "certified equation evaluations lost their quantified Skolem witness")
+  (fn () => ()) ()
+
 fun mf_open_true_model_is_kept () =
   let
     val function = Term.mk_var ("open_true_f", ``:num -> num``)
