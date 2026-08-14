@@ -10354,6 +10354,74 @@ in
     "an ill-formed Kodkodi instance was accepted") (fn () => ()) ()
 end
 
+val _ = tprint "Refute Kodkodi supervisor startup cancellation"
+
+local
+  fun shell_quote text =
+    "'" ^ String.translate
+      (fn #"'" => "'\\''" | character => String.str character) text ^ "'"
+
+  fun read_all path =
+    let
+      val stream = TextIO.openIn path
+      val text = TextIO.inputAll stream
+        handle error => (TextIO.closeIn stream; raise error)
+      val _ = TextIO.closeIn stream
+    in
+      text
+    end
+
+  fun remove path = OS.FileSys.remove path handle OS.SysErr _ => ()
+
+  fun wait_for_file _ 0 = false
+    | wait_for_file path attempts =
+        if (OS.FileSys.access (path, []) handle OS.SysErr _ => false) then true
+        else
+          (OS.Process.sleep (Time.fromReal 0.01);
+           wait_for_file path (attempts - 1))
+
+  fun startup_cancellation_is_deferred () =
+    case !Refute_Forl_Test.run_child of
+        NONE => true
+      | SOME run_child =>
+          let
+            val ready_path = OS.FileSys.tmpName ()
+            val error_path = OS.FileSys.tmpName ()
+            val _ = remove ready_path
+            val _ = remove error_path
+            val _ = Refute_Forl_Test.supervisor_prefix :=
+              "exec 2> " ^ shell_quote error_path
+            val _ = Refute_Forl_Test.before_child :=
+              ": > " ^ shell_quote ready_path ^
+              "; while [ -z \"$cancelled\" ]; do /bin/sleep 0.01; done"
+            val future = Future.fork (fn () =>
+              run_child "while :; do /bin/sleep 1; done")
+            val stopped = ref false
+            fun stop () =
+              if !stopped then ()
+              else
+                (Future.cancel future;
+                 ignore (Future.join_result future);
+                 stopped := true)
+            fun cleanup () =
+              (stop ();
+               Refute_Forl_Test.supervisor_prefix := "";
+               Refute_Forl_Test.before_child := "";
+               remove ready_path;
+               remove error_path)
+            fun check () =
+              wait_for_file ready_path 500 andalso
+              (stop (); read_all error_path = "")
+          in
+            Portable.finally cleanup check ()
+          end
+in
+  val _ = require_msg
+    (check_result startup_cancellation_is_deferred) (fn () =>
+      "pre-child cancellation escaped or wrote a shell diagnostic")
+    (fn () => ()) ()
+end
+
 val _ = tprint "Refute live Kodkodi bridge"
 
 local

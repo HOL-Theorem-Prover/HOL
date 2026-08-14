@@ -1,3 +1,13 @@
+(* Kept outside the public signature so the regression suite can hold the
+   supervisor in its pre-child startup window and capture its diagnostics.
+   Production leaves both shell fragments empty. *)
+structure Refute_Forl_Test =
+struct
+  val supervisor_prefix = ref ""
+  val before_child = ref ""
+  val run_child = ref (NONE : (string -> int) option)
+end
+
 signature REFUTE_FORL = sig
   type n_ary_index = int * int
   type setting = string * string
@@ -1505,18 +1515,26 @@ structure Refute_Forl :> REFUTE_FORL = struct
            orphan its JVM or SAT child. *)
         val setsid = valOf (setsid_executable ())
         val sleep = valOf (sleep_executable ())
+        fun test_fragment fragment =
+          if fragment = "" then "" else fragment ^ "; "
         val supervised =
           (* The watchdog also bounds the supervisor's trap.  In particular,
              a stopped child can otherwise leave its [wait] (and hence the
              masked ML-side reap) blocked forever. *)
-          "timer=" ^ shell_quote sleep ^ "; trap '" ^
+          test_fragment (!Refute_Forl_Test.supervisor_prefix) ^
+          "timer=" ^ shell_quote sleep ^ "; terminate() { " ^
+          "trap '' TERM INT; " ^
           "kill -TERM -$child 2>/dev/null; " ^
           "(\"$timer\" 1; kill -KILL -$child 2>/dev/null; " ^
           "kill -KILL $$ 2>/dev/null) & watchdog=$!; " ^
           "wait \"$child\"; kill \"$watchdog\" 2>/dev/null; " ^
-          "wait \"$watchdog\" 2>/dev/null; exit 130' TERM INT; " ^
+          "wait \"$watchdog\" 2>/dev/null; exit 130; }; " ^
+          "cancelled=; trap 'cancelled=1' TERM INT; " ^
+          test_fragment (!Refute_Forl_Test.before_child) ^
           shell_quote setsid ^ " /bin/sh -c " ^ shell_quote command ^
-          " & child=$!; wait \"$child\"; status=$?; " ^
+          " & child=$!; trap 'terminate' TERM INT; " ^
+          "if [ -n \"$cancelled\" ]; then terminate; fi; " ^
+          "wait \"$child\"; status=$?; " ^
           "if kill -TERM -$child 2>/dev/null; then " ^
           "(\"$timer\" 1; kill -KILL -$child 2>/dev/null) & reaper=$!; " ^
           "wait \"$reaper\" 2>/dev/null; fi; exit \"$status\""
@@ -1535,6 +1553,13 @@ structure Refute_Forl :> REFUTE_FORL = struct
         restore_interrupts wait ()
           handle error => (terminate (); Exn.reraise error)
       end) ()
+
+  val _ =
+    Refute_Forl_Test.run_child :=
+      if Systeml.isUnix andalso Option.isSome (setsid_executable ()) andalso
+         Option.isSome (sleep_executable ())
+      then SOME run_child
+      else NONE
 
   (* The solver runs through a shell, so place a kernel-enforced output cap
      on its stdout and stderr before it starts.  This bounds both temporary
