@@ -22064,6 +22064,226 @@ fun certificate_audit original theorem =
   certifies_negated_closure original theorem andalso
   certificate_tag_clean theorem
 
+val universal_pnf_goal = ``(?x : num. p x) ==> !x. p x``
+
+val universal_pnf_config = default_config
+  |> upd_backends (SOME ["exhaustive"])
+  |> upd_sequential true
+  |> upd_substrate NativeSML
+  |> upd_size 1
+  |> upd_quiet true
+
+val universal_pnf_disabled_config =
+  upd_certify false universal_pnf_config
+
+val universal_pnf_cache :
+    (Refute_Core.outcome * Refute_Core.outcome) option ref = ref NONE
+
+fun universal_pnf_runs () =
+  case !universal_pnf_cache of
+      SOME results => results
+    | NONE =>
+        let
+          val results =
+            (exhaustive universal_pnf_config universal_pnf_goal,
+             exhaustive universal_pnf_disabled_config universal_pnf_goal)
+          val _ = universal_pnf_cache := SOME results
+        in
+          results
+        end
+
+fun named_variable name ty = Term.mk_var (name, ty)
+
+val universal_pnf_p = named_variable "p" ``:num -> bool``
+val universal_pnf_x = named_variable "x" ``:num``
+val universal_pnf_x' = named_variable "x'" ``:num``
+val universal_pnf_p_value = Term.mk_comb
+  (combinSyntax.mk_update (``0 : num``, boolSyntax.T),
+   ``\n : num. F``)
+
+val universal_pnf_expected_bindings =
+  [(universal_pnf_p, universal_pnf_p_value),
+   (universal_pnf_x, ``0 : num``),
+   (universal_pnf_x', ``1 : num``)]
+
+fun contains_binding bindings (variable, value) =
+  List.exists (fn (found_variable, found_value) =>
+    Term.aconv found_variable variable andalso
+    Term.aconv found_value value) bindings
+
+fun exact_universal_pnf_bindings bindings =
+  length bindings = length universal_pnf_expected_bindings andalso
+  List.all (contains_binding bindings) universal_pnf_expected_bindings
+
+fun universal_pnf_live_certifies () =
+  case universal_pnf_runs () of
+      (Counterexample
+         [cex as {certainty = Genuine, cert = SOME theorem, ...}],
+       Counterexample [disabled]) =>
+        #backend cex = "exhaustive" andalso
+        #substrate cex = "native" andalso
+        certificate_audit universal_pnf_goal theorem andalso
+        exact_universal_pnf_bindings (#bindings cex) andalso
+        same_env (#bindings cex) (#bindings disabled)
+    | _ => false
+
+val _ = require_msg (check_result universal_pnf_live_certifies) (fn () =>
+  "ordinary QC did not certify the universal-PNF counterexample")
+  (fn () => ()) ()
+
+fun universal_pnf_opt_out_is_unchanged () =
+  case #2 (universal_pnf_runs ()) of
+      outcome as Counterexample
+        [cex as {certainty = Genuine, cert = NONE, ...}] =>
+          exact_universal_pnf_bindings (#bindings cex) andalso
+          String.isSubstring "Certification: uncertified"
+            (format_outcome universal_pnf_disabled_config outcome)
+    | _ => false
+
+val _ = require_msg
+  (check_result universal_pnf_opt_out_is_unchanged) (fn () =>
+  "certification opt-out changed the universal-PNF counterexample")
+  (fn () => ()) ()
+
+fun universal_pnf_disabled_cex () =
+  case #2 (universal_pnf_runs ()) of
+      Counterexample [cex] => cex
+    | _ => raise Fail "universal-PNF fixture did not find a counterexample"
+
+val universal_pnf_eval = ``p (0 : num)``
+val universal_pnf_direct_mismatch = ref ""
+
+fun universal_pnf_direct_is_stuck env =
+  let
+    val (_, _, body) = Refute_Cert.closure_of universal_pnf_goal
+    val instance = Refute_Cert.instantiate env body
+    fun step _ input conversion =
+      SOME (conversion input)
+      handle Interrupt => raise Interrupt | _ => NONE
+  in
+    case Refute_Cert.evaluate_instance Refute_Cert.default_leaf_rounds
+        step instance of
+        Refute_Cert.InstanceStuck _ => true
+      | _ => false
+  end
+
+fun universal_pnf_direct_false_certifies () =
+  let
+    val original_cex = universal_pnf_disabled_cex ()
+    val expected_eval = Refute_Cert.eval_term (#bindings original_cex)
+      universal_pnf_eval
+  in
+    case Refute_Cert.certify
+      {original = universal_pnf_goal,
+       evals = [universal_pnf_eval],
+       env = #bindings original_cex,
+       cex = original_cex} of
+        Certified (certified as {certainty = Genuine,
+          cert = SOME theorem, ...}) =>
+          let
+            val checks =
+              [("direct evaluator",
+                universal_pnf_direct_is_stuck (#bindings original_cex)),
+               ("certificate", certificate_audit universal_pnf_goal theorem),
+               ("bindings",
+                same_env (#bindings certified) (#bindings original_cex)),
+               ("backend", #backend certified = #backend original_cex),
+               ("substrate",
+                #substrate certified = #substrate original_cex),
+               ("stats", #stats certified = #stats original_cex),
+               ("scope", not (Option.isSome (#scope certified)) andalso
+                  not (Option.isSome (#scope original_cex))),
+               ("model", not (Option.isSome (#model certified)) andalso
+                  not (Option.isSome (#model original_cex))),
+               ("evals", same_env (#evals certified)
+                  [(universal_pnf_eval, expected_eval)])]
+            val failed = map #1 (List.filter (not o #2) checks)
+            val _ = universal_pnf_direct_mismatch :=
+              String.concatWith ", " failed
+          in
+            null failed
+          end
+      | _ =>
+          (universal_pnf_direct_mismatch := "unexpected result"; false)
+  end
+
+val _ = require_msg
+  (check_result universal_pnf_direct_false_certifies) (fn () =>
+  "direct universal-PNF replay did not produce a clean certificate: " ^
+  !universal_pnf_direct_mismatch)
+  (fn () => ()) ()
+
+fun replace_binding variable replacement (found_variable, value) =
+  if Term.aconv found_variable variable then
+    (found_variable, replacement)
+  else
+    (found_variable, value)
+
+fun universal_pnf_direct_true_is_discarded () =
+  let
+    val cex = universal_pnf_disabled_cex ()
+    val env = map (replace_binding universal_pnf_x' ``0 : num``)
+      (#bindings cex)
+  in
+    universal_pnf_direct_is_stuck env andalso
+    (case Refute_Cert.certify
+       {original = universal_pnf_goal, evals = [], env = env, cex = cex} of
+         Discarded => true
+       | _ => false)
+  end
+
+val _ = require_msg
+  (check_result universal_pnf_direct_true_is_discarded) (fn () =>
+  "a true universal-PNF instance was not discarded")
+  (fn () => ()) ()
+
+fun universal_pnf_bad_environments_fail_closed () =
+  let
+    val cex = universal_pnf_disabled_cex ()
+    val env = #bindings cex
+    val missing = List.filter (fn (variable, _) =>
+      not (Term.aconv variable universal_pnf_x')) env
+    val duplicate =
+      case List.find (fn (variable, _) =>
+        Term.aconv variable universal_pnf_x') env of
+          SOME binding => binding :: env
+        | NONE => env
+    val wrong_type = map
+      (replace_binding universal_pnf_x' boolSyntax.T) env
+    fun uncertified candidate_env =
+      case Refute_Cert.certify
+        {original = universal_pnf_goal, evals = [], env = candidate_env,
+         cex = cex} of
+          Uncertified {certainty = Genuine, cert = NONE, ...} => true
+        | _ => false
+  in
+    uncertified missing andalso
+    uncertified duplicate andalso
+    uncertified wrong_type
+  end
+
+val _ = require_msg
+  (check_result universal_pnf_bad_environments_fail_closed) (fn () =>
+  "missing, duplicate, or ill-typed PNF bindings did not fail closed")
+  (fn () => ()) ()
+
+fun existential_pnf_boundary_fails_closed () =
+  let
+    val cex = universal_pnf_disabled_cex ()
+    val unknown_predicate = named_variable "q" ``:num -> bool``
+  in
+    case Refute_Cert.certify
+      {original = ``?x : num. p x``, evals = [],
+       env = [(universal_pnf_p, unknown_predicate)], cex = cex} of
+        Uncertified {certainty = Genuine, cert = NONE, ...} => true
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result existential_pnf_boundary_fails_closed) (fn () =>
+  "an existential PNF prefix crossed the certification boundary")
+  (fn () => ()) ()
+
 fun model_replay_certifies original env hints fuel =
   case Refute_Cert_Model.certify
     {original = original, env = env, hints = hints, fuel = fuel,

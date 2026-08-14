@@ -79,10 +79,14 @@ Execution substrates are untrusted accelerators.  When `certify=true` (the
 default), Refute_Cert re-evaluates an exhaustive or random QC candidate's
 instantiated proposition with computeLib.  A re-evaluation that proves the
 proposition true discards the candidate; one that proves it false attaches a
-theorem certifying its negation; and an inconclusive re-evaluation leaves the
-substrate-derived verdict unchanged with `cert = NONE`.  Native narrowing
-uses Refute_Cert_Narrow to replay its recorded case tree; ground and partial
-candidates fall back to Refute_Cert evaluation.  With `certify=false`, Refute
+theorem certifying its negation.  If direct re-evaluation is stuck, Refute may
+also normalize the closed proposition to PNF and replay an all-universal
+prefix using the candidate's exact generated bindings.  Mixed or existential
+PNF prefixes are not handled by this ordinary-QC fallback.  An inconclusive
+attempt leaves the substrate-derived verdict unchanged with `cert = NONE`.
+Native narrowing uses Refute_Cert_Narrow to replay its recorded case tree;
+ground and partial candidates fall back to Refute_Cert evaluation.  With
+`certify=false`, Refute
 skips QC certification, so an otherwise genuine hit has `cert = NONE` and is
 reported as uncertified.  Certification is monotone: enabling it cannot
 weaken the certainty obtained with it disabled, and can only discard a false

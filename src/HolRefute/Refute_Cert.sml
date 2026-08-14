@@ -266,6 +266,84 @@ structure Refute_Cert = struct
       model = #model cex,
       stats = #stats cex }
 
+  fun uncertified cex =
+    Uncertified (replace cex Refute_Core.Genuine [] NONE)
+
+  (* Both certification paths must end at exactly the negated closure the
+     caller supplied.  Keep theorem trust and display-evaluation attachment
+     in one place so the PNF fallback cannot acquire a weaker audit than the
+     direct whole-formula path. *)
+  fun finish_certificate label closure evals env cex certificate =
+    let
+      val expected = boolSyntax.mk_neg closure
+      val certificate = conform_conclusion label expected certificate
+    in
+      if null (Thm.hyp certificate) andalso trusted certificate then
+        let val values = map (fn tm => (tm, eval_term env tm)) evals
+        in
+          Certified (replace cex Refute_Core.Genuine values
+            (SOME certificate))
+        end
+      else
+        uncertified cex
+    end
+    handle Interrupt => raise Interrupt | _ => uncertified cex
+
+  (* Direct evaluation may be stuck on the quantified source even though
+     theorem-producing normalization exposes the fully instantiated matrix
+     that the QC backend tested.  Replay only an all-universal PNF prefix:
+     environment values are specializations, never assumptions or evidence
+     that an existential domain was exhausted. *)
+  fun certify_universal_pnf {closure, evals, env, cex} =
+    let
+      fun normalization_step conversion tm = conversion tm
+      val (normalized_equality, prenex_equality, pnf) =
+        normalize_to_pnf normalization_step closure
+      val (prefix, matrix) = Refute_Narrow.strip_quantifiers pnf
+      val _ =
+        if List.all (fn (Refute_Eval.Forall, _) => true | _ => false)
+             prefix then ()
+        else raise Fail "non-universal PNF prefix"
+      fun quantified tm =
+        boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
+      val _ =
+        if Lib.can (HolKernel.find_term quantified) matrix then
+          raise Fail "quantifier remains outside the PNF prefix"
+        else ()
+
+      fun binding_for (_, variable) =
+        case List.filter (fn (key, _) => Term.aconv key variable) env of
+            [(_, value)] =>
+              if Refute_Util.same_type (Term.type_of value)
+                   (Term.type_of variable) then
+                (variable, value)
+              else raise Fail "PNF binding has the wrong type"
+          | _ => raise Fail "PNF binding is missing or duplicated"
+      val bindings = map binding_for prefix
+      val witnesses = map #2 bindings
+      val instance = instantiate bindings matrix
+      val _ = if null (Term.free_vars_lr instance) then ()
+        else raise Fail "PNF matrix remains open"
+      fun step _ input conversion =
+        SOME (conversion input)
+        handle Interrupt => raise Interrupt | _ => NONE
+    in
+      case evaluate_instance default_leaf_rounds step instance of
+          InstanceFalse theorem =>
+            let
+              val negated_instance = Drule.EQF_ELIM theorem
+              val replayed = refute_forall pnf witnesses negated_instance
+              val certificate = undo_normalization "universal PNF replay"
+                (normalized_equality, prenex_equality) replayed
+            in
+              finish_certificate "universal PNF replay" closure evals env cex
+                certificate
+            end
+        | InstanceTrue => Discarded
+        | InstanceStuck _ => uncertified cex
+    end
+    handle Interrupt => raise Interrupt | _ => uncertified cex
+
   fun certify {original, evals, env, cex} =
     let
       val (variables, closure, body) = closure_of original
@@ -276,7 +354,8 @@ structure Refute_Cert = struct
     in
       case evaluate_instance default_leaf_rounds step instance of
           InstanceStuck _ =>
-            Uncertified (replace cex Refute_Core.Genuine [] NONE)
+            certify_universal_pnf
+              {closure = closure, evals = evals, env = env, cex = cex}
         | InstanceTrue => Discarded
         | InstanceFalse theorem =>
             let
@@ -285,16 +364,11 @@ structure Refute_Cert = struct
               val certificate = refute_forall closure witnesses
                 negated_instance
             in
-              if null (Thm.hyp certificate) andalso trusted certificate then
-                let val values = map (fn tm => (tm, eval_term env tm)) evals
-                in
-                  Certified (replace cex Refute_Core.Genuine values
-                    (SOME certificate))
-                end
-              else
-                Uncertified (replace cex Refute_Core.Genuine [] NONE)
+              finish_certificate "whole-formula replay" closure evals env cex
+                certificate
             end
     end
+    handle Interrupt => raise Interrupt | _ => uncertified cex
 
   fun grounding_failure cex =
     Potential (replace cex

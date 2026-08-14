@@ -413,10 +413,14 @@ Execution substrates, generated SML, Kodkodi, and SAT solvers are
 untrusted accelerators.  With the default `certify = true`, a Quickcheck
 candidate is re-evaluated independently with `computeLib`.  A replay that
 proves the instantiated proposition true discards the candidate; one that
-proves it false attaches a theorem for the negated, closed instance; an
-inconclusive replay keeps the substrate-derived certainty with
-`cert = NONE`.  Certification is monotone: it only discards false
-positives or adds theorems, and never weakens a verdict.  Narrowing
+proves it false attaches a theorem for the negated, closed instance.  If
+direct evaluation is stuck, ordinary Quickcheck certification may normalize
+the closure to PNF and replay an all-universal prefix using the candidate's
+exact generated bindings.  This fallback remains partial for mixed or
+existential PNF prefixes.  An inconclusive attempt keeps the
+substrate-derived certainty with `cert = NONE`.  Certification is monotone:
+it only discards false positives or adds theorems, and never weakens a
+verdict.  Narrowing
 grounds partial hits before evaluation and certifies PNF existential hits
 by replaying their finite case tree.  Refute never adds an oracle tag.
 
