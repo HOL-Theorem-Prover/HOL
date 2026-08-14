@@ -221,7 +221,7 @@ structure Refute_Extract = struct
       datatypes : datatype_desc list ref,
       types : (hol_type * ml_ty * string) list ref,
       equalities : hol_type list ref,
-      definitions : (term * string * Thm.thm) list ref,
+      definitions : (term * string * int * Thm.thm) list ref,
       definition_groups : term list list ref,
       definition_clauses : (term * string) list ref,
       pending : term list ref,
@@ -818,7 +818,8 @@ structure Refute_Extract = struct
     "  | refute_front (x :: xs) = x :: refute_front xs\n"
 
   fun lookup_definition ({definitions, ...} : context) constant =
-    List.find (fn (other, _, _) => same_term other constant) (!definitions)
+    List.find (fn (other, _, _, _) => same_term other constant)
+      (!definitions)
 
   fun lookup_pending ({pending, ...} : context) constant =
     List.exists (same_term constant) (!pending)
@@ -835,6 +836,43 @@ structure Refute_Extract = struct
     in
       split (Thm.concl theorem)
     end
+
+  (* The callable arity of an emitted definition is the number of arguments
+     on its equation lhs, not the number of arrows in the constant's type.
+     They differ for function-valued definitions such as
+     [UNIV = (\x. T)].  Cache that arity with the definition so every strict
+     and lazy call uses the same convention as its emitted clauses. *)
+  fun definition_equations constant theorem =
+    let
+      fun equation tm =
+        let
+          val (left, right) = boolSyntax.dest_eq tm
+            handle Feedback.HOL_ERR _ =>
+              reject ("non-equational rule for " ^
+                      kname_text (kname constant))
+          val (head, arguments) = boolSyntax.strip_comb left
+          val _ =
+            if Term.is_const head andalso Term.same_const head constant then ()
+            else reject ("rule has the wrong head for " ^
+                         kname_text (kname constant))
+        in
+          (arguments, right)
+        end
+      val equations = List.map equation (equations_of theorem)
+      val _ = if null equations then
+        reject ("definition has no clauses for " ^
+                kname_text (kname constant)) else ()
+      val arity = length (#1 (hd equations))
+      val _ = if List.all (fn (arguments, _) =>
+        length arguments = arity) equations then ()
+        else reject ("definition has inconsistent arities for " ^
+                     kname_text (kname constant))
+    in
+      equations
+    end
+
+  fun definition_arity constant theorem =
+    length (#1 (hd (definition_equations constant theorem)))
 
   fun theorem_for_typebase constant =
     let
@@ -949,15 +987,15 @@ structure Refute_Extract = struct
 
   fun ensure_definition context constant =
     case lookup_definition context constant of
-      SOME (_, name, _) => name
+      SOME (_, name, _, _) => name
     | NONE =>
         if lookup_pending context constant then
           let val (_, name) = kname constant
           in
-            case List.find (fn (other, _, _) =>
+            case List.find (fn (other, _, _, _) =>
               Term.same_const other constant)
               (!(#definitions context)) of
-              SOME (_, mlname, _) => mlname
+              SOME (_, mlname, _, _) => mlname
             | NONE => lower_name name
           end
         else
@@ -969,8 +1007,9 @@ structure Refute_Extract = struct
               | NONE =>
                   let
                     val (_, base) = kname member
+                    val theorem = definition_theorem context member
                     val item = (member, fresh_const context base,
-                                definition_theorem context member)
+                                definition_arity member theorem, theorem)
                     val _ = #definitions context :=
                       item :: !(#definitions context)
                     val _ = #pending context :=
@@ -984,7 +1023,7 @@ structure Refute_Extract = struct
               registered_constants :: !(#definition_groups context)
           in
             case lookup_definition context constant of
-              SOME (_, name, _) => name
+              SOME (_, name, _, _) => name
             | NONE =>
                 reject ("mutual definition group omitted " ^
                         kname_text (kname constant))
@@ -1883,14 +1922,14 @@ structure Refute_Extract = struct
                    else
                      let
                        val name = ensure_definition context head
-                       val (domains, _) =
-                         boolSyntax.strip_fun (Term.type_of head)
+                       val (_, _, arity, _) =
+                         valOf (lookup_definition context head)
                      in
                        choose (context_mode context)
                          (fn () =>
                            let
                              val base =
-                               if null domains then name ^ " ()" else name
+                               if arity = 0 then name ^ " ()" else name
                            in
                              List.foldl (fn (argument, result) =>
                                parens (result ^ " " ^ parens argument))
@@ -1904,7 +1943,7 @@ structure Refute_Extract = struct
                                   join " " (List.map parens values))
                            in
                              lazy_with_arity context arguments
-                               (length domains) invoke
+                               arity invoke
                            end)
                      end)
           else
@@ -2282,31 +2321,11 @@ structure Refute_Extract = struct
       match initial_bound tm value success
     end
 
-  fun lazy_definition_clause context (constant, name, theorem) =
+  fun lazy_definition_clause context (constant, name, arity, theorem) =
     let
-      fun equation equation =
-        let
-          val (left, right) = boolSyntax.dest_eq equation
-            handle Feedback.HOL_ERR _ =>
-              reject ("non-equational rule for " ^
-                      kname_text (kname constant))
-          val (head, arguments) = boolSyntax.strip_comb left
-          val _ =
-            if Term.is_const head andalso Term.same_const head constant then ()
-            else reject ("rule has the wrong head for " ^
-                         kname_text (kname constant))
-        in
-          (arguments, right)
-        end
-      val equations = List.map equation (equations_of theorem)
-      val _ = if null equations then
-        reject ("definition has no clauses for " ^
-                kname_text (kname constant)) else ()
-      val arity = length (#1 (hd equations))
-      val _ = if List.all (fn (arguments, _) =>
-        length arguments = arity) equations then ()
-        else reject ("definition has inconsistent arities for " ^
-                     kname_text (kname constant))
+      val equations = definition_equations constant theorem
+      val _ = if length (#1 (hd equations)) = arity then ()
+        else raise Fail "cached definition arity changed"
       val arguments = List.tabulate (arity, fn index =>
         "refute_argument_" ^ Int.toString index)
       fun dispatch [] = "(raise Match)"
@@ -2342,7 +2361,7 @@ structure Refute_Extract = struct
   (* Compiling a clause is the expensive part of extraction and its text
      is final once produced (names are fixed at registration), so the
      drain pass and the declarations pass share one compilation. *)
-  fun cached_definition_clause context (item as (constant, _, _)) =
+  fun cached_definition_clause context (item as (constant, _, _, _)) =
     case List.find (fn (other, _) => same_term other constant)
       (!(#definition_clauses context)) of
       SOME (_, clause) => clause
@@ -2385,13 +2404,13 @@ structure Refute_Extract = struct
       val definitions = rev (!(#definitions context))
       val groups = rev (!(#definition_groups context))
       fun item_for constant =
-        case List.find (fn (other, _, _) => same_term other constant)
+        case List.find (fn (other, _, _, _) => same_term other constant)
           definitions of
           SOME item => item
         | NONE => raise Fail "Refute_Extract: missing definition"
       fun group_for constant =
         List.find (List.exists (same_term constant)) groups
-      fun constants_in (_, _, theorem) =
+      fun constants_in (_, _, _, theorem) =
         HolKernel.find_terms Term.is_const (Thm.concl theorem)
       fun same_group left right =
         List.all (fn constant => List.exists (same_term constant) right)

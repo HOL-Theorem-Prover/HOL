@@ -13745,6 +13745,10 @@ val rx_list_rel_def = TotalDefn.Define
    rx_list_rel P (x :: xs) (y :: ys) =
      (P x y /\ rx_list_rel P xs ys)`
 
+val rx_add_left_def = new_definition
+  ("rx_add_left_def",
+   ``rx_add_left (x : num) = (\y : num. x + y)``)
+
 val _ = Theory.new_constant ("rx_unmapped", ``:num -> num``)
 
 structure RefuteExtractSelftest = struct
@@ -14146,6 +14150,21 @@ fun lazy_definition_and_constructor_literals () =
   compile_lazy_extracted ``rx_sum [1; 2; 3] = 6``
     (fn (_, entry, _) => "Susp.force (" ^ entry ^ ")")
 
+fun strict_function_valued_definitions_apply () =
+  compile_extracted ``(UNIV : bool set) = UNIV`` andalso
+  compile_extracted ``rx_add_left 2 3 = 5``
+
+(* UNIV is defined by a nullary equation whose right-hand side is a
+   function.  Applying that function must first invoke the generated unit
+   thunk for the definition, then apply its suspended result. *)
+fun lazy_nullary_function_definition_applies () =
+  compile_lazy_extracted ``(UNIV : bool set) = UNIV``
+    (fn (_, entry, _) => "Susp.force (" ^ entry ^ ")")
+
+fun lazy_partially_applied_function_definition_applies () =
+  compile_lazy_extracted ``rx_add_left 2 3 = 5``
+    (fn (_, entry, _) => "Susp.force (" ^ entry ^ ")")
+
 fun lazy_extractor_seam () =
   let
     val extracted =
@@ -14241,6 +14260,18 @@ val _ = require_msg (check_result lazy_force_twice_memoizes_application)
 val _ = require_msg
   (check_result lazy_definition_and_constructor_literals) (fn () =>
   "lazy extraction failed across a recursive definition")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result strict_function_valued_definitions_apply) (fn () =>
+  "strict extraction misapplied a function-valued definition")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_nullary_function_definition_applies) (fn () =>
+  "a lazy nullary function definition was applied without its unit thunk")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result lazy_partially_applied_function_definition_applies) (fn () =>
+  "lazy extraction bypassed a partially applied definition result")
   (fn () => ()) ()
 val _ = require_msg (check_result lazy_extractor_seam) (fn () =>
   "the direct lazy extractor seam failed")
@@ -18173,6 +18204,19 @@ fun narrowing_custom_enum_is_integrated () =
       | _ => false
   end
 
+fun narrowing_univ_function_definition_is_integrated () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 2
+  in
+    case run_with_strategy Narrowing config
+      ``(s : bool set) = UNIV`` of
+        Counterexample [cex] =>
+          #certainty cex = Genuine andalso Option.isSome (#cert cex)
+      | _ => false
+  end
+
 fun narrowing_partial_function_is_certified () =
   let
     val config = default_config
@@ -18401,6 +18445,11 @@ val _ = require_msg (check_result narrowing_reversed_shallow_is_integrated)
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_custom_enum_is_integrated)
   (fn () => "custom enumerable narrowing was not reconstructed exactly")
+  (fn () => ()) ()
+val _ = require_msg
+  (check_result narrowing_univ_function_definition_is_integrated)
+  (fn () =>
+    "narrowing could not apply the nullary function definition for UNIV")
   (fn () => ()) ()
 val _ = require_msg (check_result narrowing_partial_function_is_certified)
   (fn () => "partial function narrowing hit was not certified")
