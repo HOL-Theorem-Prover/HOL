@@ -192,21 +192,6 @@ in
     die ("No Holmake executable in " ^ fP [HOLDIR, "bin"])
 end
 
-(* The quote filter's lexer is generated from tools/parsing/HolLex by
-   configure, and by no Holmakefile rule, so pulling in a grammar change
-   leaves a stale bin/unquote that silently mis-lexes the new syntax.
-   The app_sml_files sweep above cannot catch it: HolLex has no .sml
-   extension and does not live under tools/Holmake. *)
-val _ = let
-  val fP = fullPath
-  open HOLFileSys
-  val unquote = fP [HOLDIR,"bin",xable_string "unquote"]
-in
-  if access(unquote, [A_READ, A_EXEC]) then
-    check_against unquote "tools/parsing/HolLex"
-  else ()
-end
-
 (* bin/hol is likewise compiled by configure and by no Holmakefile rule,
    from tools-poly/hol.ML and from the Holmake sources it links against.
    Neither check above reaches it: the sweep compares those sources with
@@ -214,7 +199,12 @@ end
    a hol built from different sources, and hol.ML is caught by nothing
    at all.  A stale bin/hol misdirects the interactive load path and
    fails tools/Holmake/tests/repl, which -t reaches while still inside
-   sequences/kernel -- so the whole selftest build stops there. *)
+   sequences/kernel -- so the whole selftest build stops there.
+
+   tools/parsing is included because the quote filter is linked in, not
+   run as bin/unquote (HolLex.sml is generated from HolLex by
+   configure); Holmake embeds it too, but configure builds Holmake
+   before hol, so checking hol covers both. *)
 val _ = let
   val fP = fullPath
   open HOLFileSys
@@ -225,7 +215,10 @@ in
      app_sml_files (check_against hol)
                    {dirname = fP [HOLDIR, "tools-poly", "Holmake"]};
      app_sml_files (check_against hol)
-                   {dirname = fP [HOLDIR, "tools", "Holmake"]})
+                   {dirname = fP [HOLDIR, "tools", "Holmake"]};
+     check_against hol "tools/parsing/HolLex";
+     app_sml_files (check_against hol)
+                   {dirname = fP [HOLDIR, "tools", "parsing"]})
   else ()
 end
 
