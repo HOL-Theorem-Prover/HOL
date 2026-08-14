@@ -306,6 +306,18 @@ Datatype :
            rules : 'b inf |-> ('a,'b,'c,'e) pegsym |>
 End
 
+(* wrapped conjunct inside a set-comprehension: a right-recursive /\-chain
+   should treat every conjunct as a peer of the first (`p IN A'), even when
+   the previous line packs several conjuncts.  See holscript-ts-tests.el. *)
+Theorem setcomp_indent:
+  s = {(p,q) | p IN A /\
+               q IN A /\
+               p < q /\ p * q < 0 /\
+               !i. i IN A ==> a i = 0}
+Proof
+  tac
+QED
+
 Theorem read_while_P_lem[local]:
   ∀ls rest P x y.
     EVERY P rest ∧ read_while P ls rest = (x,y) ⇒ EVERY P x
