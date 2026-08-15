@@ -1,7 +1,7 @@
 
 Theory prog_ppc
 Ancestors
-  pred_set res_quan words bit arithmetic list pair combin address
+  pred_set words bit arithmetic list pair combin address
   set_sep prog ppc_ ppc_seq_monad
 Libs
   wordsLib

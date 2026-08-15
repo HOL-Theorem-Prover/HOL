@@ -1,7 +1,7 @@
 
 Theory prog_arm
 Ancestors
-  pred_set res_quan words bit arithmetic list pair combin address
+  pred_set words bit arithmetic list pair combin address
   bit_list[qualified] finite_map set_sep prog arm arm_coretypes arm_step
 Libs
   wordsLib numLib armLib

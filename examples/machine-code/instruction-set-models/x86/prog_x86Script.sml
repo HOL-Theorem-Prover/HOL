@@ -1,7 +1,7 @@
 
 Theory prog_x86
 Ancestors
-  pred_set res_quan words bit arithmetic list pair combin address
+  pred_set words bit arithmetic list pair combin address
   set_sep prog x86_ x86_seq_monad x86_icache x86_ast
   x86_coretypes
 Libs
