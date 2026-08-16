@@ -12,4 +12,5 @@ selftest.exe: selftest.uo
 # build does not visit via parallel_tests INCLUDES.  List their .hol/
 # trees here so build cleanAll removes them.
 EXTRA_CLEANS = selftest.exe cachekey-selftest.log \
-               depdir/.hol/ subdir/.hol/ sigobj_symlink/.hol/
+               depdir/.hol/ subdir/.hol/ sigobj_symlink/.hol/ \
+               depdir/baseScript.sml

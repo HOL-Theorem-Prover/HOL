@@ -7,6 +7,25 @@ val holstate_args =
       ["--holstate", Globals.HOLDIR ++ "bin" ++ "hol.state0"]
     else []
 
+fun write_file path contents =
+    let val strm = TextIO.openOut path
+    in TextIO.output(strm, contents); TextIO.closeOut strm end
+
+(* depdir/baseScript.sml is generated rather than stored under version
+   control: test 7 rewrites it, so a tracked copy would be reported as
+   modified for the duration of every run, and would be left modified by
+   any run that died before reaching the restore at the end. *)
+val baseScript_v1 =
+    "Theory base[bare]\n\
+    \Ancestors bool\n\
+    \Theorem base_thm = TRUTH\n"
+
+val baseScript_v2 =
+    "Theory base[bare]\n\
+    \Ancestors bool\n\
+    \Theorem base_thm = TRUTH\n\
+    \Theorem base_thm2 = TRUTH\n"
+
 val _ = HOLFileSys.chDir "subdir"
 
 (* Test 1: --cachekey produces output *)
@@ -53,6 +72,7 @@ val _ = if not (OS.Process.isSuccess result3) then OK()
 
 (* Tests 4-7: dependency chain scenarios *)
 val _ = HOLFileSys.chDir "../depdir"
+val _ = write_file "baseScript.sml" baseScript_v1
 
 fun run_cachekey thy =
     let val tmp = OS.FileSys.tmpName ()
@@ -96,14 +116,7 @@ val _ = if ok6 andalso key6 = key5 then OK()
 (* Test 7: modify baseScript.sml without rebuilding -> same cachekey
    (the .dat file hasn't changed, so the cachekey shouldn't either) *)
 val _ = tprint "Checking --cachekey unchanged when source modified but not rebuilt"
-val _ = let val strm = TextIO.openOut "baseScript.sml"
-        in TextIO.output(strm,
-             "Theory base[bare]\n\
-             \Ancestors bool\n\
-             \Theorem base_thm = TRUTH\n\
-             \Theorem base_thm2 = TRUTH\n");
-           TextIO.closeOut strm
-        end
+val _ = write_file "baseScript.sml" baseScript_v2
 val (ok7, key7) = run_cachekey "childTheory"
 val _ = if ok7 andalso key7 = key5 then OK()
         else die ("Expected same hash " ^ key5 ^ ", got: \"" ^ key7 ^ "\"")
@@ -132,12 +145,7 @@ val _ = if ok9 andalso size key9 = 40 then OK()
 
 val _ = HOLFileSys.chDir "../depdir"
 
-(* Clean up depdir and restore baseScript.sml *)
+(* Clean up depdir.  baseScript.sml is generated, so remove it rather
+   than restoring it; the next run writes it afresh. *)
 val _ = run_holmake ["cleanAll"]
-val _ = let val strm = TextIO.openOut "baseScript.sml"
-        in TextIO.output(strm,
-             "Theory base[bare]\n\
-             \Ancestors bool\n\
-             \Theorem base_thm = TRUTH\n");
-           TextIO.closeOut strm
-        end
+val _ = OS.FileSys.remove "baseScript.sml" handle OS.SysErr _ => ()

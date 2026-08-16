@@ -105,9 +105,13 @@ fun mustSucceed (status, log, what) =
     if OS.Process.isSuccess status then ()
     else die (what ^ " failed:\n" ^ log)
 
-(* Restore parentScript to v1 if we exit/die mid-test, so the working
-   tree stays clean for the next invocation. *)
-fun restore_parent_v1 () = writeFile parentScript parentV1
+(* parentScript.sml is generated rather than stored under version
+   control: the steps below rewrite it, so a tracked copy would be
+   reported as modified for the duration of every run, and would be
+   left modified by any run killed before it could restore it.  Remove
+   it on the way out; step 1 writes it afresh each time. *)
+fun discard_parent () =
+    OS.FileSys.remove parentScript handle OS.SysErr _ => ()
 
 val _ =
   let
@@ -138,7 +142,7 @@ val _ =
 
     val ok = OS.Process.isSuccess s3
   in
-    if ok then (restore_parent_v1 (); OK ())
+    if ok then (discard_parent (); OK ())
     else
       let
         val link_parents_present =
@@ -152,9 +156,9 @@ val _ =
               "outer rebuild failed for another reason (not the \
               \link_parents signature)."
       in
-        restore_parent_v1 ();
+        discard_parent ();
         die ("Bug reproduced.\n  " ^ why ^
              "\n  --- captured outer log ---\n" ^ log3)
       end
   end
-  handle e => (restore_parent_v1 (); raise e)
+  handle e => (discard_parent (); raise e)
