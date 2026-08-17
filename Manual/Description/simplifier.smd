@@ -404,11 +404,11 @@ As in the example above, `bool_ss` also performs
 $\beta$-reductions and one-point unwindings.  The latter turns
 terms of the form
 $$
-\exists x.\;P(x)\land\dots x = e \dots\land Q(x)
+\exists x.\;P(x)\land\cdots x = e \cdots\land Q(x)
 $$
 into
 $$
-P(e) \land \dots \land Q(e)
+P(e) \land \cdots \land Q(e)
 $$
 Similarly, unwinding will turn $\forall x.\;x = e \Rightarrow P(x)$
 into $P(e)$.
