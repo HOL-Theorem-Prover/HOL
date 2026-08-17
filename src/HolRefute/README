@@ -249,8 +249,7 @@ Backend selection is typed for the four built-ins:
       | Only of backend_choice list
 
 `RegisteredBackend` is the escape hatch for an extension registered under a
-string name.  `upd_backends` remains available for source compatibility and
-low-level registry code.
+string name.
 
 The same per-call update list works outside the tactic layer through
 `refute_with` and `refute_goal_with`.  `apply_updates updates cfg` constructs

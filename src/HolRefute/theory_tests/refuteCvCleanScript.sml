@@ -16,7 +16,7 @@ End
 val base_config =
   Refute.default_config
   |> Refute.upd_substrate Refute.Cv
-  |> Refute.upd_backends (SOME ["exhaustive"])
+  |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
   |> Refute.upd_sequential true
   |> Refute.upd_timeout 10.0
 

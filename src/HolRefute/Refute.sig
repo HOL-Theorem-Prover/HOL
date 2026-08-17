@@ -119,7 +119,6 @@ signature Refute = sig
   val apply_updates : config_update list -> config -> config
   val current_config : config_update list -> config
   val upd_timeout : real -> config -> config
-  val upd_backends : string list option -> config -> config
   val upd_sequential : bool -> config -> config
   val upd_genuine_only : bool -> config -> config
   val upd_abort_potential : bool -> config -> config

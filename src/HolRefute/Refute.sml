@@ -186,7 +186,6 @@ structure Refute :> Refute = struct
   val the_config = Refute_Core.the_config
   val show_config = Refute_Core.show_config
   val upd_timeout = Refute_Core.upd_timeout
-  val upd_backends = Refute_Core.upd_backends
   val upd_sequential = Refute_Core.upd_sequential
   val upd_genuine_only = Refute_Core.upd_genuine_only
   val upd_abort_potential = Refute_Core.upd_abort_potential

@@ -22,7 +22,7 @@ val result =
     SOME
       (Refute.refute
         (Refute.default_config
-          |> Refute.upd_backends (SOME ["kodkod"])
+          |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
           |> Refute.upd_sequential true
           |> Refute.upd_card [(NONE, [2])]
           |> Refute.upd_timeout 10.0

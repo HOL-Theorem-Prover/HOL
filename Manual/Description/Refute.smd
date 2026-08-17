@@ -244,9 +244,9 @@ Four backends are registered by default, in increasing weight order:
 `upd_search AllBackends` selects every configured backend;
 `QuickcheckBackends` selects exhaustive, random, and narrowing search; and
 `Only choices` selects exactly its nonempty list.  Kodkod is absent from an
-all-backend run when its external component is not available.  The older
-`upd_backends` string interface remains available for extension and
-compatibility code.  Weights order sequential execution and break ties
+all-backend run when its external component is not available.  An
+extension registered under a string name is selected through
+`RegisteredBackend`.  Weights order sequential execution and break ties
 between results of equal certainty; in parallel mode they do not promise
 which process finishes first.
 
@@ -554,7 +554,6 @@ common fields are:
 |---|---:|---|
 | `upd_timeout` | `10.0` | Seconds in the whole-call search deadline. |
 | `upd_search` | `AllBackends` | Typed selection of all, Quickcheck, or explicit backends. |
-| `upd_backends` | `NONE` | Low-level string selection retained for compatibility. |
 | `upd_sequential` | `false` | Run backends by weight instead of racing them. |
 | `upd_genuine_only` | `false` | Suppress potential results and continue looking for genuine ones. |
 | `upd_abort_potential` | `false` | Stop at the first counterexample regardless of certainty. |

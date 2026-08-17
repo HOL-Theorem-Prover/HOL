@@ -38,7 +38,6 @@ val cfg = Refute.default_config
 ``` hol4
 Refute.upd_timeout : real -> config -> config
 Refute.upd_search : search -> config -> config
-Refute.upd_backends : string list option -> config -> config
 Refute.upd_sequential : bool -> config -> config
 Refute.upd_genuine_only : bool -> config -> config
 Refute.upd_abort_potential : bool -> config -> config
@@ -68,9 +67,9 @@ Refute.upd_mf : mf_config -> config -> config
 
 The `timeout` is one absolute deadline for the whole call: preprocessing,
 backend admission, compilation, testing, and solver calls all consume the
-same remainder.  `upd_search` takes the typed `AllBackends`,
-`QuickcheckBackends`, or `Only choices` selection; `upd_backends` is the
-low-level string interface retained for compatibility.
+same remainder.  The `backends` field is set through `upd_search`, which
+takes the typed `AllBackends`, `QuickcheckBackends`, or `Only choices`
+selection.
 
 The expectation constructors are `NoExpectation`, `ExpectNone`,
 `ExpectUnknown`, `ExpectCex`, `ExpectGenuine`, `ExpectQuasiGenuine`, and

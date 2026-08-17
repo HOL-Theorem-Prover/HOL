@@ -10893,7 +10893,7 @@ local
         if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
       val config = default_config
         |> upd_timeout 20.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
       val stat_keys =
@@ -10924,7 +10924,7 @@ local
         if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
       val config = default_config
         |> upd_timeout 20.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_whack [``I : 'a -> 'a``]
         |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
@@ -10943,7 +10943,7 @@ local
         if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
       val base = default_config
         |> upd_timeout 20.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_evals [``I (1 : num)``]
         |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
@@ -10998,7 +10998,7 @@ local
         if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
       val config = default_config
         |> upd_timeout 20.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_card [(SOME ``:num``, [3]), (NONE, [1])]
     in
@@ -11017,7 +11017,7 @@ local
       val predicate = ``zoo_unroll_lfp : num -> bool``
       val config = default_config
         |> upd_timeout 20.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_star_linear_preds false
         |> upd_iter [(SOME predicate, [2]), (NONE, [0])]
@@ -11045,7 +11045,7 @@ local
       val predicate = ``zoo_guarded_gfp : bool -> bool``
       val config = default_config
         |> upd_timeout 20.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_iter [(SOME predicate, [2]), (NONE, [0])]
       fun pinned ({scope, ...} : Refute.counterexample) =
@@ -11071,7 +11071,7 @@ local
       val predicate = ``zoo_mutual_gfp : bool -> bool``
       val config = default_config
         |> upd_timeout 20.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_iter [(SOME predicate, [2]), (NONE, [0])]
     in
@@ -11091,7 +11091,7 @@ local
       val predicate = ``zoo_wf_lfp : num -> bool``
       val config = default_config
         |> upd_timeout 20.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_wf [(SOME predicate, SOME false)]
         |> upd_star_linear_preds true
@@ -11119,7 +11119,7 @@ local
         if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
       val config = default_config
         |> upd_timeout 20.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_binary_ints (SOME false)
         |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
@@ -11139,7 +11139,7 @@ local
         if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
       val config = default_config
         |> upd_timeout 20.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_binary_ints (SOME false)
         |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
@@ -11162,7 +11162,7 @@ local
         if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
       val config = default_config
         |> upd_timeout 30.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_binary_ints NONE
         |> upd_bits [9]
@@ -11192,7 +11192,7 @@ local
         if Lib.mem "MiniSat_JNI" solvers then "MiniSat_JNI" else "SAT4J"
       val config = default_config
         |> upd_timeout 20.0
-        |> upd_backends (SOME ["kodkod"])
+        |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
         |> upd_sat_solver solver
         |> upd_genuine_only true
         |> upd_card [(NONE, [1])]
@@ -12217,7 +12217,9 @@ fun backend_input_dispatch () =
     val config = default_config
       |> upd_sequential true
       |> upd_finite_type_size 3
-      |> upd_backends (SOME ["refute-input-mono", "refute-input-poly"])
+      |> Refute.upd_search
+        (Refute.Only [Refute.RegisteredBackend "refute-input-mono",
+                      Refute.RegisteredBackend "refute-input-poly"])
     val _ = input_dispatch_enabled := true
     val _ = Feedback.set_trace "Refute" 0
     fun run () =
@@ -12960,7 +12962,8 @@ fun run_admission_profile phase sequential goal =
       val _ = reset_admission_test phase
       val _ = admission_test_enabled := true
       val config = default_config
-        |> upd_backends (SOME admission_test_names)
+        |> Refute.upd_search
+          (Refute.Only (map Refute.RegisteredBackend admission_test_names))
         |> upd_sequential sequential
         |> upd_quiet true
         |> upd_timeout 5.0
@@ -13064,7 +13067,7 @@ val _ = register_backend (admission_failure_backend
   admission_error_beta)
 
 fun quiet_failure_config names timeout = default_config
-  |> upd_backends (SOME names)
+  |> Refute.upd_search (Refute.Only (map Refute.RegisteredBackend names))
   |> upd_sequential false
   |> upd_quiet true
   |> upd_timeout timeout
@@ -13138,7 +13141,8 @@ fun all_phases_share_one_deadline () =
     val _ = shared_deadlines := []
     val _ = shared_deadline_enabled := true
     val config = default_config
-      |> upd_backends (SOME ["refute-shared-deadline"])
+      |> Refute.upd_search
+        (Refute.Only [Refute.RegisteredBackend "refute-shared-deadline"])
       |> upd_sequential true
       |> upd_quiet true
     val result = refute config ``q (!n : num. n = 0)``
@@ -13222,7 +13226,8 @@ val reentrant_outer_backend : backend =
      let
        val _ = wait_for_reentrant_other ()
        val nested_config = default_config
-         |> upd_backends (SOME ["refute-reentrant-nested"])
+         |> Refute.upd_search
+           (Refute.Only [Refute.RegisteredBackend "refute-reentrant-nested"])
          |> upd_sequential true
          |> upd_quiet true
        val nested = Exn.capture (fn () => refute nested_config boolSyntax.T) ()
@@ -13269,8 +13274,9 @@ fun nested_quiet_refute_does_not_deadlock () =
       val _ = reentrant_other_enabled := true
       val _ = reentrant_nested_enabled := true
       val config = default_config
-        |> upd_backends
-          (SOME ["refute-reentrant-outer", "refute-reentrant-other"])
+        |> Refute.upd_search
+          (Refute.Only [Refute.RegisteredBackend "refute-reentrant-outer",
+                        Refute.RegisteredBackend "refute-reentrant-other"])
         |> upd_sequential false
         |> upd_quiet true
         |> upd_timeout 5.0
@@ -13347,7 +13353,9 @@ fun holrefute_caller_interrupt_unwinds_admission () =
     val _ = admission_interrupt_unwound := 0
     val _ = admission_interrupt_enabled := true
     val config = default_config
-      |> upd_backends (SOME admission_interrupt_names)
+      |> Refute.upd_search
+        (Refute.Only
+          (map Refute.RegisteredBackend admission_interrupt_names))
       |> upd_sequential false
       |> upd_quiet true
       |> upd_timeout 10.0
@@ -13513,9 +13521,10 @@ fun potential_does_not_interrupt_genuine () =
       upd_expect ExpectGenuine
         (upd_timeout 2.0
           (upd_sequential false
-            (upd_backends
-              (SOME ["refute-race-mf-potential",
-                     "refute-race-qc-genuine"])
+            (Refute.upd_search
+              (Refute.Only
+                [Refute.RegisteredBackend "refute-race-mf-potential",
+                 Refute.RegisteredBackend "refute-race-qc-genuine"])
               default_config)))
     val captured = Exn.capture (fn () => refute config ``T``) ()
     val _ = race_potential_enabled := false
@@ -13542,9 +13551,10 @@ fun quasi_does_not_interrupt_genuine () =
       upd_expect ExpectGenuine
         (upd_timeout 2.0
           (upd_sequential false
-            (upd_backends
-              (SOME ["refute-race-mf-quasi",
-                     "refute-race-qc-genuine"])
+            (Refute.upd_search
+              (Refute.Only
+                [Refute.RegisteredBackend "refute-race-mf-quasi",
+                 Refute.RegisteredBackend "refute-race-qc-genuine"])
               default_config)))
     val captured = Exn.capture (fn () => refute config ``T``) ()
     val _ = race_quasi_enabled := false
@@ -13569,8 +13579,10 @@ fun quasi_is_decisive_at_declared_ceiling () =
     val config =
       upd_expect ExpectQuasiGenuine
         (upd_sequential true
-          (upd_backends
-            (SOME ["refute-race-mf-quasi", "refute-race-slow-quasi"])
+          (Refute.upd_search
+            (Refute.Only
+              [Refute.RegisteredBackend "refute-race-mf-quasi",
+               Refute.RegisteredBackend "refute-race-slow-quasi"])
             default_config))
     val captured = Exn.capture (fn () => refute config ``zoo_spec = 1``) ()
     val _ = race_quasi_enabled := false
@@ -13597,9 +13609,10 @@ fun potential_merge_uses_backend_weight () =
     val config =
       upd_expect ExpectPotential
         (upd_sequential false
-          (upd_backends
-            (SOME ["refute-merge-potential-low",
-                   "refute-merge-potential-high"])
+          (Refute.upd_search
+            (Refute.Only
+              [Refute.RegisteredBackend "refute-merge-potential-low",
+               Refute.RegisteredBackend "refute-merge-potential-high"])
             default_config))
     val captured = Exn.capture (fn () => refute config ``T``) ()
     val _ = merge_low_enabled := false
@@ -16201,7 +16214,7 @@ val nonexecutable_goal = ``q (!n : num. n = 0)``
 
 fun qc_gate_reason_is_merged () =
   case refute_problem
-    (upd_backends (SOME ["exhaustive"]) default_config)
+    (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config)
     (preprocessing_problem nonexecutable_goal) of
       Unknown reasons =>
         reasons = ["not executable: unexpanded binder"]
@@ -16233,7 +16246,9 @@ fun any_goal_backend_receives_nonexecutable_instance () =
     val _ = any_goal_stub_received := false
     val _ = any_goal_stub_enabled := true
     val captured = Exn.capture (fn () => refute_problem
-      (upd_backends (SOME ["refute-any-goal-stub"]) default_config)
+      (Refute.upd_search
+        (Refute.Only [Refute.RegisteredBackend "refute-any-goal-stub"])
+        default_config)
       (preprocessing_problem nonexecutable_goal)) ()
     val _ = any_goal_stub_enabled := false
   in
@@ -16253,8 +16268,9 @@ fun qc_gate_reason_merges_with_any_goal_unknown () =
   let
     val _ = any_goal_stub_enabled := true
     val captured = Exn.capture (fn () => refute_problem
-      (upd_backends
-        (SOME ["exhaustive", "refute-any-goal-stub"])
+      (Refute.upd_search
+        (Refute.Only [Refute.Exhaustive,
+                      Refute.RegisteredBackend "refute-any-goal-stub"])
         default_config)
       (preprocessing_problem nonexecutable_goal)) ()
     val _ = any_goal_stub_enabled := false
@@ -16602,7 +16618,7 @@ fun higher_priority_custom_opens_smart_gate () =
        preflight = NONE,
        compile = dummy_compile}
     val config = default_config
-      |> upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
       |> upd_certify false
       |> upd_depth 4
       |> upd_size 1
@@ -16699,7 +16715,7 @@ fun smartgen_native_end_to_end () =
           (computeLib.add_thms [zoo_sg_linear_compute] saved)
         fun run depth = exhaustive
           (default_config
-           |> Refute.upd_backends (SOME ["exhaustive"])
+           |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
            |> Refute.upd_substrate Refute.NativeSML
            |> Refute.upd_size 1
            |> Refute.upd_depth depth)
@@ -16778,7 +16794,7 @@ fun smartgen_hol_reln_payoff () =
           (computeLib.add_thms [zoo_sg_linear_compute] saved)
         val goal = smartgen_linear_goal
         val config = default_config
-          |> Refute.upd_backends (SOME ["exhaustive"])
+          |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
           |> Refute.upd_substrate Refute.NativeSML
           |> Refute.upd_size 1
           |> Refute.upd_depth 4
@@ -16804,7 +16820,7 @@ fun smartgen_horn_payoff () =
     val goal =
       ``ALL_DISTINCT (xs : bool list) ==> LENGTH xs < 1``
     val config = default_config
-      |> Refute.upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
       |> Refute.upd_substrate Refute.Compute
       |> Refute.upd_size 1
       |> Refute.upd_depth 8
@@ -16835,7 +16851,7 @@ fun smartgen_native_matches_duplicate_outputs () =
           (computeLib.add_thms [zoo_sg_duplicate_compute] saved)
         val result = exhaustive
           (default_config
-           |> Refute.upd_backends (SOME ["exhaustive"])
+           |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
            |> Refute.upd_substrate Refute.NativeSML
            |> Refute.upd_size 1
            |> Refute.upd_depth 1)
@@ -16888,7 +16904,7 @@ val _ = require_msg (check_result smartgen_plain_all_input_native) (fn () =>
 fun smartgen_gate_preflight_rejects_mixed_nonexec () =
   let
     val config = default_config
-      |> Refute.upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
       |> Refute.upd_substrate Refute.NativeSML
       |> Refute.upd_certify false
     val goal =
@@ -16917,7 +16933,7 @@ fun executable_requirement_stays_gated () =
        input = MonoInstances,
        run = fn _ => fn _ => (ran := true; Unknown ["unexpected run"])}
     val config = default_config
-      |> Refute.upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
       |> Refute.upd_substrate Refute.NativeSML
       |> Refute.upd_certify false
     fun body () =
@@ -16987,7 +17003,9 @@ val _ = register_backend gate_release_stub
 fun smartgen_gate_release_survives_unrun_exhaustive () =
   let
     val config = default_config
-      |> upd_backends (SOME ["exhaustive", "refute-gate-release-stub"])
+      |> Refute.upd_search
+        (Refute.Only [Refute.Exhaustive,
+                      Refute.RegisteredBackend "refute-gate-release-stub"])
       |> upd_substrate NativeSML
       |> upd_sequential true
       |> upd_certify false
@@ -17013,8 +17031,9 @@ val _ = require_msg
 fun smartgen_gate_release_survives_admission_error () =
   let
     val config = default_config
-      |> upd_backends
-        (SOME ["exhaustive", "refute-admission-error-beta"])
+      |> Refute.upd_search
+        (Refute.Only [Refute.Exhaustive,
+                      Refute.RegisteredBackend "refute-admission-error-beta"])
       |> upd_substrate NativeSML
       |> upd_sequential false
       |> upd_certify false
@@ -17043,7 +17062,7 @@ fun smartgen_mutual_string_and_hygiene_native () =
     fun run goal depth =
       refute
         (default_config
-         |> Refute.upd_backends (SOME ["exhaustive"])
+         |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
          |> Refute.upd_substrate Refute.NativeSML
          |> Refute.upd_certify false
          |> Refute.upd_size 1
@@ -17283,7 +17302,7 @@ fun true_bounded_expect_none () =
   let
     val config = upd_expect ExpectNone
       (upd_sequential true
-        (upd_backends (SOME ["exhaustive"]) default_config))
+        (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config))
   in
     case refute_problem config
       (qc_problem ``(∀n : num. n < 4 ⇒ n ≤ 4) ⇔ T``) of
@@ -19187,7 +19206,7 @@ val _ = require_msg
 fun unused_fixture_results_are_pinned () =
   let
     val config = default_config
-      |> upd_backends (SOME ["exhaustive", "random"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive, Refute.Random])
       |> upd_substrate Compute
       |> upd_size 2
       |> upd_iterations 20
@@ -19216,7 +19235,7 @@ fun unused_backend_selection_is_pinned () =
   let
     val saved_config = !Refute.the_config
     val config = default_config
-      |> upd_backends NONE
+      |> Refute.upd_search Refute.AllBackends
       |> upd_substrate Compute
       |> upd_size 2
       |> upd_timeout 2.0
@@ -19252,7 +19271,8 @@ val _ = require_msg (check_result unused_backend_selection_is_pinned)
 fun unused_profile_is_pinned () =
   let
     val config = default_config
-      |> upd_backends (SOME ["refute-unused-profile"])
+      |> Refute.upd_search
+        (Refute.Only [Refute.RegisteredBackend "refute-unused-profile"])
       |> upd_sequential false
       |> upd_abort_potential false
       |> upd_quiet false
@@ -19283,7 +19303,9 @@ val _ = require_msg (check_result unused_profile_is_pinned)
 fun unused_theorem_sweep_is_sequential () =
   let
     val config = default_config
-      |> upd_backends (SOME ["refute-unused-sequential-sweep"])
+      |> Refute.upd_search
+        (Refute.Only
+          [Refute.RegisteredBackend "refute-unused-sequential-sweep"])
       |> upd_sequential false
       |> upd_timeout 2.0
     fun restore () = reset_unused_sweep false
@@ -19311,7 +19333,7 @@ val _ = require_msg (check_result unused_theorem_sweep_is_sequential)
 fun unused_skipped_count_is_pinned (backend, enabled, timeout) =
   let
     val config = default_config
-      |> upd_backends (SOME [backend])
+      |> Refute.upd_search (Refute.Only [Refute.RegisteredBackend backend])
       |> upd_timeout timeout
     fun restore () = enabled := false
     fun run () =
@@ -19349,7 +19371,8 @@ fun try_refute_protocol_and_profile () =
     fun run () =
       let
         val config = default_config
-          |> upd_backends (SOME ["refute-try-profile"])
+          |> Refute.upd_search
+            (Refute.Only [Refute.RegisteredBackend "refute-try-profile"])
           |> upd_sequential false
           |> upd_seed NONE
           |> upd_expect ExpectNone
@@ -19360,7 +19383,7 @@ fun try_refute_protocol_and_profile () =
         val (hit, output) = capture_refute_messages 4 (fn () =>
           Refute.try_refute config ([], ``F``))
         val miss = Refute.try_refute
-          (config |> upd_backends (SOME ["exhaustive"])
+          (config |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
                   |> upd_substrate Compute)
           ([], ``T``)
       in
@@ -19413,7 +19436,7 @@ fun same_try_counterexample (left : Refute.counterexample)
 fun try_refute_is_deterministic () =
   let
     val config = default_config
-      |> upd_backends (SOME ["random"])
+      |> Refute.upd_search (Refute.Only [Refute.Random])
       |> upd_substrate Compute
       |> upd_size 3
       |> upd_iterations 40
@@ -19449,9 +19472,10 @@ fun try_refute_honors_whole_budget () =
         val _ = try_budget_first_enabled := true
         val _ = try_budget_second_enabled := true
         val config = default_config
-          |> upd_backends
-               (SOME ["refute-try-budget-first",
-                      "refute-try-budget-second"])
+          |> Refute.upd_search
+            (Refute.Only
+              [Refute.RegisteredBackend "refute-try-budget-first",
+               Refute.RegisteredBackend "refute-try-budget-second"])
           |> upd_timeout 1.5
         (* Each one-second backend fits comfortably within a reset 1.5s
            backend budget, but together they cannot fit in the one outer
@@ -19473,7 +19497,7 @@ val _ = require_msg (check_result try_refute_honors_whole_budget) (fn () =>
 fun quiet_suppresses_whole_refute_call () =
   let
     val config = default_config
-      |> upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
       |> upd_sequential true
       |> upd_substrate Compute
       |> upd_quiet true
@@ -19496,7 +19520,9 @@ fun quiet_suppresses_model_finder_output () =
     fun run () =
       let
         val config = default_config
-          |> upd_backends (SOME ["refute-quiet-output-probe"])
+          |> Refute.upd_search
+            (Refute.Only
+              [Refute.RegisteredBackend "refute-quiet-output-probe"])
           |> upd_sequential true
         val _ = quiet_output_probe_enabled := true
         val _ = MFMono.trace := true
@@ -19521,7 +19547,7 @@ val _ = require_msg
 fun quiet_restores_output_state_after_exception () =
   let
     val config = default_config
-      |> upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
       |> upd_sequential true
       |> upd_quiet true
       |> upd_expect ExpectNone
@@ -19574,7 +19600,9 @@ fun quiet_scope_serializes_loud_calls () =
         val _ = Synchronized.change quiet_scope_attempted (K false)
         val _ = Synchronized.change quiet_scope_events (K [])
         val config = default_config
-          |> upd_backends (SOME ["refute-quiet-scope-probe"])
+          |> Refute.upd_search
+            (Refute.Only
+              [Refute.RegisteredBackend "refute-quiet-scope-probe"])
           |> upd_sequential true
         val quiet = Future.fork (fn () =>
           ignore (Refute.refute (upd_quiet true config) ``T``))
@@ -19610,7 +19638,7 @@ fun uncertified_qc_is_genuine_and_decisive () =
     fun check backend seed =
       let
         val config = base
-          |> upd_backends (SOME [backend])
+          |> Refute.upd_search (Refute.Only [Refute.RegisteredBackend backend])
           |> upd_seed seed
         val outcome = refute config ``(x : num) = 0``
       in
@@ -19633,7 +19661,8 @@ val _ = require_msg
 
 fun trace_level_two_reports_qc_gate () =
   let
-    val config = upd_backends (SOME ["exhaustive"]) default_config
+    val config =
+      Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config
     val (_, output) = capture_refute_messages 2 (fn () =>
       ignore (refute_problem config
         (preprocessing_problem nonexecutable_goal)))
@@ -19654,7 +19683,7 @@ fun local_racing_has_no_degradation_diagnostic () =
   with_global_thread_count 1 (fn () =>
     let
       val config = default_config
-        |> upd_backends (SOME ["exhaustive"])
+        |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
         |> upd_size 0
         |> upd_timeout 10.0
         |> upd_sequential false
@@ -19677,7 +19706,7 @@ fun smartgen_failure_reason_and_gate_output () =
       ignore (compile_plan default_config
         ``zoo_sg_higher_order (P : num -> bool) x ==> F``))
     val disabled = default_config
-      |> upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
       |> Refute.upd_smart_generators false
     val (disabled_result, disabled_output) =
       capture_refute_messages 2 (fn () =>
@@ -19703,7 +19732,7 @@ fun smartgen_random_plan_is_unchanged () =
         val _ = computeLib.put_compset
           (computeLib.add_thms [zoo_sg_linear_compute] saved)
         val config = default_config
-          |> upd_backends (SOME ["random"])
+          |> Refute.upd_search (Refute.Only [Refute.Random])
           |> upd_substrate NativeSML
           |> upd_seed (SOME 1)
           |> upd_iterations 1
@@ -19836,7 +19865,7 @@ fun slow_masked_cleanup_keeps_the_verdict () =
        accepts = #accepts original, preflight = #preflight original,
        compile = compile}
     val config = default_config
-      |> upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
       |> upd_sequential true
       |> upd_substrate Compute
       |> upd_size 1
@@ -20358,7 +20387,7 @@ fun enum_post_definition_failures_are_clean () =
       let
         val config = default_config
           |> upd_substrate choice
-          |> upd_backends (SOME ["exhaustive"])
+          |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
           |> upd_sequential true
           |> upd_certify false
           |> upd_size 1
@@ -20953,7 +20982,7 @@ fun cv_timeout_is_healthy () =
       (upd_iterations 1
         (upd_size 1
           (upd_sequential true
-            (upd_backends (SOME ["random"])
+            (Refute.upd_search (Refute.Only [Refute.Random])
               (upd_substrate Cv default_config)))))
     val compiled =
       case Refute_EvalCv.compile config (Random {seed = 1})
@@ -20998,7 +21027,7 @@ fun cv_timeout_is_healthy () =
     val healthy_config = upd_timeout 5.0
       (upd_size 2
         (upd_sequential true
-          (upd_backends (SOME ["exhaustive"])
+          (Refute.upd_search (Refute.Only [Refute.Exhaustive])
             (upd_substrate Cv default_config))))
     val healthy =
       case Refute.refute healthy_config ``(b : bool)`` of
@@ -21046,7 +21075,7 @@ fun cv_dual_run_is_clean sequential goal sound =
       (upd_iterations 20
         (upd_size 2
           (upd_sequential sequential
-            (upd_backends (SOME ["exhaustive", "random"])
+            (Refute.upd_search (Refute.Only [Refute.Exhaustive, Refute.Random])
               (upd_substrate Cv default_config)))))
     val _ = register_substrate replacement
     val outcome = Refute.refute config goal
@@ -21108,7 +21137,7 @@ val corpus_config =
   upd_timeout 5.0
     (upd_seed (SOME 1)
       (upd_sequential true
-        (upd_backends (SOME ["exhaustive"]) default_config)))
+        (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config)))
 
 fun public_expect NoExpectation = Refute.NoExpectation
   | public_expect ExpectNone = Refute.ExpectNone
@@ -21202,7 +21231,7 @@ fun corpus_smart_quantifiers () =
 fun corpus_default_quickcheck () =
   let
     val config =
-      upd_backends (SOME (Refute_QC.qc_backend_names ())) (!the_config)
+      Refute.upd_search Refute.QuickcheckBackends (!the_config)
     fun check name tm =
       tc {name = "Refute default quickcheck: " ^ name,
           cfg = config, tm = tm, expect = ExpectGenuine}
@@ -21429,10 +21458,11 @@ fun corpus_registries () =
 fun corpus_parlist () =
   let
     val parallel_config =
-      upd_backends (SOME ["exhaustive", "random"])
+      Refute.upd_search (Refute.Only [Refute.Exhaustive, Refute.Random])
         (upd_sequential false corpus_config)
     val sequential_config =
-      upd_backends (SOME ["exhaustive", "random"]) corpus_config
+      Refute.upd_search (Refute.Only [Refute.Exhaustive, Refute.Random])
+        corpus_config
     val cex_goal = ``(x : num) - y + y = x``
     val sound_goal = ``(!b : bool. b \/ ~b)``
     fun same goal =
@@ -21573,9 +21603,10 @@ fun conform ({name, cfg, tm, inapplicable} : conformance_case) =
         val selected = Refute.upd_substrate (public_substrate choice) base
         val configured =
           case seed of
-              NONE => Refute.upd_backends (SOME ["exhaustive"]) selected
+              NONE =>
+                Refute.upd_search (Refute.Only [Refute.Exhaustive]) selected
             | SOME value => Refute.upd_seed (SOME value)
-                (Refute.upd_backends (SOME ["random"]) selected)
+                (Refute.upd_search (Refute.Only [Refute.Random]) selected)
       in
         quiet_refute configured tm
       end
@@ -21932,7 +21963,7 @@ fun enum_conformance () =
       |> Refute.upd_size 1
       |> Refute.upd_sequential true
       |> Refute.upd_certify false
-      |> Refute.upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
     val instances = qc_instances base smartgen_linear_goal
     val genuinely_gated =
       not (null instances) andalso
@@ -22087,7 +22118,7 @@ fun certificate_audit original theorem =
 val universal_pnf_goal = ``(?x : num. p x) ==> !x. p x``
 
 val universal_pnf_config = default_config
-  |> upd_backends (SOME ["exhaustive"])
+  |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
   |> upd_sequential true
   |> upd_substrate NativeSML
   |> upd_size 1
@@ -23112,7 +23143,7 @@ fun inconclusive_certification_is_monotone () =
        accepts = #accepts original, preflight = #preflight original,
        compile = fn _ => fn _ => fn _ => Compiled test}
     val base = default_config
-      |> upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
       |> upd_sequential true
       |> upd_substrate Compute
       |> upd_size 1
@@ -23212,7 +23243,7 @@ fun facade_reverse () =
 fun facade_expectation () =
   ((ignore (Refute.refute
       (Refute.upd_expect Refute.ExpectNone
-        (Refute.upd_backends (SOME ["exhaustive"]) default_config))
+        (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config))
       ``(x : num) - y + y = x``); false)
    handle HOL_ERR error =>
      Feedback.top_structure_of error = "Refute" andalso
@@ -23221,7 +23252,7 @@ fun facade_expectation () =
 fun facade_parallel () =
   case Refute.refute
     (Refute.upd_sequential false
-      (Refute.upd_backends (SOME ["exhaustive"]) default_config))
+      (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config))
     ``(x : num) - y + y = x`` of
       Refute.Counterexample _ => true
     | _ => false
@@ -23241,11 +23272,11 @@ fun facade_tactic_allows_unknown () =
 
 fun facade_assumptions () =
   case (Refute.refute_goal
-    (Refute.upd_backends (SOME ["exhaustive"]) default_config)
+    (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config)
     ([``b : bool``], ``b : bool``),
     Refute.refute_goal
       (Refute.upd_no_assms true
-        (Refute.upd_backends (SOME ["exhaustive"]) default_config))
+        (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config))
       ([``b : bool``], ``b : bool``)) of
       (Refute.NoCounterexample, Refute.Counterexample _) => true
     | _ => false
@@ -23461,7 +23492,7 @@ fun polymorphic_qc_miss_stays_bounds_relative () =
        input = MonoInstances,
        run = fn _ => fn _ => NoCounterexample}
     val config = Refute.default_config
-      |> Refute.upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
       |> Refute.upd_sequential true
       |> Refute.upd_quiet true
   in
@@ -23488,7 +23519,8 @@ fun no_counterexample_preempts_auxiliary_model_search () =
        run = fn _ => fn _ =>
          (model_started := true; Model [stub_cex "kodkod" Genuine])}
     val config = Refute.default_config
-      |> Refute.upd_backends (SOME ["exhaustive", "kodkod"])
+      |> Refute.upd_search
+        (Refute.Only [Refute.Exhaustive, Refute.ModelFinder])
       |> Refute.upd_falsify false
       |> Refute.upd_sequential true
       |> Refute.upd_quiet true
@@ -23595,7 +23627,7 @@ fun enforce_mf_acceptance_config solver config =
     (Refute.upd_max_threads 1
       (Refute.upd_timeout 120.0
         (Refute.upd_sequential true
-          (Refute.upd_backends (SOME ["kodkod"]) config))))
+          (Refute.upd_search (Refute.Only [Refute.ModelFinder]) config))))
 
 fun mf_acceptance_config solver =
   enforce_mf_acceptance_config solver (mf_acceptance_base_config ())
@@ -23604,7 +23636,7 @@ fun mf_no_counterexample_totality_regressions () =
   not (Refute_Forl.is_configured ()) orelse
   let
     val base = Refute.default_config
-      |> Refute.upd_backends (SOME ["kodkod"])
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
       |> Refute.upd_sequential true
       |> Refute.upd_quiet true
       |> Refute.upd_timeout 20.0
@@ -25554,7 +25586,7 @@ fun mf_differential_test solver
       |> Refute.upd_size 4
       |> Refute.upd_substrate Refute.Compute
       |> Refute.upd_sequential true
-      |> Refute.upd_backends (SOME ["exhaustive"])
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
     val qc = quiet_refute qc_config tm
     val qc_verdict = mf_differential_verdict name "QC" qc
     val qc_has = mf_differential_has_counterexample qc_verdict
