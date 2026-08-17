@@ -819,6 +819,11 @@ fun reconstruct_term (context as {scope, sel_names, ...} : context)
             else if Util.same_type ty MFH.int_type then
               intSyntax.term_of_int
                 (Arbint.fromInt (MFP.int_for_atom (card, 0) atom))
+            else if MFH.is_word_type ty then
+              (* Atom [j] of a word carrier denotes [n2w j], which prints in
+                 the surface literal form. *)
+              wordsSyntax.mk_n2w
+                (numSyntax.term_of_int atom, wordsSyntax.dest_word_type ty)
             else
               case MFS.data_type_spec data_types ty of
                   SOME spec =>

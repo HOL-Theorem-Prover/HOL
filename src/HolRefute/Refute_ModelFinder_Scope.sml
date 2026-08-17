@@ -144,6 +144,13 @@ structure Refute_ModelFinder_Scope = struct
       handle HOL_ERR _ => ~1),
      offset_of_type ofs ty)
 
+  (* The widest word carrier of a scope, or 0 without one.  Word operations
+     are computed in Kodkod's integers, so this sets the integer width the
+     problem asks for. *)
+  fun max_word_width ({card_assigns, ...} : scope) =
+    List.foldl Int.max 0
+      (List.mapPartial (MFH.word_dimension o #1) card_assigns)
+
   fun same_card_assigns (left, right) =
     ListPair.allEq (fn ((left_ty, left_card),
                         (right_ty, right_card)) =>
@@ -257,6 +264,26 @@ structure Refute_ModelFinder_Scope = struct
 
   fun bit_card bits = Int.min (max_bits, Int.max (1, bits))
 
+  (* A word carrier is exact and unsearched: width [w] means exactly [2^w]
+     atoms, atom [j] denoting [n2w j].  Materializing them is the whole
+     cost, so an oversized width refuses by name instead of being built. *)
+  val max_word_atoms = 1024
+
+  fun word_atom_count width =
+    if width <= 30 then Int.toString (Util.reasonable_power 2 width)
+    else "2^" ^ Int.toString width
+
+  fun word_card ty =
+    case MFH.word_dimension ty of
+        NONE => raise err "word_card" "not a word type"
+      | SOME width =>
+          if width > 30 orelse
+             Util.reasonable_power 2 width > max_word_atoms then
+            raise Util.NOT_SUPPORTED
+              ("word width " ^ Int.toString width ^ " needs " ^
+               word_atom_count width ^ " atoms")
+          else Util.reasonable_power 2 width
+
   fun block_for_type context binarize cards_assigns maxes_assigns
         iters_assigns bitss bisim_depths ty =
     if MFH.is_bisim_iterator_type ty then
@@ -276,6 +303,8 @@ structure Refute_ModelFinder_Scope = struct
       [(Card ty, lookup_type_ints_assign cards_assigns MFH.num_type)]
     else if ty = MFH.signed_bitword_type then
       [(Card ty, lookup_type_ints_assign cards_assigns MFH.int_type)]
+    else if MFH.is_word_type ty then
+      [(Card ty, [word_card ty])]
     else
       (Card ty, lookup_type_ints_assign cards_assigns ty) ::
       (case MFH.binarized_and_boxed_data_type_constrs context binarize ty of

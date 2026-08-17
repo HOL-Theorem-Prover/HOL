@@ -1,8 +1,8 @@
 HolRefute by example
 ====================
 
-The main HolRefute interface is its proof tactics.  Examples 01--10 and 12
-are modern HOL4 theory scripts built around:
+The main HolRefute interface is its proof tactics.  Examples 01--10, 12 and
+13 are modern HOL4 theory scripts built around:
 
     REFUTE_TAC
     QUICKCHECK_TAC
@@ -45,7 +45,7 @@ To build one example, run Holmake in this directory, for example:
 
     ../../../bin/Holmake -C examples refuteExample01Theory.uo
 
-Examples 01, 02, 04, 09, 10, and 12 contain MODEL_REFUTE_TAC calls.  They
+Examples 01, 02, 04, 09, 10, 12, and 13 contain MODEL_REFUTE_TAC calls.  They
 need Kodkodi 1.5.7 and a Java runtime:
 
     export HOL4_KODKODI=/path/to/kodkodi-1.5.7
@@ -100,6 +100,10 @@ refuteExample11Script.sml
 
 refuteExample12Script.sml
     Executable and relational support for standard-library types.
+
+refuteExample13Script.sml
+    Machine words: the finite carrier at a concrete width, widths left as
+    type variables, and the operations that are not encoded.
 
 
 Further reading

@@ -20,7 +20,12 @@ signature REFUTE_MODEL_FINDER_NUT = sig
   datatype cst =
     False | True | Iden | Num of int | Unknown | Unrep | Suc | Add |
     Subtract | Multiply | Divide | Gcd | Lcm | Fracs | NormFrac |
-    NatToInt | IntToNat
+    NatToInt | IntToNat |
+    (* Word operations with no arithmetic reading.  [Add], [Subtract] and
+       [Multiply] serve the modular ring at a word type, and the rest of the
+       direct tier reduces to those. *)
+    NatToWord | WordToNat | WordAnd | WordOr | WordXor |
+    WordShl | WordShr | WordAsr
 
   datatype op1 =
     Not | Finite | Converse | Closure | SingletonSet | IsUnknown |
@@ -103,7 +108,12 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
   datatype cst =
     False | True | Iden | Num of int | Unknown | Unrep | Suc | Add |
     Subtract | Multiply | Divide | Gcd | Lcm | Fracs | NormFrac |
-    NatToInt | IntToNat
+    NatToInt | IntToNat |
+    (* Word operations with no arithmetic reading.  [Add], [Subtract] and
+       [Multiply] serve the modular ring at a word type, and the rest of the
+       direct tier reduces to those. *)
+    NatToWord | WordToNat | WordAnd | WordOr | WordXor |
+    WordShl | WordShr | WordAsr
 
   datatype op1 =
     Not | Finite | Converse | Closure | SingletonSet | IsUnknown |
@@ -149,6 +159,14 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
     | string_for_cst NormFrac = "NormFrac"
     | string_for_cst NatToInt = "NatToInt"
     | string_for_cst IntToNat = "IntToNat"
+    | string_for_cst NatToWord = "NatToWord"
+    | string_for_cst WordToNat = "WordToNat"
+    | string_for_cst WordAnd = "WordAnd"
+    | string_for_cst WordOr = "WordOr"
+    | string_for_cst WordXor = "WordXor"
+    | string_for_cst WordShl = "WordShl"
+    | string_for_cst WordShr = "WordShr"
+    | string_for_cst WordAsr = "WordAsr"
 
   fun string_for_op1 Not = "Not"
     | string_for_op1 Finite = "Finite"
@@ -573,6 +591,83 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     is_named {Thy = "integer", Name = "int_div"} head then
               SOME Divide
             else NONE
+          (* Atom [j] of a word carrier denotes [n2w j], so a literal is a
+             [Num] at the word type once reduced modulo the width. *)
+          fun word_literal_value term =
+            case Lib.total wordsSyntax.dest_mod_word_literal term of
+                SOME (value, _) => Lib.total Arbnum.toInt value
+              | NONE => NONE
+          fun word_key_lookup table head =
+            if Option.isSome (MFH.word_op_dimension (Term.type_of head)) then
+              Option.map #2
+                (List.find (fn (key, _) => is_named key head) table)
+            else NONE
+          (* [Add], [Subtract] and [Multiply] are the modular ring at a word
+             type; the other direct operations have no arithmetic reading. *)
+          val word_csts =
+            [({Thy = "words", Name = "n2w"}, NatToWord),
+             ({Thy = "words", Name = "w2n"}, WordToNat),
+             ({Thy = "words", Name = "word_add"}, Add),
+             ({Thy = "words", Name = "word_sub"}, Subtract),
+             ({Thy = "words", Name = "word_mul"}, Multiply),
+             ({Thy = "words", Name = "word_and"}, WordAnd),
+             ({Thy = "words", Name = "word_or"}, WordOr),
+             ({Thy = "words", Name = "word_xor"}, WordXor),
+             ({Thy = "words", Name = "word_lsl"}, WordShl),
+             ({Thy = "words", Name = "word_lsr"}, WordShr),
+             ({Thy = "words", Name = "word_asr"}, WordAsr)]
+          val word_cst_of = word_key_lookup word_csts
+          (* Each order is the unsigned strict one, optionally swapped and
+             negated; a signed order additionally adds the sign bit to both
+             operands, which turns the signed order into the unsigned one. *)
+          val word_orders =
+            [({Thy = "words", Name = "word_lo"}, (false, false, false)),
+             ({Thy = "words", Name = "word_hi"}, (false, true, false)),
+             ({Thy = "words", Name = "word_ls"}, (false, true, true)),
+             ({Thy = "words", Name = "word_hs"}, (false, false, true)),
+             ({Thy = "words", Name = "word_lt"}, (true, false, false)),
+             ({Thy = "words", Name = "word_gt"}, (true, true, false)),
+             ({Thy = "words", Name = "word_le"}, (true, true, true)),
+             ({Thy = "words", Name = "word_ge"}, (true, false, true))]
+          val word_order_of = word_key_lookup word_orders
+          fun word_width_of ty =
+            case MFH.word_dimension ty of
+                SOME width => width
+              | NONE => raise Feedback.mk_HOL_ERR
+                  "Refute_ModelFinder_Nut" "nut_from_term"
+                  "word operation at a non-word type"
+          (* [value - x] at a word type: complementation is [~1w - x] and
+             negation is [0w - x], neither needing a primitive of its own. *)
+          fun word_subtract_from word_ty value =
+            Op2 (Apply, Type.-->(word_ty, word_ty), MFR.Any,
+              Cst (Subtract,
+                Type.-->(word_ty, Type.-->(word_ty, word_ty)), MFR.Any),
+              Cst (Num value, word_ty, MFR.Any))
+          fun word_add_sign_bit operand =
+            let
+              val word_ty = type_of operand
+              val width = word_width_of word_ty
+            in
+              Op2 (Apply, word_ty, MFR.Any,
+                Op2 (Apply, Type.-->(word_ty, word_ty), MFR.Any,
+                  Cst (Add,
+                    Type.-->(word_ty, Type.-->(word_ty, word_ty)), MFR.Any),
+                  Cst (Num (Util.reasonable_power 2 (width - 1)), word_ty,
+                    MFR.Any)),
+                operand)
+            end
+          fun word_comparison (signed, swap, negate) left right =
+            let
+              val (first, second) =
+                if swap then (right, left) else (left, right)
+              val (first, second) =
+                if signed then
+                  (word_add_sign_bit first, word_add_sign_bit second)
+                else (first, second)
+              val less = Op2 (Less, Type.bool, MFR.Any, first, second)
+            in
+              if negate then Op1 (Not, Type.bool, MFR.Any, less) else less
+            end
           fun is_numeral_skeleton head =
             is_named {Thy = "arithmetic", Name = "NUMERAL"} head orelse
             is_named {Thy = "arithmetic", Name = "BIT1"} head orelse
@@ -613,6 +708,10 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                      Cst (Num (int_of_numeral integer),
                        Term.type_of candidate, MFR.Any)
                  | NONE =>
+              case word_literal_value candidate of
+                  SOME value =>
+                    Cst (Num value, Term.type_of candidate, MFR.Any)
+                | NONE =>
               if boolSyntax.is_forall candidate then
                 let val (variable, body) = boolSyntax.dest_forall candidate
                 in do_quantifier All variable body end
@@ -780,6 +879,30 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
               else if is_named {Thy = "integer", Name = "Num"} head andalso
                       null arguments then
                 Cst (IntToNat, Term.type_of head, MFR.Any)
+              else if Option.isSome (word_order_of head) andalso
+                      length arguments < 2 then
+                sub (MFH.eta_expand candidate (2 - length arguments))
+              else if Option.isSome (word_order_of head) andalso
+                      length arguments = 2 then
+                word_comparison (valOf (word_order_of head))
+                  (sub (hd arguments)) (sub (List.nth (arguments, 1)))
+              else if (is_named {Thy = "words", Name = "word_2comp"} head
+                       orelse
+                       is_named {Thy = "words", Name = "word_1comp"} head)
+                      andalso null arguments andalso
+                      Option.isSome
+                        (MFH.word_op_dimension (Term.type_of head)) then
+                let
+                  val word_ty = domain_type (Term.type_of head)
+                  val width = word_width_of word_ty
+                in
+                  word_subtract_from word_ty
+                    (if is_named {Thy = "words", Name = "word_2comp"} head
+                     then 0 else Util.reasonable_power 2 width - 1)
+                end
+              else if Option.isSome (word_cst_of head) andalso
+                      null arguments then
+                cst (valOf (word_cst_of head)) head
               else if Term.is_const head andalso
                       is_named {Thy = "refute", Name = "unknown"} head andalso
                       null arguments then
@@ -1004,6 +1127,36 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
       | Construct (_, _, _, nuts) => List.all is_constructive nuts
       | _ => false
 
+  (* Kodkod reads a word atom's value from its universe index, which is that
+     atom's Kodkod integer only while the integer bounds stay sequential, and
+     computes in a fixed integer width.  Binary integers replace the bounds
+     with powers of two, and a width the integers cannot hold would wrap in
+     Kodkod's arithmetic rather than the word's, so both refuse by name
+     instead of encoding something else. *)
+  (* [product] covers the operations whose unwrapped result is twice as wide
+     as an operand: multiplication and the left shift.  The integer width is
+     sized for the widest word of the scope, so the second refusal is a check
+     on that sizing rather than a limit users meet. *)
+  fun check_word_budget scope product ty =
+    case MFH.word_op_dimension ty of
+        NONE => ()
+      | SOME width =>
+          if #binarize scope then
+            raise Util.NOT_SUPPORTED
+              "word operations are not encoded with binary integers"
+          else
+            let
+              val needed = (if product then 2 * width else width + 1) + 1
+            in
+              if needed >
+                 MFP.bit_width_for (#bits scope) (MFS.max_word_width scope)
+              then
+                raise Util.NOT_SUPPORTED
+                  ("word width " ^ Int.toString width ^ " needs " ^
+                   Int.toString needed ^ " integer bits")
+              else ()
+            end
+
   fun unknown_boolean ty representation =
     Cst (case representation of
              MFR.Formula Util.Pos => False
@@ -1197,14 +1350,60 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 else if List.exists (fn other => constant = other)
                     [Add, Subtract, Multiply, Divide, Gcd, Lcm] then
                   let
+                    val _ = check_word_budget scope
+                      (constant = Multiply) ty
                     val number_ty = domain_type ty
                     val atom = MFR.Atom (MFS.spec_of_type scope number_ty)
-                    val total = number_ty = MFH.num_type andalso
-                      (constant = Subtract orelse constant = Divide orelse
-                       constant = Gcd)
+                    (* The modular ring is total at a word type: every
+                       operation wraps into the carrier. *)
+                    val total = MFH.is_word_type number_ty orelse
+                      (number_ty = MFH.num_type andalso
+                       (constant = Subtract orelse constant = Divide orelse
+                        constant = Gcd))
                     val range = if total then atom else MFR.Opt atom
                   in Cst (constant, ty,
                        MFR.Func (atom, MFR.Func (atom, range))) end
+                else if constant = NatToWord orelse constant = WordToNat then
+                  let
+                    val _ = check_word_budget scope false ty
+                    val (domain_card, domain_offset) =
+                      MFS.spec_of_type scope (domain_type ty)
+                    val (range_card, range_offset) =
+                      MFS.spec_of_type scope (range_type ty)
+                    (* [n2w] wraps, so it is total whatever the carriers are;
+                       [w2n] needs a numeric carrier holding every word
+                       value. *)
+                    val total = constant = NatToWord orelse
+                      domain_card <= range_card
+                    val range = MFR.Atom (range_card, range_offset)
+                  in
+                    Cst (constant, ty,
+                      MFR.Func (MFR.Atom (domain_card, domain_offset),
+                        if total then range else MFR.Opt range))
+                  end
+                else if List.exists (fn other => constant = other)
+                    [WordAnd, WordOr, WordXor] then
+                  let
+                    val _ = check_word_budget scope false ty
+                    val atom = MFR.Atom
+                      (MFS.spec_of_type scope (domain_type ty))
+                  in
+                    Cst (constant, ty,
+                      MFR.Func (atom, MFR.Func (atom, atom)))
+                  end
+                else if List.exists (fn other => constant = other)
+                    [WordShl, WordShr, WordAsr] then
+                  let
+                    val _ = check_word_budget scope (constant = WordShl) ty
+                    val word_atom = MFR.Atom
+                      (MFS.spec_of_type scope (domain_type ty))
+                    val count_atom = MFR.Atom
+                      (MFS.spec_of_type scope
+                        (domain_type (range_type ty)))
+                  in
+                    Cst (constant, ty,
+                      MFR.Func (word_atom, MFR.Func (count_atom, word_atom)))
+                  end
                 else if constant = NatToInt orelse constant = IntToNat then
                   let
                     val (domain_card, domain_offset) =
@@ -1261,6 +1460,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                 end
             | Op2 (Less, ty, _, first, second) =>
                 let
+                  val _ = check_word_budget scope false (type_of first)
                   val first' = sub first
                   val second' = sub second
                   val optional = List.exists

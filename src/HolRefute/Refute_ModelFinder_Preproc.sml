@@ -2418,6 +2418,14 @@ structure Refute_ModelFinder_Preproc = struct
       val (nondefinitions, definitions, got_all_mono_user_axioms,
            no_poly_user_axioms) =
         axioms_for_term context assumptions prepared
+      (* A concrete-width word is its own numeric carrier: the encoder reads
+         a word atom's value from its universe index, which is its Kodkod
+         integer only while [int_bounds] stays sequential - that is, while
+         binarization is off.  The numeral inside a word literal ([5w] is
+         [n2w 5]) would otherwise switch binarization on and leave every
+         word atom without an integer value, so a word type vetoes the smart
+         choice.  A forced [binary_ints] still wins, and the encoder then
+         refuses the word by name. *)
       val binarize =
         case binary_ints of
             SOME false => false
@@ -2425,8 +2433,10 @@ structure Refute_ModelFinder_Preproc = struct
               List.all (may_use_binary_ints false) nondefinitions andalso
               List.all (may_use_binary_ints true) definitions andalso
               (binary_ints = SOME true orelse
-               List.exists should_use_binary_ints
-                 (nondefinitions @ definitions))
+               (List.exists should_use_binary_ints
+                  (nondefinitions @ definitions) andalso
+                not (List.exists MFH.term_mentions_word_type
+                  (nondefinitions @ definitions))))
       val box = List.exists (fn (_, value) => value <> SOME false) boxes
       val uncurry_terms =
         if binarize then

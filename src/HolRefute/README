@@ -293,10 +293,10 @@ Model-finder surface
 --------------------
 
 The model finder supports native polymorphic scopes, monotonicity and smart
-finitization, specialization and boxing, binary integers, (co)inductive
-predicates, codatatypes, quotients, typedefs, value pinning, model formatting,
-and incremental multi-model search.  The principal options and their defaults
-are:
+finitization, specialization and boxing, binary integers, machine words,
+(co)inductive predicates, codatatypes, quotients, typedefs, value pinning,
+model formatting, and incremental multi-model search.  The principal options
+and their defaults are:
 
 | updater | default | meaning |
 | --- | --- | --- |
@@ -305,7 +305,7 @@ are:
 | `upd_specialize` | `true` | specialize static higher-order arguments |
 | `upd_box` | `[(NONE, NONE)]` | box functions and pairs when useful |
 | `upd_binary_ints` | `NONE` | select binary integers when useful |
-| `upd_bits` | `[1, ..., 10]` | candidate binary word widths |
+| `upd_bits` | `[1, ..., 10]` | candidate binary integer widths |
 | `upd_star_linear_preds` | `true` | use exact closure for linear predicates |
 | `upd_iter` | default depth row (below) | fixpoint unrolling depths |
 | `upd_bisim_depth` | `[9]` | codatatype bisimulation depth; `~1` disables it |
@@ -338,6 +338,24 @@ evaluated-term, and needed-term type variable to the alphabetically first one
 before building its context.  This reduces independent scope blocks, at the
 cost of potentially losing models that require the variables to have
 different cardinalities.
+
+A word type of concrete width `w` is a native numeric carrier, not a
+datatype and not a typedef: it has exactly `2^w` atoms, atom `j` denoting
+`n2w j`, and models print in the surface literal form.  The carrier is exact
+and never searched, so a scope never sizes it; a width whose carrier would
+exceed 1024 atoms refuses by name.  Encoded directly are word literals,
+`n2w`, `w2n`, `+`, `-`, unary `-`, `*`, `~`, `&&`, `||`, `??`, `<<`, `>>`,
+`>>>`, and the unsigned and signed orders.  Width-changing operations
+(`w2w`, `sw2sw`, `word_extract`, `word_concat`) and the bit-permuting
+remainder (rotations, `word_reverse`, `word_log2`, ...) are not encoded and
+are refused by name, so an inconclusive report never passes for a proof.
+Word arithmetic runs in Kodkod's integers, which read an atom's value from
+its universe index; binary integers replace those bounds, so a problem
+mentioning a word turns smart binarization off, and forcing it with
+`upd_binary_ints (SOME true)` refuses the word instead.  A width left as a
+type variable has no carrier at all — such a goal is refuted through the
+monomorphic width instances described above.  A `cart` type that is not a
+word is not encoded.
 
 Registrations are session-local ML state and create no theory content:
 

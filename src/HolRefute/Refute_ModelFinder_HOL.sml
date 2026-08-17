@@ -483,6 +483,50 @@ structure Refute_ModelFinder_HOL = struct
   fun binary_type argument result =
     fun_type (argument, fun_type (argument, result))
 
+  fun cart_type_parts ty = Lib.total fcpSyntax.dest_cart_type ty
+
+  fun numeric_type_card ty =
+    case Lib.total fcpLib.index_to_num ty of
+        SOME card =>
+          SOME (Arbnum.toInt card
+            handle Overflow =>
+              raise Refute_ModelFinder_Util.TOO_LARGE
+                ("Refute_ModelFinder_HOL.numeric_type_card",
+                 "finite type cardinality does not fit in int"))
+      | NONE => NONE
+
+  fun word_dimension ty =
+    case Lib.total wordsSyntax.dest_word_type ty of
+        SOME index_ty => numeric_type_card index_ty
+      | NONE => NONE
+
+  (* A word of concrete width is a native numeric carrier: exactly [2^w]
+     atoms, atom [j] denoting [n2w j].  That makes it interpreted rather
+     than a datatype, even though it shares the [cart] operator with
+     general finite Cartesian products, whose constructor [mk_cart] takes a
+     function into [:'a finite_image]. *)
+  fun is_word_type ty = Option.isSome (word_dimension ty)
+
+  (* [n2w] of a numeral at a concrete width: the encoder folds it into the
+     single carrier atom that denotes it. *)
+  fun is_word_literal term =
+    Lib.can wordsSyntax.dest_mod_word_literal term
+
+  fun type_has_word ty =
+    is_word_type ty orelse
+    (List.exists type_has_word (#Args (Type.dest_thy_type ty))
+     handle HOL_ERR _ => false)
+
+  fun term_mentions_word_type term =
+    List.exists (type_has_word o Term.type_of)
+      (HolKernel.find_terms (fn _ => true) term)
+
+  (* The width of the word type a word operation acts on. *)
+  fun word_op_dimension ty =
+    get_first word_dimension
+      (let val (domains, range) = boolSyntax.strip_fun ty
+       in domains @ [range] end)
+
   val built_in_typed_consts =
     [(({Thy = "num", Name = "0"}, num_type), 0),
      (({Thy = "arithmetic", Name = "+"},
@@ -517,6 +561,34 @@ structure Refute_ModelFinder_HOL = struct
      (({Thy = "integer", Name = "int_le"},
        binary_type int_type Type.bool), 2)]
 
+  (* [built_in_typed_consts] matches one exact type, which cannot express
+     "at any concrete width", so the word family needs its own lookup.  The
+     direct tier of D4: literals through [n2w]/[w2n], the modular ring, the
+     unsigned and signed orders, and the bitwise/shift group.  Everything else
+     at a word type is refused by name in [unfold_defs_in_term]. *)
+  val word_built_in_consts =
+    [({Thy = "words", Name = "n2w"}, 0),
+     ({Thy = "words", Name = "w2n"}, 0),
+     ({Thy = "words", Name = "word_add"}, 0),
+     ({Thy = "words", Name = "word_sub"}, 0),
+     ({Thy = "words", Name = "word_mul"}, 0),
+     ({Thy = "words", Name = "word_2comp"}, 0),
+     ({Thy = "words", Name = "word_1comp"}, 0),
+     ({Thy = "words", Name = "word_and"}, 0),
+     ({Thy = "words", Name = "word_or"}, 0),
+     ({Thy = "words", Name = "word_xor"}, 0),
+     ({Thy = "words", Name = "word_lsl"}, 0),
+     ({Thy = "words", Name = "word_lsr"}, 0),
+     ({Thy = "words", Name = "word_asr"}, 0),
+     ({Thy = "words", Name = "word_lo"}, 2),
+     ({Thy = "words", Name = "word_ls"}, 2),
+     ({Thy = "words", Name = "word_hi"}, 2),
+     ({Thy = "words", Name = "word_hs"}, 2),
+     ({Thy = "words", Name = "word_lt"}, 2),
+     ({Thy = "words", Name = "word_le"}, 2),
+     ({Thy = "words", Name = "word_gt"}, 2),
+     ({Thy = "words", Name = "word_ge"}, 2)]
+
   fun generic_built_in_arity key =
     Option.map #2 (List.find (fn (other, _) => same_key key other)
       built_in_consts)
@@ -524,6 +596,31 @@ structure Refute_ModelFinder_HOL = struct
   fun typed_built_in_arity key ty =
     Option.map #2 (List.find (fn ((other, other_ty), _) =>
       same_key key other andalso ty = other_ty) built_in_typed_consts)
+
+  fun word_built_in_arity key ty =
+    if Option.isSome (word_op_dimension ty) then
+      Option.map #2 (List.find (fn (other, _) => same_key key other)
+        word_built_in_consts)
+    else NONE
+
+  (* Outside the direct tier a word operation is refused by name rather than
+     unfolded: the definitions of width changes, bit fields and rotations run
+     through [fcp] indexing, which no encoder reads, so unfolding them only
+     replaces a precise complaint with an obscure one.  The net is every
+     word-typed constant of the word and fcp theories that the tier omits. *)
+  fun unencoded_word_reason constant =
+    let
+      val {Thy, Name, ...} = Term.dest_thy_const constant
+      val key = {Thy = Thy, Name = Name}
+      val ty = Term.type_of constant
+    in
+      if (Thy = "words" orelse Thy = "fcp") andalso
+         Option.isSome (word_op_dimension ty) andalso
+         not (List.exists (fn (other, _) => same_key key other)
+                word_built_in_consts) then
+        SOME ("word operation " ^ Thy ^ "$" ^ Name ^ " is not encoded")
+      else NONE
+    end handle HOL_ERR _ => NONE
 
   fun result_type_after 0 ty = ty
     | result_type_after count ty =
@@ -540,7 +637,10 @@ structure Refute_ModelFinder_HOL = struct
       else
         case generic_built_in_arity key of
             SOME arity => SOME arity
-          | NONE => typed_built_in_arity key ty
+          | NONE =>
+              (case typed_built_in_arity key ty of
+                   SOME arity => SOME arity
+                 | NONE => word_built_in_arity key ty)
     end handle HOL_ERR _ => NONE
 
   fun is_built_in_const constant =
@@ -573,6 +673,7 @@ structure Refute_ModelFinder_HOL = struct
     in
       Option.isSome (generic_built_in_arity key) orelse
       Option.isSome (typed_built_in_arity key ty) orelse
+      Option.isSome (word_built_in_arity key ty) orelse
       raw_fixpoint_kind constant <> NoFp
     end handle HOL_ERR _ => false
 
@@ -2306,10 +2407,32 @@ structure Refute_ModelFinder_HOL = struct
         same_type_operator (project entry) operator) (!registry)
     end handle HOL_ERR _ => false
 
+  (* The operator applied to distinct fresh type variables. *)
+  fun generic_instance ty =
+    let
+      val {Thy, Tyop, Args} = Type.dest_thy_type ty
+      fun name index =
+        if index < 26 then
+          "'" ^ String.str (Char.chr (Char.ord #"a" + index))
+        else "'a" ^ Int.toString index
+    in
+      Type.mk_thy_type
+        {Thy = Thy, Tyop = Tyop,
+         Args = List.tabulate (length Args, Type.mk_vartype o name)}
+    end
+
+  (* Classification is operator-level: every Refute registry is keyed by type
+     operator and [validate_registered_type] forbids non-variable type
+     arguments, so the generic instance is the authoritative answer.
+     [TypeBase.fetch] is a type-net lookup, so asking at a specialized
+     instance can pick a different entry for one operator - [:'a word] finds
+     the constructor-free word entry while [:('a,'b) cart] finds the cart
+     entry - and the guards would then disagree with the registration path
+     about [cart]. *)
   fun raw_free_datatype ty =
-    case TypeBase.fetch ty of
-        SOME info => not (null (TypeBasePure.constructors_of info))
-      | NONE => false
+    (case TypeBase.fetch (generic_instance ty) of
+         SOME info => not (null (TypeBasePure.constructors_of info))
+       | NONE => false)
     handle HOL_ERR _ => false
 
   fun register_codatatype (registration : codatatype_info) =
@@ -3431,7 +3554,8 @@ structure Refute_ModelFinder_HOL = struct
       ty
 
   fun is_interpreted_type ty =
-    interpreted_type_operator (type_operator_of ty) handle HOL_ERR _ => false
+    is_word_type ty orelse
+    (interpreted_type_operator (type_operator_of ty) handle HOL_ERR _ => false)
 
   val is_raw_free_datatype = raw_free_datatype
 
@@ -3624,8 +3748,23 @@ structure Refute_ModelFinder_HOL = struct
                       | NONE => []))
     end handle HOL_ERR _ => []
 
+  (* Operator-level classification makes every [cart] a free datatype, but
+     [mk_cart] takes a function into [:'a finite_image], whose defining
+     predicate mentions [FINITE UNIV] and [ARB] (fcpScript.sml) and has no
+     faithful interpretation here.  Word types are the interpreted case
+     above; everything else under [cart] refuses by name. *)
   fun uncached_data_type_constrs ty =
     if is_interpreted_type ty then []
+    else if Option.isSome (cart_type_parts ty) then
+      raise Refute_ModelFinder_Util.NOT_SUPPORTED
+        (if Lib.can wordsSyntax.dest_word_type ty then
+           (* The width is a type variable: no carrier can be built for it.
+              A polymorphic word goal is refuted through the monomorphic
+              instances instead. *)
+           "word type " ^ Parse.type_to_string ty ^ " has no concrete width"
+         else
+           "cart type " ^ Parse.type_to_string ty ^
+           " is not encoded; only word types are")
     else
       case registered_constructors ty of
           constructors as _ :: _ => constructors
@@ -3910,10 +4049,30 @@ structure Refute_ModelFinder_HOL = struct
         | NONE => get_first unregistered_typedef_type constants
     end
 
+  (* Advising [register_typedef] is only honest where registration can
+     actually succeed: it validates the type it is given, so a specialized
+     instance must be named generically, and an operator that validation
+     refuses outright cannot be registered at all. *)
   fun unregistered_typedef_reason terms =
     Option.map (fn ty =>
-      "unregistered typedef " ^ #Tyop (Type.dest_thy_type ty) ^
-        ": register with Refute.register_typedef")
+      let
+        fun obstacle candidate =
+          (validate_registered_type "register_typedef" candidate; NONE)
+          handle HOL_ERR error => SOME (Feedback.message_of error)
+        val advice =
+          case obstacle ty of
+              NONE => "register with Refute.register_typedef"
+            | SOME _ =>
+                let val generic = generic_instance ty
+                in
+                  case obstacle generic of
+                      NONE => "register " ^ Parse.type_to_string generic ^
+                        " with Refute.register_typedef"
+                    | SOME message => "cannot be registered: " ^ message
+                end
+      in
+        "unregistered typedef " ^ #Tyop (Type.dest_thy_type ty) ^ ": " ^ advice
+      end)
       (first_unregistered_typedef terms)
 
   fun find_field which term =
@@ -4770,23 +4929,6 @@ structure Refute_ModelFinder_HOL = struct
         SOME {Thy = "bool", Tyop = "itself", ...} => true
       | _ => false
 
-  fun cart_type_parts ty = Lib.total fcpSyntax.dest_cart_type ty
-
-  fun numeric_type_card ty =
-    case Lib.total fcpLib.index_to_num ty of
-        SOME card =>
-          SOME (Arbnum.toInt card
-            handle Overflow =>
-              raise Refute_ModelFinder_Util.TOO_LARGE
-                ("Refute_ModelFinder_HOL.numeric_type_card",
-                 "finite type cardinality does not fit in int"))
-      | NONE => NONE
-
-  fun word_dimension ty =
-    case Lib.total wordsSyntax.dest_word_type ty of
-        SOME index_ty => numeric_type_card index_ty
-      | NONE => NONE
-
   fun cart_type_card ty =
     case cart_type_parts ty of
         SOME (element, index_ty) =>
@@ -4930,6 +5072,14 @@ structure Refute_ModelFinder_HOL = struct
                                        bounded_power maximum
                                          (recurse avoid element) dimension
                                    | NONE =>
+                                (* A [cart] whose dimension is symbolic has no
+                                   computable size.  This is a cardinality
+                                   query, not an encoding request, so it takes
+                                   the assigned size rather than raising the
+                                   encoder's refusal. *)
+                                if Option.isSome (cart_type_parts ty) then
+                                  fallback ty
+                                else
                                 let
                                   val constructors =
                                     data_type_constrs context ty
@@ -5077,6 +5227,10 @@ structure Refute_ModelFinder_HOL = struct
         let
           val key = const_key constant
           fun ordinary () =
+            case unencoded_word_reason constant of
+                SOME reason =>
+                  raise Refute_ModelFinder_Util.NOT_SUPPORTED reason
+              | NONE =>
             if same_key key {Thy = "relation", Name = "RTC"} orelse
                same_key key {Thy = "relation", Name = "RC"} then
               (* RTC is itself a Hol_reln predicate and RC has ordinary

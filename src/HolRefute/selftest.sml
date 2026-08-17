@@ -1713,6 +1713,88 @@ val _ = require_msg (check_result mf_codatatype_case_orientations) (fn () =>
   "codatatype classification or derived case orientation changed")
   (fn () => ()) ()
 
+(* [:'a word] is [(bool, 'a) cart], and every Refute registry is keyed by
+   type operator, so the classification guards must answer for the operator
+   rather than per instance.  A concrete width is interpreted; anything else
+   under [cart] is refused by name instead of reaching the encoder. *)
+fun mf_word_classification () =
+  let
+    val cart_ty = ``:('a, 'b) cart``
+    val word_ty = ``:3 word``
+    val poly_word_ty = ``:'a word``
+    val operator_agrees =
+      MFH.is_raw_free_datatype poly_word_ty =
+        MFH.is_raw_free_datatype cart_ty andalso
+      MFH.is_raw_free_datatype word_ty = MFH.is_raw_free_datatype cart_ty
+    (* The refusal is raised while encoding, so no Kodkodi bridge is
+       involved and the reason is reported whether or not one is
+       configured. *)
+    val config = Refute.default_config |> Refute.upd_timeout 2.0
+      |> Refute.upd_quiet true
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+    fun refuses_with message goal =
+      case Refute.refute config goal of
+          Refute.Unknown reasons =>
+            List.exists (fn reason => reason = "kodkod: " ^ message) reasons
+        | _ => false
+  in
+    operator_agrees andalso
+    MFH.is_word_type word_ty andalso
+    not (MFH.is_word_type poly_word_ty) andalso
+    MFH.is_interpreted_type word_ty andalso
+    not (MFH.is_data_type word_ty) andalso
+    refuses_with
+      ("cart type " ^ Parse.type_to_string cart_ty ^
+       " is not encoded; only word types are")
+      ``(c : ('a, 'b) cart) = d`` andalso
+    refuses_with
+      ("word type " ^ Parse.type_to_string poly_word_ty ^
+       " has no concrete width")
+      ``(w : 'a word) = v``
+  end
+
+val _ = require_msg (check_result mf_word_classification) (fn () =>
+  "word/cart classification or its refusal wording changed")
+  (fn () => ()) ()
+
+(* A type variable in a word's index position is a width: it is instantiated
+   to fcp numeral types, so a polymorphic word goal is refuted at a concrete
+   width, and the certificate is a monomorphic theorem. *)
+fun word_width_instantiation () =
+  let
+    val config = default_config
+      |> upd_timeout 30.0
+      |> Refute.upd_search Refute.QuickcheckBackends
+  in
+    case Refute.refute config ``(w : 'a word) + 1w <> 0w`` of
+        Counterexample
+          ({certainty = Genuine, cert = SOME theorem, ...} :: _) =>
+          null (Term.type_vars_in_term (Thm.concl theorem))
+      | _ => false
+  end
+
+val _ = require_msg (check_result word_width_instantiation) (fn () =>
+  "a polymorphic word goal was not refuted at an instantiated width")
+  (fn () => ()) ()
+
+(* Finitely many widths do not exhaust the widths a type variable ranges
+   over, so a goal that holds only at the configured ones stays bounded. *)
+fun word_width_totality () =
+  case Refute.refute
+         (default_config
+            |> upd_timeout 30.0
+            |> Refute.upd_search Refute.QuickcheckBackends)
+         ``w2n (w : 'a word) < 16`` of
+      Unknown reasons =>
+        List.exists (String.isSubstring
+          "polymorphic search covered only configured monomorphic proxies")
+          reasons
+    | _ => false
+
+val _ = require_msg (check_result word_width_totality) (fn () =>
+  "a width-instantiated search reported more than it tested")
+  (fn () => ()) ()
+
 fun with_quotient_typedef_registries_restored body =
   let
     val saved_quotients = !MFH.quotient_registry
@@ -11185,6 +11267,89 @@ local
         | _ => false
     end
 
+  (* A word of concrete width is a native carrier: width [w] means exactly
+     [2^w] atoms, atom [j] denoting [n2w j].  The pinned [:num] row only
+     bounds shift counts and [w2n] results; the word rows are exact and are
+     not searched. *)
+  val word_config =
+    default_config
+      |> upd_timeout 60.0
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> upd_sat_solver
+           (if Lib.mem "MiniSat_JNI"
+                 (Refute_ForlSat.configured_sat_solvers false)
+            then "MiniSat_JNI" else "SAT4J")
+      |> upd_max_threads 1
+      |> upd_card [(SOME ``:num``, [8]), (NONE, [1])]
+
+  fun word_refuted goal =
+    case Refute.refute word_config goal of
+        Refute.Counterexample
+          ({backend = "kodkod", certainty = Refute.Genuine, ...} :: _) => true
+      | _ => false
+
+  fun word_unknown_because pattern goal =
+    case Refute.refute word_config goal of
+        Refute.Unknown reasons =>
+          List.exists (String.isSubstring pattern) reasons
+      | _ => false
+
+  fun mf_word_carrier () =
+    word_refuted ``!w : 3 word. w = 0w`` andalso
+    (* Exactly four atoms at width two: the disjunction is not refutable. *)
+    (case Refute.refute word_config
+            ``(w : 2 word) = 0w \/ w = 1w \/ w = 2w \/ w = 3w`` of
+         Refute.NoCounterexample => true
+       | _ => false)
+
+  fun mf_word_operations () =
+    List.all word_refuted
+      [``(w : 3 word) + 1w = w``,
+       ``(w : 3 word) * 2w <> w + w``,
+       ``-(w : 3 word) <> 0w - w``,
+       ``(w : 3 word) <+ 0w``,
+       ``(4w : 3 word) < 0w ==> F``,
+       ``(w : 3 word) && 0w <> 0w``,
+       ``(w : 3 word) << 5 <> 0w``,
+       ``w2n (7w : 3 word) <> 7``]
+
+  (* A numeral above the binarization threshold turns binary integers on, but
+     a word carrier is read off the sequential integer bounds that
+     binarization replaces, so a word in the problem keeps them unary. *)
+  fun mf_word_keeps_unary_integers () =
+    let
+      fun no_bit_type ({backend, scope, ...} : Refute.counterexample) =
+        backend = "kodkod" andalso
+        case scope of
+            SOME assignments =>
+              not (List.exists (fn (ty, _) =>
+                Type.compare (ty, MFH.unsigned_bit_type) = EQUAL orelse
+                Type.compare (ty, MFH.signed_bit_type) = EQUAL) assignments)
+          | NONE => false
+    in
+      case Refute.refute word_config
+             ``~((w : 3 word) = 5w /\ (n : num) = 7)`` of
+          Refute.Counterexample counterexamples =>
+            List.exists no_bit_type counterexamples
+        | _ => false
+    end
+
+  fun mf_word_refusals () =
+    (* Outside the direct tier the operation is named rather than unfolded
+       into fcp indexing the encoder cannot read. *)
+    word_unknown_because "word operation words$w2w is not encoded"
+      ``w2w (w : 3 word) = (0w : 4 word)`` andalso
+    word_unknown_because "word operation words$word_rol is not encoded"
+      ``(w : 3 word) #<< 1 = w`` andalso
+    (* Forced binary integers cannot carry a word, and say so. *)
+    (case Refute.refute
+            (word_config |> upd_binary_ints (SOME true) |> upd_bits [4])
+            ``(w : 3 word) * 2w <> w + w`` of
+         Refute.Unknown reasons =>
+           List.exists (String.isSubstring
+             "word operations are not encoded with binary integers") reasons
+       | _ => false)
+
   fun mf_genuine_only_keeps_certified_genuine () =
     let
       val solvers = Refute_ForlSat.configured_sat_solvers false
@@ -11315,6 +11480,30 @@ in
     if bridge_configured then
       require_msg (check_result mf_binary_smart_trigger) (fn () =>
         "smart binary integers did not fire on the arithmetic goal")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_word_carrier) (fn () =>
+        "the word carrier was not exactly 2^w atoms")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_word_operations) (fn () =>
+        "a direct-tier word operation did not refute its goal")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_word_keeps_unary_integers) (fn () =>
+        "a word problem binarized its integers or lost its model")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_word_refusals) (fn () =>
+        "an unencodable word operation was not refused by name")
         (fn () => ()) ()
     else ()
   val _ =
@@ -11658,6 +11847,7 @@ fun config_surface_snapshot () =
        "expect = NoExpectation\n",
        "max_counterexamples = 1\n",
        "tag = \n",
+       "widths = [1, 2, 3, 4]\n",
        "size = 10\n",
        "size_mode = IterativeDeepening\n",
        "iterations = 100\n",

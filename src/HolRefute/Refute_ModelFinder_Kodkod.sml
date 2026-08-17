@@ -24,7 +24,7 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
   val flatten : bool
   val kodkod_settings : int -> Refute_Forl.setting list
   val kodkod_problem_settings :
-    string list -> int -> int -> Refute_Forl.setting list
+    string list -> int -> int -> int -> Refute_Forl.setting list
 
   val univ_card :
     int -> int -> int -> Refute_Forl.bound list ->
@@ -142,9 +142,9 @@ fun kodkod_settings delay =
 
 fun quote text = "\"" ^ text ^ "\""
 
-fun kodkod_problem_settings solver bits delay =
+fun kodkod_problem_settings solver bits word_width delay =
   [("solver", String.concatWith ", " (map quote solver)),
-   ("bit_width", Int.toString (if bits = 0 then 16 else bits + 1))] @
+   ("bit_width", Int.toString (MFP.bit_width_for bits word_width))] @
   kodkod_settings delay
 
 fun member equal value = List.exists (fn other => equal (value, other))
@@ -1847,6 +1847,27 @@ fun atom_from_int_expr
     (kk_rel_eq (bit_set_from_atom kk ty (KK.Var (1, ~1)))
       (KK.Bits integer))
 
+fun word_width ty =
+  case MFH.word_dimension ty of
+      SOME width => width
+    | NONE => raise Util.BAD
+        ("Refute_ModelFinder_Kodkod.word_width", "not a word type")
+
+(* Kodkod's integers are two's complement of a fixed width, so masking off
+   the low bits reduces a word operation's result into its carrier however
+   far the integer arithmetic overshot. *)
+fun wrap_word width integer =
+  KK.BitAnd (integer, KK.Num (Util.reasonable_power 2 width - 1))
+
+(* The signed reading of a word value: the sign bit's weight, counted once
+   positively by the unsigned reading, is subtracted twice. *)
+fun signed_word_value width integer =
+  let val half = Util.reasonable_power 2 (width - 1)
+  in
+    KK.IntIf (KK.LE (KK.Num half, integer),
+      KK.Sub (integer, KK.Num (2 * half)), integer)
+  end
+
 fun kodkod_formula_from_nut offsets
       (kk as {kk_all, kk_exist, kk_formula_let, kk_formula_if, kk_or,
               kk_not, kk_iff, kk_implies, kk_and, kk_subset, kk_rel_eq, kk_no,
@@ -2126,7 +2147,10 @@ fun kodkod_formula_from_nut offsets
                            ("Refute_ModelFinder_Kodkod.to_r (Num)",
                             [candidate])
                  | atom => KK.Atom atom)
-            else if ty = MFH.num_type orelse MFH.is_iterator_type ty then
+            else if ty = MFH.num_type orelse MFH.is_iterator_type ty orelse
+                    MFH.is_word_type ty then
+              (* Atom [j] of a word carrier denotes [n2w j], so a literal is
+                 its own atom once reduced modulo the width. *)
               if value >= 0 andalso
                  value < MFR.card_of_rep representation then
                 KK.Atom (value + MFS.offset_of_type offsets ty)
@@ -2168,6 +2192,13 @@ fun kodkod_formula_from_nut offsets
                     (KK.LE (KK.Num 0, KK.BitXor (first, second)))
                     (KK.LE (KK.Num 0, KK.BitXor (second, result)))))
                 (SOME (fn left => fn right => KK.Add (left, right)))
+            else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
+              let val width = word_width (#1 (Type.dom_rng ty))
+              in
+                to_word_binary_op ty (MFNT.rep_of candidate)
+                  (fn left => fn right =>
+                    wrap_word width (KK.Add (left, right)))
+              end
             else
               raise MFNT.NUT
                 ("Refute_ModelFinder_Kodkod.to_r (Add)", [candidate])
@@ -2188,6 +2219,13 @@ fun kodkod_formula_from_nut offsets
                     (KK.LT (KK.BitXor (first, second), KK.Num 0))
                     (KK.LT (KK.BitXor (second, result), KK.Num 0))))
                 (SOME (fn left => fn right => KK.Sub (left, right)))
+            else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
+              let val width = word_width (#1 (Type.dom_rng ty))
+              in
+                to_word_binary_op ty (MFNT.rep_of candidate)
+                  (fn left => fn right =>
+                    wrap_word width (KK.Sub (left, right)))
+              end
             else
               raise MFNT.NUT
                 ("Refute_ModelFinder_Kodkod.to_r (Subtract)", [candidate])
@@ -2216,6 +2254,13 @@ fun kodkod_formula_from_nut offsets
                 to_bit_word_binary_op ty (MFNT.rep_of candidate)
                   (SOME guard)
                   (SOME (fn left => fn right => KK.Mult (left, right)))
+              end
+            else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
+              let val width = word_width (#1 (Type.dom_rng ty))
+              in
+                to_word_binary_op ty (MFNT.rep_of candidate)
+                  (fn left => fn right =>
+                    wrap_word width (KK.Mult (left, right)))
               end
             else
               raise MFNT.NUT
@@ -2340,6 +2385,55 @@ fun kodkod_formula_from_nut offsets
                       [candidate]))
             else raise MFNT.NUT
               ("Refute_ModelFinder_Kodkod.to_r (IntToNat)", [candidate])
+        | MFNT.Cst (MFNT.NatToWord, ty, representation) =>
+            to_word_unary_op ty representation
+              (wrap_word (word_width (#2 (Type.dom_rng ty))))
+        | MFNT.Cst (MFNT.WordToNat, ty, representation) =>
+            (* A word value is already a [num] value; the pairs of words too
+               large for the [num] carrier are simply absent, which is what
+               makes the representation optional. *)
+            to_word_unary_op ty representation (fn integer => integer)
+        | MFNT.Cst (MFNT.WordAnd, ty, representation) =>
+            to_word_binary_op ty representation
+              (fn left => fn right => KK.BitAnd (left, right))
+        | MFNT.Cst (MFNT.WordOr, ty, representation) =>
+            to_word_binary_op ty representation
+              (fn left => fn right => KK.BitOr (left, right))
+        | MFNT.Cst (MFNT.WordXor, ty, representation) =>
+            to_word_binary_op ty representation
+              (fn left => fn right => KK.BitXor (left, right))
+        (* HOL4 shifts a word by a [num], and a count at or beyond the width
+           shifts every bit out; Kodkod's shifts are taken modulo their own
+           integer width, so the saturating cases are handled here. *)
+        | MFNT.Cst (MFNT.WordShl, ty, representation) =>
+            let val width = word_width (#1 (Type.dom_rng ty))
+            in
+              to_word_binary_op ty representation
+                (fn value => fn count =>
+                  KK.IntIf (KK.LE (KK.Num width, count), KK.Num 0,
+                    wrap_word width (KK.SHL (value, count))))
+            end
+        | MFNT.Cst (MFNT.WordShr, ty, representation) =>
+            let val width = word_width (#1 (Type.dom_rng ty))
+            in
+              to_word_binary_op ty representation
+                (fn value => fn count =>
+                  KK.IntIf (KK.LE (KK.Num width, count), KK.Num 0,
+                    KK.SHR (value, count)))
+            end
+        | MFNT.Cst (MFNT.WordAsr, ty, representation) =>
+            (* An arithmetic shift fills with the sign bit, so a count at or
+               beyond the width saturates to a full sign fill rather than to
+               zero: shifting by [width - 1] is that fill. *)
+            let val width = word_width (#1 (Type.dom_rng ty))
+            in
+              to_word_binary_op ty representation
+                (fn value => fn count =>
+                  wrap_word width
+                    (KK.SHA (signed_word_value width value,
+                      KK.IntIf (KK.LT (count, KK.Num width), count,
+                        KK.Num (width - 1)))))
+            end
         | MFNT.Op1 (MFNT.Not, _, representation, first) =>
             kk_not3 (to_rep representation first)
         | MFNT.Op1 (MFNT.Finite, _, MFR.Opt (MFR.Atom _), _) =>
@@ -2512,6 +2606,35 @@ fun kodkod_formula_from_nut offsets
                     val less = KK.LT
                       (int_expr_from_atom kk (MFNT.type_of first) first_rel,
                        int_expr_from_atom kk (MFNT.type_of second) second_rel)
+                  in
+                    kk_rel_if guard
+                      (atom_from_formula kk bool_offset less) KK.None
+                  end
+              in
+                double_rel_rel_let kk guarded
+                  (to_rep operand_rep first) (to_rep operand_rep second)
+              end
+            else if MFH.is_word_type (MFNT.type_of first) then
+              (* Word atoms are ordered by value, so the unsigned order is the
+                 integer order of the operands' carriers. *)
+              let
+                val operand_rep = MFR.Opt
+                  (MFR.Atom (MFR.card_of_rep (MFNT.rep_of first),
+                    MFS.offset_of_type offsets (MFNT.type_of first)))
+                fun present (nut, relation) =
+                  if MFR.is_opt_rep (MFNT.rep_of nut) then
+                    SOME (kk_some relation)
+                  else NONE
+                fun guarded first_rel second_rel =
+                  let
+                    val guards = List.mapPartial present
+                      [(first, first_rel), (second, second_rel)]
+                    val guard = List.foldl
+                      (fn (formula, result) => kk_and result formula)
+                      KK.True guards
+                    val less = KK.LT
+                      (numeric_int_expr (MFNT.type_of first) first_rel,
+                       numeric_int_expr (MFNT.type_of second) second_rel)
                   in
                     kk_rel_if guard
                       (atom_from_formula kk bool_offset less) KK.None
@@ -2863,6 +2986,42 @@ fun kodkod_formula_from_nut offsets
                 (to_rep (MFR.Opt (MFR.Struct reps)) candidate) column
             end
 
+    (* A numeric carrier's atoms are its values: under the sequential integer
+       bounds atom [j] carries the integer [j], so subtracting the carrier's
+       offset reads a value off an atom.  A word carrier and the [num] carrier
+       holding a shift count or a [w2n] result are read the same way. *)
+    and numeric_int_expr ty relation =
+      let val offset = MFS.offset_of_type offsets ty
+      in
+        if offset = 0 then KK.SetSum relation
+        else KK.Sub (KK.SetSum relation, KK.Num offset)
+      end
+
+    and to_word_op ty representation arity operation =
+      let
+        val (domains, range) = boolSyntax.strip_fun ty
+        val types = domains @ [range]
+        fun integer index =
+          numeric_int_expr (List.nth (types, index)) (KK.Var (1, index))
+      in
+        kk_comprehension
+          (decls_for_atom_schema 0
+            (MFR.atom_schema_of_rep representation))
+          (KK.FormulaLet
+            (map (fn index => KK.AssignIntReg (index, integer index))
+               (Util.index_seq 0 (arity + 1)),
+             KK.IntEq (KK.IntReg arity,
+               operation (List.tabulate (arity, KK.IntReg)))))
+      end
+
+    and to_word_unary_op ty representation operation =
+      to_word_op ty representation 1
+        (fn arguments => operation (hd arguments))
+
+    and to_word_binary_op ty representation operation =
+      to_word_op ty representation 2
+        (fn arguments => operation (hd arguments) (List.nth (arguments, 1)))
+
     and to_bit_word_unary_op ty representation operation =
       let
         val (domains, range) = boolSyntax.strip_fun ty
@@ -3170,7 +3329,7 @@ fun assemble_problem_once
        settings = map (fn ("symmetry_breaking", _) =>
            ("symmetry_breaking", Int.toString kodkod_sym_break)
          | setting => setting)
-         (kodkod_problem_settings solver bits
+         (kodkod_problem_settings solver bits (MFS.max_word_width scope)
            (if unsound then unsound_delay else 0)),
        univ_card = universe_card, tuple_assigns = [],
        bounds = bounds,

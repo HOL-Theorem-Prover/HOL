@@ -82,6 +82,10 @@ fun ground_types context binarize terms =
           types (type_arguments ty)
       else if MFH.is_boolean_type ty orelse Util.member_type ty types then
         types
+      else if MFH.is_word_type ty then
+        (* A word carrier is atomic: its index type is a width, not a carrier
+           the search should size, and its element type is [bool]. *)
+        Util.add_type ty types
       else
         let
           val types = Util.add_type ty types
@@ -97,9 +101,23 @@ fun ground_types context binarize terms =
             types nested
         end
     fun add_term term types = add (Term.type_of term) types
+    (* A word literal is folded into the carrier atom that denotes it, so its
+       [n2w] head must not pull the [num] carrier into the problem: [num] is
+       unbounded, and the scope search would then grow it forever for a goal
+       that never mentions a number. *)
+    fun subterms term =
+      if MFH.is_word_literal term then [term]
+      else
+        term ::
+        (case Lib.total Term.dest_comb term of
+             SOME (rator, rand) => subterms rator @ subterms rand
+           | NONE =>
+               case Lib.total Term.dest_abs term of
+                   SOME (variable, body) => variable :: subterms body
+                 | NONE => [])
     fun add_all_subterms term types =
       List.foldl (fn (subterm, result) => add_term subterm result)
-        types (HolKernel.find_terms (fn _ => true) term)
+        types (subterms term)
   in
     Listsort.sort Type.compare
       (List.foldl (fn (term, result) => add_all_subterms term result)

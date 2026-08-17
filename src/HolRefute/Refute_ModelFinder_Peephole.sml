@@ -49,6 +49,8 @@ sig
   val int_for_atom : int * int -> int -> int
   val atom_for_int : int * int -> int -> int
   val is_twos_complement_representable : int -> int -> bool
+  val default_bit_width : int
+  val bit_width_for : int -> int -> int
   val max_squeeze_card : int
   val suc_rel_for_atom_seq : (int * int) * bool -> n_ary_index
   val atom_seq_for_suc_rel : n_ary_index -> (int * int) * bool
@@ -146,6 +148,17 @@ fun atom_for_int (k, j0) n =
 (* M4-only bits-mode helper reservation. *)
 fun is_twos_complement_representable bits n =
   let val max = reasonable_power 2 bits in n >= ~max andalso n < max end
+
+(* Every integer expression of a problem is computed in this many bits, two's
+   complement.  Binary integers ask for one bit beyond their own width.
+   Otherwise the integers exist to read the sequential bounds, and the widest
+   word in the problem sets the floor: a product of two [w]-bit values needs
+   [2w] bits and a sign. *)
+val default_bit_width = 16
+
+fun bit_width_for bits word_width =
+  if bits = 0 then Int.max (default_bit_width, 2 * word_width + 2)
+  else bits + 1
 
 val max_squeeze_card = 49
 
