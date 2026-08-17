@@ -33,6 +33,12 @@ structure Refute_ModelFinder_HOL = struct
   type ersatz = {original : kname, replacement : kname}
   type codatatype_info =
     {tyop : type_operator, case_const : term, constructors : term list}
+  (* What a caller supplies to register_quotient.  The stored registry
+     entry additionally carries the encoding bit inferred from the
+     theorem shape. *)
+  type quotient_registration =
+    {qty : hol_type, rty : hol_type, abs : term, rep : term,
+     equiv_thm : thm}
   type quotient_info =
     {qty : hol_type, rty : hol_type, abs : term, rep : term,
      equiv_thm : thm, partial : bool}
@@ -2466,7 +2472,7 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun register_quotient_unlocked
-        ({qty, rty, abs, rep, equiv_thm, partial = _} : quotient_info) =
+        ({qty, rty, abs, rep, equiv_thm} : quotient_registration) =
     let
       val _ = validate_registered_type "register_quotient" qty
       val _ = if Term.is_const abs andalso Term.is_const rep then () else
@@ -2501,10 +2507,9 @@ structure Refute_ModelFinder_HOL = struct
       val _ = if null (Term.free_vars_lr relation) then () else
         raise err "register_quotient"
           "equivalence relation has free term variables"
-      (* The theorem shape, not the caller's legacy record bit, is
-         authoritative.  A bare QUOTIENT theorem therefore defaults to the
-         sound partial encoding; a total extensionality theorem disables the
-         redundant domain axiom. *)
+      (* The theorem shape selects the encoding: a bare QUOTIENT theorem
+         takes the sound partial encoding; a total extensionality theorem
+         disables the then-redundant domain axiom. *)
       val normalized : quotient_info =
         {qty = qty, rty = rty, abs = abs, rep = rep,
          equiv_thm = equiv_thm, partial = inferred_partial}
@@ -2835,8 +2840,7 @@ structure Refute_ModelFinder_HOL = struct
       val _ = if same_type_operator (type_operator_of qty) operator then ()
         else raise Match
       val _ = register_quotient_unlocked
-        {qty = qty, rty = rty, abs = abs, rep = rep,
-         equiv_thm = theorem, partial = true}
+        {qty = qty, rty = rty, abs = abs, rep = rep, equiv_thm = theorem}
     in
       true
     end

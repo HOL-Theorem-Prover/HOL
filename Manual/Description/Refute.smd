@@ -684,10 +684,13 @@ replaces the old one.
   `itree`, `itreeTau`, `lbtree`, and `path` when their theories are present.
 * `register_typedef {ty, abs, rep, absrep_thm}` registers existing Abs and
   Rep constants and the exported bijection conjunction.
-  `register_quotient {qty, rty, abs, rep, equiv_thm, partial}` registers
-  an existing quotient.  `equiv_thm` must be a hypothesis-free
-  `QUOTIENT equiv abs rep` theorem and Refute always uses the sound partial
-  encoding; `partial` remains for source compatibility.
+  `register_quotient {qty, rty, abs, rep, equiv_thm}` registers an
+  existing quotient.  `equiv_thm` must be hypothesis-free and either a
+  `QUOTIENT equiv abs rep` theorem mentioning the registered `abs` and
+  `rep`, or a total equivalence `!x y. R x y <=> (R x = R y)`.  Its shape
+  selects the encoding: a `QUOTIENT` theorem gets the sound partial
+  encoding, whereas a total equivalence drops its then redundant domain
+  axiom.
 * `register_frac_type {tyop, ersatz}` supplies a fraction representation
   and replacements.  `register_frac_type_rat ()` idempotently restores
   the built-in rational registration.  `register_ersatz` adds an

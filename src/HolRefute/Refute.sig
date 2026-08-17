@@ -90,7 +90,7 @@ signature Refute = sig
      case_const : term, constructors : term list} -> unit
   val register_quotient :
     {qty : hol_type, rty : hol_type, abs : term, rep : term,
-     equiv_thm : thm, partial : bool} -> unit
+     equiv_thm : thm} -> unit
   val register_typedef :
     {ty : hol_type, abs : term, rep : term, absrep_thm : thm} -> unit
   val register_frac_type :

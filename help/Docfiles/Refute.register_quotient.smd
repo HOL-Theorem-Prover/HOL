@@ -7,8 +7,7 @@ Refute.register_quotient :
    rty : hol_type,
    abs : term,
    rep : term,
-   equiv_thm : thm,
-   partial : bool} -> unit
+   equiv_thm : thm} -> unit
 ```
 
 ------------------------------------------------------------------------
@@ -17,13 +16,16 @@ Registers an existing quotient type with the model finder.
 
 `qty` is the quotient type and `rty` its representation type.  `abs` and
 `rep` must be existing constants of types `rty -> qty` and
-`qty -> rty`.  `equiv_thm` must be a standard bare
-`QUOTIENT equiv abs rep` theorem with no hypotheses.  This bridge theorem
-is required because a total equivalence theorem alone does not establish
-that arbitrary same-typed Abs/Rep constants implement its quotient.
+`qty -> rty`.  `equiv_thm` must have no hypotheses and be either a
+standard bare `QUOTIENT equiv abs rep` theorem or a total equivalence
+`!x y. R x y <=> (R x = R y)`.  Only the `QUOTIENT` shape is a bridge
+theorem: a total equivalence alone does not establish that arbitrary
+same-typed Abs/Rep constants implement its quotient, so the registered
+`abs` and `rep` are cross-checked against the `QUOTIENT` shape only.
 
-The legacy `partial` record field is ignored: a verified `QUOTIENT` bridge
-uses the sound partial encoding.
+The theorem shape selects the encoding.  A `QUOTIENT` bridge uses the
+sound partial encoding; a total equivalence makes that encoding's domain
+axiom redundant, so it is dropped.
 
 Registrations are session-local.  A valid later registration replaces the
 same quotient type operator.  The model finder can also lazily harvest

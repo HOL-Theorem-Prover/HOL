@@ -1848,7 +1848,7 @@ val zoo_check_registration =
 val zoo_manual_my_int_registration =
   {qty = ``:zoo_manual_my_int``, rty = ``:num # num``,
    abs = ``zoo_manual_my_int_abs``, rep = ``zoo_manual_my_int_rep``,
-   equiv_thm = zoo_manual_my_int_equiv, partial = false}
+   equiv_thm = zoo_manual_my_int_equiv}
 
 fun with_term_postprocessors_restored body =
   let
@@ -1896,20 +1896,18 @@ fun mf_quotient_typedef_registrations () =
     val initially_unregistered =
       not (MFH.is_quot_type ``:rat``) andalso
       not (MFH.is_typedef ``:zoo_three``)
-    val total_registration =
+    val total_equivalence_registration =
       {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
-       rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV,
-       partial = true}
-    val partial_registration =
+       rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV}
+    val quotient_theorem_registration =
       {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
-       rep = ``rat$rep_rat``, equiv_thm = ratTheory.rat_def,
-       partial = false}
-    val _ = Refute.register_quotient total_registration
+       rep = ``rat$rep_rat``, equiv_thm = ratTheory.rat_def}
+    val _ = Refute.register_quotient total_equivalence_registration
     val total_inferred =
       case MFH.quotient_for_type ``:rat`` of
           SOME {partial = false, ...} => true
         | _ => false
-    val _ = Refute.register_quotient partial_registration
+    val _ = Refute.register_quotient quotient_theorem_registration
     val partial_defaulted =
       case MFH.quotient_for_type ``:rat`` of
           SOME {partial = true, ...} => true
@@ -1917,8 +1915,7 @@ fun mf_quotient_typedef_registrations () =
     val malformed_quotient_rejected =
       ((Refute.register_quotient
           {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
-           rep = ``rat$rep_rat``, equiv_thm = boolTheory.TRUTH,
-           partial = false}; false)
+           rep = ``rat$rep_rat``, equiv_thm = boolTheory.TRUTH}; false)
        handle HOL_ERR _ => true)
     val quotient_typedef_overlap_rejected =
       ((Refute.register_typedef
@@ -1945,7 +1942,7 @@ fun mf_quotient_typedef_registrations () =
       ((Refute.register_quotient
           {qty = ``:zoo_three``, rty = ``:num``,
            abs = ``zoo_three_abs``, rep = ``zoo_three_rep``,
-           equiv_thm = boolTheory.TRUTH, partial = false}; false)
+           equiv_thm = boolTheory.TRUTH}; false)
        handle HOL_ERR _ => true)
   in
     initially_unregistered andalso total_inferred andalso
@@ -2119,8 +2116,8 @@ fun mf_frac_registration () =
     val overlap_rejected =
       ((Refute.register_quotient
           {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
-           rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV,
-           partial = false}; false)
+           rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV};
+        false)
        handle HOL_ERR _ => true)
   in
     default_on andalso goal_harvested andalso invalid_atomic andalso
@@ -4567,8 +4564,7 @@ fun mf_quotient_typedef_axiom_goldens () =
     val quotient_context = fresh_mf_context ()
     val _ = Refute.register_quotient
       {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
-       rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV,
-       partial = true}
+       rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV}
     val total_axioms =
       MFH.optimized_quot_type_axioms quotient_context ``:rat``
     val qn = MFH.quot_normal_for_type ``:rat`` ``:frac``
@@ -4601,8 +4597,7 @@ fun mf_quotient_typedef_axiom_goldens () =
       [expected_fixed, expected_respects, expected_representative]
     val _ = Refute.register_quotient
       {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
-       rep = ``rat$rep_rat``, equiv_thm = ratTheory.rat_def,
-       partial = false}
+       rep = ``rat$rep_rat``, equiv_thm = ratTheory.rat_def}
     val partial_axioms =
       MFH.optimized_quot_type_axioms quotient_context ``:rat``
     val expected_domain = boolSyntax.mk_forall
@@ -6796,8 +6791,7 @@ fun mf_quotient_displays () =
     with_quotient_typedef_registries_restored (fn () => let
     val _ = Refute.register_quotient
       {qty = ``:rat``, rty = ``:frac``, abs = ``rat$abs_rat``,
-       rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV,
-       partial = false}
+       rep = ``rat$rep_rat``, equiv_thm = ratTheory.RAT_EQUIV}
     val qn = MFH.quot_normal_for_type ``:rat`` ``:frac``
     val (qn_name, qn_ty) = Term.dest_var qn
     val friendly = MFM.user_friendly_const [] qn_name qn_ty
@@ -26151,7 +26145,7 @@ fun mf_quotient_typedef_acceptance solver =
     val _ = Refute.register_quotient
       {qty = ``:zoo_bool_quot``, rty = ``:bool``,
        abs = ``zoo_bool_quot_abs``, rep = ``zoo_bool_quot_rep``,
-       equiv_thm = zoo_bool_equiv, partial = false}
+       equiv_thm = zoo_bool_equiv}
     val _ = Refute.register_typedef zoo_three_registration
     val config = mf_acceptance_config solver
       |> Refute.upd_card
