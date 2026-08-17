@@ -4254,7 +4254,9 @@ structure Refute_ModelFinder_HOL = struct
 
   val builtin_ersatz =
     [{original = {Thy = "pred_set", Name = "CARD"},
-      replacement = {Thy = "refute", Name = "card'"}}]
+      replacement = {Thy = "refute", Name = "card'"}},
+     {original = {Thy = "relation", Name = "WF"},
+      replacement = {Thy = "refute", Name = "wf'"}}]
 
   fun register_ersatz replacement =
     let
@@ -5540,13 +5542,17 @@ structure Refute_ModelFinder_HOL = struct
                      process_args depth rest)
                | [] => do_term depth (eta_expand constant 1))
           else
-            (* An ersatz entry names a surrogate that denotes the same
-               function as the constant it replaces, chosen only because
-               the model finder can encode it: CARD as card', and each rat
-               operation as its normalized Frac counterpart, whose
-               faithfulness argument is recorded in refuteScript.  A
-               faithful substitution changes no model in either direction,
-               so it raises no weakening. *)
+            (* An ersatz entry names a surrogate the model finder can
+               encode, substituted for a constant it cannot.  Most rows
+               are faithful: CARD/card' and each rat operation/Frac
+               counterpart denote the same function (argument in
+               refuteScript), so substitution changes no model either
+               direction.  WF/wf' is deliberately liberal instead:
+               wf'_def's [unknown] disjunct is a real weakening marker on
+               an infinite domain, lowered to [Cst Unknown] and read by
+               unknown_formula (Refute_ModelFinder_Kodkod.sml); it is
+               accounted for by the sound/unsound problem pair each scope
+               generates (run_batch, Refute_ModelFinder.sml). *)
             case replacement_for ersatz_table constant of
                 SOME replacement =>
                   if depth >= unfold_max_depth then

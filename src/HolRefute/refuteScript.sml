@@ -67,6 +67,23 @@ Definition card'_def:
       0
 End
 
+(* Port of Nitpick.thy's wf': wf' r = acyclic r /\ (finite r \/ unknown),
+   r a set of pairs.  HOL4 relations are curried, so acyclic becomes
+   !x. ~TC R x x (the graph has no self-reachable point, matching
+   relationTheory's WF_noloops) and the pair set is the graph
+   \p. R (FST p) (SND p), directly usable as a ('a # 'a) set since HOL4
+   sets are predicates.  FINITE unfolds to True only when R's element
+   type is finite (MFH.is_finite_type; an uninstantiated type variable
+   counts as finite) -- not when the model-finder scope is finite, which
+   it always is regardless.  Over an intrinsically infinite element type
+   such as num, FINITE instead lowers to a Kodkod formula that a
+   positive-polarity sound problem forces False, so [unknown] genuinely
+   participates and wf' only reaches Potential there. *)
+Definition wf'_def:
+  wf' (R : 'a -> 'a -> bool) <=>
+    (!x. ~TC R x x) /\ (FINITE (\p. R (FST p) (SND p)) \/ unknown)
+End
+
 Theorem Eps_psimp[refute_psimp]:
   P x ==> ~P y ==> ($@ P = y) ==> ($@ P = x)
 Proof

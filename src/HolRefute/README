@@ -484,7 +484,13 @@ is HOL4 notation for `(=)` rather than a constant of its own, so there is
 nothing to unfold: it is eta-expanded to a partial application of equality
 and encoded as a singleton set.  The `Iden` nut constant and its Kodkod
 translation exist but are never produced; emitting `iden` directly would be
-a performance refinement, not added power.
+a performance refinement, not added power.  `relation$WF` is second-order
+and out of reach directly, so it goes through the same builtin-ersatz path
+as `CARD`: `WF` is swapped for `refuteTheory`'s `wf' R = (!x. ~TC R x x) /\
+(FINITE (\p. R (FST p) (SND p)) \/ unknown)`, exact on a genuinely finite or
+polymorphic domain but only `Potential` over an intrinsically infinite one
+such as `num`, where a bounded scope can never decide the `FINITE`
+disjunct.
 
 Recorded follow-ups are compute-hosted residual-inspection narrowing; full
 function flattening; higher-order and negative smart-generator modes; `real`

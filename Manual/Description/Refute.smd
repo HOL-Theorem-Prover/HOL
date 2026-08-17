@@ -786,7 +786,11 @@ Counterexample search is bounded and incomplete.  In particular:
 * the model finder encodes machine words of concrete width only, and
   refuses width-changing and bit-permuting word operations by name;
 * if lazy metadata harvest cannot validate an Abs/Rep type, MF returns
-  `Unknown` and asks for an explicit typedef registration; and
+  `Unknown` and asks for an explicit typedef registration;
+* `relation$WF` is encoded through a builtin ersatz definition that is
+  exact on a genuinely finite or polymorphic domain, but only `Potential`
+  over an intrinsically infinite domain, where the encoding's finiteness
+  disjunct can never be decided from a bounded scope; and
 * HolRefute is built only with Poly/ML.  Kodkodi adds the Unix, Java, and
   local-component restrictions described above.
 

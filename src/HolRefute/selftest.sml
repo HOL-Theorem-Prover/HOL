@@ -2039,6 +2039,11 @@ val _ = require_msg
     "quotient or typedef public registration validation failed")
   (fn () => ()) ()
 
+fun ersatz_maps table original replacement =
+  List.exists (fn {original = found, replacement = target} =>
+    MFH.same_key found original andalso MFH.same_key target replacement)
+    table
+
 fun mf_frac_registration () =
   with_frac_registry_restored (fn () => let
     val rat_operator = {Thy = "rat", Tyop = "rat"}
@@ -2155,10 +2160,7 @@ fun mf_frac_registration () =
         SOME unrelated_fingerprint
 
     val table = MFH.current_ersatz_table ()
-    fun maps original replacement =
-      List.exists (fn {original = found, replacement = target} =>
-        KernelSig.name_compare (found, original) = EQUAL andalso
-        KernelSig.name_compare (target, replacement) = EQUAL) table
+    val maps = ersatz_maps table
     fun first_mapping original =
       Option.map #replacement
         (List.find (fn ({original = found, ...} : MFH.ersatz) =>
@@ -3780,12 +3782,15 @@ fun mf_builtins_numerals_sets_and_ersatz () =
     val open_set_builder =
       ``GSPEC (\n : num. (x : num, n = 0))``
     val card = ``CARD ({T; F} : bool set)``
+    val wf_goal = ``WF (R : num -> num -> bool)``
     val unfolded_set = MFH.unfold_defs_in_term mf_hol_context set_builder
     val unfolded_open_set = MFH.unfold_defs_in_term mf_hol_context
       open_set_builder
     val unfolded_card = MFH.unfold_defs_in_term mf_hol_context card
+    val unfolded_wf = MFH.unfold_defs_in_term mf_hol_context wf_goal
     val card_axioms = MFH.equational_fun_axioms mf_hol_context
       ``card' : 'a set -> num``
+    val ersatz_table = MFH.current_ersatz_table ()
     val boolean_conditional = ``if b then T else F``
     val unfolded_conditional = MFH.unfold_defs_in_term mf_hol_context
       boolean_conditional
@@ -3842,7 +3847,11 @@ fun mf_builtins_numerals_sets_and_ersatz () =
       unfolded_set) andalso
     contains_constant {Thy = "refute", Name = "card'"} unfolded_card andalso
     not (contains_constant {Thy = "pred_set", Name = "CARD"}
-      unfolded_card)
+      unfolded_card) andalso
+    ersatz_maps ersatz_table {Thy = "relation", Name = "WF"}
+      {Thy = "refute", Name = "wf'"} andalso
+    contains_constant {Thy = "refute", Name = "wf'"} unfolded_wf andalso
+    not (contains_constant {Thy = "relation", Name = "WF"} unfolded_wf)
   end
 
 val _ = require_msg
@@ -24066,6 +24075,69 @@ val _ = require_msg
   "model-finder bounded exhaustion or finite totality was misclassified")
   (fn () => ()) ()
 
+(* num is intrinsically infinite, so wf'_def's [FINITE] disjunct can
+   never be decided (refuteScript.sml): refutable, but only Potential. *)
+fun mf_wf_ersatz_infinite_type_regression () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_timeout 20.0
+      |> Refute.upd_card [(SOME ``:num``, [3]), (NONE, [1, 2, 3])]
+      |> Refute.upd_max_potential 1
+    val outcome = Refute.refute config
+      ``WF (R : num -> num -> bool) ==> transitive R``
+  in
+    case outcome of
+        Refute.Counterexample
+          [{certainty = Refute.Potential _, ...}] => true
+      | _ => false
+  end
+
+val _ = tprint "Refute MF: WF ersatz over an infinite type is Potential"
+val _ = require_msg
+  (check_result mf_wf_ersatz_infinite_type_regression) (fn () =>
+  "WF over num either failed to refute or was not honestly liberal")
+  (fn () => ()) ()
+
+(* Every Definition-style recursive function is internally a WFREC term
+   whose termination witness is [@R. WF R /\ ...]; the wf' ersatz must not
+   reach into that and weaken or break an ordinary recursive definition.
+   It doesn't: [make_tables]'s raw_standard_props (Refute_ModelFinder_HOL.
+   sml) keeps a defined constant on its clean STDEQNS equations instead of
+   its raw WFREC form whenever one exists, and [unfold_defs_in_term] never
+   unfolds an is_equational_fun constant at all. *)
+fun mf_wf_ersatz_does_not_weaken_definitions () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val _ = TotalDefn.Define
+      `mf_wf_sortedp ([] : num list) = T /\
+       mf_wf_sortedp [x] = T /\
+       mf_wf_sortedp (x :: y :: xs) =
+         (x <= y /\ mf_wf_sortedp (y :: xs))`
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_timeout 30.0
+    val outcome = Refute.refute config
+      ``mf_wf_sortedp (xs : num list) ==> LENGTH xs <= 8``
+  in
+    case outcome of
+        Refute.Counterexample
+          [{certainty = Refute.Genuine, cert = SOME _, ...}] => true
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute MF: WF ersatz does not weaken a Definition's own recursion"
+val _ = require_msg
+  (check_result mf_wf_ersatz_does_not_weaken_definitions) (fn () =>
+  "WF ersatz degraded or broke a Definition-style recursive function")
+  (fn () => ()) ()
+
 fun mf_cert_pin_holds MfCertIgnored _ = true
   | mf_cert_pin_holds MfCertSome
       (Refute.Counterexample
@@ -25451,7 +25523,19 @@ val mf_refute_nits_cases =
      ``ALL_DISTINCT [a; b]`` ExpectGenuine MfCertSome false
      mf_same_config,
    mf_acceptance_invocation "Refute_Nits simplified distinct"
-     ``a <> b`` ExpectGenuine MfCertSome false mf_same_config]
+     ``a <> b`` ExpectGenuine MfCertSome false mf_same_config,
+   (* wf'_def (refuteScript.sml): finiteness is exact on a polymorphic or
+      genuinely finite type, so these two are Genuine; the num variant is
+      pinned separately, above (mf_wf_ersatz_infinite_type_regression). *)
+   mf_acceptance_invocation "Refute_Nits WF not transitive [poly]"
+     ``WF (R : 'a -> 'a -> bool) ==> transitive R``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits WF not transitive [rf3]"
+     ``WF (R : rf3 -> rf3 -> bool) ==> transitive R``
+     ExpectGenuine MfCertNone false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits WF irreflexive [rf3]"
+     ``WF (R : rf3 -> rf3 -> bool) ==> ~R x x``
+     ExpectNone MfCertIgnored false mf_same_config]
 
 val mf_refute_nits_group : mf_acceptance_group =
   {name = "Refute_Nits", configure = mf_refute_nits_config,
@@ -25653,7 +25737,7 @@ val _ = require_msg (check_result (fn () =>
      Refute counts source cases.  Manual has 31 source cases and five
      repeated option/eval invocations. *)
   length mf_core_nits_cases = 38 andalso
-  length mf_refute_nits_cases = 40 andalso
+  length mf_refute_nits_cases = 43 andalso
   length mf_manual_nits_cases = 36 andalso
   length mf_hotel_nits_cases = 1 andalso
   List.all mf_executable_genuine_pin_is_some
