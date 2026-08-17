@@ -71,7 +71,10 @@ Refute_ModelFinder.uo: Refute_ModelFinder_Preproc.uo \
 Refute_Unused.uo: Refute_Core.uo
 Refute.uo: Refute_Unused.uo Refute_ModelFinder.uo Refute_QC_Narrow.uo
 
-ifdef POLY
+# Poly/ML only: the SML substrate calls PolyML.compiler, and Multithreading,
+# Thread_Attributes, Thread_Data and Timeout exist only under
+# src/portableML/poly.  src/parallel_builds/core INCLUDEs this directory under
+# ifdef POLY, so other MLs never enter it.
 selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
               refuteTableZooTheory.uo refuteUnusedTheory.uo \
               refuteHarvestTheoremTheory.uo
@@ -79,12 +82,6 @@ selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
 	  '$(HOLDIR)/bin/hol --gcthreads=1 run selftest' \
 	  'exit 0' > $@
 	@chmod +x $@
-else
-selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
-              refuteTableZooTheory.uo refuteUnusedTheory.uo \
-              refuteHarvestTheoremTheory.uo
-	$(HOLMOSMLC) -o $@ $<
-endif
 
 ifdef HOLSELFTESTLEVEL
 all: holrefute-selftest.log
