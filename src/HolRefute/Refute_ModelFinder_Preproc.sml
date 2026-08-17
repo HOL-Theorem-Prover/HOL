@@ -2424,8 +2424,13 @@ structure Refute_ModelFinder_Preproc = struct
          binarization is off.  The numeral inside a word literal ([5w] is
          [n2w 5]) would otherwise switch binarization on and leave every
          word atom without an integer value, so a word type vetoes the smart
-         choice.  A forced [binary_ints] still wins, and the encoder then
-         refuses the word by name. *)
+         choice.  [:char] is the same carrier and vetoes for the same reason,
+         its literals being [CHR] of a numeral.  A typedef over [num] or
+         [int] vetoes it for a second reason: binarized, its bound is a
+         numeral needing a carrier atom of its own, which no scope the search
+         grows in lockstep provides.  A forced [binary_ints] still wins in
+         every case; the encoder then refuses the word or char operation by
+         name, and reaches the typedef only at a hand-named [card num]. *)
       val binarize =
         case binary_ints of
             SOME false => false
@@ -2436,6 +2441,10 @@ structure Refute_ModelFinder_Preproc = struct
                (List.exists should_use_binary_ints
                   (nondefinitions @ definitions) andalso
                 not (List.exists MFH.term_mentions_word_type
+                  (nondefinitions @ definitions)) andalso
+                not (List.exists MFH.term_mentions_char_type
+                  (nondefinitions @ definitions)) andalso
+                not (List.exists MFH.term_mentions_num_typedef
                   (nondefinitions @ definitions))))
       val box = List.exists (fn (_, value) => value <> SOME false) boxes
       val uncurry_terms =

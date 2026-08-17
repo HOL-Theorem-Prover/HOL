@@ -193,15 +193,16 @@ structure Refute_ModelFinder_Scope = struct
 
   fun project_block (column, block) = map (project_row column) block
 
-  fun lookup_ints_assign equal assigns key =
+  fun lookup_ints_assign describe equal assigns key =
     case Util.triple_lookup equal assigns key of
         SOME candidates => candidates
-      | NONE => raise err "lookup_ints_assign" "missing assignment"
+      | NONE => raise err "lookup_ints_assign"
+          ("missing assignment for " ^ describe key)
 
   fun lookup_type_ints_assign assigns ty =
     map (fn value => Int.max (1, value))
-      (lookup_ints_assign (fn (actual, pattern) =>
-         type_matches pattern actual) assigns ty)
+      (lookup_ints_assign Parse.type_to_string
+         (fn (actual, pattern) => type_matches pattern actual) assigns ty)
 
   fun const_matches (pattern, actual) =
     case (Lib.total MFH.constructor_name pattern,
@@ -305,6 +306,9 @@ structure Refute_ModelFinder_Scope = struct
       [(Card ty, lookup_type_ints_assign cards_assigns MFH.int_type)]
     else if MFH.is_word_type ty then
       [(Card ty, [word_card ty])]
+    else if MFH.is_char_type ty then
+      (* Like a word carrier: exact, unsearched, atom [j] denoting [CHR j]. *)
+      [(Card ty, [MFH.char_card])]
     else
       (Card ty, lookup_type_ints_assign cards_assigns ty) ::
       (case MFH.binarized_and_boxed_data_type_constrs context binarize ty of
@@ -1065,7 +1069,8 @@ structure Refute_ModelFinder_Scope = struct
     MFH.is_iterator_type ty orelse MFH.is_integer_type ty orelse
     MFH.is_bit_type ty orelse
     Option.isSome (MFH.numeric_type_card ty) orelse
-    Option.isSome (MFH.word_dimension ty)
+    Option.isSome (MFH.word_dimension ty) orelse
+    MFH.is_char_type ty
 
   fun is_type_fundamentally_monotonic ty =
     (MFH.is_data_type ty andalso not (MFH.is_quot_type ty) andalso

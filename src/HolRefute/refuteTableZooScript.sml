@@ -194,6 +194,21 @@ Definition zoo_three_rep_wrapper_def:
     if b then zoo_three_rep x else zoo_three_rep x
 End
 
+(* A bound above [binary_int_threshold], so that the smart binarize choice
+   would fire on this typedef were it not vetoed. *)
+Theorem zoo_four_exists[local]:
+  ?n : num. (\n. n < 4) n
+Proof
+  qexists_tac `0` >> simp []
+QED
+
+val zoo_four_tydef =
+  new_type_definition ("zoo_four", zoo_four_exists);
+
+val zoo_four_absrep = define_new_type_bijections
+  {name = "zoo_four_absrep", ABS = "zoo_four_abs",
+   REP = "zoo_four_rep", tyax = zoo_four_tydef};
+
 (* A kernel typedef whose two valid bijection halves are saved separately,
    but whose harvestable conjunction is deliberately absent.  A selftest can
    add that conjunction temporarily to exercise negative-cache freshness. *)

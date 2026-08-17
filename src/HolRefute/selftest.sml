@@ -11,6 +11,7 @@ open pathTheory
 open refuteHarvestTheoremTheory
 local open finite_mapTheory finite_setTheory in end
 local open wordsLib in end
+local open stringLib in end
 open Refute_Core
 open Refute_Gen
 open Refute_Narrow
@@ -4924,6 +4925,15 @@ fun mf_binarize_preproc_goldens () =
     val (_, take_pipeline_defs, _, _, _, take_pipeline_binarize) =
       MFP.preprocess_formulas pipeline_context []
         ``TAKE 5 (xs : num list) = []``
+    (* Each veto refuses the *smart* binarize choice for a goal that would
+       otherwise trigger it: the numeral 5 is above the threshold in all
+       three, and only the carrier in the first conjunct differs. *)
+    fun smart_binarize goal =
+      #6 (MFP.preprocess_formulas (MFH.context_with_binary_ints
+        (fresh_mf_context ()) NONE) [] goal)
+    (* The veto reads the typedef registry, which preprocessing fills on the
+       way past; the direct checks below must not depend on that order. *)
+    val _ = ignore (MFH.harvest_typedef ``:zoo_four``)
     val forced_binary_context = MFH.context_with_binary_ints
       (fresh_mf_context ()) (SOME true)
     val (_, _, _, _, _, frac_pipeline_binarize) =
@@ -4982,6 +4992,18 @@ fun mf_binarize_preproc_goldens () =
           ty = MFH.int_type) pipeline_types)),
        ("restatement pipeline",
         take_pipeline_binarize andalso not (null take_pipeline_defs)),
+       ("carrier vetoes",
+        smart_binarize ``(n : num) = 5`` andalso
+        not (smart_binarize ``(w : 3 word) = 1w /\ (n : num) = 5``) andalso
+        not (smart_binarize ``(c : char) = c' /\ (n : num) = 5``) andalso
+        not (smart_binarize ``(a : zoo_four) = b /\ (n : num) = 5``)),
+       ("num typedef detection",
+        MFH.term_mentions_num_typedef ``(a : zoo_four) = b`` andalso
+        MFH.term_mentions_num_typedef ``zoo_four_rep a = 0`` andalso
+        MFH.term_mentions_num_typedef ``zoo_four_abs 0 = a`` andalso
+        (* [:char] is on the numeric-carrier tier, not the typedef one. *)
+        not (MFH.term_mentions_num_typedef ``(c : char) = c'``) andalso
+        not (MFH.term_mentions_num_typedef ``(t : zoo_tree) = u``)),
        ("binarized SUC destruction",
         suc_pipeline_binarize andalso
         not (List.exists (fn ty => ty = MFH.num_type)
@@ -11350,6 +11372,138 @@ local
              "word operations are not encoded with binary integers") reasons
        | _ => false)
 
+  (* [:char] is a numeric carrier of exactly 256 atoms, atom [j] denoting
+     [CHR j].  Read as the typedef it is defined as, it instead costs a
+     [:num] carrier of 256 values and puts the numeral 256 in the axiom set,
+     which is enough on its own to switch binarization on. *)
+  val carrier_config =
+    default_config
+      |> upd_timeout 60.0
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> upd_sat_solver
+           (if Lib.mem "MiniSat_JNI"
+                 (Refute_ForlSat.configured_sat_solvers false)
+            then "MiniSat_JNI" else "SAT4J")
+      |> upd_max_threads 1
+
+  fun carrier_counterexamples config goal =
+    case Refute.refute config goal of
+        Refute.Counterexample counterexamples => counterexamples
+      | _ => []
+
+  fun carrier_refuted goal =
+    case carrier_counterexamples carrier_config goal of
+        ({backend = "kodkod", certainty = Refute.Genuine, ...} :: _) => true
+      | _ => false
+
+  fun carrier_not_refuted goal =
+    case Refute.refute carrier_config goal of
+        Refute.NoCounterexample => true
+      | _ => false
+
+  fun card_in scope ty =
+    case scope of
+        SOME assignments =>
+          Option.map #2 (List.find (fn (candidate, _) =>
+            Type.compare (candidate, ty) = EQUAL) assignments)
+      | NONE => NONE
+
+  fun mf_char_carrier () =
+    let
+      fun exact_char_scope ({scope, ...} : Refute.counterexample) =
+        card_in scope ``:char`` = SOME 256 andalso
+        (* The codes never become a [:num] carrier of their own, which is the
+           whole observable difference from the typedef reading. *)
+        card_in scope MFH.num_type = NONE
+    in
+      List.exists exact_char_scope
+        (carrier_counterexamples carrier_config ``(c : char) = c'``) andalso
+      (* The motivating goal: a list over the 256-atom element carrier. *)
+      carrier_refuted ``STRCAT s "a" = s``
+    end
+
+  (* [CHR] and [ORD] are the carrier's numbering and its inverse, and the four
+     character orders are that numbering's order.  A code above the [:num]
+     carrier is out of reach in either direction, so the codes here are
+     small; [ORD (CHR 97) = 97] needs [card num >= 98] and is not pinned. *)
+  fun mf_char_operations () =
+    List.all carrier_refuted
+      [``CHR 1 = CHR 2``,
+       ``ORD (CHR 1) <> 1``,
+       ``char_lt (CHR 2) (CHR 1)``,
+       ``char_ge (CHR 1) (CHR 2)``] andalso
+    List.all carrier_not_refuted
+      [``char_lt (CHR 1) (CHR 2)``,
+       ``char_le (c : char) c``]
+
+  (* A reconstructed char atom is [CHR j], which prints as a character
+     literal rather than an internal atom name. *)
+  fun mf_char_display () =
+    let
+      fun literal_bindings ({bindings, ...} : Refute.counterexample) =
+        not (null bindings) andalso
+        List.all (fn (_, value) =>
+          String.isPrefix "#\"" (Parse.term_to_string value)) bindings
+    in
+      List.exists literal_bindings
+        (carrier_counterexamples carrier_config ``(c : char) = c'``)
+    end
+
+  (* Task A's veto: a typedef over [:num] is refuted under default settings,
+     where the smart binarize choice would otherwise fire on its bound. *)
+  fun mf_num_typedef_veto () =
+    carrier_refuted ``(a : zoo_four) = b``
+
+  (* Below the veto.  Binarized, the typedef's bound is a numeral that needs
+     a carrier atom of its own, so a scope is satisfiable only above it --
+     which is why the veto exists, the scope search growing the carriers
+     together.  At the bound every emitted scope is unsatisfiable and the
+     search reports inconclusively, which is what the defect looked like.
+     Above it the model still names the constant that the binarized retyping
+     degraded into a reserved variable. *)
+  fun mf_binarized_typedef_needs_room () =
+    let
+      fun forced cards =
+        Refute.refute
+          (carrier_config |> upd_binary_ints (SOME true) |> upd_card cards)
+          ``(a : zoo_three) = b``
+      fun names_the_constant ({bindings, ...} : Refute.counterexample) =
+        not (null bindings) andalso
+        List.all (fn (_, value) =>
+          let val text = Parse.term_to_string value
+          in
+            String.isSubstring "zoo_three_abs" text andalso
+            not (String.isSubstring MFN.reserved_prefix text)
+          end) bindings
+    in
+      (case forced [(SOME ``:num``, [4]), (NONE, [3])] of
+           Refute.Counterexample counterexamples =>
+             List.exists names_the_constant counterexamples
+         | _ => false) andalso
+      (case forced [(SOME ``:num``, [3]), (NONE, [3])] of
+           Refute.Unknown reasons =>
+             List.exists (String.isSubstring
+               "no counterexample within the tested scopes") reasons
+         | _ => false)
+    end
+
+  (* Task C: a card list naming only some types keeps the built-in fallback
+     for the rest instead of aborting the backend, and the named entry still
+     wins over it. *)
+  fun mf_card_keeps_its_default () =
+    let
+      fun partial cards goal =
+        Refute.refute (carrier_config |> upd_card cards) goal
+    in
+      (case partial [(SOME ``:num``, [4])] ``(n : num) = 0 /\ (b : bool)`` of
+           Refute.Counterexample ({scope, ...} :: _) =>
+             card_in scope MFH.num_type = SOME 4
+         | _ => false) andalso
+      (case partial [(SOME ``:char``, [2])] ``(c : char) = c'`` of
+           Refute.Counterexample _ => true
+         | _ => false)
+    end
+
   fun mf_genuine_only_keeps_certified_genuine () =
     let
       val solvers = Refute_ForlSat.configured_sat_solvers false
@@ -11504,6 +11658,42 @@ in
     if bridge_configured then
       require_msg (check_result mf_word_refusals) (fn () =>
         "an unencodable word operation was not refused by name")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_char_carrier) (fn () =>
+        "the char carrier was not 256 unsearched atoms free of :num")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_char_operations) (fn () =>
+        "a char coercion or order did not read the carrier's numbering")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_char_display) (fn () =>
+        "a reconstructed char did not print as a character literal")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_num_typedef_veto) (fn () =>
+        "a typedef over :num was binarized by the smart choice")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_binarized_typedef_needs_room) (fn () =>
+        "the forced-binary typedef scopes did not straddle its bound")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg (check_result mf_card_keeps_its_default) (fn () =>
+        "a partial card assignment lost the built-in fallback")
         (fn () => ()) ()
     else ()
   val _ =

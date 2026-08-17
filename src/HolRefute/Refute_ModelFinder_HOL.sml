@@ -399,6 +399,28 @@ structure Refute_ModelFinder_HOL = struct
             let val (name, _) = Term.dest_var term
             in Term.mk_var (name, ty) end
 
+  (* The inverse of the degradation above, for reconstruction: a monomorphic
+     constant that binarization retyped into a reserved variable is a
+     constant again once the type is restored, and a model that keeps the
+     reserved name displays an internal identifier instead.  The name alone
+     does not decide it -- a reserved name of the same shape may belong to no
+     constant, or to one this type does not fit -- so the constant is rebuilt
+     only where the kernel accepts it. *)
+  fun restore_retyped_constant term =
+    case Lib.total Term.dest_var term of
+        NONE => term
+      | SOME (name, ty) =>
+          if not (Refute_ModelFinder_Names.is_reserved_name name) then term
+          else
+            let
+              val original = Refute_ModelFinder_Names.original_name name
+              val (thy, constant) =
+                Refute_ModelFinder_Names.strip_first_name_sep original
+            in
+              if thy = "" orelse constant = "" then term
+              else Term.mk_thy_const {Thy = thy, Name = constant, Ty = ty}
+            end handle HOL_ERR _ => term
+
   fun registered_frac_type ty =
     case Lib.total Type.dest_thy_type ty of
         SOME {Thy, Tyop, Args = []} =>
@@ -527,6 +549,45 @@ structure Refute_ModelFinder_HOL = struct
       (let val (domains, range) = boolSyntax.strip_fun ty
        in domains @ [range] end)
 
+  (* [:char] is the same kind of carrier as a word: exactly 256 atoms, atom
+     [j] denoting [CHR j].  Reading it as the typedef it is defined as costs a
+     [num] carrier of 256 values and puts the numeral 256 in the axiom set,
+     which is enough on its own to switch binarization on. *)
+  val char_card = 256
+
+  fun is_char_type ty =
+    case Lib.total Type.dest_thy_type ty of
+        SOME {Thy = "string", Tyop = "char", Args = []} => true
+      | _ => false
+
+  (* [CHR] of a numeral below 256: the encoder folds it into the single
+     carrier atom that denotes it, so no [num] carrier holding the code is
+     needed.  Above 255 [CHR] is unspecified and stays an application. *)
+  fun is_char_literal term =
+    case Lib.total Term.dest_comb term of
+        SOME (head, argument) =>
+          (case Lib.total Term.dest_thy_const head of
+               SOME {Thy = "string", Name = "CHR", ...} =>
+                 (case Lib.total numSyntax.int_of_term argument of
+                      SOME value => value >= 0 andalso value < char_card
+                    | NONE => false)
+             | _ => false)
+      | NONE => false
+
+  fun type_has_char ty =
+    is_char_type ty orelse
+    (List.exists type_has_char (#Args (Type.dest_thy_type ty))
+     handle HOL_ERR _ => false)
+
+  fun term_mentions_char_type term =
+    List.exists (type_has_char o Term.type_of)
+      (HolKernel.find_terms (fn _ => true) term)
+
+  (* Whether a char operation's type touches the carrier at all. *)
+  fun is_char_op_type ty =
+    let val (domains, range) = boolSyntax.strip_fun ty
+    in List.exists is_char_type (domains @ [range]) end
+
   val built_in_typed_consts =
     [(({Thy = "num", Name = "0"}, num_type), 0),
      (({Thy = "arithmetic", Name = "+"},
@@ -589,6 +650,17 @@ structure Refute_ModelFinder_HOL = struct
      ({Thy = "words", Name = "word_gt"}, 2),
      ({Thy = "words", Name = "word_ge"}, 2)]
 
+  (* The direct tier at [:char]: the two morphisms, which are the carrier's
+     numbering, and the four orders, which are that numbering's order.
+     Everything else on characters is an ordinary definition and unfolds. *)
+  val char_built_in_consts =
+    [({Thy = "string", Name = "CHR"}, 0),
+     ({Thy = "string", Name = "ORD"}, 0),
+     ({Thy = "string", Name = "char_lt"}, 2),
+     ({Thy = "string", Name = "char_le"}, 2),
+     ({Thy = "string", Name = "char_gt"}, 2),
+     ({Thy = "string", Name = "char_ge"}, 2)]
+
   fun generic_built_in_arity key =
     Option.map #2 (List.find (fn (other, _) => same_key key other)
       built_in_consts)
@@ -601,6 +673,12 @@ structure Refute_ModelFinder_HOL = struct
     if Option.isSome (word_op_dimension ty) then
       Option.map #2 (List.find (fn (other, _) => same_key key other)
         word_built_in_consts)
+    else NONE
+
+  fun char_built_in_arity key ty =
+    if is_char_op_type ty then
+      Option.map #2 (List.find (fn (other, _) => same_key key other)
+        char_built_in_consts)
     else NONE
 
   (* Outside the direct tier a word operation is refused by name rather than
@@ -640,7 +718,10 @@ structure Refute_ModelFinder_HOL = struct
           | NONE =>
               (case typed_built_in_arity key ty of
                    SOME arity => SOME arity
-                 | NONE => word_built_in_arity key ty)
+                 | NONE =>
+                     (case word_built_in_arity key ty of
+                          SOME arity => SOME arity
+                        | NONE => char_built_in_arity key ty))
     end handle HOL_ERR _ => NONE
 
   fun is_built_in_const constant =
@@ -674,6 +755,7 @@ structure Refute_ModelFinder_HOL = struct
       Option.isSome (generic_built_in_arity key) orelse
       Option.isSome (typed_built_in_arity key ty) orelse
       Option.isSome (word_built_in_arity key ty) orelse
+      Option.isSome (char_built_in_arity key ty) orelse
       raw_fixpoint_kind constant <> NoFp
     end handle HOL_ERR _ => false
 
@@ -2194,7 +2276,8 @@ structure Refute_ModelFinder_HOL = struct
     (Thy = "min" andalso (Tyop = "bool" orelse Tyop = "fun")) orelse
     (Thy = "pair" andalso Tyop = "prod") orelse
     (Thy = "num" andalso Tyop = "num") orelse
-    (Thy = "integer" andalso Tyop = "int")
+    (Thy = "integer" andalso Tyop = "int") orelse
+    (Thy = "string" andalso Tyop = "char")
 
   fun remove_nth index values =
     List.take (values, index) @ List.drop (values, index + 1)
@@ -3634,6 +3717,33 @@ structure Refute_ModelFinder_HOL = struct
         SOME {univ, ...} => univ
       | NONE => false
 
+  (* Binarizing a typedef over [num] or [int] costs a carrier atom for the
+     bound.  Unbinarized, a bound at or above [card num] is vacuous and the
+     peephole drops the membership axiom; binarized, the bound is a numeral
+     that [atom_from_int_expr] must find an atom for, so the axiom's [some]
+     fails unless [card num] exceeds it.  The scope search grows the carriers
+     together, so the scopes where the abstract type is large enough are
+     exactly the ones where the numeral is missing, and every one of them is
+     unsatisfiable.  Forced binarization reaches a model by naming a larger
+     [card num] by hand. *)
+  fun is_num_typedef_type ty =
+    not (is_interpreted_type ty) andalso
+    (case typedef_for_type ty of
+         SOME {rty, ...} => rty = num_type orelse rty = int_type
+       | NONE => false)
+
+  (* Scanning types rather than morphisms is the robust half: a goal can
+     mention the abstract type with neither Abs nor Rep present, and a
+     morphism's own type mentions it anyway. *)
+  fun type_has_num_typedef ty =
+    is_num_typedef_type ty orelse
+    (List.exists type_has_num_typedef (#Args (Type.dest_thy_type ty))
+     handle HOL_ERR _ => false)
+
+  fun term_mentions_num_typedef term =
+    List.exists (type_has_num_typedef o Term.type_of)
+      (HolKernel.find_terms (fn _ => true) term)
+
   fun quotient_relation_for_type ty =
     case quotient_for_type ty of
         SOME {qty, rty, abs, rep, equiv_thm, ...} =>
@@ -4939,6 +5049,7 @@ structure Refute_ModelFinder_HOL = struct
   fun card_of_type assigns ty =
     if is_boolean_type ty then 2
     else if is_itself_type ty then 1
+    else if is_char_type ty then char_card
     else
       case Lib.total Type.dom_rng ty of
           SOME (domain, range) =>
@@ -5045,6 +5156,7 @@ structure Refute_ModelFinder_HOL = struct
           fallback ty
         else if is_boolean_type ty then 2
         else if is_itself_type ty then 1
+        else if is_char_type ty then Int.min (maximum, char_card)
         else
           case Lib.total Type.dom_rng ty of
               SOME (domain, range) =>

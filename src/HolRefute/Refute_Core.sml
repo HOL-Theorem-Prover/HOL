@@ -565,8 +565,20 @@ structure Refute_Core = struct
     | MfNeed of term list option
     | MfMergeTypeVars of bool
 
+  fun is_fallback_assign (pattern, _) = not (Option.isSome pattern)
+
+  (* A card list without a [(NONE, _)] entry leaves every type the user did
+     not name unassigned, which aborts the backend in [lookup_ints_assign].
+     Retain the current fallback; the lookup prefers exact and pattern
+     entries, so appending it cannot shadow a user entry. *)
+  fun card_with_fallback current value =
+    if List.exists is_fallback_assign value then value
+    else value @ List.filter is_fallback_assign current
+
   fun change_mf update (mf : mf_config) =
-    { card = (case update of MfCard (value, _) => value | _ => #card mf),
+    { card = (case update of MfCard (value, _) =>
+                card_with_fallback (#card mf) value
+              | _ => #card mf),
       card_mode =
         (case update of MfCard (_, mode) => mode | _ => #card_mode mf),
       max = (case update of MfMax value => value | _ => #max mf),

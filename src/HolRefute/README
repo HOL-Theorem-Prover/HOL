@@ -358,6 +358,26 @@ type variable has no carrier at all — such a goal is refuted through the
 monomorphic width instances described above.  A `cart` type that is not a
 word is not encoded.
 
+`:char` is the same kind of carrier: exactly 256 atoms, atom `j` denoting
+`CHR j`, exact and never searched, and models print as character literals.
+Encoded directly are character literals, `CHR`, `ORD`, and `char_lt`,
+`char_le`, `char_gt`, `char_ge`; everything else on characters unfolds
+through `ORD`, and `:string` stays an ordinary `:char list`.  Read instead as
+the typedef `{n | n < 256}` it is defined as, a character would cost a `:num`
+carrier of 256 values and put the numeral 256 in the axiom set, which alone
+switches binarization on; as a carrier it costs neither.  A character is read
+off the sequential integer bounds just as a word is, so it turns smart
+binarization off too, and `upd_binary_ints (SOME true)` refuses the character
+operation by name.  `ORD` and `CHR` are total only where the `:num` carrier
+holds the code, so a goal over a large code needs `card num` above it.
+
+A typedef over `:num` or `:int` also turns smart binarization off.  Binarized,
+its bound is a numeral needing a carrier atom of its own, and the scope search
+grows the carriers together: the scopes where the abstract type is large
+enough are exactly the ones where the numeral is missing, so all of them are
+unsatisfiable.  Forcing `upd_binary_ints (SOME true)` still binarizes, and
+reaches a model only at a `card num` named above the bound.
+
 Registrations are session-local ML state and create no theory content:
 
 * `Refute.register_codatatype {tyop, case_const, constructors}` validates or

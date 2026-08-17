@@ -25,7 +25,10 @@ signature REFUTE_MODEL_FINDER_NUT = sig
        [Multiply] serve the modular ring at a word type, and the rest of the
        direct tier reduces to those. *)
     NatToWord | WordToNat | WordAnd | WordOr | WordXor |
-    WordShl | WordShr | WordAsr
+    WordShl | WordShr | WordAsr |
+    (* The two morphisms of the [:char] carrier: the numbering that makes
+       atom [j] denote [CHR j], and its inverse. *)
+    NatToChar | CharToNat
 
   datatype op1 =
     Not | Finite | Converse | Closure | SingletonSet | IsUnknown |
@@ -113,7 +116,10 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
        [Multiply] serve the modular ring at a word type, and the rest of the
        direct tier reduces to those. *)
     NatToWord | WordToNat | WordAnd | WordOr | WordXor |
-    WordShl | WordShr | WordAsr
+    WordShl | WordShr | WordAsr |
+    (* The two morphisms of the [:char] carrier: the numbering that makes
+       atom [j] denote [CHR j], and its inverse. *)
+    NatToChar | CharToNat
 
   datatype op1 =
     Not | Finite | Converse | Closure | SingletonSet | IsUnknown |
@@ -167,6 +173,8 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
     | string_for_cst WordShl = "WordShl"
     | string_for_cst WordShr = "WordShr"
     | string_for_cst WordAsr = "WordAsr"
+    | string_for_cst NatToChar = "NatToChar"
+    | string_for_cst CharToNat = "CharToNat"
 
   fun string_for_op1 Not = "Not"
     | string_for_op1 Finite = "Finite"
@@ -630,6 +638,29 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
              ({Thy = "words", Name = "word_le"}, (true, true, true)),
              ({Thy = "words", Name = "word_ge"}, (true, false, true))]
           val word_order_of = word_key_lookup word_orders
+          (* Atom [j] of the char carrier denotes [CHR j], so a literal is a
+             [Num] at [:char]. *)
+          fun char_literal_value term =
+            if MFH.is_char_literal term then
+              Lib.total numSyntax.int_of_term (#2 (Term.dest_comb term))
+            else NONE
+          fun char_key_lookup table head =
+            if MFH.is_char_op_type (Term.type_of head) then
+              Option.map #2
+                (List.find (fn (key, _) => is_named key head) table)
+            else NONE
+          val char_csts =
+            [({Thy = "string", Name = "CHR"}, NatToChar),
+             ({Thy = "string", Name = "ORD"}, CharToNat)]
+          val char_cst_of = char_key_lookup char_csts
+          (* Character order is the order of the codes, which is the atom
+             order, so the unsigned word orders read it unchanged. *)
+          val char_orders =
+            [({Thy = "string", Name = "char_lt"}, (false, false, false)),
+             ({Thy = "string", Name = "char_gt"}, (false, true, false)),
+             ({Thy = "string", Name = "char_le"}, (false, true, true)),
+             ({Thy = "string", Name = "char_ge"}, (false, false, true))]
+          val char_order_of = char_key_lookup char_orders
           fun word_width_of ty =
             case MFH.word_dimension ty of
                 SOME width => width
@@ -709,6 +740,10 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                        Term.type_of candidate, MFR.Any)
                  | NONE =>
               case word_literal_value candidate of
+                  SOME value =>
+                    Cst (Num value, Term.type_of candidate, MFR.Any)
+                | NONE =>
+              case char_literal_value candidate of
                   SOME value =>
                     Cst (Num value, Term.type_of candidate, MFR.Any)
                 | NONE =>
@@ -900,9 +935,19 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     (if is_named {Thy = "words", Name = "word_2comp"} head
                      then 0 else Util.reasonable_power 2 width - 1)
                 end
+              else if Option.isSome (char_order_of head) andalso
+                      length arguments < 2 then
+                sub (MFH.eta_expand candidate (2 - length arguments))
+              else if Option.isSome (char_order_of head) andalso
+                      length arguments = 2 then
+                word_comparison (valOf (char_order_of head))
+                  (sub (hd arguments)) (sub (List.nth (arguments, 1)))
               else if Option.isSome (word_cst_of head) andalso
                       null arguments then
                 cst (valOf (word_cst_of head)) head
+              else if Option.isSome (char_cst_of head) andalso
+                      null arguments then
+                cst (valOf (char_cst_of head)) head
               else if Term.is_const head andalso
                       is_named {Thy = "refute", Name = "unknown"} head andalso
                       null arguments then
@@ -1157,6 +1202,14 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
               else ()
             end
 
+  (* The char carrier is read the same way as a word one, so it needs the same
+     sequential [int_bounds].  Its 256 atoms always fit the integer width. *)
+  fun check_char_budget scope ty =
+    if MFH.is_char_op_type ty andalso #binarize scope then
+      raise Util.NOT_SUPPORTED
+        "char operations are not encoded with binary integers"
+    else ()
+
   fun unknown_boolean ty representation =
     Cst (case representation of
              MFR.Formula Util.Pos => False
@@ -1381,6 +1434,23 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                       MFR.Func (MFR.Atom (domain_card, domain_offset),
                         if total then range else MFR.Opt range))
                   end
+                else if constant = NatToChar orelse constant = CharToNat then
+                  let
+                    val _ = check_char_budget scope ty
+                    val (domain_card, domain_offset) =
+                      MFS.spec_of_type scope (domain_type ty)
+                    val (range_card, range_offset) =
+                      MFS.spec_of_type scope (range_type ty)
+                    (* [CHR] is unspecified at or above 256 and [ORD] needs a
+                       [num] carrier holding every code, so either direction is
+                       total exactly when the domain fits the range. *)
+                    val total = domain_card <= range_card
+                    val range = MFR.Atom (range_card, range_offset)
+                  in
+                    Cst (constant, ty,
+                      MFR.Func (MFR.Atom (domain_card, domain_offset),
+                        if total then range else MFR.Opt range))
+                  end
                 else if List.exists (fn other => constant = other)
                     [WordAnd, WordOr, WordXor] then
                   let
@@ -1461,6 +1531,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
             | Op2 (Less, ty, _, first, second) =>
                 let
                   val _ = check_word_budget scope false (type_of first)
+                  val _ = check_char_budget scope (type_of first)
                   val first' = sub first
                   val second' = sub second
                   val optional = List.exists

@@ -82,9 +82,10 @@ fun ground_types context binarize terms =
           types (type_arguments ty)
       else if MFH.is_boolean_type ty orelse Util.member_type ty types then
         types
-      else if MFH.is_word_type ty then
+      else if MFH.is_word_type ty orelse MFH.is_char_type ty then
         (* A word carrier is atomic: its index type is a width, not a carrier
-           the search should size, and its element type is [bool]. *)
+           the search should size, and its element type is [bool].  [:char] is
+           atomic for the same reason, its size being fixed at 256. *)
         Util.add_type ty types
       else
         let
@@ -101,12 +102,12 @@ fun ground_types context binarize terms =
             types nested
         end
     fun add_term term types = add (Term.type_of term) types
-    (* A word literal is folded into the carrier atom that denotes it, so its
-       [n2w] head must not pull the [num] carrier into the problem: [num] is
-       unbounded, and the scope search would then grow it forever for a goal
-       that never mentions a number. *)
+    (* A word or char literal is folded into the carrier atom that denotes it,
+       so its [n2w] or [CHR] head must not pull the [num] carrier into the
+       problem: [num] is unbounded, and the scope search would then grow it
+       forever for a goal that never mentions a number. *)
     fun subterms term =
-      if MFH.is_word_literal term then [term]
+      if MFH.is_word_literal term orelse MFH.is_char_literal term then [term]
       else
         term ::
         (case Lib.total Term.dest_comb term of

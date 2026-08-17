@@ -27,6 +27,15 @@ Proof
   QUICKCHECK_TAC >> cheat
 QED
 
+(* The model finder reads a character as a 256-element carrier ordered by
+   code, so character literals and the character orders reach it directly. *)
+
+Theorem no_character_precedes_the_letter_a:
+  char_le #"a" (c : char)
+Proof
+  MODEL_REFUTE_TAC >> cheat
+QED
+
 (* The model finder has a relational encoding for rationals. *)
 
 Theorem adding_one_leaves_a_rational_unchanged:

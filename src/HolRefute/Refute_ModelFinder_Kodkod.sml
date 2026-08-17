@@ -2148,9 +2148,10 @@ fun kodkod_formula_from_nut offsets
                             [candidate])
                  | atom => KK.Atom atom)
             else if ty = MFH.num_type orelse MFH.is_iterator_type ty orelse
-                    MFH.is_word_type ty then
+                    MFH.is_word_type ty orelse MFH.is_char_type ty then
               (* Atom [j] of a word carrier denotes [n2w j], so a literal is
-                 its own atom once reduced modulo the width. *)
+                 its own atom once reduced modulo the width; atom [j] of the
+                 char carrier denotes [CHR j] the same way. *)
               if value >= 0 andalso
                  value < MFR.card_of_rep representation then
                 KK.Atom (value + MFS.offset_of_type offsets ty)
@@ -2393,6 +2394,13 @@ fun kodkod_formula_from_nut offsets
                large for the [num] carrier are simply absent, which is what
                makes the representation optional. *)
             to_word_unary_op ty representation (fn integer => integer)
+        (* A char code is already the atom's value in both directions; the
+           pairs outside the other carrier are simply absent, which is what
+           makes the representation optional. *)
+        | MFNT.Cst (MFNT.NatToChar, ty, representation) =>
+            to_word_unary_op ty representation (fn integer => integer)
+        | MFNT.Cst (MFNT.CharToNat, ty, representation) =>
+            to_word_unary_op ty representation (fn integer => integer)
         | MFNT.Cst (MFNT.WordAnd, ty, representation) =>
             to_word_binary_op ty representation
               (fn left => fn right => KK.BitAnd (left, right))
@@ -2614,9 +2622,10 @@ fun kodkod_formula_from_nut offsets
                 double_rel_rel_let kk guarded
                   (to_rep operand_rep first) (to_rep operand_rep second)
               end
-            else if MFH.is_word_type (MFNT.type_of first) then
-              (* Word atoms are ordered by value, so the unsigned order is the
-                 integer order of the operands' carriers. *)
+            else if MFH.is_word_type (MFNT.type_of first) orelse
+                    MFH.is_char_type (MFNT.type_of first) then
+              (* Word and char atoms are ordered by value, so the unsigned
+                 order is the integer order of the operands' carriers. *)
               let
                 val operand_rep = MFR.Opt
                   (MFR.Atom (MFR.card_of_rep (MFNT.rep_of first),
