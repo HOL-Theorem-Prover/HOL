@@ -130,6 +130,10 @@ structure Refute_Core = struct
       expect : expectation,
       max_counterexamples : int,
       tag : string,
+      (* Machine-word widths substituted for a type variable in a word's
+         index position.  Unrelated to [mf.bits], which sizes binary
+         integers. *)
+      widths : int list,
       qc : qc_config,
       mf : mf_config }
 
@@ -232,6 +236,7 @@ structure Refute_Core = struct
       expect = NoExpectation,
       max_counterexamples = 1,
       tag = "",
+      widths = [1, 2, 3, 4],
       qc = default_qc_config,
       mf = default_mf_config }
 
@@ -249,6 +254,7 @@ structure Refute_Core = struct
     | ConfigExpect of expectation
     | ConfigMaxCounterexamples of int
     | ConfigTag of string
+    | ConfigWidths of int list
     | ConfigQc of qc_config
     | ConfigMf of mf_config
 
@@ -273,6 +279,8 @@ structure Refute_Core = struct
         (case update of ConfigMaxCounterexamples value => value
          | _ => #max_counterexamples cfg),
       tag = (case update of ConfigTag value => value | _ => #tag cfg),
+      widths = (case update of ConfigWidths value => value
+                | _ => #widths cfg),
       qc = (case update of ConfigQc value => value | _ => #qc cfg),
       mf = (case update of ConfigMf value => value | _ => #mf cfg) }
 
@@ -302,6 +310,12 @@ structure Refute_Core = struct
     else raise Feedback.mk_HOL_ERR "Refute_Core" "upd_max_counterexamples"
       "max_counterexamples: must be at least 1"
   fun upd_tag value = change_config (ConfigTag value)
+  fun upd_widths value =
+    if not (null value) andalso
+       List.all (fn width => width >= 1 andalso width <= 32) value then
+      change_config (ConfigWidths value)
+    else raise Feedback.mk_HOL_ERR "Refute_Core" "upd_widths"
+      "widths: must be nonempty with every entry between 1 and 32"
 
   datatype qc_update =
       QcSize of int * bound_mode
@@ -856,6 +870,28 @@ structure Refute_Core = struct
     Type.mk_thy_type
       { Thy = "refute", Tyop = "rf" ^ Int.toString number, Args = [] }
 
+  (* A type variable in the index position of a [cart] - the width slot of
+     a machine word - cannot take an [rf] carrier: nothing computes
+     [dimindex (:rf1)], so every substrate declines.  Such a variable is
+     instantiated to an fcp numeral type instead.  Index occurrence wins
+     over a value-position occurrence of the same variable. *)
+  fun width_type_vars tys =
+    let
+      fun collect (ty, found) =
+        let
+          val found =
+            case Lib.total fcpSyntax.dest_cart_type ty of
+                SOME (_, index_ty) =>
+                  Lib.union (Type.type_vars index_ty) found
+              | NONE => found
+        in
+          List.foldl collect found
+            (#2 (Type.dest_type ty) handle Feedback.HOL_ERR _ => [])
+        end
+    in
+      List.foldl collect [] tys
+    end
+
   fun monomorphic_types qc =
     if #finite_types qc then
       List.tabulate (#finite_type_size qc, fn index => rf_type (index + 1))
@@ -895,8 +931,12 @@ structure Refute_Core = struct
       val original_goal = hd renamed
       val input_evals = tl renamed
       val types = monomorphic_types (#qc cfg)
-      val tyvars = Lib.U
-        (map Term.type_vars_in_term (original_goal :: input_evals))
+      val input_terms = original_goal :: input_evals
+      val tyvars = Lib.U (map Term.type_vars_in_term input_terms)
+      val width_vars = width_type_vars
+        (map Term.type_of
+          (List.concat (map (HolKernel.find_terms (Lib.K true)) input_terms)))
+      val widths = #widths cfg
       fun make_instance card theta =
         let
           val original = Term.inst theta original_goal
@@ -924,22 +964,34 @@ structure Refute_Core = struct
             size_matters = instance_size_matters goal }
         end
       (* One replacement interprets every type variable at once, so [card]
-         is the index of the single rf type the instance uses.  That
-         identity is what lets [Refute_QC.schedule] order work by
+         is the index of the single carrier/width pair the instance uses.
+         That identity is what lets [Refute_QC.schedule] order work by
          [card + size] and lets every report name the cardinality it
          tested.  Interpreting the variables independently would instead
          normalize [finite_type_size] raised to the number of type
          variables instances before any backend runs, and leave [card] a
-         bare dispatch index. *)
-      fun monomorphic_instance (card, replacement) =
-        make_instance card (map (fn tyvar =>
-          {redex = tyvar, residue = replacement}) tyvars)
+         bare dispatch index.  For the same reason the two roles are
+         paired by clamped index rather than crossed. *)
+      val instance_count =
+        if null types then 0
+        else if null width_vars then length types
+        else Int.max (length types, length widths)
+      fun monomorphic_instance card =
+        let
+          val carrier = List.nth (types, Int.min (card, length types) - 1)
+          val width = fcpSyntax.mk_int_numeric_type
+            (List.nth (widths, Int.min (card, length widths) - 1))
+        in
+          make_instance card (map (fn tyvar =>
+            {redex = tyvar,
+             residue = if Lib.mem tyvar width_vars then width else carrier})
+            tyvars)
+        end
       val mono_instances =
         if null tyvars then [make_instance 1 []]
         else
-          List.map monomorphic_instance
-            (ListPair.zip
-              (List.tabulate (length types, fn index => index + 1), types))
+          List.tabulate (instance_count, fn index =>
+            monomorphic_instance (index + 1))
       (* A monomorphic goal has literally the same backend input in both
          forms.  This is stronger than merely constructing an equivalent
          singleton and keeps the old front-end behaviour exact. *)
@@ -1017,7 +1069,8 @@ structure Refute_Core = struct
   fun show_config () =
     let
       val {timeout, backends, sequential, genuine_only, abort_potential,
-           quiet, no_assms, evals, expect, max_counterexamples, tag, qc, mf} =
+           quiet, no_assms, evals, expect, max_counterexamples, tag, widths,
+           qc, mf} =
         !the_config
       val q = qc
       val m = mf
@@ -1058,6 +1111,7 @@ structure Refute_Core = struct
           "expect = " ^ Private.expectation_to_string expect ^ "\n",
           "max_counterexamples = " ^ Int.toString max_counterexamples ^ "\n",
           "tag = " ^ tag ^ "\n",
+          "widths = " ^ ints widths ^ "\n",
           "size = " ^ Int.toString (#size q) ^ "\n",
           "size_mode = " ^ Private.bound_mode_to_string (#size_mode q) ^
             "\n",

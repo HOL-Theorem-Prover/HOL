@@ -135,6 +135,9 @@ signature Refute = sig
   val upd_depth : int -> config -> config
   val upd_finite_types : bool -> config -> config
   val upd_finite_type_size : int -> config -> config
+  (* Word widths tried for a type variable in a word's index position;
+     [upd_bits] is the unrelated binary-integer width. *)
+  val upd_widths : int list -> config -> config
   val upd_default_type : hol_type list -> config -> config
   val upd_substrate : substrate_choice -> config -> config
   val upd_seed : int option -> config -> config

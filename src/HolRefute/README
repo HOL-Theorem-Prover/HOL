@@ -230,9 +230,18 @@ Code constructing those records literally must add the corresponding field;
 existing `#size` and `#card` selectors are unchanged.
 
 Only the primary size coordinates deepen.  Smart-generator `depth`, random
-`iterations`, `finite_type_size`, constructor `max`, binary `bits`, fixpoint
-`iter`, `bisim_depth`, result quotas, and `tac_timeout` remain independent
-fixed controls.
+`iterations`, `finite_type_size`, word `widths`, constructor `max`, binary
+`bits`, fixpoint `iter`, `bisim_depth`, result quotas, and `tac_timeout`
+remain independent fixed controls.
+
+A type variable in the index position of a word type is a *width* variable
+and is instantiated to an fcp numeral type (`:1`, `:2`, ...) rather than to an
+`rf` carrier, which no substrate can size.  `upd_widths` sets the row tried,
+default `[1, 2, 3, 4]`; entries must lie between 1 and 32.  Carrier and width
+roles are paired by clamped instance index, so instance `k` uses carrier
+`rf (min (k, finite_type_size))` and the `k`-th configured width, and enough
+instances are generated to try every configured width at least once.  This is
+unrelated to the model finder's `upd_bits`, which sizes *binary integers*.
 
 Backend selection is typed for the four built-ins:
 

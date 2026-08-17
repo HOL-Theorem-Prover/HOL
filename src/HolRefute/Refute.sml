@@ -202,6 +202,7 @@ structure Refute :> Refute = struct
   val upd_depth = Refute_Core.upd_depth
   val upd_finite_types = Refute_Core.upd_finite_types
   val upd_finite_type_size = Refute_Core.upd_finite_type_size
+  val upd_widths = Refute_Core.upd_widths
   val upd_default_type = Refute_Core.upd_default_type
   val upd_substrate = Refute_Core.upd_substrate
   val upd_seed = Refute_Core.upd_seed
