@@ -224,10 +224,9 @@ Neither form silently changes `quiet` or `expect`.
 `upd_size n` and `upd_card rows` pin reproducible hard bounds.  Their
 iterative counterparts store an initial window and restore adaptive search.
 An iterative card row must be a consecutive prefix `[1, ..., n]`; sparse and
-per-type candidate lists remain available in fixed mode.  The public
-`qc_config` and `mf_config` records now include `size_mode` and `card_mode`.
-Code constructing those records literally must add the corresponding field;
-existing `#size` and `#card` selectors are unchanged.
+per-type candidate lists remain available in fixed mode.  The mode itself is
+the `size_mode` field of `qc_config` and the `card_mode` field of
+`mf_config`; `#size` and `#card` hold the bound or the initial window.
 
 Only the primary size coordinates deepen.  Smart-generator `depth`, random
 `iterations`, `finite_type_size`, word `widths`, constructor `max`, binary
@@ -283,11 +282,13 @@ Module layout:
 * Refute_Unused: unused-assumption probes and theory sweeps.
 * Refute.sig and Refute.sml: the public API facade.
 
-The `examples/` directory holds executable theory scripts covering the whole
-user-facing surface, from first steps to the model finder, the extension
-registries, and which library types each half of Refute can serve;
-`examples/README` indexes them.  Run `Holmake examples` here to build them
-with the standard HOL heap and their declared `Ancestors` and `Libs`.
+The `examples/` directory holds executable theory scripts showing typical
+usage, from first steps to the model finder, the SML automation API, and
+which library types each half of Refute can serve; `examples/README` indexes
+them.  Run `Holmake examples` here to build them with the standard HOL heap
+and their declared `Ancestors` and `Libs`.  They are documentation rather
+than tests: extending Refute through the registries below is described here,
+not demonstrated there.
 
 Model-finder surface
 --------------------
@@ -388,10 +389,10 @@ Registrations are session-local ML state and create no theory content:
   normalization-faithfulness corpus passed.  The idempotent
   `Refute.register_frac_type_rat ()` restores or refreshes both the encoding
   and the built-in transformation, which displays reconstructed Frac atoms
-  with `rat_cons`'s `//` syntax.  Example 12 works the
-  encoding through: what the shorthand registers, what an incomplete ersatz
-  table costs, and what restoring it looks like.  Support for `real` via
-  Frac is deferred; certification of real literals is a real blocker.
+  with `rat_cons`'s `//` syntax.  Example 12 shows the registered encoding
+  in use on a `rat` goal; the registration calls themselves are exercised by
+  `selftest.sml`.  Support for `real` via Frac is deferred; certification of
+  real literals is a real blocker.
 
 Structural registration types use distinct type variables as parameters.
 Abs, rep, case, and constructor terms must be existing constants.  A later
@@ -459,10 +460,14 @@ Support for `real` via Frac remains deferred because certification of real
 literals is unresolved.  Relation inverse and composition (`inv` and `O`)
 already have native monotonicity rules, with dedicated verdict, scope,
 soundness, and certified argument-order coverage.  Relation identity (`Id`)
-remains unfolded because there is no corresponding nut builtin.
+is HOL4 notation for `(=)` rather than a constant of its own, so there is
+nothing to unfold: it is eta-expanded to a partial application of equality
+and encoded as a singleton set.  The `Iden` nut constant and its Kodkod
+translation exist but are never produced; emitting `iden` directly would be
+a performance refinement, not added power.
 
 Recorded follow-ups are compute-hosted residual-inspection narrowing; full
 function flattening; higher-order and negative smart-generator modes; `real`
-via Frac; offset interval rewrites such as `lo <= n /\\ n < hi`; and eager
+via Frac; offset interval rewrites such as `lo <= n /\ n < hi`; and eager
 whole-ancestry typedef/quotient harvesting.  These are not part of the current
 implementation.

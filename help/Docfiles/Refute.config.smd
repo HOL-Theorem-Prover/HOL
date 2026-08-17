@@ -47,6 +47,7 @@ Refute.upd_evals : term list -> config -> config
 Refute.upd_expect : expectation -> config -> config
 Refute.upd_max_counterexamples : int -> config -> config
 Refute.upd_tag : string -> config -> config
+Refute.upd_widths : int list -> config -> config
 Refute.upd_qc : qc_config -> config -> config
 Refute.upd_mf : mf_config -> config -> config
 ```
@@ -64,6 +65,7 @@ Refute.upd_mf : mf_config -> config -> config
 | `expect` | `NoExpectation` | Check a regression expectation after the run. |
 | `max_counterexamples` | `1` | Maximum number of QC hits requested. |
 | `tag` | `""` | Append text to the formatted outcome. |
+| `widths` | `[1,2,3,4]` | Widths tried for a word type variable. |
 
 The `timeout` is one absolute deadline for the whole call: preprocessing,
 backend admission, compilation, testing, and solver calls all consume the
@@ -72,8 +74,10 @@ takes the typed `AllBackends`, `QuickcheckBackends`, or `Only choices`
 selection.
 
 The expectation constructors are `NoExpectation`, `ExpectNone`,
-`ExpectUnknown`, `ExpectCex`, `ExpectGenuine`, `ExpectQuasiGenuine`, and
-`ExpectPotential`.  A mismatch raises a HOL error.  `upd_qc` and `upd_mf`
+`ExpectUnknown`, `ExpectCex`, `ExpectModel`, `ExpectNoModel`,
+`ExpectGenuine`, `ExpectQuasiGenuine`, and `ExpectPotential`.  A mismatch
+raises a HOL error.  A word type variable takes its instances from
+`widths`, independently of the QC and MF sub-records.  `upd_qc` and `upd_mf`
 replace a complete sub-record; the individual updaters are usually less
 brittle.
 
@@ -237,9 +241,10 @@ with cases-theorem order and the first explicit row deciding it.
 `merge_type_vars` can reduce the scope product but can lose models that
 need different cardinalities for the original variables.
 
-MF updaters validate the resulting MF sub-record.  In particular,
-`bits` must be nonempty and between 1 and 31.  Every `iter` row must be
-nonempty, nonnegative, and have a representable successor; every
+Updaters validate the resulting record.  `widths` must be nonempty with
+every entry between 1 and 32.  MF updaters validate the MF sub-record; in
+particular, `bits` must be nonempty and between 1 and 31.  Every `iter`
+row must be nonempty, nonnegative, and have a representable successor; every
 nonnegative `bisim_depth` must likewise have a representable successor.
 A `bisim_depth` row cannot mix `~1` (disabled) with nonnegative depths.
 The non-fallback keys of `max`, `wf`, and `iter` must be constants or

@@ -1,6 +1,11 @@
 HolRefute by example
 ====================
 
+These examples showcase typical HolRefute usage: what a user actually types
+while developing a proof.  They are documentation that happens to be
+executable, not a regression suite; the selftest in `..` is what pins
+behavior.
+
 The main HolRefute interface is its proof tactics.  Examples 01--10, 12 and
 13 are modern HOL4 theory scripts built around:
 
@@ -26,7 +31,9 @@ These introductory tactic examples intentionally use the adaptive defaults:
 size and carrier-cardinality search starts with window 10 and deepens while
 the shared 10-second call budget remains.  Tools requiring an exact frontier
 should use the fixed `upd_size` or `upd_card` updaters, as example 11 does for
-its bounded automation profile.
+its bounded automation profile.  Because the defaults adapt, the scopes
+reached and the counterexamples printed depend on the machine; read the
+reports, do not expect a fixed transcript.
 
 Example 11 is deliberately the only exception.  It explains the SML-level
 automation API for tools that need per-call configurations and structured
@@ -45,8 +52,8 @@ To build one example, run Holmake in this directory, for example:
 
     ../../../bin/Holmake -C examples refuteExample01Theory.uo
 
-Examples 01, 02, 04, 09, 10, 12, and 13 contain MODEL_REFUTE_TAC calls.  They
-need Kodkodi 1.5.7 and a Java runtime:
+Examples 01, 02, 04, 05, 09, 10, 12, and 13 contain MODEL_REFUTE_TAC calls.
+They need Kodkodi 1.5.7 and a Java runtime:
 
     export HOL4_KODKODI=/path/to/kodkodi-1.5.7
 

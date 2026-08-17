@@ -583,8 +583,8 @@ fun make_fun (context as {scope, ...} : context) actual_domain_ty
     val origin =
       if complete then FunctionDefault else IncompleteFunctionFallback
     (* A function-valued hole leaves different unspecified points
-       independent.  The public renderer restores the legacy [K ?]/[K _]
-       spelling and hides direct unknown-valued rows. *)
+       independent.  The public renderer spells such a hole [K ?]/[K _]
+       and hides direct unknown-valued rows. *)
     val base = fresh_replay_hole context DisplayFunctionFallback origin
       (Type.-->(display_domain_ty, display_range_ty))
     val _ = List.app (fn (_, value) =>

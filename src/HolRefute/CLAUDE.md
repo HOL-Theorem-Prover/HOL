@@ -30,7 +30,8 @@ repository.
 ## Architecture
 
 - Pipeline: `Refute_QC` compiles a goal into test-plan IR
-  (`Refute_Eval.plan`: `Test`/`Gen`/`Bind`/`Split`/`Guard`/`Prune`); a
+  (`Refute_Eval.plan`: `Test`/`Gen`/`Bind`/`Split`/`Guard`/`SmartGuard`/
+  `Enum`/`Prune`); a
   registered substrate (`Refute_Eval.substrate`) compiles plans into a
   `compiled_test` and runs it; `Refute_Cert` certifies candidates.
   `Refute.sml` is a thin facade over `Refute_Core` orchestration.
@@ -110,16 +111,21 @@ repository.
   under `Holmake` at level >= 2 only, never from `selftest.exe`.
 - Don't validate by piping `.sml` into `bin/hol`; the harness only sees
   `selftest.sml`.
-- `examples/` are executable descendant theories.  Build them with
-  `Holmake examples` and fix the prose whenever behavior changes.
-  Every call carries an `upd_expect` clause, so a changed verdict class
-  raises `Refute.expect` on the next run instead of going quiet; a changed
-  binding, scope or runtime figure still only shows on inspection.  A raise
-  fails the theory build.  The three deliberately raised exceptions in
-  01 §5, 02 §8 and 12 §3 are handled inside their scripts.
-- Model-finder calls in `examples/` pin `upd_max_threads 1` and an explicit
-  `upd_card` row, so quoted scopes and models are exact.  The sole
-  exception is the opener of 09 §1, left racing on purpose and labelled.
+- `examples/` are executable descendant theories showing *typical*
+  user-facing usage: conjectures discharged by the four tactics under the
+  adaptive defaults, no configuration updaters, no SML-level calls.  Keep
+  them that way — pinning `upd_expect`, `upd_card` or `upd_max_threads`
+  there stops showing what a user would type.  Example 11 is the sole
+  SML-API example and the only one that asserts its own outcomes
+  (`upd_expect` plus `raise Fail`).  Deliberately false conjectures are
+  admitted by `>> cheat` after the diagnostic has printed.
+- Examples are documentation, not regression tests.  `Holmake examples` is
+  a manual target, outside `all` and the selftest, and only checks that the
+  scripts still run; a changed verdict class shows solely on inspection, so
+  reread the prose whenever behavior changes.  Pin behavior in
+  `selftest.sml` instead.
+- Adaptive scope search makes model-finder output machine-dependent: never
+  quote a scope, model or runtime figure in example prose.
   `NoCounterexample` can also come from exhaustive QC or narrowing when a
   finite generator space is completely covered (`examples/README`).
 - Quality gate: `HOLSELFTESTLEVEL=2 Holmake` in `src/HolRefute/`.

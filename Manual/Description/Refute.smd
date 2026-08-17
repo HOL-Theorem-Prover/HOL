@@ -293,8 +293,9 @@ higher-order domains.  Partially known values are printed with `_` holes.
 The model finder translates the original polymorphic problem into a
 bounded relational formula.  It handles finite scopes, datatypes and
 codatatypes, functions, sets, inductive and coinductive predicates,
-typedefs, quotients, binary integers, and the registered `rat` fraction
-encoding.  Its `Scope:` line records the exact finite interpretation.
+typedefs, quotients, binary integers, machine words, and the registered
+`rat` fraction encoding.  Its `Scope:` line records the exact finite
+interpretation.
 For example:
 
 ```{=latex}
@@ -334,6 +335,19 @@ For example:
         y = a1
       Certified: ⊢ ¬∀x y. x = y
 ```
+
+A word type of concrete width `w` is a native carrier of exactly `2^w`
+atoms rather than a datatype or a typedef, and models print surface word
+literals.  Word literals, `n2w`, `w2n`, the arithmetic and bitwise
+operations, the shifts, and the unsigned and signed orders are encoded
+directly.  Width-changing and bit-permuting operations, such as `w2w`,
+`word_concat`, the rotations, and `word_reverse`, are refused by name
+instead of approximated, so an inconclusive report never passes for a
+proof.  Word arithmetic uses Kodkod's integers, so a goal mentioning a
+word disables binary integers rather than losing the bounds it depends
+on.  A width left as a type variable has no carrier at all; such goals
+are reached through the monomorphic width instances that `upd_widths`
+selects, which the executable backends test as well.
 
 ### Smart testing
 
@@ -563,6 +577,7 @@ common fields are:
 | `upd_expect` | `NoExpectation` | Regression expectation checked after the run. |
 | `upd_max_counterexamples` | `1` | Maximum QC counterexamples requested. |
 | `upd_tag` | `""` | Text appended to the formatted outcome. |
+| `upd_widths` | `[1,2,3,4]` | Widths tried for a word type variable; entries lie between 1 and 32. |
 
 Expectations are `ExpectNone`, `ExpectUnknown`, `ExpectCex`, `ExpectModel`,
 `ExpectNoModel`,
@@ -767,8 +782,9 @@ Counterexample search is bounded and incomplete.  In particular:
 * fraction support covers `rat`, not `real`; certification of reconstructed
   real literals remains unresolved;
 * hand-written greatest fixpoints are not recognized for unrolling; use
-  `Hol_coreln`.  Relation identity remains unfolded rather than a native
-  relational primitive;
+  `Hol_coreln`;
+* the model finder encodes machine words of concrete width only, and
+  refuses width-changing and bit-permuting word operations by name;
 * if lazy metadata harvest cannot validate an Abs/Rep type, MF returns
   `Unknown` and asks for an explicit typedef registration; and
 * HolRefute is built only with Poly/ML.  Kodkodi adds the Unix, Java, and
