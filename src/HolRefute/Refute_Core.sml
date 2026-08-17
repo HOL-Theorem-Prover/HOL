@@ -1359,9 +1359,53 @@ structure Refute_Core = struct
     String.concatWith "\n" (map (fn (name, value) =>
       "  " ^ format_term name ^ " = " ^ format_term value) bindings)
 
+  fun boolean_value_for_display term =
+    if Term.type_of term <> Type.bool then NONE
+    else
+      let
+        val theorem =
+          simpLib.SIMP_CONV (BasicProvers.srw_ss ()) [] term
+        val value = #2 (boolSyntax.dest_eq (Thm.concl theorem))
+      in
+        if Term.aconv value boolSyntax.T orelse
+           Term.aconv value boolSyntax.F then SOME value
+        else NONE
+      end
+      handle Interrupt => raise Interrupt | _ => NONE
+
+  fun format_bool_function value =
+    case Lib.total Type.dom_rng (Term.type_of value) of
+        SOME (domain, range) =>
+          if domain = Type.bool andalso range = Type.bool then
+            let
+              fun at argument = boolean_value_for_display
+                (Term.mk_comb (value, argument))
+            in
+              case (at boolSyntax.F, at boolSyntax.T) of
+                  (SOME at_false, SOME at_true) =>
+                    let val arrow =
+                      if Feedback.get_tracefn "PP.avoid_unicode" () = 1 then
+                        "|->"
+                      else
+                        "↦"
+                    in
+                      SOME ("{F " ^ arrow ^ " " ^ format_term at_false ^
+                        ", T " ^ arrow ^ " " ^ format_term at_true ^ "}")
+                    end
+                | _ => NONE
+            end
+          else NONE
+      | NONE => NONE
+
+  fun format_kodkod_bindings bindings =
+    String.concatWith "\n" (map (fn (name, value) =>
+      "  " ^ format_term name ^ " = " ^
+      Option.getOpt (format_bool_function value, format_term value)) bindings)
+
   fun format_evals evals =
     String.concatWith "\n" (map (fn (term, value) =>
-      "  " ^ format_term term ^ " = " ^ format_term value) evals)
+      "  " ^ format_term term ^ " = " ^ format_term
+        (Option.getOpt (boolean_value_for_display value, value))) evals)
 
   fun format_reasons title reasons =
     if null reasons then "" else
@@ -1472,7 +1516,10 @@ structure Refute_Core = struct
       val scope_text =
         if substrate = "kodkod" then format_scope scope else ""
       val binding_text =
-        if null bindings then "" else "\n" ^ format_bindings bindings
+        if null bindings then ""
+        else "\n" ^
+          (if substrate = "kodkod" then format_kodkod_bindings bindings
+           else format_bindings bindings)
       val eval_text =
         if null evals then "" else "\nEvaluated terms:\n" ^ format_evals evals
       val model_text = format_model mf model

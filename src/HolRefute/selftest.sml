@@ -12497,6 +12497,37 @@ fun mf_formatter_snapshot () =
 val _ = require_msg (check_result mf_formatter_snapshot) (fn () =>
   "model-finder formatter snapshot changed") (fn () => ()) ()
 
+fun mf_bool_function_formatter_snapshot () =
+  let
+    val function = ``f : bool -> bool``
+    val argument = ``b : bool``
+    val singleton = ``{T} : bool set``
+    val cex : counterexample =
+      {backend = "kodkod", substrate = "kodkod", certainty = Genuine,
+       bindings = [(function, singleton), (argument, boolSyntax.F)],
+       evals =
+         [(Term.mk_comb (function, argument),
+           Term.mk_comb (singleton, boolSyntax.F)),
+          (Term.mk_comb (function, boolSyntax.T),
+           Term.mk_comb (singleton, boolSyntax.T))],
+       cert = NONE, scope = SOME [], model = NONE, stats = []}
+    val expected =
+      "Scope: \n" ^
+      "  f = {F ↦ F, T ↦ T}\n" ^
+      "  b = F\n" ^
+      "Evaluated terms:\n" ^
+      "  f b = F\n" ^
+      "  f T = T"
+  in
+    String.isSubstring expected
+      (format_outcome default_config (Counterexample [cex]))
+  end
+
+val _ = require_msg
+  (check_result mf_bool_function_formatter_snapshot) (fn () =>
+  "Boolean function counterexample was not rendered extensionally")
+  (fn () => ()) ()
+
 val _ = tprint "Refute reachable-certainty backend racing"
 
 fun with_global_thread_count count body =
