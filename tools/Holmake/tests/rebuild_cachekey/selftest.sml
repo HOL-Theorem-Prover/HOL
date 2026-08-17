@@ -1,11 +1,21 @@
 (* Test: --rebuild=cachekey (the default) skips script invocations when
    a theory target's inputs haven't changed (as measured by the
    recursive content hash recorded in a sibling .cachekey stamp file).
-   --rebuild=mtime restores the traditional timestamp-based decision. *)
+   --rebuild=mtime restores the traditional timestamp-based decision.
+
+   The scripts under test are generated into a scratch directory at run
+   time rather than kept under version control.  The test rewrites them
+   as it goes (that is the whole point -- see the three baseScript
+   versions below), so tracked copies get left modified in the working
+   tree by every run, and an interrupted run leaves whichever version
+   it had reached. *)
 
 open testutils
 
 val op++ = OS.Path.concat
+val testRoot = OS.FileSys.getDir ()
+val scratch = testRoot ++ "scratch"
+val cacheDir = testRoot ++ ".cache-iso"
 val Holmake = Globals.HOLDIR ++ "bin" ++ "Holmake"
 val holstate_args =
     if Systeml.ML_SYSNAME = "poly" then
@@ -14,11 +24,12 @@ val holstate_args =
 
 (* These scenarios exercise the cachekey-based rebuild decision, which
    is opt-in: pass --use-cache so the strategy actually fires.  A
-   later --rebuild=mtime (scenario 5) still overrides as expected. *)
-val cache_args = ["--use-cache"]
+   later --rebuild=mtime (scenario 5) still overrides as expected.
 
-fun run_holmake args =
-    Systeml.systeml ([Holmake] @ holstate_args @ cache_args @ args)
+   --cache-dir keeps that store inside the test directory: the scenarios
+   below assert on whether a .dat was rebuilt, so a hit in the shared
+   user-level cache could satisfy a target we expected to see rebuilt. *)
+val cache_args = ["--use-cache", "--cache-dir=" ^ cacheDir]
 
 fun run_holmake_out args =
     let val tmp = OS.FileSys.tmpName ()
@@ -59,9 +70,22 @@ val childScript =
     \Ancestors base\n\
     \Theorem child_thm = base_thm\n"
 
-val _ = HOLFileSys.chDir "subdir"
-
 (* --- helpers -------------------------------------------------------- *)
+
+fun rm_rf path =
+    let
+      fun rm p =
+          if OS.FileSys.isDir p handle OS.SysErr _ => false then
+            (let val strm = OS.FileSys.openDir p
+                 fun loop () =
+                     case OS.FileSys.readDir strm of
+                         NONE => OS.FileSys.closeDir strm
+                       | SOME f => (rm (p ++ f); loop ())
+             in loop () end;
+             OS.FileSys.rmDir p handle OS.SysErr _ => ())
+          else
+            (OS.FileSys.remove p handle OS.SysErr _ => ())
+    in rm path end
 
 fun dat_path thy = thy ^ "Theory.dat"
 
@@ -114,9 +138,18 @@ fun expect_greater_mtime label f before_ =
         | _ => die (label ^ ": " ^ f ^ " missing")
     end
 
-(* --- setup: clean baseline build ------------------------------------ *)
+(* --- setup: scratch directory, then a clean baseline build ---------- *)
 
-val _ = run_holmake ["cleanAll"]
+(* Remove any leftovers first: a previous run that died part way through
+   will have left both the scratch tree and the isolated cache behind.
+   Keeping these under the test directory rather than in a system temp
+   directory means Holmake's cleanAll reaches them (EXTRA_CLEANS) and
+   that they share a filesystem with the products they are compared
+   against, which matters to the mtime assertions below. *)
+val _ = rm_rf scratch
+val _ = rm_rf cacheDir
+val _ = OS.FileSys.mkDir scratch
+val _ = HOLFileSys.chDir scratch
 val _ = write_file "baseScript.sml" baseScript_v1
 val _ = write_file "childScript.sml" childScript
 
@@ -218,6 +251,6 @@ val _ =
 
 (* --- cleanup -------------------------------------------------------- *)
 
-val _ = run_holmake ["cleanAll"]
-val _ = write_file "baseScript.sml" baseScript_v1
-val _ = HOLFileSys.chDir ".."
+val _ = HOLFileSys.chDir testRoot
+val _ = rm_rf scratch
+val _ = rm_rf cacheDir

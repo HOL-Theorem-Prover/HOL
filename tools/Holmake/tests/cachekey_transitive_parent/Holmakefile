@@ -5,4 +5,4 @@ selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.log selftest.exe .cache-iso/ \
-               .selftest-step.log outer/qux
+               .selftest-step.log outer/qux inner/parentScript.sml

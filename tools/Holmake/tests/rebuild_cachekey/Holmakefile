@@ -8,4 +8,5 @@ rebuild_cachekey-selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe rebuild_cachekey-selftest.log
+EXTRA_CLEANS = selftest.exe rebuild_cachekey-selftest.log scratch/ \
+               .cache-iso/

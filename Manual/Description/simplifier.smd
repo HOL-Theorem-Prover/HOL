@@ -404,11 +404,11 @@ As in the example above, `bool_ss` also performs
 $\beta$-reductions and one-point unwindings.  The latter turns
 terms of the form
 $$
-\exists x.\;P(x)\land\dots x = e \dots\land Q(x)
+\exists x.\;P(x)\land\cdots x = e \cdots\land Q(x)
 $$
 into
 $$
-P(e) \land \dots \land Q(e)
+P(e) \land \cdots \land Q(e)
 $$
 Similarly, unwinding will turn $\forall x.\;x = e \Rightarrow P(x)$
 into $P(e)$.
@@ -524,15 +524,11 @@ efficient, but less general than the simplifier.  For example:
 \label{sec:srw-ss}
 \index{srw_ss (simplification set)@\ml{srw\_ss} (simplification set)}
 
-The last *simpset* exported by `bossLib` is hidden behind a
-function.  The `srw_ss` value has type `unit -> simpset`, so
-that one must type `srw_ss()` in order to get a *simpset*
-value.  This use of a function type allows the underlying
-*simpset* to be stored in an SML reference, and allows it to be
-updated dynamically.  In this way, referential transparency is
-deliberately broken.  All of the other *simpset*s will always
-behave identically: `SIMP_CONV\ bool_ss` is the same
-simplification routine wherever and whenever it is called.
+The last *simpset* exported by `bossLib` is hidden behind a function.
+The `srw_ss` value has type `unit -> simpset`, so that one must type `srw_ss()` in order to get a *simpset* value.
+This use of a function type allows the underlying *simpset* to be stored in an SML reference, and allows it to be updated dynamically.
+In this way, referential transparency is deliberately broken.
+All of the other *simpset*s will always behave identically: `SIMP_CONV bool_ss` is the same simplification routine wherever and whenever it is called.
 
 In contrast, `srw_ss` is designed to be updated.  When a theory
 is loaded, when a new type is defined, the value behind
@@ -630,14 +626,8 @@ to pick up the default “filter” function for converting theorems to
 rewrite rules.  (This filtering process is described below in
 Section \ref{sec:generating-rewrite-rules}.)
 
-A *simpset* also carries a (usually empty) set of *excluded*
-fragment names, set up by `simpLib.exclude_ssfrags` (which is
-what `Proof[exclude_frags = \ldots]` ultimately calls).  When
-the incoming fragment of `ss\ ++\ frag` has a name in that set,
-the addition is a silent no-op and `ss` is returned unchanged.
-Use `simpLib.force_add`, or the `SF` marker in a thm-list
-argument to a simplification tactic, to override that prohibition
-for a particular fragment.
+A *simpset* also carries a (usually empty) set of *excluded* fragment names, set up by `simpLib.exclude_ssfrags` (which is what `Proof[exclude_frags = ...]` ultimately calls).  When the incoming fragment of `ss ++ frag` has a name in that set, the addition is a silent no-op and `ss` is returned unchanged.
+Use `simpLib.force_add`, or the `SF` marker in a thm-list argument to a simplification tactic, to override that prohibition for a particular fragment.
 
 For major theories (or groups thereof), a collection of relevant
 *simpset* fragments is usually found in the module `<thy>Simps`,
@@ -818,15 +808,11 @@ removed:
 ##assert aconv (#2 (top_goal())) ``x < 10 ==> x < 13``
 ```
 
-The exclusion that `ExclSF` effects is local to the `simp`
-call in which it appears.  For an exclusion that persists across
-all the simplification tactics in a proof body, use the
-`Proof[exclude_frags\ =\ \ldots]` attribute (the
-`simpLib.exclude_ssfrags` function it relies on records the
-names in the *simpset*’s excluded set, so subsequent uses of
+The exclusion that `ExclSF` effects is local to the `simp` call in which it appears.
+For an exclusion that persists across all the simplification tactics in a proof body, use the
+`Proof[exclude_frags = ...]` attribute (the `simpLib.exclude_ssfrags` function it relies on records the names in the *simpset*’s excluded set, so subsequent uses of
 `++` also respect it; see Section \ref{sec:simpset-fragments}).
-Inside such a proof body, the `SF` marker can opt back in for
-an individual `simp` call.
+Inside such a proof body, the `SF` marker can opt back in for an individual `simp` call.
 \index{simplification!removing rewrites|)}
 
 ### Rewriting with the simplifier
@@ -921,9 +907,7 @@ $$
 \vdash 0 < n \;\Rightarrow \; (k\,\textsf{MOD}\,n)\,\textsf{MOD}\,n = k
 \,\textsf{MOD}\,n
 $$
-The simplifier (specifically, `SIMP_CONV\ arith_ss\ [MOD_MOD]`)
-can use this theorem to simplify the term
-`(k MOD (x + 1)) MOD (x + 1)`: the arithmetic decision procedure
+The simplifier (specifically, `SIMP_CONV arith_ss [MOD_MOD]`) can use this theorem to simplify the term `(k MOD (x + 1)) MOD (x + 1)`: the arithmetic decision procedure
 can prove that `0 < x + 1`, justifying the rewrite.
 
 Though conditional rewrites are powerful, not every theorem of the
@@ -968,7 +952,7 @@ function from the `pure_ss` *simpset* (see
 Section \ref{sec:purebool-ss}).  However, when a *simpset*
 fragment is added to a full simpset, the fragment can specify an
 additional filter component.  If specified, this function is of
-type `controlled_thm\ ->\ controlled_thm\ list`, and is
+type `controlled_thm -> controlled_thm list`, and is
 applied to each of the theorems produced by the existing
 *simpset*’s filter.
 \index{simplification!guaranteeing termination}
@@ -1342,29 +1326,20 @@ does not check types, and does not check multiple bindings.  This
 means that the conversion will not only be applied to terms that
 are exact matches for the supplied pattern.
 
-Finally, the conversion itself.  Most uses of this facility are to
-add normal HOL conversions (of type `term->thm`), and this
-can be done by ignoring the `conv` field’s first two parameters.
-For a conversion `myconv`, the standard idiom is to write
-`K\ (K\ myconv)`.  If the user desires, however, their code
-*can* refer to the first two parameters.  The second parameter is
-the stack of side-conditions that have been attempted so far.  The
-first enables the user’s code to call back to the simplifier,
-passing the stack of side-conditions, and a new side-condition to
-solve.  The `term` argument must be of type `:bool`, and the
-recursive call will simplify it to true (and call `EQT_ELIM`
-to turn a term $t$ into the theorem $\vdash t$).  This restriction
-is lifted for decision procedures (see below), but for conversions
-the recursive call can *only* be used for side-condition discharge.
-Note also that it is the user’s responsibility to pass an
-appropriately updated stack of side-conditions to the recursive
-invocation of the simplifier.
+Finally, the conversion itself.
+Most uses of this facility are to add normal HOL conversions (of type `term->thm`), and this can be done by ignoring the `conv` field’s first two parameters.
+For a conversion `myconv`, the standard idiom is to write `K (K myconv)`.
+If the user desires, however, their code *can* refer to the first two parameters.
+The second parameter is the stack of side-conditions that have been attempted so far.
+The first enables the user’s code to call back to the simplifier, passing the stack of side-conditions, and a new side-condition to solve.
+The `term` argument must be of type `:bool`, and the recursive call will simplify it to true (and call `EQT_ELIM` to turn a term $t$ into the theorem $\vdash t$).
+This restriction is lifted for decision procedures (see below), but for conversions the recursive call can *only* be used for side-condition discharge.
+Note also that it is the user’s responsibility to pass an appropriately updated stack of side-conditions to the recursive invocation of the simplifier.
 
-A user-supplied conversion should never return the reflexive
-identity (an instance of $\vdash t = t$).  This will cause the
-simplifier to loop.  Rather than return such a result, raise a
-`HOL_ERR` or `Conv.UNCHANGED` exception.  (Both are treated
-the same by the simplifier.)
+A user-supplied conversion should never return the reflexive identity (an instance of $\vdash t = t$).
+This will cause the simplifier to loop.
+Rather than return such a result, raise a `HOL_ERR` or `Conv.UNCHANGED` exception.
+(Both are treated the same by the simplifier.)
 
 ##### Context-aware decision procedures
 
@@ -1383,11 +1358,7 @@ constructor `REDUCER`:
 >>__ val travns = PolyML.NameSpace.Structures.contents trav_str
 >>__ val SOME redval = #lookupVal travns "REDUCER"
 >>__ val pp = PolyML.NameSpace.Values.printWithType (redval,300,NONE)
->>__ val safeprint =
-        (!scriptPrint) o
-        String.translate
-          (fn #"{" => "\\{" | #"}" => "\\}" | c => str c)
->>__ val _ = PP.prettyPrint(safeprint, 70) pp
+>>__ val _ = PP.prettyPrint(!scriptPrint, 70) pp
 ```
 
 The `context` type is an alias for the built-in SML type
@@ -1544,7 +1515,7 @@ As also described above in
 Section \ref{sec:removing-rewrites-from-simpsets}, various
 built-in (named) components can be removed from invocations of
 the simplifier through the use of the `Excl` form.  This
-function is of type `string\ ->\ thm`, so takes a string naming
+function is of type `string -> thm`, so takes a string naming
 the rewrite or other component that is to be removed.  For example,
 the standard stateful simpset includes the theorem stating that
 $x < x + y \Leftrightarrow 0 < y$, with name `X_LT_X_PLUS`:
@@ -1617,11 +1588,7 @@ conjunctions as assumptions using the `CONJ_ss` fragment:
 ##assert aconv (#2 (top_goal())) ``x = 10``
 ```
 
-`SF` also serves as the in-call escape hatch for fragments
-excluded by an enclosing `Proof[exclude_frags\ =\ \ldots]`
-attribute (see Section \ref{sec:simpset-fragments}): writing
-`simp[SF\ X_ss]` inside a body where the fragment named
-`"X"` has been excluded re-enables it for that one `simp` call.
+`SF` also serves as the in-call escape hatch for fragments excluded by an enclosing `Proof[exclude_frags = ...]` attribute (see Section \ref{sec:simpset-fragments}): writing `simp[SF X_ss]` inside a body where the fragment named `"X"` has been excluded re-enables it for that one `simp` call.
 
 ##### Simplifying at particular sub-terms
 
@@ -1747,11 +1714,11 @@ appropriate functions (e.g., substitution) and relations over
 transitive closure of $\beta$-reduction ($\rightarrow^*_\beta$).
 This relation has congruence rules such as
 $$
-\begin{array}{c@{\qquad\qquad}c}
-\frac{M_1 \;\rightarrow^*_\beta\;M_2}{M_1 \,N\;\rightarrow^*_\beta\;M_2\,N} &
-\frac{N_1 \;\rightarrow^*_\beta\;N_2}{M \,N_1\;\rightarrow^*_\beta\;M\,N_2}\\[3mm]
-\multicolumn{2}{c}{\frac{M_1\;\rightarrow^*_\beta\;M_2}{(\lambda v.M_1)\;\rightarrow^*_\beta\;(\lambda v.M_2)}}
-\end{array}
+\dfrac{M_1 \;\rightarrow^*_\beta\;M_2}{M_1 \,N\;\rightarrow^*_\beta\;M_2\,N}
+\qquad
+\dfrac{N_1 \;\rightarrow^*_\beta\;N_2}{M \,N_1\;\rightarrow^*_\beta\;M\,N_2}
+\qquad
+\dfrac{M_1\;\rightarrow^*_\beta\;M_2}{(\lambda v.M_1)\;\rightarrow^*_\beta\;(\lambda v.M_2)}
 $$
 and one important rewrite
 $$

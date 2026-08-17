@@ -1,7 +1,7 @@
 
 Theory prog_x64
 Ancestors
-  pred_set res_quan words bit arithmetic list pair combin address
+  pred_set words bit arithmetic list pair combin address
   fcp set_sep prog x64_ x64_seq_monad x64_icache x64_ast
   x64_coretypes temporal
 Libs

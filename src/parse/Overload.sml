@@ -414,10 +414,15 @@ fun strip_comb ((_, prmap): overload_info) namePred t = let
 
   fun test ((fvs, pat), (orig, nm, tstamp)) = let
     val _ = assert namePred nm
-    val _ = assert Theory.uptodate_term orig
     val tyvs = tmlist_tyvs fvs
     val tmset = HOLset.addList(empty_tmset, fvs)
     val ((tmi0,tmeq),(tyi0,tyeq)) = raw_match tyvs tmset pat t ([],[])
+    (* Checked only once raw_match has accepted the candidate:
+       uptodate_term walks all of `orig`, doing a KernelSig lookup and a
+       type traversal per constant, and `test` runs over every entry the
+       print map offers.  Paying that before the match meant paying it
+       for the majority that raw_match rejects immediately. *)
+    val _ = assert Theory.uptodate_term orig
     val tmi = HOLset.foldl (fn (t,acc) => if HOLset.member(tmset,t) then acc
                                           else (t |-> t) :: acc)
                            tmi0

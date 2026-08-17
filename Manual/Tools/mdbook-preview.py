@@ -3,9 +3,6 @@
 
 Wraps `Holmake mdbook` (unified) or per-manual `Holmake mdbook` with a
 foreground HTTP server so the freshly-built site can be browsed locally.
-This replaces the old `Holmake mdbook-serve` / `mdbook-livewatch` /
-per-manual `mdbook-serve` recipes: long-running server processes are
-started from a script rather than from Holmake.
 
 Default: rebuild and serve the unified site statically on port 3002.
 

@@ -3,7 +3,7 @@ Ancestors
   fsgraph pred_set arithmetic list genericGraph set_relation
   rich_list combin While pair prim_rec
 Libs
-  pred_setLib hurdUtils tautLib
+  pred_setLib hurdUtils tautLib intLib
 
 Overload V[local] = “nodes (G :fsgraph)”;
 Overload E[local] = “fsgedges (G :fsgraph)”;

@@ -95,12 +95,14 @@ QED
     computing fibonacci numbers without taking an exponential amount of
     time over it.
 
-    Proof translates to a WHILE-loop because I can't figure out the
-    corresponding induction hypothesis, even as the loop invariant is
-    quite obvious.  Counting down (rather than up) in the loop is slightly
-    awkward, and perhaps this would make the inductive hypothesis worse.
-    Throwing away components of the triple can't help either; the invariant
-    sees starting and finishing values for all three.
+    Three variations:
+
+    1. with fibA, a three parameter counting-down implementation. Prove
+       the loop's correctness with a proof by induction
+    2. with fibA using a WHILE-loop and HOARE_SPEC
+    3. with fibloop, which counts up and uses four parameters so it
+       knows when to stop incrementing the counter.
+
    ---------------------------------------------------------------------- *)
 
 Definition fibA_def[simp]:
@@ -112,6 +114,24 @@ Definition fastfib_def:
   fastfib n = if n = 0 then 0 else fibA (n - 1) 0 1
 End
 
+Theorem fibA_correct:
+  ∀n p t. n < L ∧ p = fib (L - (n + 1)) ∧ t = fib (L - n) ⇒
+          fibA n p t = fib L
+Proof
+  Induct >> simp[] >> strip_tac >> gvs[] >>
+  ‘L - SUC n = L - (n + 1)’ by simp[] >> simp[] >>
+  ‘fib (L - (n + 1)) + fib(L - (SUC n + 1)) = fib(L - n)’
+    suffices_by simp[] >>
+  simp[SimpRHS, Once fib_def] >> simp[ADD1]
+QED
+
+Theorem fastfib_correct:
+  fastfib n = fib n
+Proof
+  rw[fastfib_def, fib] >> irule fibA_correct >> simp[fib]
+QED
+
+(* the WHILE variation *)
 Overload Gd[local] = “λ(i:num,p:num,t:num). 0 < i”
 Overload Body[local] = “(λ(i:num,p:num,t:num). i - 1, t, t + p)”
 Overload Inv[local] =
@@ -134,7 +154,7 @@ Proof
   rpt strip_tac >> simp[Once fib_def, SimpRHS]
 QED
 
-Theorem fastfib_correct:
+Theorem fastfib_correct2:
   fastfib n = fib n
 Proof
   rw[fastfib_def, fibA_thm]
@@ -149,21 +169,63 @@ Proof
   simp[]
 QED
 
+(* ----------------------------------------------------------------------
+    second, counting up, variation, with core function = fibloop.
+   ---------------------------------------------------------------------- *)
+
+Definition fibloop_def:
+  fibloop fi fpi i n =
+  if n ≤ i then fi
+  else fibloop (fi + fpi) fi (i + 1) n
+Termination
+  WF_REL_TAC ‘measure (λ(_,_,i,n). n - i)’
+End
+
+Theorem fibloop_correct:
+  ∀fi fpi i n.
+    0 < i ∧ i ≤ n ∧ fi = fib i ∧ fpi = fib (i - 1) ⇒
+    fibloop fi fpi i n = fib n
+Proof
+  recInduct fibloop_ind >> rw[] >> Cases_on ‘i = n’ >> gvs[] >~
+  [‘fibloop _ _ i i = fib i’]
+  >- simp[Once fibloop_def] >>
+  ‘fib (i + 1) = fib i + fib (i - 1)’
+    by simp[Once fib_def, SimpLHS] >> gvs[] >>
+  simp[Once fibloop_def]
+QED
+
+Definition fastfib2_def:
+  fastfib2 n = if n = 0 then 0 else fibloop 1 0 1 n
+End
+
+Theorem fastfib2_correct:
+  fastfib2 n = fib n
+Proof
+  rw[fib, fastfib2_def, fibloop_correct]
+QED
+
+
 (*
 lo, exponential speedup
 
- time EVAL “fastfib 10”
- time EVAL “fib 10”  (* 0.006s *)
+ time EVAL “fib 20”       (* 0.67s *)
+ time EVAL “fastfib 20”   (* 0.00061s *)
+ time EVAL “fastfib2 20”  (* 0.00079s *)
 
- time EVAL “fib 20”      (* 0.55s *)
- time EVAL “fastfib 20”  (* 0.0012s *)
-
- time EVAL “fib 25”      (* 5.9s *)
- time EVAL “fastfib 25”  (* 0.00204s *)
+ time EVAL “fib 25”       (* 7.2s *)
+ time EVAL “fastfib 25”   (* 0.00084s *)
+ time EVAL “fastfib2 25”  (* 0.0011s *)
 *)
+
 
 (* References:
 
   [1] https://en.wikipedia.org/wiki/Fibonacci_sequence
 
  *)
+
+Theorem foo:
+   n < 2 ==> n < 10
+Proof
+  strip_tac >> simp[]
+QED

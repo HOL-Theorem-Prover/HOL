@@ -63,12 +63,12 @@ The three existing chapters (`system.smd`, `drules.smd`,
 
 ## Math rendering
 
-Math is rendered client-side by MathJax 2.7 (loaded from cdnjs). The
-default config recognises only `\(…\)` and `$$…$$`, so
-`Manual/theme/index.hbs` injects a `tex2jax` script setting
-`inlineMath` to include `$…$`. The same script can also define LaTeX
-macros that mdbook MathJax wouldn't otherwise know about (e.g.
-`\llbracket`, `\rrbracket`). If you upgrade mdbook and the theme
+Math is rendered client-side by MathJax, configured in
+`Manual/theme/index.hbs` — that is the one place naming the version and
+the loader, so read it there rather than trusting a copy here. The
+config adds `$…$` as an inline delimiter, which is not on by default,
+and defines the LaTeX macros MathJax wouldn't otherwise know about
+(e.g. `\llbracket`, `\rrbracket`). If you upgrade mdbook and the theme
 override disappears, you'll need to re-create it.
 
 ## Tables
