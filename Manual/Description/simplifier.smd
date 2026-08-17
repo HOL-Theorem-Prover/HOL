@@ -1714,10 +1714,11 @@ appropriate functions (e.g., substitution) and relations over
 transitive closure of $\beta$-reduction ($\rightarrow^*_\beta$).
 This relation has congruence rules such as
 $$
-\begin{array}{c@{\qquad\qquad}c}
-\frac{M_1 \;\rightarrow^*_\beta\;M_2}{M_1 \,N\;\rightarrow^*_\beta\;M_2\,N} &
+\begin{array}{c}
+\frac{M_1 \;\rightarrow^*_\beta\;M_2}{M_1 \,N\;\rightarrow^*_\beta\;M_2\,N}
+\qquad\qquad
 \frac{N_1 \;\rightarrow^*_\beta\;N_2}{M \,N_1\;\rightarrow^*_\beta\;M\,N_2}\\[3mm]
-\multicolumn{2}{c}{\frac{M_1\;\rightarrow^*_\beta\;M_2}{(\lambda v.M_1)\;\rightarrow^*_\beta\;(\lambda v.M_2)}}
+\frac{M_1\;\rightarrow^*_\beta\;M_2}{(\lambda v.M_1)\;\rightarrow^*_\beta\;(\lambda v.M_2)}
 \end{array}
 $$
 and one important rewrite

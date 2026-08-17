@@ -2419,6 +2419,8 @@ fun checkHtmlMain bookDir =
           "LaTeX macro-definition command leaked into mdbook";
         checkFiltered hasEnvLeak
           "LaTeX environment leaked into mdbook";
+        checkFiltered (containsLit "\\multicolumn")
+          "\\multicolumn reached mdbook (MathJax does not implement it)";
         checkFiltered hasDoubleHash
           "double-hash URL (sidebar rewrite picked up an anchored ancestor)";
         checkFiltered (containsLit "<i class=\"fa fa-")
