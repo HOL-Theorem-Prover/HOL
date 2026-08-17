@@ -7,10 +7,12 @@ val testdir = OS.FileSys.getDir()
 
 fun clean_state d =
     let
-      val lock = d ++ ".plimit.lock"
+      (* check.sh releases its own lock; rmDir here is for a run that
+         was killed while holding it. *)
+      val lockdir = d ++ ".plimit.lockdir"
       val count = d ++ ".plimit.count"
     in
-      OS.FileSys.remove lock handle OS.SysErr _ => ();
+      OS.FileSys.rmDir lockdir handle OS.SysErr _ => ();
       OS.FileSys.remove count handle OS.SysErr _ => ()
     end
 

@@ -9,5 +9,5 @@ selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe local-parallelism-limit-selftest.log \
-               capped1/.plimit.lock capped1/.plimit.count \
-               capped2/.plimit.lock capped2/.plimit.count
+               capped1/.plimit.lockdir/ capped1/.plimit.count \
+               capped2/.plimit.lockdir/ capped2/.plimit.count
