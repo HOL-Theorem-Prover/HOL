@@ -8,4 +8,7 @@ cachefetch-selftest.log: selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe cachefetch-selftest.log
+# The selftest builds subdir2/ at run time, as a sibling of subdir/, to
+# check a cache hit across directories.  It removes it again on the way
+# out; listing it here only covers a run that was killed first.
+EXTRA_CLEANS = selftest.exe cachefetch-selftest.log subdir2/

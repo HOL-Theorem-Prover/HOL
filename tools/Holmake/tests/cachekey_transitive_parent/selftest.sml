@@ -2,13 +2,10 @@
    See README.md for the underlying mechanism.
 
    The test reports OK when the bug is ABSENT (i.e. when consumeScript
-   builds cleanly after parent has changed and outer has been cleaned).
-   While the bug is unfixed, this selftest is expected to fail with a
-   die("FAILED!") message that includes the captured link_parents text
-   from Holmake's logs.
-
-   The test is NOT yet wired into tools/Holmake/tests/parallel_tests/
-   Holmakefile.  Wire it in once the fix lands. *)
+   builds cleanly after parent has changed and outer has been cleaned),
+   which is the case now that the bug is fixed.  A failure means it has
+   returned: the die() carries the captured link_parents text from
+   Holmake's logs, which is the signature to look for. *)
 
 open testutils
 
