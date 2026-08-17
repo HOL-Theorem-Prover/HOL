@@ -311,6 +311,40 @@
               'ol.section a[href$="#' + CSS.escape(hash) + '"]');
             if (match) expandAncestors(match.parentElement);
           }
+          // Static hosts commonly serve `foo.html` at `foo`, redirecting
+          // the extension away -- Cloudflare Pages, which serves this
+          // site, answers /Description/simplifier.html with a 308 to
+          // /Description/simplifier.  mdbook's toc.js decides the active
+          // chapter by exact string equality between a link's href and
+          // location.href, so behind such a host nothing matches: no
+          // link gets `active`, none of its ancestors get `expanded`
+          // (the sidebar collapses on every navigation, and the current
+          // chapter loses its highlight), and numberBodyHeadings() below
+          // -- which keys off `a.active` -- silently widens its lookup
+          // to the whole sidebar.
+          //
+          // Redo mdbook's match with the suffix normalised away.  The
+          // early return leaves setups that really are served as .html
+          // (mdbook serve, file://) on mdbook's own logic untouched.
+          function markActiveIgnoringHtmlSuffix() {
+            if (document.querySelector('#mdbook-sidebar a.active')) return;
+            function strip(u) {
+              return u.split('#')[0].split('?')[0]
+                      .replace(/\.html$/, '')
+                      .replace(/\/index$/, '/');
+            }
+            const here = strip(window.location.href);
+            document.querySelectorAll('#mdbook-sidebar a[href]')
+                    .forEach(function (a) {
+              // Skip the section links rewrite() points at in-page
+              // anchors: they all share the chapter's path, so matching
+              // on them would mark every subsection active at once.
+              if ((a.getAttribute('href') || '').indexOf('#') !== -1) return;
+              if (strip(a.href) !== here) return;
+              a.classList.add('active');
+              expandAncestors(a.parentElement);
+            });
+          }
           // Pull section numbers out of the sidebar and prepend them
           // to the matching body headings.  Keeps mdbook's numbered
           // sidebar consistent with what readers see at the top of
@@ -376,6 +410,9 @@
           }
           function applyAll() {
             rewrite();
+            // Before numberBodyHeadings(): it scopes its section-number
+            // lookup to the active chapter's sub-list.
+            markActiveIgnoringHtmlSuffix();
             numberBodyHeadings();
             expandForCurrentHash();
           }
