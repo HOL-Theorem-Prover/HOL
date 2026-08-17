@@ -1275,7 +1275,7 @@ expressions of the form `^(`$t$`)`
 \index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}
 An antiquotation `^(`$t$`)` evaluates to the SML value of $t$.
 For example, `x \/ ^(mk_conj(“y:bool”, “z:bool”))`
-evaluates to the same term as `x \/ (y /\ z)`.  
+evaluates to the same term as `x \/ (y /\ z)`.
 The most common
 use of antiquotation is when the term $t$ is bound to an SML
 variable $x$.  In this case `^(`$x$`)` can be abbreviated by
@@ -1861,26 +1861,21 @@ non-trivial equality reasoning than the tactics in `mesonLib`.
 \label{sec:computeLib}
 \index{computeLib@\ml{computeLib}|see{\ml{EVAL}}}
 
-Section \ref{sec:datatype} and Section \ref{TFL} show the ability
-of HOL to represent many of the standard constructs of
-functional programming.  If one then wants to ‘run’ functional
-programs on arguments, there are several choices.  First, one
-could apply the simplifier, as demonstrated in
-Section \ref{sec:simpLib}.  This allows all the power of the
-rewriting process to be brought to bear, including, for example,
-the application of decision procedures to prove constraints on
-conditional rewrite rules.  Second, one could write the program,
-and all the programs it transitively depends on, out to a file in
-a suitable concrete syntax, and invoke a compiler or interpreter.
-This functionality is available in HOL via use of
-`EmitML.exportML`.
+Section \ref{sec:datatype} and Section \ref{TFL} show HOL's ability to represent many of the standard constructs of functional programming.
+If one then wants to ‘run’ functional programs on arguments, there are several choices:
 
-Third, `computeLib` can be used.  This library supports
-call-by-value evaluation of HOL functions by deductive steps.
-In other words, it is quite similar to having an SML
-interpreter inside the HOL logic, working by forward inference.
-When used in this way, functional programs can be executed more
-quickly than by using the simplifier.
+-  One could apply the simplifier, as demonstrated in Section \ref{sec:simpLib}.
+   This allows all the power of the rewriting process to be brought to bear, including, for example, the application of decision procedures to prove constraints on conditional rewrite rules.
+
+-  One could write the program, and all the programs it transitively depends on, out to a file in a suitable concrete syntax, and invoke a compiler or interpreter.
+   This functionality is available in HOL via use of `EmitML.exportML`; or
+
+-  One could transform the program into a “cv-compute” program and execute using that functionality (see Section \ref{sec:cv-computeLib} below.
+
+Finally, one might use `computeLib`.
+This library supports call-by-value evaluation of HOL functions by deductive steps.
+In other words, it is quite similar to having an SML interpreter inside the HOL logic, working by forward inference.
+When used in this way, functional programs can be executed more quickly than by using the simplifier.
 
 The most accessible entry-points for using the `computeLib`
 library are the conversion `EVAL` and its tactic counterpart
@@ -2790,4 +2785,3 @@ assumptions.
 ```
 
 >>__ Parse.temp_set_grammars libraries_initial_grammars;
-
