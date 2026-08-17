@@ -63,63 +63,72 @@
         {{/each}}
 
         {{#if mathjax_support}}
-        <!-- MathJax: enable $...$ for inline math (the default
-             TeX-AMS-MML_HTMLorMML config only recognises \(...\) and
-             $$...$$, but our sources use $...$). -->
-        <script type="text/x-mathjax-config">
-          MathJax.Hub.Config({
-            tex2jax: {
+        <!-- MathJax 4.  window.MathJax must be assigned before the
+             library loads.
+
+             Do not go back to a MathJax 2 "_HTMLorMML" config.  Those
+             hand the math to the browser's native MathML, which Chrome
+             and Safari both now claim: Chrome renders it without
+             MathJax's fonts, and WebKit fails a whole page at once with
+             [Math Processing Error].  The same trap catches any book
+             left on mdbook's stock injection, as
+             examples/formal-languages/regular/automata-tutorial still
+             is.
+
+             $...$ inline math is not on by default.  The macros table
+             mirrors the LaTeX definitions MathJax cannot see; each one
+             also needs its PDF-side definition, per
+             Manual/Developers/manual-authoring.md. -->
+        <script>
+          window.MathJax = {
+            // \unicode{...} is a separate TeX extension.  Preload it so
+            // startup does not fetch partway through a typeset.
+            loader: {load: ['[tex]/unicode']},
+            tex: {
+              packages: {'[+]': ['unicode']},
               inlineMath: [['$','$'], ['\\(','\\)']],
               displayMath: [['$$','$$'], ['\\[','\\]']],
-              processEscapes: true
-            },
-            TeX: {
-              Macros: {
+              processEscapes: true,
+              macros: {
                 // From LaTeX stmaryrd, which mdbook MathJax doesn't load.
-                llbracket: ["{\\unicode{x27E6}}"],
-                rrbracket: ["{\\unicode{x27E7}}"],
-                llparenthesis: ["{\\unicode{x2987}}"],
-                rrparenthesis: ["{\\unicode{x2988}}"],
-                lbrbrak: ["{\\unicode{x2772}}"],
-                rbrbrak: ["{\\unicode{x2773}}"],
-                rightwhitearrow: ["{\\unicode{x21E8}}"],
-                upand: ["{\\unicode{x214B}}"],
+                llbracket: "{\\unicode{x27E6}}",
+                rrbracket: "{\\unicode{x27E7}}",
+                llparenthesis: "{\\unicode{x2987}}",
+                rrparenthesis: "{\\unicode{x2988}}",
+                lbrbrak: "{\\unicode{x2772}}",
+                rbrbrak: "{\\unicode{x2773}}",
+                rightwhitearrow: "{\\unicode{x21E8}}",
+                upand: "{\\unicode{x214B}}",
                 // From bbm-defined \llbrace/\rrbrace in the source.
-                llbrace: ["{\\unicode{x2983}}"],
-                rrbrace: ["{\\unicode{x2984}}"],
+                llbrace: "{\\unicode{x2983}}",
+                rrbrace: "{\\unicode{x2984}}",
                 // Manual/LaTeX/commands.tex: \hilbert = \varepsilon.
-                hilbert: ["\\varepsilon"],
+                hilbert: "\\varepsilon",
                 // \textsl works inside LaTeX math mode (legitimate
-                // for slanted text in a formula) but MathJax 2.7
-                // doesn't recognise it as a math command and emits
-                // it as red error text.  Map to \mathit for the
-                // closest math-mode equivalent.  Used in misc.smd's
-                // Holmake grammar productions.
+                // for slanted text in a formula) but MathJax doesn't
+                // recognise it as a math command and emits it as red
+                // error text.  Map to \mathit for the closest
+                // math-mode equivalent.  Used in misc.smd's Holmake
+                // grammar productions.
                 textsl: ["{\\mathit{#1}}", 1],
-                // MathJax 2.7's default \vec is a small text-accent
-                // arrow positioned at the geometric centre of the
-                // argument; for italic letters (e.g. \vec{v}) the
-                // visual centre is right of that, so the arrow ends
-                // up sitting next to rather than over the variable.
-                // \overrightarrow uses an <mover> stretchy arrow
-                // that lays over the argument correctly.
-                vec: ["{\\overrightarrow{#1}}", 1],
+                // No \vec override: v4's built-in accent matches the
+                // PDF.  Earlier versions needed \overrightarrow here.
                 // Chapter-local LaTeX macros from Description's
                 // theories.smd.  The PDF definitions live in the
                 // {=latex} block at the top of that file; these are
                 // the MathJax mirrors.
                 konst: ["{\\mathsf{#1}}", 1],
-                nil: ["{\\mathbf{[}\\;\\mathbf{]}}"],
+                nil: "{\\mathbf{[}\\;\\mathbf{]}}",
                 cons: ["{#1}\\mathbf{:}\\mathbf{:}{#2}", 2],
-                subr: ["_{\\mathsf{r}}"],
+                subr: "_{\\mathsf{r}}",
                 // Local macros for the bit-vectors subsection.
                 fcp: ["#1[#2]", 2],
-                worda: ["\\mathit{bool}[\\alpha]"],
-                wordb: ["\\mathit{bool}[\\beta]"],
-                wordc: ["\\mathit{bool}[\\gamma]"],
+                worda: "\\mathit{bool}[\\alpha]",
+                wordb: "\\mathit{bool}[\\beta]",
+                wordc: "\\mathit{bool}[\\gamma]",
                 // Chapter-local macros from Description's libraries.smd.
-                term: ["\\mathit{term}"],
-                type: ["\\mathit{type}"],
+                term: "\\mathit{term}",
+                type: "\\mathit{type}",
                 // From commands.tex: \holtxt renders HOL syntax in
                 // typewriter; \ml does the same outside math mode.
                 holtxt: ["{\\mathtt{#1}}", 1],
@@ -128,9 +137,9 @@
                 // top of that file; these are the MathJax mirrors.  \con
                 // comes from Manual/LaTeX/commands.tex (\con{X} = \sf X).
                 con: ["{\\mathsf{#1}}", 1],
-                KC: ["{\\mathsf{K}}"],
-                SC: ["{\\mathsf{S}}"],
-                mathpredn: ["\\mathbin{-\\!\\!\\!\\mid\\mid\\!\\rightarrow}"],
+                KC: "{\\mathsf{K}}",
+                SC: "{\\mathsf{S}}",
+                mathpredn: "\\mathbin{-\\!\\!\\!\\mid\\mid\\!\\rightarrow}",
                 // \infer from proof.sty (used in latex-munger.smd's
                 // examples of the `rule` and `stackedrule` options).
                 // The premises are passed in #2, ampersand-separated;
@@ -141,31 +150,37 @@
                 // Logic manual's syntax.smd / semantics.smd.  The PDF
                 // side gets these straight from commands.tex (logic.tex
                 // \inputs it); these are the MathJax mirrors.
-                fun: ["{\\to}"],
-                conj: ["\\;\\wedge\\;"],
-                imp: ["\\Rightarrow"],
-                turn: ["\\;\\vdash\\;"],
+                fun: "{\\to}",
+                conj: "\\;\\wedge\\;",
+                imp: "\\Rightarrow",
+                turn: "\\;\\vdash\\;",
                 // \den{x} = denotational brackets [[x]] (commands.tex
                 // uses [\![ ]\!]; llbracket/rrbracket above render the
                 // same glyphs more crisply).
                 den: ["{\\llbracket #1\\rrbracket}", 1],
-                inds: ["{\\mathrm{I}}"],     // standard infinite set
-                ch: ["{\\mathrm{ch}}"],      // standard choice function
-                two: ["{\\mathrm{2}}"],      // standard 2-element set
+                inds: "{\\mathrm{I}}",       // standard infinite set
+                ch: "{\\mathrm{ch}}",        // standard choice function
+                two: "{\\mathrm{2}}",        // standard 2-element set
                 ty: ["{\\mathit{#1}}", 1],   // type names
                 // Logical-constant names (commands.tex: \con{...}).
-                OneOne: ["{\\mathsf{One\\_One}}"],
-                Onto: ["{\\mathsf{Onto}}"],
-                TyDef: ["{\\mathsf{Type\\_Definition}}"],
+                OneOne: "{\\mathsf{One\\_One}}",
+                Onto: "{\\mathsf{Onto}}",
+                TyDef: "{\\mathsf{Type\\_Definition}}",
                 // Quantifier binders (commands.tex \uquant/\equant/\lquant).
                 uquant: ["{\\forall #1.\\,}", 1],
                 equant: ["{\\exists #1.\\,}", 1],
                 lquant: ["{\\lambda #1.\\,}", 1]
               }
             }
-          });
+          };
         </script>
-        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <!-- The path is version-sensitive: v4 serves bundles from the
+             package root and has no "-full" variant.  Check
+             https://data.jsdelivr.com/v1/package/npm/mathjax@<v>/flat
+             before bumping. -->
+        <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-chtml.js">
+        </script>
         {{/if}}
 
         <!-- Provide site root and default themes to javascript -->
@@ -716,7 +731,7 @@
         {{#if mathjax_support}}
         <script>
         window.addEventListener('load', function() {
-            MathJax.Hub.Register.StartupHook('End', function() {
+            MathJax.startup.promise.then(function() {
                 window.setTimeout(window.print, 100);
             });
         });

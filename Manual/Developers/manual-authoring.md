@@ -88,7 +88,7 @@ For any math command that appears inside `$...$` or `$$...$$` in chapter prose, 
 
   - **PDF side:** a `\providecommand{...}` in a `{=latex}` raw block at the top of the chapter.
     YAML `header-includes:` does not survive `pandoc -t latex` and is silently discarded — use the raw block.
-  - **mdbook side:** a matching entry in `Manual/theme/index.hbs`'s MathJax `Macros` table.
+  - **mdbook side:** a matching entry in `Manual/theme/index.hbs`'s MathJax `tex.macros` table.
 
 See `Manual/Tutorial/combin.smd`'s top-of-file block and `Manual/theme/index.hbs`'s `con`/`KC`/`SC`/`mathpredn` entries for a worked example.
 
