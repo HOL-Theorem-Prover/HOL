@@ -3917,9 +3917,8 @@ structure Refute_Extract = struct
         end
     end
 
-  (* Direct extraction used to discard its table identifier, leaving callers
-     unable to release the vectors retained by generated code.  Keep source
-     compatibility while returning an idempotent owner close operation. *)
+  (* Adds an idempotent owner close over extract_tests_with Strict, so a
+     caller can release the vectors retained by generated code. *)
   fun extract_tests config strategy plans =
     let
       val {source, entry, table} =

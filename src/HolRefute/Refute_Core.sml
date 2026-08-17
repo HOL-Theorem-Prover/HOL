@@ -1196,8 +1196,8 @@ structure Refute_Core = struct
       end)
 
   fun register_backend backend =
-    (* Preserve source compatibility and safety for backends that do not
-       opt into a tighter, configuration-sensitive declaration. *)
+    (* Backends that declare no tighter, configuration-sensitive bound get
+       the conservative Genuine ceiling. *)
     register_backend_with_ceiling backend (fn _ => fn _ => Genuine)
 
   fun registered_backends () =
