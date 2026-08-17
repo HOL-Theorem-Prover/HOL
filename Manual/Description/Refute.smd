@@ -590,17 +590,13 @@ raises a HOL error.  They are intended mainly for tests.
 | `upd_optimise_equality` | `true` | Turn suitable equality premises into direct bindings. |
 | `upd_reorder_premises` | `true` | Reorder premises during smart mode inference. |
 | `upd_seed` | `NONE` | Reproducible random seed; `NONE` advances a deterministic session stream. |
-| `upd_allow_function_inversion` | `false` | Reserved; currently has no consumer. |
-| `upd_use_subtype` | `false` | Reserved; currently has no consumer. |
 
 The default size mode is iterative deepening: `10` is an initial window,
 not a terminal bound, and testing deepens until the deadline.  `upd_size`
 deliberately pins a fixed, reproducible bound, while `upd_iterative_size`
-sets a different initial window and restores adaptive deepening.
-
-The reserved annotations also appear in `show_config`; changing either
-reserved field has no effect.  In contrast, `depth` is live and is not a
-second 0-through-depth schedule loop.
+sets a different initial window and restores adaptive deepening.  The
+separate `depth` field bounds narrowing; it is not a second
+0-through-depth schedule loop.
 
 #### Model-finder fields
 
@@ -759,8 +755,7 @@ Counterexample search is bounded and incomplete.  In particular:
 * smart generators support positive first-order modes.  Higher-order
   relation parameters, negative modes, and general function flattening
   fall back to guards rather than becoming errors;
-* `use_subtype` and `allow_function_inversion` are reserved.  Subtype
-  lifting and general function inversion are not implemented;
+* subtype lifting and general function inversion are not implemented;
 * narrowing finitizes function inputs.  The constant-function fallback
   for a higher-order domain is an approximation, and every depth bound
   remains incomplete;

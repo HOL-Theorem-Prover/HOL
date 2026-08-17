@@ -138,8 +138,6 @@ signature Refute = sig
   val upd_finite_type_size : int -> config -> config
   val upd_default_type : hol_type list -> config -> config
   val upd_substrate : substrate_choice -> config -> config
-  val upd_allow_function_inversion : bool -> config -> config
-  val upd_use_subtype : bool -> config -> config
   val upd_seed : int option -> config -> config
   val upd_allow_existentials : bool -> config -> config
   val upd_finite_functions : bool -> config -> config

@@ -89,8 +89,6 @@ Refute.upd_finite_types : bool -> config -> config
 Refute.upd_finite_type_size : int -> config -> config
 Refute.upd_default_type : hol_type list -> config -> config
 Refute.upd_substrate : substrate_choice -> config -> config
-Refute.upd_allow_function_inversion : bool -> config -> config
-Refute.upd_use_subtype : bool -> config -> config
 Refute.upd_seed : int option -> config -> config
 Refute.upd_allow_existentials : bool -> config -> config
 Refute.upd_finite_functions : bool -> config -> config
@@ -119,8 +117,6 @@ Refute.upd_reorder_premises : bool -> config -> config
 | `smart_generators` | `true` | Enable Horn `Enum` plans. |
 | `optimise_equality` | `true` | Bind suitable equality premises. |
 | `reorder_premises` | `true` | Reorder premises during smart mode inference. |
-| `allow_function_inversion` | `false` | Reserved; currently has no consumer. |
-| `use_subtype` | `false` | Reserved; currently has no consumer. |
 
 The default `size_mode` is iterative deepening: `10` is an initial
 window, not a terminal bound, and testing deepens until the deadline.

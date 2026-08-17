@@ -205,9 +205,6 @@ structure Refute :> Refute = struct
   val upd_finite_type_size = Refute_Core.upd_finite_type_size
   val upd_default_type = Refute_Core.upd_default_type
   val upd_substrate = Refute_Core.upd_substrate
-  val upd_allow_function_inversion =
-    Refute_Core.upd_allow_function_inversion
-  val upd_use_subtype = Refute_Core.upd_use_subtype
   val upd_seed = Refute_Core.upd_seed
   val upd_allow_existentials = Refute_Core.upd_allow_existentials
   val upd_finite_functions = Refute_Core.upd_finite_functions

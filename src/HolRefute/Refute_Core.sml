@@ -71,8 +71,6 @@ structure Refute_Core = struct
       finite_type_size : int,
       default_type : hol_type list,
       substrate : substrate_choice,
-      allow_function_inversion : bool,
-      use_subtype : bool,
       seed : int option,
       allow_existentials : bool,
       finite_functions : bool,
@@ -175,8 +173,6 @@ structure Refute_Core = struct
       finite_type_size = 3,
       default_type = [``:num``],
       substrate = Auto,
-      allow_function_inversion = false,
-      use_subtype = false,
       seed = NONE,
       allow_existentials = true,
       finite_functions = true,
@@ -315,8 +311,6 @@ structure Refute_Core = struct
     | QcFiniteTypeSize of int
     | QcDefaultType of hol_type list
     | QcSubstrate of substrate_choice
-    | QcAllowFunctionInversion of bool
-    | QcUseSubtype of bool
     | QcSeed of int option
     | QcAllowExistentials of bool
     | QcFiniteFunctions of bool
@@ -341,11 +335,6 @@ structure Refute_Core = struct
                       | _ => #default_type qc),
       substrate = (case update of QcSubstrate value => value
                    | _ => #substrate qc),
-      allow_function_inversion =
-        (case update of QcAllowFunctionInversion value => value
-         | _ => #allow_function_inversion qc),
-      use_subtype = (case update of QcUseSubtype value => value
-                     | _ => #use_subtype qc),
       seed = (case update of QcSeed value => value | _ => #seed qc),
       allow_existentials =
         (case update of QcAllowExistentials value => value
@@ -410,9 +399,6 @@ structure Refute_Core = struct
   fun upd_finite_type_size value = update_qc (QcFiniteTypeSize value)
   fun upd_default_type value = update_qc (QcDefaultType value)
   fun upd_substrate value = update_qc (QcSubstrate value)
-  fun upd_allow_function_inversion value =
-    update_qc (QcAllowFunctionInversion value)
-  fun upd_use_subtype value = update_qc (QcUseSubtype value)
   fun upd_seed value = update_qc (QcSeed value)
   fun upd_allow_existentials value =
     update_qc (QcAllowExistentials value)
@@ -1084,11 +1070,6 @@ structure Refute_Core = struct
           "default_type = " ^ types ^ "\n",
           "substrate = " ^ Private.substrate_to_string (#substrate q) ^
             "\n",
-          "allow_function_inversion = " ^
-            Bool.toString (#allow_function_inversion q) ^
-            " (reserved)\n",
-          "use_subtype = " ^ Bool.toString (#use_subtype q) ^
-            " (reserved)\n",
           "seed = " ^ Private.option_to_string Int.toString (#seed q) ^
             "\n",
           "allow_existentials = " ^
