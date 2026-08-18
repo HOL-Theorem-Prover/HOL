@@ -139,6 +139,7 @@ def build_manifest(repo, book_dir, manual_names):
     # self-contained entries, with the pre-commit `Holmake mdbook` as the
     # source of truth).  render() then re-renders the mirror.
     docfiles = repo / "help" / "Docfiles"
+    gendocs = repo / "help" / "generated-alias-docs"
     processed = manual_root / "build" / "Docfiles-processed"
     ref_dir = manual_root / "Reference"
     helpsrc = repo / "help" / "src-sml"
@@ -146,6 +147,14 @@ def build_manifest(repo, book_dir, manual_names):
 
     def reference_preprocess(changed, removed):
         processed.mkdir(parents=True, exist_ok=True)
+        # Alias stubs are generated from the canonicals' `aliases:`
+        # frontmatter.  Refresh them first; the generated directory is
+        # watched too, so anything AliasGen rewrites comes back round as
+        # a changed file on the next tick.
+        aliasgen = helpsrc / "AliasGen.exe"
+        if aliasgen.exists():
+            _run([str(aliasgen), "--regen", str(docfiles), str(gendocs)],
+                 cwd=helpsrc)
         # A changed file with no counterpart in the mirror is new; a removal
         # also alters the file set -- either way the sidebar must regenerate.
         fileset_changed = bool(removed) or any(
@@ -170,7 +179,8 @@ def build_manifest(repo, book_dir, manual_names):
     def make_manual(name):
         if name == "Reference":
             return Manual(name, src_dir=ref_dir,
-                          watch_globs=dir_globs(docfiles, "*.smd"),
+                          watch_globs=(dir_globs(docfiles, "*.smd") +
+                                       dir_globs(gendocs, "*.smd")),
                           preprocess=reference_preprocess)
         # Hand-authored .smd / .md manual: mdbook reads the dir directly, so
         # render() (mdbook build) is the whole rebuild.

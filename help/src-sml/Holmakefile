@@ -1,11 +1,23 @@
 OPTIONS = NO_OVERLAY
+Docfiles = ../Docfiles
+Gend = ../generated-alias-docs
 EXTRA_CLEANS = Md2TeX.exe AliasGen.exe process_docfiles makebase.exe \
                Lexer.lex.sml Parser.grm-sig.sml Parser.grm.sml \
-               Parser.grm.sig
+               Parser.grm.sig $(Gend)/
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
-all: makebase.exe AliasGen.exe
+all: makebase.exe AliasGen.exe $(Gend)/.stamp
+
+# Alias entries are build products: AliasGen writes one stub per name
+# listed in a canonical entry's `aliases:` frontmatter.  $(Gend) is
+# gitignored and nothing in it is edited by hand.  The rule lives here,
+# beside the generator, so that bin/build (which runs `Holmake all`
+# here) and Manual/Reference (which has this directory in its INCLUDES)
+# both get the stubs without either one restating the recipe.
+$(Gend)/.stamp: AliasGen.exe $(wildcard $(Docfiles)/*.smd)
+	./AliasGen.exe --regen $(Docfiles) $(Gend)
+	touch $@
 
 ifdef POLY
 all:  process_docfiles

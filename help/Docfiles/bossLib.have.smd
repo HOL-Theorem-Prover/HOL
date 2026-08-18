@@ -1,10 +1,9 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ---
 aliases:
   - bossLib.subgoal
   - bossLib.sg
 ---
-
->>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `have`
 
 ``` hol4
@@ -12,6 +11,12 @@ bossLib.have : term quotation -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`bossLib.subgoal`](#bossLib.subgoal), [`bossLib.sg`](#bossLib.sg).*
+
+<!-- END aliases-block -->
 
 Produces a subgoal.
 

@@ -556,8 +556,9 @@ fun loadCiteLabels () =
   end
 
 (* Loaded once from `../Reference/entries.list` at preprocessor
-   startup (see loadRefEntries below).  Each line names one entry
-   that exists in help/Docfiles/ (e.g. `BasicProvers.CASE_TAC`).
+   startup (see loadRefEntries below).  Each line names one entry of
+   the Reference manual (e.g. `BasicProvers.CASE_TAC`), hand-written
+   in help/Docfiles or generated into help/generated-alias-docs.
    Used to resolve `\refentry{Foo.bar}` cross-manual references and
    to error out at preprocess-time on typos / removed entries. *)
 val refEntries : string list ref = ref []
@@ -620,8 +621,9 @@ fun rewriteRefEntry currentFile s =
                 if null knownEntries orelse knownEntry key then ()
                 else
                   die ("smdpp: \\refentry{" ^ key ^ "} in " ^
-                       currentFile ^ " has no matching " ^
-                       "help/Docfiles/" ^ key ^ ".smd")
+                       currentFile ^ " names no Reference entry (no " ^
+                       key ^ ".smd in help/Docfiles or " ^
+                       "help/generated-alias-docs)")
               (* Path is relative to the current book's output dir.
                  From book/<Book>/<chapter>.html, ../Reference/X.html
                  resolves to book/Reference/X.html -- works uniformly

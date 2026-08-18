@@ -1,9 +1,8 @@
----
-aliases
-- bossLib.qsuff_tac
----
-
 >>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+---
+aliases:
+  - bossLib.qsuff_tac
+---
 ## `suff`
 
 ``` hol4
@@ -11,6 +10,12 @@ bossLib.suff : term quotation -> tactic
 ```
 
 ------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`bossLib.qsuff_tac`](#bossLib.qsuff_tac).*
+
+<!-- END aliases-block -->
 
 Introduces an implicational subgoal.
 

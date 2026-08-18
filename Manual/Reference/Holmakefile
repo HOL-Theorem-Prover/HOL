@@ -4,13 +4,15 @@
 
 # ---------------------------------------------------------------------
 # Pathnames: Helpd = hol help directory; Processed = polyscripter-
-# evaluated mirror of help/Docfiles produced by bin/build's build_help
-# step (see help/src-sml/process_docfiles.sml).  Both PDF and mdbook
-# pipelines consume the processed directory so polyscripter `>>`
-# directives are evaluated exactly once per build.
+# evaluated mirror of the Reference entries (see
+# help/src-sml/process_docfiles.sml).  Both PDF and mdbook pipelines
+# consume the processed directory so polyscripter `>>` directives are
+# evaluated exactly once per build.
 # ---------------------------------------------------------------------
 Helpd=../../help
 Processed=../build/Docfiles-processed
+# Generated alias entries; built and owned by help/src-sml (below).
+Gend=$(Helpd)/generated-alias-docs
 
 INCLUDES = $(Helpd)/src-sml ../Tools
 
@@ -42,13 +44,17 @@ entries.md: $(Helpd)/src-sml/Md2TeX.exe $(Processed)/.stamp
 # the whole batch on any source change".  The `rm -rf` ensures the
 # tree only ever holds outputs for currently-existing sources --
 # without it, renaming/deleting a Docfile leaves orphans behind.
+# $(Gend)/.stamp is built by help/src-sml (this directory's INCLUDES),
+# which owns AliasGen and its output; see that Holmakefile.
 $(Processed)/.stamp: $(Helpd)/src-sml/process_docfiles \
+                     $(Gend)/.stamp \
                      $(wildcard $(Helpd)/Docfiles/*.smd)
 	rm -rf $(Processed)
 	mkdir -p $(Processed)
 	cd $(Helpd)/src-sml && \
 	  ./process_docfiles $(HOLDIR)/help/Docfiles \
-	                     $(HOLDIR)/Manual/build/Docfiles-processed
+	                     $(HOLDIR)/Manual/build/Docfiles-processed \
+	                     --extra-src=$(HOLDIR)/help/generated-alias-docs
 	touch $@
 
 entries.tex: entries.md
@@ -101,8 +107,11 @@ labels.tsv: ../Tools/smdpp $(Processed)/SUMMARY.md $(Processed)/.stamp
 # (filename without .smd).  Sibling books' smdpp loads this at
 # preprocess startup and dies if it sees `\refentry{X}` with X
 # missing -- a typo / removed-entry guard.
-entries.list: $(wildcard $(Helpd)/Docfiles/*.smd)
-	ls $(Helpd)/Docfiles/*.smd | xargs -n1 basename | sed 's/\.smd$$//' > $@
+# Via $(Gend)/.stamp rather than the Docfiles directly, so the
+# generated alias entries exist before the `ls`.
+entries.list: $(Gend)/.stamp
+	ls $(Helpd)/Docfiles/*.smd $(Gend)/*.smd | xargs -n1 basename | \
+	  sed 's/\.smd$$//' | sort > $@
 
 EXTRA_CLEANS = reference.pdf entries.md entries.tex \
                $(Processed)/ entries.list labels.tsv \
