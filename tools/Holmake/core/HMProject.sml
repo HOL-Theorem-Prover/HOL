@@ -29,6 +29,25 @@ fun canonical_abs p =
        else OS.Path.mkAbsolute { path = p,
                                  relativeTo = OS.FileSys.getDir() })
 
+fun sorted_dedup ss =
+    Binaryset.listItems
+      (Binaryset.addList (Binaryset.empty String.compare, ss))
+
+(* Path-prefix test, in canonicalised form.  Both arguments must be
+   absolute and canonical.  `ancestor` is a prefix of `descendant`
+   either if they are equal, or if descendant starts with ancestor
+   followed by a path separator.  Curried so that a partial application
+   computes the separator-terminated prefix once: callers test one
+   ancestor against many paths. *)
+fun is_path_under ancestor =
+    let
+      val pfx = if String.isSuffix "/" ancestor then ancestor
+                else ancestor ^ "/"
+    in
+      fn descendant => ancestor = descendant orelse
+                       String.isPrefix pfx descendant
+    end
+
 (* Substitute the literal token $(HOLDIR) in `s' with the configure-time
    HOLDIR path.  Matches the idiom users already use in Holmakefiles
    (e.g. `INCLUDES = $(HOLDIR)/src/integer'), letting external_includes
@@ -195,10 +214,7 @@ fun externals_from_table tbl rel_to =
                                List.map (abs_relative_to ext_path) ext_excl_rel
                            val inherited_excl = excludes_declared_at ext_path
                            val ext_excl =
-                               Binaryset.listItems
-                                 (Binaryset.addList
-                                    (Binaryset.empty String.compare,
-                                     consumer_excl @ inherited_excl))
+                               sorted_dedup (consumer_excl @ inherited_excl)
                          in
                            SOME { id = id, path = ext_path,
                                   exclude = ext_excl }
@@ -274,10 +290,7 @@ fun load { root } =
           List.concat
             (List.map (fn e => external_includes_declared_at (#path e))
                       externals)
-      val external_includes =
-          Binaryset.listItems
-            (Binaryset.addList (Binaryset.empty String.compare,
-                                own_ext_inc @ inherited_ext_inc))
+      val external_includes = sorted_dedup (own_ext_inc @ inherited_ext_inc)
 
       (* Under holmake = false, project-mode-only keys are inert.  Collect
          the present-but-ignored ones so the caller can warn.  `name`,
@@ -329,6 +342,12 @@ fun list_subdirs dir =
       loop []
     end handle OS.SysErr _ => []
 
+(* Returns both the directories that join the scan and the child
+   directories that were pruned because they carry their own project
+   file.  The latter are the roots of nested projects; the caller
+   decides whether to adopt them (see `discover`).  A nested root
+   underneath an [exclude]d subtree is not reported: `excluded` is
+   tested on pop, before that directory's children are ever listed. *)
 fun discover_under start excludes =
     let
       open OS.FileSys
@@ -336,11 +355,11 @@ fun discover_under start excludes =
                        (Binaryset.empty String.compare, excludes)
       fun hasProjFile p = access(OS.Path.concat(p, "holproject.toml"), [A_READ])
       fun excluded p = Binaryset.member (excl_set, p)
-      fun walk acc worklist =
+      fun walk acc nested worklist =
           case worklist of
-              [] => acc
+              [] => (acc, nested)
             | d :: ds =>
-                if excluded d then walk acc ds
+                if excluded d then walk acc nested ds
                 else
                   let
                     val children = list_subdirs d
@@ -348,26 +367,26 @@ fun discover_under start excludes =
                        (starting point is canonicalised once below,
                        and `OS.Path.concat` with a name component
                        preserves canonicity). *)
+                    val (sub, own) = List.partition hasProjFile children
                   in
-                    walk (d :: acc)
-                         (List.filter (not o hasProjFile) children @ ds)
+                    walk (d :: acc) (sub @ nested) (own @ ds)
                   end
     in
-      walk [] [OS.Path.mkCanonical start]
+      walk [] [] [OS.Path.mkCanonical start]
     end
 
-fun discover_dirs (cfg : config) =
+fun discover (cfg : config) =
     let
       val roots =
           (#root cfg, #exclude cfg) ::
           List.map (fn e => (#path e, #exclude e)) (#externals cfg)
-      val all = List.concat
-                  (List.map (fn (r, excl) => discover_under r excl) roots)
-      (* sort + dedup for determinism *)
-      val set = Binaryset.addList (Binaryset.empty String.compare, all)
+      val walked = List.map (fn (r, excl) => discover_under r excl) roots
     in
-      Binaryset.listItems set
+      { dirs = sorted_dedup (List.concat (List.map #1 walked)),
+        nested = sorted_dedup (List.concat (List.map #2 walked)) }
     end
+
+fun discover_dirs cfg = #dirs (discover cfg)
 
 (* ----------------------------------------------------------------------
    Source-name clash detection across project dirs.

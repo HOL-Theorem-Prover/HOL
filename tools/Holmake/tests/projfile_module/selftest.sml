@@ -45,7 +45,8 @@ val () = List.app mkdirs [
   proj ++ ".hol",
   proj ++ ".git",
   ext ++ "lib",
-  ext ++ "subWithProjectFile"
+  ext ++ "subWithProjectFile",
+  proj ++ "excluded_dir" ++ "innerproj"
 ]
 
 (* `source_only/` deliberately has no Holmakefile --
@@ -62,6 +63,7 @@ val () = List.app touch [
   ext ++ "Holmakefile",
   ext ++ "lib" ++ "Holmakefile",
   ext ++ "subWithProjectFile" ++ "holproject.toml",
+  proj ++ "excluded_dir" ++ "innerproj" ++ "holproject.toml",
   ext ++ "holproject.toml"
 ]
 
@@ -157,6 +159,29 @@ val _ =
           List.exists (fn d => Binaryset.member (got, d))
                       (Binaryset.listItems excluded)
   in if any_excluded then die "an excluded or dot-dir leaked into result"
+     else OK ()
+  end
+
+(* ---- discover ---- *)
+
+val _ = tprint "HMProject.discover reports pruned nested project roots"
+val _ =
+  let val {nested, ...} = HMProject.discover cfg
+  in if Binaryset.equal (canon_set nested,
+                         canon_set [ext ++ "subWithProjectFile"])
+     then OK ()
+     else die ("got " ^ String.concatWith ", "
+                          (Binaryset.listItems (canon_set nested)))
+  end
+
+(* excluded_dir/innerproj carries a project file, but excluded_dir is in
+   [exclude] and so is never descended into: exclusion prunes first. *)
+val _ = tprint "a nested root under an [exclude]d subtree is not reported"
+val _ =
+  let val {nested, ...} = HMProject.discover cfg
+      val inner = OS.Path.mkCanonical (proj ++ "excluded_dir" ++ "innerproj")
+  in if Binaryset.member (canon_set nested, inner)
+     then die "a nested root below an excluded dir leaked into #nested"
      else OK ()
   end
 

@@ -66,6 +66,17 @@ sig
      .claude, .svn).  Result is sorted for determinism. *)
   val discover_dirs : config -> string list
 
+  (* discover cfg - as `discover_dirs`, but also reporting the
+     directories the walk pruned because they carry their own
+     `holproject.toml`.  Those are the roots of *nested* projects:
+     they are not part of this project's directory set, and it is the
+     caller's job to decide whether to adopt them as projects in their
+     own right.  A nested root underneath an [exclude]d subtree is not
+     reported -- exclusion prunes before the subtree is examined.
+     Both lists are sorted and duplicate-free;
+     `discover_dirs cfg = #dirs (discover cfg)`. *)
+  val discover : config -> { dirs : string list, nested : string list }
+
   (* find_name_clashes dirs - within `dirs`, look for filenames Holdep
      might resolve (`.sml` and `.sig` files, including theory scripts)
      and return any short-name that appears in more than one directory.
@@ -91,6 +102,13 @@ sig
   val lookup_bool : TOML.table -> TOML.key -> bool option
   val lookup_int : TOML.table -> TOML.key -> int option
   val lookup_table : TOML.table -> TOML.key -> TOML.table option
+
+  (* is_path_under ancestor - a test for whether a path lies at or below
+     `ancestor`.  Both `ancestor` and the tested path must be absolute
+     and canonical.  Curried: a partial application computes the
+     separator-terminated prefix once, so testing one ancestor against
+     many paths costs one string concatenation, not one per path. *)
+  val is_path_under : string -> string -> bool
 
   (* tag_path pf f - run `f`; if it raises Fail, re-raise with `pf:` as
      a prefix so the message names the offending file.  Used to wrap

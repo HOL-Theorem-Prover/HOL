@@ -113,13 +113,7 @@ fun load { start : string } : config option =
                    overrides = overrides }
           end
 
-(* Path-prefix test, in canonicalised form.  Both arguments must be
-   absolute and canonical.  `ancestor` is a prefix of `descendant`
-   either if they are equal, or if descendant starts with ancestor
-   followed by a path separator. *)
-fun is_path_under ancestor descendant =
-    ancestor = descendant orelse
-    (String.isPrefix (ancestor ^ "/") descendant)
+val is_path_under = HMProject.is_path_under
 
 fun is_excluded (cfg : config) path =
     List.exists (fn ex => is_path_under ex path) (#excludes cfg)
