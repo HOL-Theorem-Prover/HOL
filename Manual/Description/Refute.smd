@@ -790,7 +790,21 @@ Counterexample search is bounded and incomplete.  In particular:
 * `relation$WF` is encoded through a builtin ersatz definition that is
   exact on a genuinely finite or polymorphic domain, but only `Potential`
   over an intrinsically infinite domain, where the encoding's finiteness
-  disjunct can never be decided from a bounded scope; and
+  disjunct can never be decided from a bounded scope;
+* Hilbert choice (`min$@`) is otherwise an uninterpreted function; a
+  predicate with no in-scope witness would read an arbitrary value off it,
+  so the model finder inserts a guard at every syntactic occurrence and
+  reports the choice's value as unrepresented instead when no witness is
+  in scope.  A later simplification can erase an inserted guard's `if`,
+  but the encoding stays sound in that case too, and a fired guard's
+  bounds signal (below) survives the erasure regardless.  Two escapes
+  stand the guard down where the unguarded read is independently sound: a
+  predicate provably empty in HOL (decided by a fixed, terminating
+  decision procedure under a syntactic fragment and size gate, never a
+  search), and a predicate over `bool`, always exactly represented.  A
+  fired guard also blocks `NoCounterexample`: a search that finds no model
+  reports a bounds-relative `Unknown` instead, since a truncated witness
+  cannot be told apart from a genuinely empty one; and
 * HolRefute is built only with Poly/ML.  Kodkodi adds the Unix, Java, and
   local-component restrictions described above.
 

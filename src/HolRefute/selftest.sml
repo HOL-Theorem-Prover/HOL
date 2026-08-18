@@ -4728,9 +4728,19 @@ fun mf_quotient_typedef_axiom_goldens () =
     val set = Term.mk_var ("S", ``:frac -> bool``)
     val choice = Term.mk_thy_const
       {Thy = "min", Name = "@", Ty = ``:(frac -> bool) -> frac``}
+    (* abs_rat_CLASS reads @S off the class it is handed; since [set] can be
+       empty within the tested scope, the [min$@] guard (unfold_defs_in_term,
+       Refute_ModelFinder_HOL.sml) wraps it in the same [if (?x. S x) then
+       @S else unknown] this golden must track. *)
+    val choice_witness = Term.mk_var ("x", ``:frac``)
+    val choice_nonempty = boolSyntax.mk_exists
+      (choice_witness, Term.mk_comb (set, choice_witness))
+    val guarded_choice = boolSyntax.mk_cond
+      (choice_nonempty, Term.mk_comb (choice, set),
+       MFH.unknown_value ``:frac``)
     val expected_class_abs = Term.mk_abs
       (set, Term.mk_comb
-        (constructor, Term.mk_comb (qn, Term.mk_comb (choice, set))))
+        (constructor, Term.mk_comb (qn, guarded_choice)))
     val class_abstract = Term.mk_var ("a", ``:rat``)
     val class_representation = Term.mk_var ("r", ``:frac``)
     val class_selected = MFH.select_nth_constr_arg unfold_context
@@ -24075,6 +24085,48 @@ val _ = require_msg
   "model-finder bounded exhaustion or finite totality was misclassified")
   (fn () => ()) ()
 
+fun mf_choice_guard_blocks_no_counterexample_totality () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_timeout 20.0
+      |> Refute.upd_card [(NONE, [3])]
+    (* [rg_enum] has exactly three constructors, so this is a case-
+       exhaustiveness tautology of any term of that type, choice result
+       included -- the same shape [mf_no_counterexample_totality_
+       regressions]'s [finite_total] uses above to certify
+       [NoCounterexample] with no choice in sight.  Adding one Hilbert
+       choice over [rg_enum] (not [bool], and not provably empty --
+       RGRed is a real witness) makes the [min$@] guard fire
+       (unfold_defs_in_term, Refute_ModelFinder_HOL.sml) and sets
+       [choice_guard_inserted].  Per the bounds signal
+       (total_scope_search, Refute_ModelFinder.sml) the search may then
+       never certify [NoCounterexample] from this problem, even though
+       card 3 is [rg_enum]'s exact scope and every value the choice can
+       take in HOL is present in it. *)
+    val outcome = Refute.refute config
+      ``($@ (\x : rg_enum. x = RGRed) = RGRed) \/
+        ($@ (\x : rg_enum. x = RGRed) = RGGreen) \/
+        ($@ (\x : rg_enum. x = RGRed) = RGBlue)``
+  in
+    case outcome of
+        Refute.Unknown reasons =>
+          List.exists (String.isSubstring
+            "no counterexample within the tested scopes") reasons
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute MF: a guarded choice occurrence blocks NoCounterexample totality"
+val _ = require_msg
+  (check_result mf_choice_guard_blocks_no_counterexample_totality) (fn () =>
+  "a problem containing a guarded Hilbert-choice occurrence wrongly \
+  \certified NoCounterexample")
+  (fn () => ()) ()
+
 (* num is intrinsically infinite, so wf'_def's [FINITE] disjunct can
    never be decided (refuteScript.sml): refutable, but only Potential. *)
 fun mf_wf_ersatz_infinite_type_regression () =
@@ -24136,6 +24188,351 @@ val _ = tprint
 val _ = require_msg
   (check_result mf_wf_ersatz_does_not_weaken_definitions) (fn () =>
   "WF ersatz degraded or broke a Definition-style recursive function")
+  (fn () => ()) ()
+
+(* min$@ (Hilbert choice) used to be encoded as an uninterpreted function
+   whose only axiom, Eps_psimp (refuteScript.sml), is vacuous once no
+   in-scope value satisfies the predicate: the sound problem then read an
+   arbitrary atom off the relation and reported Genuine countermodels of
+   true theorems.  Fixed in unfold_defs_in_term's [min$@] branch
+   (Refute_ModelFinder_HOL.sml): $@ P becomes
+   [if (?x. P x) then $@ P else unknown], so an empty in-scope extension
+   makes the value unrepresented instead of arbitrary.  Both regressions
+   below are true theorems that the pre-fix encoding refuted as Genuine at
+   these exact scopes; the fix must not report them Genuine again. *)
+fun mf_choice_empty_extension_not_genuine () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_timeout 30.0
+      |> Refute.upd_card [(NONE, [1, 2, 3, 4, 5, 6])]
+    val outcome = Refute.refute config ``x <> y ==> CARD {x; y} = 2``
+  in
+    case outcome of
+        Refute.Unknown reasons =>
+          List.exists (String.isSubstring
+            "no counterexample within the tested scopes") reasons
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute MF: CARD via card' choice is not Genuine without an in-scope \
+  \witness"
+val _ = require_msg
+  (check_result mf_choice_empty_extension_not_genuine) (fn () =>
+  "CARD {x;y} = 2 (true since x<>y) was reported Genuine again: the \
+  \Hilbert-choice witness-list guard regressed")
+  (fn () => ()) ()
+
+fun mf_choice_wfrec_empty_extension_not_genuine () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_user_axioms (SOME false)
+      |> Refute.upd_timeout 90.0
+      |> Refute.upd_card [(NONE, [1, 2, 3])]
+    (* [relation$WFREC] applied directly (not via [TotalDefn.Define], whose
+       clean STDEQNS equations never expose the raw WFREC/the_fun form to
+       the model finder) unfolds through [the_fun], whose own definition
+       (relationScript.sml) is [@f. approx R M x f]: the same Hilbert-choice
+       shape as [card'], now over a witness *function* instead of a witness
+       list. *)
+    val outcome = Refute.refute config
+      ``WFREC ($< : num -> num -> bool)
+          (\f n. if n = 0 then [] else (n - 1) :: f (n - 1)) 1 = [0]``
+  in
+    case outcome of
+        Refute.Unknown reasons =>
+          List.exists (String.isSubstring
+            "no counterexample within the tested scopes") reasons
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute MF: WFREC recursion via the_fun choice is not Genuine without a \
+  \witness"
+val _ = require_msg
+  (check_result mf_choice_wfrec_empty_extension_not_genuine) (fn () =>
+  "a true WFREC recursion equation was reported Genuine again: the_fun's \
+  \choice witness-function guard regressed")
+  (fn () => ()) ()
+
+fun mf_choice_witness_in_scope_still_genuine () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_timeout 30.0
+      |> Refute.upd_card [(NONE, [1, 2, 3, 4, 5, 6])]
+    (* Positive control: the empty list [] is always representable, so
+       card' {} always has an in-scope witness and the guard must not
+       touch this Genuine verdict. *)
+    val outcome = Refute.refute config ``CARD ({} : 'a set) = 1``
+  in
+    case outcome of
+        Refute.Counterexample
+          [{certainty = Refute.Genuine, cert = NONE, ...}] => true
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute MF: CARD via card' choice stays Genuine with an in-scope witness"
+val _ = require_msg
+  (check_result mf_choice_witness_in_scope_still_genuine) (fn () =>
+  "CARD {} = 1, refuted by the always-in-scope [] witness, was weakened \
+  \by the choice empty-extension guard")
+  (fn () => ()) ()
+
+fun mf_choice_provably_empty_predicate_escapes_guard () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_timeout 30.0
+      |> Refute.upd_card [(SOME ``:num``, [2]), (NONE, [1, 2, 3, 4, 5, 6])]
+      |> Refute.upd_max_potential 1
+      |> Refute.upd_binary_ints (SOME false)
+    (* [j < 3 /\ j > 3] is empty over num -- DECIDE proves [~?j. ...] --
+       so the provably-empty escape (unfold_defs_in_term's [min$@]
+       branch, Refute_ModelFinder_HOL.sml) stands the guard down and the
+       raw, unguarded [$@] encoding runs, exactly as it did before the
+       guard existed.  Without the escape the blanket guard would report
+       [Unknown] here instead, the same loss the escape also restores for
+       "Core_Nits Eps bounded three" below.  [upd_binary_ints (SOME false)]
+       sidesteps an unrelated landmine, not this escape: any numeral above 3
+       also turns on whole-formula binarization later in the pipeline
+       (preprocess_formulas, Refute_ModelFinder_Preproc.sml), which recodes
+       [num] as a word carrier and would leave this test unable to tell the
+       escape's effect apart from binarization's.  "Core_Nits Eps bounded
+       three" below sidesteps the same landmine by keeping every numeral in
+       its predicate at or below 3. *)
+    val outcome = Refute.refute config
+      ``($@ (\j : num. j < 3 /\ j > 3)) <> 0``
+  in
+    case outcome of
+        Refute.Counterexample [{certainty = Refute.Genuine, ...}] => true
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute MF: a provably empty choice predicate escapes the min$@ guard"
+val _ = require_msg
+  (check_result mf_choice_provably_empty_predicate_escapes_guard) (fn () =>
+  "a provably empty Hilbert-choice predicate no longer escapes the \
+  \min$@ guard")
+  (fn () => ()) ()
+
+(* [j = 3] alone would not discriminate: destroy_existential_equalities
+   (Refute_ModelFinder_Preproc.sml) collapses the guard's [?x. x = 3]
+   condition to [T] and erases the conditional entirely, so the encoded
+   problem carries no [refute$unknown] and the observed [Unknown] verdict
+   at [num] card 2 comes solely from numeral 3 being unrepresented there,
+   a fact that predates this guard.  [j = 2 \/ j = 3] has two witnesses,
+   so [destroy_existential_equalities]'s single-equality substitution does
+   not apply and [?x. x=2 \/ x=3] survives unfolding; the encoded problem
+   below is checked to actually carry the guard's [unknown]. *)
+fun mf_choice_witness_out_of_scope_carries_unknown () =
+  let
+    val context = fresh_mf_context ()
+    val goal = ``($@ (\j : num. j = 2 \/ j = 3)) <> 0``
+    val negated = boolSyntax.mk_imp (goal, boolSyntax.F)
+    val (nondefs, defs, _, _, _, _) = MFP.preprocess_formulas context []
+      negated
+    val target = MFH.unknown_value ``:num``
+  in
+    List.exists
+      (fn term => not (null (HolKernel.find_terms
+        (fn sub => Term.aconv sub target) term)))
+      (nondefs @ defs)
+  end
+
+fun mf_choice_witness_out_of_scope_not_genuine () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_timeout 30.0
+      |> Refute.upd_card [(SOME ``:num``, [2]), (NONE, [1, 2, 3, 4, 5, 6])]
+      |> Refute.upd_max_potential 1
+      |> Refute.upd_binary_ints (SOME false)
+    (* [j = 2 \/ j = 3] has real HOL witnesses, so neither escape applies:
+       2 and 3 are not [bool]-typed, and DECIDE refuses to prove the
+       (false) claim that the predicate is empty.  At [num] card 2 both
+       witnesses are out of scope, so the guard must still fire and read
+       the choice as unrepresented instead of an arbitrary in-scope atom.
+       Asserted against the bounds-relative reason, not merely "not
+       Genuine": a plain timeout would also satisfy "not Genuine".
+       [upd_binary_ints (SOME false)] and keeping the witnesses at or
+       below 3 sidestep the same binarization landmine documented above
+       [mf_choice_provably_empty_predicate_escapes_guard]. *)
+    val outcome = Refute.refute config
+      ``($@ (\j : num. j = 2 \/ j = 3)) <> 0``
+  in
+    mf_choice_witness_out_of_scope_carries_unknown () andalso
+    (case outcome of
+         Refute.Unknown reasons =>
+           List.exists (String.isSubstring
+             "no counterexample within the tested scopes") reasons
+       | _ => false)
+  end
+
+val _ = tprint
+  "Refute MF: a choice predicate with an out-of-scope witness is not \
+  \Genuine"
+val _ = require_msg
+  (check_result mf_choice_witness_out_of_scope_not_genuine) (fn () =>
+  "a Hilbert-choice predicate with a real but out-of-scope witness was \
+  \reported Genuine, or its encoded problem no longer carries the \
+  \guard's unknown: the witness escape misfired")
+  (fn () => ()) ()
+
+(* An unapplied [$@] (passed as a value, not applied to a predicate
+   directly) used to reach [unfold_defs_in_term]'s [min$@] branch with
+   [arguments = []], take the [ordinary ()] escape unchanged, and only
+   get applied to its predicate afterwards by the generic comb case,
+   which does not re-walk the result through the guard.  Fixed by
+   eta-expanding the bare occurrence, mirroring the GSPEC branch's own
+   [] case (Refute_ModelFinder_HOL.sml). *)
+fun mf_choice_unapplied_occurrence_not_genuine () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_timeout 30.0
+      |> Refute.upd_card [(NONE, [3])]
+    val outcome = Refute.refute config
+      ``!z. ((\g. g (\x. x > z /\ x <= SUC z)) $@) <> 0``
+  in
+    case outcome of
+        Refute.Counterexample cexs =>
+          not (List.exists
+            (fn c => #certainty c = Refute.Genuine) cexs)
+      | _ => true
+  end
+
+val _ = tprint
+  "Refute MF: an unapplied min$@ occurrence does not bypass the guard"
+val _ = require_msg
+  (check_result mf_choice_unapplied_occurrence_not_genuine) (fn () =>
+  "an eta-contracted $@ passed as a value bypassed the choice guard and \
+  \was reported Genuine")
+  (fn () => ()) ()
+
+(* [choice_predicate_provably_empty] (Refute_ModelFinder_HOL.sml) used to
+   gate the DECIDE attempt on term_size alone, but DECIDE's cost is driven
+   by how many case-splitting arithmetic generators it must expand, not
+   by size, so a size-only gate can neither block a small-but-expensive
+   predicate nor allow a large-but-cheap one.
+
+   [subtraction_under_budget] is genuinely empty, under the size ceiling,
+   and unbounded DECIDE proves it -- yet it must still be declined,
+   because [choice_predicate_cheap_fragment] rejects its subtraction
+   before size is even considered.  [linear_comparable_size] is the same
+   shape at a comparable size but built only from order comparisons: the
+   fragment must accept it and the escape must fire.  [linear_over_budget]
+   and its alpha-renamed twin are fragment-clean and unbounded-DECIDE-cheap
+   but past the size ceiling, so the escape must still decline; the twin
+   also pins that a second, alpha-equivalent call hits the [Term.aconv]
+   memo instead of growing it.  A last check pins the attempt cap
+   directly: with [choice_predicate_attempts] preset to the cap, a fresh,
+   cheap, in-budget, genuinely empty predicate is still declined. *)
+fun mf_choice_predicate_empty_escape_respects_fragment_and_size_gates () =
+  let
+    val context = fresh_mf_context ()
+    val subtraction_under_budget = ``\j:num. j < 3 /\ j > 3 /\
+      (j - 1 = j - 1) /\ (j - 2 = j - 2) /\ (j - 3 = j - 3)``
+    val linear_comparable_size = ``\j:num. j < 3 /\ j > 3 /\
+      (j < 1 \/ j >= 1) /\ (j < 2 \/ j >= 2) /\ (j < 3 \/ j >= 3)``
+    val linear_over_budget = ``\j:num. j < 3 /\ j > 3 /\
+      (j < 1 \/ j >= 1) /\ (j < 2 \/ j >= 2) /\ (j < 3 \/ j >= 3) /\
+      (j < 4 \/ j >= 4)``
+    val linear_over_budget_alpha = ``\k:num. k < 3 /\ k > 3 /\
+      (k < 1 \/ k >= 1) /\ (k < 2 \/ k >= 2) /\ (k < 3 \/ k >= 3) /\
+      (k < 4 \/ k >= 4)``
+    fun exists_of predicate witness =
+      boolSyntax.mk_exists
+        (witness, Term.beta_conv (Term.mk_comb (predicate, witness)))
+    val sub_claim = exists_of subtraction_under_budget ``j:num``
+    val lin_claim = exists_of linear_comparable_size ``j:num``
+    val over_claim = exists_of linear_over_budget ``j:num``
+    val over_claim_alpha = exists_of linear_over_budget_alpha ``k:num``
+
+    val fragment_rejects_subtraction =
+      not (MFH.choice_predicate_cheap_fragment subtraction_under_budget)
+    val fragment_accepts_linear =
+      MFH.choice_predicate_cheap_fragment linear_comparable_size andalso
+      MFH.choice_predicate_cheap_fragment linear_over_budget
+    val under_budget =
+      Term.term_size subtraction_under_budget <=
+        MFH.choice_predicate_decide_budget andalso
+      Term.term_size linear_comparable_size <=
+        MFH.choice_predicate_decide_budget
+    val over_budget =
+      Term.term_size linear_over_budget > MFH.choice_predicate_decide_budget
+    val decides_unbudgeted =
+      Lib.can bossLib.DECIDE (boolSyntax.mk_neg sub_claim) andalso
+      Lib.can bossLib.DECIDE (boolSyntax.mk_neg over_claim)
+
+    val subtraction_declined =
+      not (MFH.choice_predicate_provably_empty context
+        subtraction_under_budget sub_claim)
+    val linear_escapes =
+      MFH.choice_predicate_provably_empty context
+        linear_comparable_size lin_claim
+    val over_budget_declined =
+      not (MFH.choice_predicate_provably_empty context
+        linear_over_budget over_claim)
+    val cache_after_first_over = length (!(#choice_empty_cache context))
+    val over_budget_declined_again =
+      not (MFH.choice_predicate_provably_empty context
+        linear_over_budget_alpha over_claim_alpha)
+    val cache_after_second_over = length (!(#choice_empty_cache context))
+
+    val cap_context = fresh_mf_context ()
+    val () = #choice_predicate_attempts cap_context :=
+      MFH.choice_predicate_decide_attempt_cap
+    val capped_predicate = ``\j:num. j < 999 /\ j > 999``
+    val capped_claim = exists_of capped_predicate ``j:num``
+    val cap_declined =
+      MFH.choice_predicate_cheap_fragment capped_predicate andalso
+      Term.term_size capped_predicate <= MFH.choice_predicate_decide_budget
+      andalso
+      not (MFH.choice_predicate_provably_empty cap_context
+        capped_predicate capped_claim)
+  in
+    fragment_rejects_subtraction andalso fragment_accepts_linear andalso
+    under_budget andalso over_budget andalso decides_unbudgeted andalso
+    subtraction_declined andalso linear_escapes andalso
+    over_budget_declined andalso cache_after_first_over = 3 andalso
+    over_budget_declined_again andalso cache_after_second_over = 3 andalso
+    cap_declined
+  end
+
+val _ = tprint
+  "Refute MF: the provably-empty choice escape gates by fragment, size, \
+  \then attempt count"
+val _ = require_msg
+  (check_result
+    mf_choice_predicate_empty_escape_respects_fragment_and_size_gates)
+  (fn () =>
+  "a choice predicate's provably-empty escape either let a case-splitting \
+  \generator through under budget, blocked a fragment-clean linear \
+  \predicate, mis-gated the size ceiling, failed to memoise an \
+  \alpha-equivalent re-occurrence, or ignored the attempt cap")
   (fn () => ()) ()
 
 fun mf_cert_pin_holds MfCertIgnored _ = true
@@ -25356,9 +25753,24 @@ val mf_core_nits_cases =
      ExpectGenuine MfCertNone true
      (fn config => config |> mf_core_num_card 6
        |> Refute.upd_max_potential 1),
+   (* [j > SUC 2 /\ j <= 4] holds of exactly one num, 4, so SELECT_AX
+      forces [$@ P = 4] regardless of which value the choice operator
+      picks -- a singleton predicate leaves no room for arbitrariness.
+      Both [card 2] goals below are therefore HOL theorems: substituting
+      the forced [x = 4] makes [x <> 0] and [x = 4] trivial.  Upstream
+      Isabelle reports Genuine here -- it reads a scope-arbitrary value off
+      Eps without recognizing the real witness lies outside a card-2 scope
+      -- which is the same defect this guard exists to close (see the
+      [min$@] branch, Refute_ModelFinder_HOL.sml); refuting a theorem is
+      an imported upstream bug, not a shape to reproduce.  [x] is
+      genuinely unrepresented at this scope (no in-scope witness for the
+      guard's existential, and 4 is not provably out of reach the way
+      emptiness is, so the provably-empty escape does not apply either),
+      so [Unknown] is the correct, deliberately divergent verdict; do not
+      re-pin these as Genuine. *)
    mf_acceptance_invocation "Core_Nits Eps bounded four nonzero [card 2]"
      ``($@ (\j : num. j > SUC 2 /\ j <= 4)) = x ==> x <> 0``
-     ExpectGenuine MfCertNone false
+     ExpectUnknown MfCertIgnored false
      (fn config => config |> mf_core_num_card 2
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded four nonzero [card 6]"
@@ -25368,7 +25780,7 @@ val mf_core_nits_cases =
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded four exact [card 2]"
      ``($@ (\j : num. j > SUC 2 /\ j <= 4)) = x ==> x = 4``
-     ExpectGenuine MfCertNone false
+     ExpectUnknown MfCertIgnored false
      (fn config => config |> mf_core_num_card 2
        |> Refute.upd_max_potential 1),
    mf_acceptance_invocation "Core_Nits Eps bounded four exact [card 6]"

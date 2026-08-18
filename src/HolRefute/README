@@ -492,6 +492,88 @@ polymorphic domain but only `Potential` over an intrinsically infinite one
 such as `num`, where a bounded scope can never decide the `FINITE`
 disjunct.
 
+Hilbert choice (`min$@`) is otherwise encoded as an uninterpreted function
+pinned only by `refuteTheory`'s `Eps_psimp`, which is vacuous once no
+in-scope value satisfies the predicate; reading an atom off that
+unconstrained relation would silently turn a sound problem into a
+countermodel of a true theorem (`x <> y ==> CARD {x; y} = 2` via `card'`'s
+witness list, and true `WFREC` recursion equations via the `the_fun`
+witness function it unfolds into).  `unfold_defs_in_term`
+(`Refute_ModelFinder_HOL.sml`) inserts a guard at every syntactic
+occurrence -- goal and harvested axiom alike -- with a one-shot rewrite:
+`$@ P` becomes `if (?x. P x) then $@ P else unknown`, so an empty
+in-scope extension reports the value as unrepresented rather than
+arbitrary.  This is a `[deviation from upstream]`: Isabelle's `Eps_psimp`
+has the identical hole.  `refute$safe_The` (the definite-description
+counterpart also recognized by `is_descr`) is deliberately excluded from
+the guard: as a genuine description its empty extension already yields an
+empty relation, so it is sound as encoded.
+
+"Every syntactic occurrence is guarded" describes insertion, not the final
+encoded problem: a later pass, `destroy_existential_equalities`
+(`Refute_ModelFinder_Preproc.sml`), can collapse a guard's own `?x. x = e`
+condition to `T` and erase the `if` it introduced.  This stays sound for
+two independent reasons.  The bounds signal below is set at insertion
+time, so it survives the erasure regardless of what happens to the `if`.
+And the erased case is itself sound on the same negative-polarity grounds
+as the exact-domain escape below: `e` is either in scope, in which case
+the guard's condition would have been true anyway, or unrepresented, in
+which case `P`'s in-scope reads are `unknown` rather than false and
+`Eps_psimp` still constrains `$@ P`.
+
+Two escapes stand the guard down where the unguarded read is independently
+sound.  Provably-empty: when `~(?x. P x)` is a HOL theorem, HOL itself
+leaves `$@ P` unspecified, so any value is a correct reading; decided by a
+fixed, terminating decision procedure (`bossLib.DECIDE`), never a
+wall-clock-bounded search.  Cost is not a function of size: `DECIDE`
+expands a case-splitting arithmetic generator (subtraction, `PRE`, `DIV`,
+`MOD`, `MIN`, `MAX`, `EXP`, a numeral-typed `COND`, a non-numeral `*`)
+combinatorially, so the attempt is gated by a syntactic fragment check
+first -- any of those generators, or a quantifier, anywhere in the
+predicate keeps the guard without ever calling `DECIDE` -- then a size
+ceiling on what the fragment accepts, then a per-context cap on the
+number of distinct predicates `DECIDE` is ever called on in one Refute
+call; declining at any gate just keeps the guard.  Memoised per predicate
+(`Term.aconv`) since a harvested axiom's predicate can recur across many
+specialized occurrences.  Exact domain: when `P`'s domain type is `bool`,
+every model this module builds interprets `bool` with exactly its two HOL
+elements, never subject to card search or completeness approximation, so
+no in-scope extension can miss a HOL witness by omitting a domain
+element.  A domain element's own read of `P` can still come back
+`unknown` rather than false; the escape is sound there too, but not
+because an unknown read is discarded.  Asserted positively, `Eps_psimp`
+(`P x ==> ~P y ==> ($@ P = y) ==> ($@ P = x)`) puts `P x` at negative
+polarity, and the encoder resolves an unknown or unrepresented read at
+negative polarity to `True` rather than ignoring it
+(`unknown_formula`/`formula_from_opt_atom`,
+`Refute_ModelFinder_Kodkod.sml`), so an unknown read still fires the axiom
+and forces `$@ P` onto a genuine witness -- the escape is sound because
+unknown reads strengthen the axiom, not because they vacate it.  Per-type
+scope exactness for other types is not reachable at this point of the
+pipeline (`unfold_defs_in_term` runs during preprocessing, before any
+scope is chosen), so `bool` is the one case decided statically.  This also
+removes the cost of `bool$COND`'s own defining axiom, which the guard
+would otherwise reach every time it is harvested
+(`arity_of_built_in_const`, `Refute_ModelFinder_HOL.sml`).
+
+A fired guard means a scope may have truncated a real witness, so a clean
+search that finds no model may not conclude whole-space exhaustion from it:
+`choice_guard_inserted`, set whenever the guard is inserted anywhere in a
+problem, vetoes `NoCounterexample` in `total_scope_search`
+(`Refute_ModelFinder.sml`) the same way the scope-completeness check already
+does for a type that is never exact (`num`, `int`, words) -- the search
+instead reports a bounds-relative `Unknown`, and the adaptive scope search
+keeps growing rather than concluding.  This is a deliberate, static,
+per-problem approximation, not a recomputation per scope.
+
+One corpus shape is a deliberate divergence from upstream rather than a bug
+to match: `($@ (\j. j > SUC 2 /\ j <= 4)) = x ==> x = 4` and its `x <> 0`
+sibling are HOL theorems -- the predicate is a num singleton, so
+`SELECT_AX` forces `$@ P = 4` regardless of which value choice picks -- but
+Isabelle reports `Genuine` at a scope too small to contain 4, the same
+scope-arbitrary-read defect this guard exists to close.  HolRefute reports
+`Unknown` instead and does not reproduce the imported bug.
+
 Recorded follow-ups are compute-hosted residual-inspection narrowing; full
 function flattening; higher-order and negative smart-generator modes; `real`
 via Frac; offset interval rewrites such as `lo <= n /\ n < hi`; and eager

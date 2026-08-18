@@ -94,6 +94,9 @@ structure Refute_ModelFinder_HOL = struct
      iterator_table : iterator_table,
      ersatz_table : ersatz list,
      whack_weakening : bool ref,
+     choice_guard_inserted : bool ref,
+     choice_empty_cache : (term * bool) list ref,
+     choice_predicate_attempts : int ref,
      prefix_origins : (string * hol_type) list ref,
      skolems : skolem_info list ref,
      special_funs : special_fun list ref,
@@ -704,6 +707,14 @@ structure Refute_ModelFinder_HOL = struct
     | result_type_after count ty =
         result_type_after (count - 1) (#2 (Type.dom_rng ty))
 
+  (* Excluding boolean-result [bool$COND] routes it through
+     [is_built_in_const] = false, so harvesting picks up its Eps-based
+     COND_DEF axiom, which the [min$@] guard's exact-domain escape
+     (below) then covers for free -- sound, pure overhead, since
+     Refute_ModelFinder_Nut.sml's structural [is_cond] already encodes
+     COND directly.  [is_built_in_const] is not narrowly scoped -- it
+     also gates Refute_ModelFinder_Mono.sml's [is_harmless_axiom] -- so
+     this exclusion is correctness-relevant, not a cleanup. *)
   fun arity_of_built_in_const constant =
     let
       val key = original_const_key constant
@@ -5296,9 +5307,82 @@ structure Refute_ModelFinder_HOL = struct
   val def_inline_threshold_for_booleans = 60
   val def_inline_threshold_for_non_booleans = 20
 
+  (* Provably-empty escape for the [min$@] guard: [~(?x. P x)] is decided
+     by [DECIDE], a fixed terminating procedure, not a wall-clock search;
+     failure -- including a predicate outside its decidable fragment --
+     keeps the guard, so incompleteness here is safe by construction.
+
+     Cost tracks case-splitting, not size: a case-splitting arithmetic
+     generator (subtraction, PRE, DIV, MOD, MIN, MAX, EXP, a numeral-typed
+     COND, a non-numeral [*]) makes [DECIDE] combinatorial, e.g.
+     [j = (a1-b1)+...+(a10-b10)] (size 82, 12.5s), while a larger,
+     generator-free predicate stays cheap, e.g. a 13-clause linear
+     conjunction of order comparisons (size 206, 0.17s).  So
+     [choice_predicate_cheap_fragment] rejects every such generator and
+     every quantifier before size is even considered.
+
+     Three gates run before [DECIDE] ever does: the fragment check; a
+     size ceiling on top of it; and a per-context cap on the number of
+     distinct predicates [DECIDE] is called on, bounding one Refute call's
+     total escape cost by a constant independent of problem size.
+     Declining any gate keeps the guard.  Memoised per predicate
+     ([Term.aconv]): a harvested axiom's predicate can recur across many
+     specialized occurrences in one call. *)
+  val choice_predicate_case_splitting_consts =
+    [{Thy = "arithmetic", Name = "-"}, {Thy = "integer", Name = "int_sub"},
+     {Thy = "prim_rec", Name = "PRE"},
+     {Thy = "arithmetic", Name = "DIV"}, {Thy = "integer", Name = "int_div"},
+     {Thy = "arithmetic", Name = "MOD"}, {Thy = "integer", Name = "int_mod"},
+     {Thy = "arithmetic", Name = "MIN"}, {Thy = "arithmetic", Name = "MAX"},
+     {Thy = "arithmetic", Name = "EXP"}, {Thy = "bool", Name = "COND"}]
+
+  fun choice_predicate_bad_subterm term =
+    boolSyntax.is_forall term orelse boolSyntax.is_exists term orelse
+    boolSyntax.is_exists1 term orelse
+    let val (head, args) = boolSyntax.strip_comb term in
+      Term.is_const head andalso
+      (List.exists (same_key (original_const_key head))
+         choice_predicate_case_splitting_consts orelse
+       ((same_key (original_const_key head) {Thy = "arithmetic", Name = "*"}
+         orelse same_key (original_const_key head)
+           {Thy = "integer", Name = "int_mul"}) andalso
+        (case args of
+             [left, right] => not (is_numeral left andalso is_numeral right)
+           | _ => true)))
+    end
+
+  fun choice_predicate_cheap_fragment predicate =
+    null (HolKernel.find_terms choice_predicate_bad_subterm predicate)
+
+  val choice_predicate_decide_budget = 120
+  val choice_predicate_decide_attempt_cap = 32
+
+  fun choice_predicate_provably_empty
+        ({choice_empty_cache, choice_predicate_attempts, ...} : mf_context)
+        predicate exists_claim =
+    case List.find (fn (other, _) => Term.aconv other predicate)
+           (!choice_empty_cache) of
+        SOME (_, cached) => cached
+      | NONE =>
+          let
+            val eligible =
+              choice_predicate_cheap_fragment predicate andalso
+              Term.term_size predicate <= choice_predicate_decide_budget
+              andalso
+              !choice_predicate_attempts < choice_predicate_decide_attempt_cap
+            val result =
+              eligible andalso
+              (choice_predicate_attempts := !choice_predicate_attempts + 1;
+               Lib.can bossLib.DECIDE (boolSyntax.mk_neg exists_claim))
+          in
+            choice_empty_cache := (predicate, result) :: !choice_empty_cache;
+            result
+          end
+
   fun unfold_defs_in_term
         (context as {case_names, ersatz_table, whacks, total_consts,
-                     whack_weakening, ...} : mf_context) term =
+                     whack_weakening, choice_guard_inserted, ...}
+           : mf_context) term =
     let
       fun whack_matches pattern candidate =
         case (Lib.total Term.dest_thy_const pattern,
@@ -5541,6 +5625,86 @@ structure Refute_ModelFinder_HOL = struct
                      (gspec_expansion (do_term depth function)),
                      process_args depth rest)
                | [] => do_term depth (eta_expand constant 1))
+          else if same_key key {Thy = "min", Name = "@"} then
+            (* [deviation from upstream] Eps_psimp (refuteScript.sml)
+               only constrains $@ P once some in-scope value satisfies P;
+               with no witness it is vacuous, and the raw encoding reads
+               an arbitrary atom off $@, turning a sound problem into a
+               countermodel of a true theorem.  Guard every syntactic
+               occurrence -- goal and harvested axiom alike, since
+               add_axiom (Refute_ModelFinder_Preproc.sml) feeds every
+               axiom back through this pass -- by the one-shot rewrite
+               $@ P ~> if (?x. P x) then $@ P else unknown.  The inner
+               $@ P is not re-walked, so this does not loop.
+               refute$safe_The is excluded: its empty extension already
+               yields an empty relation, so it needs no guard.
+
+               Two escapes stand the guard down where the unguarded read
+               is independently sound: provably-empty, when
+               [~(?x. P x)] is a HOL theorem so HOL itself leaves $@ P
+               unspecified ([choice_predicate_provably_empty] above);
+               and exact domain [bool] (Refute_ModelFinder_Nut.sml
+               hardwires [bool_atom] to card 2), where Eps_psimp asserted
+               positively puts P's occurrence at negative polarity, and
+               the encoder resolves an unknown/unrepresented read at
+               negative polarity to True ([unknown_formula],
+               Refute_ModelFinder_Kodkod.sml) rather than discarding it,
+               so an unknown read still fires the axiom and forces $@ P
+               onto a genuine witness -- sound because unknown reads
+               strengthen the axiom, not because they are ignored.
+               Other domain types are undecided here: this pass runs
+               before any scope exists. *)
+            (case arguments of
+                 predicate :: rest =>
+                   let
+                     val predicate' = do_term depth predicate
+                     val (domain_ty, _) =
+                       Type.dom_rng (Term.type_of predicate')
+                     val choice = Term.mk_comb (constant, predicate')
+                     val applied =
+                       s_betapplys (choice, process_args depth rest)
+                     val result_ty = Term.type_of applied
+                     val witness = Term.variant
+                       (Term.all_vars predicate' @ Term.all_vars applied)
+                       (Term.mk_var ("x", domain_ty))
+                     val nonempty = boolSyntax.mk_exists
+                       (witness, s_betapply (predicate', witness))
+                     (* Decided on [predicate], not [predicate'] (the
+                        [do_term] image): the escape's soundness -- HOL
+                        leaves [$@ P] unspecified when [~(?x. P x)] holds
+                        -- is about the original predicate's HOL
+                        extension, not [do_term]'s rewritten shape.  Both
+                        existentials use [s_betapply], not a bare
+                        [Term.mk_comb]: an un-beta-reduced redex leaves
+                        [DECIDE]'s fragment, silently disabling the
+                        escape. *)
+                     val (orig_domain_ty, _) =
+                       Type.dom_rng (Term.type_of predicate)
+                     val orig_witness = Term.variant
+                       (Term.all_vars predicate)
+                       (Term.mk_var ("x", orig_domain_ty))
+                     val orig_nonempty = boolSyntax.mk_exists
+                       (orig_witness, s_betapply (predicate, orig_witness))
+                   in
+                     if domain_ty = Type.bool orelse
+                        choice_predicate_provably_empty
+                          context predicate orig_nonempty then
+                       applied
+                     else
+                       (* Bounds signal (ii): a guarded occurrence's
+                          [unknown] branch is only a sound read of "no HOL
+                          witness" when the scope this problem is eventually
+                          checked at happens to be exact for [domain_ty] --
+                          unknowable here, before any scope is chosen.  Mark
+                          the problem so a clean search may never conclude
+                          [NoCounterexample] from it (total_scope_search,
+                          Refute_ModelFinder.sml), only a bounds-relative
+                          [Unknown], regardless of which scope actually ran. *)
+                       (choice_guard_inserted := true;
+                        boolSyntax.mk_cond
+                          (nonempty, applied, unknown_value result_ty))
+                   end
+               | [] => do_term depth (eta_expand constant 1))
           else
             (* An ersatz entry names a surrogate the model finder can
                encode, substituted for a constant it cannot.  Most rows
@@ -5582,8 +5746,9 @@ structure Refute_ModelFinder_HOL = struct
           needs, tac_timeout, evals, case_names, def_tables, nondef_table,
           nondefs, simp_table, psimp_table, choice_spec_table, intro_table,
           case_table, fixpoint_cache, iterator_table, ersatz_table,
-          whack_weakening, prefix_origins, skolems, special_funs, wf_cache,
-          constr_cache, ...}
+          whack_weakening, choice_guard_inserted, choice_empty_cache,
+          choice_predicate_attempts,
+          prefix_origins, skolems, special_funs, wf_cache, constr_cache, ...}
          : mf_context) binary_ints : mf_context =
     {max_bisim_depth = max_bisim_depth, boxes = boxes, wfs = wfs,
      user_axioms = user_axioms, debug = debug, whacks = whacks,
@@ -5596,6 +5761,9 @@ structure Refute_ModelFinder_HOL = struct
      intro_table = intro_table, case_table = case_table,
      fixpoint_cache = fixpoint_cache, iterator_table = iterator_table,
      ersatz_table = ersatz_table, whack_weakening = whack_weakening,
+     choice_guard_inserted = choice_guard_inserted,
+     choice_empty_cache = choice_empty_cache,
+     choice_predicate_attempts = choice_predicate_attempts,
      prefix_origins = prefix_origins, skolems = skolems,
      special_funs = special_funs, wf_cache = wf_cache,
      constr_cache = constr_cache}
@@ -5634,6 +5802,9 @@ structure Refute_ModelFinder_HOL = struct
        iterator_table = ref [],
        ersatz_table = current_ersatz_table (),
        whack_weakening = ref false,
+       choice_guard_inserted = ref false,
+       choice_empty_cache = ref [],
+       choice_predicate_attempts = ref 0,
        prefix_origins = ref [],
        skolems = ref [],
        special_funs = ref [],

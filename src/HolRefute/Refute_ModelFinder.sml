@@ -1185,9 +1185,17 @@ fun run_instance deadline started (config : Refute_Core.config)
        types, the scope metadata records both semantic completeness and
        concreteness; forced, unsound finitization is deliberately excluded.
        Empty [all_types] is the constant-formula case and is vacuously
-       covered once its (empty) frontier has been checked. *)
+       covered once its (empty) frontier has been checked.  A guarded
+       [min$@] occurrence (Refute_ModelFinder_HOL.sml,
+       [choice_guard_inserted]) additionally vetoes totality: its [unknown]
+       branch reads as "no HOL witness" only when the scope actually
+       checked happened to be exact for that occurrence's domain type, which
+       this static, problem-wide flag cannot tell apart from a scope that
+       merely truncated one -- so no scope may certify exhaustion while it
+       is set. *)
     fun total_scope_search () =
       !fully_exhausted andalso
+      not (!(#choice_guard_inserted context)) andalso
       not (List.exists Type.is_vartype all_types) andalso
       List.exists (fn scope =>
         scope_checked scope andalso
