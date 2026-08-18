@@ -121,9 +121,12 @@ New features
     `unicode_ok` toggle, an `exclude` list of skipped subdirectories,
     and a `[[h4pedant.dir]]` array of per-subdirectory overrides;
     `h4pedant` with no positional arguments walks up to find the
-    project root and scans the whole tree.  See the *Project
-    files* sub-section of *Maintaining HOL Formalizations with
-    Holmake* in the Description manual.
+    project root and scans the whole tree.  Projects nest: a
+    sub-directory carrying its own `holproject.toml` heads a
+    separate project, governed by its own file rather than the
+    enclosing one's, and `Holmake -r` and `--dirs` account for that.
+    See the *Project files* sub-section of *Maintaining HOL
+    Formalizations with Holmake* in the Description manual.
 
 -   `bossLib` provides three new short names for common tactics:
     `have ‘t’` states an intermediate result, leaving it as the

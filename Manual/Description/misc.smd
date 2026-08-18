@@ -675,17 +675,96 @@ This is distinct from the `--no-project` command-line flag, which
 ignores the file entirely (no `external_includes`, no holpathdb
 registration from it).
 
+#### Nested projects
+
+\index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!nested projects}
+A sub-directory of a project may carry a `holproject.toml` of its
+own.  When it does, that sub-directory heads a *separate* project:
+the enclosing project's discovery walk prunes it, so the nested
+tree is no part of the enclosing project's directory set, and the
+enclosing project's sources are invisible from inside it unless
+the nested project asks for them with `[projects.<id>]`.
+
+Which project governs a given directory is decided by path
+containment: a directory belongs to the **deepest** project root at
+or above it.  So with
+
+```
+cakeml/holproject.toml                       project "cakeml"
+cakeml/misc/                                 -> cakeml
+cakeml/examples/lpr_checker/holproject.toml  project "lpr_checker"
+cakeml/examples/lpr_checker/array/           -> lpr_checker
+```
+
+`cakeml/misc` gets cakeml's directory set as its implicit
+`INCLUDES`, and `.../lpr_checker/array` gets lpr_checker's.  If
+lpr_checker's project file declares `[projects.cakeml]` then
+cakeml's directories are part of lpr_checker's set too, and the
+arrow points only that way — cakeml never sees into lpr_checker.
+
+The source-name clash check is per project for the same reason: two
+directories in two projects that cannot see each other may carry
+the same `Foo.sml` without complaint, while a clash inside one
+project's own set is fatal as before.
+
+A nested project joins the build when either of the following
+holds, and is built by its own project file's rules when it does:
+
+  - some directory of the enclosing project refers into it — an
+    `INCLUDES` entry, or a rule target or prerequisite naming a
+    path inside the nested tree.  (This is what lets a project's
+    top-level `Holmakefile` write
+    `all: examples/compilation/x64/proofs/helloProofTheory.sig`
+    with no further ceremony.)
+
+  - `--recursive-build` (`-r`) is in force, in which case *every*
+    nested project below the scope of the build is drawn in,
+    referred to or not.
+
+Directories reached by an external declared with
+`[projects.<id>]` are likewise governed by that project's own file
+rather than by the consumer's.
+
+#### `-r` and `--dirs` inside a project
+
+\index{Holmake@\holmake!recursive invocation}
+Run anywhere inside a project, `Holmake -r` builds everything that
+project owns: the targets of every one of its directories, plus
+those of every project nested beneath it.  It is the project root
+that scopes this, not `cwd`, so `-r` deep inside a project still
+means the whole project.  Directories of *externals* that live
+outside the project's own tree are dependencies rather than build
+targets, and are built only as far as those targets need.
+
+Without `-r`, an invocation inside a project builds `cwd`'s targets
+and whatever they depend on, exactly as a classical invocation
+would.
+
+A recursive *clean* (`-r clean` and friends) has the same reach:
+the project's own directories and those of the projects nested
+inside it.
+
+`--dirs d1 d2 ...` treats each named directory as a root governed
+by the project file at or above *it*.  Naming a sub-project's root
+therefore behaves as if `Holmake` had been invoked in it, whether
+the command is issued from the enclosing project or from a
+directory in no project at all.  Adding `-r` extends each named
+root to everything beneath it that a project owns.
+
 #### When project mode does **not** activate
 
-`Holmake` decides once, at startup, whether project mode is on,
-based on whether a `holproject.toml` file lies on the chain of
-ancestor directories above `cwd`.  Project mode does *not* fire
-when `Holmake` walks into a project's directory tree via classical
-`INCLUDES` from an aggregator like `src/parallel_builds/core`: the
-aggregator's invocation is from outside the project and there's no
-project file in its own ancestor chain.  In that case the
-project's directories behave classically; their `INCLUDES` lines
-drive build order in the usual way.
+`Holmake` decides at startup which project governs `cwd`, by
+walking the chain of ancestor directories above it.  Project mode
+does *not* fire when `Holmake` walks into a project's directory
+tree via classical `INCLUDES` from an aggregator like
+`src/parallel_builds/core`: the aggregator's invocation is from
+outside the project and there's no project file in its own ancestor
+chain.  In that case the project's directories behave classically;
+their `INCLUDES` lines drive build order in the usual way.  (This
+is the one place where a directory's project file is deliberately
+disregarded; the nested-project rules above apply to a build that
+started inside some project, or that named the directory to
+`--dirs`.)
 
 The `--no-project` command-line flag suppresses project-mode
 detection regardless of `holproject.toml`'s presence; useful for
@@ -764,9 +843,12 @@ ancestor chain, so mutual references between *sibling* roots no
 longer trip the `INCLUDES`-loop detector — but a genuine cycle
 within one root's `INCLUDES` chain is still reported.  Each
 directory reachable from any root is scanned and added to the
-unified graph exactly once.  Clean targets (`clean`,
-`cleanDeps`, `cleanAll`) are rejected as positional arguments
-when `--dirs` is given; supply at least one directory.
+unified graph exactly once.  Each root is governed by the
+`holproject.toml` at or above *it*, so a root that is a project's
+own top behaves as if `Holmake` had been invoked there — see
+*Project files* above.  Clean targets (`clean`, `cleanDeps`,
+`cleanAll`) are rejected as positional arguments when `--dirs` is
+given; supply at least one directory.
 
 **`-f <theory>`** Toggles whether or not a theory should be built
 in “fast” mode.  Fast building causes tactic proofs (invocations
@@ -884,6 +966,10 @@ all “includes” directories (which is not done otherwise).  When
 building normally, all targets in “includes” directories are
 built; normally only dependencies of targets in the current
 directory are built.
+
+Inside a project (see *Project files* above) `-r` means the whole
+project: the targets of every one of its directories, and of every
+project nested beneath it.
 
 **`--rebuild_deps`** Forces `Holmake` to always rebuild the
 dependency information for files it examines, whether or not it
