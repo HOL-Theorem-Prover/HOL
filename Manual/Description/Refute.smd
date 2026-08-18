@@ -791,6 +791,15 @@ Counterexample search is bounded and incomplete.  In particular:
   exact on a genuinely finite or polymorphic domain, but only `Potential`
   over an intrinsically infinite domain, where the encoding's finiteness
   disjunct can never be decided from a bounded scope;
+* `pred_set$CARD` and `pred_set$SUM_IMAGE` are also encoded through
+  builtin ersatz definitions, both built on the same
+  guarded-Hilbert-choice witness list described below
+  (`pred_set$SUM_SET`, being `SUM_IMAGE I`, reaches the latter through
+  its own defining equation).  These rows are liberal, not exact: a
+  missing witness list degrades a verdict instead of producing a
+  spurious `Genuine` refutation, but also means `NoCounterexample` is
+  never available through them, regardless of the element type's
+  finiteness;
 * Hilbert choice (`min$@`) is otherwise an uninterpreted function; a
   predicate with no in-scope witness would read an arbitrary value off it,
   so the model finder inserts a guard at every syntactic occurrence and

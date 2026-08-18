@@ -3783,13 +3783,20 @@ fun mf_builtins_numerals_sets_and_ersatz () =
       ``GSPEC (\n : num. (x : num, n = 0))``
     val card = ``CARD ({T; F} : bool set)``
     val wf_goal = ``WF (R : num -> num -> bool)``
+    val sum_goal = ``SUM_IMAGE (f : num -> num) ({0; 1; 2} : num set)``
+    val sum_set_goal = ``SUM_SET ({0; 1; 2} : num set)``
     val unfolded_set = MFH.unfold_defs_in_term mf_hol_context set_builder
     val unfolded_open_set = MFH.unfold_defs_in_term mf_hol_context
       open_set_builder
     val unfolded_card = MFH.unfold_defs_in_term mf_hol_context card
     val unfolded_wf = MFH.unfold_defs_in_term mf_hol_context wf_goal
+    val unfolded_sum = MFH.unfold_defs_in_term mf_hol_context sum_goal
+    val unfolded_sum_set = MFH.unfold_defs_in_term mf_hol_context
+      sum_set_goal
     val card_axioms = MFH.equational_fun_axioms mf_hol_context
       ``card' : 'a set -> num``
+    val sum_set_axioms = MFH.equational_fun_axioms mf_hol_context
+      ``SUM_SET``
     val ersatz_table = MFH.current_ersatz_table ()
     val boolean_conditional = ``if b then T else F``
     val unfolded_conditional = MFH.unfold_defs_in_term mf_hol_context
@@ -3851,7 +3858,28 @@ fun mf_builtins_numerals_sets_and_ersatz () =
     ersatz_maps ersatz_table {Thy = "relation", Name = "WF"}
       {Thy = "refute", Name = "wf'"} andalso
     contains_constant {Thy = "refute", Name = "wf'"} unfolded_wf andalso
-    not (contains_constant {Thy = "relation", Name = "WF"} unfolded_wf)
+    not (contains_constant {Thy = "relation", Name = "WF"} unfolded_wf) andalso
+    ersatz_maps ersatz_table {Thy = "pred_set", Name = "SUM_IMAGE"}
+      {Thy = "refute", Name = "sum'"} andalso
+    contains_constant {Thy = "refute", Name = "sum'"} unfolded_sum andalso
+    not (contains_constant {Thy = "pred_set", Name = "SUM_IMAGE"}
+      unfolded_sum) andalso
+    (* SUM_SET (= SUM_IMAGE I, pred_setScript.sml) has no row of its own
+       and needs none.  [is_equational_fun] keeps it un-inlined, exactly
+       like any other defined constant, so the term still reads SUM_SET
+       after unfolding; what carries the encoding is its harvested
+       equation [!x. SUM_SET x = SUM_IMAGE I x], which reaches the
+       SUM_IMAGE row when preprocessing feeds it back through this same
+       pass (add_axiom, Refute_ModelFinder_Preproc.sml).  Pinning that
+       route -- rather than a row -- is what keeps SUM_SET encodable. *)
+    not (List.exists (fn {original, ...} =>
+      MFH.same_key original {Thy = "pred_set", Name = "SUM_SET"})
+      ersatz_table) andalso
+    contains_constant {Thy = "pred_set", Name = "SUM_SET"}
+      unfolded_sum_set andalso
+    List.exists (fn axiom =>
+      contains_constant {Thy = "refute", Name = "sum'"}
+        (MFH.unfold_defs_in_term mf_hol_context axiom)) sum_set_axioms
   end
 
 val _ = require_msg
@@ -24154,6 +24182,58 @@ val _ = require_msg
   "WF over num either failed to refute or was not honestly liberal")
   (fn () => ()) ()
 
+(* sum'_def (refuteScript.sml) is liberal, not faithful -- see
+   card'_def's comment for the full argument.  A literal,
+   explicitly-enumerated set always has a distinct witness list in scope,
+   so a true SUM_IMAGE/SUM_SET statement over one must search cleanly to
+   [Unknown]: bounds-relative, since [choice_guard_inserted] vetoes
+   [NoCounterexample] on every occurrence of this shape, so a confirmed
+   [NoCounterexample] is never available even though no counterexample
+   exists.  Pins the "no counterexample within the tested scopes" reason:
+   a timeout Unknown cannot substitute for that fully-exhausted,
+   zero-donno search (0.4s per term here against the 30s budget).
+
+   What discriminates the row is the reported scope: the sum' witness
+   list makes [num list] a carrier the search sizes, and nothing else in
+   either term does.  Measured with the [builtin_ersatz] SUM_IMAGE row
+   removed, both terms instead search SUM_IMAGE's own ITSET unfolding,
+   reporting scopes over [num itself -> num] and [(num -> bool) # num]
+   and exhausting only 4 of 6 and 3 of 6 emitted scopes in the same
+   budget -- and symbolic-set goals such as [SUM_IMAGE f {a} = f a],
+   clean here, time out there outright.  The scope pin is the
+   speed-independent half of that: ITSET's encoding never sizes a list
+   carrier however fast the machine is. *)
+fun mf_sum_ersatz_literal_witness_regression () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_timeout 30.0
+      |> Refute.upd_card [(NONE, [1, 2, 3, 4, 5, 6])]
+    val outcome1 = Refute.refute config
+      ``SUM_IMAGE (\e:num. e) ({0; 1; 2} : num set) = 3``
+    val outcome2 = Refute.refute config
+      ``SUM_SET ({0; 1; 2} : num set) = 3``
+    fun is_bounds_clean (Refute.Unknown reasons) =
+          List.exists (String.isSubstring
+            "no counterexample within the tested scopes") reasons andalso
+          List.exists (String.isSubstring "card num list") reasons
+      | is_bounds_clean _ = false
+  in
+    is_bounds_clean outcome1 andalso is_bounds_clean outcome2
+  end
+
+val _ = tprint
+  "Refute MF: SUM_IMAGE/SUM_SET over a literal set search cleanly over \
+  \the sum' witness-list carrier"
+val _ = require_msg
+  (check_result mf_sum_ersatz_literal_witness_regression) (fn () =>
+  "SUM_IMAGE/SUM_SET over a literal set did not exhaust its scopes over \
+  \a list carrier: the sum' ersatz row is not carrying the encoding")
+  (fn () => ()) ()
+
 (* Every Definition-style recursive function is internally a WFREC term
    whose termination witness is [@R. WF R /\ ...]; the wf' ersatz must not
    reach into that and weaken or break an ordinary recursive definition.
@@ -25947,7 +26027,38 @@ val mf_refute_nits_cases =
      ExpectGenuine MfCertNone false mf_same_config,
    mf_acceptance_invocation "Refute_Nits WF irreflexive [rf3]"
      ``WF (R : rf3 -> rf3 -> bool) ==> ~R x x``
-     ExpectNone MfCertIgnored false mf_same_config]
+     ExpectNone MfCertIgnored false mf_same_config,
+   (* sum'_def (refuteScript.sml): both goals reach it, SUM_SET through
+      its own equation (see builtin_ersatz, Refute_ModelFinder_HOL.sml).
+      The row is liberal, not exact -- see card'_def's comment
+      (refuteScript.sml) -- and the [min$@] guard it goes through
+      (unfold_defs_in_term, Refute_ModelFinder_HOL.sml) fires
+      unconditionally on the witness-list shape, so
+      [choice_guard_inserted] is always set and no scope bound this
+      corpus tries can ever certify totality (total_scope_search,
+      Refute_ModelFinder.sml).  This config's [max_potential = 0]
+      (mf_refute_nits_config, above) means only the sound problem variant
+      is ever searched (run_batch, Refute_ModelFinder.sml), so the
+      testing verdict alone is [Genuine] -- never require a certificate
+      for that (SETTLED, CLAUDE.md); [certainty] comes from
+      [fallback_certainty].  [MfCertSome] instead pins that the model
+      replay reproves the original SUM_IMAGE/SUM_SET goal -- not sum',
+      which the certificate never mentions.  It gets there through
+      [equality_portfolio] (Refute_Cert.sml), whose rounds alternate
+      [computeLib.the_compset] evaluation with srw_ss simplification;
+      [nocompute] on SUM_IMAGE_DEF/SUM_SET_DEF only keeps those two
+      equations out of the automatic compute set, and pred_setLib puts
+      SUM_SET_DEF, [CONJUNCT1 SUM_IMAGE_THM] and a SUM_IMAGE_CONV into
+      the compset by hand.  [certainty] and
+      [cert] stay independent axes.  The truth-side twin lives in the
+      dedicated regression above
+      (mf_sum_ersatz_literal_witness_regression). *)
+   mf_acceptance_invocation "Refute_Nits SUM_IMAGE nonzero"
+     ``SUM_IMAGE (f : 'a -> num) (s : 'a set) = 0``
+     ExpectGenuine MfCertSome false mf_same_config,
+   mf_acceptance_invocation "Refute_Nits SUM_SET nonzero"
+     ``SUM_SET (s : num set) = 0``
+     ExpectGenuine MfCertSome false mf_same_config]
 
 val mf_refute_nits_group : mf_acceptance_group =
   {name = "Refute_Nits", configure = mf_refute_nits_config,
@@ -26149,7 +26260,7 @@ val _ = require_msg (check_result (fn () =>
      Refute counts source cases.  Manual has 31 source cases and five
      repeated option/eval invocations. *)
   length mf_core_nits_cases = 38 andalso
-  length mf_refute_nits_cases = 43 andalso
+  length mf_refute_nits_cases = 45 andalso
   length mf_manual_nits_cases = 36 andalso
   length mf_hotel_nits_cases = 1 andalso
   List.all mf_executable_genuine_pin_is_some
@@ -27387,11 +27498,11 @@ val _ = require_msg
     "a sound but inexact model was charged to the potential budget")
   (fn () => ()) ()
 
-(* An ersatz entry substitutes a faithful surrogate -- CARD by card', each
-   rat operation by its normalized Frac counterpart -- so it changes no
-   model in either direction and may not be recorded as a semantic
-   weakening.  The fixed rational scopes still cannot cover the infinite
-   type, however, so clean exhaustion is bounds-relative [Unknown]. *)
+(* An ersatz entry can substitute a faithful surrogate -- each rat
+   operation by its normalized Frac counterpart -- so it changes no model
+   in either direction and may not be recorded as a semantic weakening.
+   The fixed rational scopes still cannot cover the infinite type,
+   however, so clean exhaustion is bounds-relative [Unknown]. *)
 fun mf_ersatz_absence_is_bounds_relative () =
   not (Refute_Forl.is_configured ()) orelse
   let

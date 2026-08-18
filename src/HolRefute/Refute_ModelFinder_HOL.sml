@@ -4267,7 +4267,14 @@ structure Refute_ModelFinder_HOL = struct
     [{original = {Thy = "pred_set", Name = "CARD"},
       replacement = {Thy = "refute", Name = "card'"}},
      {original = {Thy = "relation", Name = "WF"},
-      replacement = {Thy = "refute", Name = "wf'"}}]
+      replacement = {Thy = "refute", Name = "wf'"}},
+     (* pred_set$SUM_SET (= SUM_IMAGE I) gets no row of its own: it is an
+        ordinary defined constant, so the encoder constrains it by its
+        harvested equation, whose body reaches this row instead
+        (mf_builtins_numerals_sets_and_ersatz and
+        mf_sum_ersatz_literal_witness_regression, selftest.sml). *)
+     {original = {Thy = "pred_set", Name = "SUM_IMAGE"},
+      replacement = {Thy = "refute", Name = "sum'"}}]
 
   fun register_ersatz replacement =
     let
@@ -5707,16 +5714,19 @@ structure Refute_ModelFinder_HOL = struct
                | [] => do_term depth (eta_expand constant 1))
           else
             (* An ersatz entry names a surrogate the model finder can
-               encode, substituted for a constant it cannot.  Most rows
-               are faithful: CARD/card' and each rat operation/Frac
-               counterpart denote the same function (argument in
-               refuteScript), so substitution changes no model either
-               direction.  WF/wf' is deliberately liberal instead:
-               wf'_def's [unknown] disjunct is a real weakening marker on
-               an infinite domain, lowered to [Cst Unknown] and read by
-               unknown_formula (Refute_ModelFinder_Kodkod.sml); it is
-               accounted for by the sound/unsound problem pair each scope
-               generates (run_batch, Refute_ModelFinder.sml). *)
+               encode, substituted for a constant it cannot.  Some rows
+               are faithful: each rat operation/Frac counterpart denotes
+               the same function outright.  CARD/card' and SUM_IMAGE/sum'
+               are liberal instead, disagreeing with their originals past
+               FINITE -- see card'_def's comment
+               (refuteScript.sml) for why that never turns a true goal
+               into a reported Genuine countermodel.  WF/wf' is liberal
+               on a different axis: wf'_def's [unknown] disjunct is a
+               real weakening marker on an infinite domain, lowered to
+               [Cst Unknown] and read by unknown_formula
+               (Refute_ModelFinder_Kodkod.sml); it is accounted for by
+               the same sound/unsound problem pair each scope generates
+               (run_batch, Refute_ModelFinder.sml). *)
             case replacement_for ersatz_table constant of
                 SOME replacement =>
                   if depth >= unfold_max_depth then

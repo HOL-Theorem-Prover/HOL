@@ -490,7 +490,23 @@ as `CARD`: `WF` is swapped for `refuteTheory`'s `wf' R = (!x. ~TC R x x) /\
 (FINITE (\p. R (FST p) (SND p)) \/ unknown)`, exact on a genuinely finite or
 polymorphic domain but only `Potential` over an intrinsically infinite one
 such as `num`, where a bounded scope can never decide the `FINITE`
-disjunct.
+disjunct.  `pred_set$SUM_IMAGE` is defined by an `ITSET` fold, whose
+unfolding the encoder handles badly: measured against a 30s budget, it
+sizes scopes over `num itself -> num` and `(num -> bool) # num`,
+exhausts four of the six emitted scopes of `SUM_IMAGE (\e. e) {0;1;2} =
+3` where the ersatz encoding exhausts all six, and times out outright on
+a symbolic-set goal such as `SUM_IMAGE f {a} = f a`.  So it too takes an
+ersatz row, `refuteTheory`'s `sum' f s = if FINITE s then
+SUM (MAP f (@xs. set xs = s /\ ALL_DISTINCT xs)) else 0`:
+the same distinct-witness-list construction `card'` counts on, and it
+disagrees with `SUM_IMAGE` past `FINITE` the same way `card'` disagrees
+with `CARD`.  Both rows are liberal, not faithful: the `min$@` guard
+below (see "Hilbert choice") keeps a missing witness list from ever
+turning that disagreement into a spurious `Genuine` result -- see
+`card'_def`'s comment (`refuteScript.sml`) for the full argument.
+`pred_set$SUM_SET` (`= SUM_IMAGE I`) needs no row of its own: it is an
+ordinary defined constant, so the encoder constrains it by its harvested
+equation, and the equation's body reaches the `SUM_IMAGE` row.
 
 Hilbert choice (`min$@`) is otherwise encoded as an uninterpreted function
 pinned only by `refuteTheory`'s `Eps_psimp`, which is vacuous once no

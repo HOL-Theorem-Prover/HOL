@@ -59,10 +59,53 @@ val _ = new_constant ("unknown", ``:'a``)
 val _ = new_constant ("is_unknown", ``:'a -> bool``)
 val _ = new_constant ("safe_The", ``:('a -> bool) -> 'a``)
 
+(* CARD is a [new_specification] (pred_setScript.sml), pinned only at
+   EMPTY and on FINITE INSERT -- past FINITE it is unconstrained, not 0,
+   so card' <> CARD as full HOL4 functions.  Substitution is sound
+   anyway, but liberally rather than faithfully.  card' (and sum' below,
+   built the same way) reach every value through
+   [$@ xs. set xs = s /\ ALL_DISTINCT xs], the identical Hilbert-choice
+   shape unfold_defs_in_term's [min$@] branch (Refute_ModelFinder_HOL.sml)
+   guards on every occurrence: [$@ P] becomes
+   [if (?x. P x) then $@ P else unknown].  Where the model's scope is
+   large enough to contain a list witnessing s's enumeration -- which
+   the adaptive search reaches by growing, always eventually for a
+   literal, explicitly-enumerated set -- card' reads it and agrees with
+   CARD.  Below that scope -- as well as for an abstractly-quantified or
+   too-large set -- the guard reports [unknown] instead of an arbitrary
+   atom, so a divergence from CARD's true value can only ever weaken a
+   verdict, the same sound/unsound problem pair every [unknown]
+   occurrence gets (run_batch, Refute_ModelFinder.sml), never falsify a
+   true goal.  The guard also fires unconditionally on this shape, so
+   [choice_guard_inserted] is always set and no problem going through
+   these rows can ever certify [NoCounterexample]
+   (total_scope_search, Refute_ModelFinder.sml): the rows narrow a
+   search, they do not close one. *)
 Definition card'_def:
   card' (s : 'a set) =
     if FINITE s then
       LENGTH (@xs. set xs = s /\ ALL_DISTINCT xs)
+    else
+      0
+End
+
+(* Port of Nitpick.thy's sum': sum' f A = if finite A then
+   sum_list (map f (SOME xs. set xs = A /\ distinct xs)) else 0, over the
+   same finite-A distinct witness list as card' above -- same liberal
+   substitution argument, see card'_def's comment.  pred_set$SUM_IMAGE is
+   fixed at codomain num (its type is ('a -> num) -> ('a -> bool) ->
+   num), so SUM below is listTheory's num-list summation, matching
+   sum_list at that codomain exactly; xs itself, not MAP f xs, is the
+   repetition-free enumeration of s, so MAP f xs lists f e once per
+   element of s and SUM (MAP f xs) is order-independent because + is
+   commutative and associative -- the same fact that makes SUM_IMAGE's
+   ITSET fold well defined (COMMUTING_ITSET_RECURSES, pred_setScript.sml).
+   SUM_IMAGE is itself ITSET-based ([FINITE s then ... else ARB]), so past
+   FINITE it too is unconstrained rather than 0. *)
+Definition sum'_def:
+  sum' (f : 'a -> num) (s : 'a set) =
+    if FINITE s then
+      SUM (MAP f (@xs. set xs = s /\ ALL_DISTINCT xs))
     else
       0
 End
