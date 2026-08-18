@@ -138,6 +138,11 @@ New features
 Bugs fixed
 ----------
 
+-   `Holmake -r` now overrides `--no_prereqs`, as the documentation
+    has always said it does.  Previously the two fought: `-r` seeded
+    the targets of every `INCLUDES` directory and `--no_prereqs`
+    then demoted every node outside the current directory.
+
 -   Three kernel bugs (github issues [#1838](https://github.com/HOL-Theorem-Prover/HOL/issues/1838), [#1839](https://github.com/HOL-Theorem-Prover/HOL/issues/1839), and [#1840](https://github.com/HOL-Theorem-Prover/HOL/issues/1840)) in CV-compute were fixed.
     Thanks to Ramana Kumar for finding these!
 

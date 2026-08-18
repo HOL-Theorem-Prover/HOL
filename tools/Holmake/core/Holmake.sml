@@ -736,7 +736,15 @@ val show_json = #json coption_value
 val cline_cachekey = #cachekey coption_value
 val cline_rebuild_strategy = #rebuild coption_value
 val quit_on_failure = #quit_on_failure coption_value
-val toplevel_no_prereqs = #no_prereqs coption_value
+(* `-r' overrides `--no_prereqs': seeding every directory's targets and
+   then demoting every out-of-cwd node would leave the two fighting.
+   Announced, because a `--no_prereqs' coming from a Holmakefile's
+   CLINE_OPTIONS is not visible on the command line the user typed. *)
+val toplevel_no_prereqs =
+    #no_prereqs coption_value andalso not (#recursive_build coption_value)
+val () = if #no_prereqs coption_value andalso not toplevel_no_prereqs then
+           diag "startup" (fn _ => "-r overrides --no_prereqs")
+         else ()
 val toplevel_no_overlay = #no_overlay coption_value
 val cline_additional_includes = #includes coption_value
 val cline_always_rebuild_deps = #rebuild_deps coption_value
