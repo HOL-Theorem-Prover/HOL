@@ -1,3 +1,8 @@
+---
+aliases
+- bossLib.qsuff_tac
+---
+
 >>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
 ## `suff`
 
