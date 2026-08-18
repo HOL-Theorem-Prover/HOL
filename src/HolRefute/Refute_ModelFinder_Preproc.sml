@@ -2285,45 +2285,6 @@ structure Refute_ModelFinder_Preproc = struct
         in
           MFH.retype_constant "box" candidate new_ty
         end
-      and box_var_in_def variable =
-        let
-          val old_ty = Term.type_of variable
-          val (_, quantified_body) = boolSyntax.strip_forall original
-          val (_, conclusion) = boolSyntax.strip_imp quantified_body
-          val (left, _) = boolSyntax.dest_eq conclusion
-          val (head, arguments) = HolKernel.strip_comb left
-          val head' =
-            if Term.is_const head orelse Term.is_var head then constant head
-            else head
-          val (argument_tys, _) = boolSyntax.strip_fun (Term.type_of head')
-          fun expected_types expected argument =
-            if Term.aconv argument variable then [expected]
-            else if pairSyntax.is_pair argument andalso
-                    (MFH.is_pair_type expected orelse
-                     MFH.is_pairbox_type expected) then
-              let
-                val (left_arg, right_arg) = pairSyntax.dest_pair argument
-                val expected_args =
-                  if MFH.is_pair_type expected then
-                    let val (left_ty, right_ty) =
-                      pairSyntax.dest_prod expected
-                    in [left_ty, right_ty] end
-                  else MFH.boxed_type_args expected
-              in
-                expected_types (List.nth (expected_args, 0)) left_arg @
-                expected_types (List.nth (expected_args, 1)) right_arg
-              end
-            else if Term.free_in variable argument then [old_ty]
-            else []
-          val demanded = List.concat (ListPair.mapEq
-            (fn (expected, argument) => expected_types expected argument)
-            (List.take (argument_tys, length arguments), arguments))
-          val distinct = List.foldl (fn (ty, result) =>
-            if List.exists (fn other => other = ty) result then result
-            else ty :: result) [] demanded
-        in
-          case distinct of [ty] => ty | _ => old_ty
-        end handle HOL_ERR _ => Term.type_of variable
       and recurse environment polarity candidate =
         if boolSyntax.is_forall candidate then
           quantifier environment polarity false candidate
@@ -2371,11 +2332,19 @@ structure Refute_ModelFinder_Preproc = struct
                  if is_generated_const candidate then
                    constant candidate
                  else
+                   (* Upstream boxes a Free unconditionally and consults its
+                      definition's left-hand side only for a schematic Var
+                      (nitpick_preproc.ML, [do_term]).  HOL4 has no schematic
+                      variables -- what plays that role here is a generated
+                      constant, handled just above -- so every variable left
+                      is a Free.  Making [def] unbox one silently splits it
+                      from its boxed twin in the negated goal, which
+                      specialization puts in the same problem, and leaves the
+                      definition constraining nothing
+                      (mf_box_specialize_free_var_soundness, selftest.sml). *)
                    let val (name, ty) = Term.dest_var candidate
                    in
-                     Term.mk_var (name,
-                       if def then box_var_in_def candidate
-                       else MFH.box_type context MFH.InExpr ty)
+                     Term.mk_var (name, MFH.box_type context MFH.InExpr ty)
                    end)
         else if Term.is_const candidate then constant candidate
         else candidate

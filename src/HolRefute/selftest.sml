@@ -5645,6 +5645,52 @@ val _ = require_msg (check_result mf_preproc_need_path) (fn () =>
   "model-finder need terms did not survive the middle-only path")
   (fn () => ()) ()
 
+(* A goal's free variable must carry one type in every formula the
+   preprocessor emits.  Specialization lifts a goal subterm into a
+   definitional axiom, and boxing used to leave a variable unboxed there
+   while boxing it in the negated goal; the two are then distinct
+   variables, the axiom constrains nothing, and combinTheory.o_THM came
+   back as a Genuine counterexample. *)
+fun mf_box_specialize_free_var_soundness () =
+  let
+    val context = fresh_mf_context ()
+    val o_thm =
+      ``((Fn : (bool -> num) -> num) o (g : bool -> bool -> num)) x =
+        Fn (g x)``
+    val (nondefs, defs, _, _, _, _) =
+      MFP.preprocess_formulas context [] (boolSyntax.mk_neg o_thm)
+    fun types_of term = map Term.type_of
+      (HolKernel.find_terms (fn candidate =>
+         Term.is_var candidate andalso
+         #1 (Term.dest_var candidate) = "Fn") term)
+    val fn_types = List.concat (map types_of (nondefs @ defs))
+    val consistent = not (null defs) andalso not (null nondefs) andalso
+      length fn_types >= 2 andalso
+      List.all (fn ty => ty = hd fn_types) fn_types
+    val refuted =
+      Refute_Forl.is_configured () andalso
+      (case Refute.refute (Refute.default_config
+              |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+              |> Refute.upd_sequential true
+              |> Refute.upd_quiet true
+              |> Refute.upd_user_axioms (SOME false)
+              |> Refute.upd_timeout 90.0
+              |> Refute.upd_card [(NONE, [1, 2])]) o_thm of
+           Refute.Counterexample _ => true
+         | _ => false)
+  in
+    consistent andalso not refuted
+  end
+
+val _ = tprint
+  "Refute MF: a free variable keeps one boxed type across the negated \
+  \goal and the definitions specialization derives from it"
+val _ = require_msg
+  (check_result mf_box_specialize_free_var_soundness) (fn () =>
+  "boxing split a goal free variable between definitional and \
+  \nondefinitional formulas: a HOL theorem is refutable again")
+  (fn () => ()) ()
+
 fun mf_preproc_unfold_goldens () =
   let
     val context = fresh_mf_context ()
