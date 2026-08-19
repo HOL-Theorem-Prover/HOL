@@ -99,7 +99,20 @@ signature Refute = sig
     {qty : hol_type, rty : hol_type, abs : term, rep : term,
      equiv_thm : thm} -> unit
   val register_typedef :
-    {ty : hol_type, abs : term, rep : term, absrep_thm : thm} -> unit
+    {ty : hol_type, abs : term, rep : term, absrep_thms : thm list} -> unit
+  (* Sweeps every theory in [Theory.ancestry] once, in a canonical
+     deterministic order, attempting typedef and quotient harvesting for
+     every type operator those theories declare.  The lazy, demand-driven
+     harvest remains the default; this is an opt-in alternative for a
+     caller who would rather pay the scan upfront.  Returns only what this
+     call newly registered - a type already registered, explicitly or by
+     an earlier harvest, is not listed - so an immediate second call
+     returns empty lists.  [theories_scanned] is this whole ancestry, not
+     the (much narrower, per-operator) set of theories whose theorems were
+     actually inspected. *)
+  val harvest_registrations : unit ->
+    {typedefs : hol_type list, quotients : hol_type list,
+     theories_scanned : string list}
   val register_frac_type :
     {tyop : {Thy : string, Tyop : string},
      ersatz :

@@ -23,7 +23,7 @@ selftest.uo: Refute_SmartGen.uo Refute_Narrow.uo Refute_PropSat.uo \
              Refute_ModelFinder_Mono.uo \
              Refute_ModelFinder_HOL.uo Refute_ModelFinder.uo \
              refuteTableZooTheory.uo refuteUnusedTheory.uo \
-             refuteHarvestTheoremTheory.uo
+             refuteHarvestAbsTheory.uo
 
 # The substrate layer reaches the shared type/term helpers through a
 # `structure Util = Refute_Util` alias, which holdep does not follow, so the
@@ -77,7 +77,7 @@ Refute.uo: Refute_Unused.uo Refute_ModelFinder.uo Refute_QC_Narrow.uo
 # ifdef POLY, so other MLs never enter it.
 selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
               refuteTableZooTheory.uo refuteUnusedTheory.uo \
-              refuteHarvestTheoremTheory.uo
+              refuteHarvestAbsTheory.uo
 	@printf '%s\n' '#!/bin/sh' 'set -e' \
 	  '$(HOLDIR)/bin/hol --gcthreads=1 run selftest' \
 	  'exit 0' > $@

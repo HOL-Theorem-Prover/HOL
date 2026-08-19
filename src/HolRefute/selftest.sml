@@ -8,7 +8,7 @@ open realTheory
 open metricTheory
 open lbtreeTheory
 open pathTheory
-open refuteHarvestTheoremTheory
+open refuteHarvestAbsTheory
 local open finite_mapTheory finite_setTheory in end
 local open wordsLib in end
 local open stringLib in end
@@ -2170,23 +2170,23 @@ val _ = require_msg
 
 val zoo_three_registration =
   {ty = ``:zoo_three``, abs = ``zoo_three_abs``, rep = ``zoo_three_rep``,
-   absrep_thm = zoo_three_absrep}
+   absrep_thms = [zoo_three_absrep]}
 
 val zoo_univ_registration =
   {ty = ``:zoo_univ``, abs = ``zoo_univ_abs``, rep = ``zoo_univ_rep``,
-   absrep_thm = zoo_univ_absrep}
+   absrep_thms = [zoo_univ_absrep]}
 
 val zoo_one_or_two_registration =
   {ty = ``:'a zoo_one_or_two``, abs = ``zoo_one_or_two_abs``,
-   rep = ``zoo_one_or_two_rep``, absrep_thm = zoo_one_or_two_absrep}
+   rep = ``zoo_one_or_two_rep``, absrep_thms = [zoo_one_or_two_absrep]}
 
 val zoo_bounded_registration =
   {ty = ``:'a zoo_bounded``, abs = ``zoo_bounded_abs``,
-   rep = ``zoo_bounded_rep``, absrep_thm = zoo_bounded_absrep}
+   rep = ``zoo_bounded_rep``, absrep_thms = [zoo_bounded_absrep]}
 
 val zoo_check_registration =
   {ty = ``:zoo_check``, abs = ``zoo_check_abs``,
-   rep = ``zoo_check_rep``, absrep_thm = zoo_check_absrep}
+   rep = ``zoo_check_rep``, absrep_thms = [zoo_check_absrep]}
 
 val zoo_manual_my_int_registration =
   {qty = ``:zoo_manual_my_int``, rty = ``:num # num``,
@@ -2263,7 +2263,7 @@ fun mf_quotient_typedef_registrations () =
     val quotient_typedef_overlap_rejected =
       ((Refute.register_typedef
           {ty = ``:rat``, abs = ``rat$abs_rat``, rep = ``rat$rep_rat``,
-           absrep_thm = boolTheory.TRUTH}; false)
+           absrep_thms = [boolTheory.TRUTH]}; false)
        handle HOL_ERR _ => true)
     val _ = Refute.register_typedef zoo_three_registration
     val _ = Refute.register_typedef zoo_univ_registration
@@ -2279,7 +2279,7 @@ fun mf_quotient_typedef_registrations () =
     val malformed_typedef_rejected =
       ((Refute.register_typedef
           {ty = ``:zoo_three``, abs = ``zoo_three_abs``,
-           rep = ``zoo_three_rep``, absrep_thm = boolTheory.TRUTH}; false)
+           rep = ``zoo_three_rep``, absrep_thms = [boolTheory.TRUTH]}; false)
        handle HOL_ERR _ => true)
     val typedef_quotient_overlap_rejected =
       ((Refute.register_quotient
@@ -2716,32 +2716,287 @@ val _ = require_msg (check_result mf_lazy_db_harvest) (fn () =>
   "lazy typedef/quotient DB harvest targets or controls failed")
   (fn () => ()) ()
 
+(* The opt-in whole-ancestry sweep: from cleared registries and without any
+   targeted [harvest_typedef]/[harvest_quotient] call naming it, the sweep
+   alone must register a real distribution typedef the demand-driven path
+   only reaches when a goal actually mentions it; likewise a genuine
+   quotient-package type must land in [#quotients], not [#typedefs] -
+   [real] has both a kernel typedef theorem and a quotient package
+   [_ABS_REP_CLASS], so this is the one case that actually exercises the
+   typedef/quotient preference order; the returned record must name what
+   it newly registered; an immediate repeat call is a no-op; and the sweep
+   must respect the same negative controls the lazy harvest does. *)
+fun mf_harvest_registrations_sweep () =
+  with_quotient_typedef_registries_restored (fn () => let
+    fun mkty Thy Tyop Args =
+      Type.mk_thy_type {Thy = Thy, Tyop = Tyop, Args = Args}
+    val hreal_ty = mkty "hreal" "hreal" []
+    val real_ty = mkty "realax" "real" []
+    val sum_ty = mkty "sum" "sum" [Type.bool, Type.bool]
+    val llist_ty = mkty "llist" "llist" [Type.bool]
+    val rat_ty = mkty "rat" "rat" []
+    val _ = MFH.quotient_registry := []
+    val _ = MFH.typedef_registry := []
+    val _ = MFH.quotient_harvest_misses := KNametab.empty
+    val _ = MFH.typedef_harvest_misses := KNametab.empty
+    val initially_unregistered = not (MFH.is_typedef hreal_ty)
+    val real_initially_unregistered =
+      not (MFH.is_typedef real_ty) andalso not (MFH.is_quot_type real_ty)
+    val result = MFH.harvest_registrations ()
+    val hreal_named =
+      List.exists (fn ty => Type.compare (ty, hreal_ty) = EQUAL)
+        (#typedefs result)
+    val hreal_registered = MFH.is_typedef hreal_ty
+    val real_named_as_quotient =
+      List.exists (fn ty => Type.compare (ty, real_ty) = EQUAL)
+        (#quotients result)
+    val real_not_named_as_typedef =
+      not (List.exists (fn ty => Type.compare (ty, real_ty) = EQUAL)
+        (#typedefs result))
+    val real_registered_as_quotient =
+      MFH.is_quot_type real_ty andalso not (MFH.is_typedef real_ty)
+    val theories_scanned_nonempty = not (null (#theories_scanned result))
+    val repeat = MFH.harvest_registrations ()
+    val idempotent =
+      null (#typedefs repeat) andalso null (#quotients repeat)
+    val negatives_after_sweep =
+      not (MFH.is_typedef MFH.num_type) andalso
+      not (MFH.is_quot_type MFH.num_type) andalso
+      not (MFH.is_typedef sum_ty) andalso not (MFH.is_quot_type sum_ty) andalso
+      not (MFH.is_typedef llist_ty) andalso
+      not (MFH.is_quot_type llist_ty) andalso
+      MFH.is_frac_type rat_ty andalso not (MFH.is_quot_type rat_ty)
+  in
+    initially_unregistered andalso hreal_named andalso hreal_registered
+    andalso real_initially_unregistered andalso real_named_as_quotient
+    andalso real_not_named_as_typedef andalso real_registered_as_quotient
+    andalso theories_scanned_nonempty andalso idempotent andalso
+    negatives_after_sweep
+  end)
+
+val _ = require_msg
+  (check_result mf_harvest_registrations_sweep) (fn () =>
+    "harvest_registrations did not sweep a real typedef, was not " ^
+    "idempotent, or broke a negative control")
+  (fn () => ()) ()
+
+(* No theory in the distribution holds two theorems classifying to the
+   same bijection half for one (abs, rep) pair, so this exercises
+   [absrep_pairs]'s multi-candidate path directly: a genuine RepAbsLaw and
+   a rewritten variant - same predicate up to [P r <=> P r /\ T], not
+   alpha-equal - are classified for the same dynamic (abs, rep), and
+   [absrep_pairs] must keep both candidates and try both combinations with
+   the AbsRepLaw half, regardless of which theorem the caller lists
+   first. *)
+fun mf_absrep_pairs_multi_candidate () =
+  with_quotient_typedef_registries_restored (fn () => let
+    val ty = ``:zoo_unharvested``
+    val operator = MFH.type_operator_of ty
+    val tyax = DB.fetch "refuteTableZoo" "zoo_unharvested_TY_DEF"
+    val conj_name = "zoo_unharvested_multi_absrep"
+    val abs_name = "zoo_unharvested_multi_abs"
+    val rep_name = "zoo_unharvested_multi_rep"
+    fun delete_binding_if_present name =
+      if List.exists (fn n => n = name) (map #1 (DB.thms "-"))
+      then Theory.delete_binding name else ()
+    fun delete_const_if_present name =
+      if List.exists (fn n => n = name)
+           (map (#1 o Term.dest_const) (Theory.constants "-"))
+      then Theory.delete_const name else ()
+    fun cleanup () =
+      (delete_binding_if_present conj_name;
+       delete_const_if_present abs_name;
+       delete_const_if_present rep_name)
+  in
+    Portable.finally cleanup (fn () => let
+      val conj = Drule.define_new_type_bijections
+        {name = conj_name, ABS = abs_name, REP = rep_name, tyax = tyax}
+      val genuine_abs_rep = Thm.CONJUNCT1 conj
+      val genuine_rep_abs = Conv.BETA_RULE (Thm.CONJUNCT2 conj)
+      val and_t = bossLib.DECIDE ``!b:bool. b <=> b /\ T``
+      val variant_rep_abs =
+        Conv.CONV_RULE (Conv.STRIP_QUANT_CONV
+          (Conv.LAND_CONV (Conv.REWR_CONV and_t))) genuine_rep_abs
+      val classified_ok =
+        (case MFH.classify_absrep_law genuine_abs_rep of
+             MFH.AbsRepLaw _ => true | _ => false) andalso
+        (case MFH.classify_absrep_law genuine_rep_abs of
+             MFH.RepAbsLaw _ => true | _ => false) andalso
+        (case MFH.classify_absrep_law variant_rep_abs of
+             MFH.RepAbsLaw _ => true | _ => false)
+      val variant_not_alpha_equal =
+        not (Term.aconv (Thm.concl variant_rep_abs)
+               (Thm.concl genuine_rep_abs))
+      val theorems_variant_first =
+        [("variant", variant_rep_abs), ("abs_rep", genuine_abs_rep),
+         ("rep_abs", genuine_rep_abs)]
+      val theorems_genuine_first =
+        [("abs_rep", genuine_abs_rep), ("rep_abs", genuine_rep_abs),
+         ("variant", variant_rep_abs)]
+      val both_candidates_kept =
+        length (MFH.absrep_pairs theorems_variant_first) = 2 andalso
+        length (MFH.absrep_pairs theorems_genuine_first) = 2
+      fun validates theorems =
+        (MFH.typedef_registry := [];
+         List.exists (fn (a, r) =>
+           MFH.typedef_candidate operator (Thm.CONJ a r))
+           (MFH.absrep_pairs theorems))
+      val variant_first_validates = validates theorems_variant_first
+      val genuine_first_validates = validates theorems_genuine_first
+    in
+      classified_ok andalso variant_not_alpha_equal andalso
+      both_candidates_kept andalso variant_first_validates andalso
+      genuine_first_validates
+    end) ()
+  end)
+
+val _ = require_msg
+  (check_result mf_absrep_pairs_multi_candidate) (fn () =>
+    "absrep_pairs dropped a valid pairing when a rewritten same-half " ^
+    "variant preceded the genuine theorem")
+  (fn () => ()) ()
+
+(* Field-by-field [aconv] comparison of two registered typedef entries -
+   shared between the split/conjunction harvest comparison below and the
+   split-acceptance API test. *)
+fun same_typedef_info
+      ({abs = abs1, rep = rep1, pred = pred1, univ = univ1,
+        inverse_axioms = ax1, ...} : MFH.typedef_info)
+      ({abs = abs2, rep = rep2, pred = pred2, univ = univ2,
+        inverse_axioms = ax2, ...} : MFH.typedef_info) =
+  Term.aconv abs1 abs2 andalso Term.aconv rep1 rep2 andalso
+  Term.aconv pred1 pred2 andalso univ1 = univ2 andalso
+  ListPair.allEq (fn (x, y) => Term.aconv x y) (ax1, ax2)
+
 fun mf_lazy_db_harvest_split_theories () =
   with_quotient_typedef_registries_restored (fn () => let
-    val ty = ``:refute_harvest_split``
-    val expected_theories =
-      ["refuteHarvestType", "refuteHarvestAbs", "refuteHarvestRep",
-       "refuteHarvestTheorem"]
-    fun scanned theory = List.exists (fn old => old = theory)
-      (!MFH.typedef_harvest_scan_theories)
+    (* Split acceptance: [refute_harvest_split]'s home theory carries only
+       the two bijection halves, and that alone registers it without the
+       scan reaching any other theory. *)
+    val split_ty = ``:refute_harvest_split``
     val _ = MFH.typedef_registry := []
     val _ = MFH.typedef_harvest_misses := KNametab.empty
     val _ = MFH.typedef_harvest_scan_theories := []
-    val harvested = MFH.harvest_typedef ty
-    val right_constants =
-      case MFH.typedef_for_type ty of
+    val split_harvested = MFH.harvest_typedef split_ty
+    val split_harvested_info = MFH.typedef_for_type split_ty
+    val split_at_home =
+      case split_harvested_info of
+          SOME {abs, rep, ...} =>
+            #Thy (Term.dest_thy_const abs) = "refuteHarvestType" andalso
+            #Thy (Term.dest_thy_const rep) = "refuteHarvestType"
+        | NONE => false
+    (* A quantifier's own home theory (bool$!, bool$?) enters the index
+       as a constant theory of any type ever bound under it, so the scan
+       list can carry incidental extras; only home is pinned exactly, by
+       [scan]'s early stop the moment split acceptance succeeds there. *)
+    val split_scanned_home_only =
+      !MFH.typedef_harvest_scan_theories = ["refuteHarvestType"]
+    (* The scan pairs the two halves into the identical [Thm.CONJ] that a
+       caller supplying the whole conjunction up front would register - so
+       the harvested [pred]/[univ]/[inverse_axioms] must match registering
+       from that reconstructed conjunction directly. *)
+    val _ = MFH.typedef_registry := []
+    val _ = MFH.register_typedef
+      {ty = split_ty, abs = ``refute_harvest_split_home_abs``,
+       rep = ``refute_harvest_split_home_rep``,
+       absrep_thms =
+         [Thm.CONJ
+            refuteHarvestTypeTheory.refute_harvest_split_home_absrep_1
+            refuteHarvestTypeTheory.refute_harvest_split_home_absrep_2]}
+    val split_matches_conjunction =
+      case (split_harvested_info, MFH.typedef_for_type split_ty) of
+          (SOME harvested, SOME conjunction) =>
+            same_typedef_info harvested conjunction
+        | _ => false
+    val _ = MFH.typedef_registry := []
+
+    (* M5-D10 scan scope: [refute_harvest_deep]'s home theory has neither
+       abs/rep constants nor a bijection theorem for it, so the type
+       registers only because the scan also reaches the home theory of
+       its abs/rep constants. *)
+    val deep_ty = ``:refute_harvest_deep``
+    val _ = MFH.typedef_registry := []
+    val _ = MFH.typedef_harvest_misses := KNametab.empty
+    val _ = MFH.typedef_harvest_scan_theories := []
+    val deep_harvested = MFH.harvest_typedef deep_ty
+    val deep_right_constants =
+      case MFH.typedef_for_type deep_ty of
           SOME {abs, rep, ...} =>
             #Thy (Term.dest_thy_const abs) = "refuteHarvestAbs" andalso
-            #Thy (Term.dest_thy_const rep) = "refuteHarvestRep"
+            #Thy (Term.dest_thy_const rep) = "refuteHarvestAbs"
         | NONE => false
+    fun scanned theory = List.exists (fn old => old = theory)
+      (!MFH.typedef_harvest_scan_theories)
+    val deep_scanned_past_home =
+      scanned "refuteHarvestType" andalso scanned "refuteHarvestAbs"
   in
-    harvested andalso right_constants andalso
-    List.all scanned expected_theories
+    split_harvested andalso split_at_home andalso
+    split_scanned_home_only andalso split_matches_conjunction andalso
+    deep_harvested andalso deep_right_constants andalso
+    deep_scanned_past_home
   end)
 
 val _ = require_msg
   (check_result mf_lazy_db_harvest_split_theories) (fn () =>
-    "lazy typedef harvest did not scan split home/abs/rep/theorem theories")
+    "split acceptance at home, its match to the conjunction reading, or " ^
+    "scan scope past an empty home, changed")
+  (fn () => ()) ()
+
+(* Split acceptance, public API: [register_typedef] must accept the two
+   bijection halves directly, in either order, producing a registration
+   [aconv]-identical to supplying their conjunction; and must reject a
+   wrong-length list, a repeated half, and two halves naming different
+   abs/rep constants. *)
+fun mf_register_typedef_split_halves () =
+  with_quotient_typedef_registries_restored (fn () => let
+    val ty = ``:refute_harvest_split``
+    val abs = ``refute_harvest_split_home_abs``
+    val rep = ``refute_harvest_split_home_rep``
+    val abs_rep_half =
+      refuteHarvestTypeTheory.refute_harvest_split_home_absrep_1
+    val rep_abs_half =
+      refuteHarvestTypeTheory.refute_harvest_split_home_absrep_2
+    val _ = MFH.typedef_registry := []
+    val _ = MFH.register_typedef
+      {ty = ty, abs = abs, rep = rep,
+       absrep_thms = [Thm.CONJ abs_rep_half rep_abs_half]}
+    val conjunction_info = valOf (MFH.typedef_for_type ty)
+    val _ = MFH.typedef_registry := []
+    val _ = MFH.register_typedef
+      {ty = ty, abs = abs, rep = rep,
+       absrep_thms = [abs_rep_half, rep_abs_half]}
+    val forward_order_matches =
+      same_typedef_info conjunction_info (valOf (MFH.typedef_for_type ty))
+    val _ = MFH.typedef_registry := []
+    val _ = MFH.register_typedef
+      {ty = ty, abs = abs, rep = rep,
+       absrep_thms = [rep_abs_half, abs_rep_half]}
+    val reverse_order_matches =
+      same_typedef_info conjunction_info (valOf (MFH.typedef_for_type ty))
+    fun rejected thunk =
+      ((MFH.typedef_registry := []; thunk (); false)
+       handle HOL_ERR _ => true)
+    val wrong_length_rejected = rejected (fn () =>
+      MFH.register_typedef
+        {ty = ty, abs = abs, rep = rep, absrep_thms = []})
+    val duplicate_half_rejected = rejected (fn () =>
+      MFH.register_typedef
+        {ty = ty, abs = abs, rep = rep,
+         absrep_thms = [abs_rep_half, abs_rep_half]})
+    val mismatched_pair_rejected = rejected (fn () =>
+      MFH.register_typedef
+        {ty = ty, abs = abs, rep = rep,
+         absrep_thms = [abs_rep_half, Thm.CONJUNCT2 zoo_three_absrep]})
+  in
+    forward_order_matches andalso reverse_order_matches andalso
+    wrong_length_rejected andalso duplicate_half_rejected andalso
+    mismatched_pair_rejected
+  end)
+
+val _ = require_msg
+  (check_result mf_register_typedef_split_halves) (fn () =>
+    "register_typedef split-halves acceptance, order-independence, or " ^
+    "its raise cases changed")
   (fn () => ()) ()
 
 fun mf_lazy_db_harvest_guards_and_cache () =
@@ -2792,16 +3047,29 @@ fun mf_lazy_db_harvest_guards_and_cache () =
     val pure_message =
       MFH.unregistered_typedef_reason [miss_goal] = SOME expected
     val dynamic_name = "zoo_unharvested_dynamic_absrep"
+    val abs_name = "zoo_unharvested_dynamic_abs"
+    val rep_name = "zoo_unharvested_dynamic_rep"
     val snapshot = map #1 (DB.thms "-")
+    val const_snapshot = map (#1 o Term.dest_const) (Theory.constants "-")
     fun revert_dynamic () =
-      if List.exists (fn name => name = dynamic_name) (map #1 (DB.thms "-"))
-      then Theory.delete_binding dynamic_name
-      else ()
+      let
+        fun delete_binding_if_present name =
+          if List.exists (fn n => n = name) (map #1 (DB.thms "-"))
+          then Theory.delete_binding name else ()
+        fun delete_const_if_present name =
+          if List.exists (fn n => n = name)
+               (map (#1 o Term.dest_const) (Theory.constants "-"))
+          then Theory.delete_const name else ()
+      in
+        delete_binding_if_present dynamic_name;
+        delete_const_if_present abs_name;
+        delete_const_if_present rep_name
+      end
     val fresh_after_add =
       Portable.finally revert_dynamic (fn () => let
-        val _ = save_thm
-          (dynamic_name,
-           CONJ zoo_unharvested_absrep_1 zoo_unharvested_absrep_2)
+        val tyax = DB.fetch "refuteTableZoo" "zoo_unharvested_TY_DEF"
+        val _ = Drule.define_new_type_bijections
+          {name = dynamic_name, ABS = abs_name, REP = rep_name, tyax = tyax}
         val before_retry = !MFH.typedef_harvest_scan_count
         val harvested = MFH.harvest_typedef ``:zoo_unharvested``
         val rescanned_after_add =
@@ -2816,7 +3084,9 @@ fun mf_lazy_db_harvest_guards_and_cache () =
         missed_after_revert andalso
         !MFH.typedef_harvest_scan_count > before_revert
       end) ()
-    val reverted = map #1 (DB.thms "-") = snapshot
+    val reverted =
+      map #1 (DB.thms "-") = snapshot andalso
+      map (#1 o Term.dest_const) (Theory.constants "-") = const_snapshot
   in
     surface_harvested andalso positive_cached andalso
     unfolded_harvested andalso first_miss andalso second_miss andalso
@@ -12126,6 +12396,38 @@ local
          | _ => false)
     end
 
+  (* Split acceptance, end to end: [refute_harvest_split]'s home theory
+     carries only the two bijection halves, never their conjunction, so
+     refuting a goal over it exercises split acceptance through the whole
+     pipeline rather than just the harvest API.  The refuted goal is the
+     same free-variable-disequality shape [mf_num_typedef_veto] already
+     uses for [zoo_four]: any two distinct atoms falsify it; a probe
+     confirmed this reaches [Genuine] through split-lazy-harvest exactly as
+     it does through an equivalent explicit conjunction registration.  The
+     soundness twin restates the harvested type's own [abs (rep a) = a]
+     law with a free variable in place of its bound one - true simply
+     because it is the split-registered axiom itself.  Deciding
+     [NoCounterexample] outright for it needs more search than a
+     closed-existential goal of this shape gets certified for (the same
+     probe found it still unresolved at 20s), so this only pins the
+     literal soundness requirement - never [Genuine] - rather than a full
+     exhaustive proof. *)
+  fun mf_split_typedef_goal_refuted_soundly () =
+    with_quotient_typedef_registries_restored (fn () => let
+      val _ = MFH.typedef_registry := []
+      val refuted = carrier_refuted ``(a : refute_harvest_split) = b``
+      val _ = MFH.typedef_registry := []
+      val not_genuine =
+        case Refute.refute carrier_config
+               ``refute_harvest_split_home_abs
+                   (refute_harvest_split_home_rep a) = a`` of
+            Refute.Counterexample ({certainty = Refute.Genuine, ...} :: _) =>
+              false
+          | _ => true
+    in
+      refuted andalso not_genuine
+    end)
+
   (* Task C: a card list naming only some types keeps the built-in fallback
      for the rest instead of aborting the backend, and the named entry still
      wins over it. *)
@@ -12327,6 +12629,14 @@ in
     if bridge_configured then
       require_msg (check_result mf_binarized_typedef_needs_room) (fn () =>
         "the forced-binary typedef scopes did not straddle its bound")
+        (fn () => ()) ()
+    else ()
+  val _ =
+    if bridge_configured then
+      require_msg
+        (check_result mf_split_typedef_goal_refuted_soundly) (fn () =>
+        "a split-form typedef goal did not refute soundly, or its " ^
+        "pigeonhole twin was unsoundly refuted")
         (fn () => ()) ()
     else ()
   val _ =
@@ -28442,5 +28752,33 @@ val _ =
 val _ = if selftest_level >= 2 then run_level2_mf_corpus () else ()
 
 val _ = if selftest_level >= 2 then corpus_potential () else ()
+
+(* Diagnostic, not a pass/fail check: measures what the eager whole-ancestry
+   sweep still finds, here, after the ordinary demand-driven session above
+   has already lazily registered whatever goals actually mentioned.  Runs
+   at level 1 too because it is cheap (one sweep, no matrix) and because
+   the diagnostic's baseline is the level-1 session's own lazy
+   registrations; deferring it to level 2 would measure a different
+   session.  Wrapped so the sweep's own mutations never survive it, same
+   as every other registry mutation in this file. *)
+val _ =
+  with_quotient_typedef_registries_restored (fn () =>
+  let
+    val before_typedefs = length (!MFH.typedef_registry)
+    val before_quotients = length (!MFH.quotient_registry)
+    val {typedefs, quotients, theories_scanned} =
+      Refute.harvest_registrations ()
+  in
+    print ("Refute harvest_registrations diagnostic: " ^
+      Int.toString before_typedefs ^ " typedefs and " ^
+      Int.toString before_quotients ^
+      " quotients already registered by the ordinary session; swept " ^
+      Int.toString (length theories_scanned) ^
+      " ancestry theories and newly registered " ^
+      Int.toString (length typedefs) ^ " typedef(s) [" ^
+      String.concatWith ", " (map Parse.type_to_string typedefs) ^
+      "] and " ^ Int.toString (length quotients) ^ " quotient(s) [" ^
+      String.concatWith ", " (map Parse.type_to_string quotients) ^ "]\n")
+  end)
 
 val _ = exit_count0 erc

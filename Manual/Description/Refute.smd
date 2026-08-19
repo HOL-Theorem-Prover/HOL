@@ -729,8 +729,11 @@ replaces the old one.
   list remains the caller's assertion.  Built-in lazy registrations
   cover `llist`, `ltree`, `itree`, `itreeTau`, `lbtree`, and `path` when
   their theories are present.
-* `register_typedef {ty, abs, rep, absrep_thm}` registers existing Abs and
-  Rep constants and the exported bijection conjunction.
+* `register_typedef {ty, abs, rep, absrep_thms}` registers existing Abs and
+  Rep constants.  `absrep_thms` is either the exported bijection conjunction
+  as a singleton list, or its two conjuncts `!a. abs (rep a) = a` and
+  `!r. P r = (rep (abs r) = r)` as separate theorems in either order; both
+  forms register identically.
   `register_quotient {qty, rty, abs, rep, equiv_thm}` registers an
   existing quotient.  `equiv_thm` must be hypothesis-free and either a
   `QUOTIENT equiv abs rep` theorem mentioning the registered `abs` and
@@ -758,7 +761,16 @@ and existing constants for constructors, case operators, Abs, and Rep.
 The model finder also attempts a lazy, validated database harvest when it
 first encounters an unregistered typedef or quotient; explicit
 registration remains useful when automatic harvesting cannot recover an
-otherwise standard `QUOTIENT` bridge.
+otherwise standard `QUOTIENT` bridge.  Typedef harvesting accepts either
+the exported bijection conjunction or its two conjuncts saved separately,
+provided both live in the same theory; halves split across two theories
+are not paired.  `harvest_registrations ()` is an
+opt-in alternative that sweeps every theory in the session's ancestry
+once, oldest first, running that same lazy harvest against every type
+operator those theories declare instead of waiting for a goal to demand
+it; it returns the typedef and quotient types it newly registered, so an
+immediate repeat call reports nothing further.  The default remains the
+demand-driven lazy harvest.
 
 ### Installing Kodkodi
 

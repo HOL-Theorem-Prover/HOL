@@ -2504,19 +2504,21 @@ structure Refute_ModelFinder_HOL = struct
   fun remove_nth index values =
     List.take (values, index) @ List.drop (values, index + 1)
 
+  fun fresh_type_var_name index =
+    if index < 26 then
+      "'" ^ String.str (Char.chr (Char.ord #"a" + index))
+    else "'a" ^ Int.toString index
+
+  (* A type operator applied to [arity] distinct fresh type variables. *)
+  fun type_operator_instance (thy, tyop, arity) =
+    Type.mk_thy_type
+      {Thy = thy, Tyop = tyop,
+       Args = List.tabulate (arity, Type.mk_vartype o fresh_type_var_name)}
+
   (* The operator applied to distinct fresh type variables. *)
   fun generic_instance ty =
-    let
-      val {Thy, Tyop, Args} = Type.dest_thy_type ty
-      fun name index =
-        if index < 26 then
-          "'" ^ String.str (Char.chr (Char.ord #"a" + index))
-        else "'a" ^ Int.toString index
-    in
-      Type.mk_thy_type
-        {Thy = Thy, Tyop = Tyop,
-         Args = List.tabulate (length Args, Type.mk_vartype o name)}
-    end
+    let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+    in type_operator_instance (Thy, Tyop, length Args) end
 
   (* Classification is operator-level: every Refute registry is keyed by type
      operator and [validate_registered_type] forbids non-variable type
@@ -3092,15 +3094,102 @@ structure Refute_ModelFinder_HOL = struct
       | NONE => NONE
     handle HOL_ERR _ => NONE
 
-  fun parse_absrep theorem supplied_abs supplied_rep =
+  (* Shape of [!a. abs (rep a) = a]. *)
+  fun match_abs_rep_body body =
+    let
+      val (left, right) = boolSyntax.dest_eq body
+      val (abs, abs_arguments) = HolKernel.strip_comb left
+      val _ = if length abs_arguments = 1 then () else raise Match
+      val (rep, rep_arguments) =
+        HolKernel.strip_comb (hd abs_arguments)
+      val _ = if length rep_arguments = 1 then () else raise Match
+    in
+      SOME {abs = abs, rep = rep, arg = hd rep_arguments, result = right}
+    end
+    handle HOL_ERR _ => NONE | Match => NONE
+
+  (* Shape of [!r. P r = (rep (abs r) = r)]. *)
+  fun match_rep_abs_body body =
+    let
+      val (pred, right) = boolSyntax.dest_eq body
+      val (equal_left, equal_right) = boolSyntax.dest_eq right
+      val (rep, rep_arguments) = HolKernel.strip_comb equal_left
+      val _ = if length rep_arguments = 1 then () else raise Match
+      val (abs, abs_arguments) =
+        HolKernel.strip_comb (hd rep_arguments)
+      val _ = if length abs_arguments = 1 then () else raise Match
+    in
+      SOME {abs = abs, rep = rep, pred = pred,
+            arg = hd abs_arguments, result = equal_right}
+    end
+    handle HOL_ERR _ => NONE | Match => NONE
+
+  datatype absrep_law =
+      AbsRepLaw of {abs : term, rep : term}
+    | RepAbsLaw of {abs : term, rep : term}
+    | NotABijectionLaw
+
+  (* Classifies one hypothesis-free theorem as one of the two bijection
+     halves [define_new_type_bijections] conjoins, reusing the same shape
+     analysis [parse_absrep_conjunction] runs on each conjunct. *)
+  fun classify_absrep_law theorem =
+    if not (null (Thm.hyp theorem)) then NotABijectionLaw
+    else
+      let val (_, body) = boolSyntax.strip_forall (Thm.concl theorem) in
+        case match_abs_rep_body body of
+            SOME {abs, rep, ...} => AbsRepLaw {abs = abs, rep = rep}
+          | NONE =>
+              (case match_rep_abs_body body of
+                   SOME {abs, rep, ...} => RepAbsLaw {abs = abs, rep = rep}
+                 | NONE => NotABijectionLaw)
+      end
+      handle HOL_ERR _ => NotABijectionLaw
+
+  (* Normalizes the caller's [thms] to the single conjunction
+     [parse_absrep_conjunction] expects: today's whole theorem unchanged,
+     or the two halves - in either order - joined with [Thm.CONJ]. *)
+  fun pair_absrep_thms thms =
+    case thms of
+        [theorem] => theorem
+      | [first, second] =>
+          let
+            fun same_pair (a1, r1) (a2, r2) =
+              Term.compare (a1, a2) = EQUAL andalso
+              Term.compare (r1, r2) = EQUAL
+            fun mismatch () = raise err "register_typedef"
+              ("the two bijection halves are at different type instances " ^
+               "or name different abs/rep constants")
+          in
+            case (classify_absrep_law first, classify_absrep_law second) of
+                (AbsRepLaw {abs = a1, rep = r1},
+                 RepAbsLaw {abs = a2, rep = r2}) =>
+                  if same_pair (a1, r1) (a2, r2) then Thm.CONJ first second
+                  else mismatch ()
+              | (RepAbsLaw {abs = a1, rep = r1},
+                 AbsRepLaw {abs = a2, rep = r2}) =>
+                  if same_pair (a1, r1) (a2, r2) then Thm.CONJ second first
+                  else mismatch ()
+              | (AbsRepLaw _, AbsRepLaw _) | (RepAbsLaw _, RepAbsLaw _) =>
+                  raise err "register_typedef"
+                    "both bijection theorems are the same half"
+              | _ => raise err "register_typedef"
+                  "at least one theorem is not a bijection half"
+          end
+      | _ => raise err "register_typedef"
+          "expected a bijections theorem or its two halves"
+
+  fun parse_absrep_conjunction theorem supplied_abs supplied_rep =
     let
       val _ = if null (Thm.hyp theorem) then () else
         raise err "register_typedef" "bijections theorem has hypotheses"
       val raw_conclusion = Thm.concl theorem
       val (raw_first, _) = boolSyntax.dest_conj raw_conclusion
       val (_, raw_first_body) = boolSyntax.strip_forall raw_first
-      val (raw_first_left, _) = boolSyntax.dest_eq raw_first_body
-      val (raw_abs, _) = HolKernel.strip_comb raw_first_left
+      val raw_abs =
+        case match_abs_rep_body raw_first_body of
+            SOME {abs, ...} => abs
+          | NONE => raise err "register_typedef"
+              "bijections theorem has a bad shape"
       val theta = Type.match_type (Term.type_of raw_abs)
         (Term.type_of supplied_abs)
       val conclusion = Term.inst theta raw_conclusion
@@ -3112,34 +3201,28 @@ structure Refute_ModelFinder_HOL = struct
         raise err "register_typedef" "bijections theorem has a bad shape"
       val abstract = hd first_variables
       val representation = hd second_variables
-      val (first_left, first_right) = boolSyntax.dest_eq first_body
-      val (first_abs, first_abs_arguments) =
-        HolKernel.strip_comb first_left
-      val _ = if length first_abs_arguments = 1 then () else
-        raise err "register_typedef" "bijections theorem has a bad shape"
-      val (first_rep, first_rep_arguments) =
-        HolKernel.strip_comb (hd first_abs_arguments)
-      val (predicate_body, second_right) = boolSyntax.dest_eq second_body
-      val (second_rep, second_rep_arguments) =
-        HolKernel.strip_comb (#1 (boolSyntax.dest_eq second_right))
-      val _ = if length second_rep_arguments = 1 then () else
-        raise err "register_typedef" "bijections theorem has a bad shape"
-      val (second_abs, second_abs_arguments) =
-        HolKernel.strip_comb (hd second_rep_arguments)
+      val first_match =
+        case match_abs_rep_body first_body of
+            SOME data => data
+          | NONE => raise err "register_typedef"
+              "bijections theorem has a bad shape"
+      val second_match =
+        case match_rep_abs_body second_body of
+            SOME data => data
+          | NONE => raise err "register_typedef"
+              "bijections theorem has a bad shape"
       val _ =
-        if length first_rep_arguments = 1 andalso
-           length second_abs_arguments = 1 andalso
-           Term.same_const supplied_abs first_abs andalso
-           Term.same_const supplied_abs second_abs andalso
-           Term.same_const supplied_rep first_rep andalso
-           Term.same_const supplied_rep second_rep andalso
-           Term.aconv (hd first_rep_arguments) abstract andalso
-           Term.aconv first_right abstract andalso
-           Term.aconv (hd second_abs_arguments) representation andalso
-           Term.aconv (#2 (boolSyntax.dest_eq second_right)) representation
+        if Term.same_const supplied_abs (#abs first_match) andalso
+           Term.same_const supplied_abs (#abs second_match) andalso
+           Term.same_const supplied_rep (#rep first_match) andalso
+           Term.same_const supplied_rep (#rep second_match) andalso
+           Term.aconv (#arg first_match) abstract andalso
+           Term.aconv (#result first_match) abstract andalso
+           Term.aconv (#arg second_match) representation andalso
+           Term.aconv (#result second_match) representation
         then ()
         else raise err "register_typedef" "bijections theorem has a bad shape"
-      val pred = Term.mk_abs (representation, predicate_body)
+      val pred = Term.mk_abs (representation, #pred second_match)
       val probe = Term.variant (Term.all_vars pred)
         (Term.mk_var ("r", Term.type_of representation))
       val univ = Term.aconv
@@ -3157,8 +3240,12 @@ structure Refute_ModelFinder_HOL = struct
       (pred, inverse_axioms, univ)
     end
 
+  fun parse_absrep thms supplied_abs supplied_rep =
+    parse_absrep_conjunction (pair_absrep_thms thms) supplied_abs
+      supplied_rep
+
   fun register_typedef_unlocked
-        {ty : hol_type, abs : term, rep : term, absrep_thm : thm} =
+        {ty : hol_type, abs : term, rep : term, absrep_thms : thm list} =
     let
       val _ = validate_registered_type "register_typedef" ty
       val _ = if Term.is_const abs andalso Term.is_const rep then () else
@@ -3183,7 +3270,7 @@ structure Refute_ModelFinder_HOL = struct
             "type operator already has an incompatible classification"
         else ()
       val (pred, inverse_axioms, univ) =
-        parse_absrep absrep_thm abs rep
+        parse_absrep absrep_thms abs rep
       val {rty = raw_rty, pred = raw_pred} =
         case raw_typedef_data ty of
             SOME data => data
@@ -3394,11 +3481,54 @@ structure Refute_ModelFinder_HOL = struct
       val _ = if same_type_operator (type_operator_of ty) operator then ()
         else raise Match
       val _ = register_typedef_unlocked
-        {ty = ty, abs = abs, rep = rep, absrep_thm = theorem}
+        {ty = ty, abs = abs, rep = rep, absrep_thms = [theorem]}
     in
       true
     end
     handle HOL_ERR _ => false | Match => false
+
+  (* Groups a theory's theorems by classified [(abs, rep)] pair, keeping up
+     to [absrep_pairs_bound] theorems per half per key, and returns every
+     AbsRepLaw x RepAbsLaw combination for a key.  A key almost never holds
+     more than one theorem of each half, so this stays linear in the
+     theorem count in practice: one classification and one bounded-list
+     table operation per theorem, and the final combination step is at
+     most [absrep_pairs_bound * absrep_pairs_bound] pairs per key.  Keeping
+     more than the first theorem per half matters when a theory holds both
+     the genuine bijection half and a rewritten variant whose predicate is
+     equivalent but not alpha-equal - dropping the genuine one would lose
+     an otherwise valid pairing. *)
+  val absrep_pairs_bound = 4
+  fun absrep_pairs theorems =
+    let
+      val key_compare = Portable.pair_compare (Term.compare, Term.compare)
+      fun empty_slots () : thm list * thm list = ([], [])
+      fun bounded_cons theorem slot =
+        if length slot >= absrep_pairs_bound then slot
+        else slot @ [theorem]
+      fun note key law theorem table =
+        let
+          val (abs_reps, rep_abses) =
+            Option.getOpt (Redblackmap.peek (table, key), empty_slots ())
+          val slots =
+            case law of
+                AbsRepLaw _ => (bounded_cons theorem abs_reps, rep_abses)
+              | RepAbsLaw _ => (abs_reps, bounded_cons theorem rep_abses)
+        in
+          Redblackmap.insert (table, key, slots)
+        end
+      fun step ((_, theorem), table) =
+        case classify_absrep_law theorem of
+            NotABijectionLaw => table
+          | law as AbsRepLaw {abs, rep} => note (abs, rep) law theorem table
+          | law as RepAbsLaw {abs, rep} => note (abs, rep) law theorem table
+      val table = List.foldl step
+        (Redblackmap.mkDict key_compare) theorems
+      fun combine (abs_reps, rep_abses) =
+        List.concat (map (fn a => map (fn r => (a, r)) rep_abses) abs_reps)
+    in
+      List.concat (map (combine o #2) (Redblackmap.listItems table))
+    end
 
   fun is_fun_type ty = Option.isSome (Lib.total Type.dom_rng ty)
 
@@ -4139,11 +4269,19 @@ structure Refute_ModelFinder_HOL = struct
       val fingerprint = harvest_fingerprint operator theories
       fun scan [] = false
         | scan (theory :: rest) =
-            List.exists (typedef_candidate operator o #2)
-              (typedef_harvest_scan_count :=
-                 !typedef_harvest_scan_count + 1;
-               scan_harvest_theorems typedef_harvest_scan_theories theory)
-            orelse scan rest
+            let
+              val theorems =
+                (typedef_harvest_scan_count :=
+                   !typedef_harvest_scan_count + 1;
+                 scan_harvest_theorems typedef_harvest_scan_theories theory)
+            in
+              List.exists (typedef_candidate operator o #2) theorems
+              orelse
+              List.exists (fn (first, second) =>
+                typedef_candidate operator (Thm.CONJ first second))
+                (absrep_pairs theorems)
+              orelse scan rest
+            end
       val incompatible =
         is_interpreted_type ty orelse is_codatatype ty orelse
         is_quot_type ty orelse is_frac_type ty orelse
@@ -4163,6 +4301,45 @@ structure Refute_ModelFinder_HOL = struct
 
   fun harvest_typedef ty =
     with_registration_lock (fn () => harvest_typedef_unlocked ty)
+
+  (* Opt-in whole-ancestry sweep.  [oldest_first_theories] is already the
+     module's canonical deterministic theory order; within a theory,
+     [Theory.types] enumerates by type-operator name (it folds a
+     [KernelSig.listThy] table ordered by [String.compare]), so neither
+     the sweep nor its result depends on any hash order.  Reuses the same
+     [harvest_typedef_unlocked]/[harvest_quotient_unlocked] the lazy path
+     calls, so every incompatibility guard, clash guard and miss cache
+     behaves identically; this is not a second harvest implementation. *)
+  fun harvest_registrations_unlocked () =
+    let
+      val theories = oldest_first_theories ()
+      fun operators_of theory =
+        map (fn (tyop, arity) => (theory, tyop, arity))
+          (Theory.types theory)
+      val operators = List.concat (map operators_of theories)
+      fun attempt ((thy, tyop, arity), (typedefs, quotients)) =
+        (let
+           val ty = type_operator_instance (thy, tyop, arity)
+           val had_typedef = is_typedef ty
+           val had_quotient = is_quot_type ty
+           val got_quotient = harvest_quotient_unlocked ty
+           val got_typedef = harvest_typedef_unlocked ty
+         in
+           ((if got_typedef andalso not had_typedef then ty :: typedefs
+             else typedefs),
+            (if got_quotient andalso not had_quotient then ty :: quotients
+             else quotients))
+         end
+         handle HOL_ERR _ => (typedefs, quotients))
+      val (typedefs, quotients) =
+        List.foldl attempt ([], []) operators
+    in
+      {typedefs = rev typedefs, quotients = rev quotients,
+       theories_scanned = theories}
+    end
+
+  fun harvest_registrations () =
+    with_registration_lock harvest_registrations_unlocked
 
   fun quot_constructor rty qty =
     Term.mk_thy_const

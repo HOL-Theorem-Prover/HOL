@@ -244,9 +244,11 @@ val zoo_four_absrep = define_new_type_bijections
   {name = "zoo_four_absrep", ABS = "zoo_four_abs",
    REP = "zoo_four_rep", tyax = zoo_four_tydef};
 
-(* A kernel typedef whose two valid bijection halves are saved separately,
-   but whose harvestable conjunction is deliberately absent.  A selftest can
-   add that conjunction temporarily to exercise negative-cache freshness. *)
+(* A kernel typedef with abs/rep constants but no bijection theorem of any
+   kind - whole or split - anywhere in this theory: neither form is
+   harvestable.  A selftest can add a fresh bijection theorem temporarily,
+   against the same [_TY_DEF] witness, to exercise negative-cache
+   freshness. *)
 Theorem zoo_unharvested_exists[local]:
   ?n : num. (\n. n < 2) n
 Proof
@@ -259,19 +261,6 @@ val zoo_unharvested_tydef =
 val zoo_unharvested_absrep = define_new_type_bijections
   {name = "zoo_unharvested_absrep", ABS = "zoo_unharvested_abs",
    REP = "zoo_unharvested_rep", tyax = zoo_unharvested_tydef};
-
-Theorem zoo_unharvested_absrep_1:
-  !x. zoo_unharvested_abs (zoo_unharvested_rep x) = x
-Proof
-  metis_tac [zoo_unharvested_absrep]
-QED
-
-Theorem zoo_unharvested_absrep_2:
-  !n. (\n. n < 2) n =
-      (zoo_unharvested_rep (zoo_unharvested_abs n) = n)
-Proof
-  metis_tac [zoo_unharvested_absrep]
-QED
 
 val _ = Theory.delete_binding "zoo_unharvested_absrep";
 

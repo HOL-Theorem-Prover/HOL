@@ -36,3 +36,16 @@ QED
 (* Keep the constants and the two non-candidate halves, but remove the only
    conjunction that the lazy harvester could accept in the home theory. *)
 val _ = Theory.delete_binding "refute_harvest_split_home_absrep";
+
+(* A second, unrelated typedef whose home theory carries nothing at all
+   about its bijection: no abs/rep constants, no split halves, no
+   conjunction.  Both live only in a descendant theory. *)
+Theorem refute_harvest_deep_exists[local]:
+  ?n : num. (\n. n < 2) n
+Proof
+  qexists_tac `0` >> simp []
+QED
+
+val refute_harvest_deep_tydef =
+  new_type_definition
+    ("refute_harvest_deep", refute_harvest_deep_exists);

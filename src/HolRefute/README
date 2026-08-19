@@ -433,9 +433,12 @@ Registrations are session-local ML state and create no theory content:
   `!x y. R x y <=> (R x = R y)`.  Its shape selects the encoding: a
   `QUOTIENT` theorem gets the sound partial encoding, whereas a total
   equivalence drops its then redundant domain axiom.
-* `Refute.register_typedef {ty, abs, rep, absrep_thm}` registers an existing
-  HOL typedef.  `absrep_thm` must be its exported conjunction of the two
-  bijection laws and must agree with the type's `<tyop>_TY_DEF` theorem.
+* `Refute.register_typedef {ty, abs, rep, absrep_thms}` registers an existing
+  HOL typedef.  `absrep_thms` is either `[conjunction]`, the exported
+  conjunction of the two bijection laws, or `[first, second]`, the two
+  halves `!a. abs (rep a) = a` and `!r. P r = (rep (abs r) = r)` supplied
+  separately in either order; either form must agree with the type's
+  `<tyop>_TY_DEF` theorem.
 * `Refute.register_term_postprocessor pattern f` installs a bottom-up,
   display-only model-value transformation for every type matched by
   `pattern`; `f` must preserve the term's type.  Re-registering the same
@@ -528,7 +531,16 @@ only records its invalidated harvest entry; pending theories are indexed on
 first demand.  If validated harvesting fails, it returns `Unknown` rather than
 risk a spurious genuine result; an explicit registration can then supply the
 metadata.  Harvesting is deliberately demand-driven rather than an eager scan
-on every theory load.
+on every theory load.  Typedef harvesting accepts either the exported
+conjunction of the two bijection laws or the two halves saved separately,
+provided both live in the same theory; halves split across two theories are
+not paired.  `Refute.harvest_registrations ()` is an opt-in
+alternative: it sweeps every theory in `Theory.ancestry`, oldest first, once,
+attempting the same lazy typedef and quotient harvest for every type operator
+those theories declare, and returns only what that call newly registered.  A
+caller who would rather pay the scan upfront, once, than have it triggered
+piecemeal by whichever goals happen to mention a type first can call it; the
+demand-driven lazy harvest remains the default and is unaffected.
 
 The normalized Frac/ersatz encoding for `rat` is registered by default.
 Support for `real` via Frac remains deferred because certification of real
@@ -671,6 +683,5 @@ scope-arbitrary-read defect this guard exists to close.  HolRefute reports
 
 Recorded follow-ups are compute-hosted residual-inspection narrowing; full
 function flattening; higher-order and negative smart-generator modes; `real`
-via Frac; offset interval rewrites such as `lo <= n /\ n < hi`; and eager
-whole-ancestry typedef/quotient harvesting.  These are not part of the current
-implementation.
+via Frac; and offset interval rewrites such as `lo <= n /\ n < hi`.  These are
+not part of the current implementation.

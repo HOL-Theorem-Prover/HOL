@@ -6,7 +6,7 @@ Libs
 
 val _ = Refute.register_typedef
   {ty = ``:zoo_three``, abs = ``zoo_three_abs``, rep = ``zoo_three_rep``,
-   absrep_thm = zoo_three_absrep};
+   absrep_thms = [zoo_three_absrep]};
 
 (* The default Frac registration is session data and creates no theory
    content.  Its display half is present without an explicit registration. *)

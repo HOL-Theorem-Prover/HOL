@@ -168,6 +168,7 @@ structure Refute :> Refute = struct
       Refute_ModelFinder_HOL.register_codatatype registration)
   val register_quotient = Refute_ModelFinder_HOL.register_quotient
   val register_typedef = Refute_ModelFinder_HOL.register_typedef
+  val harvest_registrations = Refute_ModelFinder_HOL.harvest_registrations
   val register_frac_type = Refute_ModelFinder_HOL.register_frac_type
   val register_frac_type_rat =
     Refute_ModelFinder_Model.register_frac_type_rat

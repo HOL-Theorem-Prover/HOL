@@ -1,0 +1,48 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `harvest_registrations`
+
+``` hol4
+Refute.harvest_registrations : unit ->
+  {typedefs : hol_type list,
+   quotients : hol_type list,
+   theories_scanned : string list}
+```
+
+------------------------------------------------------------------------
+
+Sweeps every theory in the current session's `Theory.ancestry`, oldest
+first, once, attempting standard typedef and quotient harvesting for
+every type operator those theories declare.
+
+This is an opt-in, eager alternative to the model finder's default
+demand-driven harvest, which only registers a type's metadata the first
+time an unregistered Abs/Rep occurrence for it is encountered while
+processing a goal.  `harvest_registrations` reuses that same lazy harvest
+for every candidate type operator, so every incompatibility guard, clash
+guard, and negative-cache entry behaves identically; it is not a second
+harvest implementation, only an eager caller of the existing one.
+
+The returned record lists only what this call newly registered: a type
+already registered, whether by an earlier explicit registration or an
+earlier harvest, is not listed.  Consequently an immediate second call
+returns empty lists, and calling it costs nothing beyond the first sweep
+for any type it has already settled, positively or negatively.
+`theories_scanned` is the whole swept ancestry, not the narrower,
+per-operator set of theories whose theorems the harvest actually
+inspected.
+
+### Failure
+
+A type operator that harvesting cannot classify, or that already carries
+an incompatible classification, is silently skipped.  This covers only
+the per-operator harvesting attempt: enumerating the ancestry and each
+theory's type operators runs outside that handler and can still raise.
+
+### See also
+
+[`Refute.register_typedef`](#Refute.register_typedef),
+[`Refute.register_quotient`](#Refute.register_quotient),
+[`Refute.model_refute`](#Refute.model_refute)
+
+Lazy and whole-ancestry harvesting are described in
+\ref{Description:the-holrefute-library}.
