@@ -1447,6 +1447,121 @@ fun read_foreign_depfile tgt =
 
 (* is run in a directory at a time *)
 type g = GraphExtra.t HM_DepGraph.t
+
+(* ----------------------------------------------------------------------
+    decide_status
+
+    The policy half of HM_DepGraph.assign_statuses.  Every node
+    `build_depgraph' creates below carries Undecided{forced}, where
+    `forced' is the part of the verdict needing only the filesystem.
+    What is left over is the part that needs the finished graph: whether
+    any dependency will itself be rebuilt.
+
+    The formulas are the ones the walk used to apply inline, with two
+    differences.  The dependency half is now exact rather than whatever
+    the walk happened to have reached -- that is the whole point.  And
+    the nodes one script run produces share a single verdict, so a
+    theory's .sig can no longer be called stale while the .dat written
+    beside it is called fresh; the build marks that same group Succeeded
+    as a unit (`other_nodes' in BuildCommand).
+   ---------------------------------------------------------------------- *)
+fun decide_status (g : g) (nIs : (node * GraphExtra.t nodeInfo) list)
+                  {deps_unbuilt} =
+    let
+      (* Where the group has a .dat, that node speaks for it: its
+         dependencies are the ones the cachekey stamp was computed over.
+         A starred-dep rule can put a node with quite different
+         dependencies into the same group (the EmitML pattern, where a
+         rule's target is a side effect of running a theory script). *)
+      val (repnode, rep) =
+          case List.find (fn (_, nI) => is_theory_dat_node nI) nIs of
+              SOME x => x
+            | NONE => hd nIs
+      val forced =
+          List.exists (fn (_, nI) => case #status nI of
+                                         Undecided {forced} => forced
+                                       | _ => false)
+                      nIs
+      val tgt = #target rep
+      val dir = hm_target.dirpart tgt
+      (* Inlined into the guard below rather than bound here: under the
+         default mtime strategy the guard short-circuits before this,
+         and probing every group in the graph for nothing is the sort
+         of cost that does not announce itself. *)
+      fun all_exist () =
+          List.all (fn (_, nI) => cached_tgtexists (#target nI)) nIs
+      (* Which theory tgt is a product of, if any.  The script's own
+         products (.sml/.sig/.dat) are checked against its stamp; the
+         compile products (.uo/.ui) inherit the .dat's verdict. *)
+      val thy_of_tgt =
+          case hm_target.filepart tgt of
+              SML (Theory s) => SOME s
+            | SIG (Theory s) => SOME s
+            | DAT s => SOME s
+            | UO (Theory s) => SOME s
+            | UI (Theory s) => SOME s
+            | _ => NONE
+      fun stamp_path thy =
+          let
+            val datHOL_s =
+                OS.Path.concat (hmdir.toAbsPath dir, thy ^ "Theory.dat")
+            val datFS =
+                case HFS_NameMunge.HOLtoFS datHOL_s of
+                    SOME {fullfile, ...} => fullfile
+                  | NONE => datHOL_s
+          in
+            HM_Cachekey.stamp_path_for_datfile datFS
+          end
+      fun stamp_matches g thy =
+          case HM_Cachekey.read_stamp (stamp_path thy) of
+              NONE => (false, g)
+            | SOME recorded =>
+              let val (ck, g') = HM_Cachekey.compute_for_node g repnode
+              in
+                case ck of
+                    HM_Cachekey.Key k => (k = recorded, g')
+                  | HM_Cachekey.Missing _ => (false, g')
+              end
+      (* A theory's compile products are written alongside the .dat by
+         the same script, so under --rebuild=cachekey they inherit its
+         verdict instead of consulting mtimes that can race against
+         each other when siblings are built in parallel.  Reached only
+         once the .dat has been decided: the .uo depends on it, and the
+         .ui depends on the .sig it is grouped with. *)
+      fun theory_dat_succeeded g =
+          case thy_of_tgt of
+              NONE => false
+            | SOME s =>
+              (case target_node g (hm_target.mk(dir, DAT s)) of
+                   NONE => false
+                 | SOME n =>
+                   (case peeknode g n of
+                        SOME {status = Succeeded, ...} => true
+                      | _ => false))
+      val (uptodate, g) =
+          if cline_rebuild_strategy <> HM_Cachekey_dtype.Cachekey orelse
+             deps_unbuilt orelse not forced orelse not (all_exist ())
+          then (false, g)
+          else
+            (case #command rep of
+                 BuiltInCmd (BIC_BuildScript _, _) =>
+                   (case thy_of_tgt of
+                        SOME thy => stamp_matches g thy
+                      | NONE => (false, g))
+               | BuiltInCmd (BIC_Compile, _) => (theory_dat_succeeded g, g)
+               | _ => (false, g))
+      val _ = if uptodate then
+                diag "builddepgraph"
+                     (fn _ => tgt_toString tgt ^
+                              ": cachekey matches stamp, up-to-date")
+              else ()
+    in
+      (g,
+       if deps_unbuilt orelse (forced andalso not uptodate) then
+         Pending {needed = false}
+       else Succeeded)
+    end
+
 fun build_depgraph cdset incinfo (tgt:dep) g0:(g * node) =
 let
   val dir = hm_target.dirpart tgt and target = hm_target.filepart tgt
@@ -1469,7 +1584,6 @@ let
   fun fp d s = hmdir.extendp {base = d, extension = s}
   fun fps d = hmdir.toAbsPath d
   fun addF tgt n = (n,tgt)
-  fun nstatus g n = peeknode g n |> valOf |> #status
   fun build (tgt':dep) g =
     build_depgraph (cdset_add cdset (dir, target_s)) incinfo tgt' g
 
@@ -1519,102 +1633,29 @@ let
               end
           val (g2, depnodes : (HM_DepGraph.node * dep) list) =
               Binaryset.foldl foldthis (g1, [addF pdep pnode]) secondaries
-          val unbuilt_deps =
-              List.filter (fn (n,_) => let val stat = nstatus g2 n
-                                       in
-                                         is_pending stat orelse is_failed stat
-                                       end)
-                          depnodes
           val bic = case toFile target_s of
                         SML (Theory s) => BIC_BuildScript s
                       | SIG (Theory s) => BIC_BuildScript s
                       | DAT s => BIC_BuildScript s
                       | _ => BIC_Compile
-          (* For theory targets, when --rebuild=cachekey is in force,
-             consult the cachekey stamp next to the .dat instead of
-             mtime.  Short-circuit to Succeeded when the target exists
-             on disk and the stamp records the current input hash. *)
-          fun theory_stamp_path thy =
-              let
-                val datHOL_s = fps (fp dir (thy ^ "Theory.dat"))
-                val datFS =
-                    case HFS_NameMunge.HOLtoFS datHOL_s of
-                        SOME {fullfile, ...} => fullfile
-                      | NONE => datHOL_s
-              in
-                HM_Cachekey.stamp_path_for_datfile datFS
-              end
-          fun stamp_matches g thy =
-              case HM_Cachekey.read_stamp (theory_stamp_path thy) of
-                  NONE => (false, g)
-                | SOME recorded =>
-                  let val (ck, g') =
-                          HM_Cachekey.compute_for_deps g
-                                                       (map #2 depnodes)
-                  in
-                    case ck of
-                        HM_Cachekey.Key k => (k = recorded, g')
-                      | HM_Cachekey.Missing _ => (false, g')
-                  end
-          (* If this target is a theory's compile product (fooTheory.uo
-             or fooTheory.ui), check the corresponding .dat node.
-             Theory compile products are built alongside the .dat from
-             the same script; under --rebuild=cachekey, when the .dat
-             node is Succeeded, the products inherit that status --
-             bypassing the mtime check that can spuriously fire on
-             parallel-built siblings whose mtimes can race against
-             each other. *)
-          fun theory_dat_succeeded () =
-              let
-                val thy_opt = case hm_target.filepart tgt of
-                                  UO (Theory s) => SOME s
-                                | UI (Theory s) => SOME s
-                                | _ => NONE
-              in
-                case thy_opt of
-                    NONE => false
-                  | SOME s =>
-                    (case HM_DepGraph.target_node g2 (hm_target.mk(dir, DAT s)) of
-                         NONE => false
-                       | SOME n =>
-                         (case HM_DepGraph.peeknode g2 n of
-                              SOME {status = Succeeded, ...} => true
-                            | _ => false))
-              end
-          val (cachekey_uptodate, g3) =
-              if cline_rebuild_strategy <> HM_Cachekey_dtype.Cachekey then
-                (false, g2)
-              else
-                (case bic of
-                     BIC_BuildScript thy =>
-                     if cached_exists fullpath_s andalso
-                        null unbuilt_deps
-                     then stamp_matches g2 thy
-                     else (false, g2)
-                   | BIC_Compile =>
-                     if cached_exists fullpath_s andalso
-                        null unbuilt_deps andalso
-                        theory_dat_succeeded ()
-                     then (true, g2)
-                     else (false, g2))
-          val needs_building =
-              not cachekey_uptodate andalso
-              (not (null unbuilt_deps) orelse
-               set_exists (fn d => d cached_depforces_update_of tgt)
-                          (set_add pdep secondaries))
-          val _ = if cachekey_uptodate then
-                    diag (fn _ => target_s ^
-                                  ": cachekey matches stamp, up-to-date")
-                  else ()
+          (* The half of the rebuild decision that does not depend on
+             the graph: is some dependency newer than the target?  That
+             is pure mtime over file paths, so settling it here is
+             sound.  Whether a dependency will *itself* be rebuilt is
+             the half that has to wait until the walk is over, because
+             a cross-directory dependency may still be a placeholder
+             judged on nothing but its own existence.  See
+             `decide_status' and HM_DepGraph.assign_statuses. *)
+          val forced = set_exists (fn d => d cached_depforces_update_of tgt)
+                                  (set_add pdep secondaries)
         in
           ({target = tgt, seqnum = 0, phony = false,
-            status = if needs_building then Pending{needed=false}
-                     else Succeeded,
+            status = Undecided {forced = forced},
             extra = extra,
             mtime = hm_target.tgt_modTime tgt,
             local_parallelism_limit = limit_for_dir rh,
             command = BuiltInCmd (bic,incinfo), dir = rh,
-            dependencies = depnodes }, g3)
+            dependencies = depnodes }, g2)
         end
       else
         case extra_rule_for tgt of
@@ -1690,36 +1731,23 @@ let
                                   (more_deps |> set_addList dependencies
                                              |> set_addList extra_deps)
 
-              val unbuilt_deps =
-                  List.filter
-                    (fn (n,_) => let val stat = nstatus g1 n
-                                 in
-                                   is_pending stat orelse is_failed stat
-                                 end)
-                    depnodes
               val is_phony = isPHONY tgt
               val _ = if is_phony then diag (fn _ => target_s ^" is phony")
                       else ()
-              val needs_building_by_deps_existence =
+              (* As in the branch above, only the graph-independent half
+                 of the decision is taken here: the target's own
+                 absence, its mtime against the rule's dependencies, and
+                 phoniness. *)
+              val forced =
                   not (FileSys.access(target_s, [])) orelse
-                  not (null unbuilt_deps) orelse
                   List.exists (fn d => d cached_depforces_update_of tgt)
                               dependencies orelse
                   is_phony
-              val needs_building =
-                  needs_building_by_deps_existence andalso
-                  not (null commands)
-              val _ = if is_phony then
-                        diag (fn _ => target_s ^ " needs building = " ^
-                                      Bool.toString needs_building)
-                      else ()
-              val status = if needs_building then Pending{needed=false}
-                           else Succeeded
               val tgt_mtime = if is_phony then NONE
                               else hm_target.tgt_modTime tgt
               fun commandNode (c, local_depnodes, seqnum) =
                   {target = tgt, seqnum = seqnum,
-                   status = status, phony = is_phony,
+                   status = Undecided {forced = forced}, phony = is_phony,
                    command = SomeCmd c, extra = extra,
                    dir = rh, mtime = tgt_mtime,
                    local_parallelism_limit = limit_for_dir rh,
@@ -1736,7 +1764,16 @@ let
                   ([(n,tgt)], seqnum + 1, g')
                 end
             in
-              if needs_building then
+              if not (null commands) then
+                (* The chain of command nodes is built whether or not the
+                   commands turn out to be needed.  It used to be built
+                   only when they were, which made *structure* depend on
+                   a staleness verdict that cannot be reached yet: an
+                   unbuilt cross-directory dependency discovered later
+                   would have called for a chain that could no longer be
+                   created.  `assign_statuses' marks the whole chain
+                   Succeeded when nothing needs to run; the extra nodes
+                   cost one per command beyond the first. *)
                 let
                   val (pfx, lastc) = front_last commands
                   val (lastnodelist, seqnum, g) = List.foldl foldthis ([], 0, g1) pfx
@@ -1747,22 +1784,23 @@ let
               else
                 case starred_dep of
                     NONE =>
+                    (* No commands anywhere for this target, so nothing
+                       will ever run for it: an aggregate -- a phony
+                       `all', or a rule that only names prerequisites.
+                       Succeeded, as before; there is nothing to
+                       decide. *)
                     ({target = tgt, seqnum = 0, phony = is_phony,
-                      status = status, command = NoCmd, extra = extra,
+                      status = Succeeded, command = NoCmd, extra = extra,
                       dir = rh,
                       mtime = tgt_mtime,
                       local_parallelism_limit = limit_for_dir rh,
                       dependencies = depnodes}, g1)
                   | SOME s =>
                     let
-                      val updstatus =
-                          if needs_building_by_deps_existence then
-                            Pending{needed=false}
-                          else Succeeded
                       val fp = OS.Path.concat (hmdir.toAbsPath actual_dir, s)
                     in
                       ({target = tgt, seqnum = 0,
-                        phony = false, status = updstatus,
+                        phony = false, status = Undecided {forced = forced},
                         command = BuiltInCmd (BIC_BuildScript fp, incinfo),
                         dir = actual_dir, extra = extra,
                         mtime = hm_target.tgt_modTime tgt,
@@ -1861,6 +1899,10 @@ fun create_complete_graph cline_incs idm =
                  #info_inline_end scan_output_functions())
               else ()
       val diag = diag "builddepgraph"
+      (* Statuses are settled only now, over the finished graph: while
+         the walk is in progress a cross-directory target may still be a
+         placeholder judged on its own existence alone. *)
+      val g = HM_DepGraph.assign_statuses decide_status g
     in
       diag (fn _ => "Finished building complete dep graph (has " ^
                     Int.toString (HM_DepGraph.size g) ^ " nodes)");
@@ -2149,6 +2191,10 @@ fun create_complete_graph_for_roots roots dirmode_roots idm =
                  #info_inline_end scan_output_functions ())
               else ()
       val diag = diag "builddepgraph"
+      (* See create_complete_graph: the walk decides no statuses, so
+         that no verdict can be taken against a placeholder a later
+         directory is going to replace. *)
+      val graph = HM_DepGraph.assign_statuses decide_status graph
     in
       diag (fn _ => "Finished building complete dep graph (has " ^
                     Int.toString (HM_DepGraph.size graph) ^ " nodes)");
