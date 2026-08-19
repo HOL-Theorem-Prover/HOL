@@ -3889,10 +3889,17 @@ val _ = require_msg
 
 (* wf_wfrec'_def (refuteScript.sml) reads [wf_wfrec R Fn] on its own RHS;
    the [refute$wf_wfrec -> refute$wf_wfrec'] row must rewrite that
-   occurrence back to wf_wfrec' itself, so the harvested axiom the model
-   finder actually sees is the genuine recursive equation
-   [wf_wfrec' R Fn x = Fn (RESTRICT (wf_wfrec' R Fn) R x) x] -- not an
-   unrolling over an unconstrained wf_wfrec. *)
+   occurrence back to wf_wfrec' itself, so what unfolding hands to
+   add_axiom (Refute_ModelFinder_Preproc.sml) is the genuine recursive
+   equation [wf_wfrec' R Fn x = Fn (RESTRICT (wf_wfrec' R Fn) R x) x] --
+   not an unrolling over an unconstrained wf_wfrec.  This only pins
+   [unfold_defs_in_term]'s output; add_axiom feeds that on through
+   [skolemize_term_with_origins] and [specialize_consts_in_term] before
+   it reaches preprocess_formulas' own definitions, and specialization
+   regenerates a specialized constant's axiom from the raw, un-ersatzed
+   equation, re-tying the knot only on a later pass --
+   mf_wfrec_ersatz_ties_the_knot_in_preprocessed_defs below pins that
+   stage instead. *)
 fun mf_wfrec_ersatz_ties_the_knot () =
   let
     val ersatz_table = MFH.current_ersatz_table ()
@@ -3924,6 +3931,83 @@ val _ = require_msg
   (check_result mf_wfrec_ersatz_ties_the_knot) (fn () =>
     "WFREC/wf_wfrec ersatz rows are missing, or the recursive knot is not \
     \tied in the harvested wf_wfrec' axiom")
+  (fn () => ()) ()
+
+(* add_axiom feeds preprocess_formulas [unfold_defs_in_term |>
+   skolemize_term_with_origins |> specialize_consts_in_term], and the
+   goal itself is specialized too.  specialize_fun_axiom
+   (Refute_ModelFinder_Preproc.sml) regenerates the specialized
+   constant's axiom from the *raw*, un-ersatzed wf_wfrec'_def, so the
+   knot is re-tied only when that regenerated axiom is fed back through
+   add_axiom's own unfold/specialize pass.  Check what
+   preprocess_formulas actually emits -- the idiom
+   mf_box_specialize_free_var_soundness reads its definitional output
+   with -- rather than stopping at unfold_defs_in_term.  Nested
+   RESTRICT/RESTRICTION specialization can put the recursive occurrence
+   a few specialized definitions away from wf_wfrec' itself, a chain
+   rather than literal self-application inside one equation, so this
+   walks the call graph the specialized definitions form and checks for
+   a cycle through a wf_wfrec'-derived node. *)
+fun mf_wfrec_ersatz_ties_the_knot_in_preprocessed_defs () =
+  let
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    (* Fn must genuinely apply its function argument -- [\f n. n], which
+       ignores it, lets specialize_fun_axiom's own beta-reduction erase
+       the recursive call before this pin could see it. *)
+    val goal =
+      ``WFREC (\x y:bool. (x = F) /\ (y = T))
+          (\f (b:bool). if b then (1:num) + f F else 0) T = (1:num)``
+    val (_, defs, _, _, _, _) =
+      Refute_ModelFinder_Preproc.preprocess_formulas context [] goal
+    fun is_wfrec_special variable =
+      Term.is_var variable andalso
+      let val name = #1 (Term.dest_var variable)
+      in
+        Refute_ModelFinder_Names.is_special_name name andalso
+        String.isSubstring "wfrec" name
+      end
+    (* Nested RESTRICT/RESTRICTION specialization can put wf_wfrec's
+       recursive occurrence a few specialized definitions away from its
+       own -- a chain sp_wf_wfrec -> ... -> sp_wf_wfrec, not literal
+       self-application inside one equation.  Follow the whole
+       specialized call graph the definitions form instead of one term
+       at a time. *)
+    fun edge_of term =
+      let
+        val body = #2 (boolSyntax.strip_forall term)
+        val (lhs, rhs) = boolSyntax.dest_eq body
+        val (head, _) = HolKernel.strip_comb lhs
+      in
+        if Term.is_var head then SOME (head, Term.all_vars rhs) else NONE
+      end handle HOL_ERR _ => NONE
+    val call_graph = List.mapPartial edge_of defs
+    fun successors variable =
+      case List.find (fn (head, _) => Term.aconv head variable) call_graph of
+          SOME (_, referenced) => referenced
+        | NONE => []
+    fun reachable start =
+      let
+        fun bfs seen [] = seen
+          | bfs seen (variable :: rest) =
+              if List.exists (Term.aconv variable) seen then bfs seen rest
+              else bfs (variable :: seen) (successors variable @ rest)
+      in bfs [] (successors start) end
+    fun on_a_cycle variable =
+      List.exists (Term.aconv variable) (reachable variable)
+    val wfrec_specials = List.filter is_wfrec_special
+      (List.concat (map (fn (head, referenced) => head :: referenced)
+        call_graph))
+  in
+    not (null (!(#special_funs context))) andalso
+    not (null defs) andalso
+    List.exists on_a_cycle wfrec_specials
+  end
+
+val _ = require_msg
+  (check_result mf_wfrec_ersatz_ties_the_knot_in_preprocessed_defs) (fn () =>
+    "the recursive occurrence in wf_wfrec's harvested axiom does not \
+    \survive specialize_consts_in_term: preprocess_formulas' own \
+    \definitions unravel the knot")
   (fn () => ()) ()
 
 fun mf_relation_builtin_producers () =
@@ -24432,13 +24516,20 @@ val _ = require_msg
   \guard on wfrec's WF premise regressed")
   (fn () => ()) ()
 
-(* Positive control for the wfrec' knot itself: over the finite domain
-   [:bool], wf' decides [WF R] exactly (README), so wfrec' both refutes a
-   false universally-quantified WFREC statement Genuine and stays Unknown
-   on a true one -- confirming the recursive equation
-   [wf_wfrec' R Fn x = Fn (RESTRICT (wf_wfrec' R Fn) R x) x]
-   (mf_wfrec_ersatz_ties_the_knot) is actually driving the search, not an
-   unconstrained wf_wfrec standing in for it. *)
+(* Positive control for the wfrec' knot itself, over the finite domain
+   [:bool] where wf' decides [WF R] exactly (README).  The `<>1` half
+   alone does not discriminate: an unconstrained wf_wfrec standing in
+   for the recursion can pick 0 at F just as the tied equation does, so
+   Fn (\f b. if b then 1 + f F else 0) still yields 1 at T either way.
+   The `<>2` twin is what confirms the tied equation [wf_wfrec' R Fn x =
+   if WF R then Fn (RESTRICT (wf_wfrec' R Fn) R x) x else unknown]
+   (mf_wfrec_ersatz_ties_the_knot) is actually driving the search, not
+   an unconstrained wf_wfrec: measured by ablating the [refute$wf_wfrec
+   -> refute$wf_wfrec'] row (renaming its key, Refute_ModelFinder_HOL.
+   sml), the `<>1` half stays Genuine unchanged, but the `<>2` half
+   flips from Unknown to a spurious Genuine -- an unconstrained
+   wf_wfrec lets Kodkod pick [wf_wfrec R Fn F = 1] freely, giving
+   [WFREC R Fn T = 2], false under real WFREC semantics. *)
 fun mf_wfrec_finite_domain_witness_genuine () =
   not (Refute_Forl.is_configured ()) orelse
   let

@@ -26,7 +26,11 @@ search that does not cover every relevant type returns `Unknown`, with a
 reason such as `no counterexample within the tested scopes` and the searched
 frontier.  Exhaustive QC and narrowing can establish totality for finite
 generator spaces, and the model finder can do so for a constant preprocessed
-formula or exact finite scopes.  `NoCounterexample` is decisive in a backend
+formula or exact finite scopes -- except when a generated problem's own
+encoding carries a value-position `unknown` (the `wfrec'` ersatz row, see
+"Known limitations and follow-ups" below), which vetoes the totality claim
+outright regardless of how many scopes exhaust.  `NoCounterexample` is
+decisive in a backend
 race and stops the other searches, just like a counterexample at the declared
 certainty ceiling.
 
@@ -495,12 +499,22 @@ straight through `the_fun` (its own Hilbert-choice fixpoint,
 `relationScript.sml`) risks the same empty-extension danger as `min$@`
 below; it is swapped instead for `refuteTheory`'s `wfrec'`, whose body
 reads `wf_wfrec R Fn x` and is paired with a `wf_wfrec -> wf_wfrec'`
-ersatz row of its own, so the harvested axiom the model finder actually
-sees is the literal recursive equation `wf_wfrec' R Fn x =
-Fn (RESTRICT (wf_wfrec' R Fn) R x) x` rather than an unrolling over an
-unconstrained function (`mf_wfrec_ersatz_ties_the_knot`,
-`selftest.sml`).  `wfrec'` guards its own `WF R` premise with `wf'`, so it
-inherits the same finite-exact/infinite-`Potential` split.
+ersatz row of its own.  Unfolding hands `add_axiom` the literal
+recursive equation `wf_wfrec' R Fn x = if WF R then
+Fn (RESTRICT (wf_wfrec' R Fn) R x) x else unknown` rather than an
+unrolling over an unconstrained function, and the knot survives the
+default specialized path too, where it is re-tied only on a later pass
+(`mf_wfrec_ersatz_ties_the_knot`, `selftest.sml`).  The `WF R` guard is
+itself swapped for `wf'`, so it decides exactly on a finite or
+polymorphic domain like any other `WF` occurrence, but its `unknown`
+else-branch is a syntactic part of every `wf_wfrec'` occurrence's
+harvested axiom regardless of how that check resolves, so any goal
+reaching this row costs the search `NoCounterexample` outright, not
+only over an infinite domain: an `unknown` at a value position is
+exactly as restrictive on the liberal side of a search as on the sound
+side, so an exhausted search can no longer be trusted to mean no
+counterexample exists (`unknown_value`,
+`Refute_ModelFinder_Kodkod.sml`).
 `pred_set$SUM_IMAGE` is defined by an `ITSET` fold, whose
 unfolding the encoder handles badly: measured against a 30s budget, it
 sizes scopes over `num itself -> num` and `(num -> bool) # num`,
@@ -524,7 +538,11 @@ pinned only by `refuteTheory`'s `Eps_psimp`, which is vacuous once no
 in-scope value satisfies the predicate; reading an atom off that
 unconstrained relation would silently turn a sound problem into a
 countermodel of a true theorem (`x <> y ==> CARD {x; y} = 2` via `card'`'s
-witness list).  `unfold_defs_in_term`
+witness list, and a goal naming `relation$the_fun` directly rather than
+through `WFREC`: the `wfrec'` row above intercepts only the `WFREC`
+symbol, and `the_fun` is a public constant of `relationTheory` in its
+own right that still unfolds straight into `@f. approx R M x f`).
+`unfold_defs_in_term`
 (`Refute_ModelFinder_HOL.sml`) inserts a guard at every syntactic
 occurrence -- goal and harvested axiom alike -- with a one-shot rewrite:
 `$@ P` becomes `if (?x. P x) then $@ P else unknown`, so an empty

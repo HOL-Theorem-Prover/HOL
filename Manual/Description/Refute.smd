@@ -800,6 +800,19 @@ Counterexample search is bounded and incomplete.  In particular:
   spurious `Genuine` refutation, but also means `NoCounterexample` is
   never available through them, regardless of the element type's
   finiteness;
+* `relation$WFREC` is encoded through a pair of builtin ersatz
+  definitions that tie a literal recursive equation instead of
+  unfolding HOL4's own Hilbert-choice fixpoint witness function.  The
+  recursion is guarded by the well-foundedness premise `WF R`, and
+  matches HOL's own characterization exactly wherever that premise is
+  decided; off it, the value is `unknown`, honestly reflecting that
+  nothing characterizes HOL's own witness there either.  That
+  `unknown` sits at a value position, not a formula position, so any
+  goal that reaches this encoding loses `NoCounterexample` outright,
+  not merely `Potential` as with `WF` above: an unrepresented value is
+  exactly as restrictive on the liberal side of a search as on the
+  sound side, so an exhausted search can no longer be trusted to mean
+  no counterexample exists;
 * Hilbert choice (`min$@`) is otherwise an uninterpreted function; a
   predicate with no in-scope witness would read an arbitrary value off it,
   so the model finder inserts a guard at every syntactic occurrence and

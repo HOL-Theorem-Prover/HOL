@@ -4275,16 +4275,23 @@ structure Refute_ModelFinder_HOL = struct
         mf_sum_ersatz_literal_witness_regression, selftest.sml). *)
      {original = {Thy = "pred_set", Name = "SUM_IMAGE"},
       replacement = {Thy = "refute", Name = "sum'"}},
-     (* wf_wfrec is only ever produced by unfolding wf_wfrec'_def's own
-        body (refuteScript.sml); this row is what turns that occurrence
-        back into wf_wfrec', tying the recursive knot -- see
-        mf_wfrec_ersatz_ties_the_knot (selftest.sml). *)
+     (* wf_wfrec is a public constant of this theory, so a user goal may
+        name it directly, not just occur inside wf_wfrec'_def's own body
+        (refuteScript.sml).  Either way this row rewrites the occurrence
+        to wf_wfrec', whose guarded equation constrains it no more
+        strongly than HOL constrains WFREC -- see
+        mf_wfrec_ersatz_ties_the_knot (selftest.sml) for the
+        unfolding-body case. *)
      {original = {Thy = "refute", Name = "wf_wfrec"},
       replacement = {Thy = "refute", Name = "wf_wfrec'"}},
-     (* A goal that syntactically mentions relation$WFREC (never an
-        ordinary TotalDefn-recursive function, which stays on its own
-        clean equations, see mf_wf_ersatz_does_not_weaken_definitions)
-        now routes to wfrec' instead of unfolding the_fun/[$@]. *)
+     (* A goal that syntactically mentions relation$WFREC now routes to
+        wfrec' instead of unfolding the_fun/[$@].  A function stays on
+        its own clean equations, untouched by this row (see
+        mf_wf_ersatz_does_not_weaken_definitions), only while DefnBase
+        carries a live userdef presentation for it; a [notuserdef]
+        definition, or one built by hand outside TotalDefn, registers
+        none, and raw_standard_props (above) then falls through to its
+        raw WFREC-containing equation, which this row does reach. *)
      {original = {Thy = "relation", Name = "WFREC"},
       replacement = {Thy = "refute", Name = "wfrec'"}}]
 

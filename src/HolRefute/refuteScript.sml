@@ -170,11 +170,15 @@ End
    it agrees with WFREC's own fixpoint characterization.  The
    [relation$WFREC -> refute$wfrec'] ersatz row (Refute_ModelFinder_HOL.
    sml) makes any goal that syntactically mentions WFREC route here
-   instead of the_fun/[$@]; an ordinary TotalDefn-recursive function
-   never exposes raw WFREC to the model finder in the first place, kept
-   on its own clean STDEQNS equations instead
-   (mf_wf_ersatz_does_not_weaken_definitions, selftest.sml), so this row
-   cannot touch it.  [relation$WFREC_DEF] itself is unconditional -- it
+   instead of the_fun/[$@].  A function stays on its own clean STDEQNS
+   equations, untouched by this row
+   (mf_wf_ersatz_does_not_weaken_definitions, selftest.sml), only while
+   DefnBase carries a live [userdef] presentation for it; that is
+   [TotalDefn.Define]'s default, but a [notuserdef] definition, or one
+   built by hand outside TotalDefn, registers none, and
+   [raw_standard_props] (Refute_ModelFinder_HOL.sml) then falls through
+   to its raw, WFREC-containing equation, which this row does reach.
+   [relation$WFREC_DEF] itself is unconditional -- it
    picks a value via [the_fun] even when R is not well-founded -- but
    WFREC_THM's fixpoint equation, the only characterization wfrec' ports,
    is proved solely under [WF R]; outside that premise this port has
