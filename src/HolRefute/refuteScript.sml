@@ -127,6 +127,67 @@ Definition wf'_def:
     (!x. ~TC R x x) /\ (FINITE (\p. R (FST p) (SND p)) \/ unknown)
 End
 
+(* Port of Nitpick.thy's wf_wfrec'/wfrec': well-founded recursion made
+   encodable by tying a literal recursive equation instead of unfolding
+   HOL4's Hilbert-choice [the_fun] (relationScript.sml).  wf_wfrec is
+   uninterpreted -- it exists only so the [refute$wf_wfrec ->
+   refute$wf_wfrec'] ersatz row (Refute_ModelFinder_HOL.sml) rewrites its
+   occurrence inside wf_wfrec'_def's own body back to wf_wfrec' itself,
+   giving the model finder the genuine recursive equation
+   [wf_wfrec' R Fn x =
+    if wf' R then Fn (RESTRICT (wf_wfrec' R Fn) R x) x else unknown]
+   rather than an unrolling over an unconstrained function -- see
+   mf_wfrec_ersatz_ties_the_knot (selftest.sml) for the harvested-axiom
+   pin.  wf_wfrec' is a plain [Definition], so [is_equational_fun]
+   (Refute_ModelFinder_HOL.sml) keeps it un-inlined, and the equation
+   above is what unfolding hands on to add_axiom -- the same route
+   SUM_SET's own equation takes (sum'_def's comment above).
+
+   The recursion is guarded by [WF R], which the [relation$WF ->
+   refute$wf'] row lowers to wf', because relation$WFREC_THM -- the only
+   HOL fact wf_wfrec' ports -- is proved solely under that premise.
+   Asserted for every R the knot is strictly stronger than HOL and can be
+   outright unsatisfiable: at [R = \x y. T] and [Fn f b = ~ f b] over
+   :bool it reads [v = ~v].  Every scope then goes UNSAT for a goal and
+   its negation alike, and exhaustion answers NoCounterexample -- a total
+   claim -- to both; dropping the guard here and probing
+   [wf_wfrec' (\x y. T) (\f b. ~ f b) T] reproduces exactly that.  Off
+   [WF R] the value is [unknown] instead, which is honest: WFREC_DEF picks
+   a [the_fun] witness there that nothing characterizes.  A goal reaching
+   this through WFREC is covered a second time, by the [unknown_value]
+   veto on totality (Refute_ModelFinder_Kodkod.sml); wf_wfrec' has no
+   wfrec' wrapper of its own, so only the guard covers it
+   (mf_wfrec_ersatz_stays_satisfiable_off_wf, selftest.sml). *)
+val _ = new_constant ("wf_wfrec",
+  ``:('a -> 'a -> bool) -> (('a -> 'b) -> 'a -> 'b) -> 'a -> 'b``)
+
+Definition wf_wfrec'_def:
+  wf_wfrec' (R : 'a -> 'a -> bool) (Fn : ('a -> 'b) -> 'a -> 'b) x =
+    if WF R then Fn (RESTRICT (wf_wfrec R Fn) R x) x else unknown
+End
+
+(* wfrec' mirrors relation$WFREC_THM (relationScript.sml): under [WF R]
+   it agrees with WFREC's own fixpoint characterization.  The
+   [relation$WFREC -> refute$wfrec'] ersatz row (Refute_ModelFinder_HOL.
+   sml) makes any goal that syntactically mentions WFREC route here
+   instead of the_fun/[$@]; an ordinary TotalDefn-recursive function
+   never exposes raw WFREC to the model finder in the first place, kept
+   on its own clean STDEQNS equations instead
+   (mf_wf_ersatz_does_not_weaken_definitions, selftest.sml), so this row
+   cannot touch it.  [relation$WFREC_DEF] itself is unconditional -- it
+   picks a value via [the_fun] even when R is not well-founded -- but
+   WFREC_THM's fixpoint equation, the only characterization wfrec' ports,
+   is proved solely under [WF R]; outside that premise this port has
+   nothing to agree or disagree with, so [unknown] is honest rather than
+   an arbitrary guess at [the_fun]'s unconstrained choice.  wf_wfrec'
+   carries the same guard for the same reason, so a goal naming
+   refute$wf_wfrec directly is constrained no more strongly than HOL
+   constrains WFREC. *)
+Definition wfrec'_def:
+  wfrec' (R : 'a -> 'a -> bool) (Fn : ('a -> 'b) -> 'a -> 'b) x =
+    if WF R then wf_wfrec' R Fn x else unknown
+End
+
 Theorem Eps_psimp[refute_psimp]:
   P x ==> ~P y ==> ($@ P = y) ==> ($@ P = x)
 Proof

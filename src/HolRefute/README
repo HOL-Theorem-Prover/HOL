@@ -490,7 +490,18 @@ as `CARD`: `WF` is swapped for `refuteTheory`'s `wf' R = (!x. ~TC R x x) /\
 (FINITE (\p. R (FST p) (SND p)) \/ unknown)`, exact on a genuinely finite or
 polymorphic domain but only `Potential` over an intrinsically infinite one
 such as `num`, where a bounded scope can never decide the `FINITE`
-disjunct.  `pred_set$SUM_IMAGE` is defined by an `ITSET` fold, whose
+disjunct.  `relation$WFREC` is likewise second-order, and unfolding it
+straight through `the_fun` (its own Hilbert-choice fixpoint,
+`relationScript.sml`) risks the same empty-extension danger as `min$@`
+below; it is swapped instead for `refuteTheory`'s `wfrec'`, whose body
+reads `wf_wfrec R Fn x` and is paired with a `wf_wfrec -> wf_wfrec'`
+ersatz row of its own, so the harvested axiom the model finder actually
+sees is the literal recursive equation `wf_wfrec' R Fn x =
+Fn (RESTRICT (wf_wfrec' R Fn) R x) x` rather than an unrolling over an
+unconstrained function (`mf_wfrec_ersatz_ties_the_knot`,
+`selftest.sml`).  `wfrec'` guards its own `WF R` premise with `wf'`, so it
+inherits the same finite-exact/infinite-`Potential` split.
+`pred_set$SUM_IMAGE` is defined by an `ITSET` fold, whose
 unfolding the encoder handles badly: measured against a 30s budget, it
 sizes scopes over `num itself -> num` and `(num -> bool) # num`,
 exhausts four of the six emitted scopes of `SUM_IMAGE (\e. e) {0;1;2} =
@@ -513,8 +524,7 @@ pinned only by `refuteTheory`'s `Eps_psimp`, which is vacuous once no
 in-scope value satisfies the predicate; reading an atom off that
 unconstrained relation would silently turn a sound problem into a
 countermodel of a true theorem (`x <> y ==> CARD {x; y} = 2` via `card'`'s
-witness list, and true `WFREC` recursion equations via the `the_fun`
-witness function it unfolds into).  `unfold_defs_in_term`
+witness list).  `unfold_defs_in_term`
 (`Refute_ModelFinder_HOL.sml`) inserts a guard at every syntactic
 occurrence -- goal and harvested axiom alike -- with a one-shot rewrite:
 `$@ P` becomes `if (?x. P x) then $@ P else unknown`, so an empty

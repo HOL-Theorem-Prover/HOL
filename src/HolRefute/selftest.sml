@@ -3887,6 +3887,45 @@ val _ = require_msg
     "model-finder built-in/numeral/set/ersatz mapping failed")
   (fn () => ()) ()
 
+(* wf_wfrec'_def (refuteScript.sml) reads [wf_wfrec R Fn] on its own RHS;
+   the [refute$wf_wfrec -> refute$wf_wfrec'] row must rewrite that
+   occurrence back to wf_wfrec' itself, so the harvested axiom the model
+   finder actually sees is the genuine recursive equation
+   [wf_wfrec' R Fn x = Fn (RESTRICT (wf_wfrec' R Fn) R x) x] -- not an
+   unrolling over an unconstrained wf_wfrec. *)
+fun mf_wfrec_ersatz_ties_the_knot () =
+  let
+    val ersatz_table = MFH.current_ersatz_table ()
+    val wf_wfrec' = ``wf_wfrec' : (bool -> bool -> bool) ->
+      ((bool -> num) -> bool -> num) -> bool -> num``
+    val axioms = MFH.equational_fun_axioms mf_hol_context wf_wfrec'
+    val unfolded = map (MFH.unfold_defs_in_term mf_hol_context) axioms
+    val wfrec_goal =
+      ``WFREC ($< : num -> num -> bool) (\f (n : num). n) 0``
+    val unfolded_goal = MFH.unfold_defs_in_term mf_hol_context wfrec_goal
+  in
+    ersatz_maps ersatz_table {Thy = "refute", Name = "wf_wfrec"}
+      {Thy = "refute", Name = "wf_wfrec'"} andalso
+    ersatz_maps ersatz_table {Thy = "relation", Name = "WFREC"}
+      {Thy = "refute", Name = "wfrec'"} andalso
+    not (null axioms) andalso
+    List.exists (contains_constant {Thy = "refute", Name = "wf_wfrec'"})
+      unfolded andalso
+    not (List.exists
+      (contains_constant {Thy = "refute", Name = "wf_wfrec"}) unfolded)
+      andalso
+    contains_constant {Thy = "refute", Name = "wfrec'"} unfolded_goal
+      andalso
+    not (contains_constant {Thy = "relation", Name = "WFREC"}
+      unfolded_goal)
+  end
+
+val _ = require_msg
+  (check_result mf_wfrec_ersatz_ties_the_knot) (fn () =>
+    "WFREC/wf_wfrec ersatz rows are missing, or the recursive knot is not \
+    \tied in the harvested wf_wfrec' axiom")
+  (fn () => ()) ()
+
 fun mf_relation_builtin_producers () =
   let
     val relation = ``r : num -> num -> bool``
@@ -24353,7 +24392,7 @@ val _ = require_msg
   \Hilbert-choice witness-list guard regressed")
   (fn () => ()) ()
 
-fun mf_choice_wfrec_empty_extension_not_genuine () =
+fun mf_wfrec_infinite_domain_not_genuine () =
   not (Refute_Forl.is_configured ()) orelse
   let
     val config = Refute.default_config
@@ -24364,11 +24403,15 @@ fun mf_choice_wfrec_empty_extension_not_genuine () =
       |> Refute.upd_timeout 90.0
       |> Refute.upd_card [(NONE, [1, 2, 3])]
     (* [relation$WFREC] applied directly (not via [TotalDefn.Define], whose
-       clean STDEQNS equations never expose the raw WFREC/the_fun form to
-       the model finder) unfolds through [the_fun], whose own definition
-       (relationScript.sml) is [@f. approx R M x f]: the same Hilbert-choice
-       shape as [card'], now over a witness *function* instead of a witness
-       list. *)
+       clean STDEQNS equations never expose raw WFREC to the model finder)
+       now unfolds through [wfrec'] (refuteScript.sml), not [the_fun]: the
+       [relation$WFREC -> refute$wfrec'] row (Refute_ModelFinder_HOL.sml)
+       intercepts every syntactic WFREC occurrence first.  wfrec' guards its
+       recursion with [WF R], encoded by the pre-existing [wf'] ersatz row;
+       over the intrinsically infinite domain [:num], wf' can never decide
+       the FINITE disjunct within a bounded scope (README, "Known
+       limitations"), so the guard -- not a Hilbert-choice witness -- is
+       what keeps this true equation from being reported Genuine. *)
     val outcome = Refute.refute config
       ``WFREC ($< : num -> num -> bool)
           (\f n. if n = 0 then [] else (n - 1) :: f (n - 1)) 1 = [0]``
@@ -24381,12 +24424,109 @@ fun mf_choice_wfrec_empty_extension_not_genuine () =
   end
 
 val _ = tprint
-  "Refute MF: WFREC recursion via the_fun choice is not Genuine without a \
-  \witness"
+  "Refute MF: WFREC recursion over an infinite domain is not Genuine \
+  \without a decided WF premise"
 val _ = require_msg
-  (check_result mf_choice_wfrec_empty_extension_not_genuine) (fn () =>
-  "a true WFREC recursion equation was reported Genuine again: the_fun's \
-  \choice witness-function guard regressed")
+  (check_result mf_wfrec_infinite_domain_not_genuine) (fn () =>
+  "a true WFREC recursion equation was reported Genuine again: the wf' \
+  \guard on wfrec's WF premise regressed")
+  (fn () => ()) ()
+
+(* Positive control for the wfrec' knot itself: over the finite domain
+   [:bool], wf' decides [WF R] exactly (README), so wfrec' both refutes a
+   false universally-quantified WFREC statement Genuine and stays Unknown
+   on a true one -- confirming the recursive equation
+   [wf_wfrec' R Fn x = Fn (RESTRICT (wf_wfrec' R Fn) R x) x]
+   (mf_wfrec_ersatz_ties_the_knot) is actually driving the search, not an
+   unconstrained wf_wfrec standing in for it. *)
+fun mf_wfrec_finite_domain_witness_genuine () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_binary_ints (SOME false)
+      |> Refute.upd_timeout 60.0
+      |> Refute.upd_card [(NONE, [1, 2, 3, 4])]
+    (* R relates T after F, so WFREC unwinds as
+       [WFREC R Fn F = 0] and [WFREC R Fn T = 1 + WFREC R Fn F = 1]. *)
+    val outcome_refutable = Refute.refute config
+      ``!x:bool. WFREC (\x y. (x = F) /\ (y = T))
+          (\f (b:bool). if b then (1:num) + f F else 0) x <> 1``
+    val outcome_sound = Refute.refute config
+      ``!x:bool. WFREC (\x y. (x = F) /\ (y = T))
+          (\f (b:bool). if b then (1:num) + f F else 0) x <> 2``
+  in
+    (case outcome_refutable of
+         Refute.Counterexample [{certainty = Refute.Genuine, ...}] => true
+       | _ => false) andalso
+    (case outcome_sound of
+         Refute.Unknown _ => true
+       | _ => false)
+  end
+
+val _ = tprint
+  "Refute MF: wfrec' finds a Genuine witness and stays sound on a true \
+  \twin"
+val _ = require_msg
+  (check_result mf_wfrec_finite_domain_witness_genuine) (fn () =>
+  "wfrec' either missed a Genuine WFREC counterexample over a finite \
+  \domain, or wrongly reported the true soundness twin Genuine")
+  (fn () => ()) ()
+
+(* NoCounterexample is a total claim, so a proposition and its negation
+   may never both earn one.  Two independent mechanisms keep the wfrec'
+   rows on the right side of that, and dropping either turns its own pair
+   into two NoCounterexample answers:
+
+   - wf_wfrec' guards its knot with [WF R] (refuteScript.sml).  Asserted
+     for every R the knot is unsatisfiable at [R = \x y. T] and
+     [Fn f b = ~ f b], which sends both polarities UNSAT by itself.
+   - off [WF R] the value is [refute$unknown], and an unknown at a value
+     position is an absent optional in the unsound problem as much as in
+     the sound one, so exhaustion may not certify totality
+     ([unknown_value], Refute_ModelFinder_Kodkod.sml).
+
+   The wf_wfrec' goal has no wfrec' wrapper, hence no unknown of its own
+   until the guard supplies one; the WFREC goal reaches both. *)
+fun mf_wfrec_ersatz_stays_satisfiable_off_wf () =
+  not (Refute_Forl.is_configured ()) orelse
+  let
+    val config = Refute.default_config
+      |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
+      |> Refute.upd_sequential true
+      |> Refute.upd_quiet true
+      |> Refute.upd_binary_ints (SOME false)
+      |> Refute.upd_timeout 90.0
+      |> Refute.upd_card [(NONE, [1, 2, 3])]
+    fun is_total goal =
+      case Refute.refute config goal of
+          Refute.NoCounterexample => true
+        | _ => false
+    fun both_total goal =
+      is_total goal andalso is_total (boolSyntax.mk_neg goal)
+    val through_wfrec =
+      ``WFREC (\x y:bool. T) (\f (b:bool). ~ f b) T``
+    val through_wf_wfrec =
+      ``wf_wfrec' (\x y:bool. T) (\f (b:bool). ~ f b) T``
+    (* Not over-conservative: wf' decides this one by acyclicity alone,
+       with no unknown reaching a value position, so the search still
+       closes. *)
+    val decided = is_total ``~WF (\(x:bool) y. T)``
+  in
+    not (both_total through_wfrec) andalso
+    not (both_total through_wf_wfrec) andalso
+    decided
+  end
+
+val _ = tprint
+  "Refute MF: the wfrec' ersatz never answers NoCounterexample to a \
+  \proposition and its negation alike"
+val _ = require_msg
+  (check_result mf_wfrec_ersatz_stays_satisfiable_off_wf) (fn () =>
+  "the wfrec' rows certified totality both ways: either wf_wfrec' lost \
+  \its WF guard or a value-position unknown stopped vetoing exhaustion")
   (fn () => ()) ()
 
 fun mf_choice_witness_in_scope_still_genuine () =

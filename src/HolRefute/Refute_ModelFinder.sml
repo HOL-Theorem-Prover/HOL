@@ -1192,10 +1192,16 @@ fun run_instance deadline started (config : Refute_Core.config)
        checked happened to be exact for that occurrence's domain type, which
        this static, problem-wide flag cannot tell apart from a scope that
        merely truncated one -- so no scope may certify exhaustion while it
-       is set. *)
+       is set.  A [refute$unknown] that reached a value position vetoes it
+       for a sharper reason ([unknown_value], Refute_ModelFinder_Kodkod.sml):
+       there the unsound problem is no weaker than the sound one, so the two
+       go UNSAT together and exhaustion would answer NoCounterexample to a
+       proposition and its negation alike. *)
     fun total_scope_search () =
       !fully_exhausted andalso
       not (!(#choice_guard_inserted context)) andalso
+      not (List.exists (#unknown_value o metadata) (!generated_problems))
+        andalso
       not (List.exists Type.is_vartype all_types) andalso
       List.exists (fn scope =>
         scope_checked scope andalso

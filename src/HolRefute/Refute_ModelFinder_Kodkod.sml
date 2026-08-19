@@ -58,6 +58,7 @@ signature REFUTE_MODEL_FINDER_KODKOD = sig
      nonsel_names : nut list,
      rel_table : nut Refute_ModelFinder_Nut.NameTable.table,
      unsound : bool,
+     unknown_value : bool,
      scope : Refute_ModelFinder_Scope.scope}
   type rich_problem = Refute_Forl.problem * problem_metadata
   type assembly_params =
@@ -3208,6 +3209,7 @@ type problem_metadata =
    nonsel_names : nut list,
    rel_table : nut MFNT.NameTable.table,
    unsound : bool,
+   unknown_value : bool,
    scope : MFS.scope}
 
 type rich_problem = KK.problem * problem_metadata
@@ -3288,6 +3290,23 @@ fun assemble_problem_once
       (MFNT.choose_reps_in_nut scope unsound rep_table false) nondef_us
     val need_us = map
       (MFNT.choose_reps_in_nut scope unsound rep_table false) need_us
+    (* [refute$unknown] at a formula position is weakened by polarity, and
+       [choose_reps_in_nut] flips that polarity for the unsound problem, so
+       the liberal reading really is the permissive one.  At a value
+       position it becomes an absent optional instead, and absence is
+       restrictive in both problems -- the liberal problem stops
+       over-approximating, so its UNSAT no longer means "no model exists"
+       (total_scope_search, Refute_ModelFinder.sml). *)
+    val unknown_value = List.exists (fn nut =>
+      MFNT.fold_nut (fn item => fn found =>
+        found orelse
+        (case item of
+             MFNT.Cst (MFNT.Unknown, _, representation) =>
+               (case representation of
+                    MFR.Formula _ => false
+                  | _ => true)
+           | _ => false)) nut false)
+      (def_us @ nondef_us @ need_us)
     val (free_rels, pool, rel_table) = MFNT.rename_free_vars free_names
       MFP.initial_pool MFNT.NameTable.empty
     val (sel_rels, pool, rel_table) = MFNT.rename_free_vars sel_names
@@ -3348,7 +3367,7 @@ fun assemble_problem_once
     val metadata : problem_metadata =
       {free_names = free_names, sel_names = sel_names,
        nonsel_names = nonsel_names, rel_table = rel_table,
-       unsound = unsound, scope = scope}
+       unsound = unsound, unknown_value = unknown_value, scope = scope}
   in
     (problem, metadata)
   end

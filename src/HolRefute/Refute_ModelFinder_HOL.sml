@@ -4274,7 +4274,19 @@ structure Refute_ModelFinder_HOL = struct
         (mf_builtins_numerals_sets_and_ersatz and
         mf_sum_ersatz_literal_witness_regression, selftest.sml). *)
      {original = {Thy = "pred_set", Name = "SUM_IMAGE"},
-      replacement = {Thy = "refute", Name = "sum'"}}]
+      replacement = {Thy = "refute", Name = "sum'"}},
+     (* wf_wfrec is only ever produced by unfolding wf_wfrec'_def's own
+        body (refuteScript.sml); this row is what turns that occurrence
+        back into wf_wfrec', tying the recursive knot -- see
+        mf_wfrec_ersatz_ties_the_knot (selftest.sml). *)
+     {original = {Thy = "refute", Name = "wf_wfrec"},
+      replacement = {Thy = "refute", Name = "wf_wfrec'"}},
+     (* A goal that syntactically mentions relation$WFREC (never an
+        ordinary TotalDefn-recursive function, which stays on its own
+        clean equations, see mf_wf_ersatz_does_not_weaken_definitions)
+        now routes to wfrec' instead of unfolding the_fun/[$@]. *)
+     {original = {Thy = "relation", Name = "WFREC"},
+      replacement = {Thy = "refute", Name = "wfrec'"}}]
 
   fun register_ersatz replacement =
     let
