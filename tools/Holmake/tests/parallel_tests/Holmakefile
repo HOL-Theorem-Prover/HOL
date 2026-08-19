@@ -71,6 +71,7 @@ DIRNAMES += cache_reflink \
             json-strings \
             local_parallelism_limit \
             projfile_module \
+            scan_order_staleness \
 	    target_times
 endif
 
