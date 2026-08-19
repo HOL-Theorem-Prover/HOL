@@ -1,12 +1,11 @@
-OPTIONS = NO_OVERLAY
 ifdef POLY
-CLINE_OPTIONS = --poly_not_hol
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 endif
 
 projfile_nested-selftest.log: selftest.exe
 	$(tee ./$<, $@)
 
 selftest.exe: selftest.uo
-	$(MOSMLC) -o $@ $<
+	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe projfile_nested-selftest.log

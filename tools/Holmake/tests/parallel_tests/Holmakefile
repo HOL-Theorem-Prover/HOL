@@ -5,6 +5,12 @@ DIRNAMES = \
   brokenstrings \
   clinevars \
   cross_dir_rule \
+  depchainloop \
+  dirs \
+  dupcommands \
+  projfile_nested \
+  varextension \
+  wildcard \
   holpathdb/proj2 \
   holpathdb/proj2/proj2A \
   depchain1/dir3 \
