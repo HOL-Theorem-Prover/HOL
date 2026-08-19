@@ -496,4 +496,48 @@ val _ =
   then OK ()
   else die "expected empty exclude and externals under holmake = false"
 
+(* Keys nobody understands are collected rather than discarded.  A TOML
+   lookup cannot tell a misspelled key from an absent one, so
+   `[project.x]` for `[projects.x]`, or `paths` for `path`, would
+   otherwise drop what it declares in silence.  Each label says where
+   the key sat, and `recognised_keys_for` maps a label back to the set
+   it missed. *)
+val unk_dir = scratch ++ "unknown_keys"
+val () = mkdirs unk_dir
+val unk_ext_rel =
+    OS.Path.mkRelative {path = hmf_ext_dir, relativeTo = unk_dir}
+val () = write (unk_dir ++ "holproject.toml")
+  ("name = \"unk\"\n\
+   \projekt = 3\n\
+   \[projects.x]\n\
+   \path = \"" ^ String.toString unk_ext_rel ^ "\"\n\
+   \paths = \"..\"\n")
+val () = write (unk_dir ++ "holproject.local.toml") "bogus = true\n"
+val unk_cfg = HMProject.load { root = unk_dir }
+
+val _ = tprint "Unrecognised keys are labelled by where they sat"
+val _ =
+  let
+    val uk = #unknown_keys unk_cfg
+    fun has s = List.exists (fn k => k = s) uk
+  in
+    if length uk = 3 andalso has "projekt" andalso
+       has "[projects.x].paths" andalso has "bogus (local)"
+    then OK ()
+    else die ("unknown_keys = [" ^ String.concatWith ", " uk ^ "]")
+  end
+
+val _ = tprint "...and each label names the key set it missed"
+val _ =
+  let
+    val rk = HMProject.recognised_keys_for
+  in
+    if rk "projekt" = ["name", "holpath", "exclude", "external_includes",
+                       "holmake", "projects", "h4pedant"] andalso
+       rk "[projects.x].paths" = ["path", "exclude"] andalso
+       rk "bogus (local)" = ["projects"]
+    then OK ()
+    else die "recognised_keys_for answered with the wrong set"
+  end
+
 val () = rm_rf scratch

@@ -518,6 +518,31 @@ can sit alongside `holproject.toml` and carry the same
 file override entries in the committed file, letting individual
 developers point externals at their own local paths.
 
+#### Unrecognised keys
+
+\index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!unrecognised keys}
+The keys recognised at the top level of `holproject.toml` are
+exactly `name`, `holpath`, `exclude`, `external_includes`,
+`holmake`, `projects` and `h4pedant`.  Inside a `[projects.<id>]`
+table they are `path` and `exclude`, and `holproject.local.toml`
+recognises `projects` alone.  A TOML lookup cannot tell a
+misspelled key from an absent one, so anything outside those sets
+would otherwise be discarded in silence -- `[project.cakeml]` for
+`[projects.cakeml]` reads as correct and behaves as if the external
+had never been declared.  `Holmake` therefore names what it did not
+understand, and what it would have accepted:
+
+```
+Holmake: holproject.toml at /home/me/dev/proj: unrecognised key `project`
+  (recognised: name, holpath, exclude, external_includes, holmake,
+   projects, h4pedant)
+```
+
+The contents of `[h4pedant]` are exempt: that section's schema is
+`h4pedant`'s own, and `Holmake` does not descend into it.  This is
+a warning and not an error, so that an older `Holmake` can still
+build a tree whose project file uses a key it has yet to learn.
+
 #### `[h4pedant]`: style-check configuration
 
 \index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!h4pedant section@\texttt{[h4pedant]} section}
@@ -586,6 +611,10 @@ registration to print paths portably in dependency lists.
 `name` is otherwise optional: a `holproject.toml` that omits
 `name` still drives project mode (the directory-set widening
 described above), it just contributes no path-database entry.
+The optional `holpath` key overrides `name` for this purpose
+alone, letting a project keep a human-facing `name` (say
+`cakeml`) distinct from the variable that stands for it in paths
+(say `CAKEMLDIR`).
 
 Conflicting registrations are fatal: if two `holproject.toml`
 files reachable from the current build register the same name for

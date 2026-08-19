@@ -31,7 +31,18 @@ sig
      lightweight inheritance shim rather than a project root.  Under
      `holmake = false` the project-mode-only keys `exclude` and
      `[projects.<id>]` are skipped during parsing and listed in
-     `dead_keys` so the caller can warn the user. *)
+     `dead_keys` so the caller can warn the user.
+
+     `unknown_keys` has the same shape as `dead_keys` -- human-readable
+     key labels for the caller to warn about -- but a different cause:
+     these are keys no reader of `holproject.toml` understands at all.
+     A TOML lookup cannot tell a misspelled key from an absent one, so
+     without this a typo (`[project.cakeml]` for `[projects.cakeml]`)
+     is discarded in silence.  A label from `holproject.local.toml`
+     carries the same ` (local)` suffix `dead_keys` uses, and a key of
+     a `[projects.<id>]` sub-table is labelled `[projects.<id>].<key>`;
+     `recognised_keys_for` maps a label back to the keys that were
+     legal where it appeared. *)
   type config = {
     root : string,
     name : string option,
@@ -39,8 +50,17 @@ sig
     externals : external_project list,
     external_includes : string list,
     holmake : bool,
-    dead_keys : string list
+    dead_keys : string list,
+    unknown_keys : string list
   }
+
+  (* recognised_keys_for k - the keys that were legal where the
+     `unknown_keys` entry `k` appeared: a `[projects.<id>].` prefix
+     names an external's sub-table, a ` (local)` suffix names
+     `holproject.local.toml`, and anything else is a top-level key of
+     `holproject.toml`.  Callers warning about an unknown key use this
+     to name the set the typo missed. *)
+  val recognised_keys_for : string -> string list
 
   (* find_root {start} - walk upward from `start` looking for a
      `holproject.toml`.  Returns the directory holding it (absolute,

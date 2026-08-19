@@ -500,6 +500,18 @@ local
                                       ": `" ^ k ^
                                       "` ignored under holmake = false"))
                       (#dead_keys cfg)
+              (* Unlike `dead_keys` this fires regardless of `modep`:
+                 a typo is a typo in either mode.  Naming the keys that
+                 were legal there makes the near-miss visible. *)
+              val () =
+                  List.app
+                    (fn k => warn0 ("holproject.toml at " ^ root ^
+                                    ": unrecognised key `" ^ k ^ "`\n" ^
+                                    "  (recognised: " ^
+                                    String.concatWith ", "
+                                      (HMProject.recognised_keys_for k) ^
+                                    ")"))
+                    (#unknown_keys cfg)
             in
               projects := Binarymap.insert(!projects, root, ctxt);
               (* project dirs and their external includes can be

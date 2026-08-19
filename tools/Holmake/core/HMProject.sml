@@ -11,8 +11,42 @@ type config = {
   externals : external_project list,
   external_includes : string list,
   holmake : bool,
-  dead_keys : string list
+  dead_keys : string list,
+  unknown_keys : string list
 }
+
+(* Every key any reader of holproject.toml consults.  `name` and
+   `holpath` are read here and by holpathdb's registration walk;
+   `h4pedant` is read by tools/h4pedant, which owns that block's
+   schema (so we never descend into it); the rest are `load`'s own.
+   A key outside this set is a typo: TOML lookups answer NONE for an
+   absent key and for a misspelled one alike, so `load` collects the
+   strangers into `unknown_keys` rather than discarding them. *)
+val recognised_keys =
+    ["name", "holpath", "exclude", "external_includes", "holmake",
+     "projects", "h4pedant"]
+
+(* holproject.local.toml is the per-developer override file; only
+   [projects.<id>] means anything in it. *)
+val recognised_local_keys = ["projects"]
+
+(* Keys of a [projects.<id>] sub-table.  A typo here (`paths = ".."`)
+   drops the external as quietly as a top-level one drops its key. *)
+val recognised_project_keys = ["path", "exclude"]
+
+(* How `dead_keys` and `unknown_keys` label what they report, and how
+   `recognised_keys_for` reads a label back.  Constructors and decoder
+   live together so the convention has one definition: the decoder
+   must test the `[projects.` prefix first, because an external's
+   sub-table key in the local file carries both marks. *)
+fun local_label s = s ^ " (local)"
+fun ext_table_label id = "[projects." ^ id ^ "]"
+fun ext_key_label id k = ext_table_label id ^ "." ^ k
+
+fun recognised_keys_for k =
+    if String.isPrefix "[projects." k then recognised_project_keys
+    else if String.isSuffix " (local)" k then recognised_local_keys
+    else recognised_keys
 
 val PROJECT_FILE = "holproject.toml"
 val LOCAL_FILE = "holproject.local.toml"
@@ -192,35 +226,43 @@ fun external_includes_declared_at root =
       List.map (abs_relative_to root o expand_holdir) rel
     end
 
+(* The declared [projects.<id>] sub-tables as (id, table) pairs.  An
+   entry whose value is not a table is dropped: `projects` is a table
+   of tables by construction, so anything else is malformed rather
+   than meaningful. *)
+fun project_subtables tbl =
+    case lookup_table tbl ["projects"] of
+        NONE => []
+      | SOME svs =>
+          List.mapPartial
+            (fn (id, TOMLvalue_dtype.TABLE inner) => SOME (id, inner)
+              | _ => NONE)
+            svs
+
 (* Read [projects.<id>] sub-tables; capture each's `path` and (optional)
    `exclude` list, unioned (non-recursively) with whatever the external
    declares for itself in its own holproject.toml.  Excludes are
    interpreted relative to that external's path. *)
 fun externals_from_table tbl rel_to =
-    case lookup_table tbl ["projects"] of
-        NONE => []
-      | SOME svs =>
-          List.mapPartial
-            (fn (id, TOMLvalue_dtype.TABLE inner) =>
-                  (case lookup_string inner ["path"] of
-                       NONE => NONE
-                     | SOME p =>
-                         let
-                           val ext_path = abs_relative_to rel_to p
-                           val ext_excl_rel =
-                               Option.getOpt
-                                 (lookup_string_array inner ["exclude"], [])
-                           val consumer_excl =
-                               List.map (abs_relative_to ext_path) ext_excl_rel
-                           val inherited_excl = excludes_declared_at ext_path
-                           val ext_excl =
-                               sorted_dedup (consumer_excl @ inherited_excl)
-                         in
-                           SOME { id = id, path = ext_path,
-                                  exclude = ext_excl }
-                         end)
-              | _ => NONE)
-            svs
+    List.mapPartial
+      (fn (id, inner) =>
+          case lookup_string inner ["path"] of
+              NONE => NONE
+            | SOME p =>
+                let
+                  val ext_path = abs_relative_to rel_to p
+                  val ext_excl_rel =
+                      Option.getOpt
+                        (lookup_string_array inner ["exclude"], [])
+                  val consumer_excl =
+                      List.map (abs_relative_to ext_path) ext_excl_rel
+                  val inherited_excl = excludes_declared_at ext_path
+                  val ext_excl =
+                      sorted_dedup (consumer_excl @ inherited_excl)
+                in
+                  SOME { id = id, path = ext_path, exclude = ext_excl }
+                end)
+      (project_subtables tbl)
 
 (* ----------------------------------------------------------------------
    load: parse holproject.toml and, if present, holproject.local.toml.
@@ -295,22 +337,43 @@ fun load { root } =
       (* Under holmake = false, project-mode-only keys are inert.  Collect
          the present-but-ignored ones so the caller can warn.  `name`,
          `holpath`, and `external_includes` stay live. *)
-      fun proj_ids_in suffix tbl =
-          case lookup_table tbl ["projects"] of
-              NONE => []
-            | SOME svs =>
-                List.mapPartial
-                  (fn (id, TOMLvalue_dtype.TABLE _) =>
-                         SOME ("[projects." ^ id ^ "]" ^ suffix)
-                    | _ => NONE)
-                  svs
+      fun proj_ids_in label tbl =
+          List.map (label o ext_table_label o #1) (project_subtables tbl)
       val dead_keys =
           if holmake then []
           else
             (case exclude_rel of [] => [] | _ => ["exclude"]) @
-            proj_ids_in "" ptbl @
+            proj_ids_in (fn s => s) ptbl @
             (case ltbl_opt of NONE => []
-                            | SOME t => proj_ids_in " (local)" t)
+                            | SOME t => proj_ids_in local_label t)
+
+      (* Keys nobody understands, labelled for the caller's warning:
+         `<key>`, `[projects.<id>].<key>`, and the same again with a
+         ` (local)` suffix for holproject.local.toml.  Collected
+         whether or not project mode is on -- a typo is a typo either
+         way -- and never descending into [h4pedant]. *)
+      fun strangers recognised tbl =
+          List.filter (fn k => not (List.exists (fn r => r = k) recognised))
+                      (List.map #1 tbl)
+      fun unknown_in localp tbl =
+          let
+            val (label, top_keys) =
+                if localp then (local_label, recognised_local_keys)
+                else ((fn s => s), recognised_keys)
+          in
+            List.map label (strangers top_keys tbl) @
+            List.concat
+              (List.map
+                 (fn (id, inner) =>
+                     List.map (label o ext_key_label id)
+                              (strangers recognised_project_keys inner))
+                 (project_subtables tbl))
+          end
+      val unknown_keys =
+          tag_path proj_path (fn () => unknown_in false ptbl) @
+          (case ltbl_opt of
+               NONE => []
+             | SOME t => tag_path local_path (fn () => unknown_in true t))
 
     in
       { root = root,
@@ -319,7 +382,8 @@ fun load { root } =
         externals = externals,
         external_includes = external_includes,
         holmake = holmake,
-        dead_keys = dead_keys }
+        dead_keys = dead_keys,
+        unknown_keys = unknown_keys }
     end
 
 (* ----------------------------------------------------------------------
