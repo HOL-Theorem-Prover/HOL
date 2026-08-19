@@ -472,6 +472,67 @@ it moves left one word/char, staying inside the parens."
       (should (search-forward "simp[]" nil t))
       (search-backward "simp"))))
 
+(defun holscript-ts-tests--column-walk (content n mover)
+  "Return the columns visited by N calls of MOVER in CONTENT.
+Point starts where CONTENT holds `|' (removed before moving)."
+  (holscript-ts-tests--with-string content
+    (goto-char (point-min))
+    (search-forward "|")
+    (delete-char -1)
+    (let (out)
+      (dotimes (_ n)
+        (condition-case nil (funcall mover) (error nil))
+        (push (current-column) out))
+      (nreverse out))))
+
+(ert-deftest holscript-ts-sexp-backward-walks-chain-operands ()
+  "back-sexp from the end of a tactic chain steps one tactic at a
+time — `>>' is a binary operator, so the left-nested parse shouldn't
+make the whole chain a single unit."
+  (skip-unless (holscript-ts-tests--preconds))
+  (should (equal (holscript-ts-tests--column-walk
+                  "Theorem foo:\n  T\nProof\n  tac1 >> tac2 >> tac3|\nQED\n"
+                  3 #'backward-sexp)
+                 ;; starts of tac3, tac2, tac1
+                 '(18 10 2))))
+
+(ert-deftest holscript-ts-sexp-chain-motion-is-symmetric ()
+  "forward-sexp and back-sexp visit the same operands of a chain whose
+operators have different precedences: `a + b' is one operand of the
+`>>' chain in both directions."
+  (skip-unless (holscript-ts-tests--preconds))
+  (let ((body (concat "Theorem foo:\n  T\nProof\n"
+                      "  %ssimp[] >> a + b >> gvs[]%s\nQED\n")))
+    (should (equal (holscript-ts-tests--column-walk
+                    (format body "" "|") 3 #'backward-sexp)
+                   ;; starts of gvs[], a + b, simp[]
+                   '(21 12 2)))
+    (should (equal (holscript-ts-tests--column-walk
+                    (format body "|" "") 4 #'forward-sexp)
+                   ;; ends of simp, simp[], a + b, gvs[]
+                   '(6 8 17 26)))))
+
+(ert-deftest holscript-ts-sexp-backward-walks-right-assoc-chain ()
+  "The same holds for a right-associative chain (`::' in SML, `/\\' in
+a HOL term), where the nesting leans the other way."
+  (skip-unless (holscript-ts-tests--preconds))
+  (should (equal (holscript-ts-tests--column-walk
+                  "val x = a :: b :: c|\n" 3 #'backward-sexp)
+                 '(18 13 8)))
+  (should (equal (holscript-ts-tests--column-walk
+                  "Theorem foo:\n  p /\\ q /\\ r|\nProof\n  tac\nQED\n"
+                  3 #'backward-sexp)
+                 '(12 7 2))))
+
+(ert-deftest holscript-ts-sexp-backward-keeps-application-whole ()
+  "Stepping an infix chain operand-by-operand doesn't split an
+application: `gvs[foo, bar]' is still one sexp."
+  (skip-unless (holscript-ts-tests--preconds))
+  (should (equal (holscript-ts-tests--column-walk
+                  "Theorem foo:\n  T\nProof\n  simp[] >> gvs[foo, bar]|\nQED\n"
+                  2 #'backward-sexp)
+                 '(12 2))))
+
 (ert-deftest holscript-ts-sexp-forward-over-quotation ()
   "forward-sexp at the opening `‘' jumps just past the closing `’',
 not out to the enclosing tactic's end."

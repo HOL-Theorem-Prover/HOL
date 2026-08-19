@@ -1096,6 +1096,42 @@ happens to have been absorbed upstream."
      (sentence ,holscript-ts-mode--sentence-node-regexp)))
   "Settings for `treesit-thing-settings' (sexp + sentence).")
 
+(defconst holscript-ts-mode--chain-node-regexp
+  (concat "\\`"
+          (regexp-opt '("infix_exp" "THEN" "hol_binary_term"))
+          "\\'")
+  "Regexp matching node types that chain peer operands with an infix
+operator.  Their nesting (`tac1 >> tac2 >> tac3' is
+`((tac1 >> tac2) >> tac3)') is an artefact of the operator's
+associativity, not something motion should step over as a unit:
+backward motion walks such a chain operand by operand, matching what
+forward motion already does.  `C-M-u' still takes the whole chain.")
+
+(defun holscript-ts-mode--chain-node-p (node)
+  "Non-nil if NODE is an infix chain node.
+See `holscript-ts-mode--chain-node-regexp'."
+  (and node
+       (string-match-p holscript-ts-mode--chain-node-regexp
+                       (or (treesit-node-type node) ""))))
+
+(defun holscript-ts-mode--chain-last-operand (node pos)
+  "Return the last sexp-typed child of chain NODE ending at or before POS.
+Returns nil if NODE is not a chain node, or has no such child.  Only
+one level is descended: in `simp[] >> a + b', the last operand of the
+`>>' chain is all of `a + b', not `b'."
+  (when (holscript-ts-mode--chain-node-p node)
+    (let ((re holscript-ts-mode--sexp-node-regexp)
+          (i (1- (treesit-node-child-count node)))
+          (found nil))
+      (while (and (>= i 0) (null found))
+        (let ((c (treesit-node-child node i)))
+          (when (and c
+                     (string-match-p re (or (treesit-node-type c) ""))
+                     (<= (treesit-node-end c) pos))
+            (setq found c)))
+        (setq i (1- i)))
+      found)))
+
 (defun holscript-ts-mode--sexp-ancestor (node &optional min-start max-end)
   "Walk up from NODE to the nearest ancestor whose type matches
 `holscript-ts-mode--sexp-node-regexp'.  If MIN-START is given, also
@@ -1226,11 +1262,17 @@ sensible target.  Only uses primitives available in Emacs 29."
                           ;; user's mental model is "I'm inside the
                           ;; brackets, move over the last atom", so
                           ;; the innermost end-here match wins.
+                          ;; Expansion also stops at an infix chain
+                          ;; node: the operands before the last one
+                          ;; are steps of their own.
                           (unless (memq (char-after pos)
                                         '(?\) ?\] ?\} ?” ?’ ?⟧ ?⦈ ?❳ ?⟩))
                             (let ((up (holscript-ts-mode--sexp-ancestor
                                        (treesit-node-parent leaf-n))))
-                              (while (and up (= (treesit-node-end up) pos))
+                              (while (and up
+                                          (not (holscript-ts-mode--chain-node-p
+                                                up))
+                                          (= (treesit-node-end up) pos))
                                 (setq leaf-n up)
                                 (setq up (holscript-ts-mode--sexp-ancestor
                                           (treesit-node-parent up))))))
@@ -1255,8 +1297,16 @@ sensible target.  Only uses primitives available in Emacs 29."
                   ;; Skip past non-sexp siblings (`;', `|', etc.).
                   (holscript-ts-mode--next-sexp-sibling n nil)))
                (t
-                (if (< (treesit-node-start n) pos) n
-                  (holscript-ts-mode--next-sexp-sibling n t))))))
+                ;; When the step lands on an infix chain — either N
+                ;; itself (point sits inside it) or the previous
+                ;; sibling (the nested LHS of a left-associative
+                ;; chain) — descend to that chain's last operand
+                ;; before POS, so `C-M-b' walks `tac1 >> tac2 >> tac3'
+                ;; one tactic at a time.
+                (let ((cand (if (< (treesit-node-start n) pos) n
+                              (holscript-ts-mode--next-sexp-sibling n t))))
+                  (or (holscript-ts-mode--chain-last-operand cand pos)
+                      cand))))))
         (if (null target)
             (let ((outer (and n
                               (if (> sign 0)
