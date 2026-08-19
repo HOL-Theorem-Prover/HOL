@@ -435,6 +435,58 @@ If neither `Holmakefile` provides a rule and `T` exists on disk,
 If neither provides a rule and `T` does not exist, `Holmake`
 reports `Don't know how to build necessary target(s)`.
 
+### Build progress output
+
+\index{Holmake@\holmake!progress output}
+Under Poly/ML, and when more than one job is allowed to run at a
+time, `Holmake` reports each target as it finishes on a line of the
+form
+
+```
+   lexer_implTheory              compiler/parsing  (30s)  [↓474]     OK
+```
+
+The target's name is on the left; the columns on the right are the
+processor time the job consumed, a progress marker counting theory
+files (`[built/total]`, or `[↓remaining]` once the total exceeds
+99), and the verdict.  Between them, dimmed, sits the directory the
+target was built in.
+
+That directory column is shown only when the build spans more than
+one directory, and it is abbreviated in two stages.  First, if the
+directory lies under a registered path-database directory (see
+Section \ref{sec:holproject-name} below), the registration is used:
+`$(HOLDIR)/examples/lambda/basics`.  Second, the leading
+`$(`*name*`)` is dropped again unless the directories being built
+span **more than one** registered tree -- within a single tree the
+prefix is the same on every line and only costs space, whereas
+across trees it is the only thing distinguishing, say, a
+`compiler/parsing` in one project from a `compiler/parsing` in
+another.  Directories under no registered directory count as one
+further tree between them.
+
+A directory's tree here is its path-database registration, which is
+what the column displays; it is not necessarily the project that
+owns the directory, since a registration can come from a
+`holproject.toml` that is not a project root.
+
+The column has only the space the target name and the fixed-width
+columns leave it, so a path that does not fit is shortened by
+dropping whole interior path components in favour of `...`:
+
+```
+   $(CAKEMLDIR)/compiler/backend/proofs
+   $(CAKEMLDIR)/.../backend/proofs
+   $(CAKEMLDIR)/.../proofs
+   .../backend/proofs
+   .../proofs
+```
+
+The tree name is kept while there is room for it and any trailing
+component, and given up before the trailing components are.  In a
+narrow terminal the column ends up blank rather than pushing the
+time and verdict columns out of alignment.
+
 ### Project files: `holproject.toml`
 
 \index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}}
@@ -598,6 +650,7 @@ turned off.
 
 #### `name` and the path database
 
+\label{sec:holproject-name}
 \index{Holmake@\holmake!holpathdb}
 The `name` key doubles as the project's `holpathdb` registration:
 during startup `Holmake` walks the directory hierarchy for

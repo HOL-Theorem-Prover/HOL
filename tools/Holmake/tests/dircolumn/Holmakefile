@@ -1,0 +1,14 @@
+dircolumn-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+# selftest drives Holmake in testdir/ -- those subdirectories are not
+# visited through parallel_tests' INCLUDES, so list their artifacts
+# here for build cleanAll.
+EXTRA_CLEANS = dircolumn-selftest.log selftest.exe \
+               $(patsubst %,testdir/%/.hol/,treeA treeB same/d1 same/d2) \
+               $(patsubst %,testdir/%/output,treeB same) \
+               testdir/treeA/dcA.out testdir/treeB/dcB.out \
+               testdir/same/d1/dcC.out testdir/same/d2/dcD.out

@@ -684,6 +684,67 @@ val nice_dir =
                            else s)
       | NONE => (fn s => s)
 
+(* ----------------------------------------------------------------------
+    squash_path
+
+    Shorten a "/"-separated path to fit in wdth characters, eliding
+    whole interior arcs with "...".  The candidates, in decreasing
+    order of informativeness, are
+
+       $(FOODIR)/compiler/backend/proofs     the path itself
+       $(FOODIR)/.../backend/proofs          leading arc + trailing arcs
+       $(FOODIR)/.../proofs
+       .../backend/proofs                    trailing arcs only
+       .../proofs
+
+    and the first that fits wins.  If not even ".../<last arc>" fits,
+    the last arc is truncated on the left ("...roofs"); with no room
+    for that either, the result is empty.
+   ---------------------------------------------------------------------- *)
+local
+  val dots = "..."
+  fun arcs_of s = String.tokens (fn c => c = #"/") s
+  (* the proper non-empty suffixes of a list, longest first *)
+  fun proper_sfxs [] = []
+    | proper_sfxs [_] = []
+    | proper_sfxs (_ :: t) = t :: proper_sfxs t
+  fun cand pfx sfx = String.concatWith "/" (pfx @ dots :: sfx)
+  fun candidates s arcs =
+    case arcs of
+        a0 :: (rest as _ :: _) =>
+        let
+          (* arcs_of drops the leading empty arc of an absolute path;
+             put the slash back so the tree the path names survives *)
+          val a0 = (if String.isPrefix "/" s then "/" else "") ^ a0
+          val sfxs = proper_sfxs rest
+        in
+          s :: map (cand [a0]) sfxs @ map (cand []) (rest :: sfxs)
+        end
+      | _ => [s]
+in
+fun squash_path wdth s =
+  if wdth <= 0 then ""
+  else
+    let
+      val arcs = arcs_of s
+    in
+      case List.find (fn c => size c <= wdth) (candidates s arcs) of
+          SOME c => c
+        | NONE =>
+          (* the candidates end with ".../<last arc>" (or, for a
+             single-arc path, the arc itself), so none of them fitting
+             gives size lastarc >= wdth - size dots, and the extract
+             below is in range *)
+          let val lastarc = case arcs of [] => s | _ => List.last arcs
+          in
+            if wdth > size dots then
+              dots ^ String.extract(lastarc,
+                                    size lastarc - (wdth - size dots), NONE)
+            else ""
+          end
+    end
+end (* local *)
+
 fun pushdir d f x =
     let
       val d0 = FileSys.getDir()
@@ -730,6 +791,11 @@ fun pretty_dir d =
   in
     if abs = abs' then toString d else abs'
   end
+
+fun tree_key d =
+  case holpathdb.owning_var {path = toAbsPath d} of
+      SOME {vname, ...} => "$(" ^ vname ^ ")"
+    | NONE => ""
 
 fun fromPath {origin,path} =
     if Path.isAbsolute path then

@@ -35,6 +35,7 @@ DIRNAMES = \
   projfile_name_clash \
   projfile_undeclared_parent \
   projfile_synthetic \
+  pathsquash \
   patrule_parse \
   patrule_match \
   patrule_e2e \
@@ -63,6 +64,7 @@ DIRNAMES = \
 
 ifdef POLY
 DIRNAMES += cache_reflink \
+            dircolumn \
             cachefetch \
             cachekey_transitive_parent \
             cheatspotting \

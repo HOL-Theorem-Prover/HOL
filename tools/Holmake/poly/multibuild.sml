@@ -44,6 +44,21 @@ fun is_multidir gdi =
     (Map.numItems gdi = 1 andalso
      Binarymap.peek(gdi, hmdir.curdir()) = NONE)
 
+(* Does the build span more than one source tree?  A directory's tree
+   is its holpathdb registration -- the thing the monitor's directory
+   column displays -- and not the holproject.toml project that owns
+   it; the two need not coincide.  Directories under no registered
+   directory share the empty key.  That lumping is deliberate: such
+   directories have no abbreviation to display anyway, and mixing them
+   with registered ones still yields more than one key. *)
+fun is_multitree gdi =
+    let
+      fun foldthis (d,_,A) = Binaryset.add(A, hmdir.tree_key d)
+      val keys = Map.foldl foldthis (Binaryset.empty String.compare) gdi
+    in
+      Binaryset.numItems keys > 1
+    end
+
 
 
 
@@ -122,7 +137,8 @@ fun graphbuild optinfo g =
         MB_Monitor.new {info = info, warn = warn, genLogFile = genLF,
                         time_limit = time_limit,
                         keep_going = keep_going,
-                        multidir = is_multidir dirmap}
+                        multidir = is_multidir dirmap,
+                        multitree = is_multitree dirmap}
 
     fun dircomplete dir (good, bad) t =
         let

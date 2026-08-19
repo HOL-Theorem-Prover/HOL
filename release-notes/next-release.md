@@ -70,6 +70,23 @@ New features
     Genuine cycles within a single root's `INCLUDES` chain are
     still reported.
 
+-   The directory column in `Holmake`'s per-target completion lines
+    (Poly/ML, `-j n` with `n` greater than one) now names the source
+    tree a target came from when the build spans more than one of
+    them, writing the path with its `holpathdb` registration:
+    `$(CAKEMLDIR)/compiler/parsing` rather than just
+    `compiler/parsing`.  Builds confined to a single tree are
+    unchanged, the prefix being the same on every line there.
+    A path too long for the column now has whole interior components
+    replaced by `...` (`$(CAKEMLDIR)/.../parsing`) instead of being
+    truncated from the left, the tree name being the last part given
+    up; in a very narrow terminal the column is left blank rather
+    than displacing the time and verdict columns.
+    Relatedly, a directory that *is* a registered `holpathdb`
+    directory now abbreviates to a bare `$(NAME)` wherever `Holmake`
+    prints a directory, where it previously printed the unabbreviated
+    path.
+
 -   `Holmake` (under Poly/ML) understands a new per-directory
     `Holmakefile` variable, `LOCAL_PARALLELISM_LIMIT = n`, which
     caps the total number of concurrent jobs the parallel

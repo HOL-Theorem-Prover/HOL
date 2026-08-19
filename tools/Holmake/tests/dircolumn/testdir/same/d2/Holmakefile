@@ -1,0 +1,4 @@
+dcD.out:
+	touch $@
+
+EXTRA_CLEANS = dcD.out

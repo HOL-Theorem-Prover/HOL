@@ -13,23 +13,28 @@ fun fold f x = Binarymap.foldl (fn (k,v,A) => f {vname = k, path = v} A) x
 
 fun lookup_holpath {vname = s} = Binarymap.peek(#mapf (!holpath_db), s)
 
-fun reverse_lookup {path} =
+fun owning_var {path} =
   let
-    fun split vnm p0 p =
-      "$(" ^ vnm ^ ")/" ^ String.extract(p, size p0 + 1, NONE)
+    fun rest_of p =
+      if p = path then "" else String.extract(path, size p + 1, NONE)
     fun foldthis (vnm, p, acc) =
-      if String.isPrefix (p^"/") path then
+      if p = path orelse String.isPrefix (p^"/") path then
         case acc of
-            NONE => SOME (size p, split vnm p path)
-          | SOME (sz', p') => if size p > sz' then
-                                SOME (size p, split vnm p path)
-                              else acc
+            SOME {vname = _, path = p'} =>
+              if size p > size p' then SOME {vname = vnm, path = p} else acc
+          | NONE => SOME {vname = vnm, path = p}
       else acc
   in
     case Binarymap.foldl foldthis NONE (#mapf (!holpath_db)) of
-        NONE => path
-      | SOME (_, p) => p
+        NONE => NONE
+      | SOME {vname,path=p} => SOME {vname = vname, rest = rest_of p}
   end
+
+fun reverse_lookup {path} =
+  case owning_var {path = path} of
+      NONE => path
+    | SOME {vname, rest} =>
+        "$(" ^ vname ^ ")" ^ (if rest = "" then "" else "/" ^ rest)
 
 fun extend_db {vname, path} =
     let val {mapf,dom,rng} = !holpath_db

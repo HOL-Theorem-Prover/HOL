@@ -3,6 +3,7 @@ sig
 
   val new : {info : string -> unit, warn : string -> unit,
              multidir : bool,
+             multitree : bool,
              keep_going : bool,
              genLogFile : {tag:string,dir:string} -> string,
              time_limit : Time.time option} ->

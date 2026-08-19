@@ -9,7 +9,16 @@ sig
   val db_vnames : unit -> string Binaryset.set (* domain of map *)
   val db_dirs : unit -> string Binaryset.set (* range of map *)
   val fold : ({vname:string,path:string} -> 'a -> 'a) -> 'a -> 'a
+  val owning_var : {path : string} -> {vname : string, rest : string} option
+                  (* the registration whose directory contains the
+                     argument, longest first, with rest the remainder of
+                     the argument below that directory ("" when the two
+                     are the same directory).  NONE when no registered
+                     directory contains it. *)
   val reverse_lookup : {path : string} -> string
+                  (* owning_var, written as "$(VNAME)/rest"; the
+                     argument unchanged when there is no owning
+                     registration. *)
   val subst_pathvars : string -> string
                   (* may complain to stdErr about malformed variable things *)
 
