@@ -27,6 +27,7 @@ DIRNAMES = \
   projfile_holpath_override \
   projfile_open_resolution \
   projfile_name_clash \
+  projfile_undeclared_parent \
   projfile_synthetic \
   patrule_parse \
   patrule_match \

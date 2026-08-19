@@ -125,6 +125,13 @@ New features
     sub-directory carrying its own `holproject.toml` heads a
     separate project, governed by its own file rather than the
     enclosing one's, and `Holmake -r` and `--dirs` account for that.
+    Two diagnostics guard the nesting: a project that points into an
+    enclosing project it has not declared with `[projects.<id>]` is
+    warned about, with the stanza to add spelled out, and any key
+    `holproject.toml` does not recognise is reported rather than
+    quietly discarded — a `[project.<id>]` typo for
+    `[projects.<id>]` otherwise reads as correct and behaves as
+    absent.
     See the *Project files* sub-section of *Maintaining HOL
     Formalizations with Holmake* in the Description manual.
 

@@ -1970,6 +1970,14 @@ fun hmf_referenced_dirs absdir =
                      empty_strset)
     end
 
+fun union_of f xs =
+    listItems (List.foldl (fn (x,A) => set_addList (f x) A) empty_strset xs)
+
+(* Everywhere `p`'s Holmakefiles point out at.  Both the adoption
+   fixpoint and the reaches-out check below ask this, and must agree
+   about what counts as an outward reference. *)
+fun project_refs (p : pctxt) = union_of hmf_referenced_dirs (#dirs p)
+
 (* Where `-r' reaches.  Without --dirs it is the whole of the project
    cwd belongs to, so `-r' deep inside a project still means the
    project.  With --dirs it is each directory named on the command
@@ -2012,8 +2020,7 @@ val () =
                     if null rest then scoped
                     else
                       let
-                        val refs = List.concat
-                                     (List.map hmf_referenced_dirs (#dirs p))
+                        val refs = project_refs p
                         fun referenced r =
                             List.exists (HMProject.is_path_under r) refs
                       in
@@ -2032,9 +2039,115 @@ val () =
       loop (project_count ())
     end
 
-fun union_over sel =
-    listItems (List.foldl (fn (p,A) => set_addList (sel p) A)
-                          empty_strset (all_projects()))
+(* ----------------------------------------------------------------------
+    Referring *out* of a project, into an undeclared enclosing one
+
+    Adoption above reaches downward only.  A project nested inside
+    another sees nothing of it unless it says so with
+    `[projects.<id>]`: registration is never inherited upwards, and a
+    directory no registered project owns gets no implicit INCLUDES at
+    all.  Undeclared, the enclosing tree's directories are still
+    scanned when something names them explicitly -- `$(FOODIR)` resolves
+    through holpathdb whether or not any project is registered -- but
+    they compile against nothing, and the directories reachable only
+    through *their* implicit includes are never scanned at all.
+
+    The condition is deliberately narrow: the referring project lives
+    inside a project it never declared, and points into it.  A
+    referenced directory that is merely ownerless -- an unrelated tree
+    whose own Holmakefiles carry full explicit INCLUDES -- is the
+    classical arrangement and stays silent.
+
+    A warning rather than a hard failure: such a directory still builds
+    correctly when its Holmakefile spells its INCLUDES out in full.
+   ---------------------------------------------------------------------- *)
+val () =
+    let
+      (* Project roots strictly above `r`, nearest first.  The walk
+         continues past each hit so grandparents are seen too. *)
+      fun ancestor_roots r =
+          let val parent = OS.Path.getParent r
+          in
+            if parent = r then []
+            else
+              case HMProject.find_root {start = parent} of
+                  NONE => []
+                | SOME a => a :: ancestor_roots a
+          end
+      (* An ancestor worth reporting: unregistered, and a project in
+         its own right.  A `holmake = false` shim has no directory set,
+         so registering it would confer nothing and warning about it
+         would be wrong -- which is what keeps HOL's own tree, whose
+         holproject.toml is exactly such a shim, out of the picture.
+         An ancestor whose file won't load says nothing either; had it
+         been registered, `register_project` would have warned. *)
+      fun candidate a =
+          if registeredp a then NONE
+          else (let val cfg = HMProject.load {root = a}
+                in if #holmake cfg then SOME cfg else NONE
+                end) handle Fail _ => NONE
+      fun report (p : pctxt) refs (acfg : HMProject.config) =
+          let
+            val a = #root acfg
+            val under_a = HMProject.is_path_under a
+            (* Directories registering `a` would bring in: under it,
+               governed by it rather than by some project nested
+               between the two, and owned by nobody as things stand
+               (an ancestor of `a` that *is* registered already gives
+               them an include path).  `under_a` is implied by the
+               `find_root` test, and is asked first only to keep the
+               upward walk off the paths that cannot qualify. *)
+            val orphans =
+                List.filter
+                  (fn d => under_a d andalso
+                           HMProject.find_root {start = d} = SOME a andalso
+                           not (isSome (owning_root d)))
+                  refs
+          in
+            if null orphans then ()
+            else
+              let
+                val r = #root (#cfg p)
+                val shown = List.take (orphans, 3)
+                            handle Subscript => orphans
+                val extra = length orphans - length shown
+                val more = if extra = 0 then ""
+                           else " (+ " ^ Int.toString extra ^ " more)"
+                val id = case #name acfg of
+                             SOME n => n
+                           | NONE => OS.Path.file a
+              in
+                warn (String.concatWith "\n"
+                  ["project '" ^ Option.getOpt (#name (#cfg p), "<unnamed>") ^
+                     "' (" ^ r ^ ") refers into the project rooted at " ^ a ^
+                     ", which this build has not registered, so directories \
+                     \there get no implicit INCLUDES:",
+                   "  " ^ String.concatWith ", " shown ^ more,
+                   "  Declare it in " ^ OS.Path.concat (r, "holproject.toml") ^
+                     ":",
+                   "    [projects." ^ id ^ "]",
+                   "    path = \"" ^
+                     OS.Path.mkRelative {path = a, relativeTo = r} ^ "\""])
+              end
+          end
+      (* Reading every one of the project's Holmakefiles is the
+         expensive half, so it waits until an unregistered ancestor
+         project has actually turned up.  For the common case -- every
+         top-level project -- the check costs a handful of `stat`s and
+         stops, and a project with no directories of its own refers to
+         nothing and so cannot warn whatever sits above it. *)
+      fun check (p : pctxt) =
+          if null (#dirs p) then ()
+          else
+          case List.mapPartial candidate (ancestor_roots (#root (#cfg p))) of
+              [] => ()
+            | cands =>
+              List.app (report p (project_refs p)) cands
+    in
+      List.app check (all_projects())
+    end
+
+fun union_over sel = union_of sel (all_projects())
 
 (* Every directory any registered project draws into the build.  Used
    only to enumerate scan roots: scanning a directory grants it no

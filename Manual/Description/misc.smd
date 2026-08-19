@@ -754,6 +754,39 @@ Directories reached by an external declared with
 `[projects.<id>]` are likewise governed by that project's own file
 rather than by the consumer's.
 
+Adoption reaches downward only.  A nested project that needs the
+*enclosing* tree must declare it with `[projects.<id>]`; there is
+no upward adoption, and a directory no registered project owns
+gets no implicit `INCLUDES` at all.  Undeclared, the enclosing
+tree does not simply vanish -- a holpathdb variable such as
+`$(CAKEMLDIR)` resolves whether or not any project is registered,
+so an enclosing directory named in an explicit `INCLUDES` is still
+scanned -- but it is scanned with nothing on its include path
+beyond what its own `Holmakefile` spells out, and the directories
+reachable only through *its* implicit includes are not scanned at
+all.  The symptom is a compile error, or a "Don't know how to
+build", a long way from the project file that caused it, so
+`Holmake` reports the situation up front:
+
+```
+Holmake: project 'pseudo_bool' (/home/me/cakeml/examples/pseudo_bool)
+  refers into the project rooted at /home/me/cakeml, which this build
+  has not registered, so directories there get no implicit INCLUDES:
+    /home/me/cakeml/misc, /home/me/cakeml/semantics/proofs (+ 3 more)
+  Declare it in /home/me/cakeml/examples/pseudo_bool/holproject.toml:
+    [projects.cakeml]
+    path = "../.."
+```
+
+The condition is narrow: the warning fires only when a project
+lives inside another project and points into it.  A referenced
+directory that merely belongs to no project -- an unrelated tree
+elsewhere on disk, whose own `Holmakefile`s carry the `INCLUDES`
+they need -- is the classical arrangement and says nothing.  It is
+a warning rather than an error for the same reason: an
+enclosing-project directory whose `Holmakefile` is explicit about
+its include path builds correctly as it stands.
+
 #### `-r` and `--dirs` inside a project
 
 \index{Holmake@\holmake!recursive invocation}
