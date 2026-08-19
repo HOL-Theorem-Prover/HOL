@@ -93,7 +93,7 @@ mdbook: ../book/Description/index.html
         $(SMD_MDS) \
         $(SVG_FIGS) references.md cite-labels.tsv \
         ../Reference/entries.list \
-        labels.tsv $(SIBLING_LABELS)
+        identifiers.js labels.tsv $(SIBLING_LABELS)
 	mdbook build
 	# Stable searchindex.js -> searchindex-<hash>.js symlink: the
 	# cross-book searcher loads sibling indices from `../<Book>/
@@ -101,6 +101,11 @@ mdbook: ../book/Description/index.html
 	# whenever content changes.  Resolve the hash here.
 	cd ../book/Description && \
 	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	# `mdbook build` empties the build dir, so the entry-name
+	# sidecar is installed afterwards.  Copied rather than
+	# symlinked: a link pointing out of book/ wouldn't survive a
+	# deploy snapshot.
+	cp identifiers.js ../book/Description/identifiers.js
 	../Tools/smdpp check-html ../book/Description
 	../Tools/smdpp check-refs ../book/Description
 	../Tools/smdpp check-links ../book/Description
@@ -111,6 +116,15 @@ mdbook: ../book/Description/index.html
 # mdbook target (own + siblings) before anything slow runs.
 labels.tsv: ../Tools/smdpp SUMMARY.md $(SMDS)
 	../Tools/smdpp dump-labels .
+
+# Entry-name table for the site's name-lookup layer.  It exists
+# because elasticlunr runs its trimmer / stop-word filter / stemmer
+# over the *query* as well as over the indexed text, so a section
+# whose name is a stop word or punctuation is unreachable through
+# searchindex.js no matter what the reader types.  Scan-only, like
+# labels.tsv above.  See Manual/Developers/manual-authoring.md.
+identifiers.js: ../Tools/smdpp SUMMARY.md $(SMDS)
+	../Tools/smdpp dump-identifiers .
 
 # Render the bibliography chapter and the per-call-site cite label
 # table in one shot, via pandoc citeproc.  Both outputs share a
@@ -223,6 +237,6 @@ EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                description.fdb_latexmk \
                chapters-include.tex chapter-stems.mk \
                book-title.tex SUMMARY.md \
-               references.md cite-labels.tsv labels.tsv \
+               references.md cite-labels.tsv labels.tsv identifiers.js \
                $(SVG_FIGS) \
                ../book/Description/

@@ -153,6 +153,11 @@ Bugs fixed
     the targets of every `INCLUDES` directory and `--no_prereqs`
     then demoted every node outside the current directory.
 
+-   Searching the manual site for an entry whose name is an English stop word (`by`, `THEN`, `EVERY`, `IF`, `I`, `all`, `can`, `for`, `say`) or punctuation (`&&`, `$`, `==`, `++`, `-->`) returned nothing, in every manual.
+    The search index's stop-word and stemming pipeline is applied to the query as well as to the indexed text, so those names were dropped on both sides and the query produced no terms at all.
+    Each book now emits a generated table of its entry names, which the site consults first: exact and prefix name matches are shown above the full-text results.
+    An exact entry-name match is thereby also prioritised — searching for `subgoal` puts `bossLib.subgoal` at the top rather than somewhere among the pages that merely mention it.
+
 -   Three kernel bugs (github issues [#1838](https://github.com/HOL-Theorem-Prover/HOL/issues/1838), [#1839](https://github.com/HOL-Theorem-Prover/HOL/issues/1839), and [#1840](https://github.com/HOL-Theorem-Prover/HOL/issues/1840)) in CV-compute were fixed.
     Thanks to Ramana Kumar for finding these!
 

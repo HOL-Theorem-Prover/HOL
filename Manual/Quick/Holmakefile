@@ -27,11 +27,16 @@ mdbook: ../book/Quick/index.html
 
 ../book/Quick/index.html: ../Tools/smdpp SUMMARY.md quickref.md \
         ../Reference/entries.list \
-        labels.tsv $(SIBLING_LABELS)
+        identifiers.js labels.tsv $(SIBLING_LABELS)
 	mdbook build
 	# See Manual/Description/Holmakefile for the rationale.
 	cd ../book/Quick && \
 	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	# `mdbook build` empties the build dir, so the entry-name
+	# sidecar is installed afterwards.  Copied rather than
+	# symlinked: a link pointing out of book/ wouldn't survive a
+	# deploy snapshot.
+	cp identifiers.js ../book/Quick/identifiers.js
 	../Tools/smdpp check-html ../book/Quick
 	../Tools/smdpp check-refs ../book/Quick
 	../Tools/smdpp check-links ../book/Quick
@@ -40,6 +45,15 @@ mdbook: ../book/Quick/index.html
 # See Manual/Description/Holmakefile for the rationale.
 labels.tsv: ../Tools/smdpp SUMMARY.md quickref.md
 	../Tools/smdpp dump-labels .
+
+# Entry-name table for the site's name-lookup layer.  It exists
+# because elasticlunr runs its trimmer / stop-word filter / stemmer
+# over the *query* as well as over the indexed text, so a section
+# whose name is a stop word or punctuation is unreachable through
+# searchindex.js no matter what the reader types.  Scan-only, like
+# labels.tsv above.  See Manual/Developers/manual-authoring.md.
+identifiers.js: ../Tools/smdpp SUMMARY.md quickref.md
+	../Tools/smdpp dump-identifiers .
 
 # ---- PDF side ----
 # A single dense reference sheet built from the same quickref.md
@@ -54,6 +68,6 @@ quick.pdf: quick.tex quickref.tex
 	latexmk -pdf -f -interaction=nonstopmode quick; \
 	test -s $@
 
-EXTRA_CLEANS = quickref.tex labels.tsv quick.pdf \
+EXTRA_CLEANS = quickref.tex labels.tsv identifiers.js quick.pdf \
                quick.aux quick.log quick.out quick.toc \
                quick.fls quick.fdb_latexmk ../book/Quick/

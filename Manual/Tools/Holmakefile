@@ -1,10 +1,11 @@
 INCLUDES = ../../tools/cmp $(HOLDIR)/examples/misc $(HOLDIR)/src/bag
 EXTRA_CLEANS = polyscripter smdpp gen_chap_lists gen_lander \
-               gen_reference_summary testoutput1
+               gen_reference_summary testoutput1 testoutput-ids
 
 .PHONY: all
 
-all: polyscripter smdpp gen_chap_lists gen_lander gen_reference_summary testoutput1
+all: polyscripter smdpp gen_chap_lists gen_lander gen_reference_summary \
+     testoutput1 testoutput-ids
 
 polyscripter: polyscripter.sml $(dprot $(HOLDIR)/bin/hol.state)
 	env HOL_CONFIG='' $(protect $(HOLDIR)/bin/hol) buildheap Arbrat $< -o $@ --exe main
@@ -30,3 +31,18 @@ gen_reference_summary: gen_reference_summary.sml \
 testoutput1: testinput1 polyscripter umap expected1 $(dprot ../../tools/cmp/cmp.exe) $(HOLDIR)/examples/misc/root2Theory.uo $(dprot $(HOLDIR)/src/bag/bagTheory.uo)
 	./polyscripter umap < $< > $@ && \
 	( ../../tools/cmp/cmp.exe $@ expected1 || ( rm testoutput1 && exit 1 ))
+
+# Round-trip the identifier-table generator over testids/, whose
+# files' *names* are the whole fixture -- the generator never reads
+# their contents.  Between them they cover a structure-level entry
+# (Lib.smd, where qualified and short names coincide), a plain
+# entry (Lib.I.smd), an entry under a lower-case structure
+# (bossLib.have.smd, which the case-insensitive group sort has to
+# place between the other two structures), and a
+# UC_ASCII_Encode'd name (BasicProvers..IYG.smd -> `&&`, the decode
+# path, where the name and the page stem differ).
+testoutput-ids: gen_reference_summary expected-identifiers.js \
+                $(wildcard testids/*.smd) $(dprot ../../tools/cmp/cmp.exe)
+	./gen_reference_summary --identifiers testids > $@ && \
+	( ../../tools/cmp/cmp.exe $@ expected-identifiers.js || \
+	  ( rm testoutput-ids && exit 1 ))

@@ -19,6 +19,22 @@
  * Search options (boost, expand, bool) are read from each book's
  * own index, so per-book tuning (if anyone adds it later via
  * book.toml) carries through.
+ *
+ * On top of that there is a name-lookup layer that deliberately
+ * does *not* go through elasticlunr.  elasticlunr applies its
+ * `trimmer -> stopWordFilter -> stemmer` pipeline to the query as
+ * well as to the indexed text, so a page whose name is an English
+ * stop word (`bossLib.have`, `Tactical.THEN`, `Lib.I`) or pure
+ * punctuation (`BasicProvers.&&`) can never be reached through the
+ * index: the token is dropped on both sides.  mdbook 0.5 exposes
+ * no knob for that pipeline, so instead each book emits a
+ * hash-free `identifiers.js` -- a plain `[qualified, short, page]`
+ * table of its SUMMARY-level entries -- which this file loads the
+ * same <script>-injection way as the search indexes and matches
+ * literally, rendering exact and prefix name hits above the
+ * elasticlunr groups.  Please don't "simplify" it back into an
+ * index query; the point is that it isn't one.  See
+ * Manual/Developers/manual-authoring.md.
  */
 
 window.search = window.search || {};
@@ -34,11 +50,21 @@ window.search = window.search || {};
 
   /* ----- shared site config ----- */
   /* HOL_MANUALS is defined in Manual/theme/index.hbs near the top
-   * of <head>.  Fall back to the canonical three-book list if it's
-   * absent (older cache / theme override break). */
+   * of <head>.  Fall back to the full book list if it's absent
+   * (older cache / theme override break); keep it in sync with
+   * MANUALS in Manual/mdbook.mk. */
   const HOL_MANUALS =
     (window.HOL_MANUALS && window.HOL_MANUALS.books) ||
-    ['Description', 'Tutorial', 'Reference'];
+    ['Description', 'Tutorial', 'Quick', 'Logic', 'Reference',
+     'Interaction-emacs', 'Developers'];
+
+  /* Books that ship an identifiers.js entry-name table.  Filtered
+   * against HOL_MANUALS so a stale config can't send us fetching
+   * `../Nonesuch/identifiers.js` and littering the console with
+   * 404s. */
+  const IDENT_BOOKS =
+    ((window.HOL_MANUALS && window.HOL_MANUALS.identifierBooks) ||
+     HOL_MANUALS).filter(b => HOL_MANUALS.indexOf(b) !== -1);
 
   /* Detect the current book from the URL path -- the same trick the
    * manual-switcher in index.hbs uses.  If we can't identify a
@@ -90,6 +116,19 @@ window.search = window.search || {};
    * searchindex.js wasn't reachable) are silently skipped during
    * queries; the user sees a warning in the console only. */
   const bookIndexes = {};
+
+  /* Name-lookup state, populated alongside bookIndexes:
+   *   bookIdentifiers[book] = [[qualified, short, page], …]
+   *   bookPageRefs[book]    = Map(page -> elasticlunr doc ref)
+   * The Map turns a bare `foo.html` from the table into the
+   * `foo.html#slug` the index knows about (the first doc_urls
+   * record for a page is its lead section), which is what lets a
+   * name hit reuse the indexed breadcrumbs and body teaser.  Books
+   * can appear in one map and not the other: the table and the
+   * index are separate files, either of which may be missing. */
+  const bookIdentifiers = {};
+  const bookPageRefs = {};
+
   let allIndicesLoaded = false;
   let teaser_count = 0;
   let current_searchterm = '';
@@ -159,6 +198,17 @@ window.search = window.search || {};
       return 'No search results for \'' + searchterm + '\'.';
     }
     return count + ' search results for \'' + searchterm + '\':';
+  }
+
+  /* URL of a sidecar file (`searchindex.js`, `identifiers.js`) in
+   * `book`'s output directory, from wherever the current page
+   * sits.  Both are loaded by <script> injection rather than
+   * fetch(), so that the manuals keep working when opened straight
+   * off disk over `file://`. */
+  function bookAsset(book, file) {
+    return (book === currentBook) ?
+      path_to_root + file :
+      path_to_root + '../' + book + '/' + file;
   }
 
   /* Compute the cross-book href for a result.  `doc_url` is what
@@ -275,6 +325,103 @@ window.search = window.search || {};
     return teaser_split.join('');
   }
 
+  /* ----- entry-name lookup (see the header comment) ----- */
+
+  /* Cap on prefix matches shown per book; exact matches are never
+   * truncated. */
+  const IDENT_LIMIT = 10;
+  /* Prefix matching only kicks in from this length.  Without a
+   * gate, typing `a` in the Description manual would push a stack
+   * of arbitrary Reference names above the reader's own book. */
+  const IDENT_PREFIX_MINLEN = 3;
+
+  /* Literal name matches for `term` in `book`'s table.  Tier 1 is
+   * an exact (case-insensitive) hit on the short or the qualified
+   * name; tier 2 is a prefix hit on either.  Both compare against
+   * the whole typed string, since a prose section's name is
+   * several words (`Core Theories`).  Tier 1 additionally accepts
+   * a per-token hit on a multi-token query, so `bossLib.have
+   * tactic` still surfaces the entry; tier 2 doesn't, because a
+   * whole-string prefix is specific enough to stay quiet on
+   * ordinary prose queries. */
+  function identifierMatches(book, term) {
+    const entries = bookIdentifiers[book];
+    if (!entries) return [];
+    const full = term.trim().toLowerCase();
+    if (full === '') return [];
+    const tokens = full.split(' ').filter(t => t !== '');
+
+    const exact = [];
+    const prefix = [];
+    for (const e of entries) {
+      const short = e[1].toLowerCase();
+      const qual = e[0].toLowerCase();
+      if (full === short || full === qual ||
+          tokens.length > 1 &&
+            tokens.some(t => t === short || t === qual)) {
+        exact.push(e);
+      } else if (full.length >= IDENT_PREFIX_MINLEN &&
+                 (short.startsWith(full) || qual.startsWith(full))) {
+        prefix.push(e);
+      }
+    }
+    exact.sort((a, b) => a[0].localeCompare(b[0]));
+    /* Rank the prefix tier: names that themselves start with what
+     * was typed, before ones that only matched via their structure
+     * qualifier -- otherwise `con` fills up with arbitrary `Conv.*`
+     * entries and buries `Abbrev.conv`.  Then shortest first, so
+     * `subgoal` outranks `subgoal_CONV`. */
+    const shortHit = e => (e[1].toLowerCase().startsWith(full) ? 0 : 1);
+    prefix.sort((a, b) =>
+      shortHit(a) - shortHit(b) ||
+      a[1].length - b[1].length ||
+      a[0].localeCompare(b[0]));
+    return exact.concat(prefix)
+                .slice(0, Math.max(IDENT_LIMIT, exact.length));
+  }
+
+  /* The elasticlunr document behind a table row, or null when this
+   * book's index didn't load (or doesn't know the page). */
+  function identifierResult(book, entry) {
+    const refs = bookPageRefs[book];
+    const cfg = bookIndexes[book];
+    if (!refs || !cfg) return null;
+    const ref = refs.get(entry[2]);
+    if (ref === undefined) return null;
+    const doc = cfg.index.documentStore.getDoc(ref);
+    return doc ? {ref: ref, doc: doc} : null;
+  }
+
+  /* Render one name hit; `res` is identifierResult's answer for it,
+   * possibly null.  Mirrors formatSearchResult, except the anchor
+   * text is the *qualified* name in <code> -- so it is obvious why
+   * the row matched -- and everything downstream of the index is
+   * optional, because the table may have loaded when the index did
+   * not. */
+  function formatIdentifierResult(book, entry, res, searchterms) {
+    const bookCfg = bookIndexes[book];
+    const encoded_search =
+      encodeURIComponent(searchterms.join(' ')).replace(/'/g, '%27');
+    const doc_url = res ? bookCfg.doc_urls[res.ref] : entry[2];
+    const href = bookHref(book, doc_url, encoded_search);
+
+    /* makeTeaser stems but does not stop-word-filter, so `have`
+     * still gets <em>-highlighted in the teaser even though the
+     * index dropped it. */
+    let teaser = '';
+    if (res) {
+      teaser = makeTeaser(escapeHTML(res.doc.body), searchterms,
+                          bookCfg.results_options);
+    }
+    teaser_count++;
+
+    return '<a href="' + href +
+      '" aria-details="mdbook-teaser_' + teaser_count + '">' +
+      '<code>' + escapeHTML(entry[0]) + '</code></a>' +
+      '<span class="teaser" id="mdbook-teaser_' + teaser_count +
+      '" aria-label="Search Result Teaser">' + teaser + '</span>';
+  }
+
   /* ----- lazy index loader ----- */
 
   /* Each book's searchindex.js does
@@ -296,13 +443,32 @@ window.search = window.search || {};
   async function loadAllIndices() {
     if (allIndicesLoaded) return;
     searchbar_outer.classList.add('searching');
+    /* The searchindex.js files below overwrite window.search, which
+     * is also where this file hangs its own exports; hold on to it
+     * and put it back once they're all in. */
+    const exported = window.search;
+
+    /* Entry-name tables first (they're small, and the names are
+     * what a reader is most likely to be after).  Each one assigns
+     * window.hol_identifiers, so load them sequentially and clear
+     * the global between loads -- the same shared-global reason
+     * the index loads below are sequential. */
+    for (const book of IDENT_BOOKS) {
+      try {
+        window.hol_identifiers = null;
+        await loadScript(bookAsset(book, 'identifiers.js'));
+        const table = window.hol_identifiers;
+        if (table && table.entries) bookIdentifiers[book] = table.entries;
+      } catch (err) {
+        console.warn('HOL searcher: no identifier table for ' + book +
+                     ' (' + err.message + ')');
+      }
+    }
+
     for (const book of HOL_MANUALS) {
-      const src = (book === currentBook) ?
-        path_to_root + 'searchindex.js' :
-        path_to_root + '../' + book + '/searchindex.js';
       try {
         window.search = {};
-        await loadScript(src);
+        await loadScript(bookAsset(book, 'searchindex.js'));
         const cfg = window.search;
         bookIndexes[book] = {
           index: elasticlunr.Index.load(cfg.index),
@@ -310,11 +476,22 @@ window.search = window.search || {};
           search_options: cfg.search_options,
           results_options: cfg.results_options,
         };
+        /* page -> ref, first record wins: mdbook emits a page's
+         * lead section before its sub-headings, so that's the doc
+         * whose breadcrumbs and body describe the page itself.
+         * Refs stay strings, as documentStore keys them. */
+        const refs = new Map();
+        cfg.doc_urls.forEach((url, i) => {
+          const page = url.split('#')[0];
+          if (!refs.has(page)) refs.set(page, String(i));
+        });
+        bookPageRefs[book] = refs;
       } catch (err) {
         console.warn('HOL searcher: skipping ' + book +
                      ' (' + err.message + ')');
       }
     }
+    window.search = exported;
     allIndicesLoaded = true;
     searchbar_outer.classList.remove('searching');
 
@@ -340,28 +517,63 @@ window.search = window.search || {};
     removeChildren(searchresults);
     teaser_count = 0;
 
+    function appendGroupHeader(label, extraClass) {
+      const header = document.createElement('li');
+      header.className = 'hol-book-group' +
+        (extraClass ? ' ' + extraClass : '');
+      header.textContent = label;
+      searchresults.appendChild(header);
+    }
+
+    let totalRendered = 0;
+
+    /* Name matches first, and above every book's full-text hits:
+     * someone typing an entry name wants that entry, not the
+     * hundred pages that mention it.  Remember which docs they
+     * covered so the elasticlunr pass below doesn't repeat them. */
+    const shownRefs = {};
+    for (const book of displayBooks) {
+      const matches = identifierMatches(book, searchterm);
+      if (matches.length === 0) continue;
+      appendGroupHeader(book + ' entries', 'hol-ident-group');
+      const seen = new Set();
+      for (const entry of matches) {
+        const res = identifierResult(book, entry);
+        const li = document.createElement('li');
+        li.innerHTML =
+          formatIdentifierResult(book, entry, res, searchterms);
+        searchresults.appendChild(li);
+        totalRendered++;
+        if (res) seen.add(res.ref);
+      }
+      shownRefs[book] = seen;
+    }
+
     /* Run query across every loaded book; cap per-book results
      * using each book's own results_options.limit_results so the
      * Reference manual (which has 1,613 entries) doesn't drown
-     * out everything else. */
-    let totalRendered = 0;
+     * out everything else.  The cap counts rows actually rendered,
+     * i.e. after dropping anything the name pass already showed.
+     * Rows are buffered so a group whose every hit was a duplicate
+     * doesn't leave a header with nothing under it. */
     for (const book of displayBooks) {
       const cfg = bookIndexes[book];
       if (!cfg) continue;
       const results = cfg.index.search(searchterm, cfg.search_options);
-      const cap =
-        Math.min(results.length, cfg.results_options.limit_results);
-      if (cap === 0) continue;
+      const seen = shownRefs[book];
+      const limit = cfg.results_options.limit_results;
+      const rows = [];
+      for (let i = 0; i < results.length && rows.length < limit; i++) {
+        if (seen && seen.has(results[i].ref)) continue;
+        rows.push(formatSearchResult(book, results[i], searchterms));
+      }
+      if (rows.length === 0) continue;
 
-      const header = document.createElement('li');
-      header.className = 'hol-book-group';
-      header.textContent = book +
-        (book === currentBook ? ' (this manual)' : '');
-      searchresults.appendChild(header);
-
-      for (let i = 0; i < cap; i++) {
+      appendGroupHeader(book + (book === currentBook ?
+                                ' (this manual)' : ''));
+      for (const row of rows) {
         const li = document.createElement('li');
-        li.innerHTML = formatSearchResult(book, results[i], searchterms);
+        li.innerHTML = row;
         searchresults.appendChild(li);
         totalRendered++;
       }
@@ -560,6 +772,9 @@ window.search = window.search || {};
       e => e.preventDefault(), false);
     doSearchOrMarkFromUrl();
     window.search.hasFocus = hasFocus;
+    /* Zero-cost console hook for checking the name layer without a
+     * rebuild: window.search.identifierMatches('Reference', 'have'). */
+    window.search.identifierMatches = identifierMatches;
   }
 
   initSearchInteractions();

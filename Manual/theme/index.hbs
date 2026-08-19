@@ -25,7 +25,15 @@
         <script>
             window.HOL_MANUALS = {
                 books: ['Description', 'Tutorial', 'Quick', 'Logic',
-                        'Reference', 'Interaction-emacs', 'Developers']
+                        'Reference', 'Interaction-emacs', 'Developers'],
+                /* Books that ship an identifiers.js entry-name table
+                   beside their searchindex.js.  Every book loads
+                   every other book's table -- that is how a name
+                   elasticlunr cannot represent (`have`, `&&`) stays
+                   findable from whichever manual the reader is in. */
+                identifierBooks: ['Description', 'Tutorial', 'Quick',
+                                  'Logic', 'Reference',
+                                  'Interaction-emacs', 'Developers']
             };
         </script>
 

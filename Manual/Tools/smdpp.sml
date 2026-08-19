@@ -3031,6 +3031,81 @@ fun dumpLabelsMain bookDir =
     OS.Process.exit OS.Process.success
   end
 
+(* ===== dump-identifiers sub-command =====
+   Emit `<book-dir>/identifiers.js`: the section-name lookup table
+   that Manual/theme/hol-searcher.js consults *before* elasticlunr,
+   so a section can be found by name even when the search index
+   can't represent that name.  (elasticlunr's trimmer / stop-word
+   filter / stemmer pipeline runs over the query as well as over
+   the text, so a name like `have` or `&&` is unreachable through
+   the index no matter what the reader types.)  See
+   Manual/Developers/manual-authoring.md for the shared format;
+   the Reference manual's table comes from
+   Manual/Tools/gen_reference_summary --identifiers instead, since
+   its names need UC_ASCII_Encode decoding and a structure
+   qualifier.
+
+   SUMMARY-level entries only: mdbook already indexes in-page `###`
+   headings as separate documents, and those are found by ordinary
+   search. *)
+
+(* Escape for a JS double-quoted string literal; UTF-8 bytes pass
+   through, as the loading page declares <meta charset="UTF-8">.
+   Chapter titles are prose, so this one really can fire. *)
+fun jsEscape s =
+  let
+    val digits = "0123456789abcdef"
+    fun hex n =
+      String.implode [String.sub (digits, (n div 16) mod 16),
+                      String.sub (digits, n mod 16)]
+    fun esc c =
+      if c = #"\\" then "\\\\"
+      else if c = #"\"" then "\\\""
+      else if Char.ord c < 32 then "\\u00" ^ hex (Char.ord c)
+      else String.str c
+  in
+    String.translate esc s
+  end
+
+fun dumpIdentifiersMain bookDir =
+  let
+    val origDir = OS.FileSys.getDir ()
+    val () = OS.FileSys.chDir bookDir
+    val src = readBookSrc "book.toml"
+              handle IO.Io _ => "."
+    val summaryPath = OS.Path.concat (src, "SUMMARY.md")
+    val () =
+      if OS.FileSys.access (summaryPath, [OS.FileSys.A_READ]) then ()
+      else die ("dump-identifiers: " ^ summaryPath ^ " missing")
+    val summary =
+        let val ins = TextIO.openIn summaryPath
+            val s = TextIO.inputAll ins
+            val () = TextIO.closeIn ins
+        in s end
+    val chapters = parseSummary summary
+    (* For a prose section the qualified and short names coincide,
+       so the title fills both fields; `path` is the chapter source
+       (`foo.smd` / `foo.md`), whose rendered page is `foo.html`. *)
+    fun rowOf (_, name, path) =
+        "[\"" ^ jsEscape name ^ "\",\"" ^ jsEscape name ^ "\",\"" ^
+        jsEscape (OS.Path.base path) ^ ".html\"],\n"
+    val body = String.concat (List.map rowOf chapters)
+    val () =
+      writeFile "identifiers.js"
+        ("/* Generated -- do not edit.  Loaded by Manual/theme/\n\
+         \   hol-searcher.js; see Manual/Developers/manual-authoring.md.\n\
+         \   Long data lines are intentional. */\n\
+         \window.hol_identifiers = {entries: [\n" ^ body ^ "]};\n")
+    val () = OS.FileSys.chDir origDir
+    val () = TextIO.output (TextIO.stdErr,
+              "dump-identifiers: " ^ bookDir ^
+              ": wrote " ^ Int.toString (List.length chapters) ^
+              " name(s) to " ^
+              OS.Path.concat (bookDir, "identifiers.js") ^ "\n")
+  in
+    OS.Process.exit OS.Process.success
+  end
+
 (* ===== main ===== *)
 
 fun smdppMain () =
@@ -3059,6 +3134,7 @@ fun smdppMain () =
             die "Usage: smdpp render-bib BIB CSL SMD..."
           else renderBibMain bib csl smds
       | ["dump-labels", bookDir] => dumpLabelsMain bookDir
+      | ["dump-identifiers", bookDir] => dumpIdentifiersMain bookDir
       | [] =>
           let
             val () = loadCiteLabels ()
@@ -3088,7 +3164,8 @@ fun smdppMain () =
                   \ check-links <book-dir> |\
                   \ check-html <book-dir> |\
                   \ render-bib <bib> <csl> <smd>... |\
-                  \ dump-labels <book-dir>]")
+                  \ dump-labels <book-dir> |\
+                  \ dump-identifiers <book-dir>]")
   end
 
 fun main () = smdppMain ()

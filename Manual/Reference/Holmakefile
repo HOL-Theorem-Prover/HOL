@@ -72,12 +72,17 @@ entries.tex: entries.md
 mdbook: ../book/Reference/index.html
 
 ../book/Reference/index.html: ../Tools/smdpp \
-        $(Processed)/SUMMARY.md entries.list \
+        $(Processed)/SUMMARY.md entries.list identifiers.js \
         labels.tsv $(SIBLING_LABELS)
 	mdbook build
 	# See Manual/Description/Holmakefile for the rationale.
 	cd ../book/Reference && \
 	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	# `mdbook build` empties the build dir, so the entry-name
+	# sidecar is installed afterwards.  Copied rather than
+	# symlinked: a link pointing out of book/ wouldn't survive a
+	# deploy snapshot.
+	cp identifiers.js ../book/Reference/identifiers.js
 	../Tools/smdpp check-html ../book/Reference
 	../Tools/smdpp check-refs ../book/Reference
 	../Tools/smdpp check-links ../book/Reference || true
@@ -113,8 +118,19 @@ entries.list: $(Gend)/.stamp
 	ls $(Helpd)/Docfiles/*.smd $(Gend)/*.smd | xargs -n1 basename | \
 	  sed 's/\.smd$$//' | sort > $@
 
+# Entry-name table for the site's name-lookup layer.  It exists
+# because elasticlunr runs its trimmer / stop-word filter / stemmer
+# over the *query* as well as over the indexed text, so entries
+# named `have`, `THEN`, `I`, `&&` (and the rest) are unreachable
+# through searchindex.js no matter what the reader types.  The
+# generator reuses this manual's own scan, so the sidebar and the
+# table always agree on which entries exist.  See
+# Manual/Developers/manual-authoring.md.
+identifiers.js: ../Tools/gen_reference_summary $(Processed)/.stamp
+	../Tools/gen_reference_summary --identifiers $(Processed) > $@
+
 EXTRA_CLEANS = reference.pdf entries.md entries.tex \
-               $(Processed)/ entries.list labels.tsv \
+               $(Processed)/ entries.list labels.tsv identifiers.js \
                ../book/Reference/ \
                reference.aux reference.log reference.out \
                reference.toc reference.fls reference.idx reference.ilg \

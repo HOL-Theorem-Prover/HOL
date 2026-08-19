@@ -43,6 +43,7 @@ PORTS = {
     None:                3002,  # unified site
     "Description":       3000,
     "Tutorial":          3001,
+    "Quick":             3007,
     "Reference":         3003,
     "Interaction-emacs": 3004,
     "Logic":             3005,
@@ -83,9 +84,9 @@ class Manual:
         self.mtimes = None            # last-seen {Path: mtime} of the sources
 
     def render(self, book_dir):
-        """Re-render this book and refresh its searchindex symlink."""
+        """Re-render this book and reinstall its search sidecars."""
         _run(["mdbook", "build"], cwd=self.src_dir)
-        refix_searchindex(book_dir / self.name)
+        install_sidecars(self.src_dir, book_dir / self.name)
 
 
 def _log(msg):
@@ -98,19 +99,26 @@ def _run(cmd, cwd):
                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
 
-def refix_searchindex(book_manual_dir):
-    """Recreate the stable searchindex.js -> searchindex-<hash>.js symlink.
+def install_sidecars(src_dir, book_manual_dir):
+    """Reinstall the search sidecars `mdbook build` just wiped out.
 
-    mdbook hashes the index filename on every build; the cross-book searcher
-    loads siblings from a fixed `../<M>/searchindex.js`, so resolve the hash
-    here (mirrors each per-manual Holmakefile's mdbook recipe)."""
+    Two of them, mirroring each per-manual Holmakefile's mdbook recipe:
+
+      - `searchindex.js`, a symlink to the hashed `searchindex-<hash>.js`
+        mdbook emits (the hash changes on every content change, and the
+        cross-book searcher loads siblings from a fixed
+        `../<M>/searchindex.js`);
+      - `identifiers.js`, the generated entry-name table, copied in from the
+        manual's source directory."""
     hits = sorted(book_manual_dir.glob("searchindex-*.js"))
-    if not hits:
-        return
-    link = book_manual_dir / "searchindex.js"
-    if link.is_symlink() or link.exists():
-        link.unlink()
-    link.symlink_to(hits[0].name)
+    if hits:
+        link = book_manual_dir / "searchindex.js"
+        if link.is_symlink() or link.exists():
+            link.unlink()
+        link.symlink_to(hits[0].name)
+    table = src_dir / "identifiers.js"
+    if table.exists():
+        shutil.copy(table, book_manual_dir / "identifiers.js")
 
 
 def read_manuals_mk(repo):
@@ -170,9 +178,17 @@ def build_manifest(repo, book_dir, manual_names):
                 for f in Path(tout).glob("*.smd"):
                     shutil.copy(f, processed / f.name)
         if fileset_changed:
+            # Both outputs are functions of the entry *set*, which is
+            # exactly this branch's condition: the sidebar and the
+            # searcher's entry-name table.
             with (processed / "SUMMARY.md").open("w") as fh:
                 subprocess.run([str(tools / "gen_reference_summary"),
                                 str(processed)],
+                               check=True, stdout=fh, stderr=subprocess.PIPE,
+                               text=True)
+            with (ref_dir / "identifiers.js").open("w") as fh:
+                subprocess.run([str(tools / "gen_reference_summary"),
+                                "--identifiers", str(processed)],
                                check=True, stdout=fh, stderr=subprocess.PIPE,
                                text=True)
 
