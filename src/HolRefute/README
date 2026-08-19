@@ -465,8 +465,22 @@ group shares one iterator row: members are checked in `_cases` theorem order,
 and the first member with an explicit row wins before the default row is used.
 Predicates introduced by `Hol_reln` and `Hol_coreln` are recognized through
 the IndDef registries and support direct well-founded equations or joint
-least/greatest-fixpoint unrolling.  Hand-rolled greatest fixpoints are not
-recognized; define coinductive predicates with `Hol_coreln`.
+least/greatest-fixpoint unrolling.  A definition whose right-hand side is
+directly headed by `fixedPoint$lfp` or `fixedPoint$gfp` but is absent from
+those registries is recognized too (`fixpoint_definition_parts`,
+`derived_fixpoint_group` in `Refute_ModelFinder_HOL.sml`): its unrolling
+equation is derived from `fixedPointTheory.lfp_fixedpoint` or
+`gfp_greatest_fixedpoint` once `monotone` on the functional is discharged
+by `InductiveDefinition.MONO_TAC`, never by hand-building the unrolling
+equation.  The derived equation supersedes the definition's own
+presentation (`is_raw_equational_fun`), which would otherwise leave the
+encoder with `p = lfp F` and suppress the polarity-correct unrolling.
+A functional whose monotonicity cannot be discharged is not refused --
+unfolding `lfp_def`/`gfp_def` directly stays sound, merely more
+expensive -- it is only diagnosed, at `Refute` trace level 2.  Mutual
+hand-rolled fixpoints are out of scope: a tupled mutual definition is
+still recognized and sound as the single tupled predicate it syntactically
+is, but is not unrolled as a joint group the way `Hol_coreln` output is.
 
 Known limitations and follow-ups
 --------------------------------

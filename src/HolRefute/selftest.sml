@@ -2824,32 +2824,195 @@ val _ = require_msg (check_result mf_coinductive_recognition_and_wf)
   (fn () => "coinductive registry recognition or wf dual failed")
   (fn () => ()) ()
 
-fun mf_hand_rolled_gfp_refusal () =
+(* Hand-rolled fixpoints, recognized from the definition's [lfp]/[gfp]
+   head rather than from the IndDefLib/CoIndDefLib registries.  The
+   functionals are contentful on purpose: an identity functional derives
+   the tautology [p x = p x], which every pin below would pass with the
+   predicate left wholly unconstrained.
+     [hand_lfp_or]  = lfp (\X b. b \/ X b) = {T}: closure needs
+       [b ==> X b], and {T} is the least such set.
+     [hand_gfp_and] = gfp (\X b. b /\ X b) = {T}: consistency needs
+       [X b ==> b], and {T} is the greatest such set. *)
+val hand_lfp_or_def = TotalDefn.Define
+  `hand_lfp_or = fixedPoint$lfp (\X (b:bool). b \/ X b)`
+val hand_gfp_and_def = TotalDefn.Define
+  `hand_gfp_and = fixedPoint$gfp (\X (b:bool). b /\ X b)`
+
+(* [poly_lfp_top] is [UNIV] at every instance: [?y. y = x] holds, so a
+   closed set contains every element.  The derived equation is generic,
+   and each instance the goal mentions must get its own instantiation. *)
+val poly_lfp_top_def = TotalDefn.Define
+  `poly_lfp_top = fixedPoint$lfp (\X (x:'a). (?y. y = x) \/ X x)`
+
+fun is_genuine_counterexample outcome =
+  case outcome of
+      Counterexample reports => List.exists
+        (fn report => case #certainty report of Genuine => true | _ => false)
+        reports
+    | _ => false
+
+(* [hand_lfp_noise = lfp (\X x. ~ X x)] is [UNIV]: [F X SUBSET X] rewrites
+   to [!x. x IN X], i.e. [X = UNIV], so [BIGINTER {X | F X SUBSET X}] is
+   [BIGINTER {UNIV}] = [UNIV], and [!x. ~ hand_lfp_noise x] is false.
+   [\X x. ~ X x] is not monotone, so [lfp_fixedpoint]'s premise cannot be
+   discharged and no unrolling equation is derived. *)
+val hand_lfp_noise_def = TotalDefn.Define
+  `hand_lfp_noise = fixedPoint$lfp (\X (x:bool). ~ X x)`
+
+fun mf_derived_gfp_recognized () =
   let
-    val predicate = ``zoo_hand_gfp : bool -> bool``
-    val goal = ``zoo_hand_gfp F``
+    val predicate = ``hand_gfp_and : bool -> bool``
     val context = MFH.make_context Refute_Core.default_mf_config []
+    val kind = MFH.fixpoint_kind_of_const context predicate
     val reason = MFH.fixpoint_refusal_reason context predicate
-    val first = MFH.first_fixpoint_refusal context goal
-    val config = default_config |> upd_timeout 2.0
-    val instances = Refute_Core.preprocess config
-      {goal = goal, assumptions = [], evals = []}
-    val outcome = #run Refute_ModelFinder.kodkod_backend config instances
-    fun hand_rolled text = Refute_ModelFinder_Util.is_substring_of
-      "hand-rolled greatest fixpoint" text
+    val cases = MFH.case_props_for_const context predicate
+    val rules = MFH.intro_props_for_const context predicate
+    val unfolded = MFH.unfold_defs_in_term context ``hand_gfp_and x``
+    val key = MFH.const_key predicate
+    fun run goal =
+      let
+        val instances = Refute_Core.preprocess default_config
+          {goal = goal, assumptions = [], evals = []}
+      in
+        #run Refute_ModelFinder.kodkod_backend default_config instances
+      end
+    val refuted = run ``hand_gfp_and F``
+    val twin = run ``~hand_gfp_and F``
   in
     MFH.raw_fixpoint_kind predicate = MFH.NoFp andalso
-    MFH.fixpoint_kind_of_const context predicate = MFH.NoFp andalso
-    MFH.is_hand_rolled_gfp context predicate andalso
-    Option.getOpt (Option.map hand_rolled reason, false) andalso
-    Option.getOpt (Option.map hand_rolled first, false) andalso
-    (case outcome of
-         Unknown reasons => List.exists hand_rolled reasons
-       | _ => false)
+    kind = MFH.Gfp andalso
+    reason = NONE andalso
+    MFH.first_fixpoint_refusal context ``hand_gfp_and F`` = NONE andalso
+    (* the deleted refusal: a gfp-headed definition absent from the
+       coinduction registry is no longer turned away *)
+    MFH.fixpoint_refusal_reason context ``zoo_hand_gfp : bool -> bool``
+      = NONE andalso
+    not (null cases) andalso not (null rules) andalso
+    term_has_const key unfolded andalso
+    is_genuine_counterexample refuted andalso
+    (case twin of NoCounterexample => true | _ => false)
   end
 
-val _ = require_msg (check_result mf_hand_rolled_gfp_refusal)
-  (fn () => "a hand-rolled greatest fixpoint was not refused with a reason")
+val _ = require_msg (check_result mf_derived_gfp_recognized) (fn () =>
+  "a hand-rolled greatest fixpoint was not recognized, refuted at its " ^
+  "true certainty, or its equation did not reach the encoder")
+  (fn () => ()) ()
+
+fun mf_derived_lfp_recognized () =
+  let
+    val predicate = ``hand_lfp_or : bool -> bool``
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val kind = MFH.fixpoint_kind_of_const context predicate
+    val reason = MFH.fixpoint_refusal_reason context predicate
+    val cases = MFH.case_props_for_const context predicate
+    val rules = MFH.intro_props_for_const context predicate
+    val unfolded = MFH.unfold_defs_in_term context ``hand_lfp_or x``
+    val key = MFH.const_key predicate
+    fun run goal =
+      let
+        val instances = Refute_Core.preprocess default_config
+          {goal = goal, assumptions = [], evals = []}
+      in
+        #run Refute_ModelFinder.kodkod_backend default_config instances
+      end
+    val refuted = run ``hand_lfp_or F``
+    val twin = run ``~hand_lfp_or F``
+    val closed = run ``hand_lfp_or T``
+  in
+    MFH.raw_fixpoint_kind predicate = MFH.NoFp andalso
+    kind = MFH.Lfp andalso
+    reason = NONE andalso
+    MFH.first_fixpoint_refusal context ``hand_lfp_or F`` = NONE andalso
+    not (null cases) andalso not (null rules) andalso
+    term_has_const key unfolded andalso
+    is_genuine_counterexample refuted andalso
+    (* [T] is in every closed set and [F] in none, so both directions
+       pin the fixpoint exactly; an unconstrained predicate refutes both *)
+    (case twin of NoCounterexample => true | _ => false) andalso
+    (case closed of NoCounterexample => true | _ => false)
+  end
+
+val _ = require_msg (check_result mf_derived_lfp_recognized) (fn () =>
+  "a hand-rolled least fixpoint was not recognized, refuted at its " ^
+  "true certainty, or its equation did not reach the encoder")
+  (fn () => ()) ()
+
+fun mf_derived_fixpoint_generic_instances () =
+  let
+    val at_bool = ``poly_lfp_top : bool -> bool``
+    val at_pair = ``poly_lfp_top : bool # bool -> bool``
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val unfolded = MFH.unfold_defs_in_term context ``poly_lfp_top (x, y)``
+    fun run goal =
+      let
+        val instances = Refute_Core.preprocess default_config
+          {goal = goal, assumptions = [], evals = []}
+      in
+        #run Refute_ModelFinder.kodkod_backend default_config instances
+      end
+    val at_bool_true = run ``poly_lfp_top T``
+    val at_pair_true = run ``poly_lfp_top ((T, F) : bool # bool)``
+    val both = run ``poly_lfp_top T ==> ~ poly_lfp_top ((T, F) : bool # bool)``
+  in
+    MFH.fixpoint_kind_of_const context at_bool = MFH.Lfp andalso
+    MFH.fixpoint_kind_of_const context at_pair = MFH.Lfp andalso
+    not (null (MFH.case_props_for_const context at_pair)) andalso
+    term_has_const (MFH.const_key at_pair) unfolded andalso
+    (* an unconstrained predicate refutes both, so these pin the
+       instantiated equation, not merely the classification *)
+    (case at_bool_true of NoCounterexample => true | _ => false) andalso
+    (case at_pair_true of NoCounterexample => true | _ => false) andalso
+    is_genuine_counterexample both
+  end
+
+val _ = require_msg (check_result mf_derived_fixpoint_generic_instances)
+  (fn () =>
+  "a generic hand-rolled fixpoint was not instantiated at each type " ^
+  "instance its goal mentions")
+  (fn () => ()) ()
+
+(* A non-monotone hand-rolled functional is not refused -- unfolding
+   [lfp_def] itself stays sound -- only diagnosed, at the verbosity
+   [print_wf_cache] uses.  The fallback still answers all three goals. *)
+fun mf_derived_fixpoint_nonmonotone_diagnosed () =
+  let
+    val predicate = ``hand_lfp_noise : bool -> bool``
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val chunks = ref ([] : string list)
+    fun output text = chunks := text :: !chunks
+    val kind = Lib.with_flag (Feedback.MESG_outstream, output)
+      (Feedback.with_traces [("Refute", 2)]
+        (fn () => MFH.fixpoint_kind_of_const context predicate)) ()
+    val message = String.concat (rev (!chunks))
+    val reason = MFH.fixpoint_refusal_reason context predicate
+    val first = MFH.first_fixpoint_refusal context ``hand_lfp_noise F``
+    fun run goal =
+      let
+        val instances = Refute_Core.preprocess default_config
+          {goal = goal, assumptions = [], evals = []}
+      in
+        #run Refute_ModelFinder.kodkod_backend default_config instances
+      end
+    val true_atom = run ``hand_lfp_noise F``
+    val true_universal = run ``!x. hand_lfp_noise x``
+    val false_atom = run ``~ hand_lfp_noise F``
+  in
+    MFH.raw_fixpoint_kind predicate = MFH.NoFp andalso
+    kind = MFH.NoFp andalso
+    reason = NONE andalso
+    first = NONE andalso
+    Refute_ModelFinder_Util.is_substring_of "monoton" message andalso
+    Refute_ModelFinder_Util.is_substring_of "hand_lfp_noise" message andalso
+    (case true_atom of NoCounterexample => true | _ => false) andalso
+    (case true_universal of NoCounterexample => true | _ => false) andalso
+    is_genuine_counterexample false_atom
+  end
+
+val _ = require_msg
+  (check_result mf_derived_fixpoint_nonmonotone_diagnosed) (fn () =>
+  "a non-monotone hand-rolled lfp functional was refused, its " ^
+  "diagnostic did not name monotonicity, or the [lfp_def] fallback " ^
+  "answered it wrongly")
   (fn () => ()) ()
 
 fun mf_inductive_direct_equation () =

@@ -888,28 +888,20 @@ structure Refute_ModelFinder_HOL = struct
 
   fun def_of_const context = Option.map #2 o def_of_const_ext context
 
-  fun fixpoint_kind_of_rhs rhs =
-    let
-      fun strip_abstractions term =
-        if Term.is_abs term then strip_abstractions (Term.body term)
-        else term
-      val (head, _) = HolKernel.strip_comb (strip_abstractions rhs)
-    in
-      if Term.is_const head andalso
-         same_key (const_key head) {Thy = "fixedPoint", Name = "gfp"}
-      then Gfp
-      else NoFp
-    end
-    handle HOL_ERR _ => NoFp
+  fun strip_abstractions term =
+    if Term.is_abs term then strip_abstractions (Term.body term) else term
 
-  (* CoIndDefLib's registry is authoritative for package-generated gfps.
-     A definition headed directly by fixedPoint$gfp but absent from that
-     registry has none of the rules/cases evidence needed by the encoding. *)
-  fun is_hand_rolled_gfp context constant =
-    raw_fixpoint_kind constant = NoFp andalso
-    (case def_of_const context constant of
-         SOME rhs => fixpoint_kind_of_rhs rhs = Gfp
-       | NONE => false)
+  fun fixpoint_kind_of_head head =
+    if not (Term.is_const head) then NoFp
+    else if same_key (const_key head) {Thy = "fixedPoint", Name = "gfp"}
+    then Gfp
+    else if same_key (const_key head) {Thy = "fixedPoint", Name = "lfp"}
+    then Lfp
+    else NoFp
+
+  fun fixpoint_kind_of_rhs rhs =
+    fixpoint_kind_of_head (#1 (HolKernel.strip_comb (strip_abstractions rhs)))
+    handle HOL_ERR _ => NoFp
 
   fun constants_in term =
     let
@@ -1152,25 +1144,228 @@ structure Refute_ModelFinder_HOL = struct
   fun cache_lookup key entries =
     Option.map #2 (List.find (fn (other, _) => same_key other key) entries)
 
+  fun fixpoint_base_theorem_name Lfp = "lfp_fixedpoint"
+    | fixpoint_base_theorem_name Gfp = "gfp_greatest_fixedpoint"
+    | fixpoint_base_theorem_name NoFp =
+        raise err "fixpoint_base_theorem_name" "not a fixpoint kind"
+
+  (* The definitional theorem for a hand-rolled [p = lfp F], fetched
+     rather than reconstructed.  The DefnBase presentation answers for
+     anything made by [Definition]/[Define]; the ancestry scan is the
+     fallback for a raw [new_definition]. *)
+  fun fixpoint_definition_theorem constant =
+    let
+      val key = original_const_key constant
+      fun presented () =
+        case DefnBase.lookup_userdef constant of
+            SOME {thm = DefnBase.STDEQNS theorem, ...} => SOME theorem
+          | _ => NONE
+      fun matching theorem =
+        List.find (fn (kid, _) => same_key kid key)
+          (DefnBase.defn_eqns theorem handle DefnBase.nonstdform => [])
+      fun in_theory theory =
+        List.mapPartial (matching o #2) (definitions_of theory)
+      fun scanned () =
+        case rev (List.concat (map in_theory (oldest_first_theories ()))) of
+            (_, theorem) :: _ => SOME theorem
+          | [] => NONE
+    in
+      case presented () handle HOL_ERR _ => NONE of
+          SOME theorem => SOME theorem
+        | NONE => scanned ()
+    end
+    handle HOL_ERR _ => NONE
+
+  (* Only the zero-ary shape [p = lfp F] is derivable: the fold in
+     [derived_fixpoint_case_theorem] rewrites [lfp F] back to [p].
+     Reading both off the theorem rather than off [def_of_const] keeps
+     them generic -- def-table entries are instantiated to the queried
+     constant, and a group built at one instance matches no other. *)
+  fun fixpoint_definition_parts def_thm =
+    let
+      val (left, right) = boolSyntax.dest_eq (Thm.concl def_thm)
+      val (head, arguments) = HolKernel.strip_comb right
+    in
+      if not (Term.is_const left) then NONE
+      else
+        case (fixpoint_kind_of_head head, arguments) of
+            (NoFp, _) => NONE
+          | (kind, [functional]) => SOME (kind, left, functional)
+          | _ => NONE
+    end
+    handle HOL_ERR _ => NONE
+
+  (* Discharge [monotone F] with HOL4's own monotonicity prover -- the
+     one IndDefLib uses for the same purpose -- after unfolding
+     [monotone_def]/[SUBSET_DEF]/[IN_DEF] with a fixed conversion.  It
+     is syntax-directed and terminating, so its cost is a function of the
+     term, not of the machine. *)
+  fun prove_fixpoint_monotone functional =
+    let
+      open Tactical Tactic Rewrite
+      fun fetch (thy, name) = SOME (DB.fetch thy name)
+        handle HOL_ERR _ => NONE
+      val unfold_thms = List.mapPartial fetch
+        [("fixedPoint", "monotone_def"), ("pred_set", "SUBSET_DEF"),
+         ("bool", "IN_DEF")]
+      val monotone_const =
+        Term.prim_mk_const {Thy = "fixedPoint", Name = "monotone"}
+      val goal = boolSyntax.mk_icomb (monotone_const, functional)
+      (* MONO_TAC wants [body[X] ==> body[Y]] with [!x. X x ==> Y x] to
+         hand, so the SUBSET premise has to be pointwise *and* in the
+         assumptions before it runs. *)
+      val tactic = PURE_REWRITE_TAC unfold_thms THEN REPEAT GEN_TAC THEN
+        PURE_REWRITE_TAC unfold_thms THEN BETA_TAC THEN STRIP_TAC THEN
+        InductiveDefinition.MONO_TAC (!IndDefLib.the_monoset)
+    in
+      SOME (Tactical.TAC_PROOF (([], goal), tactic))
+    end
+    handle HOL_ERR _ => NONE
+
+  (* The unrolling equation, obtained by instantiating
+     [fixedPointTheory.lfp_fixedpoint] / [gfp_greatest_fixedpoint] with
+     the discharged [monotone F] premise and folding [def_thm] backwards
+     to replace [lfp F] / [gfp F] with the defined constant.  Building
+     [F p = p]'s beta-reduct by hand instead would ship a premise-free
+     copy of a premised theorem: [p = lfp (\X x. ~ X x)] is UNIV, so its
+     unconditional unrolling [p x = ~ p x] is false of the predicate it
+     claims to characterize. *)
+  fun derived_fixpoint_case_theorem kind constant functional
+        def_thm mono_thm =
+    let
+      val base = DB.fetch "fixedPoint" (fixpoint_base_theorem_name kind)
+      val fixed_eq = Thm.CONJUNCT1
+        (Thm.MP (Drule.ISPEC functional base) mono_thm)
+      (* fixed_eq : |- F (lfp F) = lfp F  (or the gfp dual) *)
+      val folded = Rewrite.PURE_REWRITE_RULE [Thm.SYM def_thm] fixed_eq
+      (* folded : |- F p = p, both sides of type ['a -> bool] *)
+      val domain = #1 (Type.dom_rng (Term.type_of constant))
+      val variable = Term.variant (Term.free_vars_lr (Thm.concl folded))
+        (Term.mk_var ("x", domain))
+      val applied = Conv.CONV_RULE
+        (Conv.LHS_CONV (Conv.DEPTH_CONV Thm.BETA_CONV))
+        (Thm.AP_THM folded variable)
+      (* applied : |- F p x [reduced] = p x *)
+      val equation = Drule.GEN_ALL (Thm.SYM applied)
+      (* Every step above is inference, so the equation is a theorem --
+         but the fold is a rewrite, and a [def_thm] shape it does not
+         match leaves [lfp F] standing where the constant should be.
+         [derived_fixpoint_group] would then file the equation under
+         [fixedPoint$lfp].  Decline instead. *)
+      val (left, _) = boolSyntax.dest_eq
+        (#2 (boolSyntax.strip_forall (Thm.concl equation)))
+      val (head, _) = HolKernel.strip_comb left
+    in
+      if Term.is_const head andalso
+         same_key (const_key head) (const_key constant)
+      then SOME equation else NONE
+    end
+    handle HOL_ERR _ => NONE
+
+  (* The case equation is an iff, so the introduction rule follows
+     immediately; [intro_table] and the wf prover both want it. *)
+  fun derived_fixpoint_rule_theorem case_thm =
+    SOME (Drule.GEN_ALL (snd (Thm.EQ_IMP_RULE (Drule.SPEC_ALL case_thm))))
+    handle HOL_ERR _ => NONE
+
+  (* The fallback branch of [fixpoint_group_of_const] for a constant the
+     IndDefLib/CoIndDefLib registries do not answer for.  Recognition is
+     gated on discharging [monotone F]; a functional that fails the gate
+     is not refused -- the raw [p = lfp F] definition still characterizes
+     it soundly, merely at the cost of encoding [lfp] itself -- it is
+     only diagnosed, at the verbosity [print_wf_cache] uses. *)
+  fun derived_fixpoint_group
+        (context as {intro_table, case_table, ...} : mf_context) constant =
+    let
+      fun diagnose kind =
+        Refute_Core.Private.say 2
+          ("The " ^ (if kind = Gfp then "coinductive" else "inductive") ^
+           " predicate \"" ^ Parse.term_to_string constant ^
+           "\" is headed by fixedPoint$" ^
+           (if kind = Gfp then "gfp" else "lfp") ^
+           " but is not registered and its monotonicity could not be " ^
+           "discharged; Refute cannot derive its unrolling equation\n")
+      fun install kind case_thm =
+        let
+          val cases = quantified_conjuncts case_thm
+          val rules =
+            case derived_fixpoint_rule_theorem case_thm of
+                SOME rule_thm => quantified_conjuncts rule_thm
+              | NONE => []
+          val group : fixpoint_group =
+            {kind = kind, stem = #Name (original_const_key constant),
+             members = [original_const_key constant],
+             rules = rules, cases = cases}
+          fun extend table props = List.foldl
+            (fn (prop, entries) =>
+              let val (head, value) = pair_for_prop prop
+              in table_append head value entries end)
+            table props
+          (* Both tables are built before either is assigned, so a raise
+             cannot leave one populated for a group the caller discards. *)
+          val intro_entries = extend (!intro_table) rules
+          val case_entries = extend (!case_table) cases
+        in
+          intro_table := intro_entries;
+          case_table := case_entries;
+          SOME group
+        end
+      fun derive def_thm =
+        case fixpoint_definition_parts def_thm of
+            NONE => NONE
+          | SOME (kind, generic, functional) =>
+              (case prove_fixpoint_monotone functional of
+                   NONE => (diagnose kind; NONE)
+                 | SOME mono_thm =>
+                     (case derived_fixpoint_case_theorem kind generic
+                             functional def_thm mono_thm of
+                          NONE => NONE
+                        | SOME case_thm => install kind case_thm))
+      (* Generated bound/unrolled constants share their source
+         predicate's key and reach this function too, but have no
+         def-table entry of their own; the group is the source
+         predicate's either way, and the cache is keyed by that key. *)
+      val key = original_const_key constant
+      val original =
+        if Term.is_const constant andalso same_key (const_key constant) key
+        then constant
+        else Term.prim_mk_const {Thy = #Thy key, Name = #Name key}
+      (* A def-table lookup, so the theorem search stays off every
+         constant that is not [lfp]/[gfp]-headed. *)
+      val headed =
+        case def_of_const context original of
+            SOME rhs => fixpoint_kind_of_rhs rhs <> NoFp
+          | NONE => false
+    in
+      if headed then
+        Option.mapPartial derive (fixpoint_definition_theorem original)
+      else NONE
+    end
+    handle HOL_ERR _ => NONE
+
   fun fixpoint_group_of_const
-        ({intro_table, case_table, fixpoint_cache, ...} : mf_context)
+        (context as {intro_table, case_table, fixpoint_cache, ...}
+           : mf_context)
         constant =
     if is_built_in_const constant then NONE
     else
       let
         val key = original_const_key constant
         val kind = raw_fixpoint_kind constant
+        (* A registry hit that turns out to be unusable falls back to the
+           derived group too: a malformed _cases/_rules pair is no reason
+           to ignore a definition the equation can be derived from. *)
+        fun cache_derived () =
+          let val derived = derived_fixpoint_group context constant
+          in fixpoint_cache := (key, derived) :: !fixpoint_cache; derived end
       in
         case cache_lookup key (!fixpoint_cache) of
             SOME result => result
           | NONE =>
-              if kind = NoFp then
-                (fixpoint_cache := (key, NONE) :: !fixpoint_cache; NONE)
+              if kind = NoFp then cache_derived ()
               else
                 (case locate_cases_theorem kind key of
-                     NONE =>
-                       (fixpoint_cache := (key, NONE) :: !fixpoint_cache;
-                        NONE)
+                     NONE => cache_derived ()
                    | SOME (stem, cases_theorem) =>
                        let
                          val rules_theorem = DB.fetch (#Thy key)
@@ -1212,9 +1407,7 @@ structure Refute_ModelFinder_HOL = struct
                        in
                          SOME group
                        end
-                       handle HOL_ERR _ =>
-                         (fixpoint_cache := (key, NONE) :: !fixpoint_cache;
-                          NONE))
+                       handle HOL_ERR _ => cache_derived ())
       end
       handle HOL_ERR _ => NONE
 
@@ -1307,10 +1500,24 @@ structure Refute_ModelFinder_HOL = struct
     (ignore (fixpoint_group_of_const context constant);
      def_props_for_const (!(#case_table context)) constant)
 
+  (* Generated helpers (base/step/bound/unrolled) share their source
+     predicate's key, so [is_raw_inductive_pred] answers for the source
+     rather than for them; only a real constant is characterized by the
+     fixpoint equation.  For one that is, the equation supersedes its
+     def-table presentation: a hand-rolled [p = lfp F] is a [Definition]
+     too, and its raw presentation says only that [p] is [lfp F], which
+     leaves the encoder to encode [lfp]'s own BIGINTER and suppresses the
+     polarity-correct unrolling (the guard in
+     Refute_ModelFinder_Preproc.sml) that makes [Lfp] mean the *least*
+     fixpoint rather than any fixpoint. *)
+  fun is_fixpoint_pred_const context constant =
+    Term.is_const constant andalso is_raw_inductive_pred context constant
+
   fun is_raw_equational_fun
-        ({simp_table, psimp_table, ...} : mf_context) constant =
-    not (null (def_props_for_const (!simp_table) constant)) orelse
-    not (null (def_props_for_const psimp_table constant))
+        (context as {simp_table, psimp_table, ...} : mf_context) constant =
+    not (is_fixpoint_pred_const context constant) andalso
+    (not (null (def_props_for_const (!simp_table) constant)) orelse
+     not (null (def_props_for_const psimp_table constant)))
 
   fun is_equational_fun context constant =
     is_raw_equational_fun context constant orelse
@@ -1353,14 +1560,15 @@ structure Refute_ModelFinder_HOL = struct
 
   fun equational_fun_axioms
         (context as {simp_table, psimp_table, ...} : mf_context) constant =
+    if is_fixpoint_pred_const context constant then
+      case_props_for_const context constant
+    else
     case def_props_for_const (!simp_table) constant of
         [] =>
           (case def_props_for_const psimp_table constant of
                [] =>
                  if is_fixpoint_bound_const constant then
                    substituted_fixpoint_axioms context constant
-                 else if is_raw_inductive_pred context constant then
-                   case_props_for_const context constant
                  else
                  (case def_of_const context constant of
                       SOME definition =>
@@ -1867,33 +2075,28 @@ structure Refute_ModelFinder_HOL = struct
                    in result end)
     end
 
+  (* Only a *registered* predicate can be refused here.  A derived
+     fixpoint is unregistered by construction, so it takes the [NoFp]
+     arm; a non-monotone one is diagnosed by [derived_fixpoint_group] at
+     the [print_wf_cache] verbosity instead. *)
   fun fixpoint_refusal_reason context constant =
-    if is_hand_rolled_gfp context constant then
-      SOME ("hand-rolled greatest fixpoint " ^
-        Parse.term_to_string constant ^ " is not supported; " ^
-        "define coinductive predicates with Hol_coreln")
-    else
-      case raw_fixpoint_kind constant of
-          NoFp => NONE
-        | raw_kind =>
-            (case fixpoint_group_of_const context constant of
-                 NONE =>
-                   SOME ((if raw_kind = Gfp then "coinductive"
-                          else "inductive") ^ " predicate " ^
-                     Parse.term_to_string constant ^
-                     " has no usable registered _cases/_rules theorem")
-               | SOME {kind = Lfp, ...} => NONE
-               | SOME {kind = Gfp, ...} => NONE
-               | SOME {kind = NoFp, ...} => SOME ("predicate " ^
-                   Parse.term_to_string constant ^ " is not a fixpoint"))
+    case raw_fixpoint_kind constant of
+        NoFp => NONE
+      | raw_kind =>
+          (case fixpoint_group_of_const context constant of
+               SOME _ => NONE
+             | NONE =>
+                 SOME ((if raw_kind = Gfp then "coinductive"
+                        else "inductive") ^ " predicate " ^
+                   Parse.term_to_string constant ^
+                   " has no usable registered _cases/_rules theorem"))
 
   fun first_fixpoint_refusal context term =
     let
       val constants = HolKernel.find_terms Term.is_const term
       fun check [] = NONE
         | check (constant :: rest) =
-            if is_hand_rolled_gfp context constant orelse
-               is_raw_inductive_pred context constant then
+            if is_raw_inductive_pred context constant then
               (case fixpoint_refusal_reason context constant of
                    SOME reason => SOME reason
                  | NONE => check rest)

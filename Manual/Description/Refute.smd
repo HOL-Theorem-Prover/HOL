@@ -781,8 +781,12 @@ Counterexample search is bounded and incomplete.  In particular:
   or downgraded rather than silently called genuine;
 * fraction support covers `rat`, not `real`; certification of reconstructed
   real literals remains unresolved;
-* hand-written greatest fixpoints are not recognized for unrolling; use
-  `Hol_coreln`;
+* a hand-written definition headed by `fixedPoint$lfp` or `fixedPoint$gfp`
+  but absent from the `Hol_reln`/`Hol_coreln` registries is recognized if
+  its monotonicity can be discharged automatically; a non-monotone
+  functional falls back to plain `lfp_def`/`gfp_def` unfolding, which
+  stays sound but is not refused; mutual hand-rolled fixpoints are
+  recognized only as their single tupled predicate, not unrolled jointly;
 * the model finder encodes machine words of concrete width only, and
   refuses width-changing and bit-permuting word operations by name;
 * if lazy metadata harvest cannot validate an Abs/Rep type, MF returns

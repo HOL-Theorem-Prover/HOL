@@ -118,6 +118,23 @@ structure Refute_QC = struct
             SOME (_, answer) => answer
           | NONE =>
               let
+                (* A group whose rules the SCC converter cannot use is
+                   not out of reach: the single-relation Horn route is
+                   weaker but independent, so try it before reporting
+                   the conversion failure. *)
+                fun from_horn fallback =
+                  case SmartGen.horn_inference_clauses_for relation of
+                      SOME clauses =>
+                        {result = SOME (SmartGen.infer_group
+                          {members = [relation],
+                           clauses = clauses, external = [],
+                           reorder_premises =
+                             #reorder_premises (#qc config)}),
+                         trigger = true, reason = NONE}
+                    | NONE =>
+                        {result = NONE,
+                         trigger = Option.isSome fallback,
+                         reason = fallback}
                 val answer =
                   case smart_context () of
                       NONE => {result = NONE, trigger = false, reason = NONE}
@@ -134,23 +151,9 @@ structure Refute_QC = struct
                                     SOME result =>
                                       {result = SOME result, trigger = true,
                                        reason = NONE}
-                                  | NONE =>
-                                      {result = NONE, trigger = true,
-                                       reason = SOME
-                                         "introduction-rule conversion failed"})
-                           | NONE =>
-                               (case SmartGen.horn_inference_clauses_for
-                                   relation of
-                                    SOME clauses =>
-                                      {result = SOME (SmartGen.infer_group
-                                        {members = [relation],
-                                         clauses = clauses, external = [],
-                                         reorder_premises =
-                                           #reorder_premises (#qc config)}),
-                                       trigger = true, reason = NONE}
-                                  | NONE =>
-                                      {result = NONE, trigger = false,
-                                       reason = NONE}))
+                                  | NONE => from_horn (SOME
+                                      "introduction-rule conversion failed"))
+                           | NONE => from_horn NONE)
                 val _ = analyses := (relation, answer) :: !analyses
                 val _ = Option.app SmartGen.cache_inference (#result answer)
               in
