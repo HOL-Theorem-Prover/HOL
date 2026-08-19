@@ -8,6 +8,41 @@ Datatype:
   zoo_tree = ZooLeaf num | ZooNode zoo_tree zoo_tree
 End
 
+(* An ordinary, genuinely acyclic datatype for [register_codatatype]'s
+   shape-validation control: [combin$I]'s declared result type is the
+   bare type variable ['a], which unifies with any [result_ty] under
+   [Type.match_type], so substituting it for [ZooSucc] in the
+   constructor list has the same arity and the same instantiated result
+   type ([zoo_nat0 -> zoo_nat0]) as the constructor it replaces and would
+   pass every other clause of [validate_codatatype_shape]. *)
+Datatype:
+  zoo_nat0 = ZooZero | ZooSucc zoo_nat0
+End
+
+(* Witness for the cross-type control: [combin$I] instantiated at
+   [zoo_nat0 -> zoo_nat0] is trivially cyclic ([x = I x] for any [x]),
+   so if the instance-typed impostor were ever accepted as a [zoo_nat0]
+   constructor, this witness would certify it. *)
+Theorem zoo_nat0_instance_impostor_witness:
+  ?x : zoo_nat0. x = (combin$I : zoo_nat0 -> zoo_nat0) x
+Proof
+  qexists_tac `ZooZero` >> simp [combinTheory.I_THM]
+QED
+
+(* A database impostor: [zoo_id] is a genuine constant declared at
+   [zoo_nat0 -> zoo_nat0] - unlike [combin$I], its declared result type
+   is already [zoo_nat0]-headed - but it is not one of [zoo_nat0]'s
+   database constructors, and its witness is just as trivially cyclic. *)
+Definition zoo_id_def:
+  zoo_id (x : zoo_nat0) = x
+End
+
+Theorem zoo_id_witness:
+  ?x : zoo_nat0. x = zoo_id x
+Proof
+  qexists_tac `ZooZero` >> simp [zoo_id_def]
+QED
+
 (* Stable replay fixtures.  Their equations deliberately expose constructor
    behavior only after a kernel case split or induction; a symbolic
    scrutinee does not collapse by ordinary evaluation. *)
@@ -301,6 +336,115 @@ val zoo_check_tydef =
 val zoo_check_absrep = define_new_type_bijections
   {name = "zoo_check_absrep", ABS = "zoo_check_abs",
    REP = "zoo_check_rep", tyax = zoo_check_tydef};
+
+(* A hand-rolled codatatype for [register_codatatype]'s witness path: a
+   typedef over the always-true predicate on [:num -> 'a] gives an infinite
+   stream, with [zoo_scons] its sole constructor and [zoo_stream_CASE] a
+   scrutinee-first case constant.  [zoo_tree] above cannot stand in for this:
+   it is a genuine (acyclic) TypeBase datatype. *)
+Theorem zoo_stream_exists[local]:
+  ?f : num -> 'a. (\f. T) f
+Proof
+  qexists_tac `\n. ARB` >> simp []
+QED
+
+val zoo_stream_tydef =
+  new_type_definition ("zoo_stream", zoo_stream_exists);
+
+val zoo_stream_absrep = define_new_type_bijections
+  {name = "zoo_stream_absrep", ABS = "zoo_stream_abs",
+   REP = "zoo_stream_rep", tyax = zoo_stream_tydef};
+
+Theorem zoo_stream_repabs[local]:
+  !r. zoo_stream_rep (zoo_stream_abs r) = r
+Proof
+  simp [GSYM zoo_stream_absrep]
+QED
+
+Theorem zoo_stream_rep_11[local]:
+  !x y. (zoo_stream_rep x = zoo_stream_rep y) <=> (x = y)
+Proof
+  metis_tac [CONJUNCT1 zoo_stream_absrep]
+QED
+
+Definition zoo_scons_def:
+  zoo_scons (a : 'a) (s : 'a zoo_stream) : 'a zoo_stream =
+    zoo_stream_abs (\n. if n = 0 then a else zoo_stream_rep s (n - 1))
+End
+
+Definition zoo_shd_def:
+  zoo_shd (s : 'a zoo_stream) : 'a = zoo_stream_rep s 0
+End
+
+Definition zoo_stl_def:
+  zoo_stl (s : 'a zoo_stream) : 'a zoo_stream =
+    zoo_stream_abs (\n. zoo_stream_rep s (n + 1))
+End
+
+Definition zoo_stream_CASE_def:
+  zoo_stream_CASE (s : 'a zoo_stream)
+                  (f : 'a -> 'a zoo_stream -> 'b) : 'b =
+    f (zoo_shd s) (zoo_stl s)
+End
+
+(* The stream eta law: every stream is its own head/tail reassembly. *)
+Theorem zoo_stream_eta:
+  !s. s = zoo_scons (zoo_shd s) (zoo_stl s)
+Proof
+  simp [GSYM zoo_stream_rep_11, zoo_scons_def, zoo_shd_def,
+        zoo_stl_def, zoo_stream_repabs, FUN_EQ_THM] >>
+  rw []
+QED
+
+(* The registration witness: the constant stream of [a] is cyclic under
+   [zoo_scons], which is exactly what justifies dropping acyclicity. *)
+Theorem zoo_stream_witness:
+  ?s. s = zoo_scons a s
+Proof
+  qexists_tac `zoo_stream_abs (\n. a)` >>
+  simp [GSYM zoo_stream_rep_11, zoo_scons_def, zoo_stream_repabs]
+QED
+
+(* Positive control for the constructor-spine walk (clause 3 of
+   [validate_codatatype_witness]): [s] is nested two [zoo_scons]
+   applications deep, not a top-level argument of the outer one, so a
+   check confined to the outer application's own arguments rejects this
+   genuine depth-2 cyclic witness.  The walk accepts it because
+   [zoo_scons]'s own argument is again a [zoo_scons] application. *)
+Theorem zoo_stream_nested_witness:
+  ?s. s = zoo_scons a (zoo_scons a s)
+Proof
+  qexists_tac `zoo_stream_abs (\n. a)` >>
+  simp [GSYM zoo_stream_rep_11, zoo_scons_def, zoo_stream_repabs]
+QED
+
+(* Negative control for [register_codatatype]'s witness check: [a] is
+   free inside the argument [combin$K a l], but [combin$K] is not a
+   registered constructor, so the constructor-spine walk never descends
+   into it and [l] itself is never an argument on that spine.  This is
+   not a cyclic value - [l = [a]] proves it, an ordinary finite list. *)
+Theorem zoo_list_free_occurrence_witness:
+  ?l : 'a list. l = CONS (combin$K a l) []
+Proof
+  qexists_tac `[a]` >> simp [combinTheory.K_THM]
+QED
+
+(* Negative control: [combin$I] is a constant, but not one of
+   [zoo_stream]'s registered constructors. *)
+Theorem zoo_stream_non_constructor_witness:
+  ?s : num zoo_stream. s = combin$I s
+Proof
+  qexists_tac `ARB` >> simp [combinTheory.I_THM]
+QED
+
+(* Positive control: the instance-typed witness the shape check accepts -
+   [num zoo_stream], not [zoo_stream]'s generic instance. *)
+Theorem zoo_stream_instance_witness:
+  ?s : num zoo_stream. s = zoo_scons 0 s
+Proof
+  qexists_tac `zoo_stream_abs (\n. 0)` >>
+  simp [GSYM zoo_stream_rep_11, zoo_scons_def, zoo_stream_repabs]
+QED
 
 Datatype:
   zoo_even_tree = ZooEvenLeaf num | ZooEvenNode zoo_odd_tree ;

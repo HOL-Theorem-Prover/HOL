@@ -31,6 +31,14 @@ structure Refute_ModelFinder_HOL = struct
   type fixpoint_cache = (kname * fixpoint_group option) list
   type type_operator = {Thy : string, Tyop : string}
   type ersatz = {original : kname, replacement : kname}
+  (* What a caller supplies to register_codatatype.  [witness] is
+     consumed only by validation itself - supplying one narrows what the
+     registration can get away with - and is not part of the stored
+     registry entry below, mirroring quotient_registration/quotient_info
+     just below. *)
+  type codatatype_registration =
+    {tyop : type_operator, case_const : term, constructors : term list,
+     witness : thm option}
   type codatatype_info =
     {tyop : type_operator, case_const : term, constructors : term list}
   (* What a caller supplies to register_quotient.  The stored registry
@@ -2496,6 +2504,33 @@ structure Refute_ModelFinder_HOL = struct
   fun remove_nth index values =
     List.take (values, index) @ List.drop (values, index + 1)
 
+  (* The operator applied to distinct fresh type variables. *)
+  fun generic_instance ty =
+    let
+      val {Thy, Tyop, Args} = Type.dest_thy_type ty
+      fun name index =
+        if index < 26 then
+          "'" ^ String.str (Char.chr (Char.ord #"a" + index))
+        else "'a" ^ Int.toString index
+    in
+      Type.mk_thy_type
+        {Thy = Thy, Tyop = Tyop,
+         Args = List.tabulate (length Args, Type.mk_vartype o name)}
+    end
+
+  (* Classification is operator-level: every Refute registry is keyed by type
+     operator and [validate_registered_type] forbids non-variable type
+     arguments, so the generic instance is the authoritative answer.
+     [TypeBase.fetch] is a type-net lookup, so asking at a specialized
+     instance can pick a different entry for one operator - [:'a word] finds
+     the constructor-free word entry while [:('a,'b) cart] finds the cart
+     entry - and callers would then disagree about [cart]. *)
+  fun database_constructors ty =
+    (case TypeBase.fetch (generic_instance ty) of
+         SOME info => TypeBasePure.constructors_of info
+       | NONE => [])
+    handle HOL_ERR _ => []
+
   (* Case constants in HOL normally take the scrutinee first, but manually
      defined codata case constants may put it elsewhere.  A candidate
      position is accepted only if instantiating that domain to the registered
@@ -2517,15 +2552,47 @@ structure Refute_ModelFinder_HOL = struct
         raise err function "constructors must be distinct"
       val result_ty = #2 (boolSyntax.strip_fun
         (Term.type_of (hd constructors)))
-      val {Thy, Tyop, Args} = Type.dest_thy_type result_ty
-      val actual = {Thy = Thy, Tyop = Tyop}
-      val _ = if same_type_operator tyop actual then () else
+      (* Every constructor's *declared* result type - not just [hd
+         constructors]'s - must have [tyop] as its type operator.
+         [Term.type_of constructor] is the instance the caller passed, not
+         the constant's declared type: a genuinely polymorphic constant
+         (["combin$I"], declared result type ['a]) can be instantiated at
+         any type, including one whose operator matches [tyop] by
+         coincidence, and would then unify with [result_ty] under
+         [Type.match_type] and pass as a "constructor" of any codatatype.
+         Look the constant up at its declared type instead. *)
+      fun declared_operator constructor =
+        type_operator_of (#2 (boolSyntax.strip_fun
+          (Term.type_of (primitive_constant (const_key constructor)))))
+      val _ = if List.all (fn constructor =>
+                   same_type_operator tyop (declared_operator constructor)
+                     handle HOL_ERR _ => false)
+                 constructors
+              then () else
         raise err function "constructor result has the wrong type operator"
+      val {Args, ...} = Type.dest_thy_type result_ty
       val _ = if interpreted_type_operator tyop then
           raise err function
             "interpreted and function types cannot be codatatypes"
         else ()
       val _ = distinct_types Args
+      (* When [tyop] is a type the datatype database already knows as a
+         free datatype, its own constructors are authoritative: every
+         registered constructor must be one of them, by [const_key].
+         With a type's genuine constructors, [x = C ... x ...] is
+         unprovable for an acyclic datatype, so a witness that
+         type-checks does certify; a hand-rolled codatatype is unknown to
+         the database, so this imposes nothing on it. *)
+      val database_keys = map const_key (database_constructors result_ty)
+      val _ = if null database_keys orelse
+                 List.all (fn constructor =>
+                     List.exists (same_key (const_key constructor))
+                       database_keys handle HOL_ERR _ => false)
+                   constructors
+              then () else
+        raise err function
+          "constructor is not one of the type's known datatype \
+          \constructors"
       fun normalize_constructor constructor =
         let
           val constructor_result = #2 (boolSyntax.strip_fun
@@ -2704,55 +2771,103 @@ structure Refute_ModelFinder_HOL = struct
         same_type_operator (project entry) operator) (!registry)
     end handle HOL_ERR _ => false
 
-  (* The operator applied to distinct fresh type variables. *)
-  fun generic_instance ty =
+  fun raw_free_datatype ty = not (null (database_constructors ty))
+
+  (* A witness must exhibit a cyclic value: after [strip_forall], the
+     conclusion must be hypothesis-free and of shape [?x. body], [body]
+     an equation with one side [aconv] to [x] (either orientation) and
+     the other a constructor application [C a1 ... an].  [C]'s key must
+     match one of [constructors]; [validate_codatatype_shape] already
+     forces every registered constructor's *declared* result type to be
+     [tyop]-headed, so the match makes [C] literally that constant.  [x]
+     must be [aconv] to some argument reached by walking the constructor
+     spine of the application - an argument of [C], or (recursively) of
+     a nested constructor application, not merely free somewhere in it -
+     so every such position is a strict subterm at the far end of an
+     unbroken chain of constructor applications, and [x = C ... x ...]
+     there is unsatisfiable in any initial algebra.  [C] need not be
+     fully applied, so [x]'s own type need not be [tyop]-headed (e.g. an
+     argument of function type).  Mutual-cycle witnesses
+     ([?x y. x = C ... y ... /\ y = C ... x ...]) and HOL4's per-type
+     bisimulation theorems ([llist_bisimulation] and friends) are not of
+     this shape; a caller holding one passes [witness = NONE] instead.
+     This rules out generic shape defeats (free occurrences,
+     non-constructor heads, a witness about another type); together with
+     [validate_codatatype_shape]'s database cross-check, which rules out
+     impostor constructors for a type the database knows, the witness
+     certifies genuinely for such a type.  Otherwise the constructor list
+     remains the caller's assertion. *)
+  fun validate_codatatype_witness
+        ({constructors, ...} : codatatype_info) theorem =
     let
-      val {Thy, Tyop, Args} = Type.dest_thy_type ty
-      fun name index =
-        if index < 26 then
-          "'" ^ String.str (Char.chr (Char.ord #"a" + index))
-        else "'a" ^ Int.toString index
+      val function = "register_codatatype"
+      val _ = if null (Thm.hyp theorem) then () else
+        raise err function "witness theorem has hypotheses"
+      val (_, body) = boolSyntax.strip_forall (Thm.concl theorem)
+      val (x, matrix) = boolSyntax.dest_exists body
+        handle HOL_ERR _ => raise err function
+          "witness must be ?x. <equation>"
+      val (left, right) = boolSyntax.dest_eq matrix
+        handle HOL_ERR _ => raise err function
+          "witness body must be an equation"
+      val application =
+        if Term.aconv left x then right
+        else if Term.aconv right x then left
+        else raise err function
+          "witness equation must equate the bound variable with a \
+          \constructor application"
+      val (head, _) = HolKernel.strip_comb application
+      val _ = if Term.is_const head then () else
+        raise err function
+          "witness equation's other side must be a constructor \
+          \application"
+      (* [constructor_headed] re-checks [Term.is_const head], but with a
+         message distinct from the plain non-constant case above. *)
+      fun constructor_headed term =
+        let val (head, _) = HolKernel.strip_comb term
+        in
+          Term.is_const head andalso
+          List.exists (fn constructor =>
+            same_key (const_key head) (const_key constructor)) constructors
+        end handle HOL_ERR _ => false
+      val _ = if constructor_headed application then () else
+        raise err function
+          "witness head is not one of the registration's constructors"
+      fun spine_arguments term =
+        let val (_, arguments) = HolKernel.strip_comb term
+        in
+          List.concat (map (fn argument =>
+              argument ::
+              (if constructor_headed argument then spine_arguments argument
+               else []))
+            arguments)
+        end
+      val _ = if List.exists (Term.aconv x) (spine_arguments application)
+              then () else
+        raise err function
+          "no argument on the witness's constructor spine is the bound \
+          \variable itself"
     in
-      Type.mk_thy_type
-        {Thy = Thy, Tyop = Tyop,
-         Args = List.tabulate (length Args, Type.mk_vartype o name)}
+      ()
     end
 
-  (* Classification is operator-level: every Refute registry is keyed by type
-     operator and [validate_registered_type] forbids non-variable type
-     arguments, so the generic instance is the authoritative answer.
-     [TypeBase.fetch] is a type-net lookup, so asking at a specialized
-     instance can pick a different entry for one operator - [:'a word] finds
-     the constructor-free word entry while [:('a,'b) cart] finds the cart
-     entry - and the guards would then disagree with the registration path
-     about [cart]. *)
-  fun raw_free_datatype ty =
-    (case TypeBase.fetch (generic_instance ty) of
-         SOME info => not (null (TypeBasePure.constructors_of info))
-       | NONE => false)
-    handle HOL_ERR _ => false
-
-  fun register_codatatype (registration : codatatype_info) =
+  fun register_codatatype
+        ({tyop, case_const, constructors, witness} :
+         codatatype_registration) =
     let
       val (normalized as {tyop, constructors, ...}, _) =
-        validate_codatatype_shape registration
+        validate_codatatype_shape
+          {tyop = tyop, case_const = case_const, constructors = constructors}
       val result_ty = #2 (boolSyntax.strip_fun
         (Term.type_of (hd constructors)))
-      (* Constructor/case types cannot distinguish inductive data from
-         codata.  Until a registration carries a checked coinduction
-         witness, accept only the audited built-in codata descriptions;
-         treating an arbitrary TypeBase datatype as codata removes its
-         acyclicity constraints. *)
-      val _ =
-        case builtin_codatatype_for tyop of
-            SOME {case_const, constructors = builtin_constructors, ...} =>
-              if Term.aconv case_const (#case_const normalized) andalso
-                 ListPair.allEq (fn (left, right) => Term.aconv left right)
-                   (builtin_constructors, constructors) then ()
-              else raise err "register_codatatype"
-                "registration disagrees with the built-in codatatype"
-          | NONE => raise err "register_codatatype"
-            "unverified codatatype registration requires a coinduction witness"
+      (* Beyond [validate_codatatype_shape]'s database cross-check,
+         constructor/case types alone cannot distinguish inductive data
+         from codata; that residual trust is exactly what Isabelle's own
+         [register_codatatype] also takes.  A supplied witness narrows it
+         further, per [validate_codatatype_witness]. *)
+      val _ = case witness of
+          NONE => ()
+        | SOME theorem => validate_codatatype_witness normalized theorem
       val _ = if has_type_operator (type_operator_of o #qty)
                        quotient_registry result_ty orelse
                      has_type_operator (type_operator_of o #ty)

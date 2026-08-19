@@ -384,11 +384,48 @@ reaches a model only at a `card num` named above the bound.
 
 Registrations are session-local ML state and create no theory content:
 
-* `Refute.register_codatatype {tyop, case_const, constructors}` validates or
-  refreshes an audited built-in codatatype registration.  User-defined
-  codatatypes cannot yet be registered, because their coinduction witness is
-  not part of this API.  Lazy built-ins cover `llist`, `ltree`, `itree`,
-  `itreeTau`, `lbtree`, and `path` when their theories are present.
+* `Refute.register_codatatype {tyop, case_const, constructors, witness}`
+  validates the shape of `tyop`, `case_const` and `constructors`
+  (non-empty, distinct constructors, each declaring - at its own
+  declared type, not merely at whatever instance the caller applied it -
+  a `tyop`-headed result type; a case constant with a unique valid
+  scrutinee position, in any argument; the type applied to distinct type
+  variables) and registers.  When `tyop` is a type the datatype database
+  already knows as a free datatype, every registered constructor must
+  also be one of that type's database constructors, by key; this rejects
+  an impostor constant declared at the right type without needing a
+  witness.  For a type the database does not know (hand-rolled
+  codatatypes such as `zoo_stream`), this imposes nothing, and shape
+  validation alone cannot tell codata from an ordinary inductive
+  datatype: constructor and case types look the same either way, so
+  `witness = NONE` accepts the registration on trust, exactly as
+  Isabelle's own `register_codatatype` does.  The built-in registrations
+  below are themselves trusted this way too, but through a different
+  path - the lazy harvest that finds them calls the shape check directly
+  rather than `register_codatatype`, so no witness ever applies to them.
+  `witness = SOME thm` narrows what a caller can get away with further:
+  after stripping `thm`'s outer `!`s, its conclusion must be `?x. body`,
+  `body` an equation with one side `aconv` to `x` (either orientation)
+  and the other a constructor application `C a1 ... an`, where `C`'s key
+  matches a registered constructor and `x` is `aconv` to some argument
+  reached by walking `C`'s constructor spine - descending into an
+  argument only when its own head is again a registered constructor -
+  not merely free somewhere in it.  Every registered constructor's
+  *declared* result type is `tyop`-headed, so the key match makes `C`
+  literally that declared constant; `C` need not be fully applied, so
+  `x`'s own type need not be `tyop`-headed (e.g. an argument of function
+  type).  `x`'s type also need not be the generic instance, so
+  `|- ?xs : num llist. xs = llist$LCONS 0 xs` is as conclusive a witness
+  as a polymorphic one.  Mutual-cycle witnesses
+  (`?x y. x = C ... y ... /\ y = C ... x ...`) and HOL4's per-type
+  bisimulation theorems (`llist_bisimulation` and friends) are not of
+  this shape and are not accepted; a caller holding one passes
+  `witness = NONE`.  Together, the witness rules out generic shape
+  defeats and the database cross-check rules out impostor constants for
+  types the database knows; beyond that, the constructor list remains
+  the caller's assertion.  Lazy built-ins cover `llist`, `ltree`,
+  `itree`, `itreeTau`, `lbtree`, and `path` when their theories are
+  present.
 * `Refute.register_quotient {qty, rty, abs, rep, equiv_thm}`
   registers the abstract and representation types and constants.  `equiv_thm`
   must be hypothesis-free and either a `QUOTIENT equiv abs rep` theorem

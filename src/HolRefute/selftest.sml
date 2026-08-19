@@ -1520,8 +1520,6 @@ val _ = require_msg (check_result smartgen_cross_group_behavior)
   (fn () => "cross-group modes were not reused or degraded to a guard")
   (fn () => ()) ()
 
-val _ = tprint "Refute model-finder HOL tables"
-
 fun with_codatatype_registry_restored body =
   let
     val saved = !MFH.codatatype_registry
@@ -1547,12 +1545,12 @@ fun mf_codatatype_registrations () =
     val _ = Refute.register_codatatype
       {tyop = {Thy = "llist", Tyop = "llist"},
        case_const = ``llist$llist_CASE``,
-       constructors = [``llist$LNIL``, ``llist$LCONS``]}
+       constructors = [``llist$LNIL``, ``llist$LCONS``], witness = NONE}
     val after = MFH.registered_constructors llist_ty
     val _ = Refute.register_codatatype
       {tyop = {Thy = "lbtree", Tyop = "lbtree"},
        case_const = ``lbtree$lbtree_case``,
-       constructors = [``lbtree$Lf``, ``lbtree$Nd``]}
+       constructors = [``lbtree$Lf``, ``lbtree$Nd``], witness = NONE}
     val lbtree_after = MFH.registered_constructors lbtree_ty
     fun constructor_names ty =
       map MFH.constructor_name (MFH.registered_constructors ty)
@@ -1561,36 +1559,38 @@ fun mf_codatatype_registrations () =
        handle HOL_ERR _ => true)
     val empty_rejected = rejected
       {tyop = {Thy = "llist", Tyop = "llist"},
-       case_const = ``llist$llist_CASE``, constructors = []}
+       case_const = ``llist$llist_CASE``, constructors = [],
+       witness = NONE}
     val wrong_operator_rejected = rejected
       {tyop = {Thy = "num", Tyop = "num"},
        case_const = ``llist$llist_CASE``,
-       constructors = [``llist$LNIL``, ``llist$LCONS``]}
+       constructors = [``llist$LNIL``, ``llist$LCONS``], witness = NONE}
     val interpreted_rejected = rejected
       {tyop = {Thy = "min", Tyop = "fun"},
        case_const = ``llist$llist_CASE``,
-       constructors = [``llist$LNIL``, ``llist$LCONS``]}
+       constructors = [``llist$LNIL``, ``llist$LCONS``], witness = NONE}
     val boolean_rejected = rejected
       {tyop = {Thy = "min", Tyop = "bool"},
-       case_const = ``COND``, constructors = [``T``, ``F``]}
+       case_const = ``COND``, constructors = [``T``, ``F``],
+       witness = NONE}
     val wrong_case_rejected = rejected
       {tyop = {Thy = "llist", Tyop = "llist"},
        case_const = ``list$list_CASE``,
-       constructors = [``llist$LNIL``, ``llist$LCONS``]}
+       constructors = [``llist$LNIL``, ``llist$LCONS``], witness = NONE}
     val duplicate_constructor_rejected = rejected
       {tyop = {Thy = "llist", Tyop = "llist"},
        case_const = ``llist$llist_CASE``,
-       constructors = [``llist$LNIL``, ``llist$LNIL``]}
+       constructors = [``llist$LNIL``, ``llist$LNIL``], witness = NONE}
     val variable_case_rejected = rejected
       {tyop = {Thy = "llist", Tyop = "llist"},
        case_const = Term.mk_var
          ("fake_case", Term.type_of ``llist$llist_CASE``),
-       constructors = [``llist$LNIL``, ``llist$LCONS``]}
+       constructors = [``llist$LNIL``, ``llist$LCONS``], witness = NONE}
     val variable_constructor_rejected = rejected
       {tyop = {Thy = "llist", Tyop = "llist"},
        case_const = ``llist$llist_CASE``,
        constructors = [``llist$LNIL``, Term.mk_var
-         ("fake_cons", Term.type_of ``llist$LCONS``)]}
+         ("fake_cons", Term.type_of ``llist$LCONS``)], witness = NONE}
     val ret = ``itree$Ret``
     val result_args = #Args (Type.dest_thy_type
       (#2 (boolSyntax.strip_fun (Term.type_of ret))))
@@ -1599,43 +1599,59 @@ fun mf_codatatype_registrations () =
     val duplicate_rejected = rejected
       {tyop = {Thy = "itree", Tyop = "itree"},
        case_const = ``itree$itree_CASE``,
-       constructors = [duplicate_ret, ``itree$Div``, ``itree$Vis``]}
+       constructors = [duplicate_ret, ``itree$Div``, ``itree$Vis``],
+       witness = NONE}
     val nonvariable_ret = Term.inst
       [{redex = hd result_args, residue = ``:num``}] ret
     val nonvariable_rejected = rejected
       {tyop = {Thy = "itree", Tyop = "itree"},
        case_const = ``itree$itree_CASE``,
-       constructors = [nonvariable_ret, ``itree$Div``, ``itree$Vis``]}
+       constructors = [nonvariable_ret, ``itree$Div``, ``itree$Vis``],
+       witness = NONE}
     val mixed_results_rejected = rejected
       {tyop = {Thy = "llist", Tyop = "llist"},
        case_const = ``llist$llist_CASE``,
-       constructors = [``llist$LNIL``, ``list$NIL``]}
+       constructors = [``llist$LNIL``, ``list$NIL``], witness = NONE}
     val lbtree_empty_rejected = rejected
       {tyop = {Thy = "lbtree", Tyop = "lbtree"},
-       case_const = ``lbtree$lbtree_case``, constructors = []}
+       case_const = ``lbtree$lbtree_case``, constructors = [],
+       witness = NONE}
     val lbtree_duplicate_rejected = rejected
       {tyop = {Thy = "lbtree", Tyop = "lbtree"},
        case_const = ``lbtree$lbtree_case``,
-       constructors = [``lbtree$Lf``, ``lbtree$Lf``]}
+       constructors = [``lbtree$Lf``, ``lbtree$Lf``], witness = NONE}
     val lbtree_wrong_case_rejected = rejected
       {tyop = {Thy = "lbtree", Tyop = "lbtree"},
        case_const = ``llist$llist_CASE``,
-       constructors = [``lbtree$Lf``, ``lbtree$Nd``]}
+       constructors = [``lbtree$Lf``, ``lbtree$Nd``], witness = NONE}
     val lbtree_wrong_branch_order_rejected = rejected
       {tyop = {Thy = "lbtree", Tyop = "lbtree"},
        case_const = ``lbtree$lbtree_case``,
-       constructors = [``lbtree$Nd``, ``lbtree$Lf``]}
+       constructors = [``lbtree$Nd``, ``lbtree$Lf``], witness = NONE}
     val path_empty_rejected = rejected
       {tyop = {Thy = "path", Tyop = "path"},
-       case_const = ``path$path_case``, constructors = []}
+       case_const = ``path$path_case``, constructors = [],
+       witness = NONE}
     val path_duplicate_rejected = rejected
       {tyop = {Thy = "path", Tyop = "path"},
        case_const = ``path$path_case``,
-       constructors = [``path$stopped_at``, ``path$stopped_at``]}
+       constructors = [``path$stopped_at``, ``path$stopped_at``],
+       witness = NONE}
     val path_wrong_case_rejected = rejected
       {tyop = {Thy = "path", Tyop = "path"},
        case_const = ``llist$llist_CASE``,
-       constructors = [``path$stopped_at``, ``path$pcons``]}
+       constructors = [``path$stopped_at``, ``path$pcons``],
+       witness = NONE}
+    (* [combin$I]'s declared result type is the bare type variable ['a],
+       which unifies with any [result_ty] under [Type.match_type].
+       Without a check that every constructor - not just [ZooZero]'s -
+       declares a [tyop]-headed result type, this registers [zoo_nat0],
+       an ordinary and genuinely acyclic datatype, as a codatatype,
+       dropping its acyclicity constraint entirely. *)
+    val non_constructor_rejected = rejected
+      {tyop = {Thy = "refuteTableZoo", Tyop = "zoo_nat0"},
+       case_const = ``zoo_nat0_CASE``,
+       constructors = [``ZooZero``, ``combin$I``], witness = NONE}
     val unavailable_gated = not (Option.isSome
       (MFH.builtin_codatatype_info
         {Thy = "Refute_unavailable_codatatype", Tyop = "missing",
@@ -1676,10 +1692,12 @@ fun mf_codatatype_registrations () =
     lbtree_wrong_branch_order_rejected andalso path_empty_rejected andalso
     path_duplicate_rejected andalso
     path_wrong_case_rejected andalso
+    non_constructor_rejected andalso
     map MFH.constructor_name (MFH.registered_constructors llist_ty) =
       ["llist$LNIL", "llist$LCONS"]
   end)
 
+val _ = tprint "Refute MF: codatatype registration and shape validation"
 val _ = require_msg (check_result mf_codatatype_registrations) (fn () =>
   "codatatype lazy registration or public validation failed")
   (fn () => ()) ()
@@ -1710,8 +1728,250 @@ fun mf_codatatype_case_orientations () =
     llist_cases = [({Thy = "llist", Name = "llist_CASE"}, (2, 0))]
   end
 
+val _ = tprint "Refute MF: codatatype case-orientation classification"
 val _ = require_msg (check_result mf_codatatype_case_orientations) (fn () =>
   "codatatype classification or derived case orientation changed")
+  (fn () => ()) ()
+
+(* [zoo_stream] ([refuteTableZooScript.sml]) is a hand-rolled, non-built-in
+   codatatype: [register_codatatype] used to refuse anything outside
+   [builtin_codatatype_for], so accepting this exercises exactly the trust
+   path that changed.  [zoo_stream_witness] then exercises the accepting
+   side of the witness check. *)
+fun mf_zoo_stream_codatatype_registration () =
+  with_codatatype_registry_restored (fn () => let
+    val zoo_stream_ty = ``:num zoo_stream``
+    fun register witness = Refute.register_codatatype
+      {tyop = {Thy = "refuteTableZoo", Tyop = "zoo_stream"},
+       case_const = ``zoo_stream_CASE``,
+       constructors = [``zoo_scons``], witness = witness}
+    val trusted_accepted =
+      ((register NONE; true) handle HOL_ERR _ => false)
+    val is_codatatype_after_trust = MFH.is_codatatype zoo_stream_ty
+    val constructors_after_trust =
+      map MFH.constructor_name (MFH.registered_constructors zoo_stream_ty)
+    val witness_accepted =
+      ((register (SOME zoo_stream_witness); true) handle HOL_ERR _ => false)
+  in
+    trusted_accepted andalso is_codatatype_after_trust andalso
+    constructors_after_trust = ["refuteTableZoo$zoo_scons"] andalso
+    witness_accepted
+  end)
+
+val _ = tprint
+  "Refute MF: user-defined codatatype registration and witness \
+  \validation"
+val _ = require_msg (check_result mf_zoo_stream_codatatype_registration)
+  (fn () => "user-defined codatatype registration or witness validation \
+    \failed") (fn () => ()) ()
+
+(* A witness satisfied only by [TRUTH] dies at the first [dest_exists]
+   and leaves every discriminating conjunct in
+   [validate_codatatype_witness] unpinned - the whole suite stays green
+   even if one is deleted.  Each control below is instead its own pinned
+   test, with a genuine witness distinguishing exactly one clause; each
+   asserts the specific message that clause raises, which also pins
+   *which* clause fired instead of merely observing some [HOL_ERR]. *)
+val zoo_stream_operator = {Thy = "refuteTableZoo", Tyop = "zoo_stream"}
+val zoo_list_operator = {Thy = "list", Tyop = "list"}
+fun register_zoo_stream witness = Refute.register_codatatype
+  {tyop = zoo_stream_operator, case_const = ``zoo_stream_CASE``,
+   constructors = [``zoo_scons``], witness = witness}
+fun register_zoo_list witness = Refute.register_codatatype
+  {tyop = zoo_list_operator, case_const = ``list$list_CASE``,
+   constructors = [``list$NIL``, ``list$CONS``], witness = witness}
+fun witness_rejected call witness message () =
+  with_codatatype_registry_restored (fn () =>
+    ((call (SOME witness); false)
+     handle HOL_ERR error => Feedback.message_of error = message))
+fun witness_accepted call witness () =
+  with_codatatype_registry_restored (fn () =>
+    ((call (SOME witness); true) handle HOL_ERR _ => false))
+val zoo_nat0_operator = {Thy = "refuteTableZoo", Tyop = "zoo_nat0"}
+fun register_zoo_nat0 witness = Refute.register_codatatype
+  {tyop = zoo_nat0_operator, case_const = ``zoo_nat0_CASE``,
+   constructors = [``ZooZero``, ``ZooSucc``], witness = witness}
+fun rejected_with_message registration message () =
+  with_codatatype_registry_restored (fn () =>
+    ((Refute.register_codatatype registration; false)
+     handle HOL_ERR error => Feedback.message_of error = message))
+
+(* [combin$I]'s *declared* result type is the bare type variable ['a];
+   only the instance the caller supplies here ([zoo_nat0 -> zoo_nat0])
+   has [zoo_nat0] as its operator.  Without consulting the declared type,
+   this registers [zoo_nat0] - an ordinary, genuinely acyclic datatype -
+   as a codatatype, dropping its acyclicity constraint entirely. *)
+val _ = tprint
+  "Refute MF: an instance-typed impostor constructor is rejected"
+val _ = require_msg
+  (check_result (rejected_with_message
+     {tyop = zoo_nat0_operator, case_const = ``zoo_nat0_CASE``,
+      constructors =
+        [``ZooZero``, ``combin$I : zoo_nat0 -> zoo_nat0``],
+      witness = NONE}
+     "constructor result has the wrong type operator"))
+  (fn () => "an impostor constructor stated at zoo_nat0's instance, \
+    \rather than combin$I's declared generic type, was wrongly \
+    \accepted")
+  (fn () => ()) ()
+
+(* [zoo_id] genuinely declares a [zoo_nat0]-headed result type - no
+   instance trickery - so the declared-type check above cannot catch it.
+   It is simply not one of [zoo_nat0]'s own datatype constructors, which
+   only a cross-check against the datatype database catches. *)
+val _ = tprint
+  "Refute MF: a non-constructor constant is rejected for a \
+  \database-known type"
+val _ = require_msg
+  (check_result (rejected_with_message
+     {tyop = zoo_nat0_operator, case_const = ``zoo_nat0_CASE``,
+      constructors = [``ZooZero``, ``zoo_id``], witness = NONE}
+     "constructor is not one of the type's known datatype constructors"))
+  (fn () => "a real constant not among zoo_nat0's own datatype \
+    \constructors was wrongly accepted")
+  (fn () => ()) ()
+
+(* [list] is an ordinary inductive datatype; registering it as a
+   codatatype only ever exercises the witness check.  [a] is free inside
+   the argument [combin$K a l], but [K] is not one of [CONS]'s registered
+   siblings, so the spine walk never descends into it and [l] itself is
+   never encountered: [l = [a]] proves this is an ordinary finite list,
+   not a cyclic one. *)
+val _ = tprint
+  "Refute MF: a free occurrence is not on the constructor spine"
+val _ = require_msg
+  (check_result (witness_rejected register_zoo_list
+     zoo_list_free_occurrence_witness
+     "no argument on the witness's constructor spine is the bound \
+     \variable itself"))
+  (fn () => "a witness with the bound variable merely free inside an \
+    \argument was wrongly accepted")
+  (fn () => ()) ()
+
+(* [combin$I] is a constant, but not one of [zoo_stream]'s registered
+   constructors. *)
+val _ = tprint "Refute MF: witness head must be a registered constructor"
+val _ = require_msg
+  (check_result (witness_rejected register_zoo_stream
+     zoo_stream_non_constructor_witness
+     "witness head is not one of the registration's constructors"))
+  (fn () => "a witness whose head is not a registered constructor was \
+    \wrongly accepted")
+  (fn () => ()) ()
+
+val _ = tprint "Refute MF: witness must be hypothesis-free"
+val _ = require_msg
+  (check_result (witness_rejected register_zoo_stream
+     (Drule.ADD_ASSUM boolSyntax.T zoo_stream_witness)
+     "witness theorem has hypotheses"))
+  (fn () => "a witness with a hypothesis was wrongly accepted")
+  (fn () => ()) ()
+
+(* [num zoo_stream] is as conclusive a witness as [zoo_stream_witness]'s
+   generic instance: no clause of [validate_codatatype_witness] singles
+   out the generic instance for special treatment. *)
+val _ = tprint "Refute MF: an instance-typed witness is accepted"
+val _ = require_msg
+  (check_result (witness_accepted register_zoo_stream
+     zoo_stream_instance_witness))
+  (fn () => "an instance-typed witness was wrongly rejected")
+  (fn () => ()) ()
+
+(* Positive control for the constructor-spine walk: [s] sits two
+   [zoo_scons] applications deep, not as a top-level argument, so this
+   is accepted only because the walk descends into [zoo_scons]'s own
+   argument. *)
+val _ = tprint "Refute MF: a depth-2 nested cyclic witness is accepted"
+val _ = require_msg
+  (check_result (witness_accepted register_zoo_stream
+     zoo_stream_nested_witness))
+  (fn () => "a witness with the bound variable nested two constructor \
+    \applications deep was wrongly rejected")
+  (fn () => ()) ()
+
+(* Four more controls, one per remaining raise clause of
+   [validate_codatatype_witness], each cheap and needing no new fixture
+   machinery. *)
+val no_existential_witness = boolTheory.TRUTH
+val non_equation_body_witness =
+  Thm.EXISTS (``?x:bool. x``, ``T``) boolTheory.TRUTH
+val neither_side_bound_var_witness =
+  Thm.EXISTS (``?x:'a. (x = x) = T``, ``ARB : 'a``)
+    (Drule.EQT_INTRO (Thm.REFL ``ARB : 'a``))
+val abstraction_headed_witness =
+  Thm.EXISTS (``?x:'a. x = (\y:'a. y) x``, ``ARB : 'a``)
+    (Thm.SYM (Thm.BETA_CONV ``(\y:'a. y) (ARB : 'a)``))
+
+val _ = tprint "Refute MF: witness must have an existential conclusion"
+val _ = require_msg
+  (check_result (witness_rejected register_zoo_stream
+     no_existential_witness
+     "witness must be ?x. <equation>"))
+  (fn () => "a witness with no existential conclusion was wrongly \
+    \accepted")
+  (fn () => ()) ()
+
+val _ = tprint "Refute MF: witness body must be an equation"
+val _ = require_msg
+  (check_result (witness_rejected register_zoo_stream
+     non_equation_body_witness
+     "witness body must be an equation"))
+  (fn () => "a witness whose body is not an equation was wrongly \
+    \accepted")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute MF: witness equation must have the bound variable on a side"
+val _ = require_msg
+  (check_result (witness_rejected register_zoo_stream
+     neither_side_bound_var_witness
+     "witness equation must equate the bound variable with a \
+     \constructor application"))
+  (fn () => "a witness equation with neither side aconv to the bound \
+    \variable was wrongly accepted")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute MF: witness equation's other side must be constant-headed"
+val _ = require_msg
+  (check_result (witness_rejected register_zoo_stream
+     abstraction_headed_witness
+     "witness equation's other side must be a constructor \
+     \application"))
+  (fn () => "a witness equation whose other side is not constant-headed \
+    \was wrongly accepted")
+  (fn () => ()) ()
+
+(* A witness genuinely about [zoo_stream] must not certify a [zoo_nat0]
+   registration, even though [zoo_nat0]'s own constructors here are the
+   real ones - the head-match check must be cross-type sound, not just
+   same-type sound. *)
+val _ = tprint
+  "Refute MF: a witness about a different type operator is rejected"
+val _ = require_msg
+  (check_result (witness_rejected register_zoo_nat0 zoo_stream_witness
+     "witness head is not one of the registration's constructors"))
+  (fn () => "a witness about zoo_stream was wrongly accepted while \
+    \registering zoo_nat0")
+  (fn () => ()) ()
+
+(* The cross-type case from the instance-typed impostor control above:
+   attaching a witness built from the same impostor must not rescue it -
+   shape validation rejects the constructor list before any witness is
+   even considered. *)
+fun register_zoo_nat0_instance_impostor witness = Refute.register_codatatype
+  {tyop = zoo_nat0_operator, case_const = ``zoo_nat0_CASE``,
+   constructors = [``ZooZero``, ``combin$I : zoo_nat0 -> zoo_nat0``],
+   witness = witness}
+val _ = tprint
+  "Refute MF: an instance-typed impostor is rejected even with a \
+  \witness"
+val _ = require_msg
+  (check_result (witness_rejected register_zoo_nat0_instance_impostor
+     zoo_nat0_instance_impostor_witness
+     "constructor result has the wrong type operator"))
+  (fn () => "an instance-typed impostor constructor was wrongly \
+    \accepted merely because its witness type-checked")
   (fn () => ()) ()
 
 (* [:'a word] is [(bool, 'a) cart], and every Refute registry is keyed by
@@ -24514,6 +24774,14 @@ val _ = require_msg
   "WF over num either failed to refute or was not honestly liberal")
   (fn () => ()) ()
 
+(* Shared by every regression below that pins a bounds-clean [Unknown]:
+   fully exhausted, not a timeout, and over the expected carrier. *)
+fun is_bounds_clean carrier_substring (Refute.Unknown reasons) =
+      List.exists (String.isSubstring
+        "no counterexample within the tested scopes") reasons andalso
+      List.exists (String.isSubstring carrier_substring) reasons
+  | is_bounds_clean _ _ = false
+
 (* sum'_def (refuteScript.sml) is liberal, not faithful -- see
    card'_def's comment for the full argument.  A literal,
    explicitly-enumerated set always has a distinct witness list in scope,
@@ -24548,13 +24816,9 @@ fun mf_sum_ersatz_literal_witness_regression () =
       ``SUM_IMAGE (\e:num. e) ({0; 1; 2} : num set) = 3``
     val outcome2 = Refute.refute config
       ``SUM_SET ({0; 1; 2} : num set) = 3``
-    fun is_bounds_clean (Refute.Unknown reasons) =
-          List.exists (String.isSubstring
-            "no counterexample within the tested scopes") reasons andalso
-          List.exists (String.isSubstring "card num list") reasons
-      | is_bounds_clean _ = false
+    val clean = is_bounds_clean "card num list"
   in
-    is_bounds_clean outcome1 andalso is_bounds_clean outcome2
+    clean outcome1 andalso clean outcome2
   end
 
 val _ = tprint
@@ -27598,6 +27862,59 @@ fun mf_codatatype_acceptance solver =
   end
   handle e => die (Feedback.exn_to_string e)
 
+(* The first codatatype "true law is not refuted" twin: a genuine cyclic
+   countermodel shows the encoding is exact for this non-built-in,
+   [witness]-checked registration, and the twin on the eta law
+   ([zoo_stream_eta]) shows dropping acyclicity did not make the search
+   unsound for it - a true law about [zoo_stream] must search cleanly to
+   [Unknown], never to a manufactured countermodel. *)
+fun mf_zoo_stream_codatatype_acceptance solver =
+  with_codatatype_registry_restored (fn () => let
+    val _ = tprint "Refute MF: zoo_stream cyclic countermodel"
+    val _ = Refute.register_codatatype
+      {tyop = {Thy = "refuteTableZoo", Tyop = "zoo_stream"},
+       case_const = ``zoo_stream_CASE``, constructors = [``zoo_scons``],
+       witness = SOME zoo_stream_witness}
+    val base = mf_acceptance_config solver
+      |> Refute.upd_card [(NONE, [2, 3])]
+    val cycle_config = base |> Refute.upd_expect Refute.ExpectGenuine
+    val cycle_goal = ``(s : num zoo_stream) <> zoo_scons a s``
+    val cycle = with_silent_refute (fn () =>
+      Refute.refute cycle_config cycle_goal)
+    val _ = case cycle of
+        Refute.Counterexample ({certainty = Refute.Genuine, ...} :: _) => OK ()
+      | _ => die ("zoo_stream cyclic countermodel failed: " ^
+          mf_pin_outcome_name cycle)
+    (* [ExpectNone] is unattainable for a codatatype goal, and not
+       because of this registration: the carrier is infinite, so no
+       emitted scope covers the space and a clean search is a
+       bounds-relative miss.  Measured here: 2 of 2 scopes clean at an
+       effective bisim_depth = 2 (Refute_ModelFinder_Scope.sml -- the
+       config default is [9], Refute_Core.sml), card num zoo_stream = 3.
+       The soundness content of the twin is that the true law is never
+       *refuted* -- dropping acyclicity must not manufacture a
+       countermodel for it.  A bare [Unknown] would not show that:
+       [Unknown] is Refute's catch-all for a bounds-clean search, an
+       encoder that declined the goal, no configured backend, or an
+       expired deadline alike, and "the encoder gave up" is a live
+       alternative here, since the goal unfolds [zoo_shd]/[zoo_stl] into
+       the unregistered [zoo_stream_rep].  Assert the bounds-clean reason
+       specifically instead. *)
+    val _ = tprint "Refute MF: zoo_stream eta law is not refuted"
+    val eta_config = base |> Refute.upd_expect Refute.ExpectUnknown
+    val eta_type_var = hd (Term.type_vars_in_term (Thm.concl zoo_stream_eta))
+    val eta_theorem = Thm.INST_TYPE
+      [{redex = eta_type_var, residue = ``:num``}] zoo_stream_eta
+    val (_, eta_goal) = boolSyntax.strip_forall (Thm.concl eta_theorem)
+    val eta = with_silent_refute (fn () =>
+      Refute.refute eta_config eta_goal)
+  in
+    if is_bounds_clean "card num zoo_stream" eta then OK ()
+    else die ("zoo_stream eta law acceptance failed: " ^
+      mf_pin_outcome_name eta)
+  end)
+  handle e => die (Feedback.exn_to_string e)
+
 fun mf_quotient_typedef_acceptance solver =
   with_quotient_typedef_registries_restored (fn () => let
     val _ = tprint "Refute MF: quotient and typedef countermodels"
@@ -27869,6 +28186,7 @@ fun run_mf_acceptance () =
         let
           val _ = List.app (run_timed_mf_group solver "") mf_acceptance_groups
           val _ = mf_codatatype_acceptance solver
+          val _ = mf_zoo_stream_codatatype_acceptance solver
           val _ = mf_quotient_typedef_acceptance solver
           val _ = mf_atoms_finitize_acceptance solver
           val _ = mf_need_acceptance solver

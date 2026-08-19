@@ -85,9 +85,16 @@ signature Refute = sig
     hol_type -> term_postprocessor -> unit
   val lookup_term_postprocessor :
     hol_type -> term_postprocessor option
+  (* [witness = SOME thm] rules out generic shape defeats: [thm] must be
+     [?x. x = C ... x ...] for a registered constructor [C], showing some
+     value is cyclic.  For a type the datatype database already knows,
+     the constructor list is separately cross-checked against it; beyond
+     that it remains the caller's assertion.  See [README] for the exact
+     shape. *)
   val register_codatatype :
     {tyop : {Thy : string, Tyop : string},
-     case_const : term, constructors : term list} -> unit
+     case_const : term, constructors : term list, witness : thm option} ->
+    unit
   val register_quotient :
     {qty : hol_type, rty : hol_type, abs : term, rep : term,
      equiv_thm : thm} -> unit
