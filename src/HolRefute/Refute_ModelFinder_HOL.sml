@@ -3391,7 +3391,7 @@ structure Refute_ModelFinder_HOL = struct
         ("rat_of_num", "of_num_frac"),
         ("rat_cons", "frac")]}
 
-  (* Opt-in: real has no literal constructor like [rat_cons], so it has no
+  (* real has no literal constructor like [rat_cons], so it has no
      twelfth row.  [real_ge]/[real_gt] are excluded, symmetric with the
      excluded [rat_geq]/[rat_gre] above.  [real_of_num] row: encoding
      shortcut, not a correctness pin -- with it removed,

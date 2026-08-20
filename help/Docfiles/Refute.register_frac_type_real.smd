@@ -7,19 +7,16 @@ Refute.register_frac_type_real : unit -> unit
 
 ------------------------------------------------------------------------
 
-Installs Refute's `real` fraction registration on the same Frac carrier
-used for `rat`.
+Restores or refreshes Refute's `real` fraction registration on the same
+Frac carrier used for `rat`.
 
-Unlike `register_frac_type_rat`, this registration is **opt-in**: it is
-not installed when `Refute` is loaded, so a session that wants a `real`
-goal to reach the model finder's Frac encoding must call this once,
-before that goal is refuted.  The registration maps the nullary `real`
-type and its arithmetic, comparison, and numeral constants to the
-corresponding normalized `refute` fraction operations.  `real` has no
-literal constructor of its own (unlike `rat$rat_cons`), so this
-registration has no analogue of `rat`'s twelfth ersatz row.  It also
-installs the display postprocessor that reconstructs model values as
-real literals: a reconstructed Frac atom prints as the bare numerator
+The registration maps the nullary `real` type and its arithmetic,
+comparison, and numeral constants to the corresponding normalized
+`refute` fraction operations.  `real` has no literal constructor of its
+own (unlike `rat$rat_cons`), so this registration has no analogue of
+`rat`'s twelfth ersatz row.  It also installs the display postprocessor
+that reconstructs model values as real literals: a reconstructed Frac
+atom prints as the bare numerator
 when the denominator is `1` or the numerator is `0`, and otherwise as
 `numerator / denominator`.  A `real` model value never prints with
 `rat_cons`'s `//` syntax.
@@ -53,8 +50,10 @@ values are ever shown.  `rat` counterexamples are unaffected by this.
 
 The operation validates all fraction metadata before changing state and
 commits the fraction and display registrations together.  It is
-session-local, synchronized, atomic, and idempotent.  It creates no HOL
-objects.
+session-local, synchronized, atomic, and idempotent.  The registration is
+installed when `Refute` is loaded; this entry point is useful after
+session-level customization of the `real` fraction or postprocessor
+rows.  It creates no HOL objects.
 
 ### Failure
 

@@ -451,17 +451,16 @@ Registrations are session-local ML state and create no theory content:
   snapshot is used for an entire model, callback failures or type changes
   leave that display term unchanged, and certification always uses untouched
   raw terms.  `Refute.lookup_term_postprocessor ty` reports this composed
-  transformation.  Rational Frac encoding is registered by default after its
-  normalization-faithfulness corpus passed.  The idempotent
-  `Refute.register_frac_type_rat ()` restores or refreshes both the encoding
-  and the built-in transformation, which displays reconstructed Frac atoms
-  with `rat_cons`'s `//` syntax.  Example 12 shows the registered encoding
-  in use on a `rat` goal; the registration calls themselves are exercised by
-  `selftest.sml`.  `real` via the same Frac carrier is implemented but
-  opt-in: `Refute.register_frac_type_real ()` installs it (idempotently) on
-  demand rather than at load time, and its display transformation prints
-  reconstructed atoms as real literals -- `3 / 4`, `3` for a unit
-  denominator or a zero numerator, never `rat_cons`'s `//`.  Certification
+  transformation.  Rational and real Frac encoding are both registered by
+  default after their normalization-faithfulness corpora passed.  The
+  idempotent `Refute.register_frac_type_rat ()` and
+  `Refute.register_frac_type_real ()` restore or refresh their respective
+  encoding and built-in transformation: `rat`'s displays reconstructed
+  Frac atoms with `rat_cons`'s `//` syntax, while `real`'s prints them as
+  real literals -- `3 / 4`, `3` for a unit denominator or a zero
+  numerator, never `rat_cons`'s `//`.  Example 12 shows the registered
+  rational encoding in use on a `rat` goal; both registration calls are
+  exercised by `selftest.sml`.  Certification
   (`certify=true`, the default) is attempted on a real Frac counterexample,
   but not exactly as on any other: `frac$abs_frac` is `int # int -> frac`
   (`src/rational/fracScript.sml`), so it retypes natively to neither
@@ -573,9 +572,9 @@ piecemeal by whichever goals happen to mention a type first can call it; the
 demand-driven lazy harvest remains the default and is unaffected.
 
 The normalized Frac/ersatz encoding for `rat` is registered by default.
-The analogous `real` encoding on the same Frac carrier is implemented but
-opt-in (`Refute.register_frac_type_real ()`); it excludes `real_ge` and
-`real_gt` for symmetry with the `rat` encoding, which excludes `rat_geq`
+The analogous `real` encoding on the same Frac carrier is also registered
+by default; it excludes `real_ge` and `real_gt` for symmetry with the
+`rat` encoding, which excludes `rat_geq`
 and `rat_gre`.  The exclusion is harmless because each is an ordinary,
 non-recursive `Definition` naming its `<`/`<=` dual: `is_equational_fun`
 keeps it un-inlined, and `equational_fun_axioms` hands the Definition to

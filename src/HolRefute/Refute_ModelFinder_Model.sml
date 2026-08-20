@@ -55,13 +55,16 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   type term_postprocessor_snapshot
   val register_term_postprocessor :
     hol_type -> term_postprocessor -> unit
+  (* Removes an entry whose pattern is alpha-equivalent to [pattern];
+     a no-op if none is registered. *)
+  val unregister_term_postprocessor : hol_type -> unit
   val lookup_term_postprocessor :
     hol_type -> term_postprocessor option
   val snapshot_term_postprocessors : unit -> term_postprocessor_snapshot
   val restore_term_postprocessors : term_postprocessor_snapshot -> unit
   val postprocess_term : term_postprocessor_snapshot -> term -> term
   val register_frac_type_rat : unit -> unit
-  (* Opt-in; not installed by default (see Refute.sml).  Idempotent, like
+  (* Installed by default (see Refute.sml).  Idempotent, like
      [register_frac_type_rat]. *)
   val register_frac_type_real : unit -> unit
 
@@ -330,6 +333,17 @@ fun register_term_postprocessor pattern postprocessor =
   with_term_postprocessor_lock (fn () =>
     term_postprocessors :=
       insert_postprocessor pattern postprocessor (!term_postprocessors))
+
+fun remove_postprocessor pattern
+      ({entries, next_serial} : term_postprocessor_snapshot) =
+  {entries = List.filter (fn {pattern = old, ...} =>
+     not (same_pattern old pattern)) entries,
+   next_serial = next_serial}
+
+fun unregister_term_postprocessor pattern =
+  with_term_postprocessor_lock (fn () =>
+    term_postprocessors :=
+      remove_postprocessor pattern (!term_postprocessors))
 
 fun postprocess_term snapshot term =
   let

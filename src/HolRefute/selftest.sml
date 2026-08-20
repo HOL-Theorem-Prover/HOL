@@ -2222,13 +2222,33 @@ fun with_frac_registry_restored body =
     Portable.finally restore body ()
   end)
 
+(* Registration commits the Frac classification and the display
+   postprocessor atomically (Refute_ModelFinder_Model.sml's
+   [register_frac_type_with_display]), so a true inverse drops both;
+   otherwise the body sees the type unregistered but still displayed. *)
 fun with_rat_frac_unregistered body =
   with_frac_registry_restored (fn () => let
     val rat_operator = {Thy = "rat", Tyop = "rat"}
+    val rat_ty = Type.mk_thy_type {Thy = "rat", Tyop = "rat", Args = []}
     fun other_rat ({tyop, ...} : MFH.frac_info) =
       not (MFH.same_type_operator tyop rat_operator)
     val _ = MFH.frac_registry :=
       List.filter other_rat (!MFH.frac_registry)
+    val _ = Refute_ModelFinder_Model.unregister_term_postprocessor rat_ty
+  in
+    body ()
+  end)
+
+fun with_real_frac_unregistered body =
+  with_frac_registry_restored (fn () => let
+    val real_operator = {Thy = "realax", Tyop = "real"}
+    val real_ty = Type.mk_thy_type {Thy = "realax", Tyop = "real",
+      Args = []}
+    fun other_real ({tyop, ...} : MFH.frac_info) =
+      not (MFH.same_type_operator tyop real_operator)
+    val _ = MFH.frac_registry :=
+      List.filter other_real (!MFH.frac_registry)
+    val _ = Refute_ModelFinder_Model.unregister_term_postprocessor real_ty
   in
     body ()
   end)
@@ -2297,6 +2317,22 @@ fun mf_quotient_typedef_registrations () =
 val _ = require_msg
   (check_result mf_quotient_typedef_registrations) (fn () =>
     "quotient or typedef public registration validation failed")
+  (fn () => ()) ()
+
+(* Acceptance pin: [real] is a registered Frac type with its display
+   postprocessor installed, and no call above this point has made that
+   call itself - every explicit [register_frac_type_real] elsewhere in
+   this file is wrapped in [with_frac_registry_restored], so it never
+   survives past its own test.  This can only be true because
+   [Refute.sml] registers [real] at load time; removing that call is the
+   ablation this test exists to catch. *)
+fun real_frac_registered_by_default () =
+  MFH.is_frac_type ``:real`` andalso
+  Option.isSome (Refute.lookup_term_postprocessor ``:real``)
+
+val _ = require_msg
+  (check_result real_frac_registered_by_default) (fn () =>
+    "real is not registered as a Frac type by default")
   (fn () => ()) ()
 
 fun ersatz_maps table original replacement =
@@ -2476,10 +2512,11 @@ val _ = require_msg (check_result mf_frac_registration) (fn () =>
   "frac registration, synthetic typedef, or ersatz merge failed")
   (fn () => ()) ()
 
-(* Opt-in real-via-Frac: [register_frac_type_real] is not called
-   at module init, so this test installs and restores it itself.  The real
-   analogue of the [rat_stays_frac] control above: after registration,
-   [real] is classified as a Frac type, not a harvested quotient. *)
+(* [register_frac_type_real] runs at module init now, but this test still
+   calls it explicitly (idempotently) and restores the registry itself, so
+   it is independent of init order.  The real analogue of the
+   [rat_stays_frac] control above: [real] is classified as a Frac type,
+   not a harvested quotient. *)
 fun mf_real_frac_registration () =
   with_frac_registry_restored (fn () => let
     val real_ty = ``:real``
@@ -2508,8 +2545,8 @@ fun mf_real_frac_registration () =
   end)
 
 val _ = require_msg (check_result mf_real_frac_registration) (fn () =>
-  "opt-in real frac registration, ersatz specialization, or typedef " ^
-  "record failed")
+  "real frac registration, ersatz specialization, or typedef record " ^
+  "failed")
   (fn () => ()) ()
 
 (* The synthetic typedef and specialized ersatz definitions must share the
@@ -2722,7 +2759,15 @@ fun mf_lazy_db_harvest () =
     val sum_ty = mkty "sum" "sum" [Type.bool, Type.bool]
     val llist_ty = mkty "llist" "llist" [Type.bool]
     val typedef_targets = [frac_ty, hreal_ty, fmap_ty, metric_ty]
-    val quotient_targets = [real_ty, hrat_ty, fset_ty]
+    (* [real]'s default Frac registration makes it short-circuit here
+       (below), so it no longer exercises the typedef/quotient preference
+       order this list once relied on it for; that case now rests on
+       [mf_harvest_registrations_sweep] instead.  [hrat] carries the same
+       dual shape -- a kernel typedef theorem and a quotient
+       [_ABS_REP_CLASS] ([hrat_TY_DEF], [hrat_ABS_REP_CLASS]) -- and is
+       not Frac-registered, so [hrat_typedef_rejected_after_quotient]
+       below restores in-line preference-order coverage using it. *)
+    val quotient_targets = [hrat_ty, fset_ty]
     val _ = MFH.quotient_registry := []
     val _ = MFH.typedef_registry := []
     val _ = MFH.quotient_harvest_misses := KNametab.empty
@@ -2732,9 +2777,18 @@ fun mf_lazy_db_harvest () =
     val quotients = List.all (fn ty =>
       MFH.harvest_quotient ty andalso MFH.is_quot_type ty)
       quotient_targets
+    val hrat_typedef_rejected_after_quotient =
+      MFH.is_quot_type hrat_ty andalso
+      not (MFH.harvest_typedef hrat_ty) andalso
+      not (MFH.is_typedef hrat_ty)
     val rat_stays_frac = MFH.is_frac_type rat_ty andalso
       not (MFH.harvest_quotient rat_ty) andalso
       not (MFH.is_quot_type rat_ty)
+    (* [real] is Frac-registered by default now, same precedence as
+       [rat]: harvest must not reclassify it as a quotient. *)
+    val real_stays_frac = MFH.is_frac_type real_ty andalso
+      not (MFH.harvest_quotient real_ty) andalso
+      not (MFH.is_quot_type real_ty)
     val negatives =
       not (MFH.harvest_typedef MFH.num_type) andalso
       not (MFH.harvest_quotient MFH.num_type) andalso
@@ -2745,7 +2799,8 @@ fun mf_lazy_db_harvest () =
       MFH.is_interpreted_type MFH.num_type andalso
       MFH.is_raw_free_datatype sum_ty andalso MFH.is_codatatype llist_ty
   in
-    typedefs andalso quotients andalso rat_stays_frac andalso negatives
+    typedefs andalso quotients andalso hrat_typedef_rejected_after_quotient
+    andalso rat_stays_frac andalso real_stays_frac andalso negatives
   end)
 
 val _ = require_msg (check_result mf_lazy_db_harvest) (fn () =>
@@ -2761,8 +2816,12 @@ val _ = require_msg (check_result mf_lazy_db_harvest) (fn () =>
    [_ABS_REP_CLASS], so this is the one case that actually exercises the
    typedef/quotient preference order; the returned record must name what
    it newly registered; an immediate repeat call is a no-op; and the sweep
-   must respect the same negative controls the lazy harvest does. *)
+   must respect the same negative controls the lazy harvest does.  [real]
+   is Frac-registered by default, which would otherwise make harvest skip
+   it (as [real_stays_frac] above pins), so this test unregisters that
+   Frac entry to exercise the harvest-only path. *)
 fun mf_harvest_registrations_sweep () =
+  with_real_frac_unregistered (fn () =>
   with_quotient_typedef_registries_restored (fn () => let
     fun mkty Thy Tyop Args =
       Type.mk_thy_type {Thy = Thy, Tyop = Tyop, Args = Args}
@@ -2808,7 +2867,7 @@ fun mf_harvest_registrations_sweep () =
     andalso real_not_named_as_typedef andalso real_registered_as_quotient
     andalso theories_scanned_nonempty andalso idempotent andalso
     negatives_after_sweep
-  end)
+  end))
 
 val _ = require_msg
   (check_result mf_harvest_registrations_sweep) (fn () =>
@@ -9386,10 +9445,10 @@ val _ = require_msg (check_result mf_model_frac_display_golden) (fn () =>
   "Frac display, zero canonicalization, or repeated registration changed")
   (fn () => ()) ()
 
-(* [real]'s display postprocessor (opt-in) differs from rat's: it
-   renders through division rather than [n // d], and a unit denominator or
-   a zero numerator collapses to the bare numerator - a real model value
-   must print as [3], never [3 / 1]. *)
+(* [real]'s display postprocessor differs from rat's: it renders through
+   division rather than [n // d], and a unit denominator or a zero
+   numerator collapses to the bare numerator - a real model value must
+   print as [3], never [3 / 1]. *)
 fun mf_real_frac_display () =
   with_frac_registry_restored (fn () => let
     val _ = Refute.register_frac_type_real ()
@@ -9426,7 +9485,7 @@ fun mf_real_frac_display () =
   end)
 
 val _ = require_msg (check_result mf_real_frac_display) (fn () =>
-  "opt-in real Frac display transform changed")
+  "real Frac display transform changed")
   (fn () => ()) ()
 
 fun mf_rat_registration_is_transactional () =
@@ -10646,7 +10705,7 @@ val _ = require_msg (check_result frac_spoof_rows_are_rejected) (fn () =>
    both worlds and cannot distinguish them.  What differs is whether
    [certification_copy] ever builds an env at all, asserted directly via
    [certification_copy_for_test]. *)
-fun mf_rat_frac_replay_matches_pre_task_07 () =
+fun mf_rat_frac_replay_keeps_base_path () =
   let
     val x = Term.mk_var ("x", ``:rat``)
     val binding_value = rat_frac_atom 1 2
@@ -10671,9 +10730,9 @@ fun mf_rat_frac_replay_matches_pre_task_07 () =
   end
 
 val _ = require_msg
-  (check_result mf_rat_frac_replay_matches_pre_task_07) (fn () =>
-    "a rat Frac counterexample no longer takes the pre-real-Frac " ^
-    "Keep-base path")
+  (check_result mf_rat_frac_replay_keeps_base_path) (fn () =>
+    "a rat Frac counterexample no longer takes the untouched Keep-base " ^
+    "path")
   (fn () => ()) ()
 
 fun mf_polymorphic_model_protocol () =
@@ -16513,8 +16572,7 @@ val _ = require_msg (check_result (fn () =>
   recursive_under_function [``:rg_rose``] ``:rg_rose -> bool``))
   (fn () => "recursive function occurrence was not detected")
   (fn () => ()) ()
-val real_ty = Type.mk_thy_type {Thy = "real", Tyop = "real", Args = []}
-  handle Feedback.HOL_ERR _ => ``:ind``
+val real_ty = Type.mk_thy_type {Thy = "realax", Tyop = "real", Args = []}
 val _ = require_msg (check_result (fn () => has_no_generator real_ty))
   (fn () => "real unexpectedly has a generator") (fn () => ()) ()
 val _ = require_msg (check_result (fn () => has_no_generator ``:ind``))
@@ -28238,10 +28296,11 @@ val mf_rat_soundness_corpus =
     ``rat$rat_cons (1 : int) (2 : int) =
       rat$rat_cons (2 : int) (4 : int)``)]
 
-(* [real] via Frac (opt-in, [Refute.register_frac_type_real]) is the same
-   transposition as [mf_rat_soundness_corpus] onto the eleven-row real
-   ersatz table.  Real has no literal constructor like [rat_cons], so the
-   "real division equality shape" row carries the [rat_cons] row's load -
+(* [real] via Frac ([Refute.register_frac_type_real], installed by
+   default) is the same transposition as [mf_rat_soundness_corpus] onto
+   the eleven-row real ersatz table.  Real has no literal constructor
+   like [rat_cons], so the "real division equality shape" row carries
+   the [rat_cons] row's load -
    a true statement whose two sides are non-identical Frac atoms with the
    same value - through division instead of a normalized literal.
 
@@ -28951,8 +29010,9 @@ fun mf_real_soundness_acceptance solver =
   List.app (mf_soundness_test_with mf_real_soundness_config solver)
     mf_real_soundness_corpus
 
-(* Opt-in mirror of [mf_frac_acceptance]: registers real-via-Frac itself
-   (it is not installed by default), runs the transposed soundness corpus
+(* Mirror of [mf_frac_acceptance]: registers real-via-Frac itself
+   (redundant with the default registration, but keeps this test
+   independent of init order), runs the transposed soundness corpus
    under that registration, then checks a real goal is refuted with a
    displayed real-literal binding and the same binary_ints warning rat
    gets, because both routes go through the same Frac carrier and the
@@ -28960,7 +29020,7 @@ fun mf_real_soundness_acceptance solver =
 fun mf_real_frac_acceptance solver =
   with_frac_registry_restored (fn () => let
     val _ = Refute.register_frac_type_real ()
-    val _ = tprint "Refute MF: opt-in real frac encoding"
+    val _ = tprint "Refute MF: default real frac encoding"
     val _ = mf_real_soundness_acceptance solver
     val config = mf_acceptance_config solver
       |> Refute.upd_binary_ints (SOME true)
@@ -29012,11 +29072,97 @@ fun mf_real_frac_acceptance solver =
       | NONE => false
   in
     if encoded andalso displayed andalso printed andalso warned then OK ()
-    else die ("opt-in real frac acceptance failed: " ^
+    else die ("real frac acceptance failed: " ^
       mf_pin_outcome_name outcome ^ "; display=" ^
       Bool.toString displayed ^ "; printed=" ^ Bool.toString printed ^
       "; warning=" ^ Bool.toString warned)
   end)
+  handle e => die (Feedback.exn_to_string e)
+
+(* register_frac_type_real.smd claims [real_of_hreal], [hreal_of_real]
+   (realaxTheory) and [sup] (realTheory) cross into or out of [real] by a
+   route the eleven-row ersatz table does not name, so a goal using them
+   "can only reach Potential, never ... Genuine".  Nothing pinned that
+   before this test; with [real]-via-Frac default-on, every session is on
+   this path, so a spurious Genuine countermodel to a true statement
+   would be a live soundness violation, not an opt-in one.
+
+   [sup]'s predicate here (real equality) is representable in the
+   fragment, so its sound copy is a live contender: a false claim about
+   it is refuted, but the certificate comes only from the liberal copy
+   ([Refute.upd_expect Refute.ExpectPotential] fails loudly if it is ever
+   Genuine or QuasiGenuine instead).  [real_of_hreal]/[hreal_of_real]
+   cross the [hreal] typedef carrier by a route the table never mentions;
+   the model finder recognizes the crossing cannot be soundly represented
+   at all and marks the sound copy trivially unsatisfiable before Kodkod
+   runs, printing the "potentially spurious" diagnostic -- asserted here
+   directly against that message, not merely inferred from the outcome,
+   so a regression that starts treating the crossing as an ordinary
+   encodable function is caught even before it manages to produce a
+   found countermodel at this scope. *)
+fun mf_real_frac_outside_fragment_ceiling solver =
+  let
+    val config = mf_acceptance_config solver
+      |> Refute.upd_card [(NONE, [2])]
+    val _ = tprint "Refute MF: real functions outside the Frac fragment"
+    val sup_goal = ``real$sup (\r. r = (x : real)) = x + 1``
+    val sup_config = config |> Refute.upd_expect Refute.ExpectPotential
+    val _ = with_silent_refute (fn () => Refute.refute sup_config sup_goal)
+    val bij_goal = ``hreal_of_real (real_of_hreal h) = h``
+    val bij_config = config |> Refute.upd_expect Refute.ExpectUnknown
+    val (_, bij_messages) = capture_refute_messages 2 (fn () =>
+      Refute.refute bij_config bij_goal)
+    val bij_warned =
+      String.isSubstring "potentially spurious" bij_messages
+  in
+    if bij_warned then OK ()
+    else die ("real_of_hreal/hreal_of_real sound copy was not marked " ^
+      "potentially spurious")
+  end
+  handle e => die (Feedback.exn_to_string e)
+
+(* Every explicit [register_frac_type_real] call in this file is wrapped
+   in [with_frac_registry_restored] (see [real_frac_registered_by_default]
+   above), so nothing above this point leaves it registered by side
+   effect: this goal reaches a real-specific verdict solely from the
+   default registration [Refute.sml] installs at load time.  Ablation:
+   delete that module's [register_frac_type_real ()] call and this named
+   test must fail, since [mf_real_frac_acceptance] and the rest of the
+   corpus register it explicitly and would keep passing regardless. *)
+fun mf_real_default_path_acceptance solver =
+  let
+    val _ = tprint "Refute MF: real goal reaches the default Frac path"
+    val config = mf_acceptance_config solver
+      |> Refute.upd_binary_ints (SOME true)
+      |> Refute.upd_card [(NONE, [3])]
+    val (outcome, output) = capture_refute_messages 2 (fn () =>
+      Refute.refute config
+        ``realax$real_add x (0 : real) = (0 : real)``)
+    fun is_real_frac_display value =
+      Util.same_type (Term.type_of value) ``:real`` andalso
+      (realSyntax.is_real_literal value orelse
+       (realSyntax.is_div value andalso
+        let val (numerator, denominator) = realSyntax.dest_div value in
+          realSyntax.is_real_literal numerator andalso
+          realSyntax.is_real_literal denominator
+        end))
+    val displayed =
+      case outcome of
+          Refute.Counterexample
+            ({backend = "kodkod", substrate = "kodkod", bindings, ...}
+               :: _) =>
+            List.exists (fn (_, value) => is_real_frac_display value)
+              bindings
+        | _ => false
+    val warned = String.isSubstring
+      "binary_ints\" will be ignored because of the presence of rationals"
+      output
+  in
+    if displayed andalso warned then OK ()
+    else die ("real goal did not reach the default Frac path: outcome=" ^
+      mf_pin_outcome_name outcome ^ "; displayed=" ^
+      Bool.toString displayed ^ "; warned=" ^ Bool.toString warned)
+  end
   handle e => die (Feedback.exn_to_string e)
 
 fun mf_merge_type_vars_acceptance solver =
@@ -29125,6 +29271,8 @@ fun run_mf_acceptance () =
           val _ = mf_int_to_nat_acceptance solver
           val _ = mf_frac_acceptance solver
           val _ = mf_real_frac_acceptance solver
+          val _ = mf_real_frac_outside_fragment_ceiling solver
+          val _ = mf_real_default_path_acceptance solver
         in
           ()
         end
