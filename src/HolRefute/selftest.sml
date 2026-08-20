@@ -2476,7 +2476,7 @@ val _ = require_msg (check_result mf_frac_registration) (fn () =>
   "frac registration, synthetic typedef, or ersatz merge failed")
   (fn () => ()) ()
 
-(* Opt-in real-via-Frac (D-06-1): [register_frac_type_real] is not called
+(* Opt-in real-via-Frac: [register_frac_type_real] is not called
    at module init, so this test installs and restores it itself.  The real
    analogue of the [rat_stays_frac] control above: after registration,
    [real] is classified as a Frac type, not a harvested quotient. *)
@@ -9386,7 +9386,7 @@ val _ = require_msg (check_result mf_model_frac_display_golden) (fn () =>
   "Frac display, zero canonicalization, or repeated registration changed")
   (fn () => ()) ()
 
-(* [real]'s display postprocessor (opt-in, D-06-3) differs from rat's: it
+(* [real]'s display postprocessor (opt-in) differs from rat's: it
    renders through division rather than [n // d], and a unit denominator or
    a zero numerator collapses to the bare numerator - a real model value
    must print as [3], never [3 / 1]. *)
@@ -10387,6 +10387,294 @@ fun mf_model_certification_protocol () =
 
 val _ = require_msg (check_result mf_model_certification_protocol) (fn () =>
   "model certification/verdict protocol changed") (fn () => ()) ()
+
+(* A raw retyped Frac atom, the shape [certification_copy] actually
+   sees for a [real]-typed binding -
+   constructed directly, as the other MFM.certify tests above do, rather
+   than by running the full model-finder pipeline. *)
+fun real_frac_atom n d =
+  let
+    val abs_frac = MFH.retype_frac_constant
+      (Term.prim_mk_const {Thy = "frac", Name = "abs_frac"})
+      ``:(int # int) -> real``
+  in
+    Term.mk_comb (abs_frac,
+      pairSyntax.mk_pair
+        (intSyntax.term_of_int (Arbint.fromInt n),
+         intSyntax.term_of_int (Arbint.fromInt d)))
+  end
+
+val real_frac_base : Refute_Core.counterexample =
+  {backend = "kodkod", substrate = "kodkod",
+   certainty = Refute_Core.Potential [], bindings = [], evals = [],
+   cert = NONE, scope = SOME [(``:real``, 2)], model = NONE, stats = []}
+
+(* Positive pin: [original] is the positive conjecture (the convention
+   every MFM.certify test above follows).  The second disjunct
+   [?y. y = y + 1] is unconditionally false and does not
+   mention [x], so the closure [!x. ...] is false exactly at the Frac-atom
+   witness x = 1/2: proving that needs both the derived literal candidate
+   that [certification_copy] offers as an untrusted hint - [1 / 2] via
+   [frac_atom_to_real] - to resolve [x], and the real-arithmetic leaf to
+   close the still-symbolic [y <> y + 1], since [y]'s witness is never
+   grounded by substitution.  No [register_frac_type_real] call: nothing
+   on the certification path consults the postprocessor registry, only
+   the raw [abs_frac] shape [real_frac_atom] builds directly.  See
+   [mf_real_frac_leaf_is_load_bearing] below for the ablation pin on this
+   same goal. *)
+fun mf_real_frac_replay_certifies () =
+  let
+    val x = Term.mk_var ("x", ``:real``)
+    val goal = ``^x <> 1 / 2 \/ ?y : real. y = y + 1``
+    val reconstructed : MFM.reconstruction =
+      {bindings = [(x, real_frac_atom 1 2)], evals = [], skolems = [],
+       consts = [], types = [], codatatypes_ok = true}
+  in
+    case MFM.certify
+      {executable = true, original = goal, eval_terms = [],
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar, replay_hints = [],
+       cex = real_frac_base, sound = true, genuine_means_genuine = true,
+       reasons = [], deadline = NONE} of
+        MFM.Keep {certainty = Genuine, cert = SOME theorem,
+                  model = NONE, ...} =>
+          null (Thm.hyp theorem) andalso Refute_Cert.trusted theorem andalso
+          Term.aconv (Thm.concl theorem)
+            (boolSyntax.mk_neg (#2 (Refute_Cert.closure_of goal)))
+      | _ => false
+  end
+
+val _ = require_msg (check_result mf_real_frac_replay_certifies) (fn () =>
+  "real Frac counterexample did not certify via the derived literal hint")
+  (fn () => ()) ()
+
+(* Ablation: the SAME goal as [mf_real_frac_replay_certifies], rebuilt
+   directly at the
+   [Refute_Cert_Model] layer instead of through [MFM.certify]'s Frac-atom
+   encoding, since [MFM.certify] always calls [default_policy] and offers
+   no way to flip a single field.  The candidate [1 / 2] for [x] is
+   supplied as a hint, exactly what [certification_copy] derives from the
+   Frac atom via [frac_atom_to_real]; candidate substitution still leaves
+   [y <> y + 1] symbolic (no ground literal for CBV), so
+   [enable_real_arith] is the only knob left that can close it. *)
+fun mf_real_frac_leaf_is_load_bearing () =
+  let
+    val x = Term.mk_var ("x", ``:real``)
+    val goal = ``^x <> 1 / 2 \/ ?y : real. y = y + 1``
+    fun policy real_arith = Refute_Cert_Model.policy_for_test
+      {fuel = 1000, cases = false, induction = false, synthesis = false,
+       taut = true, omega = true, real_arith = real_arith,
+       split_depth = 0, branches = 0,
+       constructor_depth = 0, constructor_width = 0}
+    fun run real_arith = Refute_Cert_Model.certify_with_policy
+      {original = goal, env = [], hints = [``1 / 2 : real``],
+       policy = policy real_arith, deadline = NONE}
+  in
+    (case run true of Refute_Cert_Model.Certified _ => true | _ => false)
+    andalso
+    (case run false of
+         Refute_Cert_Model.NoCertificate _ => true | _ => false)
+  end
+
+val _ = require_msg (check_result mf_real_frac_leaf_is_load_bearing) (fn () =>
+  "enable_real_arith no longer gates the real linear arithmetic leaf")
+  (fn () => ()) ()
+
+(* A "same verdict and same certainty with the leaf disabled" ablation
+   cannot be built through [MFM.certify]: it hardcodes [default_policy],
+   with no way to flip [real_arith] through it, and
+   [mf_real_frac_leaf_is_load_bearing] above already exercises the
+   disabled case at the [Refute_Cert_Model] layer instead.  A landed
+   certificate does move certainty: [certify] passes
+   [Refute_Core.Genuine] on [Certified] regardless of the encoding-only
+   [fallback_certainty] base, so it upgrades a [QuasiGenuine] base to
+   [Genuine] - see [mf_real_frac_replay_upgrades_quasi_genuine] below. *)
+
+fun mf_real_frac_replay_upgrades_quasi_genuine () =
+  let
+    val x = Term.mk_var ("x", ``:real``)
+    val goal = ``^x <> 1 / 2 \/ ?y : real. y = y + 1``
+    val reconstructed : MFM.reconstruction =
+      {bindings = [(x, real_frac_atom 1 2)], evals = [], skolems = [],
+       consts = [], types = [], codatatypes_ok = true}
+  in
+    case MFM.certify
+      {executable = true, original = goal, eval_terms = [],
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar, replay_hints = [],
+       cex = real_frac_base, sound = true, genuine_means_genuine = false,
+       reasons = ["encoding-only reason"], deadline = NONE} of
+        MFM.Keep {certainty = Genuine, cert = SOME _, ...} => true
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result mf_real_frac_replay_upgrades_quasi_genuine) (fn () =>
+  "a landed certificate no longer upgrades a QuasiGenuine base to Genuine")
+  (fn () => ()) ()
+
+(* Failure pin, over a genuine Frac binding (not [bindings = []]).
+   [x]'s witness [1 / 2] resolves via the same Frac-atom hint as
+   [mf_real_frac_replay_certifies], but the second
+   disjunct needs [?y. y * y = 2] - a genuine real solution (sqrt 2) - and
+   REAL_ARITH is incomplete for nonlinear goals with no rational candidate
+   to witness it, so replay cannot construct that existential even with
+   [x] resolved.  The encoding-derived certainty and the model survive
+   untouched regardless, and the result is [Keep], never [Discarded]. *)
+fun mf_real_frac_nonlinear_replay_leaves_certainty () =
+  let
+    val x = Term.mk_var ("x", ``:real``)
+    val goal = ``^x <> 1 / 2 \/ !y : real. y * y <> 2``
+    val reconstructed : MFM.reconstruction =
+      {bindings = [(x, real_frac_atom 1 2)], evals = [], skolems = [],
+       consts = [], types = [], codatatypes_ok = true}
+  in
+    case MFM.certify
+      {executable = true, original = goal, eval_terms = [],
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar, replay_hints = [],
+       cex = real_frac_base, sound = true, genuine_means_genuine = true,
+       reasons = [], deadline = NONE} of
+        MFM.Keep {certainty = Genuine, cert = NONE, model = SOME _, ...} =>
+          true
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result mf_real_frac_nonlinear_replay_leaves_certainty) (fn () =>
+    "a failed nonlinear real replay changed certainty or discarded the model")
+  (fn () => ()) ()
+
+(* [x]'s Frac binding is dropped from the replay env (drop-not-
+   authorize), so [dropped_term], the [upd_evals] term [x + 1], cannot
+   fully reduce; [eval_term] then returns the literal unknown-marker
+   variable ["?"] ([MFN.unknown_marker]), never [x] itself.
+   [MFN.is_replay_hole] only matches the [replay_hole_prefix] namespace,
+   so it never matches ["?"] either: a replay-hole-only check silently
+   kept this row, displaying the marker instead of dropping it.  [closed_term]
+   (unrelated to [x]) reduces fully and must still appear, so the fixed
+   output is exactly the one-row list below - not empty, and not two
+   rows. *)
+fun mf_frac_dropped_eval_row_is_absent () =
+  let
+    val x = Term.mk_var ("x", ``:real``)
+    val goal = ``^x <> 1 / 2 \/ ?y : real. y = y + 1``
+    val dropped_term = ``^x + 1``
+    val closed_term = ``SUC 0``
+    val reconstructed : MFM.reconstruction =
+      {bindings = [(x, real_frac_atom 1 2)], evals = [], skolems = [],
+       consts = [], types = [], codatatypes_ok = true}
+  in
+    case MFM.certify
+      {executable = true, original = goal,
+       eval_terms = [dropped_term, closed_term],
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar, replay_hints = [],
+       cex = real_frac_base, sound = true, genuine_means_genuine = true,
+       reasons = [], deadline = NONE} of
+        MFM.Keep {certainty = Genuine, cert = SOME theorem,
+                  evals = [(kept_term, kept_value)], ...} =>
+          null (Thm.hyp theorem) andalso Refute_Cert.trusted theorem andalso
+          Term.aconv kept_term closed_term andalso
+          Term.aconv kept_value ``1 : num``
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result mf_frac_dropped_eval_row_is_absent) (fn () =>
+    "an eval row over a Frac-dropped variable was not omitted from the " ^
+    "output")
+  (fn () => ()) ()
+
+fun rat_frac_atom n d =
+  let
+    val abs_frac = MFH.retype_frac_constant
+      (Term.prim_mk_const {Thy = "frac", Name = "abs_frac"})
+      ``:(int # int) -> rat``
+  in
+    Term.mk_comb (abs_frac,
+      pairSyntax.mk_pair
+        (intSyntax.term_of_int (Arbint.fromInt n),
+         intSyntax.term_of_int (Arbint.fromInt d)))
+  end
+
+(* A bare string match on [frac$abs_frac] alone would authorize every one
+   of these as a hole-free binding; the structural predicate
+   ([qualifying_frac_binding]) must reject all four when the binding is
+   not itself a declared hole.  Row 1 is user-reachable:
+   [MFN.assert_user_goal] only rejects the [refute$] prefix, not a plain
+   variable spelled [frac$abs_frac].  Rows 2 and 3 are the
+   selector/discriminator layers [original_name] alone would conflate
+   with the genuine atom.  Row 4 is the headline real-vs-rat case: the
+   identical reserved name at [:rat] instead of [:real]. *)
+fun frac_spoof_rows_are_rejected () =
+  let
+    fun user_shaped_atom name =
+      Term.mk_comb (Term.mk_var (name, ``:int # int -> real``),
+        pairSyntax.mk_pair
+          (intSyntax.term_of_int (Arbint.fromInt 1),
+           intSyntax.term_of_int (Arbint.fromInt 2)))
+    fun rejected ty value =
+      case MFM.certification_env_with_holes MFM.empty_replay_sidecar
+             [(Term.mk_var ("x", ty), value)] of
+          NONE => true
+        | SOME _ => false
+  in
+    rejected ``:real`` (user_shaped_atom "frac$abs_frac") andalso
+    rejected ``:real``
+      (user_shaped_atom (MFN.sel_prefix_for 0 ^ "frac$abs_frac")) andalso
+    rejected ``:real``
+      (user_shaped_atom (MFN.discr_prefix ^ "frac$abs_frac")) andalso
+    rejected ``:rat`` (rat_frac_atom 1 2)
+  end
+
+val _ = require_msg (check_result frac_spoof_rows_are_rejected) (fn () =>
+  "a spoofed or mistyped Frac atom was authorized as a declared hole")
+  (fn () => ()) ()
+
+(* [rat] must stay on the pre-real-Frac-certification path:
+   [qualifying_frac_binding]'s [:real] check fails for a [:rat] binding,
+   so [certification_env_with_holes] finds an unauthorized free variable,
+   [certification_copy] returns NONE, and [certify] takes the [NONE =>
+   Keep base] branch untouched: same [cert = NONE], same [bindings] as
+   the raw reconstruction, nothing rebuilt or attempted.  Mirrors
+   [mf_real_frac_replay_certifies]'s goal exactly, but over :rat, where
+   nothing may qualify.  In the ablated world (the [:real] conjuncts of
+   [qualifying_frac_binding] removed), replay would instead be attempted
+   and fail, landing on the identical [cert = NONE]/[bindings] by a
+   different route - [MFM.certify]'s result alone is byte-identical in
+   both worlds and cannot distinguish them.  What differs is whether
+   [certification_copy] ever builds an env at all, asserted directly via
+   [certification_copy_for_test]. *)
+fun mf_rat_frac_replay_matches_pre_task_07 () =
+  let
+    val x = Term.mk_var ("x", ``:rat``)
+    val binding_value = rat_frac_atom 1 2
+    val goal = ``^x <> 1 / 2 \/ ?y : rat. y = y + 1``
+    val reconstructed : MFM.reconstruction =
+      {bindings = [(x, binding_value)], evals = [], skolems = [],
+       consts = [], types = [], codatatypes_ok = true}
+    val no_env = not (Option.isSome
+      (MFM.certification_copy_for_test NONE [] goal []
+         [(x, binding_value)] [] MFM.empty_replay_sidecar))
+  in
+    no_env andalso
+    (case MFM.certify
+      {executable = true, original = goal, eval_terms = [],
+       reconstruction = reconstructed, certification = reconstructed,
+       replay_sidecar = MFM.empty_replay_sidecar, replay_hints = [],
+       cex = real_frac_base, sound = true, genuine_means_genuine = true,
+       reasons = [], deadline = NONE} of
+        MFM.Keep {cert = NONE, bindings = [(bound, value)], ...} =>
+          Term.aconv bound x andalso Term.aconv value binding_value
+      | _ => false)
+  end
+
+val _ = require_msg
+  (check_result mf_rat_frac_replay_matches_pre_task_07) (fn () =>
+    "a rat Frac counterexample no longer takes the pre-real-Frac " ^
+    "Keep-base path")
+  (fn () => ()) ()
 
 fun mf_polymorphic_model_protocol () =
   let
@@ -23763,12 +24051,13 @@ val replay_quantified = ``(?x : num. p x) ==> !x. p x``
 val replay_predicate_env = [(replay_predicate, ``{31} : num set``)]
 
 (* Hints alone: no case split, induction or synthesis, so a certificate
-   can only come from a supplied witness.  [decisions] enables both leaf
-   decision procedures together. *)
+   can only come from a supplied witness.  [decisions] enables all three
+   leaf decision procedures together. *)
 fun bare_replay_policy decisions =
   Refute_Cert_Model.policy_for_test
     {fuel = 1000, cases = false, induction = false,
      synthesis = false, taut = decisions, omega = decisions,
+     real_arith = decisions,
      split_depth = 0, branches = 0,
      constructor_depth = 0, constructor_width = 0}
 
@@ -23878,7 +24167,7 @@ fun replay_policy cases induction synthesis split_depth branches
       constructor_depth constructor_width =
   Refute_Cert_Model.policy_for_test
     {fuel = 4000, cases = cases, induction = induction,
-     synthesis = synthesis, taut = true, omega = true,
+     synthesis = synthesis, taut = true, omega = true, real_arith = true,
      split_depth = split_depth, branches = branches,
      constructor_depth = constructor_depth,
      constructor_width = constructor_width}
@@ -24068,12 +24357,51 @@ fun constructor_combination_width_is_hard_cap () =
   Refute_Cert_Model.combination_count_for_test 32
     (List.tabulate (40, fn _ => [false, true])) = 32
 
+(* Pins the [DirectHint]-before-[TypeValue] emission order directly at
+   [generate_candidates]'s seam, [certify_detailed_rich] (already used
+   this way by [ambiguous_origins_degrade_to_generic_hints] above): a
+   [DirectHint] must survive alongside enough same-typed [TypeValue]
+   filler to exceed [replay_candidate_limit] (128).  [target] only
+   falsifies the goal at [999999], which the 200-strong filler (0..199)
+   never reaches, so certification succeeds if and only if the
+   [DirectHint] is emitted - and, since [emit]'s callback raises
+   [CandidateSuccess] on first success, attempted - before the cap is
+   spent on filler. *)
+fun direct_hint_survives_bulk_type_values () =
+  let
+    val target = numSyntax.term_of_int 999999
+    val goal = ``!n : num. n <> ^target``
+    val filler = List.tabulate (200, fn i =>
+      {term = numSyntax.term_of_int i,
+       source = Refute_Cert_Model.TypeValue,
+       provenance = NONE} : Refute_Cert_Model.replay_hint)
+    val hint : Refute_Cert_Model.replay_hint =
+      {term = target, source = Refute_Cert_Model.DirectHint,
+       provenance = NONE}
+    val (result, _) = Refute_Cert_Model.certify_detailed_rich
+      {original = goal, env = [], hints = hint :: filler,
+       policy = hint_only_policy, deadline = NONE}
+  in
+    case result of
+        Refute_Cert_Model.Certified theorem => certificate_audit goal theorem
+      | _ => false
+  end
+
+(* Frac hints share [replay_candidate_limit] with [type_values], so an
+   oversized binding list alone - no [type_values], no [replay_hints] -
+   must also be capped. *)
 fun certification_hint_preparation_is_bounded () =
   let
     val values = List.tabulate (4096, fn _ => boolSyntax.T)
+    val frac_bindings = List.tabulate (4096, fn i =>
+      (Term.mk_var ("frac_hint_bound_x" ^ Int.toString i, ``:real``),
+       real_frac_atom 1 2))
   in
     MFM.certification_hint_count_for_test
-      [(``:bool``, values, true)] [] =
+      [(``:bool``, values, true)] [] [] =
+      Refute_Cert_Model.replay_candidate_limit
+    andalso
+    MFM.certification_hint_count_for_test [] [] frac_bindings =
       Refute_Cert_Model.replay_candidate_limit
   end
 
@@ -24094,7 +24422,7 @@ fun replay_resource_failures_are_classified () =
   let
     val zero_policy = Refute_Cert_Model.policy_for_test
       {fuel = 0, cases = true, induction = true,
-       synthesis = true, taut = true, omega = true,
+       synthesis = true, taut = true, omega = true, real_arith = true,
        split_depth = 1, branches = 16,
        constructor_depth = 2, constructor_width = 16}
     val (_, zero_stats) = Refute_Cert_Model.certify_detailed
@@ -24110,6 +24438,71 @@ fun replay_resource_failures_are_classified () =
     (case #failure deadline_stats of
          SOME {kind = Refute_Cert_Model.DeadlineExhausted, ...} => true
        | _ => false)
+  end
+
+(* [decision_leaf] must not spend fuel on the real-arithmetic leaf when
+   the goal has no [:real] subterm at all.  [y + y = 7] is unsatisfiable
+   over [:num] (parity), but needs neither [taut] nor [omega] (both off
+   here) nor [direct_leaf]'s CBV/simp portfolio to fail first, so
+   [decision_leaf] is genuinely reached.  The property under test is a
+   *difference*, not a constant that any unrelated [charge]-site change
+   would shift: over this [:real]-free goal, [mentions_real] vetoes the
+   leaf either way, so enabling [enable_real_arith] must cost exactly
+   the same fuel as disabling it. *)
+fun real_arith_leaf_is_gated_by_real_subterm () =
+  let
+    fun run real_arith =
+      let
+        val policy = Refute_Cert_Model.policy_for_test
+          {fuel = 10, cases = false, induction = false, synthesis = false,
+           taut = false, omega = false, real_arith = real_arith,
+           split_depth = 0, branches = 0,
+           constructor_depth = 0, constructor_width = 0}
+        val goal = ``?y : num. y + y = 7``
+      in
+        Refute_Cert_Model.certify_detailed
+          {original = goal, env = [], hints = [], policy = policy,
+           deadline = NONE}
+      end
+    val (enabled_result, enabled_stats) = run true
+    val (disabled_result, disabled_stats) = run false
+    fun no_certificate result =
+      case result of
+          Refute_Cert_Model.NoCertificate _ => true
+        | _ => false
+  in
+    no_certificate enabled_result andalso
+    no_certificate disabled_result andalso
+    #consumed_fuel enabled_stats = #consumed_fuel disabled_stats
+  end
+
+(* The induction path's leaf runs once per constructor obligation, so
+   [decision_leaf]'s fuel-differential trick above cannot see it: the
+   induction obligation itself is charged one flat unit regardless of
+   which sub-tactic closes it.  [real_arith_attempts] counts only actual
+   [REAL_ASM_ARITH_TAC] invocations, so it is the direct witness that the
+   whole-goal gate in [local_induction_tactic]'s [real_goal] vetoes the
+   leaf on every obligation of a [:real]-free induction, exactly as
+   [decision_leaf]'s gate does for the whole-formula route.  The
+   constructor step needs [n * n >= n], which [ASM_TAUT_TAC] and
+   [OMEGA_TAC] cannot close (nonlinear), so [account] genuinely reaches
+   [real_goal] instead of the obligation having already been discharged
+   by an earlier tactic in the [EVERY] chain - unlike a plain [[simp]]
+   recursive predicate, whose base and step cases close before
+   [real_goal] is ever reached, making the gate untestable. *)
+fun induction_real_leaf_is_gated_by_real_subterm () =
+  let
+    val policy = Refute_Cert_Model.policy_for_test
+      {fuel = 4000, cases = false, induction = true, synthesis = false,
+       taut = true, omega = true, real_arith = true,
+       split_depth = 0, branches = 0,
+       constructor_depth = 0, constructor_width = 0}
+    val goal = ``?xs : num list. ~(EVERY (\n. n * n >= n) xs)``
+    val (_, stats) = Refute_Cert_Model.certify_detailed
+      {original = goal, env = [], hints = [], policy = policy,
+       deadline = NONE}
+  in
+    #leaf_attempts stats > 0 andalso #real_arith_attempts stats = 0
   end
 
 fun unsupported_inductions_are_not_attempted () =
@@ -24268,6 +24661,10 @@ val expanded_model_replay_checks =
    ("bounded constructor synthesis", constructor_synthesis_replay),
    ("trusted leaf portfolio", trusted_leaf_portfolio_replay),
    ("resource failure taxonomy", replay_resource_failures_are_classified),
+   ("real leaf gated by a real subterm",
+    real_arith_leaf_is_gated_by_real_subterm),
+   ("induction real leaf gated by a real subterm",
+    induction_real_leaf_is_gated_by_real_subterm),
    ("nested, mutual, and codatatype induction boundary",
     unsupported_inductions_are_not_attempted),
    ("preprocessor/replay origin numbering",
@@ -24280,6 +24677,8 @@ val expanded_model_replay_checks =
     replay_provenance_prefers_exact_dependencies),
    ("constructor combination width hard cap",
     constructor_combination_width_is_hard_cap),
+   ("DirectHint survives cap over bulk same-typed TypeValue",
+    direct_hint_survives_bulk_type_values),
    ("bounded certification hint preparation",
     certification_hint_preparation_is_bounded),
    ("deterministic provider counters", replay_provider_counters_are_pinned),

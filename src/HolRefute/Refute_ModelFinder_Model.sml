@@ -144,7 +144,8 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   val certification_env_with_holes :
     replay_sidecar -> (term * term) list -> (term * term) list option
   val certification_hint_count_for_test :
-    (hol_type * term list * bool) list -> replay_hint list -> int
+    (hol_type * term list * bool) list -> replay_hint list ->
+    (term * term) list -> int
   val certification_copy_for_test :
     (hol_type * int) list option ->
     (hol_type * term list * bool) list -> term -> term list ->
@@ -418,6 +419,40 @@ fun frac_atom_to_real term =
         else
           term
     | _ => term
+
+(* Narrowed to [:real] by type, not by the reserved name alone: [abs_frac]
+   is [int # int -> frac] (retypes to neither [real] nor [rat]), so [rat]
+   hits the identical opaque-reserved-variable fallback and a bare name
+   match would also authorize it.  [MFN.original_name] alone is not
+   enough either: it strips every generated-name layer, so a selector or
+   discriminator wrapping the same tail ([refute$sel0$frac$abs_frac])
+   would match too, hence the explicit [not (MFN.is_sel name)].  This
+   predicate need not discriminate precisely for soundness - see
+   [certification_env_with_holes] below: a qualifying binding is dropped,
+   not trusted. *)
+fun qualifying_frac_head head =
+  case Lib.total Term.dest_var head of
+      SOME (name, _) =>
+        MFN.is_reserved_name name andalso not (MFN.is_sel name) andalso
+        MFN.original_name name = "frac$abs_frac"
+    | NONE => false
+
+fun qualifying_frac_binding (variable, value) =
+  Util.same_type (Term.type_of variable) realSyntax.real_ty andalso
+  Util.same_type (Term.type_of value) realSyntax.real_ty andalso
+  (case HolKernel.strip_comb value of
+       (head, [pair]) =>
+         qualifying_frac_head head andalso
+         (case Lib.total pairSyntax.dest_pair pair of
+              SOME (n, d) =>
+                intSyntax.is_int_literal n andalso
+                intSyntax.is_int_literal d andalso
+                let val converted = frac_atom_to_real value in
+                  not (Term.aconv converted value) andalso
+                  null (Term.free_vars converted)
+                end
+            | NONE => false)
+     | _ => false)
 
 fun prepare_frac_term_postprocessor pattern postprocessor =
   let
@@ -2206,15 +2241,25 @@ fun valid_replay_sidecar ({holes} : replay_sidecar) =
     distinct (fn left => fn right => Term.aconv left right) variables
   end
 
+(* A qualifying Frac binding is dropped, not authorized: replay does not
+   need it in [env], since [closure_of] still quantifies the variable and
+   [certification_copy] separately offers the recovered literal as a
+   hint.  This keeps "every free variable of an env value is a declared
+   hole" true of the returned list without widening it. *)
 fun certification_env_with_holes (sidecar as {holes}) bindings =
   let
     val declared = map #variable holes
-    fun authorized value = List.all (fn free =>
-      Util.aconv_member free declared) (Term.free_vars_lr value)
+    fun authorized value =
+      List.all (fn free => Util.aconv_member free declared)
+        (Term.free_vars_lr value)
+    fun keep [] = SOME []
+      | keep (binding :: rest) =
+          if authorized (#2 binding) then
+            Option.map (fn kept => binding :: kept) (keep rest)
+          else if qualifying_frac_binding binding then keep rest
+          else NONE
   in
-    if valid_replay_sidecar sidecar andalso List.all (authorized o #2) bindings
-    then SOME bindings
-    else NONE
+    if valid_replay_sidecar sidecar then keep bindings else NONE
   end
 
 fun rf_type card =
@@ -2226,21 +2271,32 @@ fun rf_constructor card serial =
     {Thy = "refute", Name = "rf" ^ Int.toString card ^ "_" ^
        Int.toString serial}
 
-fun certification_hint_inputs types replay_hints =
+(* [frac_terms] derives the untrusted real-literal candidates
+   [qualifying_frac_binding] recovers from [bindings]; folded into the same
+   [replay_candidate_limit] budget as [replay_hints]/[type_values], so it
+   must be computed before that budget is split. *)
+fun frac_terms bindings =
+  List.mapPartial (fn binding as (_, value) =>
+    if qualifying_frac_binding binding then SOME (frac_atom_to_real value)
+    else NONE) bindings
+
+fun certification_hint_inputs types replay_hints frac_hints =
   let
     val limit = Refute_Cert_Model.replay_candidate_limit
     val replay_hints = MFS.take_at_most limit replay_hints
-    val type_values = MFS.take_at_most (limit - length replay_hints)
+    val after_replay = limit - length replay_hints
+    val frac_hints = MFS.take_at_most after_replay frac_hints
+    val type_values = MFS.take_at_most (after_replay - length frac_hints)
       (List.concat (map #2 types))
   in
-    (replay_hints, type_values)
+    (replay_hints, frac_hints, type_values)
   end
 
-fun certification_hint_count_for_test types replay_hints =
-  let val (replay_hints, type_values) =
-    certification_hint_inputs types replay_hints
+fun certification_hint_count_for_test types replay_hints bindings =
+  let val (replay_hints, frac_hints, type_values) =
+    certification_hint_inputs types replay_hints (frac_terms bindings)
   in
-    length replay_hints + length type_values
+    length replay_hints + length frac_hints + length type_values
   end
 
 (* Certification is deliberately performed on a private, monomorphic copy.
@@ -2251,8 +2307,8 @@ fun certification_hint_count_for_test types replay_hints =
 fun certification_copy scope types original eval_terms bindings replay_hints
       (sidecar as {holes}) =
   let
-    val (replay_hints, type_values) =
-      certification_hint_inputs types replay_hints
+    val (replay_hints, frac_hints, type_values) =
+      certification_hint_inputs types replay_hints (frac_terms bindings)
     val hint_values = map #value replay_hints
     val copied_terms =
       original :: eval_terms @
@@ -2274,16 +2330,26 @@ fun certification_copy scope types original eval_terms bindings replay_hints
                    SOME ((tyvar, card) :: rows)
                  else NONE
              | _ => NONE)
-    fun authorized declared value = List.all (fn free =>
+    (* Distinct from [certification_env_with_holes]'s [authorized]: that
+       one gates raw bindings against declared holes, this one gates a
+       *copied* (type-substituted) hint/type-value image the same way. *)
+    fun copy_authorized declared value = List.all (fn free =>
       Util.aconv_member free declared) (Term.free_vars_lr value)
     fun optional_values copy declared values =
       List.mapPartial (fn value =>
         (case Lib.total copy value of
              SOME copied =>
-               if authorized declared copied then SOME copied else NONE
+               if copy_authorized declared copied then SOME copied else NONE
            | NONE => NONE)) values
     fun copy_provenance copy_type provenance =
       Option.map (Refute_Skolem.map_types copy_type) provenance
+    (* [frac_hints] terms are already closed ([qualifying_frac_binding]
+       requires no free variables) and already budget-capped by
+       [certification_hint_inputs], so unlike [copied_hints]/[copied_types]
+       they need neither a [copy]/[declared] check nor [copy_type]. *)
+    val frac_hint_records = map (fn term =>
+      {term = term, source = Refute_Cert_Model.DirectHint,
+       provenance = NONE}) frac_hints
     fun finish copied_original copied_evals env copied_holes copy copy_type =
       let
         val initial = map #2 env
@@ -2292,7 +2358,7 @@ fun certification_copy scope types original eval_terms bindings replay_hints
           ({value, provenance, ...} : replay_hint) =>
             case Lib.total copy value of
                 SOME copied =>
-                  if authorized declared copied then
+                  if copy_authorized declared copied then
                     SOME
                       {term = copied,
                        source = Refute_Cert_Model.SkolemValue,
@@ -2314,7 +2380,7 @@ fun certification_copy scope types original eval_terms bindings replay_hints
           if already_seen term accumulated then accumulated
           else hint :: accumulated
         val hints = rev (List.foldl add_unique []
-          (copied_hints @ copied_types))
+          (copied_hints @ copied_types @ frac_hint_records))
       in
         SOME
           {original = copied_original, eval_terms = copied_evals,
@@ -2396,15 +2462,12 @@ fun certification_copy scope types original eval_terms bindings replay_hints
                            display = display, origin = origin}) holes
                       val copied_sidecar = {holes = copied_holes}
                     in
-                      if Option.isSome
-                           (certification_env_with_holes copied_sidecar env)
-                      then
-                        finish (Term.inst theta original)
-                          (map (Term.inst theta) eval_terms) env copied_holes
-                          copy_value
-                          (Type.type_subst theta)
-                      else
-                        NONE
+                      case certification_env_with_holes copied_sidecar env of
+                          SOME filtered_env =>
+                            finish (Term.inst theta original)
+                              (map (Term.inst theta) eval_terms) filtered_env
+                              copied_holes copy_value (Type.type_subst theta)
+                        | NONE => NONE
                     end
             end
   end
@@ -2543,13 +2606,18 @@ fun certify {executable, original, eval_terms,
                         deliberately excluded by the pattern above. *)
                      val eval_env = List.foldl add_binding env
                        (List.mapPartial source_skolem_binding hints)
+                     (* Only kernel-established values are shown: any
+                        remaining free variable - a replay hole, or an
+                        ordinary variable left over from a dropped
+                        binding (e.g. a qualifying real Frac atom) - means
+                        [tm] was not actually reduced, so the row is
+                        dropped rather than displayed half-evaluated. *)
                      fun safe_eval tm =
                        let val value = Refute_Cert.eval_term eval_env tm
                        in
-                         if List.exists MFN.is_replay_hole
-                              (Term.free_vars_lr value)
-                         then NONE
-                         else SOME (tm, value)
+                         if null (Term.free_vars_lr value)
+                         then SOME (tm, value)
+                         else NONE
                        end
                      val values = List.mapPartial safe_eval cert_evals
                    in

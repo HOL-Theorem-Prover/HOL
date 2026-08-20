@@ -829,9 +829,15 @@ Counterexample search is bounded and incomplete.  In particular:
   conditions reported in `certainty`.  Unsupported encodings are refused
   or downgraded rather than silently called genuine;
 * fraction support covers `rat` by default and `real` opt-in
-  (`register_frac_type_real`); certification of a Frac counterexample is
-  attempted as usual and, measured, comes back inconclusive
-  (`cert = NONE`), which the trust model accepts rather than blocks;
+  (`register_frac_type_real`); certification of a `real` Frac
+  counterexample offers its genuine literal value to replay as an
+  untrusted candidate, and a linear real-arithmetic leaf can then certify
+  a goal computeLib alone cannot.  A nonlinear instance still comes back
+  inconclusive (`cert = NONE`), which the trust model accepts rather than
+  blocks; `rat` counterexamples are unaffected, since the candidate-hint
+  mechanism is deliberately scoped to `real`-typed atoms by a structural
+  check, and a `rat` Frac atom is the same kind of opaque reserved variable
+  as a `real` one;
 * a hand-written definition headed by `fixedPoint$lfp` or `fixedPoint$gfp`
   but absent from the `Hol_reln`/`Hol_coreln` registries is recognized if
   its monotonicity can be discharged automatically; a non-monotone

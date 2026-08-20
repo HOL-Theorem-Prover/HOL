@@ -39,6 +39,18 @@ realises -- are not covered by these rows; a goal using them stays
 sound through the ordinary choice-guard/`unknown` machinery and can
 only reach `Potential`, never this fragment's stronger `Genuine`.
 
+Certification (`certify=true`, the default) is attempted on a `real`
+Frac counterexample, but not exactly as on any other: the qualifying
+binding is dropped from the certification env rather than authorized,
+and the atom's genuine real-literal value is instead offered to replay
+separately as an untrusted candidate hint.  A linear real-arithmetic
+leaf can then certify a goal computeLib alone cannot; a nonlinear
+instance still comes back inconclusive (`cert = NONE`, `certainty`
+unchanged), which the trust model accepts rather than blocks.  A
+successful replay reports `model = NONE` and drops any `evals` row
+whose value still has a free variable, since only kernel-established
+values are ever shown.  `rat` counterexamples are unaffected by this.
+
 The operation validates all fraction metadata before changing state and
 commits the fraction and display registrations together.  It is
 session-local, synchronized, atomic, and idempotent.  It creates no HOL

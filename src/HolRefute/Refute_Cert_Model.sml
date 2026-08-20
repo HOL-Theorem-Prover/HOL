@@ -73,7 +73,8 @@ structure Refute_Cert_Model = struct
      enable_induction : bool,
      enable_synthesis : bool,
      enable_taut : bool,
-     enable_omega : bool}
+     enable_omega : bool,
+     enable_real_arith : bool}
 
   type diagnostics =
     {nodes : int,
@@ -89,6 +90,7 @@ structure Refute_Cert_Model = struct
      case_branches : int,
      induction_attempts : int,
      leaf_attempts : int,
+     real_arith_attempts : int,
      schematic_attempts : int,
      completion_attempts : int,
      candidate_trace : (int * term * term) list,
@@ -120,10 +122,11 @@ structure Refute_Cert_Model = struct
      enable_induction = true,
      enable_synthesis = true,
      enable_taut = true,
-     enable_omega = true}
+     enable_omega = true,
+     enable_real_arith = true}
 
   fun policy_for_test
-        {fuel, cases, induction, synthesis, taut, omega,
+        {fuel, cases, induction, synthesis, taut, omega, real_arith,
          split_depth, branches, constructor_depth, constructor_width} :
         policy =
     {total_fuel = Int.max (0, fuel),
@@ -144,7 +147,8 @@ structure Refute_Cert_Model = struct
      enable_induction = induction,
      enable_synthesis = synthesis,
      enable_taut = taut,
-     enable_omega = omega}
+     enable_omega = omega,
+     enable_real_arith = real_arith}
 
   fun portfolio_policy_for_test {fuel, candidates, vectors} : policy =
     {total_fuel = Int.max (0, fuel),
@@ -165,7 +169,8 @@ structure Refute_Cert_Model = struct
      enable_induction = true,
      enable_synthesis = false,
      enable_taut = true,
-     enable_omega = true}
+     enable_omega = true,
+     enable_real_arith = true}
 
   fun failure_kind_name NoProof = "no-proof"
     | failure_kind_name Unsupported = "unsupported"
@@ -178,6 +183,19 @@ structure Refute_Cert_Model = struct
   fun render_failure ({kind, stage, depth, detail} : failure) =
     "model replay [" ^ failure_kind_name kind ^ "] " ^ stage ^
     " at depth " ^ Int.toString depth ^ ": " ^ detail
+
+  (* [realLib.REAL_ARITH] is a prover ([term -> thm]), not a [conv]; the
+     other two leaf decision procedures are already [conv]s, so wrap it
+     the same way as [Drule.EQT_INTRO]. *)
+  fun real_arith_conv goal = Drule.EQT_INTRO (realLib.REAL_ARITH goal)
+
+  (* [REAL_ARITH] is two provers (the second Positivstellensatz-based)
+     behind one flat fuel charge, so [decision_leaf] must not spend it
+     on goals with no [:real] subterm at all - unlike
+     [TAUT_CONV]/[OMEGA_CONV], it cannot even apply. *)
+  fun mentions_real goal =
+    Lib.can (HolKernel.find_term
+      (fn tm => Util.same_type (Term.type_of tm) realSyntax.real_ty)) goal
 
   fun theorem_acceptable expected theorem =
     null (Thm.hyp theorem) andalso trusted theorem andalso
@@ -293,6 +311,7 @@ structure Refute_Cert_Model = struct
       val case_branches = ref 0
       val induction_attempts = ref 0
       val leaf_attempts = ref 0
+      val real_arith_attempts = ref 0
       val generated_candidates = ref 0
       val function_states = ref 0
       val candidate_trace = ref ([] : (int * term * term) list)
@@ -418,10 +437,17 @@ structure Refute_Cert_Model = struct
                else NONE of
               SOME theorem => SOME theorem
             | NONE =>
-                if #enable_omega policy then
-                  prove_by_conversion "Presburger leaf" depth
-                    Omega.OMEGA_CONV goal
-                else NONE
+                case if #enable_omega policy then
+                       prove_by_conversion "Presburger leaf" depth
+                         Omega.OMEGA_CONV goal
+                     else NONE of
+                    SOME theorem => SOME theorem
+                  | NONE =>
+                      if #enable_real_arith policy andalso
+                         mentions_real goal then
+                        prove_by_conversion "real linear arithmetic leaf"
+                          depth real_arith_conv goal
+                      else NONE
         end
 
       val (variables, closure, body) = closure_of original
@@ -741,8 +767,12 @@ structure Refute_Cert_Model = struct
                   | _ => false) direct_skolems);
               emit_terms OrdinaryBinding direct_bindings;
               List.app (emit_hint ReconstructedSkolem) direct_skolems;
-              List.app (emit_hint ReconstructedTypeValue) direct_types;
+              (* [DirectHint] (an explicitly-supplied targeted hint, e.g.
+                 the real-Frac literal) before [TypeValue] (bulk type
+                 enumeration): a targeted hint must not be starved by
+                 [max_generated_candidates] behind same-typed filler. *)
               List.app (emit_hint GenericHint) direct_generic;
+              List.app (emit_hint ReconstructedTypeValue) direct_types;
               emit_terms ActiveVariable direct_active;
               List.app provenance_application hint_pool;
               List.app applications_of pool_base;
@@ -803,12 +833,23 @@ structure Refute_Cert_Model = struct
                 if #enable_omega policy then
                   Tactical.TRY Omega.OMEGA_TAC
                 else Tactical.ALL_TAC
+              (* Unlike [decision_leaf]'s single-formula gate,
+                 [REAL_ASM_ARITH_TAC] consumes assumptions too, so the
+                 gate must see the whole goal - every assumption plus the
+                 conclusion - not the conclusion alone. *)
+              fun real_goal (goal as (asl, w)) =
+                if #enable_real_arith policy andalso
+                   List.exists mentions_real (w :: asl)
+                then
+                  (real_arith_attempts := !real_arith_attempts + 1;
+                   Tactical.TRY realLib.REAL_ASM_ARITH_TAC goal)
+                else Tactical.ALL_TAC goal
               fun account goal =
                 (charge "induction constructor obligation" depth;
                  leaf_attempts := !leaf_attempts + 1;
                  Tactical.EVERY
                    [introductions, simplify_goal, assumptions,
-                    simplify_goal, taut_goal, omega_goal]
+                    simplify_goal, taut_goal, omega_goal, real_goal]
                    goal)
             in
               account
@@ -1094,6 +1135,7 @@ structure Refute_Cert_Model = struct
          case_branches = !case_branches,
          induction_attempts = !induction_attempts,
          leaf_attempts = !leaf_attempts,
+         real_arith_attempts = !real_arith_attempts,
          schematic_attempts = 0,
          completion_attempts = 0,
          candidate_trace = rev (!candidate_trace),
@@ -1149,7 +1191,8 @@ structure Refute_Cert_Model = struct
      enable_induction = #enable_induction policy,
      enable_synthesis = #enable_synthesis policy,
      enable_taut = #enable_taut policy,
-     enable_omega = #enable_omega policy}
+     enable_omega = #enable_omega policy,
+     enable_real_arith = #enable_real_arith policy}
 
   fun add_diagnostics (left : diagnostics) (right : diagnostics) issue
         schematic_attempts completion_attempts : diagnostics =
@@ -1171,6 +1214,8 @@ structure Refute_Cert_Model = struct
      induction_attempts = #induction_attempts left +
        #induction_attempts right,
      leaf_attempts = #leaf_attempts left + #leaf_attempts right,
+     real_arith_attempts = #real_arith_attempts left +
+       #real_arith_attempts right,
      schematic_attempts = schematic_attempts,
      completion_attempts = completion_attempts,
      candidate_trace = #candidate_trace left @ #candidate_trace right,
@@ -1192,6 +1237,7 @@ structure Refute_Cert_Model = struct
      case_branches = #case_branches stats,
      induction_attempts = #induction_attempts stats,
      leaf_attempts = #leaf_attempts stats,
+     real_arith_attempts = #real_arith_attempts stats,
      schematic_attempts = schematic,
      completion_attempts = completion,
      candidate_trace = #candidate_trace stats,
@@ -1240,6 +1286,10 @@ structure Refute_Cert_Model = struct
         end
 
       val (schematic_result, schematic_stats0) = run env hints
+      (* [null holes] below means "every env value is closed", not just "no
+         hole was declared" - callers (e.g. [certification_env_with_holes])
+         must drop, never authorize, a binding with a stray free variable
+         when it declares no matching hole. *)
       val schematic_kind =
         case schematic_result of
             DiscardedByWholeFormulaEval => Exact
@@ -1356,6 +1406,7 @@ structure Refute_Cert_Model = struct
          case_branches = #case_branches stats,
          induction_attempts = #induction_attempts stats,
          leaf_attempts = #leaf_attempts stats,
+         real_arith_attempts = #real_arith_attempts stats,
          schematic_attempts = #schematic_attempts stats,
          completion_attempts = #completion_attempts stats,
          candidate_trace = #candidate_trace stats,

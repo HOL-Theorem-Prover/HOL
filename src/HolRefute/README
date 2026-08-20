@@ -105,10 +105,12 @@ It first prefers values with matching Skolem provenance, then ordinary model
 bindings and reconstructed type values.  If those do not close the negated
 goal, replay may use bounded constructor synthesis, exhaustive one-layer
 datatype cases, regular single-property datatype induction, propositional
-tautology proving, and Presburger arithmetic.  Lists, ordinary records and
-enums, and regular recursive datatypes such as `zoo_tree` are supported by
-these paths.  Every exported certificate has the exact negated closed goal,
-no hypotheses, and no untrusted oracle tag.
+tautology proving, Presburger arithmetic, and linear real arithmetic
+(`realLib.REAL_ARITH`, gated on the goal containing a `real`-typed
+subterm).  Lists, ordinary records and enums, and regular recursive
+datatypes such as `zoo_tree` are supported by these paths.  Every exported
+certificate has the exact negated closed goal, no hypotheses, and no
+untrusted oracle tag.
 
 Partially reconstructed model-finder values have a separate private replay
 view.  Its `?`, `_`, and `...` fragments are fresh schematic variables with
@@ -460,10 +462,31 @@ Registrations are session-local ML state and create no theory content:
   demand rather than at load time, and its display transformation prints
   reconstructed atoms as real literals -- `3 / 4`, `3` for a unit
   denominator or a zero numerator, never `rat_cons`'s `//`.  Certification
-  (`certify=true`, the default) is attempted on a real Frac counterexample
-  exactly as on any other: measured, its computeLib replay comes back
+  (`certify=true`, the default) is attempted on a real Frac counterexample,
+  but not exactly as on any other: `frac$abs_frac` is `int # int -> frac`
+  (`src/rational/fracScript.sml`), so it retypes natively to neither
+  `real` nor `rat`, and replay sees an opaque reserved variable for both
+  alike.  For a qualifying `:real` binding, that variable's value is
+  dropped from the certification env rather than authorized, and the
+  atom's genuine real-literal value (recovered the same way the display
+  transformation reads it) is offered to replay separately as an
+  untrusted candidate hint, never as a trusted term; a linear
+  real-arithmetic leaf (`realLib.REAL_ARITH`) can then close goals
+  computeLib alone cannot.  A nonlinear instance still comes back
   inconclusive (`cert = NONE`, `certainty` unchanged) -- valid and
-  expected under the trust model, not a blocker.
+  expected under the trust model, not a blocker.  `rat` counterexamples
+  are unaffected: the candidate-hint mechanism is deliberately scoped to
+  `real`-typed atoms by a structural check (type, application shape, and
+  reserved-name check), so a `rat` binding's identically-shaped reserved
+  atom instead fails that scope check outright -- the certification env
+  is never built, `certification_copy` returns `NONE`, and `certify`
+  falls back to `Keep base`, exactly as before this mechanism existed.
+  Extending it to `rat` would need a rat-capable arithmetic leaf and is a
+  recorded follow-up, not implemented here.  A successful real-Frac
+  replay reports `model = NONE`, and any `evals` row whose evaluated
+  term still has a free variable (e.g. the dropped binding's own
+  variable) is dropped rather than displayed half-evaluated -- only
+  kernel-established values are shown.
 
 Structural registration types use distinct type variables as parameters.
 Abs, rep, case, and constructor terms must be existing constants.  A later
