@@ -28,6 +28,7 @@ sig
   structure Thm : Thm where type tag = Tag.tag
                             and type hol_type = Type.hol_type
                             and type term = Term.term
+  structure Context : FinalContext
 end
 
 structure Kernel :> KERNEL =
@@ -37,6 +38,7 @@ struct
   structure Term = Term
   structure Net = Net
   structure Thm = Thm
+  structure Context = Context
 end
 
 open Kernel
