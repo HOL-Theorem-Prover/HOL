@@ -607,9 +607,21 @@ fun find_includes0 dirname =
   in
     if OS.FileSys.access(hm_fname, [OS.FileSys.A_READ]) then
       let
-        val (e, _, _, _) = diagread silent_diags hm_fname (base_environment())
-        val raw_incs = readlist silent_diags e "INCLUDES" @
-                       readlist silent_diags e "PRE_INCLUDES"
+        val base = base_environment()
+        (* Under `dirname': INCLUDES may use $(wildcard ...), which
+           globs the process cwd, and this parse services *other*
+           directories' Holmakefiles from a fixed cwd. `dirname' is
+           absolute -- `find_includes' normalises it -- so `hm_fname'
+           still resolves once we are there. *)
+        val raw_incs =
+            pushdir dirname
+              (fn () =>
+                  let
+                    val (e, _, _, _) = diagread silent_diags hm_fname base
+                  in
+                    readlist silent_diags e "INCLUDES" @
+                    readlist silent_diags e "PRE_INCLUDES"
+                  end) ()
       in
         map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
             raw_incs
@@ -664,18 +676,30 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
              read once via diagread in Holmake.sml's get_hmf0 with the
              real channels.  This call services ancestors' Holmakefiles
              during INCLUDES traversal. *)
-          val (env, _, _, _) = read (dir ++ "Holmakefile") base_env
-          fun envlist id =
-              map dequote (tokenize (perform_substitution
-                                       internal_functions.default_diags
-                                       env [VREF id]))
+          (* Same reason as `find_includes0': the parse and the
+             INCLUDES expansions belong to `dir', not to the fixed cwd
+             this traversal runs from.  `dir' is absolute. *)
+          val (raw_pre, raw_post) =
+              pushdir dir
+                (fn () =>
+                    let
+                      val (env, _, _, _) = read (dir ++ "Holmakefile") base_env
+                      fun envlist id =
+                          map dequote
+                              (tokenize
+                                 (perform_substitution
+                                    internal_functions.default_diags
+                                    env [VREF id]))
+                    in
+                      (envlist "PRE_INCLUDES", envlist "INCLUDES")
+                    end) ()
           fun diag nm incs =
               if null incs orelse verbosity < 2 then ()
               else
                 print (nm ^ " = " ^ String.concatWith ", " incs ^ "\n")
-          val pre_incs = map (canonicalise dir) (envlist "PRE_INCLUDES")
+          val pre_incs = map (canonicalise dir) raw_pre
           val _ = diag "PRE_INCLUDES" pre_incs
-          val post_incs = map (canonicalise dir) (envlist "INCLUDES")
+          val post_incs = map (canonicalise dir) raw_post
           val _ = diag "INCLUDES" post_incs
           fun maybeinsert(m,k,v) =
               if null v then m else Binarymap.insert(m,k,v)

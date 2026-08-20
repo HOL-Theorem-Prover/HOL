@@ -4,6 +4,7 @@ DIRNAMES = \
   altquote1 \
   brokenstrings \
   clinevars \
+  cross_dir_expansion \
   cross_dir_rule \
   holpathdb/proj2 \
   holpathdb/proj2/proj2A \

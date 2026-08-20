@@ -1,0 +1,12 @@
+# `marker's' recipe echoes $(DEFAULT_TARGETS), which expands to a
+# $(wildcard *.sml) over whichever directory is the process cwd at
+# substitution time.  Here that must be this directory, naming
+# producerOnly.uo -- not the sibling that referenced the target.
+#
+# $(DEFAULT_TARGETS) is only ever echoed as a string, never used as a
+# prerequisite, so producerOnly.uo is never compiled and the test needs
+# no ML compiler.
+marker:
+	echo $(DEFAULT_TARGETS) > $@
+
+EXTRA_CLEANS = marker

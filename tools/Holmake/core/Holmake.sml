@@ -297,6 +297,31 @@ type pctxt = { cfg : HMProject.config,
                excludes : string list,
                nested : string list }
 
+(* Expanding a Holmakefile's quotations must happen with that
+   Holmakefile's own directory as the process cwd.  `$(wildcard ...)'
+   globs `OS.FileSys.getDir()' (internal_functions.wildcard), and the
+   built-in `$(DEFAULT_TARGETS)' is a wildcard underneath, so it names
+   whatever directory we happen to be standing in.  `$(shell ...)' and
+   `$(tee ...)' are cwd-relative too.
+
+   Rule *dependencies* are substituted during the parse, which
+   `get_hmf_for_dir' already runs under the right cwd.  Recipes and
+   `envlist' reads happen later, from wherever the directory walk has
+   reached, so every expansion of a *foreign* directory's env has to
+   re-establish that directory first.  Without it a cross-directory rule
+   (`find_rule's' home branch) expands `$(DEFAULT_TARGETS)' against the
+   referencing directory and hands the recipe another directory's files.
+
+   `pushdir' restores the old cwd on the exception path too; the guard
+   makes the common already-there case free.
+
+   This covers the envs held in `hmcache'.  ReadHMF's own
+   holpathdb/INCLUDES discovery reads (`find_includes',
+   `extend_path_with_includes') use `pushdir' directly for the same
+   reason. *)
+fun in_hmf_dir absdir f =
+    if absdir = FileSys.getDir() then f () else pushdir absdir f ()
+
 local
   open hm_target
   val base = extend_with_cline_vars (read_holpathdb())
@@ -574,17 +599,23 @@ fun get_hmf_for_dir absdir =
         SOME r => (mark_known absdir; r)
       | NONE =>
         let
-          val cur = FileSys.getDir()
-          val need_chdir = cur <> absdir
-          val () = if need_chdir then FileSys.chDir absdir else ()
-          val (result as (env, _, _, _)) =
-              get_hmf0 absdir
-              handle e => (if need_chdir then FileSys.chDir cur else ();
-                           raise e)
-          val () = if need_chdir then FileSys.chDir cur else ()
           val dir_hm = hmdir.fromPath {origin = "", path = absdir}
-          val incs = envlist hmf_diags env "INCLUDES" |> slist_to_dset dir_hm
-          val pres = envlist hmf_diags env "PRE_INCLUDES" |> slist_to_dset dir_hm
+          (* The parse and the INCLUDES/PRE_INCLUDES expansion both run
+             under `absdir'.  The latter used to run after the cwd had
+             been put back, so `INCLUDES = $(wildcard ...)' globbed
+             whichever directory asked. *)
+          val (result, incs, pres) =
+              in_hmf_dir absdir
+                (fn () =>
+                    let
+                      val result as (env, _, _, _) = get_hmf0 absdir
+                    in
+                      (result,
+                       envlist hmf_diags env "INCLUDES"
+                               |> slist_to_dset dir_hm,
+                       envlist hmf_diags env "PRE_INCLUDES"
+                               |> slist_to_dset dir_hm)
+                    end)
         in
           hmcache := Binarymap.insert (!hmcache, absdir, result);
           mark_known absdir;
@@ -615,20 +646,22 @@ val excludes_for = excludes_for
 val modep_for = modep_for
 val owning_root = owning_root
 
-(* `limit_for_dir' must not trigger a Holmakefile read here: doing
-   so would chdir under code in `build_depgraph' that captures
-   `FileSys.getDir()' for rule lookup.  We only consult `hmcache'
-   directly.  If the dir's Holmakefile hasn't been read by the
-   normal `recursively' traversal (e.g. foreign-external nodes such
-   as sigobj references), we return NONE -- those nodes don't drive
-   jobs in this Holmake, so the limit is moot. *)
+(* `limit_for_dir' must not trigger a Holmakefile read here: reading a
+   stranger Holmakefile speculatively would fire any `$(error ...)' in
+   it.  We only consult `hmcache' directly.  If the dir's Holmakefile
+   hasn't been read by the normal `recursively' traversal (e.g.
+   foreign-external nodes such as sigobj references), we return NONE --
+   those nodes don't drive jobs in this Holmake, so the limit is moot.
+   The expansion goes through `in_hmf_dir': the env is `absdir's', not
+   that of wherever the walk currently stands. *)
 fun limit_for_dir (d : hmdir.t) : int option =
     let val absdir = hmdir.toAbsPath d
     in
       case Binarymap.peek(!hmcache, absdir) of
           NONE => NONE
         | SOME (env, _, _, _) =>
-          case envlist hmf_diags env "LOCAL_PARALLELISM_LIMIT" of
+          case in_hmf_dir absdir
+                 (fn () => envlist hmf_diags env "LOCAL_PARALLELISM_LIMIT") of
               [] => NONE
             | [s] =>
               (case Int.fromString s of
@@ -1063,8 +1096,10 @@ fun find_rule t =
       else if home_has then
         (case home_data of
             SOME (env', rules', _, _) =>
+              (* Expanded in `tgt_dir', not here; see `in_hmf_dir'. *)
               Option.map (fn r => (r, tgt_dir))
-                         (get_rule_info rules' env' t)
+                         (in_hmf_dir tgt_dir_abs
+                                     (fn () => get_rule_info rules' env' t))
           | NONE => NONE)
       else NONE
     end
@@ -1599,10 +1634,16 @@ let
      `node.dir' (the cwd ProcessMultiplexor chdir's into before
      running the recipe). *)
   val rh = rule_home tgt
-  val (env, _, _, _) = get_hmf_for_dir (hmdir.toAbsPath rh)
-  val extra = GraphExtra.get_extra { master_dir = original_dir,
-                                     master_cline = option_value,
-                                     envlist = envlist hmf_diags env }
+  val rh_abs = hmdir.toAbsPath rh
+  val (env, _, _, _) = get_hmf_for_dir rh_abs
+  (* HOLHEAP and friends come from `rh's' Holmakefile, so the callback
+     binds the cwd to `rh' rather than to whatever directory the walk
+     is scanning. *)
+  val extra = GraphExtra.get_extra
+                { master_dir = original_dir,
+                  master_cline = option_value,
+                  envlist = fn k => in_hmf_dir rh_abs
+                                      (fn () => envlist hmf_diags env k) }
   val extra_deps = if GraphExtra.canIgnore tgt extra then []
                    else GraphExtra.extra_deps extra
   val diag = fn f => diag "builddepgraph"
@@ -1984,7 +2025,13 @@ fun hmf_referenced_dirs absdir =
     let
       val (env, rules, _, _) = get_hmf_for_dir absdir
       val dir_hm = hmdir.fromPath {origin = "", path = absdir}
-      fun dset k = envlist hmf_diags env k |> slist_to_dset dir_hm
+      (* `env' is `absdir's', not the caller's: expand it there, both
+         keys under the one chdir as `get_hmf_for_dir' does. *)
+      val (incs, pres) =
+          in_hmf_dir absdir
+            (fn () => (envlist hmf_diags env "INCLUDES",
+                       envlist hmf_diags env "PRE_INCLUDES"))
+      val dset = slist_to_dset dir_hm
       fun absdirs ds = List.map hmdir.toAbsPath (listItems ds)
       fun tgtdir t = hmdir.toAbsPath (hm_target.dirpart t)
       fun undefined t = not (isSome (Binarymap.peek(rules, t)))
@@ -1995,8 +2042,8 @@ fun hmf_referenced_dirs absdir =
             [] rules
     in
       listItems
-        (set_addList (absdirs (dset "INCLUDES") @
-                      absdirs (dset "PRE_INCLUDES") @ prereq_dirs)
+        (set_addList (absdirs (dset incs) @
+                      absdirs (dset pres) @ prereq_dirs)
                      empty_strset)
     end
 
