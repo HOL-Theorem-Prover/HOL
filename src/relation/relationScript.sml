@@ -2033,13 +2033,13 @@ val _ = TeX_notation { hol = UnicodeChars.subset ^ UnicodeChars.sub_r,
                        TeX = ("\\HOLTokenRSubset{}", 1) }
 
 Theorem RSUBSET_REFL:
-  R RSUBSET R
+  ∀R. R RSUBSET R
 Proof
   SRW_TAC[][RSUBSET]
 QED
 
 Theorem RSUBSET_TRANS:
-  P RSUBSET Q ∧ Q RSUBSET R ==> P RSUBSET R
+  ∀R1 R2 R3. R1 RSUBSET R2 ∧ R2 RSUBSET R3 ==> R1 RSUBSET R3
 Proof
   SRW_TAC[][RSUBSET]
 QED
@@ -2653,54 +2653,60 @@ Proof
 QED
 
 (* ==========================================================================
-   Some theorems about interaction between the relation operators
-   Naming convention used below:
-     P, Q, R  : relations ('a -> 'a -> bool)
-     f, g     : predicates on relations ('a -> 'a -> bool) -> bool,
-                e.g. reflexive, symmetric, transitive, equivalence
-     a, b     : relation transformers/operators
-                (('a -> 'a -> bool) -> 'a -> 'a -> bool),
-                e.g closures like RC, SC, TC, RTC, EQC
+   Some theorems about interaction between the relation operators, of type
+   b: ('a -> 'a -> bool) -> 'a -> 'a -> bool
    ===========================================================================*)
 
+Theorem RUNION_IDEMPOT[simp]:
+  ∀R. R ∪ᵣ R = R
+Proof
+  SRW_TAC[][FUN_EQ_THM, RUNION]
+QED
+
+Theorem RINTER_IDEMPOT[simp]:
+  ∀R. R ∩ᵣ R = R
+Proof
+  SRW_TAC[][FUN_EQ_THM, RINTER]
+QED
+
 Theorem RUNION_RSUBSET:
-  ∀P Q R. P ∪ᵣ Q ⊆ᵣ R <=> P ⊆ᵣ R ∧ Q ⊆ᵣ R
+  ∀R1 R2 R3. R1 ∪ᵣ R2 ⊆ᵣ R3 <=> R1 ⊆ᵣ R3 ∧ R2 ⊆ᵣ R3
 Proof
   SRW_TAC[][RUNION, RSUBSET] >> METIS_TAC[]
 QED
 
 Theorem RINTER_RSUBSET:
-  ∀P Q R. P ⊆ᵣ R ∨ Q ⊆ᵣ R ==> P ∩ᵣ Q ⊆ᵣ R
+  ∀R1 R2 R3. R1 ⊆ᵣ R3 ∨ R2 ⊆ᵣ R3 ==> R1 ∩ᵣ R2 ⊆ᵣ R3
 Proof
   SRW_TAC[][RINTER, RSUBSET] >> METIS_TAC[]
 QED
 
 Theorem RSUBSET_RUNION:
-  ∀R P Q. R ⊆ᵣ P ∨ R ⊆ᵣ Q ==> R ⊆ᵣ P ∪ᵣ Q
+  ∀R1 R2 R3. R1 ⊆ᵣ R2 ∨ R1 ⊆ᵣ R3 ==> R1 ⊆ᵣ R2 ∪ᵣ R3
 Proof
   SRW_TAC[][RUNION, RSUBSET] >> METIS_TAC[]
 QED
 
 Theorem RSUBSET_RINTER:
-  ∀R P Q. R ⊆ᵣ P ∩ᵣ Q <=> R ⊆ᵣ P ∧ R ⊆ᵣ Q
+  ∀R1 R2 R3. R1 ⊆ᵣ R2 ∩ᵣ R3 <=> R1 ⊆ᵣ R2 ∧ R1 ⊆ᵣ R3
 Proof
   SRW_TAC[][RINTER, RSUBSET] >> METIS_TAC[]
 QED
 
 Theorem INV_RUNION:
-  ∀P Q. (P ∪ᵣ Q)ᵀ = Pᵀ ∪ᵣ Qᵀ
+  ∀R1 R2. (R1 ∪ᵣ R2)ᵀ = R1ᵀ ∪ᵣ R2ᵀ
 Proof
   SRW_TAC[][FUN_EQ_THM, RUNION] >> METIS_TAC[]
 QED
 
 Theorem INV_RINTER:
-  ∀P Q. (P ∩ᵣ Q)ᵀ = Pᵀ ∩ᵣ Qᵀ
+  ∀R1 R2. (R1 ∩ᵣ R2)ᵀ = R1ᵀ ∩ᵣ R2ᵀ
 Proof
   SRW_TAC[][FUN_EQ_THM, RINTER] >> METIS_TAC[]
 QED
 
 Theorem INV_RSUBSET:
-  ∀P Q. Pᵀ ⊆ᵣ Q <=> P ⊆ᵣ Qᵀ
+  ∀R1 R2. R1ᵀ ⊆ᵣ R2 <=> R1 ⊆ᵣ R2ᵀ
 Proof
   SRW_TAC[][EQ_IMP_THM, RSUBSET]
 QED
@@ -2712,13 +2718,13 @@ Proof
 QED
 
 Theorem SYMMETRIC_RUNION:
-  ∀P Q. symmetric P ∧ symmetric Q ==> symmetric (P ∪ᵣ Q)
+  ∀R1 R2. symmetric R1 ∧ symmetric R2 ==> symmetric (R1 ∪ᵣ R2)
 Proof
   SRW_TAC[][symmetric_def, RUNION]
 QED
 
 Theorem SYMMETRIC_RINTER:
-  ∀P Q. symmetric P ∧ symmetric Q ==> symmetric (P ∩ᵣ Q)
+  ∀R1 R2. symmetric R1 ∧ symmetric R2 ==> symmetric (R1 ∩ᵣ R2)
 Proof
   SRW_TAC[][symmetric_def, RINTER]
 QED
@@ -2727,7 +2733,7 @@ QED
 val rmonotone_def = new_definition(
   "rmonotone_def",
   ``rmonotone (b: ('a -> 'a -> bool) -> 'a -> 'a -> bool) <=>
-    ∀P Q. P ⊆ᵣ Q ==> b P ⊆ᵣ b Q``
+    ∀R1 R2. R1 ⊆ᵣ R2 ==> b R1 ⊆ᵣ b R2``
 );
 
 (* Used to convert existing theorems *)
@@ -2745,26 +2751,26 @@ Theorem rmonotone_closures[simp] =
   |> LIST_CONJ;
 
 Theorem rmonotone_RUNION:
-  ∀P. rmonotone ($RUNION P)
+  ∀R. rmonotone ($RUNION R)
 Proof
   SRW_TAC[][rmonotone_def, RUNION_RSUBSET, RSUBSET_RUNION, RSUBSET_REFL]
 QED
 
 Theorem rmonotone_RINTER:
-  ∀P. rmonotone ($RINTER P)
+  ∀R. rmonotone ($RINTER R)
 Proof
   SRW_TAC[][rmonotone_def, RINTER_RSUBSET, RSUBSET_RINTER, RSUBSET_REFL]
 QED
 
-(* If you have a relation P with property f, then b P also has property f *)
+(* If you have a relation R with property P, then b R also has property P *)
 val rpreserves_def = new_definition(
   "rpreserves_def",
-  ``rpreserves (f: ('a -> 'a -> bool) -> bool) b <=>
-    ∀P. f P ==> f (b P)``
+  ``rpreserves (P: ('a -> 'a -> bool) -> bool) b <=>
+    ∀R. P R ==> P (b R)``
 );
 
 Theorem rpreserves_o:
-  ∀f a b. rpreserves f a ∧ rpreserves f b ==> rpreserves f (a o b)
+  ∀P a b. rpreserves P a ∧ rpreserves P b ==> rpreserves P (a o b)
 Proof
   SRW_TAC[][rpreserves_def]
 QED
@@ -2802,33 +2808,31 @@ Proof
   SRW_TAC[][symmetric_inv_identity, rpreserves_def]
 QED
 
-(* C is the closure operator for property f, so
-  (1) C R has property f
+(* C is the closure operator for property P, so
+  (1) C R has property P
   (2) R ⊆ᵣ C R
-  (3) C R is the smallest such relation, in the sense that
-      if P is a relation satisfying (1) and (2), then C R ⊆ᵣ P
+  (3) C R2 is the smallest such relation for R2, in the sense that
+      if R1 is a relation satisfying (1) and (2), then C R1 ⊆ᵣ R2
   *)
 val is_closure_op_def = new_definition(
   "is_closure_op_def",
-  ``is_closure_op f b <=>
-    ∀R. f (b R) ∧ R ⊆ᵣ (b R) ∧ ∀P. f P ∧ R ⊆ᵣ P ==> b R ⊆ᵣ P``
+  ``is_closure_op P C <=>
+    (∀R. P (C R)) ∧
+    (∀R. R ⊆ᵣ (C R)) ∧
+    (∀R1 R2. P R2 ∧ R1 ⊆ᵣ R2 ==> C R1 ⊆ᵣ R2)``
 );
 
 Theorem is_closure_op_closed:
-  ∀f C R. is_closure_op f C ==> f (C R)
+  ∀P C R. is_closure_op P C ==> P (C R)
 Proof
   SRW_TAC[][is_closure_op_def]
 QED
 
 Theorem is_closure_op_rmonotone:
-  ∀f C. is_closure_op f C ==> rmonotone C
+  ∀P C. is_closure_op P C ==> rmonotone C
 Proof
-  SRW_TAC[][is_closure_op_def, rmonotone_def]
-  >> FIRST_ASSUM $ Q.SPEC_THEN `Q` MP_TAC
-  >> FIRST_X_ASSUM $ Q.SPEC_THEN `P` MP_TAC
-  >> SRW_TAC[][]
-  >> LAST_X_ASSUM $ Q.SPEC_THEN `C Q` MP_TAC
-  >> METIS_TAC[RSUBSET_TRANS]
+  SRW_TAC[][is_closure_op_def, rmonotone_def, RSUBSET]
+  >> METIS_TAC[]
 QED
 
 Theorem is_closure_op_reflexive_RC[simp]:
@@ -2854,7 +2858,7 @@ Proof
 QED
 
 Theorem RMONOTONE_IMP_CLOSURE_RSUBSET:
-  ∀f C b. is_closure_op f C ∧ rmonotone b ∧ rpreserves f b ==> C (b R) ⊆ᵣ b (C R)
+  ∀P C b. is_closure_op P C ∧ rmonotone b ∧ rpreserves P b ==> ∀R. C (b R) ⊆ᵣ b (C R)
 Proof
   SRW_TAC[][] >> drule $ iffLR is_closure_op_def >> STRIP_TAC
   >> LAST_X_ASSUM $ Q.SPEC_THEN `b R` MP_TAC >> SRW_TAC[][]

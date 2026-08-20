@@ -4372,9 +4372,9 @@ applied to the transitive closure of the symmetric closure of
 These closures are an example of a relation transformer, which are of type
 $b:(\alpha\to\alpha\to\konst{bool})\to\alpha\to\alpha\to\konst{bool}$. A
 transformer is monotone (`rmonotone`) if it respects `RSUBSET`. A transformer
-preserves a property `f` (`rpreserves`) if relations with property `f` continue
-to have property `f` after being transformed. Finally, a transformer `b` is the
-closure of a property `f` when it maps all relations `R` to their `f`-closures.
+preserves a property `P` (`rpreserves`) if relations with property `P` continue
+to have property `P` after being transformed. Finally, a transformer `b` is the
+closure of a property `P` when it maps all relations `R` to their `P`-closures.
 Theorems for these transformer properties involving the relation properties/closures
 above have been added to the simpset.
 
