@@ -1636,14 +1636,17 @@ let
   val rh = rule_home tgt
   val rh_abs = hmdir.toAbsPath rh
   val (env, _, _, _) = get_hmf_for_dir rh_abs
-  (* HOLHEAP and friends come from `rh's' Holmakefile, so the callback
-     binds the cwd to `rh' rather than to whatever directory the walk
-     is scanning. *)
-  val extra = GraphExtra.get_extra
-                { master_dir = original_dir,
-                  master_cline = option_value,
-                  envlist = fn k => in_hmf_dir rh_abs
-                                      (fn () => envlist hmf_diags env k) }
+  (* HOLHEAP comes from `rh's' Holmakefile, and GraphExtra turns it into
+     a target with `filestr_to_tgt', which resolves a relative path
+     against the cwd.  So the whole call runs in `rh' -- expansion and
+     path resolution alike.  Wrapping only the envlist callback would
+     expand the string correctly and then resolve `HOLHEAP = sub/x'
+     against whichever directory the walk happened to be scanning. *)
+  val extra =
+      in_hmf_dir rh_abs
+        (fn () => GraphExtra.get_extra { master_dir = original_dir,
+                                         master_cline = option_value,
+                                         envlist = envlist hmf_diags env })
   val extra_deps = if GraphExtra.canIgnore tgt extra then []
                    else GraphExtra.extra_deps extra
   val diag = fn f => diag "builddepgraph"
