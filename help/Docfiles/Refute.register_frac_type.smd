@@ -33,6 +33,7 @@ free datatype, or codatatype classification.
 ### See also
 
 [`Refute.register_frac_type_rat`](#Refute.register_frac_type_rat),
+[`Refute.register_frac_type_real`](#Refute.register_frac_type_real),
 [`Refute.register_ersatz`](#Refute.register_ersatz),
 [`Refute.register_term_postprocessor`](#Refute.register_term_postprocessor),
 [`Refute.register_quotient`](#Refute.register_quotient),

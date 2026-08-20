@@ -455,8 +455,15 @@ Registrations are session-local ML state and create no theory content:
   and the built-in transformation, which displays reconstructed Frac atoms
   with `rat_cons`'s `//` syntax.  Example 12 shows the registered encoding
   in use on a `rat` goal; the registration calls themselves are exercised by
-  `selftest.sml`.  Support for `real` via Frac is deferred; certification of
-  real literals is a real blocker.
+  `selftest.sml`.  `real` via the same Frac carrier is implemented but
+  opt-in: `Refute.register_frac_type_real ()` installs it (idempotently) on
+  demand rather than at load time, and its display transformation prints
+  reconstructed atoms as real literals -- `3 / 4`, `3` for a unit
+  denominator or a zero numerator, never `rat_cons`'s `//`.  Certification
+  (`certify=true`, the default) is attempted on a real Frac counterexample
+  exactly as on any other: measured, its computeLib replay comes back
+  inconclusive (`cert = NONE`, `certainty` unchanged) -- valid and
+  expected under the trust model, not a blocker.
 
 Structural registration types use distinct type variables as parameters.
 Abs, rep, case, and constructor terms must be existing constants.  A later
@@ -543,10 +550,21 @@ piecemeal by whichever goals happen to mention a type first can call it; the
 demand-driven lazy harvest remains the default and is unaffected.
 
 The normalized Frac/ersatz encoding for `rat` is registered by default.
-Support for `real` via Frac remains deferred because certification of real
-literals is unresolved.  Relation inverse and composition (`inv` and `O`)
-already have native monotonicity rules, with dedicated verdict, scope,
-soundness, and certified argument-order coverage.  Relation identity (`Id`)
+The analogous `real` encoding on the same Frac carrier is implemented but
+opt-in (`Refute.register_frac_type_real ()`); it excludes `real_ge` and
+`real_gt` for symmetry with the `rat` encoding, which excludes `rat_geq`
+and `rat_gre`.  The exclusion is harmless because each is an ordinary,
+non-recursive `Definition` naming its `<`/`<=` dual: `is_equational_fun`
+keeps it un-inlined, and `equational_fun_axioms` hands the Definition to
+`add_axiom`, whose right-hand side reaches the ersatz table on the next
+unfolding pass.  Measured at matched scope and boundary values, this
+reaches an identical verdict either way: a goal phrased purely with
+`real_ge`/`real_gt` (or `rat_geq`/`rat_gre`) refutes at the same scope,
+with the same witness, as its definitional `<=`/`<` dual -- no
+refutation power is lost by leaving them out of the ersatz table.
+Relation inverse and composition (`inv` and `O`) already have native
+monotonicity rules, with dedicated verdict, scope, soundness, and
+certified argument-order coverage.  Relation identity (`Id`)
 is HOL4 notation for `(=)` rather than a constant of its own, so there is
 nothing to unfold: it is eta-expanded to a partial application of equality
 and encoded as a singleton set.  The `Iden` nut constant and its Kodkod
@@ -682,6 +700,6 @@ scope-arbitrary-read defect this guard exists to close.  HolRefute reports
 `Unknown` instead and does not reproduce the imported bug.
 
 Recorded follow-ups are compute-hosted residual-inspection narrowing; full
-function flattening; higher-order and negative smart-generator modes; `real`
-via Frac; and offset interval rewrites such as `lo <= n /\ n < hi`.  These are
-not part of the current implementation.
+function flattening; higher-order and negative smart-generator modes; and
+offset interval rewrites such as `lo <= n /\ n < hi`.  These are not part
+of the current implementation.

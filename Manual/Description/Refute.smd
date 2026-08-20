@@ -294,8 +294,8 @@ The model finder translates the original polymorphic problem into a
 bounded relational formula.  It handles finite scopes, datatypes and
 codatatypes, functions, sets, inductive and coinductive predicates,
 typedefs, quotients, binary integers, machine words, and the registered
-`rat` fraction encoding.  Its `Scope:` line records the exact finite
-interpretation.
+`rat` (default) and opt-in `real` fraction encodings.  Its `Scope:` line
+records the exact finite interpretation.
 For example:
 
 ```{=latex}
@@ -743,7 +743,11 @@ replaces the old one.
   axiom.
 * `register_frac_type {tyop, ersatz}` supplies a fraction representation
   and replacements.  `register_frac_type_rat ()` idempotently restores
-  the built-in rational registration.  `register_ersatz` adds an
+  the built-in rational registration, installed by default.
+  `register_frac_type_real ()` idempotently installs the analogous `real`
+  registration on the same Frac carrier; unlike the rational one, it is
+  opt-in and must be called explicitly, once per session, before a `real`
+  goal reaches the Frac encoding.  `register_ersatz` adds an
   individual original-to-replacement constant mapping.
 * `register_term_postprocessor pattern f` installs a bottom-up,
   display-only model transformation.  Matching transformations compose
@@ -824,8 +828,10 @@ Counterexample search is bounded and incomplete.  In particular:
 * the model finder depends on finite scopes and on the soundness
   conditions reported in `certainty`.  Unsupported encodings are refused
   or downgraded rather than silently called genuine;
-* fraction support covers `rat`, not `real`; certification of reconstructed
-  real literals remains unresolved;
+* fraction support covers `rat` by default and `real` opt-in
+  (`register_frac_type_real`); certification of a Frac counterexample is
+  attempted as usual and, measured, comes back inconclusive
+  (`cert = NONE`), which the trust model accepts rather than blocks;
 * a hand-written definition headed by `fixedPoint$lfp` or `fixedPoint$gfp`
   but absent from the `Hol_reln`/`Hol_coreln` registries is recognized if
   its monotonicity can be discharged automatically; a non-monotone

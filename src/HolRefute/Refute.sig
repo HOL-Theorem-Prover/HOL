@@ -121,6 +121,10 @@ signature Refute = sig
   (* Installed by default; this idempotent entry point restores or refreshes
      the built-in rational registration after session-level customization. *)
   val register_frac_type_rat : unit -> unit
+  (* Opt-in, unlike [register_frac_type_rat]: gives the model finder a
+     [real] encoding on the same Frac carrier.  Not installed by default;
+     call this once per session (idempotently) to enable it. *)
+  val register_frac_type_real : unit -> unit
   val register_ersatz :
     {original : {Thy : string, Name : string},
      replacement : {Thy : string, Name : string}} -> unit

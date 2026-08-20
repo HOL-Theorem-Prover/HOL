@@ -172,6 +172,8 @@ structure Refute :> Refute = struct
   val register_frac_type = Refute_ModelFinder_HOL.register_frac_type
   val register_frac_type_rat =
     Refute_ModelFinder_Model.register_frac_type_rat
+  val register_frac_type_real =
+    Refute_ModelFinder_Model.register_frac_type_real
   fun register_ersatz registration =
     Refute_ModelFinder_HOL.with_registration_lock (fn () =>
       Refute_ModelFinder_HOL.register_ersatz registration)

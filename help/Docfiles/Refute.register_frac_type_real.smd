@@ -1,0 +1,61 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `register_frac_type_real`
+
+``` hol4
+Refute.register_frac_type_real : unit -> unit
+```
+
+------------------------------------------------------------------------
+
+Installs Refute's `real` fraction registration on the same Frac carrier
+used for `rat`.
+
+Unlike `register_frac_type_rat`, this registration is **opt-in**: it is
+not installed when `Refute` is loaded, so a session that wants a `real`
+goal to reach the model finder's Frac encoding must call this once,
+before that goal is refuted.  The registration maps the nullary `real`
+type and its arithmetic, comparison, and numeral constants to the
+corresponding normalized `refute` fraction operations.  `real` has no
+literal constructor of its own (unlike `rat$rat_cons`), so this
+registration has no analogue of `rat`'s twelfth ersatz row.  It also
+installs the display postprocessor that reconstructs model values as
+real literals: a reconstructed Frac atom prints as the bare numerator
+when the denominator is `1` or the numerator is `0`, and otherwise as
+`numerator / denominator`.  A `real` model value never prints with
+`rat_cons`'s `//` syntax.
+
+A finite Frac scope never exhausts the rationals, so this encoding
+never claims exhaustion over `real`: it can find a genuine `real`
+counterexample witnessed by a rational value, but it can never
+conclude `NoCounterexample` for a `real` goal.  Rational values are
+real values and the eleven ersatz operations agree with the real
+operations on rational arguments, so for a goal whose real-typed
+constants all lie in this eleven-row fragment, a Frac counterexample is
+a genuine `real` counterexample; the rationals being a proper subset of
+the reals costs completeness only, never soundness, within that
+fragment.  Other real constants -- `real_of_hreal`/`hreal_of_real`, or
+`realTheory$sup`, whose completeness axiom no finite rational carrier
+realises -- are not covered by these rows; a goal using them stays
+sound through the ordinary choice-guard/`unknown` machinery and can
+only reach `Potential`, never this fragment's stronger `Genuine`.
+
+The operation validates all fraction metadata before changing state and
+commits the fraction and display registrations together.  It is
+session-local, synchronized, atomic, and idempotent.  It creates no HOL
+objects.
+
+### Failure
+
+Fails if the required `realax` or `refute` constants are unavailable or
+if `real` has an incompatible datatype or codatatype classification.  A
+failure leaves both registries unchanged.
+
+### See also
+
+[`Refute.register_frac_type_rat`](#Refute.register_frac_type_rat),
+[`Refute.register_frac_type`](#Refute.register_frac_type),
+[`Refute.register_ersatz`](#Refute.register_ersatz),
+[`Refute.register_term_postprocessor`](#Refute.register_term_postprocessor),
+[`Refute.model_refute`](#Refute.model_refute)
+
+Real model display is described in \ref{Description:the-holrefute-library}.

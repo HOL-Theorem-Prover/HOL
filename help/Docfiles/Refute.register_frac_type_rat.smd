@@ -29,6 +29,7 @@ failure leaves both registries unchanged.
 
 ### See also
 
+[`Refute.register_frac_type_real`](#Refute.register_frac_type_real),
 [`Refute.register_frac_type`](#Refute.register_frac_type),
 [`Refute.register_ersatz`](#Refute.register_ersatz),
 [`Refute.register_term_postprocessor`](#Refute.register_term_postprocessor),

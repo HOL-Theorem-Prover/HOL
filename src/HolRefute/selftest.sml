@@ -2476,6 +2476,42 @@ val _ = require_msg (check_result mf_frac_registration) (fn () =>
   "frac registration, synthetic typedef, or ersatz merge failed")
   (fn () => ()) ()
 
+(* Opt-in real-via-Frac (D-06-1): [register_frac_type_real] is not called
+   at module init, so this test installs and restores it itself.  The real
+   analogue of the [rat_stays_frac] control above: after registration,
+   [real] is classified as a Frac type, not a harvested quotient. *)
+fun mf_real_frac_registration () =
+  with_frac_registry_restored (fn () => let
+    val real_ty = ``:real``
+    val _ = Refute.register_frac_type_real ()
+    val _ = Refute.register_frac_type_real ()
+    val classified =
+      MFH.is_frac_type real_ty andalso MFH.is_typedef real_ty andalso
+      not (MFH.harvest_quotient real_ty) andalso
+      not (MFH.is_quot_type real_ty)
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val replacement =
+      MFH.unfold_defs_in_term context ``realax$real_add``
+    val replacement_name =
+      case Lib.total Term.dest_var replacement of
+          SOME (name, _) => MFN.original_name name
+        | NONE => ""
+    val ersatz_specialized =
+      replacement_name = "refute$plus_frac" andalso
+      Term.type_of replacement = ``:real -> real -> real``
+    val typedef_rep_typed =
+      case MFH.typedef_for_type real_ty of
+          SOME {rep, ...} => Term.type_of rep = ``:real -> int # int``
+        | NONE => false
+  in
+    classified andalso ersatz_specialized andalso typedef_rep_typed
+  end)
+
+val _ = require_msg (check_result mf_real_frac_registration) (fn () =>
+  "opt-in real frac registration, ersatz specialization, or typedef " ^
+  "record failed")
+  (fn () => ()) ()
+
 (* The synthetic typedef and specialized ersatz definitions must share the
    exact reserved abs/rep terms.  Frac operations intentionally remain
    equational relations, so inspect their generated axioms and serialize the
@@ -9348,6 +9384,49 @@ fun mf_model_frac_display_golden () =
 
 val _ = require_msg (check_result mf_model_frac_display_golden) (fn () =>
   "Frac display, zero canonicalization, or repeated registration changed")
+  (fn () => ()) ()
+
+(* [real]'s display postprocessor (opt-in, D-06-3) differs from rat's: it
+   renders through division rather than [n // d], and a unit denominator or
+   a zero numerator collapses to the bare numerator - a real model value
+   must print as [3], never [3 / 1]. *)
+fun mf_real_frac_display () =
+  with_frac_registry_restored (fn () => let
+    val _ = Refute.register_frac_type_real ()
+    val abs_frac = MFH.retype_frac_constant
+      (Term.prim_mk_const {Thy = "frac", Name = "abs_frac"})
+      ``:(int # int) -> real``
+    fun raw n d = Term.mk_comb (abs_frac,
+      pairSyntax.mk_pair
+        (intSyntax.term_of_int (Arbint.fromInt n),
+         intSyntax.term_of_int (Arbint.fromInt d)))
+    fun expected_div n d = realSyntax.mk_div
+      (realSyntax.term_of_int (Arbint.fromInt n),
+       realSyntax.term_of_int (Arbint.fromInt d))
+    fun expected_bare n = realSyntax.term_of_int (Arbint.fromInt n)
+    val postprocessor_present =
+      Option.isSome (Refute.lookup_term_postprocessor ``:real``)
+    val postprocessor = valOf (Refute.lookup_term_postprocessor ``:real``)
+    fun shown n d = postprocessor (raw n d)
+    val positive = Term.aconv (shown 3 4) (expected_div 3 4)
+    val negative = Term.aconv (shown ~3 4) (expected_div ~3 4)
+    val unit_denominator = Term.aconv (shown 3 1) (expected_bare 3) andalso
+      not (String.isSubstring "/" (Parse.term_to_string (shown 3 1)))
+    val zero_numerator = Term.aconv (shown 0 7) (expected_bare 0)
+    (* String goldens, measured: [expected_div]/[expected_bare] reuse the
+       same [realSyntax] constructors the postprocessor calls, so the
+       [Term.aconv] checks above are satisfied by shape alone.  Pin the
+       actual printed strings too. *)
+    val negative_string = Parse.term_to_string (shown ~3 4) = "-3 / 4"
+    val bare_string = Parse.term_to_string (shown 3 1) = "3"
+  in
+    postprocessor_present andalso positive andalso negative andalso
+    unit_denominator andalso zero_numerator andalso negative_string andalso
+    bare_string
+  end)
+
+val _ = require_msg (check_result mf_real_frac_display) (fn () =>
+  "opt-in real Frac display transform changed")
   (fn () => ()) ()
 
 fun mf_rat_registration_is_transactional () =
@@ -27655,7 +27734,22 @@ val mf_bounds_relative_soundness =
    "rat non-strict order antisymmetric",
    "rat additive inverse equality shape",
    "rat addition cancellation equality shape",
-   "rat normalized literal equality shape"]
+   "rat normalized literal equality shape",
+   "real additive identity",
+   "real multiplicative identity",
+   "real addition commutes",
+   "real multiplication commutes",
+   "real additive inverse",
+   "real double additive inverse",
+   "real strict order irreflexive",
+   "real non-strict order reflexive",
+   "real strict order total",
+   "real non-strict order antisymmetric",
+   "real additive inverse equality shape",
+   "real addition cancellation equality shape",
+   "real division equality shape",
+   "real additive identity numeral",
+   "real multiplicative identity numeral"]
 
 fun mf_soundness_test_with configure solver (name, tm) =
   let
@@ -27744,6 +27838,58 @@ val mf_rat_soundness_corpus =
    ("rat normalized literal equality shape",
     ``rat$rat_cons (1 : int) (2 : int) =
       rat$rat_cons (2 : int) (4 : int)``)]
+
+(* [real] via Frac (opt-in, [Refute.register_frac_type_real]) is the same
+   transposition as [mf_rat_soundness_corpus] onto the eleven-row real
+   ersatz table.  Real has no literal constructor like [rat_cons], so the
+   "real division equality shape" row carries the [rat_cons] row's load -
+   a true statement whose two sides are non-identical Frac atoms with the
+   same value - through division instead of a normalized literal.
+
+   Every row here is listed in [mf_bounds_relative_soundness], so each
+   pins [Refute.ExpectUnknown]: a finite Frac scope never exhausts the
+   reals, so the correct verdict is "no counterexample within the tested
+   scope", never exhaustion.  That makes this corpus a soundness net.
+
+   Measured exception: [realax$real_of_num] applies to closed numerals,
+   not a free/skolemizable variable, so removing its ersatz row leaves it
+   pinned by the generic recursive-definition axiom route
+   ([unfold_defs_in_term]) rather than left free to disagree; no goal
+   here distinguishes the two encodings (see the [real_of_num] row's
+   comment in [Refute_ModelFinder_HOL.sml]).  The two numeral rows below
+   are kept regardless, for the numeral spelling users actually write. *)
+val mf_real_soundness_corpus =
+  [("real additive identity",
+    ``realax$real_add x realax$real_0 = (x : real)``),
+   ("real additive identity numeral",
+    ``realax$real_add x (0 : real) = (x : real)``),
+   ("real multiplicative identity",
+    ``realax$real_mul x realax$real_1 = (x : real)``),
+   ("real multiplicative identity numeral",
+    ``realax$real_mul x (1 : real) = (x : real)``),
+   ("real addition commutes",
+    ``realax$real_add x y = realax$real_add y (x : real)``),
+   ("real multiplication commutes",
+    ``realax$real_mul x y = realax$real_mul y (x : real)``),
+   ("real additive inverse",
+    ``realax$real_add x (realax$real_neg x) = realax$real_0``),
+   ("real double additive inverse",
+    ``realax$real_neg (realax$real_neg x) = (x : real)``),
+   ("real strict order irreflexive",
+    ``~realax$real_lt x (x : real)``),
+   ("real non-strict order reflexive",
+    ``realax$real_lte x (x : real)``),
+   ("real strict order total",
+    ``realax$real_lt x y \/ x = (y : real) \/ realax$real_lt y x``),
+   ("real non-strict order antisymmetric",
+    ``realax$real_lte x y /\ realax$real_lte y x ==> x = (y : real)``),
+   ("real additive inverse equality shape",
+    ``(realax$real_neg x = realax$real_neg y) <=> x = (y : real)``),
+   ("real addition cancellation equality shape",
+    ``(realax$real_add z x = realax$real_add z y) <=> x = (y : real)``),
+   ("real division equality shape",
+    ``realax$real_of_num 1 / realax$real_of_num 2 =
+      realax$real_of_num 2 / realax$real_of_num 4``)]
 
 fun configured_mf_test_solver () =
   if Lib.mem "MiniSat_JNI"
@@ -28398,6 +28544,82 @@ fun mf_frac_acceptance solver =
   end)
   handle e => die (Feedback.exn_to_string e)
 
+(* Same shape as [mf_rat_soundness_config]; the two encodings share one
+   Frac carrier, so they share one soundness-corpus configuration. *)
+val mf_real_soundness_config = mf_rat_soundness_config
+
+fun mf_real_soundness_acceptance solver =
+  List.app (mf_soundness_test_with mf_real_soundness_config solver)
+    mf_real_soundness_corpus
+
+(* Opt-in mirror of [mf_frac_acceptance]: registers real-via-Frac itself
+   (it is not installed by default), runs the transposed soundness corpus
+   under that registration, then checks a real goal is refuted with a
+   displayed real-literal binding and the same binary_ints warning rat
+   gets, because both routes go through the same Frac carrier and the
+   same [frac$abs_frac]/[refute$Frac] blockers. *)
+fun mf_real_frac_acceptance solver =
+  with_frac_registry_restored (fn () => let
+    val _ = Refute.register_frac_type_real ()
+    val _ = tprint "Refute MF: opt-in real frac encoding"
+    val _ = mf_real_soundness_acceptance solver
+    val config = mf_acceptance_config solver
+      |> Refute.upd_binary_ints (SOME true)
+      |> Refute.upd_card [(NONE, [3])]
+    (* [(0 : real)] parses through [add_numeral_form]'s injector to
+       [realax$real_of_num 0], the spelling surface syntax actually
+       produces -- not [realax$real_0], which is essentially unreachable
+       from ordinary goals -- so this exercises the numeral ersatz row,
+       not only the bare identity constant's row. *)
+    val (outcome, output) = capture_refute_messages 2 (fn () =>
+      Refute.refute config
+        ``realax$real_add x (0 : real) = (0 : real)``)
+    (* Positive check, mirroring [mf_frac_acceptance]'s [" // "] check: a
+       real model value is either a bare real literal, or a division of
+       two real literals ([frac_atom_to_real] never emits anything else).
+       A binding that never reached the postprocessor - still a raw
+       [frac$abs_frac] pair, say - matches neither. *)
+    fun is_real_frac_display value =
+      Util.same_type (Term.type_of value) ``:real`` andalso
+      (realSyntax.is_real_literal value orelse
+       (realSyntax.is_div value andalso
+        let val (numerator, denominator) = realSyntax.dest_div value in
+          realSyntax.is_real_literal numerator andalso
+          realSyntax.is_real_literal denominator
+        end))
+    val (encoded, shown) =
+      case outcome of
+          Refute.Counterexample
+            ({backend = "kodkod", substrate = "kodkod",
+              bindings, ...} :: _) =>
+            (case List.find (fn (_, value) => is_real_frac_display value)
+                 bindings of
+                 SOME (name, value) =>
+                   (true, SOME (Parse.term_to_string name,
+                                Parse.term_to_string value))
+               | NONE => (true, NONE))
+        | _ => (false, NONE)
+    val displayed = Option.isSome shown
+    val warned = String.isSubstring
+      "binary_ints\" will be ignored because of the presence of rationals"
+      output
+    (* Discriminating, not merely present: the witness must appear as a
+       bound value, "name = value" ([Refute_Core.sml]'s
+       format_kodkod_bindings shape) -- a bare-literal witness would
+       otherwise also match an unrelated "Evaluated terms:" line
+       carrying the same digit. *)
+    val printed = case shown of
+        SOME (name, text) => String.isSubstring (name ^ " = " ^ text) output
+      | NONE => false
+  in
+    if encoded andalso displayed andalso printed andalso warned then OK ()
+    else die ("opt-in real frac acceptance failed: " ^
+      mf_pin_outcome_name outcome ^ "; display=" ^
+      Bool.toString displayed ^ "; printed=" ^ Bool.toString printed ^
+      "; warning=" ^ Bool.toString warned)
+  end)
+  handle e => die (Feedback.exn_to_string e)
+
 fun mf_merge_type_vars_acceptance solver =
   let
     val _ = tprint "Refute MF: merged goal/need type-variable scope budget"
@@ -28503,6 +28725,7 @@ fun run_mf_acceptance () =
           val _ = mf_merge_type_vars_acceptance solver
           val _ = mf_int_to_nat_acceptance solver
           val _ = mf_frac_acceptance solver
+          val _ = mf_real_frac_acceptance solver
         in
           ()
         end

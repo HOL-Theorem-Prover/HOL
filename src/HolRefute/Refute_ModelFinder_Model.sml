@@ -61,6 +61,9 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   val restore_term_postprocessors : term_postprocessor_snapshot -> unit
   val postprocess_term : term_postprocessor_snapshot -> term -> term
   val register_frac_type_rat : unit -> unit
+  (* Opt-in; not installed by default (see Refute.sml).  Idempotent, like
+     [register_frac_type_rat]. *)
+  val register_frac_type_real : unit -> unit
 
   val term_for_rep :
     {scope : scope,
@@ -378,30 +381,85 @@ fun frac_atom_to_rat term =
           term
     | _ => term
 
-fun prepare_rat_term_postprocessor () =
+(* [realax$real] has no literal constructor the way [rat$rat_cons] does, so
+   a reconstructed [abs_frac] value is rendered through division instead: a
+   zero numerator or a denominator of [1] prints as the bare numerator
+   (a real model value must print as [3], never [3 / 1]), any other
+   denominator prints as [realSyntax.mk_div] of the two rendered integers.
+   That is a deliberate divergence from [frac_atom_to_rat], which always
+   prints [n // d]; it is not an oversight to "fix" back into symmetry. *)
+fun frac_atom_to_real term =
+  case HolKernel.strip_comb term of
+      (constructor, [pair]) =>
+        if MFH.raw_constructor_name constructor = "frac$abs_frac" then
+          let
+            val (numerator, denominator) = pairSyntax.dest_pair pair
+          in
+            if Util.same_type (Term.type_of numerator) MFH.int_type andalso
+               Util.same_type (Term.type_of denominator) MFH.int_type then
+              let
+                val numerator_int = intSyntax.int_of_term numerator
+                val denominator_int = intSyntax.int_of_term denominator
+                val numerator_term = realSyntax.term_of_int numerator_int
+              in
+                if Arbint.compare
+                     (numerator_int, Arbint.zero) = EQUAL orelse
+                   Arbint.compare
+                     (denominator_int, Arbint.one) = EQUAL
+                then
+                  numerator_term
+                else
+                  realSyntax.mk_div
+                    (numerator_term, realSyntax.term_of_int denominator_int)
+              end
+            else
+              term
+          end handle HOL_ERR _ => term
+        else
+          term
+    | _ => term
+
+fun prepare_frac_term_postprocessor pattern postprocessor =
   let
-    val pattern = Type.mk_thy_type
-      {Thy = "rat", Tyop = "rat", Args = []}
-    val updated = insert_postprocessor pattern frac_atom_to_rat
+    val updated = insert_postprocessor pattern postprocessor
       (!term_postprocessors)
   in
     fn () => term_postprocessors := updated
   end
 
-fun register_frac_type_rat () =
+(* Shared two-phase commit for every Frac-carrier registration: the Frac
+   classification and its display postprocessor are prepared (validated,
+   with every replacement precomputed) before either registry is touched,
+   then committed together under one uninterruptible section so an
+   interrupt cannot leave the encoding registered without its display
+   transform, or vice versa.  [MFH.prepare_frac_type_unlocked], not a
+   locking variant, is correct here because [with_term_postprocessor_lock]
+   *is* [MFH.with_registration_lock] (see above): both prepare steps are
+   callback-free and already run under that one shared mutex, so a locking
+   variant would deadlock. *)
+fun register_frac_type_with_display (frac_info, pattern, postprocessor) =
   with_term_postprocessor_lock (fn () =>
     let
-      (* Frac validation and all list construction happen before either
-         registry is changed.  Both following commits are callback-free and
-         execute while all term/Frac registrations share the same mutex. *)
-      val commit_frac =
-        MFH.prepare_frac_type_unlocked MFH.rat_frac_registration
-      val commit_postprocessor = prepare_rat_term_postprocessor ()
+      val commit_frac = MFH.prepare_frac_type_unlocked frac_info
+      val commit_postprocessor =
+        prepare_frac_term_postprocessor pattern postprocessor
     in
       Thread_Attributes.uninterruptible (fn _ => fn () =>
         (commit_frac ();
          commit_postprocessor ())) ()
     end)
+
+fun register_frac_type_rat () =
+  register_frac_type_with_display
+    (MFH.rat_frac_registration,
+     Type.mk_thy_type {Thy = "rat", Tyop = "rat", Args = []},
+     frac_atom_to_rat)
+
+fun register_frac_type_real () =
+  register_frac_type_with_display
+    (MFH.real_frac_registration,
+     Type.mk_thy_type {Thy = "realax", Tyop = "real", Args = []},
+     frac_atom_to_real)
 
 (* Per-type running counters plus the numbers already handed out, so
    that numbering an atom is a pair of lookups rather than a scan. *)

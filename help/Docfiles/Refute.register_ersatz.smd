@@ -30,6 +30,7 @@ retyped is reported when model-finder preprocessing uses the row.
 
 [`Refute.register_frac_type`](#Refute.register_frac_type),
 [`Refute.register_frac_type_rat`](#Refute.register_frac_type_rat),
+[`Refute.register_frac_type_real`](#Refute.register_frac_type_real),
 [`Refute.register_term_postprocessor`](#Refute.register_term_postprocessor),
 [`Refute.model_refute`](#Refute.model_refute)
 

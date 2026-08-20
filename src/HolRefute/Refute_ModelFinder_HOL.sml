@@ -3391,6 +3391,32 @@ structure Refute_ModelFinder_HOL = struct
         ("rat_of_num", "of_num_frac"),
         ("rat_cons", "frac")]}
 
+  (* Opt-in: real has no literal constructor like [rat_cons], so it has no
+     twelfth row.  [real_ge]/[real_gt] are excluded, symmetric with the
+     excluded [rat_geq]/[rat_gre] above.  [real_of_num] row: encoding
+     shortcut, not a correctness pin -- with it removed,
+     unfold_defs_in_term leaves realax$real_of_num opaque and the
+     equational-function axiom route constrains it by its own defining
+     equations instead.  Measured: no goal in mf_real_soundness_corpus
+     distinguishes the two encodings. *)
+  val real_frac_registration : frac_info =
+    {tyop = {Thy = "realax", Tyop = "real"},
+     ersatz =
+       map (fn (original, replacement) =>
+         {original = {Thy = "realax", Name = original},
+          replacement = {Thy = "refute", Name = replacement}})
+       [("real_0", "zero_frac"),
+        ("real_1", "one_frac"),
+        ("real_neg", "uminus_frac"),
+        ("inv", "inverse_frac"),
+        ("real_add", "plus_frac"),
+        ("real_sub", "subtract_frac"),
+        ("real_mul", "times_frac"),
+        ("/", "divide_frac"),
+        ("real_lt", "less_frac"),
+        ("real_lte", "less_eq_frac"),
+        ("real_of_num", "of_num_frac")]}
+
   fun harvest_index_entry operator =
     let
       val _ =
