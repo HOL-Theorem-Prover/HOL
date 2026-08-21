@@ -66,9 +66,7 @@ fun rm_rf p =
    that translation for us, and is the identity under mosml. *)
 fun exists p = HOLFileSys.access (p, []) handle OS.SysErr _ => false
 
-val tmproot = OS.FileSys.tmpName ()
-val () = OS.FileSys.remove tmproot handle OS.SysErr _ => ()
-val () = OS.FileSys.mkDir tmproot
+val tmproot = HMTestPaths.mk_root ()
 
 val outside = tmproot ++ "outside"
 val parent = tmproot ++ "parent"

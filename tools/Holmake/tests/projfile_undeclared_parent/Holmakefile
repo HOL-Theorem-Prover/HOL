@@ -1,3 +1,5 @@
+INCLUDES = ../testsupport
+
 ifdef POLY
 HOLHEAP = $(HOLDIR)/bin/hol.state0
 endif
