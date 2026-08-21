@@ -1,2 +1,5 @@
 CLINE_OPTIONS = --no_prereqs
-INCLUDES = ..
+
+# refuteRegistrationCleanScript has refuteTableZoo as an ancestor, and
+# that fixture theory now lives in ../tests.
+INCLUDES = .. ../tests

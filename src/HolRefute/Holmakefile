@@ -9,21 +9,18 @@ INCLUDES = ../n-bit ../sort \
            $(HOLDIR)/src/num/theories/cv_compute \
            $(HOLDIR)/src/num/theories/cv_compute/automation
 
-all: $(DEFAULT_TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS) build-tests
 .PHONY: all
 
-selftest.uo: Refute_SmartGen.uo Refute_Narrow.uo Refute_PropSat.uo \
-             Refute_ModelFinder_Preproc.uo \
-             Refute_ModelFinder_Kodkod.uo \
-             Refute_ModelFinder_Model.uo \
-             Refute_ModelFinder_Nut.uo \
-             Refute_ModelFinder_Peephole.uo \
-             Refute_ModelFinder_Rep.uo \
-             Refute_ModelFinder_Scope.uo \
-             Refute_ModelFinder_Mono.uo \
-             Refute_ModelFinder_HOL.uo Refute_ModelFinder.uo \
-             refuteTableZooTheory.uo refuteUnusedTheory.uo \
-             refuteHarvestAbsTheory.uo
+# The selftest, the fixture theories it compiles against, and its
+# goldens live in tests/.  Holmake rejects a parent that INCLUDEs its
+# own subdirectory ("INCLUDES chain"), so the dependency runs the other
+# way and that directory is driven recursively from here, as
+# theory_tests/ and examples/ already are.  tests/ decides for itself
+# whether HOLSELFTESTLEVEL means "build" or "build and run".
+.PHONY: build-tests
+build-tests: $(DEFAULT_TARGETS)
+	$(HOLDIR)/bin/Holmake -C tests --no_prereqs
 
 # The substrate layer reaches the shared type/term helpers through a
 # `structure Util = Refute_Util` alias, which holdep does not follow, so the
@@ -71,36 +68,7 @@ Refute_ModelFinder.uo: Refute_ModelFinder_Preproc.uo \
 Refute_Unused.uo: Refute_Core.uo
 Refute.uo: Refute_Unused.uo Refute_ModelFinder.uo Refute_QC_Narrow.uo
 
-# Poly/ML only: the SML substrate calls PolyML.compiler, and Multithreading,
-# Thread_Attributes, Thread_Data and Timeout exist only under
-# src/portableML/poly.  src/parallel_builds/core INCLUDEs this directory under
-# ifdef POLY, so other MLs never enter it.
-selftest.exe: selftest.uo refuteTheory.uo refute_cvTheory.uo \
-              refuteTableZooTheory.uo refuteUnusedTheory.uo \
-              refuteHarvestAbsTheory.uo
-	@printf '%s\n' '#!/bin/sh' 'set -e' \
-	  '$(HOLDIR)/bin/hol --gcthreads=1 run selftest' \
-	  'exit 0' > $@
-	@chmod +x $@
-
 ifdef HOLSELFTESTLEVEL
-all: holrefute-selftest.log
-
-FORL_GOLDENS = tests/forl-layout.kki tests/forl-expressions.kki \
-               tests/forl-multi.kki tests/mf-kodkod-translation.kki \
-               tests/mf-binary-integers.kki tests/mf-frac.kki \
-               tests/mf-bisim.kki
-FORL_TRANSCRIPTS = tests/kodkodi-sat.stdout \
-                   tests/kodkodi-unsat.stdout \
-                   tests/kodkodi-batch.stdout \
-                   tests/kodkodi-timeout.stdout \
-                   tests/kodkodi-timeout.stderr \
-                   tests/kodkodi-error.stdout \
-                   tests/kodkodi-error.stderr
-
-.PHONY: holrefute-selftest.log
-holrefute-selftest.log: selftest.exe $(FORL_GOLDENS) $(FORL_TRANSCRIPTS)
-	$(tee ./selftest.exe 2>&1,$@)
 
 ifdef POLY
 ifneq ($(HOLSELFTESTLEVEL),0)
@@ -108,7 +76,9 @@ ifneq ($(HOLSELFTESTLEVEL),1)
 all: theory-tests
 .PHONY: theory-tests
 
-theory-tests: selftest.exe
+# theory_tests reaches a fixture theory in tests/, so that
+# directory has to be built first.
+theory-tests: build-tests
 	$(HOLDIR)/bin/Holmake -C theory_tests clean
 	$(HOLDIR)/bin/Holmake -C theory_tests --no_prereqs
 endif
@@ -116,10 +86,9 @@ endif
 endif
 endif
 
-EXTRA_CLEANS = selftest.exe holrefute-selftest.log
 
 .PHONY: examples
-examples: selftest.exe
+examples: $(DEFAULT_TARGETS)
 	$(HOLDIR)/bin/Holmake -C examples --no_prereqs
 
 ifdef HOLBUILD

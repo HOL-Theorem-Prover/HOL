@@ -5,16 +5,24 @@ repository.
 
 ## Build & test
 
-- `Holmake` in this directory builds everything, including `selftest.exe`
-  (plain `Holmake`, boss-onwards band).  Poly/ML only; the
-  tree build skips this directory on other MLs.
+- `Holmake` in this directory builds the module and then recurses into
+  `tests/` to build `tests/selftest.exe` (plain `Holmake`, boss-onwards
+  band).  Poly/ML only; the tree build skips this directory on other MLs.
 - `HOLSELFTESTLEVEL=2 Holmake` also runs the selftest (output tees to
-  `holrefute-selftest.log`) and `theory_tests/`.
-- After building, `./selftest.exe` reruns the selftest directly;
-  `HOLSELFTESTLEVEL=2 ./selftest.exe` enables the level-2 suites
-  (cross-substrate conformance, Cv cleanliness, corpus).  `selftest.sml`
-  is one program with `diemode := Remember` — there is no finer
-  per-test selection.
+  `tests/holrefute-selftest.log`) and `theory_tests/`.
+- After building, `tests/selftest.exe` reruns the selftest directly, from
+  inside `tests/` — golden files resolve relative to the cwd.
+  `HOLSELFTESTLEVEL=2 ./selftest.exe` there enables the level-2 suites
+  (cross-substrate conformance, Cv cleanliness, corpus).
+  `tests/selftest.sml` is one program with `diemode := Remember` — there is
+  no finer per-test selection.
+- `tests/` holds everything test-only: `selftest.sml`, its golden files
+  under `tests/goldens/`, and the fixture theories the selftest loads
+  (`refuteTableZoo`, `refuteUnused`, `refuteHarvestType`,
+  `refuteHarvestAbs`).  It is a child directory with `INCLUDES = ..` and
+  `--no_prereqs`, driven by a recursive `Holmake -C`, because a parent may
+  not INCLUDE its own subdirectory.  Fixture theories stay out of the
+  global sigobj namespace by living here.
 - Interactive session: start `bin/hol`, then run `load "Refute"`.
 - Quality gate: `HOLSELFTESTLEVEL=2 Holmake` here.  Level 2 is not optional —
   cross-substrate conformance, candidate-stream equality, and Cv cleanliness
@@ -94,7 +102,7 @@ repository.
 
 - Test specified behavior, not implementation internals.
 - Bug fixes get a failing-first regression test.
-- Tests go in `selftest.sml`: `tprint "name"` then
+- Tests go in `tests/selftest.sml`: `tprint "name"` then
   `require_msg (check_result f) (fn () => "failure msg") (fn () => ()) ()`.
   `diemode := Remember erc` accumulates failures instead of aborting;
   `exit_count0 erc` turns the count into the exit status.
@@ -110,7 +118,7 @@ repository.
   `*Script.sml` descendant theories raising `Fail`, not testutils.  Runs
   under `Holmake` at level >= 2 only, never from `selftest.exe`.
 - Don't validate by piping `.sml` into `bin/hol`; the harness only sees
-  `selftest.sml`.
+  `tests/selftest.sml`.
 - `examples/` are executable descendant theories showing *typical*
   user-facing usage: conjectures discharged by the four tactics under the
   adaptive defaults, no configuration updaters, no SML-level calls.  Keep
@@ -123,7 +131,7 @@ repository.
   a manual target, outside `all` and the selftest, and only checks that the
   scripts still run; a changed verdict class shows solely on inspection, so
   reread the prose whenever behavior changes.  Pin behavior in
-  `selftest.sml` instead.
+  `tests/selftest.sml` instead.
 - Adaptive scope search makes model-finder output machine-dependent: never
   quote a scope, model or runtime figure in example prose.
   `NoCounterexample` can also come from exhaustive QC or narrowing when a

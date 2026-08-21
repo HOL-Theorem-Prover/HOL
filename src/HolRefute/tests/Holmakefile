@@ -1,0 +1,44 @@
+# Test-only directory: the selftest, the fixture theories it compiles
+# against, and the serializer/transcript goldens.  Nothing here is part
+# of the library.  Keeping the fixtures out of ../ also keeps them out
+# of $(HOL_LNSIGOBJ), which would otherwise export four test-only
+# theories into the global sigobj namespace.
+#
+# INCLUDES reaches the module, never the other way round: Holmake
+# rejects a parent that depends on its own subdirectory ("INCLUDES
+# chain", tools/Holmake/tests/badincludes/onesteploopdir).  The parent
+# therefore drives this directory with a recursive Holmake instead.
+CLINE_OPTIONS = --no_prereqs
+INCLUDES = ..
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+# Poly/ML only: the SML substrate calls PolyML.compiler, and
+# Multithreading, Thread_Attributes, Thread_Data and Timeout exist only
+# under src/portableML/poly.
+selftest.exe: selftest.uo
+	@printf '%s\n' '#!/bin/sh' 'set -e' \
+	  '$(HOLDIR)/bin/hol --gcthreads=1 run selftest' \
+	  'exit 0' > $@
+	@chmod +x $@
+
+ifdef HOLSELFTESTLEVEL
+
+GOLDENS = goldens/forl-layout.kki goldens/forl-expressions.kki \
+          goldens/forl-multi.kki goldens/mf-kodkod-translation.kki \
+          goldens/mf-binary-integers.kki goldens/mf-frac.kki \
+          goldens/mf-bisim.kki \
+          goldens/kodkodi-sat.stdout goldens/kodkodi-unsat.stdout \
+          goldens/kodkodi-batch.stdout \
+          goldens/kodkodi-timeout.stdout goldens/kodkodi-timeout.stderr \
+          goldens/kodkodi-error.stdout goldens/kodkodi-error.stderr
+
+all: holrefute-selftest.log
+.PHONY: holrefute-selftest.log
+holrefute-selftest.log: selftest.exe $(GOLDENS)
+	$(tee ./selftest.exe 2>&1,$@)
+
+endif
+
+EXTRA_CLEANS = selftest.exe holrefute-selftest.log

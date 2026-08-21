@@ -367,6 +367,12 @@ and their declared `Ancestors` and `Libs`.  They are documentation rather
 than tests: extending Refute through the registries below is described here,
 not demonstrated there.
 
+The `tests/` directory holds the selftest and nothing else: `selftest.sml`,
+its golden files under `tests/goldens/`, and the fixture theories the
+selftest loads (`refuteTableZoo`, `refuteUnused`, `refuteHarvestType`,
+`refuteHarvestAbs`).  `Holmake` here recurses into it; keeping the fixtures
+there keeps them out of the installed signature namespace.
+
 Model-finder surface
 --------------------
 
