@@ -27,9 +27,32 @@ decides closed `:rat` literals afterwards too, not only Refute's own
 substrates.  A decided comparison yields `T` or `F`, but a decided
 arithmetic result is a raw `abs_rat (abs_frac (n, d))` value, not
 reduced to lowest terms; the `n // d` display is the QC generator's
-candidate shape, not an output normal form.  As with any finite QC sample over an infinite type, `:rat`
-QC never reports `NoCounterexample`: exhaustive and random search both
-report `Unknown` instead, however large the size or count.
+candidate shape, not an output normal form.  As with any finite QC
+sample over an infinite type, `:rat` QC never reports
+`NoCounterexample` for a goal quantified over `:rat` variables:
+exhaustive and random search both report `Unknown` instead, however
+large the size or count.  A closed `:rat` goal is not such a sample --
+reducing it to `T` is a proof -- and can decide to `NoCounterexample`.
+
+`:real` has a built-in QC generator too (`Refute_EvalReal`), registered
+the same way and with the same `GenCustom`/Compute-only consequences.
+Unlike `:rat`, real's arithmetic and comparisons
+(`+ - * / < <= > >= = abs pow`) were already decided on closed literals
+by realLib's own global-compset installation (`realSimps.sml`), loaded
+transitively -- except `n / &0` for a nonzero `n`, which realSimps'
+`elim_common_factor` conv leaves stuck rather than reducing.  The only
+gap that fragment otherwise left was `inv`, which `Refute_EvalReal`
+adds, declining (rather than reducing) on a zero argument to match
+`/`'s existing refusal on a zero divisor.  A decided value is
+`real_of_num n`/`real_neg (real_of_num n)` for an integer, or
+`real_div` of such a numerator over a positive `real_of_num`
+denominator -- the same shape realSimps' own literal rules already
+produce, so a QC candidate is displayed exactly as a user would write
+it.  A finite rational sample can never exhaust the uncountably many
+reals, so `:real` QC never reports `NoCounterexample` for a goal
+quantified over `:real` variables either; a closed `:real` goal can
+still decide to `NoCounterexample`, for the same reason as `:rat`
+above.
 
 An unconfigured call has one 10-second search budget covering preprocessing,
 backend admission, compilation, testing, model translation, and solver calls.
@@ -295,6 +318,7 @@ Module layout:
 * Refute_Core: shared types, configuration, registry, and orchestration.
 * Refute_Gen: generator derivation and enumeration support.
 * Refute_EvalRat: the built-in :rat QC generator and computeLib fragment.
+* Refute_EvalReal: the built-in :real QC generator and its inv fragment.
 * Refute_Eval: the substrate seam, registry, and common random generator.
 * Refute_EvalCompute, Refute_EvalCv, and Refute_EvalSML: substrates.
 * Refute_Extract: in-memory HOL-to-SML extraction for NativeSML.

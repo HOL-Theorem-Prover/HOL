@@ -16572,17 +16572,44 @@ val _ = require_msg (check_result (fn () =>
   recursive_under_function [``:rg_rose``] ``:rg_rose -> bool``))
   (fn () => "recursive function occurrence was not detected")
   (fn () => ()) ()
-val real_ty = Type.mk_thy_type {Thy = "realax", Tyop = "real", Args = []}
-val _ = require_msg (check_result (fn () => has_no_generator real_ty))
-  (fn () => "real unexpectedly has a generator") (fn () => ()) ()
+val frac_ty = Type.mk_thy_type {Thy = "frac", Tyop = "frac", Args = []}
+val _ = require_msg (check_result (fn () => has_no_generator frac_ty))
+  (fn () => "frac unexpectedly has a generator") (fn () => ()) ()
 val _ = require_msg (check_result (fn () => has_no_generator ``:ind``))
   (fn () => "unknown type unexpectedly has a generator") (fn () => ()) ()
-(* rat is a quotient type but is not in [named_quotient_types]: a
-   registered generator shadows the quotient fallback, since [[spec_of]]
-   consults [[generator_of]] first, and [[Refute_EvalRat.register]]
-   installs one unconditionally.  There is no unregister API, so this is
+(* rat and real are both quotient types, but neither reaches the
+   quotient fallback: [[spec_of]] consults [[generator_of]] first, and
+   [[Refute_EvalRat.register]]/[[Refute_EvalReal.register]] each install
+   a generator unconditionally.  There is no unregister API, so this is
    not a reachable-but-untaken path -- it genuinely cannot happen. *)
 val _ = check_gen "rat" (fn GenCustom _ => true | _ => false) ratSyntax.rat_ty
+val _ = check_gen "real" (fn GenCustom _ => true | _ => false)
+  (Type.mk_thy_type {Thy = "realax", Tyop = "real", Args = []})
+
+(* [[zoo_bool_quot]] (refuteTableZooTheory) genuinely reaches the
+   surviving [[is_quotient_type]] fallback rat/real no longer can: it
+   has no TypeBase info (built from [[new_type_definition]], like frac
+   above) and its own QUOTIENT theorem is exported into the "quotient"
+   ThmSetData set (see [[zoo_bool_quot_quotient_reg]]), with no
+   registered generator to shadow the check first.  Loading
+   [[refuteTableZooTheory]] alone does not register that set: a Script's
+   [[Libs quotient]] is a compile-time dependency of the theory it
+   builds, not of a later session that merely loads the result, so the
+   "quotient" ThmSetData exporter only exists once something in this
+   session loads the [[quotient]] structure too -- exactly as an
+   interactive user who has been defining quotient types already would
+   have done before ever calling Refute. *)
+val _ = load "quotient"
+
+fun quotient_fallback_reached () =
+  (ignore (spec_of ``:zoo_bool_quot``); false)
+  handle NoGenerator (_, reason) =>
+    reason = "quotient type; register a generator"
+
+val _ = tprint "Refute quotient type fallback reached"
+val _ = require_msg (check_result quotient_fallback_reached) (fn () =>
+  "zoo_bool_quot did not reach the quotient-type generator fallback")
+  (fn () => ()) ()
 
 val _ = tprint "Refute narrowing core"
 
@@ -19105,14 +19132,15 @@ val _ = require_msg (check_result stuck_split_counts_failure) (fn () =>
 
 fun no_generator_is_compile_inapplicable () =
   let
-    val variable = Term.mk_var ("r", ``:real``)
+    val frac_ty = Type.mk_thy_type {Thy = "frac", Tyop = "frac", Args = []}
+    val variable = Term.mk_var ("r", frac_ty)
   in
     case Refute_EvalCompute.compile default_config Exhaustive
       (Plans [Gen (variable, Test boolSyntax.T)]) of
         Inapplicable reasons =>
           List.exists (fn reason =>
-            String.isSubstring "no generator for :real" reason andalso
-            String.isSubstring "quotient type" reason) reasons
+            String.isSubstring "no generator for :frac" reason andalso
+            String.isSubstring "no TypeBase information" reason) reasons
       | Compiled _ => false
   end
 
@@ -23098,16 +23126,29 @@ fun corpus_hol4_specific () =
     val record_goal = ``(r : rg_record) = s``
     val word_goal =
       ``w2n ((a : bool[8]) + b) = w2n a + w2n b``
-    val quotient_goal = ``(x : real) = y``
+    (* real is a quotient type, but now has a registered QC generator
+       (Refute_EvalReal), so this decides via exhaustive Compute instead
+       of falling back to Unknown.  Exercise [[real_add]], not only
+       equality: the "real quickcheck" conformance case already covers
+       plain [[x = y]] and cross-substrate agreement on it. *)
+    val real_goal = ``(x : real) + y = x``
+    (* frac has no generator and no TypeBase info (a bare
+       [[new_type_definition]], like [[no_generator_is_compile_inapplicable]]
+       above), so this is the corpus's only local ExpectUnknown row. *)
+    val frac_ty = Type.mk_thy_type {Thy = "frac", Tyop = "frac", Args = []}
+    val frac_goal =
+      boolSyntax.mk_eq (Term.mk_var ("x", frac_ty), Term.mk_var ("y", frac_ty))
   in
     tc {name = "Refute corpus: record type",
         cfg = corpus_config, tm = record_goal, expect = ExpectGenuine};
     tc {name = "Refute corpus: word addition",
         cfg = corpus_config, tm = word_goal, expect = ExpectGenuine};
-    tc {name = "Refute corpus: quotient unknown",
-        cfg = corpus_config, tm = quotient_goal, expect = ExpectUnknown};
-    check_corpus "Refute corpus: quotient explanation" (fn () =>
-      is_unknown_with "quotient" (Refute.refute corpus_config quotient_goal))
+    tc {name = "Refute corpus: real quickcheck",
+        cfg = corpus_config, tm = real_goal, expect = ExpectGenuine};
+    tc {name = "Refute corpus: no generator",
+        cfg = corpus_config, tm = frac_goal, expect = ExpectUnknown};
+    check_corpus "Refute corpus: no generator explanation" (fn () =>
+      is_unknown_with "no generator" (Refute.refute corpus_config frac_goal))
   end
 
 (* Numeral/string/char literals in a goal must not be mistaken for
@@ -23535,14 +23576,17 @@ val conformance_full_cases : conformance_case list =
     inapplicable =
       [(Cv, "cv: :rat - custom generator registered"),
        (NativeSML, "custom generator registered for :rat")]},
-   {name = "infinite quantifier", cfg = conform_unknown_config,
-    tm = ``(!n : num. n <= n)``, inapplicable = []},
-   {name = "quotient", cfg = conform_unknown_config,
+   (* real's generator is GenCustom too: same shape as rat quickcheck
+      above, native and cv decline via "custom generator registered",
+      and compute decides -- this is the module's cross-substrate
+      conformance pin for real. *)
+   {name = "real quickcheck", cfg = conform_cex_config,
     tm = ``(x : real) = y``,
     inapplicable =
-      [(Compute, "no generator for :real"),
-       (Cv, "cv: :real - quotient type"),
-       (NativeSML, "no generator for :real")]},
+      [(Cv, "cv: :real - custom generator registered"),
+       (NativeSML, "custom generator registered for :real")]},
+   {name = "infinite quantifier", cfg = conform_unknown_config,
+    tm = ``(!n : num. n <= n)``, inapplicable = []},
    {name = "closed soundness", cfg = conform_none_config,
     tm = ``T``, inapplicable = []},
    {name = "reverse soundness", cfg = conform_none_config,
@@ -23958,6 +24002,7 @@ val _ = require_msg (check_result rat_totality_never_claims_exhaustion)
    gates [[Refute_Gen.enumerate]] before its own body ever runs -- no
    custom-generator type can be reported enumerable or finite. *)
 fun rat_generator_is_not_enumerable () =
+  Refute_Gen.has_registered_generator ratSyntax.rat_ty andalso
   (case Refute_Gen.enumerate ratSyntax.rat_ty of
        NONE => true | SOME _ => false) andalso
   (case Refute_Gen.cardinality ratSyntax.rat_ty of
@@ -24012,6 +24057,50 @@ val _ = tprint "Refute rat quickcheck > is decidable"
 val _ = require_msg (check_result (fn () =>
   rat_comparison_refuted ``!x : rat. x > 0``))
   (fn () => "!x. x > 0 was not refuted via compute") (fn () => ()) ()
+
+(* [[<]] needs its own refuted goal for the same reason [[<=]] did: the
+   totality pin below asserts the very [[Unknown]] reasons a *stuck*
+   [[<]] also produces, so it cannot tell "decided at every candidate"
+   from "never decided at all". *)
+val _ = tprint "Refute rat quickcheck < is decidable"
+val _ = require_msg (check_result (fn () =>
+  rat_comparison_refuted ``!x y : rat. x < y``))
+  (fn () => "!x y. x < y was not refuted via compute") (fn () => ()) ()
+
+(* One refuted goal per arithmetic operator the fragment claims to
+   decide.  Each goal is false at every rational (at all but one, for
+   [[~]] and [[rat_minv]]), so an operator that went stuck -- unable to
+   decide any candidate -- could not refute it either. *)
+val _ = tprint "Refute rat quickcheck + is decidable"
+val _ = require_msg (check_result (fn () =>
+  rat_comparison_refuted ``!x : rat. x + 1 = x``))
+  (fn () => "!x. x + 1 = x was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute rat quickcheck - is decidable"
+val _ = require_msg (check_result (fn () =>
+  rat_comparison_refuted ``!x : rat. x - 1 = x``))
+  (fn () => "!x. x - 1 = x was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute rat quickcheck * is decidable"
+val _ = require_msg (check_result (fn () =>
+  rat_comparison_refuted ``!x : rat. x * 2 = x``))
+  (fn () => "!x. x * 2 = x was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute rat quickcheck / is decidable"
+val _ = require_msg (check_result (fn () =>
+  rat_comparison_refuted ``!x : rat. x / 2 = x``))
+  (fn () => "!x. x / 2 = x was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute rat quickcheck ~ is decidable"
+val _ = require_msg (check_result (fn () =>
+  rat_comparison_refuted ``!x : rat. rat$rat_ainv x = x``))
+  (fn () => "!x. ~x = x was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute rat quickcheck inv is decidable"
+val _ = require_msg (check_result (fn () =>
+  rat_comparison_refuted ``!x : rat. rat$rat_minv x = x``))
+  (fn () => "!x. rat_minv x = x was not refuted via compute")
+  (fn () => ()) ()
 
 (* The true-goal half of the family: [x <= x] holds at every rational, so
    no finite sample may report a counterexample for it -- and, as with
@@ -24131,6 +24220,351 @@ fun rat_enumerate_lowest_terms () =
 val _ = tprint "Refute rat quickcheck enumerate is in lowest terms"
 val _ = require_msg (check_result rat_enumerate_lowest_terms) (fn () =>
   "an enumerated rat candidate was not in lowest terms")
+  (fn () => ()) ()
+
+(* real's generator is GenCustom too, so it cannot join
+   [stream_conformance]'s types list, for the same reason as rat above.
+   Reimplement the draw independently from only the shared PRNG
+   primitive [[checked_rand_below]] -- [[Refute_EvalReal]] is sealed, so
+   its own [[draw_numerator]] and [[draw_denominator]] are not callable
+   here -- so this fails if the numerator and denominator draws are ever
+   exchanged, not merely if [[random]] becomes [[NONE]]. *)
+fun reference_real_draw size state =
+  let
+    val radius = IntInf.fromInt (Int.max (0, size))
+    val (n_raw, after_n) = checked_rand_below (2 * radius + 1) state
+    val n = IntInf.toInt n_raw - IntInf.toInt radius
+    val (d_raw, after_d) =
+      checked_rand_below (IntInf.fromInt (Int.max (0, size) + 1)) after_n
+    val d = IntInf.toInt d_raw + 1
+    val term =
+      if d = 1 then realSyntax.term_of_int (Arbint.fromInt n)
+      else realSyntax.mk_div
+        (realSyntax.term_of_int (Arbint.fromInt n),
+         realSyntax.term_of_int (Arbint.fromInt d))
+  in
+    (term, after_d)
+  end
+
+fun reference_real_stream size seed count =
+  let
+    fun loop 0 _ candidates = rev candidates
+      | loop remaining state candidates =
+          let val (term, next) = reference_real_draw size state
+          in loop (remaining - 1) next ([term] :: candidates) end
+  in
+    loop count seed []
+  end
+
+fun real_stream_matches_reference () =
+  let
+    val variable = Term.mk_var ("stream_real", realSyntax.real_ty)
+    val plan = Gen (variable, Test boolSyntax.T)
+    val arguments = {plan = plan, seed = 7 : IntInf.int, size = 5, count = 6}
+  in
+    same_candidate_stream (dump_random_candidates arguments)
+      (reference_real_stream 5 7 6)
+  end
+
+val _ = tprint "Refute real quickcheck stream matches an independent \
+  \reference"
+val _ = require_msg (check_result real_stream_matches_reference) (fn () =>
+  "the real candidate stream diverged from an independently \
+  \reimplemented reference")
+  (fn () => ()) ()
+
+fun real_auto_falls_through_to_compute () =
+  let
+    val config =
+      Refute.upd_search Refute.QuickcheckBackends default_config
+    val goal = ``(x : real) = real_of_num 0``
+  in
+    case refute config goal of
+        Counterexample ({substrate, certainty = Genuine, cert = SOME _, ...}
+                         :: _) => substrate = "compute"
+      | _ => false
+  end
+
+val _ = tprint "Refute real quickcheck Auto falls through to compute"
+val _ = require_msg (check_result real_auto_falls_through_to_compute) (fn () =>
+  "Auto did not resolve a real goal via the compute substrate")
+  (fn () => ()) ()
+
+(* [[1 / 0]] does not satisfy [[is_real_numeral_value]]'s acceptance
+   condition (nonzero numerator, zero denominator), so it must still
+   surface [[real_of_num]] (printed [[$&]]) as a non-executable constant
+   instead of being admitted as an already-decided value. *)
+fun real_div_zero_not_executable () =
+  case preprocess default_config
+    (preprocessing_problem ``(1 : real) / 0 = 0``) of
+      [{qc_gate = SOME reasons, ...}] =>
+        List.exists (String.isSubstring "$&") reasons
+    | _ => false
+
+val _ = tprint "Refute real quickcheck 1 / 0 is not executable"
+val _ = require_msg (check_result real_div_zero_not_executable) (fn () =>
+  "1 / 0 was accepted as an already-decided real value")
+  (fn () => ()) ()
+
+(* Soundness pin, not negotiable: a finite exhaustive or random sample can
+   never exhaust :real, so neither backend may report NoCounterexample for
+   a goal that is true only because it holds at every one of uncountably
+   many reals.  Assert the exact [[Unknown]] reasons, for the same reason
+   as the rat pin above: the negation of NoCounterexample alone also
+   passes on an unrelated Unknown, a timeout, or a spurious
+   counterexample. *)
+fun real_totality_never_claims_exhaustion () =
+  let
+    val x = Term.mk_var ("x", realSyntax.real_ty)
+    val goal = boolSyntax.mk_forall (x,
+      realSyntax.mk_less
+        (x, realSyntax.mk_plus (x, realSyntax.term_of_int Arbint.one)))
+    val config =
+      upd_size 10
+        (upd_substrate Compute
+          (Refute.upd_search (Refute.Only [Refute.Exhaustive])
+            default_config))
+  in
+    case refute config goal of
+        Unknown reasons =>
+          reasons = ["exhaustive: search space not exhausted",
+                     "exhaustive: searched up to size 10"]
+      | _ => false
+  end
+
+val _ = tprint "Refute real quickcheck totality pin"
+val _ = require_msg (check_result real_totality_never_claims_exhaustion)
+  (fn () =>
+    "real exhaustive QC did not report the expected Unknown reasons")
+  (fn () => ()) ()
+
+(* Direct unit pin on the actual mechanism behind the totality pin above,
+   same rationale as the rat pin -- strengthened with a registration check
+   the rat pin lacks: [[from_spec (GenCustom _) = NONE]] is what
+   [[enumerate]]/[[cardinality]] fall back to for a type with *no*
+   generator at all too (both wrap [[spec_of]] in a blanket
+   [[handle NoGenerator _ => NONE]]), so without the registration check
+   this pin would still pass with real's generator deleted outright. *)
+fun real_generator_is_not_enumerable () =
+  Refute_Gen.has_registered_generator realSyntax.real_ty andalso
+  (case Refute_Gen.enumerate realSyntax.real_ty of
+       NONE => true | SOME _ => false) andalso
+  (case Refute_Gen.cardinality realSyntax.real_ty of
+       NONE => true | SOME _ => false)
+
+val _ = tprint "Refute real quickcheck generator is not enumerable"
+val _ = require_msg (check_result real_generator_is_not_enumerable) (fn () =>
+  "real's custom generator was treated as enumerable or of finite \
+  \cardinality")
+  (fn () => ()) ()
+
+(* Direct unit pin on the generator itself, same rationale as rat's: a
+   regression that stopped [[enumerate]] growing with size would shrink
+   the QC search at every size without tripping the totality pin above. *)
+fun real_enumerate_grows_with_size () =
+  case Refute_EvalReal.generator of
+    {enumerate = SOME enum, ...} => length (enum 0) < length (enum 5)
+  | {enumerate = NONE, ...} => false
+
+val _ = tprint "Refute real quickcheck enumerate grows with size"
+val _ = require_msg (check_result real_enumerate_grows_with_size) (fn () =>
+  "real's enumerate did not grow between size 0 and size 5")
+  (fn () => ()) ()
+
+(* Comparison family coverage, same rationale as the rat block above: one
+   refuted goal per operator, via Auto-falls-through-to-compute.  Unlike
+   rat, real's comparisons were already decided by realSimps before this
+   module existed; pinned anyway so a future change cannot silently
+   regress just one operator behind a green suite. *)
+fun real_comparison_refuted tm =
+  case refute (Refute.upd_search Refute.QuickcheckBackends default_config)
+    tm of
+      Counterexample ({substrate, certainty = Genuine, cert = SOME _, ...}
+                       :: _) => substrate = "compute"
+    | _ => false
+
+val _ = tprint "Refute real quickcheck <= is decidable"
+val _ = require_msg (check_result (fn () =>
+  real_comparison_refuted ``!x y : real. x <= y``))
+  (fn () => "!x y. x <= y was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute real quickcheck >= is decidable"
+val _ = require_msg (check_result (fn () =>
+  real_comparison_refuted ``!x y : real. x >= y``))
+  (fn () => "!x y. x >= y was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute real quickcheck > is decidable"
+val _ = require_msg (check_result (fn () =>
+  real_comparison_refuted ``!x : real. x > 0``))
+  (fn () => "!x. x > 0 was not refuted via compute") (fn () => ()) ()
+
+(* [[<]] has no discriminating pin of its own elsewhere: the totality pin
+   above asserts the same [[Unknown]] reasons a stuck [[<]] would also
+   produce, so it cannot tell "decided, true at every candidate" from
+   "never decided at all" apart.  Close that gap the same way as
+   [[<=]]/[[>=]]/[[>]] above. *)
+val _ = tprint "Refute real quickcheck < is decidable"
+val _ = require_msg (check_result (fn () =>
+  real_comparison_refuted ``!x y : real. x < y``))
+  (fn () => "!x y. x < y was not refuted via compute") (fn () => ()) ()
+
+(* One refuted goal per arithmetic operator the README claims realLib
+   already decides on closed literals ([[+ - * /]]): each goal is false
+   at every real but 0 (or 1, for [[*]]), so a stuck operator -- unable
+   to decide any candidate -- cannot refute it either, and this pin
+   fails exactly like the comparison family above would. *)
+val _ = tprint "Refute real quickcheck + is decidable"
+val _ = require_msg (check_result (fn () =>
+  real_comparison_refuted ``!x : real. x + 1 = x``))
+  (fn () => "!x. x + 1 = x was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute real quickcheck - is decidable"
+val _ = require_msg (check_result (fn () =>
+  real_comparison_refuted ``!x : real. x - 1 = x``))
+  (fn () => "!x. x - 1 = x was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute real quickcheck * is decidable"
+val _ = require_msg (check_result (fn () =>
+  real_comparison_refuted ``!x : real. x * 2 = x``))
+  (fn () => "!x. x * 2 = x was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute real quickcheck / is decidable"
+val _ = require_msg (check_result (fn () =>
+  real_comparison_refuted ``!x : real. x / 2 = x``))
+  (fn () => "!x. x / 2 = x was not refuted via compute") (fn () => ()) ()
+
+(* Same coverage for [[abs]] and [[pow]], the remaining two operators the
+   README claims realLib already decides. *)
+val _ = tprint "Refute real quickcheck abs is decidable"
+val _ = require_msg (check_result (fn () =>
+  real_comparison_refuted ``!x : real. abs x = x``))
+  (fn () => "!x. abs x = x was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute real quickcheck pow is decidable"
+val _ = require_msg (check_result (fn () =>
+  real_comparison_refuted ``!x : real. x pow 2 = x``))
+  (fn () => "!x. x pow 2 = x was not refuted via compute") (fn () => ()) ()
+
+(* The true-goal half of the family: [x <= x] holds at every real, so no
+   finite sample may report a counterexample, and (as with the totality
+   pin above) none may claim exhaustion either.  Same config and exact
+   assertion as the rat pin, for the same reason. *)
+fun real_reflexive_leq_never_refuted () =
+  case refute
+    (upd_size 10 (upd_substrate Compute
+      (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config)))
+    ``!x : real. x <= x`` of
+      Unknown reasons =>
+        reasons = ["exhaustive: search space not exhausted",
+                   "exhaustive: searched up to size 10"]
+    | _ => false
+
+val _ = tprint "Refute real quickcheck x <= x is never refuted"
+val _ = require_msg (check_result real_reflexive_leq_never_refuted) (fn () =>
+  "x <= x did not report the expected Unknown reasons")
+  (fn () => ()) ()
+
+(* Candidate display.  [[Refute_EvalReal.mk_real_lit]] prints a candidate
+   as a bare (possibly negated) numeral or as [[n / d]], the same shape
+   realSimps' own [[elim_common_factor]] decides to; cover a positive, a
+   negative, zero, and a non-unit denominator. *)
+fun real_enumerate_display () =
+  case Refute_EvalReal.generator of
+      {enumerate = SOME enum, ...} =>
+        let val shown = List.map Parse.term_to_string (enum 3)
+        in
+          List.exists (fn s => s = "3") shown andalso
+          List.exists (fn s => s = "-3") shown andalso
+          List.exists (fn s => s = "0") shown andalso
+          List.exists (fn s => s = "-3 / 2") shown
+        end
+    | {enumerate = NONE, ...} => false
+
+val _ = tprint "Refute real quickcheck enumerate candidate display"
+val _ = require_msg (check_result real_enumerate_display) (fn () =>
+  "real's enumerated candidates no longer display as bare numerals or \
+  \n / d")
+  (fn () => ()) ()
+
+(* End-to-end display check via an actual counterexample binding, not
+   only [[enumerate]]; the exact value is not pinned (the default seed is
+   machine-chosen), only its printed shape. *)
+fun looks_like_real_binding s =
+  case String.tokens (fn c => c = #" ") s of
+      [numeral] => looks_like_numeral numeral
+    | [numerator, "/", denominator] =>
+        looks_like_numeral numerator andalso looks_like_numeral denominator
+    | _ => false
+
+fun real_counterexample_binding_display () =
+  case refute (Refute.upd_search Refute.QuickcheckBackends default_config)
+    ``(x : real) = real_of_num 1`` of
+      Counterexample ({bindings = [(_, value)], ...} :: _) =>
+        looks_like_real_binding (Parse.term_to_string value)
+    | _ => false
+
+val _ = tprint "Refute real quickcheck counterexample binding display"
+val _ = require_msg
+  (check_result real_counterexample_binding_display) (fn () =>
+  "a real counterexample binding did not display as a numeral or n / d")
+  (fn () => ()) ()
+
+(* Lowest terms, same property as rat's enumerate above: every emitted
+   (n, d) has gcd(|n|, d) = 1, and 0 is only ever emitted as 0/1.  Pin the
+   property, not the count, which is brittle to enumeration order. *)
+fun real_pin_gcd (a, 0) = a
+  | real_pin_gcd (a, b) = real_pin_gcd (b, a mod b)
+
+fun dest_real_candidate tm =
+  if realSyntax.is_div tm then
+    let val (a, b) = realSyntax.dest_div tm
+    in
+      (Arbint.toInt (realSyntax.int_of_term a),
+       Arbint.toInt (realSyntax.int_of_term b))
+    end
+  else (Arbint.toInt (realSyntax.int_of_term tm), 1)
+
+fun real_enumerate_lowest_terms () =
+  case Refute_EvalReal.generator of
+      {enumerate = SOME enum, ...} =>
+        let val pairs = List.map dest_real_candidate (enum 6)
+        in
+          not (null pairs) andalso
+          List.all (fn (n, d) =>
+            d > 0 andalso
+            (if n = 0 then d = 1 else real_pin_gcd (Int.abs n, d) = 1))
+            pairs
+        end
+    | {enumerate = NONE, ...} => false
+
+val _ = tprint "Refute real quickcheck enumerate is in lowest terms"
+val _ = require_msg (check_result real_enumerate_lowest_terms) (fn () =>
+  "an enumerated real candidate was not in lowest terms")
+  (fn () => ()) ()
+
+(* [[inv]] is the one arithmetic gap [[Refute_EvalReal]] closes, via
+   [[REAL_INV_DIV']] into the same [[real_div]] shape [[elim_common_factor]]
+   already decides; pin both halves of its contract directly against the
+   compset, not only indirectly via QC.  [[eval_rhs]] is defined above, at
+   the [[bool]]/[[rf3]] enumeration pins. *)
+fun real_inv_decides () =
+  Term.aconv (eval_rhs ``inv (3 / 4 : real)``) ``4 / 3 : real``
+
+val _ = tprint "Refute real quickcheck inv decides on a literal"
+val _ = require_msg (check_result real_inv_decides) (fn () =>
+  "inv (3 / 4) did not decide to 4 / 3")
+  (fn () => ()) ()
+
+(* Matches [[/]]'s own existing refusal on a zero divisor: [[inv 0 = 0]]
+   is a theorem, so reducing it would not be unsound, but declining keeps
+   one honest convention instead of two.  A stuck [[CBV_CONV]] leaves the
+   subterm unrewritten, so the whole term reduces to itself. *)
+fun real_inv_declines_on_zero () =
+  Term.aconv (eval_rhs ``inv (0 : real)``) ``inv (0 : real)``
+
+val _ = tprint "Refute real quickcheck inv declines on zero"
+val _ = require_msg (check_result real_inv_declines_on_zero) (fn () =>
+  "inv 0 reduced instead of declining")
   (fn () => ()) ()
 
 val _ =
@@ -28660,6 +29094,9 @@ val mf_real_soundness_corpus =
     ``(realax$real_neg x = realax$real_neg y) <=> x = (y : real)``),
    ("real addition cancellation equality shape",
     ``(realax$real_add z x = realax$real_add z y) <=> x = (y : real)``),
+   (* Closed, no free variables: QC would decide this directly to
+      [NoCounterexample], not [Unknown] -- only [enforce_mf_acceptance_config]'s
+      [Only [ModelFinder]] keeps this a model-finder-only pin. *)
    ("real division equality shape",
     ``realax$real_of_num 1 / realax$real_of_num 2 =
       realax$real_of_num 2 / realax$real_of_num 4``)]

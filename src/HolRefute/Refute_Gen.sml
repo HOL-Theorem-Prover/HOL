@@ -149,26 +149,19 @@ structure Refute_Gen = struct
 
   fun quotient_types () =
     let
-      val data = ThmSetData.current_data {settype = "quotient"}
+      (* [[current_data]] only sees deltas added to the literally still-open
+         theory segment; a "quotient"-tagged theorem from any already-loaded
+         ancestor (the ordinary case) needs the full-ancestry query. *)
+      val data = ThmSetData.all_data {settype = "quotient"}
+      val thms = List.concat (map (ThmSetData.added_thms o #2) data)
     in
-      List.mapPartial quotient_result_type (ThmSetData.added_thms data)
+      List.mapPartial quotient_result_type thms
     end
     handle Feedback.HOL_ERR _ => []
 
-  (* Quotient types that quotient_types () does not surface because their
-     QUOTIENT theorems are not exported into the "quotient" ThmSetData
-     set; recognised by name.  rat is a quotient type too but does not
-     belong here: [[spec_of]] below consults [[generator_of]] before it
-     ever reaches [[is_quotient_type]], and Refute_EvalRat registers a
-     generator for rat unconditionally, so this fallback is unreachable
-     for it -- there is no unregister API to make it reachable again. *)
-  val named_quotient_types = ["real"]
-
+  (* [[spec_of]] below consults [[generator_of]] before this check, so a
+     type with a registered generator never reaches it. *)
   fun is_quotient_type ty =
-    (case Lib.total Type.dest_type ty of
-       SOME (name, []) => Lib.mem name named_quotient_types
-     | _ => false)
-    orelse
     List.exists (fn quotient_ty => same_type (quotient_ty, ty))
       (quotient_types ())
 

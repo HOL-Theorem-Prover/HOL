@@ -211,6 +211,13 @@ val zoo_bool_quot_def =
   define_quotient_type "zoo_bool_quot" "zoo_bool_quot_abs"
     "zoo_bool_quot_rep" zoo_bool_equiv;
 
+(* Registers [zoo_bool_quot] in the "quotient" ThmSetData set, so
+   Refute_Gen's structural [is_quotient_type] fallback (a TypeBase-info
+   type with a registered QUOTIENT theorem) has a genuine, ground,
+   TypeBase-less target to fire on -- unlike rat/real, whose own
+   registered generators shadow that check first. *)
+Theorem zoo_bool_quot_quotient_reg[quotient] = zoo_bool_quot_def
+
 Theorem zoo_three_exists[local]:
   ?n : num. (\n. n < 3) n
 Proof

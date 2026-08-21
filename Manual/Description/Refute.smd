@@ -27,7 +27,12 @@ decides closed `:rat` arithmetic and comparison literals; the latter also
 extends the ambient `EVAL`, so closed rational literals compute afterwards
 regardless of whether Refute itself is invoked again -- a comparison to `T`
 or `F`, an arithmetic term to a raw `abs_rat (abs_frac (n, d))` value that
-is not reduced to lowest terms.
+is not reduced to lowest terms.  A Quickcheck generator for `:real` is
+registered the same way; `:real` arithmetic and comparisons were already
+decided on closed literals by `realLib` -- except `n / &0` for a nonzero
+`n`, left stuck -- so this only adds `inv` and extends `EVAL` with it,
+deciding to `real_of_num`/`real_neg`/`real_div` of numerals, the same
+shape `realLib` itself already produces.
 Loading and running Refute leaves no Refute-created type, constant, theorem,
 or theory binding in the user's theory.  In particular, temporary
 compilation artefacts are removed on success, failure, timeout, and
@@ -302,9 +307,9 @@ codatatypes, functions, sets, inductive and coinductive predicates,
 typedefs, quotients, binary integers, machine words, and the registered
 `rat` and `real` fraction encodings, both on by default.  Its `Scope:`
 line records the exact finite interpretation.  Quickcheck reaches `:rat`
-by a different, independent route: a built-in generator plus a
-computeLib fragment that decides closed `:rat` literals directly, not
-the model finder's Frac encoding above.
+and `:real` by a different, independent route: a built-in generator for
+each, plus a computeLib fragment that decides closed literals directly,
+not the model finder's Frac encoding above.
 For example:
 
 ```{=latex}

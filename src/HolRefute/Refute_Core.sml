@@ -822,14 +822,61 @@ structure Refute_Core = struct
     else
       false
 
+  (* [[real_of_num]] is [[nocompute]] -- it carries no compset entry of
+     its own, unlike [[rat_of_num]], which unfolds via a genuine (if
+     unused in practice) SUC-recursive definition -- yet a ground real
+     numeral or [[n / d]] fraction built from it is exactly as much a
+     closed, already-decided value as a NUMERAL literal: realSimps'
+     rules pattern-match through [[real_of_num]]/[[real_neg]]/[[real_div]]
+     directly, never by unfolding [[real_of_num]] itself.  Recognise that
+     shape the same way [[Literal.is_literal]] recognises a bare numeral,
+     so it is never mistaken for a stuck, non-executable constant.
+
+     A fraction of two real literals is only ever actually decided by
+     the compset when the numerator is zero (unconditional, by
+     [[REAL_DIV_LZERO]]) or the denominator is a nonzero literal
+     (negative denominators are first renormalised by [[realSimps]]'
+     [[div_rats]]/[[div_ratls]]/[[div_ratrs]], positive ones handled
+     directly): this is exactly [[realSimps.elim_common_factor]]'s own
+     acceptance condition, which raises on a nonzero numerator over a
+     zero denominator and so leaves it stuck.  Match that condition
+     here so a term like [[1 / 0]] is not mistaken for a decided value. *)
+  fun is_real_literal_fraction tm =
+    realSyntax.is_div tm andalso
+    let val (num, den) = realSyntax.dest_div tm in
+      realSyntax.is_real_literal num andalso realSyntax.is_real_literal den
+    end
+
+  fun is_real_numeral_value tm =
+    realSyntax.is_real_literal tm orelse
+    (is_real_literal_fraction tm andalso
+     let val (num, den) = realSyntax.dest_div tm in
+       realSyntax.int_of_term num = Arbint.zero orelse
+       realSyntax.int_of_term den <> Arbint.zero
+     end)
+
   fun term_constants tm =
     let
       fun collect seen tm =
-        if Literal.is_literal tm then
+        if Literal.is_literal tm orelse is_real_numeral_value tm then
           (* Numeral/string/char literals are closed values that EVAL
              reduces natively; their internal constants (NUMERAL, BIT1,
-             STRING, CHR, ...) never leave the evaluator stuck. *)
+             STRING, CHR, ...) never leave the evaluator stuck.  A real
+             numeral value is the same, despite [[real_of_num]] itself
+             having no compset entry -- see [[is_real_numeral_value]]. *)
           seen
+        else if is_real_literal_fraction tm then
+          (* Rejected by [[is_real_numeral_value]]: a nonzero numerator
+             over a zero denominator, which [[elim_common_factor]]
+             declines.  Generic recursion below would only reach
+             [[real_div]], which the compset can otherwise decide, and
+             lose the fact that this particular redex is stuck; surface
+             [[real_of_num]] (genuinely [[nocompute]]) directly instead. *)
+          if List.exists
+               (fn old => Term.same_const old realSyntax.real_injection)
+               seen
+          then seen
+          else realSyntax.real_injection :: seen
         else if Term.is_const tm then
           if List.exists (fn old => Term.same_const old tm) seen then seen
           else tm :: seen
