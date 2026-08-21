@@ -46,6 +46,18 @@ from Quickcheck: a finite sample never exhausts an infinite type, so
 exhaustive and random search alike report `Unknown`, however large the
 size or count.
 
+Finite maps (`:'a |-> 'b`) get the same asymmetry through a different
+mechanism: a `register_generator_family` registration built from
+`FEMPTY`/`FUPDATE` fires on demand at whatever concrete instance a goal
+needs, always `exhaustive = false`.  The generator lives only on the
+`Compute` substrate -- `NativeSML` and `Cv` each decline it by name and
+fall through under `Auto`, since fmap's `TypeBase` entry has no
+constructors of its own for either to build a native or a cv
+representation from -- and `Refute_Gen.enumerate` never fires for it
+either, so a closed fmap fact can be decided but a goal quantified over
+an fmap variable can never license `NoCounterexample`, the same
+guarantee `:rat`/`:real` already give.
+
 Loading and running Refute leaves no Refute-created type, constant, theorem,
 or theory binding in the user's theory.  In particular, temporary
 compilation artefacts are removed on success, failure, timeout, and
@@ -709,6 +721,20 @@ replaces the old one.
   `abstract_generator {ty, constructors, pred}` instead describes an
   abstract type through existing constructor terms and an optional
   predicate.
+* `register_generator_family {tyop, constructors, canonical}` registers a
+  QC generator for every concrete instance of a type operator at once,
+  built from constructor constants whose declared result type is `tyop`
+  applied to distinct type variables (e.g. `FEMPTY`/`FUPDATE` for
+  `:'a |-> 'b`).  Unlike `register_generator`, nothing is stored per
+  instance: `tyop` is matched on demand, so this fires for a type never
+  previously seen, and the resulting generator always has
+  `exhaustive = false`.  `canonical`, if present, is a display-only
+  `term_postprocessor` applied to a reported binding at that type after
+  testing and certification have already run against the raw term; it
+  removes structure a later part of the same candidate has overwritten,
+  and need not identify every pair of terms that denote the same value.
+  Registration fails if `tyop` already has `TypeBase` datatype
+  constructors, the same precedence `register_codatatype` enforces.
 * `register_substrate {name, priority, accepts, preflight, compile}`
   extends or replaces the executable substrate ladder.  A substrate must compile the common plan
   and preserve candidate order and cleanup; returning `Inapplicable`

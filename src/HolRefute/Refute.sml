@@ -53,6 +53,43 @@ structure Refute :> Refute = struct
      independent of the model-finder Frac registration above. *)
   val () = Refute_EvalRat.register ()
   val () = Refute_EvalReal.register ()
+  (* Finite maps: FEMPTY/FUPDATE fit the same constructor-registration
+     shape as an abstract type, generalized to fire for every concrete
+     instance of the fmap type operator.  Unlike :rat/:real, this yields an
+     ordinary GenDatatype (exhaustive = false, since the key type is
+     generally infinite); only Compute can produce fmap candidates today
+     (Refute_EvalCv and NativeSML decline, see Refute_EvalCv.sml).
+     FEMPTY |+ (1,2) |+ (1,3) and FEMPTY |+ (1,3) denote the same map, so
+     an FUPDATE chain has no unique syntactic form.  [canonical_fmap_chain]
+     removes an update iff a later update in the same chain has an [aconv]
+     key, keeping every survivor at its original position.  This is
+     denotation-preserving for any key type: a later [aconv] match shadows
+     the earlier write completely, regardless of what the keys denote.  It
+     is deliberately not a sort: sorting needs the keys known pairwise
+     distinct as values, which [Term.compare] cannot decide, so two chains
+     denoting the same map are not guaranteed to display identically. *)
+  fun canonical_fmap_chain term =
+    let
+      val (base, pairs) = finite_mapSyntax.strip_fupdate term
+    in
+      if not (finite_mapSyntax.is_fempty base) then term
+      else
+        let
+          val keyed = List.map pairSyntax.dest_pair pairs
+          fun keep ((key, value), (kept, seen)) =
+            if List.exists (fn k => Term.aconv key k) seen
+            then (kept, key :: seen)
+            else ((key, value) :: kept, key :: seen)
+          val (kept, _) = List.foldr keep ([], []) keyed
+        in
+          finite_mapSyntax.list_mk_fupdate
+            (base, List.map pairSyntax.mk_pair kept)
+        end
+    end
+  val () = Refute_Gen.register_generator_family
+    {tyop = {Thy = "finite_map", Tyop = "fmap"},
+     constructors = [finite_mapSyntax.fempty_tm, finite_mapSyntax.fupdate_tm],
+     canonical = SOME canonical_fmap_chain}
 
   val refute = Refute_Core.refute
   fun refute_def tm = refute (!Refute_Core.the_config) tm
@@ -164,6 +201,7 @@ structure Refute :> Refute = struct
           | Potential reasons => Refute_Core.Potential reasons)
   val register_substrate = Refute_Eval.register_substrate
   val register_generator = Refute_Gen.register_generator
+  val register_generator_family = Refute_Gen.register_generator_family
   val register_term_postprocessor =
     Refute_ModelFinder_Model.register_term_postprocessor
   val lookup_term_postprocessor =

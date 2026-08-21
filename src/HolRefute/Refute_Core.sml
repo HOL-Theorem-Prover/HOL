@@ -905,6 +905,7 @@ structure Refute_Core = struct
           comp_items
       fun executable_constant constant =
         TypeBase.is_constructor constant orelse
+        Refute_Gen.is_family_constructor constant orelse
         let
           val {Name, Thy, ...} = Term.dest_thy_const constant
         in

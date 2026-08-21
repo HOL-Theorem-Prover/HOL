@@ -19455,18 +19455,18 @@ val _ = require_msg (check_result function_witness_binder_is_ordinary)
   "disagreed about the witness")
   (fn () => ()) ()
 
-(* A TypeBase entry is not always a datatype the generators can enumerate:
-   the finite-map entry has no constructors and no induction principle.
-   Reaching one threw out of [Refute_Gen.induction_key], and the outer
-   handler stringified the exception into the reason list, so the user was
-   shown a raw [Exception raised at TypeBasePure.induction_of0] dump.  A
-   reason is user-facing text and must never be one: it has to name what is
+(* A TypeBase entry is not always a datatype the generators can enumerate.
+   [:'a fset] (finite_set's quotient finite-set type, distinct from fmap,
+   which now has its own generator family) has no constructors, so
+   [datatype_spec]'s null-constructors guard raises before
+   [Refute_Gen.induction_key] is ever reached.  A reason is user-facing
+   text and must never be a raw exception dump: it has to name what is
    missing and what to do about it. *)
-val finite_map_goals =
-  [``FLOOKUP (fm : num |-> num) 0 = SOME 0``,
-   ``FDOM (fm : num |-> num) = {}``]
+val finite_set_goals =
+  [``fIN (0 : num) (fs : num fset)``,
+   ``(fs : num fset) = fEMPTY``]
 
-fun finite_map_reason_is_a_diagnostic () =
+fun finite_set_reason_is_a_diagnostic () =
   let
     fun diagnostic reason =
       reason <> "" andalso
@@ -19483,24 +19483,285 @@ fun finite_map_reason_is_a_diagnostic () =
       in
         not (null reasons) andalso List.all diagnostic reasons
       end
-    (* The first goal is the one that reaches the generator lookup; the
-       second is refused earlier, over the set literal it is compared
-       against. *)
-    val generator_goal = hd finite_map_goals
+    val generator_goal = hd finite_set_goals
     fun actionable strategy =
       List.exists (String.isSubstring "register a generator")
         (reasons_of strategy generator_goal)
   in
-    List.all (reported Exhaustive) finite_map_goals andalso
+    List.all (reported Exhaustive) finite_set_goals andalso
     reported Narrowing generator_goal andalso
     actionable Exhaustive andalso actionable Narrowing
   end
 
-val _ = tprint "Refute finite-map generator refusal"
-val _ = require_msg (check_result finite_map_reason_is_a_diagnostic)
+val _ = tprint "Refute finite-set generator refusal"
+val _ = require_msg (check_result finite_set_reason_is_a_diagnostic)
   (fn () =>
-  "a finite-map goal reported no reason, or reported a raw exception dump " ^
+  "a finite-set goal reported no reason, or reported a raw exception dump " ^
   "instead of an actionable generator diagnostic")
+  (fn () => ()) ()
+
+(* FEMPTY/FUPDATE now fit the on-demand [register_generator_family] shape,
+   so the goal above that used to be the actionable-[Unknown] witness is
+   now a genuine counterexample.  [Only [Exhaustive]] pins the minimal
+   witness itself -- FEMPTY, the only size-0 candidate -- distinct from
+   [finite_map_counterexample_certifies] below, which pins certification
+   over the same goal but does not look at the binding at all. *)
+fun finite_map_flookup_zero_is_genuine () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config)
+    ``FLOOKUP (fm : num |-> num) 0 = SOME 0`` of
+      Counterexample ({certainty = Genuine, bindings = [(_, value)], ...}
+          :: _) => finite_mapSyntax.is_fempty value
+    | _ => false
+
+val _ = tprint "Refute finite-map quickcheck flips the lookup gap to Genuine"
+val _ = require_msg
+  (check_result finite_map_flookup_zero_is_genuine) (fn () =>
+  "FLOOKUP fm 0 = SOME 0 was not refuted at Genuine with witness FEMPTY " ^
+  "now that fmap has a generator")
+  (fn () => ()) ()
+
+(* True-theorem twin, same shape: a ground, closed fact decided outright by
+   compute -- not licensed by any claim of exhausting the key type. *)
+fun finite_map_flookup_update_sound_twin () =
+  case refute (Refute.upd_search Refute.QuickcheckBackends default_config)
+    ``FLOOKUP ((FEMPTY : num |-> num) |+ (0, 0)) 0 = SOME 0`` of
+      NoCounterexample => true
+    | _ => false
+
+val _ = tprint "Refute finite-map quickcheck lookup-after-update sound twin"
+val _ = require_msg
+  (check_result finite_map_flookup_update_sound_twin) (fn () =>
+  "a ground true FLOOKUP-after-FUPDATE fact was not decided " ^
+  "NoCounterexample")
+  (fn () => ()) ()
+
+(* The key type is generally infinite, so exhaustive QC must never claim
+   totality for fmap -- not even for a goal that is true at every
+   candidate it tries. *)
+fun finite_map_never_exhausted () =
+  case refute
+    (upd_size 2 (upd_substrate Compute
+      (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config)))
+    ``FDOM ((fm : num |-> num) |+ (k, v)) = k INSERT FDOM fm`` of
+      Unknown reasons =>
+        reasons = ["exhaustive: search space not exhausted",
+                   "exhaustive: searched up to size 2"]
+    | _ => false
+
+val _ = tprint "Refute finite-map quickcheck is never exhausted"
+val _ = require_msg (check_result finite_map_never_exhausted) (fn () =>
+  "an fmap goal over an infinite key type did not report the expected " ^
+  "Unknown reasons")
+  (fn () => ()) ()
+
+(* [Refute_Gen.enumerate]/[datatype_terms] never fire for fmap: a family
+   spec always has [exhaustive = false]
+   ([register_generator_family]/[from_spec]), so [datatype_cardinality]
+   short-circuits to [NONE] before [FUPDATE]'s recursion is even
+   examined, and [enumerate] gates on that cardinality.  The [Genuine]
+   result the [Only [Exhaustive]] pins above get comes from an entirely
+   different, always-incomplete generator
+   ([Refute_EvalCompute]'s own [exhaustive_values]/[exhaustive_compile],
+   driven directly off [Refute_Gen.spec_of]) that never calls
+   [enumerate].  Pin the enumeration half directly instead of inferring
+   it from the QC pins' behaviour. *)
+fun finite_map_enumerate_is_unreachable () =
+  not (Option.isSome (Refute_Gen.enumerate ``:num |-> num``))
+
+val _ = tprint "Refute finite-map enumerate is unreachable"
+val _ = require_msg
+  (check_result finite_map_enumerate_is_unreachable) (fn () =>
+  "Refute_Gen.enumerate unexpectedly returned SOME for an fmap instance")
+  (fn () => ()) ()
+
+(* A literal fmap lookup premise compiles to the same generic Split shape
+   as the [:num -> num option] proxy pinned above
+   ([plan_is_fmap_lookup]/[fmap_lookup_goal]).  No narrowing-specific fmap
+   code was needed for this. *)
+val literal_fmap_lookup_goal =
+  ``FLOOKUP (fm : num |-> num) k = SOME (v : num) ==> p fm k v``
+
+val _ = check_plan plan_is_fmap_lookup
+  "a literal fmap lookup premise did not compile to the expected Split"
+  literal_fmap_lookup_goal
+
+(* An fmap counterexample certifies, since FLOOKUP, FDOM, FUPDATE and
+   FEMPTY are already in the global compset. *)
+fun finite_map_counterexample_certifies () =
+  case refute (Refute.upd_search Refute.QuickcheckBackends default_config)
+    ``FLOOKUP (fm : num |-> num) 0 = SOME 0`` of
+      Counterexample ({certainty = Genuine, cert = SOME _, ...} :: _) => true
+    | _ => false
+
+val _ = tprint "Refute finite-map counterexample certifies"
+val _ = require_msg
+  (check_result finite_map_counterexample_certifies) (fn () =>
+  "a genuine fmap counterexample did not certify")
+  (fn () => ()) ()
+
+(* Canonical chains: FEMPTY |+ (1,2) |+ (1,3) and FEMPTY |+ (1,3) denote
+   the same map.  [lookup_family_canonical] is the display-only rewrite
+   [Refute_QC.record_candidate_with] applies to a reported binding; it
+   never reaches testing or certification.  Dedup is in place (a later
+   [aconv] key shadows an earlier one, at the earlier one's position) and
+   there is no sort, so two chains that denote the same map via
+   non-[aconv] keys are *not* guaranteed to display identically -- see
+   [finite_map_canonical_dedup_is_denotation_preserving] below for the
+   guarantee that replaces it. *)
+fun finite_map_canonical_chain_dedups () =
+  case lookup_family_canonical ``:num |-> num`` of
+      SOME rewrite =>
+        let
+          val overwritten =
+            ``(FEMPTY : num |-> num) |+ (1, 2) |+ (1, 3)``
+          val direct = ``(FEMPTY : num |-> num) |+ (1, 3)``
+        in
+          Term.aconv (rewrite overwritten) (rewrite direct)
+        end
+    | NONE => false
+
+val _ = tprint "Refute finite-map canonical chain collapses overwritten keys"
+val _ = require_msg
+  (check_result finite_map_canonical_chain_dedups) (fn () =>
+  "canonicalizing an fmap update chain did not dedup an overwritten key")
+  (fn () => ()) ()
+
+(* Dedup must be denotation-preserving even when
+   two non-[aconv] keys denote the same value -- e.g. [1 + 1] and [2].
+   The retired sort could not tell such keys apart as values, so it
+   reordered them by [Term.compare] with no relation to which write was
+   chronologically last; since that reordering never depends on the raw
+   chain's order, canonicalizing both orderings of the same two updates
+   always produced the *same* rewritten term, so at least one of the two
+   had to disagree with its own raw chain's true last write.  Checking
+   both orderings here therefore fails under the retired sort regardless
+   of which way [Term.compare] happened to break the tie. *)
+fun finite_map_canonical_dedup_is_denotation_preserving () =
+  case lookup_family_canonical ``:num |-> num`` of
+      NONE => false
+    | SOME rewrite =>
+        let
+          fun last_write_survives (first_key, first_value)
+                (second_key, second_value) =
+            let
+              val empty = finite_mapSyntax.mk_fempty
+                (Term.type_of first_key, Term.type_of first_value)
+              val raw = finite_mapSyntax.list_mk_fupdate
+                (empty,
+                 [pairSyntax.mk_pair (first_key, first_value),
+                  pairSyntax.mk_pair (second_key, second_value)])
+            in
+              closed_eval_is
+                (finite_mapSyntax.mk_flookup (rewrite raw, second_key))
+                (optionSyntax.mk_some second_value)
+            end
+          val a = (``1 + 1 : num``, ``10 : num``)
+          val b = (``2 : num``, ``20 : num``)
+        in
+          last_write_survives a b andalso last_write_survives b a
+        end
+
+val _ = tprint
+  "Refute finite-map canonical dedup is denotation-preserving"
+val _ = require_msg
+  (check_result finite_map_canonical_dedup_is_denotation_preserving)
+  (fn () =>
+  "canonicalizing a chain with two non-aconv same-valued keys changed " ^
+  "which update's value the map reports")
+  (fn () => ()) ()
+
+(* The pin above shows the rewrite itself is correct; it does not show
+   [Refute_QC.record_candidate_with] -- the single choke point that builds
+   every reported QC binding -- actually applies it.  Drive that function
+   directly with a raw candidate holding an overwritten key and inspect
+   what it reports; [certify = false] takes the shortest path to a
+   retained counterexample, bypassing certification, which is irrelevant
+   to this display-only property.  fmap's generator fires only on the
+   compute substrate (see the comment at [stream_conformance] above), so
+   there is no cross-substrate form of this pin: "compute" is the only
+   real substrate name that can ever reach this code path for fmap. *)
+fun finite_map_canonical_chain_reaches_the_report () =
+  let
+    val fm_var = Term.mk_var ("fm", ``:num |-> num``)
+    val goal_tm = boolSyntax.mk_eq (fm_var, fm_var)
+    val overwritten = ``(FEMPTY : num |-> num) |+ (1, 2) |+ (1, 3)``
+    val collapsed = ``(FEMPTY : num |-> num) |+ (1, 3)``
+    val instance : Refute_Core.instance =
+      {original = goal_tm, goal = goal_tm, qc_gate = NONE, evals = [],
+       card = 1, size_matters = false}
+    val counterexamples = ref ([] : Refute_Core.counterexample list)
+  in
+    Refute_QC.record_candidate_with (fn _ => "exhaustive")
+      {config = Refute.upd_certify false default_config,
+       strategy = Exhaustive, substrate = "compute", instance = instance,
+       stats = [], counterexamples = counterexamples, discarded = ref 0,
+       run_depth = NONE, pnf_prefix = NONE,
+       retain_replay_potential = fn _ => (),
+       retry = fn _ => fn _ => (), retry_potential = fn _ => fn _ => ()}
+      {env = [(fm_var, overwritten)], ground_env = NONE, case_tree = NONE,
+       genuine = true, genuine_only = false, ignored = []};
+    case !counterexamples of
+        [{bindings = [(reported_var, reported_value)], ...}] =>
+          Term.aconv reported_var fm_var andalso
+          Term.aconv reported_value collapsed
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute finite-map canonical chain reaches the reported binding"
+val _ = require_msg
+  (check_result finite_map_canonical_chain_reaches_the_report) (fn () =>
+  "record_candidate_with did not canonicalize an overwritten-key fmap " ^
+  "binding before reporting it")
+  (fn () => ()) ()
+
+(* The default *adaptive* configuration -- no [upd_size], no
+   [upd_substrate], no [Only [Exhaustive]] -- is what a user actually
+   gets; the fixed-size pin above ([finite_map_never_exhausted]) does not
+   exercise it.  It must never report [NoCounterexample] for a goal
+   universally quantified over an fmap-typed variable, since the key
+   type is generally infinite and no adaptive window ever exhausts it. *)
+fun finite_map_default_adaptive_config_never_exhausts () =
+  case refute default_config
+    ``FDOM ((fm : num |-> num) |+ (k, v)) = k INSERT FDOM fm`` of
+      NoCounterexample => false
+    | _ => true
+
+val _ = tprint
+  ("Refute finite-map default adaptive config never reports " ^
+   "NoCounterexample")
+val _ = require_msg
+  (check_result finite_map_default_adaptive_config_never_exhausts) (fn () =>
+  "the default adaptive configuration reported NoCounterexample for an " ^
+  "fmap goal over an infinite key type")
+  (fn () => ()) ()
+
+(* The [exhaustive] flag on a family registration is narrowing-load-
+   bearing in general ([Refute_Narrow.sml]'s [complete = exhaustive
+   andalso ...]), but not for fmap: [Refute_Extract.ensure_type] runs on
+   every type in the narrowing prefix's dependency closure before any
+   shape is built, and fmap's [TypeBase] entry has no constructors
+   (family registration does not touch [TypeBase]), so extraction always
+   rejects fmap by name -- "abstract or generated type is not
+   extractable" -- before [Refute_Narrow.shape_of_with] ever sees an
+   fmap [GenDatatype] spec.  Narrowing over fmap is therefore
+   unreachable; pin the actual outcome instead of leaving that claim
+   untested. *)
+fun finite_map_narrowing_is_unreachable () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.Narrowing]) default_config)
+    ``FLOOKUP (fm : num |-> num) 0 = SOME 0`` of
+      Unknown reasons =>
+        List.exists (fn r => String.isSubstring "not extractable" r)
+          reasons
+    | _ => false
+
+val _ = tprint "Refute finite-map narrowing is unreachable by name"
+val _ = require_msg
+  (check_result finite_map_narrowing_is_unreachable) (fn () =>
+  "selecting Narrowing for an fmap goal did not report Unknown naming " ^
+  "the extraction failure")
   (fn () => ()) ()
 
 val _ = tprint "Refute narrowing backend"
@@ -20916,8 +21177,9 @@ val _ = require_msg
   "an explicit inapplicable substrate fell back or lost its reason")
   (fn () => ()) ()
 
-(* The custom and abstract registries are disjoint, so a refusal that names
-   both leaves the user guessing which registration to go and look for. *)
+(* The custom, abstract, and family registries are disjoint, so a
+   refusal that names more than one leaves the user guessing which
+   registration to go and look for. *)
 fun cv_names_the_registry_that_refused () =
   let
     fun refused fragment goal =
@@ -20933,6 +21195,29 @@ fun cv_names_the_registry_that_refused () =
 val _ = require_msg
   (check_result cv_names_the_registry_that_refused) (fn () =>
   "cv did not name the registry that refused the type")
+  (fn () => ()) ()
+
+(* fmap's generator is a [register_generator_family], not a custom or
+   abstract registration.  An explicitly selected Cv must decline it by
+   name -- "generator family registered" -- exactly as it does the other
+   two registries above, and must never surface the internal
+   [TypeBasePure.axiom_of] failure a naive attempt to synthesize cv
+   equations for a constructor-less type produces. *)
+fun finite_map_cv_declines_by_name () =
+  case run_with_strategy Exhaustive (upd_substrate Cv default_config)
+    ``FLOOKUP (fm : num |-> num) 0 = SOME 0`` of
+      Unknown reasons =>
+        List.exists
+          (String.isSubstring "generator family registered") reasons
+        andalso not (List.exists (String.isSubstring "HOL_ERR") reasons)
+        andalso not (List.exists (String.isSubstring "axiom_of") reasons)
+    | _ => false
+
+val _ = tprint "Refute finite-map Cv declines by name"
+val _ = require_msg
+  (check_result finite_map_cv_declines_by_name) (fn () =>
+  "an explicit Cv substrate did not decline an fmap goal by naming the " ^
+  "family registration")
   (fn () => ()) ()
 
 fun capture_refute_messages level action =
@@ -23820,6 +24105,18 @@ fun stream_conformance () =
        ("word8", ``:word8``), ("num list", ``:num list``),
        ("record", ``:rg_stream_record``), ("rose", ``:rg_rose``),
        ("function", ``:refute$rf2 -> bool``)]
+      (* fmap cannot join this list, for the same reason as rat (see the
+         comment below at [reference_rat_draw]): its generator lives only
+         on the compute substrate.  [Refute_Extract.extract_problem] itself
+         declines cleanly and by name ("abstract or generated type is not
+         extractable"), exactly like the wrapped Auto pipeline; the problem
+         is [dump_native_random_candidates] below, which bypasses Auto and
+         has no substrate to fall through to, so it turns that same
+         [Inapplicable] reason into a raised [Fail] instead of silently
+         trying the next substrate.  There is no cross-substrate form of
+         [finite_map_canonical_chain_reaches_the_report] above for the
+         same reason: "compute" is the only substrate that can ever be
+         credited with an fmap candidate. *)
 
     fun check seed (name, ty) =
       let

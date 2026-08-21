@@ -35,6 +35,7 @@ are rejected when a backend consumes them.
 ### See also
 
 [`Refute.register_substrate`](#Refute.register_substrate),
+[`Refute.register_generator_family`](#Refute.register_generator_family),
 [`Refute.quickcheck`](#Refute.quickcheck),
 [`Refute.config`](#Refute.config)
 

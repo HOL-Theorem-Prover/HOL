@@ -8,3 +8,8 @@ Refute.abstract_generator :
 Registers constructor-shaped values for counterexample discovery.  This is an
 incomplete generator registration: it can find examples but cannot establish
 exhaustive `NoCounterexample` results.
+
+### See also
+
+[`Refute.register_generator`](#Refute.register_generator),
+[`Refute.register_generator_family`](#Refute.register_generator_family)

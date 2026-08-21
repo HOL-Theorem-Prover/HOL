@@ -13,6 +13,7 @@ signature REFUTE_UTIL = sig
   val member_type : Type.hol_type -> Type.hol_type list -> bool
   val add_type :
     Type.hol_type -> Type.hol_type list -> Type.hol_type list
+  val all_distinct_types : Type.hol_type list -> bool
   val aconv_member : Term.term -> Term.term list -> bool
   val distinct_terms : Term.term list -> Term.term list
   val union_terms : Term.term list -> Term.term list -> Term.term list
@@ -23,6 +24,15 @@ structure Refute_Util :> REFUTE_UTIL = struct
 
   val member_type = Lib.op_mem same_type
   val add_type = Lib.op_insert same_type
+
+  (* Shared by callers that need distinct type-variable arguments, e.g.
+     [register_codatatype] and [register_generator_family]: each checks
+     its own well-formedness and delegates pairwise distinctness here. *)
+  fun all_distinct_types tys =
+    #2 (List.foldl (fn (ty, (seen, ok)) =>
+      if ok andalso not (member_type ty seen) then (ty :: seen, true)
+      else (seen, false)) ([], true) tys)
+
   val aconv_member = Lib.op_mem Term.aconv
 
   fun distinct_terms terms =

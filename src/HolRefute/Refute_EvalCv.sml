@@ -119,15 +119,18 @@ structure Refute_EvalCv = struct
   fun unsupported ty why =
     raise Unsupported (cv_type_name ty ^ " - " ^ why)
 
-  (* The two registries are disjoint, so name the one that actually holds
-     the type: a user reading "custom" must be able to look for their own
-     [register_generator] call rather than an abstract declaration. *)
+  (* The three registries are disjoint, so name the one that actually
+     holds the type: a user reading "custom" must be able to look for
+     their own [register_generator] call rather than an abstract
+     declaration or a family registration. *)
   fun check_in_fragment ty =
     if Type.is_vartype ty then unsupported ty "unresolved type variable"
     else if Option.isSome (Refute_Gen.generator_of ty) then
       unsupported ty "custom generator registered"
     else if Refute_Gen.has_registered_generator ty then
       unsupported ty "abstract generator registered"
+    else if Option.isSome (Refute_Gen.family_for ty) then
+      unsupported ty "generator family registered"
     else ()
 
   fun recipe_of ty =

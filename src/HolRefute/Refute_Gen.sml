@@ -39,6 +39,18 @@ structure Refute_Gen = struct
   val user_generators : (hol_type * custom_gen) list ref = ref []
   val abstract_specs : (hol_type * genspec) list ref = ref []
   val abstract_predicates : (hol_type * term) list ref = ref []
+
+  (* A family fires on demand, at every concrete instance of a type
+     operator, unlike [abstract_specs] which is keyed by one exact type.
+     [canonical], if present, picks one term to represent every value a
+     generated candidate of this type can denote -- e.g. collapsing an
+     FUPDATE chain to the unique map it denotes -- for display only; it
+     never affects the raw generated candidate used for testing or
+     certification. *)
+  type generator_family =
+    { thy : string, tyop : string, constructors : term list,
+      canonical : (term -> term) option }
+  val generator_families : generator_family list ref = ref []
   val registry_mutex = Mutex.mutex ()
   val registry_generation = ref 0
 
@@ -226,6 +238,159 @@ structure Refute_Gen = struct
       visit false ty
     end
 
+  fun result_type tm = #2 (boolSyntax.strip_fun (Term.type_of tm))
+
+  (* Shared by [abstract_generator] (one exact type, validated eagerly) and
+     the on-demand family dispatch in [spec_of] (a type operator, validated
+     per encountered instance).  [bad] supplies the failure shape: [Fail]
+     for the former, [NoGenerator] for the latter. *)
+  fun instantiate_family_constructor ty bad constructor =
+    let
+      val _ = if Term.is_const constructor then ()
+              else bad "constructors must be constants"
+      val result_ty = result_type constructor
+      val (_, result_args) = Type.dest_type result_ty
+      val _ = if List.all Type.is_vartype result_args then ()
+              else bad ("constructor result must have type-variable " ^
+                        "arguments")
+      val theta = Type.match_type result_ty ty
+      val constructor = Term.inst theta constructor
+      val (args, actual_ty) =
+        boolSyntax.strip_fun (Term.type_of constructor)
+      val _ = if same_type (actual_ty, ty) then ()
+              else bad "constructor has a mismatching result type"
+      val _ =
+        if List.exists (recursive_under_function [ty]) args then
+          bad "constructor is recursive under a function type"
+        else
+          ()
+    in
+      (constructor, args)
+    end
+
+  fun family_datatype_spec ty bad constructors =
+    let
+      val _ =
+        if List.null constructors then bad "constructors must be nonempty"
+        else ()
+      val constrs =
+        List.map (instantiate_family_constructor ty bad) constructors
+      val recursive = List.map (fn (_, args) =>
+        List.map (type_mentions [ty]) args) constrs
+      val min_size = List.map (fn row =>
+        List.map (fn is_recursive => if is_recursive then 1 else 0) row)
+          recursive
+    in
+      GenDatatype
+        { constrs = constrs,
+          exhaustive = false,
+          recursive = recursive,
+          min_size = min_size,
+          family = [ty] }
+    end
+
+  fun check_family_constructor (thy, tyop) constructor =
+    let
+      fun bad message =
+        raise Fail ("Refute_Gen.register_generator_family: " ^ message)
+      val _ = if Term.is_const constructor then ()
+              else bad "constructors must be constants"
+      val result_ty = result_type constructor
+    in
+      case Lib.total Type.dest_thy_type result_ty of
+          SOME {Thy, Tyop, Args} =>
+            if Thy = thy andalso Tyop = tyop andalso
+               List.all Type.is_vartype Args then
+              if Util.all_distinct_types Args then ()
+              else bad "constructor result type arguments must be distinct"
+            else
+              bad ("constructor result must be " ^ thy ^ "$" ^ tyop ^
+                   " applied to type variables")
+        | NONE =>
+            bad ("constructor result must be " ^ thy ^ "$" ^ tyop ^
+                 " applied to type variables")
+    end
+
+  (* [non_function_spec] consults a registered family before [TypeBase],
+     so registering one for a type operator [TypeBase] already treats as a
+     datatype would silently shadow its spec -- and, since a family spec is
+     always [exhaustive = false], silently disable finite exhaustion for a
+     type that may in fact be finite.  Reject that the way
+     [register_codatatype] cross-checks the database in the analogous
+     situation, rather than let it happen unremarked. *)
+  fun family_typebase_constructors (thy, tyop) constructors =
+    case constructors of
+        [] => []
+      | first :: _ =>
+          (let
+            val {Args, ...} = Type.dest_thy_type (result_type first)
+            val generic = Type.mk_thy_type
+              {Thy = thy, Tyop = tyop,
+               Args = List.tabulate (List.length Args,
+                 fn index => Type.mk_vartype ("'family" ^ Int.toString index))}
+          in
+            case TypeBase.fetch generic of
+                SOME info => TypeBasePure.constructors_of info
+              | NONE => []
+          end
+          handle Feedback.HOL_ERR _ => [])
+
+  (* Registers a constructor family for every concrete instance of a type
+     operator, e.g. FEMPTY/FUPDATE for [:'a |-> 'b].  Session-local, like
+     [abstract_generator]; unlike it, nothing is stored per instance, so
+     [spec_of] builds and caches each encountered instance on demand. *)
+  fun register_generator_family {tyop = {Thy = thy, Tyop = tyop},
+        constructors, canonical} =
+    let
+      fun bad message =
+        raise Fail ("Refute_Gen.register_generator_family: " ^ message)
+      val _ =
+        if List.null constructors then bad "constructors must be nonempty"
+        else ()
+      val _ = List.app (check_family_constructor (thy, tyop)) constructors
+      val _ =
+        if List.null (family_typebase_constructors (thy, tyop) constructors)
+        then ()
+        else bad (thy ^ "$" ^ tyop ^
+             " already has TypeBase datatype constructors")
+    in
+      synchronized_registry (fn () =>
+        (generator_families :=
+           { thy = thy, tyop = tyop, constructors = constructors,
+             canonical = canonical } ::
+           List.filter
+             (fn fam => not (#thy fam = thy andalso #tyop fam = tyop))
+             (!generator_families);
+         registry_generation := !registry_generation + 1;
+         spec_cache := Redblackmap.mkDict Type.compare;
+         cardinality_cache := Redblackmap.mkDict Type.compare;
+         enumerate_cache := Redblackmap.mkDict Type.compare))
+    end
+
+  fun family_for ty =
+    case Lib.total Type.dest_thy_type ty of
+        NONE => NONE
+      | SOME {Thy, Tyop, ...} =>
+          synchronized_registry (fn () =>
+            List.find (fn fam => #thy fam = Thy andalso #tyop fam = Tyop)
+              (!generator_families))
+
+  fun lookup_family_canonical ty =
+    case family_for ty of
+        SOME {canonical, ...} => canonical
+      | NONE => NONE
+
+  (* A registered family's constructors (e.g. FEMPTY/FUPDATE) are as
+     [nocompute]/constructor-like as an ordinary datatype's, so
+     [Refute_Core.nonexecutable_constants] trusts them the same way it
+     trusts [TypeBase.is_constructor]. *)
+  fun is_family_constructor constant =
+    Term.is_const constant andalso
+    synchronized_registry (fn () =>
+      List.exists (fn fam =>
+        List.exists (fn c => Term.same_const c constant) (#constructors fam))
+        (!generator_families))
+
   fun own_floor (GenDatatype {min_size, ...}) =
         List.foldl Int.min 1073741823
           (List.map (fn row => List.foldl Int.max 0 row) min_size)
@@ -316,12 +481,14 @@ structure Refute_Gen = struct
 
           fun datatype_spec info =
             let
-              (* A TypeBase entry need not describe a datatype: the
-                 finite-map entry, for one, lists no constructors, so there
-                 is nothing to build values from.  Refuse in the same words
-                 as the other missing-generator cases rather than returning
-                 an empty enumeration, which would make the type look
-                 uninhabited and the search look exhausted. *)
+              (* A TypeBase entry need not describe a datatype: [:'a fset]'s
+                 entry, for one, lists no constructors, so there is nothing
+                 to build values from.  (The finite-map entry is the same
+                 way, but [non_function_spec] below routes it to a
+                 registered family before this is ever reached.)  Refuse in
+                 the same words as the other missing-generator cases rather
+                 than returning an empty enumeration, which would make the
+                 type look uninhabited and the search look exhausted. *)
               val constrs = constructor_data ty info
               val _ =
                 if List.null constrs then
@@ -363,74 +530,42 @@ structure Refute_Gen = struct
                     family = family }
             end
 
+          fun no_typebase_spec () =
+            case TypeBase.fetch ty of
+                SOME info => datatype_spec info
+              | NONE =>
+                  if is_quotient_type ty then
+                    raise NoGenerator
+                      (ty, "quotient type; register a generator")
+                  else
+                    raise no_generator ty
+
+          fun non_function_spec () =
+            case family_for ty of
+                SOME {constructors, ...} =>
+                  family_datatype_spec ty
+                    (fn message => raise NoGenerator (ty, message))
+                    constructors
+              | NONE => no_typebase_spec ()
+
           val spec =
             case numeric_kind ty of
-              SOME kind => GenNum kind
-            | NONE =>
-                (case Lib.total dest_fun ty of
-                   SOME (dom, rng) => GenFun (dom, rng)
-                 | NONE =>
-                     (case TypeBase.fetch ty of
-                        SOME info => datatype_spec info
-                      | NONE =>
-                          if is_quotient_type ty then
-                            raise NoGenerator
-                              (ty, "quotient type; register a generator")
-                          else
-                            raise no_generator ty))
+                SOME kind => GenNum kind
+              | NONE =>
+                  (case Lib.total dest_fun ty of
+                       SOME (dom, rng) => GenFun (dom, rng)
+                     | NONE => non_function_spec ())
           val _ = cache_spec generation ty spec
         in
           spec
         end))
     end
 
-  fun result_type tm = #2 (boolSyntax.strip_fun (Term.type_of tm))
-
   fun abstract_generator {ty, constructors, pred} =
     let
       fun bad message =
         raise Fail ("Refute_Gen.abstract_generator: " ^ message)
-
-      fun instantiate constructor =
-        let
-          val _ = if Term.is_const constructor then ()
-                  else bad "constructors must be constants"
-          val result_ty = result_type constructor
-          val (_, result_args) = Type.dest_type result_ty
-          val _ = if List.all Type.is_vartype result_args then ()
-                  else bad ("constructor result must have type-variable " ^
-                            "arguments")
-          val theta = Type.match_type result_ty ty
-          val constructor = Term.inst theta constructor
-          val (args, actual_ty) =
-            boolSyntax.strip_fun (Term.type_of constructor)
-          val _ = if same_type (actual_ty, ty) then ()
-                  else bad "constructor has a mismatching result type"
-          val _ =
-            if List.exists (recursive_under_function [ty]) args then
-              bad "constructor is recursive under a function type"
-            else
-              ()
-        in
-          (constructor, args)
-        end
-
-      val _ =
-        if List.null constructors then bad "constructors must be nonempty"
-        else ()
-      val constrs = List.map instantiate constructors
-      val recursive = List.map (fn (_, args) =>
-        List.map (type_mentions [ty]) args) constrs
-      val min_size = List.map (fn row =>
-        List.map (fn is_recursive => if is_recursive then 1 else 0) row)
-          recursive
-      val spec =
-        GenDatatype
-          { constrs = constrs,
-            exhaustive = false,
-            recursive = recursive,
-            min_size = min_size,
-            family = [ty] }
+      val spec = family_datatype_spec ty bad constructors
       val _ =
         case pred of
           NONE => ()

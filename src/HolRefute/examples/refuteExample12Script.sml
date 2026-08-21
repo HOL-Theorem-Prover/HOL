@@ -44,12 +44,12 @@ Proof
   MODEL_REFUTE_TAC >> cheat
 QED
 
-(* An unsupported type is reported as inconclusive; it is not evidence
-   that the conjecture is true.  Finite maps are therefore illustrated by
-   a statement whose list representation is directly executable. *)
+(* Finite maps have a QC generator too, registered on demand at whatever
+   instance a goal needs; FEMPTY is always a candidate, so no fixed key
+   maps to a fixed value in every finite map. *)
 
-Theorem association_lists_need_not_map_zero_to_zero:
-  ALOOKUP xs (0 : num) = SOME (0 : num)
+Theorem finite_maps_need_not_map_zero_to_zero:
+  FLOOKUP (fm : num |-> num) 0 = SOME (0 : num)
 Proof
   QUICKCHECK_TAC >> cheat
 QED

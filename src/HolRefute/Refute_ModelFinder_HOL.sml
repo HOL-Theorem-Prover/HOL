@@ -2479,18 +2479,11 @@ structure Refute_ModelFinder_HOL = struct
     {Thy = #Thy key, Name = #Name key}
 
   fun distinct_type_variables function tys =
-    let
-      fun add (ty, seen) =
-        if List.exists (fn old => Type.compare (ty, old) = EQUAL) seen then
-          raise err function "type arguments must be distinct type variables"
-        else
-          ty :: seen
-    in
-      if List.all Type.is_vartype tys then
-        ignore (List.foldl add [] tys)
-      else
-        raise err function "type arguments must all be type variables"
-    end
+    if not (List.all Type.is_vartype tys) then
+      raise err function "type arguments must all be type variables"
+    else if not (Refute_Util.all_distinct_types tys) then
+      raise err function "type arguments must be distinct type variables"
+    else ()
 
   fun distinct_types tys = distinct_type_variables "register_codatatype" tys
 

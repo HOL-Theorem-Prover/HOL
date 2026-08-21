@@ -80,6 +80,63 @@ that has no fact either way -- sound under the same trust model that
 lets Refute rely on Kodkodi's arithmetic exactly as Nitpick relies on
 Kodkod, and never stricter, but a choice rather than a deduction.
 
+`:'a |-> 'b` (finite maps) is a third built-in case, but registered
+through a different mechanism than `:rat`/`:real`'s single `GenCustom`
+instance: `Refute_Gen.register_generator_family {tyop, constructors,
+canonical}` (exposed as `Refute.register_generator_family`) declares a
+type operator's constructors (`FEMPTY`, `FUPDATE`) once, and the
+generator fires on demand at whatever concrete instance a goal needs,
+built as an ordinary `GenDatatype` over those constructors rather than a
+bespoke spec.  Because it is a `GenDatatype`, not a `GenCustom`, Cv and
+NativeSML are not refused outright by `has_registered_generator`; each
+independently declines it by name -- Cv's `check_in_fragment` checks
+`Refute_Gen.family_for` before attempting any cv translation, and
+NativeSML's `ensure_type` rejects it as soon as it finds fmap's
+`TypeBase` entry has no constructors -- falling through to Compute under
+`Auto` exactly as an ordinary inapplicable substrate would.  The
+registration always sets `exhaustive = false`: a finite map's key type
+is typically infinite, so no finite sample of update chains ever
+exhausts the space, and QC must never report `NoCounterexample` for a
+goal universally quantified over an `fmap`-typed variable -- only a
+*closed* fmap fact (no such variable) can decide that way, the same
+asymmetry `:rat`/`:real` already have.  `Refute_Gen.enumerate` never
+fires for fmap either: a family spec's `exhaustive = false` makes
+`datatype_cardinality` short-circuit to `NONE` before `FUPDATE`'s
+recursion is examined, and `enumerate` gates on that cardinality; the
+`Genuine` results an exhaustive-only search still finds come from a
+separate, always-incomplete generator private to the Compute substrate
+that never calls `enumerate`.  The Narrowing strategy is unreachable for
+fmap for the same underlying reason as NativeSML's decline above:
+extraction rejects every fmap-typed prefix variable by name before any
+narrowing shape is built, so fmap's `exhaustive` flag, unlike an
+ordinary recursive datatype's, is never narrowing-load-bearing.
+`FEMPTY`/`FUPDATE` are also registered with
+`Refute_Core.nonexecutable_constants`'s executability check
+(`Refute_Gen.is_family_constructor`), trusted the same way an ordinary
+datatype's `TypeBase.is_constructor` already is; without this, a goal
+mentioning `FUPDATE`/`FEMPTY` literally in its text -- as opposed to
+only through a generated variable -- would be rejected as "not
+executable" regardless of the registered generator, since `FUPDATE` is
+`[nocompute]`-tagged in `finite_mapScript.sml` and fmap's `TypeBase`
+entry has no constructors of its own.  `canonical`, when supplied, is a
+display-only `term_postprocessor` applied at
+`Refute_QC.record_candidate_with`'s single choke point for every
+reported binding; the rewrite it installs never reaches testing or
+certification, both of which always see the untouched `env` this
+mechanism closes over, independent of when the rewrite runs relative to
+them.  fmap's is `canonical_fmap_chain`, which dedups an update chain
+like `FEMPTY |+ (1,2) |+ (1,3)` to the semantically identical
+`FEMPTY |+ (1,3)` *in place* -- a later `aconv` key shadows an earlier
+one, at the earlier one's position -- with no sort: sorting would need
+to compare keys as values, which `Term.compare` cannot decide, so two
+chains that denote the same map via non-`aconv` keys are not guaranteed
+to display identically.  `Refute_Gen.lookup_family_canonical ty` exposes
+the registered rewrite for a given instance type; `NONE` means no family
+registered a canonical form for that type (or none is registered at
+all).  Like the model finder's own `register_term_postprocessor`, a
+callback that raises a non-interrupt exception or changes the term's
+type is ignored and the raw candidate is kept; interrupts re-raise.
+
 An unconfigured call has one 10-second search budget covering preprocessing,
 backend admission, compilation, testing, model translation, and solver calls.
 All concurrent backends share its absolute deadline.  Mandatory cleanup still

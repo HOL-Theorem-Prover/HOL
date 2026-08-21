@@ -81,6 +81,20 @@ signature Refute = sig
     backend -> certainty_ceiling -> unit
   val register_substrate : substrate -> unit
   val register_generator : hol_type -> custom_gen -> unit
+  (* Registers a QC generator for every concrete instance of a type
+     operator, built from constructor constants whose declared result type
+     is [tyop] applied to distinct type variables (e.g. FEMPTY/FUPDATE for
+     [:'a |-> 'b]).  Unlike [register_generator], nothing is stored per
+     instance: [tyop] is matched on demand, so this fires for a type never
+     previously seen.  The resulting generator always has
+     [exhaustive = false].  [canonical], if present, rewrites a generated
+     candidate for display by removing structure that a later part of the
+     same candidate has overwritten; it never affects the term used for
+     testing or certification, and need not identify every pair of terms
+     that denote the same value. *)
+  val register_generator_family :
+    {tyop : {Thy : string, Tyop : string}, constructors : term list,
+     canonical : term_postprocessor option} -> unit
   val register_term_postprocessor :
     hol_type -> term_postprocessor -> unit
   val lookup_term_postprocessor :

@@ -566,8 +566,49 @@ structure Refute_QC = struct
       (* The plan substrates build their environment by consing, so goal
          order is recovered by reversing.  Narrowing reports against the
          prenex prefix, which is already in goal order. *)
-      val ordered_bindings =
+      val goal_ordered_bindings =
         if narrowing then report_bindings else rev report_bindings
+      (* Display only: a registered family's canonical form (e.g. fmap's
+         FUPDATE-chain collapse) never reaches testing or certification,
+         both of which still see the raw [env] this function closes over.
+         Same safety contract as [register_term_postprocessor]: a result
+         whose type changed, or a non-interrupt exception (e.g.
+         [canonical_fmap_chain] on a chain whose update argument is not a
+         literal pair), is ignored and the raw candidate is kept;
+         interrupts re-raise.  Applied bottom-up, like
+         [Refute_ModelFinder_Model.postprocess_term], so a family-typed
+         value nested inside a tuple, list, or another family value's
+         range is canonicalized too, not just a top-level binding. *)
+      fun apply_family candidate =
+        case Refute_Gen.lookup_family_canonical (Term.type_of candidate) of
+            NONE => candidate
+          | SOME rewrite =>
+              let
+                val result =
+                  (SOME (rewrite candidate) handle error =>
+                     if Exn.is_interrupt error then Exn.reraise error
+                     else NONE)
+              in
+                case result of
+                    SOME processed =>
+                      if Refute_Util.same_type
+                        (Term.type_of processed) (Term.type_of candidate)
+                      then processed else candidate
+                  | NONE => candidate
+              end
+      fun canonicalize_term candidate =
+        apply_family
+          (if Term.is_abs candidate then
+             let val (variable, body) = Term.dest_abs candidate
+             in Term.mk_abs (variable, canonicalize_term body) end
+           else
+             case Lib.total Term.dest_comb candidate of
+                 SOME (function, argument) =>
+                   Term.mk_comb
+                     (canonicalize_term function, canonicalize_term argument)
+               | NONE => candidate)
+      fun canonicalize (variable, value) = (variable, canonicalize_term value)
+      val ordered_bindings = List.map canonicalize goal_ordered_bindings
       val cex : Refute_Core.counterexample =
         { backend = display_name strategy,
           substrate = substrate,
