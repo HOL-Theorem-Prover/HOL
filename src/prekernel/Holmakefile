@@ -25,6 +25,9 @@ FinalThm-sig.uo: FinalThm-sig.sml Nonce.ui Lib.uo $(PORTABLED)
 FinalNet-sig.uo: FinalNet-sig.sml
 	$(HOLMOSMLC) -c -toplevel $<
 
+FinalContext-sig.uo: FinalContext-sig.sml
+	$(HOLMOSMLC) -c -toplevel $<
+
 KNametab.uo: KNametab.sml $(dprot $(SIGOBJ)/Table.ui)
 	$(HOLMOSMLC) -c Table.ui $<
 

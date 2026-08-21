@@ -13,6 +13,7 @@ datatype target_status =
        | Succeeded
        | Failed of {needed:bool}
        | Running
+       | Undecided of {forced:bool}
 fun is_pending (Pending _) = true | is_pending _ = false
 fun is_failed (Failed _) = true | is_failed _ = false
 fun needed_string {needed} = "{needed="^Bool.toString needed^"}]"
@@ -22,6 +23,7 @@ fun status_toString s =
     | Failed n => "[Failed" ^ needed_string n ^ "]"
     | Running => "[Running]"
     | Pending n => "[Pending" ^ needed_string n ^ "]"
+    | Undecided {forced} => "[Undecided{forced=" ^ Bool.toString forced ^ "}]"
 
 exception NoSuchNode
 exception DuplicateTarget
@@ -205,11 +207,26 @@ fun add_dependency n (dn, dt) (g : 'a t) : 'a t =
       | SOME nI =>
         if List.exists (fn (m,_) => m = dn) (#dependencies nI) then g
         else
-          fupd_nodes
-            (fn m =>
-                Map.insert(m, n,
-                           fupdDependencies (fn ds => (dn, dt) :: ds) nI))
-            g
+          let
+            (* Edges attached mid-build must not leave a node claiming to
+               be up to date over something that is not: the same
+               invariant `assign_statuses' establishes.  A node already
+               marked Succeeded that acquires an unbuilt dependency goes
+               back to being needed. *)
+            val dep_unbuilt =
+                case peeknode g dn of
+                    NONE => raise NoSuchNode
+                  | SOME dnI => #status dnI <> Succeeded
+            val nI = if dep_unbuilt andalso #status nI = Succeeded then
+                       setStatus (Pending{needed=true}) nI
+                     else nI
+          in
+            fupd_nodes
+              (fn m =>
+                  Map.insert(m, n,
+                             fupdDependencies (fn ds => (dn, dt) :: ds) nI))
+              g
+          end
 
 (* Three-way probe so `find_runnable_pred`'s scan can terminate on the
    first NoNode without a second peeknode. *)
@@ -489,6 +506,108 @@ fun topo_sort g =
             | SOME n => recurse (visit(n,A))
     in
       recurse (Set.empty node_compare, unmarked, [])
+    end
+
+(* ----------------------------------------------------------------------
+    assign_statuses
+
+    Nodes are created Undecided because the walk that creates them
+    cannot tell whether they need rebuilding: that depends on their
+    dependencies, and a cross-directory target no local rule claims is
+    entered as a placeholder judged on file existence alone, only
+    becoming a real node when its own directory is scanned.  A decision
+    taken against such a placeholder can be wrong by the time the walk
+    ends, and nothing revisits it.
+
+    So decide here instead, over the finished graph, in an order that
+    settles a node's dependencies before the node.  `topo_sort' lists
+    dependents ahead of what they depend on, so its reverse is the
+    order wanted.
+
+    A group is decided as a unit and at the position of its *last*
+    member: every member's dependencies precede that member in the
+    order, hence precede the last member too, so all of them are
+    settled by then.  Earlier members are passed over -- `ready' is
+    what recognises that -- rather than decided against dependencies
+    that have yet to be looked at.
+   ---------------------------------------------------------------------- *)
+fun assign_statuses decide (g0 : 'a t) =
+    let
+      fun info g n = case peeknode g n of
+                         NONE => raise NoSuchNode
+                       | SOME nI => nI
+      fun undecidedp g n =
+          case #status (info g n) of Undecided _ => true | _ => false
+      (* One script run writes every product of its theory, so those
+         products stand or fall together. *)
+      fun group_of g n =
+          let val nI = info g n
+          in
+            case #command nI of
+                BuiltInCmd (BIC_BuildScript _, _) =>
+                  List.filter (undecidedp g)
+                              (find_nodes_by_command g (#dir nI, #command nI))
+              | _ => [n]
+          end
+      (* The dependencies of a group that lie outside it.  One inside
+         the group is settled by this very decision, so it neither
+         blocks the group nor counts against it: a starred-dep rule can
+         name a product of the script it shares its command with. *)
+      fun outside_deps g ns =
+          let fun inside m = List.exists (fn k => k = m) ns
+          in
+            List.concat
+              (map (fn n => List.filter (fn (m, _) => not (inside m))
+                                        (#dependencies (info g n)))
+                   ns)
+          end
+      fun settled g (m, _) = not (undecidedp g m)
+      (* Undecided counts as unbuilt, which is why the straggler pass
+         below is safe: it errs towards rebuilding, never towards
+         reading a stale file. *)
+      fun unbuilt g (m, _) = #status (info g m) <> Succeeded
+      fun decide_group g ns ods =
+          let
+            val nIs = map (fn n => (n, info g n)) ns
+            val (g', st) =
+                decide g nIs {deps_unbuilt = List.exists (unbuilt g) ods}
+          in
+            (* `decide' only threads the file-hash memo, so the records
+               read above are still current. *)
+            List.foldl
+              (fn ((n, nI), g) =>
+                  fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g)
+              g' nIs
+          end
+      fun step (n, g) =
+          if not (undecidedp g n) then g
+          else
+            let
+              val ns = group_of g n
+              val ods = outside_deps g ns
+            in
+              if List.all (settled g) ods then decide_group g ns ods else g
+            end
+      val order = List.rev (topo_sort g0)
+      val g = List.foldl step g0 order
+      (* Every group is reachable at its last member, so nothing should
+         be left.  Deciding a straggler on its own anyway is the only
+         one of the three outcomes that is harmless: leaving a node
+         Undecided would make it unrunnable and invisible to
+         `postmortem', which is the silent stale build this whole pass
+         exists to prevent, and raising would fail a build over a
+         graph shape that is merely unexpected. *)
+      val g = List.foldl (fn (n, g) =>
+                             if undecidedp g n then
+                               decide_group g [n] (outside_deps g [n])
+                             else g)
+                         g order
+    in
+      (* Nothing has been built at this point, whatever the walk's
+         placeholder upgrades may have counted along the way. *)
+      {nodes = #nodes g, target_map = #target_map g,
+       command_map = #command_map g, file_hashes = #file_hashes g,
+       theories_built = 0}
     end
 
 fun successor_map g =

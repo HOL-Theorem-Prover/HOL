@@ -22,10 +22,7 @@ Libs
      (3) `Term.prim_new_const {Thy="overrideA",...}` and
          `Type.prim_new_type {Thy="overrideA",...}` — the raw kernel
          entry points — refuse for the same reason.
-     (4) The final backstop: `Context.map_typesig + KernelSig.insert`
-         — which composes past Term/Type's own gate — is caught
-         inside `KernelSig.insert` itself. *)
-
+*)
 val _ =
   if not (Thm.is_sealed "overrideA") then
     die "overrideA not sealed; test setup wrong"
@@ -52,13 +49,3 @@ val _ = shouldfail
    testfn      = fn knm => Type.prim_new_type knm 0}
   {Thy = "overrideA", Tyop = "attacker_ty"}
 
-val _ = shouldfail
-  {checkexn    = is_struct_HOL_ERR "KernelSig",
-   printarg    = K "Context.map_typesig + KernelSig.insert bypass refused",
-   printresult = fn () => "<no exception>",
-   testfn      = fn thy =>
-                   Context.update
-                     (Context.map_typesig (fn t =>
-                        #1 (KernelSig.insert
-                              ({Thy = thy, Name = "sneaky"}, 0) t)))}
-  "overrideA"

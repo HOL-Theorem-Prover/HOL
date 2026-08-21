@@ -1,0 +1,42 @@
+# Regression: a cross-directory rule's *recipe* must be expanded with
+# the rule's own directory as cwd.
+#
+# `$(DEFAULT_TARGETS)' is a built-in whose value is a `$(wildcard
+# *.sml)' expression, and `wildcard' globs the process cwd.  Rule
+# dependencies are substituted while the Holmakefile is being parsed,
+# which happens under the right cwd; recipes are substituted later, by
+# `get_rule_info' under `find_rule', from wherever the directory walk
+# has reached.
+#
+# `consumer' and `producer' are sibling subdirectories holding
+# *different* .sml files.  `consumer' depends on `producer/marker',
+# whose recipe echoes `$(DEFAULT_TARGETS)'.  INCLUDES is walked in
+# order, so `consumer' is scanned first and `producer/marker's' rule is
+# resolved from `producer's' Holmakefile while cwd is still `consumer'
+# -- exactly the case that used to misfire.
+#
+# Before the fix `marker' recorded consumer's expansion
+# (`consumerOnly.uo'); the real-world symptom was a `buildheap' recipe
+# in HOL's asl-equiv sail directory being handed a CakeML theory's .uo.
+#
+# The recipes are plain echo/cat/grep, so --poly_not_hol skips the
+# implicit hol.state dependency that Holmake would otherwise add when
+# running inside HOLDIR.
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
+INCLUDES = consumer producer
+
+all: check.log
+.PHONY: all
+
+# `marker' must name producer's .sml, and must not name
+# consumer's.  A file target rather than a .PHONY one, so the
+# assertion runs exactly once per change to out.txt.
+check.log: consumer/out.txt
+	cat $< > $@
+	grep -q producerOnly.uo $@
+	! grep -q consumerOnly.uo $@
+
+EXTRA_CLEANS = check.log consumer/out.txt producer/marker

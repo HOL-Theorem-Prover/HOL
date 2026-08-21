@@ -11,6 +11,15 @@ sig
          | Succeeded
          | Failed of {needed:bool}
          | Running
+         | Undecided of {forced:bool}
+    (* Undecided is the status a node carries while the graph is being
+       built.  Whether a target needs rebuilding depends on whether its
+       dependencies do, and that is not known until the walk over the
+       directories has finished: see `assign_statuses'.  `forced' is
+       the part of the decision that does not depend on the graph --
+       the target is missing, or phony, or older than one of its
+       dependencies -- recorded by whoever created the node.  No node
+       is still Undecided once `assign_statuses' has run. *)
   val is_pending : target_status -> bool
   val is_failed : target_status -> bool
   eqtype node
@@ -44,6 +53,32 @@ sig
 
   val empty : unit -> 'a t
   val add_node : 'a nodeInfo -> 'a t -> 'a t * node
+
+  val assign_statuses :
+      ('a t -> (node * 'a nodeInfo) list -> {deps_unbuilt : bool} ->
+       'a t * target_status)
+      -> 'a t -> 'a t
+    (* Replace every Undecided status with a real one, visiting nodes in
+       an order that settles a node's dependencies before the node
+       itself.  That is what makes the result independent of the order
+       the directories were scanned in: a decision is never taken
+       against a dependency whose own status is still to change.
+
+       The argument supplies the policy.  It is handed the graph (so it
+       can thread the file-hash memo), a group of nodes to be decided
+       together, and whether any dependency of any of them will be
+       rebuilt; it returns the status the whole group takes.  The graph
+       it returns must differ only in that memo: adding or rewriting
+       nodes would invalidate the traversal in progress.  Nodes
+       sharing a BIC_BuildScript command form one group, because a
+       single script run writes all of its theory's products: deciding
+       them separately allows a .sig to be called stale while the .dat
+       written beside it is called fresh.
+
+       Statuses already decided -- placeholders for targets no
+       directory in this build claims -- are left alone.  The
+       theories_built count is reset, since nothing has been built at
+       the point this runs. *)
   val updnode_tgtstatus : node * target_status -> 'a t -> 'a t
   val updnode_fully : node * 'a nodeInfo -> 'a t -> 'a t
 

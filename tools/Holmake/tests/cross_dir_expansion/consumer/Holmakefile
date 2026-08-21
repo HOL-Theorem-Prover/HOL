@@ -1,0 +1,8 @@
+# The prerequisite is in the sibling directory, so rule lookup for
+# `../producer/marker' goes through producer's Holmakefile while cwd is
+# still consumer.  That is what used to expand producer's recipe
+# against consumer's *.sml.
+out.txt: ../producer/marker
+	cat $< > $@
+
+EXTRA_CLEANS = out.txt
