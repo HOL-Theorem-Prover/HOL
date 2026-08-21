@@ -24567,6 +24567,204 @@ val _ = require_msg (check_result real_inv_declines_on_zero) (fn () =>
   "inv 0 reduced instead of declining")
   (fn () => ()) ()
 
+(* :rat's zero-argument analogues of the two real pins above.  Unlike
+   [[inv]] ([[real_of_num]] is [[nocompute]], so an undecided term is
+   byte-identical to its input), [[rat_minv]]'s own default equation is
+   not [[nocompute]] and unfolds one step through [[rep_rat]]/[[rep_frac]]
+   whenever [[install]]'s conv is absent, so "declines" is asserted by
+   the surviving head constant rather than by term identity: with the
+   conv installed, a zero-denominator failure leaves [[rat_minv]] itself
+   unrewritten; strip the conv and the term unfolds past [[rat_minv]]
+   entirely. *)
+fun still_headed_by op_tm tm =
+  case Lib.total HolKernel.strip_comb tm of
+      SOME (head, _) => Term.same_const head op_tm
+    | NONE => false
+
+fun rat_minv_declines_on_zero () =
+  still_headed_by ratSyntax.rat_minv_tm (eval_rhs ``rat_minv (0 : rat)``)
+
+val _ = tprint "Refute rat quickcheck rat_minv declines on zero"
+val _ = require_msg (check_result rat_minv_declines_on_zero) (fn () =>
+  "rat_minv 0 reduced instead of declining")
+  (fn () => ()) ()
+
+(* [[rat_div]] is [[nocompute]] like [[real_div]], so a zero-divisor
+   redex is left syntactically stuck either way -- that half of the
+   check holds in both worlds and is not what distinguishes them.  What
+   [[install]] actually changes is the static executability gate: with
+   the conv installed, [[rat_div]] carries a compset entry (even though
+   that entry declines at zero), so the gate never fires; strip the
+   conv and the gate reports [[rat_div]] itself non-executable. *)
+fun rat_div_zero_declines () =
+  still_headed_by ratSyntax.rat_div_tm (eval_rhs ``(1 : rat) / 0``)
+  andalso
+  (case preprocess default_config
+         (preprocessing_problem ``(1 : rat) / 0 = 0``) of
+       [{qc_gate = NONE, ...}] => true
+     | _ => false)
+
+val _ = tprint "Refute rat quickcheck 1 / 0 declines"
+val _ = require_msg (check_result rat_div_zero_declines) (fn () =>
+  "1 / 0 (rat) reduced or was gated as non-executable")
+  (fn () => ()) ()
+
+(* A displayed binding beginning with [[~]]/[[-]] is negative; both
+   [[looks_like_numeral]] prefixes apply since a bare or n//d/n/d shape
+   may carry the sign on its leading token. *)
+fun is_negative_display s =
+  String.isPrefix "~" s orelse String.isPrefix "-" s
+
+(* Multiplication-monotonicity trap: from a <= b and c <= d it does not
+   follow that a * c <= b * d over an ordered field, since a negative a
+   and c flip the product's sign.  Auto must reach a genuine, certified
+   QC counterexample with a readable negative witness -- asserted
+   explicitly below, not merely entailed by the goal. *)
+fun rat_monotonicity_trap_refuted () =
+  case refute (Refute.upd_search Refute.QuickcheckBackends default_config)
+    ``!a b c d : rat. a <= b /\ c <= d ==> a * c <= b * d`` of
+      Counterexample ({certainty = Genuine, cert = SOME _, bindings, ...}
+                       :: _) =>
+        length bindings = 4 andalso
+        List.all (fn (_, value) =>
+          looks_like_rat_binding (Parse.term_to_string value)) bindings
+        andalso
+        List.exists (fn (_, value) =>
+          is_negative_display (Parse.term_to_string value)) bindings
+    | _ => false
+
+val _ = tprint "Refute rat quickcheck multiplication monotonicity trap"
+val _ = require_msg (check_result rat_monotonicity_trap_refuted) (fn () =>
+  "a <= b /\\ c <= d ==> a * c <= b * d was not refuted with a readable \
+  \negative witness")
+  (fn () => ()) ()
+
+fun real_monotonicity_trap_refuted () =
+  case refute (Refute.upd_search Refute.QuickcheckBackends default_config)
+    ``!a b c d : real. a <= b /\ c <= d ==> a * c <= b * d`` of
+      Counterexample ({certainty = Genuine, cert = SOME _, bindings, ...}
+                       :: _) =>
+        length bindings = 4 andalso
+        List.all (fn (_, value) =>
+          looks_like_real_binding (Parse.term_to_string value)) bindings
+        andalso
+        List.exists (fn (_, value) =>
+          is_negative_display (Parse.term_to_string value)) bindings
+    | _ => false
+
+val _ = tprint "Refute real quickcheck multiplication monotonicity trap"
+val _ = require_msg (check_result real_monotonicity_trap_refuted) (fn () =>
+  "a <= b /\\ c <= d ==> a * c <= b * d was not refuted with a readable \
+  \negative witness")
+  (fn () => ()) ()
+
+(* Random's totality guarantee, unpinned until now: the totality pins
+   above use [[Only [Exhaustive]]] only.  A finite random sample can no
+   more exhaust :rat or :real than an exhaustive one can, so the same
+   [[Unknown]] discipline must hold for the random backend too -- assert
+   the exact reasons, not merely "not NoCounterexample", which also
+   passes on an unrelated timeout or a spurious counterexample. *)
+fun rat_random_totality_never_claims_exhaustion () =
+  let
+    val x = Term.mk_var ("x", ratSyntax.rat_ty)
+    val one = Term.mk_comb
+      (ratSyntax.rat_of_num_tm, numSyntax.mk_numeral (Arbnum.fromInt 1))
+    val goal = boolSyntax.mk_forall (x,
+      Term.list_mk_comb (ratSyntax.rat_les_tm,
+        [x, Term.list_mk_comb (ratSyntax.rat_add_tm, [x, one])]))
+    val config =
+      upd_size 10
+        (upd_substrate Compute
+          (Refute.upd_search (Refute.Only [Refute.Random])
+            default_config))
+  in
+    case refute config goal of
+        Unknown reasons =>
+          reasons = ["random: random search exhausted",
+                     "random: searched up to size 10"]
+      | _ => false
+  end
+
+val _ = tprint "Refute rat quickcheck random totality pin"
+val _ = require_msg
+  (check_result rat_random_totality_never_claims_exhaustion) (fn () =>
+    "rat random QC did not report the expected Unknown reasons")
+  (fn () => ()) ()
+
+fun real_random_totality_never_claims_exhaustion () =
+  let
+    val x = Term.mk_var ("x", realSyntax.real_ty)
+    val goal = boolSyntax.mk_forall (x,
+      realSyntax.mk_less
+        (x, realSyntax.mk_plus (x, realSyntax.term_of_int Arbint.one)))
+    val config =
+      upd_size 10
+        (upd_substrate Compute
+          (Refute.upd_search (Refute.Only [Refute.Random])
+            default_config))
+  in
+    case refute config goal of
+        Unknown reasons =>
+          reasons = ["random: random search exhausted",
+                     "random: searched up to size 10"]
+      | _ => false
+  end
+
+val _ = tprint "Refute real quickcheck random totality pin"
+val _ = require_msg
+  (check_result real_random_totality_never_claims_exhaustion) (fn () =>
+    "real random QC did not report the expected Unknown reasons")
+  (fn () => ()) ()
+
+(* The closed-goal half of the totality distinction, documented in the
+   README/Refute.smd but never pinned: reducing a closed :rat/:real goal
+   to T is a proof, not a sample, so NoCounterexample is sound there,
+   unlike the quantified goals the totality pins above cover.  Each goal
+   is chosen to need this module's own decision procedure (rat: the
+   [[install]] multiplication/equality convs; real: the [[inv]] conv) so
+   the pin cannot pass on bare syntactic reflexivity alone.  Check fixed
+   exhaustive, fixed random, and the unmodified [[default_config]] (all
+   backends, adaptive substrate) all agree, so the distinction cannot
+   silently invert. *)
+fun outcome_is_none outcome =
+  case outcome of NoCounterexample => true | _ => false
+
+fun rat_closed_goal_decides_soundly () =
+  let
+    val goal = ``rat_of_num 2 * rat_of_num 3 = rat_of_num 6``
+    val exh = upd_size 10 (upd_substrate Compute
+      (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config))
+    val rnd = upd_size 10 (upd_substrate Compute
+      (Refute.upd_search (Refute.Only [Refute.Random]) default_config))
+  in
+    outcome_is_none (refute exh goal) andalso
+    outcome_is_none (refute rnd goal) andalso
+    outcome_is_none (refute default_config goal)
+  end
+
+val _ = tprint "Refute rat quickcheck closed goal decides soundly"
+val _ = require_msg (check_result rat_closed_goal_decides_soundly) (fn () =>
+  "a closed rat goal the compset decides did not report NoCounterexample")
+  (fn () => ()) ()
+
+fun real_closed_goal_decides_soundly () =
+  let
+    val goal = ``inv (2 : real) * 2 = 1``
+    val exh = upd_size 10 (upd_substrate Compute
+      (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config))
+    val rnd = upd_size 10 (upd_substrate Compute
+      (Refute.upd_search (Refute.Only [Refute.Random]) default_config))
+  in
+    outcome_is_none (refute exh goal) andalso
+    outcome_is_none (refute rnd goal) andalso
+    outcome_is_none (refute default_config goal)
+  end
+
+val _ = tprint "Refute real quickcheck closed goal decides soundly"
+val _ = require_msg (check_result real_closed_goal_decides_soundly) (fn () =>
+  "a closed real goal the compset decides did not report NoCounterexample")
+  (fn () => ()) ()
+
 val _ =
   if selftest_level >= 2 then
     (corpus_smoke ();

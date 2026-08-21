@@ -54,6 +54,32 @@ quantified over `:real` variables either; a closed `:real` goal can
 still decide to `NoCounterexample`, for the same reason as `:rat`
 above.
 
+QC's own genuine, certified counterexamples reach into negative and
+non-integral territory routinely: e.g. the ordered-field
+monotonicity trap `a <= b /\ c <= d ==> a * c <= b * d`, false at both
+`:rat` and `:real` once `a` and `c` may be negative, is refuted with a
+readable negative witness at both types.  Division by a zero literal
+and `rat_minv`/`inv` at zero are sound but incomplete: `:rat`'s and
+`:real`'s compset fragments both decline on these rather than
+mis-deciding them (matching `/`'s own zero-divisor refusal), so a
+*closed* goal built from them reports `Unknown`, not
+`NoCounterexample`.  The two types are not symmetric here, though.
+`inv (0 : real) = 0` is a genuine theorem (`REAL_INV_0`), so `:real`'s
+decline is an incompleteness -- a fact the compset fragment fails to
+use.  `:rat`'s `rat_minv` has no such fact to miss: `frac_minv`
+constructs `abs_frac (0, 0)` at zero, outside `frac`'s defining
+predicate `0 < SND f`, so `rat_minv 0` is genuinely unspecified and
+declining is the only correct behaviour, not a gap.  The model finder,
+unlike either compset fragment, does evaluate zero-divisor division
+inside its Frac encoding: it reports a `Genuine` `1 / 0 = 0` at both
+types.  At `:real` that settles the *false* closed goal `1 / 0 = 1`,
+because `1 / 0 = 0` is itself a real theorem (`REAL_INV_0` again, via
+`real_div`).  At `:rat` the same encoding move instead *picks* the
+value `0` for a division HOL leaves completely unspecified, on a goal
+that has no fact either way -- sound under the same trust model that
+lets Refute rely on Kodkodi's arithmetic exactly as Nitpick relies on
+Kodkod, and never stricter, but a choice rather than a deduction.
+
 An unconfigured call has one 10-second search budget covering preprocessing,
 backend admission, compilation, testing, model translation, and solver calls.
 All concurrent backends share its absolute deadline.  Mandatory cleanup still

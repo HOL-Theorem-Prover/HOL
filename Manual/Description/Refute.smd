@@ -23,16 +23,29 @@ At the prompt, load the public facade explicitly:
 
 This loads the implementation modules and registers the built-in backends,
 including a Quickcheck generator for `:rat` and a computeLib fragment that
-decides closed `:rat` arithmetic and comparison literals; the latter also
-extends the ambient `EVAL`, so closed rational literals compute afterwards
-regardless of whether Refute itself is invoked again -- a comparison to `T`
-or `F`, an arithmetic term to a raw `abs_rat (abs_frac (n, d))` value that
-is not reduced to lowest terms.  A Quickcheck generator for `:real` is
-registered the same way; `:real` arithmetic and comparisons were already
-decided on closed literals by `realLib` -- except `n / &0` for a nonzero
-`n`, left stuck -- so this only adds `inv` and extends `EVAL` with it,
-deciding to `real_of_num`/`real_neg`/`real_div` of numerals, the same
-shape `realLib` itself already produces.
+decides closed `:rat` arithmetic and comparison literals -- except
+division by a zero literal and `rat_minv` at zero, which it declines
+rather than mis-decides, matching `/`'s own zero-divisor refusal; the
+latter also extends the ambient `EVAL`, so closed rational literals
+compute afterwards regardless of whether Refute itself is invoked again
+-- a comparison to `T` or `F`, an arithmetic term to a raw `abs_rat
+(abs_frac (n, d))` value that is not reduced to lowest terms.  A
+Quickcheck generator for `:real` is registered the same way; `:real`
+arithmetic and comparisons were already decided on closed literals by
+`realLib` -- except `n / &0` for a nonzero `n`, left stuck -- so this
+only adds `inv`, declining the same way at zero, and extends `EVAL`
+with it, otherwise deciding to `real_of_num`/`real_neg`/`real_div` of
+numerals, the same shape `realLib` itself already produces.
+
+Because these fragments only *decide* a goal, never sample it, a closed
+`:rat`/`:real` goal they reduce to `T` can soundly report
+`NoCounterexample`: reducing a closed goal to `T` is a proof, and
+nothing is quantified for a search to have missed.  A goal quantified
+over `:rat` or `:real` variables can never license `NoCounterexample`
+from Quickcheck: a finite sample never exhausts an infinite type, so
+exhaustive and random search alike report `Unknown`, however large the
+size or count.
+
 Loading and running Refute leaves no Refute-created type, constant, theorem,
 or theory binding in the user's theory.  In particular, temporary
 compilation artefacts are removed on success, failure, timeout, and
