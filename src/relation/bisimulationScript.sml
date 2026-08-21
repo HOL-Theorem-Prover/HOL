@@ -146,12 +146,15 @@ QED
 
 Theorem BISIM_REL_EQUIV_rules =
   BISIM_REL_IS_EQUIV_REL
-  |> SIMP_RULE bool_ss [equivalence_def, reflexive_def, symmetric_def, transitive_def];
+  |> SIMP_RULE bool_ss
+     [equivalence_def, reflexive_def, symmetric_def, transitive_def];
 
 Theorem BISIM_REL_ts:
   ∀ts.
-  (∀p q l p'. BISIM_REL ts p q ∧ ts p l p' ==> ∃q'. ts q l q' ∧ BISIM_REL ts p' q') ∧
-  (∀p q l q'. BISIM_REL ts p q ∧ ts q l q' ==> ∃p'. ts p l p' ∧ BISIM_REL ts p' q')
+  (∀p q l p'. BISIM_REL ts p q ∧ ts p l p'
+    ==> ∃q'. ts q l q' ∧ BISIM_REL ts p' q') ∧
+  (∀p q l q'. BISIM_REL ts p q ∧ ts q l q'
+    ==> ∃p'. ts p l p' ∧ BISIM_REL ts p' q')
 Proof
   SRW_TAC[][BISIM_REL_def]
   >> METIS_TAC[BISIM_def]
@@ -208,7 +211,8 @@ QED
 Theorem BISIM_REL_sym_strong_thm:
   ∀ts R.
   BISIM_REL ts p0 q0 <=> ∃R. symmetric R ∧ R p0 q0 ∧
-    (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
+    (∀p q. R p q ⇒ ∀l p'. ts p l p'
+      ==> ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
 Proof
   SRW_TAC[][EQ_IMP_THM]
   >- METIS_TAC[BISIM_REL_sym_thm]
@@ -219,7 +223,8 @@ QED
 
 Theorem BISIM_REL_sym_strong_coind:
   ∀ts R. symmetric R ∧
-    (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
+    (∀p q. R p q ==> ∀l p'. ts p l p'
+      ==> ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
   ==> ∀p0 q0. R p0 q0 ==> BISIM_REL ts p0 q0
 Proof
   SRW_TAC[][EQ_IMP_THM] >> SRW_TAC[][Once BISIM_REL_sym_strong_thm]
@@ -492,14 +497,19 @@ QED
 
 Theorem WBISIM_REL_EQUIV_rules =
   WBISIM_REL_IS_EQUIV_REL
-  |> SIMP_RULE bool_ss [equivalence_def, reflexive_def, symmetric_def, transitive_def];
+  |> SIMP_RULE bool_ss
+     [equivalence_def, reflexive_def, symmetric_def, transitive_def];
 
 Theorem WBISIM_REL_ts:
   ∀ts tau.
-  (∀p q l p'. WBISIM_REL ts tau p q ∧ ts p l p' ∧ l ≠ tau ==> ∃q'. WTS ts tau q l q' ∧ WBISIM_REL ts tau p' q') ∧
-  (∀p q l q'. WBISIM_REL ts tau p q ∧ ts q l q' ∧ l ≠ tau ==> ∃p'. WTS ts tau p l p' ∧ WBISIM_REL ts tau p' q') ∧
-  (∀p q p'. WBISIM_REL ts tau p q ∧ ts p tau p' ==> ∃q'. ETS ts tau q q' ∧ WBISIM_REL ts tau p' q') ∧
-  (∀p q q'. WBISIM_REL ts tau p q ∧ ts q tau q' ==> ∃p'. ETS ts tau p p' ∧ WBISIM_REL ts tau p' q')
+  (∀p q l p'. WBISIM_REL ts tau p q ∧ ts p l p' ∧ l ≠ tau
+    ==> ∃q'. WTS ts tau q l q' ∧ WBISIM_REL ts tau p' q') ∧
+  (∀p q l q'. WBISIM_REL ts tau p q ∧ ts q l q' ∧ l ≠ tau
+    ==> ∃p'. WTS ts tau p l p' ∧ WBISIM_REL ts tau p' q') ∧
+  (∀p q p'. WBISIM_REL ts tau p q ∧ ts p tau p'
+    ==> ∃q'. ETS ts tau q q' ∧ WBISIM_REL ts tau p' q') ∧
+  (∀p q q'. WBISIM_REL ts tau p q ∧ ts q tau q'
+    ==> ∃p'. ETS ts tau p p' ∧ WBISIM_REL ts tau p' q')
 Proof
   SRW_TAC[][WBISIM_REL_def]
   >> METIS_TAC[WBISIM_def]

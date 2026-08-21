@@ -2746,7 +2746,8 @@ QED
 (* rmonotone RC ∧ rmonotone SC ∧ rmonotone TC ∧ rmonotone RTC ∧ rmonotone EQC *)
 fun rmonotone_from_thm thm = thm |> GEN_ALL |> MATCH_MP (iffRL rmonotone_thm)
 Theorem rmonotone_closures[simp] =
-  [RC_MONOTONE, SC_MONOTONE, TC_MONOTONE, RTC_MONOTONE, EQC_MONOTONE |> Q.INST [`R'` |-> `Q`]]
+  [RC_MONOTONE, SC_MONOTONE, TC_MONOTONE, RTC_MONOTONE,
+   EQC_MONOTONE |> Q.INST [`R'` |-> `Q`]]
   |> map rmonotone_from_thm
   |> LIST_CONJ;
 
@@ -2785,7 +2786,8 @@ Theorem rpreserves_symmetric[simp]:
   rpreserves symmetric RC ∧ rpreserves symmetric TC
 Proof
   SRW_TAC[][rpreserves_def, symmetric_def, RC_SUBSET, TC_SUBSET] >> EQ_TAC
-  >| [Q.ID_SPEC_TAC `y` >> Q.ID_SPEC_TAC `x`, Q.ID_SPEC_TAC `x` >> Q.ID_SPEC_TAC `y`]
+  >| [Q.ID_SPEC_TAC `y` >> Q.ID_SPEC_TAC `x`,
+      Q.ID_SPEC_TAC `x` >> Q.ID_SPEC_TAC `y`]
   >> HO_MATCH_MP_TAC TC_INDUCT_LEFT1 >> SRW_TAC[][TC_SUBSET]
   >> METIS_TAC[TC_RIGHT1_I]
 QED
@@ -2858,7 +2860,8 @@ Proof
 QED
 
 Theorem RMONOTONE_IMP_CLOSURE_RSUBSET:
-  ∀P C b. is_closure_op P C ∧ rmonotone b ∧ rpreserves P b ==> ∀R. C (b R) ⊆ᵣ b (C R)
+  ∀P C b.
+  is_closure_op P C ∧ rmonotone b ∧ rpreserves P b ==> ∀R. C (b R) ⊆ᵣ b (C R)
 Proof
   SRW_TAC[][] >> drule $ iffLR is_closure_op_def >> STRIP_TAC
   >> LAST_X_ASSUM $ Q.SPEC_THEN `b R` MP_TAC >> SRW_TAC[][]
