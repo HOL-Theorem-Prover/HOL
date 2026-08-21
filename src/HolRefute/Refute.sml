@@ -49,6 +49,9 @@ structure Refute :> Refute = struct
      keeps them honest. *)
   val () = Refute_ModelFinder_Model.register_frac_type_rat ()
   val () = Refute_ModelFinder_Model.register_frac_type_real ()
+  (* Quickcheck generator and compset fragment for :rat, independent of
+     the model-finder Frac registration above. *)
+  val () = Refute_EvalRat.register ()
 
   val refute = Refute_Core.refute
   fun refute_def tm = refute (!Refute_Core.the_config) tm

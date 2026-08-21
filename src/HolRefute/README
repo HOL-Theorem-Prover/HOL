@@ -11,6 +11,26 @@ execution substrates:
 * NativeSML extracts the executable fragment to SML and compiles the test
   loop in process.  It is the preferred fast substrate on Poly/ML.
 
+`:rat` has a built-in QC generator (`Refute_EvalRat`), registered
+unconditionally at Refute's load time.  Its candidates are a custom
+generator (`Refute_Gen.GenCustom`), so -- exactly like any other
+user-registered custom generator -- Cv and NativeSML report it
+inapplicable ("custom generator registered") and `Auto` falls through to
+Compute, the only substrate that can host it.  The same load also installs
+a computeLib fragment that decides `+ - * / ~ inv < <= > >= =` on closed
+`:rat` literals via proof-time conversions rather than compset rewriting
+(`ratLib.RAT_CALC_CONV`/`fracLib.FRAC_CALC_CONV` plus arithmetic
+side-condition discharge); an open `:rat` term is left stuck rather than
+unfolded into `rep_rat`/`rep_frac` form, and rat numerals are otherwise
+unaffected.  Because that fragment is added to the global compset, `EVAL`
+decides closed `:rat` literals afterwards too, not only Refute's own
+substrates.  A decided comparison yields `T` or `F`, but a decided
+arithmetic result is a raw `abs_rat (abs_frac (n, d))` value, not
+reduced to lowest terms; the `n // d` display is the QC generator's
+candidate shape, not an output normal form.  As with any finite QC sample over an infinite type, `:rat`
+QC never reports `NoCounterexample`: exhaustive and random search both
+report `Unknown` instead, however large the size or count.
+
 An unconfigured call has one 10-second search budget covering preprocessing,
 backend admission, compilation, testing, model translation, and solver calls.
 All concurrent backends share its absolute deadline.  Mandatory cleanup still
@@ -274,6 +294,7 @@ Module layout:
 
 * Refute_Core: shared types, configuration, registry, and orchestration.
 * Refute_Gen: generator derivation and enumeration support.
+* Refute_EvalRat: the built-in :rat QC generator and computeLib fragment.
 * Refute_Eval: the substrate seam, registry, and common random generator.
 * Refute_EvalCompute, Refute_EvalCv, and Refute_EvalSML: substrates.
 * Refute_Extract: in-memory HOL-to-SML extraction for NativeSML.
@@ -460,7 +481,10 @@ Registrations are session-local ML state and create no theory content:
   real literals -- `3 / 4`, `3` for a unit denominator or a zero
   numerator, never `rat_cons`'s `//`.  Example 12 shows the registered
   rational encoding in use on a `rat` goal; both registration calls are
-  exercised by `selftest.sml`.  Certification
+  exercised by `selftest.sml`.  This is the model finder's own Frac
+  display path, unrelated to the `:rat` QC generator (`Refute_EvalRat`,
+  described above): that generator builds `rat_cons`-or-bare-numeral
+  candidates directly, with no postprocessor involved.  Certification
   (`certify=true`, the default) is attempted on a real Frac counterexample,
   but not exactly as on any other: `frac$abs_frac` is `int # int -> frac`
   (`src/rational/fracScript.sml`), so it retypes natively to neither

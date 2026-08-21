@@ -157,8 +157,12 @@ structure Refute_Gen = struct
 
   (* Quotient types that quotient_types () does not surface because their
      QUOTIENT theorems are not exported into the "quotient" ThmSetData
-     set; recognised by name. *)
-  val named_quotient_types = ["real", "rat"]
+     set; recognised by name.  rat is a quotient type too but does not
+     belong here: [[spec_of]] below consults [[generator_of]] before it
+     ever reaches [[is_quotient_type]], and Refute_EvalRat registers a
+     generator for rat unconditionally, so this fallback is unreachable
+     for it -- there is no unregister API to make it reachable again. *)
+  val named_quotient_types = ["real"]
 
   fun is_quotient_type ty =
     (case Lib.total Type.dest_type ty of

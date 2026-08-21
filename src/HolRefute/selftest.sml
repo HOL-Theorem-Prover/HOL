@@ -16577,6 +16577,12 @@ val _ = require_msg (check_result (fn () => has_no_generator real_ty))
   (fn () => "real unexpectedly has a generator") (fn () => ()) ()
 val _ = require_msg (check_result (fn () => has_no_generator ``:ind``))
   (fn () => "unknown type unexpectedly has a generator") (fn () => ()) ()
+(* rat is a quotient type but is not in [named_quotient_types]: a
+   registered generator shadows the quotient fallback, since [[spec_of]]
+   consults [[generator_of]] first, and [[Refute_EvalRat.register]]
+   installs one unconditionally.  There is no unregister API, so this is
+   not a reachable-but-untaken path -- it genuinely cannot happen. *)
+val _ = check_gen "rat" (fn GenCustom _ => true | _ => false) ratSyntax.rat_ty
 
 val _ = tprint "Refute narrowing core"
 
@@ -23520,6 +23526,15 @@ val conformance_full_cases : conformance_case list =
       [(Cv, "cv: :rg_custom_matrix - custom generator registered"),
        (NativeSML,
         "custom generator registered for :rg_custom_matrix")]},
+   (* rat's generator is GenCustom, like rg_custom_matrix above: native
+      and cv trace the same "custom generator registered" refusal, and
+      compute is the only substrate left to decide the goal -- this is
+      the module's cross-substrate conformance pin for rat. *)
+   {name = "rat quickcheck", cfg = conform_cex_config,
+    tm = ``(x : rat) = y``,
+    inapplicable =
+      [(Cv, "cv: :rat - custom generator registered"),
+       (NativeSML, "custom generator registered for :rat")]},
    {name = "infinite quantifier", cfg = conform_unknown_config,
     tm = ``(!n : num. n <= n)``, inapplicable = []},
    {name = "quotient", cfg = conform_unknown_config,
@@ -23817,6 +23832,306 @@ val _ =
        "candidate streams differed across substrates")
        (fn () => ()) ())
   else ()
+
+(* rat's generator is GenCustom, so it cannot join [stream_conformance]'s
+   types list above: native and cv refuse it outright (pinned by the
+   "rat quickcheck" conformance case), leaving compute the only substrate
+   able to produce a stream at all.  It also cannot join the house
+   [generated_stream_checks] pattern (16263-16291 as of the previous
+   pass), whose reference route is the native-SML dispatcher -- refused
+   for the same reason.  Reimplement the draw independently instead,
+   from only the shared PRNG primitive [[checked_rand_below]] --
+   [[Refute_EvalRat]] is sealed, so its own [[draw_numerator]] and
+   [[draw_denominator]] are not callable here -- so this fails if the
+   numerator and denominator draws are ever exchanged, not merely if
+   [[random]] becomes [[NONE]]. *)
+fun reference_rat_draw size state =
+  let
+    val radius = IntInf.fromInt (Int.max (0, size))
+    val (n_raw, after_n) = checked_rand_below (2 * radius + 1) state
+    val n = IntInf.toInt n_raw - IntInf.toInt radius
+    val (d_raw, after_d) =
+      checked_rand_below (IntInf.fromInt (Int.max (0, size) + 1)) after_n
+    val d = IntInf.toInt d_raw + 1
+    val rat_cons_c = Term.prim_mk_const {Thy = "rat", Name = "rat_cons"}
+    val term =
+      if d = 1 then
+        let
+          val base = Term.mk_comb
+            (ratSyntax.rat_of_num_tm, numSyntax.term_of_int (Int.abs n))
+        in
+          if n < 0 then Term.mk_comb (ratSyntax.rat_ainv_tm, base) else base
+        end
+      else
+        Term.list_mk_comb (rat_cons_c,
+          [intSyntax.term_of_int (Arbint.fromInt n),
+           intSyntax.term_of_int (Arbint.fromInt d)])
+  in
+    (term, after_d)
+  end
+
+fun reference_rat_stream size seed count =
+  let
+    fun loop 0 _ candidates = rev candidates
+      | loop remaining state candidates =
+          let val (term, next) = reference_rat_draw size state
+          in loop (remaining - 1) next ([term] :: candidates) end
+  in
+    loop count seed []
+  end
+
+fun rat_stream_matches_reference () =
+  let
+    val variable = Term.mk_var ("stream_rat", ratSyntax.rat_ty)
+    val plan = Gen (variable, Test boolSyntax.T)
+    val arguments = {plan = plan, seed = 7 : IntInf.int, size = 5, count = 6}
+  in
+    same_candidate_stream (dump_random_candidates arguments)
+      (reference_rat_stream 5 7 6)
+  end
+
+val _ = tprint "Refute rat quickcheck stream matches an independent \
+  \reference"
+val _ = require_msg (check_result rat_stream_matches_reference) (fn () =>
+  "the rat candidate stream diverged from an independently \
+  \reimplemented reference")
+  (fn () => ()) ()
+
+fun rat_auto_falls_through_to_compute () =
+  let
+    val config =
+      Refute.upd_search Refute.QuickcheckBackends default_config
+    val goal = ``(x : rat) = rat_of_num 0``
+  in
+    case refute config goal of
+        Counterexample ({substrate, certainty = Genuine, cert = SOME _, ...}
+                         :: _) => substrate = "compute"
+      | _ => false
+  end
+
+val _ = tprint "Refute rat quickcheck Auto falls through to compute"
+val _ = require_msg (check_result rat_auto_falls_through_to_compute) (fn () =>
+  "Auto did not resolve a rat goal via the compute substrate")
+  (fn () => ()) ()
+
+(* Soundness pin, not negotiable: a finite exhaustive or random sample can
+   never exhaust :rat, so neither backend may report NoCounterexample for
+   a goal that is true only because it holds at every one of infinitely
+   many rationals -- unlike a syntactic tautology such as [x = x], which a
+   decision procedure can dismiss without touching the domain at all.
+   Assert the exact [[Unknown]] reasons, not merely "not NoCounterexample":
+   that negation also passes on [[Unknown]] for an unrelated reason, on a
+   timeout, and even on a spurious counterexample, so it would stay green
+   if an unsound comparison conversion reported a witness here.  No
+   [[upd_timeout]] override: the body runs in well under a second, so a
+   20s budget only added a second passing world (a timeout). *)
+fun rat_totality_never_claims_exhaustion () =
+  let
+    val x = Term.mk_var ("x", ratSyntax.rat_ty)
+    val one = Term.mk_comb
+      (ratSyntax.rat_of_num_tm, numSyntax.mk_numeral (Arbnum.fromInt 1))
+    val goal = boolSyntax.mk_forall (x,
+      Term.list_mk_comb (ratSyntax.rat_les_tm,
+        [x, Term.list_mk_comb (ratSyntax.rat_add_tm, [x, one])]))
+    val config =
+      upd_size 10
+        (upd_substrate Compute
+          (Refute.upd_search (Refute.Only [Refute.Exhaustive])
+            default_config))
+  in
+    case refute config goal of
+        Unknown reasons =>
+          reasons = ["exhaustive: search space not exhausted",
+                     "exhaustive: searched up to size 10"]
+      | _ => false
+  end
+
+val _ = tprint "Refute rat quickcheck totality pin"
+val _ = require_msg (check_result rat_totality_never_claims_exhaustion)
+  (fn () =>
+    "rat exhaustive QC did not report the expected Unknown reasons")
+  (fn () => ()) ()
+
+(* Direct unit pin on the actual mechanism behind the totality pin above:
+   [[Refute_Gen.cardinality]]'s [[from_spec (GenCustom _) = NONE]] treats
+   every custom generator's type as infinite-or-unknown, and that result
+   gates [[Refute_Gen.enumerate]] before its own body ever runs -- no
+   custom-generator type can be reported enumerable or finite. *)
+fun rat_generator_is_not_enumerable () =
+  (case Refute_Gen.enumerate ratSyntax.rat_ty of
+       NONE => true | SOME _ => false) andalso
+  (case Refute_Gen.cardinality ratSyntax.rat_ty of
+       NONE => true | SOME _ => false)
+
+val _ = tprint "Refute rat quickcheck generator is not enumerable"
+val _ = require_msg (check_result rat_generator_is_not_enumerable) (fn () =>
+  "rat's custom generator was treated as enumerable or of finite \
+  \cardinality")
+  (fn () => ()) ()
+
+(* Direct unit pin on the generator itself, independent of the whole
+   pipeline: the totality pin above cannot observe this property, since
+   [[Refute_Gen.sml]]'s [[from_spec (GenCustom _) = NONE]] makes every
+   custom generator's completeness flag false unconditionally, before
+   the pipeline ever calls this [[enumerate]].  A regression that let
+   [[enumerate]] stop growing with size would silently shrink the QC
+   search at every size without tripping any pipeline-level check, so
+   it needs its own, narrower pin. *)
+fun rat_enumerate_grows_with_size () =
+  case Refute_EvalRat.generator of
+    {enumerate = SOME enum, ...} => length (enum 0) < length (enum 5)
+  | {enumerate = NONE, ...} => false
+
+val _ = tprint "Refute rat quickcheck enumerate grows with size"
+val _ = require_msg (check_result rat_enumerate_grows_with_size) (fn () =>
+  "rat's enumerate did not grow between size 0 and size 5")
+  (fn () => ()) ()
+
+(* Comparison family coverage.  Every rat pin above uses only [=] and
+   [<] -- exactly why [<=], [>] and [>=] shipped undecidable behind a
+   fully green suite.  One refuted goal per operator, via the same
+   Auto-falls-through-to-compute route as the [=] pin above. *)
+fun rat_comparison_refuted tm =
+  case refute (Refute.upd_search Refute.QuickcheckBackends default_config)
+    tm of
+      Counterexample ({substrate, certainty = Genuine, cert = SOME _, ...}
+                       :: _) => substrate = "compute"
+    | _ => false
+
+val _ = tprint "Refute rat quickcheck <= is decidable"
+val _ = require_msg (check_result (fn () =>
+  rat_comparison_refuted ``!x y : rat. x <= y``))
+  (fn () => "!x y. x <= y was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute rat quickcheck >= is decidable"
+val _ = require_msg (check_result (fn () =>
+  rat_comparison_refuted ``!x y : rat. x >= y``))
+  (fn () => "!x y. x >= y was not refuted via compute") (fn () => ()) ()
+
+val _ = tprint "Refute rat quickcheck > is decidable"
+val _ = require_msg (check_result (fn () =>
+  rat_comparison_refuted ``!x : rat. x > 0``))
+  (fn () => "!x. x > 0 was not refuted via compute") (fn () => ()) ()
+
+(* The true-goal half of the family: [x <= x] holds at every rational, so
+   no finite sample may report a counterexample for it -- and, as with
+   the totality pin above, none may claim exhaustion either.  Same
+   config as that pin (fixed size, exhaustive only) and the same exact
+   assertion, for the same reason: "not NoCounterexample" alone also
+   passes on a spurious counterexample from an unsound [<=] decision,
+   and under the module's default iterative search this goal merely
+   times out, which is a wall-clock race unfit to pin exactly. *)
+fun rat_reflexive_leq_never_refuted () =
+  case refute
+    (upd_size 10 (upd_substrate Compute
+      (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config)))
+    ``!x : rat. x <= x`` of
+      Unknown reasons =>
+        reasons = ["exhaustive: search space not exhausted",
+                   "exhaustive: searched up to size 10"]
+    | _ => false
+
+val _ = tprint "Refute rat quickcheck x <= x is never refuted"
+val _ = require_msg (check_result rat_reflexive_leq_never_refuted) (fn () =>
+  "x <= x did not report the expected Unknown reasons")
+  (fn () => ()) ()
+
+(* Candidate display.  [[Refute_EvalRat.mk_rat_lit]] now prints a
+   candidate as a bare (possibly negated) numeral or as [[n // d]],
+   never as [[abs_rat (abs_frac (n, d))]]; cover a positive, a negative,
+   zero, and a non-unit denominator. *)
+fun rat_enumerate_display () =
+  case Refute_EvalRat.generator of
+      {enumerate = SOME enum, ...} =>
+        let val shown = List.map Parse.term_to_string (enum 3)
+        in
+          List.exists (fn s => s = "3") shown andalso
+          List.exists (fn s => s = "-3") shown andalso
+          List.exists (fn s => s = "0") shown andalso
+          List.exists (fn s => s = "-3 // 2") shown
+        end
+    | {enumerate = NONE, ...} => false
+
+val _ = tprint "Refute rat quickcheck enumerate candidate display"
+val _ = require_msg (check_result rat_enumerate_display) (fn () =>
+  "rat's enumerated candidates no longer display as bare numerals or \
+  \n // d")
+  (fn () => ()) ()
+
+(* The generator's shape and a reported binding are different things --
+   only the latter is what a user sees -- so check the display end to
+   end via an actual counterexample instead of only via [[enumerate]].
+   The exact value is not pinned (the default seed is machine-chosen),
+   only its printed shape: a bare (possibly negated) numeral, or
+   [[n // d]] with both parts numerals; never [[abs_rat]]/[[abs_frac]]. *)
+fun looks_like_numeral s =
+  let val digits = if String.isPrefix "~" s orelse String.isPrefix "-" s
+        then String.extract (s, 1, NONE) else s
+  in size digits > 0 andalso List.all Char.isDigit (String.explode digits)
+  end
+
+fun looks_like_rat_binding s =
+  not (String.isSubstring "abs_rat" s) andalso
+  not (String.isSubstring "abs_frac" s) andalso
+  (case String.tokens (fn c => c = #" ") s of
+       [numeral] => looks_like_numeral numeral
+     | [numerator, "//", denominator] =>
+         looks_like_numeral numerator andalso looks_like_numeral denominator
+     | _ => false)
+
+fun rat_counterexample_binding_display () =
+  case refute (Refute.upd_search Refute.QuickcheckBackends default_config)
+    ``(x : rat) = rat_of_num 1`` of
+      Counterexample ({bindings = [(_, value)], ...} :: _) =>
+        looks_like_rat_binding (Parse.term_to_string value)
+    | _ => false
+
+val _ = tprint "Refute rat quickcheck counterexample binding display"
+val _ = require_msg
+  (check_result rat_counterexample_binding_display) (fn () =>
+  "a rat counterexample binding did not display as a numeral or n // d")
+  (fn () => ()) ()
+
+(* Lowest terms.  [[enumerate]] is restricted to lowest terms: every
+   emitted (n, d) has gcd(|n|, d) = 1, and 0 is only ever emitted as
+   0/1.  Pin the property, not the count (19 at size 3), which is
+   brittle to any change in enumeration order or coverage. *)
+val rat_cons_c = Term.prim_mk_const {Thy = "rat", Name = "rat_cons"}
+
+fun rat_pin_gcd (a, 0) = a
+  | rat_pin_gcd (a, b) = rat_pin_gcd (b, a mod b)
+
+fun dest_rat_candidate tm =
+  if ratSyntax.is_rat_ainv tm then
+    let val (n, d) = dest_rat_candidate (ratSyntax.dest_rat_ainv tm)
+    in (~n, d) end
+  else if ratSyntax.is_rat_of_num tm then
+    (Arbnum.toInt (numSyntax.dest_numeral (ratSyntax.dest_rat_of_num tm)), 1)
+  else
+    case Lib.total HolKernel.strip_comb tm of
+        SOME (head, [n, d]) =>
+          if Term.same_const head rat_cons_c then
+            (Arbint.toInt (intSyntax.int_of_term n),
+             Arbint.toInt (intSyntax.int_of_term d))
+          else raise Fail "dest_rat_candidate: unexpected shape"
+      | _ => raise Fail "dest_rat_candidate: unexpected shape"
+
+fun rat_enumerate_lowest_terms () =
+  case Refute_EvalRat.generator of
+      {enumerate = SOME enum, ...} =>
+        let val pairs = List.map dest_rat_candidate (enum 6)
+        in
+          not (null pairs) andalso
+          List.all (fn (n, d) =>
+            d > 0 andalso
+            (if n = 0 then d = 1 else rat_pin_gcd (Int.abs n, d) = 1)) pairs
+        end
+    | {enumerate = NONE, ...} => false
+
+val _ = tprint "Refute rat quickcheck enumerate is in lowest terms"
+val _ = require_msg (check_result rat_enumerate_lowest_terms) (fn () =>
+  "an enumerated rat candidate was not in lowest terms")
+  (fn () => ()) ()
 
 val _ =
   if selftest_level >= 2 then

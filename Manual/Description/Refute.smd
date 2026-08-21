@@ -21,7 +21,13 @@ At the prompt, load the public facade explicitly:
 
     load "Refute"; open Refute;
 
-This loads the implementation modules and registers the built-in backends.
+This loads the implementation modules and registers the built-in backends,
+including a Quickcheck generator for `:rat` and a computeLib fragment that
+decides closed `:rat` arithmetic and comparison literals; the latter also
+extends the ambient `EVAL`, so closed rational literals compute afterwards
+regardless of whether Refute itself is invoked again -- a comparison to `T`
+or `F`, an arithmetic term to a raw `abs_rat (abs_frac (n, d))` value that
+is not reduced to lowest terms.
 Loading and running Refute leaves no Refute-created type, constant, theorem,
 or theory binding in the user's theory.  In particular, temporary
 compilation artefacts are removed on success, failure, timeout, and
@@ -295,7 +301,10 @@ bounded relational formula.  It handles finite scopes, datatypes and
 codatatypes, functions, sets, inductive and coinductive predicates,
 typedefs, quotients, binary integers, machine words, and the registered
 `rat` and `real` fraction encodings, both on by default.  Its `Scope:`
-line records the exact finite interpretation.
+line records the exact finite interpretation.  Quickcheck reaches `:rat`
+by a different, independent route: a built-in generator plus a
+computeLib fragment that decides closed `:rat` literals directly, not
+the model finder's Frac encoding above.
 For example:
 
 ```{=latex}
