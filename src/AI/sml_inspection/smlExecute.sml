@@ -29,7 +29,8 @@ val sml_thml_glob = ref []
 
 fun quse_string s =
   let
-    val stream = TextIO.openString (HOLSource.fromString {quietOpen = false, print = K()} s)
+    val stream = TextIO.openString
+                   (HOLSource.fromString {quietOpen = false, print = K()} s)
     fun infn () = TextIO.input1 stream
   in
     (

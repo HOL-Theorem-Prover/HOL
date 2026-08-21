@@ -575,7 +575,9 @@ fun expand_goal infs rules =
 (*
 val state = (g,([],2 * offinc,maxinf))
    : ((int * fol_term list)
-      * (int * (((int * fol_term list) list * (int * fol_term list)) * (int * thm)) list) list)
+      * (int *
+         (((int * fol_term list) list *
+           (int * fol_term list)) * (int * thm)) list) list)
      * ((fol_term * int) list * int * int);;
 
 *)

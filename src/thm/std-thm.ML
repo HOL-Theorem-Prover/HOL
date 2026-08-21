@@ -806,7 +806,8 @@ end
 
 local
   val mesg1 = "First argument not of form `?x. P`"
-  val mesg2 = "(2nd argument)/(bound var) in body of 1st argument is not theorem's conclusion"
+  val mesg2 = "(2nd argument)/(bound var) in body of 1st argument is not \
+              \theorem's conclusion"
   val err = thm_err "EXISTS" mesg1
 in
 fun EXISTS (w,t) th =

@@ -304,7 +304,7 @@ val WELL_FOUNDED_NUM_TAC :tactic = fn (asl,gl) =>
       A |- (!x.t1) ==> (!x.t2)
 %
 
-% Adapted from FORALL_EQ: [PVH 94.12.05]                                             %
+% Adapted from FORALL_EQ: [PVH 94.12.05]
 
 let FORALL_IMP =
     fn x => let all t = mk_forall(x,t) in

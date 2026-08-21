@@ -578,7 +578,7 @@ QED
 
 Theorem variant_THM:
      !x s. FINITE s ==>
-              (variant x s = (if x IN s then variant (mk_variant x 1) s  else  x))
+           (variant x s = (if x IN s then variant (mk_variant x 1) s else x))
 Proof
     REPEAT STRIP_TAC
     THEN COND_CASES_TAC

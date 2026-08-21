@@ -331,7 +331,8 @@ fun mk_fast_set compare l =
     map fst (Redblackmap.listItems (foldl f empty_dict l))
   end
 
-(* preserve the order of elements and take the first seen element as representant *)
+(* preserve the order of elements and take the first seen element as
+   representant *)
 fun mk_sameorder_set_aux memdict rl l =
   case l of
     [] => rev rl
@@ -936,7 +937,8 @@ fun enc_tmdata (encf,tmlf) tmdata =
 
 fun dec_tmdata decf t =
   let
-    val ({exports,tables}, tmdata) = valOf (pair_decode (TheoryReader.core_decode, SOME) t)
+    val ({exports,tables}, tmdata) =
+        valOf (pair_decode (TheoryReader.core_decode, SOME) t)
     val sdo = dec_sdata {exports = exports, tables = tables,
                          before_types = fn _ => (), before_terms = fn _ => ()}
     val dec_tm = Option.map (read_term sdo) o string_decode

@@ -395,7 +395,8 @@ in
         val w_ty = fcpSyntax.mk_int_numeric_type w
         val fp_ty = mk_w (fcpSyntax.mk_int_numeric_type k)
         val float_ty = Type.mk_type ("float", [t_ty, w_ty])
-        val float_to_real = Term.mk_const ("float_to_real", float_ty --> real_ty)
+        val float_to_real =
+            Term.mk_const ("float_to_real", float_ty --> real_ty)
         val float_value = Term.mk_const ("float_value", float_ty --> value_ty)
         val real_to_float =
           Term.mk_const ("real_to_float", rounding_ty --> real_ty --> float_ty)

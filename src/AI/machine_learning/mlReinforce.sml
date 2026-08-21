@@ -339,7 +339,8 @@ fun rl_loop ngen (rlobj,es) (rlex,targetd) =
   let
     val _ = log rlobj ("\nGeneration " ^ its ngen)
     val tnn = rl_train ngen rlobj rlex
-    val (newrlex,newtargetd) = rl_explore_cont ngen (rlobj,es) (tnn,rlex,targetd)
+    val (newrlex,newtargetd) =
+        rl_explore_cont ngen (rlobj,es) (tnn,rlex,targetd)
   in
     rl_loop (ngen + 1) (rlobj,es) (newrlex,newtargetd)
   end

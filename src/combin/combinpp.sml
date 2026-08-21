@@ -163,19 +163,19 @@ fun upd_processor0 (DB:pppdb) a =
               (fn s => String.isPrefix toplevel_updname s)
               (fn s => String.extract(s, size toplevel_updname, NONE))
               a
-           of
-             NONE => APP(l, upd_processor0 DB a1, upd_processor0 DB a2)
-           | SOME ((_, arg10, arg20), left) =>
-             let
-               val arg1 = upd_processor0 DB arg10
-               val arg2 = upd_processor0 DB arg20
-             in
-               case Symtab.lookup(#parse DB) left of
-                   NONE => raise ERR "upd_processor" (locn_of_absyn a)
-                                 ("No stored info for " ^ left)
-                 | SOME (DD {lookup_term_name, upd_term_name = (_, unm), ...}) =>
-                   process_updates (unm, Option.map #2 lookup_term_name)
-                                   arg1 arg2
+         of
+            NONE => APP(l, upd_processor0 DB a1, upd_processor0 DB a2)
+          | SOME ((_, arg10, arg20), left) =>
+            let
+              val arg1 = upd_processor0 DB arg10
+              val arg2 = upd_processor0 DB arg20
+            in
+              case Symtab.lookup(#parse DB) left of
+                  NONE => raise ERR "upd_processor" (locn_of_absyn a)
+                                ("No stored info for " ^ left)
+                | SOME (DD {lookup_term_name, upd_term_name = (_, unm), ...}) =>
+                  process_updates (unm, Option.map #2 lookup_term_name)
+                                  arg1 arg2
              end)
       | _ => a
 
@@ -349,8 +349,9 @@ fun addlform l r =
                 TOK r],
               term_name = toplevel_updname^l};
 
-fun new_form (r as {left,right,upd_term_name = (updt,updnm), lookup_term_name}) =
+fun new_form r =
     let
+      val {left,right,upd_term_name = (updt,updnm), lookup_term_name} = r
       val d = ADD (DD r)
     in
       addlform left right;
@@ -363,7 +364,8 @@ fun new_form (r as {left,right,upd_term_name = (updt,updnm), lookup_term_name}) 
     end
 
 fun remove_paren_syntax lparen_name = (
-  remove_termtok {tok = lparen_name, term_name = toplevel_updname ^ lparen_name};
+  remove_termtok {tok = lparen_name,
+                  term_name = toplevel_updname ^ lparen_name};
   record_delta (RM lparen_name)
 )
 

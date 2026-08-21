@@ -125,7 +125,8 @@ fun initial_state rws t =
    - `Cbv_abs`: The continuation after descending into the body of an
      abstraction.
 
-   `rws` is the compset, threaded through for use in wrapping conversion results.
+   `rws` is the compset, threaded through for use in wrapping conversion
+   results.
 *)
 fun cbv_wk rws ((th,CLOS{Env, Term=App(a,args)}), stk) =
   (* *Combination.* Descend into operator immediately. Descend into operand in
@@ -197,15 +198,19 @@ and cbv_up rws (hcl, Cbv_rator{Rand=(mka,clos), Ctx}) =
           the stack. *)
           case Const_info of
             {Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip} =>
-              cbv_wk rws ((thm, CST {Head=Head,Args=Args,Rws=Tail,Skip=Skip}),Ctx)
+              cbv_wk
+                rws
+                ((thm, CST {Head=Head,Args=Args,Rws=Tail,Skip=Skip}),Ctx)
           | _ => raise DEAD_CODE "cbv_wk"
       in
         case Ctx of
            Cbv_top =>
              (if aconv T (rhs (concl current_thm)) then
                 (* This antecedent proved. Add it to the accumulator and try to
-                prove next antecedent. *)
-                prove_ants rws (thm,Cl,current_thm::Proved,Pending,Mk_thm,Const_info,Ctx)
+                   prove next antecedent. *)
+                prove_ants
+                  rws
+                  (thm,Cl,current_thm::Proved,Pending,Mk_thm,Const_info,Ctx)
               else
                 (* The current antecedent did not reduce to `T`; abandon this
                 rewrite rule. *)
@@ -239,7 +244,8 @@ and strong_up _ (th, Cbv_top) = th
   | strong_up _ (th, Cbv_rand{Rator=(mka,false,clos), Ctx}) =
       raise DEAD_CODE "strong_up"
   | strong_up rws (th, Cbv_rator{Rand=(mka,clos), Ctx}) =
-      strong rws (cbv_wk rws (clos, Cbv_rand{Rator=(mka,true,(th,NEUTR)), Ctx=Ctx}))
+      strong rws
+             (cbv_wk rws (clos, Cbv_rand{Rator=(mka,true,(th,NEUTR)), Ctx=Ctx}))
   | strong_up rws (th, Cbv_rand{Rator=(mka,true,(tha,_)), Ctx}) =
       strong_up rws (mka tha th, Ctx)
   | strong_up rws (th, Cbv_abs{Bvar=mkl, Ctx}) = strong_up rws (mkl th, Ctx)
@@ -384,7 +390,8 @@ in
            List.partition (fn thm => tmopt_eq (Lib.total get_f thm) case_const)
                           simpls
         val case_thm = List.map lazyfy_thm case_thm
-        val cs' = foldl (fn (c, cset) => add_conv c cset) cs (translate_convs convs)
+        val cs' =
+            foldl (fn (c, cset) => add_conv c cset) cs (translate_convs convs)
     in
         add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs'
     end

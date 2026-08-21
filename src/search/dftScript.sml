@@ -34,7 +34,8 @@ val _ = numLib.temp_prefer_num();
 (* parent, then it has no children, and so the to_visit list shrinks.        *)
 (*---------------------------------------------------------------------------*)
 
-Definition Rel_def:    (* map arg. tuples into a pair of numbers for termination *)
+Definition Rel_def:
+    (* map arg. tuples into a pair of numbers for termination *)
     Rel(G,f,seen,to_visit,acc) =
         (CARD(Parents G DIFF (LIST_TO_SET seen)), LENGTH to_visit)
 End
@@ -234,8 +235,9 @@ Theorem DFT_REACH_THM:
       ==>
     !x. x IN REACH_LIST G to_visit <=> MEM x (DFT G CONS [] to_visit [])
 Proof
- RW_TAC bool_ss [EQ_IMP_THM] THENL
- [MATCH_MP_TAC DFT_REACH_2,IMP_RES_TAC DFT_REACH_1] THEN
- FULL_SIMP_TAC set_ss [REACH_def,REACH_EXCLUDE,SPECIFICATION,REACH_LIST_def] THEN
+ RW_TAC bool_ss [EQ_IMP_THM] THENL [
+  MATCH_MP_TAC DFT_REACH_2,
+  IMP_RES_TAC DFT_REACH_1] >>
+ FULL_SIMP_TAC set_ss [REACH_def,REACH_EXCLUDE,SPECIFICATION,REACH_LIST_def] >>
  METIS_TAC[LIST_TO_SET_DEF]
 QED

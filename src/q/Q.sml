@@ -256,24 +256,35 @@ end
 fun LIST_REFINE_EXISTS_TAC qs (asl, g) = let
     fun strip_n_exists 0 acc tm = (rev acc, tm)
       | strip_n_exists n acc tm =
-          let val (bv, tm) = dest_exists tm in strip_n_exists (n - 1) (bv::acc) tm end
+          let val (bv, tm) = dest_exists tm
+          in
+            strip_n_exists (n - 1) (bv::acc) tm
+          end
     val (exists_vars, body) = strip_n_exists (length qs) [] g
-      handle _ => raise ERR "LIST_REFINE_EXISTS_TAC" "too many quotations provided"
+      handle _ => raise ERR "LIST_REFINE_EXISTS_TAC"
+                        "too many quotations provided"
     val qs_bvs = zip qs exists_vars
     val ctxt = free_varsl (g::asl)
     fun is_underscore q =
-      let val tm = trace ("notify type variable guesses", 0) ptm q in
-      if not (is_var tm) then false else String.isPrefix "_" (fst (dest_var tm)) end
+      let val tm = trace ("notify type variable guesses", 0) ptm q
+      in
+        if not (is_var tm) then false
+        else String.isPrefix "_" (fst (dest_var tm))
+      end
     fun process [] = ([], [], [], [])
       | process ((q,bv)::rest) =
-        let val (wits, new_vars, renames, subs) = process rest in
-        if is_underscore q then
-          let val bv' = variant (map #redex subs) bv
-          in (NONE::wits, new_vars, (bv |-> bv')::renames, subs) end
-        else let
-          val wit = ptm_with_ctxtty' (new_vars @ ctxt) (type_of bv) q
-          val new_vars' = op_set_diff aconv (free_vars wit) (new_vars @ ctxt)
-          in (SOME wit::wits, new_vars' @ new_vars, renames, (bv |-> wit)::subs) end
+        let val (wits, new_vars, renames, subs) = process rest
+        in
+          if is_underscore q then
+            let val bv' = variant (map #redex subs) bv
+            in (NONE::wits, new_vars, (bv |-> bv')::renames, subs)
+            end
+          else let
+            val wit = ptm_with_ctxtty' (new_vars @ ctxt) (type_of bv) q
+            val new_vars' = op_set_diff aconv (free_vars wit) (new_vars @ ctxt)
+          in
+            (SOME wit::wits, new_vars' @ new_vars, renames, (bv |-> wit)::subs)
+          end
         end
     val (wits, new_vars, renames, subs) = process qs_bvs
     val g' =
@@ -300,7 +311,8 @@ fun LIST_REFINE_EXISTS_TAC qs (asl, g) = let
           let val th = chooser vs th
               val exists_tm = mk_exists (v, hd (hyp th))
           in CHOOSE (v, ASSUME exists_tm) th end
-    val th = ASSUME body |> exists g' wits old_vars |> chooser (new_vars @ old_vars)
+    val th =
+        ASSUME body |> exists g' wits old_vars |> chooser (new_vars @ old_vars)
   in
     MATCH_MP_TAC (DISCH_ALL th) (asl, g)
   end

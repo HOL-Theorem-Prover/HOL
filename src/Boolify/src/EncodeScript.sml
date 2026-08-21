@@ -490,7 +490,7 @@ Proof
        >> ASM_REWRITE_TAC []
        >> METIS_TAC [])
    >> DISCH_THEN (fn th => REWRITE_TAC [th])
-   >> MATCH_MP_TAC (PROVE [] ``(R ==> P) /\ (P ==> (Q = R)) ==> (P /\ Q <=> R)``)
+   >> MATCH_MP_TAC (PROVE [] “(R ==> P) /\ (P ==> (Q = R)) ==> (P /\ Q <=> R)”)
    >> CONJ_TAC
    >- (RW_TAC std_ss []
        >> Suff `?m n. (m * 2 + x MOD 2) MOD 2 = (n * 2 + y MOD 2) MOD 2`

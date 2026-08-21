@@ -128,7 +128,8 @@ struct
 
   fun encode f NONE = "N"
     | encode f (SOME x) = "S" ^ f x
-  fun reader f = (literal "N" >> return NONE) ++ (literal "S" >> f >- (return o SOME))
+  fun reader f = (literal "N" >> return NONE) ++
+                 (literal "S" >> f >- (return o SOME))
   fun decode f = lift (reader f)
 end
 

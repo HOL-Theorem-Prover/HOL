@@ -207,9 +207,10 @@ fun Hol_mono_reln name monoset tm = let
                      " (use xHol_reln to specify a better)")
   val _ = case find_double_implications tm of
               NONE => ()
-           |  SOME (idx,loc) => raise ERRloc "Hol_mono_reln" loc
-                                ("Clause #" ^ Int.toString idx ^
-                                 " has a double implication (use conjunctions instead)")
+           |  SOME (idx,loc) =>
+              raise ERRloc "Hol_mono_reln" loc
+                    ("Clause #" ^ Int.toString idx ^
+                     " has a double implication (use conjunctions instead)")
   val (rules, indn, cases) = new_inductive_definition monoset name tm
       (* not! InductiveDefinition.bool_monoset tm *)
   val strong_ind = derive_strong_induction (rules, indn)

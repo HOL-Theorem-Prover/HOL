@@ -879,7 +879,7 @@ End
 val invoke_dict1_def = Define
    `(invoke_dict1 (CONS e d) o' lb = let ((l:string), m) = e
                                       in (if l = lb then invoke_method1 m o'
-                                                    else invoke_dict1 d o' lb))  /\
+                                          else invoke_dict1 d o' lb))  /\
     (invoke_dict1 (NIL) o' lb       = obj1_0)`
 handle e => Raise e;
 
@@ -910,17 +910,17 @@ QED
 
 Definition update_dict1_def:
     (update_dict1 (CONS e d) (lb:string) (mth:method1) =
-              let (l,m) = (e:^entry1) in
-                    (if l = lb then          (update_dict1 d lb mth)
-                               else  (CONS e (update_dict1 d lb mth)) ))   /\
+      let (l,m) = (e:^entry1) in
+            (if l = lb then          (update_dict1 d lb mth)
+                       else  (CONS e (update_dict1 d lb mth)) ))   /\
     (update_dict1 (NIL) lb mth      = NIL)
 End
 
 Theorem update_dict1:
      (!l m (d:^dict1) lb mth.
           update_dict1 (CONS (l, m) d) lb mth =
-                    (if l = lb then               (update_dict1 d lb mth)
-                               else  (CONS (l, m) (update_dict1 d lb mth)) ))   /\
+            (if l = lb then               (update_dict1 d lb mth)
+                       else  (CONS (l, m) (update_dict1 d lb mth)) ))   /\
         (!lb mth.
           update_dict1 (NIL) lb mth = NIL)
 Proof

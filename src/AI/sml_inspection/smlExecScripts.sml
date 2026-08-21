@@ -30,7 +30,8 @@ fun heapname_dir () = scratch_dir_of () ^ "/sml_inspection/heapname"
 val use_state0 = ref false
 val hol_bin = HOLDIR ^ "/bin/hol"
 
-fun script_arg file = if OS.Path.isAbsolute file then file else OS.Path.file file
+fun script_arg file =
+    if OS.Path.isAbsolute file then file else OS.Path.file file
 
 fun find_heapname_in_dir dir file =
   if !use_state0 then HOLDIR ^ "/bin/hol.state0" else

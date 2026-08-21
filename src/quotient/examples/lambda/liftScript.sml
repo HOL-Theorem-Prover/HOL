@@ -10,11 +10,6 @@ Libs
 (* Lifting the lambda calculus syntax to the abstract level.             *)
 (* --------------------------------------------------------------------- *)
 
-
-(* In interactive sessions, do:
-val _ = map load ["more_listTheory","more_setTheory","variableTheory","termTheory","alphaTheory"];
-*)
-
 val _ = associate_restriction ("?!!",  "RES_EXISTS_EQUIV");
 
 val term = ty_antiq (``:'a term1``);
@@ -1091,7 +1086,8 @@ val quot_ths = quotients
 val tyops = tyop_quotients
 val newdefs = fn_defns
 
-... read in lift_theorem_by_quotients quot_ths equivs tyops newdefs respects polydfs polywfs
+... read in lift_theorem_by_quotients quot_ths equivs tyops newdefs
+                                      respects polydfs polywfs
 
 TESTS:
 

@@ -114,8 +114,11 @@ Proof
 QED
 
 Theorem BISIM_REL_sym_strong_thm:
-  BISIM_REL ts p0 q0 <=> ∃R. symmetric R ∧ R p0 q0 ∧
-    (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
+  BISIM_REL ts p0 q0 <=>
+    ∃R. symmetric R ∧ R p0 q0 ∧
+        (∀p q. R p q ⇒
+               ∀l p'. ts p l p' ⇒
+                      ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
 Proof
   SRW_TAC[][EQ_IMP_THM]
   >- METIS_TAC[BISIM_REL_sym_thm]

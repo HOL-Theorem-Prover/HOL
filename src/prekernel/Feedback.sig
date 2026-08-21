@@ -7,7 +7,8 @@ sig
 
     val pp_hol_error      : hol_error -> HOLPP.pretty
     val mk_hol_error      : string -> string -> locn.locn -> string -> hol_error
-    val wrap_hol_error    : string -> string -> locn.locn -> hol_error -> hol_error
+    val wrap_hol_error    : string -> string -> locn.locn -> hol_error ->
+                            hol_error
     val empty_hol_error   : hol_error
     val top_structure_of  : hol_error -> string
     val top_function_of   : hol_error -> string

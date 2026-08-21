@@ -498,7 +498,7 @@ fun check_lhs tm =
  then raise ERR "check_lhs" ("attempt to redefine the constant " ^
                              fst (dest_const tm))
  else if not(is_comb tm)
- then raise ERR "check_lhs" "lhs not of form (--`x = ...`--) or (--`f x = ... `--)"
+ then raise ERR "check_lhs" "lhs not of form `x = ...` or `f x = ... `"
  else
   let val (t1,t2) = dest_comb tm
       val l1 = check_lhs t1
@@ -529,7 +529,8 @@ fun get_type left rightty =
 fun RESQ_DEF_EXISTS_RULE tm =
     let val (gvars,tm') = strip_forall tm
     val (ress,(lh,rh)) = ((I ## dest_eq) o strip_res_forall) tm'
-        handle _ => raise ERR "RESQ_DEF_EXISTS_RULE" "definition not an equation"
+        handle _ =>
+        raise ERR "RESQ_DEF_EXISTS_RULE" "definition not an equation"
     val leftvars = check_lhs lh val leftvars_s = listset leftvars
     val cty = get_type lh (type_of rh)
     val rightvars = free_vars rh val rightvars_s = listset rightvars
@@ -540,7 +541,8 @@ fun RESQ_DEF_EXISTS_RULE tm =
     val cname = fst(dest_var pConst)
     in
     if not(Lexis.allowed_term_constant cname) then
-        raise ERR "RESQ_DEF_EXISTS_RULE" (cname^" is not allowed as a constant name")
+        raise ERR "RESQ_DEF_EXISTS_RULE"
+              (cname^" is not allowed as a constant name")
     else if tmem pConst resvars then
         raise ERR "RESQ_DEF_EXISTS_RULE" (cname^" is restrict bound")
     else if not(all (fn x => tmem x leftvars) resvars) then

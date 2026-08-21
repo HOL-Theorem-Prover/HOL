@@ -472,7 +472,8 @@ fun complex cnv cps (ant,rst) =
                   if null vstructs then
                     REFL rhsFnapp
                   else SYM (Conv.QCONV (DEPTH_CONV GEN_BETA_CONV) rhsFnapp)
-               val th1 = TRANS th rhs_eq (* |- lhsFn vstructs = rhsFn vstructs *)
+               val th1 = TRANS th rhs_eq
+                         (* |- lhsFn vstructs = rhsFn vstructs *)
             in
               (rhsFn,th1)
             end
@@ -487,8 +488,10 @@ fun complex cnv cps (ant,rst) =
               of SOME tup => pairTools.PGEN v tup thm
                | NONE => GEN v thm
          val th3 = itlist generalize vlist th2
-         val _ = lztrace(4,"compare extraction results (ant' vs derived thm):\n",
-                 fn () => ppstring (indent_pp 3 o pp_terms) [ant', concl th3])
+         val _ =
+             lztrace(4,"compare extraction results (ant' vs derived thm):\n",
+                     fn () =>
+                        ppstring (indent_pp 3 o pp_terms) [ant', concl th3])
       in
         (CHANGE th3, map (subst [rhsFnVar |-> rhsFn]) rst)
       end
@@ -609,8 +612,9 @@ fun extract FV congs (proto_def,WFR) =
      val restr_fR = rator(rator(lhs(snd(dest_imp (concl (SPEC_ALL CUT_LEM))))))
      val simpls = insert_cut_lem (simpls_of_congs congs) CUT_LEM
  in fn (p,th) =>
-    let val _ = lztrace(3,"------------------------\nTC extraction on clause:\n\n",
-                fn () => ppstring pp_term (concl th))
+    let val _ =
+            lztrace(3,"------------------------\nTC extraction on clause:\n\n",
+                    fn () => ppstring pp_term (concl th))
         val nested_ref = ref false
         val FV' = FV@free_vars(concl th)
         val cps0 = {simpls = simpls,

@@ -306,7 +306,7 @@ Proof
       simp[closest_def, closest_such_def] >>
       SELECT_ELIM_TAC >> simp[] >>
       conj_tac >>~-
-      ([‘$? _’], qexists ‘POS0’ >> simp[is_closest_def, word_lsb_n2w, IN_DEF]) >>
+      ([‘$? _’],qexists ‘POS0’ >> simp[is_closest_def, word_lsb_n2w, IN_DEF]) >>
       simp[is_closest_def, IN_DEF]) >>
   qexists ‘f’ >> simp[] >>
   simp[round_def] >>
@@ -341,7 +341,8 @@ Proof
 QED
 
 Theorem round_representable_zero:
-  2 ≤ precision(:β) ⇒ round m 0 = (POS0:(α,β)float) ∨ round m 0 = (NEG0:(α,β)float)
+  2 ≤ precision(:β) ⇒
+  round m 0 = (POS0:(α,β)float) ∨ round m 0 = (NEG0:(α,β)float)
 Proof
   strip_tac >>
   drule_then (qspecl_then [‘m’, ‘POS0’] strip_assume_tac) round_representable >>

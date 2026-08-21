@@ -109,7 +109,8 @@ sig
    val next : ('a, 'b) istream -> ('a, 'b) istream
    val null_intersection : ''a list -> ''a list -> bool
    val op_U : ('a -> 'a -> bool) -> 'a list list -> 'a list
-   val op_allpairs : ('a -> 'a -> bool) -> ('b -> 'c -> 'a) -> 'b list -> 'c list -> 'a list
+   val op_allpairs : ('a -> 'a -> bool) -> ('b -> 'c -> 'a) -> 'b list ->
+                     'c list -> 'a list
    val op_assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b
    val op_assoc1 : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b option
    val op_insert : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list

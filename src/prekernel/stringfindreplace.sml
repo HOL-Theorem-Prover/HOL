@@ -37,7 +37,10 @@ fun foldl f acc t =
                       NONE => acc0
                     | SOME v => f(k,v,acc0)
       in
-        Chartab.fold (fn (c,t) => fn a => recurse (k ^ str c) a t) (dictOf t) acc
+        Chartab.fold
+          (fn (c,t) => fn a => recurse (k ^ str c) a t)
+          (dictOf t)
+          acc
       end
   in
     recurse "" acc t
