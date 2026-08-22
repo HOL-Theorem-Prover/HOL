@@ -561,22 +561,29 @@ Theorem eval_cfun_compute[compute] = eval_cfun_def
    (Refute_ModelFinder_Scope.sml), unlike is_fmap's recursive one.
    is_fmap' carries the same FINITE-guarded [unknown] escape as wf'_def
    above, and for the same syntactic reason (FINITE is encoded against
-   'a's own type, not against the Kodkod scope), but the escape is not
-   what keeps a verdict at an intrinsically infinite key type (e.g. num)
-   safe: every value Kodkod ever assigns is a finite relation regardless
-   of which disjunct of is_fmap' holds, so [abs_fmap' f] already denotes
-   a genuine, finite-support fmap for any [f] a scope can produce, typedef
-   guard or not.  What the guard buys is availability, not safety:
-   dropping [unknown] would force the membership axiom [!a. is_fmap'
-   (FLOOKUP a)] to read [!a. FINITE {x | FLOOKUP a x <> NONE}] outright,
-   which the model finder cannot certify True over an infinite key type in
-   a positive-polarity sound problem, killing the search there instead of
-   leaving one running (mf_typedef_registration_backs_genuine_fmap_verdict,
-   selftest.sml).
+   'a's own type, not against the Kodkod scope).  Measured: dropping the
+   [\/ unknown] disjunct from is_fmap'_def (and, correspondingly,
+   disj1_tac from is_fmap'_FLOOKUP's proof below) leaves the level-1
+   selftest at 939 OK/0 failures, byte-identical to the pre-ablation
+   baseline; no pin, including finite_map_model_finder_reaches_genuine,
+   is sensitive to the escape's presence.  So the escape's necessity is
+   not established by anything in this suite, and the previously stated
+   reason for keeping it -- that dropping it "kills the search" over an
+   infinite key type in a positive-polarity sound problem -- is refuted
+   by that measurement and is not repeated here.  The escape is kept
+   anyway, for the same reason wf'_def carries one: FLOOKUP a's domain
+   is a HOL-level FINITE claim over 'a's own (possibly infinite) type,
+   which the model finder has no general syntactic way to certify True
+   at every instance and scope, so removing the escape would trade an
+   unmeasured amount of scope-search coverage for no observed benefit;
+   see [Refute_ModelFinder_HOL.sml]'s [synthetic_fmap_typedef] comment
+   for how FLOOKUP/is_fmap' are actually dispatched at a typedef
+   instance, which is the more likely reason no tested goal exercises
+   this particular disjunct either way.
 
    abs_fmap' is Hilbert choice, so it is a real inverse of FLOOKUP only
-   where a preimage exists; the two theorems below say exactly that, and
-   are precisely what a genuine (non-synthetic) HOL typedef would give
+   where a preimage exists; the theorems below say exactly that, and are
+   precisely what a genuine (non-synthetic) HOL typedef would give
    [register_typedef] as its bijection theorem -- [FLOOKUP]/[abs_fmap']/
    [is_fmap'] are all genuine constants at every instance the model finder
    uses, unlike frac's [abs_frac]/[rep_frac], which [retype_constant]
@@ -586,19 +593,55 @@ Theorem eval_cfun_compute[compute] = eval_cfun_def
    fmap's own kernel [fmap_TY_DEF] representation ['a -> 'b + one], and
    this route deliberately uses the simpler ['a -> 'b option] instead (see
    above).  [synthetic_fmap_typedef] (Refute_ModelFinder_HOL.sml) stays,
-   but now consumes these two theorems as the typedef's inverse axioms,
-   the same slot a validated typedef fills from its own bijection
-   theorem -- so a typo in either definition breaks the proof below at
-   build time rather than silently changing what the model finder
-   encodes.  This is the structurally correct thing to supply regardless
-   of whether any single goal can be shown to need it: every
-   finite-key-type FLOOKUP-injectivity pin tried so far
-   (finite_map_flookup_is_injective_by_construction, selftest.sml)
-   already passes with an empty inverse-axiom list too, because at those
-   scopes the abstract carrier is exactly the represented subset of
-   ['a -> 'b option] and injectivity comes from that identification, not
-   from this axiom -- ablating it is not currently a way to make that
-   pin fail. *)
+   but now consumes [abs_fmap'_FLOOKUP]/[FLOOKUP_abs_fmap'] as the
+   typedef's inverse axioms, the same slot a validated typedef fills from
+   its own bijection theorem.  [FLOOKUP_abs_fmap'] is stated as the full
+   biconditional [FINITE {x | f x <> NONE} <=> FLOOKUP (abs_fmap' f) = f]
+   rather than the one-way implication a HOL typedef's second bijection
+   law states informally: [Refute_ModelFinder_HOL.sml]'s
+   [guarded_inverse_axiom] pattern-matches this exact biconditional shape
+   to also emit an [onto] surjectivity axiom, which an implication does
+   not trigger -- see [guarded_inverse_axiom]'s own comment.  Both
+   directions are genuine theorems here (forward: Hilbert choice finds a
+   preimage when one exists; backward: [FLOOKUP]'s own range always has
+   finite support, via [FDOM_FINITE]), so restating as a biconditional
+   loses no generality.
+
+   [is_fmap'_FLOOKUP] below is the fact [is_fmap'_def]'s own comment above
+   needs: a typo in [is_fmap'_def] -- a dropped disjunct, [f x = NONE],
+   the wrong set -- now fails this proof, exactly as a typo in
+   [abs_fmap'_def] already failed [abs_fmap'_FLOOKUP]'s.  That alone pins
+   [is_fmap'_def]'s statement, not its *use* as the typedef's [pred]:
+   [Refute_ModelFinder_HOL.sml]'s [synthetic_fmap_typedef] additionally
+   checks, at every instance it builds, that this theorem's instantiated
+   conclusion is literally the membership term [pred (rep a)] the module
+   would otherwise construct from separately-retyped [is_fmap']/[FLOOKUP]
+   constants, raising if they diverge -- so a wiring bug that reassigns
+   [pred] or [rep] to the wrong constant fails loudly at registration
+   time too, not only a typo caught by the theorem's own proof.
+
+   Measured, no fmap-fact pin tried so far is actually load-bearing on
+   the inverse axioms: emptying [inverse_axioms] in
+   [synthetic_fmap_typedef] and rebuilding turns the level-1 selftest
+   from 939 OK/0 failures to 938 OK/1 failure, and the one failure is
+   [mf_fmap_typedef_has_onto_inverse_axiom] (selftest.sml), which probes
+   the axiom-emission machinery directly, not a fmap fact.  Both
+   [finite_map_flookup_is_injective_by_construction] and
+   [finite_map_fempty_ersatz_is_sound]'s FDOM FEMPTY = {} still pass:
+   [FLOOKUP] is dispatched structurally as the typedef's rep
+   (constructor/selector encoding, [Refute_ModelFinder_HOL.sml]) and
+   [abs_fmap'] unfolds to its own Hilbert-choice body (an ordinary
+   [Definition], unlike a genuine typedef's kernel-introduced Abs), so
+   [FLOOKUP (abs_fmap' f) = f] comes out true by construction for these
+   goals without appeal to [FLOOKUP_abs_fmap'].  This is nonetheless the
+   structurally correct thing to supply regardless of whether any one
+   goal needs it -- in particular the [onto] half still states a
+   coverage guarantee (the abstract carrier is pinned to exactly
+   [is_fmap']'s extension, not some subset of it at a proper-subset
+   scope) that the structural encoding does not supply by itself, even
+   though no goal tried here has been found where dropping it changes a
+   verdict; see [Refute_ModelFinder_HOL.sml]'s [synthetic_fmap_typedef]
+   comment for the same point and the counts. *)
 Definition is_fmap'_def:
   is_fmap' (f : 'a -> 'b option) =
     (FINITE {x | f x <> NONE} \/ unknown)
@@ -616,15 +659,30 @@ Proof
 QED
 
 Theorem FLOOKUP_abs_fmap':
-  !f. FINITE {x | f x <> NONE} ==> FLOOKUP (abs_fmap' f) = f
+  !f. FINITE {x | f x <> NONE} <=> (FLOOKUP (abs_fmap' f) = f)
 Proof
-  rpt strip_tac >>
-  simp [abs_fmap'_def] >>
-  `(\fm. FLOOKUP fm = f) (FUN_FMAP (THE o f) {x | f x <> NONE})` by
-    (fs [boolTheory.FUN_EQ_THM, finite_mapTheory.FLOOKUP_FUN_FMAP,
-         combinTheory.o_THM, pred_setTheory.GSPECIFICATION] >>
-     gen_tac >> Cases_on `f x` >> fs []) >>
-  metis_tac [boolTheory.SELECT_AX]
+  gen_tac >> eq_tac
+  >- (strip_tac >> simp [abs_fmap'_def] >>
+      `(\fm. FLOOKUP fm = f) (FUN_FMAP (THE o f) {x | f x <> NONE})` by
+        (fs [boolTheory.FUN_EQ_THM, finite_mapTheory.FLOOKUP_FUN_FMAP,
+             combinTheory.o_THM, pred_setTheory.GSPECIFICATION] >>
+         gen_tac >> Cases_on `f x` >> fs []) >>
+      metis_tac [boolTheory.SELECT_AX])
+  >- (strip_tac >>
+      `{x | f x <> NONE} = FDOM (abs_fmap' f)` by
+        (simp [pred_setTheory.EXTENSION, finite_mapTheory.TO_FLOOKUP] >>
+         metis_tac []) >>
+      simp [finite_mapTheory.FDOM_FINITE])
+QED
+
+Theorem is_fmap'_FLOOKUP:
+  !fm. is_fmap' (FLOOKUP fm)
+Proof
+  gen_tac >> simp [is_fmap'_def] >> disj1_tac >>
+  `{x | FLOOKUP fm x <> NONE} = FDOM fm` by
+    (simp [pred_setTheory.EXTENSION, finite_mapTheory.TO_FLOOKUP] >>
+     metis_tac []) >>
+  simp [finite_mapTheory.FDOM_FINITE]
 QED
 
 (* The [FUPDATE/FEMPTY/FAPPLY/FDOM -> fupdate'/fempty'/fapply'/fdom']

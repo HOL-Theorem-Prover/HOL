@@ -19778,14 +19778,15 @@ val _ = require_msg
    The typedef is genuinely load-bearing for this route, just not
    demonstrated by this goal; see finite_map_flookup_is_injective_by_
    construction and finite_map_off_domain_apply_equality_is_total below,
-   both of which do fail under that same ablation.  Safety at this
-   infinite key type does not come from is_fmap' certifying its FINITE
-   disjunct True -- it cannot, over an infinite type, in a
-   positive-polarity sound problem -- but structurally: every value
-   kodkod ever assigns is a finite relation regardless of which disjunct
-   holds, so [abs_fmap' f] already denotes a genuine fmap for any [f] a
-   scope can produce.  The [unknown] escape's role is availability
-   (letting the search run at all here), not this pin's soundness.
+   both of which do fail under that same ablation.  Separately measured:
+   dropping is_fmap'_def's [\/ unknown] disjunct entirely (a different,
+   narrower ablation than disabling the typedef above) leaves this pin,
+   and the whole level-1 selftest, unaffected (939 OK/0 failures, same
+   as baseline) -- so, unlike the typedef registration itself, the
+   escape's necessity is not demonstrated by anything in this suite; see
+   refuteScript.sml's Part 7 comment for the full account, including why
+   the previously stated "kills the search otherwise" mechanism for this
+   escape does not hold up.
    [cert = NONE] is expected, not a defect: certainty here comes from the
    encoding, never from a certificate (see CLAUDE.md/README). *)
 fun finite_map_model_finder_reaches_genuine () =
@@ -19803,11 +19804,27 @@ val _ = require_msg
   (fn () => ()) ()
 
 (* ExpectNone twin: the same route also proves totality when the key type
-   is HOL-finite (bool), where is_fmap' never needs its FINITE-guarded
-   [unknown] escape.  A *true* finite-map fact is decided
+   is HOL-finite (bool).  A *true* finite-map fact is decided
    [NoCounterexample] outright, not left [Unknown] by an adaptive window
    running out, as it would be for an infinite key type
-   ([finite_map_default_adaptive_config_never_exhausts] above). *)
+   ([finite_map_default_adaptive_config_never_exhausts] above).
+
+   Ablation-validated, both counts: this pin does NOT need is_fmap' or
+   the fmap typedef at all.  Disabling synthetic_fmap_typedef entirely
+   (Refute_ModelFinder_HOL.sml, unconditional NONE) leaves it passing
+   (933 OK/6 failures overall -- the 6 are elsewhere, none of them this
+   pin); dropping is_fmap'_def's [\/ unknown] escape also leaves it
+   passing (939 OK/0 failures, unchanged from baseline).  What it
+   actually needs is fdom'_def: forcing [fdom' fm k = F] (refuteScript.
+   sml) turns the goal's [x IN FDOM fm] into an unconditional [F] via
+   ordinary definitional unfolding, and this pin fails alongside two
+   others that mention FDOM (936 OK/3 failures); restoring fdom'_def
+   returns to 939 OK/0.  So the mechanism is plain equational unfolding
+   of the FDOM ersatz row into [FLOOKUP fm k <> NONE]
+   (Refute_ModelFinder_HOL.sml's ersatz table), reducing this goal to an
+   option-type tautology that never touches the typedef machinery --
+   not, as previously and now-corrected here, is_fmap' skipping its
+   [unknown] escape. *)
 fun finite_map_model_finder_expect_none_twin () =
   case refute
     (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
@@ -19883,8 +19900,20 @@ val _ = require_msg
    own [NOT_FDOM_FAPPLY_FEMPTY] -- stays [NoCounterexample]: both sides
    reduce to the very same [unknown] occurrence (the same [fapply'_def]
    NONE branch, off [FEMPTY] on both sides), so the verdict does not
-   depend on how [unknown] would be resolved, and the totality veto must
-   not fire merely because [unknown] occurs somewhere in the goal. *)
+   depend on how [unknown] would be resolved.  This is not the totality
+   veto ([unknown_value], Refute_ModelFinder_Kodkod.sml) declining to
+   fire because the dependency is irrelevant here: that check is a
+   problem-wide [List.exists] and is occurrence-blind, firing whenever
+   [refute$unknown] reaches a non-Formula value position anywhere in the
+   problem, whether or not the goal's truth depends on it.  It plays no
+   role in this whole pin group ([finite_map_off_domain_apply_*] above
+   and below): the range type is bool in every one of them, so
+   [is_unknown]'s argument stays Formula-typed there and the veto never
+   sees a value-position occurrence to fire on.  The *_is_not_a_totality
+   pins instead pass via the ordinary sound/liberal problem split
+   (Refute_ModelFinder.sml): only the liberal sibling reports a
+   candidate, which certification leaves Potential/unconfirmed rather
+   than promoting to Genuine or NoCounterexample. *)
 fun finite_map_off_domain_apply_equality_is_total () =
   case refute
     (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
@@ -19950,14 +19979,17 @@ val _ = require_msg
    (Refute_ModelFinder_HOL.sml) supplies [abs_fmap'_FLOOKUP]/
    [FLOOKUP_abs_fmap'] (refuteScript.sml) as the typedef's inverse
    axioms, the structurally correct thing for a typedef registration to
-   carry -- but at this (finite-key) instance the pin below passes even
-   with that list emptied out: the abstract carrier is already exactly
-   the represented subset of ['a -> 'b option] at these scopes, so
-   injectivity comes from that identification, not from the axiom list.
-   This pins the actual guarantee (behavior, not the mechanism that
-   happens to supply it here); see refuteScript.sml's Part 7 comment and
-   Refute_ModelFinder_HOL.sml's synthetic_fmap_typedef comment for where
-   the axioms are still expected to matter. *)
+   carry -- but measured, this pin passes even with that list emptied
+   out (ablation: 939 OK/0 failures -> 938 OK/1 failure, the one
+   failure being [mf_fmap_typedef_has_onto_inverse_axiom] below, not
+   this pin).  [abs_fmap'_FLOOKUP] alone already forces FLOOKUP
+   injectivity on the abstract carrier unconditionally, so injectivity
+   comes from that theorem, not from [FLOOKUP_abs_fmap'].  This pins the
+   actual guarantee (behavior, not the mechanism that happens to supply
+   it here); no pin in this file has been found where
+   [FLOOKUP_abs_fmap'] is load-bearing -- see
+   [finite_map_fempty_ersatz_is_sound] below, which was suspected to
+   need it and measurably does not either. *)
 fun finite_map_flookup_is_injective_by_construction () =
   case refute
     (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
@@ -19972,9 +20004,56 @@ val _ = require_msg
   "an instance of FLOOKUP_EXT was not decided NoCounterexample")
   (fn () => ()) ()
 
+(* [FLOOKUP_abs_fmap'] (refuteScript.sml) is stated as a biconditional
+   specifically so [guarded_inverse_axiom] (Refute_ModelFinder_HOL.sml)
+   emits an [onto] surjectivity axiom for fmap, not only the guarded
+   equation; [abs_fmap'_FLOOKUP] stays a plain equation and fails that
+   function's [bool]-guard check, falling back to itself unguarded.  So
+   [optimized_inverse_axioms_for_rep_fun] on FLOOKUP returns three axioms
+   in total (one from abs_fmap'_FLOOKUP's fallback, two from
+   FLOOKUP_abs_fmap''s guarded path), one of which is exists-shaped after
+   stripping its leading foralls and its guard implication.  Ablation
+   (reverting [FLOOKUP_abs_fmap'] to its pre-fix one-way-implication
+   shape, so [dest_eq] raises on that theorem's body too and both inputs
+   take the one-axiom fallback): 2 axioms, neither exists-shaped, this
+   pin fails; restored, 3 axioms with one exists-shaped, this pin
+   passes. *)
+fun mf_fmap_typedef_has_onto_inverse_axiom () =
+  let
+    val fmap_rep = ``FLOOKUP : (bool |-> bool) -> bool -> bool option``
+    val axioms = MFH.optimized_inverse_axioms_for_rep_fun fmap_rep
+    fun is_onto_shaped term =
+      let
+        val (_, body) = boolSyntax.strip_forall term
+        val (_, matrix) = boolSyntax.dest_imp body
+      in
+        boolSyntax.is_exists matrix
+      end handle HOL_ERR _ => false
+  in
+    length axioms = 3 andalso List.exists is_onto_shaped axioms
+  end
+
+val _ = tprint "Refute finite-map inverse axioms include an onto axiom"
+val _ = require_msg
+  (check_result mf_fmap_typedef_has_onto_inverse_axiom) (fn () =>
+  "optimized_inverse_axioms_for_rep_fun for FLOOKUP did not return an " ^
+  "onto axiom alongside the guarded equation")
+  (fn () => ()) ()
+
 (* One pin per new [builtin_ersatz] row (Refute_ModelFinder_HOL.sml),
    each a true fact whose proof genuinely goes through that row -- fdom'
-   is already covered above by [finite_map_model_finder_expect_none_twin]. *)
+   is already covered above by [finite_map_model_finder_expect_none_twin].
+   This one was suspected to need [FLOOKUP_abs_fmap'] ([fempty' =
+   abs_fmap' (K NONE)], and only that theorem's forward direction states
+   [FLOOKUP (abs_fmap' (K NONE)) = K NONE]) but measurably does not:
+   emptying [synthetic_fmap_typedef]'s [inverse_axioms] and rebuilding
+   still passes this pin (ablation: 939 OK/0 failures -> 938 OK/1
+   failure, the one failure being [mf_fmap_typedef_has_onto_inverse_axiom]
+   above, not this pin).  [FLOOKUP] is dispatched structurally as the
+   typedef's rep and [abs_fmap'] unfolds to its own Hilbert-choice body
+   (Refute_ModelFinder_HOL.sml's [synthetic_fmap_typedef] comment), so
+   [FLOOKUP (abs_fmap' f) = f] already holds by construction here,
+   independent of the supplied axiom. *)
 fun finite_map_fempty_ersatz_is_sound () =
   case refute
     (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)

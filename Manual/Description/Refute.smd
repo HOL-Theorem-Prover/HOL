@@ -331,12 +331,12 @@ higher-order domains.  Partially known values are printed with `_` holes.
 The model finder translates the original polymorphic problem into a
 bounded relational formula.  It handles finite scopes, datatypes and
 codatatypes, functions, sets, inductive and coinductive predicates,
-typedefs, quotients, binary integers, machine words, finite maps, and the
-registered `rat` and `real` fraction encodings, all on by default.  Its `Scope:`
-line records the exact finite interpretation.  Quickcheck reaches `:rat`
-and `:real` by a different, independent route: a built-in generator for
-each, plus a computeLib fragment that decides closed literals directly,
-not the model finder's Frac encoding above.
+typedefs, quotients, binary integers, machine words, finite maps, and
+the registered `rat` and `real` fraction encodings, all on by default.
+Its `Scope:` line records the exact finite interpretation.  Quickcheck
+reaches `:rat` and `:real` by a different, independent route: a
+built-in generator for each, plus a computeLib fragment that decides
+closed literals directly, not the model finder's Frac encoding above.
 For example:
 
 ```{=latex}
@@ -933,12 +933,22 @@ Counterexample search is bounded and incomplete.  In particular:
   crutch: every value a scope ever assigns is already a finite relation
   regardless of which disjunct holds, so a `Genuine` verdict at an
   intrinsically infinite key type is exact.  Off-domain `FAPPLY` reads
-  `unknown` rather than an arbitrary value, so (as with `WFREC` above) a
-  goal whose truth depends on it loses `NoCounterexample` outright; and
-  the typedef's registration carries its own bijection theorems as
-  inverse axioms, the structurally correct thing for any typedef
-  registration to supply, so that no goal can rely on `FLOOKUP` failing
-  to be injective on the abstract carrier;
+  `unknown` rather than an arbitrary value.  At a non-`bool` range this
+  `unknown` sits at a value position, so (as with `WFREC` above) *any*
+  goal mentioning `FAPPLY` at that instance loses `NoCounterexample`
+  outright, whether or not its truth actually depends on the off-domain
+  read; at `bool` range the same `unknown` is a `Formula` and does not
+  trigger that veto, so a genuinely true off-domain fact there is
+  instead certified, or left `Potential`, through the ordinary
+  sound/liberal problem split.  A finite map's models can also print raw
+  representation structure -- an internal `refuteTheory` constant plus
+  combinator-update notation, such as `fm = abs_fmap' (K ?)⦇0 ↦ NONE⦈`
+  -- when the witness-generated `FEMPTY |+ ...` display cannot reconstruct
+  a chain from the underlying representation (an unrepresented base or a
+  duplicate key); and the typedef's registration carries its own
+  bijection theorems as inverse axioms, the structurally correct thing
+  for any typedef registration to supply, so that no goal can rely on
+  `FLOOKUP` failing to be injective on the abstract carrier;
 * Hilbert choice (`min$@`) is otherwise an uninterpreted function; a
   predicate with no in-scope witness would read an arbitrary value off it,
   so the model finder inserts a guard at every syntactic occurrence and

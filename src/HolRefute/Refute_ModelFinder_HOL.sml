@@ -4198,16 +4198,60 @@ structure Refute_ModelFinder_HOL = struct
      theorems, instantiated to this instance and supplied the same slot a
      validated typedef fills from its own bijection theorem
      (register_typedef_unlocked above), rather than left empty as
-     synthetic_frac_typedef's are.  This is the structurally correct
-     thing to supply -- a genuine typedef's registration always carries
-     its bijection law -- even though manually emptying this list still
-     leaves every finite-key-type FLOOKUP-injectivity pin tried so far
-     (finite_map_flookup_is_injective_by_construction, selftest.sml)
-     passing: at those scopes the abstract carrier is already exactly
-     the represented subset of ['a -> 'b option], so FLOOKUP's
-     injectivity there comes from that identification, not from this
-     axiom list.  See refuteScript.sml's Part 7 comment for the same
-     point stated where the theorems are proved. *)
+     synthetic_frac_typedef's are.  [FLOOKUP_abs_fmap'] is stated as a
+     biconditional rather than a one-way implication specifically so
+     [guarded_inverse_axiom] below also emits an [onto] surjectivity
+     axiom for fmap, which an implication's [dest_eq] does not match
+     (checked: [optimized_inverse_axioms_for_rep_fun] on FLOOKUP now
+     returns 3 axioms -- abs_fmap'_FLOOKUP's own [dest_eq] fails the
+     [bool] guard check and falls back to itself unguarded, while
+     FLOOKUP_abs_fmap' fires the guarded path and contributes both the
+     guarded equation and the onto axiom; see
+     mf_fmap_typedef_has_onto_inverse_axiom, selftest.sml).
+
+     [guarded_inverse_axiom] then emits its guard as the literal term
+     [FINITE {x | f x <> NONE}], not as [pred] ([is_fmap'], the
+     registration's own membership predicate, which is that same FINITE
+     disjoined with [unknown]) -- verified rather than assumed coherent:
+     [MFNT.Op1(MFNT.Finite, _)] and [MFNT.Cst(MFNT.Unknown, _)] both
+     translate through [to_f] (Refute_ModelFinder_Kodkod.sml) to the same
+     truth value at every polarity ({Pos: False, Neg: True, Neut: True}),
+     so a disjunction of the two behaves identically to the first disjunct
+     alone at any polarity the guard can appear under.  Using the literal
+     FINITE guard is strictly more restrictive on paper (it drops the
+     [unknown] escape) but identical in the one place it is consumed, so
+     no scope the full [pred] would admit is lost here.
+
+     This is the structurally correct thing to supply regardless of
+     whether any one goal needs it -- measured, though, no fmap-fact pin
+     tried so far actually needs it: emptying [inverse_axioms] and
+     rebuilding turns the level-1 selftest from 939 OK/0 failures to 938
+     OK/1 failure, and the one failure is
+     [mf_fmap_typedef_has_onto_inverse_axiom] (selftest.sml), which
+     probes [optimized_inverse_axioms_for_rep_fun]'s output directly.
+     [finite_map_flookup_is_injective_by_construction] still passes
+     ([abs_fmap'_FLOOKUP] alone already forces FLOOKUP injectivity on the
+     abstract carrier unconditionally, independent of
+     [FLOOKUP_abs_fmap']), and so, contrary to what an earlier version of
+     this comment claimed without having measured it, does
+     [finite_map_fempty_ersatz_is_sound]'s FDOM FEMPTY = {}: [FLOOKUP] is
+     itself a registered typedef rep function, so occurrences of it are
+     rewritten structurally to a constructor-selector pattern on [abs]
+     (typedef_for_rep's dispatch in unfold_defs_in_term's do_const, this
+     file) rather than left as an opaque relation depending on a
+     supplied axiom, and [abs_fmap'] is an ordinary [Definition] (unlike
+     a genuine typedef's kernel-introduced Abs), so it unfolds to its own
+     Hilbert-choice body wherever it occurs and is handled by the
+     general [min$@] guard machinery instead.  Between the two, the
+     [rep(abs f) = f] direction this route needs for both pins above
+     comes out already true by construction, without consulting
+     [inverse_axioms] at all.  The axioms remain worth supplying for the
+     coverage guarantee the [onto] half states -- the structural
+     encoding does not by itself bound the abstract carrier to exactly
+     [pred]'s extension at a proper-subset scope -- but no goal tried
+     here has been found where omitting them changes a verdict.  See
+     refuteScript.sml's Part 7 comment for the same point stated where
+     the theorems are proved. *)
   fun synthetic_fmap_typedef ty =
     case Lib.total Type.dest_thy_type ty of
         SOME {Thy = "finite_map", Tyop = "fmap", Args = [key, range]} =>
@@ -4221,12 +4265,50 @@ structure Refute_ModelFinder_HOL = struct
               (Type.-->(ty, rty))
             val pred = retype_fmap_constant "refute" "is_fmap'"
               (Type.-->(rty, Type.bool))
+            (* [pred (rep a)] is exactly what [is_fmap'_FLOOKUP]
+               (refuteScript.sml) states once instantiated to this
+               instance; a mismatch means [pred]/[rep] above were wired
+               to the wrong constant, and that must fail loudly here
+               rather than silently encode something else. *)
+            val () =
+              let
+                val (bound, body) =
+                  boolSyntax.dest_forall
+                    (Thm.concl refuteTheory.is_fmap'_FLOOKUP)
+                val instance_theta = Type.match_type (Term.type_of bound) ty
+                val instantiated = Term.inst instance_theta body
+                val fm = Term.mk_var ("fm", ty)
+                val expected = Term.mk_comb (pred, Term.mk_comb (rep, fm))
+              in
+                if Term.aconv instantiated expected then () else
+                  raise Fail
+                    ("synthetic_fmap_typedef: is_fmap'_FLOOKUP does not " ^
+                     "match the emitted fmap membership axiom")
+              end
             val theta = Type.match_type
               (Term.type_of (Term.prim_mk_const
                 {Thy = "refute", Name = "abs_fmap'"})) (Type.-->(rty, ty))
             val inverse_axioms =
               [Term.inst theta (Thm.concl refuteTheory.abs_fmap'_FLOOKUP),
                Term.inst theta (Thm.concl refuteTheory.FLOOKUP_abs_fmap')]
+            (* [ty] need not be ground here: [is_typedef]/[is_data_type]
+               (below) call this purely to classify a type operator, and do
+               so on a schematic instance (verified: [:'a |-> 'b] reaches
+               this point with both type variables still free).  theta is
+               computed off abs_fmap' alone, so confirm -- rather than
+               assume -- that every type variable it leaves behind in an
+               inverse axiom is one already free in [ty] itself, not some
+               other, stray variable theta failed to bind; the latter would
+               otherwise be silent. *)
+            val ty_vars = Type.type_vars ty
+            val () =
+              if List.all (fn axiom => List.all
+                (fn tv => List.exists (fn v => v = tv) ty_vars)
+                (Term.type_vars_in_term axiom)) inverse_axioms
+              then ()
+              else raise Fail
+                ("synthetic_fmap_typedef: theta left a type variable in " ^
+                 "the fmap inverse axioms that is not free in ty")
           in
             SOME {ty = ty, rty = rty, abs = abs, rep = rep, pred = pred,
               inverse_axioms = inverse_axioms, univ = false}

@@ -1549,7 +1549,9 @@ fun make_display_fun domain_ty marker pairs =
    [NONE] point after a [SOME v] one would otherwise silently keep the
    stale [v] instead of the point that actually wins.  [pairs] is
    therefore checked for a duplicate key first, and the whole rewrite
-   is declined (not guessed at) if one is found. *)
+   is declined (not guessed at) if one is found.  Defensive only:
+   [dest_display_fun] cannot currently produce a duplicate key, so
+   nothing exercises this branch today. *)
 fun has_duplicate_key pairs =
   let
     fun seen key = List.exists (fn key' => Term.aconv key key')
@@ -1561,11 +1563,16 @@ fun has_duplicate_key pairs =
   end
 
 fun fmap_atom_to_chain term =
-  case HolKernel.strip_comb term of
+  (case HolKernel.strip_comb term of
       (constructor, [rep]) =>
         if MFH.raw_constructor_name constructor = "refute$abs_fmap'" then
           (case Lib.total dest_display_fun rep of
                SOME (marker, pairs) =>
+                 (* Declining (not guessing) covers two cases neither of
+                    which [dest_display_fun] can currently produce for a
+                    fmap rep: a base that is [unknown_marker] rather than
+                    [NONE]/[irrelevant_marker], and a duplicate key in
+                    [pairs].  Both branches are defensive only. *)
                  if Lib.can optionSyntax.dest_none marker orelse
                     MFN.is_irrelevant_marker marker
                  then
@@ -1597,7 +1604,7 @@ fun fmap_atom_to_chain term =
                  else term
              | NONE => term)
         else term
-    | _ => term
+    | _ => term)
   handle HOL_ERR _ => term
 
 (* fmap's typedef (synthetic_fmap_typedef, Refute_ModelFinder_HOL.sml)
