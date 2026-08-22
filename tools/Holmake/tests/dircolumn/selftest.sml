@@ -16,7 +16,8 @@
    agree rather than pinning a spelling.  These lines once named every
    directory "." (hmdir.curdir() stored a relpath relative to whatever
    the cwd was while the directory was scanned, and they print after
-   that chdir is undone).
+   that chdir is undone), and once came out before the completion line
+   of the target that finished the directory.
 *)
 
 open testutils
@@ -84,6 +85,14 @@ fun finished_dir l =
     else NONE
 
 fun finished_dirs lines = List.mapPartial finished_dir lines
+
+fun position p lines =
+    let
+      fun go _ [] = NONE
+        | go i (l :: ls) = if p l then SOME i else go (i + 1) ls
+    in
+      go 0 lines
+    end
 
 fun testcase what fixture check =
     let
@@ -185,3 +194,35 @@ val _ = testcase
                                    String.concatWith ", "
                                                      (finished_dirs lines))
                 | msgs => SOME (String.concatWith "; " msgs))
+
+(* A directory is finished when its last target is, so its line must
+   come after that target's.  The count is crossed inside the job's
+   `update', which ProcessMultiplexor runs before handing the monitor
+   the Terminated message that prints the target line, so reporting
+   from there put the two the wrong way round. *)
+val _ = testcase
+          "A directory is reported finished after its last target"
+          ("same", ["same" ++ "d1" ++ "dcC.out",
+                    "same" ++ "d2" ++ "dcD.out"])
+          (fn lines =>
+              let
+                fun outoforder tgt =
+                    let
+                      val d = column_dir tgt lines
+                      fun names l = finished_dir l = SOME d
+                    in
+                      case (position (is_completion tgt) lines,
+                            position names lines) of
+                          (SOME t, SOME f) =>
+                          if t < f then NONE
+                          else SOME ("the report for " ^ tgt ^
+                                     "'s directory precedes it")
+                        | (NONE, _) => SOME ("no completion line for " ^ tgt)
+                        | (_, NONE) => SOME ("no report for " ^ tgt ^
+                                             "'s directory")
+                    end
+              in
+                case List.mapPartial outoforder ["dcC.out", "dcD.out"] of
+                    [] => NONE
+                  | msgs => SOME (String.concatWith "; " msgs)
+              end)

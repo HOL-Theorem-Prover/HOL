@@ -133,8 +133,8 @@ fun graphbuild optinfo g =
           ldir ++ safetag dir tag
         end
 
-    val (monitor, {bold,green,red,coloured_info = info,dirname,
-                   final_report}) =
+    val (monitor0, {bold,green,red,coloured_info = info,dirname,
+                    final_report}) =
         MB_Monitor.new {info = info, warn = warn, genLogFile = genLF,
                         time_limit = time_limit,
                         keep_going = keep_going,
@@ -159,6 +159,29 @@ fun graphbuild optinfo g =
           info (pfx,timetaken)
         end
 
+    (* A directory's report is queued rather than printed at the point
+       its last target is accounted for.  ProcessMultiplexor runs a
+       job's `update' -- which is where the count is usually crossed --
+       before handing the Terminated message to the monitor, so printing
+       from there would put "Finished <dir>" above the completion line
+       of the very target that finished the directory.  Draining once
+       the monitor has had the message keeps the two in the order they
+       happened, and makes the in-process compiles that cross the count
+       elsewhere (see the `needed' case in genjob) agree. *)
+    val pending_dirreports : (unit -> unit) list ref = ref []
+    fun queue_dirreport th = pending_dirreports := th :: !pending_dirreports
+    fun drain_dirreports () =
+        case !pending_dirreports of
+            [] => ()
+          | ths => (pending_dirreports := [];
+                    List.app (fn th => th ()) (List.rev ths))
+    fun monitor msg =
+        let
+          val cmd = monitor0 msg
+        in
+          drain_dirreports (); cmd
+        end
+
     fun tgtcompletion_cb dirmap =
         if not (is_multidir dirmap) then fn _ => ()
         else
@@ -168,22 +191,33 @@ fun graphbuild optinfo g =
                        Int.toString n ^
                        " targets to build");
                  Map.insert(A, d, {good = ref 0, bad = ref 0, tgt = n,
-                                   goodthys = ref 0,
+                                   goodthys = ref 0, reported = ref false,
                                    elapsed = ref Time.zeroTime}))
             val dirprogress_map =
                 Map.foldl foldthis (Map.mkDict hmdir.compare) dirmap
           in
             fn (dir, n, nthys, goodp, t) =>
                let
-                 val {tgt,good,bad,goodthys,elapsed} =
+                 val {tgt,good,bad,goodthys,reported,elapsed} =
                      Map.find(dirprogress_map, dir)
                  val _ = if goodp then (good := !good + n;
                                         goodthys := !goodthys + nthys)
                          else bad := !bad + n
                  val _ = elapsed := Time.+(!elapsed, t)
                in
-                 if !good + !bad >= tgt then
-                   dircomplete dir (!goodthys,!bad) (!elapsed)
+                 (* the counts can be pushed past tgt more than once: a
+                    theory rescan can return an already-Succeeded node to
+                    Pending, so report only the first crossing, on the
+                    figures as they stood then *)
+                 if not (!reported) andalso !good + !bad >= tgt then
+                   let
+                     val thys = !goodthys and fails = !bad
+                     and taken = !elapsed
+                   in
+                     reported := true;
+                     queue_dirreport
+                       (fn () => dircomplete dir (thys,fails) taken)
+                   end
                  else ()
                end
           end
@@ -499,7 +533,7 @@ fun graphbuild optinfo g =
                       provider = { initial = (g,true), genjob = genjob }}
   in
     do_work(worklist, monitor)
-    before (release_all_locks(); final_report())
+    before (drain_dirreports(); release_all_locks(); final_report())
   end
 
 end
