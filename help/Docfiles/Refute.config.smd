@@ -91,6 +91,8 @@ Refute.upd_depth : int -> config -> config
 Refute.upd_finite_types : bool -> config -> config
 Refute.upd_finite_type_size : int -> config -> config
 Refute.upd_default_type : hol_type list -> config -> config
+Refute.upd_instantiate :
+  (hol_type option * hol_type) list -> config -> config
 Refute.upd_substrate : substrate_choice -> config -> config
 Refute.upd_seed : int option -> config -> config
 Refute.upd_allow_existentials : bool -> config -> config
@@ -111,6 +113,7 @@ Refute.upd_reorder_premises : bool -> config -> config
 | `finite_types` | `true` | Add small finite type instances. |
 | `finite_type_size` | `3` | Number of finite cardinalities to consider. |
 | `default_type` | `[``:num``]` | Instances if `finite_types` is false. |
+| `instantiate` | `[]` | Per-type-variable pins overriding `finite_types`/`default_type`. |
 | `substrate` | `Auto` | `Auto`, `NativeSML`, `Cv`, or `Compute`. |
 | `seed` | `NONE` | Seed; `NONE` advances the session stream. |
 | `allow_existentials` | `true` | Permit PNF existential narrowing. |
@@ -132,6 +135,30 @@ controls selection of the PNF narrowing engine, and `finite_functions`
 controls update-chain or constant-function representations there.
 Setting `certify` false skips QC evaluation and replay certification;
 a hit remains `Genuine` but has `cert = NONE`.
+
+By default QC substitutes one type for every type variable of a goal at
+once, so a goal with two type variables is tested with both at the same
+type.  `upd_instantiate` pins named type variables to fixed types
+instead: a `SOME ty` key pins that type variable, and a variable no
+entry reaches keeps taking the shared `finite_types`/`default_type`
+carrier, exactly as `[]` would.  A `NONE` key is the fallback for every
+*non-width* variable no `SOME` entry names, so a `NONE`-only row pins
+all of them and, like a fully-`SOME` assignment, collapses the search to
+a single instance -- unless the goal has a symbolic word width, since a
+width variable takes a pin only from its own `SOME` entry (`NONE` never
+reaches it: carriers and word-width numerals are disjoint value spaces)
+and otherwise keeps varying over the configured widths.  A type variable
+in a word's index position must therefore be pinned to a concrete
+word-width type (`:1`, `:2`, ...), not an ordinary carrier.  Naming a
+type variable the goal does not have, naming a width variable with a
+non-width type, or naming a pin value that still carries type variables
+of its own, is a configuration error reported as `Unknown`, not a
+silent fallback.  Pinning changes only which monomorphic proxies QC
+tests: a still-polymorphic goal whose pinned instances are completely
+covered still degrades to `Unknown`, never `NoCounterexample`.
+`upd_instantiate` scopes to QC and narrowing; the model finder is
+unaffected and has its own per-type-variable updater,
+`upd_card [(SOME ty, [n])]`.
 
 ### Model-finder fields
 
@@ -248,8 +275,8 @@ row must be nonempty, nonnegative, and have a representable successor; every
 nonnegative `bisim_depth` must likewise have a representable successor.
 A `bisim_depth` row cannot mix `~1` (disabled) with nonnegative depths.
 The non-fallback keys of `max`, `wf`, and `iter` must be constants or
-variables.  `max_genuine` must be positive and `max_potential`
-nonnegative.
+variables, and of `instantiate` a type variable.  `max_genuine` must be
+positive and `max_potential` nonnegative.
 
 ### See also
 

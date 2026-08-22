@@ -78,7 +78,17 @@ structure Refute_Core = struct
       smart_quantifier : bool,
       smart_generators : bool,
       optimise_equality : bool,
-      reorder_premises : bool }
+      reorder_premises : bool,
+      (* Per-type-variable pins for QC's monomorphizing substitution.  A
+         [SOME tyvar] key pins that variable; [NONE] is the fallback for
+         every non-width variable no [SOME] entry names.  A width type
+         variable (a word's index) takes a pin only from its own [SOME]
+         entry -- [NONE] never reaches it, because carriers and fcp-numeral
+         widths are disjoint value spaces and a single fallback value
+         cannot serve both.  A variable no entry reaches keeps taking the
+         single carrier/width [monomorphic_types] indexes by instance,
+         exactly as when this list is []. *)
+      instantiate : (hol_type option * hol_type) list }
 
   type mf_config =
     { card : (hol_type option * int list) list,
@@ -184,7 +194,8 @@ structure Refute_Core = struct
       smart_quantifier = true,
       smart_generators = true,
       optimise_equality = true,
-      reorder_premises = true }
+      reorder_premises = true,
+      instantiate = [] }
 
   val default_mf_config : mf_config =
     { card = [(NONE, List.tabulate (10, fn n => n + 1))],
@@ -333,6 +344,7 @@ structure Refute_Core = struct
     | QcSmartGenerators of bool
     | QcOptimiseEquality of bool
     | QcReorderPremises of bool
+    | QcInstantiate of (hol_type option * hol_type) list
 
   fun change_qc update (qc : qc_config) =
     { size = (case update of QcSize (value, _) => value | _ => #size qc),
@@ -364,7 +376,9 @@ structure Refute_Core = struct
       optimise_equality = (case update of QcOptimiseEquality value => value
                            | _ => #optimise_equality qc),
       reorder_premises = (case update of QcReorderPremises value => value
-                          | _ => #reorder_premises qc) }
+                          | _ => #reorder_premises qc),
+      instantiate = (case update of QcInstantiate value => value
+                     | _ => #instantiate qc) }
 
   fun validate_qc_config (qc : qc_config) =
     let
@@ -393,6 +407,25 @@ structure Refute_Core = struct
           raise Feedback.mk_HOL_ERR "Refute_Core" "validate_qc_config"
             "finite_type_size: must lie between 1 and 6"
         else ()
+      val _ = List.app (fn (NONE, _) => ()
+                 | (SOME key, _) =>
+                     if Type.is_vartype key then ()
+                     else raise Feedback.mk_HOL_ERR "Refute_Core"
+                       "validate_qc_config"
+                       ("instantiate row key must be a type variable; got: " ^
+                        Parse.type_to_string key))
+        (#instantiate qc)
+      (* A pin naming a type that still carries type variables would
+         "monomorphize" to a type that is not monomorphic; reject it here
+         rather than let it through and rely on the polymorphic guard to
+         paper over the incoherence downstream. *)
+      val _ = List.app (fn (_, value) =>
+                 if null (Type.type_vars value) then ()
+                 else raise Feedback.mk_HOL_ERR "Refute_Core"
+                   "validate_qc_config"
+                   ("instantiate row value must be a ground type (no " ^
+                    "type variables); got: " ^ Parse.type_to_string value))
+        (#instantiate qc)
     in
       qc
     end
@@ -422,6 +455,7 @@ structure Refute_Core = struct
   fun upd_smart_generators value = update_qc (QcSmartGenerators value)
   fun upd_optimise_equality value = update_qc (QcOptimiseEquality value)
   fun upd_reorder_premises value = update_qc (QcReorderPremises value)
+  fun upd_instantiate value = update_qc (QcInstantiate value)
 
   fun range_error field explanation =
     raise Feedback.mk_HOL_ERR "Refute_Core" "validate_mf_config"
@@ -977,6 +1011,13 @@ structure Refute_Core = struct
   type preprocessed_forms =
     {mono_instances : instance list, poly_original : instance list}
 
+  (* A configuration error diagnosed while building the instances, e.g. an
+     [upd_instantiate] pin naming a type variable absent from the goal.
+     Its own exception, on the [Refute_Gen.NoGenerator] precedent, so the
+     handler in [attempt] can render one clean line instead of letting it
+     fall to the generic [exception_reason] dump. *)
+  exception InstantiateError of string
+
   fun preprocess_forms (cfg : config) (problem : problem) =
     let
       val assumptions =
@@ -997,6 +1038,49 @@ structure Refute_Core = struct
         (map Term.type_of
           (List.concat (map (HolKernel.find_terms (Lib.K true)) input_terms)))
       val widths = #widths cfg
+      val instantiate = #instantiate (#qc cfg)
+      fun instantiate_error message = raise InstantiateError message
+      val () = List.app (fn (NONE, _) => ()
+                 | (SOME tyvar, _) =>
+                     if Lib.mem tyvar tyvars then ()
+                     else instantiate_error
+                       ("type variable " ^ Parse.type_to_string tyvar ^
+                        " does not occur in the goal")) instantiate
+      (* [Refute_ModelFinder_Util.double_lookup] is the same SOME-then-NONE
+         shape, but does not fit: its NONE branch is unconditional, and a
+         width variable must never take the NONE fallback (see
+         [resolved_pin] below), which needs a guard double_lookup has no
+         room for. *)
+      fun instantiate_lookup tyvar =
+        case List.find (fn (SOME key, _) => Refute_Util.same_type key tyvar
+                          | (NONE, _) => false) instantiate of
+            SOME (_, pin) => SOME pin
+          | NONE =>
+              if Lib.mem tyvar width_vars then NONE
+              else Option.map #2
+                (List.find (fn (NONE, _) => true | _ => false) instantiate)
+      (* Resolved once per tyvar, independently of [card]: a pin never
+         varies across instances, so this also catches a malformed width
+         pin before any instance is built. *)
+      fun resolved_pin tyvar =
+        case instantiate_lookup tyvar of
+            NONE => NONE
+          | SOME pin =>
+              if Lib.mem tyvar width_vars andalso
+                 not (fcpSyntax.is_numeric_type pin) then
+                instantiate_error
+                  ("width type variable " ^ Parse.type_to_string tyvar ^
+                   " must be pinned to a concrete word-width type " ^
+                   "(:1, :2, ...), not " ^ Parse.type_to_string pin)
+              else SOME pin
+      val pin_table = List.mapPartial
+        (fn tyvar => Option.map (fn pin => (tyvar, pin)) (resolved_pin tyvar))
+        tyvars
+      val pinned_vars = map #1 pin_table
+      val unpinned_tyvars =
+        List.filter (fn tyvar => not (Lib.mem tyvar pinned_vars)) tyvars
+      val unpinned_width_vars =
+        List.filter (fn tyvar => Lib.mem tyvar unpinned_tyvars) width_vars
       fun make_instance card theta =
         let
           val original = Term.inst theta original_goal
@@ -1023,29 +1107,48 @@ structure Refute_Core = struct
             card = card,
             size_matters = instance_size_matters goal }
         end
-      (* One replacement interprets every type variable at once, so [card]
-         is the index of the single carrier/width pair the instance uses.
-         That identity is what lets [Refute_QC.schedule] order work by
-         [card + size] and lets every report name the cardinality it
-         tested.  Interpreting the variables independently would instead
-         normalize [finite_type_size] raised to the number of type
-         variables instances before any backend runs, and leave [card] a
-         bare dispatch index.  For the same reason the two roles are
-         paired by clamped index rather than crossed. *)
+      (* One replacement interprets every *unpinned* type variable at once
+         (see [upd_instantiate]), so [card] is the index of the single
+         carrier/width pair the instance uses for them.  That identity is
+         what lets [Refute_QC.schedule] order work by [card + size] and
+         lets every report name the cardinality it tested.  Interpreting
+         the variables independently would instead normalize
+         [finite_type_size] raised to the number of type variables
+         instances before any backend runs, and leave [card] a bare
+         dispatch index.  For the same reason the two roles are paired by
+         clamped index rather than crossed.  A pinned variable is fixed to
+         its own type in every instance and never participates in this
+         indexing; a fully pinned goal ([unpinned_tyvars] empty) therefore
+         collapses to exactly one instance -- unless the goal has a
+         symbolic word width, since [NONE] never pins one (see
+         [instantiate_lookup]), so an otherwise fully-[SOME]-pinned goal
+         with an unpinned width variable still varies over [widths]. *)
       val instance_count =
-        if null types then 0
-        else if null width_vars then length types
+        if null unpinned_tyvars then 1
+        else if null types then 0
+        else if null unpinned_width_vars then length types
         else Int.max (length types, length widths)
       fun monomorphic_instance card =
         let
-          val carrier = List.nth (types, Int.min (card, length types) - 1)
-          val width = fcpSyntax.mk_int_numeric_type
+          (* Thunked, not [val]: [types] can be empty ([upd_default_type]
+             has no lower-bound check), and a fully pinned goal now needs
+             zero carrier lookups where the old code always needed one, so
+             an eager [List.nth] would raise [Subscript] on that goal. Safe
+             because [carrier]/[width] are only forced for an unpinned
+             tyvar, and a fully pinned goal has none. *)
+          fun carrier () = List.nth (types, Int.min (card, length types) - 1)
+          fun width () = fcpSyntax.mk_int_numeric_type
             (List.nth (widths, Int.min (card, length widths) - 1))
+          fun residue tyvar =
+            case List.find (fn (pinned, _) => Refute_Util.same_type pinned
+                              tyvar) pin_table of
+                SOME (_, pin) => pin
+              | NONE => if Lib.mem tyvar width_vars then width ()
+                        else carrier ()
         in
-          make_instance card (map (fn tyvar =>
-            {redex = tyvar,
-             residue = if Lib.mem tyvar width_vars then width else carrier})
-            tyvars)
+          make_instance card
+            (map (fn tyvar => {redex = tyvar, residue = residue tyvar})
+               tyvars)
         end
       val mono_instances =
         if null tyvars then [make_instance 1 []]
@@ -1155,6 +1258,7 @@ structure Refute_Core = struct
       val term_bools = assignments Parse.term_to_string
         (Private.option_to_string Bool.toString)
       val type_strings = assignments Parse.type_to_string strings
+      val type_types = assignments Parse.type_to_string Parse.type_to_string
       fun optional_terms NONE = "NONE"
         | optional_terms (SOME values) = "SOME " ^ terms values
     in
@@ -1182,6 +1286,7 @@ structure Refute_Core = struct
           "finite_type_size = " ^ Int.toString (#finite_type_size q) ^
             "\n",
           "default_type = " ^ types ^ "\n",
+          "instantiate = " ^ type_types (#instantiate q) ^ "\n",
           "substrate = " ^ Private.substrate_to_string (#substrate q) ^
             "\n",
           "seed = " ^ Private.option_to_string Int.toString (#seed q) ^
@@ -2102,6 +2207,7 @@ structure Refute_Core = struct
         execute ()
         handle Refute_Gen.NoGenerator pair =>
           Unknown [no_generator_reason pair]
+             | InstantiateError message => Unknown [message]
              | Timeout.TIMEOUT _ => Unknown ["search timed out"]
              | Interrupt => raise Interrupt
              | e => Unknown [exception_reason e]

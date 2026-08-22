@@ -374,6 +374,30 @@ roles are paired by clamped instance index, so instance `k` uses carrier
 instances are generated to try every configured width at least once.  This is
 unrelated to the model finder's `upd_bits`, which sizes *binary integers*.
 
+By default this one carrier/width pair covers *every* type variable of a
+goal at once: a goal with two type variables is tested with both at the
+same type, and every report names the one cardinality that instance
+tested.  `upd_instantiate` pins named type variables to fixed types
+instead, leaving every variable no entry reaches on the shared
+carrier/width exactly as an empty list would.  A `NONE` key is the
+fallback for every *non-width* variable no `SOME` entry names, so a
+`NONE`-only assignment pins all of them and collapses the search to one
+instance -- unless the goal has a symbolic word width, since a width
+variable takes a pin only from its own `SOME` entry (`NONE` never
+reaches it, because carriers and width numerals are disjoint value
+spaces) and otherwise keeps varying over the configured widths.  A width
+variable must therefore be pinned to a concrete numeral type, not an
+ordinary carrier.  Naming a type variable the goal lacks, a width
+variable a non-numeral type, or a pin value that still carries type
+variables of its own, is a configuration error reported as `Unknown`.
+Because pinning only narrows which monomorphic proxies are tested, not
+what the polymorphic goal itself means, a completely covered but
+still-polymorphic goal degrades to `Unknown` exactly as it does without
+pins; `upd_instantiate` can turn `Unknown` into a `Genuine`
+counterexample but never into `NoCounterexample`.  `upd_instantiate`
+scopes to QC and narrowing; the model finder is unaffected and has its
+own per-type-variable updater, `upd_card [(SOME ty, [n])]`.
+
 Backend selection is typed for the four built-ins:
 
     datatype backend_choice =

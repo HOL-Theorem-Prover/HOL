@@ -13423,6 +13423,7 @@ fun config_surface_snapshot () =
        "finite_types = true\n",
        "finite_type_size = 3\n",
        "default_type = :num\n",
+       "instantiate = []\n",
        "substrate = Auto\n",
        "seed = NONE\n",
        "allow_existentials = true\n",
@@ -17973,6 +17974,306 @@ fun default_type_instance () =
 
 val _ = require_msg (check_result default_type_instance) (fn () =>
   "default-type monomorphization did not use num")
+  (fn () => ()) ()
+
+val _ = tprint "Refute per-type-variable instantiation (upd_instantiate)"
+
+fun instantiate_default_is_empty () = null (#instantiate default_qc_config)
+
+val _ = require_msg (check_result instantiate_default_is_empty) (fn () =>
+  "the default configuration no longer leaves every type variable unpinned")
+  (fn () => ()) ()
+
+(* Under any single substitution this is [P ==> P], a structural tautology
+   no substrate can refute; pinning the two type variables to differently
+   sized carriers separates premise from conclusion instead. *)
+val instantiate_witness = ``(!x y:'a. x = y) ==> (!x y:'b. x = y)``
+
+fun instantiate_qc_only cfg =
+  cfg |> upd_timeout 30.0 |> Refute.upd_search Refute.QuickcheckBackends
+
+(* Companion to [instantiate_witness_genuine]: with no pins the two type
+   variables still share one carrier per instance, so the witness is a
+   tautology at every configured cardinality and the polymorphic-proxies
+   guard reports [Unknown], never [NoCounterexample]. *)
+fun instantiate_witness_baseline_unknown () =
+  case Refute.refute (instantiate_qc_only default_config)
+         instantiate_witness of
+      Unknown reasons =>
+        List.exists (String.isSubstring
+          "polymorphic search covered only configured monomorphic proxies")
+          reasons
+    | _ => false
+
+val _ = require_msg (check_result instantiate_witness_baseline_unknown)
+  (fn () => "the unpinned witness goal was not bounds-relative")
+  (fn () => ()) ()
+
+fun instantiate_witness_genuine () =
+  let
+    val alpha = ``:'a``
+    val beta = ``:'b``
+    val config = instantiate_qc_only default_config
+      |> upd_instantiate [(SOME alpha, rf_type 1), (SOME beta, rf_type 2)]
+  in
+    case Refute.refute config instantiate_witness of
+        Counterexample ({certainty = Genuine, ...} :: _) => true
+      | _ => false
+  end
+
+val _ = require_msg (check_result instantiate_witness_genuine) (fn () =>
+  "pinning the witness goal's two type variables did not reach a " ^
+  "genuine counterexample")
+  (fn () => ()) ()
+
+(* The critical soundness property: pinning away every type variable does
+   not make [poly_original] any less polymorphic, so a fully covered
+   pinned search must still degrade to [Unknown], never license
+   [NoCounterexample] for the still-polymorphic goal. *)
+fun instantiate_fully_pinned_stays_bounded () =
+  let
+    val config = instantiate_qc_only default_config
+      |> upd_instantiate [(NONE, rf_type 1)]
+  in
+    case Refute.refute config instantiate_witness of
+        Unknown reasons =>
+          List.exists (String.isSubstring
+            "polymorphic search covered only configured monomorphic proxies")
+            reasons
+      | _ => false
+  end
+
+val _ = require_msg (check_result instantiate_fully_pinned_stays_bounded)
+  (fn () => "a fully-pinned polymorphic goal stopped reporting Unknown")
+  (fn () => ()) ()
+
+(* A pinned variable and an unpinned one behave differently: the pinned
+   premise side is fixed at a one-element carrier throughout, so only the
+   unpinned conclusion side's own cardinality search can falsify it.
+   Under the old single-substitution semantics this configuration would
+   instead move both sides together and never separate them. *)
+fun instantiate_partial_assignment () =
+  let
+    val alpha = ``:'a``
+    val goal = ``(!x y:'a. x = y) ==> (!u v:'b. u = v)``
+    val config = instantiate_qc_only default_config
+      |> upd_instantiate [(SOME alpha, rf_type 1)]
+  in
+    case Refute.refute config goal of
+        Counterexample ({certainty = Genuine, bindings, ...} :: _) =>
+          not (null bindings) andalso
+          List.all (fn (_, value) =>
+            Type.compare (Term.type_of value, rf_type 1) <> EQUAL)
+            bindings
+      | _ => false
+  end
+
+val _ = require_msg (check_result instantiate_partial_assignment) (fn () =>
+  "an unpinned type variable did not keep independently searching " ^
+  "cardinalities")
+  (fn () => ()) ()
+
+(* The configuration error must read as one clean line of prose, not as
+   an unexpected-exception dump: it rides [InstantiateError], not the
+   generic [exception_reason] catch-all, so it never carries the raw
+   "Exception raised at ..." rendering that fallback produces. *)
+fun instantiate_absent_tyvar_error () =
+  let
+    val gamma = ``:'c``
+    val config = instantiate_qc_only default_config
+      |> upd_instantiate [(SOME gamma, rf_type 1)]
+  in
+    case Refute.refute config instantiate_witness of
+        Unknown reasons =>
+          List.exists (String.isSubstring "does not occur in the goal")
+            reasons andalso
+          List.all (fn reason =>
+            not (String.isSubstring "Exception raised" reason) andalso
+            not (String.isSubstring "\n" reason)) reasons
+      | _ => false
+  end
+
+val _ = require_msg (check_result instantiate_absent_tyvar_error) (fn () =>
+  "pinning a type variable absent from the goal was not a clean, " ^
+  "actionable error")
+  (fn () => ()) ()
+
+fun instantiate_no_generator_error () =
+  let
+    val alpha = ``:'a``
+    val beta = ``:'b``
+    val config = instantiate_qc_only default_config
+      |> upd_instantiate [(SOME alpha, ``:ind``), (SOME beta, ``:bool``)]
+  in
+    case Refute.refute config instantiate_witness of
+        Unknown reasons =>
+          List.exists (String.isSubstring "no TypeBase information")
+            reasons andalso
+          List.exists
+            (String.isSubstring (Parse.type_to_string ``:ind``)) reasons
+      | _ => false
+  end
+
+val _ = require_msg (check_result instantiate_no_generator_error) (fn () =>
+  "pinning a type variable to a generator-less type was not reported, " ^
+  "or did not name which type failed")
+  (fn () => ()) ()
+
+fun instantiate_non_tyvar_key_rejected () =
+  (upd_instantiate [(SOME ``:bool``, ``:num``)] default_config; false)
+  handle HOL_ERR error =>
+    Feedback.top_function_of error = "validate_qc_config" andalso
+    Feedback.message_of error =
+      "instantiate row key must be a type variable; got: " ^
+      Parse.type_to_string ``:bool``
+
+val _ = require_msg (check_result instantiate_non_tyvar_key_rejected)
+  (fn () => "a non-type-variable instantiate key was not rejected, or " ^
+    "not by the key-validity clause")
+  (fn () => ()) ()
+
+(* [SOME]'s key validity says nothing about its value: "monomorphizing" to
+   a type that still carries a type variable is incoherent even though the
+   polymorphic guard would still catch it downstream, so it is its own
+   rejected clause. *)
+fun instantiate_polymorphic_value_rejected () =
+  (upd_instantiate [(SOME ``:'a``, ``:'b list``)] default_config; false)
+  handle HOL_ERR error =>
+    Feedback.top_function_of error = "validate_qc_config" andalso
+    Feedback.message_of error =
+      "instantiate row value must be a ground type (no type " ^
+      "variables); got: " ^ Parse.type_to_string ``:'b list``
+
+val _ = require_msg (check_result instantiate_polymorphic_value_rejected)
+  (fn () => "an instantiate pin naming a non-ground type was not " ^
+    "rejected")
+  (fn () => ()) ()
+
+(* A type variable in a word's index position is a width, not a carrier:
+   pinning it to an ordinary type is as much a configuration error as
+   pinning it to a type with no generator. *)
+fun instantiate_width_var_wrong_kind_error () =
+  let
+    val alpha = ``:'a``
+    val config = instantiate_qc_only default_config
+      |> upd_instantiate [(SOME alpha, ``:bool``)]
+  in
+    case Refute.refute config ``(w : 'a word) + 1w <> 0w`` of
+        Unknown reasons =>
+          List.exists (String.isSubstring
+            "must be pinned to a concrete word-width type") reasons
+      | _ => false
+  end
+
+val _ = require_msg (check_result instantiate_width_var_wrong_kind_error)
+  (fn () => "pinning a width variable to a non-width type was not " ^
+    "reported")
+  (fn () => ()) ()
+
+(* Width 5, not 4: the default [widths] row is [1, 2, 3, 4], and this
+   goal is already refuted at every one of them with no pin at all (see
+   [word_width_instantiation]).  Pinning inside the default row would pass
+   whichever worker wins regardless of whether the pin does anything;
+   width 5 is reachable only if the pin actually applies. *)
+fun instantiate_width_var_pin_genuine () =
+  let
+    val alpha = ``:'a``
+    val config = instantiate_qc_only default_config
+      |> upd_instantiate [(SOME alpha, fcpSyntax.mk_int_numeric_type 5)]
+  in
+    case Refute.refute config ``(w : 'a word) + 1w <> 0w`` of
+        Counterexample ({certainty = Genuine, bindings = [(_, value)], ...}
+            :: _) =>
+          fcpSyntax.dest_int_numeric_type (wordsSyntax.dim_of value) = 5
+      | _ => false
+  end
+
+val _ = require_msg (check_result instantiate_width_var_pin_genuine)
+  (fn () => "a pinned word-width variable was not instantiated to the " ^
+    "named width")
+  (fn () => ()) ()
+
+(* The width-variable exception to [NONE]'s fallback: an ordinary [NONE]
+   carrier pin must not reach a word's index type, so it keeps varying
+   over [widths] instead of erroring on the mismatched carrier value
+   (before this was decided, [NONE] reached width variables too and this
+   call raised "must be pinned to a concrete word-width type"). *)
+fun instantiate_none_leaves_width_var_unpinned () =
+  let
+    val config = instantiate_qc_only default_config
+      |> upd_instantiate [(NONE, rf_type 1)]
+  in
+    case Refute.refute config ``(w : 'a word) + 1w <> 0w`` of
+        Counterexample ({certainty = Genuine, bindings = [(_, value)], ...}
+            :: _) =>
+          Lib.mem
+            (fcpSyntax.dest_int_numeric_type (wordsSyntax.dim_of value))
+            [1, 2, 3, 4]
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result instantiate_none_leaves_width_var_unpinned) (fn () =>
+  "a NONE pin for an ordinary carrier wrongly reached a word's width " ^
+  "variable")
+  (fn () => ()) ()
+
+(* [NONE] pins every variable a [SOME] entry does not name; naming every
+   variable explicitly must collapse the search the same way. *)
+fun instantiate_none_matches_fully_some () =
+  let
+    val alpha = ``:'a``
+    val beta = ``:'b``
+    val problem = preprocessing_problem polymorphic_goal
+    (* [rf_type 2], not [rf_type 1]: card 1's own default carrier is
+       [rf_type 1], so pinning there would not tell a real substitution
+       apart from an accidentally-matching unpinned default. *)
+    val fallback = preprocess_forms
+      (upd_instantiate [(NONE, rf_type 2)] default_config) problem
+    val explicit = preprocess_forms
+      (upd_instantiate [(SOME alpha, rf_type 2), (SOME beta, rf_type 2)]
+         default_config) problem
+  in
+    (case (#mono_instances fallback, #mono_instances explicit) of
+         ([left], [right]) => Term.aconv (#goal left) (#goal right)
+       | _ => false) andalso
+    all_same_type (rf_type 2)
+      (List.map (fn ty => Term.mk_var ("x", ty))
+        (value_variable_types (#goal (hd (#mono_instances fallback)))))
+  end
+
+val _ = require_msg (check_result instantiate_none_matches_fully_some)
+  (fn () => "a NONE-only assignment did not match its fully-SOME " ^
+    "equivalent")
+  (fn () => ()) ()
+
+fun instantiate_var_has_type name ty term =
+  case List.find (fn variable => #1 (Term.dest_var variable) = name)
+         (Term.free_vars_lr term) of
+      SOME variable => Type.compare (Term.type_of variable, ty) = EQUAL
+    | NONE => false
+
+(* The core of the row convention, otherwise untested: a [SOME] entry
+   wins for the variable it names, while the shared [NONE] fallback still
+   reaches every other variable in the same row. *)
+fun instantiate_mixed_some_and_none () =
+  let
+    val alpha = ``:'a``
+    val problem = preprocessing_problem polymorphic_goal
+    val config =
+      upd_instantiate [(SOME alpha, rf_type 1), (NONE, rf_type 2)]
+        default_config
+  in
+    case #mono_instances (preprocess_forms config problem) of
+        [{goal, ...}] =>
+          instantiate_var_has_type "x" (rf_type 1) goal andalso
+          instantiate_var_has_type "y" (rf_type 2) goal
+      | _ => false
+  end
+
+val _ = require_msg (check_result instantiate_mixed_some_and_none) (fn () =>
+  "a SOME entry did not take priority over the row's own NONE fallback " ^
+  "for the variable it names")
   (fn () => ()) ()
 
 fun equation_adds_evals () =

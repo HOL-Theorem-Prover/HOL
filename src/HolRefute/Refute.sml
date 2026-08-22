@@ -253,6 +253,7 @@ structure Refute :> Refute = struct
   val upd_finite_type_size = Refute_Core.upd_finite_type_size
   val upd_widths = Refute_Core.upd_widths
   val upd_default_type = Refute_Core.upd_default_type
+  val upd_instantiate = Refute_Core.upd_instantiate
   val upd_substrate = Refute_Core.upd_substrate
   val upd_seed = Refute_Core.upd_seed
   val upd_allow_existentials = Refute_Core.upd_allow_existentials

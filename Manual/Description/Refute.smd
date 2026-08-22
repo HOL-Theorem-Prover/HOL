@@ -636,6 +636,7 @@ raises a HOL error.  They are intended mainly for tests.
 | `upd_finite_types` | `true` | Add small fresh finite types when monomorphizing type variables. |
 | `upd_finite_type_size` | `3` | Number of such finite cardinalities considered. |
 | `upd_default_type` | `[``:num``]` | Type instances used when `finite_types` is false. |
+| `upd_instantiate` | `[]` | Per-type-variable pins, overriding `finite_types`/`default_type`. |
 | `upd_substrate` | `Auto` | `Auto`, `NativeSML`, `Cv`, or `Compute` for executable QC. |
 | `upd_allow_existentials` | `true` | Permit PNF narrowing of prenex existentials. |
 | `upd_finite_functions` | `true` | Finitize narrowing function inputs as update chains or constants. |
@@ -652,6 +653,34 @@ deliberately pins a fixed, reproducible bound, while `upd_iterative_size`
 sets a different initial window and restores adaptive deepening.  The
 separate `depth` field bounds narrowing; it is not a second
 0-through-depth schedule loop.
+
+By default, QC substitutes one type for *every* type variable in a goal
+at once: a goal with two type variables is tested with both at the same
+type, and each report names the one cardinality that instance tested.
+`upd_instantiate` pins named type variables to fixed types instead: a
+`SOME ty` key pins the named type variable, and a variable no entry
+reaches still takes the shared carrier/width, exactly as `[]` would.  A
+`NONE` key is the fallback for every *non-width* variable no `SOME`
+entry names, so a `NONE`-only assignment pins all of them and, like a
+fully-`SOME` assignment, collapses the search to one instance -- unless
+the goal has a symbolic word width, since a width variable takes a pin
+only from its own `SOME` entry (`NONE` never reaches it: carriers and
+word-width numerals are disjoint value spaces, so a single fallback
+cannot serve both) and otherwise keeps varying over the configured
+widths.  A type variable in a word's index position must therefore be
+pinned to a concrete word-width type (`` `:1` ``, `` `:2` ``, ...), not
+an ordinary carrier.  Naming a type variable the goal does not have,
+naming a width variable with a non-width type, or naming a pin value
+that still carries type variables of its own, is a configuration error,
+reported as `Unknown` rather than silently ignored.  Because pinning
+only changes which monomorphic proxies QC tests, not what the original
+polymorphic goal means, a completely covered but still-polymorphic goal
+degrades to `Unknown` exactly as it does without any pins --
+`upd_instantiate` can turn `Unknown` into a `Genuine` counterexample,
+but it can never turn a polymorphic goal's exhaustible search into
+`NoCounterexample`.  `upd_instantiate` scopes to QC and narrowing; the
+model finder is unaffected and has its own per-type-variable updater,
+`upd_card [(SOME ty, [n])]`.
 
 #### Model-finder fields
 

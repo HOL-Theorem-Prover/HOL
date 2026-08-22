@@ -178,6 +178,13 @@ signature Refute = sig
      [upd_bits] is the unrelated binary-integer width. *)
   val upd_widths : int list -> config -> config
   val upd_default_type : hol_type list -> config -> config
+  (* Per-type-variable QC instantiation pins; [NONE] is the fallback for
+     every non-width variable no [SOME] entry names -- a width variable
+     (a word's index) takes a pin only from its own [SOME] entry.  An
+     unpinned variable keeps taking the single indexed carrier/width,
+     exactly as with []. *)
+  val upd_instantiate :
+    (hol_type option * hol_type) list -> config -> config
   val upd_substrate : substrate_choice -> config -> config
   val upd_seed : int option -> config -> config
   val upd_allow_existentials : bool -> config -> config
