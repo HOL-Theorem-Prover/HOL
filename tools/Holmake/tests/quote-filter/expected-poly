@@ -31,9 +31,9 @@ even_suc = boolLib.save_thm ( "even_suc" , Drule.cj 3 even_rules handle Feedback
 
 ; 
 
-val foo = TotalDefn.qDefine "foo" [ QUOTE " (*#loc 34 16*)\n  foo x = if x < 2 then 1 else x * foo (x - 1)\n" ] NONE val _ = CompilerSpecific.quietbind "val foo_ind = DB.fetch \"-\" \"foo_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;" 
+val foo = TotalDefn.qDefine "foo" [ QUOTE " (*#loc 34 16*)\n  foo x = if x < 2 then 1 else x * foo (x - 1)\n" ] 
 
-; 
+NONE val _ = CompilerSpecific.quietbind "val foo_ind = DB.fetch \"-\" \"foo_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;" ; 
 
 val ( compile_rel_rules , compile_rel_ind , compile_rel_cases ) = IndDefLib.xHol_reln "compile_rel" [ QUOTE "(" , QUOTE " (*#loc 40 8*)\n  compile_rel foo bar\n" , QUOTE ") /\\ (" , QUOTE " (*#loc 42 8*)\n  compile_rel foo bar\n" , QUOTE ")" ] val _ = CompilerSpecific.quietbind "val compile_rel_strongind = DB.fetch \"-\" \"compile_rel_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;" val 
 
@@ -52,9 +52,9 @@ val next_sym_def = TotalDefn.qDefine "next_sym_def" [ QUOTE " (*#loc 47 25*)\n  
 
 val it = Parse.Term [ QUOTE " (*#loc 53 4*)f \226\128\185foo\"\226\128\186" ] ; 
 
-val sexpPEG_def = TotalDefn.qDefine "sexpPEG_def" [ QUOTE " (*#loc 55 24*)\n  #\"\\\\\";\n" ] NONE val _ = CompilerSpecific.quietbind "val sexpPEG_ind = DB.fetch \"-\" \"sexpPEG_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;" 
+val sexpPEG_def = TotalDefn.qDefine "sexpPEG_def" [ QUOTE " (*#loc 55 24*)\n  #\"\\\\\";\n" ] 
 
-; 
+NONE val _ = CompilerSpecific.quietbind "val sexpPEG_ind = DB.fetch \"-\" \"sexpPEG_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;" ; 
 
 val sexpPEG_start = boolLib.save_thm ( "sexpPEG_start[simp]" , SIMP_CONV ( srw_ss () ) [ sexpPEG_def ] ( Parse.Term [ QUOTE " (*#loc 59 66*)sexpPEG.start" ] ) ) ; 
 

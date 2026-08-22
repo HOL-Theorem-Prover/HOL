@@ -292,6 +292,17 @@ in
   else ()
 end
 
+(* Force the next parse/print call to rebuild its cached closures from
+   the current grammars.  Needed after `Context.restore`: the slot-
+   backed grammars are restored, but the closure caches
+   (`type_parser1`, `the_absyn_parser`, etc.) still capture the pre-
+   restore grammar and won't rebuild until a grammar-mutating call
+   flips one of the changed-flags.  Callers that restore grammars
+   out-of-band (LSP mid-compile snapshots, boot-restore) must call
+   this immediately after the restore. *)
+fun invalidate_caches () =
+  (type_grammar_changed := true; term_grammar_changed := true)
+
 fun Absyn q = let
 in
   update_term_fns();

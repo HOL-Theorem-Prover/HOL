@@ -21,11 +21,9 @@ practical guide to trying it out; the protocol details live in
 - Server capabilities advertised: `textDocumentSync`, `hoverProvider`,
   `definitionProvider`, `referencesProvider`.  Plus LSP extensions:
   `$/setConfig` (elabOn mode, holdep behaviour), `$/eval` (streamed
-  arbitrary SML), `$/cancelRequest`, `$/compileProgress` /
+  arbitrary SML), `$/hol/goalState` (goal-state at cursor — see
+  below), `$/cancelRequest`, `$/compileProgress` /
   `$/compileCompleted` / `$/compileInterrupted`.
-- **Not implemented yet:** `$/getState` (goal-state-at-cursor) is a
-  stub — see `Manual/Developers/lsp-server.md:114-124` for the API
-  proposal.  That is the current active work item.
 
 Sanity check the server works before wiring up an editor.  The
 protocol requires strict CRLF line endings on the header block, so
@@ -42,6 +40,80 @@ advertising `textDocumentSync`, `hoverProvider`,
 `definitionProvider`, `referencesProvider`; a
 `window/logMessage "started"` notification; the `shutdown` response
 (`{"id":2,"result":null}`); and a clean exit 0.
+
+## Goal-state at cursor (`$/hol/goalState`)
+
+Custom LSP request that returns the goal-state for a cursor position
+inside a `Proof … QED` block.  The server walks the tactic body via
+`goalFrag` up to the step under the cursor, snapshotting states in a
+per-theorem cache so subsequent queries at nearby cursors reuse work.
+
+### Request
+
+```json
+{
+  "jsonrpc": "2.0", "id": <n>,
+  "method": "$/hol/goalState",
+  "params": {
+    "textDocument": {"uri": "file:///path/to/Script.sml"},
+    "position": {"line": <0-based>, "character": <0-based UTF-8 byte offset>}
+  }
+}
+```
+
+### Response
+
+`result` is `null` when the cursor isn't inside a `Proof … QED` (or
+when the theorem statement can't be parsed).  Otherwise:
+
+```json
+{
+  "theorem": "<theorem name>",
+  "step": <int>,
+  "goals": [{"asms": ["<assumption>", ...], "goal": "<goal>"}, ...],
+  "pretty": "<full REPL-style render>",
+  "error": <string or null>
+}
+```
+
+- `step` — 0-based tactic-step index at the cursor, counting only
+  `Expand` / `ExpandList` steps (structural markers like `>-` /
+  `THEN1` don't advance it).
+- `goals` — structured per-subgoal render for clients that want to
+  format goals themselves.
+- `pretty` — the whole state rendered by HOL's `goalFrag.pp_goalstate`
+  via the VT100 backend, so bound / free variables carry ANSI colour
+  escapes (`\x1B[…m`).  Clients that don't render ANSI can strip the
+  escapes with `\x1B\[[0-9;]*m` or fall back to `goals`.
+- `error` — non-null when the walker gave up (e.g. wall-clock budget
+  exceeded); `goals` / `pretty` are empty and clients should render
+  the message in place of the state.  A mid-walk partial state is
+  complete for its own step but wrong for the cursor's step, so the
+  server refuses to send it and returns `error` instead.  A stderr
+  line `goal-state walker exceeded Nms budget; interrupting` is
+  also emitted for visibility.
+
+### Client cookbook
+
+- **eglot (shipped in this repo)** — `hol-lsp-show-goal-state` bound
+  to `M-h M-g`.  Set `hol-lsp-goals-follow-cursor` non-nil to make
+  `*HOL Goals*` auto-refresh on cursor movement (debounced via
+  `hol-lsp-goals-follow-delay`).  `hol-lsp--render-goals` runs
+  `ansi-color-apply-on-region` on the inserted `pretty` text so the
+  bound / free variable colouring survives.
+- **VS Code (recipe, not shipped)** — `client.sendRequest("$/hol/goalState", params)`
+  returns the response object.  For the simplest path, strip the ANSI
+  escapes (regex `\x1B\[[0-9;]*m`) and display `pretty` as plain text
+  in a `WebviewPanel`, or ignore `pretty` entirely and render the
+  `goals` array structurally.  Keeping the colours requires an
+  ANSI-to-HTML converter (e.g. `ansi_up` on npm) plus a small CSS
+  palette in the webview.
+
+The server negotiates `positionEncoding: "utf-8"` (LSP 3.17) during
+`initialize`, so `position.character` is a byte offset within the
+line for both `textDocument/hover` and `$/hol/goalState`.  Clients
+that assume the LSP default of UTF-16 will send wrong offsets on
+lines containing multibyte characters.
 
 ## Emacs
 

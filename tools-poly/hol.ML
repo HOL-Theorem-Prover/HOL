@@ -19,6 +19,7 @@ val _ = use "../src/portableML/json/JSONParser.sig";
 val _ = use "../src/portableML/json/JSONParser.sml";
 val _ = use "../src/portableML/json/JSONDecode.sig";
 val _ = use "../src/portableML/json/JSONDecode.sml";
+val _ = use "lsp/lsp_namespace.ML";
 val _ = use "lsp/holide.ML";
 val _ = use "lsp/server.ML";
 
@@ -384,12 +385,12 @@ fun main() = let
      - --bare: use hol.state0
      - --poly/--poly_not_hol: use no state (NONE)
      - --holstate=X: use X
-     - REPL mode with default: auto-detect using get_heap_name()
+     - REPL/LSP mode with default: auto-detect using get_heap_name()
      - Other modes: use specified state or default *)
   val base_state =
       if bare then SOME (OS.Path.concat(Systeml.HOLDIR, "bin/hol.state0"))
-      else if subcmd = REPL andalso base_state = SOME Systeml.DEFAULT_STATE then
-        (* Auto-detect heap for REPL mode when no explicit --holstate was given *)
+      else if (subcmd = REPL orelse subcmd = LSP)
+              andalso base_state = SOME Systeml.DEFAULT_STATE then
         SOME (get_heap_name())
       else
         (* Use explicitly specified state (including NONE for --poly) *)
@@ -595,12 +596,32 @@ in
            restores it before each LSP compile.  Without this, each
            didChange inherits the previous compile's theory (new_theory
            retires the constants but leaves stale theorems in DB),
-           producing a flood of "is out-of-date!" errors. *)
+           producing a flood of "is out-of-date!" errors.
+
+           `captureCompileSnap` is the mid-compile companion used by
+           incremental resume: it captures Context + loaded modules +
+           the LSP namespace layer at a dec boundary; the returned
+           thunk restores each channel and forces
+           `Parse.invalidate_caches` so the parser closure caches
+           (`type_parser1`, `the_absyn_parser`, ...) rebuild against
+           the restored grammars.  The boot-restore path in
+           `resetForCompile` also calls `invalidate_caches`, fixing
+           a latent staleness between restore and the next grammar-
+           mutating dec. *)
         evalString
           "let val snap = Context.snapshot () \
           \    val restoreLoaded = Meta.snapshotLoaded () in \
           \  LSPExtension.resetForCompile := \
-          \    (fn () => (Context.restore snap; restoreLoaded ())) \
+          \    (fn () => (Context.restore snap; restoreLoaded (); \
+          \               LSPNameSpace.clearFileLayer (); \
+          \               Parse.invalidate_caches ())); \
+          \  LSPExtension.captureCompileSnap := \
+          \    (fn () => let val cSnap = Context.snapshot () \
+          \                  val loadedR = Meta.snapshotLoaded () \
+          \                  val nsR = LSPNameSpace.snapshotLayer () \
+          \              in fn () => (Context.restore cSnap; \
+          \                           loadedR (); nsR (); \
+          \                           Parse.invalidate_caches ()) end) \
           \end";
         (* Cheat every tactic proof: return an oracle-tagged theorem
            for the goal instead of running the tactic.  Same hook that
@@ -644,6 +665,20 @@ in
           \        end \
           \  in Option.map Parse.thm_to_string thm_opt end \
           \  handle _ => NONE)";
+        (* HOL-side hover for cursors inside quotations: parses the
+           captured quote to a resolved Preterm and walks it. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/hover_quote_init.ML"));
+        (* Tactic-step compiler used by later slices to walk a Proof
+           body via goalFrag; also runs its selftest at load time. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/tactic_steps.ML"));
+        (* goalFrag-based interpreter for the step stream. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/tactic_walker.ML"));
+        (* Goal-state at cursor inside a Proof-QED body. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/goal_state_init.ML"));
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
@@ -653,7 +688,7 @@ in
                 NONE => []
               | SOME _ => [("poly_decide_threadcount.uo", false)]) @
            objs);
-        LSPServer.start {diag = diag}
+        LSPServer.start {diag = diag, dbg = debug}
       end
     | REPL =>
       let in

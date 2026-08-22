@@ -648,7 +648,9 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
         let
           open Holmake_types
           val _ = if verbosity > 1 then
-                    print ("Visiting " ^ dir ^ " for first time\n")
+                    (TextIO.output(TextIO.stdErr,
+                                   "Visiting " ^ dir ^ " for first time\n");
+                     TextIO.flushOut TextIO.stdErr)
                   else ()
           val extensions =
               holpathdb.search_for_extensions find_includes
@@ -664,7 +666,10 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
                             vname ^ "` for " ^ existing)
           val _ = List.app register extensions
           val _ = if verbosity > 1 then
-                    print ("Completed holpathdb analysis in " ^ dir ^ "\n")
+                    (TextIO.output(TextIO.stdErr,
+                                   "Completed holpathdb analysis in " ^
+                                   dir ^ "\n");
+                     TextIO.flushOut TextIO.stdErr)
                   else ()
           val base_env = let
             fun foldthis ({vname,path}, env) =
@@ -696,7 +701,9 @@ fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
           fun diag nm incs =
               if null incs orelse verbosity < 2 then ()
               else
-                print (nm ^ " = " ^ String.concatWith ", " incs ^ "\n")
+                (TextIO.output(TextIO.stdErr,
+                               nm ^ " = " ^ String.concatWith ", " incs ^ "\n");
+                 TextIO.flushOut TextIO.stdErr)
           val pre_incs = map (canonicalise dir) raw_pre
           val _ = diag "PRE_INCLUDES" pre_incs
           val post_incs = map (canonicalise dir) raw_post
@@ -739,8 +746,10 @@ fun extend_path_with_includes (cfg as {lpref,verbosity=v}) =
       fun m s = holpathdb.reverse_lookup {path = s}
       fun foldthis nm (dirname,incs,acc) = (
         if v > 1 then
-          print (m dirname ^ "/Holmakefile:" ^ nm ^ " +=\n  " ^
-                 String.concatWith "\n  " (map m incs) ^ "\n")
+          (TextIO.output(TextIO.stdErr,
+                         m dirname ^ "/Holmakefile:" ^ nm ^ " +=\n  " ^
+                         String.concatWith "\n  " (map m incs) ^ "\n");
+           TextIO.flushOut TextIO.stdErr)
         else ();
         Binaryset.addList(acc,incs)
       )

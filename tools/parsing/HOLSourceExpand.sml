@@ -278,9 +278,37 @@ and expandQuoteCore start toks = let
     | go (DefinitionLabel _ :: _) _ = raise Unreachable
   in go toks [] end
 
+(* Byte-precise positions of a qdecl in the source file.  Used by
+   expandQuote to give the synthesized quotation List and its
+   ExpExpansion wrapper a span that covers the ACTUAL body text, so
+   the LSP annotator can tag the body with PQuote and quotation
+   hover works on Theorem-QED / Definition / Datatype / etc. bodies
+   (not just explicit `‘...’` / `‘‘...’’` quotations). *)
+and qdStart (QuoteLiteral (p, _)) = p
+  | qdStart (QuoteAntiq {caret_, ...}) = caret_
+  | qdStart (DefinitionLabel {left, ...}) = left
+and qdStop (QuoteLiteral (p, s)) = p + String.size s
+  | qdStop (QuoteAntiq {exp, ...}) = expStop exp
+  | qdStop (DefinitionLabel {stop, ...}) = stop
+
 and expandQuote start stop toks = let
-  val elems = {args = expandQuoteCore start toks, seps = [], stop = stop}
-  in List {left = start, elems = elems, right = NONE, stop = stop} end
+  val (bodyStart, bodyEnd) = case toks of
+      [] => (start, stop)
+    | _ => (qdStart (hd toks), qdStop (List.last toks))
+  val elems = {args = expandQuoteCore start toks, seps = [], stop = bodyEnd}
+  val list = List {left = bodyStart, elems = elems, right = NONE, stop = bodyEnd}
+  (* Wrap the synthesized List in an ExpExpansion whose orig is a
+     synthetic HOLQuote pointing at the body span.  The LSP's
+     annotateExp fires its HOLQuote case on this List and adds a
+     PQuote-tagged Built node — the same mechanism used for explicit
+     source quotations.  For quotations that WERE explicit in source
+     (HOLFullQuote / HOLQuote), expandExp wraps expandQuote's result
+     in ANOTHER ExpExpansion carrying the original AST node; that
+     outer wrap keeps its own wider span (including delimiters) via
+     overspan. *)
+  val orig = HOLQuote {head = (bodyStart, ""), quote = toks,
+                       end_tok = NONE, stop = bodyEnd}
+  in ExpExpansion {orig = orig, result = list} end
 
 and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
   | expandDec _ (DecVal {val_, tyvars, elems}) = let
@@ -432,6 +460,19 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       in Infix {left = exclude_docs, id = (theory_, "before"), right = e} end
     in DecExpansion {orig = dec, result = [valWild theory_ e]} end
   | expandDec _ (dec as HOLDefinition {
+      definition_, id, attrs = _, colon = _, quote = _,
+      termination, end_ = NONE, stop = _}) = let
+    (* Skip `TotalDefn.qDefine` wrapping so wide type errors from a
+       partial body don't fire; still bind the SML name to a `thm`
+       placeholder so downstream references type-check. *)
+    val bind = valPat definition_ (mkIdent id)
+                 (mkIdent (definition_, "boolTheory.TRUTH"))
+    val extra = case termination of
+        NONE => []
+      | SOME {tac = ExpEmpty _, ...} => []
+      | SOME {tac, ...} => [valWild definition_ (expandExp false tac)]
+    in DecExpansion {orig = dec, result = bind :: extra} end
+  | expandDec _ (dec as HOLDefinition {
       definition_, id as (_, name), attrs, colon = _, quote, termination, end_ = _, stop}) = let
     val indThm = ref NONE
     val _ = app (fn
@@ -453,8 +494,21 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val e = mkLocString (definition_, "TotalDefn.qDefine", "TotalDefn.located_qDefine") fileline
     val e = App (e, mkNameAttrs mkKval id attrs)
     val e = App (e, expandQuote definition_ stop quote)
+    (* Anchor the synthetic `NONE` past the body so the enclosing
+       App's expStop covers the quotation.  Otherwise
+       `mkIdent(definition_, "NONE")` at the `Definition` keyword
+       position gives the outer App span (definition_, definition_+4)
+       and the body's PQuote node — structurally inside this App —
+       becomes unreachable via builtNavigateTo.
+
+       For the `SOME tac` case there's nothing to fix: `tac`'s own
+       expStop naturally extends past the body, so keep `SOME` at
+       `definition_` to preserve input→output line correspondence
+       for the tac's SML (moving it to `stop` would push the whole
+       `( SOME <tac> )` onto the `End` input line even though the
+       tac lives on an earlier line). *)
     val e = App (e, case termination of
-      NONE => mkIdent (definition_, "NONE")
+      NONE => mkIdent (stop, "NONE")
     | SOME {tac, ...} => App (mkIdent (definition_, "SOME"), expandExp false tac))
     val dec' = magicBind indThm [valPat definition_ (mkIdent id) e]
     in DecExpansion {orig = dec, result = rev dec'} end
@@ -483,7 +537,22 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
         else split (SOME lab) [] r (mk l :: qs, olab :: labs)
       | split olab l (d :: r) qs = split olab (d :: l) r qs
     val (quotes, conjs) = split NONE [] quote ([], [])
-    val quote = mkList (inductive_, mkQ "(" :: tl (List.concat quotes) @ [mkQ ")"])
+    (* Give the synthesised quote-list a body-precise span and wrap
+       in ExpExpansion(HOLQuote, ...) so the LSP annotator adds
+       PQuote to the body — same trick as `expandQuote` for the
+       other HOL* declarations.  Without this, mkList's default
+       left=stop=inductive_ yields a zero-width span and body
+       hovers fall through to the SML tree walk. *)
+    val (bodyStart, bodyEnd) = case quote of
+        [] => (inductive_, inductive_)
+      | _ => (qdStart (hd quote), qdStop (List.last quote))
+    val elems = {args = mkQ "(" :: tl (List.concat quotes) @ [mkQ ")"],
+                 seps = [], stop = bodyEnd}
+    val quoteList = List {left = bodyStart, elems = elems,
+                          right = NONE, stop = bodyEnd}
+    val quoteOrig = HOLQuote {head = (bodyStart, ""), quote = quote,
+                              end_tok = NONE, stop = bodyEnd}
+    val quote = ExpExpansion {orig = quoteOrig, result = quoteList}
     fun mkStem x = (id, stem ^ x)
     val pat = mkTuple (inductive_, map (mkIdent o mkStem) ["_rules", indSuffix, "_cases"])
     val e = App (App (mkIdent (inductive_, entryPoint), mkString (id, stem)), quote)
@@ -533,6 +602,20 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     | SOME {exp, ...} => expandExp false exp
     val dec' = valPat theorem_ (mkIdent id) (App (e, mkTuple (theorem_, [nameAttrs, rhs])))
     in DecExpansion {orig = dec, result = [dec']} end
+  | expandDec _ (dec as HOLTheoremDecl {
+      triv = _, theorem_, id, attrs = _, colon = _, quote = _,
+      proof_, tac, qed_ = NONE, stop = _}) = let
+    (* Skip `Q.store_thm` wrapping so a not-yet-`tactic` tac (e.g.
+       `Induct_on` still waiting for its argument) doesn't surface
+       as a wide wrapping-type error; standalone-compile the tac
+       to still catch real SML bugs inside it. *)
+    val bind = valPat theorem_ (mkIdent id)
+                 (mkIdent (theorem_, "boolTheory.TRUTH"))
+    val extra = case (proof_, tac) of
+        (NONE, _) => []
+      | (SOME _, ExpEmpty _) => []
+      | (SOME _, _) => [valWild theorem_ (expandExp false tac)]
+    in DecExpansion {orig = dec, result = bind :: extra} end
   | expandDec _ (dec as HOLTheoremDecl {
       triv, theorem_, id,
       attrs, colon = _, quote, proof_, tac, qed_ = _, stop}) = let

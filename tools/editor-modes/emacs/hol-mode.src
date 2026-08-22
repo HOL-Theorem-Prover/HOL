@@ -1086,32 +1086,37 @@ Make-variable references are not expanded; the last assignment wins."
                (setq val (match-string 1)))
              val)))))
 
-(defun hol--executable-is-binary-p ()
-  "Non-nil when `hol-executable' is a native binary (i.e. Poly-built).
-The mosml `bin/hol' is a `#!'-prefixed shell wrapper that doesn't
-understand `heapname' or `--holstate='."
-  (and (stringp hol-executable)
-       (file-readable-p hol-executable)
-       (with-temp-buffer
-         (insert-file-contents-literally hol-executable nil 0 1)
-         (not (string= (buffer-string) "#")))))
+(defun hol--executable-is-binary-p (&optional path)
+  "Non-nil when PATH (default: `hol-executable') is a native binary
+(i.e. Poly-built).  The mosml `bin/hol' is a `#!'-prefixed shell
+wrapper that doesn't understand `heapname' or `--holstate='."
+  (let ((path (or path hol-executable)))
+    (and (stringp path)
+         (file-readable-p path)
+         (with-temp-buffer
+           (insert-file-contents-literally path nil 0 1)
+           (not (string= (buffer-string) "#"))))))
 
-(defun hol--default-heap (dir)
+(defun hol--default-heap (dir &optional hol-path)
   "Return absolute path of the heap `bin/hol' would load by default in DIR.
 Delegates to `hol heapname' so the answer matches `bin/hol's own
-resolution exactly.  Returns nil when emacs can't ask (mosml wrapper,
-missing executable, or subprocess failure)."
-  (when (and dir
-             (file-accessible-directory-p dir)
-             (hol--executable-is-binary-p)
-             (file-executable-p hol-executable))
-    (with-temp-buffer
-      (let ((default-directory (file-name-as-directory
-                                (expand-file-name dir))))
-        (when (eq 0 (ignore-errors
-                      (call-process hol-executable nil t nil "heapname")))
-          (let ((out (string-trim (buffer-string))))
-            (and (> (length out) 0) out)))))))
+resolution exactly.  HOL-PATH overrides `hol-executable' -- pass
+the file-specific `bin/hol' (e.g. from `.hol/make-deps/lastmaker')
+when the buffer belongs to a HOL install different from the one
+`hol-executable' names.  Returns nil when emacs can't ask (mosml
+wrapper, missing executable, or subprocess failure)."
+  (let ((hol-path (or hol-path hol-executable)))
+    (when (and dir
+               (file-accessible-directory-p dir)
+               (hol--executable-is-binary-p hol-path)
+               (file-executable-p hol-path))
+      (with-temp-buffer
+        (let ((default-directory (file-name-as-directory
+                                  (expand-file-name dir))))
+          (when (eq 0 (ignore-errors
+                        (call-process hol-path nil t nil "heapname")))
+            (let ((out (string-trim (buffer-string))))
+              (and (> (length out) 0) out))))))))
 
 (defun hol--candidate-heaps (dir)
   "Return absolute paths of dumped-heap files living directly in DIR.
@@ -2168,6 +2173,7 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key hol-map "E"    'copy-region-as-goaltree-tactic)
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "G"    'hol-do-goaltree)
+(define-key hol-map "\M-g" 'hol-lsp-show-goal-state)
 (define-key hol-map "h"    'hol)
 (define-key hol-map "H"    'hol-with-region)
 (define-key hol-map "\M-m" 'holmake)
@@ -2602,3 +2608,287 @@ the surrounding text (as done by ‘hol-do-goal’ and
 
 (define-key global-map [menu-bar hol-menu hol-process hol-with-region]
   '("Start HOL & run to cursor" . hol-with-region))
+
+;; ---------------------------------------------------------------------
+;; LSP integration via eglot
+;; ---------------------------------------------------------------------
+;; `bin/hol lsp' starts an LSP server.  eglot spawns the server with
+;; cwd = project root; hol.ML's get_heap_name reads the Holmakefile in
+;; that cwd and boots the appropriate heap.  Holmakefiles are per-
+;; directory (they do NOT govern sub-directories), so the LSP project
+;; root is the buffer's own directory — no upward walk.
+;;
+;; Users opt in by calling `hol-lsp-enable' (e.g. from init.el):
+;;
+;;     (with-eval-after-load 'hol-mode (hol-lsp-enable))
+
+(defcustom hol-lsp-server-modes '(holscript-mode holscript-ts-mode)
+  "Major modes recognised as HOL script buffers.  `hol-lsp-enable'
+attaches an eglot server for each; the auto-follow-cursor hook fires
+only in these modes.  `holscript-ts-mode' is not derived from
+`holscript-mode', so a single-mode default silently excluded users
+running the tree-sitter variant."
+  :group 'hol
+  :type '(repeat symbol))
+
+(defvar hol-lsp--hol-cache (make-hash-table :test 'equal)
+  "Memo: absolute directory → `bin/hol' path this file should
+route to; delegates to `hol--find-alternate-executable'.")
+
+(defvar hol-lsp--heap-cache (make-hash-table :test 'equal)
+  "Memo: (absolute-dir . bin/hol) → HOLHEAP that `bin/hol
+heapname' resolves to in that dir.  Two different `bin/hol' for
+the same dir must not collide, hence the pair key.")
+
+(defvar hol-lsp--project-roots (make-hash-table :test 'equal)
+  "Memo: (bin/hol . HOLHEAP) → the first buffer directory that
+resolved to that pair; reused as the LSP server's cwd for
+subsequent buffers sharing the pair.  A distinct HOL install or
+distinct HOLHEAP gets a distinct eglot server.")
+
+(defun hol-lsp--hol-for-dir (dir)
+  "Return the absolute `bin/hol' path serving LSP for DIR."
+  (let ((abs (expand-file-name dir)))
+    (or (gethash abs hol-lsp--hol-cache)
+        (let* ((default-directory (file-name-as-directory abs))
+               (alt (hol--find-alternate-executable abs hol-executable))
+               (hol (or (car-safe alt) hol-executable)))
+          (puthash abs hol hol-lsp--hol-cache)
+          hol))))
+
+(defun hol-lsp--heap-for-dir (dir)
+  "Return the absolute HOLHEAP path `bin/hol' would auto-detect
+starting in DIR, using the lastmaker-resolved `bin/hol' for DIR."
+  (let* ((abs (expand-file-name dir))
+         (hol (hol-lsp--hol-for-dir abs))
+         (key (cons abs hol)))
+    (or (gethash key hol-lsp--heap-cache)
+        (let ((heap (or (hol--default-heap abs hol)
+                        (expand-file-name
+                         "hol.state" (file-name-directory hol)))))
+          (puthash key heap hol-lsp--heap-cache)
+          heap))))
+
+(defcustom hol-lsp-project-debug nil
+  "When non-nil, log each `hol-lsp--project-try' call to *Messages*
+so mis-routing can be diagnosed without instrumenting hol-mode.el
+by hand.  Off by default; the log is chatty (fires once per LSP
+lookup)."
+  :group 'hol :type 'boolean)
+
+(defun hol-lsp--project-try (dir)
+  "Group HOL buffers into LSP projects keyed by (bin/hol, HOLHEAP).
+Two files whose lastmaker + Holmakefile resolve to the same pair
+share one eglot server; two files that need different HOLHEAPs
+(typical inside HOL itself and CakeML, where kernel-adjacent dirs
+pin `hol.state0' and downstream dirs use the full `hol.state') or
+that come from different HOL installs get separate servers."
+  (let ((match (and buffer-file-name
+                    (memq major-mode hol-lsp-server-modes))))
+    (when hol-lsp-project-debug
+      (message
+       "hol-lsp--project-try: dir=%s buffer=%s mode=%s file=%s match=%s"
+       dir (buffer-name) major-mode buffer-file-name (and match t)))
+    (when match
+      (let* ((hol (hol-lsp--hol-for-dir dir))
+             (heap (hol-lsp--heap-for-dir dir))
+             (key (cons hol heap)))
+        (unless (gethash key hol-lsp--project-roots)
+          (puthash key dir hol-lsp--project-roots))
+        (when hol-lsp-project-debug
+          (message "hol-lsp--project-try: hol=%s heap=%s root=%s"
+                   hol heap (gethash key hol-lsp--project-roots)))
+        (cons 'hol-lsp-project key)))))
+
+(with-eval-after-load 'project
+  (cl-defmethod project-root ((p (head hol-lsp-project)))
+    (or (gethash (cdr p) hol-lsp--project-roots)
+        default-directory)))
+
+(defun hol-lsp--server-program (&rest _args)
+  "eglot-server-programs entry: return `(bin/hol lsp)' for the
+current buffer, honouring `.hol/make-deps/lastmaker'."
+  (list (hol-lsp--hol-for-dir default-directory) "lsp"))
+
+(defun hol-lsp--setup-buffer ()
+  "Configure the current buffer to use the HOL LSP server via eglot."
+  (setq-local project-find-functions
+              (cons #'hol-lsp--project-try project-find-functions))
+  (when (fboundp 'eglot-ensure) (eglot-ensure)))
+
+(defun hol-lsp-enable ()
+  "Enable eglot-based HOL LSP for buffers in `hol-lsp-server-modes'.
+Registers `bin/hol lsp' as the server command and treats each
+buffer's HOLHEAP-clustered directory as its LSP project."
+  (interactive)
+  ;; `hol-lsp--setup-buffer' references `project-find-functions',
+  ;; which the built-in `project' package defines; without loading
+  ;; it here, the first setup-buffer on a fresh emacs raises
+  ;; void-variable, our project-try never gets installed, and
+  ;; eglot falls back to project-try-vc (i.e. the git root).
+  (require 'project)
+  (with-eval-after-load 'eglot
+    (dolist (mode hol-lsp-server-modes)
+      (add-to-list 'eglot-server-programs
+                   `(,mode . hol-lsp--server-program))))
+  (dolist (mode hol-lsp-server-modes)
+    (add-hook (intern (concat (symbol-name mode) "-hook"))
+              #'hol-lsp--setup-buffer)))
+
+(defun hol-lsp--point-byte-in-line ()
+  "Byte offset from BOL to point.  The HOL LSP uses UTF-8 position
+encoding, so LSP `character' is a byte offset within the line, not a
+UTF-16 code-unit count."
+  (- (position-bytes (point))
+     (position-bytes (line-beginning-position))))
+
+(defun hol-lsp--server ()
+  "Return the current eglot server or nil.
+Handles Emacs 30's `eglot-current-server' and Emacs 29's
+`eglot--current-server-or-lose' / `eglot-current-server'."
+  (or (and (fboundp 'eglot-current-server) (eglot-current-server))
+      (and (fboundp 'eglot--current-server-or-lose)
+           (ignore-errors (eglot--current-server-or-lose)))))
+
+(defun hol-lsp--path-to-uri (path)
+  "Convert PATH to a file URI, working on Emacs 29 and 30 eglot.
+Public `eglot-path-to-uri' arrived in Emacs 30; older builds only
+expose the private `eglot--path-to-uri'."
+  (cond ((fboundp 'eglot-path-to-uri) (eglot-path-to-uri path))
+        ((fboundp 'eglot--path-to-uri) (eglot--path-to-uri path))
+        (t (concat "file://" (url-hexify-string (expand-file-name path)
+                                                url-path-allowed-chars)))))
+
+(defun hol-lsp--goalstate-params ()
+  "Build the `$/hol/goalState' params object for point."
+  (list :textDocument
+        (list :uri (hol-lsp--path-to-uri buffer-file-name))
+        :position
+        (list :line (1- (line-number-at-pos))
+              :character (hol-lsp--point-byte-in-line))))
+
+(defun hol-lsp--query (&optional cancel-on-input)
+  "Send `$/hol/goalState' synchronously; return parsed result or nil
+on any failure.  When CANCEL-ON-INPUT is non-nil, user input during
+the wait cancels the request and returns nil — used by auto-follow
+so a slow server never freezes emacs on a keystroke."
+  (let ((server (hol-lsp--server)))
+    (when (and server buffer-file-name)
+      ;; eglot batches `didChange' at `eglot-send-changes-idle-time'
+      ;; (default 0.5 s), so if the user typed less than that ago the
+      ;; server still sees the previous buffer.  Flush pending changes
+      ;; before the query -- otherwise the reply reflects stale state
+      ;; and the pane doesn't update until the user jogs the cursor.
+      (when (fboundp 'eglot--signal-textDocument/didChange)
+        (ignore-errors (eglot--signal-textDocument/didChange)))
+      (condition-case nil
+          (jsonrpc-request server :$/hol/goalState
+                           (hol-lsp--goalstate-params)
+                           :cancel-on-input cancel-on-input)
+        (error nil)))))
+
+(define-derived-mode hol-lsp-goals-mode special-mode "HOL Goals"
+  "Major mode for the *HOL Goals* buffer populated by the HOL LSP.
+Inherits `special-mode' keys — `q' buries the window.")
+
+(defun hol-lsp--render-goals (result)
+  "Render RESULT into *HOL Goals* and display it below the selected
+window.  Preserves ANSI colour escapes from the server's `pretty'
+field.  Structured `goals' render is a fallback for older servers.
+When RESULT has :error set the buffer is cleared to just the header
+plus the error message, and the message is echoed via `message'
+too — a partial mid-walk state is complete for its own step but
+wrong for the cursor's step, so we surface the failure instead."
+  (require 'ansi-color)
+  (with-current-buffer (get-buffer-create "*HOL Goals*")
+    (let ((inhibit-read-only t)
+          (pretty (plist-get result :pretty))
+          (err (plist-get result :error)))
+      (erase-buffer)
+      (insert (format "%s — step %d\n\n"
+                      (plist-get result :theorem)
+                      (plist-get result :step)))
+      ;; Errors from the walker: prepend so the user sees the
+      ;; failure signal at the top, and still render the last-good
+      ;; state below (so they can tell WHERE the walker halted).
+      ;; Empty-goals + error (e.g. timeout) collapses to error-only.
+      (when err
+        (insert "⚠ " err "\n\n")
+        (message "HOL goal-state: %s" err))
+      (cond
+       ((and pretty (not (string-empty-p pretty)))
+        ;; Server rendered via goalFrag.pp_goalstate with the VT100
+        ;; backend — ANSI escapes classify bound / free vars.
+        (let ((start (point)))
+          (insert pretty)
+          (ansi-color-apply-on-region start (point))))
+       (t
+        (dolist (g (append (plist-get result :goals) nil))
+          (dolist (a (append (plist-get g :asms) nil))
+            (insert (format "  %s\n" a)))
+          (insert (format "⊢ %s\n\n" (plist-get g :goal)))))))
+    (goto-char (point-min))
+    (hol-lsp-goals-mode)
+    ;; inhibit-switch-frame: when the goals buffer has been moved to
+    ;; a separate frame (via user's `display-buffer-alist' or by hand),
+    ;; `display-buffer-reuse-window' finds it there and would otherwise
+    ;; raise+focus that frame on every auto-follow tick, defeating the
+    ;; user's attempt to edit the script file.
+    (display-buffer (current-buffer)
+                    '((display-buffer-reuse-window
+                       display-buffer-below-selected)
+                      (inhibit-switch-frame . t)))))
+
+(defun hol-lsp-show-goal-state ()
+  "Ask the HOL LSP server for the goal-state at point.
+Sends the custom `$/hol/goalState' request and renders the response
+in a *HOL Goals* buffer.  Bound to \\<hol-map>\\[hol-lsp-show-goal-state]
+by default via `hol-map'."
+  (interactive)
+  (unless (hol-lsp--server)
+    (user-error "No LSP server for this buffer"))
+  (let ((result (hol-lsp--query)))
+    (if result (hol-lsp--render-goals result)
+      (message "No goal state at point"))))
+
+(defcustom hol-lsp-goals-follow-cursor nil
+  "If non-nil, the *HOL Goals* buffer auto-refreshes on cursor
+movement in HOL LSP buffers, after `hol-lsp-goals-follow-delay'
+seconds of idle time."
+  :group 'hol :type 'boolean)
+
+(defcustom hol-lsp-goals-follow-delay 0.15
+  "Idle-time delay (seconds) before an auto-follow refresh fires."
+  :group 'hol :type 'number)
+
+(defvar hol-lsp--goals-timer nil
+  "Pending idle timer for auto-following goals, or nil.")
+
+(defun hol-lsp--goals-tick (buf)
+  "Timer callback: query BUF's goal-state (cancel-on-input) and
+render on success."
+  (setq hol-lsp--goals-timer nil)
+  (when (buffer-live-p buf)
+    (with-current-buffer buf
+      (let ((result (hol-lsp--query t)))
+        (when result (hol-lsp--render-goals result))))))
+
+(defun hol-lsp--goals-schedule ()
+  "Post-command hook: reschedule the auto-follow refresh if
+`hol-lsp-goals-follow-cursor' is on and we're in an eglot-managed
+HOL buffer.  Cancels any pending timer so rapid cursor movement
+produces one query, not many.
+
+Installed as a GLOBAL `post-command-hook' so toggling the custom
+takes effect immediately regardless of whether `hol-lsp-enable' was
+called for the current buffer.  Bails out cheaply in non-HOL
+buffers via the `memq' / server check."
+  (when (and hol-lsp-goals-follow-cursor
+             (memq major-mode hol-lsp-server-modes)
+             (hol-lsp--server))
+    (when hol-lsp--goals-timer (cancel-timer hol-lsp--goals-timer))
+    (setq hol-lsp--goals-timer
+          (run-with-idle-timer hol-lsp-goals-follow-delay nil
+                               #'hol-lsp--goals-tick (current-buffer)))))
+
+(add-hook 'post-command-hook #'hol-lsp--goals-schedule)

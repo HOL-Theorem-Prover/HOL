@@ -436,7 +436,15 @@ fun split_ident mixedset octalok s locn qb = let
       in
         if 0 < sz then
           let
-            val (locn1,locn2) = locn.split_at (length cpts - UTF8.size sfx) locn
+            (* `locn` uses byte-based columns (from base_lexer.getLoc);
+               split it by byte count, not codepoint count.  For a
+               lexeme like ``∀p`` (∀ = 3 bytes, p = 1 byte), the old
+               codepoint-based split gave ∀ a 1-byte Locn (`(c, c)`)
+               and p a 3-byte Locn — visible in LSP hovers as a
+               binder-symbol Locn that doesn't cover the symbol's
+               own bytes. *)
+            val prefix_bytes = String.size s - String.size sfx
+            val (locn1,locn2) = locn.split_at prefix_bytes locn
           in
             pushstring (sfx, locn2);
             (tok, locn1)
