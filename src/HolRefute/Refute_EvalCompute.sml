@@ -501,14 +501,33 @@ structure Refute_EvalCompute = struct
   and random_function_with draw custom dom rng_ty size state =
     let
       val entry = random_entry_with draw custom
+      (* Size decays geometrically across every function boundary: the
+         default, each domain point, and each range value are all drawn
+         at half this size.  For itree, whose [own_floor] is 0, this makes
+         the decayed size a hard budget ([random_entry_with]'s [budget =
+         Int.max (floor, bounded_size size)] collapses to [bounded_size
+         size]), so a [Vis] shrinks its budget on every crossing and
+         cannot diverge -- [size div 2 < size] for every [size >= 1], and
+         the recursive constructor's weight is 0 at size 0.  A family
+         member whose own floor survives the decay (floor >= 1 at decayed
+         size 0) would not shrink to 0 this way; termination for such a
+         family would be almost-sure, not bounded.  [size div 2] and
+         [Int.max (0, size - 1)] agree at sizes 0, 1 and 2, so this only
+         changes the stream from size 3 up; the faster decay cuts the
+         expected node count of the branching process this drives by
+         several orders of magnitude at the default size (10), where a
+         decay of 1 leaves it supercritical enough to routinely exhaust
+         the search deadline instead of terminating.  The point count
+         itself stays keyed to the pre-decay [size]. *)
+      val decayed = size div 2
       val variable = Term.mk_var ("x", dom)
       val (default, after_default) =
-        entry (Refute_Gen.spec_of rng_ty) size state
+        entry (Refute_Gen.spec_of rng_ty) decayed state
       fun draw_points 0 current = ([], current)
         | draw_points count current =
             let
               val (point, next) =
-                entry (Refute_Gen.spec_of dom) size current
+                entry (Refute_Gen.spec_of dom) decayed current
               val (points, final) = draw_points (count - 1) next
             in
               (point :: points, final)
@@ -520,7 +539,7 @@ structure Refute_EvalCompute = struct
       fun add (point, (base, current)) =
         let
           val (value, next) =
-            entry (Refute_Gen.spec_of rng_ty) size current
+            entry (Refute_Gen.spec_of rng_ty) decayed current
         in
           (Term.mk_comb (combinSyntax.mk_update (point, value), base), next)
         end
@@ -717,9 +736,17 @@ structure Refute_EvalCompute = struct
               | Refute_Gen.GenNum _ => ()
               | Refute_Gen.GenFun (dom, rng) =>
                   (validate_type dom; validate_type rng)
-              | Refute_Gen.GenDatatype {constrs, ...} =>
-                  List.app validate_type
-                    (List.concat (List.map #2 constrs))
+              | Refute_Gen.GenDatatype {constrs, family, ...} =>
+                  (ground_strategy strategy
+                     {exhaustive = fn () =>
+                        if Refute_Gen.datatype_recursive_under_function
+                          family constrs
+                        then add (no_generator_reason ty
+                          "datatype is recursive under a function type")
+                        else (),
+                      random = fn _ => ()};
+                   List.app validate_type
+                     (List.concat (List.map #2 constrs)))
               | Refute_Gen.GenCustom (_, {enumerate, random}) =>
                   ground_strategy strategy
                     {exhaustive = fn () =>

@@ -868,9 +868,21 @@ Counterexample search is bounded and incomplete.  In particular:
 * bounded-quantifier rewriting does not support offset intervals such as
   `lo <= n /\ n < hi`;
 * ordinary QC requires executable terms and generators.  Unrestricted
-  quantifiers over infinite types, choice, unsupported constants, and
-  recursive datatypes beneath function types may make a substrate
-  inapplicable;
+  quantifiers over infinite types, choice, and unsupported constants may
+  make a substrate inapplicable.  A datatype recursive beneath a function
+  type (e.g. an interaction tree's `Vis`) cannot be exhaustively
+  enumerated and so is refused under exhaustive QC and narrowing; Cv is
+  also inapplicable to it, though for a broader, pre-existing reason
+  (nested recursive datatype generators in general, not this shape
+  specifically).  Only native and compute random QC can still test such
+  a type, by drawing a random function value on demand, mirroring
+  Isabelle's `random_fun_lift`; when a value of the type is instead
+  pinned by an equation the search cannot evaluate, the search prunes
+  that case rather than generating it.  The random function generator
+  also samples its points eagerly, so its cost grows with the number of
+  function-typed values it must produce even though the depth of any one
+  value stays bounded; Isabelle's version is lazy and pays only for
+  points the test actually reaches;
 * smart generators support positive first-order modes.  Higher-order
   relation parameters, negative modes, and general function flattening
   fall back to guards rather than becoming errors;

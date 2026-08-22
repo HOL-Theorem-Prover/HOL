@@ -238,6 +238,14 @@ structure Refute_Gen = struct
       visit false ty
     end
 
+  (* Shared by every consumer that must refuse a datatype recursive under
+     a function type (e.g. itree's [Vis]): [Refute_Extract.validate_type],
+     [Refute_EvalCompute.validation_reasons], and [Refute_QC.
+     genspec_available]. *)
+  fun datatype_recursive_under_function family constrs =
+    List.exists (fn (_, args) =>
+      List.exists (recursive_under_function family) args) constrs
+
   fun result_type tm = #2 (boolSyntax.strip_fun (Term.type_of tm))
 
   (* Shared by [abstract_generator] (one exact type, validated eagerly) and
@@ -499,16 +507,15 @@ structure Refute_Gen = struct
               val floors = family_floors family
               val recursive = List.map (fn (_, args) =>
                 List.map (type_mentions family) args) constrs
-              val _ =
-                if List.exists (fn (_, args) =>
-                  List.exists (recursive_under_function family) args) constrs
-                then
-                  raise NoGenerator
-                    (ty,
-                     "Creation of exhaustive generators failed because " ^
-                     "the datatype is recursive under a function type")
-                else
-                  ()
+              (* A constructor recursive under a function type (e.g. an
+                 interaction tree's [Vis]) is left to build here: exhaustive
+                 enumeration of it is genuinely impossible, but the random
+                 strategy can still lift a random function generator.  The
+                 refusal for the exhaustive case belongs to the
+                 strategy-aware consumer -- [Refute_Extract.validate_type]
+                 and [Refute_EvalCompute.validation_reasons] -- not here:
+                 [spec_of] is strategy-agnostic and shared by every backend
+                 through one cache. *)
               val min_size = List.map (fn (_, args) =>
                 List.map (fn arg_ty =>
                   if type_mentions family arg_ty then
@@ -559,6 +566,39 @@ structure Refute_Gen = struct
         in
           spec
         end))
+    end
+
+  (* Transitive form of [datatype_recursive_under_function]: a container
+     (e.g. [:itree list]) is not itself recursive under a function type,
+     but its element type may be, and that element's generator can never
+     run either.  Walks constructor argument types outward through
+     [spec_of], answering [true] as soon as any reachable datatype is
+     recursive under a function type in its own family.  A cycle (e.g.
+     mutually recursive datatypes) terminates via the seen-set, exactly as
+     [Refute_Extract.validate_type] terminates its own transitive walk.
+     Deliberately does not descend through [GenFun]: [spec_of] on a
+     function type never inspects its domain or range (a function-typed
+     constructor argument gets [own_floor = 0] with no recursion into
+     either side), so a type such as [:num -> itree] was already usable
+     by the random strategy before this helper existed, and descending
+     into it here would strip that pre-existing fallback rather than
+     restore anything.  Does not itself catch [NoGenerator]: a deep
+     failure propagates to the caller exactly as an un-transitive lookup
+     would, and [genspec_available] already converts it to [false]. *)
+  fun type_recursive_under_function ty =
+    let
+      val seen = ref ([] : hol_type list)
+      fun visit ty =
+        if Util.member_type ty (!seen) then false
+        else
+          (seen := ty :: !seen;
+           case spec_of ty of
+               GenDatatype {constrs, family, ...} =>
+                 datatype_recursive_under_function family constrs orelse
+                 List.exists (fn (_, args) => List.exists visit args) constrs
+             | _ => false)
+    in
+      visit ty
     end
 
   fun abstract_generator {ty, constructors, pred} =

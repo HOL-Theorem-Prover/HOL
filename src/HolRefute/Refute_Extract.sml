@@ -2760,9 +2760,20 @@ structure Refute_Extract = struct
               else ()
           in
             case Refute_Gen.spec_of ty of
-              Refute_Gen.GenDatatype {constrs, ...} =>
-                List.app (validate_type root)
-                  (List.concat (List.map #2 constrs))
+              Refute_Gen.GenDatatype {constrs, family, ...} =>
+                ((case strategy of
+                    Exhaustive =>
+                      if Refute_Gen.datatype_recursive_under_function
+                        family constrs
+                      then
+                        reject ("Creation of exhaustive generators failed " ^
+                          "because the datatype is recursive under a " ^
+                          "function type: " ^ type_name ty)
+                      else ()
+                  | Random _ => ()
+                  | Narrowing => ());
+                 List.app (validate_type root)
+                   (List.concat (List.map #2 constrs)))
             | Refute_Gen.GenFun (domain, range) =>
                 (validate_type root domain; validate_type root range)
             | Refute_Gen.GenCustom _ =>
@@ -3127,13 +3138,31 @@ structure Refute_Extract = struct
               SOME _ => points
             | NONE => "rev (#1 points_result)"
         in
+          (* [decayed_size] implements the function-boundary decay: the
+             default, every domain point, and every range value are drawn
+             at half the size.  For itree, whose floor ([floor_for]) is 0,
+             this makes the decayed size a hard budget (the wrapper's
+             [Int.max (floor, Int.max (0, size))] collapses to [size]), so
+             a [Vis] shrinks its budget on every crossing and cannot
+             diverge -- [size div 2 < size] for every [size >= 1], and the
+             recursive constructor's weight is 0 at size 0.  A family
+             member whose own floor survives the decay (floor >= 1 at
+             decayed size 0) would not shrink to 0 this way; termination
+             for such a family would be almost-sure, not bounded.
+             [size div 2] and [Int.max (0, size - 1)] agree at sizes 0, 1
+             and 2, so this only changes the stream from size 3 up; the
+             faster decay avoids the supercritical branching process a
+             decay of 1 leaves behind, which routinely exhausts the search
+             deadline instead of terminating.  The point count keeps using
+             the pre-decay [size]. *)
           "let\n" ^
+          "  val decayed_size = size div 2\n" ^
           "  val (default_generated, after_default) =\n" ^
-          "    " ^ range_random ^ " size state\n" ^
+          "    " ^ range_random ^ " decayed_size state\n" ^
           "  fun draw_points 0 current points = (points, current)\n" ^
           "    | draw_points count current points =\n" ^
           "      let val (point, next) = " ^ domain_random ^
-          " size current\n" ^
+          " decayed_size current\n" ^
           "      in draw_points (count - 1) next (point :: points) end\n" ^
           (case enum of
              SOME _ => "  val points_result = ([], after_default)\n"
@@ -3148,7 +3177,7 @@ structure Refute_Extract = struct
           "    | values ((point, point_term) :: rest) current graph " ^
           "updates =\n" ^
           "      let val ((value, value_term), next) =\n" ^
-          "            " ^ range_random ^ " size current\n" ^
+          "            " ^ range_random ^ " decayed_size current\n" ^
           "          val graph' = fn x => if " ^ equality ^
           " x point then value else graph x\n" ^
           "      in values rest next graph'\n" ^

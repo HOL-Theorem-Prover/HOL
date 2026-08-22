@@ -11,8 +11,23 @@ structure Refute_QC = struct
   fun subtract_terms left right =
     List.filter (fn tm => not (member tm right)) left
 
+  (* A [Bind] fallback needs a generator that can actually run: plan
+     construction has no [strategy] in scope (it is strategy-agnostic by
+     the same design as [Refute_Gen.spec_of]), so a datatype recursive
+     under a function type -- or a container over one, e.g. [:itree
+     list] -- must answer [false] here exactly as it did before [spec_of]
+     stopped refusing it: exhaustive extraction still rejects the type by
+     name (transitively, into every constructor argument), and threading
+     a fallback into that plan would only turn the whole extraction's
+     refusal into a mid-search one.  [type_recursive_under_function] is
+     transitive for exactly this reason; the non-transitive predicate
+     answers only for [ty]'s own family and would leave a container's
+     [Bind] with a fallback that reaches a rejected element type. *)
   fun genspec_available ty =
-    ((ignore (Refute_Gen.spec_of ty); true)
+    ((case Refute_Gen.spec_of ty of
+          Refute_Gen.GenDatatype _ =>
+            not (Refute_Gen.type_recursive_under_function ty)
+        | _ => true)
      handle Refute_Gen.NoGenerator _ => false)
 
   fun guarded_gen variable continuation =

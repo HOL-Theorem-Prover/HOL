@@ -21387,15 +21387,33 @@ fun narrowing_stuck_existential_is_potential () =
    declaration, but interaction trees provide a loaded TypeBase family with
    the same recursive-under-function shape.  Pin both the family predicate
    and the public narrowing result so this cannot regress to a unit-only
-   helper test. *)
+   helper test.
+
+   [Refute_Gen.spec_of] itself no longer refuses this family (the random
+   strategy needs it to succeed there -- see the function-recursive
+   datatype pins below), so narrowing's own shape computation now runs one
+   level deeper before failing: it builds itree's [GenDatatype] and only
+   trips on [Vis]'s embedded function-type argument.  The exact offending
+   type and wording changed (from "datatype is recursive under a function
+   type", inherited from [Refute_Gen]'s old blanket refusal, to the
+   "finitization" wording below -- [Refute_Narrow.shape_of]'s own for the
+   unit-level check, [Refute_Extract.sml]'s "before finitization" for the
+   end-to-end one); the refusal itself -- narrowing cannot handle this
+   family, at any depth -- did not. *)
 fun narrowing_no_function_recursion_pin () =
   let
     val itree_ty = ``:(num, bool, num) itree$itree``
-    val reason = "datatype is recursive under a function type"
+    (* Two different code paths, two different wordings: [shape_of]'s own
+       refusal ([Refute_Narrow.sml]'s "function types require
+       finitization") versus native narrowing extraction's ([Refute_
+       Extract.sml]'s "... before finitization").  A bare "finitization"
+       matches both but is too loose; tighten each to its own message. *)
+    val shape_reason = "require finitization"
+    val end_to_end_reason = "before finitization"
     val shape_refused =
       (ignore (shape_of 2 itree_ty); false)
       handle Refute_Narrow.ShapeFailure (offending_ty, refusal) =>
-        String.isSubstring reason
+        String.isSubstring shape_reason
           (inapplicable_message offending_ty refusal)
     val config = default_config
       |> upd_substrate NativeSML
@@ -21405,7 +21423,7 @@ fun narrowing_no_function_recursion_pin () =
     val end_to_end =
       case outcome of
           Unknown reasons =>
-            List.exists (String.isSubstring reason) reasons
+            List.exists (String.isSubstring end_to_end_reason) reasons
         | _ => false
   in
     recursive_under_function [``:rg_rose``] ``:bool -> rg_rose`` andalso
@@ -21446,6 +21464,284 @@ fun run_narrowing_acceptance_needles () =
    without ever exploring their required list counterexamples. *)
 val _ =
   if selftest_level >= 2 then run_narrowing_acceptance_needles () else ()
+
+(* Random generator for a function-recursive datatype.
+   [Refute_Gen.datatype_spec] used to refuse a datatype recursive under a
+   function type (e.g. itree's [Vis]) unconditionally, for every strategy.
+   That refusal now lives only in the strategy-aware consumers
+   ([Refute_Extract.validate_type], [Refute_EvalCompute.validation_
+   reasons]): exhaustive, Cv and narrowing still refuse, but random lifts
+   [random_function]/[random_function_with] and proceeds, mirroring
+   Isabelle's [random_fun_lift].  Both decay the size budget
+   geometrically (halved, not decremented) on every function-boundary
+   crossing, so a [Vis] continuation that recurses back into itree
+   shrinks its budget on each crossing and terminates within
+   O(log [size]) crossings; see the comment on [random_function_with].
+   That bound holds because itree's [own_floor] is 0 -- a family member
+   whose floor survives the decay would only shrink toward that floor,
+   not toward 0. *)
+val fnrec_itree_ty = ``:(num, bool, num) itree$itree``
+val fnrec_reason = "recursive under a function type"
+
+fun fnrec_extraction_refusal () =
+  let
+    val t = Term.mk_var ("fnrec_t", fnrec_itree_ty)
+    val plan = Gen (t, Test boolSyntax.T)
+    val exhaustive_refused =
+      ((ignore (extract_tests default_config Exhaustive [plan]); false)
+       handle NotExtractable reasons =>
+         List.exists (String.isSubstring fnrec_reason) reasons)
+    val random_ok =
+      (ignore (extract_tests default_config (Random {seed = 1}) [plan]);
+       true)
+  in
+    exhaustive_refused andalso random_ok
+  end
+
+val _ = require_msg (check_result fnrec_extraction_refusal) (fn () =>
+  "native extraction lost the strategy-sensitive refusal for a " ^
+  "function-recursive datatype") (fn () => ()) ()
+
+fun fnrec_compute_refusal () =
+  let
+    val t = Term.mk_var ("fnrec_t2", fnrec_itree_ty)
+    val plan = Gen (t, Test boolSyntax.T)
+    val exhaustive_refused =
+      case Refute_EvalCompute.compile default_config Exhaustive
+        (Plans [plan]) of
+          Inapplicable reasons =>
+            List.exists (String.isSubstring fnrec_reason) reasons
+        | Compiled _ => false
+    val random_ok =
+      case Refute_EvalCompute.compile default_config (Random {seed = 1})
+        (Plans [plan]) of
+          Compiled _ => true
+        | Inapplicable _ => false
+  in
+    exhaustive_refused andalso random_ok
+  end
+
+val _ = require_msg (check_result fnrec_compute_refusal) (fn () =>
+  "compute validation lost the strategy-sensitive refusal for a " ^
+  "function-recursive datatype") (fn () => ()) ()
+
+(* The exhaustive backend tries every substrate (native, cv, compute).
+   Native and compute decline by naming the function recursion
+   ([fnrec_reason]); cv declines for an unrelated reason -- its
+   pre-existing nested-recursive-datatype check trips before [GenFun] is
+   ever reached (see [fnrec_stream_conformance]'s comment below).  Only
+   one match is required, so the aggregate reason still names the type
+   via native's and compute's contributions. *)
+fun fnrec_facade_exhaustive_refusal () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config)
+    ``!(t : (num, bool, num) itree$itree).
+        (t = itree$Ret 0) \/ (t <> itree$Ret 0)`` of
+      Unknown reasons => List.exists (String.isSubstring fnrec_reason) reasons
+    | _ => false
+
+val _ = require_msg
+  (check_result fnrec_facade_exhaustive_refusal) (fn () =>
+  "the exhaustive backend admitted a function-recursive datatype")
+  (fn () => ()) ()
+
+(* [Refute_QC.genspec_available] answers whether a [Bind]'s equality
+   optimization may generate its bound variable when the matched value
+   fails to evaluate.  For a function-recursive datatype it must answer
+   [false], restoring the pre-[spec_of]-relaxation answer exactly: plan
+   construction has no [strategy] in scope, so a generating fallback here
+   would carry itree into [plan_gen_types] and reject the whole
+   exhaustive extraction outright, even though this goal's [t] is bound
+   structurally from a closed value and the fallback is never taken.
+   The assumption's shape ([itree$Ret 5 = t], not [t = <var>]) means [t]
+   is never [Gen]-quantified directly, so [Refute_QC.compile_plan] takes
+   the [Bind] path here, not [fnrec_facade_exhaustive_refusal]'s direct
+   [Gen] refusal above.
+
+   The end-to-end exhaustive search over this goal is still [Unknown]:
+   completeness ([Refute_Core.instance_size_matters]) is decided from the
+   goal's free variables, not the compiled plan, and itree has no finite
+   enumeration regardless of how [t] is bound -- an orthogonal,
+   pre-existing limit this fix does not touch.  So this pin checks the
+   compiled [Bind]'s shape and admission directly rather than a full
+   search outcome.
+
+   The second leg repeats this for a container over the same element
+   type, [:itree list].  [:itree list]'s own family (list) is not
+   recursive under a function type -- only its element is -- so this
+   leg only passes once [genspec_available] walks transitively into
+   constructor arguments; the non-transitive predicate wrongly answers
+   [true] for the container, hands its [Bind] a generating fallback,
+   and that fallback's [:itree list] reaches [plan_gen_types],
+   [validate_type] and [validation_reasons], which then reject the
+   *whole* extraction over the embedded [itree]. *)
+fun fnrec_exhaustive_bind_restored () =
+  let
+    val goal = snd (boolSyntax.dest_forall
+      ``!(t : (num, bool, num) itree$itree).
+          (itree$Ret 5 = t) ==>
+          itree$itree_CASE t (\r:num. T) T
+            (\e:bool f:num->(num,bool,num)itree$itree. T)``)
+    val plan = compile_plan default_config goal
+    val fallback_absent =
+      case plan of
+          Bind (_, _, NONE, _) => true
+        | _ => false
+    val native_admits =
+      (ignore (extract_tests default_config Exhaustive [plan]); true)
+      handle NotExtractable _ => false
+    val compute_admits =
+      case Refute_EvalCompute.compile default_config Exhaustive
+        (Plans [plan]) of
+          Compiled _ => true
+        | Inapplicable _ => false
+
+    val list_goal = snd (boolSyntax.dest_forall
+      ``!(t : (num, bool, num) itree$itree list).
+          ([itree$Ret 5] = t) ==> (LENGTH t = LENGTH t)``)
+    val list_plan = compile_plan default_config list_goal
+    val list_fallback_absent =
+      case list_plan of
+          Bind (_, _, NONE, _) => true
+        | _ => false
+    val list_native_admits =
+      (ignore (extract_tests default_config Exhaustive [list_plan]); true)
+      handle NotExtractable _ => false
+    val list_compute_admits =
+      case Refute_EvalCompute.compile default_config Exhaustive
+        (Plans [list_plan]) of
+          Compiled _ => true
+        | Inapplicable _ => false
+  in
+    fallback_absent andalso native_admits andalso compute_admits andalso
+    list_fallback_absent andalso list_native_admits andalso
+    list_compute_admits
+  end
+
+val _ = require_msg
+  (check_result fnrec_exhaustive_bind_restored) (fn () =>
+  "a Bind fallback over a function-recursive datatype, or a container " ^
+  "over one, regressed an otherwise-admissible exhaustive extraction " ^
+  "to Inapplicable") (fn () => ()) ()
+
+val fnrec_false_goal =
+  ``!(t : (num, bool, num) itree$itree). t = itree$Ret 0``
+
+fun fnrec_random_genuine_pin () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.Random]) default_config)
+    fnrec_false_goal of
+      Counterexample ({certainty = Genuine, ...} :: _) => true
+    | _ => false
+
+val _ = require_msg (check_result fnrec_random_genuine_pin) (fn () =>
+  "random QC did not reach a Genuine counterexample over a function-" ^
+  "recursive datatype") (fn () => ()) ()
+
+(* A tautology that still forces a genuine draw and a genuine case split
+   on the drawn value (unlike a bare [t = t], which the equality optimizer
+   folds to [T] before any backend runs, and which would then trivially
+   report [NoCounterexample] without exercising the generator at all). *)
+val fnrec_true_goal =
+  ``!(t : (num, bool, num) itree$itree).
+      itree$itree_CASE t (\r:num. T) T
+        (\e:bool f:num->(num,bool,num)itree$itree. T)``
+
+fun fnrec_random_config () =
+  default_config
+    |> upd_size 2
+    |> upd_iterations 20
+    |> upd_seed (SOME 1)
+    |> upd_timeout 3.0
+    |> Refute.upd_search (Refute.Only [Refute.Random])
+
+(* Random sampling never licenses a total claim, so a true fact over a
+   function-recursive datatype can only end [Unknown] once the draw
+   budget is spent -- never [NoCounterexample].  After the
+   function-boundary decay, that budget is genuinely spent rather than
+   the deadline killing a runaway draw, so the [Unknown] must report
+   [Refute_QC]'s "random search exhausted" (a completed random schedule),
+   never [Refute_Core]'s "search timed out" (the global deadline), and
+   never the generator declining the type outright ([fnrec_reason]).  A
+   bare [_ => true] would accept either a hang or a silent revert to
+   refusing the type, since both also report [Unknown]. *)
+fun fnrec_random_never_no_counterexample () =
+  case refute (fnrec_random_config ()) fnrec_true_goal of
+      NoCounterexample => false
+    | Unknown reasons =>
+        List.exists (String.isSubstring "random search exhausted") reasons
+        andalso
+        not (List.exists (String.isSubstring "search timed out") reasons)
+        andalso
+        not (List.exists (String.isSubstring fnrec_reason) reasons)
+    | _ => false
+
+val _ = require_msg
+  (check_result fnrec_random_never_no_counterexample) (fn () =>
+  "random QC did not cleanly exhaust its budget over a function-" ^
+  "recursive datatype") (fn () => ()) ()
+
+(* ExpectNone twin: the same true fact must never satisfy [ExpectNone]
+   under random sampling, so [check_expect] raises the mismatch.  As
+   above, [format_outcome]'s embedded reasons ([check_expect]'s message
+   carries the full outcome) must show a genuinely exhausted budget, not
+   a timeout or a refusal. *)
+fun fnrec_random_expect_none_twin () =
+  ((ignore (refute
+      (upd_expect ExpectNone (fnrec_random_config ())) fnrec_true_goal);
+    false)
+   handle HOL_ERR error =>
+     let val message = Feedback.exn_to_string (HOL_ERR error)
+     in
+       Feedback.top_structure_of error = "Refute" andalso
+       Feedback.top_function_of error = "expect" andalso
+       String.isSubstring "random search exhausted" message andalso
+       not (String.isSubstring "search timed out" message) andalso
+       not (String.isSubstring fnrec_reason message)
+     end)
+
+val _ = require_msg
+  (check_result fnrec_random_expect_none_twin) (fn () =>
+  "random QC satisfied ExpectNone over a function-recursive datatype")
+  (fn () => ()) ()
+
+(* Ablated against the decay's rate, not against the earlier refusal
+   move.  At [size = 8] each candidate a [Vis] draw builds is
+   supercritical under a decay of 1 (mean offspring around 7, since
+   [P(Vis) = 8/10] against 9 range draws) but still terminates -- the
+   decay bounds depth, not breadth -- so a single candidate alone does
+   not distinguish the two decays.  2000 candidates at that size do: with
+   [size div 2] the whole schedule (sizes 1..8) measures well under a
+   second; with a decay of 1 the same schedule still has not finished
+   after 20 seconds.  The timeout below sits between those two, with
+   ample margin over the fast side and none available to the slow one,
+   so it must report a genuinely exhausted schedule, never the global
+   deadline.  Gated at level 2: 2000 candidates at size 8 is not level-1
+   cheap even on the fast side. *)
+fun fnrec_random_cost_config () =
+  default_config
+    |> upd_size 8
+    |> upd_iterations 2000
+    |> upd_seed (SOME 1)
+    |> upd_timeout 15.0
+    |> Refute.upd_search (Refute.Only [Refute.Random])
+
+fun fnrec_random_cost_pin () =
+  case refute (fnrec_random_cost_config ()) fnrec_true_goal of
+      Unknown reasons =>
+        List.exists (String.isSubstring "random search exhausted") reasons
+        andalso
+        not (List.exists (String.isSubstring "search timed out") reasons)
+    | _ => false
+
+val _ =
+  if selftest_level >= 2 then
+    require_msg (check_result fnrec_random_cost_pin) (fn () =>
+      "random QC over a function-recursive datatype at size 8 hit the " ^
+      "search deadline instead of exhausting its schedule -- the " ^
+      "function-boundary decay is not bounding cost")
+      (fn () => ()) ()
+  else ()
 
 val auto_ho_custom : custom_gen =
   {enumerate = SOME (fn _ =>
@@ -24447,7 +24743,30 @@ fun stream_conformance () =
          trying the next substrate.  There is no cross-substrate form of
          [finite_map_canonical_chain_reaches_the_report] above for the
          same reason: "compute" is the only substrate that can ever be
-         credited with an fmap candidate. *)
+         credited with an fmap candidate.
+
+         itree cannot join this list either, but no longer because it
+         hangs: [random_function_with]/[random_function] now decay the
+         size budget geometrically (halved) on every function-boundary
+         crossing, so a [Vis] continuation that recurses back into itree
+         strictly shrinks its budget each time it crosses -- the weight
+         [random_value_with]'s [GenDatatype] case gives [Vis] is exactly
+         the (decayed) budget, and that weight is 0 once the budget
+         reaches 0, so a draw is bounded to terminate within O(log
+         [size]) function-boundary crossings regardless of what the PRNG
+         returns.  (That bound relies on itree's own floor being 0; see
+         the comment on [random_function_with].)  itree stays excluded
+         from this list for the same reason fmap is: cv has no
+         function generator at all
+         ([Refute_EvalCv.sml] rejects [GenFun] as "function type in data
+         position"), and for itree the pre-existing nested-recursive
+         check trips even earlier, before [GenFun] is ever reached, so cv
+         is inapplicable for this type under Random exactly as it is
+         under Exhaustive.  [fnrec_stream_conformance] below pins
+         native/compute agreement at a size that exercises the function
+         boundary and states cv's scope limit explicitly, instead of
+         silently comparing compute's generator against itself under
+         cv's name. *)
 
     fun check seed (name, ty) =
       let
@@ -24468,6 +24787,53 @@ fun stream_conformance () =
       end
   in
     List.app (fn seed => List.app (check seed) types) [1, 2, 3]
+  end
+
+(* itree's cross-substrate candidate-stream equality, at [size = 2] --
+   large enough to actually exercise recursion through the function
+   boundary (a [Vis] draw at size 1 already decays to a size-0 range
+   draw, so size 2 is the smallest size that can nest two levels deep)
+   and, after the function-boundary decay, bounded to terminate within
+   O(log [size]) crossings regardless of what the PRNG returns (see the
+   comment on [stream_conformance]'s [types] list above).
+
+   Only the [compute]/[native] comparison below exercises two
+   independent generator implementations.  The [cv] leg does not:
+   [Refute_EvalCv.validate_supported] refuses itree before [GenFun] is
+   ever reached -- [Vis]'s [num -> itree] argument is flagged recursive
+   by [type_mentions] but is not itself a family member, so the
+   pre-existing "nested recursive datatype generator" check trips first
+   -- so [dump_cv_random_candidates] falls through to [dump_cv_fallback],
+   which replays compute's own [random_entry_with] with [rand_below]
+   routed through [cv_eval].  The [cv] comparison here therefore checks
+   compute against itself, with only its PRNG calls genuinely cv's; it
+   is not evidence that cv has a working function-recursive generator.
+   cv is inapplicable for a datatype recursive under a function type
+   under Random exactly as it is under Exhaustive, so the level-2
+   "every substrate yields the identical stream" guarantee covers native
+   and compute only for this shape. *)
+fun fnrec_stream_conformance () =
+  let
+    val ty = ``:(num, bool, num) itree$itree``
+    fun check seed =
+      let
+        val variable = Term.mk_var ("fnrec_stream", ty)
+        val plan = Gen (variable, Test boolSyntax.T)
+        val arguments =
+          {plan = plan, seed = IntInf.fromInt seed, size = 2, count = 5}
+        val compute = Refute_EvalCompute.dump_random_candidates arguments
+        val native = Refute_EvalSML.dump_native_random_candidates
+          Refute_Extract.extract_problem arguments
+        val cv = Refute_EvalCv.dump_cv_random_candidates arguments
+      in
+        if same_candidate_stream compute native andalso
+           same_candidate_stream compute cv
+        then ()
+        else raise Fail ("itree candidate stream disagreement at seed " ^
+          Int.toString seed)
+      end
+  in
+    List.app check [1, 2, 3]
   end
 
 val _ =
@@ -24502,6 +24868,11 @@ val _ =
      require_msg (check_result (fn () =>
        (stream_conformance (); true))) (fn () =>
        "candidate streams differed across substrates")
+       (fn () => ()) ();
+     tprint "Refute itree substrate candidate-stream conformance";
+     require_msg (check_result (fn () =>
+       (fnrec_stream_conformance (); true))) (fn () =>
+       "itree candidate streams differed across substrates")
        (fn () => ()) ())
   else ()
 
