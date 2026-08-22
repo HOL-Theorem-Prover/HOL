@@ -491,6 +491,7 @@ fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
      {coloured_info =
       (fn (s1,s2) => info (lrpad (infopfx ^ s1, s2 ^ " " ^ CLR_EOL))),
       red = red, green = green, bold = bold,
+      dirname = prettydir multitree,
       final_report = final_report})
   end
 

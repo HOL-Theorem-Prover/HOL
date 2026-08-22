@@ -135,6 +135,8 @@ val master_cline_nohmf =
    have already taken effect and original_dir is the directory
    Holmake will treat as its starting point. *)
 val original_dir = hmdir.curdir()
+(* so later curdir()s name themselves relative to here *)
+val _ = hmdir.set_invocation_dir original_dir
 val originally_in_src = is_src_dir original_dir
 
 (* Register a name->path mapping in holpathdb.  Idempotent re-registration

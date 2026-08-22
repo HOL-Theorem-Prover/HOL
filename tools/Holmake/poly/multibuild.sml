@@ -133,7 +133,8 @@ fun graphbuild optinfo g =
           ldir ++ safetag dir tag
         end
 
-    val (monitor, {bold,green,red,coloured_info = info,final_report}) =
+    val (monitor, {bold,green,red,coloured_info = info,dirname,
+                   final_report}) =
         MB_Monitor.new {info = info, warn = warn, genLogFile = genLF,
                         time_limit = time_limit,
                         keep_going = keep_going,
@@ -142,7 +143,7 @@ fun graphbuild optinfo g =
 
     fun dircomplete dir (good, bad) t =
         let
-          val pfx0 = bold ("Finished " ^ hmdir.pretty_dir dir)
+          val pfx0 = bold ("Finished " ^ dirname (hmdir.toAbsPath dir))
           val timetaken = "(" ^ Time.toString t ^ "s)"
           val pfx = if good > 0 orelse bad > 0 then
                       pfx0 ^ " [" ^
@@ -163,7 +164,8 @@ fun graphbuild optinfo g =
         else
           let
             fun foldthis (d,n,A) =
-                (diag (hmdir.pretty_dir d ^ " has " ^ Int.toString n ^
+                (diag (dirname (hmdir.toAbsPath d) ^ " has " ^
+                       Int.toString n ^
                        " targets to build");
                  Map.insert(A, d, {good = ref 0, bad = ref 0, tgt = n,
                                    goodthys = ref 0,

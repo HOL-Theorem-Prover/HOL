@@ -182,6 +182,15 @@ sig
     val fromPath : {origin: string, path : string} -> t
     val sort : t list -> t list
     val curdir : unit -> t
+    val set_invocation_dir : t -> unit
+      (* Fix the directory that curdir's relpath is taken relative to.
+         Called once, early, from Holmake's startup; without it a
+         relpath means "relative to the cwd at the time curdir was
+         called", which does not survive a chdir.  Never call this from
+         code that gets saved into a poly state: this file is also
+         loaded into bin/hol, and a baked-in invocation directory would
+         be read back stale from elsewhere.  Left unset, curdir behaves
+         as it did before the setter existed. *)
     val compare : t * t -> order
     val eqdir : t -> t -> bool
     val chdir : t -> unit
