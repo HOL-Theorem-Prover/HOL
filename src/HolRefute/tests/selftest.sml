@@ -491,9 +491,12 @@ val _ = require_msg (check_result (fn () =>
 
 val same_string_set : string list -> string list -> bool = Lib.set_eq
 
+(* [sorting] is no longer a direct parent: [finite_map] already ancestors
+   it (finite_mapScript.sml), so HOL4's minimal-parent computation folds
+   it in there instead once [finite_map] is itself a named ancestor. *)
 fun cv_ancestry_is_separate () =
   same_string_set (Theory.parents "refute")
-    ["real", "sorting", "words", "rat"] andalso
+    ["real", "words", "rat", "finite_map"] andalso
   same_string_set (Theory.parents "refute_cv") ["refute", "cv_std"] andalso
   not (Lib.mem "cv_std" (Theory.ancestry "refute"))
 
@@ -19762,6 +19765,255 @@ val _ = require_msg
   (check_result finite_map_narrowing_is_unreachable) (fn () =>
   "selecting Narrowing for an fmap goal did not report Unknown naming " ^
   "the extraction failure")
+  (fn () => ()) ()
+
+(* MF gives fmap its own typedef (is_fmap'/abs_fmap', refuteScript.sml's
+   Part 7) instead of degrading to Unknown, so a goal with a free fmap
+   variable over an infinite key type can reach a genuine kodkod verdict.
+   Ablating the typedef registration alone (making synthetic_fmap_typedef
+   unconditionally return NONE) does not make this particular pin fail,
+   though: a bare [FLOOKUP fm 0 = SOME 0] never mentions FUPDATE, FEMPTY,
+   FDOM or FAPPLY, so it is refuted by harvesting [FLOOKUP fm 0] itself as
+   an opaque atom, independent of whether fmap has a registered typedef.
+   The typedef is genuinely load-bearing for this route, just not
+   demonstrated by this goal; see finite_map_flookup_is_injective_by_
+   construction and finite_map_off_domain_apply_equality_is_total below,
+   both of which do fail under that same ablation.  Safety at this
+   infinite key type does not come from is_fmap' certifying its FINITE
+   disjunct True -- it cannot, over an infinite type, in a
+   positive-polarity sound problem -- but structurally: every value
+   kodkod ever assigns is a finite relation regardless of which disjunct
+   holds, so [abs_fmap' f] already denotes a genuine fmap for any [f] a
+   scope can produce.  The [unknown] escape's role is availability
+   (letting the search run at all here), not this pin's soundness.
+   [cert = NONE] is expected, not a defect: certainty here comes from the
+   encoding, never from a certificate (see CLAUDE.md/README). *)
+fun finite_map_model_finder_reaches_genuine () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
+    ``FLOOKUP (fm : num |-> num) 0 = SOME 0`` of
+      Counterexample ({certainty = Genuine, cert = NONE, ...} :: _) => true
+    | _ => false
+
+val _ = tprint "Refute finite-map model finder reaches a Genuine verdict"
+val _ = require_msg
+  (check_result finite_map_model_finder_reaches_genuine) (fn () =>
+  "an fmap goal over an infinite key type was not Genuine with cert = " ^
+  "NONE via the model finder")
+  (fn () => ()) ()
+
+(* ExpectNone twin: the same route also proves totality when the key type
+   is HOL-finite (bool), where is_fmap' never needs its FINITE-guarded
+   [unknown] escape.  A *true* finite-map fact is decided
+   [NoCounterexample] outright, not left [Unknown] by an adaptive window
+   running out, as it would be for an infinite key type
+   ([finite_map_default_adaptive_config_never_exhausts] above). *)
+fun finite_map_model_finder_expect_none_twin () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
+    ``FLOOKUP (fm : bool |-> bool) x = SOME v ==> x IN FDOM fm`` of
+      NoCounterexample => true
+    | _ => false
+
+val _ = tprint
+  "Refute finite-map model finder ExpectNone twin over a finite key type"
+val _ = require_msg
+  (check_result finite_map_model_finder_expect_none_twin) (fn () =>
+  "a true fmap fact over a finite key type was not decided " ^
+  "NoCounterexample by the model finder")
+  (fn () => ()) ()
+
+(* The model must print as a genuine [FEMPTY |+ ...] chain -- via
+   [fmap_atom_to_chain]'s [register_term_postprocessor] hook
+   (Refute_ModelFinder_Model.sml) -- not as raw [abs_fmap'] rep structure.
+   [strip_fupdate]/[is_fempty] decide this structurally, so the pin
+   survives a change to which witness kodkod happens to pick.
+   Cross-checking the rebuilt chain's own [FLOOKUP] against the
+   counterexample's own recorded eval shows the rewrite did not merely
+   look right: it denotes the same map the verdict was computed from. *)
+fun finite_map_model_finder_display_chain () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
+    ``FLOOKUP (fm : bool # bool |-> num) (T,T) = SOME 5`` of
+      Counterexample ({certainty = Genuine, bindings = [(_, value)],
+                        evals, ...} :: _) =>
+        let
+          val (base, _) = finite_mapSyntax.strip_fupdate value
+        in
+          finite_mapSyntax.is_fempty base andalso
+          (case List.find
+                 (fn (lhs, _) => finite_mapSyntax.is_flookup lhs) evals of
+               SOME (lhs, recorded) =>
+                 let val (_, key) = finite_mapSyntax.dest_flookup lhs
+                 in closed_eval_is
+                      (finite_mapSyntax.mk_flookup (value, key)) recorded
+                 end
+             | NONE => false)
+        end
+    | _ => false
+
+val _ = tprint "Refute finite-map model finder display is a |+ chain"
+val _ = require_msg
+  (check_result finite_map_model_finder_display_chain) (fn () =>
+  "an fmap model finder witness did not display as a FEMPTY |+ chain, " ^
+  "or the chain did not denote the recorded FLOOKUP value")
+  (fn () => ()) ()
+
+(* [fapply'_def]'s NONE case routes off-domain application through
+   [unknown], not [ARB]: an off-domain read is genuinely unconstrained by
+   any fmap axiom, so a goal whose truth value depends on what it reads
+   there must never be [NoCounterexample] -- that would be certifying a
+   fabricated equation, not an exhaustively checked one. *)
+fun finite_map_off_domain_apply_is_not_a_totality () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
+    ``(FEMPTY : bool |-> bool) ' T = ARB`` of
+      NoCounterexample => false
+    | _ => true
+
+val _ = tprint
+  "Refute finite-map off-domain apply is not falsely NoCounterexample"
+val _ = require_msg
+  (check_result finite_map_off_domain_apply_is_not_a_totality) (fn () =>
+  "an off-domain FAPPLY equated to ARB was NoCounterexample: unknown " ^
+  "is being resolved to a specific value rather than left unconstrained")
+  (fn () => ()) ()
+
+(* A genuinely true off-domain fact -- an instance of finite_mapTheory's
+   own [NOT_FDOM_FAPPLY_FEMPTY] -- stays [NoCounterexample]: both sides
+   reduce to the very same [unknown] occurrence (the same [fapply'_def]
+   NONE branch, off [FEMPTY] on both sides), so the verdict does not
+   depend on how [unknown] would be resolved, and the totality veto must
+   not fire merely because [unknown] occurs somewhere in the goal. *)
+fun finite_map_off_domain_apply_equality_is_total () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
+    ``!x. x NOTIN FDOM (fm : bool |-> bool) ==>
+          fm ' x = (FEMPTY : bool |-> bool) ' x`` of
+      NoCounterexample => true
+    | _ => false
+
+val _ = tprint
+  "Refute finite-map off-domain apply equality is still NoCounterexample"
+val _ = require_msg
+  (check_result finite_map_off_domain_apply_equality_is_total) (fn () =>
+  "an instance of NOT_FDOM_FAPPLY_FEMPTY was not decided " ^
+  "NoCounterexample despite both sides sharing the same unknown")
+  (fn () => ()) ()
+
+(* Same false totality claim, but with the off-domain key reached through
+   an [FUPDATE] chain rather than literal [FEMPTY], so the pin exercises
+   [fupdate'] alongside [fempty'] and [fapply'] and cannot pass merely by
+   fempty' being special-cased. *)
+fun finite_map_off_domain_apply_after_fupdate_is_not_a_totality () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
+    ``((FEMPTY : bool |-> bool) |+ (F,T)) ' T = ARB`` of
+      NoCounterexample => false
+    | _ => true
+
+val _ = tprint
+  ("Refute finite-map off-domain apply after FUPDATE is not falsely " ^
+   "NoCounterexample")
+val _ = require_msg
+  (check_result finite_map_off_domain_apply_after_fupdate_is_not_a_totality)
+  (fn () =>
+  "an off-domain FAPPLY past an FUPDATE chain equated to ARB was " ^
+  "NoCounterexample")
+  (fn () => ()) ()
+
+(* The same false totality claim, universally quantified over an
+   arbitrary off-domain fmap rather than one fixed literal: with
+   [fapply'_def]'s off-domain branch returning [ARB] instead of
+   [unknown], this shape would have been falsely certified, since every
+   off-domain read would equal [ARB] by definition. *)
+fun finite_map_off_domain_apply_universal_is_not_a_totality () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
+    ``!k. k NOTIN FDOM (fm : bool |-> bool) ==> fm ' k = ARB`` of
+      NoCounterexample => false
+    | _ => true
+
+val _ = tprint
+  ("Refute finite-map universal off-domain apply is not falsely " ^
+   "NoCounterexample")
+val _ = require_msg
+  (check_result finite_map_off_domain_apply_universal_is_not_a_totality)
+  (fn () =>
+  "a universally quantified off-domain FAPPLY equated to ARB was " ^
+  "NoCounterexample")
+  (fn () => ()) ()
+
+(* FLOOKUP must be injective on the abstract fmap carrier, or an instance
+   of finite_mapTheory's own [FLOOKUP_EXT] could be refuted Genuine
+   despite being a real theorem.  [synthetic_fmap_typedef]
+   (Refute_ModelFinder_HOL.sml) supplies [abs_fmap'_FLOOKUP]/
+   [FLOOKUP_abs_fmap'] (refuteScript.sml) as the typedef's inverse
+   axioms, the structurally correct thing for a typedef registration to
+   carry -- but at this (finite-key) instance the pin below passes even
+   with that list emptied out: the abstract carrier is already exactly
+   the represented subset of ['a -> 'b option] at these scopes, so
+   injectivity comes from that identification, not from the axiom list.
+   This pins the actual guarantee (behavior, not the mechanism that
+   happens to supply it here); see refuteScript.sml's Part 7 comment and
+   Refute_ModelFinder_HOL.sml's synthetic_fmap_typedef comment for where
+   the axioms are still expected to matter. *)
+fun finite_map_flookup_is_injective_by_construction () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
+    ``FLOOKUP (fm1 : bool |-> bool) = FLOOKUP fm2 ==> fm1 = fm2`` of
+      NoCounterexample => true
+    | _ => false
+
+val _ = tprint
+  "Refute finite-map FLOOKUP is injective on the abstract carrier"
+val _ = require_msg
+  (check_result finite_map_flookup_is_injective_by_construction) (fn () =>
+  "an instance of FLOOKUP_EXT was not decided NoCounterexample")
+  (fn () => ()) ()
+
+(* One pin per new [builtin_ersatz] row (Refute_ModelFinder_HOL.sml),
+   each a true fact whose proof genuinely goes through that row -- fdom'
+   is already covered above by [finite_map_model_finder_expect_none_twin]. *)
+fun finite_map_fempty_ersatz_is_sound () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
+    ``FDOM (FEMPTY : bool |-> bool) = {}`` of
+      NoCounterexample => true
+    | _ => false
+
+val _ = tprint "Refute finite-map fempty' ersatz row is sound"
+val _ = require_msg
+  (check_result finite_map_fempty_ersatz_is_sound) (fn () =>
+  "FDOM FEMPTY = {} was not decided NoCounterexample via the fempty' row")
+  (fn () => ()) ()
+
+fun finite_map_fupdate_ersatz_is_sound () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
+    ``FDOM ((fm : bool |-> bool) |+ (T,F)) = T INSERT FDOM fm`` of
+      NoCounterexample => true
+    | _ => false
+
+val _ = tprint "Refute finite-map fupdate' ersatz row is sound"
+val _ = require_msg
+  (check_result finite_map_fupdate_ersatz_is_sound) (fn () =>
+  "FDOM (fm |+ (T,F)) = T INSERT FDOM fm was not decided " ^
+  "NoCounterexample via the fupdate' row")
+  (fn () => ()) ()
+
+fun finite_map_fapply_ersatz_is_sound () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.ModelFinder]) default_config)
+    ``FLOOKUP (fm : bool |-> bool) x = SOME v ==> fm ' x = v`` of
+      NoCounterexample => true
+    | _ => false
+
+val _ = tprint "Refute finite-map fapply' ersatz row is sound on-domain"
+val _ = require_msg
+  (check_result finite_map_fapply_ersatz_is_sound) (fn () =>
+  "FLOOKUP fm x = SOME v ==> fm ' x = v was not decided " ^
+  "NoCounterexample via the fapply' row")
   (fn () => ()) ()
 
 val _ = tprint "Refute narrowing backend"

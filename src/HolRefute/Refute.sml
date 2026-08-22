@@ -49,6 +49,9 @@ structure Refute :> Refute = struct
      keeps them honest. *)
   val () = Refute_ModelFinder_Model.register_frac_type_rat ()
   val () = Refute_ModelFinder_Model.register_frac_type_real ()
+  (* fmap's model-finder typedef (Refute_ModelFinder_HOL.sml) is itself
+     unconditional, so its display is installed unconditionally too. *)
+  val () = Refute_ModelFinder_Model.register_fmap_display ()
   (* Quickcheck generator and compset fragment for :rat and :real,
      independent of the model-finder Frac registration above. *)
   val () = Refute_EvalRat.register ()

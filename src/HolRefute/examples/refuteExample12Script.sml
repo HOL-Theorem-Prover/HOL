@@ -53,3 +53,14 @@ Theorem finite_maps_need_not_map_zero_to_zero:
 Proof
   QUICKCHECK_TAC >> cheat
 QED
+
+(* The model finder has its own relational encoding for finite maps as
+   well, reached the same way as any other MODEL_REFUTE_TAC goal:
+   agreement at one key does not make two finite maps equal. *)
+
+Theorem two_finite_maps_agreeing_at_one_key_need_not_be_equal:
+  FLOOKUP (fm : bool |-> bool) T = FLOOKUP (fm' : bool |-> bool) T ==>
+  fm = fm'
+Proof
+  MODEL_REFUTE_TAC >> cheat
+QED

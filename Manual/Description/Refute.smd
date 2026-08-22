@@ -46,17 +46,19 @@ from Quickcheck: a finite sample never exhausts an infinite type, so
 exhaustive and random search alike report `Unknown`, however large the
 size or count.
 
-Finite maps (`:'a |-> 'b`) get the same asymmetry through a different
-mechanism: a `register_generator_family` registration built from
+Finite maps (`:'a |-> 'b`) get the same asymmetry from Quickcheck through a
+different mechanism: a `register_generator_family` registration built from
 `FEMPTY`/`FUPDATE` fires on demand at whatever concrete instance a goal
 needs, always `exhaustive = false`.  The generator lives only on the
 `Compute` substrate -- `NativeSML` and `Cv` each decline it by name and
 fall through under `Auto`, since fmap's `TypeBase` entry has no
 constructors of its own for either to build a native or a cv
 representation from -- and `Refute_Gen.enumerate` never fires for it
-either, so a closed fmap fact can be decided but a goal quantified over
-an fmap variable can never license `NoCounterexample`, the same
-guarantee `:rat`/`:real` already give.
+either, so on this route a closed fmap fact can be decided but a goal
+quantified over an fmap variable can never license `NoCounterexample`.
+The model finder reaches finite maps independently, through its own
+typedef encoding (see below), and can decide a quantified fmap goal
+outright when the key type is exhaustively covered by the chosen scope.
 
 Loading and running Refute leaves no Refute-created type, constant, theorem,
 or theory binding in the user's theory.  In particular, temporary
@@ -329,8 +331,8 @@ higher-order domains.  Partially known values are printed with `_` holes.
 The model finder translates the original polymorphic problem into a
 bounded relational formula.  It handles finite scopes, datatypes and
 codatatypes, functions, sets, inductive and coinductive predicates,
-typedefs, quotients, binary integers, machine words, and the registered
-`rat` and `real` fraction encodings, both on by default.  Its `Scope:`
+typedefs, quotients, binary integers, machine words, finite maps, and the
+registered `rat` and `real` fraction encodings, all on by default.  Its `Scope:`
 line records the exact finite interpretation.  Quickcheck reaches `:rat`
 and `:real` by a different, independent route: a built-in generator for
 each, plus a computeLib fragment that decides closed literals directly,
@@ -924,6 +926,19 @@ Counterexample search is bounded and incomplete.  In particular:
   exactly as restrictive on the liberal side of a search as on the
   sound side, so an exhausted search can no longer be trusted to mean
   no counterexample exists;
+* `:'a |-> 'b` (finite maps) get their own typedef, over representation
+  type `'a -> 'b option` rather than the kernel's own (recursive, and
+  not exactly representable at scope-search precision) `fmap_TY_DEF`.
+  Its FINITE-guarded `unknown` escape is availability, not a soundness
+  crutch: every value a scope ever assigns is already a finite relation
+  regardless of which disjunct holds, so a `Genuine` verdict at an
+  intrinsically infinite key type is exact.  Off-domain `FAPPLY` reads
+  `unknown` rather than an arbitrary value, so (as with `WFREC` above) a
+  goal whose truth depends on it loses `NoCounterexample` outright; and
+  the typedef's registration carries its own bijection theorems as
+  inverse axioms, the structurally correct thing for any typedef
+  registration to supply, so that no goal can rely on `FLOOKUP` failing
+  to be injective on the abstract carrier;
 * Hilbert choice (`min$@`) is otherwise an uninterpreted function; a
   predicate with no in-scope witness would read an arbitrary value off it,
   so the model finder inserts a guard at every syntactic occurrence and

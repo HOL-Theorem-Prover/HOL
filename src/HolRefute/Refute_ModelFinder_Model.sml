@@ -67,6 +67,10 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   (* Installed by default (see Refute.sml).  Idempotent, like
      [register_frac_type_rat]. *)
   val register_frac_type_real : unit -> unit
+  (* Installed by default (see Refute.sml).  Idempotent, like
+     [register_frac_type_rat]; unlike the frac registrations there is
+     only one fmap display, valid at every [:'a |-> 'b] instance. *)
+  val register_fmap_display : unit -> unit
 
   val term_for_rep :
     {scope : scope,
@@ -1516,6 +1520,94 @@ fun dest_display_fun term =
 fun make_display_fun domain_ty marker pairs =
   List.foldl (fn (pair, base) => make_update pair base)
     (combinSyntax.mk_K_1 (marker, domain_ty)) pairs
+
+(* fmap's synthetic rep is [key -> range option]
+   (synthetic_fmap_typedef, Refute_ModelFinder_HOL.sml), so a
+   reconstructed [abs_fmap' f] displays through [dest_display_fun]'s
+   generic update-chain parser exactly like any other reconstructed
+   function value.  The chain's base case must be safe to render as
+   [NONE]: either it already is the literal [NONE], or it is
+   [MFN.irrelevant_marker] -- a hole the reconstruction has already
+   certified as fillable with *any* well-typed value without changing
+   the verdict (Refute_ModelFinder_Names.sml), so [NONE] is one sound
+   choice among the ones that hole permits.  [MFN.unknown_marker] gets
+   no such license: unlike [DisplayIrrelevant], [DisplayUnknown] does
+   not promise every filling is safe, so treating it as [NONE] could
+   show a different map than the one certified -- decline instead.
+   The same reasoning applies per explicit point: a value is rendered
+   only when it is the literal [NONE] or [SOME v]; if any named point's
+   value is itself an opaque marker, the whole rewrite is declined
+   rather than guessing whether that point is present.  Kept points are
+   rendered via [pairs] in the order [dest_display_fun] returns them,
+   innermost first, so the outermost (highest-priority) update lands
+   last and wins ties exactly as it does in the rep chain -- making the
+   result denote the identical rep function, and hence (abs_fmap' being
+   a bijection on such reps) the identical fmap atom.  That relies on
+   each key occurring at most once: [binding] below drops a [NONE]
+   point rather than emitting an [FUPDATE] for it, which is only sound
+   when no later point re-adds that same key -- a duplicate key with a
+   [NONE] point after a [SOME v] one would otherwise silently keep the
+   stale [v] instead of the point that actually wins.  [pairs] is
+   therefore checked for a duplicate key first, and the whole rewrite
+   is declined (not guessed at) if one is found. *)
+fun has_duplicate_key pairs =
+  let
+    fun seen key = List.exists (fn key' => Term.aconv key key')
+  in
+    #1 (List.foldl
+      (fn ((key, _), (dup, prior)) =>
+         (dup orelse seen key prior, key :: prior))
+      (false, []) pairs)
+  end
+
+fun fmap_atom_to_chain term =
+  case HolKernel.strip_comb term of
+      (constructor, [rep]) =>
+        if MFH.raw_constructor_name constructor = "refute$abs_fmap'" then
+          (case Lib.total dest_display_fun rep of
+               SOME (marker, pairs) =>
+                 if Lib.can optionSyntax.dest_none marker orelse
+                    MFN.is_irrelevant_marker marker
+                 then
+                   let
+                     val (key_ty, option_ty) = Type.dom_rng (Term.type_of rep)
+                     val range_ty = optionSyntax.dest_option option_ty
+                     fun classify value =
+                       if Lib.can optionSyntax.dest_none value then SOME NONE
+                       else
+                         Option.map SOME (Lib.total optionSyntax.dest_some
+                           value)
+                     val classified =
+                       map (fn (key, value) => (key, classify value)) pairs
+                   in
+                     if has_duplicate_key pairs then term
+                     else if List.all (isSome o #2) classified then
+                       let
+                         fun binding (key, SOME (SOME v)) =
+                               SOME (pairSyntax.mk_pair (key, v))
+                           | binding (_, _) = NONE
+                         val bindings = List.mapPartial binding classified
+                       in
+                         finite_mapSyntax.list_mk_fupdate
+                           (finite_mapSyntax.mk_fempty (key_ty, range_ty),
+                            bindings)
+                       end
+                     else term
+                   end
+                 else term
+             | NONE => term)
+        else term
+    | _ => term
+  handle HOL_ERR _ => term
+
+(* fmap's typedef (synthetic_fmap_typedef, Refute_ModelFinder_HOL.sml)
+   is itself unconditional, valid at every instance, so unlike the frac
+   registrations there is no per-instance encoding to commit alongside
+   the display: [register_term_postprocessor] alone suffices. *)
+fun register_fmap_display () =
+  register_term_postprocessor
+    (finite_mapSyntax.mk_fmap_ty (Type.alpha, Type.beta))
+    fmap_atom_to_chain
 
 fun dest_literal_set term =
   if pred_setSyntax.is_empty term then SOME []

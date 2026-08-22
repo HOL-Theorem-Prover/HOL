@@ -1,6 +1,6 @@
 Theory refute
 Ancestors
-  real sorting words rat
+  real sorting words rat finite_map
 Libs
   EnumType
 
@@ -539,3 +539,121 @@ Definition eval_cfun_def:
 End
 
 Theorem eval_cfun_compute[compute] = eval_cfun_def
+
+(* Part 7: fmap's ersatz encoding for the model finder.
+
+   fmap (finite_mapScript.sml) is [new_type_definition] over
+   representation type 'a -> 'b + one, restricted by the inductively
+   defined is_fmap; is_fmap's own well-foundedness proof does not go
+   through automatically, so registering the genuine typedef leaves the
+   model finder to unroll it -- an iterative-depth search stacked on an
+   already large function-typed carrier, which a probed goal never
+   finishes under adaptive defaults.  FUPDATE/FEMPTY/FAPPLY/FDOM are
+   themselves [nocompute] and built directly from fmap_ABS/fmap_REP,
+   which -- introduced by [define_new_type_bijections], not a
+   [Definition] -- have no equation to unfold, so without a typedef
+   registration recognizing them the model finder would see them as
+   uninterpreted.
+
+   is_fmap'/abs_fmap' below give the model finder its own [fmap]
+   typedef, over representation type 'a -> 'b option instead: a plain
+   function type, already well supported for scope-search exactness
+   (Refute_ModelFinder_Scope.sml), unlike is_fmap's recursive one.
+   is_fmap' carries the same FINITE-guarded [unknown] escape as wf'_def
+   above, and for the same syntactic reason (FINITE is encoded against
+   'a's own type, not against the Kodkod scope), but the escape is not
+   what keeps a verdict at an intrinsically infinite key type (e.g. num)
+   safe: every value Kodkod ever assigns is a finite relation regardless
+   of which disjunct of is_fmap' holds, so [abs_fmap' f] already denotes
+   a genuine, finite-support fmap for any [f] a scope can produce, typedef
+   guard or not.  What the guard buys is availability, not safety:
+   dropping [unknown] would force the membership axiom [!a. is_fmap'
+   (FLOOKUP a)] to read [!a. FINITE {x | FLOOKUP a x <> NONE}] outright,
+   which the model finder cannot certify True over an infinite key type in
+   a positive-polarity sound problem, killing the search there instead of
+   leaving one running (mf_typedef_registration_backs_genuine_fmap_verdict,
+   selftest.sml).
+
+   abs_fmap' is Hilbert choice, so it is a real inverse of FLOOKUP only
+   where a preimage exists; the two theorems below say exactly that, and
+   are precisely what a genuine (non-synthetic) HOL typedef would give
+   [register_typedef] as its bijection theorem -- [FLOOKUP]/[abs_fmap']/
+   [is_fmap'] are all genuine constants at every instance the model finder
+   uses, unlike frac's [abs_frac]/[rep_frac], which [retype_constant]
+   turns into reserved variables with no proof obligation to discharge
+   (Refute_ModelFinder_HOL.sml).  [register_typedef] itself cannot accept
+   this typedef: it requires the supplied representation type to match
+   fmap's own kernel [fmap_TY_DEF] representation ['a -> 'b + one], and
+   this route deliberately uses the simpler ['a -> 'b option] instead (see
+   above).  [synthetic_fmap_typedef] (Refute_ModelFinder_HOL.sml) stays,
+   but now consumes these two theorems as the typedef's inverse axioms,
+   the same slot a validated typedef fills from its own bijection
+   theorem -- so a typo in either definition breaks the proof below at
+   build time rather than silently changing what the model finder
+   encodes.  This is the structurally correct thing to supply regardless
+   of whether any single goal can be shown to need it: every
+   finite-key-type FLOOKUP-injectivity pin tried so far
+   (finite_map_flookup_is_injective_by_construction, selftest.sml)
+   already passes with an empty inverse-axiom list too, because at those
+   scopes the abstract carrier is exactly the represented subset of
+   ['a -> 'b option] and injectivity comes from that identification, not
+   from this axiom -- ablating it is not currently a way to make that
+   pin fail. *)
+Definition is_fmap'_def:
+  is_fmap' (f : 'a -> 'b option) =
+    (FINITE {x | f x <> NONE} \/ unknown)
+End
+
+Definition abs_fmap'_def:
+  abs_fmap' (f : 'a -> 'b option) = (@fm : 'a |-> 'b. FLOOKUP fm = f)
+End
+
+Theorem abs_fmap'_FLOOKUP:
+  !fm. abs_fmap' (FLOOKUP fm) = fm
+Proof
+  simp [abs_fmap'_def, finite_mapTheory.FLOOKUP_EXT] >>
+  metis_tac [boolTheory.SELECT_AX]
+QED
+
+Theorem FLOOKUP_abs_fmap':
+  !f. FINITE {x | f x <> NONE} ==> FLOOKUP (abs_fmap' f) = f
+Proof
+  rpt strip_tac >>
+  simp [abs_fmap'_def] >>
+  `(\fm. FLOOKUP fm = f) (FUN_FMAP (THE o f) {x | f x <> NONE})` by
+    (fs [boolTheory.FUN_EQ_THM, finite_mapTheory.FLOOKUP_FUN_FMAP,
+         combinTheory.o_THM, pred_setTheory.GSPECIFICATION] >>
+     gen_tac >> Cases_on `f x` >> fs []) >>
+  metis_tac [boolTheory.SELECT_AX]
+QED
+
+(* The [FUPDATE/FEMPTY/FAPPLY/FDOM -> fupdate'/fempty'/fapply'/fdom']
+   ersatz rows (Refute_ModelFinder_HOL.sml) redirect fmap's primitives
+   through FLOOKUP -- registered as [is_fmap'/abs_fmap']'s rep -- and
+   combin$UPDATE/combin$K, both plain, already-unfolded definitions, so
+   no operation here ever reaches fmap_ABS/fmap_REP.  FLOOKUP itself gets
+   no row of its own: it is the registered rep, read directly by the
+   typedef machinery, not reached by unfolding.  FCARD, FRANGE and
+   SUBMAP -- checked, not just asserted -- reduce to these four (FCARD
+   and SUBMAP to FDOM/FAPPLY, FRANGE to FDOM/FAPPLY via a set
+   comprehension) by ordinary unfolding of their own [nocompute]
+   equations; further finite_map constants are expected to do the same
+   but have not all been checked, so treat this as a narrower claim than
+   "every other constant". *)
+Definition fupdate'_def:
+  fupdate' (fm : 'a |-> 'b) (kv : 'a # 'b) =
+    abs_fmap' ((FST kv =+ SOME (SND kv)) (FLOOKUP fm))
+End
+
+Definition fempty'_def:
+  fempty' = abs_fmap' (K NONE : 'a -> 'b option)
+End
+
+Definition fapply'_def:
+  fapply' (fm : 'a |-> 'b) k =
+    case FLOOKUP fm k of SOME v => v | NONE => unknown
+End
+
+Definition fdom'_def:
+  fdom' (fm : 'a |-> 'b) k = (FLOOKUP fm k <> NONE)
+End

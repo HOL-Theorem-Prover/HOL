@@ -93,8 +93,8 @@ repository.
   path (success, failure, timeout, interrupt); if safe cleanup is
   unavailable, report inapplicable instead.  `theory_tests/refuteCvClean*`
   check this.
-- Ancestry split: refuteTheory (parents: real, sorting, words, rat) must stay
-  cv-free; refute_cvTheory (parents: refute, cv_std) holds the cv
+- Ancestry split: refuteTheory (parents: real, words, rat, finite_map) must
+  stay cv-free; refute_cvTheory (parents: refute, cv_std) holds the cv
   translations.  Their separate `Ancestors` declarations enforce the split,
   and the selftest asserts the exact parent sets.
 

@@ -435,9 +435,9 @@ Model-finder surface
 
 The model finder supports native polymorphic scopes, monotonicity and smart
 finitization, specialization and boxing, binary integers, machine words,
-(co)inductive predicates, codatatypes, quotients, typedefs, value pinning,
-model formatting, and incremental multi-model search.  The principal options
-and their defaults are:
+(co)inductive predicates, codatatypes, quotients, typedefs, finite maps,
+value pinning, model formatting, and incremental multi-model search.  The
+principal options and their defaults are:
 
 | updater | default | meaning |
 | --- | --- | --- |
@@ -772,6 +772,44 @@ turning that disagreement into a spurious `Genuine` result -- see
 `pred_set$SUM_SET` (`= SUM_IMAGE I`) needs no row of its own: it is an
 ordinary defined constant, so the encoder constrains it by its harvested
 equation, and the equation's body reaches the `SUM_IMAGE` row.
+
+`:'a |-> 'b` (finite maps) also get a builtin-ersatz route rather than
+the genuine `fmap_TY_DEF` typedef: that typedef's own representation
+type is recursive and its well-foundedness proof does not run
+automatically, so unrolling it directly is the same dead end `WFREC`
+avoids above.  `refuteTheory`'s `is_fmap'`/`abs_fmap'` register fmap's
+own typedef instead, over representation type `'a -> 'b option` -- a
+plain function type the scope search already handles exactly.
+`is_fmap'` carries a `FINITE`-guarded `unknown` escape like `wf'` above,
+for the same syntactic reason, but unlike `wf'` the escape is not what
+makes a verdict safe at an intrinsically infinite key type: every value
+Kodkod ever assigns is already a finite relation regardless of which
+disjunct holds, so `abs_fmap' f` denotes a genuine finite map for any
+`f` a scope produces, typedef guard or not.  The escape's role is
+availability -- without it the membership axiom would have to state
+`FINITE` outright, which the search cannot certify over an infinite key
+type, killing the search there instead of leaving one running.
+`FUPDATE`/`FEMPTY`/`FAPPLY`/`FDOM` each get their own ersatz row
+(`fupdate'`/`fempty'`/`fapply'`/`fdom'`) built on `FLOOKUP` and
+`combin$UPDATE`/`combin$K`; `FAPPLY` off its finite map's domain reads
+`unknown` rather than an arbitrary value, so -- like `wfrec'` above -- a
+goal whose truth depends on an off-domain read loses `NoCounterexample`
+outright, not merely `Potential`.  `abs_fmap'` is Hilbert choice, so it
+is a genuine inverse of `FLOOKUP` only where a preimage exists;
+`synthetic_fmap_typedef` (`Refute_ModelFinder_HOL.sml`) supplies the two
+theorems saying exactly that as the typedef's inverse axioms, the
+structurally correct thing for a typedef registration to carry -- the
+same role a validated typedef's own bijection theorem fills -- even
+though at a finite key type the encoder's own identification of the
+abstract carrier with the represented subset of `'a -> 'b option`
+already makes `FLOOKUP` injective there without them; see
+`refuteScript.sml`'s Part 7 comment.  The witness-generated
+`FEMPTY |+ ...` display
+(`fmap_atom_to_chain`, `Refute_ModelFinder_Model.sml`) only fires when
+the underlying chain's base is literal `NONE` or the reconstruction's
+irrelevant-value marker; a chain bottoming out at the unknown-value
+marker, or containing a duplicate key, is shown as the raw `abs_fmap'`
+rep term instead of guessed at.
 
 Hilbert choice (`min$@`) is otherwise encoded as an uninterpreted function
 pinned only by `refuteTheory`'s `Eps_psimp`, which is vacuous once no

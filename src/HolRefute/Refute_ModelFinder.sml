@@ -834,7 +834,7 @@ fun run_instance deadline started (config : Refute_Core.config)
             (if weakened then
                ["formula was semantically weakened by whack"]
              else [])
-          else []
+          else ["model comes from the liberal, unsound-by-design problem"]
         fun discard () = if sound then discarded_sound_model := true else ()
       in
         case MFM.certify

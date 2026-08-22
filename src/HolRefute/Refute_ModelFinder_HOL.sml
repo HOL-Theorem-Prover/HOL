@@ -4164,6 +4164,75 @@ structure Refute_ModelFinder_HOL = struct
           pred = pred, inverse_axioms = [], univ = false}
       end
 
+  (* Retypes one of the fmap route's own constants (abs_fmap'/FLOOKUP/
+     is_fmap') to a specific key/range instance.  Unlike frac's
+     abs_frac/rep_frac (retype_frac_constant), all three are genuinely
+     polymorphic HOL constants whose generic type matches any such
+     instance by construction, so [Term.inst] alone always succeeds and
+     retype_constant's reserved-variable fallback -- needed there because
+     a registered carrier may have no such constant -- would be dead code
+     here. *)
+  fun retype_fmap_constant thy name ty =
+    let
+      val generic = Term.prim_mk_const {Thy = thy, Name = name}
+      val theta = Type.match_type (Term.type_of generic) ty
+    in
+      Term.inst theta generic
+    end
+
+  (* fmap gets its own synthetic typedef, unconditionally -- unlike frac
+     it needs no opt-in registration call, matching how fmap's QC
+     generator family (Refute.sml) is also unconditional.  [rty] is
+     'a -> 'b option, a plain function type rather than fmap's own
+     recursive [is_fmap] representation; see refuteScript.sml's
+     is_fmap'/abs_fmap' comment for why.  This branch runs before
+     harvesting is ever attempted for [fmap]: [typedef_for_type] returns
+     [SOME] here whenever the registry has no entry, so [is_typedef]
+     is already true and harvest_typedef_unlocked's own
+     [if is_typedef ty then true else ...] short-circuits, never
+     registering fmap's real, harvest-eligible but far slower
+     is_fmap/fmap_ABS/fmap_REP typedef instead.
+
+     Unlike synthetic_frac_typedef, [inverse_axioms] here is not empty:
+     abs_fmap'_FLOOKUP/FLOOKUP_abs_fmap' (refuteScript.sml) are proved HOL
+     theorems, instantiated to this instance and supplied the same slot a
+     validated typedef fills from its own bijection theorem
+     (register_typedef_unlocked above), rather than left empty as
+     synthetic_frac_typedef's are.  This is the structurally correct
+     thing to supply -- a genuine typedef's registration always carries
+     its bijection law -- even though manually emptying this list still
+     leaves every finite-key-type FLOOKUP-injectivity pin tried so far
+     (finite_map_flookup_is_injective_by_construction, selftest.sml)
+     passing: at those scopes the abstract carrier is already exactly
+     the represented subset of ['a -> 'b option], so FLOOKUP's
+     injectivity there comes from that identification, not from this
+     axiom list.  See refuteScript.sml's Part 7 comment for the same
+     point stated where the theorems are proved. *)
+  fun synthetic_fmap_typedef ty =
+    case Lib.total Type.dest_thy_type ty of
+        SOME {Thy = "finite_map", Tyop = "fmap", Args = [key, range]} =>
+          let
+            val option_ty = Type.mk_thy_type
+              {Thy = "option", Tyop = "option", Args = [range]}
+            val rty = Type.-->(key, option_ty)
+            val abs = retype_fmap_constant "refute" "abs_fmap'"
+              (Type.-->(rty, ty))
+            val rep = retype_fmap_constant "finite_map" "FLOOKUP"
+              (Type.-->(ty, rty))
+            val pred = retype_fmap_constant "refute" "is_fmap'"
+              (Type.-->(rty, Type.bool))
+            val theta = Type.match_type
+              (Term.type_of (Term.prim_mk_const
+                {Thy = "refute", Name = "abs_fmap'"})) (Type.-->(rty, ty))
+            val inverse_axioms =
+              [Term.inst theta (Thm.concl refuteTheory.abs_fmap'_FLOOKUP),
+               Term.inst theta (Thm.concl refuteTheory.FLOOKUP_abs_fmap')]
+          in
+            SOME {ty = ty, rty = rty, abs = abs, rep = rep, pred = pred,
+              inverse_axioms = inverse_axioms, univ = false}
+          end
+      | _ => NONE
+
   fun typedef_for_type ty =
     let
       val operator = type_operator_of ty
@@ -4172,7 +4241,10 @@ structure Refute_ModelFinder_HOL = struct
         (!typedef_registry)
     in
       case info of
-          NONE => synthetic_frac_typedef ty
+          NONE =>
+            (case synthetic_frac_typedef ty of
+                 SOME t => SOME t
+               | NONE => synthetic_fmap_typedef ty)
         | SOME {ty = registered, rty, abs, rep, pred, inverse_axioms,
                 univ} =>
             let val theta = Type.match_type registered ty
@@ -4807,7 +4879,25 @@ structure Refute_ModelFinder_HOL = struct
         none, and raw_standard_props (above) then falls through to its
         raw WFREC-containing equation, which this row does reach. *)
      {original = {Thy = "relation", Name = "WFREC"},
-      replacement = {Thy = "refute", Name = "wfrec'"}}]
+      replacement = {Thy = "refute", Name = "wfrec'"}},
+     (* FUPDATE/FEMPTY/FAPPLY/FDOM are [nocompute] and built directly
+        from fmap_ABS/fmap_REP, which have no unfolding equation (see
+        refuteScript.sml's Part 7 comment); these rows redirect them to
+        the ersatz bodies built on FLOOKUP, registered as fmap's
+        synthetic rep (synthetic_fmap_typedef above) rather than reached
+        by a row of its own.  FCARD, FRANGE and SUBMAP reach these four,
+        or the CARD row, by ordinary unfolding (checked, not just
+        asserted -- see refuteScript.sml's Part 7 comment); further
+        finite_map constants are expected to do the same but have not
+        all been checked. *)
+     {original = {Thy = "finite_map", Name = "FUPDATE"},
+      replacement = {Thy = "refute", Name = "fupdate'"}},
+     {original = {Thy = "finite_map", Name = "FEMPTY"},
+      replacement = {Thy = "refute", Name = "fempty'"}},
+     {original = {Thy = "finite_map", Name = "FAPPLY"},
+      replacement = {Thy = "refute", Name = "fapply'"}},
+     {original = {Thy = "finite_map", Name = "FDOM"},
+      replacement = {Thy = "refute", Name = "fdom'"}}]
 
   fun register_ersatz replacement =
     let
