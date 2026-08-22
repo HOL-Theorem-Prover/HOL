@@ -71,4 +71,5 @@ on by the provided tactics.
 
 [`bossLib.by`](#bossLib.by),
 [`Parse.parse_in_context`](#Parse.parse_in_context),
-[`Tactic.SUFF_TAC`](#Tactic.SUFF_TAC)
+[`bossLib.suff`](#bossLib.suff),
+[`Tactic.SUFF_TAC`](#Tactic.SUFF_TAC).
