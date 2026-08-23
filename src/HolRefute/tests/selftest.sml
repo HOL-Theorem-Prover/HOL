@@ -13433,6 +13433,7 @@ fun config_surface_snapshot () =
        "smart_generators = true\n",
        "optimise_equality = true\n",
        "reorder_premises = true\n",
+       "use_subtype = false\n",
        "mf.card = [NONE => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]\n",
        "mf.card_mode = IterativeDeepening\n",
        "mf.max = [NONE => [~1]]\n",
@@ -14018,7 +14019,7 @@ fun model_finder_naming_is_wired () =
     val reserved = Term.mk_var ("refute$user", ``:bool``)
     val instance : instance =
       {original = reserved, goal = reserved, qc_gate = NONE,
-       evals = [reserved], card = 0, size_matters = false}
+       evals = [reserved], card = 0, size_matters = false, transport = []}
     val (renamed, evals) =
       Refute_ModelFinder.prepare_instance_input instance
   in
@@ -14098,11 +14099,11 @@ val _ = require_msg
 
 val ceiling_executable_instance : instance =
   {original = ``T``, goal = ``T``, qc_gate = NONE, evals = [], card = 1,
-   size_matters = false}
+   size_matters = false, transport = []}
 
 val ceiling_gated_instance : instance =
   {original = ``T``, goal = ``T``, qc_gate = SOME ["stub gate"],
-   evals = [], card = 2, size_matters = false}
+   evals = [], card = 2, size_matters = false, transport = []}
 
 fun fixed_ceiling certainty : certainty_ceiling =
   fn _ => fn _ => certainty
@@ -18276,6 +18277,320 @@ val _ = require_msg (check_result instantiate_mixed_some_and_none) (fn () =>
   "for the variable it names")
   (fn () => ()) ()
 
+val _ = tprint "Refute rep->abs transport for typedefs (upd_use_subtype)"
+
+fun transport_default_is_off () = not (#use_subtype default_qc_config)
+
+val _ = require_msg (check_result transport_default_is_off) (fn () =>
+  "the default configuration turned on use_subtype transport")
+  (fn () => ()) ()
+
+fun transport_qc_only cfg =
+  cfg |> upd_timeout 10.0 |> Refute.upd_search Refute.QuickcheckBackends
+
+(* [zoo_three]'s representation predicate is [\n. n < 3]: the guarded
+   representation space {0, 1, 2} is small, and a [FixedBound] size of 5
+   reaches every one of its values, so every genuine witness is found.
+   Finding every witness is not the same as proving there is none: the
+   generator ranges over all of [:num] and does not know the guard
+   bounds it, so a true transported goal reports exhaustion only when
+   its body collapses to a ground truth under normalization -- see
+   [transport_filter_load_bearing] and [transport_twin_diverges]. *)
+fun transport_small cfg = transport_qc_only cfg |> upd_size 5
+
+val zoo_three_ne_2 = ``!x : zoo_three. zoo_three_rep x <> 2``
+
+(* Criterion 1's baseline: unreachable without the flag.  [zoo_three]
+   has no generator of its own, so QC alone (the model finder is
+   excluded by [transport_qc_only]) can only report [Unknown]. *)
+fun transport_unreachable_without_flag () =
+  case Refute.refute (transport_small default_config) zoo_three_ne_2 of
+      Unknown reasons =>
+        List.exists (String.isSubstring "no TypeBase information") reasons
+    | _ => false
+
+val _ = require_msg (check_result transport_unreachable_without_flag)
+  (fn () => "a typedef goal reported something other than the expected " ^
+    "Unknown with use_subtype false")
+  (fn () => ()) ()
+
+(* With the flag on, the only representation value in {0, 1, 2} that
+   falsifies the goal is 2, so any genuine hit must report exactly
+   [x = zoo_three_abs 2] -- deterministic regardless of which strategy
+   finds it first.  The binding also carries criterion 5: the report
+   names the user's own variable [x] at the abstract type, not [r]. *)
+fun transport_reaches_genuine () =
+  let
+    val config = transport_small (upd_use_subtype true default_config)
+  in
+    case Refute.refute config zoo_three_ne_2 of
+        Counterexample ({certainty = Genuine, bindings = [(x, value)], ...}
+            :: _) =>
+          #1 (Term.dest_var x) = "x" andalso
+          Type.compare (Term.type_of x, ``:zoo_three``) = EQUAL andalso
+          Term.aconv value ``zoo_three_abs 2``
+      | _ => false
+  end
+
+val _ = require_msg (check_result transport_reaches_genuine) (fn () =>
+  "use_subtype true did not reach the genuine transported counterexample, " ^
+  "or misreported its binding")
+  (fn () => ()) ()
+
+(* [Refute_QC_Narrow] compiles a PNF formula rather than a test plan, so
+   it consumes its own copy of the goal instead of the plan the other
+   strategies share; the transported instance reaches it only through
+   [narrowing_goal]'s dedicated branch.  Isolating narrowing pins that
+   branch: without it narrowing sees the untransported goal, finds no
+   generator for [:zoo_three], and can only report [Unknown]. *)
+fun transport_narrowing_consumes_transported_goal () =
+  let
+    val config = transport_small (upd_use_subtype true default_config)
+      |> Refute.upd_search (Refute.Only [Refute.Narrowing])
+  in
+    case Refute.refute config zoo_three_ne_2 of
+        Counterexample ({certainty = Genuine, bindings = [(x, value)],
+            cert = NONE, ...} :: _) =>
+          #1 (Term.dest_var x) = "x" andalso
+          Type.compare (Term.type_of x, ``:zoo_three``) = EQUAL andalso
+          Term.aconv value ``zoo_three_abs 2``
+      | _ => false
+  end
+
+val _ = require_msg
+  (check_result transport_narrowing_consumes_transported_goal) (fn () =>
+  "narrowing on its own did not reach the transported counterexample, " ^
+  "so the transported goal never reached the narrowing engine")
+  (fn () => ()) ()
+
+(* Criterion 1's twin: [zoo_three_rep x <> 3] is true (rep is always
+   below 3), so transport must never manufacture a refutation for it.
+   Both worlds land on [Unknown], so a shared [ExpectNone] expectation
+   would be satisfied for two entirely different reasons and would
+   prove nothing; this pin asserts the divergence that is really there,
+   in the reasons.  With the flag off no search ever starts:
+   [:zoo_three] has no generator, [zoo_three_rep] is not executable,
+   and no backend reports a size it reached.  With it on the
+   representation search genuinely runs over [:num] and comes back
+   empty, reporting the size it got to, and neither
+   generator-absence reason appears at all.  The true world stops at
+   [Unknown] rather than [NoCounterexample] because the guard bounds
+   [r] semantically while the [:num] generator does not know that --
+   the stated scope limit: transport is a counterexample-search aid,
+   and a true transported goal is only ever *proved* when its body
+   collapses to a ground truth, as in [transport_filter_load_bearing]. *)
+val zoo_three_ne_3 = ``!x : zoo_three. zoo_three_rep x <> 3``
+
+fun transport_twin_diverges () =
+  let
+    fun mentions text = List.exists (String.isSubstring text)
+  in
+    case (Refute.refute (transport_small default_config) zoo_three_ne_3,
+          Refute.refute
+            (transport_small (upd_use_subtype true default_config))
+            zoo_three_ne_3) of
+        (Unknown off, Unknown on) =>
+          mentions "not executable: zoo_three_rep" off andalso
+          mentions "no narrowing generator for" off andalso
+          not (mentions "searched up to size" off) andalso
+          mentions "searched up to size" on andalso
+          not (mentions "not executable: zoo_three_rep" on) andalso
+          not (mentions "no narrowing generator for" on)
+      | _ => false
+  end
+
+val _ = require_msg (check_result transport_twin_diverges) (fn () =>
+  "the ExpectNone twin did not diverge between use_subtype worlds in its " ^
+  "reasons, or diverged the wrong way")
+  (fn () => ()) ()
+
+(* Criterion 2 and criterion 3's positive branch share one witness:
+   [zoo_three_rep x < 3] is true purely because of the characteristic
+   predicate (the docstring's own worked example).  After substitution
+   and contraction the guard and the body are syntactically the same
+   term, [r < 3 ==> r < 3]; [transport_instance] re-normalizes exactly
+   as [Refute_Core.make_instance] would (see its own comment), and
+   ordinary propositional simplification collapses that to the ground
+   [T] -- no free variable survives, so completeness is immediate and
+   exact, not a claim about an unbounded [num] generator being
+   "exhausted" by a small size.  Ablating the guard while keeping the
+   [rep (abs r)] contraction turns this same call into a spurious
+   refutation at r = 3, which is how this pin is validated. *)
+val zoo_three_lt_3 = ``!x : zoo_three. zoo_three_rep x < 3``
+
+fun transport_filter_load_bearing () =
+  case Refute.refute
+    (transport_small (upd_use_subtype true default_config)) zoo_three_lt_3
+  of
+      NoCounterexample => true
+    | _ => false
+
+val _ = require_msg (check_result transport_filter_load_bearing) (fn () =>
+  "a true, filter-dependent typedef goal was not soundly and " ^
+  "exhaustively verified under transport")
+  (fn () => ()) ()
+
+(* Criterion 3's negative branch needs a transported goal whose guard is
+   vacuous: [zoo_univ]'s characteristic predicate is [\n. T], so once
+   [rep (abs r)] contracts, the guard [T ==> B[r]] itself collapses to
+   [B[r]] by the very same propositional simplification that decides
+   [transport_filter_load_bearing] above -- leaving an ordinary,
+   unguarded free [num] with no equation for [Bind] to seize on.
+   [EVEN]/[ODD] are not among [normalize]'s rewrites, and a disjunction is
+   not the equality shape [try_equality] specializes, so nothing shortcuts
+   this to a ground truth: it genuinely requires searching all of [num],
+   which no size (fixed or adaptive) ever finishes, so this must stay
+   [Unknown] both ways. *)
+val zoo_univ_even_or_odd =
+  ``!x : zoo_univ. EVEN (zoo_univ_rep x) \/ ODD (zoo_univ_rep x)``
+
+fun transport_not_exhausted_stays_unknown () =
+  let
+    val fixed =
+      transport_small (upd_use_subtype true default_config)
+    val adaptive =
+      transport_qc_only (upd_use_subtype true default_config)
+        |> upd_timeout 2.0
+  in
+    case (Refute.refute fixed zoo_univ_even_or_odd,
+          Refute.refute adaptive zoo_univ_even_or_odd) of
+        (Unknown _, Unknown _) => true
+      | _ => false
+  end
+
+val _ = require_msg (check_result transport_not_exhausted_stays_unknown)
+  (fn () => "an unexhausted transported search wrongly licensed a " ^
+    "verdict other than Unknown")
+  (fn () => ()) ()
+
+(* Firing condition: a TypeBase datatype's own generator wins, so
+   use_subtype makes no difference to an ordinary datatype goal. *)
+val zoo_tree_ne_leaf0 = ``!t : zoo_tree. t <> ZooLeaf 0``
+
+fun transport_typebase_wins () =
+  case (Refute.refute (transport_small default_config) zoo_tree_ne_leaf0,
+        Refute.refute
+          (transport_small (upd_use_subtype true default_config))
+          zoo_tree_ne_leaf0) of
+      (Counterexample ({certainty = Genuine, bindings = [(_, v1)], ...}
+           :: _),
+       Counterexample ({certainty = Genuine, bindings = [(_, v2)], ...}
+           :: _)) => Term.aconv v1 v2
+    | _ => false
+
+val _ = require_msg (check_result transport_typebase_wins) (fn () =>
+  "a TypeBase datatype goal behaved differently under use_subtype")
+  (fn () => ()) ()
+
+val zoo_univ_fixed_value = ``zoo_univ_abs 7``
+
+val zoo_univ_fixed_custom : custom_gen =
+  {enumerate = SOME (fn _ => [zoo_univ_fixed_value]),
+   random = SOME (fn _ => fn state => (zoo_univ_fixed_value, state))}
+
+val _ = register_generator ``:zoo_univ`` zoo_univ_fixed_custom
+
+(* Firing condition: an explicitly registered generator wins even when
+   the type is also a harvestable typedef and use_subtype is on.
+   [zoo_univ_rep] has no compute rule of its own; had transport fired,
+   it would have been contracted away, as it is for [zoo_three] above.
+   Its survival in the "not executable" reason shows the untransformed
+   goal, not a transported one, reached the qc_gate. *)
+fun transport_registered_generator_wins () =
+  case Refute.refute
+    (transport_small (upd_use_subtype true default_config))
+    ``!x : zoo_univ. zoo_univ_rep x <> 7``
+  of
+      Unknown reasons =>
+        List.exists (String.isSubstring "not executable: zoo_univ_rep")
+          reasons
+    | _ => false
+
+val _ = require_msg (check_result transport_registered_generator_wins)
+  (fn () => "a registered generator did not take priority over transport")
+  (fn () => ()) ()
+
+(* Scope limit: only a variable whose own type is transportable is
+   transported.  Here the free variable's type is [:zoo_three list],
+   not [:zoo_three], so transport never applies; both worlds must fail
+   identically with today's [NoGenerator] behaviour. *)
+val zoo_three_list_goal =
+  ``!xs : zoo_three list. LENGTH (xs ++ xs) = 2 * LENGTH xs``
+
+fun transport_scope_limit_list () =
+  case (Refute.refute (transport_qc_only default_config)
+          zoo_three_list_goal,
+        Refute.refute
+          (transport_qc_only (upd_use_subtype true default_config))
+          zoo_three_list_goal) of
+      (Unknown r1, Unknown r2) =>
+        List.exists (String.isSubstring "no TypeBase information") r1
+          andalso r1 = r2
+    | _ => false
+
+val _ = require_msg (check_result transport_scope_limit_list) (fn () =>
+  "a nested typedef occurrence inside :zoo_three list was affected by " ^
+  "use_subtype, or stopped reporting Unknown")
+  (fn () => ()) ()
+
+(* Soundness: [transportable_typedef] must require [MFH.raw_typedef_data]
+   -- a real [TYPE_DEFINITION] theorem -- not just [MFH.harvest_typedef]'s
+   own [is_typedef] short-circuit, which also admits the model finder's
+   synthetic frac/fmap entries.  [:rat]/[:real] cannot pin this: both
+   already carry a registered QC generator, so [has_generator] excludes
+   them before the typedef registry is ever consulted.  A freshly
+   declared, ungenerated type registered only via
+   [Refute.register_frac_type] is not excluded that way, and it has no
+   [TY_DEF] theorem of its own, so it pins the bypass directly: its
+   synthetic [abs] degrades to a reserved free variable
+   ([retype_frac_constant] cannot match [abs_frac]'s monomorphic
+   [:int # int -> frac] to any other carrier).  Broken transport
+   substitutes that reserved variable in for [x]; its function type
+   [:int # int -> ty] then surfaces where the Cv substrate expects a
+   value -- "function type in data position", naming the transported
+   shape -- which the fixed code must never produce: every reason must
+   match what [use_subtype false] already reports. *)
+val transport_synthetic_frac_ty =
+  let
+    val thy = Theory.current_theory ()
+    val () = Theory.new_type ("refute_transport_synthetic_frac", 0)
+    val ty = Type.mk_thy_type
+      {Thy = thy, Tyop = "refute_transport_synthetic_frac", Args = []}
+    val () = Refute.register_frac_type
+      {tyop = {Thy = thy, Tyop = "refute_transport_synthetic_frac"},
+       ersatz = []}
+  in
+    ty
+  end
+
+val transport_synthetic_frac_goal =
+  let
+    val x = Term.mk_var ("x", transport_synthetic_frac_ty)
+    val y = Term.mk_var ("y", transport_synthetic_frac_ty)
+  in
+    boolSyntax.list_mk_forall ([x, y], boolSyntax.mk_eq (x, y))
+  end
+
+fun transport_synthetic_typedef_declines () =
+  let
+    fun mentions text = List.exists (String.isSubstring text)
+  in
+    case Refute.refute
+      (transport_small (upd_use_subtype true default_config))
+      transport_synthetic_frac_goal
+    of
+        Unknown reasons =>
+          mentions "no TypeBase information" reasons andalso
+          not (mentions "function type in data position" reasons)
+      | _ => false
+  end
+
+val _ = require_msg (check_result transport_synthetic_typedef_declines)
+  (fn () => "use_subtype true transported a synthetic (theorem-less) " ^
+    "typedef -- the reserved-variable/function-type shape leaked into " ^
+    "the report")
+  (fn () => ()) ()
+
 fun equation_adds_evals () =
   case preprocessed_instances
     (preprocess default_config
@@ -18752,7 +19067,7 @@ fun qc_schedule_cursors_are_lazy_and_fair () =
   let
     fun instance card matters : instance =
       {original = boolSyntax.T, goal = boolSyntax.T, qc_gate = NONE,
-       evals = [], card = card, size_matters = matters}
+       evals = [], card = card, size_matters = matters, transport = []}
     val instances = map (fn card => instance card true) [1, 2, 3]
     fun take 0 _ result = rev result
       | take remaining cursor result =
@@ -19054,7 +19369,7 @@ fun smartgen_preflight_interrupt_propagates () =
     val instance : instance =
       {original = smartgen_linear_goal, goal = smartgen_linear_goal,
        qc_gate = SOME ["interrupt propagation pin"], evals = [], card = 1,
-       size_matters = true}
+       size_matters = true, transport = []}
     val tables_before = term_table_count ()
     fun interrupting_preflight _ _ _ _ = raise Interrupt
     val gate_interrupt =
@@ -19993,7 +20308,7 @@ fun finite_map_canonical_chain_reaches_the_report () =
     val collapsed = ``(FEMPTY : num |-> num) |+ (1, 3)``
     val instance : Refute_Core.instance =
       {original = goal_tm, goal = goal_tm, qc_gate = NONE, evals = [],
-       card = 1, size_matters = false}
+       card = 1, size_matters = false, transport = []}
     val counterexamples = ref ([] : Refute_Core.counterexample list)
   in
     Refute_QC.record_candidate_with (fn _ => "exhaustive")
@@ -20404,7 +20719,7 @@ fun renamed_narrowing_uses_typed_certification_path () =
     val discarded = ref 0
     val instance : instance =
       {original = boolSyntax.F, goal = boolSyntax.F, qc_gate = NONE,
-       evals = [], card = 1, size_matters = false}
+       evals = [], card = 1, size_matters = false, transport = []}
     fun display Narrowing = "renamed-narrowing"
       | display Exhaustive = "renamed-exhaustive"
       | display (Random _) = "renamed-random"

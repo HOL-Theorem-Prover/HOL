@@ -22,9 +22,45 @@ structure Refute_QC_Narrow = struct
   (* Keep free inputs free until selection has inserted any registered
      abstract-generator guards.  [pnf_of] closes them afterwards, preserving
      leading explicit universals in the prefix.  A guarded hit is certified
-     against the original formula, so the restriction only narrows search. *)
+     against the original formula, so the restriction only narrows search.
+
+     [use_subtype] transport rewrites [#goal], never [#original] (see
+     [Refute_QC.transport_instance]): [#original] still quantifies over the
+     untransportable abstract type, which narrowing could never search
+     either way, so a transported instance must be handed [#goal].  Hand
+     it over open, exactly as it is: [#goal] is a rep-typed implication
+     whose fresh representation variables are free, and [pnf_of] closes
+     free variables itself, so they become the prefix's leading
+     universals by the same route every other narrowing input takes.
+     Closing them here first instead is what the guard makes tempting and
+     it is wrong: measured on [zoo_three_ne_2], [Refute_Core.normalize]
+     rewrites the closed [!r. r < 3 ==> r <> 2] to the bounded, ground
+     [EVERY (\r. r <> 2) (COUNT_LIST 3)], leaving [pnf_of] an empty
+     prefix.  Narrowing then refutes at depth 0 with nothing instantiated
+     and an empty [env], and [Refute_QC.record_candidate_with]'s binding
+     filter -- which keeps exactly the [env] entries free in [#goal] --
+     has nothing to keep, so the hit reports a counterexample naming no
+     witness at all.  Every certification call site in [Refute_QC] --
+     [Refute_Cert.certify], [Refute_Cert.ground_and_certify], and
+     [Refute_Cert_Narrow.certify_case_tree] alike -- is passed
+     [original = #original instance] regardless of substrate, so a
+     transported hit's replay always closes over the pre-transport
+     formula quantifying [x], while its [env] only ever binds the fresh
+     [r]: [Refute_Cert.certify]'s direct replay finds [x] unsubstituted
+     and gets stuck, and its PNF fallback's [binding_for] finds no [env]
+     entry named [x] and raises, so both routes land on [Uncertified].
+     That is not a certainty downgrade -- [Refute_Cert.uncertified]
+     keeps the payload's [certainty] at whatever testing already
+     established (see [Refute_Core]'s "certainty and cert are
+     independent axes") -- so reusing [#goal] here, rather than trying
+     to route narrowing's own formula into certification, costs nothing:
+     certification was never going to see [#goal] either way.  Measured
+     on [zoo_three_ne_2] under [Only [Exhaustive]] and [Only [Narrowing]]
+     alike: both report [certainty = Genuine], [cert = NONE]. *)
   fun narrowing_goal (instance : Refute_Core.instance) =
-    Refute_Core.normalize (#original instance)
+    case #transport instance of
+        [] => Refute_Core.normalize (#original instance)
+      | _ => Refute_Core.normalize (#goal instance)
 
   (* A narrowing problem is one PNF formula rather than a list of plans.
      Compile each monomorphic/cardinality instance independently and

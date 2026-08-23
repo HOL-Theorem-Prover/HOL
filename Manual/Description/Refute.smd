@@ -645,6 +645,7 @@ raises a HOL error.  They are intended mainly for tests.
 | `upd_smart_generators` | `true` | Enable Horn relation/function `Enum` plans. |
 | `upd_optimise_equality` | `true` | Turn suitable equality premises into direct bindings. |
 | `upd_reorder_premises` | `true` | Reorder premises during smart mode inference. |
+| `upd_use_subtype` | `false` | Test a generator-less typedef by transporting to its representation type. |
 | `upd_seed` | `NONE` | Reproducible random seed; `NONE` advances a deterministic session stream. |
 
 The default size mode is iterative deepening: `10` is an initial window,
@@ -681,6 +682,45 @@ but it can never turn a polymorphic goal's exhaustible search into
 `NoCounterexample`.  `upd_instantiate` scopes to QC and narrowing; the
 model finder is unaffected and has its own per-type-variable updater,
 `upd_card [(SOME ty, [n])]`.
+
+A free variable at a typedef type `t` (`new_type_definition`, abstraction
+`abs`, representation type `rty`, characteristic predicate `P`) usually
+leaves QC with nothing to test: `t` has no generator and none of the
+built-in fallbacks apply.  `upd_use_subtype true` rewrites `!x : t. B x`
+to `!r : rty. P r ==> B (abs r)`, contracting every `rep (abs r)` redex
+the substitution creates back to `r`, and reports a hit's binding for
+`x` as `abs`-of-the-tested `r`, never `r` itself.  `TYPE_DEFINITION P
+rep` makes `abs` restricted to `{r | P r}` a bijection onto `t`, so the
+guard is the soundness condition, not an optimisation: dropping it lets
+a representation value outside `t`'s image manufacture a spurious
+refutation.  Whether a filtered representation search counts as
+exhausted follows the same completeness bookkeeping as any other QC
+search; transport adds no bespoke exhaustion rule in either direction.
+In practice that makes transport a counterexample-search aid rather
+than a verification route: the generator ranges over the whole
+representation type and does not know the characteristic predicate
+bounds it, so a true transported goal reports `Unknown` unless its body
+collapses to a ground truth under normalization.
+A genuine transported hit never certifies: replaying the original
+closure needs the untransported `x`, but a transported search's
+environment only ever binds the representation-typed `r`, so the
+report always carries `Genuine` certainty with no attached certificate
+-- proving it by kernel replay would require evaluating the very
+`rep (abs r)` redex the contraction exists to avoid.
+Transport is a fallback of last resort: a registered generator or an
+`abstract_generator` registration for `t` wins, a TypeBase datatype for
+`t` wins, and only when none of those apply and `t` is itself a
+harvestable typedef with a real `TYPE_DEFINITION` theorem behind it
+does the flag take effect.  That last requirement excludes the model
+finder's synthetic frac and fmap typedef entries, which are an
+encoding device for the model finder and carry no such theorem, so
+nothing licenses the guard or the contraction for them.  It also does not reach
+inside another type: a free variable of type `t list` keeps today's
+`NoGenerator`/`Unknown` behaviour, since transporting it would require
+lifting the predicate and generator through the list structure, which
+this fallback does not do.  Default `false`, matching Isabelle's
+`use_subtype`; the model finder never sees the rewrite; it already
+handles typedefs natively.
 
 #### Model-finder fields
 

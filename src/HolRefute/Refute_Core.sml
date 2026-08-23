@@ -88,7 +88,12 @@ structure Refute_Core = struct
          cannot serve both.  A variable no entry reaches keeps taking the
          single carrier/width [monomorphic_types] indexes by instance,
          exactly as when this list is []. *)
-      instantiate : (hol_type option * hol_type) list }
+      instantiate : (hol_type option * hol_type) list,
+      (* Rep->abs transport for a variable at a typedef type with no
+         generator: see [Refute_QC]'s [transport_instance], installed
+         through [register_mono_instance_transform] below.  Off by
+         default, matching Isabelle's [use_subtype]. *)
+      use_subtype : bool }
 
   type mf_config =
     { card : (hol_type option * int list) list,
@@ -153,7 +158,13 @@ structure Refute_Core = struct
       qc_gate : string list option,
       evals : term list,
       card : int,
-      size_matters : bool }
+      size_matters : bool,
+      (* [use_subtype] rep->abs transport record, [(r, x, abs)]: [r]
+         is the representation-typed variable [goal] now carries in
+         place of the user's [x], and [abs] rebuilds [x]'s reported
+         value from a candidate binding for [r].  Empty unless
+         [Refute_QC]'s transform fired on this instance. *)
+      transport : (term * term * term) list }
 
   datatype requirement =
       AnyGoal
@@ -195,7 +206,8 @@ structure Refute_Core = struct
       smart_generators = true,
       optimise_equality = true,
       reorder_premises = true,
-      instantiate = [] }
+      instantiate = [],
+      use_subtype = false }
 
   val default_mf_config : mf_config =
     { card = [(NONE, List.tabulate (10, fn n => n + 1))],
@@ -345,6 +357,7 @@ structure Refute_Core = struct
     | QcOptimiseEquality of bool
     | QcReorderPremises of bool
     | QcInstantiate of (hol_type option * hol_type) list
+    | QcUseSubtype of bool
 
   fun change_qc update (qc : qc_config) =
     { size = (case update of QcSize (value, _) => value | _ => #size qc),
@@ -378,7 +391,9 @@ structure Refute_Core = struct
       reorder_premises = (case update of QcReorderPremises value => value
                           | _ => #reorder_premises qc),
       instantiate = (case update of QcInstantiate value => value
-                     | _ => #instantiate qc) }
+                     | _ => #instantiate qc),
+      use_subtype = (case update of QcUseSubtype value => value
+                     | _ => #use_subtype qc) }
 
   fun validate_qc_config (qc : qc_config) =
     let
@@ -456,6 +471,7 @@ structure Refute_Core = struct
   fun upd_optimise_equality value = update_qc (QcOptimiseEquality value)
   fun upd_reorder_premises value = update_qc (QcReorderPremises value)
   fun upd_instantiate value = update_qc (QcInstantiate value)
+  fun upd_use_subtype value = update_qc (QcUseSubtype value)
 
   fun range_error field explanation =
     raise Feedback.mk_HOL_ERR "Refute_Core" "validate_mf_config"
@@ -1008,8 +1024,35 @@ structure Refute_Core = struct
       not (Option.isSome (Refute_Gen.enumerate (Term.type_of variable))))
       (Term.free_vars_lr goal)
 
+  (* Shared by [make_instance] and [Refute_QC]'s [use_subtype] transform,
+     which recomputes this for the rewritten goal: a syntactic executability
+     scan, not a claim about what testing does at a concrete value. *)
+  fun compute_qc_gate goal evals =
+    let
+      val binders_remain = has_unexpanded_binder goal
+      val constants =
+        if binders_remain then []
+        else nonexecutable_constants (goal :: evals)
+    in
+      if binders_remain then SOME ["not executable: unexpanded binder"]
+      else if null constants then NONE
+      else SOME ["not executable: " ^ show_constants constants]
+    end
+
   type preprocessed_forms =
     {mono_instances : instance list, poly_original : instance list}
+
+  (* Installed by [Refute_QC] at load time with the [use_subtype] rewrite:
+     [Refute_ModelFinder_HOL] owns the typedef harvest the transform needs
+     and already depends on this structure, so [Refute_Core] cannot call
+     into it directly; the transform is threaded in as a callback instead,
+     on the same precedent as [register_backend] below.  Applied only to
+     [MonoInstances] instances, in [preprocess_forms]; [PolyOriginal]
+     instances (the model finder's input) never reach it. *)
+  val mono_instance_transform : (config -> instance -> instance) ref =
+    ref (fn (_ : config) => fn (instance : instance) => instance)
+
+  fun register_mono_instance_transform f = mono_instance_transform := f
 
   (* A configuration error diagnosed while building the instances, e.g. an
      [upd_instantiate] pin naming a type variable absent from the goal.
@@ -1090,22 +1133,14 @@ structure Refute_Core = struct
           val goal = expand_quantifiers normalized_goal
           val evals = map (Term.inst theta) input_evals
           val evals = add_equation_eval_terms goal evals
-          val binders_remain = has_unexpanded_binder goal
-          val constants =
-            if binders_remain then []
-            else nonexecutable_constants (goal :: evals)
-          val qc_gate =
-            if binders_remain then
-              SOME ["not executable: unexpanded binder"]
-            else if null constants then NONE
-            else SOME ["not executable: " ^ show_constants constants]
         in
           { original = original,
             goal = goal,
-            qc_gate = qc_gate,
+            qc_gate = compute_qc_gate goal evals,
             evals = evals,
             card = card,
-            size_matters = instance_size_matters goal }
+            size_matters = instance_size_matters goal,
+            transport = [] }
         end
       (* One replacement interprets every *unpinned* type variable at once
          (see [upd_instantiate]), so [card] is the index of the single
@@ -1150,16 +1185,23 @@ structure Refute_Core = struct
             (map (fn tyvar => {redex = tyvar, residue = residue tyvar})
                tyvars)
         end
-      val mono_instances =
+      val raw_mono_instances =
         if null tyvars then [make_instance 1 []]
         else
           List.tabulate (instance_count, fn index =>
             monomorphic_instance (index + 1))
-      (* A monomorphic goal has literally the same backend input in both
-         forms.  This is stronger than merely constructing an equivalent
-         singleton and keeps the old front-end behaviour exact. *)
+      (* Absent the [use_subtype] transform, a monomorphic goal hands both
+         forms literally the same backend input -- stronger than merely
+         constructing an equivalent singleton, and it keeps the old
+         front-end behaviour exact.  Read it off [raw_mono_instances],
+         before the transform runs below: the model finder handles
+         typedefs natively and must never see the rewrite, so when the
+         transform does fire the two forms deliberately diverge and
+         [poly_original] keeps the untransported goal. *)
       val poly_original =
-        if null tyvars then mono_instances else [make_instance 0 []]
+        if null tyvars then raw_mono_instances else [make_instance 0 []]
+      val mono_instances =
+        map (!mono_instance_transform cfg) raw_mono_instances
     in
       {mono_instances = mono_instances, poly_original = poly_original}
     end
@@ -1304,6 +1346,7 @@ structure Refute_Core = struct
             Bool.toString (#optimise_equality q) ^ "\n",
           "reorder_premises = " ^
             Bool.toString (#reorder_premises q) ^ "\n",
+          "use_subtype = " ^ Bool.toString (#use_subtype q) ^ "\n",
           "mf.card = " ^ type_ints (#card m) ^ "\n",
           "mf.card_mode = " ^
             Private.bound_mode_to_string (#card_mode m) ^ "\n",

@@ -185,6 +185,14 @@ signature Refute = sig
      exactly as with []. *)
   val upd_instantiate :
     (hol_type option * hol_type) list -> config -> config
+  (* Rep->abs transport: a free variable at a typedef type with no
+     generator of its own is replaced by [abs r] for a fresh
+     representation-typed [r], guarded by the characteristic predicate
+     applied to [r].  Off by default, matching Isabelle's [use_subtype];
+     never applied to the model finder's input, which handles typedefs
+     natively; does not reach an occurrence nested inside another type
+     (e.g. a free variable of type [t list] is untouched). *)
+  val upd_use_subtype : bool -> config -> config
   val upd_substrate : substrate_choice -> config -> config
   val upd_seed : int option -> config -> config
   val upd_allow_existentials : bool -> config -> config

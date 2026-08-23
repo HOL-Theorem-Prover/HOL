@@ -56,6 +56,170 @@ structure Refute_QC = struct
       loop types avoid_variables []
     end
 
+  (* [use_subtype] rep->abs transport.  For a free variable [x : t] of a
+     [MonoInstances] goal where [t] has no generator of its own but is a
+     typedef the model finder's registry knows, replace [x] throughout by
+     [abs r] for a fresh [r : rty], contract every [rep (abs r)] redex the
+     substitution creates back to [r], and guard the goal with the
+     (beta-reduced) characteristic predicate applied to [r].  Both the
+     variable that was bound by an outer [!] (already free by the time
+     [make_instance] hands us [goal], having been stripped) and one that
+     was already free look identical here, so one rewrite covers both, as
+     the task's "free (Skolemized) variables get the corresponding
+     hypothesis form" describes.  [TYPE_DEFINITION P rep] makes [abs]
+     restricted to [{r | P r}] a bijection onto [t]; the guard is what
+     licenses the contraction (see [Refute_Core.README] and this
+     structure's own registration below), not an optimisation on top of
+     it -- an unguarded contraction would let a representation value
+     outside [t]'s image manufacture a spurious refutation.
+
+     This is a plain rewrite of the goal term consumed by
+     [compile_plan_with]/native narrowing alike, so every strategy and
+     substrate gets transport from this one place; no plan-IR node and no
+     new genspec are involved.  The result is re-normalized exactly as
+     [Refute_Core.make_instance] normalizes an ordinary goal (see
+     [transport_instance] below): skipping that would leave, say, a
+     rewritten [P ==> P] unrecognised as the tautology it is only because
+     this rewrite runs after [make_instance]'s own normalization pass.
+     Narrowing is the one strategy that does not consume the shared
+     plan: it compiles a PNF formula, so it takes [#goal] directly
+     rather than through [compile_plan_with], and it takes it *open* --
+     [Refute_Narrow.pnf_of] closes free variables itself, which is how
+     the fresh representation variables become the prefix's leading
+     universals.  See [Refute_QC_Narrow.narrowing_goal], which records
+     what measurably goes wrong if they are closed here first. *)
+
+  fun has_generator ty =
+    (Refute_Gen.spec_of ty; true) handle Refute_Gen.NoGenerator _ => false
+
+  (* A registered generator, an [abstract_generator] wrapper, or a
+     TypeBase datatype all make [spec_of] succeed and must win over
+     transport (the firing condition); only then is the model finder's
+     lazily-harvested typedef registry consulted.  A goal over [:t list]
+     does reach this check -- the free variable's type is [:t list],
+     [spec_of] fails for it, so [has_generator] is false and the test
+     proceeds -- and what refuses it is [MFH.harvest_typedef]:
+     [:t list] is a raw free datatype, one of the classifications its
+     own [incompatible] test excludes.  So no container is ever
+     transported and the goal keeps today's [NoGenerator]/[Unknown]
+     behaviour. *)
+  (* [MFH.typedef_for_type] also answers for the synthetic frac/fmap
+     entries [MFH.harvest_typedef] admits via its own [is_typedef]
+     short-circuit (bypassing that function's [incompatible] test, which
+     would otherwise exclude frac): those have no [TYPE_DEFINITION]
+     theorem, so [abs] there is not a licensed bijection -- for frac it is
+     not even a constant, since [retype_frac_constant] cannot match
+     [abs_frac]'s monomorphic generic type to any other carrier and falls
+     back to a reserved variable.  [MFH.raw_typedef_data] being [SOME] is
+     exactly [register_typedef_unlocked]'s own admission requirement, so
+     every genuine entry already satisfies it; requiring it here closes
+     the synthetic bypass without disturbing genuine typedefs. *)
+  fun transportable_typedef ty =
+    if has_generator ty then NONE
+    else if MFH.harvest_typedef ty andalso
+            Option.isSome (MFH.raw_typedef_data ty)
+    then MFH.typedef_for_type ty
+    else NONE
+
+  fun beta_reduce tm =
+    boolSyntax.rhs
+      (Thm.concl (Conv.QCONV (Conv.DEPTH_CONV Thm.BETA_CONV) tm))
+
+  (* Bottom-up replacement of every syntactic occurrence of [redex] by
+     [replacement]; used to contract [rep (abs r)] to [r]. *)
+  fun contract redex replacement tm =
+    if Term.aconv tm redex then replacement
+    else
+      case Lib.total Term.dest_comb tm of
+          SOME (rator, rand) =>
+            Term.mk_comb (contract redex replacement rator,
+                           contract redex replacement rand)
+        | NONE =>
+            case Lib.total Term.dest_abs tm of
+                SOME (variable, body) =>
+                  Term.mk_abs (variable, contract redex replacement body)
+              | NONE => tm
+
+  type transport_entry =
+    {x : term, r : term, abs : term, rep : term, pred : term}
+
+  fun transport_entries goal evals =
+    let
+      fun typedef_of variable =
+        Option.map (fn info => (variable, info : MFH.typedef_info))
+          (transportable_typedef (Term.type_of variable))
+      val found = List.mapPartial typedef_of (Term.free_vars_lr goal)
+    in
+      if null found then []
+      else
+        let
+          val fresh = fresh_variables (goal :: evals)
+            (map (#rty o #2) found)
+        in
+          ListPair.map
+            (fn ((x, info : MFH.typedef_info), r) =>
+              {x = x, r = r, abs = #abs info, rep = #rep info,
+               pred = #pred info} : transport_entry)
+            (found, fresh)
+        end
+    end
+
+  fun apply_transport_entries entries tm =
+    let
+      val subst = map (fn {x, abs, r, ...} : transport_entry =>
+        {redex = x, residue = Term.mk_comb (abs, r)}) entries
+    in
+      List.foldl
+        (fn ({abs, rep, r, ...} : transport_entry, tm) =>
+          contract (Term.mk_comb (rep, Term.mk_comb (abs, r))) r tm)
+        (Term.subst subst tm) entries
+    end
+
+  fun transport_guard ({pred, r, ...} : transport_entry) =
+    beta_reduce (Term.mk_comb (pred, r))
+
+  (* Installed as [Refute_Core]'s [mono_instance_transform]; runs once per
+     [MonoInstances] instance, after monomorphization, before any plan is
+     compiled from [#goal]. *)
+  fun transport_instance (cfg : Refute_Core.config)
+        (instance : Refute_Core.instance) =
+    if not (#use_subtype (#qc cfg)) then instance
+    else
+      case transport_entries (#goal instance) (#evals instance) of
+          [] => instance
+        | entries =>
+            let
+              val body = apply_transport_entries entries (#goal instance)
+              val raw_goal = List.foldr boolSyntax.mk_imp body
+                (map transport_guard entries)
+              (* [make_instance] runs every goal through [normalize] (and
+                 [expand_quantifiers]) before anything downstream sees it;
+                 skipping that step here would let an entirely ordinary
+                 simplification -- e.g. the [P ==> P] the docstring's own
+                 worked example reduces to once the guard and the
+                 contracted body coincide -- go unrecognised only because
+                 this rewrite built its implication after that pass ran.
+                 Re-running it is what makes a transported goal reach the
+                 exact completeness verdict its hand-written equivalent
+                 would. *)
+              val goal = Refute_Core.expand_quantifiers
+                (Refute_Core.strip_outer_forall_body
+                   (Refute_Core.normalize raw_goal))
+              val evals =
+                map (apply_transport_entries entries) (#evals instance)
+            in
+              { original = #original instance,
+                goal = goal,
+                qc_gate = Refute_Core.compute_qc_gate goal evals,
+                evals = evals,
+                card = #card instance,
+                size_matters = Refute_Core.instance_size_matters goal,
+                transport = map (fn {x, r, abs, ...} : transport_entry =>
+                  (r, x, abs)) entries }
+            end
+
+  val _ = Refute_Core.register_mono_instance_transform transport_instance
+
   type analysis =
     {result : SmartGen.inference_result option,
      trigger : bool, reason : string option}
@@ -583,6 +747,17 @@ structure Refute_QC = struct
          prenex prefix, which is already in goal order. *)
       val goal_ordered_bindings =
         if narrowing then report_bindings else rev report_bindings
+      (* [use_subtype] transport reports the user's own variable, not the
+         representation-typed [r] testing actually bound: a binding for
+         [r] becomes one for [x = abs r-value], per [#transport instance].
+         Display only, on the same choke point as [apply_family] below --
+         testing and certification only ever see the untouched [env] this
+         function closes over. *)
+      fun apply_report_transport (variable, value) =
+        case List.find (fn (r, _, _) => Term.aconv r variable)
+               (#transport instance) of
+            SOME (_, x, abs) => (x, Term.mk_comb (abs, value))
+          | NONE => (variable, value)
       (* Display only: a registered family's canonical form (e.g. fmap's
          FUPDATE-chain collapse) never reaches testing or certification,
          both of which still see the raw [env] this function closes over.
@@ -623,7 +798,8 @@ structure Refute_QC = struct
                      (canonicalize_term function, canonicalize_term argument)
                | NONE => candidate)
       fun canonicalize (variable, value) = (variable, canonicalize_term value)
-      val ordered_bindings = List.map canonicalize goal_ordered_bindings
+      val ordered_bindings = List.map
+        (canonicalize o apply_report_transport) goal_ordered_bindings
       val cex : Refute_Core.counterexample =
         { backend = display_name strategy,
           substrate = substrate,
