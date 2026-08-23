@@ -1,50 +1,37 @@
-(* Interpret a TacticSteps.step stream against a starting
-   goalFrag.goalstate, applying each step and returning the state at
-   the cursor's step index.  Snapshots each Expand's post-state into a
-   per-theorem cache stored in plugin_data, so subsequent queries in
-   the same theorem resume from the closest snapshot rather than
-   re-walking. *)
+(* Interpret a TacticParse.tac_frag list against a starting
+   goalFrag.goalstate, applying each fragment and returning the
+   state at the cursor's fragment index.  Snapshots each successful
+   FAtom's post-state into a per-theorem cache stored in
+   plugin_data, so subsequent queries in the same theorem resume
+   from the closest snapshot rather than re-walking. *)
 
 structure TacticWalker :> sig
   (* Exposed because PolyML.compiler compiles at top level: `holder`
      must be reachable by qualified name from the wrapped
      `TacticWalker.holder := SOME (…)` source that compileTactic
-     runs.  Not part of the public API — callers should treat this
-     as private. *)
+     runs.  Not part of the public API. *)
   val holder : Abbrev.tactic option ref
 
-  (* Applies steps in order.  For Expand/ExpandList steps whose end
-     byte is > cursor, stops BEFORE applying — the "pre-state of the
-     step under the cursor".  Markers (Open/Close) are always applied
-     when reached.  Halts on the first step that fails to compile or
-     apply, returning the last successful state.
-
-     Cache invalidation is implicit: an entry with a different
-     `tacText` for the same theorem is replaced on the next walk. *)
   val walkTo : {
     plugins: LSPExtension.plugin_data,
     theoremName: string,
     theoremStart: int,   (* file byte offset of the theorem's dec *)
     tacText: string,
     startState: goalFrag.goalstate,
-    steps: TacticSteps.step list,
+    frags: TacticParse.tac_frag list,
     cursor: int
   } -> { state: goalFrag.goalstate,
-         failedAt: TacticSteps.step option }
+         failedAt: TacticParse.tac_frag option }
 end = struct
+
+open TacticParse
 
 val holder : Abbrev.tactic option ref = ref NONE
 
 (* Process-lifetime cache of compiled tactic values, keyed by their
-   source text.  Per-Expand `PolyML.compiler` invocation dominates
-   walker cost — the whole point of `hol-lsp-goals-follow-cursor` is
-   that auto-follow keystrokes should feel snappy, and re-running
-   the compile pipeline for every tactic on every keystroke does
-   not.  Keeping compiled values across compiles is safe for the
-   pure tactics HOL scripts typically use (GEN_TAC, REWRITE_TAC, …
-   bind to stable globalNameSpace slots); if a user genuinely
-   redefines a locally-referenced binding the compile itself will
-   flag the mismatch. *)
+   source text.  Per-atom PolyML.compiler invocation dominates
+   walker cost — the point of `hol-lsp-goals-follow-cursor` is that
+   auto-follow keystrokes should feel snappy. *)
 val compileCache: (string, Abbrev.tactic) Binarymap.dict ref =
   ref (Binarymap.mkDict String.compare)
 
@@ -53,10 +40,6 @@ fun compileTactic src =
     SOME tac => SOME tac
   | NONE => let
       val wrapped = "TacticWalker.holder := SOME (" ^ src ^ ");"
-      (* Run the HOL quotation filter over the wrapped source:
-         backticks become `[QUOTE …]`, so tactics like `Cases_on
-         \`p\`` reach PolyML in the form it can parse.  Same pipeline
-         the LSP file compile uses. *)
       val filtered = HOLSource.fromString
                        {quietOpen = true, print = fn _ => ()} wrapped
       val i = ref 0
@@ -76,49 +59,86 @@ fun compileTactic src =
                | NONE => ()
       in !holder end
 
-fun expandSpan (TacticSteps.Expand span)     = SOME span
-  | expandSpan (TacticSteps.ExpandList span) = SOME span
-  | expandSpan (TacticSteps.GoalSelect span) = SOME span
-  | expandSpan _                             = NONE
-
-(* GoalSelect passes the operator+RHS substring in `span` -- e.g.
-   `">~ [`pat`]"` -- which isn't a valid tactic on its own.  The
-   `"ALL_TAC "` prefix turns it into `ALL_TAC >~ [`pat`]`, applying
-   the selector to the current focus with no other effect. *)
-fun expandSrc prefix tacText (s, e) state =
-  case compileTactic (prefix ^ String.substring (tacText, s, e - s)) of
+fun compileAndApply src state =
+  case compileTactic src of
     NONE => NONE
   | SOME tac => Portable.total (goalFrag.expand tac) state
 
-fun applyStep tacText step state = case step of
-    TacticSteps.Expand span      => expandSrc ""         tacText span state
-  | TacticSteps.ExpandList span  => expandSrc ""         tacText span state
-  | TacticSteps.GoalSelect span  => expandSrc "ALL_TAC " tacText span state
-  | TacticSteps.OpenParen _      => Portable.total goalFrag.open_paren    state
-  | TacticSteps.CloseParen _     => Portable.total goalFrag.close_paren   state
-  | TacticSteps.OpenThen1 _      => Portable.total goalFrag.open_then1    state
-  | TacticSteps.OpenFirst _      => Portable.total goalFrag.open_first    state
-  | TacticSteps.NextFirst _      => Portable.total goalFrag.next_first    state
-  | TacticSteps.CloseFirst _     => Portable.total goalFrag.close_first   state
-  | TacticSteps.OpenRepeat _     => Portable.total goalFrag.open_repeat   state
-  | TacticSteps.CloseRepeat _    => Portable.total goalFrag.close_repeat  state
-  | TacticSteps.OpenTacsToLT _   => Portable.total goalFrag.open_tacs_to_lt state
-  | TacticSteps.NextTacsToLT _   => Portable.total goalFrag.next_tacs_to_lt state
-  | TacticSteps.OpenNthGoal (n, _) =>
-      Portable.total (goalFrag.open_nth_goal n) state
+fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
+
+(* Sugared atoms compile the equivalent surface SML call; other
+   leaves compile their own source-substring verbatim. *)
+fun applyAtom tacText te state = case te of
+    Subgoal span =>
+      compileAndApply ("BasicProvers.subgoal " ^ textAt tacText span) state
+  | LSelectGoal span =>
+      compileAndApply ("ALL_TAC >~ [" ^ textAt tacText span ^ "]") state
+  | LSelectGoals span =>
+      compileAndApply ("ALL_TAC >>~ [" ^ textAt tacText span ^ "]") state
+  (* REVERSE_LT is a list_tactic; wrap under a no-op tactic so
+     `goalFrag.expand' can accept it. *)
+  | LReverse => compileAndApply "ALL_TAC >>> REVERSE_LT" state
+  | _ => (case topSpan te of
+        SOME span => compileAndApply (textAt tacText span) state
+      | NONE => NONE)
+
+fun applyOpen ok state = case ok of
+    FOpen           => Portable.total goalFrag.open_paren      state
+  | FOpenThen1      => Portable.total goalFrag.open_then1      state
+  | FOpenFirst      => Portable.total goalFrag.open_first      state
+  | FOpenRepeat     => Portable.total goalFrag.open_repeat     state
+  | FOpenTacsToLT   => Portable.total goalFrag.open_tacs_to_lt state
+  | FOpenNullOk     => Portable.total goalFrag.open_null_ok    state
+  | FOpenNthGoal (n, _) => Portable.total (goalFrag.open_nth_goal n) state
+  | FOpenLastGoal   => Portable.total goalFrag.open_last_goal  state
+  | FOpenHeadGoal   => Portable.total goalFrag.open_head_goal  state
+  | FOpenSplit (n, _) => Portable.total (goalFrag.open_split_lt n) state
+  | FOpenSelect     => Portable.total goalFrag.open_select_lt  state
+  | FOpenFirstLT    => Portable.total goalFrag.open_first_lt   state
+
+fun applyMid m state = case m of
+    FNextFirst    => Portable.total goalFrag.next_first     state
+  | FNextTacsToLT => Portable.total goalFrag.next_tacs_to_lt state
+  | FNextSplit    => Portable.total goalFrag.next_split_lt  state
+  | FNextSelect   => Portable.total goalFrag.next_select_lt state
+
+fun applyClose c state = case c of
+    FClose        => Portable.total goalFrag.close_paren    state
+  | FCloseFirst   => Portable.total goalFrag.close_first    state
+  | FCloseRepeat  => Portable.total goalFrag.close_repeat   state
+  | FCloseFirstLT => Portable.total goalFrag.close_first_lt state
+
+val atomEndByte = TacticSteps.atomEndByte
+
+fun fragEnd frag = case frag of
+    FAtom te => atomEndByte te
+  | FGroup ((_, e), _) => SOME e
+  | FBracket (_, inner, _, te) => bracketEndByte te inner
+  | FMBracket (_, _, _, sections, te) =>
+      bracketEndByte te (List.concat sections)
+  | FFOpen _ | FFMid _ | FFClose _ => NONE
+
+(* Rightmost fragment span in a list -- foldl walking L-R and
+   keeping the last SOME.  Fragments are in source order, so this
+   is the maximum end position without a `List.rev`. *)
+and lastFragEnd frags =
+  List.foldl (fn (f, acc) => case fragEnd f of NONE => acc | some => some)
+             NONE frags
+
+and bracketEndByte te inner = case topSpan te of
+    SOME (_, e) => SOME e
+  | NONE => (case atomEndByte te of
+      SOME e => SOME e
+    | NONE => lastFragEnd inner)
 
 type snap = {stepIdx: int, endByte: int, state: goalFrag.goalstate}
 type cacheEntry = {
   tacText: string,
-  theoremStart: int,  (* file byte offset where the theorem's dec begins *)
+  theoremStart: int,
   snapshots: snap list}
 type cacheMap = (string, cacheEntry) Binarymap.dict
 type cacheData = cacheMap ref
 
-(* Alias to the currently-active cache ref, set by `afterCompile`.
-   Used by the `resetForCompile` wrapping below so we can empty the
-   cache at compile-start without going through plugin_data (which
-   isn't accessible from that hook). *)
 val latestCacheRef : cacheData option ref = ref NONE
 
 val cacheTag : cacheData LSPExtension.tag =
@@ -126,10 +146,6 @@ val cacheTag : cacheData LSPExtension.tag =
     name = "goalStateCache",
     init = fn _ => (),
     beforeCompile = fn () => (),
-    (* Reuse the same ref across compiles so cache entries can survive
-       (they're invalidated by tacText comparison at query time).
-       Also alias the ref to a module-global so `resetForCompile` can
-       reach it. *)
     afterCompile = fn (_, prev) => let
       val r = case prev of
                 SOME r => r
@@ -138,13 +154,6 @@ val cacheTag : cacheData LSPExtension.tag =
     in SOME r end
   }
 
-(* Chain into `notifyCompileStart` — fires at compile-start with the
-   buffer's `minEditOffset`.  Cache entries whose theorem begins at
-   or after the edit are downstream of the change and may reference a
-   stale HOL Context; drop them.  Entries strictly before the edit
-   are still valid — their Context is inherited from the snapshot or
-   from the unchanged file prefix, so their cached snapshots are
-   safe to reuse. *)
 val () = let val prev = !LSPExtension.notifyCompileStart in
   LSPExtension.notifyCompileStart := (fn minEdit => (
     (case (!latestCacheRef, minEdit) of
@@ -155,14 +164,11 @@ val () = let val prev = !LSPExtension.notifyCompileStart in
                   else Binarymap.insert (m, name, entry))
                 (Binarymap.mkDict String.compare) (!r)
      | (SOME r, NONE) =>
-         (* No pending edit but a compile is starting: full-file
-            didOpen or a manual re-compile.  Safest to drop all. *)
          r := Binarymap.mkDict String.compare
      | (NONE, _) => ());
     prev minEdit))
 end
 
-(* Largest snapshot whose endByte ≤ cursor. *)
 fun bestSnap cursor =
   List.foldl
     (fn (s, acc) =>
@@ -172,12 +178,6 @@ fun bestSnap cursor =
            | SOME s' => if #endByte s > #endByte s' then SOME s else acc)
     NONE
 
-(* First byte position at which two strings differ (or their common
-   length if one is a prefix of the other).  Used to invalidate
-   only those snapshots whose walk crossed the edited region — a
-   change to `tac3` in `tac1 >> tac2 >> tac3` leaves the post-tac1
-   and post-tac2 snapshots valid, so the next walk resumes from
-   post-tac2 and applies only the new tac3. *)
 fun commonPrefixLen (a, b) = let
   val n = Int.min (String.size a, String.size b)
   fun go i = if i >= n orelse String.sub (a, i) <> String.sub (b, i) then i
@@ -198,54 +198,215 @@ fun resumeFrom NONE _ startState = (0, startState, [])
                  (stepIdx + 1, state, kept)
           end
 
+datatype walkOut =
+  Done of {state: goalFrag.goalstate, snaps: snap list, stepIdx: int}
+| Halted of {state: goalFrag.goalstate, snaps: snap list, stepIdx: int}
+| Failed of {state: goalFrag.goalstate, snaps: snap list, stepIdx: int,
+             at: tac_frag}
+
+fun walkFrag tacText cursor state snaps stepIdx frag = case frag of
+    FAtom te => (case atomEndByte te of
+        SOME endB =>
+          if cursor < endB then
+            Halted {state = state, snaps = snaps, stepIdx = stepIdx}
+          else (case applyAtom tacText te state of
+                  NONE => Failed {state = state, snaps = snaps,
+                                  stepIdx = stepIdx, at = frag}
+                | SOME state' =>
+                    Done {state = state',
+                          snaps = {stepIdx = stepIdx, endByte = endB,
+                                   state = state'} :: snaps,
+                          stepIdx = stepIdx + 1})
+      | NONE => (* no snap key: apply as an always-fires leaf (e.g. LReverse) *)
+          (case applyAtom tacText te state of
+             NONE => Failed {state = state, snaps = snaps,
+                             stepIdx = stepIdx, at = frag}
+           | SOME state' =>
+               Done {state = state', snaps = snaps, stepIdx = stepIdx}))
+  | FFOpen ok =>
+      (case applyOpen ok state of
+         NONE => Failed {state = state, snaps = snaps,
+                         stepIdx = stepIdx, at = frag}
+       | SOME state' =>
+           Done {state = state', snaps = snaps, stepIdx = stepIdx})
+  | FFMid m =>
+      (case applyMid m state of
+         NONE => Failed {state = state, snaps = snaps,
+                         stepIdx = stepIdx, at = frag}
+       | SOME state' =>
+           Done {state = state', snaps = snaps, stepIdx = stepIdx})
+  | FFClose c =>
+      (case applyClose c state of
+         NONE => Failed {state = state, snaps = snaps,
+                         stepIdx = stepIdx, at = frag}
+       | SOME state' =>
+           Done {state = state', snaps = snaps, stepIdx = stepIdx})
+  | FGroup (_, inner) =>
+      walkFrags tacText cursor state snaps stepIdx inner
+  (* Transparent bracket: `open_null_ok`'s Parallel frame would
+     hide the inner TacsToLT context from `pp_goalstate`. *)
+  | FBracket (FOpenNullOk, inner, _, _) =>
+      walkFrags tacText cursor state snaps stepIdx inner
+  | FBracket (ok, inner, cc, te) => (case bracketEndByte te inner of
+        SOME be =>
+          if cursor < be then
+            (* Open, walk inner as far as cursor lets us; don't close. *)
+            (case applyOpen ok state of
+               NONE => Failed {state = state, snaps = snaps,
+                               stepIdx = stepIdx, at = FFOpen ok}
+             | SOME state' =>
+                 (case walkFrags tacText cursor state' snaps stepIdx inner of
+                    Done r =>
+                      Halted {state = #state r, snaps = #snaps r,
+                              stepIdx = #stepIdx r}
+                  | Halted r => Halted r
+                  | Failed r => Failed r))
+        else
+          (* Cursor past the whole bracket: open + walk + close. *)
+          (case applyOpen ok state of
+             NONE => Failed {state = state, snaps = snaps,
+                             stepIdx = stepIdx, at = FFOpen ok}
+           | SOME state' =>
+               (case walkFrags tacText cursor state' snaps stepIdx inner of
+                  Failed r => Failed r
+                | Halted r => Halted r
+                | Done r =>
+                    (case applyClose cc (#state r) of
+                       NONE => Failed {state = #state r, snaps = #snaps r,
+                                       stepIdx = #stepIdx r, at = FFClose cc}
+                     | SOME state'' =>
+                         Done {state = state'', snaps = #snaps r,
+                               stepIdx = #stepIdx r})))
+      | NONE => (* no end position: bail as opaque *)
+          Failed {state = state, snaps = snaps,
+                  stepIdx = stepIdx, at = frag})
+  | FMBracket (ok, mid, cc, sections, te) => (case bracketEndByte te
+                                                        (List.concat sections) of
+        SOME be =>
+          let
+            (* `walkFrags` returns Done only when it has walked
+               every frag in a section — i.e., cursor sits after
+               the section's last atom.  In that state we can
+               safely advance to the next section via `applyMid`.
+               A cursor inside the current section short-circuits
+               with Halted, which propagates immediately. *)
+            fun walkSections state snaps stepIdx sections =
+              case sections of
+                [] => Done {state = state, snaps = snaps, stepIdx = stepIdx}
+              | [sec] => walkFrags tacText cursor state snaps stepIdx sec
+              | sec :: rest =>
+                  (case walkFrags tacText cursor state snaps stepIdx sec of
+                     Done r =>
+                       (case applyMid mid (#state r) of
+                          NONE => Failed {state = #state r,
+                                          snaps = #snaps r,
+                                          stepIdx = #stepIdx r,
+                                          at = FFMid mid}
+                        | SOME state' =>
+                            walkSections state' (#snaps r)
+                                         (#stepIdx r) rest)
+                   | Halted r => Halted r
+                   | Failed r => Failed r)
+          in
+            if cursor < be then
+              (case applyOpen ok state of
+                 NONE => Failed {state = state, snaps = snaps,
+                                 stepIdx = stepIdx, at = FFOpen ok}
+               | SOME state' =>
+                   (case walkSections state' snaps stepIdx sections of
+                      Done r => Halted {state = #state r, snaps = #snaps r,
+                                        stepIdx = #stepIdx r}
+                    | Halted r => Halted r
+                    | Failed r => Failed r))
+            else
+              (case applyOpen ok state of
+                 NONE => Failed {state = state, snaps = snaps,
+                                 stepIdx = stepIdx, at = FFOpen ok}
+               | SOME state' =>
+                   (case walkSections state' snaps stepIdx sections of
+                      Done r =>
+                        (case applyClose cc (#state r) of
+                           NONE => Failed {state = #state r,
+                                           snaps = #snaps r,
+                                           stepIdx = #stepIdx r,
+                                           at = FFClose cc}
+                         | SOME state'' =>
+                             Done {state = state'', snaps = #snaps r,
+                                   stepIdx = #stepIdx r})
+                    | Halted r => Halted r
+                    | Failed r => Failed r))
+          end
+      | NONE => Failed {state = state, snaps = snaps,
+                        stepIdx = stepIdx, at = frag})
+
+and walkFrags tacText cursor state snaps stepIdx frags = case frags of
+    [] => Done {state = state, snaps = snaps, stepIdx = stepIdx}
+  | f :: rest =>
+      (case walkFrag tacText cursor state snaps stepIdx f of
+         Done r =>
+           walkFrags tacText cursor (#state r) (#snaps r) (#stepIdx r) rest
+       | Halted r => Halted r
+       | Failed r => Failed r)
+
+(* Skip forward through frags until stepIdx reaches resumeIdx.
+   The resume state already reflects the pre-cursor atoms; only
+   structural markers need re-firing to reach that state. *)
+fun advanceToResume resumeIdx state stepIdx frags = let
+  fun consume [] state stepIdx = ([], state, stepIdx)
+    | consume (fs as (f :: rest)) state stepIdx =
+        if stepIdx >= resumeIdx then (fs, state, stepIdx)
+        else case f of
+          FAtom _ =>
+            consume rest state (stepIdx + 1)
+        | FFOpen ok =>
+            (case applyOpen ok state of
+               NONE => (fs, state, stepIdx)
+             | SOME s' => consume rest s' stepIdx)
+        | FFMid m =>
+            (case applyMid m state of
+               NONE => (fs, state, stepIdx)
+             | SOME s' => consume rest s' stepIdx)
+        | FFClose c =>
+            (case applyClose c state of
+               NONE => (fs, state, stepIdx)
+             | SOME s' => consume rest s' stepIdx)
+        | _ => (fs, state, stepIdx)  (* nested; fall through to full walk *)
+  in consume frags state stepIdx end
+
 fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
-            steps, cursor} = let
+            frags, cursor} = let
   val cacheRefOpt = LSPExtension.getPluginData (plugins, cacheTag)
   val (resumeIdx, resumeState, priorSnaps) =
     resumeFrom cacheRefOpt
       {theoremName = theoremName, tacText = tacText, cursor = cursor}
       startState
-  (* Walker halts before applying a step whose stopPos is past the
-     cursor.  For Expand this is the end of the span; for markers
-     like OpenThen1 it is the position of the `>-` operator, so a
-     cursor between `EQ_TAC` and `>-` keeps both subgoals visible. *)
-  fun stopAt step = cursor < TacticSteps.stopPos step
-  fun snapOf idx step newState =
-    Option.map (fn (_, e) => {stepIdx = idx, endByte = e, state = newState})
-               (expandSpan step)
-  fun collect [] _ state acc = (state, acc, NONE)
-    | collect (step :: rest) idx state acc =
-        if idx < resumeIdx then collect rest (idx + 1) state acc
-        else if stopAt step then (state, acc, NONE)
-        else (case applyStep tacText step state of
-                NONE => (state, acc, SOME step)
-              | SOME newState =>
-                let val acc' = case snapOf idx step newState of
-                                 NONE => acc
-                               | SOME s => s :: acc
-                in collect rest (idx + 1) newState acc' end)
-             (* Wall-clock budget from `goal_state_init.ML` interrupts
-                this thread when a tactic (typically METIS_TAC) exceeds
-                the budget.  Treat the interrupt like a failed step:
-                halt with the pre-step state, cache what we already
-                walked, and let the caller return partial state. *)
-             handle Portable.Interrupt => (state, acc, SOME step)
-  val (finalState, newSnaps, failedAt) = collect steps 0 resumeState []
-  val _ = case (cacheRefOpt, newSnaps) of
-      (SOME cacheRef, _::_) => let
-        (* Merge new snapshots into the cache, deduping by stepIdx so
-           a resumed walk that re-walks past an already-cached step
-           replaces rather than duplicates. *)
-        val merged = newSnaps @ priorSnaps
+  val (frags', state', stepIdx') =
+    if resumeIdx = 0 then (frags, resumeState, 0)
+    else let val (fs, s, i) = advanceToResume resumeIdx resumeState 0 frags
+         (* Only trust the resume if we could step to it via flat
+            markers.  A cache miss inside a bracket restarts from
+            startState, else we'd re-apply cached atoms. *)
+         in if i >= resumeIdx then (fs, s, i) else (frags, startState, 0)
+         end
+  val outcome = walkFrags tacText cursor state' priorSnaps stepIdx' frags'
+                handle Portable.Interrupt =>
+                  Halted {state = state', snaps = priorSnaps,
+                          stepIdx = stepIdx'}
+  val (finalState, allSnaps, failedAt) = case outcome of
+      Done r    => (#state r, #snaps r, NONE)
+    | Halted r  => (#state r, #snaps r, NONE)
+    | Failed r  => (#state r, #snaps r, SOME (#at r))
+  val _ = case (cacheRefOpt, allSnaps) of
+      (SOME cacheRef, _ :: _) => let
         val deduped = Lib.op_mk_set
                         (fn s1 => fn s2 => #stepIdx s1 = #stepIdx s2)
-                        merged
-      in cacheRef := Binarymap.insert
-                       (!cacheRef, theoremName,
-                        {tacText = tacText, theoremStart = theoremStart,
-                         snapshots = deduped})
-      end
-    | _ => ()  (* no cache slot yet, or nothing new to store *)
+                        allSnaps
+        in cacheRef := Binarymap.insert
+                         (!cacheRef, theoremName,
+                          {tacText = tacText, theoremStart = theoremStart,
+                           snapshots = deduped})
+        end
+    | _ => ()
   in {state = finalState, failedAt = failedAt} end
 
 end;

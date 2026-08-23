@@ -1911,17 +1911,22 @@ def test_goalState_walks_double_backslash_in_then1_block():
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted")
         # Cursor at line 7 char 13 = right after `ALL_TAC `, before
-        # the `\\\\`.  With the fix the walker has CONJ_TAC and
-        # ALL_TAC as distinct Expand steps and reports step >= 2.
-        # Without the fix the whole chain is one Expand and step
-        # halts at 1.
+        # the `\\\\`.  Post-TacticParse the walker treats `\\\\` as
+        # a THEN-chain separator and descends into the `>-` block:
+        # CONJ_TAC ran, then focus flipped to the first subgoal
+        # `T` for the >- branch, then ALL_TAC (semantic no-op).
+        # What we're testing: the walker got INTO the >- block and
+        # focused a single subgoal — proves the `\\\\` chain
+        # split.  (Without the fix the whole >- block was opaque
+        # and the walker halted at the pre-CONJ_TAC state showing
+        # both conjuncts.)
         r = _send_goalstate(c, 501, uri, 7, 13)
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
-        step = result.get("step")
-        assert_true(step >= 2,
-                    f"walker advanced past ALL_TAC inside `\\\\` "
-                    f"chain, got step {step} ({result!r})")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "T",
+                    f"walker split the `\\\\` chain and focused `T`, "
+                    f"got {result!r}")
     finally:
         c.close()
 
@@ -2634,6 +2639,128 @@ def test_goalState_walks_squiggle_selector():
         c.close()
 
 
+def test_goalState_walks_into_by_block():
+    """`‘g’ by (tac1 >> tac2)` compiles to `ThenLT(Subgoal, [LThen1
+    tac1 >> tac2])`; the walker steps into the RHS so a cursor
+    between tac1 and tac2 advances past the subgoal + tac1."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_by_block.sml"
+        #  0 Theory goalstate_by_block
+        #  1 Ancestors arithmetic
+        #  2
+        #  3 Theorem t:
+        #  4   !n:num. n + 0 = n
+        #  5 Proof
+        #  6   gen_tac >> `n = n` by (ALL_TAC >> ACCEPT_TAC (REFL n))
+        #  7   >> simp[]
+        #  8 QED
+        src = ("Theory goalstate_by_block\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  gen_tac >> `n = n` by (ALL_TAC >> ACCEPT_TAC (REFL n))\n"
+               "  >> simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Cursor at line 6 char 34: right after `ALL_TAC `, inside the
+        # `by (…)` block.  Post-fix the walker has descended into the
+        # `by` RHS.  ALL_TAC is a semantic no-op under TacticParse
+        # (`Then []`) so it doesn't advance the step count; what
+        # matters is the goal-state — cursor should sit on the
+        # freshly-introduced subgoal `n = n`, not on the outer goal.
+        r = _send_goalstate(c, 701, uri, 6, 34)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "n = n",
+                    f"walker focused subgoal `n = n` ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_walks_into_suffices_by_block():
+    """`‘g’ suffices_by tac` compiles to
+    `ThenLT(Group(ThenLT(Subgoal,[LReverse])), [LThen1 tac])` — the
+    walker steps into the tac RHS."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_suffices_by.sml"
+        #  0 Theory goalstate_suffices_by
+        #  1 Ancestors arithmetic
+        #  2
+        #  3 Theorem t:
+        #  4   !n:num. n + 0 = n
+        #  5 Proof
+        #  6   gen_tac >> `n = n + 0` suffices_by (ALL_TAC >> simp[])
+        #  7 QED
+        src = ("Theory goalstate_suffices_by\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  gen_tac >> `n = n + 0` suffices_by (ALL_TAC >> simp[])\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Cursor at line 6 char 43: right after `ALL_TAC `, inside the
+        # `suffices_by (…)` block.  Focus should be on the sufficient
+        # goal (`n = n + 0`) with the original `n + 0 = n` sitting
+        # below as the assumption-holder subgoal.
+        r = _send_goalstate(c, 702, uri, 6, 43)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        goals = result["goals"]
+        assert_true(len(goals) >= 1 and goals[0]["goal"] == "n = n + 0",
+                    f"walker focused sufficient goal ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_walks_into_select_goal_block():
+    """`>~ [pat]` (LSelectGoal) narrows focus to a matching subgoal;
+    the walker steps into the tactic sequence that follows.  Before
+    the fix, the walker synthesised `ALL_TAC >~ [pat]` at apply
+    time, which would fail when the current focus didn't hold a
+    matching goal (see fibonacciScript.sml's `>~
+    [‘fibloop _ _ i i = fib i’]` where the false-positive `Selector
+    ALL_TAC >~ ...` error came from)."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_select_block.sml"
+        src = ("Theory goalstate_select_block\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n = 0 \\/ 0 < n\n"
+               "Proof\n"
+               "  gen_tac >> Cases_on `n`\n"
+               "  >~ [`SUC m`] >- (ALL_TAC >> rw[])\n"
+               "  >~ [`0`] >- rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Cursor at line 7 char 29: right after `ALL_TAC `, inside
+        # the `>~ [`SUC m`] >- (…)` block.  Step should be past
+        # gen_tac + Cases_on + SUC-selector + ALL_TAC.
+        r = _send_goalstate(c, 703, uri, 7, 29)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        step = result.get("step")
+        assert_true(step >= 3,
+                    f"walker stepped into select-goal block, "
+                    f"got step {step} ({result!r})")
+    finally:
+        c.close()
+
+
 def test_lsp_walks_file_includes_from_arbitrary_cwd():
     """When the LSP server is launched with cwd != the opened file's
     directory (as eglot typically does — cwd is the project root),
@@ -2957,6 +3084,12 @@ TESTS = [
                                      test_goalState_thenl_end_shows_proved),
     ("goalState_walks_squiggle_selector",
                                      test_goalState_walks_squiggle_selector),
+    ("goalState_walks_into_by_block",
+                                     test_goalState_walks_into_by_block),
+    ("goalState_walks_into_suffices_by_block",
+                                     test_goalState_walks_into_suffices_by_block),
+    ("goalState_walks_into_select_goal_block",
+                                     test_goalState_walks_into_select_goal_block),
     ("lsp_walks_file_includes_from_arbitrary_cwd",
                                      test_lsp_walks_file_includes_from_arbitrary_cwd),
     ("lsp_holproject_preload_project_dirs",

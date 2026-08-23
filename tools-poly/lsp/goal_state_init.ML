@@ -3,31 +3,13 @@
    goalFrag and return the goal-state at the cursor. *)
 
 local
-  (* Wall-clock budget for the walker.  Users routinely park their
-     cursor past the last tactic in a Proof block; that closer is
-     often expensive (METIS_TAC, DECIDE_TAC, …), and without a budget
-     each auto-follow tick spawns a fresh walker that runs the whole
-     tactic — the LSP ends up pinned at 100% CPU per stuck query.
+  open TacticParse
 
-     The canary Thread.interrupts the walker at the budget.  For the
-     interrupt to actually land inside pure ML like METIS_TAC we run
-     under `private_interrupts` (InterruptAsynchOnce) — spawnJob's
-     default (InterruptSynch) only fires interrupts at explicit
-     `Thread.testInterrupt` polls, which HOL tactics don't do.
-
-     `src/portableML/poly/concurrent/Timeout.sml` implements the same
-     shape properly (Event_Timer + race-safe cancel) but isn't linked
-     into the LSP heap. *)
   val walkerBudgetMs = 1500
 
   fun logStderr s =
     (TextIO.output (TextIO.stdErr, s); TextIO.flushOut TextIO.stdErr)
 
-  (* Returns SOME (f ()) when f completed within the budget, NONE
-     when the canary had to interrupt it — a mid-walk partial state
-     is complete for its own step but wrong for the cursor's step,
-     so callers surface it as "no goal-state" rather than misleading
-     the user with stale content. *)
   fun withTimeout ms f = let
     val here = Thread.self ()
     val done = ref false
@@ -54,28 +36,68 @@ local
     asms = List.map Parse.term_to_string asms,
     goal = Parse.term_to_string g
   }
-  (* Render the whole goalstate the way the REPL does — via
-     goalFrag's own pretty-printer, driven by the VT100 backend so
-     bound / free variables carry ANSI colour escapes.  Clients that
-     don't decode ANSI can strip the escapes with an
-     `\x1B\[[0-9;]*m` regex. *)
   fun ppState st =
     Lib.with_flag (Parse.current_backend, PPBackEnd.vt100_terminal)
       (HOLPP.pp_to_string 75 goalFrag.pp_goalstate) st
     handle _ => ""
 
-  (* Count Expand/ExpandList/GoalSelect steps whose end is strictly
-     before the cursor — the step-index the user sits at. *)
-  fun stepIndex (steps, cursor) = let
+  val fragEndByte = TacticSteps.atomEndByte
+
+  fun stepIndex (frags, cursor) = let
     fun go [] n = n
-      | go (TacticSteps.Expand (_, e) :: rest) n =
-          if cursor < e then n else go rest (n + 1)
-      | go (TacticSteps.ExpandList (_, e) :: rest) n =
-          if cursor < e then n else go rest (n + 1)
-      | go (TacticSteps.GoalSelect (_, e) :: rest) n =
-          if cursor < e then n else go rest (n + 1)
+      | go (FAtom te :: rest) n = (case fragEndByte te of
+          SOME e => if cursor < e then n else go rest (n + 1)
+        | NONE => go rest n)
+      | go (FGroup (_, inner) :: rest) n = go rest (go inner n)
+      | go (FBracket (_, inner, _, _) :: rest) n = go rest (go inner n)
+      | go (FMBracket (_, _, _, sections, _) :: rest) n =
+          go rest (List.foldl (fn (s, m) => go s m) n sections)
       | go (_ :: rest) n = go rest n
-    in go steps 0 end
+    in go frags 0 end
+
+  (* User-facing error message per failing frag.  Uses the surface
+     sugar name rather than the internal synthesis (e.g. "Selector
+     `>~ [pat]` found no matching subgoal", not the `ALL_TAC >~ …`
+     wrapper the walker actually compiled). *)
+  fun failMsg tacText frag = case frag of
+      FAtom (Subgoal span) =>
+        "Subgoal `" ^ String.substring
+                        (tacText, #1 span, #2 span - #1 span)
+        ^ "` by … failed to prove"
+    | FAtom (LSelectGoal span) =>
+        "Selector `>~ ["
+        ^ String.substring (tacText, #1 span, #2 span - #1 span)
+        ^ "]` found no matching subgoal"
+    | FAtom (LSelectGoals span) =>
+        "Selector `>>~ ["
+        ^ String.substring (tacText, #1 span, #2 span - #1 span)
+        ^ "]` found no matching subgoal"
+    | FAtom LReverse =>
+        "`suffices_by` reversal failed"
+    | FAtom te => (case topSpan te of
+        SOME (s, e) =>
+          "Tactic `" ^ String.substring (tacText, s, e - s)
+          ^ "` failed to apply"
+      | NONE => "Structural leaf failed")
+    | FFOpen _  => "Combinator open failed"
+    | FFMid _   => "Combinator branch-advance failed"
+    | FFClose _ => "Combinator close failed"
+    | FGroup _  => "Group failed"
+    | FBracket _  => "Bracket failed"
+    | FMBracket _ => "Bracket failed"
+
+  fun failRange tacStart frag = case frag of
+      FAtom te => (case fragEndByte te of
+          SOME e => (case topSpan te of
+            SOME (s, _) => SOME (tacStart + s, tacStart + e)
+          | NONE => (case te of
+              Subgoal (s, _)      => SOME (tacStart + s, tacStart + e)
+            | LSelectGoal (s, _)  => SOME (tacStart + s, tacStart + e)
+            | LSelectGoals (s, _) => SOME (tacStart + s, tacStart + e)
+            | Rename (s, _)       => SOME (tacStart + s, tacStart + e)
+            | _ => NONE))
+        | NONE => NONE)
+    | _ => NONE
 in
 
 val () = LSPExtension.goalStateAtPos :=
@@ -83,45 +105,19 @@ val () = LSPExtension.goalStateAtPos :=
        {name, quote, quoteStart, tacText, tacStart, cursor}
          : LSPExtension.theorem_context) => let
     val initialGoal = Lib.total Parse.Term [QUOTE quote]
-    val steps = TacticSteps.stepsOfTacText
+    val frags = TacticSteps.fragsOfTacText
                   {label = "goal_state", tacText = tacText}
     val tacCursor = cursor - tacStart
-    in case (initialGoal, steps) of
-         (SOME tm, SOME sts) => let
+    in case (initialGoal, frags) of
+         (SOME tm, SOME fs) => let
            val startState = goalFrag.new_goal ([], tm)
-           val step = stepIndex (sts, tacCursor)
-           (* Extract the leaf-tactic source for the failed step, if
-              any -- so the error message names WHICH tactic failed
-              rather than just reporting a byte offset. *)
-           fun failMsg step =
-             case step of
-               TacticSteps.Expand (s, e) =>
-                 "Tactic `" ^ String.substring (tacText, s, e - s)
-                 ^ "` failed to apply"
-             | TacticSteps.ExpandList (s, e) =>
-                 "Tactic list `" ^ String.substring (tacText, s, e - s)
-                 ^ "` failed to apply"
-             | TacticSteps.GoalSelect (s, e) =>
-                 "Selector `ALL_TAC "
-                 ^ String.substring (tacText, s, e - s)
-                 ^ "` failed to apply"
-             | _ =>
-                 "Structural marker at byte "
-                 ^ Int.toString (TacticSteps.stopPos step) ^ " failed"
-           (* File byte range of the failed step, if it has a natural
-              span; structural markers don't and get NONE. *)
-           fun failRange step =
-             case step of
-               TacticSteps.Expand (s, e)     => SOME (tacStart + s, tacStart + e)
-             | TacticSteps.ExpandList (s, e) => SOME (tacStart + s, tacStart + e)
-             | TacticSteps.GoalSelect (s, e) => SOME (tacStart + s, tacStart + e)
-             | _ => NONE
+           val step = stepIndex (fs, tacCursor)
            in case withTimeout walkerBudgetMs (fn () =>
                     TacticWalker.walkTo {
                       plugins = plugins, theoremName = name,
                       theoremStart = quoteStart,
                       tacText = tacText, startState = startState,
-                      steps = sts, cursor = tacCursor}) of
+                      frags = fs, cursor = tacCursor}) of
                 NONE => SOME
                   {theorem = name, step = step,
                    goals = [], pretty = "",
@@ -132,8 +128,9 @@ val () = LSPExtension.goalStateAtPos :=
                   {theorem = name, step = step,
                    goals = List.map ppGoal (goalFrag.top_goals state),
                    pretty = ppState state,
-                   error = Option.map failMsg failedAt,
-                   failedRange = Option.mapPartial failRange failedAt}
+                   error = Option.map (failMsg tacText) failedAt,
+                   failedRange =
+                     Option.mapPartial (failRange tacStart) failedAt}
            end
        | (SOME tm, NONE) => let
            val startState = goalFrag.new_goal ([], tm)

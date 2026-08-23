@@ -670,7 +670,11 @@ in
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/hover_quote_init.ML"));
         (* Tactic-step compiler used by later slices to walk a Proof
-           body via goalFrag; also runs its selftest at load time. *)
+           body via goalFrag; also runs its selftest at load time.
+           Depends on TacticParse (src/parse/) for the surface-sugar
+           elaboration -- boss's ancestor chain doesn't autoload it,
+           so pull it in explicitly. *)
+        Meta.load "TacticParse";
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/tactic_steps.ML"));
         (* goalFrag-based interpreter for the step stream. *)

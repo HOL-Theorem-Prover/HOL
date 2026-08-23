@@ -1,149 +1,39 @@
-(* Compile a Theorem's tactic body (HOLSourceAST.exp) into a step
-   stream for the goalFrag interpreter.  `THENL […]` is opaque for
-   now; sub-branch stepping is a follow-up. *)
+(* Parse a Theorem's tactic body into TacticParse.tac_frag form for
+   the goalFrag walker.  TacticParse already elaborates every
+   surface sugar (by, suffices_by, tilde-selectors, MapEvery,
+   Rename, Repair) so the walker doesn't need its own combinator-
+   name matcher. *)
 
 structure TacticSteps :> sig
-  (* Every step carries a byte position that says "the walker halts
-     when the cursor is strictly before this".  For an Expand it is
-     the end of the tactic's textual span; for structural markers it
-     is the position of the operator that induces the marker (e.g.
-     the `>-` for OpenThen1 that opens the THEN1 branch, or the end
-     of the branch for CloseParen that closes it).  Without this
-     position markers would always be applied regardless of cursor,
-     which produces a state focused into a subgoal even when the
-     cursor is still before the split operator. *)
-  datatype step =
-      Expand of int * int           (* byte-range of an atomic tactic *)
-    | ExpandList of int * int       (* opaque fallback for THENL with a
-                                       non-literal RHS *)
-    | GoalSelect of int * int       (* >~ / >>~ operator+RHS span *)
-    | OpenParen of int | CloseParen of int
-    | OpenThen1 of int              (* >- / THEN1 *)
-    | OpenFirst of int | NextFirst of int | CloseFirst of int
-    | OpenRepeat of int | CloseRepeat of int
-    | OpenNthGoal of int * int      (* n, activation byte *)
-    | OpenTacsToLT of int           (* THENL / >| — [ position *)
-    | NextTacsToLT of int           (*                , position *)
-  val compileToSteps: HOLSourceAST.exp -> step list
+  (* Full pipeline: wrap the proof body in a synthetic Theorem,
+     parse via HOLSourceParser, run TacticParse's surface-sugar
+     elaboration, linearize to a tac_frag list with every span
+     shifted into tacText-relative coordinates. *)
+  val fragsOfTacText:
+    {label: string, tacText: string} -> TacticParse.tac_frag list option
 
-  (* Byte position at/after which the walker should apply the step —
-     equivalently, the walker stops when `cursor < stopPos`.  For
-     Expand/ExpandList this is the end of the span; for markers it
-     is the position they were annotated with. *)
-  val stopPos: step -> int
-
-  (* Parse a raw proof-body source (the text between `Proof` and
-     `QED`) via a synthesised `Theorem hol_lsp_wrap: T Proof <text>
-     QED` wrapper, returning the parsed tactic expression.  `label`
-     is passed through to the parser for diagnostics.  Spans on
-     the returned exp are in tacText-relative bytes (the wrapper
-     prefix has already been accounted for). *)
-  val parseTacText:
-    {label: string, tacText: string} -> HOLSourceAST.exp option
-
-  (* Convenience: parseTacText + compileToSteps + span shift so
-     callers get tacText-coord steps in one call. *)
-  val stepsOfTacText:
-    {label: string, tacText: string} -> step list option
+  (* End-byte of a leaf tac_expr's span.  Shared between the walker
+     and the LSP response builder so both classify snap-worthy
+     atoms identically. *)
+  val atomEndByte: (int * int) TacticParse.tac_expr -> int option
 end = struct
-
-open HOLSourceAST
-
-datatype step =
-    Expand of int * int
-  | ExpandList of int * int
-  | GoalSelect of int * int
-  | OpenParen of int | CloseParen of int
-  | OpenThen1 of int
-  | OpenFirst of int | NextFirst of int | CloseFirst of int
-  | OpenRepeat of int | CloseRepeat of int
-  | OpenNthGoal of int * int
-  | OpenTacsToLT of int
-  | NextTacsToLT of int
-
-fun stopPos (Expand (_, e))         = e
-  | stopPos (ExpandList (_, e))     = e
-  | stopPos (GoalSelect (_, e))     = e
-  | stopPos (OpenParen p)           = p
-  | stopPos (CloseParen p)          = p
-  | stopPos (OpenThen1 p)           = p
-  | stopPos (OpenFirst p)           = p
-  | stopPos (NextFirst p)           = p
-  | stopPos (CloseFirst p)          = p
-  | stopPos (OpenRepeat p)          = p
-  | stopPos (CloseRepeat p)         = p
-  | stopPos (OpenNthGoal (_, p))    = p
-  | stopPos (OpenTacsToLT p)        = p
-  | stopPos (NextTacsToLT p)        = p
-
-(* Combinator names are matched bare — a qualified `Tactical.THEN`
-   parses as an `App` rather than an `Infix` and lands in the generic
-   `Expand` branch.  Same for `REPEAT`: only the unqualified form is
-   recognised as a step opener. *)
-fun then1Steps opPos left right = let val (_, rightEnd) = expSpan right in
-  compileToSteps left @ [OpenThen1 opPos]
-                      @ compileToSteps right @ [CloseParen rightEnd]
-  end
-(* Non-literal RHS (`THENL bs`, `THENL (mkBranches ())`) falls back
-   to one opaque ExpandList so the walker at least halts cleanly at
-   the whole-list boundary; branch stepping requires the AST-visible
-   list shape. *)
-and thenlSteps left right =
-  let val leftSteps = compileToSteps left in
-  case right of
-    List {left = lbracket, elems = {args, seps, ...}, stop, ...} =>
-      let
-        (* HOLSourceAST.sig:8-13 -- |seps| may be |args|-1 (normal),
-           |args| (trailing sep), or 0 (synthetic).  Fall back to
-           end-of-branch for missing/absent seps. *)
-        fun walk [] _ = []
-          | walk [b] _ = compileToSteps b
-          | walk (b :: bs) (SOME p :: ss) =
-              compileToSteps b @ [NextTacsToLT p] @ walk bs ss
-          | walk (b :: bs) (_ :: ss) =
-              let val (_, bEnd) = expSpan b in
-              compileToSteps b @ [NextTacsToLT bEnd] @ walk bs ss
-              end
-          | walk (b :: bs) [] =
-              let val (_, bEnd) = expSpan b in
-              compileToSteps b @ [NextTacsToLT bEnd] @ walk bs []
-              end
-      in
-        leftSteps @ [OpenTacsToLT lbracket] @ walk args seps
-                  @ [CloseParen stop]
-      end
-  | _ => leftSteps @ [ExpandList (expSpan right)]
-  end
-and goalSelectSteps opPos left right = let
-  val (_, rightEnd) = expSpan right
-in compileToSteps left @ [GoalSelect (opPos, rightEnd)] end
-and compileToSteps (e: exp) : step list =
-  case e of
-    Infix {left, id = (opPos, name), right} =>
-     (case name of
-        "THEN"  => compileToSteps left @ compileToSteps right
-      | ">>"    => compileToSteps left @ compileToSteps right
-      | "\\\\"  => compileToSteps left @ compileToSteps right
-      | ">-"    => then1Steps opPos left right
-      | "THEN1" => then1Steps opPos left right
-      | "THENL" => thenlSteps left right
-      | ">|"    => thenlSteps left right
-      | ">~"    => goalSelectSteps opPos left right
-      | ">>~"   => goalSelectSteps opPos left right
-      | _       => [Expand (expSpan e)])
-  | Parens {exp = e', ...} => compileToSteps e'
-  (* Defensive: raw parseDec output has no ExpExpansion, but a
-     post-expansion feed could deliver one. *)
-  | ExpExpansion {orig, ...} => compileToSteps orig
-  | _ => [Expand (expSpan e)]
-  (* `REPEAT tac` is treated as one atomic Expand — decomposing into
-     open_repeat / expand / close_repeat runs the body just ONCE, not
-     iteratively, which is a semantic error.  goalFrag can't drive a
-     REPEAT one-iteration-at-a-time without more machinery.  Same for
-     any App(Ident, …) we don't recognise: run as-is. *)
 
 val wrapPrefix = "Theorem hol_lsp_wrap: T\nProof\n"
 val wrapPrefixLen = String.size wrapPrefix
+
+fun atomEndByte te = let open TacticParse in case te of
+    Subgoal (_, e)      => SOME e
+  | LSelectGoal (_, e)  => SOME e
+  | LSelectGoals (_, e) => SOME e
+  | Rename (_, e)       => SOME e
+  | Opaque (_, (_, e))
+  | LOpaque (_, (_, e))
+  | OOpaque (_, (_, e))   => SOME e
+  | MapEvery ((_, e), _)
+  | MapFirst ((_, e), _)  => SOME e
+  | LReverse => NONE
+  | _ => Option.map #2 (topSpan te)
+end
 
 fun parseTacText {label, tacText} = let
   val src = wrapPrefix ^ tacText ^ "\nQED\n"
@@ -153,80 +43,94 @@ fun parseTacText {label, tacText} = let
   val {parseDec, ...} =
     HOLSourceParser.parseSML label read err HOLSourceParser.initialScope
   in case parseDec () of
-       SOME (HOLTheoremDecl {tac, ...}) => SOME tac
+       SOME (HOLSourceAST.HOLTheoremDecl {tac, ...}) => SOME tac
      | _ => NONE
   end
 
-fun shiftStep step = let val d = wrapPrefixLen in case step of
-    Expand (s, e)     => Expand (s - d, e - d)
-  | ExpandList (s, e) => ExpandList (s - d, e - d)
-  | GoalSelect (s, e) => GoalSelect (s - d, e - d)
-  | OpenParen p       => OpenParen  (p - d)
-  | CloseParen p      => CloseParen (p - d)
-  | OpenThen1 p       => OpenThen1  (p - d)
-  | OpenFirst p       => OpenFirst  (p - d)
-  | NextFirst p       => NextFirst  (p - d)
-  | CloseFirst p      => CloseFirst (p - d)
-  | OpenRepeat p      => OpenRepeat (p - d)
-  | CloseRepeat p     => CloseRepeat (p - d)
-  | OpenNthGoal (n, p) => OpenNthGoal (n, p - d)
-  | OpenTacsToLT p    => OpenTacsToLT (p - d)
-  | NextTacsToLT p    => NextTacsToLT (p - d)
-  end
-
-fun stepsOfTacText args =
-  Option.map (List.map shiftStep o compileToSteps) (parseTacText args)
+fun fragsOfTacText args =
+  case parseTacText args of
+    NONE => NONE
+  | SOME tac_ast => let
+      val d = wrapPrefixLen
+      val shifted = TacticParse.mapTacExpr {
+          start = fn _ => fn (s, e) => (s - d, e - d),
+          stop  = fn _ => fn x => x,
+          repair = fn _ => fn _ => () }
+        (TacticParse.parseTacticBlock tac_ast)
+      (* `fn _ => false` = maximum decomposition; leaves still land
+         as FAtom via linearize's own classification. *)
+      in SOME (TacticParse.linearize (fn _ => false) shifted) end
 
 end;
 
-(* Load-time selftest.  Raises Fail on regression, which surfaces as
-   a `bin/hol lsp` startup crash and shows up in every Python LSP
-   test.  Inline because the LSP init doesn't have access to the
-   `testutils` selftest infrastructure. *)
+(* Load-time selftest -- raises Fail on regression. *)
 local
-  fun parseTac tacText =
-    case TacticSteps.parseTacText
+  open TacticParse
+  fun parseFrags tacText =
+    case TacticSteps.fragsOfTacText
            {label = "tactic_steps_selftest", tacText = tacText} of
-      SOME tac => tac
-    | NONE => raise Fail ("parseTac: no HOLTheoremDecl in " ^ tacText)
+      SOME frags => frags
+    | NONE => raise Fail ("parseFrags: no HOLTheoremDecl in " ^ tacText)
+  fun open_ch FOpen           = "("
+    | open_ch FOpenThen1      = "["
+    | open_ch FOpenFirst      = "<"
+    | open_ch FOpenRepeat     = "R"
+    | open_ch FOpenTacsToLT   = "T"
+    | open_ch FOpenNullOk     = "K"
+    | open_ch (FOpenNthGoal _) = "N"
+    | open_ch FOpenLastGoal   = "L"
+    | open_ch FOpenHeadGoal   = "H"
+    | open_ch (FOpenSplit _)  = "S"
+    | open_ch FOpenSelect     = "$"
+    | open_ch FOpenFirstLT    = "F"
+  fun mid_ch FNextFirst       = "|"
+    | mid_ch FNextTacsToLT    = ";"
+    | mid_ch FNextSplit       = ","
+    | mid_ch FNextSelect      = "~"
+  fun close_ch FClose         = ")"
+    | close_ch FCloseFirst    = ">"
+    | close_ch FCloseRepeat   = "r"
+    | close_ch FCloseFirstLT  = "f"
+  fun atom_ch te = case te of
+      Subgoal _      => "S"
+    | LSelectGoal _  => "G"
+    | LSelectGoals _ => "g"
+    | LReverse       => "V"
+    | Rename _       => "N"
+    | _              => "E"
   fun shape [] = ""
-    | shape (TacticSteps.Expand _      :: r) = "E" ^ shape r
-    | shape (TacticSteps.ExpandList _  :: r) = "L" ^ shape r
-    | shape (TacticSteps.GoalSelect _  :: r) = "G" ^ shape r
-    | shape (TacticSteps.OpenParen _   :: r) = "(" ^ shape r
-    | shape (TacticSteps.CloseParen _  :: r) = ")" ^ shape r
-    | shape (TacticSteps.OpenThen1 _   :: r) = "[" ^ shape r
-    | shape (TacticSteps.OpenFirst _   :: r) = "<" ^ shape r
-    | shape (TacticSteps.NextFirst _   :: r) = "|" ^ shape r
-    | shape (TacticSteps.CloseFirst _  :: r) = ">" ^ shape r
-    | shape (TacticSteps.OpenRepeat _  :: r) = "R" ^ shape r
-    | shape (TacticSteps.CloseRepeat _ :: r) = "r" ^ shape r
-    | shape (TacticSteps.OpenNthGoal _ :: r) = "N" ^ shape r
-    | shape (TacticSteps.OpenTacsToLT _ :: r) = "T" ^ shape r
-    | shape (TacticSteps.NextTacsToLT _ :: r) = ";" ^ shape r
+    | shape (FAtom te :: r)              = atom_ch te ^ shape r
+    | shape (FFOpen o' :: r)             = open_ch o' ^ shape r
+    | shape (FFMid m :: r)               = mid_ch m ^ shape r
+    | shape (FFClose c :: r)             = close_ch c ^ shape r
+    | shape (FGroup (_, fs) :: r)        = shape fs ^ shape r
+    | shape (FBracket (o', fs, c, _) :: r) =
+        open_ch o' ^ shape fs ^ close_ch c ^ shape r
+    | shape (FMBracket (o', m, c, secs, _) :: r) = let
+        fun sec [] = ""
+          | sec [s] = shape s
+          | sec (s :: rest) = shape s ^ mid_ch m ^ sec rest
+        in open_ch o' ^ sec secs ^ close_ch c ^ shape r end
   fun check name tacText expected = let
-    val steps = TacticSteps.compileToSteps (parseTac tacText)
-    val got = shape steps
+    val got = shape (parseFrags tacText)
     in if got = expected then ()
        else raise Fail ("TacticSteps selftest [" ^ name ^ "]: expected "
                         ^ expected ^ ", got " ^ got
                         ^ " for tactic: " ^ tacText)
     end
 in
-  val _ = check "single leaf"      "ALL_TAC"                     "E"
+  val _ = check "single leaf"      "simp[]"                      "E"
+  val _ = check "ALL_TAC no-op"    "ALL_TAC"                     ""
   val _ = check "THEN chain"       "tac1 THEN tac2 THEN tac3"    "EEE"
   val _ = check ">> chain"         "tac1 >> tac2 >> tac3"        "EEE"
-  val _ = check "\\\\ chain"       "tac1 \\\\ tac2 \\\\ tac3"    "EEE"
   val _ = check ">- nested parens" "tac1 >- (a >> b) >- (c >> d)"
                                                                  "E[EE)[EE)"
-  val _ = check ">- with \\\\"     "tac1 >- (a \\\\ b \\\\ c)"   "E[EEE)"
-  val _ = check "REPEAT atomic"    "REPEAT (tac1 >> tac2)"       "E"
+  val _ = check "REPEAT atomic"    "REPEAT (tac1 >> tac2)"       "REEr"
   val _ = check "nested parens"    "((tac1))"                    "E"
-  val _ = check "THENL branches"   "tac1 THENL [b1, b2, b3]"     "ETE;E;E)"
-  val _ = check ">| branches"      "tac1 >| [b1, b2, b3]"        "ETE;E;E)"
-  val _ = check "THENL single"     "tac1 THENL [b1]"             "ETE)"
-  val _ = check "THENL var-rhs"    "tac1 THENL bs"               "EL"
+  val _ = check "THENL branches"   "tac1 THENL [b1, b2, b3]"     "EKTE;E;E))"
+  val _ = check "THENL single"     "tac1 THENL [b1]"             "EKTE))"
   val _ = check ">~ selector"      "tac1 >~ [`P`]"               "EG"
-  val _ = check ">>~ selector"     "tac1 >>~ [`P`, `Q`]"         "EG"
-  val _ = check ">~ then >>"       "tac1 >~ [`P`] >> tac2"       "EGE"
+  val _ = check ">>~ selector"     "tac1 >>~ [`P`, `Q`]"         "Eg"
+  val _ = check "by block"         "`n < 10` by (rw[] >> simp[])" "S[EE)"
+  val _ = check "suffices_by"      "`n < 10` suffices_by rw[]"    "SV[E)"
 end;
