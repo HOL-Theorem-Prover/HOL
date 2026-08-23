@@ -127,26 +127,38 @@ or **lsp-mode** (from MELPA).
 Eglot documentation: `M-x info` → `(eglot)`.  Minimal `init.el`:
 
 ```elisp
-;; Make holscript-mode discoverable.
+;; hol-mode.el / holscript-mode.el on the load-path.
 (add-to-list 'load-path
              "/absolute/path/to/HOL/tools/editor-modes/emacs")
-(require 'holscript-mode)  ; auto-loads on *Script.sml files
+(require 'hol-mode)
 
-;; Tell eglot how to start the HOL LSP.  Register both the classic
-;; SMIE-based holscript-mode and the tree-sitter variant
-;; holscript-ts-mode; holscript-pick-mode chooses between them
-;; depending on whether the tree-sitter parser is installed, and
-;; holscript-ts-mode is derived from prog-mode (not from
-;; holscript-mode), so a single-mode entry misses one of the two.
-(with-eval-after-load 'eglot
-  (add-to-list 'eglot-server-programs
-               '((holscript-mode holscript-ts-mode)
-                 . ("/absolute/path/to/HOL/bin/hol" "lsp"))))
+;; Registers the server for both holscript-mode and its tree-sitter
+;; variant holscript-ts-mode, installs the HOLHEAP-clustered project
+;; function, and auto-starts eglot from each mode hook.
+(hol-lsp-enable)
 
-;; Auto-start eglot when opening a HOL script.  Hook both modes.
-(add-hook 'holscript-mode-hook 'eglot-ensure)
-(add-hook 'holscript-ts-mode-hook 'eglot-ensure)
+;; Optional: *HOL Goals* follows point.
+(setq hol-lsp-goals-follow-cursor t)
 ```
+
+That is the whole configuration — in particular there is no need to
+add an `eglot-server-programs` entry, call `eglot-ensure`, or send
+`$/setConfig` by hand:
+
+- `hol-lsp-enable` registers `hol-lsp--server-program`, which resolves
+  `bin/hol` per file through `.hol/make-deps/lastmaker`.  A literal
+  `("/path/to/HOL/bin/hol" "lsp")` entry pins every buffer to one
+  tree, which is wrong as soon as you have more than one worktree.
+  It also covers both modes: `holscript-ts-mode` derives from
+  `prog-mode`, not from `holscript-mode`, so a single-mode entry
+  misses one of the two.
+- Auto-start is `hol-lsp-enable`'s job as well; it adds
+  `hol-lsp--setup-buffer` (which ends in `eglot-ensure`) to both mode
+  hooks.  Note `eglot-managed-mode-hook` is *not* an auto-start hook —
+  it runs only once eglot is already managing the buffer.
+- `elabOn` already defaults to `Change`, so setting it to `1`
+  changes nothing; see Troubleshooting for the case where you want
+  `2`.
 
 Then open a `*Script.sml` file.  Diagnostics appear as flymake
 underlines; `M-x eldoc` (or `eldoc-mode`) shows hover at point;
