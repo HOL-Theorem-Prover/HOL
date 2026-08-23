@@ -150,4 +150,11 @@ in
   val _ = check "MAP_EVERY"        "MAP_EVERY X_GEN_TAC [`p`, `q`]" "M"
   val _ = check "MAP_FIRST"        "MAP_FIRST ACCEPT_TAC [th1, th2]" "m"
   val _ = check "RENAME_TAC"       "RENAME_TAC [`p` |-> `q`]"     "N"
+  (* TRY is ORELSE with an empty second branch: the `|' before the
+     closer is what lets a failing inner tactic be absorbed. *)
+  val _ = check "TRY"              "TRY tac1"                    "<E|)"
+  val _ = check "TRY multi-step"   "TRY (tac1 >> tac2)"          "<EE|)"
+  val _ = check "ORELSE"           "tac1 ORELSE tac2"            "<E|E)"
+  val _ = check "TRY_LT"           "tac1 THEN_LT TRY_LT (ALLGOALS tac2)"
+                                                                 "E<E|>"
 end;

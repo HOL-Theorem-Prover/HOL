@@ -523,8 +523,13 @@ fun linearize isAtom e = let
   and go e (acc as (one, acc')) = if isAtom e then (false, FAtom e :: acc') else let
     fun bracket2 stop f start (one, acc) = (false, FBracket (start, rev (snd (f one)), stop, e) :: acc)
     val bracket = bracket2 FClose
+    (* `go' accumulates frags reversed, as `bracket2' and `group'
+       already account for.  Every other caller here hands over one
+       Group per section, whose contents `group' has already
+       reversed, so the rev was invisible until Try needed a section
+       holding a THEN-chain directly. *)
     fun mbracket stop mid start f (one, acc) =
-      (false, FMBracket (start, mid, stop, f one, e) :: acc)
+      (false, FMBracket (start, mid, stop, map rev (f one), e) :: acc)
     fun asTac f (true, acc) = f (true, acc)
       | asTac f acc = bracket (K $ f (true, [])) FOpen acc
     val r = case e of
@@ -534,7 +539,13 @@ fun linearize isAtom e = let
     | First (e::ls) =>
       asTac (mbracket FClose FNextFirst FOpenFirst (fn one =>
         map (fn e => snd (go e (one, []))) (e::ls))) acc
-    | Try e => asTac (bracket (fn one => go e (one, [])) FOpenFirst) acc
+    (* TRY tac = tac ORELSE ALL_TAC, so it needs ORELSE's second,
+       empty branch: without the FNextFirst the walker closes over
+       goalFrag's `Try (Failed e, _)' node, which every closer
+       re-raises -- exactly the failure TRY exists to absorb. *)
+    | Try e =>
+      asTac (mbracket FClose FNextFirst FOpenFirst (fn one =>
+        [snd (go e (one, [])), []])) acc
     | Repeat e => asTac (bracket2 FCloseRepeat (fn one => go e (one, [])) FOpenRepeat) acc
     | MapEvery (_, []) => acc
     | MapFirst (_, []) => (true, FAtom (First []) :: acc')
@@ -557,7 +568,9 @@ fun linearize isAtom e = let
       mbracket FClose FNextSplit (FOpenSplit n) (fn _ =>
         map (fn e => snd (go e (false, []))) [e1, e2]) acc
     | LReverse => (one, FAtom LReverse :: acc')
-    | LTry e => bracket (fn one => go e (one, [])) FOpenFirst acc
+    | LTry e =>
+      mbracket FCloseFirst FNextFirst FOpenFirst (fn one =>
+        [snd (go e (one, [])), []]) acc
     | LRepeat e => bracket (fn one => go e (one, [])) FOpenRepeat acc
     | LFirstLT e => bracket2 FCloseFirstLT (fn one => go e (one, [])) FOpenFirstLT acc
     | LSelectThen (e1, e2) =>

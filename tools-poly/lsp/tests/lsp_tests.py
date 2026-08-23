@@ -2809,13 +2809,15 @@ def test_goalState_walks_map_every():
         # Two ASM_CASES_TAC splits over a single goal.
         assert_eq(len(after.get("goals")), 4,
                   f"two case splits give four subgoals ({after!r})")
-        # NB the sweep stops here rather than running to the end of
-        # the proof: line 961 holds `TRY(FIRST_ASSUM(SUBST1_TAC o
-        # SYM))`, and `linearize` gives `Try e` an FOpenFirst bracket
-        # with no FNextFirst, so a TRY whose inner tactic fails leaves
-        # goalFrag's `Try (Failed e, _)` node, which both close_paren
-        # and close_first re-raise.  That is a separate bug from the
-        # atom coverage this test pins.
+        # And the walker reaches the end of the proof without failing
+        # anywhere — line 961's `TRY(FIRST_ASSUM(SUBST1_TAC o SYM))`
+        # fails on some of the four subgoals, so this also covers TRY
+        # absorbing a failure.
+        for ln in range(961, 966):
+            r = _send_goalstate(c, 713 + ln, uri, ln, 10).get("result")
+            assert_true(r is not None, f"goal state on line {ln}")
+            assert_eq(r.get("error"), None,
+                      f"no walker failure on line {ln} ({r!r})")
     finally:
         c.close()
 
@@ -2880,6 +2882,117 @@ def test_goalState_walks_squiggle_minus_rename():
         assert_true(result is not None, f"got a result ({r!r})")
         assert_eq(result.get("error"), None,
                   f"the >>~- block applied cleanly ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_try_absorbs_failure():
+    """`TRY tac` is `tac ORELSE ALL_TAC`, so `linearize` has to give it
+    ORELSE's second, empty branch.  With only `FOpenFirst … FClose` and
+    no `FNextFirst`, a failing inner tactic left goalFrag's
+    `Try (Failed e, _)` node in place and every closer re-raised it —
+    the walker reported "Combinator close failed" and froze the goals
+    for the rest of the proof, which is precisely the case TRY is
+    written for."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_try_absorbs.sml"
+        #  6   gen_tac THEN DISCH_TAC THEN
+        #  7   TRY(CONJ_TAC) THEN
+        #  8   simp[]
+        src = ("Theory goalstate_try_absorbs\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. 0 < a ==> a + 0 = a\n"
+               "Proof\n"
+               "  gen_tac THEN DISCH_TAC THEN\n"
+               "  TRY(CONJ_TAC) THEN\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        before = _send_goalstate(c, 716, uri, 7, 2).get("result")
+        assert_true(before is not None, "goal state on the TRY")
+        after = _send_goalstate(c, 717, uri, 8, 2).get("result")
+        assert_true(after is not None, "goal state after the TRY")
+        assert_eq(after.get("error"), None,
+                  f"CONJ_TAC's failure absorbed by TRY ({after!r})")
+        assert_eq(after.get("goals"), before.get("goals"),
+                  f"a failing TRY leaves the goals alone ({after!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_try_multi_step_branch():
+    """`TRY (t1 >> t2)` is the one `FMBracket` producer whose section
+    holds a THEN-chain directly rather than a single `Group`, so it is
+    what pins `mbracket` reversing each section: with the frags the
+    wrong way round CONJ_TAC would run first, fail, and be absorbed,
+    leaving one goal instead of two."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_try_multi.sml"
+        #  6   gen_tac THEN
+        #  7   TRY (DISCH_TAC >> CONJ_TAC) THEN
+        #  8   simp[]
+        src = ("Theory goalstate_try_multi\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !p:bool. p ==> p /\\ p\n"
+               "Proof\n"
+               "  gen_tac THEN\n"
+               "  TRY (DISCH_TAC >> CONJ_TAC) THEN\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Cursor between the two branch steps: DISCH_TAC has run.
+        mid = _send_goalstate(c, 718, uri, 7, 20).get("result")
+        assert_true(mid is not None, "goal state inside the TRY")
+        assert_eq(mid.get("error"), None, "no error inside the TRY")
+        goals = mid["goals"]
+        assert_true(len(goals) == 1 and goals[0]["asms"] == ["p"],
+                    f"DISCH_TAC ran first, not CONJ_TAC ({mid!r})")
+        after = _send_goalstate(c, 719, uri, 8, 2).get("result")
+        assert_true(after is not None, "goal state after the TRY")
+        assert_eq(after.get("error"), None, "no error after the TRY")
+        assert_eq(len(after["goals"]), 2,
+                  f"both branch steps ran, in order ({after!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_try_lt_absorbs_failure():
+    """`TRY_LT` (`LTry`) had the same missing branch as `TRY`."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_try_lt.sml"
+        #  6   gen_tac THEN_LT TRY_LT (ALLGOALS DISCH_TAC) THEN
+        #  7   simp[]
+        src = ("Theory goalstate_try_lt\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. a + 0 = a\n"
+               "Proof\n"
+               "  gen_tac THEN_LT TRY_LT (ALLGOALS DISCH_TAC) THEN\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 720, uri, 7, 2)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None,
+                  f"DISCH_TAC's failure absorbed by TRY_LT ({result!r})")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "a + 0 = a",
+                    f"goals left alone by the failing TRY_LT ({result!r})")
     finally:
         c.close()
 
@@ -3217,6 +3330,12 @@ TESTS = [
     ("goalState_walks_map_first",    test_goalState_walks_map_first),
     ("goalState_walks_squiggle_minus_rename",
                                      test_goalState_walks_squiggle_minus_rename),
+    ("goalState_try_absorbs_failure",
+                                     test_goalState_try_absorbs_failure),
+    ("goalState_try_multi_step_branch",
+                                     test_goalState_try_multi_step_branch),
+    ("goalState_try_lt_absorbs_failure",
+                                     test_goalState_try_lt_absorbs_failure),
     ("lsp_walks_file_includes_from_arbitrary_cwd",
                                      test_lsp_walks_file_includes_from_arbitrary_cwd),
     ("lsp_holproject_preload_project_dirs",
