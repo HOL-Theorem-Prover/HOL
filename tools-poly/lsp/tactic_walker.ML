@@ -66,8 +66,27 @@ fun compileAndApply src state =
 
 fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
 
-(* Sugared atoms compile the equivalent surface SML call; other
-   leaves compile their own source-substring verbatim. *)
+(* Four sugars compile a synthesised surface call.  Their spans cover
+   a quotation rather than a tactic, and each names its entry point in
+   full: `TacticParse's own rendering of these is the *surface* syntax
+   (`sg', `SELECT_GOAL_LT', bare `RENAME_TAC'), which only compiles in
+   a file that opened the right structures, whereas the walker has to
+   work against whatever the edited file happens to have opened.
+   Everything else with a whole-expression span compiles that source
+   verbatim; anything left -- MapEvery and MapFirst are annotated with
+   the mapped function's span, First [] and LFirst [] carry none --
+   goes back through `TacticParse's inverse printer, whose renderings
+   (MAP_EVERY, NO_TAC, TACS_TO_LT, ...) all live in Tactical and so
+   are unqualified-safe.  That fallback is what keeps `applyAtom'
+   total: a leaf kind nobody anticipated still applies rather than
+   halting the walk at the previous step.
+
+   First [] renders as NO_TAC, which is deliberate rather than a
+   dead end: it is `>>~-'s "the tactic must solve the selected goals"
+   check (Q.sml's SELECT_GOALS_LT_THEN1 is SELECT_LT_THEN rename
+   (tac THEN NO_TAC)), and `goalFrag.expand' maps a tactic over the
+   focused goals, so NO_TAC succeeds exactly when the focus is
+   already empty. *)
 fun applyAtom tacText te state = case te of
     Subgoal span =>
       compileAndApply ("BasicProvers.subgoal " ^ textAt tacText span) state
@@ -75,12 +94,16 @@ fun applyAtom tacText te state = case te of
       compileAndApply ("ALL_TAC >~ [" ^ textAt tacText span ^ "]") state
   | LSelectGoals span =>
       compileAndApply ("ALL_TAC >>~ [" ^ textAt tacText span ^ "]") state
-  (* REVERSE_LT is a list_tactic; wrap under a no-op tactic so
-     `goalFrag.expand' can accept it. *)
-  | LReverse => compileAndApply "ALL_TAC >>> REVERSE_LT" state
+  | Rename span =>
+      compileAndApply ("Q.RENAME_TAC " ^ textAt tacText span) state
   | _ => (case topSpan te of
         SOME span => compileAndApply (textAt tacText span) state
-      | NONE => NONE)
+      | NONE => (case printTacAsSML tacText te of
+            NONE => SOME state   (* a no-op leaf: ALL_TAC and friends *)
+          | SOME src => compileAndApply
+              (* list_tactics need a tactic wrapper for `expand'. *)
+              (if isTac te then src
+               else "ALL_TAC >>> (" ^ src ^ ")") state))
 
 fun applyOpen ok state = case ok of
     FOpen           => Portable.total goalFrag.open_paren      state

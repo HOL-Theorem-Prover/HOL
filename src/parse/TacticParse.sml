@@ -224,6 +224,8 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
         SOME args => MapFirst (tr f, map (fn e => OOpaque (trPrec e)) args)
       | NONE => Opaque (trPrec e))
     | SOME ("RENAME_TAC", [pat]) => group true (tr e) (Rename (tr pat))
+    (* QLib.rename = Q.RENAME_TAC; same argument, a quotation list. *)
+    | SOME ("rename", [pat]) => group true (tr e) (Rename (tr pat))
     | SOME ("ALL_TAC", []) => group true (tr e) (Then [])
     | SOME ("all_tac", []) => group true (tr e) (Then [])
     | _ => Opaque (trPrec e)
@@ -344,7 +346,7 @@ fun mapTacExpr {start, stop, repair} = let
     | go (OOpaque (prec, p)) = OOpaque (prec, tr false p)
   in go end
 
-fun printTacsAsE s ls = let
+local
   datatype tree
     = TAtom of string
     | TOpaque of int * string
@@ -352,7 +354,7 @@ fun printTacsAsE s ls = let
     | TApp of string * tree list
     | TList of tree list
     | TTuple of tree list
-  val mkTree = let
+  fun mkTree s = let
     fun sub (start, stop) = String.concat [
       String.substring (s, start, stop-start)]
     fun mkInfixl _ acc [] = Option.valOf acc
@@ -431,39 +433,51 @@ fun printTacsAsE s ls = let
       | go (TList ls) = TList (map go ls)
       | go (TTuple ls) = TTuple (map go ls)
     in go end
-  val r = ref []
-  fun print s = r := s :: !r
-  val indent = ref 1
-  fun newline () = (print "\n"; funpow (!indent) (fn () => print "  ") ())
-  fun parenIf b f = if b then
-    (print "("; indent := !indent + 1; f (); indent := !indent - 1; print ")")
-  else f ()
-  val getPrec' = fn "by" => 8 | "suffices_by" => 8 | _ => 0
-  fun printTree _ (TAtom s) = print s
-    | printTree prec (TOpaque (p, s)) = parenIf (p < prec) (fn () => print s)
-    | printTree prec (TInfix (e1, s, e2)) = let
-      val p = getPrec' s
-      val _ = parenIf (getPrec' s < prec) (fn () => (
-        printTree p e1; newline (); app print [s, " "]; printTree (p+1) e2))
-      in () end
-    | printTree prec (TApp (s, args)) =
-      parenIf (9 < prec) (fn () => (
-        print s; app (fn e => (print " "; printTree 10 e)) args))
-    | printTree _ (TList []) = print "[]"
-    | printTree _ (TList (a::l)) = (
-      print "["; printTree 0 a;
-      app (fn e => (print ", "; printTree 0 e)) l; print "]")
-    | printTree _ (TTuple []) = print "()"
-    | printTree _ (TTuple (a::l)) = (
-      print "("; printTree 0 a;
-      app (fn e => (print ", "; printTree 0 e)) l; print ")")
-  fun goL l = case optTree $ mkTree l of
+  (* Render one tree as source text.  Layout is precedence-driven,
+     with a running indent and parens added only where required. *)
+  fun render t = let
+    val r = ref []
+    fun print s = r := s :: !r
+    val indent = ref 1
+    fun newline () = (print "\n"; funpow (!indent) (fn () => print "  ") ())
+    fun parenIf b f = if b then (
+      print "("; indent := !indent + 1;
+      f (); indent := !indent - 1; print ")")
+    else f ()
+    val getPrec' = fn "by" => 8 | "suffices_by" => 8 | _ => 0
+    fun printTree _ (TAtom s) = print s
+      | printTree prec (TOpaque (p, s)) = parenIf (p < prec) (fn () => print s)
+      | printTree prec (TInfix (e1, s, e2)) = let
+        val p = getPrec' s
+        val _ = parenIf (getPrec' s < prec) (fn () => (
+          printTree p e1; newline (); app print [s, " "]; printTree (p+1) e2))
+        in () end
+      | printTree prec (TApp (s, args)) =
+        parenIf (9 < prec) (fn () => (
+          print s; app (fn e => (print " "; printTree 10 e)) args))
+      | printTree _ (TList []) = print "[]"
+      | printTree _ (TList (a::l)) = (
+        print "["; printTree 0 a;
+        app (fn e => (print ", "; printTree 0 e)) l; print "]")
+      | printTree _ (TTuple []) = print "()"
+      | printTree _ (TTuple (a::l)) = (
+        print "("; printTree 0 a;
+        app (fn e => (print ", "; printTree 0 e)) l; print ")")
+    in printTree 0 t; concat $ rev (!r) end
+  fun tree s e = case optTree $ mkTree s e of
       TAtom "ALL_TAC" => NONE
     | t => SOME t
-  fun goT [] = ()
-    | goT [t] = (print "e("; printTree 0 t; print ");\n")
-    | goT (t::ts) = (print "val _ = e("; printTree 0 t; print ");\n"; goT ts)
-  in goT (List.mapPartial goL ls); concat $ rev (!r) end
+in
+
+fun printTacsAsE s ls = let
+  fun goT [] = []
+    | goT [t] = ["e(", render t, ");\n"]
+    | goT (t::ts) = "val _ = e(" :: render t :: ");\n" :: goT ts
+  in concat (goT (List.mapPartial (tree s) ls)) end
+
+fun printTacAsSML s e = Option.map render (tree s e)
+
+end (* local *)
 
 datatype tac_frag_open
   = FOpen

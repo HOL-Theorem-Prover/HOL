@@ -2761,6 +2761,129 @@ def test_goalState_walks_into_select_goal_block():
         c.close()
 
 
+def test_goalState_walks_map_every():
+    """`MAP_EVERY f [a, b]` is a single `MapEvery` atom annotated with
+    the span of `f` alone — the head token `MAP_EVERY` and the argument
+    list sit outside every recorded span, so `topSpan` is NONE and the
+    walker used to return `Failed` here ("Structural leaf failed"),
+    freezing the goal for the whole rest of the proof.  It now falls
+    back on `TacticParse.printTacAsSML` to rebuild the surface call.
+
+    Pinned against the real `integerScript.sml` (INT_LE_MUL, line 961)
+    because that is where the bug was found."""
+    src = f"{REPO}/src/integer/integerScript.sml"
+    c = Client(os.path.dirname(src))
+    try:
+        _init(c, REPO)
+        uri = f"file://{src}"
+        with open(src, encoding="utf8") as f: text = f.read()
+        _did_open(c, uri, text)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        lines = text.split("\n")
+        # 0-based 960 is `MAP_EVERY ASM_CASES_TAC [Term `0i = x`, …]`
+        assert_true("MAP_EVERY ASM_CASES_TAC" in lines[960],
+                    f"line 960 still holds the MAP_EVERY ({lines[960]!r})")
+        # Cursor on `MAP_EVERY` itself: halted before the atom, so this
+        # is the state the MAP_EVERY is about to act on.
+        before = _send_goalstate(c, 710, uri, 960, 10).get("result")
+        assert_true(before is not None, "goal state before MAP_EVERY")
+        assert_eq(before.get("error"), None, "no error before MAP_EVERY")
+        # Cursor inside the argument list (char 45; `ASM_CASES_TAC` ends
+        # at 32).  The atom is annotated with the mapped function's span
+        # alone, so without the atomEndByte fix this counts as past the
+        # atom and fires it early.
+        inarg = _send_goalstate(c, 711, uri, 960, 45).get("result")
+        assert_true(inarg is not None, "goal state inside the arg list")
+        assert_eq(inarg.get("error"), None, "no error inside the arg list")
+        assert_eq(inarg.get("goals"), before.get("goals"),
+                  "cursor in MAP_EVERY's arg list still shows the "
+                  "pre-MAP_EVERY goal")
+        # Cursor on the following line: MAP_EVERY has fired.
+        after = _send_goalstate(c, 712, uri, 961, 10).get("result")
+        assert_true(after is not None, "goal state after MAP_EVERY")
+        assert_eq(after.get("error"), None,
+                  f"MAP_EVERY applied cleanly ({after!r})")
+        assert_true(after.get("goals") != before.get("goals"),
+                    f"goal advanced past MAP_EVERY ({after!r})")
+        # Two ASM_CASES_TAC splits over a single goal.
+        assert_eq(len(after.get("goals")), 4,
+                  f"two case splits give four subgoals ({after!r})")
+        # NB the sweep stops here rather than running to the end of
+        # the proof: line 961 holds `TRY(FIRST_ASSUM(SUBST1_TAC o
+        # SYM))`, and `linearize` gives `Try e` an FOpenFirst bracket
+        # with no FNextFirst, so a TRY whose inner tactic fails leaves
+        # goalFrag's `Try (Failed e, _)` node, which both close_paren
+        # and close_first re-raise.  That is a separate bug from the
+        # atom coverage this test pins.
+    finally:
+        c.close()
+
+
+def test_goalState_walks_map_first():
+    """`MAP_FIRST` reaches the walker as a `MapFirst` atom with the
+    same NONE-topSpan shape as `MAP_EVERY`."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_map_first.sml"
+        #  6   MAP_FIRST (fn t => t) [gen_tac] >>
+        #  7   simp[]
+        src = ("Theory goalstate_map_first\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  MAP_FIRST (fn t => t) [gen_tac] >>\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 714, uri, 7, 2)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None,
+                  f"MAP_FIRST applied cleanly ({result!r})")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "n + 0 = n",
+                    f"gen_tac ran under MAP_FIRST ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_walks_squiggle_minus_rename():
+    """`>>~- ([pat], tac)` elaborates to `LSelectThen (Rename …, …)`.
+    The `Rename` atom carries only the pattern's span; the walker
+    synthesises `Q.RENAME_TAC` for it — qualified, because plain
+    `RENAME_TAC` lives in `Q` and the edited file need not have
+    opened it."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_squig_minus.sml"
+        #  6   gen_tac >> conj_tac >>~- ([`0 + a = a`], simp[]) >>
+        #  7   simp[]
+        src = ("Theory goalstate_squig_minus\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. a + 0 = a /\\ 0 + a = a\n"
+               "Proof\n"
+               "  gen_tac >> conj_tac >>~- ([`0 + a = a`], simp[]) >>\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 715, uri, 7, 2)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None,
+                  f"the >>~- block applied cleanly ({result!r})")
+    finally:
+        c.close()
+
+
 def test_lsp_walks_file_includes_from_arbitrary_cwd():
     """When the LSP server is launched with cwd != the opened file's
     directory (as eglot typically does — cwd is the project root),
@@ -3090,6 +3213,10 @@ TESTS = [
                                      test_goalState_walks_into_suffices_by_block),
     ("goalState_walks_into_select_goal_block",
                                      test_goalState_walks_into_select_goal_block),
+    ("goalState_walks_map_every",    test_goalState_walks_map_every),
+    ("goalState_walks_map_first",    test_goalState_walks_map_first),
+    ("goalState_walks_squiggle_minus_rename",
+                                     test_goalState_walks_squiggle_minus_rename),
     ("lsp_walks_file_includes_from_arbitrary_cwd",
                                      test_lsp_walks_file_includes_from_arbitrary_cwd),
     ("lsp_holproject_preload_project_dirs",

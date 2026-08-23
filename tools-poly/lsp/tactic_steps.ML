@@ -21,7 +21,16 @@ end = struct
 val wrapPrefix = "Theorem hol_lsp_wrap: T\nProof\n"
 val wrapPrefixLen = String.size wrapPrefix
 
-fun atomEndByte te = let open TacticParse in case te of
+fun atomEndByte te = let
+  open TacticParse
+  (* MapEvery/MapFirst are annotated with the span of the mapped
+     function, not of the whole call, so end the atom at its last
+     argument -- otherwise a cursor sitting in the argument list
+     already counts as past the atom and fires it early. *)
+  fun lastArgEnd dflt =
+    List.foldl (fn (a, e) => case topSpan a of SOME (_, e') => e' | NONE => e)
+               dflt
+in case te of
     Subgoal (_, e)      => SOME e
   | LSelectGoal (_, e)  => SOME e
   | LSelectGoals (_, e) => SOME e
@@ -29,8 +38,8 @@ fun atomEndByte te = let open TacticParse in case te of
   | Opaque (_, (_, e))
   | LOpaque (_, (_, e))
   | OOpaque (_, (_, e))   => SOME e
-  | MapEvery ((_, e), _)
-  | MapFirst ((_, e), _)  => SOME e
+  | MapEvery ((_, e), args)
+  | MapFirst ((_, e), args) => SOME (lastArgEnd e args)
   | LReverse => NONE
   | _ => Option.map #2 (topSpan te)
 end
@@ -97,6 +106,8 @@ local
     | LSelectGoals _ => "g"
     | LReverse       => "V"
     | Rename _       => "N"
+    | MapEvery _     => "M"
+    | MapFirst _     => "m"
     | _              => "E"
   fun shape [] = ""
     | shape (FAtom te :: r)              = atom_ch te ^ shape r
@@ -133,4 +144,10 @@ in
   val _ = check ">>~ selector"     "tac1 >>~ [`P`, `Q`]"         "Eg"
   val _ = check "by block"         "`n < 10` by (rw[] >> simp[])" "S[EE)"
   val _ = check "suffices_by"      "`n < 10` suffices_by rw[]"    "SV[E)"
+  (* MapEvery/MapFirst/Rename are single atoms whose span covers only
+     an operand -- the walker reaches them through TacticParse's
+     inverse printer, so pin that they stay atoms. *)
+  val _ = check "MAP_EVERY"        "MAP_EVERY X_GEN_TAC [`p`, `q`]" "M"
+  val _ = check "MAP_FIRST"        "MAP_FIRST ACCEPT_TAC [th1, th2]" "m"
+  val _ = check "RENAME_TAC"       "RENAME_TAC [`p` |-> `q`]"     "N"
 end;

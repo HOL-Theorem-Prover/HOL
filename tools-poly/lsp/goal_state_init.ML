@@ -78,7 +78,11 @@ local
         SOME (s, e) =>
           "Tactic `" ^ String.substring (tacText, s, e - s)
           ^ "` failed to apply"
-      | NONE => "Structural leaf failed")
+        (* No whole-expression span (MapEvery, Rename, ...); recover
+           the surface call from TacticParse's inverse printer. *)
+      | NONE => (case printTacAsSML tacText te of
+            SOME src => "Tactic `" ^ src ^ "` failed to apply"
+          | NONE => "Structural leaf failed"))
     | FFOpen _  => "Combinator open failed"
     | FFMid _   => "Combinator branch-advance failed"
     | FFClose _ => "Combinator close failed"
@@ -86,16 +90,24 @@ local
     | FBracket _  => "Bracket failed"
     | FMBracket _ => "Bracket failed"
 
+  (* Leaves whose annotation is an operand span rather than a whole
+     expression: the start still marks where the squiggle begins. *)
+  fun atomStart te = case te of
+      Subgoal (s, _)       => SOME s
+    | LSelectGoal (s, _)   => SOME s
+    | LSelectGoals (s, _)  => SOME s
+    | Rename (s, _)        => SOME s
+    | MapEvery ((s, _), _) => SOME s
+    | MapFirst ((s, _), _) => SOME s
+    | _ => NONE
+
   fun failRange tacStart frag = case frag of
       FAtom te => (case fragEndByte te of
           SOME e => (case topSpan te of
             SOME (s, _) => SOME (tacStart + s, tacStart + e)
-          | NONE => (case te of
-              Subgoal (s, _)      => SOME (tacStart + s, tacStart + e)
-            | LSelectGoal (s, _)  => SOME (tacStart + s, tacStart + e)
-            | LSelectGoals (s, _) => SOME (tacStart + s, tacStart + e)
-            | Rename (s, _)       => SOME (tacStart + s, tacStart + e)
-            | _ => NONE))
+          | NONE => (case atomStart te of
+              SOME s => SOME (tacStart + s, tacStart + e)
+            | NONE => NONE))
         | NONE => NONE)
     | _ => NONE
 in

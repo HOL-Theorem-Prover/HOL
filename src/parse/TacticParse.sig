@@ -50,6 +50,7 @@ val mapTacExpr:
   'a tac_expr -> 'c tac_expr
 
 val printTacsAsE: string -> (int * int) tac_expr list -> string
+val printTacAsSML: string -> (int * int) tac_expr -> string option
 
 datatype tac_frag_open
   = FOpen
@@ -173,6 +174,15 @@ end
     repair on the synthesised nodes.  Used to re-decorate the tree
     (e.g. with type info or diagnostic markers) without rewriting its
     structure.
+
+    printTacAsSML renders a single (int*int) tac_expr back to plain
+    SML source against the string the spans index into, returning NONE
+    for an expression that is a semantic no-op (ALL_TAC).  It is total:
+    every constructor has a rendering, including the ones whose spans
+    cover only an operand (MapEvery, MapFirst, Rename) and the ones
+    carrying no span at all (First [], LFirst []).  Consumers that need
+    to compile an arbitrary tac_expr -- the LSP's goal-state walker,
+    for one -- use it as the fallback when topSpan yields nothing.
 
     printTacsAsE renders a list of (int*int) tac_expr back to source
     text, formatted as a sequence of `e(...)` calls suitable for
