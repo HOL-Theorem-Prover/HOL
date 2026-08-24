@@ -18314,6 +18314,61 @@ val _ = require_msg (check_result transport_unreachable_without_flag)
     "Unknown with use_subtype false")
   (fn () => ()) ()
 
+(* Side effect: [transportable_typedef] calls [MFH.harvest_typedef], and a
+   successful harvest permanently registers the typedef in the model
+   finder's global registry -- so a QC-only search populates state the
+   model finder later observes.  This is the exact same lazy harvest the
+   model finder performs on its own ([transportable_typedef] calls no
+   separate implementation), so it is idempotent and settles no verdict
+   differently than the model finder's own harvest would; see
+   [src/HolRefute/README] and [Refute.smd] for the recorded decision.
+
+   The precondition is established here rather than inherited: measured,
+   [:zoo_three] is already registered by the time this block runs, so a
+   pin that merely asserted "unregistered before" would fail -- and one
+   that dropped the conjunct would observe no transition at all.
+   Deregistering it explicitly (the [with_rat_frac_unregistered]
+   precedent: filter the registry, drop the miss-cache key) makes the
+   transition observable without depending on what earlier tests left
+   behind, and the surrounding bracket puts the ambient state back so
+   this pin does not itself become the kind of cross-test side effect it
+   documents. *)
+val zoo_three_key = {Thy = "refuteTableZoo", Name = "zoo_three"}
+
+fun transport_registers_typedef_as_side_effect () =
+  with_quotient_typedef_registries_restored (fn () =>
+    let
+      fun other_zoo_three ({ty, ...} : MFH.typedef_info) =
+        Type.compare (ty, ``:zoo_three``) <> EQUAL
+      val _ = MFH.typedef_registry :=
+        List.filter other_zoo_three (!MFH.typedef_registry)
+      val _ = MFH.typedef_harvest_misses :=
+        KNametab.delete_safe zoo_three_key (!MFH.typedef_harvest_misses)
+      val unregistered_before = not (MFH.is_typedef ``:zoo_three``)
+      val _ = Refute.refute
+        (transport_small (upd_use_subtype true default_config))
+        zoo_three_ne_2
+      val registered_after = MFH.is_typedef ``:zoo_three``
+      val info_after = MFH.typedef_for_type ``:zoo_three``
+      val scans_before = !MFH.typedef_harvest_scan_count
+      val rescanned = MFH.harvest_typedef ``:zoo_three``
+      val no_rescan = !MFH.typedef_harvest_scan_count = scans_before
+      val idempotent =
+        case (info_after, MFH.typedef_for_type ``:zoo_three``) of
+            (SOME a, SOME b) => same_typedef_info a b
+          | _ => false
+    in
+      unregistered_before andalso registered_after andalso rescanned
+      andalso no_rescan andalso idempotent
+    end)
+
+val _ = require_msg
+  (check_result transport_registers_typedef_as_side_effect) (fn () =>
+  "a transported QC-only search did not register the typedef exactly as " ^
+  "the model finder's own lazy harvest would, or registration was not " ^
+  "idempotent")
+  (fn () => ()) ()
+
 (* With the flag on, the only representation value in {0, 1, 2} that
    falsifies the goal is 2, so any genuine hit must report exactly
    [x = zoo_three_abs 2] -- deterministic regardless of which strategy
@@ -18446,21 +18501,27 @@ val zoo_univ_even_or_odd =
 
 fun transport_not_exhausted_stays_unknown () =
   let
-    val fixed =
-      transport_small (upd_use_subtype true default_config)
-    val adaptive =
-      transport_qc_only (upd_use_subtype true default_config)
-        |> upd_timeout 2.0
+    fun mentions text = List.exists (String.isSubstring text)
   in
-    case (Refute.refute fixed zoo_univ_even_or_odd,
-          Refute.refute adaptive zoo_univ_even_or_odd) of
-        (Unknown _, Unknown _) => true
+    case (Refute.refute (transport_small default_config)
+            zoo_univ_even_or_odd,
+          Refute.refute
+            (transport_small (upd_use_subtype true default_config))
+            zoo_univ_even_or_odd) of
+        (Unknown off, Unknown on) =>
+          mentions "not executable: zoo_univ_rep" off andalso
+          mentions "no narrowing generator for" off andalso
+          not (mentions "searched up to size" off) andalso
+          mentions "searched up to size" on andalso
+          not (mentions "not executable: zoo_univ_rep" on) andalso
+          not (mentions "no narrowing generator for" on)
       | _ => false
   end
 
 val _ = require_msg (check_result transport_not_exhausted_stays_unknown)
   (fn () => "an unexhausted transported search wrongly licensed a " ^
-    "verdict other than Unknown")
+    "verdict other than Unknown, or the two worlds did not diverge in " ^
+    "their reasons")
   (fn () => ()) ()
 
 (* Firing condition: a TypeBase datatype's own generator wins, so
@@ -18488,6 +18549,11 @@ val zoo_univ_fixed_custom : custom_gen =
   {enumerate = SOME (fn _ => [zoo_univ_fixed_value]),
    random = SOME (fn _ => fn state => (zoo_univ_fixed_value, state))}
 
+(* Generator registration is global and permanent for the rest of the run,
+   so this must stay after every pin above that relies on [:zoo_univ]
+   having no generator of its own ([transport_not_exhausted_stays_unknown]
+   in particular): moving it earlier would make that pin pass while
+   testing nothing. *)
 val _ = register_generator ``:zoo_univ`` zoo_univ_fixed_custom
 
 (* Firing condition: an explicitly registered generator wins even when
@@ -18508,6 +18574,36 @@ fun transport_registered_generator_wins () =
 
 val _ = require_msg (check_result transport_registered_generator_wins)
   (fn () => "a registered generator did not take priority over transport")
+  (fn () => ()) ()
+
+(* Firing condition's third case: no generator, and the typedef itself is
+   not harvestable.  [:zoo_unharvested]'s bijection theorem was deleted
+   from [refuteTableZoo] right after being stated (see the fixture
+   theory), so [MFH.harvest_typedef] can never discover it by scanning;
+   [transportable_typedef] then answers [NONE] regardless of the flag,
+   and the untransformed goal reaches the same qc_gate either way -- the
+   flag is inert when nothing is transportable. *)
+val zoo_unharvested_ne_2 =
+  ``!x : zoo_unharvested. zoo_unharvested_rep x <> 2``
+
+fun transport_unharvested_typedef_is_inert () =
+  let
+    val not_harvested_before =
+      not (MFH.harvest_typedef ``:zoo_unharvested``)
+  in
+    not_harvested_before andalso
+    (case (Refute.refute (transport_small default_config)
+             zoo_unharvested_ne_2,
+           Refute.refute
+             (transport_small (upd_use_subtype true default_config))
+             zoo_unharvested_ne_2) of
+        (Unknown off, Unknown on) => off = on
+      | _ => false)
+  end
+
+val _ = require_msg (check_result transport_unharvested_typedef_is_inert)
+  (fn () => "an unharvestable typedef was already harvested before this " ^
+    "pin ran, or use_subtype changed its (un)reachable Unknown reason")
   (fn () => ()) ()
 
 (* Scope limit: only a variable whose own type is transportable is

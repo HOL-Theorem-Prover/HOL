@@ -444,6 +444,13 @@ and generator through the list structure, which this fallback does not
 do.  Default `false`, matching Isabelle's `use_subtype`; the model
 finder never sees the rewrite -- it already handles typedefs natively,
 through the same harvested registry.
+Checking whether `t` is a harvestable typedef calls `harvest_typedef`
+itself, so a `use_subtype`-enabled QC-only search that reaches this
+fallback permanently populates the model finder's global typedef
+registry as a side effect -- the same lazy harvest the model finder
+performs on its own, hence idempotent and settling no verdict
+differently than the model finder's own harvest would, but a QC-only
+call site now has that observable effect.
 
 Backend selection is typed for the four built-ins:
 

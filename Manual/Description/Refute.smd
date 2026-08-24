@@ -721,6 +721,12 @@ lifting the predicate and generator through the list structure, which
 this fallback does not do.  Default `false`, matching Isabelle's
 `use_subtype`; the model finder never sees the rewrite; it already
 handles typedefs natively.
+Deciding whether `t` is a harvestable typedef triggers the model
+finder's own lazy harvest, so a `use_subtype`-enabled QC-only search
+that reaches this fallback permanently populates the model finder's
+global typedef registry -- the same harvest the model finder performs
+on its own, hence idempotent and not a soundness concern, but an
+observable side effect of what looks like a QC-only call.
 
 #### Model-finder fields
 

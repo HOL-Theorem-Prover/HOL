@@ -125,21 +125,6 @@ structure Refute_QC = struct
     boolSyntax.rhs
       (Thm.concl (Conv.QCONV (Conv.DEPTH_CONV Thm.BETA_CONV) tm))
 
-  (* Bottom-up replacement of every syntactic occurrence of [redex] by
-     [replacement]; used to contract [rep (abs r)] to [r]. *)
-  fun contract redex replacement tm =
-    if Term.aconv tm redex then replacement
-    else
-      case Lib.total Term.dest_comb tm of
-          SOME (rator, rand) =>
-            Term.mk_comb (contract redex replacement rator,
-                           contract redex replacement rand)
-        | NONE =>
-            case Lib.total Term.dest_abs tm of
-                SOME (variable, body) =>
-                  Term.mk_abs (variable, contract redex replacement body)
-              | NONE => tm
-
   type transport_entry =
     {x : term, r : term, abs : term, rep : term, pred : term}
 
@@ -164,6 +149,9 @@ structure Refute_QC = struct
         end
     end
 
+  (* [Term.subst] on a non-[Fv] redex walks the term top-down replacing
+     every [aconv] occurrence, which is exactly the contraction of
+     [rep (abs r)] to [r] this needs; no hand-rolled walker required. *)
   fun apply_transport_entries entries tm =
     let
       val subst = map (fn {x, abs, r, ...} : transport_entry =>
@@ -171,7 +159,9 @@ structure Refute_QC = struct
     in
       List.foldl
         (fn ({abs, rep, r, ...} : transport_entry, tm) =>
-          contract (Term.mk_comb (rep, Term.mk_comb (abs, r))) r tm)
+          Term.subst
+            [{redex = Term.mk_comb (rep, Term.mk_comb (abs, r)),
+              residue = r}] tm)
         (Term.subst subst tm) entries
     end
 
