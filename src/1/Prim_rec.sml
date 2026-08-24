@@ -596,12 +596,13 @@ and TACS tm =
 (* GOALS is a strictly local function, used only in INDUCT_THEN.        *)
 (* ---------------------------------------------------------------------*)
 
-fun GOALS A [] tm = raise ERR "GOALS" "empty list"
-  | GOALS A [t] tm = let val (sg,pf) = t (A,tm) in ([sg],[pf]) end
-  | GOALS A (h::t) tm =
+fun GOALS A [] ctxt tm = raise ERR "GOALS" "empty list"
+  | GOALS A [t:tactic] ctxt tm =
+      let val (sg,pf) = t (A,tm) ctxt in ([sg],[pf]) end
+  | GOALS A (h::t) ctxt tm =
       let val (conj1,conj2) = dest_conj tm
-          val (sgs,pfs) = GOALS A t conj2
-          val (sg,pf) = h (A,conj1)
+          val (sgs,pfs) = GOALS A t ctxt conj2
+          val (sg,pf) = h (A,conj1) ctxt
       in (sg::sgs, pf::pfs)
       end;
 
@@ -662,14 +663,14 @@ fun INDUCT_THEN th =
      val ind = GEN v (SUBST [boolvar |-> GALPHA ty asm]
                             (mk_imp(boolvar, con))
                             (DISCH asm eta_th))
- in fn ttac => fn (A,t) =>
+ in fn ttac => fn (A,t) => fn ctxt =>
      let val lam = snd(dest_comb t)
          val spec = SPEC lam (INST_TYPE (Lib.snd(Term.match_term v lam)) ind)
          val (ant,conseq) = dest_imp(concl spec)
          val beta = SUBST [boolvar |-> bconv ant]
                           (mk_imp(boolvar, conseq)) spec
          val tacs = tacsf (fst(dest_abs lam)) ttac
-         val (gll,pl) = GOALS A tacs (fst(dest_imp(concl beta)))
+         val (gll,pl) = GOALS A tacs ctxt (fst(dest_imp(concl beta)))
          val pf = ((MP beta) o LIST_CONJ) o mapshape(map length gll)pl
      in
        (Lib.flatten gll, pf)
@@ -1837,10 +1838,11 @@ fun usefuls cs = let
   val vs_l = HOLset.listItems vs
   val (_, eqn1) = strip_forall (hd cs)
   val (const,args) = strip_comb (lhs eqn1)
-  val (arg1_ty, casefs) = case args of
-                              h::t => (type_of h,t)
-                            | _ => raise mk_HOL_ERR "Prim_rec" "prove_case_rand_thm"
-                                         "Case constant theorem has too few arguments"
+  val (arg1_ty, casefs) =
+      case args of
+          h::t => (type_of h,t)
+        | _ => raise mk_HOL_ERR "Prim_rec" "prove_case_rand_thm"
+                     "Case constant theorem has too few arguments"
   val v = variant vs_l (mk_var("x", arg1_ty))
 in
   (const, list_mk_comb(const, v::tl args), casefs, vs_l, v)
@@ -1867,10 +1869,11 @@ fun prove_case_rand_thm {nchotomy, case_def} = let
   val const' = inst [#2 (strip_fun (type_of const)) |-> fresh_tyvar] const
   val rhs' = list_mk_comb(const', v::cfs')
 in
-  prove(mk_eq(mk_comb(f,t),rhs'),
-        STRUCT_CASES_TAC (ISPEC v nchotomy) THEN
-        PURE_REWRITE_TAC [case_def] THEN BETA_TAC THEN
-        PURE_REWRITE_TAC [EQT_INTRO (SPEC_ALL EQ_REFL)])
+  prove (Context.snapshot())
+        (mk_eq(mk_comb(f,t),rhs'),
+         STRUCT_CASES_TAC (ISPEC v nchotomy) THEN
+         PURE_REWRITE_TAC [case_def] THEN BETA_TAC THEN
+         PURE_REWRITE_TAC [EQT_INTRO (SPEC_ALL EQ_REFL)])
 end
 
 fun strip_exists' avds t =
