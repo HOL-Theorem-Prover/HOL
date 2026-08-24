@@ -21,6 +21,7 @@ signature Parse = sig
   (* Parsing Types *)
 
   val type_grammar : unit -> type_grammar.grammar
+  val get_type_grammar : Context.t -> type_grammar.grammar
   val Type         : hol_type frag list -> hol_type
   val ==           : hol_type frag list -> 'a -> hol_type
 
@@ -83,6 +84,7 @@ signature Parse = sig
   val print_without_macros : term -> unit
 
   val term_grammar : unit -> term_grammar.grammar
+  val get_term_grammar : Context.t -> term_grammar.grammar
 
   val print_term_grammar : unit -> unit
 

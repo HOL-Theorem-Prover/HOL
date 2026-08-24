@@ -2,10 +2,10 @@ signature Tactical =
 sig
   include Abbrev
 
-  val TAC_PROOF      : goal * tactic -> thm
-  val prove          : term * tactic -> thm
-  val prove_goal     : goal * tactic -> thm
-  val store_thm      : string * term * tactic -> thm
+  val TAC_PROOF      : Context.t -> goal * tactic -> thm
+  val prove          : Context.t -> term * tactic -> thm
+  val prove_goal     : Context.t -> goal * tactic -> thm
+  val store_thm      : Context.t -> string * term * tactic -> thm
   val CONV_TAC       : conv -> tactic
   val THEN           : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
   val >>             : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
@@ -111,8 +111,8 @@ sig
   val Q_TAC          : (term -> tactic) -> term quotation -> tactic
   val QTY_TAC        : hol_type -> (term -> tactic) -> term quotation -> tactic
 
-  val default_prover : term * tactic -> thm
-  val set_prover     : (goal * tactic -> thm) -> unit
+  val default_prover : Context.t -> term * tactic -> thm
+  val set_prover     : (Context.t -> goal * tactic -> thm) -> unit
   val restore_prover : unit -> unit
 
 end

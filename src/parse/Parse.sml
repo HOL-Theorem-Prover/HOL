@@ -61,8 +61,8 @@ local
                         empty = type_grammar.min_grammar,
                         pp = fn _ => "<type_grammar>"}
 in
-  fun type_grammar () =
-      Context.Data.get type_grammar_slot (Context.snapshot())
+  fun get_type_grammar ctxt = Context.Data.get type_grammar_slot ctxt
+  fun type_grammar () = get_type_grammar (Context.snapshot())
   val put_type_grammar = Context.Data.write type_grammar_slot
   val upd_type_grammar = Context.Data.modify type_grammar_slot
 end
@@ -78,8 +78,8 @@ local
                         empty = term_grammar.min_grammar,
                         pp = fn _ => "<term_grammar>"}
 in
-  fun term_grammar () =
-      Context.Data.get term_grammar_slot (Context.snapshot())
+  fun get_term_grammar ctxt = Context.Data.get term_grammar_slot ctxt
+  fun term_grammar () = get_term_grammar (Context.snapshot())
   val put_term_grammar = Context.Data.write term_grammar_slot
   val upd_term_grammar = Context.Data.modify term_grammar_slot
 end

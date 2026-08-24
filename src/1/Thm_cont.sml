@@ -139,11 +139,11 @@ fun DISJ_CASES_THEN2 ttac1 ttac2 =
    let
       val (disj1, disj2) = dest_disj (Thm.concl disth)
    in
-      fn g as (asl, w) =>
+      fn g as (asl, w) => fn ctxt =>
          let
-            val (gl1, prf1) = ttac1 (foo disth disj1) g
+            val (gl1, prf1) = ttac1 (foo disth disj1) g ctxt
 (*               ttac1 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj1)) g *)
-            and (gl2, prf2) = ttac2 (foo disth disj2) g
+            and (gl2, prf2) = ttac2 (foo disth disj2) g ctxt
 (*              ttac2 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj2)) g *)
             val len_gl1 = length gl1 (* Avoid capture of gl1 in closure *)
          in
@@ -187,10 +187,10 @@ val DISJ_CASES_THENL: thm_tactic list -> thm_tactic =
  * Added: TFM 88.03.31  (bug fix)
  *---------------------------------------------------------------------------*)
 
-fun DISCH_THEN ttac (asl,w) =
+fun DISCH_THEN ttac (asl,w) ctxt =
    let
       val (ant, conseq) = dest_imp w
-      val (gl, prf) = ttac (ASSUME ant) (asl, conseq)
+      val (gl, prf) = ttac (ASSUME ant) (asl, conseq) ctxt
    in
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
@@ -229,11 +229,11 @@ fun X_CHOOSE_THEN y (ttac: thm_tactic) : thm_tactic =
       let
          val (Bvar,Body) = dest_exists (Thm.concl xth)
       in
-         fn (asl,w) =>
+         fn (asl,w) => fn ctxt =>
             let
                val th = foo xth (subst[Bvar |-> y] Body)
               (* itlist ADD_ASSUM (hyp xth) (ASSUME (subst[Bvar |-> y] Body)) *)
-               val (gl,prf) = ttac th (asl,w)
+               val (gl,prf) = ttac th (asl,w) ctxt
             in
                (gl, (CHOOSE (y,xth)) o prf)
             end
@@ -256,9 +256,9 @@ fun X_CHOOSE_THENL ys (ttac: thm_tactic) : thm_tactic =
          val (tm,vf) = dest_list ys (Thm.concl xth) (PROVE_HYP xth)
          val th = foo xth (tm)
          (* itlist ADD_ASSUM (hyp xth) (ASSUME (subst[Bvar |-> y] Body)) *)
-      in fn (asl,w) =>
+      in fn (asl,w) => fn ctxt =>
             let
-               val (gl,prf) = ttac th (asl,w)
+               val (gl,prf) = ttac th (asl,w) ctxt
             in
                (gl, vf o prf)
             end
