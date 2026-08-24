@@ -134,13 +134,6 @@ struct
             let val new = f (get slot (Sref.value ctx))
             in Sref.update ctx (put slot new) end))
 
-    fun register spec =
-        let val slot = new spec
-        in {get = fn () => get slot (Sref.value ctx),
-            write = write slot,
-            modify = modify slot}
-        end
-
     fun with_slot_value slot v f x =
         let val old = get slot (Sref.value ctx)
             val () = write slot v

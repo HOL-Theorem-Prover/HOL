@@ -79,9 +79,12 @@ with
  fun dest_rewrites(RW{thms, ...}) = thms
  fun net_of(RW{net,...})          = net
  val empty_rewrites = RW{thms = [], net= Net.empty}
- val implicit = ref empty_rewrites;
- fun implicit_rewrites() = !implicit
- fun set_implicit_rewrites rws = (implicit := rws);
+ val implicit_slot : rewrites Context.Data.slot =
+     Context.Data.new {name = "Rewrite.implicit", empty = empty_rewrites,
+                       pp = fn _ => "<Rewrite.implicit>"}
+ fun implicit_rewrites_of ctxt = Context.Data.get implicit_slot ctxt
+ fun implicit_rewrites() = implicit_rewrites_of (Context.snapshot())
+ val set_implicit_rewrites = Context.Data.write implicit_slot
 
 fun add_rewrites (RW{thms,net}) thl =
  let val rewrites = itlist (append o local_mk_rewrites) thl []

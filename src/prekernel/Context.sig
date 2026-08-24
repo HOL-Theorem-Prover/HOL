@@ -87,13 +87,6 @@ sig
     val write  : 'a slot -> 'a -> unit
     val modify : 'a slot -> ('a -> 'a) -> unit
 
-    (* Convenience one-liner for the common `local val slot = new {...}
-       in fun x () = get slot (snapshot()); val put_x = write slot;
-       val upd_x = modify slot end` boilerplate. *)
-    val register :
-        {name : string, empty : 'a, pp : 'a -> string} ->
-        {get : unit -> 'a, write : 'a -> unit, modify : ('a -> 'a) -> unit}
-
     (* Lib.with_flag-style save-set-restore on a slot: writes `v`, runs
        `f x`, restores the previous value (also on exception). *)
     val with_slot_value : 'a slot -> 'a -> ('b -> 'c) -> 'b -> 'c
