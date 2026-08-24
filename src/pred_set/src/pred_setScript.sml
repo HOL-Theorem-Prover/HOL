@@ -9600,4 +9600,35 @@ Proof
     PROVE_TAC [COUNTABLE_NUM]
 QED
 
+(* Some theorems for relationTheory consts that require set operations *)
+
+Theorem rpreserves_inter:
+  ∀f g b. rpreserves f b ∧ rpreserves g b ==> rpreserves (f ∩ g) b
+Proof
+  SRW_TAC[][rpreserves_def, SPECIFICATION]
+QED
+
+Theorem is_closure_inter:
+  ∀f g a b. is_closure_op f a ∧ is_closure_op g b ∧ rpreserves g a
+    ==> is_closure_op (f ∩ g) (a o b)
+Proof
+  SRW_TAC[][is_closure_op_def, SPECIFICATION, rpreserves_def]
+  >> METIS_TAC[RSUBSET_TRANS]
+QED
+
+Theorem is_closure_op_reflexive_transitive_RTC[simp]:
+  is_closure_op (reflexive ∩ transitive) RTC
+Proof
+  SRW_TAC[][RTC_RC_o_TC, is_closure_inter]
+QED
+
+Theorem is_closure_op_equivalence_EQC[simp]:
+  is_closure_op equivalence EQC
+Proof
+  `equivalence = reflexive ∩ symmetric ∩ transitive` by SRW_TAC[][FUN_EQ_THM, equivalence_def, SPECIFICATION, CONJ_ASSOC]
+  >> SRW_TAC[][EQC_THM, GSYM INTER_ASSOC]
+  >> HO_MATCH_MP_TAC is_closure_inter
+  >> SRW_TAC[][rpreserves_inter, Once INTER_COMM, is_closure_inter]
+QED
+
 (* END *)
