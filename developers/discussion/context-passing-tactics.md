@@ -794,6 +794,47 @@ lookup-only, fail if unregistered.  This is a deliberate, accepted loss
 — and arguably an improvement, since the current behaviour is already a
 footgun that warns about itself.
 
+### Starting notes for 3a
+
+Groundwork done: `AncestryData` has `get_global_value_of`, so the bottom
+of the chain is reachable from a context, and `GEN_TAC` is off the census.
+Four things worth knowing before the simpset itself:
+
+**The derived value does not consult its previous value.**
+`make_simpset_derived_value`'s `deriver` has type `simpset -> 'a -> 'a`,
+but its only client is `bossLib`'s `boss_augment ss old = addfrags
+let_arith_frags ss`, which ignores `old`.  So the derived value *is* a
+function of the simpset, the `'a -> 'a` shape is vestigial, and the
+suspension can be `Susp.delay (fn () => deriver (srw_ss_of c) init)`
+without having to force the previous one to build the next.
+
+**`srw_ss_of` need not mutate.**  `srw_ss ()` is
+`update_global_value init_state; #1 (get_global_value())`, but
+`init_state : srw_state -> srw_state` is already pure --- it folds the
+pending updates into the simpset and marks it initialised.  So
+`fun srw_ss_of ctxt = #1 (init_state (get_global_value_of ctxt))` reads a
+context without writing one.  On an already-initialised context it returns
+immediately; on an uninitialised one it redoes the fold per call, which is
+what the suspension in the slot is for.  Note `init_state` also reads
+`tyinfol()`, so it stays on the census until 3c.
+
+**Installation has to happen inside the transform that adjusts the
+simpset, not as a nested update.**  `RWLock.acquire_read` waits while a
+writer is queued, so a `Context.update` reached from inside a
+`Data.modify` callback can deadlock against a concurrent `restore`.
+`(update_global_value f; notify())` must therefore become one transform
+--- `Context.update (install_derived o Data.update global_slot f)` ---
+rather than an adjust followed by a nested install.  Today's `notify()`
+already writes a slot from inside `AncestryData`'s `apply_to_global`
+callback, so this nesting exists already and has not bitten a
+single-threaded build; the point is not to build more of it.
+
+**Keep the ambient `boss_ss()` cached.**  `simp` resolves its simpset per
+invocation, so dropping the memoisation to get a context-explicit read
+would pay `addfrags` on every call.  The suspension-in-a-slot is what
+keeps both properties: pure read, computed at most once per context.
+
+
 #### 3b. Pure plumbing (state already an explicit parameter below)
 
 Each is an ambient read whose state is already an explicit parameter of
