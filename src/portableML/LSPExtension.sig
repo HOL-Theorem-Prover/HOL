@@ -136,8 +136,10 @@ val notifyCompileStart: (int option -> unit) ref
    mid-file recompile resume: the HOL Context, the Poly/ML loaded-
    modules set, and the LSP file-namespace layer (see
    `lsp/lsp_namespace.ML`).  `captureCompileSnap ()` runs at a dec
-   boundary and returns a thunk that restores each channel and forces
-   `Parse.invalidate_caches` when applied.  `restoreCompileSnap` is
+   boundary and returns a thunk that restores each channel when
+   applied; the parsers and printers derived from the grammars travel
+   in the Context, so nothing else needs resetting.
+   `restoreCompileSnap` is
    a small indirection so callers can apply it uniformly.  Defaults
    are no-ops; installed by the LSP runtime init in tools-poly/hol.ML.
    Concrete type is exposed (rather than opaque) because the runtime

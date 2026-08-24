@@ -601,27 +601,22 @@ in
            `captureCompileSnap` is the mid-compile companion used by
            incremental resume: it captures Context + loaded modules +
            the LSP namespace layer at a dec boundary; the returned
-           thunk restores each channel and forces
-           `Parse.invalidate_caches` so the parser closure caches
-           (`type_parser1`, `the_absyn_parser`, ...) rebuild against
-           the restored grammars.  The boot-restore path in
-           `resetForCompile` also calls `invalidate_caches`, fixing
-           a latent staleness between restore and the next grammar-
-           mutating dec. *)
+           thunk restores each channel.  The parsers and printers
+           derived from the grammars live in the context alongside
+           them, so restoring it restores a consistent set and there
+           is nothing to invalidate. *)
         evalString
           "let val snap = Context.snapshot () \
           \    val restoreLoaded = Meta.snapshotLoaded () in \
           \  LSPExtension.resetForCompile := \
           \    (fn () => (Context.restore snap; restoreLoaded (); \
-          \               LSPNameSpace.clearFileLayer (); \
-          \               Parse.invalidate_caches ())); \
+          \               LSPNameSpace.clearFileLayer ())); \
           \  LSPExtension.captureCompileSnap := \
           \    (fn () => let val cSnap = Context.snapshot () \
           \                  val loadedR = Meta.snapshotLoaded () \
           \                  val nsR = LSPNameSpace.snapshotLayer () \
           \              in fn () => (Context.restore cSnap; \
-          \                           loadedR (); nsR (); \
-          \                           Parse.invalidate_caches ()) end) \
+          \                           loadedR (); nsR ()) end) \
           \end";
         (* Cheat every tactic proof: return an oracle-tagged theorem
            for the goal instead of running the tactic.  Same hook that
