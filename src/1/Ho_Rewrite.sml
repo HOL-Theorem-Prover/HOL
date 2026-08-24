@@ -68,7 +68,8 @@ local
          empty = empty_rewrites,
          pp = fn _ => "<Ho_Rewrite.implicit>"}
 in
-  fun implicit () = Context.Data.get implicit_slot (Context.snapshot())
+  fun implicit_of ctxt = Context.Data.get implicit_slot ctxt
+  fun implicit () = implicit_of (Context.snapshot())
   val set_implicit = Context.Data.write implicit_slot
   val upd_implicit = Context.Data.modify implicit_slot
 end

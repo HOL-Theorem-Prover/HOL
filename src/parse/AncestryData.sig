@@ -5,14 +5,18 @@ sig
     apply_delta : 'delta -> 'value -> 'value
   }
 
+  (* the `_of` fields read the supplied context; the others read the
+     ambient one and are defined in terms of them *)
   type ('delta,'value) fullresult =
        { merge : string list -> 'value option,
          DB : {thyname : string} -> 'value option,
+         DB_of : Context.t -> {thyname : string} -> 'value option,
          get_deltas : {thyname : string} -> 'delta list,
          record_delta : 'delta -> unit,
          parents : {thyname : string} -> string list,
          set_parents : string list -> 'value option,
          get_global_value : unit -> 'value,
+         get_global_value_of : Context.t -> 'value,
          update_global_value : ('value -> 'value) -> unit }
 
   (* doesn't lock, or in any way exclude others from seeing the adjusted
@@ -26,6 +30,7 @@ sig
                delta_side_effects : 'delta -> unit } ->
              { merge : string list -> 'value option,
                DB : {thyname : string} -> 'value option,
+               DB_of : Context.t -> {thyname : string} -> 'value option,
                parents : {thyname : string} -> string list,
                set_parents : string list -> 'value option
              }

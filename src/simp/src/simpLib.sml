@@ -134,7 +134,8 @@ local
          empty = Symtab.empty,
          pp = fn _ => "<simpLib.ssfragDB>"}
 in
-  fun ssfragDB () = Context.Data.get ssfragDB_slot (Context.snapshot())
+  fun ssfragDB_of ctxt = Context.Data.get ssfragDB_slot ctxt
+  fun ssfragDB () = ssfragDB_of (Context.snapshot())
   val upd_ssfragDB = Context.Data.modify ssfragDB_slot
 end
 fun register_frag ssf =

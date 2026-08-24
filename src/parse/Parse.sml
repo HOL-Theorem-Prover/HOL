@@ -1081,7 +1081,7 @@ fun gparents {thyname} =
     | thys => thys
 
 val {merge = merge_grammars0, set_parents = set_grammar_ancestry0,
-     DB = grammarDB0, parents = grammar_ancestry} =
+     DB = grammarDB0, DB_of = grammarDB0_of, parents = grammar_ancestry} =
     let
       open GrammarDeltas
       fun apply (TYD tyd) (tyG, tmG) = (type_grammar.apply_delta tyd tyG, tmG)
@@ -1112,6 +1112,7 @@ fun merge_grammars sl =
                        " have defined grammars")
       | SOME gv => gv
 
+fun get_grammarDB ctxt thyname = grammarDB0_of ctxt thyname
 fun grammarDB thyname = grammarDB0 thyname
 
 fun set_grammar_ancestry slist =

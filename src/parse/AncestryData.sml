@@ -147,9 +147,9 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
             {name = "ancestry." ^ tag ^ ".values",
              empty = itlist Symtab.update initial_values Symtab.empty,
              pp = fn _ => "<ancestry." ^ tag ^ ".values>"}
-      fun valueDB {thyname} =
-          Symtab.lookup (Context.Data.get value_table (Context.snapshot()))
-                        thyname
+      fun valueDB_of ctxt {thyname} =
+          Symtab.lookup (Context.Data.get value_table ctxt) thyname
+      fun valueDB arg = valueDB_of (Context.snapshot()) arg
 
       (* calculates merged values in the "onload" hook *)
       val apply_delta_hook = ref (fn _ => NONE)
@@ -193,7 +193,7 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
           }
     in
       List.app onload (tts_ancestry "-");
-      {merge = merge info, DB = valueDB,
+      {merge = merge info, DB = valueDB, DB_of = valueDB_of,
        parents = parents, set_parents = set_ancestry}
     end
 
@@ -232,11 +232,13 @@ fun gen_other_tds {tag,dec,enc,P} = let
 type ('delta,'value) fullresult =
      { merge : string list -> 'value option,
        DB : {thyname : string} -> 'value option,
+       DB_of : Context.t -> {thyname : string} -> 'value option,
        get_deltas : {thyname : string} -> 'delta list,
        record_delta : 'delta -> unit,
        parents : {thyname : string} -> string list,
        set_parents : string list -> 'value option,
        get_global_value : unit -> 'value,
+       get_global_value_of : Context.t -> 'value,
        update_global_value : ('value -> 'value) -> unit }
 
 fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta} =
@@ -252,8 +254,8 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
             {name = "ancestry." ^ tag ^ ".global",
              empty = initial_value,
              pp = fn _ => "<ancestry." ^ tag ^ ".global>"}
-      fun get_global_value () =
-          Context.Data.get global_slot (Context.snapshot())
+      fun get_global_value_of ctxt = Context.Data.get global_slot ctxt
+      fun get_global_value () = get_global_value_of (Context.snapshot())
       val update_global_value = Context.Data.modify global_slot
 
       (* table of values per theory *)
@@ -262,9 +264,9 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
             {name = "ancestry." ^ tag ^ ".values",
              empty = itlist Symtab.update initial_values Symtab.empty,
              pp = fn _ => "<ancestry." ^ tag ^ ".values>"}
-      fun valueDB {thyname} =
-          Symtab.lookup (Context.Data.get value_table (Context.snapshot()))
-                        thyname
+      fun valueDB_of ctxt {thyname} =
+          Symtab.lookup (Context.Data.get value_table ctxt) thyname
+      fun valueDB arg = valueDB_of (Context.snapshot()) arg
 
       (* store deltas *)
       val {export = export_raw_delta, segment_data = get_raw_deltas,
@@ -331,12 +333,13 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
                                        data = get_raw_parents {thyname = s}}
       val _ = List.app onload (tts_ancestry "-")
     in
-      {merge = merge info, DB = valueDB,
+      {merge = merge info, DB = valueDB, DB_of = valueDB_of,
        get_deltas = get_deltas,
        record_delta = record_delta,
        parents = get_parents,
        set_parents = set_ancestry,
        get_global_value = get_global_value,
+       get_global_value_of = get_global_value_of,
        update_global_value = update_global_value}
     end
 

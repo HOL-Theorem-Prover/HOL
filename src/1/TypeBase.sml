@@ -99,8 +99,9 @@ local
 in
   fun register_update_fn f =
       Context.Data.modify update_fns_slot (fn fs => fs @ [f])
-  fun apply_update_fns tyi =
-      list_compose (Context.Data.get update_fns_slot (Context.snapshot())) tyi
+  fun apply_update_fns_of ctxt tyi =
+      list_compose (Context.Data.get update_fns_slot ctxt) tyi
+  fun apply_update_fns tyi = apply_update_fns_of (Context.snapshot()) tyi
 end;
 
 fun apply_delta tyi tyb = TypeBasePure.insert tyb (tweak_tyi tyi)

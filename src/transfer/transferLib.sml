@@ -718,7 +718,8 @@ local
          empty = ruledb,
          pp = fn _ => "<transferLib.ruledb>"}
 in
-  fun global_ruledb () = Context.Data.get ruledb_slot (Context.snapshot())
+  fun global_ruledb_of ctxt = Context.Data.get ruledb_slot ctxt
+  fun global_ruledb () = global_ruledb_of (Context.snapshot())
   val upd_ruledb = Context.Data.modify ruledb_slot
 end
 

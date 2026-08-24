@@ -322,7 +322,8 @@ local
          empty = copy bool_compset,
          pp = fn _ => "<compset>"}
 in
-  fun the_compset () = Context.Data.get compset_slot (Context.snapshot())
+  fun the_compset_of ctxt = Context.Data.get compset_slot ctxt
+  fun the_compset () = the_compset_of (Context.snapshot())
   val put_compset = Context.Data.write compset_slot
   val upd_compset = Context.Data.modify compset_slot
 end
