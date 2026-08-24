@@ -263,7 +263,7 @@ val _ = let
   fun Cases t = STRUCT_CASES_TAC (SPEC t BOOL_CASES_AX)
 in
   require_msg (check_result (list_eq goal_eq expected)) goalprint
-              (fst o REPEAT (fv_term Cases)) goal
+              (fst o runtac (REPEAT (fv_term Cases))) goal
 end
 
 val _ = let
@@ -329,7 +329,7 @@ val _ = let
   fun Cases t g = STRUCT_CASES_TAC (SPEC t BOOL_CASES_AX) g
 in
   require_msg (check_result (list_eq goal_eq expected)) goalprint
-              (fst o first_fv_term Cases) goal
+              (fst o runtac (first_fv_term Cases)) goal
 end
 
 val _ = let
@@ -339,7 +339,7 @@ val _ = let
   val G = ([] : term list, “T /\ p <=> p”)
   val tac = VALID (goal_assum (resolve_then Any mp_tac ith))
 in
-  require_msg (check_result null) goalprint (fst o tac) G
+  require_msg (check_result null) goalprint (fst o runtac tac) G
 end
 
 val _ = let
@@ -350,7 +350,7 @@ in
   shouldfail {checkexn = is_struct_HOL_ERR "Tactic",
               printarg = K "resolve_then fails with HOL_ERR",
               printresult = goalprint,
-              testfn = #1 o VALID tac} ([a], “p \/ q”)
+              testfn = #1 o runtac (VALID tac)} ([a], “p \/ q”)
 end
 
 val _ = let
@@ -363,7 +363,7 @@ val _ = let
   fun verdict [(asl',sg)] = tml_eq asl' asl andalso sg ~~ “(u:'b = v) ==> p”
     | verdict _ = false
 in
-  require_msg (check_result verdict) goalprint (fst o tac) G
+  require_msg (check_result verdict) goalprint (fst o runtac tac) G
 end
 
 val _ = let
@@ -376,14 +376,15 @@ val _ = let
     | verdict _ = false
 in
   require_msg (check_result verdict) goalprint
-              (fst o POP_LAST_ASSUM (REWRITE_TAC o single)) (asl,g)
+              (fst o runtac (POP_LAST_ASSUM (REWRITE_TAC o single)))
+              (asl,g)
 end
 
 val _ = let
   open boolLib
 in
   shouldfail {checkexn = is_struct_HOL_ERR "Tactical",
-              testfn = fst o POP_LAST_ASSUM (REWRITE_TAC o single),
+              testfn = fst o runtac (POP_LAST_ASSUM (REWRITE_TAC o single)),
               printresult = goalprint,
               printarg = fn _ => "POP_LAST_ASSUM fails (no assums)"}
              ([], “(P:'a -> bool) x”)

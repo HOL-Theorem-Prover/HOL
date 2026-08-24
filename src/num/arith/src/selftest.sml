@@ -31,7 +31,8 @@ val _ = let
     if null res andalso Feq (concl (vfn [])) then OK()
     else die "FAILED!\n"
 in
-  timed(ASM_SIMP_TAC arith_ss []) (exncheck c) ([``2 <= 0``], ``F``)
+  timed (runtac (ASM_SIMP_TAC arith_ss [])) (exncheck c)
+        ([``2 <= 0``], ``F``)
 end
 
 val _ = pr "Testing with hypothesis-less context"
@@ -43,7 +44,7 @@ val _ = let
     if null res andalso aconv (concl (vfn [])) goal then OK()
     else die "FAILED\n"
 in
-  timed (ASM_SIMP_TAC arith_ss [foo_ax]) (exncheck c) ([], goal)
+  timed (runtac (ASM_SIMP_TAC arith_ss [foo_ax])) (exncheck c) ([], goal)
 end
 
 val _ = new_constant("dimindex", ``:'a itself -> num``)
@@ -194,12 +195,12 @@ val _ = let
   fun pr (sgs, vf) =
       "[" ^ String.concatWith ",\n     " (map prg sgs) ^ "]"
   val _ = require_msg (check_result (null o #1)) pr
-                      (VALID (FULL_SIMP_TAC ss [c3_def]))
+                      (runtac (VALID (FULL_SIMP_TAC ss [c3_def])))
                       goal
 
-  fun cached_simp thl g = VALID (FULL_SIMP_TAC ss thl) g
+  fun cached_simp thl g = runtac (VALID (FULL_SIMP_TAC ss thl)) g
   fun uncached_simp thl g =
-      (clear_arith_caches(); VALID (FULL_SIMP_TAC ss thl)) g
+      (clear_arith_caches(); runtac (VALID (FULL_SIMP_TAC ss thl)) g)
 
   val list_eq = Portable.list_eq and pair_eq = Portable.pair_eq
   fun tac_result_eq (sgs1, vf1) (sgs2, vf2) =
@@ -234,7 +235,8 @@ val _ = let
   fun pr_result (sgs, _) =
       "[" ^ String.concatWith ", " (map pr_goal sgs) ^ "]"
   fun test0 g =
-      (clear_arith_caches(); simp_tac (bool_ss ++ ARITH_ss) [] ([], g))
+      (clear_arith_caches();
+       runtac (simp_tac (bool_ss ++ ARITH_ss) []) ([], g))
   fun test (msg, g) =
       (tprint msg;
        require_msg

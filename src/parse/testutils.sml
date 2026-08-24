@@ -195,6 +195,8 @@ fun timed f check x =
 fun exncheck f (Res a) = f a
   | exncheck f (Exn e) = die ("  Unexpected EXN:\n    "^General.exnMessage e)
 
+fun runtac tac g = tac g (Context.snapshot())
+
 fun convtest (nm,conv,tm,expected) =
   let
     open Term

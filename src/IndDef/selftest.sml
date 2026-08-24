@@ -118,7 +118,7 @@ val _ = diemode := Remember failcount
 local
   fun itf n pat t =
       let
-        val (sgs, _) = VALID (isolate_to_front n pat) ([], t)
+        val (sgs, _) = runtac (VALID (isolate_to_front n pat)) ([], t)
       in
         case sgs of
             [([], t')] => t'
