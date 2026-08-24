@@ -41,6 +41,13 @@ sig
   val snapshot : unit -> t
   val restore  : t -> unit
 
+  (* Runs `f x` as a parameterised proof: while it is running, an
+     ambient `snapshot` on this thread is reported under the trace
+     "ambient context inside proof" (0 silent, 1 one report per
+     theory, 2 every read, 3 error).
+     `TAC_PROOF` is the only sanctioned caller. *)
+  val in_proof : ('a -> 'b) -> 'a -> 'b
+
   (* Whole-context mutators.  Both take the RW-lock's read side so
      `restore` won't interleave.  `f` runs under the internal Sref
      mutex, so nested `update` / `gen_update` inside `f` deadlocks;

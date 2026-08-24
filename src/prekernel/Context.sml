@@ -70,7 +70,58 @@ struct
 
   val ctx_rwlock : RWLock.t = RWLock.new "Context.ctx"
 
-  fun snapshot () = Sref.value ctx
+  (* A proof is a function of the context it is given.  Code reached
+     while one is running that reads the ambient context instead had a
+     context in scope and dropped it, so `snapshot` reports when called
+     inside the dynamic extent that `TAC_PROOF` marks.  Reads at
+     declaration level are the ambient wrappers doing their job and are
+     not reported.
+
+     The extent is per-thread: a worker proving on its own thread must
+     not see another's.  `ThreadLocal.get` is NONE on a fresh thread,
+     which reads as depth zero --- right for a thread that is not
+     proving, and harmless for one that is, since its own TAC_PROOF
+     sets the depth before any tactic runs. *)
+  local
+    val depth : int ThreadLocal.t = ThreadLocal.new ()
+    fun get () = case ThreadLocal.get depth of NONE => 0 | SOME n => n
+    fun set n = ThreadLocal.set (depth, n)
+    (* 0 silent, 1 one report per theory, 2 every read, 3 error.  Level 1
+       is the default: the reports are a style ratchet, and one marker per
+       theory log says which theories still offend without the volume ---
+       there are 611k reads to report across a core build, which costs
+       about a tenth of the build's heaviest theory and buries its log. *)
+    val action = ref 1
+    val _ = Feedback.register_trace ("ambient context inside proof", action, 3)
+    val reported : string list ref = ref []
+    fun thyname () =
+        case #current_thy (Sref.value ctx) of
+            NONE => "<no current theory>"
+          | SOME s => s
+    fun report () =
+        let val thy = thyname ()
+            val msg = "ambient context read while a proof was running (in " ^
+                      thy ^ ")"
+            fun warn () = Feedback.HOL_WARNING "Context" "snapshot" msg
+        in
+          if !action > 2 then raise ERR "snapshot" msg
+          else if !action > 1 then warn ()
+          else if List.exists (fn s => s = thy) (!reported) then ()
+          else (reported := thy :: !reported; warn ())
+        end
+  in
+    fun in_proof f x =
+        let val n = get ()
+            val () = set (n + 1)
+            val r = f x handle e => (set n; raise e)
+        in
+          set n; r
+        end
+    fun snapshot () =
+        (if !action > 0 andalso get () > 0 then report () else ();
+         Sref.value ctx)
+  end
+
   fun restore  c  =
       RWLock.write_locked ctx_rwlock (fn () => Sref.update ctx (fn _ => c))
 

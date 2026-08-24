@@ -66,7 +66,7 @@ That was the state this plan was written against.  Phase 0 and most of
 Phase 1 have since landed and the core build is green; see **Status**
 below for what that took and where the tree disagreed with the plan.
 
-## Status: Phase 0 and Phase 1 have landed
+## Status: Phases 0, 1 and 2 have landed
 
 The full build passes with selftests, so the baseline the phases assume is
 real and then some.  Getting there took all of Phase 0 and all of Phase 1,
@@ -217,6 +217,75 @@ Holmake does not know it.  After changing `HOLSourceExpand.sml`, re-run
 `Theorem … QED` with the old expander and the change is never
 exercised.  `tools/Holmake/tests/quote-filter` holds the golden
 expansion for both compilers.
+
+## Phase 2: the tripwire and the census
+
+`Context.in_proof` marks the dynamic extent of a parameterised proof and
+`Context.snapshot` reports when called inside one, under the trace
+`"ambient context inside proof"`.  `TAC_PROOF_in` is the only sanctioned
+caller and brackets both the tactic and its validation.  The extent is a
+per-thread depth (`ThreadLocal`, restored on exception), so a worker
+proving on its own thread cannot see another's.
+
+**The extent has to cover the goal application, not just the context
+one.**  `Context.in_proof (tac g) ctxt` evaluates `tac g` before
+`in_proof` sees it, and for anything shaped like
+`fn g => ... boss_ss() ...` that is exactly where the ambient read
+happens; written that way the tripwire reports nothing for `simp`.  It is
+`Context.in_proof (fn () => tac g ctxt) ()`.
+
+**Levels, and why the default is not "warn on every read".**  0 silent,
+1 one report per theory (default), 2 every read, 3 error.  Reporting every
+read means 611k lines across a core build and about a tenth of the
+build time of its heaviest theory; one marker per theory log still says
+which theories offend, which is what a ratchet needs.  Level 2 gives the
+full count when you want to measure.
+
+### Core-build census
+
+| measure                                             |   count |
+|-----------------------------------------------------|---------|
+| ambient reads inside a proof (trace at 2)            | 611 424 |
+| theory logs carrying at least one                    |     100 |
+| theory logs carrying at least one (trace at 1)       |      96 |
+
+Heaviest logs, all of them proof-heavy set/list/arithmetic theories:
+`cardinal` (100 436), `pred_set` (83 274), `wellorder` (70 883),
+`set_relation` (67 415), `rich_list` (39 644), `ordinalBasic` (39 586),
+`list` (35 992), `iterate` (23 652), `logroot` (23 084), `gcd` (16 962).
+
+### What is doing the reading
+
+Setting the trace to 3 makes the first read raise, so a tactic either
+completes or is named.  Probing the common ones (only *clean* and
+*ambient* are conclusive --- a tactic that does not close the goal is
+inconclusive):
+
+| tactic                        | reads ambient state |
+|-------------------------------|---------------------|
+| `ACCEPT_TAC`, `REFL_TAC`, `STRIP_TAC` | no          |
+| `REWRITE_TAC []`              | no                  |
+| `SIMP_TAC bool_ss []`         | no                  |
+| `DECIDE_TAC`                  | no                  |
+| `ASM_REWRITE_TAC []`          | yes                 |
+| `simp []`, `rw []`, `fs []`   | yes                 |
+| `EVAL_TAC`                    | yes                 |
+| `GEN_TAC`                     | yes                 |
+| `Induct_on`, `Cases_on`       | yes                 |
+| `Q.EXISTS_TAC`                | yes                 |
+
+Two of these are worth calling out.  `SIMP_TAC bool_ss []` is clean while
+`simp []` is not, which is the thesis of this document in one line: the
+simpset passed explicitly is fine, the stateful wrapper around it is the
+problem.  And **`GEN_TAC` reads ambient state** --- it chooses its variant
+with `gen_variant Parse.is_constname`, which consults the ambient term
+grammar.  That is the bug this whole change exists to fix, still live, and
+now named by the tripwire; it is the obvious first target for Phase 3.
+
+The rest of the table maps onto the phases as written: `simp`/`rw`/`fs`
+are 3a, `EVAL_TAC` and `ASM_REWRITE_TAC` are 3b, `Induct_on`/`Cases_on`
+(TypeBase) and `Q.EXISTS_TAC` (parsing in a tactic body) are 3c.
+
 
 ## Hand-off notes (guest VM)
 

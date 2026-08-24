@@ -51,12 +51,15 @@ local
    val unsolved_list = ref ([]: goal list)
 in
    fun unsolved () = !unsolved_list
+   (* Context.in_proof marks the dynamic extent of a parameterised proof:
+      anything reached from here that reads the ambient context had this
+      one in scope and dropped it. *)
    fun TAC_PROOF_in ctxt (g, tac) =
       (check_current_thy ctxt g;
-       case tac g ctxt of
+       case Context.in_proof (fn () => tac g ctxt) () of
          ([], p) =>
              (let
-                 val thm = p []
+                 val thm = Context.in_proof p []
                  val c = concl thm
                  val () = unsolved_list := []
               in
