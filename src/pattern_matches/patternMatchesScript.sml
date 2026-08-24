@@ -1642,3 +1642,71 @@ Proof
 SIMP_TAC list_ss [PMATCH_IS_EXHAUSTIVE_def, EXISTS_MAP, PMATCH_ROW_LIFT_def,
   IS_SOME_MAP]
 QED
+
+(* ------------------------------------------------------------------------- *)
+(* Lemmas moved from patternMatchesLib and constrFamiliesLib to keep their   *)
+(* proofs out of load time.                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem PAIR_EQ_COLLAPSE:
+  ((FST x = (a:'a)) /\ (SND x = (b:'b))) <=> (x = (a, b))
+Proof
+  STRUCT_CASES_TAC (SPEC ``x:'a#'b`` pairTheory.pair_CASES) THEN
+  SIMP_TAC std_ss []
+QED
+
+Theorem COND_CONG_STOP:
+  (c = c') ==> ((if c then x else y:'a) = (if c' then x else y))
+Proof SIMP_TAC std_ss []
+QED
+
+Theorem literal_cong_stop:
+  (v = v') ==> (literal_case (f:'a -> 'b) v = literal_case f v')
+Proof SIMP_TAC std_ss []
+QED
+
+Theorem IMP_TO_EQ_THM:
+  !P Q. (P ==> Q) ==> (~P ==> ~Q) ==> (Q <=> P)
+Proof PROVE_TAC[]
+QED
+
+Theorem neg_imp_rewr:  (~A ==> B) <=> (~B ==> A)
+Proof tautLib.PTAUT_TAC
+QED
+
+Theorem IMP_AUX_THM:
+  (P ==> (X <=> Y)) <=> ((P ==> X) <=> (P ==> Y))
+Proof PROVE_TAC[]
+QED
+
+Theorem COND_CONG_APPLY:
+  (if (x:'a) = c then (ff x):'b else ff x) = (if x = c then ff c else ff x)
+Proof ASM_CASES_TAC ``x:'a = c`` THEN ASM_REWRITE_TAC[]
+QED
+
+Theorem case_dist_exists_thm:
+  !Q. (!(x:'a). Q x) ==> !P. (?x. P x) <=> (?x. Q x /\ P x)
+Proof SIMP_TAC std_ss []
+QED
+
+Theorem label_over_or_thm:
+  (lbl :- (t1 \/ t2)) <=> (lbl :- t1) \/ (lbl :- t2)
+Proof REWRITE_TAC [markerTheory.label_def]
+QED
+
+Theorem EQ_F_ELIM:  !b. F ==> b
+Proof PROVE_TAC[]
+QED
+
+Theorem EQ_T_ELIM:  !b. (b <=> T) ==> ~F ==> b
+Proof PROVE_TAC[]
+QED
+
+Theorem EQ_O_ELIM:  !b1 b2. (b1 <=> b2) ==> b2 ==> b1
+Proof PROVE_TAC[]
+QED
+
+Theorem simple_imp_thm:
+  !X Y X'. (Y ==> (X <=> X')) ==> ((X ==> ~Y) <=> (X' ==> ~Y))
+Proof PROVE_TAC[]
+QED

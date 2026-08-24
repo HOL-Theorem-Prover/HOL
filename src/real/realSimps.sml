@@ -93,9 +93,7 @@ val real_ac_SS = SSFRAG {
 
 
 
-val num_eq_0 = prove(
-  Term`~(NUMERAL (BIT1 n) = 0n) /\ ~(NUMERAL (BIT2 n) = 0n)`,
-  REWRITE_TAC [numeralTheory.numeral_distrib, numeralTheory.numeral_eq]);
+val num_eq_0 = realTheory.num_eq_0;
 
 fun two_nats  rv nv th = let
   open numSyntax
@@ -229,14 +227,8 @@ val m = mk_var("m", numSyntax.num)
 fun to_numeraln th = INST [n |-> mk_comb(numSyntax.numeral_tm, n),
                            m |-> mk_comb(numSyntax.numeral_tm, m)] th
 
-val ltnb12 = TAC_PROOF(([], “0 < NUMERAL (BIT1 n) /\ 0 < NUMERAL (BIT2 n)”),
-                       REWRITE_TAC[arithmeticTheory.NUMERAL_DEF,
-                                   arithmeticTheory.BIT1,
-                                   arithmeticTheory.BIT2,
-                                   arithmeticTheory.ADD_CLAUSES,
-                                   prim_recTheory.LESS_0])
-val let_id = TAC_PROOF(([], “LET (\n. n) x = x”),
-                       SIMP_TAC boolSimps.bool_ss [LET_THM])
+val ltnb12 = realTheory.ltnb12
+val let_id = realTheory.let_id
 
 val clg0 = SIMP_RULE boolSimps.bool_ss [flr, LET_THM]
                      (SPEC “0r” NUM_CEILING_NUM_FLOOR)

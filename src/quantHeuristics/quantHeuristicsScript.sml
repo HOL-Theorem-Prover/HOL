@@ -1494,3 +1494,9 @@ Theorem SND_PAIR_EQ_SYM:
 Proof
 Cases THEN SIMP_TAC std_ss []
 QED
+
+Theorem GUESS_PAIR_THM:
+  !P (i:'b -> 'a). (!v. ?x. v = i x) ==>
+    (GUESS_EXISTS_GAP i P /\ GUESS_FORALL_GAP i P)
+Proof simpLib.SIMP_TAC std_ss [GUESS_REWRITES]
+QED

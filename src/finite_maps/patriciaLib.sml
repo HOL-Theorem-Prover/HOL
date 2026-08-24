@@ -326,28 +326,7 @@ val PTREE_IN_PTREE_CONV =
 
 (* ------------------------------------------------------------------------- *)
 
-val BRANCHING_BIT_numeral = Q.prove(
-   `(BRANCHING_BIT 0 0 = 0) /\
-    (!x. BRANCHING_BIT 0 (NUMERAL (BIT1 x)) = 0) /\
-    (!x. BRANCHING_BIT (NUMERAL (BIT1 x)) 0 = 0) /\
-    (!x. BRANCHING_BIT 0 (NUMERAL (BIT2 x)) =
-         SUC (BRANCHING_BIT 0 (NUMERAL (SUC x)))) /\
-    (!x. BRANCHING_BIT (NUMERAL (BIT2 x)) 0 =
-         SUC (BRANCHING_BIT (NUMERAL (SUC x)) 0)) /\
-    (!x y. BRANCHING_BIT (NUMERAL (BIT1 x)) (NUMERAL (BIT1 y)) =
-           if x = y then 0 else SUC (BRANCHING_BIT (NUMERAL x) (NUMERAL y))) /\
-    (!x y. BRANCHING_BIT (NUMERAL (BIT2 x)) (NUMERAL (BIT2 y)) =
-           if x = y then 0
-           else SUC (BRANCHING_BIT (NUMERAL (SUC x)) (NUMERAL (SUC y)))) /\
-    (!x y. BRANCHING_BIT (NUMERAL (BIT1 x)) (NUMERAL (BIT2 y)) = 0) /\
-    (!x y. BRANCHING_BIT (NUMERAL (BIT2 x)) (NUMERAL (BIT1 y)) = 0)`,
-   REPEAT STRIP_TAC
-   THEN CONV_TAC
-          (LHS_CONV (ONCE_REWRITE_CONV [patriciaTheory.BRANCHING_BIT_def]))
-   THEN SIMP_TAC std_ss
-        [numeralTheory.numeral_distrib, numeralTheory.numeral_eq,
-         numeralTheory.numeral_evenodd, numeralTheory.numeral_div2]
-   )
+val BRANCHING_BIT_numeral = patriciaTheory.BRANCHING_BIT_numeral
 
 val BRANCHING_BIT_CONV =
    REWRITE_CONV [BRANCHING_BIT_numeral, numeralTheory.numeral_eq,
@@ -696,16 +675,7 @@ end
 val rhsc = rhs o concl
 val lhsc = lhs o concl
 
-val PTREE_OF_NUMSET_RWT = Q.prove(
-   `(!x t s y.
-      IS_PTREE t /\ FINITE s /\ (PTREE_OF_NUMSET t s = y) ==>
-      (PTREE_OF_NUMSET t (x INSERT s) = x INSERT_PTREE y)) /\
-    (!s1 s2 t y.
-      IS_PTREE t /\ FINITE s1 /\ FINITE s2 /\
-      (PTREE_OF_NUMSET t s1 = y) /\
-      (PTREE_OF_NUMSET y s2 = z) ==>
-      (PTREE_OF_NUMSET t (s1 UNION s2) = z))`,
-   SRW_TAC [] [PTREE_OF_NUMSET_UNION, PTREE_OF_NUMSET_INSERT])
+val PTREE_OF_NUMSET_RWT = patriciaTheory.PTREE_OF_NUMSET_RWT
 
 val ptee_of_numset_insert = CONJUNCT1 PTREE_OF_NUMSET_RWT
 val ptee_of_numset_union = CONJUNCT2 PTREE_OF_NUMSET_RWT
@@ -742,18 +712,9 @@ fun PTREE_OF_NUMSET_CONV tm =
 (* Conversion for applications of ADD, REMOVE and INSERT_PTREE (ARI)         *)
 (* ------------------------------------------------------------------------- *)
 
-val DEPTH_ADD_THM = Q.prove(
-   `(c1 = t) /\ (patricia$ADD t (k,d) = c2) ==> (patricia$ADD c1 (k,d) = c2)`,
-   SRW_TAC [] [])
-
-val DEPTH_REMOVE_THM = Q.prove(
-   `(c1 = t) /\ (patricia$REMOVE t k = c2) ==> (patricia$REMOVE c1 k = c2)`,
-   SRW_TAC [] [])
-
-val DEPTH_INSERT_PTREE_THM = Q.prove(
-   `(c1 = t) /\ (patricia$INSERT_PTREE k t = c2) ==>
-                (patricia$INSERT_PTREE k c1 = c2)`,
-   SRW_TAC [] [])
+val DEPTH_ADD_THM = patriciaTheory.DEPTH_ADD_THM
+val DEPTH_REMOVE_THM = patriciaTheory.DEPTH_REMOVE_THM
+val DEPTH_INSERT_PTREE_THM = patriciaTheory.DEPTH_INSERT_PTREE_THM
 
 fun DEPTH_ARI_CONV rwt tm =
    REWR_CONV rwt tm
@@ -976,9 +937,7 @@ fun PTREE_ARI_CONV tm =
             | NONE => create_ptree_definition (const_variant tm) tm
    end
 
-val DEPTH_PEEK_THM = Q.prove(
-   `(c1 = t) /\ (patricia$PEEK t k = c2) ==> (patricia$PEEK c1 k = c2)`,
-   SRW_TAC [] [])
+val DEPTH_PEEK_THM = patriciaTheory.DEPTH_PEEK_THM
 
 fun PTREE_PEEK_ARI_CONV tm =
    let
@@ -1007,9 +966,7 @@ fun mk_ptree_conv2 dest mk conv d_thm tm =
       else conv tm
    end
 
-val thm = Q.prove(
-   `!f. (c1 = t) /\ (f k t = c2) ==> (f k c1 = c2)`,
-   SRW_TAC [] [])
+val thm = patriciaTheory.DEPTH_ARI_CONG
 
 val PTREE_IN_PTREE_ARI_CONV =
    mk_ptree_conv2 dest_in_ptree mk_in_ptree PTREE_IN_PTREE_CONV
@@ -1023,9 +980,7 @@ val PTREE_EXISTS_LEAF_ARI_CONV =
    mk_ptree_conv2 dest_exists_leaf mk_exists_leaf (PTREE_EXISTS_LEAF_CONV EVAL)
      (Drule.ISPEC patriciaSyntax.exists_leaf_tm thm)
 
-val thm = Q.prove(
-   `!f. (c1 = t) /\ (f t = c2) ==> (f c1 = c2)`,
-   SRW_TAC [] [])
+val thm = patriciaTheory.DEPTH_CONG
 
 fun mk_ptree_conv dest mk conv d_thm tm =
    let

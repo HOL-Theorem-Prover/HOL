@@ -154,7 +154,12 @@ struct
    fun Q_SPECL_NO_ASSUM n [] = ALL_TAC
      | Q_SPECL_NO_ASSUM n (h::l) = (Q_SPEC_NO_ASSUM n h THEN Q_SPECL_NO_ASSUM 0 l);
 
-   val IMP_TO_EQ_TAC = MATCH_MP_TAC (prove (``(a = b) ==> (a ==> b)``, SIMP_TAC std_ss []));
+   (* |- (a = b) ==> (a ==> b), derived forward via SIMP_CONV +
+      EQT_ELIM so we don't fire a load-time Tactical.prove. *)
+   val IMP_TO_EQ_TAC =
+     MATCH_MP_TAC
+       (EQT_ELIM (simpLib.SIMP_CONV std_ss []
+                    ``(a = b) ==> (a ==> b)``));
 
    fun store_simp_thm(name,term,tac) = save_thm(name,
             SIMP_RULE std_ss [] (prove(term, tac)));

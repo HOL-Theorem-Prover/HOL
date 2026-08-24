@@ -13,16 +13,20 @@ val POST_CONV = RAND_CONV o RAND_CONV
 val PRE_CONV = RATOR_CONV o RATOR_CONV o POST_CONV
 
 (* ------------------------------------------------------------------------ *)
-val PAIR_LEMMA = Q.prove(
-   `((x1 = y1) ==> (x2 = y2) ==> b) ==> (((x2,x1) = (y2:'a,y1:'b)) ==> b)`,
-   SIMP_TAC std_ss [])
+val PAIR_LEMMA =
+   Drule.EQT_ELIM
+     (simpLib.SIMP_CONV std_ss []
+        ``((x1 = y1) ==> (x2 = y2) ==> b) ==>
+          (((x2,x1) = (y2:'a,y1:'b)) ==> b)``)
 
 val pair_rule =
    Drule.UNDISCH_ALL o Lib.repeat (Drule.MATCH_MP PAIR_LEMMA) o DISCH_ALL
 
-val precond_thm = Q.prove(
-   `!b. precond b = cond (Abbrev b): 'a set set`,
-   SIMP_TAC std_ss [markerTheory.Abbrev_def,set_sepTheory.precond_def])
+val precond_thm =
+   Drule.EQT_ELIM
+     (simpLib.SIMP_CONV std_ss
+        [markerTheory.Abbrev_def, set_sepTheory.precond_def]
+        ``!b. precond b = cond (Abbrev b): 'a set set``)
 
 val precond_rule =
    UNDISCH_ALL o

@@ -63,13 +63,8 @@ val state_id =
        ["REG", "count", "pcinc"]
       ]
 
-val m0_frame =
-   stateLib.update_frame_state_thm m0_proj_def
-      ["PSR.N", "PSR.Z", "PSR.C", "PSR.V", "count", "REG", "MEM"]
-
-val m0_frame_hidden =
-   stateLib.update_hidden_frame_state_thm m0_proj_def
-      [``s with pcinc := x``]
+val m0_frame = m0_progTheory.m0_frame
+val m0_frame_hidden = m0_progTheory.m0_frame_hidden
 
 (* -- *)
 
@@ -542,8 +537,14 @@ local
           [r, _, m, _] => [r, m]
         | _ => raise ERR "component_11" "")
    val sym_R_x_pc =
-      REWRITE_RULE [utilsLib.qm [] ``(a = RName_PC) = (RName_PC = a)``]
-         m0_stepTheory.R_x_pc
+      let val rname_pc_tm = ``RName_PC``
+          val rname_ty = type_of rname_pc_tm
+          val a_var = mk_var ("a", rname_ty)
+          val sym_thm =
+             Drule.ISPECL [a_var, rname_pc_tm] boolTheory.EQ_SYM_EQ
+      in
+        REWRITE_RULE [sym_thm] m0_stepTheory.R_x_pc
+      end
    val EXTRA_TAC =
       RULE_ASSUM_TAC (REWRITE_RULE [sym_R_x_pc, m0_stepTheory.R_x_pc])
       THEN ASM_REWRITE_TAC [boolTheory.DE_MORGAN_THM]

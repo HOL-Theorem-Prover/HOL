@@ -530,5 +530,22 @@ val write'mem2 = mem_ev "2" ``write'Mem (d:word16, address, 2, acctype)``
 val write'mem4 = mem_ev "4" ``write'Mem (d:word32, address, 4, acctype)``
 val write'mem8 = mem_ev "8" ``write'Mem (d:word64, address, 8, acctype)``
 
+(* Moved here from arm8_stepLib.sml so that library doesn't fire
+   load-time Tactical.prove calls. *)
+
+Theorem COND_UPDATE:
+  !b a x y c m n f.
+    (if b then (a =+ x) ((c =+ m) f) else (a =+ y) ((c =+ n) f)) =
+    (a =+ if b then x else y) ((c =+ if b then m else n) f)
+Proof
+  Cases THEN REWRITE_TAC [combinTheory.APPLY_UPDATE_ID]
+QED
+
+Theorem cond_add_lemma:
+  !a:'a word b c. (if b then a else a + c) = a + (if b then 0w else c)
+Proof
+  lrw []
+QED
+
 (* ------------------------------------------------------------------------ *)
 

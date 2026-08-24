@@ -42,8 +42,7 @@ fmap_TO_FMAPAL_CONV keyconv keyord;
 (*                   RAND_CONV (TC_ITER_CONV keyconv) .                 *)
 (* ******************************************************************** *)
 
-val EMPTY_UNION_EQN = prove (``!sd:'a set. sd = {} UNION sd``,
-REWRITE_TAC [pred_setTheory.UNION_EMPTY]);
+val EMPTY_UNION_EQN = tcTheory.EMPTY_UNION_EQN;
 
 (* Catholic PRE_TC_CONV, works for fmap or FMAPAL terms. *)
 

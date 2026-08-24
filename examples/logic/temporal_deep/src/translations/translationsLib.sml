@@ -87,7 +87,8 @@ fun getBindingFor b1 b2 l [] = (false, false, ``dummy:num``)
       end;
 
 exception T_IMP_Error;
-val t_imp_elim_rwt = prove (``!x. (T ==> x) = x``, REWRITE_TAC[]);
+val t_imp_elim_rwt =
+  EQT_ELIM (simpLib.SIMP_CONV std_ss [] ``!x. (T ==> x) = x``);
 
 fun T_IMP_ELIM_RULE thm =
   (CONV_RULE (REWR_CONV t_imp_elim_rwt) thm) handle _ => (
@@ -745,7 +746,8 @@ local
     new_compset [
                 res_quanTheory.RES_FORALL_EMPTY,
                 RES_FORALL_INSERT,
-                prove (``!x:num n:num. x + n >= n``, DECIDE_TAC),
+                EQT_ELIM (simpLib.SIMP_CONV arith_ss []
+                            ``!x:num n:num. x + n >= n``),
                 AND_CLAUSES]
 
   val inj_thm_compset =
@@ -882,9 +884,11 @@ fun ks_fair_emptyness___num___impl thm ltl_type used_vars_num =
     val thm = SIMP_RULE std_ss [LEFT_FORALL_IMP_THM] thm
 
     val inj_exists_term = rand (rator (concl thm));
-    val inj_exists_thm = prove (inj_exists_term,
-                                MATCH_MP_TAC NUM_FINITE_INJ_EXISTS THEN
-                                REWRITE_TAC[FINITE_INSERT, FINITE_EMPTY])
+    val set_term = rand (rator (body (rand inj_exists_term)))
+    val finite_thm =
+      Drule.EQT_ELIM (REWRITE_CONV [FINITE_INSERT, FINITE_EMPTY]
+                                   (pred_setSyntax.mk_finite set_term))
+    val inj_exists_thm = MATCH_MP NUM_FINITE_INJ_EXISTS finite_thm
     val thm = REWRITE_RULE [inj_exists_thm] thm
   in
     (thm, enum_list used_vars_num var_list)

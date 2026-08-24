@@ -1239,6 +1239,53 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
+Theorem l2n_2_compute:
+  (l2n 2 [] = 0) /\
+  (!l. l2n 2 (0::l) = 2 * l2n 2 l) /\
+  (!l. l2n 2 (1::l) = 2 * l2n 2 l + 1)
+Proof
+  simp_tac arith_ss [numposrepTheory.l2n_def]
+QED
+
+Theorem l2n_2_numeric:
+  (l2n 2 [] = ZERO) /\
+  (!l. l2n 2 (0::l) = numeral$iDUB (l2n 2 l)) /\
+  (!l. l2n 2 (1::l) = BIT1 (l2n 2 l))
+Proof
+  metis_tac [l2n_2_compute, arithmeticTheory.ALT_ZERO, arithmeticTheory.ONE,
+             arithmeticTheory.ADD_ASSOC, arithmeticTheory.BIT1,
+             arithmeticTheory.TIMES2, arithmeticTheory.MULT_COMM,
+             numeralTheory.iDUB]
+QED
+
+Theorem num_from_bin_list_compute:
+  (num_from_bin_list [] = 0) /\
+  (!l. num_from_bin_list (0::l) = NUMERAL (l2n 2 $ REVERSE (0::l))) /\
+  (!l. num_from_bin_list (1::l) = NUMERAL (l2n 2 $ REVERSE (1::l)))
+Proof
+  simp_tac list_ss [numposrepTheory.num_from_bin_list_def,
+                    numposrepTheory.l2n_def] >>
+  metis_tac [arithmeticTheory.NUMERAL_DEF]
+QED
+
+Theorem v2w_n2w_thm:
+  !l n. (v2n l = n) ==> (v2w l = n2w n : 'a word)
+Proof
+  metis_tac [ops_to_n2w]
+QED
+
+Theorem extract_v2w_cor:
+  !h l v.
+    (LENGTH v <= dimindex(:'a)) /\ (dimindex(:'b) = SUC h - l) /\
+    dimindex(:'b) <= dimindex(:'a) ==>
+    ((h >< l) (v2w v : 'a word) : 'b word =
+     v2w (fixwidth (dimindex(:'b)) (shiftr v l)))
+Proof
+  metis_tac [extract_v2w, field_def]
+QED
+
+(* ------------------------------------------------------------------------- *)
+
 val () = bossLib.export_rewrites
    ["length_w2v", "length_fixwidth", "length_field",
     "length_bitify", "length_shiftr", "length_rotate",

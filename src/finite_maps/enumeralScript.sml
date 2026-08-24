@@ -1386,3 +1386,42 @@ Theorem set_OWL_thm:
 Proof
 REWRITE_TAC [OWL, incr_ssort_set, incr_ssort_OL]
 QED
+
+(* Small helpers formerly proved by enumTacs.sml at load time. *)
+
+Theorem GREATER_F:  (GREATER = LESS) <=> F
+Proof REWRITE_TAC [all_cpn_distinct]
+QED
+
+Theorem EQUAL_F:  (EQUAL = LESS) <=> F
+Proof REWRITE_TAC [all_cpn_distinct]
+QED
+
+Theorem EQ_LESS_REWR:
+  !v0 v1:'a. (if LESS = LESS then v0 else v1) = v0
+Proof RW_TAC bool_ss []
+QED
+
+Theorem EQ_GREATER_REWR:
+  !v0 v1:'a. (if GREATER = LESS then v0 else v1) = v1
+Proof RW_TAC bool_ss []
+QED
+
+Theorem EQ_EQUAL_REWR:
+  !v0 v1:'a. (if EQUAL = LESS then v0 else v1) = v1
+Proof RW_TAC bool_ss []
+QED
+
+Theorem LIST_TO_SET_NIL:  {} = set ([]:'a list)
+Proof REWRITE_TAC [LIST_TO_SET_THM]
+QED
+
+Theorem LIST_TO_SET_CONS:
+  !a:'a l s. (s = set l) ==> (a INSERT s = set (a :: l))
+Proof REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [LIST_TO_SET_THM]
+QED
+
+Theorem AND_CONV_conj:
+  (T /\ T <=> T) /\ (T /\ F <=> F) /\ (F /\ T <=> F) /\ (F /\ F <=> F)
+Proof REWRITE_TAC [AND_CLAUSES]
+QED

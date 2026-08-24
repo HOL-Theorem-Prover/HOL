@@ -107,20 +107,8 @@ fun posdenom_conv t =
 fun binop_prenorm c =
   BINOP_CONV (maybe_denom1_conv THENC posdenom_conv) THENC c
 
-val xn = mk_var("x", numSyntax.num)
-val nb1_x = mk_rat_of_num (mk_comb(numSyntax.numeral_tm, numSyntax.mk_bit1 xn))
-val nb2_x = mk_rat_of_num (mk_comb(numSyntax.numeral_tm, numSyntax.mk_bit2 xn))
-
-fun mk_div_eq1 t =
-  TAC_PROOF(([], mk_eq(mk_rat_div(t,t), one)),
-            MATCH_MP_TAC RAT_DIV_INV >>
-            REWRITE_TAC [RAT_EQ_NUM_CALCULATE] >>
-            REWRITE_TAC [arithmeticTheory.NUMERAL_DEF,
-                         arithmeticTheory.BIT2,
-                         arithmeticTheory.BIT1, numTheory.NOT_SUC,
-                         arithmeticTheory.ADD_CLAUSES])
-
-val div_eq_1 = map mk_div_eq1 [nb1_x, nb2_x]
+val div_eq_1 = [ratTheory.RAT_DIV_NUMERAL_BIT1_SELF,
+                ratTheory.RAT_DIV_NUMERAL_BIT2_SELF]
 
 val elim_neg0_conv = LAND_CONV (REWR_CONV RAT_AINV_0)
 

@@ -26,7 +26,8 @@ structure Prim_rec :> Prim_rec =
 struct
 
 open HolKernel Parse boolTheory boolSyntax
-     Drule Tactical Tactic Conv Thm_cont Rewrite Abbrev;
+     Drule Tactical Tactic Conv Thm_cont Rewrite Abbrev
+     coreboolSupportTheory;
 
 val ERR = mk_HOL_ERR "Prim_rec";
 
@@ -500,14 +501,14 @@ fun BETAS fnn body =
 (* NB: the x is always a genvar, so optimized for this case.            *)
 (* ---------------------------------------------------------------------*)
 
-fun GTAC y (A,g) =
+fun GTAC y (A,g) ctxt =
    let val (Bvar,Body) = dest_forall g
        and y' = Term.variant (free_varsl (g::A)) y
    in
      if type_of Bvar = type_of y' then
        ([(A, subst[Bvar |-> y'] Body)],
         fn [th] => GEN Bvar (INST [y' |-> Bvar] th) | _ => raise Match)
-     else GEN_TAC (A,g)
+     else GEN_TAC (A,g) ctxt
    end;
 
 (* ---------------------------------------------------------------------*)
@@ -1665,20 +1666,10 @@ fun nBETA_CONV dpth n =
   else
     RATORn_CONV (dpth - 1) BETA_CONV THENC nBETA_CONV (dpth - 1) (n - 1)
 
-(* !x. ~T /\ x = ~T *)
-val notT_and = prove(gen_all ((mk_neg T /\ bn 1) == mk_neg T),
-                              REWRITE_TAC []);
-(* !x. ~~T /\ x = x *)
-val notnotT_and = prove(gen_all (((mk_neg (mk_neg T)) /\ bn 1) == bn 1),
-                        REWRITE_TAC []);
-(* !x. T /\ x = x *)
-val T_and = prove(gen_all (T /\ bn 1 == bn 1), REWRITE_TAC []);
-(* (T = ~T) = F *)
-val T_eqF = prove((T == mk_neg T) == F, REWRITE_TAC []);
-(* ~~T = T *)
-val notnotT = prove(mk_neg (mk_neg T) == T, REWRITE_TAC []);
-(* ~T = F *)
-val notT = prove(mk_neg T == F, REWRITE_TAC []);
+(* notT_and, notnotT_and, T_and, T_eqF, notnotT, notT are all imported
+   from coreboolSupportTheory (opened at the top of this structure),
+   which proves them once at Script time rather than reproving them
+   each time Prim_rec loads. *)
 
 (* A special purpose conv to move along a conjunction of T's, ~T's and ~~T's,
    simplifying it to a single atom as quickly as possible.
@@ -1848,6 +1839,22 @@ in
   (const, list_mk_comb(const, v::tl args), casefs, vs_l, v)
 end
 
+fun strip_exists' avds t =
+  let
+    fun recurse acc avds t =
+      if is_exists t then
+        let
+          val (v, bod) = dest_exists t
+          val v' = variant avds v
+        in
+          recurse (v'::acc) (v'::avds)
+                  (if v ~~ v' then bod else subst[v |-> v'] bod)
+        end
+      else (List.rev acc, t)
+  in
+    recurse [] avds t
+  end
+
 fun prove_case_rand_thm {nchotomy, case_def} = let
   val cs = strip_conj (concl case_def)
   val (const,t,casefs,vs_l,v) = usefuls cs
@@ -1868,29 +1875,46 @@ fun prove_case_rand_thm {nchotomy, case_def} = let
         (casefs, ctor_args)
   val const' = inst [#2 (strip_fun (type_of const)) |-> fresh_tyvar] const
   val rhs' = list_mk_comb(const', v::cfs')
+  (* Forward proof.  Under each disjunct v = ctor args_i in nchotomy,
+     both sides reduce to f (casef_i args_i) after applying the
+     matching case_def equation on either side and beta-reducing.
+     Combine per-disjunct equalities via DISJ_CASES on nchotomy. *)
+  val nch_v = ISPEC v nchotomy
+  val disjs = strip_disj (concl nch_v)
+  val ret_ty = #2 (strip_fun (type_of const))
+  val case_def_inst = INST_TYPE [ret_ty |-> fresh_tyvar] case_def
+  fun try_conv c t = c t handle Conv.UNCHANGED => Thm.REFL t
+  fun prove_under_disj disj_body =
+    let
+      val (vars, eqn) = strip_exists' [] disj_body
+      val eq_asm = ASSUME eqn
+      val conv = PURE_ONCE_REWRITE_CONV [eq_asm] THENC
+                 PURE_REWRITE_CONV [case_def, case_def_inst] THENC
+                 Conv.DEPTH_CONV BETA_CONV
+      val lhs_r = try_conv conv new_lhs
+      val rhs_r = try_conv conv rhs'
+      val eq_thm = TRANS lhs_r (SYM rhs_r)
+    in
+      List.foldr
+        (fn (var, th) =>
+            let val h = hd (hyp th)
+                val ex_h = mk_exists (var, h)
+            in CHOOSE (var, ASSUME ex_h) th end)
+        eq_thm vars
+    end
+  val disj_thms = map prove_under_disj disjs
+  fun combine [th] = th
+    | combine (th :: rest) =
+        let val rest_thm = combine rest
+            val h_th = hd (hyp th)
+            val h_rest = hd (hyp rest_thm)
+            val full = mk_disj (h_th, h_rest)
+        in DISJ_CASES (ASSUME full) th rest_thm end
+    | combine [] = raise mk_HOL_ERR "Prim_rec" "prove_case_rand_thm"
+                                    "empty disjunction from nchotomy"
 in
-  prove (Context.snapshot())
-        (mk_eq(mk_comb(f,t),rhs'),
-         STRUCT_CASES_TAC (ISPEC v nchotomy) THEN
-         PURE_REWRITE_TAC [case_def] THEN BETA_TAC THEN
-         PURE_REWRITE_TAC [EQT_INTRO (SPEC_ALL EQ_REFL)])
+  PROVE_HYP nch_v (combine disj_thms)
 end
-
-fun strip_exists' avds t =
-  let
-    fun recurse acc avds t =
-      if is_exists t then
-        let
-          val (v, bod) = dest_exists t
-          val v' = variant avds v
-        in
-          recurse (v'::acc) (v'::avds)
-                  (if v ~~ v' then bod else subst[v |-> v'] bod)
-        end
-      else (List.rev acc, t)
-  in
-    recurse [] avds t
-  end
 
 (* prove a theorem of the form
      ty_CASE x f1 .. fn :bool <=>

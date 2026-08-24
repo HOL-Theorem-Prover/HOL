@@ -58,14 +58,8 @@ val state_id =
        ["REG", "branch_hint"]
       ]
 
-val arm_frame =
-   stateLib.update_frame_state_thm arm_proj_def
-      ["PSTATE.N", "PSTATE.Z", "PSTATE.C", "PSTATE.V", "SP_EL0", "PC", "REG",
-       "MEM"]
-
-val arm_frame_hidden =
-   stateLib.update_hidden_frame_state_thm arm_proj_def
-      [``s with branch_hint := x``]
+val arm_frame = arm8_progTheory.arm8_frame
+val arm_frame_hidden = arm8_progTheory.arm8_frame_hidden
 
 (* -- *)
 

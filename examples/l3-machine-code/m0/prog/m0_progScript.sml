@@ -50,6 +50,20 @@ val (m0_REGISTERS_def, m0_REGISTERS_INSERT) =
 val (m0_MEMORY_def, m0_MEMORY_INSERT) =
    stateLib.define_map_component ("m0_MEMORY", "mem", m0_MEM_def)
 
+(* Frame theorems moved here from m0_progLib so that stateLib's
+   Tactical.prove-based helpers run inside a Script (with a current
+   theory) instead of at library load time.  m0_progLib pulls these
+   back via m0_progTheory. *)
+val m0_proj_def = DB.definition "m0_proj_def"
+
+Theorem m0_frame =
+   stateLib.update_frame_state_thm m0_proj_def
+      ["PSR.N", "PSR.Z", "PSR.C", "PSR.V", "count", "REG", "MEM"]
+
+Theorem m0_frame_hidden =
+   stateLib.update_hidden_frame_state_thm m0_proj_def
+      [``s with pcinc := x``]
+
 Definition m0_WORD_def:
    m0_WORD a (i: word32) =
    m0_MEM a ((7 >< 0) i) *

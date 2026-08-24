@@ -733,7 +733,7 @@ Theorem print_thm:
     lookup_fun (name "print") s.funs = SOME ([name "s"],print_code) ⇒
     app (name "print") [list char str] s
       (Num 0, s with output := s.output ++ str)
-Proof
+Proof[exclude_simps = state_fupdselfid]
   gen_tac \\ completeInduct_on ‘LENGTH str’
   \\ rw [] \\ fs [PULL_FORALL]
   \\ match_mp_tac (trans_app |> SIMP_RULE std_ss [LET_THM] |> MP_CANON |> GEN_ALL)

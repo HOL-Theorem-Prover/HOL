@@ -230,10 +230,7 @@ end
 (******************************************************************************)
 
 local
-   val BAG_EVERY_BAG_IN_THM = prove (
-      ``!b:'a -> num. BAG_EVERY (\e. BAG_IN e b) b``,
-      REWRITE_TAC [bagTheory.BAG_EVERY] THEN
-      BETA_TAC THEN REWRITE_TAC[])
+   val BAG_EVERY_BAG_IN_THM = bagTheory.BAG_EVERY_BAG_IN_THM
 
    val BAG_EVERY_STEP_CONV = (PART_MATCH lhs (CONJUNCT2 bagTheory.BAG_EVERY_THM))
 
@@ -337,11 +334,9 @@ fun get_resort_position___pred p t =
 (*                                                                            *)
 (******************************************************************************)
 local
-   val sub_bag_empty1 = prove (
-     ``!b:'a->num. SUB_BAG EMPTY_BAG b = T``, REWRITE_TAC [bagTheory.SUB_BAG_EMPTY])
+   val sub_bag_empty1 = bagTheory.SUB_BAG_EMPTY_T
    val sub_bag_empty2 = CONJUNCT2 bagTheory.SUB_BAG_EMPTY;
-   val sub_bag_refl = prove (
-     ``!b:'a -> num. SUB_BAG b b = T``, REWRITE_TAC [bagTheory.SUB_BAG_REFL])
+   val sub_bag_refl = bagTheory.SUB_BAG_REFL_T
 
    val conv2 = TRY_CONV (PART_MATCH lhs bagTheory.SUB_BAG_INSERT)
    val conv3 = TRY_CONV (PART_MATCH lhs sub_bag_empty1)
@@ -471,9 +466,7 @@ end
 (******************************************************************************)
 
 local
-  val bag_card_eq_thm = prove (
-     ``!(b1:'a -> num) b2. ~(BAG_CARD b1 = BAG_CARD b2) ==> ((b1 = b2) = F)``,
-       REPEAT GEN_TAC THEN Cases_on `b1 = b2` THEN ASM_REWRITE_TAC[])
+  val bag_card_eq_thm = bagTheory.bag_card_neq_thm
 in
 fun BAG_EQ_INSERT_CANCEL_CONV tm =
    let

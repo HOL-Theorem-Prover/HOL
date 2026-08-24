@@ -86,7 +86,7 @@ end;
  * ------------------------
  *    T ==> t
  *---------------------------------------------------------*)
-val true_imp_elim_thm = prove (``(T ==> b) = b``, REWRITE_TAC[]);
+val true_imp_elim_thm = ConseqConvTheory.true_imp_elim_thm
 
 val TRUE_IMP_ELIM_CONV  =
    TRY_CONV (REWR_CONV true_imp_elim_thm)

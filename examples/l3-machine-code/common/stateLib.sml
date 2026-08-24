@@ -44,9 +44,7 @@ val MOVE_COND_CONV =
    ORELSEC Conv.REWR_CONV (GSYM temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND)
 
 local
-   val cond_T = prove (
-      “!p : 'a set set. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)”,
-      REWRITE_TAC [set_sepTheory.SEP_CLAUSES])
+   val cond_T = set_sepTheory.cond_T
    val rule1 =
       helperLib.PRE_POST_RULE (REWRITE_CONV [cond_T]) o
       Conv.CONV_RULE MOVE_COND_CONV
@@ -95,6 +93,10 @@ local
    val rng_of = utilsLib.rng o Term.type_of
    val ty_name = #Tyop o Type.dest_thy_type o Term.type_of
 in
+   (* Caller must run this from a Script (or otherwise with a current
+      theory), since the per-conjunct proof fires Tactical.prove.
+      progScript files pre-compute these theorems and progLib files
+      read them back from their theory. *)
    fun update_frame_state_thm proj_def =
       let
          val tac =
@@ -179,12 +181,15 @@ local
    fun prove_hidden thm u =
       let
          val p = utilsLib.get_function thm
-         val t = tac THEN FULL_SIMP_TAC (srw_ss()) [thm]
+         val goal = “!y s. FRAME_STATE ^p y ^u = FRAME_STATE ^p y s”
       in
-         Drule.GEN_ALL
-           (prove (“!y s. FRAME_STATE ^p y ^u = FRAME_STATE ^p y s”, t))
+         Tactical.prove (goal, tac THEN FULL_SIMP_TAC (srw_ss()) [thm])
       end
 in
+   (* Caller must run this from a Script (or otherwise with a current
+      theory), since `prove_hidden` fires Tactical.prove.  progScript
+      files pre-compute these theorems and progLib files read them
+      back from their theory. *)
    fun update_hidden_frame_state_thm proj_def =
       utilsLib.map_conv (prove_hidden proj_def)
 end
@@ -207,18 +212,8 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-   val EXPAND_lem = prove(
-      “!x:'a # 'b y m s:'c c:'d.
-          (!c d. (c, d) IN set (x :: y) ==> (m s c = d)) =
-          (!c d. ((c, d) = x) ==> (m s c = d)) /\
-          (!c d. ((c, d) IN set y) ==> (m s c = d))”,
-      SRW_TAC [] [] \\ utilsLib.qm_tac [])
-   val EXPAND_lem2 = prove(
-      “!x:'a # 'b y m s:'c c:'d.
-          (!c d. (c, d) IN x INSERT y ==> (m s c = d)) =
-          (!c d. ((c, d) = x) ==> (m s c = d)) /\
-          (!c d. ((c, d) IN y) ==> (m s c = d))”,
-      SRW_TAC [] [] \\ utilsLib.qm_tac [])
+   val EXPAND_lem = utilsLibSupportTheory.EXPAND_lem
+   val EXPAND_lem2 = utilsLibSupportTheory.EXPAND_lem2
    val emp_thm =
       set_sepTheory.SEP_CLAUSES
       |> Drule.SPEC_ALL
@@ -1803,9 +1798,7 @@ local
    val cond_STAR1 = CONJUNCT1 (Drule.SPEC_ALL set_sepTheory.cond_STAR)
    val STAR_ASSOC_CONV =
       Conv.REDEPTH_CONV (Conv.REWR_CONV (GSYM set_sepTheory.STAR_ASSOC))
-   val cond_STAR1_I =
-      utilsLib.qm [cond_STAR1, combinTheory.I_THM]
-         ``(set_sep$cond c * p) (s:'a set) = I c /\ p s``
+   val cond_STAR1_I = Drule.SPEC_ALL set_sepTheory.cond_STAR1_I
 in
    fun spec imp_spec imp_temp read_thms write_thms select_state_thms frame_thms
             component_11 map_tys EXTRA_TAC STATE_TAC =

@@ -423,14 +423,7 @@ struct
 
   (* A tactic that simplifies certain word expressions. *)
 
-  val TO_WORD_EXTRACT = boolLib.TAC_PROOF(([],
-        “(!w : 'a word.
-            dimindex(:'b) < dimindex(:'a) ==>
-            (w2w w : 'b word = (dimindex(:'b) - 1 >< 0) w)) /\
-         (!w : 'a word.
-            dimindex(:'b) < dimindex(:'a) ==>
-            (sw2sw w : 'b word = (dimindex(:'b) - 1 >< 0) w))”),
-        BasicProvers.SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [])
+  val TO_WORD_EXTRACT = HolSmtTheory.TO_WORD_EXTRACT
 
   val WORD_BIT_EXTRACT = simpLib.SIMP_PROVE
         (simpLib.++(bossLib.std_ss, wordsLib.WORD_BIT_EQ_ss))

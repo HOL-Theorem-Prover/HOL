@@ -259,15 +259,10 @@ val w2w_ss = eval_term_ss "w2w" ``(w2w:'a word->'b word) (n2w n)``
 
 val star_ss = simpLib.ac_ss [(STAR_ASSOC,STAR_COMM)]
 
-val cond_ELIM = prove(
-  ``!c c' P . (cond c * cond c' = cond (c /\ c'):'a set -> bool) /\
-              (P * cond c * cond c' = P * cond (c /\ c'):'a set -> bool)``,
-  REWRITE_TAC [GSYM STAR_ASSOC,SEP_CLAUSES]);
-
-val cond_MOVE = prove(
-  ``!c P Q. (cond c * P = P * (cond c) :'a set -> bool) /\
-            (P * cond c * Q = P * Q * cond c)``,
-  SIMP_TAC (bool_ss++star_ss) []);
+(* cond_ELIM and cond_MOVE live in set_sepTheory now; import them
+   here rather than firing a load-time Tactical.prove. *)
+val cond_ELIM = set_sepTheory.cond_ELIM
+val cond_MOVE = set_sepTheory.cond_MOVE
 
 val SEP_cond_CONV =
   REWRITE_CONV [STAR_ASSOC]
@@ -390,9 +385,7 @@ fun PRE_POST_CONV c = PRE_CONV c THENC POST_CONV c
 val PRE_POST_RULE = CONV_RULE o PRE_POST_CONV
 
 local
-   val cond_T = prove (
-      “!p : 'a set set. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)”,
-      REWRITE_TAC [set_sepTheory.SEP_CLAUSES])
+   val cond_T = set_sepTheory.cond_T
    val rule1 =
       PRE_POST_RULE (REWRITE_CONV [cond_T]) o
       Conv.CONV_RULE (Conv.REWR_CONV (GSYM SPEC_MOVE_COND))
@@ -698,10 +691,7 @@ fun EXISTS_SEP_REWRITE_RULE rw th = let (* possibly fragile *)
 
 (* introducing SEP_EXISTS into pre and possibly also post *)
 
-val SEP_IMP_EXISTS = prove(
-  ``!(p :'a -> 'b set -> bool) x. SEP_IMP (p x) (SEP_EXISTS x. p x)``,
-  SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS]
-  THEN REPEAT STRIP_TAC THEN Q.EXISTS_TAC `x` THEN ASM_REWRITE_TAC []);
+val SEP_IMP_EXISTS = set_sepTheory.SEP_IMP_EXISTS
 
 fun SEP_EXISTS_SEP_IMP tm q = let
   val thj = SPEC tm (ISPEC (mk_abs(tm,q)) SEP_IMP_EXISTS)
@@ -792,9 +782,24 @@ fun HIDE_SEP_IMP_POST_RULE tm th = LIST_HIDE_SEP_IMP_POST_RULE [tm] th
 
 val EQ_IMP_IMP = Q.SPECL [`p`,`q`] quotientTheory.EQ_IMPLIES;
 
-val INC_ASSUM = (SPEC (genvar ``:bool``) o prove)(
-  ``!t p q. (p ==> q) ==> ((t ==> p) ==> (t ==> q))``,
-  REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC);
+(* INC_ASSUM : |- (p ==> q) ==> (t ==> p) ==> t ==> q for a specific
+   fresh boolean `t`.  Derived forward via primitive discharge/MP so
+   we don't fire a load-time Tactical.prove. *)
+val INC_ASSUM =
+  let
+    val p = mk_var("p", bool)
+    val q = mk_var("q", bool)
+    val t = genvar bool
+    val pq = mk_imp(p, q)
+    val tp = mk_imp(t, p)
+    val h1 = ASSUME pq
+    val h2 = ASSUME tp
+    val h3 = ASSUME t
+    val p_thm = MP h2 h3
+    val q_thm = MP h1 p_thm
+  in
+    q_thm |> DISCH t |> DISCH tp |> DISCH pq |> GENL [p, q]
+  end
 
 fun DISCH_ALL_AS_SINGLE_IMP th = let
   val th = RW [AND_IMP_INTRO] (DISCH_ALL th)
@@ -951,7 +956,12 @@ fun match_and_partition q p =
       partition q p ([],[],[])
    end
 
-val AND_CLAUSES2 = CONJ AND_CLAUSES (prove(``(T ==> b) = b``,SIMP_TAC std_ss []))
+(* CONJ AND_CLAUSES with |- !b. (T ==> b) = b (the first conjunct of
+   IMP_CLAUSES).  Constructed forward so we don't fire a load-time
+   Tactical.prove. *)
+val AND_CLAUSES2 =
+  CONJ AND_CLAUSES
+       (GEN_ALL (CONJUNCT1 (SPEC_ALL boolTheory.IMP_CLAUSES)))
 
 local
    val rule1 =

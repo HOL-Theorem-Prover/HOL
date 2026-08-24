@@ -12,7 +12,7 @@ structure Parse = struct
 end
 open Parse
 
-open Susp combinTheory hurdUtils skiTools;
+open Susp combinTheory hurdUtils skiTools ho_proverToolsContextTheory;
 
 infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER -->;
 infix 1 >> |->;
@@ -150,8 +150,8 @@ val fact_vars = clause_vars o fact_clause;
 val fact_literals = clause_literals o fact_clause;
 
 local
-  val thm1 = prove (``!a. a ==> ~a ==> F``, PROVE_TAC [])
-  val thm2 = prove (``!x. (~x ==> F) ==> x``, PROVE_TAC [])
+  val thm1 = POS_NEG_F
+  val thm2 = NNEG_F_ELIM
 in
   val norm_thm = MATCH_MP thm1 THENR UNDISCH
   fun march_literal lit = DISCH (mk_neg (literal_term lit)) THENR MATCH_MP thm2
@@ -488,35 +488,25 @@ val once_rewrite_frule =
 (* First, the basic rewrites *)
 
 val basic_rewrites =
-  map (prove o (I ## (fn ths => !! FUN_EQ_TAC ++ RW_TAC bool_ss ths)))
-  [(``!x y z. S x y z = (x z) (y z)``, [S_DEF]),
-   (``!x y z. combin$C x y z = x z y``, [C_DEF]),
-   (``!x y z. (x o y) z = x (y z)``, [o_DEF]),
-   (``!x y. K x y = x``, [K_DEF]),
-   (``!x. I x = x``, [I_THM]),
-   (``!x y. S (K x) (K y) = K (x y)``, [S_DEF, K_DEF]),
-   (``!x. S (K x) = $o x``, [S_DEF, K_DEF, o_DEF]),
-   (``S o K = $o``, [S_DEF, K_DEF, o_DEF]),
-   (``!x y. S x (K y) = combin$C x y``, [S_DEF, K_DEF, C_DEF]),
-   (``!x y. x o (K y) = K (x y)``, [K_DEF, o_DEF]),
-   (``!x y. combin$C (K x) y = K (x y)``, [K_DEF, C_DEF]),
-   (``!x y. K x o y = K x``, [K_DEF, o_DEF]),
-   (``!x. x o I = x``, [I_THM, o_DEF]),
-   (``$o I = I``, [I_THM, o_DEF]),
-   (``S K K = I``, [I_THM, S_DEF, K_DEF]),
-   (``!x y z. (x o y) o z = x o (y o z)``, [o_THM]),
-   (``!x. (x = T) = x``, []),
-   (``!x. (T = x) = x``, []),
-   (``!x. (x = F) = ~x``, []),
-   (``!x. (F = x) = ~x``, []),
-   (``!x:bool. ~~x = x``, []),
-   (``!x y z w. w (if x then y else z) = if x then w y else w z``, []),
-   (``!x y z w. (if x then y else z) w = if x then y w else z w``, []),
-   (``!x y. (x ==> y) = (~x \/ y)``, [IMP_DISJ_THM]),
-   (``!x. (x = x) = T``, []),
-   (``!x y. (x = y) = (!z. x z = y z)``, []),
-   (``!x y. (x = y) = (x ==> y) /\ (y ==> x)``, [EQ_IMP_THM]),
-   (``!x y z. (if x then y else z) = (x ==> y) /\ (~x ==> z)``, [])];
+  let val K_o = CONJUNCTS K_o_THM
+      val I_o = CONJUNCTS (SPEC_ALL I_o_ID)
+      val eqcl = CONJUNCTS (SPEC_ALL EQ_CLAUSES)
+      val notcl = CONJUNCTS NOT_CLAUSES
+  in
+    [S_THM, C_THM, o_THM, K_THM, I_THM,
+     skiTheory.LIFT_K_THRU_S, skiTheory.S_K_o, skiTheory.S_o_K,
+     skiTheory.S_K_C,
+     List.nth (K_o, 1), skiTheory.C_K_K, List.nth (K_o, 0),
+     List.nth (I_o, 1), skiTheory.o_I_EQ_I, skiTheory.S_K_K_EQ_I,
+     GSYM o_ASSOC,
+     List.nth (eqcl, 1),                        (* (x = T) = x *)
+     List.nth (eqcl, 0),                        (* (T = x) = x *)
+     List.nth (eqcl, 3),                        (* (x = F) = ~x *)
+     List.nth (eqcl, 2),                        (* (F = x) = ~x *)
+     List.nth (notcl, 0),                       (* ~~x = x *)
+     COND_RAND, COND_RATOR, IMP_DISJ_THM,
+     REFL_CLAUSE, FUN_EQ_THM, EQ_IMP_THM, COND_EXPAND_IMP]
+  end;
 
 val basic_rewrite_frule =
   rewrite_frule (map ((I ## CONV_RULE SKI_CONV) o thm_to_vthm) basic_rewrites);
@@ -524,7 +514,7 @@ val basic_rewrite_frule =
 (* Second, the basic rules of inference. *)
 
 local
-  val thm1 = prove (``!x. ~~x ==> x``, PROVE_TAC [])
+  val thm1 = NEG_ELIM
 in
   val neg_lrule : literal_rule =
     fn (vars, lit as (pos, tm)) =>
@@ -540,7 +530,7 @@ in
 end;
 
 local
-  val thm1 = prove (``~T ==> F``, PROVE_TAC [])
+  val thm1 = NOT_T_IMP_F
 in
   val true_lrule : literal_rule =
     fn (vars, lit as (pos, tm)) =>
@@ -565,9 +555,9 @@ val false_lrule : literal_rule =
 val false_frule = lrule_to_frule false_lrule
 
 local
-  val thm1 = prove (``!a b. (a \/ b) ==> ~a ==> ~b ==> F``, PROVE_TAC [])
-  val thm2 = prove (``!a b. ~(a \/ b) ==> ~~a ==> F``, PROVE_TAC [])
-  val thm3 = prove (``!a b. ~(a \/ b) ==> ~~b ==> F``, PROVE_TAC [])
+  val thm1 = OR_NEG_NEG_F
+  val thm2 = NOR_NNEG_L_F
+  val thm3 = NOR_NNEG_R_F
 in
   val disj_lrule : literal_rule =
     fn (vars, lit as (pos, tm)) =>
@@ -588,9 +578,9 @@ in
 end;
 
 local
-  val thm1 = prove (``!a b. ~(a /\ b) ==> ~~a ==> ~~b ==> F``, PROVE_TAC [])
-  val thm2 = prove (``!a b. (a /\ b) ==> ~a ==> F``, PROVE_TAC [])
-  val thm3 = prove (``!a b. (a /\ b) ==> ~b ==> F``, PROVE_TAC [])
+  val thm1 = NAND_NNEG_F
+  val thm2 = AND_NEG_L_F
+  val thm3 = AND_NEG_R_F
 in
   val conj_lrule : literal_rule =
     fn (vars, lit as (pos, tm)) =>
@@ -701,8 +691,7 @@ in
 end;
 
 local
-  val thm1 = prove
-    (``(p : bool -> 'a) x = if x then p T else p F``, RW_TAC bool_ss []);
+  val thm1 = BOOL_APP_CASES;
   val (p_tm, x_tm) = dest_comb (LHS thm1)
   val rhs_thm1 = RHS thm1
 
@@ -735,7 +724,7 @@ in
 end;
 
 local
-  val thm1 = prove (``!(x : 'a). ~(x = x) ==> F``, PROVE_TAC [])
+  val thm1 = NEQ_REFL_F
 in
   val equal_lrule : literal_rule =
     fn (vars, lit as (pos, atom)) =>
@@ -829,7 +818,7 @@ val mk_pos_atom_db = fst o mk_atom_db;
 val mk_neg_atom_db = snd o mk_atom_db;
 
 local
-  val thm1 = prove (``!x. x /\ ~x ==> F``, PROVE_TAC [])
+  val thm1 = CONJ_NEG_F
 in
   fun resolution_rule sub (pos, atom) th th' =
     let
@@ -1000,7 +989,7 @@ val s1_frule = lrule_to_frule s1_lrule;
 (* A variable-in-equality rule *)
 
 local
-  val thm1 = prove (``!x. ~(x = x) ==> F``, PROVE_TAC []);
+  val thm1 = NEQ_REFL_F;
 in
   val equality_lrule : literal_rule =
     fn (vars, lit as (pos, atom)) =>
@@ -1024,7 +1013,7 @@ val equality_frule : fact_rule = lrule_to_frule equality_lrule;
 (* A paramodulation rule from the term perspective *)
 
 local
-  val thm1 = prove (``!x y : bool. (x = y) ==> (~x = ~y)``, PROVE_TAC []);
+  val thm1 = EQ_NEG_EQ;
 in
   fun paramodulation_rule (lit as (pos, _)) sub eq_th th =
     let
@@ -1043,7 +1032,7 @@ in
 end;
 
 local
-  val thm1 = prove (``!x y. (x = y) ==> (y = x)``, PROVE_TAC []);
+  val thm1 = EQ_SYM;
 
   fun extra1 (sub, vars', eq, lits, rule, th) =
     (sub, vars', rhs eq, lits, rule, th);

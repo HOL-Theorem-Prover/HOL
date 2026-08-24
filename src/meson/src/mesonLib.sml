@@ -5,14 +5,10 @@
 structure mesonLib :> mesonLib =
 struct
 
-open HolKernel boolLib liteLib Ho_Rewrite Canon_Port tautLib;
+open HolKernel boolLib liteLib Ho_Rewrite Canon_Port tautLib
+     mesonLibContextTheory;
 
 infix THEN THENC ORELSE ORELSE_TCL;
-
-(* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val SOME bool_grammars = Parse.grammarDB {thyname="bool"};
-val _ = Parse.temp_set_grammars bool_grammars
 
 (*---------------------------------------------------------------------------*
  * Miscellaneous bits.                                                       *
@@ -691,7 +687,7 @@ local
                                      (SPEC_ALL boolTheory.IMP_F);
 
   val DISJ_AC   = EQT_ELIM o AC_CONV (DISJ_ASSOC', DISJ_SYM')
-  val imp_CONV  = REWR_CONV(TAUT `a \/ b <=> ~b ==> a`)
+  val imp_CONV  = REWR_CONV meson_imp_conv
   val push_CONV = GEN_REWRITE_CONV TOP_SWEEP_CONV [DEMORG_DISJ, NOT2]
   and pull_CONV = GEN_REWRITE_CONV DEPTH_CONV [DEMORG_AND]
   and imf_CONV  = REWR_CONV NOT_IMP
@@ -732,7 +728,7 @@ local
   fun hol_negate tm = dest_neg tm handle HOL_ERR _ => mk_neg tm
   fun merge_inst (t,x) current = (fol_subst current t,x)::current
   val finish_RULE = Rewrite.GEN_REWRITE_RULE I Rewrite.empty_rewrites
-                          [TAUT `(~p ==> p) = p`, TAUT `(p ==> ~p) = ~p`]
+                          [meson_not_imp_p, meson_p_imp_not_p]
 in
   fun meson_to_hol insts cpos_cache cvdb (Subgoal(g,gs,(n,th),offset,locin)) =
     let val newins = itlist merge_inst locin insts
@@ -796,14 +792,9 @@ val PREMESON_CANON_TAC =
 val create_equality_axioms =
   let
     (* open Resolve *)
-    val eq_thms = (CONJUNCTS o prove)
-      (``(x:'a = x) /\
-         (~(x:'a = y) \/ ~(x = z) \/ (y = z))``,
-      REWRITE_TAC[] THEN ASM_CASES_TAC ``x:'a = y`` THEN
-      ASM_REWRITE_TAC[ONCE_REWRITE_RULE[boolTheory.DISJ_SYM]
-                       (REWRITE_RULE[] boolTheory.BOOL_CASES_AX)])
-    val imp_elim_CONV = REWR_CONV (TAUT `(a ==> b) <=> ~a \/ b`)
-    val eq_elim_RULE = MATCH_MP(TAUT `(a = b) ==> b \/ ~a`)
+    val eq_thms = CONJUNCTS meson_eq_thms
+    val imp_elim_CONV = REWR_CONV meson_imp_elim
+    val eq_elim_RULE = MATCH_MP meson_eq_elim
     val veq_tm = rator(rator(concl(hd eq_thms)))
     fun create_equivalence_axioms (eq,_) =
       let val tyins = type_match (type_of veq_tm) (type_of eq) []
@@ -999,6 +990,5 @@ fun ASM_MESON_TAC e = GEN_MESON_TAC 0 (!max_depth) 1 e;
 fun MESON_TAC ths = POP_ASSUM_LIST (K ALL_TAC) THEN ASM_MESON_TAC ths;
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 
-val _ = Parse.temp_set_grammars ambient_grammars;
 
 end;

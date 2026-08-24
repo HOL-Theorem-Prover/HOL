@@ -68,6 +68,14 @@ val x64_MEM_def = DB.definition "x64_MEM_def"
 val (x64_BYTE_MEMORY_def, x64_BYTE_MEMORY_INSERT) =
    stateLib.define_map_component ("x64_BYTE_MEMORY", "bmem", x64_MEM_def)
 
+(* Frame theorem moved here from x64_progLib so that stateLib's
+   Tactical.prove-based helper runs inside a Script (with a current
+   theory) instead of at library load time.  x64_progLib pulls this
+   back via x64_progTheory. *)
+Theorem x64_frame =
+   stateLib.update_frame_state_thm (DB.definition "x64_proj_def")
+     ["RIP", "REG", "MEM", "EFLAGS", "MXCSR", "XMM_REG"]
+
 Definition x64_MEMORY_def:
   x64_MEMORY dmem mem =
   { BIGUNION { BIGUNION (x64_mem64 a (mem a)) | a IN dmem /\ (a && 7w = 0w)} }

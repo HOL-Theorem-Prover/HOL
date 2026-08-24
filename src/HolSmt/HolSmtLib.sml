@@ -56,7 +56,8 @@ structure HolSmtLib :> HolSmtLib = struct
 
   val include_theorems = SmtLib.include_theorems
 
-  (* report whether solvers are available *)
+  (* report whether solvers are available.  The probe calls prove(T,...),
+     which needs a current theory; skip when none is active. *)
   val _ =
     let
       fun check_available prove_fn name =
@@ -69,22 +70,27 @@ structure HolSmtLib :> HolSmtLib = struct
           handle Feedback.HOL_ERR herr =>
             Feedback.HOL_MESG ("HolSmtLib: " ^ Feedback.message_of herr)
     in
-      Feedback.set_trace "HolSmtLib" 0;
-      if CVC.is_configured () then (
-        check_available CVC_ORACLE_PROVE "cvc5 (oracle)";
-        check_available CVC_PROVE "cvc5 (with proofs)"
-      ) else
-        provoke_err CVC_ORACLE_PROVE;
-      if Yices.is_configured () then
-        check_available YICES_PROVE "Yices"
-      else
-        provoke_err YICES_PROVE;
-      if Z3.is_configured () then (
-        check_available Z3_ORACLE_PROVE "Z3 (oracle)";
-        check_available Z3_PROVE "Z3 (with proofs)"
-      ) else
-        provoke_err Z3_ORACLE_PROVE;
-      Feedback.reset_trace "HolSmtLib"
+      case Thm.getCT () of
+          NONE => ()
+        | SOME _ =>
+            (
+              Feedback.set_trace "HolSmtLib" 0;
+              if CVC.is_configured () then (
+                check_available CVC_ORACLE_PROVE "cvc5 (oracle)";
+                check_available CVC_PROVE "cvc5 (with proofs)"
+              ) else
+                provoke_err CVC_ORACLE_PROVE;
+              if Yices.is_configured () then
+                check_available YICES_PROVE "Yices"
+              else
+                provoke_err YICES_PROVE;
+              if Z3.is_configured () then (
+                check_available Z3_ORACLE_PROVE "Z3 (oracle)";
+                check_available Z3_PROVE "Z3 (with proofs)"
+              ) else
+                provoke_err Z3_ORACLE_PROVE;
+              Feedback.reset_trace "HolSmtLib"
+            )
     end
 
 end
