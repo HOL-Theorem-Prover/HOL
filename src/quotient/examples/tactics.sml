@@ -495,11 +495,12 @@ fun RES2_THEN thm_tac =
 fun IMP_RES2_THEN thm_tac =
     IMP_RES_THEN (fn th => IMP_RES_THEN thm_tac th ORELSE ALL_TAC);
 
-fun IMP_RES_M_THEN tac th g =
-    IMP_RES_THEN (REPEAT_GTCL IMP_RES_THEN tac) th g handle _ => ALL_TAC g;
+fun IMP_RES_M_THEN tac th g c =
+    IMP_RES_THEN (REPEAT_GTCL IMP_RES_THEN tac) th g c
+    handle _ => ALL_TAC g c;
 
-fun RES_M_THEN tac g =
-    RES_THEN (REPEAT_GTCL IMP_RES_THEN tac) g handle _ => ALL_TAC g;
+fun RES_M_THEN tac g c =
+    RES_THEN (REPEAT_GTCL IMP_RES_THEN tac) g c handle _ => ALL_TAC g c;
 
 val REWRITE_THM = fn th => REWRITE_TAC[th];
 val ASM_REWRITE_THM = fn th => ASM_REWRITE_TAC[th];

@@ -24,7 +24,7 @@ signature schneiderUtils =
     val LEFT_LEMMA_DISJ_CASES_TAC : thm -> tactic
     val LEFT_NO_EXISTS_TAC : int -> tactic
     val LEFT_NO_FORALL_TAC : int -> term -> tactic
-    val MY_MP_TAC : term -> goal -> (term list * term) list * (thm list -> thm)
+    val MY_MP_TAC : term -> tactic
     val POP_NO_ASSUM : int -> (thm -> term list * 'a -> 'b) -> term list * 'a -> 'b
     val POP_NO_TAC : int -> tactic
     val RIGHT_CONJ_TAC : tactic

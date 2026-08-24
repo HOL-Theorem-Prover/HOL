@@ -383,7 +383,7 @@ Theorem TC_INDUCT_RIGHT1 =
 
 val TC_INDUCT_TAC =
  let val tc_thm = TC_INDUCT
-     fun tac (asl,w) =
+     fun tac (asl,w) ctxt =
       let val (u,Body) = dest_forall w
           val (v,Body) = dest_forall Body
           val (ant,conseq) = dest_imp Body
@@ -395,7 +395,7 @@ val TC_INDUCT_TAC =
           val _ = assert (aconv v) v'
           val P = list_mk_abs([u,v], conseq)
           val tc_thm' = BETA_RULE(ISPEC P (ISPEC R tc_thm))
-      in MATCH_MP_TAC tc_thm' (asl,w)
+      in MATCH_MP_TAC tc_thm' (asl,w) ctxt
       end
       handle _ => raise mk_HOL_ERR "<top-level>" "TC_INDUCT_TAC"
                                    "Unanticipated term structure"
@@ -1076,14 +1076,14 @@ val WF_INDUCT_TAC =
                           WF_INDUCTION_THM))
       val [R,P] = fst(strip_forall(concl wf_thm0))
       val wf_thm1 = GENL [P,R](SPEC_ALL wf_thm0)
-   fun tac (asl,w) =
+   fun tac (asl,w) ctxt =
     let val (Rator,Rand) = dest_comb w
         val _ = assert (equal "!") (fst (dest_const Rator))
         val thi = ISPEC Rand wf_thm1
         fun eqRand t = Term.compare(Rand,t) = EQUAL
         val thf = CONV_RULE(ONCE_DEPTH_CONV
                               (BETA_CONV o assert (eqRand o rator))) thi
-    in MATCH_MP_TAC thf (asl,w)
+    in MATCH_MP_TAC thf (asl,w) ctxt
     end
     handle _ => raise mk_HOL_ERR "" "WF_INDUCT_TAC"
                       "Unanticipated term structure"

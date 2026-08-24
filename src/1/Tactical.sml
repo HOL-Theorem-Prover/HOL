@@ -1114,12 +1114,12 @@ fun Q_TAC0 {traces} tyopt (tac : term -> tactic) q (g as (asl,w)) ctxt =
     search (terms_of q)
   end
 
-fun Q_TAC tac q g =
-    Q_TAC0 {traces = []} NONE tac q g
+fun Q_TAC tac q g ctxt =
+    Q_TAC0 {traces = []} NONE tac q g ctxt
     handle e => raise wrap_exn "Tactical" "Q_TAC" e
 
-fun QTY_TAC ty tac q g =
-    Q_TAC0 {traces = []} (SOME ty) tac q g
+fun QTY_TAC ty tac q g ctxt =
+    Q_TAC0 {traces = []} (SOME ty) tac q g ctxt
     handle e => raise wrap_exn "Tactical" "QTY_TAC" e
 
 end (* Tactical *)
