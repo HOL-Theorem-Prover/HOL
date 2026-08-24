@@ -57,7 +57,7 @@ fun mkLocString' (p, loc) ({file = "", ...}: fileline) = App (mkIdent (p, loc), 
 
 fun doProofKvals _ [] tac = tac
   | doProofKvals p (kv::kvs) tac = let
-  val e = mkIdent (p, "BasicProvers.with_simpset_updates")
+  val e = mkIdent (p, "BasicProvers.with_simpset_updates_tac")
   fun mktm1 {key = (p, key), bind} = let
     val args = case bind of NONE => [] | SOME {vals, eq_=_} => map mkString vals
     val key = case key of
@@ -77,7 +77,13 @@ fun wrapTac (p, tac) = let
      one byte wide — it doesn't overlap with any real source token
      the user might hover.  A 14-character name would extend into
      the tac's own source range and intercept navigation on tactic
-     identifiers. *)
+     identifiers.
+
+     Only the goal is abstracted: this defers evaluation of the tactic
+     expression itself, which is what the wrapper is for.  Whoever needs
+     the tactic's *execution* bracketed has to span the context
+     application too, since that is when a tactic does its work --- see
+     BasicProvers.with_simpset_updates_tac. *)
   val tacEnd = expStop tac
   val patDummy = mkIdent (tacEnd, "g")
   val expDummy = mkIdent (tacEnd, "g")
