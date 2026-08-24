@@ -294,13 +294,14 @@ fun X_GEN_TAC x1 : tactic =
  *---------------------------------------------------------------------------*)
 
 val GEN_TAC: tactic =
-   fn (asl, w) =>
+   fn (asl, w) => fn ctxt =>
       let
          val (Bvar, _) = with_exn dest_forall w (ERR "GEN_TAC" "not a forall")
       in
          X_GEN_TAC
-             (gen_variant Parse.is_constname "" (free_varsl (w :: asl)) Bvar)
-             (asl, w)
+             (gen_variant (Parse.get_is_constname ctxt) ""
+                          (free_varsl (w :: asl)) Bvar)
+             (asl, w) ctxt
       end
 val gen_tac = GEN_TAC
 

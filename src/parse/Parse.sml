@@ -954,11 +954,12 @@ fun reveal s =
 
 fun known_constants() = term_grammar.known_constants (term_grammar())
 
-fun is_constname s = let
-  val oinfo = term_grammar.overload_info (term_grammar())
-in
-  Overload.is_overloaded oinfo s
-end
+fun get_is_constname ctxt s =
+  let val oinfo = term_grammar.overload_info (get_term_grammar ctxt)
+  in
+    Overload.is_overloaded oinfo s
+  end
+fun is_constname s = get_is_constname (Context.snapshot()) s
 
 fun hidden s =
   let val declared = Term.all_consts()

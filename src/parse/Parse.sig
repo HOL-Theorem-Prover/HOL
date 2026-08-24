@@ -240,6 +240,7 @@ signature Parse = sig
   val known_constants     : unit -> string list
   val set_known_constants : string list -> unit
   val is_constname : string -> bool
+  val get_is_constname : Context.t -> string -> bool
 
   val LEFT       : associativity
   val RIGHT      : associativity
