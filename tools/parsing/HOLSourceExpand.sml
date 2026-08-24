@@ -504,7 +504,8 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
         String.extract (name, 0, SOME (size name - 4)) ^ "_IND"
       else name ^ "_ind")
     val fileline = fileline (#1 id)
-    val e = mkLocString (definition_, "TotalDefn.qDefine", "TotalDefn.located_qDefine") fileline
+    val e = mkLocString' (definition_, "TotalDefn.located_qDefine")
+                         fileline
     val e = App (e, mkNameAttrs mkKval id attrs)
     val e = App (e, expandQuote definition_ stop quote)
     (* Anchor the synthetic `NONE` past the body so the enclosing
@@ -650,7 +651,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val quote = expandQuote theorem_ tacAnchor quote
     val tac = wrapTac (tacAnchor, expandExp false tac)
     val tac = case proof_ of SOME {proof_, attrs} => doProofAttrs proof_ attrs tac | _ => tac
-    val e = mkLocString (theorem_, "Q.store_thm", "Q.store_thm_at") fileline
+    val e = mkLocString' (theorem_, "Q.store_thm_at") fileline
     (* Give the synthetic tuple a real stop so the resulting Built
        parent covers its children.  mkTuple's default (stop = anchor
        position = theorem_) yields a zero-width parent over tac's

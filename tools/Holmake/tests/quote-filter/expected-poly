@@ -31,7 +31,7 @@ val ( even_rules , even_ind , even_cases ) = IndDefLib.xHol_reln "even" [ QUOTE 
 
 ( Context.snapshot () ) val _ = CompilerSpecific.quietbind "val even_strongind = DB.fetch \"-\" \"even_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;" val even_0 = boolLib.save_thm ( "even_0[simp]" , Drule.cj 1 even_rules handle Feedback.HOL_ERR _ => boolTheory.TRUTH ) val even_suc = boolLib.save_thm ( "even_suc" , Drule.cj 3 even_rules handle Feedback.HOL_ERR _ => boolTheory.TRUTH ) ; 
 
-val foo = TotalDefn.qDefine "foo" [ QUOTE " (*#loc 34 16*)\n  foo x = if x < 2 then 1 else x * foo (x - 1)\n" ] 
+val foo = TotalDefn.located_qDefine DB_dtype.Unknown "foo" [ QUOTE " (*#loc 34 16*)\n  foo x = if x < 2 then 1 else x * foo (x - 1)\n" ] 
 
 NONE 
 
@@ -44,7 +44,7 @@ NONE
 ( Context.snapshot () ) val _ = CompilerSpecific.quietbind "val compile_rel_strongind = DB.fetch \"-\" \"compile_rel_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;" val compile_rel_Var = boolLib.save_thm ( "compile_rel_Var" , Drule.cj 1 compile_rel_rules handle Feedback.HOL_ERR _ => boolTheory.TRUTH ) val compile_rel_Ret = boolLib.save_thm ( "compile_rel_Ret" , Drule.cj 2 compile_rel_rules handle Feedback.HOL_ERR _ => boolTheory.TRUTH ) ; 
 
 
-val next_sym_def = TotalDefn.qDefine "next_sym_def" [ QUOTE " (*#loc 47 25*)\n     foo = isPREFIX \"(*\" (c::str)\n" ] ( SOME 
+val next_sym_def = TotalDefn.located_qDefine DB_dtype.Unknown "next_sym_def" [ QUOTE " (*#loc 47 25*)\n     foo = isPREFIX \"(*\" (c::str)\n" ] ( SOME 
 
 
 ( WF_REL_TAC [ QUOTE " (*#loc 50 15*)measure (LENGTH o FST) " ] THEN REPEAT STRIP_TAC ) ) ( Context.snapshot () ) val _ = CompilerSpecific.quietbind "val next_sym_ind = DB.fetch \"-\" \"next_sym_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;" 
@@ -52,7 +52,7 @@ val next_sym_def = TotalDefn.qDefine "next_sym_def" [ QUOTE " (*#loc 47 25*)\n  
 
 val it = Parse.Term [ QUOTE " (*#loc 53 4*)f \226\128\185foo\"\226\128\186" ] ; 
 
-val sexpPEG_def = TotalDefn.qDefine "sexpPEG_def" [ QUOTE " (*#loc 55 24*)\n  #\"\\\\\";\n" ] 
+val sexpPEG_def = TotalDefn.located_qDefine DB_dtype.Unknown "sexpPEG_def" [ QUOTE " (*#loc 55 24*)\n  #\"\\\\\";\n" ] 
 
 NONE 
 
