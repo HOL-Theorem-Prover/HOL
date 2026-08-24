@@ -18,12 +18,12 @@ Libs
    expansion using only Parse.typedTerm, Tactical.prove and
    Theory.gen_save_thm --- machinery already available at src/1. *)
 structure Q = struct
-  fun store_thm_at loc (name, q, tac) =
-    let val tm = Parse.typedTerm q Type.bool
-        val th = Tactical.prove (tm, tac)
+  fun store_thm_at loc (name, q, tac) ctxt =
+    let val tm = Parse.typedTerm_in ctxt q Type.bool
+        val th = Tactical.prove_in ctxt (tm, tac)
     in Theory.gen_save_thm {name = name, loc = loc, private = false, thm = th}
     end
-  fun store_thm x = store_thm_at DB_dtype.Unknown x
+  fun store_thm x = store_thm_at DB_dtype.Unknown x (Context.snapshot())
 end
 
 (*---------------------------------------------------------------------------

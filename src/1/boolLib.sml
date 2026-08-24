@@ -252,11 +252,11 @@ local
   fun tac_failure s1 s2 =
       String.concat ["Failed to prove theorem ", Lib.quote s1, ":\n", s2]
 in
-fun store_thm_at loc (n0,t,tac) =
+fun store_thm_at loc (n0,t,tac) ctxt =
   let val attrblock = ThmAttribute.extract_attributes n0
       val name = #thmname attrblock
       val _ = current_thm_name := name
-      val th = Tactical.prove(t,tac)
+      val th = Tactical.prove_in ctxt (t,tac)
                handle HOL_ERR herr =>
                if !Globals.dumpheap_on_failure andalso
                   not (!Globals.interactive)
@@ -282,7 +282,7 @@ fun store_thm_at loc (n0,t,tac) =
   end
 end
 
-val store_thm = store_thm_at DB.Unknown
+fun store_thm arg = store_thm_at DB.Unknown arg (Context.snapshot())
 
 fun save_thm_at loc (n0,th) =
   save_thm_attrs loc (ThmAttribute.extract_attributes n0,th)

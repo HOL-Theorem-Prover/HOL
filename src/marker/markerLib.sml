@@ -1247,7 +1247,7 @@ fun build_suspendlabel_thms label_nm (ncts, sub_th) =
 fun fast_shortcut () =
     Thm.mk_oracle_thm "fast_proof" ([], boolSyntax.T)
 
-fun resume {suspension_name, label_name} tac =
+fun resume {suspension_name, label_name} tac ctxt =
     case find_parent suspension_name of
         NONE => raise ERR "resume"
                   ("No suspended theorem named " ^ suspension_name ^
@@ -1267,7 +1267,7 @@ fun resume {suspension_name, label_name} tac =
              | SOME ncts =>
                let
                  val goal = resumption_to_goal ncts
-                 val sub_th = prove_goal (goal, tac)
+                 val sub_th = prove_goal_in ctxt (goal, tac)
                  (* A resumption proof may consume only finalised
                     theorems.  A slab in sub_th's hyps whose owner is
                     some already-registered suspended theorem means

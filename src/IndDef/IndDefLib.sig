@@ -4,12 +4,15 @@ sig
   type monoset = InductiveDefinition.monoset
 
   val term_of       : term quotation -> term * locn.locn list
+  val term_of_in    : Context.t -> term quotation ->
+                      term * locn.locn list
   val term_of_absyn : Absyn.absyn -> term * locn.locn list
 
   val name_from_def : term -> string
 
   val Hol_reln      : term quotation -> thm * thm * thm
-  val xHol_reln     : string -> term quotation -> thm * thm * thm
+  val xHol_reln     : string -> term quotation -> Context.t ->
+                      thm * thm * thm
   val Hol_mono_reln : string -> monoset ->
                       (term * locn.locn list) -> thm * thm * thm
 

@@ -42,6 +42,13 @@ fun expandRecord f pat {left, elems = {args, seps, stop = stop1}, right, stop} =
   val elems = {args = reord args NONE [], seps = seps, stop = stop1}
   in {left = left, elems = elems, right = right, stop = stop} end
 
+(* The context a surface form is elaborated against.  It goes on as a
+   curried argument anchored past the preceding one, so the enclosing
+   App's span still covers its children and hover navigation inside the
+   form keeps resolving to the user's own identifiers. *)
+fun mkSnapshot p =
+    App (mkIdent (p, "Context.snapshot"), Unit {left = p, right = p})
+
 fun mkLocPragma line col s =
   concat [" (*#loc ", Int.toString (line + 1), " ", Int.toString (col + 1), "*)", s]
 
@@ -516,6 +523,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val e = App (e, case termination of
       NONE => mkIdent (stop, "NONE")
     | SOME {tac, ...} => App (mkIdent (definition_, "SOME"), expandExp false tac))
+    val e = App (e, mkSnapshot (expStop e))
     val dec' = magicBind indThm [valPat definition_ (mkIdent id) e]
     in DecExpansion {orig = dec, result = rev dec'} end
   | expandDec _ (dec as HOLDatatype {datatype_, quote, stop, ...}) = let
@@ -562,6 +570,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     fun mkStem x = (id, stem ^ x)
     val pat = mkTuple (inductive_, map (mkIdent o mkStem) ["_rules", indSuffix, "_cases"])
     val e = App (App (mkIdent (inductive_, entryPoint), mkString (id, stem)), quote)
+    val e = App (e, mkSnapshot (expStop e))
     val acc = magicBind (mkStem "_strongind") [valPat inductive_ pat e]
     fun mkExtra _ [] acc = acc
       | mkExtra i (SOME {label = SOME (HOLLabel {tilde_, id}), attrs, ...} :: conjs) acc = let
@@ -650,6 +659,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val args = {args = [nameAttrs, quote, tac], seps = [], stop = tupleStop}
     val tuple = Tuple {left = theorem_, elems = args, right = NONE, stop = tupleStop}
     val e = App (e, tuple)
+    val e = App (e, mkSnapshot tupleStop)
     in DecExpansion {orig = dec, result = [valPat theorem_ (mkIdent id) e]} end
   | expandDec _ (dec as HOLResume {resume_, id, attrs, tac, ...}) = let
     val (label, rest) = case (case attrs of NONE => [] | SOME v => #args (#attrs v)) of
@@ -670,6 +680,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       mkLabEq (resume_, "label_name", mkString label),
       mkLabEq (resume_, "suspension_name", mkString id)]))
     val e = App (e, doProofKvals resume_ rest (wrapTac (resume_, expandExp false tac)))
+    val e = App (e, mkSnapshot (expStop e))
     in DecExpansion {orig = dec, result = [valPat resume_ subname e]} end
   | expandDec _ (dec as HOLFinalise {finalise_, id, attrs, ...}) = let
     val fileline = fileline (#1 id)

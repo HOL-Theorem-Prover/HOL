@@ -28,7 +28,7 @@ val _ = set_suspended_goal {
   label_name = "p", suspension_name = "willsplit"}
 
 val psubgoal = resume{label_name = "p", suspension_name = "willsplit"}
-  (ASM_REWRITE_TAC[])
+  (ASM_REWRITE_TAC[]) (Context.snapshot())
 
 val _ = set_suspended_goal {
   label_name = "q", suspension_name = "willsplit"}
@@ -48,7 +48,7 @@ val _ = set_suspended_goal {
   }
 
 val q3sg = resume{label_name = "q", suspension_name = "willsplit2"}
-  (RES_TAC)
+  (RES_TAC) (Context.snapshot())
 
 val willsplit2 = finalise_suspended_thm (DB_dtype.mkloc(#(FILE),#(LINE),true))
                                    "willsplit2"
@@ -68,7 +68,7 @@ val _ = set_suspended_goal
   {label_name = "p", suspension_name = "multisplit"}
 
 val multi_resumed = resume{label_name = "p", suspension_name = "multisplit"}
-  (RESUME_TAC >> FIRST_ASSUM ACCEPT_TAC)
+  (RESUME_TAC >> FIRST_ASSUM ACCEPT_TAC) (Context.snapshot())
 
 Finalise multisplit
 

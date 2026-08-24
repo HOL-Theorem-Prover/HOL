@@ -856,7 +856,10 @@ fun tailrecDefine loc nm q =
 val _ = List.app ThmAttribute.reserve_word
                  ["nocompute", "schematic", "tailrecursive"]
 
-fun located_qDefine loc stem q tacopt =
+(* The context is the channel the expansion supplies; the quote and the
+   termination proof are handled by the Defn machinery below, which does
+   not take one yet. *)
+fun located_qDefine loc stem q tacopt (_ : Context.t) =
     let
       val {thmname=corename, attrs=attrs,reserved=R,unknown} =
           ThmAttribute.extract_attributes stem
@@ -909,7 +912,8 @@ fun located_qDefine loc stem q tacopt =
       thm
     end
 
-val qDefine = located_qDefine DB.Unknown
+fun qDefine stem q tacopt =
+    located_qDefine DB.Unknown stem q tacopt (Context.snapshot())
 
 fun Define q =
     let

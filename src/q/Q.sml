@@ -58,8 +58,9 @@ fun store_thm(s,q,t) =
     boolLib.store_thm(s,Parse.typedTerm q bool,t)
     handle e => Feedback.render_exn (wrap_exn "Q" "store_thm" e);
 
-fun store_thm_at loc (s,q,t) =
-    boolLib.store_thm_at loc (s,Parse.typedTerm q bool,t)
+(* the statement is parsed against the same context it is proved in *)
+fun store_thm_at loc (s,q,t) ctxt =
+    boolLib.store_thm_at loc (s,Parse.typedTerm_in ctxt q bool,t) ctxt
     handle e => Feedback.render_exn (wrap_exn "Q" "store_thm_at" e);
 
 fun prove (q, t) =
@@ -508,7 +509,7 @@ fun PQ (* parser quiet *) f =
 (* needs to be eta-expanded so that the possible HOL_ERRs are raised
    when applied to a goal, not before, thereby letting FIRST_ASSUM catch
    the exception *)
-fun wholeterm_rename_helper {pats,fvs_set,ERR,kont} tm g = let
+fun wholeterm_rename_helper {pats,fvs_set,ERR,kont} tm g ctxt = let
   fun do_one_pat pat =
     let
       val ((tmtheta0, _), (tytheta, _)) =
@@ -519,7 +520,7 @@ fun wholeterm_rename_helper {pats,fvs_set,ERR,kont} tm g = let
                    |> make_rename_tac
     in
       rename_tac THEN kont
-    end g
+    end g ctxt
   fun test_parses patseq =
     case PQ seq.cases patseq of
         NONE => raise ERR "No match"
@@ -532,27 +533,27 @@ val Absyn = Parse.Absyn
 val term_grammar = Parse.term_grammar
 
 
-fun kMATCH_RENAME_TAC q k (g as (_, t)) = let
-  val ctxt = goal_ctxt g
+fun kMATCH_RENAME_TAC q k (g as (_, t)) ctxt = let
+  val fvl = goal_ctxt g
   fun mkA q = Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType bool)
-  val pat_parses = TermParse.prim_ctxt_termS mkA (term_grammar()) ctxt q
+  val pat_parses = TermParse.prim_ctxt_termS mkA (term_grammar()) fvl q
 in
   wholeterm_rename_helper
     {pats=pat_parses, ERR = ERR "MATCH_RENAME_TAC", kont = k,
-     fvs_set = HOLset.fromList Term.compare ctxt}
+     fvs_set = HOLset.fromList Term.compare fvl}
     t
-end g
+end g ctxt
 
 fun MATCH_RENAME_TAC q = kMATCH_RENAME_TAC q ALL_TAC
 
 fun kMATCH_ASSUM_RENAME_TAC q k (g as (asl,t)) = let
-  val ctxt = free_varsl(t::asl)
-  val pats = TermParse.prim_ctxt_termS Absyn (term_grammar()) ctxt q
+  val fvl = free_varsl(t::asl)
+  val pats = TermParse.prim_ctxt_termS Absyn (term_grammar()) fvl q
 in
   FIRST_ASSUM (fn th =>
     wholeterm_rename_helper
       {pats=pats, ERR = ERR "MATCH_ASSUM_RENAME_TAC", kont = k,
-       fvs_set = HOLset.fromList Term.compare ctxt}
+       fvs_set = HOLset.fromList Term.compare fvl}
       (concl th))
 end g
 
@@ -561,7 +562,7 @@ fun MATCH_ASSUM_RENAME_TAC q = kMATCH_ASSUM_RENAME_TAC q ALL_TAC
 (* needs to be eta-expanded so that the possible HOL_ERRs are raised
    when applied to a goal, not before, thereby letting FIRST_ASSUM catch
    the exception *)
-fun subterm_helper strictp make_tac k {ERR,pats,fvs_set} t g = let
+fun subterm_helper strictp make_tac k {ERR,pats,fvs_set} t g ctxt = let
   fun test (pat, thetasz) (bvs, subt) =
       if strictp andalso aconv t subt then NONE
       else
@@ -576,7 +577,7 @@ fun subterm_helper strictp make_tac k {ERR,pats,fvs_set} t g = let
               val theta = map (redex_map (inst tytheta)) theta0
             in
               if length theta <> thetasz then NONE
-              else Lib.total (make_tac theta THEN k) g
+              else Lib.total (fn g => (make_tac theta THEN k) g ctxt) g
             end
           | NONE => NONE
   fun find_pats patseq =
@@ -607,9 +608,9 @@ in
   {ERR = ERR, pats = seq.map mapthis pats, fvs_set = fvs_set}
 end
 
-fun kMATCH_GOALSUB_RENAME_TAC b q k (g as (asl, t)) =
+fun kMATCH_GOALSUB_RENAME_TAC b q k (g as (asl, t)) ctxt =
     subterm_helper b make_rename_tac k
-                   (prep_rename q "MATCH_GOALSUB_RENAME_TAC" g) t g
+                   (prep_rename q "MATCH_GOALSUB_RENAME_TAC" g) t g ctxt
 
 fun MATCH_GOALSUB_RENAME_TAC q = kMATCH_GOALSUB_RENAME_TAC false q ALL_TAC
 
@@ -619,9 +620,9 @@ in
   FIRST_ASSUM (subterm_helper b make_rename_tac k args o concl) g
 end
 
-fun MATCH_GOALSUB_ABBREV_TAC q (g as (asl, t)) =
+fun MATCH_GOALSUB_ABBREV_TAC q (g as (asl, t)) ctxt =
     subterm_helper false make_abbrev_tac ALL_TAC
-                   (prep_rename q "MATCH_GOALSUB_ABBREV_TAC" g) t g
+                   (prep_rename q "MATCH_GOALSUB_ABBREV_TAC" g) t g ctxt
 
 fun MATCH_ASMSUB_ABBREV_TAC q (g as (asl, t)) = let
   val args = prep_rename q "MATCH_ASMSUB_ABBREV_TAC" g

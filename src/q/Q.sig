@@ -48,7 +48,8 @@ sig
   val X_SKOLEM_CONV          : tmquote -> conv
   val store_thm              : string * tmquote * tactic -> thm
   val store_thm_at           : DB.thm_src_location ->
-                               string * tmquote * tactic -> thm
+                               string * tmquote * tactic -> Context.t ->
+                               thm
   val prove                  : tmquote * tactic -> thm
   val INST                   : (tmquote, tmquote) subst -> thm -> thm
   val new_definition         : string * tmquote -> thm

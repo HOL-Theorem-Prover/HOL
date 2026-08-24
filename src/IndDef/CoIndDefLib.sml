@@ -197,9 +197,12 @@ handle e => raise (wrap_exn "CoIndDefLib" "Hol_mono_coreln" e);
 val parse =
   IndDefLib.term_of |> trace ("syntax_error", 0)
                     |> trace ("show_typecheck_errors", 0)
+fun parse_in ctxt =
+  IndDefLib.term_of_in ctxt |> trace ("syntax_error", 0)
+                            |> trace ("show_typecheck_errors", 0)
 
-fun xHol_coreln name q =
-    Hol_mono_coreln name (!IndDefLib.the_monoset) (parse q)
+fun xHol_coreln name q ctxt =
+    Hol_mono_coreln name (!IndDefLib.the_monoset) (parse_in ctxt q)
     handle e as HOL_ERR _ =>
     render_exn (wrap_exn "CoIndDefLib" "xHol_coreln" e)
 

@@ -4,7 +4,8 @@ sig
   type monoset = InductiveDefinition.monoset
 
   val Hol_coreln      : term quotation -> thm * thm * thm
-  val xHol_coreln     : string -> term quotation -> thm * thm * thm
+  val xHol_coreln     : string -> term quotation -> Context.t ->
+                        thm * thm * thm
   val Hol_mono_coreln : string -> monoset ->
                         (term * locn.locn list) -> thm * thm * thm
 

@@ -270,7 +270,8 @@ fun == q x = Type q;
              Parsing into abstract syntax
  ---------------------------------------------------------------------------*)
 
-fun Absyn q = #absyn_parser (derived_fns ()) q
+fun Absyn_in ctxt q = #absyn_parser (get_derived_fns ctxt) q
+fun Absyn q = Absyn_in (Context.snapshot()) q
 
 (* Pretty-print the grammar rules *)
 fun print_term_grammar() = let
@@ -421,9 +422,14 @@ val absyn_to_term =
      Parse into term type.
  ---------------------------------------------------------------------------*)
 
-fun Term q = absyn_to_term (term_grammar()) (Absyn q)
+(* The grammar and the derived parser come from the supplied context.
+   Constants still resolve against the kernel signature read from the
+   ambient context; threading that is the kernel readers' own job. *)
+fun Term_in ctxt q =
+    absyn_to_term (get_term_grammar ctxt) (Absyn_in ctxt q)
+fun Term q = Term_in (Context.snapshot()) q
 
-fun typedTerm qtm ty = let
+fun typedTerm_in ctxt qtm ty = let
   val tyclose = [ANTIQUOTE (ty_antiq ty), QUOTE ""]
   fun open_ (QUOTE s) t = QUOTE ("(" ^ s) :: t
     | open_ frag      t = QUOTE "(" :: frag :: t
@@ -435,8 +441,10 @@ fun typedTerm qtm ty = let
       | (hd :: rst, last) => open_ hd (rst @ close last)
       | _                 => raise ERROR "Parse.typedTerm" "unreachable"
 in
-  Term frags
+  Term_in ctxt frags
 end;
+
+fun typedTerm qtm ty = typedTerm_in (Context.snapshot()) qtm ty
 
 fun parse_from_grammars (tyG, tmG) = let
   val ty_parser = parse_type.parse_type Pretype.typantiq_constructors false tyG

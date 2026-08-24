@@ -70,6 +70,10 @@ signature Parse = sig
   val Preterm          : term frag list -> Preterm.preterm
   val Term             : term frag list -> term
   val typedTerm        : term frag list -> hol_type -> term
+  (* parse against a supplied context rather than the ambient one *)
+  val Absyn_in         : Context.t -> term frag list -> Absyn.absyn
+  val Term_in          : Context.t -> term frag list -> term
+  val typedTerm_in     : Context.t -> term frag list -> hol_type -> term
   val ty_antiq         : hol_type -> term
   val parse_in_context : term list -> term frag list -> term
   val typed_parse_in_context : hol_type -> term list -> term frag list -> term
