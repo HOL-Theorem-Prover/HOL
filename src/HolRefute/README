@@ -11,6 +11,31 @@ execution substrates:
 * NativeSML extracts the executable fragment to SML and compiles the test
   loop in process.  It is the preferred fast substrate on Poly/ML.
 
+QC's report distinguishes a vacuous run from a real one.  Every candidate
+that satisfied all of a plan's Guard/SmartGuard/Split/Bind premises counts
+as "assumption satisfied", and every one of those whose conclusion was
+actually evaluated (as opposed to left stuck) counts as "conclusion
+evaluated"; a found counterexample or model shows both counts alongside
+its size, and a search that ends `Unknown` always appends them to its
+reason list, so a run where every candidate failed its premises -- which
+otherwise looks identical to a real search that tried everything and
+found nothing -- is visible in the report.  Compute and NativeSML count
+every candidate for real, incrementally, inside the search itself.  Cv
+leaves the counters absent on every shape rather than fabricate a
+number: unlike Compute and NativeSML, Cv's search runs as one opaque
+compiled call, so counting would need either a second pass over the
+same candidate space or threading counters into the trusted search
+definition.  Threading was rejected as a determinism risk (any change
+to the search's own definition is a change to the candidate stream), and
+a second pass was tried and reverted: it cannot stop early the way the
+real search does, so on a goal the real search settles quickly by
+short-circuiting (e.g. an early counterexample in a large arithmetic
+domain), the mandatory full-domain count can cost far more than the
+search itself and starve it of the shared deadline -- turning a genuine
+counterexample into a timeout.  A diagnostic must never be able to
+change a verdict, so Cv reports "candidate counters unavailable on this
+backend" uniformly instead.
+
 `:rat` has a built-in QC generator (`Refute_EvalRat`), registered
 unconditionally at Refute's load time.  Its candidates are a custom
 generator (`Refute_Gen.GenCustom`), so -- exactly like any other

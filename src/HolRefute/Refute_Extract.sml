@@ -3239,9 +3239,32 @@ structure Refute_Extract = struct
         parens ("complete := false; if " ^ genuine_only ^
           " then RefuteContinue else " ^ fallback)
 
-      fun random_recovery state fallback =
+      (* Guard-only variant of the above: giving up on a stuck premise
+         (the [genuine_only] branch) is a candidate reaching a terminal
+         decision without ever reaching Test, so it counts toward
+         [candidates_generated], mirroring [Refute_EvalCompute]'s
+         [traverse]: every branch that ends a candidate without
+         recursing further bumps the counter exactly once.  [Guard]'s
+         other terminal branch (the premise evaluating to false, at its
+         own call site below) gets the same treatment, as do [Bind],
+         [Split], [SmartGuard] and [Enum] inline at their own call
+         sites, since none of their branching matches this fallback's
+         shape.  [Test] does not need it, since it already increments
+         unconditionally on entry and its own stuck path only replaces
+         what happens after.  [Prune] is excluded on both substrates:
+         the planner already knows that branch can never fire, so
+         nothing was generated to count. *)
+      fun guard_recovery complete genuine_only fallback =
+        parens ("complete := false; if " ^ genuine_only ^ " then " ^
+          parens ("candidates_generated := !candidates_generated + 1; " ^
+            "RefuteContinue") ^
+          " else " ^ fallback)
+
+      fun guard_random_recovery state fallback =
         parens ("complete := false; if genuine_only then " ^
-          parens ("RefuteContinue, " ^ state) ^ " else " ^ fallback)
+          parens ("candidates_generated := !candidates_generated + 1; " ^
+            parens ("RefuteContinue, " ^ state)) ^
+          " else " ^ fallback)
 
       val guard_serial = ref 0
 
@@ -3661,24 +3684,33 @@ structure Refute_Extract = struct
               val stuck = recovery "complete" "genuine_only"
                 ("refute_hit (" ^ environment_source environment ^
                   ", NONE, NONE, false)")
+              val assume = "if " ^ genuine_only ^ " then " ^
+                "assumption_satisfied := !assumption_satisfied + 1 else ()"
+              val conclude = "if " ^ genuine_only ^ " then " ^
+                "conclusion_evaluated := !conclusion_evaluated + 1 else ()"
             in
               parens ("tests := !tests + 1; " ^
+                "candidates_generated := !candidates_generated + 1; " ^
+                assume ^ "; " ^
                 "if !tests mod 4096 = 0 then " ^
                 "Refute_EvalSML.check_deadline () else (); " ^
                 safe_value (evaluated_expression tm) stuck ^
-                "if refute_value then RefuteContinue else " ^ hit ^ ")")
+                parens (conclude ^ "; " ^
+                  "if refute_value then RefuteContinue else " ^ hit) ^ ")")
             end
         | Guard (tm, next) =>
             let
               val (name, flag) = guard_names ()
               val body = compile_exhaustive_plan next environment flag
-              val stuck = recovery "complete" "genuine_only"
+              val stuck = guard_recovery "complete" "genuine_only"
                 (name ^ " false")
             in
               "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^
               "\nin " ^ safe_value (evaluated_expression tm) stuck ^
               "if refute_value then " ^ name ^ " " ^ genuine_only ^
-              " else RefuteContinue) end"
+              " else " ^
+              parens ("candidates_generated := " ^
+                "!candidates_generated + 1; RefuteContinue") ^ ") end"
             end
         | SmartGuard {predicate, version, cont} =>
             let
@@ -3686,7 +3718,9 @@ structure Refute_Extract = struct
               val body = compile_exhaustive_plan cont environment flag
               val compiled =
                 case compile_smart_guard predicate version environment
-                    (name ^ " " ^ genuine_only) "RefuteContinue" of
+                    (name ^ " " ^ genuine_only)
+                    (parens ("candidates_generated := " ^
+                       "!candidates_generated + 1; RefuteContinue")) of
                     SOME source => source
                   | NONE => smart_reject "smart Guard became stale"
             in
@@ -3700,11 +3734,15 @@ structure Refute_Extract = struct
               val next_environment = (variable, value, term) :: environment
               val continued = compile_exhaustive_plan next next_environment
                 genuine_only
-              val alternative = case fallback of
-                  NONE => "RefuteContinue"
-                | SOME other =>
-                    compile_exhaustive_plan other environment "false"
-              val stuck = recovery "complete" "genuine_only" alternative
+              val bump = "candidates_generated := " ^
+                "!candidates_generated + 1; RefuteContinue"
+              val stuck =
+                case fallback of
+                    NONE => parens ("complete := false; " ^ bump)
+                  | SOME other =>
+                      parens ("complete := false; if genuine_only then " ^
+                        parens bump ^ " else " ^
+                        compile_exhaustive_plan other environment "false")
             in
               safe_value (evaluated_expression tm) stuck ^
               "let val " ^ value ^ " = refute_value\n" ^
@@ -3716,8 +3754,11 @@ structure Refute_Extract = struct
                 compile_exhaustive_plan next branch_environment
                   genuine_only)
               (parens ("complete := false; match_failures := " ^
-                 "!match_failures + 1; RefuteContinue"))
-              "RefuteContinue" tm branches environment
+                 "!match_failures + 1; candidates_generated := " ^
+                 "!candidates_generated + 1; RefuteContinue"))
+              (parens ("candidates_generated := " ^
+                 "!candidates_generated + 1; RefuteContinue"))
+              tm branches environment
         | Gen (variable, next) =>
             let
               val value = variable_name variable
@@ -3743,7 +3784,8 @@ structure Refute_Extract = struct
                 compile_exhaustive_plan cont extended genuine_only
               val callback = cps_lambda output_names
                 (match_generated outs output_names environment success
-                  "RefuteContinue")
+                  (parens ("candidates_generated := " ^
+                     "!candidates_generated + 1; RefuteContinue")))
               val fuel = Int.max (0, #depth (#qc config))
             in
               parens ("complete := false; " ^ enum_call_name rel mode ^ " " ^
@@ -3762,24 +3804,33 @@ structure Refute_Extract = struct
               val stuck = recovery "complete" "genuine_only"
                 ("refute_hit (" ^ environment_source environment ^
                   ", NONE, NONE, false)")
+              val assume = "if " ^ genuine ^ " then " ^
+                "assumption_satisfied := !assumption_satisfied + 1 else ()"
+              val conclude = "if " ^ genuine ^ " then " ^
+                "conclusion_evaluated := !conclusion_evaluated + 1 else ()"
             in
               parens ("tests := !tests + 1; " ^
+                "candidates_generated := !candidates_generated + 1; " ^
+                assume ^ "; " ^
                 "if !tests mod 4096 = 0 then " ^
                 "Refute_EvalSML.check_deadline () else (); " ^
                 safe_value (evaluated_expression tm) stuck ^
-                parens ("if refute_value then RefuteContinue else " ^ hit) ^
+                parens (conclude ^ "; " ^
+                  "if refute_value then RefuteContinue else " ^ hit) ^
                 ", " ^ state ^ ")")
             end
         | Guard (tm, next) =>
             let
               val (name, flag) = guard_names ()
               val body = compile_random_plan next environment flag state
-              val stuck = random_recovery state (name ^ " false")
+              val stuck = guard_random_recovery state (name ^ " false")
             in
               "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^ "\n" ^
               "in " ^ safe_value (evaluated_expression tm) stuck ^
               "if refute_value then " ^ name ^ " " ^ genuine ^ " else " ^
-              parens ("RefuteContinue, " ^ state) ^ ") end"
+              parens ("candidates_generated := " ^
+                "!candidates_generated + 1; " ^
+                parens ("RefuteContinue, " ^ state)) ^ ") end"
             end
         | SmartGuard _ =>
             smart_reject "smart Guard reached random compilation"
@@ -3789,11 +3840,16 @@ structure Refute_Extract = struct
               val term = evaluation_thunk tm environment
               val continued = compile_random_plan next
                 ((variable, value, term) :: environment) genuine state
-              val alternative = case fallback of
-                  NONE => parens ("RefuteContinue, " ^ state)
-                | SOME other =>
-                    compile_random_plan other environment "false" state
-              val failed = random_recovery state alternative
+              val bump = "candidates_generated := " ^
+                "!candidates_generated + 1; " ^
+                parens ("RefuteContinue, " ^ state)
+              val failed =
+                case fallback of
+                    NONE => parens ("complete := false; " ^ bump)
+                  | SOME other =>
+                      parens ("complete := false; if genuine_only then " ^
+                        parens bump ^ " else " ^
+                        compile_random_plan other environment "false" state)
             in
               safe_value (evaluated_expression tm) failed ^
               "let val " ^ value ^ " = refute_value in " ^ continued ^
@@ -3805,9 +3861,13 @@ structure Refute_Extract = struct
                 compile_random_plan next branch_environment genuine state)
               (parens
                 ("complete := false; match_failures := " ^
-                 "!match_failures + 1; " ^
+                 "!match_failures + 1; candidates_generated := " ^
+                 "!candidates_generated + 1; " ^
                  parens ("RefuteContinue, " ^ state)))
-              (parens ("RefuteContinue, " ^ state)) tm branches environment
+              (parens ("candidates_generated := " ^
+                 "!candidates_generated + 1; " ^
+                 parens ("RefuteContinue, " ^ state)))
+              tm branches environment
         | Gen (variable, next) =>
             let
               val value = variable_name variable
@@ -3836,6 +3896,9 @@ structure Refute_Extract = struct
                 Bool.toString (not (Refute_Eval.plan_uses_enum plan)) ^ "\n" ^
               "      val tests = ref 0\n" ^
               "      val match_failures = ref 0\n" ^
+              "      val assumption_satisfied = ref 0\n" ^
+              "      val conclusion_evaluated = ref 0\n" ^
+              "      val candidates_generated = ref 0\n" ^
               "      val answer = " ^
                 compile_exhaustive_plan plan [] "true" ^ "\n" ^
               "      val hit = case answer of RefuteContinue => NONE\n" ^
@@ -3843,13 +3906,19 @@ structure Refute_Extract = struct
               "  in {hit = hit, complete = !complete,\n" ^
               "      table = refute_table_id, state = state, " ^
               "tests = !tests,\n" ^
-              "      match_failures = !match_failures}\n" ^
+              "      match_failures = !match_failures,\n" ^
+              "      assumption_satisfied = !assumption_satisfied,\n" ^
+              "      conclusion_evaluated = !conclusion_evaluated,\n" ^
+              "      candidates_generated = !candidates_generated}\n" ^
               "  end\n"
           | Random _ =>
               "fun " ^ name ^ " genuine_only size draws state =\n" ^
               "  let val complete = ref true\n" ^
               "      val tests = ref 0\n" ^
               "      val match_failures = ref 0\n" ^
+              "      val assumption_satisfied = ref 0\n" ^
+              "      val conclusion_evaluated = ref 0\n" ^
+              "      val candidates_generated = ref 0\n" ^
               "      fun loop 0 current = (NONE, current)\n" ^
               "        | loop remaining current =\n" ^
               "          (case " ^ compile_random_plan plan [] "true"
@@ -3861,7 +3930,10 @@ structure Refute_Extract = struct
               "        loop (Int.max (0, draws)) state\n" ^
               "  in {hit = hit, complete = !complete,\n" ^
               "      table = refute_table_id, state = final_state,\n" ^
-              "      tests = !tests, match_failures = !match_failures}\n" ^
+              "      tests = !tests, match_failures = !match_failures,\n" ^
+              "      assumption_satisfied = !assumption_satisfied,\n" ^
+              "      conclusion_evaluated = !conclusion_evaluated,\n" ^
+              "      candidates_generated = !candidates_generated}\n" ^
               "  end\n"
           | Narrowing => raise Fail "normalized narrowing strategy"
         end
@@ -3919,7 +3991,11 @@ structure Refute_Extract = struct
             "    in {hit = hit, complete = #complete answer,\n" ^
             "        table = refute_table_id, state = #state answer,\n" ^
             "        tests = #tests answer,\n" ^
-            "        match_failures = #match_failures answer}\n" ^
+            "        match_failures = #match_failures answer,\n" ^
+            "        assumption_satisfied = #assumption_satisfied answer,\n" ^
+            "        conclusion_evaluated = #conclusion_evaluated answer,\n" ^
+            "        candidates_generated = " ^
+              "#candidates_generated answer}\n" ^
             "    end)\n" ^
             "fun install () =\n" ^
             "  Refute_EvalSML.installed_dispatch := SOME protected_dispatch\n"
@@ -4434,31 +4510,32 @@ structure Refute_Extract = struct
           "    in not ((!Refute_EvalSML.ignored_filter)\n" ^
           "      (candidate depth arguments (SOME replay) genuine)) end)\n" ^
           "  initial\n" ^
-          "val (hit, tests, complete) =\n" ^
+          "val (hit, tests, decided, complete) =\n" ^
           "  case result of\n" ^
           "      Refute_Narrow.PnfCounterexample\n" ^
-          "        {genuine, example, tests, ...} =>\n" ^
+          "        {genuine, example, tests, decided, ...} =>\n" ^
           "        let\n" ^
           "          val arguments = Refute_Narrow.leading_universals " ^
           integer leading_count ^ " example\n" ^
           "          val replay = Refute_Narrow.replay_of_example\n" ^
           "            (replay_rebuild depth) example\n" ^
           "        in (SOME (candidate depth arguments (SOME replay) genuine),\n" ^
-          "            tests, false) end\n" ^
-          "    | Refute_Narrow.PnfExhausted {tests, complete, ...} =>\n" ^
-          "        (NONE, tests, complete)\n"
+          "            tests, decided, false) end\n" ^
+          "    | Refute_Narrow.PnfExhausted {tests, decided, complete, ...} =>\n" ^
+          "        (NONE, tests, decided, complete)\n"
         else
           "val result = Refute_Narrow.refute_plain_avoiding genuine_only\n" ^
           "  {arguments = " ^ initial_arguments ^ ",\n" ^
           "   evaluate = narrow_evaluate depth,\n" ^
           "   accept = accept_hit depth genuine_only}\n" ^
-          "val (hit, tests, complete) =\n" ^
+          "val (hit, tests, decided, complete) =\n" ^
           "  case result of\n" ^
           "      Refute_Narrow.PlainCounterexample\n" ^
-          "        {genuine, arguments, tests} =>\n" ^
-          "        (make_hit depth arguments NONE genuine, tests, false)\n" ^
-          "    | Refute_Narrow.PlainExhausted {tests, complete} =>\n" ^
-          "        (NONE, tests, complete)\n"
+          "        {genuine, arguments, tests, decided} =>\n" ^
+          "        (make_hit depth arguments NONE genuine, tests, decided,\n" ^
+          "         false)\n" ^
+          "    | Refute_Narrow.PlainExhausted {tests, decided, complete} =>\n" ^
+          "        (NONE, tests, decided, complete)\n"
 
       val table_id = Refute_EvalSML.register_term_tables
         (rev (!(#list constructor_terms))) (rev (!(#list raw_terms)))
@@ -4483,7 +4560,17 @@ structure Refute_Extract = struct
             "  if card <> 1 then raise Subscript else\n" ^
             "  let\n    " ^ engine ^
             "  in {hit = hit, complete = complete, table = refute_table_id,\n" ^
-            "      state = state, tests = tests, match_failures = 0}\n" ^
+            "      state = state, tests = tests, match_failures = 0,\n" ^
+            (* Narrowing evaluates one combined prenex formula per
+               candidate, so it has no separate assumption/conclusion
+               phase -- but [tests] still conflates decided rows
+               ([Known]) with rows that only got refined further
+               ([NeedsRefinement]).  [decided] is the honest count of
+               the former; [tests] is every attempt, decided or not, so
+               it is the candidates_generated denominator. *)
+            "      assumption_satisfied = decided,\n" ^
+            "      conclusion_evaluated = decided,\n" ^
+            "      candidates_generated = tests}\n" ^
             "  end\n" ^
             "fun protected_dispatch card genuine_only depth draws state =\n" ^
             "  Refute_EvalSML.with_term_tables refute_table_id (fn () =>\n" ^
@@ -4502,7 +4589,11 @@ structure Refute_Extract = struct
             "    in {hit = hit, complete = #complete answer,\n" ^
             "        table = refute_table_id, state = #state answer,\n" ^
             "        tests = #tests answer,\n" ^
-            "        match_failures = #match_failures answer}\n" ^
+            "        match_failures = #match_failures answer,\n" ^
+            "        assumption_satisfied = #assumption_satisfied answer,\n" ^
+            "        conclusion_evaluated = #conclusion_evaluated answer,\n" ^
+            "        candidates_generated = " ^
+              "#candidates_generated answer}\n" ^
             "    end)\n" ^
             "fun install () = Refute_EvalSML.installed_dispatch :=\n" ^
             "  SOME protected_dispatch\n"

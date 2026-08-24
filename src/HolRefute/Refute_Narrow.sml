@@ -22,10 +22,14 @@ structure Refute_Narrow = struct
       Known of {genuine : bool, result : bool}
     | NeedsRefinement of position
 
+  (* [tests] counts every [evaluate] call, decided or not; [decided]
+     counts only the [Known] ones -- a [NeedsRefinement] row leaves the
+     property undecided and must not be reported as evaluated. *)
   datatype plain_result =
       PlainCounterexample of
-        {genuine : bool, arguments : narrowing_term list, tests : int}
-    | PlainExhausted of {tests : int, complete : bool}
+        {genuine : bool, arguments : narrowing_term list, tests : int,
+         decided : int}
+    | PlainExhausted of {tests : int, decided : int, complete : bool}
 
   datatype engine_selection =
       PlainEngine
@@ -62,11 +66,14 @@ structure Refute_Narrow = struct
         narrowing_type * (narrowing_term * example) list
     | EmptyExample
 
+  (* Same [tests]/[decided] split as [plain_result]. *)
   datatype pnf_result =
       PnfCounterexample of
-        {genuine : bool, example : example, tree : tree, tests : int}
+        {genuine : bool, example : example, tree : tree, tests : int,
+         decided : int}
     | PnfExhausted of
-        {truth : truth, tree : tree, tests : int, complete : bool}
+        {truth : truth, tree : tree, tests : int, decided : int,
+         complete : bool}
 
   exception InvalidPosition of position
   exception InvalidPath
@@ -337,43 +344,53 @@ structure Refute_Narrow = struct
      protocol.  Each refinement candidate is evaluated afresh, exactly as in
      Narrowing_Engine.ref/refute.  Rejected hits are refined in this DFS;
      returning them to the driver as NONE would restart at the same root. *)
-  fun refute_from genuine_only evaluate accept arguments tests =
+  fun refute_from genuine_only evaluate accept arguments tests decided =
     let
       fun preserve_complete complete
-            (PlainExhausted {tests, complete = rest_complete}) =
+            (PlainExhausted {tests, decided, complete = rest_complete}) =
             PlainExhausted
-              {tests = tests, complete = complete andalso rest_complete}
+              {tests = tests, decided = decided,
+               complete = complete andalso rest_complete}
         | preserve_complete _ result = result
-      fun search [] count = PlainExhausted {tests = count, complete = true}
-        | search (refined :: rest) count =
-            (case refute_from genuine_only evaluate accept refined count of
+      fun search [] count dcount =
+            PlainExhausted {tests = count, decided = dcount, complete = true}
+        | search (refined :: rest) count dcount =
+            (case refute_from genuine_only evaluate accept refined count
+                dcount of
                  result as PlainCounterexample _ => result
-               | PlainExhausted {tests = count', complete} =>
-                   preserve_complete complete (search rest count'))
-      fun continue count =
+               | PlainExhausted {tests = count', decided = dcount',
+                   complete} =>
+                   preserve_complete complete (search rest count' dcount'))
+      fun continue count dcount =
         case first_variable_position arguments of
-            NONE => PlainExhausted {tests = count, complete = true}
-          | SOME position => search (refineList arguments position) count
+            NONE =>
+              PlainExhausted {tests = count, decided = dcount,
+                complete = true}
+          | SOME position =>
+              search (refineList arguments position) count dcount
     in
       case evaluate genuine_only arguments of
           Known {genuine, result = true} =>
-            PlainExhausted {tests = tests + 1, complete = genuine}
+            PlainExhausted
+              {tests = tests + 1, decided = decided + 1, complete = genuine}
         | Known {genuine, result = false} =>
             if accept arguments genuine then
               PlainCounterexample
-                {genuine = genuine, arguments = arguments, tests = tests + 1}
+                {genuine = genuine, arguments = arguments,
+                 tests = tests + 1, decided = decided + 1}
             else
-              preserve_complete genuine (continue (tests + 1))
+              preserve_complete genuine
+                (continue (tests + 1) (decided + 1))
         | NeedsRefinement position =>
-            search (refineList arguments position) (tests + 1)
+            search (refineList arguments position) (tests + 1) decided
     end
 
   fun refute_plain_avoiding genuine_only
         {arguments, evaluate, accept} =
-    case refute_from genuine_only evaluate accept arguments 0 of
-        PlainExhausted {tests, complete} =>
+    case refute_from genuine_only evaluate accept arguments 0 0 of
+        PlainExhausted {tests, decided, complete} =>
           PlainExhausted
-            {tests = tests,
+            {tests = tests, decided = decided,
              complete = complete andalso
                List.all term_shape_complete arguments}
       | result => result
@@ -649,28 +666,30 @@ structure Refute_Narrow = struct
 
   fun refute evaluate genuine_only depth initial_tree =
     let
-      fun loop tree tests =
+      fun loop tree tests decided =
         let
           val path = find tree
-          val tree' =
+          val (tree', decided') =
             case evaluate genuine_only (terms_of [] path) of
                 Known {genuine, result} =>
-                  update path
-                    (Eval {result = result, potential = not genuine}) tree
+                  (update path
+                     (Eval {result = result, potential = not genuine}) tree,
+                   decided + 1)
               | NeedsRefinement position =>
                   (* Root positions have length one, while [depth] counts
                      refinements below that root. *)
-                  if length position <= depth + 1 then
-                    refine_tree path position tree
-                  else
-                    update path Unknown tree
+                  ((if length position <= depth + 1 then
+                      refine_tree path position tree
+                    else
+                      update path Unknown tree),
+                   decided)
           val tests' = tests + 1
         in
-          if is_unevaluated (value_of tree') then loop tree' tests'
-          else (tree', tests')
+          if is_unevaluated (value_of tree') then loop tree' tests' decided'
+          else (tree', tests', decided')
         end
     in
-      loop initial_tree 0
+      loop initial_tree 0 0
     end
 
   fun is_false (Eval {result = false, ...}) = true
@@ -907,22 +926,23 @@ structure Refute_Narrow = struct
 
   fun refute_pnf genuine_only depth evaluate initial_tree =
     let
-      val (tree, tests) =
+      val (tree, tests, decided) =
         refute evaluate genuine_only depth initial_tree
     in
       case value_of tree of
           Eval {result = false, potential} =>
             PnfCounterexample
               {genuine = not potential, example = example_of 0 tree,
-               tree = tree, tests = tests}
+               tree = tree, tests = tests, decided = decided}
         | truth => PnfExhausted
-            {truth = truth, tree = tree, tests = tests,
+            {truth = truth, tree = tree, tests = tests, decided = decided,
              complete = pnf_complete tree}
     end
 
   fun refute_pnf_avoiding genuine_only depth evaluate accept initial_tree =
     let
-      val (tree, tests) = refute evaluate genuine_only depth initial_tree
+      val (tree, tests, decided) =
+        refute evaluate genuine_only depth initial_tree
       val selected = ref (NONE : (example * bool) option)
       fun select (example, genuine) =
         if (not genuine_only orelse genuine) andalso
@@ -937,12 +957,12 @@ structure Refute_Narrow = struct
                  SOME (example, genuine) =>
                    PnfCounterexample
                      {genuine = genuine, example = example, tree = tree,
-                      tests = tests}
+                      tests = tests, decided = decided}
                | NONE => PnfExhausted
                    {truth = value_of tree, tree = tree, tests = tests,
-                    complete = pnf_complete tree})
+                    decided = decided, complete = pnf_complete tree})
         | truth => PnfExhausted
-            {truth = truth, tree = tree, tests = tests,
+            {truth = truth, tree = tree, tests = tests, decided = decided,
              complete = pnf_complete tree}
     end
 

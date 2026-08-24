@@ -90,7 +90,8 @@ external compiler.
 
 - val _ = quickcheck ``(n : num) < 3``;
 > Refute found a counterexample
-    (backend: exhaustive, substrate: compute, size 3, 0.0s):
+    (backend: exhaustive, substrate: compute, size 3, 0.0s,
+     assumptions satisfied 4, conclusion evaluated 4):
     n = 3
   Certified: |- ~!n. n < 3
 \end{verbatim}
@@ -111,7 +112,8 @@ external compiler.
 
     - val _ = quickcheck ``(n : num) < 3``;
     > Refute found a counterexample
-        (backend: exhaustive, substrate: compute, size 3, 0.0s):
+        (backend: exhaustive, substrate: compute, size 3, 0.0s,
+         assumptions satisfied 4, conclusion evaluated 4):
         n = 3
       Certified: ⊢ ¬∀n. n < 3
 ```
@@ -139,7 +141,18 @@ datatype outcome =
 
 A `counterexample` records its `backend`, execution `substrate`,
 `certainty`, free-variable `bindings`, requested `evals`, optional
-certificate, optional finite `scope` and model, and statistics.
+certificate, optional finite `scope` and model, and statistics.  On a
+Quickcheck backend (`exhaustive`, `random`, `narrowing`), the statistics
+and, for an `Unknown` result, the reasons report how many candidates had
+every `Guard`/`SmartGuard`/`Split`/`Bind` premise satisfied and how many
+of those went on to have their conclusion evaluated, as "assumptions
+satisfied" and "conclusion evaluated" counts.  A run where every
+candidate failed its premises -- so the conclusion was never actually
+tested -- otherwise looks identical to a real search that tried
+everything and found nothing; the counts tell the two apart.  `Compute`
+and `NativeSML` count every candidate for real; `Cv` runs its search as
+one compiled call with no room for incremental counting, so it always
+omits the counts rather than fabricate them.
 `NoCounterexample` means that a selected search covered the whole relevant
 space: no counterexample is possible at any larger size.  The result is
 decisive and stops the concurrent backend pool.  A clean fixed-bound search
@@ -435,7 +448,8 @@ same bound and reports an incomplete no-hit result.
     ``ALL_DISTINCT (xs : bool list) ==> LENGTH xs < 1``;
 (* temporary compilation messages omitted *)
 > Refute found a counterexample
-    (backend: exhaustive, substrate: compute, size 1, 0.075s):
+    (backend: exhaustive, substrate: compute, size 1, 0.074s,
+     assumptions satisfied 2, conclusion evaluated 2):
     xs = [T]
   Certified: |- ~!xs. ALL_DISTINCT xs ==> LENGTH xs < 1
 \end{verbatim}
@@ -456,7 +470,8 @@ same bound and reports an incomplete no-hit result.
         ``ALL_DISTINCT (xs : bool list) ==> LENGTH xs < 1``;
     (* temporary compilation messages omitted *)
     > Refute found a counterexample
-        (backend: exhaustive, substrate: compute, size 1, 0.075s):
+        (backend: exhaustive, substrate: compute, size 1, 0.074s,
+         assumptions satisfied 2, conclusion evaluated 2):
         xs = [T]
       Certified: ⊢ ¬∀xs. ALL_DISTINCT xs ⇒ LENGTH xs < 1
 ```

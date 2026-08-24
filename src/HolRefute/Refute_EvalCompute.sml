@@ -216,6 +216,30 @@ structure Refute_EvalCompute = struct
       val complete = ref (not (Refute_Eval.plan_uses_enum plan))
       val match_failures = ref 0
       val tests = ref 0
+      (* [candidates_generated] counts every candidate reaching a terminal
+         decision, exactly once, on whichever branch ends it without
+         recursing further: a Test visit, a Guard rejection (false, or
+         given up on stuck), a SmartGuard rejection (compiled-relation
+         empty result, ungrounded inputs, or -- on the eval_boolean
+         fallback -- false or given up on stuck, mirroring Guard), an
+         Enum branch whose inputs were not yet ground or that could not
+         match a generated value, a Bind whose value computation got
+         stuck (fallback-less or given up on stuck), or a Split that
+         could not classify its scrutinee, found no matching branch, or
+         could not even evaluate its scrutinee.  A branch that recurses
+         (visits [next]/[cont]) never increments here itself -- the
+         recursive visit's own terminal branch does, so nothing is
+         double-counted.  [Prune] is excluded: the planner already knows
+         that branch can never fire, so nothing was generated to count.
+         [assumption_satisfied] counts only Test visits with [genuine]
+         true -- no earlier Guard/SmartGuard/Bind/Split step was stuck --
+         since a Test can be reached with an undecided premise on the
+         genuine-only-false recovery path.  [conclusion_evaluated] further
+         excludes IsStuck results, keeping conclusions <= assumptions
+         <= candidates. *)
+      val candidates_generated = ref 0
+      val assumption_satisfied = ref 0
+      val conclusion_evaluated = ref 0
 
       fun candidate env genuine =
         let
@@ -233,8 +257,17 @@ structure Refute_EvalCompute = struct
           | Test tm =>
               let
                 val _ = tests := !tests + 1
+                val _ = candidates_generated := !candidates_generated + 1
+                val _ =
+                  if genuine then
+                    assumption_satisfied := !assumption_satisfied + 1
+                  else ()
                 val result = eval_boolean env tm
                 val _ = trace_candidate env result
+                val _ =
+                  if genuine andalso result <> IsStuck then
+                    conclusion_evaluated := !conclusion_evaluated + 1
+                  else ()
               in
                 case result of
                     IsTrue => Continue
@@ -250,10 +283,14 @@ structure Refute_EvalCompute = struct
           | Guard (tm, next) =>
               (case eval_boolean env tm of
                    IsTrue => visit env genuine next
-                 | IsFalse => Continue
+                 | IsFalse =>
+                     (candidates_generated := !candidates_generated + 1;
+                      Continue)
                  | IsStuck =>
                      (complete := false;
-                      if genuine_only then Continue
+                      if genuine_only then
+                        (candidates_generated := !candidates_generated + 1;
+                         Continue)
                       else visit env false next))
           | SmartGuard {predicate, version, cont} =>
               (case smart_guard_program programs predicate version of
@@ -268,17 +305,27 @@ structure Refute_EvalCompute = struct
                        if List.all Option.isSome inputs then
                          if null (enum_values program
                                     (List.map valOf inputs)) then
-                           Continue
+                           (candidates_generated :=
+                              !candidates_generated + 1;
+                            Continue)
                          else visit env genuine cont
-                       else Continue
+                       else
+                         (candidates_generated := !candidates_generated + 1;
+                          Continue)
                      end
                  | NONE =>
                      (case eval_boolean env predicate of
                           IsTrue => visit env genuine cont
-                        | IsFalse => Continue
+                        | IsFalse =>
+                            (candidates_generated :=
+                               !candidates_generated + 1;
+                             Continue)
                         | IsStuck =>
                             (complete := false;
-                             if genuine_only then Continue
+                             if genuine_only then
+                               (candidates_generated :=
+                                  !candidates_generated + 1;
+                                Continue)
                              else visit env false cont)))
           | Enum {rel, mode, ins, outs, cont, ...} =>
               let
@@ -292,9 +339,14 @@ structure Refute_EvalCompute = struct
                       (fn values =>
                         case match_enum_terms env outs values of
                             SOME extended => visit extended genuine cont
-                          | NONE => Continue)
+                          | NONE =>
+                              (candidates_generated :=
+                                 !candidates_generated + 1;
+                               Continue))
                   end
-                else Continue
+                else
+                  (candidates_generated := !candidates_generated + 1;
+                   Continue)
               end
           | Bind (variable, tm, fallback, next) =>
               (case eval_rhs env tm of
@@ -303,9 +355,15 @@ structure Refute_EvalCompute = struct
                  | NONE =>
                      (complete := false;
                       case fallback of
-                          NONE => Continue
+                          NONE =>
+                            (candidates_generated :=
+                               !candidates_generated + 1;
+                             Continue)
                         | SOME alternative =>
-                            if genuine_only then Continue
+                            if genuine_only then
+                              (candidates_generated :=
+                                 !candidates_generated + 1;
+                               Continue)
                             else visit env false alternative))
           | Split (tm, branches) =>
               (case eval_rhs env tm of
@@ -314,6 +372,7 @@ structure Refute_EvalCompute = struct
                           NONE =>
                             (complete := false;
                              match_failures := !match_failures + 1;
+                             candidates_generated := !candidates_generated + 1;
                              Continue)
                         | SOME (constructor, args) =>
                             (case List.find (fn (expected, variables, _) =>
@@ -321,7 +380,10 @@ structure Refute_EvalCompute = struct
                               length variables = length args) branches of
                                  (* A partial split is the false constructor
                                     premise, not an evaluator failure. *)
-                                 NONE => Continue
+                                 NONE =>
+                                   (candidates_generated :=
+                                      !candidates_generated + 1;
+                                    Continue)
                                | SOME (_, variables, next) =>
                                    visit
                                      (ListPair.zip (variables, args) @ env)
@@ -329,6 +391,7 @@ structure Refute_EvalCompute = struct
                  | NONE =>
                      (complete := false;
                       match_failures := !match_failures + 1;
+                      candidates_generated := !candidates_generated + 1;
                       Continue))
           | Gen (variable, next) =>
               gen visit complete env genuine variable next
@@ -338,7 +401,10 @@ structure Refute_EvalCompute = struct
         complete = !complete,
         stats = [
           ("tests", !tests),
-          ("match_failures", !match_failures)] }
+          ("match_failures", !match_failures),
+          ("assumption_satisfied", !assumption_satisfied),
+          ("conclusion_evaluated", !conclusion_evaluated),
+          ("candidates_generated", !candidates_generated)] }
     end
 
   fun exhaustive_compile (config : Refute_Core.config) plans programs =
@@ -642,6 +708,9 @@ structure Refute_EvalCompute = struct
           val plan = List.nth (plans, card - 1)
           val tests = ref 0
           val match_failures = ref 0
+          val assumption_satisfied = ref 0
+          val conclusion_evaluated = ref 0
+          val candidates_generated = ref 0
           val all_complete = ref true
 
           fun attempt 0 = Exhausted {complete = !all_complete}
@@ -653,6 +722,12 @@ structure Refute_EvalCompute = struct
                   val _ = tests := !tests + stat "tests" stats
                   val _ = match_failures := !match_failures +
                     stat "match_failures" stats
+                  val _ = assumption_satisfied := !assumption_satisfied +
+                    stat "assumption_satisfied" stats
+                  val _ = conclusion_evaluated := !conclusion_evaluated +
+                    stat "conclusion_evaluated" stats
+                  val _ = candidates_generated := !candidates_generated +
+                    stat "candidates_generated" stats
                   val _ = all_complete := (!all_complete andalso complete)
                 in
                   case result of
@@ -666,7 +741,10 @@ structure Refute_EvalCompute = struct
                   | Fail reason => GaveUp reason)
           val _ = last_stats := [
             ("tests", !tests),
-            ("match_failures", !match_failures)]
+            ("match_failures", !match_failures),
+            ("assumption_satisfied", !assumption_satisfied),
+            ("conclusion_evaluated", !conclusion_evaluated),
+            ("candidates_generated", !candidates_generated)]
         in
           result
         end

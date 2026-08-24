@@ -1573,7 +1573,13 @@ structure Refute_Core = struct
       val fields =
         [ Option.map (fn value => "size " ^ Int.toString value)
             (lookup_stat "size" stats),
-          msec ]
+          msec,
+          Option.map (fn value =>
+            "assumptions satisfied " ^ Int.toString value)
+            (lookup_stat "assumption_satisfied" stats),
+          Option.map (fn value =>
+            "conclusion evaluated " ^ Int.toString value)
+            (lookup_stat "conclusion_evaluated" stats) ]
       val present = List.mapPartial (fn value => value) fields
     in
       if null present then "" else ", " ^ String.concatWith ", " present

@@ -25,7 +25,10 @@ structure Refute_EvalSML = struct
       table : int,
       state : IntInf.int,
       tests : int,
-      match_failures : int }
+      match_failures : int,
+      assumption_satisfied : int,
+      conclusion_evaluated : int,
+      candidates_generated : int }
   type generated_dispatch =
     int -> bool -> int -> int -> IntInf.int -> generated_answer
 
@@ -468,7 +471,11 @@ structure Refute_EvalSML = struct
                   val _ = state := #state answer
                   val _ = last_stats :=
                     [("tests", #tests answer),
-                     ("match_failures", #match_failures answer)]
+                     ("match_failures", #match_failures answer),
+                     ("assumption_satisfied", #assumption_satisfied answer),
+                     ("conclusion_evaluated", #conclusion_evaluated answer),
+                     ("candidates_generated",
+                       #candidates_generated answer)]
                 in
                   case #hit answer of
                       NONE => Refute_Eval.Exhausted

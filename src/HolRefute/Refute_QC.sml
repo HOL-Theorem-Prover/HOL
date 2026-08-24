@@ -1419,15 +1419,41 @@ structure Refute_QC = struct
               val discarded = ref 0
               val gave_up = ref []
               val frontier = ref (NONE : (int * int) option)
+              (* Aggregated across every [one] call in this search (one
+                 call per schedule entry for exhaustive, one per random
+                 chunk, plus certification retries), so both the witness
+                 and the vacuity reason reflect the whole run, never a
+                 single call's sample. *)
+              val assumption_satisfied_total = ref 0
+              val conclusion_evaluated_total = ref 0
+              val candidates_generated_total = ref 0
+              (* False once any call's substrate did not report these
+                 counters at all (as opposed to reporting zero). *)
+              val counters_measured = ref true
               fun instance_for card = List.nth (instances, card - 1)
               fun stats_for size card msec =
-                !(#last_stats compiled) @
+                (List.filter (fn (key, _) =>
+                   key <> "assumption_satisfied" andalso
+                   key <> "conclusion_evaluated" andalso
+                   key <> "candidates_generated")
+                   (!(#last_stats compiled))) @
+                (if !counters_measured then
+                   [("assumption_satisfied", !assumption_satisfied_total),
+                    ("conclusion_evaluated", !conclusion_evaluated_total),
+                    ("candidates_generated", !candidates_generated_total)]
+                 else []) @
                 (if !discarded = 0 then []
                  else [("discarded", !discarded)]) @
                 [("size", size), ("card", card), ("msec", msec)]
               fun one (card, size) draws genuine_only ignored retry_budget =
                 let
                   val start = Time.now ()
+                  (* Cleared before every call: a substrate whose [run]
+                     leaves [last_stats] untouched on an exceptional exit
+                     (a deadline, a compile-time handler) must read back
+                     as "not measured this call", never the previous
+                     call's numbers. *)
+                  val _ = #last_stats compiled := []
                   val result = #run compiled
                     { genuine_only = genuine_only,
                       card = card,
@@ -1435,6 +1461,22 @@ structure Refute_QC = struct
                       draws = draws,
                       ignored = ignored }
                   val msec = elapsed_msec start
+                  val call_stats = !(#last_stats compiled)
+                  val _ =
+                    case (Refute_Core.lookup_stat
+                            "assumption_satisfied" call_stats,
+                          Refute_Core.lookup_stat
+                            "conclusion_evaluated" call_stats,
+                          Refute_Core.lookup_stat
+                            "candidates_generated" call_stats) of
+                        (SOME satisfied, SOME evaluated, SOME generated) =>
+                          (assumption_satisfied_total :=
+                             !assumption_satisfied_total + satisfied;
+                           conclusion_evaluated_total :=
+                             !conclusion_evaluated_total + evaluated;
+                           candidates_generated_total :=
+                             !candidates_generated_total + generated)
+                      | _ => counters_measured := false
                 in
                   case result of
                       Exhausted {complete = entry_complete} =>
@@ -1574,6 +1616,17 @@ structure Refute_QC = struct
               val generic_reason =
                 if is_random strategy then "random search exhausted"
                 else "search space not exhausted"
+              (* The vacuity signal: distinguishes a search that never
+                 reached a Test node (every candidate failed its
+                 premises) from one that genuinely exercised the
+                 conclusion, without being a certainty decision itself. *)
+              val counter_reason =
+                if !counters_measured then
+                  "assumption satisfied " ^
+                  Int.toString (!assumption_satisfied_total) ^
+                  ", conclusion evaluated " ^
+                  Int.toString (!conclusion_evaluated_total)
+                else "candidate counters unavailable on this substrate"
             in
                   if not (null (!counterexamples)) then
                     Refute_Core.Counterexample (rev (!counterexamples))
@@ -1584,7 +1637,8 @@ structure Refute_QC = struct
                       | NONE =>
                           if !complete then Refute_Core.NoCounterexample
                           else Refute_Core.Unknown
-                            (generic_reason :: !gave_up @ frontier_reason)
+                            (generic_reason :: !gave_up @ frontier_reason @
+                             [counter_reason])
                 end
               val body_result = Exn.capture selected_body ()
               val close_result = bounded_close (#close compiled)

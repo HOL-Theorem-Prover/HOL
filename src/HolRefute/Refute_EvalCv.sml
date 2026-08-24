@@ -1253,6 +1253,18 @@ structure Refute_EvalCv = struct
        application = application}
     end
 
+  (* A separate, additive counting pass over the same plan -- summing
+     (assumption_satisfied, match_failures) over every leaf the real
+     search would visit -- was tried and reverted: unlike the real
+     search, a count cannot stop early, so on a goal whose real search
+     finds its answer quickly by short-circuiting (e.g. an early
+     counterexample in a large arithmetic domain such as word8 x
+     word8), the mandatory full-domain count can cost far more than the
+     search itself and starve it of the shared deadline, turning a
+     genuine counterexample into a timeout -- a diagnostic is not
+     allowed to change a verdict.  Cv's counters are therefore left
+     absent on every shape, not only Enum and Random; see README. *)
+
   fun define_exhaustive_enum prefix payloads plan generators programs
       enum_fuel =
     let
@@ -1651,11 +1663,15 @@ structure Refute_EvalCv = struct
         let
           val _ = start ()
           val result = runner (#card input) input
-          val tests =
-            Refute_Eval.ground_strategy strategy
-              {exhaustive = fn () => 0,
-               random = fn _ => Int.max (0, #draws input)}
-          val _ = last_stats := [("tests", tests), ("match_failures", 0)]
+          (* No candidate counters on any Cv shape: a mandatory
+             full-domain count cannot stop early the way the real
+             search does, so on a goal the real search settles quickly
+             by short-circuiting, the count could cost far more than
+             the search and starve it of the shared deadline -- a
+             diagnostic must never be able to change a verdict.  Absent
+             here, not fictional: [lookup_stat] reports "not present"
+             rather than a fabricated zero. *)
+          val _ = last_stats := []
         in
           result
         end
