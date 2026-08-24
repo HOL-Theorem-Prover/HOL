@@ -1272,8 +1272,8 @@ Proof
      PURE_REWRITE_TAC [SUBSET_DEF,IN_INSERT] THEN
      REPEAT STRIP_TAC THEN EQ_TAC THENL
      [REPEAT STRIP_TAC THEN
-      let fun tac th g = SUBST_ALL_TAC th g
-                         handle  _ => STRIP_ASSUME_TAC th g
+      let fun tac th g c = SUBST_ALL_TAC th g c
+                           handle  _ => STRIP_ASSUME_TAC th g c
       in RES_THEN (STRIP_THM_THEN tac) THEN RES_TAC
       end,
       REPEAT STRIP_TAC THEN DISJ2_TAC THEN
@@ -1345,7 +1345,8 @@ Proof
      PURE_REWRITE_TAC [EXTENSION,IN_DELETE] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
      [FIRST_ASSUM ACCEPT_TAC,
-      FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g handle _ => NO_TAC g)
+      FIRST_ASSUM (fn th => fn g => fn c =>
+                  SUBST_ALL_TAC th g c handle _ => NO_TAC g c)
       THEN RES_TAC,
       RES_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC]
 QED
@@ -1473,7 +1474,8 @@ Proof
      REWRITE_TAC [EXTENSION,IN_DELETE,IN_INSERT] THEN
      REPEAT GEN_TAC THEN EQ_TAC THENL
      [DISCH_THEN (STRIP_THM_THEN MP_TAC) THEN DISCH_TAC THEN
-      let fun tac th g = SUBST_ALL_TAC th g handle _ => ASSUME_TAC th g
+      let fun tac th g c =
+              SUBST_ALL_TAC th g c handle _ => ASSUME_TAC th g c
       in DISCH_THEN (STRIP_THM_THEN tac) THENL
          [ASM_REWRITE_TAC [IN_INSERT],
          COND_CASES_TAC THEN ASM_REWRITE_TAC [IN_DELETE,IN_INSERT]]
@@ -3097,8 +3099,9 @@ Proof
      [REWRITE_TAC [INTER_EMPTY,FINITE_EMPTY],
       REWRITE_TAC [INSERT_INTER] THEN GEN_TAC THEN
       COND_CASES_TAC THENL
-      [FIRST_ASSUM (fn th => fn g => ASSUME_TAC (SPEC (“t:'a set”) th) g
-                                     handle _ => NO_TAC g) THEN
+      [FIRST_ASSUM (fn th => fn g => fn c =>
+                       ASSUME_TAC (SPEC (“t:'a set”) th) g c
+                       handle _ => NO_TAC g c) THEN
        IMP_RES_TAC FINITE_INSERT THEN
        FIRST_ASSUM MATCH_ACCEPT_TAC,
        FIRST_ASSUM MATCH_ACCEPT_TAC]]
@@ -3461,7 +3464,8 @@ Proof
        IMP_RES_TAC CARD_DEF THEN ASM_REWRITE_TAC [IN_DELETE,SUC_SUB1] THEN
        COND_CASES_TAC THEN ASM_REWRITE_TAC [] THEN
        STRIP_ASSUME_TAC (SPEC (“CARD(s:'a set)”) num_CASES) THENL
-       [let fun tac th g = SUBST_ALL_TAC th g handle _ => ASSUME_TAC th g
+       [let fun tac th g c =
+                SUBST_ALL_TAC th g c handle _ => ASSUME_TAC th g c
         in REPEAT_GTCL IMP_RES_THEN tac CARD_EQ_0
         end THEN IMP_RES_TAC NOT_IN_EMPTY,
         ASM_REWRITE_TAC [SUC_SUB1]]]]
@@ -3559,7 +3563,8 @@ Proof
      IMP_RES_THEN (IMP_RES_THEN MP_TAC) CARD_SUBSET THEN
      PURE_ONCE_REWRITE_TAC [LESS_OR_EQ] THEN
      DISCH_THEN (STRIP_THM_THEN
-       (fn th => fn g => ACCEPT_TAC th g handle _ => MP_TAC th g)) THEN
+       (fn th => fn g => fn c =>
+           ACCEPT_TAC th g c handle _ => MP_TAC th g c)) THEN
      IMP_RES_THEN STRIP_ASSUME_TAC PSUBSET_INSERT_SUBSET THEN
      IMP_RES_THEN (IMP_RES_THEN MP_TAC) CARD_SUBSET THEN
      IMP_RES_TAC INSERT_SUBSET THEN
@@ -4575,7 +4580,8 @@ Proof
    GEN_TAC THEN EQ_TAC THENL
    [REPEAT STRIP_TAC THENL
     [FIRST_ASSUM ACCEPT_TAC,
-     FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g handle _ => NO_TAC g)
+     FIRST_ASSUM (fn th => fn g => fn c =>
+                  SUBST_ALL_TAC th g c handle _ => NO_TAC g c)
      THEN RES_TAC],
     REPEAT STRIP_TAC THEN RES_TAC THEN
     ASSUME_TAC (SPEC (“s:'a set”) SUBSET_REFL) THEN
