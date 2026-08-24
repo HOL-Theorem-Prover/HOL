@@ -417,28 +417,62 @@ val _ = check_theorem_set "refute_unfold"
 val _ = tprint "Refute bounded-quantifier support"
 
 val bounded_quantifier_shapes =
-  [(bounded_forall_less,
+  [("forall-less", bounded_forall_less,
     ``(∀n : num. n < e ⇒ P n) ⇔ EVERY P (COUNT_LIST e)``),
-   (bounded_exists_less,
+   ("exists-less", bounded_exists_less,
     ``(∃n : num. n < e ∧ P n) ⇔ EXISTS P (COUNT_LIST e)``),
-   (bounded_forall_leq,
+   ("forall-leq", bounded_forall_leq,
     ``(∀n : num. n ≤ e ⇒ P n) ⇔ EVERY P (COUNT_LIST (e + 1))``),
-   (bounded_exists_leq,
+   ("exists-leq", bounded_exists_leq,
     ``(∃n : num. n ≤ e ∧ P n) ⇔ EXISTS P (COUNT_LIST (e + 1))``),
-   (bounded_forall_in_count,
+   ("forall-in-count", bounded_forall_in_count,
     ``(∀n : num. n IN count e ⇒ P n) ⇔ EVERY P (COUNT_LIST e)``),
-   (bounded_exists_in_count,
+   ("exists-in-count", bounded_exists_in_count,
     ``(∃n : num. n IN count e ∧ P n) ⇔ EXISTS P (COUNT_LIST e)``),
-   (bounded_forall_mem,
+   ("forall-mem", bounded_forall_mem,
     ``(∀x : 'a. MEM x l ⇒ P x) ⇔ EVERY P l``),
-   (bounded_exists_mem,
-    ``(∃x : 'a. MEM x l ∧ P x) ⇔ EXISTS P l``)]
+   ("exists-mem", bounded_exists_mem,
+    ``(∃x : 'a. MEM x l ∧ P x) ⇔ EXISTS P l``),
+   ("forall-interval-leq-lt", bounded_forall_interval_leq_lt,
+    ``(∀n : num. lo ≤ n ∧ n < hi ⇒ P n) ⇔ EVERY P [lo ..< hi]``),
+   ("exists-interval-leq-lt", bounded_exists_interval_leq_lt,
+    ``(∃n : num. lo ≤ n ∧ n < hi ∧ P n) ⇔ EXISTS P [lo ..< hi]``),
+   ("forall-interval-leq-lt-swap", bounded_forall_interval_leq_lt_swap,
+    ``(∀n : num. n < hi ∧ lo ≤ n ⇒ P n) ⇔ EVERY P [lo ..< hi]``),
+   ("exists-interval-leq-lt-swap", bounded_exists_interval_leq_lt_swap,
+    ``(∃n : num. n < hi ∧ lo ≤ n ∧ P n) ⇔ EXISTS P [lo ..< hi]``),
+   ("forall-interval-leq-leq", bounded_forall_interval_leq_leq,
+    ``(∀n : num. lo ≤ n ∧ n ≤ hi ⇒ P n) ⇔ EVERY P [lo .. hi]``),
+   ("exists-interval-leq-leq", bounded_exists_interval_leq_leq,
+    ``(∃n : num. lo ≤ n ∧ n ≤ hi ∧ P n) ⇔ EXISTS P [lo .. hi]``),
+   ("forall-interval-leq-leq-swap", bounded_forall_interval_leq_leq_swap,
+    ``(∀n : num. n ≤ hi ∧ lo ≤ n ⇒ P n) ⇔ EVERY P [lo .. hi]``),
+   ("exists-interval-leq-leq-swap", bounded_exists_interval_leq_leq_swap,
+    ``(∃n : num. n ≤ hi ∧ lo ≤ n ∧ P n) ⇔ EXISTS P [lo .. hi]``),
+   ("forall-interval-lt-lt", bounded_forall_interval_lt_lt,
+    ``(∀n : num. lo < n ∧ n < hi ⇒ P n) ⇔ EVERY P [lo + 1 ..< hi]``),
+   ("exists-interval-lt-lt", bounded_exists_interval_lt_lt,
+    ``(∃n : num. lo < n ∧ n < hi ∧ P n) ⇔ EXISTS P [lo + 1 ..< hi]``),
+   ("forall-interval-lt-lt-swap", bounded_forall_interval_lt_lt_swap,
+    ``(∀n : num. n < hi ∧ lo < n ⇒ P n) ⇔ EVERY P [lo + 1 ..< hi]``),
+   ("exists-interval-lt-lt-swap", bounded_exists_interval_lt_lt_swap,
+    ``(∃n : num. n < hi ∧ lo < n ∧ P n) ⇔ EXISTS P [lo + 1 ..< hi]``),
+   ("forall-interval-lt-leq", bounded_forall_interval_lt_leq,
+    ``(∀n : num. lo < n ∧ n ≤ hi ⇒ P n) ⇔ EVERY P [lo + 1 .. hi]``),
+   ("exists-interval-lt-leq", bounded_exists_interval_lt_leq,
+    ``(∃n : num. lo < n ∧ n ≤ hi ∧ P n) ⇔ EXISTS P [lo + 1 .. hi]``),
+   ("forall-interval-lt-leq-swap", bounded_forall_interval_lt_leq_swap,
+    ``(∀n : num. n ≤ hi ∧ lo < n ⇒ P n) ⇔ EVERY P [lo + 1 .. hi]``),
+   ("exists-interval-lt-leq-swap", bounded_exists_interval_lt_leq_swap,
+    ``(∃n : num. n ≤ hi ∧ lo < n ∧ P n) ⇔ EXISTS P [lo + 1 .. hi]``)]
 
-val _ = require_msg (check_result (fn () =>
-  List.all (fn (theorem, expected) =>
-    Term.aconv (Thm.concl theorem) expected) bounded_quantifier_shapes))
-  (fn () => "a bounded-quantifier theorem statement changed")
-  (fn () => ()) ()
+fun check_bounded_quantifier_shape (name, theorem, expected) =
+  require_msg (check_result (fn () =>
+    Term.aconv (Thm.concl theorem) expected))
+    (fn () => name ^ " bounded-quantifier theorem statement changed")
+    (fn () => ()) ()
+
+val _ = List.app check_bounded_quantifier_shape bounded_quantifier_shapes
 
 fun bounded_quantifier_evals (rewrite, term, expected) =
   let
@@ -466,7 +500,72 @@ val bounded_quantifier_eval_cases =
    ("forall-mem", bounded_forall_mem,
     ``∀x : num. MEM x [0; 2] ⇒ x < 3``, boolSyntax.T),
    ("exists-mem", bounded_exists_mem,
-    ``∃x : num. MEM x [0; 2] ∧ x = 1``, boolSyntax.F)]
+    ``∃x : num. MEM x [0; 2] ∧ x = 1``, boolSyntax.F),
+   (* Boundary correctness: for each strictness combination, check
+      membership of both endpoints [2, 5] against a [2 ..< 5]/[2 .. 5]/
+      [3 ..< 5]/[3 .. 5] range.  An included endpoint breaks [n <> lo]/
+      [n <> hi] (result F); an excluded endpoint leaves it vacuously
+      true (result T). *)
+   ("forall-interval-leq-lt-lo", bounded_forall_interval_leq_lt,
+    ``∀n : num. 2 ≤ n ∧ n < 5 ⇒ n ≠ 2``, boolSyntax.F),
+   ("forall-interval-leq-lt-hi", bounded_forall_interval_leq_lt,
+    ``∀n : num. 2 ≤ n ∧ n < 5 ⇒ n ≠ 5``, boolSyntax.T),
+   ("exists-interval-leq-lt-lo", bounded_exists_interval_leq_lt,
+    ``∃n : num. 2 ≤ n ∧ n < 5 ∧ n = 2``, boolSyntax.T),
+   ("exists-interval-leq-lt-hi", bounded_exists_interval_leq_lt,
+    ``∃n : num. 2 ≤ n ∧ n < 5 ∧ n = 5``, boolSyntax.F),
+   ("forall-interval-leq-leq-lo", bounded_forall_interval_leq_leq,
+    ``∀n : num. 2 ≤ n ∧ n ≤ 5 ⇒ n ≠ 2``, boolSyntax.F),
+   ("forall-interval-leq-leq-hi", bounded_forall_interval_leq_leq,
+    ``∀n : num. 2 ≤ n ∧ n ≤ 5 ⇒ n ≠ 5``, boolSyntax.F),
+   ("exists-interval-leq-leq-lo", bounded_exists_interval_leq_leq,
+    ``∃n : num. 2 ≤ n ∧ n ≤ 5 ∧ n = 2``, boolSyntax.T),
+   ("exists-interval-leq-leq-hi", bounded_exists_interval_leq_leq,
+    ``∃n : num. 2 ≤ n ∧ n ≤ 5 ∧ n = 5``, boolSyntax.T),
+   ("forall-interval-lt-lt-lo", bounded_forall_interval_lt_lt,
+    ``∀n : num. 2 < n ∧ n < 5 ⇒ n ≠ 2``, boolSyntax.T),
+   ("forall-interval-lt-lt-hi", bounded_forall_interval_lt_lt,
+    ``∀n : num. 2 < n ∧ n < 5 ⇒ n ≠ 5``, boolSyntax.T),
+   ("exists-interval-lt-lt-lo", bounded_exists_interval_lt_lt,
+    ``∃n : num. 2 < n ∧ n < 5 ∧ n = 2``, boolSyntax.F),
+   ("exists-interval-lt-lt-hi", bounded_exists_interval_lt_lt,
+    ``∃n : num. 2 < n ∧ n < 5 ∧ n = 5``, boolSyntax.F),
+   ("forall-interval-lt-leq-lo", bounded_forall_interval_lt_leq,
+    ``∀n : num. 2 < n ∧ n ≤ 5 ⇒ n ≠ 2``, boolSyntax.T),
+   ("forall-interval-lt-leq-hi", bounded_forall_interval_lt_leq,
+    ``∀n : num. 2 < n ∧ n ≤ 5 ⇒ n ≠ 5``, boolSyntax.F),
+   ("exists-interval-lt-leq-lo", bounded_exists_interval_lt_leq,
+    ``∃n : num. 2 < n ∧ n ≤ 5 ∧ n = 2``, boolSyntax.F),
+   ("exists-interval-lt-leq-hi", bounded_exists_interval_lt_leq,
+    ``∃n : num. 2 < n ∧ n ≤ 5 ∧ n = 5``, boolSyntax.T),
+   (* Swapped conjunct order: same boundary readings via the [_swap]
+      theorems, confirming both guard orders reach the same range. *)
+   ("forall-interval-leq-lt-swap", bounded_forall_interval_leq_lt_swap,
+    ``∀n : num. n < 5 ∧ 2 ≤ n ⇒ n ≠ 2``, boolSyntax.F),
+   ("forall-interval-leq-leq-swap", bounded_forall_interval_leq_leq_swap,
+    ``∀n : num. n ≤ 5 ∧ 2 ≤ n ⇒ n ≠ 2``, boolSyntax.F),
+   ("forall-interval-lt-lt-swap", bounded_forall_interval_lt_lt_swap,
+    ``∀n : num. n < 5 ∧ 2 < n ⇒ n ≠ 2``, boolSyntax.T),
+   ("forall-interval-lt-leq-swap", bounded_forall_interval_lt_leq_swap,
+    ``∀n : num. n ≤ 5 ∧ 2 < n ⇒ n ≠ 2``, boolSyntax.T),
+   (* Exists half of the same swap coverage, [lo] endpoint only, mirroring
+      the [forall-interval-*-swap] cases above. *)
+   ("exists-interval-leq-lt-swap", bounded_exists_interval_leq_lt_swap,
+    ``∃n : num. n < 5 ∧ 2 ≤ n ∧ n = 2``, boolSyntax.T),
+   ("exists-interval-leq-leq-swap", bounded_exists_interval_leq_leq_swap,
+    ``∃n : num. n ≤ 5 ∧ 2 ≤ n ∧ n = 2``, boolSyntax.T),
+   ("exists-interval-lt-lt-swap", bounded_exists_interval_lt_lt_swap,
+    ``∃n : num. n < 5 ∧ 2 < n ∧ n = 2``, boolSyntax.F),
+   ("exists-interval-lt-leq-swap", bounded_exists_interval_lt_leq_swap,
+    ``∃n : num. n ≤ 5 ∧ 2 < n ∧ n = 2``, boolSyntax.F),
+   (* Empty range: [hi <= lo] truncates to [[]] (num subtraction), so a
+      universal is vacuously true and an existential is false -- a
+      consequence of [listRangeLHI]'s definition, not a hand-written
+      special case. *)
+   ("forall-interval-empty", bounded_forall_interval_leq_lt,
+    ``∀n : num. 5 ≤ n ∧ n < 2 ⇒ n = 999``, boolSyntax.T),
+   ("exists-interval-empty", bounded_exists_interval_leq_lt,
+    ``∃n : num. 5 ≤ n ∧ n < 2 ∧ n = 999``, boolSyntax.F)]
 
 fun check_bounded_quantifier_eval (name, rewrite, term, expected) =
   require_msg (check_result (fn () =>
@@ -477,6 +576,155 @@ fun check_bounded_quantifier_eval (name, rewrite, term, expected) =
 
 val _ = List.app check_bounded_quantifier_eval
   bounded_quantifier_eval_cases
+
+(* [has_bounded_quantifier] gates [Refute_Cert.eval_original]'s bounded
+   branch, and this is where the two worlds actually diverge: on an
+   interval goal plain compute evaluation is stuck (it returns the term
+   unchanged), while [eval_original] takes the branch and reduces to [F].
+   Both halves are asserted, the stuck one because it is the premise that
+   makes the branch necessary -- were computeLib ever to learn the shape,
+   this pin should go stale loudly rather than keep passing for a reason
+   that no longer holds.  A [REWRITE_CONV]-level pin cannot show the
+   branch is reached at all: it rewrites the theorem directly, bypassing
+   the recogniser. *)
+fun interval_eval_original_decides () =
+  let
+    val goal = ``∀n : num. 2 ≤ n ∧ n < 5 ⇒ n * n < 10``
+    val plain_is_stuck =
+      case Lib.total (computeLib.CBV_CONV (computeLib.the_compset ())) goal of
+          NONE => true
+        | SOME theorem =>
+            Term.aconv (boolSyntax.rhs (Thm.concl theorem)) goal
+    val branch_decides =
+      case Lib.total Refute_Cert.eval_original goal of
+          NONE => false
+        | SOME theorem =>
+            Term.aconv (boolSyntax.rhs (Thm.concl theorem)) boolSyntax.F
+  in
+    Refute_Core.has_bounded_quantifier goal andalso plain_is_stuck andalso
+    branch_decides
+  end
+
+val _ = require_msg (check_result interval_eval_original_decides) (fn () =>
+  "the interval recogniser did not gate eval_original's bounded branch, " ^
+  "or plain compute evaluation is no longer stuck on an interval goal")
+  (fn () => ()) ()
+
+(* End to end, the certificate for an interval goal.  This one does *not*
+   discriminate the recogniser -- [Refute_Cert]'s equality portfolio
+   reaches a certificate for this goal by another route, measured -- so it
+   pins the rewrite and the certification path, and the pin above is what
+   covers the recogniser.  The always-true antecedent keeps [n] out of the
+   witness environment, so [certify] cannot ground the interval quantifier
+   away by substitution before replay. *)
+fun interval_quantifier_certifies () =
+  let
+    val goal =
+      ``∀z : num. z = z ⇒ (∀n : num. 2 ≤ n ∧ n < 5 ⇒ n * n < 10)``
+    val config = Refute.upd_search Refute.QuickcheckBackends default_config
+  in
+    case Refute.refute config goal of
+        Counterexample
+          ({certainty = Genuine, cert = SOME theorem, ...} :: _) =>
+          Term.aconv (Thm.concl theorem) (boolSyntax.mk_neg goal)
+      | _ => false
+  end
+
+val _ = require_msg (check_result interval_quantifier_certifies) (fn () =>
+  "an offset-interval counterexample was not certified")
+  (fn () => ()) ()
+
+(* A numeric lower bound conjoined with [MEM] has no interval rewrite:
+   [bounded_forall_mem] needs its antecedent to be exactly [MEM n l], not
+   a conjunct of it.  [interval_pair] must use the numeric-only upper
+   bound, never the four-way one with [in_count]/[in_list] mixed in. *)
+fun mixed_interval_bound_declines () =
+  let
+    val goal = ``∀n : num. 2 ≤ n ∧ MEM n l ⇒ n < 10``
+    val declines = not (Refute_Core.has_bounded_quantifier goal)
+    val plain =
+      Lib.total (computeLib.CBV_CONV (computeLib.the_compset ())) goal
+    val via_eval_original = Lib.total Refute_Cert.eval_original goal
+    val agrees =
+      case (plain, via_eval_original) of
+          (SOME p, SOME e) =>
+            Term.aconv (boolSyntax.rhs (Thm.concl p))
+              (boolSyntax.rhs (Thm.concl e))
+        | (NONE, NONE) => true
+        | _ => false
+  in
+    declines andalso agrees
+  end
+
+val _ = require_msg (check_result mixed_interval_bound_declines) (fn () =>
+  "a numeric lower bound conjoined with MEM was accepted as an " ^
+  "interval, or eval_original diverged from plain evaluation on it")
+  (fn () => ()) ()
+
+(* A bound predicate must exclude the quantified variable from its other
+   side: [f n <= n] would otherwise read as a valid lower bound with
+   [lo := f n], even though higher-order matching can never instantiate
+   [lo] to a term mentioning the bound [n]. *)
+fun self_referential_bound_declines () =
+  let
+    val goal = ``∀n : num. f n ≤ n ∧ n < 10 ⇒ n < 20``
+    val declines = not (Refute_Core.has_bounded_quantifier goal)
+    val plain =
+      Lib.total (computeLib.CBV_CONV (computeLib.the_compset ())) goal
+    val via_eval_original = Lib.total Refute_Cert.eval_original goal
+    val agrees =
+      case (plain, via_eval_original) of
+          (SOME p, SOME e) =>
+            Term.aconv (boolSyntax.rhs (Thm.concl p))
+              (boolSyntax.rhs (Thm.concl e))
+        | (NONE, NONE) => true
+        | _ => false
+  in
+    declines andalso agrees
+  end
+
+val _ = require_msg (check_result self_referential_bound_declines) (fn () =>
+  "a self-referential lower bound was accepted as an interval, or " ^
+  "eval_original diverged from plain evaluation on it")
+  (fn () => ()) ()
+
+(* A bound that stays symbolic all the way through preprocessing -- the
+   shape "interval dependent bound" above pins for [compute_qc_gate] --
+   still reaches a decisive verdict, because search grounds the free
+   variables before evaluation and [listRangeLHI] then computes like any
+   other compset entry.  Measured: random QC certifies a genuine
+   counterexample.  [certify] closes over [lo], [l] and [k], free in the
+   goal, together with the goal's own [i], so the certificate negates a
+   four-variable prefix over the unchanged body; the prefix order is not
+   pinned, only its variable set. *)
+fun interval_dependent_bound_decides () =
+  let
+    val goal = ``∀i : num. lo ≤ i ∧ i < LENGTH l ⇒ EL i l ≤ k``
+    val (goal_variables, goal_body) = boolSyntax.strip_forall goal
+    val expected = goal_variables @ Term.free_vars goal
+    val config = Refute.upd_search Refute.QuickcheckBackends default_config
+    fun same_vars vs1 vs2 =
+      length vs1 = length vs2 andalso
+      List.all (fn v => List.exists (Term.aconv v) vs2) vs1
+  in
+    case Refute.refute config goal of
+        Counterexample
+          ({certainty = Genuine, cert = SOME theorem, ...} :: _) =>
+          let
+            val (variables, body) = boolSyntax.strip_forall
+              (boolSyntax.dest_neg (Thm.concl theorem))
+          in
+            null (Thm.hyp theorem) andalso
+            same_vars variables expected andalso
+            Term.aconv body goal_body
+          end
+      | _ => false
+  end
+
+val _ = require_msg (check_result interval_dependent_bound_decides) (fn () =>
+  "a goal with a non-ground interval bound did not reach a certified " ^
+  "genuine counterexample over the expected closure")
+  (fn () => ()) ()
 
 val _ = tprint "CoIndDefLib registry"
 val _ = require_msg (check_result (fn () =>
@@ -493,10 +741,12 @@ val same_string_set : string list -> string list -> bool = Lib.set_eq
 
 (* [sorting] is no longer a direct parent: [finite_map] already ancestors
    it (finite_mapScript.sml), so HOL4's minimal-parent computation folds
-   it in there instead once [finite_map] is itself a named ancestor. *)
+   it in there instead once [finite_map] is itself a named ancestor.
+   [listRange] is a direct parent because the offset-interval rewrites are
+   stated over [listRangeLHI]/[listRangeINC]. *)
 fun cv_ancestry_is_separate () =
   same_string_set (Theory.parents "refute")
-    ["real", "words", "rat", "finite_map"] andalso
+    ["real", "words", "rat", "finite_map", "listRange"] andalso
   same_string_set (Theory.parents "refute_cv") ["refute", "cv_std"] andalso
   not (Lib.mem "cv_std" (Theory.ancestry "refute"))
 
@@ -17875,7 +18125,26 @@ val bounded_preprocess_cases =
    ("dependent bound",
     ``(q : bool -> bool) (∀i : num. i < LENGTH l ⇒ EL i l ≤ k)``,
     ``(q : bool -> bool)
-        (EVERY (λi : num. EL i l ≤ k) (COUNT_LIST (LENGTH l)))``)]
+        (EVERY (λi : num. EL i l ≤ k) (COUNT_LIST (LENGTH l)))``),
+   ("forall interval",
+    ``(q : bool -> bool) (∀n : num. lo ≤ n ∧ n < hi ⇒ n < k)``,
+    ``(q : bool -> bool) (EVERY (λn : num. n < k) [lo ..< hi])``),
+   ("exists interval",
+    ``(q : bool -> bool) (∃n : num. lo ≤ n ∧ n < hi ∧ n = k)``,
+    ``(q : bool -> bool) (EXISTS (λn : num. n = k) [lo ..< hi])``),
+   ("forall interval swap",
+    ``(q : bool -> bool) (∀n : num. n < hi ∧ lo ≤ n ⇒ n < k)``,
+    ``(q : bool -> bool) (EVERY (λn : num. n < k) [lo ..< hi])``),
+   (* Non-literal bound, mirroring "dependent bound" above: [hi] is the
+      symbolic [LENGTH l], and the rewrite fires and clears [qc_gate]
+      exactly as [COUNT_LIST (LENGTH l)] already does -- the equivalence
+      holds with [lo]/[hi] free, so preprocessing never needs them
+      ground.  [[lo ..< LENGTH l]] not evaluating yet is a downstream
+      concern for whichever substrate later instantiates [l]. *)
+   ("interval dependent bound",
+    ``(q : bool -> bool) (∀i : num. lo ≤ i ∧ i < LENGTH l ⇒ EL i l ≤ k)``,
+    ``(q : bool -> bool)
+        (EVERY (λi : num. EL i l ≤ k) [lo ..< LENGTH l])``)]
 
 fun check_bounded_preprocess (name, input, expected) =
   let
@@ -25106,6 +25375,9 @@ val conformance_smoke_cases : conformance_case list =
 val conformance_full_cases : conformance_case list =
   [{name = "bounded natural quantifier", cfg = conform_cex_config,
     tm = ``(∀n : num. n < 3 ⇒ n * n < 4) ⇔ T``, inapplicable = []},
+   {name = "bounded interval quantifier", cfg = conform_cex_config,
+    tm = ``(∀n : num. 2 ≤ n ∧ n < 5 ⇒ n * n < 10) ⇔ T``,
+    inapplicable = []},
    {name = "reverse", cfg = conform_cex_config,
     tm = ``REVERSE (xs : num list) = xs``, inapplicable = []},
    {name = "natural subtraction", cfg = conform_cex_config,

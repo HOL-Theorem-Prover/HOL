@@ -987,6 +987,5 @@ scope-arbitrary-read defect this guard exists to close.  HolRefute reports
 `Unknown` instead and does not reproduce the imported bug.
 
 Recorded follow-ups are compute-hosted residual-inspection narrowing; full
-function flattening; higher-order and negative smart-generator modes; and
-offset interval rewrites such as `lo <= n /\ n < hi`.  These are not part
-of the current implementation.
+function flattening; and higher-order and negative smart-generator modes.
+These are not part of the current implementation.

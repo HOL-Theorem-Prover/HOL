@@ -394,11 +394,14 @@ selects, which the executable backends test as well.
 
 Refute rewrites executable bounded quantifiers before planning.  It
 supports the universal forms `!n. n < e ==> P n`, `!n. n <= e ==> P n`,
-`!n. n IN count e ==> P n`, and `!x. MEM x xs ==> P x`, and their
-existential conjunction duals.  The rewrites use `EVERY` or `EXISTS`, so a
-bound such as `LENGTH xs` may depend on another generated value.  Offset
-intervals such as `lo <= n /\ n < hi` are not recognized; neither they nor
-unrestricted quantifiers over infinite types become executable QC goals.
+`!n. n IN count e ==> P n`, `!x. MEM x xs ==> P x`, and the offset
+interval `!n. lo <= n /\ n < hi ==> P n` (with either conjunct order and
+either bound strict or non-strict), and their existential conjunction
+duals.  The rewrites use `EVERY` or `EXISTS`, so a bound such as
+`LENGTH xs` may depend on another generated value.  Unrestricted
+quantifiers over infinite types do not become executable QC goals.  The
+enumeration is materialised, so a very wide interval, such as
+`0 <= n /\ n < 1000000`, costs proportionally to its length.
 
 With `smart_quantifier = true`, premises are considered while the test
 plan is built rather than after every variable has been generated.
@@ -940,8 +943,6 @@ Counterexample search is bounded and incomplete.  In particular:
 
 * random exhaustion, smart-generator fuel exhaustion, and narrowing at a
   finite depth normally produce `Unknown`, not a proof of validity;
-* bounded-quantifier rewriting does not support offset intervals such as
-  `lo <= n /\ n < hi`;
 * ordinary QC requires executable terms and generators.  Unrestricted
   quantifiers over infinite types, choice, and unsupported constants may
   make a substrate inapplicable.  A datatype recursive beneath a function

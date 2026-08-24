@@ -747,7 +747,23 @@ structure Refute_Core = struct
       refuteTheory.bounded_forall_in_count,
       refuteTheory.bounded_exists_in_count,
       refuteTheory.bounded_forall_mem,
-      refuteTheory.bounded_exists_mem ]
+      refuteTheory.bounded_exists_mem,
+      refuteTheory.bounded_forall_interval_leq_lt,
+      refuteTheory.bounded_exists_interval_leq_lt,
+      refuteTheory.bounded_forall_interval_leq_lt_swap,
+      refuteTheory.bounded_exists_interval_leq_lt_swap,
+      refuteTheory.bounded_forall_interval_leq_leq,
+      refuteTheory.bounded_exists_interval_leq_leq,
+      refuteTheory.bounded_forall_interval_leq_leq_swap,
+      refuteTheory.bounded_exists_interval_leq_leq_swap,
+      refuteTheory.bounded_forall_interval_lt_lt,
+      refuteTheory.bounded_exists_interval_lt_lt,
+      refuteTheory.bounded_forall_interval_lt_lt_swap,
+      refuteTheory.bounded_exists_interval_lt_lt_swap,
+      refuteTheory.bounded_forall_interval_lt_leq,
+      refuteTheory.bounded_exists_interval_lt_leq,
+      refuteTheory.bounded_forall_interval_lt_leq_swap,
+      refuteTheory.bounded_exists_interval_lt_leq_swap ]
 
   val normal_rewrites =
     [ boolTheory.NOT_EXISTS_THM,
@@ -760,29 +776,82 @@ structure Refute_Core = struct
 
   fun has_bounded_quantifier tm =
     let
+      (* Every bound predicate excludes [variable] from the other side:
+         e.g. [f n <= n] or [n < f n] put [variable] on the expected side
+         syntactically, but the rewrite these predicates predict needs
+         [lo]/[e] free of [variable] to instantiate under the binder. *)
       fun bound_left dest variable guard =
         case Lib.total dest guard of
-            SOME (left, _) => Term.aconv left variable
+            SOME (left, right) =>
+              Term.aconv left variable andalso
+              not (Term.free_in variable right)
+          | NONE => false
+      fun bound_right dest variable guard =
+        case Lib.total dest guard of
+            SOME (left, right) =>
+              Term.aconv right variable andalso
+              not (Term.free_in variable left)
           | NONE => false
       fun in_count variable guard =
         case Lib.total pred_setSyntax.dest_in guard of
             SOME (element, set) =>
               Term.aconv element variable andalso
-              Option.isSome (Lib.total pred_setSyntax.dest_count set)
+              (case Lib.total pred_setSyntax.dest_count set of
+                   SOME bound => not (Term.free_in variable bound)
+                 | NONE => false)
           | NONE => false
       fun in_list variable guard =
         case Lib.total listSyntax.dest_mem guard of
-            SOME (element, _) => Term.aconv element variable
+            SOME (element, list) =>
+              Term.aconv element variable andalso
+              not (Term.free_in variable list)
           | NONE => false
+      (* An upper bound has [variable] on the left ([n < e], [n <= e]) or
+         as the tested element ([n IN count e], [MEM n l]) -- the shape
+         the plain, non-interval rewrites already recognise. *)
+      fun upper_bound variable guard =
+        bound_left numSyntax.dest_less variable guard orelse
+        bound_left numSyntax.dest_leq variable guard orelse
+        in_count variable guard orelse in_list variable guard
+      (* An interval's upper bound is numeric-only: [in_count]/[in_list]
+         have no interval rewrite ([bounded_forall_mem] needs its
+         antecedent to be exactly [MEM n l], and every interval theorem
+         needs both conjuncts to be [numSyntax] comparisons), so mixing
+         them into [interval_pair] would admit shapes no rewrite covers. *)
+      fun interval_upper_bound variable guard =
+        bound_left numSyntax.dest_less variable guard orelse
+        bound_left numSyntax.dest_leq variable guard
+      (* A lower bound has [variable] on the right ([lo < n], [lo <= n]),
+         the new half of an offset interval. *)
+      fun lower_bound variable guard =
+        bound_right numSyntax.dest_less variable guard orelse
+        bound_right numSyntax.dest_leq variable guard
+      fun interval_pair variable g1 g2 =
+        (lower_bound variable g1 andalso
+         interval_upper_bound variable g2) orelse
+        (interval_upper_bound variable g1 andalso
+         lower_bound variable g2)
+      (* Forall's guard is one conjunction after [AND_IMP_INTRO] merges
+         nested implications; exists' guard is the first conjunct of a
+         three-way [g1 /\ g2 /\ P n], so its interval pair sits one level
+         deeper, behind [rest]. *)
       fun bounded variable body universal =
-        case Lib.total
-          (if universal then boolSyntax.dest_imp else boolSyntax.dest_conj)
-          body of
-            SOME (guard, _) =>
-              bound_left numSyntax.dest_less variable guard orelse
-              bound_left numSyntax.dest_leq variable guard orelse
-              in_count variable guard orelse in_list variable guard
-          | NONE => false
+        if universal then
+          case Lib.total boolSyntax.dest_imp body of
+              SOME (guard, _) =>
+                upper_bound variable guard orelse
+                (case Lib.total boolSyntax.dest_conj guard of
+                     SOME (g1, g2) => interval_pair variable g1 g2
+                   | NONE => false)
+            | NONE => false
+        else
+          case Lib.total boolSyntax.dest_conj body of
+              SOME (g1, rest) =>
+                upper_bound variable g1 orelse
+                (case Lib.total boolSyntax.dest_conj rest of
+                     SOME (g2, _) => interval_pair variable g1 g2
+                   | NONE => false)
+            | NONE => false
       fun search tm =
         if boolSyntax.is_forall tm orelse boolSyntax.is_exists tm then
           let

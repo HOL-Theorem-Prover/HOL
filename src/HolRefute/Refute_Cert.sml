@@ -46,15 +46,17 @@ structure Refute_Cert = struct
 
   fun eval tm = computeLib.CBV_CONV (computeLib.the_compset ()) tm
 
+  (* [has_bounded_quantifier] is a syntactic over-approximation of what
+     [bounded_rewrites] can rewrite; when the two disagree, [REWRITE_CONV]
+     raises [UNCHANGED].  Catching that keeps a recogniser miss a lost
+     speedup rather than a lost evaluation step: falling through to plain
+     [eval] still decides the instance, just without the bounded shortcut. *)
   fun eval_original tm =
     if Refute_Core.has_bounded_quantifier tm then
-      let
-        val rewritten =
-          Ho_Rewrite.REWRITE_CONV Refute_Core.bounded_rewrites tm
-        val normalized = rhs_of rewritten
-      in
-        Thm.TRANS rewritten (eval normalized)
-      end
+      case Lib.total
+        (Ho_Rewrite.REWRITE_CONV Refute_Core.bounded_rewrites) tm of
+          SOME rewritten => Thm.TRANS rewritten (eval (rhs_of rewritten))
+        | NONE => eval tm
     else
       eval tm
 

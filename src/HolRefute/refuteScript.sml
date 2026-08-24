@@ -1,6 +1,6 @@
 Theory refute
 Ancestors
-  real sorting words rat finite_map
+  real sorting words rat finite_map listRange
 Libs
   EnumType
 
@@ -512,6 +512,118 @@ Theorem bounded_exists_mem:
   (∃x. MEM x l ∧ P x) ⇔ EXISTS P l
 Proof
   simp [listTheory.EXISTS_MEM]
+QED
+
+(* Part 5 continued: offset intervals.  [[lo <= n /\ n < hi]] compiles to
+   [[listRangeLHI]] ([[lo ..< hi]]), and [[lo <= n /\ n <= hi]] to
+   [[listRangeINC]] ([[lo .. hi]]) -- its natural fit, so a non-strict
+   upper bound never needs a manufactured offset.  A strict bound folds
+   into the endpoint instead ([[lo < n]] is [[lo + 1 <= n]]).
+   [[AND_IMP_INTRO]] does not normalise conjunct order, and a generic
+   commuting rewrite would ping-pong against its own reverse, so both
+   guard orders get their own theorem rather than a shared swap rule. *)
+Theorem bounded_forall_interval_leq_lt:
+  (∀n. lo ≤ n ∧ n < hi ⇒ P n) ⇔ EVERY P [lo ..< hi]
+Proof
+  simp [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeLHI]
+QED
+
+Theorem bounded_exists_interval_leq_lt:
+  (∃n. lo ≤ n ∧ n < hi ∧ P n) ⇔ EXISTS P [lo ..< hi]
+Proof
+  metis_tac [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeLHI]
+QED
+
+Theorem bounded_forall_interval_leq_lt_swap:
+  (∀n. n < hi ∧ lo ≤ n ⇒ P n) ⇔ EVERY P [lo ..< hi]
+Proof
+  metis_tac [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeLHI]
+QED
+
+Theorem bounded_exists_interval_leq_lt_swap:
+  (∃n. n < hi ∧ lo ≤ n ∧ P n) ⇔ EXISTS P [lo ..< hi]
+Proof
+  metis_tac [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeLHI]
+QED
+
+Theorem bounded_forall_interval_leq_leq:
+  (∀n. lo ≤ n ∧ n ≤ hi ⇒ P n) ⇔ EVERY P [lo .. hi]
+Proof
+  simp [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeINC]
+QED
+
+Theorem bounded_exists_interval_leq_leq:
+  (∃n. lo ≤ n ∧ n ≤ hi ∧ P n) ⇔ EXISTS P [lo .. hi]
+Proof
+  metis_tac [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeINC]
+QED
+
+Theorem bounded_forall_interval_leq_leq_swap:
+  (∀n. n ≤ hi ∧ lo ≤ n ⇒ P n) ⇔ EVERY P [lo .. hi]
+Proof
+  metis_tac [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeINC]
+QED
+
+Theorem bounded_exists_interval_leq_leq_swap:
+  (∃n. n ≤ hi ∧ lo ≤ n ∧ P n) ⇔ EXISTS P [lo .. hi]
+Proof
+  metis_tac [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeINC]
+QED
+
+Theorem bounded_forall_interval_lt_lt:
+  (∀n. lo < n ∧ n < hi ⇒ P n) ⇔ EVERY P [lo + 1 ..< hi]
+Proof
+  simp [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeLHI] >>
+  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+QED
+
+Theorem bounded_exists_interval_lt_lt:
+  (∃n. lo < n ∧ n < hi ∧ P n) ⇔ EXISTS P [lo + 1 ..< hi]
+Proof
+  simp [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeLHI] >>
+  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+QED
+
+Theorem bounded_forall_interval_lt_lt_swap:
+  (∀n. n < hi ∧ lo < n ⇒ P n) ⇔ EVERY P [lo + 1 ..< hi]
+Proof
+  simp [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeLHI] >>
+  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+QED
+
+Theorem bounded_exists_interval_lt_lt_swap:
+  (∃n. n < hi ∧ lo < n ∧ P n) ⇔ EXISTS P [lo + 1 ..< hi]
+Proof
+  simp [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeLHI] >>
+  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+QED
+
+Theorem bounded_forall_interval_lt_leq:
+  (∀n. lo < n ∧ n ≤ hi ⇒ P n) ⇔ EVERY P [lo + 1 .. hi]
+Proof
+  simp [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeINC] >>
+  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+QED
+
+Theorem bounded_exists_interval_lt_leq:
+  (∃n. lo < n ∧ n ≤ hi ∧ P n) ⇔ EXISTS P [lo + 1 .. hi]
+Proof
+  simp [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeINC] >>
+  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+QED
+
+Theorem bounded_forall_interval_lt_leq_swap:
+  (∀n. n ≤ hi ∧ lo < n ⇒ P n) ⇔ EVERY P [lo + 1 .. hi]
+Proof
+  simp [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeINC] >>
+  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+QED
+
+Theorem bounded_exists_interval_lt_leq_swap:
+  (∃n. n ≤ hi ∧ lo < n ∧ P n) ⇔ EXISTS P [lo + 1 .. hi]
+Proof
+  simp [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeINC] >>
+  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
 QED
 
 (* Part 6: narrowing represents function variables by finite update chains.
