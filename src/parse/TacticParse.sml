@@ -433,8 +433,6 @@ local
       | go (TList ls) = TList (map go ls)
       | go (TTuple ls) = TTuple (map go ls)
     in go end
-  (* Render one tree as source text.  Layout is precedence-driven,
-     with a running indent and parens added only where required. *)
   fun render t = let
     val r = ref []
     fun print s = r := s :: !r
@@ -471,8 +469,8 @@ in
 
 fun printTacsAsE s ls = let
   fun goT [] = []
-    | goT [t] = ["e(", render t, ");\n"]
-    | goT (t::ts) = "val _ = e(" :: render t :: ");\n" :: goT ts
+    | goT (t::ts) = (if null ts then "e(" else "val _ = e(")
+                    :: render t :: ");\n" :: goT ts
   in concat (goT (List.mapPartial (tree s) ls)) end
 
 fun printTacAsSML s e = Option.map render (tree s e)
@@ -523,15 +521,18 @@ fun linearize isAtom e = let
   and go e (acc as (one, acc')) = if isAtom e then (false, FAtom e :: acc') else let
     fun bracket2 stop f start (one, acc) = (false, FBracket (start, rev (snd (f one)), stop, e) :: acc)
     val bracket = bracket2 FClose
-    (* `go' accumulates frags reversed, as `bracket2' and `group'
-       already account for.  Every other caller here hands over one
-       Group per section, whose contents `group' has already
-       reversed, so the rev was invisible until Try needed a section
-       holding a THEN-chain directly. *)
+    (* `go' accumulates frags reversed; un-reverse each section, as
+       `bracket2' and `group' already do for their contents. *)
     fun mbracket stop mid start f (one, acc) =
       (false, FMBracket (start, mid, stop, map rev (f one), e) :: acc)
     fun asTac f (true, acc) = f (true, acc)
       | asTac f acc = bracket (K $ f (true, [])) FOpen acc
+    (* TRY t = t ORELSE ALL_TAC, so it needs ORELSE's second, empty
+       branch.  Without the FNextFirst a closer meets goalFrag's
+       `Try (Failed e, _)' node and re-raises -- exactly the failure
+       TRY exists to absorb. *)
+    fun tryish stop e' = mbracket stop FNextFirst FOpenFirst
+                           (fn one => [snd (go e' (one, [])), []])
     val r = case e of
       Then ls => goList ls acc
     | ThenLT (e, ls) => asTac (goList ls o go e) acc
@@ -539,13 +540,7 @@ fun linearize isAtom e = let
     | First (e::ls) =>
       asTac (mbracket FClose FNextFirst FOpenFirst (fn one =>
         map (fn e => snd (go e (one, []))) (e::ls))) acc
-    (* TRY tac = tac ORELSE ALL_TAC, so it needs ORELSE's second,
-       empty branch: without the FNextFirst the walker closes over
-       goalFrag's `Try (Failed e, _)' node, which every closer
-       re-raises -- exactly the failure TRY exists to absorb. *)
-    | Try e =>
-      asTac (mbracket FClose FNextFirst FOpenFirst (fn one =>
-        [snd (go e (one, [])), []])) acc
+    | Try e' => asTac (tryish FClose e') acc
     | Repeat e => asTac (bracket2 FCloseRepeat (fn one => go e (one, [])) FOpenRepeat) acc
     | MapEvery (_, []) => acc
     | MapFirst (_, []) => (true, FAtom (First []) :: acc')
@@ -568,9 +563,7 @@ fun linearize isAtom e = let
       mbracket FClose FNextSplit (FOpenSplit n) (fn _ =>
         map (fn e => snd (go e (false, []))) [e1, e2]) acc
     | LReverse => (one, FAtom LReverse :: acc')
-    | LTry e =>
-      mbracket FCloseFirst FNextFirst FOpenFirst (fn one =>
-        [snd (go e (one, [])), []]) acc
+    | LTry e' => tryish FCloseFirst e' acc
     | LRepeat e => bracket (fn one => go e (one, [])) FOpenRepeat acc
     | LFirstLT e => bracket2 FCloseFirstLT (fn one => go e (one, [])) FOpenFirstLT acc
     | LSelectThen (e1, e2) =>

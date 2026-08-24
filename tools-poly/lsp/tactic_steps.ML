@@ -12,37 +12,39 @@ structure TacticSteps :> sig
   val fragsOfTacText:
     {label: string, tacText: string} -> TacticParse.tac_frag list option
 
-  (* End-byte of a leaf tac_expr's span.  Shared between the walker
-     and the LSP response builder so both classify snap-worthy
-     atoms identically. *)
+  (* Whole source extent of a leaf tac_expr, and its end alone.
+     Shared between the walker and the LSP response builder so both
+     classify snap-worthy atoms identically. *)
+  val atomSpan: (int * int) TacticParse.tac_expr -> (int * int) option
   val atomEndByte: (int * int) TacticParse.tac_expr -> int option
 end = struct
 
 val wrapPrefix = "Theorem hol_lsp_wrap: T\nProof\n"
 val wrapPrefixLen = String.size wrapPrefix
 
-fun atomEndByte te = let
+(* `TacticParse.topSpan' already answers for every leaf whose
+   annotation is the whole expression -- including the Opaque family
+   and LSelectGoal(s), and NONE for LReverse.  Only the four below
+   annotate an operand instead, so only they need assembling. *)
+fun atomSpan te = let
   open TacticParse
-  (* MapEvery/MapFirst are annotated with the span of the mapped
-     function, not of the whole call, so end the atom at its last
-     argument -- otherwise a cursor sitting in the argument list
-     already counts as past the atom and fires it early. *)
-  fun lastArgEnd dflt =
+  (* MapEvery/MapFirst carry the span of the mapped function, not of
+     the whole call, so end the atom at its last argument -- otherwise
+     a cursor sitting in the argument list already counts as past the
+     atom and fires it early.  The closing bracket stays outside the
+     extent: the call's own span isn't recorded in the tree. *)
+  fun lastArgEnd dflt args =
     List.foldl (fn (a, e) => case topSpan a of SOME (_, e') => e' | NONE => e)
-               dflt
+               dflt args
 in case te of
-    Subgoal (_, e)      => SOME e
-  | LSelectGoal (_, e)  => SOME e
-  | LSelectGoals (_, e) => SOME e
-  | Rename (_, e)       => SOME e
-  | Opaque (_, (_, e))
-  | LOpaque (_, (_, e))
-  | OOpaque (_, (_, e))   => SOME e
-  | MapEvery ((_, e), args)
-  | MapFirst ((_, e), args) => SOME (lastArgEnd e args)
-  | LReverse => NONE
-  | _ => Option.map #2 (topSpan te)
+    Subgoal span => SOME span
+  | Rename span  => SOME span
+  | MapEvery ((s, e), args)
+  | MapFirst ((s, e), args) => SOME (s, lastArgEnd e args)
+  | _ => topSpan te
 end
+
+val atomEndByte = Option.map #2 o atomSpan
 
 fun parseTacText {label, tacText} = let
   val src = wrapPrefix ^ tacText ^ "\nQED\n"

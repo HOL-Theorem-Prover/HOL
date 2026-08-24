@@ -66,44 +66,41 @@ fun compileAndApply src state =
 
 fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
 
-(* Four sugars compile a synthesised surface call.  Their spans cover
-   a quotation rather than a tactic, and each names its entry point in
-   full: `TacticParse's own rendering of these is the *surface* syntax
-   (`sg', `SELECT_GOAL_LT', bare `RENAME_TAC'), which only compiles in
-   a file that opened the right structures, whereas the walker has to
-   work against whatever the edited file happens to have opened.
-   Everything else with a whole-expression span compiles that source
-   verbatim; anything left -- MapEvery and MapFirst are annotated with
-   the mapped function's span, First [] and LFirst [] carry none --
-   goes back through `TacticParse's inverse printer, whose renderings
-   (MAP_EVERY, NO_TAC, TACS_TO_LT, ...) all live in Tactical and so
-   are unqualified-safe.  That fallback is what keeps `applyAtom'
-   total: a leaf kind nobody anticipated still applies rather than
-   halting the walk at the previous step.
+(* The source to compile for a leaf, or NONE for one that is a
+   no-op.  The four sugars name their entry point in full because
+   their spans cover a quotation rather than a tactic, and because
+   `TacticParse's rendering of them is surface syntax needing
+   particular opens: `sg' from bossLib, `SELECT_GOAL_LT' and
+   `RENAME_TAC' from Q.  Leaves carrying a whole-expression span use
+   that source verbatim.  Anything left goes back through
+   `TacticParse's inverse printer, which is what keeps `applyAtom'
+   total -- a leaf kind nobody anticipated still applies rather than
+   halting the walk at the previous step.  Every name reachable that
+   way (MAP_EVERY, NO_TAC, TACS_TO_LT, REVERSE_LT, ...) lives in
+   Tactical, so it needs no opens.
 
-   First [] renders as NO_TAC, which is deliberate rather than a
-   dead end: it is `>>~-'s "the tactic must solve the selected goals"
-   check (Q.sml's SELECT_GOALS_LT_THEN1 is SELECT_LT_THEN rename
-   (tac THEN NO_TAC)), and `goalFrag.expand' maps a tactic over the
-   focused goals, so NO_TAC succeeds exactly when the focus is
-   already empty. *)
-fun applyAtom tacText te state = case te of
-    Subgoal span =>
-      compileAndApply ("BasicProvers.subgoal " ^ textAt tacText span) state
-  | LSelectGoal span =>
-      compileAndApply ("ALL_TAC >~ [" ^ textAt tacText span ^ "]") state
-  | LSelectGoals span =>
-      compileAndApply ("ALL_TAC >>~ [" ^ textAt tacText span ^ "]") state
-  | Rename span =>
-      compileAndApply ("Q.RENAME_TAC " ^ textAt tacText span) state
-  | _ => (case topSpan te of
-        SOME span => compileAndApply (textAt tacText span) state
-      | NONE => (case printTacAsSML tacText te of
-            NONE => SOME state   (* a no-op leaf: ALL_TAC and friends *)
-          | SOME src => compileAndApply
-              (* list_tactics need a tactic wrapper for `expand'. *)
-              (if isTac te then src
-               else "ALL_TAC >>> (" ^ src ^ ")") state))
+   The `>>>' wrapper for a list_tactic is there because
+   `compileTactic' is typed through a single tactic-valued `holder';
+   `goalFrag.expand_list' would take one more ref and a twin
+   compile. *)
+fun atomSrc tacText te = let
+  val txt = textAt tacText
+  in case te of
+      Subgoal span      => SOME ("BasicProvers.subgoal " ^ txt span)
+    | LSelectGoal span  => SOME ("ALL_TAC >~ [" ^ txt span ^ "]")
+    | LSelectGoals span => SOME ("ALL_TAC >>~ [" ^ txt span ^ "]")
+    | Rename span       => SOME ("Q.RENAME_TAC " ^ txt span)
+    | _ => case topSpan te of
+        SOME span => SOME (txt span)
+      | NONE => Option.map
+          (fn src => if isTac te then src
+                     else "ALL_TAC >>> (" ^ src ^ ")")
+          (printTacAsSML tacText te)
+  end
+
+fun applyAtom tacText te state = case atomSrc tacText te of
+    NONE => SOME state
+  | SOME src => compileAndApply src state
 
 fun applyOpen ok state = case ok of
     FOpen           => Portable.total goalFrag.open_paren      state
@@ -136,9 +133,10 @@ val atomEndByte = TacticSteps.atomEndByte
 fun fragEnd frag = case frag of
     FAtom te => atomEndByte te
   | FGroup ((_, e), _) => SOME e
-  | FBracket (_, inner, _, te) => bracketEndByte te inner
-  | FMBracket (_, _, _, sections, te) =>
-      bracketEndByte te (List.concat sections)
+  | FBracket (_, inner, _, te) =>
+      bracketEndByte te (fn () => lastFragEnd inner)
+  | FMBracket (_, _, _, sections, te) => bracketEndByte te (fn () =>
+      lastSectionEnd sections)
   | FFOpen _ | FFMid _ | FFClose _ => NONE
 
 (* Rightmost fragment span in a list -- foldl walking L-R and
@@ -148,11 +146,17 @@ and lastFragEnd frags =
   List.foldl (fn (f, acc) => case fragEnd f of NONE => acc | some => some)
              NONE frags
 
-and bracketEndByte te inner = case topSpan te of
+and lastSectionEnd sections =
+  List.foldl (fn (s, acc) => case lastFragEnd s of NONE => acc | some => some)
+             NONE sections
+
+(* `lastInner' is a thunk because it is only wanted for a wrapper
+   whose own span is missing, as `LThen1's and `Try's are. *)
+and bracketEndByte te lastInner = case topSpan te of
     SOME (_, e) => SOME e
   | NONE => (case atomEndByte te of
       SOME e => SOME e
-    | NONE => lastFragEnd inner)
+    | NONE => lastInner ())
 
 type snap = {stepIdx: int, endByte: int, state: goalFrag.goalstate}
 type cacheEntry = {
@@ -270,7 +274,8 @@ fun walkFrag tacText cursor state snaps stepIdx frag = case frag of
      hide the inner TacsToLT context from `pp_goalstate`. *)
   | FBracket (FOpenNullOk, inner, _, _) =>
       walkFrags tacText cursor state snaps stepIdx inner
-  | FBracket (ok, inner, cc, te) => (case bracketEndByte te inner of
+  | FBracket (ok, inner, cc, te) =>
+      (case bracketEndByte te (fn () => lastFragEnd inner) of
         SOME be =>
           if cursor < be then
             (* Open, walk inner as far as cursor lets us; don't close. *)
@@ -303,8 +308,8 @@ fun walkFrag tacText cursor state snaps stepIdx frag = case frag of
       | NONE => (* no end position: bail as opaque *)
           Failed {state = state, snaps = snaps,
                   stepIdx = stepIdx, at = frag})
-  | FMBracket (ok, mid, cc, sections, te) => (case bracketEndByte te
-                                                        (List.concat sections) of
+  | FMBracket (ok, mid, cc, sections, te) =>
+      (case bracketEndByte te (fn () => lastSectionEnd sections) of
         SOME be =>
           let
             (* `walkFrags` returns Done only when it has walked

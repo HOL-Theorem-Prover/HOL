@@ -90,25 +90,10 @@ local
     | FBracket _  => "Bracket failed"
     | FMBracket _ => "Bracket failed"
 
-  (* Leaves whose annotation is an operand span rather than a whole
-     expression: the start still marks where the squiggle begins. *)
-  fun atomStart te = case te of
-      Subgoal (s, _)       => SOME s
-    | LSelectGoal (s, _)   => SOME s
-    | LSelectGoals (s, _)  => SOME s
-    | Rename (s, _)        => SOME s
-    | MapEvery ((s, _), _) => SOME s
-    | MapFirst ((s, _), _) => SOME s
-    | _ => NONE
-
   fun failRange tacStart frag = case frag of
-      FAtom te => (case fragEndByte te of
-          SOME e => (case topSpan te of
-            SOME (s, _) => SOME (tacStart + s, tacStart + e)
-          | NONE => (case atomStart te of
-              SOME s => SOME (tacStart + s, tacStart + e)
-            | NONE => NONE))
-        | NONE => NONE)
+      FAtom te =>
+        Option.map (fn (s, e) => (tacStart + s, tacStart + e))
+                   (TacticSteps.atomSpan te)
     | _ => NONE
 in
 
