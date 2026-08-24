@@ -584,7 +584,7 @@ fun qlinenum q =
       locn.Loc(locn.LocA(line, _), _) => SOME (line+1)
     | _ => NONE
 
-fun by0 k (q, tac) (g as (asl,w)) = let
+fun by0 k (q, tac) (g as (asl,w)) ctxt = let
   val a = trace ("syntax_error", 0) Parse.Absyn q
   open errormonad
   val (goal_pt, finisher) =
@@ -610,7 +610,7 @@ fun by0 k (q, tac) (g as (asl,w)) = let
         SOME l => " on line "^Int.toString l
       | NONE => ": "^term_to_string tm
 in
-  (SUBGOAL_THEN tm finisher gTHEN1 (tac THEN k)) g
+  (SUBGOAL_THEN tm finisher gTHEN1 (tac THEN k)) g ctxt
    handle HOL_ERR _ =>
    raise ERR "by" ("by's tactic failed to prove subgoal"^mk_errmsg())
 end

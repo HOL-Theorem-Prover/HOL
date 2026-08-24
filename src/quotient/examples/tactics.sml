@@ -175,7 +175,7 @@ val PRINT_TAC :tactic = goalStack.print_tac ""
 
 val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
-fun ETA_TAC v :tactic = fn (asl,gl) =>
+fun ETA_TAC v :tactic = fn (asl,gl) => fn _ (* ctxt *) =>
       let val (t1,t2) = dest_eq gl;
           val at1 = “\^v.^t1 ^v”;
           val at2 = “\^v.^t2 ^v” in
@@ -183,7 +183,7 @@ fun ETA_TAC v :tactic = fn (asl,gl) =>
        fn [thm] => TRANS (SYM(ETA_CONV at1)) (TRANS thm (ETA_CONV at2)))
       end;
 
-fun EXT_TAC v :tactic = fn (asl,gl) =>
+fun EXT_TAC v :tactic = fn (asl,gl) => fn _ (* ctxt *) =>
       let val (t1,t2) = dest_eq gl;
           val at1 = mk_comb(t1,v)
           and at2 = mk_comb(t2,v) in
@@ -191,34 +191,35 @@ fun EXT_TAC v :tactic = fn (asl,gl) =>
        fn [thm] => EXT thm)
       end;
 
-val CHECK_TAC :tactic = fn (asl,gl) =>
+val CHECK_TAC :tactic = fn (asl,gl) => fn ctxt =>
       if exists (aconv gl) asl
-      then ACCEPT_TAC (ASSUME gl) (asl,gl)
+      then ACCEPT_TAC (ASSUME gl) (asl,gl) ctxt
       else failwith "CHECK_TAC";
 
-val FALSE_TAC :tactic = fn (asl,gl) =>
+val FALSE_TAC :tactic = fn (asl,gl) => fn ctxt =>
       if exists (fn th => Feq th) asl
-      then CONTR_TAC (ASSUME “F”) (asl,gl)
+      then CONTR_TAC (ASSUME “F”) (asl,gl) ctxt
       else failwith "FALSE_TAC";
 
-fun MP_IMP_TAC imp_th :tactic = fn (asl,gl) =>
+fun MP_IMP_TAC imp_th :tactic = fn (asl,gl) => fn _ (* ctxt *) =>
       let val (ant,cns) = dest_imp(concl imp_th) in
       ([(asl,ant)],
        fn [thm] => MP imp_th thm)
       end;
 
-fun UNASSUME_THEN (ttac:thm_tactic) tm :tactic = fn (asl,t) =>
+fun UNASSUME_THEN (ttac:thm_tactic) tm :tactic =
+    fn (asl,t) => fn ctxt =>
  if tmem tm asl
- then ttac (ASSUME tm) (op_set_diff aconv asl [tm], t)
+ then ttac (ASSUME tm) (op_set_diff aconv asl [tm], t) ctxt
  else failwith "UNASSUME_TAC";
 
-val CONTRAPOS_TAC :tactic = fn (asl,gl) =>
+val CONTRAPOS_TAC :tactic = fn (asl,gl) => fn _ (* ctxt *) =>
       let val (ant,cns) = dest_imp gl in
       ([(asl,mk_imp (dest_neg cns, dest_neg ant))],
        fn [thm] => CONTRAPOS thm)
       end;
 
-val FORALL_EQ_TAC :tactic = fn (asl,gl) =>
+val FORALL_EQ_TAC :tactic = fn (asl,gl) => fn _ (* ctxt *) =>
      (let val (allt1,allt2) = dest_eq gl;
           val (x,t1) = dest_forall allt1
           and (y,t2) = dest_forall allt2 in
@@ -229,7 +230,7 @@ val FORALL_EQ_TAC :tactic = fn (asl,gl) =>
       end)
       handle _ => failwith "FORALL_EQ_TAC";
 
-val EXISTS_EQ_TAC :tactic = fn (asl,gl) =>
+val EXISTS_EQ_TAC :tactic = fn (asl,gl) => fn _ (* ctxt *) =>
      (let val (ext1,ext2) = dest_eq gl;
           val (x,t1) = dest_exists ext1
           and (y,t2) = dest_exists ext2 in
@@ -245,7 +246,7 @@ fun EXISTS_VAR (x,u) th =
     EXISTS (mk_exists(x,p),u) th
     end;
 
-val FIND_EXISTS_TAC :tactic = fn (asl,gl) =>
+val FIND_EXISTS_TAC :tactic = fn (asl,gl) => fn ctxt =>
     let val (vars,body) = strip_exists gl
         val v = hd vars
         val cnjs = strip_conj body
@@ -259,7 +260,7 @@ val FIND_EXISTS_TAC :tactic = fn (asl,gl) =>
             end
             handle _ => find_exists_eq cnjs
     in
-        EXISTS_TAC (find_exists_eq cnjs) (asl,gl)
+        EXISTS_TAC (find_exists_eq cnjs) (asl,gl) ctxt
     end
     handle _ => failwith "FIND_EXISTS_TAC";
 
@@ -273,7 +274,7 @@ val FIND_EXISTS_TAC :tactic = fn (asl,gl) =>
 
 (* [PVH 95.2.19] *)
 
-fun UNBETA_TAC x :tactic = fn (asl,gl) =>
+fun UNBETA_TAC x :tactic = fn (asl,gl) => fn _ (* ctxt *) =>
      ([(asl,mk_comb(mk_abs(x, gl), x))],
        fn [thm] => BETA_RULE thm)
       handle _ => failwith "UNBETA_TAC";
@@ -284,7 +285,7 @@ e(UNBETA_TAC “x:num”);
 e(UNBETA_TAC “y:num”);
 *)
 (*
-val WELL_FOUNDED_NUM_TAC :tactic = fn (asl,gl) =>
+val WELL_FOUNDED_NUM_TAC :tactic = fn (asl,gl) => fn _ (* ctxt *) =>
      (let val n = (fst o dest_forall) gl in
         (GEN_TAC
          THEN UNBETA_TAC n
@@ -320,7 +321,7 @@ FORALL_IMP “n:num” (SPEC_ALL SUB_ADD);
 FORALL_IMP “n:num” (SPEC_ALL (ASSUME “!n:num. R n ==> Q n”));
 %
 
-let FORALL_IMP_TAC :tactic = fn (asl,gl) =>
+let FORALL_IMP_TAC :tactic = fn (asl,gl) => fn _ (* ctxt *) =>
      (let allt1,allt2 = dest_imp gl in
       let x,t1 = dest_forall allt1 in
       let y,t2 = dest_forall allt2 in
@@ -331,10 +332,10 @@ let FORALL_IMP_TAC :tactic = fn (asl,gl) =>
       handle _ => failwith "FORALL_IMP_TAC";
 *)
 
-val rec UNDISCH_ALL_TAC :tactic = fn (asl,gl) =>
-        if null asl then ALL_TAC (asl,gl)
+val rec UNDISCH_ALL_TAC :tactic = fn (asl,gl) => fn ctxt =>
+        if null asl then ALL_TAC (asl,gl) ctxt
         else (UNDISCH_TAC (hd asl)
-              THEN UNDISCH_ALL_TAC) (asl,gl);
+              THEN UNDISCH_ALL_TAC) (asl,gl) ctxt;
 
 val UNDISCH_LAST_TAC :tactic =
     POP_ASSUM MP_TAC;
@@ -388,7 +389,7 @@ FORALL_SYM_CONV “!x y. x+y=z”;
 *)
 
 
-fun NOT_AP_TERM_TAC f :tactic = fn (asl,gl) =>
+fun NOT_AP_TERM_TAC f :tactic = fn (asl,gl) => fn _ (* ctxt *) =>
       let val eq_gl = dest_neg gl;
           val (a,b) = dest_eq eq_gl in
       ([(asl,mk_neg(mk_eq(mk_comb(f,a),mk_comb(f,b))))],
@@ -411,7 +412,7 @@ val APP_let_CONV :conv = fn tm1 =>
 val LIFT_let_TAC = (REPEAT o CONV_TAC o CHANGED_CONV o ONCE_DEPTH_CONV)
                     APP_let_CONV;
 
-val STRIP_let_TAC :tactic = fn (asl,gl) =>
+val STRIP_let_TAC :tactic = fn (asl,gl) => fn _ (* ctxt *) =>
       let val (bodyf,vl) = dest_let gl;
           val (var,body) = dest_abs bodyf;
           val let_equal = mk_eq(var,vl) in
@@ -459,12 +460,12 @@ fun ONCE_DEPTH_USE_IMP_EQ_matches th =
 fun ONCE_DEPTH_USE_IMP_matches th =
     ONCE_DEPTH_matches (USE_IMP_matches th);
 
-fun USE_IMP_THEN ttac th :tactic = fn (asl,gl) =>
+fun USE_IMP_THEN ttac th :tactic = fn (asl,gl) => fn ctxt =>
       let val matches = ONCE_DEPTH_USE_IMP_EQ_matches th gl;
           val ith = INST_TY_TERM matches (SPEC_ALL th);
           val subgoal = concl (UNDISCH_ALL ith) in
        (SUBGOAL_THEN subgoal ttac
-        THEN (MATCH_MP_TAC th ORELSE ALL_TAC)) (asl,gl)
+        THEN (MATCH_MP_TAC th ORELSE ALL_TAC)) (asl,gl) ctxt
       end
       handle _ => failwith "USE_IMP_THEN";
 
@@ -474,12 +475,12 @@ fun USE_IMP_AND_THEN ttac th tac :tactic =
     USE_IMP_THEN ttac th
     THENL [ tac, ALL_TAC ];
 
-fun USE_THEN ttac th :tactic = fn (asl,gl) =>
+fun USE_THEN ttac th :tactic = fn (asl,gl) => fn ctxt =>
       let val matches = ONCE_DEPTH_USE_IMP_matches th gl;
           val ith = INST_TY_TERM matches (SPEC_ALL th);
           val subgoal = concl (UNDISCH_ALL ith) in
        (SUBGOAL_THEN subgoal ttac
-        THEN (MATCH_MP_TAC th ORELSE ALL_TAC)) (asl,gl)
+        THEN (MATCH_MP_TAC th ORELSE ALL_TAC)) (asl,gl) ctxt
       end
       handle _ => failwith "USE_THEN";
 

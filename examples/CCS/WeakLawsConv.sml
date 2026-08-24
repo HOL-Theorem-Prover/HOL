@@ -47,7 +47,7 @@ val OE_RHS_RELAB_ELIM_TAC = OE_RHS_CONV_TAC STRONG_RELAB_ELIM_CONV;
 
 (* Tactic for applying the expansion theorem (parallel and restriction operators). *)
 val OE_EXP_THM_TAC :tactic =
-    fn (asl, w) => let
+    fn (asl, w) => fn _ (* ctxt *) => let
         val (opt, t1, t2) = args_equiv w
     in
         if opt ~~ mk_const ("WEAK_EQUIV", type_of opt) then
@@ -217,7 +217,7 @@ end;
 (* Define the tactic OE_LHS_SUBST1_TAC: thm_tactic which substitutes a theorem
    in the left-hand side of an observation equivalence. *)
 fun OE_LHS_SUBST1_TAC thm :tactic =
-  fn (asl, w) => let
+  fn (asl, w) => fn _ (* ctxt *) => let
       val (opt, t1, t2) = args_equiv w
   in
       if opt ~~ mk_const ("WEAK_EQUIV", type_of opt) then

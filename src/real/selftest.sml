@@ -534,7 +534,7 @@ end;
 val _ = let
   val _ = tprint "NLA_TAC closes x^2 >= 0"
   val goal : goal = ([], “!x:real. x * x >= &0”)
-  val (sgs, vf) = NLA_TAC goal
+  val (sgs, vf) = runtac NLA_TAC goal
 in
   if null sgs then OK()
   else die ("FAILED: " ^ Int.toString (length sgs) ^ " subgoals remain")
@@ -544,7 +544,7 @@ val _ = let
   val _ = tprint "NLA_ASM_TAC closes product bound with assumptions"
   val asms = map ASSUME [“x >= &5 :real”, “y >= &5 :real”]
   val goal : goal = (map concl asms, “x * y >= &25 :real”)
-  val (sgs, vf) = NLA_ASM_TAC goal
+  val (sgs, vf) = runtac NLA_ASM_TAC goal
 in
   if null sgs then OK()
   else die ("FAILED: " ^ Int.toString (length sgs) ^ " subgoals remain")
