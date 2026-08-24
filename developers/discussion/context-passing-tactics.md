@@ -62,22 +62,98 @@ The tactic work is early: the type change and the `src/1` combinators
 are done, `Parse` has its first two ctxt-taking accessors, and
 `Prim_rec` is started.  Everything from Phase 0 onwards is ahead.
 
-**First task is simply to get `src/1` compiling and confirm a green
-core build** — that is the baseline the phases assume, and it should
-not be taken on trust.  At the time of writing two one-word snags
-remained in `src/1/Tactical.sml`, though they may well be gone before
-this plan is picked up:
+That was the state this plan was written against.  Phase 0 and most of
+Phase 1 have since landed and the core build is green; see **Status**
+below for what that took and where the tree disagreed with the plan.
 
-- `:35` reads `Context.current_theory ctxt`; the export is
-  `current_thy` (`Context.sig:64`, `FinalContext-sig.sml:58`).
-- the local helper is defined as `check_current_theory` (`:34`) but
-  called as `check_current_thy` (`:55`).
+## Status: the core build is green
 
-Expect the details to have moved; treat the compiler as the authority
-rather than these line numbers.  Errors of this shape — a name that
-does not exist, or an arity that no longer matches — are what the type
-change surfaces, and Phase 0 is largely a matter of working through
-them.
+The core build passes with selftests, so the baseline the phases assume
+is real.  Getting there took Phase 0 and most of Phase 1, and the
+findings below correct this document where the tree disagreed with it.
+
+**The compat layer is not optional groundwork for later — it is what
+makes a green baseline possible at all.**  `Tactical.prove` was
+ctxt-first, so every one of the raw call sites was broken; the first
+casualty was `src/1/coreboolSupportScript.sml`, two directories in.
+Decision 4's `prove_in` / ambient-`prove` split therefore landed
+alongside Phase 0 rather than at the head of Phase 1.  `TAC_PROOF` and
+`default_prover` needed the same treatment, since raw ambient uses of
+both are spread through `src`; the explicit entry point is spelled
+`TAC_PROOF_in`, so Phase 4's `TAC_PROOF ctxt (goal, tac)` means
+`TAC_PROOF_in`.
+
+### The bug class this migration actually has
+
+Very little of the work was arity.  The substance is that **`tac g` no
+longer runs a tactic — it builds a closure awaiting the context** — so
+every construct that treats a tactic application's failure or effects as
+control flow silently stopped working, while still typechecking:
+
+- `handle` around `tac g`: `IMP_RES_TAC`, `RES_TAC` and their
+  `res_quan` counterparts turned from no-ops-on-failure into failing
+  tactics; `UNABBREV_TAC` lost the clear error of issue #1483, which its
+  own regression test caught; `MATCH_ASSUM_ABBREV_TAC` stopped
+  backtracking to the next matching assumption; `HolSmt`'s `NLA_TAC`
+  stopped falling back through its decision procedures; `DISCH_TAC`,
+  `STRIP_TAC`, `SYM_TAC`, `INDUCT_TAC`, `P_PGEN_TAC` and
+  `suffices_by` lost their error wrapping.
+- `Lib.total` / `tryfind`: `APPLY_MONOTAC` stopped trying the next
+  monotonicity rule.
+- Continuation-passing search: `bvk_find_term` skips a candidate
+  sub-term whose continuation raises, so `DEEP_INTROk_TAC` accepted the
+  first candidate and failed later — this is what broke
+  `While`'s `OWHILE_THM`.  `match_goal`'s lazy search abandons a
+  candidate match the same way.
+- Effect windows: `Portable.with_flag` / `trace` / `add_time` /
+  `timeout` / a cache clear placed before the application all close
+  before the tactic runs.  `TC_OFF` in `smlExecute`, `tttSearch` and
+  `hhReconstruct` suppressed nothing; TacticToe timed closure
+  construction; `clear_arith_caches` left the "uncached" leg of the
+  arith cache tests running warm.
+
+**The Phase 2 census will not find any of this**, because no ambient read
+is involved.  It surfaces only as a failing proof, a lost error message
+or a silently weaker tactic.  The rule to grep for is: an application of
+a tactic to fewer than two arguments, inside anything that catches, times,
+flag-wraps or searches.
+
+### Corrections to this document
+
+- **Script files are not edit-free.**  The scale table's "none" is right
+  about plumbing — the expansion supplies the context — but a proof body
+  that defines its own tactic helper and falls back on failure needs
+  threading like any library.  Five such sites exist in `src` and
+  `examples`; `arithmeticScript`'s `LESS_SUB_ADD_LESS` and
+  `pred_setScript`'s `CARD_PSUBSET` are the ones that fail visibly.
+- **`Proof[exclude_simps=…]` cannot be fixed from the expander.**  The
+  eta-expansion suggested for `wrapTac` does not help: the window in
+  `with_simpset_updates f g x` closes when `g x` returns, and under the
+  new type that is the context-awaiting closure.  The fix landed in the
+  wrapper instead — `with_simpset_updates_tac` spans both applications —
+  and `wrapTac` is unchanged.  Phase 3a's context transform should
+  supersede it and delete the window; `exclSimpsScript.sml` is the guard.
+- **`hurdUtils` defined its own `type tactic`**, so its annotations were
+  checked against the pre-context shape.  It now takes the type from
+  `Abbrev`.  No other file in the tree defines the type independently.
+- **`goalFrag.expand` and friends take the context as a parameter**
+  (`tactic -> Context.t -> frag_tactic`), which is what Phase 4 wanted;
+  `goalStack`, `goalTree` and `Manager` snapshot the session's context,
+  which is correct for interactive use and declaration-level as far as
+  the tripwire is concerned.
+- **`testutils.runtac`** applies a tactic to a goal and the ambient
+  context.  Every directory's selftest needs it, so it lives in
+  `testutils` rather than being redeclared.
+
+### Editing the expander
+
+`bin/hol.state0` and `bin/unquote` are built from `tools/parsing`, and
+Holmake does not know it.  After changing `HOLSourceExpand.sml`, re-run
+`poly < tools/smart-configure.sml`, delete `bin/hol.state0` and
+`bin/hol.state.min`, and rebuild — otherwise the build keeps expanding
+`Theorem … QED` with the old expander and the change is never
+exercised.  `tools/Holmake/tests/quote-filter` holds the golden
+expansion for both compilers.
 
 ## Hand-off notes (guest VM)
 
@@ -213,7 +289,7 @@ the reasoning is what makes it re-derivable.
 
 | proof sites                                  | count  | manual edits |
 |----------------------------------------------|--------|--------------|
-| `Theorem … QED` blocks                        | 56228  | none         |
+| `Theorem … QED` blocks                        | 56228  | none\*       |
 | `Definition … End` blocks                     | 12738  | none         |
 | `Termination` clauses                         | 205    | none         |
 | raw `prove`/`store_thm`/`TAC_PROOF` in `*Script.sml` | 4951 | none (see below) |
@@ -223,6 +299,11 @@ the reasoning is what makes it re-derivable.
 
 The first three rows are why the expander is the right lever: **69k proof
 sites acquire a context with no source edit at all.**
+
+\* Bar one narrow exception, found while landing Phase 0: a proof body
+that defines its own tactic helper and catches its failure needs the
+context threaded like any library code.  Five such sites exist across
+`src` and `examples`.
 
 ### The compatibility layer that keeps the other 5.5k untouched
 
