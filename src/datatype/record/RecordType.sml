@@ -367,7 +367,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
      end
   in
     fun FAST_CASES_ON_TAC a :tactic =
-        (fn (g as (asl,w)) => let
+        (fn (g as (asl,w)) => fn _ (* ctxt *) => let
             val P = mk_abs (a,w) (* (\a. ...)  a *)
             val imp = (SPEC P induction_thm') (* !a1 ... xn . . (\a. ...) (rec ...) ==> !a. (\a. ...) a *)
             val (ant,_) = dest_imp (concl imp)

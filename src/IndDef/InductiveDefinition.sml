@@ -429,7 +429,7 @@ end
 
 fun BACKCHAIN_TAC th =
     let val match_fn = HO_PART_MATCH (snd o dest_imp) th
-    in fn (asl,w) =>
+    in fn (asl,w) => fn _ (* ctxt *) =>
         let val th1 = match_fn w
             val (ant,con) = dest_imp(concl th1)
         in ([(asl,ant)],fn [t] => HO_MATCH_MP th1 t | _ => raise Match)
@@ -467,20 +467,21 @@ val bool_monoset =
 
 val IMP_REFL = let val p = mk_var("p", bool) in ASSUME p |> DISCH p |> GEN p end
 
-fun APPLY_MONOTAC monoset (asl, w) = let
+fun APPLY_MONOTAC monoset (asl, w) ctxt = let
   val (a,c) = dest_imp w
 in
-  if aconv a c then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w)
+  if aconv a c then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w) ctxt
   else let
       val {Thy,Name,...} = dest_thy_const(repeat rator c)
                            handle HOL_ERR _ => {Thy = "", Name = "",
                                                 Ty = Type.alpha}
     in
       case (Thy,Name) of
-        ("","") => MONO_ABS_TAC (asl, w)
-      | ("pair", "UNCURRY") => MONO_UNCURRY_TAC (asl, w)
-      | _ => tryfind (fn (k,t) => if k = Name then BACKCHAIN_TAC t (asl,w)
-                                  else fail())
+        ("","") => MONO_ABS_TAC (asl, w) ctxt
+      | ("pair", "UNCURRY") => MONO_UNCURRY_TAC (asl, w) ctxt
+      | _ => tryfind (fn (k,t) =>
+                         if k = Name then BACKCHAIN_TAC t (asl,w) ctxt
+                         else fail())
                      monoset
     end
 end

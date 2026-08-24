@@ -164,11 +164,18 @@ fun goal_of_sml s =
    Apply tactic string
    ------------------------------------------------------------------------- *)
 
-val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
+val TC_OFF = trace ("show_typecheck_errors", 0)
 
+(* A tactic does its work once it has both the goal and the context, so
+   both the trace setting and the timeout have to span that application,
+   not merely the one that builds the context-awaiting closure. *)
 fun app_stac tim stac g =
-  let val tac = tactic_of_sml tim stac in
-    SOME (fst (timeout tim (TC_OFF tac) g))
+  let
+    val tac = tactic_of_sml tim stac
+    val ctxt = Context.snapshot()
+    fun run g = TC_OFF (fn g => tac g ctxt) g
+  in
+    SOME (fst (timeout tim run g))
   end
   handle Interrupt => raise Interrupt | _ => NONE
 

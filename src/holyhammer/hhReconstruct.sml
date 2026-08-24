@@ -56,9 +56,13 @@ fun get_lemmas (atp_status,atp_out) =
    Minimization and pretty-printing
  -----------------------------------------------------------------------------*)
 
-val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
+val TC_OFF = trace ("show_typecheck_errors", 0)
+(* the trace setting, the timeout and the handler all have to span the
+   context application, which is when the tactic does its work *)
 fun timeout_tactic t tac g =
-  SOME (fst (timeout t (TC_OFF tac) g))
+  let val ctxt = Context.snapshot() in
+    SOME (fst (timeout t (fn g => TC_OFF (fn g => tac g ctxt) g) g))
+  end
   handle Interrupt => raise Interrupt | _ => NONE
 
 fun hh_reconstruct lemmas g =

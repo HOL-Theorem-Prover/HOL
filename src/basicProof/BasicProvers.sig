@@ -51,6 +51,10 @@ sig
   (* update stateful simpset for duration of function call and then restore;
      has same locking guarantees as underlying AncestryData.with_temp_value *)
   val with_simpset_updates : (simpset -> simpset) -> ('a -> 'b) -> ('a -> 'b)
+  (* for tactics and list-tactics, whose work happens only once both the
+     goal and the context have been supplied *)
+  val with_simpset_updates_tac :
+      (simpset -> simpset) -> ('a -> 'b -> 'c) -> ('a -> 'b -> 'c)
   val mk_tacmod : string -> Manager.tacmodifier
 
   val make_simpset_derived_value :

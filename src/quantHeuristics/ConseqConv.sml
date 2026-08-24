@@ -113,7 +113,7 @@ fun GEN_ASSUM v thm =
 
 
 (*Introduces allquantification for all free variables*)
-val SPEC_ALL_TAC:tactic = fn (asm,t) =>
+val SPEC_ALL_TAC:tactic = fn (asm,t) => fn _ (* ctxt *) =>
 let
    val asm_vars = FVL asm empty_tmset;
    val t_vars = FVL [t] empty_tmset;
@@ -1715,7 +1715,7 @@ if (is_forall tt) then (
 ) else (new_mL, REFL tt)
 
 (* a simple tactic to remove true form the assumptions *)
-val REMOVE_TRUE_TAC:tactic = fn (asm, t) =>
+val REMOVE_TRUE_TAC:tactic = fn (asm, t) => fn _ (* ctxt *) =>
    let
       val _ = if not (op_mem aconv T asm) then Feedback.fail() else ();
    in
@@ -1724,7 +1724,8 @@ val REMOVE_TRUE_TAC:tactic = fn (asm, t) =>
    end;
 
 
-val DISCH_ASM_CONV_TAC:(conv -> tactic) = fn conv => fn (asm,t) =>
+val DISCH_ASM_CONV_TAC:(conv -> tactic) =
+  fn conv => fn (asm,t) => fn ctxt =>
 let
    val fv = HOLset.listItems (FVL (t::asm) empty_tmset)
    val (m_base, mt) = mk_asm_marker_random_pair t
@@ -1773,7 +1774,7 @@ in
     in
         thm
     end)
-end handle UNCHANGED => ALL_TAC (asm,t);
+end handle UNCHANGED => ALL_TAC (asm,t) ctxt;
 
 fun DISCH_ASM_CONSEQ_CONV_TAC c = DISCH_ASM_CONV_TAC (c CONSEQ_CONV_STRENGTHEN_direction);
 

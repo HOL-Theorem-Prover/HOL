@@ -119,7 +119,7 @@ fun BETAS fnns body =
 (* NB: the x is always a genvar, so optimized for this case.            *)
 (* ---------------------------------------------------------------------*)
 
-fun GTAC y (A,g) =
+fun GTAC y (A,g) (_ : Context.t) =
    let val (Bvar,Body) = dest_forall g
        and y' = variant (free_varsl (g::A)) y
    in
@@ -238,13 +238,13 @@ and
 (*                                                                      *)
 (* GOALS is a strictly local function, used only in MUTUAL_INDUCT_THEN. *)
 (* ---------------------------------------------------------------------*)
-fun GOALS A [] tm = raise ERR "GOALS" "empty lsit"
-  | GOALS A [t] tm =
-      let val (sg,pf) = t (A,tm) in ([sg],[pf]) end
-  | GOALS A (h::t) tm =
+fun GOALS A [] ctxt tm = raise ERR "GOALS" "empty lsit"
+  | GOALS A [t:tactic] ctxt tm =
+      let val (sg,pf) = t (A,tm) ctxt in ([sg],[pf]) end
+  | GOALS A (h::t) ctxt tm =
       let val (conj1,conj2) = dest_conj tm
-          val (sgs,pfs) = GOALS A t conj2
-          val (sg,pf) = h (A,conj1)
+          val (sgs,pfs) = GOALS A t ctxt conj2
+          val (sg,pf) = h (A,conj1) ctxt
       in
       ((sg::sgs),(pf::pfs))
       end;
@@ -336,7 +336,7 @@ fun MUTUAL_INDUCT_THEN1 th =
        val CHECK_TAC :tactic = fn (asl,gl) => ACCEPT_TAC (ASSUME gl) (asl,gl)
 
    in
-   fn ttac => fn (A,t) => (* t is the current goal *)
+   fn ttac => fn (A,t) => fn ctxt => (* t is the current goal *)
       let val ts = strip_conj t
           val lams = map (snd o dest_comb) ts
           val ts' = map (findt ts) vs
@@ -370,7 +370,7 @@ fun MUTUAL_INDUCT_THEN1 th =
 *)
           val bvars = map (fst o dest_abs) lams'
           val tacs = tacsf bvars ttac
-          val (gll,pl) = GOALS A tacs (fst(dest_imp(concl beta)))
+          val (gll,pl) = GOALS A tacs ctxt (fst(dest_imp(concl beta)))
           val pf = ((EQ_MP ts_thm) o (MP beta) o LIST_CONJ)
                    o mapshape(map length gll)pl
       in

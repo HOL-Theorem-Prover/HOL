@@ -591,8 +591,8 @@ fun FILTER_DISCH_THEN ttac tm = fn (asl, w) =>
 fun FILTER_STRIP_THEN ttac tm =
    FIRST [FILTER_GEN_TAC tm, FILTER_DISCH_THEN ttac tm, CONJ_TAC]
 
-fun DISCH_TAC g =
-   DISCH_THEN ASSUME_TAC g handle HOL_ERR _ => raise ERR "DISCH_TAC" ""
+fun DISCH_TAC g ctxt =
+   DISCH_THEN ASSUME_TAC g ctxt handle HOL_ERR _ => raise ERR "DISCH_TAC" ""
 
 val disch_tac = DISCH_TAC
 
@@ -604,8 +604,8 @@ val CHOOSE_TAC = CHOOSE_THEN ASSUME_TAC
 
 fun X_CHOOSE_TAC x = X_CHOOSE_THEN x ASSUME_TAC
 
-fun STRIP_TAC g =
-   STRIP_GOAL_THEN STRIP_ASSUME_TAC g
+fun STRIP_TAC g ctxt =
+   STRIP_GOAL_THEN STRIP_ASSUME_TAC g ctxt
    handle HOL_ERR _ => raise ERR "STRIP_TAC" ""
 val strip_tac = STRIP_TAC
 
@@ -644,8 +644,9 @@ fun REFL_TAC (asl, g) _ (* ctxt *) =
         G ?- y = x
    ---------------------------------------------------------------------- *)
 
-fun SYM_TAC g = CONV_TAC (REWR_CONV EQ_SYM_EQ) g
-                handle HOL_ERR _ => raise ERR "SYM_TAC" "Term not an equality"
+fun SYM_TAC g ctxt = CONV_TAC (REWR_CONV EQ_SYM_EQ) g ctxt
+                     handle HOL_ERR _ =>
+                            raise ERR "SYM_TAC" "Term not an equality"
 val sym_tac = SYM_TAC
 
 (*---------------------------------------------------------------------------*
@@ -983,13 +984,13 @@ end
 local
    open Thm_cont
 in
-   fun IMP_RES_TAC th g =
-      IMP_RES_THEN (REPEAT_GTCL IMP_RES_THEN STRIP_ASSUME_TAC) th g
-      handle HOL_ERR _ => ALL_TAC g
+   fun IMP_RES_TAC th g ctxt =
+      IMP_RES_THEN (REPEAT_GTCL IMP_RES_THEN STRIP_ASSUME_TAC) th g ctxt
+      handle HOL_ERR _ => ALL_TAC g ctxt
 
-   fun RES_TAC g =
-      RES_THEN (REPEAT_GTCL IMP_RES_THEN STRIP_ASSUME_TAC) g
-      handle HOL_ERR _ => ALL_TAC g
+   fun RES_TAC g ctxt =
+      RES_THEN (REPEAT_GTCL IMP_RES_THEN STRIP_ASSUME_TAC) g ctxt
+      handle HOL_ERR _ => ALL_TAC g ctxt
 
    val res_tac = RES_TAC
    val imp_res_tac = IMP_RES_TAC
@@ -1154,7 +1155,7 @@ fun IMP2AND_CONV t =
       then (RAND_CONV IMP2AND_CONV THENC TRY_CONV (REWR_CONV AND_IMP_INTRO)) t
    else ALL_CONV t
 
-fun DEEP_INTROk_TAC th tac (asl, g) =
+fun DEEP_INTROk_TAC th tac (asl, g) ctxt =
    let
       val th = th |> CONV_RULE (TOP_DEPTH_CONV RIGHT_IMP_FORALL_CONV THENC
                                 STRIP_QUANT_CONV IMP2AND_CONV)
@@ -1184,7 +1185,7 @@ fun DEEP_INTROk_TAC th tac (asl, g) =
          handle HOL_ERR _ (* if match fails *) => false
       fun continuation subt =
          (CONV_TAC (UNBETA_CONV subt) THEN
-          MATCH_MP_TAC th THEN BETA_TAC THEN tac) (asl, g)
+          MATCH_MP_TAC th THEN BETA_TAC THEN tac) (asl, g) ctxt
    in
       case bvk_find_term test continuation g of
          SOME result => result

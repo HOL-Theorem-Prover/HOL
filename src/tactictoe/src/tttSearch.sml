@@ -191,7 +191,7 @@ fun is_metis_stac token = case token of
     Stac s => s = "metisTools.METIS_TAC " ^ thmlarg_placeholder
   | _ => false
 
-val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
+val TC_OFF = trace ("show_typecheck_errors", 0)
 
 val stac_cache = ref (
   dempty (cpl_compare goal_compare (list_compare compare_token)))
@@ -204,9 +204,10 @@ fun apply_tac parsetoken tokenl goal =
     val tim = if is_metis_stac (hd tokenl) andalso !ttt_metis_flag
               then !ttt_metis_time
               else !ttt_tactic_time
+    val ctxt = Context.snapshot()
     fun f g =
       let val tac = build_tac parsetoken tokenl in
-        SOME (fst (TC_OFF tac g))
+        SOME (fst (TC_OFF (fn g => tac g ctxt) g))
       end
     val timer =
       if is_metis_stac (hd tokenl)

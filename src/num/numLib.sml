@@ -162,8 +162,8 @@ end;
 (*   [A] t[0]  ,  [A,t[n]] t[SUC x]                                      *)
 (* --------------------------------------------------------------------- *)
 
-fun INDUCT_TAC g =
-  INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g
+fun INDUCT_TAC g ctxt =
+  INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g ctxt
   handle HOL_ERR _ => raise ERR "INDUCT_TAC" "";
 
 

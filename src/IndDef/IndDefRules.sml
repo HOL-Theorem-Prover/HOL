@@ -379,7 +379,7 @@ fun RULE_INDUCT_THEN th =
      val RED  = RED_WHERE (last vs) (mk_imp(ant,cncl))
      val tacs = TACS (last vs) ant
  in
- fn ttac1 => fn ttac2 => fn (A,g) =>
+ fn ttac1 => fn ttac2 => fn (A,g) => fn ctxt =>
    let val (gvs,body) = strip_forall g
        val (theta as (slis,ilis)) = match_term (rator cncl) (rator body)
        val sith = INST_TY_TERM theta sthm
@@ -390,8 +390,9 @@ fun RULE_INDUCT_THEN th =
        val spth = INST [inst ilis pvar |-> lam] sith
        val spec = GENL gvs (UNDISCH (CONV_RULE RED spth))
        val subgls = map (pair A) (strip_conj (hd(hyp spec)))
-       fun tactc g = (subgls,fn ths => PROVE_HYP (LIST_CONJ ths) spec)
-   in (tactc THENL (tacs ttac1 ttac2)) (A,g)
+       fun tactc g (_ : Context.t) =
+           (subgls,fn ths => PROVE_HYP (LIST_CONJ ths) spec)
+   in (tactc THENL (tacs ttac1 ttac2)) (A,g) ctxt
    end handle HOL_ERR _ => raise RIND_ERR "inappropriate goal"
  end handle HOL_ERR _ => raise RIND_ERR "ill-formed rule induction theorem"
 end;
@@ -401,7 +402,7 @@ end;
 (* TACTICS FROM THEOREMS THAT STATE RULES.                               *)
 (* ===================================================================== *)
 
-fun axiom_tac th :tactic = fn (A,g) =>
+fun axiom_tac th :tactic = fn (A,g) => fn _ (* ctxt *) =>
  let val (vs,body) = strip_forall g
      val instl = match_term (concl th) body
  in ([], K (itlist ADD_ASSUM A (GENL vs (INST_TY_TERM instl th))))
@@ -437,7 +438,7 @@ fun RULE_TAC th =
  in let val (ant,conseq) = dest_imp rule
         val (cvs,cncl) = strip_forall conseq
         val ith = DISCH ant (SPECL cvs (UNDISCH (SPECL vs th)))
-    in fn (A,g) =>
+    in fn (A,g) => fn _ (* ctxt *) =>
         let val (gvs,body) = strip_forall g
             val (slis,ilis) = match_term cncl body
             val th1 = INST_TY_TERM (slis,ilis) ith

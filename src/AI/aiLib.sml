@@ -828,7 +828,8 @@ fun string_of_goal_noquote (asm,w) =
 
 fun trace_tacl tacl g = case tacl of
     tac :: m =>
-    (print_endline (string_of_goal g); trace_tacl m (hd (fst (tac g))))
+    (print_endline (string_of_goal g);
+     trace_tacl m (hd (fst (tac g (Context.snapshot())))))
   | [] => print_endline (string_of_goal g)
 
 fun only_concl x =

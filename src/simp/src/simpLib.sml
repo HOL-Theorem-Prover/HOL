@@ -920,10 +920,10 @@ type simptac_config =
 
 (* back/front assume_tac; backp is true if the new assumption should go at the
    back of the list *)
-fun BF_ASSUME_TAC backp th (g as (asl,w)) =
+fun BF_ASSUME_TAC backp th (g as (asl,w)) ctxt =
     if backp then ([(asl @ [concl th], w)],
                    fn resths => PROVE_HYP th (hd resths))
-    else ASSUME_TAC th g
+    else ASSUME_TAC th g ctxt
 
 (* contr/accept/assume *)
 fun caa_tac0 backp (c : simptac_config) th =

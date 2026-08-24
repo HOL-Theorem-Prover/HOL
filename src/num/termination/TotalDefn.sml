@@ -544,9 +544,9 @@ fun ACHIEVES_CONV P cnv t =
 
 val SOLVES_CONV = ACHIEVES_CONV (aconv boolSyntax.T o snd)
 
-fun SOLVES tac g =
-  let val result as (subgoals, vfn) = tac g
-  in if null subgoals then result else NO_TAC g
+fun SOLVES tac g ctxt =
+  let val result as (subgoals, vfn) = tac g ctxt
+  in if null subgoals then result else NO_TAC g ctxt
   end
 
 (*---------------------------------------------------------------------------*)

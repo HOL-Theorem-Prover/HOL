@@ -543,13 +543,13 @@ fun chop_at n frontacc l =
 
 infix gTHEN1 (* "gentle" THEN1 : doesn't fail if the tactic for the
                 head goal doesn't completely solve the subgoal. *)
-fun ((tac1:tactic) gTHEN1 (tac2:tactic)) (asl:term list,w:term) = let
-  val (subgoals, vf) = tac1 (asl,w)
+fun ((tac1:tactic) gTHEN1 (tac2:tactic)) (asl:term list,w:term) ctxt = let
+  val (subgoals, vf) = tac1 (asl,w) ctxt
 in
   case subgoals of
     [] => ([], vf)
   | (h::hs) => let
-      val (sgoals2, vf2) = tac2 h
+      val (sgoals2, vf2) = tac2 h ctxt
     in
       (sgoals2 @ hs,
        (fn thmlist => let
@@ -618,8 +618,8 @@ end
 val op by = by0 NO_TAC
 val byA = by0 ALL_TAC
 
-fun (q suffices_by tac) g =
-  (Q_TAC SUFF_TAC q gTHEN1 (tac THEN NO_TAC)) g
+fun (q suffices_by tac) g ctxt =
+  (Q_TAC SUFF_TAC q gTHEN1 (tac THEN NO_TAC)) g ctxt
   handle e as HOL_ERR herr =>
          if top_function_of herr = "Q_TAC" then raise e
          else
@@ -635,10 +635,10 @@ val sg = subgoal
 
 infix on
 fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
-  (fn (g as (asl:term list, w:term)) => let
+  (fn (g as (asl:term list, w:term)) => fn ctxt => let
     val tm = Parse.parse_in_context (free_varsl (w::asl)) q
   in
-    (SUBGOAL_THEN tm ttac gTHEN1 tac) g
+    (SUBGOAL_THEN tm ttac gTHEN1 tac) g ctxt
   end)
 
 (*===========================================================================*)
@@ -865,9 +865,9 @@ fun CONCL_TAC f P = W (fn (_,c) => if P c then f else NO_TAC);
 fun LIFT_SIMP ss = STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []
 
 local
-  fun DTHEN ttac = fn (asl,w) =>
+  fun DTHEN ttac = fn (asl,w) => fn ctxt =>
    let val (ant,conseq) = dest_imp_only w
-       val (gl,prf) = ttac (ASSUME ant) (asl,conseq)
+       val (gl,prf) = ttac (ASSUME ant) (asl,conseq) ctxt
    in (gl, Thm.DISCH ant o prf)
    end
 in
@@ -1265,6 +1265,13 @@ fun with_simpset_updates f g x = (
   before notify()
 )
 
+(* A tactic consumes a goal and then a context, and only does its work
+   once it has both, so a tactic modifier's window must span both
+   applications: bracketing `tac goal` alone would close it while the
+   tactic was still an unapplied closure. *)
+fun with_simpset_updates_tac f g x y =
+    with_simpset_updates f (fn () => g x y) ()
+
 local
   val update_log_slot :
         (simpset -> simpset) list Symtab.table Context.Data.slot =
@@ -1418,7 +1425,8 @@ fun mk_tacmod s =
                      perkey = (fn k => fn vs => key_to_f k vs) }
                    alist
     in
-      {tacm = with_simpset_updates f, ltacm = with_simpset_updates f}
+      {tacm = with_simpset_updates_tac f,
+       ltacm = with_simpset_updates_tac f}
     end
 
 end

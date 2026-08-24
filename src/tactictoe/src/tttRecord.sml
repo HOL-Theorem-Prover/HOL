@@ -106,9 +106,9 @@ fun write_info thy =
    Replaying a tactic
    ------------------------------------------------------------------------- *)
 
-fun record_tactic (tac,stac) g =
+fun record_tactic (tac,stac) g ctxt =
   let
-    val ((gl,v),t) = add_time tac g
+    val ((gl,v),t) = add_time (fn g => tac g ctxt) g
     val _ =
       (incr n_tactic_replayed;
        if op_mem goal_eq g gl then () else
@@ -163,13 +163,14 @@ fun app_wrap_proof name run_stac recorded_stac =
       (debug ("proof string too large: " ^ name);
        raise ERR "app_wrap_proof" name))
   else
-    fn goal =>
+    fn goal => fn ctxt =>
       let
         val (wstac,wtac) = total_time parse_time
           (wrap_proof run_stac) recorded_stac
         val _ = incr n_proof_parsed
       in
-        let val (gl,v) = total_time replay_time wtac goal
+        let val (gl,v) =
+                total_time replay_time (fn g => wtac g ctxt) goal
         in
           if null gl
           then (incr n_proof_replayed; (gl,v))
@@ -349,7 +350,7 @@ fun save_goal lflag pflag g =
    Recording (continued)
    ---------------------------------------------------------------------- *)
 
-fun record_proof name lflag tac1 tac2 (g:goal) =
+fun record_proof name lflag tac1 tac2 (g:goal) ctxt =
   let
     val pflag = String.isPrefix "tactictoe_prove_" name
     val _ = if !record_savestate_flag then save_goal lflag pflag g else ()
@@ -359,19 +360,19 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
     val b3 = (not (!record_let_flag) andalso lflag)
     val result =
       if b1 orelse b2 orelse b3 then
-        (debug "record proof: ignored"; incr n_proof_ignored; tac2 g)
+        (debug "record proof: ignored"; incr n_proof_ignored; tac2 g ctxt)
       else
         let
-          val (r,t) = add_time tac1 g
+          val (r,t) = add_time (fn g => tac1 g ctxt) g
           val _ = record_time := !record_time + t;
           val _ = debug ("record time: " ^ Real.toString t)
           val _ = total_time learn_time end_record_proof name
         in
           if null (fst r) then r
-          else (debug "error: record_proof: not null"; tac2 g)
+          else (debug "error: record_proof: not null"; tac2 g ctxt)
         end
         handle Interrupt => raise Interrupt
-          | _ => (debug "error: record_proof: exception"; tac2 g)
+          | _ => (debug "error: record_proof: exception"; tac2 g ctxt)
   in
     result
   end

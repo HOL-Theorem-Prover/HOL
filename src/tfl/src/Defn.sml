@@ -1866,7 +1866,7 @@ fun TC_TAC0 E I =
      val tac = MATCH_MP_TAC (GEN_ALL (mangle th hyps'))
      val goal = ([],concl th)
  in
-   case tac goal
+   case tac goal (Context.snapshot())
     of ([([],g)],validation) => (([],g), fn th => validation [th])
      | _  => raise ERR "TC_TAC" "unexpected output"
  end;

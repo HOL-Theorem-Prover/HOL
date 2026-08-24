@@ -55,13 +55,16 @@ fun concatMapV f (ls, v: list_validation) = let
   val (gs, v1) = go ls
   in (gs, v o v1: list_validation) end
 
-fun expandf (tac:tactic) (n, g) =
+fun expandf (tac:tactic) ctxt (n, g) =
   (n, apply (fn (gs, v) =>
-    Base (concatMapV ((fn (gs, v) => (gs, single o v)) o tac) (gs, v))) g)
+    Base (concatMapV ((fn (gs, v) => (gs, single o v)) o
+                      (fn g => tac g ctxt))
+                     (gs, v))) g)
 val expand = expandf o Tactical.VALID
 
-fun expand_listf (ltac:list_tactic) (n, g) =
-  (n, apply (fn (gs, v) => (fn (gs', v') => Base (gs', v o v')) (ltac gs)) g)
+fun expand_listf (ltac:list_tactic) ctxt (n, g) =
+  (n, apply (fn (gs, v) =>
+                (fn (gs', v') => Base (gs', v o v')) (ltac gs ctxt)) g)
 val expand_list = expand_listf o Tactical.VALID_LT
 
 fun top_goals (_, Base (gs, _)) = gs

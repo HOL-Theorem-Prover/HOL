@@ -62,7 +62,8 @@ fun compileTactic src =
 fun compileAndApply src state =
   case compileTactic src of
     NONE => NONE
-  | SOME tac => Portable.total (goalFrag.expand tac) state
+  | SOME tac =>
+      Portable.total (goalFrag.expand tac (Context.snapshot())) state
 
 fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
 

@@ -45,9 +45,9 @@ fun REPEAT_TCL ttcl ttac th =
 (* TFM 91.01.20.                                                         *)
 (* --------------------------------------------------------------------- *)
 
-fun REPEAT_GTCL (ttcl: thm_tactical) ttac th (A,g) =
-   ttcl (REPEAT_GTCL ttcl ttac) th (A,g)
-   handle HOL_ERR _ => ttac th (A,g)
+fun REPEAT_GTCL (ttcl: thm_tactical) ttac th (A,g) ctxt =
+   ttcl (REPEAT_GTCL ttcl ttac) th (A,g) ctxt
+   handle HOL_ERR _ => ttac th (A,g) ctxt
 
 val ALL_THEN: thm_tactical = I
 val NO_THEN: thm_tactical = fn ttac => fn th => raise ERR "NO_THEN" ""
@@ -325,7 +325,7 @@ val CHOOSE_ALL_THEN: thm_tactical =
          val vec = Array.vector arr
 
       in
-         fn (g as (asl,w)) =>
+         fn (g as (asl,w)) => fn ctxt =>
          let
             val fvs = (free_varsl ((conc::hyp)@(w::asl)))
             val vars = List.rev (snd (rev_itlist varyAcc vars (fvs,[])))
@@ -336,7 +336,7 @@ val CHOOSE_ALL_THEN: thm_tactical =
                                     else []
             val vars = merge 0 dups vars
          in
-            X_CHOOSE_THENL vars ttac xth g
+            X_CHOOSE_THENL vars ttac xth g ctxt
          end
          handle HOL_ERR _ => raise ERR "CHOOSE_THEN" ""
       end

@@ -220,26 +220,27 @@ val safe_inst_sort =
     Listsort.sort safe_inst_cmp
 
 fun MATCH_ABBREV_TAC fv_set pattern (g as (asl, w)) = let
-  val ctxt = HOLset.listItems fv_set
-  val (tminst,_) = match_terml (fixed_tyvars ctxt pattern) fv_set pattern w
+  val fvl = HOLset.listItems fv_set
+  val (tminst,_) = match_terml (fixed_tyvars fvl pattern) fv_set pattern w
 in
   MAP_EVERY ABB' (safe_inst_sort tminst) g
 end
 
-fun MATCH_ASSUM_ABBREV_TAC fv_set pattern (g as (asl, w)) = let
-  val ctxt = HOLset.listItems fv_set
-  val fixed = fixed_tyvars ctxt pattern
+fun MATCH_ASSUM_ABBREV_TAC fv_set pattern (g as (asl, w)) ctxt = let
+  val fvl = HOLset.listItems fv_set
+  val fixed = fixed_tyvars fvl pattern
   fun find [] = raise ERR "MATCH_ASSUM_ABBREV_TAC" "No matching assumption found"
     | find (asm::tl) =
       case total (match_terml fixed fv_set pattern) asm of
         NONE => find tl
-      | SOME (tminst,_) => MAP_EVERY ABB' (safe_inst_sort tminst) g
+      | SOME (tminst,_) => MAP_EVERY ABB' (safe_inst_sort tminst) g ctxt
                            handle HOL_ERR e => find tl
 in find asl end
 
 fun HO_MATCH_ABBREV_TAC fv_set pattern (gl as (asl,w)) =
- let val ctxt = HOLset.listItems fv_set
-     val (tminst, tyinst) = ho_match_term (fixed_tyvars ctxt pattern) fv_set pattern w
+ let val fvl = HOLset.listItems fv_set
+     val (tminst, tyinst) =
+         ho_match_term (fixed_tyvars fvl pattern) fv_set pattern w
      val unbeta_goal =
         Tactical.default_prover(mk_eq(w, subst tminst (inst tyinst pattern)),
                                 BETA_TAC THEN REFL_TAC)
@@ -247,10 +248,10 @@ in
   CONV_TAC (K unbeta_goal) THEN MAP_EVERY ABB' (safe_inst_sort tminst)
 end gl;
 
-fun UNABBREV_TAC s gl =
+fun UNABBREV_TAC s gl ctxt =
  FIRST_X_ASSUM(SUBST_ALL_TAC o
                assert(equal s o fst o dest_var o lhs o concl) o
-               DeAbbrev) gl
+               DeAbbrev) gl ctxt
  handle HOL_ERR _ =>
    raise ERR "UNABBREV_TAC"
          ("No assumption of the form `Abbrev (" ^ s ^ " = ...)`");
@@ -376,7 +377,7 @@ fun splitp p [] = ([], [])
         (x::ys, zs)
       end
 in
-fun ASSUME_NAMED_TAC s bth (g as (asl,w)) =
+fun ASSUME_NAMED_TAC s bth (g as (asl,w)) (_ : Context.t) =
   let
     val label_thm = MK_LABEL(s, bth)
     val (xs,ys) = splitp (not o is_label) (List.rev (asl))
@@ -560,7 +561,7 @@ fun MK_HIDE s th =
     EQ_MP (SYM (SPECL [mk_var(s,bool), concl th] hide_def)) th
 val UNHIDE = CONV_RULE (REWR_CONV hide_def)
 
-fun hide_tac s th (asl,w) =
+fun hide_tac s th (asl,w) (_ : Context.t) =
     ([(asl @ [mk_hide s (concl th)], w)],
      fn ths => PROVE_HYP (MK_HIDE s th) (hd ths))
 
@@ -795,8 +796,8 @@ fun sMP simpth th =
       MP impth th
     end
 
-fun spopmp ([], g) = raise ERR "spopmp" "No assumptions"
-  | spopmp (a::rest, g) =
+fun spopmp ([], g) (_ : Context.t) = raise ERR "spopmp" "No assumptions"
+  | spopmp (a::rest, g) (_ : Context.t) =
     ([(rest, list_mk_suspimp([a], g))],
      fn ths => sMP (hd ths) (ASSUME (lhand (concl (hd ths)))))
 
