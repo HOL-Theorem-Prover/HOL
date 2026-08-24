@@ -100,12 +100,12 @@ fun prelude () = let
      These symbols are only available after the HOL kernel is loaded,
      so prelude() must not be called until then. *)
   val s = String.concat [
-    "let fun f (t, _) = mk_oracle_thm \"fast_proof\" t\n",
-    "    fun f2 g = (\n",
+    "let fun f _ (t, _) = mk_oracle_thm \"fast_proof\" t\n",
+    "    fun f2 ctxt g = (\n",
     "      if current_theory () = \"scratch\"\n",
     "      then HOL_WARNING \"HOL_IDE\" \"prove\" \"calling prove before new_theory\"\n",
     "      else Tactical.set_prover f;\n",
-    "      f g)\n",
+    "      f ctxt g)\n",
     "in Tactical.set_prover f2 end"]
   val i = ref 0
   fun read () = (SOME (String.sub (s, !i)) before i := !i + 1) handle Subscript => NONE

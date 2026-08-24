@@ -629,7 +629,8 @@ in
            whose proofs were skipped in an LSP session. *)
         evalString
           "Tactical.set_prover \
-          \  (fn (g, _) => Thm.mk_oracle_thm \"lsp_compile_skip\" g)";
+          \  (fn _ => fn (g, _) => \
+          \      Thm.mk_oracle_thm \"lsp_compile_skip\" g)";
         (* Wire LSPExtension.thmLookup to DB + Parse so the hover
            handler can render a theorem's statement when the cursor
            lands on an SML identifier of type thm.  Handles bare names

@@ -6,8 +6,8 @@ local
 
    val holmake_tag = "tactic_failed"
 
-   fun basic_prover (g, tac: Abbrev.tactic) =
-     Tactical.TAC_PROOF (g, tac)
+   fun basic_prover ctxt (g, tac: Abbrev.tactic) =
+     Tactical.TAC_PROOF_in ctxt (g, tac)
      handle (e as HOL_ERR _) =>
         (HOL_MESG
            ("*** Proof of \n  " ^ Parse.term_to_string (#2 g) ^

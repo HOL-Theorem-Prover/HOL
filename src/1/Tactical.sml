@@ -31,8 +31,8 @@ val notheory_action = ref 1
 val _ = Feedback.register_trace
           ("TAC_PROOF requires current theory", notheory_action, 1)
 
-fun check_current_theory ctxt (_, t) =
-    case Context.current_theory ctxt of
+fun check_current_thy ctxt (_, t) =
+    case Context.current_thy ctxt of
         SOME _ => ()
       | NONE =>
           let
@@ -51,7 +51,7 @@ local
    val unsolved_list = ref ([]: goal list)
 in
    fun unsolved () = !unsolved_list
-   fun TAC_PROOF ctxt (g, tac) =
+   fun TAC_PROOF_in ctxt (g, tac) =
       (check_current_thy ctxt g;
        case tac g ctxt of
          ([], p) =>
@@ -67,7 +67,10 @@ in
        | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals"))
 end
 
-fun default_prover ctxt (t, tac) = TAC_PROOF ctxt (([], t), tac)
+fun TAC_PROOF gtac = TAC_PROOF_in (Context.snapshot()) gtac
+
+fun default_prover_in ctxt (t, tac) = TAC_PROOF_in ctxt (([], t), tac)
+fun default_prover ttac = default_prover_in (Context.snapshot()) ttac
 
 local
   fun goal_to_string (asms, t) =
@@ -95,19 +98,25 @@ local
            raise e
         end
    val internal_prover =
-      ref (provide_feedback TAC_PROOF: Context.t -> goal * tactic -> Thm.thm)
+      ref (provide_feedback TAC_PROOF_in
+           : Context.t -> goal * tactic -> Thm.thm)
 in
    fun set_prover f = internal_prover := provide_feedback f
-   fun restore_prover () = set_prover TAC_PROOF
-   fun prove ctxt (t, tac) = !internal_prover ctxt (([], t), tac)
-   fun prove_goal ctxt (g, tac) = !internal_prover ctxt (g, tac)
+   fun restore_prover () = set_prover TAC_PROOF_in
+   fun prove_in ctxt (t, tac) = !internal_prover ctxt (([], t), tac)
+   fun prove_goal_in ctxt (g, tac) = !internal_prover ctxt (g, tac)
 end
 
-fun store_thm ctxt (name, tm, tac) =
-   Theory.save_thm (name, prove ctxt (tm, tac))
+fun prove ttac = prove_in (Context.snapshot()) ttac
+fun prove_goal gtac = prove_goal_in (Context.snapshot()) gtac
+
+fun store_thm_in ctxt (name, tm, tac) =
+   Theory.save_thm (name, prove_in ctxt (tm, tac))
    handle e =>
      (print ("Failed to prove theorem " ^ name ^ ".\n");
       Raise e)
+
+fun store_thm ntac = store_thm_in (Context.snapshot()) ntac
 
 (*---------------------------------------------------------------------------
  * tac1 THEN_LT ltac2:
@@ -678,8 +687,9 @@ fun EVERY_LT ltacl = List.foldr (op THEN_LT) ALL_LT ltacl
  *    FIRST [TAC1;...;TACn] =  TAC1  ORELSE  ...  ORELSE  TACn
  *---------------------------------------------------------------------------*)
 
-fun FIRST [] g = NO_TAC g
-  | FIRST (tac :: rst) g = tac g handle HOL_ERR _ => FIRST rst g
+fun FIRST [] g ctxt = NO_TAC g ctxt
+  | FIRST (tac :: rst) g ctxt =
+      tac g ctxt handle HOL_ERR _ => FIRST rst g ctxt
 
 fun MAP_EVERY tacf lst = EVERY (map tacf lst)
 val map_every = MAP_EVERY
@@ -816,14 +826,15 @@ val shut_parser_up =
    trace ("show_typecheck_errors", 0)
 
 local
-  fun find ttac name goal [] = raise ERR name  ""
-    | find ttac name goal (a :: L) =
-      ttac (ASSUME a) goal handle HOL_ERR _ => find ttac name goal L
+  fun find ttac name goal ctxt [] = raise ERR name  ""
+    | find ttac name goal ctxt (a :: L) =
+      ttac (ASSUME a) goal ctxt
+      handle HOL_ERR _ => find ttac name goal ctxt L
 in
-  fun FIRST_ASSUM ttac (A, g) =
-        shut_parser_up (find ttac "FIRST_ASSUM" (A, g)) A
-  fun LAST_ASSUM ttac (A, g) =
-        shut_parser_up (find ttac "LAST_ASSUM" (A, g)) (List.rev A)
+  fun FIRST_ASSUM ttac (A, g) ctxt =
+        shut_parser_up (find ttac "FIRST_ASSUM" (A, g) ctxt) A
+  fun LAST_ASSUM ttac (A, g) ctxt =
+        shut_parser_up (find ttac "LAST_ASSUM" (A, g) ctxt) (List.rev A)
   val first_assum = FIRST_ASSUM
   val last_assum = LAST_ASSUM
 end
