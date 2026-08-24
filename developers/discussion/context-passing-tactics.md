@@ -66,11 +66,12 @@ That was the state this plan was written against.  Phase 0 and most of
 Phase 1 have since landed and the core build is green; see **Status**
 below for what that took and where the tree disagreed with the plan.
 
-## Status: the core build is green
+## Status: Phase 0 and Phase 1 have landed
 
-The core build passes with selftests, so the baseline the phases assume
-is real.  Getting there took Phase 0 and most of Phase 1, and the
-findings below correct this document where the tree disagreed with it.
+The full build passes with selftests, so the baseline the phases assume is
+real and then some.  Getting there took all of Phase 0 and all of Phase 1,
+and the findings below correct this document where the tree disagreed with
+it.
 
 **The compat layer is not optional groundwork for later — it is what
 makes a green baseline possible at all.**  `Tactical.prove` was
@@ -144,6 +145,68 @@ flag-wraps or searches.
 - **`testutils.runtac`** applies a tactic to a goal and the ambient
   context.  Every directory's selftest needs it, so it lives in
   `testutils` rather than being redeclared.
+
+### Where Phase 1 got to
+
+All five items have landed and **the full build is green** — `bin/build -t
+-F`, which is the core sequence, `src/parallel_builds/core`, the example
+set built at selftest level, and the 1589-entry help-documentation pass.
+The LSP suite is 66/66.  Two notes on running it: the `integer_*` cases
+need `jrhUtils` in `sigobj`, which only the full build puts there, and the
+suite takes `HOL_LSP_TEST_REPO` to point at a worktree.
+
+Item 3 replaced the changed-flag machinery outright: the parsers and
+printers derived from the two grammars are a `Susp.susp` in a slot of
+their own, rederived by the four grammar mutators, so the 26 flag-setting
+sites, both flags, `update_type_fns`, `update_term_fns` and
+`invalidate_caches` are gone.  `type_parser1` went with them — it was
+rebuilt on every invalidation and never read.
+
+Item 2 and item 4 landed together, as decision 6 requires.  `Parse` gained
+`Term_in`, `Absyn_in` and `typedTerm_in` so `Q.store_thm_at` can parse a
+statement against the context it proves it in; constants still resolve
+against the kernel signature read from the *ambient* context, which is the
+kernel readers' own remaining work.  `located_qDefine` takes the context
+and ignores it: the quote and the termination proof belong to `Defn`,
+which decision 10 reaches in Phase 4.  `CoIndDefLib.xHol_coreln` needs the
+parameter as much as `xHol_reln` does — the expander picks between them.
+
+**The expander has two emission modes and both need the argument.**
+Without a file and line — Docfile examples, interactive input —
+`mkLocString` named the *ambient* `qDefine` / `store_thm`, which take no
+context by design, so a context got applied to a theorem.  Both forms now
+go through the located entry point with `DB_dtype.Unknown`.  Only the
+help-docs stage of a full build catches this; the core build skips it.
+
+### More of the same bug class
+
+Phase 1's work turned up further instances of the deferred-execution
+class, all of them silent:
+
+- **`mp_then` and `resolve_then`** — the engines under `drule`,
+  `drule_at`, `dxrule` and friends.  Both try candidate positions in turn
+  and move on when the continuation raises; with the continuation only
+  built, the search commits to the first position.  This is what stopped
+  `drule_at_then Any irule` matching in `companionScript`.
+- **`Q`'s `wholeterm_rename_helper` and `subterm_helper`** — the search
+  behind `rename`, `MATCH_RENAME_TAC` and the abbreviation tactics.  The
+  comment above them already said the failure has to be raised late enough
+  for `FIRST_ASSUM` to catch it; that is now the context application.
+  `symmetryScript` and `unary_recfnsScript` were failing on this.
+- **`by0`** — `by`'s line-number error reporting, the sibling of
+  `suffices_by`.  `bylocnScript` asserts on exactly that message.
+- Effect windows in more guises: `smlTimeout.timeout`, `add_time`,
+  `total_time`, `trace`, and a cache clear sequenced before the tactic
+  rather than before it runs.
+
+Two lessons for the grep.  Anchoring on `_TAC` misses the lowercase
+combinators (`mp_then`, `resolve_then`), and requiring the control-flow
+keyword to follow the application immediately misses `... ttac th g\n end
+handle ...`.  Both patterns are worth keeping in the sweep.
+
+Finally, a naming hazard: several files use `ctxt` for a list of the
+goal's free variables (`markerLib`, `wlogLib`, `Q`).  Sitting next to a
+`Context.t` also called `ctxt`, that reads as a bug; they are `fvl` now.
 
 ### Editing the expander
 
