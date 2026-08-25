@@ -61,7 +61,7 @@ val TC_OFF = trace ("show_typecheck_errors", 0)
    context application, which is when the tactic does its work *)
 fun timeout_tactic t tac g =
   let val ctxt = Context.snapshot() in
-    SOME (fst (timeout t (fn g => TC_OFF (fn g => tac g ctxt) g) g))
+    SOME (fst (timeout t (TC_OFF (Lib.C tac ctxt)) g))
   end
   handle Interrupt => raise Interrupt | _ => NONE
 

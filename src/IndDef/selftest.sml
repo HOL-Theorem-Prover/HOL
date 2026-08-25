@@ -87,8 +87,7 @@ val _ = tprint "Can still look at rule_induction data"
 val _ = if can ThmSetData.current_data{settype = "rule_induction"} then OK()
         else die ""
 
-fun xHol_reln_amb name q = xHol_reln name q (Context.snapshot())
-val _ = shouldfail {testfn = quietly (in_repl_mode (xHol_reln_amb "tr")),
+val _ = shouldfail {testfn = quietly (in_repl_mode (runtac (xHol_reln "tr"))),
                     printresult = (fn (th,_,_) => thm_to_string th),
                     printarg = K "With Unicode should fail",
                     checkexn = is_struct_HOL_ERR "IndDefLib"}
@@ -104,7 +103,7 @@ val _ = if (in_repl_mode Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
         then OK()
         else die "FAILED"
 
-val _ = shouldfail { testfn = quietly (in_repl_mode (xHol_reln_amb "tr")),
+val _ = shouldfail { testfn = quietly (in_repl_mode (runtac (xHol_reln "tr"))),
                      printresult = (fn (th,_,_) => thm_to_string th),
                      printarg = K "Double implication should fail",
                      checkexn = (fn(HOL_ERR herr) =>

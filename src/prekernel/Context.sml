@@ -100,14 +100,17 @@ struct
           | SOME s => s
     fun report () =
         let val thy = thyname ()
-            val msg = "ambient context read while a proof was running (in " ^
-                      thy ^ ")"
-            fun warn () = Feedback.HOL_WARNING "Context" "snapshot" msg
+            (* built only where it is used: at level 1 the common case is
+               a theory already reported, and this fires per read *)
+            fun msg () = "ambient context read while a proof was running (in " ^
+                         thy ^ ")"
+            fun warn () = Feedback.HOL_WARNING "Context" "snapshot" (msg ())
         in
-          if !action > 2 then raise ERR "snapshot" msg
-          else if !action > 1 then warn ()
-          else if List.exists (fn s => s = thy) (!reported) then ()
-          else (reported := thy :: !reported; warn ())
+          case !action of
+              1 => if Lib.mem thy (!reported) then ()
+                   else (reported := thy :: !reported; warn ())
+            | 2 => warn ()
+            | _ => raise ERR "snapshot" (msg ())
         end
   in
     fun in_proof f x =

@@ -207,7 +207,7 @@ fun apply_tac parsetoken tokenl goal =
     val ctxt = Context.snapshot()
     fun f g =
       let val tac = build_tac parsetoken tokenl in
-        SOME (fst (TC_OFF (fn g => tac g ctxt) g))
+        SOME (fst (TC_OFF (Lib.C tac ctxt) g))
       end
     val timer =
       if is_metis_stac (hd tokenl)

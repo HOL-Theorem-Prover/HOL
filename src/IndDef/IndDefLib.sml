@@ -491,12 +491,10 @@ fun isolate_to_front numSchematics Rt (G as (_, gt)) =
    ---------------------------------------------------------------------- *)
 
 (* turn off verbiage because Raise will redisplay any exceptions *)
-val parse =
-    term_of |> trace ("syntax_error", 0)
-            |> trace ("show_typecheck_errors", 0)
 fun parse_in ctxt =
     term_of_in ctxt |> trace ("syntax_error", 0)
                     |> trace ("show_typecheck_errors", 0)
+fun parse q = parse_in (Context.snapshot()) q
 
 (* the relation's quote is parsed against the supplied context; the
    monotonicity and rule-induction proofs below still read ambient state *)

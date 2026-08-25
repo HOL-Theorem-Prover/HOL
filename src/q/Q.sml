@@ -54,18 +54,20 @@ end
 
 val mk_type_rsubst = map (fn {redex,residue} => (pty redex |-> pty residue));
 
-fun store_thm(s,q,t) =
-    boolLib.store_thm(s,Parse.typedTerm q bool,t)
-    handle e => Feedback.render_exn (wrap_exn "Q" "store_thm" e);
-
 (* the statement is parsed against the same context it is proved in *)
 fun store_thm_at loc (s,q,t) ctxt =
     boolLib.store_thm_at loc (s,Parse.typedTerm_in ctxt q bool,t) ctxt
     handle e => Feedback.render_exn (wrap_exn "Q" "store_thm_at" e);
 
-fun prove (q, t) =
-    Tactical.prove(Parse.typedTerm q bool,t)
+fun store_thm arg =
+    store_thm_at DB.Unknown arg (Context.snapshot())
+    handle e => Feedback.render_exn (wrap_exn "Q" "store_thm" e);
+
+fun prove_in ctxt (q, t) =
+    Tactical.prove_in ctxt (Parse.typedTerm_in ctxt q bool,t)
     handle e => Feedback.render_exn (wrap_exn "Q" "prove" e);
+
+fun prove qt = prove_in (Context.snapshot()) qt;
 
 fun new_definition_at l (s,q) = boolLib.new_definition_at l (s,btm q);
 val new_definition = new_definition_at DB.Unknown
@@ -577,7 +579,7 @@ fun subterm_helper strictp make_tac k {ERR,pats,fvs_set} t g ctxt = let
               val theta = map (redex_map (inst tytheta)) theta0
             in
               if length theta <> thetasz then NONE
-              else Lib.total (fn g => (make_tac theta THEN k) g ctxt) g
+              else Lib.total (Lib.C (make_tac theta THEN k) ctxt) g
             end
           | NONE => NONE
   fun find_pats patseq =

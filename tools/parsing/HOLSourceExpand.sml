@@ -660,7 +660,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val args = {args = [nameAttrs, quote, tac], seps = [], stop = tupleStop}
     val tuple = Tuple {left = theorem_, elems = args, right = NONE, stop = tupleStop}
     val e = App (e, tuple)
-    val e = App (e, mkSnapshot tupleStop)
+    val e = App (e, mkSnapshot (expStop e))
     in DecExpansion {orig = dec, result = [valPat theorem_ (mkIdent id) e]} end
   | expandDec _ (dec as HOLResume {resume_, id, attrs, tac, ...}) = let
     val (label, rest) = case (case attrs of NONE => [] | SOME v => #args (#attrs v)) of

@@ -53,7 +53,7 @@ fun apply_tactic_goal_term (tactic:bossLib.tactic) (LEAF g) =
   (let
     val ctxt = Context.snapshot()
     val (subgoals,v) =
-        smlTimeout.timeout 0.1 (fn g => tactic g ctxt) g
+        smlTimeout.timeout 0.1 (Lib.C tactic ctxt) g
   in
     if List.null subgoals then
       SUCCESS (v [])

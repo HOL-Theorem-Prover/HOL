@@ -51,6 +51,7 @@ sig
                                string * tmquote * tactic -> Context.t ->
                                thm
   val prove                  : tmquote * tactic -> thm
+  val prove_in               : Context.t -> tmquote * tactic -> thm
   val INST                   : (tmquote, tmquote) subst -> thm -> thm
   val new_definition         : string * tmquote -> thm
   val new_definition_at      : DB.thm_src_location -> string * tmquote -> thm

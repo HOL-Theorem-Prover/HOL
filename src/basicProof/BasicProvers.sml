@@ -1269,8 +1269,11 @@ fun with_simpset_updates f g x = (
    once it has both, so a tactic modifier's window must span both
    applications: bracketing `tac goal` alone would close it while the
    tactic was still an unapplied closure. *)
+(* The window spans the tactic, but not the validation it returns, which
+   runs later.  Phase 3a removes the window rather than widening it: an
+   adjusted simpset in the context travels with the proof. *)
 fun with_simpset_updates_tac f g x y =
-    with_simpset_updates f (fn () => g x y) ()
+    with_simpset_updates f (Lib.C g y) x
 
 local
   val update_log_slot :

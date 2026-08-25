@@ -58,7 +58,7 @@ fun concatMapV f (ls, v: list_validation) = let
 fun expandf (tac:tactic) ctxt (n, g) =
   (n, apply (fn (gs, v) =>
     Base (concatMapV ((fn (gs, v) => (gs, single o v)) o
-                      (fn g => tac g ctxt))
+                      (Lib.C tac ctxt))
                      (gs, v))) g)
 val expand = expandf o Tactical.VALID
 

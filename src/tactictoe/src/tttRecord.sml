@@ -108,7 +108,7 @@ fun write_info thy =
 
 fun record_tactic (tac,stac) g ctxt =
   let
-    val ((gl,v),t) = add_time (fn g => tac g ctxt) g
+    val ((gl,v),t) = add_time (Lib.C tac ctxt) g
     val _ =
       (incr n_tactic_replayed;
        if op_mem goal_eq g gl then () else
@@ -170,7 +170,7 @@ fun app_wrap_proof name run_stac recorded_stac =
         val _ = incr n_proof_parsed
       in
         let val (gl,v) =
-                total_time replay_time (fn g => wtac g ctxt) goal
+                total_time replay_time (Lib.C wtac ctxt) goal
         in
           if null gl
           then (incr n_proof_replayed; (gl,v))
@@ -363,7 +363,7 @@ fun record_proof name lflag tac1 tac2 (g:goal) ctxt =
         (debug "record proof: ignored"; incr n_proof_ignored; tac2 g ctxt)
       else
         let
-          val (r,t) = add_time (fn g => tac1 g ctxt) g
+          val (r,t) = add_time (Lib.C tac1 ctxt) g
           val _ = record_time := !record_time + t;
           val _ = debug ("record time: " ^ Real.toString t)
           val _ = total_time learn_time end_record_proof name

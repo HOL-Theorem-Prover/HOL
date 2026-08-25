@@ -376,7 +376,7 @@ structure ToSML = struct
         val () =
             case mod_alist of
                 [] => ()
-              | kv::attrs => aux ("BasicProvers.with_simpset_updates (" ^
+              | kv::attrs => aux ("BasicProvers.with_simpset_updates_tac (" ^
                                   mktm kv attrs ^ ") ")
         val n = #1 (!line)
         val _ = readAt p (p + sz) countlines

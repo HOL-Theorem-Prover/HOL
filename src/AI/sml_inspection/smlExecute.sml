@@ -173,7 +173,7 @@ fun app_stac tim stac g =
   let
     val tac = tactic_of_sml tim stac
     val ctxt = Context.snapshot()
-    fun run g = TC_OFF (fn g => tac g ctxt) g
+    val run = TC_OFF (Lib.C tac ctxt)
   in
     SOME (fst (timeout tim run g))
   end
