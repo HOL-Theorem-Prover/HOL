@@ -11,30 +11,45 @@ execution substrates:
 * NativeSML extracts the executable fragment to SML and compiles the test
   loop in process.  It is the preferred fast substrate on Poly/ML.
 
-QC's report distinguishes a vacuous run from a real one.  Every candidate
-that satisfied all of a plan's Guard/SmartGuard/Split/Bind premises counts
-as "assumption satisfied", and every one of those whose conclusion was
-actually evaluated (as opposed to left stuck) counts as "conclusion
-evaluated"; a found counterexample or model shows both counts alongside
-its size, and a search that ends `Unknown` always appends them to its
-reason list, so a run where every candidate failed its premises -- which
-otherwise looks identical to a real search that tried everything and
-found nothing -- is visible in the report.  Compute and NativeSML count
-every candidate for real, incrementally, inside the search itself.  Cv
-leaves the counters absent on every shape rather than fabricate a
-number: unlike Compute and NativeSML, Cv's search runs as one opaque
-compiled call, so counting would need either a second pass over the
-same candidate space or threading counters into the trusted search
-definition.  Threading was rejected as a determinism risk (any change
-to the search's own definition is a change to the candidate stream), and
-a second pass was tried and reverted: it cannot stop early the way the
-real search does, so on a goal the real search settles quickly by
-short-circuiting (e.g. an early counterexample in a large arithmetic
-domain), the mandatory full-domain count can cost far more than the
-search itself and starve it of the shared deadline -- turning a genuine
-counterexample into a timeout.  A diagnostic must never be able to
-change a verdict, so Cv reports "candidate counters unavailable on this
-backend" uniformly instead.
+QC's report carries three counters: every candidate a plan generates
+counts as "candidates generated"; every one of those that satisfied all
+of a plan's Guard/SmartGuard/Split/Bind premises counts as "assumptions
+satisfied"; and every one of those whose conclusion was actually
+evaluated (as opposed to left stuck) counts as "conclusions evaluated"
+-- `conclusions evaluated <= assumptions satisfied <= candidates
+generated`.  A found counterexample shows all three counts alongside
+its size via `format_stats`.  When a search instead ends
+`NoCounterexample` or `Unknown` with no witness, the same three counts
+are reported separately, on the `Private.say` trace channel rather than
+in the `Unknown` reason list: they are telemetry about the search, not
+themselves a reason it was inconclusive, and a witness's own
+`format_stats` line already covers the counterexample case.  A nonzero
+"assumptions satisfied" already shows a witness-less search tested real
+candidates against a real conclusion, so the numerator alone tells a
+real search from a vacuous one.  The denominator earns its keep when
+the numerator is zero on both sides: measured on this tree at size 3,
+Compute, exhaustive, `!n. n * n = 7 ==> n < 3` reports "candidates
+generated 9, assumptions satisfied 0" -- real candidates were generated
+and every one was rejected by the premise -- while `!n. n > 100 ==>
+n < 3` reports "candidates generated 0, assumptions satisfied 0",
+because the planner inverts `n > 100` into a smart generator whose
+enumeration is empty at every size, so nothing was generated at all.
+Only "candidates generated" tells those two zero-numerator runs apart.
+The totals accumulate over every entry of a search schedule, and larger
+entries re-explore the same domain from scratch (sizes 1..N), so a
+4-element domain can legitimately total 9 candidates generated across
+an exhaustive run at size 3 -- the total is a cumulative count of a
+schedule's work, not a count of distinct candidates.  Compute and
+NativeSML count every candidate for real, incrementally, inside the
+search itself.  Cv leaves all three counters absent on every shape
+rather than fabricate a number, and a witness-less Cv report says
+"candidate counters unavailable on this substrate" instead of a
+denominator it cannot produce; see the comment beside `last_stats :=
+[]` on `run` in `Refute_EvalCv.sml`'s `compile_plans` for why, and
+`Refute_QC.sml`'s `strategy_run_body` (mirrored in
+`Refute_QC_Narrow.sml`) for where the telemetry is emitted.  The
+model finder emits none of the three counters; the denominator is a QC
+concept only.
 
 `:rat` has a built-in QC generator (`Refute_EvalRat`), registered
 unconditionally at Refute's load time.  Its candidates are a custom

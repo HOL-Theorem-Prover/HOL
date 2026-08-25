@@ -20531,9 +20531,7 @@ fun finite_map_never_exhausted () =
     ``FDOM ((fm : num |-> num) |+ (k, v)) = k INSERT FDOM fm`` of
       Unknown reasons =>
         reasons = ["exhaustive: search space not exhausted",
-                   "exhaustive: searched up to size 2",
-                   "exhaustive: assumption satisfied 62, " ^
-                   "conclusion evaluated 62"]
+                   "exhaustive: searched up to size 2"]
     | _ => false
 
 val _ = tprint "Refute finite-map quickcheck is never exhausted"
@@ -23185,10 +23183,14 @@ fun quiet_suppresses_whole_refute_call () =
       |> upd_sequential true
       |> upd_substrate Compute
       |> upd_quiet true
-    val (_, output) = capture_refute_messages 4 (fn () =>
+    val (_, cex_output) = capture_refute_messages 4 (fn () =>
       ignore (Refute.refute config ``F``))
+    (* [F] finds a witness immediately; also cover the witness-less
+       [Private.say] counter line FIX_B added, which [F] never reaches. *)
+    val (_, unknown_output) = capture_refute_messages 4 (fn () =>
+      ignore (Refute.refute (upd_size 3 config) ``n > 100 ==> n < 3``))
   in
-    output = ""
+    cex_output = "" andalso unknown_output = ""
   end
 
 val _ = require_msg
@@ -25225,26 +25227,32 @@ fun conformance_bindings (Refute.Counterexample (cex :: _)) =
       SOME (#bindings cex)
   | conformance_bindings _ = NONE
 
-(* The candidate-counter diagnostic (assumption-satisfied /
-   conclusion-evaluated, or its "unavailable" fallback) is not part of a
-   substrate's verdict: Compute and NativeSML measure it for real, while
-   Cv reports it as absent, so it legitimately differs -- present with
-   real numbers on one substrate, absent on another -- without the
-   substrates disagreeing on the search outcome itself.  Conformance
-   compares outcomes, so this diagnostic is excluded from the
-   comparison. *)
-fun is_counter_reason reason =
-  String.isSubstring "assumption satisfied" reason orelse
-  String.isSubstring "candidate counters unavailable" reason
+fun conformance_stats (Refute.Counterexample (cex :: _)) = SOME (#stats cex)
+  | conformance_stats _ = NONE
 
-fun strip_counter_reasons reasons =
-  List.filter (not o is_counter_reason) reasons
+val conformance_counter_keys =
+  ["assumption_satisfied", "conclusion_evaluated", "candidates_generated"]
+
+(* Cv omits all three counters; the rule is symmetric non-contradiction,
+   not equality: where both sides report a key its values must agree,
+   where either omits it there is no constraint. *)
+fun same_conformance_counters (left, right) =
+  case (conformance_stats left, conformance_stats right) of
+      (SOME left_stats, SOME right_stats) =>
+        List.all (fn key =>
+          case (lookup_stat key left_stats, lookup_stat key right_stats) of
+              (SOME l, SOME r) => l = r
+            | _ => true) conformance_counter_keys
+    | _ => true
 
 (* QC's candidate counters: every candidate whose Guard/SmartGuard/Split/
-   Bind premises all held counts as "assumption satisfied", and every one
-   of those whose conclusion was actually evaluated counts as
-   "conclusion evaluated".  On a found counterexample they land in
-   [#stats], keyed exactly as in a search's [Unknown] reason text. *)
+   Bind premises all held counts as "assumptions satisfied", and every
+   one of those whose conclusion was actually evaluated counts as
+   "conclusions evaluated".  On a found counterexample they land in
+   [#stats]; on a witness-less outcome ([NoCounterexample] or
+   [Unknown]) they are telemetry, printed as a "backend: ..." line at
+   trace level 1 rather than folded into the [Unknown] reasons -- see
+   [qc_counters_distinguish_vacuous] below. *)
 fun qc_counters_compute_real () =
   let
     val config =
@@ -25293,13 +25301,8 @@ val _ = require_msg (check_result qc_counters_native_real) (fn () =>
   "native did not report the expected assumption/conclusion counts")
   (fn () => ()) ()
 
-(* Cv's search runs as one opaque compiled call: threading counters into
-   it would risk the candidate stream, and a companion counting pass was
-   tried and reverted (it cannot stop early the way the real search
-   does, so it can cost far more than a search the real search settles
-   quickly by short-circuiting, and starve it of the shared deadline --
-   see README).  Cv therefore reports the counters as genuinely absent,
-   never a fabricated number. *)
+(* Cv reports the counters as genuinely absent on every shape rather
+   than fabricate a number; see [Refute_EvalCv.run] for why. *)
 fun qc_counters_cv_absent () =
   let
     val config =
@@ -25310,8 +25313,7 @@ fun qc_counters_cv_absent () =
         Counterexample [cex] =>
           lookup_stat "assumption_satisfied" (#stats cex) = NONE andalso
           lookup_stat "conclusion_evaluated" (#stats cex) = NONE andalso
-          not (String.isSubstring "assumption satisfied"
-            (format_outcome config (Counterexample [cex])))
+          lookup_stat "candidates_generated" (#stats cex) = NONE
       | _ => false
   end
 
@@ -25320,47 +25322,136 @@ val _ = require_msg (check_result qc_counters_cv_absent) (fn () =>
   "cv reported a candidate counter it cannot measure")
   (fn () => ()) ()
 
+(* Cv never measures the counters, so a witness-less Cv search must say
+   so instead of rendering a denominator it cannot produce. *)
+fun qc_counters_cv_unavailable_message () =
+  let
+    val config =
+      upd_size 3 (upd_substrate Cv
+        (upd_backends (SOME ["exhaustive"]) default_config))
+    val (outcome, messages) = capture_refute_messages 1 (fn () =>
+      refute config ``!n : num. n < 3 ==> n < 100``)
+  in
+    case outcome of
+        Unknown _ =>
+          String.isSubstring
+            "candidate counters unavailable on this substrate" messages
+      | _ => (print ("\n  messages: " ^ messages ^ "\n"); false)
+  end
+
+val _ = tprint "Refute QC counters: cv reports counters unavailable"
+val _ = require_msg
+  (check_result qc_counters_cv_unavailable_message) (fn () =>
+  "cv did not report the counters-unavailable message on a witness-less " ^
+  "search")
+  (fn () => ()) ()
+
 (* The deliverable: a vacuous run (every candidate failed the premise, so
    the conclusion was never evaluated) is indistinguishable from a real
    one by verdict and by the rest of an [Unknown] reason list alone --
    both are "search space not exhausted" at the same size -- but the
-   counter line tells them apart: 0 assumption-satisfied candidates
-   against a nonzero count on an otherwise identically-shaped search.
-
-   The premise is [n * n = 7] rather than a comparison against a large
-   literal deliberately.  A premise the planner can invert ([n > 100],
-   say) becomes a smart generator that enumerates its own solutions, and
-   over 0..3 that enumeration is empty -- the run then reports 0 because
-   it generated nothing at all, not because candidates failed the
-   premise, which is a different fact wearing the same number (pinned
-   separately by [qc_counters_empty_smart_enumeration]).  Multiplication
-   gives the planner no such inverse, so all four candidates really are
-   generated and really are rejected. *)
+   counter diagnostic ([Private.say], not a reason -- see the comment
+   above [qc_counters_compute_real]) tells them apart.  The two goals are
+   not identically shaped: [n * n = 7 ==> n < 3] gives the planner no
+   invertible premise, so every candidate is generated and rejected at
+   the guard (assumptions satisfied 0); [n < 3 ==> n < 100] is a genuine
+   search whose premise lets candidates through, so assumptions
+   satisfied is nonzero.  That is the numerator gap; see
+   [qc_counters_denominator_distinguishes_empty_enumeration] below for
+   the sharper case where both numerators are zero. *)
 fun qc_counters_distinguish_vacuous () =
   let
     val config =
       upd_size 3 (upd_substrate Compute
         (upd_backends (SOME ["exhaustive"]) default_config))
-    val vacuous = refute config ``!n : num. n * n = 7 ==> n < 3``
-    val real = refute config ``!n : num. n < 3 ==> n < 100``
+    val (vacuous, vacuous_messages) = capture_refute_messages 1 (fn () =>
+      refute config ``!n : num. n * n = 7 ==> n < 3``)
+    val (real, real_messages) = capture_refute_messages 1 (fn () =>
+      refute config ``!n : num. n < 3 ==> n < 100``)
   in
     case (vacuous, real) of
-        (Unknown vacuous_reasons, Unknown real_reasons) =>
-          List.exists
-            (String.isSubstring "assumption satisfied 0, ")
-            vacuous_reasons andalso
-          List.exists
-            (String.isSubstring "assumption satisfied 8, ")
-            real_reasons andalso
-          strip_counter_reasons vacuous_reasons =
-          strip_counter_reasons real_reasons
-      | _ => false
+        (Unknown _, Unknown _) =>
+          String.isSubstring "assumptions satisfied 0, "
+            vacuous_messages andalso
+          not (String.isSubstring "assumptions satisfied 0, "
+            real_messages)
+      | _ =>
+          (print ("\n  vacuous messages: " ^ vacuous_messages ^
+                  "\n  real messages: " ^ real_messages ^ "\n");
+           false)
   end
 
 val _ = tprint
   "Refute QC counters distinguish a vacuous search from a real one"
 val _ = require_msg (check_result qc_counters_distinguish_vacuous) (fn () =>
   "the counter line did not distinguish the vacuous run from the real one")
+  (fn () => ()) ()
+
+(* The primary defect-1 pin: a decisive [NoCounterexample] verdict used
+   to surface nothing about whether the search ever exercised its
+   conclusion.  Neither goal is a counterexample -- the first's premise
+   is never true, so its conclusion is never evaluated; the second is a
+   tautology, evaluated on every candidate -- and both used to print the
+   byte-identical "Refute searched the whole space: no counterexample is
+   possible".  The counter diagnostic now tells them apart without
+   touching the verdict. *)
+fun qc_counters_distinguish_no_counterexample_reports () =
+  let
+    val config =
+      upd_size 3 (upd_substrate Compute
+        (upd_backends (SOME ["exhaustive"]) default_config))
+    val (never, never_messages) = capture_refute_messages 1 (fn () =>
+      refute config ``!b. (b /\ ~b) ==> b``)
+    val (always, always_messages) = capture_refute_messages 1 (fn () =>
+      refute config ``!b. (b \/ ~b) ==> (b \/ ~b)``)
+  in
+    case (never, always) of
+        (NoCounterexample, NoCounterexample) =>
+          never_messages <> always_messages
+      | _ =>
+          (print ("\n  never messages: " ^ never_messages ^
+                  "\n  always messages: " ^ always_messages ^ "\n");
+           false)
+  end
+
+val _ = tprint
+  "Refute QC counters distinguish two NoCounterexample reports"
+val _ = require_msg
+  (check_result qc_counters_distinguish_no_counterexample_reports) (fn () =>
+  "a vacuously-true and a genuinely-tested NoCounterexample reported " ^
+  "the same text")
+  (fn () => ()) ()
+
+(* Narrowing's own route to the headline gap, mirroring the exhaustive
+   pin above but forced through the narrowing backend: this exercises the
+   emission point in [Refute_QC_Narrow.run_body], which no other pin
+   covers. *)
+fun narrowing_counters_distinguish_no_counterexample_reports () =
+  let
+    val config =
+      upd_size 3
+        (Refute.upd_search (Refute.Only [Refute.Narrowing]) default_config)
+    val (never, never_messages) = capture_refute_messages 1 (fn () =>
+      refute config ``!b. (b /\ ~b) ==> b``)
+    val (always, always_messages) = capture_refute_messages 1 (fn () =>
+      refute config ``!b. (b \/ ~b) ==> (b \/ ~b)``)
+  in
+    case (never, always) of
+        (NoCounterexample, NoCounterexample) =>
+          never_messages <> always_messages
+      | _ =>
+          (print ("\n  never messages: " ^ never_messages ^
+                  "\n  always messages: " ^ always_messages ^ "\n");
+           false)
+  end
+
+val _ = tprint
+  "Refute narrowing counters distinguish two NoCounterexample reports"
+val _ = require_msg
+  (check_result narrowing_counters_distinguish_no_counterexample_reports)
+  (fn () =>
+  "a vacuously-true and a genuinely-tested narrowing NoCounterexample " ^
+  "reported the same text")
   (fn () => ()) ()
 
 (* Low-level access to a single call's raw counters, bypassing [refute]'s
@@ -25525,6 +25616,52 @@ val _ = require_msg
   "an empty smart enumeration did not report a zero denominator")
   (fn () => ()) ()
 
+(* The headline gap this whole diagnostic exists to close: two goals
+   whose premise the planner cannot invert into a generator both fail
+   every candidate's premise, so both end [Unknown] with no witness and
+   zero assumptions satisfied -- but [n * n = 7] really does generate
+   candidates and reject them, while [n > 100]'s smart-generator
+   inversion enumerates no candidates over 0..3 at all.  With no
+   witness, the user-visible surface is the [Private.say] line built
+   from [counter_reason], not [format_stats] (which only ever renders
+   on a witness) -- capture that line directly instead of building a
+   stats list by hand and formatting it off to the side.  9, not 4: a
+   full [refute] search re-explores sizes 1..3 (2 + 3 + 4 candidates),
+   unlike [raw_counters]'s single size-3 call above. *)
+fun qc_counters_denominator_distinguishes_empty_enumeration () =
+  let
+    val config =
+      upd_size 3 (upd_substrate Compute
+        (upd_backends (SOME ["exhaustive"]) default_config))
+    val (rejected, rejected_messages) = capture_refute_messages 1 (fn () =>
+      refute config ``!n : num. n * n = 7 ==> n < 3``)
+    val (empty, empty_messages) = capture_refute_messages 1 (fn () =>
+      refute config ``!n : num. n > 100 ==> n < 3``)
+  in
+    case (rejected, empty) of
+        (Unknown _, Unknown _) =>
+          String.isSubstring
+            "candidates generated 9, assumptions satisfied 0"
+            rejected_messages andalso
+          String.isSubstring
+            "candidates generated 0, assumptions satisfied 0"
+            empty_messages
+      | _ =>
+          (print ("\n  rejected messages: " ^ rejected_messages ^
+                  "\n  empty messages: " ^ empty_messages ^ "\n");
+           false)
+  end
+
+val _ = tprint
+  "Refute QC counters: the denominator distinguishes two zero-satisfied \
+  \runs"
+val _ = require_msg
+  (check_result qc_counters_denominator_distinguishes_empty_enumeration)
+  (fn () =>
+  "rejecting four candidates and generating none reported the same " ^
+  "user-visible counter line")
+  (fn () => ()) ()
+
 (* Narrowing's own route for the same invariant (defect 1): [xs] starts
    totally unrefined, so at least one [evaluate] call on it is
    [NeedsRefinement] (a test that is not decided) before narrowing refines
@@ -25556,6 +25693,36 @@ val _ = tprint
 val _ = require_msg
   (check_result qc_counters_narrowing_decided_lt_tests) (fn () =>
   "narrowing did not distinguish decided candidates from tested ones")
+  (fn () => ()) ()
+
+(* At [upd_size 1], narrowing runs two schedule entries -- depth 0, then
+   depth 1 -- before this witness turns up at depth 1: depth 0's [xs] is
+   totally unrefined and undecided, but it still ran and its counts
+   still belong in the total.  [#stats] must report the two entries'
+   combined total (3, 3, 5), not depth 1's own call alone (2, 2, 3);
+   see [Refute_QC_Narrow.run_body]'s [stats_for], which mirrors
+   [Refute_QC.strategy_run_body]'s. *)
+fun qc_counters_narrowing_reports_schedule_total () =
+  let
+    val config = default_config
+      |> upd_substrate NativeSML
+      |> upd_size 1
+  in
+    case run_with_strategy Narrowing config ``NULL (xs : num list)`` of
+        Counterexample [cex] =>
+          lookup_stat "assumption_satisfied" (#stats cex) = SOME 3 andalso
+          lookup_stat "conclusion_evaluated" (#stats cex) = SOME 3 andalso
+          lookup_stat "candidates_generated" (#stats cex) = SOME 5
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute QC counters: narrowing reports the schedule total, not the \
+  \last call"
+val _ = require_msg
+  (check_result qc_counters_narrowing_reports_schedule_total) (fn () =>
+  "narrowing's witness reported a single call's counters instead of " ^
+  "the whole search's total")
   (fn () => ()) ()
 
 (* [x = SOME y ==> y < 100] compiles to a Split on [x] with a single
@@ -25648,17 +25815,24 @@ val _ = require_msg
   "smart-guard rejections were left out of candidates_generated")
   (fn () => ()) ()
 
+(* The candidate-counter diagnostic never reaches [reasons]: it is
+   telemetry on the [Private.say] channel, not part of the [Unknown]
+   verdict, so no stripping is needed here to compare outcomes -- an
+   [Unknown] pair is compared on its reasons exactly as given.
+   [quiet_refute] silences [Private.say] entirely, so a witness's
+   [#stats] is the only comparable counter surface in this harness;
+   [same_conformance_counters] checks it. *)
 fun same_conformance_outcome (left, right) =
   case (left, right) of
       (Refute.Counterexample _, Refute.Counterexample _) =>
         (case (conformance_bindings left, conformance_bindings right) of
              (SOME left_bindings, SOME right_bindings) =>
-               same_bindings left_bindings right_bindings
+               same_bindings left_bindings right_bindings andalso
+               same_conformance_counters (left, right)
            | _ => false)
     | (Refute.NoCounterexample, Refute.NoCounterexample) => true
     | (Refute.Unknown left_reasons, Refute.Unknown right_reasons) =>
-        strip_counter_reasons left_reasons =
-        strip_counter_reasons right_reasons
+        left_reasons = right_reasons
     | _ => false
 
 fun certificate_tag_clean theorem =
@@ -26396,9 +26570,7 @@ fun rat_totality_never_claims_exhaustion () =
     case refute config goal of
         Unknown reasons =>
           reasons = ["exhaustive: search space not exhausted",
-                     "exhaustive: searched up to size 10",
-                     "exhaustive: assumption satisfied 612, " ^
-                     "conclusion evaluated 612"]
+                     "exhaustive: searched up to size 10"]
       | _ => false
   end
 
@@ -26529,9 +26701,7 @@ fun rat_reflexive_leq_never_refuted () =
     ``!x : rat. x <= x`` of
       Unknown reasons =>
         reasons = ["exhaustive: search space not exhausted",
-                   "exhaustive: searched up to size 10",
-                   "exhaustive: assumption satisfied 612, " ^
-                   "conclusion evaluated 612"]
+                   "exhaustive: searched up to size 10"]
     | _ => false
 
 val _ = tprint "Refute rat quickcheck x <= x is never refuted"
@@ -26742,9 +26912,7 @@ fun real_totality_never_claims_exhaustion () =
     case refute config goal of
         Unknown reasons =>
           reasons = ["exhaustive: search space not exhausted",
-                     "exhaustive: searched up to size 10",
-                     "exhaustive: assumption satisfied 612, " ^
-                     "conclusion evaluated 612"]
+                     "exhaustive: searched up to size 10"]
       | _ => false
   end
 
@@ -26872,9 +27040,7 @@ fun real_reflexive_leq_never_refuted () =
     ``!x : real. x <= x`` of
       Unknown reasons =>
         reasons = ["exhaustive: search space not exhausted",
-                   "exhaustive: searched up to size 10",
-                   "exhaustive: assumption satisfied 612, " ^
-                   "conclusion evaluated 612"]
+                   "exhaustive: searched up to size 10"]
     | _ => false
 
 val _ = tprint "Refute real quickcheck x <= x is never refuted"
@@ -27099,9 +27265,7 @@ fun rat_random_totality_never_claims_exhaustion () =
     case refute config goal of
         Unknown reasons =>
           reasons = ["random: random search exhausted",
-                     "random: searched up to size 10",
-                     "random: assumption satisfied 1000, " ^
-                     "conclusion evaluated 1000"]
+                     "random: searched up to size 10"]
       | _ => false
   end
 
@@ -27126,9 +27290,7 @@ fun real_random_totality_never_claims_exhaustion () =
     case refute config goal of
         Unknown reasons =>
           reasons = ["random: random search exhausted",
-                     "random: searched up to size 10",
-                     "random: assumption satisfied 1000, " ^
-                     "conclusion evaluated 1000"]
+                     "random: searched up to size 10"]
       | _ => false
   end
 

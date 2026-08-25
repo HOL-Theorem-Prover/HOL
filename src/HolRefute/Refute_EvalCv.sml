@@ -1253,17 +1253,9 @@ structure Refute_EvalCv = struct
        application = application}
     end
 
-  (* A separate, additive counting pass over the same plan -- summing
-     (assumption_satisfied, match_failures) over every leaf the real
-     search would visit -- was tried and reverted: unlike the real
-     search, a count cannot stop early, so on a goal whose real search
-     finds its answer quickly by short-circuiting (e.g. an early
-     counterexample in a large arithmetic domain such as word8 x
-     word8), the mandatory full-domain count can cost far more than the
-     search itself and starve it of the shared deadline, turning a
-     genuine counterexample into a timeout -- a diagnostic is not
-     allowed to change a verdict.  Cv's counters are therefore left
-     absent on every shape, not only Enum and Random; see README. *)
+  (* Cv reports no candidate counters on any shape, Enum and Random
+     alike -- see the comment beside `last_stats := []` in
+     `compile_plans`'s `run` function below for why. *)
 
   fun define_exhaustive_enum prefix payloads plan generators programs
       enum_fuel =
@@ -1663,14 +1655,22 @@ structure Refute_EvalCv = struct
         let
           val _ = start ()
           val result = runner (#card input) input
-          (* No candidate counters on any Cv shape: a mandatory
-             full-domain count cannot stop early the way the real
-             search does, so on a goal the real search settles quickly
-             by short-circuiting, the count could cost far more than
-             the search and starve it of the shared deadline -- a
-             diagnostic must never be able to change a verdict.  Absent
-             here, not fictional: [lookup_stat] reports "not present"
-             rather than a fabricated zero. *)
+          (* No candidate counters on any Cv shape.  Cv's search runs as
+             one opaque compiled call, so counting needs either a
+             companion pass over the same candidate space or threading
+             an accumulator into the compiled search itself.  The
+             vacuity signal matters exactly when no counterexample is
+             found, and there the real search has already visited the
+             whole domain or spent the deadline, so a companion pass
+             would roughly double the cost of a search that has already
+             finished -- for a diagnostic that must never be able to
+             change a verdict.  Threading an accumulator does not
+             change which candidates are visited, but it does touch the
+             trusted search's own definition, so it would require the
+             level-2 candidate-stream pins to be re-measured for no
+             compensating benefit.  Absent here, not fictional:
+             [lookup_stat] reports "not present" rather than a
+             fabricated zero. *)
           val _ = last_stats := []
         in
           result

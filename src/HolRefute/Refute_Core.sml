@@ -1575,10 +1575,13 @@ structure Refute_Core = struct
             (lookup_stat "size" stats),
           msec,
           Option.map (fn value =>
+            "candidates generated " ^ Int.toString value)
+            (lookup_stat "candidates_generated" stats),
+          Option.map (fn value =>
             "assumptions satisfied " ^ Int.toString value)
             (lookup_stat "assumption_satisfied" stats),
           Option.map (fn value =>
-            "conclusion evaluated " ^ Int.toString value)
+            "conclusions evaluated " ^ Int.toString value)
             (lookup_stat "conclusion_evaluated" stats) ]
       val present = List.mapPartial (fn value => value) fields
     in

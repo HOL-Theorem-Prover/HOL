@@ -1619,12 +1619,19 @@ structure Refute_QC = struct
               (* The vacuity signal: distinguishes a search that never
                  reached a Test node (every candidate failed its
                  premises) from one that genuinely exercised the
-                 conclusion, without being a certainty decision itself. *)
+                 conclusion, without being a certainty decision itself.
+                 Telemetry, not a search-inconclusive reason -- it rides
+                 [Private.say] rather than the [Unknown] reason list, and
+                 only when the outcome carries no witness: a found
+                 counterexample already shows the counts via
+                 [format_stats]. *)
               val counter_reason =
                 if !counters_measured then
-                  "assumption satisfied " ^
+                  "candidates generated " ^
+                  Int.toString (!candidates_generated_total) ^
+                  ", assumptions satisfied " ^
                   Int.toString (!assumption_satisfied_total) ^
-                  ", conclusion evaluated " ^
+                  ", conclusions evaluated " ^
                   Int.toString (!conclusion_evaluated_total)
                 else "candidate counters unavailable on this substrate"
             in
@@ -1635,10 +1642,12 @@ structure Refute_QC = struct
                         SOME potential =>
                           Refute_Core.Counterexample [potential]
                       | NONE =>
-                          if !complete then Refute_Core.NoCounterexample
-                          else Refute_Core.Unknown
-                            (generic_reason :: !gave_up @ frontier_reason @
-                             [counter_reason])
+                          (Refute_Core.Private.say 1
+                             (strategy_name strategy ^ ": " ^
+                              counter_reason ^ "\n");
+                           if !complete then Refute_Core.NoCounterexample
+                           else Refute_Core.Unknown
+                             (generic_reason :: !gave_up @ frontier_reason))
                 end
               val body_result = Exn.capture selected_body ()
               val close_result = bounded_close (#close compiled)

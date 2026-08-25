@@ -91,7 +91,8 @@ external compiler.
 - val _ = quickcheck ``(n : num) < 3``;
 > Refute found a counterexample
     (backend: exhaustive, substrate: compute, size 3, 0.0s,
-     assumptions satisfied 4, conclusion evaluated 4):
+     candidates generated 9, assumptions satisfied 9,
+     conclusions evaluated 9):
     n = 3
   Certified: |- ~!n. n < 3
 \end{verbatim}
@@ -113,7 +114,8 @@ external compiler.
     - val _ = quickcheck ``(n : num) < 3``;
     > Refute found a counterexample
         (backend: exhaustive, substrate: compute, size 3, 0.0s,
-         assumptions satisfied 4, conclusion evaluated 4):
+         candidates generated 9, assumptions satisfied 9,
+         conclusions evaluated 9):
         n = 3
       Certified: ⊢ ¬∀n. n < 3
 ```
@@ -126,7 +128,77 @@ substrate selection, schedules, and compiled plans; level 0 suppresses
 normal Refute output.  `upd_quiet true` is the preferred per-call way to
 suppress all messages and warnings.
 
-### Entry points and results
+### A witness-less report
+
+A search that ends `NoCounterexample` or `Unknown` -- no witness, so no
+`format_stats` line -- still reports its three QC counters, one line per
+backend that ran, on the `"Refute"` trace at level 1.  The following
+transcript is `!n. n * n = 7 ==> n < 3` at size 3: no premise-inverting
+generator exists for multiplication, so every candidate is really
+generated and really rejected, on every backend that measures the
+counters at all.
+
+```{=latex}
+\begin{session}
+\begin{verbatim}
+- the_config :=
+    (default_config
+       |> upd_sequential true
+       |> upd_substrate Compute
+       |> upd_size 3);
+> val it = () : unit
+
+- val _ = quickcheck ``!n : num. n * n = 7 ==> n < 3``;
+> exhaustive: candidates generated 9, assumptions satisfied 0,
+  conclusions evaluated 0
+  random: candidates generated 300, assumptions satisfied 0,
+  conclusions evaluated 0
+  narrowing: candidates generated 0, assumptions satisfied 0,
+  conclusions evaluated 0
+  Refute search was inconclusive
+  Reasons:
+    exhaustive: search space not exhausted
+    exhaustive: searched up to size 3
+    random: random search exhausted
+    random: searched up to size 3
+    narrowing: narrowing search exhausted
+    narrowing: substrate does not accept this problem
+\end{verbatim}
+\end{session}
+```
+
+```{=mdbook}
+    - the_config :=
+        (default_config
+           |> upd_sequential true
+           |> upd_substrate Compute
+           |> upd_size 3);
+    > val it = () : unit
+
+    - val _ = quickcheck ``!n : num. n * n = 7 ==> n < 3``;
+    > exhaustive: candidates generated 9, assumptions satisfied 0,
+      conclusions evaluated 0
+      random: candidates generated 300, assumptions satisfied 0,
+      conclusions evaluated 0
+      narrowing: candidates generated 0, assumptions satisfied 0,
+      conclusions evaluated 0
+      Refute search was inconclusive
+      Reasons:
+        exhaustive: search space not exhausted
+        exhaustive: searched up to size 3
+        random: random search exhausted
+        random: searched up to size 3
+        narrowing: narrowing search exhausted
+        narrowing: substrate does not accept this problem
+```
+
+Narrowing reports "substrate does not accept this problem": it declines
+a bare arithmetic equation outright, so its counters are the vacuous
+`(0, 0, 0)` of a backend that never ran a candidate, not evidence of a
+rejected search.  `random`'s 300 (100 candidates per size, sizes 1..3)
+is the same cumulative-schedule convention as `exhaustive`'s 9 (2 + 3 +
+4): the total counts a schedule's work across every entry, not distinct
+candidates, and a domain far smaller than 300 is unsurprising.
 
 The principal result type is:
 
@@ -143,16 +215,36 @@ A `counterexample` records its `backend`, execution `substrate`,
 `certainty`, free-variable `bindings`, requested `evals`, optional
 certificate, optional finite `scope` and model, and statistics.  On a
 Quickcheck backend (`exhaustive`, `random`, `narrowing`), the statistics
-and, for an `Unknown` result, the reasons report how many candidates had
-every `Guard`/`SmartGuard`/`Split`/`Bind` premise satisfied and how many
-of those went on to have their conclusion evaluated, as "assumptions
-satisfied" and "conclusion evaluated" counts.  A run where every
-candidate failed its premises -- so the conclusion was never actually
-tested -- otherwise looks identical to a real search that tried
-everything and found nothing; the counts tell the two apart.  `Compute`
-and `NativeSML` count every candidate for real; `Cv` runs its search as
-one compiled call with no room for incremental counting, so it always
-omits the counts rather than fabricate them.
+report three counts: how many candidates the search generated, how many
+of those had every `Guard`/`SmartGuard`/`Split`/`Bind` premise satisfied,
+and how many of those went on to have their conclusion evaluated, as
+"candidates generated", "assumptions satisfied", and "conclusions
+evaluated".  A found counterexample shows all three alongside its size;
+a search that instead ends `NoCounterexample` or `Unknown` with no
+witness reports the same three counts separately, as a message on the
+`"Refute"` trace rather than in the `Unknown` reason list, since they
+describe the search rather than being themselves a reason it was
+inconclusive.  A nonzero "assumptions satisfied" already shows a
+witness-less search tested real candidates against a real conclusion,
+so the numerator alone tells a real search from a vacuous one.  The
+denominator earns its keep when the numerator is zero on both sides:
+measured at size 3, `Compute`, exhaustive, `!n. n * n = 7 ==> n < 3`
+reports "candidates generated 9, assumptions satisfied 0" -- real
+candidates were generated and every one was rejected by the premise --
+while `!n. n > 100 ==> n < 3` reports "candidates generated 0,
+assumptions satisfied 0", because the planner inverts `n > 100` into a
+smart generator whose enumeration is empty at every size, so nothing
+was generated at all.  Only "candidates generated" tells those two
+zero-numerator runs apart.  The totals accumulate over every entry of a
+search schedule, and larger entries re-explore the same domain from
+scratch (sizes 1..N), so a 4-element domain can legitimately total 9
+candidates generated across an exhaustive run at size 3 -- the total is
+a cumulative count of a schedule's work, not a count of distinct
+candidates.  `Compute` and `NativeSML` count every candidate for real;
+`Cv` runs its search as one compiled call with no room for incremental
+counting, so it always omits all three counts rather than fabricate
+them, reporting "candidate counters unavailable on this substrate"
+instead of a denominator it cannot produce.
 `NoCounterexample` means that a selected search covered the whole relevant
 space: no counterexample is possible at any larger size.  The result is
 decisive and stops the concurrent backend pool.  A clean fixed-bound search
@@ -449,7 +541,8 @@ same bound and reports an incomplete no-hit result.
 (* temporary compilation messages omitted *)
 > Refute found a counterexample
     (backend: exhaustive, substrate: compute, size 1, 0.074s,
-     assumptions satisfied 2, conclusion evaluated 2):
+     candidates generated 2, assumptions satisfied 2,
+     conclusions evaluated 2):
     xs = [T]
   Certified: |- ~!xs. ALL_DISTINCT xs ==> LENGTH xs < 1
 \end{verbatim}
@@ -471,7 +564,8 @@ same bound and reports an incomplete no-hit result.
     (* temporary compilation messages omitted *)
     > Refute found a counterexample
         (backend: exhaustive, substrate: compute, size 1, 0.074s,
-         assumptions satisfied 2, conclusion evaluated 2):
+         candidates generated 2, assumptions satisfied 2,
+         conclusions evaluated 2):
         xs = [T]
       Certified: ⊢ ¬∀xs. ALL_DISTINCT xs ⇒ LENGTH xs < 1
 ```
@@ -526,7 +620,9 @@ uncertified marker:
 
 - val _ = quickcheck ``(n : num) < 3``;
 > Refute found a counterexample
-    (backend: exhaustive, substrate: compute, size 3, 0.0s):
+    (backend: exhaustive, substrate: compute, size 3, 0.0s,
+     candidates generated 9, assumptions satisfied 9,
+     conclusions evaluated 9):
     n = 3
   Certification: uncertified
 \end{verbatim}
@@ -539,7 +635,9 @@ uncertified marker:
 
     - val _ = quickcheck ``(n : num) < 3``;
     > Refute found a counterexample
-        (backend: exhaustive, substrate: compute, size 3, 0.0s):
+        (backend: exhaustive, substrate: compute, size 3, 0.0s,
+         candidates generated 9, assumptions satisfied 9,
+         conclusions evaluated 9):
         n = 3
       Certification: uncertified
 ```
