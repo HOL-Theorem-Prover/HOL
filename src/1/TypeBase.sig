@@ -12,6 +12,7 @@ sig
    (* Imperative database of datatype facts and associated operations. *)
 
    val theTypeBase        : unit -> typeBase
+   val theTypeBase_of     : Context.t -> typeBase
    val thy_typebase       : {thyname : string} -> typeBase option
    val thy_updates        : {thyname : string} -> tyinfo list
    val merge_typebases    : string list -> typeBase option

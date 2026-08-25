@@ -974,16 +974,17 @@ fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
 
  ---------------------------------------------------------------------------*)
 
-fun tyinfol() = TypeBasePure.listItems (TypeBase.theTypeBase());
+fun tyinfol_of ctxt = TypeBasePure.listItems (TypeBase.theTypeBase_of ctxt)
+fun tyinfol() = tyinfol_of (Context.snapshot())
 
-fun mkCSET () =
+fun mkCSET_of ctxt =
  let val CSET = (HOLset.empty
                   (inv_img_cmp (fn {Thy,Name,Ty} => (Thy,Name))
                           (pair_compare(String.compare,String.compare))))
      fun add_const (c,CSET) = HOLset.add(CSET, dest_thy_const c)
      fun add_tyinfo (tyinfo,CSET) =
        List.foldl add_const CSET (TypeBasePure.constructors_of tyinfo)
-     val CSET = List.foldl add_tyinfo CSET (tyinfol())
+     val CSET = List.foldl add_tyinfo CSET (tyinfol_of ctxt)
      fun inCSET t = HOLset.member(CSET, dest_thy_const t)
      fun constructed tm =
       let val (lhs,rhs) = dest_eq tm
@@ -1002,8 +1003,8 @@ fun mkCSET () =
 val leave_lets_var = mk_var("__leave_lets_alone__", bool)
 val LEAVE_LETS = ASSUME leave_lets_var
 
-fun PRIM_STP_TAC ss finisher =
- let val has_constr_eqn = mkCSET ()
+fun PRIM_STP_TAC ss finisher g ctxt =
+ (let val has_constr_eqn = mkCSET_of ctxt
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
      (* we don't have access to any theorem list that might have been passed
         to RW_TAC or SRW_TAC at this point, but we can look for the effect of
@@ -1040,7 +1041,7 @@ fun PRIM_STP_TAC ss finisher =
                ORELSE CONCL_TAC ASM_SIMP has_constr_eqn
                ORELSE LET_ELIM_TAC))
      THEN TRY finisher
-  end
+  end) g ctxt
 
 (*---------------------------------------------------------------------------
     PRIM_NORM_TAC: preliminary attempt at keeping the goal in a
@@ -1066,8 +1067,8 @@ fun LIFT_SPLIT_SIMP ss simp th =
 
 fun SPLIT_SIMP simp = TRY (IF_CASES_TAC ORELSE CASE_TAC) THEN simp ;
 
-fun PRIM_NORM_TAC ss =
- let val has_constr_eqn = mkCSET()
+fun PRIM_NORM_TAC ss g ctxt =
+ (let val has_constr_eqn = mkCSET_of ctxt
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
@@ -1083,7 +1084,7 @@ fun PRIM_NORM_TAC ss =
                ORELSE ASSUM_TAC (LIFT_SPLIT_SIMP ss ASM_SIMP) splittable
                ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) splittable
                ORELSE LET_ELIM_TAC))
-  end
+  end) g ctxt
 
 
 (*---------------------------------------------------------------------------
@@ -1092,8 +1093,8 @@ fun PRIM_NORM_TAC ss =
     PRIM_STP tac instead.
  ---------------------------------------------------------------------------*)
 
-fun STP_TAC ss finisher
-  = PRIM_STP_TAC (rev_itlist add_simpls (tyinfol()) ss) finisher
+fun STP_TAC ss finisher g ctxt =
+    PRIM_STP_TAC (rev_itlist add_simpls (tyinfol_of ctxt) ss) finisher g ctxt
 
 fun RW_TAC ss thl g = markerLib.ABBRS_THEN
                           (markerLib.mk_require_tac
@@ -1102,11 +1103,13 @@ fun RW_TAC ss thl g = markerLib.ABBRS_THEN
                           g
 val rw_tac = RW_TAC
 
-fun NORM_TAC ss thl g =
+fun NORM_TAC ss thl g ctxt =
     markerLib.ABBRS_THEN
-      (fn thl => PRIM_NORM_TAC (rev_itlist add_simpls (tyinfol()) (ss && thl)))
+      (fn thl =>
+          PRIM_NORM_TAC (rev_itlist add_simpls (tyinfol_of ctxt) (ss && thl)))
       thl
       g
+      ctxt
 
 val bool_ss = boolSimps.bool_ss;
 
@@ -1138,16 +1141,17 @@ fun apply_delta d ((sset,initp,upds):srw_state) : srw_state =
 fun apply_srw_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
   | apply_srw_update (REMOVE_RWT n, ss) = ss -* [n]
 
-fun init_state (st as (sset,initp,upds)) =
+fun init_state_of ctxt (st as (sset,initp,upds)) =
     if initp then st
     else
       let fun init() =
               (List.foldl apply_srw_update sset (List.rev upds)
-                          |> rev_itlist add_simpls (tyinfol()),
+                          |> rev_itlist add_simpls (tyinfol_of ctxt),
                true, [])
       in
         HOL_PROGRESS_MESG ("Initialising SRW simpset ... ", "done") init ()
       end
+fun init_state st = init_state_of (Context.snapshot()) st
 fun opt_partition f g ls =
     let
       fun recurse As Bs ls =
@@ -1177,7 +1181,13 @@ fun opt_partition f g ls =
    already hold the global slot's lock: those take the read side only,
    whereas a nested Context.update could deadlock against a concurrent
    restore.  Both are handed the new state rather than reading it back,
-   so neither depends on when it runs relative to the adjustment. *)
+   so neither depends on when it runs relative to the adjustment.
+
+   The suspension also closes over the context to initialise the state
+   against, since that reaches the TypeBase.  `put` has one; `write`
+   runs during theory load, outside any proof, so it snapshots there
+   rather than leaving an ambient read to happen when the value is
+   forced -- which could be arbitrarily later, inside a proof. *)
 val derived_installers =
     Sref.new ([] : {put : srw_state -> Context.t -> Context.t,
                     write : srw_state -> unit} list)
@@ -1275,7 +1285,7 @@ val () = TypeBase.register_update_fn (fn tyi => (update_fn tyi; tyi))
    the state without reinstalling would leave every derived value
    suspended over the uninitialised one, so each would repeat the fold
    -- and reach tyinfol() -- when forced. *)
-fun srw_ss_of ctxt = #1 (init_state (get_global_value_of ctxt))
+fun srw_ss_of ctxt = #1 (init_state_of ctxt (get_global_value_of ctxt))
 fun srw_ss () =
     case get_global_value() of
         (ss, true, _) => ss
@@ -1423,16 +1433,21 @@ fun recreate_sset_at_parentage ps =
 fun make_simpset_derived_value name (deriver : simpset -> 'a -> 'a) init =
     let
       fun derive ss = deriver ss init
-      fun suspend st = SOME (Susp.delay (fn () => derive (#1 (init_state st))))
+      fun suspend ctxt st =
+          SOME (Susp.delay (fn () => derive (#1 (init_state_of ctxt st))))
       val vslot : 'a Susp.susp option Context.Data.slot =
           Context.Data.new
             {name = name ^ ".value",
              empty = NONE,
              pp = fn _ => "<" ^ name ^ ".value>"}
       val () = Sref.update derived_installers
-                 (cons {put = Context.Data.put vslot o suspend,
-                        write = Context.Data.write vslot o suspend})
-      val () = Context.Data.write vslot (suspend (get_global_value()))
+                 (cons {put = fn st => fn c =>
+                                 Context.Data.put vslot (suspend c st) c,
+                        write = fn st =>
+                                   Context.Data.write vslot
+                                     (suspend (Context.snapshot()) st)})
+      val () = Context.Data.write vslot
+                 (suspend (Context.snapshot()) (get_global_value()))
       (* NONE is a context older than this slot -- one snapshotted before
          the derived value existed.  Deriving from its own simpset is
          still the right answer; it just isn't memoised, which matters

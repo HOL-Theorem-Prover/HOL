@@ -111,6 +111,7 @@ val initial_tydb = TypeBasePure.empty
                      |> rev_itlist apply_delta [bool_info, itself_info]
 
 val fullresult as {DB = thy_typebase, get_global_value = theTypeBase,
+                   get_global_value_of = theTypeBase_of,
                    record_delta, get_deltas = thy_updates,
                    merge = merge_typebases, update_global_value, ...} =
     let open TypeBasePure
