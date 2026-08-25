@@ -1165,6 +1165,32 @@ signatures.  The work is fixing the individual offenders:
   inside decision-procedure code.
 - Whatever else the census turns up.
 
+**Measured.**  `EVAL_TAC` on a genuine `PMATCH` term makes **5** ambient
+reads, of `ancestry.simp.global` and `parse.derived.term` --- so the
+`patternMatchesLib` instance is real and is the sharpest one, as
+predicted.  (Note that `case (1,2) of (x,y) => x + y` does *not*
+exercise it: HOL compiles a pair-case to `pair_CASE`, not `PMATCH`, and
+a probe built that way reads zero and proves the goal, looking exactly
+like a clean result.  The term has to be built with
+`patternMatchesSyntax`.)
+
+**Left undone deliberately, because the fix has a cost this document
+does not price.**  Decision 1 says a captured conversion must be
+state-free, and the only way to make this one state-free is to fix its
+simpset when the conversion is *registered* --- at load time --- rather
+than reading `srw_ss()` when it is invoked.  That is a real semantic
+change: today an `EVAL` of a `PMATCH` picks up simpset additions made
+after `patternMatchesLib` loaded, and freezing the simpset silently
+weakens evaluation for anything relying on that.  Confining the change
+to the compset registration (leaving the interactive
+`PMATCH_CLEANUP_CONV` alone) narrows the blast radius but does not
+remove it.
+
+The measurement is the useful part; the trade-off is a maintainer's call
+rather than a mechanical migration step, and Phase 3's tactic-level goal
+does not depend on it.  `realSimps.sml:991` is the same shape and the
+same question.
+
 **Not defects, but worth knowing about.**  These hold conversions that
 are themselves state-free (structural literal-equality deciders, case
 rewrites); their only flaw is being append-only globals that
