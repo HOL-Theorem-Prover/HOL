@@ -1404,6 +1404,33 @@ namespace layer will produce compile results that depend on which worker
 ran last, and that failure looks like a flaky tactic rather than a
 threading bug.
 
+**Done.**  The six kind-tables are thread-local, an untouched thread
+reading as an empty layer, and `snapshotLayer` installs onto whichever
+thread calls the thunk it returns --- so it serves the existing
+same-thread mid-compile resume unchanged, and is also how a worker
+inherits its spawner's layer.  Core build green, LSP tests 66/66,
+including the `goalState_*` group that drives the tactic walker.
+
+Two things to know if this needs revisiting:
+
+- **`ThreadLocal` is not loadable at that point in the boot.**  It writes
+  `Thread.getLocal`, but `Thread` there is Poly's *outer* structure, so
+  the primitives are `Thread.Thread.*`.  `lsp_namespace.ML` therefore
+  mirrors the structure locally with the identical signature, rather than
+  reordering the boot.  If the two ever need to be one, that mismatch is
+  the thing to fix.
+- **The value restriction is easy to trip here.**  `Binarymap.mkDict
+  String.compare` is an application, so binding it with `val` makes it
+  monomorphic and silently unifies all six tables on whichever value
+  type is seen first.  The error then surfaces at `fileNS`, nowhere near
+  the cause.  It is a `fun` for that reason.
+
+What remains for the pool: the deferring prover, the queue, and the
+worker loop.  A worker's start-up sequence is now well-defined --- take
+the work item's `Context.t`, install the captured namespace layer thunk,
+and call the *unhooked* `TAC_PROOF` so it does not re-enter the
+deferring prover.
+
 The other conversion:
 
 1. Replace `goalStateAtPos`'s global restore bracket
