@@ -618,14 +618,15 @@ in
           \              in fn () => (Context.restore cSnap; \
           \                           loadedR (); nsR ()) end) \
           \end";
-        (* Cheat every tactic proof: return an oracle-tagged theorem
-           for the goal instead of running the tactic.  Same hook that
-           fastbuild (Holmake --fast) uses.  The tag identifies theorems
-           whose proofs were skipped in an LSP session. *)
-        evalString
-          "Tactical.set_prover \
-          \  (fn _ => fn (g, _) => \
-          \      Thm.mk_oracle_thm \"lsp_compile_skip\" g)";
+        (* The prover hook: don't run tactic proofs during elaboration,
+           return an oracle-tagged theorem instead (the same hook
+           fastbuild uses), and with LSPExtension.deferProofs set also
+           enqueue the proof so it can be replayed afterwards.  Ordinary
+           SML rather than an evalString, so it is type-checked at load
+           and can be read; see the file for why the replay guard is
+           per-thread. *)
+        QUse.use (OS.Path.concat(Systeml.HOLDIR,
+                                 "tools-poly/lsp/deferred_proofs.ML"));
         (* Wire LSPExtension.thmLookup to DB + Parse so the hover
            handler can render a theorem's statement when the cursor
            lands on an SML identifier of type thm.  Handles bare names

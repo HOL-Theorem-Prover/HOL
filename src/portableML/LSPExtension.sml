@@ -141,4 +141,28 @@ type compileSnap = unit -> unit
 val captureCompileSnap : (unit -> compileSnap) ref = ref (fn () => (fn () => ()))
 val restoreCompileSnap : (compileSnap -> unit) ref = ref (fn f => f ())
 
+type deferred = {site: string, run: unit -> string option}
+val deferProofs = ref false
+local
+  (* enqueued in reverse; Phase A is single-threaded, so a plain ref is
+     enough here.  The drain takes the whole queue in one step. *)
+  val q : deferred list ref = ref []
+in
+  fun enqueueDeferred d = q := d :: !q
+  fun pendingDeferred () = length (!q)
+  fun clearDeferred () = q := []
+  fun drainDeferred () =
+      let
+        val items = List.rev (!q)
+        val () = q := []
+        fun go [] acc = List.rev acc
+          | go ({site, run} :: rest) acc =
+            case run () of
+                NONE => go rest acc
+              | SOME e => go rest ({site = site, error = e} :: acc)
+      in
+        go items []
+      end
+end
+
 end

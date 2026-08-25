@@ -149,4 +149,32 @@ type compileSnap = unit -> unit
 val captureCompileSnap: (unit -> compileSnap) ref
 val restoreCompileSnap: (compileSnap -> unit) ref
 
+(* ----------------------------------------------------------------------
+   Deferred proofs — Phase A of the LSP's proof replay.
+
+   Instead of running a tactic during elaboration, the prover hook
+   enqueues a self-contained item and returns an oracle-tagged theorem,
+   so elaboration stays fast and something else runs the proofs later.
+
+   An item's `run` is opaque — `unit -> string option`, SOME on failure
+   — because this structure sits below the kernel and cannot name
+   `Context.t`, `goal` or `tactic`.  The hook closes over all three, so
+   an item is independent of every other: the context is an immutable
+   value and the tactic is already elaborated.  In particular a worker
+   replaying one of these does *not* need the LSP namespace layer; that
+   is only for compiling tactic *text*, which Phase A has already done.
+
+   `deferProofs` is off by default, in which case the hook behaves
+   exactly as it does today and skips the proof outright.
+   ---------------------------------------------------------------------- *)
+type deferred = {site: string, run: unit -> string option}
+val deferProofs: bool ref
+val enqueueDeferred: deferred -> unit
+val pendingDeferred: unit -> int
+val clearDeferred: unit -> unit
+(* Runs every queued item and returns those that failed, in the order
+   they were enqueued.  Empties the queue first, so a failure part-way
+   through cannot leave items to be run twice. *)
+val drainDeferred: unit -> {site: string, error: string} list
+
 end;
