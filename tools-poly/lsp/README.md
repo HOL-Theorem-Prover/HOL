@@ -101,7 +101,12 @@ when the theorem statement can't be parsed).  Otherwise:
   `hol-lsp-goals-follow-delay`).  `hol-lsp--render-goals` runs
   `ansi-color-apply-on-region` on the inserted `pretty` text so the
   bound / free variable colouring survives.
-- **VS Code (recipe, not shipped)** — `client.sendRequest("$/hol/goalState", params)`
+- **VS Code** — the `lsp-integration` branch of
+  [hol4-vscode](https://github.com/HOL-Theorem-Prover/hol4-vscode)
+  ships a client and a HOL Goals pane; see
+  [`vscode-setup.md`](vscode-setup.md) for a step-by-step install.
+  To drive `$/hol/goalState` yourself,
+  `client.sendRequest("$/hol/goalState", params)`
   returns the response object.  For the simplest path, strip the ANSI
   escapes (regex `\x1B\[[0-9;]*m`) and display `pretty` as plain text
   in a `WebviewPanel`, or ignore `pretty` entirely and render the
