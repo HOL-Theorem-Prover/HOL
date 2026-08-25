@@ -1,7 +1,10 @@
-(* Horn sources and positive first-order mode inference for smart generators.
-   This module reads existing equations, checks their constructor-pattern
-   coverage, converts them syntactically to intro triples, and mode-checks
-   Horn SCCs.  It neither flattens functions nor creates theory definitions. *)
+(* Horn sources and polarity-split first-order mode inference for smart
+   generators.  This module reads existing equations, checks their
+   constructor-pattern coverage, converts them syntactically to intro
+   triples, and mode-checks Horn SCCs -- both the modes in which a relation
+   executes positively, and, conservatively, the modes in which its
+   complement does.  It neither flattens functions nor creates theory
+   definitions. *)
 structure Refute_SmartGen = struct
   type term = Term.term
 
@@ -455,8 +458,17 @@ structure Refute_SmartGen = struct
       HigherOrderParameters of term
     | CrossGroupReference of term
 
+  (* Which of a relation's modes have a decidable complement.  Only the
+     mode is recorded: a complement is compiled from the positive clauses
+     in [relations] under the same mode, so those remain the single source
+     of truth and this table cannot be mistaken for a positive one.  A
+     relation's list is [] whenever decidability cannot be established --
+     never an optimistic guess.  Nothing consumes it yet. *)
+  type relation_negative_modes = {relation : term, modes : mode list}
+
   type inference_result =
     {relations : relation_modes list,
+     negative : relation_negative_modes list,
      degradation : degradation list}
 
   type premise_score =
@@ -923,6 +935,40 @@ structure Refute_SmartGen = struct
           SOME head => same_relation relation head
         | NONE => false) clauses
 
+  (* Deciding that a clause fails means deciding that one of its premises
+     fails, and for a relational call that needs the callee's complement,
+     which this inference does not have: a fellow group member's call may be
+     cyclic, and an external [Compiled] relation exports positive modes
+     only.  Every [Prem] premise therefore blocks; a [Sidecond] does not,
+     since the substrate decides those.  Once [external_status] carries
+     negative modes this becomes a lookup rather than a blanket refusal. *)
+  fun clause_blocks_complement members external
+        ({ordered, ...} : inference_clause) =
+    List.exists (fn term =>
+      case classify members external term of
+          Prem _ => true
+        | _ => false) ordered
+
+  fun relation_blocks_complement members external clauses relation =
+    List.exists (clause_blocks_complement members external)
+      (clauses_for relation clauses)
+
+  (* [strip_mode] is partial; a mode it cannot strip is simply not
+     admitted. *)
+  fun mode_all_input mode =
+    List.all (fn component => eq_mode (component, Input)) (strip_mode mode)
+    handle Feedback.HOL_ERR _ => false
+
+  (* Nothing may defer the decision: no [Prem] premise, no [Generator], no
+     output position.  What is left is a finite chain of guards over ground
+     inputs, whose failure is as decidable as its success, over a defining
+     disjunction that is exact because no clause consults the fixpoint. *)
+  fun negative_modes_of blocked modes =
+    if blocked then []
+    else List.mapPartial (fn (mode, _, needs_generator) =>
+      if mode_all_input mode andalso not needs_generator then SOME mode
+      else NONE) modes
+
   fun check_relation reorder members external clauses table relation
         modes =
     let
@@ -993,8 +1039,16 @@ structure Refute_SmartGen = struct
         else map (fn relation => (relation, [])) members
       fun materialize (relation, modes) : relation_modes =
         {relation = relation, modes = modes}
+      fun materialize_negative (relation, modes)
+            : relation_negative_modes =
+        {relation = relation,
+         modes = negative_modes_of
+           (relation_blocks_complement members external clauses relation)
+           modes}
     in
-      {relations = map materialize stable, degradation = degradation}
+      {relations = map materialize stable,
+       negative = map materialize_negative stable,
+       degradation = degradation}
     end
 
   fun infer_group
@@ -1254,6 +1308,19 @@ structure Refute_SmartGen = struct
         ({relations, ...} : inference_result) =
     List.find (fn ({relation = other, ...} : relation_modes) =>
       same_relation relation other) relations
+
+  fun negative_relation_modes_for relation
+        ({negative, ...} : inference_result) =
+    List.find (fn ({relation = other, ...} : relation_negative_modes) =>
+      same_relation relation other) negative
+
+  (* The consumption test: may [relation]'s complement be compiled at
+     [mode]? *)
+  fun complement_available relation mode inference =
+    case negative_relation_modes_for relation inference of
+        NONE => false
+      | SOME ({modes, ...} : relation_negative_modes) =>
+          List.exists (fn other => eq_mode (other, mode)) modes
 
   fun top_level_parts mode arguments =
     SOME (split_arguments mode arguments)

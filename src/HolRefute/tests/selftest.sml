@@ -1773,6 +1773,134 @@ val _ = require_msg (check_result smartgen_cross_group_behavior)
   (fn () => "cross-group modes were not reused or degraded to a guard")
   (fn () => ()) ()
 
+(* Polarity-split mode inference: alongside the modes in which a relation
+   executes positively, the inference records the modes in which its
+   complement does.  These pins read that table through
+   [complement_available], the surface a consumer will use, so each one
+   distinguishes "inferred correctly" from "not inferred at all". *)
+
+fun smartgen_negative_nonrecursive_available () =
+  let
+    val relation = ``zoo_sg_duplicate : num -> num # num -> bool``
+    val result = sg_infer_hol_reln relation true
+  in
+    SG.complement_available relation
+      (SG.list_mode [SG.Input, SG.Input]) result
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = tprint "Refute SmartGen negative mode inference"
+val _ = require_msg (check_result smartgen_negative_nonrecursive_available)
+  (fn () =>
+    "a non-recursive relation's decidable fully-input mode was not " ^
+    "recorded as negatively executable")
+  (fn () => ()) ()
+
+(* zoo_sg_linear is self-recursive but every clause resolves its fully-input
+   mode without a generator (smartgen_linear_modes above), so a table that
+   confused "needs_generator = false" with "complement decidable" would
+   wrongly admit this mode too.  Recursion alone must still block it. *)
+fun smartgen_negative_recursive_unavailable () =
+  let
+    val relation = ``zoo_sg_linear : num -> bool``
+    val result = sg_infer_hol_reln relation true
+    val positive = valOf (sg_relation_result relation result)
+    val negative = valOf (SG.negative_relation_modes_for relation result)
+    val input = SG.list_mode [SG.Input]
+  in
+    (case sg_mode_result input positive of
+         SOME (_, _, false) => true
+       | _ => false) andalso
+    null (#modes negative)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = tprint "Refute SmartGen negative modes exclude recursive relations"
+val _ = require_msg (check_result smartgen_negative_recursive_unavailable)
+  (fn () =>
+    "a recursive relation's complement was optimistically admitted as " ^
+    "negatively executable")
+  (fn () => ()) ()
+
+(* zoo_sg_duplicate's sole clause is [!n. zoo_sg_duplicate n (n,n)]: at mode
+   (Output, Input) the repeated pattern variable is already pinned by the
+   pair's input side, so this clause resolves with no generator even though
+   the first argument is nominally an output position.  A filter that kept
+   only [needs_generator = false] would wrongly admit it; the mode is not
+   fully input and must stay out of the negative table regardless. *)
+fun smartgen_negative_excludes_output_position () =
+  let
+    val relation = ``zoo_sg_duplicate : num -> num # num -> bool``
+    val result = sg_infer_hol_reln relation true
+    val positive = valOf (sg_relation_result relation result)
+    val mode = SG.list_mode [SG.Output, SG.Input]
+  in
+    (case sg_mode_result mode positive of
+         SOME (_, _, false) => true
+       | _ => false) andalso
+    not (SG.complement_available relation mode result)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = tprint "Refute SmartGen negative modes exclude output positions"
+val _ = require_msg
+  (check_result smartgen_negative_excludes_output_position)
+  (fn () =>
+    "a generator-free mode with an output position leaked into the " ^
+    "negative table")
+  (fn () => ()) ()
+
+(* A relation can be free of recursion in its own group and still defer the
+   decision.  [$<]'s only clause here has the external premise
+   [zoo_sg_linear y]; deciding that the clause fails means deciding that
+   [zoo_sg_linear y] fails, which is exactly what the group test refuses for
+   [zoo_sg_linear] itself.  An external [Compiled] status exports positive
+   modes only, so it cannot license that.  The [admissible] conjunct asserts
+   the world where a members-only block would be wrong: a fully-input,
+   generator-free positive mode does exist, so an inference that looked only
+   for recursion inside [members] would admit it. *)
+fun smartgen_negative_external_call_blocks () =
+  let
+    val relation = ``$< : num -> num -> bool``
+    val dependency = ``zoo_sg_linear : num -> bool``
+    val x = ``x : num``
+    val y = ``y : num``
+    val ordered = [``zoo_sg_linear y``]
+    val triple : SG.intro_triple =
+      {variables = [x, y], main = [], side = ordered,
+       conclusion = ``(x : num) < y``}
+    val clause = sg_clause triple ordered
+    val dependency_result = sg_infer_hol_reln dependency true
+    val dependency_modes = valOf
+      (sg_relation_result dependency dependency_result)
+    val exported = map (fn (mode, _, random) => (mode, random))
+      (#modes dependency_modes)
+    val result = SG.infer_group
+      {members = [relation], clauses = [clause],
+       external = [(dependency,
+         SG.Compiled {modes = exported, functional = []})],
+       reorder_premises = true}
+    val positive = valOf (sg_relation_result relation result)
+    val negative = valOf (SG.negative_relation_modes_for relation result)
+    val admissible = List.exists (fn (mode, _, needs_generator) =>
+      List.all (fn part => SG.eq_mode (part, SG.Input)) (SG.strip_mode mode)
+      andalso not needs_generator) (#modes positive)
+  in
+    admissible andalso null (#modes negative)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = tprint "Refute SmartGen negative modes exclude deferred premises"
+val _ = require_msg (check_result smartgen_negative_external_call_blocks)
+  (fn () =>
+    "a relation whose clause defers to an external call was admitted as " ^
+    "negatively executable")
+  (fn () => ()) ()
+
 fun with_codatatype_registry_restored body =
   let
     val saved = !MFH.codatatype_registry
@@ -19991,14 +20119,17 @@ fun smartgen_cache_replacement_is_atomic () =
     val programs = List.filter (fn {program = {relation = other, ...}, ...} =>
       SG.same_relation relation other) (SG.enumerator_snapshot ())
     val removed = #mode (#program (List.last programs))
-    val {relations, degradation} = inference
+    val {relations, negative, degradation} = inference
     fun trim ({relation = other, modes} : SG.relation_modes) =
       {relation = other,
        modes = List.filter (fn (mode, _, _) =>
          not (SG.same_relation relation other andalso
               SG.eq_mode (mode, removed))) modes} : SG.relation_modes
+    (* [cache_inference] reads only [relations]; this test exercises that
+       atomicity alone, so [negative] passes through untrimmed. *)
     val reduced : SG.inference_result =
-      {relations = map trim relations, degradation = degradation}
+      {relations = map trim relations, negative = negative,
+       degradation = degradation}
     val _ = SG.cache_inference reduced
     val obsolete_gone =
       not (Option.isSome (SG.enumerator_for relation removed))
