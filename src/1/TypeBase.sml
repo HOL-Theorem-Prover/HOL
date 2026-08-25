@@ -133,7 +133,8 @@ fun export tyis = (write tyis; List.app record_delta tyis)
 
 (* various ways to access the global value *)
 fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
-fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
+fun fetch_of ctxt ty = TypeBasePure.fetch (theTypeBase_of ctxt) ty
+fun fetch ty = fetch_of (Context.snapshot()) ty
 val elts = listItems o theTypeBase;
 
 fun print_sp_type ty =
@@ -296,8 +297,10 @@ fun is_constructor x = TypeBasePure.is_constructor (theTypeBase()) x;
 (*---------------------------------------------------------------------------*)
 
 fun mk_case x   = TypeBasePure.mk_case (theTypeBase()) x
-fun dest_case x = TypeBasePure.dest_case (theTypeBase()) x
-fun is_case x   = TypeBasePure.is_case (theTypeBase()) x;
+fun dest_case_of c x = TypeBasePure.dest_case (theTypeBase_of c) x
+fun dest_case x = dest_case_of (Context.snapshot()) x
+fun is_case_of c x = TypeBasePure.is_case (theTypeBase_of c) x
+fun is_case x   = is_case_of (Context.snapshot()) x;
 fun strip_case x = TypeBasePure.strip_case (theTypeBase()) x
 
 fun mk_pattern_fn css =

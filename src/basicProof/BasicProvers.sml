@@ -142,12 +142,13 @@ fun prim_find_subterm FVs tm (asl,w) =
           else Alien tm
       end
 
-fun find_subterm qtm (g as (asl,w)) =
+fun find_subterm_in c qtm (g as (asl,w)) =
   let val FVs = free_varsl (w::asl)
-      val tm = Parse.parse_in_context FVs qtm
+      val tm = Parse.parse_in_context_in c FVs qtm
   in
     prim_find_subterm FVs tm g
   end;
+fun find_subterm qtm g = find_subterm_in (Context.snapshot()) qtm g
 
 (*---------------------------------------------------------------------------*)
 (* Support for pairs copied from coretypes/pairSyntax to be self-contained.  *)
@@ -290,11 +291,11 @@ fun set_names names ty thm0 =
  handle e => raise wrap_exn "BasicProvers" "primCases_on (set_names)" e
 ;
 
-fun primCases_on names st (g as (_,w)) =
+fun primCases_on names st (g as (_,w)) c =
     let
       val ty = type_of (dest_tmkind st)
       fun gen() =
-          case TypeBase.fetch ty of
+          case TypeBase.fetch_of c ty of
               SOME facts => [TypeBasePure.nchotomy_of facts]
             | NONE => let val {Thy,Tyop,...} = dest_thy_type ty
                       in
@@ -318,26 +319,26 @@ fun primCases_on names st (g as (_,w)) =
                               else TERM_INTRO_TAC (ISPEC M thm')
           end
     in
-      markerLib.maybe_using gen ttac g
+      markerLib.maybe_using gen ttac g c
     end
 
-fun Cases_on qtm g = primCases_on [] (find_subterm qtm g) g
+fun Cases_on qtm g c = primCases_on [] (find_subterm_in c qtm g) g c
   handle e => raise wrap_exn "BasicProvers" "Cases_on" e;
 
-fun tmCases_on tm names (g as (asl,w)) =
+fun tmCases_on tm names (g as (asl,w)) c =
     let
       val fvs = FVL (w::asl) empty_tmset |> HOLset.listItems
     in
-      primCases_on names (prim_find_subterm fvs tm g) g
+      primCases_on names (prim_find_subterm fvs tm g) g c
     end handle e => raise wrap_exn "BasicProvers" "tmCases_on" e;
 
-fun namedCases_on qtm names g =
-  primCases_on names (find_subterm qtm g) g
+fun namedCases_on qtm names g c =
+  primCases_on names (find_subterm_in c qtm g) g c
   handle e => raise wrap_exn "BasicProvers" "namedCases_on" e;
 
-fun Cases (g as (_,w)) =
+fun Cases (g as (_,w)) c =
   let val (Bvar,_) = with_exn dest_forall w (ERR "Cases" "not a forall")
-  in primCases_on [] (Bound([Bvar],Bvar)) g
+  in primCases_on [] (Bound([Bvar],Bvar)) g c
   end
   handle e => raise wrap_exn "BasicProvers" "Cases" e;
 
@@ -400,11 +401,11 @@ fun primInduct st ind_tac (g as (asl,c)) =
 (* TypeBase.theTypeBase).                                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun induct_on_type st ty g =
+fun induct_on_type st ty g c =
     let
       val is_mutind_thm = is_conj o snd o strip_imp o snd o
                           strip_forall o concl
-      val facts_opt = TypeBase.fetch ty
+      val facts_opt = TypeBase.fetch_of c ty
       fun gen() =
           case facts_opt of
               SOME facts =>
@@ -432,7 +433,7 @@ fun induct_on_type st ty g =
                      primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC) ORELSE
                      (primInduct st (HO_MATCH_MP_TAC thm) THEN REPEAT CONJ_TAC)
     in
-      maybe_using gen ttac g
+      maybe_using gen ttac g c
     end
 
 fun checkind th =
@@ -449,8 +450,8 @@ fun checkind th =
       else NO_TAC
     end
 
-fun Induct_on qtm g =
- let val st = find_subterm qtm g
+fun Induct_on qtm g ctxt =
+ let val st = find_subterm_in ctxt qtm g
      val tm = dest_tmkind st
      val ty = type_of (dest_tmkind st)
      val (_, rngty) = strip_fun ty
@@ -470,7 +471,7 @@ fun Induct_on qtm g =
           SOME {Thy,Name,...} =>
           let
             fun indths() =
-                Option.getOpt (KNametab.lookup (rule_induction_map())
+                Option.getOpt (KNametab.lookup (rule_induction_map_of ctxt)
                                                {Thy=Thy,Name=Name},
                                [])
             fun numSchematics th =
@@ -487,11 +488,11 @@ fun Induct_on qtm g =
                 HO_MATCH_MP_TAC th
           in
             markerLib.maybe_using indths tryind ORELSE induct_on_type st ty
-          end g
-        | NONE => induct_on_type st ty g
+          end g ctxt
+        | NONE => induct_on_type st ty g ctxt
    end
   else
-    induct_on_type st ty g
+    induct_on_type st ty g ctxt
  end
  handle e => raise wrap_exn "BasicProvers" "Induct_on" e;
 
@@ -504,10 +505,10 @@ fun grab_var M =
   if is_conj M then fst(dest_forall(fst(dest_conj M)))
   else raise ERR "Induct" "expected a forall or a conjunction of foralls";
 
-fun Induct (g as (_,w)) =
+fun Induct (g as (_,w)) c =
  let val v = grab_var w
      val (_,ty) = dest_var (grab_var w)
- in induct_on_type (Bound([v],v)) ty g
+ in induct_on_type (Bound([v],v)) ty g c
  end
  handle e => raise wrap_exn "BasicProvers" "Induct" e
 
@@ -669,9 +670,9 @@ fun first_subterm f tm = f (case_find_subterm (can f) tm);
 (* Otherwise raise an exception.                                             *)
 (*---------------------------------------------------------------------------*)
 
-fun scrutinized_and_free_in tm =
+fun scrutinized_and_free_in c tm =
  let fun free_case t =
-        let val (_, examined, _) = TypeBase.dest_case t
+        let val (_, examined, _) = TypeBase.dest_case_of c t
         in if free_in examined tm
               then examined else raise ERR "free_case" ""
         end
@@ -679,18 +680,18 @@ fun scrutinized_and_free_in tm =
     free_case
  end;
 
-fun PURE_TOP_CASE_TAC (g as (_, tm)) =
- let val t = first_term (scrutinized_and_free_in tm) tm
- in Cases_on `^t` end g;
+fun PURE_TOP_CASE_TAC (g as (_, tm)) c =
+ let val t = first_term (scrutinized_and_free_in c tm) tm
+ in Cases_on `^t` end g c;
 
-fun PURE_CASE_TAC (g as (_, tm)) =
- let val t = first_subterm (scrutinized_and_free_in tm) tm
- in Cases_on `^t` end g;
+fun PURE_CASE_TAC (g as (_, tm)) c =
+ let val t = first_subterm (scrutinized_and_free_in c tm) tm
+ in Cases_on `^t` end g c;
 
-fun PURE_FULL_CASE_TAC (g as (asl,w)) =
+fun PURE_FULL_CASE_TAC (g as (asl,w)) c =
  let val tm = list_mk_conj(w::asl)
-     val t = first_subterm (scrutinized_and_free_in tm) tm
- in Cases_on `^t` end g;
+     val t = first_subterm (scrutinized_and_free_in c tm) tm
+ in Cases_on `^t` end g c;
 
 local
 
@@ -1057,8 +1058,8 @@ fun PRIM_STP_TAC ss finisher g ctxt =
     case expressions in the goal, but that hasn't been implemented yet.
  ---------------------------------------------------------------------------*)
 
-fun splittable w =
- Lib.can (find_term (fn tm => (is_cond tm orelse TypeBase.is_case tm)
+fun splittable c w =
+ Lib.can (find_term (fn tm => (is_cond tm orelse TypeBase.is_case_of c tm)
                               andalso free_in tm w)) w;
 
 fun LIFT_SPLIT_SIMP ss simp th =
@@ -1081,8 +1082,9 @@ fun PRIM_NORM_TAC ss g ctxt =
                ORELSE ASSUMS_TAC (LIFT_SIMP ss) has_constr_eqn
                ORELSE ASSUM_TAC (LIFT_SIMP ss) breakable
                ORELSE CONCL_TAC ASM_SIMP has_constr_eqn
-               ORELSE ASSUM_TAC (LIFT_SPLIT_SIMP ss ASM_SIMP) splittable
-               ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) splittable
+               ORELSE ASSUM_TAC (LIFT_SPLIT_SIMP ss ASM_SIMP)
+                                (splittable ctxt)
+               ORELSE CONCL_TAC (SPLIT_SIMP ASM_SIMP) (splittable ctxt)
                ORELSE LET_ELIM_TAC))
   end) g ctxt
 

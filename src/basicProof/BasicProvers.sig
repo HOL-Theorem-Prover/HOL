@@ -98,6 +98,7 @@ sig
   val dest_tmkind       : tmkind -> term
   val prim_find_subterm : term list -> term -> goal -> tmkind
   val find_subterm      : term quotation -> goal -> tmkind
+  val find_subterm_in   : Context.t -> term quotation -> goal -> tmkind
   val primInduct        : tmkind -> tactic -> tactic
   val Cases             : tactic
   val Induct            : tactic

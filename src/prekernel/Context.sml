@@ -93,25 +93,37 @@ struct
        about a tenth of the build's heaviest theory and buries its log. *)
     val action = ref 1
     val _ = Feedback.register_trace ("ambient context inside proof", action, 3)
+    (* The same levels for the kernel-signature reads that `live` serves,
+       reported separately and silent by default.  They are a different
+       population with a different fix -- see `live` -- and mixing them
+       into the tactic-state census would swamp it. *)
+    val sig_action = ref 0
+    val _ = Feedback.register_trace
+              ("ambient signature inside proof", sig_action, 3)
     val reported : string list ref = ref []
+    val sig_reported : string list ref = ref []
     fun thyname () =
         case #current_thy (Sref.value ctx) of
             NONE => "<no current theory>"
           | SOME s => s
-    fun report () =
+    fun report0 (what, fname, lvl, seen) =
         let val thy = thyname ()
             (* built only where it is used: at level 1 the common case is
                a theory already reported, and this fires per read *)
-            fun msg () = "ambient context read while a proof was running (in " ^
+            fun msg () = what ^ " read while a proof was running (in " ^
                          thy ^ ")"
-            fun warn () = Feedback.HOL_WARNING "Context" "snapshot" (msg ())
+            fun warn () = Feedback.HOL_WARNING "Context" fname (msg ())
         in
-          case !action of
-              1 => if Lib.mem thy (!reported) then ()
-                   else (reported := thy :: !reported; warn ())
+          case lvl of
+              1 => if Lib.mem thy (!seen) then ()
+                   else (seen := thy :: !seen; warn ())
             | 2 => warn ()
-            | _ => raise ERR "snapshot" (msg ())
+            | _ => raise ERR fname (msg ())
         end
+    fun report () =
+        report0 ("ambient context", "snapshot", !action, reported)
+    fun report_sig () =
+        report0 ("ambient signature", "live", !sig_action, sig_reported)
   in
     fun in_proof f x =
         let val n = get ()
@@ -122,6 +134,17 @@ struct
         end
     fun snapshot () =
         (if !action > 0 andalso get () > 0 then report () else ();
+         Sref.value ctx)
+    (* Reads the live context without reporting.  The kernel signatures
+       are read this way: mk_type and mk_const resolve a name against the
+       live signature rather than a caller-supplied context, so every
+       name-based term or type construction inside a proof would report,
+       and Phase 3 cannot plumb that away -- it is a separate, recorded
+       gap.  Reporting it would leave the census permanently non-zero and
+       hide the tactic-level reads it exists to find.  Nothing else
+       should use this. *)
+    fun live () =
+        (if !sig_action > 0 andalso get () > 0 then report_sig () else ();
          Sref.value ctx)
   end
 

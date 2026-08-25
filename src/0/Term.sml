@@ -29,7 +29,7 @@ infix |-> ##;
                Create the signature for HOL terms
  ---------------------------------------------------------------------------*)
 
-fun termsig() = Context.termsig (Context.snapshot())
+fun termsig() = Context.termsig (Context.live())
 fun upd_termsig f = Context.update (Context.map_termsig f)
 fun genupd_termsig f =
     Context.gen_update (fn c =>

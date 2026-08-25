@@ -19,6 +19,7 @@ sig
    val write              : tyinfo list -> unit
    val export             : tyinfo list -> unit (* includes write action *)
    val fetch              : hol_type -> tyinfo option
+   val fetch_of           : Context.t -> hol_type -> tyinfo option
    val read               : {Thy :string, Tyop: string} -> tyinfo option
    val elts               : unit -> tyinfo list
    val register_update_fn : (tyinfo -> tyinfo) -> unit
@@ -51,7 +52,10 @@ sig
 
    val mk_case            : term * (term * term) list -> term
    val dest_case          : term -> term * term * (term * term) list
+   val dest_case_of       : Context.t -> term ->
+                            term * term * (term * term) list
    val is_case            : term -> bool
+   val is_case_of         : Context.t -> term -> bool
    val strip_case         : term -> term * (term * term) list
    val mk_pattern_fn      : (term * term) list -> term
 

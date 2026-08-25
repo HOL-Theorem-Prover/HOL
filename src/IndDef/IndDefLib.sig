@@ -27,6 +27,7 @@ sig
   type rule_induction_map = thm list KNametab.table
   val thy_rule_inductions : string -> thm list
   val rule_induction_map : unit -> rule_induction_map
+  val rule_induction_map_of : Context.t -> rule_induction_map
   val rule_induction_map_by_theory : {thyname : string} ->
                                      rule_induction_map option
   val add_rule_induction : thm -> unit

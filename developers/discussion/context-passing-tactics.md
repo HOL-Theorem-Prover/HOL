@@ -936,6 +936,78 @@ generations.  Filter by mtime against the build, or clear the logs
 first.
 
 
+### The kernel signature is a separate population
+
+`mk_type` and `mk_const` resolve a *name*, and they resolve it against
+`Type.typesig()` / `Term.termsig()` --- which were
+`Context.typesig (Context.snapshot())`.  So every name-based term or
+type construction inside a proof was an ambient read, and no amount of
+tactic-level plumbing removes it: it is the `uptodate_term` threading
+item, recorded separately as not urgent.  Left in the census it would
+peg the count permanently above zero and bury the reads Phase 3 exists
+to find.
+
+`Context.live : unit -> t` now reads the live context without reporting,
+and the two kernels' `typesig`/`termsig` use it.  It reports under its
+own trace, `"ambient signature inside proof"`, same levels, silent by
+default.  **This is a scoping decision, not a fix.**  A tactic that
+parses still takes its grammars from the supplied context and its
+constants from the live signature, and if those diverge --- a restored
+older context --- that is a real inconsistency.  The signatures say so.
+
+#### Where the calls are
+
+1019 calls to `mk_type` / `mk_thy_type` / `mk_const` / `mk_thy_const` /
+`prim_mk_const` across `src`, `examples` and `tools`:
+
+| | sites |
+|---|---|
+| load-time `val` binding | 615 |
+| deferred, name is a string literal | 188 |
+| deferred, name is dynamic | 216 |
+
+The 615 are the `*Syntax.sml` tables --- `val cons_tm = prim_mk_const
+{Name = "CONS", ...}` --- resolved once when the module loads.  They
+never run inside a proof and do not matter.
+
+The **literal-name** 188 do run inside proofs, and measurably so:
+probing at signature-trace level 3, `PairRules.NOT_PFORALL_CONV`,
+`PFORALL_AND_CONV`, `CURRY_CONV`, `ListConv1.LENGTH_CONV`,
+`APPEND_CONV` and `numLib.REDUCE_CONV` all report.  But they are looking
+up a *fixed, well-known* constant on every call ---
+`mk_const("!", ...)` in `PairRules`, `mk_const{Name = "NIL", ...}` in
+`ListConv1`, the numeral constructors in `Literal`.  **These do not want
+a context; they want hoisting to a load-time constant**, exactly as the
+syntax libraries already do.  A local cleanup, no plumbing, and it
+removes them from the census outright.
+
+The **dynamic-name** 216 are the ones where which signature you ask
+genuinely matters.  Only 121 are in `src` at all, and they sort as:
+
+- kernel internals (`0/Term`, `0/Type`, `experimental-kernel`) --- the
+  constructors themselves and their internal plumbing, not callers;
+- `src/parse` (`Overload`, `Parse`, `GrammarDeltas`, `term_pp`,
+  `parse_bnf`) --- **parsing**, the systematic case;
+- definition machinery (`ind_types`, `Datatype`, `RecordType`,
+  `quotient`, `DefnBaseCore`) --- runs at definition time, at the top
+  level, not inside a proof;
+- prooftrace replay and the holyhammer/pfl exporters --- neither runs
+  inside a proof.
+
+So the dynamic reads that actually fire inside a proof are parsing, and
+the probes agree: of the tactics measured, the ones reaching the
+signature are exactly the quotation-parsing ones --- `Cases_on`,
+`Q.EXISTS_TAC`, `Q.ABBREV_TAC` --- while `simp`, `rw`, `gvs`,
+`DECIDE_TAC`, `ARITH_TAC`, `EVAL_TAC`, `Induct`, `Induct_on`,
+`STRIP_TAC` and `REWRITE_TAC` are clean.
+
+**Consequence for the plan.**  Threading a context into the parsing
+functions, so they resolve names against the signature of the context
+they are parsing in, covers the whole dynamic population; the
+literal-name conversions are a separate hoisting pass.  Neither is
+needed for Phase 3 to finish, and both are measurable independently now
+that the trace is split.
+
 #### 3b. Pure plumbing (state already an explicit parameter below)
 
 Each is an ambient read whose state is already an explicit parameter of

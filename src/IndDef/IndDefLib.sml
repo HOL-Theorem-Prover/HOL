@@ -93,6 +93,7 @@ val {update_global_value = rule_ind_apply_global_update,
      record_delta = rule_ind_record_delta,
      get_deltas = rule_ind_get_deltas,
      get_global_value = rule_induction_map,
+     get_global_value_of = rule_induction_map_of,
      DB = rule_induction_map_by_theory,...} =
     ThmSetData.export_with_ancestry {
       settype = "rule_induction",

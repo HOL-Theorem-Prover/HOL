@@ -48,6 +48,18 @@ sig
      `TAC_PROOF` is the only sanctioned caller. *)
   val in_proof : ('a -> 'b) -> 'a -> 'b
 
+  (* The live context, for the kernel signatures alone: `mk_type` and
+     `mk_const` resolve a name against the live signature rather than a
+     supplied context, so name-based construction inside a proof is an
+     ambient read that no amount of tactic plumbing removes.  Do not use
+     it for anything else.
+
+     It reports under its own trace, "ambient signature inside proof",
+     with the same levels but silent by default: a different population
+     with a different fix, which would otherwise swamp the tactic-state
+     census.  Turn it up to find which proofs construct terms by name. *)
+  val live : unit -> t
+
   (* Whole-context mutators.  Both take the RW-lock's read side so
      `restore` won't interleave.  `f` runs under the internal Sref
      mutex, so nested `update` / `gen_update` inside `f` deadlocks;
