@@ -487,15 +487,16 @@ val stdprinters = SOME(term_to_string,type_to_string)
 fun ctxt_absyn_to_preterm fvs a =
   TermParse.ctxt_absyn_to_preterm (term_grammar()) fvs a
 
-fun parse_in_context FVs q =
+fun parse_in_context_in c FVs q =
   let
     open errormonad
     val m =
-        (q |> Absyn |> ctxt_absyn_to_preterm FVs) >-
+        (q |> Absyn_in c |> ctxt_absyn_to_preterm FVs) >-
         TermParse.ctxt_preterm_to_term stdprinters NONE FVs
   in
     smashErrm m
   end
+fun parse_in_context FVs q = parse_in_context_in (Context.snapshot()) FVs q
 
 fun grammar_parse_in_context(tyg,tmg) ctxt q =
     TermParse.ctxt_term stdprinters tmg tyg NONE ctxt q |> smashErrm
@@ -508,16 +509,20 @@ fun grammar_typed_parse_in_context gs ty ctxt q =
       SOME(tm, _) => tm
     | NONE => raise ERROR "grammar_typed_parse_in_context" "No consistent parse"
 
-fun typed_parse_in_context ty ctxt q =
+fun typed_parse_in_context_in c ty ctxt q =
   let
     fun mkA q = let
-      val a = Absyn q
+      val a = Absyn_in c q
       in Absyn.TYPED(Absyn.locn_of_absyn a, a, Pretype.fromType ty) end
   in
-    case seq.cases (TermParse.prim_ctxt_termS mkA (term_grammar()) ctxt q) of
+    case seq.cases
+           (TermParse.prim_ctxt_termS mkA (get_term_grammar c) ctxt q)
+     of
         SOME (tm, _) => tm
       | NONE => raise ERROR "typed_parse_in_context" "No consistent parse"
   end
+fun typed_parse_in_context ty ctxt q =
+    typed_parse_in_context_in (Context.snapshot()) ty ctxt q
 
 (*---------------------------------------------------------------------------
      Making temporary and persistent changes to the grammars.

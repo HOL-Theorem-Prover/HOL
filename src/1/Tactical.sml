@@ -1090,9 +1090,10 @@ fun Q_TAC0 {traces} tyopt (tac : term -> tactic) q (g as (asl,w)) ctxt =
       val fvs = free_varsl (w::asl)
       val ab =
         case tyopt of
-            NONE => Absyn
+            NONE => Absyn_in ctxt
           | SOME ty =>
-            fn q => Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
+            fn q => Absyn.TYPED(locn.Loc_None, Absyn_in ctxt q,
+                                Pretype.fromType ty)
       val terms_of = TermParse.prim_ctxt_termS ab (get_term_grammar ctxt) fvs
       val tactic_failures = ref [] : exn list ref
       fun failure() =

@@ -30,6 +30,15 @@ fun ptm_with_ctxtty ctxt ty q = Parse.typed_parse_in_context ty ctxt q
 fun TC_OFF f x = trace ("show_typecheck_errors", 0) f x
 fun ptm_with_ctxtty' ctxt ty = TC_OFF (ptm_with_ctxtty ctxt ty)
 
+(* The same three against a supplied prover context, for the tactics.
+   `ctxt` throughout this file is the free-variable list a quotation is
+   read against; `c` is the Context.t it is parsed in. *)
+fun contextTerm_in c ctxt q =
+    Parse.parse_in_context_in c ctxt (normalise_quotation q);
+fun ptm_with_ctxtty_in c ctxt ty q =
+    Parse.typed_parse_in_context_in c ty ctxt q
+fun ptm_with_ctxtty_in' c ctxt ty = TC_OFF (ptm_with_ctxtty_in c ctxt ty)
+
 
 fun ptm_with_ty q ty = ptm_with_ctxtty [] ty q;
 fun btm q = ptm_with_ty q Type.bool
@@ -103,11 +112,11 @@ val ID_SPEC = W(Thm.SPEC o (fst o dest_forall o concl))
 fun em_getState s = errormonad.Some((s,s))
 fun sm_getState s = seq.result(s,s)
 
-fun SPEC_THEN q ttac thm (g as (asl,w)) = let
+fun SPEC_THEN q ttac thm (g as (asl,w)) c = let
   infix >>- >>~
   fun em >>- f = let open errormonad in em >- f end
   fun sm >>~ f = let open seqmonad in sm >- f end
-  val a = Parse.Absyn q
+  val a = Parse.Absyn_in c q
   val ctxt = HOLset.listItems (hyp_frees thm) @ free_varsl(w::asl)
   val (Bvar,_) = dest_forall (concl thm)
   val bty = type_of Bvar
@@ -128,7 +137,8 @@ fun SPEC_THEN q ttac thm (g as (asl,w)) = let
         | _ => raise Fail "SPEC_THEN invariant failure"
   fun parse_with_unify_check a =
       let
-          val ptmm = TermParse.absyn_to_preterm (Parse.term_grammar()) a
+          val ptmm =
+              TermParse.absyn_to_preterm (Parse.get_term_grammar c) a
           open Preterm seqmonad
           val printers = SOME (term_to_string, type_to_string)
       in
@@ -154,7 +164,7 @@ fun SPEC_THEN q ttac thm (g as (asl,w)) = let
         in
           case Lib.total ttac (Thm.SPEC t (INST_TYPE theta thm)) of
               NONE => fail
-            | SOME tac => (case Lib.total tac g of
+            | SOME tac => (case Lib.total (Lib.C tac c) g of
                               NONE => fail
                             | SOME result => return result)
         end)
@@ -185,18 +195,18 @@ fun seq_mmap mf list =
                             seq.bind (seq_mmap mf xs)
                                      (fn xs' => seq.result (x'::xs')))
 
-fun ISPECL_THEN ql ttac thm g =
+fun ISPECL_THEN ql ttac thm g c =
   let
     open Parse TermParse
     val ctxt = goal_ctxt g
-    fun tf q = prim_ctxt_termS Absyn (term_grammar()) ctxt q
+    fun tf q = prim_ctxt_termS (Absyn_in c) (get_term_grammar c) ctxt q
     val tl_s = seq_mmap tf ql
   in
     case seq.cases tl_s of
         NONE => raise ERR "ISPECL_THEN" "No parse for quotation list"
       | SOME _ =>
         let
-          fun f tl = SOME (ttac (Drule.ISPECL tl thm) g)
+          fun f tl = SOME (ttac (Drule.ISPECL tl thm) g c)
                      handle HOL_ERR _ => NONE
         in
           case seq.cases (seq.mapPartial f tl_s) of
@@ -205,21 +215,21 @@ fun ISPECL_THEN ql ttac thm g =
         end
   end
 
-fun SPEC_TAC (q1,q2) (g as (asl,w)) = let
+fun SPEC_TAC (q1,q2) (g as (asl,w)) c = let
   val ctxt = free_varsl (w::asl)
-  val T1 = Parse.parse_in_context ctxt q1
-  val T2 = ptm_with_ctxtty' ctxt (type_of T1) q2
+  val T1 = Parse.parse_in_context_in c ctxt q1
+  val T2 = ptm_with_ctxtty_in' c ctxt (type_of T1) q2
 in
-  Tactic.SPEC_TAC(T1, T2) g
+  Tactic.SPEC_TAC(T1, T2) g c
 end;
 
 (* Generalizes first free variable with given name to itself. *)
 
-fun ID_SPEC_TAC q (g as (asl,w)) =
+fun ID_SPEC_TAC q (g as (asl,w)) c =
  let val ctxt = free_varsl (w::asl)
-     val tm = Parse.parse_in_context ctxt q
+     val tm = Parse.parse_in_context_in c ctxt q
  in
-   Tactic.SPEC_TAC (tm, tm) g
+   Tactic.SPEC_TAC (tm, tm) g c
  end
 
 fun EXISTS(q1,q2) thm =
@@ -241,10 +251,10 @@ fun EXISTS_TAC q (g as (asl, w)) =
 
 fun LIST_EXISTS_TAC qL = EVERY (map EXISTS_TAC qL)
 
-fun REFINE_EXISTS_TAC q (asl, w) = let
+fun REFINE_EXISTS_TAC q (asl, w) c = let
   val (qvar, body) = dest_exists w
   val ctxt = free_varsl (w::asl)
-  val t = ptm_with_ctxtty' ctxt (type_of qvar) q
+  val t = ptm_with_ctxtty_in' c ctxt (type_of qvar) q
   val qvars = op_set_diff aconv (free_vars t) ctxt
   val newgoal = subst [qvar |-> t] body
   fun chl [] ttac = ttac
@@ -254,9 +264,10 @@ in
     (list_mk_exists(rev qvars, newgoal))
     (chl (rev qvars) (fn th => Tactic.EXISTS_TAC t THEN ACCEPT_TAC th))
     (asl, w)
+    c
 end
 
-fun LIST_REFINE_EXISTS_TAC qs (asl, g) = let
+fun LIST_REFINE_EXISTS_TAC qs (asl, g) c = let
     fun strip_n_exists 0 acc tm = (rev acc, tm)
       | strip_n_exists n acc tm =
           let val (bv, tm) = dest_exists tm
@@ -269,7 +280,8 @@ fun LIST_REFINE_EXISTS_TAC qs (asl, g) = let
     val qs_bvs = zip qs exists_vars
     val ctxt = free_varsl (g::asl)
     fun is_underscore q =
-      let val tm = trace ("notify type variable guesses", 0) ptm q
+      let val tm = trace ("notify type variable guesses", 0)
+                         (Parse.Term_in c) q
       in
         if not (is_var tm) then false
         else String.isPrefix "_" (fst (dest_var tm))
@@ -283,7 +295,7 @@ fun LIST_REFINE_EXISTS_TAC qs (asl, g) = let
             in (NONE::wits, new_vars, (bv |-> bv')::renames, subs)
             end
           else let
-            val wit = ptm_with_ctxtty' (new_vars @ ctxt) (type_of bv) q
+            val wit = ptm_with_ctxtty_in' c (new_vars @ ctxt) (type_of bv) q
             val new_vars' = op_set_diff aconv (free_vars wit) (new_vars @ ctxt)
           in
             (SOME wit::wits, new_vars' @ new_vars, renames, (bv |-> wit)::subs)
@@ -317,7 +329,7 @@ fun LIST_REFINE_EXISTS_TAC qs (asl, g) = let
     val th =
         ASSUME body |> exists g' wits old_vars |> chooser (new_vars @ old_vars)
   in
-    MATCH_MP_TAC (DISCH_ALL th) (asl, g)
+    MATCH_MP_TAC (DISCH_ALL th) (asl, g) c
   end
 
 fun X_CHOOSE_THEN q ttac thm (g as (asl,w)) =
@@ -337,12 +349,12 @@ fun DISCH q th =
  in Thm.DISCH tm th
  end;
 
-fun PAT_UNDISCH_TAC q (g as (asl,w)) =
+fun PAT_UNDISCH_TAC q (g as (asl,w)) c =
 let val ctxt = free_varsl (w::asl)
-    val pat = ptm_with_ctxtty' ctxt Type.bool q
+    val pat = ptm_with_ctxtty_in' c ctxt Type.bool q
     val asm =
         first (can (ho_match_term [] Term.empty_tmset pat)) asl
-in Tactic.UNDISCH_TAC asm g
+in Tactic.UNDISCH_TAC asm g c
 end;
 
 fun PAT_ASSUM q ttac =
@@ -431,56 +443,56 @@ val INST_TYPE = Thm.INST_TYPE o mk_type_rsubst;
 (*    Abbreviation tactics                                                   *)
 (*---------------------------------------------------------------------------*)
 
-fun ABBREV_TAC q (gl as (asl,w)) =
+fun ABBREV_TAC q (gl as (asl,w)) c =
  let val ctxt = free_varsl(w::asl)
-     val eq = Parse.parse_in_context ctxt q
+     val eq = Parse.parse_in_context_in c ctxt q
  in
    markerLib.ABBREV_TAC eq
- end gl;
+ end gl c;
 
-fun PAT_ABBREV_TAC q (gl as (asl,w)) =
+fun PAT_ABBREV_TAC q (gl as (asl,w)) c =
  let val fv_set = FVL (w::asl) empty_tmset
      val ctxt = HOLset.listItems fv_set
-     val eq = Parse.parse_in_context ctxt q
+     val eq = Parse.parse_in_context_in c ctxt q
  in
    markerLib.PAT_ABBREV_TAC fv_set eq
- end gl;
+ end gl c;
 
-fun MATCH_ABBREV_TAC q (gl as (asl,w)) =
+fun MATCH_ABBREV_TAC q (gl as (asl,w)) c =
  let val fv_set = FVL (w::asl) empty_tmset
      val ctxt = HOLset.listItems fv_set
-     val pattern = ptm_with_ctxtty' ctxt bool q
+     val pattern = ptm_with_ctxtty_in' c ctxt bool q
  in
   markerLib.MATCH_ABBREV_TAC fv_set pattern
- end gl;
+ end gl c;
 
-fun HO_MATCH_ABBREV_TAC q (gl as (asl,w)) =
+fun HO_MATCH_ABBREV_TAC q (gl as (asl,w)) c =
  let val fv_set = FVL (w::asl) empty_tmset
      val ctxt = HOLset.listItems fv_set
-     val pattern = ptm_with_ctxtty' ctxt bool q
+     val pattern = ptm_with_ctxtty_in' c ctxt bool q
 in
   markerLib.HO_MATCH_ABBREV_TAC fv_set pattern
-end gl;
+end gl c;
 
-fun UNABBREV_TAC q (gl as (asl,w)) =
- let val v = Parse.parse_in_context (free_varsl (w::asl)) q
+fun UNABBREV_TAC q (gl as (asl,w)) c =
+ let val v = Parse.parse_in_context_in c (free_varsl (w::asl)) q
  in
    markerLib.UNABBREV_TAC (fst(dest_var v))
- end gl;
+ end gl c;
 
-fun RM_ABBREV_TAC q (gl as (asl,w)) =
- let val v = Parse.parse_in_context (free_varsl (w::asl)) q
+fun RM_ABBREV_TAC q (gl as (asl,w)) c =
+ let val v = Parse.parse_in_context_in c (free_varsl (w::asl)) q
  in
    markerLib.RM_ABBREV_TAC (fst(dest_var v))
- end gl;
+ end gl c;
 
-fun MATCH_ASSUM_ABBREV_TAC q (gl as (asl,w)) =
+fun MATCH_ASSUM_ABBREV_TAC q (gl as (asl,w)) c =
  let val fv_set = FVL (w::asl) empty_tmset
      val ctxt = HOLset.listItems fv_set
-     val pattern = ptm_with_ctxtty' ctxt bool q
+     val pattern = ptm_with_ctxtty_in' c ctxt bool q
  in
   markerLib.MATCH_ASSUM_ABBREV_TAC fv_set pattern
- end gl;
+ end gl c;
 
 fun make_abbrev_tac s =
   MAP_EVERY markerLib.ABB' (markerLib.safe_inst_sort s)
@@ -531,14 +543,16 @@ in
   test_parses pats
 end
 
-val Absyn = Parse.Absyn
-val term_grammar = Parse.term_grammar
+val Absyn_in = Parse.Absyn_in
+val get_term_grammar = Parse.get_term_grammar
 
 
 fun kMATCH_RENAME_TAC q k (g as (_, t)) ctxt = let
   val fvl = goal_ctxt g
-  fun mkA q = Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType bool)
-  val pat_parses = TermParse.prim_ctxt_termS mkA (term_grammar()) fvl q
+  fun mkA q =
+      Absyn.TYPED(locn.Loc_None, Absyn_in ctxt q, Pretype.fromType bool)
+  val pat_parses =
+      TermParse.prim_ctxt_termS mkA (get_term_grammar ctxt) fvl q
 in
   wholeterm_rename_helper
     {pats=pat_parses, ERR = ERR "MATCH_RENAME_TAC", kont = k,
@@ -548,16 +562,17 @@ end g ctxt
 
 fun MATCH_RENAME_TAC q = kMATCH_RENAME_TAC q ALL_TAC
 
-fun kMATCH_ASSUM_RENAME_TAC q k (g as (asl,t)) = let
+fun kMATCH_ASSUM_RENAME_TAC q k (g as (asl,t)) ctxt = let
   val fvl = free_varsl(t::asl)
-  val pats = TermParse.prim_ctxt_termS Absyn (term_grammar()) fvl q
+  val pats =
+      TermParse.prim_ctxt_termS (Absyn_in ctxt) (get_term_grammar ctxt) fvl q
 in
   FIRST_ASSUM (fn th =>
     wholeterm_rename_helper
       {pats=pats, ERR = ERR "MATCH_ASSUM_RENAME_TAC", kont = k,
        fvs_set = HOLset.fromList Term.compare fvl}
       (concl th))
-end g
+end g ctxt
 
 fun MATCH_ASSUM_RENAME_TAC q = kMATCH_ASSUM_RENAME_TAC q ALL_TAC
 
@@ -593,10 +608,11 @@ in
   find_pats pats
 end
 
-fun prep_rename q nm (asl, t) = let
+fun prep_rename c q nm (asl, t) = let
   val ERR = ERR nm
   val fvs = free_varsl (t::asl)
-  val pats = TermParse.prim_ctxt_termS Absyn (term_grammar()) fvs q
+  val pats =
+      TermParse.prim_ctxt_termS (Absyn_in c) (get_term_grammar c) fvs q
   val fvs_set = HOLset.fromList Term.compare fvs
   fun mapthis pat = let
     val patfvs = free_vars pat
@@ -612,24 +628,25 @@ end
 
 fun kMATCH_GOALSUB_RENAME_TAC b q k (g as (asl, t)) ctxt =
     subterm_helper b make_rename_tac k
-                   (prep_rename q "MATCH_GOALSUB_RENAME_TAC" g) t g ctxt
+                   (prep_rename ctxt q "MATCH_GOALSUB_RENAME_TAC" g) t g ctxt
 
 fun MATCH_GOALSUB_RENAME_TAC q = kMATCH_GOALSUB_RENAME_TAC false q ALL_TAC
 
-fun kMATCH_ASMSUB_RENAME_TAC b q k (g as (asl, t)) = let
-  val args = prep_rename q "MATCH_ASMSUB_RENAME_TAC" g
+fun kMATCH_ASMSUB_RENAME_TAC b q k (g as (asl, t)) ctxt = let
+  val args = prep_rename ctxt q "MATCH_ASMSUB_RENAME_TAC" g
 in
-  FIRST_ASSUM (subterm_helper b make_rename_tac k args o concl) g
+  FIRST_ASSUM (subterm_helper b make_rename_tac k args o concl) g ctxt
 end
 
 fun MATCH_GOALSUB_ABBREV_TAC q (g as (asl, t)) ctxt =
     subterm_helper false make_abbrev_tac ALL_TAC
-                   (prep_rename q "MATCH_GOALSUB_ABBREV_TAC" g) t g ctxt
+                   (prep_rename ctxt q "MATCH_GOALSUB_ABBREV_TAC" g) t g ctxt
 
-fun MATCH_ASMSUB_ABBREV_TAC q (g as (asl, t)) = let
-  val args = prep_rename q "MATCH_ASMSUB_ABBREV_TAC" g
+fun MATCH_ASMSUB_ABBREV_TAC q (g as (asl, t)) ctxt = let
+  val args = prep_rename ctxt q "MATCH_ASMSUB_ABBREV_TAC" g
 in
-  FIRST_ASSUM (subterm_helper false make_abbrev_tac ALL_TAC args o concl) g
+  FIRST_ASSUM (subterm_helper false make_abbrev_tac ALL_TAC args o concl)
+              g ctxt
 end
 
 fun MATCH_ASMSUB_RENAME_TAC q = kMATCH_ASMSUB_RENAME_TAC false q ALL_TAC

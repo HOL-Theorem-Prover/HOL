@@ -77,6 +77,11 @@ signature Parse = sig
   val ty_antiq         : hol_type -> term
   val parse_in_context : term list -> term frag list -> term
   val typed_parse_in_context : hol_type -> term list -> term frag list -> term
+  (* the `term list` is the free-variable context the quotation is read
+     against; the Context.t is the prover state it is parsed in *)
+  val parse_in_context_in : Context.t -> term list -> term frag list -> term
+  val typed_parse_in_context_in : Context.t -> hol_type -> term list ->
+                                  term frag list -> term
   val parse_from_grammars :
       (type_grammar.grammar * term_grammar.grammar) ->
       ((hol_type frag list -> hol_type) * (term frag list -> term))
