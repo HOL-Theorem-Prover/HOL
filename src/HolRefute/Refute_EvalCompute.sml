@@ -251,7 +251,23 @@ structure Refute_EvalCompute = struct
           else Found found
         end
 
-      fun visit env genuine current =
+      (* Shared by [Guard] and [NegGuard]: both decide a closed
+         condition with the same three-valued discipline, and only
+         differ in what [tm] means to the caller. *)
+      fun guard_step env genuine tm next =
+        case eval_boolean env tm of
+            IsTrue => visit env genuine next
+          | IsFalse =>
+              (candidates_generated := !candidates_generated + 1;
+               Continue)
+          | IsStuck =>
+              (complete := false;
+               if genuine_only then
+                 (candidates_generated := !candidates_generated + 1;
+                  Continue)
+               else visit env false next)
+
+      and visit env genuine current =
         case current of
             Prune => Continue
           | Test tm =>
@@ -280,18 +296,12 @@ structure Refute_EvalCompute = struct
                        if genuine_only then Continue
                        else candidate env false)
               end
-          | Guard (tm, next) =>
-              (case eval_boolean env tm of
-                   IsTrue => visit env genuine next
-                 | IsFalse =>
-                     (candidates_generated := !candidates_generated + 1;
-                      Continue)
-                 | IsStuck =>
-                     (complete := false;
-                      if genuine_only then
-                        (candidates_generated := !candidates_generated + 1;
-                         Continue)
-                      else visit env false next))
+          | Guard (tm, next) => guard_step env genuine tm next
+          | NegGuard (tm, next) =>
+              (* Same three-valued discipline as [Guard]: [tm] is the
+                 closed complement condition, and a stuck evaluation
+                 must not be read as a decided [false]. *)
+              guard_step env genuine tm next
           | SmartGuard {predicate, version, cont} =>
               (case smart_guard_program programs predicate version of
                    SOME (program, ins) =>
@@ -852,6 +862,7 @@ structure Refute_EvalCompute = struct
           | Split (_, branches) =>
               List.app (fn (_, _, next) => validate_plan next) branches
           | Guard (_, next) => validate_plan next
+          | NegGuard (_, next) => validate_plan next
           | SmartGuard {cont, ...} => validate_plan cont
           | Enum {cont, ...} => validate_plan cont
           | Prune => ()

@@ -2580,6 +2580,9 @@ structure Refute_Extract = struct
         | Guard (tm, next) =>
             Guard (substitute_variables environment tm,
               rename_plan next environment)
+        | NegGuard (tm, next) =>
+            NegGuard (substitute_variables environment tm,
+              rename_plan next environment)
         | SmartGuard {predicate, version, cont} =>
             SmartGuard
               {predicate = substitute_variables environment predicate,
@@ -2606,11 +2609,17 @@ structure Refute_Extract = struct
 
       (* Lazy extraction installs only the property compiler.  Generation
          and refinement belong to the narrowing engine; accepting those nodes
-         here would accidentally run strict enumeration over lazy values. *)
+         here would accidentally run strict enumeration over lazy values.
+         No plan reaches this today: [Refute_EvalSML.compile_locked] picks
+         [Lazy] only for [Narrowing], and the one [Narrowing] compile call
+         ([Refute_QC_Narrow.compile_instances_window]) supplies a [Pnf]
+         problem or raises, so [extract_tests_with] never runs under
+         [Lazy].  The guard stays complete for every node regardless. *)
       fun test_only current =
         case current of
             Test _ => true
           | Guard (_, next) => test_only next
+          | NegGuard (_, next) => test_only next
           | Prune => true
           | _ => false
       val _ =
@@ -3698,20 +3707,12 @@ structure Refute_Extract = struct
                 parens (conclude ^ "; " ^
                   "if refute_value then RefuteContinue else " ^ hit) ^ ")")
             end
-        | Guard (tm, next) =>
-            let
-              val (name, flag) = guard_names ()
-              val body = compile_exhaustive_plan next environment flag
-              val stuck = guard_recovery "complete" "genuine_only"
-                (name ^ " false")
-            in
-              "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^
-              "\nin " ^ safe_value (evaluated_expression tm) stuck ^
-              "if refute_value then " ^ name ^ " " ^ genuine_only ^
-              " else " ^
-              parens ("candidates_generated := " ^
-                "!candidates_generated + 1; RefuteContinue") ^ ") end"
-            end
+        | Guard (tm, next) => guard_body environment genuine_only tm next
+        | NegGuard (tm, next) =>
+            (* Same three-valued discipline as [Guard]: [tm] is the
+               closed complement condition, so a stuck evaluation must
+               fall to [stuck] rather than be read as [false]. *)
+            guard_body environment genuine_only tm next
         | SmartGuard {predicate, version, cont} =>
             let
               val (name, flag) = guard_names ()
@@ -3794,6 +3795,24 @@ structure Refute_Extract = struct
                 " " ^ integer fuel ^ " size complete")
             end
 
+      (* Shared by [Guard] and [NegGuard]: both decide a closed
+         condition with the same three-valued discipline, and only
+         differ in what [tm] means to the caller. *)
+      and guard_body environment genuine_only tm next =
+        let
+          val (name, flag) = guard_names ()
+          val body = compile_exhaustive_plan next environment flag
+          val stuck = guard_recovery "complete" "genuine_only"
+            (name ^ " false")
+        in
+          "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^
+          "\nin " ^ safe_value (evaluated_expression tm) stuck ^
+          "if refute_value then " ^ name ^ " " ^ genuine_only ^
+          " else " ^
+          parens ("candidates_generated := " ^
+            "!candidates_generated + 1; RefuteContinue") ^ ") end"
+        end
+
       fun compile_random_plan current environment genuine state =
         case current of
           Prune => parens ("RefuteContinue, " ^ state)
@@ -3832,6 +3851,12 @@ structure Refute_Extract = struct
                 "!candidates_generated + 1; " ^
                 parens ("RefuteContinue, " ^ state)) ^ ") end"
             end
+        | NegGuard _ =>
+            (* [Refute_QC.strategy_run_body] forces smart_generators
+               false for every random strategy, and the exhaustive gate
+               override only ever selects [Exhaustive], so no random
+               plan can carry a [NegGuard]. *)
+            smart_reject "Neg Guard reached random compilation"
         | SmartGuard _ =>
             smart_reject "smart Guard reached random compilation"
         | Bind (variable, tm, fallback, next) =>
@@ -3951,6 +3976,8 @@ structure Refute_Extract = struct
                 (ignore (expression context tm);
                  List.app (payload o #3) branches)
             | Guard (tm, next) =>
+                (ignore (expression context tm); payload next)
+            | NegGuard (tm, next) =>
                 (ignore (expression context tm); payload next)
             | SmartGuard {cont, ...} => payload cont
             | Enum {ins, cont, ...} =>

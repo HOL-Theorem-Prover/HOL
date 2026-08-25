@@ -35,7 +35,11 @@ Refute_Cert_Model.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo \
                       Refute_ModelFinder_HOL.uo Refute_Skolem.uo
 Refute_Narrow.uo: Refute_Util.uo Refute_Gen.uo Refute_ModelFinder_Names.uo
 Refute_SmartGen.uo: Refute_Util.uo
-Refute_QC.uo: Refute_Cert_Narrow.uo Refute_ModelFinder_HOL.uo
+# negative_candidates calls Refute_EvalEnum.negation_condition directly;
+# none of Refute_QC's other prerequisites reach Refute_EvalEnum, so this
+# edge is new, not a restatement of an existing transitive one.
+Refute_QC.uo: Refute_Cert_Narrow.uo Refute_ModelFinder_HOL.uo \
+              Refute_EvalEnum.uo
 Refute_QC_Narrow.uo: Refute_QC.uo Refute_Narrow.uo
 Refute_EvalEnum.uo: Refute_Util.uo
 Refute_EvalCompute.uo: Refute_Util.uo Refute_EvalEnum.uo

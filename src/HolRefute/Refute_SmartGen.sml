@@ -463,7 +463,10 @@ structure Refute_SmartGen = struct
      in [relations] under the same mode, so those remain the single source
      of truth and this table cannot be mistaken for a positive one.  A
      relation's list is [] whenever decidability cannot be established --
-     never an optimistic guess.  Nothing consumes it yet. *)
+     never an optimistic guess.  Consumed by [Refute_QC]'s premise
+     analysis through [complement_available], which builds a closed
+     complement condition from the same-mode [enumerator] via
+     [Refute_EvalEnum.negation_condition]. *)
   type relation_negative_modes = {relation : term, modes : mode list}
 
   type inference_result =

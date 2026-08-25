@@ -10,6 +10,29 @@ signature Refute_Eval = sig
     | Bind of term * term * plan option * plan
     | Split of term * (term * term list * plan) list
     | Guard of term * plan
+      (* A closed complement condition for a negated relational
+         premise: true only when every admitted clause of the
+         relation's negative mode is decided false.  Evaluated with
+         the same three-valued (true/false/stuck) discipline as
+         [Guard]; a stuck evaluation must never be read as [false].
+         Marks [plan_uses_smart] so the executability gate can lift.
+
+         Deliberately carries no [program_version], unlike [Enum] and
+         [SmartGuard]: those name a program resolved from the mutable
+         [Refute_SmartGen] enumerator cache at execution time, so a
+         redefinition can silently replace the cache entry behind an
+         old plan's back, and only the version stamp lets
+         [Refute_QC.same_plan] tell a stale selection from a current
+         one.  [NegGuard] instead inlines the whole complement into
+         the plan as a term value, with no deferred lookup that can go
+         stale.  [Refute_QC.same_plan] compares that term with
+         [Term.aconv]: if the relation is redefined and the
+         re-derived complement differs, the comparison fails and the
+         cached selection is not reused; if the redefinition
+         re-derives an identical complement, the comparison succeeds
+         and reuse is correct, because the term being tested is
+         exactly the same value either way. *)
+    | NegGuard of term * plan
     | SmartGuard of {predicate : term, version : program_version,
                      cont : plan}
     | Enum of {rel : term, mode : mode, version : program_version,
@@ -106,7 +129,13 @@ signature Refute_Eval = sig
   val session_seed : IntInf.int ref
 
   val plan_gen_types : plan -> Type.hol_type list
+  (* Fuel-bounded and needs enumerator programs: [Enum] and
+     [SmartGuard], whose terminal exhaustion cannot be certified.
+     Excludes [NegGuard], whose condition is an ordinary closed guard. *)
   val plan_uses_enum : plan -> bool
+  (* Contains any smart construct -- [Enum], [SmartGuard] or
+     [NegGuard] -- that the executability gate must account for. *)
+  val plan_uses_smart : plan -> bool
   val same_env : (term * term) list -> (term * term) list -> bool
   val same_case_tree : case_tree option -> case_tree option -> bool
   val ignored_candidate : candidate -> candidate list -> bool

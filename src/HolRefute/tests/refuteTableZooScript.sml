@@ -542,6 +542,30 @@ Proof
   metis_tac [zoo_sg_duplicate_cases, zoo_sg_duplicate_rules]
 QED
 
+(* Same duplicate-pattern clause as [zoo_sg_duplicate], but over a type
+   with a total generator ([:bool] is fully enumerated by
+   [Refute_Gen.enumerate]), so a [:num] free variable's unboundedness is
+   not a confound when probing the negative complement's exhaustive
+   coverage -- see [negation_complement_expectnone_goal] in
+   selftest.sml. *)
+Inductive zoo_sg_bool_duplicate:
+  (!x : bool. zoo_sg_bool_duplicate x (x,x))
+End
+
+Theorem zoo_sg_bool_duplicate_compute:
+  !x p. zoo_sg_bool_duplicate x p <=> (p = (x,x))
+Proof
+  metis_tac [zoo_sg_bool_duplicate_cases, zoo_sg_bool_duplicate_rules]
+QED
+
+(* Same duplicate-pattern clause again, but its Sidecond, [HD [] = x],
+   can never be evaluated ([HD] is partial and its argument is always
+   [[]]): the complement's runtime guard is always stuck, never true or
+   false.  See [negation_complement_stuck_goal] in selftest.sml. *)
+Inductive zoo_sg_bool_stuck:
+  (!x : bool. HD ([] : bool list) = x ==> zoo_sg_bool_stuck x (x,x))
+End
+
 (* Stream-order pins for substrate-neutral enumerator synthesis.  The first
    relation has genuinely duplicate derivations; the second exposes multiple
    outputs in source order. *)

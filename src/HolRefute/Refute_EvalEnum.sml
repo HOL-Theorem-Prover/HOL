@@ -100,6 +100,7 @@ structure Refute_EvalEnum = struct
               List.foldl (fn ((_, _, next), result) =>
                 collect next result) programs branches
           | Refute_Eval.Guard (_, next) => collect next programs
+          | Refute_Eval.NegGuard (_, next) => collect next programs
           | Refute_Eval.SmartGuard {predicate, version, cont} =>
               collect cont
                 (closure (guard_program predicate version) programs)
@@ -290,6 +291,11 @@ structure Refute_EvalEnum = struct
                require_boolean "Guard" tm;
                validate_executable "Guard" [] [tm];
                validate_plan next bound)
+          | Refute_Eval.NegGuard (tm, next) =>
+              (require_bound "Neg Guard" bound [tm];
+               require_boolean "Neg Guard" tm;
+               validate_executable "Neg Guard" [] [tm];
+               validate_plan next bound)
           | Refute_Eval.SmartGuard {predicate, version, cont} =>
               let
                 val (program, ins) =
@@ -448,6 +454,56 @@ structure Refute_EvalEnum = struct
     in
       match_many patterns values [] (fn additions =>
         success (additions @ environment))
+    end
+
+  (* Lives here, not in [Refute_SmartGen]: [Refute_Eval.sig] takes
+     [mode]/[program_version] FROM [Refute_SmartGen], so [Refute_SmartGen]
+     sits below [Refute_Eval], and this function needs [match_patterns],
+     which needs [Refute_Eval.fully_applied_constructor] from this module.
+     Moving it to [Refute_SmartGen] would invert that dependency.  Its
+     caller, [Refute_QC.negative_candidates], reaches across from above
+     with a direct [Refute_EvalEnum.negation_condition] qualified
+     reference -- a normal downward call, not a layering violation. *)
+
+  (* The closed boolean condition "every clause of [program] fails
+     against [values]" -- the complement of a fully-input relation at
+     a mode [Refute_SmartGen.complement_available] admits.  Every
+     clause's premises are [CpsGuard] only: a [Prem] premise would
+     have blocked admission, and an admitted mode never needs a
+     [Generator], so no fuel or recursion is needed and pattern
+     mismatch or a guard testing false are the only ways a clause can
+     fail.  The caller must still read the result with the same
+     three-valued discipline as an ordinary guard: a stuck evaluation
+     is not a decided [false], so it must never license the
+     disjunction's negation. *)
+  fun negation_condition
+        ({clauses, ...} : Refute_SmartGen.enumerator) values =
+    let
+      (* [Refute_SmartGen.complement_available] admits only a mode with
+         no output position and no [Prem] premise, so every clause here
+         is expected to have empty [outs] and [CpsGuard]-only premises.
+         Both are enforced two modules away, not here: guess instead of
+         checking would silently test the wrong condition, so a
+         violation is fatal rather than reported as unavailable. *)
+      val serial = ref 0
+      fun fresh ty =
+        let val index = !serial
+            val _ = serial := index + 1
+        in Term.mk_var ("negguard_pat_" ^ Int.toString index, ty) end
+      fun guard_term (Refute_SmartGen.CpsGuard tm) = tm
+        | guard_term _ = reject
+            "negation_condition: clause premise is not a guard"
+      fun holds (Refute_SmartGen.CpsClause {ins, premises, outs}) =
+        (if null outs then ()
+         else reject "negation_condition: clause binds an output position";
+         match_patterns fresh ins values [] boolSyntax.F (fn environment =>
+           case map (substitute environment o guard_term) premises of
+               [] => boolSyntax.T
+             | guards => boolSyntax.list_mk_conj guards))
+    in
+      case clauses of
+          [] => boolSyntax.T
+        | _ => boolSyntax.mk_neg (boolSyntax.list_mk_disj (map holds clauses))
     end
 
   fun conjunction [] = raise Fail "Refute enum empty definition"

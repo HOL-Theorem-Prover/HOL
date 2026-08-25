@@ -246,7 +246,15 @@ structure Refute_QC = struct
         ({smart_context = smart_context_cache, analyses} : plan_cache)
         (config : Refute_Core.config) goal =
     let
-      val (assumptions, conclusion) = boolSyntax.strip_imp goal
+      val (raw_assumptions, conclusion) = boolSyntax.strip_imp goal
+      (* [Refute_Core.normalize]'s [AND_IMP_INTRO] folds a multi-premise
+         chain into one conjunction before a real goal ever reaches here
+         (a bare [compile_plan] call on an unnormalized goal does not);
+         flatten it back so each conjunct is classified on its own,
+         instead of the whole conjunction being handed to [classify] as
+         a single opaque, headless assumption. *)
+      val assumptions =
+        List.concat (map boolSyntax.strip_conj raw_assumptions)
       (* Building a model-finder context scans the whole theory ancestry,
          so pay for it only once a premise actually reaches mode inference:
          goals without relational premises never need it. *)
@@ -339,7 +347,19 @@ structure Refute_QC = struct
                          answer
                        end
 
-      fun smart_candidates bound assumption =
+      (* The smart-generator candidate for a premise: a positive
+         enumerator for a [Prem]-shaped call, or a complement condition
+         for a negated one.  The two never mix -- a mode is a
+         [Negative] candidate only via [SmartGen.complement_available],
+         which reads the table [Refute_SmartGen.negative_modes_of]
+         built, itself derived only from the positive clauses under
+         the same mode.  Nothing here compiles a positive program with
+         a flipped flag. *)
+      datatype smart_source =
+          Positive of SmartGen.enumerator
+        | Negative of term
+
+      fun positive_candidates bound assumption =
         case premise_head assumption of
             NONE => ([], false, NONE)
           | SOME relation =>
@@ -352,7 +372,7 @@ structure Refute_QC = struct
                   val modes =
                     List.mapPartial (fn goal_mode as
                         ({mode, ...} : SmartGen.goal_mode) =>
-                      Option.map (fn program => (goal_mode, program))
+                      Option.map (fn program => (goal_mode, Positive program))
                         (SmartGen.enumerator_for relation mode)) inferred
                   val reason =
                     if not (null modes) orelse not trigger then reason
@@ -364,13 +384,54 @@ structure Refute_QC = struct
                 (modes, trigger, reason)
               end
 
+      fun negative_candidates bound assumption =
+        let val call = boolSyntax.dest_neg assumption
+        in
+          case premise_head call of
+              NONE => ([], false, NONE)
+            | SOME relation =>
+                let val {result, trigger, reason} = analyse relation
+                    val inferred =
+                      case result of
+                          NONE => []
+                        | SOME inference =>
+                            List.filter (fn
+                                ({mode, ...} : SmartGen.goal_mode) =>
+                              SmartGen.complement_available relation mode
+                                inference)
+                              (SmartGen.goal_modes_for_call bound call
+                                inference)
+                    val modes =
+                      List.mapPartial (fn goal_mode as
+                          ({mode, ins, ...} : SmartGen.goal_mode) =>
+                        Option.map (fn program =>
+                            (goal_mode,
+                             Negative (Refute_EvalEnum.negation_condition
+                               program ins)))
+                          (SmartGen.enumerator_for relation mode)) inferred
+                    val reason =
+                      if not (null modes) orelse not trigger then reason
+                      else if not (null inferred) then SOME
+                        "complement compilation failed for inferred mode"
+                      else SOME (Option.getOpt (reason,
+                        "no executable negative mode"))
+                in
+                  (modes, trigger, reason)
+                end
+        end
+
+      fun smart_candidates bound assumption =
+        if boolSyntax.is_neg assumption then
+          negative_candidates bound assumption
+        else positive_candidates bound assumption
+
       fun report_fallback assumption reason =
         Refute_Core.Private.say 2
           ("Refute smart generator fallback for " ^
            safe_term_text assumption ^ ": " ^ reason ^ "\n")
 
       datatype premise_action =
-          Smart of SmartGen.goal_mode * SmartGen.enumerator
+          Smart of SmartGen.goal_mode * smart_source
         | Ordinary
 
       fun orientation_score bound (lhs, rhs) =
@@ -538,7 +599,7 @@ structure Refute_QC = struct
             in
               case action of
                   Smart ({mode, ins, outs, missing, ...},
-                         {version, ...} : SmartGen.enumerator) =>
+                         Positive {version, ...}) =>
                     gen_all missing
                       (if null outs then
                          (Refute_Core.Private.say 2
@@ -552,6 +613,12 @@ structure Refute_QC = struct
                                mode = mode, version = version,
                                ins = ins, outs = outs,
                                cont = continuation ()})
+                | Smart ({missing, ...}, Negative condition) =>
+                    gen_all missing
+                      (Refute_Core.Private.say 2
+                         ("Refute smart complement Guard for " ^
+                          safe_term_text assumption ^ "\n");
+                       NegGuard (condition, continuation ()))
                 | Ordinary =>
                     (if triggering then
                        report_fallback assumption
@@ -600,6 +667,9 @@ structure Refute_QC = struct
         | Guard (predicate, continuation) =>
             indent depth ^ "Guard " ^ Parse.term_to_string predicate ^ "\n" ^
             show (depth + 2) continuation
+        | NegGuard (condition, continuation) =>
+            indent depth ^ "Neg Guard " ^ Parse.term_to_string condition ^
+            "\n" ^ show (depth + 2) continuation
         | SmartGuard {predicate, cont, ...} =>
             indent depth ^ "Smart Guard " ^
             Parse.term_to_string predicate ^ "\n" ^
@@ -895,6 +965,7 @@ structure Refute_QC = struct
       | Split (_, branches) =>
           List.exists (fn (_, _, next) => plan_has_gen next) branches
       | Guard (_, next) => plan_has_gen next
+      | NegGuard (_, next) => plan_has_gen next
       | SmartGuard {cont, ...} => plan_has_gen cont
       | Enum _ => true
       | Prune => false
@@ -974,6 +1045,9 @@ structure Refute_QC = struct
         end
     | same_plan (Guard (left_tm, left_next),
                  Guard (right_tm, right_next)) =
+        Term.aconv left_tm right_tm andalso same_plan (left_next, right_next)
+    | same_plan (NegGuard (left_tm, left_next),
+                 NegGuard (right_tm, right_next)) =
         Term.aconv left_tm right_tm andalso same_plan (left_next, right_next)
     | same_plan
         (SmartGuard {predicate = left_predicate, version = left_version,
@@ -1247,7 +1321,7 @@ structure Refute_QC = struct
       val eligible =
         #smart_generators (#qc config) andalso
         not (null gated_plans) andalso
-        List.all Refute_Eval.plan_uses_enum gated_plans
+        List.all Refute_Eval.plan_uses_smart gated_plans
     in
       if not eligible then false
       else
@@ -1329,7 +1403,7 @@ structure Refute_QC = struct
           #qc_gate instance) instances)
       val every_gated_plan_is_smart = List.all (fn (instance, plan) =>
         not (Option.isSome (#qc_gate instance)) orelse
-        Refute_Eval.plan_uses_enum plan)
+        Refute_Eval.plan_uses_smart plan)
         paired
       val can_preflight = gated andalso strategy = Exhaustive andalso
         #smart_generators (#qc config) andalso every_gated_plan_is_smart

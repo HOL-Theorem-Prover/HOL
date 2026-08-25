@@ -10,6 +10,7 @@ structure Refute_Eval :> Refute_Eval = struct
     | Bind of term * term * plan option * plan
     | Split of term * (term * term list * plan) list
     | Guard of term * plan
+    | NegGuard of term * plan
     | SmartGuard of {predicate : term, version : program_version,
                      cont : plan}
     | Enum of {rel : term, mode : mode, version : program_version,
@@ -157,17 +158,22 @@ structure Refute_Eval :> Refute_Eval = struct
       | Split (_, branches) =>
           List.concat (List.map (plan_gen_types o #3) branches)
       | Guard (_, next) => plan_gen_types next
+      | NegGuard (_, next) => plan_gen_types next
       | SmartGuard {cont, ...} => plan_gen_types cont
       | Enum {cont, ...} => plan_gen_types cont
       | Prune => []
 
-  (* Does this plan depend on the smart-generator machinery?  Both the
-     substrate compilers and the QC gate ask this question, so a new plan
-     constructor is classified in one place. *)
+  (* Does this plan need enumerator programs for a fuel-bounded
+     construct whose terminal exhaustion cannot be certified?  [NegGuard]
+     is excluded: its condition is a closed guard over already-bound
+     inputs, decided with the same three-valued discipline as an
+     ordinary [Guard], so it needs no enumerator and its exhaustion is
+     exact. *)
   fun plan_uses_enum plan =
     case plan of
         Enum _ => true
       | SmartGuard _ => true
+      | NegGuard (_, next) => plan_uses_enum next
       | Gen (_, next) => plan_uses_enum next
       | Bind (_, _, fallback, next) =>
           plan_uses_enum next orelse
@@ -175,6 +181,25 @@ structure Refute_Eval :> Refute_Eval = struct
       | Split (_, branches) =>
           List.exists (plan_uses_enum o #3) branches
       | Guard (_, next) => plan_uses_enum next
+      | Test _ => false
+      | Prune => false
+
+  (* Does this plan contain a smart construct -- [Enum], [SmartGuard] or
+     [NegGuard] -- that the executability gate must account for?  All
+     three are compiled by the smart-generator machinery, and a
+     syntactically gated goal needs one of them to lift. *)
+  fun plan_uses_smart plan =
+    case plan of
+        Enum _ => true
+      | SmartGuard _ => true
+      | NegGuard _ => true
+      | Gen (_, next) => plan_uses_smart next
+      | Bind (_, _, fallback, next) =>
+          plan_uses_smart next orelse
+          Option.getOpt (Option.map plan_uses_smart fallback, false)
+      | Split (_, branches) =>
+          List.exists (plan_uses_smart o #3) branches
+      | Guard (_, next) => plan_uses_smart next
       | Test _ => false
       | Prune => false
 
@@ -282,6 +307,7 @@ structure Refute_Eval :> Refute_Eval = struct
           Split (tm, List.map (fn (constructor, variables, next) =>
             (constructor, variables, dump_plan next)) branches)
       | Guard (tm, next) => Guard (tm, dump_plan next)
+      | NegGuard (tm, next) => NegGuard (tm, dump_plan next)
       | SmartGuard {predicate, version, cont} =>
           SmartGuard {predicate = predicate, version = version,
                       cont = dump_plan cont}

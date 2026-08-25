@@ -935,6 +935,7 @@ structure Refute_EvalCv = struct
               List.foldl (fn ((_, _, next), result) =>
                 collect next result) variables branches
           | Refute_Eval.Guard (_, next) => collect next variables
+          | Refute_Eval.NegGuard (_, next) => collect next variables
           | Refute_Eval.SmartGuard {cont, ...} => collect cont variables
           | Refute_Eval.Enum {outs, cont, ...} =>
               collect cont
@@ -962,6 +963,7 @@ structure Refute_EvalCv = struct
               List.foldl (fn ((_, _, next), result) =>
                 collect next result) (tm :: terms) branches
           | Refute_Eval.Guard (tm, next) => collect next (tm :: terms)
+          | Refute_Eval.NegGuard (tm, next) => collect next (tm :: terms)
           | Refute_Eval.SmartGuard {predicate, cont, ...} =>
               collect cont (predicate :: terms)
           | Refute_Eval.Enum {ins, outs, cont, ...} =>
@@ -1150,10 +1152,8 @@ structure Refute_EvalCv = struct
                     hit variables (numeral 0) env,
                     no_hit variables
                       (numSyntax.mk_minus (skip, numeral 1))))
-          | Refute_Eval.Guard (tm, next) =>
-              boolSyntax.mk_cond
-                (substitute env tm, build next env skip,
-                 no_hit variables skip)
+          | Refute_Eval.Guard (tm, next) => guard_step env skip tm next
+          | Refute_Eval.NegGuard (tm, next) => guard_step env skip tm next
           | Refute_Eval.SmartGuard {predicate, cont, ...} =>
               boolSyntax.mk_cond
                 (substitute env predicate, build cont env skip,
@@ -1228,6 +1228,13 @@ structure Refute_EvalCv = struct
                    current_parameters @ [skip])
               end
 
+      (* Shared by [Guard] and [NegGuard]: both are a closed condition
+         gating the continuation, and only differ in what [tm] means
+         to the caller. *)
+      and guard_step env skip tm next =
+        boolSyntax.mk_cond
+          (substitute env tm, build next env skip, no_hit variables skip)
+
       val skip = named_variable (prefix ^ "skip") numSyntax.num
       val loop_var = named_variable (prefix ^ "loop")
         (function_type
@@ -1301,9 +1308,8 @@ structure Refute_EvalCv = struct
               boolSyntax.mk_cond
                 (substitute env tm, empty,
                  singleton (env_term variables env))
-          | Refute_Eval.Guard (tm, next) =>
-              boolSyntax.mk_cond
-                (substitute env tm, build next env, empty)
+          | Refute_Eval.Guard (tm, next) => guard_step env tm next
+          | Refute_Eval.NegGuard (tm, next) => guard_step env tm next
           | Refute_Eval.SmartGuard {predicate, version, cont} =>
               boolSyntax.mk_cond
                 (listSyntax.mk_null
@@ -1344,6 +1350,12 @@ structure Refute_EvalCv = struct
                 bind values variable
                   (build next ((variable, variable) :: env))
               end
+
+      (* Shared by [Guard] and [NegGuard]: both are a closed condition
+         gating the continuation, and only differ in what [tm] means
+         to the caller. *)
+      and guard_step env tm next =
+        boolSyntax.mk_cond (substitute env tm, build next env, empty)
 
       val loop_var = named_variable (prefix ^ "loop")
         (function_type ([numSyntax.num], list_result_ty))
@@ -1389,6 +1401,12 @@ structure Refute_EvalCv = struct
               boolSyntax.mk_cond
                 (substitute env tm, build next env state,
                  no_hit variables state)
+          | Refute_Eval.NegGuard _ =>
+              (* [Refute_QC.strategy_run_body] forces smart_generators
+                 false for every random strategy, and the exhaustive
+                 gate override only ever selects [Exhaustive], so no
+                 random plan can carry a [NegGuard]. *)
+              raise Unsupported "Neg Guard reached random compilation"
           | Refute_Eval.SmartGuard {predicate, cont, ...} =>
               boolSyntax.mk_cond
                 (substitute env predicate, build cont env state,

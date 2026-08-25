@@ -234,16 +234,35 @@ seed use a deterministic session stream which advances between runs.
 
 Smart generators are enabled by default.  A `Hol_reln` premise, or a
 Boolean function with exhaustive Horn-shaped equations, is mode-compiled to
-a positive CPS enumerator for exhaustive testing on all three substrates.
-`upd_depth` sets its fixed per-plan fuel (default 10); it does not add a
-schedule loop.  Compute and cv define the same structurally recursive HOL
-list enumerators (cv then translates those definitions); native SML preserves
-the same clause and premise order.  Because fuel bounds every smart
-enumeration, Enum- or SmartGuard-bearing terminal exhaustion is always
-reported as incomplete.  Ignored counterexamples are matched by structural
-environment equality, not by stream position.  Setting
-`upd_smart_generators false` restores generate-and-guard planning, and
-`upd_reorder_premises` controls mode-analysis reordering.
+a positive CPS enumerator for exhaustive testing on all three substrates.  A
+*negated* such premise is instead mode-compiled to a `NegGuard` complement:
+the relation's Horn clauses are combined into a semantic complement
+predicate (`Refute_EvalEnum.negation_condition`) and used as a runtime
+guard, so a goal whose only obstacle was a negated relational premise no
+longer needs to fall back to opaque, unconstrained treatment of that
+relation.  This only fires for a mode every clause admits: fully-`Input`,
+no clause needs a `Generator` for a variable outside the head, and no
+clause calls another relation (a `Prem` premise).  That last condition
+excludes every recursive relation -- a self- or mutually-recursive
+relation's negated call still falls back to an opaque `Guard`; giving it a
+bounded complement with a downgraded verdict instead of wider admission is
+an open gap (see `Manual/Description/Refute.smd`).
+Unlike `Enum`, `NegGuard` needs no enumerator program and consumes no
+fuel: its condition is a closed conjunction of guards over already-bound
+inputs, decided with the same three-valued discipline as an ordinary
+`Guard`, so reaching `NegGuard` does not by itself make a plan incomplete
+-- a stuck evaluation there is still caught and reported at runtime,
+exactly as for `Guard`.  `upd_depth` sets the fixed per-plan fuel for
+`Enum` and `SmartGuard` (default 10); it does not add a schedule loop and
+has no effect on `NegGuard`.  Compute and cv define the same structurally
+recursive HOL list enumerators (cv then translates those definitions);
+native SML preserves the same clause and premise order.  Because fuel
+bounds every `Enum`- or `SmartGuard`-bearing enumeration, their terminal
+exhaustion is always reported as incomplete; `NegGuard` carries no such
+penalty.  Ignored counterexamples are matched by structural environment
+equality, not by stream position.  Setting `upd_smart_generators false`
+restores generate-and-guard planning, and `upd_reorder_premises` controls
+mode-analysis reordering.
 
 Native narrowing is active by default as the `narrowing` backend.  It uses
 `size` as its initial refinement-depth window and supports prenex existential

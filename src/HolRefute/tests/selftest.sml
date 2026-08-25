@@ -19654,6 +19654,7 @@ fun smartgen_payoff_result expected_substrate variable predicate outcome =
 fun contains_guard current =
   case current of
       Guard _ => true
+    | NegGuard _ => true
     | Gen (_, next) => contains_guard next
     | Bind (_, _, fallback, next) =>
         contains_guard next orelse Option.getOpt
@@ -19981,6 +19982,368 @@ fun smartgen_mutual_string_and_hygiene_native () =
 val _ = require_msg
   (check_result smartgen_mutual_string_and_hygiene_native) (fn () =>
   "mutual, string-pattern, or identifier-hygiene native Enum failed")
+  (fn () => ()) ()
+
+(* [Refute_Core.normalize]'s [AND_IMP_INTRO] rewrite folds a multi-premise
+   goal's implication chain into a single conjunction before any real goal
+   reaches [Refute_QC.compile_plan_with] -- a bare [compile_plan] call, as
+   every plan-shape pin above uses, never sees that folded form, which is
+   why none of them caught this.  Without re-splitting the conjunction
+   back into its conjuncts, [zoo_sg_linear]'s premise below is buried
+   inside a headless conjunction (its head is [/\], not a relation
+   constant with Horn clauses) and never separately classified, so the
+   goal stays gated ("not executable") through the real [refute] path even
+   though the identical goal handed directly to [compile_plan] triggers
+   [Enum] just fine.  This is what [compile_plan_with]'s
+   [List.concat (map strip_conj assumptions)] re-flattening fixes; it is a
+   pre-existing gap in the positive [Enum] path that predates this task's
+   negative-mode work and affects it identically ([NegGuard] premises are
+   classified by the same [compile] loop). *)
+fun smartgen_conjunctive_premise_gate_lifts () =
+  refute
+    (default_config
+     |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
+     |> Refute.upd_certify false
+     |> Refute.upd_size 3
+     |> Refute.upd_depth 1)
+    ``(n : num) < 3 ==> zoo_sg_linear n ==> F``
+
+fun smartgen_conjunctive_premise_gate_lifts_genuine () =
+  case smartgen_conjunctive_premise_gate_lifts () of
+      Counterexample (cex :: _) => #certainty cex = Genuine
+    | _ => false
+
+val _ = tprint
+  "Refute conjunctive multi-premise goal gate lifts through the real path"
+val _ = require_msg
+  (check_result smartgen_conjunctive_premise_gate_lifts_genuine) (fn () =>
+  "a multi-premise goal folded into one conjunction by AND_IMP_INTRO " ^
+  "stayed gated instead of lifting through Enum")
+  (fn () => ()) ()
+
+(* Complement compilation and gate lifting.  [zoo_sg_duplicate] is not in
+   the default compset, so any goal mentioning it -- positively or
+   negated -- is syntactically gated; only [smart_gate_override] can lift
+   it.  Its sole clause [!n. zoo_sg_duplicate n (n,n)] is a fully-input
+   admitted mode (smartgen_negative_nonrecursive_available above), so a
+   negated call now compiles to [NegGuard] instead of falling back to an
+   unexecutable [Guard], and the gate lifts on all three substrates. *)
+
+fun contains_negguard current =
+  case current of
+      NegGuard _ => true
+    | Gen (_, next) => contains_negguard next
+    | Bind (_, _, fallback, next) =>
+        contains_negguard next orelse Option.getOpt
+          (Option.map contains_negguard fallback, false)
+    | Split (_, branches) => List.exists (contains_negguard o #3) branches
+    | Guard (_, next) => contains_negguard next
+    | SmartGuard {cont, ...} => contains_negguard cont
+    | Enum {cont, ...} => contains_negguard cont
+    | _ => false
+
+(* [refute_problem] never hands [compile_plan_with] a raw goal: it first
+   runs [Refute_Core.make_instance]'s [expand_quantifiers
+   (strip_outer_forall_body (normalize (strip_outer_forall_body _)))].
+   Every route assertion below therefore compiles [runtime_goal tm], not
+   [tm]: asserting on the raw term checks a plan no run executes, and the
+   two do differ -- for [x <> T] the raw term yields [Bind x = T] with a
+   [Test F] on both arms, while the normalized [~x] yields
+   [Gen x; NegGuard; Guard x; Test F].  The routes happen to agree on
+   [NegGuard] for every goal pinned here, so this is drift protection
+   rather than a live fix; that is why swapping a target back reddens
+   nothing. *)
+fun runtime_goal tm =
+  Refute_Core.expand_quantifiers
+    (Refute_Core.strip_outer_forall_body
+      (Refute_Core.normalize (Refute_Core.strip_outer_forall_body tm)))
+
+val smartgen_negation_goal =
+  ``~zoo_sg_duplicate (n : num) (p : num # num) ==> p = (n, n)``
+
+fun smartgen_negation_plan_trigger () =
+  let
+    val enabled = compile_plan default_config smartgen_negation_goal
+    val disabled = compile_plan
+      (Refute.upd_smart_generators false default_config)
+      smartgen_negation_goal
+  in
+    contains_negguard enabled andalso not (contains_negguard disabled) andalso
+    plan_has_gen disabled andalso contains_guard disabled
+  end
+
+val _ = tprint "Refute negated premise compiles to a complement Guard"
+val _ = require_msg (check_result smartgen_negation_plan_trigger) (fn () =>
+  "a negated premise with an available complement did not trigger " ^
+  "NegGuard, or flag-off changed the plain fallback")
+  (fn () => ()) ()
+
+(* [SmartGen.complement_available]'s two blocking reasons, each pinned so
+   the admission filter in [Refute_QC.negative_candidates] cannot be
+   deleted without a named test going red: a [Prem] premise ([zoo_sg_linear]
+   calls itself in its [SUC] clause) and a clause needing a [Generator]
+   ([zoo_sg_tied]'s sidecond [y = y] mentions [y], which is not a head
+   variable even though the relation's only mode is fully input). *)
+val negation_blocked_recursive_goal =
+  ``~zoo_sg_linear (n : num) ==> n < 3``
+
+fun negation_blocked_recursive_no_negguard () =
+  not (contains_negguard (compile_plan default_config
+    (runtime_goal negation_blocked_recursive_goal)))
+
+val _ = tprint
+  "Refute negated premise on a recursive relation never reaches NegGuard"
+val _ = require_msg
+  (check_result negation_blocked_recursive_no_negguard) (fn () =>
+  "a negated call to a recursive relation compiled to NegGuard despite " ^
+  "no available complement mode")
+  (fn () => ()) ()
+
+val negation_blocked_generator_goal =
+  ``~zoo_sg_tied (n : num) ==> n < 3``
+
+fun negation_blocked_generator_no_negguard () =
+  not (contains_negguard (compile_plan default_config
+    (runtime_goal negation_blocked_generator_goal)))
+
+val _ = tprint
+  "Refute negated premise needing a generator never reaches NegGuard"
+val _ = require_msg
+  (check_result negation_blocked_generator_no_negguard) (fn () =>
+  "a negated call whose clause needs a generator compiled to NegGuard " ^
+  "despite no available complement mode")
+  (fn () => ()) ()
+
+fun smartgen_negation_gate_lifts substrate =
+  refute
+    (default_config
+     |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
+     |> Refute.upd_substrate substrate
+     |> Refute.upd_certify false
+     |> Refute.upd_size 2
+     |> Refute.upd_depth 1)
+    smartgen_negation_goal
+
+fun genuine_from name (Counterexample (cex :: _)) =
+      #substrate cex = name andalso #certainty cex = Genuine
+  | genuine_from _ _ = false
+
+fun smartgen_negation_gate_lifts_native () =
+  genuine_from "native" (smartgen_negation_gate_lifts Refute.NativeSML)
+
+val _ = tprint "Refute negated premise gate lifts on native"
+val _ = require_msg (check_result smartgen_negation_gate_lifts_native)
+  (fn () =>
+    "native did not refute a formerly gated negated premise via its " ^
+    "complement")
+  (fn () => ()) ()
+
+fun smartgen_negation_gate_lifts_cv () =
+  genuine_from "cv" (smartgen_negation_gate_lifts Refute.Cv)
+
+val _ = tprint "Refute negated premise gate lifts on cv"
+val _ = require_msg (check_result smartgen_negation_gate_lifts_cv)
+  (fn () =>
+    "cv did not refute a formerly gated negated premise via its " ^
+    "complement")
+  (fn () => ()) ()
+
+fun smartgen_negation_gate_lifts_compute () =
+  genuine_from "compute" (smartgen_negation_gate_lifts Refute.Compute)
+
+val _ = tprint "Refute negated premise gate lifts on compute"
+val _ = require_msg (check_result smartgen_negation_gate_lifts_compute)
+  (fn () =>
+    "compute did not refute a formerly gated negated premise via its " ^
+    "complement")
+  (fn () => ()) ()
+
+(* Soundness twins for the complement, over [zoo_sg_bool_duplicate] so a
+   [:num] free variable's unboundedness is not a confound (unlike
+   [zoo_sg_duplicate] above, [:bool] has a total [Refute_Gen.enumerate]). *)
+val negation_complement_true_goal =
+  ``~zoo_sg_bool_duplicate (x : bool) (y, z) ==> (y, z) <> (x, x)``
+val negation_complement_false_goal =
+  ``~zoo_sg_bool_duplicate (x : bool) (y, z) ==> (y, z) = (x, x)``
+
+fun negation_complement_reaches_negguard () =
+  contains_negguard
+    (compile_plan default_config
+      (runtime_goal negation_complement_true_goal)) andalso
+  not (contains_negguard (compile_plan
+    (Refute.upd_smart_generators false default_config)
+    (runtime_goal negation_complement_true_goal)))
+
+val _ = tprint "Refute negated premise complement reaches NegGuard (bool twin)"
+val _ = require_msg
+  (check_result negation_complement_reaches_negguard) (fn () =>
+  "the bool complement twin's plan did not reach NegGuard, or firing did " ^
+  "not depend on smart_generators")
+  (fn () => ()) ()
+
+fun negation_complement_gate_required () =
+  let
+    val config = Refute.upd_smart_generators false
+      (upd_sequential true
+        (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config))
+  in
+    case refute_problem config (qc_problem negation_complement_true_goal) of
+        Unknown reasons =>
+          List.exists (String.isSubstring "not executable") reasons
+      | _ => false
+  end
+
+val _ = tprint "Refute negated premise complement required (smart off gates)"
+val _ = require_msg (check_result negation_complement_gate_required) (fn () =>
+  "the bool complement twin ran without smart generators enabled, so " ^
+  "its own gate lift is not load-bearing")
+  (fn () => ()) ()
+
+fun negation_complement_false_sibling_genuine () =
+  let
+    val config = upd_expect ExpectGenuine
+      (Refute.upd_certify false
+        (upd_sequential true
+          (Refute.upd_search (Refute.Only [Refute.Exhaustive])
+            (Refute.upd_size 2 default_config))))
+  in
+    case refute_problem config (qc_problem negation_complement_false_goal) of
+        Counterexample (cex :: _) => #certainty cex = Genuine
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute negated premise complement correctly refutes the false sibling"
+val _ = require_msg
+  (check_result negation_complement_false_sibling_genuine) (fn () =>
+  "the false sibling of the bool complement twin was not genuinely refuted")
+  (fn () => ()) ()
+
+(* Same false sibling, with certification turned on: [zoo_sg_bool_duplicate]
+   has no equational compute rule of its own (it is [Inductive], not
+   [Define]d), so certify's computeLib replay needs
+   [zoo_sg_bool_duplicate_compute] added to the compset, exactly as
+   [zoo_sg_duplicate_compute] is added for [zoo_sg_duplicate] above.
+   Without it this pin's candidate would stay [cert = NONE]. *)
+fun negation_complement_false_sibling_certified () =
+  let
+    val saved = computeLib.the_compset ()
+    fun restore () = computeLib.put_compset saved
+    fun body () =
+      let
+        val _ = computeLib.put_compset
+          (computeLib.add_thms [zoo_sg_bool_duplicate_compute] saved)
+        val config = upd_expect ExpectGenuine
+          (upd_sequential true
+            (Refute.upd_search (Refute.Only [Refute.Exhaustive])
+              (Refute.upd_substrate Refute.Compute
+                (Refute.upd_size 2 default_config))))
+      in
+        case refute_problem config
+            (qc_problem negation_complement_false_goal) of
+            Counterexample (cex :: _) =>
+              #certainty cex = Genuine andalso Option.isSome (#cert cex)
+          | _ => false
+      end
+  in
+    Portable.finally restore body ()
+  end
+
+val _ = tprint
+  "Refute negated premise complement false sibling certifies (compute)"
+val _ = require_msg
+  (check_result negation_complement_false_sibling_certified) (fn () =>
+  "the false sibling of the bool complement twin did not certify under " ^
+  "compute")
+  (fn () => ()) ()
+
+(* ExpectNone twin: a ground output argument leaves nothing to
+   reconstruct, so the complement's [Gen x; NegGuard; Guard; Test F]
+   plan exhausts the whole of [:bool] (two candidates) and the search is
+   genuinely total, not merely unattempted. *)
+val negation_complement_expectnone_goal =
+  ``~zoo_sg_bool_duplicate (x : bool) (T, T) ==> x <> T``
+
+fun negation_complement_expectnone_reaches_negguard () =
+  contains_negguard (compile_plan default_config
+    (runtime_goal negation_complement_expectnone_goal))
+
+val _ = tprint
+  "Refute negated premise complement ExpectNone twin reaches NegGuard"
+val _ = require_msg
+  (check_result negation_complement_expectnone_reaches_negguard) (fn () =>
+  "the ExpectNone complement twin's plan did not reach NegGuard")
+  (fn () => ()) ()
+
+(* This twin alone only shows the complement can exhaust with zero
+   assumptions satisfied; it cannot tell a correct complement from one
+   that is always [false].  That direction is carried by
+   [negation_complement_false_sibling_genuine] above and the
+   [smartgen_negation_gate_lifts_*] pins, which refute a goal whose
+   complement is genuinely [true] for some witness. *)
+
+fun negation_complement_expectnone_holds () =
+  let
+    val config = upd_expect ExpectNone
+      (Refute.upd_certify false
+        (upd_sequential true
+          (Refute.upd_search (Refute.Only [Refute.Exhaustive])
+            default_config)))
+  in
+    case refute_problem config
+        (qc_problem negation_complement_expectnone_goal) of
+        NoCounterexample => true
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute negated premise complement ExpectNone twin is decided total"
+val _ = require_msg
+  (check_result negation_complement_expectnone_holds) (fn () =>
+  "a true statement routed through the complement over an exhausted " ^
+  "finite type was not decided NoCounterexample")
+  (fn () => ()) ()
+
+(* Soundness guard: [zoo_sg_bool_stuck]'s sole clause guards on
+   [HD [] = x], and [HD] has no clause for [[]], so that guard is never
+   decided true or false -- only stuck.  A [NegGuard] built from it must
+   never be read as a decided [false]; the plan must stay [Unknown].
+   [HD] is in [Refute_EvalCv.partial_names], so cv's [partial_constant]
+   refuses the route entirely and never reaches its own stuck handling
+   for this goal -- this pin covers native and compute only, not cv. *)
+val negation_complement_stuck_goal =
+  ``~zoo_sg_bool_stuck (x : bool) (T, T) ==> x <> T``
+
+fun negation_complement_stuck_reaches_negguard () =
+  contains_negguard (compile_plan default_config
+    (runtime_goal negation_complement_stuck_goal))
+
+val _ = tprint
+  "Refute negated premise complement stuck guard reaches NegGuard"
+val _ = require_msg
+  (check_result negation_complement_stuck_reaches_negguard) (fn () =>
+  "the stuck complement twin's plan did not reach NegGuard")
+  (fn () => ()) ()
+
+fun negation_complement_stuck_is_unknown () =
+  let
+    val config = Refute.upd_certify false
+      (upd_sequential true
+        (Refute.upd_search (Refute.Only [Refute.Exhaustive]) default_config))
+  in
+    case refute_problem config
+        (qc_problem negation_complement_stuck_goal) of
+        Unknown reasons =>
+          List.exists (String.isSubstring "search space not exhausted")
+            reasons
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute negated premise complement with a stuck guard stays Unknown"
+val _ = require_msg
+  (check_result negation_complement_stuck_is_unknown) (fn () =>
+  "a NegGuard whose condition can never be decided was not left Unknown")
   (fn () => ()) ()
 
 fun smartgen_ir_validation_and_theory_footprint () =
@@ -26732,6 +27095,52 @@ fun enum_conformance () =
       same_conformance_outcome (baseline, result)) results
   end
 
+(* The [NegGuard] sibling of [enum_conformance] above, and for the same
+   reason a standalone check rather than a [conformance_full_cases] row:
+   [Refute_QC.strategy_run_body] forces [smart_generators false] for
+   every random strategy, so no random plan can carry a smart node and
+   the matrix's three random rows would only pin the gate refusal.
+   [negation_complement_false_goal] is gated without the complement and
+   decides candidates false through the [NegGuard] arm on the way to a
+   genuine counterexample, so [same_conformance_outcome] -- bindings
+   plus [conformance_counter_keys] -- is what pins the arm's new
+   [candidates_generated] increment across substrates.  cv publishes no
+   candidate counters, so for cv only the bindings half bites.
+   Certification is off: [zoo_sg_bool_duplicate] is [Inductive] and the
+   ambient compset holds no equation for it, which
+   [negation_complement_false_sibling_certified] covers separately under
+   a scoped compset. *)
+fun negguard_conformance () =
+  let
+    val base = conform_cex_config
+      |> Refute.upd_expect Refute.NoExpectation
+      |> Refute.upd_sequential true
+      |> Refute.upd_certify false
+      |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
+    val instances = qc_instances base negation_complement_false_goal
+    val genuinely_gated =
+      not (null instances) andalso
+      List.all (Option.isSome o #qc_gate) instances andalso
+      List.all (fn (instance : instance) =>
+        contains_negguard (compile_plan base (#goal instance))) instances
+    fun outcome (choice, substrate) =
+      (substrate, quiet_refute
+        (Refute.upd_substrate (public_substrate choice) base)
+        negation_complement_false_goal)
+    val results = map outcome conformance_substrates
+    val baseline = #2 (hd results)
+    fun refuted (substrate, result) =
+      case result of
+          Refute.Counterexample
+            ({substrate = selected, certainty = Refute.Genuine,
+              cert = NONE, ...} :: _) => selected = substrate
+        | _ => false
+  in
+    genuinely_gated andalso List.all refuted results andalso
+    List.all (fn (_, result) =>
+      same_conformance_outcome (baseline, result)) results
+  end
+
 fun run_full_conformance () =
   run_conformance conformance_full_cases
 
@@ -26873,6 +27282,11 @@ val _ =
      tprint "Refute Enum substrate conformance";
      require_msg (check_result enum_conformance) (fn () =>
        "Enum outcomes differed across substrates")
+       (fn () => ()) ();
+     tprint "Refute NegGuard substrate conformance";
+     require_msg (check_result negguard_conformance) (fn () =>
+       "NegGuard outcomes or candidate counters differed across " ^
+       "substrates")
        (fn () => ()) ();
      tprint "Refute full substrate conformance matrix";
      require_msg (check_result (fn () =>
