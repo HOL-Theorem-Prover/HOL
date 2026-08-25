@@ -63,6 +63,14 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   val snapshot_term_postprocessors : unit -> term_postprocessor_snapshot
   val restore_term_postprocessors : term_postprocessor_snapshot -> unit
   val postprocess_term : term_postprocessor_snapshot -> term -> term
+  (* [Refute_Gen] has no dependency on this structure, so a generator
+     family's canonical display form is threaded in as a callback instead
+     of registered directly; see [Refute.sml], which depends on both and
+     installs [Refute_Gen.lookup_family_canonical] here, on the same
+     precedent as [Refute_Core.register_backend] and
+     [register_mono_instance_transform]. *)
+  val register_family_canonical_lookup :
+    (hol_type -> term_postprocessor option) -> unit
   val register_frac_type_rat : unit -> unit
   (* Installed by default (see Refute.sml).  Idempotent, like
      [register_frac_type_rat]. *)
@@ -71,6 +79,9 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
      [register_frac_type_rat]; unlike the frac registrations there is
      only one fmap display, valid at every [:'a |-> 'b] instance. *)
   val register_fmap_display : unit -> unit
+  (* Installed by default (see Refute.sml).  Idempotent, like
+     [register_fmap_display]; valid at every function type. *)
+  val register_function_display : unit -> unit
 
   val term_for_rep :
     {scope : scope,
@@ -247,8 +258,18 @@ type term_postprocessor = term -> term
 
 type term_postprocessor_entry =
   {pattern : hol_type, postprocessor : term_postprocessor, serial : int}
-type term_postprocessor_snapshot =
+type term_postprocessor_registry =
   {entries : term_postprocessor_entry list, next_serial : int}
+
+(* A snapshot pairs the pattern registry with the family lookup, captured
+   together at the same instant, so one model display sees one coherent
+   view of both sources instead of a stable registry mixed with a family
+   lookup that can move mid-walk.  [family] is a plain copy of the
+   [family_canonical_lookup] closure below at snapshot time, not a live
+   reference to it. *)
+type term_postprocessor_snapshot =
+  {registry : term_postprocessor_registry,
+   family : hol_type -> term_postprocessor option}
 
 (* Model display extensions are process-local ML data.  The registry uses
    type patterns: every pattern that matches an actual type participates.
@@ -257,15 +278,31 @@ type term_postprocessor_snapshot =
    ones.  Re-registering an alpha-equivalent pattern replaces its callback
    without adding a duplicate or changing its established position. *)
 val term_postprocessors = ref
-  ({entries = [], next_serial = 0} : term_postprocessor_snapshot)
+  ({entries = [], next_serial = 0} : term_postprocessor_registry)
 
 fun with_term_postprocessor_lock body = MFH.with_registration_lock body
 
-fun snapshot_term_postprocessors () =
-  with_term_postprocessor_lock (fn () => !term_postprocessors)
+(* Settable lookup hook for a generator family's canonical display form
+   (Refute_Gen.sml), consulted through the snapshot above.  Defaults to
+   "no family registered anything"; [Refute.sml] installs the real lookup
+   at load time (see the signature comment on
+   [register_family_canonical_lookup]). *)
+val family_canonical_lookup : (hol_type -> term_postprocessor option) ref =
+  ref (fn (_ : hol_type) => NONE)
 
-fun restore_term_postprocessors snapshot =
-  with_term_postprocessor_lock (fn () => term_postprocessors := snapshot)
+fun register_family_canonical_lookup f = family_canonical_lookup := f
+
+fun snapshot_term_postprocessors () =
+  with_term_postprocessor_lock (fn () =>
+    {registry = !term_postprocessors, family = !family_canonical_lookup})
+
+(* Restores both halves together: leaving [family_canonical_lookup] at
+   whatever it had since moved to would pair the restored registry with a
+   family lookup the snapshot never saw. *)
+fun restore_term_postprocessors
+      ({registry, family} : term_postprocessor_snapshot) =
+  with_term_postprocessor_lock (fn () =>
+    (term_postprocessors := registry; family_canonical_lookup := family))
 
 fun pattern_matches pattern actual =
   Lib.can (Type.match_type pattern) actual
@@ -277,7 +314,7 @@ fun strictly_more_general left right =
   pattern_matches left right andalso not (pattern_matches right left)
 
 fun matching_postprocessors
-      ({entries, ...} : term_postprocessor_snapshot) actual =
+      ({entries, ...} : term_postprocessor_registry) actual =
   let
     val matches = List.filter (fn {pattern, ...} =>
       pattern_matches pattern actual) entries
@@ -305,18 +342,39 @@ fun safe_postprocess postprocessor candidate =
   handle error =>
     if Exn.is_interrupt error then Exn.reraise error else candidate
 
-fun composed_postprocessor snapshot ty =
-  case matching_postprocessors snapshot ty of
-      [] => NONE
-    | postprocessors => SOME (fn term =>
-        List.foldl (fn (postprocessor, candidate) =>
-          safe_postprocess postprocessor candidate) term postprocessors)
+(* One walk, two registration sources: the pattern registry above (user
+   patterns and the model finder's own built-ins, e.g. fmap rep unwrapping)
+   runs first, then the family hook's canonical form (e.g. fmap's own
+   FUPDATE-chain dedup) -- so a fmap rep atom is unwrapped into a chain by
+   the former before the latter dedups it.  Both go through the identical
+   [safe_postprocess] contract: this is the single copy of it.  Both
+   sources are read from [snapshot], never from a live global: that is
+   what makes one registry snapshot mean one coherent view of the whole
+   model, and it avoids taking [Refute_Gen]'s registration mutex (behind
+   [family]) at every term node of every model. *)
+fun composed_postprocessor
+      (snapshot : term_postprocessor_snapshot) ty =
+  let
+    val pattern_postprocessors =
+      matching_postprocessors (#registry snapshot) ty
+    val family_postprocessor =
+      case (#family snapshot) ty of
+          SOME postprocessor => [postprocessor]
+        | NONE => []
+    val postprocessors = pattern_postprocessors @ family_postprocessor
+  in
+    case postprocessors of
+        [] => NONE
+      | _ => SOME (fn term =>
+          List.foldl (fn (postprocessor, candidate) =>
+            safe_postprocess postprocessor candidate) term postprocessors)
+  end
 
 fun lookup_term_postprocessor ty =
   composed_postprocessor (snapshot_term_postprocessors ()) ty
 
 fun insert_postprocessor pattern postprocessor
-      ({entries, next_serial} : term_postprocessor_snapshot) =
+      ({entries, next_serial} : term_postprocessor_registry) =
   let
     fun replace [] =
           ([{pattern = pattern, postprocessor = postprocessor,
@@ -339,7 +397,7 @@ fun register_term_postprocessor pattern postprocessor =
       insert_postprocessor pattern postprocessor (!term_postprocessors))
 
 fun remove_postprocessor pattern
-      ({entries, next_serial} : term_postprocessor_snapshot) =
+      ({entries, next_serial} : term_postprocessor_registry) =
   {entries = List.filter (fn {pattern = old, ...} =>
      not (same_pattern old pattern)) entries,
    next_serial = next_serial}
@@ -349,7 +407,7 @@ fun unregister_term_postprocessor pattern =
     term_postprocessors :=
       remove_postprocessor pattern (!term_postprocessors))
 
-fun postprocess_term snapshot term =
+fun postprocess_term (snapshot : term_postprocessor_snapshot) term =
   let
     fun apply candidate =
       case composed_postprocessor snapshot (Term.type_of candidate) of
@@ -365,8 +423,15 @@ fun postprocess_term snapshot term =
                SOME (function, argument) =>
                  Term.mk_comb (descend function, descend argument)
              | NONE => candidate)
+    (* The family half of [snapshot] is never checked here: [Refute.sml]
+       installs both it and the four built-in pattern entries together,
+       unconditionally, at load, and the public surface exposes no way to
+       remove a pattern entry, so [#entries] is never empty in a real
+       session -- this is purely a fast path for that case, not a
+       correctness gate. *)
+    val nothing_registered = null (#entries (#registry snapshot))
   in
-    if null (#entries snapshot) then term else descend term
+    if nothing_registered then term else descend term
   end
 
 (* [raw_constructor_name] deliberately covers reconstructed variables as well
@@ -1549,16 +1614,22 @@ fun make_display_fun domain_ty marker pairs =
    [NONE] point after a [SOME v] one would otherwise silently keep the
    stale [v] instead of the point that actually wins.  [pairs] is
    therefore checked for a duplicate key first, and the whole rewrite
-   is declined (not guessed at) if one is found.  Defensive only:
-   [dest_display_fun] cannot currently produce a duplicate key, so
-   nothing exercises this branch today. *)
+   is declined (not guessed at) if one is found.  A key carrying a
+   display marker is never counted as a duplicate of another, even an
+   [aconv]-equal one: the same policy [dedup_update_chain] applies to
+   the rep chain below this node, for the same reason (a marker stands
+   for an unspecified value, so two occurrences are never known to
+   collide).  Genuine (marker-free) duplicate keys are defensive only:
+   [dedup_update_chain] already dedups the rep chain bottom-up before
+   this node runs, so [dest_display_fun] cannot currently surface one. *)
 fun has_duplicate_key pairs =
   let
     fun seen key = List.exists (fn key' => Term.aconv key key')
   in
     #1 (List.foldl
       (fn ((key, _), (dup, prior)) =>
-         (dup orelse seen key prior, key :: prior))
+         if MFN.contains_display_marker key then (dup, prior)
+         else (dup orelse seen key prior, key :: prior))
       (false, []) pairs)
   end
 
@@ -1568,11 +1639,12 @@ fun fmap_atom_to_chain term =
         if MFH.raw_constructor_name constructor = "refute$abs_fmap'" then
           (case Lib.total dest_display_fun rep of
                SOME (marker, pairs) =>
-                 (* Declining (not guessing) covers two cases neither of
-                    which [dest_display_fun] can currently produce for a
-                    fmap rep: a base that is [unknown_marker] rather than
-                    [NONE]/[irrelevant_marker], and a duplicate key in
-                    [pairs].  Both branches are defensive only. *)
+                 (* Declining (not guessing) covers a base that is
+                    [unknown_marker] rather than [NONE]/[irrelevant_marker];
+                    [dest_display_fun] cannot currently produce that for a
+                    fmap rep, so this branch is defensive only.  A genuine
+                    duplicate key is likewise defensive only, per
+                    [has_duplicate_key]'s comment above. *)
                  if Lib.can optionSyntax.dest_none marker orelse
                     MFN.is_irrelevant_marker marker
                  then
@@ -1615,6 +1687,53 @@ fun register_fmap_display () =
   register_term_postprocessor
     (finite_mapSyntax.mk_fmap_ty (Type.alpha, Type.beta))
     fmap_atom_to_chain
+
+(* A raw function witness's update chain can carry a point shadowed by a
+   later, higher-priority one: NativeSML's and Compute's own
+   [exhaustive_function] (identical [layers] recursion in
+   Refute_Extract.sml and Refute_EvalCompute.sml) and their random
+   counterparts ([draw_points]) each pick a layer's/point's value
+   independently, with no revisit guarantee.  Only
+   [Refute_Gen.function_terms] -- reached solely when both the domain
+   and range enumerate -- zips a domain enumeration and never repeats;
+   that is a special case, not the general QC behaviour.  [strip_update]
+   returns pairs outermost first, i.e. highest priority first, so keeping
+   only the first occurrence of each [aconv] point and dropping the rest
+   is exactly [canonical_fmap_chain]'s dedup (Refute.sml), generalized
+   from fmap's [FUPDATE] to every function type; the base and every
+   surviving point are left untouched, so no fresh binder or value is
+   ever introduced.  A point carrying a display marker
+   (MFN.contains_display_marker) is never deduped against another, even
+   an [aconv]-equal one: a marker stands for an unspecified value, so
+   two occurrences are never known to be the same point, and dropping
+   either would silently lose a real row of the model.  Registered
+   generically, this is the one seam both the model finder's own
+   K_1-based reconstruction and a QC substrate's lambda-based witness go
+   through alike. *)
+fun dedup_update_chain term =
+  let val (updates, base) = combinSyntax.strip_update term in
+    if List.length updates < 2 then term
+    else
+      let
+        fun keep ((point, value), (kept, seen)) =
+          if MFN.contains_display_marker point then
+            ((point, value) :: kept, seen)
+          else if List.exists (Term.aconv point) seen then (kept, seen)
+          else ((point, value) :: kept, point :: seen)
+        val (kept_rev, _) = List.foldl keep ([], []) updates
+        val kept = List.rev kept_rev
+      in
+        if List.length kept = List.length updates then term
+        else
+          List.foldr (fn ((point, value), result) =>
+            Term.mk_comb (combinSyntax.mk_update (point, value), result))
+            base kept
+      end
+  end
+
+fun register_function_display () =
+  register_term_postprocessor
+    (Type.-->(Type.alpha, Type.beta)) dedup_update_chain
 
 fun dest_literal_set term =
   if pred_setSyntax.is_empty term then SOME []

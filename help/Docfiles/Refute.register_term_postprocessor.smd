@@ -20,12 +20,23 @@ strictly more specific ones; otherwise older registrations run first.
 Re-registering an alpha-equivalent pattern replaces its callback without
 changing that position.
 
-Refute snapshots the registry for a model display and applies the
+Refute snapshots the registry, together with any `canonical` callback a
+`register_generator_family` registration supplied, and applies the
 composed transformations bottom-up.  If a callback raises a
 non-interrupt exception or changes the term's type, its result is ignored
 and composition continues from that callback's input candidate.  Interrupts are
-re-raised.  Postprocessing never changes raw model values or
-certification.
+re-raised.  Postprocessing never changes the raw model value, the
+verdict's certainty, or its certificate.
+
+This is the one walk both a model finder display and a QC-strategy
+counterexample's reported binding go through; a generator family's
+`canonical` form is a second registration source composing into the same
+walk, not a second walk.  Two patterns are installed by default:
+function-update-chain deduplication at `:'a -> 'b`
+(`Refute.register_function_display`) and finite-map notation at
+`:'a |-> 'b` (`Refute.register_fmap_display`).  Registering at exactly
+one of those patterns replaces the built-in; call the matching entry
+point again afterward to restore or refresh it.
 
 Registrations are session-local and synchronized with the other model
 registries.  `Refute.lookup_term_postprocessor ty` returns the currently

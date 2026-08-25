@@ -52,6 +52,9 @@ structure Refute :> Refute = struct
   (* fmap's model-finder typedef (Refute_ModelFinder_HOL.sml) is itself
      unconditional, so its display is installed unconditionally too. *)
   val () = Refute_ModelFinder_Model.register_fmap_display ()
+  (* Update-chain dedup applies to every function type, so it too is
+     unconditional; see the comment on [dedup_update_chain]. *)
+  val () = Refute_ModelFinder_Model.register_function_display ()
   (* Quickcheck generator and compset fragment for :rat and :real,
      independent of the model-finder Frac registration above. *)
   val () = Refute_EvalRat.register ()
@@ -93,6 +96,13 @@ structure Refute :> Refute = struct
     {tyop = {Thy = "finite_map", Tyop = "fmap"},
      constructors = [finite_mapSyntax.fempty_tm, finite_mapSyntax.fupdate_tm],
      canonical = SOME canonical_fmap_chain}
+  (* [Refute_Gen] cannot register this directly with the model finder --
+     it has no dependency on [Refute_ModelFinder_Model] -- so this module,
+     which depends on both, installs the callback.  This is the single
+     source [Refute_QC.record_candidate_with] now consults through the
+     shared walk, replacing its own former copy of the same lookup. *)
+  val () = Refute_ModelFinder_Model.register_family_canonical_lookup
+    Refute_Gen.lookup_family_canonical
 
   val refute = Refute_Core.refute
   fun refute_def tm = refute (!Refute_Core.the_config) tm
@@ -220,6 +230,10 @@ structure Refute :> Refute = struct
     Refute_ModelFinder_Model.register_frac_type_rat
   val register_frac_type_real =
     Refute_ModelFinder_Model.register_frac_type_real
+  val register_function_display =
+    Refute_ModelFinder_Model.register_function_display
+  val register_fmap_display =
+    Refute_ModelFinder_Model.register_fmap_display
   fun register_ersatz registration =
     Refute_ModelFinder_HOL.with_registration_lock (fn () =>
       Refute_ModelFinder_HOL.register_ersatz registration)

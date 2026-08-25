@@ -140,6 +140,18 @@ signature Refute = sig
      entry point restores or refreshes the built-in registration after
      session-level customization. *)
   val register_frac_type_real : unit -> unit
+  (* Installed by default: deduplicates a raw function witness's
+     update chain at every function type.  A [register_term_postprocessor]
+     registration at exactly [:'a -> 'b] replaces this built-in, since
+     registration matches on the pattern; this idempotent entry point
+     restores or refreshes it afterward, exactly like
+     [register_frac_type_rat]. *)
+  val register_function_display : unit -> unit
+  (* Installed by default, on the same "replaced by an exact-pattern
+     registration, restorable afterward" terms as
+     [register_function_display]: unwraps a model finder's finite-map
+     representation into FUPDATE notation at every [:'a |-> 'b]. *)
+  val register_fmap_display : unit -> unit
   val register_ersatz :
     {original : {Thy : string, Name : string},
      replacement : {Thy : string, Name : string}} -> unit

@@ -922,7 +922,10 @@ replaces the old one.
   instance: `tyop` is matched on demand, so this fires for a type never
   previously seen, and the resulting generator always has
   `exhaustive = false`.  `canonical`, if present, is a display-only
-  `term_postprocessor` applied to a reported binding at that type after
+  `term_postprocessor`, fed as a callback into the same registry-consulting
+  walk `register_term_postprocessor` below drives, so it composes with
+  every other registered postprocessor rather than running as a second,
+  separate walk; it applies to a reported binding at that type after
   testing and certification have already run against the raw term; it
   removes structure a later part of the same candidate has overwritten,
   and need not identify every pair of terms that denote the same value.
@@ -995,9 +998,21 @@ replaces the old one.
   individual original-to-replacement constant mapping.
 * `register_term_postprocessor pattern f` installs a bottom-up,
   display-only model transformation.  Matching transformations compose
-  from general to specific; failures or type changes leave the raw term
-  unchanged.  Certification always uses raw terms.
-  `lookup_term_postprocessor ty` returns the composed callback.
+  from general to specific, then with any `canonical` callback a
+  generator family registered (`register_generator_family` above);
+  failures or type changes leave the raw term unchanged.  Certification
+  always uses raw terms.  `lookup_term_postprocessor ty` returns the
+  composed callback.  This is the one walk both the model finder's own
+  display and a QC-strategy counterexample's reported binding go
+  through.  Two patterns are installed by default, each with its own
+  idempotent restore/refresh entry point mirroring the Frac pair above:
+  `register_function_display` dedups a function-type witness's update
+  chain at `:'a -> 'b`, and `register_fmap_display` unwraps the model
+  finder's finite-map representation into FUPDATE notation at
+  `:'a |-> 'b`.  Registering at exactly one of those patterns replaces
+  the built-in, since registration matches on the pattern; unlike the
+  Frac pair, this has no automatic re-installation, so the matching
+  entry point is the way back.
 
 The theorem sets used by MF preprocessing can be extended in a theory
 script with `export_refute_simp`, `export_refute_psimp`, and

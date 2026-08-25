@@ -260,6 +260,27 @@ structure Refute_ModelFinder_Names = struct
   fun contains_irrelevant_marker term =
     List.exists is_irrelevant_marker (Term.free_vars_lr term)
 
+  fun is_unknown_marker term =
+    Term.is_var term andalso
+    Term.aconv term (unknown_marker (Term.type_of term))
+
+  fun is_unrepresented_marker term =
+    Term.is_var term andalso
+    Term.aconv term (unrepresented_marker_ascii (Term.type_of term))
+
+  (* Every fixed-name display marker denotes an unspecified value, so no
+     two occurrences -- even of the same marker -- are known to stand for
+     the same thing.  A consumer that must not conflate distinct unknowns
+     (e.g. an update-chain dedup) tests a whole subterm with this rather
+     than a single predicate, since a marker can sit inside a compound
+     point ([(T, ?)]) rather than be the point itself. *)
+  fun is_display_marker term =
+    is_unknown_marker term orelse is_irrelevant_marker term orelse
+    is_unrepresented_marker term
+
+  fun contains_display_marker term =
+    List.exists is_display_marker (Term.free_vars_lr term)
+
   (* Reserve the marker identity before a backend inserts holes.  HOL free
      variables are identified by name and type, so colliding user variables
      must be varied at the shared front-end boundary. *)

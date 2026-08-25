@@ -159,23 +159,34 @@ only through a generated variable -- would be rejected as "not
 executable" regardless of the registered generator, since `FUPDATE` is
 `[nocompute]`-tagged in `finite_mapScript.sml` and fmap's `TypeBase`
 entry has no constructors of its own.  `canonical`, when supplied, is a
-display-only `term_postprocessor` applied at
-`Refute_QC.record_candidate_with`'s single choke point for every
-reported binding; the rewrite it installs never reaches testing or
-certification, both of which always see the untouched `env` this
-mechanism closes over, independent of when the rewrite runs relative to
-them.  fmap's is `canonical_fmap_chain`, which dedups an update chain
-like `FEMPTY |+ (1,2) |+ (1,3)` to the semantically identical
+display-only `term_postprocessor`, keyed by instance type rather than by
+the pattern unification `Refute.register_term_postprocessor` (below)
+uses.  A generator family cannot register it that way directly --
+`Refute_Gen` has no dependency on any `Refute_ModelFinder_*` module --
+so `canonical` instead feeds `Refute_Gen.lookup_family_canonical`, a
+callback hook `Refute_ModelFinder_Model.register_family_canonical_lookup`
+installs (`Refute.sml`, the same precedent as `Refute_Core`'s
+`register_backend`).  `Refute_ModelFinder_Model.postprocess_term` -- the
+one bottom-up walk, shared with the model finder's own display below --
+consults the pattern registry first and this hook second, both through
+the identical `safe_postprocess` contract: a callback that raises a
+non-interrupt exception or changes the term's type is ignored and the
+candidate at that point is kept; interrupts re-raise.
+`Refute_QC.record_candidate_with`'s `canonicalize_term` calls that walk,
+via a snapshot, at its single choke point for every reported binding;
+the rewrite never reaches testing or certification, both of which
+always see the untouched `env` this mechanism closes over, independent
+of when the rewrite runs relative to them.  fmap's is
+`canonical_fmap_chain`, which dedups an update chain like
+`FEMPTY |+ (1,2) |+ (1,3)` to the semantically identical
 `FEMPTY |+ (1,3)` *in place* -- a later `aconv` key shadows an earlier
 one, at the earlier one's position -- with no sort: sorting would need
 to compare keys as values, which `Term.compare` cannot decide, so two
 chains that denote the same map via non-`aconv` keys are not guaranteed
-to display identically.  `Refute_Gen.lookup_family_canonical ty` exposes
-the registered rewrite for a given instance type; `NONE` means no family
-registered a canonical form for that type (or none is registered at
-all).  Like the model finder's own `register_term_postprocessor`, a
-callback that raises a non-interrupt exception or changes the term's
-type is ignored and the raw candidate is kept; interrupts re-raise.
+to display identically.  `Refute_Gen.lookup_family_canonical ty` still
+exposes the raw per-family rewrite for a given instance type; `NONE`
+means no family registered a canonical form for that type (or none is
+registered at all).
 
 An unconfigured call has one 10-second search budget covering preprocessing,
 backend admission, compilation, testing, model translation, and solver calls.
@@ -699,12 +710,21 @@ Registrations are session-local ML state and create no theory content:
   pattern replaces rather than duplicates it.  All matching transformations
   compose: general patterns run before strictly more specific patterns, and
   otherwise older registrations run before newer ones.  Thus a specific or
-  later incomparable transformation has final precedence.  One registry
-  snapshot is used for an entire model, callback failures or type changes
-  leave that display term unchanged, and certification always uses untouched
-  raw terms.  `Refute.lookup_term_postprocessor ty` reports this composed
-  transformation.  Rational and real Frac encoding are both registered by
-  default after their normalization-faithfulness corpora passed.  The
+  later incomparable transformation has final precedence, and this
+  registry's own composition runs before the family-canonical hook's (see
+  `canonical` above).  One registry snapshot is used for an entire model
+  or, on the QC side, for one `Refute_QC.record_candidate_with` report;
+  callback failures or type changes leave that display term unchanged,
+  and certification always uses untouched raw terms regardless of which
+  side reported the counterexample.  `Refute.lookup_term_postprocessor ty`
+  reports this composed transformation.  A function-type witness is
+  registered by default (`register_function_display`,
+  `Refute_ModelFinder_Model.sml`): it dedups a raw `UPDATE` chain,
+  dropping any point shadowed by a later, higher-priority one, whether
+  the chain terminates in the model finder's own reconstruction marker or
+  in a QC/native substrate's plain constant-bodied lambda.  Rational and
+  real Frac encoding are both registered by default after their
+  normalization-faithfulness corpora passed.  The
   idempotent `Refute.register_frac_type_rat ()` and
   `Refute.register_frac_type_real ()` restore or refresh their respective
   encoding and built-in transformation: `rat`'s displays reconstructed

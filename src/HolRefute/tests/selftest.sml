@@ -20701,6 +20701,305 @@ val _ = require_msg
   "binding before reporting it")
   (fn () => ()) ()
 
+(* QC display used to consult only [lookup_family_canonical] (a generator
+   family's own canonical form), never the general pattern registry
+   ([Refute.register_term_postprocessor]) that the model finder's own
+   display already goes through.  An ordinary user registration therefore
+   had zero effect on a QC-strategy counterexample.
+   [record_candidate_with]'s [canonicalize_term] now calls
+   [Refute_ModelFinder_Model.postprocess_term] -- the model finder's own
+   bottom-up walk over the registry -- so a plain
+   [register_term_postprocessor] registration must now be visible here
+   too -- this is the routing half of the unification; the family-hook
+   half is already covered by [finite_map_canonical_chain_reaches_the_report]
+   above. *)
+fun qc_report_honors_registered_postprocessor () =
+  with_term_postprocessors_restored (fn () => let
+    val n_var = Term.mk_var ("n", ``:num``)
+    val goal_tm = boolSyntax.mk_eq (n_var, n_var)
+    val instance : Refute_Core.instance =
+      {original = goal_tm, goal = goal_tm, qc_gate = NONE, evals = [],
+       card = 1, size_matters = false, transport = []}
+    val counterexamples = ref ([] : Refute_Core.counterexample list)
+    val _ = Refute.register_term_postprocessor ``:num``
+      (fn _ => ``42 : num``)
+  in
+    Refute_QC.record_candidate_with (fn _ => "exhaustive")
+      {config = Refute.upd_certify false default_config,
+       strategy = Exhaustive, substrate = "compute", instance = instance,
+       stats = [], counterexamples = counterexamples, discarded = ref 0,
+       run_depth = NONE, pnf_prefix = NONE,
+       retain_replay_potential = fn _ => (),
+       retry = fn _ => fn _ => (), retry_potential = fn _ => fn _ => ()}
+      {env = [(n_var, ``7 : num``)], ground_env = NONE, case_tree = NONE,
+       genuine = true, genuine_only = false, ignored = []};
+    case !counterexamples of
+        [{bindings = [(reported_var, reported_value)], ...}] =>
+          Term.aconv reported_var n_var andalso
+          Term.aconv reported_value ``42 : num``
+      | _ => false
+  end)
+
+val _ = tprint "Refute QC report honors a registered postprocessor"
+val _ = require_msg
+  (check_result qc_report_honors_registered_postprocessor) (fn () =>
+  "a QC-strategy counterexample ignored a plain register_term_postprocessor "
+  ^ "registration")
+  (fn () => ()) ()
+
+(* Readability half of the same task: a raw function-update chain can
+   carry a point shadowed by a later, higher-priority one --
+   [dedup_update_chain] (Refute_ModelFinder_Model.sml), registered by
+   default at every function type -- collapses it to the surviving
+   update alone, keyed by [aconv], the same dedup [canonical_fmap_chain]
+   already does for fmap chains.  Reached here via
+   [lookup_term_postprocessor], the same lookup a live postprocess_term
+   walk performs; no [with_term_postprocessors_restored] is needed since
+   nothing is (un)registered. *)
+fun function_update_chain_dedups () =
+  case Refute_ModelFinder_Model.lookup_term_postprocessor ``:num -> num``
+  of
+      NONE => false
+    | SOME rewrite =>
+        let
+          val base = combinSyntax.mk_K_1 (``0 : num``, ``:num``)
+          val shadowed = Term.mk_comb
+            (combinSyntax.mk_update (``1 : num``, ``20 : num``),
+             Term.mk_comb
+               (combinSyntax.mk_update (``1 : num``, ``10 : num``), base))
+          val direct = Term.mk_comb
+            (combinSyntax.mk_update (``1 : num``, ``20 : num``), base)
+        in
+          Term.aconv (rewrite shadowed) direct
+        end
+
+val _ = tprint "Refute function-update chain dedups a shadowed point"
+val _ = require_msg (check_result function_update_chain_dedups) (fn () =>
+  "canonicalizing a function-update chain did not dedup a shadowed point")
+  (fn () => ()) ()
+
+(* Marker half: dedup is keyed by more than [aconv] on its own.  A display
+   marker (MFN.unknown_marker, [_irrelevant_marker], [_unrepresented_marker])
+   is a fixed-name variable standing for an unspecified value, so two
+   points that render to the same marker are never known to be the same
+   point; [render_replay_holes] renders every replay hole to its marker
+   before [dedup_update_chain] ever runs, so two independent holes at the
+   same type are already indistinguishable, alpha-equivalent marker terms
+   by the time this rewrite sees them.  This builds that already-rendered
+   collision directly -- both points below are the identical
+   [MFN.unknown_marker] variable by construction, exactly what two
+   independent [:num] holes look like post-render -- and checks the
+   rewrite keeps both rows rather than dropping the second as a spurious
+   duplicate of the first. *)
+fun function_update_chain_keeps_both_marker_points () =
+  case Refute_ModelFinder_Model.lookup_term_postprocessor ``:num -> num``
+  of
+      NONE => false
+    | SOME rewrite =>
+        let
+          val marker = MFN.unknown_marker ``:num``
+          val base = combinSyntax.mk_K_1 (``0 : num``, ``:num``)
+          val chain = Term.mk_comb
+            (combinSyntax.mk_update (marker, ``20 : num``),
+             Term.mk_comb
+               (combinSyntax.mk_update (marker, ``10 : num``), base))
+          val (updates, _) = combinSyntax.strip_update (rewrite chain)
+        in
+          List.length updates = 2 andalso
+          List.exists (fn (_, v) => Term.aconv v ``20 : num``) updates
+          andalso
+          List.exists (fn (_, v) => Term.aconv v ``10 : num``) updates
+        end
+
+val _ = tprint
+  "Refute function-update chain keeps both points behind one marker"
+val _ = require_msg
+  (check_result function_update_chain_keeps_both_marker_points) (fn () =>
+  "canonicalizing a function-update chain dropped a row whose point " ^
+  "rendered to the same display marker as another, distinct row")
+  (fn () => ()) ()
+
+(* Substrate-agreement half: the model finder's own function
+   reconstruction terminates a chain in a [combinSyntax.mk_K_1] marker,
+   while a QC/native witness terminates in a plain constant-bodied
+   lambda ([Refute_Gen.function_terms], [Refute_EvalSML.fun_term]).
+   [strip_update] treats whatever remains after peeling [UPDATE] combs
+   as an opaque base, so the very same [dedup_update_chain] rewrite must
+   collapse a shadowed point identically under either base shape.  Both
+   base shapes are checked directly here, independent of which substrate
+   or generator would produce a shadowed chain in practice --
+   [qc_random_function_witness_dedups_a_shadowed_point] below exercises
+   that end-to-end, through an actual substrate's random generator. *)
+fun function_update_chain_dedup_is_base_shape_agnostic () =
+  case Refute_ModelFinder_Model.lookup_term_postprocessor ``:num -> num``
+  of
+      NONE => false
+    | SOME rewrite =>
+        let
+          fun agrees base =
+            let
+              val shadowed = Term.mk_comb
+                (combinSyntax.mk_update (``1 : num``, ``20 : num``),
+                 Term.mk_comb
+                   (combinSyntax.mk_update (``1 : num``, ``10 : num``),
+                    base))
+              val direct = Term.mk_comb
+                (combinSyntax.mk_update (``1 : num``, ``20 : num``), base)
+            in
+              Term.aconv (rewrite shadowed) direct
+            end
+          val lambda_base =
+            Term.mk_abs (Term.mk_var ("x", ``:num``), ``0 : num``)
+          val k1_base = combinSyntax.mk_K_1 (``0 : num``, ``:num``)
+        in
+          agrees lambda_base andalso agrees k1_base
+        end
+
+val _ = tprint
+  "Refute function-update chain dedup agrees across base shapes"
+val _ = require_msg
+  (check_result function_update_chain_dedup_is_base_shape_agnostic)
+  (fn () =>
+  "dedup of a function-update chain disagreed between a lambda base and " ^
+  "a K_1-marker base")
+  (fn () => ()) ()
+
+(* End-to-end half: a real function witness, drawn by a real substrate's
+   random generator, through the real reporting choke point
+   ([Refute_QC.record_candidate_with]) -- not [lookup_term_postprocessor]
+   called on a hand-built term, as the two pins above do.  Measured, not
+   guessed: [:num]'s domain never takes [Refute_Gen.function_terms]'s
+   no-repeat path ([Refute_Gen.enumerate :num] is always [NONE], since
+   [GenNum Num] has no bounded enumeration -- see the comment on
+   [dedup_update_chain]), so [random_function_with] draws every domain
+   point independently ([draw_points], Refute_EvalCompute.sml); at the
+   default size 10 that is [bounded_size 10 = 10] points drawn uniformly
+   from [bounded_size (10 div 2) + 1 = 6] slots, which pigeonholes a
+   shadowed point on every single draw, for any seed -- checked below
+   rather than assumed, so this fails loudly instead of silently passing
+   if that arithmetic ever stops holding. *)
+fun qc_random_function_witness_dedups_a_shadowed_point () =
+  let
+    val f_var = Term.mk_var ("f", ``:num -> num``)
+    val plan = Gen (f_var, Test boolSyntax.T)
+    val arguments = {plan = plan, seed = 1, size = 10, count = 20}
+    val compute_streams = Refute_EvalCompute.dump_random_candidates arguments
+    val native_streams =
+      Refute_EvalSML.dump_native_random_candidates
+        Refute_Extract.extract_problem arguments
+    val compute = List.map hd compute_streams
+    val native = List.map hd native_streams
+    fun has_duplicate_point term =
+      let
+        val (updates, _) = combinSyntax.strip_update term
+        fun dup [] = false
+          | dup (point :: rest) =
+              List.exists (Term.aconv point) rest orelse dup rest
+      in
+        dup (List.map #1 updates)
+      end
+    val _ =
+      if List.all has_duplicate_point compute andalso
+         List.all has_duplicate_point native
+      then ()
+      else raise Fail
+        ("expected every :num -> num witness drawn at size 10 to carry " ^
+         "a shadowed point (pigeonhole); the measurement this pin relies " ^
+         "on no longer holds")
+    val _ =
+      if List.length compute_streams = List.length native_streams andalso
+         ListPair.allEq (fn (c, n) => same_terms c n)
+           (compute_streams, native_streams)
+      then ()
+      else raise Fail
+        "compute and native disagreed on the raw :num -> num candidate stream"
+    val raw = hd compute
+    val goal_tm = boolSyntax.mk_eq (f_var, f_var)
+    val instance : Refute_Core.instance =
+      {original = goal_tm, goal = goal_tm, qc_gate = NONE, evals = [],
+       card = 1, size_matters = false, transport = []}
+    val counterexamples = ref ([] : Refute_Core.counterexample list)
+  in
+    Refute_QC.record_candidate_with (fn _ => "random")
+      {config = Refute.upd_certify false default_config,
+       strategy = Random {seed = 1}, substrate = "compute",
+       instance = instance,
+       stats = [], counterexamples = counterexamples, discarded = ref 0,
+       run_depth = NONE, pnf_prefix = NONE,
+       retain_replay_potential = fn _ => (),
+       retry = fn _ => fn _ => (), retry_potential = fn _ => fn _ => ()}
+      {env = [(f_var, raw)], ground_env = NONE, case_tree = NONE,
+       genuine = true, genuine_only = false, ignored = []};
+    case !counterexamples of
+        [{bindings = [(reported_var, reported_value)], ...}] =>
+          Term.aconv reported_var f_var andalso
+          not (has_duplicate_point reported_value) andalso
+          not (Term.aconv reported_value raw)
+      | _ => false
+  end
+
+val _ = tprint
+  ("Refute QC reports a real random function witness with a shadowed " ^
+   "point deduped")
+val _ = require_msg
+  (check_result qc_random_function_witness_dedups_a_shadowed_point) (fn () =>
+  "a QC-reported random :num -> num witness with a genuinely shadowed " ^
+  "point was not deduped in the display, or compute/native disagreed " ^
+  "on the raw candidate")
+  (fn () => ()) ()
+
+(* Soundness half, acceptance criterion 2: display is presentation only.
+   Register a postprocessor that corrupts every displayed [:num |-> num]
+   value to a fmap for which the goal below would read as *true*
+   ([FLOOKUP {0 |-> 0} 0 = SOME 0]), while the actual witness driving the
+   search is one for which the goal is false ([FLOOKUP {1 |-> 1} 0 =
+   NONE]).  Certification ([Refute_Cert.certify], reached from
+   [record_candidate_with] below) instantiates the closed-over raw [env],
+   never [cex]'s already-canonicalized [bindings]
+   (see the comment on [canonicalize_term]/[apply_report_transport]
+   above [record_candidate_with] in Refute_QC.sml).  If certification
+   used the corrupted display instead, instantiating the goal at the
+   corrupted witness would make it evaluate to *true*, and the result
+   would be [Discarded], not [Certified] -- so a [Genuine]/[SOME _]
+   result here is only possible because certification never saw the
+   corrupted value. *)
+fun qc_postprocessing_is_display_only () =
+  with_term_postprocessors_restored (fn () => let
+    val fm_var = Term.mk_var ("fm", ``:num |-> num``)
+    val goal_tm = ``FLOOKUP (fm : num |-> num) 0 = SOME 0``
+    val witness = ``(FEMPTY : num |-> num) |+ (1, 1)``
+    val corrupted = ``(FEMPTY : num |-> num) |+ (0, 0)``
+    val instance : Refute_Core.instance =
+      {original = goal_tm, goal = goal_tm, qc_gate = NONE, evals = [],
+       card = 1, size_matters = false, transport = []}
+    val counterexamples = ref ([] : Refute_Core.counterexample list)
+    val _ = Refute.register_term_postprocessor ``:num |-> num``
+      (fn _ => corrupted)
+  in
+    Refute_QC.record_candidate_with (fn _ => "exhaustive")
+      {config = Refute.upd_certify true default_config,
+       strategy = Exhaustive, substrate = "compute", instance = instance,
+       stats = [], counterexamples = counterexamples, discarded = ref 0,
+       run_depth = NONE, pnf_prefix = NONE,
+       retain_replay_potential = fn _ => (),
+       retry = fn _ => fn _ => (), retry_potential = fn _ => fn _ => ()}
+      {env = [(fm_var, witness)], ground_env = NONE, case_tree = NONE,
+       genuine = true, genuine_only = false, ignored = []};
+    case !counterexamples of
+        [{bindings = [(reported_var, reported_value)], certainty = Genuine,
+          cert = SOME _, ...}] =>
+          Term.aconv reported_var fm_var andalso
+          Term.aconv reported_value corrupted
+      | _ => false
+  end)
+
+val _ = tprint "Refute QC postprocessing is display-only"
+val _ = require_msg (check_result qc_postprocessing_is_display_only)
+  (fn () =>
+  "a corrupting display postprocessor changed certainty or certification, " ^
+  "not just the displayed binding")
+  (fn () => ()) ()
+
 (* The default *adaptive* configuration -- no [upd_size], no
    [upd_substrate], no [Only [Exhaustive]] -- is what a user actually
    gets; the fixed-size pin above ([finite_map_never_exhausted]) does not

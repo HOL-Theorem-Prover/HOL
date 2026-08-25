@@ -23,10 +23,13 @@ reports `NoCounterexample` for a goal universally quantified over a
 variable at one of these types; only a closed fact free of such a
 variable can be decided that way.
 
-`canonical`, if present, is a display-only `term_postprocessor` applied
-to a reported candidate binding at that type, after testing and
-certification have already run against the raw term.  It is expected to
-remove structure that a later part of the same candidate has
+`canonical`, if present, is a display-only `term_postprocessor` fed as a
+second registration source into the same walk
+`Refute.register_term_postprocessor` drives, composing with every
+pattern-registered postprocessor rather than running as a second, separate
+walk.  It applies to a reported candidate binding at that type, after
+testing and certification have already run against the raw term.  It is
+expected to remove structure that a later part of the same candidate has
 overwritten (e.g. collapsing `FEMPTY |+ (1,2) |+ (1,3)` to
 `FEMPTY |+ (1,3)`); it need not identify every pair of terms that denote
 the same value, since that is in general undecidable from syntax alone.
