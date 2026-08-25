@@ -47,6 +47,12 @@ val initialize:
     error: error -> unit,
     runtimeExn: exn -> unit,
     builtTree: built -> unit,
+    (* Called before each outer dec is compiled, with the byte offset
+       its original-source span starts at.  A deferred proof records
+       this as the declaration it belongs to, which is the identity the
+       pool cancels and reports against: an edit is attributed to the
+       declaration containing it, not to a raw offset. *)
+    onDecStarted: int -> unit,
     (* Called after each outer dec finishes compilation, with the byte
        offset just past the dec's original-source span (from
        `HOLSourceAST.decSpan`).  Used by the LSP to take mid-file
@@ -661,7 +667,7 @@ end
 
 fun initialize {
   text, filename, parseError, compilerOut, toplevelOut, progress, error,
-  runtimeExn, builtTree, onDecCompleted, startByte
+  runtimeExn, builtTree, onDecStarted, onDecCompleted, startByte
 } = let
   datatype chunk
     = Chunk of string
@@ -836,10 +842,10 @@ fun initialize {
   fun loop () = (
     DArray.clear queue;
     if fetchDec () then () else let
-      val stopByte =
+      val (decStart, stopByte) =
         case !decsRef of
-          [] => 0
-        | dec :: _ => #2 (HOLSourceAST.decSpan dec)
+          [] => (0, 0)
+        | dec :: _ => HOLSourceAST.decSpan dec
     in
       if stopByte <= startByte then
         (* Skip compilation for pre-`startByte` decs — a resume
@@ -850,6 +856,7 @@ fun initialize {
         (ptRef := []; loop ())
       else (
         idx := 0; spans := []; curToken := toState ();
+        onDecStarted decStart;
         finish ();
         emitBuilt ();
         ptRef := [];

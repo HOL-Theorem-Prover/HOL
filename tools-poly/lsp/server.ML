@@ -742,7 +742,13 @@ fun start {diag, dbg} = let
       handle _ => []
     end
 
-  fun compileForReport uri code startByte lastPos builtTree onDecCompleted report = let
+  fun compileForReport uri code startByte lastPos builtTree onDecCompleted
+                       report = let
+    (* A deferred proof belongs to the declaration being compiled when it
+       is enqueued, so record that declaration's start as each one
+       begins.  Elaboration is single-threaded, so a plain ref is
+       enough. *)
+    fun onDecStarted off = LSPExtension.currentProofOffset := off
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
@@ -759,6 +765,7 @@ fun start {diag, dbg} = let
         hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
       runtimeExn = fn e => report (exnToReport (!lastPos) e),
       builtTree = builtTree,
+      onDecStarted = onDecStarted,
       onDecCompleted = onDecCompleted,
       startByte = startByte }
     in lastPos := size code end
@@ -1093,6 +1100,11 @@ fun start {diag, dbg} = let
            completion events only if we're still current; otherwise
            the fresh compile that replaced us owns lastTrees. *)
         if !cancelled then () else (
+          (* Elaboration is done, so hand whatever it deferred to the
+             worker pool.  Only when we are still the current compile:
+             a superseded pass's proofs were queued against text the
+             user has already replaced. *)
+          !LSPExtension.checkDeferred ();
           flushDiags ();
           sendProgressEnd ();
           send (mkNotif "$/compileCompleted" (fn print => (
