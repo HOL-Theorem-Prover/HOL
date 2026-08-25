@@ -1467,11 +1467,73 @@ tracks, which is far less work than dependency tracking.  Until it
 exists, an early edit costs a re-check of everything below it, which is
 the behaviour to improve first.
 
-What remains for the pool: the deferring prover, the queue, and the
-worker loop.  A worker's start-up sequence is now well-defined --- take
-the work item's `Context.t`, install the captured namespace layer thunk,
-and call the *unhooked* `TAC_PROOF` so it does not re-enter the
-deferring prover.
+#### Phase B landed: the pool
+
+`tools-poly/lsp/deferred_proofs.ML` holds both the hook and the pool,
+built on `Future` rather than raw threads --- per-group cancellation
+there *interrupts a running thread*, not merely drops a queued task,
+which is what makes a proof cancellable mid-tactic.  Measured, with a
+control in each case:
+
+| behaviour                                  | observed |
+|--------------------------------------------|----------|
+| statuses transition                        | three proofs checking -> proved |
+| cancellation is prompt                     | 1 ms, against 30 s proofs |
+| an edit above cancels, below does not      | offsets 200/300 dropped, 100 still checking |
+| interrupted workers release their slots     | 2 workers saturated by 60 s proofs, cancelled, quick proof settles in 621 ms |
+| divergence is caught and named             | `DIVERGED: 2 extra hypotheses (suspended subgoals: sq, sp)` |
+
+Three things the design turned on, none of them obvious from the plan as
+written:
+
+**A replay worker does not need the namespace layer.**  It matters for
+compiling tactic *text*, which is `TacticWalker.compileTactic`'s job; a
+worker replays an already-elaborated `tactic` value and needs only the
+immutable `Context.t`.  The layer work is for the walker.
+
+**The focused declaration is held, not checked.**  While the user works
+on a proof the goal-state walker is replaying that tactic on every
+keystroke, so a worker doing it too is duplicated effort.  Its item is
+held --- invisible to `statuses`, hence read as Cheated --- and forked at
+raised priority when the user moves on.  Deliberately *not*
+`Task_Queue.urgent_pri`: that bypasses the ready-job path, and someone
+browsing quickly would emit a stream of urgent tasks and starve the
+backlog.
+
+**`Diverged` is why a proof-body edit is not always neutral.**
+Elaboration stands in `mk_oracle_thm _ g`, whose hypotheses are exactly
+the goal's assumptions.  A real proof may return more --- one
+`marker$suspendlabel` hypothesis per suspended subgoal --- and such a
+theorem is a *different SML value*: `save_thm_attrs` stashes rather than
+stores it, ignores its attributes, and registers it for later `Resume`.
+Every consumer below was elaborated against something that does not
+match, and changing *how* a proof suspends changes the statements those
+`Resume`s produce.  A worker compares hypotheses and reports it, so the
+caller can re-elaborate instead of trusting proofs below a placeholder
+that never matched.  Without this the pool would report those proofs
+`Proved`, which is the worst failure mode available to something whose
+job is saying what has been checked.
+
+#### What is left: integration, not machinery
+
+Nothing in `server.ML` calls the pool yet.  In order:
+
+1. set `LSPExtension.currentProofOffset` per declaration during
+   elaboration, so an item knows where it came from;
+2. call `checkDeferred` after a compile pass;
+3. classify the edit in `notifyCompileStart`: `findEnclosingTheorem`
+   applied to `minEditOffset` --- the same function `goalStateAtPos` uses
+   --- distinguishes a tactic edit from a statement or definition edit,
+   so `cancelAt` versus `cancelAtOrAfter` falls straight out.  This is
+   the step that stops an early keystroke discarding a proof that was
+   nearly checked a thousand lines below;
+4. set focus from the goal-state request handler;
+5. act on `Diverged` by re-elaborating downstream, and report the five
+   states to the client.
+
+Also still open, and the thing to do before more pool features: the
+skip-cache discussed above needs a context fingerprint or per-proof
+dependency tracking, neither of which exists.
 
 The other conversion:
 
