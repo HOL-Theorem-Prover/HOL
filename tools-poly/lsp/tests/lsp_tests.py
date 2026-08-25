@@ -2686,7 +2686,11 @@ def test_goalState_walks_into_by_block():
 def test_goalState_walks_into_suffices_by_block():
     """`‘g’ suffices_by tac` compiles to
     `ThenLT(Group(ThenLT(Subgoal,[LReverse])), [LThen1 tac])` — the
-    walker steps into the tac RHS."""
+    walker steps into the tac RHS.
+
+    The `sg q`-then-`REVERSE_LT` pair is applied as the one primitive
+    it encodes, so the tactic gets the implication `q ==> w` that
+    HOL's own `Q_TAC SUFF_TAC` hands it."""
     c = Client("/tmp")
     try:
         _init(c, "/tmp")
@@ -2710,15 +2714,19 @@ def test_goalState_walks_into_suffices_by_block():
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted")
         # Cursor at line 6 char 43: right after `ALL_TAC `, inside the
-        # `suffices_by (…)` block.  Focus should be on the sufficient
-        # goal (`n = n + 0`) with the original `n + 0 = n` sitting
-        # below as the assumption-holder subgoal.
+        # `suffices_by (…)` block.  The tactic's goal is the
+        # implication, not the original goal with the sufficient
+        # statement assumed, and not the sufficient statement itself.
         r = _send_goalstate(c, 702, uri, 6, 43)
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, "no error")
         goals = result["goals"]
-        assert_true(len(goals) >= 1 and goals[0]["goal"] == "n = n + 0",
-                    f"walker focused sufficient goal ({result!r})")
+        assert_true(len(goals) >= 1
+                    and goals[0]["goal"] == "n = n + 0 ⇒ n + 0 = n",
+                    f"tactic gets the implication ({result!r})")
+        assert_eq(goals[0]["asms"], [],
+                  f"and not the statement as an assumption ({result!r})")
     finally:
         c.close()
 
@@ -3132,6 +3140,56 @@ def test_goalState_thenl_branch_left_open_shows_its_goal():
         c.close()
 
 
+def test_goalState_suffices_by_gives_the_implication():
+    """`strip_tac` is the sharp discriminator for how `suffices_by` is
+    modelled: it can only work on the implication `q ==> w`, which is
+    what `Q_TAC SUFF_TAC` produces.  TacticParse encodes the operator
+    as `sg q` followed by `REVERSE_LT`, and applying those separately
+    yields `w` with `q` in the assumptions, against which `strip_tac`
+    fails — while the file itself compiles clean, since real HOL runs
+    the real thing.
+
+    Found via balanced_mapScript's `‘f k v = f (CHOICE …) v’
+    suffices_by rw []`, which reported "Combinator close failed" for
+    the rest of the tactic."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_suff_impl.sml"
+        #  6   gen_tac
+        #  7   \\ `a = a` suffices_by (strip_tac \\ simp[])
+        #  8   \\ simp[]
+        src = ("Theory goalstate_suff_impl\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. a + 0 = a\n"
+               "Proof\n"
+               "  gen_tac\n"
+               "  \\\\ `a = a` suffices_by (strip_tac \\\\ simp[])\n"
+               "  \\\\ simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        assert_eq(len(_diag_count(c, uri)), 0,
+                  "the proof itself is fine — HOL accepts strip_tac here")
+        inside = _send_goalstate(c, 742, uri, 7, 30).get("result")
+        assert_true(inside is not None, "goal state inside the tactic")
+        assert_eq(inside.get("error"), None, "no error inside")
+        assert_true(inside["goals"][0]["goal"] == "a = a ⇒ a + 0 = a",
+                    f"the tactic's goal is the implication ({inside!r})")
+        # strip_tac then closes it, so the block ends cleanly and the
+        # sufficient statement is what remains.
+        after = _send_goalstate(c, 743, uri, 8, 5).get("result")
+        assert_true(after is not None, "goal state after the block")
+        assert_eq(after.get("error"), None,
+                  f"strip_tac applied, so no close failure ({after!r})")
+        assert_true(after["goals"][0]["goal"] == "a = a",
+                    f"the sufficient statement remains ({after!r})")
+    finally:
+        c.close()
+
+
 def test_lsp_walks_file_includes_from_arbitrary_cwd():
     """When the LSP server is launched with cwd != the opened file's
     directory (as eglot typically does — cwd is the project root),
@@ -3477,6 +3535,8 @@ TESTS = [
                                      test_goalState_thenl_branch_proved_is_acknowledged),
     ("goalState_thenl_branch_left_open_shows_its_goal",
                                      test_goalState_thenl_branch_left_open_shows_its_goal),
+    ("goalState_suffices_by_gives_the_implication",
+                                     test_goalState_suffices_by_gives_the_implication),
     ("lsp_walks_file_includes_from_arbitrary_cwd",
                                      test_lsp_walks_file_includes_from_arbitrary_cwd),
     ("lsp_holproject_preload_project_dirs",

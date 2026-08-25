@@ -6,11 +6,12 @@
    from the closest snapshot rather than re-walking. *)
 
 structure TacticWalker :> sig
-  (* Exposed because PolyML.compiler compiles at top level: `holder`
+  (* Exposed because PolyML.compiler compiles at top level: these
      must be reachable by qualified name from the wrapped
      `TacticWalker.holder := SOME (…)` source that compileTactic
      runs.  Not part of the public API. *)
   val holder : Abbrev.tactic option ref
+  val listHolder : Abbrev.list_tactic option ref
 
   val walkTo : {
     plugins: LSPExtension.plugin_data,
@@ -27,19 +28,24 @@ end = struct
 open TacticParse
 
 val holder : Abbrev.tactic option ref = ref NONE
+val listHolder : Abbrev.list_tactic option ref = ref NONE
 
-(* Process-lifetime cache of compiled tactic values, keyed by their
-   source text.  Per-atom PolyML.compiler invocation dominates
-   walker cost — the point of `hol-lsp-goals-follow-cursor` is that
-   auto-follow keystrokes should feel snappy. *)
+(* Process-lifetime caches of compiled values, keyed by source text.
+   Per-atom PolyML.compiler invocation dominates walker cost — the
+   point of `hol-lsp-goals-follow-cursor` is that auto-follow
+   keystrokes should feel snappy. *)
 val compileCache: (string, Abbrev.tactic) Binarymap.dict ref =
   ref (Binarymap.mkDict String.compare)
+val compileLTCache: (string, Abbrev.list_tactic) Binarymap.dict ref =
+  ref (Binarymap.mkDict String.compare)
 
-fun compileTactic src =
-  case Binarymap.peek (!compileCache, src) of
-    SOME tac => SOME tac
+(* `holderName' is the ref the compiled source assigns into; `get' and
+   `clear' read and reset that same ref at its own type. *)
+fun compileVia {holderName, get, clear, cache} src =
+  case Binarymap.peek (!cache, src) of
+    SOME v => SOME v
   | NONE => let
-      val wrapped = "TacticWalker.holder := SOME (" ^ src ^ ");"
+      val wrapped = holderName ^ " := SOME (" ^ src ^ ");"
       val filtered = HOLSource.fromString
                        {quietOpen = true, print = fn _ => ()} wrapped
       val i = ref 0
@@ -47,22 +53,40 @@ fun compileTactic src =
       fun read () = if !i >= n then NONE
                     else SOME (String.sub (filtered, !i)) before i := !i + 1
       fun swallow _ = ()
-      val () = holder := NONE
+      val () = clear ()
       val _ = Portable.total (fn () => PolyML.compiler
                  (read, [PolyML.Compiler.CPErrorMessageProc swallow,
                          PolyML.Compiler.CPPrintStream swallow,
                          PolyML.Compiler.CPOutStream swallow,
                          PolyML.Compiler.CPNameSpace LSPNameSpace.fileNS]) ()) ()
-      val () = case !holder of
-                 SOME tac => compileCache :=
-                             Binarymap.insert (!compileCache, src, tac)
+      val () = case get () of
+                 SOME v => cache := Binarymap.insert (!cache, src, v)
                | NONE => ()
-      in !holder end
+      in get () end
+
+fun compileTactic src = compileVia {
+  holderName = "TacticWalker.holder",
+  get = fn () => !holder, clear = fn () => holder := NONE,
+  cache = compileCache} src
+
+fun compileListTactic src = compileVia {
+  holderName = "TacticWalker.listHolder",
+  get = fn () => !listHolder, clear = fn () => listHolder := NONE,
+  cache = compileLTCache} src
 
 fun compileAndApply src state =
   case compileTactic src of
     NONE => NONE
   | SOME tac => Portable.total (goalFrag.expand tac) state
+
+(* `goalFrag.expand' runs a tactic once per focused goal, so a
+   list_tactic smuggled in as `ALL_TAC >>> lt' only ever sees the
+   singleton list made from one goal: REVERSE_LT that way is a no-op.
+   `expand_list' hands it the whole focus, which is the point of it. *)
+fun compileAndApplyLT src state =
+  case compileListTactic src of
+    NONE => NONE
+  | SOME lt => Portable.total (goalFrag.expand_list lt) state
 
 fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
 
@@ -79,10 +103,8 @@ fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
    way (MAP_EVERY, NO_TAC, TACS_TO_LT, REVERSE_LT, ...) lives in
    Tactical, so it needs no opens.
 
-   The `>>>' wrapper for a list_tactic is there because
-   `compileTactic' is typed through a single tactic-valued `holder';
-   `goalFrag.expand_list' would take one more ref and a twin
-   compile. *)
+   A list_tactic leaf is compiled and applied as one -- see
+   `compileAndApplyLT'. *)
 fun atomSrc tacText te = let
   val txt = textAt tacText
   in case te of
@@ -92,15 +114,24 @@ fun atomSrc tacText te = let
     | Rename span       => SOME ("Q.RENAME_TAC " ^ txt span)
     | _ => case topSpan te of
         SOME span => SOME (txt span)
-      | NONE => Option.map
-          (fn src => if isTac te then src
-                     else "ALL_TAC >>> (" ^ src ^ ")")
-          (printTacAsSML tacText te)
+      | NONE => printTacAsSML tacText te
   end
+
+(* Which leaves denote list_tactics.  Enumerated rather than read off
+   `TacticParse.isTac', which also answers false for OOpaque -- a
+   tactic sitting in a tactic list -- and so would misroute it. *)
+fun isListTactic te = case te of
+    LReverse => true
+  | LFirst [] => true
+  | LTacsToLT _ => true
+  | LOpaque _ => true
+  | _ => false
 
 fun applyAtom tacText te state = case atomSrc tacText te of
     NONE => SOME state
-  | SOME src => compileAndApply src state
+  | SOME src =>
+      if isListTactic te then compileAndApplyLT src state
+      else compileAndApply src state
 
 fun applyOpen ok state = case ok of
     FOpen           => Portable.total goalFrag.open_paren      state
@@ -424,6 +455,32 @@ fun walkFrag tacText cursor state snaps stepIdx frag = case frag of
 
 and walkFrags tacText cursor state snaps stepIdx frags = case frags of
     [] => Done {state = state, snaps = snaps, stepIdx = stepIdx}
+  (* `sg q' immediately followed by REVERSE_LT is how TacticParse
+     encodes `suffices_by' -- it is the very shape `optTree' folds
+     back into the surface operator when printing.  Applying the two
+     separately is not the same tactic: it leaves `w' with `q' stripped
+     into the assumptions, whereas HOL's suffices_by is
+     `Q_TAC SUFF_TAC', whose first subgoal is the implication
+     `q ==> w'.  Tactics that begin by discharging that implication --
+     strip_tac, and often rw -- fail against the assumption form.  So
+     apply the pair as the single primitive it stands for. *)
+  | FAtom (te as Subgoal span) :: FAtom LReverse :: rest =>
+      (case atomEndByte te of
+         SOME endB =>
+           if cursor < endB then
+             Halted {state = state, snaps = snaps, stepIdx = stepIdx}
+           else (case compileAndApply
+                        ("Tactical.Q_TAC Tactic.SUFF_TAC "
+                         ^ textAt tacText span) state of
+                   NONE => Failed {state = state, snaps = snaps,
+                                   stepIdx = stepIdx, at = FAtom te}
+                 | SOME state' =>
+                     walkFrags tacText cursor state'
+                       ({stepIdx = stepIdx, endByte = endB,
+                         state = state'} :: snaps)
+                       (stepIdx + 1) rest)
+       | NONE => Failed {state = state, snaps = snaps,
+                         stepIdx = stepIdx, at = FAtom te})
   | f :: rest =>
       (case walkFrag tacText cursor state snaps stepIdx f of
          Done r =>

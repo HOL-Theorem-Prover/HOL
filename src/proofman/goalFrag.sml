@@ -236,7 +236,8 @@ fun close_first_lt (n, g) = let
    combinator inward; wrappers not carried by `Stashed` (Try,
    Repeat, Parallel, Done) are not currently described. *)
 fun context_lines (_, g) = let
-  fun kind_str (Then1 _) = "first subgoal of >-"
+  val then1 = "inside >-"
+  fun kind_str (Then1 _) = then1
     | kind_str (TacsToLT (acc, rest, _)) =
         "branch " ^ Int.toString (length acc + 1) ^
         " of " ^ Int.toString (length acc + 1 + length rest) ^
@@ -246,7 +247,22 @@ fun context_lines (_, g) = let
         " of " ^ Int.toString (length lo + 1 + length hi)
   fun go (Stashed (inner, k)) acc = go inner (kind_str k :: acc)
     | go _ acc = acc
-  in rev (go g []) end
+  (* A Then1 frame has exactly one branch, so its tag carries no
+     position -- repeats say only how deeply the cursor is nested.
+     Fold a run of them into that count instead of printing the same
+     tag several times.  Other kinds number themselves, so identical
+     neighbours there are distinct facts and stay as they are. *)
+  fun collapse [] = []
+    | collapse (l :: ls) = let
+        fun run n (l' :: rest) =
+              if l' = l then run (n + 1) rest else (n, l' :: rest)
+          | run n [] = (n, [])
+        val (n, rest) = run 1 ls
+        val here = if n = 1 orelse l <> then1 then
+                     List.tabulate (n, fn _ => l)
+                   else ["inside " ^ Int.toString n ^ " nested >-"]
+        in here @ collapse rest end
+  in collapse (rev (go g [])) end
 
 fun pp_goalstate gs = let
   open smpp
