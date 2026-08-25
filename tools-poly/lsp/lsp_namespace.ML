@@ -16,7 +16,17 @@
    file layer is a per-compile scratchpad we clear on each reset.
 
    Loaded from `tools-poly/hol.ML` BEFORE `lsp/holide.ML`, since
-   `holide.ML`'s `codeFn` will route its enters through this layer. *)
+   `holide.ML`'s `codeFn` will route its enters through this layer.
+
+   Per-thread.  The six tables are thread-local, not global refs,
+   because the compiler's name resolution is what a tactic-replaying
+   worker needs and two workers must not see each other's bindings: a
+   shared layer would make a compile's result depend on which worker
+   ran last, which presents as a flaky tactic rather than as a
+   threading bug.  A fresh thread starts with an empty layer and
+   inherits one explicitly --- `snapshotLayer` captures the calling
+   thread's tables and returns a thunk that installs them on whatever
+   thread calls it, so the spawner captures and the worker installs. *)
 
 structure LSPNameSpace : sig
   val fileNS : PolyML.NameSpace.nameSpace
@@ -28,18 +38,54 @@ structure LSPNameSpace : sig
   val snapshotLayer : unit -> unit -> unit
 end = struct
 
-  fun mkTable () = ref (Binarymap.mkDict String.compare)
-  fun tblLookup t k = Binarymap.peek (!t, k)
-  fun tblEnter t (k, v) = t := Binarymap.insert (!t, k, v)
-  fun tblAll t = Binarymap.foldr (fn (n, v, acc) => (n, v) :: acc) [] (!t)
-  fun tblClear t = t := Binarymap.mkDict String.compare
+  (* Mirrors src/portableML/poly/concurrent/ThreadLocal, which cannot be
+     loaded here: it writes `Thread.getLocal`, and at this point in the
+     boot `Thread` is Poly's outer structure, so the primitives are
+     `Thread.Thread.*`.  Same signature, so the two stay swappable. *)
+  structure ThreadLocal : sig
+    type 'a t
+    val new : unit -> 'a t
+    val get : 'a t -> 'a option
+    val set : 'a t * 'a -> unit
+  end = struct
+    type 'a t = 'a Universal.tag
+    val new = Universal.tag
+    val get = Thread.Thread.getLocal
+    val set = Thread.Thread.setLocal
+  end
 
-  val vTbl = mkTable () : (string, PolyML.NameSpace.Values.value)      Binarymap.dict ref
-  val tTbl = mkTable () : (string, PolyML.NameSpace.TypeConstrs.typeConstr)    Binarymap.dict ref
-  val fTbl = mkTable () : (string, PolyML.NameSpace.Infixes.fixity)    Binarymap.dict ref
-  val sTbl = mkTable () : (string, PolyML.NameSpace.Structures.structureVal) Binarymap.dict ref
-  val gTbl = mkTable () : (string, PolyML.NameSpace.Signatures.signatureVal) Binarymap.dict ref
-  val nTbl = mkTable () : (string, PolyML.NameSpace.Functors.functorVal)   Binarymap.dict ref
+  (* a function, not a value: `Binarymap.mkDict String.compare` is an
+     application, so binding it with `val` would make it monomorphic
+     under the value restriction and unify all six tables *)
+  fun emptyTbl () = Binarymap.mkDict String.compare
+  fun mkTable () = ThreadLocal.new ()
+  (* an untouched thread reads as an empty layer *)
+  fun tblGet t = case ThreadLocal.get t of NONE => emptyTbl () | SOME d => d
+  fun tblSet t d = ThreadLocal.set (t, d)
+  fun tblLookup t k = Binarymap.peek (tblGet t, k)
+  fun tblEnter t (k, v) = tblSet t (Binarymap.insert (tblGet t, k, v))
+  fun tblAll t = Binarymap.foldr (fn (n, v, acc) => (n, v) :: acc) []
+                                 (tblGet t)
+  fun tblClear t = tblSet t (emptyTbl ())
+
+  val vTbl = mkTable ()
+      : (string, PolyML.NameSpace.Values.value) Binarymap.dict
+        ThreadLocal.t
+  val tTbl = mkTable ()
+      : (string, PolyML.NameSpace.TypeConstrs.typeConstr) Binarymap.dict
+        ThreadLocal.t
+  val fTbl = mkTable ()
+      : (string, PolyML.NameSpace.Infixes.fixity) Binarymap.dict
+        ThreadLocal.t
+  val sTbl = mkTable ()
+      : (string, PolyML.NameSpace.Structures.structureVal) Binarymap.dict
+        ThreadLocal.t
+  val gTbl = mkTable ()
+      : (string, PolyML.NameSpace.Signatures.signatureVal) Binarymap.dict
+        ThreadLocal.t
+  val nTbl = mkTable ()
+      : (string, PolyML.NameSpace.Functors.functorVal) Binarymap.dict
+        ThreadLocal.t
 
   fun overlay lookup all enter t globalLookup globalAll =
     { lookup = fn s => (case lookup t s of NONE => globalLookup s | v => v),
@@ -86,12 +132,15 @@ end = struct
     (tblClear vTbl; tblClear tTbl; tblClear fTbl;
      tblClear sTbl; tblClear gTbl; tblClear nTbl)
 
+  (* Captures this thread's layer; the returned thunk installs it on
+     whichever thread calls it.  That is both the mid-compile resume
+     (same thread) and the way a worker inherits its spawner's layer. *)
   fun snapshotLayer () = let
-    val v = !vTbl val t = !tTbl val f = !fTbl
-    val s = !sTbl val g = !gTbl val n = !nTbl
+    val v = tblGet vTbl val t = tblGet tTbl val f = tblGet fTbl
+    val s = tblGet sTbl val g = tblGet gTbl val n = tblGet nTbl
   in
-    fn () => (vTbl := v; tTbl := t; fTbl := f;
-              sTbl := s; gTbl := g; nTbl := n)
+    fn () => (tblSet vTbl v; tblSet tTbl t; tblSet fTbl f;
+              tblSet sTbl s; tblSet gTbl g; tblSet nTbl n)
   end
 
 end;

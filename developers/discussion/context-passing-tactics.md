@@ -1375,6 +1375,22 @@ is not the problem --- being process-global is.
   `TacticWalker` compiles leaf tactic text (hence its `compileCache`), and
   the file layer is what those identifiers resolve against.
 
+**Decision: the loaded state is invariant for a whole file.**  Rather
+than snapshot and restore `loadedMods` per declaration, treat it as
+fixed for the duration of a file:
+
+- non-interactively, a script's dependencies are loaded once before
+  execution begins and then left alone;
+- interactively, if an edit changes what the file loads --- the user
+  editing the `open`s at the top --- everything is thrown away and
+  recalculated, rather than trying to reconcile a partially-different
+  load set against surviving snapshots.
+
+This is much easier to be sure of than a per-dec restore, and it takes
+`Meta.snapshotLoaded` out of the per-declaration snapshot entirely: it
+does not need to be made thread-safe, because within a file no thread
+changes it.  It stays where it is for the file-granularity reset.
+
 So the blocking channel is the namespace layer, and the useful news is
 that **it is already interposed** --- a layer over `PolyML.globalNameSpace`
 rather than the global itself, which is exactly the structure that makes
