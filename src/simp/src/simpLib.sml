@@ -1007,12 +1007,7 @@ fun global_simp_tac cfg ss0 =
 
 
 
-fun track f x =
- let val _ = set_used_rewrites []
-     val res = Lib.with_flag(track_rewrites,true) f x
- in set_used_rewrites (rev (used_rewrites()))
-  ; res
- end;
+val track = with_tracking
 
 (* ----------------------------------------------------------------------
     creating per-type ssdata values

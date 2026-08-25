@@ -2,6 +2,7 @@ signature patternMatchesLib =
 sig
   include Abbrev
   type ssfrag = simpLib.ssfrag
+  type simpset = simpLib.simpset
 
   (********************************)
   (* parsing                      *)
@@ -30,18 +31,23 @@ sig
      uses a default set of theorem for proving preconditions enriched
      with information from TypeBase.
 
-     XXX_CONV_GEN : ssfrag list -> conv
+     XXX_CONV_GEN : simpset -> ssfrag list -> conv
 
-     additionally uses the given list of ssfrags for proving preconditions.
+     proves preconditions against the given simpset, plus the given list
+     of ssfrags.  The simpset is explicit because these conversions are
+     *captured* -- stored in an ssfrag or a compset and run much later --
+     so reaching for the stateful one inside would read it in whatever
+     context the simplifier happened to be running in.  The XXX_CONV
+     forms above pass srw_ss() for you.
 
      XXX_ss : ssfrag
 
      uses the default set + the simplifier using it as a callback to prove
      preconditions.
 
-     XXX_ss_GEN : ssfrag list -> ssfrag
+     XXX_ss_GEN : simpset -> ssfrag list -> ssfrag
 
-     uses additionally the given list of ssfrags.
+     uses additionally the given simpset and list of ssfrags.
   *)
 
 
@@ -75,20 +81,20 @@ sig
      removes all rows after the first matching row and
      evaluates the whole expression in case the first row matches. *)
   val PMATCH_CLEANUP_CONV : conv
-  val PMATCH_CLEANUP_CONV_GEN : ssfrag list -> conv
+  val PMATCH_CLEANUP_CONV_GEN : simpset -> ssfrag list -> conv
 
-  val PMATCH_CLEANUP_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_CLEANUP_GEN_ss : simpset -> ssfrag list -> ssfrag
   val PMATCH_CLEANUP_ss : ssfrag
 
   (* PMATCH_SIMP_COLS_CONV partially evaluates columns that all contain
      either the same constructor or a variable. *)
   val PMATCH_SIMP_COLS_CONV : conv
-  val PMATCH_SIMP_COLS_CONV_GEN : ssfrag list -> conv
+  val PMATCH_SIMP_COLS_CONV_GEN : simpset -> ssfrag list -> conv
 
   (* A combination of PMATCH_CLEANUP_CONV and PMATCH_SIMP_COLS_CONV *)
   val PMATCH_FAST_SIMP_CONV : conv
-  val PMATCH_FAST_SIMP_CONV_GEN : ssfrag list -> conv
-  val PMATCH_FAST_SIMP_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_FAST_SIMP_CONV_GEN : simpset -> ssfrag list -> conv
+  val PMATCH_FAST_SIMP_GEN_ss : simpset -> ssfrag list -> ssfrag
   val PMATCH_FAST_SIMP_ss : ssfrag
 
 
@@ -98,18 +104,19 @@ sig
 
   (* Remove easily detectable redundant rows *)
   val PMATCH_REMOVE_FAST_REDUNDANT_CONV : conv
-  val PMATCH_REMOVE_FAST_REDUNDANT_CONV_GEN : ssfrag list -> conv
+  val PMATCH_REMOVE_FAST_REDUNDANT_CONV_GEN : simpset -> ssfrag list -> conv
 
   (* Remove easily detectable subsumed rows *)
   val PMATCH_REMOVE_FAST_SUBSUMED_CONV : bool -> conv
-  val PMATCH_REMOVE_FAST_SUBSUMED_CONV_GEN : bool -> ssfrag list -> conv
+  val PMATCH_REMOVE_FAST_SUBSUMED_CONV_GEN : bool ->
+      simpset -> ssfrag list -> conv
 
   (* Full simplification of PMATCH expressions:
      normalise, partially evaluate rows and columns and
      try to remove redundant and subsumed rows. *)
   val PMATCH_SIMP_CONV : conv
-  val PMATCH_SIMP_CONV_GEN : ssfrag list -> conv
-  val PMATCH_SIMP_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_SIMP_CONV_GEN : simpset -> ssfrag list -> conv
+  val PMATCH_SIMP_GEN_ss : simpset -> ssfrag list -> ssfrag
   val PMATCH_SIMP_ss : ssfrag
 
 
@@ -118,9 +125,9 @@ sig
   (* bindings                     *)
   (********************************)
 
-  val PMATCH_REMOVE_DOUBLE_BIND_CONV_GEN : ssfrag list -> conv
+  val PMATCH_REMOVE_DOUBLE_BIND_CONV_GEN : simpset -> ssfrag list -> conv
   val PMATCH_REMOVE_DOUBLE_BIND_CONV : conv
-  val PMATCH_REMOVE_DOUBLE_BIND_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_REMOVE_DOUBLE_BIND_GEN_ss : simpset -> ssfrag list -> ssfrag
   val PMATCH_REMOVE_DOUBLE_BIND_ss : ssfrag
 
 
@@ -128,9 +135,9 @@ sig
   (* removing GUARDS              *)
   (********************************)
 
-  val PMATCH_REMOVE_GUARDS_CONV_GEN : ssfrag list -> conv
+  val PMATCH_REMOVE_GUARDS_CONV_GEN : simpset -> ssfrag list -> conv
   val PMATCH_REMOVE_GUARDS_CONV : conv
-  val PMATCH_REMOVE_GUARDS_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_REMOVE_GUARDS_GEN_ss : simpset -> ssfrag list -> ssfrag
   val PMATCH_REMOVE_GUARDS_ss : ssfrag
 
 
@@ -138,7 +145,7 @@ sig
   (* extending input              *)
   (********************************)
 
-  val PMATCH_EXTEND_INPUT_CONV_GEN : ssfrag list -> term -> conv
+  val PMATCH_EXTEND_INPUT_CONV_GEN : simpset -> ssfrag list -> term -> conv
   val PMATCH_EXTEND_INPUT_CONV : term -> conv
 
   (********************************)
@@ -172,10 +179,10 @@ sig
      allows to provide extra ssfrags. This might
      be handy, if the PMATCH contains functions
      not known by the default methods. *)
-  val PMATCH_LIFT_BOOL_CONV_GEN : ssfrag list -> bool -> conv
+  val PMATCH_LIFT_BOOL_CONV_GEN : simpset -> ssfrag list -> bool -> conv
 
   (* corresponding ssfrags *)
-  val PMATCH_LIFT_BOOL_GEN_ss : ssfrag list -> bool -> ssfrag
+  val PMATCH_LIFT_BOOL_GEN_ss : simpset -> ssfrag list -> bool -> ssfrag
   val PMATCH_LIFT_BOOL_ss : bool -> ssfrag
 
   (* A special case of lifting are function definitions,
@@ -184,7 +191,7 @@ sig
      move the PMATCH to the toplevel and introduce
      multiple cases, one case for each row of the
      PMATCH. This is automated by the following rules. *)
-  val PMATCH_TO_TOP_RULE_GEN : ssfrag list -> rule
+  val PMATCH_TO_TOP_RULE_GEN : simpset -> ssfrag list -> rule
   val PMATCH_TO_TOP_RULE : rule
 
   (********************************)
@@ -360,7 +367,7 @@ sig
      to decision trees using database [db], column heuristic
      [col_heu] and additional ssfrags [ssl]. *)
   val PMATCH_CASE_SPLIT_CONV_GEN :
-     ssfrag list ->
+     simpset -> ssfrag list ->
      constrFamiliesLib.pmatch_compile_db ->
      column_heuristic -> conv
 
@@ -374,7 +381,7 @@ sig
 
   (* ssfrag corresponding to PMATCH_CASE_SPLIT_CONV_GEN *)
   val PMATCH_CASE_SPLIT_GEN_ss :
-     ssfrag list ->
+     simpset -> ssfrag list ->
      constrFamiliesLib.pmatch_compile_db ->
      column_heuristic -> ssfrag
 
@@ -410,12 +417,14 @@ sig
      redundant rows. Internally this uses [nchotomy_of_pats] and
      therefore requires a pmatch-compile db and a column-heuristic. *)
   val PMATCH_REMOVE_REDUNDANT_CONV_GEN :
-    constrFamiliesLib.pmatch_compile_db -> column_heuristic -> ssfrag list ->
+    constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+    simpset -> ssfrag list ->
     conv
   val PMATCH_REMOVE_REDUNDANT_CONV : conv
 
   val PMATCH_REMOVE_REDUNDANT_GEN_ss :
-    constrFamiliesLib.pmatch_compile_db -> column_heuristic -> ssfrag list ->
+    constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+    simpset -> ssfrag list ->
     ssfrag
   val PMATCH_REMOVE_REDUNDANT_ss : unit -> ssfrag
 
@@ -426,7 +435,8 @@ sig
      separate these steps, this allows using interactive proofs
      for showing that a row is redundant. *)
   val COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GEN :
-    ssfrag list -> constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+    simpset -> ssfrag list ->
+    constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
     term -> thm
   val COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH : term -> thm
 
@@ -462,19 +472,19 @@ sig
 
   val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK : term -> thm
   val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GEN :
-     ssfrag list -> term -> thm
+     simpset -> ssfrag list -> term -> thm
   val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN :
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
-     (ssfrag list * conv option) -> term -> thm
+     (simpset * ssfrag list * conv option) -> term -> thm
 
   (* One can usually even derive an equality.  *)
 
   val PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK : term -> thm
   val PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GEN :
-     ssfrag list -> term -> thm
+     simpset -> ssfrag list -> term -> thm
   val PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGEN :
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
-     (ssfrag list * conv option) -> term -> thm
+     (simpset * ssfrag list * conv option) -> term -> thm
 
 
   (* Computing the IS_REDUNDANT_ROWS_INFO takes time and
@@ -494,7 +504,8 @@ sig
       and the right-hand-side is always T or F.
    *)
    val PMATCH_IS_EXHAUSTIVE_FAST_CHECK : term -> thm
-   val PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GEN : ssfrag list -> term -> thm
+   val PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GEN :
+       simpset -> ssfrag list -> term -> thm
 
 
    (* Both methods can be combined to combine the speed of
@@ -507,16 +518,17 @@ sig
       to make the pattern match exhaustive. *)
 
    val PMATCH_IS_EXHAUSTIVE_CHECK : term -> thm
-   val PMATCH_IS_EXHAUSTIVE_CHECK_GEN : ssfrag list -> term -> thm
+   val PMATCH_IS_EXHAUSTIVE_CHECK_GEN : simpset -> ssfrag list -> term -> thm
    val PMATCH_IS_EXHAUSTIVE_CHECK_FULLGEN :
       constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
-      (ssfrag list * conv option) -> term -> thm
+      (simpset * ssfrag list * conv option) -> term -> thm
 
    val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK : term -> thm
-   val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GEN : ssfrag list -> term -> thm
+   val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GEN :
+       simpset -> ssfrag list -> term -> thm
    val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGEN :
       constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
-      (ssfrag list * conv option) -> term -> thm
+      (simpset * ssfrag list * conv option) -> term -> thm
 
 
    (* More interesting than just computing whether a PMATCH
@@ -534,12 +546,12 @@ sig
 
    (* and as usual more general versions that allows using
       own pattern compilation settings *)
-   val PMATCH_COMPLETE_CONV_GEN : ssfrag list ->
+   val PMATCH_COMPLETE_CONV_GEN : simpset -> ssfrag list ->
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
      bool -> conv
 
    val PMATCH_COMPLETE_GEN_ss :
-     ssfrag list ->
+     simpset -> ssfrag list ->
      constrFamiliesLib.pmatch_compile_db ->
      column_heuristic -> bool -> ssfrag
 
@@ -551,7 +563,8 @@ sig
       original case split is exhaustive is still computed. *)
    val PMATCH_COMPLETE_CONV_WITH_EXH_PROOF : bool -> (term -> (thm option * thm))
 
-   val PMATCH_COMPLETE_CONV_GEN_WITH_EXH_PROOF : ssfrag list ->
+   val PMATCH_COMPLETE_CONV_GEN_WITH_EXH_PROOF :
+     simpset -> ssfrag list ->
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
      bool -> (term -> (thm option * thm))
 
@@ -570,7 +583,7 @@ sig
   (* A generalised version that allows specifying additional
      parameters. *)
   val SHOW_NCHOTOMY_CONSEQ_CONV_GEN :
-    ssfrag list -> constrFamiliesLib.pmatch_compile_db ->
+    simpset -> ssfrag list -> constrFamiliesLib.pmatch_compile_db ->
     column_heuristic -> ConseqConv.conseq_conv
 
 
@@ -587,13 +600,14 @@ sig
 
   val PMATCH_LIFT_CONV : conv
 
-  val PMATCH_LIFT_CONV_GEN : ssfrag list ->
+  val PMATCH_LIFT_CONV_GEN : simpset -> ssfrag list ->
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
      conv
 
   val PMATCH_LIFT_CONV_WITH_EXH_PROOF : term -> (thm * thm)
 
-  val PMATCH_LIFT_CONV_GEN_WITH_EXH_PROOF : ssfrag list ->
+  val PMATCH_LIFT_CONV_GEN_WITH_EXH_PROOF :
+     simpset -> ssfrag list ->
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
      term -> (thm * thm)
 
@@ -610,13 +624,13 @@ sig
      of the rhs of a row are considered for flattening. Otherwise,
      lifting is attempted. *)
 
-  val PMATCH_FLATTEN_CONV_GEN : ssfrag list ->
+  val PMATCH_FLATTEN_CONV_GEN : simpset -> ssfrag list ->
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
      bool -> conv
 
   val PMATCH_FLATTEN_CONV : bool -> conv
 
-  val PMATCH_FLATTEN_GEN_ss : ssfrag list ->
+  val PMATCH_FLATTEN_GEN_ss : simpset -> ssfrag list ->
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
      bool -> ssfrag
 

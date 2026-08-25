@@ -1205,6 +1205,41 @@ entries that harmlessly fail to apply:
 - `BasicProvers.sml:707`'s case-rewrite cache, mirroring TypeBase via
   `register_update_fn`.
 
+#### The census cannot see a bare `ref`
+
+The tripwire fires on `Context.snapshot`, so it reports reads of state
+that lives *in* the context and nothing else.  A plain `ref` mutated on
+the proof path reads clean no matter how often it changes.  So **"census
+at zero" means "no ambient context reads", not "no ambient state"**, and
+the `_Check_` below should be read that way.
+
+The clearest instance is `constrFamiliesLib.thePmatchCompileDB`
+(`constrFamiliesLib.sig:135`), a bare exported
+
+    val thePmatchCompileDB : pmatch_compile_db ref
+
+written by five registration functions (`pmatch_compile_db_add_ssfrag`,
+`_add_compile_fun`, `_add_nchotomy_fun`, `_add_constrFam`,
+`_remove_type`, `constrFamiliesLib.sml:753-810`) and dereferenced at
+*invocation* time in about twenty places in `patternMatchesLib`,
+including inside the captured conversions.  It has all three defects
+this migration is about --- `Context.restore` does not rewind it, so a
+restored older context sees later registrations; it is not safe for a
+worker pool; and it is read when the conversion runs rather than when it
+is built --- and it never appeared in any measurement, because the
+tripwire cannot see it.
+
+**Scheduled, not urgent** (the code is not in heavy use).  The fix is
+the one Phase 0 applied to `Rewrite.implicit`, `computeLib.compset` and
+`simpLib.ssfragDB`: one `Context.Data` slot with a `_of` reader, the
+five writers becoming slot updates, and the readers taking `_of ctxt`
+where a context is in scope and an ambient wrapper elsewhere.  Contained:
+one slot, five writers, ~20 readers.
+
+Worth a sweep for the same shape elsewhere while doing it --- a bare
+`ref` holding a database that conversions consult is a pattern, not a
+one-off, and none of them are visible to the census.
+
 **Explicitly not being changed** (decision 14): the simplifier caches
 (`Cache.sml:44`; instances at `numSimps.sml:462`, `realSimps.sml:588`,
 `intSimps.sml:251`, `bagSimps.sml:120`, `ConseqConv.sml:1913`).  Cross-

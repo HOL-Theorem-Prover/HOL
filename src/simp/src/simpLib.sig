@@ -232,14 +232,14 @@ sig
    val ASM_SIMP_RULE : simpset -> thm list -> thm -> thm
 
    (* ---------------------------------------------------------------------*)
-   (* Accumulating the rewrite rules that are actually used.               *)
+   (* Reporting which rewrite rules actually fired.  This is an aid for a
+      human watching a simplification, so it hands the list back with the
+      result rather than leaving it in a ref to be read afterwards; there
+      is no flag to set and none to forget to unset.  Nested tracking
+      reports only the inner extent.                                     *)
    (* ---------------------------------------------------------------------*)
 
-   val used_rewrites : unit -> thm list
-   val set_used_rewrites : thm list -> unit
-   val track_rewrites : bool ref
-
-   val track : ('a -> 'b) -> 'a -> 'b
+   val track : ('a -> 'b) -> 'a -> 'b * thm list
 
    (* ---------------------------------------------------------------------*)
    (* Prettyprinters for ssfrags and simpsets.                             *)
