@@ -904,10 +904,25 @@ not the one-off initialisation:
 | `simp []`                     | ambient   | **clean** |
 | `fs []`, `gvs []`             | ambient   | **clean** |
 | `asm_simp_tac (srw_ss()) []`  | ---       | clean     |
-| `ASM_REWRITE_TAC []`          | ambient   | clean     |
 | `rw []`                       | ambient   | ambient   |
 | `srw_tac [] []`, `SRW_TAC [] []` | ambient | ambient   |
 | `EVAL_TAC`                    | ambient   | ambient   |
+
+**A probe only measures a tactic that actually runs.**  An earlier
+version of this table recorded `ASM_REWRITE_TAC []` as clean, on the
+strength of `strip_tac >> ASM_REWRITE_TAC []` against
+`(p /\ T) ==> p`.  But `strip_tac` closes that goal by itself, so the
+second tactic never executed and the reading was vacuous.  On a goal
+that leaves work --- `p /\ q ==> q /\ p` --- it reads ambient, and so
+do `Ho_Rewrite.ASM_REWRITE_TAC` and the `FILTER_*_ASM_REWRITE_TAC`
+family.  Three rules for probing, each learned the hard way:
+
+- pick a goal no earlier tactic in the chain can discharge;
+- count reads at level 2 rather than catching the level-3 exception ---
+  a handler inside the tactic can swallow the exception, and a tactic
+  that never ran reports zero exactly like a clean one;
+- include a positive control, so a broken instrument cannot read as a
+  clean result.
 
 Every read left in this family is `tyinfol()`, from two sites and no
 others: `init_state`, reached lazily when a derived value's suspension is
@@ -1007,6 +1022,66 @@ they are parsing in, covers the whole dynamic population; the
 literal-name conversions are a separate hoisting pass.  Neither is
 needed for Phase 3 to finish, and both are measurable independently now
 that the trace is split.
+
+### What is left in a proof, measured
+
+Counting reads at level 2 with a positive control, on goals no earlier
+tactic can discharge:
+
+| tactic                                  | reads |
+|-----------------------------------------|-------|
+| `simp []`, `rw []`, `fs []`, `gvs []`   | 0     |
+| `SRW_TAC`, `srw_tac`                    | 0     |
+| `EVAL_TAC`                              | 0     |
+| `Cases`, `Induct`                       | 0     |
+| `DECIDE_TAC`, `ARITH_TAC`               | 0     |
+| `ASM_REWRITE_TAC`, `FILTER_ASM_*`       | 0 (was 1) |
+| `Cases_on ‘n’`                          | 3     |
+| `Q.EXISTS_TAC ‘4’`                      | 1     |
+
+The rewriting family went to zero by threading `REWRITE_TAC` and
+`ONCE_REWRITE_TAC` in both `Rewrite` and `Ho_Rewrite`: the `ASM_` and
+`FILTER_` variants build them from inside an `ASSUM_LIST` callback,
+which runs once the goal arrives --- inside the proof --- so fixing the
+two roots fixed all eight wrappers.
+
+**Everything still reading is parsing a quotation.**  `Cases` reads
+nothing while `Cases_on` reads three; the difference is the quotation.
+`find_subterm_in` on its own accounts for two of them, and
+`Parse.Absyn_in` for one.  So the residue is not in the tactics --- it
+is one ambient read per parse, inside the parsing pipeline itself, even
+when the pipeline is handed a context.
+
+#### The residual parse read, characterised
+
+Narrowed as far as bisection takes it, and left as an open item:
+
+- it is **one read per parse**, the same for `‘n’` as for `‘SUC 0’` or a
+  `let`-expression, so it does not depend on the quotation;
+- it survives pre-forcing the `parse.derived.term` suspension, so it is
+  not the derived-value slot;
+- it survives building the parser entirely outside the proof
+  (`TermParse.absyn tmG tyG` bound at top level, then run inside), so it
+  is in **running** the parser, not constructing it;
+- `Parse.get_term_grammar` and `get_type_grammar` are both 0, so it is
+  not the grammars;
+- no module in `src/parse` calls `Context.snapshot` except `Parse`
+  itself, `AncestryData` and `testutils` --- so it is reached through a
+  callback registered into the grammar (a user printer, an absyn
+  postprocessor, a preterm processor) rather than from the parser's own
+  code.
+
+It raises unwrapped, so the `wrap_exn` chain does not name a caller the
+way `QTY_TAC` did.  Naming it exactly needs an instrument the tripwire
+does not have: record, on an ambient `snapshot`, which `Data` slot is
+read next.  That is a worthwhile addition to `Context` when this is
+picked up --- it turns "something read ambient state" into "this slot
+did", which is the question every one of these investigations has
+actually been asking.
+
+This matters less than it looks: the same threading that gives the
+parsing functions a context for the *kernel signature* will give them
+one for this too, so both fall to the same change.
 
 #### 3b. Pure plumbing (state already an explicit parameter below)
 
