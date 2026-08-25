@@ -141,8 +141,14 @@ type compileSnap = unit -> unit
 val captureCompileSnap : (unit -> compileSnap) ref = ref (fn () => (fn () => ()))
 val restoreCompileSnap : (compileSnap -> unit) ref = ref (fn f => f ())
 
-type deferred = {site: string, run: unit -> string option}
+datatype proof_status =
+         Unseen | Cheated | Checking | Proved
+       | Failed of string | Diverged of string
+type proof_state = {site: string, offset: int, status: proof_status}
+
+type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs = ref false
+val currentProofOffset = ref 0
 local
   (* enqueued in reverse; Phase A is single-threaded, so a plain ref is
      enough here.  The drain takes the whole queue in one step. *)
@@ -151,18 +157,29 @@ in
   fun enqueueDeferred d = q := d :: !q
   fun pendingDeferred () = length (!q)
   fun clearDeferred () = q := []
+  fun takeDeferred () = let val items = List.rev (!q) in q := []; items end
   fun drainDeferred () =
       let
-        val items = List.rev (!q)
-        val () = q := []
+        val items = takeDeferred ()
         fun go [] acc = List.rev acc
-          | go ({site, run} :: rest) acc =
+          | go ({site, offset = _, run} :: rest) acc =
             case run () of
-                NONE => go rest acc
-              | SOME e => go rest ({site = site, error = e} :: acc)
+                Failed e => go rest ({site = site, error = e} :: acc)
+              | Diverged e =>
+                go rest ({site = site,
+                          error = "theorem diverged from placeholder: " ^ e}
+                         :: acc)
+              | _ => go rest acc
       in
         go items []
       end
 end
+
+val checkDeferred : (unit -> unit) ref = ref (fn () => ())
+val proofStates : (unit -> proof_state list) ref = ref (fn () => [])
+val cancelProofsAtOrAfter : (int -> unit) ref = ref (fn _ => ())
+val cancelProofAt : (int -> unit) ref = ref (fn _ => ())
+val cancelAllProofs : (unit -> unit) ref = ref (fn () => ())
+val setProofFocus : (int option -> unit) ref = ref (fn _ => ())
 
 end

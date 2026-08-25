@@ -167,14 +167,94 @@ val restoreCompileSnap: (compileSnap -> unit) ref
    `deferProofs` is off by default, in which case the hook behaves
    exactly as it does today and skips the proof outright.
    ---------------------------------------------------------------------- *)
-type deferred = {site: string, run: unit -> string option}
+(* `run` replays the proof and reports what it established: `Proved`,
+   `Failed` or `Diverged` (see proof_status below -- it cannot return the
+   other two, which are statements about declarations the pool was never
+   given). *)
+(* ----------------------------------------------------------------------
+   Status of a proof, for reporting back to the user.
+
+   Two of these the pool cannot produce, because they say something
+   about declarations the pool has never been given:
+
+     Unseen   the text has not been elaborated at all, so we do not even
+              know that its statement and tactic type-check.  This is
+              everything past the compile frontier.
+     Cheated  elaborated -- statement and tactic both type-check, in HOL
+              and in SML respectively -- but no pool entry exists, so the
+              theorem is being taken on trust.  This covers "never
+              submitted" and "we stopped checking it" alike: from the
+              user's point of view those are the same thing.  A cancelled
+              proof therefore reverts to Cheated by having its entry
+              dropped, which is right, because an edit above it means its
+              recorded position is about to be stale.
+
+   The remaining three are the pool's own:
+
+     Checking a worker is on it
+     Proved   the replay went through
+     Failed   the replay ran and the proof did not go through.  Really a
+              diagnostic rather than a resting state, carried here so
+              status and diagnostic can be reported together.
+     Diverged the replay went through, but produced a theorem the
+              placeholder did not match -- see proof_outcome.  Everything
+              elaborated below this declaration is suspect.
+
+   So a caller assembling a display walks its own list of declarations
+   and consults the pool: an entry gives one of the last three, and
+   absence means Unseen or Cheated according to whether elaboration has
+   reached that declaration.
+   ---------------------------------------------------------------------- *)
+datatype proof_status =
+         Unseen | Cheated | Checking | Proved
+       | Failed of string | Diverged of string
+type proof_state = {site: string, offset: int, status: proof_status}
+
+type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs: bool ref
 val enqueueDeferred: deferred -> unit
 val pendingDeferred: unit -> int
 val clearDeferred: unit -> unit
-(* Runs every queued item and returns those that failed, in the order
-   they were enqueued.  Empties the queue first, so a failure part-way
-   through cannot leave items to be run twice. *)
+(* Runs every queued item on this thread and returns those that failed,
+   in the order they were enqueued.  Empties the queue first, so a
+   failure part-way through cannot leave items to be run twice.  This is
+   the sequential drain; the worker pool below is the parallel one. *)
 val drainDeferred: unit -> {site: string, error: string} list
+(* Empties the queue and hands back what was in it, for a caller that
+   wants to run the items itself -- the worker pool does. *)
+val takeDeferred: unit -> deferred list
+
+(* The byte offset of the declaration currently being elaborated, set by
+   the compile driver before each one.  The prover hook reads it when
+   enqueueing, so a deferred proof knows where in the file it came from
+   and the pool can decide whether an edit invalidates it.  A plain ref
+   is enough: elaboration is single-threaded. *)
+val currentProofOffset: int ref
+
+
+(* Hooks installed by the LSP runtime (tools-poly/lsp/deferred_proofs.ML);
+   defaults are inert so a non-LSP session behaves as before.
+
+   - checkDeferred: hand the queued proofs to the worker pool.
+   - proofStates: current status of everything the pool knows about.
+   - cancelProofsAtOrAfter n: give up on any proof whose declaration
+     starts at or after byte n.  An edit invalidates the proofs below
+     it in the file and leaves the ones above alone, so this is what a
+     compile pass calls with its minimum edit offset.
+   - cancelAllProofs: give up on all of them. *)
+val checkDeferred: (unit -> unit) ref
+val proofStates: (unit -> proof_state list) ref
+val cancelProofsAtOrAfter: (int -> unit) ref
+(* Give up on just this declaration's proof, for an edit inside a
+   Proof...QED body: the tactic is not run during the cheating pass,
+   so what the declaration contributes downstream is unchanged and the
+   proofs below it need not be disturbed. *)
+val cancelProofAt: (int -> unit) ref
+val cancelAllProofs: (unit -> unit) ref
+(* The declaration the user is working on, by byte offset, or NONE.
+   Its proof is held back rather than checked, since the goal-state
+   walker is already replaying that tactic on every keystroke; it is
+   checked at raised priority once the user moves on. *)
+val setProofFocus: (int option -> unit) ref
 
 end;

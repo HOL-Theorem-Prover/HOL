@@ -1425,6 +1425,48 @@ Two things to know if this needs revisiting:
   type is seen first.  The error then surfaces at `fileNS`, nowhere near
   the cause.  It is a `fun` for that reason.
 
+#### What invalidates a deferred proof
+
+`cancelAtOrAfter minEditOffset` is deliberately blunt: an edit above a
+declaration can change any definition it depends on, so everything at or
+after the edit is abandoned and re-elaborated.  Two things are worth
+recording about that, one a correction.
+
+**The correction.**  It is tempting to say that because a work item
+carries an immutable `Context.t`, an unchanged declaration reached with
+"the same context" can skip re-checking.  That does not work as stated.
+There is no usable equality on `Context.t`: it holds closures (the parse
+suspensions, simpset dprocs, registered conversions), so SML `=` is
+unavailable, and re-elaboration allocates a fresh value anyway, so
+pointer equality fails even when nothing changed.  An early edit also
+does change the context flowing downstream in general.  What the
+immutable context actually gives is a self-contained work item -- safe to
+cancel, reorder and run in parallel -- and the *possibility* of
+characterising what a proof ran against, which ambient mutable state
+denies you.  A real skip-cache still needs an incrementally maintained
+fingerprint or per-proof dependency tracking; neither exists.
+
+**The narrower claim, which does hold and covers the common case.**  An
+edit *inside a `Proof … QED` body* changes nothing downstream.  What a
+`Theorem foo: stmt Proof tac QED` contributes to the context is `foo`
+with statement `stmt`; during the cheating pass the tactic is not run, so
+`tac` contributes nothing at all.  Editing `tac` therefore leaves every
+later declaration's context identical in content, and only that one
+declaration's proof obligation changes.
+
+That is exactly what someone iterating on a proof is doing, so the useful
+distinction is not "same context" but:
+
+- an edit within a proof body -> invalidate that declaration's proof
+  alone, and leave the rest of the pool running;
+- an edit to a statement, a definition, or anything else elaboration
+  consumes -> invalidate downstream conservatively, as now.
+
+The classification needs the declaration structure the server already
+tracks, which is far less work than dependency tracking.  Until it
+exists, an early edit costs a re-check of everything below it, which is
+the behaviour to improve first.
+
 What remains for the pool: the deferring prover, the queue, and the
 worker loop.  A worker's start-up sequence is now well-defined --- take
 the work item's `Context.t`, install the captured namespace layer thunk,

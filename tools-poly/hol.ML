@@ -625,6 +625,9 @@ in
            SML rather than an evalString, so it is type-checked at load
            and can be read; see the file for why the replay guard is
            per-thread. *)
+        (* Future (Isabelle's task framework) is in sigobj but not the
+           base heap, so pull it in before the pool that uses it. *)
+        Meta.load "Future";
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/deferred_proofs.ML"));
         (* Wire LSPExtension.thmLookup to DB + Parse so the hover
