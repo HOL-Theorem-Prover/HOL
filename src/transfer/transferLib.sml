@@ -723,14 +723,15 @@ in
   val upd_ruledb = Context.Data.modify ruledb_slot
 end
 
-fun default_depth () = ruledb.depth_of (global_ruledb ())
+fun default_depth_of ctxt = ruledb.depth_of (global_ruledb_of ctxt)
+fun default_depth () = default_depth_of (Context.snapshot())
 fun set_default_depth n = upd_ruledb (ruledb.fupd_default_depth (K n))
 
-fun xfer_tac cleftp hints (g as (asl,c)) =
+fun xfer_tac cleftp hints (g as (asl,c)) ctxt =
     let
-      val th = transfer_tm (default_depth ())
+      val th = transfer_tm (default_depth_of ctxt)
                            {hints = hints, cleftp = cleftp, force_imp = false}
-                           (global_ruledb ()) c
+                           (global_ruledb_of ctxt) c
       val (is_imp', impc, impa, imp_munge, eql, eqr, eqmunge) =
           if cleftp then
             (is_flipimp, lhand, rand, CONV_RULE (REWR_CONV combinTheory.C_THM),
@@ -739,25 +740,25 @@ fun xfer_tac cleftp hints (g as (asl,c)) =
       val con = concl th
       val mkE = mk_HOL_ERR "transferLib" "xfer_tac"
     in
-      if aconv con c then ACCEPT_TAC th g
+      if aconv con c then ACCEPT_TAC th g ctxt
       else if is_imp' con then
         if aconv (impc con) c then
           if aconv (impa con) c then
             raise mkE "Derived p ==> p implication"
-          else Tactic.MATCH_MP_TAC (imp_munge th) g
+          else Tactic.MATCH_MP_TAC (imp_munge th) g ctxt
         else raise mkE "Derived an implication, but conclusion <> goal"
       else if is_eq con andalso aconv (eql con) c then
         if aconv (eqr con) c then raise mkE "Derived p <=> p equality"
-        else CONV_TAC (REWR_CONV (eqmunge th)) g
+        else CONV_TAC (REWR_CONV (eqmunge th)) g ctxt
       else raise mkE ("Derived non-equality, non-implication: "^
                       term_to_string con)
     end
 
-fun SPEC_ALL_TAC (asl,g) =
+fun SPEC_ALL_TAC (asl,g) ctxt =
     (rpt (pop_assum mp_tac) >>
      map_every (fn v => SPEC_TAC (v,v))
                (HOLset.listItems $ FVL (g::asl) empty_tmset))
-    (asl,g)
+    (asl,g) ctxt
 fun xfer_back_tac hs = SPEC_ALL_TAC >> xfer_tac false hs
 fun xfer_fwd_tac hs = SPEC_ALL_TAC >> xfer_tac true hs
 

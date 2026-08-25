@@ -163,12 +163,12 @@ in
    val () = Feedback.register_btrace
                ("PAT_ABBREV_TAC: match var/const", match_var_or_const)
 
-   fun PAT_ABBREV_TAC fv_set eq (g as (asl, w)) =
+   fun PAT_ABBREV_TAC fv_set eq (g as (asl, w)) ctxt =
       let
          open HOLset
          val (l, r) = dest_eq eq
          val rvs = FVL [r] empty_tmset
-         val l' = gen_variant Parse.is_constname ""
+         val l' = gen_variant (Parse.get_is_constname ctxt) ""
                               (listItems(union(fv_set, rvs))) l
          fun matchr t =
            case raw_match [] fv_set r t ([],[]) of
@@ -197,7 +197,7 @@ in
       in
          case gen_find_term finder w of
             NONE => raise ERR "PAT_ABBREV_TAC" "No matching term found"
-          | SOME (t, tysub) => ABB (Term.inst tysub l') t g
+          | SOME (t, tysub) => ABB (Term.inst tysub l') t g ctxt
       end
 end
 

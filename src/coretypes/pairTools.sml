@@ -42,21 +42,21 @@ local
     | SOME (tya, tyd) => split_tacs v tya tyd
   end g
 in
-  fun PairCases (g as (hyps, w)) = let
+  fun PairCases (g as (hyps, w)) ctxt = let
     val fvs = free_varsl (w::hyps)
     val (v, _) = dest_forall w
     (* From gen_tac: *)
-    val v' = gen_variant Parse.is_constname "" fvs v
+    val v' = gen_variant (Parse.get_is_constname ctxt) "" fvs v
   in
     X_GEN_TAC v' THEN PairCases_common v' fvs
-  end g
+  end g ctxt
 
-  fun PairCases_on q (g as (hyps, w)) = let
+  fun PairCases_on q (g as (hyps, w)) ctxt = let
     val fvs = free_varsl (w::hyps)
-    val v = parse_in_context fvs q
+    val v = Parse.parse_in_context_in ctxt fvs q
   in
     if is_var v then
-      PairCases_common v fvs g
+      PairCases_common v fvs g ctxt
     else
       raise PERR "PairCases_on" "Not a variable"
   end

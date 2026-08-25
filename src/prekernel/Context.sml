@@ -102,6 +102,15 @@ struct
               ("ambient signature inside proof", sig_action, 3)
     val reported : string list ref = ref []
     val sig_reported : string list ref = ref []
+    (* An ambient read reports from `snapshot`, which cannot say *what*
+       was read -- the slot is only known one call later, when the
+       ambient accessor does its `Data.get`.  So `snapshot` leaves a mark
+       and the next `Data.get` names itself.  It is per-thread, and
+       cleared by whoever consumes it, so at worst a read that never
+       reaches a slot leaves a stale mark for the next one on the same
+       thread to claim.  Good enough to name a culprit; not evidence on
+       its own. *)
+    val pending : bool ThreadLocal.t = ThreadLocal.new ()
     fun thyname () =
         case #current_thy (Sref.value ctx) of
             NONE => "<no current theory>"
@@ -133,7 +142,10 @@ struct
           set n; r
         end
     fun snapshot () =
-        (if !action > 0 andalso get () > 0 then report () else ();
+        (if !action > 0 andalso get () > 0 then
+           (report (); if !action > 1 then ThreadLocal.set (pending, true)
+                       else ())
+         else ();
          Sref.value ctx)
     (* Reads the live context without reporting.  The kernel signatures
        are read this way: mk_type and mk_const resolve a name against the
@@ -146,6 +158,12 @@ struct
     fun live () =
         (if !sig_action > 0 andalso get () > 0 then report_sig () else ();
          Sref.value ctx)
+    (* consumed by Data.get, which is the only thing that can name the
+       slot an ambient read was after *)
+    fun claim_pending () =
+        case ThreadLocal.get pending of
+            SOME true => (ThreadLocal.set (pending, false); true)
+          | _ => false
   end
 
   fun restore  c  =
@@ -191,9 +209,14 @@ struct
         end
 
     fun get (slot : 'a slot) (c : t) =
-        case Symtab.lookup (session_data c) (#name slot) of
-            NONE   => #empty slot
-          | SOME u => valOf (#unwrap slot u)
+        (if claim_pending () then
+           Feedback.HOL_WARNING "Context" "snapshot"
+             ("  ... the ambient read above was of slot \"" ^
+              #name slot ^ "\"")
+         else ();
+         case Symtab.lookup (session_data c) (#name slot) of
+             NONE   => #empty slot
+           | SOME u => valOf (#unwrap slot u))
 
     fun put (slot : 'a slot) v c =
         map_session_data (Symtab.update (#name slot, #wrap slot v)) c

@@ -22,6 +22,7 @@ sig
    val fetch_of           : Context.t -> hol_type -> tyinfo option
    val read               : {Thy :string, Tyop: string} -> tyinfo option
    val elts               : unit -> tyinfo list
+   val elts_of            : Context.t -> tyinfo list
    val register_update_fn : (tyinfo -> tyinfo) -> unit
 
    val axiom_of           : hol_type -> thm

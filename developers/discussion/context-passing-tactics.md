@@ -1052,36 +1052,59 @@ nothing while `Cases_on` reads three; the difference is the quotation.
 is one ambient read per parse, inside the parsing pipeline itself, even
 when the pipeline is handed a context.
 
-#### The residual parse read, characterised
+#### The residual parse read: `ancestry.dictppp.global`
 
-Narrowed as far as bisection takes it, and left as an open item:
+Naming it needed an instrument the tripwire did not have.  `snapshot`
+reports, but cannot say *what* was read: the slot is only known one call
+later, when the ambient accessor does its `Data.get`.  So `snapshot` now
+leaves a per-thread mark (at level 2 and above) and the next `Data.get`
+names itself:
 
-- it is **one read per parse**, the same for `‘n’` as for `‘SUC 0’` or a
-  `let`-expression, so it does not depend on the quotation;
-- it survives pre-forcing the `parse.derived.term` suspension, so it is
-  not the derived-value slot;
-- it survives building the parser entirely outside the proof
-  (`TermParse.absyn tmG tyG` bound at top level, then run inside), so it
-  is in **running** the parser, not constructing it;
-- `Parse.get_term_grammar` and `get_type_grammar` are both 0, so it is
-  not the grammars;
-- no module in `src/parse` calls `Context.snapshot` except `Parse`
-  itself, `AncestryData` and `testutils` --- so it is reached through a
-  callback registered into the grammar (a user printer, an absyn
-  postprocessor, a preterm processor) rather than from the parser's own
-  code.
+    <<HOL warning: Context.snapshot: ambient context read ... >>
+    <<HOL warning: Context.snapshot:   ... the ambient read above was of
+                                       slot "ancestry.dictppp.global">>
 
-It raises unwrapped, so the `wrap_exn` chain does not name a caller the
-way `QTY_TAC` did.  Naming it exactly needs an instrument the tripwire
-does not have: record, on an ambient `snapshot`, which `Data` slot is
-read next.  That is a worthwhile addition to `Context` when this is
-picked up --- it turns "something read ambient state" into "this slot
-did", which is the question every one of these investigations has
-actually been asking.
+It is a lead, not proof --- a read that never reaches a slot leaves a
+stale mark for the next one on the same thread to claim --- so always
+run it with a positive control.  It named the culprit on first use, and
+found four more sites the same afternoon.
 
-This matters less than it looks: the same threading that gives the
-parsing functions a context for the *kernel signature* will give them
-one for this too, so both fall to the same change.
+The culprit is `combinpp`'s dictionary-syntax database, read by
+
+    fun upd_processor G a = upd_processor0 (get_global_value()) a
+
+which is registered as an *absyn postprocessor* and so runs on every
+parse.  It cannot be fixed where it stands: the postprocessor API is
+`grammar -> absyn -> absyn`, with no context to read from.  Fixing it
+means giving `TermParse.absyn` a context and passing it to the
+postprocessors --- which is the same threading the kernel signature
+needs.  Both fall to one change; neither is needed for Phase 3.
+
+#### Where Phase 3 finished
+
+Reads per tactic, counted at level 2 with a positive control, on goals
+no earlier tactic in the chain can discharge:
+
+| tactic                                            | reads | slot |
+|---------------------------------------------------|-------|------|
+| `simp`, `rw`, `fs`, `gvs`, `SRW_TAC`, `srw_tac`   | 0 | --- |
+| `ASM_REWRITE_TAC`, `FILTER_ASM_*`                 | 0 | --- |
+| `EVAL_TAC`                                        | 0 | --- |
+| `Cases`, `Induct`, `DECIDE_TAC`, `ARITH_TAC`      | 0 | --- |
+| `Cases_on`, `Induct_on`, `PairCases_on`           | 1 | `dictppp` |
+| `Q.EXISTS_TAC`, `Q.ABBREV_TAC`                    | 1 | `dictppp` |
+
+Every tactic that takes a quotation reads once; every tactic that does
+not reads nothing.  The tactic-level state is done: what remains is one
+read per parse, in one place, with a known fix.
+
+Three sites turned up along the way that were the *same* bug as the
+`GEN_TAC` one this document opens with --- `gen_variant
+Parse.is_constname` choosing a fresh name from the ambient grammar,
+inside the goal lambda: `Thm_cont.CHOOSE_THEN` and `CHOOSE_ALL_THEN`,
+`markerLib.PAT_ABBREV_TAC`, and `pairTools.PairCases`/`PairCases_on`.
+`Sanity.check_var_names___const` reads it too but runs at theorem-store
+time, outside any proof, and is left alone.
 
 #### 3b. Pure plumbing (state already an explicit parameter below)
 

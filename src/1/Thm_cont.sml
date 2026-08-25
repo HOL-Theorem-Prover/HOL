@@ -276,20 +276,21 @@ val CHOOSE_THEN: thm_tactical =
          val (hyp,conc) = dest_thm xth
          val (Bvar,_) = dest_exists conc
       in
-         fn (asl,w) =>
+         fn (asl,w) => fn ctxt =>
          let
-            val y = gen_variant Parse.is_constname ""
+            val y = gen_variant (Parse.get_is_constname ctxt) ""
                                 (free_varsl ((conc::hyp)@(w::asl)))
                                 Bvar
          in
-            X_CHOOSE_THEN y ttac xth (asl,w)
+            X_CHOOSE_THEN y ttac xth (asl,w) ctxt
          end
       end
       handle HOL_ERR _ => raise ERR "CHOOSE_THEN" ""
 
 (* same as REPEAT_TCL CHOOSE_THEN but faster *)
 local
-   fun varyAcc v (V, l) = let val v' = gen_variant Parse.is_constname "" V v in (v'::V, v'::l) end
+   fun varyAcc isc v (V, l) =
+       let val v' = gen_variant isc "" V v in (v'::V, v'::l) end
    (* There are actual cases where strip_exists differ from this function *)
    fun strip_exists1 tm =
    let fun strip A tm =
@@ -328,7 +329,10 @@ val CHOOSE_ALL_THEN: thm_tactical =
          fn (g as (asl,w)) => fn ctxt =>
          let
             val fvs = (free_varsl ((conc::hyp)@(w::asl)))
-            val vars = List.rev (snd (rev_itlist varyAcc vars (fvs,[])))
+            val vars =
+                List.rev (snd (rev_itlist
+                                 (varyAcc (Parse.get_is_constname ctxt))
+                                 vars (fvs,[])))
             fun merge i dups vars = if i < Vector.length vec
                                     then if Vector.sub (vec,i)
                                          then (hd dups :: merge (i + 1) (tl dups) vars)

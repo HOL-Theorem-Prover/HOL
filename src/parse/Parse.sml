@@ -484,14 +484,16 @@ fun smashErrm m =
 
 val stdprinters = SOME(term_to_string,type_to_string)
 
+fun ctxt_absyn_to_preterm_in c fvs a =
+  TermParse.ctxt_absyn_to_preterm (get_term_grammar c) fvs a
 fun ctxt_absyn_to_preterm fvs a =
-  TermParse.ctxt_absyn_to_preterm (term_grammar()) fvs a
+  ctxt_absyn_to_preterm_in (Context.snapshot()) fvs a
 
 fun parse_in_context_in c FVs q =
   let
     open errormonad
     val m =
-        (q |> Absyn_in c |> ctxt_absyn_to_preterm FVs) >-
+        (q |> Absyn_in c |> ctxt_absyn_to_preterm_in c FVs) >-
         TermParse.ctxt_preterm_to_term stdprinters NONE FVs
   in
     smashErrm m

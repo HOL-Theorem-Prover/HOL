@@ -135,6 +135,7 @@ fun export tyis = (write tyis; List.app record_delta tyis)
 fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
 fun fetch_of ctxt ty = TypeBasePure.fetch (theTypeBase_of ctxt) ty
 fun fetch ty = fetch_of (Context.snapshot()) ty
+fun elts_of ctxt = listItems (theTypeBase_of ctxt)
 val elts = listItems o theTypeBase;
 
 fun print_sp_type ty =
