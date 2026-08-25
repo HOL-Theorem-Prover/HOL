@@ -101,36 +101,60 @@ in `.js`.  Check with:
 ls out/extension.js
 ```
 
-## Step 3 — Install it into VS Code
+## Step 3 — Load it into VS Code
 
-VS Code loads extensions from a folder in your home directory.  You
-install this one by putting a link to your built copy there.
+This extension is not on the Marketplace, so you cannot install it the
+usual way.  There are two routes.  Do the first one now; it needs
+nothing further and is the better choice while you are tracking a
+branch that changes.
 
-On **macOS or Linux**:
+**Do not** simply copy or symlink the folder into
+`~/.vscode/extensions`.  Older guides tell you to, and it silently
+does nothing on current VS Code: the editor loads only the extensions
+recorded in `~/.vscode/extensions/extensions.json`, which is written
+when an extension is *installed*, not by scanning the directory.  A
+folder you put there by hand is ignored, with no error anywhere.
+
+### Route 1 — Run it as a development extension (recommended)
+
+From inside the `hol4-vscode` directory, launch VS Code with the
+extension loaded, opening the HOL directory you want to work in:
 
 ```
-mkdir -p ~/.vscode/extensions
-ln -s "$(pwd)" ~/.vscode/extensions/hol4-mode-dev
+code --extensionDevelopmentPath="$(pwd)" /path/to/your/hol/files
 ```
 
-On **Windows**, copy the whole `hol4-vscode` folder into
-`%USERPROFILE%\.vscode\extensions\` instead.
+If `code` is not a command your shell knows — on macOS it is not there
+by default — open VS Code, then the Command Palette
+(`Cmd+Shift+P`) and run **"Shell Command: Install 'code' command in
+PATH"**.  Alternatively, open the `hol4-vscode` folder in VS Code and
+press `F5`, which does the same thing through the launch configuration
+already in the repository.
 
-Using a link rather than a copy means that when you later update the
-extension (Step 8), VS Code picks up the new version with no further
-installation.
+The extension is live in the window this opens, and only in that
+window.  After rebuilding (Step 8) you reload that window rather than
+reinstalling anything.
 
-Now **quit VS Code completely and start it again** — reloading a
-window is not enough for a newly installed extension.
+### Route 2 — Build an installable package
 
-### Alternative: try it without installing
+If you would rather have it available in every window, build a `.vsix`
+and install that.  From inside the `hol4-vscode` directory:
 
-If you would rather test before installing, open the `hol4-vscode`
-folder in VS Code and press `F5`.  That launches a second VS Code
-window with the extension active.  It is a good way to check things
-work, but the extension is only alive in that second window, and you
-have to press `F5` again every time — so do the install above for
-everyday use.
+```
+npx @vscode/vsce package
+code --install-extension hol4-mode-0.0.20.vsix
+```
+
+Adjust the version in the filename to match what `vsce` printed.  Then
+**quit VS Code completely and start it again** — reloading a window is
+not enough for a newly installed extension.
+
+Unlike the symlink this really does register the extension, so it is
+there in every window and survives restarts.  The cost is that each
+update means packaging and installing again (Step 8).
+
+To confirm either route worked, see "Check the extension is loaded" in
+Troubleshooting.
 
 ## Step 4 — Tell the extension where HOL is
 
@@ -231,8 +255,16 @@ npm install
 npm run compile
 ```
 
-Then restart VS Code.  (If you installed with a link in Step 3, there
-is nothing else to do.)
+Then, if you took Route 1 in Step 3, reload the development window
+(Command Palette → "Developer: Reload Window", or press `F5` again).
+If you took Route 2, repeat the packaging and install:
+
+```
+npx @vscode/vsce package
+code --install-extension hol4-mode-0.0.20.vsix
+```
+
+and restart VS Code.
 
 If you have updated HOL itself, you do not need to rebuild the
 extension — but you should restart the language server so it picks up
@@ -255,12 +287,36 @@ set the path explicitly in your settings JSON:
 Step 4 did not take.  Use Option B (the settings file) — it does not
 depend on how VS Code was launched.
 
-**No goals pane, no errors, no status bar entry.**
-Check the extension is loaded at all: Command Palette →
-"Developer: Show Running Extensions" should list "HOL4 mode".  If it
-does not, VS Code has not picked up your installation — confirm the
-link or copy in Step 3, and make sure you fully quit and restarted VS
-Code rather than reloading the window.
+**Check the extension is loaded.**
+Ask VS Code rather than looking at the filesystem — a folder can be
+sitting in `~/.vscode/extensions` and be entirely invisible to the
+editor.  For Route 2, run
+
+```
+code --list-extensions
+```
+
+which is authoritative: if `oskarabrahamsson.hol4-mode` is not in that
+list, the extension is not installed, whatever is on disk.  For
+Route 1, instead check the window you launched: Command Palette →
+"Developer: Show Running Extensions" lists extensions that have
+*activated*, so it shows "HOL4 mode" only once something has woken it
+up — opening a `Script.sml` or running one of the commands below.
+
+**Nothing matches when you search the Command Palette for "hol4".**
+The commands are all in the category `HOL`, so they read **"HOL: Start
+session"**, **"HOL: Toggle HOL Goals pane"** and so on.  Type `HOL`,
+not `hol4`; there is no `4` in any of the labels, so `hol4` matches
+none of them.  Note that an empty result here does not tell you
+whether the extension is installed — palette entries come from the
+extension's manifest, so they are listed even before it activates, but
+only once VS Code has actually registered it.
+
+**Opening a `Script.sml` does nothing, but the `HOL:` commands work.**
+The extension is loaded but not activating by itself.  Its
+`activationEvents` in `package.json` must name the language id it
+registers for `.sml` — check that the two agree.  Running any `HOL:`
+command from the palette activates it in the meantime.
 
 **Errors appear that `Holmake` does not report.**
 Make sure the folder you opened is the one containing your theory
