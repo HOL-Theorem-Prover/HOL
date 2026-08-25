@@ -1065,6 +1065,9 @@ Isabelle reports `Genuine` at a scope too small to contain 4, the same
 scope-arbitrary-read defect this guard exists to close.  HolRefute reports
 `Unknown` instead and does not reproduce the imported bug.
 
-Recorded follow-ups are compute-hosted residual-inspection narrowing; full
-function flattening; and higher-order and negative smart-generator modes.
-These are not part of the current implementation.
+Recorded follow-ups are compute-hosted residual-inspection narrowing, full
+function flattening, and compiling an enumerator for a higher-order
+smart-generator mode.  Negative smart-generator modes already ship (see
+`NegGuard` above).  Higher-order mode inference itself is implemented, but
+stays inert: `compile_clause` compiles no enumerator for a mode with a
+function-typed component, so it does not yet widen positive coverage.

@@ -1440,10 +1440,151 @@ val _ = require_msg (check_result smartgen_generator_order)
   (fn () => "Generator insertion did not preserve upstream variable order")
   (fn () => ()) ()
 
-fun smartgen_higher_order_degrades () =
+(* A predicate-typed parameter -- [P : num -> bool] -- is itself a curried
+   chain ending in [bool] over a first-order argument, so it gets the sole
+   mode SmartGen can ever give an opaque predicate: fully [Input], calling
+   it as a decidable test.  [zoo_sg_higher_order]'s own modes are then
+   derived exactly as a first-order relation's are, over that one
+   predicate mode times the ordinary [Input]/[Output] choice for [x]. *)
+fun smartgen_higher_order_modes_inferred () =
   let
     val relation =
       ``zoo_sg_higher_order : (num -> bool) -> num -> bool``
+    val result = sg_infer_hol_reln relation true
+    val relation_modes = valOf (sg_relation_result relation result)
+    val predicate = SG.list_mode [SG.Input]
+    val checked = SG.list_mode [predicate, SG.Input]
+    val generated = SG.list_mode [predicate, SG.Output]
+  in
+    not (List.exists (fn SG.HigherOrderParameters candidate =>
+           SG.same_constant relation candidate | _ => false)
+         (#degradation result)) andalso
+    (case (sg_mode_result checked relation_modes,
+           sg_mode_result generated relation_modes) of
+         (SOME (_, _, false), SOME (_, _, true)) => true
+       | _ => false)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_higher_order_modes_inferred)
+  (fn () =>
+    "a predicate-parameter relation's own modes were not inferred from " ^
+    "the predicate's mode")
+  (fn () => ()) ()
+
+(* [zoo_sg_listall] is recursive through its [Prem] premise
+   [zoo_sg_listall P xs], the only route into [derive_atomic]'s [Fun]
+   arm: [zoo_sg_higher_order]'s premise [P x] has a variable head and is
+   a [Sidecond], never reaching [derive_call]/[derive_atomic]. *)
+fun smartgen_listall_modes () =
+  let
+    val relation =
+      ``zoo_sg_listall : (num -> bool) -> num list -> bool``
+    val result = sg_infer_hol_reln relation true
+    val relation_modes = valOf (sg_relation_result relation result)
+    val predicate = SG.list_mode [SG.Input]
+    val all_input = SG.list_mode [predicate, SG.Input]
+    val with_output = SG.list_mode [predicate, SG.Output]
+  in
+    case (sg_mode_result all_input relation_modes,
+          sg_mode_result with_output relation_modes) of
+        (SOME (_, _, false), SOME (_, _, true)) => true
+      | _ => false
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_listall_modes)
+  (fn () =>
+    "a recursive higher-order relation's mode table was not inferred " ^
+    "through derive_atomic's Fun arm")
+  (fn () => ()) ()
+
+(* [zoo_sg_mix_fo] and [zoo_sg_mix_ho] are one joint [Inductive] group.
+   Degradation is per member, not per group: the first-order sibling
+   keeps its modes while the higher-order one -- a non-predicate
+   function parameter -- loses all of its. *)
+fun smartgen_mixed_group_degradation () =
+  let
+    val fo = ``zoo_sg_mix_fo : num -> bool``
+    val ho = ``zoo_sg_mix_ho : (num -> num) -> num -> bool``
+    val result = sg_infer_hol_reln fo true
+    val fo_modes = valOf (sg_relation_result fo result)
+    val ho_modes = valOf (sg_relation_result ho result)
+  in
+    not (null (#modes fo_modes)) andalso null (#modes ho_modes)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_mixed_group_degradation)
+  (fn () => "a mixed group's first-order member lost its modes along " ^
+    "with its higher-order sibling")
+  (fn () => ()) ()
+
+(* [mode_all_input] stays strict atomic-[Input]: a [Fun]-moded relation's
+   complement is never admitted, since [Refute_EvalEnum.sml] maps a
+   zero-clause enumerator (what a compiled [Fun] mode would be) to the
+   constant guard [T] -- a spurious [Counterexample]. *)
+fun smartgen_higher_order_negative_table_empty () =
+  let
+    val relation =
+      ``zoo_sg_higher_order : (num -> bool) -> num -> bool``
+    val result = sg_infer_hol_reln relation true
+    val negative = valOf (SG.negative_relation_modes_for relation result)
+  in
+    null (#modes negative)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_higher_order_negative_table_empty)
+  (fn () => "a higher-order relation's complement table was not empty")
+  (fn () => ()) ()
+
+(* [argument_modes] handles products before function types, so a
+   predicate nested in a pair really does carry a [Pair (Fun (...), _)]
+   mode.  [zoo_sg_pair_pred]'s head argument [fp] is a bare variable, not
+   a literal pair, so [split_argument] cannot destructure it first and
+   [split_atomic] sees the composite mode intact -- [given_mode] must
+   recurse into it rather than matching a [Fun] only at the top or
+   falling back to atomic [eq_mode] equality, either of which drops the
+   mode from the table entirely (a bare pair variable cannot be split
+   into separately-known and separately-generated halves, so the
+   Output-for-the-num-half variant never compiles either way). *)
+fun smartgen_pair_nested_predicate_modes () =
+  let
+    val relation =
+      ``zoo_sg_pair_pred : (num -> bool) # num -> bool``
+    val result = sg_infer_hol_reln relation true
+    val relation_modes = valOf (sg_relation_result relation result)
+    val predicate = SG.list_mode [SG.Input]
+    val checked = SG.list_mode [SG.Pair (predicate, SG.Input)]
+  in
+    case sg_mode_result checked relation_modes of
+        SOME (_, _, false) => true
+      | _ => false
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = require_msg (check_result smartgen_pair_nested_predicate_modes)
+  (fn () =>
+    "a predicate nested in a pair did not get a structurally given mode")
+  (fn () => ()) ()
+
+(* A non-predicate function parameter -- [f : num -> num] -- cannot be
+   called as a decidable test or inverted into a generator: SmartGen has
+   no definition to consult, only a bound variable.  Its mode table must
+   come back empty, not an optimistic guess, exactly like an ordinary
+   relation whose modes exceed [max_mode_space].  Driven through
+   [sg_infer_hol_reln] like the other zoo_sg_ fixtures, exercising
+   [infer_scc]/[joint_intro_triple_for] rather than a hand-built clause
+   that does not match a real definition. *)
+fun smartgen_higher_order_function_unavailable () =
+  let
+    val relation = ``zoo_sg_fun_param : (num -> num) -> num -> bool``
     val result = sg_infer_hol_reln relation true
     val relation_modes = valOf (sg_relation_result relation result)
   in
@@ -1455,8 +1596,10 @@ fun smartgen_higher_order_degrades () =
   handle HOL_ERR _ => false
        | Option.Option => false
 
-val _ = require_msg (check_result smartgen_higher_order_degrades)
-  (fn () => "higher-order relation parameter did not degrade")
+val _ = require_msg
+  (check_result smartgen_higher_order_function_unavailable)
+  (fn () =>
+    "a non-predicate function parameter was not recorded unavailable")
   (fn () => ()) ()
 
 fun smartgen_reordering_flag () =
@@ -1699,10 +1842,22 @@ fun smartgen_first_order_scope () =
   let
     val pair_modes = SG.argument_modes ``:num # bool``
     val current = [``zoo_sg_linear : num -> bool``]
+    (* [all_modes_for] reads only [Term.type_of], so a local variable of
+       the intended type exercises it without claiming any fixture
+       provenance. *)
+    val nonpred = Term.mk_var ("nonpred", ``:(num -> num) -> num -> bool``)
+    val pred_of_pred =
+      Term.mk_var ("pred_of_pred", ``:((num -> bool) -> bool) -> bool``)
   in
     length pair_modes = 4 andalso
-    null (SG.all_modes_for
-      ``zoo_sg_higher_order : (num -> bool) -> num -> bool``) andalso
+    (* A plain predicate parameter is in scope: it gets the fully-input
+       mode SmartGen can call as a decidable test. *)
+    length (SG.all_modes_for
+      ``zoo_sg_higher_order : (num -> bool) -> num -> bool``) = 2 andalso
+    (* A non-predicate function parameter, and a parameter that is itself
+       a predicate over predicates, both remain out of scope. *)
+    null (SG.all_modes_for nonpred) andalso
+    null (SG.all_modes_for pred_of_pred) andalso
     (case SG.classify current [] ``~zoo_sg_linear (x : num)`` of
          SG.Sidecond _ => true
        | _ => false)
@@ -19388,6 +19543,12 @@ val _ = require_msg (check_result smartgen_all_input_tie_prefers_guard)
   (fn () => "a tied all-input smart mode fell back to ordinary analysis")
   (fn () => ()) ()
 
+(* zoo_sg_higher_order's modes are inferred (see smartgen mode inference
+   above), but every one has a [Fun] component: the CPS enumerator
+   compiler admits only first-order modes, so no enumerator is ever
+   built and the plan must still fall back to plain Gen+Guard.  Higher-
+   order inference is consumed only by a later stage; this is its
+   inertness boundary. *)
 fun smartgen_mode_failure_falls_back () =
   let
     val goal =
@@ -19399,7 +19560,9 @@ fun smartgen_mode_failure_falls_back () =
   end
 
 val _ = require_msg (check_result smartgen_mode_failure_falls_back)
-  (fn () => "failed SmartGen mode analysis did not retain Gen+Guard")
+  (fn () =>
+    "an inferred but non-executable higher-order mode was compiled " ^
+    "into an Enum plan")
   (fn () => ()) ()
 
 fun enum_compiles_on_all_substrates () =
@@ -24179,11 +24342,19 @@ val _ = require_msg
   "the obsolete thread-count degradation diagnostic is still emitted")
   (fn () => ()) ()
 
+(* zoo_sg_higher_order's predicate-parameter mode is now inferred, so the
+   fallback reason is the enumerator-compile one, not the older
+   no-mode-at-all message; that older message is still live, re-pinned
+   here via zoo_sg_fun_param, whose sole parameter is a non-predicate
+   function and so gets no inferred mode at all. *)
 fun smartgen_failure_reason_and_gate_output () =
   let
     val (_, fallback) = capture_refute_messages 2 (fn () =>
       ignore (compile_plan default_config
         ``zoo_sg_higher_order (P : num -> bool) x ==> F``))
+    val (_, no_mode_fallback) = capture_refute_messages 2 (fn () =>
+      ignore (compile_plan default_config
+        ``zoo_sg_fun_param (f : num -> num) x ==> F``))
     val disabled = default_config
       |> Refute.upd_search (Refute.Only [Refute.Exhaustive])
       |> Refute.upd_smart_generators false
@@ -24191,8 +24362,11 @@ fun smartgen_failure_reason_and_gate_output () =
       capture_refute_messages 2 (fn () =>
         refute disabled smartgen_linear_goal)
   in
-    String.isSubstring "no executable first-order positive mode" fallback
+    String.isSubstring
+      "CPS enumerator compilation failed for inferred mode" fallback
       andalso
+    String.isSubstring
+      "no executable first-order positive mode" no_mode_fallback andalso
     reason_contains "not executable: zoo_sg_linear" disabled_result andalso
     String.isSubstring "QC backends excluded: not executable" disabled_output
   end

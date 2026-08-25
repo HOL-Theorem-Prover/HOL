@@ -621,6 +621,42 @@ Inductive zoo_sg_higher_order:
   !P x. P x ==> zoo_sg_higher_order P x
 End
 
+(* Recursive higher-order relation: the second clause's premise
+   [zoo_sg_listall P xs] is a [Prem] carrying the predicate argument, so
+   it reaches [derive_atomic]'s [Fun] branch via [derive_call] -- unlike
+   [zoo_sg_higher_order]'s variable-headed premise, which is a
+   [Sidecond]. *)
+Inductive zoo_sg_listall:
+  (!P. zoo_sg_listall P []) /\
+  (!P x xs. P x /\ zoo_sg_listall P xs ==>
+            zoo_sg_listall P (x::xs))
+End
+
+(* A mixed group: [zoo_sg_mix_fo] is first-order, [zoo_sg_mix_ho] takes a
+   non-predicate function parameter and so gets no modes at all.  Joint
+   inference must degrade [zoo_sg_mix_ho] alone, not the whole group. *)
+Inductive zoo_sg_mix:
+  zoo_sg_mix_fo (0 : num) /\
+  (!n. zoo_sg_mix_fo n ==> zoo_sg_mix_fo (SUC n)) /\
+  (!f n. zoo_sg_mix_fo n /\ (f n = n) ==> zoo_sg_mix_ho (f : num -> num) n)
+End
+
+(* Replaces a selftest-local [TotalDefn.Define]: a fixture with fixture
+   provenance, driven through the same [Hol_reln]/SCC route as the
+   others. *)
+Inductive zoo_sg_fun_param:
+  !f x. (f x = x) ==> zoo_sg_fun_param (f : num -> num) x
+End
+
+(* [argument_modes] handles products before function types, so this
+   argument's mode really is [Pair (Fun (Input, Bool), _)] -- a predicate
+   nested in a pair.  The head argument [fp] must be a bare variable, not
+   a literal pair: a literal pair is destructured by [split_argument]'s
+   own [dest_pair] before [split_atomic] ever sees the composite mode. *)
+Inductive zoo_sg_pair_pred:
+  !fp : (num -> bool) # num. FST fp (SND fp) ==> zoo_sg_pair_pred fp
+End
+
 Inductive zoo_sg_string:
   zoo_sg_string [] /\
   (!c s. zoo_sg_string s ==> zoo_sg_string (c::s))

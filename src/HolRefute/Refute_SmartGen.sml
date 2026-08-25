@@ -498,6 +498,21 @@ structure Refute_SmartGen = struct
     | eq_mode (Bool, Bool) = true
     | eq_mode _ = false
 
+  (* [argument_modes] returns [mode] or [] for a function type -- never
+     [Input, Output] -- so SmartGen never inverts a predicate value: no
+     function-typed position ever carries [Output].
+     A mode is "given" iff it contains no [Output] anywhere: an atomic
+     [Input] or [Bool], or a [Fun]/[Pair] whose components are all given.
+     [Fun] can nest inside [Pair] -- e.g. the mode of [(num -> bool) # num]
+     is [Pair (Fun (Input, Bool), Input)] -- so both recurse together
+     rather than treating [Fun] as flat or as automatically given. *)
+  fun given_mode Bool = true
+    | given_mode (Fun (domain, range)) =
+        given_mode domain andalso given_mode range
+    | given_mode (Pair (left, right)) =
+        given_mode left andalso given_mode right
+    | given_mode mode = eq_mode (mode, Input)
+
   fun list_mode [] = Bool
     | list_mode (mode :: modes) = Fun (mode, list_mode modes)
 
@@ -545,6 +560,23 @@ structure Refute_SmartGen = struct
                  List.exists contains_function_type arguments
              | NONE => false)
 
+  (* A predicate-typed argument -- a curried chain ending in [bool], none
+     of whose own argument types contains a function type -- gets the
+     single mode that treats it as an opaque decidable test: every one of
+     its arguments is [Input].  SmartGen cannot invert it (there is no
+     definition to consult, only a bound variable), so no [Output] variant
+     is ever offered for it.  A wider function type (non-[bool] range, or
+     one that itself takes a predicate) has no safe mode at all: it can be
+     neither tested nor inverted, so it gets none. *)
+  fun predicate_mode_of ty =
+    let val (arguments, range) = boolSyntax.strip_fun ty
+    in
+      if range = Type.bool andalso not (null arguments) andalso
+         not (List.exists contains_function_type arguments)
+      then SOME (list_mode (map (fn _ => Input) arguments))
+      else NONE
+    end
+
   val max_mode_space = 256
 
   fun argument_mode_count ty =
@@ -557,7 +589,16 @@ structure Refute_SmartGen = struct
               max_mode_space + 1
             else left_count * right_count
           end
-      | NONE => 2
+      | NONE =>
+          if contains_function_type ty then
+            (* [argument_modes] already returns [] here, so the product
+               is [] regardless; this agrees with it belt-and-braces --
+               keep it [max_mode_space + 1], not [0], which would raise
+               [Div] at [max_mode_space div right_count] above,
+               uncaught by the [Feedback.HOL_ERR] handler. *)
+            case predicate_mode_of ty of SOME _ => 1
+                                        | NONE => max_mode_space + 1
+          else 2
 
   fun argument_modes ty =
     case Lib.total pairSyntax.dest_prod ty of
@@ -565,14 +606,17 @@ structure Refute_SmartGen = struct
           List.concat (map (fn left_mode =>
             map (fn right_mode => Pair (left_mode, right_mode))
               (argument_modes right)) (argument_modes left))
-      | NONE => [Input, Output]
+      | NONE =>
+          if contains_function_type ty then
+            case predicate_mode_of ty of SOME mode => [mode]
+                                        | NONE => []
+          else [Input, Output]
 
   fun all_modes_for relation =
     let
       val (domains, range) = boolSyntax.strip_fun (Term.type_of relation)
     in
       if range = Type.bool andalso
-         not (List.exists contains_function_type domains) andalso
          List.foldl (fn (domain, count) =>
            let val modes = argument_mode_count domain
            in
@@ -695,6 +739,8 @@ structure Refute_SmartGen = struct
   and derive_atomic known term mode =
     if eq_mode (mode, Input) then
       [(Term_Mode Input, missing_vars known term)]
+    else if given_mode mode then
+      [(Term_Mode mode, missing_vars known term)]
     else if eq_mode (mode, Output) andalso possible_output known term then
       [(Term_Mode Output, [])]
     else
@@ -854,7 +900,7 @@ structure Refute_SmartGen = struct
         | split_argument argument_mode term =
             split_atomic argument_mode term
       and split_atomic argument_mode term =
-        if eq_mode (argument_mode, Input) then (SOME term, NONE)
+        if given_mode argument_mode then (SOME term, NONE)
         else if eq_mode (argument_mode, Output) then (NONE, SOME term)
         else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
           "split_arguments" "argument mode does not match term"
@@ -957,7 +1003,9 @@ structure Refute_SmartGen = struct
       (clauses_for relation clauses)
 
   (* [strip_mode] is partial; a mode it cannot strip is simply not
-     admitted. *)
+     admitted.  Must use strict atomic-[Input] equality, not [given_mode]:
+     this feeds the [NegGuard] complement, and a [Fun] component being
+     "given" is not a claim that its failure is decidable. *)
   fun mode_all_input mode =
     List.all (fn component => eq_mode (component, Input)) (strip_mode mode)
     handle Feedback.HOL_ERR _ => false
@@ -1037,9 +1085,11 @@ structure Refute_SmartGen = struct
       fun fixpoint table =
         let val next = iteration table
         in if same_mode_table table next then next else fixpoint next end
-      val stable =
-        if null higher_order then fixpoint start
-        else map (fn relation => (relation, [])) members
+      (* A member whose seed is [[]] -- [higher_order], a genuinely
+         unsupported function parameter, or a mode space over
+         [max_mode_space] -- stays [[]] through the fixpoint, since
+         [check_relation] trivially returns [] for it every iteration. *)
+      val stable = fixpoint start
       fun materialize (relation, modes) : relation_modes =
         {relation = relation, modes = modes}
       fun materialize_negative (relation, modes)
@@ -1182,12 +1232,18 @@ structure Refute_SmartGen = struct
     end
     handle Feedback.HOL_ERR _ => NONE
 
+  (* [compile_clause]'s [first_order_mode] check means no enumerator is
+     ever compiled for a mode with a [Fun] component: higher-order mode
+     inference feeds no compiled enumerator today, so it is inert. *)
   fun compile_relation version
         ({relation, modes} : relation_modes) =
     List.mapPartial (fn (mode, clauses, _) =>
       let val compiled = map (compile_clause mode) clauses
       in
-        if length compiled = length clauses then
+        (* A dropped clause under-approximates the relation, and a
+           zero-clause enumerator makes [negation_condition]
+           unconditionally true. *)
+        if List.all Option.isSome compiled then
           SOME ({relation = relation, mode = mode, version = version,
                  clauses = List.mapPartial (fn value => value) compiled}
                 : enumerator)
