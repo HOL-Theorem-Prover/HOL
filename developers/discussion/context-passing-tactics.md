@@ -1531,6 +1531,52 @@ Nothing in `server.ML` calls the pool yet.  In order:
 5. act on `Diverged` by re-elaborating downstream, and report the five
    states to the client.
 
+#### A broken proof body must not break the rest of the file
+
+Someone editing a proof will routinely leave the tactic in a state that
+does not parse or type-check.  The statement is usually still fine, so
+every later declaration should carry on consuming the cheated theorem.
+**That is not what happens today.**  `HOLSourceExpand` emits a
+Theorem-QED block as a *single* declaration --- verified with
+`bin/unquote`:
+
+    val foo = Q.store_thm_at DB_dtype.Unknown
+                ("foo", [QUOTE " ... 1 + 1 = 2\n"],
+                 fn g => this_is_not_a_tactic ??? garbage g)
+                (Context.snapshot ());
+    val consumer = CONJ foo foo;
+
+`wrapTac`'s `fn g => ...` defers *evaluation* of the tactic, but it must
+still *compile*.  So a broken proof body fails the whole `val foo`, `foo`
+never binds, and every consumer below fails too.
+
+**Decided: substitute `cheat`, in the LSP only.**  On a declaration whose
+compile fails, retry with the `Proof ... QED` body replaced by `cheat`
+(`bossLib.cheat : tactic`, so it type-checks with no arguments).  If that
+compiles, `foo` binds and the file below is happy; the original error
+becomes a diagnostic in the tactic's span.
+
+Three reasons this is the cheap way in:
+
+- it is a *textual* substitution over a span the LSP already computes
+  (`findEnclosingTheorem` gives the tactic's start and stop), and the LSP
+  compiles from buffer text anyway;
+- the shared expander is untouched, so ordinary Holmake builds keep
+  running proofs atomically through `store_thm_at`, which is what they
+  should do;
+- the substituted tactic is never *run*.  Under the LSP the prover hook
+  already returns an oracle theorem without executing the tactic, so
+  `cheat` only has to compile.  It costs one extra compile attempt, on
+  error only, which is nothing beside a proof.
+
+This is interactive-only by design: a batch build should fail loudly on a
+proof it cannot compile.
+
+Note such a declaration is not in the `Cheated` state as defined above ---
+that requires the tactic to type-check.  It has no pool entry and no
+status, because there is no tactic value to enqueue; the diagnostic is
+the report.
+
 Also still open, and the thing to do before more pool features: the
 skip-cache discussed above needs a context fingerprint or per-proof
 dependency tracking, neither of which exists.
