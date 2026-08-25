@@ -1008,9 +1008,9 @@ fun global_simp_tac cfg ss0 =
 
 
 fun track f x =
- let val _ = (used_rewrites := [])
+ let val _ = set_used_rewrites []
      val res = Lib.with_flag(track_rewrites,true) f x
- in used_rewrites := rev (!used_rewrites)
+ in set_used_rewrites (rev (used_rewrites()))
   ; res
  end;
 

@@ -98,8 +98,20 @@ val dump_setup_hook : (goal -> unit) ref = ref (fn _ => ())
    basic_prover (which only receives a goal, not a name) can construct
    a sensible dump-file name on the --noqof failure path.  Cleared again
    after the prove call so that user code invoking Tactical.prove
-   directly doesn't inherit a stale name. *)
-val current_thm_name : string ref = ref ""
+   directly doesn't inherit a stale name.
+
+   Per-thread: it is set immediately before a proof and cleared after,
+   so two proofs running concurrently would clobber each other's name
+   with certainty rather than by luck.  A thread that has not set one
+   reads "", which is what the shared cell held before its first
+   write. *)
+local
+  val slot : string ThreadLocal.t = ThreadLocal.new ()
+in
+  fun current_thm_name () =
+      case ThreadLocal.get slot of NONE => "" | SOME s => s
+  fun set_current_thm_name s = ThreadLocal.set (slot, s)
+end
 
 (* Counter used by dump_failure_state when no theorem name is in
    scope (e.g. raw Tactical.prove invocations outside store_thm_at):
@@ -255,7 +267,7 @@ in
 fun store_thm_at loc (n0,t,tac) ctxt =
   let val attrblock = ThmAttribute.extract_attributes n0
       val name = #thmname attrblock
-      val _ = current_thm_name := name
+      val _ = set_current_thm_name name
       val th = Tactical.prove_in ctxt (t,tac)
                handle HOL_ERR herr =>
                if !Globals.dumpheap_on_failure andalso
@@ -274,7 +286,7 @@ fun store_thm_at loc (n0,t,tac) ctxt =
                      val err = HOL_ERR (set_message err_mesg herr)
                  in render_exn
                       (wrap_exn "boolLib" "store_thm_at" err) end
-      val _ = current_thm_name := ""
+      val _ = set_current_thm_name ""
   in
     save_thm_attrs loc (attrblock,th)
     handle e => render_exn

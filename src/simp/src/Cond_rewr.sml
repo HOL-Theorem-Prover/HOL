@@ -11,7 +11,18 @@ fun ERR x      = STRUCT_ERR "Cond_rewr" x;
 val stack_limit = ref 4;
 
 val track_rewrites = ref false;
-val used_rewrites  = ref [] : thm list ref;
+(* Per-thread: this is appended to *during* rewriting, so two proofs
+   tracking at once would interleave their rewrite lists.  A thread that
+   has recorded nothing reads [], as the shared cell did before its
+   first write. *)
+local
+  val slot : thm list ThreadLocal.t = ThreadLocal.new ()
+in
+  fun used_rewrites () =
+      case ThreadLocal.get slot of NONE => [] | SOME l => l
+  fun set_used_rewrites l = ThreadLocal.set (slot, l)
+  fun add_used_rewrite th = set_used_rewrites (th :: used_rewrites ())
+end
 
 (* -----------------------------------------------------------------------*
  * A total ordering on terms.  The behaviour of the simplifier depends    *
@@ -185,7 +196,7 @@ fun ac_term_ord(tm1,tm2) =
               trace(if isperm then 2 else 1, REWRITING(nm,tm,th))
                     else ()
             val _ = if null stack andalso !track_rewrites
-                      then used_rewrites := th :: !used_rewrites
+                      then add_used_rewrite th
                       else ()
         in trace(if isperm then 3 else 2,PRODUCE(tm,nm,final_thm));
             final_thm

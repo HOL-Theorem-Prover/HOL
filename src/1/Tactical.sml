@@ -48,9 +48,17 @@ fun check_current_thy ctxt (_, t) =
           end
 
 local
-   val unsolved_list = ref ([]: goal list)
+   (* Per-thread: TAC_PROOF writes this on every proof, so two proofs
+      running concurrently would otherwise report each other's unsolved
+      subgoals.  DefnBase's checkLog is the model.  On a thread that has
+      never proved anything, `get` is NONE, which reads as "no unsolved
+      goals recorded" -- the same answer the shared cell gave before its
+      first write. *)
+   val unsolved_list : goal list ThreadLocal.t = ThreadLocal.new ()
+   fun set_unsolved l = ThreadLocal.set (unsolved_list, l)
 in
-   fun unsolved () = !unsolved_list
+   fun unsolved () =
+       case ThreadLocal.get unsolved_list of NONE => [] | SOME l => l
    (* Context.in_proof marks the dynamic extent of a parameterised proof:
       anything reached from here that reads the ambient context had this
       one in scope and dropped it. *)
@@ -61,13 +69,14 @@ in
              (let
                  val thm = Context.in_proof p []
                  val c = concl thm
-                 val () = unsolved_list := []
+                 val () = set_unsolved []
               in
                  if identical c (snd g) then thm
                  else EQ_MP (ALPHA c (snd g)) thm
               end
               handle e => raise ERR "TAC_PROOF" "Can't alpha convert")
-       | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals"))
+       | (l, _) => (set_unsolved l;
+                    raise ERR "TAC_PROOF" "unsolved goals"))
 end
 
 fun TAC_PROOF gtac = TAC_PROOF_in (Context.snapshot()) gtac

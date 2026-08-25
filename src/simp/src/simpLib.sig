@@ -235,7 +235,8 @@ sig
    (* Accumulating the rewrite rules that are actually used.               *)
    (* ---------------------------------------------------------------------*)
 
-   val used_rewrites : thm list ref
+   val used_rewrites : unit -> thm list
+   val set_used_rewrites : thm list -> unit
    val track_rewrites : bool ref
 
    val track : ('a -> 'b) -> 'a -> 'b
