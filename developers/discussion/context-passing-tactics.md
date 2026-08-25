@@ -1357,7 +1357,36 @@ it *smaller* --- the Context stops being restored globally --- but does
 not remove it, and the walker can only move to its own thread once those
 two channels are either thread-safe or shown to be irrelevant to it.
 That question should be answered before the worker pool is built, since
-the pool has the same dependency.
+the pool has the same dependency.  Answering it, since it is cheap:
+
+**Both channels are refs holding immutable values**, so capturing them
+is not the problem --- being process-global is.
+
+- `Meta.snapshotLoaded` (`tools-poly/poly/poly-init2.ML:188`) is
+  `let val s = !loadedMods in fn () => loadedMods := s end` --- one
+  `Binaryset ref`.  It exists to keep `loadedMods` in step with the
+  context: on `Context.restore` an ancestor theory's data leaves the
+  graph, so its entry must leave `loadedMods` too or a later `load`
+  treats it as present and skips repopulating.  A worker needs this only
+  if it can trigger a `load`.  If the walker cannot, it need not restore
+  this at all --- worth confirming rather than assuming.
+- `LSPNameSpace.snapshotLayer` (`tools-poly/lsp/lsp_namespace.ML`) is six
+  per-kind `Binarymap ref`s.  This one the walker *does* need:
+  `TacticWalker` compiles leaf tactic text (hence its `compileCache`), and
+  the file layer is what those identifiers resolve against.
+
+So the blocking channel is the namespace layer, and the useful news is
+that **it is already interposed** --- a layer over `PolyML.globalNameSpace`
+rather than the global itself, which is exactly the structure that makes
+a per-thread version possible.  Six refs to `ThreadLocal`, with a fresh
+thread inheriting the layer it was spawned from.  That is a real piece of
+work but a contained one, and it is the prerequisite for both the walker
+moving off the main thread and the Phase B worker pool.
+
+Do it before the pool, not alongside it: a pool whose workers share one
+namespace layer will produce compile results that depend on which worker
+ran last, and that failure looks like a flaky tactic rather than a
+threading bug.
 
 The other conversion:
 
