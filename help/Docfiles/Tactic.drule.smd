@@ -37,7 +37,8 @@ The `DIV_LESS` theorem states:
 Then:
 
 ``` hol4
-   > drule arithmeticTheory.DIV_LESS ([“1 < x”, “0 < y”], “P:bool”);
+   > drule arithmeticTheory.DIV_LESS ([“1 < x”, “0 < y”], “P:bool”)
+           (Context.snapshot());
    val it =
       ([([“1 < x”, “0 < y”], “(!d. 1 < d ==> y DIV d < y) ==> P”)], fn):
       goal list * validation

@@ -66,7 +66,7 @@ That was the state this plan was written against.  Phase 0 and most of
 Phase 1 have since landed and the core build is green; see **Status**
 below for what that took and where the tree disagreed with the plan.
 
-## Status: Phases 0, 1, 2 and 3a have landed
+## Status: Phases 0-3 and 5 have landed; Phase 4 is part-done
 
 The full build passes with selftests, so the baseline the phases assume is
 real and then some.  Getting there took all of Phase 0 and all of Phase 1,
@@ -1492,6 +1492,27 @@ editing:
   kept current as the phases land, in the style of its sibling memo.
 
 Leave `Manual/Translations/IT/` alone.
+
+**Done.**  `Manual/Description/tactics.smd` now gives the type as
+`goal -> Context.t -> goal list * validation` and says why the goal
+comes first --- `tac g` builds a closure, so anything wrapping it alone
+closes before the tactic works, which is the bug class this migration
+had.
+
+The Docfiles needed more than the two the estimate named: **21
+transcripts across 10 files** apply a tactic to a goal and print the
+result, and every one of them now prints
+`fn: Context.t -> goal list * validation` instead of the goal list.
+They take `(Context.snapshot())`.  Only the `.smd` are sources --- the
+`.txt` beside them are gitignored build products.
+
+Spot-checked by running them: `Tactic.drule`, `bossLib.CONG_TAC`,
+`Tactic.SELECT_ELIM_TAC`, `bossLib.SIMP_TAC`, `pureSimps.pure_ss`,
+`Q.ABBREV_TAC` and `Rewrite.PURE_REWRITE_TAC` all reproduce.
+`Thm_cont.PROVEHYP_THEN`'s example does not run verbatim, but did not
+before either --- its `“p”` parses at type `α` outside a goalstack, so
+`FIRST_ASSUM` never matched.  Its arity is corrected; its semantics are
+left alone.
 
 Style, enforced by `tools/h4pedant` in the regression suite: no tabs,
 no trailing whitespace, strongly prefer < 80 columns.

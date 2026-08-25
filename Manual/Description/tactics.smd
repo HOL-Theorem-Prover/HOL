@@ -119,9 +119,28 @@ Conceptually, the following abbreviations are made in HOL:
 \index{tactics!ML type of@ML type of}
 ```
    goal       = term list * term
-   tactic     = goal -> goal list * validation
+   tactic     = goal -> Context.t -> goal list * validation
    validation = thm list -> thm
 ```
+
+A tactic takes a goal and then a *context*: the prover state the proof
+is to run against --- the kernel signatures, the parser's grammars, the
+stateful simpset, the `TypeBase`, and so on.  A `Context.t` is an
+immutable value, so a tactic reads the state it was handed rather than
+whatever happens to be current when it runs, and two proofs against two
+contexts cannot disturb one another.
+
+Because the goal is supplied first, `tac g` does not run the tactic: it
+yields a function awaiting the context.  This matters when writing
+tactics, since anything that wraps `tac g` alone --- a handler, a
+`Lib.total`, a search over candidates, an effect window such as
+`trace` --- closes before the tactic has done any work.  Supply both:
+`tac g ctxt`, or `Lib.C tac ctxt` where a plain `goal -> ...` function
+is wanted.
+
+Interactively, `Context.snapshot()` reads the current state, so
+`tac g (Context.snapshot())` is the direct-application form; the
+goalstack and `prove` supply a context for you.
 
 It does not follow, of course, from the type `tactic` that a particular tactic is well-behaved.
 For example, suppose that $T\ g$ ` = ([`$g_1$`,`$\dots$`,`$g_n$`],`$v$`)`, and that the subgoals $g_1$, $\dots$, $g_n$ have been solved.

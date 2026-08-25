@@ -26,7 +26,8 @@ fails similarly to `Q.REFINE_EXISTS_TAC`.
 
 ``` hol4
   - Q.LIST_REFINE_EXISTS_TAC [`_`,`SUC c`,`_`,`n + m`]
-      ([``n = 2``,``c = 5``], ``∃a b c d. a + b = c + d``);
+      ([``n = 2``,``c = 5``], ``∃a b c d. a + b = c + d``)
+      (Context.snapshot());
   > val it =
        ([([``n = 2``, ``c = 5``], ``∃a c' m. a + SUC c = c' + (n + m)``)], fn)
        : goal list * validation

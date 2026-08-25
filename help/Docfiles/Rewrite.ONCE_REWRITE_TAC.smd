@@ -37,7 +37,8 @@ the tactic `ONCE_REWRITE_TAC thl` can be iterated as required without
 diverging:
 
 ``` hol4
-   - ONCE_REWRITE_TAC thl ([], Term `P (a:'a) :bool`);
+   - ONCE_REWRITE_TAC thl ([], Term `P (a:'a) :bool`)
+       (Context.snapshot());
    > val it = ([([], `P b`)], fn)
       : (term list * term) list * (thm list -> thm)
 
@@ -50,7 +51,8 @@ diverging:
 
 
 
-   - (NTAC 3 (ONCE_REWRITE_TAC thl)) ([], Term `P a`);
+   - (NTAC 3 (ONCE_REWRITE_TAC thl)) ([], Term `P a`)
+       (Context.snapshot());
    > val it = ([([], `P a`)], fn)
       : (term list * term) list * (thm list -> thm)
 ```

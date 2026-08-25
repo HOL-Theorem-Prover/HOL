@@ -37,11 +37,11 @@ It might be necessary, say for subsequent application of an induction
 hypothesis, to resist reducing a term `b = T` to `b`.
 
 ``` hol4
-  - PURE_REWRITE_TAC [] ([], Term `b = T`);
+  - PURE_REWRITE_TAC [] ([], Term `b = T`) (Context.snapshot());
   > val it = ([([], `b = T`)], fn)
      : (term list * term) list * (thm list -> thm)
 
-  - REWRITE_TAC [] ([], Term `b = T`);
+  - REWRITE_TAC [] ([], Term `b = T`) (Context.snapshot());
   > val it = ([([], `b`)], fn)
      : (term list * term) list * (thm list -> thm)
 ```

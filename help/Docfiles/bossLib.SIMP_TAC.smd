@@ -58,7 +58,8 @@ simpset. Here it is used in conjunction with the arithmetic theorem
 `GREATER_DEF`, `|- !m n. m > n = n < m`, to advance a goal:
 
 ``` hol4
-   - SIMP_TAC bool_ss [GREATER_DEF]  ([], Term`T /\ 5 > 4 \/ F`);
+   - SIMP_TAC bool_ss [GREATER_DEF]  ([], Term`T /\ 5 > 4 \/ F`)
+       (Context.snapshot());
    > val it = ([([], `4 < 5`)], fn) : subgoals
 ```
 

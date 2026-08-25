@@ -45,6 +45,7 @@ Here `FULL_SIMP_TAC` is used to prove a goal:
 ``` hol4
    > FULL_SIMP_TAC arith_ss [] (map Term [`x = 3`, `x < 2`],
                               Term `?y. x * y = 51`)
+       (Context.snapshot())
    - val it = ([], fn) : tactic_result
 ```
 

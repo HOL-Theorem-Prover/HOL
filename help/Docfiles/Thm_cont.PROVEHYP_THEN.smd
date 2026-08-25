@@ -33,6 +33,7 @@ Fails if the theorem argument is not an implication or negation.
 
 ``` hol4
    > FIRST_X_ASSUM (PROVEHYP_THEN (K MP_TAC)) ([“p”, “p ==> q”], “r”)
+       (Context.snapshot());
    val it = ([([“p”], “p”), ([“p”], “q ==> r”)], fn):
             goal list * validation
 ```

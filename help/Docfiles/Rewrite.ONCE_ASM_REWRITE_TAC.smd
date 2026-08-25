@@ -29,7 +29,8 @@ performed is illustrated below:
 
 ``` hol4
    - ONCE_ASM_REWRITE_TAC []
-       ([Term` (a:'a) = b`, Term `(b:'a) = c`], Term `P (a:'a): bool`);
+       ([Term` (a:'a) = b`, Term `(b:'a) = c`], Term `P (a:'a): bool`)
+       (Context.snapshot());
 
    > val it = ([([`a = b`, `b = c`], `P b`)], fn)
       : (term list * term) list * (thm list -> thm)
