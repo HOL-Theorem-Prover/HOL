@@ -66,7 +66,7 @@ That was the state this plan was written against.  Phase 0 and most of
 Phase 1 have since landed and the core build is green; see **Status**
 below for what that took and where the tree disagreed with the plan.
 
-## Status: Phases 0, 1 and 2 have landed
+## Status: Phases 0, 1, 2 and 3a have landed
 
 The full build passes with selftests, so the baseline the phases assume is
 real and then some.  Getting there took all of Phase 0 and all of Phase 1,
@@ -833,6 +833,107 @@ single-threaded build; the point is not to build more of it.
 invocation, so dropping the memoisation to get a context-explicit read
 would pay `addfrags` on every call.  The suspension-in-a-slot is what
 keeps both properties: pure read, computed at most once per context.
+
+### What 3a landed, and what it left
+
+The seam went in as written.  `AncestryData` gained
+`update_global_value_of : ('value -> 'value) -> Context.t -> Context.t`,
+so ancestry-backed state can be adjusted *in* a context rather than
+around a call; `srw_ss_of` reads a context without writing one; and
+`bossLib`'s `stateful` --- still the single line behind `simp`, `dsimp`,
+`csimp`, `rw`, `fs`, `rfs`, the `l`-prefixed aliases and the `g`-family
+--- resolves its simpset from the context the tactic is run in, as do
+`SRW_TAC` and `fsrw_tac`.
+
+The `stale_flags` registry became a registry of *installers* and the
+derived value became an unforced `Susp` in its slot, as planned, with
+two adjustments worth recording:
+
+**The slot holds an option, and `NONE` is not a stale value.**  A slot's
+`empty` is what a context that predates the slot reads, and there is no
+way to ask whether a slot was ever written.  With a suspension as
+`empty`, that context would derive from whatever state the suspension
+was built over --- `state0`, say --- rather than from its own simpset,
+which is wrong for any context snapshotted before the derived value
+existed.  `'a Susp.susp option` with `empty = NONE` makes the question
+askable: `NONE` means *no memo for this context*, and the answer is
+derived from the context's own simpset, unmemoised.  Correct everywhere;
+the unmemoised path is reachable only during the boot that creates the
+slot.
+
+**Installers are correctness-critical, exactly as `notify()` was.**  A
+missed installation site does not merely lose memoisation --- it leaves a
+suspension over a superseded state.  The installer set is therefore the
+old `notify()` set, one for one, and comes in two forms because the
+simpset is adjusted from two kinds of place: `put`, a pure transform for
+top-level adjustments, and `write`, for the paths reached from inside
+AncestryData's own callbacks (`apply_to_global`, `finaliser`), which
+already hold the global slot's lock and must not open a nested
+`Context.update`.  Both are handed the new state rather than reading it
+back, so neither depends on when it runs relative to the adjustment.
+
+**`srw_ss ()` now installs when it initialises.**  It used to call
+`update_global_value init_state` bare.  Under suspensions that is a
+trap: the global state becomes initialised while every derived value
+stays suspended over the uninitialised one, so each repeats the fold ---
+and reaches `tyinfol()` --- every time it is forced.  It now
+initialises through `updnote_global_value`, and only when the state is
+not already initialised.
+
+#### `exclude_simps` keeps its window, for now
+
+The plan had `Proof[exclude_simps=…]` stop being a global clobber
+outright.  It does not, yet.  `with_simpset_updates_tac` now transforms
+the context *and* keeps the ambient window, because a tactic that names
+`srw_ss()` itself --- `SIMP_TAC (srw_ss()) ths`, of which the tree has
+many --- still reads the ambient simpset, and dropping the window would
+silently stop honouring the attribute for all of them.  A silent change
+of that shape is worse than a retained clobber.  `exclSimpsScript` now
+tests both paths (`foo` ambient, `foo_ctxt` context-carried) rather than
+only the one that happened to be there.  The window goes when the census
+has retired the ambient readers.
+
+#### Measured: the stateful family is down to `tyinfol()`
+
+Probing at trace level 3, in a fresh process, with `srw_ss()` forced
+before the tripwire is armed so that what it reports is the tactic and
+not the one-off initialisation:
+
+| tactic                        | before 3a | after 3a  |
+|-------------------------------|-----------|-----------|
+| `simp []`                     | ambient   | **clean** |
+| `fs []`, `gvs []`             | ambient   | **clean** |
+| `asm_simp_tac (srw_ss()) []`  | ---       | clean     |
+| `ASM_REWRITE_TAC []`          | ambient   | clean     |
+| `rw []`                       | ambient   | ambient   |
+| `srw_tac [] []`, `SRW_TAC [] []` | ambient | ambient   |
+| `EVAL_TAC`                    | ambient   | ambient   |
+
+Every read left in this family is `tyinfol()`, from two sites and no
+others: `init_state`, reached lazily when a derived value's suspension is
+first forced, and `PRIM_STP_TAC`'s `mkCSET ()` (`:1006`), which is why
+the `PRIM_SRW_TAC` family (`rw`, `srw_tac`, `SRW_TAC`) is still on the
+list while `simp` is not.  `STP_TAC` (`:1096`) calls `tyinfol()` outright
+as well.  So the simpset is done and **TypeBase is the whole of what
+remains here** --- which argues for taking 3c before 3b.  `EVAL_TAC` is
+unrelated: that is `the_compset()`, and it is 3b as written.
+
+Two traps in measuring this, both of which produced wrong readings first:
+
+- **Probes in one process contaminate each other.**  An earlier tactic
+  initialises the state a later one would have read, so the later one
+  reads clean.  `fs []` measured clean purely because `simp []` ran
+  before it.
+- **At level 3 the report is an exception, so it aborts the force.**  A
+  suspension whose forcing trips the tripwire is never memoised, so the
+  *same* read reports again on every subsequent proof.  Repeated reports
+  are not evidence of repeated read sites.
+
+The core-build census is not comparable across this phase as it stands:
+`.hol/logs` accumulates logs from earlier builds, and an incremental
+build rewrites only what it rebuilt, so a walk of the tree mixes
+generations.  Filter by mtime against the build, or clear the logs
+first.
 
 
 #### 3b. Pure plumbing (state already an explicit parameter below)

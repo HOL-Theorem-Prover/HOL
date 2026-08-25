@@ -239,7 +239,9 @@ type ('delta,'value) fullresult =
        set_parents : string list -> 'value option,
        get_global_value : unit -> 'value,
        get_global_value_of : Context.t -> 'value,
-       update_global_value : ('value -> 'value) -> unit }
+       update_global_value : ('value -> 'value) -> unit,
+       update_global_value_of : ('value -> 'value) -> Context.t ->
+                                Context.t }
 
 fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta} =
     let
@@ -257,6 +259,7 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
       fun get_global_value_of ctxt = Context.Data.get global_slot ctxt
       fun get_global_value () = get_global_value_of (Context.snapshot())
       val update_global_value = Context.Data.modify global_slot
+      val update_global_value_of = Context.Data.update global_slot
 
       (* table of values per theory *)
       val value_table : 'value Symtab.table Context.Data.slot =
@@ -340,7 +343,8 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo, uptodate_delta}
        set_parents = set_ancestry,
        get_global_value = get_global_value,
        get_global_value_of = get_global_value_of,
-       update_global_value = update_global_value}
+       update_global_value = update_global_value,
+       update_global_value_of = update_global_value_of}
     end
 
 fun with_temp_value (fr:('delta,'value)fullresult) v =

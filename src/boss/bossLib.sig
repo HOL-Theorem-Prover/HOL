@@ -85,7 +85,9 @@ sig
   val old_arith_ss    : simpset
   val list_ss         : simpset
   val srw_ss          : unit -> simpset
+  val srw_ss_of       : Context.t -> simpset
   val boss_ss         : unit -> simpset (* srw_ss() + LET_ss + ARITH_ss *)
+  val boss_ss_of      : Context.t -> simpset
 
   val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
   val old_ARITH_ss    : ssfrag

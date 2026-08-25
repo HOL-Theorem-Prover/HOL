@@ -74,6 +74,7 @@ val rw_tac          = BasicProvers.RW_TAC
 val srw_tac         = BasicProvers.SRW_TAC
 val srw_tac         = BasicProvers.srw_tac
 val srw_ss          = BasicProvers.srw_ss
+val srw_ss_of       = BasicProvers.srw_ss_of
 val augment_srw_ss  = BasicProvers.augment_srw_ss
 val diminish_srw_ss = BasicProvers.diminish_srw_ss
 val export_rewrites = BasicProvers.export_rewrites
@@ -381,20 +382,23 @@ fun fraglistify f base_ss fragl thms : tactic = f (addfrags fragl base_ss) thms
 
 val let_arith_frags = [boolSimps.LET_ss, ARITH_ss]
 fun boss_augment ss old = addfrags let_arith_frags ss
-val {get = boss_ss, set = set_boss_ss} =
+val {get = boss_ss, get_of = boss_ss_of, set = set_boss_ss} =
     Feedback.quiet_messages
       (BasicProvers.make_simpset_derived_value "bossLib.boss_ss" boss_augment)
       bool_ss
 
+(* the single funnel for simp, rw, fs and the rest: they resolve their
+   simpset from the context the tactic is run in *)
 fun stateful f ssfl thms : tactic =
-    fn g => fraglistify f (boss_ss()) ssfl thms g
+    fn g => fn ctxt => fraglistify f (boss_ss_of ctxt) ssfl thms g ctxt
 
 val simp = stateful asm_simp_tac []
 val dsimp = stateful asm_simp_tac [boolSimps.DNF_ss]
 val csimp = stateful asm_simp_tac [boolSimps.CONJ_ss]
 
 val rw = stateful (fn ss => BasicProvers.PRIM_SRW_TAC ss []) []
-fun fsrw_tac frags thms = fraglistify full_simp_tac (srw_ss()) frags thms
+fun fsrw_tac frags thms g ctxt =
+    fraglistify full_simp_tac (srw_ss_of ctxt) frags thms g ctxt
 val fs = stateful full_simp_tac []
 val rfs = stateful rev_full_simp_tac []
 

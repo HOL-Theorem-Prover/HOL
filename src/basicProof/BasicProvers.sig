@@ -19,6 +19,7 @@ sig
 
   val bool_ss         : simpset
   val srw_ss          : unit -> simpset
+  val srw_ss_of       : Context.t -> simpset
   val Abbr            : term quotation -> thm
   val LEAVE_LETS      : thm
 
@@ -51,15 +52,21 @@ sig
   (* update stateful simpset for duration of function call and then restore;
      has same locking guarantees as underlying AncestryData.with_temp_value *)
   val with_simpset_updates : (simpset -> simpset) -> ('a -> 'b) -> ('a -> 'b)
-  (* for tactics and list-tactics, whose work happens only once both the
-     goal and the context have been supplied *)
+  (* the same adjustment made to a context rather than around a call.
+     Everything reached from that context sees the adjusted simpset, for
+     as long as the context lives; there is no window to close. *)
+  val map_simpset     : (simpset -> simpset) -> Context.t -> Context.t
+  (* for tactics and list-tactics: adjusts the context they are given,
+     and, for as long as ambient readers remain, the ambient simpset for
+     the duration of the call *)
   val with_simpset_updates_tac :
-      (simpset -> simpset) -> ('a -> 'b -> 'c) -> ('a -> 'b -> 'c)
+      (simpset -> simpset) -> ('a -> Context.t -> 'b) ->
+      ('a -> Context.t -> 'b)
   val mk_tacmod : string -> Manager.tacmodifier
 
   val make_simpset_derived_value :
       string -> (simpset -> 'a -> 'a) -> 'a ->
-      {get : unit -> 'a, set : 'a -> unit}
+      {get : unit -> 'a, get_of : Context.t -> 'a, set : 'a -> unit}
 
   (* LET and Abbrev manoeuvres *)
   val LET_ELIM_TAC    : tactic

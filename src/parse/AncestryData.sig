@@ -17,7 +17,9 @@ sig
          set_parents : string list -> 'value option,
          get_global_value : unit -> 'value,
          get_global_value_of : Context.t -> 'value,
-         update_global_value : ('value -> 'value) -> unit }
+         update_global_value : ('value -> 'value) -> unit,
+         update_global_value_of : ('value -> 'value) -> Context.t ->
+                                  Context.t }
 
   (* doesn't lock, or in any way exclude others from seeing the adjusted
      value while this code is executing *)
@@ -122,6 +124,12 @@ end
             "global" value -- the one visible to user code via the
             getDB / temp_setDB style API exposed by clients like
             ThmSetData.
+          - get_global_value_of /
+            update_global_value_of    : the same value read from, and
+            written into, a supplied context.  A tactic that adjusts
+            the global value for the proof beneath it uses these:
+            they compose into a single context transform instead of
+            bracketing a mutation around a window.
 
     Two constructor functions:
 
