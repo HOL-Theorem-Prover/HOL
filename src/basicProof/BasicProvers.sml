@@ -1322,7 +1322,14 @@ fun map_simpset f ctxt =
    They are what the census is for; when it has retired them the window
    goes and the attribute stops being a global clobber. *)
 fun with_simpset_updates_tac f tac g ctxt =
-    with_simpset_updates f (tac g) (map_simpset f ctxt)
+    (* `fn c => tac g c` must NOT be eta-reduced to `tac g`.  The
+       expander hands us `fn g => <tactic expression> g`, so applying the
+       goal is what evaluates the tactic expression -- and a tactic
+       naming srw_ss() reads it right there.  As an argument to
+       with_simpset_updates that happens before the window opens; under
+       the lambda it happens inside.  src/boss/theory_tests/exclSimps
+       tests exactly this. *)
+    with_simpset_updates f (fn c => tac g c) (map_simpset f ctxt)
 
 local
   val update_log_slot :

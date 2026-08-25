@@ -1509,10 +1509,14 @@ They take `(Context.snapshot())`.  Only the `.smd` are sources --- the
 Spot-checked by running them: `Tactic.drule`, `bossLib.CONG_TAC`,
 `Tactic.SELECT_ELIM_TAC`, `bossLib.SIMP_TAC`, `pureSimps.pure_ss`,
 `Q.ABBREV_TAC` and `Rewrite.PURE_REWRITE_TAC` all reproduce.
-`Thm_cont.PROVEHYP_THEN`'s example does not run verbatim, but did not
-before either --- its `“p”` parses at type `α` outside a goalstack, so
-`FIRST_ASSUM` never matched.  Its arity is corrected; its semantics are
-left alone.
+`Thm_cont.PROVEHYP_THEN`'s did not run, and had not before either, but
+not for the reason first recorded here: the tactic does do its work, and
+the culprit is the *conclusion* rather than the assumption.  Written
+`([“p”, “p ==> q”], “r”)`, `r` parses at type `α`, so `q ==> r` cannot
+be built and every `FIRST_X_ASSUM` branch fails.  Annotated as the
+author plainly intended --- `([“p:bool”, “p ==> q”], “r:bool”)` --- it
+produces exactly the output the Docfile already claimed, so the goal is
+now annotated and doc and behaviour agree.
 
 Style, enforced by `tools/h4pedant` in the regression suite: no tabs,
 no trailing whitespace, strongly prefer < 80 columns.
