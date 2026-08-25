@@ -1324,6 +1324,41 @@ Consequences to hold on to:
   location should travel in the work item, which `store_thm_at` already
   has as `loc`.
 
+#### What Phase 4 has, and one correction to item 1
+
+Landed: the three per-proof cells that would cross-report between
+concurrent proofs are `ThreadLocal` --- `Tactical`'s unsolved-goal list
+(written on every `TAC_PROOF`), `boolLib.current_thm_name` (set
+immediately before a proof and cleared after) and `Cond_rewr`'s tracked
+rewrites (appended to *during* rewriting).  Each reads its
+pre-first-write value on a thread that has not written, so the
+single-threaded path is unchanged.  `Cond_rewr`'s tracking also stopped
+being exported state at all: `simpLib.track` now returns the rewrite
+list with the result, and the per-thread accumulator doubles as the
+on/off switch, so there is no flag to leave set.
+
+**`goalFrag.expandf` already takes a context** (and applies the tactic
+with `Lib.C tac ctxt`), so that prerequisite is met.
+
+**But item 1 cannot be done by passing a `Context.t` alone.**  The
+`declSnapshot`'s `compileSnap` is not a context --- it bundles three
+channels (`tools-poly/hol.ML:614-620`):
+
+    fn () => let val cSnap   = Context.snapshot ()
+                 val loadedR = Meta.snapshotLoaded ()
+                 val nsR     = LSPNameSpace.snapshotLayer ()
+             in fn () => (Context.restore cSnap; loadedR (); nsR ()) end
+
+Only the first is a value.  `Meta.snapshotLoaded` covers the compiler's
+loaded-module state and `LSPNameSpace.snapshotLayer` the namespace layer;
+both are inherently global and are restored by thunk, not passed.  So
+replacing the bracket in `goalStateAtPos` (`server.ML:1405-1412`) makes
+it *smaller* --- the Context stops being restored globally --- but does
+not remove it, and the walker can only move to its own thread once those
+two channels are either thread-safe or shown to be irrelevant to it.
+That question should be answered before the worker pool is built, since
+the pool has the same dependency.
+
 The other conversion:
 
 1. Replace `goalStateAtPos`'s global restore bracket
