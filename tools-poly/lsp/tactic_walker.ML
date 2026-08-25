@@ -130,6 +130,12 @@ fun applyClose c state = case c of
 
 val atomEndByte = TacticSteps.atomEndByte
 
+(* A missing start is not evidence of anything, so treat it as "the
+   cursor is not before this". *)
+fun startsAfter cursor start = case start of
+    SOME s => cursor < s
+  | NONE => false
+
 fun fragEnd frag = case frag of
     FAtom te => atomEndByte te
   | FGroup ((_, e), _) => SOME e
@@ -149,6 +155,35 @@ and lastFragEnd frags =
 and lastSectionEnd sections =
   List.foldl (fn (s, acc) => case lastFragEnd s of NONE => acc | some => some)
              NONE sections
+
+(* Mirror of the above for start positions, used to keep the walker
+   from running structure that lies after the cursor. *)
+and fragStart frag = case frag of
+    FAtom te => Option.map #1 (TacticSteps.atomSpan te)
+  | FGroup ((s, _), _) => SOME s
+  | FBracket (_, inner, _, te) =>
+      bracketStartByte te (fn () => firstFragStart inner)
+  | FMBracket (_, _, _, sections, te) =>
+      bracketStartByte te (fn () => firstSectionStart sections)
+  | FFOpen _ | FFMid _ | FFClose _ => NONE
+
+and firstFragStart frags = case frags of
+    [] => NONE
+  | f :: rest =>
+      (case fragStart f of NONE => firstFragStart rest | some => some)
+
+and firstSectionStart sections = case sections of
+    [] => NONE
+  | sec :: rest =>
+      (case firstFragStart sec of
+         NONE => firstSectionStart rest
+       | some => some)
+
+and bracketStartByte te firstInner = case topSpan te of
+    SOME (s, _) => SOME s
+  | NONE => (case TacticSteps.atomSpan te of
+      SOME (s, _) => SOME s
+    | NONE => firstInner ())
 
 (* `lastInner' is a thunk because it is only wanted for a wrapper
    whose own span is missing, as `LThen1's and `Try's are. *)
@@ -277,7 +312,12 @@ fun walkFrag tacText cursor state snaps stepIdx frag = case frag of
   | FBracket (ok, inner, cc, te) =>
       (case bracketEndByte te (fn () => lastFragEnd inner) of
         SOME be =>
-          if cursor < be then
+          (* Cursor before the combinator: it hasn't run yet, so show
+             the goals it is about to act on rather than opening it. *)
+          if startsAfter cursor (bracketStartByte te
+                                   (fn () => firstFragStart inner)) then
+            Halted {state = state, snaps = snaps, stepIdx = stepIdx}
+          else if cursor < be then
             (* Open, walk inner as far as cursor lets us; don't close. *)
             (case applyOpen ok state of
                NONE => Failed {state = state, snaps = snaps,
@@ -325,6 +365,16 @@ fun walkFrag tacText cursor state snaps stepIdx frag = case frag of
               | sec :: rest =>
                   (case walkFrags tacText cursor state snaps stepIdx sec of
                      Done r =>
+                       (* `walkFrags' says Done as soon as a section's
+                          frags run out, which for an ALL_TAC branch is
+                          immediately.  Only advance once the cursor has
+                          actually reached the next section, so the text
+                          between two branches reports the first one's
+                          result -- solved, or its leftover goals. *)
+                       if cursor < Option.getOpt (firstSectionStart rest, be)
+                       then Halted {state = #state r, snaps = #snaps r,
+                                    stepIdx = #stepIdx r}
+                       else
                        (case applyMid mid (#state r) of
                           NONE => Failed {state = #state r,
                                           snaps = #snaps r,
@@ -336,7 +386,12 @@ fun walkFrag tacText cursor state snaps stepIdx frag = case frag of
                    | Halted r => Halted r
                    | Failed r => Failed r)
           in
-            if cursor < be then
+            if startsAfter cursor
+                 (bracketStartByte te
+                    (fn () => firstSectionStart sections))
+            then
+              Halted {state = state, snaps = snaps, stepIdx = stepIdx}
+            else if cursor < be then
               (case applyOpen ok state of
                  NONE => Failed {state = state, snaps = snaps,
                                  stepIdx = stepIdx, at = FFOpen ok}

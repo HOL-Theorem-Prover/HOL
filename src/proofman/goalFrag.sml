@@ -262,17 +262,29 @@ fun pp_goalstate gs = let
     | ls => add_string ("[" ^ String.concatWith "] [" ls ^ "]") >>
             add_newline >> add_newline
   (* If the current focus is empty and the outer combinators can't
-     yet close cleanly, close them one at a time until goals become
-     visible again (or every close fails).  The user sees the state
-     that WILL be current once the pending close_paren steps fire,
-     so cursor positions just past a solved subgoal don't render as
-     the misleading "No subgoals but proof incomplete." message. *)
+     yet close cleanly, step them one at a time until goals become
+     visible again (or every step fails).  The user sees the state
+     that WILL be current once the pending steps fire, so cursor
+     positions just past a solved subgoal don't render as the
+     misleading "No subgoals but proof incomplete." message.
+
+     A solved THENL branch needs `next_tacs_to_lt' rather than
+     `close_paren': closing a TacsToLT frame with branches still to
+     come is a length mismatch, so closing is not available until the
+     last branch.  Report which step got us moving, and keep the
+     first one -- that is the one describing what the user just
+     finished. *)
+  fun stepOut gs = case total close_paren gs of
+      SOME closed => SOME ("remaining after close", closed)
+    | NONE => (case total next_tacs_to_lt gs of
+        SOME next => SOME ("next branch", next)
+      | NONE => NONE)
   fun peek gs =
-    case total close_paren gs of
+    case stepOut gs of
       NONE => NONE
-    | SOME closed =>
-      if not (null (top_goals closed)) then SOME closed
-      else peek closed
+    | SOME (how, gs') =>
+      if not (null (top_goals gs')) then SOME (how, gs')
+      else Option.map (fn (_, gs'') => (how, gs'')) (peek gs')
   in
     case top_goals gs of
       [] =>
@@ -284,13 +296,12 @@ fun pp_goalstate gs = let
           lift Parse.pp_thm th)
       | NONE =>
         (case peek gs of
-          SOME closed =>
+          SOME (how, rest) =>
             block Portable.CONSISTENT 0 (
               pp_context >>
-              add_string
-                "Focused subgoal(s) solved; remaining after close:" >>
+              add_string ("Focused subgoal(s) solved; " ^ how ^ ":") >>
               add_newline >> add_newline >>
-              pp_goalstate closed)
+              pp_goalstate rest)
         | NONE =>
           add_string "No subgoals but proof incomplete (try close_paren)." >>
           add_newline))
