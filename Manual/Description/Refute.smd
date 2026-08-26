@@ -774,6 +774,7 @@ raises a HOL error.  They are intended mainly for tests.
 | `upd_optimise_equality` | `true` | Turn suitable equality premises into direct bindings. |
 | `upd_reorder_premises` | `true` | Reorder premises during smart mode inference. |
 | `upd_use_subtype` | `false` | Test a generator-less typedef by transporting to its representation type. |
+| `upd_allow_function_inversion` | `false` | Mode-infer a self-recursive function's graph clauses. |
 | `upd_seed` | `NONE` | Reproducible random seed; `NONE` advances a deterministic session stream. |
 
 The default size mode is iterative deepening: `10` is an initial window,
@@ -1112,7 +1113,21 @@ Counterexample search is bounded and incomplete.  In particular:
   any first-order relation; the same parameter left as a runtime-bound
   variable, other un-classifiable negative modes, and general function
   flattening still fall back to guards rather than becoming errors;
-* subtype lifting and general function inversion are not implemented;
+* subtype lifting does not reach inside another type: a free variable
+  of type `t list`, say, keeps today's `NoGenerator`/`Unknown`
+  behaviour even when `t` itself is a liftable typedef (see
+  `upd_use_subtype` above);
+* function inversion -- synthesising Horn clauses for an ordinary
+  function's graph (`f a1 ... an = res`) from its own defining
+  equations, and running mode inference over them so an inverting mode
+  could drive a generator -- is implemented for a purely self-recursive
+  definition (a call to any other function refuses the whole function
+  rather than approximating its graph), but is reachable only from the
+  SML internals: `upd_allow_function_inversion` (default `false`) sets
+  a config field nothing reads, so it does not connect to this
+  machinery.  No goal-premise recogniser consumes a function's graph
+  either, so today neither the flag nor the machinery it names affects
+  any goal's verdict;
 * narrowing finitizes function inputs.  The constant-function fallback
   for a higher-order domain is an approximation, and every depth bound
   remains incomplete;

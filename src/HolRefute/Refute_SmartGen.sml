@@ -1,10 +1,13 @@
 (* Horn sources and polarity-split first-order mode inference for smart
    generators.  This module reads existing equations, checks their
    constructor-pattern coverage, converts them syntactically to intro
-   triples, and mode-checks Horn SCCs -- both the modes in which a relation
-   executes positively, and, conservatively, the modes in which its
-   complement does.  It neither flattens functions nor creates theory
-   definitions. *)
+   triples, and mode-checks Horn SCCs -- both the modes in which a
+   relation executes positively, and, conservatively, the modes in
+   which its complement does.  [flatten_rhs] also flattens an ordinary
+   function's self-recursive defining equations into Horn graph clauses
+   (function flattening, in the Isabelle predicate-compiler sense), and
+   [infer_graph] mode-checks that graph via its own fixpoint.  The
+   module creates no theory definitions. *)
 structure Refute_SmartGen = struct
   type term = Term.term
 
@@ -443,8 +446,13 @@ structure Refute_SmartGen = struct
      fixed by [f]'s type alone (never partial), because a function's
      defining equations are stated at maximal application and a partial
      graph would have no equations to synthesise clauses from.  [Graph]
-     is constructed nowhere in this tree except three accessor pins in
-     the selftest; synthesising its clauses is future work. *)
+     values are built at three sites: [synthesize_graph_clauses]
+     (transiently, only to read [relation_arity]), [infer_graph] (the
+     relation carried in its result), and [compile_premise]'s
+     [GraphPrem] branch -- the last unreached today, since no caller
+     runs [cache_inference] on an [infer_graph] result and only the
+     selftest calls [infer_graph] at all.  [check_graph_relation] builds
+     no [Graph] value itself, only [GraphPrem] premises. *)
   datatype relation_key =
       Predicate of term
     | Graph of term
@@ -457,10 +465,10 @@ structure Refute_SmartGen = struct
         let val (domains, range) = boolSyntax.strip_fun (Term.type_of f)
         in boolSyntax.list_mk_fun (domains @ [range], Type.bool) end
 
-  (* Unconsumed outside its own selftest pin: kept ahead of use because
-     synthesising a graph's clause heads will need the arity.  There is
-     no [Refute_SmartGen.sig] to record that as deliberate, so an audit
-     could otherwise mistake this for a mechanism nothing wires up. *)
+  (* Type-driven, never equation-driven: [synthesize_graph_clauses] checks
+     its equations' own argument count against this, rather than the
+     other way around, so a point-free definition (fewer formals than its
+     type admits) is caught instead of silently assumed. *)
   fun relation_arity key =
     length (#1 (boolSyntax.strip_fun (relation_type key)))
 
@@ -475,16 +483,230 @@ structure Refute_SmartGen = struct
   fun relation_string (Predicate f) = Parse.term_to_string f
     | relation_string (Graph f) = "graph " ^ Parse.term_to_string f
 
+  (* Graph clause synthesis (function inversion, gated by
+     [allow_function_inversion]).  One clause per defining equation of a
+     function [f]: [arguments] are its LHS patterns, [output] is its RHS
+     flattened per [flatten_rhs], and [calls], in left-to-right order, are
+     the self-recursive calls that flattening replaced by a fresh
+     variable -- each [(call_args, result)] denoting the premise
+     [f call_args = result]. *)
+  type graph_clause =
+    {arguments : term list, output : term,
+     calls : (term list * term) list}
+
+  fun fresh_variable used ty = Term.variant used (Term.mk_var ("v", ty))
+
+  (* Flatten one rhs occurrence for [constant]'s own graph, whose defining
+     equations apply it to exactly [arity] arguments: a variable or a
+     fully-applied constructor over already-flattened subterms stays in
+     place; a self-recursive call to [constant] at that same [arity] is
+     replaced by a fresh variable, with its own arguments flattened
+     first, contributing a premise; anything else -- in particular a call
+     to a *different* function, or non-Horn syntax such as a conditional
+     -- is refused by returning [NONE], rather than composing with
+     another function's graph.  This scopes clause synthesis down to
+     self-recursion only; recursively flattening a call to some other
+     flattenable function is a strictly more general capability that is
+     deliberately not attempted here.  Every shape test below is total
+     and structural; the one non-test step, [Term.list_mk_comb]
+     rebuilding a constructor application from its flattened arguments,
+     is a construction that can raise in principle, but is safe here
+     because flattening preserves each subterm's type.  A [NONE] result
+     is therefore always a shape refusal, never a swallowed error. *)
+  fun flatten_rhs constant arity used term =
+    if Term.is_var term then SOME (term, [], used)
+    else
+      let val (head, arguments) = HolKernel.strip_comb term
+      in
+        if Term.is_const head andalso TypeBase.is_constructor head andalso
+           length (#1 (boolSyntax.strip_fun (Term.type_of head))) =
+             length arguments
+        then
+          Option.map (fn (flattened, calls, used') =>
+              (Term.list_mk_comb (head, flattened), calls, used'))
+            (flatten_args constant arity used arguments)
+        else if same_constant head constant andalso
+                length arguments = arity
+        then
+          case flatten_args constant arity used arguments of
+              NONE => NONE
+            | SOME (flat_args, calls, used') =>
+                let val result = fresh_variable used' (Term.type_of term)
+                in
+                  SOME (result, calls @ [(flat_args, result)],
+                        result :: used')
+                end
+        else NONE
+      end
+  and flatten_args _ _ used [] = SOME ([], [], used)
+    | flatten_args constant arity used (argument :: rest) =
+        case flatten_rhs constant arity used argument of
+            NONE => NONE
+          | SOME (flat, calls, used') =>
+              (case flatten_args constant arity used' rest of
+                   NONE => NONE
+                 | SOME (flats, more_calls, used'') =>
+                     SOME (flat :: flats, calls @ more_calls, used''))
+
+  (* One equation, recognised the same way [recognize_clause] recognises a
+     Horn equation: closed, stripped of its leading [!], its LHS parsed as
+     [arity] constructor patterns over distinct variables covering the
+     whole equation -- reusing [parse_pattern]/[close_free]/
+     [distinct_terms]/[same_term_set] rather than duplicating their
+     checks -- with the rhs then flattened.  Returns the clause together
+     with its LHS patterns, so the caller can run the same [exhaustive]
+     check [recognize_horn_sources] runs. *)
+  fun recognize_graph_clause constant arity raw =
+    let
+      val (variables, body) = boolSyntax.strip_forall (close_free raw)
+      val (left, right) = boolSyntax.dest_eq body
+      val (head, arguments) = HolKernel.strip_comb left
+      val parsed = List.mapPartial parse_pattern arguments
+      val pattern_variables = List.concat (map #2 parsed)
+    in
+      if same_constant head constant andalso
+         length arguments = arity andalso length parsed = arity andalso
+         distinct_terms variables andalso
+         same_term_set variables pattern_variables
+      then
+        case flatten_rhs constant arity (Term.free_vars_lr left) right of
+            NONE => NONE
+          | SOME (output, calls, _) =>
+              SOME (({arguments = arguments, output = output,
+                      calls = calls} : graph_clause), map #1 parsed)
+      else NONE
+    end
+    (* No [Option.Option] arm, unlike [recognize_clause]: nothing in this
+       body's call graph ([flatten_rhs]/[flatten_args], [parse_pattern],
+       [close_free], [distinct_terms], [same_term_set]) calls [valOf] or
+       [Option.valOf]; only [Feedback.HOL_ERR] can escape here. *)
+    handle Feedback.HOL_ERR _ => NONE
+
+  fun equation_arity raw =
+    let
+      val (_, body) = boolSyntax.strip_forall (close_free raw)
+      val (left, _) = boolSyntax.dest_eq body
+    in SOME (length (#2 (HolKernel.strip_comb left))) end
+    handle Feedback.HOL_ERR _ => NONE
+
+  (* Synthesise [constant]'s graph clauses from its defining equations, or
+     refuse ([NONE]).  Every equation must be recognised ([length raw =
+     length equations]) and the surviving patterns must be [exhaustive],
+     as for the Horn recogniser -- but that guard is not needed for
+     SOUNDNESS here: each equation is a universally-closed conjunct of a
+     theorem, so any surviving clause is true at every instance of its
+     own patterns, and an exhaustive surviving subset is already a
+     complete clause set, since a dropped equation cannot remove a
+     derivable fact.  Its job is instead to refuse a definition the code
+     does not fully understand, rather than synthesise an
+     under-approximating graph from a partial read of it.  The
+     arity-agreement check is additional to what [recognize_horn_sources]
+     needs, because a function's own type can admit more formals than
+     its equations bind:
+     [arity], from the equations themselves, must agree with
+     [relation_arity (Graph constant)], which [relation_type] computes
+     from [constant]'s type alone.  A point-free definition -- fewer
+     formals than the type admits -- fails this and is refused rather
+     than assumed.  Raises no exception of its own: [equation_arity],
+     [recognize_graph_clause] and [exhaustive] each already catch their
+     own [Feedback.HOL_ERR], and [relation_arity]/[Term.type_of] cannot
+     raise on the well-formed constant [Term.is_const constant] has
+     already confirmed by the time [relation_arity (Graph constant)] is
+     evaluated. *)
+  fun synthesize_graph_clauses constant equations =
+    case equations of
+        [] => NONE
+      | first :: _ =>
+          (case equation_arity first of
+               NONE => NONE
+             | SOME arity =>
+                 let
+                   val raw = List.mapPartial
+                     (recognize_graph_clause constant arity) equations
+                 in
+                   if Term.is_const constant andalso
+                      length raw = length equations andalso
+                      exhaustive (map #2 raw) andalso
+                      arity + 1 = relation_arity (Graph constant)
+                   then SOME (map #1 raw)
+                   else NONE
+                 end)
+
+  type graph_cache_entry =
+    {constant : term, stamp : term option,
+     result : graph_clause list option}
+
+  (* Separate from [intro_cache]: a [Graph f] entry and a [Predicate f]
+     entry for the same [f] therefore cannot collide, because they are
+     never in the same table. *)
+  val graph_cache : graph_cache_entry list ref = ref []
+
+  fun cache_graph_result constant stamp result =
+    graph_cache := {constant = constant, stamp = stamp, result = result} ::
+      List.filter (fn {constant = other, ...} =>
+        not (same_constant constant other)) (!graph_cache)
+
+  fun clear_graph_cache () = graph_cache := []
+  fun graph_cache_size () = length (!graph_cache)
+
+  (* The sole construction site for clause synthesis outside the accessor
+     pins: [allow] gates it first, before [constant]'s equations are even
+     looked up, so with the flag off this returns [NONE] without ever
+     reaching [synthesize_graph_clauses] -- no [Graph] key is built on
+     that path.  Formerly split into a cache lookup and a bare wrapper
+     under this same name that added no behaviour of its own; collapsed
+     into one function since nothing else in the module needed the
+     split, unlike [horn_intro_triples_for]/[horn_inference_clauses_for],
+     which each project [cached_horn_sources_for]'s cache differently.
+     This function's own [not allow] disjunct is not the load-bearing
+     check today: [infer_graph] (below) gates on [allow] before ever
+     calling this, and every other caller passes [allow = true]
+     literally, so ablating only this disjunct leaves the test suite
+     green.  It stays as leaf defence for a future caller that reaches
+     this function without going through [infer_graph]'s hoisted
+     check. *)
+  fun graph_clauses_for allow constant =
+    if not allow orelse not (Term.is_const constant) then NONE
+    else
+      let
+        val source = equation_source constant
+        val stamp = Option.map #1 source
+        val cached = List.find (fn {constant = other, stamp = old, ...} =>
+          same_constant constant other andalso same_stamp stamp old)
+          (!graph_cache)
+      in
+        case cached of
+            SOME {result, ...} => result
+          | NONE =>
+              let
+                val result =
+                  case source of
+                      SOME (_, equations) =>
+                        synthesize_graph_clauses constant equations
+                    | NONE => NONE
+                val _ = cache_graph_result constant stamp result
+              in
+                result
+              end
+      end
+
   datatype mode_derivation =
       Mode_App of mode_derivation * mode_derivation
     | Context of mode
     | Mode_Pair of mode_derivation * mode_derivation
     | Term_Mode of mode
 
+  (* [GraphPrem (f, arguments)] is a flattened graph-clause premise:
+     [f]'s graph applied to [arguments] ([call_args @ [result]], length
+     [relation_arity (Graph f)]).  Distinct from [Prem]: a graph premise
+     is never one [strip_comb]-able term ([f]'s own type generally
+     cannot accept an extra [result] argument), so it carries its parts
+     pre-split rather than a single term to re-derive them from. *)
   datatype indprem =
       Prem of term
     | Sidecond of term
     | Generator of term
+    | GraphPrem of term * term list
 
   type moded_clause =
     {arguments : term list,
@@ -662,9 +884,13 @@ structure Refute_SmartGen = struct
                                         | NONE => []
           else [Input, Output]
 
-  fun all_modes_for relation =
+  (* Pure function of a curried Boolean-valued type; [all_modes_for] below
+     is exactly this applied to [Term.type_of relation].  Split out so
+     graph clause synthesis can drive it from [relation_type (Graph f)]
+     without a placeholder term of that type. *)
+  fun all_modes_for_type ty =
     let
-      val (domains, range) = boolSyntax.strip_fun (Term.type_of relation)
+      val (domains, range) = boolSyntax.strip_fun ty
     in
       if range = Type.bool andalso
          List.foldl (fn (domain, count) =>
@@ -688,6 +914,8 @@ structure Refute_SmartGen = struct
         []
     end
     handle Feedback.HOL_ERR _ => []
+
+  fun all_modes_for relation = all_modes_for_type (Term.type_of relation)
 
   fun compare_score
         ({missing = left_missing, functional = left_functional,
@@ -880,6 +1108,9 @@ structure Refute_SmartGen = struct
   fun term_of_premise (Prem term) = term
     | term_of_premise (Sidecond term) = term
     | term_of_premise (Generator term) = term
+    | term_of_premise (GraphPrem (f, arguments)) =
+        boolSyntax.mk_eq
+          (Term.list_mk_comb (f, Lib.butlast arguments), List.last arguments)
 
   fun best_derivation relation table external known premise =
     let
@@ -903,6 +1134,12 @@ structure Refute_SmartGen = struct
                  functional = false, generator = false, outputs = 0,
                  recursive = false})]
           | Generator _ => []
+          (* A graph premise is scored inside [check_graph_clause], via
+             [best_graph_call], never through [select_premise]; an
+             explicit [] here (not a wildcard) makes the next added
+             [indprem] constructor fail to compile instead of silently
+             falling through to this case. *)
+          | GraphPrem _ => []
       fun least candidate NONE = SOME candidate
         | least (candidate as (_, _, score))
             (current as SOME (_, _, current_score)) =
@@ -1081,20 +1318,29 @@ structure Refute_SmartGen = struct
      this feeds the [NegGuard] complement, and a [Fun] component being
      "given" is not a claim that its failure is decidable.  The same
      strictness is what keeps a [Fixed] component out of the complement:
-     [given_mode (Fixed _)] is true, [eq_mode (Fixed _, Input)] is not. *)
-  fun mode_all_input mode =
-    List.all (fn component => eq_mode (component, Input)) (strip_mode mode)
-    handle Feedback.HOL_ERR _ => false
+     [given_mode (Fixed _)] is true, [eq_mode (Fixed _, Input)] is not.
+     [Graph] is excluded structurally: a graph's clauses are
+     synthesised from equations known to be exhaustive as a *definition*,
+     which says nothing about the negative complement of any one mode, so
+     no [Graph] relation may ever enter this table regardless of mode.
+     [infer_graph] never reaches this clause today (it always passes
+     [blocked = true] to [negative_modes_of], which short-circuits first);
+     the clause is defence-in-depth for a future caller that does not,
+     and today is exercised only by its own accessor pin. *)
+  fun mode_all_input (Graph _) _ = false
+    | mode_all_input (Predicate _) mode =
+        List.all (fn component => eq_mode (component, Input)) (strip_mode mode)
+        handle Feedback.HOL_ERR _ => false
 
   (* Nothing may defer the decision: no [Prem] premise, no [Generator], no
      output position.  What is left is a finite chain of guards over ground
      inputs, whose failure is as decidable as its success, over a defining
      disjunction that is exact because no clause consults the fixpoint. *)
-  fun negative_modes_of blocked modes =
+  fun negative_modes_of blocked relation modes =
     if blocked then []
     else List.mapPartial (fn (mode, _, needs_generator) =>
-      if mode_all_input mode andalso not needs_generator then SOME mode
-      else NONE) modes
+      if mode_all_input relation mode andalso not needs_generator
+      then SOME mode else NONE) modes
 
   fun check_relation reorder members external clauses table relation
         modes =
@@ -1178,7 +1424,7 @@ structure Refute_SmartGen = struct
         {relation = Predicate relation,
          modes = negative_modes_of
            (relation_blocks_complement members external clauses relation)
-           modes}
+           (Predicate relation) modes}
     in
       {relations = map materialize stable,
        negative = map materialize_negative stable,
@@ -1232,6 +1478,213 @@ structure Refute_SmartGen = struct
           SOME (infer_clauses
             {members = members, clauses = clauses, external = external,
              reorder_premises = reorder_premises})
+
+  (* Graph mode inference is its own small fixpoint, deliberately not a
+     generalisation of [check_clause]/[check_relation]: those are built
+     around a [term] whose own [strip_comb] head names the relation being
+     called, which a graph premise ([f call_args = result], arity one more
+     than [f]'s own type) is not.  [f]'s graph is always exactly one
+     self-recursive group, since [flatten_rhs] refuses any call to
+     another function, so there is exactly one relation to look modes up
+     in -- [table] below -- never a multi-relation [external]/[members]
+     structure to thread through. *)
+
+  (* One candidate mode against one clause's calls, threaded in the exact
+     left-to-right order [flatten_rhs] produced them (which already
+     respects data dependency: a call's own arguments are fully flattened,
+     and any fresh variables they introduce appear, before that call is
+     appended to [calls]).  [table] is the current fixpoint state for this
+     same graph, exactly as [derive_call] consults [table] for an ordinary
+     relation's own recursive calls.  Unlike [derive_call], this has no
+     own [handle Feedback.HOL_ERR _ => []]: a raise here escapes to
+     [check_graph_clause]'s blanket handler and drops the whole
+     candidate mode, rather than just this one candidate call.  Harmless
+     today, since nothing here is known to raise on a graph clause
+     [flatten_rhs] produced, but the two functions are not symmetric. *)
+  fun derive_graph_call table known (call_args, result) =
+    let
+      val terms = call_args @ [result]
+      fun derive (mode, _, needs_generator) =
+        let
+          val argument_mode = strip_mode mode
+          fun step [] [] states = states
+            | step (term :: terms) (component :: modes) states =
+                step terms modes
+                  (List.concat (map (fn (derivation, missing) =>
+                    map (fn (argument_derivation, argument_missing) =>
+                      (Mode_App (derivation, argument_derivation),
+                       union_terms missing argument_missing))
+                      (derive_argument known term component)) states))
+            | step _ _ _ = []
+        in
+          if length terms = length argument_mode then
+            map (fn (derivation, missing) =>
+              (derivation, missing, mode, needs_generator))
+              (step terms argument_mode [(Context mode, [])])
+          else []
+        end
+    in
+      List.concat (map derive table)
+    end
+
+  (* Score and select a callee mode for one graph self-call, reusing
+     [compare_score] rather than a hand-rolled comparator -- so a future
+     change there is inherited here instead of silently diverging again.
+     Every graph premise is a self-call to the same relation, so
+     [functional] and [recursive] are constant across candidates and
+     therefore cannot discriminate; only [missing], [generator] and
+     [outputs] vary.  Ties keep the FIRST candidate, mirroring
+     [best_derivation]'s [least]. *)
+  fun best_graph_call candidates =
+    let
+      fun score (_, missing, mode, needs_generator) =
+        {missing = length missing, functional = false,
+         generator = needs_generator, outputs = output_positions mode,
+         recursive = true} : premise_score
+      val scored = map (fn candidate => (candidate, score candidate))
+        candidates
+      fun least entry NONE = SOME entry
+        | least (entry as (_, score)) (current as SOME (_, current_score)) =
+            if compare_score (score, current_score) = LESS then SOME entry
+            else current
+    in
+      Option.map #1
+        (List.foldl (fn (entry, current) => least entry current)
+          NONE scored)
+    end
+
+  (* Mirrors [check_clause]: [mode] is the candidate mode for [f]'s own
+     graph, of arity [length arguments + 1]; [table] is the current
+     fixpoint's full mode list for that same graph, consulted for each
+     self-recursive call exactly as [derive_call] consults [table] for an
+     ordinary relation.  Unlike an ordinary clause, this does not honour
+     [reorder_premises]: [calls] is processed in the fixed left-to-right
+     order [flatten_rhs] produced it, with no [select_premise] reordering
+     step.  Deliberate -- a self-call's arguments already reflect data
+     dependency (see [flatten_rhs] above) -- but it does cost something:
+     a call needing a variable that a LATER call would produce gets a
+     [Generator] for it instead of being deferred. *)
+  fun check_graph_clause f table mode
+        ({arguments, output, calls} : graph_clause) =
+    let
+      val (inputs, outputs) = split_arguments mode (arguments @ [output])
+      val initial = union_terms []
+        (List.concat (map destructable_vars inputs))
+      fun process known result generated [] = SOME (known, result, generated)
+        | process known result generated
+              ((call_args, call_result) :: rest) =
+            (case best_graph_call (derive_graph_call table known
+                    (call_args, call_result)) of
+                 NONE => NONE
+               | SOME (derivation, missing, _, callee_generator) =>
+                   let
+                     val generators = rev (map (fn variable =>
+                       (Generator variable, Term_Mode Output)) missing)
+                     val premise = GraphPrem (f, call_args @ [call_result])
+                     val known' = union_terms known missing
+                     val known'' = union_terms known'
+                       (Term.free_vars_lr (term_of_premise premise))
+                   in
+                     (* [missing] alone under-reports: an [Output]
+                        position's [derive_argument] never adds to
+                        [missing] (a bare-variable output is always
+                        [possible_output]), so a call whose own arguments
+                        are all locally resolved can still recurse into a
+                        callee mode whose OTHER clauses raise a generator
+                        at runtime.  Folding in [callee_generator] --
+                        already carried by [derive_graph_call] for
+                        selection -- closes that gap without touching
+                        selection itself. *)
+                     process known''
+                       (result @ generators @ [(premise, derivation)])
+                       (generated orelse not (null missing) orelse
+                        callee_generator)
+                       rest
+                   end)
+    in
+      case process initial [] false calls of
+          NONE => NONE
+        | SOME (known, premises, generated) =>
+            let
+              val head_variables = union_terms []
+                (List.concat (map Term.free_vars_lr (inputs @ outputs)))
+              val missing = List.filter (fn variable =>
+                not (member_term variable known)) head_variables
+              val trailing = rev (map (fn variable =>
+                (Generator variable, Term_Mode Output)) missing)
+            in
+              SOME {arguments = arguments @ [output],
+                    premises = premises @ trailing,
+                    needs_generator = generated orelse not (null missing)}
+            end
+    end
+    (* Live, not dead: [split_arguments] raises for a [Pair] mode whose
+       argument is a bare variable rather than a [dest_pair]-able term
+       ([split_atomic] admits only [given_mode] or all-[Output]; a
+       [Pair (Input, Output)] mode is neither), and a graph clause's
+       flattened arguments and calls can present exactly that shape.  This
+       mirrors the same blanket-[HOL_ERR] pattern around [check_clause]
+       (which raises for the analogous reason) and [top_level_parts]. *)
+    handle Feedback.HOL_ERR _ => NONE
+
+  fun check_graph_relation f clauses table modes =
+    let
+      fun check_clauses _ [] checked = SOME (rev checked)
+        | check_clauses mode (clause :: rest) checked =
+            (case check_graph_clause f table mode clause of
+                 NONE => NONE
+               | SOME result => check_clauses mode rest (result :: checked))
+      fun check (mode, _, _) =
+        if null clauses then NONE
+        else
+          Option.map (fn checked =>
+            (mode, checked, List.exists #needs_generator checked))
+            (check_clauses mode clauses [])
+    in
+      List.mapPartial check modes
+    end
+
+  (* The graph counterpart of [infer_clauses]: a self-contained fixpoint
+     over the single relation [Graph constant], gated by [allow] exactly
+     as [graph_clauses_for] is -- with the flag off this returns
+     [NONE] before [graph_clauses_for] is even called, so no [Graph] key
+     is built.  [NONE] also results from [graph_clauses_for] refusing the
+     equations (unflattenable, non-exhaustive, or arity mismatch); this
+     function raises no exception of its own -- but only because
+     [check_graph_clause]'s own blanket [HOL_ERR] handler already turns
+     its live [split_arguments] raiser into [NONE].  Remove that handler
+     and this claim no longer holds. *)
+  fun infer_graph allow constant : inference_result option =
+    if not allow then NONE
+    else
+      case graph_clauses_for allow constant of
+          NONE => NONE
+        | SOME clauses =>
+            let
+              val relation = Graph constant
+              val seed = map (fn mode => (mode, [], false))
+                (all_modes_for_type (relation_type relation))
+              fun iteration table = check_graph_relation constant clauses
+                table table
+              fun fixpoint table =
+                let val next = iteration table
+                in if same_mode_infos table next then next
+                   else fixpoint next end
+              val stable = fixpoint seed
+              (* [[]] because [blocked = true] short-circuits
+                 [negative_modes_of] before [mode_all_input] is ever
+                 consulted -- not because of [mode_all_input]'s own
+                 [Graph _ => false] clause, which this call never reaches.
+                 That clause is defence-in-depth against some future
+                 caller passing [blocked = false] for a [Graph] relation;
+                 today it is exercised only by its own accessor pin. *)
+              val negative = negative_modes_of true relation stable
+            in
+              SOME
+                {relations = [{relation = relation, modes = stable}],
+                 negative = [{relation = relation, modes = negative}],
+                 degradation = []}
+            end
 
   (* Full beta normalization: [infer_fixed_argument] substitutes a closed
      value for a predicate parameter throughout a clause, which routinely
@@ -1543,7 +1996,7 @@ structure Refute_SmartGen = struct
         Generator variable => SOME (CpsGenerate variable)
       | Sidecond term => SOME (CpsGuard term)
       | Prem term =>
-          let
+          (let
             val (relation, arguments) = HolKernel.strip_comb term
             val mode = head_mode_of derivation
             val (ins, outs) = split_arguments mode arguments
@@ -1554,7 +2007,18 @@ structure Refute_SmartGen = struct
                  outs = outs})
             else NONE
           end
-          handle Feedback.HOL_ERR _ => NONE
+          handle Feedback.HOL_ERR _ => NONE)
+      | GraphPrem (f, arguments) =>
+          (let
+            val mode = head_mode_of derivation
+            val (ins, outs) = split_arguments mode arguments
+          in
+            if List.all first_order_mode (strip_mode mode) then
+              SOME (CpsCall {rel = Graph f, mode = mode, ins = ins,
+                             outs = outs})
+            else NONE
+          end
+          handle Feedback.HOL_ERR _ => NONE)
 
   fun compile_clause mode
         ({arguments, premises, ...} : moded_clause) =

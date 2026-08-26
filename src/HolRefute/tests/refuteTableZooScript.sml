@@ -1282,3 +1282,36 @@ Inductive zoo_hotel_pinned:
            zoo_hotel_owns s r <> SOME g ==>
            zoo_hotel_pinned s r g)
 End
+
+(* Point-free relative to its own type, though not relative to its
+   pattern: the equation binds two formals, but [strip_fun] on
+   [(num -> num) -> num -> (num -> num)] peels the trailing arrow too,
+   giving three domains -- one more than the equation's own arity -- so
+   a graph-clause synthesiser driven by the type alone must refuse this
+   rather than assume the equation is already at maximal application. *)
+Definition zoo_graph_select_def:
+  zoo_graph_select (g : num -> num) (x : num) = g
+End
+
+(* A step equation that calls a different function of the same arity,
+   rather than recursing on the function being defined: [flatten_rhs]
+   must refuse this by falling through to its final [else NONE], never
+   mistaking the call for a self-recursive one and building a clause
+   set against the wrong relation. *)
+Definition zoo_graph_other_def:
+  zoo_graph_other (t : num list) (l : num list) = l
+End
+
+Definition zoo_graph_calls_other_def:
+  (zoo_graph_calls_other ([] : num list) (l : num list) = l) /\
+  (zoo_graph_calls_other (h :: t) l = zoo_graph_other t l)
+End
+
+(* A product-typed formal that stays a bare variable: no pattern ever
+   destructures [p], so a candidate mode that splits it into a separate
+   input half and output half cannot be applied to the actual term --
+   [split_arguments] can only recurse into a literal pair constructor.
+   Witnesses [check_graph_clause]'s blanket handler on a live raiser. *)
+Definition zoo_graph_pair_formal_def:
+  zoo_graph_pair_formal (p : num # num) (n : num) = n
+End

@@ -264,6 +264,38 @@ equality, not by stream position.  Setting `upd_smart_generators false`
 restores generate-and-guard planning, and `upd_reorder_premises` controls
 mode-analysis reordering.
 
+`upd_allow_function_inversion` (default `false`, Isabelle Quickcheck
+parity) sets a config field that no code currently reads: nothing
+connects it to `Refute_SmartGen.infer_graph`'s own `allow` parameter,
+which only the selftest supplies directly, so setting this flag
+changes no goal's verdict.  The machinery it names is real, and
+reachable only from the SML internals: calling `infer_graph allow
+constant` directly synthesises Horn clauses for an ordinary function's
+graph -- `f a1 ... an = res`, at `f`'s maximal application -- from its
+own defining equations, and runs the same mode inference over them.
+`flatten_rhs` accepts only a variable or a fully-applied TypeBase
+constructor over already-flattened subterms, plus a self-recursive
+call to `f` at its own maximal arity, which it replaces by a fresh
+variable and turns into a graph premise; anything else -- not only a
+conditional or an uncompiled match, but any arithmetic (`f n = n +
+1`), any non-zero numeral (`1` is `NUMERAL (BIT1 ZERO)`, and `NUMERAL`
+is not one of `num`'s constructors -- only `0` and `SUC` are), and a
+call to any *other* function, even one itself total and flattenable --
+refuses the whole function rather than approximating it, since an
+under-approximating graph used as a generator would be unsound.
+Synthesis also requires `f`'s equations to be stated at its maximal
+application (`arity + 1 = relation_arity` in
+`synthesize_graph_clauses`); a point-free definition is refused rather
+than assumed.  Mode inference over the resulting graph is capped at
+256 candidate modes (`max_mode_space`); a signature whose full mode
+space would exceed that returns no modes at all rather than
+materializing an exponential search.  A graph relation's modes are
+never entered in the negative-mode table: soundness there rests on an
+equation set's own exhaustiveness as a *definition*, which says
+nothing about any one mode's complement.  No goal-premise recogniser
+consumes a function's graph either, so today both the flag and the
+machinery it names leave every goal's verdict unaffected.
+
 Native narrowing is active by default as the `narrowing` backend.  It uses
 `size` as its initial refinement-depth window and supports prenex existential
 goals.  In fixed mode that window is the complete requested search; in

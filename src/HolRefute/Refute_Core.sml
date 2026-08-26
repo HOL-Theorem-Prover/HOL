@@ -79,6 +79,14 @@ structure Refute_Core = struct
       smart_generators : bool,
       optimise_equality : bool,
       reorder_premises : bool,
+      (* Function inversion: synthesise Horn clauses for a function's
+         graph from its defining equations and run mode inference over
+         them, so a premise recognising [f a b = z] could drive an
+         inverting generator.  Off by default, matching Isabelle
+         Quickcheck's own function-inversion flag: an under-approximating
+         graph used as a generator is unsound, and no goal-premise
+         recogniser consumes this yet. *)
+      allow_function_inversion : bool,
       (* Per-type-variable pins for QC's monomorphizing substitution.  A
          [SOME tyvar] key pins that variable; [NONE] is the fallback for
          every non-width variable no [SOME] entry names.  A width type
@@ -207,7 +215,8 @@ structure Refute_Core = struct
       optimise_equality = true,
       reorder_premises = true,
       instantiate = [],
-      use_subtype = false }
+      use_subtype = false,
+      allow_function_inversion = false }
 
   val default_mf_config : mf_config =
     { card = [(NONE, List.tabulate (10, fn n => n + 1))],
@@ -358,6 +367,7 @@ structure Refute_Core = struct
     | QcReorderPremises of bool
     | QcInstantiate of (hol_type option * hol_type) list
     | QcUseSubtype of bool
+    | QcAllowFunctionInversion of bool
 
   fun change_qc update (qc : qc_config) =
     { size = (case update of QcSize (value, _) => value | _ => #size qc),
@@ -393,7 +403,10 @@ structure Refute_Core = struct
       instantiate = (case update of QcInstantiate value => value
                      | _ => #instantiate qc),
       use_subtype = (case update of QcUseSubtype value => value
-                     | _ => #use_subtype qc) }
+                     | _ => #use_subtype qc),
+      allow_function_inversion =
+        (case update of QcAllowFunctionInversion value => value
+         | _ => #allow_function_inversion qc) }
 
   fun validate_qc_config (qc : qc_config) =
     let
@@ -472,6 +485,8 @@ structure Refute_Core = struct
   fun upd_reorder_premises value = update_qc (QcReorderPremises value)
   fun upd_instantiate value = update_qc (QcInstantiate value)
   fun upd_use_subtype value = update_qc (QcUseSubtype value)
+  fun upd_allow_function_inversion value =
+    update_qc (QcAllowFunctionInversion value)
 
   fun range_error field explanation =
     raise Feedback.mk_HOL_ERR "Refute_Core" "validate_mf_config"
@@ -1416,6 +1431,8 @@ structure Refute_Core = struct
           "reorder_premises = " ^
             Bool.toString (#reorder_premises q) ^ "\n",
           "use_subtype = " ^ Bool.toString (#use_subtype q) ^ "\n",
+          "allow_function_inversion = " ^
+            Bool.toString (#allow_function_inversion q) ^ "\n",
           "mf.card = " ^ type_ints (#card m) ^ "\n",
           "mf.card_mode = " ^
             Private.bound_mode_to_string (#card_mode m) ^ "\n",

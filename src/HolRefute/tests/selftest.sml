@@ -1317,9 +1317,11 @@ val _ = require_msg (check_result (fn () =>
 structure MFH = Refute_ModelFinder_HOL
 
 (* [relation_key] generalises "a relation" to also denote the graph of an
-   ordinary function.  Nothing in the tree constructs [Graph] yet, so
-   these three pins are its only construction sites; they exercise the
-   accessors directly rather than through any real inference path. *)
+   ordinary function.  These three pins exercise the [Graph]/[Predicate]
+   accessors directly rather than through any real inference path; the
+   graph clause synthesis and mode inference pins further below exercise
+   the real construction sites ([SG.infer_graph], gated on
+   [allow_function_inversion]). *)
 val _ = tprint "Refute SmartGen same_relation distinguishes Predicate/Graph"
 fun relation_key_predicate_graph_distinct () =
   let val f = ``EVEN`` in
@@ -1364,6 +1366,354 @@ fun relation_key_string_distinct () =
 val _ = require_msg (check_result relation_key_string_distinct)
   (fn () =>
     "relation_string did not render Predicate and Graph distinctly")
+  (fn () => ()) ()
+
+(* Graph clause synthesis (function inversion), gated by
+   [allow_function_inversion].  Every pin below calls the [SG] internals
+   directly: no goal-premise recogniser exists yet, so there is no
+   tactic-level surface to drive this through. *)
+
+val _ = tprint "Refute SmartGen graph clause synthesis for APPEND"
+fun graph_clauses_append () =
+  case SG.graph_clauses_for true
+        ``APPEND : num list -> num list -> num list`` of
+      SOME clauses =>
+        length clauses = 2 andalso
+        let
+          val base = List.nth (clauses, 0)
+          val step = List.nth (clauses, 1)
+        in
+          (case #arguments base of
+               [nil_pat, l] =>
+                 listSyntax.is_nil nil_pat andalso Term.is_var l andalso
+                 Term.aconv (#output base) l andalso null (#calls base)
+             | _ => false)
+          andalso
+          (case (#arguments step, #calls step) of
+               ([cons_pat, l2], [(call_args, result)]) =>
+                 (case Lib.total listSyntax.dest_cons cons_pat of
+                      SOME (h, l1) =>
+                        ListPair.allEq (fn (x, y) => Term.aconv x y)
+                          (call_args, [l1, l2])
+                        andalso
+                        (case Lib.total listSyntax.dest_cons (#output step) of
+                             SOME (h', v) =>
+                               Term.aconv h h' andalso Term.aconv v result
+                           | NONE => false)
+                    | NONE => false)
+             | _ => false)
+        end
+    | NONE => false
+val _ = require_msg (check_result graph_clauses_append)
+  (fn () => "APPEND's synthesised graph clauses did not match the " ^
+    "shape of its real defining equations")
+  (fn () => ()) ()
+
+val _ = tprint "Refute SmartGen graph clause synthesis for LENGTH"
+fun graph_clauses_length () =
+  case SG.graph_clauses_for true ``LENGTH : num list -> num`` of
+      SOME clauses =>
+        length clauses = 2 andalso
+        let
+          val base = List.nth (clauses, 0)
+          val step = List.nth (clauses, 1)
+        in
+          (case #arguments base of
+               [nil_pat] =>
+                 listSyntax.is_nil nil_pat andalso
+                 Term.aconv (#output base) numSyntax.zero_tm andalso
+                 null (#calls base)
+             | _ => false)
+          andalso
+          (case (#arguments step, #calls step) of
+               ([cons_pat], [(call_args, result)]) =>
+                 (case Lib.total listSyntax.dest_cons cons_pat of
+                      SOME (h, t) =>
+                        ListPair.allEq (fn (x, y) => Term.aconv x y)
+                          (call_args, [t])
+                        andalso
+                        (case Lib.total numSyntax.dest_suc (#output step) of
+                             SOME v => Term.aconv v result
+                           | NONE => false)
+                    | NONE => false)
+             | _ => false)
+        end
+    | NONE => false
+val _ = require_msg (check_result graph_clauses_length)
+  (fn () => "LENGTH's synthesised graph clauses did not match the " ^
+    "shape of its real defining equations")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute SmartGen function inversion: Graph APPEND yields an inverting mode"
+fun graph_append_inverting_mode () =
+  let val f = ``APPEND : num list -> num list -> num list`` in
+    case SG.infer_graph true f of
+        SOME {relations = [{modes, ...}], ...} =>
+          List.exists (fn (mode, _, needs_generator) =>
+            case SG.strip_mode mode of
+                [arg1, arg2, result] =>
+                  SG.eq_mode (result, SG.Input) andalso
+                  (SG.eq_mode (arg1, SG.Output) orelse
+                   SG.eq_mode (arg2, SG.Output)) andalso
+                  not needs_generator
+              | _ => false) modes
+      | _ => false
+  end
+val _ = require_msg (check_result graph_append_inverting_mode)
+  (fn () => "Graph APPEND did not yield a decidable inverting mode " ^
+    "(result Input, an argument Output)")
+  (fn () => ()) ()
+
+(* [flatten_rhs]'s shape tests are total and structural; its one
+   non-test step, [Term.list_mk_comb], is safe here only because
+   flattening preserves each subterm's type, not because it cannot
+   raise in principle.  So a [NONE] returned directly from it (as
+   opposed to from [recognize_graph_clause], which does carry a
+   [handle]) is, in this well-typed usage, always the final, explicit
+   "no known shape matched" case, never a swallowed [HOL_ERR].  Calling
+   it directly, rather than through a wrapper that could paper over an
+   exception, is what makes this a shape pin and not a mere [NONE]
+   pin. *)
+val _ = tprint "Refute SmartGen flatten_rhs refuses a non-Horn rhs by shape"
+fun flatten_rhs_refuses_conditional () =
+  let
+    val f = ``APPEND : num list -> num list -> num list``
+    val rhs = ``if (b:bool) then (x:num list) else y``
+  in
+    not (Option.isSome (SG.flatten_rhs f 2 [] rhs))
+  end
+val _ = require_msg (check_result flatten_rhs_refuses_conditional)
+  (fn () => "flatten_rhs accepted a conditional rhs instead of " ^
+    "refusing it by shape")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute SmartGen graph synthesis refuses an unflattenable function"
+fun graph_synthesis_refuses_conditional () =
+  let
+    val f = ``APPEND : num list -> num list -> num list``
+    val base = ``APPEND ([] : num list) (l : num list) = l``
+    val step = ``!(h:num) l1 l2. APPEND (h::l1) l2 =
+      if h = 0 then [] else h::(APPEND l1 l2)``
+  in
+    not (Option.isSome (SG.synthesize_graph_clauses f [base, step]))
+  end
+val _ = require_msg (check_result graph_synthesis_refuses_conditional)
+  (fn () => "graph clause synthesis accepted a function with a " ^
+    "non-Horn (conditional) defining equation")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute SmartGen graph synthesis refuses non-exhaustive equations"
+fun graph_synthesis_refuses_partial () =
+  let
+    val f = ``APPEND : num list -> num list -> num list``
+    val step = ``!(h:num) l1 l2. APPEND (h::l1) l2 = h::(APPEND l1 l2)``
+  in
+    not (Option.isSome (SG.synthesize_graph_clauses f [step]))
+  end
+val _ = require_msg (check_result graph_synthesis_refuses_partial)
+  (fn () =>
+    "graph clause synthesis accepted a non-exhaustive equation set")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute SmartGen graph synthesis refuses a not-maximal-application clause"
+fun graph_synthesis_refuses_arity_mismatch () =
+  not (Option.isSome (SG.graph_clauses_for true ``zoo_graph_select``))
+val _ = require_msg (check_result graph_synthesis_refuses_arity_mismatch)
+  (fn () => "graph clause synthesis accepted equations at less than " ^
+    "maximal application")
+  (fn () => ()) ()
+
+(* Distinct from the two conditional-rhs pins above: [zoo_graph_calls_other]'s
+   step calls a different function at the SAME arity, so only
+   [same_constant head constant] -- not an arity mismatch -- can be
+   refusing it; a bug there could otherwise hide behind a coincidental
+   arity difference.  The conditional-rhs pins above DO reach
+   [flatten_rhs]'s [same_constant head constant andalso length
+   arguments = arity] test ([COND] is not a constructor, so the
+   preceding constructor check fails first); but [andalso]
+   short-circuits, and [same_constant COND constant] is already false,
+   so the arity conjunct there is never evaluated. *)
+val _ = tprint
+  "Refute SmartGen graph synthesis refuses a call to a different function"
+fun graph_synthesis_refuses_foreign_call () =
+  not (Option.isSome (SG.graph_clauses_for true ``zoo_graph_calls_other``))
+val _ = require_msg (check_result graph_synthesis_refuses_foreign_call)
+  (fn () => "graph clause synthesis accepted a step equation that calls " ^
+    "a different function instead of refusing the foreign call")
+  (fn () => ()) ()
+
+(* [zoo_graph_pair_formal]'s first formal [p : num # num] is never
+   pattern-matched, so it stays a bare variable in the one clause's
+   [arguments].  A candidate mode that treats it as [Pair (Input,
+   Output)] (half given, half generated) cannot be applied to that
+   variable -- [split_arguments] only recurses into a [Pair] mode when
+   the term is a literal pair constructor -- so [split_atomic] raises,
+   caught by [check_graph_clause]'s own blanket handler.  This witnesses
+   that raiser directly: report what survives, not what is dead. *)
+val _ = tprint
+  "Refute SmartGen graph inference drops a mixed pair-formal mode \
+  \instead of raising"
+fun graph_pair_formal_drops_mixed_mode () =
+  let
+    val f = ``zoo_graph_pair_formal : num # num -> num -> num``
+    fun mixed_pair (SG.Pair (left, right)) = not (SG.eq_mode (left, right))
+      | mixed_pair _ = false
+    fun first_mode mode =
+      case SG.strip_mode mode of
+          first :: _ => first
+        | [] => SG.Bool
+  in
+    case SG.infer_graph true f of
+        SOME {relations = [{modes, ...}], ...} =>
+          not (null modes) andalso
+          not (List.exists (fn (mode, _, _) =>
+            mixed_pair (first_mode mode)) modes)
+      | _ => false
+  end
+val _ = require_msg (check_result graph_pair_formal_drops_mixed_mode)
+  (fn () => "Graph inference for a bare-variable pair formal either " ^
+    "produced no modes at all or kept an unsplittable mixed-pair mode")
+  (fn () => ()) ()
+
+(* Split in two so each half's failure names its own cause: [infer_graph]
+   empties [negative] via [blocked = true] in [negative_modes_of], never
+   by consulting [mode_all_input] on a [Graph] key (that path is not
+   reached today); [mode_all_input]'s own [Graph _ => false] clause is a
+   separate, currently-unreached defence-in-depth, witnessed only here. *)
+val _ = tprint
+  "Refute SmartGen graph relation has a needs_generator-free all-input \
+  \mode but an empty negative table"
+fun graph_negative_table_empty () =
+  let
+    val f = ``APPEND : num list -> num list -> num list``
+    val all_input = SG.list_mode [SG.Input, SG.Input, SG.Input]
+  in
+    (* Not vacuous: a mode satisfying [mode_all_input] with [not
+       needs_generator] genuinely exists for [Graph APPEND]'s positive
+       clauses, so the empty [negative] below is a real choice
+       ([blocked = true]), not an empty table anyway.  [not
+       needs_generator] alone does not establish decidability: the
+       fixpoint is a GREATEST fixpoint seeded with every mode (see
+       [infer_graph]), so a mode can be justified by assuming itself --
+       e.g. [f 0 = 0 /\ f (SUC n) = f n] reports [needs_generator =
+       false] at mode (o,i) while enumerating [0, SUC 0, ...] forever.
+       This pin asserts only that the choice exists, not that it
+       terminates. *)
+    case SG.infer_graph true f of
+        SOME {relations = [{modes, ...}],
+              negative = [{modes = neg, ...}], ...} =>
+          List.exists (fn (mode, _, needs) =>
+            SG.eq_mode (mode, all_input) andalso not needs) modes
+          andalso null neg
+      | _ => false
+  end
+val _ = require_msg (check_result graph_negative_table_empty)
+  (fn () => "Graph's negative-mode table was not empty despite a " ^
+    "needs_generator-free all-input positive mode")
+  (fn () => ()) ()
+
+(* [graph_negative_table_empty] above only asserts the HEAD mode's
+   [needs_generator], which holds whether the self-recursive call
+   underneath is CHECKED at (i,i,i) or ENUMERATED at (o,o,o) -- both
+   leave the head decidable, so that pin cannot tell a correct callee
+   selection from a wrong one that happens not to leak a generator to
+   the head.  This pin looks inside the (i,i,i) clause's own [GraphPrem]
+   derivation instead: the self-call's own head mode must be (i,i,i), not
+   the all-[Output] mode that ties on [missing] count alone. *)
+val _ = tprint
+  "Refute SmartGen graph clause for APPEND checks its self-call at \
+  \(i,i,i) rather than enumerating it"
+fun graph_append_selfcall_checks () =
+  let
+    val f = ``APPEND : num list -> num list -> num list``
+    val all_input = SG.list_mode [SG.Input, SG.Input, SG.Input]
+    fun is_selfcall_at_all_input
+          ({premises, ...} : SG.moded_clause) =
+      List.exists (fn (premise, derivation) =>
+        case premise of
+            SG.GraphPrem _ =>
+              SG.eq_mode (SG.head_mode_of derivation, all_input)
+          | _ => false) premises
+  in
+    case SG.infer_graph true f of
+        SOME {relations = [{modes, ...}], ...} =>
+          List.exists (fn (mode, clauses, _) =>
+            SG.eq_mode (mode, all_input) andalso
+            List.exists is_selfcall_at_all_input clauses) modes
+      | _ => false
+  end
+val _ = require_msg (check_result graph_append_selfcall_checks)
+  (fn () => "Graph APPEND's (i,i,i) clause derived its self-call at " ^
+    "some other mode instead of checking it at (i,i,i)")
+  (fn () => ()) ()
+
+(* An [Output] position's [derive_argument] never contributes to
+   [missing] (a bare-variable output always passes [possible_output]),
+   so [check_graph_clause]'s [generated] fold can locally see
+   [missing = []] at a call site while the SELECTED callee mode's own
+   [needs_generator] is [true] for an unrelated reason (here: [(i,o,o)]'s
+   base clause needs one, because the shared variable in
+   [APPEND [] l = l] is a genuine free output with no premise to derive
+   it from).  This pin looks at the STEP clause's own
+   [moded_clause.needs_generator] directly, not the mode-level aggregate
+   ([List.exists] over both clauses): at [(i,o,o)] the aggregate is
+   already [true] via the base clause alone, so it cannot distinguish a
+   step clause that folds in its callee's flag from one that does not --
+   only the per-clause field can. *)
+val _ = tprint
+  "Refute SmartGen graph clause folds a selected callee's own \
+  \needs_generator into its own"
+fun graph_append_folds_callee_generator () =
+  let
+    val f = ``APPEND : num list -> num list -> num list``
+    val target = SG.list_mode [SG.Input, SG.Output, SG.Output]
+  in
+    case SG.infer_graph true f of
+        SOME {relations = [{modes, ...}], ...} =>
+          (case List.find (fn (mode, _, _) => SG.eq_mode (mode, target))
+                 modes of
+               SOME (_, [_, step], _) =>
+                 #needs_generator (step : SG.moded_clause)
+             | _ => false)
+      | _ => false
+  end
+val _ = require_msg (check_result graph_append_folds_callee_generator)
+  (fn () => "Graph APPEND's (i,o,o) step clause did not report " ^
+    "needs_generator even though its selected self-call mode needs one")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute SmartGen mode_all_input refuses a Graph key unconditionally"
+fun graph_mode_all_input_refused () =
+  let
+    val f = ``APPEND : num list -> num list -> num list``
+    val all_input = SG.list_mode [SG.Input, SG.Input, SG.Input]
+  in
+    not (SG.mode_all_input (SG.Graph f) all_input)
+  end
+val _ = require_msg (check_result graph_mode_all_input_refused)
+  (fn () => "mode_all_input accepted a Graph key as all-input instead " ^
+    "of refusing it structurally")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute SmartGen allow_function_inversion=false constructs no Graph"
+fun graph_flag_off_constructs_nothing () =
+  let
+    val _ = SG.clear_graph_cache ()
+    val f = ``LENGTH : num list -> num``
+    val prior_size = SG.graph_cache_size ()
+    val result = SG.infer_graph false f
+  in
+    not (Option.isSome result) andalso SG.graph_cache_size () = prior_size
+  end
+val _ = require_msg (check_result graph_flag_off_constructs_nothing)
+  (fn () => "infer_graph with the flag off touched the graph cache " ^
+    "or returned a result")
   (fn () => ()) ()
 
 val _ = tprint "Refute SmartGen mode inference"
@@ -14130,6 +14480,7 @@ fun config_surface_snapshot () =
        "optimise_equality = true\n",
        "reorder_premises = true\n",
        "use_subtype = false\n",
+       "allow_function_inversion = false\n",
        "mf.card = [NONE => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]\n",
        "mf.card_mode = IterativeDeepening\n",
        "mf.max = [NONE => [~1]]\n",

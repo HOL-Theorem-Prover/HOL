@@ -214,6 +214,15 @@ signature Refute = sig
   val upd_smart_generators : bool -> config -> config
   val upd_optimise_equality : bool -> config -> config
   val upd_reorder_premises : bool -> config -> config
+  (* Function inversion (synthesise a function's graph clauses from its
+     defining equations and run mode inference over them, see
+     [Refute_SmartGen.infer_graph]) names Isabelle Quickcheck's own
+     function-inversion flag, off by default, but this updater sets a
+     config field no code currently reads: nothing connects it to
+     [infer_graph]'s own [allow] parameter, so setting it changes no
+     goal's verdict.  The machinery itself is exercised only directly,
+     by the selftest; no goal-premise recogniser consumes it either. *)
+  val upd_allow_function_inversion : bool -> config -> config
   val upd_mf : mf_config -> config -> config
   val upd_card : (hol_type option * int list) list -> config -> config
   val upd_iterative_card :

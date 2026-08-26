@@ -278,6 +278,8 @@ structure Refute :> Refute = struct
   val upd_smart_generators = Refute_Core.upd_smart_generators
   val upd_optimise_equality = Refute_Core.upd_optimise_equality
   val upd_reorder_premises = Refute_Core.upd_reorder_premises
+  val upd_allow_function_inversion =
+    Refute_Core.upd_allow_function_inversion
   val upd_mf = Refute_Core.upd_mf
   val upd_card = Refute_Core.upd_card
   val upd_iterative_card = Refute_Core.upd_iterative_card
