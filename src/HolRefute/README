@@ -265,14 +265,14 @@ restores generate-and-guard planning, and `upd_reorder_premises` controls
 mode-analysis reordering.
 
 `upd_allow_function_inversion` (default `false`, Isabelle Quickcheck
-parity) sets a config field that no code currently reads: nothing
-connects it to `Refute_SmartGen.infer_graph`'s own `allow` parameter,
-which only the selftest supplies directly, so setting this flag
-changes no goal's verdict.  The machinery it names is real, and
-reachable only from the SML internals: calling `infer_graph allow
-constant` directly synthesises Horn clauses for an ordinary function's
-graph -- `f a1 ... an = res`, at `f`'s maximal application -- from its
-own defining equations, and runs the same mode inference over them.
+parity) gates function inversion: synthesising Horn clauses for an
+ordinary function's graph -- `f a1 ... an = res`, at `f`'s maximal
+application -- from its own defining equations, and running the same
+mode inference over them (`Refute_SmartGen.infer_graph`).  Function
+inversion is itself a smart-generator route -- it compiles to an
+`Enum` -- so it also requires `smart_generators` (default `true`);
+`upd_smart_generators false` disables it too, keeping every
+random-backend plan `Enum`-free regardless of this flag.
 `flatten_rhs` accepts only a variable or a fully-applied TypeBase
 constructor over already-flattened subterms, plus a self-recursive
 call to `f` at its own maximal arity, which it replaces by a fresh
@@ -292,9 +292,36 @@ space would exceed that returns no modes at all rather than
 materializing an exponential search.  A graph relation's modes are
 never entered in the negative-mode table: soundness there rests on an
 equation set's own exhaustiveness as a *definition*, which says
-nothing about any one mode's complement.  No goal-premise recogniser
-consumes a function's graph either, so today both the flag and the
-machinery it names leave every goal's verdict unaffected.
+nothing about any one mode's complement, so a negated graph premise
+always falls back to an opaque guard, never a complement.
+
+With the flag on, a goal premise recognising `f a1 ... an = res`
+drives this machinery: `Refute_QC` destructures the equation itself
+(either orientation), requires `f` a constant applied at exactly its
+own maximal arity -- a partial application has no equations to invert
+and is refused, not approximated -- and requires every one of the
+`n + 1` flattened positions to be either fully bound (every free
+variable already known) or a bare unbound variable.  A compound
+position still carrying an unbound variable, e.g. `z :: zs` in
+`xs ++ ys = z :: zs`, is neither an `Input` nor an `Output` the mode
+system can express, and refuses the whole premise.  A recognised
+premise mode-infers `f`'s graph (memoised per constant) and, on a
+match, compiles to the same `Enum` plan node an ordinary relational
+premise would, keyed by `Graph f` instead of `Predicate f`; it is
+additive next to every other route and competes on the same five-way
+score, ties going to the smart candidate.  With the flag off, no
+`Graph` key is ever built.
+
+An all-input premise -- every one of the `n + 1` positions already
+bound, e.g. `f a b = c` with `a`, `b`, `c` all known -- offers no
+inverting candidate: every position is Input, so no mode survives with
+a non-empty `outs` (an Output must be a bare variable not already
+bound), and the premise is decided by the ordinary route with no
+enumerator at all.  A premise whose function is not executable but
+whose graph clauses would invert, with every position already bound,
+is no longer reachable through inversion either way; both routes
+forfeit completeness for such a premise regardless, so this costs
+refutation reach, not certainty.
 
 Native narrowing is active by default as the `narrowing` backend.  It uses
 `size` as its initial refinement-depth window and supports prenex existential

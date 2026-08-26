@@ -774,7 +774,7 @@ raises a HOL error.  They are intended mainly for tests.
 | `upd_optimise_equality` | `true` | Turn suitable equality premises into direct bindings. |
 | `upd_reorder_premises` | `true` | Reorder premises during smart mode inference. |
 | `upd_use_subtype` | `false` | Test a generator-less typedef by transporting to its representation type. |
-| `upd_allow_function_inversion` | `false` | Mode-infer a self-recursive function's graph clauses. |
+| `upd_allow_function_inversion` | `false` | Invert an `f ... = res` premise via its graph clauses. |
 | `upd_seed` | `NONE` | Reproducible random seed; `NONE` advances a deterministic session stream. |
 
 The default size mode is iterative deepening: `10` is an initial window,
@@ -1120,14 +1120,29 @@ Counterexample search is bounded and incomplete.  In particular:
 * function inversion -- synthesising Horn clauses for an ordinary
   function's graph (`f a1 ... an = res`) from its own defining
   equations, and running mode inference over them so an inverting mode
-  could drive a generator -- is implemented for a purely self-recursive
+  can drive a generator -- is implemented for a purely self-recursive
   definition (a call to any other function refuses the whole function
-  rather than approximating its graph), but is reachable only from the
-  SML internals: `upd_allow_function_inversion` (default `false`) sets
-  a config field nothing reads, so it does not connect to this
-  machinery.  No goal-premise recogniser consumes a function's graph
-  either, so today neither the flag nor the machinery it names affects
-  any goal's verdict;
+  rather than approximating its graph), and is gated by
+  `upd_allow_function_inversion` (default `false`).  On, a goal
+  premise recognising `f a1 ... an = res` (either orientation, `f`
+  applied at exactly its own maximal arity) can compile to an
+  inverting `Enum`, competing on score with every other route exactly
+  like an ordinary relational premise.  A position -- argument or
+  result -- that is neither fully bound nor a bare unbound variable,
+  e.g. `z :: zs` in `xs ++ ys = z :: zs`, is a pattern the mode system
+  cannot express and refuses the whole premise; a negated graph
+  premise always falls back to an opaque guard, since a graph
+  relation's modes never enter the negative-mode table; an all-input
+  premise (every position already bound) offers no inverting `Enum`
+  either, because every position is Input and no mode survives with a
+  non-empty output set, and is left to the ordinary route with no
+  enumerator at all -- a premise whose function is not executable but
+  whose graph clauses would invert, with every position already bound,
+  is no longer reachable through inversion either way, though both
+  routes forfeit completeness for such a premise regardless, so this
+  costs refutation reach, not certainty; the flag is itself a
+  smart-generator route, so it also requires `upd_smart_generators`
+  (default on);
 * narrowing finitizes function inputs.  The constant-function fallback
   for a higher-order domain is an approximation, and every depth bound
   remains incomplete;

@@ -19943,6 +19943,7 @@ fun contains_enum current =
           (Option.map contains_enum fallback, false)
     | Split (_, branches) => List.exists (contains_enum o #3) branches
     | Guard (_, next) => contains_enum next
+    | NegGuard (_, next) => contains_enum next
     | SmartGuard {cont, ...} => contains_enum cont
     | _ => false
 
@@ -21988,6 +21989,249 @@ val _ = require_msg (check_result (fn () =>
   auto_solves_function_lookup ())) (fn () =>
   "native emitted ill-formed SML for a function type with a non-enumerable " ^
   "domain, refused a goal it can decide, or Auto found no counterexample")
+  (fn () => ()) ()
+
+(* Function inversion consumed from a goal premise: [xs ++ ys = [1;2;3]]
+   drives an [Enum] keyed by [SG.Graph APPEND] rather than an opaque
+   guard, once [upd_allow_function_inversion] is set.  [contains_graph_enum]
+   walks a compiled plan exactly as [contains_enum] above does, but only
+   recognises an [Enum] keyed by a [Graph] relation, so it distinguishes
+   the new route from the ordinary one. *)
+fun contains_graph_enum current =
+  case current of
+      Enum {rel = SG.Graph _, ...} => true
+    | Gen (_, next) => contains_graph_enum next
+    | Bind (_, _, fallback, next) =>
+        contains_graph_enum next orelse Option.getOpt
+          (Option.map contains_graph_enum fallback, false)
+    | Split (_, branches) => List.exists (contains_graph_enum o #3) branches
+    | Guard (_, next) => contains_graph_enum next
+    | NegGuard (_, next) => contains_graph_enum next
+    | SmartGuard {cont, ...} => contains_graph_enum cont
+    | _ => false
+
+fun find_graph_enum current =
+  case current of
+      Enum {rel = rel as SG.Graph _, mode, ...} => SOME (rel, mode)
+    | Gen (_, next) => find_graph_enum next
+    | Bind (_, _, fallback, next) =>
+        (case find_graph_enum next of
+             SOME found => SOME found
+           | NONE => (case fallback of
+                          SOME alternative => find_graph_enum alternative
+                        | NONE => NONE))
+    | Split (_, branches) => Lib.get_first (find_graph_enum o #3) branches
+    | Guard (_, next) => find_graph_enum next
+    | NegGuard (_, next) => find_graph_enum next
+    | SmartGuard {cont, ...} => find_graph_enum cont
+    | _ => NONE
+
+val graph_on_config = Refute.upd_allow_function_inversion true default_config
+
+val graph_headline_goal =
+  ``(xs : num list) ++ ys = [1;2;3] ==> LENGTH xs <> 1``
+
+val graph_sound_goal =
+  ``(xs : num list) ++ ys = [1;2;3] ==> LENGTH xs <= 3``
+
+val graph_partial_application_goal =
+  ``APPEND (xs : num list) = (g : num list -> num list) ==> F``
+
+val graph_result_pattern_refusal_goal =
+  ``(xs : num list) ++ ys = (z : num) :: zs ==> F``
+
+val graph_argument_pattern_refusal_goal =
+  ``APPEND ((h : num) :: t) ys = (zs : num list) ==> F``
+
+(* Every position of the equation is already bound by the time it is
+   reached: [xs], [ys] and [zs] are all pinned by the three premises
+   ahead of it.  Mode [(i,i,o)] would offer [outs = [zs]] -- [zs] is a
+   bare variable, so the pre-fix [graph_position_ok]-only check would
+   have accepted it -- but [zs] is already known, so no Output position
+   is valid and the whole candidate must be dropped. *)
+val graph_fully_bound_goal =
+  ``(xs = [1 : num]) ==> (ys = [2]) ==> (zs = [1; 2]) ==>
+    (xs ++ ys = zs) ==> (LENGTH zs = 2)``
+
+val _ = tprint "Refute goal-premise graph inversion: headline route"
+fun graph_headline_route () =
+  contains_graph_enum (compile_plan graph_on_config graph_headline_goal)
+val _ = require_msg (check_result graph_headline_route) (fn () =>
+  "flag-on headline goal did not compile the equation into a graph Enum")
+  (fn () => ()) ()
+
+val _ = tprint "Refute goal-premise graph inversion: flag off takes no route"
+fun graph_headline_flag_off () =
+  not (contains_graph_enum
+    (compile_plan default_config graph_headline_goal))
+val _ = require_msg (check_result graph_headline_flag_off) (fn () =>
+  "flag-off headline goal still compiled a graph Enum")
+  (fn () => ()) ()
+
+(* Hoisted at [Refute_QC.compile_plan_with] alongside [allow_function_
+   inversion] itself: [smart_generators] off must veto the graph route
+   exactly as it vetoes every other smart-generator route, not just the
+   ordinary flag.  Nothing else in either suite exercises the two flags
+   together. *)
+val _ = tprint
+  "Refute goal-premise graph inversion: needs smart_generators too"
+fun graph_needs_smart_generators () =
+  not (contains_graph_enum
+    (compile_plan (Refute.upd_smart_generators false graph_on_config)
+      graph_headline_goal))
+val _ = require_msg (check_result graph_needs_smart_generators) (fn () =>
+  "smart_generators := false did not veto the graph route")
+  (fn () => ()) ()
+
+(* Asserts where the two worlds actually diverge: not merely that a
+   [Counterexample] with the right shape appeared (a goal this simple can
+   also be refuted by plain exhaustive generate-and-guard on [xs]/[ys]),
+   but that the graph route was compiled in AND is the route the
+   refutation went through.  The plan half compiles the same instance
+   goal(s) [run_with_strategy] runs, the way [graph_soundness_twin]
+   below does, so the plan half describes what the run half executes. *)
+val _ = tprint
+  "Refute goal-premise graph inversion: headline refuted via the route"
+fun graph_headline_refuted () =
+  let
+    val instances = qc_instances graph_on_config graph_headline_goal
+  in
+    List.exists (fn i =>
+      contains_graph_enum (compile_plan graph_on_config (#goal i)))
+      instances
+    andalso
+    (case run_with_strategy Exhaustive graph_on_config graph_headline_goal of
+         Counterexample ({certainty = Genuine, ...} :: _) => true
+       | _ => false)
+  end
+val _ = require_msg (check_result graph_headline_refuted) (fn () =>
+  "flag-on headline goal did not compile via the graph route, or was " ^
+  "not refuted with a genuine counterexample")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute goal-premise graph inversion: GraphPrem branch is reached"
+fun graph_prem_branch_reached () =
+  case find_graph_enum
+      (compile_plan graph_on_config graph_headline_goal) of
+      NONE => false
+    | SOME (rel, mode) =>
+        (case SG.enumerator_for rel mode of
+             SOME {clauses, ...} =>
+               List.exists (fn SG.CpsClause {premises, ...} =>
+                 List.exists (fn SG.CpsCall {rel = SG.Graph _, ...} => true
+                     | _ => false) premises) clauses
+           | NONE => false)
+val _ = require_msg (check_result graph_prem_branch_reached) (fn () =>
+  "the compiled graph enumerator carried no GraphPrem-compiled recursive " ^
+  "call, so compile_premise's GraphPrem branch was not exercised")
+  (fn () => ()) ()
+
+(* Not [NoCounterexample]: every existing SmartGen [Enum] pin in this file
+   ([normal_bounded_no_hit], the [smartgen_*_payoff] tests) settles for
+   [Unknown] on a true theorem, because an [Enum]'s fuel-bounded search is
+   never reported as exhausted -- that is a property of the [Enum] node
+   itself, not of which relation it inverts.  The soundness bar an
+   inverted premise must clear is the one [Enum]-bearing plans generally
+   clear: never a spurious [Counterexample].  [contains_graph_enum] keeps
+   this from being a blind test that would pass identically with function
+   inversion silently disabled, but only proves the route was *planned*:
+   a run that timed out before drawing one tuple would pass this check
+   identically to one that enumerated all four splittings of [1;2;3] and
+   rejected each.  Driving [Refute_EvalCompute] directly, the same way
+   [listall_specialisation_twin_no_spurious_cex] above drives
+   [candidates_generated], and requiring [assumption_satisfied] strictly
+   positive asserts where those two worlds actually diverge. *)
+val _ = tprint "Refute goal-premise graph inversion: soundness twin"
+fun graph_soundness_twin () =
+  let
+    val config = Refute.upd_timeout 3.0 graph_on_config
+    val plan_ok = contains_graph_enum (compile_plan config graph_sound_goal)
+    val verdict_ok =
+      case run_with_strategy Exhaustive config graph_sound_goal of
+          Counterexample _ => false
+        | _ => true
+    val instances = qc_instances config graph_sound_goal
+    val plans = List.map (fn i => compile_plan config (#goal i)) instances
+    val compiled =
+      case Refute_EvalCompute.compile config Exhaustive (Plans plans) of
+          Compiled test => test
+        | Inapplicable reasons => raise Fail (String.concatWith "; " reasons)
+    val ran_ok = Portable.finally (fn () => #close compiled ())
+      (fn () =>
+        (ignore (#run compiled
+           {genuine_only = false, card = 1, size = 3, draws = 0,
+            ignored = []});
+         case lookup_stat "assumption_satisfied"
+             (!(#last_stats compiled)) of
+             SOME n => n > 0
+           | NONE => false)) ()
+  in
+    plan_ok andalso verdict_ok andalso ran_ok
+  end
+val _ = require_msg (check_result graph_soundness_twin) (fn () =>
+  "a true theorem of the inverted shape was not compiled via the graph " ^
+  "route, was falsely refuted, or never drew a satisfying candidate")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute goal-premise graph inversion: partial application refused"
+fun graph_partial_application_refused () =
+  not (contains_graph_enum
+    (compile_plan graph_on_config graph_partial_application_goal))
+val _ = require_msg (check_result graph_partial_application_refused) (fn () =>
+  "a partially-applied constant was accepted as a graph premise")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute goal-premise graph inversion: compound result pattern refused"
+fun graph_result_pattern_refused () =
+  not (contains_graph_enum
+    (compile_plan graph_on_config graph_result_pattern_refusal_goal))
+val _ = require_msg (check_result graph_result_pattern_refused) (fn () =>
+  "a compound result pattern carrying unbound variables was accepted " ^
+  "as a graph premise")
+  (fn () => ()) ()
+
+val _ = tprint
+  "Refute goal-premise graph inversion: compound argument pattern refused"
+fun graph_argument_pattern_refused () =
+  not (contains_graph_enum
+    (compile_plan graph_on_config graph_argument_pattern_refusal_goal))
+val _ = require_msg (check_result graph_argument_pattern_refused) (fn () =>
+  "a compound argument pattern carrying unbound variables was accepted " ^
+  "as a graph premise")
+  (fn () => ()) ()
+
+(* A graph-premise Output is a bare *unbound* variable, never an
+   already-bound one.  [xs ++ ys = zs] mode-infers a candidate mode
+   [(i,i,o)] with [outs = [zs]] regardless of whether [zs] happens to be
+   bound already -- [zs] is still a bare variable either way -- so
+   [graph_position_ok] alone cannot refuse it, and the mode-selection
+   check in [SmartGen.graph_mode_ok] is the only thing that can.
+   [xs]/[ys]/[zs] range over [num list], an infinite type: measured
+   directly, [run_with_strategy Exhaustive] on this goal reports
+   [Unknown] from the search deadline both with the fix in place (a
+   clean [Bind] chain, no [Enum]) and with [SmartGen.graph_mode_ok]'s
+   Output check reverted (an [Enum] is planted instead) -- the ordinary
+   route's own [Bind]/[Split] compilation for an equation over an
+   infinite-typed variable is not decisive here either, so a verdict
+   check cannot distinguish the two worlds and would be a blind test.
+   What does distinguish them is the plan shape, as in
+   [graph_argument_pattern_refused] above: whether an [Enum] is
+   planted at all. *)
+val _ = tprint
+  "Refute goal-premise graph inversion: fully-bound equation refused"
+fun graph_fully_bound_refused () =
+  let
+    val instances = qc_instances graph_on_config graph_fully_bound_goal
+  in
+    not (List.exists (fn i =>
+      contains_graph_enum (compile_plan graph_on_config (#goal i)))
+      instances)
+  end
+val _ = require_msg (check_result graph_fully_bound_refused) (fn () =>
+  "a fully-bound equation premise was accepted as a graph premise")
   (fn () => ()) ()
 
 (* Extraction builds SML as text, so a value spliced into an application

@@ -217,11 +217,14 @@ signature Refute = sig
   (* Function inversion (synthesise a function's graph clauses from its
      defining equations and run mode inference over them, see
      [Refute_SmartGen.infer_graph]) names Isabelle Quickcheck's own
-     function-inversion flag, off by default, but this updater sets a
-     config field no code currently reads: nothing connects it to
-     [infer_graph]'s own [allow] parameter, so setting it changes no
-     goal's verdict.  The machinery itself is exercised only directly,
-     by the selftest; no goal-premise recogniser consumes it either. *)
+     function-inversion flag, off by default.  When set, a goal premise
+     recognising [f a1 ... an = res] -- [f] a constant applied at exactly
+     its own maximal arity, every position either fully bound or a bare
+     unbound variable -- may compile to an [Enum] that inverts [f]'s
+     graph instead of an opaque guard, competing on score with every
+     other route exactly as an ordinary relational premise does.  Also
+     needs [upd_smart_generators] (default on): this is itself a
+     smart-generator route, so turning that off disables it too. *)
   val upd_allow_function_inversion : bool -> config -> config
   val upd_mf : mf_config -> config -> config
   val upd_card : (hol_type option * int list) list -> config -> config

@@ -225,10 +225,15 @@ structure Refute_QC = struct
         [Term.aconv] on the value, exactly like
         [SmartGen.same_relation]/[SmartGen.same_term] do for the
         ordinary cache this one sits beside. *)
-     fixed_analyses : (term * int * term * analysis) list ref}
+     fixed_analyses : (term * int * term * analysis) list ref,
+     (* [SmartGen.infer_graph] inference for a function's own graph,
+        keyed by the constant alone -- unlike [fixed_analyses], a graph
+        inference has no position or static value to specialise. *)
+     graph_analyses : (term * analysis) list ref}
 
   fun new_plan_cache () : plan_cache =
-    {smart_context = ref NONE, analyses = ref [], fixed_analyses = ref []}
+    {smart_context = ref NONE, analyses = ref [], fixed_analyses = ref [],
+     graph_analyses = ref []}
 
   (*
      Plan compilation, ported from exhaustive_generators.ML:260--315.
@@ -252,11 +257,31 @@ structure Refute_QC = struct
          (Guard (a, compile concl (frees a U bound) rest))
   *)
   fun compile_plan_with
-        ({smart_context = smart_context_cache, analyses, fixed_analyses}
+        ({smart_context = smart_context_cache, analyses, fixed_analyses,
+          graph_analyses}
            : plan_cache)
         (config : Refute_Core.config) goal =
     let
       val (raw_assumptions, conclusion) = boolSyntax.strip_imp goal
+      (* Hoisted, read once for the whole goal -- exactly like
+         [smart_context] below -- rather than re-read at every route that
+         might want it.  A per-route read has already leaked once in this
+         codebase; the single route that consumes it, [positive_candidates]'s
+         graph branch, takes this value rather than re-reading the field.
+         The graph route is a smart-generator route -- its output is an
+         [Enum], exactly like [smart_context]'s callers -- but it cannot
+         gate on [smart_context ()] the way they do: they need the
+         model-finder context itself, so [NONE] doubles as their veto,
+         while [infer_graph] works from [f]'s own defining equations and
+         needs no context at all, so it has no such incidental veto and
+         must state the [smart_generators] dependency explicitly here.
+         Without this conjunct this route would be the only
+         smart-generator route not gated by [smart_generators], so
+         [strategy_run_body]'s [upd_smart_generators false] (below) would
+         fail to keep a random plan [Enum]-free. *)
+      val allow_function_inversion =
+        #smart_generators (#qc config) andalso
+        #allow_function_inversion (#qc config)
       (* [Refute_Core.normalize]'s [AND_IMP_INTRO] folds a multi-premise
          chain into one conjunction before a real goal ever reaches here
          (a bare [compile_plan] call on an unnormalized goal does not);
@@ -508,6 +533,131 @@ structure Refute_QC = struct
                     (SmartGen.goal_modes_for_call bound assumption inference))
           (fixed_argument_positions assumption))
 
+      (* A graph-premise position is Input (every free variable already
+         bound) or Output (a bare unbound variable); a compound term
+         still carrying an unbound variable is a pattern, which the mode
+         system has no way to express, and refuses the whole premise
+         rather than misreading the position as either. *)
+      fun graph_position_ok bound term =
+        null (vars_of bound term) orelse Term.is_var term
+
+      (* One orientation of an equation as a graph premise: [call] a
+         constant applied at exactly its own maximal arity (a partial
+         application has no equations to invert, and is refused rather
+         than approximated), [result] the other side, every one of the
+         flattened [n + 1] positions passing [graph_position_ok].  The
+         arity check below is not the load-bearing refusal either:
+         [split_arguments]' own "mode arity mismatch" -- reached through
+         [top_level_parts] in [SmartGen.graph_modes_for_call] -- rejects
+         the same mismatch downstream, so ablating just this check still
+         leaves the suite green.  It stays as a cheap early refusal that
+         also lets [graph_position_ok] below assume the flattened list
+         has exactly arity + 1 positions. *)
+      fun graph_orientation bound (call, result) =
+        let
+          val (head, arguments) = HolKernel.strip_comb call
+        in
+          if not (Term.is_const head) then NONE
+          else
+            let
+              val arity =
+                length (#1 (boolSyntax.strip_fun (Term.type_of head)))
+            in
+              if length arguments <> arity then NONE
+              else
+                let val flattened = arguments @ [result]
+                in
+                  if List.all (graph_position_ok bound) flattened
+                  then SOME (head, flattened)
+                  else NONE
+                end
+            end
+        end
+        handle HOL_ERR _ => NONE
+
+      (* Both orientations of an equation premise -- [f a1 ... an = r]
+         and [r = f a1 ... an] -- are independent candidates: either side
+         may be the maximally-applied constant to invert, and each is
+         checked on its own, exactly as [equality_score]/[try_equality]
+         above try both orientations of an ordinary equation. *)
+      fun graph_recognise bound assumption =
+        case Lib.total boolSyntax.dest_eq assumption of
+            NONE => []
+          | SOME (left, right) =>
+              List.mapPartial (graph_orientation bound)
+                [(left, right), (right, left)]
+
+      (* Memoised [SmartGen.infer_graph] for [constant], keyed by the
+         constant alone.  Mirrors [analyse]; [cache_inference] on a
+         [SOME] result is what makes [compile_premise]'s [GraphPrem]
+         branch reachable.  [trigger]/[reason] are dead here -- only
+         [#result] is ever read back by [graph_positive_candidates] --
+         the [analysis] record shape is reused solely for the same
+         cache/[cache_inference] plumbing as [analyse]/[analyse_fixed],
+         whose own [NONE] arm this now matches. *)
+      fun analyse_graph constant =
+        case List.find (fn (other, _) =>
+               SmartGen.same_constant constant other) (!graph_analyses) of
+            SOME (_, answer) => answer
+          | NONE =>
+              let
+                val answer =
+                  case SmartGen.infer_graph allow_function_inversion
+                         constant of
+                      SOME result =>
+                        {result = SOME result, trigger = true, reason = NONE}
+                    | NONE =>
+                        {result = NONE, trigger = false, reason = NONE}
+                val _ = graph_analyses := (constant, answer) :: !graph_analyses
+                val _ = Option.app SmartGen.cache_inference (#result answer)
+              in
+                answer
+              end
+              handle Interrupt => raise Interrupt
+                   | error =>
+                       let
+                         val answer =
+                           {result = NONE, trigger = true,
+                            reason = SOME (error_text error)}
+                         val _ = graph_analyses :=
+                           (constant, answer) :: !graph_analyses
+                       in
+                         answer
+                       end
+
+      (* Function-inversion candidates for [assumption]: for every
+         orientation [graph_recognise] admits, mode-infer that
+         constant's own graph and offer whatever positive enumerators
+         the inference compiles.  Gated once, here, on the hoisted
+         [allow_function_inversion], so with the flag off no [Graph] key
+         is ever built.  Additive next to [generic_modes]/[fixed_modes]
+         below, using the same [Positive] shape, so a graph enumerator
+         only ever competes on score; a negated premise never reaches
+         this function, and a graph relation's negative-mode table is
+         empty by construction, so it never appears under a negation.
+         This [if not allow ...] is not the load-bearing
+         check by itself: [analyse_graph] passes the same
+         [allow_function_inversion] into [SmartGen.infer_graph], whose
+         own [if not allow then NONE] refuses identically, so ablating
+         only this line leaves the test suite green.  It stays as a
+         cheap early refusal that also skips building a [Graph] key and
+         calling [analyse_graph] at all when the route is off. *)
+      fun graph_positive_candidates bound assumption =
+        if not allow_function_inversion then []
+        else
+          List.concat (map (fn (constant, arguments) =>
+              case #result (analyse_graph constant) of
+                  NONE => []
+                | SOME inference =>
+                    List.mapPartial (fn goal_mode as
+                        ({mode, ...} : SmartGen.goal_mode) =>
+                      Option.map (fn program => (goal_mode, Positive program))
+                        (SmartGen.enumerator_for
+                          (SmartGen.Graph constant) mode))
+                      (SmartGen.graph_modes_for_call bound constant arguments
+                        inference))
+            (graph_recognise bound assumption))
+
       fun positive_candidates bound assumption =
         case premise_head assumption of
             NONE => ([], false, NONE)
@@ -525,8 +675,10 @@ structure Refute_QC = struct
                         (SmartGen.enumerator_for
                           (SmartGen.Predicate relation) mode)) inferred
                   val fixed_modes = fixed_positive_candidates bound assumption
-                  val modes = generic_modes @ fixed_modes
+                  val graph_modes = graph_positive_candidates bound assumption
+                  val modes = generic_modes @ fixed_modes @ graph_modes
                   val trigger = trigger orelse not (null fixed_modes)
+                    orelse not (null graph_modes)
                   val reason =
                     if not (null modes) orelse not trigger then reason
                     else if not (null inferred) then SOME
@@ -753,19 +905,34 @@ structure Refute_QC = struct
             in
               case action of
                   Smart ({mode, ins, outs, missing, ...},
-                         Positive {version, ...}) =>
+                         Positive {relation, version, ...}) =>
                     gen_all missing
                       (if null outs then
-                         (Refute_Core.Private.say 2
-                            ("Refute smart generator Guard for " ^
-                             safe_term_text assumption ^ "\n");
-                          SmartGuard
-                            {predicate = assumption, version = version,
-                             cont = continuation ()})
+                         (case relation of
+                              (* [graph_modes_for_call] already refuses an
+                                 all-input mode, so this is unreached today
+                                 -- defence in depth against the trap
+                                 [Refute_SmartGen.graph_modes_for_call]'s
+                                 own comment names: a [Graph] [SmartGuard]'s
+                                 [predicate] is an equation, so
+                                 [smart_guard_lookup]'s [strip_comb] finds
+                                 no matching [Predicate] program, and
+                                 [validate_plan] rejects the whole plan as
+                                 stale.  Falling back to the ordinary
+                                 [Guard] is sound and total: the equation
+                                 is exactly as checkable as the plain route
+                                 would have made it. *)
+                              SmartGen.Graph _ =>
+                                Guard (assumption, continuation ())
+                            | SmartGen.Predicate _ =>
+                                (Refute_Core.Private.say 2
+                                   ("Refute smart generator Guard for " ^
+                                    safe_term_text assumption ^ "\n");
+                                 SmartGuard
+                                   {predicate = assumption, version = version,
+                                    cont = continuation ()}))
                        else
-                         Enum {rel = SmartGen.Predicate
-                                 (valOf (premise_head assumption)),
-                               mode = mode, version = version,
+                         Enum {rel = relation, mode = mode, version = version,
                                ins = ins, outs = outs,
                                cont = continuation ()})
                 | Smart ({missing, ...}, Negative condition) =>

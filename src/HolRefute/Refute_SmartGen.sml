@@ -446,13 +446,14 @@ structure Refute_SmartGen = struct
      fixed by [f]'s type alone (never partial), because a function's
      defining equations are stated at maximal application and a partial
      graph would have no equations to synthesise clauses from.  [Graph]
-     values are built at three sites: [synthesize_graph_clauses]
-     (transiently, only to read [relation_arity]), [infer_graph] (the
-     relation carried in its result), and [compile_premise]'s
-     [GraphPrem] branch -- the last unreached today, since no caller
-     runs [cache_inference] on an [infer_graph] result and only the
-     selftest calls [infer_graph] at all.  [check_graph_relation] builds
-     no [Graph] value itself, only [GraphPrem] premises. *)
+     values are built at [synthesize_graph_clauses] (transiently, only
+     to read [relation_arity]), [infer_graph] (the relation carried in
+     its result), [compile_premise]'s [GraphPrem] branch, and
+     [Refute_QC]'s goal-premise recogniser, which is what makes
+     [infer_graph]'s result actually reach [cache_inference] -- and
+     hence [compile_premise] -- for a goal premise recognising
+     [f a1 ... an = res].  [check_graph_relation] builds no [Graph]
+     value itself, only [GraphPrem] premises. *)
   datatype relation_key =
       Predicate of term
     | Graph of term
@@ -2201,14 +2202,16 @@ structure Refute_SmartGen = struct
     {mode : mode, ins : term list, outs : term list,
      missing : term list, score : premise_score}
 
-  (* Goal-premise mode selection uses the same five-way order as rule mode
-     inference.  Missing input variables are explicit: the plan compiler may
-     generate them before the Enum, allowing an earlier equality premise to
-     win and bind them instead when premise reordering is enabled. *)
-  fun goal_modes_for_call known call inference =
+  (* Shared scoring body for both [Predicate] and [Graph] mode selection,
+     using the same five-way order as rule mode inference.  Missing input
+     variables are explicit: the plan compiler may generate them before
+     the Enum, allowing an earlier equality premise to win and bind them
+     instead when premise reordering is enabled.  Any route-specific
+     policy over the resulting [outs] belongs at the call site, not here
+     -- see [graph_mode_ok] below. *)
+  fun modes_for_arguments known key arguments inference =
     let
-      val (relation, arguments) = HolKernel.strip_comb call
-      val relation_result = relation_modes_for (Predicate relation) inference
+      val relation_result = relation_modes_for key inference
       fun candidate (mode, _, needs_generator) =
         case top_level_parts mode arguments of
             NONE => NONE
@@ -2234,5 +2237,49 @@ structure Refute_SmartGen = struct
         | SOME {modes, ...} => List.mapPartial candidate modes
     end
     handle Feedback.HOL_ERR _ => []
+
+  fun goal_modes_for_call known call inference =
+    let val (relation, arguments) = HolKernel.strip_comb call
+    in modes_for_arguments known (Predicate relation) arguments inference
+    end
+    handle Feedback.HOL_ERR _ => []
+
+  (* [goal_modes_for_call]'s graph counterpart: [call] is not one term to
+     [strip_comb] -- [constant]'s own type generally cannot accept the
+     extra result argument -- so this takes the constant and the already
+     flattened [a1 ... an, result] list directly, and looks up
+     [Graph constant] instead of [Predicate relation].  Two policies apply
+     only to a graph candidate, both enforced by [graph_mode_ok] after the
+     shared scoring above: an all-input ([outs = []]) mode is refused, and
+     every remaining [outs] entry must be a bare variable not already in
+     [known] -- a graph-premise position is Input (every free variable
+     already bound) or Output (a bare unbound variable), so a ground term
+     or an already-bound variable sitting in [outs] (e.g. mode [(i,i,o)]
+     against [xs ++ ys = zs] with [zs] already bound) is refused the same
+     way.  Both matter for the same underlying reason.  A [Predicate]
+     guard with no outputs still round-trips through [SmartGuard]: its
+     stored [predicate] term IS the call, so [strip_comb] recovers the
+     very same relation at lookup time.  An equation has no such
+     round-trip -- [strip_comb (f a1 ... an = r)] yields [$=], not [f] --
+     so a [Graph]-relation all-input candidate can never be found again by
+     [smart_guard_lookup]; the consequence is not confined to that one
+     candidate: [validate_plan] rejects the WHOLE plan on every substrate
+     the moment one [SmartGuard] fails lookup, and Compute reaches that
+     same rejection through [prepare_enums], never falling back to its
+     own [eval_boolean] on the bare predicate.  A bound-variable or
+     ground-term Output has a sharper cost: nothing there fails to
+     compile, so an already-decided equation would plant an [Enum] where
+     the ordinary route settles it exactly, a real loss of decisiveness
+     even though sound.  Nothing is lost by excluding either shape here
+     instead: the premise is already a plain checkable proposition,
+     evaluated soundly by the ordinary route without any enumerator. *)
+  fun graph_mode_ok known ({outs, ...} : goal_mode) =
+    not (null outs) andalso
+    List.all (fn out => Term.is_var out andalso not (member_term out known))
+      outs
+
+  fun graph_modes_for_call known constant arguments inference =
+    List.filter (graph_mode_ok known)
+      (modes_for_arguments known (Graph constant) arguments inference)
 
 end
