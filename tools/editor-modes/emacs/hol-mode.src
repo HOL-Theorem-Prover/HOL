@@ -2799,17 +2799,32 @@ in Lisp, so convert before testing it."
     (when tags
       (mapconcat (lambda (c) (concat "[" c "]")) tags " "))))
 
+(defun hol-lsp--solved-p (result)
+  "Whether RESULT says the focused subgoal(s) have been proved.
+No goals and no error is exactly that: the server sends the goals
+of the current focus, and `pretty\=' then shows what remains once
+the pending close fires.  A timeout also has no goals, but carries
+an error."
+  (and (plist-member result :goals)      ; absent /= empty
+       (null (append (plist-get result :goals) nil))
+       (not (plist-get result :error))))
+
 (defun hol-lsp--goals-header (result)
-  "Header-line text for RESULT: theorem, step, combinator tags, error.
+  "Header-line text for RESULT: theorem, step, combinator tags,
+whether the focus is proved, and any error.
 This is what stays put while the goals scroll, so everything that
-says *which* state is on show belongs here.  `%' is doubled because
-a header-line string is read for mode-line constructs."
+says *which* state is on show belongs here -- including the fact
+that a branch is finished, which `pretty\=' announces on its first
+line, where scrolling to the end would carry it out of sight.  `%\='
+is doubled because a header-line string is read for mode-line
+constructs."
   (let* ((ctx (hol-lsp--context-line (plist-get result :context)))
          (err (plist-get result :error))
          (text (concat (format "%s — step %d"
                                (plist-get result :theorem)
                                (plist-get result :step))
                        (and ctx (concat "  " ctx))
+                       (and (hol-lsp--solved-p result) "  ✓ solved")
                        (and err (concat "  ⚠ " err)))))
     (replace-regexp-in-string "%" "%%" text)))
 

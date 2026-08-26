@@ -141,3 +141,31 @@ LSP caches, run BODY, tear down."
   ;; string the server sent is what tells them apart.
   (should (equal (hol-lsp--strip-context "[] = []\n" ["inside >-"])
                  "[] = []\n")))
+
+(ert-deftest hol-lsp-goals-header-flags-a-solved-focus ()
+  ;; `pretty' announces this on its first line, which scrolling to the
+  ;; end carries out of sight — so the header has to carry it.
+  (should (string-match-p
+           "✓ solved"
+           (hol-lsp--goals-header
+            '(:theorem "foo" :step 3 :context ["inside >-"]
+              :goals [] :error nil))))
+  (should (hol-lsp--solved-p '(:goals [] :error nil)))
+  (should (hol-lsp--solved-p '(:goals nil :error nil)))
+  ;; A reply with no `goals' field at all is not a solved focus.
+  (should-not (hol-lsp--solved-p '(:error nil))))
+
+(ert-deftest hol-lsp-goals-header-does-not-flag-a-timeout ()
+  ;; A timeout has no goals either, but it is not a proved subgoal.
+  (let ((r '(:theorem "foo" :step 3 :context nil
+             :goals [] :error "walker timed out")))
+    (should-not (hol-lsp--solved-p r))
+    (should-not (string-match-p "✓ solved" (hol-lsp--goals-header r)))
+    (should (string-match-p "⚠ walker timed out"
+                            (hol-lsp--goals-header r)))))
+
+(ert-deftest hol-lsp-goals-header-does-not-flag-an-ordinary-state ()
+  (let ((r '(:theorem "foo" :step 3 :context nil
+             :goals [(:asms [] :goal "a = a")] :error nil)))
+    (should-not (hol-lsp--solved-p r))
+    (should-not (string-match-p "✓ solved" (hol-lsp--goals-header r)))))

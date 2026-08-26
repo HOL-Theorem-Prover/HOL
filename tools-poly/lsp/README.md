@@ -120,7 +120,10 @@ when the theorem statement can't be parsed).  Otherwise:
   to `M-h M-g`.  The *HOL Goals* window is scrolled to the buffer's
   end, the current goal being last and the subgoal count printed
   after them, with `theorem`, `step`, `context` and `error` in the
-  window's `header-line-format` so they stay visible.
+  window's `header-line-format` so they stay visible.  An empty
+  `goals` with no `error` means the focused subgoal(s) are proved —
+  what `pretty` announces on its first line, which scrolling to the
+  end would carry out of sight — so the header shows that too.
   Set `hol-lsp-goals-follow-cursor` non-nil to make
   `*HOL Goals*` auto-refresh on cursor movement (debounced via
   `hol-lsp-goals-follow-delay`).  `hol-lsp--render-goals` runs
