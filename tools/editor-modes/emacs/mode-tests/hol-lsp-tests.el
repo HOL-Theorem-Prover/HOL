@@ -92,3 +92,52 @@ LSP caches, run BODY, tear down."
     (let ((default-directory workdir))
       (should (equal (hol-lsp--server-program)
                      (list (concat holX "/bin/hol") "lsp"))))))
+
+;;; --- *HOL Goals* presentation ------------------------------------
+
+(ert-deftest hol-lsp-context-line-is-nil-when-empty ()
+  (should (equal (hol-lsp--context-line nil) nil))
+  (should (equal (hol-lsp--context-line []) nil)))
+
+(ert-deftest hol-lsp-context-line-brackets-each-tag ()
+  ;; eglot hands JSON arrays over as vectors, so both must work.
+  (should (equal (hol-lsp--context-line ["inside >-"]) "[inside >-]"))
+  (should (equal (hol-lsp--context-line '("branch 2 of 3 of THENL"
+                                          "inside 2 nested >-"))
+                 "[branch 2 of 3 of THENL] [inside 2 nested >-]")))
+
+(ert-deftest hol-lsp-goals-header-carries-the-identifying-bits ()
+  (let ((h (hol-lsp--goals-header
+            '(:theorem "foo" :step 7 :context ["inside >-"] :error nil))))
+    (should (string-match-p "foo" h))
+    (should (string-match-p "step 7" h))
+    (should (string-match-p (regexp-quote "[inside >-]") h))))
+
+(ert-deftest hol-lsp-goals-header-includes-the-error ()
+  (should (string-match-p
+           "⚠ boom"
+           (hol-lsp--goals-header
+            '(:theorem "foo" :step 0 :context nil :error "boom")))))
+
+(ert-deftest hol-lsp-goals-header-escapes-percent ()
+  ;; A header-line string is read for mode-line constructs, so a `%'
+  ;; coming from a theorem name or an error must not be one.
+  (should (equal (hol-lsp--goals-header
+                  '(:theorem "a%b" :step 0 :context nil :error nil))
+                 "a%%b — step 0")))
+
+(ert-deftest hol-lsp-strip-context-removes-the-repeated-line ()
+  ;; `pretty' repeats the tags at its top; the buffer shows only the
+  ;; goals, the tags having moved to the header line.
+  (should (equal (hol-lsp--strip-context
+                  "[inside >-]\n\n\n 0.  asm\n----\n     goal\n"
+                  ["inside >-"])
+                 " 0.  asm\n----\n     goal\n")))
+
+(ert-deftest hol-lsp-strip-context-leaves-the-goal-text-alone ()
+  ;; Leading blank lines go; the goal itself does not.
+  (should (equal (hol-lsp--strip-context "\n[] = []\n" nil) "[] = []\n"))
+  ;; A goal starting with `[' is not a tag line: matching the exact
+  ;; string the server sent is what tells them apart.
+  (should (equal (hol-lsp--strip-context "[] = []\n" ["inside >-"])
+                 "[] = []\n")))

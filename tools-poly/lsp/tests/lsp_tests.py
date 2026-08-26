@@ -2019,6 +2019,11 @@ def test_goalState_thenl_context_line():
         r = _send_goalstate(c, 811, uri, 8, 4)
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
+        # Same tags as a list, so a client can pin them in a header
+        # instead of letting them scroll away with the goals.
+        assert_eq(list(result.get("context") or []),
+                  ["branch 2 of 3 of THENL"],
+                  f"context field ({result!r})")
         pretty = result.get("pretty", "")
         assert_true("[branch 2 of 3 of THENL]" in pretty,
                     f"expected [branch 2 of 3 of THENL] context, "

@@ -81,6 +81,12 @@ type goal_state_response = {
      verbatim should prefer this; `goals` remains for clients that
      want to render individual subgoals structurally. *)
   pretty: string,
+  (* The combinator tags `pretty` prints above the goals, outermost
+     first ("branch 2 of 3 of THENL", "inside >-"), sent separately
+     so a client can show them in a fixed header while the goals
+     scroll.  `pretty` still carries them, so a client that renders
+     it verbatim needs no change. *)
+  context: string list,
   (* SOME msg when the walker gave up (e.g. wall-clock budget
      exceeded) or halted at a failed tactic.  On timeout `goals`
      and `pretty` are empty; on a failed tactic they hold the
