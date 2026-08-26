@@ -650,6 +650,12 @@ Proof
   simp[SING_CARDLE]
 QED
 
+Theorem CARDLEQ_INFINITE:
+  ∀s t. INFINITE s ∧ s ≼ t ⇒ INFINITE t
+Proof
+  metis_tac[CARD_LE_FINITE]
+QED
+
 Theorem INFINITE_NOT_EMPTY:
   ∀B. INFINITE B ⇒ B ≠ ∅
 Proof

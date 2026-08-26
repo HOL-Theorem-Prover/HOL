@@ -16,6 +16,7 @@ val functorToMapAndSet : bnfBase.t -> hol_type -> term * term * info HOLset.set
    functor's argument; all other type variables are constants. *)
 type derived_bnf = {
   bnd : term,        (* infinite set bounding the composite's set fn *)
+  bndINFINITE : thm, (* |- INFINITE bnd *)
   bndthm : thm,      (* |- !x. set x <<= bnd *)
   components : info HOLset.set,  (* the BNFs the composite is built from *)
   mapCONG : thm,     (* |- (!a. a IN set x ==> f a = g a) ==>

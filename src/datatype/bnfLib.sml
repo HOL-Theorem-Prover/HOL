@@ -408,7 +408,7 @@ fun planBnd plan =
                                        INFINITE_num_sum
       val Bne = MATCH_MP INFINITE_NOT_EMPTY Binf
     in
-      (B, planBndThm (B, Bne, Binf, tys) plan)
+      (B, Binf, planBndThm (B, Bne, Binf, tys) plan)
     end
 
 (* ----------------------------------------------------------------------
@@ -682,6 +682,7 @@ fun fresh_tyvar avoid =
 
 type derived_bnf = {
   bnd : term,
+  bndINFINITE : thm,
   bndthm : thm,
   components : info HOLset.set,
   mapCONG : thm,
@@ -705,9 +706,9 @@ fun deriveBNF db ty : derived_bnf =
       val f_ab = mk_var("f", alpha --> bty)
       val g_ab = mk_var("g", alpha --> bty)
       val f_bc = mk_var("f", bty --> cty)
-      val (B, bndthm) = planBnd plan
+      val (B, bndINF, bndthm) = planBnd plan
     in
-      {bnd = B, bndthm = bndthm,
+      {bnd = B, bndINFINITE = bndINF, bndthm = bndthm,
        components = HOLset.addList(empty_biset, planInfos plan),
        mapCONG = planMapCONG (f_ab, g_ab) plan,
        mapID = planMapID plan,
