@@ -213,6 +213,13 @@ type proof_state = {site: string, offset: int, status: proof_status}
 
 type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs: bool ref
+(* Set by the compile driver while it retries a declaration whose tactic
+   would not compile, with the proof body replaced by `cheat`.  Such a
+   proof must not be enqueued: replaying `cheat` would report `Proved`
+   for a theorem whose proof the user cannot even compile.  The
+   declaration ends up with no pool entry at all, which is right -- the
+   compile error in the tactic is the report. *)
+val cheatSubstituted: bool ref
 val enqueueDeferred: deferred -> unit
 (* Empties the queue and hands back what was in it: the worker pool
    runs the items itself. *)

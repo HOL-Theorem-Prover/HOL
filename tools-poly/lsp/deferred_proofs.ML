@@ -104,7 +104,8 @@ fun prover ctxt (g, tac) =
          pass/fail verdict reported for the outer proof would be wrong.
          TAC_PROOF_in is the unhooked entry, so this does not recurse. *)
       Tactical.TAC_PROOF_in ctxt (g, tac)
-    else if !LSPExtension.deferProofs then
+    else if !LSPExtension.deferProofs andalso
+            not (!LSPExtension.cheatSubstituted) then
       (* current_thm_name and currentProofOffset are meaningful here --
          elaboration, one thread, both set immediately before the proof.
          A replaying worker must not consult either, which is why they

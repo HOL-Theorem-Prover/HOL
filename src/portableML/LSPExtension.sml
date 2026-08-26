@@ -148,6 +148,7 @@ type proof_state = {site: string, offset: int, status: proof_status}
 
 type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs = ref false
+val cheatSubstituted = ref false
 val currentProofOffset = ref 0
 local
   (* enqueued in reverse; Phase A is single-threaded, so a plain ref is

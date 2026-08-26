@@ -1619,6 +1619,107 @@ def test_snapshot_resume_keeps_namespace():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_broken_tactic_does_not_break_consumers():
+    """A `Proof ... QED` body that does not compile must not take the
+    theorem's binding down with it.  The declaration is retried with the
+    proof body replaced by `cheat`, so `broken` still binds and the
+    declaration below can consume it; the tactic's own error stands as
+    the diagnostic.
+
+    Without the retry a Theorem-QED block expands to a single
+    `val broken = Q.store_thm_at ...`, so the bad tactic unbinds
+    `broken` and every later reference to it fails too."""
+    d = tempfile.mkdtemp(prefix="lsp_cheat_")
+    try:
+        src = ("Theory cheatsub\n"
+               "\n"
+               "Theorem broken:\n"
+               "  T\n"
+               "Proof\n"
+               "  this_is_not_a_tactic\n"
+               "QED\n"
+               "\n"
+               "val consumer = CONJ broken broken;\n")
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/cheatsubScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+            diags = _diag_count(c, uri)
+            msgs = [dg["message"] for dg in diags]
+            # The tactic itself is reported ...
+            assert_true(any("this_is_not_a_tactic" in m for m in msgs),
+                        f"the bad tactic is reported ({msgs!r})")
+            # ... and nothing else is: `broken` still bound, so the
+            # consumer below compiled.
+            assert_true(not any("broken" in m for m in msgs),
+                        f"consumer sees a bound `broken` ({msgs!r})")
+            lines = sorted({dg["range"]["start"]["line"] for dg in diags})
+            assert_eq(lines, [5],
+                      f"diagnostics stay in the tactic's line ({diags!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_cheat_substituted_proof_is_not_checked():
+    """A proof the driver replaced with `cheat` must not reach the
+    checking pool: replaying `cheat` succeeds trivially, so the pool
+    would report `proved` for a proof that does not compile.  The
+    declaration gets no pool entry at all, and the compile error is the
+    report."""
+    d = tempfile.mkdtemp(prefix="lsp_cheat_")
+    try:
+        src = ("Theory cheatnochk\n"
+               "\n"
+               "Theorem fine:\n"
+               "  T\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n"
+               "\n"
+               "Theorem broken:\n"
+               "  T\n"
+               "Proof\n"
+               "  this_is_not_a_tactic\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/cheatnochkScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def settled(cl):
+                msgs, _ = cl.messages_since(0)
+                seen = {}
+                for m in msgs:
+                    if m.get("method") != "$/proofStates":
+                        continue
+                    p = m["params"]
+                    if p["uri"] != uri:
+                        continue
+                    if p.get("reset"):
+                        seen = {}
+                    for st in p["states"]:
+                        seen[st["name"]] = st["status"]
+                return seen if seen.get("fine") == "proved" else None
+
+            seen = c.wait_until(settled, 60)
+            assert_true(seen is not None, "the good proof was checked")
+            assert_true("broken" not in seen,
+                        f"the cheat-substituted proof has no pool entry "
+                        f"({seen!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def _send_goalstate(c, req_id, uri, line, char):
     c.send({"jsonrpc":"2.0","id":req_id,
             "method":"$/hol/goalState",
@@ -3097,6 +3198,10 @@ TESTS = [
                                      test_snapshot_resume_second_edit_after_completion),
     ("snapshot_resume_keeps_namespace",
                                      test_snapshot_resume_keeps_namespace),
+    ("broken_tactic_does_not_break_consumers",
+                                     test_broken_tactic_does_not_break_consumers),
+    ("cheat_substituted_proof_is_not_checked",
+                                     test_cheat_substituted_proof_is_not_checked),
     ("goalState_inside_proof",       test_goalState_inside_proof),
     ("goalState_outside_proof",      test_goalState_outside_proof),
     ("goalState_between_two_theorems",

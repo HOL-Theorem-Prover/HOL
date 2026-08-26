@@ -690,6 +690,15 @@ fun initialize {
     str = push o Chunk,
     startSpan = fn i => (!lastPush := true; lastPush := ref false; push (PushSpan (i, !lastPush))),
     stopSpan = fn _ => (lastPush := ref false; push (PopSpan (!lastPush))) }
+  (* Whether the declaration in hand produced a hard compile error, and
+     whether to keep quiet.  The first drives the cheat retry below; the
+     second silences the retry itself, whose job is to bind the theorem,
+     not to offer a second opinion on a tactic already reported on. *)
+  val hardError = ref false
+  val muffled = ref false
+  fun error' (e as {hard, ...} : error) =
+      if !muffled then ()
+      else (if hard then hardError := true else (); error e)
   val decsRef = ref []
   val ptRef = ref []
   fun fetchDec () =
@@ -755,7 +764,7 @@ fun initialize {
   val parameters = (if !compile then [] else noCompile) @ [
     CPOutStream compilerOut,
     CPPrintStream toplevelOut,
-    CPErrorMessageProc error,
+    CPErrorMessageProc error',
     CPCompilerResultFun (fn (pt, code) => (ptFn pt; codeFn code)),
     CPLineNo getTokIdx,
     CPLineOffset getOffset,
@@ -832,6 +841,67 @@ fun initialize {
          else ());
         finish ())
     end
+  (* A complete `Theorem foo: ... Proof tac QED` expands to a *single*
+     `val foo = ...`, so a tactic that will not compile takes the
+     theorem's binding down with it and every consumer below fails too.
+     Someone iterating on a proof leaves the tactic in that state
+     routinely, and the statement is usually still fine.
+
+     So: retry the declaration with the proof body replaced by `cheat`.
+     The statement binds, the rest of the file carries on consuming it,
+     and the errors already reported against the tactic stand as the
+     diagnostic.  `cheat` only has to *compile* -- under the LSP the
+     tactic is never run -- and the substituted proof is deliberately
+     kept out of the checking pool, since replaying `cheat` would report
+     `Proved` for a proof that does not compile.
+
+     `ExpExpansion` rather than a bare `Ident` so the built tree keeps
+     the original tactic's span: hover over the statement still works,
+     and nothing claims the first thirteen bytes of the user's tactic
+     are an identifier.
+
+     An in-progress block (`qed_ = NONE`) needs none of this: it already
+     expands to a separate binding plus a standalone tac. *)
+  fun cheatDec (HOLSourceAST.DecExpansion {orig = HOLSourceAST.HOLTheoremDecl
+                    {triv, theorem_, id, attrs, colon, quote,
+                     proof_ = SOME p, tac, qed_ = SOME q, stop}, ...}) =
+      SOME (HOLSourceAST.HOLTheoremDecl
+              {triv = triv, theorem_ = theorem_, id = id, attrs = attrs,
+               colon = colon, quote = quote, proof_ = SOME p,
+               tac = HOLSourceAST.ExpExpansion
+                       {orig = tac,
+                        result = HOLSourceAST.Ident
+                                   {op_ = NONE,
+                                    id = (#1 (HOLSourceAST.expSpan tac),
+                                          "bossLib.cheat")}},
+               qed_ = SOME q, stop = stop})
+    | cheatDec _ = NONE
+
+  fun recompileAsCheat dec =
+      let
+        val expanded = expandDec dec
+        fun restore () = (muffled := false;
+                          LSPExtension.cheatSubstituted := false)
+      in
+        DArray.clear queue;
+        HOLSourcePrinter.printDecs parseError'
+          (rev (HOLSourceExpand.mkSemi [expanded])) pr';
+        decsRef := [expanded];
+        ptRef := [];
+        idx := 0; spans := []; curToken := toState ();
+        muffled := true;
+        LSPExtension.cheatSubstituted := true;
+        (finish () handle e => (restore (); raise e));
+        restore ()
+      end
+
+  fun retryAsCheat () =
+      case !decsRef of
+        [d] => (case cheatDec d of
+                  NONE => ()
+                | SOME dec => recompileAsCheat dec)
+      | _ => ()
+
   fun emitBuilt () = let
     val decs = !decsRef
     val pts = rev (!ptRef)
@@ -857,7 +927,9 @@ fun initialize {
       else (
         idx := 0; spans := []; curToken := toState ();
         onDecStarted decStart;
+        hardError := false;
         finish ();
+        if !hardError then retryAsCheat () else ();
         emitBuilt ();
         ptRef := [];
         onDecCompleted stopByte;

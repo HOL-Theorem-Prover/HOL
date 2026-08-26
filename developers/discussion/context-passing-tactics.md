@@ -1665,6 +1665,39 @@ that requires the tactic to type-check.  It has no pool entry and no
 status, because there is no tactic value to enqueue; the diagnostic is
 the report.
 
+**Landed, and one correction to the sketch above.**  The substitution is
+in `holide.ML`'s driver loop, not in the server: the driver already holds
+the parsed declaration, so it replaces the tactic in the *AST* rather
+than in the text, and re-expands.  Same effect, no second parse of the
+buffer.  `error` is wrapped to record whether the declaration produced a
+hard error and to silence the retry, whose job is to bind the theorem,
+not to offer a second opinion on a tactic already reported on.
+
+The substituted tactic is `ExpExpansion {orig = tac, result = cheat}`,
+not a bare `Ident`.  `annotateExp` maps an expansion's tree back onto the
+original's span, so the built tree still describes the source the user
+has: hover over the statement keeps working, and nothing claims the first
+thirteen bytes of the broken tactic are an identifier.
+
+Keeping it out of the pool needs an explicit flag
+(`LSPExtension.cheatSubstituted`), because the retry *executes* ---
+`Q.store_thm_at` runs, and the prover hook would enqueue the substituted
+proof like any other.  Replaying `cheat` succeeds trivially, so the pool
+would report `Proved` for a proof that does not compile, which is the
+failure mode the `Diverged` machinery exists to avoid.
+
+Two things the retry does not cover, both deliberate:
+
+- Only a complete `Theorem ... Proof ... QED`.  An in-progress block
+  (`qed_ = NONE`) already expands to a separate binding plus a standalone
+  tac, so the theorem survives a broken tactic without help --- though it
+  is bound to `boolTheory.TRUTH` rather than its own statement.
+- Only compile errors.  A statement that does not *parse* fails at run
+  time, when the HOL parser runs, and no tactic substitution fixes that.
+
+`Definition ... Termination ... End` has the same single-binding shape
+and is not handled; worth doing if it turns out to bite.
+
 Also still open, and the thing to do before more pool features: the
 skip-cache discussed above needs a context fingerprint or per-proof
 dependency tracking, neither of which exists.
