@@ -216,10 +216,19 @@ structure Refute_QC = struct
 
   type plan_cache =
     {smart_context : MFH.mf_context option option ref,
-     analyses : (term * analysis) list ref}
+     analyses : (term * analysis) list ref,
+     (* Keyed by (relation, position, static value), never by relation
+        alone and never by (relation, value) alone: a relation can have
+        more than one predicate-typed parameter, and a plan specialised
+        to one closed argument at one position must never answer for the
+        same value pinned at a different position.  Lookup uses
+        [Term.aconv] on the value, exactly like
+        [SmartGen.same_relation]/[SmartGen.same_term] do for the
+        ordinary cache this one sits beside. *)
+     fixed_analyses : (term * int * term * analysis) list ref}
 
   fun new_plan_cache () : plan_cache =
-    {smart_context = ref NONE, analyses = ref []}
+    {smart_context = ref NONE, analyses = ref [], fixed_analyses = ref []}
 
   (*
      Plan compilation, ported from exhaustive_generators.ML:260--315.
@@ -243,7 +252,8 @@ structure Refute_QC = struct
          (Guard (a, compile concl (frees a U bound) rest))
   *)
   fun compile_plan_with
-        ({smart_context = smart_context_cache, analyses} : plan_cache)
+        ({smart_context = smart_context_cache, analyses, fixed_analyses}
+           : plan_cache)
         (config : Refute_Core.config) goal =
     let
       val (raw_assumptions, conclusion) = boolSyntax.strip_imp goal
@@ -347,6 +357,122 @@ structure Refute_QC = struct
                          answer
                        end
 
+      (* [analyse]'s own clause acquisition (SCC route, falling back to
+         Horn) is deliberately not refactored to share code with this:
+         [analyse]'s error text and caching are already pinned, and this
+         helper's caller needs the intermediate [members]/[clauses] pair
+         that [analyse] does not expose, not just an [inference_result]. *)
+      fun clauses_and_members relation =
+        case smart_context () of
+            NONE => NONE
+          | SOME context =>
+              let
+                val from_scc =
+                  (case MFH.instantiated_fixpoint_group context relation of
+                       NONE => NONE
+                     | SOME {members, rules, ...} =>
+                         (case SmartGen.scc_clauses members rules
+                                MFH.joint_intro_triple_for of
+                              NONE => NONE
+                            | SOME clauses => SOME (members, clauses)))
+                  handle Interrupt => raise Interrupt
+                       | _ => NONE
+              in
+                case from_scc of
+                    SOME found => SOME found
+                  | NONE =>
+                      (case SmartGen.horn_inference_clauses_for relation of
+                           SOME clauses => SOME ([relation], clauses)
+                         | NONE => NONE)
+                      handle Interrupt => raise Interrupt
+                           | _ => NONE
+              end
+
+      (* Static-parameter specialisation: [relation]'s argument at
+         [position] is pinned to the one closed [value] found at a call
+         site, rather than left as the opaque [Fun] mode that a
+         higher-order parameter otherwise gets.  Cached by [(relation,
+         position, value)] so a plan specialised to one static argument at
+         one position is never reused for a different value, nor for the
+         same value pinned at a different position (a relation can carry
+         more than one predicate-typed parameter), and never mixed with
+         the ordinary, value-independent [analyses] cache above. *)
+      fun analyse_fixed relation position value =
+        case List.find (fn (other_relation, other_position, other_value,
+                             _) =>
+               SmartGen.same_constant relation other_relation andalso
+               position = other_position andalso
+               SmartGen.same_term value other_value) (!fixed_analyses) of
+            SOME (_, _, _, answer) => answer
+          | NONE =>
+              let
+                val answer =
+                  case clauses_and_members relation of
+                      NONE => {result = NONE, trigger = false, reason = NONE}
+                    | SOME (members, clauses) =>
+                        (case SmartGen.infer_fixed_argument
+                               {members = members, clauses = clauses,
+                                external = [], relation = relation,
+                                position = position, value = value,
+                                reorder_premises =
+                                  #reorder_premises (#qc config)} of
+                             SOME result =>
+                               {result = SOME result, trigger = true,
+                                reason = NONE}
+                           | NONE =>
+                               {result = NONE, trigger = false, reason = NONE})
+                val _ = fixed_analyses :=
+                  (relation, position, value, answer) :: !fixed_analyses
+                val _ = Option.app SmartGen.cache_inference (#result answer)
+              in
+                answer
+              end
+              handle Interrupt => raise Interrupt
+                   | error =>
+                       let
+                         val answer =
+                           {result = NONE, trigger = true,
+                            reason = SOME (error_text error)}
+                         val _ = fixed_analyses :=
+                           (relation, position, value, answer) ::
+                           !fixed_analyses
+                       in
+                         answer
+                       end
+
+      (* Every position in [call] whose domain is a predicate type and
+         whose actual argument there is closed: a candidate for static-
+         parameter specialisation.  A non-predicate function parameter
+         (no [predicate_mode_of]) is excluded exactly as the ordinary
+         mode table already excludes it; an open argument -- one that
+         still mentions a bound or as-yet-ungenerated variable -- is
+         excluded because it is not yet a single known value to
+         specialise to. *)
+      fun fixed_argument_positions call =
+        let
+          val (relation, arguments) = HolKernel.strip_comb call
+        in
+          if not (Term.is_const relation) then []
+          else
+            let
+              val (domains, _) = boolSyntax.strip_fun (Term.type_of relation)
+            in
+              List.mapPartial (fn result => result)
+                (Lib.mapi (fn index => fn argument =>
+                    if index >= length domains then NONE
+                    else
+                      let val domain = List.nth (domains, index)
+                      in
+                        if Option.isSome (SmartGen.predicate_mode_of domain)
+                           andalso null (Term.free_vars argument)
+                        then SOME (relation, index, argument)
+                        else NONE
+                      end)
+                  arguments)
+            end
+        end
+        handle HOL_ERR _ => []
+
       (* The smart-generator candidate for a premise: a positive
          enumerator for a [Prem]-shaped call, or a complement condition
          for a negated one.  The two never mix -- a mode is a
@@ -359,6 +485,28 @@ structure Refute_QC = struct
           Positive of SmartGen.enumerator
         | Negative of term
 
+      (* Static-parameter specialisation candidates for [assumption]: for
+         every closed predicate argument [fixed_argument_positions] finds,
+         mode-infer the relation with that one position pinned instead of
+         left [Fun]-opaque, and offer whatever positive enumerators that
+         inference compiles.  This is additive next to the ordinary,
+         value-independent [analyse]/[goal_modes_for_call] path just
+         below, using the same [Positive] shape, so [action_for]'s
+         existing [compare_score] selection picks the best of the two
+         automatically -- a specialised enumerator competes on score, it
+         is never forced. *)
+      fun fixed_positive_candidates bound assumption =
+        List.concat (map (fn (relation, position, value) =>
+            case #result (analyse_fixed relation position value) of
+                NONE => []
+              | SOME inference =>
+                  List.mapPartial (fn goal_mode as
+                      ({mode, ...} : SmartGen.goal_mode) =>
+                    Option.map (fn program => (goal_mode, Positive program))
+                      (SmartGen.enumerator_for relation mode))
+                    (SmartGen.goal_modes_for_call bound assumption inference))
+          (fixed_argument_positions assumption))
+
       fun positive_candidates bound assumption =
         case premise_head assumption of
             NONE => ([], false, NONE)
@@ -369,11 +517,14 @@ structure Refute_QC = struct
                         NONE => []
                       | SOME inference => SmartGen.goal_modes_for_call bound
                           assumption inference
-                  val modes =
+                  val generic_modes =
                     List.mapPartial (fn goal_mode as
                         ({mode, ...} : SmartGen.goal_mode) =>
                       Option.map (fn program => (goal_mode, Positive program))
                         (SmartGen.enumerator_for relation mode)) inferred
+                  val fixed_modes = fixed_positive_candidates bound assumption
+                  val modes = generic_modes @ fixed_modes
+                  val trigger = trigger orelse not (null fixed_modes)
                   val reason =
                     if not (null modes) orelse not trigger then reason
                     else if not (null inferred) then SOME

@@ -1065,9 +1065,23 @@ Isabelle reports `Genuine` at a scope too small to contain 4, the same
 scope-arbitrary-read defect this guard exists to close.  HolRefute reports
 `Unknown` instead and does not reproduce the imported bug.
 
-Recorded follow-ups are compute-hosted residual-inspection narrowing, full
-function flattening, and compiling an enumerator for a higher-order
-smart-generator mode.  Negative smart-generator modes already ship (see
-`NegGuard` above).  Higher-order mode inference itself is implemented, but
-stays inert: `compile_clause` compiles no enumerator for a mode with a
-function-typed component, so it does not yet widen positive coverage.
+Recorded follow-ups are compute-hosted residual-inspection narrowing and
+full function flattening.  Negative smart-generator modes already ship
+(see `NegGuard` above).  Higher-order mode inference feeds a static-
+parameter specialisation pass: a predicate argument applied to a
+statically known closed value (a literal lambda, not a runtime-bound
+variable) is substituted through the relation's clauses before mode
+inference runs, so the substituted clauses are first order and the CPS
+compiler accepts them, turning what would be an inert `Fun`-moded guard
+into a compiled `Enum`.  A ground `var = closed_term` sidecond exposed by
+that substitution is discharged by direct substitution rather than a
+generate-then-filter search, so the reachable witness does not scale with
+the target value's magnitude.  A predicate argument that is still a
+runtime-bound variable at compile time is unaffected and keeps falling
+back to plain `Gen`+`Guard`, exactly as before: `compile_clause` still
+compiles no enumerator for a mode with an unresolved function-typed
+component, and the complement table stays strictly atomic-`Input`: its
+gate compares each mode component against `Input` by exact structural
+equality, so a mode with a `Fixed` component -- however it arose, whether
+from ordinary inference or from specialisation's substitution -- never
+satisfies that gate and never reaches the negative table.

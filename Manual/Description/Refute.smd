@@ -1105,9 +1105,13 @@ Counterexample search is bounded and incomplete.  In particular:
   every recursive relation: a self- or mutually-recursive relation's
   negated call falls back to an opaque guard, not a complement.  Giving
   it a bounded complement with a downgraded verdict, instead of
-  admitting it outright, remains an open gap.  Higher-order relation
-  parameters, other un-classifiable negative modes, and general function
-  flattening likewise fall back to guards rather than becoming errors;
+  admitting it outright, remains an open gap.  A higher-order relation
+  parameter applied to a statically known closed predicate is
+  specialised -- substituted through the relation's clauses before mode
+  inference -- and can then compile to a positive-mode enumerator like
+  any first-order relation; the same parameter left as a runtime-bound
+  variable, other un-classifiable negative modes, and general function
+  flattening still fall back to guards rather than becoming errors;
 * subtype lifting and general function inversion are not implemented;
 * narrowing finitizes function inputs.  The constant-function fallback
   for a higher-order domain is an approximation, and every depth bound

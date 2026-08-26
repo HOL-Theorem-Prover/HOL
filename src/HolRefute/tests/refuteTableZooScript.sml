@@ -632,6 +632,16 @@ Inductive zoo_sg_listall:
             zoo_sg_listall P (x::xs))
 End
 
+(* Computational view, same role as [zoo_sg_linear_compute] above: an
+   [Inductive] constant is not executable merely from its cases theorem,
+   so a full-pipeline QC pin needs this added to the compset before it can
+   pass [Refute_Core.nonexecutable_constants]'s gate. *)
+Theorem zoo_sg_listall_compute:
+  !P xs. zoo_sg_listall P xs <=> EVERY P xs
+Proof
+  Induct_on `xs` >> rw [Once zoo_sg_listall_cases]
+QED
+
 (* A mixed group: [zoo_sg_mix_fo] is first-order, [zoo_sg_mix_ho] takes a
    non-predicate function parameter and so gets no modes at all.  Joint
    inference must degrade [zoo_sg_mix_ho] alone, not the whole group. *)

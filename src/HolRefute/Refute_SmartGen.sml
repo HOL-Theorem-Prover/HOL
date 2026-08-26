@@ -420,13 +420,21 @@ structure Refute_SmartGen = struct
   (* Modes describe which parts of a predicate call are known on entry.
      [Fun] is used only to curry the modes of a predicate itself.  A [Fun]
      below an argument position is deliberately not inferred: that is the
-     higher-order fragment from which this port degrades. *)
+     higher-order fragment from which this port degrades.
+     [Fixed] names one more escape from that fragment: a single closed
+     term this argument position is known to hold at every occurrence in
+     one inference attempt.  It carries no runtime slot at all -- neither
+     [ins] nor [outs] -- because the value is baked into the compiled
+     clause bodies by substitution before the clause is ever mode-checked;
+     see [infer_fixed_argument].  It is therefore never produced by
+     [argument_modes]/[all_modes_for], only by [fixed_modes_for]. *)
   datatype mode =
       Bool
     | Input
     | Output
     | Pair of mode * mode
     | Fun of mode * mode
+    | Fixed of term
 
   datatype mode_derivation =
       Mode_App of mode_derivation * mode_derivation
@@ -481,7 +489,8 @@ structure Refute_SmartGen = struct
      outputs : int,
      recursive : bool}
 
-  fun eq_mode (Fun (left1, left2), Fun (right1, right2)) =
+  fun eq_mode (Fixed left, Fixed right) = same_term left right
+    | eq_mode (Fun (left1, left2), Fun (right1, right2)) =
         eq_mode (left1, right1) andalso eq_mode (left2, right2)
     | eq_mode (Pair (left1, left2), Pair (right1, right2)) =
         eq_mode (left1, right1) andalso eq_mode (left2, right2)
@@ -506,7 +515,8 @@ structure Refute_SmartGen = struct
      [Fun] can nest inside [Pair] -- e.g. the mode of [(num -> bool) # num]
      is [Pair (Fun (Input, Bool), Input)] -- so both recurse together
      rather than treating [Fun] as flat or as automatically given. *)
-  fun given_mode Bool = true
+  fun given_mode (Fixed _) = true
+    | given_mode Bool = true
     | given_mode (Fun (domain, range)) =
         given_mode domain andalso given_mode range
     | given_mode (Pair (left, right)) =
@@ -543,7 +553,8 @@ structure Refute_SmartGen = struct
       mode_of (head derivation)
     end
 
-  fun mode_string Bool = "bool"
+  fun mode_string (Fixed term) = "=" ^ Parse.term_to_string term
+    | mode_string Bool = "bool"
     | mode_string Input = "i"
     | mode_string Output = "o"
     | mode_string (Pair (left, right)) =
@@ -737,14 +748,24 @@ structure Refute_SmartGen = struct
                (Pair (left_mode, right_mode)))
     | derive_argument known term mode = derive_atomic known term mode
   and derive_atomic known term mode =
-    if eq_mode (mode, Input) then
-      [(Term_Mode Input, missing_vars known term)]
-    else if given_mode mode then
-      [(Term_Mode mode, missing_vars known term)]
-    else if eq_mode (mode, Output) andalso possible_output known term then
-      [(Term_Mode Output, [])]
-    else
-      []
+    (* [Fixed] never derives from an arbitrary term the way [given_mode]
+       does: the whole point of the mode is that this position holds one
+       particular closed value, so a call whose actual argument there is
+       some other term is not an occurrence of the fixed relation and
+       must not be mistaken for one. *)
+    case mode of
+        Fixed expected =>
+          if same_term term expected then [(Term_Mode mode, [])] else []
+      | _ =>
+          if eq_mode (mode, Input) then
+            [(Term_Mode Input, missing_vars known term)]
+          else if given_mode mode then
+            [(Term_Mode mode, missing_vars known term)]
+          else if eq_mode (mode, Output) andalso possible_output known term
+          then
+            [(Term_Mode Output, [])]
+          else
+            []
 
   fun same_relation left right =
     same_constant left right handle Feedback.HOL_ERR _ => false
@@ -900,10 +921,24 @@ structure Refute_SmartGen = struct
         | split_argument argument_mode term =
             split_atomic argument_mode term
       and split_atomic argument_mode term =
-        if given_mode argument_mode then (SOME term, NONE)
-        else if eq_mode (argument_mode, Output) then (NONE, SOME term)
-        else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
-          "split_arguments" "argument mode does not match term"
+        (* A [Fixed] position carries no runtime slot: its value is
+           already baked into the clause bodies by substitution, so it
+           contributes to neither [ins] nor [outs].  Verify the actual
+           term still is the fixed value rather than trusting the mode:
+           a call site whose argument there differs is not an occurrence
+           of this fixed relation and must be rejected, not silently
+           treated as a match (this is also what stops one specialised
+           enumerator from being attached to a different call site). *)
+        case argument_mode of
+            Fixed expected =>
+              if same_term term expected then (NONE, NONE)
+              else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
+                "split_arguments" "argument mode does not match term"
+          | _ =>
+              if given_mode argument_mode then (SOME term, NONE)
+              else if eq_mode (argument_mode, Output) then (NONE, SOME term)
+              else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
+                "split_arguments" "argument mode does not match term"
       fun split [] [] inputs outputs = (rev inputs, rev outputs)
         | split (argument_mode :: modes) (term :: terms) inputs outputs =
             let
@@ -1055,10 +1090,15 @@ structure Refute_SmartGen = struct
       same_relation left_relation right_relation andalso
       same_mode_infos left_modes right_modes) (left, right)
 
-  fun infer_clauses
+  (* [seed_modes] lets [infer_fixed_argument] re-run the same fixpoint
+     with one relation's mode space narrowed to [Fixed value] at one
+     position, instead of the type-driven [all_modes_for] every member
+     gets by default.  [infer_clauses] below is exactly [infer_clauses_with
+     all_modes_for]; nothing about its own behavior changes. *)
+  fun infer_clauses_with seed_modes
         {members, clauses, external, reorder_premises} : inference_result =
     let
-      val higher_order = List.filter (null o all_modes_for) members
+      val higher_order = List.filter (null o seed_modes) members
       fun cross_reference term =
         case premise_head term of
             SOME head =>
@@ -1078,7 +1118,7 @@ structure Refute_SmartGen = struct
         map CrossGroupReference (distinct_relations cross)
       val start = map (fn relation =>
         (relation, map (fn mode => (mode, [], false))
-          (all_modes_for relation))) members
+          (seed_modes relation))) members
       fun iteration table = map (fn (relation, modes) =>
         (relation, check_relation reorder_premises members external
           clauses table relation modes)) table
@@ -1103,6 +1143,12 @@ structure Refute_SmartGen = struct
        negative = map materialize_negative stable,
        degradation = degradation}
     end
+
+  fun infer_clauses
+        {members, clauses, external, reorder_premises} : inference_result =
+    infer_clauses_with all_modes_for
+      {members = members, clauses = clauses, external = external,
+       reorder_premises = reorder_premises}
 
   fun infer_group
         {members, clauses, external, reorder_premises} : inference_result =
@@ -1129,18 +1175,269 @@ structure Refute_SmartGen = struct
      argument preserves SmartGen's independence from the model finder while
      ensuring that one shared SCC and its cross-member calls are inferred in
      a single decreasing fixpoint. *)
-  fun infer_scc
-        {members, rules, triple_for, external, reorder_premises} =
+  fun scc_clauses members rules triple_for =
     let
       val clauses = List.mapPartial
         (clause_for_rule triple_for members) rules
     in
-      if length clauses = length rules then
-        SOME (infer_clauses
-          {members = members, clauses = clauses, external = external,
-           reorder_premises = reorder_premises})
+      if length clauses = length rules then SOME clauses else NONE
+    end
+
+  fun infer_scc
+        {members, rules, triple_for, external, reorder_premises} =
+    case scc_clauses members rules triple_for of
+        NONE => NONE
+      | SOME clauses =>
+          SOME (infer_clauses
+            {members = members, clauses = clauses, external = external,
+             reorder_premises = reorder_premises})
+
+  (* Full beta normalization: [infer_fixed_argument] substitutes a closed
+     value for a predicate parameter throughout a clause, which routinely
+     leaves an un-reduced application of a literal lambda (e.g. [(\n. n =
+     500) x]) sitting where a plain first-order guard belongs.  Reduce it
+     away before mode inference ever sees the clause, rather than relying
+     on a downstream validator: [Refute_Core.has_unexpanded_binder] does
+     not reject a mere beta-redex (an [Abs] applied to an argument is not
+     itself a forall/exists/select, and recursing into the [Abs]'s own
+     body finds none either), and even where a check would degrade the
+     compile safely, a clean substrate-neutral definition is what every
+     substrate -- Cv's translator in particular -- should see. *)
+  fun beta_norm term =
+    let val (head, arguments) = HolKernel.strip_comb term
+    in
+      if Term.is_abs head andalso not (null arguments) then
+        let
+          val (variable, body) = Term.dest_abs head
+          val reduced = Term.subst
+            [{redex = variable, residue = hd arguments}] body
+        in
+          beta_norm (Term.list_mk_comb (reduced, tl arguments))
+        end
+      else if Term.is_abs term then
+        let val (variable, body) = Term.dest_abs term
+        in Term.mk_abs (variable, beta_norm body) end
+      else if Term.is_comb term then
+        let val (operator, operand) = Term.dest_comb term
+        in Term.mk_comb (beta_norm operator, beta_norm operand) end
+      else term
+    end
+
+  (* The mode space for [infer_fixed_argument]: every position keeps its
+     ordinary [argument_modes] except [position], which is pinned to
+     [Fixed value].  Never produced by [all_modes_for] itself, so the
+     generic inference path is untouched.
+
+     This is also the sole construction site for [Fixed]: an open value
+     (one still carrying a free variable) is not merely wrong here, it is
+     silently unsound downstream -- a [Fixed] position contributes to
+     neither [ins] nor [outs], so the compiled enumerator would generate
+     its own binding for that free variable, decoupled from the goal's,
+     and report solutions to a premise the goal never asserted.  The
+     closedness and type checks below are therefore load-bearing at this
+     level, not a convenience; see [infer_fixed_argument] for the
+     complementary, merely-defensive check at its own API boundary. *)
+  fun fixed_modes_for relation position value =
+    let
+      val (domains, range) = boolSyntax.strip_fun (Term.type_of relation)
+    in
+      if range <> Type.bool orelse position < 0 orelse
+         position >= length domains orelse
+         not (null (Term.free_vars value)) orelse
+         Term.type_of value <> List.nth (domains, position)
+      then []
+      else
+        let
+          val per_position = Lib.mapi (fn index => fn domain =>
+            if index = position then [Fixed value] else argument_modes domain)
+            domains
+          fun product [] = [[]]
+            | product (choices :: rest) =
+                List.concat (map (fn choice =>
+                  map (fn suffix => choice :: suffix) (product rest))
+                  choices)
+          val total = List.foldl (fn (choices, count) =>
+            let val width = Int.max (1, length choices)
+            in
+              if count > max_mode_space div width then max_mode_space + 1
+              else count * width
+            end) 1 per_position
+        in
+          if total <= max_mode_space then map list_mode (product per_position)
+          else []
+        end
+    end
+    handle Feedback.HOL_ERR _ => []
+
+  (* Combine every option into [SOME] iff every element is [SOME]; the
+     order-preserving analogue of [List.mapPartial] that must fail whole
+     rather than silently drop a clause. *)
+  fun sequence_options list =
+    List.foldr (fn (item, acc) =>
+      case (item, acc) of
+          (SOME value, SOME rest) => SOME (value :: rest)
+        | _ => NONE) (SOME []) list
+
+  fun fixed_argument_target relation position
+        ({head, ...} : inference_clause) =
+    let val (head_relation, arguments) = HolKernel.strip_comb head
+    in
+      if same_relation head_relation relation then
+        SOME (List.nth (arguments, position))
       else NONE
     end
+    handle Feedback.HOL_ERR _ => NONE
+         | Subscript => NONE
+
+  (* [var = closed]/[closed = var], [closed] having no free variable at
+     all: an occurs check is therefore unnecessary, [var] cannot appear
+     inside its own [closed] value. *)
+  fun ground_equality term =
+    case Lib.total boolSyntax.dest_eq term of
+        SOME (left, right) =>
+          if Term.is_var left andalso null (Term.free_vars right) then
+            SOME (left, right)
+          else if Term.is_var right andalso null (Term.free_vars left) then
+            SOME (right, left)
+          else NONE
+      | NONE => NONE
+
+  (* Discharge every ground equality premise by substitution, dropping the
+     premise and replacing the variable everywhere else in the clause --
+     the same rewrite [Refute_QC]'s ordinary, non-smart planner already
+     performs as its [try_eq] optimisation, applied here inside one
+     clause instead of at plan level.  Fixing a predicate parameter to a
+     literal like [\n. n = 500] routinely leaves exactly this shape behind
+     ([x = 500] after beta reduction): without discharging it, the missing
+     variable [x] can only be produced by [check_clause]'s blanket
+     [Generator], turning a single baked-in value into a full runtime
+     search over its whole type.  Discharging it here instead bakes [500]
+     directly into the clause's own head (e.g. [x::xs] becomes [500::xs]),
+     so the compiled enumerator constructs the witness rather than
+     searching for it -- the cost this pays for is independent of how
+     large the fixed value is.  Restricted to [substitute_fixed_argument]:
+     ordinary, non-[Fixed] clauses are unaffected, so no other relation's
+     already-pinned mode table can change shape by this.
+
+     Every substitution below is wrapped in [beta_norm], exactly as
+     [substitute_fixed_argument]'s own two substitutions are: this
+     function's own [ground_equality] guard admits a function-typed
+     [variable] equal to a closed lambda just as readily as a
+     first-order one, and if that variable is itself applied elsewhere
+     in the clause, a bare [Term.subst] would leave an un-reduced
+     redex sitting in a clause body -- exactly what [beta_norm]'s own
+     comment says must not reach the substrates.  No natural clause in
+     the test zoo has been found that reaches this arm (it would need a
+     clause-local, already-quantified predicate variable equated to a
+     literal closed lambda rather than simply being written to that
+     literal directly), so this is a defensive normalisation with no
+     observed behaviour change, not a change guarded by a regression
+     pin. *)
+  fun discharge_ground_equalities (head, remaining) =
+    case List.find (fn term => Option.isSome (ground_equality term))
+           remaining of
+        NONE => (head, remaining)
+      | SOME equality =>
+          let
+            val (variable, value) = Option.valOf (ground_equality equality)
+            val theta = [{redex = variable, residue = value}]
+            val rest = List.filter (fn term => not (same_term term equality))
+              remaining
+          in
+            discharge_ground_equalities
+              (beta_norm (Term.subst theta head),
+               map (beta_norm o Term.subst theta) rest)
+          end
+
+  (* A clause belonging to [relation] is rewritten iff its own occurrence
+     of the parameter at [position] is a bare variable: only then does
+     substituting [value] for it stand for "every call this clause makes
+     is at [value]", rather than for some other, unrelated term that
+     happens to sit there.  A clause belonging to any other member of the
+     group is passed through unchanged; [Term.subst] on it would be a
+     no-op regardless, since the variable being fixed is scoped to
+     [relation]'s own clauses. *)
+  fun substitute_fixed_argument relation position value
+        (clause as {head, ordered, ...} : inference_clause) =
+    case fixed_argument_target relation position clause of
+        NONE => SOME clause
+      | SOME target =>
+          if Term.is_var target then
+            let
+              val theta = [{redex = target, residue = value}]
+              val head' = beta_norm (Term.subst theta head)
+              val ordered' = map (beta_norm o Term.subst theta) ordered
+              val (head'', ordered'') =
+                discharge_ground_equalities (head', ordered')
+              (* Honest split, not [{side = [], main = ordered''}]: a
+                 discharged ground equality drops out entirely, but a
+                 premise that survives substitution without mentioning
+                 [relation] at all (e.g. a residual arithmetic guard on
+                 the substituted variable) is [side] under the very
+                 invariant this record documents, not [main]. *)
+              val (main'', side'') =
+                List.partition (mentions relation) ordered''
+            in
+              SOME ({side = side'', main = main'', head = head'',
+                     ordered = ordered''} : inference_clause)
+            end
+          else NONE
+
+  (* Static-parameter mode inference: as [infer_clauses], but with
+     [relation]'s argument at [position] pinned to the one closed [value]
+     throughout, rather than left as the opaque, uninvertible [Fun] mode
+     [predicate_mode_of] would otherwise assign it.  Every clause whose
+     head belongs to [relation] is rewritten by substituting [value] for
+     that argument (declining -- [NONE] -- if any such clause does not
+     hold a bare variable there, since substitution would not then mean
+     what it is supposed to); every other clause is untouched.  The
+     result is then mode-checked by exactly [check_clause]/[check_relation]
+     as any other clause set, so a [Fixed] position that turns out not to
+     compile (its guards need a constant or function the compiler cannot
+     yet see, or the position does not actually let go of the higher-order
+     parameter) simply drops out of the fixpoint as usual: no separate
+     success test is needed here beyond the ordinary one.
+     Restricted to a Boolean-valued constant relation, a [position] inside
+     its domain list, and a closed [value] of the matching type -- outside
+     that, [NONE], the same safe degradation as every other inference
+     entry point.
+
+     The soundness-critical half of this guard (closedness, the type
+     match) is enforced again, independently, at [fixed_modes_for] --
+     the sole construction site for [Fixed] -- so this level cannot be
+     bypassed by some other, future caller of that function.  Checking
+     it here as well is this function's own API boundary: it lets a
+     caller of [infer_fixed_argument] fail fast, before any clause
+     substitution work, rather than only discovering the rejection once
+     [fixed_modes_for] is reached below. *)
+  fun infer_fixed_argument
+        {members, clauses, external, reorder_premises, relation, position,
+         value} =
+    let
+      val (domains, range) = boolSyntax.strip_fun (Term.type_of relation)
+    in
+      if not (Term.is_const relation) orelse range <> Type.bool orelse
+         position < 0 orelse position >= length domains orelse
+         not (null (Term.free_vars value)) orelse
+         Term.type_of value <> List.nth (domains, position)
+      then NONE
+      else
+        case sequence_options
+               (map (substitute_fixed_argument relation position value)
+                 clauses) of
+            NONE => NONE
+          | SOME substituted =>
+              if null (fixed_modes_for relation position value) then NONE
+              else
+                SOME (infer_clauses_with (fn candidate =>
+                  if same_relation candidate relation then
+                    fixed_modes_for relation position value
+                  else all_modes_for candidate)
+                  {members = members, clauses = substituted,
+                   external = external, reorder_premises = reorder_premises})
+    end
+    handle Feedback.HOL_ERR _ => NONE
+         | Subscript => NONE
 
   (* The substrate-neutral enumerator is a positive, depth-bounded CPS
      program.  [CpsClause] is [single inputs >>= case-match >>=
@@ -1193,7 +1490,8 @@ structure Refute_SmartGen = struct
     {relation : term, mode : mode, version : program_version,
      clauses : cps_clause list}
 
-  fun first_order_mode Input = true
+  fun first_order_mode (Fixed _) = true
+    | first_order_mode Input = true
     | first_order_mode Output = true
     | first_order_mode (Pair (left, right)) =
         first_order_mode left andalso first_order_mode right
@@ -1277,13 +1575,16 @@ structure Refute_SmartGen = struct
           enumerator_cache_entry) =
     same_relation relation other andalso eq_mode (mode, other_mode)
 
-  fun relation_in relations candidate =
-    List.exists (fn ({relation, ...} : relation_modes) =>
-      same_relation relation candidate) relations
-
-  (* One assignment replaces the complete inferred group.  This also removes
-     modes that disappeared or ceased to compile, rather than leaving an
-     obsolete per-mode program behind. *)
+  (* Retention is per (relation, mode), not per relation: a generic
+     inference covers a relation's whole mode space, so a mode missing
+     from a fresh result is dead and safe to drop, but a specialised
+     inference (static-parameter specialisation) only ever covers the one
+     mode it was asked for, so an absent mode there means nothing -- some
+     other specialisation of the same relation may still hold the only
+     copy of it.  A relation's clauses cannot change within one
+     [source_generation], so a retained mode's program still matches them;
+     [program_is_fresh]/[current_program_version_raw] handle staleness
+     across generations regardless of how retention is keyed. *)
   fun cache_inference ({relations, ...} : inference_result) =
     let
       val version = synchronized_cache (fn () =>
@@ -1294,8 +1595,10 @@ structure Refute_SmartGen = struct
     in
       synchronized_cache (fn () =>
         if current_program_version_raw version then
-          let val retained = List.filter (fn {relation, ...} =>
-            not (relation_in relations relation)) (!enumerator_cache)
+          let val retained = List.filter (fn old =>
+            not (List.exists (fn {relation, mode, ...} =>
+              same_enumerator_key relation mode old) fresh))
+            (!enumerator_cache)
           in enumerator_cache := fresh @ retained end
         else ())
     end

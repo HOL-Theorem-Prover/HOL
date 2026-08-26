@@ -61,7 +61,20 @@ structure Refute_EvalEnum = struct
   (* Dependency closure of an enumerator program.  The native extractor
      resolves programs from its own snapshot and gates smart Guards
      differently from the compute/cv path, so the lookups are parameters;
-     [reject] raises, and its result is only wrapped to keep one type. *)
+     [reject] raises, and its result is only wrapped to keep one type.
+
+     [dependency]'s production caller ([prepare]'s [lookup]) resolves a
+     [CpsCall] purely by relation and mode, with no
+     [same_program_version] check -- the one consumption path that omits
+     one, because a dependency on an already-compiled *external*
+     relation legitimately comes from a different inference with a
+     different fingerprint, and a version check would wrongly reject
+     that valid case.  What keeps this lookup sound for a [Fixed]
+     position is therefore entirely [Refute_SmartGen.eq_mode]'s [Fixed]
+     arm: it compares by exact term equality, so a call needing the
+     program compiled for [n = 7] cannot resolve here to one compiled
+     for [n = 500] even though neither carries a version distinguishing
+     them. *)
   fun program_closure reject dependency program programs =
     let
       fun visit program programs =
@@ -128,8 +141,18 @@ structure Refute_EvalEnum = struct
          val _ = if length domains = length modes andalso
              List.all Refute_SmartGen.first_order_mode modes then ()
            else rejected "enumerator mode/arity mismatch"
+         (* A [Fixed] position's own [split_arguments] arm verifies the
+            actual term against the pinned value ([Refute_SmartGen]'s
+            [split_atomic]), so a synthetic placeholder there always
+            fails that check.  This is a shape probe only -- no real call
+            site is in scope -- so use the pinned value itself at that
+            position; every other position still gets a fresh, distinctly
+            named placeholder. *)
          val arguments = Lib.mapi (fn index => fn ty =>
-           Term.mk_var ("refute_enum_shape_" ^ Int.toString index, ty)) domains
+           case List.nth (modes, index) of
+               Refute_SmartGen.Fixed value => value
+             | _ => Term.mk_var
+                 ("refute_enum_shape_" ^ Int.toString index, ty)) domains
          val (ins, outs) = Refute_SmartGen.split_arguments mode arguments
        in
          (map Term.type_of ins, map Term.type_of outs)

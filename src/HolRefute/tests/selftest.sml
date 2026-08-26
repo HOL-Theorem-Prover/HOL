@@ -1341,6 +1341,20 @@ fun sg_infer_hol_reln relation reorder =
        reorder_premises = reorder})
   end
 
+(* [SG.infer_fixed_argument] needs the same [members]/[clauses] pair
+   [sg_infer_hol_reln] builds, but exposed separately so a pin can call
+   [infer_fixed_argument] itself instead of going through [infer_scc]. *)
+fun sg_fixed_argument_clauses relation =
+  let
+    val context = MFH.make_context Refute_Core.default_mf_config []
+    val {members, rules, ...} =
+      valOf (MFH.instantiated_fixpoint_group context relation)
+    val clauses =
+      valOf (SG.scc_clauses members rules MFH.joint_intro_triple_for)
+  in
+    (members, clauses)
+  end
+
 fun sg_generator_count premises =
   length (List.filter (fn (SG.Generator _, _) => true | _ => false)
     premises)
@@ -1541,6 +1555,101 @@ fun smartgen_higher_order_negative_table_empty () =
 
 val _ = require_msg (check_result smartgen_higher_order_negative_table_empty)
   (fn () => "a higher-order relation's complement table was not empty")
+  (fn () => ()) ()
+
+(* [zoo_sg_listall] is recursive, so [relation_blocks_complement]'s
+   blanket [Prem] rule already empties its negative table regardless of
+   [mode_all_input] -- a pin built on it would pass whether or not [Fixed]
+   is excluded, which proves nothing.  [zoo_sg_higher_order] is not
+   recursive and its specialised clause's only premise is the ground
+   equality [x = 500], never a [Prem], so nothing here blocks the
+   complement except [mode_all_input] itself.  [checked] is the mode this
+   specialisation compiles with position 1 fully known: it must be (1) in
+   the *positive* table, so specialisation genuinely happened rather than
+   the relation being inert, and (2) *absent* from the negative table
+   despite being generator-free and unblocked -- the only thing excluding
+   it is [mode_all_input]'s [eq_mode (Fixed _, Input) = false].
+   A third check -- that this same inference result also puts some other,
+   genuinely all-[Input] mode into the negative table, so "excluded" is
+   not confused with "the table is unpopulated for an unrelated reason"
+   -- is not available here: [fixed_modes_for] pins position 0 to
+   [Fixed value] in *every* mode it generates, so no mode in this
+   inference result ever has an atomic-[Input] component at position 0 to
+   begin with, in the specialised inference or (via the structurally
+   [given], never atomic-[Input], predicate mode) the ordinary one either.
+   That normal-route half is covered separately, on an ordinary relation
+   with no function-typed parameter, by
+   [smartgen_negative_nonrecursive_available]'s [zoo_sg_duplicate] above
+   -- the same [mode_all_input] machinery admitting a genuinely all-
+   [Input] mode when nothing blocks it. *)
+fun smartgen_fixed_argument_negative_table_excludes_fixed_mode () =
+  let
+    val relation =
+      ``zoo_sg_higher_order : (num -> bool) -> num -> bool``
+    val (members, clauses) = sg_fixed_argument_clauses relation
+    val value = ``\n:num. n = 500``
+    val result = valOf (SG.infer_fixed_argument
+      {members = members, clauses = clauses, external = [],
+       relation = relation, position = 0, value = value,
+       reorder_premises = true})
+    val relation_modes = valOf (sg_relation_result relation result)
+    val negative = valOf (SG.negative_relation_modes_for relation result)
+    val checked = SG.list_mode [SG.Fixed value, SG.Input]
+    val in_negative =
+      List.exists (fn candidate => SG.eq_mode (candidate, checked))
+        (#modes negative)
+  in
+    (case sg_mode_result checked relation_modes of
+         SOME (_, _, false) => true
+       | _ => false) andalso not in_negative
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = tprint
+  "Refute specialised mode is excluded from the negative table it \
+  \would otherwise populate"
+val _ = require_msg
+  (check_result smartgen_fixed_argument_negative_table_excludes_fixed_mode)
+  (fn () =>
+  "a Fixed-carrying mode was present in a specialised relation's " ^
+  "negative-mode table")
+  (fn () => ()) ()
+
+(* [fixed_modes_for] is the sole construction site for [Fixed], and its
+   own closedness/type checks are the load-bearing gate: [null
+   (Term.free_vars value)] and [Term.type_of value <> List.nth (domains,
+   position)] are checked there, independently of [Refute_QC]'s own
+   [fixed_argument_positions], which filters the same way at the
+   call-site harvesting layer before a value ever reaches here.  This
+   pin observes that gate directly, at [fixed_modes_for] itself, rather
+   than through [infer_fixed_argument]'s downstream behaviour: for the
+   ill-typed value in particular, [infer_fixed_argument] would return
+   [NONE] regardless of its own boundary check, because
+   [substitute_fixed_argument]'s [Term.subst] already raises
+   ["redex has different type than residue"] and the enclosing
+   [handle Feedback.HOL_ERR _ => NONE] catches it -- a pin built one
+   level up cannot tell that guard apart from this one (confirmed by
+   ablation below). *)
+fun smartgen_fixed_modes_for_rejects_unsafe_value () =
+  let
+    val relation =
+      ``zoo_sg_listall : (num -> bool) -> num list -> bool``
+    val open_value = ``\n:num. n = (m:num)``
+    val wrong_type_value = ``\n:num. n + 1``
+  in
+    null (SG.fixed_modes_for relation 0 open_value) andalso
+    null (SG.fixed_modes_for relation 0 wrong_type_value)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = tprint
+  "Refute fixed_modes_for rejects a non-closed or ill-typed value"
+val _ = require_msg
+  (check_result smartgen_fixed_modes_for_rejects_unsafe_value) (fn () =>
+  "fixed_modes_for accepted a value that was not closed or not of " ^
+  "the pinned position's type")
   (fn () => ()) ()
 
 (* [argument_modes] handles products before function types, so a
@@ -19565,6 +19674,363 @@ val _ = require_msg (check_result smartgen_mode_failure_falls_back)
     "into an Enum plan")
   (fn () => ()) ()
 
+(* Static-parameter specialisation: unlike [smartgen_mode_failure_falls_back]
+   above, here the predicate argument is a *statically known closed value*
+   (a literal lambda, not a bound variable), so it is substituted through
+   [zoo_sg_listall]'s clauses before mode inference runs.  The substituted
+   clauses are first order (the [Fun] component is gone, replaced by
+   [Fixed]), so the CPS compiler now accepts the mode and an [Enum] plan is
+   built where before there was only [Gen]+[Guard].  [given_mode]'s
+   structural "no [Output] anywhere" rule and the complement table's
+   atomic-[Input] restriction are both untouched by this: specialisation
+   only ever consumes an argument position already inferred [Fixed], it
+   never invents an [Output] for a function-typed argument itself. *)
+val zoo_sg_listall_specialisation_goal =
+  ``zoo_sg_listall (\n:num. n = 500) (xs:num list) ==> LENGTH xs <= 2``
+
+fun higher_order_mode_table_consumed () =
+  let
+    val plan = compile_plan default_config
+      zoo_sg_listall_specialisation_goal
+  in
+    contains_enum plan andalso
+    (case plan of
+         Enum {mode = SG.Fun (SG.Fixed _, SG.Fun (SG.Output, SG.Bool)),
+               ...} => true
+       | _ => false)
+  end
+
+val _ = tprint
+  "Refute higher-order mode table is consumed by static specialisation"
+val _ = require_msg (check_result higher_order_mode_table_consumed) (fn () =>
+  "a statically fixed predicate parameter did not compile to an Enum " ^
+  "plan -- the higher-order mode table stayed inert")
+  (fn () => ()) ()
+
+(* [strategy_run_body] turns [smart_generators] off for every random
+   strategy before a goal ever reaches [compile_plan_with]; static-
+   parameter specialisation must respect that exactly as the generic
+   mode-inference path already does.  This cannot reuse
+   [zoo_sg_listall_specialisation_goal] above as the witness: that
+   goal's clauses convert through [MFH.instantiated_fixpoint_group]/
+   [scc_clauses] -- the SCC route, already gated on [smart_context ()]
+   before this fix existed -- and its single-relation Horn conversion
+   fails outright for [zoo_sg_listall], so with [smart_generators] off
+   its plan is plain [Gen]+[Guard] whether or not the Horn fallback
+   below [from_scc] is itself gated; a pin built on it would pass in
+   both the fixed and the unfixed world (confirmed by re-running the
+   ablation below against it).  [SORTED $=]'s clauses convert the other
+   way around -- its SCC route is [NONE] and its single-relation Horn
+   conversion succeeds -- so it is [clauses_and_members]'s Horn
+   fallback, and only that fallback, that decides whether this goal's
+   plan turns smart when [smart_generators] is off.
+
+   The [not (plan_uses_smart ...)] half alone is true in *every* world
+   where nothing smart ever happens for this goal, for any reason --
+   feature removed, [horn_inference_clauses_for] stopping at [SORTED],
+   [SORTED_DEF] changing shape, [predicate_mode_of] narrowing,
+   [fixed_argument_positions] no longer classifying [$=] as closed --
+   so it does not by itself show that specialisation is what the gate
+   is turning off.  The positive control closes that: with the gate on
+   (the default config), this goal's plan must actually be smart, so
+   the gate really is suppressing something real. *)
+val sorted_specialisation_goal =
+  ``SORTED $= (xs : num list) ==> SORTED $= (x :: xs)``
+
+fun sorted_specialisation_respects_smart_generators_gate () =
+  Refute_Eval.plan_uses_smart
+    (compile_plan default_config sorted_specialisation_goal) andalso
+  not (Refute_Eval.plan_uses_smart
+    (compile_plan (Refute.upd_smart_generators false default_config)
+      sorted_specialisation_goal))
+
+val _ = tprint
+  "Refute static specialisation respects the smart_generators gate"
+val _ = require_msg
+  (check_result sorted_specialisation_respects_smart_generators_gate)
+  (fn () =>
+    "either the default config did not produce a smart plan for a " ^
+    "goal that specialises (positive control), or a static-parameter " ^
+    "specialisation produced a smart plan with smart_generators off")
+  (fn () => ()) ()
+
+(* The pin above establishes "[smart_generators] off ==> no smart plan";
+   it does not establish "random strategy ==> [smart_generators] off" --
+   that line lives inside [strategy_run_body], a function that runs a
+   whole search and returns an outcome, not a plan, so there is no way
+   to pin it structurally the way the plan-level pin above does.  Drive
+   it through the real [random_backend] registered in [Refute_QC]
+   instead, the same one [Refute.upd_search (Refute.Only [Refute.Random])]
+   selects for any caller, on the same goal as the structural pin above
+   so both pins stand on the same confirmed-discriminating witness, end
+   to end through production code rather than a direct [compile_plan]
+   call.  A concrete, bound counterexample is not something a timed-out
+   or declined search can manufacture -- both report
+   [Unknown]/[GaveUp], never a genuine witness -- so
+   [certainty = Genuine] here is still a structural fact about what the
+   search did, not a wall-clock race, even though the search itself is
+   not fuel-free the way plan compilation is.  This pin covers only the
+   wiring -- that a random strategy actually sets [smart_generators]
+   false; it says nothing about [Refute_EvalEnum]'s executability veto
+   on the resulting plan, which stays the structural pin above's job
+   alone.  The 300s timeout is a hang-guard, not a search budget: the
+   witness lands on the first candidate, so only a genuine hang can
+   reach it. *)
+fun sorted_insert_random_backend_stays_genuine () =
+  let
+    val config = upd_timeout 300.0
+      (upd_iterations 100
+        (upd_max_counterexamples 1
+          (upd_seed (SOME 1)
+            (Refute.upd_search (Refute.Only [Refute.Random])
+              (upd_sequential true (upd_size 4 default_config))))))
+  in
+    case Refute.refute config sorted_specialisation_goal of
+        Counterexample (cex :: _) => #certainty cex = Genuine
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute random backend stays genuine on a specialised-relation goal"
+val _ = require_msg
+  (check_result sorted_insert_random_backend_stays_genuine) (fn () =>
+  "the random backend did not reach a genuine counterexample for a " ^
+  "goal whose ordering parameter specialises to a closed relation")
+  (fn () => ()) ()
+
+(* What this pin actually shows: specialising [zoo_sg_listall] to two
+   different closed predicates in the same session compiles two
+   distinct working programs ([program_version]s differ, and each
+   witness reflects only its own pinned value), not one value's plan
+   silently reusing the other's compiled clauses.  It does *not* show
+   non-reuse of a cached program by itself -- each [witness] call below
+   re-runs [compile_plan], which re-installs the correct cache entry for
+   its own goal immediately before the plan is run, so a cache lookup
+   that ignored the [Fixed] value entirely would still leave every
+   assertion here true.  That is measured, not assumed: blinding
+   [SG.eq_mode]'s [Fixed] arm to always [true] leaves this pin green,
+   because [cache_inference] prepends fresh programs and each [witness]
+   call re-compiles immediately before use, so the correct program is
+   [find_by_mode]'s first match on recency alone.  The arm is therefore
+   pinned separately, above; this pin is about distinct programs and
+   distinct witnesses, and claims nothing about mode lookup. *)
+val zoo_sg_listall_fixed_value_500 = ``\n:num. n = 500``
+val zoo_sg_listall_fixed_value_7 = ``\n:num. n = 7``
+
+(* [SG.eq_mode]'s [Fixed] arm compares the two pinned terms by exact
+   equality.  Pinned on its own rather than folded into the witness pin
+   below, because that pin does not cover it: blinding this arm to
+   always [true] leaves the witness pin green (measured), since
+   [cache_inference] prepends freshly compiled programs and each witness
+   re-runs [compile_plan] immediately before use, so [find_by_mode]'s
+   first match is the correct one on recency alone.
+
+   That recency is also why this pin cannot be stated as a claim about
+   [Refute_EvalEnum.program_closure], whose dependency lookup resolves a
+   recursive premise with no [same_program_version] check (see its
+   comment).  This arm would be what distinguishes two specialisations
+   there, but nothing in this suite separates it from recency, so that
+   remains reasoning rather than a measured fact.  What is pinned here
+   is the arm itself, nothing more. *)
+fun smartgen_eq_mode_distinguishes_fixed_values () =
+  not (SG.eq_mode
+         (SG.Fixed zoo_sg_listall_fixed_value_500,
+          SG.Fixed zoo_sg_listall_fixed_value_7))
+
+val _ = tprint
+  "Refute eq_mode tells two Fixed modes apart by their pinned terms"
+val _ = require_msg
+  (check_result smartgen_eq_mode_distinguishes_fixed_values) (fn () =>
+  "eq_mode treated two Fixed modes with different pinned terms as equal")
+  (fn () => ()) ()
+
+fun listall_specialisation_produces_distinct_programs () =
+  let
+    val config = default_config |> Refute.upd_depth 4 |> Refute.upd_size 1
+    fun version_of tm =
+      case compile_plan config tm of
+          Enum {version, ...} => version
+        | _ => raise Fail "expected an Enum plan"
+    val goal_seven =
+      ``zoo_sg_listall (\n:num. n = 7) (xs:num list) ==> LENGTH xs <= 2``
+    val version_500 = version_of zoo_sg_listall_specialisation_goal
+    val version_7 = version_of goal_seven
+    fun witness tm =
+      case Refute_EvalCompute.compile config Exhaustive
+          (Plans [compile_plan config tm]) of
+          Compiled test => Portable.finally (#close test) (fn () =>
+            case #run test
+                {genuine_only = false, card = 1, size = 1, draws = 0,
+                 ignored = []} of
+                CexFound {env = [(_, value)], ...} => SOME value
+              | _ => NONE) ()
+        | Inapplicable _ => NONE
+  in
+    not (SG.same_program_version (version_500, version_7)) andalso
+    (case (witness zoo_sg_listall_specialisation_goal, witness goal_seven) of
+         (SOME w500, SOME w7) =>
+           Term.aconv w500 ``[500; 500; 500] : num list`` andalso
+           Term.aconv w7 ``[7; 7; 7] : num list``
+       | _ => false)
+  end
+
+val _ = tprint
+  "Refute specialisation to distinct values compiles distinct programs"
+val _ = require_msg
+  (check_result listall_specialisation_produces_distinct_programs) (fn () =>
+  "two specialisations of the same relation to different closed " ^
+  "predicates did not compile to distinct programs")
+  (fn () => ()) ()
+
+(* [substitute_fixed_argument] partitions its rewritten premises by
+   [mentions relation] rather than dumping every survivor into [main]
+   with [side] left empty.  Fixing [zoo_sg_listall]'s predicate to an
+   equality literal (as every other pin in this file does) can never
+   show the difference: [discharge_ground_equalities] fully consumes
+   the resulting ground equality, so nothing is left over to land in
+   either bucket.  Fixing it to [\n. n < 10] instead leaves a genuine,
+   undischarged side condition: [P x] becomes [x < 10] after
+   substitution, which is not an equality and so survives, sitting
+   alongside the recursive call [zoo_sg_listall (\n. n < 10) xs] that
+   alone mentions the relation. *)
+fun listall_specialisation_partitions_side_from_main () =
+  let
+    val relation =
+      ``zoo_sg_listall : (num -> bool) -> num list -> bool``
+    val (_, clauses) = sg_fixed_argument_clauses relation
+    val value = ``\n:num. n < 10``
+    val substituted =
+      List.mapPartial (SG.substitute_fixed_argument relation 0 value)
+        clauses
+  in
+    length substituted = length clauses andalso
+    (case List.find
+        (fn ({side, ...} : SG.inference_clause) => not (null side))
+        substituted of
+         SOME ({side, main, ...} : SG.inference_clause) =>
+           length side = 1 andalso length main = 1 andalso
+           SG.mentions relation (hd main) andalso
+           not (SG.mentions relation (hd side))
+       | NONE => false)
+  end
+  handle HOL_ERR _ => false
+       | Option.Option => false
+
+val _ = tprint
+  "Refute specialised clause substitution partitions side from main"
+val _ = require_msg
+  (check_result listall_specialisation_partitions_side_from_main) (fn () =>
+  "a specialised clause with a surviving non-relation premise did not " ^
+  "come back with that premise in side and only the relation-mentioning " ^
+  "premise in main")
+  (fn () => ()) ()
+
+(* Distinct from the pin above: there, each specialisation's program is
+   used and discarded before the next one is even inferred, so an
+   eviction keyed on relation alone is invisible.  Here both
+   specialisations of [SORTED] -- at [$<=] and at [$>=] -- are needed by
+   the *same* plan at once: [$<=]'s premise is analysed and its program
+   cached first, then [$>=]'s premise is analysed, and if caching keys on
+   relation alone that second analysis evicts the first relation's
+   only cache entry before the plan is ever run. *)
+val sorted_double_specialisation_goal =
+  ``SORTED $<= (xs:num list) /\ SORTED $>= (ys:num list)
+      ==> LENGTH xs + LENGTH ys <= 4``
+
+fun sorted_specialisation_modes plan =
+  case plan of
+      Enum {rel, mode, cont, ...} =>
+        (rel, mode) :: sorted_specialisation_modes cont
+    | Gen (_, next) => sorted_specialisation_modes next
+    | Bind (_, _, fallback, next) =>
+        sorted_specialisation_modes next @
+          Option.getOpt (Option.map sorted_specialisation_modes fallback, [])
+    | Split (_, branches) =>
+        List.concat (map (sorted_specialisation_modes o #3) branches)
+    | Guard (_, next) => sorted_specialisation_modes next
+    | SmartGuard {cont, ...} => sorted_specialisation_modes cont
+    | _ => []
+
+fun sorted_two_specialisations_do_not_evict_each_other () =
+  let
+    val _ = SG.clear_enumerator_cache ()
+    val plan = compile_plan default_config sorted_double_specialisation_goal
+    fun is_sorted rel =
+      (#1 (Term.dest_const rel) = "SORTED") handle HOL_ERR _ => false
+    val modes = sorted_specialisation_modes plan
+    val two_distinct_sorted_modes =
+      length modes = 2 andalso List.all (is_sorted o #1) modes andalso
+      not (SG.eq_mode (#2 (hd modes), #2 (List.nth (modes, 1))))
+  in
+    two_distinct_sorted_modes andalso
+    (case Refute_EvalCompute.compile default_config Exhaustive
+        (Plans [plan]) of
+         Compiled test => (#close test (); true)
+       | Inapplicable _ => false)
+  end
+
+val _ = tprint
+  "Refute two specialisations of one relation keep both compiled programs"
+val _ = require_msg
+  (check_result sorted_two_specialisations_do_not_evict_each_other) (fn () =>
+  "a second specialisation of a relation evicted an earlier " ^
+  "specialisation's compiled enumerator program")
+  (fn () => ()) ()
+
+(* Three-substrate conformance and candidate-stream determinism for the
+   specialised Enum plan, in the style of
+   [enum_solution_stream_conformance] above.  Cv hygiene is exercised
+   here as a side effect: [Refute_EvalCv.compile]'s per-call definitions
+   and translations for this plan live and die inside the same
+   snapshot/revert bracket [enum_solution_stream_conformance] already
+   relies on, so a leak here would show up as a residual binding in that
+   shared theory, not as a distinct assertion of its own. *)
+fun listall_specialisation_stream_conformance () =
+  let
+    val config = default_config |> Refute.upd_depth 4 |> Refute.upd_size 1
+    val compilers =
+      [Refute_EvalCompute.compile, Refute_EvalCv.compile,
+       Refute_EvalSML.compile_with Refute_Extract.extract_problem]
+    fun compile_all plan = map (fn substrate =>
+      case substrate config Exhaustive (Plans [plan]) of
+          Compiled test => test
+        | Inapplicable reasons => raise Fail
+            ("listall specialisation substrate inapplicable: " ^
+             String.concatWith "; " reasons)) compilers
+    fun solutions test =
+      let
+        fun collect ignored result =
+          case #run test
+              {genuine_only = false, card = 1, size = 1, draws = 0,
+               ignored = ignored} of
+              CexFound candidate =>
+                collect (candidate :: ignored) (#env candidate :: result)
+            | Exhausted {complete = false} => rev result
+            | Exhausted {complete = true} =>
+                raise Fail "depth-bounded Enum reported complete"
+            | GaveUp reason => raise Fail reason
+      in
+        Portable.finally (#close test) (fn () => collect [] []) ()
+      end
+    val plan = compile_plan config zoo_sg_listall_specialisation_goal
+    val streams = map solutions (compile_all plan)
+    val expected = [[(``xs : num list``, ``[500; 500; 500] : num list``)]]
+  in
+    (* [length stream = length expected] first: a stream can come back
+       empty (e.g. the target value unreachable within [size]), and
+       [hd] on that would raise rather than report a clean mismatch. *)
+    List.all (fn stream => length stream = length expected andalso
+      same_env (hd stream) (hd expected)) streams
+  end
+
+val _ = tprint
+  "Refute specialised Enum plan: same candidate stream on all substrates"
+val _ = require_msg
+  (check_result listall_specialisation_stream_conformance) (fn () =>
+  "the specialised listall plan produced different candidate streams " ^
+  "across substrates")
+  (fn () => ()) ()
+
 fun enum_compiles_on_all_substrates () =
   let
     val plan = compile_plan default_config smartgen_linear_goal
@@ -19719,6 +20185,122 @@ fun in_refute_call body =
 fun qc_problem goal : problem = {goal = goal, assumptions = [], evals = []}
 
 fun qc_instances config goal = preprocess config (qc_problem goal)
+
+(* The acceptance headline: before specialisation this goal's only route
+   was the blanket [Gen]+[Guard] fallback, which must reach exactly 500
+   before its guard can pass -- an unreachable search within any ordinary
+   budget.  Specialising to the closed predicate turns every remaining
+   list element into a direct substitution instead of a generate-then-
+   filter search, so the genuine witness is found immediately regardless
+   of the target value's magnitude. *)
+fun listall_specialisation_genuine () =
+  let
+    val config = upd_expect ExpectGenuine
+      (Refute.upd_certify false
+        (upd_sequential true
+          (Refute.upd_search (Refute.Only [Refute.Exhaustive])
+            default_config)))
+  in
+    case refute_problem config
+        (qc_problem zoo_sg_listall_specialisation_goal) of
+        Counterexample (cex :: _) =>
+          #certainty cex = Genuine andalso
+          List.exists (fn (variable, value) =>
+            Term.aconv variable ``xs : num list`` andalso
+            Term.aconv value ``[500; 500; 500] : num list``)
+            (#bindings cex)
+      | _ => false
+  end
+
+val _ = tprint
+  "Refute static-parameter specialisation refutes the listall headline"
+val _ = require_msg (check_result listall_specialisation_genuine) (fn () =>
+  "specialising listall to a fixed predicate did not reach a genuine " ^
+  "counterexample")
+  (fn () => ()) ()
+
+(* Guard against specialisation silently dropping a constraint: this twin
+   swaps the headline's consequent for the mathematically equivalent
+   [EVERY] form, made a theorem here by direct instantiation of
+   [zoo_sg_listall_compute] rather than by a fresh tactic proof, so the
+   goal handed to Refute is provably true independently of any search.
+   A specialisation that widened the generator past exactly-500 elements
+   -- the failure [discharge_ground_equalities] is meant to rule out --
+   would expose itself by finding an early, wrong counterexample (e.g.
+   [xs = [0]]) well inside the budget below; a correct specialisation
+   finds nothing to report, because there is nothing wrong to find.
+   Total absence of a counterexample over an unbounded [:num list]
+   output is not something [Enum]'s exhaustive search can ever decide --
+   its completeness signal is depth-bounded and never total for an
+   infinite-typed generated position, exactly as
+   [enum_solution_stream_conformance]'s own
+   [Exhausted {complete = true} => raise Fail ...] guard assumes -- so
+   the decisive half of this check is the theorem, and Refute is asked
+   only to confirm it finds no spurious counterexample within a short
+   budget. *)
+val listall_specialisation_twin_true =
+  fst (EQ_IMP_RULE
+    (SPEC ``xs : num list``
+      (ISPEC ``\n:num. n = 500`` zoo_sg_listall_compute)))
+
+(* [refute_problem]'s outcome carries per-candidate [stats] only inside
+   [Counterexample] -- [NoCounterexample] and [Unknown] are bare, so "no
+   counterexample" alone cannot distinguish a search that ran and found
+   nothing wrong from one that timed out or was declined before
+   generating anything.  Drive the same [Exhaustive] backend directly
+   for [candidates_generated], the way [stuck_split_counts_failure] and
+   [raw_counters] below do -- inlined here, rather than calling
+   [raw_counters], because that helper is defined later in this file and
+   every piece it needs ([qc_instances], [compile_plan], [Exhaustive],
+   [Plans], [Compiled], [Inapplicable], [lookup_stat]) is already open
+   and in scope at this point.
+   This drives a second, independent compiled search at a fixed small
+   size, not the counters of the [refute_problem] call [outcome_ok]
+   reads -- that call's own stats are unreachable in its bare
+   [NoCounterexample]/[Unknown] result.  So this rules out "the
+   specialised plan never generates a candidate for this goal", not
+   "the particular run behind [outcome_ok] did not time out before
+   generating one"; under host load [outcome_ok] can be [true] because
+   the search timed out, at the same time as [candidates_ok] is [true]
+   from this unrelated, cheaper run. *)
+fun listall_specialisation_twin_no_spurious_cex () =
+  let
+    val config = upd_expect Refute.NoExpectation
+      (Refute.upd_certify false
+        (upd_sequential true
+          (Refute.upd_search (Refute.Only [Refute.Exhaustive])
+            (Refute.upd_timeout 2.0 default_config))))
+    val goal = concl listall_specialisation_twin_true
+    val outcome_ok =
+      case refute_problem config (qc_problem goal) of
+          Counterexample _ => false
+        | _ => true
+    val instances = qc_instances config goal
+    val plans = List.map (fn i => compile_plan config (#goal i)) instances
+    val compiled =
+      case Refute_EvalCompute.compile config Exhaustive (Plans plans) of
+          Compiled test => test
+        | Inapplicable reasons => raise Fail (String.concatWith "; " reasons)
+    val candidates_ok = Portable.finally (fn () => #close compiled ())
+      (fn () =>
+        (ignore (#run compiled
+           {genuine_only = false, card = 1, size = 3, draws = 0,
+            ignored = []});
+         case lookup_stat "candidates_generated" (!(#last_stats compiled)) of
+             SOME n => n > 0
+           | NONE => false)) ()
+  in
+    outcome_ok andalso candidates_ok
+  end
+
+val _ = tprint
+  "Refute specialisation twin: no spurious counterexample over a proved fact"
+val _ = require_msg
+  (check_result listall_specialisation_twin_no_spurious_cex) (fn () =>
+  "a provably true twin of the specialised listall headline was either " ^
+  "refuted -- specialisation dropped a constraint -- or the exhaustive " ^
+  "search generated no candidates at all")
+  (fn () => ()) ()
 
 fun qc_schedule_cursors_are_lazy_and_fair () =
   let
@@ -20632,7 +21214,13 @@ val _ = require_msg (check_result smartgen_validator_corpus) (fn () =>
   "smart-plan validator corpus lost a unified refusal or SmartGuard match")
   (fn () => ()) ()
 
-fun smartgen_cache_replacement_is_atomic () =
+(* Retention keys on (relation, mode), not relation: a mode a fresh
+   inference of the same relation no longer produces is not evicted,
+   since its clauses have not changed within this generation and its
+   program is still correct -- see the comment on [SG.cache_inference].
+   This exercises that on the generic (whole-group) path, where a
+   relation can carry more than one compiled mode. *)
+fun smartgen_cache_replacement_retains_absent_mode () =
   let
     val relation = ``zoo_sg_linear``
     val context = MFH.make_context (#mf default_config) []
@@ -20652,21 +21240,23 @@ fun smartgen_cache_replacement_is_atomic () =
          not (SG.same_relation relation other andalso
               SG.eq_mode (mode, removed))) modes} : SG.relation_modes
     (* [cache_inference] reads only [relations]; this test exercises that
-       atomicity alone, so [negative] passes through untrimmed. *)
+       alone, so [negative] passes through untrimmed. *)
     val reduced : SG.inference_result =
       {relations = map trim relations, negative = negative,
        degradation = degradation}
     val _ = SG.cache_inference reduced
-    val obsolete_gone =
-      not (Option.isSome (SG.enumerator_for relation removed))
+    val absent_mode_retained =
+      Option.isSome (SG.enumerator_for relation removed)
     val _ = ignore (compile_plan default_config smartgen_linear_goal)
   in
-    length programs > 1 andalso obsolete_gone
+    length programs > 1 andalso absent_mode_retained
   end
   handle Option.Option => false | Empty => false
 
-val _ = require_msg (check_result smartgen_cache_replacement_is_atomic)
-  (fn () => "inference replacement retained an obsolete relation mode")
+val _ = require_msg
+  (check_result smartgen_cache_replacement_retains_absent_mode) (fn () =>
+  "a relation mode absent from a fresh inference of the same relation " ^
+  "was evicted rather than retained")
   (fn () => ()) ()
 
 fun reverse_counterexample () =
