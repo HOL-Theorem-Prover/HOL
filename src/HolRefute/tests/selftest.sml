@@ -19683,8 +19683,11 @@ val _ = require_msg (check_result smartgen_mode_failure_falls_back)
    built where before there was only [Gen]+[Guard].  [given_mode]'s
    structural "no [Output] anywhere" rule and the complement table's
    atomic-[Input] restriction are both untouched by this: specialisation
-   only ever consumes an argument position already inferred [Fixed], it
-   never invents an [Output] for a function-typed argument itself. *)
+   does not consume an argument position already inferred [Fixed] --
+   [fixed_modes_for] is the sole site that ever builds a [Fixed], and
+   [eq_mode] (Fixed _, Input) is false, so [mode_all_input] can never
+   admit a [Fixed] component to the negative table -- and it never
+   invents an [Output] for a function-typed argument itself. *)
 val zoo_sg_listall_specialisation_goal =
   ``zoo_sg_listall (\n:num. n = 500) (xs:num list) ==> LENGTH xs <= 2``
 

@@ -890,7 +890,7 @@ row value of `NONE` asks Refute to choose, while `SOME true` or
 | `upd_overlord` | `false` | Keep solver files with stable names in the current directory. |
 | `upd_max_threads` | `0` | Kodkodi thread cap; zero leaves it unspecified. |
 | `upd_tac_timeout` | `0.5` | Seconds for inner monotonicity and well-foundedness tactics. |
-| `upd_specialize` | `true` | Specialize static higher-order arguments. |
+| `upd_specialize` | `true` | Specialize a constant at its equation-invariant arguments. |
 | `upd_box` | fallback `NONE` | Automatically or forcibly box function and pair types. |
 | `upd_binary_ints` | `NONE` | Automatically or forcibly use binary integers. |
 | `upd_bits` | `[1,...,10]` | Candidate binary word widths. |

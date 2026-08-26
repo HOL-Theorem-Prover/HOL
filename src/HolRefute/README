@@ -1081,7 +1081,7 @@ runtime-bound variable at compile time is unaffected and keeps falling
 back to plain `Gen`+`Guard`, exactly as before: `compile_clause` still
 compiles no enumerator for a mode with an unresolved function-typed
 component, and the complement table stays strictly atomic-`Input`: its
-gate compares each mode component against `Input` by exact structural
-equality, so a mode with a `Fixed` component -- however it arose, whether
-from ordinary inference or from specialisation's substitution -- never
-satisfies that gate and never reaches the negative table.
+gate compares each mode component against `Input` via `eq_mode`, which
+recurses through `Pair` rather than requiring literal identity, so a
+mode with a `Fixed` component -- however it arose -- never satisfies
+that gate and never reaches the negative table.

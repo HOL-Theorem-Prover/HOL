@@ -1040,7 +1040,9 @@ structure Refute_SmartGen = struct
   (* [strip_mode] is partial; a mode it cannot strip is simply not
      admitted.  Must use strict atomic-[Input] equality, not [given_mode]:
      this feeds the [NegGuard] complement, and a [Fun] component being
-     "given" is not a claim that its failure is decidable. *)
+     "given" is not a claim that its failure is decidable.  The same
+     strictness is what keeps a [Fixed] component out of the complement:
+     [given_mode (Fixed _)] is true, [eq_mode (Fixed _, Input)] is not. *)
   fun mode_all_input mode =
     List.all (fn component => eq_mode (component, Input)) (strip_mode mode)
     handle Feedback.HOL_ERR _ => false
@@ -1531,8 +1533,10 @@ structure Refute_SmartGen = struct
     handle Feedback.HOL_ERR _ => NONE
 
   (* [compile_clause]'s [first_order_mode] check means no enumerator is
-     ever compiled for a mode with a [Fun] component: higher-order mode
-     inference feeds no compiled enumerator today, so it is inert. *)
+     ever compiled for a mode with a [Fun] component.  The drop is
+     all-or-nothing at both stages: [check_relation] drops a mode
+     entirely if any clause fails [check_clause], and [compile_relation]
+     drops a mode entirely if any clause fails to compile. *)
   fun compile_relation version
         ({relation, modes} : relation_modes) =
     List.mapPartial (fn (mode, clauses, _) =>

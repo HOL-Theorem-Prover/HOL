@@ -632,10 +632,14 @@ Inductive zoo_sg_listall:
             zoo_sg_listall P (x::xs))
 End
 
-(* Computational view, same role as [zoo_sg_linear_compute] above: an
-   [Inductive] constant is not executable merely from its cases theorem,
-   so a full-pipeline QC pin needs this added to the compset before it can
-   pass [Refute_Core.nonexecutable_constants]'s gate. *)
+(* Unlike [zoo_sg_linear_compute], this is never added to a compset:
+   [compute_qc_gate] does flag [zoo_sg_listall] as non-executable, and
+   the full-pipeline pin passes anyway because [strategy_run_body]'s
+   [can_preflight] holds for the specialised plan and its
+   [compile_smart_selected] call does not fail, not because of
+   anything registered here.  This theorem's actual role is as the
+   source, via [ISPEC], of the provably-true [EVERY]-form twin used by
+   the specialisation pin. *)
 Theorem zoo_sg_listall_compute:
   !P xs. zoo_sg_listall P xs <=> EVERY P xs
 Proof
