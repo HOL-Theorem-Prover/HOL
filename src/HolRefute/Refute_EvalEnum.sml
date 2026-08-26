@@ -44,7 +44,8 @@ structure Refute_EvalEnum = struct
       fun inspect [] = NONE
         | inspect (program :: rest) =
             if Refute_SmartGen.same_relation
-                 relation (#relation program) andalso
+                 (Refute_SmartGen.Predicate relation) (#relation program)
+                 andalso
                Refute_SmartGen.same_program_version
                  (version, #version program)
             then
@@ -132,9 +133,11 @@ structure Refute_EvalEnum = struct
            "Refute_EvalEnum.mode_shape_with: rejecting function returned")
     in
       (let
-         val _ = if Term.is_const relation then ()
+         val _ = if Term.is_const (Refute_SmartGen.relation_term relation)
+           then ()
            else rejected "enumerator relation is not a constant"
-         val (domains, range) = boolSyntax.strip_fun (Term.type_of relation)
+         val (domains, range) =
+           boolSyntax.strip_fun (Refute_SmartGen.relation_type relation)
          val modes = Refute_SmartGen.strip_mode mode
          val _ = if Util.same_type range Type.bool then ()
            else rejected "enumerator relation does not return bool"
@@ -331,7 +334,8 @@ structure Refute_EvalEnum = struct
                 require_bound "smart Guard" bound [predicate];
                 require_bound "smart Guard input" bound ins;
                 validate_executable "smart Guard"
-                  [#relation program] [predicate];
+                  [Refute_SmartGen.relation_term (#relation program)]
+                  [predicate];
                 validate_plan cont bound
               end
           | Refute_Eval.Enum {rel, mode, version, ins, outs, cont} =>

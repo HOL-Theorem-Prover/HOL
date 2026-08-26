@@ -436,6 +436,45 @@ structure Refute_SmartGen = struct
     | Fun of mode * mode
     | Fixed of term
 
+  (* A relation key generalises "a Boolean constant" to also denote the
+     graph of an ordinary function, without that graph ever existing as
+     a term.  [Graph f], for [f : t1 -> ... -> tn -> r], denotes
+     [\a1 ... an res. f a1 ... an = res], of arity [n + 1]: maximal and
+     fixed by [f]'s type alone (never partial), because a function's
+     defining equations are stated at maximal application and a partial
+     graph would have no equations to synthesise clauses from.  [Graph]
+     is constructed nowhere in this tree except three accessor pins in
+     the selftest; synthesising its clauses is future work. *)
+  datatype relation_key =
+      Predicate of term
+    | Graph of term
+
+  fun relation_term (Predicate f) = f
+    | relation_term (Graph f) = f
+
+  fun relation_type (Predicate f) = Term.type_of f
+    | relation_type (Graph f) =
+        let val (domains, range) = boolSyntax.strip_fun (Term.type_of f)
+        in boolSyntax.list_mk_fun (domains @ [range], Type.bool) end
+
+  (* Unconsumed outside its own selftest pin: kept ahead of use because
+     synthesising a graph's clause heads will need the arity.  There is
+     no [Refute_SmartGen.sig] to record that as deliberate, so an audit
+     could otherwise mistake this for a mechanism nothing wires up. *)
+  fun relation_arity key =
+    length (#1 (boolSyntax.strip_fun (relation_type key)))
+
+  (* Equal constructor and equal constant: [Predicate f] and [Graph f]
+     are different relations for the same [f] -- different arities and
+     different clause sets. *)
+  fun same_relation (Predicate left) (Predicate right) =
+        same_constant left right
+    | same_relation (Graph left) (Graph right) = same_constant left right
+    | same_relation _ _ = false
+
+  fun relation_string (Predicate f) = Parse.term_to_string f
+    | relation_string (Graph f) = "graph " ^ Parse.term_to_string f
+
   datatype mode_derivation =
       Mode_App of mode_derivation * mode_derivation
     | Context of mode
@@ -453,7 +492,7 @@ structure Refute_SmartGen = struct
      needs_generator : bool}
 
   type relation_modes =
-    {relation : term,
+    {relation : relation_key,
      modes : (mode * moded_clause list * bool) list}
 
   datatype external_status =
@@ -475,7 +514,7 @@ structure Refute_SmartGen = struct
      analysis through [complement_available], which builds a closed
      complement condition from the same-mode [enumerator] via
      [Refute_EvalEnum.negation_condition]. *)
-  type relation_negative_modes = {relation : term, modes : mode list}
+  type relation_negative_modes = {relation : relation_key, modes : mode list}
 
   type inference_result =
     {relations : relation_modes list,
@@ -767,12 +806,12 @@ structure Refute_SmartGen = struct
           else
             []
 
-  fun same_relation left right =
-    same_constant left right handle Feedback.HOL_ERR _ => false
-
+  (* [lookup_assoc] is SCC-internal bookkeeping over bare constants
+     (Horn-clause members, external relations), never over a
+     [relation_key]: compare with [same_constant], not [same_relation]. *)
   fun lookup_assoc relation entries =
     Option.map #2 (List.find (fn (other, _) =>
-      same_relation relation other) entries)
+      same_constant relation other) entries)
 
   fun premise_head premise =
     let val (head, _) = HolKernel.strip_comb premise
@@ -827,7 +866,7 @@ structure Refute_SmartGen = struct
       case premise_head term of
           NONE => Sidecond term
         | SOME head =>
-            if List.exists (same_relation head) members then Prem term
+            if List.exists (same_constant head) members then Prem term
             else
               (case lookup_assoc head external of
                    SOME (Compiled _) => Prem term
@@ -835,7 +874,7 @@ structure Refute_SmartGen = struct
 
   fun is_recursive relation term =
     case premise_head term of
-        SOME head => same_relation relation head
+        SOME head => same_constant relation head
       | NONE => false
 
   fun term_of_premise (Prem term) = term
@@ -962,7 +1001,7 @@ structure Refute_SmartGen = struct
           ordered = raw_premises} : inference_clause) =
     let
       val (head, arguments) = HolKernel.strip_comb conclusion
-      val _ = if same_relation head relation then ()
+      val _ = if same_constant head relation then ()
         else raise Feedback.mk_HOL_ERR "Refute_SmartGen"
           "check_clause" "clause belongs to another relation"
       val _ = if same_term_multiset raw_premises (main @ side) then ()
@@ -1016,7 +1055,7 @@ structure Refute_SmartGen = struct
   fun clauses_for relation clauses =
     List.filter (fn ({head = conclusion, ...} : inference_clause) =>
       case premise_head conclusion of
-          SOME head => same_relation relation head
+          SOME head => same_constant relation head
         | NONE => false) clauses
 
   (* Deciding that a clause fails means deciding that one of its premises
@@ -1089,7 +1128,7 @@ structure Refute_SmartGen = struct
     length left = length right andalso
     ListPair.allEq (fn ((left_relation, left_modes),
                         (right_relation, right_modes)) =>
-      same_relation left_relation right_relation andalso
+      same_constant left_relation right_relation andalso
       same_mode_infos left_modes right_modes) (left, right)
 
   (* [seed_modes] lets [infer_fixed_argument] re-run the same fixpoint
@@ -1113,7 +1152,7 @@ structure Refute_SmartGen = struct
           ordered) clauses))
       fun distinct_relations relations =
         List.foldl (fn (relation, result) =>
-          if List.exists (same_relation relation) result then result
+          if List.exists (same_constant relation) result then result
           else result @ [relation]) [] relations
       val degradation =
         map HigherOrderParameters higher_order @
@@ -1133,10 +1172,10 @@ structure Refute_SmartGen = struct
          [check_relation] trivially returns [] for it every iteration. *)
       val stable = fixpoint start
       fun materialize (relation, modes) : relation_modes =
-        {relation = relation, modes = modes}
+        {relation = Predicate relation, modes = modes}
       fun materialize_negative (relation, modes)
             : relation_negative_modes =
-        {relation = relation,
+        {relation = Predicate relation,
          modes = negative_modes_of
            (relation_blocks_complement members external clauses relation)
            modes}
@@ -1284,7 +1323,7 @@ structure Refute_SmartGen = struct
         ({head, ...} : inference_clause) =
     let val (head_relation, arguments) = HolKernel.strip_comb head
     in
-      if same_relation head_relation relation then
+      if same_constant head_relation relation then
         SOME (List.nth (arguments, position))
       else NONE
     end
@@ -1432,7 +1471,7 @@ structure Refute_SmartGen = struct
               if null (fixed_modes_for relation position value) then NONE
               else
                 SOME (infer_clauses_with (fn candidate =>
-                  if same_relation candidate relation then
+                  if same_constant candidate relation then
                     fixed_modes_for relation position value
                   else all_modes_for candidate)
                   {members = members, clauses = substituted,
@@ -1446,7 +1485,7 @@ structure Refute_SmartGen = struct
      premise-chain >>= single outputs]; the list of clauses is [plus] in
      source order.  Every substrate must preserve these two list orders. *)
   datatype cps_premise =
-      CpsCall of {rel : term, mode : mode, ins : term list,
+      CpsCall of {rel : relation_key, mode : mode, ins : term list,
                   outs : term list}
     | CpsGuard of term
     | CpsGenerate of term
@@ -1489,7 +1528,7 @@ structure Refute_SmartGen = struct
   end
 
   type enumerator =
-    {relation : term, mode : mode, version : program_version,
+    {relation : relation_key, mode : mode, version : program_version,
      clauses : cps_clause list}
 
   fun first_order_mode (Fixed _) = true
@@ -1511,7 +1550,8 @@ structure Refute_SmartGen = struct
           in
             if List.all first_order_mode (strip_mode mode) then
               SOME (CpsCall
-                {rel = relation, mode = mode, ins = ins, outs = outs})
+                {rel = Predicate relation, mode = mode, ins = ins,
+                 outs = outs})
             else NONE
           end
           handle Feedback.HOL_ERR _ => NONE
@@ -1559,7 +1599,7 @@ structure Refute_SmartGen = struct
           (map Parse.term_to_string
             (arguments @ map (term_of_premise o #1) premises))
       fun relation ({relation, modes} : relation_modes) =
-        Parse.term_to_string relation ^ "{" ^
+        relation_string relation ^ "{" ^
         String.concatWith ";" (map (fn (mode, clauses, needs) =>
           mode_string mode ^ ":" ^ Bool.toString needs ^ ":" ^
           String.concatWith "/" (map clause clauses)) modes) ^ "}"
@@ -1568,7 +1608,7 @@ structure Refute_SmartGen = struct
     end
 
   type enumerator_cache_entry =
-    {relation : term, mode : mode, program : enumerator}
+    {relation : relation_key, mode : mode, program : enumerator}
 
   (* Session-local only: enumerator compilation creates no HOL definition.
      Recompiling a typed relation/mode replaces its previous program. *)
@@ -1608,7 +1648,8 @@ structure Refute_SmartGen = struct
     end
 
   fun program_is_fresh_unlocked ({relation, version, ...} : enumerator) =
-    current_program_version_raw version andalso Theory.uptodate_term relation
+    current_program_version_raw version andalso
+    Theory.uptodate_term (relation_term relation)
 
   fun program_is_fresh program =
     synchronized_cache (fn () => program_is_fresh_unlocked program)
@@ -1703,7 +1744,7 @@ structure Refute_SmartGen = struct
   fun goal_modes_for_call known call inference =
     let
       val (relation, arguments) = HolKernel.strip_comb call
-      val relation_result = relation_modes_for relation inference
+      val relation_result = relation_modes_for (Predicate relation) inference
       fun candidate (mode, _, needs_generator) =
         case top_level_parts mode arguments of
             NONE => NONE

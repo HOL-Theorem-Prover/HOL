@@ -3,6 +3,7 @@ structure Refute_Eval :> Refute_Eval = struct
 
   type mode = Refute_SmartGen.mode
   type program_version = Refute_SmartGen.program_version
+  type relation_key = Refute_SmartGen.relation_key
 
   datatype plan =
       Test of term
@@ -13,7 +14,7 @@ structure Refute_Eval :> Refute_Eval = struct
     | NegGuard of term * plan
     | SmartGuard of {predicate : term, version : program_version,
                      cont : plan}
-    | Enum of {rel : term, mode : mode, version : program_version,
+    | Enum of {rel : relation_key, mode : mode, version : program_version,
                ins : term list, outs : term list, cont : plan}
     | Prune
 

@@ -1316,12 +1316,62 @@ val _ = require_msg (check_result (fn () =>
 
 structure MFH = Refute_ModelFinder_HOL
 
+(* [relation_key] generalises "a relation" to also denote the graph of an
+   ordinary function.  Nothing in the tree constructs [Graph] yet, so
+   these three pins are its only construction sites; they exercise the
+   accessors directly rather than through any real inference path. *)
+val _ = tprint "Refute SmartGen same_relation distinguishes Predicate/Graph"
+fun relation_key_predicate_graph_distinct () =
+  let val f = ``EVEN`` in
+    not (SG.same_relation (SG.Predicate f) (SG.Graph f)) andalso
+    SG.same_relation (SG.Predicate f) (SG.Predicate f) andalso
+    SG.same_relation (SG.Graph f) (SG.Graph f) andalso
+    not (SG.same_relation (SG.Predicate f) (SG.Predicate ``ODD``))
+  end
+val _ = require_msg (check_result relation_key_predicate_graph_distinct)
+  (fn () =>
+    "same_relation did not distinguish Predicate/Graph of the same " ^
+    "constant")
+  (fn () => ()) ()
+
+val _ = tprint "Refute SmartGen relation_type/relation_arity for Graph"
+fun relation_key_graph_type_and_arity () =
+  let
+    val f = ``$+ : num -> num -> num``
+    val graph = SG.Graph f
+  in
+    SG.relation_type graph = ``:num -> num -> num -> bool`` andalso
+    SG.relation_arity graph = 3 andalso
+    SG.relation_type (SG.Predicate f) = Term.type_of f andalso
+    SG.relation_arity (SG.Predicate f) = 2
+  end
+val _ = require_msg (check_result relation_key_graph_type_and_arity)
+  (fn () => "Graph's relation_type/relation_arity did not account for " ^
+    "the extra result argument")
+  (fn () => ()) ()
+
+val _ = tprint ("Refute SmartGen relation_string renders Predicate/Graph " ^
+  "distinctly")
+fun relation_key_string_distinct () =
+  let
+    val f = ``APPEND : num list -> num list -> num list``
+    val predicate_text = SG.relation_string (SG.Predicate f)
+    val graph_text = SG.relation_string (SG.Graph f)
+  in
+    predicate_text = Parse.term_to_string f andalso
+    graph_text = "graph " ^ predicate_text
+  end
+val _ = require_msg (check_result relation_key_string_distinct)
+  (fn () =>
+    "relation_string did not render Predicate and Graph distinctly")
+  (fn () => ()) ()
+
 val _ = tprint "Refute SmartGen mode inference"
 
 fun sg_relation_result relation
       ({relations, ...} : SG.inference_result) =
   List.find (fn ({relation = candidate, ...} : SG.relation_modes) =>
-    SG.same_constant relation candidate) relations
+    SG.same_relation (SG.Predicate relation) candidate) relations
 
 fun sg_mode_result mode ({modes, ...} : SG.relation_modes) =
   List.find (fn (candidate, _, _) => SG.eq_mode (candidate, mode)) modes
@@ -1546,7 +1596,8 @@ fun smartgen_higher_order_negative_table_empty () =
     val relation =
       ``zoo_sg_higher_order : (num -> bool) -> num -> bool``
     val result = sg_infer_hol_reln relation true
-    val negative = valOf (SG.negative_relation_modes_for relation result)
+    val negative = valOf (SG.negative_relation_modes_for
+      (SG.Predicate relation) result)
   in
     null (#modes negative)
   end
@@ -1593,7 +1644,8 @@ fun smartgen_fixed_argument_negative_table_excludes_fixed_mode () =
        relation = relation, position = 0, value = value,
        reorder_premises = true})
     val relation_modes = valOf (sg_relation_result relation result)
-    val negative = valOf (SG.negative_relation_modes_for relation result)
+    val negative = valOf (SG.negative_relation_modes_for
+      (SG.Predicate relation) result)
     val checked = SG.list_mode [SG.Fixed value, SG.Input]
     val in_negative =
       List.exists (fn candidate => SG.eq_mode (candidate, checked))
@@ -2048,7 +2100,7 @@ fun smartgen_negative_nonrecursive_available () =
     val relation = ``zoo_sg_duplicate : num -> num # num -> bool``
     val result = sg_infer_hol_reln relation true
   in
-    SG.complement_available relation
+    SG.complement_available (SG.Predicate relation)
       (SG.list_mode [SG.Input, SG.Input]) result
   end
   handle HOL_ERR _ => false
@@ -2070,7 +2122,8 @@ fun smartgen_negative_recursive_unavailable () =
     val relation = ``zoo_sg_linear : num -> bool``
     val result = sg_infer_hol_reln relation true
     val positive = valOf (sg_relation_result relation result)
-    val negative = valOf (SG.negative_relation_modes_for relation result)
+    val negative = valOf (SG.negative_relation_modes_for
+      (SG.Predicate relation) result)
     val input = SG.list_mode [SG.Input]
   in
     (case sg_mode_result input positive of
@@ -2104,7 +2157,7 @@ fun smartgen_negative_excludes_output_position () =
     (case sg_mode_result mode positive of
          SOME (_, _, false) => true
        | _ => false) andalso
-    not (SG.complement_available relation mode result)
+    not (SG.complement_available (SG.Predicate relation) mode result)
   end
   handle HOL_ERR _ => false
        | Option.Option => false
@@ -2148,7 +2201,8 @@ fun smartgen_negative_external_call_blocks () =
          SG.Compiled {modes = exported, functional = []})],
        reorder_premises = true}
     val positive = valOf (sg_relation_result relation result)
-    val negative = valOf (SG.negative_relation_modes_for relation result)
+    val negative = valOf (SG.negative_relation_modes_for
+      (SG.Predicate relation) result)
     val admissible = List.exists (fn (mode, _, needs_generator) =>
       List.all (fn part => SG.eq_mode (part, SG.Input)) (SG.strip_mode mode)
       andalso not needs_generator) (#modes positive)
@@ -19958,8 +20012,9 @@ fun sorted_two_specialisations_do_not_evict_each_other () =
   let
     val _ = SG.clear_enumerator_cache ()
     val plan = compile_plan default_config sorted_double_specialisation_goal
-    fun is_sorted rel =
-      (#1 (Term.dest_const rel) = "SORTED") handle HOL_ERR _ => false
+    fun is_sorted (SG.Predicate f) =
+          ((#1 (Term.dest_const f) = "SORTED") handle HOL_ERR _ => false)
+      | is_sorted (SG.Graph _) = false
     val modes = sorted_specialisation_modes plan
     val two_distinct_sorted_modes =
       length modes = 2 andalso List.all (is_sorted o #1) modes andalso
@@ -21234,13 +21289,14 @@ fun smartgen_cache_replacement_retains_absent_mode () =
        reorder_premises = true})
     val _ = SG.cache_inference inference
     val programs = List.filter (fn {program = {relation = other, ...}, ...} =>
-      SG.same_relation relation other) (SG.enumerator_snapshot ())
+      SG.same_relation (SG.Predicate relation) other)
+      (SG.enumerator_snapshot ())
     val removed = #mode (#program (List.last programs))
     val {relations, negative, degradation} = inference
     fun trim ({relation = other, modes} : SG.relation_modes) =
       {relation = other,
        modes = List.filter (fn (mode, _, _) =>
-         not (SG.same_relation relation other andalso
+         not (SG.same_relation (SG.Predicate relation) other andalso
               SG.eq_mode (mode, removed))) modes} : SG.relation_modes
     (* [cache_inference] reads only [relations]; this test exercises that
        alone, so [negative] passes through untrimmed. *)
@@ -21249,7 +21305,7 @@ fun smartgen_cache_replacement_retains_absent_mode () =
        degradation = degradation}
     val _ = SG.cache_inference reduced
     val absent_mode_retained =
-      Option.isSome (SG.enumerator_for relation removed)
+      Option.isSome (SG.enumerator_for (SG.Predicate relation) removed)
     val _ = ignore (compile_plan default_config smartgen_linear_goal)
   in
     length programs > 1 andalso absent_mode_retained

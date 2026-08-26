@@ -2640,7 +2640,8 @@ structure Refute_Extract = struct
             fun find {program =
                   (program as {relation, mode, version, ...} :
                     Refute_SmartGen.enumerator), ...} =
-              if Refute_SmartGen.same_relation head relation andalso
+              if Refute_SmartGen.same_relation
+                   (Refute_SmartGen.Predicate head) relation andalso
                  Refute_SmartGen.same_program_version
                    (expected_version, version) andalso
                  Refute_SmartGen.program_is_fresh program andalso

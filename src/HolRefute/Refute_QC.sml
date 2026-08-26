@@ -503,7 +503,8 @@ structure Refute_QC = struct
                   List.mapPartial (fn goal_mode as
                       ({mode, ...} : SmartGen.goal_mode) =>
                     Option.map (fn program => (goal_mode, Positive program))
-                      (SmartGen.enumerator_for relation mode))
+                      (SmartGen.enumerator_for
+                        (SmartGen.Predicate relation) mode))
                     (SmartGen.goal_modes_for_call bound assumption inference))
           (fixed_argument_positions assumption))
 
@@ -521,7 +522,8 @@ structure Refute_QC = struct
                     List.mapPartial (fn goal_mode as
                         ({mode, ...} : SmartGen.goal_mode) =>
                       Option.map (fn program => (goal_mode, Positive program))
-                        (SmartGen.enumerator_for relation mode)) inferred
+                        (SmartGen.enumerator_for
+                          (SmartGen.Predicate relation) mode)) inferred
                   val fixed_modes = fixed_positive_candidates bound assumption
                   val modes = generic_modes @ fixed_modes
                   val trigger = trigger orelse not (null fixed_modes)
@@ -548,8 +550,8 @@ structure Refute_QC = struct
                         | SOME inference =>
                             List.filter (fn
                                 ({mode, ...} : SmartGen.goal_mode) =>
-                              SmartGen.complement_available relation mode
-                                inference)
+                              SmartGen.complement_available
+                                (SmartGen.Predicate relation) mode inference)
                               (SmartGen.goal_modes_for_call bound call
                                 inference)
                     val modes =
@@ -559,7 +561,8 @@ structure Refute_QC = struct
                             (goal_mode,
                              Negative (Refute_EvalEnum.negation_condition
                                program ins)))
-                          (SmartGen.enumerator_for relation mode)) inferred
+                          (SmartGen.enumerator_for
+                            (SmartGen.Predicate relation) mode)) inferred
                     val reason =
                       if not (null modes) orelse not trigger then reason
                       else if not (null inferred) then SOME
@@ -760,7 +763,8 @@ structure Refute_QC = struct
                             {predicate = assumption, version = version,
                              cont = continuation ()})
                        else
-                         Enum {rel = valOf (premise_head assumption),
+                         Enum {rel = SmartGen.Predicate
+                                 (valOf (premise_head assumption)),
                                mode = mode, version = version,
                                ins = ins, outs = outs,
                                cont = continuation ()})
@@ -826,7 +830,7 @@ structure Refute_QC = struct
             Parse.term_to_string predicate ^ "\n" ^
             show (depth + 2) cont
         | Enum {rel, mode, ins, outs, cont, ...} =>
-            indent depth ^ "Enum " ^ Parse.term_to_string rel ^ "[" ^
+            indent depth ^ "Enum " ^ SmartGen.relation_string rel ^ "[" ^
             SmartGen.mode_string mode ^ "] (" ^
             String.concatWith ", " (map Parse.term_to_string ins) ^
             ") -> (" ^
@@ -1213,7 +1217,7 @@ structure Refute_QC = struct
                ins = left_ins, outs = left_outs, cont = left_next},
          Enum {rel = right_rel, mode = right_mode, version = right_version,
                ins = right_ins, outs = right_outs, cont = right_next}) =
-        Term.aconv left_rel right_rel andalso
+        SmartGen.same_relation left_rel right_rel andalso
         SmartGen.eq_mode (left_mode, right_mode) andalso
         SmartGen.same_program_version (left_version, right_version) andalso
         same_terms left_ins right_ins andalso
