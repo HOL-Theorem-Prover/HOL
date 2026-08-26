@@ -87,6 +87,12 @@ type goal_state_response = {
      scroll.  `pretty` still carries them, so a client that renders
      it verbatim needs no change. *)
   context: string list,
+  (* "ok", or "pending" when the answer is provisional because the
+     file's own compile hasn't finished: the walker compiles each
+     tactic against the file's namespace, and until the file's
+     `open's have run the names simply aren't there yet.  A client
+     should show the state but not treat it as settled. *)
+  status: string,
   (* SOME msg when the walker gave up (e.g. wall-clock budget
      exceeded) or halted at a failed tactic.  On timeout `goals`
      and `pretty` are empty; on a failed tactic they hold the
@@ -105,7 +111,8 @@ type theorem_context = {
   quoteStart: int,        (* file byte offset of the quote's start *)
   tacText: string,        (* raw text between `Proof` and `QED` *)
   tacStart: int,          (* file byte offset of `tacText` start *)
-  cursor: int             (* cursor byte offset (file coords) *)
+  cursor: int,            (* cursor byte offset (file coords) *)
+  compileDone: bool       (* has the file's own compile finished? *)
 }
 val goalStateAtPos:
   (hover_context * theorem_context -> goal_state_response option) ref

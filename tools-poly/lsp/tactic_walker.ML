@@ -6,6 +6,13 @@
    from the closest snapshot rather than re-walking. *)
 
 structure TacticWalker :> sig
+  (* Why a leaf didn't apply.  `CompileFailed' means its SML source
+     didn't compile, which during a file's own compile means only
+     that the file's `open's haven't run yet -- the names aren't
+     there to be found.  Distinct from the tactic being run and
+     refused by the goal. *)
+  datatype failkind = ApplyFailed | CompileFailed
+
   (* Exposed because PolyML.compiler compiles at top level: these
      must be reachable by qualified name from the wrapped
      `TacticWalker.holder := SOME (…)` source that compileTactic
@@ -22,7 +29,7 @@ structure TacticWalker :> sig
     frags: TacticParse.tac_frag list,
     cursor: int
   } -> { state: goalFrag.goalstate,
-         failedAt: TacticParse.tac_frag option }
+         failedAt: (TacticParse.tac_frag * failkind) option }
 end = struct
 
 open TacticParse
@@ -74,10 +81,15 @@ fun compileListTactic src = compileVia {
   get = fn () => !listHolder, clear = fn () => listHolder := NONE,
   cache = compileLTCache} src
 
+datatype failkind = ApplyFailed | CompileFailed
+datatype applied = Applied of goalFrag.goalstate | Rejected of failkind
+
 fun compileAndApply src state =
   case compileTactic src of
-    NONE => NONE
-  | SOME tac => Portable.total (goalFrag.expand tac) state
+    NONE => Rejected CompileFailed
+  | SOME tac => (case Portable.total (goalFrag.expand tac) state of
+                   NONE => Rejected ApplyFailed
+                 | SOME state' => Applied state')
 
 (* `goalFrag.expand' runs a tactic once per focused goal, so a
    list_tactic smuggled in as `ALL_TAC >>> lt' only ever sees the
@@ -85,8 +97,10 @@ fun compileAndApply src state =
    `expand_list' hands it the whole focus, which is the point of it. *)
 fun compileAndApplyLT src state =
   case compileListTactic src of
-    NONE => NONE
-  | SOME lt => Portable.total (goalFrag.expand_list lt) state
+    NONE => Rejected CompileFailed
+  | SOME lt => (case Portable.total (goalFrag.expand_list lt) state of
+                  NONE => Rejected ApplyFailed
+                | SOME state' => Applied state')
 
 (* A branch whose tactics we skip.  `t >- tac' obliges tac to
    discharge the focused goal entirely, so its only effect on what
@@ -135,7 +149,7 @@ fun isListTactic te = case te of
   | _ => false
 
 fun applyAtom tacText te state = case atomSrc tacText te of
-    NONE => SOME state
+    NONE => Applied state
   | SOME src =>
       if isListTactic te then compileAndApplyLT src state
       else compileAndApply src state
@@ -322,7 +336,7 @@ datatype walkOut =
   Done of {state: goalFrag.goalstate, snaps: snap list, stepIdx: int}
 | Halted of {state: goalFrag.goalstate, snaps: snap list, stepIdx: int}
 | Failed of {state: goalFrag.goalstate, snaps: snap list, stepIdx: int,
-             at: tac_frag}
+             at: tac_frag, why: failkind}
 
 (* Constant across a walk.  `resumeIdx' is where a cached snapshot
    picks up: while `stepIdx' is below it the walk is replaying a
@@ -356,9 +370,10 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
           else if cursor < endB then
             Halted {state = state, snaps = snaps, stepIdx = stepIdx}
           else (case applyAtom tacText te state of
-                  NONE => Failed {state = state, snaps = snaps,
-                                  stepIdx = stepIdx, at = frag}
-                | SOME state' =>
+                  Rejected why => Failed {state = state, snaps = snaps,
+                                          stepIdx = stepIdx, at = frag,
+                                          why = why}
+                | Applied state' =>
                     Done {state = state',
                           snaps = {stepIdx = stepIdx, endByte = endB,
                                    state = state'} :: snaps,
@@ -366,29 +381,29 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
       | NONE => (* no snap key: apply as an always-fires leaf (e.g. LReverse) *)
           if replaying then keep stepIdx
           else (case applyAtom tacText te state of
-             NONE => Failed {state = state, snaps = snaps,
-                             stepIdx = stepIdx, at = frag}
-           | SOME state' =>
+             Rejected why => Failed {state = state, snaps = snaps,
+                                     stepIdx = stepIdx, at = frag, why = why}
+           | Applied state' =>
                Done {state = state', snaps = snaps, stepIdx = stepIdx}))
   | FFOpen ok =>
       if replaying then keep stepIdx
       else (case applyOpen ok state of
          NONE => Failed {state = state, snaps = snaps,
-                         stepIdx = stepIdx, at = frag}
+                         stepIdx = stepIdx, at = frag, why = ApplyFailed}
        | SOME state' =>
            Done {state = state', snaps = snaps, stepIdx = stepIdx})
   | FFMid m =>
       if replaying then keep stepIdx
       else (case applyMid m state of
          NONE => Failed {state = state, snaps = snaps,
-                         stepIdx = stepIdx, at = frag}
+                         stepIdx = stepIdx, at = frag, why = ApplyFailed}
        | SOME state' =>
            Done {state = state', snaps = snaps, stepIdx = stepIdx})
   | FFClose c =>
       if replaying then keep stepIdx
       else (case applyClose c state of
          NONE => Failed {state = state, snaps = snaps,
-                         stepIdx = stepIdx, at = frag}
+                         stepIdx = stepIdx, at = frag, why = ApplyFailed}
        | SOME state' =>
            Done {state = state', snaps = snaps, stepIdx = stepIdx})
   | FGroup (_, inner) => walkFrags env state snaps stepIdx inner
@@ -410,7 +425,8 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
               if replaying then k state
               else (case applyOpen ok state of
                       NONE => Failed {state = state, snaps = snaps,
-                                      stepIdx = stepIdx, at = FFOpen ok}
+                                      stepIdx = stepIdx, at = FFOpen ok,
+                                       why = ApplyFailed}
                     | SOME state' => k state')
             (* A bracket wholly inside the replayed prefix had its
                close accounted for as well as its open. *)
@@ -418,7 +434,8 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
               if #stepIdx r < resumeIdx then Done r
               else (case applyClose cc (#state r) of
                       NONE => Failed {state = #state r, snaps = #snaps r,
-                                      stepIdx = #stepIdx r, at = FFClose cc}
+                                      stepIdx = #stepIdx r, at = FFClose cc,
+                                       why = ApplyFailed}
                     | SOME state'' =>
                         Done {state = state'', snaps = #snaps r,
                               stepIdx = #stepIdx r})
@@ -436,9 +453,10 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                  one thing that outlives it. *)
               opened (fn state' =>
                 case cheatBranch state' of
-                  NONE => Failed {state = state', snaps = snaps,
-                                  stepIdx = stepIdx, at = frag}
-                | SOME state'' =>
+                  Rejected why => Failed {state = state', snaps = snaps,
+                                          stepIdx = stepIdx, at = frag,
+                                          why = why}
+                | Applied state'' =>
                     closed {state = state'', snaps = snaps,
                             stepIdx = stepIdx + countSteps inner})
             else
@@ -450,7 +468,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
           end
       | NONE => (* no end position: bail as opaque *)
           Failed {state = state, snaps = snaps,
-                  stepIdx = stepIdx, at = frag})
+                  stepIdx = stepIdx, at = frag, why = ApplyFailed})
   | FMBracket (ok, mid, cc, sections, te) =>
       (case bracketEndByte te (fn () => lastSectionEnd sections) of
         SOME be =>
@@ -477,12 +495,14 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                        block opened. *)
                     (cheatedLT := true;
                      case cheatBranch state of
-                       NONE => Failed {state = state, snaps = snaps,
-                                       stepIdx = stepIdx, at = FFMid mid}
-                     | SOME state' =>
+                       Rejected why => Failed {state = state, snaps = snaps,
+                                               stepIdx = stepIdx,
+                                               at = FFMid mid, why = why}
+                     | Applied state' =>
                        (case applyMid mid state' of
                           NONE => Failed {state = state', snaps = snaps,
-                                          stepIdx = stepIdx, at = FFMid mid}
+                                          stepIdx = stepIdx, at = FFMid mid,
+                                           why = ApplyFailed}
                         | SOME state'' =>
                             walkSections mayCheat state'' snaps
                               (stepIdx + countSteps sec) rest))
@@ -508,7 +528,8 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                           NONE => Failed {state = #state r,
                                           snaps = #snaps r,
                                           stepIdx = #stepIdx r,
-                                          at = FFMid mid}
+                                          at = FFMid mid,
+                                          why = ApplyFailed}
                         | SOME state' =>
                             walkSections mayCheat state' (#snaps r)
                                          (#stepIdx r) rest)
@@ -517,13 +538,15 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
               if replaying then k state
               else (case applyOpen ok state of
                       NONE => Failed {state = state, snaps = snaps,
-                                      stepIdx = stepIdx, at = FFOpen ok}
+                                      stepIdx = stepIdx, at = FFOpen ok,
+                                       why = ApplyFailed}
                     | SOME state' => k state')
             fun closed r =
               if #stepIdx r < resumeIdx then Done r
               else (case applyClose cc (#state r) of
                       NONE => Failed {state = #state r, snaps = #snaps r,
-                                      stepIdx = #stepIdx r, at = FFClose cc}
+                                      stepIdx = #stepIdx r, at = FFClose cc,
+                                       why = ApplyFailed}
                     | SOME state'' =>
                         Done {state = state'', snaps = #snaps r,
                               stepIdx = #stepIdx r})
@@ -549,7 +572,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
                 | out => out)
           end
       | NONE => Failed {state = state, snaps = snaps,
-                        stepIdx = stepIdx, at = frag})
+                        stepIdx = stepIdx, at = frag, why = ApplyFailed})
   end
 
 and walkFrags (env as {tacText, cursor, resumeIdx, ...}) state snaps
@@ -575,15 +598,16 @@ and walkFrags (env as {tacText, cursor, resumeIdx, ...}) state snaps
            else (case compileAndApply
                         ("Tactical.Q_TAC Tactic.SUFF_TAC "
                          ^ textAt tacText span) state of
-                   NONE => Failed {state = state, snaps = snaps,
-                                   stepIdx = stepIdx, at = FAtom te}
-                 | SOME state' =>
+                   Rejected why => Failed {state = state, snaps = snaps,
+                                           stepIdx = stepIdx, at = FAtom te,
+                                           why = why}
+                 | Applied state' =>
                      walkFrags env state'
                        ({stepIdx = stepIdx, endByte = endB,
                          state = state'} :: snaps)
                        (stepIdx + 1) rest)
        | NONE => Failed {state = state, snaps = snaps,
-                         stepIdx = stepIdx, at = FAtom te})
+                         stepIdx = stepIdx, at = FAtom te, why = ApplyFailed})
   | f :: rest =>
       (case walkFrag env state snaps stepIdx f of
          Done r =>
@@ -625,7 +649,7 @@ fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
   val (finalState, allSnaps, failedAt) = case outcome of
       Done r    => (#state r, #snaps r, NONE)
     | Halted r  => (#state r, #snaps r, NONE)
-    | Failed r  => (#state r, #snaps r, SOME (#at r))
+    | Failed r  => (#state r, #snaps r, SOME (#at r, #why r))
   val _ = case (cacheRefOpt, allSnaps) of
       (SOME cacheRef, _ :: _) => let
         val deduped = Lib.op_mk_set

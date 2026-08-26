@@ -73,6 +73,7 @@ when the theorem statement can't be parsed).  Otherwise:
   "goals": [{"asms": ["<assumption>", ...], "goal": "<goal>"}, ...],
   "pretty": "<full REPL-style render>",
   "context": ["<combinator tag>", ...],
+  "status": "ok" | "pending",
   "error": <string or null>
 }
 ```
@@ -95,6 +96,16 @@ when the theorem statement can't be parsed).  Otherwise:
   one last.  Matching the exact strings is also how a client can
   strip the line back out of `pretty` — a goal may itself begin with
   a `[`.
+- `status` — `"pending"` when the answer is provisional because the
+  file's own compile hasn't finished.  The walker compiles each
+  tactic against the file's namespace, so until the file's `open`s
+  have run the tactic names aren't there and nothing can be applied;
+  goal-state requests are answered during a compile on purpose (see
+  `goalStateAtPos`), so a client should show what it gets but not
+  treat it as settled.  A tactic whose source doesn't compile never
+  produces an `error` either way: the file's compile reports the real
+  message against that very text, and the walker would only duplicate
+  and misdescribe it.
 - `error` — non-null when the walker gave up (e.g. wall-clock budget
   exceeded); `goals` / `pretty` are empty and clients should render
   the message in place of the state.  A mid-walk partial state is

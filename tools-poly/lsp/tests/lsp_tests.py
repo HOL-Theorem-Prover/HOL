@@ -3361,6 +3361,54 @@ def test_goalState_thenl_leftovers_survive_a_skipped_branch():
         c.close()
 
 
+def test_goalState_source_that_wont_compile_is_not_a_tactic_failure():
+    """A tactic whose SML source doesn't compile is not a tactic that
+    failed on its goal, and saying so is both a duplicate and a
+    mis-description: the file's own compile already reports the real
+    message against that very text.
+
+    This also covers the transient case.  Goal-state requests are
+    answered during a compile on purpose, and until the file's `open`s
+    have run no tactic name resolves — which used to surface as
+    "Tactic `conj_tac` failed to apply", with a squiggle, for any
+    proof at all.  Same code path; here it is provoked deterministically
+    with a name that never resolves."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_badsrc.sml"
+        #  6   conj_tacX          <- no such tactic
+        #  7   \\ simp[]
+        src = ("Theory goalstate_badsrc\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (0 = 0) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  conj_tacX\n"
+               "  \\\\ simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # The compile says what's wrong, once.
+        ds = _diag_count(c, uri)
+        assert_true(any("conj_tacX" in d["message"] for d in ds),
+                    f"the compile reports the undeclared name ({ds!r})")
+        r = _send_goalstate(c, 770, uri, 7, 5)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None,
+                  f"the walker doesn't restate it as a tactic failure "
+                  f"({result!r})")
+        # Compile has finished, so the answer is settled, not pending.
+        assert_eq(result.get("status"), "ok", f"status ({result!r})")
+        # And no second squiggle for the same text.
+        n = len([d for d in _diag_count(c, uri) if "conj_tacX" in d["message"]])
+        assert_eq(n, 1, "exactly one diagnostic for the bad name")
+    finally:
+        c.close()
+
+
 def test_lsp_walks_file_includes_from_arbitrary_cwd():
     """When the LSP server is launched with cwd != the opened file's
     directory (as eglot typically does — cwd is the project root),
@@ -3712,6 +3760,8 @@ TESTS = [
                                      test_goalState_resume_matches_a_cold_walk),
     ("goalState_skips_finished_then1_branches",
                                      test_goalState_skips_finished_then1_branches),
+    ("goalState_source_that_wont_compile_is_not_a_tactic_failure",
+                                     test_goalState_source_that_wont_compile_is_not_a_tactic_failure),
     ("goalState_thenl_leftovers_survive_a_skipped_branch",
                                      test_goalState_thenl_leftovers_survive_a_skipped_branch),
     ("lsp_walks_file_includes_from_arbitrary_cwd",

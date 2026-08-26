@@ -109,13 +109,14 @@ fun encGoalState ({asms, goal}: goal_state) print = (
   print ",\"goal\":"; encString goal print;
   print "}")
 
-fun encGoalStateResponse ({theorem, step, goals, pretty, context, error,
-                           failedRange} : goal_state_response) print = (
+fun encGoalStateResponse ({theorem, step, goals, pretty, context, status,
+                           error, failedRange} : goal_state_response) print = (
   print "{\"theorem\":"; encString theorem print;
   print ",\"step\":"; encInt step print;
   print ",\"goals\":"; encArray encGoalState goals print;
   print ",\"pretty\":"; encString pretty print;
   print ",\"context\":"; encArray encString context print;
+  print ",\"status\":"; encString status print;
   print ",\"error\":"; encOrNull encString error print;
   print "}")
 
@@ -127,7 +128,7 @@ fun encGoalStateResponse ({theorem, step, goals, pretty, context, error,
    the compile uses — so keyword matching, attribute brackets, strings
    and comments are handled correctly.  parseDec streams decs one at a
    time; we bail on the first matching HOLTheoremDecl. *)
-fun findEnclosingTheorem text cursor = let
+fun findEnclosingTheorem compileDone text cursor = let
   val consumed = ref false
   fun read _ = if !consumed then "" else (consumed := true; text)
   fun errSink _ _ _ = ()  (* buffer may be mid-edit and mildly invalid *)
@@ -153,7 +154,8 @@ fun findEnclosingTheorem text cursor = let
                  tacText = String.substring (text, tacStart,
                                              Int.max (0, tacEnd - tacStart)),
                  tacStart = tacStart,
-                 cursor = cursor}
+                 cursor = cursor,
+                 compileDone = compileDone}
         end
         else loop ()
         end
@@ -1400,7 +1402,7 @@ fun start {diag, dbg} = let
                NONE => SOME s
              | SOME b => if #endByte s > #endByte b then SOME s else best)
       NONE declSnapshots
-    in case findEnclosingTheorem (#text text) offset of
+    in case findEnclosingTheorem (#done parse) (#text text) offset of
          NONE => NONE
        | SOME (thm as {quoteStart, ...}) =>
          let val restoreLater = !LSPExtension.captureCompileSnap ()

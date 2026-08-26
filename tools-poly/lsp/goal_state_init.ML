@@ -90,6 +90,15 @@ local
     | FBracket _  => "Bracket failed"
     | FMBracket _ => "Bracket failed"
 
+  (* A leaf whose SML source didn't compile says nothing about the
+     proof.  Either the file's compile hasn't run the `open's yet, in
+     which case the answer is provisional; or it has, and the compile
+     already published the real message against that very text -- so
+     repeating it as "failed to apply" would both duplicate it and
+     misdescribe it. *)
+  fun sourceFailure (_, TacticWalker.CompileFailed) = true
+    | sourceFailure _ = false
+
   fun failRange tacStart frag = case frag of
       FAtom te =>
         Option.map (fn (s, e) => (tacStart + s, tacStart + e))
@@ -99,7 +108,7 @@ in
 
 val () = LSPExtension.goalStateAtPos :=
   (fn ({plugins, ...}: LSPExtension.hover_context,
-       {name, quote, quoteStart, tacText, tacStart, cursor}
+       {name, quote, quoteStart, tacText, tacStart, cursor, compileDone}
          : LSPExtension.theorem_context) => let
     val initialGoal = Lib.total Parse.Term [QUOTE quote]
     val frags = TacticSteps.fragsOfTacText
@@ -117,18 +126,26 @@ val () = LSPExtension.goalStateAtPos :=
                       frags = fs, cursor = tacCursor}) of
                 NONE => SOME
                   {theorem = name, step = step,
-                   goals = [], pretty = "", context = [],
+                   goals = [], pretty = "", context = [], status = "ok",
                    error = SOME ("walker timed out (>"
                                  ^ LargeInt.toString walkerBudgetMs ^ "ms)"),
                    failedRange = NONE}
-              | SOME {state, failedAt} => SOME
+              | SOME {state, failedAt} => let
+                  val silent = case failedAt of
+                      SOME f => sourceFailure f
+                    | NONE => false
+                  val reported = if silent then NONE else failedAt
+                  in SOME
                   {theorem = name, step = step,
                    goals = List.map ppGoal (goalFrag.top_goals state),
                    pretty = ppState state,
                    context = goalFrag.context_lines state,
-                   error = Option.map (failMsg tacText) failedAt,
+                   status = if silent andalso not compileDone
+                            then "pending" else "ok",
+                   error = Option.map (failMsg tacText o #1) reported,
                    failedRange =
-                     Option.mapPartial (failRange tacStart) failedAt}
+                     Option.mapPartial (failRange tacStart o #1) reported}
+                  end
            end
        | (SOME tm, NONE) => let
            val startState = goalFrag.new_goal ([], tm)
@@ -136,7 +153,7 @@ val () = LSPExtension.goalStateAtPos :=
                     goals = [{asms = [], goal = Parse.term_to_string tm}],
                     pretty = ppState startState,
                     context = goalFrag.context_lines startState,
-                    error = NONE,
+                    status = "ok", error = NONE,
                     failedRange = NONE}
            end
        | _ => NONE
