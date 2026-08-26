@@ -1043,3 +1043,77 @@ QED
 
 val DEST_def = new_specification("DEST_def", ["DEST"],
                                  iso |> SRULE [BIJ_IFF_INV])
+
+(* ----------------------------------------------------------------------
+    Confirm that what came out really is the datatype
+
+        Datatype: t = FM (num |-> t) | ND num (('b1 # t) list)
+
+    by unfolding the composite's set function at each summand and
+    recasting NCONS and IND in terms of the two constructors.  This part
+    *is* shape-specific: deriving constructors from a specification is
+    still to be automated.
+   ---------------------------------------------------------------------- *)
+
+Theorem Fset_INL[simp]:
+  Fset (INL m) = FRANGE m
+Proof
+  simp[Fset_def, combinTheory.S_THM, combinTheory.o_THM] >>
+  simp[Once EXTENSION, PULL_EXISTS, IN_DEF] >> metis_tac[]
+QED
+
+Theorem Fset_INR[simp]:
+  Fset (INR (n,l)) = IMAGE SND (set l)
+Proof
+  simp[Fset_def, combinTheory.S_THM, combinTheory.o_THM] >>
+  simp[Once EXTENSION, PULL_EXISTS, IN_DEF, pairTheory.EXISTS_PROD] >>
+  metis_tac[pairTheory.SND, pairTheory.PAIR]
+QED
+
+Definition FM_def:
+  FM m = NCONS (INL m)
+End
+
+Definition ND_def:
+  ND n l = NCONS (INR (n,l))
+End
+
+Theorem constructors_distinct[simp]:
+  FM m ≠ ND n l
+Proof
+  simp[FM_def, ND_def, NCONS_11]
+QED
+
+Theorem FM_11[simp]:
+  FM m1 = FM m2 ⇔ m1 = m2
+Proof
+  simp[FM_def, NCONS_11]
+QED
+
+Theorem ND_11[simp]:
+  ND n1 l1 = ND n2 l2 ⇔ n1 = n2 ∧ l1 = l2
+Proof
+  simp[ND_def, NCONS_11]
+QED
+
+Theorem nty_induction:
+  (∀m. (∀t. t ∈ FRANGE m ⇒ P t) ⇒ P (FM m)) ∧
+  (∀n l. (∀b t. MEM (b,t) l ⇒ P t) ⇒ P (ND n l)) ⇒
+  ∀t. P t
+Proof
+  strip_tac >> ho_match_mp_tac IND >>
+  simp[sumTheory.FORALL_SUM, pairTheory.FORALL_PROD, GSYM FM_def,
+       GSYM ND_def] >>
+  rpt strip_tac >>
+  qpat_x_assum ‘∀n l. _ ⇒ P (ND _ _)’ irule >>
+  rpt strip_tac >> first_x_assum irule >>
+  qexists_tac ‘(b,t)’ >> simp[]
+QED
+
+Theorem nty_nchotomy:
+  ∀t. (∃m. t = FM m) ∨ ∃n l. t = ND n l
+Proof
+  gen_tac >> ‘NCONS (DEST t) = t’ by simp[DEST_def] >>
+  Cases_on ‘DEST t’ >> gvs[] >>
+  metis_tac[FM_def, ND_def, pairTheory.PAIR]
+QED
