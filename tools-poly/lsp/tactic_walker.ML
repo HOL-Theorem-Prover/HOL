@@ -297,10 +297,26 @@ datatype walkOut =
 | Failed of {state: goalFrag.goalstate, snaps: snap list, stepIdx: int,
              at: tac_frag}
 
-fun walkFrag tacText cursor state snaps stepIdx frag = case frag of
+(* Constant across a walk.  `resumeIdx' is where a cached snapshot
+   picks up: while `stepIdx' is below it the walk is replaying a
+   prefix that snapshot already accounts for, so nothing in the
+   prefix is applied again -- atoms are counted, opens, mids and
+   closes passed over.  A bracket the resume point falls inside is
+   thus entered without opening it and closed on the way back out,
+   which is what a flat scan of the top-level fragments could not
+   express: it gave up at the first nested fragment, so any `rpt' or
+   `>-' before the cursor cost a full re-walk of the proof. *)
+type walkenv = {tacText: string, cursor: int, resumeIdx: int}
+
+fun walkFrag (env as {tacText, cursor, resumeIdx}) state snaps stepIdx frag =
+  let
+    val replaying = stepIdx < resumeIdx
+    fun keep idx = Done {state = state, snaps = snaps, stepIdx = idx}
+  in case frag of
     FAtom te => (case atomEndByte te of
         SOME endB =>
-          if cursor < endB then
+          if replaying then keep (stepIdx + 1)
+          else if cursor < endB then
             Halted {state = state, snaps = snaps, stepIdx = stepIdx}
           else (case applyAtom tacText te state of
                   NONE => Failed {state = state, snaps = snaps,
@@ -311,71 +327,79 @@ fun walkFrag tacText cursor state snaps stepIdx frag = case frag of
                                    state = state'} :: snaps,
                           stepIdx = stepIdx + 1})
       | NONE => (* no snap key: apply as an always-fires leaf (e.g. LReverse) *)
-          (case applyAtom tacText te state of
+          if replaying then keep stepIdx
+          else (case applyAtom tacText te state of
              NONE => Failed {state = state, snaps = snaps,
                              stepIdx = stepIdx, at = frag}
            | SOME state' =>
                Done {state = state', snaps = snaps, stepIdx = stepIdx}))
   | FFOpen ok =>
-      (case applyOpen ok state of
+      if replaying then keep stepIdx
+      else (case applyOpen ok state of
          NONE => Failed {state = state, snaps = snaps,
                          stepIdx = stepIdx, at = frag}
        | SOME state' =>
            Done {state = state', snaps = snaps, stepIdx = stepIdx})
   | FFMid m =>
-      (case applyMid m state of
+      if replaying then keep stepIdx
+      else (case applyMid m state of
          NONE => Failed {state = state, snaps = snaps,
                          stepIdx = stepIdx, at = frag}
        | SOME state' =>
            Done {state = state', snaps = snaps, stepIdx = stepIdx})
   | FFClose c =>
-      (case applyClose c state of
+      if replaying then keep stepIdx
+      else (case applyClose c state of
          NONE => Failed {state = state, snaps = snaps,
                          stepIdx = stepIdx, at = frag}
        | SOME state' =>
            Done {state = state', snaps = snaps, stepIdx = stepIdx})
-  | FGroup (_, inner) =>
-      walkFrags tacText cursor state snaps stepIdx inner
+  | FGroup (_, inner) => walkFrags env state snaps stepIdx inner
   (* Transparent bracket: `open_null_ok`'s Parallel frame would
      hide the inner TacsToLT context from `pp_goalstate`. *)
   | FBracket (FOpenNullOk, inner, _, _) =>
-      walkFrags tacText cursor state snaps stepIdx inner
+      walkFrags env state snaps stepIdx inner
   | FBracket (ok, inner, cc, te) =>
       (case bracketEndByte te (fn () => lastFragEnd inner) of
         SOME be =>
           (* Cursor before the combinator: it hasn't run yet, so show
              the goals it is about to act on rather than opening it. *)
-          if startsAfter cursor (bracketStartByte te
+          if not replaying andalso
+             startsAfter cursor (bracketStartByte te
                                    (fn () => firstFragStart inner)) then
             Halted {state = state, snaps = snaps, stepIdx = stepIdx}
-          else if cursor < be then
-            (* Open, walk inner as far as cursor lets us; don't close. *)
-            (case applyOpen ok state of
-               NONE => Failed {state = state, snaps = snaps,
-                               stepIdx = stepIdx, at = FFOpen ok}
-             | SOME state' =>
-                 (case walkFrags tacText cursor state' snaps stepIdx inner of
-                    Done r =>
-                      Halted {state = #state r, snaps = #snaps r,
-                              stepIdx = #stepIdx r}
-                  | Halted r => Halted r
-                  | Failed r => Failed r))
-        else
-          (* Cursor past the whole bracket: open + walk + close. *)
-          (case applyOpen ok state of
-             NONE => Failed {state = state, snaps = snaps,
-                             stepIdx = stepIdx, at = FFOpen ok}
-           | SOME state' =>
-               (case walkFrags tacText cursor state' snaps stepIdx inner of
-                  Failed r => Failed r
-                | Halted r => Halted r
-                | Done r =>
-                    (case applyClose cc (#state r) of
-                       NONE => Failed {state = #state r, snaps = #snaps r,
-                                       stepIdx = #stepIdx r, at = FFClose cc}
-                     | SOME state'' =>
-                         Done {state = state'', snaps = #snaps r,
-                               stepIdx = #stepIdx r})))
+          else let
+            fun opened k =
+              if replaying then k state
+              else (case applyOpen ok state of
+                      NONE => Failed {state = state, snaps = snaps,
+                                      stepIdx = stepIdx, at = FFOpen ok}
+                    | SOME state' => k state')
+            (* A bracket wholly inside the replayed prefix had its
+               close accounted for as well as its open. *)
+            fun closed r =
+              if #stepIdx r < resumeIdx then Done r
+              else (case applyClose cc (#state r) of
+                      NONE => Failed {state = #state r, snaps = #snaps r,
+                                      stepIdx = #stepIdx r, at = FFClose cc}
+                    | SOME state'' =>
+                        Done {state = state'', snaps = #snaps r,
+                              stepIdx = #stepIdx r})
+          in
+            if cursor < be then
+              (* Open, walk inner as far as cursor lets us; don't close. *)
+              opened (fn state' =>
+                case walkFrags env state' snaps stepIdx inner of
+                  Done r => Halted {state = #state r, snaps = #snaps r,
+                                    stepIdx = #stepIdx r}
+                | out => out)
+            else
+              (* Cursor past the whole bracket: open + walk + close. *)
+              opened (fn state' =>
+                case walkFrags env state' snaps stepIdx inner of
+                  Done r => closed r
+                | out => out)
+          end
       | NONE => (* no end position: bail as opaque *)
           Failed {state = state, snaps = snaps,
                   stepIdx = stepIdx, at = frag})
@@ -392,17 +416,21 @@ fun walkFrag tacText cursor state snaps stepIdx frag = case frag of
             fun walkSections state snaps stepIdx sections =
               case sections of
                 [] => Done {state = state, snaps = snaps, stepIdx = stepIdx}
-              | [sec] => walkFrags tacText cursor state snaps stepIdx sec
+              | [sec] => walkFrags env state snaps stepIdx sec
               | sec :: rest =>
-                  (case walkFrags tacText cursor state snaps stepIdx sec of
+                  (case walkFrags env state snaps stepIdx sec of
                      Done r =>
+                       if #stepIdx r < resumeIdx then
+                         (* still replaying: this mid already fired *)
+                         walkSections (#state r) (#snaps r) (#stepIdx r) rest
                        (* `walkFrags' says Done as soon as a section's
                           frags run out, which for an ALL_TAC branch is
                           immediately.  Only advance once the cursor has
                           actually reached the next section, so the text
                           between two branches reports the first one's
                           result -- solved, or its leftover goals. *)
-                       if cursor < Option.getOpt (firstSectionStart rest, be)
+                       else if cursor <
+                               Option.getOpt (firstSectionStart rest, be)
                        then Halted {state = #state r, snaps = #snaps r,
                                     stepIdx = #stepIdx r}
                        else
@@ -414,46 +442,46 @@ fun walkFrag tacText cursor state snaps stepIdx frag = case frag of
                         | SOME state' =>
                             walkSections state' (#snaps r)
                                          (#stepIdx r) rest)
-                   | Halted r => Halted r
-                   | Failed r => Failed r)
+                   | out => out)
+            fun opened k =
+              if replaying then k state
+              else (case applyOpen ok state of
+                      NONE => Failed {state = state, snaps = snaps,
+                                      stepIdx = stepIdx, at = FFOpen ok}
+                    | SOME state' => k state')
+            fun closed r =
+              if #stepIdx r < resumeIdx then Done r
+              else (case applyClose cc (#state r) of
+                      NONE => Failed {state = #state r, snaps = #snaps r,
+                                      stepIdx = #stepIdx r, at = FFClose cc}
+                    | SOME state'' =>
+                        Done {state = state'', snaps = #snaps r,
+                              stepIdx = #stepIdx r})
           in
-            if startsAfter cursor
+            if not replaying andalso
+               startsAfter cursor
                  (bracketStartByte te
                     (fn () => firstSectionStart sections))
             then
               Halted {state = state, snaps = snaps, stepIdx = stepIdx}
             else if cursor < be then
-              (case applyOpen ok state of
-                 NONE => Failed {state = state, snaps = snaps,
-                                 stepIdx = stepIdx, at = FFOpen ok}
-               | SOME state' =>
-                   (case walkSections state' snaps stepIdx sections of
-                      Done r => Halted {state = #state r, snaps = #snaps r,
-                                        stepIdx = #stepIdx r}
-                    | Halted r => Halted r
-                    | Failed r => Failed r))
+              opened (fn state' =>
+                case walkSections state' snaps stepIdx sections of
+                  Done r => Halted {state = #state r, snaps = #snaps r,
+                                    stepIdx = #stepIdx r}
+                | out => out)
             else
-              (case applyOpen ok state of
-                 NONE => Failed {state = state, snaps = snaps,
-                                 stepIdx = stepIdx, at = FFOpen ok}
-               | SOME state' =>
-                   (case walkSections state' snaps stepIdx sections of
-                      Done r =>
-                        (case applyClose cc (#state r) of
-                           NONE => Failed {state = #state r,
-                                           snaps = #snaps r,
-                                           stepIdx = #stepIdx r,
-                                           at = FFClose cc}
-                         | SOME state'' =>
-                             Done {state = state'', snaps = #snaps r,
-                                   stepIdx = #stepIdx r})
-                    | Halted r => Halted r
-                    | Failed r => Failed r))
+              opened (fn state' =>
+                case walkSections state' snaps stepIdx sections of
+                  Done r => closed r
+                | out => out)
           end
       | NONE => Failed {state = state, snaps = snaps,
                         stepIdx = stepIdx, at = frag})
+  end
 
-and walkFrags tacText cursor state snaps stepIdx frags = case frags of
+and walkFrags (env as {tacText, cursor, resumeIdx}) state snaps stepIdx frags =
+  case frags of
     [] => Done {state = state, snaps = snaps, stepIdx = stepIdx}
   (* `sg q' immediately followed by REVERSE_LT is how TacticParse
      encodes `suffices_by' -- it is the very shape `optTree' folds
@@ -467,7 +495,9 @@ and walkFrags tacText cursor state snaps stepIdx frags = case frags of
   | FAtom (te as Subgoal span) :: FAtom LReverse :: rest =>
       (case atomEndByte te of
          SOME endB =>
-           if cursor < endB then
+           if stepIdx < resumeIdx then
+             walkFrags env state snaps (stepIdx + 1) rest
+           else if cursor < endB then
              Halted {state = state, snaps = snaps, stepIdx = stepIdx}
            else (case compileAndApply
                         ("Tactical.Q_TAC Tactic.SUFF_TAC "
@@ -475,43 +505,17 @@ and walkFrags tacText cursor state snaps stepIdx frags = case frags of
                    NONE => Failed {state = state, snaps = snaps,
                                    stepIdx = stepIdx, at = FAtom te}
                  | SOME state' =>
-                     walkFrags tacText cursor state'
+                     walkFrags env state'
                        ({stepIdx = stepIdx, endByte = endB,
                          state = state'} :: snaps)
                        (stepIdx + 1) rest)
        | NONE => Failed {state = state, snaps = snaps,
                          stepIdx = stepIdx, at = FAtom te})
   | f :: rest =>
-      (case walkFrag tacText cursor state snaps stepIdx f of
+      (case walkFrag env state snaps stepIdx f of
          Done r =>
-           walkFrags tacText cursor (#state r) (#snaps r) (#stepIdx r) rest
-       | Halted r => Halted r
-       | Failed r => Failed r)
-
-(* Skip forward through frags until stepIdx reaches resumeIdx.
-   The resume state already reflects the pre-cursor atoms; only
-   structural markers need re-firing to reach that state. *)
-fun advanceToResume resumeIdx state stepIdx frags = let
-  fun consume [] state stepIdx = ([], state, stepIdx)
-    | consume (fs as (f :: rest)) state stepIdx =
-        if stepIdx >= resumeIdx then (fs, state, stepIdx)
-        else case f of
-          FAtom _ =>
-            consume rest state (stepIdx + 1)
-        | FFOpen ok =>
-            (case applyOpen ok state of
-               NONE => (fs, state, stepIdx)
-             | SOME s' => consume rest s' stepIdx)
-        | FFMid m =>
-            (case applyMid m state of
-               NONE => (fs, state, stepIdx)
-             | SOME s' => consume rest s' stepIdx)
-        | FFClose c =>
-            (case applyClose c state of
-               NONE => (fs, state, stepIdx)
-             | SOME s' => consume rest s' stepIdx)
-        | _ => (fs, state, stepIdx)  (* nested; fall through to full walk *)
-  in consume frags state stepIdx end
+           walkFrags env (#state r) (#snaps r) (#stepIdx r) rest
+       | out => out)
 
 fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
             frags, cursor} = let
@@ -520,18 +524,20 @@ fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
     resumeFrom cacheRefOpt
       {theoremName = theoremName, tacText = tacText, cursor = cursor}
       startState
-  val (frags', state', stepIdx') =
-    if resumeIdx = 0 then (frags, resumeState, 0)
-    else let val (fs, s, i) = advanceToResume resumeIdx resumeState 0 frags
-         (* Only trust the resume if we could step to it via flat
-            markers.  A cache miss inside a bracket restarts from
-            startState, else we'd re-apply cached atoms. *)
-         in if i >= resumeIdx then (fs, s, i) else (frags, startState, 0)
-         end
-  val outcome = walkFrags tacText cursor state' priorSnaps stepIdx' frags'
-                handle Portable.Interrupt =>
-                  Halted {state = state', snaps = priorSnaps,
-                          stepIdx = stepIdx'}
+  fun run idx state =
+    walkFrags {tacText = tacText, cursor = cursor, resumeIdx = idx}
+              state priorSnaps 0 frags
+    handle Portable.Interrupt =>
+      Halted {state = state, snaps = priorSnaps, stepIdx = idx}
+  val outcome = run resumeIdx resumeState
+  (* Finishing the fragments while still replaying means the cached
+     index doesn't match them any more -- fewer atoms than the
+     snapshot counted.  Start over rather than report a state that
+     nothing was applied to. *)
+  val outcome = case outcome of
+      Done r => if resumeIdx > 0 andalso #stepIdx r < resumeIdx
+                then run 0 startState else outcome
+    | _ => outcome
   val (finalState, allSnaps, failedAt) = case outcome of
       Done r    => (#state r, #snaps r, NONE)
     | Halted r  => (#state r, #snaps r, NONE)

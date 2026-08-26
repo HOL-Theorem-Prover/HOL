@@ -3195,6 +3195,79 @@ def test_goalState_suffices_by_gives_the_implication():
         c.close()
 
 
+_RESUME_SRC = ("Theory goalstate_resume\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. (0 < a ==> a + 0 = a) /\\ 0 + a = a\n"
+               "Proof\n"
+               "  rpt gen_tac\n"                        # nested: FBracket
+               "  THEN CONJ_TAC\n"
+               "  THENL [DISCH_TAC, ALL_TAC]\n"          # nested: FMBracket
+               "  THEN ASSUME_TAC TRUTH\n"
+               "  THEN ASSUME_TAC TRUTH\n"
+               "  THEN simp[]\n"
+               "QED\n")
+_RESUME_LINES = list(range(6, 12))
+
+
+def _resume_probe(c, uri, line, rid):
+    src_lines = _RESUME_SRC.split("\n")
+    r = _send_goalstate(c, rid, uri, line, len(src_lines[line]))
+    res = r.get("result") or {}
+    return (res.get("step"), res.get("error"),
+            [(g.get("goal"), tuple(g.get("asms") or []))
+             for g in (res.get("goals") or [])])
+
+
+def test_goalState_resume_matches_a_cold_walk():
+    """Resuming from a cached snapshot must give exactly what walking
+    from the start gives.
+
+    The walker skips the fragments a snapshot already accounts for
+    rather than re-applying them, which means not re-opening a
+    bracket the resume point sits inside, and not re-firing its close
+    or a THENL's mid.  Get any of that wrong and the state silently
+    differs from a cold walk — so compare against one, over a proof
+    whose every kind of nesting sits before the cursor.
+
+    Before this, the resume was a flat scan of the top-level
+    fragments that gave up at the first nested one, so a proof with
+    `rpt` or `>-` in it re-executed its whole prefix on every query.
+    """
+    uri = "file:///tmp/goalstate_resume.sml"
+    lines = _RESUME_SRC.split("\n")
+
+    # Reference: a fresh server per position, so nothing is cached.
+    cold = {}
+    for line in _RESUME_LINES:
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp")
+            _did_open(c, uri, _RESUME_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 30),
+                        "compileCompleted (cold)")
+            cold[line] = _resume_probe(c, uri, line, 750 + line)
+        finally:
+            c.close()
+
+    # One server, scanned forward and then backward: every query
+    # after the first resumes, at a different index each time.
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _RESUME_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted (warm)")
+        order = _RESUME_LINES + list(reversed(_RESUME_LINES))
+        for i, line in enumerate(order):
+            got = _resume_probe(c, uri, line, 800 + i)
+            assert_eq(got, cold[line],
+                      f"line {line} ({lines[line].strip()!r}) matches a cold "
+                      f"walk on pass {'fwd' if i < len(_RESUME_LINES) else 'rev'}")
+    finally:
+        c.close()
+
+
 def test_lsp_walks_file_includes_from_arbitrary_cwd():
     """When the LSP server is launched with cwd != the opened file's
     directory (as eglot typically does — cwd is the project root),
@@ -3542,6 +3615,8 @@ TESTS = [
                                      test_goalState_thenl_branch_left_open_shows_its_goal),
     ("goalState_suffices_by_gives_the_implication",
                                      test_goalState_suffices_by_gives_the_implication),
+    ("goalState_resume_matches_a_cold_walk",
+                                     test_goalState_resume_matches_a_cold_walk),
     ("lsp_walks_file_includes_from_arbitrary_cwd",
                                      test_lsp_walks_file_includes_from_arbitrary_cwd),
     ("lsp_holproject_preload_project_dirs",
