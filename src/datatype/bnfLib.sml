@@ -195,6 +195,15 @@ fun dest_cardleq t =
       else raise ERR "dest_cardleq" "not a cardleq application"
     end
 
+(* Instantiating a stored theorem to the case in hand is a forward step:
+   nothing here should go through the parser or a tactic. *)
+fun inst_thm th target = PART_MATCH I th target
+fun inst_forall th target =
+    let val (v, body) = dest_forall target
+    in
+      GEN v (PART_MATCH I th body)
+    end
+
 fun biCompare (bI info1, bI info2) =
     Type.compare(#canontype info1, #canontype info2)
 val empty_biset : info HOLset.set = HOLset.empty biCompare
@@ -368,8 +377,8 @@ fun planBndThm (B, Bne, Binf, bndtys) plan =
         val goal = mk_forall(x, mk_cardleq(mk_comb(st,x), B))
     in
       case plan of
-          FPvar => prove(goal, MATCH_ACCEPT_TAC (MATCH_MP EQ_CARDLE Bne))
-        | FPconst _ => prove(goal, MATCH_ACCEPT_TAC K0_CARDLE)
+          FPvar => inst_forall (MATCH_MP EQ_CARDLE Bne) goal
+        | FPconst _ => inst_forall K0_CARDLE goal
         | FPnode {kids, ...} =>
           let
             fun kidthm ({set,bnd,bndthm,sub}:fkid) =
@@ -449,12 +458,7 @@ fun planMapID plan =
 fun planMapO (f,g) plan =
     case plan of
         FPvar => REFL (combinSyntax.mk_o(f,g))
-      | FPconst ty =>
-        let val i = Ityped ty
-        in
-          prove(mk_eq(combinSyntax.mk_o(i,i), i),
-                REWRITE_TAC[combinTheory.I_o_ID])
-        end
+      | FPconst ty => CONJUNCT1 (ISPEC (Ityped ty) combinTheory.I_o_ID)
       | FPnode {info = bI i, kids, ...} =>
         let
           val step1 = inst_lhs (#mapO i)
@@ -471,9 +475,9 @@ fun planMapIMAGE (f, instB) plan =
     case plan of
         FPvar => ISPEC f EQ_natural
       | FPconst ty =>
-        prove(mk_eq(combinSyntax.mk_o(instB (K0 ty), Ityped ty),
-                    combinSyntax.mk_o(mk_IMAGE f, K0 ty)),
-              MATCH_ACCEPT_TAC K0_natural)
+        inst_thm K0_natural
+                 (mk_eq(combinSyntax.mk_o(instB (K0 ty), Ityped ty),
+                        combinSyntax.mk_o(mk_IMAGE f, K0 ty)))
       | FPnode {info = bI i, kids, ...} =>
         let
           val mp = planMap plan f
@@ -564,8 +568,7 @@ fun planWitness plan =
       | FPconst ty =>
         let val w = mk_arb ty
         in
-          SOME (w, prove(mk_eq(mk_comb(K0 ty, w), empty_alpha),
-                         MATCH_ACCEPT_TAC K0_EMPTY))
+          SOME (w, inst_thm K0_EMPTY (mk_eq(mk_comb(K0 ty, w), empty_alpha)))
         end
       | FPnode {info = bI i, kids, ty} =>
         let
