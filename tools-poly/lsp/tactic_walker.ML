@@ -88,6 +88,13 @@ fun compileAndApplyLT src state =
     NONE => NONE
   | SOME lt => Portable.total (goalFrag.expand_list lt) state
 
+(* A branch whose tactics we skip.  `t >- tac' obliges tac to
+   discharge the focused goal entirely, so its only effect on what
+   follows is that one goal is gone -- which `cheat' reproduces
+   exactly, at no cost.  Verified against real branches: the goal
+   lists coincide. *)
+fun cheatBranch state = compileAndApply "bossLib.cheat" state
+
 fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
 
 (* The source to compile for a leaf, or NONE for one that is a
@@ -161,6 +168,9 @@ fun applyClose c state = case c of
 
 val atomEndByte = TacticSteps.atomEndByte
 
+fun isThen1 FOpenThen1 = true
+  | isThen1 _ = false
+
 (* A missing start is not evidence of anything, so treat it as "the
    cursor is not before this". *)
 fun startsAfter cursor start = case start of
@@ -223,6 +233,23 @@ and bracketEndByte te lastInner = case topSpan te of
   | NONE => (case atomEndByte te of
       SOME e => SOME e
     | NONE => lastInner ())
+
+(* Steps a fragment list contributes to `stepIdx', mirroring exactly
+   what the walk counts.  Skipping a branch must advance the index by
+   what walking it would have, or snapshots recorded by one query
+   won't line up with another's. *)
+fun countSteps frags = case frags of
+    [] => 0
+  | FAtom (Subgoal _) :: FAtom LReverse :: rest => 1 + countSteps rest
+  | f :: rest => countFrag f + countSteps rest
+
+and countFrag f = case f of
+    FAtom te => (case atomEndByte te of SOME _ => 1 | NONE => 0)
+  | FGroup (_, inner) => countSteps inner
+  | FBracket (_, inner, _, _) => countSteps inner
+  | FMBracket (_, _, _, secs, _) =>
+      List.foldl (fn (sec, n) => n + countSteps sec) 0 secs
+  | FFOpen _ | FFMid _ | FFClose _ => 0
 
 type snap = {stepIdx: int, endByte: int, state: goalFrag.goalstate}
 type cacheEntry = {
@@ -306,9 +333,19 @@ datatype walkOut =
    which is what a flat scan of the top-level fragments could not
    express: it gave up at the first nested fragment, so any `rpt' or
    `>-' before the cursor cost a full re-walk of the proof. *)
-type walkenv = {tacText: string, cursor: int, resumeIdx: int}
+type walkenv = {tacText: string, cursor: int, resumeIdx: int,
+                cheatLT: bool}
 
-fun walkFrag (env as {tacText, cursor, resumeIdx}) state snaps stepIdx frag =
+(* Set when a THENL branch was skipped.  Unlike `>-', a THENL branch
+   need not discharge its goal, and closing the frame concatenates
+   every branch's leftovers -- which `pp_goalstate' does, via `peek',
+   whenever the focus ends up empty.  So the skip is optimistic: if
+   the walk lands on an empty focus, `walkTo' runs it again with
+   `cheatLT' false and reports that instead. *)
+val cheatedLT = ref false
+
+fun walkFrag (env as {tacText, cursor, resumeIdx, cheatLT}) state snaps
+             stepIdx frag =
   let
     val replaying = stepIdx < resumeIdx
     fun keep idx = Done {state = state, snaps = snaps, stepIdx = idx}
@@ -393,6 +430,17 @@ fun walkFrag (env as {tacText, cursor, resumeIdx}) state snaps stepIdx frag =
                   Done r => Halted {state = #state r, snaps = #snaps r,
                                     stepIdx = #stepIdx r}
                 | out => out)
+            else if isThen1 ok andalso not replaying then
+              (* Cursor past a finished `>-' branch: it had to prove
+                 the focused goal, so skip its tactics and take the
+                 one thing that outlives it. *)
+              opened (fn state' =>
+                case cheatBranch state' of
+                  NONE => Failed {state = state', snaps = snaps,
+                                  stepIdx = stepIdx, at = frag}
+                | SOME state'' =>
+                    closed {state = state'', snaps = snaps,
+                            stepIdx = stepIdx + countSteps inner})
             else
               (* Cursor past the whole bracket: open + walk + close. *)
               opened (fn state' =>
@@ -413,16 +461,38 @@ fun walkFrag (env as {tacText, cursor, resumeIdx}) state snaps stepIdx frag =
                safely advance to the next section via `applyMid`.
                A cursor inside the current section short-circuits
                with Halted, which propagates immediately. *)
-            fun walkSections state snaps stepIdx sections =
+            fun walkSections mayCheat state snaps stepIdx sections =
               case sections of
                 [] => Done {state = state, snaps = snaps, stepIdx = stepIdx}
               | [sec] => walkFrags env state snaps stepIdx sec
               | sec :: rest =>
+                  if mayCheat andalso cheatLT andalso stepIdx >= resumeIdx
+                     andalso cursor >= Option.getOpt
+                                         (firstSectionStart rest, be)
+                  then
+                    (* This branch's turn is over and the cursor is
+                       still inside the block, so only its effect on
+                       the branches after it matters -- and that is
+                       nothing: each gets its own goal, fixed when the
+                       block opened. *)
+                    (cheatedLT := true;
+                     case cheatBranch state of
+                       NONE => Failed {state = state, snaps = snaps,
+                                       stepIdx = stepIdx, at = FFMid mid}
+                     | SOME state' =>
+                       (case applyMid mid state' of
+                          NONE => Failed {state = state', snaps = snaps,
+                                          stepIdx = stepIdx, at = FFMid mid}
+                        | SOME state'' =>
+                            walkSections mayCheat state'' snaps
+                              (stepIdx + countSteps sec) rest))
+                  else
                   (case walkFrags env state snaps stepIdx sec of
                      Done r =>
                        if #stepIdx r < resumeIdx then
                          (* still replaying: this mid already fired *)
-                         walkSections (#state r) (#snaps r) (#stepIdx r) rest
+                         walkSections mayCheat (#state r) (#snaps r)
+                                      (#stepIdx r) rest
                        (* `walkFrags' says Done as soon as a section's
                           frags run out, which for an ALL_TAC branch is
                           immediately.  Only advance once the cursor has
@@ -440,7 +510,7 @@ fun walkFrag (env as {tacText, cursor, resumeIdx}) state snaps stepIdx frag =
                                           stepIdx = #stepIdx r,
                                           at = FFMid mid}
                         | SOME state' =>
-                            walkSections state' (#snaps r)
+                            walkSections mayCheat state' (#snaps r)
                                          (#stepIdx r) rest)
                    | out => out)
             fun opened k =
@@ -466,13 +536,15 @@ fun walkFrag (env as {tacText, cursor, resumeIdx}) state snaps stepIdx frag =
               Halted {state = state, snaps = snaps, stepIdx = stepIdx}
             else if cursor < be then
               opened (fn state' =>
-                case walkSections state' snaps stepIdx sections of
+                case walkSections true state' snaps stepIdx sections of
                   Done r => Halted {state = #state r, snaps = #snaps r,
                                     stepIdx = #stepIdx r}
                 | out => out)
             else
+              (* Past the `]': the closed state concatenates every
+                 branch's leftovers, so they all have to be real. *)
               opened (fn state' =>
-                case walkSections state' snaps stepIdx sections of
+                case walkSections false state' snaps stepIdx sections of
                   Done r => closed r
                 | out => out)
           end
@@ -480,7 +552,8 @@ fun walkFrag (env as {tacText, cursor, resumeIdx}) state snaps stepIdx frag =
                         stepIdx = stepIdx, at = frag})
   end
 
-and walkFrags (env as {tacText, cursor, resumeIdx}) state snaps stepIdx frags =
+and walkFrags (env as {tacText, cursor, resumeIdx, ...}) state snaps
+              stepIdx frags =
   case frags of
     [] => Done {state = state, snaps = snaps, stepIdx = stepIdx}
   (* `sg q' immediately followed by REVERSE_LT is how TacticParse
@@ -524,20 +597,31 @@ fun walkTo {plugins, theoremName, theoremStart, tacText, startState,
     resumeFrom cacheRefOpt
       {theoremName = theoremName, tacText = tacText, cursor = cursor}
       startState
-  fun run idx state =
-    walkFrags {tacText = tacText, cursor = cursor, resumeIdx = idx}
-              state priorSnaps 0 frags
-    handle Portable.Interrupt =>
-      Halted {state = state, snaps = priorSnaps, stepIdx = idx}
-  val outcome = run resumeIdx resumeState
+  fun run cheatLT idx state =
+    (cheatedLT := false;
+     walkFrags {tacText = tacText, cursor = cursor, resumeIdx = idx,
+                cheatLT = cheatLT}
+               state priorSnaps 0 frags
+     handle Portable.Interrupt =>
+       Halted {state = state, snaps = priorSnaps, stepIdx = idx})
+  val outcome = run true resumeIdx resumeState
   (* Finishing the fragments while still replaying means the cached
      index doesn't match them any more -- fewer atoms than the
      snapshot counted.  Start over rather than report a state that
      nothing was applied to. *)
   val outcome = case outcome of
       Done r => if resumeIdx > 0 andalso #stepIdx r < resumeIdx
-                then run 0 startState else outcome
+                then run true 0 startState else outcome
     | _ => outcome
+  fun stateOf out = case out of
+      Done r => #state r | Halted r => #state r | Failed r => #state r
+  (* An empty focus is where `pp_goalstate' closes the enclosing
+     frame to show what remains, and a closed THENL wants every
+     branch's real leftovers.  Redo without skipping any. *)
+  val outcome =
+    if !cheatedLT andalso null (goalFrag.top_goals (stateOf outcome))
+    then run false resumeIdx resumeState
+    else outcome
   val (finalState, allSnaps, failedAt) = case outcome of
       Done r    => (#state r, #snaps r, NONE)
     | Halted r  => (#state r, #snaps r, NONE)

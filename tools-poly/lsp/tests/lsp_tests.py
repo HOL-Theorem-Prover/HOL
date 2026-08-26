@@ -3268,6 +3268,99 @@ def test_goalState_resume_matches_a_cold_walk():
         c.close()
 
 
+def test_goalState_skips_finished_then1_branches():
+    """`t >- tac` obliges tac to discharge the focused goal, so once
+    the cursor is past the branch its only effect is that one goal is
+    gone.  The walker takes that directly instead of running the
+    branch, which is what makes a cursor in a later branch cheap.
+
+    Pinned here by a branch that does NOT discharge its goal: the
+    walker no longer notices, and reports the following goal as if it
+    had.  That is deliberate — the branches are not re-checked once
+    passed — and it is the behaviour to revisit if the walker ever
+    becomes the thing that verifies a proof."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_skip_then1.sml"
+        #  6   conj_tac
+        #  7   >- (ASSUME_TAC TRUTH)      <- does not prove `0 = 0`
+        #  8   \\ simp[]
+        src = ("Theory goalstate_skip_then1\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (0 = 0) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  conj_tac\n"
+               "  >- (ASSUME_TAC TRUTH)\n"
+               "  \\\\ simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 760, uri, 8, 5)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None,
+                  f"the passed branch is not re-checked ({result!r})")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "1 = 1",
+                    f"one goal consumed, the next on show ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_thenl_leftovers_survive_a_skipped_branch():
+    """A THENL branch need not discharge its goal — leftovers are
+    concatenated when the block closes, which `pp_goalstate` does via
+    `peek` whenever the focus ends up empty.  So a skipped branch
+    would lose goals that ought to show.
+
+    Branch 1 here leaves `a + 0 = a`; with the cursor past the block
+    the closed state is what shows, so that leftover has to be in it.
+    Skipping is therefore off once the cursor clears the last
+    branch."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_thenl_leftover.sml"
+        #  6   conj_tac
+        #  7   THENL [DISCH_TAC, simp[]]
+        #  8   THEN simp[]
+        src = ("Theory goalstate_thenl_leftover\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. (0 < a ==> a + 0 = a) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  gen_tac THEN conj_tac\n"
+               "  THENL [DISCH_TAC, simp[]]\n"
+               "  THEN simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Inside branch 2, the earlier branch may be skipped: what
+        # shows is branch 2's own goal, under its own caption.
+        mid = _send_goalstate(c, 761, uri, 7, 24).get("result")
+        assert_true(mid is not None, "goal state inside branch 2")
+        assert_eq(mid.get("error"), None, "no error inside branch 2")
+        assert_true("branch 2 of 2 of THENL" in (mid.get("pretty") or ""),
+                    f"captioned as branch 2 ({mid!r})")
+        # Past the last branch the block has closed, and the closed
+        # state concatenates every branch's leftovers -- so branch 1
+        # must have really run.
+        r = _send_goalstate(c, 762, uri, 7, 27)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, "no error past the block")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "a + 0 = a"
+                    and goals[0]["asms"] == ["0 < a"],
+                    f"branch 1's leftover survives the close ({result!r})")
+    finally:
+        c.close()
+
+
 def test_lsp_walks_file_includes_from_arbitrary_cwd():
     """When the LSP server is launched with cwd != the opened file's
     directory (as eglot typically does — cwd is the project root),
@@ -3617,6 +3710,10 @@ TESTS = [
                                      test_goalState_suffices_by_gives_the_implication),
     ("goalState_resume_matches_a_cold_walk",
                                      test_goalState_resume_matches_a_cold_walk),
+    ("goalState_skips_finished_then1_branches",
+                                     test_goalState_skips_finished_then1_branches),
+    ("goalState_thenl_leftovers_survive_a_skipped_branch",
+                                     test_goalState_thenl_leftovers_survive_a_skipped_branch),
     ("lsp_walks_file_includes_from_arbitrary_cwd",
                                      test_lsp_walks_file_includes_from_arbitrary_cwd),
     ("lsp_holproject_preload_project_dirs",
