@@ -650,6 +650,12 @@ Proof
   simp[SING_CARDLE]
 QED
 
+Theorem CARDEQ_IMP_CARDLEQ:
+  ∀s t. s ≈ t ⇒ s ≼ t
+Proof
+  metis_tac[cardleq_lteq]
+QED
+
 Theorem CARDLEQ_INFINITE:
   ∀s t. INFINITE s ∧ s ≼ t ⇒ INFINITE t
 Proof

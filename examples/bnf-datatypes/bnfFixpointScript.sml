@@ -21,13 +21,16 @@ val Fty = “:one + 'b1 # 'a”
 val bnf = bnfLib.deriveBNF (bnfBase.fullDB()) Fty
 
 val fvar = mk_var("f", alpha --> beta)
+fun SRULE ths = SIMP_RULE (srw_ss()) ths
 val FTY = ty_antiq Fty
 val BTY = #1 (dom_rng (type_of (#bnd bnf)))   (* bnd is univ(:BTY) *)
 
 (* the functor's type with the recursion argument at ty *)
-fun FatTY ty = ty_antiq (type_subst [alpha |-> ty] Fty)
+fun FatTy ty = type_subst [alpha |-> ty] Fty
+fun FatTY ty = ty_antiq (FatTy ty)
 val FORD = FatTY “:'g ordinal”
 val FTYB = FatTY beta
+val FTYC = FatTY gamma
 val FSUM = FatTY “:'a + bool”
 
 (* turn a point-free law into the pointwise form the construction wants *)
@@ -272,9 +275,19 @@ Proof
   simp[mkalg_def]
 QED
 
+(* the two components of the pair must be pinned to the same instance of
+   the functor, or bigprod ends up a constant with type variables that
+   nothing later can determine *)
+val idxty = pairSyntax.mk_prod(alpha --> bool, Fty --> alpha)
+val IDXTY = ty_antiq idxty
+val carrierty = idxty --> alpha
+val CARRIER = ty_antiq carrierty
+val FCARRIER = FatTY carrierty
+
 Definition bigprod_def:
-  bigprod = ({ f : ('a set # (^FTY -> 'a)) -> 'a | ∀i. f i ∈ FST (mkalg i) },
-             λfv i. SND (mkalg i) $ Fmap (λf. f i) fv)
+  bigprod = ({ f : ^CARRIER | ∀i. f i ∈ FST (mkalg i) },
+             λ(fv : ^FCARRIER) (i : ^IDXTY).
+               SND (mkalg i) (Fmap (λf. f i) fv))
 End
 
 Theorem bigprod_isalg[simp]:
@@ -632,7 +645,6 @@ QED
     initiality, IND, MAP and SET.  See .tmp/bnf-datatypes-handoff.md.
    ---------------------------------------------------------------------- *)
 
-(*
 Theorem alg_cardinality_bound:
   ω ≤ (bd : 'g ordinal) ∧ (∀x:^FSUM. Fset x ≼ preds bd) ⇒
   KK (s:^FTY -> 'a) (csuc bd) ≼ 𝟚 ** (cardSUC (Fin (preds bd) : ^FORD set))
@@ -678,11 +690,7 @@ Proof
   irule IMAGE_cardleq_rwt >>
   resolve_then (Pos hd) irule (MATCH_MP (GEN_ALL Fin_cardleq) cardADD2)
                cardleq_TRANS >>
-  mp_tac (Q.SPEC ‘KK s j +_c 𝟚’
-            (MATCH_MP CBDb
-               (CONJ (ASSUME “ω ≤ (bd:'g ordinal)”)
-                     (ASSUME “∀x:^FTY.
-                                Fset x ≼ preds (bd:'g ordinal)”)))) >>
+  drule_then (drule_then $ qspec_then ‘KK s j +_c 𝟚’ mp_tac) CBDb >>
   impl_tac >- simp[CARD_LE_ADDL] >>
   disch_then $ C (resolve_then (Pos hd) irule) cardleq_TRANS >>
   first_x_assum $ qspec_then ‘j’ mp_tac >> simp[] >>
@@ -700,14 +708,342 @@ Proof
   ‘INFINITE (𝟚 ** BD)’ by simp[] >>
   ‘𝟚 ** BD +_c 𝟚 ≈ 𝟚 ** BD’
     by metis_tac[CARD_ADD_SYM, CARD_ADD_ABSORB, cardeq_TRANS] >>
-  drule_then (qspecl_then [‘BD’, ‘BD’] mp_tac) set_exp_card_cong >>
-  simp[cardeq_REFL] >> strip_tac >>
-  pop_assum (C (resolve_then (Pos hd)
-                (resolve_then (Pos hd) irule cardeq_REFL))
-             (iffRL CARD_LE_CONG)) >>
-  resolve_then (Pos hd) (resolve_then (Pos hd) irule cardeq_REFL)
-               set_exp_product (iffRL CARD_LE_CONG) >>
-  irule set_exp_cardle_cong >> simp[] >> ONCE_REWRITE_TAC [cardleq_lteq] >>
-  simp[CARD_SQUARE_INFINITE]
+  ‘(𝟚 ** BD +_c 𝟚) ** BD ≼ (𝟚 ** BD) ** BD’
+    by (irule CARDEQ_IMP_CARDLEQ >> irule set_exp_card_cong >> simp[]) >>
+  ‘(𝟚 ** BD) ** BD ≼ 𝟚 ** (BD CROSS BD)’
+    by (irule CARDEQ_IMP_CARDLEQ >> MATCH_ACCEPT_TAC set_exp_product) >>
+  ‘𝟚 ** (BD CROSS BD) ≼ 𝟚 ** BD’
+    by (irule set_exp_cardle_cong >> simp[] >>
+        ONCE_REWRITE_TAC [cardleq_lteq] >> simp[CARD_SQUARE_INFINITE]) >>
+  metis_tac[cardleq_TRANS]
 QED
-*)
+
+(* ----------------------------------------------------------------------
+    Everything the algebras need is now known about the specific bound,
+    so a single type is big enough to hold the initial algebra.
+   ---------------------------------------------------------------------- *)
+
+Theorem KK_EQ_MINSET =
+        MATCH_MP KKbnd_EQ_minset (CONJ omega_le_bnd Fset_cle_bnd)
+
+Theorem inst_bound =
+        MATCH_MP alg_cardinality_bound
+                 (CONJ omega_le_bnd
+                       (INST_TYPE [alpha |-> “:'a + bool”] Fset_cle_bnd))
+          |> REWRITE_RULE [KK_EQ_MINSET]
+
+val algty0 = #1 (dom_rng (type_of (rand (concl inst_bound))))
+val ALGTY0 = ty_antiq algty0
+val idx0 = pairSyntax.mk_prod(algty0 --> bool, FatTy algty0 --> algty0)
+val algty = idx0 --> algty0
+val ALGTY = ty_antiq algty
+val FALGTY = FatTY algty
+
+Theorem copy_alg_back:
+  (A:'a set) ≼ (B:'b set) ∧ alg (A, s : ^FTY -> 'a) ⇒
+  ∃(B0:'b set) (s' : ^FTYB -> 'b) h j.
+    hom h (B0,s') (A,s) ∧ hom j (A,s) (B0,s') ∧
+    (∀a. a ∈ A ⇒ h (j a) = a) ∧ (∀b. b ∈ B0 ⇒ j (h b) = b)
+Proof
+  simp[cardleq_def] >> strip_tac >> rename [‘INJ h0 A B’] >>
+  qexistsl_tac [‘IMAGE h0 A’, ‘λbv. h0 (s (Fmap (LINV h0 A) bv))’,
+                ‘LINV h0 A’, ‘h0’] >>
+  csimp[hom_def, PULL_EXISTS] >>
+  drule_then assume_tac LINV_DEF >> rw[] >~
+  [‘alg (IMAGE h0 A, _)’]
+  >- (gs[alg_def, SUBSET_DEF] >> rw[] >>
+      irule_at Any EQ_REFL >> first_assum irule >>
+      simp[FsetMap, PULL_EXISTS] >> rw[] >> first_assum drule >>
+      simp[PULL_EXISTS]) >~
+  [‘LINV h0 A (h0 (s _))’]
+  >- (‘s (Fmap (LINV h0 A) bv) ∈ A’
+        by (gs[alg_def] >> first_assum irule >>
+            gs[FsetMap, SUBSET_DEF, PULL_EXISTS] >> rw[] >>
+            first_assum drule >> simp[PULL_EXISTS]) >>
+      simp[]) >>
+  simp[FmapO'] >> ntac 2 AP_TERM_TAC >> irule Fmap_eq_id >>
+  gs[SUBSET_DEF]
+QED
+
+Definition IAlg_def:
+  IAlg = minset (SND bigprod : ^FALGTY -> ^ALGTY)
+End
+
+Definition Cons_def:
+  Cons = (SND bigprod : ^FALGTY -> ^ALGTY)
+End
+
+Theorem IAlg_isalg[simp]:
+  alg (IAlg, Cons)
+Proof
+  simp[IAlg_def, Cons_def]
+QED
+
+Theorem hom_arbification:
+  hom h (A,s) (B,t) ⇒
+  ∃j. hom j (A,s) (B,t) ∧ ∀x. x ∉ A ⇒ j x = ARB
+Proof
+  strip_tac >>
+  qexists_tac ‘λx. if x ∈ A then h x else ARB’ >> simp[] >>
+  gs[hom_def, alg_def] >> RULE_ASSUM_TAC GSYM >>
+  simp[] >> rw[] >> AP_TERM_TAC >> irule FmapCONG >> simp[] >>
+  gs[SUBSET_DEF]
+QED
+
+Theorem initiality0:
+  ∀(t:^FTYC -> 'c) (G:'c set).
+    alg(G,t) ⇒
+    ∃!h. hom h (IAlg,Cons) (G,t) ∧ ∀x. x ∉ IAlg ⇒ h x = ARB
+Proof
+  rw[] >> simp[EXISTS_UNIQUE_THM] >> reverse conj_tac
+  >- (rpt strip_tac >> simp[FUN_EQ_THM] >> qx_gen_tac ‘a’ >>
+      Cases_on ‘a ∈ IAlg’ >> simp[] >> gs[IAlg_def, Cons_def] >>
+      dxrule_then drule minset_unique_homs >> simp[]) >>
+  irule hom_arbification >>
+  simp[IAlg_def, Cons_def] >>
+  qmatch_abbrev_tac ‘∃h. hom h (minset Is, Is) _’ >>
+  ‘hom I (minset Is, Is) (FST bigprod,Is)’
+    by (irule minsub_I_subalg >> simp[Abbr‘Is’]) >>
+  dxrule_then (irule_at (Pos hd)) homs_compose >>
+  ‘hom I (minset t, t) (G,t)’ by (irule minsub_I_subalg >> metis_tac[]) >>
+  pop_assum $ C (resolve_then (Pos last) (irule_at (Pos hd))) homs_compose >>
+  ‘alg (minset t, t)’ by simp[] >>
+  resolve_then (Pos hd) (drule_then strip_assume_tac)
+               inst_bound copy_alg_back >>
+  rename [‘hom h (A0,s) (minset t, t)’] >>
+  first_assum $ C (resolve_then (Pos last) (irule_at (Pos hd))) homs_compose >>
+  simp[Abbr‘Is’] >>
+  irule_at (Pos hd) bigprod_proj >> gs[hom_def]
+QED
+
+Theorem inhabited:
+  ∃w. IAlg w
+Proof
+  ‘alg (IAlg, Cons)’ by simp[] >>
+  drule alg_nonempty >> simp[EXTENSION, IN_DEF]
+QED
+
+Theorem alg_Fin:
+  alg (A,s) ⇒ alg (Fin A, Fmap s)
+Proof
+  strip_tac >>
+  simp[alg_def, SUBSET_DEF, FsetMap, PULL_EXISTS] >> rw[] >>
+  rename [‘s vf ∈ A’, ‘vf ∈ Fset vff’] >>
+  first_assum $ drule_then assume_tac >>
+  irule (iffLR alg_def) >> simp[SUBSET_DEF]
+QED
+
+Definition arbify_def:
+  arbify A f x = if x ∈ A then f x else ARB
+End
+
+Theorem hom_arbify:
+  hom (arbify A f) (A,s : ^FTY -> 'a) (B,t : ^FTYB -> 'b) ⇔ hom f (A,s) (B,t)
+Proof
+  simp[hom_def, arbify_def] >> Cases_on ‘alg (A,s)’ >> simp[] >>
+  ‘∀af. af ∈ Fin A ⇒ s af ∈ A’ by gs[alg_def] >> simp[] >>
+  rw[EQ_IMP_THM] >> RULE_ASSUM_TAC GSYM >> simp[] >> AP_TERM_TAC >>
+  irule FmapCONG >> gs[arbify_def, SUBSET_DEF]
+QED
+
+Theorem iso0:
+  BIJ Cons (Fin IAlg) IAlg
+Proof
+  ‘alg (IAlg, Cons)’ by simp[] >>
+  drule_then assume_tac alg_Fin >>
+  drule_then assume_tac initiality0 >>
+  gs[EXISTS_UNIQUE_ALT] >>
+  rename[‘hom _ (IAlg,Cons) _ ∧ _ ⇔ H = _’] >>
+  ‘hom H (IAlg,Cons) (Fin IAlg, Fmap Cons)’ by metis_tac[] >>
+  ‘hom Cons (Fin IAlg, Fmap Cons) (IAlg,Cons)’
+    by (simp[hom_def] >> rpt strip_tac >> irule (iffLR alg_def) >>
+        simp[]) >>
+  rev_drule_then (drule_then assume_tac) homs_compose >>
+  strip_assume_tac
+    (SRULE [EXISTS_UNIQUE_ALT] (MATCH_MP initiality0 IAlg_isalg)) >>
+  ‘hom (arbify IAlg (Cons o H)) (IAlg,Cons) (IAlg,Cons)’ by simp[hom_arbify] >>
+  ‘∀x. x ∉ IAlg ⇒ arbify IAlg (Cons o H) x = ARB’ by simp[arbify_def] >>
+  ‘hom (arbify IAlg I) (IAlg,Cons) (IAlg,Cons)’
+    by (simp[hom_arbify] >> simp[hom_def, FmapID]) >>
+  ‘∀x. x ∉ IAlg ⇒ arbify IAlg I x = ARB’ by simp[arbify_def] >>
+  ‘arbify IAlg (Cons o H) = arbify IAlg I’ by metis_tac[] >>
+  simp[BIJ_IFF_INV] >> conj_tac
+  >- (rpt strip_tac >> irule (iffLR alg_def) >> simp[]) >>
+  qexists_tac ‘H’ >> conj_tac
+  >- (qpat_x_assum ‘hom H _ _’ mp_tac >> simp[hom_def]) >>
+  conj_asm2_tac
+  >- (qpat_x_assum ‘hom H _ _’ mp_tac >> simp[hom_def, FmapO'] >> strip_tac >>
+      qx_gen_tac ‘a’ >> strip_tac >>
+      ‘H (Cons a) = Fmap (Cons o H) a’ by simp[] >> pop_assum SUBST1_TAC >>
+      ‘Fmap (Cons o H) a = Fmap I a’ suffices_by simp[FmapID'] >>
+      irule FmapCONG >> gs[SUBSET_DEF]) >>
+  pop_assum mp_tac >> simp[Once FUN_EQ_THM, arbify_def] >> metis_tac[]
+QED
+
+(* ----------------------------------------------------------------------
+    The datatype itself: the only type this construction introduces.
+   ---------------------------------------------------------------------- *)
+
+val itype = newtypeTools.rich_new_type{
+  tyname = "nty", exthm = inhabited, ABS = "nty_ABS", REP = "nty_REP"
+  }
+
+val NTY = ty_antiq “:'b1 nty”
+val FNTY = FatTY “:'b1 nty”
+
+Definition NCONS_def:
+  NCONS (x : ^FNTY) = nty_ABS (Cons (Fmap nty_REP x))
+End
+
+Theorem NCONS_isalg[simp]:
+  alg (UNIV, NCONS)
+Proof
+  simp[alg_def]
+QED
+
+Theorem hom_nty_ABS:
+  hom nty_ABS (IAlg,Cons) (UNIV,NCONS)
+Proof
+  simp[hom_def] >> simp[NCONS_def, FmapO'] >>
+  rpt strip_tac >> rpt AP_TERM_TAC >> irule Fmap_eq_id >>
+  gs[SUBSET_DEF, #repabs_pseudo_id itype, IN_DEF]
+QED
+
+Theorem hom_nty_REP:
+  hom nty_REP (UNIV, NCONS) (IAlg, Cons)
+Proof
+  simp[hom_def] >> conj_tac
+  >- simp[IN_DEF, # termP_term_REP itype] >>
+  simp[NCONS_def] >> rpt strip_tac >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
+  irule (#repabs_pseudo_id itype) >>
+  ONCE_REWRITE_TAC [GSYM SPECIFICATION] >>
+  irule (iffLR alg_def) >>
+  simp[FsetMap, SUBSET_DEF, PULL_EXISTS, IN_DEF, #termP_term_REP itype]
+QED
+
+Theorem initiality_hom:
+  alg(B,t) ⇒ ∃!h. hom h (UNIV,NCONS) (B,t)
+Proof
+  strip_tac >>
+  simp[EXISTS_UNIQUE_THM] >>
+  drule_then (strip_assume_tac o SRULE[EXISTS_UNIQUE_ALT]) initiality0 >>
+  rename [‘hom _ _ _ ∧ _ ⇔ H = _’] >>
+  ‘hom H (IAlg,Cons) (B,t)’ by metis_tac[] >> conj_tac
+  >- metis_tac[homs_compose, hom_nty_REP] >>
+  qx_genl_tac [‘h1’, ‘h2’] >> strip_tac >>
+  ‘hom (arbify IAlg (h1 o nty_ABS)) (IAlg,Cons) (B,t) ∧
+   hom (arbify IAlg (h2 o nty_ABS)) (IAlg,Cons) (B,t)’
+    by (simp[hom_arbify] >> metis_tac[homs_compose, hom_nty_ABS]) >>
+  ‘arbify IAlg (h1 o nty_ABS) = arbify IAlg (h2 o nty_ABS)’
+    by metis_tac[arbify_def] >>
+  pop_assum mp_tac >> ONCE_REWRITE_TAC [FUN_EQ_THM] >> simp[arbify_def] >>
+  strip_tac >> qx_gen_tac ‘a’ >>
+  qspec_then ‘a’ (SUBST1_TAC o SYM) (#absrep_id itype) >>
+  pop_assum $ qspec_then ‘nty_REP a’ mp_tac >>
+  simp[#termP_term_REP itype, IN_DEF]
+QED
+
+Theorem initiality =
+        initiality_hom |> Q.INST [‘B’ |-> ‘UNIV’]
+                       |> SRULE [hom_def, alg_def, SUBSET_UNIV]
+                       |> GSYM |> Q.GEN ‘t’
+
+Theorem minset_Cons:
+  minset Cons = IAlg
+Proof
+  simp[IAlg_def, Cons_def]
+QED
+
+Theorem ALL_Ialg:
+  (∀ia. ia ∈ IAlg ⇒ P ia) ⇔ (∀n. P (nty_REP n))
+Proof
+  eq_tac >> rw[] >> gs[IN_DEF]
+  >- (pop_assum $ qspec_then ‘nty_REP n’ mp_tac >>
+      simp[#termP_term_REP itype]) >>
+  first_x_assum $ qspec_then ‘nty_ABS ia’ mp_tac >>
+  simp[#repabs_pseudo_id itype]
+QED
+
+Theorem ALL_Ialgv:
+  (∀av. Fset av ⊆ IAlg ⇒ P av) ⇔ (∀n. P (Fmap nty_REP n))
+Proof
+  rw[EQ_IMP_THM]
+  >- (pop_assum irule >> simp[FsetMap, SUBSET_DEF, PULL_EXISTS] >>
+      simp[IN_DEF, #termP_term_REP itype]) >>
+  first_x_assum $ qspec_then ‘Fmap nty_ABS av’ mp_tac >>
+  simp[FmapO'] >>
+  ‘Fmap (nty_REP o nty_ABS) av = av’ suffices_by simp[] >>
+  irule Fmap_eq_id >> gs[SUBSET_DEF, #repabs_pseudo_id itype, IN_DEF]
+QED
+
+Theorem IN_Fset:
+  (∀y. y ∈ Fset x ⇒ Q (nty_ABS y)) ⇔ x ∈ Fin (Q o nty_ABS)
+Proof
+  simp[SUBSET_DEF] >> simp[IN_DEF]
+QED
+
+Theorem Cons_NCONS:
+  Fset x ⊆ IAlg ⇒ Cons x = nty_REP (NCONS (Fmap nty_ABS x))
+Proof
+  simp[NCONS_def, FmapO'] >> strip_tac >>
+  ‘Fmap (nty_REP o nty_ABS) x = x’
+    by (irule Fmap_eq_id >>
+        gs[SUBSET_DEF, #repabs_pseudo_id itype, IN_DEF]) >>
+  simp[] >>
+  ‘Cons x ∈ IAlg’ suffices_by simp[IN_DEF, #repabs_pseudo_id itype] >>
+  irule (iffLR alg_def) >> simp[]
+QED
+
+Theorem abs_o_rep:
+  nty_ABS o nty_REP = I
+Proof
+  simp[FUN_EQ_THM, #absrep_id itype]
+QED
+
+Theorem Fset_applied:
+  Fset x v ⇔ v ∈ Fset x
+Proof
+  simp[IN_DEF]
+QED
+
+Theorem IND =
+        minset_ind |> Q.GEN ‘s’
+                   |> Q.ISPEC ‘Cons’
+                   |> SRULE [minset_Cons]
+                   |> Q.SPEC ‘λia. Q (nty_ABS ia)’
+                   |> SRULE[ALL_Ialg, #absrep_id itype, IN_Fset, Cons_NCONS]
+                   |> SRULE[GSYM AND_IMP_INTRO, ALL_Ialgv, FmapO', Fin_def,
+                            FsetMap, abs_o_rep, FmapID]
+                   |> SRULE[SUBSET_DEF, PULL_EXISTS, IN_DEF, #absrep_id itype]
+                   |> SRULE [Fset_applied]
+
+Theorem NCONS_comp:
+  NCONS = nty_ABS o Cons o Fmap nty_REP
+Proof
+  simp[FUN_EQ_THM, NCONS_def]
+QED
+
+Theorem iso:
+  BIJ NCONS (Fin UNIV) UNIV
+Proof
+  simp[NCONS_comp] >> irule BIJ_COMPOSE >> qexists_tac ‘IAlg’ >>
+  reverse conj_tac
+  >- (simp[BIJ_IFF_INV] >> qexists_tac ‘nty_REP’ >>
+      simp[#repabs_pseudo_id itype, #absrep_id itype, IN_DEF,
+           #termP_term_REP itype]) >>
+  irule BIJ_COMPOSE >> irule_at Any iso0 >>
+  simp[BIJ_IFF_INV] >> conj_tac
+  >- simp[FsetMap, SUBSET_DEF, PULL_EXISTS, IN_DEF, #termP_term_REP itype] >>
+  qexists_tac ‘Fmap nty_ABS’ >> simp[FmapO', abs_o_rep, FmapID] >>
+  rpt strip_tac >> irule Fmap_eq_id >> simp[] >>
+  gs[SUBSET_DEF, #repabs_pseudo_id itype, IN_DEF]
+QED
+
+Theorem NCONS_11:
+  NCONS x = NCONS y ⇔ x = y
+Proof
+  assume_tac iso >> gs[BIJ_DEF, INJ_IFF]
+QED
+
+val DEST_def = new_specification("DEST_def", ["DEST"],
+                                 iso |> SRULE [BIJ_IFF_INV])
