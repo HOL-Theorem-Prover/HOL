@@ -2,8 +2,35 @@ signature bnfLib =
 sig
 
 include Abbrev
+type info = thm bnfBase_dtype.info
+
 val specToFunctor : bnfBase.bnftor -> hol_type
-val functorToMapAndSet : bnfBase.t -> hol_type ->
-                         term * term * thm bnfBase_dtype.info HOLset.set
+
+(* the composite functor's map and set terms, along with the BNFs that
+   the composite is built from.  The map term has a free variable f of
+   type α → β in it. *)
+val functorToMapAndSet : bnfBase.t -> hol_type -> term * term * info HOLset.set
+
+(* Everything that makes a type expression built over already-registered
+   BNFs a BNF in its own right.  The type's α argument is taken to be the
+   functor's argument; all other type variables are constants. *)
+type derived_bnf = {
+  bnd : term,        (* infinite set bounding the composite's set fn *)
+  bndthm : thm,      (* |- !x. set x <<= bnd *)
+  components : info HOLset.set,  (* the BNFs the composite is built from *)
+  mapCONG : thm,     (* |- (!a. a IN set x ==> f a = g a) ==>
+                            map f x = map g x *)
+  mapID : thm,       (* |- map I = I *)
+  mapIMAGE : thm,    (* |- set o map f = IMAGE f o set *)
+  mapO : thm,        (* |- map f o map g = map (f o g) *)
+  mkmap : term -> term, (* mkmap f is the composite's map at f : α → β *)
+  nontrivial : (term * thm) option, (* (t, |- set t <> {}), if the
+                                       composite isn't constant *)
+  set : term,
+  wit : (term * thm) option (* (w, |- set w = {}), if an element can be
+                               built without an α *)
+}
+
+val deriveBNF : bnfBase.t -> hol_type -> derived_bnf
 
 end

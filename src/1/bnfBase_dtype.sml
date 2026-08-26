@@ -22,7 +22,10 @@ datatype 'a info = bI of {
                                map (f₁ o g₁) ... (fₙ o gₙ) thm *)
   relator : term,           (* type's rel term *)
   set : term list,          (* type's set terms *)
-  siblings : hol_type list  (* types I'm mutually recursive with *)
+  siblings : hol_type list, (* types I'm mutually recursive with *)
+
+  wits : (term * 'a) list,  (* nonemptiness witnesses; see below *)
+  inhabits : (term * 'a) list (* set₁ is inhabited, ...; see below *)
 }
 
 (*
@@ -71,6 +74,31 @@ gsetIMAGE has form
    |- IMAGE (f : γ -> δ)
       (gset (g₁ : α₁ -> γ set) ... (gₙ : αₙ -> γ set) (x:(α₁,...,αₙ,β₁,...,βₘ)F)) =
       gset (IMAGE f ∘ g₁) ... (IMAGE f ∘ gₙ) x
+
+Nonemptiness witnesses (the wits field) come in (term,theorem) pairs.  The
+term always takes one argument per genuine type variable, whether or not
+it uses it, so is of type
+
+   wit : α₁ -> ... -> αₙ -> (α₁, ... αₙ, β₁ ... βₘ) tyop
+
+and its theorem records, for each i, whether the witness needed an αᵢ:
+
+   |- !a₁ ... aₙ. set₁ (wit a₁ ... aₙ) ⊆ W₁ ∧ ... ∧ setₙ (wit a₁ ... aₙ) ⊆ Wₙ
+
+where each Wᵢ is either ∅ (the witness doesn't need an αᵢ) or {aᵢ} (it
+does).  Reading the term as a proof of nonemptiness in the style of the
+Curry-Howard correspondence, wit says: given elements of those αᵢ whose
+Wᵢ is a singleton, here is an element of the type.  A witness with more
+∅s is a stronger claim; the whole list is kept because the strongest
+witness depends on which arguments turn out to be inhabited (see
+Blanchette, Popescu and Traytel, "Witnessing (Co)datatypes", ESOP 2015).
+
+The inhabits field holds one (term,theorem) pair per set function, saying
+that setᵢ is not always empty, and in the strong form that lets a
+composite functor's nontriviality be built out of its components':
+
+   inhabitᵢ : αᵢ -> (α₁, ... αₙ, β₁ ... βₘ) tyop
+   |- !v. v ∈ setᵢ (inhabitᵢ v)
 
 *)
 
