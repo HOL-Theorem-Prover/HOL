@@ -169,3 +169,23 @@ LSP caches, run BODY, tear down."
              :goals [(:asms [] :goal "a = a")] :error nil)))
     (should-not (hol-lsp--solved-p r))
     (should-not (string-match-p "✓ solved" (hol-lsp--goals-header r)))))
+
+(ert-deftest hol-lsp-goals-go-below-a-narrow-window ()
+  (with-temp-buffer
+    (let ((hol-lsp-goals-side-min-width 160))
+      ;; batch frames are 80 columns, well under the threshold
+      (should (memq 'display-buffer-below-selected
+                    (car (hol-lsp--goals-display-action)))))))
+
+(ert-deftest hol-lsp-goals-go-beside-a-wide-window ()
+  (with-temp-buffer
+    (let ((hol-lsp-goals-side-min-width 10))   ; force the wide branch
+      (let ((action (hol-lsp--goals-display-action)))
+        (should (memq 'display-buffer-in-direction (car action)))
+        (should (eq 'right (cdr (assq 'direction action))))))))
+
+(ert-deftest hol-lsp-goals-side-split-can-be-switched-off ()
+  (with-temp-buffer
+    (let ((hol-lsp-goals-side-min-width nil))
+      (should (memq 'display-buffer-below-selected
+                    (car (hol-lsp--goals-display-action)))))))

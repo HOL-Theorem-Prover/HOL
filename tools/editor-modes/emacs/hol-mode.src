@@ -2841,6 +2841,32 @@ stripped, the goal block\='s own indentation being load-bearing."
                  pretty)))
     (replace-regexp-in-string "\\`\n+" "" body)))
 
+(defcustom hol-lsp-goals-side-min-width 160
+  "Put *HOL Goals* beside the script window rather than below it when
+that window is at least this many columns wide.  HOL renders a goal
+at 75 columns, so splitting a window narrower than about twice that
+leaves both halves wrapping.  nil always splits below."
+  :group 'hol :type '(choice integer (const :tag "always below" nil)))
+
+(defun hol-lsp--goals-display-action ()
+  "Where to put *HOL Goals*, given the script window's width.
+inhibit-switch-frame: when the goals buffer has been moved to a
+separate frame (via the user's `display-buffer-alist' or by hand),
+`display-buffer-reuse-window' finds it there and would otherwise
+raise and focus that frame on every auto-follow tick, defeating the
+attempt to edit the script file."
+  (if (and hol-lsp-goals-side-min-width
+           (>= (window-body-width (selected-window))
+               hol-lsp-goals-side-min-width))
+      '((display-buffer-reuse-window display-buffer-in-direction)
+        (direction . right) (window-width . 0.5)
+        (inhibit-switch-frame . t))
+    '((display-buffer-reuse-window display-buffer-below-selected)
+      (inhibit-switch-frame . t))))
+
+(defvar-local hol-lsp--last-render nil
+  "The (HEADER . BODY) last put in this buffer, or nil.")
+
 (defun hol-lsp--render-goals (result)
   "Render RESULT into *HOL Goals* and display it below the selected
 window.  Preserves ANSI colour escapes from the server's `pretty'
@@ -2854,19 +2880,29 @@ and anything put at the top would scroll out of sight.  An error is
 echoed via `message' as well, a long one being truncated in the
 header."
   (require 'ansi-color)
-  (with-current-buffer (get-buffer-create "*HOL Goals*")
-    (let ((inhibit-read-only t)
-          (ctx (plist-get result :context))
-          (pretty (plist-get result :pretty))
-          (err (plist-get result :error)))
+  (let ((action (hol-lsp--goals-display-action))
+        (header (hol-lsp--goals-header result)))
+   (with-current-buffer (get-buffer-create "*HOL Goals*")
+    (let* ((inhibit-read-only t)
+           (ctx (plist-get result :context))
+           (pretty (plist-get result :pretty))
+           (err (plist-get result :error))
+           (body (and pretty (not (string-empty-p pretty))
+                      (hol-lsp--strip-context pretty ctx)))
+           (same (equal (cons header body) hol-lsp--last-render)))
+     (if same
+         ;; Nothing has changed, so leave the window where the user
+         ;; left it: an auto-follow tick shouldn't undo their
+         ;; scrolling just because the cursor moved within a tactic.
+         (display-buffer (current-buffer) action)
       (erase-buffer)
       (when err (message "HOL goal-state: %s" err))
       (cond
-       ((and pretty (not (string-empty-p pretty)))
+       (body
         ;; Server rendered via goalFrag.pp_goalstate with the VT100
         ;; backend — ANSI escapes classify bound / free vars.
         (let ((start (point)))
-          (insert (hol-lsp--strip-context pretty ctx))
+          (insert body)
           (ansi-color-apply-on-region start (point))))
        (t
         (dolist (g (append (plist-get result :goals) nil))
@@ -2874,24 +2910,17 @@ header."
             (insert (format "  %s\n" a)))
           (insert (format "⊢ %s\n\n" (plist-get g :goal))))))
       ;; `hol-lsp-goals-mode' runs `kill-all-local-variables', so the
-      ;; header line has to be set after it rather than before.
+      ;; header line and the render record have to be set after it.
       (hol-lsp-goals-mode)
-      (setq-local header-line-format (hol-lsp--goals-header result))
-      (goto-char (point-max)))
-    ;; inhibit-switch-frame: when the goals buffer has been moved to
-    ;; a separate frame (via user's `display-buffer-alist' or by hand),
-    ;; `display-buffer-reuse-window' finds it there and would otherwise
-    ;; raise+focus that frame on every auto-follow tick, defeating the
-    ;; user's attempt to edit the script file.
-    (let ((win (display-buffer (current-buffer)
-                               '((display-buffer-reuse-window
-                                  display-buffer-below-selected)
-                                 (inhibit-switch-frame . t)))))
-      (when (window-live-p win)
-        (set-window-point win (point-max))
-        ;; Last line at the window bottom, so a state longer than the
-        ;; window shows its end rather than its start.
-        (with-selected-window win (recenter -1))))))
+      (setq-local header-line-format header)
+      (setq-local hol-lsp--last-render (cons header body))
+      (goto-char (point-max))
+      (let ((win (display-buffer (current-buffer) action)))
+        (when (window-live-p win)
+          (set-window-point win (point-max))
+          ;; Last line at the window bottom, so a state longer than
+          ;; the window shows its end rather than its start.
+          (with-selected-window win (recenter -1)))))))))
 
 (defun hol-lsp-show-goal-state ()
   "Ask the HOL LSP server for the goal-state at point.

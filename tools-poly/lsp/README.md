@@ -124,6 +124,9 @@ when the theorem statement can't be parsed).  Otherwise:
   `goals` with no `error` means the focused subgoal(s) are proved —
   what `pretty` announces on its first line, which scrolling to the
   end would carry out of sight — so the header shows that too.
+  The pane goes beside the script window when that window is at
+  least `hol-lsp-goals-side-min-width` columns (default 160, so both
+  halves clear HOL's 75-column render), and below it otherwise.
   Set `hol-lsp-goals-follow-cursor` non-nil to make
   `*HOL Goals*` auto-refresh on cursor movement (debounced via
   `hol-lsp-goals-follow-delay`).  `hol-lsp--render-goals` runs
