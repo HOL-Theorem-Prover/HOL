@@ -936,17 +936,26 @@ fun start {diag, dbg} = let
         (* `declSnapshots` is newest-first, so the first match walking
            the list is the largest `endByte <= editOff`. *)
         List.find (fn (s:declSnapshot) => #endByte s <= editOff) lastSnaps
-    val (initialTrees, resumeStart, oldDiags) =
+    (* `restoreSnap` is run by the compile thread, not here.  Part of
+       what a compile snapshot holds is the file's namespace layer --
+       `Theory foo` expands to `open HolKernel Parse boolLib bossLib`,
+       whose bindings land there -- and that layer is thread-local
+       (lsp_namespace.ML: a thread inherits nothing, so `snapshotLayer`
+       captures on one thread for a thunk to install on another).
+       Installing it here would populate *this* thread and leave the
+       compile with an empty layer, so a resumed compile could not see
+       `ACCEPT_TAC`.  A full restart needs no such care: its compile
+       thread re-executes the `Theory` dec, opens and all. *)
+    val (restoreSnap, initialTrees, resumeStart, oldDiags) =
       case resumeSnap of
         NONE => (
           !LSPExtension.notifyCompileStart (!minEditOffset);
           invalidateProofs uri lines NONE;
           !LSPExtension.resetForCompile ();
-          (emptyParseData 8, 0, oldDiags))
+          (fn () => (), emptyParseData 8, 0, oldDiags))
       | SOME snap => let
           val _ = !LSPExtension.notifyCompileStart (!minEditOffset)
           val _ = invalidateProofs uri lines (SOME (#endByte snap))
-          val _ = !LSPExtension.restoreCompileSnap (#compileSnap snap)
           val {endByte, builtTrees, diags = snapDiags, plugins,
                ...} = snap
           (* Seed `diags` with the frozen snapshot; leave `oldDiags`
@@ -960,7 +969,8 @@ fun start {diag, dbg} = let
               List.filter (fn (s':declSnapshot) => #endByte s' <= endByte)
                           lastSnaps}
           val emptyDiags = DArray.new (0, Completed)
-        in (trees, endByte, emptyDiags) end
+        in (fn () => !LSPExtension.restoreCompileSnap (#compileSnap snap),
+            trees, endByte, emptyDiags) end
     val _ = minEditOffset := NONE
     val _ = if dbg andalso resumeStart > 0 then
               send (mkNotif "$/compileResumedAt" (fn print => (
@@ -973,6 +983,7 @@ fun start {diag, dbg} = let
     val cancelled = ref false
 
     fun compileThread () = ((let
+      val () = restoreSnap ()
       fun encDiag (Error {hard, pos, msg}) print = (
           print "{\"range\":"; encRangeLC lines pos print;
           print ",\"severity\":"; encInt (if hard then ErrorSeverity else WarnSeverity) print;

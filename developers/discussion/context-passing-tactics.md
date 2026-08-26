@@ -1534,6 +1534,32 @@ Nothing in `server.ML` calls the pool yet.  In order:
 5. act on `Diverged` by re-elaborating downstream, and report the five
    states to the client.
 
+#### A snapshot restore has to happen on the thread that will use it
+
+Found while trying to verify the above: **every snapshot-resumed compile
+was losing the file's namespace.**  Edit anything but the very top of a
+script and the next compile reported `Value or constructor (ACCEPT_TAC)
+has not been declared` for every tactic in the file.
+
+`Theory foo` expands to `open HolKernel Parse boolLib bossLib`, so the
+library bindings a script uses live in the LSP's *file layer*, and since
+`6de834fcf` that layer is thread-local --- deliberately, and
+`lsp_namespace.ML` says so: `snapshotLayer` captures the calling thread's
+tables and hands back a thunk to install them on whatever thread runs it,
+"so the spawner captures and the worker installs".  `startCompile` was
+calling `restoreCompileSnap` on the request thread and forking the
+compile afterwards, so the layer was installed on the thread that was
+about to stop using it and the compile thread began with an empty one.
+A resume starts *after* the `Theory` dec, so nothing re-ran the opens.
+The restore now runs first thing on the compile thread.
+
+A full restart never showed this: its compile thread re-executes the
+`Theory` dec itself.  The resume tests never showed it either, because
+their fixtures are twenty `val xN = N` bindings --- no library
+identifier, so an empty namespace layer reads exactly like a correct one.
+A fixture with a `Theorem ... Proof ... QED` in it would have caught this
+the day it landed.
+
 #### The tactic-edit refinement, tried and withdrawn
 
 Item 3 above was built (`bcc76ad62`) and then taken out again, because

@@ -1564,6 +1564,61 @@ def test_snapshot_resume_second_edit_after_completion():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_snapshot_resume_keeps_namespace():
+    """A resumed compile must still see the file layer that `Theory`'s
+    expansion to `open HolKernel Parse boolLib bossLib` installed.
+
+    That layer is thread-local, so the compile snapshot's restore thunk
+    has to run on the compile thread; while it ran on the request thread
+    instead, every tactic below the resume point came back as `Value or
+    constructor (ACCEPT_TAC) has not been declared`.  The other resume
+    tests cannot see this: their fixtures are `val xN = N` bindings, and
+    with no library identifier in the file an empty namespace layer is
+    indistinguishable from a correct one."""
+    d = tempfile.mkdtemp(prefix="lsp_resume_")
+    try:
+        src = ("Theory resumens\n"
+               "\n"
+               "Theorem r1:\n"
+               "  T\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n"
+               "\n"
+               "Theorem r2:\n"
+               "  T /\\ T\n"
+               "Proof\n"
+               "  REWRITE_TAC[]\n"
+               "QED\n")
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/resumensScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+            v1 = _diag_count(c, uri, ver=1)
+            assert_eq(len(v1), 0, f"v1 compiles clean ({v1!r})")
+
+            # An edit inside r1's tactic body: late enough that the
+            # compile resumes from the snapshot taken after `Theory`,
+            # which is the snapshot whose namespace layer matters.
+            at = src.index("ACCEPT_TAC") + len("ACCEPT_TAC")
+            idx = c.total_msgs()
+            _did_change_incr(c, uri, src, at, at, " ", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                        "second compileCompleted")
+            assert_eq(len(_resume_events(c, since=idx, uri=uri)), 1,
+                      "second compile resumed from a snapshot")
+            v2 = _diag_count(c, uri, ver=2)
+            assert_eq(len(v2), 0,
+                      f"resumed compile keeps the file namespace ({v2!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def _send_goalstate(c, req_id, uri, line, char):
     c.send({"jsonrpc":"2.0","id":req_id,
             "method":"$/hol/goalState",
@@ -3040,6 +3095,8 @@ TESTS = [
                                      test_snapshot_resume_survives_grammar_delta),
     ("snapshot_resume_second_edit_after_completion",
                                      test_snapshot_resume_second_edit_after_completion),
+    ("snapshot_resume_keeps_namespace",
+                                     test_snapshot_resume_keeps_namespace),
     ("goalState_inside_proof",       test_goalState_inside_proof),
     ("goalState_outside_proof",      test_goalState_outside_proof),
     ("goalState_between_two_theorems",
