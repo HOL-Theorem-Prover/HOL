@@ -1122,3 +1122,108 @@ Theorem IALG_ind:
 Proof
   simp[IALG_def] >> MATCH_ACCEPT_TAC MINSET_ind
 QED
+
+(* ----------------------------------------------------------------------
+    Transporting the algebra to a type of its own.
+
+    A type definition supplies abs and rep with the three facts below;
+    nothing here needs to know that they came from one.  'n is the new
+    type, 'fn is F['n].
+   ---------------------------------------------------------------------- *)
+
+Definition NCONS_def:
+  NCONS (mp_np : ('n -> 'p) -> 'fn -> 'fp) s rep abs af =
+    abs (s (mp_np rep af))
+End
+
+Theorem ALG_NCONS[simp]:
+  ALG stn (𝕌(:'n), NCONS mp_np s rep abs)
+Proof
+  simp[ALG_def]
+QED
+
+Theorem HOM_ABS:
+  MapComp (mp_pn : ('p -> 'n) -> 'fp -> 'fn) mp_np mp_pp ∧
+  MapId mp_pp ∧ MapCong mp_pp stp ∧
+  (∀p. p ∈ A ⇒ rep (abs p) = p) ∧ ALG stp (A,s) ⇒
+  HOM mp_pn stp stn abs (A,s) (𝕌(:'n), NCONS mp_np s rep abs)
+Proof
+  strip_tac >> drule_then (drule_then assume_tac) Map_eq_id >>
+  simp[HOM_def, NCONS_def] >> rpt strip_tac >>
+  gs[MapComp_def] >> AP_TERM_TAC >> AP_TERM_TAC >>
+  first_x_assum irule >> gs[SUBSET_DEF]
+QED
+
+Theorem HOM_REP:
+  Natural (mp_np : ('n -> 'p) -> 'fn -> 'fp) stn stp ∧
+  (∀n. rep n ∈ A) ∧ (∀p. p ∈ A ⇒ rep (abs p) = p) ∧ ALG stp (A,s) ⇒
+  HOM mp_np stn stp rep (𝕌(:'n), NCONS mp_np s rep abs) (A,s)
+Proof
+  strip_tac >> simp[HOM_def, NCONS_def] >> rpt strip_tac >>
+  irule EQ_SYM >> first_x_assum irule >> irule ALG_closed >>
+  qexists_tac ‘stp’ >> gs[Natural_def, SUBSET_DEF, PULL_EXISTS]
+QED
+
+Theorem NEWTYPE_INITIALITY:
+  MapComp (mp_pn : ('p -> 'n) -> 'fp -> 'fn) mp_np mp_pp ∧
+  MapId mp_pp ∧ MapCong mp_pp stp ∧
+  Natural mp_np stn stp ∧ Natural mp_pn stp stn ∧
+  MapComp mp_np (mp_pc : ('p -> 'c) -> 'fp -> 'fc) mp_nc ∧
+  MapComp mp_pn mp_nc mp_pc ∧ MapCong mp_pc stp ∧
+  (∀n. abs (rep n) = n) ∧ (∀p. p ∈ A ⇒ rep (abs p) = p) ∧ (∀n. rep n ∈ A) ∧
+  ALG stp (A,s) ∧
+  (∀t G. ALG stc (G,t) ⇒
+         ∃!h. HOM mp_pc stp stc h (A,s) (G,t) ∧ ∀x. x ∉ A ⇒ h x = ARB) ⇒
+  ∀t G. ALG stc (G,t) ⇒
+        ∃!h. HOM mp_nc stn stc h (𝕌(:'n), NCONS mp_np s rep abs) (G,t)
+Proof
+  strip_tac >> rpt strip_tac >>
+  ‘HOM mp_np stn stp rep (𝕌(:'n), NCONS mp_np s rep abs) (A,s)’
+    by (irule HOM_REP >> simp[]) >>
+  (* mp_pp appears only in HOM_ABS's hypotheses, so this one is forward *)
+  byrule HOM_ABS
+    [‘MapComp mp_pn mp_np mp_pp’, ‘MapId mp_pp’, ‘MapCong mp_pp stp’,
+     ‘∀p. p ∈ A ⇒ rep (abs p) = p’, ‘ALG stp (A,s)’]
+    assume_tac >>
+  (* the rewrite goes on the assumption: EXISTS_UNIQUE_ALT on the goal
+     would put it in a shape the rest of the proof does not expect *)
+  first_x_assum (qspecl_then [‘t’,‘G’] mp_tac) >> simp[] >>
+  disch_then (qx_choose_then ‘H’ assume_tac o SRULE[EXISTS_UNIQUE_ALT]) >>
+  simp[EXISTS_UNIQUE_THM] >> conj_tac
+  >- (‘HOM mp_pc stp stc H (A,s) (G,t) ∧ ∀x. x ∉ A ⇒ H x = ARB’
+        by (first_assum (irule o iffRL) >> simp[]) >>
+      byrule HOMs_compose
+        [‘MapComp mp_np mp_pc mp_nc’, ‘Natural mp_np stn stp’,
+         ‘HOM mp_np stn stp rep _ (A,s)’, ‘HOM mp_pc stp stc H (A,s) (G,t)’]
+        (irule_at Any)) >>
+  (* uniqueness: both give homomorphisms out of (A,s) once composed
+     with abs, and those are unique *)
+  qx_genl_tac [‘h1’, ‘h2’] >> strip_tac >>
+  ‘∀h. HOM mp_nc stn stc h (𝕌(:'n), NCONS mp_np s rep abs) (G,t) ⇒
+       H = ARBIFY A (h o abs)’
+    by (rpt strip_tac >> first_assum (irule o iffLR) >>
+        simp[ARBIFY_def] >>
+        byrule HOM_ARBIFY [‘MapCong mp_pc stp’] (fn th => simp[th]) >>
+        byrule HOMs_compose
+          [‘MapComp mp_pn mp_nc mp_pc’, ‘Natural mp_pn stp stn’,
+           ‘HOM mp_pn stp stn abs (A,s) _’,
+           ‘HOM mp_nc stn stc _ _ (G,t)’]
+          (irule_at Any)) >>
+  ‘ARBIFY A (h1 o abs) = ARBIFY A (h2 o abs)’ by metis_tac[] >>
+  simp[FUN_EQ_THM] >> qx_gen_tac ‘n’ >>
+  (* stating the instance rather than AP_TERMing a quotation: a rule's
+     quotation is parsed with no goal context, so rep would come back at
+     a fresh type *)
+  ‘ARBIFY A (h1 o abs) (rep n) = ARBIFY A (h2 o abs) (rep n)’ by simp[] >>
+  gs[ARBIFY_def]
+QED
+
+(* over the whole type every function is a homomorphism, so initiality
+   collapses to the recursion equation a datatype package wants *)
+Theorem NEWTYPE_RECURSION =
+        NEWTYPE_INITIALITY |> UNDISCH
+                           |> Q.SPECL [‘t’, ‘UNIV’]
+                           |> SRULE [HOM_def, ALG_def, SUBSET_UNIV]
+                           |> GSYM
+                           |> Q.GEN ‘t’
+                           |> DISCH_ALL
