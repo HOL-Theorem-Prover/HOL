@@ -514,9 +514,64 @@ fun start {diag, dbg} = let
       method = "window/logMessage",
       params = fn print => (
         print "{\"type\":4,\"message\":"; encString str print; print "}")})
+  (* type 2 = Warning; unlike `logMessage` this one is meant to be
+     seen without opening the log. *)
+  fun warnUser str =
+    send (Notification {
+      method = "window/showMessage",
+      params = fn print => (
+        print "{\"type\":2,\"message\":"; encString str print; print "}")})
   val _ = diag "started"
   val _ = logMessage "started"
   val _ = markServerStarted ()
+
+  (* A server process is bound to the first file it opens.  A second
+     file cannot be served correctly: its ancestors have to be in the
+     theory graph, only loading puts them there, and loading a theory
+     seals it (`Theory.load_complete'), so an ancestor already loaded
+     for the first file can be neither re-read nor withdrawn.  The
+     result is a broken environment for the second file -- wrong goals
+     and dead hovers -- with nothing in either file to explain it.
+
+     Clients are expected to run one server per buffer; `hol-lsp-enable'
+     does this by giving each buffer its own eglot project.  Say so
+     when a client does otherwise, rather than answering with quiet
+     nonsense.
+
+     Only `*Script.sml' takes the binding.  A `.sig' or an ordinary
+     `.sml' declares no theory of its own, and editors routinely open
+     them alongside a script -- the hol4-vscode selector matches the
+     whole language, so it sends every one of them.  Letting those
+     claim the process would hand it to whichever file the client
+     happened to sync first and then report the user's actual script
+     as the offender.
+
+     One warning per process, not per file: a client that opens N
+     scripts syncs them all at once (vscode-languageclient replays
+     `didOpen' for every already-open match when it registers), and N
+     toasts is a worse way to learn one fact.  Every offending file
+     still reaches the log. *)
+  val boundUri : string option ref = ref NONE
+  val warnedOnce = ref false
+  fun isScriptUri uri = String.isSuffix "Script.sml" uri
+  fun checkSingleFile uri =
+    if not (isScriptUri uri) then ()
+    else case !boundUri of
+      NONE => boundUri := SOME uri
+    | SOME first =>
+      if first = uri then ()
+      else let
+        val msg = String.concat [
+          "This HOL server is bound to ", first,
+          ".  Goal states and hovers for ", uri,
+          " will be unreliable: one server can serve only one script, ",
+          "and closing the first does not release it.  Configure your ",
+          "editor to start a server per buffer -- see ",
+          "tools-poly/lsp/README.md, \"One server per buffer\"."]
+        in
+          logMessage msg;
+          if !warnedOnce then () else (warnedOnce := true; warnUser msg)
+        end
 
   val textWidth = 100 (* configure? *)
   val printDepth = 100
@@ -1838,6 +1893,7 @@ fun start {diag, dbg} = let
       in app (fn (j,th) => if j = id then Thread.interrupt th else ()) (jobs I) end
     | Notification {method = "textDocument/didOpen", params} => let
       val {uri, text, version} = JSONDecode.decode textDocumentParams params
+      val () = checkSingleFile uri
       val (v, existed) = withFileInfo (fn fileInfo =>
         case Binarymap.peek (fileInfo, uri) of
           SOME v => (fileInfo, (v, true))

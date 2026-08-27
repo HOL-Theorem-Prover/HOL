@@ -202,6 +202,23 @@ Two things tell you the extension has connected:
 If the status bar says `HOL LSP: exe missing` or `no executable`,
 Step 4 has not taken effect — see Troubleshooting.
 
+### Work on one file at a time
+
+Keep one `*Script.sml` file open at a time, and close a file before
+opening the next one.
+
+The reason is a real limitation, not tidiness.  HOL loads the theories
+your file builds on, and loading a theory *seals* it — nothing can
+re-read it or take it back for the rest of that session.  A second
+file usually needs a different set of theories, and they can no longer
+be arranged, so the second file's goals and error markers come out
+wrong with nothing on screen to say why.
+
+The extension currently runs one HOL for the whole folder, so it
+cannot arrange this for you.  If you do open a second file, HOL warns
+you with a notification.  Emacs users get one HOL per buffer and are
+not affected.
+
 ## Step 6 — Open the HOL Goals pane
 
 Press **`Ctrl+H Ctrl+G`** (on macOS, `Cmd+H Cmd+G`).

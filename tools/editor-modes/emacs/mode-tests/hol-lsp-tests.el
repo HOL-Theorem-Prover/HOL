@@ -35,7 +35,6 @@ LSP caches, run BODY, tear down."
            (hol-lsp-tests--drop-lastmaker ,workdir-var ,holX-var)
            (clrhash hol-lsp--hol-cache)
            (clrhash hol-lsp--heap-cache)
-           (clrhash hol-lsp--project-roots)
            ,@body)
        (delete-directory ,holX-var t))))
 
@@ -68,7 +67,6 @@ LSP caches, run BODY, tear down."
           (hol-lsp-tests--drop-lastmaker workY holY)
           (clrhash hol-lsp--hol-cache)
           (clrhash hol-lsp--heap-cache)
-          (clrhash hol-lsp--project-roots)
           (let* ((pX (with-temp-buffer
                        (setq buffer-file-name
                              (concat workX "fooScript.sml"))
@@ -86,6 +84,61 @@ LSP caches, run BODY, tear down."
             (should-not (equal pX pY))))
       (delete-directory holX t)
       (delete-directory holY t))))
+
+(defun hol-lsp-tests--project-for (dir file)
+  "The project object `hol-lsp--project-try' yields for FILE in DIR."
+  (with-temp-buffer
+    (setq buffer-file-name (concat dir file))
+    (setq major-mode (car hol-lsp-server-modes))
+    (let ((default-directory dir))
+      (hol-lsp--project-try dir))))
+
+(ert-deftest hol-lsp-each-buffer-gets-its-own-project ()
+  "Two scripts in ONE directory must not share a project, and so must
+not share a server: a server is bound to the first file it compiles,
+because loading a theory seals it and a second file's ancestors can
+then neither be re-read nor withdrawn."
+  (let ((dir (file-name-as-directory
+              (make-temp-file "hol-lsp-perbuf-" t))))
+    (unwind-protect
+        (progn
+          (clrhash hol-lsp--hol-cache)
+          (clrhash hol-lsp--heap-cache)
+          (let ((pA (hol-lsp-tests--project-for dir "aScript.sml"))
+                (pB (hol-lsp-tests--project-for dir "bScript.sml")))
+            (should pA)
+            (should pB)
+            (should-not (equal pA pB))))
+      (delete-directory dir t))))
+
+(ert-deftest hol-lsp-same-file-shares-one-project ()
+  "Two buffers visiting the SAME file are still one file, so they
+share a server."
+  (let ((dir (file-name-as-directory
+              (make-temp-file "hol-lsp-perbuf-" t))))
+    (unwind-protect
+        (progn
+          (clrhash hol-lsp--hol-cache)
+          (clrhash hol-lsp--heap-cache)
+          (should (equal (hol-lsp-tests--project-for dir "aScript.sml")
+                         (hol-lsp-tests--project-for dir "aScript.sml"))))
+      (delete-directory dir t))))
+
+(ert-deftest hol-lsp-project-root-is-the-files-own-directory ()
+  "eglot spawns the server with cwd = project root, and
+`get_heap_name' reads the Holmakefile there, so the root must be the
+file's own directory -- not a VC root, and not the file itself."
+  (require 'project)
+  (let ((dir (file-name-as-directory
+              (make-temp-file "hol-lsp-perbuf-" t))))
+    (unwind-protect
+        (progn
+          (clrhash hol-lsp--hol-cache)
+          (clrhash hol-lsp--heap-cache)
+          (let ((p (hol-lsp-tests--project-for dir "aScript.sml")))
+            (should (equal (project-root p) dir))
+            (should (equal (project-name p) "aScript.sml"))))
+      (delete-directory dir t))))
 
 (ert-deftest hol-lsp-server-program-uses-resolved-hol ()
   (hol-lsp-tests--with-alt-install holX workdir

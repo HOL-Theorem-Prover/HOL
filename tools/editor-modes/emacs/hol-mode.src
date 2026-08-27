@@ -2618,6 +2618,15 @@ the surrounding text (as done by ‘hol-do-goal’ and
 ;; directory (they do NOT govern sub-directories), so the LSP project
 ;; root is the buffer's own directory — no upward walk.
 ;;
+;; One server per buffer.  A server process is bound to the first
+;; script it compiles, and cannot be re-aimed at another: loading a
+;; theory seals it (`Theory.load_complete'), and a second file's
+;; ancestors can then neither be re-read nor withdrawn, so the second
+;; file gets a broken environment — wrong goals, dead hovers.  eglot
+;; keys its server table on the project object, so giving each buffer
+;; its own project object gives each buffer its own process.  Each one
+;; holds a HOL heap, hence `hol-lsp-autoshutdown' below.
+;;
 ;; Users opt in by calling `hol-lsp-enable' (e.g. from init.el):
 ;;
 ;;     (with-eval-after-load 'hol-mode (hol-lsp-enable))
@@ -2639,12 +2648,6 @@ route to; delegates to `hol--find-alternate-executable'.")
   "Memo: (absolute-dir . bin/hol) → HOLHEAP that `bin/hol
 heapname' resolves to in that dir.  Two different `bin/hol' for
 the same dir must not collide, hence the pair key.")
-
-(defvar hol-lsp--project-roots (make-hash-table :test 'equal)
-  "Memo: (bin/hol . HOLHEAP) → the first buffer directory that
-resolved to that pair; reused as the LSP server's cwd for
-subsequent buffers sharing the pair.  A distinct HOL install or
-distinct HOLHEAP gets a distinct eglot server.")
 
 (defun hol-lsp--hol-for-dir (dir)
   "Return the absolute `bin/hol' path serving LSP for DIR."
@@ -2677,12 +2680,15 @@ lookup)."
   :group 'hol :type 'boolean)
 
 (defun hol-lsp--project-try (dir)
-  "Group HOL buffers into LSP projects keyed by (bin/hol, HOLHEAP).
-Two files whose lastmaker + Holmakefile resolve to the same pair
-share one eglot server; two files that need different HOLHEAPs
-(typical inside HOL itself and CakeML, where kernel-adjacent dirs
-pin `hol.state0' and downstream dirs use the full `hol.state') or
-that come from different HOL installs get separate servers."
+  "Give each HOL script buffer its own LSP project, and so its own
+server process.  The project object carries the buffer's file name,
+which is what makes it distinct: eglot keys `eglot--servers-by-project'
+on the project with `equal', so two buffers never share a server.
+
+Keying on the file rather than on (bin/hol, HOLHEAP) also subsumes
+what that clustering was for — the server's cwd is the file's own
+directory, so `get_heap_name' reads that directory's Holmakefile and
+each process boots the heap its own file needs."
   (let ((match (and buffer-file-name
                     (memq major-mode hol-lsp-server-modes))))
     (when hol-lsp-project-debug
@@ -2690,36 +2696,46 @@ that come from different HOL installs get separate servers."
        "hol-lsp--project-try: dir=%s buffer=%s mode=%s file=%s match=%s"
        dir (buffer-name) major-mode buffer-file-name (and match t)))
     (when match
-      (let* ((hol (hol-lsp--hol-for-dir dir))
-             (heap (hol-lsp--heap-for-dir dir))
-             (key (cons hol heap)))
-        (unless (gethash key hol-lsp--project-roots)
-          (puthash key dir hol-lsp--project-roots))
+      (let ((file (expand-file-name buffer-file-name)))
         (when hol-lsp-project-debug
-          (message "hol-lsp--project-try: hol=%s heap=%s root=%s"
-                   hol heap (gethash key hol-lsp--project-roots)))
-        (cons 'hol-lsp-project key)))))
+          (message "hol-lsp--project-try: hol=%s heap=%s file=%s"
+                   (hol-lsp--hol-for-dir dir)
+                   (hol-lsp--heap-for-dir dir) file))
+        (cons 'hol-lsp-project file)))))
 
 (with-eval-after-load 'project
   (cl-defmethod project-root ((p (head hol-lsp-project)))
-    (or (gethash (cdr p) hol-lsp--project-roots)
-        default-directory)))
+    (file-name-directory (cdr p)))
+  ;; Without this every server in a directory reports the same name,
+  ;; and the mode line cannot tell ten of them apart.
+  (cl-defmethod project-name ((p (head hol-lsp-project)))
+    (file-name-nondirectory (cdr p))))
 
 (defun hol-lsp--server-program (&rest _args)
   "eglot-server-programs entry: return `(bin/hol lsp)' for the
 current buffer, honouring `.hol/make-deps/lastmaker'."
   (list (hol-lsp--hol-for-dir default-directory) "lsp"))
 
+(defcustom hol-lsp-autoshutdown t
+  "When non-nil, killing a HOL script buffer shuts its LSP server down.
+Each buffer gets its own server, and each server holds a HOL heap, so
+servers that outlive their buffers cost hundreds of megabytes apiece.
+Set buffer-locally over `eglot-autoshutdown', so servers for other
+languages keep whatever policy you chose for them."
+  :group 'hol
+  :type 'boolean)
+
 (defun hol-lsp--setup-buffer ()
   "Configure the current buffer to use the HOL LSP server via eglot."
   (setq-local project-find-functions
               (cons #'hol-lsp--project-try project-find-functions))
+  (setq-local eglot-autoshutdown hol-lsp-autoshutdown)
   (when (fboundp 'eglot-ensure) (eglot-ensure)))
 
 (defun hol-lsp-enable ()
   "Enable eglot-based HOL LSP for buffers in `hol-lsp-server-modes'.
-Registers `bin/hol lsp' as the server command and treats each
-buffer's HOLHEAP-clustered directory as its LSP project."
+Registers `bin/hol lsp' as the server command and gives each script
+buffer its own LSP project, hence its own server process."
   (interactive)
   ;; `hol-lsp--setup-buffer' references `project-find-functions',
   ;; which the built-in `project' package defines; without loading

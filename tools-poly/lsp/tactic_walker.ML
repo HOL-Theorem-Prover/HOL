@@ -37,10 +37,21 @@ open TacticParse
 val holder : Abbrev.tactic option ref = ref NONE
 val listHolder : Abbrev.list_tactic option ref = ref NONE
 
-(* Process-lifetime caches of compiled values, keyed by source text.
-   Per-atom PolyML.compiler invocation dominates walker cost — the
-   point of `hol-lsp-goals-follow-cursor` is that auto-follow
-   keystrokes should feel snappy. *)
+(* Caches of compiled values, keyed by source text.  Per-atom
+   PolyML.compiler invocation dominates walker cost — the point of
+   `hol-lsp-goals-follow-cursor` is that auto-follow keystrokes should
+   feel snappy.
+
+   Their lifetime is one compile, not the process: a compiled tactic
+   closes over the values its names had when it was compiled, and a
+   recompile re-mints every constant the file defines (see `Context`'s
+   note on `restore` — a later `new_definition` produces a fresh
+   kernelid, and the old constant reads as retired).  A closure held
+   across that boundary rewrites with theorems about constants the
+   goal no longer mentions, so a tactic that closed its goal before
+   the edit silently stops closing it after.  Cleared on compile
+   start, below; within one compile they still serve every cursor
+   movement, which is what auto-follow needs. *)
 val compileCache: (string, Abbrev.tactic) Binarymap.dict ref =
   ref (Binarymap.mkDict String.compare)
 val compileLTCache: (string, Abbrev.list_tactic) Binarymap.dict ref =
@@ -320,6 +331,8 @@ val cacheTag : cacheData LSPExtension.tag =
 
 val () = let val prev = !LSPExtension.notifyCompileStart in
   LSPExtension.notifyCompileStart := (fn minEdit => (
+    compileCache := Binarymap.mkDict String.compare;
+    compileLTCache := Binarymap.mkDict String.compare;
     (case (!latestCacheRef, minEdit) of
        (SOME r, SOME edit) =>
          r := Binarymap.foldl
