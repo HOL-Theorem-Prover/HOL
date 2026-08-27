@@ -1,17 +1,22 @@
 Theory bnfRegister
 Ancestors
-  bnfInitial pred_set cardinal
+  bnfInitial bnfFixBNF pred_set cardinal
 Libs
   HolKernel Parse boolLib bossLib bnfBase bnfLib bnfFixLib testutils
 
 (* ----------------------------------------------------------------------
     Turning a type the package defined back into a BNF.
 
-    This is what nested recursion needs: once ‘mylist’ is in the
-    database, a later datatype can recurse through it.  The map and set
-    functions come straight off the recursion principle the package
-    produced, and the four laws by induction over the new type — the
-    same theorems every registered functor is stored with.
+    This is what nested recursion needs: once ‘mylist’ is a functor in
+    the database, a later datatype can recurse through it.  Nothing here
+    is written per datatype — the map and the set function come off the
+    recursion principle and the laws off bnfFixBNFTheory — so what the
+    script checks is that the theorems fixpointBNF derives are the ones
+    a hand proof would have produced.
+
+    The database is extended *in memory*: registering is a separate
+    decision, and an intermediate type that only exists so that a mutual
+    recursion can be built has no business being exported.
    ---------------------------------------------------------------------- *)
 
 val db = bnfBase.fullDB()
@@ -25,116 +30,127 @@ Theorem mylist_induction = valOf (#induction cs)
 Theorem MyCons_11 = valOf (List.last (#one_one cs))
 Theorem mylist_distinct = valOf (hd (#distinct cs))
 
-val mylistMAP_def = Prim_rec.new_recursive_definition {
-  name = "mylistMAP_def", rec_axiom = mylist_axiom,
-  def = “(mylistMAP f MyNil = MyNil) ∧
-         (mylistMAP f (MyCons a l) = MyCons (f a) (mylistMAP f l))”}
-
-val mylistSET_def = Prim_rec.new_recursive_definition {
-  name = "mylistSET_def", rec_axiom = mylist_axiom,
-  def = “(mylistSET MyNil = ∅) ∧
-         (mylistSET (MyCons a l) = a INSERT mylistSET l)”}
-
-val _ = export_rewrites ["mylistMAP_def", "mylistSET_def"]
-
-Theorem mylistMAP_ID:
-  mylistMAP I = I
-Proof
-  simp[FUN_EQ_THM] >> ho_match_mp_tac mylist_induction >> simp[]
-QED
-
-Theorem mylistMAP_O:
-  mylistMAP (f:'c -> 'd) o mylistMAP (g:'b -> 'c) = mylistMAP (f o g)
-Proof
-  simp[FUN_EQ_THM] >> ho_match_mp_tac mylist_induction >> simp[]
-QED
-
-Theorem mylistMAPIMAGE:
-  ∀f l. mylistSET (mylistMAP f l) = IMAGE f (mylistSET l)
-Proof
-  gen_tac >> ho_match_mp_tac mylist_induction >> simp[]
-QED
-
-Theorem mylistMAPCONG:
-  ∀f g l. (∀a. a ∈ mylistSET l ⇒ f a = g a) ⇒
-          mylistMAP f l = mylistMAP g l
-Proof
-  ntac 2 gen_tac >> ho_match_mp_tac mylist_induction >> simp[] >>
-  rpt strip_tac >> gs[]
-QED
-
-(* the elements of a list form a finite, hence countable, set *)
-Theorem mylistSET_FINITE[simp]:
-  ∀l. FINITE (mylistSET l)
-Proof
-  ho_match_mp_tac mylist_induction >> simp[]
-QED
-
-Theorem mylist_bnd:
-  ∀l. mylistSET l ≼ 𝕌(:num)
-Proof
-  gen_tac >> irule cardinalTheory.FINITE_CLE_INFINITE >> simp[]
-QED
-
-(* MyNil's element type has to be pinned to the witness's argument: on
-   its own it is a free type variable, and the database rejects that *)
-Theorem mylist_wit:
-  ∀a:'a1. mylistSET ((K MyNil : 'a1 -> 'a1 mylist) a) = ∅
-Proof
-  simp[]
-QED
-
-(* and stated at the canonical type variable, since the database checks
-   the theorem's variables against the term it is stored with *)
-Theorem mylist_inh:
-  ∀v:'a1. v ∈ mylistSET ((flip MyCons MyNil : 'a1 -> 'a1 mylist) v)
-Proof
-  simp[combinTheory.C_DEF]
-QED
-
-(* the relator; the database stores one for every functor, though the
-   derivation of composites doesn't consume it *)
-val mylistREL_def = Prim_rec.new_recursive_definition {
-  name = "mylistREL_def", rec_axiom = mylist_axiom,
-  def = “(mylistREL R MyNil m ⇔ (m = MyNil)) ∧
-         (mylistREL R (MyCons a l) m ⇔
-            ∃b u. m = MyCons b u ∧ R a b ∧ mylistREL R l u)”}
-
 (* ----------------------------------------------------------------------
-    the registration itself
+    the BNF structure of the new type, derived
    ---------------------------------------------------------------------- *)
 
-fun rnm s : KernelSig.kernelname = {Thy = "bnfRegister", Name = s}
+val mylist_bnf = fixpointBNF bnf fix
+val bnfBase.bI mylist_info = #info mylist_bnf
 
-val _ = bnfBase.updateDB (
-  {Thy = "bnfRegister", Name = "mylist"},
-  bnfBase.bI {
-    bnd = “univ(:num)”,
-    bndthms = [rnm "mylist_bnd"],
-    canontype = “:'a1 mylist”,
+(* the map and the set function are defined by the library, which saves
+   their equations as mylistMAP_def and mylistSET_def *)
+val mylistMAP_def = #map_thm mylist_bnf
+val mylistSET_def = hd (#set_thms mylist_bnf)
 
-    map = “mylistMAP : ('a1 -> 'c1) -> 'a1 mylist -> 'c1 mylist”,
-    mapID = rnm "mylistMAP_ID",
-    mapO = rnm "mylistMAP_O",
-    mapIMAGE = [rnm "mylistMAPIMAGE"],
-    mapCONG = rnm "mylistMAPCONG",
+Theorem mylistMAP_ID = #mapID mylist_info
+Theorem mylistMAP_O = #mapO mylist_info
+Theorem mylistMAPIMAGE = hd (#mapIMAGE mylist_info)
+Theorem mylistMAPCONG = #mapCONG mylist_info
+Theorem mylist_bnd = hd (#bndthms mylist_info)
 
-    relator = “mylistREL : ('a1 -> 'c1 -> bool) ->
-                           'a1 mylist -> 'c1 mylist -> bool”,
-    set = [“mylistSET : 'a1 mylist -> 'a1 set”],
-    siblings = [],
+(* equality up to the naming of type variables: a freshly parsed
+   quotation invents its own *)
+fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
 
-    wits = [(“K MyNil : 'a1 -> 'a1 mylist”, rnm "mylist_wit")],
-    inhabits = [(“flip MyCons MyNil : 'a1 -> 'a1 mylist”, rnm "mylist_inh")]
-  }
-)
+fun checkthm nm th q =
+    (tprint nm;
+     if null (hyp th) andalso same (concl th) q then OK()
+     else die (thm_to_string th))
+
+(* the map is the one the recursion principle gives: the parameter's
+   function on the head, the map itself on the tail *)
+val _ = checkthm "mylist's map" mylistMAP_def
+   “∀f af. mylistMAP f (mylist_CONS af) =
+           mylist_CONS (SUM_MAP I (f ## mylistMAP f) af)”
+
+val _ = checkthm "mylist's map identity law" mylistMAP_ID “mylistMAP I = I”
+val _ = checkthm "mylist's map composition law" mylistMAP_O
+   “mylistMAP f ∘ mylistMAP g = mylistMAP (f ∘ g)”
+val _ = checkthm "mylist's naturality law" mylistMAPIMAGE
+   “∀f l. mylistSET (mylistMAP f l) = IMAGE f (mylistSET l)”
+val _ = checkthm "mylist's congruence law" mylistMAPCONG
+   “∀f g l. (∀a. a ∈ mylistSET l ⇒ f a = g a) ⇒ mylistMAP f l = mylistMAP g l”
+
+(* the bound is the functor's own: a term has no more atoms than F's
+   bound, because it has that many sub-terms and each holds that many *)
+val _ = checkthm "mylist's bound" mylist_bnd “∀l. mylistSET l ≼ 𝕌(:num)”
+
+(* the witness is the base case, and it needs no element of the
+   parameter; MyNil is what it amounts to *)
+val _ = tprint "mylist's witness needs no argument"
+val _ =
+    case #wits mylist_info of
+        [(w,th)] =>
+        if null (hyp th) andalso
+           same (concl th) “∀a:'a1. mylistSET ((^w) a) ⊆ ∅”
+        then OK() else die (thm_to_string th)
+      | _ => die "not one witness"
+
+val _ = tprint "mylist's set function is inhabited"
+val _ =
+    case #inhabits mylist_info of
+        [(t,th)] =>
+        if null (hyp th) andalso
+           same (concl th) “∀v:'a1. v ∈ mylistSET ((^t) v)”
+        then OK() else die (thm_to_string th)
+      | _ => die "not one inhabitation fact"
+
+(* ----------------------------------------------------------------------
+    The constructor-level equations.
+
+    These are what a user would have written the definitions with, and
+    they follow from the composite's set function being unfolded at each
+    summand — the same unfolding defineConstructors does for the
+    set-based induction.  Deriving them belongs with that, and until it
+    is there they are one simplification per datatype.
+   ---------------------------------------------------------------------- *)
+
+val cdefs = #defs cs
+
+(* the set terms are built from predicates, so unfolding them leaves
+   ‘λx. x = a’ and ‘λx. F’ where set notation is wanted *)
+Theorem lam_sing[local]:
+  (λx. x = a) = {a}
+Proof
+  simp[EXTENSION]
+QED
+
+Theorem lam_none[local]:
+  (λx. F) = ∅
+Proof
+  simp[EXTENSION]
+QED
+
+val unfold = [bnfPrelimsTheory.BIMG_EQUAL, bnfPrelimsTheory.BIMG_K0,
+              combinTheory.I_o_ID, combinTheory.S_DEF, combinTheory.o_DEF,
+              combinTheory.K_DEF, pairTheory.setFST_thm,
+              pairTheory.setSND_thm, lam_sing, lam_none, INSERT_UNION_EQ]
+
+Theorem mylistMAP_thm[simp]:
+  (mylistMAP f MyNil = MyNil) ∧
+  (mylistMAP f (MyCons a l) = MyCons (f a) (mylistMAP f l))
+Proof
+  simp (mylistMAP_def :: cdefs)
+QED
+
+Theorem mylistSET_thm[simp]:
+  (mylistSET MyNil = ∅) ∧
+  (mylistSET (MyCons a l) = a INSERT mylistSET l)
+Proof
+  simp (mylistSET_def :: unfold @ cdefs)
+QED
+
+(* ----------------------------------------------------------------------
+    extending the database with what was just derived
+   ---------------------------------------------------------------------- *)
+
+val db = bnfBase.insert (#key mylist_bnf, #info mylist_bnf) db
 
 (* ----------------------------------------------------------------------
     and now a functor may recurse through it
    ---------------------------------------------------------------------- *)
 
-val nested = deriveBNFn (bnfBase.fullDB()) [alpha, “:'b1”]
-                        “:one + 'b1 # 'a mylist”
+val nested = deriveBNFn db [alpha, “:'b1”] “:one + 'b1 # 'a mylist”
 
 val _ = tprint "deriving a functor that recurses under mylist"
 val _ = if List.all (null o hyp)
@@ -170,8 +186,6 @@ Theorem rose_axiom = #axiom rcs
     showing through: the constructor's argument is an F of the type, so
     the function's argument is an F of the results.
    ---------------------------------------------------------------------- *)
-
-fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
 
 val _ = tprint "recursion through the nested map, not replayed clauses"
 val _ =

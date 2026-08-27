@@ -60,6 +60,11 @@ type derived_bnfn = {
                                subset-minimal *)
 }
 
+(* |- P ((\xs. t) xs), from |- P t and the position cnv aims at.  A
+   witness is stored as a function of its arguments, so its theorem has to
+   be about the application rather than about the body. *)
+val unbeta_at : (conv -> conv) -> term list -> term -> thm -> thm
+
 val deriveBNFn : bnfBase.t -> hol_type list -> hol_type -> derived_bnfn
 
 val deriveBNF : bnfBase.t -> hol_type -> derived_bnf

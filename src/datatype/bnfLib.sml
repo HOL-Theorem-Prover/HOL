@@ -761,9 +761,10 @@ fun planWitCands lives bs plan : wcand list =
         end
     end
 
-(* |- t = (λbs. body) bs, aimed at the position the theorem talks about:
-   a witness is stored as a function of its arguments, so its theorem has
-   to be about the application rather than the body *)
+(* |- P ((λbs. t) bs), from |- P t: a witness is stored as a function of
+   its arguments, so its theorem has to be about the application rather
+   than about the body.  cnv aims the rewrite at the occurrence of t; a
+   conversion that searched for it would rewrite its own output. *)
 fun unbeta_at cnv bs tm th =
     let val beta = LIST_BETA_CONV (list_mk_comb(list_mk_abs(bs, tm), bs))
     in
@@ -782,7 +783,8 @@ fun planWits lives bs plan =
                        (n, fn i =>
                              if List.nth (needs, i) then
                                pred_setSyntax.mk_set [List.nth (bs, i)]
-                             else pred_setSyntax.mk_empty (List.nth (lives, i)))
+                             else pred_setSyntax.mk_empty
+                                    (List.nth (lives, i)))
             val restate = unbeta_at (LAND_CONV o RAND_CONV) bs tm
           in
             (list_mk_abs(bs, tm),

@@ -95,11 +95,12 @@ sig
       tyname names the type; ABS and REP name the type definition's
       abstraction and representation functions.
      ---------------------------------------------------------------------- *)
+  type fixpoint = {newty : hol_type, cons : term, cons_def : thm,
+                   recursion : thm, prim_recursion : thm,
+                   set_induction : thm}
+
   val defineFixpoint : {tyname : string, ABS : string, REP : string} ->
-                       bnfLib.derived_bnfn ->
-                       {newty : hol_type, cons : term, cons_def : thm,
-                        recursion : thm, prim_recursion : thm,
-                        set_induction : thm}
+                       bnfLib.derived_bnfn -> fixpoint
 
   (* ----------------------------------------------------------------------
       The datatype's own constructors, and its axiom in the shape the
@@ -116,13 +117,32 @@ sig
       HOL's axiom takes a different shape for it.
      ---------------------------------------------------------------------- *)
   val defineConstructors :
-      string list -> bnfLib.derived_bnfn ->
-      {newty : hol_type, cons : term, cons_def : thm,
-       recursion : thm, prim_recursion : thm, set_induction : thm} ->
+      string list -> bnfLib.derived_bnfn -> fixpoint ->
       {constructors : term list, defs : thm list, axiom : thm,
        legacy_axiom : thm, existential_axiom : thm,
        induction : thm option,   (* NONE for a nested recursion *)
        set_induction : thm,      (* hypothesis: every sub-term in the set *)
        distinct : thm option list, one_one : thm option list}
+
+  (* ----------------------------------------------------------------------
+      The new type as a functor.
+
+      A datatype the package builds is a functor in whatever arguments of
+      the underlying functor were not the recursive one, and everything
+      the BNF database stores about it — a map, a set function per
+      argument, the four laws, a bound, witnesses and inhabitation — comes
+      out of the recursion principle and the laws F was derived with.  The
+      map, the set functions and the relator are defined as constants
+      along the way, named after the type.
+
+      Nothing is registered: the result is a value, which a caller adds to
+      a database with bnfBase.insert or names and records.  The
+      intermediate type a mutual recursion goes through has no business
+      being exported.
+     ---------------------------------------------------------------------- *)
+  val fixpointBNF : bnfLib.derived_bnfn -> fixpoint ->
+                    {key : KernelSig.kernelname,
+                     info : thm bnfBase_dtype.info,
+                     map_thm : thm, set_thms : thm list, relator_def : thm}
 
 end
