@@ -233,3 +233,11 @@ val _ =
                (rsize2 (RNode a l) = 1 + mylistSUM (mylistMAP rsize2 l))”});
      die "accepted")
     handle HOL_ERR _ => OK()
+
+val _ = tprint "set-based induction, split along the constructors"
+val _ =
+    if same (concl (#set_induction rcs))
+            “∀P. P RLeaf ∧
+                 (∀a l. (∀y. y ∈ mylistSET l ⇒ P y) ⇒ P (RNode a l)) ⇒
+                 ∀r. P r”
+    then OK() else die (thm_to_string (#set_induction rcs))

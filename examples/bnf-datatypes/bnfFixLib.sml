@@ -558,6 +558,20 @@ fun defineConstructors names bnf fix =
            induction principle is the set-based one anyway — the
            hypothesis is "for every sub-term in the set" — so this is
            left as NONE rather than forced. *)
+        (* the set-based induction, split along the constructors: the
+           hypothesis becomes "for every sub-term in the set", which is
+           the form a nested recursion keeps *)
+        val set_induction =
+            REWRITE_RULE (map (GSYM o #def) cs)
+              (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV
+                 (PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
+                                     combinTheory.I_o_ID] THENC
+                  simpLib.SIMP_CONV (BasicProvers.srw_ss())
+                    [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
+                     oneTheory.FORALL_ONE, combinTheory.S_DEF,
+                     combinTheory.o_DEF, combinTheory.K_DEF,
+                     pairTheory.setFST_thm, pairTheory.setSND_thm])))
+                 (#set_induction fix))
         val induction = SOME (Prim_rec.prove_induction_thm legacy)
                         handle HOL_ERR _ => NONE
         (* the derivations of distinctness and injectivity want the plain
@@ -567,6 +581,7 @@ fun defineConstructors names bnf fix =
     in
       {constructors = map #cons cs, defs = map #def cs, axiom = axiom,
        legacy_axiom = legacy, induction = induction,
+       set_induction = set_induction,
        existential_axiom = existential,
        distinct = Prim_rec.prove_constructors_distinct existential,
        one_one = Prim_rec.prove_constructors_one_one existential}

@@ -117,6 +117,7 @@ sig
       {constructors : term list, defs : thm list, axiom : thm,
        legacy_axiom : thm, existential_axiom : thm,
        induction : thm option,   (* NONE for a nested recursion *)
+       set_induction : thm,      (* hypothesis: every sub-term in the set *)
        distinct : thm option list, one_one : thm option list}
 
 end
