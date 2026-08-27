@@ -103,4 +103,87 @@ fun MapCongThm bnf (t1,t2) =
       byDefn MapCong_def [mapOp bnf (t1,t2), setOp bnf t1] (GENL [f,g,x] th)
     end
 
+
+(* ----------------------------------------------------------------------
+    The bound as an ordinal.
+
+    The BNF's own bound is a set; the cardinality argument wants an
+    ordinal whose predecessors match it.  One exists because the set
+    embeds in a whole type, and the choice term names it without
+    introducing a constant.
+   ---------------------------------------------------------------------- *)
+
+fun boundOrdinal bnf =
+    let val B = #bnd bnf
+        val bty = #1 (dom_rng (type_of B))
+        val leUNIV = ISPEC B CARDLEQ_UNIV
+        val leSUM = INST_TYPE [alpha |-> numSyntax.num, beta |-> bty]
+                              bnfPrelimsTheory.UNIV_CARD_LE_ADDL
+        val le = MATCH_MP cardinalTheory.cardleq_TRANS (CONJ leUNIV leSUM)
+        val th = SELECT_RULE (MATCH_MP ordinalBasicTheory.cardeq_ordinals_exist
+                                       le)
+        val bd = rand (rand (rator (concl th)))
+    in
+      {bd = bd, cardeq = th,
+       omega_le = MATCH_MP cardeq_preds_omega (CONJ (#bndINFINITE bnf) th)}
+    end
+
+fun setBoundThm bnf bd ty =
+    let val cardeq = #cardeq (boundOrdinal bnf)
+        val x = mk_var("x", functorAt bnf ty)
+        val bounded = SPEC x (INST_TYPE [alpha |-> ty] (#bndthm bnf))
+    in
+      GEN x (MATCH_MP cardeq_preds_bound (CONJ cardeq bounded))
+    end
+
+
+(* ----------------------------------------------------------------------
+    The cardinality bound.
+
+    MINSET_CARDLEQ wants the laws at three instances: the carrier, the
+    carrier with a point added, and the ordinals bounding F's sets.
+   ---------------------------------------------------------------------- *)
+
+fun nontrivialThm bnf ty =
+    let val (w,th) = case #nontrivial bnf of
+                         SOME p => p
+                       | NONE => raise ERR "nontrivialThm"
+                                       "the functor has no non-trivial set"
+        val th = INST_TYPE [alpha |-> ty] th
+        val w = Term.inst [alpha |-> ty] w
+        val x = mk_var("x", functorAt bnf ty)
+    in
+      EXISTS (mk_exists (x, subst [w |-> x] (concl th)), w) th
+    end
+
+fun minsetBound bnf ty =
+    let val {bd, omega_le, ...} = boundOrdinal bnf
+        val ordty = type_of bd
+        val abty = sumSyntax.mk_sum (ty, bool)
+        val laws = LIST_CONJ [MapIdThm bnf ty,
+                              MapCongThm bnf (ty,ty),
+                              NaturalThm bnf (ty,abty),
+                              MapCompThm bnf (ty,abty,ty),
+                              MapIdThm bnf abty,
+                              MapCongThm bnf (abty,abty),
+                              NaturalThm bnf (abty,ordty),
+                              NaturalThm bnf (ordty,abty),
+                              MapCompThm bnf (abty,ordty,abty),
+                              NaturalThm bnf (ordty,ordty),
+                              nontrivialThm bnf ordty,
+                              omega_le,
+                              setBoundThm bnf bd ty,
+                              setBoundThm bnf bd abty]
+        val th = MATCH_MP MINSET_CARDLEQ laws
+        (* and from the bounding set to the whole type it sits in *)
+        val s = mk_var("s", functorAt bnf ty --> ty)
+        val th = SPEC s th
+        val bset = rand (concl th)
+        val carrier = #1 (dom_rng (type_of bset))
+        val th = GEN s (MATCH_MP cardinalTheory.cardleq_TRANS
+                                 (CONJ th (ISPEC bset CARDLEQ_UNIV)))
+    in
+      {carrier = carrier, thm = th}
+    end
+
 end

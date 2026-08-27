@@ -777,9 +777,25 @@ QED
 (* the step from the bound to a whole type, which is the form the
    construction's hypothesis takes *)
 Theorem CARDLEQ_UNIV[simp]:
-  (s : 'a set) ≼ 𝕌(:'a)
+  ∀s : 'a set. s ≼ 𝕌(:'a)
 Proof
-  irule SUBSET_CARDLEQ >> simp[]
+  gen_tac >> irule SUBSET_CARDLEQ >> simp[]
+QED
+
+(* getting from F's own bound, which is a set, to an ordinal one *)
+Theorem cardeq_preds_omega:
+  INFINITE B ∧ preds (bd:'g ordinal) ≈ B ⇒ ω ≤ bd
+Proof
+  strip_tac >> irule omega_LEQ_INFINITE_preds >>
+  metis_tac[CARD_FINITE_CONG]
+QED
+
+Theorem cardeq_preds_bound:
+  preds (bd:'g ordinal) ≈ (B:'b set) ∧ (s:'s set) ≼ B ⇒ s ≼ preds bd
+Proof
+  strip_tac >> irule (INST_TYPE [beta |-> “:'b”] cardleq_TRANS) >>
+  qexists_tac ‘B’ >> simp[] >> irule CARDEQ_IMP_CARDLEQ >>
+  simp[Once cardeq_SYM]
 QED
 
 Theorem MINSET_CARDLEQ:

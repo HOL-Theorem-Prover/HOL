@@ -36,4 +36,21 @@ sig
   (* |- MapCong (mapOp bnf (a,b)) (setOp bnf a) *)
   val MapCongThm : bnfLib.derived_bnf -> hol_type * hol_type -> thm
 
+  (* An ordinal as big as the functor's own bound: the term bd, and
+        |- preds bd = ~ <the bound>,  |- w <= bd
+     The ordinal is a choice term, so no constant is introduced. *)
+  val boundOrdinal : bnfLib.derived_bnf -> {bd : term, cardeq : thm,
+                                            omega_le : thm}
+
+  (* |- !x. setOp bnf ty x <<= preds bd *)
+  val setBoundThm : bnfLib.derived_bnf -> term -> hol_type -> thm
+
+  (* The cardinality bound the construction runs on: a type big enough
+     to hold every minimal algebra over ty, and
+        |- !s. MINSET (setOp bnf ty) s <<= univ(:carrier)
+     ty is normally left a type variable, so that the theorem covers
+     every carrier at once. *)
+  val minsetBound : bnfLib.derived_bnf -> hol_type ->
+                    {carrier : hol_type, thm : thm}
+
 end
