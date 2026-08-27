@@ -43,15 +43,21 @@ type derived_bnfn = {
   bndINFINITE : thm,
   bndthms : thm list,       (* |- !x. setᵢ x <<= bnd, one per argument *)
   components : info HOLset.set,
+  inhabits : (term * thm) option list,
+                            (* (inhᵢ, |- !v. v IN setᵢ (inhᵢ v)), NONE if
+                               argument i doesn't occur *)
   lives : hol_type list,    (* the arguments, in the order map takes them *)
   mapCONG : thm,            (* hypotheses conjoined, one per argument *)
   mapID : thm,              (* |- map I .. I = I *)
   mapIMAGE : thm list,      (* |- setᵢ o map f₁..fₙ = IMAGE fᵢ o setᵢ *)
   mapO : thm,
   mkmap : term list -> term,
-  nontrivial : (term * thm) option list,
   sets : term list,
-  wits : (term * thm) option list
+  wits : (term * thm) list  (* (w, |- !a⃗. set₁ (w a⃗) SUBSET W₁ /\ ...),
+                               each Wᵢ either {aᵢ} or {}: the witnesses,
+                               in the form the database stores them, and
+                               pruned to those whose demands are
+                               subset-minimal *)
 }
 
 val deriveBNFn : bnfBase.t -> hol_type list -> hol_type -> derived_bnfn

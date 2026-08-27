@@ -596,14 +596,24 @@ fun planMapCONG lives (fs,gs) plan =
 (* ----------------------------------------------------------------------
     nonemptiness.
 
-    Constructing a fixed point for the composite needs two facts beyond
-    the BNF laws: that the composite has an element whose set is empty
-    (otherwise the algebra over ∅ is itself empty, and the fixed point
-    can't be built), and that its set is not *always* empty (otherwise
-    the fixed point is trivial).  Both come out of the witnesses each
-    component functor was registered with, composed the same way the map
-    and set terms are: see Blanchette, Popescu and Traytel, "Witnessing
-    (Co)datatypes", ESOP 2015.
+    Two facts beyond the BNF laws have to be derived, and both are
+    recorded in the form the database stores them in, so that a composite
+    can be built out of them again.
+
+    A witness takes one argument per live argument and says which of them
+    it actually needed: setᵢ of it is bounded either by ∅ or by the
+    singleton of the argument it was given.  Read as a proof of
+    nonemptiness, it says "given elements of these arguments, here is an
+    element of the composite" — and a witness needing no arguments at all
+    is exactly what the fixed-point construction wants for a base case.
+    Several witnesses can be worth keeping, since which is strongest
+    depends on which arguments turn out to be inhabited; only the
+    ones whose demands are subset-minimal are.  See Blanchette, Popescu
+    and Traytel, "Witnessing (Co)datatypes", ESOP 2015.
+
+    Inhabitation goes the other way: for each argument, a term with that
+    argument's element inside it, which is what makes the composite
+    non-constant in that argument.
    ---------------------------------------------------------------------- *)
 
 fun actual_of ({sub,...}:fkid) = planTy sub
@@ -616,64 +626,170 @@ fun inst_wit (wtm, wth) actuals ty =
       (Term.inst theta wtm, INST_TYPE theta wth)
     end
 
-(* (w, |- set w = ∅), when the composite has such a w.  It doesn't when
-   an element can't be built without supplying the functor's argument, as
-   in ‘:'a # 'a option’; there every element's set is inhabited. *)
-fun planWitness lives i plan =
-    let val vi = List.nth (lives, i)
-        fun constwit ty =
-            let val w = mk_arb ty
-            in
-              SOME (w, inst_thm K0_EMPTY
-                                (mk_eq(mk_comb(K0e vi ty, w),
-                                       pred_setSyntax.mk_empty vi)))
-            end
+(* A candidate witness for the composite: its term, with the argument
+   variables free in it; the arguments it needs, one flag per live
+   argument; and a derivation of  setᵢ tm ⊆ Wᵢ  for each i, at bounds the
+   caller supplies.
+
+   The bounds have to be a parameter rather than read off the candidate's
+   own flags, because a sub-term need not need an argument that the whole
+   witness does.  Every node's lemma is general in the bound; the only
+   place it is forced is the leaf where the argument itself sits. *)
+type wcand = {tm : term, needs : bool list, thms : term list -> thm list}
+
+fun subset_goal settm tm W =
+    pred_setSyntax.mk_subset(mk_comb(settm, tm), W)
+
+(* a candidate needing fewer arguments is strictly better, and a node's
+   demands are the union of its parts', so only the subset-minimal
+   signatures can matter *)
+fun sig_le (s1,s2) = ListPair.all (fn (a,b) => not a orelse b) (s1,s2)
+fun prune (cands : wcand list) =
+    let fun keep (c, acc) =
+            if List.exists (fn c' => sig_le (#needs c', #needs c)) acc then acc
+            else c :: List.filter (fn c' => not (sig_le (#needs c, #needs c')))
+                                  acc
+    in
+      List.rev (List.foldl keep [] cands)
+    end
+
+fun combinations [] = [[]]
+  | combinations (xs::rest) =
+    let val tails = combinations rest
+    in
+      List.concat (List.map (fn x => List.map (fn t => x::t) tails) xs)
+    end
+
+fun planWitCands lives bs plan : wcand list =
+    let
+      val n = length lives
+      fun leaf tm which =
+          let fun thms Ws =
+                  List.tabulate
+                    (n, fn i =>
+                          let val goal = subset_goal (planSet lives i plan) tm
+                                                     (List.nth (Ws, i))
+                          in
+                            if which = SOME i then inst_thm EQ_SUBSET goal
+                            else inst_thm K0_SUBSET goal
+                          end)
+          in
+            [{tm = tm, needs = List.tabulate (n, fn i => which = SOME i),
+              thms = thms}]
+          end
     in
     case plan of
-        FPvar (j,ty) => if i = j then NONE else constwit ty
-      | FPconst ty => constwit ty
+        FPvar (j,_) => leaf (List.nth (bs, j)) (SOME j)
+      | FPconst ty => leaf (mk_arb ty) NONE
       | FPnode {info = bI inf, kids, ty} =>
         let
           val actuals = List.map actual_of kids
+          val nkids = length kids
           fun tryWit wit =
               let
                 val (wtm, wth) = inst_wit wit actuals ty
-                (* which of the functor's arguments this witness needs *)
-                val needs = List.map (not o pred_setSyntax.is_empty o rand)
-                                     (strip_conj (concl (SPEC_ALL wth)))
-                (* an argument to pass, and a proof that everything the
-                   node's set function can produce there has empty set *)
-                fun kidarg (needed, kid as {sub,...} : fkid) =
-                    if needed then
-                      case planWitness lives i sub of
-                          NONE => NONE
-                        | SOME (t,th) => SOME (t, MATCH_MP SING_ALL th)
-                    else
-                      SOME (mk_arb (actual_of kid),
-                            ISPEC (planSet lives i sub) EMPTY_ALL)
-                val kidargs = ListPair.mapEq kidarg (needs, kids)
+                (* which of the node's own arguments this witness needs *)
+                val needed = List.map (not o pred_setSyntax.is_empty o rand)
+                                      (strip_conj (concl (SPEC_ALL wth)))
+                (* NONE for an argument the witness doesn't need: nothing
+                   the node's set function produces there is looked at *)
+                val choices =
+                    ListPair.mapEq
+                      (fn (nd, {sub,...} : fkid) =>
+                          if nd then
+                            List.map SOME (prune (planWitCands lives bs sub))
+                          else [NONE])
+                      (needed, kids)
+                fun mkcand chosen =
+                    let
+                      val args =
+                          ListPair.mapEq
+                            (fn (SOME (c:wcand), _) => #tm c
+                              | (NONE, kid) => mk_arb (actual_of kid))
+                            (chosen, kids)
+                      val tm = list_mk_comb(wtm, args)
+                      fun needsOf i =
+                          List.exists
+                            (fn SOME (c:wcand) => List.nth (#needs c, i)
+                              | NONE => false)
+                            chosen
+                      fun thms Ws =
+                          let
+                            val conjs = CONJUNCTS (SPECL args wth)
+                            val kidthms =
+                                List.map (Option.map (fn c => #thms c Ws))
+                                         chosen
+                            fun kidthm i (conj, (kth, {sub,...}:fkid)) =
+                                let
+                                  val prem =
+                                      case kth of
+                                          SOME ths =>
+                                            MATCH_MP SING_ALL
+                                                     (List.nth (ths, i))
+                                        | NONE =>
+                                            ISPECL [planSet lives i sub,
+                                                    List.nth (Ws, i)]
+                                                   EMPTY_ALL
+                                in
+                                  MATCH_MP BIMGo_SUBSET (CONJ conj prem)
+                                end
+                            fun argthm i =
+                                let
+                                  val kths =
+                                      List.map (kidthm i)
+                                        (ListPair.zipEq
+                                           (conjs,
+                                            ListPair.zipEq (kidthms, kids)))
+                                in
+                                  List.foldl
+                                    (fn (t,A) =>
+                                        MATCH_MP LU_SUBSET (CONJ A t))
+                                    (hd kths) (tl kths)
+                                end
+                          in
+                            List.tabulate (n, argthm)
+                          end
+                    in
+                      {tm = tm, needs = List.tabulate (n, needsOf),
+                       thms = thms} : wcand
+                    end
               in
-                if List.exists (not o isSome) kidargs then NONE
-                else
-                  let
-                    val kas = List.map valOf kidargs
-                    val args = List.map #1 kas
-                    val kths =
-                        ListPair.mapEq
-                          (fn (c, (_,prem)) =>
-                              MATCH_MP BIMGo_EMPTY (CONJ c prem))
-                          (CONJUNCTS (SPECL args wth), kas)
-                    fun combine (t,A) = MATCH_MP LU_EMPTY (CONJ A t)
-                  in
-                    SOME (list_mk_comb(wtm, args),
-                          List.foldl combine (hd kths) (tl kths))
-                  end
+                List.map mkcand (combinations choices)
               end
-          fun firstOK [] = NONE
-            | firstOK (w::ws) = (case tryWit w of NONE => firstOK ws | r => r)
         in
-          firstOK (#wits inf)
+          prune (List.concat (List.map tryWit (#wits inf)))
         end
+    end
+
+(* |- t = (λbs. body) bs, aimed at the position the theorem talks about:
+   a witness is stored as a function of its arguments, so its theorem has
+   to be about the application rather than the body *)
+fun unbeta_at cnv bs tm th =
+    let val beta = LIST_BETA_CONV (list_mk_comb(list_mk_abs(bs, tm), bs))
+    in
+      CONV_RULE (cnv (K (SYM beta))) th
+    end
+
+(* the composite's witnesses, in the form the database stores:
+     w : α₁ → ... → αₙ → C, and
+     |- ∀a₁ .. aₙ. set₁ (w a⃗) ⊆ W₁ ∧ ... ∧ setₙ (w a⃗) ⊆ Wₙ  *)
+fun planWits lives bs plan =
+    let
+      val n = length lives
+      fun finish ({tm, needs, thms} : wcand) =
+          let
+            val Ws = List.tabulate
+                       (n, fn i =>
+                             if List.nth (needs, i) then
+                               pred_setSyntax.mk_set [List.nth (bs, i)]
+                             else pred_setSyntax.mk_empty (List.nth (lives, i)))
+            val restate = unbeta_at (LAND_CONV o RAND_CONV) bs tm
+          in
+            (list_mk_abs(bs, tm),
+             GENL bs (LIST_CONJ (List.map restate (thms Ws))))
+          end
+    in
+      List.map finish (prune (planWitCands lives bs plan))
     end
 
 (* the partial results of the left-associated fold that planSet uses to
@@ -685,12 +801,17 @@ fun partialsOf lifted =
       List.foldl go [] lifted
     end
 
-(* (t, |- set t <> ∅), when the composite isn't constant *)
-fun planNontrivial lives i plan =
+(* (t, |- v ∈ setᵢ t) with v the i-th argument variable, when the
+   composite's i-th set function isn't empty everywhere *)
+fun planInhabit lives bs i plan =
+    let val v = List.nth (bs, i)
+    in
     case plan of
-        FPvar (j,ty) =>
-          if i = j then let val a = mk_arb ty
-                        in SOME (a, ISPEC a EQ_NONEMPTY) end
+        FPvar (j,_) =>
+          if i = j then
+            SOME (v, inst_thm EQ_IN
+                              (pred_setSyntax.mk_in
+                                 (v, mk_comb(planSet lives i plan, v))))
           else NONE
       | FPconst _ => NONE
       | FPnode {info = bI inf, kids, ty} =>
@@ -699,17 +820,18 @@ fun planNontrivial lives i plan =
               mk_BIMGo (planSet lives i sub, set)
           val lifted = List.map lift kids
           val ps = partialsOf lifted
-          val n = length kids
+          val nkids = length kids
           fun climb (m, x, th) =
               (* th is about the m'th partial fold applied to x *)
-              if m >= n then th
+              if m >= nkids then th
               else
                 climb (m + 1, x,
-                       MP (ISPECL [List.nth(ps, m-1), List.nth(lifted, m), x]
-                                  LU_NONEMPTY1)
+                       MP (ISPECL [List.nth(ps, m-1), List.nth(lifted, m),
+                                   x, v]
+                                  LU_IN1)
                           th)
-          fun tryKid (j, kid as {set,sub,...} : fkid, inh) =
-              case planNontrivial lives i sub of
+          fun tryKid (j, kid as {sub,...} : fkid, inh) =
+              case planInhabit lives bs i sub of
                   NONE => NONE
                 | SOME (t, th) =>
                   let
@@ -717,12 +839,12 @@ fun planNontrivial lives i plan =
                                            (actual_of kid --> ty)
                     val x = mk_comb(Term.inst theta (#1 inh), t)
                     val inhth = SPEC t (INST_TYPE theta (#2 inh))
-                    val base = MATCH_MP BIMGo_NONEMPTY (CONJ inhth th)
+                    val base = MATCH_MP BIMGo_IN (CONJ inhth th)
                     val atj =
                         if j = 1 then base
                         else MP (ISPECL [List.nth(ps, j-2),
-                                         List.nth(lifted, j-1), x]
-                                        LU_NONEMPTY2)
+                                         List.nth(lifted, j-1), x, v]
+                                        LU_IN2)
                                 base
                   in
                     SOME (x, climb (j, x, atj))
@@ -732,10 +854,23 @@ fun planNontrivial lives i plan =
               (case tryKid (j, k, inh) of
                    NONE => firstOK (j+1, ks, inhs)
                  | r => r)
-            | firstOK _ = raise ERR "planNontrivial"
+            | firstOK _ = raise ERR "planInhabit"
                                 "no inhabits entry for a set function"
         in
           firstOK (1, kids, #inhabits inf)
+        end
+    end
+
+(* the composite's inhabitation facts, in the form the database stores:
+     inhᵢ : αᵢ → C, and |- ∀v. v ∈ setᵢ (inhᵢ v)  *)
+fun planInhabits lives bs i plan =
+    case planInhabit lives bs i plan of
+        NONE => NONE
+      | SOME (tm, th) =>
+        let val v = List.nth (bs, i)
+            val restate = unbeta_at (RAND_CONV o RAND_CONV) [v] tm
+        in
+          SOME (mk_abs(v, tm), GEN v (restate th))
         end
 
 (* ----------------------------------------------------------------------
@@ -776,15 +911,18 @@ type derived_bnfn = {
   bndINFINITE : thm,
   bndthms : thm list,
   components : info HOLset.set,
-  lives : hol_type list,
-  mapCONG : thm,
-  mapID : thm,
-  mapIMAGE : thm list,
+  inhabits : (term * thm) option list,
+                            (* (inhᵢ, |- !v. v IN setᵢ (inhᵢ v)), if
+                               argument i occurs at all *)
+  lives : hol_type list,    (* the arguments, in the order map takes them *)
+  mapCONG : thm,            (* hypotheses conjoined, one per argument *)
+  mapID : thm,              (* |- map I .. I = I *)
+  mapIMAGE : thm list,      (* |- setᵢ o map f₁..fₙ = IMAGE fᵢ o setᵢ *)
   mapO : thm,
   mkmap : term list -> term,
-  nontrivial : (term * thm) option list,
   sets : term list,
-  wits : (term * thm) option list
+  wits : (term * thm) list  (* (w, |- !a⃗. set₁ (w a⃗) SUBSET W₁ /\ ...),
+                               in the form the database stores them *)
 }
 
 fun deriveBNFn db lives ty : derived_bnfn =
@@ -811,6 +949,9 @@ fun deriveBNFn db lives ty : derived_bnfn =
       val fs_ab = numbered "f" (ListPair.mapEq (op -->) (lives, bs))
       val gs_ab = numbered "g" (ListPair.mapEq (op -->) (lives, bs))
       val fs_bc = numbered "f" (ListPair.mapEq (op -->) (bs, cs))
+      (* the witnesses' arguments: one per live argument, whether or not
+         a given witness uses it *)
+      val as_ = numbered "a" lives
       val (B, bndINF, bndthms) = planBnd lives plan
     in
       {bnd = B, bndINFINITE = bndINF, bndthms = bndthms,
@@ -822,9 +963,43 @@ fun deriveBNFn db lives ty : derived_bnfn =
                     (n, fn i => planMapIMAGE lives i (fs_ab, instB) plan),
        mapO = planMapO lives (fs_bc, gs_ab) plan,
        mkmap = planMap lives plan,
-       nontrivial = List.tabulate (n, fn i => planNontrivial lives i plan),
+       inhabits = List.tabulate (n, fn i => planInhabits lives as_ i plan),
        sets = List.tabulate (n, fn i => planSet lives i plan),
-       wits = List.tabulate (n, fn i => planWitness lives i plan)}
+       wits = planWits lives as_ plan}
+    end
+
+(* An element of the composite whose set is empty, as the fixed-point
+   construction wants it: a witness that needs no arguments at all, with
+   ARB supplied for the argument it takes anyway. *)
+fun ground_wit wits =
+    let
+      fun needsNothing (_,th) =
+          pred_setSyntax.is_empty (#2 (pred_setSyntax.dest_subset
+                                         (concl (SPEC_ALL th))))
+    in
+      case List.find needsNothing wits of
+          NONE => NONE
+        | SOME (w,th) =>
+          let
+            val th = CONV_RULE (LAND_CONV (RAND_CONV BETA_CONV))
+                               (SPEC (mk_arb (#1 (dom_rng (type_of w)))) th)
+            val (A,_) = pred_setSyntax.dest_subset (concl th)
+          in
+            SOME (rand A, EQ_MP (ISPEC A pred_setTheory.SUBSET_EMPTY) th)
+          end
+    end
+
+(* and an element whose set isn't empty, from the inhabitation fact *)
+fun ground_nontrivial NONE = NONE
+  | ground_nontrivial (SOME (inh,th)) =
+    let
+      val th = CONV_RULE (RAND_CONV (RAND_CONV BETA_CONV))
+                         (SPEC (mk_arb (#1 (dom_rng (type_of inh)))) th)
+      val (v,A) = pred_setSyntax.dest_in (concl th)
+      val x = mk_var("x", type_of v)
+      val ex = EXISTS (mk_exists(x, pred_setSyntax.mk_in(x,A)), v) th
+    in
+      SOME (rand A, EQ_MP (ISPEC A pred_setTheory.MEMBER_NOT_EMPTY) ex)
     end
 
 (* the one-argument view, which is what the fixed-point construction
@@ -836,8 +1011,8 @@ fun deriveBNF db ty : derived_bnf =
        components = #components b, mapCONG = #mapCONG b, mapID = #mapID b,
        mapIMAGE = hd (#mapIMAGE b), mapO = #mapO b,
        mkmap = (fn f => #mkmap b [f]),
-       nontrivial = hd (#nontrivial b), set = hd (#sets b),
-       wit = hd (#wits b)}
+       nontrivial = ground_nontrivial (hd (#inhabits b)), set = hd (#sets b),
+       wit = ground_wit (#wits b)}
     end
 
 end (* struct *)

@@ -188,62 +188,76 @@ QED
 
 (* ----------------------------------------------------------------------
     Results supporting the compositional derivation of a composite
-    functor's nonemptiness witnesses, and of the fact that it is not
-    constant (i.e., that its set function is not always empty).
+    functor's nonemptiness witnesses, and of the fact that each of its
+    arguments is inhabited.
+
+    A witness takes one argument per genuine type variable and its
+    theorem bounds each of the composite's set functions either by ∅ (the
+    witness didn't need that argument) or by the singleton of the
+    argument it was given.  So the lemmas below are stated with an
+    arbitrary bounding set: each says how bounds on a node's parts bound
+    the whole, and the bound only becomes a singleton at the leaf where
+    the argument itself sits.
    ---------------------------------------------------------------------- *)
 
-Theorem K0_EMPTY:
-  ∀x:'b. (K ∅ : 'b -> 'a set) x = ∅
+Theorem K0_SUBSET:
+  ∀W x:'b. (K ∅ : 'b -> 'a set) x ⊆ W
 Proof
   simp[]
 QED
 
+Theorem EQ_SUBSET:
+  ∀a:'a. $= a ⊆ {a}
+Proof
+  simp[EQ_SING]
+QED
+
 Theorem EMPTY_ALL:
-  ∀s:'b -> 'a set. ∀w. w ∈ (∅ : 'b set) ⇒ s w = ∅
+  ∀(s:'b -> 'a set) W. ∀w. w ∈ (∅ : 'b set) ⇒ s w ⊆ W
 Proof
   simp[]
 QED
 
 Theorem SING_ALL:
-  ∀(s:'b -> 'a set) a. s a = ∅ ⇒ ∀w. w ∈ {a} ⇒ s w = ∅
+  ∀(s:'b -> 'a set) a W. s a ⊆ W ⇒ ∀w. w ∈ {a} ⇒ s w ⊆ W
 Proof
   simp[]
 QED
 
-Theorem BIMGo_EMPTY:
-  ∀s st x W. st x ⊆ W ∧ (∀w. w ∈ W ⇒ s w = ∅) ⇒ (BIMG s o st) x = ∅
+Theorem BIMGo_SUBSET:
+  ∀s st x V W. st x ⊆ V ∧ (∀w. w ∈ V ⇒ s w ⊆ W) ⇒ (BIMG s o st) x ⊆ W
 Proof
-  simp[EXTENSION, PULL_EXISTS, SUBSET_DEF] >> metis_tac[NOT_IN_EMPTY]
+  simp[PULL_EXISTS, SUBSET_DEF] >> metis_tac[]
 QED
 
-Theorem LU_EMPTY:
-  ∀a b x. a x = ∅ ∧ b x = ∅ ⇒ S ($UNION o a) b x = ∅
+Theorem LU_SUBSET:
+  ∀a b x W. a x ⊆ W ∧ b x ⊆ W ⇒ S ($UNION o a) b x ⊆ W
 Proof
   simp[combinTheory.S_THM]
 QED
 
-Theorem EQ_NONEMPTY:
-  ∀x:'a. $= x ≠ ∅
+Theorem EQ_IN:
+  ∀v:'a. v ∈ $= v
 Proof
-  simp[EXTENSION, IN_equal] >> metis_tac[]
+  simp[IN_equal]
 QED
 
-Theorem BIMGo_NONEMPTY:
-  ∀s st x t. t ∈ st x ∧ s t ≠ ∅ ⇒ (BIMG s o st) x ≠ ∅
+Theorem BIMGo_IN:
+  ∀s st x t v. t ∈ st x ∧ v ∈ s t ⇒ v ∈ (BIMG s o st) x
 Proof
-  simp[EXTENSION, PULL_EXISTS] >> metis_tac[]
+  simp[PULL_EXISTS] >> metis_tac[]
 QED
 
-Theorem LU_NONEMPTY1:
-  ∀a b x. a x ≠ ∅ ⇒ S ($UNION o a) b x ≠ ∅
+Theorem LU_IN1:
+  ∀a b x v. v ∈ a x ⇒ v ∈ S ($UNION o a) b x
 Proof
-  simp[combinTheory.S_THM, EXTENSION] >> metis_tac[]
+  simp[combinTheory.S_THM]
 QED
 
-Theorem LU_NONEMPTY2:
-  ∀a b x. b x ≠ ∅ ⇒ S ($UNION o a) b x ≠ ∅
+Theorem LU_IN2:
+  ∀a b x v. v ∈ b x ⇒ v ∈ S ($UNION o a) b x
 Proof
-  simp[combinTheory.S_THM, EXTENSION] >> metis_tac[]
+  simp[combinTheory.S_THM]
 QED
 
 (* ----------------------------------------------------------------------

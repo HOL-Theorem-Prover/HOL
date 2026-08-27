@@ -181,6 +181,7 @@ Theorem bnfDerive_ran = boolTheory.TRUTH
 
 val a1 = mk_vartype "'a1"
 val a2 = mk_vartype "'a2"
+val b1 = mk_vartype "'b1"
 
 fun lawsOKn lives (d : bnfLib.derived_bnfn) =
     let
@@ -278,4 +279,93 @@ val _ =
          can (match_term set1) (rator l)
       then OK()
       else die (thm_to_string pw)
+    end
+
+(* ----------------------------------------------------------------------
+    Witnesses and inhabitation, in the form the database stores them: a
+    witness takes one argument per live argument and its theorem records
+    which of them it needed, and each argument has a term with an element
+    of that argument inside it.  Registering a functor the package builds
+    needs both in exactly this form.
+   ---------------------------------------------------------------------- *)
+
+fun witShapeOK lives (d : bnfLib.derived_bnfn) =
+    let
+      val n = length lives
+      val {sets, wits, inhabits, ...} = d
+      val ty = #1 (dom_rng (type_of (hd sets)))
+      fun witOK (w, th) =
+          let
+            val args = #1 (strip_forall (concl th))
+            val app = list_mk_comb (w, args)
+            (* one argument per live argument, landing in the type *)
+            val tyOK = null (free_vars w) andalso
+                       length args = n andalso type_of app = ty andalso
+                       ListPair.all (fn (a,v) => type_of a = v) (args, lives)
+            fun conjOK (i, c) =
+                let val (l, r) = pred_setSyntax.dest_subset c
+                    val ai = List.nth (args, i)
+                in
+                  aconv l (mk_comb (List.nth (sets, i), app)) andalso
+                  (pred_setSyntax.is_empty r orelse
+                   aconv r (pred_setSyntax.mk_set [ai]))
+                end
+            val conjs = strip_conj (#2 (strip_forall (concl th)))
+          in
+            null (hyp th) andalso tyOK andalso length conjs = n andalso
+            List.all conjOK (Lib.enumerate 0 conjs)
+          end
+      fun inhOK (_, NONE) = true
+        | inhOK (i, SOME (t, th)) =
+          let val v = #1 (dest_forall (concl th))
+              val app = mk_comb (t, v)
+          in
+            null (hyp th) andalso null (free_vars t) andalso
+            type_of t = (List.nth (lives, i) --> ty) andalso
+            aconv (#2 (dest_forall (concl th)))
+                  (pred_setSyntax.mk_in (v, mk_comb (List.nth (sets, i), app)))
+          end
+    in
+      not (null wits) andalso List.all witOK wits andalso
+      length inhabits = n andalso List.all inhOK (Lib.enumerate 0 inhabits)
+    end
+
+fun testwitn (lives, ty) =
+    (tprint ("witnesses of " ^ type_to_string ty);
+     require_msg (check_result (witShapeOK lives)) (K "<derived BNF>")
+                 (bnfLib.deriveBNFn db lives) ty)
+
+val _ = List.app (ignore o testwitn) [
+      ([a1,a2], “:'a1 + 'a2”),
+      ([a1,a2], “:one + 'a2 # 'a1”),
+      ([a1,a2], “:('b1 -> 'a1) # 'a2 option”),
+      ([a1,a2], “:('a1 # 'a2) option + 'b1 # 'a1”),
+      ([alpha], “:one + 'b1 # 'a”),
+      ([alpha], “:('a # 'a) option”)
+    ]
+
+(* which arguments the witnesses need is the whole point of keeping
+   several of them: the functor behind ‘mylist = Nil | Cons 'a mylist’
+   has one witness needing nothing (Nil), while every element of the one
+   behind ‘fstrm = FSCons 'a fstrm’ needs both arguments *)
+fun needsOf (d : bnfLib.derived_bnfn) =
+    let fun sigOf (_, th) =
+            List.map (not o pred_setSyntax.is_empty o #2 o
+                      pred_setSyntax.dest_subset)
+                     (strip_conj (#2 (strip_forall (concl th))))
+    in
+      List.map sigOf (#wits d)
+    end
+
+val _ = tprint "the witnesses' demands"
+val _ =
+    let
+      val mylist = needsOf (bnfLib.deriveBNFn db [alpha,b1] “:one + 'b1 # 'a”)
+      val fstrm = needsOf (bnfLib.deriveBNFn db [alpha,b1] “:'b1 # 'a”)
+      val sum = needsOf (bnfLib.deriveBNFn db [a1,a2] “:'a1 + 'a2”)
+    in
+      if mylist = [[false,false]] andalso fstrm = [[true,true]] andalso
+         sum = [[true,false],[false,true]]
+      then OK()
+      else die "unexpected demands"
     end
