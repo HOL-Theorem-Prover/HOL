@@ -4054,7 +4054,7 @@ fun mf_lazy_db_harvest_split_theories () =
         | _ => false
     val _ = MFH.typedef_registry := []
 
-    (* M5-D10 scan scope: [refute_harvest_deep]'s home theory has neither
+    (* Scan scope: [refute_harvest_deep]'s home theory has neither
        abs/rep constants nor a bijection theorem for it, so the type
        registers only because the scan also reaches the home theory of
        its abs/rep constants. *)
@@ -21419,6 +21419,15 @@ val _ = require_msg
 val negation_complement_expectnone_goal =
   ``~zoo_sg_bool_duplicate (x : bool) (T, T) ==> x <> T``
 
+(* Hoisted here so this pin and the level-2 corpus row of the same name
+   below share one definition instead of two copies that could drift. *)
+val negation_complement_expectnone_config =
+  upd_expect ExpectNone
+    (Refute.upd_certify false
+      (upd_sequential true
+        (Refute.upd_search (Refute.Only [Refute.Exhaustive])
+          default_config)))
+
 fun negation_complement_expectnone_reaches_negguard () =
   contains_negguard (compile_plan default_config
     (runtime_goal negation_complement_expectnone_goal))
@@ -21438,18 +21447,10 @@ val _ = require_msg
    complement is genuinely [true] for some witness. *)
 
 fun negation_complement_expectnone_holds () =
-  let
-    val config = upd_expect ExpectNone
-      (Refute.upd_certify false
-        (upd_sequential true
-          (Refute.upd_search (Refute.Only [Refute.Exhaustive])
-            default_config)))
-  in
-    case refute_problem config
-        (qc_problem negation_complement_expectnone_goal) of
-        NoCounterexample => true
-      | _ => false
-  end
+  case refute_problem negation_complement_expectnone_config
+      (qc_problem negation_complement_expectnone_goal) of
+      NoCounterexample => true
+    | _ => false
 
 val _ = tprint
   "Refute negated premise complement ExpectNone twin is decided total"
@@ -21994,9 +21995,11 @@ val _ = require_msg (check_result (fn () =>
 (* Function inversion consumed from a goal premise: [xs ++ ys = [1;2;3]]
    drives an [Enum] keyed by [SG.Graph APPEND] rather than an opaque
    guard, once [upd_allow_function_inversion] is set.  [contains_graph_enum]
-   walks a compiled plan exactly as [contains_enum] above does, but only
-   recognises an [Enum] keyed by a [Graph] relation, so it distinguishes
-   the new route from the ordinary one. *)
+   walks a compiled plan like [contains_enum] above, but only recognises
+   an [Enum] keyed by a [Graph] relation rather than any [Enum]; unlike
+   [contains_enum], which returns as soon as it sees any [Enum], it must
+   therefore also recurse past a non-matching one via its own [Enum
+   {cont, ...}] arm to keep looking for a later [Graph]-keyed one. *)
 fun contains_graph_enum current =
   case current of
       Enum {rel = SG.Graph _, ...} => true
@@ -22008,6 +22011,7 @@ fun contains_graph_enum current =
     | Guard (_, next) => contains_graph_enum next
     | NegGuard (_, next) => contains_graph_enum next
     | SmartGuard {cont, ...} => contains_graph_enum cont
+    | Enum {cont, ...} => contains_graph_enum cont
     | _ => false
 
 fun find_graph_enum current =
@@ -22141,18 +22145,23 @@ val _ = require_msg (check_result graph_prem_branch_reached) (fn () =>
    rejected each.  Driving [Refute_EvalCompute] directly, the same way
    [listall_specialisation_twin_no_spurious_cex] above drives
    [candidates_generated], and requiring [assumption_satisfied] strictly
-   positive asserts where those two worlds actually diverge. *)
+   positive asserts where those two worlds actually diverge.  [plan_ok]
+   reads [contains_graph_enum] off the same preprocessed instance goals
+   [ran_ok] compiles and runs -- the way [graph_headline_refuted] above
+   reads its route off [qc_instances] rather than the raw goal -- so the
+   shape half and the stats half describe one plan set; compiling the
+   raw goal instead can drift from what [run_with_strategy] executes. *)
 val _ = tprint "Refute goal-premise graph inversion: soundness twin"
 fun graph_soundness_twin () =
   let
     val config = Refute.upd_timeout 3.0 graph_on_config
-    val plan_ok = contains_graph_enum (compile_plan config graph_sound_goal)
     val verdict_ok =
       case run_with_strategy Exhaustive config graph_sound_goal of
           Counterexample _ => false
         | _ => true
     val instances = qc_instances config graph_sound_goal
     val plans = List.map (fn i => compile_plan config (#goal i)) instances
+    val plan_ok = List.exists contains_graph_enum plans
     val compiled =
       case Refute_EvalCompute.compile config Exhaustive (Plans plans) of
           Compiled test => test
@@ -27665,16 +27674,20 @@ val _ = require_msg
   "reported the same text")
   (fn () => ()) ()
 
-(* Low-level access to a single call's raw counters, bypassing [refute]'s
-   retry/certification machinery entirely (a stuck conclusion drives that
-   machinery, whose call count is not what these pins are about) -- the
-   same style [stuck_split_counts_failure] already uses.  Parameterized
-   over the compiler so the same shape checks Compute and native SML. *)
+(* Low-level access to a single call's compiled plans and full
+   statistics, bypassing [refute]'s retry/certification machinery
+   entirely (a stuck conclusion drives that machinery, whose call count
+   is not what these pins are about) -- the same style
+   [stuck_split_counts_failure] already uses.  Parameterized over the
+   compiler so the same shape checks Compute and native SML.  Returns
+   the full [stats] list rather than a fixed projection of it, so a
+   future caller can pin a statistic outside the three [raw_counters_
+   with] below narrows to. *)
 (* [#close] must run on every exit, or a plan that opens a smart-generator
    theory bracket (any [Enum]) leaks its definitions into the ambient
    theory for the rest of the session -- exactly what [refute]'s own
    run-scoped release does for every other caller of a [compiled_test]. *)
-fun raw_counters_with compile config goal genuine_only size =
+fun raw_stats_with compile config goal genuine_only size =
   let
     val instances = qc_instances config goal
     val plans =
@@ -27689,6 +27702,13 @@ fun raw_counters_with compile config goal genuine_only size =
            {genuine_only = genuine_only, card = 1, size = size,
             draws = 0, ignored = []});
          !(#last_stats compiled))) ()
+  in
+    (plans, stats)
+  end
+
+fun raw_counters_with compile config goal genuine_only size =
+  let
+    val (_, stats) = raw_stats_with compile config goal genuine_only size
   in
     (lookup_stat "assumption_satisfied" stats,
      lookup_stat "conclusion_evaluated" stats,
@@ -35346,5 +35366,593 @@ val _ =
       "] and " ^ Int.toString (length quotients) ^ " quotient(s) [" ^
       String.concatWith ", " (map Parse.type_to_string quotients) ^ "]\n")
   end)
+
+(* Predicate-compiler soundness corpus: one row per capability, run as a
+   data-driven, independent set at level 2.  A row is a record, not a
+   thunk: [run_predcomp_soundness_row] compiles and runs [goal] under
+   [config] itself, via [qc_instances]/[compile_plan]/[Refute_EvalCompute.
+   compile] the way [graph_soundness_twin] and [listall_specialisation_
+   twin_no_spurious_cex] above do, then asserts [expect] on the verdict,
+   [route] on the compiled plans -- a predicate over the whole plan list,
+   each row stating its own quantifier explicitly (see the note at
+   [run_predcomp_soundness_row]), for the same reason [graph_soundness_
+   twin]'s [plan_ok] checks a route at all: a row whose mode inference
+   degraded would still fall back to plain [Gen]+[Guard], still reach a
+   sound verdict, still generate candidates, and still pass, while
+   covering nothing -- and [looked] on the resulting statistics.
+
+   The fixed-parameter twin is untouched by this diff.  The negation
+   twin's body now reads the hoisted config instead of an inline copy
+   -- a refactor, not a behaviour change; the corpus's own decisive
+   rows below read a further, separately derived config, while the
+   level-1 twin keeps the one it always used.  [graph_soundness_twin]'s
+   own [plan_ok] (above) was widened to read [contains_graph_enum] off
+   the [qc_instances]-derived plans this corpus's graph row also reads,
+   instead of compiling [graph_sound_goal] directly, so the two checks
+   describe one plan set -- a refactor of the plan source, not a
+   behaviour change, since [graph_sound_goal] is monomorphic and
+   [qc_instances] yields exactly the one instance whose goal is
+   [graph_sound_goal] itself.  (The predicate itself was separately
+   corrected to recurse past a non-matching [Enum]; see its own comment
+   above.)  This corpus is the level-2 soundness sweep -- the
+   graph-inversion row alone drives hundreds of thousands of candidates
+   and carries a multi-second deadline, not level-1 cheap.
+
+   What each row adds beyond its twin: the negation row's [NegGuard]
+   route conjunct and its [NoCounterexample] verdict are already
+   pinned at level 1, by [negation_complement_expectnone_reaches_
+   negguard] and [negation_complement_expectnone_holds]; its net-new
+   contribution here is the [not (List.exists contains_enum plans)]
+   route conjunct and [candidates_generated = SOME 2] in [looked] --
+   and the next paragraph already concedes that count is blind to the
+   under-approximating direction.  The companion row has no level-1
+   analogue at all: [negation_complement_exhausts_goal] is defined
+   and used only in this corpus, so its verdict, [route], and [looked]
+   are all net-new.  The fixed-parameter row contributes only [route],
+   its verdict and search restating [listall_specialisation_twin_no_
+   spurious_cex]; the graph row contributes only the end-to-end
+   [refute_problem] verdict, its [route] and [looked] restating
+   [graph_soundness_twin]'s own checks.
+
+   Every row, not the graph row alone, gets its verdict and its
+   [route]/[looked] from two different machines: the verdict comes from
+   the full driver ([refute_problem]), while [route] and [looked] are
+   hand-driven through [Refute_EvalCompute] on a separately compiled
+   [Plans plans].  For the two
+   [no_spurious_cex] rows this is a virtue: a load-induced timeout in
+   the full-driver half cannot redden the row ([no_spurious_cex]
+   accepts [Unknown]); only a spurious [Counterexample] can, which is
+   the thing worth catching.  For the two decisive rows below it is a
+   limitation instead: the statistics meant to justify a decisive
+   [NoCounterexample] are never measured on the run that issued the
+   verdict, and the two halves need not even share a substrate --
+   [default_qc_config] (Refute_Core.sml) sets [substrate = Auto] and
+   neither negation config overrides it, while [looked] is always
+   measured through [Refute_EvalCompute] regardless of [config]'s own
+   substrate.  The per-substrate direction is instead covered by
+   [smartgen_negation_gate_lifts_{native,cv,compute}].
+
+   Two rows are decisive: the negation row and its companion assert the
+   verdict is [NoCounterexample], through their own [expect] conjunct.
+   The other two assert [no_spurious_cex], which [Unknown] satisfies;
+   both check that a proven-true instance is not falsely refuted --
+   sound and useful, but not decisive.  Neither of those two can be
+   decisive: each one's generated position is an unbounded [:num
+   list], and a bounded [Enum] search can rule out a spurious
+   [Counterexample] but can never license totality over an infinite
+   domain, so [NoCounterexample] is not obtainable there and is not
+   asked for.  No row's config carries an expectation: a config-level
+   one would make [refute_problem] raise on a wrong verdict
+   ([check_expect], Refute_Core.sml) before [route] and [looked] are
+   ever measured, which is exactly the run whose route is worth
+   seeing -- so each row's [expect] field, not its [config], is the
+   check.
+
+     negated relational premise, decidable complement: a negated
+       relation whose complement is fully input and genuinely decidable.
+       Its only generated variable is [x : bool], exhaustion is exact,
+       and [looked] requires [candidates_generated = 2], pinning that
+       the generated domain was exhausted exactly -- what makes
+       [NoCounterexample] decisive here.  What the row actually catches
+       is an *over*-approximating complement: a wrongly admitted
+       [x = T] would pass the [NegGuard], reach [Test], and refute the
+       true goal, going red via [expect].  It cannot catch the opposite,
+       *under*-approximating direction: a complement mutated to
+       constant [false] rejects both candidates at the [NegGuard],
+       whereas the correct complement here rejects [x = T] at the
+       [NegGuard] and [x = F] at the grounding [Guard (x = T)] -- in
+       whichever order premise reordering placed them -- only the
+       count of rejected candidates coincides, so
+       [candidates_generated] reads [2] either way -- the companion row
+       below exists for that direction.  [route] requires [not
+       (List.exists contains_enum plans)] *and* [List.exists
+       contains_negguard plans]: no plan may contain an [Enum], and some
+       plan must reach [NegGuard].  The [NegGuard] conjunct is what
+       distinguishes "the predicate compiler produced a decidable
+       complement" from "the compiler declined and the plan degraded to
+       plain [Gen]+[Guard]" -- the absence of an [Enum] alone cannot
+       tell those apart, since a degraded fallback plan contains no
+       [Enum] either and would otherwise satisfy this route while
+       covering none of the machinery it is named for.
+     negated relational premise whose complement is exhausted into
+       Test: the companion catching the under-approximating direction
+       the row above cannot.  [negation_complement_exhausts_goal]'s
+       complement, [(x,x) <> (T,F)], is true for both booleans, so a
+       correct complement drives both candidates past [NegGuard] into
+       [Test], where the relation-free conclusion holds for both;
+       [looked] requires both [assumption_satisfied] and
+       [conclusion_evaluated] to be [SOME 2].  A complement mutated to
+       constant [false] instead rejects both candidates at [NegGuard],
+       both statistics drop to [0], and the row goes red.  [route] is
+       the same conjunction as above, for the same reason.
+     relation called with a statically fixed predicate parameter.  The
+       generated position is an unbounded [:num list], so a decisive
+       [NoCounterexample] is not obtainable from an [Enum]'s bounded
+       search; [goal] is a proven-true instance instead
+       ([listall_specialisation_twin_true]), and [looked] requires a
+       positive [candidates_generated] -- the search actually ran.
+       [route] is [List.exists contains_fixed_output_enum].
+     goal premise inverting a function ([APPEND]).  Same unbounded-
+       output caveat as above: [goal] is [graph_sound_goal], a proven-
+       true instance, and [looked] requires a positive
+       [assumption_satisfied], matching [graph_soundness_twin].
+       [route] is [List.exists contains_graph_enum], the same predicate
+       [graph_soundness_twin]'s own [plan_ok] uses.
+     A fourth row for the non-[Fixed] higher-order route -- the
+     predicate parameter left a genuine, opaque [Fun (Input, Bool)]
+     rather than a statically substituted literal, the shape
+     [smartgen_listall_modes] above shows is inferred for
+     [zoo_sg_listall] -- was investigated and is not addable here: that
+     mode is never consumed.  [compile_premise]'s [Prem] case
+     (Refute_SmartGen.sml) demands [first_order_mode] of every argument
+     mode, which rejects a bare [Fun] outright (only [Fixed]/[Input]/
+     [Output]/[Pair] pass), so no enumerator is ever compiled for it;
+     [zoo_sg_listall] is also deliberately kept out of every compset
+     (refuteTableZooScript.sml), so the plain-[Guard] fallback is not
+     executable either -- confirmed by trying it: [refute_problem]
+     gracefully reports [Unknown ["not executable: zoo_sg_listall"]],
+     but driving [Refute_EvalCompute.compile]/[#run] on the same plan,
+     the way this corpus's other rows get their statistics, raises
+     [Fail "smart plan: Guard is nonexecutable: zoo_sg_listall"].
+     [relation_blocks_complement]'s blanket [Prem] rule empties the
+     negation table for any relation with a [Prem] premise, regardless
+     of mode -- [zoo_sg_listall] qualifies because it is recursive, but
+     the rule itself blocks on the premise kind, not on recursion -- so
+     the negated route is equally closed.  This is an inertness
+     boundary in production code, the same kind
+     [smartgen_mode_failure_falls_back] above documents for
+     [zoo_sg_higher_order]; nothing in this test file can turn it into
+     a running search. *)
+
+(* The two pins below turn the comment above into a regression guard:
+   prose alone would not notice if [first_order_mode] were ever relaxed
+   to admit a bare [Fun] without the rest of the pipeline being
+   completed.  Both are level 1 -- cheap.  The first narrows to
+   [Only [Exhaustive]] below, so kodkod is never a candidate; the
+   second keeps [default_config]'s [backends = NONE], where kodkod --
+   registered unconditionally -- is a candidate too. *)
+
+val zoo_sg_listall_fallback_goal =
+  concl (fst (EQ_IMP_RULE (SPEC_ALL zoo_sg_listall_compute)))
+
+val zoo_sg_listall_fallback_config =
+  Refute.upd_search (Refute.Only [Refute.Exhaustive])
+    (Refute.upd_timeout 2.0 default_config)
+
+val _ = tprint
+  ("Refute predicate-compiler fallback: zoo_sg_listall reports the " ^
+   "documented reason")
+fun zoo_sg_listall_fallback_reports_reason () =
+  case refute_problem zoo_sg_listall_fallback_config
+      (qc_problem zoo_sg_listall_fallback_goal) of
+      Unknown reasons =>
+        List.exists (fn r => r = "not executable: zoo_sg_listall") reasons
+    | _ => false
+val _ = require_msg
+  (check_result zoo_sg_listall_fallback_reports_reason)
+  (fn () =>
+    "the documented listall fallback did not report the non-executable " ^
+    "constant as its Unknown reason")
+  (fn () => ()) ()
+
+(* The soundness edge: same non-executable route, but this goal is
+   actually false ([P = \n. T], [xs = [1]] satisfy the premise while the
+   consequent fails).  A decisive [NoCounterexample] here would be
+   exactly the false total claim this whole corpus exists to prevent --
+   issued by a plan that never executed the premise.  Pinned as "not
+   decisive" rather than "is Unknown": a route that actually executed the
+   premise could soundly return a [Counterexample], and a pin demanding
+   [Unknown] would then fail on a genuine improvement. *)
+val zoo_sg_listall_unsound_goal =
+  ``zoo_sg_listall (P : num -> bool) (xs : num list) ==> (xs = [])``
+
+val _ = tprint
+  ("Refute predicate-compiler soundness edge: a false listall goal is " ^
+   "never NoCex")
+fun zoo_sg_listall_route_not_decisive () =
+  case refute_problem default_config
+      (qc_problem zoo_sg_listall_unsound_goal) of
+      NoCounterexample => false
+    | _ => true
+val _ = require_msg (check_result zoo_sg_listall_route_not_decisive)
+  (fn () =>
+    "a false zoo_sg_listall goal reached a decisive NoCounterexample " ^
+    "verdict despite the premise never having been executed")
+  (fn () => ()) ()
+
+(* Defined here rather than beside [specialised_reorder_shape] below,
+   which also uses it: the fixed-parameter row's [route] needs it
+   first. *)
+fun contains_fixed_output_enum current =
+  case current of
+      Enum {mode = SG.Fun (SG.Fixed _, SG.Fun (SG.Output, _)), ...} => true
+    | Gen (_, next) => contains_fixed_output_enum next
+    | Bind (_, _, fallback, next) =>
+        contains_fixed_output_enum next orelse
+        Option.getOpt (Option.map contains_fixed_output_enum fallback, false)
+    | Split (_, branches) => List.exists (contains_fixed_output_enum o #3)
+        branches
+    | Guard (_, next) => contains_fixed_output_enum next
+    | NegGuard (_, next) => contains_fixed_output_enum next
+    | SmartGuard {cont, ...} => contains_fixed_output_enum cont
+    | Enum {cont, ...} => contains_fixed_output_enum cont
+    | _ => false
+
+(* Returns the three conjuncts separately -- see
+   [run_predcomp_soundness_corpus] below -- rather than folding them into
+   one bool, so a failure message can name which one broke: the verdict
+   was wrong, the row never took the predicate-compiler route it is
+   named for, or the route was taken but the search never ran.
+
+   [route] is a predicate over the whole [plans] list, not one plan at a
+   time: rows differ in quantifier (the negation rows need "no plan",
+   the other two need "some plan"), and a per-plan predicate combined
+   here by one fixed [List.exists] would silently give a negated
+   predicate like the negation rows' the wrong one -- [List.exists
+   (not o contains_enum) plans] is "some plan lacks an Enum", not the
+   "no plan has one" those rows actually need, and the two only agree
+   while [plans] happens to be a singleton.
+
+   [looked] instead aggregates [#last_stats] over the one [Plans plans]
+   compile as a whole, not per plan.  With more than one instance,
+   nothing ties the plan [route] found (e.g. the one carrying a
+   [NegGuard]) to which plan actually contributed the visits [looked]
+   inspects -- they could be different plans in the list.  Every
+   current row's [goal] elaborates to exactly one instance, so this
+   never bites here, but it is a real gap for a future multi-instance
+   row. *)
+fun run_predcomp_soundness_row {goal, config, expect, route, looked} =
+  let
+    val verdict = refute_problem config (qc_problem goal)
+    val (plans, stats) =
+      raw_stats_with Refute_EvalCompute.compile config goal false 3
+  in
+    {verdict_ok = expect verdict, route_ok = route plans,
+     looked_ok = looked stats}
+  end
+
+val no_spurious_cex =
+  fn (Counterexample _) => false | _ => true
+
+fun positive_stat name stats =
+  case lookup_stat name stats of SOME n => n > 0 | NONE => false
+
+(* Route shared by the two negation rows: no plan may contain an [Enum],
+   and some plan must reach [NegGuard] -- see the corpus comment above
+   for why the [NegGuard] conjunct is required. *)
+val negation_route = fn plans =>
+  not (List.exists contains_enum plans) andalso
+  List.exists contains_negguard plans
+
+(* [negation_complement_expectnone_config] is hoisted next to
+   [negation_complement_expectnone_goal] above, shared with that level-1
+   pin. *)
+
+(* [(T, F) = (x, x)] is false for both booleans, so the complement
+   [(x, x) <> (T, F)] admits both -- unlike
+   [negation_complement_expectnone_goal], where the complement admits
+   only [x = F].  The relation appears only negated: it is deliberately
+   out of every compset (refuteTableZooScript.sml), so a *positive*
+   occurrence has no executable route and the whole problem degrades to
+   [Unknown ["not executable: zoo_sg_bool_duplicate"]] -- measured, by
+   trying it.  Only the negated form compiles, via the complement, to a
+   [NegGuard].  The conclusion is therefore relation-free, and is a
+   computation rather than a tautology: [x = x] or [MEM x [T; F]] risk
+   being discharged by preprocessing before the evaluator runs, which
+   would leave the row vacuous.  Vacuity here is self-detecting -- it
+   drives [conclusion_evaluated] to 0 and reddens [looked] -- but a row
+   that needs a rerun to notice is a worse row. *)
+val negation_complement_exhausts_goal =
+  ``~zoo_sg_bool_duplicate (x : bool) (T, F) ==>
+      (if x then 1 else 0) < (2 : num)``
+
+(* The corpus asserts the verdict through each row's own [expect]
+   conjunct, so no row's config may set [upd_expect]: a config-level
+   expectation makes [refute_problem] raise on a wrong verdict
+   (Refute_Core, [check_expect]) before [route] and [looked] are ever
+   measured, which is exactly the run whose route is worth seeing.
+   Derived from the level-1 config rather than copied, so the search
+   and certification settings cannot drift apart. *)
+val negation_complement_corpus_config =
+  upd_expect Refute.NoExpectation negation_complement_expectnone_config
+
+val predcomp_soundness_corpus =
+  [{name = "negated relational premise, decidable complement",
+    goal = negation_complement_expectnone_goal,
+    config = negation_complement_corpus_config,
+    expect = (fn NoCounterexample => true | _ => false),
+    route = negation_route,
+    looked = (fn stats =>
+      lookup_stat "candidates_generated" stats = SOME 2)},
+   {name = "negated relational premise whose complement is exhausted " ^
+      "into Test",
+    goal = negation_complement_exhausts_goal,
+    config = negation_complement_corpus_config,
+    expect = (fn NoCounterexample => true | _ => false),
+    route = negation_route,
+    looked = (fn stats =>
+      lookup_stat "assumption_satisfied" stats = SOME 2 andalso
+      lookup_stat "conclusion_evaluated" stats = SOME 2)},
+   {name = "relation called with a statically fixed predicate parameter",
+    goal = concl listall_specialisation_twin_true,
+    config = upd_expect Refute.NoExpectation
+      (Refute.upd_certify false
+        (upd_sequential true
+          (Refute.upd_search (Refute.Only [Refute.Exhaustive])
+            (Refute.upd_timeout 2.0 default_config)))),
+    expect = no_spurious_cex,
+    route = List.exists contains_fixed_output_enum,
+    looked = positive_stat "candidates_generated"},
+   {name = "goal premise inverting a function",
+    goal = graph_sound_goal,
+    config = Refute.upd_timeout 3.0 graph_on_config,
+    expect = no_spurious_cex,
+    route = List.exists contains_graph_enum,
+    looked = positive_stat "assumption_satisfied"}]
+
+(* [outcome] carries the row's three conjuncts out of the raising
+   predicate below so the failure message can name the one that broke;
+   see the note at [run_predcomp_soundness_row].  [check_result] here is
+   this file's own exception-catching shadow defined near the top (not
+   raw [testutils.check_result]): it wraps this row's whole predicate in
+   a handler, so a row that raises -- e.g. an [Inapplicable] compile --
+   reddens only that row and the corpus continues to the next one,
+   exactly like any other raising predicate in this file.  [outcome]
+   stays [NONE] in that case; [raised] additionally carries the
+   exception's message into this row's own failure text, alongside the
+   shadow's own "raised: ..." line.  The final [SOME _] arm below is
+   unreachable by construction, not dead: the predicate returns [false]
+   only when at least one of the three conjuncts is [false], so one of
+   the three named arms above always matches first.  Because no row's
+   config carries an expectation, [run_predcomp_soundness_row] never
+   raises out of a wrong verdict; [expect verdict] alone turns that
+   into [verdict_ok = false], so the "reached the wrong verdict" arm
+   above is live for all four rows. *)
+fun run_predcomp_soundness_corpus () =
+  List.app (fn {name, goal, config, expect, route, looked} =>
+      let
+        val outcome =
+          ref (NONE : {verdict_ok : bool, route_ok : bool,
+                       looked_ok : bool} option)
+        val raised = ref (NONE : string option)
+      in
+        tprint ("Refute predicate-compiler soundness corpus: " ^ name);
+        require_msg
+          (check_result (fn () =>
+             let
+               val result =
+                 run_predcomp_soundness_row
+                   {goal = goal, config = config, expect = expect,
+                    route = route, looked = looked}
+                 handle Interrupt => raise Interrupt
+                      | e => (raised := SOME (General.exnMessage e);
+                              raise e)
+             in
+               outcome := SOME result;
+               #verdict_ok result andalso #route_ok result andalso
+                 #looked_ok result
+             end))
+          (fn () =>
+            name ^
+            (case !outcome of
+                 NONE =>
+                   " raised before recording all three conjuncts" ^
+                   (case !raised of
+                        SOME msg => ": " ^ msg
+                      | NONE => "")
+               | SOME {verdict_ok = false, ...} =>
+                   " reached the wrong verdict"
+               | SOME {route_ok = false, ...} =>
+                   " did not take the predicate-compiler route it is " ^
+                   "named for"
+               | SOME {looked_ok = false, ...} =>
+                   " took its predicate-compiler route but the search " ^
+                   "never ran"
+               | SOME _ => " failed for no recorded reason (unreachable)"))
+          (fn () => ()) ()
+      end)
+    predcomp_soundness_corpus
+
+val _ = if selftest_level >= 2 then run_predcomp_soundness_corpus () else ()
+
+(* Predicate-compiler premise-reordering interaction.  [compare_score]
+   (Refute_SmartGen.sml) is lexicographic on [missing, functional,
+   generator, outputs, recursive], [missing] first.  While
+   [#optimise_equality (#qc config)] is on (the default), a grounding
+   equality premise whose [missing] count is <= a predicate-compiler
+   candidate's always outranks it -- at equal [missing] the equality
+   wins the second key, since it is [functional] and the candidate is
+   not; with [optimise_equality] off, every ordinary premise scores
+   [functional = false] and the comparison no longer favours the
+   equality this way.  But a grounding premise with a strictly *larger*
+   [missing] count can be deferred *behind* a predicate-compiler node:
+   premises [xs = f zs ws, Q xs ys] with [Q] a predicate-compiler
+   relation at mode [(i,o)] score [missing = 2] for the equality (needs
+   [zs],[ws]) against [missing = 1] for the call (needs [xs]) --
+   [1 < 2] decides it at the first key, so the node is selected ahead of
+   the premise that grounds its own input, and [gen_all [xs]] then
+   generates [xs] blindly.  This remains sound: [gen_all] wraps whatever
+   the node still lacks in fresh [Gen] nodes at the point it actually
+   runs (Refute_QC.sml, candidate construction sites), so either premise
+   order is sound; only the amount of blind generation differs.  These
+   three pins reuse [smartgen_goal_reordering_pin]'s construction -- a
+   smart premise ahead, in source order, of the equation that grounds
+   its inputs -- once per predicate-compiler kind, and check both that
+   reordering visibly changes the compiled plan and that both orders
+   reach a genuine refutation.  For the specialised and graph goals the
+   witness is uniquely determined, so "same witness" would be a
+   tautology there; for the negation goal it is not ([p <> (0,0)] has
+   many witnesses), so that pin only checks the forced [n = 0] binding
+   in both orders, not that the two orders report the same [p]. *)
+
+fun gens_to_negguard current =
+  case current of
+      NegGuard _ => SOME 0
+    | Gen (_, next) => Option.map (fn n => n + 1) (gens_to_negguard next)
+    | Bind (_, _, _, next) => gens_to_negguard next
+    | _ => NONE
+
+val neg_reorder_goal =
+  ``~zoo_sg_duplicate (n : num) (p : num # num) ==> n = 0 ==> p = (n, n)``
+
+fun neg_reorder_shape () =
+  let
+    val reordered = compile_plan default_config neg_reorder_goal
+    val source_order = compile_plan
+      (Refute.upd_reorder_premises false default_config) neg_reorder_goal
+  in
+    gens_to_negguard reordered = SOME 1 andalso
+    gens_to_negguard source_order = SOME 2
+  end
+
+val _ = tprint "Refute negation complement reordering pin"
+val _ = require_msg (check_result neg_reorder_shape) (fn () =>
+  "reordering did not defer the negation complement past the grounding " ^
+  "premise, reducing its blind generation by exactly one variable")
+  (fn () => ()) ()
+
+fun neg_reorder_sound_both_orders () =
+  let
+    val config = Refute.upd_certify false
+      (Refute.upd_size 2 (Refute.upd_depth 1 default_config))
+    val forward = run_with_strategy Exhaustive config neg_reorder_goal
+    val source = run_with_strategy Exhaustive
+      (Refute.upd_reorder_premises false config) neg_reorder_goal
+    fun genuine_n0 (Counterexample ({certainty = Genuine, bindings, ...}
+        :: _)) =
+          List.exists (fn (candidate, value) =>
+            Term.aconv candidate ``n : num`` andalso
+            Term.aconv value ``0 : num``) bindings
+      | genuine_n0 _ = false
+  in
+    genuine_n0 forward andalso genuine_n0 source
+  end
+
+val _ = tprint "Refute negation complement reordering is sound both ways"
+val _ = require_msg (check_result neg_reorder_sound_both_orders) (fn () =>
+  "the negation complement reached a different or unsound verdict " ^
+  "depending on premise order")
+  (fn () => ()) ()
+
+val specialised_reorder_goal =
+  ``zoo_sg_listall (\n:num. n = 500) (xs:num list) ==> xs = [500] ==> F``
+
+fun specialised_reorder_shape () =
+  let
+    val reordered = compile_plan default_config specialised_reorder_goal
+    val source_order = compile_plan
+      (Refute.upd_reorder_premises false default_config)
+      specialised_reorder_goal
+  in
+    contains_fixed_output_enum source_order andalso
+    (case reordered of
+         Bind (v, _, _, cont) =>
+           Term.aconv v ``xs : num list`` andalso
+           not (contains_fixed_output_enum cont)
+       | _ => false)
+  end
+
+val _ = tprint "Refute specialisation reordering pin"
+val _ = require_msg (check_result specialised_reorder_shape) (fn () =>
+  "reordering did not ground xs before the specialised Enum, or the " ^
+  "specialised Enum survived a fully-bound predicate call")
+  (fn () => ()) ()
+
+fun specialised_reorder_sound_both_orders () =
+  let
+    val config = Refute.upd_substrate Refute.Compute
+      (Refute.upd_certify false (Refute.upd_size 3
+        (Refute.upd_depth 2 default_config)))
+    val forward = run_with_strategy Exhaustive config
+      specialised_reorder_goal
+    val source = run_with_strategy Exhaustive
+      (Refute.upd_reorder_premises false config) specialised_reorder_goal
+    fun genuine_xs500 (Counterexample ({certainty = Genuine, bindings, ...}
+        :: _)) =
+          List.exists (fn (candidate, value) =>
+            Term.aconv candidate ``xs : num list`` andalso
+            Term.aconv value ``[500] : num list``) bindings
+      | genuine_xs500 _ = false
+  in
+    genuine_xs500 forward andalso genuine_xs500 source
+  end
+
+val _ = tprint "Refute specialisation reordering is sound both ways"
+val _ = require_msg (check_result specialised_reorder_sound_both_orders)
+  (fn () =>
+    "the specialised Enum reached a different or unsound verdict " ^
+    "depending on premise order")
+  (fn () => ()) ()
+
+val graph_reorder_goal =
+  ``(xs : num list) ++ ys = [1;2;3] ==> ys = [3] ==> F``
+
+fun graph_reorder_shape () =
+  let
+    val reordered = compile_plan graph_on_config graph_reorder_goal
+    val source_order = compile_plan
+      (Refute.upd_reorder_premises false graph_on_config)
+      graph_reorder_goal
+  in
+    (case source_order of
+         Enum {rel = SG.Graph _, ...} => true
+       | _ => false) andalso
+    (case reordered of
+         Bind (v, _, _, cont) =>
+           Term.aconv v ``ys : num list`` andalso contains_graph_enum cont
+       | _ => false)
+  end
+
+val _ = tprint "Refute graph inversion reordering pin"
+val _ = require_msg (check_result graph_reorder_shape) (fn () =>
+  "reordering did not ground ys before the graph Enum, or the graph " ^
+  "route disappeared once ys was known")
+  (fn () => ()) ()
+
+fun graph_reorder_sound_both_orders () =
+  let
+    val config = Refute.upd_certify false
+      (Refute.upd_timeout 3.0 graph_on_config)
+    val forward = run_with_strategy Exhaustive config graph_reorder_goal
+    val source = run_with_strategy Exhaustive
+      (Refute.upd_reorder_premises false config) graph_reorder_goal
+    fun genuine_split (Counterexample ({certainty = Genuine, bindings, ...}
+        :: _)) =
+          List.exists (fn (candidate, value) =>
+            Term.aconv candidate ``ys : num list`` andalso
+            Term.aconv value ``[3] : num list``) bindings andalso
+          List.exists (fn (candidate, value) =>
+            Term.aconv candidate ``xs : num list`` andalso
+            Term.aconv value ``[1;2] : num list``) bindings
+      | genuine_split _ = false
+  in
+    genuine_split forward andalso genuine_split source
+  end
+
+val _ = tprint "Refute graph inversion reordering is sound both ways"
+val _ = require_msg (check_result graph_reorder_sound_both_orders) (fn () =>
+  "the graph inversion reached a different or unsound verdict " ^
+  "depending on premise order")
+  (fn () => ()) ()
 
 val _ = exit_count0 erc
