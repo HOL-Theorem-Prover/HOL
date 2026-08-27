@@ -125,13 +125,21 @@ fun is_alphanum_tyv ty =
    ---------------------------------------------------------------------- *)
 
 val map_f = mk_var("f", alpha --> beta)
-val equal_alpha = boolSyntax.equality
+
+(* The functor may have several arguments, so the element type of a set
+   function is a parameter here rather than always α: setᵢ collects the
+   occurrences of argument i, and an occurrence of any other argument
+   contributes nothing to it. *)
+fun equal_ty ty = Term.inst [alpha |-> ty] boolSyntax.equality
 val empty_alpha = pred_setSyntax.mk_empty alpha
-fun K0 ty =
+
+(* K (∅ : elem set) : dom -> elem set *)
+fun K0e elem dom =
     mk_comb(
-      Term.inst[alpha |-> (alpha --> bool), beta |-> ty] combinSyntax.K_tm,
-      empty_alpha
+      Term.inst[alpha |-> (elem --> bool), beta |-> dom] combinSyntax.K_tm,
+      pred_setSyntax.mk_empty elem
     )
+fun K0 ty = K0e alpha ty
 fun Ityped ty = Term.inst [alpha |-> ty] combinSyntax.I_tm
 
 val aset_ty = alpha --> bool
@@ -155,25 +163,27 @@ val UNION_tm = mk_thy_const{
       Ty = aset_ty --> (aset_ty --> aset_ty)}
 
 fun mk_lifted_union (f1,f2) =
-    (* f1 and f2 have same type, schematically some-β → α set;
-       i.e., range type is literally α, domain can vary
-       generate S((UNION) o f1)f2
-     *)
+    (* f1 and f2 have the same type, some domain → elem set; generate
+       S ((UNION) o f1) f2 *)
     let
-      val (b,_) = dom_rng (type_of f1)
-      val Uof1 = combinSyntax.mk_o(UNION_tm, f1)
+      val (b,setty) = dom_rng (type_of f1)
+      val UNION_e = mk_thy_const{Thy = "pred_set", Name = "UNION",
+                                 Ty = setty --> (setty --> setty)}
+      val Uof1 = combinSyntax.mk_o(UNION_e, f1)
       val Stm = mk_thy_const{Thy = "combin", Name = "S",
-                             Ty = (b --> (aset_ty --> aset_ty)) -->
-                                  ((b --> aset_ty) --> (b --> aset_ty))}
+                             Ty = (b --> (setty --> setty)) -->
+                                  ((b --> setty) --> (b --> setty))}
     in
       list_mk_comb(Stm, [Uof1, f2])
     end
 
 (* BIMG f o set *)
 fun mk_BIMGo (f, set) =
-    let val (fd, _) = dom_rng (type_of f)
+    let val (fd, fr) = dom_rng (type_of f)
+        val elem = #1 (dom_rng fr)
     in
-      combinSyntax.mk_o(mk_comb(inst [beta |-> fd] BIMG, f), set)
+      combinSyntax.mk_o(mk_comb(inst [alpha |-> elem, beta |-> fd] BIMG, f),
+                        set)
     end
 
 fun mk_IMAGE f =
@@ -217,8 +227,8 @@ val empty_biset : info HOLset.set = HOLset.empty biCompare
    ---------------------------------------------------------------------- *)
 
 datatype fplan =
-    FPvar                   (* the functor's own argument, α *)
-  | FPconst of hol_type     (* an α-free type; the constant functor *)
+    FPvar of int * hol_type (* the functor's i-th argument, and its type *)
+  | FPconst of hol_type     (* an argument-free type; the constant functor *)
   | FPnode of {ty : hol_type, info : info, kids : fkid list}
 withtype fkid = {set : term,    (* the node's set fn for this argument *)
                  bnd : term,    (* ... and its bound *)
@@ -232,9 +242,19 @@ fun inst_bndthm th setty =
       INST_TYPE (match_type (type_of (rator l)) setty) th
     end
 
-fun mkplan db ty =
-    if ty = alpha then FPvar
-    else if not (mem alpha (type_vars ty)) then FPconst ty
+fun idxOf lives ty =
+    let fun go _ [] = NONE
+          | go i (v::vs) = if v = ty then SOME i else go (i + 1) vs
+    in
+      go 0 lives
+    end
+fun livesIn lives ty = List.exists (fn v => mem v (type_vars ty)) lives
+
+fun mkplan db lives ty =
+    case idxOf lives ty of
+        SOME i => FPvar (i, ty)
+      | NONE =>
+    if not (livesIn lives ty) then FPconst ty
     else
       let val {Tyop,Thy,Args} = dest_thy_type ty
       in
@@ -247,7 +267,7 @@ fun mkplan db ty =
               fun sift (_, [], []) = []
                 | sift (n, a::As, p::Ps) =
                   if is_alphanum_tyv p then a :: sift(n + 1, As, Ps)
-                  else if mem alpha (type_vars a) then
+                  else if livesIn lives a then
                     raise ERR "mkplan"
                           (Thy ^ "$" ^ Tyop ^
                            " is not functorial in argument " ^ Int.toString n)
@@ -260,8 +280,8 @@ fun mkplan db ty =
                     val settm' = inst (match_type (type_of settm) target) settm
                     val bth = inst_bndthm bth0 target
                     val (_, bnd) = dest_cardleq (concl (SPEC_ALL bth))
-                    val sub = if mem alpha (type_vars actual) then
-                                mkplan db actual
+                    val sub = if livesIn lives actual then
+                                mkplan db lives actual
                               else FPconst actual
                   in
                     {set = settm', bnd = bnd, bndthm = bth, sub = sub} : fkid
@@ -287,41 +307,50 @@ fun apply_map map_t submaps srcty =
       list_mk_comb(Term.inst (match_type pat tgt) map_t, submaps)
     end
 
-fun planMap plan f =
+fun planMap lives plan fs =
     case plan of
-        FPvar => f
+        FPvar (i,_) => List.nth (fs, i)
       | FPconst ty => Ityped ty
       | FPnode {info = bI i, kids, ty, ...} =>
         let
-          val submaps = List.map (fn {sub,...} => planMap sub f) kids
-          val srcty = type_subst [alpha |-> #1 (dom_rng (type_of f))] ty
+          val submaps = List.map (fn {sub,...} => planMap lives sub fs) kids
+          val theta = ListPair.mapEq
+                        (fn (v,f) => v |-> #1 (dom_rng (type_of f)))
+                        (lives, fs)
+          val srcty = type_subst theta ty
         in
           apply_map (#map i) submaps srcty
         end
 
-fun planSet plan =
-    case plan of
-        FPvar => equal_alpha
-      | FPconst ty => K0 ty
-      | FPnode {kids, ...} =>
-        let
-          val lifted =
-              List.map (fn {set,sub,...} => mk_BIMGo (planSet sub, set)) kids
-        in
-          List.foldl (fn (t,A) => mk_lifted_union(A,t)) (hd lifted) (tl lifted)
-        end
+(* the set function for the functor's i-th argument *)
+fun planSet lives i plan =
+    let val vi = List.nth (lives, i)
+    in
+      case plan of
+          FPvar (j, ty) => if i = j then equal_ty vi else K0e vi ty
+        | FPconst ty => K0e vi ty
+        | FPnode {kids, ...} =>
+          let
+            fun lift ({set,sub,...}:fkid) =
+                mk_BIMGo (planSet lives i sub, set)
+            val lifted = List.map lift kids
+          in
+            List.foldl (fn (t,A) => mk_lifted_union(A,t))
+                       (hd lifted) (tl lifted)
+          end
+    end
 
 fun planInfos plan =
     case plan of
-        FPvar => []
+        FPvar _ => []
       | FPconst _ => []
       | FPnode {info, kids, ...} =>
         info :: List.concat (List.map (planInfos o #sub) kids)
 
 fun functorToMapAndSet db ty =
-    let val plan = mkplan db ty
+    let val plan = mkplan db [alpha] ty
     in
-      (planMap plan map_f, planSet plan,
+      (planMap [alpha] plan [map_f], planSet [alpha] 0 plan,
        HOLset.addList(empty_biset, planInfos plan))
     end
 
@@ -343,7 +372,7 @@ fun list_mk_sumty [t] = t
 
 fun planBndTypes plan =
     case plan of
-        FPvar => []
+        FPvar _ => []
       | FPconst _ => []
       | FPnode {kids, ...} =>
         List.concat (List.map
@@ -371,19 +400,21 @@ fun univ_le tys ty =
                                       UNIV_CARD_LE_ADDL))
         end
 
-fun planBndThm (B, Bne, Binf, bndtys) plan =
-    let val st = planSet plan
+fun planBndThm lives i (B, Bne, Binf, bndtys) plan =
+    let val st = planSet lives i plan
         val x = mk_var("x", #1 (dom_rng (type_of st)))
         val goal = mk_forall(x, mk_cardleq(mk_comb(st,x), B))
     in
       case plan of
-          FPvar => inst_forall (MATCH_MP EQ_CARDLE Bne) goal
+          FPvar (j,_) =>
+            if i = j then inst_forall (MATCH_MP EQ_CARDLE Bne) goal
+            else inst_forall K0_CARDLE goal
         | FPconst _ => inst_forall K0_CARDLE goal
         | FPnode {kids, ...} =>
           let
             fun kidthm ({set,bnd,bndthm,sub}:fkid) =
                 let
-                  val subth = planBndThm (B,Bne,Binf,bndtys) sub
+                  val subth = planBndThm lives i (B,Bne,Binf,bndtys) sub
                   val bnd_le_B =
                       MATCH_MP cardinalTheory.cardleq_TRANS
                                (CONJ (ISPEC bnd cardinalTheory.CARD_LE_UNIV)
@@ -406,7 +437,7 @@ fun planBndThm (B, Bne, Binf, bndtys) plan =
           end
     end
 
-fun planBnd plan =
+fun planBnd lives plan =
     let
       val tys = num_ty :: List.filter (not o equal num_ty)
                                       (op_mk_set equal (planBndTypes plan))
@@ -417,7 +448,9 @@ fun planBnd plan =
                                        INFINITE_num_sum
       val Bne = MATCH_MP INFINITE_NOT_EMPTY Binf
     in
-      (B, Binf, planBndThm (B, Bne, Binf, tys) plan)
+      (B, Binf,
+       List.tabulate (length lives,
+                      fn i => planBndThm lives i (B, Bne, Binf, tys) plan))
     end
 
 (* ----------------------------------------------------------------------
@@ -441,29 +474,32 @@ fun inst_lhs th target =
       INST tmS (INST_TYPE tyS th')
     end
 
-fun planMapID plan =
+fun planMapID lives plan =
     case plan of
-        FPvar => REFL (Ityped alpha)
+        FPvar (_,ty) => REFL (Ityped ty)
       | FPconst ty => REFL (Ityped ty)
       | FPnode {info = bI i, kids, ...} =>
         let
-          val kidths = List.map (planMapID o #sub) kids
-          val hdtm = #1 (strip_comb (planMap plan (Ityped alpha)))
+          val kidths = List.map (planMapID lives o #sub) kids
+          val hdtm = #1 (strip_comb
+                           (planMap lives plan (List.map Ityped lives)))
           val cong =
               List.foldl (fn (kth,A) => MK_COMB(A,kth)) (REFL hdtm) kidths
         in
           TRANS cong (inst_lhs (#mapID i) (rhs (concl cong)))
         end
 
-fun planMapO (f,g) plan =
+fun planMapO lives (fs,gs) plan =
     case plan of
-        FPvar => REFL (combinSyntax.mk_o(f,g))
+        FPvar (i,_) => REFL (combinSyntax.mk_o(List.nth (fs,i),
+                                               List.nth (gs,i)))
       | FPconst ty => CONJUNCT1 (ISPEC (Ityped ty) combinTheory.I_o_ID)
       | FPnode {info = bI i, kids, ...} =>
         let
           val step1 = inst_lhs (#mapO i)
-                        (combinSyntax.mk_o(planMap plan f, planMap plan g))
-          val kidths = List.map (planMapO (f,g) o #sub) kids
+                        (combinSyntax.mk_o(planMap lives plan fs,
+                                           planMap lives plan gs))
+          val kidths = List.map (planMapO lives (fs,gs) o #sub) kids
           val hdtm = #1 (strip_comb (rhs (concl step1)))
           val step2 = List.foldl (fn (kth,A) => MK_COMB(A,kth)) (REFL hdtm)
                                  kidths
@@ -471,26 +507,35 @@ fun planMapO (f,g) plan =
           TRANS step1 step2
         end
 
-fun planMapIMAGE (f, instB) plan =
+(* naturality for the i-th argument: an occurrence of another argument
+   contributes nothing to setᵢ, so it is handled exactly like a constant
+   — with that argument's own function in place of I *)
+fun planMapIMAGE lives i (fs, instB) plan =
+    let val f = List.nth (fs, i)
+        val vi = List.nth (lives, i)
+        fun constcase mp dom =
+            inst_thm K0_natural
+                     (mk_eq(combinSyntax.mk_o(instB (K0e vi dom), mp),
+                            combinSyntax.mk_o(mk_IMAGE f, K0e vi dom)))
+    in
     case plan of
-        FPvar => ISPEC f EQ_natural
-      | FPconst ty =>
-        inst_thm K0_natural
-                 (mk_eq(combinSyntax.mk_o(instB (K0 ty), Ityped ty),
-                        combinSyntax.mk_o(mk_IMAGE f, K0 ty)))
-      | FPnode {info = bI i, kids, ...} =>
+        FPvar (j,ty) => if i = j then ISPEC f EQ_natural
+                        else constcase (List.nth (fs,j)) ty
+      | FPconst ty => constcase (Ityped ty) ty
+      | FPnode {info = bI inf, kids, ...} =>
         let
-          val mp = planMap plan f
+          val mp = planMap lives plan fs
           fun kidthm (({set,sub,...}:fkid), imgth) =
               MATCH_MP BIMG_o_natural
                        (CONJ (inst_lhs (mapIMG_ofy imgth)
                                        (combinSyntax.mk_o(instB set, mp)))
-                             (planMapIMAGE (f,instB) sub))
-          val kths = ListPair.mapEq kidthm (kids, #mapIMAGE i)
+                             (planMapIMAGE lives i (fs,instB) sub))
+          val kths = ListPair.mapEq kidthm (kids, #mapIMAGE inf)
         in
           List.foldl (fn (t,A) => MATCH_MP LU_natural (CONJ A t))
                      (hd kths) (tl kths)
         end
+    end
 
 (* the hypothesis of the composite's congruence theorem talks about the
    whole of the composite's set; break it up into the parts that the
@@ -501,37 +546,54 @@ fun splitLU th n =
       let val p = MATCH_MP LU_CONG_hyp th
       in splitLU (CONJUNCT1 p) (n - 1) @ [CONJUNCT2 p] end
 
-fun planMapCONG (f,g) plan =
+fun planMapCONG lives (fs,gs) plan =
     let
-      val setA = planSet plan
-      val ty = #1 (dom_rng (type_of setA))
+      val n = length lives
+      val sets = List.tabulate (n, fn i => planSet lives i plan)
+      val ty = #1 (dom_rng (type_of (hd sets)))
       val x = mk_var("x", ty)
-      val a = mk_var("a", alpha)
-      val hyp = mk_forall(a,
-                  mk_imp(pred_setSyntax.mk_in(a, mk_comb(setA,x)),
-                         mk_eq(mk_comb(f,a), mk_comb(g,a))))
+      fun hypOf i =
+          let val a = mk_var("a", List.nth (lives, i))
+          in
+            mk_forall(a,
+              mk_imp(pred_setSyntax.mk_in(a, mk_comb(List.nth (sets,i), x)),
+                     mk_eq(mk_comb(List.nth (fs,i), a),
+                           mk_comb(List.nth (gs,i), a))))
+          end
+      val hyp = list_mk_conj (List.tabulate (n, hypOf))
+      val parts = CONJUNCTS (ASSUME hyp)
     in
       case plan of
-          FPvar => ISPECL [f,g,x] EQ_CONG
+          FPvar (i,_) =>
+            DISCH hyp
+              (MP (ISPECL [List.nth (fs,i), List.nth (gs,i), x] EQ_CONG)
+                  (List.nth (parts, i)))
         | FPconst _ => DISCH hyp (REFL (mk_comb(Ityped ty, x)))
-        | FPnode {info = bI i, kids, ...} =>
+        | FPnode {info = bI inf, kids, ...} =>
           let
-            val kidhyps = splitLU (ASSUME hyp) (length kids)
-            fun kidfact (({set,sub,...}:fkid), khyp) =
+            (* each argument's hypothesis is about a union over the node's
+               own arguments, so it splits the same way *)
+            val splits = List.map (fn p => splitLU p (length kids)) parts
+            fun kidfact (k, ({set,sub,...}:fkid)) =
                 let
-                  val sty = #1 (dom_rng (type_of (planSet sub)))
+                  val sty = #1 (dom_rng (type_of (planSet lives 0 sub)))
                   val y = mk_var("y", sty)
                   val ymem = pred_setSyntax.mk_in(y, mk_comb(set, x))
-                  val subhyp = MATCH_MP BIMG_o_CONG_hyp
-                                        (CONJ khyp (ASSUME ymem))
+                  val subhyps =
+                      List.map (fn sp => MATCH_MP BIMG_o_CONG_hyp
+                                           (CONJ (List.nth (sp,k))
+                                                 (ASSUME ymem)))
+                               splits
                   val ih = INST [mk_var("x", sty) |-> y]
-                                (planMapCONG (f,g) sub)
+                                (planMapCONG lives (fs,gs) sub)
                 in
-                  GEN y (DISCH ymem (MP ih subhyp))
+                  GEN y (DISCH ymem (MP ih (LIST_CONJ subhyps)))
                 end
-            val facts = ListPair.mapEq kidfact (kids, kidhyps)
+            val facts = List.tabulate
+                          (length kids,
+                           fn k => kidfact (k, List.nth (kids, k)))
           in
-            DISCH hyp (MATCH_MP (GEN_ALL (#mapCONG i)) (LIST_CONJ facts))
+            DISCH hyp (MATCH_MP (GEN_ALL (#mapCONG inf)) (LIST_CONJ facts))
           end
     end
 
@@ -549,7 +611,8 @@ fun planMapCONG (f,g) plan =
    ---------------------------------------------------------------------- *)
 
 fun mk_arb ty = mk_thy_const{Thy = "bool", Name = "ARB", Ty = ty}
-fun actual_of ({sub,...}:fkid) = #1 (dom_rng (type_of (planSet sub)))
+fun actual_of lives ({sub,...}:fkid) =
+    #1 (dom_rng (type_of (planSet lives 0 sub)))
 
 (* instantiate a witness's term and theorem so that the term takes the
    plan's actual argument types and lands in ty *)
@@ -562,17 +625,22 @@ fun inst_wit (wtm, wth) actuals ty =
 (* (w, |- set w = ∅), when the composite has such a w.  It doesn't when
    an element can't be built without supplying the functor's argument, as
    in ‘:'a # 'a option’; there every element's set is inhabited. *)
-fun planWitness plan =
+fun planWitness lives i plan =
+    let val vi = List.nth (lives, i)
+        fun constwit ty =
+            let val w = mk_arb ty
+            in
+              SOME (w, inst_thm K0_EMPTY
+                                (mk_eq(mk_comb(K0e vi ty, w),
+                                       pred_setSyntax.mk_empty vi)))
+            end
+    in
     case plan of
-        FPvar => NONE
-      | FPconst ty =>
-        let val w = mk_arb ty
-        in
-          SOME (w, inst_thm K0_EMPTY (mk_eq(mk_comb(K0 ty, w), empty_alpha)))
-        end
-      | FPnode {info = bI i, kids, ty} =>
+        FPvar (j,ty) => if i = j then NONE else constwit ty
+      | FPconst ty => constwit ty
+      | FPnode {info = bI inf, kids, ty} =>
         let
-          val actuals = List.map actual_of kids
+          val actuals = List.map (actual_of lives) kids
           fun tryWit wit =
               let
                 val (wtm, wth) = inst_wit wit actuals ty
@@ -583,12 +651,12 @@ fun planWitness plan =
                    node's set function can produce there has empty set *)
                 fun kidarg (needed, kid as {sub,...} : fkid) =
                     if needed then
-                      case planWitness sub of
+                      case planWitness lives i sub of
                           NONE => NONE
                         | SOME (t,th) => SOME (t, MATCH_MP SING_ALL th)
                     else
-                      SOME (mk_arb (actual_of kid),
-                            ISPEC (planSet sub) EMPTY_ALL)
+                      SOME (mk_arb (actual_of lives kid),
+                            ISPEC (planSet lives i sub) EMPTY_ALL)
                 val kidargs = ListPair.mapEq kidarg (needs, kids)
               in
                 if List.exists (not o isSome) kidargs then NONE
@@ -610,8 +678,9 @@ fun planWitness plan =
           fun firstOK [] = NONE
             | firstOK (w::ws) = (case tryWit w of NONE => firstOK ws | r => r)
         in
-          firstOK (#wits i)
+          firstOK (#wits inf)
         end
+    end
 
 (* the partial results of the left-associated fold that planSet uses to
    combine a node's arguments *)
@@ -623,14 +692,18 @@ fun partialsOf lifted =
     end
 
 (* (t, |- set t <> ∅), when the composite isn't constant *)
-fun planNontrivial plan =
+fun planNontrivial lives i plan =
     case plan of
-        FPvar => let val a = mk_arb alpha in SOME (a, ISPEC a EQ_NONEMPTY) end
+        FPvar (j,ty) =>
+          if i = j then let val a = mk_arb ty
+                        in SOME (a, ISPEC a EQ_NONEMPTY) end
+          else NONE
       | FPconst _ => NONE
-      | FPnode {info = bI i, kids, ty} =>
+      | FPnode {info = bI inf, kids, ty} =>
         let
-          val lifted =
-              List.map (fn {set,sub,...} => mk_BIMGo (planSet sub, set)) kids
+          fun lift ({set,sub,...}:fkid) =
+              mk_BIMGo (planSet lives i sub, set)
+          val lifted = List.map lift kids
           val ps = partialsOf lifted
           val n = length kids
           fun climb (m, x, th) =
@@ -642,12 +715,12 @@ fun planNontrivial plan =
                                   LU_NONEMPTY1)
                           th)
           fun tryKid (j, kid as {set,sub,...} : fkid, inh) =
-              case planNontrivial sub of
+              case planNontrivial lives i sub of
                   NONE => NONE
                 | SOME (t, th) =>
                   let
                     val theta = match_type (type_of (#1 inh))
-                                           (actual_of kid --> ty)
+                                           (actual_of lives kid --> ty)
                     val x = mk_comb(Term.inst theta (#1 inh), t)
                     val inhth = SPEC t (INST_TYPE theta (#2 inh))
                     val base = MATCH_MP BIMGo_NONEMPTY (CONJ inhth th)
@@ -668,7 +741,7 @@ fun planNontrivial plan =
             | firstOK _ = raise ERR "planNontrivial"
                                 "no inhabits entry for a set function"
         in
-          firstOK (1, kids, #inhabits i)
+          firstOK (1, kids, #inhabits inf)
         end
 
 (* ----------------------------------------------------------------------
@@ -698,29 +771,79 @@ type derived_bnf = {
   wit : (term * thm) option
 }
 
-fun deriveBNF db ty : derived_bnf =
+(* the same thing for a functor with several arguments: one map taking a
+   function per argument, and one set function, naturality theorem and
+   bound per argument.  The cross-laws between different arguments —
+   setᵢ (mapⱼ f x) = setᵢ x, and the commutation of mapᵢ with mapⱼ — are
+   instances of these, not extra obligations: put I in the other
+   positions of mapIMAGE and mapO. *)
+type derived_bnfn = {
+  bnd : term,
+  bndINFINITE : thm,
+  bndthms : thm list,
+  components : info HOLset.set,
+  lives : hol_type list,
+  mapCONG : thm,
+  mapID : thm,
+  mapIMAGE : thm list,
+  mapO : thm,
+  mkmap : term list -> term,
+  nontrivial : (term * thm) option list,
+  sets : term list,
+  wits : (term * thm) option list
+}
+
+fun deriveBNFn db lives ty : derived_bnfn =
     let
-      val plan = mkplan db ty
-      val setA = planSet plan
-      val tyvs = alpha :: type_vars ty
-      val bty = fresh_tyvar tyvs
-      val cty = fresh_tyvar (bty :: tyvs)
-      val instB = Term.inst [alpha |-> bty]
-      val f_ab = mk_var("f", alpha --> bty)
-      val g_ab = mk_var("g", alpha --> bty)
-      val f_bc = mk_var("f", bty --> cty)
-      val (B, bndINF, bndthm) = planBnd plan
+      val plan = mkplan db lives ty
+      val n = length lives
+      val tyvs = lives @ type_vars ty
+      (* one fresh target variable per argument, and one more for mapO's
+         middle stage *)
+      fun freshes 0 avoid acc = (List.rev acc, avoid)
+        | freshes k avoid acc =
+          let val t = fresh_tyvar avoid
+          in freshes (k-1) (t::avoid) (t::acc) end
+      val (bs, avoid1) = freshes n tyvs []
+      val (cs, _) = freshes n avoid1 []
+      val instB = Term.inst (ListPair.mapEq (fn (a,b) => a |-> b) (lives, bs))
+      (* numbered, because same-named variables at different types print
+         identically and are impossible to read *)
+      fun numbered nm tys =
+          List.tabulate (length tys,
+                         fn i => mk_var(if n = 1 then nm
+                                        else nm ^ Int.toString (i + 1),
+                                        List.nth (tys, i)))
+      val fs_ab = numbered "f" (ListPair.mapEq (op -->) (lives, bs))
+      val gs_ab = numbered "g" (ListPair.mapEq (op -->) (lives, bs))
+      val fs_bc = numbered "f" (ListPair.mapEq (op -->) (bs, cs))
+      val (B, bndINF, bndthms) = planBnd lives plan
     in
-      {bnd = B, bndINFINITE = bndINF, bndthm = bndthm,
+      {bnd = B, bndINFINITE = bndINF, bndthms = bndthms,
        components = HOLset.addList(empty_biset, planInfos plan),
-       mapCONG = planMapCONG (f_ab, g_ab) plan,
-       mapID = planMapID plan,
-       mapIMAGE = planMapIMAGE (f_ab, instB) plan,
-       mapO = planMapO (f_bc, g_ab) plan,
-       mkmap = planMap plan,
-       nontrivial = planNontrivial plan,
-       set = setA,
-       wit = planWitness plan}
+       lives = lives,
+       mapCONG = planMapCONG lives (fs_ab, gs_ab) plan,
+       mapID = planMapID lives plan,
+       mapIMAGE = List.tabulate
+                    (n, fn i => planMapIMAGE lives i (fs_ab, instB) plan),
+       mapO = planMapO lives (fs_bc, gs_ab) plan,
+       mkmap = planMap lives plan,
+       nontrivial = List.tabulate (n, fn i => planNontrivial lives i plan),
+       sets = List.tabulate (n, fn i => planSet lives i plan),
+       wits = List.tabulate (n, fn i => planWitness lives i plan)}
+    end
+
+(* the one-argument view, which is what the fixed-point construction
+   consumes *)
+fun deriveBNF db ty : derived_bnf =
+    let val b = deriveBNFn db [alpha] ty
+    in
+      {bnd = #bnd b, bndINFINITE = #bndINFINITE b, bndthm = hd (#bndthms b),
+       components = #components b, mapCONG = #mapCONG b, mapID = #mapID b,
+       mapIMAGE = hd (#mapIMAGE b), mapO = #mapO b,
+       mkmap = (fn f => #mkmap b [f]),
+       nontrivial = hd (#nontrivial b), set = hd (#sets b),
+       wit = hd (#wits b)}
     end
 
 end (* struct *)

@@ -32,6 +32,30 @@ type derived_bnf = {
                                built without an α *)
 }
 
+(* The same, for a functor with several arguments: one map taking a
+   function per argument, and a set function, naturality theorem and
+   bound per argument.  The laws relating *different* arguments — that
+   setᵢ ignores mapⱼ, and that mapᵢ and mapⱼ commute — are instances of
+   these rather than extra obligations: put I in the other positions of
+   mapIMAGE and of mapO. *)
+type derived_bnfn = {
+  bnd : term,
+  bndINFINITE : thm,
+  bndthms : thm list,       (* |- !x. setᵢ x <<= bnd, one per argument *)
+  components : info HOLset.set,
+  lives : hol_type list,    (* the arguments, in the order map takes them *)
+  mapCONG : thm,            (* hypotheses conjoined, one per argument *)
+  mapID : thm,              (* |- map I .. I = I *)
+  mapIMAGE : thm list,      (* |- setᵢ o map f₁..fₙ = IMAGE fᵢ o setᵢ *)
+  mapO : thm,
+  mkmap : term list -> term,
+  nontrivial : (term * thm) option list,
+  sets : term list,
+  wits : (term * thm) option list
+}
+
+val deriveBNFn : bnfBase.t -> hol_type list -> hol_type -> derived_bnfn
+
 val deriveBNF : bnfBase.t -> hol_type -> derived_bnf
 
 end

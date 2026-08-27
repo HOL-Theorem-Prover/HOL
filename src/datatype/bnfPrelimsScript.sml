@@ -739,9 +739,12 @@ Proof
   MATCH_ACCEPT_TAC (GSYM IMAGE_o_equal)
 QED
 
+(* the map is arbitrary, not I: in an n-ary functor an occurrence of a
+   *different* argument contributes nothing to this argument's set, but
+   still has that argument's function applied to it *)
 Theorem K0_natural:
-  ∀f:'a -> 'b.
-    (K ∅ : 'c -> 'b set) o (I:'c -> 'c) = IMAGE f o (K ∅ : 'c -> 'a set)
+  ∀(f:'a -> 'b) (h:'c -> 'd).
+    (K ∅ : 'd -> 'b set) o h = IMAGE f o (K ∅ : 'c -> 'a set)
 Proof
   simp[FUN_EQ_THM]
 QED
