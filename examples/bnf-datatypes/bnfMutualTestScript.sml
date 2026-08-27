@@ -111,6 +111,37 @@ val _ =
     end
 
 (* ----------------------------------------------------------------------
+    and the same principle one constructor at a time, which is the form a
+    proof is written against
+   ---------------------------------------------------------------------- *)
+
+val cs1 = defineConstructors ["A", "B"] (#bnf1 mt) (#fix1 mt)
+val cs2 = defineConstructors ["C", "D"] (#bnf2 mt) (#fix2 mt)
+
+Theorem mt_induction = mutualInduction (cs1, cs2) mt
+
+val _ = tprint "the pair's induction, per constructor"
+val _ =
+    if null (hyp mt_induction) andalso
+       same (concl mt_induction)
+            “∀P1 P2.
+               ((∀a0. P1 (A a0)) ∧ (∀a0 a1. P1 a0 ∧ P2 a1 ⇒ P1 (B a0 a1))) ∧
+               ((∀a0. P1 a0 ⇒ P2 (C a0)) ∧
+                (∀a0 a1. P2 a1 ⇒ P2 (D a0 a1))) ⇒
+               (∀n. P1 n) ∧ ∀m. P2 m”
+    then OK() else die (thm_to_string mt_induction)
+
+(* the constructors' own theorems come from each type's construction: the
+   second type's are those of the sibling functor, at the first *)
+val _ = tprint "the pair's constructors are distinct and injective"
+val _ =
+    case (hd (#distinct cs1), List.last (#one_one cs2)) of
+        (SOME d, SOME i) =>
+          if null (hyp d) andalso null (hyp i) then OK()
+          else die (thm_to_string d ^ "\n" ^ thm_to_string i)
+      | _ => die "not derived"
+
+(* ----------------------------------------------------------------------
     and with the sibling under a type operator of its own
    ---------------------------------------------------------------------- *)
 

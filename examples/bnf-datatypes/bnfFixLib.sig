@@ -188,6 +188,8 @@ sig
     cons1 : term, cons2 : term,
     fix1 : fixpoint, fix2 : fixpoint,
     sibling : fixpoint_bnf,
+    bnf1 : bnfLib.derived_bnfn,   (* each type's functor, as the *)
+    bnf2 : bnfLib.derived_bnfn,   (* construction saw it *)
     db : bnfBase.t,
     recursion : thm,
     induction : thm
@@ -196,5 +198,18 @@ sig
   val defineMutual : {tyname1 : string, tyname2 : string} ->
                      bnfBase.t -> hol_type list -> hol_type * hol_type ->
                      mutual
+
+  (* ----------------------------------------------------------------------
+      The pair's induction principle, one clause per constructor:
+
+        |- !P1 P2. (!p. P1 (A p)) /\ (!x y. P1 x /\ P2 y ==> P1 (B x y)) /\
+                   (!x. P1 x ==> P2 (C x)) /\ (!p y. P2 y ==> P2 (D p y)) ==>
+                   (!m. P1 m) /\ !m. P2 m
+
+      The constructors come from defineConstructors over each type's own
+      functor — the second type's over the sibling at its own parameter,
+      which is instantiated here.
+     ---------------------------------------------------------------------- *)
+  val mutualInduction : constructors * constructors -> mutual -> thm
 
 end

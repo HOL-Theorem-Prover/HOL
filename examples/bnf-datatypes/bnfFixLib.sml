@@ -1281,6 +1281,8 @@ type mutual = {
   cons1 : term, cons2 : term,         (* and their constructors *)
   fix1 : fixpoint, fix2 : fixpoint,   (* what each type's construction gave *)
   sibling : fixpoint_bnf,             (* the second type as a functor *)
+  bnf1 : bnfLib.derived_bnfn,         (* each type's functor, as the *)
+  bnf2 : bnfLib.derived_bnfn,         (* construction saw it *)
   db : bnfBase.t,                     (* the database, extended with it *)
   recursion : thm, induction : thm    (* and the pair's two principles *)
 }
@@ -1495,8 +1497,54 @@ fun defineMutual {tyname1, tyname2} db params (f1ty, f2ty) : mutual =
 
     in
       {ty1 = ty1, ty2 = ty2, cons1 = cons1, cons2 = cons2,
-       fix1 = fix1, fix2 = fix2, sibling = res2, db = db,
-       recursion = recursion, induction = induction}
+       fix1 = fix1, fix2 = fix2, sibling = res2, bnf1 = bnf1, bnf2 = bnf2,
+       db = db, recursion = recursion, induction = induction}
+    end
+
+
+(* ----------------------------------------------------------------------
+    The pair's induction principle, one clause per constructor.
+
+    Expanding the quantifier over each functor's shape and simplifying its
+    set functions away is the same step defineConstructors takes for a
+    single type's set-based induction; here both clauses go through it at
+    once, and the constructors of both types fold the result back up.
+
+    The second type's constructors were defined over the sibling functor
+    at its own parameter, so they are instantiated to the first type on
+    the way in.
+   ---------------------------------------------------------------------- *)
+
+fun mutualInduction (cs1 : constructors, cs2 : constructors)
+                    (mt : mutual) =
+    let
+      val theta = match_type (type_of (#cons (#fix2 mt)))
+                             (type_of (#cons2 mt))
+      val defs2 = List.map (INST_TYPE theta) (#defs cs2)
+      val defs = #defs cs1 @ defs2
+      val expand =
+          PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
+                             combinTheory.I_o_ID] THENC
+          QCONV (simpLib.SIMP_CONV set_ss
+                   (setRWs @ [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
+                              oneTheory.FORALL_ONE]))
+      (* expanding the quantifier names each constructor's arguments after
+         the projections it went through; rename them to the constructor's
+         own, as its definition has them *)
+      fun renameOne def =
+          case List.map (#1 o dest_var) (#1 (strip_forall (concl def))) of
+              [] => ALL_CONV
+            | ns => RENAME_VARS_CONV ns
+      fun renameConj [] = ALL_CONV
+        | renameConj [d] = renameOne d
+        | renameConj (d::ds) = LAND_CONV (renameOne d) THENC
+                               RAND_CONV (renameConj ds)
+      val rename = LAND_CONV (renameConj (#defs cs1)) THENC
+                   RAND_CONV (renameConj defs2)
+    in
+      CONV_RULE (STRIP_QUANT_CONV (LAND_CONV rename))
+        (REWRITE_RULE (List.map GSYM defs)
+           (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV expand)) (#induction mt)))
     end
 
 end
