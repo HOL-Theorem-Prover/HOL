@@ -1486,6 +1486,53 @@ def test_snapshot_resume_full_text_replace_resets():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_snapshot_resume_whole_document_range():
+    """A `didChange` whose single range spans the ENTIRE document --
+    the shape Emacs `revert-buffer` (`C-x v u`) produces, and what
+    VS Code sends for a whole-file replace -- still resumes when the
+    replacement text shares a prefix with what it replaces.
+
+    The edit's own `from` is 0 here, so taking the resume offset from
+    the range would force a from-scratch recompile.  That path is not
+    merely slow: it restores the boot `Context` and rewinds
+    `Meta.loadedMods`, so the header's `Ancestors` are re-`quse`d in
+    a process where those theories are already sealed, and every
+    ancestor load after the first fails.  The offset therefore comes
+    from the texts, not the range.  Reverting a file is the common
+    case, and a revert re-inserts almost everything it replaced."""
+    d = tempfile.mkdtemp(prefix="lsp_resume_")
+    try:
+        body = "\n".join(f"val x{i} = {i}" for i in range(20))
+        src = f"Theory resumescr6\n\n{body}\n"
+        edited = src.replace("val x19 = 19", "val x19 = 190")
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/resumescr6Script.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+
+            # Edit, then revert -- each as ONE change whose range is
+            # the whole document.
+            for ver, (old, new) in enumerate([(src, edited),
+                                              (edited, src)], start=2):
+                idx = c.total_msgs()
+                _did_change_incr(c, uri, old, 0,
+                                 len(old.encode("utf8")), new, ver)
+                assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                            f"v{ver} compileCompleted")
+                resumes = _resume_events(c, since=idx, uri=uri)
+                assert_eq(len(resumes), 1,
+                          f"v{ver} resumed exactly once ({resumes!r})")
+                assert_true(resumes[0]["pos"] > 0,
+                            f"v{ver} resume pos > 0 ({resumes[0]})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_snapshot_resume_survives_grammar_delta():
     """A script that mutates the parser grammar via `overload_on` in
     an early dec, then uses the overload in a later dec: a resume
@@ -3812,6 +3859,8 @@ TESTS = [
                                      test_snapshot_resume_early_edit_falls_back),
     ("snapshot_resume_full_text_replace_resets",
                                      test_snapshot_resume_full_text_replace_resets),
+    ("snapshot_resume_whole_document_range",
+                              test_snapshot_resume_whole_document_range),
     ("snapshot_resume_survives_grammar_delta",
                                      test_snapshot_resume_survives_grammar_delta),
     ("snapshot_resume_second_edit_after_completion",

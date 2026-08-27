@@ -703,8 +703,16 @@ fun start {diag, dbg} = let
        those down the from-scratch path recompiled the file in a
        process that has already run its `Ancestors', which does not
        give the same result: a `C-x v u' left the goal state
-       reporting tactics as failing that had just worked.  Diff
-       instead, and let the usual resume take it from there. *)
+       reporting tactics as failing that had just worked.
+
+       So take the offset from the texts rather than from the edit:
+       the first byte at which old and new differ.  That is never
+       earlier than the edit's own start -- everything before it is
+       untouched by construction -- and is often much later, because
+       a replacement usually re-inserts what it replaced.  It matters
+       for a range as well as for a whole-document change: reverting
+       a buffer has Emacs report one change spanning the entire
+       document, whose `from' is 0 like any other. *)
     fun applyText [] data = data
       | applyText ({range = NONE, text}::cs) (parse, base, _) =
         (bumpMin (commonPrefixLen (base, text));
@@ -716,7 +724,7 @@ fun start {diag, dbg} = let
           Substring.substring (base, 0, from),
           Substring.full text,
           Substring.substring (base, to, size base - to)]
-        val _ = bumpMin from
+        val _ = bumpMin (commonPrefixLen (base, text))
         in applyText cs (carryOverSnapshots parse, text, NONE) end
     val {parse, text = {text, lines, version = _}} = !lastTrees
     val (parse, text, lines) = applyText changes (parse, text, SOME lines)
