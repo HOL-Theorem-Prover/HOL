@@ -50,6 +50,8 @@ Unsynchronized.sml
 ../Redblackset.sml
 ../HOLset.sig
 ../HOLset.sml
+../mosml/concurrent/ThreadLocal.sig
+../mosml/concurrent/ThreadLocal.sml
 ../mosml/concurrent/Sref.sig
 ../mosml/concurrent/Sref.sml
 ../mosml/concurrent/Lock.sig
