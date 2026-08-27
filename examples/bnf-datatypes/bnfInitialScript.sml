@@ -1227,3 +1227,51 @@ Theorem NEWTYPE_RECURSION =
                            |> GSYM
                            |> Q.GEN ‘t’
                            |> DISCH_ALL
+
+(* ----------------------------------------------------------------------
+    Primitive recursion from iteration.
+
+    The recursion theorem above is an iterator: the function only ever
+    sees the results of the recursive calls.  HOL's datatype axioms are
+    primitive recursive — the function sees the constructor's arguments
+    as well — so the two are bridged by the standard pairing trick, which
+    needs the iterator at the product carrier 'n # 'c.
+   ---------------------------------------------------------------------- *)
+
+Theorem PRIM_REC_OF_ITER:
+  MapComp (mp_nq : ('n -> 'n # 'c) -> 'fn -> 'fq) mp_qn mp_nn ∧
+  MapComp mp_nq (mp_qc : ('n # 'c -> 'c) -> 'fq -> 'fc) mp_nc ∧
+  MapId mp_nn ∧
+  (∀t : 'fq -> 'n # 'c. ∃!h. ∀af. h (cons af) = t (mp_nq h af)) ∧
+  (∀t : 'fn -> 'n. ∃!h. ∀af. h (cons af) = t (mp_nn h af)) ⇒
+  ∀t : 'fn -> 'fc -> 'c. ∃!h. ∀af. h (cons af) = t af (mp_nc h af)
+Proof
+  strip_tac >> gen_tac >>
+  (* the paired iterator: alongside the answer it rebuilds its own
+     argument, and rebuilding is the identity *)
+  qpat_assum ‘∀t. ∃!h. ∀af. h (cons af) = t (mp_nq h af)’
+    (qspec_then ‘λv. (cons (mp_qn FST v), t (mp_qn FST v) (mp_qc SND v))’
+       (strip_assume_tac o SRULE[EXISTS_UNIQUE_THM])) >>
+  rename [‘k (cons _) = _’] >>
+  ‘FST o k = I’
+    by (qpat_assum ‘∀t. ∃!h. ∀af. h (cons af) = t (mp_nn h af)’
+          (qspec_then ‘cons’ (strip_assume_tac o SRULE[EXISTS_UNIQUE_THM])) >>
+        first_x_assum irule >> rpt conj_tac >~
+        [‘I (cons _) = _’] >- gs[MapId_def] >>
+        gen_tac >> simp[] >> gs[MapComp_def]) >>
+  simp[EXISTS_UNIQUE_THM] >> conj_tac
+  >- (qexists_tac ‘SND o k’ >> gen_tac >> simp[] >>
+      gs[MapComp_def, MapId_def]) >>
+  (* uniqueness: a solution paired with the identity solves the paired
+     equation, and those solutions are unique *)
+  qx_genl_tac [‘h1’, ‘h2’] >> strip_tac >>
+  ‘∀h. (∀af. h (cons af) = t af (mp_nc h af)) ⇒ k = (λx. (x, h x))’
+    by (rpt strip_tac >>
+        qpat_assum ‘∀h h'. (∀af. h (cons af) = (cons _, _)) ∧ _ ⇒ _’ irule >>
+        rpt conj_tac >~ [‘k (cons _) = _’] >- simp[] >>
+        gen_tac >> simp[] >> gs[MapComp_def] >>
+        simp[combinTheory.o_DEF, GSYM combinTheory.I_EQ_IDABS, ETA_AX] >>
+        gs[MapId_def]) >>
+  ‘(λx. (x, h1 x)) = (λx. (x, h2 x))’ by metis_tac[] >>
+  gs[FUN_EQ_THM]
+QED

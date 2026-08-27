@@ -341,12 +341,211 @@ fun defineFixpoint {tyname, ABS, REP} bnf =
                        termP_IN,
                        #isALG ia,
                        #init ia]
-        val recursion =
+        (* the map operator is a lambda, and PRIM_REC_OF_ITER's
+           hypotheses are stated over it, so the beta reduction that
+           makes the theorem readable has to come last *)
+        val recursion0 = REWRITE_RULE [GSYM cons_def]
+                                      (MATCH_MP NEWTYPE_RECURSION laws)
+        val recursion = CONV_RULE (DEPTH_CONV BETA_CONV) recursion0
+        (* the target type variable, read off t's type *)
+        val cty = #2 (dom_rng (type_of (#1 (dest_forall (concl recursion)))))
+        val prodq = pairSyntax.mk_prod (newty, cty)
+        val prim =
             CONV_RULE (DEPTH_CONV BETA_CONV)
-                      (REWRITE_RULE [GSYM cons_def]
-                                    (MATCH_MP NEWTYPE_RECURSION laws))
+              (MATCH_MP PRIM_REC_OF_ITER
+                 (LIST_CONJ [MapCompThm bnf (newty,prodq,newty),
+                             MapCompThm bnf (newty,prodq,cty),
+                             MapIdThm bnf newty,
+                             INST_TYPE [cty |-> prodq] recursion0,
+                             INST_TYPE [cty |-> newty] recursion0]))
     in
-      {newty = newty, cons = cons, cons_def = cons_def, recursion = recursion}
+      {newty = newty, cons = cons, cons_def = cons_def,
+       recursion = recursion, prim_recursion = prim}
+    end
+
+
+(* ----------------------------------------------------------------------
+    Splitting the single constructor along the functor's sum-of-products
+    structure, and stating the datatype's axiom the way the rest of HOL
+    expects it.
+   ---------------------------------------------------------------------- *)
+
+fun factorsOf ty =
+    if Type.compare (ty, oneSyntax.one_ty) = EQUAL then []
+    else pairSyntax.strip_prod ty
+
+(* the i-th summand's value, injected into the whole sum *)
+fun mkInj [_] 0 v = v
+  | mkInj (_::tys) 0 v = sumSyntax.mk_inl (v, sumSyntax.list_mk_sum tys)
+  | mkInj (ty::tys) i v = sumSyntax.mk_inr (mkInj tys (i-1) v, ty)
+  | mkInj [] _ _ = raise ERR "mkInj" "index out of range"
+
+(* and back out again, which is what lets a branch read the mapped value
+   without dispatching on it a second time *)
+fun mkOut [_] 0 v = v
+  | mkOut (_::_) 0 v = sumSyntax.mk_outl v
+  | mkOut (_::tys) i v = mkOut tys (i-1) (sumSyntax.mk_outr v)
+  | mkOut [] _ _ = raise ERR "mkOut" "index out of range"
+
+fun projs 0 _ = []
+  | projs 1 v = [v]
+  | projs k v = pairSyntax.mk_fst v :: projs (k-1) (pairSyntax.mk_snd v)
+
+val sum_CASE_tm = prim_mk_const {Thy = "sum", Name = "sum_CASE"}
+
+fun mkCaseTerm [_] [(x,b)] scrut = subst [x |-> scrut] b
+  | mkCaseTerm (_::tys) ((x,b)::bs) scrut =
+      let val rv = mk_var ("r", sumSyntax.list_mk_sum tys)
+      in
+        list_mk_icomb (sum_CASE_tm,
+                       [scrut, mk_abs (x,b),
+                        mk_abs (rv, mkCaseTerm tys bs rv)])
+      end
+  | mkCaseTerm _ _ _ = raise ERR "mkCaseTerm" "malformed"
+
+val reduceConv =
+    simpLib.SIMP_CONV boolSimps.bool_ss
+                      [sumTheory.SUM_MAP_def, sumTheory.sum_case_def,
+                       sumTheory.OUTL, sumTheory.OUTR, pairTheory.PAIR_MAP,
+                       pairTheory.FST, pairTheory.SND, combinTheory.I_THM]
+
+fun defineConstructors names bnf fix =
+    let val newty = #newty fix
+        val cons = #cons fix
+        val prim = #prim_recursion fix
+        val cty = #2 (dom_rng (#2 (dom_rng
+                        (type_of (#1 (dest_forall (concl prim)))))))
+        val summands = sumSyntax.strip_sum (functorTy bnf)
+        val n = length summands
+        val _ = length names = n orelse
+                raise ERR "defineConstructors"
+                      ("the functor has " ^ Int.toString n ^ " summands")
+        val rawFactors = map factorsOf summands
+        fun plainFactor ty = Type.compare (ty,alpha) = EQUAL orelse
+                             not (Lib.mem alpha (type_vars ty))
+        val _ = List.all (List.all plainFactor) rawFactors orelse
+                raise ERR "defineConstructors"
+                      "recursion nested inside another type operator"
+        fun atNew ty = type_subst [alpha |-> newty] ty
+        fun atC ty = type_subst [alpha |-> cty] ty
+        val newSummands = map atNew summands
+        val cSummands = map atC summands
+        val isRec = map (fn ty => Type.compare (ty,alpha) = EQUAL)
+        (* one constructor per summand *)
+        fun mkOne (i, (nm, facs)) =
+            let val argtys = map atNew facs
+                val args = List.tabulate
+                             (length facs,
+                              fn j => mk_var ("a" ^ Int.toString j,
+                                              List.nth (argtys, j)))
+                val tup = if null args then oneSyntax.one_tm
+                          else pairSyntax.list_mk_pair args
+                val cvar = mk_var (nm, List.foldr (op -->) newty argtys)
+                val def = new_definition
+                            (nm ^ "_def",
+                             mk_eq (list_mk_comb (cvar, args),
+                                    mk_comb (cons, mkInj newSummands i tup)))
+                val ctm = #1 (strip_comb (lhs (concl (SPEC_ALL def))))
+                val recs = isRec facs
+                val nonrecargs = map #2 (filter (not o #1) (zip recs args))
+                val recargs = map #2 (filter #1 (zip recs args))
+                val ftype = List.foldr (op -->) cty
+                              (map type_of nonrecargs @ map type_of recargs @
+                               map (fn _ => cty) recargs)
+                val fvar = mk_var ("f" ^ Int.toString i, ftype)
+            in
+              {name = nm, def = def, cons = ctm, args = args, recs = recs,
+               nonrecargs = nonrecargs, recargs = recargs, fvar = fvar}
+            end
+        val cs = List.tabulate
+                   (n, fn i => mkOne (i, (List.nth (names, i),
+                                          List.nth (rawFactors, i))))
+        (* the branch bodies: the constructor's own arguments come from
+           af, the recursive results from the matching part of v *)
+        val afv = mk_var ("af", functorAt bnf newty)
+        val vv = mk_var ("v", functorAt bnf cty)
+        fun branch (i, c) =
+            let val xv = mk_var ("x", List.nth (newSummands, i))
+                val yv = mkOut cSummands i vv
+                val k = length (#args c)
+                val xps = projs k xv
+                val yps = projs k yv
+                val recres = map #2 (filter #1 (zip (#recs c) yps))
+                val xnonrec = map #2 (filter (not o #1) (zip (#recs c) xps))
+                val xrec = map #2 (filter #1 (zip (#recs c) xps))
+            in
+              (xv, list_mk_comb (#fvar c, xnonrec @ xrec @ recres))
+            end
+        val tterm = mk_abs (afv, mk_abs (vv,
+                      mkCaseTerm newSummands
+                                 (List.tabulate (n, fn i =>
+                                     branch (i, List.nth (cs,i))))
+                                 afv))
+        (* Rather than instantiating the equation at each constructor,
+           expand the quantifier over the functor's shape: that gives
+           both directions at once, so the axiom keeps its uniqueness,
+           which is what an induction principle is derived from. *)
+        val spec = CONV_RULE (DEPTH_CONV BETA_CONV) (SPEC tterm prim)
+        val (hv, body) = dest_abs (rand (concl spec))
+        val eqth = REWRITE_RULE (map (GSYM o #def) cs)
+                     (simpLib.SIMP_CONV boolSimps.bool_ss
+                        [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
+                         oneTheory.FORALL_ONE, sumTheory.SUM_MAP_def,
+                         sumTheory.sum_case_def, sumTheory.OUTL,
+                         sumTheory.OUTR, pairTheory.PAIR_MAP,
+                         pairTheory.FST, pairTheory.SND, combinTheory.I_THM]
+                        body)
+        (* expanding the quantifier names the constructors' arguments
+           after the product projections it went through; rename them to
+           what a datatype axiom is normally written with *)
+        fun renameOne c =
+            if null (#args c) then ALL_CONV
+            else RENAME_VARS_CONV (map (fst o dest_var) (#args c))
+        fun renameConj [] = ALL_CONV
+          | renameConj [c] = renameOne c
+          | renameConj (c::cs) = LAND_CONV (renameOne c) THENC
+                                 RAND_CONV (renameConj cs)
+        val axiom =
+            CONV_RULE (STRIP_QUANT_CONV
+                         (RAND_CONV (ABS_CONV (renameConj cs))))
+              (GENL (map #fvar cs)
+                    (CONV_RULE (RAND_CONV (ABS_CONV (REWR_CONV (GEN hv eqth))))
+                               spec))
+        (* Prim_rec's derivations are older than the argument order
+           TypeBase settled on: mk_fn abstracts the recursive results
+           before the constructor's own arguments.  Permuting each f is
+           one SPEC, so state the axiom the modern way and hand the
+           legacy order to the derivations. *)
+        val legacy =
+            let fun perm c =
+                    let val args = #nonrecargs c @ #recargs c
+                        val rs = List.tabulate
+                                   (length (#recargs c),
+                                    fn j => mk_var ("r" ^ Int.toString j, cty))
+                        val g = mk_var (fst (dest_var (#fvar c)) ^ "'",
+                                        List.foldr (op -->) cty
+                                          (map (fn _ => cty) (#recargs c) @
+                                           map type_of args))
+                    in
+                      (g, list_mk_abs (args @ rs, list_mk_comb (g, rs @ args)))
+                    end
+                val ps = map perm cs
+            in
+              GENL (map #1 ps)
+                   (CONV_RULE (DEPTH_CONV BETA_CONV)
+                              (SPECL (map #2 ps) axiom))
+            end
+        val induction = Prim_rec.prove_induction_thm legacy
+        (* the derivations of distinctness and injectivity want the plain
+           existential, which is also the form TypeBase stores *)
+        val fvars = map #fvar cs
+        val existential = GENL fvars (EXISTENCE (SPECL fvars axiom))
+    in
+      {constructors = map #cons cs, defs = map #def cs, axiom = axiom,
+       legacy_axiom = legacy, induction = induction,
+       existential_axiom = existential,
+       distinct = Prim_rec.prove_constructors_distinct existential,
+       one_one = Prim_rec.prove_constructors_one_one existential}
     end
 
 end

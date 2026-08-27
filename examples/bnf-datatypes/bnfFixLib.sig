@@ -93,6 +93,28 @@ sig
   val defineFixpoint : {tyname : string, ABS : string, REP : string} ->
                        bnfLib.derived_bnf ->
                        {newty : hol_type, cons : term, cons_def : thm,
-                        recursion : thm}
+                        recursion : thm, prim_recursion : thm}
+
+  (* ----------------------------------------------------------------------
+      The datatype's own constructors, and its axiom in the shape the
+      rest of HOL expects:
+
+        |- !f0 f1. ?!fn.
+             fn C0 = f0 /\
+             !a0 a1. fn (C1 a0 a1) = f1 <non-rec> <rec> <fn of rec>
+
+      which is what Prim_rec's derivations of distinctness, injectivity,
+      induction and the case constant run on.  The functor's top level
+      must be a sum of products of factors that are either the recursive
+      argument itself or free of it; nesting is rejected here, since
+      HOL's axiom takes a different shape for it.
+     ---------------------------------------------------------------------- *)
+  val defineConstructors :
+      string list -> bnfLib.derived_bnf ->
+      {newty : hol_type, cons : term, cons_def : thm,
+       recursion : thm, prim_recursion : thm} ->
+      {constructors : term list, defs : thm list, axiom : thm,
+       legacy_axiom : thm, existential_axiom : thm, induction : thm,
+       distinct : thm option list, one_one : thm option list}
 
 end

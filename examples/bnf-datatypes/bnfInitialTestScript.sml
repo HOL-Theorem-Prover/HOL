@@ -131,3 +131,49 @@ Proof
   ‘h Leaf = T ∧ h (Node l a rt) = F’ by simp[Leaf_def, Node_def] >>
   strip_tac >> gs[]
 QED
+
+(* ----------------------------------------------------------------------
+    Splitting the constructors out, and handing the result to the
+    derivations in Prim_rec.  What comes back should be, shape for
+    shape, what the Datatype package produces for the same type.
+   ---------------------------------------------------------------------- *)
+
+val btcs = defineConstructors ["Lf", "Nd"]
+             (deriveBNF (bnfBase.fullDB()) “:one + 'a # 'b1 # 'a”) btree
+
+fun checkthm nm th q =
+    (tprint nm;
+     if same (concl th) q then OK() else die (thm_to_string th))
+
+val _ = checkthm "btree axiom" (#axiom btcs)
+   “∀f0 f1. ∃!h. h Lf = f0 ∧
+                 ∀a0 a1 a2. h (Nd a0 a1 a2) = f1 a1 a0 a2 (h a0) (h a2)”
+
+val _ = checkthm "btree induction" (#induction btcs)
+   “∀P. P Lf ∧ (∀a0 a2. P a0 ∧ P a2 ⇒ ∀a1. P (Nd a0 a1 a2)) ⇒ ∀b. P b”
+
+val _ = checkthm "btree distinctness" (valOf (hd (#distinct btcs)))
+   “∀a2 a1 a0. Lf ≠ Nd a0 a1 a2”
+
+val _ = checkthm "btree injectivity"
+   (valOf (hd (List.filter isSome (#one_one btcs))))
+   “∀a0 a1 a2 a0' a1' a2'.
+      Nd a0 a1 a2 = Nd a0' a1' a2' ⇔ a0 = a0' ∧ a1 = a1' ∧ a2 = a2'”
+
+val _ = tprint "btree nchotomy and case constant"
+val _ =
+    let val nch = hd (Prim_rec.prove_cases_thm (#induction btcs))
+        val cse = hd (Prim_rec.define_case_constant (#existential_axiom btcs))
+    in
+      if not (same (concl nch) “∀b. b = Lf ∨ ∃a0 a1 a2. b = Nd a0 a1 a2”)
+      then die (thm_to_string nch)
+      (* v is annotated in both conjuncts: without it the parser types
+         the two btree_CASE instances independently, and the quotation
+         comes out more general than the theorem *)
+      else if same (concl cse)
+                   “(∀(v:'z) f. btree_CASE (Lf : 'w btree) v f = v) ∧
+                    ∀a0 (a1:'w) a2 (v:'z) f.
+                      btree_CASE (Nd a0 a1 a2) v f = f a0 a1 a2”
+      then OK()
+      else die (thm_to_string cse)
+    end
