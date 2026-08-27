@@ -698,3 +698,42 @@ Proof
         ONCE_REWRITE_TAC [cardleq_lteq] >> simp[CARD_SQUARE_INFINITE]) >>
   metis_tac[cardleq_TRANS]
 QED
+
+(* ----------------------------------------------------------------------
+    An algebra can be copied onto any carrier big enough to hold it.
+   ---------------------------------------------------------------------- *)
+
+Theorem copy_alg_back:
+  Natural (mp_ba : ('b -> 'a) -> 'g -> 'f) stb sta ∧
+  Natural (mp_ab : ('a -> 'b) -> 'f -> 'g) sta stb ∧
+  MapComp mp_ab mp_ba (mp_aa : ('a -> 'a) -> 'f -> 'f) ∧
+  MapId mp_aa ∧ MapCong mp_aa sta ⇒
+  (A:'a set) ≼ (B:'b set) ∧ ALG sta (A, s : 'f -> 'a) ⇒
+  ∃(B0:'b set) (s' : 'g -> 'b) h j.
+    HOM mp_ba stb sta h (B0,s') (A,s) ∧
+    HOM mp_ab sta stb j (A,s) (B0,s') ∧
+    (∀a. a ∈ A ⇒ h (j a) = a) ∧ (∀b. b ∈ B0 ⇒ j (h b) = b)
+Proof
+  strip_tac >>
+  qpat_assum ‘MapId _’ (fn th1 =>
+    qpat_assum ‘MapCong _ _’ (fn th2 =>
+      assume_tac (MATCH_MP Map_eq_id (CONJ th1 th2)))) >>
+  simp[cardleq_def] >> strip_tac >> rename [‘INJ h0 A B’] >>
+  qexistsl_tac [‘IMAGE h0 A’, ‘λbv. h0 (s (mp_ba (LINV h0 A) bv))’,
+                ‘LINV h0 A’, ‘h0’] >>
+  csimp[HOM_def, PULL_EXISTS] >>
+  drule_then assume_tac LINV_DEF >> gs[Natural_def] >> rw[] >~
+  [‘ALG stb (IMAGE h0 A, _)’]
+  >- (gs[ALG_def, SUBSET_DEF] >> rw[] >>
+      irule_at Any EQ_REFL >> first_assum irule >>
+      simp[PULL_EXISTS] >> rw[] >> first_assum drule >>
+      simp[PULL_EXISTS]) >~
+  [‘LINV h0 A (h0 (s _))’]
+  >- (‘s (mp_ba (LINV h0 A) bv) ∈ A’
+        by (gs[ALG_def] >> first_assum irule >>
+            gs[SUBSET_DEF, PULL_EXISTS] >> rw[] >>
+            first_assum drule >> simp[PULL_EXISTS]) >>
+      simp[]) >>
+  gs[MapComp_def] >> ntac 2 AP_TERM_TAC >>
+  first_x_assum irule >> gs[SUBSET_DEF]
+QED
