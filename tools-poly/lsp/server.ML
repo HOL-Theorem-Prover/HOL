@@ -674,6 +674,12 @@ fun start {diag, dbg} = let
     NONE => ()
   | SOME {cancelled, ...} => (r := NONE; cancelled := true)
 
+  fun commonPrefixLen (a, b) = let
+    val n = Int.min (size a, size b)
+    fun go i = if i >= n orelse String.sub (a, i) <> String.sub (b, i) then i
+               else go (i + 1)
+    in go 0 end
+
   fun applyEdit ({compile, lastTrees, minEditOffset, ...}:file_data) version changes = let
     val _ = stopCompile compile
     fun getLines text NONE = mkLineCounter text
@@ -686,13 +692,23 @@ fun start {diag, dbg} = let
       | SOME m => if off < m then minEditOffset := SOME off else ()
     (* The old `parse` value is carried through the fold so we can
        preserve its `declSnapshots` on each step (via
-       `carryOverSnapshots`).  On a full-text replace (`range = NONE`)
-       the snapshots become useless — their `endByte` offsets no
-       longer index anything meaningful in the new text — so we drop
-       them explicitly and push min-edit-offset to 0. *)
+       `carryOverSnapshots`).
+
+       A full-text replace (`range = NONE`) used to drop the
+       snapshots and push min-edit-offset to 0, on the grounds that
+       their `endByte` offsets no longer index anything meaningful.
+       That holds only past the point where the two texts diverge --
+       and a whole-document replace is typically a revert or a
+       reformat, where they diverge late or not at all.  Sending
+       those down the from-scratch path recompiled the file in a
+       process that has already run its `Ancestors', which does not
+       give the same result: a `C-x v u' left the goal state
+       reporting tactics as failing that had just worked.  Diff
+       instead, and let the usual resume take it from there. *)
     fun applyText [] data = data
-      | applyText ({range = NONE, text}::cs) _ =
-        (bumpMin 0; applyText cs (emptyParseData 0, text, NONE))
+      | applyText ({range = NONE, text}::cs) (parse, base, _) =
+        (bumpMin (commonPrefixLen (base, text));
+         applyText cs (carryOverSnapshots parse, text, NONE))
       | applyText ({range = SOME (from, to), text}::cs) (parse, base, lines) = let
         val lines = getLines base lines
         val (from, to) = (fromLineCol lines from, fromLineCol lines to)

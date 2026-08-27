@@ -1577,6 +1577,59 @@ def _send_goalstate(c, req_id, uri, line, char):
     return c.wait_until(got, 5)
 
 
+def test_full_replace_resumes_from_the_common_prefix():
+    """A whole-document replace is usually a revert or a reformat, so
+    the old and new texts agree for most of their length.  Resume from
+    a snapshot inside that agreement rather than recompiling from
+    scratch.
+
+    From-scratch is not merely slow: it re-runs the file's
+    `Ancestors` in a process that has already run them, which does not
+    reproduce the same state, and left the goal state reporting
+    tactics as failing that had just worked (`C-x v u` in Emacs).
+    Manual undo never showed it, sending incremental changes that
+    always resumed.
+
+    Measured here: ~0.4s when the texts diverge late, ~3.0s when they
+    diverge at offset 0 — which is what every full replace used to
+    do."""
+    src = f"{REPO}/src/integer/integerScript.sml"
+    c = Client(os.path.dirname(src))
+    try:
+        _init(c, REPO)
+        uri = f"file://{src}"
+        with open(src, encoding="utf8") as f: orig = f.read()
+        late = orig[:-40] + "\n(* tail *)\n" + orig[-40:]
+        _did_open(c, uri, orig)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "first compileCompleted")
+        base = _send_goalstate(c, 790, uri, 3940, 8).get("result")
+        assert_true(base is not None, "baseline goal state")
+
+        idx = c.total_msgs(); t0 = time.time()
+        _did_change_full(c, uri, late, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                    "compileCompleted after the replace")
+        elapsed = time.time() - t0
+        assert_le(elapsed, 1.5,
+                  f"a late-diverging replace resumes rather than "
+                  f"recompiling ({elapsed:.2f}s)")
+
+        # Revert, as `C-x v u` does: another whole-document replace.
+        idx = c.total_msgs()
+        _did_change_full(c, uri, orig, 3)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                    "compileCompleted after the revert")
+        after = _send_goalstate(c, 791, uri, 3940, 8).get("result")
+        assert_true(after is not None, "goal state after the revert")
+        assert_eq(after.get("error"), None,
+                  f"no tactic reported as failing ({after!r})")
+        assert_eq(after.get("goals"), base.get("goals"),
+                  f"same state as before the round trip ({after!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_inside_proof():
     """Slice B: cursor inside a `Proof … QED` block returns the enclosing
     theorem's name and parsed statement as the initial goal (step 0, no
@@ -3721,6 +3774,8 @@ TESTS = [
     ("small_recompile_type_error",   test_small_recompile_type_error_inserted),
     ("small_recompile_bare_val",     test_small_recompile_bare_val),
     ("integer_first_compile",        test_integer_first_compile),
+    ("full_replace_resumes_from_the_common_prefix",
+                                     test_full_replace_resumes_from_the_common_prefix),
     ("integer_recompile_blank",      test_integer_recompile_blank_lines),
     ("integer_recompile_type_error", test_integer_recompile_with_type_error),
     ("integer_didChange_interrupts",
