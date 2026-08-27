@@ -765,6 +765,67 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
+    The whole cardinality argument, as one theorem.
+
+    Its hypotheses are BNF laws at three instances — the carrier 'a, the
+    carrier extended by a point, and the ordinals that bound F's sets —
+    plus F's non-triviality and the bound itself.  A package instantiates
+    it and gets the one fact the construction needs: every minimal
+    algebra fits inside a set fixed by F alone.
+   ---------------------------------------------------------------------- *)
+
+(* the step from the bound to a whole type, which is the form the
+   construction's hypothesis takes *)
+Theorem CARDLEQ_UNIV[simp]:
+  (s : 'a set) ≼ 𝕌(:'a)
+Proof
+  irule SUBSET_CARDLEQ >> simp[]
+QED
+
+Theorem MINSET_CARDLEQ:
+  MapId (mp_aa : ('a -> 'a) -> 'f -> 'f) ∧ MapCong mp_aa sta ∧
+  Natural (mp_ab : ('a -> 'a + bool) -> 'f -> 'fab) sta stab ∧
+  MapComp mp_ab (mp_ba : ('a + bool -> 'a) -> 'fab -> 'f) mp_aa ∧
+  MapId (mp_bb : ('a + bool -> 'a + bool) -> 'fab -> 'fab) ∧
+  MapCong mp_bb stab ∧
+  Natural (mp_bo : ('a + bool -> 'g ordinal) -> 'fab -> 'fo) stab sto ∧
+  Natural (mp_ob : ('g ordinal -> 'a + bool) -> 'fo -> 'fab) sto stab ∧
+  MapComp mp_bo mp_ob mp_bb ∧
+  Natural (mp_oo : ('g ordinal -> 'g ordinal) -> 'fo -> 'fo) sto sto ∧
+  (∃x : 'fo. sto x ≠ ∅) ∧
+  ω ≤ (bd : 'g ordinal) ∧ (∀x. sta x ≼ preds bd) ∧
+  (∀x. stab x ≼ preds bd) ⇒
+  ∀s. MINSET sta (s : 'f -> 'a) ≼ 𝟚 ** cardSUC (FIN sto (preds bd))
+Proof
+  strip_tac >> gen_tac >>
+  ‘∀C : 'g ordinal set. C ≼ FIN sto C’
+    by (byrule NontrivialBs [‘Natural mp_oo sto sto’] irule >>
+        qpat_assum ‘sto _ ≠ ∅’ (irule_at Any)) >>
+  ‘∀u:'a set. ∀v:('a + bool) set.
+     u ≼ v ⇒ (FIN sta u : 'f set) ≼ (FIN stab v : 'fab set)’
+    by (rpt strip_tac >>
+        byrule FIN_cardleq
+          [‘MapId mp_aa’, ‘MapCong mp_aa sta’, ‘Natural mp_ab sta stab’,
+           ‘MapComp mp_ab mp_ba mp_aa’]
+          irule >> simp[]) >>
+  ‘∀B : ('a + bool) set.
+     𝟚 ≼ B ⇒ (FIN stab B : 'fab set) ≼ B ** cardSUC (FIN sto (preds bd))’
+    by (byrule CBDb
+          [‘Natural mp_bo stab sto’, ‘Natural mp_ob sto stab’,
+           ‘MapComp mp_bo mp_ob mp_bb’, ‘MapId mp_bb’, ‘MapCong mp_bb stab’,
+           ‘∀C : 'g ordinal set. C ≼ FIN sto C’]
+          (fn th => mp_tac th >> simp[])) >>
+  byrule KKbnd_EQ_MINSET [‘MapId mp_aa’]
+    (fn th => ‘KK sta s (csuc bd) = MINSET sta s’ by (irule th >> simp[])) >>
+  pop_assum (SUBST1_TAC o SYM) >>
+  byrule ALG_cardinality_bound
+    [‘∀C : 'g ordinal set. C ≼ FIN sto C’,
+     ‘∀u:'a set. ∀v:('a + bool) set. u ≼ v ⇒ _’,
+     ‘∀B : ('a + bool) set. 𝟚 ≼ B ⇒ _’]
+    (fn th => irule th >> simp[])
+QED
+
+(* ----------------------------------------------------------------------
     The initial algebra: the minimal sub-algebra of the product of all
     algebras over the bounded carrier type.
 
