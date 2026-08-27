@@ -1106,6 +1106,15 @@ Proof
   qexists_tac ‘stp’ >> simp[]
 QED
 
+(* the form new_type_definition wants: the carrier as a predicate *)
+Theorem IALG_INHABITED:
+  (∃w. stp w = ∅) ⇒ ∃x. IALG stp mp_pa sta x
+Proof
+  strip_tac >>
+  ‘IALG stp mp_pa sta ≠ ∅’ by (irule IALG_NONEMPTY >> metis_tac[]) >>
+  gs[GSYM MEMBER_NOT_EMPTY, IN_DEF] >> first_assum (irule_at Any)
+QED
+
 Theorem IALG_ind:
   ∀P. (∀x. stp x ⊆ IALG stp mp_pa sta ∧ (∀y. y ∈ stp x ⇒ P y) ⇒
            P (ICONS mp_pa sta x)) ⇒

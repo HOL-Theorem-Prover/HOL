@@ -53,4 +53,27 @@ sig
   val minsetBound : bnfLib.derived_bnf -> hol_type ->
                     {carrier : hol_type, thm : thm}
 
+  (* ----------------------------------------------------------------------
+      The initial algebra itself, before any type is defined.  carrier
+      is the bounded type the algebra is built over, prodty the product
+      of all algebras over it (which is where alg lives), and target the
+      type variable the initiality theorem is stated at, so that
+      INST_TYPE gives initiality at any carrier.
+
+        alg   : the carrier, a prodty set
+        cons  : F[prodty] -> prodty
+        bij   : |- BIJ cons (FIN st alg) alg
+        init  : |- !t G. ALG stc (G,t) ==>
+                         ?!h. HOM .. h (alg,cons) (G,t) /\ ..
+        inhabited : |- ?x. alg x
+        induction : the reachability principle for alg
+     ---------------------------------------------------------------------- *)
+  type initial_algebra = {
+    carrier : hol_type, prodty : hol_type, target : hol_type,
+    alg : term, cons : term,
+    bij : thm, init : thm, inhabited : thm, induction : thm
+  }
+
+  val initialAlgebra : bnfLib.derived_bnf -> initial_algebra
+
 end

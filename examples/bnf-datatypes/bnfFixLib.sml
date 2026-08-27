@@ -186,4 +186,106 @@ fun minsetBound bnf ty =
       {carrier = carrier, thm = th}
     end
 
+
+(* ----------------------------------------------------------------------
+    The initial algebra.
+
+    The construction lives over three types: the bounded carrier that
+    the cardinality argument produces, the product of all algebras over
+    it, and F applied to that product.  Everything else is a matter of
+    instantiating INITIALITY0 and LAMBEK, which is what the parameterised
+    statement of those theorems is for.
+   ---------------------------------------------------------------------- *)
+
+type initial_algebra = {
+  carrier : hol_type, prodty : hol_type, target : hol_type,
+  alg : term, cons : term,
+  bij : thm, init : thm, inhabited : thm, induction : thm
+}
+
+fun witnessThm bnf ty =
+    let val (w,th) = case #wit bnf of
+                         SOME p => p
+                       | NONE => raise ERR "witnessThm"
+                                       "the functor has no empty witness"
+        val th = INST_TYPE [alpha |-> ty] th
+        val w = Term.inst [alpha |-> ty] w
+        val x = mk_var("w", functorAt bnf ty)
+    in
+      EXISTS (mk_exists (x, subst [w |-> x] (concl th)), w) th
+    end
+
+fun initialAlgebra bnf =
+    let val target = alpha
+        val {carrier, thm = bound} = minsetBound bnf target
+        (* the product's index type, and the product's carrier *)
+        val idxty = pairSyntax.mk_prod (carrier --> bool,
+                                        functorAt bnf carrier --> carrier)
+        val prodty = idxty --> carrier
+        fun mp p = mapOp bnf p
+        fun st ty = setOp bnf ty
+        val laws =
+            CONJ (MapCongThm bnf (prodty,target))
+                 (LIST_CONJ [NaturalThm bnf (prodty,carrier),
+                             NaturalThm bnf (prodty,prodty),
+                             MapIdThm bnf prodty,
+                             MapCompThm bnf (prodty,prodty,carrier),
+                             NaturalThm bnf (prodty,target),
+                             MapCompThm bnf (prodty,carrier,target),
+                             MapCompThm bnf (prodty,target,target),
+                             NaturalThm bnf (carrier,target),
+                             NaturalThm bnf (target,carrier),
+                             MapCompThm bnf (target,carrier,target),
+                             MapIdThm bnf target,
+                             MapCongThm bnf (target,target),
+                             bound])
+        val init = MATCH_MP INITIALITY0 laws
+        (* the carrier and the constructor, read back off the theorem *)
+        val fpty = functorAt bnf prodty
+        val algty = pairSyntax.mk_prod (prodty --> bool, fpty --> prodty)
+        val (alg, cons) =
+            pairSyntax.dest_pair
+              (find_term (fn t => pairSyntax.is_pair t andalso
+                                  Type.compare (type_of t, algty) = EQUAL)
+                         (concl init))
+        val ALG_tm = rator (rator (concl IALG_ALG))
+        val algALG =
+            PART_MATCH I IALG_ALG
+              (list_mk_icomb (ALG_tm, [st prodty,
+                                       pairSyntax.mk_pair (alg,cons)]))
+        val lambek =
+            MATCH_MP LAMBEK
+              (LIST_CONJ [MapCongThm bnf (prodty,prodty),
+                          MapIdThm bnf prodty,
+                          NaturalThm bnf (fpty,prodty),
+                          MapCompThm bnf (prodty,fpty,prodty),
+                          MapCongThm bnf (prodty,fpty),
+                          NaturalThm bnf (prodty,fpty),
+                          algALG,
+                          INST_TYPE [alpha |-> fpty] init,
+                          INST_TYPE [alpha |-> prodty] init])
+        (* IALG_INHABITED and IALG_ind mention the algebra's map and set
+           parameters only inside IALG, so they are pinned by matching
+           that subterm against the algebra just built *)
+        val IALG_tm = repeat rator alg
+        fun atAlg th =
+            let val nargs = length (#2 (strip_comb alg))
+                val pat = find_term
+                            (fn t => let val (f,args) = strip_comb t
+                                     in
+                                       same_const f IALG_tm andalso
+                                       length args = nargs
+                                     end handle HOL_ERR _ => false)
+                            (concl th)
+            in
+              INST_TY_TERM (match_term pat alg) th
+            end
+        val inhabited = atAlg (MATCH_MP IALG_INHABITED (witnessThm bnf prodty))
+    in
+      {carrier = carrier, prodty = prodty, target = target,
+       alg = alg, cons = cons,
+       bij = lambek, init = init, inhabited = inhabited,
+       induction = atAlg IALG_ind}
+    end
+
 end
