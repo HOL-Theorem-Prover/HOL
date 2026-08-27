@@ -1285,7 +1285,9 @@ type mutual = {
   bnf2 : bnfLib.derived_bnfn,         (* construction saw it *)
   db : bnfBase.t,                     (* the database, extended with it *)
   iterator : thm,                     (* the pair's principle, folded *)
-  recursion : thm, induction : thm    (* and the two principles in full *)
+  recursion : thm,                    (* and in full, as an iterator *)
+  prim_recursion : thm,               (* and hearing the arguments too *)
+  induction : thm
 }
 
 (* |- t1 = t2, when both sides normalise to the same thing.  Two set
@@ -1459,6 +1461,67 @@ fun defineMutual {tyname1, tyname2} db params (f1ty, f2ty) : mutual =
           CONV_RULE (DEPTH_CONV BETA_CONV)
                     (REWRITE_RULE [MUTITER_def, MUTREC_def] mutiter)
 
+
+      (* ------------------------------------------------------------
+          primitive recursion for the pair
+
+          The principle above hands each function only the results of the
+          recursive calls; the axiom the rest of HOL is written against
+          hands it the constructor's arguments too.  bnfMutualTheory
+          bridges the two, over maps that take a function per *type*
+          rather than per argument — so the functor whose own recursion
+          is the second type takes them the other way round.
+         ------------------------------------------------------------ *)
+      fun pairMap bnf swap (g,k) =
+          #mkmap bnf ((if swap then [k,g] else [g,k]) @ pIs)
+      fun pairArg bnf swap (s1,s2) =
+          if swap then functorAtArgs bnf (s2, s1 :: params)
+          else functorAtArgs bnf (s1, s2 :: params)
+      fun pairVars ((s1,s2),(t1,t2)) (n1,n2) =
+          (mk_var(n1, s1 --> t1), mk_var(n2, s2 --> t2))
+      fun pairOp bnf swap (src,tgt) =
+          let val (g,k) = pairVars (src,tgt) ("g","k")
+          in mk_abs(g, mk_abs(k, pairMap bnf swap (g,k))) end
+      fun pairId bnf swap (s as (s1,s2)) =
+          let val idmap = pairMap bnf swap (Ify s1, Ify s2)
+              val x = mk_var("x", pairArg bnf swap s)
+              val th = TRANS (AP_THM (PART_MATCH lhs (#mapID bnf) idmap) x)
+                             (ISPEC x combinTheory.I_THM)
+          in
+            byDefn MapId2_def [pairOp bnf swap (s,s)] (GEN x th)
+          end
+      fun pairComp bnf swap (a,b,c) =
+          let val (f1,f2) = pairVars (a,b) ("f1","f2")
+              val (g1,g2) = pairVars (b,c) ("g1","g2")
+              val (mab, mbc) = (pairMap bnf swap (f1,f2),
+                                pairMap bnf swap (g1,g2))
+              val th = PURE_REWRITE_RULE [combinTheory.I_o_ID]
+                                         (PART_MATCH lhs (#mapO bnf)
+                                                     (mk_o (mbc, mab)))
+              val x = mk_var("x", pairArg bnf swap a)
+              val th = TRANS (SYM (ISPECL [mbc, mab, x] combinTheory.o_THM))
+                             (AP_THM th x)
+          in
+            byDefn MapComp2_def [pairOp bnf swap (a,b), pairOp bnf swap (b,c),
+                                 pairOp bnf swap (a,c)]
+                   (GENL [f1,f2,g1,g2,x] th)
+          end
+      val nn = (ty1, ty2)
+      val cc = (c1v, c2v)
+      val qq = (pairSyntax.mk_prod (ty1,c1v), pairSyntax.mk_prod (ty2,c2v))
+      fun atAnswers (a1',a2') =
+          INST_TYPE [c1v |-> a1', c2v |-> a2'] mutiter
+      val prim_recursion =
+          CONV_RULE (DEPTH_CONV BETA_CONV)
+            (MATCH_MP MUTUAL_PRIM_REC
+              (LIST_CONJ [atAnswers qq, atAnswers nn,
+                        pairComp bnfF1 false (nn,qq,nn),
+                        pairComp bnfF1 false (nn,qq,cc),
+                        pairId bnfF1 false nn,
+                        pairComp bnf2 true (nn,qq,nn),
+                        pairComp bnf2 true (nn,qq,cc),
+                        pairId bnf2 true nn]))
+
       (* ------------------------------------------------------------
           the induction principle
 
@@ -1503,7 +1566,7 @@ fun defineMutual {tyname1, tyname2} db params (f1ty, f2ty) : mutual =
       {ty1 = ty1, ty2 = ty2, cons1 = cons1, cons2 = cons2,
        fix1 = fix1, fix2 = fix2, sibling = res2, bnf1 = bnf1, bnf2 = bnf2,
        db = db, iterator = mutiter, recursion = recursion,
-       induction = induction}
+       prim_recursion = prim_recursion, induction = induction}
     end
 
 

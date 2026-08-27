@@ -191,8 +191,9 @@ sig
     bnf1 : bnfLib.derived_bnfn,   (* each type's functor, as the *)
     bnf2 : bnfLib.derived_bnfn,   (* construction saw it *)
     db : bnfBase.t,
-    iterator : thm,     (* MUTITER cons1 cons2 .., the folded principle *)
-    recursion : thm,    (* and its two equations written out *)
+    iterator : thm,        (* MUTITER cons1 cons2 .., folded *)
+    recursion : thm,       (* its two equations written out *)
+    prim_recursion : thm,  (* and the form that hears the arguments too *)
     induction : thm
   }
 

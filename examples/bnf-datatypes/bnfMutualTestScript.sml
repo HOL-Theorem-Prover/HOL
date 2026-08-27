@@ -110,6 +110,32 @@ val _ =
       then OK() else die (thm_to_string th)
     end
 
+(* the same principle in the form HOL's own datatype axioms take, where
+   each function is handed the constructor's arguments as well as the
+   results of the recursive calls *)
+val _ = tprint "the pair's primitive recursion"
+val _ =
+    if null (hyp (#prim_recursion mt)) andalso
+       null (free_vars (concl (#prim_recursion mt))) andalso
+       same (concl (#prim_recursion mt))
+            “∀t1 t2.
+               (∃h1 h2.
+                  (∀af. h1 (mt1_CONS af) =
+                        t1 af (SUM_MAP I (h1 ## h2) af)) ∧
+                  (∀af. h2 (mt2_CONS af) =
+                        t2 af (SUM_MAP h1 (I ## h2) af))) ∧
+               ∀h1 h2 k1 k2.
+                 ((∀af. h1 (mt1_CONS af) =
+                        t1 af (SUM_MAP I (h1 ## h2) af)) ∧
+                  (∀af. h2 (mt2_CONS af) =
+                        t2 af (SUM_MAP h1 (I ## h2) af))) ∧
+                 ((∀af. k1 (mt1_CONS af) =
+                        t1 af (SUM_MAP I (k1 ## k2) af)) ∧
+                  (∀af. k2 (mt2_CONS af) =
+                        t2 af (SUM_MAP k1 (I ## k2) af))) ⇒
+                 h1 = k1 ∧ h2 = k2”
+    then OK() else die (thm_to_string (#prim_recursion mt))
+
 (* ----------------------------------------------------------------------
     and the same principle one constructor at a time, which is the form a
     proof is written against
