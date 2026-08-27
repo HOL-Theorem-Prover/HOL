@@ -72,3 +72,62 @@ val _ =
                  “∀t. ∃!h. ∀af. h (mytree_CONS af) = t (SUM_MAP I (h ## h) af)”
     then OK()
     else die ("recursion is " ^ thm_to_string (#recursion mytree))
+
+(* ----------------------------------------------------------------------
+    The usual binary tree: Leaf | Node of btree # 'b1 # btree.  As well
+    as the shape of the recursion theorem, this checks that the theorem
+    is usable — that the constructors can be split out of it and the
+    recursion equations recovered.
+   ---------------------------------------------------------------------- *)
+
+val btree =
+    defineFixpoint {tyname = "btree", ABS = "btree_ABS", REP = "btree_REP"}
+                   (deriveBNF (bnfBase.fullDB()) “:one + 'a # 'b1 # 'a”)
+val btree_rec = #recursion btree
+
+val _ = tprint "defining 'b1 btree"
+val _ =
+    if not (#newty btree = “:'b1 btree”) then die "wrong type"
+    else if same (concl btree_rec)
+                 “∀t. ∃!h. ∀af.
+                    h (btree_CONS af) = t (SUM_MAP I (h ## I ## h) af)”
+    then OK()
+    else die ("recursion is " ^ thm_to_string btree_rec)
+
+Definition Leaf_def:  Leaf = btree_CONS (INL ())
+End
+Definition Node_def:  Node l a rt = btree_CONS (INR (l,a,rt))
+End
+
+(* the sum-shaped t, split along the two constructors *)
+val tcase = ‘λs. sum_CASE s (K lf) (λ(x,a,y). nd x a y)’
+
+Theorem btree_recursion_exists:
+  ∀lf nd. ∃h. h Leaf = lf ∧ ∀l a rt. h (Node l a rt) = nd (h l) a (h rt)
+Proof
+  rpt gen_tac >>
+  qspec_then tcase strip_assume_tac (SRULE [EXISTS_UNIQUE_THM] btree_rec) >>
+  qexists_tac ‘h’ >> gs[Leaf_def, Node_def]
+QED
+
+Theorem btree_recursion_unique:
+  ∀lf nd h1 h2.
+    (h1 Leaf = lf ∧ ∀l a rt. h1 (Node l a rt) = nd (h1 l) a (h1 rt)) ∧
+    (h2 Leaf = lf ∧ ∀l a rt. h2 (Node l a rt) = nd (h2 l) a (h2 rt)) ⇒
+    h1 = h2
+Proof
+  rpt gen_tac >> strip_tac >>
+  qspec_then tcase (strip_assume_tac o SRULE [EXISTS_UNIQUE_THM]) btree_rec >>
+  first_x_assum irule >> conj_tac >> Cases >> TRY (PairCases_on ‘y’) >>
+  simp[GSYM Leaf_def, GSYM Node_def, oneTheory.one]
+QED
+
+Theorem btree_distinct:
+  ∀l a rt. Leaf ≠ Node l a rt
+Proof
+  rpt gen_tac >>
+  qspec_then ‘λs. sum_CASE s (K T) (λ(x,a,y). F)’
+             (strip_assume_tac o SRULE [EXISTS_UNIQUE_THM]) btree_rec >>
+  ‘h Leaf = T ∧ h (Node l a rt) = F’ by simp[Leaf_def, Node_def] >>
+  strip_tac >> gs[]
+QED
