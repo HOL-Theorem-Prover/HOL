@@ -1435,6 +1435,42 @@ def test_goalState_recompile_drops_stale_compiled_tactics():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_second_file_in_one_server_is_reported():
+    """A server process is bound to the first file it opens: a second
+    file's ancestors must be in the theory graph, only loading puts
+    them there, and loading seals the theory, so an ancestor already
+    loaded for the first file can be neither re-read nor withdrawn.
+    Clients are meant to run a server per buffer.  When one does not,
+    say so instead of answering with quiet nonsense."""
+    d = tempfile.mkdtemp(prefix="lsp_onefile_")
+    try:
+        def script(n):
+            return (f"Theory {n}\nAncestors bool\n\nval x = 1\n")
+        uri_a, uri_b = (f"file://{d}/aScript.sml", f"file://{d}/bScript.sml")
+        c = Client(d)
+        try:
+            _init(c, d, timeout=30)
+            idx = c.total_msgs()
+            _did_open(c, uri_a, script("a"))
+            assert_true(c.wait_for_method("$/compileCompleted", 120, idx),
+                        "first compileCompleted")
+            assert_true(c.wait_for_method("window/showMessage", 1, idx) is None,
+                        "no warning for the file the server is bound to")
+
+            idx = c.total_msgs()
+            _did_open(c, uri_b, script("b"))
+            m = c.wait_for_method("window/showMessage", 30, idx)
+            assert_true(m is not None, "second file is reported")
+            assert_eq(m["params"]["type"], 2, "reported as a warning")
+            msg = m["params"]["message"]
+            assert_true("aScript.sml" in msg and "bScript.sml" in msg,
+                        f"names both files ({msg!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_snapshot_resume_late_edit():
     """After compiling a multi-dec script, an incremental `didChange`
     near the end reuses a snapshot from an earlier dec: the resumed
@@ -3954,6 +3990,8 @@ TESTS = [
                                      test_heap_autodetect_holmakefile_without_holheap),
     ("goalState_recompile_drops_stale_compiled_tactics",
                  test_goalState_recompile_drops_stale_compiled_tactics),
+    ("second_file_in_one_server_is_reported",
+                        test_second_file_in_one_server_is_reported),
     ("snapshot_resume_late_edit",    test_snapshot_resume_late_edit),
     ("snapshot_resume_early_edit_falls_back",
                                      test_snapshot_resume_early_edit_falls_back),

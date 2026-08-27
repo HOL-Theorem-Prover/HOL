@@ -509,9 +509,46 @@ fun start {diag, dbg} = let
       method = "window/logMessage",
       params = fn print => (
         print "{\"type\":4,\"message\":"; encString str print; print "}")})
+  (* type 2 = Warning; unlike `logMessage` this one is meant to be
+     seen without opening the log. *)
+  fun warnUser str =
+    send (Notification {
+      method = "window/showMessage",
+      params = fn print => (
+        print "{\"type\":2,\"message\":"; encString str print; print "}")})
   val _ = diag "started"
   val _ = logMessage "started"
   val _ = markServerStarted ()
+
+  (* A server process is bound to the first file it opens.  A second
+     file cannot be served correctly: its ancestors have to be in the
+     theory graph, only loading puts them there, and loading a theory
+     seals it (`Theory.load_complete'), so an ancestor already loaded
+     for the first file can be neither re-read nor withdrawn.  The
+     result is a broken environment for the second file -- wrong goals
+     and dead hovers -- with nothing in either file to explain it.
+
+     Clients are expected to run one server per buffer; `hol-lsp-enable'
+     does this by giving each buffer its own eglot project.  Say so
+     when a client does otherwise, rather than answering with quiet
+     nonsense. *)
+  val boundUri : string option ref = ref NONE
+  val warnedUris : (string, unit) Binarymap.dict ref =
+    ref (Binarymap.mkDict String.compare)
+  fun checkSingleFile uri =
+    case !boundUri of
+      NONE => boundUri := SOME uri
+    | SOME first =>
+      if first = uri orelse Option.isSome (Binarymap.peek (!warnedUris, uri))
+      then ()
+      else (
+        warnedUris := Binarymap.insert (!warnedUris, uri, ());
+        warnUser (String.concat [
+          "This HOL server is bound to ", first,
+          ".  Goal states and hovers for ", uri,
+          " will be unreliable: one server can serve only one file, and ",
+          "closing the first one does not release it.  Configure your ",
+          "editor to start a server per buffer."]))
 
   val textWidth = 100 (* configure? *)
   val printDepth = 100
@@ -1618,6 +1655,7 @@ fun start {diag, dbg} = let
       in app (fn (j,th) => if j = id then Thread.interrupt th else ()) (jobs I) end
     | Notification {method = "textDocument/didOpen", params} => let
       val {uri, text, version} = JSONDecode.decode textDocumentParams params
+      val () = checkSingleFile uri
       val (v, existed) = withFileInfo (fn fileInfo =>
         case Binarymap.peek (fileInfo, uri) of
           SOME v => (fileInfo, (v, true))

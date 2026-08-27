@@ -169,8 +169,8 @@ Eglot documentation: `M-x info` → `(eglot)`.  Minimal `init.el`:
 (require 'hol-mode)
 
 ;; Registers the server for both holscript-mode and its tree-sitter
-;; variant holscript-ts-mode, installs the HOLHEAP-clustered project
-;; function, and auto-starts eglot from each mode hook.
+;; variant holscript-ts-mode, gives each buffer its own LSP project,
+;; and auto-starts eglot from each mode hook.
 (hol-lsp-enable)
 
 ;; Optional: *HOL Goals* follows point.
@@ -195,6 +195,31 @@ add an `eglot-server-programs` entry, call `eglot-ensure`, or send
 - `elabOn` already defaults to `Change`, so setting it to `1`
   changes nothing; see Troubleshooting for the case where you want
   `2`.
+
+#### One server per buffer
+
+`hol-lsp-enable` gives every script buffer its own LSP project, so
+every buffer gets its own server process.  This is not a tuning
+choice; a server cannot be re-aimed at a second file.  A file's
+ancestors have to be present in the theory graph, only loading puts
+them there, and loading a theory seals it (`Theory.load_complete`) —
+so an ancestor already loaded for the first file can neither be
+re-read for the second nor withdrawn.  Serve two files from one
+process and the second one's goals and hovers are quietly wrong.
+The server says so via `window/showMessage` if a client opens a
+second file anyway.
+
+Two consequences worth knowing:
+
+- **Each server holds a HOL heap.**  Ten open script buffers means
+  ten `bin/hol lsp` processes.  `hol-lsp-autoshutdown` (default `t`)
+  therefore shuts a buffer's server down when the buffer is killed,
+  set buffer-locally over `eglot-autoshutdown` so other languages
+  keep your own policy.
+- **`M-x eglot` is not equivalent.**  It connects one server for the
+  current project and adopts every same-mode buffer under it, which
+  is exactly the arrangement that breaks.  Let `hol-lsp-enable`'s
+  hook start the server.
 
 Then open a `*Script.sml` file.  Diagnostics appear as flymake
 underlines; `M-x eldoc` (or `eldoc-mode`) shows hover at point;
@@ -235,10 +260,19 @@ Lsp-mode documentation:
 (add-hook 'holscript-ts-mode-hook #'lsp)
 ```
 
+This recipe shares one server across every script under a workspace
+root, which is the arrangement described in **One server per buffer**
+above: the second file you open gets wrong goals and dead hovers, and
+the server will warn you about it.  Only the eglot setup arranges a
+server per buffer today.  With lsp-mode, open one file per session, or
+give each file its own workspace root.
+
 ## Vim / Neovim
 
 The repo's `tools/editor-modes/vim/` mode is a REPL-oriented setup
-without LSP client integration.  Two known-good LSP clients:
+without LSP client integration.  Two known-good LSP clients.  Both
+attach one server per `rootPatterns`/root match, so the caveat in
+**One server per buffer** applies to them as it does to lsp-mode.
 
 ### With coc.nvim
 
