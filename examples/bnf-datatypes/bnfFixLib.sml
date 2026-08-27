@@ -358,9 +358,23 @@ fun defineFixpoint {tyname, ABS, REP} bnf =
                              MapIdThm bnf newty,
                              INST_TYPE [cty |-> prodq] recursion0,
                              INST_TYPE [cty |-> newty] recursion0]))
+        (* induction with the hypothesis "for every sub-term in the
+           set", which is the form that survives a nested recursion *)
+        val set_induction =
+            CONV_RULE (DEPTH_CONV BETA_CONV)
+              (REWRITE_RULE [GSYM cons_def]
+                 (MATCH_MP NEWTYPE_IND
+                    (LIST_CONJ [MapCompThm bnf (prodty,newty,prodty),
+                                MapIdThm bnf prodty,
+                                MapCongThm bnf (prodty,prodty),
+                                NaturalThm bnf (prodty,newty),
+                                #absrep_id itype,
+                                REWRITE_RULE [IALG_def] repabs_IN,
+                                REWRITE_RULE [IALG_def] termP_IN])))
     in
       {newty = newty, cons = cons, cons_def = cons_def,
-       recursion = recursion, prim_recursion = prim}
+       recursion = recursion, prim_recursion = prim,
+       set_induction = set_induction}
     end
 
 

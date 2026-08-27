@@ -1275,3 +1275,33 @@ Proof
   ‘(λx. (x, h1 x)) = (λx. (x, h2 x))’ by metis_tac[] >>
   gs[FUN_EQ_THM]
 QED
+
+(* ----------------------------------------------------------------------
+    Induction on the new type.
+
+    The hypothesis is "for every sub-term in the set", which is the form
+    that survives a nested recursion: Prim_rec's derivation counts
+    recursive arguments by their type, and under another type operator
+    there are none to count.
+   ---------------------------------------------------------------------- *)
+
+Theorem NEWTYPE_IND:
+  MapComp (mp_pn : ('p -> 'n) -> 'fp -> 'fn) mp_np mp_pp ∧
+  MapId mp_pp ∧ MapCong mp_pp stp ∧ Natural mp_pn stp stn ∧
+  (∀n. abs (rep n) = n) ∧ (∀p. p ∈ MINSET stp s ⇒ rep (abs p) = p) ∧
+  (∀n. rep n ∈ MINSET stp s) ⇒
+  ∀P. (∀af. (∀y. y ∈ stn af ⇒ P y) ⇒ P (NCONS mp_np s rep abs af)) ⇒
+      ∀n. P n
+Proof
+  strip_tac >> gen_tac >> strip_tac >>
+  drule_then (drule_then assume_tac) Map_eq_id >>
+  ‘∀p. p ∈ MINSET stp s ⇒ P (abs p)’
+    by (ho_match_mp_tac MINSET_ind' >> qx_gen_tac ‘x’ >> strip_tac >>
+        first_x_assum (qspec_then ‘mp_pn abs x’ mp_tac) >>
+        simp[NCONS_def] >>
+        ‘mp_np rep (mp_pn abs x) = x’
+          by (gs[MapComp_def] >> first_x_assum irule >> simp[] >>
+              metis_tac[]) >>
+        simp[] >> disch_then irule >> gs[Natural_def, PULL_EXISTS]) >>
+  gen_tac >> first_x_assum (qspec_then ‘rep n’ mp_tac) >> simp[]
+QED

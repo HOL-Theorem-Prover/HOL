@@ -93,7 +93,8 @@ sig
   val defineFixpoint : {tyname : string, ABS : string, REP : string} ->
                        bnfLib.derived_bnf ->
                        {newty : hol_type, cons : term, cons_def : thm,
-                        recursion : thm, prim_recursion : thm}
+                        recursion : thm, prim_recursion : thm,
+                        set_induction : thm}
 
   (* ----------------------------------------------------------------------
       The datatype's own constructors, and its axiom in the shape the
@@ -112,7 +113,7 @@ sig
   val defineConstructors :
       string list -> bnfLib.derived_bnf ->
       {newty : hol_type, cons : term, cons_def : thm,
-       recursion : thm, prim_recursion : thm} ->
+       recursion : thm, prim_recursion : thm, set_induction : thm} ->
       {constructors : term list, defs : thm list, axiom : thm,
        legacy_axiom : thm, existential_axiom : thm,
        induction : thm option,   (* NONE for a nested recursion *)
