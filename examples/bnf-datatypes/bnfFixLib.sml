@@ -7,17 +7,42 @@ open bnfInitialTheory
 val ERR = mk_HOL_ERR "bnfFixLib"
 
 (* ----------------------------------------------------------------------
-    The parameters
+    The parameters.
+
+    The fixed point is taken over the functor's *first* argument; any
+    other argument it was derived in is a parameter, which the
+    construction carries along untouched and the new type keeps.  So
+    everything here works with the map in the first argument alone —
+    the n-ary map with I in the parameters' positions — and with the
+    first argument's set function.
+
+    Deriving the functor in its parameters as well is what lets the
+    fixed point be registered as a functor in them afterwards; a caller
+    that only wants the type can declare just the one argument, and
+    every term below is then what the one-argument derivation gives.
    ---------------------------------------------------------------------- *)
 
-fun functorTy (bnf : bnfLib.derived_bnf) = #1 (dom_rng (type_of (#set bnf)))
-fun functorAt bnf ty = type_subst [alpha |-> ty] (functorTy bnf)
+(* I and o at a given instance, by matching rather than by assuming
+   which of their type variables is which *)
+fun Ify ty =
+    let val t = combinSyntax.I_tm
+    in Term.inst (match_type (type_of t) (ty --> ty)) t end
+val mk_o = combinSyntax.mk_o
 
-fun setOp bnf ty = Term.inst [alpha |-> ty] (#set bnf)
+(* the recursive argument, and the parameters *)
+fun recTy (bnf : bnfLib.derived_bnfn) = hd (#lives bnf)
+fun paramTys (bnf : bnfLib.derived_bnfn) = tl (#lives bnf)
+
+fun functorTy bnf = #1 (dom_rng (type_of (hd (#sets bnf))))
+fun functorAt bnf ty = type_subst [recTy bnf |-> ty] (functorTy bnf)
+
+fun setOp bnf ty = Term.inst [recTy bnf |-> ty] (hd (#sets bnf))
+(* the map in the recursive argument alone *)
+fun mkmapA bnf f = #mkmap bnf (f :: List.map Ify (paramTys bnf))
 fun mapOp bnf (ty1,ty2) =
     let val f = mk_var("f", ty1 --> ty2)
     in
-      mk_abs(f, #mkmap bnf f)
+      mk_abs(f, mkmapA bnf f)
     end
 
 (* ----------------------------------------------------------------------
@@ -39,16 +64,9 @@ fun byDefn defn args bodyth =
       EQ_MP (SYM eq) bodyth
     end
 
-(* I and o at a given instance, by matching rather than by assuming
-   which of their type variables is which *)
-fun Ify ty =
-    let val t = combinSyntax.I_tm
-    in Term.inst (match_type (type_of t) (ty --> ty)) t end
-val mk_o = combinSyntax.mk_o
-
 fun MapIdThm bnf ty =
-    let val idmap = #mkmap bnf (Ify ty)
-        val th = PART_MATCH lhs (#mapID bnf) idmap  (* |- map I = I *)
+    let val idmap = mkmapA bnf (Ify ty)
+        val th = PART_MATCH lhs (#mapID bnf) idmap  (* |- map I .. I = I *)
         val x = mk_var("x", functorAt bnf ty)
         val th = TRANS (AP_THM th x) (ISPEC x combinTheory.I_THM)
     in
@@ -59,10 +77,13 @@ fun MapCompThm bnf (t1,t2,t3) =
     let val f = mk_var("f", t1 --> t2)
         val g = mk_var("g", t2 --> t3)
         (* the stored law is point-free: map g o map f = map (g o f) *)
-        val target = mk_o (#mkmap bnf g, #mkmap bnf f)
-        val th = PART_MATCH lhs (#mapO bnf) target
+        val target = mk_o (mkmapA bnf g, mkmapA bnf f)
+        (* the parameters' functions are matched to I on the left, so the
+           right-hand side has I o I in their positions *)
+        val th = PURE_REWRITE_RULE [combinTheory.I_o_ID]
+                                   (PART_MATCH lhs (#mapO bnf) target)
         val x = mk_var("x", functorAt bnf t1)
-        val th = TRANS (SYM (ISPECL [#mkmap bnf g, #mkmap bnf f, x]
+        val th = TRANS (SYM (ISPECL [mkmapA bnf g, mkmapA bnf f, x]
                                     combinTheory.o_THM))
                        (AP_THM th x)
     in
@@ -73,13 +94,13 @@ fun MapCompThm bnf (t1,t2,t3) =
 
 fun NaturalThm bnf (t1,t2) =
     let val f = mk_var("f", t1 --> t2)
-        val target = mk_o (setOp bnf t2, #mkmap bnf f)
-        (* |- set2 o map f = IMAGE f o set1 *)
-        val th = PART_MATCH lhs (#mapIMAGE bnf) target
+        val target = mk_o (setOp bnf t2, mkmapA bnf f)
+        (* |- set2 o map f .. = IMAGE f o set1 *)
+        val th = PART_MATCH lhs (hd (#mapIMAGE bnf)) target
         val x = mk_var("x", functorAt bnf t1)
         val rhs0 = rhs (concl th)
         val imgf = rand (rator rhs0) and set1 = rand rhs0
-        val th = TRANS (SYM (ISPECL [setOp bnf t2, #mkmap bnf f, x]
+        val th = TRANS (SYM (ISPECL [setOp bnf t2, mkmapA bnf f, x]
                                     combinTheory.o_THM))
                        (AP_THM th x)
         val th = TRANS th (ISPECL [imgf, set1, x] combinTheory.o_THM)
@@ -88,19 +109,40 @@ fun NaturalThm bnf (t1,t2) =
              (GENL [f,x] th)
     end
 
+(* |- !a. a IN s ==> t a = t a, the hypothesis a congruence makes about
+   an argument whose two functions are the same *)
+fun trivial_cong c =
+    let val (a, body) = dest_forall c
+        val (mem, eq) = dest_imp body
+    in
+      GEN a (DISCH mem (REFL (lhs eq)))
+    end
+
 fun MapCongThm bnf (t1,t2) =
     let val f = mk_var("f", t1 --> t2)
         val x = mk_var("x", functorAt bnf t1)
-        val target = mk_comb (#mkmap bnf f, x)
-        (* |- (!a. a IN set x ==> f a = g a) ==> map f x = map g x; the
-           law's own g is whatever variable is left over *)
+        val target = mk_comb (mkmapA bnf f, x)
+        (* |- (!a. a IN set₁ x ==> f a = g a) /\ .. ==> map f .. x = map g .. x,
+           one conjunct per argument.  Matching the conclusion's left-hand
+           side fixes each f; the g's are read off the conjuncts, whose
+           shape says which is which. *)
         val th = PART_MATCH (lhs o snd o dest_imp) (#mapCONG bnf) target
-        val g = case filter (fn v => not (aconv v f) andalso not (aconv v x))
-                            (free_vars (concl th))
-                 of [v] => v
-                  | _ => raise ERR "MapCongThm" "cannot identify the law's g"
+        val conjs = strip_conj (#1 (dest_imp (concl th)))
+        val gs = List.map (rator o rhs o #2 o dest_imp o #2 o dest_forall)
+                          conjs
+        (* the parameters are carried along by I, so their congruence
+           hypotheses are about I on both sides and hold outright *)
+        val th = INST (List.map (fn g => g |-> Ify (#1 (dom_rng (type_of g))))
+                                (tl gs))
+                      th
+        val conjs = strip_conj (#1 (dest_imp (concl th)))
+        val hyp = hd conjs
+        val th = DISCH hyp
+                       (MP th (LIST_CONJ (ASSUME hyp ::
+                                          List.map trivial_cong (tl conjs))))
     in
-      byDefn MapCong_def [mapOp bnf (t1,t2), setOp bnf t1] (GENL [f,g,x] th)
+      byDefn MapCong_def [mapOp bnf (t1,t2), setOp bnf t1]
+             (GENL [f, hd gs, x] th)
     end
 
 
@@ -132,7 +174,8 @@ fun boundOrdinal bnf =
    repeat the whole choice-term construction, once per instance *)
 fun setBoundThm bnf cardeq ty =
     let val x = mk_var("x", functorAt bnf ty)
-        val bounded = SPEC x (INST_TYPE [alpha |-> ty] (#bndthm bnf))
+        val bounded = SPEC x (INST_TYPE [recTy bnf |-> ty]
+                                        (hd (#bndthms bnf)))
     in
       GEN x (MATCH_MP cardeq_preds_bound (CONJ cardeq bounded))
     end
@@ -145,13 +188,14 @@ fun setBoundThm bnf cardeq ty =
     carrier with a point added, and the ordinals bounding F's sets.
    ---------------------------------------------------------------------- *)
 
+(* |- ?x. st x <> {}, from the element bnfLib's inhabitation fact names *)
 fun nontrivialThm bnf ty =
-    let val (w,th) = case #nontrivial bnf of
+    let val (w,th) = case bnfLib.groundNonempty bnf 0 of
                          SOME p => p
                        | NONE => raise ERR "nontrivialThm"
                                        "the functor has no non-trivial set"
-        val th = INST_TYPE [alpha |-> ty] th
-        val w = Term.inst [alpha |-> ty] w
+        val th = INST_TYPE [recTy bnf |-> ty] th
+        val w = Term.inst [recTy bnf |-> ty] w
         val x = mk_var("x", functorAt bnf ty)
     in
       EXISTS (mk_exists (x, subst [w |-> x] (concl th)), w) th
@@ -206,19 +250,22 @@ type initial_algebra = {
 }
 
 fun witnessThm bnf ty =
-    let val (w,th) = case #wit bnf of
+    let val (w,th) = case bnfLib.groundEmpty bnf 0 of
                          SOME p => p
                        | NONE => raise ERR "witnessThm"
                                        "the functor has no empty witness"
-        val th = INST_TYPE [alpha |-> ty] th
-        val w = Term.inst [alpha |-> ty] w
+        val th = INST_TYPE [recTy bnf |-> ty] th
+        val w = Term.inst [recTy bnf |-> ty] w
         val x = mk_var("w", functorAt bnf ty)
     in
       EXISTS (mk_exists (x, subst [w |-> x] (concl th)), w) th
     end
 
 fun initialAlgebra bnf =
-    let val target = alpha
+    let (* the type variable initiality is stated at, so that INST_TYPE
+           gives it at any carrier.  The functor's own argument will do:
+           it is not free in anything the construction has built yet. *)
+        val target = recTy bnf
         val {carrier, thm = bound} = minsetBound bnf target
         (* the product's index type, and the product's carrier *)
         val idxty = pairSyntax.mk_prod (carrier --> bool,
@@ -263,8 +310,8 @@ fun initialAlgebra bnf =
                           MapCongThm bnf (prodty,fpty),
                           NaturalThm bnf (prodty,fpty),
                           algALG,
-                          INST_TYPE [alpha |-> fpty] init,
-                          INST_TYPE [alpha |-> prodty] init])
+                          INST_TYPE [target |-> fpty] init,
+                          INST_TYPE [target |-> prodty] init])
         (* IALG_INHABITED and IALG_ind mention the algebra's map and set
            parameters only inside IALG, so they are pinned by matching
            that subterm against the algebra just built *)
@@ -333,9 +380,9 @@ fun defineFixpoint {tyname, ABS, REP} bnf =
                        MapCongThm bnf (prodty,prodty),
                        NaturalThm bnf (newty,prodty),
                        NaturalThm bnf (prodty,newty),
-                       MapCompThm bnf (newty,prodty,alpha),
-                       MapCompThm bnf (prodty,newty,alpha),
-                       MapCongThm bnf (prodty,alpha),
+                       MapCompThm bnf (newty,prodty,#target ia),
+                       MapCompThm bnf (prodty,newty,#target ia),
+                       MapCongThm bnf (prodty,#target ia),
                        #absrep_id itype,
                        repabs_IN,
                        termP_IN,
@@ -429,15 +476,15 @@ fun defineConstructors names bnf fix =
                 raise ERR "defineConstructors"
                       ("the functor has " ^ Int.toString n ^ " summands")
         val rawFactors = map factorsOf summands
-        fun atNew ty = type_subst [alpha |-> newty] ty
-        fun atC ty = type_subst [alpha |-> cty] ty
+        fun atNew ty = type_subst [recTy bnf |-> newty] ty
+        fun atC ty = type_subst [recTy bnf |-> cty] ty
         val newSummands = map atNew summands
         val cSummands = map atC summands
         (* a factor is recursive if the argument occurs in it at all,
            not only when it *is* the argument: a nested occurrence like
            ‘'a mylist’ hands the function mylistMAP h of it, which is the
            whole point of building the datatype over a BNF *)
-        val isRec = map (fn ty => Lib.mem alpha (type_vars ty))
+        val isRec = map (fn ty => Lib.mem (recTy bnf) (type_vars ty))
         (* one constructor per summand *)
         fun mkOne (i, (nm, facs)) =
             let val argtys = map atNew facs

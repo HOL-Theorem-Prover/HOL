@@ -64,4 +64,11 @@ val deriveBNFn : bnfBase.t -> hol_type list -> hol_type -> derived_bnfn
 
 val deriveBNF : bnfBase.t -> hol_type -> derived_bnf
 
+(* ground elements, as the fixed-point construction wants them: an
+   element whose i-th set is empty — which is what makes a datatype
+   specification legal, since it is its base case — and one whose i-th
+   set is not.  Both come from the witnesses above by supplying ARB. *)
+val groundEmpty : derived_bnfn -> int -> (term * thm) option
+val groundNonempty : derived_bnfn -> int -> (term * thm) option
+
 end

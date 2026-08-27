@@ -968,42 +968,56 @@ fun deriveBNFn db lives ty : derived_bnfn =
        wits = planWits lives as_ plan}
     end
 
-(* An element of the composite whose set is empty, as the fixed-point
-   construction wants it: a witness that needs no arguments at all, with
-   ARB supplied for the argument it takes anyway. *)
-fun ground_wit wits =
-    let
-      fun needsNothing (_,th) =
-          pred_setSyntax.is_empty (#2 (pred_setSyntax.dest_subset
-                                         (concl (SPEC_ALL th))))
+(* The witnesses say what they need about every argument at once, and
+   with a variable for each; the fixed-point construction wants instead a
+   ground element whose i-th set is empty, and one whose i-th set is not.
+   Supplying ARB for a witness's arguments is enough, because a witness
+   that doesn't need the i-th argument says nothing about what was
+   supplied there. *)
+fun domains 0 _ = []
+  | domains n ty = let val (d,r) = dom_rng ty in d :: domains (n-1) r end
+
+fun ground (b : derived_bnfn) w th =
+    let val arbs = List.map mk_arb
+                            (domains (length (#lives b)) (type_of w))
     in
-      case List.find needsNothing wits of
+      CONV_RULE (DEPTH_CONV BETA_CONV) (SPECL arbs th)
+    end
+
+fun groundEmpty b i =
+    let
+      fun doesnt (_,th) =
+          pred_setSyntax.is_empty
+            (#2 (pred_setSyntax.dest_subset
+                   (List.nth (strip_conj (#2 (strip_forall (concl th))), i))))
+    in
+      case List.find doesnt (#wits b) of
           NONE => NONE
         | SOME (w,th) =>
           let
-            val th = CONV_RULE (LAND_CONV (RAND_CONV BETA_CONV))
-                               (SPEC (mk_arb (#1 (dom_rng (type_of w)))) th)
+            val th = List.nth (CONJUNCTS (ground b w th), i)
             val (A,_) = pred_setSyntax.dest_subset (concl th)
           in
             SOME (rand A, EQ_MP (ISPEC A pred_setTheory.SUBSET_EMPTY) th)
           end
     end
 
-(* and an element whose set isn't empty, from the inhabitation fact *)
-fun ground_nontrivial NONE = NONE
-  | ground_nontrivial (SOME (inh,th)) =
-    let
-      val th = CONV_RULE (RAND_CONV (RAND_CONV BETA_CONV))
-                         (SPEC (mk_arb (#1 (dom_rng (type_of inh)))) th)
-      val (v,A) = pred_setSyntax.dest_in (concl th)
-      val x = mk_var("x", type_of v)
-      val ex = EXISTS (mk_exists(x, pred_setSyntax.mk_in(x,A)), v) th
-    in
-      SOME (rand A, EQ_MP (ISPEC A pred_setTheory.MEMBER_NOT_EMPTY) ex)
-    end
+fun groundNonempty b i =
+    case List.nth (#inhabits b, i) of
+        NONE => NONE
+      | SOME (inh,th) =>
+        let
+          val th = CONV_RULE (RAND_CONV (RAND_CONV BETA_CONV))
+                             (SPEC (mk_arb (#1 (dom_rng (type_of inh)))) th)
+          val (v,A) = pred_setSyntax.dest_in (concl th)
+          val x = mk_var("x", type_of v)
+          val ex = EXISTS (mk_exists(x, pred_setSyntax.mk_in(x,A)), v) th
+        in
+          SOME (rand A, EQ_MP (ISPEC A pred_setTheory.MEMBER_NOT_EMPTY) ex)
+        end
 
-(* the one-argument view, which is what the fixed-point construction
-   consumes *)
+(* the one-argument view, which is what a caller that only wants the
+   fixed point's type needs *)
 fun deriveBNF db ty : derived_bnf =
     let val b = deriveBNFn db [alpha] ty
     in
@@ -1011,8 +1025,8 @@ fun deriveBNF db ty : derived_bnf =
        components = #components b, mapCONG = #mapCONG b, mapID = #mapID b,
        mapIMAGE = hd (#mapIMAGE b), mapO = #mapO b,
        mkmap = (fn f => #mkmap b [f]),
-       nontrivial = ground_nontrivial (hd (#inhabits b)), set = hd (#sets b),
-       wit = ground_wit (#wits b)}
+       nontrivial = groundNonempty b 0, set = hd (#sets b),
+       wit = groundEmpty b 0}
     end
 
 end (* struct *)

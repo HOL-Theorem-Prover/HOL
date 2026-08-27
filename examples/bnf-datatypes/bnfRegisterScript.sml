@@ -15,7 +15,7 @@ Libs
    ---------------------------------------------------------------------- *)
 
 val db = bnfBase.fullDB()
-val bnf = deriveBNF db “:one + 'b1 # 'a”
+val bnf = deriveBNFn db [alpha, “:'b1”] “:one + 'b1 # 'a”
 val fix = defineFixpoint {tyname = "mylist", ABS = "mylist_ABS",
                           REP = "mylist_REP"} bnf
 val cs = defineConstructors ["MyNil", "MyCons"] bnf fix
@@ -133,12 +133,13 @@ val _ = bnfBase.updateDB (
     and now a functor may recurse through it
    ---------------------------------------------------------------------- *)
 
-val nested = deriveBNF (bnfBase.fullDB()) “:one + 'b1 # 'a mylist”
+val nested = deriveBNFn (bnfBase.fullDB()) [alpha, “:'b1”]
+                        “:one + 'b1 # 'a mylist”
 
 val _ = tprint "deriving a functor that recurses under mylist"
 val _ = if List.all (null o hyp)
-                    [#mapID nested, #mapO nested, #mapIMAGE nested,
-                     #mapCONG nested, #bndthm nested]
+                    ([#mapID nested, #mapO nested, #mapCONG nested] @
+                     #mapIMAGE nested @ #bndthms nested)
         then OK() else die "hypotheses left"
 
 (* the whole way: a datatype whose recursion goes under mylist *)
