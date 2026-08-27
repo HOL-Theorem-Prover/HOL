@@ -91,7 +91,8 @@ local
 in
 val full_result as {DB = thy_lookup,
                     get_global_value = fullDB,
-                    record_delta = prim_updateDB, ...} =
+                    record_delta = prim_updateDB,
+                    update_global_value = update_globalDB, ...} =
     AncestryData.fullmake {
       adinfo = adinfo,
       uptodate_delta = K true,
@@ -173,6 +174,10 @@ fun updateDB (ty,info as bI fields) =
     let val thm_info as bI thm_fields = kname_to_thm_info info
         val _ = sanity_check ty thm_info
     in
-      prim_updateDB (ty, info)
+      (* recording the delta only queues it for export: the value user
+         code sees has to be updated too, or a functor registered here
+         is invisible until a descendant theory loads this one *)
+      prim_updateDB (ty, info);
+      update_globalDB (pure_insert (ty, thm_info))
     end
 end
