@@ -215,6 +215,25 @@ val focus : int option Sref.t = Sref.new NONE
 
 fun setWorkerCount n = Multithreading.max_threads_update n
 
+(* Every change to what the pool is doing is announced by the thread that
+   causes it, and nothing samples the whole set.  Sampling cannot be made
+   correct: `statuses ()` is read, and only then sent, so a worker that
+   settles in between has its newer verdict overwritten by the older
+   sample.  Announcing transitions has no such window, and per proof the
+   order is guaranteed -- `Checking` is sent before the task is forked,
+   and a verdict only after it runs.
+
+   Dropping an entry is announced as `Cheated`, which is what absence
+   from the pool means: the proof is taken on trust again.  A worker
+   interrupted by the cancellation stays silent, so it cannot contradict
+   this afterwards. *)
+fun announce st = !LSPExtension.proofStateChanged st
+
+fun announceEntry status (e : entry) =
+    announce {site = #site e, offset = #offset e, status = status}
+
+fun dropped e = announceEntry LSPExtension.Cheated e
+
 (* Above the default of 0 so a just-abandoned proof is picked up ahead of
    the backlog, but well below Task_Queue's urgent_pri, which bypasses
    the normal ready-job path and would let a stream of these starve
@@ -243,6 +262,8 @@ fun forkAt pri (item as {site, offset, run} : LSPExtension.deferred) =
             r
           end
     in
+      announce {site = site, offset = offset,
+                status = LSPExtension.Checking};
       case Future.forks params [announcing] of
           [f] => SOME {site = site, offset = offset, item = itemR,
                        group = group, result = result, future = f}
@@ -325,6 +346,7 @@ fun check resumeFrom =
                   (keep, (fresh, doomed))
                 end)
       val () = List.app (fn {group, ...} => Future.cancel_group group) doomed
+      val () = List.app dropped doomed
       val (focused, rest) =
           List.partition (fn ({offset, ...} : LSPExtension.deferred) =>
                              isFocused offset) fresh
@@ -370,6 +392,7 @@ fun cancelIf doomed_at =
       (* cancel after removing: an interrupted worker needs its group
          cancelled whether or not we still track it *)
       List.app (fn {group, ...} => Future.cancel_group group) doomed;
+      List.app dropped doomed;
       (* a held proof the edit reached is stale too, and re-elaboration
          will queue it again *)
       Sref.update held
@@ -402,6 +425,8 @@ fun setFocus off =
                 in (k, d) end)
       val () = List.app (fn {group, ...} => Future.cancel_group group)
                         nowFocused
+      (* held rather than checked, so it reads as taken on trust *)
+      val () = List.app dropped nowFocused
       (* Anything held that is no longer the focus can be checked, and
          should be: the user has just stopped working on it. *)
       val release =

@@ -899,26 +899,33 @@ fun start {diag, dbg} = let
     val () = DArray.app step d
     in out end
 
-  (* Emit `$/proofStates` for `uri`: what the proof-checking pool has to
-     say about each declaration it knows about.
+  (* Emit `$/proofStates` for `uri`: one change in what the
+     proof-checking pool is doing.
 
-       {"uri": ..., "reset": true|false,
-        "states": [{"pos": {"line": l, "character": c},
-                    "name": "foo",
-                    "status": "checking" | "proved" | "failed"
-                            | "suspended" | "diverged",
-                    "detail": "..."}, ...]}
+       {"uri": ..., "states": [{"pos": {"line": l, "character": c},
+                                "name": "foo",
+                                "status": "checking" | "proved" | "failed"
+                                        | "suspended" | "diverged"
+                                        | "cheated",
+                                "detail": "..."}, ...]}
 
-     `detail` is present only for `failed` and `diverged`.
+     `detail` is present only for `failed`, `suspended` and `diverged`.
 
-     `reset` says how to fold the payload in.  True: this is everything
-     the pool knows, so replace whatever is held for the uri -- sent when
-     a compile starts or finishes, the two points at which proofs
-     disappear from the pool as well as appear in it.  False: a delta,
-     usually a single proof that has just settled; merge each state in,
-     keyed by `pos`.  Positions only shift when the buffer is edited, and
-     an edit starts a compile, so a `reset` always arrives before a key
-     can go stale.
+     A transition stream, not a snapshot: merge each state in, keyed by
+     `pos`.  The pool announces every change from the thread that causes
+     it -- `checking` when a proof is forked, its verdict when it
+     settles, `cheated` when its entry is dropped -- so a client that
+     accumulates them tracks the pool exactly.
+
+     There is deliberately no full-state message.  Sending one cannot be
+     made correct: the state has to be sampled and only then sent, so a
+     worker settling in between has its newer verdict overwritten by the
+     older sample.  Per proof the transitions are ordered, which is what
+     a client needs.
+
+     Positions shift when the buffer is edited, but an edit invalidates
+     the proofs it reaches, and those are announced as `cheated` under
+     their old positions before any new ones are announced.
 
      A position rather than a range: the pool identifies a proof by the
      byte its declaration starts at, which is all it needs for
@@ -933,7 +940,7 @@ fun start {diag, dbg} = let
      not distinguish those on the wire, having no list of declarations
      past the compile frontier; a client can tell them apart from its own
      parse and the last `$/compileProgress`. *)
-  fun sendProofStates uri lines {reset} states = let
+  fun sendProofStates uri lines states = let
     fun statusName st =
         case st of
             LSPExtension.Unseen => "unseen"
@@ -960,7 +967,6 @@ fun start {diag, dbg} = let
     in
       send (mkNotif "$/proofStates" (fn print => (
         print "{\"uri\":"; encString uri print;
-        print ",\"reset\":"; print (if reset then "true" else "false");
         print ",\"states\":"; encArray encState states print;
         print "}")))
     end
@@ -988,12 +994,11 @@ fun start {diag, dbg} = let
      The declaration's start is safe to compare against offsets recorded
      in the previous pass for the same reason the resume decision is: an
      edit cannot move anything before itself. *)
-  fun invalidateProofs uri lines {resumeStart, inProofBody} = (
-    (case (inProofBody, resumeStart) of
-         (SOME d, _) => !LSPExtension.cancelProofAt d
-       | (NONE, NONE) => !LSPExtension.cancelAllProofs ()
-       | (NONE, SOME b) => !LSPExtension.cancelProofsAtOrAfter b);
-    sendProofStates uri lines {reset = true} (!LSPExtension.proofStates ()))
+  fun invalidateProofs {resumeStart, inProofBody} = (
+    case (inProofBody, resumeStart) of
+        (SOME d, _) => !LSPExtension.cancelProofAt d
+      | (NONE, NONE) => !LSPExtension.cancelAllProofs ()
+      | (NONE, SOME b) => !LSPExtension.cancelProofsAtOrAfter b)
 
   (* The declaration whose `Proof ... QED` body contains the edit, if the
      edit is in one.  `findEnclosingTheorem` answers exactly that and is
@@ -1050,8 +1055,7 @@ fun start {diag, dbg} = let
        which is how discovering that a proof suspends gets acted on. *)
     if #done (#parse (!lastTrees)) andalso not (isSome (!minEditOffset)) then
       (!LSPExtension.notifyCompileStart (!minEditOffset);
-       invalidateProofs uri (#lines (#text (!lastTrees)))
-                        {resumeStart = NONE, inProofBody = NONE};
+       invalidateProofs {resumeStart = NONE, inProofBody = NONE};
        !LSPExtension.resetForCompile (); ())
     else let
     val _ = stopCompile compile
@@ -1114,8 +1118,7 @@ fun start {diag, dbg} = let
       case resumeSnap of
         NONE => (
           !LSPExtension.notifyCompileStart (!minEditOffset);
-          invalidateProofs uri lines
-                           {resumeStart = NONE,
+          invalidateProofs {resumeStart = NONE,
                             inProofBody = proofBodyAt (#text text)
                                                       (!minEditOffset)};
           ((case baseSnap of
@@ -1125,7 +1128,7 @@ fun start {diag, dbg} = let
            emptyParseData 8, 0, oldDiags))
       | SOME snap => let
           val _ = !LSPExtension.notifyCompileStart (!minEditOffset)
-          val _ = invalidateProofs uri lines
+          val _ = invalidateProofs
                     {resumeStart = SOME (#endByte snap),
                      inProofBody = proofBodyAt (#text text)
                                                (!minEditOffset)}
@@ -1413,7 +1416,7 @@ fun start {diag, dbg} = let
                in
                  (* Runs on the worker that settled the proof, so it must
                     not raise. *)
-                 sendProofStates uri (#lines text) {reset = false} [st];
+                 sendProofStates uri (#lines text) [st];
                  (case status of
                       LSPExtension.Suspended _ => retract ()
                     | LSPExtension.Diverged _ => retract ()
@@ -1421,8 +1424,6 @@ fun start {diag, dbg} = let
                  handle _ => ()
                end);
           !LSPExtension.checkDeferred resumeStart;
-          sendProofStates uri (#lines text) {reset = true}
-                          (!LSPExtension.proofStates ());
           flushDiags ();
           sendProgressEnd ();
           send (mkNotif "$/compileCompleted" (fn print => (

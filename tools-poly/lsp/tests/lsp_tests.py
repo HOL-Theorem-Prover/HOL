@@ -1896,19 +1896,9 @@ def test_cheat_substituted_proof_is_not_checked():
                         "compileCompleted")
 
             def settled(cl):
-                msgs, _ = cl.messages_since(0)
-                seen = {}
-                for m in msgs:
-                    if m.get("method") != "$/proofStates":
-                        continue
-                    p = m["params"]
-                    if p["uri"] != uri:
-                        continue
-                    if p.get("reset"):
-                        seen = {}
-                    for st in p["states"]:
-                        seen[st["name"]] = st["status"]
-                return seen if seen.get("fine") == "proved" else None
+                seen = _proof_states(cl, uri)
+                return seen if seen.get("fine", (None,))[0] == "proved" \
+                    else None
 
             seen = c.wait_until(settled, 60)
             assert_true(seen is not None, "the good proof was checked")
@@ -1928,10 +1918,10 @@ _SUSP_PREAMBLE = ("Theory %s[bare]\n"
                   "\n")
 
 
-def _proof_states(c, uri):
-    """Fold the $/proofStates stream for `uri` into {name: status},
-    honouring the `reset` flag."""
-    msgs, _ = c.messages_since(0)
+def _proof_states(c, uri, since=0):
+    """Accumulate the $/proofStates transition stream for `uri` into
+    {name: (status, detail)}."""
+    msgs, _ = c.messages_since(since)
     seen = {}
     for m in msgs:
         if m.get("method") != "$/proofStates":
@@ -1939,11 +1929,24 @@ def _proof_states(c, uri):
         p = m["params"]
         if p["uri"] != uri:
             continue
-        if p.get("reset"):
-            seen = {}
         for st in p["states"]:
             seen[st["name"]] = (st["status"], st.get("detail"))
     return seen
+
+
+def _proof_transitions(c, uri, since=0):
+    """Every announced (name, status) for `uri`, in order."""
+    msgs, _ = c.messages_since(since)
+    out = []
+    for m in msgs:
+        if m.get("method") != "$/proofStates":
+            continue
+        p = m["params"]
+        if p["uri"] != uri:
+            continue
+        for st in p["states"]:
+            out.append((st["name"], st["status"]))
+    return out
 
 
 def test_suspending_proof_reported_as_suspended():
@@ -2045,35 +2048,6 @@ def test_suspension_re_elaborates_with_the_real_theorem():
         shutil.rmtree(d, ignore_errors=True)
 
 
-def _resets_since(c, uri, since):
-    """The reset payloads for `uri` after message index `since`, each as
-    {name: status}."""
-    msgs, _ = c.messages_since(since)
-    out = []
-    for m in msgs:
-        if m.get("method") != "$/proofStates":
-            continue
-        pr = m["params"]
-        if pr["uri"] != uri or not pr.get("reset"):
-            continue
-        out.append({st["name"]: st["status"] for st in pr["states"]})
-    return out
-
-
-def _reset_names_since(c, uri, since):
-    """Raw `name` lists from each reset payload, keeping duplicates."""
-    msgs, _ = c.messages_since(since)
-    out = []
-    for m in msgs:
-        if m.get("method") != "$/proofStates":
-            continue
-        pr = m["params"]
-        if pr["uri"] != uri or not pr.get("reset"):
-            continue
-        out.append([st["name"] for st in pr["states"]])
-    return out
-
-
 def test_tactic_edit_spares_later_proofs():
     """Editing one proof's tactic must not throw away the pool's work on
     the proofs below it.
@@ -2085,11 +2059,12 @@ def test_tactic_edit_spares_later_proofs():
     recognising a proof it is already checking -- by name, since the edit
     moves the offsets.
 
-    The observable is the reset the server sends when the recompile
-    starts: `later` should still be listed (kept), while `early` -- the
-    edited one -- should be gone.  Cancelling from the resume point, as
-    an edit to a statement or a definition still does, would clear
-    both."""
+    The observable is what the pool announces after the edit: `early`
+    is dropped and re-checked, while `later` is never mentioned at all
+    -- nothing cancelled it and nothing re-forked it, so it keeps the
+    verdict it already had.  Cancelling from the resume point, as an
+    edit to a statement or a definition still does, would announce
+    `later` as cheated too."""
     d = tempfile.mkdtemp(prefix="lsp_ident_")
     try:
         src = ("Theory identsp\n"
@@ -2130,30 +2105,29 @@ def test_tactic_edit_spares_later_proofs():
             assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
                         "second compileCompleted")
 
-            resets = _resets_since(c, uri, idx)
-            assert_true(len(resets) > 0,
-                        "the recompile sent a reset")
-            # The reset at compile start: the classification spared the
-            # declaration below the edit and abandoned the edited one.
-            first = resets[0]
-            assert_true("later" in first,
-                        f"the proof below the edit was kept ({first!r})")
-            assert_true("early" not in first,
-                        f"the edited proof was abandoned ({first!r})")
-            # The reset at compile end, after `check` has reconciled: the
-            # re-enqueued `later` was recognised as the proof already
-            # being checked rather than forked a second time.  Counted on
-            # the raw array, since duplicates share a name.
-            last = resets[-1]
-            assert_eq(sorted(last.keys()), ["early", "later"],
-                      f"both proofs are tracked after the pass "
-                      f"({last!r})")
-            # `later` still carries the verdict it had before the edit.
-            # Had `check` not recognised the re-enqueued proof as the one
-            # already checked, its entry would have been dropped and a
-            # fresh one forked, putting it back to `checking`.
-            assert_eq(last["later"], "proved",
-                      f"the verdict below the edit survived ({last!r})")
+            def early_rechecked(cl):
+                return (_proof_states(cl, uri, idx).get("early", ("", ))[0]
+                        == "proved") or None
+
+            assert_true(c.wait_until(early_rechecked, 60) is not None,
+                        f"the edited proof was re-checked "
+                        f"({_proof_transitions(c, uri, idx)!r})")
+            moves = _proof_transitions(c, uri, idx)
+            # The edited proof is abandoned and checked again.
+            assert_true(("early", "cheated") in moves,
+                        f"the edited proof was abandoned ({moves!r})")
+            assert_true(("early", "checking") in moves,
+                        f"the edited proof was re-checked ({moves!r})")
+            # The one below it is not touched: had `check` failed to
+            # recognise the re-enqueued proof as the one already being
+            # checked, its entry would have been dropped and a fresh one
+            # forked, so `later` would appear here.
+            assert_eq([m for m in moves if m[0] == "later"], [],
+                      f"the proof below the edit was left alone "
+                      f"({moves!r})")
+            assert_eq(_proof_states(c, uri).get("later", (None,))[0],
+                      "proved",
+                      "the verdict below the edit survived")
         finally:
             c.close()
     finally:
@@ -2205,11 +2179,16 @@ def test_statement_edit_still_clears_later_proofs():
             assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
                         "second compileCompleted")
 
-            resets = _resets_since(c, uri, idx)
-            assert_true(len(resets) > 0, "the recompile sent a reset")
-            assert_eq(resets[0], {},
-                      f"a statement edit gives up on the proofs below "
-                      f"({resets[0]!r})")
+            def both_dropped(cl):
+                moves = _proof_transitions(cl, uri, idx)
+                return moves if all(("early", "cheated") in moves and
+                                    ("later", "cheated") in moves
+                                    for _ in [0]) else None
+
+            moves = c.wait_until(both_dropped, 60)
+            assert_true(moves is not None,
+                        f"a statement edit gives up on the proofs below "
+                        f"({_proof_transitions(c, uri, idx)!r})")
         finally:
             c.close()
     finally:
