@@ -133,10 +133,7 @@ val map_f = mk_var("f", alpha --> beta)
 fun equal_ty ty = Term.inst [alpha |-> ty] boolSyntax.equality
 (* K (∅ : elem set) : dom -> elem set *)
 fun K0e elem dom =
-    mk_comb(
-      Term.inst[alpha |-> (elem --> bool), beta |-> dom] combinSyntax.K_tm,
-      pred_setSyntax.mk_empty elem
-    )
+    combinSyntax.mk_K_1 (pred_setSyntax.mk_empty elem, dom)
 fun Ityped ty = Term.inst [alpha |-> ty] combinSyntax.I_tm
 
 val aset_ty = alpha --> bool
@@ -154,10 +151,6 @@ val BIMG = let (* (o) BIGUNION o IMAGE ; generating an α set; other var is β *
 in
   combinSyntax.mk_o(obu, imgtm)
 end
-
-val UNION_tm = mk_thy_const{
-      Thy = "pred_set", Name = "UNION",
-      Ty = aset_ty --> (aset_ty --> aset_ty)}
 
 fun mk_lifted_union (f1,f2) =
     (* f1 and f2 have the same type, some domain → elem set; generate
@@ -370,11 +363,8 @@ fun functorToMapAndSet db ty =
     + τₙ) is such a cardinal.
    ---------------------------------------------------------------------- *)
 
-val num_ty = mk_thy_type{Thy = "num", Tyop = "num", Args = []}
-fun mk_sumty (t1,t2) = mk_thy_type{Thy = "sum", Tyop = "sum", Args = [t1,t2]}
-fun list_mk_sumty [t] = t
-  | list_mk_sumty (t::ts) = mk_sumty(t, list_mk_sumty ts)
-  | list_mk_sumty [] = raise ERR "list_mk_sumty" "empty list of types"
+val num_ty = numSyntax.num
+val list_mk_sumty = sumSyntax.list_mk_sum
 
 fun planBndTypes plan =
     case plan of
@@ -616,7 +606,6 @@ fun planMapCONG lives (fs,gs) plan =
     (Co)datatypes", ESOP 2015.
    ---------------------------------------------------------------------- *)
 
-fun mk_arb ty = mk_thy_const{Thy = "bool", Name = "ARB", Ty = ty}
 fun actual_of ({sub,...}:fkid) = planTy sub
 
 (* instantiate a witness's term and theorem so that the term takes the

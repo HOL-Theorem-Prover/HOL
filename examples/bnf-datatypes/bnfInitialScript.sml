@@ -505,9 +505,10 @@ QED
 
 Overload "𝟙" = “{()}”
 
-(* both provable from ordinalBasic/cardinal; stated here so that this
-   theory does not need more_theories, and so can sit inside the core
-   build alongside src/datatype *)
+(* CARDEQ_IMP_CARDLEQ and cardleq_INFINITE duplicate cardinalTheory's
+   CARDEQ_SUBSET_CARDLEQ and CARD_LE_INFINITE, which this theory already
+   has as an ancestor; they should be dropped in favour of those.  The
+   two below them are genuine local instantiations. *)
 Theorem CARDEQ_IMP_CARDLEQ[local]:
   ∀s t. s ≈ t ⇒ s ≼ t
 Proof
