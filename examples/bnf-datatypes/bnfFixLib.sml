@@ -421,16 +421,15 @@ fun defineConstructors names bnf fix =
                 raise ERR "defineConstructors"
                       ("the functor has " ^ Int.toString n ^ " summands")
         val rawFactors = map factorsOf summands
-        fun plainFactor ty = Type.compare (ty,alpha) = EQUAL orelse
-                             not (Lib.mem alpha (type_vars ty))
-        val _ = List.all (List.all plainFactor) rawFactors orelse
-                raise ERR "defineConstructors"
-                      "recursion nested inside another type operator"
         fun atNew ty = type_subst [alpha |-> newty] ty
         fun atC ty = type_subst [alpha |-> cty] ty
         val newSummands = map atNew summands
         val cSummands = map atC summands
-        val isRec = map (fn ty => Type.compare (ty,alpha) = EQUAL)
+        (* a factor is recursive if the argument occurs in it at all,
+           not only when it *is* the argument: a nested occurrence like
+           ‘'a mylist’ hands the function mylistMAP h of it, which is the
+           whole point of building the datatype over a BNF *)
+        val isRec = map (fn ty => Lib.mem alpha (type_vars ty))
         (* one constructor per summand *)
         fun mkOne (i, (nm, facs)) =
             let val argtys = map atNew facs
@@ -449,13 +448,18 @@ fun defineConstructors names bnf fix =
                 val recs = isRec facs
                 val nonrecargs = map #2 (filter (not o #1) (zip recs args))
                 val recargs = map #2 (filter #1 (zip recs args))
+                (* what the function is handed for a recursive factor:
+                   h x when the factor is the argument itself, and
+                   Gmap h x when it occurs under a G *)
+                val recmapped = map (atC o #2) (filter #1 (zip recs facs))
                 val ftype = List.foldr (op -->) cty
                               (map type_of nonrecargs @ map type_of recargs @
-                               map (fn _ => cty) recargs)
+                               recmapped)
                 val fvar = mk_var ("f" ^ Int.toString i, ftype)
             in
               {name = nm, def = def, cons = ctm, args = args, recs = recs,
-               nonrecargs = nonrecargs, recargs = recargs, fvar = fvar}
+               nonrecargs = nonrecargs, recargs = recargs,
+               recmapped = recmapped, fvar = fvar}
             end
         val cs = List.tabulate
                    (n, fn i => mkOne (i, (List.nth (names, i),
@@ -519,13 +523,12 @@ fun defineConstructors names bnf fix =
         val legacy =
             let fun perm c =
                     let val args = #nonrecargs c @ #recargs c
-                        val rs = List.tabulate
-                                   (length (#recargs c),
-                                    fn j => mk_var ("r" ^ Int.toString j, cty))
+                        fun rvar j = mk_var ("r" ^ Int.toString j,
+                                             List.nth (#recmapped c, j))
+                        val rs = List.tabulate (length (#recmapped c), rvar)
                         val g = mk_var (fst (dest_var (#fvar c)) ^ "'",
                                         List.foldr (op -->) cty
-                                          (map (fn _ => cty) (#recargs c) @
-                                           map type_of args))
+                                          (#recmapped c @ map type_of args))
                     in
                       (g, list_mk_abs (args @ rs, list_mk_comb (g, rs @ args)))
                     end
@@ -535,7 +538,14 @@ fun defineConstructors names bnf fix =
                    (CONV_RULE (DEPTH_CONV BETA_CONV)
                               (SPECL (map #2 ps) axiom))
             end
-        val induction = Prim_rec.prove_induction_thm legacy
+        (* Prim_rec's derivation counts recursive arguments by their
+           type, so it cannot see a recursive result that arrived under
+           another type operator.  For a nested recursion the natural
+           induction principle is the set-based one anyway — the
+           hypothesis is "for every sub-term in the set" — so this is
+           left as NONE rather than forced. *)
+        val induction = SOME (Prim_rec.prove_induction_thm legacy)
+                        handle HOL_ERR _ => NONE
         (* the derivations of distinctness and injectivity want the plain
            existential, which is also the form TypeBase stores *)
         val fvars = map #fvar cs

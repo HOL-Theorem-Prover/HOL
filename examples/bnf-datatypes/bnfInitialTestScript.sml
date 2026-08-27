@@ -149,7 +149,8 @@ val _ = checkthm "btree axiom" (#axiom btcs)
    “∀f0 f1. ∃!h. h Lf = f0 ∧
                  ∀a0 a1 a2. h (Nd a0 a1 a2) = f1 a1 a0 a2 (h a0) (h a2)”
 
-val _ = checkthm "btree induction" (#induction btcs)
+val btree_ind = valOf (#induction btcs)
+val _ = checkthm "btree induction" btree_ind
    “∀P. P Lf ∧ (∀a0 a2. P a0 ∧ P a2 ⇒ ∀a1. P (Nd a0 a1 a2)) ⇒ ∀b. P b”
 
 val _ = checkthm "btree distinctness" (valOf (hd (#distinct btcs)))
@@ -162,7 +163,7 @@ val _ = checkthm "btree injectivity"
 
 val _ = tprint "btree nchotomy and case constant"
 val _ =
-    let val nch = hd (Prim_rec.prove_cases_thm (#induction btcs))
+    let val nch = hd (Prim_rec.prove_cases_thm btree_ind)
         val cse = hd (Prim_rec.define_case_constant (#existential_axiom btcs))
     in
       if not (same (concl nch) “∀b. b = Lf ∨ ∃a0 a1 a2. b = Nd a0 a1 a2”)

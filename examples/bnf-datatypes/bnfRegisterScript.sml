@@ -21,7 +21,7 @@ val fix = defineFixpoint {tyname = "mylist", ABS = "mylist_ABS",
 val cs = defineConstructors ["MyNil", "MyCons"] bnf fix
 
 Theorem mylist_axiom = #existential_axiom cs
-Theorem mylist_induction = #induction cs
+Theorem mylist_induction = valOf (#induction cs)
 Theorem MyCons_11 = valOf (List.last (#one_one cs))
 Theorem mylist_distinct = valOf (hd (#distinct cs))
 
@@ -157,11 +157,32 @@ val _ =
        null (free_vars (concl (#recursion rose)))
     then OK() else die (thm_to_string (#recursion rose))
 
-(* Splitting *rose*'s constructors out is a separate matter: the factor
-   ‘'a mylist’ is neither the recursive argument itself nor free of it,
-   and HOL's datatype axiom takes a different shape for that.  The type
-   and its recursion principle are what this file is demonstrating. *)
-val _ = tprint "constructors are not split through a nested recursion"
-val _ = (ignore (defineConstructors ["RLeaf", "RNode"] nested rose);
-         die "accepted")
-        handle HOL_ERR _ => OK()
+val rcs = defineConstructors ["RLeaf", "RNode"] nested rose
+Theorem rose_axiom = #axiom rcs
+
+(* ----------------------------------------------------------------------
+    What a function definition over a nested recursion looks like.
+
+    The recursive call arrives as ‘mylistMAP h l’ — the map of the type
+    being recursed under — rather than as clauses replaying mylist's own
+    recursion through an auxiliary function.  That is the BNF structure
+    showing through: the constructor's argument is an F of the type, so
+    the function's argument is an F of the results.
+   ---------------------------------------------------------------------- *)
+
+fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
+
+val _ = tprint "recursion through the nested map, not replayed clauses"
+val _ =
+    if same (concl rose_axiom)
+            “∀f0 f1. ∃!h. h RLeaf = f0 ∧
+                          ∀a0 a1. h (RNode a0 a1) = f1 a0 a1 (mylistMAP h a1)”
+    then OK() else die (thm_to_string rose_axiom)
+
+(* The matching induction principle is *not* the one Prim_rec derives —
+   it counts recursive arguments by their type, and here the recursive
+   results arrived under mylist.  The natural principle is the set-based
+   one, with hypothesis "for every sub-term in mylistSET l". *)
+val _ = tprint "legacy induction is declined for a nested recursion"
+val _ = if not (isSome (#induction rcs)) then OK()
+        else die "derived one anyway"
