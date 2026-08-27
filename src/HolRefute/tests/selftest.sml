@@ -698,16 +698,31 @@ val _ = require_msg (check_result self_referential_bound_declines) (fn () =>
    four-variable prefix over the unchanged body; the prefix order is not
    pinned, only its variable set.
 
-   Only [Random], seed pinned: this goal's dependent bound routes
-   narrowing through a transported case tree whose replay closes over
-   [#goal] rather than [#original] (see [Refute_QC_Narrow.narrowing_goal]),
-   so narrowing certifies [Uncertified] and reports [cert = NONE] --
+   Only [Random]; the seed is pinned as cheap hygiene against a future
+   generator reordering, not because it drives reproducibility here --
+   that comes from [Only [Random]] itself excluding the backend race.
+   Narrowing also reaches [cert = NONE] on this goal, but not via a
+   transported case tree: [lo], [l] and [k] all have generators, so
+   [transportable_typedef] leaves [#transport] empty and
+   [narrowing_goal] takes the untouched [#original] branch (no case tree
+   is built at all).  The actual cause is [closure_of]: it quantifies
+   [lo], [l] and [k] *inside* the stripped [!i], so the same rewrite set
+   that collapses [#original]'s single-binder shape to the decidable
+   [EVERY (\i. EL i l <= k) [lo ..< LENGTH l]] is a no-op on the closure
+   -- measured directly, [normalize_to_pnf] raises [UNCHANGED] on the
+   closure and succeeds on [#original].  Narrowing's search therefore
+   grounds only [lo], [l] and [k] (measured: its reported bindings never
+   include [i]); [certify]'s direct replay is stuck on the still-free
+   [i], and its PNF fallback hits the identical [UNCHANGED] before ever
+   inspecting a binding, so both routes land on [Uncertified] --
    correctly, since [Genuine] with no certificate is a valid verdict, not
    a defect in narrowing.  Racing [QuickcheckBackends] here would let
    narrowing's uncertified answer win the pool and fail this certificate
    pin nondeterministically; measured directly under [Only [Narrowing]]
    against [Only [Exhaustive]] and [Only [Random]], only narrowing
-   returns [cert = NONE].  Restrict to the backend actually measured. *)
+   returns [cert = NONE].  Restrict to the backend actually measured.
+   See [narrowing_interval_dependent_bound_declines] below, which pins
+   that [Only [Narrowing]] outcome directly. *)
 fun interval_dependent_bound_decides () =
   let
     val goal = ``∀i : num. lo ≤ i ∧ i < LENGTH l ⇒ EL i l ≤ k``
@@ -737,6 +752,30 @@ fun interval_dependent_bound_decides () =
 val _ = require_msg (check_result interval_dependent_bound_decides) (fn () =>
   "a goal with a non-ground interval bound did not reach a certified " ^
   "genuine counterexample over the expected closure")
+  (fn () => ()) ()
+
+(* Companion to [interval_dependent_bound_decides]: pins the [Only
+   [Narrowing]] half of the comment above directly, so it is testable
+   and so a regression to [Discarded] -- the one certainty that
+   downgrades, and which nothing else here detects -- reddens this pin
+   instead of passing silently.  The candidate is not pinned, only the
+   verdict shape. *)
+fun narrowing_interval_dependent_bound_declines () =
+  let
+    val goal = ``∀i : num. lo ≤ i ∧ i < LENGTH l ⇒ EL i l ≤ k``
+    val config =
+      Refute.upd_search (Refute.Only [Refute.Narrowing]) default_config
+  in
+    case Refute.refute config goal of
+        Counterexample ({certainty = Genuine, cert = NONE, ...} :: _) => true
+      | _ => false
+  end
+
+val _ = tprint "Refute narrowing declines to certify a dependent interval"
+val _ = require_msg
+  (check_result narrowing_interval_dependent_bound_declines) (fn () =>
+  "Only [Narrowing] on the dependent-bound goal did not report Genuine " ^
+  "with cert = NONE")
   (fn () => ()) ()
 
 val _ = tprint "CoIndDefLib registry"
@@ -22969,6 +23008,47 @@ val _ = require_msg
   (check_result finite_map_narrowing_is_unreachable) (fn () =>
   "selecting Narrowing for an fmap goal did not report Unknown naming " ^
   "the extraction failure")
+  (fn () => ()) ()
+
+(* Rat and real analogues: [TypeBase.fetch] returns [NONE] for both --
+   neither ever registers a [TypeBase] entry, having only the custom
+   generators in [Refute_EvalRat]/[Refute_EvalReal] -- so
+   [Refute_Extract.ensure_type] rejects them by an earlier, distinct
+   message ("no TypeBase information for ...") than fmap's.  The five
+   rat and real certificate pins that race [QuickcheckBackends] rely on
+   narrowing never winning there; this pins the exclusion itself, so a
+   future [TypeBase] registration reddens here first instead of in
+   those five. *)
+fun rat_narrowing_is_unreachable () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.Narrowing]) default_config)
+    ``(x : rat) = rat_of_num 1`` of
+      Unknown reasons =>
+        List.exists
+          (fn r => String.isSubstring "no TypeBase information" r) reasons
+    | _ => false
+
+val _ = tprint "Refute rat narrowing is unreachable by name"
+val _ = require_msg
+  (check_result rat_narrowing_is_unreachable) (fn () =>
+  "selecting Narrowing for a rat goal did not report Unknown naming " ^
+  "the missing TypeBase entry")
+  (fn () => ()) ()
+
+fun real_narrowing_is_unreachable () =
+  case refute
+    (Refute.upd_search (Refute.Only [Refute.Narrowing]) default_config)
+    ``(x : real) = real_of_num 1`` of
+      Unknown reasons =>
+        List.exists
+          (fn r => String.isSubstring "no TypeBase information" r) reasons
+    | _ => false
+
+val _ = tprint "Refute real narrowing is unreachable by name"
+val _ = require_msg
+  (check_result real_narrowing_is_unreachable) (fn () =>
+  "selecting Narrowing for a real goal did not report Unknown naming " ^
+  "the missing TypeBase entry")
   (fn () => ()) ()
 
 (* MF gives fmap its own typedef (is_fmap'/abs_fmap', refuteScript.sml's

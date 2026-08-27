@@ -54,6 +54,10 @@ repository.
   oracle tags.
 - `certainty` and `cert` are independent axes: semantic strength vs. "a HOL
   theorem exists".  `Genuine` with `cert = NONE` is valid and expected.
+- Consequence for tests: a pin asserting `cert = SOME _` must not race the
+  backend pool.  A backend answering `Genuine` with `cert = NONE` has
+  answered correctly and will fail such a pin nondeterministically;
+  restrict it to the one backend actually measured.
 - SETTLED, do not revisit: Refute trusts Kodkodi exactly as Nitpick trusts
   Kodkod, and is never stricter.  Model-finder certainty comes from
   `fallback_certainty` (encoding soundness/exactness), never from whether a
