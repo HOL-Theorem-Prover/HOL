@@ -200,7 +200,8 @@ fun minsetBound bnf ty =
 type initial_algebra = {
   carrier : hol_type, prodty : hol_type, target : hol_type,
   alg : term, cons : term,
-  bij : thm, init : thm, inhabited : thm, induction : thm
+  bij : thm, init : thm, inhabited : thm, induction : thm,
+  isALG : thm
 }
 
 fun witnessThm bnf ty =
@@ -284,8 +285,68 @@ fun initialAlgebra bnf =
     in
       {carrier = carrier, prodty = prodty, target = target,
        alg = alg, cons = cons,
-       bij = lambek, init = init, inhabited = inhabited,
+       bij = lambek, init = init, inhabited = inhabited, isALG = algALG,
        induction = atAlg IALG_ind}
+    end
+
+
+(* ----------------------------------------------------------------------
+    The datatype.
+
+    rich_new_type states its facts about the carrier as a predicate and
+    NEWTYPE_INITIALITY states them as membership, so they are converted
+    on the way in.
+   ---------------------------------------------------------------------- *)
+
+fun defineFixpoint {tyname, ABS, REP} bnf =
+    let val ia = initialAlgebra bnf
+        val prodty = #prodty ia
+        val itype = newtypeTools.rich_new_type
+                      {tyname = tyname, exthm = #inhabited ia,
+                       ABS = ABS, REP = REP}
+        val newty = #newty itype
+        (* the rewrite has to be aimed: its pattern is a bare
+           application, so a DEPTH_CONV would rewrite the result again
+           and never stop *)
+        val inIntro = REWR_CONV (GSYM pred_setTheory.SPECIFICATION)
+        val termP_IN = GEN_ALL (CONV_RULE inIntro (#termP_term_REP itype))
+        val repabs_IN =
+            CONV_RULE (STRIP_QUANT_CONV (LAND_CONV inIntro))
+                      (#repabs_pseudo_id itype)
+        val abs = #term_ABS_t itype and rep = #term_REP_t itype
+        val fnty = functorAt bnf newty
+        (* the constructor is NCONS at this instance; defining it that
+           way rather than as the unfolded lambda is what lets the
+           recursion theorem be folded back to mention it *)
+        val NCONS_tm = repeat rator (lhs (concl (SPEC_ALL NCONS_def)))
+        val consbody = list_mk_icomb (NCONS_tm,
+                                      [mapOp bnf (newty,prodty), #cons ia,
+                                       rep, abs])
+        val cons_def =
+            new_definition (tyname ^ "_CONS_def",
+                            mk_eq (mk_var (tyname ^ "_CONS",
+                                           fnty --> newty), consbody))
+        val cons = lhs (concl cons_def)
+        val laws =
+            LIST_CONJ [MapCompThm bnf (prodty,newty,prodty),
+                       MapIdThm bnf prodty,
+                       MapCongThm bnf (prodty,prodty),
+                       NaturalThm bnf (newty,prodty),
+                       NaturalThm bnf (prodty,newty),
+                       MapCompThm bnf (newty,prodty,alpha),
+                       MapCompThm bnf (prodty,newty,alpha),
+                       MapCongThm bnf (prodty,alpha),
+                       #absrep_id itype,
+                       repabs_IN,
+                       termP_IN,
+                       #isALG ia,
+                       #init ia]
+        val recursion =
+            CONV_RULE (DEPTH_CONV BETA_CONV)
+                      (REWRITE_RULE [GSYM cons_def]
+                                    (MATCH_MP NEWTYPE_RECURSION laws))
+    in
+      {newty = newty, cons = cons, cons_def = cons_def, recursion = recursion}
     end
 
 end

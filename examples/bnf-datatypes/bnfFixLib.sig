@@ -62,6 +62,7 @@ sig
 
         alg   : the carrier, a prodty set
         cons  : F[prodty] -> prodty
+        isALG : |- ALG st (alg,cons)
         bij   : |- BIJ cons (FIN st alg) alg
         init  : |- !t G. ALG stc (G,t) ==>
                          ?!h. HOM .. h (alg,cons) (G,t) /\ ..
@@ -71,9 +72,27 @@ sig
   type initial_algebra = {
     carrier : hol_type, prodty : hol_type, target : hol_type,
     alg : term, cons : term,
-    bij : thm, init : thm, inhabited : thm, induction : thm
+    bij : thm, init : thm, inhabited : thm, induction : thm,
+    isALG : thm
   }
 
   val initialAlgebra : bnfLib.derived_bnf -> initial_algebra
+
+  (* ----------------------------------------------------------------------
+      The datatype itself.  Defines a type in bijection with the initial
+      algebra's carrier and transports the construction onto it:
+
+        newty     : the new type
+        cons      : F[newty] -> newty, the constructor
+        cons_def  : its definition
+        recursion : |- !t. ?!h. !af. h (cons af) = t (map h af)
+
+      tyname names the type; ABS and REP name the type definition's
+      abstraction and representation functions.
+     ---------------------------------------------------------------------- *)
+  val defineFixpoint : {tyname : string, ABS : string, REP : string} ->
+                       bnfLib.derived_bnf ->
+                       {newty : hol_type, cons : term, cons_def : thm,
+                        recursion : thm}
 
 end
