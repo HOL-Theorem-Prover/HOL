@@ -206,13 +206,14 @@ def _did_change_full(c, uri, text, version):
 
 def _line_col_at(text, byte_offset):
     """Byte offset → (line, character) using LSP positionEncoding=utf-8
-    (see 1cfd8db81)."""
-    prefix = text[:byte_offset]
-    if "\n" not in prefix:
-        return (0, byte_offset)
-    line = prefix.count("\n")
-    col = byte_offset - prefix.rfind("\n") - 1
-    return (line, col)
+    (see 1cfd8db81).
+
+    Counted over the encoded bytes: slicing the str by a byte offset
+    silently over-runs on any file with multibyte characters, which
+    every HOL script using `‘…’` has, and produced end positions past
+    the end of their line."""
+    b = text.encode("utf8")[:byte_offset]
+    return (b.count(b"\n"), byte_offset - (b.rfind(b"\n") + 1))
 
 
 def _did_change_incr(c, uri, old_text, byte_from, byte_to, insert, version):
