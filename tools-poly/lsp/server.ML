@@ -305,6 +305,15 @@ val recv: 'a receiver -> 'a
 end = struct
 
 exception Disconnected
+(* One condition variable serves both ends, so every wake-up must be a
+   broadcast rather than a signal.  With more than one sender -- which
+   the proof pool introduced, its workers announcing outcomes from their
+   own threads while the compile thread also sends -- `signal` can hand
+   the wake-up to the *other* sender instead of the receiver: that sender
+   sees the slot still Full, waits again, and the signal is consumed with
+   the receiver never woken.  Nobody signals after that.  Broadcasting
+   makes each waiter re-test its own predicate, which the loops below
+   already do. *)
 datatype 'a slot = Empty | Full of 'a | Disconn of exn option
 type 'a sender = ConditionVar.conditionVar * Mutex.mutex * 'a slot ref
 type 'a receiver = 'a sender
@@ -318,7 +327,7 @@ fun send (cvar, mutex, r) v = let
     case !r of
       Disconn (SOME e) => PolyML.Exception.reraise e
     | Disconn NONE => raise Disconnected
-    | Empty => (r := Full v; Mutex.unlock mutex; ConditionVar.signal cvar)
+    | Empty => (r := Full v; Mutex.unlock mutex; ConditionVar.broadcast cvar)
     | Full _ => (ConditionVar.wait (cvar, mutex); loop ())
   in Mutex.lock mutex; loop () end
 
@@ -328,7 +337,7 @@ fun closeSender (cvar, mutex, r) e = let
       Disconn (SOME e) => PolyML.Exception.reraise e
     | Disconn NONE => raise Disconnected
     | Full _ => (ConditionVar.wait (cvar, mutex); loop ())
-    | _ => (r := Disconn e; Mutex.unlock mutex; ConditionVar.signal cvar)
+    | _ => (r := Disconn e; Mutex.unlock mutex; ConditionVar.broadcast cvar)
   in Mutex.lock mutex; loop () end
 
 fun recv (cvar, mutex, r) = let
@@ -336,7 +345,7 @@ fun recv (cvar, mutex, r) = let
     case !r of
       Disconn (SOME e) => PolyML.Exception.reraise e
     | Disconn NONE => raise Disconnected
-    | Full v => (r := Empty; Mutex.unlock mutex; ConditionVar.signal cvar; v)
+    | Full v => (r := Empty; Mutex.unlock mutex; ConditionVar.broadcast cvar; v)
     | Empty => (ConditionVar.wait (cvar, mutex); loop ())
   in Mutex.lock mutex; loop () end
 
