@@ -2761,8 +2761,7 @@ def test_goalState_walks_into_select_goal_block():
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted")
         # Cursor at line 7 char 29: right after `ALL_TAC `, inside
-        # the `>~ [`SUC m`] >- (…)` block.  Step should be past
-        # gen_tac + Cases_on + SUC-selector + ALL_TAC.
+        # the `>~ [`SUC m`] >- (…)` block.
         r = _send_goalstate(c, 703, uri, 7, 29)
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
@@ -2770,6 +2769,13 @@ def test_goalState_walks_into_select_goal_block():
         assert_true(step >= 3,
                     f"walker stepped into select-goal block, "
                     f"got step {step} ({result!r})")
+        # `step` alone proves nothing: it is counted from fragment
+        # positions, so it is right whether or not the selector ran.
+        # Assert the selection actually happened.
+        assert_eq(result.get("error"), None, f"no error ({result!r})")
+        assert_true(result["goals"][0]["goal"] == "SUC m = 0 ∨ 0 < SUC m",
+                    f"the SUC-matching subgoal is selected, and renamed "
+                    f"to the pattern's variable ({result!r})")
     finally:
         c.close()
 
@@ -3409,6 +3415,72 @@ def test_goalState_source_that_wont_compile_is_not_a_tactic_failure():
         c.close()
 
 
+def test_goalState_selector_selects_and_renames():
+    """`>~ [pat]` picks the subgoal matching `pat` and renames its
+    variables to the pattern's.  It is a list_tactic wanting the whole
+    goal list: run as `ALL_TAC >~ pats` through `goalFrag.expand` it
+    sees one goal at a time and can never pick between them, and the
+    span already covers the bracketed list, so wrapping it again gave
+    `>~ [[pat]]`, which did not compile.  Between them the selector
+    did nothing at all, silently."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_selector.sml"
+        #  6   gen_tac >> Cases_on `n`
+        #  7   >~ [`SUC m`] >> rw[]
+        src = ("Theory goalstate_selector\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n = 0 \\/ 0 < n\n"
+               "Proof\n"
+               "  gen_tac >> Cases_on `n`\n"
+               "  >~ [`SUC m`] >> rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Just past the `]`, so the selector has run.
+        r = _send_goalstate(c, 780, uri, 7, 14)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, f"selector applied ({result!r})")
+        assert_true(result["goals"][0]["goal"] == "SUC m = 0 ∨ 0 < SUC m",
+                    f"matching subgoal selected and renamed ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_selector_that_matches_nothing_is_flagged():
+    """`>~` is `FIRST_LT (RENAME_TAC pats)`, which fails when no goal
+    matches — so the walker must say so rather than carry on."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_selector_bad.sml"
+        src = ("Theory goalstate_selector_bad\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n = 0 \\/ 0 < n\n"
+               "Proof\n"
+               "  gen_tac >> Cases_on `n`\n"
+               "  >~ [`A UNION B = C`] >> rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 781, uri, 7, 22)   # just past the `]`
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        err = result.get("error") or ""
+        assert_true("found no matching subgoal" in err,
+                    f"the selector's failure is reported ({result!r})")
+        # And the message quotes the pattern once, not `[[pat]]`.
+        assert_true("[[" not in err, f"pattern quoted once ({err!r})")
+    finally:
+        c.close()
+
+
 def test_lsp_walks_file_includes_from_arbitrary_cwd():
     """When the LSP server is launched with cwd != the opened file's
     directory (as eglot typically does — cwd is the project root),
@@ -3738,6 +3810,10 @@ TESTS = [
                                      test_goalState_walks_into_suffices_by_block),
     ("goalState_walks_into_select_goal_block",
                                      test_goalState_walks_into_select_goal_block),
+    ("goalState_selector_selects_and_renames",
+                                     test_goalState_selector_selects_and_renames),
+    ("goalState_selector_that_matches_nothing_is_flagged",
+                                     test_goalState_selector_that_matches_nothing_is_flagged),
     ("goalState_walks_map_every",    test_goalState_walks_map_every),
     ("goalState_walks_map_first",    test_goalState_walks_map_first),
     ("goalState_walks_squiggle_minus_rename",

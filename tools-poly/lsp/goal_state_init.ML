@@ -64,14 +64,15 @@ local
         "Subgoal `" ^ String.substring
                         (tacText, #1 span, #2 span - #1 span)
         ^ "` by … failed to prove"
+      (* The span covers the bracketed list already. *)
     | FAtom (LSelectGoal span) =>
-        "Selector `>~ ["
+        "Selector `>~ "
         ^ String.substring (tacText, #1 span, #2 span - #1 span)
-        ^ "]` found no matching subgoal"
+        ^ "` found no matching subgoal"
     | FAtom (LSelectGoals span) =>
-        "Selector `>>~ ["
+        "Selector `>>~ "
         ^ String.substring (tacText, #1 span, #2 span - #1 span)
-        ^ "]` found no matching subgoal"
+        ^ "` found no matching subgoal"
     | FAtom LReverse =>
         "`suffices_by` reversal failed"
     | FAtom te => (case topSpan te of

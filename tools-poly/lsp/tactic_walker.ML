@@ -126,16 +126,32 @@ fun textAt tacText (s, e) = String.substring (tacText, s, e - s)
 
    A list_tactic leaf is compiled and applied as one -- see
    `compileAndApplyLT'. *)
+(* Source we made up, versus source the user wrote.  Only the
+   second may fail to compile innocently -- that is the file's own
+   compile reporting a typo, or its `open's not having run yet.  Ours
+   failing to compile is a bug in this file and has to be seen. *)
+datatype src = Synthesised of string | Verbatim of string
+
 fun atomSrc tacText te = let
   val txt = textAt tacText
+  (* `tr pat' spans the whole right operand of `>~', brackets and
+     all -- as `Rename' also assumes -- so it is passed through, not
+     wrapped again: wrapping produced `>~ [[pat]]', which never
+     compiled.  And a selector is a list_tactic, wanted whole: run as
+     `ALL_TAC >~ pats' through `expand' it saw each goal on its own
+     and so could never pick one out.  Name the list_tactic itself
+     and let `expand_list' hand it the focus. *)
   in case te of
-      Subgoal span      => SOME ("BasicProvers.subgoal " ^ txt span)
-    | LSelectGoal span  => SOME ("ALL_TAC >~ [" ^ txt span ^ "]")
-    | LSelectGoals span => SOME ("ALL_TAC >>~ [" ^ txt span ^ "]")
-    | Rename span       => SOME ("Q.RENAME_TAC " ^ txt span)
+      Subgoal span      => SOME (Synthesised
+                                   ("BasicProvers.subgoal " ^ txt span))
+    | LSelectGoal span  => SOME (Synthesised
+                                   ("Q.SELECT_GOAL_LT " ^ txt span))
+    | LSelectGoals span => SOME (Synthesised
+                                   ("Q.SELECT_GOALS_LT " ^ txt span))
+    | Rename span       => SOME (Synthesised ("Q.RENAME_TAC " ^ txt span))
     | _ => case topSpan te of
-        SOME span => SOME (txt span)
-      | NONE => printTacAsSML tacText te
+        SOME span => SOME (Verbatim (txt span))
+      | NONE => Option.map Synthesised (printTacAsSML tacText te)
   end
 
 (* Which leaves denote list_tactics.  Enumerated rather than read off
@@ -143,6 +159,8 @@ fun atomSrc tacText te = let
    tactic sitting in a tactic list -- and so would misroute it. *)
 fun isListTactic te = case te of
     LReverse => true
+  | LSelectGoal _ => true
+  | LSelectGoals _ => true
   | LFirst [] => true
   | LTacsToLT _ => true
   | LOpaque _ => true
@@ -150,9 +168,18 @@ fun isListTactic te = case te of
 
 fun applyAtom tacText te state = case atomSrc tacText te of
     NONE => Applied state
-  | SOME src =>
-      if isListTactic te then compileAndApplyLT src state
-      else compileAndApply src state
+  | SOME s => let
+      val (src, ours) = case s of
+          Synthesised x => (x, true)
+        | Verbatim x => (x, false)
+      val r = if isListTactic te then compileAndApplyLT src state
+              else compileAndApply src state
+      in case r of
+           (* Our own source not compiling is not the user's problem
+              to hide; report it like any other failure. *)
+           Rejected CompileFailed => if ours then Rejected ApplyFailed else r
+         | _ => r
+      end
 
 fun applyOpen ok state = case ok of
     FOpen           => Portable.total goalFrag.open_paren      state
