@@ -161,21 +161,45 @@ val b1 = mk_vartype "'b1"
 val b2 = mk_vartype "'b2"
 
 val examples = [
-  ("tlist", [alpha,b1], “:one + 'b1 # 'a”),
-  ("tpair", [alpha,b1,b2], “:one + 'b1 # 'b2 # 'a”),
-  ("ttree", [alpha,b1], “:'b1 + 'a # 'a”),
+  ("tlist", [alpha,b1], “:one + 'b1 # 'a”, ["TNil", "TCons"]),
+  ("tpair", [alpha,b1,b2], “:one + 'b1 # 'b2 # 'a”, ["PNil", "PCons"]),
+  ("ttree", [alpha,b1], “:'b1 + 'a # 'a”, ["TLeaf", "TNode"]),
   (* an argument, and the recursion, under a registered functor: the map
      in the recursive argument alone is then not the identity on the
      parameter's position either *)
-  ("topt", [alpha,b1], “:one + 'b1 option # 'a option”),
+  ("topt", [alpha,b1], “:one + 'b1 option # 'a option”, ["ONil", "OCons"]),
   (* recursion under two registered functors at once *)
-  ("tfm", [alpha,b1], “:(num |-> 'a) + num # ('b1 # 'a) list”)
+  ("tfm", [alpha,b1], “:(num |-> 'a) + num # ('b1 # 'a) list”, ["FM", "ND"])
 ]
+
+(* What is left of the composite when the constructor view has *not*
+   simplified it away.  It has to be these two and not, say, SUM_MAP:
+   a component's own map and set functions appear legitimately, since
+   that is what a nested factor recurses through, and pair's map is ‘##’
+   whichever role it is playing.  S and K only ever come from the lifted
+   union a composite's set function is folded with. *)
+val plumbing = ["S", "K"]
+fun noPlumbing th =
+    not (List.exists
+           (fn nm => can (find_term (fn t => is_const t andalso
+                                             #1 (dest_const t) = nm))
+                         (concl th))
+           plumbing)
+
+(* one equation per constructor, each about that constructor, and with
+   the functor gone *)
+fun eqnsOK cs th =
+    let val conjs = strip_conj (concl th)
+        fun aboutC (c,eq) = same c (#1 (strip_comb (rand (lhs eq))))
+    in
+      null (hyp th) andalso length conjs = length cs andalso
+      ListPair.all aboutC (cs, conjs) andalso noPlumbing th
+    end
 
 (* the database is threaded through: each type is added to it in memory
    as it is built, which is how a caller supplies the theorems the next
    step needs without anything being recorded *)
-fun testty ((tyname, lives, ty), db) =
+fun testty ((tyname, lives, ty, cnames), (db, seen)) =
     let
       val bnf = deriveBNFn db lives ty
       val fix = defineFixpoint {tyname = tyname, ABS = tyname ^ "_ABS",
@@ -184,19 +208,66 @@ fun testty ((tyname, lives, ty), db) =
       val _ = tprint (tyname ^ " = " ^ type_to_string ty ^ " as a functor")
       val _ = if lawsOK (#info res) then OK()
               else die "the derived laws are not the map's"
+      (* the same map and set functions, read one constructor at a time *)
+      val cs = defineConstructors cnames bnf fix
+      val eqns = constructorEqns cs res
+      val _ = tprint (tyname ^ "'s equations per constructor")
+      val _ = if List.all (eqnsOK (#constructors cs))
+                          (#map_eqns eqns :: #set_eqns eqns)
+              then OK()
+              else die (String.concatWith "\n"
+                          (List.map thm_to_string
+                             (#map_eqns eqns :: #set_eqns eqns)))
       (* the database's sanity check is part of the test: a witness with a
          type variable its term doesn't pin down gets caught here *)
       val _ = tprint (tyname ^ " goes into a database")
     in
-      (bnfBase.insert (#key res, #info res) db before OK())
-      handle e => (die (General.exnMessage e); db)
+      ((bnfBase.insert (#key res, #info res) db before OK())
+       handle e => (die (General.exnMessage e); db),
+       (tyname, eqns) :: seen)
     end
 
 (* ----------------------------------------------------------------------
     and a functor over one of them, which is what nesting needs
    ---------------------------------------------------------------------- *)
 
-val db = List.foldl testty (bnfBase.fullDB()) examples
+(* the equations are kept alongside, so that the interesting ones can be
+   read back below: the check inside testty cannot say what they should be *)
+val (db, seen) = List.foldl testty (bnfBase.fullDB(), []) examples
+
+(* ----------------------------------------------------------------------
+    what the constructor view comes out as, for the two cases worth
+    reading: several arguments, and a factor under a registered functor
+   ---------------------------------------------------------------------- *)
+
+fun eqnsOf ty = #2 (valOf (Lib.assoc1 ty seen))
+
+fun checkthm nm th q =
+    (tprint nm;
+     if null (hyp th) andalso same (concl th) q then OK()
+     else die (thm_to_string th))
+
+val _ = checkthm "tpair's map, per constructor" (#map_eqns (eqnsOf "tpair"))
+   “(tpairMAP f1 f2 PNil = PNil) ∧
+    (tpairMAP f1 f2 (PCons a b t) = PCons (f1 a) (f2 b) (tpairMAP f1 f2 t))”
+
+val _ = checkthm "tpair's second set function, per constructor"
+   (List.nth (#set_eqns (eqnsOf "tpair"), 1))
+   “(tpairSET2 (PNil : ('b1,'b2) tpair) = ∅) ∧
+    (tpairSET2 (PCons (a:'b1) (b:'b2) t) = b INSERT tpairSET2 t)”
+
+val _ = checkthm "topt's map, per constructor" (#map_eqns (eqnsOf "topt"))
+   “(toptMAP f ONil = ONil) ∧
+    (toptMAP f (OCons a t) =
+       OCons (OPTION_MAP f a) (OPTION_MAP (toptMAP f) t))”
+
+(* the recursion goes under option, so the atoms of the sub-terms are
+   collected through the option's own set function *)
+val _ = checkthm "topt's set function, per constructor"
+   (hd (#set_eqns (eqnsOf "topt")))
+   “(toptSET (ONil : 'b1 topt) = ∅) ∧
+    (toptSET (OCons (a : 'b1 option) t) =
+       optSET a ∪ BIGUNION (IMAGE toptSET (optSET t)))”
 
 val _ = tprint "a functor recursing under a two-argument fixed point"
 val _ =

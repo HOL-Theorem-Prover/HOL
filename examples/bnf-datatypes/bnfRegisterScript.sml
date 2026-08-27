@@ -55,7 +55,7 @@ fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
 fun checkthm nm th q =
     (tprint nm;
      if null (hyp th) andalso same (concl th) q then OK()
-     else die (thm_to_string th))
+     else die (thm_to_string th ^ "\n  wanted: " ^ term_to_string q))
 
 (* the map is the one the recursion principle gives: the parameter's
    function on the head, the map itself on the tail *)
@@ -96,49 +96,27 @@ val _ =
       | _ => die "not one inhabitation fact"
 
 (* ----------------------------------------------------------------------
-    The constructor-level equations.
-
-    These are what a user would have written the definitions with, and
-    they follow from the composite's set function being unfolded at each
-    summand — the same unfolding defineConstructors does for the
-    set-based induction.  Deriving them belongs with that, and until it
-    is there they are one simplification per datatype.
+    The constructor-level equations, which is the form a user reads the
+    map and the set function in.  They are derived, not proved here: the
+    equation the recursion principle gives is instantiated at each
+    constructor's own argument and the functor simplified away.
    ---------------------------------------------------------------------- *)
 
-val cdefs = #defs cs
+val eqns = constructorEqns cs mylist_bnf
 
-(* the set terms are built from predicates, so unfolding them leaves
-   ‘λx. x = a’ and ‘λx. F’ where set notation is wanted *)
-Theorem lam_sing[local]:
-  (λx. x = a) = {a}
-Proof
-  simp[EXTENSION]
-QED
+Theorem mylistMAP_thm[simp] = #map_eqns eqns
+Theorem mylistSET_thm[simp] = hd (#set_eqns eqns)
 
-Theorem lam_none[local]:
-  (λx. F) = ∅
-Proof
-  simp[EXTENSION]
-QED
+val _ = checkthm "mylist's map, per constructor" mylistMAP_thm
+   “(mylistMAP f MyNil = MyNil) ∧
+    (mylistMAP f (MyCons a l) = MyCons (f a) (mylistMAP f l))”
 
-val unfold = [bnfPrelimsTheory.BIMG_EQUAL, bnfPrelimsTheory.BIMG_K0,
-              combinTheory.I_o_ID, combinTheory.S_DEF, combinTheory.o_DEF,
-              combinTheory.K_DEF, pairTheory.setFST_thm,
-              pairTheory.setSND_thm, lam_sing, lam_none, INSERT_UNION_EQ]
-
-Theorem mylistMAP_thm[simp]:
-  (mylistMAP f MyNil = MyNil) ∧
-  (mylistMAP f (MyCons a l) = MyCons (f a) (mylistMAP f l))
-Proof
-  simp (mylistMAP_def :: cdefs)
-QED
-
-Theorem mylistSET_thm[simp]:
-  (mylistSET MyNil = ∅) ∧
-  (mylistSET (MyCons a l) = a INSERT mylistSET l)
-Proof
-  simp (mylistSET_def :: unfold @ cdefs)
-QED
+(* both conjuncts are annotated because nothing links them: the parser
+   would type them independently and the quotation would come out more
+   general than the theorem *)
+val _ = checkthm "mylist's set function, per constructor" mylistSET_thm
+   “(mylistSET (MyNil : 'b1 mylist) = ∅) ∧
+    (mylistSET (MyCons (a:'b1) l) = a INSERT mylistSET l)”
 
 (* ----------------------------------------------------------------------
     extending the database with what was just derived

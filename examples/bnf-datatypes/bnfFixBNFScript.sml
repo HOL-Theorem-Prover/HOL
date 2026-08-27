@@ -168,6 +168,27 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
+    Set notation.
+
+    The set functions the component functors are registered with are
+    stated as predicates — sumTheory's setL gives ‘λx. x = a’ — so
+    unfolding a composite's set function at a constructor leaves those
+    where set notation is wanted.
+   ---------------------------------------------------------------------- *)
+
+Theorem LAM_EQ_SING:
+  (λx. x = a) = {a}
+Proof
+  simp[EXTENSION]
+QED
+
+Theorem LAM_F_EMPTY:
+  (λx. F) = ∅
+Proof
+  simp[EXTENSION]
+QED
+
+(* ----------------------------------------------------------------------
     witnesses and inhabitation.
 
     A witness for the new type is a constructor applied to a witness for

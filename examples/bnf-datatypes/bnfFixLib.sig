@@ -116,13 +116,16 @@ sig
       argument itself or free of it; nesting is rejected here, since
       HOL's axiom takes a different shape for it.
      ---------------------------------------------------------------------- *)
+  type constructors = {
+    constructors : term list, defs : thm list, axiom : thm,
+    legacy_axiom : thm, existential_axiom : thm,
+    induction : thm option,   (* NONE for a nested recursion *)
+    set_induction : thm,      (* hypothesis: every sub-term in the set *)
+    distinct : thm option list, one_one : thm option list
+  }
+
   val defineConstructors :
-      string list -> bnfLib.derived_bnfn -> fixpoint ->
-      {constructors : term list, defs : thm list, axiom : thm,
-       legacy_axiom : thm, existential_axiom : thm,
-       induction : thm option,   (* NONE for a nested recursion *)
-       set_induction : thm,      (* hypothesis: every sub-term in the set *)
-       distinct : thm option list, one_one : thm option list}
+      string list -> bnfLib.derived_bnfn -> fixpoint -> constructors
 
   (* ----------------------------------------------------------------------
       The new type as a functor.
@@ -140,9 +143,28 @@ sig
       intermediate type a mutual recursion goes through has no business
       being exported.
      ---------------------------------------------------------------------- *)
-  val fixpointBNF : bnfLib.derived_bnfn -> fixpoint ->
-                    {key : KernelSig.kernelname,
-                     info : thm bnfBase_dtype.info,
-                     map_thm : thm, set_thms : thm list, relator_def : thm}
+  type fixpoint_bnf = {
+    key : KernelSig.kernelname,
+    info : thm bnfBase_dtype.info,
+    map_thm : thm,          (* !f.. af. MAP f.. (cons af) = cons (Fmap ..) *)
+    set_thms : thm list,    (* !af. SETi (cons af) = Fseti af UNION .. *)
+    relator_def : thm
+  }
+
+  val fixpointBNF : bnfLib.derived_bnfn -> fixpoint -> fixpoint_bnf
+
+  (* ----------------------------------------------------------------------
+      The map and the set functions at each constructor:
+
+        MAP f (MyCons a l) = MyCons (f a) (MAP f l)
+        SET (MyCons a l)   = a INSERT SET l
+
+      which is the form a user reads them in, and the form a size
+      definition or a TypeBase entry is written with.  One theorem for the
+      map and one per argument for the sets, each a conjunction over the
+      constructors.
+     ---------------------------------------------------------------------- *)
+  val constructorEqns : constructors -> fixpoint_bnf ->
+                        {map_eqns : thm, set_eqns : thm list}
 
 end

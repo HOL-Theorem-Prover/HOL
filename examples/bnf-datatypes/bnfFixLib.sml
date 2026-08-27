@@ -551,7 +551,13 @@ fun mkCaseTerm [_] [(x,b)] scrut = subst [x |-> scrut] b
       end
   | mkCaseTerm _ _ _ = raise ERR "mkCaseTerm" "malformed"
 
-fun defineConstructors names bnf fix =
+type constructors = {
+  constructors : term list, defs : thm list, axiom : thm,
+  legacy_axiom : thm, existential_axiom : thm, induction : thm option,
+  set_induction : thm, distinct : thm option list, one_one : thm option list
+}
+
+fun defineConstructors names bnf fix : constructors =
     let val newty = #newty fix
         val cons = #cons fix
         val prim = #prim_recursion fix
@@ -767,7 +773,12 @@ fun freshTys pre n avoid =
 fun skolemN 0 = ALL_CONV
   | skolemN k = funpow (k - 1) BINDER_CONV SKOLEM_CONV THENC skolemN (k - 1)
 
-fun fixpointBNF bnf (fix : fixpoint) =
+type fixpoint_bnf = {
+  key : KernelSig.kernelname, info : thm bnfBase_dtype.info,
+  map_thm : thm, set_thms : thm list, relator_def : thm
+}
+
+fun fixpointBNF bnf (fix : fixpoint) : fixpoint_bnf =
     let
       val newty = #newty fix
       val consN = #cons fix
@@ -1145,6 +1156,65 @@ fun fixpointBNF bnf (fix : fixpoint) =
          inhabits = List.map ((fn (t,th) => (cinst t, cthm th)) o inhOf)
                              (upto n)
        }}
+    end
+
+(* ----------------------------------------------------------------------
+    The map and the set functions at each constructor.
+
+    fixpointBNF defines them by the equation the recursion principle
+    gives, whose right-hand side is a map of the whole functor; what a
+    user reads, and what a size definition or a TypeBase entry is written
+    with, is one equation per constructor.  Instantiating the equation at
+    a constructor's own argument and simplifying the functor away turns
+    one into the other, and the constructors' definitions fold the result
+    back up.  Nothing here needs the functor's shape: the definition of
+    each constructor says what to instantiate at.
+   ---------------------------------------------------------------------- *)
+
+(* taking a sum of products apart *)
+val shapeRWs = [sumTheory.SUM_MAP_def, pairTheory.PAIR_MAP,
+                combinTheory.I_THM, oneTheory.one]
+
+(* and the same for a set function, which is built out of BIMG and a
+   lifted union, and whose leaves are the components' set functions —
+   stated as predicates, so set notation has to be put back *)
+val setRWs = [bnfPrelimsTheory.BIMG_EQUAL, bnfPrelimsTheory.BIMG_K0,
+              combinTheory.I_o_ID, combinTheory.S_DEF, combinTheory.o_DEF,
+              combinTheory.K_DEF, pairTheory.setFST_thm,
+              pairTheory.setSND_thm, LAM_EQ_SING, LAM_F_EMPTY,
+              pred_setTheory.INSERT_UNION_EQ]
+
+fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
+    let
+      val defs = #defs cs
+      val (mvars, _) = strip_forall (concl (#map_thm res))
+      val fvars = List.take (mvars, length mvars - 1)
+      (* the instance the map lands in, as its own functions say *)
+      val theta = List.map (fn f => let val (d,r) = dom_rng (type_of f)
+                                    in d |-> r end)
+                           fvars
+      val folds = List.map GSYM defs
+      val tgtfolds = List.map (GSYM o INST_TYPE theta) defs
+      (* the constructor's own argument, from its definition *)
+      fun injOf def = rand (rhs (#2 (strip_forall (concl def))))
+      fun unfold ss rws th =
+          CONV_RULE (RAND_CONV (QCONV (simpLib.SIMP_CONV ss rws))) th
+      fun mapEqn def =
+          REWRITE_RULE (folds @ tgtfolds)
+            (unfold boolSimps.bool_ss shapeRWs
+                    (SPECL (fvars @ [injOf def]) (#map_thm res)))
+      (* eta reduction is part of it: unfolding the lifted union leaves a
+         component's set function applied to a bound variable *)
+      val set_ss = simpLib.++ (BasicProvers.srw_ss(), boolSimps.ETA_ss)
+      fun setEqn i def =
+          REWRITE_RULE folds
+            (unfold set_ss setRWs
+                    (SPEC (injOf def) (List.nth (#set_thms res, i))))
+    in
+      {map_eqns = LIST_CONJ (List.map mapEqn defs),
+       set_eqns = List.tabulate
+                    (length (#set_thms res),
+                     fn i => LIST_CONJ (List.map (setEqn i) defs))}
     end
 
 end
