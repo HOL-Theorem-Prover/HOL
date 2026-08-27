@@ -1844,6 +1844,177 @@ def test_suspension_re_elaborates_with_the_real_theorem():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def _resets_since(c, uri, since):
+    """The reset payloads for `uri` after message index `since`, each as
+    {name: status}."""
+    msgs, _ = c.messages_since(since)
+    out = []
+    for m in msgs:
+        if m.get("method") != "$/proofStates":
+            continue
+        pr = m["params"]
+        if pr["uri"] != uri or not pr.get("reset"):
+            continue
+        out.append({st["name"]: st["status"] for st in pr["states"]})
+    return out
+
+
+def _reset_names_since(c, uri, since):
+    """Raw `name` lists from each reset payload, keeping duplicates."""
+    msgs, _ = c.messages_since(since)
+    out = []
+    for m in msgs:
+        if m.get("method") != "$/proofStates":
+            continue
+        pr = m["params"]
+        if pr["uri"] != uri or not pr.get("reset"):
+            continue
+        out.append([st["name"] for st in pr["states"]])
+    return out
+
+
+def test_tactic_edit_spares_later_proofs():
+    """Editing one proof's tactic must not throw away the pool's work on
+    the proofs below it.
+
+    A tactic contributes nothing to the elaboration context, so every
+    later declaration's obligation is unchanged and the entries already
+    covering them are still the right ones.  The pass that follows the
+    edit re-enqueues everything regardless, so this depends on `check`
+    recognising a proof it is already checking -- by name, since the edit
+    moves the offsets.
+
+    The observable is the reset the server sends when the recompile
+    starts: `later` should still be listed (kept), while `early` -- the
+    edited one -- should be gone.  Cancelling from the resume point, as
+    an edit to a statement or a definition still does, would clear
+    both."""
+    d = tempfile.mkdtemp(prefix="lsp_ident_")
+    try:
+        src = ("Theory identsp\n"
+               "\n"
+               "Theorem early:\n"
+               "  T\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n"
+               "\n"
+               "Theorem later:\n"
+               "  T /\\ T\n"
+               "Proof\n"
+               "  REWRITE_TAC[]\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/identspScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+
+            def both_settled(cl):
+                seen = _proof_states(cl, uri)
+                if all(seen.get(n, ("checking",))[0] == "proved"
+                       for n in ("early", "later")) and len(seen) == 2:
+                    return seen
+                return None
+
+            assert_true(c.wait_until(both_settled, 60) is not None,
+                        f"both proofs checked ({_proof_states(c, uri)!r})")
+
+            # An edit inside `early`'s tactic body.
+            at = src.index("ACCEPT_TAC") + len("ACCEPT_TAC")
+            idx = c.total_msgs()
+            _did_change_incr(c, uri, src, at, at, " ", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                        "second compileCompleted")
+
+            resets = _resets_since(c, uri, idx)
+            assert_true(len(resets) > 0,
+                        "the recompile sent a reset")
+            # The reset at compile start: the classification spared the
+            # declaration below the edit and abandoned the edited one.
+            first = resets[0]
+            assert_true("later" in first,
+                        f"the proof below the edit was kept ({first!r})")
+            assert_true("early" not in first,
+                        f"the edited proof was abandoned ({first!r})")
+            # The reset at compile end, after `check` has reconciled: the
+            # re-enqueued `later` was recognised as the proof already
+            # being checked rather than forked a second time.  Counted on
+            # the raw array, since duplicates share a name.
+            last = resets[-1]
+            assert_eq(sorted(last.keys()), ["early", "later"],
+                      f"both proofs are tracked after the pass "
+                      f"({last!r})")
+            # `later` still carries the verdict it had before the edit.
+            # Had `check` not recognised the re-enqueued proof as the one
+            # already checked, its entry would have been dropped and a
+            # fresh one forked, putting it back to `checking`.
+            assert_eq(last["later"], "proved",
+                      f"the verdict below the edit survived ({last!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_statement_edit_still_clears_later_proofs():
+    """The counterpart: an edit that is *not* confined to a tactic body
+    can change what the declarations below elaborate to, so the pool must
+    still give up on them.  Editing a statement takes the conservative
+    path even though the declaration below has unchanged text."""
+    d = tempfile.mkdtemp(prefix="lsp_ident_")
+    try:
+        src = ("Theory identsp2\n"
+               "\n"
+               "Theorem early:\n"
+               "  T\n"
+               "Proof\n"
+               "  ACCEPT_TAC TRUTH\n"
+               "QED\n"
+               "\n"
+               "Theorem later:\n"
+               "  T /\\ T\n"
+               "Proof\n"
+               "  REWRITE_TAC[]\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/identsp2Script.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+
+            def both_settled(cl):
+                seen = _proof_states(cl, uri)
+                if len(seen) == 2 and all(
+                        v[0] == "proved" for v in seen.values()):
+                    return seen
+                return None
+
+            assert_true(c.wait_until(both_settled, 60) is not None,
+                        f"both proofs checked ({_proof_states(c, uri)!r})")
+
+            # An edit in `early`'s *statement*, not its tactic.
+            at = src.index("Theorem early:\n  T") + len("Theorem early:\n  T")
+            idx = c.total_msgs()
+            _did_change_incr(c, uri, src, at, at, " ", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                        "second compileCompleted")
+
+            resets = _resets_since(c, uri, idx)
+            assert_true(len(resets) > 0, "the recompile sent a reset")
+            assert_eq(resets[0], {},
+                      f"a statement edit gives up on the proofs below "
+                      f"({resets[0]!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def _send_goalstate(c, req_id, uri, line, char):
     c.send({"jsonrpc":"2.0","id":req_id,
             "method":"$/hol/goalState",
@@ -3330,6 +3501,10 @@ TESTS = [
                                      test_suspending_proof_reported_as_suspended),
     ("suspension_re_elaborates_with_the_real_theorem",
                                      test_suspension_re_elaborates_with_the_real_theorem),
+    ("tactic_edit_spares_later_proofs",
+                                     test_tactic_edit_spares_later_proofs),
+    ("statement_edit_still_clears_later_proofs",
+                                     test_statement_edit_still_clears_later_proofs),
     ("goalState_inside_proof",       test_goalState_inside_proof),
     ("goalState_outside_proof",      test_goalState_outside_proof),
     ("goalState_between_two_theorems",

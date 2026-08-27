@@ -24,9 +24,15 @@ structure DeferredProofs :> sig
   (* true while this thread is replaying a deferred proof *)
   val isReplaying : unit -> bool
 
-  (* Hand the queued proofs to the pool.  Returns at once: the proofs
-     run on worker threads. *)
-  val check : unit -> unit
+  (* Hand the queued proofs to the pool, given the byte the pass that
+     produced them re-elaborated from.  Returns at once: the proofs run
+     on worker threads.
+
+     A proof already being checked is not started again.  Re-elaborating
+     a declaration re-enqueues its proofs whether or not anything about
+     it changed, so without this an edit anywhere above would throw away
+     work in progress everywhere below.  See `reusable`. *)
+  val check : int -> unit
   (* Only ever reports Checking, Proved or Failed.  A proof the pool is
      not working on is absent, which the caller renders as Cheated. *)
   val statuses : unit -> LSPExtension.proof_state list
@@ -41,6 +47,10 @@ structure DeferredProofs :> sig
      compile is about to resume from, since everything from there on is
      re-elaborated and enqueued again. *)
   val cancelAtOrAfter : int -> unit
+  (* Give up on just this declaration's proofs.  For an edit inside a
+     `Proof ... QED` body, which leaves every later declaration's
+     obligation untouched. *)
+  val cancelAt : int -> unit
   val cancelAll : unit -> unit
   (* How many workers the pool may use.  0 asks for one per processor,
      which Multithreading caps at 8. *)
@@ -242,14 +252,82 @@ fun forkAt pri (item as {site, offset, run} : LSPExtension.deferred) =
 fun isFocused off =
     case Sref.value focus of SOME f => f = off | NONE => false
 
-fun check () =
+fun siteOf ({site, ...} : entry) = site
+fun itemSite ({site, ...} : LSPExtension.deferred) = site
+
+(* Is a newly enqueued proof the one a live entry is already checking?
+
+   Reuse needs an identity that survives re-elaboration, and the offset
+   is not one: an insertion moves every declaration below it.  The name
+   is, now that `prove_named` gives one to every route into the prover
+   that has one to give.
+
+   Two cases where the name will not do, and in both the answer is to
+   decline the reuse rather than guess -- forking afresh is merely the
+   work we would have done anyway, whereas a wrong match would attach a
+   verdict to the wrong proof:
+
+     - an anonymous proof (a raw `Tactical.prove` in user SML, which does
+       not go through `prove_named`) has no name at all, and every such
+       proof would collide;
+     - a name can occur twice, e.g. `Theorem foo` and a later
+       `Theorem foo[allow_rebind]`.  Numbering the occurrences would
+       work, but only if counted from the start of the file, and a
+       resumed pass does not know how many preceded its resume point.
+
+   So: reuse iff the name is non-empty and unambiguous on both sides. *)
+fun reusable itemNames liveNames nm =
+    let
+      fun count xs = List.length (List.filter (fn n => n = nm) xs)
+    in
+      nm <> "" andalso count itemNames = 1 andalso count liveNames = 1
+    end
+
+fun check resumeFrom =
     let
       (* takeDeferred empties the queue, so a second call cannot fork
          the same proof twice *)
       val items = LSPExtension.takeDeferred ()
+      val itemNames = List.map itemSite items
+      (* Decide under the lock, so a concurrent cancellation cannot be
+         lost, and fork afterwards -- forking while holding it would
+         serialise the pool behind this. *)
+      val (fresh, doomed) =
+          Sref.gen_update entries
+            (fn live =>
+                let
+                  val liveNames = List.map siteOf live
+                  fun reuse nm = reusable itemNames liveNames nm
+                  val (reused, fresh) =
+                      List.partition (reuse o itemSite) items
+                  fun reusedOffset e =
+                      case List.find (fn it => itemSite it = siteOf e)
+                                     reused of
+                          SOME {offset, ...} => SOME offset
+                        | NONE => NONE
+                  (* An entry survives if this pass re-enqueued its proof
+                     -- with its offset refreshed, since the edit may
+                     have moved the declaration -- or if it sits above
+                     what was re-elaborated and so was never in
+                     question.  Anything else the pass has orphaned. *)
+                  fun classify (e : entry) =
+                      case reusedOffset e of
+                          SOME off =>
+                            SOME {site = #site e, offset = off,
+                                  item = #item e, group = #group e,
+                                  result = #result e, future = #future e}
+                        | NONE =>
+                          if offsetOf e < resumeFrom then SOME e else NONE
+                  val keep = List.mapPartial classify live
+                  val doomed =
+                      List.filter (fn e => not (isSome (classify e))) live
+                in
+                  (keep, (fresh, doomed))
+                end)
+      val () = List.app (fn {group, ...} => Future.cancel_group group) doomed
       val (focused, rest) =
           List.partition (fn ({offset, ...} : LSPExtension.deferred) =>
-                             isFocused offset) items
+                             isFocused offset) fresh
       val new = List.mapPartial (forkAt 0) rest
     in
       Sref.update held (fn hs => hs @ focused);
@@ -300,6 +378,7 @@ fun cancelIf doomed_at =
     end
 
 fun cancelAtOrAfter off = cancelIf (fn off' => off' >= off)
+fun cancelAt off = cancelIf (fn off' => off' = off)
 fun cancelAll () = cancelIf (fn _ => true)
 
 fun setFocus off =
@@ -347,5 +426,6 @@ val () = DeferredProofs.install ();
 val () = LSPExtension.checkDeferred := DeferredProofs.check;
 val () = LSPExtension.proofStates := DeferredProofs.statuses;
 val () = LSPExtension.cancelProofsAtOrAfter := DeferredProofs.cancelAtOrAfter;
+val () = LSPExtension.cancelProofAt := DeferredProofs.cancelAt;
 val () = LSPExtension.cancelAllProofs := DeferredProofs.cancelAll;
 val () = LSPExtension.setProofFocus := DeferredProofs.setFocus;

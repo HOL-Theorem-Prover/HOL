@@ -288,16 +288,23 @@ val currentProofOffset: int ref
 (* Hooks installed by the LSP runtime (tools-poly/lsp/deferred_proofs.ML);
    defaults are inert so a non-LSP session behaves as before.
 
-   - checkDeferred: hand the queued proofs to the worker pool.
+   - checkDeferred: hand the queued proofs to the worker pool, given
+     the byte the pass re-elaborated from.  A proof already being
+     checked is not started again: see the pool's `reusable`.
    - proofStates: current status of everything the pool knows about.
    - cancelProofsAtOrAfter n: give up on any proof whose declaration
      starts at or after byte n.  An edit invalidates the proofs below
      it in the file and leaves the ones above alone, so this is what a
      compile pass calls with its minimum edit offset.
    - cancelAllProofs: give up on all of them. *)
-val checkDeferred: (unit -> unit) ref
+val checkDeferred: (int -> unit) ref
 val proofStates: (unit -> proof_state list) ref
 val cancelProofsAtOrAfter: (int -> unit) ref
+(* Give up on just this declaration's proofs, for an edit inside a
+   `Proof ... QED` body: a tactic contributes nothing to the elaboration
+   context, so every later declaration's obligation is unchanged and the
+   proofs already running on them are still the right ones. *)
+val cancelProofAt: (int -> unit) ref
 val cancelAllProofs: (unit -> unit) ref
 (* The declaration the user is working on, by byte offset, or NONE.
    Its proof is held back rather than checked, since the goal-state

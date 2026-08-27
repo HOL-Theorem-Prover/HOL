@@ -874,20 +874,46 @@ fun start {diag, dbg} = let
         print "}")))
     end
 
-  (* Give up on every proof a compile resuming at `resumeStart` is about
-     to re-elaborate, and tell the client.  NONE means the whole file.
+  (* Give up on the proofs a compile is about to invalidate, and tell the
+     client.  `resumeStart` is where it will re-elaborate from, NONE
+     meaning the whole file.
 
-     Everything from the resume point on will be enqueued again by the
-     pass that follows, so keeping the old entries would fork each of
-     those proofs twice over and -- since an edit shifts the offsets the
-     entries are keyed by -- leave the originals untouchable by any later
-     cancellation.  Proofs above the resume point are not re-elaborated
-     and are left alone. *)
-  fun invalidateProofs uri lines resumeStart = (
-    (case resumeStart of
-         NONE => !LSPExtension.cancelAllProofs ()
-       | SOME b => !LSPExtension.cancelProofsAtOrAfter b);
+     `inProofBody` is the declaration containing the edit, when the edit
+     lies inside a `Proof ... QED` body.  That case is worth separating
+     out, because a tactic contributes nothing to the elaboration
+     context: every later declaration's statement parses to the same term
+     against the same context, so the proofs already running on them are
+     still the right proofs and only the edited one need be abandoned.
+     The pass that follows re-enqueues all of them anyway; `check`
+     recognises the ones already in progress and leaves them running
+     rather than forking a second copy.
+
+     Text being unchanged is *not* on its own enough to justify this.  A
+     declaration below an edited *definition* also has unchanged text,
+     but its context has changed, so its statement can parse to a
+     different term.  Hence the test is "the edit is confined to a
+     tactic", not "this declaration was not touched".
+
+     The declaration's start is safe to compare against offsets recorded
+     in the previous pass for the same reason the resume decision is: an
+     edit cannot move anything before itself. *)
+  fun invalidateProofs uri lines {resumeStart, inProofBody} = (
+    (case (inProofBody, resumeStart) of
+         (SOME d, _) => !LSPExtension.cancelProofAt d
+       | (NONE, NONE) => !LSPExtension.cancelAllProofs ()
+       | (NONE, SOME b) => !LSPExtension.cancelProofsAtOrAfter b);
     sendProofStates uri lines {reset = true} (!LSPExtension.proofStates ()))
+
+  (* The declaration whose `Proof ... QED` body contains the edit, if the
+     edit is in one.  `findEnclosingTheorem` answers exactly that and is
+     the same walk the goal-state handler does. *)
+  fun proofBodyAt text off =
+      (case off of
+           NONE => NONE
+         | SOME b => (case findEnclosingTheorem text b of
+                          SOME (decStart, _) => SOME decStart
+                        | NONE => NONE))
+      handle Empty => NONE
 
   (* Emit publishDiagnostics for `uri` combining the last-completed
      compile's diagnostics and any walker-observed runtime squiggles. *)
@@ -931,7 +957,8 @@ fun start {diag, dbg} = let
        which is how discovering that a proof suspends gets acted on. *)
     if #done (#parse (!lastTrees)) andalso not (isSome (!minEditOffset)) then
       (!LSPExtension.notifyCompileStart (!minEditOffset);
-       invalidateProofs uri (#lines (#text (!lastTrees))) NONE;
+       invalidateProofs uri (#lines (#text (!lastTrees)))
+                        {resumeStart = NONE, inProofBody = NONE};
        !LSPExtension.resetForCompile (); ())
     else let
     val _ = stopCompile compile
@@ -961,12 +988,18 @@ fun start {diag, dbg} = let
       case resumeSnap of
         NONE => (
           !LSPExtension.notifyCompileStart (!minEditOffset);
-          invalidateProofs uri lines NONE;
+          invalidateProofs uri lines
+                           {resumeStart = NONE,
+                            inProofBody = proofBodyAt (#text text)
+                                                      (!minEditOffset)};
           !LSPExtension.resetForCompile ();
           (fn () => (), emptyParseData 8, 0, oldDiags))
       | SOME snap => let
           val _ = !LSPExtension.notifyCompileStart (!minEditOffset)
-          val _ = invalidateProofs uri lines (SOME (#endByte snap))
+          val _ = invalidateProofs uri lines
+                    {resumeStart = SOME (#endByte snap),
+                     inProofBody = proofBodyAt (#text text)
+                                               (!minEditOffset)}
           val {endByte, builtTrees, diags = snapDiags, plugins,
                ...} = snap
           (* Seed `diags` with the frozen snapshot; leave `oldDiags`
@@ -1219,32 +1252,46 @@ fun start {diag, dbg} = let
              mutex-guarded handoff to the sender thread, so being called
              from a worker is safe. *)
           LSPExtension.proofStateChanged :=
-            (fn (st as {site, offset, status}) => (
-               sendProofStates uri (#lines text) {reset = false} [st];
-               (* A suspension says the cheating pass modelled this
-                  declaration wrongly: a real build stashes such a
-                  theorem rather than saving it, so everything below was
-                  elaborated against something that would not have been
-                  there.  Re-elaborate from here, with this proof run for
-                  real rather than cheated.
+            (fn (st as {site, offset, status}) =>
+               let
+                 (* The proof did not produce the theorem elaboration
+                    stood in for, so the declarations below it were built
+                    against the wrong value -- including any proofs of
+                    theirs we optimistically left running.  Give up from
+                    here and re-elaborate with this proof run for real.
 
-                  Only on the first sighting of the name, which is what
-                  makes this terminate: the re-elaboration runs the proof
-                  instead of enqueueing it, so no second report arrives,
-                  and if that somehow fails to hold the name is already
-                  in the set and we stop anyway.
+                    A suspension is the common case: a real build stashes
+                    such a theorem rather than saving it, so everything
+                    below was elaborated against something that would not
+                    have been there.  A bare divergence gets the same
+                    treatment for the same reason.
 
-                  Runs on the worker that settled the proof, so it must
-                  not raise. *)
-               (case status of
-                    LSPExtension.Suspended _ =>
-                      if LSPExtension.addNoCheatSite site then
-                        (bumpMinEdit minEditOffset offset;
-                         scheduleCompile uri v)
-                      else ()
-                  | _ => ())
-               handle _ => ()));
-          !LSPExtension.checkDeferred ();
+                    `offset` is the declaration's start, which is not
+                    inside a proof body, so the recompile takes the
+                    conservative branch of `invalidateProofs` and gives
+                    up on everything below as well -- which is the point.
+
+                    Only on the first sighting of the name, which is what
+                    makes this terminate: the re-elaboration runs the
+                    proof instead of enqueueing it, so no second report
+                    arrives, and if that somehow fails to hold the name is
+                    already in the set and we stop anyway. *)
+                 fun retract () =
+                     if LSPExtension.addNoCheatSite site then
+                       (bumpMinEdit minEditOffset offset;
+                        scheduleCompile uri v)
+                     else ()
+               in
+                 (* Runs on the worker that settled the proof, so it must
+                    not raise. *)
+                 sendProofStates uri (#lines text) {reset = false} [st];
+                 (case status of
+                      LSPExtension.Suspended _ => retract ()
+                    | LSPExtension.Diverged _ => retract ()
+                    | _ => ())
+                 handle _ => ()
+               end);
+          !LSPExtension.checkDeferred resumeStart;
           sendProofStates uri (#lines text) {reset = true}
                           (!LSPExtension.proofStates ());
           flushDiags ();

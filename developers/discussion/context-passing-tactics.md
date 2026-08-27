@@ -1586,27 +1586,70 @@ gone, along with the second full-buffer parse per goal-state request
 (`findEnclosingTheorem` now returns the declaration start it already
 knew, and the focus is derived from that).
 
-Keeping a running proof alive across a tactic-body edit is still worth
-having --- it is the case where the pool would otherwise restart a
-sixty-second proof every time the user pauses typing a thousand lines
-above it.  It needs an identity for a proof that survives re-elaboration,
-which the offset is not.  Two candidates:
+#### Proof identity: the tactic-edit refinement, restored
 
-- *rebase.* `applyEdit` knows each change's range and length delta, so it
-  could shift the pool's offsets to match the new buffer.  Then offsets
-  stay valid, and `check` can recognise a re-enqueued proof by offset,
-  matching multiplicities per declaration (a declaration can enqueue more
-  than one proof --- a `Definition` with a termination proof --- and the
-  count is stable for unchanged text).
-- *declaration ordinal.* Pass the declaration's index in the file
-  alongside its offset, and key on (ordinal, n-th proof within the
-  declaration).  Stable under an edit that changes no declaration
-  boundaries, which a tactic-body edit does not.  Needs the drivers to
-  count declarations across a resumed compile.
+The refinement is back, and the thing that makes it work is an identity
+for a proof that survives re-elaboration.  Two halves, neither sufficient
+alone.
 
-Not attempted: the failure mode of getting either subtly wrong is
-silently associating a verdict with the wrong proof, which is worse than
-re-checking.
+**Classification.**  `findEnclosingTheorem` on `minEditOffset` decides
+whether the edit is confined to a `Proof ... QED` body.  If it is, only
+that declaration's proofs are abandoned; otherwise the pool gives up from
+the resume point as before.  Note text being unchanged is *not* enough on
+its own to spare a declaration: one below an edited *definition* also has
+unchanged text, but its context has changed, so its statement can parse
+to a different term.  The test has to be "the edit is confined to a
+tactic", not "this declaration was not touched".
+
+**Identity.**  The pass that follows re-enqueues every proof below the
+edit regardless, so `check` has to recognise the ones it is already
+checking.  The key is the proof's *name* --- viable only since
+`prove_named` gives one to every route into the prover that has one to
+give.  Two cases where a name will not do, and in both the answer is to
+decline the reuse rather than guess, because forking afresh is merely
+work we would have done anyway whereas a wrong match attaches a verdict
+to the wrong proof:
+
+- an anonymous proof (a raw `Tactical.prove` in user SML, which does not
+  go through `prove_named`) has no name, and all of them would collide;
+- a name can occur twice --- `Theorem foo` and a later
+  `Theorem foo[allow_rebind]`.  Numbering the occurrences would work, but
+  only counted from the start of the file, and a resumed pass does not
+  know how many preceded its resume point.
+
+So reuse requires the name to be non-empty and unambiguous on both sides:
+one occurrence among the items this pass enqueued, one among the live
+entries.
+
+Two earlier candidates, both dropped:
+
+- *rebase.*  Shift the pool's offsets by each edit's length delta.
+  Works, but keys the pool on a quantity the buffer keeps moving.
+- *declaration ordinal.*  Key on (index of declaration in file, n-th
+  proof within it).  Sound --- and the counter cannot be confused by a
+  nested `prove` appearing inside a tactic, since elaboration never runs
+  tactics, so such a call enqueues nothing.  Dropped anyway because the
+  name is stable without the plumbing the ordinal needs: an index on
+  `onDecStarted`, and the index recorded in `declSnapshot` so a resumed
+  pass can start counting in the right place.
+
+**The retention is speculative.**  Keeping the later proofs alive bets
+that the edited proof still yields a theorem matching its placeholder.
+When the bet loses --- verdict `Suspended` or `Diverged` --- everything at
+or after that declaration is given up and re-elaborated, because those
+proofs were checked against a theorem that turned out to be the wrong
+value.  That retraction reuses the path built for suspensions: the
+declaration goes into the no-cheat set, and since the offset it bumps
+`minEditOffset` to is a declaration *start* rather than a position inside
+a proof body, the recompile takes the conservative branch by
+construction.
+
+One consequence accepted rather than fixed: an entry below the edit can
+settle and report `Proved` before the edited proof's own verdict arrives,
+and a later retraction invalidates that report.  The pool tracks no
+dependency order, so rather than hold those reports back, the retraction
+sends a `reset` with the surviving set and the client's view corrects
+itself.
 
 Two smaller items recorded rather than done:
 

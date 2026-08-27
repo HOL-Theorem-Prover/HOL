@@ -170,9 +170,10 @@ in
   fun takeDeferred () = let val items = List.rev (!q) in q := []; items end
 end
 
-val checkDeferred : (unit -> unit) ref = ref (fn () => ())
+val checkDeferred : (int -> unit) ref = ref (fn _ => ())
 val proofStates : (unit -> proof_state list) ref = ref (fn () => [])
 val cancelProofsAtOrAfter : (int -> unit) ref = ref (fn _ => ())
+val cancelProofAt : (int -> unit) ref = ref (fn _ => ())
 val cancelAllProofs : (unit -> unit) ref = ref (fn () => ())
 val setProofFocus : (int option -> unit) ref = ref (fn _ => ())
 val proofStateChanged : (proof_state -> unit) ref = ref (fn _ => ())
