@@ -1533,6 +1533,55 @@ def test_snapshot_resume_whole_document_range():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_whole_file_recompile_keeps_ancestors_loaded():
+    """An edit at byte 0 leaves no snapshot to resume from, so the whole
+    file is recompiled.  That must not restart from the boot state.
+    `resetForCompile` rewinds `Meta.loadedMods`, and the holdep preload
+    then re-`quse`s the ancestors' generated `.sml` files -- each of
+    which ends in `Theory.load_complete`, sealing the theory in
+    `KernelSig.sealed_ref`, which is process-global and deliberately
+    outside `Context`.  `TheoryReader` refuses the re-read, every
+    ancestor behind it fails "not in ancestry", and the session stops
+    answering goal-state and hover requests for the rest of its life.
+
+    So the recompile starts from the state the header dec left, where
+    the ancestors are still loaded and still in the theory graph.  The
+    ancestor here must be one that is NOT resident in `hol.state`, or
+    nothing gets loaded and the test cannot fail."""
+    d = tempfile.mkdtemp(prefix="lsp_wholefile_")
+    try:
+        src = ("Theory wholefile\nAncestors sorting\n\n"
+               + "\n".join(f"val x{i} = {i}" for i in range(10))
+               + "\nval s = sortingTheory.SORTED_DEF\n")
+        uri = f"file://{d}/wholefileScript.sml"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 120),
+                        "first compileCompleted")
+            v1 = _diag_count(c, uri)
+
+            # Byte 0 -- no snapshot qualifies, so the whole file is
+            # recompiled.  `_resume_events` stays empty either way; what
+            # matters is that the ancestors are not reloaded.
+            idx = c.total_msgs()
+            _did_change_incr(c, uri, src, 0, 0, "(* leading *)\n", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 120, idx),
+                        "second compileCompleted")
+            v2 = _diag_count(c, uri, ver=2)
+
+            bad = [l for l in c.stderr_text().splitlines()
+                   if "is sealed" in l or "not in ancestry" in l]
+            assert_eq(bad, [], "no sealed-theory / ancestry errors")
+            assert_eq(len(v2), len(v1),
+                      f"diag count parity v1={len(v1)} v2={len(v2)}")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_snapshot_resume_survives_grammar_delta():
     """A script that mutates the parser grammar via `overload_on` in
     an early dec, then uses the overload in a later dec: a resume
@@ -3859,6 +3908,8 @@ TESTS = [
                                      test_snapshot_resume_early_edit_falls_back),
     ("snapshot_resume_full_text_replace_resets",
                                      test_snapshot_resume_full_text_replace_resets),
+    ("whole_file_recompile_keeps_ancestors_loaded",
+                        test_whole_file_recompile_keeps_ancestors_loaded),
     ("snapshot_resume_whole_document_range",
                               test_snapshot_resume_whole_document_range),
     ("snapshot_resume_survives_grammar_delta",

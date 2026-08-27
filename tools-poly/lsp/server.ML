@@ -862,8 +862,7 @@ fun start {diag, dbg} = let
     val {text as {lines, ...}, parse = lastParse} = !lastTrees
     val {declSnapshots = lastSnaps, diags = oldDiags, ...} = lastParse
     (* Resume decision: pick the largest snapshot with `endByte <=
-       !minEditOffset`.  If none, do a full boot-restore starting at
-       byte 0. *)
+       !minEditOffset`.  If none, recompile the whole file. *)
     val resumeSnap =
       case !minEditOffset of
         NONE => NONE
@@ -871,11 +870,43 @@ fun start {diag, dbg} = let
         (* `declSnapshots` is newest-first, so the first match walking
            the list is the largest `endByte <= editOff`. *)
         List.find (fn (s:declSnapshot) => #endByte s <= editOff) lastSnaps
+    (* Recompiling the whole file starts from the state the file's
+       first dec -- its header -- left behind, not from the boot state.
+       The boot state is not a legitimate starting point once a compile
+       has run in this process: `resetForCompile` rewinds
+       `Meta.loadedMods`, so the holdep preload re-`quse`s the
+       ancestors' generated `.sml` files.  Each of those ends in
+       `Theory.load_complete`, which seals the theory in
+       `KernelSig.sealed_ref` -- process-global, and deliberately
+       outside `Context`, being a soundness gate rather than a cache.
+       `TheoryReader` refuses the re-read, every ancestor behind it
+       fails "not in ancestry", and the session stops answering
+       goal-state and hover requests for good.
+
+       Resuming from the header instead leaves the ancestors both
+       loaded and in the theory graph, which makes re-running the
+       header idempotent: its `open`s resolve against structures that
+       are still present, and `new_theory` on the name it already holds
+       restarts that segment.  An ancestor the user has *added* is
+       still absent from `loadedMods`, so the preload loads it for the
+       first time and `link_parents` puts it in the graph.  One the
+       user has *removed* stays loaded: nothing can withdraw its
+       constants, grammar and DB entries, so that case needs a fresh
+       process.
+
+       `lastSnaps` is newest-first, so its last element is the oldest
+       dec captured.  That is the header unless the header itself
+       drew a diagnostic, which suppresses its capture. *)
+    val baseSnap = case lastSnaps of
+        [] => NONE
+      | _ => SOME (List.last lastSnaps)
     val (initialTrees, resumeStart, oldDiags) =
       case resumeSnap of
         NONE => (
           !LSPExtension.notifyCompileStart (!minEditOffset);
-          !LSPExtension.resetForCompile ();
+          (case baseSnap of
+             NONE => !LSPExtension.resetForCompile ()
+           | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s));
           (emptyParseData 8, 0, oldDiags))
       | SOME snap => let
           val _ = !LSPExtension.notifyCompileStart (!minEditOffset)
