@@ -158,28 +158,13 @@ in
   fun pendingDeferred () = length (!q)
   fun clearDeferred () = q := []
   fun takeDeferred () = let val items = List.rev (!q) in q := []; items end
-  fun drainDeferred () =
-      let
-        val items = takeDeferred ()
-        fun go [] acc = List.rev acc
-          | go ({site, offset = _, run} :: rest) acc =
-            case run () of
-                Failed e => go rest ({site = site, error = e} :: acc)
-              | Diverged e =>
-                go rest ({site = site,
-                          error = "theorem diverged from placeholder: " ^ e}
-                         :: acc)
-              | _ => go rest acc
-      in
-        go items []
-      end
 end
 
 val checkDeferred : (unit -> unit) ref = ref (fn () => ())
 val proofStates : (unit -> proof_state list) ref = ref (fn () => [])
 val cancelProofsAtOrAfter : (int -> unit) ref = ref (fn _ => ())
-val cancelProofAt : (int -> unit) ref = ref (fn _ => ())
 val cancelAllProofs : (unit -> unit) ref = ref (fn () => ())
 val setProofFocus : (int option -> unit) ref = ref (fn _ => ())
+val proofStateChanged : (proof_state -> unit) ref = ref (fn _ => ())
 
 end

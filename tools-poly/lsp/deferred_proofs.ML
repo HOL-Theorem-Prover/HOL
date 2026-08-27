@@ -37,17 +37,10 @@ structure DeferredProofs :> sig
      priority, once the user moves on. *)
   val setFocus : int option -> unit
   (* Give up on every proof whose declaration starts at or after this
-     byte.  Proofs above the offset are untouched.  For an edit that
-     elaboration will consume -- a statement, a definition -- since that
-     can change any declaration below it. *)
+     byte; proofs above it are untouched.  Called with the point a
+     compile is about to resume from, since everything from there on is
+     re-elaborated and enqueued again. *)
   val cancelAtOrAfter : int -> unit
-  (* Give up on just this declaration's proof.  For an edit *inside* a
-     Proof...QED body: what a theorem contributes downstream is its
-     statement, and the tactic is not run during the cheating pass, so
-     editing the tactic leaves every later declaration untouched.  That
-     is the case worth being precise about, because it is what someone
-     iterating on a proof does all day. *)
-  val cancelAt : int -> unit
   val cancelAll : unit -> unit
   (* How many workers the pool may use.  0 asks for one per processor,
      which Multithreading caps at 8. *)
@@ -69,14 +62,9 @@ val replaying : bool ThreadLocal.t = ThreadLocal.new ()
 fun isReplaying () =
     case ThreadLocal.get replaying of SOME b => b | NONE => false
 
-fun asReplay f =
-    let
-      val saved = isReplaying ()
-      val () = ThreadLocal.set (replaying, true)
-      fun restore () = ThreadLocal.set (replaying, saved)
-    in
-      (f () before restore ()) handle e => (restore (); raise e)
-    end
+val replayFlag = {get = isReplaying,
+                  set = fn b => ThreadLocal.set (replaying, b)}
+fun asReplay f = Portable.genwith_flag (replayFlag, true) f ()
 
 (* Did the real proof produce the theorem elaboration stood in for?
    The placeholder was `mk_oracle_thm _ g`, whose hypotheses are exactly
@@ -104,7 +92,9 @@ fun replay ctxt g tac =
                    " (suspended subgoals: " ^
                    String.concatWith ", " (boolLib.get_suspended_names th) ^ ")"
                  else "")))
-    handle e => LSPExtension.Failed (Feedback.exn_to_string e)
+    handle e =>
+           if Exn.is_interrupt e then Exn.reraise e
+           else LSPExtension.Failed (Feedback.exn_to_string e)
 
 fun prover ctxt (g, tac) =
     if isReplaying () then
@@ -143,14 +133,31 @@ fun install () = Tactical.set_prover prover
    edit reaches it.
    ------------------------------------------------------------------ *)
 
-(* The item is kept alongside the future so a proof taken off a worker
-   -- because the user has started editing it -- can be forked again
-   later without re-elaborating it. *)
-type entry = {item : LSPExtension.deferred,
+(* `site` and `offset` live here rather than being read back out of the
+   item, because the item does not outlive the proof.  Its closure pins a
+   Context snapshot, and a settled proof is never forked again, so the
+   worker clears `item` on the way out and only the reporting fields
+   remain.  While a proof is unsettled the item is kept, so a proof taken
+   off a worker -- because the user has started editing it -- can be
+   forked again without re-elaborating it.
+
+   `result` is what the replay decided, recorded by the worker itself.
+   Future.peek is not enough: the announcement has to happen from inside
+   the task, and at that point the future is not yet fulfilled, so peek
+   still says NONE and every report would read `Checking`.
+
+   Both refs are written by the one worker and read by whoever is
+   reporting, and each holds an immutable value, so the worst a racing
+   reader sees is the previous one -- and another announcement follows. *)
+type entry = {site : string,
+              offset : int,
+              item : LSPExtension.deferred option ref,
               group : Future.group,
+              result : LSPExtension.proof_status option ref,
               future : LSPExtension.proof_status Future.future}
 
-fun offsetOf ({item = {offset, ...}, ...} : entry) = offset
+fun offsetOf ({offset, ...} : entry) = offset
+fun isSettled ({result, ...} : entry) = isSome (!result)
 
 val entries : entry list Sref.t = Sref.new []
 (* Elaborated and queued, but deliberately not being checked: the
@@ -167,14 +174,31 @@ fun setWorkerCount n = Multithreading.max_threads_update n
    everything else. *)
 val resumed_pri = 100
 
-fun forkAt pri (item as {site, offset = _, run} : LSPExtension.deferred) =
+fun forkAt pri (item as {site, offset, run} : LSPExtension.deferred) =
     let
       val group = Future.new_group NONE
       val params = {name = "lsp_proof:" ^ site, group = SOME group,
                     deps = [], pri = pri, interrupts = true}
+      val result = ref NONE
+      val itemR = ref (SOME item)
+      (* Announce the new state on the worker that settled it, so the
+         caller need not poll.  Record it and drop the item first, for
+         the reasons given at `entry`.  An interrupt is not announced:
+         whoever cancelled already knows, and the entry is gone. *)
+      fun announcing () =
+          let
+            val r = run ()
+          in
+            result := SOME r;
+            itemR := NONE;
+            !LSPExtension.proofStateChanged
+              {site = site, offset = offset, status = r};
+            r
+          end
     in
-      case Future.forks params [run] of
-          [f] => SOME {item = item, group = group, future = f}
+      case Future.forks params [announcing] of
+          [f] => SOME {site = site, offset = offset, item = itemR,
+                       group = group, result = result, future = f}
         | _ => NONE
     end
 
@@ -195,7 +219,10 @@ fun check () =
       Sref.update entries (fn es => es @ new)
     end
 
-fun statusOf ({future, ...} : entry) =
+fun statusOf ({future, result, ...} : entry) =
+    case !result of
+        SOME st => st
+      | NONE =>
     case Future.peek future of
         NONE => LSPExtension.Checking
       (* the replay reports its own status *)
@@ -208,70 +235,72 @@ fun statusOf ({future, ...} : entry) =
         else LSPExtension.Failed (Feedback.exn_to_string e)
 
 fun statuses () =
-    List.map (fn e =>
-                 let val {item = {site, offset, ...}, ...} = e
-                 in {site = site, offset = offset, status = statusOf e} end)
+    List.map (fn (e as {site, offset, ...} : entry) =>
+                 {site = site, offset = offset, status = statusOf e})
              (Sref.value entries)
 
-fun cancelAtOrAfter off =
+(* One shape for both entry points: take the doomed entries out under the
+   lock, cancel them, and drop the held items the same predicate
+   condemns.  `gen_update` rather than a read followed by a blind write,
+   so a worker announcing an outcome concurrently cannot have its change
+   discarded.  One predicate, so the two lists cannot disagree about what
+   an edit reached. *)
+fun cancelIf doomed_at =
     let
-      val (doomed, kept) =
-          List.partition (fn e => offsetOf e >= off) (Sref.value entries)
+      val doomed =
+          Sref.gen_update entries
+            (fn es => let val (d, k) = List.partition (doomed_at o offsetOf) es
+                      in (k, d) end)
     in
-      (* cancel first, then forget: an interrupted worker needs its group
+      (* cancel after removing: an interrupted worker needs its group
          cancelled whether or not we still track it *)
       List.app (fn {group, ...} => Future.cancel_group group) doomed;
-      Sref.update entries (fn _ => kept);
-      (* held proofs below the edit are stale too, and re-elaboration
-         will queue them again *)
+      (* a held proof the edit reached is stale too, and re-elaboration
+         will queue it again *)
       Sref.update held
         (List.filter (fn ({offset, ...} : LSPExtension.deferred) =>
-                         offset < off))
+                         not (doomed_at offset)))
     end
 
-fun cancelAt off =
-    let
-      val (doomed, kept) =
-          List.partition (fn e => offsetOf e = off) (Sref.value entries)
-    in
-      List.app (fn {group, ...} => Future.cancel_group group) doomed;
-      Sref.update entries (fn _ => kept);
-      Sref.update held
-        (List.filter (fn ({offset, ...} : LSPExtension.deferred) =>
-                         offset <> off))
-    end
-
-fun cancelAll () =
-    (List.app (fn {group, ...} => Future.cancel_group group)
-              (Sref.value entries);
-     Sref.update entries (fn _ => []);
-     Sref.update held (fn _ => []))
+fun cancelAtOrAfter off = cancelIf (fn off' => off' >= off)
+fun cancelAll () = cancelIf (fn _ => true)
 
 fun setFocus off =
     let
       val () = Sref.update focus (fn _ => off)
+      fun nowFocusedAt off' = case off of SOME f => off' = f | NONE => false
       (* Stop checking whatever the user has just started editing: the
          walker is replaying that tactic anyway.  Keep the item so it can
-         be forked again when they move on. *)
-      val (nowFocused, keep) =
-          List.partition (fn e => case off of
-                                      SOME f => offsetOf e = f
-                                    | NONE => false)
-                         (Sref.value entries)
+         be forked again when they move on.  A proof that has already
+         settled stays put: there is nothing to cancel, and its verdict
+         is worth more than a re-check. *)
+      val nowFocused =
+          Sref.gen_update entries
+            (fn es =>
+                let
+                  val (d, k) =
+                      List.partition
+                        (fn e => nowFocusedAt (offsetOf e) andalso
+                                 not (isSettled e))
+                        es
+                in (k, d) end)
       val () = List.app (fn {group, ...} => Future.cancel_group group)
                         nowFocused
-      val () = Sref.update entries (fn _ => keep)
-      val () = Sref.update held
-                 (fn hs => hs @ List.map #item nowFocused)
       (* Anything held that is no longer the focus can be checked, and
          should be: the user has just stopped working on it. *)
-      val (release, stayHeld) =
-          List.partition (fn ({offset, ...} : LSPExtension.deferred) =>
-                             not (isFocused offset))
-                         (Sref.value held)
+      val release =
+          Sref.gen_update held
+            (fn hs =>
+                let
+                  val hs = hs @ List.mapPartial (fn {item, ...} => !item)
+                                                nowFocused
+                  val (r, stay) =
+                      List.partition
+                        (fn ({offset, ...} : LSPExtension.deferred) =>
+                            not (nowFocusedAt offset)) hs
+                in (stay, r) end)
       val resumed = List.mapPartial (forkAt resumed_pri) release
     in
-      Sref.update held (fn _ => stayHeld);
       Sref.update entries (fn es => es @ resumed)
     end
 
@@ -283,4 +312,3 @@ val () = LSPExtension.proofStates := DeferredProofs.statuses;
 val () = LSPExtension.cancelProofsAtOrAfter := DeferredProofs.cancelAtOrAfter;
 val () = LSPExtension.cancelAllProofs := DeferredProofs.cancelAll;
 val () = LSPExtension.setProofFocus := DeferredProofs.setFocus;
-val () = LSPExtension.cancelProofAt := DeferredProofs.cancelAt;

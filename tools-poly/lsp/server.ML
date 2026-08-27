@@ -120,7 +120,10 @@ fun encGoalStateResponse ({theorem, step, goals, pretty, error, failedRange}
 
 (* Given the buffer text and a cursor byte offset, return the enclosing
    `Theorem NAME[attrs]: … Proof … QED` block (also `Triviality`) as a
-   `theorem_context`, or NONE if the cursor isn't inside one.
+   `theorem_context`, or NONE if the cursor isn't inside one.  The
+   declaration's start byte comes back with it: that is how the proof
+   pool names a proof, and finding it here saves a second walk over the
+   buffer.
 
    Drives HOLSourceParser over the current buffer text — same parser
    the compile uses — so keyword matching, attribute brackets, strings
@@ -135,7 +138,7 @@ fun findEnclosingTheorem text cursor = let
   fun loop () =
     case parseDec () of
       NONE => NONE
-    | SOME (HOLSourceAST.HOLTheoremDecl {
+    | SOME (dec as HOLSourceAST.HOLTheoremDecl {
               id = (_, name), colon, tac,
               proof_ = SOME {proof_, ...}, qed_, stop, ...}) =>
         (* An in-progress Proof-QED block has `qed_ = NONE`; treat the
@@ -145,14 +148,16 @@ fun findEnclosingTheorem text cursor = let
         let val upperBound = case qed_ of SOME q => q | NONE => stop in
         if proof_ <= cursor andalso cursor <= upperBound
         then let val (tacStart, tacEnd) = HOLSourceAST.expSpan tac
-        in SOME {name = name,
-                 quote = String.substring (text, colon + 1,
-                                           Int.max (0, proof_ - colon - 1)),
-                 quoteStart = colon + 1,
-                 tacText = String.substring (text, tacStart,
-                                             Int.max (0, tacEnd - tacStart)),
-                 tacStart = tacStart,
-                 cursor = cursor}
+                 val (decStart, _) = HOLSourceAST.decSpan dec
+        in SOME (decStart,
+                 {name = name,
+                  quote = String.substring (text, colon + 1,
+                                            Int.max (0, proof_ - colon - 1)),
+                  quoteStart = colon + 1,
+                  tacText = String.substring (text, tacStart,
+                                              Int.max (0, tacEnd - tacStart)),
+                  tacStart = tacStart,
+                  cursor = cursor})
         end
         else loop ()
         end
@@ -799,6 +804,85 @@ fun start {diag, dbg} = let
     val () = DArray.app step d
     in out end
 
+  (* Emit `$/proofStates` for `uri`: what the proof-checking pool has to
+     say about each declaration it knows about.
+
+       {"uri": ..., "reset": true|false,
+        "states": [{"pos": {"line": l, "character": c},
+                    "name": "foo",
+                    "status": "checking" | "proved"
+                            | "failed" | "diverged",
+                    "detail": "..."}, ...]}
+
+     `detail` is present only for `failed` and `diverged`.
+
+     `reset` says how to fold the payload in.  True: this is everything
+     the pool knows, so replace whatever is held for the uri -- sent when
+     a compile starts or finishes, the two points at which proofs
+     disappear from the pool as well as appear in it.  False: a delta,
+     usually a single proof that has just settled; merge each state in,
+     keyed by `pos`.  Positions only shift when the buffer is edited, and
+     an edit starts a compile, so a `reset` always arrives before a key
+     can go stale.
+
+     A position rather than a range: the pool identifies a proof by the
+     byte its declaration starts at, which is all it needs for
+     cancellation, and a client wanting to decorate the whole
+     Theorem-QED block can find the end itself.  Ranges can be added if
+     a client would rather not.
+
+     A declaration *absent* from the list is one the pool is not working
+     on.  Per the state model in LSPExtension: if the compile has reached
+     it, it is `cheated` -- statement and tactic type-check, and the
+     proof is taken on trust; if not, it is `unseen`.  The server does
+     not distinguish those on the wire, having no list of declarations
+     past the compile frontier; a client can tell them apart from its own
+     parse and the last `$/compileProgress`. *)
+  fun sendProofStates uri lines {reset} states = let
+    fun statusName st =
+        case st of
+            LSPExtension.Unseen => "unseen"
+          | LSPExtension.Cheated => "cheated"
+          | LSPExtension.Checking => "checking"
+          | LSPExtension.Proved => "proved"
+          | LSPExtension.Failed _ => "failed"
+          | LSPExtension.Diverged _ => "diverged"
+    fun detailOf st =
+        case st of
+            LSPExtension.Failed m => SOME m
+          | LSPExtension.Diverged m => SOME m
+          | _ => NONE
+    fun encState ({site, offset, status} : LSPExtension.proof_state) print = (
+        print "{\"pos\":"; encPosLC lines offset print;
+        print ",\"name\":"; encString site print;
+        print ",\"status\":"; encString (statusName status) print;
+        (case detailOf status of
+             NONE => ()
+           | SOME m => (print ",\"detail\":"; encString m print));
+        print "}")
+    in
+      send (mkNotif "$/proofStates" (fn print => (
+        print "{\"uri\":"; encString uri print;
+        print ",\"reset\":"; print (if reset then "true" else "false");
+        print ",\"states\":"; encArray encState states print;
+        print "}")))
+    end
+
+  (* Give up on every proof a compile resuming at `resumeStart` is about
+     to re-elaborate, and tell the client.  NONE means the whole file.
+
+     Everything from the resume point on will be enqueued again by the
+     pass that follows, so keeping the old entries would fork each of
+     those proofs twice over and -- since an edit shifts the offsets the
+     entries are keyed by -- leave the originals untouchable by any later
+     cancellation.  Proofs above the resume point are not re-elaborated
+     and are left alone. *)
+  fun invalidateProofs uri lines resumeStart = (
+    (case resumeStart of
+         NONE => !LSPExtension.cancelAllProofs ()
+       | SOME b => !LSPExtension.cancelProofsAtOrAfter b);
+    sendProofStates uri lines {reset = true} (!LSPExtension.proofStates ()))
+
   (* Emit publishDiagnostics for `uri` combining the last-completed
      compile's diagnostics and any walker-observed runtime squiggles. *)
   fun publishAllDiagnostics uri
@@ -836,6 +920,7 @@ fun start {diag, dbg} = let
     walkerDiags := Binarymap.mkDict String.compare;
     if #done (#parse (!lastTrees)) then
       (!LSPExtension.notifyCompileStart (!minEditOffset);
+       invalidateProofs uri (#lines (#text (!lastTrees))) NONE;
        !LSPExtension.resetForCompile (); ())
     else let
     val _ = stopCompile compile
@@ -855,10 +940,12 @@ fun start {diag, dbg} = let
       case resumeSnap of
         NONE => (
           !LSPExtension.notifyCompileStart (!minEditOffset);
+          invalidateProofs uri lines NONE;
           !LSPExtension.resetForCompile ();
           (emptyParseData 8, 0, oldDiags))
       | SOME snap => let
           val _ = !LSPExtension.notifyCompileStart (!minEditOffset)
+          val _ = invalidateProofs uri lines (SOME (#endByte snap))
           val _ = !LSPExtension.restoreCompileSnap (#compileSnap snap)
           val {endByte, builtTrees, diags = snapDiags, plugins,
                ...} = snap
@@ -1103,8 +1190,17 @@ fun start {diag, dbg} = let
           (* Elaboration is done, so hand whatever it deferred to the
              worker pool.  Only when we are still the current compile:
              a superseded pass's proofs were queued against text the
-             user has already replaced. *)
+             user has already replaced.
+
+             The pool settles proofs asynchronously and announces each
+             outcome rather than making us poll; `send` is a
+             mutex-guarded handoff to the sender thread, so being called
+             from a worker is safe. *)
+          LSPExtension.proofStateChanged :=
+            (fn st => sendProofStates uri (#lines text) {reset = false} [st]);
           !LSPExtension.checkDeferred ();
+          sendProofStates uri (#lines text) {reset = true}
+                          (!LSPExtension.proofStates ());
           flushDiags ();
           sendProgressEnd ();
           send (mkNotif "$/compileCompleted" (fn print => (
@@ -1411,10 +1507,22 @@ fun start {diag, dbg} = let
                NONE => SOME s
              | SOME b => if #endByte s > #endByte b then SOME s else best)
       NONE declSnapshots
+    (* The user is looking at goal state here, so they are working on
+       this proof: hold it back from the pool, because the walker below
+       is about to replay that very tactic and a worker doing it too is
+       duplicated effort.  Moving to a different proof, or out of one
+       altogether, releases the previous one at raised priority --
+       setFocus handles the transition.
+
+       Note this depends on the client asking for goal state; if it
+       stops asking (the pane is closed, say) the last-focused proof
+       stays held rather than being checked.  A timer would fix that;
+       it is not worth the machinery yet. *)
     in case findEnclosingTheorem (#text text) offset of
-         NONE => NONE
-       | SOME (thm as {quoteStart, ...}) =>
-         let val restoreLater = !LSPExtension.captureCompileSnap ()
+         NONE => (!LSPExtension.setProofFocus NONE; NONE)
+       | SOME (decStart, thm as {quoteStart, ...}) =>
+         let val () = !LSPExtension.setProofFocus (SOME decStart)
+             val restoreLater = !LSPExtension.captureCompileSnap ()
              val () = case snapBefore quoteStart of
                NONE => ()
              | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)

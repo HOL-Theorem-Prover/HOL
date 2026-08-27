@@ -1467,6 +1467,11 @@ tracks, which is far less work than dependency tracking.  Until it
 exists, an early edit costs a re-check of everything below it, which is
 the behaviour to improve first.
 
+That classification was built and then withdrawn: it is sound about
+contexts but not sufficient, because the declarations below the edit are
+re-elaborated regardless and re-enqueue their proofs.  See "The
+tactic-edit refinement, tried and withdrawn".
+
 #### Phase B landed: the pool
 
 `tools-poly/lsp/deferred_proofs.ML` holds both the hook and the pool,
@@ -1521,15 +1526,72 @@ Nothing in `server.ML` calls the pool yet.  In order:
 1. set `LSPExtension.currentProofOffset` per declaration during
    elaboration, so an item knows where it came from;
 2. call `checkDeferred` after a compile pass;
-3. classify the edit in `notifyCompileStart`: `findEnclosingTheorem`
-   applied to `minEditOffset` --- the same function `goalStateAtPos` uses
-   --- distinguishes a tactic edit from a statement or definition edit,
-   so `cancelAt` versus `cancelAtOrAfter` falls straight out.  This is
-   the step that stops an early keystroke discarding a proof that was
-   nearly checked a thousand lines below;
+3. cancel what the compile is about to re-elaborate, which is
+   everything from its resume point on (see below --- the finer
+   classification this list originally called for was built and
+   withdrawn);
 4. set focus from the goal-state request handler;
 5. act on `Diverged` by re-elaborating downstream, and report the five
    states to the client.
+
+#### The tactic-edit refinement, tried and withdrawn
+
+Item 3 above was built (`bcc76ad62`) and then taken out again, because
+the narrower claim is true about *contexts* and false about *pool
+entries*.
+
+Editing a tactic body does leave every later declaration's context
+identical in content --- that part holds.  What it does not do is leave
+those declarations un-elaborated.  A compile resumes from the last
+declaration snapshot before the edit and runs to end of file, so every
+declaration below the edit is elaborated again and enqueues its proof
+again.  Cancelling only the edited declaration's entry therefore does not
+spare the rest of the pool; it forks all of them a second time, on top of
+the entries already running.  And an insertion shifts the offsets the
+entries are keyed by, so the originals no longer match any offset a later
+cancellation can name: `entries` grows by one file's worth of proofs per
+edit, each retaining a `Context.t` snapshot through its `run` closure.
+
+The invalidation is now derived from the resume point instead of from the
+edit: whatever a compile is about to re-elaborate is cancelled, and
+nothing else.  That is correct by construction and needs no
+classification --- so `classifyEdit`, `edit_site` and `cancelProofAt` are
+gone, along with the second full-buffer parse per goal-state request
+(`findEnclosingTheorem` now returns the declaration start it already
+knew, and the focus is derived from that).
+
+Keeping a running proof alive across a tactic-body edit is still worth
+having --- it is the case where the pool would otherwise restart a
+sixty-second proof every time the user pauses typing a thousand lines
+above it.  It needs an identity for a proof that survives re-elaboration,
+which the offset is not.  Two candidates:
+
+- *rebase.* `applyEdit` knows each change's range and length delta, so it
+  could shift the pool's offsets to match the new buffer.  Then offsets
+  stay valid, and `check` can recognise a re-enqueued proof by offset,
+  matching multiplicities per declaration (a declaration can enqueue more
+  than one proof --- a `Definition` with a termination proof --- and the
+  count is stable for unchanged text).
+- *declaration ordinal.* Pass the declaration's index in the file
+  alongside its offset, and key on (ordinal, n-th proof within the
+  declaration).  Stable under an edit that changes no declaration
+  boundaries, which a tactic-body edit does not.  Needs the drivers to
+  count declarations across a resumed compile.
+
+Not attempted: the failure mode of getting either subtly wrong is
+silently associating a verdict with the wrong proof, which is worse than
+re-checking.
+
+Two smaller items recorded rather than done:
+
+- `entries` is global, not per-uri, and `didClose` clears nothing, so a
+  second file's proofs pile onto the first's.
+- `LSPExtension` hosts the work queue (`enqueueDeferred`, `takeDeferred`,
+  `deferProofs`) although only `deferred_proofs.ML` uses it.  It cannot
+  simply move: `hol.ML` is compiled before `deferred_proofs.ML` exists as
+  a structure, so the flag it sets has to live somewhere both can name.
+  The six pool hooks likewise could be one record installed atomically
+  rather than six refs assigned in sequence.
 
 #### A broken proof body must not break the rest of the file
 

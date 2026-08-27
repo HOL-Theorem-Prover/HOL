@@ -26,29 +26,35 @@ val _ = use "lsp/server.ML";
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate16 z
+  fun makeUpdateT z = makeUpdate17 z
 in
 fun updateT z = let
-  fun from all_forced bare base_state checkerr checkfors debug defaultout exe
+  fun from all_forced bare base_state check_proofs checkerr checkfors debug
+           defaultout exe
            extra_data forced_objs help multithread output quietp thmsrc z_repl =
     {all_forced = all_forced, bare = bare, base_state = base_state,
+     check_proofs = check_proofs,
      checkerr = checkerr, checkfors = checkfors, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
      output = output, quietp = quietp, thmsrc = thmsrc, z_repl = z_repl}
   fun from' z_repl thmsrc quietp output multithread help forced_objs extra_data exe
-            defaultout debug checkfors checkerr base_state bare all_forced =
+            defaultout debug checkfors checkerr check_proofs base_state bare
+            all_forced =
     {all_forced = all_forced, bare = bare, base_state = base_state,
+     check_proofs = check_proofs,
      checkfors = checkfors, checkerr = checkerr, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
      output = output, quietp = quietp, thmsrc = thmsrc, z_repl = z_repl}
-  fun to f {all_forced, bare, base_state, checkerr, checkfors, debug, defaultout,
+  fun to f {all_forced, bare, base_state, check_proofs, checkerr, checkfors,
+            debug, defaultout,
             exe, extra_data,
             forced_objs, help, multithread, output, quietp, thmsrc, z_repl} =
-    f all_forced bare base_state checkerr checkfors debug defaultout exe extra_data
+    f all_forced bare base_state check_proofs checkerr checkfors debug defaultout
+      exe extra_data
       forced_objs help multithread
       output quietp thmsrc z_repl
 in
@@ -115,6 +121,9 @@ datatype option_record = OR of {
   bare : bool,
   base_state : string option,
   checkfors : string list,
+  (* LSP only: replay the proofs a compile pass cheated, on the worker
+     pool, instead of discarding them. *)
+  check_proofs : bool,
   checkerr : string option,
   debug : bool,
   defaultout : string option,
@@ -177,6 +186,8 @@ val cline_opts = [
    desc = mkBoolT #bare},
   {help = "use min-only heap (just the kernel, no boolTheory)",
    long = ["min"], short = "", desc = setBaseMin},
+  {help = "LSP: replay cheated proofs on the worker pool",
+   long = ["lsp-check-proofs"], short = "", desc = mkBoolT #check_proofs},
   {help = "error if checked for file is absent", long = ["checkerr"],
    short = "e", desc = setStringOpt "message" #checkerr},
   {help = "check file exists afterwards (can repeat)", long = ["checkfor"],
@@ -219,6 +230,7 @@ val cline_opts = [
 val initial_cline = OR {all_forced = false,
                         bare = false,
                         base_state = !heapname,
+                        check_proofs = false,
                         checkerr = NONE,
                         checkfors = [],
                         debug = false,
@@ -683,6 +695,15 @@ in
         (* Goal-state at cursor inside a Proof-QED body. *)
         QUse.use (OS.Path.concat(Systeml.HOLDIR,
                                  "tools-poly/lsp/goal_state_init.ML"));
+        (* --lsp-check-proofs: replay what the cheating pass deferred,
+           rather than discarding it.  Off by default, so an LSP session
+           costs elaboration only unless asked otherwise.  The pool is
+           given workers explicitly: Multithreading defaults to one, and
+           0 asks for one per processor, capped at 8. *)
+        if #check_proofs options then
+          (evalString "DeferredProofs.setWorkerCount 0";
+           evalString "LSPExtension.deferProofs := true")
+        else ();
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;

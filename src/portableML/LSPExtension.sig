@@ -156,9 +156,10 @@ val restoreCompileSnap: (compileSnap -> unit) ref
    enqueues a self-contained item and returns an oracle-tagged theorem,
    so elaboration stays fast and something else runs the proofs later.
 
-   An item's `run` is opaque — `unit -> string option`, SOME on failure
-   — because this structure sits below the kernel and cannot name
-   `Context.t`, `goal` or `tactic`.  The hook closes over all three, so
+   An item's `run` is opaque — it reports a `proof_status` and nothing
+   about the theorem — because this structure sits below the kernel and
+   cannot name `Context.t`, `goal` or `tactic`.  The hook closes over all
+   three, so
    an item is independent of every other: the context is an immutable
    value and the tactic is already elaborated.  In particular a worker
    replaying one of these does *not* need the LSP namespace layer; that
@@ -213,16 +214,12 @@ type proof_state = {site: string, offset: int, status: proof_status}
 type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs: bool ref
 val enqueueDeferred: deferred -> unit
+(* Empties the queue and hands back what was in it: the worker pool
+   runs the items itself. *)
+val takeDeferred: unit -> deferred list
+(* Diagnostics, for driving the queue by hand from a REPL or a test. *)
 val pendingDeferred: unit -> int
 val clearDeferred: unit -> unit
-(* Runs every queued item on this thread and returns those that failed,
-   in the order they were enqueued.  Empties the queue first, so a
-   failure part-way through cannot leave items to be run twice.  This is
-   the sequential drain; the worker pool below is the parallel one. *)
-val drainDeferred: unit -> {site: string, error: string} list
-(* Empties the queue and hands back what was in it, for a caller that
-   wants to run the items itself -- the worker pool does. *)
-val takeDeferred: unit -> deferred list
 
 (* The byte offset of the declaration currently being elaborated, set by
    the compile driver before each one.  The prover hook reads it when
@@ -245,16 +242,17 @@ val currentProofOffset: int ref
 val checkDeferred: (unit -> unit) ref
 val proofStates: (unit -> proof_state list) ref
 val cancelProofsAtOrAfter: (int -> unit) ref
-(* Give up on just this declaration's proof, for an edit inside a
-   Proof...QED body: the tactic is not run during the cheating pass,
-   so what the declaration contributes downstream is unchanged and the
-   proofs below it need not be disturbed. *)
-val cancelProofAt: (int -> unit) ref
 val cancelAllProofs: (unit -> unit) ref
 (* The declaration the user is working on, by byte offset, or NONE.
    Its proof is held back rather than checked, since the goal-state
    walker is already replaying that tactic on every keystroke; it is
    checked at raised priority once the user moves on. *)
 val setProofFocus: (int option -> unit) ref
+(* Called by the pool when one proof's outcome is decided, so the
+   caller can report it without polling.  Just the state that changed:
+   a caller reporting all of them on every settled proof is quadratic in
+   the number of proofs in the file.  It runs on the worker thread that
+   finished the proof, so it must be cheap and must not raise. *)
+val proofStateChanged: (proof_state -> unit) ref
 
 end;
