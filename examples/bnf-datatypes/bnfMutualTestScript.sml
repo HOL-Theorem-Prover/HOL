@@ -28,7 +28,8 @@ fun same t1 t2 = can (match_term t1) t2 andalso can (match_term t2) t1
 
 val b1 = mk_vartype "'b1"
 
-val mt = defineMutual {tyname1 = "mt1", tyname2 = "mt2"} (bnfBase.fullDB()) [b1]
+val mt = defineMutual {tyname1 = "mt1", tyname2 = "mt2"}
+                      (bnfBase.fullDB()) [b1]
                       (“:'b1 + 'a # 'a1”, “:'a1 + 'b1 # 'a”)
 
 val _ = tprint "the types a mutually recursive pair becomes"
@@ -56,6 +57,60 @@ val _ =
     then OK() else die (thm_to_string (#recursion mt))
 
 (* ----------------------------------------------------------------------
+    the pair's induction principle: each clause gives the induction
+    hypothesis for *both* types, through the two set functions of that
+    type's functor — the type's own occurrences and the sibling's
+   ---------------------------------------------------------------------- *)
+
+val a1 = mk_vartype "'a1"
+val bnfF1 = deriveBNFn (#db mt) [alpha, a1, b1] “:'b1 + 'a # 'a1”
+val bnfF2 = deriveBNFn (#db mt) [alpha, a1, b1] “:'a1 + 'b1 # 'a”
+
+(* A clause covers one type's constructor.  Its two hypotheses are the
+   induction hypotheses for the two types, each through the set function
+   of *this* functor for that type's argument, and in the functor's own
+   argument order — the recursive argument first. *)
+fun clauseOK h1 h2 (Pcon,cons) clause =
+    let val (af, body) = dest_forall clause
+        val (hyps, con) = dest_imp body
+        fun memberOf (p,st) h =
+            let val (v, b) = dest_forall h
+                val (mem, app) = dest_imp b
+            in
+              aconv app (mk_comb (p, v)) andalso
+              can (match_term st) (rator (rand mem)) andalso
+              aconv (rand (rand mem)) af
+            end
+    in
+      case strip_conj hyps of
+          [c1,c2] => memberOf h1 c1 andalso memberOf h2 c2 andalso
+                     aconv con (mk_comb (Pcon, mk_comb (cons, af)))
+        | _ => false
+    end
+
+val _ = tprint "the pair's induction principle"
+val _ =
+    let val th = #induction mt
+        val ([P1,P2], body) = strip_forall (concl th)
+        val (clauses, con) = dest_imp body
+        val (c1,c2) = pairSyntax.dest_pair (pairSyntax.mk_pair
+                                              (hd (strip_conj clauses),
+                                               List.last (strip_conj clauses)))
+        val n = mk_var("n", #ty1 mt) and m = mk_var("m", #ty2 mt)
+    in
+      if null (hyp th) andalso null (free_vars (concl th)) andalso
+         (* mt1's functor is 'b1 + mt1 # mt2, so its own argument comes
+            first; mt2's is mt1 + 'b1 # mt2, so the sibling's does *)
+         clauseOK (P1, hd (#sets bnfF1)) (P2, List.nth (#sets bnfF1, 1))
+                  (P1, #cons1 mt) c1 andalso
+         clauseOK (P1, List.nth (#sets bnfF2, 1)) (P2, hd (#sets bnfF2))
+                  (P2, #cons2 mt) c2 andalso
+         aconv con (mk_conj (mk_forall (n, mk_comb (P1,n)),
+                             mk_forall (m, mk_comb (P2,m))))
+      then OK() else die (thm_to_string th)
+    end
+
+(* ----------------------------------------------------------------------
     and with the sibling under a type operator of its own
    ---------------------------------------------------------------------- *)
 
@@ -69,6 +124,8 @@ val _ =
     if #ty1 nt = “:'b1 nt1” andalso #ty2 nt = “:'b1 nt1 nt2” andalso
        null (hyp (#recursion nt)) andalso
        null (free_vars (concl (#recursion nt))) andalso
+       null (hyp (#induction nt)) andalso
+       null (free_vars (concl (#induction nt))) andalso
        same (concl (#recursion nt))
             “∀t1 t2.
                (∃h1 h2.

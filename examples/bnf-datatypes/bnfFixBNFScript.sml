@@ -188,6 +188,30 @@ Proof
   simp[EXTENSION]
 QED
 
+(* and two laws that put a set term built by nesting one functor inside
+   another into a normal form: the atoms of a union are collected
+   separately, and a set function applied through a collection of
+   sub-terms is applied at each of them *)
+Theorem BIGUNION_IMAGE_UNION:
+  BIGUNION (IMAGE (λx. A x ∪ B x) X) =
+  BIGUNION (IMAGE A X) ∪ BIGUNION (IMAGE B X)
+Proof
+  simp[Once EXTENSION, PULL_EXISTS] >> metis_tac[]
+QED
+
+Theorem BIGUNION_IMAGE_EMPTY:
+  BIGUNION (IMAGE (λx. ∅) X) = ∅
+Proof
+  once_rewrite_tac[EXTENSION] >> simp[PULL_EXISTS]
+QED
+
+Theorem BIGUNION_IMAGE_BIGUNION:
+  BIGUNION (IMAGE h (BIGUNION (IMAGE g X))) =
+  BIGUNION (IMAGE (λx. BIGUNION (IMAGE h (g x))) X)
+Proof
+  simp[Once EXTENSION, PULL_EXISTS] >> metis_tac[]
+QED
+
 (* ----------------------------------------------------------------------
     witnesses and inhabitation.
 

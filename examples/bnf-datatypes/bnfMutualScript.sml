@@ -1,6 +1,6 @@
 Theory bnfMutual
 Ancestors
-  bnfFixBNF
+  bnfFixBNF pred_set
 Libs
   HolKernel Parse boolLib bossLib
 
@@ -134,4 +134,63 @@ Proof
   >- (qexistsl_tac [‘hh’, ‘fold o smap hh’] >> simp[MUTREC_def] >>
       qx_gen_tac ‘af’ >> f1bwd >> simp[]) >>
   rpt gen_tac >> strip_tac >> res_tac >> simp[]
+QED
+
+(* ----------------------------------------------------------------------
+    Mutual induction.
+
+    Each type's own principle covers *its* sub-terms, and the two are
+    tied together by the second type's set function for the first type's
+    slot: the values of one type inside a value of the other.  What the
+    pair's principle needs beyond the two is that this set decomposes the
+    way the nesting says — the first type's own sub-terms are its direct
+    occurrences together with those the sibling holds.
+   ---------------------------------------------------------------------- *)
+
+Definition NESTSET_def:
+  NESTSET (stn1 : 'fn1 -> 'n1 set) sb1 sa1 S21 ⇔
+    ∀af. stn1 af = sb1 af ∪ BIGUNION (IMAGE S21 (sa1 af))
+End
+
+Theorem MUTUAL_INDUCTION:
+  FIXIND cn1 stn1 ∧ FIXIND cn2 st2 ∧
+  NESTSET stn1 sb1 sa1 S21 ∧ FIXSET cn2 st2 sb2 S21 ⇒
+  ∀P1 P2.
+    (∀af. (∀y. y ∈ sb1 af ⇒ P1 y) ∧ (∀z. z ∈ sa1 af ⇒ P2 z) ⇒ P1 (cn1 af)) ∧
+    (∀af. (∀y. y ∈ sb2 af ⇒ P1 y) ∧ (∀z. z ∈ st2 af ⇒ P2 z) ⇒ P2 (cn2 af)) ⇒
+    (∀n. P1 n) ∧ ∀m. P2 m
+Proof
+  strip_tac >>
+  RULE_ASSUM_TAC (PURE_REWRITE_RULE [FIXIND_def, FIXSET_def, NESTSET_def]) >>
+  rpt gen_tac >> strip_tac >>
+  (* a value of the second type satisfies P2 once the first type's values
+     inside it satisfy P1 — which is its own induction *)
+  ‘∀m. (∀y. y ∈ S21 m ⇒ P1 y) ⇒ P2 m’
+    by (qpat_assum ‘∀P. (∀af. (∀z. z ∈ st2 af ⇒ P z) ⇒ P (cn2 af)) ⇒ ∀m. P m’
+          ho_match_mp_tac >>
+        rpt strip_tac >>
+        qpat_assum ‘∀af. (∀y. y ∈ sb2 af ⇒ P1 y) ∧ _ ⇒ _’ irule >> conj_tac
+        >- (rpt strip_tac >>
+            qpat_assum ‘∀y. y ∈ S21 (cn2 af) ⇒ P1 y’ irule >> simp[]) >>
+        rpt strip_tac >>
+        qpat_assum ‘∀m. m ∈ st2 af ⇒ _ ⇒ P2 m’ (drule_then irule) >>
+        rpt strip_tac >>
+        qpat_assum ‘∀y. y ∈ S21 (cn2 af) ⇒ P1 y’ irule >> simp[] >>
+        disj2_tac >> qexists_tac ‘S21 z’ >> simp[] >> qexists_tac ‘z’ >>
+        simp[]) >>
+  (* and then the first type's own induction covers both *)
+  ‘∀n. P1 n’
+    by (qpat_assum ‘∀P. (∀af. (∀y. y ∈ stn1 af ⇒ P y) ⇒ P (cn1 af)) ⇒ ∀n. P n’
+          ho_match_mp_tac >>
+        rpt strip_tac >>
+        qpat_assum ‘∀af. (∀y. y ∈ sb1 af ⇒ P1 y) ∧ _ ⇒ _’ irule >> conj_tac
+        >- (rpt strip_tac >>
+            qpat_assum ‘∀y. y ∈ stn1 af ⇒ P1 y’ irule >> simp[]) >>
+        rpt strip_tac >>
+        qpat_assum ‘∀m. (∀y. y ∈ S21 m ⇒ P1 y) ⇒ P2 m’ irule >>
+        rpt strip_tac >>
+        qpat_assum ‘∀y. y ∈ stn1 af ⇒ P1 y’ irule >> simp[] >>
+        disj2_tac >> qexists_tac ‘S21 z’ >> simp[] >> qexists_tac ‘z’ >>
+        simp[]) >>
+  simp[]
 QED

@@ -189,7 +189,8 @@ sig
     fix1 : fixpoint, fix2 : fixpoint,
     sibling : fixpoint_bnf,
     db : bnfBase.t,
-    recursion : thm
+    recursion : thm,
+    induction : thm
   }
 
   val defineMutual : {tyname1 : string, tyname2 : string} ->

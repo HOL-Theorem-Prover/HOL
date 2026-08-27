@@ -1217,7 +1217,11 @@ val setRWs = [bnfPrelimsTheory.BIMG_EQUAL, bnfPrelimsTheory.BIMG_K0,
               combinTheory.I_o_ID, combinTheory.S_DEF, combinTheory.o_DEF,
               combinTheory.K_DEF, pairTheory.setFST_thm,
               pairTheory.setSND_thm, LAM_EQ_SING, LAM_F_EMPTY,
-              pred_setTheory.INSERT_UNION_EQ]
+              pred_setTheory.INSERT_UNION_EQ, BIGUNION_IMAGE_EMPTY]
+
+(* eta reduction is part of unfolding a set term: the lifted union leaves
+   a component's set function applied to a bound variable *)
+val set_ss = simpLib.++ (BasicProvers.srw_ss(), boolSimps.ETA_ss)
 
 fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
     let
@@ -1238,9 +1242,6 @@ fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
           REWRITE_RULE (folds @ tgtfolds)
             (unfold boolSimps.bool_ss shapeRWs
                     (SPECL (fvars @ [injOf def]) (#map_thm res)))
-      (* eta reduction is part of it: unfolding the lifted union leaves a
-         component's set function applied to a bound variable *)
-      val set_ss = simpLib.++ (BasicProvers.srw_ss(), boolSimps.ETA_ss)
       fun setEqn i def =
           REWRITE_RULE folds
             (unfold set_ss setRWs
@@ -1281,8 +1282,23 @@ type mutual = {
   fix1 : fixpoint, fix2 : fixpoint,   (* what each type's construction gave *)
   sibling : fixpoint_bnf,             (* the second type as a functor *)
   db : bnfBase.t,                     (* the database, extended with it *)
-  recursion : thm                     (* the pair's recursion principle *)
+  recursion : thm, induction : thm    (* and the pair's two principles *)
 }
+
+(* |- t1 = t2, when both sides normalise to the same thing.  Two set
+   terms built by nesting one functor inside another are equal by the
+   algebra of BIMG and the lifted union; normalising both is how a driver
+   sees that without running a tactic. *)
+val normRWs = setRWs @ [BIGUNION_IMAGE_UNION, BIGUNION_IMAGE_BIGUNION]
+fun normEq (t1,t2) =
+    let val cnv = QCONV (simpLib.SIMP_CONV set_ss normRWs)
+        val (e1,e2) = (cnv t1, cnv t2)
+    in
+      if aconv (rhs (concl e1)) (rhs (concl e2)) then TRANS e1 (SYM e2)
+      else raise ERR "normEq"
+                 ("no common normal form: " ^ term_to_string (rhs (concl e1)) ^
+                  " and " ^ term_to_string (rhs (concl e2)))
+    end
 
 (* the element variable and  |- map gs (map fs af) = map (gs o fs) af, at
    the instance the functions say: one instance of the composition law,
@@ -1436,10 +1452,51 @@ fun defineMutual {tyname1, tyname2} db params (f1ty, f2ty) : mutual =
                (MATCH_MP MUTUAL_RECURSION
                   (LIST_CONJ [srec1, srec2c, srec2n, smapeq,
                               mutmap1, mutmap2, mutsplit])))
+
+      (* ------------------------------------------------------------
+          the induction principle
+
+          Each type's own principle covers its own sub-terms; what ties
+          them together is the sibling's set function for the first
+          type's slot, and the fact that the first type's sub-terms are
+          its direct occurrences together with the ones the sibling
+          holds.  That fact is an identity between two ways of writing
+          the same set term, so it is proved by normalising both.
+         ------------------------------------------------------------ *)
+      val stn1 = setAtArgs bnf1 0 (ty1, params)
+      val st2 = setAtArgs bnf2 0 (ty2, ty1 :: params)
+      val sb1 = setAtArgs bnfF1 0 (ty1, ty2 :: params)
+      val sa1 = setAtArgs bnfF1 1 (ty1, ty2 :: params)
+      val sb2 = setAtArgs bnf2 1 (ty2, ty1 :: params)
+      val a1pos = idxOf "defineMutual" (#Args (dest_thy_type sibty)) a1
+      val sibset = List.nth (#set_thms res2, a1pos)
+      val S21 = Term.inst [a1 |-> ty1]
+                  (repeat rator (lhs (#2 (strip_forall (concl sibset)))))
+      val fixind1 = byDefn FIXIND_def [cons1, stn1] (#set_induction fix1)
+      val fixind2 = byDefn FIXIND_def [cons2, st2]
+                           (INST_TYPE [a1 |-> ty1] (#set_induction fix2))
+      val fixset2 = byDefn FIXSET_def [cons2, st2, sb2, S21]
+                           (INST_TYPE [a1 |-> ty1] sibset)
+      val nestset =
+          let
+            val af = mk_var("af", functorAt bnf1 ty1)
+            val nested =
+                pred_setSyntax.mk_union
+                  (mk_comb (sb1, af),
+                   pred_setSyntax.mk_bigunion
+                     (pred_setSyntax.mk_image (S21, mk_comb (sa1, af))))
+          in
+            byDefn NESTSET_def [stn1, sb1, sa1, S21]
+                   (GEN af (normEq (mk_comb (stn1, af), nested)))
+          end
+      val induction =
+          MATCH_MP MUTUAL_INDUCTION
+                   (LIST_CONJ [fixind1, fixind2, nestset, fixset2])
+
     in
       {ty1 = ty1, ty2 = ty2, cons1 = cons1, cons2 = cons2,
        fix1 = fix1, fix2 = fix2, sibling = res2, db = db,
-       recursion = recursion}
+       recursion = recursion, induction = induction}
     end
 
 end
