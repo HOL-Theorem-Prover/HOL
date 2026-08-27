@@ -469,3 +469,232 @@ Proof
     by (conj_tac >> first_x_assum irule >> gs[SUBSET_DEF]) >>
   gs[]
 QED
+
+(* ----------------------------------------------------------------------
+    The cardinality bound.  Beyond the map and set functions this needs
+    F at the ordinal carrier as well, and the facts it uses about
+    nontriviality are taken as hypotheses rather than re-derived, so the
+    driver discharges them once with NontrivialBs.
+
+    See Lemma 33 of Blanchette, Popescu and Traytel, "Cardinals in
+    Isabelle/HOL", ITP 2014.
+   ---------------------------------------------------------------------- *)
+
+Overload "𝟙" = “{()}”
+
+(* both provable from ordinalBasic/cardinal; stated here so that this
+   theory does not need more_theories, and so can sit inside the core
+   build alongside src/datatype *)
+Theorem CARDEQ_IMP_CARDLEQ[local]:
+  ∀s t. s ≈ t ⇒ s ≼ t
+Proof
+  metis_tac[cardleq_lteq]
+QED
+
+Theorem ordlt_preds_mono[local]:
+  a < b ⇒ preds a ≼ preds b
+Proof
+  strip_tac >> irule CARD_LE_SUBSET >> simp[SUBSET_DEF] >>
+  metis_tac[ordlt_TRANS]
+QED
+
+Theorem cardleq_INFINITE[local]:
+  ∀s t. INFINITE s ∧ s ≼ t ⇒ INFINITE t
+Proof
+  metis_tac[CARD_LE_FINITE]
+QED
+
+Theorem CBDb:
+  Natural (mp_a2o : ('a -> 'g ordinal) -> 'f -> 'fo) sta sto ∧
+  Natural (mp_o2a : ('g ordinal -> 'a) -> 'fo -> 'f) sto sta ∧
+  MapComp mp_a2o mp_o2a (mp_aa : ('a -> 'a) -> 'f -> 'f) ∧
+  MapId mp_aa ∧ MapCong mp_aa sta ∧
+  (∀C : 'g ordinal set. C ≼ FIN sto C) ⇒
+  ω ≤ (bd : 'g ordinal) ∧ (∀x:'f. sta x ≼ preds bd) ⇒
+  ∀B:'a set. 𝟚 ≼ B ⇒
+             (FIN sta B : 'f set) ≼ B ** cardSUC (FIN sto (preds bd))
+Proof
+  strip_tac >>
+  qpat_assum ‘MapId _’ (fn th1 =>
+    qpat_assum ‘MapCong _ _’ (fn th2 =>
+      assume_tac (MATCH_MP Map_eq_id (CONJ th1 th2)))) >>
+  rpt strip_tac >>
+  qabbrev_tac ‘kA = (FIN sto (preds bd) : 'fo set) CROSS (B ** preds bd)’ >>
+  qmatch_abbrev_tac ‘_ ≼ B ** k’ >>
+  ‘kA ≼ B ** k’
+    by (simp[Abbr‘k’, Abbr‘kA’] >> irule CARD_MUL2_ABSORB_LE >>
+        simp[] >> rpt strip_tac >~
+        [‘𝟚 ≼ B’, ‘B ≼ 𝟙’] >- (drule_all cardleq_TRANS >> simp[]) >~
+        [‘INFINITE (FIN sto (preds bd))’]
+        >- (disj2_tac >>
+            irule (ISPEC “preds (bd:'g ordinal)” cardleq_INFINITE) >>
+            qexists_tac ‘bd’ >> conj_tac
+            >- (simp[FINITE_preds] >> rpt strip_tac >> gvs[]) >>
+            simp[]) >~
+        [‘FIN sto (preds bd) ≼ B ** cardSUC _’]
+        >- (resolve_then (Pos last) irule CARD_LE_EXP cardleq_TRANS >>
+            simp[]) >>
+        irule set_exp_cardle_cong >> simp[] >> rpt strip_tac >>
+        gvs[cardleq_empty] >>
+        first_x_assum $ qspec_then ‘preds bd’ assume_tac >>
+        first_x_assum $ C (resolve_then (Pos hd) irule) cardleq_TRANS >>
+        simp[]) >>
+  first_assum $ C (resolve_then (Pos last) irule) cardleq_TRANS >>
+  qabbrev_tac ‘d = λ(y:'fo,fn). mp_o2a fn y’ >>
+  simp[cardleq_def] >>
+  irule_at Any (SRULE [PULL_EXISTS] SURJ_IMP_INJ) >> qexists_tac ‘d’ >>
+  simp[SURJ_DEF] >> conj_tac
+  >- (simp[FORALL_PROD, Abbr‘kA’, Abbr‘d’, set_exp_def] >>
+      gs[Natural_def] >> rw[] >> simp[SUBSET_DEF, PULL_EXISTS] >>
+      qx_gen_tac ‘b’ >> strip_tac >>
+      ‘b ∈ preds bd’ by metis_tac[SUBSET_DEF] >> gs[] >>
+      first_assum drule >> simp[PULL_EXISTS]) >>
+  qx_gen_tac ‘vf’ >> strip_tac >>
+  ‘?g. INJ g (sta vf) (preds bd)’ by metis_tac[cardleq_def] >>
+  qabbrev_tac ‘y = mp_a2o g vf’ >>
+  ‘sta vf ⊆ B’ by gs[] >>
+  ‘?fn. (!b. b ∈ sta vf ⇒ fn (g b) = b) /\ (!bp. bp < bd ==> fn bp ∈ B)’
+    by (‘?be. be ∈ B’ by (simp[MEMBER_NOT_EMPTY] >>
+                          strip_tac >> gvs[cardleq_empty]) >>
+        qexists_tac ‘λbp. case some b. b IN sta vf /\ g b = bp of
+                            NONE => be
+                          | SOME b => b
+                    ’ >> conj_tac >> simp[] >> rpt strip_tac
+        >- (gs[INJ_IFF, SF CONJ_ss] >> csimp[]) >>
+        DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+        gs[SUBSET_DEF]) >>
+  qexists_tac ‘(y, λbp. if bp ∈ preds bd then fn bp else ARB)’ >>
+  conj_tac
+  >- (simp[Abbr‘kA’, Abbr‘y’] >> gs[Natural_def] >> conj_tac
+      >- gs[INJ_IFF, SUBSET_DEF, PULL_EXISTS] >>
+      simp[set_exp_def]) >>
+  simp[Abbr‘d’, Abbr‘y’] >> gs[MapComp_def] >>
+  first_x_assum irule >> simp[] >> gs[INJ_IFF]
+QED
+
+Theorem preds_bd_lemma:
+  (∀C : 'g ordinal set. C ≼ FIN sto C) ⇒
+  preds (bd:'g ordinal) ≼
+  preds (oleast a:'fo ordinal. preds a ≈ (FIN sto (preds bd) : 'fo set))
+Proof
+  strip_tac >> first_x_assum (qspec_then ‘preds bd’ assume_tac) >>
+  pop_assum mp_tac >>
+  simp[Once cardleq_lteq, SimpL “$==>”] >> strip_tac
+  >- (DEEP_INTRO_TAC oleast_intro >> conj_tac
+      >- (irule cardeq_ordinals_exist >>
+          simp[Once disjUNION_UNIV] >>
+          resolve_then (Pos hd) irule CARD_LE_UNIV CARD_LE_TRANS >>
+          simp[CARD_LE_ADDL]) >>
+      metis_tac[cardleq_lteq, CARD_LT_CONG, CARD_EQ_REFL]) >>
+  DEEP_INTRO_TAC oleast_intro >> conj_tac
+  >- (irule cardeq_ordinals_exist >>
+      simp[Once disjUNION_UNIV] >>
+      resolve_then (Pos hd) irule CARD_LE_UNIV CARD_LE_TRANS >>
+      simp[CARD_LE_ADDL]) >>
+  metis_tac[CARD_LE_REFL, CARD_LE_CONG]
+QED
+
+Theorem preds_csuc_lemma:
+  preds a ≼ preds (csuc a)
+Proof
+  simp[csuc_def] >> DEEP_INTRO_TAC oleast_intro >>
+  simp[cardinality_bump_exists] >> metis_tac[cardleq_lteq]
+QED
+
+Theorem preds_cardSUC_cardleq[local]:
+  preds i ≼ preds bd ∧
+  preds bd ≼ preds (oleast a:'fo ordinal. preds a ≈ (Q : 'fo set)) ⇒
+  preds i ≼ cardSUC Q
+Proof
+  simp[cardSUC_def] >> strip_tac >>
+  metis_tac[cardleq_TRANS, preds_csuc_lemma]
+QED
+
+Theorem cardADD2[local]:
+  s ≼ s +_c 𝟚
+Proof
+  simp[CARD_LE_ADDR]
+QED
+
+(* The bound on the iteration.  This asks only for the *conclusions* of
+   FIN_cardleq and CBDb at the instances it uses, so the driver chains
+   the lemmas rather than re-supplying their hypotheses here. *)
+Theorem ALG_cardinality_bound:
+  (∀C : 'g ordinal set. C ≼ FIN sto C) ∧
+  (∀u:'a set. ∀v:('a + bool) set.
+     u ≼ v ⇒ (FIN sta u : 'f set) ≼ (FIN stab v : 'fab set)) ∧
+  (∀B : ('a + bool) set.
+     𝟚 ≼ B ⇒ (FIN stab B : 'fab set) ≼ B ** cardSUC (FIN sto (preds bd))) ⇒
+  ω ≤ (bd : 'g ordinal) ⇒
+  KK sta (s : 'f -> 'a) (csuc bd) ≼ 𝟚 ** cardSUC (FIN sto (preds bd))
+Proof
+  strip_tac >> strip_tac >>
+  qmatch_abbrev_tac ‘_ ≼ 𝟚 ** BD’ >>
+  ‘INFINITE BD’
+    by (simp[Abbr‘BD’] >>
+        irule (ISPEC “preds (bd:'g ordinal)” cardleq_INFINITE) >>
+        qexists_tac ‘bd’ >> conj_tac
+        >- (simp[FINITE_preds] >> rpt strip_tac >> gvs[]) >>
+        simp[]) >>
+  ‘BD ≠ ∅’ by (rpt strip_tac >> gs[]) >>
+  qpat_assum ‘∀C. _ ≼ FIN sto _’ (assume_tac o MATCH_MP preds_bd_lemma) >>
+  ‘∀i. i < csuc bd ⇒ KK sta s i ≼ 𝟚 ** BD’
+    suffices_by (strip_tac >> simp[KK_def, csuc_is_nonzero_limit] >>
+                 irule CARD_BIGUNION >> simp[PULL_EXISTS] >>
+                 irule IMAGE_cardleq_rwt >>
+                 resolve_then Any
+                              (fn th =>
+                                 resolve_then (Pos hd) irule th cardleq_TRANS)
+                              cardleq_REFL
+                              CARD_LE_EXP >>
+                 irule set_exp_cardle_cong >> simp[Abbr‘BD’, cardSUC_def] >>
+                 irule cardleq_preds_csuc >> simp[]) >>
+  ho_match_mp_tac ord_induction >> rw[] >>
+  simp[Once KK_thm] >> rw[] >> irule CARD_BIGUNION >>
+  simp[PULL_EXISTS] >> rpt conj_tac >~
+  [‘IMAGE _ (preds i) ≼ _’]
+  >- (irule IMAGE_cardleq_rwt >> gs[lt_csuc] >>
+      resolve_then Any
+                   (fn th =>
+                      resolve_then (Pos hd) irule th cardleq_TRANS)
+                   cardleq_REFL
+                   CARD_LE_EXP >> irule set_exp_cardle_cong >> simp[] >>
+      simp[Abbr‘BD’] >>
+      qpat_assum ‘preds i ≼ preds bd’ (fn th1 =>
+        qpat_assum ‘preds bd ≼ preds (oleast _. _)’ (fn th2 =>
+          MATCH_ACCEPT_TAC
+            (MATCH_MP preds_cardSUC_cardleq (CONJ th1 th2))))) >>
+  qx_gen_tac ‘j’ >> strip_tac >>
+  ‘{ s fv | fv | sta fv ⊆ KK sta s j} = IMAGE s (FIN sta (KK sta s j))’
+    by simp[EXTENSION] >> simp[] >>
+  irule IMAGE_cardleq_rwt >>
+  ‘(FIN sta (KK sta s j) : 'f set) ≼ (FIN stab (KK sta s j +_c 𝟚) : 'fab set)’
+    by (first_x_assum irule >> simp[CARD_LE_ADDR]) >>
+  pop_assum (C (resolve_then (Pos hd) irule) cardleq_TRANS) >>
+  first_x_assum (qspec_then ‘KK sta s j +_c 𝟚’ mp_tac) >>
+  impl_tac >- simp[CARD_LE_ADDL] >>
+  disch_then $ C (resolve_then (Pos hd) irule) cardleq_TRANS >>
+  first_x_assum $ qspec_then ‘j’ mp_tac >> simp[] >>
+  impl_tac >- metis_tac[ordlt_TRANS] >>
+  disch_then
+    (C (resolve_then (Pos hd) (qspecl_then [‘𝟚’, ‘𝟚’] mp_tac)) CARD_LE_ADD) >>
+  simp[] >> strip_tac >>
+  pop_assum (
+    C (resolve_then (Pos (el 2)) (resolve_then (Pos last)
+                                  (qspec_then ‘BD’ mp_tac) cardleq_REFL))
+    set_exp_cardle_cong) >>
+  impl_tac >- simp[] >>
+  disch_then (C (resolve_then (Pos hd) irule) cardleq_TRANS) >>
+  ‘𝟚 ≼ 𝟚 ** BD’ by (simp[cardleq_setexp]) >>
+  ‘INFINITE (𝟚 ** BD)’ by simp[] >>
+  ‘𝟚 ** BD +_c 𝟚 ≈ 𝟚 ** BD’
+    by metis_tac[CARD_ADD_SYM, CARD_ADD_ABSORB, cardeq_TRANS] >>
+  ‘(𝟚 ** BD +_c 𝟚) ** BD ≼ (𝟚 ** BD) ** BD’
+    by (irule CARDEQ_IMP_CARDLEQ >> irule set_exp_card_cong >> simp[]) >>
+  ‘(𝟚 ** BD) ** BD ≼ 𝟚 ** (BD CROSS BD)’
+    by (irule CARDEQ_IMP_CARDLEQ >> MATCH_ACCEPT_TAC set_exp_product) >>
+  ‘𝟚 ** (BD CROSS BD) ≼ 𝟚 ** BD’
+    by (irule set_exp_cardle_cong >> simp[] >>
+        ONCE_REWRITE_TAC [cardleq_lteq] >> simp[CARD_SQUARE_INFINITE]) >>
+  metis_tac[cardleq_TRANS]
+QED
