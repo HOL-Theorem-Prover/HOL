@@ -167,4 +167,33 @@ sig
   val constructorEqns : constructors -> fixpoint_bnf ->
                         {map_eqns : thm, set_eqns : thm list}
 
+  (* ----------------------------------------------------------------------
+      Mutual recursion.
+
+      A mutually recursive pair arrives as one functor per type with the
+      sibling as an extra argument, 'a1 — which is what parse_bnf's
+      translation of a mutrec_var produces.  defineMutual takes the two
+      functors and the parameters they are both over, and defines the
+      second type as a datatype in the sibling's slot and the first as a
+      recursion nested through it; the second type is then the first
+      substituted into it.  The pair's recursion principle comes back
+      ground and hypothesis-free.
+
+      The database is extended in memory with the second type as a
+      functor, which is what the nesting needs, and returned so that the
+      caller can go on nesting through the result.
+     ---------------------------------------------------------------------- *)
+  type mutual = {
+    ty1 : hol_type, ty2 : hol_type,
+    cons1 : term, cons2 : term,
+    fix1 : fixpoint, fix2 : fixpoint,
+    sibling : fixpoint_bnf,
+    db : bnfBase.t,
+    recursion : thm
+  }
+
+  val defineMutual : {tyname1 : string, tyname2 : string} ->
+                     bnfBase.t -> hol_type list -> hol_type * hol_type ->
+                     mutual
+
 end

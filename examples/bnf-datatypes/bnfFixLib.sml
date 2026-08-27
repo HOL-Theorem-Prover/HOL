@@ -2,7 +2,7 @@ structure bnfFixLib :> bnfFixLib =
 struct
 
 open HolKernel boolLib
-open bnfInitialTheory bnfFixBNFTheory
+open bnfInitialTheory bnfFixBNFTheory bnfMutualTheory
 
 val ERR = mk_HOL_ERR "bnfFixLib"
 
@@ -187,11 +187,37 @@ fun bcong bnf (t1,t2) (us,vs) =
         val f = mk_var("f", t1 --> t2)
         val x = mk_var("x", functorAtArgs bnf (t1,srcs))
         val target = mk_comb (bmapT bnf f us, x)
-        val th = PART_MATCH (lhs o snd o dest_imp) (#mapCONG bnf) target
-        val conjs = strip_conj (#1 (dest_imp (concl th)))
-        val gs = List.map (rator o rhs o #2 o dest_imp o #2 o dest_forall)
-                          conjs
-        val th = INST (ListPair.mapEq (fn (g,v) => g |-> v) (tl gs, vs)) th
+        val th0 = PART_MATCH (lhs o snd o dest_imp) (#mapCONG bnf) target
+        (* the law's two families of functions, read off its hypotheses:
+           the conjunct for argument i says fᵢ a = gᵢ a *)
+        fun families th =
+            let val conjs = strip_conj (#1 (dest_imp (concl th)))
+                fun eqOf c = #2 (dest_imp (#2 (dest_forall c)))
+            in
+              (List.map (rator o lhs o eqOf) conjs,
+               List.map (rator o rhs o eqOf) conjs)
+            end
+        (* An argument the functor uses nowhere is left unconstrained by
+           the match, its target type included, so both families have to
+           be pinned to what the two bundles use there. *)
+        fun pairs th =
+            let val (fsL,gsL) = families th
+            in
+              ListPair.zipEq (tl fsL, us) @ ListPair.zipEq (tl gsL, vs)
+            end
+        val th1 =
+            INST_TYPE (List.concat
+                         (List.map (fn (l,v) => Type.match_type (type_of l)
+                                                                (type_of v))
+                                   (pairs th0)))
+                      th0
+        val th = INST (List.mapPartial
+                         (fn (l,v) => if is_var l andalso not (aconv l v) then
+                                        SOME (l |-> v)
+                                      else NONE)
+                         (pairs th1))
+                      th1
+        val gs = #2 (families th)
         val conjs = strip_conj (#1 (dest_imp (concl th)))
         val hyp = list_mk_conj (List.filter (not o trivialp) conjs)
         val parts = CONJUNCTS (ASSUME hyp)
@@ -793,8 +819,17 @@ fun fixpointBNF bnf (fix : fixpoint) : fixpoint_bnf =
       val _ = n > 0 orelse
               raise ERR "fixpointBNF"
                     "the functor was derived in its recursive argument alone"
-      fun toParams xs =
-          List.map (fn p => List.nth (xs, idxOf "fixpointBNF" largs p)) params
+      (* A parameter the type doesn't have — because the functor uses it
+         nowhere — still needs an entry in the map's argument list, and
+         which one cannot matter: the map ignores it. *)
+      fun byParams filler xs =
+          List.map (fn p => case Lib.assoc1 p (ListPair.zipEq (largs, xs)) of
+                                SOME (_,x) => x
+                              | NONE => filler p)
+                   params
+      val toParams = byParams Ify            (* one function per argument *)
+      val toParamTys = byParams (fn p => p)  (* one type *)
+      val toParamArgs = byParams mk_arb      (* or one value *)
       (* F's set function for the new type's i-th argument *)
       fun psetIdx i = 1 + idxOf "fixpointBNF" params (List.nth (largs, i))
       fun upto k = List.tabulate (k, fn i => i)
@@ -900,9 +935,9 @@ fun fixpointBNF bnf (fix : fixpoint) : fixpoint_bnf =
           the equations, as the parameters bnfFixBNFTheory is stated over
          ------------------------------------------------------------ *)
 
-      fun stAt tys = setAtArgs bnf 0 (atLargs tys newty, toParams tys)
+      fun stAt tys = setAtArgs bnf 0 (atLargs tys newty, toParamTys tys)
       fun sbAt tys i = setAtArgs bnf (psetIdx i) (atLargs tys newty,
-                                                  toParams tys)
+                                                  toParamTys tys)
       fun fixindAt tys =
           byDefn FIXIND_def [instLargs tys consN, stAt tys]
                  (instTyLargs tys (#set_induction fix))
@@ -1019,7 +1054,7 @@ fun fixpointBNF bnf (fix : fixpoint) : fixpoint_bnf =
          it holds are exactly F's *)
       fun witOf (w,wth) =
           let
-            val args = mk_arb newty :: toParams as_
+            val args = mk_arb newty :: toParamArgs as_
             val th = CONV_RULE (DEPTH_CONV BETA_CONV)
                        (SPECL args (INST_TYPE [av |-> newty] wth))
             val conjs = CONJUNCTS th
@@ -1215,6 +1250,196 @@ fun constructorEqns (cs : constructors) (res : fixpoint_bnf) =
        set_eqns = List.tabulate
                     (length (#set_thms res),
                      fn i => LIST_CONJ (List.map (setEqn i) defs))}
+    end
+
+
+(* ----------------------------------------------------------------------
+    Mutual recursion, as a nested recursion.
+
+    A mutually recursive pair arrives as one functor per type with the
+    sibling as an extra argument — F1(α,'a1) and F2(α,'a1), where α is
+    the type's own recursion and 'a1 the sibling's slot.  Nothing new is
+    constructed for it:
+
+      * take the second type's fixed point with the sibling's slot left a
+        parameter, which is an ordinary datatype in that argument;
+      * make it a functor and hand it on in memory;
+      * define the first type as a recursion *nested* through it,
+            T1 = μα. F1(α, ('a1 := α) T2)
+        which is what the package already does;
+      * and the second type is that datatype at T1.
+
+    The pair's recursion principle is then one instance of
+    bnfMutualTheory's, whose hypotheses are the two types' own
+    principles, the sibling's map, and three instances of the functors'
+    composition law.
+   ---------------------------------------------------------------------- *)
+
+type mutual = {
+  ty1 : hol_type, ty2 : hol_type,     (* the two types *)
+  cons1 : term, cons2 : term,         (* and their constructors *)
+  fix1 : fixpoint, fix2 : fixpoint,   (* what each type's construction gave *)
+  sibling : fixpoint_bnf,             (* the second type as a functor *)
+  db : bnfBase.t,                     (* the database, extended with it *)
+  recursion : thm                     (* the pair's recursion principle *)
+}
+
+(* the element variable and  |- map gs (map fs af) = map (gs o fs) af, at
+   the instance the functions say: one instance of the composition law,
+   pointwise.  The variable comes back because the caller has to
+   generalise the very one the theorem is about. *)
+fun mapOAt bnf (fs,gs) =
+    let val target = mk_o (#mkmap bnf gs, #mkmap bnf fs)
+        val th = PURE_REWRITE_RULE [combinTheory.I_o_ID]
+                                   (PART_MATCH lhs (#mapO bnf) target)
+        val srcs = List.map (#1 o dom_rng o type_of) fs
+        val af = mk_var("af", functorAtArgs bnf (hd srcs, tl srcs))
+    in
+      (af,
+       TRANS (SYM (ISPECL [#mkmap bnf gs, #mkmap bnf fs, af]
+                          combinTheory.o_THM))
+             (AP_THM th af))
+    end
+
+(* the answer type variable of a recursion principle *)
+fun answerTy th = #2 (dom_rng (type_of (#1 (dest_forall (concl th)))))
+
+fun defineMutual {tyname1, tyname2} db params (f1ty, f2ty) : mutual =
+    let
+      (* the sibling's slot, as the specification's translation names it *)
+      val a1 = mk_vartype "'a1"
+      val lives = alpha :: a1 :: params
+      val pIs = List.map Ify params
+
+      (* ---------------------------------------------------------------
+          the sibling, as a datatype in the other type's slot
+         --------------------------------------------------------------- *)
+      val bnf2 = bnfLib.deriveBNFn db lives f2ty
+      val fix2 = defineFixpoint {tyname = tyname2, ABS = tyname2 ^ "_ABS",
+                                 REP = tyname2 ^ "_REP"} bnf2
+      val res2 = fixpointBNF bnf2 fix2
+      val db = bnfBase.insert (#key res2, #info res2) db
+      val sibty = #newty fix2
+      fun sibAt ty = type_subst [a1 |-> ty] sibty
+
+      (* the sibling's map with a function in the other type's slot and
+         identities elsewhere: the map the two recursions meet in *)
+      val (mvars, _) = strip_forall (concl (#map_thm res2))
+      val sibfs = List.take (mvars, length mvars - 1)
+      val sibMAP =
+          repeat rator (lhs (#2 (strip_forall (concl (#map_thm res2)))))
+      fun smapArgs g =
+          List.map (fn f => let val (d,_) = dom_rng (type_of f)
+                            in if d = a1 then g else Ify d end)
+                   sibfs
+      fun smapTheta gs =
+          List.concat (ListPair.mapEq
+                         (fn (f,arg) =>
+                             let val (d,r) = dom_rng (type_of f)
+                                 val (d',r') = dom_rng (type_of arg)
+                             in [d |-> d', r |-> r'] end)
+                         (sibfs, gs))
+      fun smapAt g =
+          let val gs = smapArgs g
+          in list_mk_comb (Term.inst (smapTheta gs) sibMAP, gs) end
+
+      (* ---------------------------------------------------------------
+          the first type, as a recursion nested through the sibling
+         --------------------------------------------------------------- *)
+      val bnf1 = bnfLib.deriveBNFn db (alpha :: params)
+                                  (type_subst [a1 |-> sibAt alpha] f1ty)
+      val fix1 = defineFixpoint {tyname = tyname1, ABS = tyname1 ^ "_ABS",
+                                 REP = tyname1 ^ "_REP"} bnf1
+      (* and the first functor in both its arguments, whose composition
+         law the derivation below needs *)
+      val bnfF1 = bnfLib.deriveBNFn db lives f1ty
+
+      val ty1 = #newty fix1
+      val ty2 = sibAt ty1
+      val cons1 = #cons fix1
+      val cons2 = Term.inst [a1 |-> ty1] (#cons fix2)
+
+      (* the answer types: one per type, and distinct, whatever the two
+         constructions happened to call theirs *)
+      val answer1 = answerTy (#recursion fix1)
+      val answer2 = answerTy (#recursion fix2)
+      val avoid = [a1, answer1, answer2] @ type_vars ty1 @ type_vars sibty
+      val (c1v, c2v) = case freshTys "'e" 2 avoid of
+                           [x,y] => (x,y)
+                         | _ => raise ERR "defineMutual" "no fresh variables"
+      val rec1 = INST_TYPE [answer1 |-> c1v] (#recursion fix1)
+      val rec2 = INST_TYPE [answer2 |-> c2v] (#recursion fix2)
+
+      (* ---------------------------------------------------------------
+          the maps bnfMutualTheory's parameters stand for
+         --------------------------------------------------------------- *)
+      val g = mk_var("g", ty1 --> c1v)
+      val k2 = mk_var("k", ty2 --> c2v)
+      val km = mk_var("k", sibAt c1v --> c2v)
+      val h = mk_var("h", ty1 --> c1v)
+
+      fun F2map (rc, sib) = #mkmap bnf2 (rc :: sib :: pIs)
+      fun F1map (rc, sib) = #mkmap bnfF1 (rc :: sib :: pIs)
+
+      val smap_op = mk_abs (g, smapAt g)
+      val mpG_op = mk_abs (h, #mkmap bnf1 (h :: pIs))
+      val mpH_op = mk_abs (km, F1map (Ify c1v, km))
+      val mpK_op = mk_abs (g, mk_abs (k2, F1map (g, k2)))
+      val mpBg_op = mk_abs (g, F2map (smapAt g, g))
+      val mp2c_op = mk_abs (km, F2map (km, Ify c1v))
+      val mp2n_op = mk_abs (k2, F2map (k2, Ify ty1))
+      val mpQ_op = mk_abs (g, mk_abs (k2, F2map (k2, g)))
+      val mp1a_op = mk_abs (g, F2map (Ify c2v, g))
+
+      (* ---------------------------------------------------------------
+          and the hypotheses
+         --------------------------------------------------------------- *)
+      val srec1 = byDefn SREC_def [cons1, mpG_op] rec1
+      val srec2c = byDefn SREC_def
+                          [Term.inst [a1 |-> c1v] (#cons fix2), mp2c_op]
+                          (INST_TYPE [a1 |-> c1v] rec2)
+      val srec2n = byDefn SREC_def [cons2, mp2n_op]
+                          (INST_TYPE [a1 |-> ty1] rec2)
+      val smapeq =
+          let val gs = smapArgs g
+              val th = SPECL gs (INST_TYPE (smapTheta gs) (#map_thm res2))
+          in
+            byDefn SMAP_def [cons2, Term.inst [a1 |-> c1v] (#cons fix2),
+                             mpBg_op, smap_op]
+                   (GEN g th)
+          end
+      val mutmap1 =
+          let val (af, eq) = mapOAt bnfF1 ([g, smapAt g] @ pIs,
+                                           [Ify c1v, km] @ pIs)
+          in
+            byDefn MUTMAP_def [mpG_op, mpH_op, mpK_op, smap_op]
+                   (GENL [g, km, af] eq)
+          end
+      val mutmap2 =
+          let val (af, eq) = mapOAt bnf2 ([smapAt g, g] @ pIs,
+                                          [km, Ify c1v] @ pIs)
+          in
+            byDefn MUTMAP_def [mpBg_op, mp2c_op, mpQ_op, smap_op]
+                   (GENL [g, km, af] eq)
+          end
+      val mutsplit =
+          let val (af, eq) = mapOAt bnf2 ([k2, Ify ty1] @ pIs,
+                                          [Ify c2v, g] @ pIs)
+          in
+            byDefn MUTSPLIT_def [mpQ_op, mp1a_op, mp2n_op]
+                   (GENL [g, k2, af] (SYM eq))
+          end
+
+      val recursion =
+          CONV_RULE (DEPTH_CONV BETA_CONV)
+            (REWRITE_RULE [MUTREC_def]
+               (MATCH_MP MUTUAL_RECURSION
+                  (LIST_CONJ [srec1, srec2c, srec2n, smapeq,
+                              mutmap1, mutmap2, mutsplit])))
+    in
+      {ty1 = ty1, ty2 = ty2, cons1 = cons1, cons2 = cons2,
+       fix1 = fix1, fix2 = fix2, sibling = res2, db = db,
+       recursion = recursion}
     end
 
 end
