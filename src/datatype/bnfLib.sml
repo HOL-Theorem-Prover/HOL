@@ -131,15 +131,12 @@ val map_f = mk_var("f", alpha --> beta)
    occurrences of argument i, and an occurrence of any other argument
    contributes nothing to it. *)
 fun equal_ty ty = Term.inst [alpha |-> ty] boolSyntax.equality
-val empty_alpha = pred_setSyntax.mk_empty alpha
-
 (* K (∅ : elem set) : dom -> elem set *)
 fun K0e elem dom =
     mk_comb(
       Term.inst[alpha |-> (elem --> bool), beta |-> dom] combinSyntax.K_tm,
       pred_setSyntax.mk_empty elem
     )
-fun K0 ty = K0e alpha ty
 fun Ityped ty = Term.inst [alpha |-> ty] combinSyntax.I_tm
 
 val aset_ty = alpha --> bool
@@ -339,6 +336,15 @@ fun planSet lives i plan =
                        (hd lifted) (tl lifted)
           end
     end
+
+(* the type the plan describes.  Reading it off a set term, as this
+   used to, built the whole BIMG/union term just to project its
+   domain. *)
+fun planTy plan =
+    case plan of
+        FPvar (_,ty) => ty
+      | FPconst ty => ty
+      | FPnode {ty,...} => ty
 
 fun planInfos plan =
     case plan of
@@ -576,7 +582,7 @@ fun planMapCONG lives (fs,gs) plan =
             val splits = List.map (fn p => splitLU p (length kids)) parts
             fun kidfact (k, ({set,sub,...}:fkid)) =
                 let
-                  val sty = #1 (dom_rng (type_of (planSet lives 0 sub)))
+                  val sty = planTy sub
                   val y = mk_var("y", sty)
                   val ymem = pred_setSyntax.mk_in(y, mk_comb(set, x))
                   val subhyps =
@@ -611,8 +617,7 @@ fun planMapCONG lives (fs,gs) plan =
    ---------------------------------------------------------------------- *)
 
 fun mk_arb ty = mk_thy_const{Thy = "bool", Name = "ARB", Ty = ty}
-fun actual_of lives ({sub,...}:fkid) =
-    #1 (dom_rng (type_of (planSet lives 0 sub)))
+fun actual_of ({sub,...}:fkid) = planTy sub
 
 (* instantiate a witness's term and theorem so that the term takes the
    plan's actual argument types and lands in ty *)
@@ -640,7 +645,7 @@ fun planWitness lives i plan =
       | FPconst ty => constwit ty
       | FPnode {info = bI inf, kids, ty} =>
         let
-          val actuals = List.map (actual_of lives) kids
+          val actuals = List.map actual_of kids
           fun tryWit wit =
               let
                 val (wtm, wth) = inst_wit wit actuals ty
@@ -655,7 +660,7 @@ fun planWitness lives i plan =
                           NONE => NONE
                         | SOME (t,th) => SOME (t, MATCH_MP SING_ALL th)
                     else
-                      SOME (mk_arb (actual_of lives kid),
+                      SOME (mk_arb (actual_of kid),
                             ISPEC (planSet lives i sub) EMPTY_ALL)
                 val kidargs = ListPair.mapEq kidarg (needs, kids)
               in
@@ -720,7 +725,7 @@ fun planNontrivial lives i plan =
                 | SOME (t, th) =>
                   let
                     val theta = match_type (type_of (#1 inh))
-                                           (actual_of lives kid --> ty)
+                                           (actual_of kid --> ty)
                     val x = mk_comb(Term.inst theta (#1 inh), t)
                     val inhth = SPEC t (INST_TYPE theta (#2 inh))
                     val base = MATCH_MP BIMGo_NONEMPTY (CONJ inhth th)

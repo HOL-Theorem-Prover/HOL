@@ -128,9 +128,10 @@ fun boundOrdinal bnf =
        omega_le = MATCH_MP cardeq_preds_omega (CONJ (#bndINFINITE bnf) th)}
     end
 
-fun setBoundThm bnf bd ty =
-    let val cardeq = #cardeq (boundOrdinal bnf)
-        val x = mk_var("x", functorAt bnf ty)
+(* the caller passes the ordinal's theorem: deriving it again here would
+   repeat the whole choice-term construction, once per instance *)
+fun setBoundThm bnf cardeq ty =
+    let val x = mk_var("x", functorAt bnf ty)
         val bounded = SPEC x (INST_TYPE [alpha |-> ty] (#bndthm bnf))
     in
       GEN x (MATCH_MP cardeq_preds_bound (CONJ cardeq bounded))
@@ -157,7 +158,7 @@ fun nontrivialThm bnf ty =
     end
 
 fun minsetBound bnf ty =
-    let val {bd, omega_le, ...} = boundOrdinal bnf
+    let val {bd, omega_le, cardeq} = boundOrdinal bnf
         val ordty = type_of bd
         val abty = sumSyntax.mk_sum (ty, bool)
         val laws = LIST_CONJ [MapIdThm bnf ty,
@@ -172,8 +173,8 @@ fun minsetBound bnf ty =
                               NaturalThm bnf (ordty,ordty),
                               nontrivialThm bnf ordty,
                               omega_le,
-                              setBoundThm bnf bd ty,
-                              setBoundThm bnf bd abty]
+                              setBoundThm bnf cardeq ty,
+                              setBoundThm bnf cardeq abty]
         val th = MATCH_MP MINSET_CARDLEQ laws
         (* and from the bounding set to the whole type it sits in *)
         val s = mk_var("s", functorAt bnf ty --> ty)
@@ -223,7 +224,6 @@ fun initialAlgebra bnf =
         val idxty = pairSyntax.mk_prod (carrier --> bool,
                                         functorAt bnf carrier --> carrier)
         val prodty = idxty --> carrier
-        fun mp p = mapOp bnf p
         fun st ty = setOp bnf ty
         val laws =
             CONJ (MapCongThm bnf (prodty,target))
@@ -417,12 +417,6 @@ fun mkCaseTerm [_] [(x,b)] scrut = subst [x |-> scrut] b
       end
   | mkCaseTerm _ _ _ = raise ERR "mkCaseTerm" "malformed"
 
-val reduceConv =
-    simpLib.SIMP_CONV boolSimps.bool_ss
-                      [sumTheory.SUM_MAP_def, sumTheory.sum_case_def,
-                       sumTheory.OUTL, sumTheory.OUTR, pairTheory.PAIR_MAP,
-                       pairTheory.FST, pairTheory.SND, combinTheory.I_THM]
-
 fun defineConstructors names bnf fix =
     let val newty = #newty fix
         val cons = #cons fix
@@ -572,8 +566,15 @@ fun defineConstructors names bnf fix =
                      combinTheory.o_DEF, combinTheory.K_DEF,
                      pairTheory.setFST_thm, pairTheory.setSND_thm])))
                  (#set_induction fix))
-        val induction = SOME (Prim_rec.prove_induction_thm legacy)
-                        handle HOL_ERR _ => NONE
+        (* whether this is a nested recursion is known structurally: a
+           nested factor's mapped type is not the answer type.  Deciding
+           it by catching an exception out of Prim_rec would swallow
+           genuine failures there as well. *)
+        val nested = List.exists
+                       (List.exists (fn ty => Type.compare (ty,cty) <> EQUAL)
+                                    o #recmapped) cs
+        val induction = if nested then NONE
+                        else SOME (Prim_rec.prove_induction_thm legacy)
         (* the derivations of distinctness and injectivity want the plain
            existential, which is also the form TypeBase stores *)
         val fvars = map #fvar cs

@@ -15,7 +15,7 @@ sig
      fixed point it defined a moment ago, say — can hand them straight
      to the next step, rather than the next step having to look them up.
      Nothing about an intermediate product needs to be registered. *)
-  val pure_insert : (key * thm info) -> t -> t
+  val insert : (key * thm info) -> t -> t
 
   val thy_lookup : {thyname:string} -> t option
   val fullDB : unit -> t

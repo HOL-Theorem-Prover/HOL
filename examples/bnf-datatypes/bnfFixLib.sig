@@ -42,8 +42,8 @@ sig
   val boundOrdinal : bnfLib.derived_bnf -> {bd : term, cardeq : thm,
                                             omega_le : thm}
 
-  (* |- !x. setOp bnf ty x <<= preds bd *)
-  val setBoundThm : bnfLib.derived_bnf -> term -> hol_type -> thm
+  (* |- !x. setOp bnf ty x <<= preds bd, given boundOrdinal's cardeq *)
+  val setBoundThm : bnfLib.derived_bnf -> thm -> hol_type -> thm
 
   (* The cardinality bound the construction runs on: a type big enough
      to hold every minimal algebra over ty, and

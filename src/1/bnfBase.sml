@@ -170,6 +170,11 @@ fun sanity_check (ty:key) ((info as bI {set,map,canontype,wits,inhabits,...})
         "there isn't one inhabits entry per set function"
     end
 
+(* the in-memory path goes through the same check as the recorded one:
+   validation should not depend on which entry point a caller used *)
+fun insert (ty, thm_info) db =
+    (sanity_check ty thm_info; pure_insert (ty, thm_info) db)
+
 fun updateDB (ty,info as bI fields) =
     let val thm_info as bI thm_fields = kname_to_thm_info info
         val _ = sanity_check ty thm_info
