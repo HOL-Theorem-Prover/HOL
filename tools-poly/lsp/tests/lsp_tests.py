@@ -1450,6 +1450,14 @@ def test_second_file_in_one_server_is_reported():
         c = Client(d)
         try:
             _init(c, d, timeout=30)
+            # A `.sig' declares no theory, and editors open them next to
+            # a script as a matter of course, so it must neither take
+            # the binding nor draw a warning.
+            idx = c.total_msgs()
+            _did_open(c, f"file://{d}/a.sig", "val x : int\n")
+            assert_true(c.wait_for_method("window/showMessage", 3, idx) is None,
+                        "a .sig draws no warning")
+
             idx = c.total_msgs()
             _did_open(c, uri_a, script("a"))
             assert_true(c.wait_for_method("$/compileCompleted", 120, idx),
@@ -1460,11 +1468,22 @@ def test_second_file_in_one_server_is_reported():
             idx = c.total_msgs()
             _did_open(c, uri_b, script("b"))
             m = c.wait_for_method("window/showMessage", 30, idx)
-            assert_true(m is not None, "second file is reported")
+            assert_true(m is not None, "second script is reported")
             assert_eq(m["params"]["type"], 2, "reported as a warning")
             msg = m["params"]["message"]
+            # The .sig opened first must not be named as the owner.
             assert_true("aScript.sml" in msg and "bScript.sml" in msg,
-                        f"names both files ({msg!r})")
+                        f"names both scripts ({msg!r})")
+            assert_true("a.sig" not in msg,
+                        f"the .sig did not take the binding ({msg!r})")
+
+            # One toast per process; further offenders go to the log only.
+            idx = c.total_msgs()
+            _did_open(c, f"file://{d}/cScript.sml", script("c"))
+            assert_true(c.wait_for_method("window/showMessage", 5, idx) is None,
+                        "a third script does not raise a second toast")
+            assert_true(c.wait_for_method("window/logMessage", 5, idx)
+                        is not None, "but it is logged")
         finally:
             c.close()
     finally:

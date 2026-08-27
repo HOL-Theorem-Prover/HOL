@@ -531,24 +531,42 @@ fun start {diag, dbg} = let
      Clients are expected to run one server per buffer; `hol-lsp-enable'
      does this by giving each buffer its own eglot project.  Say so
      when a client does otherwise, rather than answering with quiet
-     nonsense. *)
+     nonsense.
+
+     Only `*Script.sml' takes the binding.  A `.sig' or an ordinary
+     `.sml' declares no theory of its own, and editors routinely open
+     them alongside a script -- the hol4-vscode selector matches the
+     whole language, so it sends every one of them.  Letting those
+     claim the process would hand it to whichever file the client
+     happened to sync first and then report the user's actual script
+     as the offender.
+
+     One warning per process, not per file: a client that opens N
+     scripts syncs them all at once (vscode-languageclient replays
+     `didOpen' for every already-open match when it registers), and N
+     toasts is a worse way to learn one fact.  Every offending file
+     still reaches the log. *)
   val boundUri : string option ref = ref NONE
-  val warnedUris : (string, unit) Binarymap.dict ref =
-    ref (Binarymap.mkDict String.compare)
+  val warnedOnce = ref false
+  fun isScriptUri uri = String.isSuffix "Script.sml" uri
   fun checkSingleFile uri =
-    case !boundUri of
+    if not (isScriptUri uri) then ()
+    else case !boundUri of
       NONE => boundUri := SOME uri
     | SOME first =>
-      if first = uri orelse Option.isSome (Binarymap.peek (!warnedUris, uri))
-      then ()
-      else (
-        warnedUris := Binarymap.insert (!warnedUris, uri, ());
-        warnUser (String.concat [
+      if first = uri then ()
+      else let
+        val msg = String.concat [
           "This HOL server is bound to ", first,
           ".  Goal states and hovers for ", uri,
-          " will be unreliable: one server can serve only one file, and ",
-          "closing the first one does not release it.  Configure your ",
-          "editor to start a server per buffer."]))
+          " will be unreliable: one server can serve only one script, ",
+          "and closing the first does not release it.  Configure your ",
+          "editor to start a server per buffer -- see ",
+          "tools-poly/lsp/README.md, \"One server per buffer\"."]
+        in
+          logMessage msg;
+          if !warnedOnce then () else (warnedOnce := true; warnUser msg)
+        end
 
   val textWidth = 100 (* configure? *)
   val printDepth = 100
