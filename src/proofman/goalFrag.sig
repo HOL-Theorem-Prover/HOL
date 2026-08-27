@@ -40,6 +40,12 @@ val close_paren     : frag_tactic
 val close_repeat    : frag_tactic
 val close_first_lt  : frag_tactic
 
+(* Tags naming the combinators still open around the focus,
+   outermost first: "branch 2 of 3 of THENL", "inside >-".  What
+   `pp_goalstate' renders above the goals; exposed separately so a
+   client can pin them somewhere that does not scroll away. *)
+val context_lines   : goalstate -> string list
+
 val pp_goalstate    : goalstate Parse.pprinter
 
 end

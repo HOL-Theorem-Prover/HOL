@@ -224,6 +224,8 @@ val parseTacticBlock: exp -> (int * int) tac_expr = let
         SOME args => MapFirst (tr f, map (fn e => OOpaque (trPrec e)) args)
       | NONE => Opaque (trPrec e))
     | SOME ("RENAME_TAC", [pat]) => group true (tr e) (Rename (tr pat))
+    (* QLib.rename = Q.RENAME_TAC; same argument, a quotation list. *)
+    | SOME ("rename", [pat]) => group true (tr e) (Rename (tr pat))
     | SOME ("ALL_TAC", []) => group true (tr e) (Then [])
     | SOME ("all_tac", []) => group true (tr e) (Then [])
     | _ => Opaque (trPrec e)
@@ -344,7 +346,7 @@ fun mapTacExpr {start, stop, repair} = let
     | go (OOpaque (prec, p)) = OOpaque (prec, tr false p)
   in go end
 
-fun printTacsAsE s ls = let
+local
   datatype tree
     = TAtom of string
     | TOpaque of int * string
@@ -352,7 +354,7 @@ fun printTacsAsE s ls = let
     | TApp of string * tree list
     | TList of tree list
     | TTuple of tree list
-  val mkTree = let
+  fun mkTree s = let
     fun sub (start, stop) = String.concat [
       String.substring (s, start, stop-start)]
     fun mkInfixl _ acc [] = Option.valOf acc
@@ -431,39 +433,49 @@ fun printTacsAsE s ls = let
       | go (TList ls) = TList (map go ls)
       | go (TTuple ls) = TTuple (map go ls)
     in go end
-  val r = ref []
-  fun print s = r := s :: !r
-  val indent = ref 1
-  fun newline () = (print "\n"; funpow (!indent) (fn () => print "  ") ())
-  fun parenIf b f = if b then
-    (print "("; indent := !indent + 1; f (); indent := !indent - 1; print ")")
-  else f ()
-  val getPrec' = fn "by" => 8 | "suffices_by" => 8 | _ => 0
-  fun printTree _ (TAtom s) = print s
-    | printTree prec (TOpaque (p, s)) = parenIf (p < prec) (fn () => print s)
-    | printTree prec (TInfix (e1, s, e2)) = let
-      val p = getPrec' s
-      val _ = parenIf (getPrec' s < prec) (fn () => (
-        printTree p e1; newline (); app print [s, " "]; printTree (p+1) e2))
-      in () end
-    | printTree prec (TApp (s, args)) =
-      parenIf (9 < prec) (fn () => (
-        print s; app (fn e => (print " "; printTree 10 e)) args))
-    | printTree _ (TList []) = print "[]"
-    | printTree _ (TList (a::l)) = (
-      print "["; printTree 0 a;
-      app (fn e => (print ", "; printTree 0 e)) l; print "]")
-    | printTree _ (TTuple []) = print "()"
-    | printTree _ (TTuple (a::l)) = (
-      print "("; printTree 0 a;
-      app (fn e => (print ", "; printTree 0 e)) l; print ")")
-  fun goL l = case optTree $ mkTree l of
+  fun render t = let
+    val r = ref []
+    fun print s = r := s :: !r
+    val indent = ref 1
+    fun newline () = (print "\n"; funpow (!indent) (fn () => print "  ") ())
+    fun parenIf b f = if b then (
+      print "("; indent := !indent + 1;
+      f (); indent := !indent - 1; print ")")
+    else f ()
+    val getPrec' = fn "by" => 8 | "suffices_by" => 8 | _ => 0
+    fun printTree _ (TAtom s) = print s
+      | printTree prec (TOpaque (p, s)) = parenIf (p < prec) (fn () => print s)
+      | printTree prec (TInfix (e1, s, e2)) = let
+        val p = getPrec' s
+        val _ = parenIf (getPrec' s < prec) (fn () => (
+          printTree p e1; newline (); app print [s, " "]; printTree (p+1) e2))
+        in () end
+      | printTree prec (TApp (s, args)) =
+        parenIf (9 < prec) (fn () => (
+          print s; app (fn e => (print " "; printTree 10 e)) args))
+      | printTree _ (TList []) = print "[]"
+      | printTree _ (TList (a::l)) = (
+        print "["; printTree 0 a;
+        app (fn e => (print ", "; printTree 0 e)) l; print "]")
+      | printTree _ (TTuple []) = print "()"
+      | printTree _ (TTuple (a::l)) = (
+        print "("; printTree 0 a;
+        app (fn e => (print ", "; printTree 0 e)) l; print ")")
+    in printTree 0 t; concat $ rev (!r) end
+  fun tree s e = case optTree $ mkTree s e of
       TAtom "ALL_TAC" => NONE
     | t => SOME t
-  fun goT [] = ()
-    | goT [t] = (print "e("; printTree 0 t; print ");\n")
-    | goT (t::ts) = (print "val _ = e("; printTree 0 t; print ");\n"; goT ts)
-  in goT (List.mapPartial goL ls); concat $ rev (!r) end
+in
+
+fun printTacsAsE s ls = let
+  fun goT [] = []
+    | goT (t::ts) = (if null ts then "e(" else "val _ = e(")
+                    :: render t :: ");\n" :: goT ts
+  in concat (goT (List.mapPartial (tree s) ls)) end
+
+fun printTacAsSML s e = Option.map render (tree s e)
+
+end (* local *)
 
 datatype tac_frag_open
   = FOpen
@@ -509,10 +521,18 @@ fun linearize isAtom e = let
   and go e (acc as (one, acc')) = if isAtom e then (false, FAtom e :: acc') else let
     fun bracket2 stop f start (one, acc) = (false, FBracket (start, rev (snd (f one)), stop, e) :: acc)
     val bracket = bracket2 FClose
+    (* `go' accumulates frags reversed; un-reverse each section, as
+       `bracket2' and `group' already do for their contents. *)
     fun mbracket stop mid start f (one, acc) =
-      (false, FMBracket (start, mid, stop, f one, e) :: acc)
+      (false, FMBracket (start, mid, stop, map rev (f one), e) :: acc)
     fun asTac f (true, acc) = f (true, acc)
       | asTac f acc = bracket (K $ f (true, [])) FOpen acc
+    (* TRY t = t ORELSE ALL_TAC, so it needs ORELSE's second, empty
+       branch.  Without the FNextFirst a closer meets goalFrag's
+       `Try (Failed e, _)' node and re-raises -- exactly the failure
+       TRY exists to absorb. *)
+    fun tryish stop e' = mbracket stop FNextFirst FOpenFirst
+                           (fn one => [snd (go e' (one, [])), []])
     val r = case e of
       Then ls => goList ls acc
     | ThenLT (e, ls) => asTac (goList ls o go e) acc
@@ -520,7 +540,7 @@ fun linearize isAtom e = let
     | First (e::ls) =>
       asTac (mbracket FClose FNextFirst FOpenFirst (fn one =>
         map (fn e => snd (go e (one, []))) (e::ls))) acc
-    | Try e => asTac (bracket (fn one => go e (one, [])) FOpenFirst) acc
+    | Try e' => asTac (tryish FClose e') acc
     | Repeat e => asTac (bracket2 FCloseRepeat (fn one => go e (one, [])) FOpenRepeat) acc
     | MapEvery (_, []) => acc
     | MapFirst (_, []) => (true, FAtom (First []) :: acc')
@@ -543,7 +563,7 @@ fun linearize isAtom e = let
       mbracket FClose FNextSplit (FOpenSplit n) (fn _ =>
         map (fn e => snd (go e (false, []))) [e1, e2]) acc
     | LReverse => (one, FAtom LReverse :: acc')
-    | LTry e => bracket (fn one => go e (one, [])) FOpenFirst acc
+    | LTry e' => tryish FCloseFirst e' acc
     | LRepeat e => bracket (fn one => go e (one, [])) FOpenRepeat acc
     | LFirstLT e => bracket2 FCloseFirstLT (fn one => go e (one, [])) FOpenFirstLT acc
     | LSelectThen (e1, e2) =>

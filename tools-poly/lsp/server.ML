@@ -109,12 +109,14 @@ fun encGoalState ({asms, goal}: goal_state) print = (
   print ",\"goal\":"; encString goal print;
   print "}")
 
-fun encGoalStateResponse ({theorem, step, goals, pretty, error, failedRange}
-                          : goal_state_response) print = (
+fun encGoalStateResponse ({theorem, step, goals, pretty, context, status,
+                           error, failedRange} : goal_state_response) print = (
   print "{\"theorem\":"; encString theorem print;
   print ",\"step\":"; encInt step print;
   print ",\"goals\":"; encArray encGoalState goals print;
   print ",\"pretty\":"; encString pretty print;
+  print ",\"context\":"; encArray encString context print;
+  print ",\"status\":"; encString status print;
   print ",\"error\":"; encOrNull encString error print;
   print "}")
 
@@ -129,7 +131,7 @@ fun encGoalStateResponse ({theorem, step, goals, pretty, error, failedRange}
    the compile uses — so keyword matching, attribute brackets, strings
    and comments are handled correctly.  parseDec streams decs one at a
    time; we bail on the first matching HOLTheoremDecl. *)
-fun findEnclosingTheorem text cursor = let
+fun findEnclosingTheorem compileDone text cursor = let
   val consumed = ref false
   fun read _ = if !consumed then "" else (consumed := true; text)
   fun errSink _ _ _ = ()  (* buffer may be mid-edit and mildly invalid *)
@@ -157,7 +159,8 @@ fun findEnclosingTheorem text cursor = let
                   tacText = String.substring (text, tacStart,
                                               Int.max (0, tacEnd - tacStart)),
                   tacStart = tacStart,
-                  cursor = cursor})
+                  cursor = cursor,
+                  compileDone = compileDone})
         end
         else loop ()
         end
@@ -685,6 +688,12 @@ fun start {diag, dbg} = let
         NONE => minEditOffset := SOME off
       | SOME m => if off < m then minEditOffset := SOME off else ()
 
+  fun commonPrefixLen (a, b) = let
+    val n = Int.min (size a, size b)
+    fun go i = if i >= n orelse String.sub (a, i) <> String.sub (b, i) then i
+               else go (i + 1)
+    in go 0 end
+
   fun applyEdit ({compile, lastTrees, minEditOffset, ...}:file_data) version changes = let
     val _ = stopCompile compile
     fun getLines text NONE = mkLineCounter text
@@ -692,13 +701,31 @@ fun start {diag, dbg} = let
     val bumpMin = bumpMinEdit minEditOffset
     (* The old `parse` value is carried through the fold so we can
        preserve its `declSnapshots` on each step (via
-       `carryOverSnapshots`).  On a full-text replace (`range = NONE`)
-       the snapshots become useless — their `endByte` offsets no
-       longer index anything meaningful in the new text — so we drop
-       them explicitly and push min-edit-offset to 0. *)
+       `carryOverSnapshots`).
+
+       A full-text replace (`range = NONE`) used to drop the
+       snapshots and push min-edit-offset to 0, on the grounds that
+       their `endByte` offsets no longer index anything meaningful.
+       That holds only past the point where the two texts diverge --
+       and a whole-document replace is typically a revert or a
+       reformat, where they diverge late or not at all.  Sending
+       those down the from-scratch path recompiled the file in a
+       process that has already run its `Ancestors', which does not
+       give the same result: a `C-x v u' left the goal state
+       reporting tactics as failing that had just worked.
+
+       So take the offset from the texts rather than from the edit:
+       the first byte at which old and new differ.  That is never
+       earlier than the edit's own start -- everything before it is
+       untouched by construction -- and is often much later, because
+       a replacement usually re-inserts what it replaced.  It matters
+       for a range as well as for a whole-document change: reverting
+       a buffer has Emacs report one change spanning the entire
+       document, whose `from' is 0 like any other. *)
     fun applyText [] data = data
-      | applyText ({range = NONE, text}::cs) _ =
-        (bumpMin 0; applyText cs (emptyParseData 0, text, NONE))
+      | applyText ({range = NONE, text}::cs) (parse, base, _) =
+        (bumpMin (commonPrefixLen (base, text));
+         applyText cs (carryOverSnapshots parse, text, NONE))
       | applyText ({range = SOME (from, to), text}::cs) (parse, base, lines) = let
         val lines = getLines base lines
         val (from, to) = (fromLineCol lines from, fromLineCol lines to)
@@ -706,7 +733,7 @@ fun start {diag, dbg} = let
           Substring.substring (base, 0, from),
           Substring.full text,
           Substring.substring (base, to, size base - to)]
-        val _ = bumpMin from
+        val _ = bumpMin (commonPrefixLen (base, text))
         in applyText cs (carryOverSnapshots parse, text, NONE) end
     val {parse, text = {text, lines, version = _}} = !lastTrees
     val (parse, text, lines) = applyText changes (parse, text, SOME lines)
@@ -906,11 +933,13 @@ fun start {diag, dbg} = let
 
   (* The declaration whose `Proof ... QED` body contains the edit, if the
      edit is in one.  `findEnclosingTheorem` answers exactly that and is
-     the same walk the goal-state handler does. *)
+     the same walk the goal-state handler does.  Its `compileDone`
+     argument only reaches the `theorem_context` it builds, which we
+     discard, so anything will do here. *)
   fun proofBodyAt text off =
       (case off of
            NONE => NONE
-         | SOME b => (case findEnclosingTheorem text b of
+         | SOME b => (case findEnclosingTheorem false text b of
                           SOME (decStart, _) => SOME decStart
                         | NONE => NONE))
       handle Empty => NONE
@@ -965,8 +994,7 @@ fun start {diag, dbg} = let
     val {text as {lines, ...}, parse = lastParse} = !lastTrees
     val {declSnapshots = lastSnaps, diags = oldDiags, ...} = lastParse
     (* Resume decision: pick the largest snapshot with `endByte <=
-       !minEditOffset`.  If none, do a full boot-restore starting at
-       byte 0. *)
+       !minEditOffset`.  If none, recompile the whole file. *)
     val resumeSnap =
       case !minEditOffset of
         NONE => NONE
@@ -974,16 +1002,50 @@ fun start {diag, dbg} = let
         (* `declSnapshots` is newest-first, so the first match walking
            the list is the largest `endByte <= editOff`. *)
         List.find (fn (s:declSnapshot) => #endByte s <= editOff) lastSnaps
-    (* `restoreSnap` is run by the compile thread, not here.  Part of
-       what a compile snapshot holds is the file's namespace layer --
-       `Theory foo` expands to `open HolKernel Parse boolLib bossLib`,
-       whose bindings land there -- and that layer is thread-local
-       (lsp_namespace.ML: a thread inherits nothing, so `snapshotLayer`
-       captures on one thread for a thunk to install on another).
-       Installing it here would populate *this* thread and leave the
-       compile with an empty layer, so a resumed compile could not see
-       `ACCEPT_TAC`.  A full restart needs no such care: its compile
-       thread re-executes the `Theory` dec, opens and all. *)
+    (* Recompiling the whole file starts from the state the file's
+       first dec -- its header -- left behind, not from the boot state.
+       The boot state is not a legitimate starting point once a compile
+       has run in this process: `resetForCompile` rewinds
+       `Meta.loadedMods`, so the holdep preload re-`quse`s the
+       ancestors' generated `.sml` files.  Each of those ends in
+       `Theory.load_complete`, which seals the theory in
+       `KernelSig.sealed_ref` -- process-global, and deliberately
+       outside `Context`, being a soundness gate rather than a cache.
+       `TheoryReader` refuses the re-read, every ancestor behind it
+       fails "not in ancestry", and the session stops answering
+       goal-state and hover requests for good.
+
+       Resuming from the header instead leaves the ancestors both
+       loaded and in the theory graph, which makes re-running the
+       header idempotent: its `open`s resolve against structures that
+       are still present, and `new_theory` on the name it already holds
+       restarts that segment.  An ancestor the user has *added* is
+       still absent from `loadedMods`, so the preload loads it for the
+       first time and `link_parents` puts it in the graph.  One the
+       user has *removed* stays loaded: nothing can withdraw its
+       constants, grammar and DB entries, so that case needs a fresh
+       process.
+
+       `lastSnaps` is newest-first, so its last element is the oldest
+       dec captured.  That is the header unless the header itself
+       drew a diagnostic, which suppresses its capture. *)
+    val baseSnap = case lastSnaps of
+        [] => NONE
+      | _ => SOME (List.last lastSnaps)
+    (* `restoreSnap` is run by the compile thread, not here -- whichever
+       snapshot it is restoring.  Part of what a compile snapshot holds
+       is the file's namespace layer -- `Theory foo` expands to
+       `open HolKernel Parse boolLib bossLib`, whose bindings land there
+       -- and that layer is thread-local (lsp_namespace.ML: a thread
+       inherits nothing, so `snapshotLayer` captures on one thread for a
+       thunk to install on another).  Installing it here would populate
+       *this* thread and leave the compile with an empty layer, so the
+       recompile could not see `ACCEPT_TAC`.
+
+       Only the boot-state path needs no such care, because there the
+       compile thread re-executes the `Theory` dec, opens and all --
+       and that is now the rare case, taken only when the header drew a
+       diagnostic and so was never captured. *)
     val (restoreSnap, initialTrees, resumeStart, oldDiags) =
       case resumeSnap of
         NONE => (
@@ -992,8 +1054,11 @@ fun start {diag, dbg} = let
                            {resumeStart = NONE,
                             inProofBody = proofBodyAt (#text text)
                                                       (!minEditOffset)};
-          !LSPExtension.resetForCompile ();
-          (fn () => (), emptyParseData 8, 0, oldDiags))
+          ((case baseSnap of
+              NONE => (!LSPExtension.resetForCompile (); (fn () => ()))
+            | SOME s =>
+              (fn () => !LSPExtension.restoreCompileSnap (#compileSnap s))),
+           emptyParseData 8, 0, oldDiags))
       | SOME snap => let
           val _ = !LSPExtension.notifyCompileStart (!minEditOffset)
           val _ = invalidateProofs uri lines
@@ -1611,7 +1676,7 @@ fun start {diag, dbg} = let
        stops asking (the pane is closed, say) the last-focused proof
        stays held rather than being checked.  A timer would fix that;
        it is not worth the machinery yet. *)
-    in case findEnclosingTheorem (#text text) offset of
+    in case findEnclosingTheorem (#done parse) (#text text) offset of
          NONE => (!LSPExtension.setProofFocus NONE; NONE)
        | SOME (decStart, thm as {quoteStart, ...}) =>
          let val () = !LSPExtension.setProofFocus (SOME decStart)

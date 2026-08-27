@@ -72,6 +72,8 @@ when the theorem statement can't be parsed).  Otherwise:
   "step": <int>,
   "goals": [{"asms": ["<assumption>", ...], "goal": "<goal>"}, ...],
   "pretty": "<full REPL-style render>",
+  "context": ["<combinator tag>", ...],
+  "status": "ok" | "pending",
   "error": <string or null>
 }
 ```
@@ -85,6 +87,25 @@ when the theorem statement can't be parsed).  Otherwise:
   via the VT100 backend, so bound / free variables carry ANSI colour
   escapes (`\x1B[…m`).  Clients that don't render ANSI can strip the
   escapes with `\x1B\[[0-9;]*m` or fall back to `goals`.
+- `context` — the combinator tags naming what is still open around
+  the focus, outermost first: `"branch 2 of 3 of THENL"`,
+  `"inside 2 nested >-"`.  `pretty` already prints these above the
+  goals, so a client rendering it verbatim can ignore the field; it
+  is sent separately so a client can pin them somewhere that doesn't
+  scroll, which matters because the goals are listed with the current
+  one last.  Matching the exact strings is also how a client can
+  strip the line back out of `pretty` — a goal may itself begin with
+  a `[`.
+- `status` — `"pending"` when the answer is provisional because the
+  file's own compile hasn't finished.  The walker compiles each
+  tactic against the file's namespace, so until the file's `open`s
+  have run the tactic names aren't there and nothing can be applied;
+  goal-state requests are answered during a compile on purpose (see
+  `goalStateAtPos`), so a client should show what it gets but not
+  treat it as settled.  A tactic whose source doesn't compile never
+  produces an `error` either way: the file's compile reports the real
+  message against that very text, and the walker would only duplicate
+  and misdescribe it.
 - `error` — non-null when the walker gave up (e.g. wall-clock budget
   exceeded); `goals` / `pretty` are empty and clients should render
   the message in place of the state.  A mid-walk partial state is
@@ -96,12 +117,27 @@ when the theorem statement can't be parsed).  Otherwise:
 ### Client cookbook
 
 - **eglot (shipped in this repo)** — `hol-lsp-show-goal-state` bound
-  to `M-h M-g`.  Set `hol-lsp-goals-follow-cursor` non-nil to make
+  to `M-h M-g`.  The *HOL Goals* window is scrolled to the buffer's
+  end, the current goal being last and the subgoal count printed
+  after them, with `theorem`, `step`, `context` and `error` in the
+  window's `header-line-format` so they stay visible.  An empty
+  `goals` with no `error` means the focused subgoal(s) are proved —
+  what `pretty` announces on its first line, which scrolling to the
+  end would carry out of sight — so the header shows that too.
+  The pane goes beside the script window when that window is at
+  least `hol-lsp-goals-side-min-width` columns (default 160, so both
+  halves clear HOL's 75-column render), and below it otherwise.
+  Set `hol-lsp-goals-follow-cursor` non-nil to make
   `*HOL Goals*` auto-refresh on cursor movement (debounced via
   `hol-lsp-goals-follow-delay`).  `hol-lsp--render-goals` runs
   `ansi-color-apply-on-region` on the inserted `pretty` text so the
   bound / free variable colouring survives.
-- **VS Code (recipe, not shipped)** — `client.sendRequest("$/hol/goalState", params)`
+- **VS Code** — the `lsp-integration` branch of
+  [hol4-vscode](https://github.com/HOL-Theorem-Prover/hol4-vscode)
+  ships a client and a HOL Goals pane; see
+  [`vscode-setup.md`](vscode-setup.md) for a step-by-step install.
+  To drive `$/hol/goalState` yourself,
+  `client.sendRequest("$/hol/goalState", params)`
   returns the response object.  For the simplest path, strip the ANSI
   escapes (regex `\x1B\[[0-9;]*m`) and display `pretty` as plain text
   in a `WebviewPanel`, or ignore `pretty` entirely and render the
@@ -127,26 +163,38 @@ or **lsp-mode** (from MELPA).
 Eglot documentation: `M-x info` → `(eglot)`.  Minimal `init.el`:
 
 ```elisp
-;; Make holscript-mode discoverable.
+;; hol-mode.el / holscript-mode.el on the load-path.
 (add-to-list 'load-path
              "/absolute/path/to/HOL/tools/editor-modes/emacs")
-(require 'holscript-mode)  ; auto-loads on *Script.sml files
+(require 'hol-mode)
 
-;; Tell eglot how to start the HOL LSP.  Register both the classic
-;; SMIE-based holscript-mode and the tree-sitter variant
-;; holscript-ts-mode; holscript-pick-mode chooses between them
-;; depending on whether the tree-sitter parser is installed, and
-;; holscript-ts-mode is derived from prog-mode (not from
-;; holscript-mode), so a single-mode entry misses one of the two.
-(with-eval-after-load 'eglot
-  (add-to-list 'eglot-server-programs
-               '((holscript-mode holscript-ts-mode)
-                 . ("/absolute/path/to/HOL/bin/hol" "lsp"))))
+;; Registers the server for both holscript-mode and its tree-sitter
+;; variant holscript-ts-mode, installs the HOLHEAP-clustered project
+;; function, and auto-starts eglot from each mode hook.
+(hol-lsp-enable)
 
-;; Auto-start eglot when opening a HOL script.  Hook both modes.
-(add-hook 'holscript-mode-hook 'eglot-ensure)
-(add-hook 'holscript-ts-mode-hook 'eglot-ensure)
+;; Optional: *HOL Goals* follows point.
+(setq hol-lsp-goals-follow-cursor t)
 ```
+
+That is the whole configuration — in particular there is no need to
+add an `eglot-server-programs` entry, call `eglot-ensure`, or send
+`$/setConfig` by hand:
+
+- `hol-lsp-enable` registers `hol-lsp--server-program`, which resolves
+  `bin/hol` per file through `.hol/make-deps/lastmaker`.  A literal
+  `("/path/to/HOL/bin/hol" "lsp")` entry pins every buffer to one
+  tree, which is wrong as soon as you have more than one worktree.
+  It also covers both modes: `holscript-ts-mode` derives from
+  `prog-mode`, not from `holscript-mode`, so a single-mode entry
+  misses one of the two.
+- Auto-start is `hol-lsp-enable`'s job as well; it adds
+  `hol-lsp--setup-buffer` (which ends in `eglot-ensure`) to both mode
+  hooks.  Note `eglot-managed-mode-hook` is *not* an auto-start hook —
+  it runs only once eglot is already managing the buffer.
+- `elabOn` already defaults to `Change`, so setting it to `1`
+  changes nothing; see Troubleshooting for the case where you want
+  `2`.
 
 Then open a `*Script.sml` file.  Diagnostics appear as flymake
 underlines; `M-x eldoc` (or `eldoc-mode`) shows hover at point;

@@ -2791,53 +2791,136 @@ so a slow server never freezes emacs on a keystroke."
   "Major mode for the *HOL Goals* buffer populated by the HOL LSP.
 Inherits `special-mode' keys — `q' buries the window.")
 
+(defun hol-lsp--context-line (ctx)
+  "The server's combinator tags CTX as one bracketed line, or nil.
+CTX arrives from eglot as a vector, and an empty one is not `nil\='
+in Lisp, so convert before testing it."
+  (let ((tags (append ctx nil)))
+    (when tags
+      (mapconcat (lambda (c) (concat "[" c "]")) tags " "))))
+
+(defun hol-lsp--solved-p (result)
+  "Whether RESULT says the focused subgoal(s) have been proved.
+No goals and no error is exactly that: the server sends the goals
+of the current focus, and `pretty\=' then shows what remains once
+the pending close fires.  A timeout also has no goals, but carries
+an error."
+  (and (plist-member result :goals)      ; absent /= empty
+       (null (append (plist-get result :goals) nil))
+       (not (plist-get result :error))))
+
+(defun hol-lsp--goals-header (result)
+  "Header-line text for RESULT: theorem, step, combinator tags,
+whether the focus is proved, and any error.
+This is what stays put while the goals scroll, so everything that
+says *which* state is on show belongs here -- including the fact
+that a branch is finished, which `pretty\=' announces on its first
+line, where scrolling to the end would carry it out of sight.  `%\='
+is doubled because a header-line string is read for mode-line
+constructs."
+  (let* ((ctx (hol-lsp--context-line (plist-get result :context)))
+         (err (plist-get result :error))
+         (text (concat (format "%s — step %d"
+                               (plist-get result :theorem)
+                               (plist-get result :step))
+                       (and ctx (concat "  " ctx))
+                       (and (hol-lsp--solved-p result) "  ✓ solved")
+                       (and err (concat "  ⚠ " err)))))
+    (replace-regexp-in-string "%" "%%" text)))
+
+(defun hol-lsp--strip-context (pretty ctx)
+  "PRETTY without the tag line it repeats at the top.
+The tags arrive separately as CTX, so the line to remove is known
+exactly rather than guessed at -- a goal can itself begin with a
+`[\='.  Leading blank lines go too, tagged or not, so the buffer
+starts at the first line that says something; only newlines are
+stripped, the goal block\='s own indentation being load-bearing."
+  (let* ((line (hol-lsp--context-line ctx))
+         (body (if (and line (string-prefix-p line pretty))
+                   (substring pretty (length line))
+                 pretty)))
+    (replace-regexp-in-string "\\`\n+" "" body)))
+
+(defcustom hol-lsp-goals-side-min-width 160
+  "Put *HOL Goals* beside the script window rather than below it when
+that window is at least this many columns wide.  HOL renders a goal
+at 75 columns, so splitting a window narrower than about twice that
+leaves both halves wrapping.  nil always splits below."
+  :group 'hol :type '(choice integer (const :tag "always below" nil)))
+
+(defun hol-lsp--goals-display-action ()
+  "Where to put *HOL Goals*, given the script window's width.
+inhibit-switch-frame: when the goals buffer has been moved to a
+separate frame (via the user's `display-buffer-alist' or by hand),
+`display-buffer-reuse-window' finds it there and would otherwise
+raise and focus that frame on every auto-follow tick, defeating the
+attempt to edit the script file."
+  (if (and hol-lsp-goals-side-min-width
+           (>= (window-body-width (selected-window))
+               hol-lsp-goals-side-min-width))
+      '((display-buffer-reuse-window display-buffer-in-direction)
+        (direction . right) (window-width . 0.5)
+        (inhibit-switch-frame . t))
+    '((display-buffer-reuse-window display-buffer-below-selected)
+      (inhibit-switch-frame . t))))
+
+(defvar-local hol-lsp--last-render nil
+  "The (HEADER . BODY) last put in this buffer, or nil.")
+
 (defun hol-lsp--render-goals (result)
   "Render RESULT into *HOL Goals* and display it below the selected
 window.  Preserves ANSI colour escapes from the server's `pretty'
 field.  Structured `goals' render is a fallback for older servers.
-When RESULT has :error set the buffer is cleared to just the header
-plus the error message, and the message is echoed via `message'
-too — a partial mid-walk state is complete for its own step but
-wrong for the cursor's step, so we surface the failure instead."
+
+Theorem, step, combinator tags and any walker error go in the header
+line rather than into the buffer.  Goals are listed with the current
+one last -- it is the only one coloured, and the subgoal count is
+printed after them -- so the window is scrolled to the buffer's end,
+and anything put at the top would scroll out of sight.  An error is
+echoed via `message' as well, a long one being truncated in the
+header."
   (require 'ansi-color)
-  (with-current-buffer (get-buffer-create "*HOL Goals*")
-    (let ((inhibit-read-only t)
-          (pretty (plist-get result :pretty))
-          (err (plist-get result :error)))
+  (let ((action (hol-lsp--goals-display-action))
+        (header (hol-lsp--goals-header result)))
+   (with-current-buffer (get-buffer-create "*HOL Goals*")
+    (let* ((inhibit-read-only t)
+           (ctx (plist-get result :context))
+           (pretty (plist-get result :pretty))
+           (err (plist-get result :error))
+           (body (and pretty (not (string-empty-p pretty))
+                      (hol-lsp--strip-context pretty ctx)))
+           (same (equal (cons header body) hol-lsp--last-render)))
+     (if same
+         ;; Nothing has changed, so leave the window where the user
+         ;; left it: an auto-follow tick shouldn't undo their
+         ;; scrolling just because the cursor moved within a tactic.
+         (display-buffer (current-buffer) action)
       (erase-buffer)
-      (insert (format "%s — step %d\n\n"
-                      (plist-get result :theorem)
-                      (plist-get result :step)))
-      ;; Errors from the walker: prepend so the user sees the
-      ;; failure signal at the top, and still render the last-good
-      ;; state below (so they can tell WHERE the walker halted).
-      ;; Empty-goals + error (e.g. timeout) collapses to error-only.
-      (when err
-        (insert "⚠ " err "\n\n")
-        (message "HOL goal-state: %s" err))
+      (when err (message "HOL goal-state: %s" err))
       (cond
-       ((and pretty (not (string-empty-p pretty)))
+       (body
         ;; Server rendered via goalFrag.pp_goalstate with the VT100
         ;; backend — ANSI escapes classify bound / free vars.
         (let ((start (point)))
-          (insert pretty)
+          (insert body)
           (ansi-color-apply-on-region start (point))))
        (t
         (dolist (g (append (plist-get result :goals) nil))
           (dolist (a (append (plist-get g :asms) nil))
             (insert (format "  %s\n" a)))
-          (insert (format "⊢ %s\n\n" (plist-get g :goal)))))))
-    (goto-char (point-min))
-    (hol-lsp-goals-mode)
-    ;; inhibit-switch-frame: when the goals buffer has been moved to
-    ;; a separate frame (via user's `display-buffer-alist' or by hand),
-    ;; `display-buffer-reuse-window' finds it there and would otherwise
-    ;; raise+focus that frame on every auto-follow tick, defeating the
-    ;; user's attempt to edit the script file.
-    (display-buffer (current-buffer)
-                    '((display-buffer-reuse-window
-                       display-buffer-below-selected)
-                      (inhibit-switch-frame . t)))))
+          (insert (format "⊢ %s\n\n" (plist-get g :goal))))))
+      ;; `hol-lsp-goals-mode' runs `kill-all-local-variables', so the
+      ;; header line and the render record have to be set after it.
+      (hol-lsp-goals-mode)
+      (setq-local header-line-format header)
+      (setq-local hol-lsp--last-render (cons header body))
+      (goto-char (point-max))
+      (let ((win (display-buffer (current-buffer) action)))
+        (when (window-live-p win)
+          (set-window-point win (point-max))
+          ;; Last line at the window bottom, so a state longer than
+          ;; the window shows its end rather than its start.
+          (with-selected-window win (recenter -1)))))))))
 
 (defun hol-lsp-show-goal-state ()
   "Ask the HOL LSP server for the goal-state at point.

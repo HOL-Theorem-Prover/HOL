@@ -206,13 +206,14 @@ def _did_change_full(c, uri, text, version):
 
 def _line_col_at(text, byte_offset):
     """Byte offset → (line, character) using LSP positionEncoding=utf-8
-    (see 1cfd8db81)."""
-    prefix = text[:byte_offset]
-    if "\n" not in prefix:
-        return (0, byte_offset)
-    line = prefix.count("\n")
-    col = byte_offset - prefix.rfind("\n") - 1
-    return (line, col)
+    (see 1cfd8db81).
+
+    Counted over the encoded bytes: slicing the str by a byte offset
+    silently over-runs on any file with multibyte characters, which
+    every HOL script using `‘…’` has, and produced end positions past
+    the end of their line."""
+    b = text.encode("utf8")[:byte_offset]
+    return (b.count(b"\n"), byte_offset - (b.rfind(b"\n") + 1))
 
 
 def _did_change_incr(c, uri, old_text, byte_from, byte_to, insert, version):
@@ -1485,6 +1486,102 @@ def test_snapshot_resume_full_text_replace_resets():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_snapshot_resume_whole_document_range():
+    """A `didChange` whose single range spans the ENTIRE document --
+    the shape Emacs `revert-buffer` (`C-x v u`) produces, and what
+    VS Code sends for a whole-file replace -- still resumes when the
+    replacement text shares a prefix with what it replaces.
+
+    The edit's own `from` is 0 here, so taking the resume offset from
+    the range would force a from-scratch recompile.  That path is not
+    merely slow: it restores the boot `Context` and rewinds
+    `Meta.loadedMods`, so the header's `Ancestors` are re-`quse`d in
+    a process where those theories are already sealed, and every
+    ancestor load after the first fails.  The offset therefore comes
+    from the texts, not the range.  Reverting a file is the common
+    case, and a revert re-inserts almost everything it replaced."""
+    d = tempfile.mkdtemp(prefix="lsp_resume_")
+    try:
+        body = "\n".join(f"val x{i} = {i}" for i in range(20))
+        src = f"Theory resumescr6\n\n{body}\n"
+        edited = src.replace("val x19 = 19", "val x19 = 190")
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/resumescr6Script.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+
+            # Edit, then revert -- each as ONE change whose range is
+            # the whole document.
+            for ver, (old, new) in enumerate([(src, edited),
+                                              (edited, src)], start=2):
+                idx = c.total_msgs()
+                _did_change_incr(c, uri, old, 0,
+                                 len(old.encode("utf8")), new, ver)
+                assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                            f"v{ver} compileCompleted")
+                resumes = _resume_events(c, since=idx, uri=uri)
+                assert_eq(len(resumes), 1,
+                          f"v{ver} resumed exactly once ({resumes!r})")
+                assert_true(resumes[0]["pos"] > 0,
+                            f"v{ver} resume pos > 0 ({resumes[0]})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_whole_file_recompile_keeps_ancestors_loaded():
+    """An edit at byte 0 leaves no snapshot to resume from, so the whole
+    file is recompiled.  That must not restart from the boot state.
+    `resetForCompile` rewinds `Meta.loadedMods`, and the holdep preload
+    then re-`quse`s the ancestors' generated `.sml` files -- each of
+    which ends in `Theory.load_complete`, sealing the theory in
+    `KernelSig.sealed_ref`, which is process-global and deliberately
+    outside `Context`.  `TheoryReader` refuses the re-read, every
+    ancestor behind it fails "not in ancestry", and the session stops
+    answering goal-state and hover requests for the rest of its life.
+
+    So the recompile starts from the state the header dec left, where
+    the ancestors are still loaded and still in the theory graph.  The
+    ancestor here must be one that is NOT resident in `hol.state`, or
+    nothing gets loaded and the test cannot fail."""
+    d = tempfile.mkdtemp(prefix="lsp_wholefile_")
+    try:
+        src = ("Theory wholefile\nAncestors sorting\n\n"
+               + "\n".join(f"val x{i} = {i}" for i in range(10))
+               + "\nval s = sortingTheory.SORTED_DEF\n")
+        uri = f"file://{d}/wholefileScript.sml"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 120),
+                        "first compileCompleted")
+            v1 = _diag_count(c, uri)
+
+            # Byte 0 -- no snapshot qualifies, so the whole file is
+            # recompiled.  `_resume_events` stays empty either way; what
+            # matters is that the ancestors are not reloaded.
+            idx = c.total_msgs()
+            _did_change_incr(c, uri, src, 0, 0, "(* leading *)\n", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 120, idx),
+                        "second compileCompleted")
+            v2 = _diag_count(c, uri, ver=2)
+
+            bad = [l for l in c.stderr_text().splitlines()
+                   if "is sealed" in l or "not in ancestry" in l]
+            assert_eq(bad, [], "no sealed-theory / ancestry errors")
+            assert_eq(len(v2), len(v1),
+                      f"diag count parity v1={len(v1)} v2={len(v2)}")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_snapshot_resume_survives_grammar_delta():
     """A script that mutates the parser grammar via `overload_on` in
     an early dec, then uses the overload in a later dec: a resume
@@ -2028,6 +2125,59 @@ def _send_goalstate(c, req_id, uri, line, char):
     return c.wait_until(got, 5)
 
 
+def test_full_replace_resumes_from_the_common_prefix():
+    """A whole-document replace is usually a revert or a reformat, so
+    the old and new texts agree for most of their length.  Resume from
+    a snapshot inside that agreement rather than recompiling from
+    scratch.
+
+    From-scratch is not merely slow: it re-runs the file's
+    `Ancestors` in a process that has already run them, which does not
+    reproduce the same state, and left the goal state reporting
+    tactics as failing that had just worked (`C-x v u` in Emacs).
+    Manual undo never showed it, sending incremental changes that
+    always resumed.
+
+    Measured here: ~0.4s when the texts diverge late, ~3.0s when they
+    diverge at offset 0 — which is what every full replace used to
+    do."""
+    src = f"{REPO}/src/integer/integerScript.sml"
+    c = Client(os.path.dirname(src))
+    try:
+        _init(c, REPO)
+        uri = f"file://{src}"
+        with open(src, encoding="utf8") as f: orig = f.read()
+        late = orig[:-40] + "\n(* tail *)\n" + orig[-40:]
+        _did_open(c, uri, orig)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "first compileCompleted")
+        base = _send_goalstate(c, 790, uri, 3940, 8).get("result")
+        assert_true(base is not None, "baseline goal state")
+
+        idx = c.total_msgs(); t0 = time.time()
+        _did_change_full(c, uri, late, 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                    "compileCompleted after the replace")
+        elapsed = time.time() - t0
+        assert_le(elapsed, 1.5,
+                  f"a late-diverging replace resumes rather than "
+                  f"recompiling ({elapsed:.2f}s)")
+
+        # Revert, as `C-x v u` does: another whole-document replace.
+        idx = c.total_msgs()
+        _did_change_full(c, uri, orig, 3)
+        assert_true(c.wait_for_method("$/compileCompleted", 60, idx),
+                    "compileCompleted after the revert")
+        after = _send_goalstate(c, 791, uri, 3940, 8).get("result")
+        assert_true(after is not None, "goal state after the revert")
+        assert_eq(after.get("error"), None,
+                  f"no tactic reported as failing ({after!r})")
+        assert_eq(after.get("goals"), base.get("goals"),
+                  f"same state as before the round trip ({after!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_inside_proof():
     """Slice B: cursor inside a `Proof … QED` block returns the enclosing
     theorem's name and parsed statement as the initial goal (step 0, no
@@ -2470,6 +2620,11 @@ def test_goalState_thenl_context_line():
         r = _send_goalstate(c, 811, uri, 8, 4)
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
+        # Same tags as a list, so a client can pin them in a header
+        # instead of letting them scroll away with the goals.
+        assert_eq(list(result.get("context") or []),
+                  ["branch 2 of 3 of THENL"],
+                  f"context field ({result!r})")
         pretty = result.get("pretty", "")
         assert_true("[branch 2 of 3 of THENL]" in pretty,
                     f"expected [branch 2 of 3 of THENL] context, "
@@ -3137,7 +3292,11 @@ def test_goalState_walks_into_by_block():
 def test_goalState_walks_into_suffices_by_block():
     """`‘g’ suffices_by tac` compiles to
     `ThenLT(Group(ThenLT(Subgoal,[LReverse])), [LThen1 tac])` — the
-    walker steps into the tac RHS."""
+    walker steps into the tac RHS.
+
+    The `sg q`-then-`REVERSE_LT` pair is applied as the one primitive
+    it encodes, so the tactic gets the implication `q ==> w` that
+    HOL's own `Q_TAC SUFF_TAC` hands it."""
     c = Client("/tmp")
     try:
         _init(c, "/tmp")
@@ -3161,15 +3320,19 @@ def test_goalState_walks_into_suffices_by_block():
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted")
         # Cursor at line 6 char 43: right after `ALL_TAC `, inside the
-        # `suffices_by (…)` block.  Focus should be on the sufficient
-        # goal (`n = n + 0`) with the original `n + 0 = n` sitting
-        # below as the assumption-holder subgoal.
+        # `suffices_by (…)` block.  The tactic's goal is the
+        # implication, not the original goal with the sufficient
+        # statement assumed, and not the sufficient statement itself.
         r = _send_goalstate(c, 702, uri, 6, 43)
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, "no error")
         goals = result["goals"]
-        assert_true(len(goals) >= 1 and goals[0]["goal"] == "n = n + 0",
-                    f"walker focused sufficient goal ({result!r})")
+        assert_true(len(goals) >= 1
+                    and goals[0]["goal"] == "n = n + 0 ⇒ n + 0 = n",
+                    f"tactic gets the implication ({result!r})")
+        assert_eq(goals[0]["asms"], [],
+                  f"and not the statement as an assumption ({result!r})")
     finally:
         c.close()
 
@@ -3199,8 +3362,7 @@ def test_goalState_walks_into_select_goal_block():
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted")
         # Cursor at line 7 char 29: right after `ALL_TAC `, inside
-        # the `>~ [`SUC m`] >- (…)` block.  Step should be past
-        # gen_tac + Cases_on + SUC-selector + ALL_TAC.
+        # the `>~ [`SUC m`] >- (…)` block.
         r = _send_goalstate(c, 703, uri, 7, 29)
         result = r.get("result")
         assert_true(result is not None, f"got a result ({r!r})")
@@ -3208,6 +3370,714 @@ def test_goalState_walks_into_select_goal_block():
         assert_true(step >= 3,
                     f"walker stepped into select-goal block, "
                     f"got step {step} ({result!r})")
+        # `step` alone proves nothing: it is counted from fragment
+        # positions, so it is right whether or not the selector ran.
+        # Assert the selection actually happened.
+        assert_eq(result.get("error"), None, f"no error ({result!r})")
+        assert_true(result["goals"][0]["goal"] == "SUC m = 0 ∨ 0 < SUC m",
+                    f"the SUC-matching subgoal is selected, and renamed "
+                    f"to the pattern's variable ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_walks_map_every():
+    """`MAP_EVERY f [a, b]` is a single `MapEvery` atom annotated with
+    the span of `f` alone — the head token `MAP_EVERY` and the argument
+    list sit outside every recorded span, so `topSpan` is NONE and the
+    walker used to return `Failed` here ("Structural leaf failed"),
+    freezing the goal for the whole rest of the proof.  It now falls
+    back on `TacticParse.printTacAsSML` to rebuild the surface call.
+
+    Pinned against the real `integerScript.sml` (INT_LE_MUL, line 961)
+    because that is where the bug was found."""
+    src = f"{REPO}/src/integer/integerScript.sml"
+    c = Client(os.path.dirname(src))
+    try:
+        _init(c, REPO)
+        uri = f"file://{src}"
+        with open(src, encoding="utf8") as f: text = f.read()
+        _did_open(c, uri, text)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        lines = text.split("\n")
+        # 0-based 960 is `MAP_EVERY ASM_CASES_TAC [Term `0i = x`, …]`
+        assert_true("MAP_EVERY ASM_CASES_TAC" in lines[960],
+                    f"line 960 still holds the MAP_EVERY ({lines[960]!r})")
+        # Cursor on `MAP_EVERY` itself: halted before the atom, so this
+        # is the state the MAP_EVERY is about to act on.
+        before = _send_goalstate(c, 710, uri, 960, 10).get("result")
+        assert_true(before is not None, "goal state before MAP_EVERY")
+        assert_eq(before.get("error"), None, "no error before MAP_EVERY")
+        # Cursor inside the argument list (char 45; `ASM_CASES_TAC` ends
+        # at 32).  The atom is annotated with the mapped function's span
+        # alone, so without the atomEndByte fix this counts as past the
+        # atom and fires it early.
+        inarg = _send_goalstate(c, 711, uri, 960, 45).get("result")
+        assert_true(inarg is not None, "goal state inside the arg list")
+        assert_eq(inarg.get("error"), None, "no error inside the arg list")
+        assert_eq(inarg.get("goals"), before.get("goals"),
+                  "cursor in MAP_EVERY's arg list still shows the "
+                  "pre-MAP_EVERY goal")
+        # Cursor on the following line: MAP_EVERY has fired.
+        after = _send_goalstate(c, 712, uri, 961, 10).get("result")
+        assert_true(after is not None, "goal state after MAP_EVERY")
+        assert_eq(after.get("error"), None,
+                  f"MAP_EVERY applied cleanly ({after!r})")
+        assert_true(after.get("goals") != before.get("goals"),
+                    f"goal advanced past MAP_EVERY ({after!r})")
+        # Two ASM_CASES_TAC splits over a single goal.
+        assert_eq(len(after.get("goals")), 4,
+                  f"two case splits give four subgoals ({after!r})")
+        # And the walker reaches the end of the proof without failing
+        # anywhere — line 961's `TRY(FIRST_ASSUM(SUBST1_TAC o SYM))`
+        # fails on some of the four subgoals, so this also covers TRY
+        # absorbing a failure.
+        for ln in range(961, 966):
+            r = _send_goalstate(c, 713 + ln, uri, ln, 10).get("result")
+            assert_true(r is not None, f"goal state on line {ln}")
+            assert_eq(r.get("error"), None,
+                      f"no walker failure on line {ln} ({r!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_walks_map_first():
+    """`MAP_FIRST` reaches the walker as a `MapFirst` atom with the
+    same NONE-topSpan shape as `MAP_EVERY`."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_map_first.sml"
+        #  6   MAP_FIRST (fn t => t) [gen_tac] >>
+        #  7   simp[]
+        src = ("Theory goalstate_map_first\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n + 0 = n\n"
+               "Proof\n"
+               "  MAP_FIRST (fn t => t) [gen_tac] >>\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 714, uri, 7, 2)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None,
+                  f"MAP_FIRST applied cleanly ({result!r})")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "n + 0 = n",
+                    f"gen_tac ran under MAP_FIRST ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_walks_squiggle_minus_rename():
+    """`>>~- ([pat], tac)` elaborates to `LSelectThen (Rename …, …)`.
+    The `Rename` atom carries only the pattern's span; the walker
+    synthesises `Q.RENAME_TAC` for it — qualified, because plain
+    `RENAME_TAC` lives in `Q` and the edited file need not have
+    opened it."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_squig_minus.sml"
+        #  6   gen_tac >> conj_tac >>~- ([`0 + a = a`], simp[]) >>
+        #  7   simp[]
+        src = ("Theory goalstate_squig_minus\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. a + 0 = a /\\ 0 + a = a\n"
+               "Proof\n"
+               "  gen_tac >> conj_tac >>~- ([`0 + a = a`], simp[]) >>\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 715, uri, 7, 2)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None,
+                  f"the >>~- block applied cleanly ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_try_absorbs_failure():
+    """`TRY tac` is `tac ORELSE ALL_TAC`, so `linearize` has to give it
+    ORELSE's second, empty branch.  With only `FOpenFirst … FClose` and
+    no `FNextFirst`, a failing inner tactic left goalFrag's
+    `Try (Failed e, _)` node in place and every closer re-raised it —
+    the walker reported "Combinator close failed" and froze the goals
+    for the rest of the proof, which is precisely the case TRY is
+    written for."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_try_absorbs.sml"
+        #  6   gen_tac THEN DISCH_TAC THEN
+        #  7   TRY(CONJ_TAC) THEN
+        #  8   simp[]
+        src = ("Theory goalstate_try_absorbs\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. 0 < a ==> a + 0 = a\n"
+               "Proof\n"
+               "  gen_tac THEN DISCH_TAC THEN\n"
+               "  TRY(CONJ_TAC) THEN\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        before = _send_goalstate(c, 716, uri, 7, 2).get("result")
+        assert_true(before is not None, "goal state on the TRY")
+        after = _send_goalstate(c, 717, uri, 8, 2).get("result")
+        assert_true(after is not None, "goal state after the TRY")
+        assert_eq(after.get("error"), None,
+                  f"CONJ_TAC's failure absorbed by TRY ({after!r})")
+        assert_eq(after.get("goals"), before.get("goals"),
+                  f"a failing TRY leaves the goals alone ({after!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_try_multi_step_branch():
+    """`TRY (t1 >> t2)` is the one `FMBracket` producer whose section
+    holds a THEN-chain directly rather than a single `Group`, so it is
+    what pins `mbracket` reversing each section: with the frags the
+    wrong way round CONJ_TAC would run first, fail, and be absorbed,
+    leaving one goal instead of two."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_try_multi.sml"
+        #  6   gen_tac THEN
+        #  7   TRY (DISCH_TAC >> CONJ_TAC) THEN
+        #  8   simp[]
+        src = ("Theory goalstate_try_multi\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !p:bool. p ==> p /\\ p\n"
+               "Proof\n"
+               "  gen_tac THEN\n"
+               "  TRY (DISCH_TAC >> CONJ_TAC) THEN\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Cursor between the two branch steps: DISCH_TAC has run.
+        mid = _send_goalstate(c, 718, uri, 7, 20).get("result")
+        assert_true(mid is not None, "goal state inside the TRY")
+        assert_eq(mid.get("error"), None, "no error inside the TRY")
+        goals = mid["goals"]
+        assert_true(len(goals) == 1 and goals[0]["asms"] == ["p"],
+                    f"DISCH_TAC ran first, not CONJ_TAC ({mid!r})")
+        after = _send_goalstate(c, 719, uri, 8, 2).get("result")
+        assert_true(after is not None, "goal state after the TRY")
+        assert_eq(after.get("error"), None, "no error after the TRY")
+        assert_eq(len(after["goals"]), 2,
+                  f"both branch steps ran, in order ({after!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_try_lt_absorbs_failure():
+    """`TRY_LT` (`LTry`) had the same missing branch as `TRY`."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_try_lt.sml"
+        #  6   gen_tac THEN_LT TRY_LT (ALLGOALS DISCH_TAC) THEN
+        #  7   simp[]
+        src = ("Theory goalstate_try_lt\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. a + 0 = a\n"
+               "Proof\n"
+               "  gen_tac THEN_LT TRY_LT (ALLGOALS DISCH_TAC) THEN\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 720, uri, 7, 2)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None,
+                  f"DISCH_TAC's failure absorbed by TRY_LT ({result!r})")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "a + 0 = a",
+                    f"goals left alone by the failing TRY_LT ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_before_thenl_shows_all_branches():
+    """A cursor that has not yet reached a THENL must see all the goals
+    the THENL is about to branch over, not one of its branches.
+
+    Two bugs used to conspire here (seen in integerScript's
+    INT_DIV_UNIQUE-region THENL, whose first branch is `ALL_TAC`):
+    `walkFrag` opened a bracket whenever `cursor < bracketEnd` without
+    checking the cursor had reached the bracket's *start*; and
+    `ALL_TAC` elaborates to `Then []`, contributing no atoms, so
+    `walkFrags` said Done at once and `walkSections` advanced a branch.
+    The reported state was branch 2, captioned "branch 2 of 4"."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_pre_thenl.sml"
+        #  6   gen_tac THEN CONJ_TAC        (23 chars, so col 23 = EOL)
+        #  7   THENL [ALL_TAC, simp[]]
+        #  8   THEN simp[]
+        src = ("Theory goalstate_pre_thenl\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. a + 0 = a /\\ 0 + a = a\n"
+               "Proof\n"
+               "  gen_tac THEN CONJ_TAC\n"
+               "  THENL [ALL_TAC, simp[]]\n"
+               "  THEN simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # End of the line before the THENL, and the start of the THENL
+        # line: in both the combinator has yet to run.
+        for (line, ch, where) in [(6, 23, "end of the CONJ_TAC line"),
+                                  (7, 2, "start of the THENL line")]:
+            r = _send_goalstate(c, 730 + line, uri, line, ch)
+            result = r.get("result")
+            assert_true(result is not None, f"got a result ({r!r})")
+            assert_eq(result.get("error"), None, f"no error at {where}")
+            assert_eq(len(result["goals"]), 2,
+                      f"both branch goals visible at {where} ({result!r})")
+            assert_true("of THENL" not in (result.get("pretty") or ""),
+                        f"no branch context at {where} ({result!r})")
+        # Inside the block, the ALL_TAC branch is still locatable: it
+        # contributes an empty FGroup that carries its own span.
+        r = _send_goalstate(c, 739, uri, 7, 9)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(len(result["goals"]), 1, f"branch 1 focused ({result!r})")
+        assert_true("branch 1 of 2 of THENL" in (result.get("pretty") or ""),
+                    f"captioned as branch 1 ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_thenl_branch_proved_is_acknowledged():
+    """At the end of a THENL branch that closed its goal, say so —
+    matching what a `by (…)` block already reported.
+
+    `pp_goalstate`'s `peek` only tried `close_paren`, and closing a
+    TacsToLT frame with branches still to come is a length mismatch
+    (goalFrag.sml's `TACS_TO_LT`), so this rendered as the misleading
+    "No subgoals but proof incomplete".  It now falls back to
+    `next_tacs_to_lt`."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_thenl_proved.sml"
+        #  7   THENL [simp[], simp[]]
+        #             ^col 9      ^col 17; col 15 is just past branch 1
+        src = ("Theory goalstate_thenl_proved\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. a + 0 = a /\\ 0 + a = a\n"
+               "Proof\n"
+               "  gen_tac THEN CONJ_TAC\n"
+               "  THENL [simp[], simp[]]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 740, uri, 7, 15)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, "no error")
+        assert_eq(len(result["goals"]), 0,
+                  f"branch 1's goal is gone ({result!r})")
+        pretty = result.get("pretty") or ""
+        assert_true("Focused subgoal(s) solved" in pretty,
+                    f"the branch is acknowledged as proved ({pretty!r})")
+        assert_true("No subgoals but proof incomplete" not in pretty,
+                    f"not the misleading close_paren message ({pretty!r})")
+        assert_true("branch 1 of 2 of THENL" in pretty,
+                    f"names the branch just finished ({pretty!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_thenl_branch_left_open_shows_its_goal():
+    """A THENL branch may legitimately finish without closing its goal
+    — the work happens after the `]`.  At the end of such a branch the
+    user needs to see *that* branch's leftover goal, not the next
+    branch's, which is what the premature section advance showed."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_thenl_open.sml"
+        #  7   THENL [DISCH_TAC, ALL_TAC]
+        #             ^col 9  col 18 is just past DISCH_TAC
+        src = ("Theory goalstate_thenl_open\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. (0 < a ==> a + 0 = a) /\\ 0 + a = a\n"
+               "Proof\n"
+               "  gen_tac THEN CONJ_TAC\n"
+               "  THENL [DISCH_TAC, ALL_TAC]\n"
+               "  THEN simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 741, uri, 7, 18)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, "no error")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "a + 0 = a"
+                    and goals[0]["asms"] == ["0 < a"],
+                    f"branch 1's own leftover goal, post-DISCH_TAC "
+                    f"({result!r})")
+        assert_true("branch 1 of 2 of THENL" in (result.get("pretty") or ""),
+                    f"captioned as branch 1, not branch 2 ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_suffices_by_gives_the_implication():
+    """`strip_tac` is the sharp discriminator for how `suffices_by` is
+    modelled: it can only work on the implication `q ==> w`, which is
+    what `Q_TAC SUFF_TAC` produces.  TacticParse encodes the operator
+    as `sg q` followed by `REVERSE_LT`, and applying those separately
+    yields `w` with `q` in the assumptions, against which `strip_tac`
+    fails — while the file itself compiles clean, since real HOL runs
+    the real thing.
+
+    Found via balanced_mapScript's `‘f k v = f (CHOICE …) v’
+    suffices_by rw []`, which reported "Combinator close failed" for
+    the rest of the tactic."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_suff_impl.sml"
+        #  6   gen_tac
+        #  7   \\ `a = a` suffices_by (strip_tac \\ simp[])
+        #  8   \\ simp[]
+        src = ("Theory goalstate_suff_impl\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. a + 0 = a\n"
+               "Proof\n"
+               "  gen_tac\n"
+               "  \\\\ `a = a` suffices_by (strip_tac \\\\ simp[])\n"
+               "  \\\\ simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        assert_eq(len(_diag_count(c, uri)), 0,
+                  "the proof itself is fine — HOL accepts strip_tac here")
+        inside = _send_goalstate(c, 742, uri, 7, 30).get("result")
+        assert_true(inside is not None, "goal state inside the tactic")
+        assert_eq(inside.get("error"), None, "no error inside")
+        assert_true(inside["goals"][0]["goal"] == "a = a ⇒ a + 0 = a",
+                    f"the tactic's goal is the implication ({inside!r})")
+        # strip_tac then closes it, so the block ends cleanly and the
+        # sufficient statement is what remains.
+        after = _send_goalstate(c, 743, uri, 8, 5).get("result")
+        assert_true(after is not None, "goal state after the block")
+        assert_eq(after.get("error"), None,
+                  f"strip_tac applied, so no close failure ({after!r})")
+        assert_true(after["goals"][0]["goal"] == "a = a",
+                    f"the sufficient statement remains ({after!r})")
+    finally:
+        c.close()
+
+
+_RESUME_SRC = ("Theory goalstate_resume\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. (0 < a ==> a + 0 = a) /\\ 0 + a = a\n"
+               "Proof\n"
+               "  rpt gen_tac\n"                        # nested: FBracket
+               "  THEN CONJ_TAC\n"
+               "  THENL [DISCH_TAC, ALL_TAC]\n"          # nested: FMBracket
+               "  THEN ASSUME_TAC TRUTH\n"
+               "  THEN ASSUME_TAC TRUTH\n"
+               "  THEN simp[]\n"
+               "QED\n")
+_RESUME_LINES = list(range(6, 12))
+
+
+def _resume_probe(c, uri, line, rid):
+    src_lines = _RESUME_SRC.split("\n")
+    r = _send_goalstate(c, rid, uri, line, len(src_lines[line]))
+    res = r.get("result") or {}
+    return (res.get("step"), res.get("error"),
+            [(g.get("goal"), tuple(g.get("asms") or []))
+             for g in (res.get("goals") or [])])
+
+
+def test_goalState_resume_matches_a_cold_walk():
+    """Resuming from a cached snapshot must give exactly what walking
+    from the start gives.
+
+    The walker skips the fragments a snapshot already accounts for
+    rather than re-applying them, which means not re-opening a
+    bracket the resume point sits inside, and not re-firing its close
+    or a THENL's mid.  Get any of that wrong and the state silently
+    differs from a cold walk — so compare against one, over a proof
+    whose every kind of nesting sits before the cursor.
+
+    Before this, the resume was a flat scan of the top-level
+    fragments that gave up at the first nested one, so a proof with
+    `rpt` or `>-` in it re-executed its whole prefix on every query.
+    """
+    uri = "file:///tmp/goalstate_resume.sml"
+    lines = _RESUME_SRC.split("\n")
+
+    # Reference: a fresh server per position, so nothing is cached.
+    cold = {}
+    for line in _RESUME_LINES:
+        c = Client("/tmp")
+        try:
+            _init(c, "/tmp")
+            _did_open(c, uri, _RESUME_SRC, 1)
+            assert_true(c.wait_for_method("$/compileCompleted", 30),
+                        "compileCompleted (cold)")
+            cold[line] = _resume_probe(c, uri, line, 750 + line)
+        finally:
+            c.close()
+
+    # One server, scanned forward and then backward: every query
+    # after the first resumes, at a different index each time.
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, _RESUME_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted (warm)")
+        order = _RESUME_LINES + list(reversed(_RESUME_LINES))
+        for i, line in enumerate(order):
+            got = _resume_probe(c, uri, line, 800 + i)
+            assert_eq(got, cold[line],
+                      f"line {line} ({lines[line].strip()!r}) matches a cold "
+                      f"walk on pass {'fwd' if i < len(_RESUME_LINES) else 'rev'}")
+    finally:
+        c.close()
+
+
+def test_goalState_skips_finished_then1_branches():
+    """`t >- tac` obliges tac to discharge the focused goal, so once
+    the cursor is past the branch its only effect is that one goal is
+    gone.  The walker takes that directly instead of running the
+    branch, which is what makes a cursor in a later branch cheap.
+
+    Pinned here by a branch that does NOT discharge its goal: the
+    walker no longer notices, and reports the following goal as if it
+    had.  That is deliberate — the branches are not re-checked once
+    passed — and it is the behaviour to revisit if the walker ever
+    becomes the thing that verifies a proof."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_skip_then1.sml"
+        #  6   conj_tac
+        #  7   >- (ASSUME_TAC TRUTH)      <- does not prove `0 = 0`
+        #  8   \\ simp[]
+        src = ("Theory goalstate_skip_then1\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (0 = 0) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  conj_tac\n"
+               "  >- (ASSUME_TAC TRUTH)\n"
+               "  \\\\ simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 760, uri, 8, 5)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None,
+                  f"the passed branch is not re-checked ({result!r})")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "1 = 1",
+                    f"one goal consumed, the next on show ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_thenl_leftovers_survive_a_skipped_branch():
+    """A THENL branch need not discharge its goal — leftovers are
+    concatenated when the block closes, which `pp_goalstate` does via
+    `peek` whenever the focus ends up empty.  So a skipped branch
+    would lose goals that ought to show.
+
+    Branch 1 here leaves `a + 0 = a`; with the cursor past the block
+    the closed state is what shows, so that leftover has to be in it.
+    Skipping is therefore off once the cursor clears the last
+    branch."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_thenl_leftover.sml"
+        #  6   conj_tac
+        #  7   THENL [DISCH_TAC, simp[]]
+        #  8   THEN simp[]
+        src = ("Theory goalstate_thenl_leftover\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !a:num. (0 < a ==> a + 0 = a) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  gen_tac THEN conj_tac\n"
+               "  THENL [DISCH_TAC, simp[]]\n"
+               "  THEN simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Inside branch 2, the earlier branch may be skipped: what
+        # shows is branch 2's own goal, under its own caption.
+        mid = _send_goalstate(c, 761, uri, 7, 24).get("result")
+        assert_true(mid is not None, "goal state inside branch 2")
+        assert_eq(mid.get("error"), None, "no error inside branch 2")
+        assert_true("branch 2 of 2 of THENL" in (mid.get("pretty") or ""),
+                    f"captioned as branch 2 ({mid!r})")
+        # Past the last branch the block has closed, and the closed
+        # state concatenates every branch's leftovers -- so branch 1
+        # must have really run.
+        r = _send_goalstate(c, 762, uri, 7, 27)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, "no error past the block")
+        goals = result["goals"]
+        assert_true(len(goals) == 1 and goals[0]["goal"] == "a + 0 = a"
+                    and goals[0]["asms"] == ["0 < a"],
+                    f"branch 1's leftover survives the close ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_source_that_wont_compile_is_not_a_tactic_failure():
+    """A tactic whose SML source doesn't compile is not a tactic that
+    failed on its goal, and saying so is both a duplicate and a
+    mis-description: the file's own compile already reports the real
+    message against that very text.
+
+    This also covers the transient case.  Goal-state requests are
+    answered during a compile on purpose, and until the file's `open`s
+    have run no tactic name resolves — which used to surface as
+    "Tactic `conj_tac` failed to apply", with a squiggle, for any
+    proof at all.  Same code path; here it is provoked deterministically
+    with a name that never resolves."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_badsrc.sml"
+        #  6   conj_tacX          <- no such tactic
+        #  7   \\ simp[]
+        src = ("Theory goalstate_badsrc\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  (0 = 0) /\\ (1 = 1)\n"
+               "Proof\n"
+               "  conj_tacX\n"
+               "  \\\\ simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # The compile says what's wrong, once.
+        ds = _diag_count(c, uri)
+        assert_true(any("conj_tacX" in d["message"] for d in ds),
+                    f"the compile reports the undeclared name ({ds!r})")
+        r = _send_goalstate(c, 770, uri, 7, 5)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None,
+                  f"the walker doesn't restate it as a tactic failure "
+                  f"({result!r})")
+        # Compile has finished, so the answer is settled, not pending.
+        assert_eq(result.get("status"), "ok", f"status ({result!r})")
+        # And no second squiggle for the same text.
+        n = len([d for d in _diag_count(c, uri) if "conj_tacX" in d["message"]])
+        assert_eq(n, 1, "exactly one diagnostic for the bad name")
+    finally:
+        c.close()
+
+
+def test_goalState_selector_selects_and_renames():
+    """`>~ [pat]` picks the subgoal matching `pat` and renames its
+    variables to the pattern's.  It is a list_tactic wanting the whole
+    goal list: run as `ALL_TAC >~ pats` through `goalFrag.expand` it
+    sees one goal at a time and can never pick between them, and the
+    span already covers the bracketed list, so wrapping it again gave
+    `>~ [[pat]]`, which did not compile.  Between them the selector
+    did nothing at all, silently."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_selector.sml"
+        #  6   gen_tac >> Cases_on `n`
+        #  7   >~ [`SUC m`] >> rw[]
+        src = ("Theory goalstate_selector\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n = 0 \\/ 0 < n\n"
+               "Proof\n"
+               "  gen_tac >> Cases_on `n`\n"
+               "  >~ [`SUC m`] >> rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Just past the `]`, so the selector has run.
+        r = _send_goalstate(c, 780, uri, 7, 14)
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        assert_eq(result.get("error"), None, f"selector applied ({result!r})")
+        assert_true(result["goals"][0]["goal"] == "SUC m = 0 ∨ 0 < SUC m",
+                    f"matching subgoal selected and renamed ({result!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_selector_that_matches_nothing_is_flagged():
+    """`>~` is `FIRST_LT (RENAME_TAC pats)`, which fails when no goal
+    matches — so the walker must say so rather than carry on."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_selector_bad.sml"
+        src = ("Theory goalstate_selector_bad\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. n = 0 \\/ 0 < n\n"
+               "Proof\n"
+               "  gen_tac >> Cases_on `n`\n"
+               "  >~ [`A UNION B = C`] >> rw[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 781, uri, 7, 22)   # just past the `]`
+        result = r.get("result")
+        assert_true(result is not None, f"got a result ({r!r})")
+        err = result.get("error") or ""
+        assert_true("found no matching subgoal" in err,
+                    f"the selector's failure is reported ({result!r})")
+        # And the message quotes the pattern once, not `[[pat]]`.
+        assert_true("[[" not in err, f"pattern quoted once ({err!r})")
     finally:
         c.close()
 
@@ -3452,6 +4322,8 @@ TESTS = [
     ("small_recompile_type_error",   test_small_recompile_type_error_inserted),
     ("small_recompile_bare_val",     test_small_recompile_bare_val),
     ("integer_first_compile",        test_integer_first_compile),
+    ("full_replace_resumes_from_the_common_prefix",
+                                     test_full_replace_resumes_from_the_common_prefix),
     ("integer_recompile_blank",      test_integer_recompile_blank_lines),
     ("integer_recompile_type_error", test_integer_recompile_with_type_error),
     ("integer_didChange_interrupts",
@@ -3487,6 +4359,10 @@ TESTS = [
                                      test_snapshot_resume_early_edit_falls_back),
     ("snapshot_resume_full_text_replace_resets",
                                      test_snapshot_resume_full_text_replace_resets),
+    ("whole_file_recompile_keeps_ancestors_loaded",
+                        test_whole_file_recompile_keeps_ancestors_loaded),
+    ("snapshot_resume_whole_document_range",
+                              test_snapshot_resume_whole_document_range),
     ("snapshot_resume_survives_grammar_delta",
                                      test_snapshot_resume_survives_grammar_delta),
     ("snapshot_resume_second_edit_after_completion",
@@ -3555,6 +4431,36 @@ TESTS = [
                                      test_goalState_walks_into_suffices_by_block),
     ("goalState_walks_into_select_goal_block",
                                      test_goalState_walks_into_select_goal_block),
+    ("goalState_selector_selects_and_renames",
+                                     test_goalState_selector_selects_and_renames),
+    ("goalState_selector_that_matches_nothing_is_flagged",
+                                     test_goalState_selector_that_matches_nothing_is_flagged),
+    ("goalState_walks_map_every",    test_goalState_walks_map_every),
+    ("goalState_walks_map_first",    test_goalState_walks_map_first),
+    ("goalState_walks_squiggle_minus_rename",
+                                     test_goalState_walks_squiggle_minus_rename),
+    ("goalState_try_absorbs_failure",
+                                     test_goalState_try_absorbs_failure),
+    ("goalState_try_multi_step_branch",
+                                     test_goalState_try_multi_step_branch),
+    ("goalState_try_lt_absorbs_failure",
+                                     test_goalState_try_lt_absorbs_failure),
+    ("goalState_before_thenl_shows_all_branches",
+                                     test_goalState_before_thenl_shows_all_branches),
+    ("goalState_thenl_branch_proved_is_acknowledged",
+                                     test_goalState_thenl_branch_proved_is_acknowledged),
+    ("goalState_thenl_branch_left_open_shows_its_goal",
+                                     test_goalState_thenl_branch_left_open_shows_its_goal),
+    ("goalState_suffices_by_gives_the_implication",
+                                     test_goalState_suffices_by_gives_the_implication),
+    ("goalState_resume_matches_a_cold_walk",
+                                     test_goalState_resume_matches_a_cold_walk),
+    ("goalState_skips_finished_then1_branches",
+                                     test_goalState_skips_finished_then1_branches),
+    ("goalState_source_that_wont_compile_is_not_a_tactic_failure",
+                                     test_goalState_source_that_wont_compile_is_not_a_tactic_failure),
+    ("goalState_thenl_leftovers_survive_a_skipped_branch",
+                                     test_goalState_thenl_leftovers_survive_a_skipped_branch),
     ("lsp_walks_file_includes_from_arbitrary_cwd",
                                      test_lsp_walks_file_includes_from_arbitrary_cwd),
     ("lsp_holproject_preload_project_dirs",
