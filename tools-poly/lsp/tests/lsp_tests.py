@@ -1386,6 +1386,55 @@ def _resume_events(client, since=0, uri=None):
     return out
 
 
+def test_goalState_recompile_drops_stale_compiled_tactics():
+    """The walker caches compiled tactics by source text.  A compiled
+    tactic closes over the values its names had at compile time, and a
+    recompile re-mints every constant the file defines, so a closure
+    kept across that boundary rewrites with theorems about constants
+    the goal no longer mentions.
+
+    Here `simp[foo_def]` closes the goal, and the probe sits on the
+    following step so it reports the post-`simp` state.  With a stale
+    closure the rewrite silently stops firing and the goal survives as
+    `¬foo T` -- a tactic that worked before the edit appearing to fail
+    after it, with nothing in the file to explain why."""
+    d = tempfile.mkdtemp(prefix="lsp_stalecache_")
+    try:
+        src = ("Theory cachestale\nAncestors bool\n\n"
+               "Definition foo_def:\n  foo (b:bool) = ~b\nEnd\n\n"
+               "Theorem t1:\n  foo T = F\nProof\n  simp[foo_def] >>\n"
+               "  ALL_TAC\nQED\n")
+        uri = f"file://{d}/cachestaleScript.sml"
+        c = Client(d, args=["--dbg"])
+        try:
+            _init(c, d, timeout=30)
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 120),
+                        "first compileCompleted")
+            r = _send_goalstate(c, 9701, uri, 11, 5)
+            res = (r or {}).get("result")
+            assert_true(res is not None, "goal state before edit")
+            assert_eq(len(res.get("goals") or []), 0,
+                      "simp closes the goal before the edit")
+
+            # An edit upstream of the definition: the recompile re-mints
+            # `foo`, so any cached `simp[foo_def]` is about a dead one.
+            at = src.index("Definition")
+            idx = c.total_msgs()
+            _did_change_incr(c, uri, src, at, at, "\n", 2)
+            assert_true(c.wait_for_method("$/compileCompleted", 120, idx),
+                        "second compileCompleted")
+            r = _send_goalstate(c, 9702, uri, 12, 5)
+            res = (r or {}).get("result")
+            assert_true(res is not None, "goal state after edit")
+            assert_eq(len(res.get("goals") or []), 0,
+                      "simp still closes the goal after the edit")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def test_snapshot_resume_late_edit():
     """After compiling a multi-dec script, an incremental `didChange`
     near the end reuses a snapshot from an earlier dec: the resumed
@@ -3903,6 +3952,8 @@ TESTS = [
                                      test_heap_autodetect_no_holmakefile),
     ("heap_autodetect_holmakefile_without_holheap",
                                      test_heap_autodetect_holmakefile_without_holheap),
+    ("goalState_recompile_drops_stale_compiled_tactics",
+                 test_goalState_recompile_drops_stale_compiled_tactics),
     ("snapshot_resume_late_edit",    test_snapshot_resume_late_edit),
     ("snapshot_resume_early_edit_falls_back",
                                      test_snapshot_resume_early_edit_falls_back),
