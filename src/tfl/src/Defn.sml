@@ -1878,47 +1878,81 @@ fun TC_TAC defn =
    TC_TAC0 E I
  end;
 
+(* The termination goal and the validation that turns a proof of it into
+   `eqns /\ ind`.  This pair is the whole content of a termination
+   "proof obligation": `tgoal` parks it in the proof manager for the user
+   to work on interactively, and `tprove` discharges it directly.
+
+   The `handle HOL_ERR _` is as it always was, and note what it does: the
+   "no termination conditions" message above is itself a HOL_ERR, so it
+   is caught here and re-raised as `ERR "tgoal" ""`.  Preserved rather
+   than fixed, so this stays a refactor. *)
+fun tc_obligation_no_defn (def,ind) =
+   (if null (op_U aconv [(hyp def)])
+    then raise ERR "tgoal" "no termination conditions"
+    else TC_TAC0 def ind) handle HOL_ERR _ => raise ERR "tgoal" "";
+
+fun tc_obligation defn =
+   (if null (tcs_of defn)
+    then raise ERR "tgoal" "no termination conditions"
+    else TC_TAC defn) handle HOL_ERR _ => raise ERR "tgoal" "";
+
 fun tgoal_no_defn0 (def,ind) =
-   if null (op_U aconv [(hyp def)])
-   then raise ERR "tgoal" "no termination conditions"
-   else let val (g,validation) = TC_TAC0 def ind
-        in proofManagerLib.add
-             (Manager.new_goalstack g Manager.id_tacm validation)
-        end handle HOL_ERR _ => raise ERR "tgoal" "";
+   (let val (g,validation) = tc_obligation_no_defn (def,ind)
+    in proofManagerLib.add
+         (Manager.new_goalstack g Manager.id_tacm validation)
+    end) handle HOL_ERR _ => raise ERR "tgoal" "";
 
 fun tgoal_no_defn (def,ind) =
   Lib.with_flag (proofManagerLib.chatting,false) tgoal_no_defn0 (def,ind);
 
 fun tgoal0 defn =
-   if null (tcs_of defn)
-   then raise ERR "tgoal" "no termination conditions"
-   else let val (g,validation) = TC_TAC defn
-        in proofManagerLib.add
-             (Manager.new_goalstack g Manager.id_tacm validation)
-        end handle HOL_ERR _ => raise ERR "tgoal" "";
+   (let val (g,validation) = tc_obligation defn
+    in proofManagerLib.add
+         (Manager.new_goalstack g Manager.id_tacm validation)
+    end) handle HOL_ERR _ => raise ERR "tgoal" "";
 
 fun tgoal defn = Lib.with_flag (proofManagerLib.chatting,false) tgoal0 defn;
 
 (*---------------------------------------------------------------------------
      The error handling here is pretty coarse.
+
+     `tprove` discharges the termination obligation with the ordinary
+     prover rather than driving the proof manager.  It used to `add` a
+     goalstack, `expand` the tactic and take `top_thm` --- which is
+     `TAC_PROOF` with a detour through a process-global goalstack, since
+     `top_thm` does no more than apply the validation the goalstack was
+     parked with.  Going direct means a `Definition` no longer mutates
+     global proof state as a side effect of being processed (so it is
+     safe on a worker thread), and the proof goes through
+     `internal_prover` like every other proof, so anything hooking that
+     --- fastbuild, the LSP --- sees it.
+
+     Two deliberate consequences: `expand` did not require the tactic to
+     finish the proof (hence the old "should finish proof off" comment,
+     with the real failure surfacing later out of `top_thm`), whereas
+     `prove_goal_in` reports unsolved goals directly; and a failure now
+     prints the usual "Proof of ... failed" feedback.
+
+     The interactive path is untouched: `tgoal` still parks the same
+     obligation in the manager, which is what a failed automatic
+     termination proof tells the user to go and work on.
  ---------------------------------------------------------------------------*)
 
-fun tprove2 tgoal0 (defn,tactic) =
-  let val _ = tgoal0 defn
-      val _ = proofManagerLib.expand tactic  (* should finish proof off *)
-      val th  = proofManagerLib.top_thm ()
-      val _   = proofManagerLib.drop()
+fun tprove2 mk_obligation (arg,tactic) =
+  let val (g,validation) = mk_obligation arg
+      val th = validation (Tactical.prove_goal_in (Context.snapshot())
+                                                  (g,tactic))
       val eqns = CONJUNCT1 th
       val ind  = CONJUNCT2 th
   in
      (eqns,ind)
   end
-  handle e => (proofManagerLib.drop(); raise wrap_exn "Defn" "tprove" e)
+  handle e => raise wrap_exn "Defn" "tprove" e
 
-fun tprove1 tgoal0 p =
+fun tprove1 mk_obligation p =
   let
-    val (eqns,ind) = Lib.with_flag (proofManagerLib.chatting,false)
-                                   (tprove2 tgoal0) p
+    val (eqns,ind) = tprove2 mk_obligation p
     val () = if not (!computeLib.auto_import_definitions) then ()
              else computeLib.add_funs
                     [eqns, CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]
@@ -1926,9 +1960,9 @@ fun tprove1 tgoal0 p =
     (eqns, ind)
   end
 
-fun tprove p = tprove1 tgoal0 p
-fun tprove0 p = tprove2 tgoal0 p
-fun tprove_no_defn p = tprove1 tgoal_no_defn0 p
+fun tprove p = tprove1 tc_obligation p
+fun tprove0 p = tprove2 tc_obligation p
+fun tprove_no_defn p = tprove1 tc_obligation_no_defn p
 
 fun tstore_defn (d,t) =
   let val (def,ind) = tprove0 (d,t)
