@@ -143,12 +143,21 @@ val restoreCompileSnap : (compileSnap -> unit) ref = ref (fn f => f ())
 
 datatype proof_status =
          Unseen | Cheated | Checking | Proved
-       | Failed of string | Diverged of string
+       | Failed of string | Suspended of string | Diverged of string
 type proof_state = {site: string, offset: int, status: proof_status}
 
 type deferred = {site: string, offset: int, run: unit -> proof_status}
 val deferProofs = ref false
 val cheatSubstituted = ref false
+
+local
+  val sites = ref ([] : string list)
+in
+  fun isNoCheatSite s = List.exists (fn s' => s' = s) (!sites)
+  fun addNoCheatSite s =
+      if isNoCheatSite s then false else (sites := s :: !sites; true)
+  fun dropNoCheatSite s = sites := List.filter (fn s' => s' <> s) (!sites)
+end
 val currentProofOffset = ref 0
 local
   (* enqueued in reverse; Phase A is single-threaded, so a plain ref is

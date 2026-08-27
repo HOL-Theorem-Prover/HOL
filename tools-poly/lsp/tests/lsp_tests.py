@@ -1720,6 +1720,130 @@ def test_cheat_substituted_proof_is_not_checked():
         shutil.rmtree(d, ignore_errors=True)
 
 
+# Preamble mirroring src/basicProof/theory_tests/suspTestScript.sml,
+# which is the known-good way to reach the `suspend` tactic.
+_SUSP_PREAMBLE = ("Theory %s[bare]\n"
+                  "Libs HolKernel Parse boolLib markerLib BasicProvers\n"
+                  "\n")
+
+
+def _proof_states(c, uri):
+    """Fold the $/proofStates stream for `uri` into {name: status},
+    honouring the `reset` flag."""
+    msgs, _ = c.messages_since(0)
+    seen = {}
+    for m in msgs:
+        if m.get("method") != "$/proofStates":
+            continue
+        p = m["params"]
+        if p["uri"] != uri:
+            continue
+        if p.get("reset"):
+            seen = {}
+        for st in p["states"]:
+            seen[st["name"]] = (st["status"], st.get("detail"))
+    return seen
+
+
+def test_suspending_proof_reported_as_suspended():
+    """A proof that suspends subgoals is not `proved` and not a bare
+    `diverged`: the cheating pass stood in a theorem with no
+    suspendlabel hypotheses, so the placeholder does not match, but the
+    proof itself is correct.  It gets its own status, naming the
+    subgoals."""
+    d = tempfile.mkdtemp(prefix="lsp_susp_")
+    try:
+        src = (_SUSP_PREAMBLE % "susplsp" +
+               "Theorem willsplit:\n"
+               "  p /\\ (p ==> q) ==> p /\\ q\n"
+               "Proof\n"
+               "  strip_tac >> conj_tac\n"
+               "  >- suspend \"p\"\n"
+               "  >- suspend \"q\"\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/susplspScript.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "compileCompleted")
+
+            def settled(cl):
+                seen = _proof_states(cl, uri)
+                st = seen.get("willsplit")
+                return seen if st and st[0] not in ("checking",) else None
+
+            seen = c.wait_until(settled, 60)
+            assert_true(seen is not None,
+                        f"willsplit settled ({_proof_states(c, uri)!r})")
+            status, detail = seen["willsplit"]
+            assert_eq(status, "suspended",
+                      f"suspending proof reports `suspended` "
+                      f"(got {status!r}, detail {detail!r})")
+            assert_true(detail is not None and "p" in detail and "q" in detail,
+                        f"detail names the suspended subgoals ({detail!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_suspension_re_elaborates_with_the_real_theorem():
+    """Discovering a suspension has to change the elaboration, not just
+    the report.  A real build *stashes* a suspended theorem rather than
+    saving it, and `save_thm_attrs` rejects any later theorem citing a
+    still-suspended one -- so the declaration below `willsplit` should
+    end up with that error, which the cheating pass never produces
+    because it stands in a clean oracle theorem.
+
+    The route: the pool reports `suspended`, the server puts the proof
+    in the no-cheat set and re-elaborates from there with the proof run
+    for real, and the citation below then fails as it would in a
+    batch build."""
+    d = tempfile.mkdtemp(prefix="lsp_susp_")
+    try:
+        src = (_SUSP_PREAMBLE % "susplsp2" +
+               "Theorem willsplit:\n"
+               "  p /\\ (p ==> q) ==> p /\\ q\n"
+               "Proof\n"
+               "  strip_tac >> conj_tac\n"
+               "  >- suspend \"p\"\n"
+               "  >- suspend \"q\"\n"
+               "QED\n"
+               "\n"
+               "Theorem cites_it:\n"
+               "  p /\\ (p ==> q) ==> p /\\ q\n"
+               "Proof\n"
+               "  ACCEPT_TAC willsplit\n"
+               "QED\n")
+        c = Client(d, args=["--lsp-check-proofs"])
+        try:
+            _init(c, d, timeout=30)
+            uri = f"file://{d}/susplsp2Script.sml"
+            _did_open(c, uri, src)
+            assert_true(c.wait_for_method("$/compileCompleted", 60),
+                        "first compileCompleted")
+            # First pass cheats everything, so the file looks clean.
+            assert_eq(len(_diag_count(c, uri)), 0,
+                      f"cheating pass sees no problem "
+                      f"({_diag_count(c, uri)!r})")
+
+            def cited_error(cl):
+                msgs = [dg["message"] for dg in _diag_count(cl, uri)]
+                return msgs if any("still-suspended" in m for m in msgs) \
+                    else None
+
+            msgs = c.wait_until(cited_error, 120)
+            assert_true(msgs is not None,
+                        f"citation of a suspended theorem is reported "
+                        f"({[dg for dg in _diag_count(c, uri)]!r})")
+        finally:
+            c.close()
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def _send_goalstate(c, req_id, uri, line, char):
     c.send({"jsonrpc":"2.0","id":req_id,
             "method":"$/hol/goalState",
@@ -3202,6 +3326,10 @@ TESTS = [
                                      test_broken_tactic_does_not_break_consumers),
     ("cheat_substituted_proof_is_not_checked",
                                      test_cheat_substituted_proof_is_not_checked),
+    ("suspending_proof_reported_as_suspended",
+                                     test_suspending_proof_reported_as_suspended),
+    ("suspension_re_elaborates_with_the_real_theorem",
+                                     test_suspension_re_elaborates_with_the_real_theorem),
     ("goalState_inside_proof",       test_goalState_inside_proof),
     ("goalState_outside_proof",      test_goalState_outside_proof),
     ("goalState_between_two_theorems",

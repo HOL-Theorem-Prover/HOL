@@ -192,23 +192,45 @@ val restoreCompileSnap: (compileSnap -> unit) ref
 
    The remaining three are the pool's own:
 
-     Checking a worker is on it
-     Proved   the replay went through
-     Failed   the replay ran and the proof did not go through.  Really a
-              diagnostic rather than a resting state, carried here so
-              status and diagnostic can be reported together.
-     Diverged the replay went through, but produced a theorem the
-              placeholder did not match -- see proof_outcome.  Everything
-              elaborated below this declaration is suspect.
+     Checking  a worker is on it
+     Proved    the replay went through
+     Failed    the replay ran and the proof did not go through.  Really a
+               diagnostic rather than a resting state, carried here so
+               status and diagnostic can be reported together.
+     Suspended the replay went through and suspended subgoals, naming
+               them.  The proof is *correct*; what is wrong is our model
+               of the file, since the cheating pass stood in a theorem
+               with no suspendlabel hypotheses.
+     Diverged  the replay went through but produced extra hypotheses for
+               some other reason.  Everything elaborated below this
+               declaration is suspect.
+
+   Suspended and Failed want opposite treatment downstream, which is why
+   they are separate states rather than one "did not match" bucket.
+
+   A failed proof means the real build would have raised out of
+   `store_thm_at`, so strictly nothing below it should be trusted -- but
+   it is a proof the user is about to fix, and re-elaborating below it
+   would bury them in errors they did not ask about.  Report and leave
+   the file alone.
+
+   A suspension is the other way round: the user's file is right and we
+   are wrong.  In a real build the theorem is *stashed* rather than
+   saved, so it is absent from the DB, a downstream citation of it is a
+   hard error from `save_thm_attrs`, and `Resume` bodies get their real
+   subgoal statements instead of the `|- T` the cheating pass hands out.
+   That difference is exactly what the user needs to see, so it is worth
+   re-elaborating for -- which means running that proof rather than
+   cheating it, since its result is not predictable from its statement.
 
    So a caller assembling a display walks its own list of declarations
-   and consults the pool: an entry gives one of the last three, and
+   and consults the pool: an entry gives one of the last five, and
    absence means Unseen or Cheated according to whether elaboration has
    reached that declaration.
    ---------------------------------------------------------------------- *)
 datatype proof_status =
          Unseen | Cheated | Checking | Proved
-       | Failed of string | Diverged of string
+       | Failed of string | Suspended of string | Diverged of string
 type proof_state = {site: string, offset: int, status: proof_status}
 
 type deferred = {site: string, offset: int, run: unit -> proof_status}
@@ -220,6 +242,33 @@ val deferProofs: bool ref
    declaration ends up with no pool entry at all, which is right -- the
    compile error in the tactic is the report. *)
 val cheatSubstituted: bool ref
+
+(* Proofs the checker has found are not safely cheatable, because their
+   result is not predictable from their statement: so far, the ones that
+   suspend subgoals.  The prover hook runs these for real during
+   elaboration instead of standing in an oracle theorem, so the
+   declarations below them are elaborated against the theorem a real
+   build would produce -- stashed rather than saved, with its
+   suspendlabel hypotheses.
+
+   Keyed by proof *name*, not offset: the set outlives edits, and an edit
+   moves offsets while leaving names alone.
+
+   Nothing clears it wholesale.  Clearing on a full re-elaboration was
+   tried and is wrong: the declaration that suspends is often early
+   enough that re-elaborating from it forces a full restart, which would
+   then discard the very fact that prompted the restart and cheat the
+   proof again.  Instead an entry is dropped by *evidence* --- when the
+   proof is run and turns out not to suspend after all (`dropNoCheatSite`
+   from the prover hook), which is also what stops a proof the user has
+   since fixed from being run for real forever.
+
+   `addNoCheatSite` reports whether the name was new, which is what makes
+   the discover-then-re-elaborate loop terminate: re-elaboration must
+   only be triggered for a name that was not already in the set. *)
+val addNoCheatSite: string -> bool
+val dropNoCheatSite: string -> unit
+val isNoCheatSite: string -> bool
 val enqueueDeferred: deferred -> unit
 (* Empties the queue and hands back what was in it: the worker pool
    runs the items itself. *)

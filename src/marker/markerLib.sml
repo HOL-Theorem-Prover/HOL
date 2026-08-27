@@ -1267,7 +1267,13 @@ fun resume {suspension_name, label_name} tac ctxt =
              | SOME ncts =>
                let
                  val goal = resumption_to_goal ncts
-                 val sub_th = prove_goal_in ctxt (goal, tac)
+                 (* `Resume X[lab]` reaches the prover from a plain value
+                    binding rather than `store_thm_at`, so without this
+                    the proof would be anonymous. *)
+                 val sub_th =
+                     boolLib.prove_named ctxt
+                       {name = suspension_name ^ "[" ^ label_name ^ "]",
+                        goal = goal, tac = tac}
                  (* A resumption proof may consume only finalised
                     theorems.  A slab in sub_th's hyps whose owner is
                     some already-registered suspended theorem means

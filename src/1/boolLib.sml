@@ -113,6 +113,29 @@ in
   fun set_current_thm_name s = ThreadLocal.set (slot, s)
 end
 
+(* A named proof attempt.  The name is how anything downstream of the
+   prover says *which* proof it is looking at: the dump-on-failure path
+   names its heap file with it, and the LSP's deferred-proof pool labels
+   its entries with it.  There are several routes into the prover that
+   have a name to offer besides `store_thm_at` -- a `Resume` body, a
+   termination obligation -- and each of them used to arrive anonymously,
+   so the pool reported them with an empty label.
+
+   Failure handling deliberately stays with the caller.  `store_thm_at`
+   dies loudly and dumps a heap; a termination obligation may be one of
+   several candidates being tried in turn, where a dump per failed
+   candidate would be wrong.
+
+   The previous name is restored rather than cleared, so a proof nested
+   inside another does not leave the outer one anonymous. *)
+local
+  val thm_name_flag = {get = current_thm_name, set = set_current_thm_name}
+in
+fun prove_named ctxt {name, goal, tac} =
+    Portable.genwith_flag (thm_name_flag, name)
+      (fn () => Tactical.prove_goal_in ctxt (goal, tac)) ()
+end
+
 (* Counter used by dump_failure_state when no theorem name is in
    scope (e.g. raw Tactical.prove invocations outside store_thm_at):
    yields "anon_<N>.dumpedheap" rather than "<thy>..dumpedheap". *)
@@ -267,8 +290,7 @@ in
 fun store_thm_at loc (n0,t,tac) ctxt =
   let val attrblock = ThmAttribute.extract_attributes n0
       val name = #thmname attrblock
-      val _ = set_current_thm_name name
-      val th = Tactical.prove_in ctxt (t,tac)
+      val th = prove_named ctxt {name = name, goal = ([], t), tac = tac}
                handle HOL_ERR herr =>
                if !Globals.dumpheap_on_failure andalso
                   not (!Globals.interactive)
@@ -286,7 +308,6 @@ fun store_thm_at loc (n0,t,tac) ctxt =
                      val err = HOL_ERR (set_message err_mesg herr)
                  in render_exn
                       (wrap_exn "boolLib" "store_thm_at" err) end
-      val _ = set_current_thm_name ""
   in
     save_thm_attrs loc (attrblock,th)
     handle e => render_exn

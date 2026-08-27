@@ -1887,18 +1887,23 @@ fun TC_TAC defn =
    "no termination conditions" message above is itself a HOL_ERR, so it
    is caught here and re-raised as `ERR "tgoal" ""`.  Preserved rather
    than fixed, so this stays a refactor. *)
+(* The name is for whatever consumes `boolLib.current_thm_name` during
+   the proof -- the dump-on-failure path, the LSP's pool.  The
+   `no_defn` form is handed bare theorems and has no name to offer, so
+   its obligation is anonymous, as it always was. *)
 fun tc_obligation_no_defn (def,ind) =
    (if null (op_U aconv [(hyp def)])
     then raise ERR "tgoal" "no termination conditions"
-    else TC_TAC0 def ind) handle HOL_ERR _ => raise ERR "tgoal" "";
+    else ("", TC_TAC0 def ind)) handle HOL_ERR _ => raise ERR "tgoal" "";
 
 fun tc_obligation defn =
    (if null (tcs_of defn)
     then raise ERR "tgoal" "no termination conditions"
-    else TC_TAC defn) handle HOL_ERR _ => raise ERR "tgoal" "";
+    else (name_of defn ^ "_termination", TC_TAC defn))
+   handle HOL_ERR _ => raise ERR "tgoal" "";
 
 fun tgoal_no_defn0 (def,ind) =
-   (let val (g,validation) = tc_obligation_no_defn (def,ind)
+   (let val (_, (g,validation)) = tc_obligation_no_defn (def,ind)
     in proofManagerLib.add
          (Manager.new_goalstack g Manager.id_tacm validation)
     end) handle HOL_ERR _ => raise ERR "tgoal" "";
@@ -1907,7 +1912,7 @@ fun tgoal_no_defn (def,ind) =
   Lib.with_flag (proofManagerLib.chatting,false) tgoal_no_defn0 (def,ind);
 
 fun tgoal0 defn =
-   (let val (g,validation) = tc_obligation defn
+   (let val (_, (g,validation)) = tc_obligation defn
     in proofManagerLib.add
          (Manager.new_goalstack g Manager.id_tacm validation)
     end) handle HOL_ERR _ => raise ERR "tgoal" "";
@@ -1940,9 +1945,9 @@ fun tgoal defn = Lib.with_flag (proofManagerLib.chatting,false) tgoal0 defn;
  ---------------------------------------------------------------------------*)
 
 fun tprove2 mk_obligation (arg,tactic) =
-  let val (g,validation) = mk_obligation arg
-      val th = validation (Tactical.prove_goal_in (Context.snapshot())
-                                                  (g,tactic))
+  let val (name, (g,validation)) = mk_obligation arg
+      val th = validation (boolLib.prove_named (Context.snapshot())
+                             {name = name, goal = g, tac = tactic})
       val eqns = CONJUNCT1 th
       val ind  = CONJUNCT2 th
   in

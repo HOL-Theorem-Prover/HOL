@@ -1698,6 +1698,77 @@ Two things the retry does not cover, both deliberate:
 `Definition ... Termination ... End` has the same single-binding shape
 and is not handled; worth doing if it turns out to bite.
 
+#### Suspension: landed, and what the code turned out to say
+
+`Diverged` was doing two jobs.  A proof that suspends is *correct*; what
+is wrong is our model of the file, because the cheating pass stood in a
+theorem with no suspendlabel hypotheses.  A proof that produces extra
+hypotheses for any other reason is a different event.  They are now
+separate statuses, because they want opposite treatment:
+
+- **Failed** -- report it, leave the file below alone.  Strictly, a real
+  build would have raised out of `store_thm_at` and the binding would not
+  exist, so nothing below is trustworthy; but it is a proof the user is
+  about to fix, and re-elaborating would bury them in errors they did not
+  ask about.
+- **Suspended** -- re-elaborate.  Here *we* are the ones who are wrong,
+  and the difference is material: a real build *stashes* such a theorem
+  instead of saving it, so it is absent from the DB, a later citation of
+  it is a hard error from `save_thm_attrs`, and `Resume` bodies get their
+  real subgoal statements rather than the `|- T` that `fast_shortcut`
+  hands out.
+
+Re-elaboration alone does not fix it, because a re-elaboration cheats the
+same proof again and lands in the same place.  The proof has to be *run*.
+So `LSPExtension` carries a **no-cheat set** of proof names: the hook
+runs those synchronously during elaboration (`proveForReal`) instead of
+standing in an oracle, and the declarations below then see the theorem a
+real build would hand them.  Keyed by name, not offset, so it survives
+the edits that move offsets.
+
+Three things this got wrong on the first attempt, all worth keeping
+written down:
+
+1. **Do not clear the set on a full re-elaboration.**  Tried it, on the
+   theory that a from-scratch pass should re-discover.  It deadlocks the
+   mechanism: the declaration that suspends is typically early, so
+   re-elaborating from it *is* a full restart, which discarded the fact
+   that prompted the restart and cheated the proof again.  Entries are
+   dropped by evidence instead --- `proveForReal` drops a site whose
+   verdict comes back `Proved`, which also stops a proof the user has
+   since fixed from being run for real forever.
+2. **`startCompile` had an early-out that made the trigger a no-op.**  It
+   returns without compiling when the last parse ran to completion, which
+   is exactly the state a just-finished compile leaves behind.  An edit
+   never hits it because `carryOverSnapshots` clears `done`; a *non*-edit
+   asking for a recompile did.  Now gated on `minEditOffset` as well.
+3. **A no-cheat proof must still reach the pool.**  Otherwise its status
+   disappears the moment we stop cheating it --- the user would see
+   `suspended` flash and vanish.  `proveForReal` enqueues an entry whose
+   verdict is already decided, which costs nothing and keeps the report.
+
+Termination of the discover-then-re-elaborate loop rests on
+`addNoCheatSite` reporting whether the name was new: only a new name
+triggers a recompile.
+
+Measured end to end (`suspension_re_elaborates_with_the_real_theorem`),
+the propagation through a citation works and converges in ~3s:
+
+    2.6s  everything cheated; willsplit -> suspended, cites_it -> proved
+    2.9s  resume at byte 73; willsplit run for real;
+          cites_it's replay inherits its labels -> suspended
+    3.2s  resume at byte 189
+    3.3s  cites_it run for real -> "Theorem "cites_it" cites
+          still-suspended theorems susprobe$willsplit[q], ..."
+
+That last line is the batch-build error, surfaced as a diagnostic in an
+LSP session that had previously reported the file clean.
+
+Still open here: a `Resume` body's proof is checked only once its parent
+stops being cheated, and the intermediate report labels a *citing*
+theorem `suspended` when what is really wrong is that it cites something
+suspended.  The final state is right; the intermediate wording is not.
+
 Also still open, and the thing to do before more pool features: the
 skip-cache discussed above needs a context fingerprint or per-proof
 dependency tracking, neither of which exists.

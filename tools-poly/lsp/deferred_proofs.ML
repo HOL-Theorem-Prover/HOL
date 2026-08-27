@@ -79,22 +79,56 @@ fun extraHyps (asl, _) th =
       List.filter (fn h => not (HOLset.member (goalAsms, h))) (Thm.hyp th)
     end
 
+(* What a proved theorem says about the placeholder elaboration stood in
+   for.  A suspension is the expected reason for extra hypotheses and
+   gets its own status, because it calls for a different response: the
+   proof is fine and the elaboration below it is not.  Anything else is a
+   bare divergence. *)
+fun verdict g th =
+    case extraHyps g th of
+        [] => LSPExtension.Proved
+      | extra =>
+        if boolLib.has_suspended_subgoals th then
+          LSPExtension.Suspended
+            (String.concatWith ", " (boolLib.get_suspended_names th))
+        else
+          LSPExtension.Diverged
+            (Int.toString (length extra) ^ " extra hypothes" ^
+             (if length extra = 1 then "is" else "es"))
+
 fun replay ctxt g tac =
-    (case asReplay (fn () => Tactical.TAC_PROOF_in ctxt (g, tac)) of
-         th =>
-         case extraHyps g th of
-             [] => LSPExtension.Proved
-           | extra =>
-             LSPExtension.Diverged
-               (Int.toString (length extra) ^
-                " extra hypothes" ^ (if length extra = 1 then "is" else "es") ^
-                (if boolLib.has_suspended_subgoals th then
-                   " (suspended subgoals: " ^
-                   String.concatWith ", " (boolLib.get_suspended_names th) ^ ")"
-                 else "")))
+    verdict g (asReplay (fn () => Tactical.TAC_PROOF_in ctxt (g, tac)))
     handle e =>
            if Exn.is_interrupt e then Exn.reraise e
            else LSPExtension.Failed (Feedback.exn_to_string e)
+
+(* The checker found this proof suspends, so elaboration cannot stand in
+   `mk_oracle_thm g` for it and still be right about what the
+   declarations below see: a real build stashes such a theorem rather
+   than saving it.  Run it here, synchronously.  Only proofs already
+   known to suspend pay this.
+
+   It is still handed to the pool, with its verdict already decided, so
+   the reported state does not vanish the moment we stop cheating it.
+   `asReplay` so a nested `prove` takes the replaying branch below rather
+   than coming back through here under the same name. *)
+fun proveForReal ctxt (g, tac) =
+    let
+      val th = asReplay (fn () => Tactical.TAC_PROOF_in ctxt (g, tac))
+      val st = verdict g th
+      val site = boolLib.current_thm_name ()
+    in
+      (* No longer suspends -- the user has changed the proof, so stop
+         paying to run it during elaboration. *)
+      (case st of
+           LSPExtension.Proved => LSPExtension.dropNoCheatSite site
+         | _ => ());
+      LSPExtension.enqueueDeferred
+        {site = site,
+         offset = !LSPExtension.currentProofOffset,
+         run = fn () => st};
+      th
+    end
 
 fun prover ctxt (g, tac) =
     if isReplaying () then
@@ -104,6 +138,8 @@ fun prover ctxt (g, tac) =
          pass/fail verdict reported for the outer proof would be wrong.
          TAC_PROOF_in is the unhooked entry, so this does not recurse. *)
       Tactical.TAC_PROOF_in ctxt (g, tac)
+    else if LSPExtension.isNoCheatSite (boolLib.current_thm_name ()) then
+      proveForReal ctxt (g, tac)
     else if !LSPExtension.deferProofs andalso
             not (!LSPExtension.cheatSubstituted) then
       (* current_thm_name and currentProofOffset are meaningful here --

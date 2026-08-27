@@ -676,16 +676,20 @@ fun start {diag, dbg} = let
     NONE => ()
   | SOME {cancelled, ...} => (r := NONE; cancelled := true)
 
+  (* Push `off` into the rolling min-edit tracker; a later `startCompile`
+     consults this to decide whether to resume from a snapshot.  An edit
+     is not the only thing that can move it: so can discovering that a
+     declaration's proof suspends. *)
+  fun bumpMinEdit minEditOffset off =
+      case !minEditOffset of
+        NONE => minEditOffset := SOME off
+      | SOME m => if off < m then minEditOffset := SOME off else ()
+
   fun applyEdit ({compile, lastTrees, minEditOffset, ...}:file_data) version changes = let
     val _ = stopCompile compile
     fun getLines text NONE = mkLineCounter text
       | getLines _ (SOME lines) = lines
-    (* Push `off` into the rolling min-edit tracker; a later `startCompile`
-       consults this to decide whether to resume from a snapshot. *)
-    fun bumpMin off =
-      case !minEditOffset of
-        NONE => minEditOffset := SOME off
-      | SOME m => if off < m then minEditOffset := SOME off else ()
+    val bumpMin = bumpMinEdit minEditOffset
     (* The old `parse` value is carried through the fold so we can
        preserve its `declSnapshots` on each step (via
        `carryOverSnapshots`).  On a full-text replace (`range = NONE`)
@@ -810,8 +814,8 @@ fun start {diag, dbg} = let
        {"uri": ..., "reset": true|false,
         "states": [{"pos": {"line": l, "character": c},
                     "name": "foo",
-                    "status": "checking" | "proved"
-                            | "failed" | "diverged",
+                    "status": "checking" | "proved" | "failed"
+                            | "suspended" | "diverged",
                     "detail": "..."}, ...]}
 
      `detail` is present only for `failed` and `diverged`.
@@ -846,10 +850,12 @@ fun start {diag, dbg} = let
           | LSPExtension.Checking => "checking"
           | LSPExtension.Proved => "proved"
           | LSPExtension.Failed _ => "failed"
+          | LSPExtension.Suspended _ => "suspended"
           | LSPExtension.Diverged _ => "diverged"
     fun detailOf st =
         case st of
             LSPExtension.Failed m => SOME m
+          | LSPExtension.Suspended m => SOME m
           | LSPExtension.Diverged m => SOME m
           | _ => NONE
     fun encState ({site, offset, status} : LSPExtension.proof_state) print = (
@@ -909,8 +915,8 @@ fun start {diag, dbg} = let
       print "}")))
   end
 
-  fun startCompile uri ({compile, lastTrees, debounce, minEditOffset,
-                         walkerDiags}:file_data) = (
+  fun startCompile uri (v as {compile, lastTrees, debounce, minEditOffset,
+                              walkerDiags}:file_data) = (
     (* Invalidate any pending scheduleCompile thread: their epoch
        check will see the new value and self-abort. *)
     debounce := !debounce + 1;
@@ -918,7 +924,12 @@ fun start {diag, dbg} = let
        new compile -- clear them so a fix removes squiggles even
        before the user visits the theorem to re-run the walker. *)
     walkerDiags := Binarymap.mkDict String.compare;
-    if #done (#parse (!lastTrees)) then
+    (* Nothing to do if the last parse ran to completion and nothing has
+       marked a point needing re-elaboration.  An edit always arrives via
+       `carryOverSnapshots`, which clears `done`, so the second condition
+       is what lets a *non*-edit ask for a recompile of unchanged text --
+       which is how discovering that a proof suspends gets acted on. *)
+    if #done (#parse (!lastTrees)) andalso not (isSome (!minEditOffset)) then
       (!LSPExtension.notifyCompileStart (!minEditOffset);
        invalidateProofs uri (#lines (#text (!lastTrees))) NONE;
        !LSPExtension.resetForCompile (); ())
@@ -1208,7 +1219,31 @@ fun start {diag, dbg} = let
              mutex-guarded handoff to the sender thread, so being called
              from a worker is safe. *)
           LSPExtension.proofStateChanged :=
-            (fn st => sendProofStates uri (#lines text) {reset = false} [st]);
+            (fn (st as {site, offset, status}) => (
+               sendProofStates uri (#lines text) {reset = false} [st];
+               (* A suspension says the cheating pass modelled this
+                  declaration wrongly: a real build stashes such a
+                  theorem rather than saving it, so everything below was
+                  elaborated against something that would not have been
+                  there.  Re-elaborate from here, with this proof run for
+                  real rather than cheated.
+
+                  Only on the first sighting of the name, which is what
+                  makes this terminate: the re-elaboration runs the proof
+                  instead of enqueueing it, so no second report arrives,
+                  and if that somehow fails to hold the name is already
+                  in the set and we stop anyway.
+
+                  Runs on the worker that settled the proof, so it must
+                  not raise. *)
+               (case status of
+                    LSPExtension.Suspended _ =>
+                      if LSPExtension.addNoCheatSite site then
+                        (bumpMinEdit minEditOffset offset;
+                         scheduleCompile uri v)
+                      else ()
+                  | _ => ())
+               handle _ => ()));
           !LSPExtension.checkDeferred ();
           sendProofStates uri (#lines text) {reset = true}
                           (!LSPExtension.proofStates ());
@@ -1249,7 +1284,7 @@ fun start {diag, dbg} = let
 
   (* Fire a compile after a debounce delay: rapid didChange bursts
      collapse to one compile. *)
-  fun scheduleCompile uri (v as {debounce, ...}: file_data) = let
+  and scheduleCompile uri (v as {debounce, ...}: file_data) = let
     val () = debounce := !debounce + 1
     val myEpoch = !debounce
     val debounce_ms = Time.fromMilliseconds 300
