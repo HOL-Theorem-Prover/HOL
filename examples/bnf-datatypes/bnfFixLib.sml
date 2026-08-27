@@ -1284,7 +1284,8 @@ type mutual = {
   bnf1 : bnfLib.derived_bnfn,         (* each type's functor, as the *)
   bnf2 : bnfLib.derived_bnfn,         (* construction saw it *)
   db : bnfBase.t,                     (* the database, extended with it *)
-  recursion : thm, induction : thm    (* and the pair's two principles *)
+  iterator : thm,                     (* the pair's principle, folded *)
+  recursion : thm, induction : thm    (* and the two principles in full *)
 }
 
 (* |- t1 = t2, when both sides normalise to the same thing.  Two set
@@ -1448,12 +1449,15 @@ fun defineMutual {tyname1, tyname2} db params (f1ty, f2ty) : mutual =
                    (GENL [g, k2, af] (SYM eq))
           end
 
+      (* the pair's principle, and the same thing with the two equations
+         written out, which is what a caller reads *)
+      val mutiter =
+          MATCH_MP MUTUAL_RECURSION
+                   (LIST_CONJ [srec1, srec2c, srec2n, smapeq,
+                               mutmap1, mutmap2, mutsplit])
       val recursion =
           CONV_RULE (DEPTH_CONV BETA_CONV)
-            (REWRITE_RULE [MUTREC_def]
-               (MATCH_MP MUTUAL_RECURSION
-                  (LIST_CONJ [srec1, srec2c, srec2n, smapeq,
-                              mutmap1, mutmap2, mutsplit])))
+                    (REWRITE_RULE [MUTITER_def, MUTREC_def] mutiter)
 
       (* ------------------------------------------------------------
           the induction principle
@@ -1498,7 +1502,8 @@ fun defineMutual {tyname1, tyname2} db params (f1ty, f2ty) : mutual =
     in
       {ty1 = ty1, ty2 = ty2, cons1 = cons1, cons2 = cons2,
        fix1 = fix1, fix2 = fix2, sibling = res2, bnf1 = bnf1, bnf2 = bnf2,
-       db = db, recursion = recursion, induction = induction}
+       db = db, iterator = mutiter, recursion = recursion,
+       induction = induction}
     end
 
 

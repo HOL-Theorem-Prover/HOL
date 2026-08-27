@@ -55,6 +55,18 @@ Definition SMAP_def:
     ∀g af. smap g (cn2 af) = cm2 (mpBg g af)
 End
 
+(* the principle a pair of types has once the reduction is done: for any
+   pair of target functions there is exactly one pair of functions
+   satisfying the two equations *)
+Definition MUTITER_def:
+  MUTITER (cn1 : 'fn1 -> 'n1) (cn2 : 'fn2 -> 'n2) mpK mpQ ⇔
+    ∀t1 t2.
+      (∃h1 h2. MUTREC cn1 cn2 mpK mpQ t1 t2 h1 h2) ∧
+      ∀h1 h2 k1 k2.
+        MUTREC cn1 cn2 mpK mpQ t1 t2 h1 h2 ∧
+        MUTREC cn1 cn2 mpK mpQ t1 t2 k1 k2 ⇒ h1 = k1 ∧ h2 = k2
+End
+
 (* Mapping a functor's own argument and then the sibling's answers is
    mapping both at once, with the sibling's map composed in.  Both
    functors need this, in the same shape: for F1 the first map is its own
@@ -90,13 +102,9 @@ Theorem MUTUAL_RECURSION:
   SMAP cn2 cm2 mpBg smap ∧
   MUTMAP mpG mpH mpK smap ∧ MUTMAP mpBg mp2c mpQ smap ∧
   MUTSPLIT mpQ mp1a mp2n ⇒
-  ∀t1 t2.
-    (∃h1 h2. MUTREC cn1 cn2 mpK mpQ t1 t2 h1 h2) ∧
-    ∀h1 h2 k1 k2.
-      MUTREC cn1 cn2 mpK mpQ t1 t2 h1 h2 ∧
-      MUTREC cn1 cn2 mpK mpQ t1 t2 k1 k2 ⇒ h1 = k1 ∧ h2 = k2
+  MUTITER cn1 cn2 mpK mpQ
 Proof
-  strip_tac >>
+  simp[MUTITER_def] >> strip_tac >>
   (* the predicates are there so that a driver's facts can be matched
      against them; the proof wants what they say *)
   RULE_ASSUM_TAC (PURE_REWRITE_RULE [SREC_def, SMAP_def, MUTSPLIT_def]) >>
@@ -193,4 +201,91 @@ Proof
         disj2_tac >> qexists_tac ‘S21 z’ >> simp[] >> qexists_tac ‘z’ >>
         simp[]) >>
   simp[]
+QED
+
+(* ----------------------------------------------------------------------
+    Primitive recursion for the pair.
+
+    The principle above is an iterator: each function only ever sees the
+    results of the recursive calls.  HOL's datatype axioms hand the
+    function the constructor's arguments as well, and the two are bridged
+    by the standard pairing trick — iterate into 'n1 # 'c1 and 'n2 # 'c2,
+    rebuilding the arguments alongside the answers, and observe that
+    rebuilding is the identity because it and the constructors solve the
+    same iteration.  Both types go through it at once, so the maps here
+    take a function per type rather than one.
+   ---------------------------------------------------------------------- *)
+
+Definition MapId2_def:
+  MapId2 (mp : ('a -> 'a) -> ('b -> 'b) -> 'f -> 'f) ⇔ ∀x. mp I I x = x
+End
+
+Definition MapComp2_def:
+  MapComp2 (mp_ab : ('a1 -> 'b1) -> ('a2 -> 'b2) -> 'f -> 'g)
+           (mp_bc : ('b1 -> 'c1) -> ('b2 -> 'c2) -> 'g -> 'h)
+           (mp_ac : ('a1 -> 'c1) -> ('a2 -> 'c2) -> 'f -> 'h) ⇔
+    ∀f1 f2 g1 g2 x. mp_bc g1 g2 (mp_ab f1 f2 x) = mp_ac (g1 o f1) (g2 o f2) x
+End
+
+Theorem MUTUAL_PRIM_REC:
+  MUTITER cn1 cn2
+          (mpq1 : ('n1 -> 'n1 # 'c1) -> ('n2 -> 'n2 # 'c2) -> 'fn1 -> 'fq1)
+          mpq2 ∧
+  MUTITER cn1 cn2 mpn1 mpn2 ∧
+  MapComp2 mpq1 mpqn1 mpn1 ∧ MapComp2 mpq1 mpqc1 mpc1 ∧ MapId2 mpn1 ∧
+  MapComp2 mpq2 mpqn2 mpn2 ∧ MapComp2 mpq2 mpqc2 mpc2 ∧ MapId2 mpn2 ⇒
+  ∀t1 t2.
+    (∃(h1 : 'n1 -> 'c1) (h2 : 'n2 -> 'c2).
+       (∀af. h1 (cn1 af) = t1 af (mpc1 h1 h2 af)) ∧
+       (∀af. h2 (cn2 af) = t2 af (mpc2 h1 h2 af))) ∧
+    ∀h1 h2 k1 k2.
+      ((∀af. h1 (cn1 af) = t1 af (mpc1 h1 h2 af)) ∧
+       (∀af. h2 (cn2 af) = t2 af (mpc2 h1 h2 af))) ∧
+      ((∀af. k1 (cn1 af) = t1 af (mpc1 k1 k2 af)) ∧
+       (∀af. k2 (cn2 af) = t2 af (mpc2 k1 k2 af))) ⇒ h1 = k1 ∧ h2 = k2
+Proof
+  strip_tac >> rpt gen_tac >>
+  (* the paired iterator: alongside the answer it rebuilds its argument *)
+  qpat_assum ‘MUTITER cn1 cn2 mpq1 mpq2’
+    (fn th =>
+        qspecl_then
+          [‘λv. (cn1 (mpqn1 FST FST v),
+                 t1 (mpqn1 FST FST v) (mpqc1 SND SND v))’,
+           ‘λv. (cn2 (mpqn2 FST FST v),
+                 t2 (mpqn2 FST FST v) (mpqc2 SND SND v))’]
+          (strip_assume_tac o SRULE [])
+          (SRULE [MUTITER_def, MUTREC_def] th)) >>
+  (* and rebuilding is the identity: it and the constructors solve the
+     iteration at the types themselves, which has one solution *)
+  qpat_assum ‘MUTITER cn1 cn2 mpn1 mpn2’
+    (fn th =>
+        qspecl_then [‘cn1’, ‘cn2’] (strip_assume_tac o SRULE [])
+                    (SRULE [MUTITER_def, MUTREC_def] th)) >>
+  ‘FST o h1 = I ∧ FST o h2 = I’
+    by (qpat_x_assum ‘∀h1 h2 k1 k2. _ ∧ _ ⇒ h1 = k1 ∧ h2 = k2’
+          (qspecl_then [‘FST o h1’, ‘FST o h2’, ‘I’, ‘I’] mp_tac) >>
+        impl_tac >- (rpt conj_tac >> gen_tac >> simp[] >>
+                     gs[MapId2_def, MapComp2_def]) >>
+        simp[]) >>
+  conj_tac
+  >- (qexistsl_tac [‘SND o h1’, ‘SND o h2’] >> rpt conj_tac >> gen_tac >>
+      simp[] >> gs[MapComp2_def] >> gs[MapId2_def]) >>
+  (* uniqueness: a solution paired with the identity solves the paired
+     iteration, and those solutions are unique *)
+  ‘∀g1 g2. (∀af. g1 (cn1 af) = t1 af (mpc1 g1 g2 af)) ∧
+           (∀af. g2 (cn2 af) = t2 af (mpc2 g1 g2 af)) ⇒
+           h1 = (λx. (x, g1 x)) ∧ h2 = (λx. (x, g2 x))’
+    by (rpt gen_tac >> strip_tac >>
+        qpat_assum ‘∀h1 h2 k1 k2. _ ∧ _ ⇒ h1 = k1 ∧ h2 = k2’
+          (qspecl_then [‘h1’, ‘h2’, ‘λx. (x, g1 x)’, ‘λx. (x, g2 x)’]
+                       mp_tac) >>
+        impl_tac
+        >- (simp[] >> gs[MapComp2_def] >>
+            simp[combinTheory.o_DEF, GSYM combinTheory.I_EQ_IDABS, ETA_AX] >>
+            gs[MapId2_def]) >>
+        simp[]) >>
+  qx_genl_tac [‘g1’, ‘g2’, ‘j1’, ‘j2’] >> strip_tac >>
+  ‘(λx. (x, g1 x)) = (λx. (x, j1 x)) ∧ (λx. (x, g2 x)) = (λx. (x, j2 x))’
+    by metis_tac[] >>
+  gs[FUN_EQ_THM]
 QED
