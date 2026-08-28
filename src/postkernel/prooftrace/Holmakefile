@@ -16,10 +16,18 @@ else
 all: pft-replay-test
 endif
 
-replay-test: replay-test.mlb replay-test.sml
+# The sources each .mlb pulls in, asked of mlton itself (about 15ms).
+# Without them the executables are rebuilt only when their own two files
+# change, so an edit to the kernel they compile leaves a stale binary in
+# place and the breakage is invisible: a clean checkout fails at once
+# while a warm tree says there is nothing to do.
+REPLAY_SRCS = $(shell mlton -stop f replay-test.mlb)
+PFT_REPLAY_SRCS = $(shell mlton -stop f pft-replay-test.mlb)
+
+replay-test: replay-test.mlb replay-test.sml $(REPLAY_SRCS)
 	mlton -default-type intinf $<
 
-pft-replay-test: pft-replay-test.mlb pft-replay-test.sml
+pft-replay-test: pft-replay-test.mlb pft-replay-test.sml $(PFT_REPLAY_SRCS)
 	mlton -default-type intinf $<
 
 
