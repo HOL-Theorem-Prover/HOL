@@ -272,3 +272,71 @@ val _ =
          #newty fix = “:'b1 mrose”
       then OK() else die (thm_to_string (#recursion fix))
     end
+
+(* ----------------------------------------------------------------------
+    and the family's recursion principle, which is the pair's existence
+    half with the sibling a family rather than a type
+   ---------------------------------------------------------------------- *)
+
+Theorem fam_recursion = familyRecursion fam
+
+val _ = tprint "the family's recursion principle"
+val _ =
+    if null (hyp fam_recursion) andalso
+       null (free_vars (concl fam_recursion)) andalso
+       same (concl fam_recursion)
+            “∀t0 t1 t2.
+               ∃h0 h1 h2.
+                 (∀af. h0 (ft1_CONS af) = t0 (SUM_MAP I (h0 ## h1) af)) ∧
+                 (∀af. h1 (ft2_CONS af) = t1 (SUM_MAP h2 (I ## h1) af)) ∧
+                 ∀af. h2 (ft3_CONS af) = t2 (SUM_MAP h0 h2 af)”
+    then OK() else die (thm_to_string fam_recursion)
+
+(* the pair is the two-member case of the same construction, and gives
+   back what defineMutual's own reduction does *)
+val fam2 = defineFamily {tynames = ["gt1", "gt2"]} (#db fam) [b1]
+             [(“:'b1 + 'a # 'a1”, [alpha, a1]),
+              (“:'a1 + 'b1 # 'a”, [a1, alpha])]
+
+val _ = tprint "a two-member family's recursion principle"
+val _ =
+    let val th = familyRecursion fam2
+    in
+      if null (hyp th) andalso null (free_vars (concl th)) andalso
+         same (concl th)
+              “∀t0 t1.
+                 ∃h0 h1.
+                   (∀af. h0 (gt1_CONS af) = t0 (SUM_MAP I (h0 ## h1) af)) ∧
+                   ∀af. h1 (gt2_CONS af) = t1 (SUM_MAP h0 (I ## h1) af)”
+      then OK() else die (thm_to_string th)
+    end
+
+(* ----------------------------------------------------------------------
+    and the same principle one constructor at a time.
+
+    Each member's constructors come from its own construction, where the
+    members before it are still parameters; the axiom states them at the
+    family's types.
+   ---------------------------------------------------------------------- *)
+
+val fnames = [["FA","FB"], ["FC","FD"], ["FE","FG"]]
+val fcss = List.tabulate
+             (3, fn j => defineConstructors (List.nth (fnames, j))
+                                            (List.nth (#bnfs fam, j))
+                                            (List.nth (#fixes fam, j)))
+
+Theorem fam_axiom = familyAxiom fcss fam fam_recursion
+
+val _ = tprint "the family's recursion, per constructor"
+val _ =
+    if null (hyp fam_axiom) andalso
+       same (concl fam_axiom)
+            “∀f0 f1 f2 f3 f4 f5.
+               ∃h0 h1 h2.
+                 ((∀a0. h0 (FA a0) = f0 a0) ∧
+                  ∀a0 a1. h0 (FB a0 a1) = f1 (h0 a0) (h1 a1)) ∧
+                 ((∀a0. h1 (FC a0) = f2 (h2 a0)) ∧
+                  ∀a0 a1. h1 (FD a0 a1) = f3 a0 (h1 a1)) ∧
+                 (∀a0. h2 (FE a0) = f4 (h0 a0)) ∧
+                 ∀a0. h2 (FG a0) = f5 (h2 a0)”
+    then OK() else die (thm_to_string fam_axiom)

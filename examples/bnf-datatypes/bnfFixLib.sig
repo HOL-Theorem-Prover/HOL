@@ -236,12 +236,43 @@ sig
     fixes : fixpoint list,
     bnfs : bnfLib.derived_bnfn list,
     functors : bnfLib.derived_bnfn list,
+    maps : fixpoint_bnf option list,
+    raw : (hol_type * hol_type list) list,
     slots : hol_type list,
+    params : hol_type list,
     db : bnfBase.t
   }
 
   val defineFamily : {tynames : string list} ->
                      bnfBase.t -> hol_type list ->
                      (hol_type * hol_type list) list -> family
+
+  (* ----------------------------------------------------------------------
+      The family's recursion principle, in the shape HOL's own axiom for a
+      mutually recursive family takes:
+
+        |- !t0 .. tn. ?h0 .. hn.
+             (!af. h0 (cons0 af) = t0 (F0map h0 .. hn af)) /\ ..
+
+      Solved from the last member back: at each member the ones after it
+      have already been solved, as a family over its own slot, and their
+      functions are what its target folds with.
+     ---------------------------------------------------------------------- *)
+  val familyRecursion : family -> thm
+
+  (* ----------------------------------------------------------------------
+      The same principle one constructor at a time, which is the form a
+      proof is written against:
+
+        |- !f0 f1 f2. ?h0 h1.
+             (!a. h0 (A a) = f0 a) /\
+             (!n m. h0 (B n m) = f1 (h0 n) (h1 m)) /\ ..
+
+      one constructors record per member, in the family's order, and the
+      principle to state this way.  Being an iterator, it hands a target
+      the results of the recursive calls; a constructor's other arguments
+      arrive as they were.
+     ---------------------------------------------------------------------- *)
+  val familyAxiom : constructors list -> family -> thm -> thm
 
 end
