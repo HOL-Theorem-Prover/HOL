@@ -49,7 +49,10 @@ size or count.
 Finite maps (`:'a |-> 'b`) get the same asymmetry from Quickcheck through a
 different mechanism: a `register_generator_family` registration built from
 `FEMPTY`/`FUPDATE` fires on demand at whatever concrete instance a goal
-needs, always `exhaustive = false`.  The generator lives only on the
+needs, always `exhaustive = false` -- the flag is fixed once for the
+type operator as a whole rather than computed per monomorphic instance,
+so no key type, `:bool |-> bool` included, can make the registration
+exhaustible.  The generator lives only on the
 `Compute` substrate -- `NativeSML` and `Cv` each decline it by name and
 fall through under `Auto`, since fmap's `TypeBase` entry has no
 constructors of its own for either to build a native or a cv
@@ -1080,8 +1083,28 @@ variables understood by Kodkodi, such as `MINISAT_HOME`,
 
 ### Limitations and interpretation
 
-Counterexample search is bounded and incomplete.  In particular:
+Counterexample search is bounded and incomplete.  Three of the
+limitations below are inherited from the approach itself, not
+shortfalls still to close -- Isabelle's Nitpick has the same three.  In
+particular:
 
+* refuting `?x. P x` means showing that *no* `x` satisfies `P`; no
+  finite search can show that over an infinite type, so a goal whose
+  falsity turns on such an existential reports `Unknown` forever, never
+  a counterexample and never `NoCounterexample`.  An existential in the
+  *witness* direction -- finding one, the ordinary case -- is
+  unaffected;
+* every value the model finder can assign to a `real` variable is a
+  rational number (see the fraction encoding above), so a proposition
+  false only at an irrational point has no countermodel Refute can
+  express: the search exhausts its scopes and reports `Unknown` instead
+  of the counterexample that exists;
+* a goal that remains polymorphic after every configured instantiation
+  degrades a would-be decisive answer to `Unknown`, on both engines,
+  even when its tested instances are all covered: neither engine
+  reports `NoCounterexample` for a claim it verified only at chosen
+  monomorphic proxies, since that would report something stronger than
+  what was actually established;
 * random exhaustion, smart-generator fuel exhaustion, and narrowing at a
   finite depth normally produce `Unknown`, not a proof of validity;
 * ordinary QC requires executable terms and generators.  Unrestricted
@@ -1121,9 +1144,12 @@ Counterexample search is bounded and incomplete.  In particular:
   function's graph (`f a1 ... an = res`) from its own defining
   equations, and running mode inference over them so an inverting mode
   can drive a generator -- is implemented for a purely self-recursive
-  definition (a call to any other function refuses the whole function
-  rather than approximating its graph), and is gated by
-  `upd_allow_function_inversion` (default `false`).  On, a goal
+  definition.  A call to any *other* function refuses the whole function
+  rather than approximating its graph: an under-approximating graph used
+  as a generator would be unsound, so the goal instead falls back to
+  ordinary `Gen`+`Guard` planning, or to the model finder -- a reach
+  limitation of this route, not a soundness or a lost-goal one.  It is
+  gated by `upd_allow_function_inversion` (default `false`).  On, a goal
   premise recognising `f a1 ... an = res` (either orientation, `f`
   applied at exactly its own maximal arity) can compile to an
   inverting `Enum`, competing on score with every other route exactly

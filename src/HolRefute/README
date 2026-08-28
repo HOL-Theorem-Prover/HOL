@@ -833,10 +833,12 @@ Registrations are session-local ML state and create no theory content:
   atom instead fails that scope check outright -- the certification env
   is never built, `certification_copy` returns `NONE`, and `certify`
   falls back to `Keep base`, exactly as before this mechanism existed.
-  Extending it to `rat` would need a rat-capable arithmetic leaf and is a
-  recorded follow-up, not implemented here.  A successful real-Frac
-  replay reports `model = NONE`, and any `evals` row whose evaluated
-  term still has a free variable (e.g. the dropped binding's own
+  Extending it to `rat` would need a rat-capable arithmetic leaf.  Not
+  implemented here; recorded instead as a follow-up beyond Isabelle2025-2
+  parity, since the mechanism it would extend -- kernel certification of
+  a counterexample -- has no Nitpick counterpart at all.  A successful
+  real-Frac replay reports `model = NONE`, and any `evals` row whose
+  evaluated term still has a free variable (e.g. the dropped binding's own
   variable) is dropped rather than displayed half-evaluated -- only
   kernel-established values are shown.
 
@@ -906,6 +908,43 @@ is, but is not unrolled as a joint group the way `Hol_coreln` output is.
 
 Known limitations and follow-ups
 --------------------------------
+
+Three limitations are inherited from the approach itself, not shortfalls
+still to close -- Isabelle's Nitpick carries the same three.
+
+Refuting `?x. P x` means showing that *no* `x` satisfies `P`, and no
+finite scope can show that over an infinite type.  In
+`Refute_Narrow.sml`'s `update_branch`, a universal branch aggregates with
+`conj` and keeps its result, but an existential branch that runs out of
+enumerated witnesses is passed through `incomplete_false`, which marks a
+`false` result as merely potential rather than conclusive.  A goal whose
+falsity turns on an essential existential over an infinite type therefore
+reports `Unknown`, never a counterexample and never `NoCounterexample`.
+Note the asymmetry: an existential in the *witness* direction (finding
+one) is unaffected and is the ordinary case; what is out of reach is
+refuting one.
+
+The `real` ersatz is registered on the same Frac carrier as `rat`
+(below), and a Frac atom is a pair of integers, so every value the model
+finder can assign to a `real` variable is rational.  A proposition false
+only at an irrational point has no countermodel this encoding can
+express, so the search exhausts its scopes without finding one.  The
+encoding is exact for the values it can name; the limitation is which
+values that is, not an approximation of the ones it names.
+
+A goal that stays polymorphic degrades a would-be decisive answer to
+`Unknown`, by a different mechanism on each engine.  The model finder
+returns the reason `"polymorphic axioms prevent an authenticity
+guarantee"` (`Refute_ModelFinder.sml`): an axiom that stays polymorphic
+is not pinned to the scope being searched, so a model over that scope is
+not certified authentic.  Quickcheck's `preserve_polymorphic_bounds`
+(`Refute_Core.sml`) keeps a miss bounds-relative whenever
+`forms_are_polymorphic`, with the reason `"polymorphic search covered
+only configured monomorphic ..."`.  Both degrade a would-be decisive
+answer rather than report something stronger than was established --
+that is the sound behaviour, not a failure.  (The `upd_instantiate`
+discussion above already shows the quickcheck mechanism from the
+configuration side; this states the same fact as a limitation.)
 
 The model finder lazily harvests typedef and quotient metadata when an
 unregistered Abs/Rep occurrence is encountered.  Loading or exporting a theory
@@ -1124,8 +1163,27 @@ Isabelle reports `Genuine` at a scope too small to contain 4, the same
 scope-arbitrary-read defect this guard exists to close.  HolRefute reports
 `Unknown` instead and does not reproduce the imported bug.
 
-Recorded follow-ups are compute-hosted residual-inspection narrowing and
-full function flattening.  Negative smart-generator modes already ship
+Function inversion's `flatten_rhs` (above) flattens only a self-recursive
+call to `f` itself; a call to any *other* function -- even one itself
+total and flattenable -- refuses the whole function rather than
+approximating its graph, by its own comment's design ("a strictly more
+general capability that is deliberately not attempted here",
+`Refute_SmartGen.sml`).  This is a reach limitation of the
+smart-generator route, not a soundness or a lost-goal one: an
+under-approximating graph used as a generator would be unsound, so a
+refused function's premise instead falls back to ordinary `Gen`+`Guard`
+planning, or to the model finder -- refutation power is not lost, only
+the specialised enumerator.  Isabelle's own predicate compiler flattens
+calls to other functions; this port, described in its module header as
+flattening "in the Isabelle predicate-compiler sense", deliberately does
+not.
+
+Compute-hosted residual-inspection narrowing is a separate recorded
+follow-up, and unlike the item above it goes beyond Isabelle2025-2
+parity rather than falling short of it: Isabelle's narrowing needs GHC,
+while Refute's native host substrate is unconditionally present on the
+only platform Refute supports, so availability parity already holds
+without adding it.  Negative smart-generator modes already ship
 (see `NegGuard` above).  Higher-order mode inference feeds a static-
 parameter specialisation pass: a predicate argument applied to a
 statically known closed value (a literal lambda, not a runtime-bound
