@@ -919,7 +919,12 @@ finite scope can show that over an infinite type.  In
 enumerated witnesses is passed through `incomplete_false`, which marks a
 `false` result as merely potential rather than conclusive.  A goal whose
 falsity turns on an essential existential over an infinite type therefore
-reports `Unknown`, never a counterexample and never `NoCounterexample`.
+never earns a `Genuine` counterexample and never `NoCounterexample`.
+Under the default configuration it reports `Unknown` on every engine.  A
+model finder run at explicitly bounded scopes is the one case that
+reports a counterexample at all, and only a `Potential` one, reasoned
+`"model comes from the liberal, unsound-by-design problem"` -- refuting
+the goal correctly, but from the liberal problem, so uncertified.
 Note the asymmetry: an existential in the *witness* direction (finding
 one) is unaffected and is the ordinary case; what is out of reach is
 refuting one.

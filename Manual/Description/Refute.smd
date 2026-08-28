@@ -1090,8 +1090,11 @@ particular:
 
 * refuting `?x. P x` means showing that *no* `x` satisfies `P`; no
   finite search can show that over an infinite type, so a goal whose
-  falsity turns on such an existential reports `Unknown` forever, never
-  a counterexample and never `NoCounterexample`.  An existential in the
+  falsity turns on such an existential never earns a genuine
+  counterexample and never `NoCounterexample`: by default it reports
+  `Unknown`, and a model finder run at explicitly bounded scopes
+  reports at most a `Potential` one, drawn from the liberal problem.
+  An existential in the
   *witness* direction -- finding one, the ordinary case -- is
   unaffected;
 * every value the model finder can assign to a `real` variable is a
