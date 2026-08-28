@@ -13096,6 +13096,25 @@ in
     (fn () => ()) ()
 end
 
+(* Hoisted above its first use ([mf_split_typedef_goal_refuted_soundly]
+   below); every later user in this file picks up this same definition.
+   Shared by every regression that pins a bounds-clean [Unknown]: fully
+   exhausted, not a timeout, and over the expected carrier. *)
+fun is_bounds_clean carrier_substring (Refute.Unknown reasons) =
+      List.exists (String.isSubstring
+        "no counterexample within the tested scopes") reasons andalso
+      List.exists (String.isSubstring carrier_substring) reasons
+  | is_bounds_clean _ _ = false
+
+(* [is_bounds_clean] for an [Unknown]; any decided outcome passes.  A
+   row using this is asking "did this call finish its scopes?", which a
+   [Counterexample] or [NoCounterexample] answers by being decided at
+   all. *)
+fun scopes_finished carrier outcome =
+  case outcome of
+      Refute.Unknown _ => is_bounds_clean carrier outcome
+    | _ => true
+
 val _ = tprint "Refute live Kodkodi bridge"
 
 local
@@ -14076,31 +14095,39 @@ local
      because it is the split-registered axiom itself.
 
      [carrier_config]'s own 60s, uncarded, left this exact call still
-     unresolved at 20s in a probe, so its [Unknown] could not be told
-     apart from a real search -- [not_genuine] alone accepted either.
-     [bounded] derives a config local to this call -- [refute_harvest_
-     split] at its exact cardinality 2, [num] to 2 so both witnesses
-     [0]/[1] are in scope -- without touching [carrier_config], which
-     other rows here share.  [finished] then requires that same call's
-     [Unknown] show "no counterexample within the tested scopes" over
-     that carrier whenever the call is not already a decided
-     [Counterexample]/[NoCounterexample], the inline idiom
-     [mf_binarized_typedef_needs_room] above already uses.  Measured:
-     [Unknown ["no counterexample within the tested scopes after
-     checking 2 of 2 emitted scopes", "searched up to size: card num =
-     2, card refute_harvest_split = 2"]], never [Genuine], reproduced at
-     three card assignments ([2] alone; [1,2]+num<=3; [2]+num<=2).  On
-     the development host the bounded call takes 0.04s-0.06s against
-     [carrier_config]'s 60s deadline -- three orders of magnitude of
-     headroom, so [finished] failing here would need a real, drastic
-     slowdown rather than ordinary load. *)
+     unresolved at 20s in a probe, so its [Unknown] could not be told apart
+     from a real search -- [not_genuine] alone accepted either.  [bounded]
+     derives a config local to this call, pinning [refute_harvest_split] at its
+     exact cardinality 2 without touching [carrier_config], which other rows
+     here share; [num]'s own bound is widened past that cardinality so the
+     carrier also holds atoms outside the typedef's set -- the interesting case
+     for a typedef row -- rather than capped to exactly the rep set.
+     [upd_card] fixes the scope source, so [source_done] starts true
+     (Refute_ModelFinder.sml:704), which lets [fully_exhausted] be set (:742);
+     the bounds-clean reason is emitted only once it is (:1289).  Under the
+     adaptive default over an unbounded carrier such as [num] the cursor never
+     reports done, so that reason is unreachable in principle, not merely slow
+     -- which is why [finished] needs a fixed bound at all, not just a faster
+     one.  [finished] passes on any decided [Counterexample]/[NoCounterexample]
+     and, when the call ends [Unknown], requires the "kodkod: no counterexample
+     within the tested scopes" reason -- the same idiom
+     [mf_binarized_typedef_needs_room] above uses for its own [Unknown] check
+     -- plus a carrier clause pinning [refute_harvest_split]'s own cardinality,
+     which that row's inline check lacks.  Measured: [Unknown ["kodkod: no
+     counterexample within the tested scopes after checking 4 of 4 emitted
+     scopes", "kodkod: searched up to size: card num = 4, card
+     refute_harvest_split = 2"]], never [Genuine].  On the development host the
+     bounded call takes under 0.1s against [carrier_config]'s 60s deadline, so
+     [finished] failing here would need a real, drastic slowdown rather than
+     ordinary load. *)
   fun mf_split_typedef_goal_refuted_soundly () =
     with_quotient_typedef_registries_restored (fn () => let
       val _ = MFH.typedef_registry := []
       val refuted = carrier_refuted ``(a : refute_harvest_split) = b``
       val _ = MFH.typedef_registry := []
       val bounded = carrier_config
-        |> upd_card [(SOME ``:refute_harvest_split``, [2]), (NONE, [1, 2])]
+        |> upd_card
+             [(SOME ``:refute_harvest_split``, [2]), (NONE, [1, 2, 3, 4])]
       val outcome = Refute.refute bounded
         ``refute_harvest_split_home_abs
             (refute_harvest_split_home_rep a) = a``
@@ -14109,15 +14136,7 @@ local
             Refute.Counterexample ({certainty = Refute.Genuine, ...} :: _) =>
               false
           | _ => true
-      val finished =
-        case outcome of
-            Refute.Unknown reasons =>
-              List.exists (String.isSubstring
-                "no counterexample within the tested scopes") reasons
-                andalso
-              List.exists (String.isSubstring
-                "card refute_harvest_split = 2") reasons
-          | _ => true
+      val finished = scopes_finished "card refute_harvest_split = 2" outcome
     in
       refuted andalso not_genuine andalso finished
     end)
@@ -32248,14 +32267,6 @@ val _ = require_msg
   "WF over num either failed to refute or was not honestly liberal")
   (fn () => ()) ()
 
-(* Shared by every regression below that pins a bounds-clean [Unknown]:
-   fully exhausted, not a timeout, and over the expected carrier. *)
-fun is_bounds_clean carrier_substring (Refute.Unknown reasons) =
-      List.exists (String.isSubstring
-        "no counterexample within the tested scopes") reasons andalso
-      List.exists (String.isSubstring carrier_substring) reasons
-  | is_bounds_clean _ _ = false
-
 (* sum'_def (refuteScript.sml) is liberal, not faithful -- see
    card'_def's comment for the full argument.  A literal,
    explicitly-enumerated set always has a distinct witness list in scope,
@@ -32483,30 +32494,34 @@ val _ = require_msg
    The wf_wfrec' goal has no wfrec' wrapper, hence no unknown of its own
    until the guard supplies one; the WFREC goal reaches both.
 
-   [is_total]'s two-valued read let any [Unknown] stand in for "ran to
-   completion without certifying," including one [upd_timeout 90.0]
-   produced by drawing nothing: four of the five calls below could pass
-   on a timeout alone.  [classify] reads the same single call three ways
-   instead: [Certified] on [NoCounterexample], [Finished] on positive
-   evidence the call completed -- a [Counterexample] of either
-   certainty, or an [Unknown] that [is_bounds_clean] over the measured
-   carrier -- and [TimedOut] otherwise.  Measured for all four
-   wfrec'/WFREC calls at [card [1,2,3]]: every one is [Unknown ["no
-   counterexample within the tested scopes after checking 1 of 1 emitted
-   scopes", "searched up to size: card bool itself = 1"]] -- [bool
-   itself] is the only carrier either encoding scopes, and 1 the only
-   size it ever emits regardless of the requested [1,2,3].  The row now
-   requires every call to reach [Finished], closing the timeout gap,
-   while keeping the original claim that no pair reaches [Certified]
-   twice.
+   The old two-valued read let any [Unknown] stand in for "ran to completion
+   without certifying," including one [upd_timeout 90.0] produced by drawing
+   nothing: four of the five calls below could pass on a timeout alone.
+   [classify] reads the same single call three ways instead: [Certified] on
+   [NoCounterexample], [Finished] on positive evidence -- a [Counterexample]
+   of any certainty (it produced a model), or an [Unknown] that
+   [scopes_finished] accepts as bounds-clean over the measured carrier -- and
+   [TimedOut] otherwise.  Measured for all four wfrec'/WFREC calls at [card
+   [1,2,3]]: every one is [Unknown ["kodkod: no counterexample within the
+   tested scopes after checking 1 of 1 emitted scopes", "kodkod: searched up
+   to size: card bool itself = 1"]] -- [bool itself] is the only carrier
+   either encoding scopes, and 1 the only size it ever emits regardless of
+   the requested [1,2,3].  The row now requires every call to reach
+   [Finished], closing the timeout gap, while keeping the original claim that
+   no pair reaches [Certified] twice.  The row used to make three calls, not
+   five: the old andalso-chained check on a goal and its negation
+   short-circuited on a false first read, which is what [through_wfrec] and
+   [through_wf_wfrec] each gave, so their paired negation call was never
+   made.  Every one of the five calls below is now made -- the negation half
+   is exactly what the row claims to check -- costing roughly 0.7s more and
+   opening two timeout surfaces that did not exist before.
 
-   This turns a stalled search from a silent pass into a failure, which
-   is correct but means ordinary host load could now redden the row.
-   Headroom, measured on the development host: the five calls above take
-   0.24s-0.38s apiece against the 90s deadline, so the budget is some
-   235x the slowest of them.  Absolute times differ elsewhere, but
-   [TimedOut] needs a call two orders of magnitude slower than that, not
-   a close race. *)
+   This turns a stalled search from a silent pass into a failure, which is
+   correct but means ordinary host load could now redden the row.  Headroom,
+   measured under load: the five calls take 0.24s-0.38s on an idle process,
+   up to ~0.9s with a large live heap, still ~100x under the 90s deadline.
+   Absolute times differ elsewhere, but [TimedOut] needs a call two orders of
+   magnitude slower than that, not a close race. *)
 fun mf_wfrec_ersatz_stays_satisfiable_off_wf () =
   not (Refute_Forl.is_configured ()) orelse
   let
@@ -32521,9 +32536,8 @@ fun mf_wfrec_ersatz_stays_satisfiable_off_wf () =
     fun classify goal =
       case Refute.refute config goal of
           Refute.NoCounterexample => Certified
-        | Refute.Counterexample _ => Finished
-        | outcome as Refute.Unknown _ =>
-            if is_bounds_clean "card bool itself" outcome
+        | outcome =>
+            if scopes_finished "card bool itself" outcome
             then Finished else TimedOut
     val through_wfrec =
       ``WFREC (\x y:bool. T) (\f (b:bool). ~ f b) T``
@@ -32552,7 +32566,8 @@ val _ = require_msg
   (check_result mf_wfrec_ersatz_stays_satisfiable_off_wf) (fn () =>
   "a wfrec'/WFREC call did not finish within its tested scopes, WFREC \
   \or wf_wfrec' certified totality on both a goal and its negation, or \
-  \the always-decidable acyclic twin stayed inconclusive")
+  \the always-decidable acyclic twin failed to certify -- staying \
+  \inconclusive or, worse, being refuted")
   (fn () => ()) ()
 
 fun mf_choice_witness_in_scope_still_genuine () =
