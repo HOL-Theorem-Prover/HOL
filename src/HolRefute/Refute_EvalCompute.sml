@@ -48,6 +48,71 @@ structure Refute_EvalCompute = struct
             fn index => wordsSyntax.mk_wordii (index, width))
         end
 
+  (* The generator half shared by every fraction-shaped carrier
+     ([:rat], [:real]): only the literal constructor differs, so the
+     sampling and enumeration policy is stated once here rather than
+     once per carrier.  Numerators span [-size, size], the house GenNum
+     Int convention above; denominators are drawn as k + 1 for k in
+     [0, size], so every candidate is well-formed by construction and no
+     draw can reach a zero or negative denominator.  Enumeration is
+     restricted to lowest terms (0 admitted only as 0/1): every distinct
+     fraction at this radius is covered exactly once instead of via
+     every non-reduced form that also fits, which only changes ordering,
+     pinned nowhere. *)
+  fun fraction_generator mk_lit : Refute_Gen.custom_gen =
+    let
+      fun draw_numerator size state =
+        let
+          val radius = IntInf.fromInt (Int.max (0, size))
+          val bound = 2 * radius + 1
+          val (value, next) = Refute_Eval.checked_rand_below bound state
+        in
+          (IntInf.toInt value - IntInf.toInt radius, next)
+        end
+
+      fun draw_denominator size state =
+        let
+          val bound = IntInf.fromInt (Int.max (0, size) + 1)
+          val (value, next) = Refute_Eval.checked_rand_below bound state
+        in
+          (IntInf.toInt value + 1, next)
+        end
+
+      fun random size state =
+        let
+          val (n, s1) = draw_numerator size state
+          val (d, s2) = draw_denominator size s1
+        in
+          (mk_lit (n, d), s2)
+        end
+
+      fun gcd (a, 0) = a
+        | gcd (a, b) = gcd (b, a mod b)
+
+      fun in_lowest_terms (0, d) = (d = 1)
+        | in_lowest_terms (n, d) = gcd (Int.abs n, d) = 1
+
+      fun enumerate size =
+        let val radius = Int.max (0, size)
+        in
+          List.concat
+            (List.tabulate (radius + 1, fn k =>
+              let val d = k + 1
+              in
+                List.mapPartial
+                  (fn i =>
+                     let val n = i - radius
+                     in
+                       if in_lowest_terms (n, d) then SOME (mk_lit (n, d))
+                       else NONE
+                     end)
+                  (List.tabulate (2 * radius + 1, fn i => i))
+              end))
+        end
+    in
+      {enumerate = SOME enumerate, random = SOME random}
+    end
+
   fun checked_custom_value expected value =
     if Util.same_type (Term.type_of value) expected then value
     else
@@ -241,6 +306,13 @@ structure Refute_EvalCompute = struct
       val assumption_satisfied = ref 0
       val conclusion_evaluated = ref 0
 
+      (* The one spelling of "this branch ended a candidate": every
+         terminal branch above routes through it, so the counting rule
+         stated above is enforced in one place rather than restated at
+         each site. *)
+      fun dropped () =
+        (candidates_generated := !candidates_generated + 1; Continue)
+
       fun candidate env genuine =
         let
           val found =
@@ -257,14 +329,11 @@ structure Refute_EvalCompute = struct
       fun guard_step env genuine tm next =
         case eval_boolean env tm of
             IsTrue => visit env genuine next
-          | IsFalse =>
-              (candidates_generated := !candidates_generated + 1;
-               Continue)
+          | IsFalse => dropped ()
           | IsStuck =>
               (complete := false;
                if genuine_only then
-                 (candidates_generated := !candidates_generated + 1;
-                  Continue)
+                 dropped ()
                else visit env false next)
 
       and visit env genuine current =
@@ -315,21 +384,15 @@ structure Refute_EvalCompute = struct
                        if List.all Option.isSome inputs then
                          if null (enum_values program
                                     (List.map valOf inputs)) then
-                           (candidates_generated :=
-                              !candidates_generated + 1;
-                            Continue)
+                           dropped ()
                          else visit env genuine cont
                        else
-                         (candidates_generated := !candidates_generated + 1;
-                          Continue)
+                         dropped ()
                      end
                  | NONE =>
                      (case eval_boolean env predicate of
                           IsTrue => visit env genuine cont
-                        | IsFalse =>
-                            (candidates_generated :=
-                               !candidates_generated + 1;
-                             Continue)
+                        | IsFalse => dropped ()
                         | IsStuck =>
                             (complete := false;
                              if genuine_only then
@@ -349,14 +412,10 @@ structure Refute_EvalCompute = struct
                       (fn values =>
                         case match_enum_terms env outs values of
                             SOME extended => visit extended genuine cont
-                          | NONE =>
-                              (candidates_generated :=
-                                 !candidates_generated + 1;
-                               Continue))
+                          | NONE => dropped ())
                   end
                 else
-                  (candidates_generated := !candidates_generated + 1;
-                   Continue)
+                  dropped ()
               end
           | Bind (variable, tm, fallback, next) =>
               (case eval_rhs env tm of
@@ -365,15 +424,10 @@ structure Refute_EvalCompute = struct
                  | NONE =>
                      (complete := false;
                       case fallback of
-                          NONE =>
-                            (candidates_generated :=
-                               !candidates_generated + 1;
-                             Continue)
+                          NONE => dropped ()
                         | SOME alternative =>
                             if genuine_only then
-                              (candidates_generated :=
-                                 !candidates_generated + 1;
-                               Continue)
+                              dropped ()
                             else visit env false alternative))
           | Split (tm, branches) =>
               (case eval_rhs env tm of
@@ -382,18 +436,14 @@ structure Refute_EvalCompute = struct
                           NONE =>
                             (complete := false;
                              match_failures := !match_failures + 1;
-                             candidates_generated := !candidates_generated + 1;
-                             Continue)
+                             dropped ())
                         | SOME (constructor, args) =>
                             (case List.find (fn (expected, variables, _) =>
                               Term.same_const expected constructor andalso
                               length variables = length args) branches of
                                  (* A partial split is the false constructor
                                     premise, not an evaluator failure. *)
-                                 NONE =>
-                                   (candidates_generated :=
-                                      !candidates_generated + 1;
-                                    Continue)
+                                 NONE => dropped ()
                                | SOME (_, variables, next) =>
                                    visit
                                      (ListPair.zip (variables, args) @ env)
@@ -401,8 +451,7 @@ structure Refute_EvalCompute = struct
                  | NONE =>
                      (complete := false;
                       match_failures := !match_failures + 1;
-                      candidates_generated := !candidates_generated + 1;
-                      Continue))
+                      dropped ()))
           | Gen (variable, next) =>
               gen visit complete env genuine variable next
       val result = visit [] true plan

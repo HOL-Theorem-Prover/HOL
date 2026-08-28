@@ -491,6 +491,124 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
       rev reversed
     end
 
+  (* The word and char carrier tables and their lookups: pure constants,
+     kept at module level rather than inside [nut_from_term]'s per-node
+     [aux], which would rebuild all 25 table entries and the four lookup
+     closures at every subterm of every encoded term. *)
+
+  (* Atom [j] of a word carrier denotes [n2w j], so a literal is a
+     [Num] at the word type once reduced modulo the width. *)
+  fun word_literal_value term =
+    case Lib.total wordsSyntax.dest_mod_word_literal term of
+        SOME (value, _) => Lib.total Arbnum.toInt value
+      | NONE => NONE
+
+  (* Shared by both carriers' tables: [applies] gates on the operation's
+     type first, since a table miss is the common case and every entry's
+     [is_named] re-destructs the head. *)
+  fun guarded_key_lookup applies table head =
+    if applies (Term.type_of head) then
+      Option.map #2 (List.find (fn (key, _) => is_named key head) table)
+    else NONE
+
+  fun word_key_lookup table head =
+    guarded_key_lookup (Option.isSome o MFH.word_op_dimension) table head
+
+  fun char_key_lookup table head =
+    guarded_key_lookup MFH.is_char_op_type table head
+
+  (* [Add], [Subtract] and [Multiply] are the modular ring at a word
+     type; the other direct operations have no arithmetic reading. *)
+  val word_csts =
+    [({Thy = "words", Name = "n2w"}, NatToWord),
+     ({Thy = "words", Name = "w2n"}, WordToNat),
+     ({Thy = "words", Name = "word_add"}, Add),
+     ({Thy = "words", Name = "word_sub"}, Subtract),
+     ({Thy = "words", Name = "word_mul"}, Multiply),
+     ({Thy = "words", Name = "word_and"}, WordAnd),
+     ({Thy = "words", Name = "word_or"}, WordOr),
+     ({Thy = "words", Name = "word_xor"}, WordXor),
+     ({Thy = "words", Name = "word_lsl"}, WordShl),
+     ({Thy = "words", Name = "word_lsr"}, WordShr),
+     ({Thy = "words", Name = "word_asr"}, WordAsr)]
+  val word_cst_of = word_key_lookup word_csts
+
+  (* Each order is the unsigned strict one, optionally swapped and
+     negated; a signed order additionally adds the sign bit to both
+     operands, which turns the signed order into the unsigned one. *)
+  val word_orders =
+    [({Thy = "words", Name = "word_lo"}, (false, false, false)),
+     ({Thy = "words", Name = "word_hi"}, (false, true, false)),
+     ({Thy = "words", Name = "word_ls"}, (false, true, true)),
+     ({Thy = "words", Name = "word_hs"}, (false, false, true)),
+     ({Thy = "words", Name = "word_lt"}, (true, false, false)),
+     ({Thy = "words", Name = "word_gt"}, (true, true, false)),
+     ({Thy = "words", Name = "word_le"}, (true, true, true)),
+     ({Thy = "words", Name = "word_ge"}, (true, false, true))]
+  val word_order_of = word_key_lookup word_orders
+
+  (* Atom [j] of the char carrier denotes [CHR j], so a literal is a
+     [Num] at [:char]. *)
+  fun char_literal_value term =
+    if MFH.is_char_literal term then
+      Lib.total numSyntax.int_of_term (#2 (Term.dest_comb term))
+    else NONE
+  val char_csts =
+    [({Thy = "string", Name = "CHR"}, NatToChar),
+     ({Thy = "string", Name = "ORD"}, CharToNat)]
+  val char_cst_of = char_key_lookup char_csts
+
+  (* Character order is the order of the codes, which is the atom
+     order, so the unsigned word orders read it unchanged. *)
+  val char_orders =
+    [({Thy = "string", Name = "char_lt"}, (false, false, false)),
+     ({Thy = "string", Name = "char_gt"}, (false, true, false)),
+     ({Thy = "string", Name = "char_le"}, (false, true, true)),
+     ({Thy = "string", Name = "char_ge"}, (false, false, true))]
+  val char_order_of = char_key_lookup char_orders
+
+  fun word_width_of ty =
+    case MFH.word_dimension ty of
+        SOME width => width
+      | NONE => raise Feedback.mk_HOL_ERR
+          "Refute_ModelFinder_Nut" "nut_from_term"
+          "word operation at a non-word type"
+
+  (* [value - x] at a word type: complementation is [~1w - x] and
+     negation is [0w - x], neither needing a primitive of its own. *)
+  fun word_subtract_from word_ty value =
+    Op2 (Apply, Type.-->(word_ty, word_ty), MFR.Any,
+      Cst (Subtract,
+        Type.-->(word_ty, Type.-->(word_ty, word_ty)), MFR.Any),
+      Cst (Num value, word_ty, MFR.Any))
+
+  fun word_add_sign_bit operand =
+    let
+      val word_ty = type_of operand
+      val width = word_width_of word_ty
+    in
+      Op2 (Apply, word_ty, MFR.Any,
+        Op2 (Apply, Type.-->(word_ty, word_ty), MFR.Any,
+          Cst (Add,
+            Type.-->(word_ty, Type.-->(word_ty, word_ty)), MFR.Any),
+          Cst (Num (Util.reasonable_power 2 (width - 1)), word_ty,
+            MFR.Any)),
+        operand)
+    end
+
+  fun word_comparison (signed, swap, negate) left right =
+    let
+      val (first, second) =
+        if swap then (right, left) else (left, right)
+      val (first, second) =
+        if signed then
+          (word_add_sign_bit first, word_add_sign_bit second)
+        else (first, second)
+      val less = Op2 (Less, Type.bool, MFR.Any, first, second)
+    in
+      if negate then Op1 (Not, Type.bool, MFR.Any, less) else less
+    end
+
   fun nut_from_term context equality term =
     let
       fun int_of_numeral integer =
@@ -599,106 +717,6 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                     is_named {Thy = "integer", Name = "int_div"} head then
               SOME Divide
             else NONE
-          (* Atom [j] of a word carrier denotes [n2w j], so a literal is a
-             [Num] at the word type once reduced modulo the width. *)
-          fun word_literal_value term =
-            case Lib.total wordsSyntax.dest_mod_word_literal term of
-                SOME (value, _) => Lib.total Arbnum.toInt value
-              | NONE => NONE
-          fun word_key_lookup table head =
-            if Option.isSome (MFH.word_op_dimension (Term.type_of head)) then
-              Option.map #2
-                (List.find (fn (key, _) => is_named key head) table)
-            else NONE
-          (* [Add], [Subtract] and [Multiply] are the modular ring at a word
-             type; the other direct operations have no arithmetic reading. *)
-          val word_csts =
-            [({Thy = "words", Name = "n2w"}, NatToWord),
-             ({Thy = "words", Name = "w2n"}, WordToNat),
-             ({Thy = "words", Name = "word_add"}, Add),
-             ({Thy = "words", Name = "word_sub"}, Subtract),
-             ({Thy = "words", Name = "word_mul"}, Multiply),
-             ({Thy = "words", Name = "word_and"}, WordAnd),
-             ({Thy = "words", Name = "word_or"}, WordOr),
-             ({Thy = "words", Name = "word_xor"}, WordXor),
-             ({Thy = "words", Name = "word_lsl"}, WordShl),
-             ({Thy = "words", Name = "word_lsr"}, WordShr),
-             ({Thy = "words", Name = "word_asr"}, WordAsr)]
-          val word_cst_of = word_key_lookup word_csts
-          (* Each order is the unsigned strict one, optionally swapped and
-             negated; a signed order additionally adds the sign bit to both
-             operands, which turns the signed order into the unsigned one. *)
-          val word_orders =
-            [({Thy = "words", Name = "word_lo"}, (false, false, false)),
-             ({Thy = "words", Name = "word_hi"}, (false, true, false)),
-             ({Thy = "words", Name = "word_ls"}, (false, true, true)),
-             ({Thy = "words", Name = "word_hs"}, (false, false, true)),
-             ({Thy = "words", Name = "word_lt"}, (true, false, false)),
-             ({Thy = "words", Name = "word_gt"}, (true, true, false)),
-             ({Thy = "words", Name = "word_le"}, (true, true, true)),
-             ({Thy = "words", Name = "word_ge"}, (true, false, true))]
-          val word_order_of = word_key_lookup word_orders
-          (* Atom [j] of the char carrier denotes [CHR j], so a literal is a
-             [Num] at [:char]. *)
-          fun char_literal_value term =
-            if MFH.is_char_literal term then
-              Lib.total numSyntax.int_of_term (#2 (Term.dest_comb term))
-            else NONE
-          fun char_key_lookup table head =
-            if MFH.is_char_op_type (Term.type_of head) then
-              Option.map #2
-                (List.find (fn (key, _) => is_named key head) table)
-            else NONE
-          val char_csts =
-            [({Thy = "string", Name = "CHR"}, NatToChar),
-             ({Thy = "string", Name = "ORD"}, CharToNat)]
-          val char_cst_of = char_key_lookup char_csts
-          (* Character order is the order of the codes, which is the atom
-             order, so the unsigned word orders read it unchanged. *)
-          val char_orders =
-            [({Thy = "string", Name = "char_lt"}, (false, false, false)),
-             ({Thy = "string", Name = "char_gt"}, (false, true, false)),
-             ({Thy = "string", Name = "char_le"}, (false, true, true)),
-             ({Thy = "string", Name = "char_ge"}, (false, false, true))]
-          val char_order_of = char_key_lookup char_orders
-          fun word_width_of ty =
-            case MFH.word_dimension ty of
-                SOME width => width
-              | NONE => raise Feedback.mk_HOL_ERR
-                  "Refute_ModelFinder_Nut" "nut_from_term"
-                  "word operation at a non-word type"
-          (* [value - x] at a word type: complementation is [~1w - x] and
-             negation is [0w - x], neither needing a primitive of its own. *)
-          fun word_subtract_from word_ty value =
-            Op2 (Apply, Type.-->(word_ty, word_ty), MFR.Any,
-              Cst (Subtract,
-                Type.-->(word_ty, Type.-->(word_ty, word_ty)), MFR.Any),
-              Cst (Num value, word_ty, MFR.Any))
-          fun word_add_sign_bit operand =
-            let
-              val word_ty = type_of operand
-              val width = word_width_of word_ty
-            in
-              Op2 (Apply, word_ty, MFR.Any,
-                Op2 (Apply, Type.-->(word_ty, word_ty), MFR.Any,
-                  Cst (Add,
-                    Type.-->(word_ty, Type.-->(word_ty, word_ty)), MFR.Any),
-                  Cst (Num (Util.reasonable_power 2 (width - 1)), word_ty,
-                    MFR.Any)),
-                operand)
-            end
-          fun word_comparison (signed, swap, negate) left right =
-            let
-              val (first, second) =
-                if swap then (right, left) else (left, right)
-              val (first, second) =
-                if signed then
-                  (word_add_sign_bit first, word_add_sign_bit second)
-                else (first, second)
-              val less = Op2 (Less, Type.bool, MFR.Any, first, second)
-            in
-              if negate then Op1 (Not, Type.bool, MFR.Any, less) else less
-            end
           fun is_numeral_skeleton head =
             is_named {Thy = "arithmetic", Name = "NUMERAL"} head orelse
             is_named {Thy = "arithmetic", Name = "BIT1"} head orelse

@@ -83,7 +83,7 @@ structure Refute :> Refute = struct
         let
           val keyed = List.map pairSyntax.dest_pair pairs
           fun keep ((key, value), (kept, seen)) =
-            if List.exists (fn k => Term.aconv key k) seen
+            if Refute_Util.aconv_member key seen
             then (kept, key :: seen)
             else ((key, value) :: kept, key :: seen)
           val (kept, _) = List.foldr keep ([], []) keyed

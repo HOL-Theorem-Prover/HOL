@@ -441,36 +441,42 @@ fun postprocess_term (snapshot : term_postprocessor_snapshot) term =
     if nothing_registered then term else descend term
   end
 
-(* [raw_constructor_name] deliberately covers reconstructed variables as well
+(* The recognition contract shared by both frac renderers below: a
+   reconstructed [abs_frac] atom over a pair of integer literals.
+   [raw_constructor_name] deliberately covers reconstructed variables as well
    as constants: the atom reaching this postprocessor is usually a variable
    whose stripped name is the mangled constant, so a [dest_thy_const] test
    here would silently stop matching. *)
-fun frac_atom_to_rat term =
+fun dest_frac_atom term =
   case HolKernel.strip_comb term of
       (constructor, [pair]) =>
         if MFH.raw_constructor_name constructor = "frac$abs_frac" then
           let
             val (numerator, denominator) = pairSyntax.dest_pair pair
-            val rat_cons = Term.prim_mk_const
-              {Thy = "rat", Name = "rat_cons"}
           in
             if Util.same_type (Term.type_of numerator) MFH.int_type andalso
-               Util.same_type (Term.type_of denominator) MFH.int_type then
-              let
-                val denominator =
-                  if Arbint.compare
-                       (intSyntax.int_of_term numerator, Arbint.zero) = EQUAL
-                  then intSyntax.term_of_int Arbint.one
-                  else denominator
-              in
-                Term.list_mk_comb (rat_cons, [numerator, denominator])
-              end
-            else
-              term
-          end handle HOL_ERR _ => term
+               Util.same_type (Term.type_of denominator) MFH.int_type
+            then SOME (numerator, denominator)
+            else NONE
+          end handle HOL_ERR _ => NONE
         else
-          term
-    | _ => term
+          NONE
+    | _ => NONE
+
+fun frac_atom_to_rat term =
+  case dest_frac_atom term of
+      NONE => term
+    | SOME (numerator, denominator) =>
+        (let
+           val rat_cons = Term.prim_mk_const {Thy = "rat", Name = "rat_cons"}
+           val denominator =
+             if Arbint.compare
+                  (intSyntax.int_of_term numerator, Arbint.zero) = EQUAL
+             then intSyntax.term_of_int Arbint.one
+             else denominator
+         in
+           Term.list_mk_comb (rat_cons, [numerator, denominator])
+         end handle HOL_ERR _ => term)
 
 (* [realax$real] has no literal constructor the way [rat$rat_cons] does, so
    a reconstructed [abs_frac] value is rendered through division instead: a
@@ -480,35 +486,21 @@ fun frac_atom_to_rat term =
    That is a deliberate divergence from [frac_atom_to_rat], which always
    prints [n // d]; it is not an oversight to "fix" back into symmetry. *)
 fun frac_atom_to_real term =
-  case HolKernel.strip_comb term of
-      (constructor, [pair]) =>
-        if MFH.raw_constructor_name constructor = "frac$abs_frac" then
-          let
-            val (numerator, denominator) = pairSyntax.dest_pair pair
-          in
-            if Util.same_type (Term.type_of numerator) MFH.int_type andalso
-               Util.same_type (Term.type_of denominator) MFH.int_type then
-              let
-                val numerator_int = intSyntax.int_of_term numerator
-                val denominator_int = intSyntax.int_of_term denominator
-                val numerator_term = realSyntax.term_of_int numerator_int
-              in
-                if Arbint.compare
-                     (numerator_int, Arbint.zero) = EQUAL orelse
-                   Arbint.compare
-                     (denominator_int, Arbint.one) = EQUAL
-                then
-                  numerator_term
-                else
-                  realSyntax.mk_div
-                    (numerator_term, realSyntax.term_of_int denominator_int)
-              end
-            else
-              term
-          end handle HOL_ERR _ => term
-        else
-          term
-    | _ => term
+  case dest_frac_atom term of
+      NONE => term
+    | SOME (numerator, denominator) =>
+        (let
+           val numerator_int = intSyntax.int_of_term numerator
+           val denominator_int = intSyntax.int_of_term denominator
+           val numerator_term = realSyntax.term_of_int numerator_int
+         in
+           if Arbint.compare (numerator_int, Arbint.zero) = EQUAL orelse
+              Arbint.compare (denominator_int, Arbint.one) = EQUAL
+           then numerator_term
+           else
+             realSyntax.mk_div
+               (numerator_term, realSyntax.term_of_int denominator_int)
+         end handle HOL_ERR _ => term)
 
 (* Narrowed to [:real] by type, not by the reserved name alone: [abs_frac]
    is [int # int -> frac] (retypes to neither [real] nor [rat]), so [rat]
@@ -1631,7 +1623,7 @@ fun make_display_fun domain_ty marker pairs =
    this node runs, so [dest_display_fun] cannot currently surface one. *)
 fun has_duplicate_key pairs =
   let
-    fun seen key = List.exists (fn key' => Term.aconv key key')
+    val seen = Util.aconv_member
   in
     #1 (List.foldl
       (fn ((key, _), (dup, prior)) =>
@@ -1725,7 +1717,7 @@ fun dedup_update_chain term =
         fun keep ((point, value), (kept, seen)) =
           if MFN.contains_display_marker point then
             ((point, value) :: kept, seen)
-          else if List.exists (Term.aconv point) seen then (kept, seen)
+          else if Util.aconv_member point seen then (kept, seen)
           else ((point, value) :: kept, point :: seen)
         val (kept_rev, _) = List.foldl keep ([], []) updates
         val kept = List.rev kept_rev

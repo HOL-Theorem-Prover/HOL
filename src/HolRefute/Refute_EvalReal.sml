@@ -157,66 +157,8 @@ end = struct
   fun install () =
     computeLib.add_convs [(realSyntax.inv_tm, 1, REAL_INV_DECIDE_CONV)]
 
-  (* Numerators span [-size, size], the house GenNum Int convention
-     (Refute_EvalCompute.sml). *)
-  fun draw_numerator size state =
-    let
-      val radius = IntInf.fromInt (Int.max (0, size))
-      val bound = 2 * radius + 1
-      val (value, next) = Refute_Eval.checked_rand_below bound state
-    in
-      (IntInf.toInt value - IntInf.toInt radius, next)
-    end
-
-  (* Denominators are drawn as k + 1 for k in [0, size], so every
-     candidate is well-formed by construction: no draw can reach a zero
-     or negative denominator. *)
-  fun draw_denominator size state =
-    let
-      val bound = IntInf.fromInt (Int.max (0, size) + 1)
-      val (value, next) = Refute_Eval.checked_rand_below bound state
-    in
-      (IntInf.toInt value + 1, next)
-    end
-
-  fun random size state =
-    let
-      val (n, s1) = draw_numerator size state
-      val (d, s2) = draw_denominator size s1
-    in
-      (mk_real_lit (n, d), s2)
-    end
-
-  fun gcd (a, 0) = a
-    | gcd (a, b) = gcd (b, a mod b)
-
-  fun in_lowest_terms (0, d) = (d = 1)
-    | in_lowest_terms (n, d) = gcd (Int.abs n, d) = 1
-
-  (* Restricted to lowest terms (0 admitted only as 0/1): every distinct
-     rational at this radius is covered exactly once instead of via
-     every non-reduced fraction that also fits, which only changes
-     ordering, pinned nowhere. *)
-  fun enumerate size =
-    let val radius = Int.max (0, size)
-    in
-      List.concat
-        (List.tabulate (radius + 1, fn k =>
-          let val d = k + 1
-          in
-            List.mapPartial
-              (fn i =>
-                 let val n = i - radius
-                 in
-                   if in_lowest_terms (n, d) then SOME (mk_real_lit (n, d))
-                   else NONE
-                 end)
-              (List.tabulate (2 * radius + 1, fn i => i))
-          end))
-    end
-
   val generator : Refute_Gen.custom_gen =
-    { enumerate = SOME enumerate, random = SOME random }
+    Refute_EvalCompute.fraction_generator mk_real_lit
 
   fun register () =
     (install (); Refute_Gen.register_generator real_ty generator)

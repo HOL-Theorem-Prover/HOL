@@ -545,14 +545,20 @@ structure Refute_ModelFinder_HOL = struct
   fun is_word_literal term =
     Lib.can wordsSyntax.dest_mod_word_literal term
 
-  fun type_has_word ty =
-    is_word_type ty orelse
-    (List.exists type_has_word (#Args (Type.dest_thy_type ty))
+  (* [type_has p ty]: [p] accepts [ty] or some type nested inside it.
+     [term_mentions p]: some subterm's type does.  Stated once for the
+     three carriers below (word, char, num-typedef), which differ only
+     in the leaf predicate. *)
+  fun type_has p ty =
+    p ty orelse
+    (List.exists (type_has p) (#Args (Type.dest_thy_type ty))
      handle HOL_ERR _ => false)
 
-  fun term_mentions_word_type term =
-    List.exists (type_has_word o Term.type_of)
+  fun term_mentions p term =
+    List.exists (type_has p o Term.type_of)
       (HolKernel.find_terms (fn _ => true) term)
+
+  val term_mentions_word_type = term_mentions is_word_type
 
   (* The width of the word type a word operation acts on. *)
   fun word_op_dimension ty =
@@ -585,14 +591,7 @@ structure Refute_ModelFinder_HOL = struct
              | _ => false)
       | NONE => false
 
-  fun type_has_char ty =
-    is_char_type ty orelse
-    (List.exists type_has_char (#Args (Type.dest_thy_type ty))
-     handle HOL_ERR _ => false)
-
-  fun term_mentions_char_type term =
-    List.exists (type_has_char o Term.type_of)
-      (HolKernel.find_terms (fn _ => true) term)
+  val term_mentions_char_type = term_mentions is_char_type
 
   (* Whether a char operation's type touches the carrier at all. *)
   fun is_char_op_type ty =
@@ -672,24 +671,30 @@ structure Refute_ModelFinder_HOL = struct
      ({Thy = "string", Name = "char_gt"}, 2),
      ({Thy = "string", Name = "char_ge"}, 2)]
 
-  fun generic_built_in_arity key =
-    Option.map #2 (List.find (fn (other, _) => same_key key other)
-      built_in_consts)
+  fun keyed_built_in_arity table key =
+    Option.map #2 (List.find (fn (other, _) => same_key key other) table)
+
+  val generic_built_in_arity = keyed_built_in_arity built_in_consts
 
   fun typed_built_in_arity key ty =
     Option.map #2 (List.find (fn ((other, other_ty), _) =>
       same_key key other andalso ty = other_ty) built_in_typed_consts)
 
+  (* Both carriers' tables are single-theory, so the theory name decides
+     before the type guard runs.  That matters: these two are reached
+     only after the generic and typed tables miss -- i.e. for every
+     ordinary constant -- and the type guards below each walk the
+     constant's whole type. *)
   fun word_built_in_arity key ty =
-    if Option.isSome (word_op_dimension ty) then
-      Option.map #2 (List.find (fn (other, _) => same_key key other)
-        word_built_in_consts)
+    if #Thy key <> "words" then NONE
+    else if Option.isSome (word_op_dimension ty) then
+      keyed_built_in_arity word_built_in_consts key
     else NONE
 
   fun char_built_in_arity key ty =
-    if is_char_op_type ty then
-      Option.map #2 (List.find (fn (other, _) => same_key key other)
-        char_built_in_consts)
+    if #Thy key <> "string" then NONE
+    else if is_char_op_type ty then
+      keyed_built_in_arity char_built_in_consts key
     else NONE
 
   (* Outside the direct tier a word operation is refused by name rather than
@@ -896,9 +901,6 @@ structure Refute_ModelFinder_HOL = struct
 
   fun def_of_const context = Option.map #2 o def_of_const_ext context
 
-  fun strip_abstractions term =
-    if Term.is_abs term then strip_abstractions (Term.body term) else term
-
   fun fixpoint_kind_of_head head =
     if not (Term.is_const head) then NoFp
     else if same_key (const_key head) {Thy = "fixedPoint", Name = "gfp"}
@@ -908,7 +910,8 @@ structure Refute_ModelFinder_HOL = struct
     else NoFp
 
   fun fixpoint_kind_of_rhs rhs =
-    fixpoint_kind_of_head (#1 (HolKernel.strip_comb (strip_abstractions rhs)))
+    fixpoint_kind_of_head
+      (#1 (HolKernel.strip_comb (#2 (Term.strip_abs rhs))))
     handle HOL_ERR _ => NoFp
 
   fun constants_in term =
@@ -2837,7 +2840,7 @@ structure Refute_ModelFinder_HOL = struct
                else []))
             arguments)
         end
-      val _ = if List.exists (Term.aconv x) (spine_arguments application)
+      val _ = if Util.aconv_member x (spine_arguments application)
               then () else
         raise err function
           "no argument on the witness's constructor spine is the bound \
@@ -4367,14 +4370,7 @@ structure Refute_ModelFinder_HOL = struct
   (* Scanning types rather than morphisms is the robust half: a goal can
      mention the abstract type with neither Abs nor Rep present, and a
      morphism's own type mentions it anyway. *)
-  fun type_has_num_typedef ty =
-    is_num_typedef_type ty orelse
-    (List.exists type_has_num_typedef (#Args (Type.dest_thy_type ty))
-     handle HOL_ERR _ => false)
-
-  fun term_mentions_num_typedef term =
-    List.exists (type_has_num_typedef o Term.type_of)
-      (HolKernel.find_terms (fn _ => true) term)
+  val term_mentions_num_typedef = term_mentions is_num_typedef_type
 
   fun quotient_relation_for_type ty =
     case quotient_for_type ty of

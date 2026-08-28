@@ -2400,6 +2400,15 @@ structure Refute_ModelFinder_Preproc = struct
          grows in lockstep provides.  A forced [binary_ints] still wins in
          every case; the encoder then refuses the word or char operation by
          name, and reaches the typedef only at a hand-named [card num]. *)
+      val all_axioms = nondefinitions @ definitions
+      (* One pass over the axioms for all three vetoes: each
+         [term_mentions_*] materialises the complete subterm list of
+         every axiom, so asking them separately walks the set three
+         times over. *)
+      fun vetoes_binarization term =
+        MFH.term_mentions_word_type term orelse
+        MFH.term_mentions_char_type term orelse
+        MFH.term_mentions_num_typedef term
       val binarize =
         case binary_ints of
             SOME false => false
@@ -2407,21 +2416,12 @@ structure Refute_ModelFinder_Preproc = struct
               List.all (may_use_binary_ints false) nondefinitions andalso
               List.all (may_use_binary_ints true) definitions andalso
               (binary_ints = SOME true orelse
-               (List.exists should_use_binary_ints
-                  (nondefinitions @ definitions) andalso
-                not (List.exists MFH.term_mentions_word_type
-                  (nondefinitions @ definitions)) andalso
-                not (List.exists MFH.term_mentions_char_type
-                  (nondefinitions @ definitions)) andalso
-                not (List.exists MFH.term_mentions_num_typedef
-                  (nondefinitions @ definitions))))
+               (List.exists should_use_binary_ints all_axioms andalso
+                not (List.exists vetoes_binarization all_axioms)))
       val box = List.exists (fn (_, value) => value <> SOME false) boxes
       val uncurry_terms =
-        if binarize then
-          map binarize_nat_and_int_in_term
-            (nondefinitions @ definitions)
-        else
-          nondefinitions @ definitions
+        if binarize then map binarize_nat_and_int_in_term all_axioms
+        else all_axioms
       val uncurry_table =
         if box then
           List.foldl (fn (term, table) =>

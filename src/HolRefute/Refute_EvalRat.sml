@@ -31,13 +31,7 @@ end = struct
      via rat_cons.  Both shapes evaluate to abs_rat (abs_frac (n, d)), so
      a binding displays the way the user would have written it without
      needing a display postprocessor. *)
-  fun mk_rat_lit (n, 1) =
-        let
-          val lit = Term.mk_comb
-            (ratSyntax.rat_of_num_tm, numSyntax.term_of_int (Int.abs n))
-        in
-          if n < 0 then Term.mk_comb (ratSyntax.rat_ainv_tm, lit) else lit
-        end
+  fun mk_rat_lit (n, 1) = ratSyntax.term_of_int (Arbint.fromInt n)
     | mk_rat_lit (n, d) =
         Term.list_mk_comb
           (rat_cons_c,
@@ -88,27 +82,10 @@ end = struct
     handle Feedback.HOL_ERR _ => Feedback.failwith "RAT_DECIDE_CONV"
          | Conv.UNCHANGED => Feedback.failwith "RAT_DECIDE_CONV"
 
-  fun RAT_EQ_DECIDE_CONV tm =
-    (let
-      val (l, r) = boolSyntax.dest_eq tm
-      val eq_const = Term.rator (Term.rator tm)
-      val lth = RAT_DECIDE_CONV l
-      val rth = RAT_DECIDE_CONV r
-      val f1 = Term.rand (boolSyntax.rhs (Thm.concl lth))
-      val f2 = Term.rand (boolSyntax.rhs (Thm.concl rth))
-      val cross = discharge_hyps (Drule.SPECL [f1, f2] ratTheory.RAT_EQ)
-      val step1 = Thm.MK_COMB (Thm.AP_TERM eq_const lth, rth)
-      val step2 = Thm.TRANS step1 cross
-      val decided = safe_norm (boolSyntax.rhs (Thm.concl step2))
-    in
-      Thm.TRANS step2 decided
-    end)
-    handle Feedback.HOL_ERR _ => Feedback.failwith "RAT_EQ_DECIDE_CONV"
-         | Conv.UNCHANGED => Feedback.failwith "RAT_EQ_DECIDE_CONV"
-
   (* Shared "decide both sides, cross-multiply via [[calc_thm]], then
-     normalise" shape behind [[<]] and [[<=]]; [[>]] and [[>=]] derive
-     from these two instead of duplicating it a third and fourth time. *)
+     normalise" shape behind [[=]], [[<]] and [[<=]]; [[>]] and [[>=]]
+     derive from the latter two instead of duplicating it a third and
+     fourth time. *)
   fun RAT_CMP_STEP calc_thm head_tm (l, r) =
     let
       val lth = RAT_DECIDE_CONV l
@@ -122,6 +99,12 @@ end = struct
     in
       Thm.TRANS step2 decided
     end
+
+  fun RAT_EQ_DECIDE_CONV tm =
+    RAT_CMP_STEP ratTheory.RAT_EQ (Term.rator (Term.rator tm))
+      (boolSyntax.dest_eq tm)
+    handle Feedback.HOL_ERR _ => Feedback.failwith "RAT_EQ_DECIDE_CONV"
+         | Conv.UNCHANGED => Feedback.failwith "RAT_EQ_DECIDE_CONV"
 
   fun RAT_LES_DECIDE_CONV tm =
     RAT_CMP_STEP ratTheory.RAT_LES_CALCULATE ratSyntax.rat_les_tm
@@ -217,66 +200,8 @@ end = struct
          (rat_eq_tm, 2, RAT_EQ_DECIDE_CONV)]
     end
 
-  (* Numerators span [-size, size], the house GenNum Int convention
-     (Refute_EvalCompute.sml). *)
-  fun draw_numerator size state =
-    let
-      val radius = IntInf.fromInt (Int.max (0, size))
-      val bound = 2 * radius + 1
-      val (value, next) = Refute_Eval.checked_rand_below bound state
-    in
-      (IntInf.toInt value - IntInf.toInt radius, next)
-    end
-
-  (* Denominators are drawn as k + 1 for k in [0, size], so every
-     candidate is well-formed by construction: no draw can reach a zero
-     or negative denominator. *)
-  fun draw_denominator size state =
-    let
-      val bound = IntInf.fromInt (Int.max (0, size) + 1)
-      val (value, next) = Refute_Eval.checked_rand_below bound state
-    in
-      (IntInf.toInt value + 1, next)
-    end
-
-  fun random size state =
-    let
-      val (n, s1) = draw_numerator size state
-      val (d, s2) = draw_denominator size s1
-    in
-      (mk_rat_lit (n, d), s2)
-    end
-
-  fun gcd (a, 0) = a
-    | gcd (a, b) = gcd (b, a mod b)
-
-  fun in_lowest_terms (0, d) = (d = 1)
-    | in_lowest_terms (n, d) = gcd (Int.abs n, d) = 1
-
-  (* Restricted to lowest terms (0 admitted only as 0/1): every distinct
-     rational at this radius is covered exactly once instead of via
-     every non-reduced fraction that also fits, which only changes
-     ordering, pinned nowhere. *)
-  fun enumerate size =
-    let val radius = Int.max (0, size)
-    in
-      List.concat
-        (List.tabulate (radius + 1, fn k =>
-          let val d = k + 1
-          in
-            List.mapPartial
-              (fn i =>
-                 let val n = i - radius
-                 in
-                   if in_lowest_terms (n, d) then SOME (mk_rat_lit (n, d))
-                   else NONE
-                 end)
-              (List.tabulate (2 * radius + 1, fn i => i))
-          end))
-    end
-
   val generator : Refute_Gen.custom_gen =
-    { enumerate = SOME enumerate, random = SOME random }
+    Refute_EvalCompute.fraction_generator mk_rat_lit
 
   fun register () =
     (install (); Refute_Gen.register_generator rat_ty generator)

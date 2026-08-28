@@ -885,6 +885,16 @@ structure Refute_SmartGen = struct
                                         | NONE => []
           else [Input, Output]
 
+  (* Cartesian product of a per-position choice list.  Both callers
+     ([all_modes_for_type], [fixed_modes_for]) guard it with their own
+     [max_mode_space] bound first: an exponential mode space is never
+     materialized, and returning no modes safely degrades to the
+     ordinary generator/guard plan. *)
+  fun product [] = [[]]
+    | product (choices :: rest) =
+        List.concat (map (fn choice =>
+          map (fn suffix => choice :: suffix) (product rest)) choices)
+
   (* Pure function of a curried Boolean-valued type; [all_modes_for] below
      is exactly this applied to [Term.type_of relation].  Split out so
      graph clause synthesis can drive it from [relation_type (Graph f)]
@@ -900,17 +910,7 @@ structure Refute_SmartGen = struct
              if count > max_mode_space div modes then max_mode_space + 1
              else count * modes
            end) 1 domains <= max_mode_space then
-        let
-          (* Never materialize an exponential mode space.  Returning no modes
-             safely degrades to the ordinary generator/guard plan. *)
-          fun product [] = [[]]
-            | product (choices :: rest) =
-                List.concat (map (fn choice =>
-                  map (fn suffix => choice :: suffix) (product rest))
-                    choices)
-        in
-          map list_mode (product (map argument_modes domains))
-        end
+        map list_mode (product (map argument_modes domains))
       else
         []
     end
@@ -1746,11 +1746,6 @@ structure Refute_SmartGen = struct
           val per_position = Lib.mapi (fn index => fn domain =>
             if index = position then [Fixed value] else argument_modes domain)
             domains
-          fun product [] = [[]]
-            | product (choices :: rest) =
-                List.concat (map (fn choice =>
-                  map (fn suffix => choice :: suffix) (product rest))
-                  choices)
           val total = List.foldl (fn (choices, count) =>
             let val width = Int.max (1, length choices)
             in
@@ -1922,14 +1917,20 @@ structure Refute_SmartGen = struct
                  clauses) of
             NONE => NONE
           | SOME substituted =>
-              if null (fixed_modes_for relation position value) then NONE
-              else
-                SOME (infer_clauses_with (fn candidate =>
-                  if same_constant candidate relation then
-                    fixed_modes_for relation position value
-                  else all_modes_for candidate)
-                  {members = members, clauses = substituted,
-                   external = external, reorder_premises = reorder_premises})
+              (* Computed once: [infer_clauses_with] calls [seed_modes]
+                 more than once per member, and each call rebuilds the
+                 whole cartesian mode product. *)
+              let val fixed = fixed_modes_for relation position value
+              in
+                if null fixed then NONE
+                else
+                  SOME (infer_clauses_with (fn candidate =>
+                    if same_constant candidate relation then fixed
+                    else all_modes_for candidate)
+                    {members = members, clauses = substituted,
+                     external = external,
+                     reorder_premises = reorder_premises})
+              end
     end
     handle Feedback.HOL_ERR _ => NONE
          | Subscript => NONE

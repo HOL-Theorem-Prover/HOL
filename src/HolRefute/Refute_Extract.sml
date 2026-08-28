@@ -3257,7 +3257,7 @@ structure Refute_Extract = struct
             substitutions)
         end
 
-      fun recovery complete genuine_only fallback =
+      fun recovery genuine_only fallback =
         parens ("complete := false; if " ^ genuine_only ^
           " then RefuteContinue else " ^ fallback)
 
@@ -3276,7 +3276,7 @@ structure Refute_Extract = struct
          what happens after.  [Prune] is excluded on both substrates:
          the planner already knows that branch can never fire, so
          nothing was generated to count. *)
-      fun guard_recovery complete genuine_only fallback =
+      fun guard_recovery genuine_only fallback =
         parens ("complete := false; if " ^ genuine_only ^ " then " ^
           parens ("candidates_generated := !candidates_generated + 1; " ^
             "RefuteContinue") ^
@@ -3703,7 +3703,7 @@ structure Refute_Extract = struct
             let
               val hit = "refute_hit (" ^ environment_source environment ^
                 ", NONE, NONE, " ^ genuine_only ^ ")"
-              val stuck = recovery "complete" "genuine_only"
+              val stuck = recovery "genuine_only"
                 ("refute_hit (" ^ environment_source environment ^
                   ", NONE, NONE, false)")
               val assume = "if " ^ genuine_only ^ " then " ^
@@ -3815,7 +3815,7 @@ structure Refute_Extract = struct
         let
           val (name, flag) = guard_names ()
           val body = compile_exhaustive_plan next environment flag
-          val stuck = guard_recovery "complete" "genuine_only"
+          val stuck = guard_recovery "genuine_only"
             (name ^ " false")
         in
           "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^
@@ -3833,7 +3833,7 @@ structure Refute_Extract = struct
             let
               val hit = "refute_hit (" ^ environment_source environment ^
                 ", NONE, NONE, " ^ genuine ^ ")"
-              val stuck = recovery "complete" "genuine_only"
+              val stuck = recovery "genuine_only"
                 ("refute_hit (" ^ environment_source environment ^
                   ", NONE, NONE, false)")
               val assume = "if " ^ genuine ^ " then " ^

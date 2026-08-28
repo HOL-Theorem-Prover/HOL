@@ -121,10 +121,6 @@ structure Refute_QC = struct
     then MFH.typedef_for_type ty
     else NONE
 
-  fun beta_reduce tm =
-    boolSyntax.rhs
-      (Thm.concl (Conv.QCONV (Conv.DEPTH_CONV Thm.BETA_CONV) tm))
-
   type transport_entry =
     {x : term, r : term, abs : term, rep : term, pred : term}
 
@@ -166,7 +162,7 @@ structure Refute_QC = struct
     end
 
   fun transport_guard ({pred, r, ...} : transport_entry) =
-    beta_reduce (Term.mk_comb (pred, r))
+    MFH.beta_normalize (Term.mk_comb (pred, r))
 
   (* Installed as [Refute_Core]'s [mono_instance_transform]; runs once per
      [MonoInstances] instance, after monomorphization, before any plan is
@@ -319,16 +315,46 @@ structure Refute_QC = struct
          handle Interrupt => raise Interrupt
               | _ => "unexpected mode-inference exception")
 
+      (* The memoise-and-recover shape shared by the three [analyse*]
+         functions below: consult the cache, else compute, cache the
+         answer and register any inference it produced.  An exception
+         (other than [Interrupt]) is itself cached, as a triggered
+         [NONE] carrying its text, so a relation that raises is not
+         re-analysed on every candidate.  The caches differ in key
+         shape, so each caller supplies its own [find]/[store]. *)
+      fun memoised {find, store} compute =
+        case find () of
+            SOME answer => answer
+          | NONE =>
+              let
+                val answer = compute ()
+                val _ = store answer
+                val _ = Option.app SmartGen.cache_inference (#result answer)
+              in
+                answer
+              end
+              handle Interrupt => raise Interrupt
+                   | error =>
+                       let
+                         val answer =
+                           {result = NONE, trigger = true,
+                            reason = SOME (error_text error)}
+                       in
+                         store answer; answer
+                       end
+
       fun safe_term_text tm =
         Parse.term_to_string tm
         handle Interrupt => raise Interrupt
              | _ => "<unprintable premise>"
 
       fun analyse relation =
-        case List.find (fn (other, _) =>
-               SmartGen.same_constant relation other) (!analyses) of
-            SOME (_, answer) => answer
-          | NONE =>
+        memoised
+          {find = fn () =>
+             Option.map #2 (List.find (fn (other, _) =>
+               SmartGen.same_constant relation other) (!analyses)),
+           store = fn answer => analyses := (relation, answer) :: !analyses}
+          (fn () =>
               let
                 (* A group whose rules the SCC converter cannot use is
                    not out of reach: the single-relation Horn route is
@@ -366,21 +392,9 @@ structure Refute_QC = struct
                                   | NONE => from_horn (SOME
                                       "introduction-rule conversion failed"))
                            | NONE => from_horn NONE)
-                val _ = analyses := (relation, answer) :: !analyses
-                val _ = Option.app SmartGen.cache_inference (#result answer)
               in
                 answer
-              end
-              handle Interrupt => raise Interrupt
-                   | error =>
-                       let
-                         val answer =
-                           {result = NONE, trigger = true,
-                            reason = SOME (error_text error)}
-                         val _ = analyses := (relation, answer) :: !analyses
-                       in
-                         answer
-                       end
+              end)
 
       (* [analyse]'s own clause acquisition (SCC route, falling back to
          Horn) is deliberately not refactored to share code with this:
@@ -423,13 +437,16 @@ structure Refute_QC = struct
          more than one predicate-typed parameter), and never mixed with
          the ordinary, value-independent [analyses] cache above. *)
       fun analyse_fixed relation position value =
-        case List.find (fn (other_relation, other_position, other_value,
-                             _) =>
+        memoised
+          {find = fn () =>
+             Option.map #4 (List.find (fn (other_relation, other_position,
+                                            other_value, _) =>
                SmartGen.same_constant relation other_relation andalso
                position = other_position andalso
-               SmartGen.same_term value other_value) (!fixed_analyses) of
-            SOME (_, _, _, answer) => answer
-          | NONE =>
+               SmartGen.same_term value other_value) (!fixed_analyses)),
+           store = fn answer => fixed_analyses :=
+             (relation, position, value, answer) :: !fixed_analyses}
+          (fn () =>
               let
                 val answer =
                   case clauses_and_members relation of
@@ -446,24 +463,9 @@ structure Refute_QC = struct
                                 reason = NONE}
                            | NONE =>
                                {result = NONE, trigger = false, reason = NONE})
-                val _ = fixed_analyses :=
-                  (relation, position, value, answer) :: !fixed_analyses
-                val _ = Option.app SmartGen.cache_inference (#result answer)
               in
                 answer
-              end
-              handle Interrupt => raise Interrupt
-                   | error =>
-                       let
-                         val answer =
-                           {result = NONE, trigger = true,
-                            reason = SOME (error_text error)}
-                         val _ = fixed_analyses :=
-                           (relation, position, value, answer) ::
-                           !fixed_analyses
-                       in
-                         answer
-                       end
+              end)
 
       (* Every position in [call] whose domain is a predicate type and
          whose actual argument there is closed: a candidate for static-
@@ -596,10 +598,13 @@ structure Refute_QC = struct
          cache/[cache_inference] plumbing as [analyse]/[analyse_fixed],
          whose own [NONE] arm this now matches. *)
       fun analyse_graph constant =
-        case List.find (fn (other, _) =>
-               SmartGen.same_constant constant other) (!graph_analyses) of
-            SOME (_, answer) => answer
-          | NONE =>
+        memoised
+          {find = fn () =>
+             Option.map #2 (List.find (fn (other, _) =>
+               SmartGen.same_constant constant other) (!graph_analyses)),
+           store = fn answer =>
+             graph_analyses := (constant, answer) :: !graph_analyses}
+          (fn () =>
               let
                 val answer =
                   case SmartGen.infer_graph allow_function_inversion
@@ -608,22 +613,9 @@ structure Refute_QC = struct
                         {result = SOME result, trigger = true, reason = NONE}
                     | NONE =>
                         {result = NONE, trigger = false, reason = NONE}
-                val _ = graph_analyses := (constant, answer) :: !graph_analyses
-                val _ = Option.app SmartGen.cache_inference (#result answer)
               in
                 answer
-              end
-              handle Interrupt => raise Interrupt
-                   | error =>
-                       let
-                         val answer =
-                           {result = NONE, trigger = true,
-                            reason = SOME (error_text error)}
-                         val _ = graph_analyses :=
-                           (constant, answer) :: !graph_analyses
-                       in
-                         answer
-                       end
+              end)
 
       (* Function-inversion candidates for [assumption]: for every
          orientation [graph_recognise] admits, mode-infer that
@@ -1311,6 +1303,53 @@ structure Refute_QC = struct
     | substrate_name Refute_Core.NativeSML = SOME "native"
     | substrate_name Refute_Core.Auto = NONE
 
+  (* Candidate counters aggregated across every substrate call in one
+     search -- one per schedule entry for exhaustive, one per random
+     chunk or narrowing window, plus certification retries -- so both the
+     witness and the vacuity reason reflect the whole run, never a single
+     call's sample.  [absorb] takes one call's stats; a substrate that
+     does not report all three keys (as opposed to reporting zero) turns
+     the totals off for the rest of the run.  [decorate] replaces the
+     substrate's own per-call copies of the three keys with the run
+     totals.  Shared with [Refute_QC_Narrow], whose run body needs the
+     same three counters over the same three-way discipline. *)
+  fun new_counter_totals () =
+    let
+      val assumption_satisfied = ref 0
+      val conclusion_evaluated = ref 0
+      val candidates_generated = ref 0
+      val measured = ref true
+      fun is_counter key =
+        key = "assumption_satisfied" orelse key = "conclusion_evaluated"
+        orelse key = "candidates_generated"
+      fun absorb call_stats =
+        case (Refute_Core.lookup_stat "assumption_satisfied" call_stats,
+              Refute_Core.lookup_stat "conclusion_evaluated" call_stats,
+              Refute_Core.lookup_stat "candidates_generated" call_stats) of
+            (SOME satisfied, SOME evaluated, SOME generated) =>
+              (assumption_satisfied := !assumption_satisfied + satisfied;
+               conclusion_evaluated := !conclusion_evaluated + evaluated;
+               candidates_generated := !candidates_generated + generated)
+          | _ => measured := false
+      fun decorate stats =
+        List.filter (fn (key, _) => not (is_counter key)) stats @
+        (if !measured then
+           [("assumption_satisfied", !assumption_satisfied),
+            ("conclusion_evaluated", !conclusion_evaluated),
+            ("candidates_generated", !candidates_generated)]
+         else [])
+      fun reason () =
+        if !measured then
+          "candidates generated " ^ Int.toString (!candidates_generated) ^
+          ", assumptions satisfied " ^
+          Int.toString (!assumption_satisfied) ^
+          ", conclusions evaluated " ^
+          Int.toString (!conclusion_evaluated)
+        else "candidate counters unavailable on this substrate"
+    in
+      {absorb = absorb, decorate = decorate, reason = reason}
+    end
+
   fun add_reason reason reasons =
     if List.exists (fn old => old = reason) (!reasons) then ()
     else reasons := !reasons @ [reason]
@@ -1788,29 +1827,10 @@ structure Refute_QC = struct
               val discarded = ref 0
               val gave_up = ref []
               val frontier = ref (NONE : (int * int) option)
-              (* Aggregated across every [one] call in this search (one
-                 call per schedule entry for exhaustive, one per random
-                 chunk, plus certification retries), so both the witness
-                 and the vacuity reason reflect the whole run, never a
-                 single call's sample. *)
-              val assumption_satisfied_total = ref 0
-              val conclusion_evaluated_total = ref 0
-              val candidates_generated_total = ref 0
-              (* False once any call's substrate did not report these
-                 counters at all (as opposed to reporting zero). *)
-              val counters_measured = ref true
+              val counters = new_counter_totals ()
               fun instance_for card = List.nth (instances, card - 1)
               fun stats_for size card msec =
-                (List.filter (fn (key, _) =>
-                   key <> "assumption_satisfied" andalso
-                   key <> "conclusion_evaluated" andalso
-                   key <> "candidates_generated")
-                   (!(#last_stats compiled))) @
-                (if !counters_measured then
-                   [("assumption_satisfied", !assumption_satisfied_total),
-                    ("conclusion_evaluated", !conclusion_evaluated_total),
-                    ("candidates_generated", !candidates_generated_total)]
-                 else []) @
+                #decorate counters (!(#last_stats compiled)) @
                 (if !discarded = 0 then []
                  else [("discarded", !discarded)]) @
                 [("size", size), ("card", card), ("msec", msec)]
@@ -1830,22 +1850,7 @@ structure Refute_QC = struct
                       draws = draws,
                       ignored = ignored }
                   val msec = elapsed_msec start
-                  val call_stats = !(#last_stats compiled)
-                  val _ =
-                    case (Refute_Core.lookup_stat
-                            "assumption_satisfied" call_stats,
-                          Refute_Core.lookup_stat
-                            "conclusion_evaluated" call_stats,
-                          Refute_Core.lookup_stat
-                            "candidates_generated" call_stats) of
-                        (SOME satisfied, SOME evaluated, SOME generated) =>
-                          (assumption_satisfied_total :=
-                             !assumption_satisfied_total + satisfied;
-                           conclusion_evaluated_total :=
-                             !conclusion_evaluated_total + evaluated;
-                           candidates_generated_total :=
-                             !candidates_generated_total + generated)
-                      | _ => counters_measured := false
+                  val _ = #absorb counters (!(#last_stats compiled))
                 in
                   case result of
                       Exhausted {complete = entry_complete} =>
@@ -1994,15 +1999,7 @@ structure Refute_QC = struct
                  only when the outcome carries no witness: a found
                  counterexample already shows the counts via
                  [format_stats]. *)
-              val counter_reason =
-                if !counters_measured then
-                  "candidates generated " ^
-                  Int.toString (!candidates_generated_total) ^
-                  ", assumptions satisfied " ^
-                  Int.toString (!assumption_satisfied_total) ^
-                  ", conclusions evaluated " ^
-                  Int.toString (!conclusion_evaluated_total)
-                else "candidate counters unavailable on this substrate"
+              val counter_reason = #reason counters ()
             in
                   if not (null (!counterexamples)) then
                     Refute_Core.Counterexample (rev (!counterexamples))

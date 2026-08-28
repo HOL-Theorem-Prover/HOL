@@ -154,13 +154,9 @@ structure Refute_QC_Narrow = struct
       val failed = ref false
       val frontier = ref (NONE : int option)
       (* Aggregated across every [one] call in this search -- including
-         [spend]'s certification retries, not just one per schedule entry
-         -- mirroring [Refute_QC.strategy_run_body]'s totals, so a
-         narrowing vacuity report reflects the whole run. *)
-      val assumption_satisfied_total = ref 0
-      val conclusion_evaluated_total = ref 0
-      val candidates_generated_total = ref 0
-      val counters_measured = ref true
+         [spend]'s certification retries, not just one per schedule
+         entry -- so a narrowing vacuity report reflects the whole run. *)
+      val counters = QC.new_counter_totals ()
       val complete_entries = ref ([] : (int * int) list)
       val incomplete_entries = ref ([] : (int * int) list)
       val totally_exhausted_depth = ref (NONE : int option)
@@ -206,19 +202,7 @@ structure Refute_QC_Narrow = struct
               | QC.Selected (substrate, compiled) =>
                   let
                     fun stats_for size card msec =
-                      (List.filter (fn (key, _) =>
-                         key <> "assumption_satisfied" andalso
-                         key <> "conclusion_evaluated" andalso
-                         key <> "candidates_generated")
-                         (!(#last_stats compiled))) @
-                      (if !counters_measured then
-                         [("assumption_satisfied",
-                             !assumption_satisfied_total),
-                          ("conclusion_evaluated",
-                             !conclusion_evaluated_total),
-                          ("candidates_generated",
-                             !candidates_generated_total)]
-                       else []) @
+                      #decorate counters (!(#last_stats compiled)) @
                       (if !discarded = 0 then []
                        else [("discarded", !discarded)]) @
                       [("size", size), ("card", card), ("msec", msec)]
@@ -229,23 +213,7 @@ structure Refute_QC_Narrow = struct
                           {genuine_only = genuine_only, card = card,
                            size = size, draws = 0, ignored = ignored}
                         val msec = QC.elapsed_msec start
-                        val call_stats = !(#last_stats compiled)
-                        val _ =
-                          case (Refute_Core.lookup_stat
-                                  "assumption_satisfied" call_stats,
-                                Refute_Core.lookup_stat
-                                  "conclusion_evaluated" call_stats,
-                                Refute_Core.lookup_stat
-                                  "candidates_generated" call_stats) of
-                              (SOME satisfied, SOME evaluated,
-                               SOME generated) =>
-                                (assumption_satisfied_total :=
-                                   !assumption_satisfied_total + satisfied;
-                                 conclusion_evaluated_total :=
-                                   !conclusion_evaluated_total + evaluated;
-                                 candidates_generated_total :=
-                                   !candidates_generated_total + generated)
-                            | _ => counters_measured := false
+                        val _ = #absorb counters (!(#last_stats compiled))
                       in
                         case result of
                             Exhausted {complete} =>
@@ -358,15 +326,7 @@ structure Refute_QC_Narrow = struct
               ["searched up to size " ^ Int.toString depth]
       (* Telemetry, not a search-inconclusive reason -- see the matching
          comment in [Refute_QC.strategy_run_body]. *)
-      val counter_reason =
-        if !counters_measured then
-          "candidates generated " ^
-          Int.toString (!candidates_generated_total) ^
-          ", assumptions satisfied " ^
-          Int.toString (!assumption_satisfied_total) ^
-          ", conclusions evaluated " ^
-          Int.toString (!conclusion_evaluated_total)
-        else "candidate counters unavailable on this substrate"
+      val counter_reason = #reason counters ()
     in
       if not (null (!counterexamples)) then
         Refute_Core.Counterexample (rev (!counterexamples))
