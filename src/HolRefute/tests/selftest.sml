@@ -20818,6 +20818,17 @@ fun count_after marker messages =
             (#1 (Substring.splitl Char.isDigit
               (Substring.triml (size marker) hit))))
 
+(* Like [count_after], but reads [marker] only after [anchor]'s first
+   occurrence, so a second, backend-prefixed counter on the same line
+   cannot be confused with an identical substring printed earlier (a
+   per-witness statistics block, say) or by a different backend when the
+   config admits more than one. *)
+fun count_after_in anchor marker messages =
+  case Substring.position anchor (Substring.full messages) of
+      (_, hit) =>
+        if Substring.isEmpty hit then NONE
+        else count_after marker (Substring.string hit)
+
 (* The acceptance headline: before specialisation this goal's only route
    was the blanket [Gen]+[Guard] fallback, which must reach exactly 500
    before its guard can pass -- an unreachable search within any ordinary
@@ -22488,8 +22499,8 @@ val _ = require_msg (check_result graph_needs_smart_generators) (fn () =>
    also be refuted by plain exhaustive generate-and-guard on [xs]/[ys]),
    but that the graph route was compiled in AND is the route the
    refutation went through.  The plan half compiles the same instance
-   goal(s) [run_with_strategy] runs, the way [graph_soundness_twin]
-   below does, so the plan half describes what the run half executes. *)
+   goal(s) [run_with_strategy] runs, so the plan half describes what
+   the run half executes. *)
 val _ = tprint
   "Refute goal-premise graph inversion: headline refuted via the route"
 fun graph_headline_refuted () =
@@ -22540,28 +22551,47 @@ val _ = require_msg (check_result graph_prem_branch_reached) (fn () =>
    identically to one that enumerated all four splittings of [1;2;3] and
    rejected each.
 
-   Per the rule [listall_specialisation_twin_no_spurious_cex] above
-   settles: verdict and evidence-of-work must come off *one* call, at a
-   fixed size, never a wall clock, so a run that did nothing cannot
-   satisfy the row.  [capture_refute_messages] drives a single
-   [refute_problem] call under [Only [Exhaustive]] and [upd_sequential
-   true]; the "never [Counterexample]" verdict and both counters below
-   come off that one call's messages.  [count_after] anchored to
+   As [listall_specialisation_twin_no_spurious_cex] above settles:
+   verdict and evidence-of-work must come off *one* call, at a fixed
+   size, never a wall clock, so a run that did nothing cannot satisfy
+   the row.  [capture_refute_messages] drives a single [refute_problem]
+   call; the "never [Counterexample]" verdict comes off [result], both
+   counters below off [messages].  [count_after] anchored to
    ["exhaustive: candidates generated "] shows the exhaustive backend
-   actually ran and drew tuples in that same run; anchored to [",
-   assumptions satisfied "] shows one drawn tuple actually satisfied
-   [xs ++ ys = [1;2;3]] -- the signal the old two-run version read from
-   an unrelated direct [Refute_EvalCompute.compile]/[#run] via
-   [lookup_stat "assumption_satisfied"].  [plan_ok] reads
-   [contains_graph_enum] off [qc_instances] for the same goal and config
-   the captured run below uses, the way [graph_headline_refuted] above
-   reads its route off [qc_instances] rather than the raw goal.
+   actually ran and drew tuples in that same run.  The assumptions
+   counter is read via [count_after_in], anchored to that same marker
+   and then to [", assumptions satisfied "], so it reads the count on
+   that one backend-prefixed line -- not the first occurrence anywhere
+   in the buffer, which could otherwise be a per-witness statistics
+   block's own (legitimately zero) count, or, were the config ever
+   widened past one backend, whichever backend printed first.  That
+   shows one drawn tuple actually satisfied [xs ++ ys = [1;2;3]] -- the
+   signal the old two-run version read from an unrelated direct
+   [Refute_EvalCompute.compile]/[#run] via [lookup_stat
+   "assumption_satisfied"].  [plan_ok] reads [contains_graph_enum] off
+   [qc_instances] for the same goal and config the captured run below
+   uses, the way [graph_headline_refuted] above reads its route off
+   [qc_instances] rather than the raw goal.
 
-   Measured at [Refute.upd_size 3] (the size the deleted direct call
-   used): [Unknown ["exhaustive: search space not exhausted", ...]],
-   never [Counterexample], with the one call's messages reading
-   "exhaustive: candidates generated 12, assumptions satisfied 12,
-   conclusions evaluated 12" -- both counters strictly positive. *)
+   [substrate] stays [Auto] here, which selects native (measured at
+   trace level 3: ["Refute substrate selection: selected native"]); the
+   level-1 twin no longer drives [Refute_EvalCompute] at all -- that
+   drive of this same plan lives in the level-2 predcomp corpus's graph
+   row.
+
+   Measured at [Refute.upd_size 3] (sizes 1-3, four splittings each):
+   [Unknown ["exhaustive: search space not exhausted", ...]], never
+   [Counterexample], with the one call's messages reading "exhaustive:
+   candidates generated 12, assumptions satisfied 12, conclusions
+   evaluated 12" -- both counters strictly positive.
+
+   Under this route [assumptions satisfied] always equals [candidates
+   generated] (measured 4/4, 8/8, 12/12, 16/16 at sizes 1-4): the two
+   conjuncts move together, and a run that draws nothing drives both to
+   zero at once.  Both conjuncts stay -- they are distinct properties,
+   and the equality is this route's, not a guarantee -- but the world
+   that would separate them, an enumerator emitting a splitting that
+   fails [xs ++ ys = [1;2;3]], is unobserved here. *)
 val _ = tprint "Refute goal-premise graph inversion: soundness twin"
 fun graph_soundness_twin () =
   let
@@ -22583,7 +22613,8 @@ fun graph_soundness_twin () =
           SOME n => n > 0
         | NONE => false
     val assumptions_ok =
-      case count_after ", assumptions satisfied " messages of
+      case count_after_in "exhaustive: candidates generated "
+          ", assumptions satisfied " messages of
           SOME n => n > 0
         | NONE => false
   in
@@ -22592,8 +22623,8 @@ fun graph_soundness_twin () =
 val _ = require_msg (check_result graph_soundness_twin) (fn () =>
   "a true theorem of the inverted shape did not compile via the graph " ^
   "route, was falsely refuted, or its one captured Exhaustive run at " ^
-  "size 3 printed no positive candidate count or no positive " ^
-  "assumption-satisfied count")
+  "size 3 drew no candidates or (the same event today) satisfied none " ^
+  "of them")
   (fn () => ()) ()
 
 val _ = tprint
@@ -36127,15 +36158,16 @@ val _ =
    data-driven, independent set at level 2.  A row is a record, not a
    thunk: [run_predcomp_soundness_row] compiles and runs [goal] under
    [config] itself, via [qc_instances]/[compile_plan]/[Refute_EvalCompute.
-   compile] the way [graph_soundness_twin] and [listall_specialisation_
-   twin_no_spurious_cex] above do, then asserts [expect] on the verdict,
-   [route] on the compiled plans -- a predicate over the whole plan list,
-   each row stating its own quantifier explicitly (see the note at
-   [run_predcomp_soundness_row]), for the same reason [graph_soundness_
-   twin]'s [plan_ok] checks a route at all: a row whose mode inference
-   degraded would still fall back to plain [Gen]+[Guard], still reach a
-   sound verdict, still generate candidates, and still pass, while
-   covering nothing -- and [looked] on the resulting statistics.
+   compile] -- the two-machine pattern described a few paragraphs below,
+   which this corpus is now the only user of -- then asserts [expect] on
+   the verdict, [route] on the compiled plans -- a predicate over the
+   whole plan list, each row stating its own quantifier explicitly (see
+   the note at [run_predcomp_soundness_row]), for the same reason
+   [graph_soundness_twin]'s [plan_ok] checks a route at all: a row
+   whose mode inference degraded would still fall back to plain
+   [Gen]+[Guard], still reach a sound verdict, still generate
+   candidates, and still pass, while covering nothing -- and [looked]
+   on the resulting statistics.
 
    The fixed-parameter twin is untouched by this diff.  The negation
    twin's body now reads the hoisted config instead of an inline copy
