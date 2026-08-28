@@ -281,7 +281,8 @@ in
 end
 end (* local *)
 
-fun Type q = parse_Type (#type_parser (ty_fns ())) q
+fun Type_in ctxt q = parse_Type (#type_parser (get_ty_fns ctxt)) q
+fun Type q = Type_in (Context.snapshot()) q
 
 fun == q x = Type q;
 
