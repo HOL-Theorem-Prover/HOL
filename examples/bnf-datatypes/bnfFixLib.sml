@@ -781,6 +781,8 @@ fun idxOf what xs x =
           | go i (y::ys) = if y = x then i else go (i + 1) ys
     in go 0 xs end
 
+fun upto k = List.tabulate (k, fn i => i)
+
 (* n type variables named 'pre1 .. 'pren, avoiding those in use *)
 fun freshTys pre n avoid =
     let fun go i acc k =
@@ -832,7 +834,6 @@ fun fixpointBNF bnf (fix : fixpoint) : fixpoint_bnf =
       val toParamArgs = byParams mk_arb      (* or one value *)
       (* F's set function for the new type's i-th argument *)
       fun psetIdx i = 1 + idxOf "fixpointBNF" params (List.nth (largs, i))
-      fun upto k = List.tabulate (k, fn i => i)
 
       (* the answer type variable of the recursion principle *)
       val rec_thm = #recursion fix
@@ -1614,5 +1615,136 @@ fun mutualInduction (cs1 : constructors, cs2 : constructors)
         (REWRITE_RULE (List.map GSYM defs)
            (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV expand)) (#induction mt)))
     end
+
+
+(* ----------------------------------------------------------------------
+    A whole family of mutually recursive types.
+
+    The pair's reduction generalises by taking the family from the last
+    member back.  Write the specification's functors over one slot
+    variable per member of the family, and let Sⱼ be the type built for
+    member j with the slots of the *earlier* members left as parameters:
+
+        Sₙ = μα. Fₙ(v₁ .. v_{n-1}, α)
+        Sⱼ = μα. Fⱼ(v₁ .. v_{j-1}, α, S_{j+1}(..α..) .. Sₙ(..α..))
+
+    Each Sⱼ is an ordinary datatype whose recursion is nested through the
+    ones after it, so nothing new is constructed; each is made a functor
+    in what is left, in memory, so that the next one can nest through it.
+    The family's own types are then S₁ and the later Sⱼ at the types
+    already built.
+
+    A caller says which type variable of each functor stands for which
+    member of the family — the translation of a specification numbers
+    them per functor, so the same 'a1 means different things in different
+    ones — and the position of a member's *own* variable is where its
+    recursion goes.
+   ---------------------------------------------------------------------- *)
+
+type family = {
+  types : hol_type list,             (* the family's types, in order *)
+  cons : term list,                  (* and their constructors *)
+  fixes : fixpoint list,             (* what each construction gave *)
+  bnfs : bnfLib.derived_bnfn list,   (* the functor each was built over *)
+  functors : bnfLib.derived_bnfn list,
+                                     (* and each specification's own functor,
+                                        derived in every member's slot *)
+  slots : hol_type list,             (* the slot variable per member *)
+  db : bnfBase.t                     (* the database, extended with them *)
+}
+
+fun defineFamily {tynames} db params specs : family =
+    let
+      val n = length specs
+      val _ = length tynames = n orelse
+              raise ERR "defineFamily" "a name per type, please"
+      (* one slot variable per member, in place of the per-functor ones *)
+      val avoid = params @ List.concat (List.map (type_vars o #1) specs)
+      val vs = freshTys "'m" n avoid
+      fun normalise (fty, slots) =
+          let val _ = length slots = n orelse
+                      raise ERR "defineFamily" "a slot per member, please"
+          in
+            type_subst (ListPair.mapEq (fn (s,v) => s |-> v) (slots, vs)) fty
+          end
+      val ftys = List.map normalise specs
+      fun slotIdx v = Lib.assoc1 v (Lib.zip vs (upto n))
+
+      (* what has been built so far, by member: its type and the
+         arguments its type operator takes *)
+      fun built ks k =
+          case Lib.assoc1 k ks of
+              SOME (_,x) => x
+            | NONE => raise ERR "defineFamily" "member not built yet"
+
+      (* member k's type, in terms of the slots of the members before i
+         and of α for member i itself *)
+      fun exprAt ks i k =
+          if k < i then List.nth (vs, k)
+          else if k = i then alpha
+          else
+            let val (ty, args) = built ks k
+            in
+              type_subst
+                (List.mapPartial
+                   (fn a => case slotIdx a of
+                                SOME (_,m) => SOME (a |-> exprAt ks i m)
+                              | NONE => NONE)
+                   args)
+                ty
+            end
+
+      (* the members are built from the last back *)
+      fun buildOne (i, (ks, fixes, bnfs, db)) =
+          let
+            val theta = List.map (fn k => List.nth (vs,k) |-> exprAt ks i k)
+                                 (List.filter (fn k => k > i) (upto n)) @
+                        [List.nth (vs,i) |-> alpha]
+            val fty = type_subst theta (List.nth (ftys, i))
+            val lives = alpha :: List.take (vs, i) @ params
+            val bnf = bnfLib.deriveBNFn db lives fty
+            val nm = List.nth (tynames, i)
+            val fix = defineFixpoint {tyname = nm, ABS = nm ^ "_ABS",
+                                      REP = nm ^ "_REP"} bnf
+            val ty = #newty fix
+            val args = #Args (dest_thy_type ty)
+            (* a member with no arguments left is a datatype in its own
+               right, which the ones before it nest through as a constant *)
+            val db =
+                if List.exists (isSome o slotIdx) args orelse
+                   List.exists (fn a => Lib.mem a params) args
+                then
+                  let val res = fixpointBNF bnf fix
+                  in bnfBase.insert (#key res, #info res) db end
+                else db
+          in
+            ((i,(ty,args)) :: ks, fix :: fixes, bnf :: bnfs, db)
+          end
+      val (ks, fixes, bnfs, db) =
+          List.foldl buildOne ([], [], [], db) (List.rev (upto n))
+
+      (* and the family's types: the first as it stands, the rest at the
+         types before them *)
+      val ty1 = #1 (built ks 0)
+      fun finalTy k = type_subst [alpha |-> ty1] (exprAt ks 0 k)
+      val types = ty1 :: List.map finalTy (tl (upto n))
+      val consts = ListPair.mapEq
+                     (fn (fix,ty) =>
+                         Term.inst (match_type (#2 (dom_rng (type_of (#cons fix))))
+                                               ty)
+                                   (#cons fix))
+                     (fixes, types)
+      (* each specification's own functor, derived in every member's slot:
+         the maps the family's principles are stated over *)
+      val functors =
+          List.map (fn fty =>
+                       bnfLib.deriveBNFn db (vs @ params)
+                                         fty)
+                   ftys
+    in
+      {types = types, cons = consts, fixes = fixes, bnfs = bnfs,
+       functors = functors, slots = vs, db = db}
+    end
+
 
 end

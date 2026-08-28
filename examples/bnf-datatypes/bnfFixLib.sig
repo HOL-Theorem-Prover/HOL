@@ -214,4 +214,34 @@ sig
      ---------------------------------------------------------------------- *)
   val mutualInduction : constructors * constructors -> mutual -> thm
 
+  (* ----------------------------------------------------------------------
+      A whole family of mutually recursive types.
+
+      The pair's reduction generalises by taking the family from the last
+      member back: each type is built with the slots of the members
+      before it left as parameters, and nested through the ones after it.
+
+      A caller gives a name per type and, per specification, its functor
+      together with the type variable standing for each member of the
+      family — the translation of a specification numbers those per
+      functor, so the same 'a1 means different things in different ones,
+      and a member's own variable marks where its recursion goes.
+
+      Each type is made a functor in what is left of it, in memory, so
+      that the ones before it can nest through it.
+     ---------------------------------------------------------------------- *)
+  type family = {
+    types : hol_type list,
+    cons : term list,
+    fixes : fixpoint list,
+    bnfs : bnfLib.derived_bnfn list,
+    functors : bnfLib.derived_bnfn list,
+    slots : hol_type list,
+    db : bnfBase.t
+  }
+
+  val defineFamily : {tynames : string list} ->
+                     bnfBase.t -> hol_type list ->
+                     (hol_type * hol_type list) list -> family
+
 end

@@ -200,6 +200,62 @@ val _ =
     then OK() else die (thm_to_string (#recursion nt))
 
 (* ----------------------------------------------------------------------
+    A family of any size.
+
+    The pair's reduction generalises by taking the family from the last
+    member back, each type built with the earlier members' slots left as
+    parameters and nested through the later ones.  The family below is
+
+        ft1 = A 'p | B ft1 ft2 ;  ft2 = C ft3 | D 'p ft2 ;  ft3 = E ft1 | F ft3
+
+    where every member is reached from every other, and the caller says
+    which variable of each functor stands for which member — the
+    translation of a specification numbers them per functor, so the same
+    'a1 means different things in different ones.
+   ---------------------------------------------------------------------- *)
+
+val a1 = mk_vartype "'a1"
+val a2 = mk_vartype "'a2"
+
+val fam = defineFamily {tynames = ["ft1", "ft2", "ft3"]} (#db nt) [b1]
+            [(“:'b1 + 'a # 'a1”, [alpha, a1, a2]),
+             (“:'a2 + 'b1 # 'a”, [a1, alpha, a2]),
+             (“:'a1 + 'a”,       [a1, a2, alpha])]
+
+val _ = tprint "the types a three-member family becomes"
+val _ =
+    if #types fam = [“:'b1 ft1”, “:('b1, 'b1 ft1) ft2”, “:'b1 ft1 ft3”]
+    then OK()
+    else die (String.concatWith ", " (List.map type_to_string (#types fam)))
+
+(* each member's constructor takes its own functor at the family's types:
+   a member the specification does not mention is simply absent from it *)
+val _ = tprint "the family's constructors"
+val _ =
+    let val tys = List.map type_of (#cons fam)
+    in
+      if tys = [“:'b1 + 'b1 ft1 # ('b1, 'b1 ft1) ft2 -> 'b1 ft1”,
+                “:'b1 ft1 ft3 + 'b1 # ('b1, 'b1 ft1) ft2 ->
+                  ('b1, 'b1 ft1) ft2”,
+                “:'b1 ft1 + 'b1 ft1 ft3 -> 'b1 ft1 ft3”]
+      then OK() else die (String.concatWith ", " (List.map type_to_string tys))
+    end
+
+(* and each is an ordinary datatype whose recursion is nested through the
+   members after it *)
+val _ = tprint "each member's own recursion"
+val _ =
+    let val ths = List.map #recursion (#fixes fam)
+    in
+      if List.all (null o hyp) ths andalso
+         List.all (null o free_vars o concl) ths andalso
+         same (concl (hd ths))
+              “∀t. ∃!h. ∀af. h (ft1_CONS af) =
+                             t (SUM_MAP I (h ## ft2MAP I h) af)”
+      then OK() else die (thm_to_string (hd ths))
+    end
+
+(* ----------------------------------------------------------------------
     The sibling is a functor in the database, in memory: that is what the
     nesting was built on, and it is also what lets a *further* datatype
     recurse through the pair.
