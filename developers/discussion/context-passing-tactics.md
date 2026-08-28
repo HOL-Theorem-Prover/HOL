@@ -1080,6 +1080,100 @@ means giving `TermParse.absyn` a context and passing it to the
 postprocessors --- which is the same threading the kernel signature
 needs.  Both fall to one change; neither is needed for Phase 3.
 
+#### Threading the context into parsing: attempted, and what stopped it
+
+The shape that works, and the two things that stop it landing.
+
+**The shape.**  Wrap each declaration in a scope that binds the context
+it is elaborated against, and rebind the entry points that would
+otherwise reach for the ambient one:
+
+    local
+      val HOLctxt = Context.snapshot()
+      structure Parse = struct open Parse
+        val Term = Parse.Term_in HOLctxt
+        val Type = Parse.Type_in HOLctxt
+      end
+    in
+      val foo = Q.store_thm_at ... HOLctxt
+    end
+
+Shadowing rather than emitting `Parse.Term_in HOLctxt` at each quotation
+is the key move, and it is why the quotation expansion needs no change at
+all: it already emits a *qualified* `Parse.Term`, so the enclosing scope
+decides which one is meant --- the shim inside a declaration, the real
+structure outside, where a quotation should still parse against the
+ambient grammar.  It catches a hand-written `Parse.Term` for the same
+reason.  Emitting the threaded form directly would instead mean teaching
+`expandExp` which context is in scope: 70 call sites, covering all SML in
+every script, and no name to use for a quotation outside a declaration.
+
+`Parse.Type_in` was missing and has landed (`b9dc5ec7c`); `Term_in`
+already existed.
+
+**It works.**  Verified with the tripwire at level 2 and a positive
+control, a `“...”` quotation inside a tactic stops reading the ambient
+context at the `Parse` level.  The whole tree builds through the new
+expansion.
+
+**Stopper 1: it breaks hover.**  Four LSP hover tests return null inside
+the theorem body.  Not the identifier spans, and not the `DecLocal`'s
+span --- `annotateDec`'s `DecLocal` case is already transparent, giving
+back `dec1` and `dec2`'s annotations without a covering node.  The
+annotator walks the emitted SML's Poly/ML parse tree *in lockstep* with
+the AST, and a synthetic `local` desynchronises that walk, so every
+annotation after it lands on the wrong position.  Measured: the failure
+survives dropping the `structure` and emitting a `local` containing
+nothing but the `val HOLctxt = ...` binding, so it is the `local` itself,
+not what is inside it.  Fixing it means either an encoding that
+introduces no new declaration nesting, or teaching the annotator about a
+`DecExpansion` whose result is a `DecLocal`.
+
+**Stopper 2: one ambient read remains anyway.**  With the shim in place
+the same probe still reports a read of slot `ancestry.dictppp.global`.
+That is `combinpp`'s absyn postprocessor: `upd_processor` takes the
+grammar it is handed, ignores it, and calls `get_global_value ()`.
+Threading it needs a context-taking read in `AncestryData` and a change
+to the absyn-postprocessor protocol, so it is separate work --- but it is
+the last one on this path, and there is now an exact reproducer for it.
+
+**Reproducer** (level 2 reports every ambient read while a proof runs;
+the control exists so a silent probe cannot be mistaken for one that
+never ran):
+
+    val _ = Feedback.set_trace "ambient context inside proof" 2;
+    Theorem control:  (p:bool) ==> p
+    Proof (fn g => fn c => (ignore (Context.snapshot()); ALL_TAC g c)) >>
+          strip_tac >> first_assum ACCEPT_TAC
+    QED
+    Theorem probe:  (p:bool) ==> p
+    Proof strip_tac >> ACCEPT_TAC (ASSUME “p:bool”)
+    QED
+
+Note `“...”` and not a backquote: only the former expands to
+`Parse.Term`.  A backquoted quotation stays a quotation value and is
+parsed by whoever receives it, which is the *implicit* half, already
+handled by threading the context into the tactic.
+
+**A separate finding, from trying to do the simpset half at the same
+time.**  Folding `Proof[exclude_simps=...]` into the context rather than
+wrapping the tactic is *not* equivalent, so `wrapTac` cannot go yet.
+`with_simpset_updates_tac` does two things --- `map_simpset f ctxt` for
+the threaded context, and a global `with_simpset_updates` bracket around
+the tactic's execution --- and replacing only the first makes
+`src/basicProof/theory_tests/exclSimps` fail its first theorem, with the
+tripwire reporting an ambient read.  Something under `exclude_frags`
+still consults ambient state and the global bracket was covering for it.
+
+Also: a `srw_ss` shim cannot be emitted unconditionally, because it names
+BasicProvers, which does not exist for the scripts that build before
+src/basicProof --- combinScript is one, and it uses `Theorem`.  Narrowing
+it to declarations that carry simpset attributes compiles, but then the
+drift fix (`srw_ss()` answering from the declaration's context rather
+than the live simpset) does not land, since deciding whether a
+declaration mentions `srw_ss` needs either an AST traversal --- there is
+none --- or the source text threaded into the expander's config.
+
 #### Where Phase 3 finished
 
 Reads per tactic, counted at level 2 with a positive control, on goals
