@@ -699,30 +699,68 @@ val _ = require_msg (check_result self_referential_bound_declines) (fn () =>
    pinned, only its variable set.
 
    Only [Random]; the seed is pinned as cheap hygiene against a future
-   generator reordering, not because it drives reproducibility here --
-   that comes from [Only [Random]] itself excluding the backend race.
-   Narrowing also reaches [cert = NONE] on this goal, but not via a
-   transported case tree: [lo], [l] and [k] all have generators, so
-   [transportable_typedef] leaves [#transport] empty and
-   [narrowing_goal] takes the untouched [#original] branch (no case tree
-   is built at all).  The actual cause is [closure_of]: it quantifies
-   [lo], [l] and [k] *inside* the stripped [!i], so the same rewrite set
-   that collapses [#original]'s single-binder shape to the decidable
-   [EVERY (\i. EL i l <= k) [lo ..< LENGTH l]] is a no-op on the closure
-   -- measured directly, [normalize_to_pnf] raises [UNCHANGED] on the
-   closure and succeeds on [#original].  Narrowing's search therefore
-   grounds only [lo], [l] and [k] (measured: its reported bindings never
-   include [i]); [certify]'s direct replay is stuck on the still-free
-   [i], and its PNF fallback hits the identical [UNCHANGED] before ever
-   inspecting a binding, so both routes land on [Uncertified] --
-   correctly, since [Genuine] with no certificate is a valid verdict, not
-   a defect in narrowing.  Racing [QuickcheckBackends] here would let
-   narrowing's uncertified answer win the pool and fail this certificate
-   pin nondeterministically; measured directly under [Only [Narrowing]]
+   generator reordering, not because it drives reproducibility here:
+   the pin's assertions do not name the witness, so a different
+   witness would not normally flip it.
+
+   Narrowing also reaches [cert = NONE] on this goal, but not because
+   [transportable_typedef] declines [lo], [l] and [k] for already
+   having generators -- that predicate is never reached here.
+   [transport_instance] opens with [if not (#use_subtype (#qc cfg))
+   then instance]; [use_subtype] defaults to [false]
+   (`Refute_Core.sml:218`, pinned by [transport_default_is_off]) and
+   this pin's bare [default_config] never overrides it, so the
+   transport pass returns before it ever calls [transport_entries].
+   [narrowing_goal] does take the untouched [#original] branch, since
+   [#transport] is empty either way, but that is not why no case tree
+   is built.  Case-tree presence is decided separately, by whether the
+   compiled PNF prefix has an existential ([has_existential],
+   `Refute_Extract.sml:4432-4433`): the existential engine passes
+   [SOME replay] as [case_tree] (`:4539`, `:4550`), the plain engine
+   hard-codes [NONE] (`:4563`), and so do the Compute and Cv
+   evaluators (`Refute_EvalCompute.sml:247`,
+   `Refute_EvalCv.sml:1560,1608`) and the plan compiler used by random
+   and exhaustive QC (`Refute_Extract.sml:3822-3823` for random;
+   illustrative, not an exhaustive list).  This goal's prefix is
+   all-universal, so the plain engine runs.
+
+   With [case_tree = NONE] and no binding here carrying the
+   irrelevant-marker hole ([has_hole] is false, `Refute_QC.sml:
+   1173-1174`, so [partial_universal] is false, `:1175-1178`),
+   narrowing's route is [Refute_Cert.certify] (`Refute_QC.sml:1235`)
+   -- not [certify_case_tree], which a case tree together with
+   [genuine] would select instead (`:1216-1218`), and not
+   [ground_and_certify], which a future narrowing change marking [k]
+   a hole would select instead (`:1230`), turning this [Uncertified]
+   into [Potential ["partial counterexample; grounding
+   uncertifiable"]] (the reason string lives in [grounding_failure],
+   `Refute_Cert.sml:378`; [ground_and_certify] itself, `:383-398`,
+   holds only the [Uncertified => grounding_failure cex] step) rather
+   than [Genuine, cert = NONE].
+
+   Inside [certify], the actual obstacle is [closure_of]: it quantifies
+   [lo], [l] and [k] *inside* the stripped [!i], so the same rewrite
+   set that collapses [#original]'s single-binder shape to the
+   decidable [EVERY (\i. EL i l <= k) [lo ..< LENGTH l]] is a no-op on
+   the closure -- measured directly, [normalize_to_pnf] raises
+   [UNCHANGED] on the closure and succeeds on [#original].  Narrowing's
+   search therefore grounds only [lo], [l] and [k] (measured: its
+   reported bindings never include [i]); [certify]'s direct replay is
+   stuck on the still-free [i], and its PNF fallback hits the identical
+   [UNCHANGED] before ever inspecting a binding, so both routes land on
+   [Uncertified] -- correctly, since [Genuine] with no certificate is a
+   valid verdict, not a defect in narrowing.
+
+   Racing [QuickcheckBackends] here would let narrowing's uncertified
+   answer win the pool and fail this certificate pin
+   nondeterministically; measured directly under [Only [Narrowing]]
    against [Only [Exhaustive]] and [Only [Random]], only narrowing
    returns [cert = NONE].  Restrict to the backend actually measured.
    See [narrowing_interval_dependent_bound_declines] below, which pins
-   that [Only [Narrowing]] outcome directly. *)
+   that [Only [Narrowing]] outcome directly, and
+   [interval_dependent_bound_closure_normalizes_unchanged] further
+   below, which pins the [closure_of]/[normalize_to_pnf] mechanism
+   above directly. *)
 fun interval_dependent_bound_decides () =
   let
     val goal = ``∀i : num. lo ≤ i ∧ i < LENGTH l ⇒ EL i l ≤ k``
@@ -754,12 +792,106 @@ val _ = require_msg (check_result interval_dependent_bound_decides) (fn () =>
   "genuine counterexample over the expected closure")
   (fn () => ()) ()
 
+(* Direct measurement of the mechanism the comment above names, so it is
+   testable independently of the verdict: the verdict alone cannot tell
+   "[normalize_to_pnf] raised [UNCHANGED]" from "the [i] binding was
+   missing" -- both land on the same trailing handler
+   (`Refute_Cert.sml:347`) and produce the same [uncertified] result.
+   The comment's claim is an asymmetry -- [normalize_to_pnf] raises on
+   the closure but succeeds on [#original] -- so both halves are
+   measured here; a version that raised on both would break the
+   mechanism the comment describes while leaving only the first half
+   green.  Production's step function,
+   [fun normalization_step conversion tm = conversion tm]
+   (`Refute_Cert.sml:301`), is byte-identical to this pin's [raw_step],
+   which is why the measurement transfers. *)
+fun interval_dependent_bound_closure_normalizes_unchanged_probe () =
+  let
+    val goal = ``∀i : num. lo ≤ i ∧ i < LENGTH l ⇒ EL i l ≤ k``
+    val (goal_variables, _) = boolSyntax.strip_forall goal
+    val i = hd goal_variables
+    val outside = Term.free_vars goal
+    val (_, closure, _) = Refute_Cert.closure_of goal
+    val (closure_bound, _) = boolSyntax.strip_forall closure
+    val nests_lo_l_k_inside_i =
+      case closure_bound of
+          first :: rest =>
+            Term.aconv first i andalso
+            length rest = length outside andalso
+            List.all (fn v => List.exists (Term.aconv v) rest) outside
+        | [] => false
+    fun raw_step conversion tm = conversion tm
+    fun raises_unchanged tm =
+      (ignore (Refute_Cert.normalize_to_pnf raw_step tm); false)
+      handle Conv.UNCHANGED => true
+  in
+    { nests_lo_l_k_inside_i = nests_lo_l_k_inside_i,
+      closure_raises_unchanged = raises_unchanged closure,
+      original_raises_unchanged = raises_unchanged goal }
+  end
+
+fun interval_dependent_bound_closure_normalizes_unchanged () =
+  let
+    val probe = interval_dependent_bound_closure_normalizes_unchanged_probe ()
+  in
+    #nests_lo_l_k_inside_i probe andalso
+    #closure_raises_unchanged probe andalso
+    not (#original_raises_unchanged probe)
+  end
+
+val _ = tprint
+  ("Refute closure_of nests lo/l/k inside i, normalize_to_pnf balks " ^
+   "only there")
+val _ = require_msg
+  (check_result interval_dependent_bound_closure_normalizes_unchanged)
+  (fn () =>
+    let
+      val probe =
+        interval_dependent_bound_closure_normalizes_unchanged_probe ()
+    in
+      if not (#nests_lo_l_k_inside_i probe) then
+        "closure_of did not nest lo, l and k inside the stripped i"
+      else if not (#closure_raises_unchanged probe) then
+        "normalize_to_pnf did not raise UNCHANGED on the closure -- " ^
+        "the asymmetry this pin measures may be gone"
+      else
+        "normalize_to_pnf raised UNCHANGED on the unclosed original " ^
+        "too -- the asymmetry this pin measures is gone"
+    end)
+  (fn () => ()) ()
+
 (* Companion to [interval_dependent_bound_decides]: pins the [Only
    [Narrowing]] half of the comment above directly, so it is testable
-   and so a regression to [Discarded] -- the one certainty that
-   downgrades, and which nothing else here detects -- reddens this pin
+   and a regression away from [Genuine, cert = NONE] reddens this pin
    instead of passing silently.  The candidate is not pinned, only the
-   verdict shape. *)
+   verdict shape.
+
+   This assumes the precondition recorded above: [has_hole] is false
+   for this goal, so [partial_universal] is false and narrowing takes
+   [Refute_Cert.certify], not [ground_and_certify].  A red row here
+   calls for a different repair depending on which of three shapes
+   the run actually took:
+   - [cert = SOME _] is an improvement -- narrowing has gained
+     certification for a dependent bound.  Update this row and the
+     comment above it; never suppress the certificate to restore
+     green.
+   - A published [Counterexample] whose [certainty] is weaker than
+     [Genuine] ([Potential _] or [QuasiGenuine _]) means the
+     candidate survived but was downgraded; its reason list is where
+     both grounding failure and stuck evaluation surface.
+   - Anything else means narrowing published no counterexample at
+     all: either it declined the goal outright (substrate reasons in
+     the [Unknown]), the search failed, or [Refute_Cert.certify]
+     returned [Discarded] and the search retried past it
+     (`Refute_QC.sml:1253-1255`), leaving the run [Unknown] or
+     [NoCounterexample].  [Discarded] is a constructor of
+     [Refute_Cert.result] (`Refute_Cert.sml:5-8`), not of [certainty]
+     (`Refute_Core.sml:17-20`); a discard here is not automatically a
+     soundness regression -- [InstanceTrue => Discarded]
+     (`Refute_Cert.sml:361`) firing correctly would mean the old
+     candidate was wrong, the opposite diagnosis from a broken
+     replay.  Both possibilities need investigating before the pin
+     is touched. *)
 fun narrowing_interval_dependent_bound_declines () =
   let
     val goal = ``∀i : num. lo ≤ i ∧ i < LENGTH l ⇒ EL i l ≤ k``
@@ -774,8 +906,16 @@ fun narrowing_interval_dependent_bound_declines () =
 val _ = tprint "Refute narrowing declines to certify a dependent interval"
 val _ = require_msg
   (check_result narrowing_interval_dependent_bound_declines) (fn () =>
-  "Only [Narrowing] on the dependent-bound goal did not report Genuine " ^
-  "with cert = NONE")
+  "Only [Narrowing] on the dependent-bound goal was not Genuine with " ^
+  "cert = NONE.  cert = SOME _ is an improvement (see the comment " ^
+  "above); a Counterexample with a weaker certainty (Potential or " ^
+  "QuasiGenuine) means the candidate was published but downgraded, " ^
+  "by grounding failure or stuck evaluation; any other outcome means " ^
+  "narrowing published nothing -- it may have declined the goal, the " ^
+  "search may have failed, or certify may have discarded the " ^
+  "candidate and the search retried past it, which needs " ^
+  "investigating rather than being read outright as a soundness " ^
+  "regression")
   (fn () => ()) ()
 
 val _ = tprint "CoIndDefLib registry"
@@ -23522,19 +23662,26 @@ val _ = require_msg
 (* Rat and real analogues: [TypeBase.fetch] returns [NONE] for both --
    neither ever registers a [TypeBase] entry, having only the custom
    generators in [Refute_EvalRat]/[Refute_EvalReal] -- so
-   [Refute_Extract.ensure_type] rejects them by an earlier, distinct
-   message ("no TypeBase information for ...") than fmap's.  The five
-   rat and real certificate pins that race [QuickcheckBackends] rely on
-   narrowing never winning there; this pins the exclusion itself, so a
-   future [TypeBase] registration reddens here first instead of in
-   those five. *)
+   [Refute_Extract.ensure_type] rejects them with "no TypeBase
+   information for " ^ [type_name ty] (`Refute_Extract.sml:350`).  Match
+   through the type name, not the bare prefix: the same reason list can
+   also carry [Refute_Gen]'s unrelated "no TypeBase information;
+   register a generator" (`Refute_Gen.sml:408`), reachable via
+   [Refute_Extract.sml:2801-2802], [Refute_Narrow.sml:309-310] and
+   [Refute_EvalCv.sml:152,191] -- a bare-prefix match would stay green
+   even if rat's exclusion here came from a dropped generator
+   registration instead of a missing [TypeBase] entry.  Every rat and
+   real certificate pin that races [QuickcheckBackends] relies on
+   narrowing never winning here; this pins the exclusion itself, so a
+   future [TypeBase] registration reddens here first instead of
+   mysteriously in one of them. *)
 fun rat_narrowing_is_unreachable () =
   case refute
     (Refute.upd_search (Refute.Only [Refute.Narrowing]) default_config)
     ``(x : rat) = rat_of_num 1`` of
       Unknown reasons =>
-        List.exists
-          (fn r => String.isSubstring "no TypeBase information" r) reasons
+        List.exists (fn r =>
+          String.isSubstring "no TypeBase information for :rat" r) reasons
     | _ => false
 
 val _ = tprint "Refute rat narrowing is unreachable by name"
@@ -23549,8 +23696,8 @@ fun real_narrowing_is_unreachable () =
     (Refute.upd_search (Refute.Only [Refute.Narrowing]) default_config)
     ``(x : real) = real_of_num 1`` of
       Unknown reasons =>
-        List.exists
-          (fn r => String.isSubstring "no TypeBase information" r) reasons
+        List.exists (fn r =>
+          String.isSubstring "no TypeBase information for :real" r) reasons
     | _ => false
 
 val _ = tprint "Refute real narrowing is unreachable by name"
