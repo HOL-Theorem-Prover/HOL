@@ -14073,26 +14073,49 @@ local
      it does through an equivalent explicit conjunction registration.  The
      soundness twin restates the harvested type's own [abs (rep a) = a]
      law with a free variable in place of its bound one - true simply
-     because it is the split-registered axiom itself.  Deciding
-     [NoCounterexample] outright for it needs more search than a
-     closed-existential goal of this shape gets certified for (the same
-     probe found it still unresolved at 20s), so this only pins the
-     literal soundness requirement - never [Genuine] - rather than a full
-     exhaustive proof. *)
+     because it is the split-registered axiom itself.
+
+     [carrier_config]'s own 60s, uncarded, left this exact call still
+     unresolved at 20s in a probe, so its [Unknown] could not be told
+     apart from a real search -- [not_genuine] alone accepted either.
+     [bounded] derives a config local to this call -- [refute_harvest_
+     split] at its exact cardinality 2, [num] to 2 so both witnesses
+     [0]/[1] are in scope -- without touching [carrier_config], which
+     other rows here share.  [finished] then requires that same call's
+     [Unknown] show "no counterexample within the tested scopes" over
+     that carrier whenever the call is not already a decided
+     [Counterexample]/[NoCounterexample], the inline idiom
+     [mf_binarized_typedef_needs_room] above already uses.  Measured:
+     [Unknown ["no counterexample within the tested scopes after
+     checking 2 of 2 emitted scopes", "searched up to size: card num =
+     2, card refute_harvest_split = 2"]], never [Genuine], reproduced at
+     three card assignments ([2] alone; [1,2]+num<=3; [2]+num<=2). *)
   fun mf_split_typedef_goal_refuted_soundly () =
     with_quotient_typedef_registries_restored (fn () => let
       val _ = MFH.typedef_registry := []
       val refuted = carrier_refuted ``(a : refute_harvest_split) = b``
       val _ = MFH.typedef_registry := []
+      val bounded = carrier_config
+        |> upd_card [(SOME ``:refute_harvest_split``, [2]), (NONE, [1, 2])]
+      val outcome = Refute.refute bounded
+        ``refute_harvest_split_home_abs
+            (refute_harvest_split_home_rep a) = a``
       val not_genuine =
-        case Refute.refute carrier_config
-               ``refute_harvest_split_home_abs
-                   (refute_harvest_split_home_rep a) = a`` of
+        case outcome of
             Refute.Counterexample ({certainty = Refute.Genuine, ...} :: _) =>
               false
           | _ => true
+      val finished =
+        case outcome of
+            Refute.Unknown reasons =>
+              List.exists (String.isSubstring
+                "no counterexample within the tested scopes") reasons
+                andalso
+              List.exists (String.isSubstring
+                "card refute_harvest_split = 2") reasons
+          | _ => true
     in
-      refuted andalso not_genuine
+      refuted andalso not_genuine andalso finished
     end)
 
   (* Task C: a card list naming only some types keeps the built-in fallback
@@ -14302,8 +14325,9 @@ in
     if bridge_configured then
       require_msg
         (check_result mf_split_typedef_goal_refuted_soundly) (fn () =>
-        "a split-form typedef goal did not refute soundly, or its " ^
-        "pigeonhole twin was unsoundly refuted")
+        "a split-form typedef goal did not refute soundly, its abs/rep " ^
+        "twin was unsoundly Genuine, or the twin's bounded search did " ^
+        "not finish within its tested scopes")
         (fn () => ()) ()
     else ()
   val _ =
@@ -32453,10 +32477,28 @@ val _ = require_msg
      ([unknown_value], Refute_ModelFinder_Kodkod.sml).
 
    The wf_wfrec' goal has no wfrec' wrapper, hence no unknown of its own
-   until the guard supplies one; the WFREC goal reaches both. *)
+   until the guard supplies one; the WFREC goal reaches both.
+
+   [is_total]'s two-valued read let any [Unknown] stand in for "ran to
+   completion without certifying," including one [upd_timeout 90.0]
+   produced by drawing nothing: four of the five calls below could pass
+   on a timeout alone.  [classify] reads the same single call three ways
+   instead: [Certified] on [NoCounterexample], [Finished] on positive
+   evidence the call completed -- a [Counterexample] of either
+   certainty, or an [Unknown] that [is_bounds_clean] over the measured
+   carrier -- and [TimedOut] otherwise.  Measured for all four
+   wfrec'/WFREC calls at [card [1,2,3]]: every one is [Unknown ["no
+   counterexample within the tested scopes after checking 1 of 1 emitted
+   scopes", "searched up to size: card bool itself = 1"]] -- [bool
+   itself] is the only carrier either encoding scopes, and 1 the only
+   size it ever emits regardless of the requested [1,2,3].  The row now
+   requires every call to reach [Finished], closing the timeout gap,
+   while keeping the original claim that no pair reaches [Certified]
+   twice. *)
 fun mf_wfrec_ersatz_stays_satisfiable_off_wf () =
   not (Refute_Forl.is_configured ()) orelse
   let
+    datatype call_progress = Certified | Finished | TimedOut
     val config = Refute.default_config
       |> Refute.upd_search (Refute.Only [Refute.ModelFinder])
       |> Refute.upd_sequential true
@@ -32464,24 +32506,31 @@ fun mf_wfrec_ersatz_stays_satisfiable_off_wf () =
       |> Refute.upd_binary_ints (SOME false)
       |> Refute.upd_timeout 90.0
       |> Refute.upd_card [(NONE, [1, 2, 3])]
-    fun is_total goal =
+    fun classify goal =
       case Refute.refute config goal of
-          Refute.NoCounterexample => true
-        | _ => false
-    fun both_total goal =
-      is_total goal andalso is_total (boolSyntax.mk_neg goal)
+          Refute.NoCounterexample => Certified
+        | Refute.Counterexample _ => Finished
+        | outcome as Refute.Unknown _ =>
+            if is_bounds_clean "card bool itself" outcome
+            then Finished else TimedOut
     val through_wfrec =
       ``WFREC (\x y:bool. T) (\f (b:bool). ~ f b) T``
     val through_wf_wfrec =
       ``wf_wfrec' (\x y:bool. T) (\f (b:bool). ~ f b) T``
+    val wfrec_pos = classify through_wfrec
+    val wfrec_neg = classify (boolSyntax.mk_neg through_wfrec)
+    val wf_wfrec_pos = classify through_wf_wfrec
+    val wf_wfrec_neg = classify (boolSyntax.mk_neg through_wf_wfrec)
     (* Not over-conservative: wf' decides this one by acyclicity alone,
        with no unknown reaching a value position, so the search still
        closes. *)
-    val decided = is_total ``~WF (\(x:bool) y. T)``
+    val decided = classify ``~WF (\(x:bool) y. T)``
   in
-    not (both_total through_wfrec) andalso
-    not (both_total through_wf_wfrec) andalso
-    decided
+    List.all (fn c => c <> TimedOut)
+      [wfrec_pos, wfrec_neg, wf_wfrec_pos, wf_wfrec_neg, decided] andalso
+    not (wfrec_pos = Certified andalso wfrec_neg = Certified) andalso
+    not (wf_wfrec_pos = Certified andalso wf_wfrec_neg = Certified) andalso
+    decided = Certified
   end
 
 val _ = tprint
@@ -32489,8 +32538,9 @@ val _ = tprint
   \proposition and its negation alike"
 val _ = require_msg
   (check_result mf_wfrec_ersatz_stays_satisfiable_off_wf) (fn () =>
-  "the wfrec' rows certified totality both ways: either wf_wfrec' lost \
-  \its WF guard or a value-position unknown stopped vetoing exhaustion")
+  "a wfrec'/WFREC call did not finish within its tested scopes, WFREC \
+  \or wf_wfrec' certified totality on both a goal and its negation, or \
+  \the always-decidable acyclic twin stayed inconclusive")
   (fn () => ()) ()
 
 fun mf_choice_witness_in_scope_still_genuine () =
