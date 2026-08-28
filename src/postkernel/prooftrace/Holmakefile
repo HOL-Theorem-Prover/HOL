@@ -8,22 +8,19 @@ endif
 
 ifneq ($(HAVE_MLTON),)
 
-# `all' must be the first rule: Holmake takes the first non-.PHONY
-# target in the file as the default goal, so with these rules above it
-# a bare Holmake built replay-test alone and pft-replay-test was never
-# exercised by a build.
+# keep the all target at "head" of file so it remains the default
+# target
 ifdef HAVE_WORD64
 all: pft-replay-test replay-test
 else
 all: pft-replay-test
 endif
 
-# The sources an .mlb pulls in, asked of mlton itself (~15ms).  Without
-# these as prerequisites the executables are rebuilt only when their own
-# two files change, so an edit to the kernel they compile leaves a stale
-# binary behind and the breakage is invisible: adding ThreadLocal to
-# Context.sml went four days unnoticed here for exactly that reason,
-# while a clean checkout failed immediately.
+# The sources each .mlb pulls in, asked of mlton itself (about 15ms).
+# Without them the executables are rebuilt only when their own two files
+# change, so an edit to the kernel they compile leaves a stale binary in
+# place and the breakage is invisible: a clean checkout fails at once
+# while a warm tree says there is nothing to do.
 REPLAY_SRCS = $(shell mlton -stop f replay-test.mlb)
 PFT_REPLAY_SRCS = $(shell mlton -stop f pft-replay-test.mlb)
 
@@ -32,6 +29,7 @@ replay-test: replay-test.mlb replay-test.sml $(REPLAY_SRCS)
 
 pft-replay-test: pft-replay-test.mlb pft-replay-test.sml $(PFT_REPLAY_SRCS)
 	mlton -default-type intinf $<
+
 
 else
 
