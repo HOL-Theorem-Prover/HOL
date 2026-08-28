@@ -14089,7 +14089,11 @@ local
      [Unknown ["no counterexample within the tested scopes after
      checking 2 of 2 emitted scopes", "searched up to size: card num =
      2, card refute_harvest_split = 2"]], never [Genuine], reproduced at
-     three card assignments ([2] alone; [1,2]+num<=3; [2]+num<=2). *)
+     three card assignments ([2] alone; [1,2]+num<=3; [2]+num<=2).  On
+     the development host the bounded call takes 0.04s-0.06s against
+     [carrier_config]'s 60s deadline -- three orders of magnitude of
+     headroom, so [finished] failing here would need a real, drastic
+     slowdown rather than ordinary load. *)
   fun mf_split_typedef_goal_refuted_soundly () =
     with_quotient_typedef_registries_restored (fn () => let
       val _ = MFH.typedef_registry := []
@@ -32494,7 +32498,15 @@ val _ = require_msg
    size it ever emits regardless of the requested [1,2,3].  The row now
    requires every call to reach [Finished], closing the timeout gap,
    while keeping the original claim that no pair reaches [Certified]
-   twice. *)
+   twice.
+
+   This turns a stalled search from a silent pass into a failure, which
+   is correct but means ordinary host load could now redden the row.
+   Headroom, measured on the development host: the five calls above take
+   0.24s-0.38s apiece against the 90s deadline, so the budget is some
+   235x the slowest of them.  Absolute times differ elsewhere, but
+   [TimedOut] needs a call two orders of magnitude slower than that, not
+   a close race. *)
 fun mf_wfrec_ersatz_stays_satisfiable_off_wf () =
   not (Refute_Forl.is_configured ()) orelse
   let
