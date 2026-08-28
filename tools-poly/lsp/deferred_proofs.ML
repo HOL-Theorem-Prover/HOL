@@ -126,7 +126,7 @@ fun proveForReal ctxt (g, tac) =
     let
       val th = asReplay (fn () => Tactical.TAC_PROOF_in ctxt (g, tac))
       val st = verdict g th
-      val site = boolLib.current_thm_name ()
+      val site = boolLib.current_thm_name ctxt
     in
       (* No longer suspends -- the user has changed the proof, so stop
          paying to run it during elaboration. *)
@@ -148,16 +148,17 @@ fun prover ctxt (g, tac) =
          pass/fail verdict reported for the outer proof would be wrong.
          TAC_PROOF_in is the unhooked entry, so this does not recurse. *)
       Tactical.TAC_PROOF_in ctxt (g, tac)
-    else if LSPExtension.isNoCheatSite (boolLib.current_thm_name ()) then
+    else if LSPExtension.isNoCheatSite (boolLib.current_thm_name ctxt) then
       proveForReal ctxt (g, tac)
     else if !LSPExtension.deferProofs andalso
             not (!LSPExtension.cheatSubstituted) then
-      (* current_thm_name and currentProofOffset are meaningful here --
-         elaboration, one thread, both set immediately before the proof.
-         A replaying worker must not consult either, which is why they
-         are read now and carried in the item. *)
+      (* The name comes from the context this proof was given.
+         currentProofOffset is still ambient -- elaboration is one
+         thread, and it is set immediately before the proof -- and a
+         replaying worker must not consult it, which is why it is read
+         now and carried in the item. *)
       (LSPExtension.enqueueDeferred
-         {site = boolLib.current_thm_name (),
+         {site = boolLib.current_thm_name ctxt,
           offset = !LSPExtension.currentProofOffset,
           run = fn () => replay ctxt g tac};
        Thm.mk_oracle_thm "lsp_deferred" g)

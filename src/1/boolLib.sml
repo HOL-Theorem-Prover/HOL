@@ -93,25 +93,28 @@ val suspended_theorem_recorder : (string * thm -> unit) ref =
    goal ready for interactive exploration. *)
 val dump_setup_hook : (goal -> unit) ref = ref (fn _ => ())
 
-(* Name of the theorem currently being proved.  store_thm_at sets this
-   immediately before invoking Tactical.prove so that holmakebuild's
-   basic_prover (which only receives a goal, not a name) can construct
-   a sensible dump-file name on the --noqof failure path.  Cleared again
-   after the prove call so that user code invoking Tactical.prove
-   directly doesn't inherit a stale name.
+(* Name of the theorem being proved, for whatever downstream of the
+   prover needs to say *which* proof it is looking at: the
+   dump-on-failure path names its heap file with it, and the LSP's
+   deferred-proof pool labels its entries with it.
 
-   Per-thread: it is set immediately before a proof and cleared after,
-   so two proofs running concurrently would clobber each other's name
-   with certainty rather than by luck.  A thread that has not set one
-   reads "", which is what the shared cell held before its first
-   write. *)
-local
-  val slot : string ThreadLocal.t = ThreadLocal.new ()
-in
-  fun current_thm_name () =
-      case ThreadLocal.get slot of NONE => "" | SOME s => s
-  fun set_current_thm_name s = ThreadLocal.set (slot, s)
-end
+   It travels in the context rather than beside it.  Every reader is a
+   prover installed through `Tactical.set_prover`, whose type is
+   `Context.t -> goal * tactic -> thm`, so each already holds the
+   context the name arrives in; and `prove_named` below is the one place
+   that puts it there.  A cell would have to be set before the proof and
+   cleared after -- with the clearing existing only so that a later
+   unrelated `Tactical.prove` does not inherit a stale name, a hazard a
+   value simply does not have.  A proof given no name has none in its
+   context.
+
+   It was a `string ref`, then thread-local once the LSP's worker pool
+   made two proofs concurrent.  That removed the cross-thread clobbering
+   without asking whether the cell should exist. *)
+val thm_name_slot : string Context.Data.slot =
+    Context.Data.new {name = "boolLib.thm_name", empty = "", pp = Lib.I}
+
+fun current_thm_name ctxt = Context.Data.get thm_name_slot ctxt
 
 (* A named proof attempt.  The name is how anything downstream of the
    prover says *which* proof it is looking at: the dump-on-failure path
@@ -126,15 +129,11 @@ end
    several candidates being tried in turn, where a dump per failed
    candidate would be wrong.
 
-   The previous name is restored rather than cleared, so a proof nested
-   inside another does not leave the outer one anonymous. *)
-local
-  val thm_name_flag = {get = current_thm_name, set = set_current_thm_name}
-in
+   A proof nested inside another sees the inner name, and the outer
+   context is unchanged, so nothing has to be put back. *)
 fun prove_named ctxt {name, goal, tac} =
-    Portable.genwith_flag (thm_name_flag, name)
-      (fn () => Tactical.prove_goal_in ctxt (goal, tac)) ()
-end
+    Tactical.prove_goal_in (Context.Data.put thm_name_slot name ctxt)
+                           (goal, tac)
 
 (* Counter used by dump_failure_state when no theorem name is in
    scope (e.g. raw Tactical.prove invocations outside store_thm_at):

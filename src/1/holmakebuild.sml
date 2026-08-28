@@ -18,7 +18,7 @@ local
            then
              let val file =
                    boolLib.dump_failure_state
-                     (boolLib.current_thm_name(), g)
+                     (boolLib.current_thm_name ctxt, g)
              in
                HOL_MESG ("Heap saved to " ^ file ^
                          "; resume with: bin/hol --holstate=" ^ file)
