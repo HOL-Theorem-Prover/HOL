@@ -163,9 +163,10 @@ display-only `term_postprocessor`, keyed by instance type rather than by
 the pattern unification `Refute.register_term_postprocessor` (below)
 uses.  A generator family cannot register it that way directly --
 `Refute_Gen` has no dependency on any `Refute_ModelFinder_*` module --
-so `canonical` instead feeds `Refute_Gen.lookup_family_canonical`, a
-callback hook `Refute_ModelFinder_Model.register_family_canonical_lookup`
-installs (`Refute.sml`, the same precedent as `Refute_Core`'s
+so `canonical` instead feeds a snapshot of the generator-family registry,
+through a callback hook
+`Refute_ModelFinder_Model.register_family_canonical_lookup` installs
+(`Refute.sml`, the same precedent as `Refute_Core`'s
 `register_backend`).  `Refute_ModelFinder_Model.postprocess_term` -- the
 one bottom-up walk, shared with the model finder's own display below --
 consults the pattern registry first and this hook second, both through
@@ -186,7 +187,9 @@ chains that denote the same map via non-`aconv` keys are not guaranteed
 to display identically.  `Refute_Gen.lookup_family_canonical ty` still
 exposes the raw per-family rewrite for a given instance type; `NONE`
 means no family registered a canonical form for that type (or none is
-registered at all).
+registered at all).  A report captures the complete family map once, so a
+concurrent family replacement cannot mix canonicalizers within that report
+and the term walk does not retake the generator-registry lock at every node.
 
 An unconfigured call has one 10-second search budget covering preprocessing,
 backend admission, compilation, testing, model translation, and solver calls.

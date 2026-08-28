@@ -375,18 +375,36 @@ structure Refute_Gen = struct
          enumerate_cache := Redblackmap.mkDict Type.compare))
     end
 
-  fun family_for ty =
+  fun family_for_in families ty =
     case Lib.total Type.dest_thy_type ty of
         NONE => NONE
       | SOME {Thy, Tyop, ...} =>
-          synchronized_registry (fn () =>
-            List.find (fn fam => #thy fam = Thy andalso #tyop fam = Tyop)
-              (!generator_families))
+          List.find (fn fam => #thy fam = Thy andalso #tyop fam = Tyop)
+            families
+
+  fun family_for ty =
+    synchronized_registry (fn () => family_for_in (!generator_families) ty)
 
   fun lookup_family_canonical ty =
     case family_for ty of
         SOME {canonical, ...} => canonical
       | NONE => NONE
+
+  (* Copy the registry once and close over that immutable list.  Model
+     display snapshots use this instead of [lookup_family_canonical], so a
+     family replacement cannot change canonicalization halfway through one
+     report and the display walk does not retake [registry_mutex] at every
+     term node. *)
+  fun snapshot_family_canonicals () =
+    synchronized_registry (fn () =>
+      let
+        val families = !generator_families
+      in
+        fn ty =>
+          case family_for_in families ty of
+              SOME {canonical, ...} => canonical
+            | NONE => NONE
+      end)
 
   (* A registered family's constructors (e.g. FEMPTY/FUPDATE) are as
      [nocompute]/constructor-like as an ordinary datatype's, so

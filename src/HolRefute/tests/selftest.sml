@@ -19283,6 +19283,35 @@ val _ = require_msg (check_result default_type_instance) (fn () =>
   "default-type monomorphization did not use num")
   (fn () => ()) ()
 
+(* An empty carrier row suppresses only instances that actually need an
+   unpinned carrier.  A symbolic word width has its own nonempty [widths]
+   row and must still produce one instance for every configured width. *)
+fun width_only_instances_ignore_empty_carriers () =
+  let
+    val widths = [2, 5, 7]
+    val config = default_config
+      |> upd_finite_types false
+      |> upd_default_type []
+      |> upd_widths widths
+    fun instance_width ({goal, ...} : instance) =
+      case List.filter (wordsSyntax.is_word_type o Term.type_of)
+             (Term.free_vars_lr goal) of
+          [word] =>
+            fcpSyntax.dest_int_numeric_type (wordsSyntax.dim_of word)
+        | _ => raise Fail "width-only instance shape"
+  in
+    case preprocessed_instances
+      (preprocess config
+        (preprocessing_problem ``(w : 'a word) + 1w <> 0w``)) of
+        SOME instances => map instance_width instances = widths
+      | NONE => false
+  end
+
+val _ = require_msg
+  (check_result width_only_instances_ignore_empty_carriers) (fn () =>
+  "an empty default-type row dropped width-only QC instances")
+  (fn () => ()) ()
+
 val _ = tprint "Refute per-type-variable instantiation (upd_instantiate)"
 
 fun instantiate_default_is_empty () = null (#instantiate default_qc_config)
@@ -23254,6 +23283,45 @@ val _ = require_msg
   "canonicalizing an fmap update chain did not dedup an overwritten key")
   (fn () => ()) ()
 
+(* A report snapshot must capture the family registry itself.  Capturing
+   only [lookup_family_canonical]'s closure leaves this old snapshot reading
+   the replacement family below on every invocation. *)
+fun family_canonical_snapshot_is_immutable () =
+  case lookup_family_canonical ``:num |-> num`` of
+      NONE => false
+    | SOME original =>
+        let
+          val snapshot = MFM.snapshot_term_postprocessors ()
+          val overwritten =
+            ``(FEMPTY : num |-> num) |+ (1, 2) |+ (1, 3)``
+          val collapsed = ``(FEMPTY : num |-> num) |+ (1, 3)``
+          val empty = ``FEMPTY : num |-> num``
+          fun register canonical = Refute.register_generator_family
+            {tyop = {Thy = "finite_map", Tyop = "fmap"},
+             constructors =
+               [finite_mapSyntax.fempty_tm, finite_mapSyntax.fupdate_tm],
+             canonical = SOME canonical}
+          fun restore () = register original
+          fun check () =
+            let
+              val _ = register (fn _ => empty)
+              val from_snapshot = MFM.postprocess_term snapshot overwritten
+              val from_replacement = MFM.postprocess_term
+                (MFM.snapshot_term_postprocessors ()) overwritten
+            in
+              Term.aconv from_snapshot collapsed andalso
+              Term.aconv from_replacement empty
+            end
+        in
+          Portable.finally restore check ()
+        end
+
+val _ = tprint "Refute family-canonical snapshots are immutable"
+val _ = require_msg
+  (check_result family_canonical_snapshot_is_immutable) (fn () =>
+  "a family-canonical snapshot consulted the live generator registry")
+  (fn () => ()) ()
+
 (* Dedup must be denotation-preserving even when
    two non-[aconv] keys denote the same value -- e.g. [1 + 1] and [2].
    The retired sort could not tell such keys apart as values, so it
@@ -25513,10 +25581,10 @@ val _ =
    crossing, so a [Vis] continuation that recurses back into itree
    shrinks its budget on each crossing and terminates within
    O(log [size]) crossings; see the comment on [random_function_with].
-   That bound holds because itree's [own_floor] is 0 -- a family member
-   whose floor survives the decay would only shrink toward that floor,
-   not toward 0. *)
+   A separate hard budget now gives the same bound when a mutually
+   recursive family member has a positive minimum inhabitation floor. *)
 val fnrec_itree_ty = ``:(num, bool, num) itree$itree``
+val fnrec_floor_ty = ``:(bool, bool, num) itree$itree``
 val fnrec_reason = "recursive under a function type"
 
 fun fnrec_extraction_refusal () =
@@ -25560,6 +25628,73 @@ fun fnrec_compute_refusal () =
 val _ = require_msg (check_result fnrec_compute_refusal) (fn () =>
   "compute validation lost the strategy-sensitive refusal for a " ^
   "function-recursive datatype") (fn () => ()) ()
+
+(* A scoped synthetic spec keeps itree's real, natively extractable [Ret]
+   and [Vis] constructors but gives both rows minimum structural floor 1.
+   This models the positive-floor mutual-family member from the regression;
+   dynamic [Datatype] cannot itself declare recursion nested below [fun].
+   The generator consumes only this ordinary [GenDatatype] value; no
+   production path is bypassed after [spec_of] returns it. *)
+fun with_fnrec_floor_spec body =
+  let
+    val ty = fnrec_floor_ty
+    val Refute_Gen.GenDatatype
+      {constrs, recursive, min_size, family, ...} = Refute_Gen.spec_of ty
+    val rows = map (fn ((constr, flags), floors) =>
+      (constr, flags, floors))
+      (ListPair.zip (ListPair.zip (constrs, recursive), min_size))
+    fun under_function ((_, args), _, _) =
+      List.exists (Refute_Gen.recursive_under_function family) args
+    fun finite_base ((_, args), _, _) =
+      not (null args) andalso
+      not (List.exists (Refute_Gen.type_mentions family) args)
+    val ((base, base_args), _, _) = Option.valOf (List.find finite_base rows)
+    val ((step, step_args), step_flags, _) =
+      Option.valOf (List.find under_function rows)
+    val spec = Refute_Gen.GenDatatype
+      {constrs = [(base, base_args), (step, step_args)],
+       exhaustive = true,
+       recursive = [map (fn _ => true) base_args, step_flags],
+       min_size = [map (fn _ => 1) base_args,
+                   map (fn _ => 1) step_args],
+       family = family}
+    val saved = Refute_Gen.synchronized_registry
+      (fn () => !Refute_Gen.spec_cache)
+    val installed = Redblackmap.insert (saved, ty, spec)
+    fun set cache = Refute_Gen.synchronized_registry
+      (fn () => Refute_Gen.spec_cache := cache)
+    fun restore () = set saved
+    fun run () = (set installed; body spec)
+  in
+    Portable.finally restore run ()
+  end
+
+(* An adversarial draw always selects the last enabled constructor.  Without
+   separate hard fuel, every size-zero range draw raises its structural
+   budget back to 1, selects [Vis] again, and never returns.  The
+   call-count sentinel makes that failure deterministic without wall-clock
+   timing. *)
+fun fnrec_positive_floor_has_hard_budget () =
+  with_fnrec_floor_spec (fn spec => let
+    val calls = ref 0
+    fun draw bound state =
+      (calls := !calls + 1;
+       if !calls > 200 then raise Fail "function recursion did not stop"
+       else (bound - 1, state))
+    fun no_custom _ _ _ =
+      raise Fail "unexpected custom generator"
+    val (value, ()) = Refute_EvalCompute.random_entry_with
+      draw no_custom spec 8 ()
+  in
+    Refute_Gen.own_floor spec = 1 andalso
+    Refute_Util.same_type (Term.type_of value) fnrec_floor_ty andalso
+    !calls <= 200
+  end)
+
+val _ = require_msg
+  (check_result fnrec_positive_floor_has_hard_budget) (fn () =>
+  "a positive datatype floor replenished function-recursion budget")
+  (fn () => ()) ()
 
 (* The exhaustive backend tries every substrate (native, cv, compute).
    Native and compute decline by naming the function recursion
@@ -29450,8 +29585,8 @@ fun stream_conformance () =
          the (decayed) budget, and that weight is 0 once the budget
          reaches 0, so a draw is bounded to terminate within O(log
          [size]) function-boundary crossings regardless of what the PRNG
-         returns.  (That bound relies on itree's own floor being 0; see
-         the comment on [random_function_with].)  itree stays excluded
+         returns.  A separate hard budget preserves that bound for
+         positive-floor family members too.  itree stays excluded
          from this list for the same reason fmap is: cv has no
          function generator at all
          ([Refute_EvalCv.sml] rejects [GenFun] as "function type in data
@@ -29532,6 +29667,33 @@ fun fnrec_stream_conformance () =
     List.app check [1, 2, 3]
   end
 
+(* The positive-floor sibling specifically checks that native carries the
+   new hard budget through its generated function-result calls in the same
+   way as compute.  Cv still takes its documented compute fallback for this
+   recursive-under-function shape, so only the two independent
+   implementations are compared here. *)
+fun fnrec_floor_stream_conformance () =
+  with_fnrec_floor_spec (fn _ => let
+    val ty = fnrec_floor_ty
+    fun check seed =
+      let
+        val variable = Term.mk_var ("fnrec_floor_stream", ty)
+        val arguments =
+          {plan = Gen (variable, Test boolSyntax.T),
+           seed = IntInf.fromInt seed, size = 4, count = 8}
+        val compute = Refute_EvalCompute.dump_random_candidates arguments
+        val native = Refute_EvalSML.dump_native_random_candidates
+          Refute_Extract.extract_problem arguments
+      in
+        if same_candidate_stream compute native then ()
+        else raise Fail
+          ("positive-floor function-recursive candidate stream " ^
+           "disagreement at seed " ^ Int.toString seed)
+      end
+  in
+    List.app check [1, 2, 3]
+  end)
+
 val _ =
   if selftest_level < 2 then
     (tprint "Refute substrate conformance smoke";
@@ -29574,6 +29736,12 @@ val _ =
      require_msg (check_result (fn () =>
        (fnrec_stream_conformance (); true))) (fn () =>
        "itree candidate streams differed across substrates")
+       (fn () => ()) ();
+     tprint "Refute positive-floor function-recursive stream conformance";
+     require_msg (check_result (fn () =>
+       (fnrec_floor_stream_conformance (); true))) (fn () =>
+       "positive-floor function-recursive candidate streams differed " ^
+       "between compute and native")
        (fn () => ()) ())
   else ()
 

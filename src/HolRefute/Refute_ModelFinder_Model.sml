@@ -64,13 +64,13 @@ signature REFUTE_MODEL_FINDER_MODEL = sig
   val restore_term_postprocessors : term_postprocessor_snapshot -> unit
   val postprocess_term : term_postprocessor_snapshot -> term -> term
   (* [Refute_Gen] has no dependency on this structure, so a generator
-     family's canonical display form is threaded in as a callback instead
-     of registered directly; see [Refute.sml], which depends on both and
-     installs [Refute_Gen.lookup_family_canonical] here, on the same
-     precedent as [Refute_Core.register_backend] and
+     family's canonical display snapshot is threaded in as a callback
+     instead of registered directly; see [Refute.sml], which depends on
+     both and installs [Refute_Gen.snapshot_family_canonicals] here, on the
+     same precedent as [Refute_Core.register_backend] and
      [register_mono_instance_transform]. *)
   val register_family_canonical_lookup :
-    (hol_type -> term_postprocessor option) -> unit
+    (unit -> hol_type -> term_postprocessor option) -> unit
   val register_frac_type_rat : unit -> unit
   (* Installed by default (see Refute.sml).  Idempotent, like
      [register_frac_type_rat]. *)
@@ -261,15 +261,16 @@ type term_postprocessor_entry =
 type term_postprocessor_registry =
   {entries : term_postprocessor_entry list, next_serial : int}
 
-(* A snapshot pairs the pattern registry with the family lookup, captured
-   together at the same instant, so one model display sees one coherent
-   view of both sources instead of a stable registry mixed with a family
-   lookup that can move mid-walk.  [family] is a plain copy of the
-   [family_canonical_lookup] closure below at snapshot time, not a live
-   reference to it. *)
+(* A snapshot pairs the pattern registry with an immutable family lookup,
+   so one model display sees one coherent view of both sources instead of a
+   stable registry mixed with a family lookup that can move mid-walk.
+   [family_source] is retained only so test-scoped restoration can restore
+   the installed snapshot provider rather than freeze the live hook to this
+   snapshot's family map. *)
 type term_postprocessor_snapshot =
   {registry : term_postprocessor_registry,
-   family : hol_type -> term_postprocessor option}
+   family : hol_type -> term_postprocessor option,
+   family_source : unit -> hol_type -> term_postprocessor option}
 
 (* Model display extensions are process-local ML data.  The registry uses
    type patterns: every pattern that matches an actual type participates.
@@ -282,27 +283,33 @@ val term_postprocessors = ref
 
 fun with_term_postprocessor_lock body = MFH.with_registration_lock body
 
-(* Settable lookup hook for a generator family's canonical display form
-   (Refute_Gen.sml), consulted through the snapshot above.  Defaults to
-   "no family registered anything"; [Refute.sml] installs the real lookup
-   at load time (see the signature comment on
+(* Settable snapshot hook for generator-family canonical display forms
+   (Refute_Gen.sml).  Defaults to "no family registered anything";
+   [Refute.sml] installs the real snapshot provider at load time (see the
+   signature comment on
    [register_family_canonical_lookup]). *)
-val family_canonical_lookup : (hol_type -> term_postprocessor option) ref =
-  ref (fn (_ : hol_type) => NONE)
+val family_canonical_lookup :
+    (unit -> hol_type -> term_postprocessor option) ref =
+  ref (fn () => fn (_ : hol_type) => NONE)
 
-fun register_family_canonical_lookup f = family_canonical_lookup := f
+fun register_family_canonical_lookup f =
+  with_term_postprocessor_lock (fn () => family_canonical_lookup := f)
 
 fun snapshot_term_postprocessors () =
   with_term_postprocessor_lock (fn () =>
-    {registry = !term_postprocessors, family = !family_canonical_lookup})
+    let val family_source = !family_canonical_lookup in
+      {registry = !term_postprocessors, family = family_source (),
+       family_source = family_source}
+    end)
 
-(* Restores both halves together: leaving [family_canonical_lookup] at
-   whatever it had since moved to would pair the restored registry with a
-   family lookup the snapshot never saw. *)
+(* Restore the pattern registry and the provider that produced the saved
+   family map.  Installing the saved map itself would freeze future family
+   registrations after a test-scoped restore. *)
 fun restore_term_postprocessors
-      ({registry, family} : term_postprocessor_snapshot) =
+      ({registry, family_source, ...} : term_postprocessor_snapshot) =
   with_term_postprocessor_lock (fn () =>
-    (term_postprocessors := registry; family_canonical_lookup := family))
+    (term_postprocessors := registry;
+     family_canonical_lookup := family_source))
 
 fun pattern_matches pattern actual =
   Lib.can (Type.match_type pattern) actual

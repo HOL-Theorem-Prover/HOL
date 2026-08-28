@@ -548,46 +548,52 @@ structure Refute_EvalCompute = struct
     in
       random_value_with draw custom spec
         {budget = Int.max (floor, bounded_size size),
+         hard_budget = bounded_size size,
          size = bounded_size size} state
     end
 
-  and random_args_with _ _ [] [] _ _ state = ([], state)
+  and random_args_with _ _ [] [] _ _ _ state = ([], state)
     | random_args_with draw custom (ty :: tys)
-        (is_recursive :: recursive) budget size state =
+        (is_recursive :: recursive) budget hard_budget size state =
         let
           val (value, next) =
             if is_recursive then
               random_value_with draw custom (Refute_Gen.spec_of ty)
-                {budget = Int.max (0, budget - 1), size = size} state
+                {budget = Int.max (0, budget - 1),
+                 hard_budget = Int.max (0, hard_budget - 1),
+                 size = size} state
             else
               (* Preserve the current constructor budget through wrappers
                  such as option.  Resetting it to [size] here lets an
                  indirect recursive field evade the direct-recursion check. *)
               random_value_with draw custom (Refute_Gen.spec_of ty)
                 {budget = Int.max (Refute_Gen.own_floor
-                   (Refute_Gen.spec_of ty), budget), size = size} state
+                   (Refute_Gen.spec_of ty), budget),
+                 hard_budget = hard_budget, size = size} state
           val (values, final) =
-            random_args_with draw custom tys recursive budget size next
+            random_args_with draw custom tys recursive budget hard_budget
+              size next
         in
           (value :: values, final)
         end
-    | random_args_with _ _ _ _ _ _ _ =
+    | random_args_with _ _ _ _ _ _ _ _ =
         raise Fail "Refute_QC.random_args: malformed datatype"
 
-  and random_function_with draw custom dom rng_ty size state =
+  and random_function_with draw custom dom rng_ty hard_budget size state =
     let
-      val entry = random_entry_with draw custom
-      (* Size decays geometrically across every function boundary: the
-         default, each domain point, and each range value are all drawn
-         at half this size.  For itree, whose [own_floor] is 0, this makes
-         the decayed size a hard budget ([random_entry_with]'s [budget =
-         Int.max (floor, bounded_size size)] collapses to [bounded_size
-         size]), so a [Vis] shrinks its budget on every crossing and
-         cannot diverge -- [size div 2 < size] for every [size >= 1], and
-         the recursive constructor's weight is 0 at size 0.  A family
-         member whose own floor survives the decay (floor >= 1 at decayed
-         size 0) would not shrink to 0 this way; termination for such a
-         family would be almost-sure, not bounded.  [size div 2] and
+      fun entry spec hard size current =
+        random_value_with draw custom spec
+          {budget = Int.max (Refute_Gen.own_floor spec, bounded_size size),
+           hard_budget = bounded_size hard,
+           size = bounded_size size} current
+      (* Size and hard recursion fuel decay geometrically across every
+         function boundary.  The structural budget may still rise to a
+         result type's minimum inhabitation floor, but [hard_budget] never
+         does; once it reaches 0, constructors recursive beneath a function
+         are disabled while a minimum finite base path remains available.
+         Thus a positive [own_floor] cannot replenish recursion and turn a
+         function result into an unbounded branching process.  [size div 2]
+         and
          [Int.max (0, size - 1)] agree at sizes 0, 1 and 2, so this only
          changes the stream from size 3 up; the faster decay cuts the
          expected node count of the branching process this drives by
@@ -596,14 +602,15 @@ structure Refute_EvalCompute = struct
          the search deadline instead of terminating.  The point count
          itself stays keyed to the pre-decay [size]. *)
       val decayed = size div 2
+      val decayed_hard = hard_budget div 2
       val variable = Term.mk_var ("x", dom)
       val (default, after_default) =
-        entry (Refute_Gen.spec_of rng_ty) decayed state
+        entry (Refute_Gen.spec_of rng_ty) decayed_hard decayed state
       fun draw_points 0 current = ([], current)
         | draw_points count current =
             let
               val (point, next) =
-                entry (Refute_Gen.spec_of dom) decayed current
+                entry (Refute_Gen.spec_of dom) decayed_hard decayed current
               val (points, final) = draw_points (count - 1) next
             in
               (point :: points, final)
@@ -615,7 +622,7 @@ structure Refute_EvalCompute = struct
       fun add (point, (base, current)) =
         let
           val (value, next) =
-            entry (Refute_Gen.spec_of rng_ty) decayed current
+            entry (Refute_Gen.spec_of rng_ty) decayed_hard decayed current
         in
           (Term.mk_comb (combinSyntax.mk_update (point, value), base), next)
         end
@@ -625,7 +632,7 @@ structure Refute_EvalCompute = struct
       (result, final)
     end
 
-  and random_value_with draw custom spec {budget, size} state =
+  and random_value_with draw custom spec {budget, hard_budget, size} state =
     case spec of
         Refute_Gen.GenEnum values =>
           if null values then
@@ -642,11 +649,16 @@ structure Refute_EvalCompute = struct
           let val (value, next) = custom random size state
           in (checked_custom_value ty value, next) end
       | Refute_Gen.GenFun (dom, rng_ty) =>
-          random_function_with draw custom dom rng_ty size state
-      | Refute_Gen.GenDatatype {constrs, recursive, min_size, ...} =>
+          random_function_with draw custom dom rng_ty hard_budget size state
+      | Refute_Gen.GenDatatype
+          {constrs, recursive, min_size, family, ...} =>
           let
-            fun weight (flags, floors) =
-              if not (List.exists (fn flag => flag) flags) then 1
+            fun weight ((_, arg_types), flags, floors) =
+              if hard_budget = 0 andalso
+                 List.exists
+                   (Refute_Gen.recursive_under_function family) arg_types
+              then 0
+              else if not (List.exists (fn flag => flag) flags) then 1
               else
                 let
                   fun depth (true, floor) = Int.max (0, floor - 1)
@@ -660,7 +672,8 @@ structure Refute_EvalCompute = struct
             fun entries [] [] [] = []
               | entries (constr :: rest) (flags :: more_flags)
                   (floors :: more_floors) =
-                  let val entry = (constr, flags, weight (flags, floors))
+                  let val entry =
+                    (constr, flags, weight (constr, flags, floors))
                   in entry :: entries rest more_flags more_floors end
               | entries _ _ _ =
                   raise Fail
@@ -680,7 +693,7 @@ structure Refute_EvalCompute = struct
                   end
             val ((constructor, arg_types), flags) = select choice choices
             val (arguments, final) = random_args_with draw custom
-              arg_types flags budget size after_choice
+              arg_types flags budget hard_budget size after_choice
           in
             (Term.list_mk_comb (constructor, arguments), final)
           end
@@ -692,8 +705,9 @@ structure Refute_EvalCompute = struct
   fun random_entry spec =
     random_entry_with checked_rand_below default_custom spec
 
-  fun random_value spec =
+  fun random_value spec {budget, size} state =
     random_value_with checked_rand_below default_custom spec
+      {budget = budget, hard_budget = budget, size = size} state
 
   fun random_term ty size state =
     random_entry (Refute_Gen.spec_of ty) size state

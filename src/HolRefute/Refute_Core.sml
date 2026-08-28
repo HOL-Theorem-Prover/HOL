@@ -1213,6 +1213,9 @@ structure Refute_Core = struct
         List.filter (fn tyvar => not (Lib.mem tyvar pinned_vars)) tyvars
       val unpinned_width_vars =
         List.filter (fn tyvar => Lib.mem tyvar unpinned_tyvars) width_vars
+      val unpinned_carrier_vars =
+        List.filter (fn tyvar => not (Lib.mem tyvar width_vars))
+          unpinned_tyvars
       fun make_instance card theta =
         let
           val original = Term.inst theta original_goal
@@ -1249,6 +1252,7 @@ structure Refute_Core = struct
          with an unpinned width variable still varies over [widths]. *)
       val instance_count =
         if null unpinned_tyvars then 1
+        else if null unpinned_carrier_vars then length widths
         else if null types then 0
         else if null unpinned_width_vars then length types
         else Int.max (length types, length widths)

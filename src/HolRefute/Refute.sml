@@ -102,7 +102,7 @@ structure Refute :> Refute = struct
      source [Refute_QC.record_candidate_with] now consults through the
      shared walk, replacing its own former copy of the same lookup. *)
   val () = Refute_ModelFinder_Model.register_family_canonical_lookup
-    Refute_Gen.lookup_family_canonical
+    Refute_Gen.snapshot_family_canonicals
 
   val refute = Refute_Core.refute
   fun refute_def tm = refute (!Refute_Core.the_config) tm

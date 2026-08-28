@@ -3056,31 +3056,34 @@ structure Refute_Extract = struct
               (thunk ("Refute_EvalSML.word_term " ^ integer width ^
                 " draw")) ^ ", next) end"
 
-      fun random_arguments [] [] _ _ state continuation =
+      fun random_arguments [] [] _ _ _ state continuation =
             continuation ([], state)
-        | random_arguments (ty :: tys) (flag :: flags) budget size state
-            continuation =
+        | random_arguments (ty :: tys) (flag :: flags) budget hard_budget
+            size state continuation =
             let
               val number = length tys
               val generated = "generated_" ^ integer number
               val next = "state_" ^ integer number
               val call = if flag then generator_name "rnd_aux_" ty ^ " " ^
-                "(Int.max (0, " ^ budget ^ " - 1)) " ^ size ^ " " ^ state
+                "(Int.max (0, " ^ budget ^ " - 1)) " ^
+                "(Int.max (0, " ^ hard_budget ^ " - 1)) " ^ size ^ " " ^
+                state
                 else generator_name "rnd_aux_" ty ^ " " ^
                   "(Int.max (" ^ integer (floor_for ty) ^ ", " ^ budget ^
-                  ")) " ^ size ^ " " ^ state
+                  ")) " ^ hard_budget ^ " " ^ size ^ " " ^ state
             in
               "let val (" ^ generated ^ ", " ^ next ^ ") = " ^ call ^
-              " in " ^ random_arguments tys flags budget size next
+              " in " ^ random_arguments tys flags budget hard_budget
+                size next
                 (fn (values, final) =>
                   continuation (generated :: values, final)) ^ " end"
             end
-        | random_arguments _ _ _ _ _ _ =
+        | random_arguments _ _ _ _ _ _ _ =
             raise Fail "Refute_Extract: random argument shape"
 
       fun random_constructor (constructor, argument_types) flags =
-        random_arguments argument_types flags "budget" "size" "next_state"
-          (fn (reversed, final) =>
+        random_arguments argument_types flags "budget" "hard_budget" "size"
+          "next_state" (fn (reversed, final) =>
             let
               val names = reversed
               val values = List.map (fn name =>
@@ -3091,11 +3094,10 @@ structure Refute_Extract = struct
                   (constructor_thunk constructor values)) final)
             end)
 
-      fun random_datatype constrs recursive min_size =
+      fun random_datatype constrs recursive min_size family =
         let
-          fun weight flags floors =
-            if not (List.exists (fn flag => flag) flags) then "1"
-            else
+          fun sized_weight flags floors =
+            if not (List.exists (fn flag => flag) flags) then "1" else
               let
                 val minimum = maximum (ListPair.mapEq
                   (fn (flag, floor) =>
@@ -3106,10 +3108,17 @@ structure Refute_Extract = struct
                 else "(if budget > " ^ integer minimum ^
                   " then budget else 0)"
               end
+          fun weight ((_, args), flags, floors) =
+            let val sized = sized_weight flags floors in
+              if List.exists
+                   (Refute_Gen.recursive_under_function family) args
+              then "(if hard_budget = 0 then 0 else " ^ sized ^ ")"
+              else sized
+            end
           val rows = ListPair.zip
             (ListPair.zip (constrs, recursive), min_size)
-          val weights = List.map (fn ((_, flags), floors) =>
-            weight flags floors) rows
+          val weights = List.map (fn ((constr, flags), floors) =>
+            weight (constr, flags, floors)) rows
           val total = join " + " weights
           fun select _ [] =
                 "(raise Fail \"Refute generated constructor choice\")"
@@ -3131,8 +3140,12 @@ structure Refute_Extract = struct
 
       fun random_function domain range =
         let
-          val domain_random = generator_name "rnd_" domain
-          val range_random = generator_name "rnd_" range
+          fun auxiliary ty =
+            generator_name "rnd_aux_" ty ^ " (Int.max (" ^
+            integer (floor_for ty) ^ ", decayed_size)) " ^
+            "decayed_hard_budget decayed_size "
+          val domain_random = auxiliary domain
+          val range_random = auxiliary range
           val equality = equality_name context domain
           (* Displayed, exactly as in [exhaustive_function] above. *)
           val variable = Term.mk_var ("x", domain)
@@ -3148,17 +3161,13 @@ structure Refute_Extract = struct
               SOME _ => points
             | NONE => "rev (#1 points_result)"
         in
-          (* [decayed_size] implements the function-boundary decay: the
-             default, every domain point, and every range value are drawn
-             at half the size.  For itree, whose floor ([floor_for]) is 0,
-             this makes the decayed size a hard budget (the wrapper's
-             [Int.max (floor, Int.max (0, size))] collapses to [size]), so
-             a [Vis] shrinks its budget on every crossing and cannot
-             diverge -- [size div 2 < size] for every [size >= 1], and the
-             recursive constructor's weight is 0 at size 0.  A family
-             member whose own floor survives the decay (floor >= 1 at
-             decayed size 0) would not shrink to 0 this way; termination
-             for such a family would be almost-sure, not bounded.
+          (* [decayed_size] and [decayed_hard_budget] implement the
+             function-boundary decay.  Structural budget may still rise to
+             the result type's minimum inhabitation floor, but hard
+             recursion fuel never does; at 0, a constructor recursive
+             beneath a function is disabled while a finite base path
+             remains available.  A positive floor therefore cannot
+             replenish recursion and create an unbounded branching process.
              [size div 2] and [Int.max (0, size - 1)] agree at sizes 0, 1
              and 2, so this only changes the stream from size 3 up; the
              faster decay avoids the supercritical branching process a
@@ -3167,12 +3176,12 @@ structure Refute_Extract = struct
              the pre-decay [size]. *)
           "let\n" ^
           "  val decayed_size = size div 2\n" ^
+          "  val decayed_hard_budget = hard_budget div 2\n" ^
           "  val (default_generated, after_default) =\n" ^
-          "    " ^ range_random ^ " decayed_size state\n" ^
+          "    " ^ range_random ^ "state\n" ^
           "  fun draw_points 0 current points = (points, current)\n" ^
           "    | draw_points count current points =\n" ^
-          "      let val (point, next) = " ^ domain_random ^
-          " decayed_size current\n" ^
+          "      let val (point, next) = " ^ domain_random ^ "current\n" ^
           "      in draw_points (count - 1) next (point :: points) end\n" ^
           (case enum of
              SOME _ => "  val points_result = ([], after_default)\n"
@@ -3187,7 +3196,7 @@ structure Refute_Extract = struct
           "    | values ((point, point_term) :: rest) current graph " ^
           "updates =\n" ^
           "      let val ((value, value_term), next) =\n" ^
-          "            " ^ range_random ^ " decayed_size current\n" ^
+          "            " ^ range_random ^ "current\n" ^
           "          val graph' = fn x => if " ^ equality ^
           " x point then value else graph x\n" ^
           "      in values rest next graph'\n" ^
@@ -3205,8 +3214,9 @@ structure Refute_Extract = struct
             " state\n" ^
             "in (List.nth (values, IntInf.toInt choice), next) end"
         | Refute_Gen.GenNum kind => random_num kind
-        | Refute_Gen.GenDatatype {constrs, recursive, min_size, ...} =>
-            random_datatype constrs recursive min_size
+        | Refute_Gen.GenDatatype
+            {constrs, recursive, min_size, family, ...} =>
+            random_datatype constrs recursive min_size family
         | Refute_Gen.GenFun (domain, range) => random_function domain range
         | Refute_Gen.GenCustom _ => raise Fail "validated custom generator"
 
@@ -3218,8 +3228,10 @@ structure Refute_Extract = struct
         in
           separator ^ wrapper ^ " size state =\n" ^
           "  " ^ auxiliary ^ " (Int.max (" ^ integer (floor_for ty) ^
-          ", Int.max (0, size))) (Int.max (0, size)) state\n" ^
-          "and " ^ auxiliary ^ " budget size state =\n  " ^ random_body ty
+          ", Int.max (0, size))) (Int.max (0, size)) " ^
+          "(Int.max (0, size)) state\n" ^
+          "and " ^ auxiliary ^ " budget hard_budget size state =\n  " ^
+          random_body ty
         end
 
       val random_generators =
