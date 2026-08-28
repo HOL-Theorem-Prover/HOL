@@ -20664,6 +20664,20 @@ fun capture_refute_messages level action =
     (result, String.concat (rev (!chunks)))
   end
 
+(* Reads a candidate count off a [capture_refute_messages] buffer: the
+   count following [marker]'s first occurrence, or [NONE] if [marker]
+   never appears.  Anchoring a marker to a specific backend's prefix (see
+   [finite_map_generator_true_free_fm_property_is_unrefuted] below) is
+   then one string argument, not a parse block repeated per call site. *)
+fun count_after marker messages =
+  case Substring.position marker (Substring.full messages) of
+      (_, hit) =>
+        if Substring.isEmpty hit then NONE
+        else
+          Int.fromString (Substring.string
+            (#1 (Substring.splitl Char.isDigit
+              (Substring.triml (size marker) hit))))
+
 (* The acceptance headline: before specialisation this goal's only route
    was the blanket [Gen]+[Guard] fallback, which must reach exactly 500
    before its guard can pass -- an unreachable search within any ordinary
@@ -20726,10 +20740,17 @@ val listall_specialisation_twin_true =
    verdict alone cannot tell a search that ran and found nothing wrong
    apart from one that timed out or was declined before generating
    anything.  "candidates generated N, ..." is printed as a trace-level-1
-   diagnostic on every non-[Counterexample] verdict (Refute_QC.sml's
-   [counter_reason], right where [complete]/[NoCounterexample] is
-   decided); [capture_refute_messages] reads it off the very call that
-   produces the verdict -- [qc_counters_distinguish_no_counterexample_
+   diagnostic on every non-[Counterexample] verdict on a counter-measuring
+   substrate (Refute_QC.sml's [counter_reason], right where
+   [complete]/[NoCounterexample] is decided; an uninstrumented substrate
+   prints "candidate counters unavailable on this substrate" instead,
+   with no marker to read).  A missing marker is not proof of an
+   uninstrumented substrate either: the gate veto (Refute_QC.sml:1760-1762)
+   and [SelectionFailed] (:1764) both return [Unknown] before any
+   substrate is even selected, so neither reaches [counter_reason].
+   [capture_refute_messages] reads it off the
+   very call that produces the verdict --
+   [qc_counters_distinguish_no_counterexample_
    reports] below is the worked example this follows.  Driving both
    signals through one such call, instead of the two independently
    driven runs this twin used to make, closes the vacuity: a timed-out
@@ -20775,15 +20796,12 @@ fun listall_specialisation_twin_no_spurious_cex () =
       case result of
           Counterexample _ => false
         | _ => true
-    val marker = "candidates generated "
+    (* Only [Exhaustive] runs here, so no other backend's line could
+       intervene; anchored to the same "exhaustive: " prefix as
+       [finite_map_generator_true_free_fm_property_is_unrefuted] below for
+       uniformity, not because this call races anything. *)
     val candidates_generated =
-      case Substring.position marker (Substring.full messages) of
-          (_, hit) =>
-            if Substring.isEmpty hit then NONE
-            else
-              Int.fromString (Substring.string
-                (#1 (Substring.splitl Char.isDigit
-                  (Substring.triml (size marker) hit))))
+      count_after "exhaustive: candidates generated " messages
   in
     outcome_ok andalso
     (case candidates_generated of SOME n => n > 0 | NONE => false)
@@ -20820,16 +20838,41 @@ val _ = require_msg
    how small [upd_size] is set.
 
    That is also its limit, and the reason it does not make the pin
-   above redundant: because this sibling's redness never depends on the
-   budget, it cannot catch a collapsed search -- a specialisation that
-   quietly stopped running would look, from here, identical to a
-   correct one, since both report a genuine [Counterexample] regardless
-   of how much work actually happened.  Only the pin above's same-call
-   [candidates generated > 0] can catch that.  So the two pins check
-   different things: this one shows the specialised route fires and is
-   sound, the pin above shows it is still doing real work; neither one
-   is a substitute for the other, and dropping either as a seeming
-   duplicate would silently lose the half only it covers. *)
+   above redundant -- a specialisation can collapse two different ways,
+   and this sibling and the pin above each catch exactly one, not both.
+
+   A *budget* collapse -- specialisation still fires but the search
+   does strictly less work than it should -- is only partly caught.  The
+   pin above's same-call [candidates generated > 0] catches a *zeroed*
+   count: a search declined outright, cut off before reporting any
+   stats, or run on a substrate that never instruments counters at all.
+   A merely *shrunk* count -- the search runs, reports stats, but stops
+   short of the full size-3 enumeration -- still prints a positive
+   number, still satisfies [n > 0], and is caught by neither pin: this
+   sibling's witness [xs = [500]] is size-independent (measured above),
+   so it says nothing about how much work happened either.  A
+   shrunk-but-nonzero budget collapse is therefore a residual gap this
+   pair does not close; asserting some fixed lower bound on the count
+   instead would pin a magic number that a legitimate improvement to
+   the search would redden, trading a soundness net for a brittle one,
+   so the gap is left named rather than "fixed" that way.
+
+   A *route* collapse -- specialisation itself reverts to the blanket
+   [Gen]+[Guard] fallback the acceptance headline above describes, which
+   "must reach exactly 500 before its guard can pass" -- is exactly what
+   this sibling catches: reverted to that fallback, the search can no
+   longer reach [xs = [500]] within any ordinary budget, [ExpectGenuine]
+   is violated, and this row goes red.  The pin above does not catch a
+   route collapse: the unspecialised route still enumerates ordinary
+   [:num list] candidates (count > 0) and still finds no counterexample
+   of a true theorem, so it stays [Unknown] and green while
+   specialisation has silently stopped happening.
+
+   So the two pins check different things: this one shows a reverted
+   route is caught, the pin above shows a zeroed budget is caught;
+   neither is a substitute for the other, and dropping either as a
+   seeming duplicate would silently lose the collapse mode only it
+   covers. *)
 fun listall_specialisation_twin_false_sibling () =
   let
     val config = upd_expect Refute.ExpectGenuine
@@ -21902,11 +21945,20 @@ val _ = require_msg (check_result true_bounded_expect_none) (fn () =>
    this pin would pass for any true closed goal, offset or not, and
    demonstrate nothing about D3.  The [<=> T] wrapper is the device
    [true_bounded_expect_none] itself uses: with no free variable left
-   once it is applied, QC's schedule holds exactly one ground candidate,
-   and deciding that candidate forces evaluation through [Refute_Cert]'s
-   bounded-quantifier branch instead of getting stuck on it -- exactly
-   what [interval_eval_original_decides] shows directly by calling that
-   branch ([eval_original]) itself.
+   once it is applied, QC's schedule holds exactly one ground candidate.
+   Deciding that candidate does NOT go through [interval_eval_original_
+   decides]'s [eval_original]: the routes to that function are the
+   certification modules and model replay, and none of them runs here --
+   this config is [Only [Exhaustive]] and a true closed goal records no
+   candidate.  What actually happens is
+   [Refute_Core.normalize]'s rewriting, run on every instance during
+   construction ([Refute_Core.make_instance], Refute_Core.sml:1221),
+   whose [normal_rewrites] set contains [bounded_rewrites] -- the same
+   rewrites [interval_eval_original_decides] exercises directly, just
+   reached along a different, non-certifying path.  That rewriting does
+   not itself decide the goal: it only makes the instance decidable, by
+   rewriting the bounded quantifier away; the substrate that evaluates
+   the resulting quantifier-free term is what decides it.
 
    The recogniser conjunct alone would pass regardless of whether the
    interval rewrites actually fire, so it cannot by itself show this pin
@@ -22661,25 +22713,31 @@ val _ = require_msg
    candidate" -- so this is a PAIR: a true goal and a false sibling that
    differ only in the bound (<= 2 vs <= 1), at the same fixed size, so
    that the false sibling's result stands as direct evidence for what
-   the true sibling's silence means.  Each pin below makes its own
-   [capture_refute_messages] call and reads its own verdict and its own
-   candidate count off that one call; the two calls are independent and
-   must stay that way -- sharing a single call, or reading one pin's
-   candidate count from the other's messages, rebuilds the exact
-   two-independent-runs defect
+   the true sibling's silence means.  The pin below for the true goal
+   makes its own [capture_refute_messages] call and reads its own
+   verdict and its own candidate count off that one call; the false
+   sibling below needs no count of its own (see its own comment for why)
+   and asserts only its verdict.  What must stay true either way: neither
+   pin may read a count, or anything else, out of the other's messages --
+   sharing a single call, or reading one pin's candidate count from the
+   other's, rebuilds the exact two-independent-runs defect
    [listall_specialisation_twin_no_spurious_cex] above removes, just
    split across two functions instead of hidden inside one.
 
-   Measured (one call each, [QuickcheckBackends], [Refute.upd_size 2]):
-   the true goal, [!fm : bool |-> bool. CARD (FDOM fm) <= 2] (true of
-   every [:bool |-> bool], since its domain has at most the two elements
-   of [:bool]), reports [Unknown] over 6 candidates; the false sibling,
-   [!fm : bool |-> bool. CARD (FDOM fm) <= 1], reports [Counterexample
-   (Genuine, fm = FEMPTY<|T |-> F; F |-> T|>)] over the same 6
-   candidates.  Same generator, same fixed size, same candidate count,
-   opposite verdicts -- so the true goal's [Unknown] is a finding (the
-   search explored two-domain-entry maps and found none of them false),
-   not blindness.  [<= 2] was chosen over a syntactic tautology
+   Measured directly, at the time of writing, under [QuickcheckBackends]
+   and [Refute.upd_size 2]: the true goal, [!fm : bool |-> bool. CARD
+   (FDOM fm) <= 2] (true of every [:bool |-> bool], since its domain has
+   at most the two elements of [:bool]), reported [Unknown] over 6
+   candidates; the false sibling, [!fm : bool |-> bool. CARD (FDOM fm)
+   <= 1], reported [Counterexample (Genuine, fm = FEMPTY<|T |-> F; F |->
+   T|>)] over the same 6 candidates.  Same generator, same fixed size,
+   same measured candidate count, opposite verdicts -- so the true
+   goal's [Unknown] is a finding (the search explored two-domain-entry
+   maps and found none of them false), not blindness.  That candidate
+   count is a fact observed once about the generator, not something
+   either pin currently checks against the other -- the false sibling's
+   pin does not read a count at all (see its own comment).  [<= 2] was
+   chosen over a syntactic tautology
    precisely so a malformed candidate could break it: [:bool] has only
    two possible keys, so at this size every candidate the generator
    builds is necessarily an overwritten/duplicate-key chain, and a
@@ -22721,15 +22779,24 @@ fun finite_map_generator_true_free_fm_property_is_unrefuted () =
       case result of
           Counterexample _ => false
         | _ => true
-    val marker = "candidates generated "
+    (* [QuickcheckBackends] runs exhaustive, random and narrowing
+       concurrently, and all three write their own "<backend>:
+       candidates generated ..." line into this one shared buffer, in an
+       order that depends on scheduling, not on backend identity: across
+       five identical runs the three lines came back in three different
+       orders.  In the run whose order differed, an unanchored marker
+       matched random's line and returned random's count (200), not
+       narrowing's (0) or exhaustive's -- the measured failure.
+       Narrowing is also a second, independent way an unanchored marker
+       misreads: it declines fmap outright but still prints its own
+       unconditional counter line with every total at 0
+       (Refute_QC_Narrow.sml).  Neither hazard is fixed by filtering on
+       value (e.g. "first match with n > 0" still reads random's count
+       whenever scheduling puts random first): the marker must select a
+       specific backend's line by its prefix -- "exhaustive: "
+       ([strategy_name]) gives that backend's line. *)
     val candidates_generated =
-      case Substring.position marker (Substring.full messages) of
-          (_, hit) =>
-            if Substring.isEmpty hit then NONE
-            else
-              Int.fromString (Substring.string
-                (#1 (Substring.splitl Char.isDigit
-                  (Substring.triml (size marker) hit))))
+      count_after "exhaustive: candidates generated " messages
   in
     outcome_ok andalso
     (case candidates_generated of SOME n => n > 0 | NONE => false)
@@ -22747,33 +22814,35 @@ val _ = require_msg
   (fn () => ()) ()
 
 (* Companion to the pin above, not a duplicate: same generator, same
-   fixed size, same candidate count, but the FALSE bound ([<= 1]) the
-   generator must catch to make the true pin's silence meaningful.  See
-   that pin's comment for why the size and the [QuickcheckBackends]
-   search setting are both load-bearing for this pair. *)
+   fixed size, same measured candidate count (see that pin's comment --
+   this pin makes no [capture_refute_messages] call, so unlike that pin
+   it has no way to read the count itself), but the FALSE bound ([<= 1])
+   the generator must catch to make the true pin's silence meaningful.
+   See that pin's comment for why the size and the [QuickcheckBackends]
+   search setting are both load-bearing for this pair.
+
+   No candidate-count conjunct here, unlike the pin above, and not
+   because one would be redundant: a winning backend takes the
+   [not (null (!counterexamples))] branch in
+   [Refute_QC.strategy_run_body] and never prints [counter_reason], so
+   on a [Counterexample] verdict a count could only come from a losing
+   backend's line or from [format_stats].  A [format_stats] count would
+   agree with the [Genuine] assertion below ([n > 0] either way), but
+   narrowing declines fmap and prints its own unconditional "narrowing:
+   candidates generated 0" line regardless of verdict
+   (Refute_QC_Narrow.sml), so a count read off a losing backend's line
+   here is deterministically [0] -- a conjunct built on it would not be
+   redundant, it would be actively wrong.  The true pin above has no
+   witness to lean on and needs the counter instead. *)
 fun finite_map_generator_false_free_fm_property_is_refuted () =
   let
     val config = Refute.upd_search Refute.QuickcheckBackends
       (Refute.upd_size 2 default_config)
     val goal = ``!fm : bool |-> bool. CARD (FDOM fm) <= 1``
-    val (result, messages) = capture_refute_messages 1 (fn () =>
-      refute config goal)
-    val outcome_ok =
-      case result of
-          Counterexample ({certainty = Genuine, ...} :: _) => true
-        | _ => false
-    val marker = "candidates generated "
-    val candidates_generated =
-      case Substring.position marker (Substring.full messages) of
-          (_, hit) =>
-            if Substring.isEmpty hit then NONE
-            else
-              Int.fromString (Substring.string
-                (#1 (Substring.splitl Char.isDigit
-                  (Substring.triml (size marker) hit))))
   in
-    outcome_ok andalso
-    (case candidates_generated of SOME n => n > 0 | NONE => false)
+    case refute config goal of
+        Counterexample ({certainty = Genuine, ...} :: _) => true
+      | _ => false
   end
 
 val _ = tprint
@@ -22783,8 +22852,7 @@ val _ = require_msg
   (check_result finite_map_generator_false_free_fm_property_is_refuted)
   (fn () =>
   "the fmap generator failed to certify a genuine counterexample for " ^
-  "a false CARD (FDOM fm) <= 1 property at size 2, or that same run " ^
-  "generated no candidates")
+  "a false CARD (FDOM fm) <= 1 property at size 2")
   (fn () => ()) ()
 
 (* The key type is generally infinite, so exhaustive QC must never claim
@@ -23289,8 +23357,13 @@ val _ = require_msg (check_result qc_postprocessing_is_display_only)
    [InstanceFalse], and certify it as [Genuine] with a theorem, so
    [!counterexamples] would come back nonempty and this pin would fail.
    Substituting [ordered_bindings] for [env] at that call reddens this
-   row and [Refute QC postprocessing is display-only], and only those
-   two. *)
+   row and [Refute QC postprocessing is display-only] -- the two
+   measured directly here.  [canonicalize_term]'s callback is not inert
+   elsewhere ([Refute.sml] registers it globally for the fmap family,
+   and every transported counterexample goes through the sibling
+   substitution in [apply_report_transport]), so this is not a claim
+   that only these two rows would redden; establishing that would need
+   a level-2 ablation across the whole suite. *)
 fun qc_postprocessing_cannot_manufacture_a_counterexample () =
   with_term_postprocessors_restored (fn () => let
     val fm_var = Term.mk_var ("fm", ``:num |-> num``)

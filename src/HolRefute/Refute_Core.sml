@@ -754,9 +754,9 @@ structure Refute_Core = struct
 
   fun strip_outer_forall_body tm = #2 (strip_outer_forall tm)
 
-  (* Three consumers: [Refute_Cert.eval_original] (Refute_Cert.sml:53)
+  (* Three consumers: [Refute_Cert.eval_original] (Refute_Cert.sml:57)
      uses this list directly; [Refute_Cert.normalize_to_pnf] (:210) and
-     [Refute_Core.normalize] (:893) reach it only via [normal_rewrites]
+     [Refute_Core.normalize] (:898) reach it only via [normal_rewrites]
      below.  Ablating any one consumer, or [normal_rewrites] alone, is
      not decisive; only disabling entries here cuts all three. *)
   val bounded_rewrites =
