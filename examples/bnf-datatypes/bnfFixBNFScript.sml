@@ -212,6 +212,23 @@ Proof
   simp[Once EXTENSION, PULL_EXISTS] >> metis_tac[]
 QED
 
+(* what a value's sets say after a map: the induction hypothesis for
+   that member, without taking the set function apart *)
+Theorem IMAGE_ALL:
+  (∀b. b ∈ IMAGE f s ⇒ b) ⇔ ∀y. y ∈ s ⇒ f y
+Proof
+  simp[PULL_EXISTS]
+QED
+
+(* an equation the induction principle is read off: a clause of it says
+   the hypothesis implies the conclusion, and what the recursion at the
+   booleans says is that the two are the same disjunction *)
+Theorem IMP_DISJ_EQ:
+  (q ⇒ p) ⇒ (p ⇔ q ∨ p)
+Proof
+  DECIDE_TAC
+QED
+
 (* ----------------------------------------------------------------------
     witnesses and inhabitation.
 

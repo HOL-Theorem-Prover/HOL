@@ -374,3 +374,92 @@ val _ =
                  (∀a0. h2 (FE a0) = f4 a0 (h0 a0)) ∧
                  ∀a0. h2 (FG a0) = f5 a0 (h2 a0)”
     then OK() else die (thm_to_string fam_prim_axiom)
+
+(* ----------------------------------------------------------------------
+    Uniqueness, and the induction principle that comes of it.
+
+    A member's own function is determined by pairing it with the
+    identity — that pairing solves member i's own recursion — and the
+    sub-family's principle determines the rest, so the family's
+    equations have exactly one solution.  Reading that at the booleans
+    is an induction principle.
+   ---------------------------------------------------------------------- *)
+
+val fam_principle = familyPrinciple fam
+
+Theorem fam_uniqueness = familyUniqueness fam_principle
+
+val _ = tprint "the family's solutions are unique"
+val _ =
+    if null (hyp fam_uniqueness) andalso
+       null (free_vars (concl fam_uniqueness)) andalso
+       same (concl fam_uniqueness)
+            “∀t0 t1 t2 h0 h1 h2 k0 k1 k2.
+               ((∀af. h0 (ft1_CONS af) = t0 af (SUM_MAP I (h0 ## h1) af)) ∧
+                (∀af. h1 (ft2_CONS af) = t1 af (SUM_MAP h2 (I ## h1) af)) ∧
+                ∀af. h2 (ft3_CONS af) = t2 af (SUM_MAP h0 h2 af)) ∧
+               ((∀af. k0 (ft1_CONS af) = t0 af (SUM_MAP I (k0 ## k1) af)) ∧
+                (∀af. k1 (ft2_CONS af) = t1 af (SUM_MAP k2 (I ## k1) af)) ∧
+                ∀af. k2 (ft3_CONS af) = t2 af (SUM_MAP k0 k2 af)) ⇒
+               h0 = k0 ∧ h1 = k1 ∧ h2 = k2”
+    then OK() else die (thm_to_string fam_uniqueness)
+
+(* the set-based principle: each clause's hypothesis is what the
+   functor's set function for a member's type holds of the argument *)
+val fam_set_induction = familySetInduction fam fam_principle
+
+val _ = tprint "the family's induction principle"
+val _ =
+    let val ([P0,P1,P2], body) = strip_forall (concl fam_set_induction)
+        val (clauses, con) = dest_imp body
+        (* a clause's hypotheses are those members' predicates the
+           functor holds values of, through this functor's own sets *)
+        fun clauseOK (j, Ps) clause =
+            let val (af, imp) = dest_forall clause
+                val (hyps, c) = dest_imp imp
+                val bnf = List.nth (#functors fam, j)
+                fun hypOK ((m,P), h) =
+                    let val (y, b) = dest_forall h
+                        val (mem, app) = dest_imp b
+                    in
+                      aconv app (mk_comb (P, y)) andalso
+                      aconv (rand (rand mem)) af andalso
+                      can (match_term (List.nth (#sets bnf, m)))
+                          (rator (rand mem))
+                    end
+            in
+              aconv c (mk_comb (List.nth ([P0,P1,P2], j),
+                                mk_comb (List.nth (#cons fam, j), af))) andalso
+              ListPair.allEq hypOK (Ps, strip_conj hyps)
+            end
+    in
+      if null (hyp fam_set_induction) andalso
+         null (free_vars (concl fam_set_induction)) andalso
+         (* ft1's functor holds ft1s and ft2s, ft2's ft2s and ft3s, and
+            ft3's ft1s and ft3s *)
+         ListPair.allEq (fn ((j,Ps),c) => clauseOK (j,Ps) c)
+                        ([(0, [(0,P0), (1,P1)]),
+                          (1, [(1,P1), (2,P2)]),
+                          (2, [(0,P0), (2,P2)])],
+                         strip_conj clauses) andalso
+         aconv con (list_mk_conj
+                      (List.map (fn (ty,P) =>
+                                    let val x = mk_var("x", ty)
+                                    in mk_forall (x, mk_comb (P,x)) end)
+                                (ListPair.zipEq (#types fam, [P0,P1,P2]))))
+      then OK() else die (thm_to_string fam_set_induction)
+    end
+
+Theorem fam_induction = familyInduction fcss fam fam_set_induction
+
+val _ = tprint "the family's induction, per constructor"
+val _ =
+    if null (hyp fam_induction) andalso
+       same (concl fam_induction)
+            “∀P0 P1 P2.
+               ((∀a0. P0 (FA a0)) ∧ ∀a0 a1. P0 a0 ∧ P1 a1 ⇒ P0 (FB a0 a1)) ∧
+               ((∀a0. P2 a0 ⇒ P1 (FC a0)) ∧
+                ∀a0 a1. P1 a1 ⇒ P1 (FD a0 a1)) ∧
+               (∀a0. P0 a0 ⇒ P2 (FE a0)) ∧ (∀a0. P2 a0 ⇒ P2 (FG a0)) ⇒
+               (∀x. P0 x) ∧ (∀x. P1 x) ∧ ∀x. P2 x”
+    then OK() else die (thm_to_string fam_induction)

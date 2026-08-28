@@ -258,6 +258,9 @@ sig
       have already been solved, as a family over its own slot, and their
       functions are what its target folds with.
      ---------------------------------------------------------------------- *)
+  val familyPrinciple : family -> thm
+  val familyExistence : thm -> thm
+  val familyUniqueness : thm -> thm
   val familyPrimRecursion : family -> thm
 
   (* the same principle as an iterator: a target that ignores the
@@ -279,5 +282,17 @@ sig
       results of the recursive calls.
      ---------------------------------------------------------------------- *)
   val familyAxiom : constructors list -> family -> thm -> thm
+
+  (* ----------------------------------------------------------------------
+      The family's induction principle, from its principle at the
+      booleans: a clause per member, with the hypothesis "every sub-term
+      the functor holds of a member's type satisfies that member's
+      predicate", which is the set-based form a nested recursion leaves.
+     ---------------------------------------------------------------------- *)
+  val familySetInduction : family -> thm -> thm
+
+  (* and the same principle one clause per constructor, which is the
+     form a proof is written against *)
+  val familyInduction : constructors list -> family -> thm -> thm
 
 end

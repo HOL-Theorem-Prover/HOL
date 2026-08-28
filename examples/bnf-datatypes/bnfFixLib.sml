@@ -1785,17 +1785,18 @@ fun defineFamily {tynames} db params specs : family =
     mutually recursive family takes.
    ---------------------------------------------------------------------- *)
 
-fun familyPrimRecursion (fam : family) =
+fun familyPrinciple (fam : family) =
     let
       val n = length (#types fam)
       val vs = #slots fam and raw = #raw fam and params = #params fam
       val pIs = List.map Ify params
       fun slotIdx v =
           Option.map #2 (Lib.assoc1 v (ListPair.zipEq (vs, upto n)))
-      (* the answer types *)
+      (* the answers, and the slots a level leaves to its caller *)
       val avoid = vs @ params @
                   List.concat (List.map (type_vars o #1) (#raw fam))
       val cs = freshTys "'r" n avoid
+      val xs = freshTys "'x" n (avoid @ cs)
 
       (* member k's type when the members before it are given by env *)
       fun tyIn env k =
@@ -1807,25 +1808,20 @@ fun familyPrimRecursion (fam : family) =
                  args)
               ty
           end
-      (* and at level i, where a member before it has been solved and
-         hands back the value it was applied to along with its answer *)
-      fun tyAt i k = tyIn (fn m => if m < i then qty m else tyAt i m) k
-      and qty k = pairSyntax.mk_prod (tyAt k k, List.nth (cs, k))
+      (* and at level i, where the members before it are whatever the
+         caller of that level's principle puts in their slots *)
+      fun tyAt i k =
+          tyIn (fn m => if m < i then List.nth (xs,m) else tyAt i m) k
 
-      (* the functions a member's own construction and its map are stated
+      (* the types a member's own construction and its map are stated
          over, at level i *)
       fun levelTheta i j =
           List.map (fn m => List.nth (vs,m) |->
-                            (if m < i then qty m else tyAt i m))
+                            (if m < i then List.nth (xs,m) else tyAt i m))
                    (upto j)
       fun atLevel i j th = INST_TYPE (levelTheta i j) th
       fun instLevel i j tm = Term.inst (levelTheta i j) tm
-
-      (* FST and SND at a member's paired answer *)
-      fun projAt sel k =
-          Term.inst (match_type (#1 (dom_rng (type_of sel))) (qty k)) sel
-      val fstAt = projAt pairSyntax.fst_tm
-      val sndAt = projAt pairSyntax.snd_tm
+      fun consAt i j = instLevel i j (#cons (List.nth (#fixes fam, j)))
 
       (* F_j's map with the given function at each member's slot and the
          parameters carried along *)
@@ -1892,83 +1888,141 @@ fun familyPrimRecursion (fam : family) =
                                | SOME (_,r) => final r
           in final (type_of (#1 (dest_forall (concl th)))) end
 
-      (* Solve the family from member i on, the members before it already
-         at their answers.  The members after i are solved first, since
-         what they do is what member i's own target folds with; each
-         member's function comes back with its equation. *)
-      fun solve i targets =
-          if i >= n then ([], [])
-          else
-          let
-            val fixi = List.nth (#fixes fam, i)
-            val consi = instLevel i i (#cons fixi)
-            val ti = hd targets
-            val later = List.drop (upto n, i + 1)
-            (* one function per member's slot: what the caller says at
-               member i's own, the maps already built after it, and the
-               identity at the members before it *)
-            fun slotFns f ms =
-                List.tabulate (n, fn k =>
-                                  if k < i then Ify (qty k)
-                                  else if k = i then f
-                                  else if k - i - 1 < length ms then
-                                    List.nth (ms, k - i - 1)
-                                  else Ify (tyAt i k))
-            (* the maps that carry the later members' values wherever the
-               function at member i's slot sends them.  A member's own
-               slots are those of the members before it, so what is not
-               built yet is not asked for. *)
-            fun transports f =
-                List.foldl (fn (m, acc) =>
-                               acc @ [#1 (memberMap m (slotFns f acc))])
-                           [] later
-            (* and what undoes such a transport *)
-            val recover = fstAt i
-            val Us = transports recover
-            val recFns = slotFns recover Us
-            (* the members after this one are solved over its paired
-               answer, and hear the argument they were reached from by
-               undoing the transport first *)
-            val subtargets =
-                List.tabulate
-                  (n - i - 1,
-                   fn d =>
-                      let val R = famMap (i + d + 1) recFns
-                          val tj = List.nth (targets, d + 1)
-                          val (_, rest) = dom_rng (type_of tj)
-                          val afv = mk_var("af", #1 (dom_rng (type_of R)))
-                          val vv = mk_var("v", #1 (dom_rng rest))
-                      in
-                        mk_abs (afv, mk_abs (vv,
-                                  list_mk_comb (tj, [mk_comb (R, afv), vv])))
-                      end)
-            val (gs, geqs) = solve (i + 1) subtargets
-            (* the answers the later members' functions give, and the
-               ones the members before this one carry *)
-            val outer = List.tabulate (n, fn k => if k <= i then sndAt k
-                                                  else List.nth (gs, k-i-1))
-            (* the target member i's own recursion is solved at: rebuild
-               its argument for one component of the pair, and fold what
-               belongs to the later members for the other *)
-            val vv = mk_var("v", #1 (dom_rng (type_of (famMap i outer))))
-            val afv = mk_var("af", #1 (dom_rng (type_of consi)))
-            val taui =
-                mk_abs (afv, mk_abs (vv,
-                  pairSyntax.mk_pair
-                    (mk_comb (consi, mk_comb (famMap i recFns, vv)),
-                     list_mk_comb (ti, [afv, mk_comb (famMap i outer, vv)]))))
-            val reci = INST_TYPE [answerOf (#prim_recursion fixi) |-> qty i]
-                                 (atLevel i i (#prim_recursion fixi))
-            val eqP = CONV_RULE (DEPTH_CONV BETA_CONV)
-                                (SELECT_RULE (EXISTENCE (SPEC taui reci)))
-            val af = #1 (dest_forall (concl eqP))
-            val Pi = rator (lhs (#2 (strip_forall (concl eqP))))
-            val Ms = transports Pi
-            val innerFns = slotFns Pi Ms
-            (* the recovery after the transport, member by member: the
-               two maps compose slot by slot, and the caller's rewrites
-               say what happens at member i's own *)
-            fun chain rws =
+      (* the function a level's caller puts in a member's slot, and the
+         target it solves a member at *)
+      fun uvar m = mk_var ("u" ^ Int.toString m,
+                           List.nth (xs,m) --> List.nth (cs,m))
+      fun hty i k = (if k < i then List.nth (xs,k) else tyAt i k) -->
+                    List.nth (cs,k)
+      fun tvar i j =
+          let val hs = List.tabulate (n, fn k => mk_var ("h", hty i k))
+              val (a,b) = dom_rng (type_of (famMap j hs))
+          in mk_var ("t" ^ Int.toString j, a --> (b --> List.nth (cs,j))) end
+
+      (* the equation member j's function satisfies at level i *)
+      fun eqTerm i fns t j =
+          let val consj = consAt i j
+              val af = mk_var ("af", #1 (dom_rng (type_of consj)))
+          in
+            mk_forall (af,
+              mk_eq (mk_comb (List.nth (fns, j), mk_comb (consj, af)),
+                     list_mk_comb (t, [af, mk_comb (famMap j fns, af)])))
+          end
+
+      (* Reduce a target's application and nothing else.  A witness from
+         a level below is a term this level has to match its own maps
+         against, and it has a target's abstraction inside it, so
+         reducing everywhere would leave the two spellings of it
+         different. *)
+      val betaTarget =
+          CONV_RULE (STRIP_QUANT_CONV
+                       (RAND_CONV (RATOR_CONV BETA_CONV THENC BETA_CONV)))
+
+      (* the witnesses of a nest of existentials, and what they satisfy *)
+      fun witnesses (ws, th) =
+          if is_exists (concl th) then
+            witnesses (ws @ [mk_select (dest_exists (concl th))],
+                       SELECT_RULE th)
+          else (ws, th)
+
+      (* Solve the family from member i on.  The members before it are
+         the level's parameters: their slots hold whatever the caller
+         says, and the functions there are what it hands over.  What
+         comes back is that level's principle, over those functions and
+         the targets. *)
+      fun solve i =
+        let
+          val later = List.drop (upto n, i + 1)
+          val us = List.tabulate (i, uvar)
+          val ts = List.map (tvar i) (List.drop (upto n, i))
+          fun targetOf j = List.nth (ts, j - i)
+          val subS = if null later then NONE else SOME (solve (i + 1))
+          val fixi = List.nth (#fixes fam, i)
+          val consi = consAt i i
+          val ci = List.nth (cs, i)
+          (* member i hands back the value it was applied to along with
+             its answer, so that the members after it can still say what
+             they were given *)
+          val qi = pairSyntax.mk_prod (tyAt i i, ci)
+          fun projq sel =
+              Term.inst (match_type (#1 (dom_rng (type_of sel))) qi) sel
+          val recover = projq pairSyntax.fst_tm
+          val answer = projq pairSyntax.snd_tm
+          (* one function per member's slot: what the caller says at
+             member i's own, the maps already built after it, and the
+             identity at the members before it *)
+          fun slotFns f ms =
+              List.tabulate (n, fn k =>
+                                if k < i then Ify (List.nth (xs,k))
+                                else if k = i then f
+                                else if k - i - 1 < length ms then
+                                  List.nth (ms, k - i - 1)
+                                else Ify (tyAt i k))
+          (* the maps that carry the later members' values wherever the
+             function at member i's slot sends them.  A member's own
+             slots are those of the members before it, so what is not
+             built yet is not asked for. *)
+          fun transports f =
+              List.foldl (fn (m, acc) =>
+                             acc @ [#1 (memberMap m (slotFns f acc))])
+                         [] later
+          (* and what undoes such a transport *)
+          val Us = transports recover
+          val recFns = slotFns recover Us
+          (* the sub-family, at whatever is put in member i's slot *)
+          fun subInst (X, w, subts) =
+              SPECL (us @ [w] @ subts)
+                    (INST_TYPE [List.nth (xs,i) |-> X] (valOf subS))
+          (* the members after this one hear the argument they were
+             reached from by undoing the transport first *)
+          val subtargets =
+              List.map
+                (fn j =>
+                    let val R = famMap j recFns
+                        val tj = targetOf j
+                        val afv = mk_var("af", #1 (dom_rng (type_of R)))
+                        val vv = mk_var("v", #1 (dom_rng (#2 (dom_rng
+                                                    (type_of tj)))))
+                    in
+                      mk_abs (afv, mk_abs (vv,
+                                list_mk_comb (tj, [mk_comb (R, afv), vv])))
+                    end)
+                later
+          val (gs, subeqs) =
+              if null later then ([], [])
+              else let val (ws, th) =
+                           witnesses ([], CONJUNCT1
+                                            (subInst (qi, answer, subtargets)))
+                   in (ws, List.map betaTarget (CONJUNCTS th)) end
+          (* the answers the later members' functions give, and the ones
+             the members before this one carry *)
+          val outer = List.tabulate (n, fn k => if k < i then uvar k
+                                                else if k = i then answer
+                                                else List.nth (gs, k-i-1))
+          (* the target member i's own recursion is solved at: rebuild
+             its argument for one component of the pair, and fold what
+             belongs to the later members for the other *)
+          val vv = mk_var("v", #1 (dom_rng (type_of (famMap i outer))))
+          val afv = mk_var("af", #1 (dom_rng (type_of consi)))
+          val taui =
+              mk_abs (afv, mk_abs (vv,
+                pairSyntax.mk_pair
+                  (mk_comb (consi, mk_comb (famMap i recFns, vv)),
+                   list_mk_comb (targetOf i,
+                                 [afv, mk_comb (famMap i outer, vv)]))))
+          val reci = INST_TYPE [answerOf (#prim_recursion fixi) |-> qi]
+                               (atLevel i i (#prim_recursion fixi))
+          val eqP0 = SELECT_RULE (EXISTENCE (SPEC taui reci))
+          val eqP = betaTarget eqP0
+          val af = #1 (dest_forall (concl eqP))
+          val Pi = rator (lhs (#2 (strip_forall (concl eqP))))
+          val mapIDs = List.map (#mapID o memberInfo) later
+          (* the recovery after a transport, member by member: the two
+             maps compose slot by slot, and the caller's rewrites say
+             what happens at member i's own *)
+          fun chain P rws =
+              let val Ms = transports P
+              in
                 List.foldl
                   (fn (m, acc) =>
                       acc @ [CONV_RULE
@@ -1978,114 +2032,216 @@ fun familyPrimRecursion (fam : family) =
                                   (mk_o (List.nth (Us, m-i-1),
                                          List.nth (Ms, m-i-1))))])
                   [] later
-            val mapIDs = List.map (#mapID o memberInfo) later
-            (* member i's function hands back the value it was applied
-               to: the recovery after it solves the recursion the
-               identity solves, and there is only one solution *)
-            val fstP =
-                let
-                  val idty = tyAt i i
-                  val idmap = famMap i (slotFns (Ify idty)
-                                                (transports (Ify idty)))
-                  val x = mk_var("x", #1 (dom_rng (type_of consi)))
-                  val idrws = mapIDs @ [#mapID (List.nth (#functors fam, i)),
-                                        combinTheory.I_THM]
-                  val idth =
-                      GEN x
-                        (TRANS (ISPEC (mk_comb (consi,x)) combinTheory.I_THM)
-                               (SYM (AP_TERM consi
-                                       (PURE_REWRITE_CONV idrws
-                                          (mk_comb (idmap, x))))))
-                  val step =
-                      PURE_REWRITE_RULE (#2 (famMapO i (innerFns, recFns)) ::
-                                         chain [])
-                        (TRANS (ISPECL [recover, Pi, mk_comb (consi, af)]
-                                       combinTheory.o_THM)
-                               (CONV_RULE
-                                  (RAND_CONV (REWR_CONV pairTheory.FST))
-                                  (AP_TERM recover (SPEC af eqP))))
-                  val uq =
-                      CONJUNCT2
-                        (CONV_RULE Conv.EXISTS_UNIQUE_CONV
-                           (SPEC consi
-                              (INST_TYPE [answerOf (#recursion fixi) |-> idty]
-                                         (atLevel i i (#recursion fixi)))))
-                in
-                  MP (SPECL [mk_o (recover, Pi), Ify idty] uq)
-                     (CONJ (GEN af step) idth)
-                end
-            (* so what is left of a transport is nothing at all *)
-            val undone = chain (fstP :: mapIDs)
-            fun recover1 j =
-                let val rws = combinTheory.I_o_ID :: combinTheory.I_THM ::
-                              fstP :: #mapID (List.nth (#functors fam, j)) ::
-                              mapIDs @ undone
-                in
-                  CONV_RULE (RAND_CONV (QCONV (PURE_REWRITE_CONV rws)))
-                            (#2 (famMapO j (innerFns, recFns)))
-                end
-            val recovered = List.map recover1 later
-            (* member i's own function is the answer half of the pair *)
-            val Ai = mk_o (sndAt i, Pi)
-            val hs = ListPair.mapEq (fn (g,m) => mk_o (g,m)) (gs, Ms)
-            (* mapping member i's own argument and then folding the later
-               members is mapping every member at once *)
-            val eqi =
-                GEN af
-                  (PURE_REWRITE_RULE [#2 (famMapO i (innerFns, outer))]
-                     (TRANS (ISPECL [sndAt i, Pi, mk_comb (consi, af)]
-                                    combinTheory.o_THM)
-                            (CONV_RULE (RAND_CONV (REWR_CONV pairTheory.SND))
-                                       (AP_TERM (sndAt i) (SPEC af eqP)))))
-            (* and a later member's function is its own solution after
-               the transport, which its target undoes *)
-            fun upgrade j =
-                let
-                  val d = j - i - 1
-                  val gj = List.nth (gs, d)
-                  val (_, mjeq) = memberMap j innerFns
-                  val consj = instLevel i j (#cons (List.nth (#fixes fam, j)))
-                  val afj = mk_var("af", #1 (dom_rng (type_of consj)))
-                  val step1 = TRANS (ISPECL [gj, List.nth (Ms, d),
-                                             mk_comb (consj, afj)]
-                                            combinTheory.o_THM)
-                                    (AP_TERM gj (SPEC afj mjeq))
-                  val inner = rand (rhs (concl (SPEC afj mjeq)))
-                  val step2 = TRANS step1 (SPEC inner (List.nth (geqs, d)))
-                in
-                  GEN afj
-                    (PURE_REWRITE_RULE [List.nth (recovered, d),
-                                        #2 (famMapO j (innerFns, outer))]
-                                       step2)
-                end
-          in
-            (List.tabulate (n - i, fn d => if d = 0 then Ai
-                                           else List.nth (hs, d - 1)),
-             eqi :: List.map upgrade later)
-          end
+              end
+          (* |- famMap recFns (famMap (slotFns P ..) af) = af, once the
+             recovery is known to undo what P does *)
+          fun recovered P fstth j =
+              let val rws = combinTheory.I_o_ID :: combinTheory.I_THM ::
+                            fstth :: #mapID (List.nth (#functors fam, j)) ::
+                            mapIDs @ chain P [fstth]
+              in
+                CONV_RULE (RAND_CONV (QCONV (PURE_REWRITE_CONV rws)))
+                          (#2 (famMapO j (slotFns P (transports P), recFns)))
+              end
+          (* member i's function hands back the value it was applied to:
+             the recovery after it solves the recursion the identity
+             solves, and there is only one solution *)
+          val fstP =
+              let
+                val idty = tyAt i i
+                val idmap = famMap i (slotFns (Ify idty)
+                                              (transports (Ify idty)))
+                val x = mk_var("x", #1 (dom_rng (type_of consi)))
+                val idrws = mapIDs @ [#mapID (List.nth (#functors fam, i)),
+                                      combinTheory.I_THM]
+                val idth =
+                    GEN x
+                      (TRANS (ISPEC (mk_comb (consi,x)) combinTheory.I_THM)
+                             (SYM (AP_TERM consi
+                                     (PURE_REWRITE_CONV idrws
+                                        (mk_comb (idmap, x))))))
+                val step =
+                    PURE_REWRITE_RULE
+                      (#2 (famMapO i (slotFns Pi (transports Pi), recFns)) ::
+                       chain Pi [])
+                      (TRANS (ISPECL [recover, Pi, mk_comb (consi, af)]
+                                     combinTheory.o_THM)
+                             (CONV_RULE
+                                (RAND_CONV (REWR_CONV pairTheory.FST))
+                                (AP_TERM recover (SPEC af eqP))))
+                val uq =
+                    CONJUNCT2
+                      (CONV_RULE Conv.EXISTS_UNIQUE_CONV
+                         (SPEC consi
+                            (INST_TYPE [answerOf (#recursion fixi) |-> idty]
+                                       (atLevel i i (#recursion fixi)))))
+              in
+                MP (SPECL [mk_o (recover, Pi), Ify idty] uq)
+                   (CONJ (GEN af step) idth)
+              end
+          (* what a member's function is, once member i's is known: its
+             own solution after the transport, which its target undoes *)
+          fun composed P = ListPair.mapEq (fn (g,m) => mk_o (g,m))
+                                          (gs, transports P)
+          fun slotsOf P =
+              List.tabulate (n, fn k => if k < i then uvar k
+                                        else if k = i then mk_o (answer, P)
+                                        else List.nth (composed P, k-i-1))
+          (* and the equation it satisfies, from that member's own and
+             the map laws *)
+          fun upgrade P fstth j =
+              let
+                val d = j - i - 1
+                val gj = List.nth (gs, d)
+                val P' = slotFns P (transports P)
+                val (_, mjeq) = memberMap j P'
+                val consj = consAt i j
+                val afj = mk_var("af", #1 (dom_rng (type_of consj)))
+                val step1 = TRANS (ISPECL [gj, List.nth (transports P, d),
+                                           mk_comb (consj, afj)]
+                                          combinTheory.o_THM)
+                                  (AP_TERM gj (SPEC afj mjeq))
+                val inner = rand (rhs (concl (SPEC afj mjeq)))
+                val step2 = TRANS step1 (SPEC inner (List.nth (subeqs, d)))
+              in
+                GEN afj
+                  (PURE_REWRITE_RULE
+                     [recovered P fstth j, #2 (famMapO j (P', outer))]
+                     step2)
+              end
+          (* member i's own function is the answer half of the pair *)
+          val eqi =
+              GEN af
+                (PURE_REWRITE_RULE
+                   [#2 (famMapO i (slotFns Pi (transports Pi), outer))]
+                   (TRANS (ISPECL [answer, Pi, mk_comb (consi, af)]
+                                  combinTheory.o_THM)
+                          (CONV_RULE (RAND_CONV (REWR_CONV pairTheory.SND))
+                                     (AP_TERM answer (SPEC af eqP)))))
+          val hs = List.drop (slotsOf Pi, i)
+          val eqs = eqi :: List.map (upgrade Pi fstP) later
+          val hvars = List.tabulate (n - i, fn d =>
+                                        mk_var ("h" ^ Int.toString (i+d),
+                                                hty i (i+d)))
+          val existence =
+              List.foldr (fn ((hv,h), th) =>
+                             EXISTS (mk_exists (hv, subst [h |-> hv]
+                                                          (concl th)), h) th)
+                         (LIST_CONJ eqs)
+                         (ListPair.zipEq (hvars, hs))
 
-      (* the family's targets, and the principle itself *)
-      val ts = List.tabulate
-                 (n, fn j =>
-                       let fun hvar k = mk_var("h" ^ Int.toString k,
-                                               tyAt 0 k --> List.nth (cs, k))
-                           val hvars = List.tabulate (n, hvar)
-                           val (a,b) = dom_rng (type_of (famMap j hvars))
-                       in
-                         mk_var("t" ^ Int.toString j,
-                                a --> (b --> List.nth (cs,j)))
-                       end)
-      val (hs, eqs) = solve 0 ts
-      val hvars = List.tabulate (n, fn j => mk_var("h" ^ Int.toString j,
-                                                   type_of (List.nth (hs,j))))
+          (* ------------------------------------------------------------
+              and only one solution.
+
+              Whatever a solution's function for member i is, pairing it
+              with the identity solves member i's own recursion at the
+              very target the construction above used — the recovery
+              undoes that pairing by beta alone — so that pairing is the
+              one built here, and the sub-family's own principle says the
+              members after it are what they were solved to be.
+             ------------------------------------------------------------ *)
+          fun fnsOf vars =
+              List.tabulate (n, fn k => if k < i then uvar k
+                                        else List.nth (vars, k - i))
+          fun eqsOf vars =
+              List.map (fn j => eqTerm i (fnsOf vars) (targetOf j) j)
+                       (List.drop (upto n, i))
+          (* λx. (x, h x), and what its two halves do *)
+          fun pairing h =
+              let
+                val x = mk_var ("x", tyAt i i)
+                val P = mk_abs (x, pairSyntax.mk_pair (x, mk_comb (h, x)))
+                val beta = BETA_CONV (mk_comb (P, x))
+                fun half (sel, proj) =
+                    TRANS (TRANS (ISPECL [sel, P, x] combinTheory.o_THM)
+                                 (AP_TERM sel beta))
+                          (REWR_CONV proj (mk_comb (sel, rhs (concl beta))))
+              in
+                (P,
+                 EXT (GEN x (TRANS (half (recover, pairTheory.FST))
+                                   (SYM (ISPEC x combinTheory.I_THM)))),
+                 EXT (GEN x (half (answer, pairTheory.SND))))
+              end
+          val uqi = CONJUNCT2 (CONV_RULE Conv.EXISTS_UNIQUE_CONV
+                                         (SPEC taui reci))
+          (* what a solution's functions have to be *)
+          fun solutionFacts (vars, ass) =
+              let
+                val hi = hd vars
+                val (P, fstth, sndth) = pairing hi
+                val Ps = slotFns P (transports P)
+                (* the members after this one, transported by what member
+                   i does, solve the sub-family at member i's own slot *)
+                val transported =
+                    List.map (fn j => PURE_REWRITE_RULE [sndth]
+                                                        (upgrade P fstth j))
+                             later
+                val subres =
+                    if null later then []
+                    else
+                      CONJUNCTS
+                        (MP (SPECL (List.tl vars @
+                                    List.drop (slotsOf P, i + 1))
+                                   (CONJUNCT2 (subInst (tyAt i i, hi,
+                                                        List.tl ts))))
+                            (CONJ (LIST_CONJ (List.tl ass))
+                                  (LIST_CONJ transported)))
+                (* so the pairing solves member i's own recursion, at the
+                   target the construction solved it at *)
+                val Peq =
+                    GEN af
+                      (TRANS (BETA_CONV (mk_comb (P, mk_comb (consi, af))))
+                             (SYM (PURE_REWRITE_RULE
+                                     ([recovered P fstth i,
+                                       #2 (famMapO i (Ps, outer)), sndth] @
+                                      List.map SYM subres @
+                                      [SYM (SPEC af (hd ass))])
+                                     ((RATOR_CONV BETA_CONV THENC BETA_CONV)
+                                        (list_mk_comb
+                                           (taui,
+                                            [af, mk_comb (famMap i Ps,
+                                                          af)]))))))
+                val isP = MP (SPECL [P, Pi] uqi) (CONJ Peq eqP0)
+              in
+                (TRANS (SYM sndth) (AP_TERM (rator (mk_o (answer, P))) isP),
+                 List.map (PURE_REWRITE_RULE [isP]) subres)
+              end
+          val hypH = list_mk_conj (eqsOf hvars)
+          val kvars = List.tabulate (n - i, fn d =>
+                                        mk_var ("k" ^ Int.toString (i+d),
+                                                hty i (i+d)))
+          val hypK = list_mk_conj (eqsOf kvars)
+          val both = ASSUME (mk_conj (hypH, hypK))
+          val uniqueness =
+              let
+                val (hi, hjs) = solutionFacts (hvars, CONJUNCTS
+                                                        (CONJUNCT1 both))
+                val (ki, kjs) = solutionFacts (kvars, CONJUNCTS
+                                                        (CONJUNCT2 both))
+              in
+                GENL (hvars @ kvars)
+                     (DISCH (mk_conj (hypH, hypK))
+                            (LIST_CONJ
+                               (TRANS hi (SYM ki) ::
+                                ListPair.mapEq (fn (a,b) => TRANS a (SYM b))
+                                               (hjs, kjs))))
+              end
+        in
+          GENL (us @ ts) (CONJ existence uniqueness)
+        end
     in
-      GENL ts
-        (List.foldr (fn ((hv,h), th) =>
-                        EXISTS (mk_exists (hv, subst [h |-> hv] (concl th)), h)
-                               th)
-                    (LIST_CONJ eqs)
-                    (ListPair.zipEq (hvars, hs)))
+      solve 0
     end
+
+(* its two halves *)
+fun familyExistence th =
+    let val (ts, _) = strip_forall (concl th)
+    in GENL ts (CONJUNCT1 (SPECL ts th)) end
+fun familyUniqueness th =
+    let val (ts, _) = strip_forall (concl th)
+    in GENL ts (CONJUNCT2 (SPECL ts th)) end
+
+fun familyPrimRecursion fam = familyExistence (familyPrinciple fam)
 
 (* ----------------------------------------------------------------------
     The same principle as an iterator: a target that ignores the
@@ -2109,6 +2265,40 @@ fun familyRecursion fam =
                       (SPECL (List.map #2 its) prim))
     end
 
+
+(* ----------------------------------------------------------------------
+    Reading a family's principles at its constructors.
+
+    Each member's constructors were defined over its own construction,
+    where the members before it are still parameters, so they are
+    instantiated to the family's types on the way in; and expanding a
+    quantifier over a functor's shape names the constructors' arguments
+    after the projections it went through, so they are renamed to what
+    the definitions call them.
+   ---------------------------------------------------------------------- *)
+
+fun familyDefs (css : constructors list) (fam : family) =
+    ListPair.mapEq
+      (fn ((cs,fix),cons) =>
+          let val theta = match_type (type_of (#cons fix)) (type_of cons)
+          in List.map (INST_TYPE theta) (#defs cs) end)
+      (ListPair.zipEq (css, #fixes fam), #cons fam)
+
+local
+  fun renameOne def =
+      case List.map (#1 o dest_var) (#1 (strip_forall (concl def))) of
+          [] => ALL_CONV
+        | ns => RENAME_VARS_CONV ns
+  fun renameConj [] = ALL_CONV
+    | renameConj [d] = renameOne d
+    | renameConj (d::ds) = LAND_CONV (renameOne d) THENC
+                           RAND_CONV (renameConj ds)
+in
+fun renameBlocks [] = ALL_CONV
+  | renameBlocks [ds] = renameConj ds
+  | renameBlocks (ds::rest) = LAND_CONV (renameConj ds) THENC
+                              RAND_CONV (renameBlocks rest)
+end
 
 (* ----------------------------------------------------------------------
     The family's recursion principle, one clause per constructor.
@@ -2136,14 +2326,7 @@ fun familyAxiom (css : constructors list) (fam : family) recursion =
       val (ts, _) = strip_forall (concl recursion)
       val _ = length ts = length css orelse
               raise ERR "familyAxiom" "a constructor list per member"
-      (* the constructors at the family's types rather than at the level
-         each member was built on *)
-      val defs =
-          ListPair.mapEq
-            (fn ((cs,fix),cons) =>
-                let val theta = match_type (type_of (#cons fix)) (type_of cons)
-                in List.map (INST_TYPE theta) (#defs cs) end)
-            (ListPair.zipEq (css, #fixes fam), #cons fam)
+      val defs = familyDefs css fam
       (* one branch per constructor: it is handed the constructor's own
          arguments, from what it was applied to, and the results of the
          recursive calls, from what the map produced.  A factor whose
@@ -2204,28 +2387,197 @@ fun familyAxiom (css : constructors list) (fam : family) recursion =
                     sumTheory.sum_case_def, sumTheory.OUTL, sumTheory.OUTR,
                     pairTheory.PAIR_MAP, pairTheory.FST, pairTheory.SND,
                     combinTheory.I_THM])
-      (* and the arguments are named after the projections they came
-         through; rename them to the constructors' own *)
-      fun renameOne def =
-          case List.map (#1 o dest_var) (#1 (strip_forall (concl def))) of
-              [] => ALL_CONV
-            | ns => RENAME_VARS_CONV ns
-      fun renameConj [] = ALL_CONV
-        | renameConj [d] = renameOne d
-        | renameConj (d::ds) = LAND_CONV (renameOne d) THENC
-                               RAND_CONV (renameConj ds)
-      fun blockConv [] = ALL_CONV
-        | blockConv [ds] = renameConj ds
-        | blockConv (ds::rest) = LAND_CONV (renameConj ds) THENC
-                                 RAND_CONV (blockConv rest)
     in
       GENL (List.concat (List.map #1 members))
         (CONV_RULE
-           (STRIP_QUANT_CONV (blockConv defs))
+           (STRIP_QUANT_CONV (renameBlocks defs))
            (REWRITE_RULE (List.map GSYM (List.concat defs))
               (CONV_RULE (STRIP_QUANT_CONV expand)
                  (CONV_RULE (DEPTH_CONV BETA_CONV)
                     (SPECL (List.map #2 members) recursion)))))
+    end
+
+
+(* ----------------------------------------------------------------------
+    The family's induction principle.
+
+    A family's principle says its equations have exactly one solution;
+    at the booleans that is an induction principle, which is how
+    Prim_rec derives one for a single type.  Solve the family with each
+    target handed "everything the map produced is true, or else the
+    conclusion at this constructor": the constant-true functions are one
+    solution, the predicates are another exactly when they satisfy the
+    induction clauses, and uniqueness makes them equal.
+
+    What a target is handed is what F's set functions hold of the mapped
+    value, and naturality turns that into the sub-terms of the argument
+    — so the hypothesis of a clause is "every sub-term the functor holds
+    of this member's type satisfies that member's predicate", the same
+    set-based hypothesis a nested recursion leaves a single type with.
+   ---------------------------------------------------------------------- *)
+
+fun familySetInduction (fam : family) principle =
+    let
+      val n = length (#types fam)
+      val types = #types fam and params = #params fam
+      val pIs = List.map Ify params
+      val uq = familyUniqueness principle
+      val (vars, _) = strip_forall (concl uq)
+      val ts = List.take (vars, n)
+      fun finalRange ty =
+          case Lib.total dom_rng ty of NONE => ty | SOME (_,r) => finalRange r
+      val atBool =
+          INST_TYPE (List.map (fn t => finalRange (type_of t) |-> bool) ts) uq
+      fun functorOf j = List.nth (#functors fam, j)
+      fun famMap j fs = #mkmap (functorOf j) (fs @ pIs)
+      (* |- setₘ (map fs x) = IMAGE fₘ (set x), pointwise: the stored law
+         is point-free *)
+      fun famNat j m fs =
+          let val Fj = functorOf j
+              val gs = fs @ pIs
+              val srcs = List.map (#1 o dom_rng o type_of) gs
+              val tgts = List.map (#2 o dom_rng o type_of) gs
+              val set1 = setAtArgs Fj m (hd srcs, tl srcs)
+              val set2 = setAtArgs Fj m (hd tgts, tl tgts)
+              val mp = famMap j fs
+              val th = PART_MATCH lhs (List.nth (#mapIMAGE Fj, m))
+                                  (mk_o (set2, mp))
+              val x = mk_var("x", functorAtArgs Fj (hd srcs, tl srcs))
+              val img = rand (rator (rhs (concl th)))
+          in
+            TRANS (TRANS (SYM (ISPECL [set2, mp, x] combinTheory.o_THM))
+                         (AP_THM th x))
+                  (ISPECL [img, set1, x] combinTheory.o_THM)
+          end
+      val Ps = List.tabulate (n, fn j =>
+                  mk_var ("P" ^ Int.toString j, List.nth (types,j) --> bool))
+      val Ts = List.map (fn ty => mk_abs (mk_var("x",ty), boolSyntax.T)) types
+      (* a member's functor need not hold values of every member's type;
+         where it does not, there is nothing for that member's predicate
+         to say *)
+      fun holds j m =
+          let val Fj = functorOf j
+          in
+            Lib.mem (List.nth (#lives Fj, m)) (type_vars (functorTy Fj))
+          end
+      fun slotsHeld j = List.filter (holds j) (upto n)
+      (* What the sets of a mapped value say is what naturality turns
+         into what the argument's own sets say, and that has to happen
+         before anything takes a composite's set function apart. *)
+      fun natConv j fs =
+          QCONV (DEPTH_CONV BETA_CONV) THENC
+          QCONV (PURE_REWRITE_CONV (List.map (fn m => famNat j m fs)
+                                             (slotsHeld j))) THENC
+          QCONV (PURE_REWRITE_CONV [bnfFixBNFTheory.IMAGE_ALL]) THENC
+          QCONV (simpLib.SIMP_CONV boolSimps.bool_ss [])
+      (* what a target is handed: everything the map produced is true *)
+      fun allTrue j v =
+          list_mk_conj
+            (List.map
+               (fn m =>
+                   let val b = mk_var("b", bool)
+                       val boolTys = List.tabulate (n, fn _ => bool) @ params
+                       val s = setAtArgs (functorOf j) m (hd boolTys,
+                                                          tl boolTys)
+                   in
+                     mk_forall (b, mk_imp (pred_setSyntax.mk_in
+                                             (b, mk_comb (s, v)), b))
+                   end)
+               (slotsHeld j))
+      fun afOf j =
+          mk_var ("af", #1 (dom_rng (type_of (List.nth (#cons fam, j)))))
+      fun target j =
+          let val af = afOf j
+              val boolTys = List.tabulate (n, fn _ => bool) @ params
+              val v = mk_var("v", functorAtArgs (functorOf j)
+                                                (hd boolTys, tl boolTys))
+          in
+            mk_abs (af, mk_abs (v,
+              mk_disj (allTrue j v,
+                       mk_comb (List.nth (Ps,j),
+                                mk_comb (List.nth (#cons fam,j), af)))))
+          end
+      (* the hypothesis of a clause is what that says of the argument
+         itself, which is what naturality turns it into *)
+      fun hypEq j =
+          let val af = afOf j
+          in
+            natConv j Ps (allTrue j (mk_comb (famMap j Ps, af)))
+          end
+      val hypEqs = List.tabulate (n, hypEq)
+      fun clause j =
+          let val af = afOf j
+          in
+            mk_forall (af,
+              mk_imp (rhs (concl (List.nth (hypEqs, j))),
+                      mk_comb (List.nth (Ps,j),
+                               mk_comb (List.nth (#cons fam,j), af))))
+          end
+      val clauses = list_mk_conj (List.tabulate (n, clause))
+      val ass = CONJUNCTS (ASSUME clauses)
+      (* the targets are handed to the principle as abstractions; what
+         has to be proved of them is what they say *)
+      val inst =
+          CONV_RULE (LAND_CONV (DEPTH_CONV BETA_CONV))
+                    (SPECL (List.tabulate (n, target) @ Ts @ Ps) atBool)
+      val (antT, antP) = dest_conj (#1 (dest_imp (concl inst)))
+      (* the constant-true functions solve the equations, since whatever
+         the map produced is true of them *)
+      val trueSide =
+          LIST_CONJ
+            (List.tabulate
+               (n, fn j =>
+                     EQT_ELIM (natConv j Ts (List.nth (strip_conj antT, j)))))
+      (* and the predicates solve them exactly when the clauses hold *)
+      val predSide =
+          LIST_CONJ
+            (List.tabulate
+               (n, fn j =>
+                     let val af = afOf j
+                         val step = MATCH_MP bnfFixBNFTheory.IMP_DISJ_EQ
+                                             (SPEC af (List.nth (ass, j)))
+                     in
+                       GEN af
+                         (CONV_RULE
+                            (RAND_CONV (LAND_CONV
+                                          (K (SYM (List.nth (hypEqs, j))))))
+                            step)
+                     end))
+      val res = CONJUNCTS (MP inst (CONJ trueSide predSide))
+    in
+      GENL Ps
+        (DISCH clauses
+           (LIST_CONJ
+              (List.tabulate
+                 (n, fn j =>
+                       let val x = mk_var("x", List.nth (types,j))
+                           val th = CONV_RULE (LAND_CONV BETA_CONV)
+                                              (AP_THM (List.nth (res,j)) x)
+                       in GEN x (EQ_MP th TRUTH) end))))
+    end
+
+(* ----------------------------------------------------------------------
+    The family's induction principle, one clause per constructor.
+
+    The set-based principle says "every sub-term the functor holds of a
+    member's type satisfies that member's predicate"; expanding the
+    quantifier over each functor's shape says it of each constructor's
+    arguments instead, which is the form a proof is written against.
+   ---------------------------------------------------------------------- *)
+
+fun familyInduction (css : constructors list) (fam : family) induction =
+    let
+      val defs = familyDefs css fam
+      val expand =
+          PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
+                             combinTheory.I_o_ID] THENC
+          QCONV (simpLib.SIMP_CONV set_ss
+                   (setRWs @ [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
+                              oneTheory.FORALL_ONE]))
+    in
+      CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (renameBlocks defs)))
+        (REWRITE_RULE (List.map GSYM (List.concat defs))
+           (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV expand)) induction))
     end
 
 end
