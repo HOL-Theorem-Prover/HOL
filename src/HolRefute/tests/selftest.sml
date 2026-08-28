@@ -22538,44 +22538,62 @@ val _ = require_msg (check_result graph_prem_branch_reached) (fn () =>
    inversion silently disabled, but only proves the route was *planned*:
    a run that timed out before drawing one tuple would pass this check
    identically to one that enumerated all four splittings of [1;2;3] and
-   rejected each.  Driving [Refute_EvalCompute] directly for
-   [candidates_generated], and requiring [assumption_satisfied] strictly
-   positive asserts where those two worlds actually diverge.  [plan_ok]
-   reads [contains_graph_enum] off the same preprocessed instance goals
-   [ran_ok] compiles and runs -- the way [graph_headline_refuted] above
-   reads its route off [qc_instances] rather than the raw goal -- so the
-   shape half and the stats half describe one plan set; compiling the
-   raw goal instead can drift from what [run_with_strategy] executes. *)
+   rejected each.
+
+   Per the rule [listall_specialisation_twin_no_spurious_cex] above
+   settles: verdict and evidence-of-work must come off *one* call, at a
+   fixed size, never a wall clock, so a run that did nothing cannot
+   satisfy the row.  [capture_refute_messages] drives a single
+   [refute_problem] call under [Only [Exhaustive]] and [upd_sequential
+   true]; the "never [Counterexample]" verdict and both counters below
+   come off that one call's messages.  [count_after] anchored to
+   ["exhaustive: candidates generated "] shows the exhaustive backend
+   actually ran and drew tuples in that same run; anchored to [",
+   assumptions satisfied "] shows one drawn tuple actually satisfied
+   [xs ++ ys = [1;2;3]] -- the signal the old two-run version read from
+   an unrelated direct [Refute_EvalCompute.compile]/[#run] via
+   [lookup_stat "assumption_satisfied"].  [plan_ok] reads
+   [contains_graph_enum] off [qc_instances] for the same goal and config
+   the captured run below uses, the way [graph_headline_refuted] above
+   reads its route off [qc_instances] rather than the raw goal.
+
+   Measured at [Refute.upd_size 3] (the size the deleted direct call
+   used): [Unknown ["exhaustive: search space not exhausted", ...]],
+   never [Counterexample], with the one call's messages reading
+   "exhaustive: candidates generated 12, assumptions satisfied 12,
+   conclusions evaluated 12" -- both counters strictly positive. *)
 val _ = tprint "Refute goal-premise graph inversion: soundness twin"
 fun graph_soundness_twin () =
   let
-    val config = Refute.upd_timeout 3.0 graph_on_config
+    val config = upd_sequential true
+      (Refute.upd_search (Refute.Only [Refute.Exhaustive])
+        (Refute.upd_size 3 graph_on_config))
+    val instances = qc_instances config graph_sound_goal
+    val plan_ok = List.exists
+      (fn i => contains_graph_enum (compile_plan config (#goal i)))
+      instances
+    val (result, messages) = capture_refute_messages 1 (fn () =>
+      refute_problem config (qc_problem graph_sound_goal))
     val verdict_ok =
-      case run_with_strategy Exhaustive config graph_sound_goal of
+      case result of
           Counterexample _ => false
         | _ => true
-    val instances = qc_instances config graph_sound_goal
-    val plans = List.map (fn i => compile_plan config (#goal i)) instances
-    val plan_ok = List.exists contains_graph_enum plans
-    val compiled =
-      case Refute_EvalCompute.compile config Exhaustive (Plans plans) of
-          Compiled test => test
-        | Inapplicable reasons => raise Fail (String.concatWith "; " reasons)
-    val ran_ok = Portable.finally (fn () => #close compiled ())
-      (fn () =>
-        (ignore (#run compiled
-           {genuine_only = false, card = 1, size = 3, draws = 0,
-            ignored = []});
-         case lookup_stat "assumption_satisfied"
-             (!(#last_stats compiled)) of
-             SOME n => n > 0
-           | NONE => false)) ()
+    val candidates_ok =
+      case count_after "exhaustive: candidates generated " messages of
+          SOME n => n > 0
+        | NONE => false
+    val assumptions_ok =
+      case count_after ", assumptions satisfied " messages of
+          SOME n => n > 0
+        | NONE => false
   in
-    plan_ok andalso verdict_ok andalso ran_ok
+    plan_ok andalso verdict_ok andalso candidates_ok andalso assumptions_ok
   end
 val _ = require_msg (check_result graph_soundness_twin) (fn () =>
-  "a true theorem of the inverted shape was not compiled via the graph " ^
-  "route, was falsely refuted, or never drew a satisfying candidate")
+  "a true theorem of the inverted shape did not compile via the graph " ^
+  "route, was falsely refuted, or its one captured Exhaustive run at " ^
+  "size 3 printed no positive candidate count or no positive " ^
+  "assumption-satisfied count")
   (fn () => ()) ()
 
 val _ = tprint
