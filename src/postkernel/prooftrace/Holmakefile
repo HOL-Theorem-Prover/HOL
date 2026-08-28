@@ -7,6 +7,17 @@ CLINE_OPTIONS = --poly_not_hol
 endif
 
 ifneq ($(HAVE_MLTON),)
+
+# `all' must be the first rule: Holmake takes the first non-.PHONY
+# target in the file as the default goal, so with these rules above it
+# a bare Holmake built replay-test alone and pft-replay-test was never
+# exercised by a build.
+ifdef HAVE_WORD64
+all: pft-replay-test replay-test
+else
+all: pft-replay-test
+endif
+
 # The sources an .mlb pulls in, asked of mlton itself (~15ms).  Without
 # these as prerequisites the executables are rebuilt only when their own
 # two files change, so an edit to the kernel they compile leaves a stale
@@ -21,12 +32,6 @@ replay-test: replay-test.mlb replay-test.sml $(REPLAY_SRCS)
 
 pft-replay-test: pft-replay-test.mlb pft-replay-test.sml $(PFT_REPLAY_SRCS)
 	mlton -default-type intinf $<
-
-ifdef HAVE_WORD64
-all: pft-replay-test replay-test
-else
-all: pft-replay-test
-endif
 
 else
 
