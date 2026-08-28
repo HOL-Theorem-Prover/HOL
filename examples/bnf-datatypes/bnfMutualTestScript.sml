@@ -311,6 +311,21 @@ val _ =
       then OK() else die (thm_to_string th)
     end
 
+(* which is the existence half of what defineMutual proves for a pair,
+   and the same holds of the principle that hears the arguments *)
+val _ = tprint "a two-member family's primitive recursion"
+val _ =
+    let val th = familyPrimRecursion fam2
+    in
+      if null (hyp th) andalso null (free_vars (concl th)) andalso
+         same (concl th)
+              “∀t0 t1.
+                 ∃h0 h1.
+                   (∀af. h0 (gt1_CONS af) = t0 af (SUM_MAP I (h0 ## h1) af)) ∧
+                   ∀af. h1 (gt2_CONS af) = t1 af (SUM_MAP h0 (I ## h1) af)”
+      then OK() else die (thm_to_string th)
+    end
+
 (* ----------------------------------------------------------------------
     and the same principle one constructor at a time.
 
@@ -340,3 +355,22 @@ val _ =
                  (∀a0. h2 (FE a0) = f4 (h0 a0)) ∧
                  ∀a0. h2 (FG a0) = f5 (h2 a0)”
     then OK() else die (thm_to_string fam_axiom)
+
+(* and in the shape HOL's own axiom for a mutually recursive family
+   takes, where a target hears the constructor's arguments as well *)
+
+Theorem fam_prim_axiom = familyAxiom fcss fam (familyPrimRecursion fam)
+
+val _ = tprint "the family's primitive recursion, per constructor"
+val _ =
+    if null (hyp fam_prim_axiom) andalso
+       same (concl fam_prim_axiom)
+            “∀f0 f1 f2 f3 f4 f5.
+               ∃h0 h1 h2.
+                 ((∀a0. h0 (FA a0) = f0 a0) ∧
+                  ∀a0 a1. h0 (FB a0 a1) = f1 a0 a1 (h0 a0) (h1 a1)) ∧
+                 ((∀a0. h1 (FC a0) = f2 a0 (h2 a0)) ∧
+                  ∀a0 a1. h1 (FD a0 a1) = f3 a0 a1 (h1 a1)) ∧
+                 (∀a0. h2 (FE a0) = f4 a0 (h0 a0)) ∧
+                 ∀a0. h2 (FG a0) = f5 a0 (h2 a0)”
+    then OK() else die (thm_to_string fam_prim_axiom)

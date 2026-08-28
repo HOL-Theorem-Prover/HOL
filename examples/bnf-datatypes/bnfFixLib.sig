@@ -258,6 +258,11 @@ sig
       have already been solved, as a family over its own slot, and their
       functions are what its target folds with.
      ---------------------------------------------------------------------- *)
+  val familyPrimRecursion : family -> thm
+
+  (* the same principle as an iterator: a target that ignores the
+     argument its constructor was applied to hears only the results of
+     the recursive calls *)
   val familyRecursion : family -> thm
 
   (* ----------------------------------------------------------------------
@@ -266,12 +271,12 @@ sig
 
         |- !f0 f1 f2. ?h0 h1.
              (!a. h0 (A a) = f0 a) /\
-             (!n m. h0 (B n m) = f1 (h0 n) (h1 m)) /\ ..
+             (!n m. h0 (B n m) = f1 n m (h0 n) (h1 m)) /\ ..
 
       one constructors record per member, in the family's order, and the
-      principle to state this way.  Being an iterator, it hands a target
-      the results of the recursive calls; a constructor's other arguments
-      arrive as they were.
+      principle to state this way — familyPrimRecursion's, for the shape
+      above, or familyRecursion's for one where a target hears only the
+      results of the recursive calls.
      ---------------------------------------------------------------------- *)
   val familyAxiom : constructors list -> family -> thm -> thm
 
