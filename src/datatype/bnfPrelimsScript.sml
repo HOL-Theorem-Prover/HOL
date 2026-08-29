@@ -361,7 +361,6 @@ val _ = bnfBase.updateDB (
     relator = “SUM_REL : ('a1 -> 'c1 -> bool) -> ('a2 -> 'c2 -> bool) ->
                          'a1 + 'a2 -> 'c1 + 'c2 -> bool”,
     set = [“setL : 'a1 + 'a2 -> 'a1 set”, “setR : 'a1 + 'a2 -> 'a2 set”],
-    siblings = [],
 
     wits = [(“(K o INL) : 'a1 -> 'a2 -> 'a1 + 'a2”, pnm "sum_wit1"),
             (“K INR : 'a1 -> 'a2 -> 'a1 + 'a2”, pnm "sum_wit2")],
@@ -440,7 +439,6 @@ val _ = bnfBase.updateDB (
   {Thy = "pair", Name = "prod"},
   bnfBase.bI {
     canontype = “:'a1 # 'a2”,
-    siblings = [],
 
     map = “pair$## : ('a1 -> 'c1) -> ('a2 -> 'c2) -> 'a1 # 'a2 -> 'c1 # 'c2”,
     set = [“setFST : 'a1 # 'a2 -> 'a1 set”, “setSND : 'a1 # 'a2 -> 'a2 set”],
@@ -519,7 +517,6 @@ val _ = bnfBase.updateDB (
   {Thy = "min", Name = "fun"},
   bnfBase.bI {
     canontype = “:'b1 -> 'a1”,
-    siblings = [],
     map = “combin$o : ('a1 -> 'c1) -> ('b1 -> 'a1) -> ('b1 -> 'c1)”,
     set = [“fset: ('b1 -> 'a1) -> 'a1 set”],
     mapID = pnm "funMap_ID",
@@ -612,7 +609,6 @@ val _ = bnfBase.updateDB (
   {Thy = "option", Name = "option"},
   bnfBase.bI {
     canontype = “:'a1 option”,
-    siblings = [],
     map = “option$OPTION_MAP : ('a1 -> 'c1) -> 'a1 option -> 'c1 option”,
     set = [“optSET : 'a1 option -> 'a1 set”],
     mapID = pnm "optMap_ID",

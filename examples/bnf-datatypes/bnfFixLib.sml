@@ -1186,7 +1186,6 @@ fun fixpointBNF bnf (fix : fixpoint) : fixpoint_bnf =
 
          relator = cinst relator,
          set = List.map (cinst o setTm) (upto n),
-         siblings = [],
 
          wits = List.map ((fn (t,th) => (cinst t, cthm th)) o witOf) fwits,
          inhabits = List.map ((fn (t,th) => (cinst t, cthm th)) o inhOf)

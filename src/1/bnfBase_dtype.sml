@@ -22,7 +22,6 @@ datatype 'a info = bI of {
                                map (f₁ o g₁) ... (fₙ o gₙ) thm *)
   relator : term,           (* type's rel term *)
   set : term list,          (* type's set terms *)
-  siblings : hol_type list, (* types I'm mutually recursive with *)
 
   wits : (term * 'a) list,  (* nonemptiness witnesses; see below *)
   inhabits : (term * 'a) list (* set₁ is inhabited, ...; see below *)

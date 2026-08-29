@@ -74,7 +74,6 @@ val _ = bnfBase.updateDB (
   {Thy = "finite_map", Name = "fmap"},
   bnfBase.bI {
     canontype = “:'b1 |-> 'a1”,
-    siblings = [],
 
     map = “$o_f : ('a1 -> 'c1) -> ('b1 |-> 'a1) -> ('b1 |-> 'c1)”,
     set = [“FRANGE : ('b1 |-> 'a1) -> 'a1 set”],
@@ -145,7 +144,6 @@ val _ = bnfBase.updateDB (
   {Thy = "list", Name = "list"},
   bnfBase.bI {
     canontype = “:'a1 list”,
-    siblings = [],
 
     map = “list$MAP : ('a1 -> 'c1) -> 'a1 list -> 'c1 list”,
     set = [“list$LIST_TO_SET : 'a1 list -> 'a1 set”],

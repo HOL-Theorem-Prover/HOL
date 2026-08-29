@@ -463,3 +463,54 @@ val _ =
                (∀a0. P0 a0 ⇒ P2 (FE a0)) ∧ (∀a0. P2 a0 ⇒ P2 (FG a0)) ⇒
                (∀x. P0 x) ∧ (∀x. P1 x) ∧ ∀x. P2 x”
     then OK() else die (thm_to_string fam_induction)
+
+(* ----------------------------------------------------------------------
+    The map and the set functions of each member, one constructor at a
+    time.
+
+    A member is a functor in the parameters and in the slots of the
+    members *before* it, so its map takes a function for each of those;
+    what a user of the family reads as "map over ft2" is that map at the
+    earlier members' own maps, which is exactly what turns up in ft1's
+    own equation.
+   ---------------------------------------------------------------------- *)
+
+fun memberEqns j =
+    constructorEqns (List.nth (fcss, j)) (valOf (List.nth (#maps fam, j)))
+val fam_eqns = List.tabulate (3, memberEqns)
+
+(* conjunct by conjunct: a theorem's conjuncts may name their arguments
+   the same way and mean different types by it, and one quotation cannot
+   say that *)
+fun checkeqn nm th q =
+    (tprint nm;
+     let val (cs, qs) = (strip_conj (concl th), strip_conj q)
+     in
+       if null (hyp th) andalso length cs = length qs andalso
+          ListPair.allEq (fn (c,q') => same c q') (cs, qs)
+       then OK() else die (thm_to_string th)
+     end)
+
+(* the names in the quotations below are the test's own: what the
+   theorem calls a0 in one conjunct and a0 in the next are two different
+   variables of two different types *)
+val _ = checkeqn "ft1's map, per constructor" (#map_eqns (hd fam_eqns))
+   “(ft1MAP f (FA a) = FA (f a)) ∧
+    (ft1MAP f (FB t u) = FB (ft1MAP f t) (ft2MAP f (ft1MAP f) u))”
+
+val _ = checkeqn "ft2's map, per constructor"
+   (#map_eqns (List.nth (fam_eqns, 1)))
+   “(ft2MAP f1 f2 (FC z) = FC (ft3MAP f2 z)) ∧
+    (ft2MAP f1 f2 (FD a t) = FD (f1 a) (ft2MAP f1 f2 t))”
+
+(* ft1's own atoms are those it holds, those of its ft1 sub-terms, and
+   those the ft2 sub-term holds — of both kinds, since an ft2 holds ft1s *)
+val _ = checkeqn "ft1's set function, per constructor"
+   (hd (#set_eqns (hd fam_eqns)))
+   “(ft1SET (FA a) = {a}) ∧
+    (ft1SET (FB t u) =
+       ft2SET1 u ∪ (ft1SET t ∪ BIGUNION (IMAGE ft1SET (ft2SET2 u))))”
+
+val _ = checkeqn "ft2's second set function, per constructor"
+   (List.nth (#set_eqns (List.nth (fam_eqns, 1)), 1))
+   “(ft2SET2 (FC z) = ft3SET z) ∧ (ft2SET2 (FD a t) = ft2SET2 t)”
