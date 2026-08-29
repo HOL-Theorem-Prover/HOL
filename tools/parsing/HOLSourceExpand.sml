@@ -62,6 +62,25 @@ fun mkLocString' (p, loc) ({file = "", ...}: fileline) = App (mkIdent (p, loc), 
     App (mkIdent (p, loc), App (mkIdent (p, "DB_dtype.mkloc"),
       mkTuple (p, [mkString (p, file), mkInt (p, line+1), mkIdent (p, "true")])))
 
+(* The composed simpset transformation a Proof's attributes ask for,
+   or NONE when it carries none.  Anchored wholly at `p' so a caller
+   that wants it inside a synthetic declaration can collapse that
+   declaration's span without leaving real-span children behind. *)
+fun simpsetUpd _ [] = NONE
+  | simpsetUpd p (kv::kvs) = let
+  fun mktm1 {key = (_, key), bind} = let
+    val args = case bind of NONE => [] | SOME {vals, eq_=_} => map mkString vals
+    val key = case key of
+      "exclude_simps" => "simpLib.remove_simps"
+    | "exclude_frags" => "simpLib.exclude_ssfrags"
+    | _ => key
+    in App (mkIdent (p, key), mkList (p, args)) end
+  fun mktm (kv, e) = Infix {left = e, id = (p, "o"), right = mktm1 kv}
+  in SOME (foldl mktm (mktm1 kv) kvs) end
+
+fun proofKvals (SOME {attrs = {args, ...}, ...}) = args
+  | proofKvals _ = []
+
 fun doProofKvals _ [] tac = tac
   | doProofKvals p (kv::kvs) tac = let
   val e = mkIdent (p, "BasicProvers.with_simpset_updates_tac")
@@ -206,6 +225,61 @@ val srwShimOK = ref false
 
    The tactic expression stays under both binders, so it is still
    evaluated per run rather than closed over early. *)
+(* The scope a declaration is elaborated in.  It binds the context the
+   declaration is checked against, applies whatever simpset transformation
+   the Proof attributes ask for, and rebinds BasicProvers so srw_ss() --
+   bare or qualified -- answers from that context.  Because the
+   transformation is applied here, the tactic runs in the transformed
+   context and with_simpset_updates_tac's ambient window has nothing left
+   to do.
+
+   The structure is rebound but NOT opened.  Opening it would shadow all
+   of BasicProvers across the declaration, and the names collide with
+   ones scripts already use: listScript's FOLDR_CONG proof calls Induct,
+   BasicProvers exports a different Induct, and the proof stops going
+   through.  Rebinding covers a qualified BasicProvers.srw_ss(), and one
+   further val -- taken from the rebound structure -- covers the bare
+   name, which between them is what an open would have reached without
+   touching anything else.  The parsing shim does the same: the quotation
+   expansion emits a qualified Parse.Term, so rebinding Parse suffices
+   there too.
+
+   Everything synthetic is anchored at `stop', the declaration's end,
+   because builtNavigateTo picks the FIRST child whose span covers the
+   cursor.  A DecVal's span can be collapsed to a point, but a DecOpen's
+   is derived from its identifier and cannot be.  At `stop' these
+   declarations sit past everything a cursor inside the declaration can
+   reach, so hover still descends to the user's own identifiers. *)
+fun ctxtLocal {anchor, stop, kvs, body} = let
+  val ctxtName = "HOLctxt"
+  val snap = mkSnapshot stop
+  val rhs = case simpsetUpd stop kvs of
+      NONE => snap
+    | SOME f => App (App (mkIdent (stop, "BasicProvers.map_simpset"), f), snap)
+  val bind = valPat stop (mkIdent (stop, ctxtName)) rhs
+  val bp = (stop, "BasicProvers")
+  val rebind =
+    if not (!srwShimOK) then []
+    else let
+      val ss = App (mkIdent (stop, "BasicProvers.srw_ss_of"),
+                    mkIdent (stop, ctxtName))
+      val thunk = Fn {fn_ = stop,
+        elems = [{bar = NONE, pat = Unit {left = stop, right = stop},
+                  arrow = NONE, exp = ss}],
+        stop = stop}
+      val strexp = StrStruct {struct_ = stop,
+        strdec = [DecOpen {open_ = stop, elems = [bp]},
+                  valPat stop (mkIdent (stop, "srw_ss")) thunk],
+        end_ = SOME stop, stop = stop}
+      in [DecStructure {structure_ = stop,
+            elems = {args = [{id = bp, constraint = NONE,
+                              bind = SOME {eq = stop, strexp = strexp}}],
+                     seps = [], stop = stop}},
+          valPat stop (mkIdent (stop, "srw_ss"))
+                      (mkIdent (stop, "BasicProvers.srw_ss"))] end
+  in DecLocal {local_ = anchor, dec1 = bind :: rebind, in_ = SOME stop,
+               dec2 = [body], end_ = SOME stop, stop = stop} end
+
 fun srwWrapTac (p, tac) =
   if not (!srwShimOK) then wrapTac (p, tac)
   else let
@@ -719,8 +793,10 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
         SOME {proof_ = p, ...} => p
       | NONE => expStart tac
     val quote = expandQuote theorem_ tacAnchor quote
-    val tac = srwWrapTac (tacAnchor, expandExp false tac)
-    val tac = case proof_ of SOME {proof_, attrs} => doProofAttrs proof_ attrs tac | _ => tac
+    val tac = wrapTac (tacAnchor, expandExp false tac)
+    (* the Proof attributes are applied to the context in the enclosing
+       local, not wrapped round the tactic *)
+    val kvs = case proof_ of SOME {attrs, ...} => proofKvals attrs | NONE => []
     val e = mkLocString' (theorem_, "Q.store_thm_at") fileline
     (* Give the synthetic tuple a real stop so the resulting Built
        parent covers its children.  mkTuple's default (stop = anchor
@@ -730,8 +806,11 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val args = {args = [nameAttrs, quote, tac], seps = [], stop = tupleStop}
     val tuple = Tuple {left = theorem_, elems = args, right = NONE, stop = tupleStop}
     val e = App (e, tuple)
-    val e = App (e, mkSnapshot (expStop e))
-    in DecExpansion {orig = dec, result = [valPat theorem_ (mkIdent id) e]} end
+    val e = App (e, mkIdent (expStop e, "HOLctxt"))
+    val body = valPat theorem_ (mkIdent id) e
+    in DecExpansion {orig = dec, result = [
+         ctxtLocal {anchor = theorem_, stop = stop, kvs = kvs, body = body}]}
+    end
   | expandDec _ (dec as HOLResume {resume_, id, attrs, tac, ...}) = let
     val (label, rest) = case (case attrs of NONE => [] | SOME v => #args (#attrs v)) of
       {key, bind = NONE} :: rest => (key, rest)

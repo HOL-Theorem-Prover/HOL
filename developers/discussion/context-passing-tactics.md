@@ -1151,18 +1151,33 @@ control, a `“...”` quotation inside a tactic stops reading the ambient
 context at the `Parse` level.  The whole tree builds through the new
 expansion.
 
-**Stopper 1: it breaks hover.**  Four LSP hover tests return null inside
-the theorem body.  Not the identifier spans, and not the `DecLocal`'s
-span --- `annotateDec`'s `DecLocal` case is already transparent, giving
-back `dec1` and `dec2`'s annotations without a covering node.  The
-annotator walks the emitted SML's Poly/ML parse tree *in lockstep* with
-the AST, and a synthetic `local` desynchronises that walk, so every
-annotation after it lands on the wrong position.  Measured: the failure
-survives dropping the `structure` and emitting a `local` containing
-nothing but the `val HOLctxt = ...` binding, so it is the `local` itself,
-not what is inside it.  Fixing it means either an encoding that
-introduces no new declaration nesting, or teaching the annotator about a
-`DecExpansion` whose result is a `DecLocal`.
+**Stopper 1: RESOLVED, and it was misdiagnosed.**  Four LSP hover tests
+returned null inside the theorem body, and this was read as the annotator
+walking the Poly/ML parse tree *out of lockstep* with the AST.  It is not
+that.  It is span containment: `builtNavigateTo` descends to the FIRST
+child whose span covers the cursor, and `valPat` derives a `DecVal`'s
+stop from its right-hand side, so a synthetic `val HOLctxt = ...` spans
+the whole declaration body and swallows every hover inside it.  The
+annotator needs no change at all.
+
+The fix is positional.  Synthetic declarations go at `stop`, the
+declaration's end, past anything a cursor inside the declaration can
+reach.  Note the asymmetry that forces this: a `DecVal`'s span is
+`(val_, stop)` and can be collapsed to a point, but a `DecOpen`'s is
+`(open_, idStop (last elems))` --- derived from the identifier, so a
+12-character `BasicProvers` anchored at the `Theorem` keyword would cover
+the theorem's own name.
+
+**Do not `open` the rebound structure.**  It shadows all 79 of
+BasicProvers' exports for the whole declaration, and the names collide
+with ones scripts already use: `Induct` is exported by BasicProvers
+(`BasicProvers.sig:104`) and is the first tactic in listScript's
+`FOLDR_CONG` proof, which stops going through.  Rebinding the structure
+covers a qualified `BasicProvers.srw_ss()`, and a single
+`val srw_ss = BasicProvers.srw_ss` taken from the rebound structure
+covers the bare name.  Between them that is everything an `open` would
+have reached, and nothing else.  `Parse` needs no `open` for the same
+reason: the quotation expansion already emits a qualified `Parse.Term`.
 
 **Stopper 2: RESOLVED.**  It was the `ancestry.dictppp.global` read from
 `combinpp`'s absyn postprocessor.  That is gone: the dictionary now lives
