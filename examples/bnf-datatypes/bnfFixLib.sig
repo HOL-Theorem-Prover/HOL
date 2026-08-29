@@ -291,6 +291,13 @@ sig
      ---------------------------------------------------------------------- *)
   val familySetInduction : family -> thm -> thm
 
+  (* the same three steps over whatever types the family has been put
+     on: the constructors' definitions, and the types and constructors
+     themselves, rather than the record the construction produced *)
+  val familyAxiomOf : thm list list -> thm -> thm
+  val familyInductionOf : thm list list -> thm -> thm
+  val familySetInductionOf : family -> hol_type list * term list -> thm -> thm
+
   (* and the same principle one clause per constructor, which is the
      form a proof is written against *)
   val familyInduction : constructors list -> family -> thm -> thm
@@ -304,6 +311,34 @@ sig
       ignoring the results of the recursive calls.
      ---------------------------------------------------------------------- *)
   val defineCases : thm -> thm list
+
+  (* ----------------------------------------------------------------------
+      Collapsing a family onto types of its own.
+
+      A member after the first comes out of the construction as an
+      instance of an operator that also takes the earlier members'
+      slots; what the specification says, and what a TypeBase entry is
+      keyed on, is an operator over the specification's own variables.
+      This copies each member onto a type of its own, once the family is
+      built, and carries the constructors and the principle across.
+     ---------------------------------------------------------------------- *)
+  type collapsed = {
+    types : hol_type list,
+    abs : term list,
+    rep : term list,
+    absrep : thm list,          (* |- ABS o REP = I *)
+    repabs : thm list,          (* |- REP o ABS = I *)
+    cons : term list,
+    cons_defs : thm list,
+    principle : thm
+  }
+
+  val collapseFamily : {tynames : string list} -> family -> thm -> collapsed
+
+  (* and its constructors, one per summand of each member's functor *)
+  val collapsedConstructors :
+      string list list -> collapsed ->
+      {constructors : term list, defs : thm list} list
 
   (* ----------------------------------------------------------------------
       The TypeBase entries, one per type the axiom defines: the axiom,

@@ -1759,6 +1759,12 @@ fun defineFamily {tynames} db params specs : family =
 
 
 
+(* the witnesses of a nest of existentials, and what they satisfy *)
+fun witnesses (ws, th) =
+    if is_exists (concl th) then
+      witnesses (ws @ [mk_select (dest_exists (concl th))], SELECT_RULE th)
+    else (ws, th)
+
 (* ----------------------------------------------------------------------
     The family's recursion principle.
 
@@ -1916,13 +1922,6 @@ fun familyPrinciple (fam : family) =
       val betaTarget =
           CONV_RULE (STRIP_QUANT_CONV
                        (RAND_CONV (RATOR_CONV BETA_CONV THENC BETA_CONV)))
-
-      (* the witnesses of a nest of existentials, and what they satisfy *)
-      fun witnesses (ws, th) =
-          if is_exists (concl th) then
-            witnesses (ws @ [mk_select (dest_exists (concl th))],
-                       SELECT_RULE th)
-          else (ws, th)
 
       (* Solve the family from member i on.  The members before it are
          the level's parameters: their slots hold whatever the caller
@@ -2320,12 +2319,11 @@ end
     instantiated to the family's types on the way in.
    ---------------------------------------------------------------------- *)
 
-fun familyAxiom (css : constructors list) (fam : family) recursion =
+fun familyAxiomOf (defs : thm list list) recursion =
     let
       val (ts, _) = strip_forall (concl recursion)
-      val _ = length ts = length css orelse
-              raise ERR "familyAxiom" "a constructor list per member"
-      val defs = familyDefs css fam
+      val _ = length ts = length defs orelse
+              raise ERR "familyAxiom" "a definition list per member"
       (* one branch per constructor: it is handed the constructor's own
          arguments, from what it was applied to, and the results of the
          recursive calls, from what the map produced.  A factor whose
@@ -2419,10 +2417,10 @@ fun familyAxiom (css : constructors list) (fam : family) recursion =
     set-based hypothesis a nested recursion leaves a single type with.
    ---------------------------------------------------------------------- *)
 
-fun familySetInduction (fam : family) principle =
+fun familySetInductionOf (fam : family) (types, conss) principle =
     let
-      val n = length (#types fam)
-      val types = #types fam and params = #params fam
+      val n = length types
+      val params = #params fam
       val pIs = List.map Ify params
       val uq = familyUniqueness principle
       val (vars, _) = strip_forall (concl uq)
@@ -2488,7 +2486,7 @@ fun familySetInduction (fam : family) principle =
                    end)
                (slotsHeld j))
       fun afOf j =
-          mk_var ("af", #1 (dom_rng (type_of (List.nth (#cons fam, j)))))
+          mk_var ("af", #1 (dom_rng (type_of (List.nth (conss, j)))))
       fun target j =
           let val af = afOf j
               val boolTys = List.tabulate (n, fn _ => bool) @ params
@@ -2498,7 +2496,7 @@ fun familySetInduction (fam : family) principle =
             mk_abs (af, mk_abs (v,
               mk_disj (allTrue j v,
                        mk_comb (List.nth (Ps,j),
-                                mk_comb (List.nth (#cons fam,j), af)))))
+                                mk_comb (List.nth (conss,j), af)))))
           end
       (* the hypothesis of a clause is what that says of the argument
          itself, which is what naturality turns it into *)
@@ -2514,7 +2512,7 @@ fun familySetInduction (fam : family) principle =
             mk_forall (af,
               mk_imp (rhs (concl (List.nth (hypEqs, j))),
                       mk_comb (List.nth (Ps,j),
-                               mk_comb (List.nth (#cons fam,j), af))))
+                               mk_comb (List.nth (conss,j), af))))
           end
       val clauses = list_mk_conj (List.tabulate (n, clause))
       val ass = CONJUNCTS (ASSUME clauses)
@@ -2568,9 +2566,8 @@ fun familySetInduction (fam : family) principle =
     arguments instead, which is the form a proof is written against.
    ---------------------------------------------------------------------- *)
 
-fun familyInduction (css : constructors list) (fam : family) induction =
+fun familyInductionOf (defs : thm list list) induction =
     let
-      val defs = familyDefs css fam
       val expand =
           PURE_REWRITE_CONV [bnfPrelimsTheory.BIMG_EQUAL,
                              combinTheory.I_o_ID] THENC
@@ -2671,11 +2668,6 @@ fun defineCases ax0 =
                       (SPECL (List.map instOf fvars) ax)
           end
       (* the functions the equations are about *)
-      fun witnesses (ws, th) =
-          if is_exists (concl th) then
-            witnesses (ws @ [mk_select (dest_exists (concl th))],
-                       SELECT_RULE th)
-          else (ws, th)
       val (sels, eqth) = witnesses ([], solved)
       val eqs = CONJUNCTS eqth
       fun defineOne (j, h) =
@@ -2779,6 +2771,342 @@ fun parseSpec q : spec =
     in
       {tynames = tynames, params = params, functors = functors,
        constructors = List.map namesOf asts}
+    end
+
+
+(* and the same steps for a family as it comes out of the construction *)
+fun familyAxiom css fam recursion =
+    familyAxiomOf (familyDefs css fam) recursion
+fun familyInduction css fam induction =
+    familyInductionOf (familyDefs css fam) induction
+fun familySetInduction (fam : family) principle =
+    familySetInductionOf fam (#types fam, #cons fam) principle
+
+(* ----------------------------------------------------------------------
+    Collapsing a family onto types of its own.
+
+    The construction builds a family from the last member back, each
+    member a datatype in the slots of the members before it, so member j
+    comes out as an *instance* — `:('b1, 'b1 ft1) ft2` — of an operator
+    that takes those slots as arguments.  What the specification says,
+    and what a TypeBase entry is keyed on, is an operator over the
+    specification's own variables alone.
+
+    So once the family is built, and only then, each member is copied
+    onto a type of its own: a new type in bijection with the instance,
+    with the constructors and the principle carried across.  Everything
+    the transport needs is the functors' composition and identity laws
+    with ABS and REP at the slots — the same two laws every step here
+    uses.
+   ---------------------------------------------------------------------- *)
+
+type collapsed = {
+  types : hol_type list,        (* the types of the family's own *)
+  abs : term list,              (* into them, out of the instances *)
+  rep : term list,
+  absrep : thm list,            (* |- ABS o REP = I, and the other way *)
+  repabs : thm list,
+  cons : term list,             (* the constructors, at the new types *)
+  cons_defs : thm list,
+  principle : thm               (* and what they satisfy *)
+}
+
+fun collapseFamily {tynames} (fam : family) principle : collapsed =
+    let
+      val n = length (#types fam)
+      val params = #params fam
+      val pIs = List.map Ify params
+      fun famMap j fs = #mkmap (List.nth (#functors fam, j)) (fs @ pIs)
+      (* a type of its own per member, in bijection with the instance *)
+      fun copy (j, nm) =
+          let
+            val rep_ty = List.nth (#types fam, j)
+            val x = mk_var ("x", rep_ty)
+            val P = mk_abs (x, boolSyntax.T)
+            val arb = mk_arb rep_ty
+            val ex = EXISTS (mk_exists (x, mk_comb (P, x)), arb)
+                            (EQT_ELIM (BETA_CONV (mk_comb (P, arb))))
+          in
+            newtypeTools.rich_new_type
+              {tyname = nm, exthm = ex, ABS = nm ^ "_ABS", REP = nm ^ "_REP"}
+          end
+      val copies = List.tabulate (n, fn j => copy (j, List.nth (tynames, j)))
+      val newtys = List.map #newty copies
+      val abss = List.map #term_ABS_t copies
+      val reps = List.map #term_REP_t copies
+      (* the two directions, as compositions: what the maps need *)
+      fun compEq (f, g, th) =
+          let val x = mk_var ("x", #1 (dom_rng (type_of g)))
+          in
+            EXT (GEN x
+                   (TRANS (TRANS (ISPECL [f, g, x] combinTheory.o_THM)
+                                 (SPEC x th))
+                          (SYM (ISPEC x combinTheory.I_THM))))
+          end
+      val absreps =
+          List.tabulate
+            (n, fn j => compEq (List.nth (abss,j), List.nth (reps,j),
+                                GEN_ALL (#absrep_id (List.nth (copies,j)))))
+      val repabss =
+          List.tabulate
+            (n, fn j =>
+                  let val th = #repabs_pseudo_id (List.nth (copies,j))
+                      val (r, eq) = dest_forall (concl th)
+                      val triv = EQT_ELIM (BETA_CONV (lhs (#1 (dest_imp eq)))
+                                           handle HOL_ERR _ =>
+                                             BETA_CONV (#1 (dest_imp eq)))
+                  in
+                    compEq (List.nth (reps,j), List.nth (abss,j),
+                            GEN r (MP (SPEC r th) triv))
+                  end)
+      (* the constructors, and what a member's argument does on the way
+         across *)
+      fun repArgs j = famMap j reps
+      fun absArgs j = famMap j abss
+      fun defineCons j =
+          let
+            val nm = List.nth (tynames, j)
+            val body = mk_o (List.nth (abss, j),
+                             mk_o (List.nth (#cons fam, j), repArgs j))
+            val cvar = mk_var (nm ^ "_CONS", type_of body)
+          in
+            new_definition (nm ^ "_CONS_def", mk_eq (cvar, body))
+          end
+      val cons_defs = List.tabulate (n, defineCons)
+      val conss = List.map (lhs o concl) cons_defs
+      (* the two directions pointwise, which is what the constructors'
+         definitions unfold against *)
+      fun pointwise j =
+          let val r = mk_var ("r", List.nth (#types fam, j))
+              val th = #repabs_pseudo_id (List.nth (copies, j))
+              val (v, eq) = dest_forall (concl th)
+              val triv = EQT_ELIM (BETA_CONV (#1 (dest_imp eq)))
+          in GEN r (MP (SPEC r th) (INST [v |-> r] triv)) end
+      (* |- map gs (map fs x) = map (gs o fs) x, at the family's functor *)
+      fun famMapO j (fs,gs) =
+          let val Fj = List.nth (#functors fam, j)
+              val target = mk_o (famMap j gs, famMap j fs)
+              val th = PURE_REWRITE_RULE [combinTheory.I_o_ID]
+                                         (PART_MATCH lhs (#mapO Fj) target)
+              val srcs = List.map (#1 o dom_rng o type_of) fs
+              val af = mk_var("af", typeAtArgs Fj (hd srcs, tl srcs @ params)
+                                               (functorTy Fj))
+          in
+            (af, TRANS (SYM (ISPECL [famMap j gs, famMap j fs, af]
+                                    combinTheory.o_THM))
+                       (AP_THM th af))
+          end
+      (* and one direction after the other is nothing at all *)
+      fun undo j (fs, gs, rws) =
+          let val (af, comp) = famMapO j (fs,gs)
+              val ids = [#mapID (List.nth (#functors fam, j)),
+                         combinTheory.I_THM]
+          in
+            (af, CONV_RULE (RAND_CONV (QCONV (PURE_REWRITE_CONV (rws @ ids))))
+                           comp)
+          end
+      fun Fold j = #1 (dom_rng (type_of (absArgs j)))
+      fun Fnew j = #1 (dom_rng (type_of (repArgs j)))
+      (* what a constructor at the new types is: across, built, and back *)
+      fun consAcross j =
+          let val af = mk_var ("af", Fnew j)
+              val th = PURE_REWRITE_RULE [combinTheory.o_THM]
+                         (AP_THM (List.nth (cons_defs, j)) af)
+          in (af, th) end
+
+      (* ------------------------------------------------------------
+          the principle, carried across
+         ------------------------------------------------------------ *)
+      val (oldts, _) = strip_forall (concl principle)
+      fun answersOf j =
+          #1 (dom_rng (#2 (dom_rng (type_of (List.nth (oldts, j))))))
+      fun cty j = #2 (dom_rng (#2 (dom_rng (type_of (List.nth (oldts, j))))))
+      val newts =
+          List.tabulate
+            (n, fn j => mk_var (#1 (dest_var (List.nth (oldts, j))),
+                                Fnew j --> (answersOf j --> cty j)))
+      (* the target the old principle is solved at reads its argument
+         across first *)
+      fun oldTarget j =
+          let val af = mk_var ("af", Fold j)
+              val v = mk_var ("v", answersOf j)
+              val t = List.nth (newts, j)
+          in
+            mk_abs (af, mk_abs (v, list_mk_comb (t, [mk_comb (absArgs j, af),
+                                                     v])))
+          end
+      val inst = SPECL (List.tabulate (n, oldTarget)) principle
+      (* the equation a function of the new types satisfies *)
+      fun newEqTerm j (hs : term list) =
+          let val af = mk_var ("af", Fnew j)
+          in
+            mk_forall (af,
+              mk_eq (mk_comb (List.nth (hs, j),
+                              mk_comb (List.nth (conss, j), af)),
+                     list_mk_comb (List.nth (newts, j),
+                                   [af, mk_comb (famMap j hs, af)])))
+          end
+      (* ------------------------------------------------------------ *)
+      val (ws, oldeqs) =
+          let val (ws, th) = witnesses ([], CONJUNCT1 inst)
+          in (ws, CONJUNCTS th) end
+      val newhs = ListPair.mapEq mk_o (ws, reps)
+      fun carry j =
+          let
+            val (af, consth) = consAcross j
+            val hj = List.nth (ws, j) and repj = List.nth (reps, j)
+            (* what the constructor was applied to, across *)
+            val inner = rand (rand (rhs (concl consth)))
+            (* the constructor's argument, read across and back *)
+            val built = rand (rhs (concl consth))
+            val step1 =
+                TRANS (ISPECL [hj, repj, mk_comb (List.nth (conss,j), af)]
+                              combinTheory.o_THM)
+                      (AP_TERM hj (TRANS (AP_TERM repj consth)
+                                         (SPEC built (pointwise j))))
+            val step2 = TRANS step1 (SPEC inner (List.nth (oldeqs, j)))
+            val (_, back) = undo j (reps, abss, absreps)
+            val (_, folded) = famMapO j (reps, ws)
+            (* the target's own application has to go first: what the
+               maps compose to is inside it.  Only that one, though —
+               the witnesses below carry targets of their own. *)
+            val beta = CONV_RULE (RAND_CONV (RATOR_CONV BETA_CONV THENC
+                                             BETA_CONV))
+                                 step2
+          in
+            GEN af (PURE_REWRITE_RULE [back, folded] beta)
+          end
+      val newEqs = List.tabulate (n, carry)
+      val existence =
+          let val hvars = List.tabulate
+                            (n, fn j => mk_var ("h" ^ Int.toString j,
+                                                type_of (List.nth (newhs, j))))
+          in
+            List.foldr (fn ((hv,h), th) =>
+                           EXISTS (mk_exists (hv, subst [h |-> hv] (concl th)),
+                                   h) th)
+                       (LIST_CONJ newEqs)
+                       (ListPair.zipEq (hvars, newhs))
+          end
+      (* ------------------------------------------------------------
+          and only one solution, since a solution over the new types is
+          one over the old at the same targets
+         ------------------------------------------------------------ *)
+      val uniqueness =
+          let
+            fun vars s = List.tabulate
+                           (n, fn j => mk_var (s ^ Int.toString j,
+                                               List.nth (newtys,j) --> cty j))
+            val (hvs, kvs) = (vars "h", vars "k")
+            fun eqsFor vs = list_mk_conj (List.tabulate (n, fn j =>
+                                                            newEqTerm j vs))
+            val both = ASSUME (mk_conj (eqsFor hvs, eqsFor kvs))
+            fun across vs = ListPair.mapEq mk_o (vs, abss)
+            fun oldEq (vs, ass) j =
+                let
+                  val af = mk_var ("af", Fold j)
+                  val hj = List.nth (vs, j) and absj = List.nth (abss, j)
+                  val (_, there) = undo j (abss, reps, repabss)
+                  (* the constructor at the new types, at the argument
+                     read across, is the old one read across *)
+                  val (afv, consth) = consAcross j
+                  val cth = PURE_REWRITE_RULE [there]
+                              (INST [afv |-> mk_comb (absArgs j, af)] consth)
+                  val old = mk_comb (List.nth (#cons fam, j), af)
+                  val step1 = TRANS (ISPECL [hj, absj, old]
+                                            combinTheory.o_THM)
+                                    (AP_TERM hj (SYM cth))
+                  val step2 = TRANS step1
+                                (SPEC (mk_comb (absArgs j, af))
+                                      (List.nth (ass, j)))
+                  val (_, folded) = famMapO j (abss, vs)
+                  val step3 = PURE_REWRITE_RULE [folded] step2
+                  (* the old principle hands its target the argument
+                     unapplied, so put the abstraction back *)
+                  val wanted = list_mk_comb (oldTarget j,
+                                             [af, rand (rhs (concl step3))])
+                in
+                  GEN af (TRANS step3
+                            (SYM ((RATOR_CONV BETA_CONV THENC BETA_CONV)
+                                    wanted)))
+                end
+            fun oldEqs (vs, ass) = List.tabulate (n, oldEq (vs, ass))
+            fun side (vs, half) = LIST_CONJ (oldEqs (vs, CONJUNCTS half))
+            val res =
+                MP (SPECL (across hvs @ across kvs) (CONJUNCT2 inst))
+                   (CONJ (side (hvs, CONJUNCT1 both))
+                         (side (kvs, CONJUNCT2 both)))
+            (* what that says of the functions themselves *)
+            fun strip j =
+                let val th = List.nth (CONJUNCTS res, j)
+                    val repj = List.nth (reps, j)
+                    (* composing with REP on the right leaves the
+                       functions themselves *)
+                    val cmp = rator (rator (mk_o (lhs (concl th), repj)))
+                in
+                  PURE_REWRITE_RULE [GSYM combinTheory.o_ASSOC,
+                                     List.nth (absreps, j),
+                                     combinTheory.I_o_ID]
+                                    (AP_THM (AP_TERM cmp th) repj)
+                end
+          in
+            GENL (hvs @ kvs)
+                 (DISCH (mk_conj (eqsFor hvs, eqsFor kvs))
+                        (LIST_CONJ (List.tabulate (n, strip))))
+          end
+    in
+      {types = newtys, abs = abss, rep = reps, absrep = absreps,
+       repabs = repabss, cons = conss, cons_defs = cons_defs,
+       principle = GENL newts (CONJ existence uniqueness)}
+    end
+
+
+
+(* ----------------------------------------------------------------------
+    The collapsed family's constructors, one per summand of each
+    member's functor — the same split defineConstructors makes for a
+    single type, at the types the family was put on.
+   ---------------------------------------------------------------------- *)
+
+fun collapsedConstructors names (coll : collapsed) =
+    let
+      fun member (j, cons) =
+          let
+            val fty = #1 (dom_rng (type_of cons))
+            val summands = sumSyntax.strip_sum fty
+            val nms = List.nth (names, j)
+            val _ = length nms = length summands orelse
+                    raise ERR "collapsedConstructors"
+                          ("member " ^ Int.toString j ^ " has " ^
+                           Int.toString (length summands) ^ " constructors")
+            val newty = #2 (dom_rng (type_of cons))
+            fun mkOne (i, nm) =
+                let
+                  val facs = factorsOf (List.nth (summands, i))
+                  val args = List.tabulate
+                               (length facs,
+                                fn k => mk_var ("a" ^ Int.toString k,
+                                                List.nth (facs, k)))
+                  val tup = if null args then oneSyntax.one_tm
+                            else pairSyntax.list_mk_pair args
+                  val cvar = mk_var (nm, List.foldr (op -->) newty facs)
+                in
+                  new_definition
+                    (nm ^ "_def",
+                     mk_eq (list_mk_comb (cvar, args),
+                            mk_comb (cons, mkInj summands i tup)))
+                end
+            val defs = List.tabulate (length nms,
+                                      fn i => mkOne (i, List.nth (nms, i)))
+          in
+            {constructors = List.map (#1 o strip_comb o lhs o #2 o strip_forall
+                                      o concl)
+                                     defs,
+             defs = defs}
+          end
+    in
+      List.tabulate (length (#cons coll),
+                     fn j => member (j, List.nth (#cons coll, j)))
     end
 
 end

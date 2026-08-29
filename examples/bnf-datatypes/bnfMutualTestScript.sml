@@ -536,3 +536,108 @@ val _ = checkeqn "the family's case constants" (hd fam_cases)
 val _ = checkeqn "and one per member" (List.nth (fam_cases, 2))
    “(∀t f g. ft3_CASE (FE t) f g = f t) ∧
     (∀t f g. ft3_CASE (FG t) f g = g t)”
+
+(* ----------------------------------------------------------------------
+    Collapsing the family onto types of its own.
+
+    The construction leaves member j an instance of an operator that
+    also takes the earlier members' slots; the specification says each
+    member is an operator over its own variables, and that is what a
+    TypeBase entry is keyed on.  So once the family is built, and only
+    then, each member is copied onto a type of its own and the
+    constructors and the principle are carried across.
+   ---------------------------------------------------------------------- *)
+
+val coll = collapseFamily {tynames = ["ct1","ct2","ct3"]} fam fam_principle
+
+val _ = tprint "the family's own types"
+val _ =
+    if #types coll = [“:'b1 ct1”, “:'b1 ct2”, “:'b1 ct3”] andalso
+       List.map (type_of o #1) (ListPair.zipEq (#cons coll, #types coll)) =
+       [“:'b1 + 'b1 ct1 # 'b1 ct2 -> 'b1 ct1”,
+        “:'b1 ct3 + 'b1 # 'b1 ct2 -> 'b1 ct2”,
+        “:'b1 ct1 + 'b1 ct3 -> 'b1 ct3”]
+    then OK()
+    else die (String.concatWith ", " (List.map type_to_string (#types coll)))
+
+val _ = tprint "and its principle, carried across"
+val _ =
+    if null (hyp (#principle coll)) andalso
+       null (free_vars (concl (#principle coll))) andalso
+       same (concl (#principle coll))
+            “∀t0 t1 t2.
+               (∃h0 h1 h2.
+                  (∀af. h0 (ct1_CONS af) = t0 af (SUM_MAP I (h0 ## h1) af)) ∧
+                  (∀af. h1 (ct2_CONS af) = t1 af (SUM_MAP h2 (I ## h1) af)) ∧
+                  ∀af. h2 (ct3_CONS af) = t2 af (SUM_MAP h0 h2 af)) ∧
+               ∀h0 h1 h2 k0 k1 k2.
+                 ((∀af. h0 (ct1_CONS af) = t0 af (SUM_MAP I (h0 ## h1) af)) ∧
+                  (∀af. h1 (ct2_CONS af) = t1 af (SUM_MAP h2 (I ## h1) af)) ∧
+                  ∀af. h2 (ct3_CONS af) = t2 af (SUM_MAP h0 h2 af)) ∧
+                 ((∀af. k0 (ct1_CONS af) = t0 af (SUM_MAP I (k0 ## k1) af)) ∧
+                  (∀af. k1 (ct2_CONS af) = t1 af (SUM_MAP k2 (I ## k1) af)) ∧
+                  ∀af. k2 (ct3_CONS af) = t2 af (SUM_MAP k0 k2 af)) ⇒
+                 h0 = k0 ∧ h1 = k1 ∧ h2 = k2”
+    then OK() else die (thm_to_string (#principle coll))
+val ccs = collapsedConstructors [["CA","CB"],["CC","CD"],["CE","CG"]] coll
+val cdefs = List.map #defs ccs
+val caxiom = familyAxiomOf cdefs (familyExistence (#principle coll))
+val csetind = familySetInductionOf fam (#types coll, #cons coll)
+                                   (#principle coll)
+val cinduction = familyInductionOf cdefs csetind
+val ccases = defineCases caxiom
+val ctyinfos = typeBaseInfo {axiom = caxiom, induction = cinduction,
+                             case_defs = ccases,
+                             rewrites = [[], [], []]}
+val _ = TypeBase.export ctyinfos
+
+val _ = tprint "the family's TypeBase entries"
+val _ =
+    if List.map TypeBasePure.ty_of ctyinfos = #types coll andalso
+       List.all (fn ty => isSome (TypeBase.read (dest_type ty |> #1 |>
+                                    (fn tyop => {Thy = current_theory(),
+                                                 Tyop = tyop}))))
+                (#types coll) andalso
+       aconv (concl (TypeBase.induction_of “:'b1 ct1”)) (concl cinduction)
+    then OK() else die "no entries"
+
+val _ = tprint "the family's members behave like datatypes"
+val _ =
+    let
+      val th1 = Q.prove (‘∀x:'b1 ct2. (∃t. x = CC t) ∨ ∃a u. x = CD a u’,
+                         Cases_on ‘x’ >> simp[])
+      val th2 = Q.prove (‘CA a ≠ CB t u ∧
+                          (CB t u = CB t' u' ⇔ t = t' ∧ u = u')’,
+                         simp[])
+      val th3 = Q.prove (‘(case CE x of CE t => T | CG u => F)’, simp[])
+    in
+      if List.all (null o hyp) [th1, th2, th3] then OK()
+      else die "not proved"
+    end
+
+(* and functions over the family are defined by its axiom and proved
+   about by its induction, which is the whole point of the entry *)
+(* the answers are type variables in the axiom; a definition picks them *)
+val caxiom_num =
+    INST_TYPE (List.map (fn ty => ty |-> numSyntax.num)
+                        (List.filter (fn ty => ty <> b1)
+                                     (type_vars_in_term (concl caxiom))))
+              caxiom
+
+val ct_size_def =
+    new_specification
+      ("ct_size_def", ["ct1SZ", "ct2SZ", "ct3SZ"],
+       CONV_RULE (DEPTH_CONV BETA_CONV)
+         (Q.SPECL [‘λa. 1n’, ‘λt u r s. 1 + r + s’, ‘λt r. 1 + r’,
+                   ‘λa u r. 1 + r’, ‘λt r. 1 + r’, ‘λu r. 1 + r’]
+                  caxiom_num))
+
+val _ = tprint "a function over the family, and induction over it"
+val _ =
+    let val th = Q.prove (‘(∀x:'p ct1. 0 < ct1SZ x) ∧
+                           (∀y:'p ct2. 0 < ct2SZ y) ∧
+                           ∀z:'p ct3. 0 < ct3SZ z’,
+                          ho_match_mp_tac cinduction >> simp[ct_size_def])
+    in
+      if null (hyp th) then OK() else die (thm_to_string th)
+    end
