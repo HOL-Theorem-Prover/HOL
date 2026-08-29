@@ -1164,13 +1164,54 @@ not what is inside it.  Fixing it means either an encoding that
 introduces no new declaration nesting, or teaching the annotator about a
 `DecExpansion` whose result is a `DecLocal`.
 
-**Stopper 2: one ambient read remains anyway.**  With the shim in place
-the same probe still reports a read of slot `ancestry.dictppp.global`.
-That is `combinpp`'s absyn postprocessor: `upd_processor` takes the
-grammar it is handed, ignores it, and calls `get_global_value ()`.
-Threading it needs a context-taking read in `AncestryData` and a change
-to the absyn-postprocessor protocol, so it is separate work --- but it is
-the last one on this path, and there is now an exact reproducer for it.
+**Stopper 2: RESOLVED.**  It was the `ancestry.dictppp.global` read from
+`combinpp`'s absyn postprocessor.  That is gone: the dictionary now lives
+in a `user_state` slot on the grammar, and the postprocessor reads it out
+of the grammar it was already handed.  See "Resolved: the state belongs
+to the grammar, not to a context" above.  The `local` is now the *only*
+thing between this shape and landing.
+
+**And the shape wants to grow, not shrink.**  If a `local` envelops the
+declaration and binds the context it is elaborated against, the simpset
+attributes belong in that same `local` rather than in a run-time window:
+
+    local
+      val HOLctxt = BasicProvers.map_simpset f (Context.snapshot())
+      structure Parse = struct open Parse
+        val Term = Parse.Term_in HOLctxt
+        val Type = Parse.Type_in HOLctxt
+      end
+      structure BasicProvers = struct open BasicProvers
+        val srw_ss = fn () => BasicProvers.srw_ss_of HOLctxt
+      end
+      open BasicProvers
+    in
+      val foo = Q.store_thm_at ... HOLctxt
+    end
+
+Applying `f` to the context *before* handing it to `store_thm_at` means
+the tactic runs in the excluded context, and rebinding-then-opening
+`BasicProvers` means a qualified `BasicProvers.srw_ss()` resolves there
+too --- the case `src/boss/theory_tests/exclArithBug` pins, and the one
+thing no rebinding of the bare name can reach.  That retires
+`with_simpset_updates_tac`'s global window rather than working around it.
+
+Note this only works at declaration level.  An expression-level `let`
+cannot host it: `structure` is a `strdec`, and SML's `let dec in exp end`
+takes core declarations only --- Poly rejects it with "in expected but
+structure was found".  Nor can the rebinding be hoisted out of the
+`local`: bound at file level it would leak into the declarations that
+follow.
+
+**Why the annotator desynchronises.**  `annotateDec`'s generic case ends
+`(withProps ... , moveTopRight pt)`: each AST declaration consumes
+exactly one *top-level* node of the emitted SML's Poly parse tree, in
+order, and `DecExpansion` walks its `result` list against that same
+cursor.  A synthetic `local` is one AST declaration but changes the
+nesting the cursor has to descend through, so every annotation after it
+lands on the wrong node.  Fixing it means either an encoding that adds no
+declaration nesting, or teaching the walk that a `DecExpansion` whose
+result is a `DecLocal` is transparent at the top level.
 
 **Reproducer** (level 2 reports every ambient read while a proof runs;
 the control exists so a silent probe cannot be mistaken for one that
@@ -1195,19 +1236,38 @@ time.**  Folding `Proof[exclude_simps=...]` into the context rather than
 wrapping the tactic is *not* equivalent, so `wrapTac` cannot go yet.
 `with_simpset_updates_tac` does two things --- `map_simpset f ctxt` for
 the threaded context, and a global `with_simpset_updates` bracket around
-the tactic's execution --- and replacing only the first makes
-`src/basicProof/theory_tests/exclSimps` fail its first theorem, with the
-tripwire reporting an ambient read.  Something under `exclude_frags`
-still consults ambient state and the global bracket was covering for it.
+the tactic's execution --- and replacing only the first breaks tests
+that the bracket was covering for.
 
-Also: a `srw_ss` shim cannot be emitted unconditionally, because it names
-BasicProvers, which does not exist for the scripts that build before
-src/basicProof --- combinScript is one, and it uses `Theorem`.  Narrowing
-it to declarations that carry simpset attributes compiles, but then the
-drift fix (`srw_ss()` answering from the declaration's context rather
-than the live simpset) does not land, since deciding whether a
-declaration mentions `srw_ss` needs either an AST traversal --- there is
-none --- or the source text threaded into the expander's config.
+An earlier version of this paragraph blamed `exclude_frags`, and was
+wrong twice over.  `simpLib.remove_simps` and `simpLib.exclude_ssfrags`
+are both pure `simpset -> simpset`; neither consults ambient state.  And
+the theorem that failed, in `src/basicProof/theory_tests/exclSimps`,
+carries only `exclude_simps=BETA_CONV` --- the `exclude_frags = REDUCE`
+it was confused with is in the *other* fixture, under `src/boss`.  What
+actually read ambient state was that fixture's own helper, defined at
+file level:
+
+    fun simp ths g = simpLib.SIMP_TAC (srw_ss()) ths g
+
+which captured `BasicProvers.srw_ss` at file scope.  Its sibling `csimp`
+already took the context; `simp` had simply been missed.  With `simp`
+fixed to match, that fixture passes with the bracket dropped.
+
+#### What the bracket is actually for
+
+Measured, by dropping the bracket and rebuilding: the core build is
+green, `src/basicProof/theory_tests` passes, and
+`src/boss/theory_tests/exclArithBug` fails one case --- with the
+tripwire reporting an ambient read.  The case is a `shouldfail` that
+pins `exclude_frags = ARITH` reaching a tactic written as
+
+    fn g => fn c => SIMP_TAC (BasicProvers.srw_ss() ++ ARITH_ss) [] g c
+
+The call is inside the proof body, under both binders, so the shim below
+runs --- but the name is *qualified*, and no rebinding of `srw_ss` can
+shadow `BasicProvers.srw_ss`.  Only the bracket reaches it.  That, and
+not anything about `exclude_frags`, is what the bracket is for.
 
 #### Where Phase 3 finished
 

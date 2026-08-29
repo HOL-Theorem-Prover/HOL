@@ -2,10 +2,11 @@ Theory exclSimps[bare]
 Libs
   HolKernel Parse boolLib simpLib BasicProvers
 
-(* two ways to reach the stateful simpset: the ambient one, and the one
-   carried by the context the tactic is run in.  exclude_simps has to
-   reach both. *)
-fun simp ths g = simpLib.SIMP_TAC (srw_ss()) ths g
+(* Both reach the simpset through the context the tactic is run in.
+   Neither should consult the ambient one: exclude_simps reaches a proof
+   by transforming its context, and a helper reading the global simpset
+   would be reading state the attribute has no business clobbering. *)
+fun simp ths g ctxt = simpLib.SIMP_TAC (srw_ss_of ctxt) ths g ctxt
 fun csimp ths g ctxt = simpLib.SIMP_TAC (srw_ss_of ctxt) ths g ctxt
 
 Theorem foo:
