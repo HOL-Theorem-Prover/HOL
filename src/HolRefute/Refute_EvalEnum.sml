@@ -41,11 +41,11 @@ structure Refute_EvalEnum = struct
   fun smart_guard_lookup {relation = predicate, version} programs =
     let
       val (relation, arguments) = HolKernel.strip_comb predicate
+      val key = Refute_SmartGen.Predicate relation
       fun inspect [] = NONE
         | inspect (program :: rest) =
-            if Refute_SmartGen.same_relation
-                 (Refute_SmartGen.Predicate relation) (#relation program)
-                 andalso
+            if Refute_SmartGen.same_relation key (#relation program)
+               andalso
                Refute_SmartGen.same_program_version
                  (version, #version program)
             then
@@ -150,11 +150,12 @@ structure Refute_EvalEnum = struct
             site is in scope -- so use the pinned value itself at that
             position; every other position still gets a fresh, distinctly
             named placeholder. *)
-         val arguments = Lib.mapi (fn index => fn ty =>
-           case List.nth (modes, index) of
+         val arguments = Lib.mapi (fn index => fn (ty, argument_mode) =>
+           case argument_mode of
                Refute_SmartGen.Fixed value => value
              | _ => Term.mk_var
-                 ("refute_enum_shape_" ^ Int.toString index, ty)) domains
+                 ("refute_enum_shape_" ^ Int.toString index, ty))
+           (ListPair.zip (domains, modes))
          val (ins, outs) = Refute_SmartGen.split_arguments mode arguments
        in
          (map Term.type_of ins, map Term.type_of outs)

@@ -15,6 +15,7 @@ signature REFUTE_UTIL = sig
     Type.hol_type -> Type.hol_type list -> Type.hol_type list
   val all_distinct_types : Type.hol_type list -> bool
   val aconv_member : Term.term -> Term.term list -> bool
+  val beta_normalize : Term.term -> Term.term
   val distinct_terms : Term.term list -> Term.term list
   val union_terms : Term.term list -> Term.term list -> Term.term list
 end
@@ -34,6 +35,29 @@ structure Refute_Util :> REFUTE_UTIL = struct
       else (seen, false)) ([], true) tys)
 
   val aconv_member = Lib.op_mem Term.aconv
+
+  (* Full beta normal form.  Both layers need one -- the generator's
+     [infer_fixed_argument] leaves redexes behind when it substitutes a
+     closed value for a predicate parameter, and the model finder's
+     encoder needs a redex-free term -- and two normalisers that must
+     agree wherever a term crosses between them is one too many. *)
+  fun beta_normalize term =
+    if Term.is_abs term then
+      let val (variable, body) = Term.dest_abs term
+      in Term.mk_abs (variable, beta_normalize body) end
+    else if Term.is_comb term then
+      let
+        val (function, argument) = Term.dest_comb term
+        val function = beta_normalize function
+        val argument = beta_normalize argument
+      in
+        if Term.is_abs function then
+          beta_normalize (Term.beta_conv (Term.mk_comb (function, argument)))
+        else
+          Term.mk_comb (function, argument)
+      end
+    else
+      term
 
   fun distinct_terms terms =
     List.rev (List.foldl (fn (term, result) =>

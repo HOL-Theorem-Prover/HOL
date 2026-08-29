@@ -28,7 +28,7 @@ build-tests: $(DEFAULT_TARGETS)
 Refute_Gen.uo: Refute_Util.uo
 Refute_Core.uo: Refute_ModelFinder_Names.uo
 Refute_ModelFinder_Names.uo: Refute_Util.uo
-Refute_ModelFinder_HOL.uo: Refute_Skolem.uo
+Refute_ModelFinder_HOL.uo: Refute_Skolem.uo Refute_Util.uo
 Refute_Cert_Narrow.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo \
                        Refute_ModelFinder_HOL.uo
 Refute_Cert_Model.uo: Refute_Cert.uo Refute_Narrow.uo Refute_Util.uo \

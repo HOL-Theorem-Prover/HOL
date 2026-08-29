@@ -2189,12 +2189,8 @@ fun kodkod_formula_from_nut offsets
                     (KK.LE (KK.Num 0, KK.BitXor (second, result)))))
                 (SOME (fn left => fn right => KK.Add (left, right)))
             else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
-              let val width = MFH.word_width (#1 (Type.dom_rng ty))
-              in
-                to_word_binary_op ty (MFNT.rep_of candidate)
-                  (fn left => fn right =>
-                    wrap_word width (KK.Add (left, right)))
-              end
+              to_wrapping_word_binary_op ty (MFNT.rep_of candidate)
+                (fn left => fn right => KK.Add (left, right))
             else
               raise MFNT.NUT
                 ("Refute_ModelFinder_Kodkod.to_r (Add)", [candidate])
@@ -2216,12 +2212,8 @@ fun kodkod_formula_from_nut offsets
                     (KK.LT (KK.BitXor (second, result), KK.Num 0))))
                 (SOME (fn left => fn right => KK.Sub (left, right)))
             else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
-              let val width = MFH.word_width (#1 (Type.dom_rng ty))
-              in
-                to_word_binary_op ty (MFNT.rep_of candidate)
-                  (fn left => fn right =>
-                    wrap_word width (KK.Sub (left, right)))
-              end
+              to_wrapping_word_binary_op ty (MFNT.rep_of candidate)
+                (fn left => fn right => KK.Sub (left, right))
             else
               raise MFNT.NUT
                 ("Refute_ModelFinder_Kodkod.to_r (Subtract)", [candidate])
@@ -2252,12 +2244,8 @@ fun kodkod_formula_from_nut offsets
                   (SOME (fn left => fn right => KK.Mult (left, right)))
               end
             else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
-              let val width = MFH.word_width (#1 (Type.dom_rng ty))
-              in
-                to_word_binary_op ty (MFNT.rep_of candidate)
-                  (fn left => fn right =>
-                    wrap_word width (KK.Mult (left, right)))
-              end
+              to_wrapping_word_binary_op ty (MFNT.rep_of candidate)
+                (fn left => fn right => KK.Mult (left, right))
             else
               raise MFNT.NUT
                 ("Refute_ModelFinder_Kodkod.to_r (Multiply)", [candidate])
@@ -3025,6 +3013,15 @@ fun kodkod_formula_from_nut offsets
     and to_word_binary_op ty representation operation =
       to_word_op ty representation 2
         (fn arguments => operation (hd arguments) (List.nth (arguments, 1)))
+
+    (* A word's arithmetic is the integer operation reduced back into the
+       carrier; the wrapping arms differ only in [operation]. *)
+    and to_wrapping_word_binary_op ty representation operation =
+      let val width = MFH.word_width (#1 (Type.dom_rng ty))
+      in
+        to_word_binary_op ty representation
+          (fn left => fn right => wrap_word width (operation left right))
+      end
 
     and to_bit_word_unary_op ty representation operation =
       let

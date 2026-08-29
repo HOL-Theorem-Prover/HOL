@@ -567,6 +567,28 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
      ({Thy = "string", Name = "char_ge"}, (false, false, true))]
   val char_order_of = char_key_lookup char_orders
 
+  (* Both carriers reach the same encoding, so one lookup serves the
+     dispatch below and the two orders never drift apart. *)
+  fun order_of head =
+    case word_order_of head of
+        NONE => char_order_of head
+      | found => found
+
+  fun cst_of head =
+    case word_cst_of head of
+        NONE => char_cst_of head
+      | found => found
+
+  (* Negation and complementation are both [value - x] for a
+     width-dependent [value], so they are two more table rows.  The
+     table's own guard is the word-type test the dispatch would
+     otherwise spell out again. *)
+  val word_subtract_bases =
+    [({Thy = "words", Name = "word_2comp"}, fn _ => 0),
+     ({Thy = "words", Name = "word_1comp"},
+      fn width => Util.reasonable_power 2 width - 1)]
+  val word_subtract_base_of = word_key_lookup word_subtract_bases
+
   (* [value - x] at a word type: complementation is [~1w - x] and
      negation is [0w - x], neither needing a primitive of its own. *)
   fun word_subtract_from word_ty value =
@@ -925,46 +947,28 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
               else if is_named {Thy = "integer", Name = "Num"} head andalso
                       null arguments then
                 Cst (IntToNat, Term.type_of head, MFR.Any)
-              else if Option.isSome (word_order_of head) then
-                let val order = valOf (word_order_of head) in
+              else if Option.isSome (order_of head) then
+                let val order = valOf (order_of head) in
                   if length arguments < 2 then
                     sub (MFH.eta_expand candidate (2 - length arguments))
-                  (* [word_orders] holds only binary relations, so a
+                  (* Both order tables hold only binary relations, so a
                      well-typed term cannot present a third argument and
                      the dropped [= 2] test could not have failed. *)
                   else
                     word_comparison order (sub (hd arguments))
                       (sub (List.nth (arguments, 1)))
                 end
-              else if (is_named {Thy = "words", Name = "word_2comp"} head
-                       orelse
-                       is_named {Thy = "words", Name = "word_1comp"} head)
-                      andalso null arguments andalso
-                      Option.isSome
-                        (MFH.word_op_dimension (Term.type_of head)) then
+              else if null arguments andalso
+                      Option.isSome (word_subtract_base_of head) then
                 let
                   val word_ty = domain_type (Term.type_of head)
-                  val width = MFH.word_width word_ty
                 in
                   word_subtract_from word_ty
-                    (if is_named {Thy = "words", Name = "word_2comp"} head
-                     then 0 else Util.reasonable_power 2 width - 1)
+                    (valOf (word_subtract_base_of head)
+                       (MFH.word_width word_ty))
                 end
-              else if Option.isSome (char_order_of head) then
-                let val order = valOf (char_order_of head) in
-                  if length arguments < 2 then
-                    sub (MFH.eta_expand candidate (2 - length arguments))
-                  (* [char_orders] likewise holds only binary relations. *)
-                  else
-                    word_comparison order (sub (hd arguments))
-                      (sub (List.nth (arguments, 1)))
-                end
-              else if Option.isSome (word_cst_of head) andalso
-                      null arguments then
-                cst (valOf (word_cst_of head)) head
-              else if Option.isSome (char_cst_of head) andalso
-                      null arguments then
-                cst (valOf (char_cst_of head)) head
+              else if null arguments andalso Option.isSome (cst_of head) then
+                cst (valOf (cst_of head)) head
               else if Term.is_const head andalso
                       is_named {Thy = "refute", Name = "unknown"} head andalso
                       null arguments then

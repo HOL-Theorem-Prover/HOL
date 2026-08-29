@@ -2401,14 +2401,7 @@ structure Refute_ModelFinder_Preproc = struct
          every case; the encoder then refuses the word or char operation by
          name, and reaches the typedef only at a hand-named [card num]. *)
       val all_axioms = nondefinitions @ definitions
-      (* One pass over the axioms for all three vetoes: each
-         [term_mentions_*] materialises the complete subterm list of
-         every axiom, so asking them separately walks the set three
-         times over. *)
-      fun vetoes_binarization term =
-        MFH.term_mentions_word_type term orelse
-        MFH.term_mentions_char_type term orelse
-        MFH.term_mentions_num_typedef term
+      val vetoes_binarization = MFH.term_mentions_binarization_veto
       val binarize =
         case binary_ints of
             SOME false => false

@@ -498,16 +498,21 @@ structure Refute_QC = struct
          existing [compare_score] selection picks the best of the two
          automatically -- a specialised enumerator competes on score, it
          is never forced. *)
+      (* Lift the goal modes that have a compiled enumerator into
+         positive candidates.  The three routes below -- generic, fixed
+         argument, function graph -- differ only in the relation key and
+         in where their goal modes come from. *)
+      fun positive_for key goal_modes =
+        List.mapPartial (fn goal_mode as ({mode, ...} : SmartGen.goal_mode) =>
+          Option.map (fn program => (goal_mode, Positive program))
+            (SmartGen.enumerator_for key mode)) goal_modes
+
       fun fixed_positive_candidates bound assumption =
         List.concat (map (fn (relation, position, value) =>
             case #result (analyse_fixed relation position value) of
                 NONE => []
               | SOME inference =>
-                  List.mapPartial (fn goal_mode as
-                      ({mode, ...} : SmartGen.goal_mode) =>
-                    Option.map (fn program => (goal_mode, Positive program))
-                      (SmartGen.enumerator_for
-                        (SmartGen.Predicate relation) mode))
+                  positive_for (SmartGen.Predicate relation)
                     (SmartGen.goal_modes_for_call bound assumption inference))
           (fixed_argument_positions assumption))
 
@@ -617,11 +622,7 @@ structure Refute_QC = struct
               case #result (analyse_graph constant) of
                   NONE => []
                 | SOME inference =>
-                    List.mapPartial (fn goal_mode as
-                        ({mode, ...} : SmartGen.goal_mode) =>
-                      Option.map (fn program => (goal_mode, Positive program))
-                        (SmartGen.enumerator_for
-                          (SmartGen.Graph constant) mode))
+                    positive_for (SmartGen.Graph constant)
                       (SmartGen.graph_modes_for_call bound constant arguments
                         inference))
             (graph_recognise bound assumption))
@@ -637,11 +638,7 @@ structure Refute_QC = struct
                       | SOME inference => SmartGen.goal_modes_for_call bound
                           assumption inference
                   val generic_modes =
-                    List.mapPartial (fn goal_mode as
-                        ({mode, ...} : SmartGen.goal_mode) =>
-                      Option.map (fn program => (goal_mode, Positive program))
-                        (SmartGen.enumerator_for
-                          (SmartGen.Predicate relation) mode)) inferred
+                    positive_for (SmartGen.Predicate relation) inferred
                   val fixed_modes = fixed_positive_candidates bound assumption
                   val graph_modes = graph_positive_candidates bound assumption
                   val modes = generic_modes @ fixed_modes @ graph_modes

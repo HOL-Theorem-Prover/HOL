@@ -386,10 +386,7 @@ structure Refute_EvalCompute = struct
                         | IsFalse => dropped ()
                         | IsStuck =>
                             (complete := false;
-                             if genuine_only then
-                               (candidates_generated :=
-                                  !candidates_generated + 1;
-                                Continue)
+                             if genuine_only then dropped ()
                              else visit env false cont)))
           | Enum {rel, mode, ins, outs, cont, ...} =>
               let

@@ -2477,12 +2477,17 @@ fun valid_replay_sidecar ({holes} : replay_sidecar) =
    [certification_copy] separately offers the recovered literal as a
    hint.  This keeps "every free variable of an env value is a declared
    hole" true of the returned list without widening it. *)
+(* Every free variable of [value] is one of the declared holes.  Both
+   the raw bindings and the type-substituted copies below are gated on
+   exactly this, so it is stated once. *)
+fun bound_by declared value =
+  List.all (fn free => Util.aconv_member free declared)
+    (Term.free_vars_lr value)
+
 fun certification_env_with_holes (sidecar as {holes}) bindings =
   let
     val declared = map #variable holes
-    fun authorized value =
-      List.all (fn free => Util.aconv_member free declared)
-        (Term.free_vars_lr value)
+    val authorized = bound_by declared
     fun keep [] = SOME []
       | keep (binding :: rest) =
           if authorized (#2 binding) then
@@ -2561,16 +2566,11 @@ fun certification_copy scope types original eval_terms bindings replay_hints
                    SOME ((tyvar, card) :: rows)
                  else NONE
              | _ => NONE)
-    (* Distinct from [certification_env_with_holes]'s [authorized]: that
-       one gates raw bindings against declared holes, this one gates a
-       *copied* (type-substituted) hint/type-value image the same way. *)
-    fun copy_authorized declared value = List.all (fn free =>
-      Util.aconv_member free declared) (Term.free_vars_lr value)
     fun optional_values copy declared values =
       List.mapPartial (fn value =>
         (case Lib.total copy value of
              SOME copied =>
-               if copy_authorized declared copied then SOME copied else NONE
+               if bound_by declared copied then SOME copied else NONE
            | NONE => NONE)) values
     fun copy_provenance copy_type provenance =
       Option.map (Refute_Skolem.map_types copy_type) provenance
@@ -2589,7 +2589,7 @@ fun certification_copy scope types original eval_terms bindings replay_hints
           ({value, provenance, ...} : replay_hint) =>
             case Lib.total copy value of
                 SOME copied =>
-                  if copy_authorized declared copied then
+                  if bound_by declared copied then
                     SOME
                       {term = copied,
                        source = Refute_Cert_Model.SkolemValue,

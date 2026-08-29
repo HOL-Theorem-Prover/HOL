@@ -44,8 +44,9 @@ end = struct
         intExtensionTheory.SGN_def])
 
   fun norm_conv tm = simpLib.SIMP_CONV frac_ss [] tm
-  fun safe_norm tm = norm_conv tm handle Feedback.HOL_ERR _ => Thm.REFL tm
-                                        | Conv.UNCHANGED => Thm.REFL tm
+  (* [TRY_CONV] turns a failure into [UNCHANGED], which [QCONV] then
+     turns into the reflexive theorem: both recovery arms, spelled once. *)
+  val safe_norm = Conv.QCONV (Conv.TRY_CONV norm_conv)
 
   fun discharge_prop h = Drule.EQT_ELIM (norm_conv h)
 

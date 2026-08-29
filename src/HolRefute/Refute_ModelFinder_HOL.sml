@@ -553,19 +553,16 @@ structure Refute_ModelFinder_HOL = struct
     Lib.can wordsSyntax.dest_mod_word_literal term
 
   (* [type_has p ty]: [p] accepts [ty] or some type nested inside it.
-     [term_mentions p]: some subterm's type does.  Stated once for the
-     three carriers below (word, char, num-typedef), which differ only
-     in the leaf predicate. *)
+     [term_mentions p]: some subterm's type does.  The carrier tests
+     (word, char, num-typedef) differ only in the leaf predicate, so
+     they share this walk rather than each getting one. *)
   fun type_has p ty =
     p ty orelse
     (List.exists (type_has p) (#Args (Type.dest_thy_type ty))
      handle HOL_ERR _ => false)
 
   fun term_mentions p term =
-    List.exists (type_has p o Term.type_of)
-      (HolKernel.find_terms (fn _ => true) term)
-
-  val term_mentions_word_type = term_mentions is_word_type
+    Lib.can (HolKernel.find_term (type_has p o Term.type_of)) term
 
   (* The width of the word type a word operation acts on. *)
   fun word_op_dimension ty =
@@ -597,8 +594,6 @@ structure Refute_ModelFinder_HOL = struct
                     | NONE => false)
              | _ => false)
       | NONE => false
-
-  val term_mentions_char_type = term_mentions is_char_type
 
   (* Whether a char operation's type touches the carrier at all. *)
   fun is_char_op_type ty =
@@ -704,6 +699,15 @@ structure Refute_ModelFinder_HOL = struct
       keyed_built_in_arity char_built_in_consts key
     else NONE
 
+  (* The four built-in tables searched in one order, first hit wins.  A
+     new carrier table is added here rather than at each caller. *)
+  fun any_built_in_arity key ty =
+    Lib.get_first (fn lookup => lookup ())
+      [fn () => generic_built_in_arity key,
+       fn () => typed_built_in_arity key ty,
+       fn () => word_built_in_arity key ty,
+       fn () => char_built_in_arity key ty]
+
   (* Outside the direct tier a word operation is refused by name rather than
      unfolded: the definitions of width changes, bit fields and rotations run
      through [fcp] indexing, which no encoder reads, so unfolding them only
@@ -744,15 +748,7 @@ structure Refute_ModelFinder_HOL = struct
          result_type_after 3 ty = Type.bool then
         NONE
       else
-        case generic_built_in_arity key of
-            SOME arity => SOME arity
-          | NONE =>
-              (case typed_built_in_arity key ty of
-                   SOME arity => SOME arity
-                 | NONE =>
-                     (case word_built_in_arity key ty of
-                          SOME arity => SOME arity
-                        | NONE => char_built_in_arity key ty))
+        any_built_in_arity key ty
     end handle HOL_ERR _ => NONE
 
   fun is_built_in_const constant =
@@ -783,10 +779,7 @@ structure Refute_ModelFinder_HOL = struct
       val key = const_key constant
       val ty = Term.type_of constant
     in
-      Option.isSome (generic_built_in_arity key) orelse
-      Option.isSome (typed_built_in_arity key ty) orelse
-      Option.isSome (word_built_in_arity key ty) orelse
-      Option.isSome (char_built_in_arity key ty) orelse
+      Option.isSome (any_built_in_arity key ty) orelse
       raw_fixpoint_kind constant <> NoFp
     end handle HOL_ERR _ => false
 
@@ -2907,23 +2900,7 @@ structure Refute_ModelFinder_HOL = struct
       else application
     end
 
-  fun beta_normalize term =
-    if Term.is_abs term then
-      let val (variable, body) = Term.dest_abs term
-      in Term.mk_abs (variable, beta_normalize body) end
-    else if Term.is_comb term then
-      let
-        val (function, argument) = Term.dest_comb term
-        val function = beta_normalize function
-        val argument = beta_normalize argument
-      in
-        if Term.is_abs function then
-          beta_normalize (Term.beta_conv (Term.mk_comb (function, argument)))
-        else
-          Term.mk_comb (function, argument)
-      end
-    else
-      term
+  val beta_normalize = Refute_Util.beta_normalize
 
   (* Naming both accepted shapes keeps the diagnostic actionable: neither
      destructor alone can tell which one the caller was aiming at. *)
@@ -4402,8 +4379,18 @@ structure Refute_ModelFinder_HOL = struct
 
   (* Scanning types rather than morphisms is the robust half: a goal can
      mention the abstract type with neither Abs nor Rep present, and a
-     morphism's own type mentions it anyway. *)
-  val term_mentions_num_typedef = term_mentions is_num_typedef_type
+     morphism's own type mentions it anyway.
+
+     One [term_mentions] walk decides all three binarization vetoes:
+     asking them separately traverses the term three times over, and the
+     leaf predicates are ordered cheapest first so the costly typedef
+     lookup runs only where the other two have already declined. *)
+  fun term_mentions_binarization_veto term =
+    term_mentions
+      (fn ty =>
+         is_word_type ty orelse is_char_type ty orelse
+         is_num_typedef_type ty)
+      term
 
   fun quotient_relation_for_type ty =
     case quotient_for_type ty of
@@ -6093,14 +6080,26 @@ structure Refute_ModelFinder_HOL = struct
     end
 
   fun choice_predicate_cheap_fragment predicate =
-    null (HolKernel.find_terms choice_predicate_bad_subterm predicate)
+    not (Lib.can (HolKernel.find_term choice_predicate_bad_subterm) predicate)
+
+  (* [?x. P x] for a choice predicate.  [s_betapply], not a bare
+     [Term.mk_comb]: an un-beta-reduced redex leaves [DECIDE]'s fragment,
+     silently disabling the escape. *)
+  fun choice_predicate_nonempty predicate =
+    let
+      val (domain_ty, _) = Type.dom_rng (Term.type_of predicate)
+      val witness = Term.variant (Term.all_vars predicate)
+        (Term.mk_var ("x", domain_ty))
+    in
+      boolSyntax.mk_exists (witness, s_betapply (predicate, witness))
+    end
 
   val choice_predicate_decide_budget = 120
   val choice_predicate_decide_attempt_cap = 32
 
   fun choice_predicate_provably_empty
         ({choice_empty_cache, choice_predicate_attempts, ...} : mf_context)
-        predicate exists_claim =
+        predicate =
     case List.find (fn (other, _) => Term.aconv other predicate)
            (!choice_empty_cache) of
         SOME (_, cached) => cached
@@ -6114,7 +6113,10 @@ structure Refute_ModelFinder_HOL = struct
             val result =
               eligible andalso
               (choice_predicate_attempts := !choice_predicate_attempts + 1;
-               Lib.can bossLib.DECIDE (boolSyntax.mk_neg exists_claim))
+               (* Built here, so an ineligible or already-cached
+                  predicate never pays for it. *)
+               Lib.can bossLib.DECIDE
+                 (boolSyntax.mk_neg (choice_predicate_nonempty predicate)))
           in
             choice_empty_cache := (predicate, result) :: !choice_empty_cache;
             result
@@ -6408,28 +6410,22 @@ structure Refute_ModelFinder_HOL = struct
                      val witness = Term.variant
                        (Term.all_vars predicate' @ Term.all_vars applied)
                        (Term.mk_var ("x", domain_ty))
+                     (* [s_betapply], not a bare [Term.mk_comb]: an
+                        un-beta-reduced redex leaves [DECIDE]'s fragment,
+                        silently disabling the escape. *)
                      val nonempty = boolSyntax.mk_exists
                        (witness, s_betapply (predicate', witness))
+                   in
                      (* Decided on [predicate], not [predicate'] (the
                         [do_term] image): the escape's soundness -- HOL
                         leaves [$@ P] unspecified when [~(?x. P x)] holds
                         -- is about the original predicate's HOL
-                        extension, not [do_term]'s rewritten shape.  Both
-                        existentials use [s_betapply], not a bare
-                        [Term.mk_comb]: an un-beta-reduced redex leaves
-                        [DECIDE]'s fragment, silently disabling the
-                        escape. *)
-                     val (orig_domain_ty, _) =
-                       Type.dom_rng (Term.type_of predicate)
-                     val orig_witness = Term.variant
-                       (Term.all_vars predicate)
-                       (Term.mk_var ("x", orig_domain_ty))
-                     val orig_nonempty = boolSyntax.mk_exists
-                       (orig_witness, s_betapply (predicate, orig_witness))
-                   in
+                        extension, not [do_term]'s rewritten shape, so
+                        [choice_predicate_provably_empty] builds its own
+                        claim from the predicate it is given. *)
                      if domain_ty = Type.bool orelse
-                        choice_predicate_provably_empty
-                          context predicate orig_nonempty then
+                        choice_predicate_provably_empty context predicate
+                     then
                        applied
                      else
                        (* Bounds signal (ii): a guarded occurrence's

@@ -570,60 +570,64 @@ Proof
   metis_tac [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeINC]
 QED
 
+(* The eight strict-lower-bound theorems below all reduce the same
+   way; deciding it once keeps it off the build's critical path. *)
+val lt_add1 = DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”
+
 Theorem bounded_forall_interval_lt_lt:
   (∀n. lo < n ∧ n < hi ⇒ P n) ⇔ EVERY P [lo + 1 ..< hi]
 Proof
   simp [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeLHI] >>
-  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+  metis_tac [lt_add1]
 QED
 
 Theorem bounded_exists_interval_lt_lt:
   (∃n. lo < n ∧ n < hi ∧ P n) ⇔ EXISTS P [lo + 1 ..< hi]
 Proof
   simp [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeLHI] >>
-  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+  metis_tac [lt_add1]
 QED
 
 Theorem bounded_forall_interval_lt_lt_swap:
   (∀n. n < hi ∧ lo < n ⇒ P n) ⇔ EVERY P [lo + 1 ..< hi]
 Proof
   simp [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeLHI] >>
-  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+  metis_tac [lt_add1]
 QED
 
 Theorem bounded_exists_interval_lt_lt_swap:
   (∃n. n < hi ∧ lo < n ∧ P n) ⇔ EXISTS P [lo + 1 ..< hi]
 Proof
   simp [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeLHI] >>
-  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+  metis_tac [lt_add1]
 QED
 
 Theorem bounded_forall_interval_lt_leq:
   (∀n. lo < n ∧ n ≤ hi ⇒ P n) ⇔ EVERY P [lo + 1 .. hi]
 Proof
   simp [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeINC] >>
-  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+  metis_tac [lt_add1]
 QED
 
 Theorem bounded_exists_interval_lt_leq:
   (∃n. lo < n ∧ n ≤ hi ∧ P n) ⇔ EXISTS P [lo + 1 .. hi]
 Proof
   simp [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeINC] >>
-  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+  metis_tac [lt_add1]
 QED
 
 Theorem bounded_forall_interval_lt_leq_swap:
   (∀n. n ≤ hi ∧ lo < n ⇒ P n) ⇔ EVERY P [lo + 1 .. hi]
 Proof
   simp [listTheory.EVERY_MEM, listRangeTheory.MEM_listRangeINC] >>
-  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+  metis_tac [lt_add1]
 QED
 
 Theorem bounded_exists_interval_lt_leq_swap:
   (∃n. n ≤ hi ∧ lo < n ∧ P n) ⇔ EXISTS P [lo + 1 .. hi]
 Proof
   simp [listTheory.EXISTS_MEM, listRangeTheory.MEM_listRangeINC] >>
-  metis_tac [DECIDE “∀m n:num. m < n ⇔ m + 1 ≤ n”]
+  metis_tac [lt_add1]
 QED
 
 (* Part 6: narrowing represents function variables by finite update chains.

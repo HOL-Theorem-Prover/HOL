@@ -1448,7 +1448,13 @@ structure Refute_SmartGen = struct
   fun infer_clauses_with seed_modes
         {members, clauses, external, reorder_premises} : inference_result =
     let
-      val higher_order = List.filter (null o seed_modes) members
+      (* [seed_modes] builds a member's whole mode space -- up to
+         [max_mode_space] mode lists -- so it is computed once per member
+         and read by both [higher_order] and [start] below. *)
+      val seeded = map (fn relation => (relation, seed_modes relation)) members
+      val higher_order = List.mapPartial
+        (fn (relation, modes) => if null modes then SOME relation else NONE)
+        seeded
       fun cross_reference term =
         case premise_head term of
             SOME head =>
@@ -1469,9 +1475,8 @@ structure Refute_SmartGen = struct
       val degradation =
         map (HigherOrderParameters o relation_term) higher_order @
         map CrossGroupReference (distinct_relations cross)
-      val start = map (fn relation =>
-        (relation, map (fn mode => (mode, [], false))
-          (seed_modes relation))) members
+      val start = map (fn (relation, modes) =>
+        (relation, map (fn mode => (mode, [], false)) modes)) seeded
       fun iteration table = map (fn (relation, modes) =>
         (relation, check_relation reorder_premises members external
           clauses table relation modes)) table
@@ -1601,25 +1606,7 @@ structure Refute_SmartGen = struct
      body finds none either), and even where a check would degrade the
      compile safely, a clean substrate-neutral definition is what every
      substrate -- Cv's translator in particular -- should see. *)
-  fun beta_norm term =
-    let val (head, arguments) = HolKernel.strip_comb term
-    in
-      if Term.is_abs head andalso not (null arguments) then
-        let
-          val (variable, body) = Term.dest_abs head
-          val reduced = Term.subst
-            [{redex = variable, residue = hd arguments}] body
-        in
-          beta_norm (Term.list_mk_comb (reduced, tl arguments))
-        end
-      else if Term.is_abs term then
-        let val (variable, body) = Term.dest_abs term
-        in Term.mk_abs (variable, beta_norm body) end
-      else if Term.is_comb term then
-        let val (operator, operand) = Term.dest_comb term
-        in Term.mk_comb (beta_norm operator, beta_norm operand) end
-      else term
-    end
+  val beta_norm = Refute_Util.beta_normalize
 
   (* [Fixed]'s well-formedness guard, shared by the construction site
      and the API boundary below. *)
@@ -1904,34 +1891,30 @@ structure Refute_SmartGen = struct
         first_order_mode left andalso first_order_mode right
     | first_order_mode _ = false
 
+  (* A relational premise compiles to the same call whether it is keyed
+     by predicate or by function graph; only the key and how the
+     arguments are obtained differ, so the first-order mode policy is
+     stated once. *)
+  fun compile_call key arguments derivation =
+    (let
+      val mode = head_mode_of derivation
+      val (ins, outs) = split_arguments mode arguments
+    in
+      if List.all first_order_mode (strip_mode mode) then
+        SOME (CpsCall {rel = key, mode = mode, ins = ins, outs = outs})
+      else NONE
+    end
+    handle Feedback.HOL_ERR _ => NONE)
+
   fun compile_premise premise derivation =
     case premise of
         Generator variable => SOME (CpsGenerate variable)
       | Sidecond term => SOME (CpsGuard term)
       | Prem term =>
-          (let
-            val (relation, arguments) = HolKernel.strip_comb term
-            val mode = head_mode_of derivation
-            val (ins, outs) = split_arguments mode arguments
-          in
-            if List.all first_order_mode (strip_mode mode) then
-              SOME (CpsCall
-                {rel = Predicate relation, mode = mode, ins = ins,
-                 outs = outs})
-            else NONE
-          end
-          handle Feedback.HOL_ERR _ => NONE)
+          let val (relation, arguments) = HolKernel.strip_comb term
+          in compile_call (Predicate relation) arguments derivation end
       | GraphPrem (f, arguments) =>
-          (let
-            val mode = head_mode_of derivation
-            val (ins, outs) = split_arguments mode arguments
-          in
-            if List.all first_order_mode (strip_mode mode) then
-              SOME (CpsCall {rel = Graph f, mode = mode, ins = ins,
-                             outs = outs})
-            else NONE
-          end
-          handle Feedback.HOL_ERR _ => NONE)
+          compile_call (Graph f) arguments derivation
 
   fun compile_clause mode
         ({arguments, premises, ...} : moded_clause) =

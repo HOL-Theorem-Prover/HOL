@@ -162,43 +162,42 @@ structure Refute_Eval :> Refute_Eval = struct
       | Enum {cont, ...} => plan_gen_types cont
       | Prune => []
 
+  (* Both plan classifiers below are the same search for [Enum] or
+     [SmartGuard] anywhere in the plan, and differ only in whether a
+     smart [Guard] counts; [count_smart_guard] is that one bit, so a
+     new plan constructor is classified in one place. *)
+  fun plan_search count_smart_guard plan =
+    let
+      fun walk plan =
+        case plan of
+            Enum _ => true
+          | SmartGuard _ => true
+          | Gen (_, next) => walk next
+          | Bind (_, _, fallback, next) =>
+              walk next orelse
+              Option.getOpt (Option.map walk fallback, false)
+          | Split (_, branches) => List.exists (walk o #3) branches
+          | Guard {smart, cont, ...} =>
+              (count_smart_guard andalso smart) orelse walk cont
+          | Test _ => false
+          | Prune => false
+    in
+      walk plan
+    end
+
   (* Does this plan need enumerator programs for a fuel-bounded
      construct whose terminal exhaustion cannot be certified?  A smart
      [Guard] is excluded: its condition is a closed guard over
      already-bound inputs, decided with the same three-valued
      discipline as an ordinary one, so it needs no enumerator and its
      exhaustion is exact. *)
-  fun plan_uses_enum plan =
-    case plan of
-        Enum _ => true
-      | SmartGuard _ => true
-      | Gen (_, next) => plan_uses_enum next
-      | Bind (_, _, fallback, next) =>
-          plan_uses_enum next orelse
-          Option.getOpt (Option.map plan_uses_enum fallback, false)
-      | Split (_, branches) =>
-          List.exists (plan_uses_enum o #3) branches
-      | Guard {cont, ...} => plan_uses_enum cont
-      | Test _ => false
-      | Prune => false
+  val plan_uses_enum = plan_search false
 
   (* Does this plan contain a smart construct -- [Enum], [SmartGuard]
      or a smart [Guard] -- that the executability gate must account
      for?  All three are compiled by the smart-generator machinery, and
      a syntactically gated goal needs one of them to lift. *)
-  fun plan_uses_smart plan =
-    case plan of
-        Enum _ => true
-      | SmartGuard _ => true
-      | Gen (_, next) => plan_uses_smart next
-      | Bind (_, _, fallback, next) =>
-          plan_uses_smart next orelse
-          Option.getOpt (Option.map plan_uses_smart fallback, false)
-      | Split (_, branches) =>
-          List.exists (plan_uses_smart o #3) branches
-      | Guard {smart, cont, ...} => smart orelse plan_uses_smart cont
-      | Test _ => false
-      | Prune => false
+  val plan_uses_smart = plan_search true
 
   val same_env = Lib.list_eq boolSyntax.tmp_eq
 

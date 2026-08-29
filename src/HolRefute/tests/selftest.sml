@@ -7116,6 +7116,7 @@ fun mf_binarize_preproc_goldens () =
     fun smart_binarize goal =
       #6 (MFP.preprocess_formulas (MFH.context_with_binary_ints
         (fresh_mf_context ()) NONE) [] goal)
+    val mentions_num_typedef = MFH.term_mentions MFH.is_num_typedef_type
     (* The veto reads the typedef registry, which preprocessing fills on the
        way past; the direct checks below must not depend on that order. *)
     val _ = ignore (MFH.harvest_typedef ``:zoo_four``)
@@ -7183,12 +7184,12 @@ fun mf_binarize_preproc_goldens () =
         not (smart_binarize ``(c : char) = c' /\ (n : num) = 5``) andalso
         not (smart_binarize ``(a : zoo_four) = b /\ (n : num) = 5``)),
        ("num typedef detection",
-        MFH.term_mentions_num_typedef ``(a : zoo_four) = b`` andalso
-        MFH.term_mentions_num_typedef ``zoo_four_rep a = 0`` andalso
-        MFH.term_mentions_num_typedef ``zoo_four_abs 0 = a`` andalso
+        mentions_num_typedef ``(a : zoo_four) = b`` andalso
+        mentions_num_typedef ``zoo_four_rep a = 0`` andalso
+        mentions_num_typedef ``zoo_four_abs 0 = a`` andalso
         (* [:char] is on the numeric-carrier tier, not the typedef one. *)
-        not (MFH.term_mentions_num_typedef ``(c : char) = c'``) andalso
-        not (MFH.term_mentions_num_typedef ``(t : zoo_tree) = u``)),
+        not (mentions_num_typedef ``(c : char) = c'``) andalso
+        not (mentions_num_typedef ``(t : zoo_tree) = u``)),
        ("binarized SUC destruction",
         suc_pipeline_binarize andalso
         not (List.exists (fn ty => ty = MFH.num_type)
@@ -32988,9 +32989,7 @@ fun mf_choice_predicate_empty_escape_respects_fragment_and_size_gates () =
       boolSyntax.mk_exists
         (witness, Term.beta_conv (Term.mk_comb (predicate, witness)))
     val sub_claim = exists_of subtraction_under_budget ``j:num``
-    val lin_claim = exists_of linear_comparable_size ``j:num``
     val over_claim = exists_of linear_over_budget ``j:num``
-    val over_claim_alpha = exists_of linear_over_budget_alpha ``k:num``
 
     val fragment_rejects_subtraction =
       not (MFH.choice_predicate_cheap_fragment subtraction_under_budget)
@@ -33010,30 +33009,29 @@ fun mf_choice_predicate_empty_escape_respects_fragment_and_size_gates () =
 
     val subtraction_declined =
       not (MFH.choice_predicate_provably_empty context
-        subtraction_under_budget sub_claim)
+        subtraction_under_budget)
     val linear_escapes =
       MFH.choice_predicate_provably_empty context
-        linear_comparable_size lin_claim
+        linear_comparable_size
     val over_budget_declined =
       not (MFH.choice_predicate_provably_empty context
-        linear_over_budget over_claim)
+        linear_over_budget)
     val cache_after_first_over = length (!(#choice_empty_cache context))
     val over_budget_declined_again =
       not (MFH.choice_predicate_provably_empty context
-        linear_over_budget_alpha over_claim_alpha)
+        linear_over_budget_alpha)
     val cache_after_second_over = length (!(#choice_empty_cache context))
 
     val cap_context = fresh_mf_context ()
     val () = #choice_predicate_attempts cap_context :=
       MFH.choice_predicate_decide_attempt_cap
     val capped_predicate = ``\j:num. j < 999 /\ j > 999``
-    val capped_claim = exists_of capped_predicate ``j:num``
     val cap_declined =
       MFH.choice_predicate_cheap_fragment capped_predicate andalso
       Term.term_size capped_predicate <= MFH.choice_predicate_decide_budget
       andalso
       not (MFH.choice_predicate_provably_empty cap_context
-        capped_predicate capped_claim)
+        capped_predicate)
   in
     fragment_rejects_subtraction andalso fragment_accepts_linear andalso
     under_budget andalso over_budget andalso decides_unbudgeted andalso
