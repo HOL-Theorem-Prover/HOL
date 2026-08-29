@@ -336,6 +336,25 @@ sig
   val collapseFamily : {tynames : string list} -> family -> thm -> collapsed
 
   (* and its constructors, one per summand of each member's functor *)
+  (* ----------------------------------------------------------------------
+      The BNF structure of a type defined as a copy of another: the map
+      conjugated by the bijection, the set functions after the
+      representation, and every law from the original's with one
+      direction of the bijection undone in the middle.  A collapsed
+      member of a family is such a copy — of a composite of functors
+      already in the database — but nothing here is particular to one.
+     ---------------------------------------------------------------------- *)
+  type copied_bnf = {
+    key : KernelSig.kernelname,
+    info : thm bnfBase_dtype.info,
+    map_def : thm,
+    set_defs : thm list,
+    relator_def : thm
+  }
+
+  val transportBNF : {abs : term, rep : term, absrep : thm, repabs : thm} ->
+                     bnfLib.derived_bnfn -> copied_bnf
+
   val collapsedConstructors :
       string list list -> collapsed ->
       {constructors : term list, defs : thm list} list

@@ -641,3 +641,61 @@ val _ =
     in
       if null (hyp th) then OK() else die (thm_to_string th)
     end
+
+(* ----------------------------------------------------------------------
+    and the collapsed types as functors of their own.
+
+    A collapsed member is a copy of a composite of functors already in
+    the database, so its own map, sets and laws are that composite's,
+    conjugated by the bijection.
+   ---------------------------------------------------------------------- *)
+
+val cbnfs =
+    List.tabulate
+      (3, fn j =>
+            transportBNF {abs = List.nth (#abs coll, j),
+                          rep = List.nth (#rep coll, j),
+                          absrep = List.nth (#absrep coll, j),
+                          repabs = List.nth (#repabs coll, j)}
+                         (deriveBNFn (#db fam) [b1]
+                                     (List.nth (#types fam, j))))
+
+val _ = checkeqn "the collapsed map's definition"
+   (SPEC_ALL (#map_def (hd cbnfs)))
+   “ct1MAP f = ct1_ABS ∘ ft1MAP f ∘ ct1_REP”
+
+val _ = tprint "and the laws that make it a functor"
+val _ =
+    let val bnfBase.bI i = #info (hd cbnfs)
+    in
+      if List.all (null o hyp) ([#mapID i, #mapO i, #mapCONG i] @
+                                #mapIMAGE i @ #bndthms i) andalso
+         same (concl (#mapID i)) “ct1MAP I = I” andalso
+         same (concl (#mapO i))
+              “ct1MAP g ∘ ct1MAP f = ct1MAP (g ∘ f)” andalso
+         (* the database keeps these two applied, as it does for a
+            fixed point's own *)
+         same (concl (hd (#mapIMAGE i)))
+              “∀f x. ct1SET (ct1MAP f x) = IMAGE f (ct1SET x)” andalso
+         same (concl (#mapCONG i))
+              “∀f g x. (∀a. a ∈ ct1SET x ⇒ f a = g a) ⇒
+                       ct1MAP f x = ct1MAP g x”
+      then OK() else die (thm_to_string (#mapO i))
+    end
+
+(* the point of the structure: a later datatype may recurse through a
+   member of the family *)
+val cdb = List.foldl (fn (r, db) => bnfBase.insert (#key r, #info r) db)
+                     (#db fam) cbnfs
+
+val _ = tprint "a datatype recursing through a collapsed member"
+val _ =
+    let val d = deriveBNFn cdb [alpha, b1] “:one + 'b1 # 'a ct2”
+        val fix = defineFixpoint {tyname = "crose", ABS = "crose_ABS",
+                                  REP = "crose_REP"} d
+    in
+      if null (hyp (#recursion fix)) andalso
+         null (free_vars (concl (#recursion fix))) andalso
+         #newty fix = “:'b1 crose”
+      then OK() else die (thm_to_string (#recursion fix))
+    end
