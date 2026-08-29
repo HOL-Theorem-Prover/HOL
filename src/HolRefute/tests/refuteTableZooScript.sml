@@ -1311,7 +1311,7 @@ End
    destructures [p], so a candidate mode that splits it into a separate
    input half and output half cannot be applied to the actual term --
    [split_arguments] can only recurse into a literal pair constructor.
-   Witnesses [check_graph_clause]'s blanket handler on a live raiser. *)
+   Witnesses [check_clause]'s blanket handler on a live raiser. *)
 Definition zoo_graph_pair_formal_def:
   zoo_graph_pair_formal (p : num # num) (n : num) = n
 End

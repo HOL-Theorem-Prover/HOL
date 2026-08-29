@@ -488,6 +488,8 @@ structure Refute_Core = struct
   fun upd_allow_function_inversion value =
     update_qc (QcAllowFunctionInversion value)
 
+  fun is_fallback_assign (pattern, _) = not (Option.isSome pattern)
+
   fun range_error field explanation =
     raise Feedback.mk_HOL_ERR "Refute_Core" "validate_mf_config"
       (field ^ ": " ^ explanation)
@@ -508,6 +510,11 @@ structure Refute_Core = struct
               ("row key must be a constant or variable; got: " ^
                Parse.term_to_string key)) rows
       val _ = valid_rows "card" 1 (#card mf)
+      (* [upd_mf] replaces the record wholesale, bypassing
+         [card_with_fallback]: demand here the row it would build. *)
+      val _ = if List.exists is_fallback_assign (#card mf) then ()
+              else range_error "card"
+                "must contain a (NONE, _) fallback row"
       fun is_prefix values =
         values = List.tabulate (length values, fn index => index + 1)
       val _ =
@@ -629,8 +636,6 @@ structure Refute_Core = struct
     | MfWhack of term list
     | MfNeed of term list option
     | MfMergeTypeVars of bool
-
-  fun is_fallback_assign (pattern, _) = not (Option.isSome pattern)
 
   (* A card list without a [(NONE, _)] entry leaves every type the user did
      not name unassigned, which aborts the backend in [lookup_ints_assign].

@@ -34,8 +34,8 @@ structure Refute_QC = struct
     case Refute_Gen.predicate_of (Term.type_of variable) of
       NONE => Gen (variable, continuation)
     | SOME predicate =>
-        Gen (variable, Guard (Term.mk_comb (predicate, variable),
-          continuation))
+        Gen (variable, Guard {condition = Term.mk_comb (predicate, variable),
+          smart = false, cont = continuation})
 
   fun gen_all variables continuation =
     List.foldr (fn (variable, plan) => guarded_gen variable plan)
@@ -210,6 +210,13 @@ structure Refute_QC = struct
     {result : SmartGen.inference_result option,
      trigger : bool, reason : string option}
 
+  (* Outcome of one clause acquisition.  [NoClauses (SOME text)] is the
+     triggered failure -- a fixpoint group was found but its introduction
+     rules did not convert -- and [NoClauses NONE] the untriggered one. *)
+  datatype clause_source =
+      Clauses of term list * SmartGen.inference_clause list
+    | NoClauses of string option
+
   type plan_cache =
     {smart_context : MFH.mf_context option option ref,
      analyses : (term * analysis) list ref,
@@ -250,7 +257,8 @@ structure Refute_QC = struct
              ([v1 = a1, ... vn = an] @ rest))]))
      default:
        gen_all (frees a \\ bound)
-         (Guard (a, compile concl (frees a U bound) rest))
+         (Guard {condition = a, smart = false,
+                 cont = compile concl (frees a U bound) rest})
   *)
   fun compile_plan_with
         ({smart_context = smart_context_cache, analyses, fixed_analyses,
@@ -348,6 +356,30 @@ structure Refute_QC = struct
         handle Interrupt => raise Interrupt
              | _ => "<unprintable premise>"
 
+      (* SCC route first, falling back to the weaker but independent
+         single-relation Horn route: a group whose introduction rules the
+         SCC converter cannot use is not out of reach.  Exceptions are
+         left unhandled here; each caller treats them as it must. *)
+      fun clause_source relation =
+        let
+          fun from_horn fallback =
+            case SmartGen.horn_inference_clauses_for relation of
+                SOME clauses => Clauses ([relation], clauses)
+              | NONE => NoClauses fallback
+        in
+          case smart_context () of
+              NONE => NoClauses NONE
+            | SOME context =>
+                (case MFH.instantiated_fixpoint_group context relation of
+                     NONE => from_horn NONE
+                   | SOME {members, rules, ...} =>
+                       (case SmartGen.scc_clauses members rules
+                               MFH.joint_intro_triple_for of
+                            SOME clauses => Clauses (members, clauses)
+                          | NONE => from_horn (SOME
+                              "introduction-rule conversion failed")))
+        end
+
       fun analyse relation =
         memoised
           {find = fn () =>
@@ -355,77 +387,21 @@ structure Refute_QC = struct
                SmartGen.same_constant relation other) (!analyses)),
            store = fn answer => analyses := (relation, answer) :: !analyses}
           (fn () =>
-              let
-                (* A group whose rules the SCC converter cannot use is
-                   not out of reach: the single-relation Horn route is
-                   weaker but independent, so try it before reporting
-                   the conversion failure. *)
-                fun from_horn fallback =
-                  case SmartGen.horn_inference_clauses_for relation of
-                      SOME clauses =>
-                        {result = SOME (SmartGen.infer_group
-                          {members = [relation],
-                           clauses = clauses, external = [],
-                           reorder_premises =
-                             #reorder_premises (#qc config)}),
-                         trigger = true, reason = NONE}
-                    | NONE =>
-                        {result = NONE,
-                         trigger = Option.isSome fallback,
-                         reason = fallback}
-                val answer =
-                  case smart_context () of
-                      NONE => {result = NONE, trigger = false, reason = NONE}
-                    | SOME context =>
-                        (case MFH.instantiated_fixpoint_group context
-                              relation of
-                             SOME {members, rules, ...} =>
-                               (case SmartGen.infer_scc
-                                  {members = members, rules = rules,
-                                   triple_for = MFH.joint_intro_triple_for,
-                                   external = [],
-                                   reorder_premises =
-                                     #reorder_premises (#qc config)} of
-                                    SOME result =>
-                                      {result = SOME result, trigger = true,
-                                       reason = NONE}
-                                  | NONE => from_horn (SOME
-                                      "introduction-rule conversion failed"))
-                           | NONE => from_horn NONE)
-              in
-                answer
-              end)
+             case clause_source relation of
+                 Clauses (members, clauses) =>
+                   {result = SOME (SmartGen.infer_group
+                      {members = members, clauses = clauses, external = [],
+                       reorder_premises = #reorder_premises (#qc config)}),
+                    trigger = true, reason = NONE}
+               | NoClauses reason =>
+                   {result = NONE, trigger = Option.isSome reason,
+                    reason = reason})
 
-      (* [analyse]'s own clause acquisition (SCC route, falling back to
-         Horn) is deliberately not refactored to share code with this:
-         [analyse]'s error text and caching are already pinned, and this
-         helper's caller needs the intermediate [members]/[clauses] pair
-         that [analyse] does not expose, not just an [inference_result]. *)
       fun clauses_and_members relation =
-        case smart_context () of
-            NONE => NONE
-          | SOME context =>
-              let
-                val from_scc =
-                  (case MFH.instantiated_fixpoint_group context relation of
-                       NONE => NONE
-                     | SOME {members, rules, ...} =>
-                         (case SmartGen.scc_clauses members rules
-                                MFH.joint_intro_triple_for of
-                              NONE => NONE
-                            | SOME clauses => SOME (members, clauses)))
-                  handle Interrupt => raise Interrupt
-                       | _ => NONE
-              in
-                case from_scc of
-                    SOME found => SOME found
-                  | NONE =>
-                      (case SmartGen.horn_inference_clauses_for relation of
-                           SOME clauses => SOME ([relation], clauses)
-                         | NONE => NONE)
-                      handle Interrupt => raise Interrupt
-                           | _ => NONE
-              end
+        (case clause_source relation of
+             Clauses pair => SOME pair
+           | NoClauses _ => NONE)
+        handle Interrupt => raise Interrupt | _ => NONE
 
       (* Static-parameter specialisation: [relation]'s argument at
          [position] is pinned to the one closed [value] found at a call
@@ -608,7 +584,7 @@ structure Refute_QC = struct
               let
                 val answer =
                   case SmartGen.infer_graph allow_function_inversion
-                         constant of
+                         (#reorder_premises (#qc config)) constant of
                       SOME result =>
                         {result = SOME result, trigger = true, reason = NONE}
                     | NONE =>
@@ -833,7 +809,9 @@ structure Refute_QC = struct
               fun continuation () = compile conclusion next_bound rest
 
               fun default () =
-                gen_all assumption_vars (Guard (assumption, continuation ()))
+                gen_all assumption_vars
+                  (Guard {condition = assumption, smart = false,
+                          cont = continuation ()})
 
               fun try_equality (lhs, rhs) =
                 if Term.is_var rhs andalso
@@ -915,7 +893,9 @@ structure Refute_QC = struct
                                  is exactly as checkable as the plain route
                                  would have made it. *)
                               SmartGen.Graph _ =>
-                                Guard (assumption, continuation ())
+                                Guard {condition = assumption,
+                                       smart = false,
+                                       cont = continuation ()}
                             | SmartGen.Predicate _ =>
                                 (Refute_Core.Private.say 2
                                    ("Refute smart generator Guard for " ^
@@ -932,7 +912,8 @@ structure Refute_QC = struct
                       (Refute_Core.Private.say 2
                          ("Refute smart complement Guard for " ^
                           safe_term_text assumption ^ "\n");
-                       NegGuard (condition, continuation ()))
+                       Guard {condition = condition, smart = true,
+                              cont = continuation ()})
                 | Ordinary =>
                     (if triggering then
                        report_fallback assumption
@@ -978,12 +959,9 @@ structure Refute_QC = struct
               indent depth ^ "Split " ^ Parse.term_to_string scrutinee ^ "\n" ^
               String.concatWith "\n" (List.map branch branches)
             end
-        | Guard (predicate, continuation) =>
-            indent depth ^ "Guard " ^ Parse.term_to_string predicate ^ "\n" ^
-            show (depth + 2) continuation
-        | NegGuard (condition, continuation) =>
-            indent depth ^ "Neg Guard " ^ Parse.term_to_string condition ^
-            "\n" ^ show (depth + 2) continuation
+        | Guard {condition, smart, cont} =>
+            indent depth ^ (if smart then "Complement Guard " else "Guard ") ^
+            Parse.term_to_string condition ^ "\n" ^ show (depth + 2) cont
         | SmartGuard {predicate, cont, ...} =>
             indent depth ^ "Smart Guard " ^
             Parse.term_to_string predicate ^ "\n" ^
@@ -1278,8 +1256,7 @@ structure Refute_QC = struct
              | SOME alternative => plan_has_gen alternative)
       | Split (_, branches) =>
           List.exists (fn (_, _, next) => plan_has_gen next) branches
-      | Guard (_, next) => plan_has_gen next
-      | NegGuard (_, next) => plan_has_gen next
+      | Guard {cont, ...} => plan_has_gen cont
       | SmartGuard {cont, ...} => plan_has_gen cont
       | Enum _ => true
       | Prune => false
@@ -1404,12 +1381,12 @@ structure Refute_QC = struct
           length left_branches = length right_branches andalso
           ListPair.allEq same_branch (left_branches, right_branches)
         end
-    | same_plan (Guard (left_tm, left_next),
-                 Guard (right_tm, right_next)) =
-        Term.aconv left_tm right_tm andalso same_plan (left_next, right_next)
-    | same_plan (NegGuard (left_tm, left_next),
-                 NegGuard (right_tm, right_next)) =
-        Term.aconv left_tm right_tm andalso same_plan (left_next, right_next)
+    | same_plan (Guard {condition = left_tm, smart = left_smart,
+                        cont = left_next},
+                 Guard {condition = right_tm, smart = right_smart,
+                        cont = right_next}) =
+        Term.aconv left_tm right_tm andalso left_smart = right_smart andalso
+        same_plan (left_next, right_next)
     | same_plan
         (SmartGuard {predicate = left_predicate, version = left_version,
                      cont = left_next},

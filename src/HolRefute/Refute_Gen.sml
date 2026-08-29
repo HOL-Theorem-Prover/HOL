@@ -19,6 +19,10 @@ structure Refute_Gen = struct
           exhaustive : bool,
           recursive : bool list list,
           min_size : int list list,
+          (* One entry per constructor: is any argument type recursive
+             under a function type?  Constant for a spec, so precomputed
+             here rather than re-traversed per generated value. *)
+          fun_recursive : bool list,
           family : hol_type list }
     | GenEnum of term list
     | GenNum of numkind
@@ -159,15 +163,39 @@ structure Refute_Gen = struct
          | Subscript => NONE
          | Fail _ => NONE
 
+  (* [[current_data]] only sees deltas added to the literally still-open
+     theory segment; a "quotient"-tagged theorem from any already-loaded
+     ancestor (the ordinary case) needs the per-theory query too.  Raises
+     if the "quotient" settype has no exporter yet -- a state that
+     [[load "quotient"]] can end at any point in a session. *)
+  fun quotient_types_in thy =
+    List.mapPartial quotient_result_type
+      (ThmSetData.added_thms
+        (ThmSetData.theory_data {settype = "quotient", thy = thy}))
+
+  val quotient_cache : (string list * hol_type list) option ref = ref NONE
+
+  (* Only the sealed ancestors are cached: the open segment still accepts
+     new quotient definitions, and a scan that raised found no exporter --
+     caching either would pin an answer that is about to change. *)
   fun quotient_types () =
     let
-      (* [[current_data]] only sees deltas added to the literally still-open
-         theory segment; a "quotient"-tagged theorem from any already-loaded
-         ancestor (the ordinary case) needs the full-ancestry query. *)
-      val data = ThmSetData.all_data {settype = "quotient"}
-      val thms = List.concat (map (ThmSetData.added_thms o #2) data)
+      val ancestors = Theory.ancestry "-"
+      val cached =
+        case !quotient_cache of
+            SOME (key, tys) => if key = ancestors then SOME tys else NONE
+          | NONE => NONE
+      val inherited =
+        case cached of
+            SOME tys => tys
+          | NONE =>
+              let
+                val tys = List.concat (map quotient_types_in ancestors)
+              in
+                quotient_cache := SOME (ancestors, tys); tys
+              end
     in
-      List.mapPartial quotient_result_type thms
+      quotient_types_in (Theory.current_theory ()) @ inherited
     end
     handle Feedback.HOL_ERR _ => []
 
@@ -238,14 +266,6 @@ structure Refute_Gen = struct
       visit false ty
     end
 
-  (* Shared by every consumer that must refuse a datatype recursive under
-     a function type (e.g. itree's [Vis]): [Refute_Extract.validate_type],
-     [Refute_EvalCompute.validation_reasons], and [Refute_QC.
-     genspec_available]. *)
-  fun datatype_recursive_under_function family constrs =
-    List.exists (fn (_, args) =>
-      List.exists (recursive_under_function family) args) constrs
-
   fun result_type tm = #2 (boolSyntax.strip_fun (Term.type_of tm))
 
   (* Shared by [abstract_generator] (one exact type, validated eagerly) and
@@ -288,12 +308,17 @@ structure Refute_Gen = struct
       val min_size = List.map (fn row =>
         List.map (fn is_recursive => if is_recursive then 1 else 0) row)
           recursive
+      (* Always all-false here: [instantiate_family_constructor] rejects a
+         constructor recursive under a function type. *)
+      val fun_recursive = List.map (fn (_, args) =>
+        List.exists (recursive_under_function [ty]) args) constrs
     in
       GenDatatype
         { constrs = constrs,
           exhaustive = false,
           recursive = recursive,
           min_size = min_size,
+          fun_recursive = fun_recursive,
           family = [ty] }
     end
 
@@ -543,6 +568,8 @@ structure Refute_Gen = struct
                      | NONE => 1)
                   else
                     floor_of family floors arg_ty) args) constrs
+              val fun_recursive = List.map (fn (_, args) =>
+                List.exists (recursive_under_function family) args) constrs
             in
               if List.all (fn (_, args) => List.null args) constrs then
                 GenEnum (List.map #1 constrs)
@@ -552,6 +579,7 @@ structure Refute_Gen = struct
                     exhaustive = true,
                     recursive = recursive,
                     min_size = min_size,
+                    fun_recursive = fun_recursive,
                     family = family }
             end
 
@@ -586,7 +614,7 @@ structure Refute_Gen = struct
         end))
     end
 
-  (* Transitive form of [datatype_recursive_under_function]: a container
+  (* Transitive form of the spec's own [fun_recursive]: a container
      (e.g. [:itree list]) is not itself recursive under a function type,
      but its element type may be, and that element's generator can never
      run either.  Walks constructor argument types outward through
@@ -611,8 +639,8 @@ structure Refute_Gen = struct
         else
           (seen := ty :: !seen;
            case spec_of ty of
-               GenDatatype {constrs, family, ...} =>
-                 datatype_recursive_under_function family constrs orelse
+               GenDatatype {constrs, fun_recursive, ...} =>
+                 List.exists (fn flag => flag) fun_recursive orelse
                  List.exists (fn (_, args) => List.exists visit args) constrs
              | _ => false)
     in

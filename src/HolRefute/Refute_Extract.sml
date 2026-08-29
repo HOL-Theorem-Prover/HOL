@@ -2577,12 +2577,9 @@ structure Refute_Extract = struct
               Split (substitute_variables environment tm,
                 List.map branch branches)
             end
-        | Guard (tm, next) =>
-            Guard (substitute_variables environment tm,
-              rename_plan next environment)
-        | NegGuard (tm, next) =>
-            NegGuard (substitute_variables environment tm,
-              rename_plan next environment)
+        | Guard {condition, smart, cont} =>
+            Guard {condition = substitute_variables environment condition,
+                   smart = smart, cont = rename_plan cont environment}
         | SmartGuard {predicate, version, cont} =>
             SmartGuard
               {predicate = substitute_variables environment predicate,
@@ -2618,8 +2615,7 @@ structure Refute_Extract = struct
       fun test_only current =
         case current of
             Test _ => true
-          | Guard (_, next) => test_only next
-          | NegGuard (_, next) => test_only next
+          | Guard {cont, ...} => test_only cont
           | Prune => true
           | _ => false
       val _ =
@@ -2770,11 +2766,10 @@ structure Refute_Extract = struct
               else ()
           in
             case Refute_Gen.spec_of ty of
-              Refute_Gen.GenDatatype {constrs, family, ...} =>
+              Refute_Gen.GenDatatype {constrs, fun_recursive, ...} =>
                 ((case strategy of
                     Exhaustive =>
-                      if Refute_Gen.datatype_recursive_under_function
-                        family constrs
+                      if List.exists (fn flag => flag) fun_recursive
                       then
                         reject ("Creation of exhaustive generators failed " ^
                           "because the datatype is recursive under a " ^
@@ -3257,6 +3252,13 @@ structure Refute_Extract = struct
             substitutions)
         end
 
+      (* [bump_counter] is the raw prefix, for a branch whose emitted
+         sequence continues past it; the wrappers close a branch. *)
+      val bump_counter =
+        "candidates_generated := !candidates_generated + 1; "
+      fun bump_with continue = parens (bump_counter ^ continue)
+      val bump = bump_with "RefuteContinue"
+
       fun recovery genuine_only fallback =
         parens ("complete := false; if " ^ genuine_only ^
           " then RefuteContinue else " ^ fallback)
@@ -3269,23 +3271,20 @@ structure Refute_Extract = struct
          recursing further bumps the counter exactly once.  [Guard]'s
          other terminal branch (the premise evaluating to false, at its
          own call site below) gets the same treatment, as do [Bind],
-         [Split], [SmartGuard] and [Enum] inline at their own call
-         sites, since none of their branching matches this fallback's
-         shape.  [Test] does not need it, since it already increments
+         [Split], [SmartGuard] and [Enum] at their own call sites,
+         since none of their branching matches this fallback's shape.
+         [Test] does not need it, since it already increments
          unconditionally on entry and its own stuck path only replaces
          what happens after.  [Prune] is excluded on both substrates:
          the planner already knows that branch can never fire, so
          nothing was generated to count. *)
       fun guard_recovery genuine_only fallback =
         parens ("complete := false; if " ^ genuine_only ^ " then " ^
-          parens ("candidates_generated := !candidates_generated + 1; " ^
-            "RefuteContinue") ^
-          " else " ^ fallback)
+          bump ^ " else " ^ fallback)
 
       fun guard_random_recovery state fallback =
         parens ("complete := false; if genuine_only then " ^
-          parens ("candidates_generated := !candidates_generated + 1; " ^
-            parens ("RefuteContinue, " ^ state)) ^
+          bump_with (parens ("RefuteContinue, " ^ state)) ^
           " else " ^ fallback)
 
       val guard_serial = ref 0
@@ -3711,8 +3710,7 @@ structure Refute_Extract = struct
               val conclude = "if " ^ genuine_only ^ " then " ^
                 "conclusion_evaluated := !conclusion_evaluated + 1 else ()"
             in
-              parens ("tests := !tests + 1; " ^
-                "candidates_generated := !candidates_generated + 1; " ^
+              parens ("tests := !tests + 1; " ^ bump_counter ^
                 assume ^ "; " ^
                 "if !tests mod 4096 = 0 then " ^
                 "Refute_EvalSML.check_deadline () else (); " ^
@@ -3720,21 +3718,26 @@ structure Refute_Extract = struct
                 parens (conclude ^ "; " ^
                   "if refute_value then RefuteContinue else " ^ hit) ^ ")")
             end
-        | Guard (tm, next) => guard_body environment genuine_only tm next
-        | NegGuard (tm, next) =>
-            (* Same three-valued discipline as [Guard]: [tm] is the
-               closed complement condition, so a stuck evaluation must
-               fall to [stuck] rather than be read as [false]. *)
-            guard_body environment genuine_only tm next
+        | Guard {condition, cont, ...} =>
+            (* A stuck condition, complement or not, must fall to
+               [stuck] rather than be read as [false]. *)
+            let
+              val (name, flag) = guard_names ()
+              val body = compile_exhaustive_plan cont environment flag
+              val stuck = guard_recovery "genuine_only" (name ^ " false")
+            in
+              "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^
+              "\nin " ^ safe_value (evaluated_expression condition) stuck ^
+              "if refute_value then " ^ name ^ " " ^ genuine_only ^
+              " else " ^ bump ^ ") end"
+            end
         | SmartGuard {predicate, version, cont} =>
             let
               val (name, flag) = guard_names ()
               val body = compile_exhaustive_plan cont environment flag
               val compiled =
                 case compile_smart_guard predicate version environment
-                    (name ^ " " ^ genuine_only)
-                    (parens ("candidates_generated := " ^
-                       "!candidates_generated + 1; RefuteContinue")) of
+                    (name ^ " " ^ genuine_only) bump of
                     SOME source => source
                   | NONE => smart_reject "smart Guard became stale"
             in
@@ -3748,14 +3751,13 @@ structure Refute_Extract = struct
               val next_environment = (variable, value, term) :: environment
               val continued = compile_exhaustive_plan next next_environment
                 genuine_only
-              val bump = "candidates_generated := " ^
-                "!candidates_generated + 1; RefuteContinue"
               val stuck =
                 case fallback of
-                    NONE => parens ("complete := false; " ^ bump)
+                    NONE => parens ("complete := false; " ^ bump_counter ^
+                      "RefuteContinue")
                   | SOME other =>
                       parens ("complete := false; if genuine_only then " ^
-                        parens bump ^ " else " ^
+                        bump ^ " else " ^
                         compile_exhaustive_plan other environment "false")
             in
               safe_value (evaluated_expression tm) stuck ^
@@ -3768,10 +3770,8 @@ structure Refute_Extract = struct
                 compile_exhaustive_plan next branch_environment
                   genuine_only)
               (parens ("complete := false; match_failures := " ^
-                 "!match_failures + 1; candidates_generated := " ^
-                 "!candidates_generated + 1; RefuteContinue"))
-              (parens ("candidates_generated := " ^
-                 "!candidates_generated + 1; RefuteContinue"))
+                 "!match_failures + 1; " ^ bump_counter ^ "RefuteContinue"))
+              bump
               tm branches environment
         | Gen (variable, next) =>
             let
@@ -3797,9 +3797,7 @@ structure Refute_Extract = struct
               fun success extended =
                 compile_exhaustive_plan cont extended genuine_only
               val callback = cps_lambda output_names
-                (match_generated outs output_names environment success
-                  (parens ("candidates_generated := " ^
-                     "!candidates_generated + 1; RefuteContinue")))
+                (match_generated outs output_names environment success bump)
               val fuel = Int.max (0, #depth (#qc config))
             in
               parens ("complete := false; " ^ enum_call_name rel mode ^ " " ^
@@ -3808,119 +3806,98 @@ structure Refute_Extract = struct
                 " " ^ integer fuel ^ " size complete")
             end
 
-      (* Shared by [Guard] and [NegGuard]: both decide a closed
-         condition with the same three-valued discipline, and only
-         differ in what [tm] means to the caller. *)
-      and guard_body environment genuine_only tm next =
-        let
-          val (name, flag) = guard_names ()
-          val body = compile_exhaustive_plan next environment flag
-          val stuck = guard_recovery "genuine_only"
-            (name ^ " false")
-        in
-          "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^
-          "\nin " ^ safe_value (evaluated_expression tm) stuck ^
-          "if refute_value then " ^ name ^ " " ^ genuine_only ^
-          " else " ^
-          parens ("candidates_generated := " ^
-            "!candidates_generated + 1; RefuteContinue") ^ ") end"
-        end
-
       fun compile_random_plan current environment genuine state =
-        case current of
-          Prune => parens ("RefuteContinue, " ^ state)
-        | Test tm =>
-            let
-              val hit = "refute_hit (" ^ environment_source environment ^
-                ", NONE, NONE, " ^ genuine ^ ")"
-              val stuck = recovery "genuine_only"
-                ("refute_hit (" ^ environment_source environment ^
-                  ", NONE, NONE, false)")
-              val assume = "if " ^ genuine ^ " then " ^
-                "assumption_satisfied := !assumption_satisfied + 1 else ()"
-              val conclude = "if " ^ genuine ^ " then " ^
-                "conclusion_evaluated := !conclusion_evaluated + 1 else ()"
-            in
-              parens ("tests := !tests + 1; " ^
-                "candidates_generated := !candidates_generated + 1; " ^
-                assume ^ "; " ^
-                "if !tests mod 4096 = 0 then " ^
-                "Refute_EvalSML.check_deadline () else (); " ^
-                safe_value (evaluated_expression tm) stuck ^
-                parens (conclude ^ "; " ^
-                  "if refute_value then RefuteContinue else " ^ hit) ^
-                ", " ^ state ^ ")")
-            end
-        | Guard (tm, next) =>
-            let
-              val (name, flag) = guard_names ()
-              val body = compile_random_plan next environment flag state
-              val stuck = guard_random_recovery state (name ^ " false")
-            in
-              "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^ "\n" ^
-              "in " ^ safe_value (evaluated_expression tm) stuck ^
-              "if refute_value then " ^ name ^ " " ^ genuine ^ " else " ^
-              parens ("candidates_generated := " ^
-                "!candidates_generated + 1; " ^
-                parens ("RefuteContinue, " ^ state)) ^ ") end"
-            end
-        | NegGuard _ =>
-            (* [Refute_QC.strategy_run_body] forces smart_generators
-               false for every random strategy, and the exhaustive gate
-               override only ever selects [Exhaustive], so no random
-               plan can carry a [NegGuard]. *)
-            smart_reject "Neg Guard reached random compilation"
-        | SmartGuard _ =>
-            smart_reject "smart Guard reached random compilation"
-        | Bind (variable, tm, fallback, next) =>
-            let
-              val value = variable_name variable
-              val term = evaluation_thunk tm environment
-              val continued = compile_random_plan next
-                ((variable, value, term) :: environment) genuine state
-              val bump = "candidates_generated := " ^
-                "!candidates_generated + 1; " ^
-                parens ("RefuteContinue, " ^ state)
-              val failed =
-                case fallback of
-                    NONE => parens ("complete := false; " ^ bump)
-                  | SOME other =>
-                      parens ("complete := false; if genuine_only then " ^
-                        parens bump ^ " else " ^
-                        compile_random_plan other environment "false" state)
-            in
-              safe_value (evaluated_expression tm) failed ^
-              "let val " ^ value ^ " = refute_value in " ^ continued ^
-              " end)"
-            end
-        | Split (tm, branches) =>
-            split_case
-              (fn next => fn branch_environment =>
-                compile_random_plan next branch_environment genuine state)
-              (parens
-                ("complete := false; match_failures := " ^
-                 "!match_failures + 1; candidates_generated := " ^
-                 "!candidates_generated + 1; " ^
-                 parens ("RefuteContinue, " ^ state)))
-              (parens ("candidates_generated := " ^
-                 "!candidates_generated + 1; " ^
-                 parens ("RefuteContinue, " ^ state)))
-              tm branches environment
-        | Gen (variable, next) =>
-            let
-              val value = variable_name variable
-              val term = "term_" ^ clean_name value
-              val next_state = "state_" ^ clean_name value
-              val draw = generator_name "rnd_" (Term.type_of variable) ^
-                " size " ^ state
-              val body = compile_random_plan next
-                ((variable, value, term) :: environment) genuine next_state
-            in
-              "let val ((" ^ value ^ ", " ^ term ^ "), " ^ next_state ^
-              ") = " ^ draw ^ "\nin " ^ body ^ " end"
-            end
-        | Enum _ =>
-            reject "smart generators require exhaustive native SML"
+        let
+          val bump = bump_with (parens ("RefuteContinue, " ^ state))
+        in
+          case current of
+            Prune => parens ("RefuteContinue, " ^ state)
+          | Test tm =>
+              let
+                val hit = "refute_hit (" ^ environment_source environment ^
+                  ", NONE, NONE, " ^ genuine ^ ")"
+                val stuck = recovery "genuine_only"
+                  ("refute_hit (" ^ environment_source environment ^
+                    ", NONE, NONE, false)")
+                val assume = "if " ^ genuine ^ " then " ^
+                  "assumption_satisfied := !assumption_satisfied + 1 else ()"
+                val conclude = "if " ^ genuine ^ " then " ^
+                  "conclusion_evaluated := !conclusion_evaluated + 1 else ()"
+              in
+                parens ("tests := !tests + 1; " ^ bump_counter ^
+                  assume ^ "; " ^
+                  "if !tests mod 4096 = 0 then " ^
+                  "Refute_EvalSML.check_deadline () else (); " ^
+                  safe_value (evaluated_expression tm) stuck ^
+                  parens (conclude ^ "; " ^
+                    "if refute_value then RefuteContinue else " ^ hit) ^
+                  ", " ^ state ^ ")")
+              end
+          | Guard {condition, smart, cont} =>
+              (* [Refute_QC.strategy_run_body] forces smart_generators
+                 false for every random strategy, and the exhaustive gate
+                 override only ever selects [Exhaustive], so no random
+                 plan can carry a complement. *)
+              if smart then
+                smart_reject "complement Guard reached random compilation"
+              else
+                let
+                  val (name, flag) = guard_names ()
+                  val body = compile_random_plan cont environment flag state
+                  val stuck = guard_random_recovery state (name ^ " false")
+                in
+                  "let fun " ^ name ^ " " ^ flag ^ " = " ^ body ^ "\n" ^
+                  "in " ^ safe_value (evaluated_expression condition) stuck ^
+                  "if refute_value then " ^ name ^ " " ^ genuine ^ " else " ^
+                  bump ^ ") end"
+                end
+          | SmartGuard _ =>
+              smart_reject "smart Guard reached random compilation"
+          | Bind (variable, tm, fallback, next) =>
+              let
+                val value = variable_name variable
+                val term = evaluation_thunk tm environment
+                val continued = compile_random_plan next
+                  ((variable, value, term) :: environment) genuine state
+                val failed =
+                  case fallback of
+                      NONE => parens ("complete := false; " ^ bump_counter ^
+                        parens ("RefuteContinue, " ^ state))
+                    | SOME other =>
+                        parens ("complete := false; if genuine_only then " ^
+                          bump ^ " else " ^
+                          compile_random_plan other environment "false" state)
+              in
+                safe_value (evaluated_expression tm) failed ^
+                "let val " ^ value ^ " = refute_value in " ^ continued ^
+                " end)"
+              end
+          | Split (tm, branches) =>
+              split_case
+                (fn next => fn branch_environment =>
+                  compile_random_plan next branch_environment genuine state)
+                (parens
+                  ("complete := false; match_failures := " ^
+                   "!match_failures + 1; " ^ bump_counter ^
+                   parens ("RefuteContinue, " ^ state)))
+                bump
+                tm branches environment
+          | Gen (variable, next) =>
+              let
+                val value = variable_name variable
+                val term = "term_" ^ clean_name value
+                val next_state = "state_" ^ clean_name value
+                val draw = generator_name "rnd_" (Term.type_of variable) ^
+                  " size " ^ state
+                val body = compile_random_plan next
+                  ((variable, value, term) :: environment) genuine next_state
+              in
+                "let val ((" ^ value ^ ", " ^ term ^ "), " ^ next_state ^
+                ") = " ^ draw ^ "\nin " ^ body ^ " end"
+              end
+          | Enum _ =>
+              reject "smart generators require exhaustive native SML"
+        end
 
       fun card_declaration (index, plan) =
         let
@@ -3988,10 +3965,8 @@ structure Refute_Extract = struct
             | Split (tm, branches) =>
                 (ignore (expression context tm);
                  List.app (payload o #3) branches)
-            | Guard (tm, next) =>
-                (ignore (expression context tm); payload next)
-            | NegGuard (tm, next) =>
-                (ignore (expression context tm); payload next)
+            | Guard {condition, cont, ...} =>
+                (ignore (expression context condition); payload cont)
             | SmartGuard {cont, ...} => payload cont
             | Enum {ins, cont, ...} =>
                 (List.app (ignore o expression context) ins; payload cont)

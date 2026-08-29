@@ -46,7 +46,7 @@ fun has_enum plan =
         has_enum next orelse Option.getOpt (Option.map has_enum fallback, false)
     | Refute_Eval.Split (_, branches) =>
         List.exists (has_enum o #3) branches
-    | Refute_Eval.Guard (_, next) => has_enum next
+    | Refute_Eval.Guard {cont, ...} => has_enum cont
     | Refute_Eval.SmartGuard {cont, ...} => has_enum cont
     | _ => false
 

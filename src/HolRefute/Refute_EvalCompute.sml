@@ -323,20 +323,7 @@ structure Refute_EvalCompute = struct
           else Found found
         end
 
-      (* Shared by [Guard] and [NegGuard]: both decide a closed
-         condition with the same three-valued discipline, and only
-         differ in what [tm] means to the caller. *)
-      fun guard_step env genuine tm next =
-        case eval_boolean env tm of
-            IsTrue => visit env genuine next
-          | IsFalse => dropped ()
-          | IsStuck =>
-              (complete := false;
-               if genuine_only then
-                 dropped ()
-               else visit env false next)
-
-      and visit env genuine current =
+      fun visit env genuine current =
         case current of
             Prune => Continue
           | Test tm =>
@@ -365,12 +352,16 @@ structure Refute_EvalCompute = struct
                        if genuine_only then Continue
                        else candidate env false)
               end
-          | Guard (tm, next) => guard_step env genuine tm next
-          | NegGuard (tm, next) =>
-              (* Same three-valued discipline as [Guard]: [tm] is the
-                 closed complement condition, and a stuck evaluation
-                 must not be read as a decided [false]. *)
-              guard_step env genuine tm next
+          | Guard {condition, cont, ...} =>
+              (* A stuck condition, complement or not, must not be read
+                 as a decided [false]. *)
+              (case eval_boolean env condition of
+                   IsTrue => visit env genuine cont
+                 | IsFalse => dropped ()
+                 | IsStuck =>
+                     (complete := false;
+                      if genuine_only then dropped ()
+                      else visit env false cont))
           | SmartGuard {predicate, version, cont} =>
               (case smart_guard_program programs predicate version of
                    SOME (program, ins) =>
@@ -700,13 +691,10 @@ structure Refute_EvalCompute = struct
       | Refute_Gen.GenFun (dom, rng_ty) =>
           random_function_with draw custom dom rng_ty hard_budget size state
       | Refute_Gen.GenDatatype
-          {constrs, recursive, min_size, family, ...} =>
+          {constrs, recursive, min_size, fun_recursive, ...} =>
           let
-            fun weight ((_, arg_types), flags, floors) =
-              if hard_budget = 0 andalso
-                 List.exists
-                   (Refute_Gen.recursive_under_function family) arg_types
-              then 0
+            fun weight (flags, floors, fun_rec) =
+              if hard_budget = 0 andalso fun_rec then 0
               else if not (List.exists (fn flag => flag) flags) then 1
               else
                 let
@@ -718,16 +706,18 @@ structure Refute_EvalCompute = struct
                   if minimum = 0 then budget
                   else if budget > minimum then budget else 0
                 end
-            fun entries [] [] [] = []
+            fun entries [] [] [] [] = []
               | entries (constr :: rest) (flags :: more_flags)
-                  (floors :: more_floors) =
+                  (floors :: more_floors) (fun_rec :: more_fun_rec) =
                   let val entry =
-                    (constr, flags, weight (constr, flags, floors))
-                  in entry :: entries rest more_flags more_floors end
-              | entries _ _ _ =
+                    (constr, flags, weight (flags, floors, fun_rec))
+                  in
+                    entry :: entries rest more_flags more_floors more_fun_rec
+                  end
+              | entries _ _ _ _ =
                   raise Fail
                     "Refute_QC.random_value: malformed datatype"
-            val choices = entries constrs recursive min_size
+            val choices = entries constrs recursive min_size fun_recursive
             val total = List.foldl (fn ((_, _, value), sum) =>
               IntInf.fromInt value + sum) 0 choices
             val (choice, after_choice) = draw total state
@@ -887,11 +877,10 @@ structure Refute_EvalCompute = struct
               | Refute_Gen.GenNum _ => ()
               | Refute_Gen.GenFun (dom, rng) =>
                   (validate_type dom; validate_type rng)
-              | Refute_Gen.GenDatatype {constrs, family, ...} =>
+              | Refute_Gen.GenDatatype {constrs, fun_recursive, ...} =>
                   (ground_strategy strategy
                      {exhaustive = fn () =>
-                        if Refute_Gen.datatype_recursive_under_function
-                          family constrs
+                        if List.exists (fn flag => flag) fun_recursive
                         then add (no_generator_reason ty
                           "datatype is recursive under a function type")
                         else (),
@@ -924,8 +913,7 @@ structure Refute_EvalCompute = struct
                validate_plan next)
           | Split (_, branches) =>
               List.app (fn (_, _, next) => validate_plan next) branches
-          | Guard (_, next) => validate_plan next
-          | NegGuard (_, next) => validate_plan next
+          | Guard {cont, ...} => validate_plan cont
           | SmartGuard {cont, ...} => validate_plan cont
           | Enum {cont, ...} => validate_plan cont
           | Prune => ()

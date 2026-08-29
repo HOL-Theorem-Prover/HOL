@@ -567,13 +567,6 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
      ({Thy = "string", Name = "char_ge"}, (false, false, true))]
   val char_order_of = char_key_lookup char_orders
 
-  fun word_width_of ty =
-    case MFH.word_dimension ty of
-        SOME width => width
-      | NONE => raise Feedback.mk_HOL_ERR
-          "Refute_ModelFinder_Nut" "nut_from_term"
-          "word operation at a non-word type"
-
   (* [value - x] at a word type: complementation is [~1w - x] and
      negation is [0w - x], neither needing a primitive of its own. *)
   fun word_subtract_from word_ty value =
@@ -585,7 +578,7 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
   fun word_add_sign_bit operand =
     let
       val word_ty = type_of operand
-      val width = word_width_of word_ty
+      val width = MFH.word_width word_ty
     in
       Op2 (Apply, word_ty, MFR.Any,
         Op2 (Apply, Type.-->(word_ty, word_ty), MFR.Any,
@@ -932,13 +925,17 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
               else if is_named {Thy = "integer", Name = "Num"} head andalso
                       null arguments then
                 Cst (IntToNat, Term.type_of head, MFR.Any)
-              else if Option.isSome (word_order_of head) andalso
-                      length arguments < 2 then
-                sub (MFH.eta_expand candidate (2 - length arguments))
-              else if Option.isSome (word_order_of head) andalso
-                      length arguments = 2 then
-                word_comparison (valOf (word_order_of head))
-                  (sub (hd arguments)) (sub (List.nth (arguments, 1)))
+              else if Option.isSome (word_order_of head) then
+                let val order = valOf (word_order_of head) in
+                  if length arguments < 2 then
+                    sub (MFH.eta_expand candidate (2 - length arguments))
+                  (* [word_orders] holds only binary relations, so a
+                     well-typed term cannot present a third argument and
+                     the dropped [= 2] test could not have failed. *)
+                  else
+                    word_comparison order (sub (hd arguments))
+                      (sub (List.nth (arguments, 1)))
+                end
               else if (is_named {Thy = "words", Name = "word_2comp"} head
                        orelse
                        is_named {Thy = "words", Name = "word_1comp"} head)
@@ -947,19 +944,21 @@ structure Refute_ModelFinder_Nut :> REFUTE_MODEL_FINDER_NUT = struct
                         (MFH.word_op_dimension (Term.type_of head)) then
                 let
                   val word_ty = domain_type (Term.type_of head)
-                  val width = word_width_of word_ty
+                  val width = MFH.word_width word_ty
                 in
                   word_subtract_from word_ty
                     (if is_named {Thy = "words", Name = "word_2comp"} head
                      then 0 else Util.reasonable_power 2 width - 1)
                 end
-              else if Option.isSome (char_order_of head) andalso
-                      length arguments < 2 then
-                sub (MFH.eta_expand candidate (2 - length arguments))
-              else if Option.isSome (char_order_of head) andalso
-                      length arguments = 2 then
-                word_comparison (valOf (char_order_of head))
-                  (sub (hd arguments)) (sub (List.nth (arguments, 1)))
+              else if Option.isSome (char_order_of head) then
+                let val order = valOf (char_order_of head) in
+                  if length arguments < 2 then
+                    sub (MFH.eta_expand candidate (2 - length arguments))
+                  (* [char_orders] likewise holds only binary relations. *)
+                  else
+                    word_comparison order (sub (hd arguments))
+                      (sub (List.nth (arguments, 1)))
+                end
               else if Option.isSome (word_cst_of head) andalso
                       null arguments then
                 cst (valOf (word_cst_of head)) head

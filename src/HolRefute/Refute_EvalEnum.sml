@@ -113,8 +113,7 @@ structure Refute_EvalEnum = struct
           | Refute_Eval.Split (_, branches) =>
               List.foldl (fn ((_, _, next), result) =>
                 collect next result) programs branches
-          | Refute_Eval.Guard (_, next) => collect next programs
-          | Refute_Eval.NegGuard (_, next) => collect next programs
+          | Refute_Eval.Guard {cont, ...} => collect cont programs
           | Refute_Eval.SmartGuard {predicate, version, cont} =>
               collect cont
                 (closure (guard_program predicate version) programs)
@@ -312,16 +311,11 @@ structure Refute_EvalEnum = struct
               in
                 List.app branch branches
               end
-          | Refute_Eval.Guard (tm, next) =>
-              (require_bound "Guard" bound [tm];
-               require_boolean "Guard" tm;
-               validate_executable "Guard" [] [tm];
-               validate_plan next bound)
-          | Refute_Eval.NegGuard (tm, next) =>
-              (require_bound "Neg Guard" bound [tm];
-               require_boolean "Neg Guard" tm;
-               validate_executable "Neg Guard" [] [tm];
-               validate_plan next bound)
+          | Refute_Eval.Guard {condition, cont, ...} =>
+              (require_bound "Guard" bound [condition];
+               require_boolean "Guard" condition;
+               validate_executable "Guard" [] [condition];
+               validate_plan cont bound)
           | Refute_Eval.SmartGuard {predicate, version, cont} =>
               let
                 val (program, ins) =
@@ -516,7 +510,7 @@ structure Refute_EvalEnum = struct
       fun fresh ty =
         let val index = !serial
             val _ = serial := index + 1
-        in Term.mk_var ("negguard_pat_" ^ Int.toString index, ty) end
+        in Term.mk_var ("complement_pat_" ^ Int.toString index, ty) end
       fun guard_term (Refute_SmartGen.CpsGuard tm) = tm
         | guard_term _ = reject
             "negation_condition: clause premise is not a guard"

@@ -533,6 +533,13 @@ structure Refute_ModelFinder_HOL = struct
         SOME index_ty => numeric_type_card index_ty
       | NONE => NONE
 
+  (* The same projection where the caller has already established that the
+     type is a word one, so a miss is an internal error. *)
+  fun word_width ty =
+    case word_dimension ty of
+        SOME width => width
+      | NONE => raise err "word_width" "not a word type"
+
   (* A word of concrete width is a native numeric carrier: exactly [2^w]
      atoms, atom [j] denoting [n2w j].  That makes it interpreted rather
      than a datatype, even though it shares the [cart] operator with
@@ -2497,6 +2504,13 @@ structure Refute_ModelFinder_HOL = struct
     (Thy = "integer" andalso Tyop = "int") orelse
     (Thy = "string" andalso Tyop = "char")
 
+  (* Word-ness is carrier-shaped rather than operator-shaped, so the
+     combined test takes a type: [:bool[32]] is interpreted while
+     [:('a,'b) cart] is not. *)
+  fun is_interpreted_type ty =
+    is_word_type ty orelse
+    (interpreted_type_operator (type_operator_of ty) handle HOL_ERR _ => false)
+
   fun remove_nth index values =
     List.take (values, index) @ List.drop (values, index + 1)
 
@@ -2569,7 +2583,9 @@ structure Refute_ModelFinder_HOL = struct
               then () else
         raise err function "constructor result has the wrong type operator"
       val {Args, ...} = Type.dest_thy_type result_ty
-      val _ = if interpreted_type_operator tyop then
+      (* [result_ty] carries [tyop] by the check above, and a width
+         besides. *)
+      val _ = if is_interpreted_type result_ty then
           raise err function
             "interpreted and function types cannot be codatatypes"
         else ()
@@ -2997,7 +3013,7 @@ structure Refute_ModelFinder_HOL = struct
     let
       val {Args, ...} = Type.dest_thy_type ty
       val _ = distinct_type_variables function Args
-      val _ = if interpreted_type_operator (type_operator_of ty) then
+      val _ = if is_interpreted_type ty then
           raise err function "interpreted types cannot be registered"
         else ()
     in
@@ -3317,7 +3333,7 @@ structure Refute_ModelFinder_HOL = struct
          looking at a goal before Frac registration or after session-level
          customization.  They are the representation we are replacing, not
          an incompatible user choice. *)
-      val _ = if interpreted_type_operator tyop orelse
+      val _ = if is_interpreted_type ty orelse
                      raw_free_datatype ty orelse
                      Option.isSome (codatatype_for tyop) then
           raise err function
@@ -4117,10 +4133,6 @@ structure Refute_ModelFinder_HOL = struct
     else
       ty
 
-  fun is_interpreted_type ty =
-    is_word_type ty orelse
-    (interpreted_type_operator (type_operator_of ty) handle HOL_ERR _ => false)
-
   val is_raw_free_datatype = raw_free_datatype
 
   fun is_codatatype ty =
@@ -4254,67 +4266,88 @@ structure Refute_ModelFinder_HOL = struct
      [pred]'s extension at a proper-subset scope -- but no goal tried
      here has been found where omitting them changes a verdict.  See
      refuteScript.sml's Part 7 comment for the same point stated where
-     the theorems are proved. *)
+     the theorems are proved.
+
+     Built once at the generic instance [:'a |-> 'b]; every fmap type is a
+     type instantiation of it, so a call only has to instantiate.  The two
+     self-checks are settled here for every instance as well: each compares
+     terms a type instantiation rewrites in step. *)
+  val generic_fmap_typedef : typedef_info =
+    let
+      val ty = Type.mk_thy_type
+        {Thy = "finite_map", Tyop = "fmap",
+         Args = [Type.alpha, Type.beta]}
+      val option_ty = Type.mk_thy_type
+        {Thy = "option", Tyop = "option", Args = [Type.beta]}
+      val rty = Type.-->(Type.alpha, option_ty)
+      val abs = retype_fmap_constant "refute" "abs_fmap'"
+        (Type.-->(rty, ty))
+      val rep = retype_fmap_constant "finite_map" "FLOOKUP"
+        (Type.-->(ty, rty))
+      val pred = retype_fmap_constant "refute" "is_fmap'"
+        (Type.-->(rty, Type.bool))
+      (* [pred (rep a)] is exactly what [is_fmap'_FLOOKUP]
+         (refuteScript.sml) states; a mismatch means [pred]/[rep] above
+         were wired to the wrong constant, and that must fail loudly
+         rather than silently encode something else. *)
+      val () =
+        let
+          val (bound, body) =
+            boolSyntax.dest_forall
+              (Thm.concl refuteTheory.is_fmap'_FLOOKUP)
+          val instance_theta = Type.match_type (Term.type_of bound) ty
+          val instantiated = Term.inst instance_theta body
+          val fm = Term.mk_var ("fm", ty)
+          val expected = Term.mk_comb (pred, Term.mk_comb (rep, fm))
+        in
+          if Term.aconv instantiated expected then () else
+            raise Fail
+              ("synthetic_fmap_typedef: is_fmap'_FLOOKUP does not " ^
+               "match the emitted fmap membership axiom")
+        end
+      val theta = Type.match_type
+        (Term.type_of (Term.prim_mk_const
+          {Thy = "refute", Name = "abs_fmap'"})) (Type.-->(rty, ty))
+      val inverse_axioms =
+        [Term.inst theta (Thm.concl refuteTheory.abs_fmap'_FLOOKUP),
+         Term.inst theta (Thm.concl refuteTheory.FLOOKUP_abs_fmap')]
+      (* theta is computed off abs_fmap' alone, so confirm -- rather than
+         assume -- that every type variable it leaves behind in an inverse
+         axiom is one of [ty]'s own, not some other, stray variable theta
+         failed to bind; the latter would otherwise be silent, and it is
+         exactly [ty]'s variables that the per-call [Term.inst] rewrites. *)
+      val ty_vars = Type.type_vars ty
+      val () =
+        if List.all (fn axiom => List.all
+          (fn tv => List.exists (fn v => v = tv) ty_vars)
+          (Term.type_vars_in_term axiom)) inverse_axioms
+        then ()
+        else raise Fail
+          ("synthetic_fmap_typedef: theta left a type variable in " ^
+           "the fmap inverse axioms that is not free in ty")
+    in
+      {ty = ty, rty = rty, abs = abs, rep = rep, pred = pred,
+       inverse_axioms = inverse_axioms, univ = false}
+    end
+
+  (* [ty] need not be ground: [is_typedef]/[is_data_type] (below) call this
+     purely to classify a type operator, and do so on a schematic instance
+     (verified: [:'a |-> 'b] reaches this point with both type variables
+     still free), which the generic match accepts unchanged. *)
   fun synthetic_fmap_typedef ty =
     case Lib.total Type.dest_thy_type ty of
-        SOME {Thy = "finite_map", Tyop = "fmap", Args = [key, range]} =>
+        SOME {Thy = "finite_map", Tyop = "fmap", Args = [_, _]} =>
           let
-            val option_ty = Type.mk_thy_type
-              {Thy = "option", Tyop = "option", Args = [range]}
-            val rty = Type.-->(key, option_ty)
-            val abs = retype_fmap_constant "refute" "abs_fmap'"
-              (Type.-->(rty, ty))
-            val rep = retype_fmap_constant "finite_map" "FLOOKUP"
-              (Type.-->(ty, rty))
-            val pred = retype_fmap_constant "refute" "is_fmap'"
-              (Type.-->(rty, Type.bool))
-            (* [pred (rep a)] is exactly what [is_fmap'_FLOOKUP]
-               (refuteScript.sml) states once instantiated to this
-               instance; a mismatch means [pred]/[rep] above were wired
-               to the wrong constant, and that must fail loudly here
-               rather than silently encode something else. *)
-            val () =
-              let
-                val (bound, body) =
-                  boolSyntax.dest_forall
-                    (Thm.concl refuteTheory.is_fmap'_FLOOKUP)
-                val instance_theta = Type.match_type (Term.type_of bound) ty
-                val instantiated = Term.inst instance_theta body
-                val fm = Term.mk_var ("fm", ty)
-                val expected = Term.mk_comb (pred, Term.mk_comb (rep, fm))
-              in
-                if Term.aconv instantiated expected then () else
-                  raise Fail
-                    ("synthetic_fmap_typedef: is_fmap'_FLOOKUP does not " ^
-                     "match the emitted fmap membership axiom")
-              end
-            val theta = Type.match_type
-              (Term.type_of (Term.prim_mk_const
-                {Thy = "refute", Name = "abs_fmap'"})) (Type.-->(rty, ty))
-            val inverse_axioms =
-              [Term.inst theta (Thm.concl refuteTheory.abs_fmap'_FLOOKUP),
-               Term.inst theta (Thm.concl refuteTheory.FLOOKUP_abs_fmap')]
-            (* [ty] need not be ground here: [is_typedef]/[is_data_type]
-               (below) call this purely to classify a type operator, and do
-               so on a schematic instance (verified: [:'a |-> 'b] reaches
-               this point with both type variables still free).  theta is
-               computed off abs_fmap' alone, so confirm -- rather than
-               assume -- that every type variable it leaves behind in an
-               inverse axiom is one already free in [ty] itself, not some
-               other, stray variable theta failed to bind; the latter would
-               otherwise be silent. *)
-            val ty_vars = Type.type_vars ty
-            val () =
-              if List.all (fn axiom => List.all
-                (fn tv => List.exists (fn v => v = tv) ty_vars)
-                (Term.type_vars_in_term axiom)) inverse_axioms
-              then ()
-              else raise Fail
-                ("synthetic_fmap_typedef: theta left a type variable in " ^
-                 "the fmap inverse axioms that is not free in ty")
+            val {ty = generic, rty, abs, rep, pred, inverse_axioms, univ} =
+              generic_fmap_typedef
+            val theta = Type.match_type generic ty
           in
-            SOME {ty = ty, rty = rty, abs = abs, rep = rep, pred = pred,
-              inverse_axioms = inverse_axioms, univ = false}
+            SOME
+              {ty = ty, rty = Type.type_subst theta rty,
+               abs = Term.inst theta abs, rep = Term.inst theta rep,
+               pred = Term.inst theta pred,
+               inverse_axioms = map (Term.inst theta) inverse_axioms,
+               univ = univ}
           end
       | _ => NONE
 

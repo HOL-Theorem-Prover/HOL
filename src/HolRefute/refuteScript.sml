@@ -724,13 +724,14 @@ Theorem eval_cfun_compute[compute] = eval_cfun_def
    the wrong set -- now fails this proof, exactly as a typo in
    [abs_fmap'_def] already failed [abs_fmap'_FLOOKUP]'s.  That alone pins
    [is_fmap'_def]'s statement, not its *use* as the typedef's [pred]:
-   [Refute_ModelFinder_HOL.sml]'s [synthetic_fmap_typedef] additionally
-   checks, at every instance it builds, that this theorem's instantiated
-   conclusion is literally the membership term [pred (rep a)] the module
-   would otherwise construct from separately-retyped [is_fmap']/[FLOOKUP]
-   constants, raising if they diverge -- so a wiring bug that reassigns
-   [pred] or [rep] to the wrong constant fails loudly at registration
-   time too, not only a typo caught by the theorem's own proof.
+   [Refute_ModelFinder_HOL.sml]'s [generic_fmap_typedef] additionally
+   checks, at the generic instance every fmap type instantiates, that
+   this theorem's instantiated conclusion is literally the membership
+   term [pred (rep a)] the module would otherwise construct from
+   separately-retyped [is_fmap']/[FLOOKUP] constants, raising if they
+   diverge -- so a wiring bug that reassigns [pred] or [rep] to the
+   wrong constant fails loudly at module load too, not only a typo
+   caught by the theorem's own proof.
 
    Measured, no fmap-fact pin tried so far is actually load-bearing on
    the inverse axioms: emptying [inverse_axioms] in

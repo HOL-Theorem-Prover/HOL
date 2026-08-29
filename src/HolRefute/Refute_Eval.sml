@@ -10,8 +10,7 @@ structure Refute_Eval :> Refute_Eval = struct
     | Gen of term * plan
     | Bind of term * term * plan option * plan
     | Split of term * (term * term list * plan) list
-    | Guard of term * plan
-    | NegGuard of term * plan
+    | Guard of {condition : term, smart : bool, cont : plan}
     | SmartGuard of {predicate : term, version : program_version,
                      cont : plan}
     | Enum of {rel : relation_key, mode : mode, version : program_version,
@@ -158,49 +157,46 @@ structure Refute_Eval :> Refute_Eval = struct
           plan_gen_types next
       | Split (_, branches) =>
           List.concat (List.map (plan_gen_types o #3) branches)
-      | Guard (_, next) => plan_gen_types next
-      | NegGuard (_, next) => plan_gen_types next
+      | Guard {cont, ...} => plan_gen_types cont
       | SmartGuard {cont, ...} => plan_gen_types cont
       | Enum {cont, ...} => plan_gen_types cont
       | Prune => []
 
   (* Does this plan need enumerator programs for a fuel-bounded
-     construct whose terminal exhaustion cannot be certified?  [NegGuard]
-     is excluded: its condition is a closed guard over already-bound
-     inputs, decided with the same three-valued discipline as an
-     ordinary [Guard], so it needs no enumerator and its exhaustion is
-     exact. *)
+     construct whose terminal exhaustion cannot be certified?  A smart
+     [Guard] is excluded: its condition is a closed guard over
+     already-bound inputs, decided with the same three-valued
+     discipline as an ordinary one, so it needs no enumerator and its
+     exhaustion is exact. *)
   fun plan_uses_enum plan =
     case plan of
         Enum _ => true
       | SmartGuard _ => true
-      | NegGuard (_, next) => plan_uses_enum next
       | Gen (_, next) => plan_uses_enum next
       | Bind (_, _, fallback, next) =>
           plan_uses_enum next orelse
           Option.getOpt (Option.map plan_uses_enum fallback, false)
       | Split (_, branches) =>
           List.exists (plan_uses_enum o #3) branches
-      | Guard (_, next) => plan_uses_enum next
+      | Guard {cont, ...} => plan_uses_enum cont
       | Test _ => false
       | Prune => false
 
-  (* Does this plan contain a smart construct -- [Enum], [SmartGuard] or
-     [NegGuard] -- that the executability gate must account for?  All
-     three are compiled by the smart-generator machinery, and a
-     syntactically gated goal needs one of them to lift. *)
+  (* Does this plan contain a smart construct -- [Enum], [SmartGuard]
+     or a smart [Guard] -- that the executability gate must account
+     for?  All three are compiled by the smart-generator machinery, and
+     a syntactically gated goal needs one of them to lift. *)
   fun plan_uses_smart plan =
     case plan of
         Enum _ => true
       | SmartGuard _ => true
-      | NegGuard _ => true
       | Gen (_, next) => plan_uses_smart next
       | Bind (_, _, fallback, next) =>
           plan_uses_smart next orelse
           Option.getOpt (Option.map plan_uses_smart fallback, false)
       | Split (_, branches) =>
           List.exists (plan_uses_smart o #3) branches
-      | Guard (_, next) => plan_uses_smart next
+      | Guard {smart, cont, ...} => smart orelse plan_uses_smart cont
       | Test _ => false
       | Prune => false
 
@@ -307,8 +303,9 @@ structure Refute_Eval :> Refute_Eval = struct
       | Split (tm, branches) =>
           Split (tm, List.map (fn (constructor, variables, next) =>
             (constructor, variables, dump_plan next)) branches)
-      | Guard (tm, next) => Guard (tm, dump_plan next)
-      | NegGuard (tm, next) => NegGuard (tm, dump_plan next)
+      | Guard {condition, smart, cont} =>
+          Guard {condition = condition, smart = smart,
+                 cont = dump_plan cont}
       | SmartGuard {predicate, version, cont} =>
           SmartGuard {predicate = predicate, version = version,
                       cont = dump_plan cont}

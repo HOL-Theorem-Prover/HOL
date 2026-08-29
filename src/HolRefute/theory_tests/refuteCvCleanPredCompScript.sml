@@ -8,7 +8,7 @@ Libs
    negative-mode complement, a static-parameter-specialised enumerator,
    and a graph/inverting enumerator.  Only the specialised and graph
    translations compile through [Refute_EvalEnum.define]: for a
-   pure-[NegGuard] plan like the negation fixture's,
+   pure-complement plan like the negation fixture's,
    [Refute_Eval.plan_uses_enum] is false, so
    [Refute_EvalCv.compile_card] routes it to
    [Refute_EvalCv.define_exhaustive_search]'s own, uninstrumented
@@ -16,9 +16,9 @@ Libs
    fixture below.  That is true of *this* negation fixture, not of the
    complement translation in general: a goal with both a negated
    premise and a positive enumerator premise compiles to a plan
-   carrying both [NegGuard] and [Enum], [plan_uses_enum] is then true,
-   and the [define] hook does fire for it.  That shape is not exercised
-   anywhere in this theory.
+   carrying both a complement and an [Enum], [plan_uses_enum] is then
+   true, and the [define] hook does fire for it.  That shape is not
+   exercised anywhere in this theory.
 
    This theory demonstrates each translation that does reach [define] is
    inside the snapshot/revert bracket on the paths [exercise] below
@@ -70,18 +70,18 @@ val base_config =
 val graph_config = Refute.upd_allow_function_inversion true base_config
 val compute_config = Refute.upd_substrate Refute.Compute base_config
 
-fun contains_negguard plan =
+fun contains_complement plan =
   case plan of
-      Refute_Eval.NegGuard _ => true
-    | Refute_Eval.Gen (_, next) => contains_negguard next
+      Refute_Eval.Guard {smart, cont, ...} =>
+        smart orelse contains_complement cont
+    | Refute_Eval.Gen (_, next) => contains_complement next
     | Refute_Eval.Bind (_, _, fallback, next) =>
-        contains_negguard next orelse
-        Option.getOpt (Option.map contains_negguard fallback, false)
+        contains_complement next orelse
+        Option.getOpt (Option.map contains_complement fallback, false)
     | Refute_Eval.Split (_, branches) =>
-        List.exists (contains_negguard o #3) branches
-    | Refute_Eval.Guard (_, next) => contains_negguard next
-    | Refute_Eval.SmartGuard {cont, ...} => contains_negguard cont
-    | Refute_Eval.Enum {cont, ...} => contains_negguard cont
+        List.exists (contains_complement o #3) branches
+    | Refute_Eval.SmartGuard {cont, ...} => contains_complement cont
+    | Refute_Eval.Enum {cont, ...} => contains_complement cont
     | _ => false
 
 fun contains_fixed_output_enum plan =
@@ -95,8 +95,7 @@ fun contains_fixed_output_enum plan =
         Option.getOpt (Option.map contains_fixed_output_enum fallback, false)
     | Refute_Eval.Split (_, branches) =>
         List.exists (contains_fixed_output_enum o #3) branches
-    | Refute_Eval.Guard (_, next) => contains_fixed_output_enum next
-    | Refute_Eval.NegGuard (_, next) => contains_fixed_output_enum next
+    | Refute_Eval.Guard {cont, ...} => contains_fixed_output_enum cont
     | Refute_Eval.SmartGuard {cont, ...} => contains_fixed_output_enum cont
     | Refute_Eval.Enum {cont, ...} => contains_fixed_output_enum cont
     | _ => false
@@ -110,8 +109,7 @@ fun contains_graph_enum plan =
         Option.getOpt (Option.map contains_graph_enum fallback, false)
     | Refute_Eval.Split (_, branches) =>
         List.exists (contains_graph_enum o #3) branches
-    | Refute_Eval.Guard (_, next) => contains_graph_enum next
-    | Refute_Eval.NegGuard (_, next) => contains_graph_enum next
+    | Refute_Eval.Guard {cont, ...} => contains_graph_enum cont
     | Refute_Eval.SmartGuard {cont, ...} => contains_graph_enum cont
     | Refute_Eval.Enum {cont, ...} => contains_graph_enum cont
     | _ => false
@@ -219,7 +217,7 @@ fun exercise name shape_ok config goal =
 
 (* [negation_condition] (Refute_EvalEnum.sml) builds the complement as a
    raw term at plan-compile time and never calls [Refute_EvalEnum.define]:
-   a pure-[NegGuard] plan like [neg_goal]'s routes entirely through
+   a pure-complement plan like [neg_goal]'s routes entirely through
    [Refute_EvalCv.define_exhaustive_search]'s own, uninstrumented
    [TotalDefn.Define] call for the generic bounded-search driver, so
    [post_definition_failure_hook] never fires for it -- confirmed
@@ -227,8 +225,8 @@ fun exercise name shape_ok config goal =
    raising.  There is no predicate-compiler-specific per-call definition
    here to inject a fault into, so only the normal and compiled-but-unrun
    paths apply. *)
-val _ = run_normal contains_negguard base_config neg_goal
-val _ = run_compiled_unrun contains_negguard base_config neg_goal
+val _ = run_normal contains_complement base_config neg_goal
+val _ = run_compiled_unrun contains_complement base_config neg_goal
 val _ = exercise "static-parameter specialisation"
   contains_fixed_output_enum base_config specialised_goal
 val _ = exercise "graph/inverting enumerator" contains_graph_enum

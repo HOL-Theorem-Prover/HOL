@@ -1560,14 +1560,16 @@ val _ = require_msg (check_result relation_key_string_distinct)
     "relation_string did not render Predicate and Graph distinctly")
   (fn () => ()) ()
 
-(* Graph clause synthesis (function inversion), gated by
-   [allow_function_inversion].  Every pin below calls the [SG] internals
-   directly: no goal-premise recogniser exists yet, so there is no
-   tactic-level surface to drive this through. *)
+(* Graph clause synthesis (function inversion), gated at [infer_graph]
+   by [allow_function_inversion].  Every pin below calls the [SG]
+   internals directly: no goal-premise recogniser exists yet, so there is
+   no tactic-level surface to drive this through.  [infer_graph]'s second
+   argument is [reorder_premises], passed [true] throughout to match the
+   default config that [Refute_QC] forwards. *)
 
 val _ = tprint "Refute SmartGen graph clause synthesis for APPEND"
 fun graph_clauses_append () =
-  case SG.graph_clauses_for true
+  case SG.graph_clauses_for
         ``APPEND : num list -> num list -> num list`` of
       SOME clauses =>
         length clauses = 2 andalso
@@ -1603,7 +1605,7 @@ val _ = require_msg (check_result graph_clauses_append)
 
 val _ = tprint "Refute SmartGen graph clause synthesis for LENGTH"
 fun graph_clauses_length () =
-  case SG.graph_clauses_for true ``LENGTH : num list -> num`` of
+  case SG.graph_clauses_for ``LENGTH : num list -> num`` of
       SOME clauses =>
         length clauses = 2 andalso
         let
@@ -1640,7 +1642,7 @@ val _ = tprint
   "Refute SmartGen function inversion: Graph APPEND yields an inverting mode"
 fun graph_append_inverting_mode () =
   let val f = ``APPEND : num list -> num list -> num list`` in
-    case SG.infer_graph true f of
+    case SG.infer_graph true true f of
         SOME {relations = [{modes, ...}], ...} =>
           List.exists (fn (mode, _, needs_generator) =>
             case SG.strip_mode mode of
@@ -1713,7 +1715,7 @@ val _ = require_msg (check_result graph_synthesis_refuses_partial)
 val _ = tprint
   "Refute SmartGen graph synthesis refuses a not-maximal-application clause"
 fun graph_synthesis_refuses_arity_mismatch () =
-  not (Option.isSome (SG.graph_clauses_for true ``zoo_graph_select``))
+  not (Option.isSome (SG.graph_clauses_for ``zoo_graph_select``))
 val _ = require_msg (check_result graph_synthesis_refuses_arity_mismatch)
   (fn () => "graph clause synthesis accepted equations at less than " ^
     "maximal application")
@@ -1732,7 +1734,7 @@ val _ = require_msg (check_result graph_synthesis_refuses_arity_mismatch)
 val _ = tprint
   "Refute SmartGen graph synthesis refuses a call to a different function"
 fun graph_synthesis_refuses_foreign_call () =
-  not (Option.isSome (SG.graph_clauses_for true ``zoo_graph_calls_other``))
+  not (Option.isSome (SG.graph_clauses_for ``zoo_graph_calls_other``))
 val _ = require_msg (check_result graph_synthesis_refuses_foreign_call)
   (fn () => "graph clause synthesis accepted a step equation that calls " ^
     "a different function instead of refusing the foreign call")
@@ -1744,7 +1746,7 @@ val _ = require_msg (check_result graph_synthesis_refuses_foreign_call)
    Output)] (half given, half generated) cannot be applied to that
    variable -- [split_arguments] only recurses into a [Pair] mode when
    the term is a literal pair constructor -- so [split_atomic] raises,
-   caught by [check_graph_clause]'s own blanket handler.  This witnesses
+   caught by [check_clause]'s own blanket handler.  This witnesses
    that raiser directly: report what survives, not what is dead. *)
 val _ = tprint
   "Refute SmartGen graph inference drops a mixed pair-formal mode \
@@ -1759,7 +1761,7 @@ fun graph_pair_formal_drops_mixed_mode () =
           first :: _ => first
         | [] => SG.Bool
   in
-    case SG.infer_graph true f of
+    case SG.infer_graph true true f of
         SOME {relations = [{modes, ...}], ...} =>
           not (null modes) andalso
           not (List.exists (fn (mode, _, _) =>
@@ -1771,11 +1773,9 @@ val _ = require_msg (check_result graph_pair_formal_drops_mixed_mode)
     "produced no modes at all or kept an unsplittable mixed-pair mode")
   (fn () => ()) ()
 
-(* Split in two so each half's failure names its own cause: [infer_graph]
-   empties [negative] via [blocked = true] in [negative_modes_of], never
-   by consulting [mode_all_input] on a [Graph] key (that path is not
-   reached today); [mode_all_input]'s own [Graph _ => false] clause is a
-   separate, currently-unreached defence-in-depth, witnessed only here. *)
+(* [infer_graph] empties [negative] because [clause_blocks_complement]
+   blocks every graph clause: a graph's equations are exhaustive as a
+   definition, which says nothing about any one mode's complement. *)
 val _ = tprint
   "Refute SmartGen graph relation has a needs_generator-free all-input \
   \mode but an empty negative table"
@@ -1795,7 +1795,7 @@ fun graph_negative_table_empty () =
        false] at mode (o,i) while enumerating [0, SUC 0, ...] forever.
        This pin asserts only that the choice exists, not that it
        terminates. *)
-    case SG.infer_graph true f of
+    case SG.infer_graph true true f of
         SOME {relations = [{modes, ...}],
               negative = [{modes = neg, ...}], ...} =>
           List.exists (fn (mode, _, needs) =>
@@ -1831,7 +1831,7 @@ fun graph_append_selfcall_checks () =
               SG.eq_mode (SG.head_mode_of derivation, all_input)
           | _ => false) premises
   in
-    case SG.infer_graph true f of
+    case SG.infer_graph true true f of
         SOME {relations = [{modes, ...}], ...} =>
           List.exists (fn (mode, clauses, _) =>
             SG.eq_mode (mode, all_input) andalso
@@ -1845,7 +1845,7 @@ val _ = require_msg (check_result graph_append_selfcall_checks)
 
 (* An [Output] position's [derive_argument] never contributes to
    [missing] (a bare-variable output always passes [possible_output]),
-   so [check_graph_clause]'s [generated] fold can locally see
+   so [check_clause]'s [generated] fold can locally see
    [missing = []] at a call site while the SELECTED callee mode's own
    [needs_generator] is [true] for an unrelated reason (here: [(i,o,o)]'s
    base clause needs one, because the shared variable in
@@ -1864,7 +1864,7 @@ fun graph_append_folds_callee_generator () =
     val f = ``APPEND : num list -> num list -> num list``
     val target = SG.list_mode [SG.Input, SG.Output, SG.Output]
   in
-    case SG.infer_graph true f of
+    case SG.infer_graph true true f of
         SOME {relations = [{modes, ...}], ...} =>
           (case List.find (fn (mode, _, _) => SG.eq_mode (mode, target))
                  modes of
@@ -1879,27 +1879,13 @@ val _ = require_msg (check_result graph_append_folds_callee_generator)
   (fn () => ()) ()
 
 val _ = tprint
-  "Refute SmartGen mode_all_input refuses a Graph key unconditionally"
-fun graph_mode_all_input_refused () =
-  let
-    val f = ``APPEND : num list -> num list -> num list``
-    val all_input = SG.list_mode [SG.Input, SG.Input, SG.Input]
-  in
-    not (SG.mode_all_input (SG.Graph f) all_input)
-  end
-val _ = require_msg (check_result graph_mode_all_input_refused)
-  (fn () => "mode_all_input accepted a Graph key as all-input instead " ^
-    "of refusing it structurally")
-  (fn () => ()) ()
-
-val _ = tprint
   "Refute SmartGen allow_function_inversion=false constructs no Graph"
 fun graph_flag_off_constructs_nothing () =
   let
     val _ = SG.clear_graph_cache ()
     val f = ``LENGTH : num list -> num``
     val prior_size = SG.graph_cache_size ()
-    val result = SG.infer_graph false f
+    val result = SG.infer_graph false true f
   in
     not (Option.isSome result) andalso SG.graph_cache_size () = prior_size
   end
@@ -2544,8 +2530,8 @@ val _ = require_msg (check_result smartgen_five_criteria)
 fun smartgen_first_order_scope () =
   let
     val pair_modes = SG.argument_modes ``:num # bool``
-    val current = [``zoo_sg_linear : num -> bool``]
-    (* [all_modes_for] reads only [Term.type_of], so a local variable of
+    val current = [SG.Predicate ``zoo_sg_linear : num -> bool``]
+    (* [all_modes_for_type] reads only the type, so a local variable of
        the intended type exercises it without claiming any fixture
        provenance. *)
     val nonpred = Term.mk_var ("nonpred", ``:(num -> num) -> num -> bool``)
@@ -2555,12 +2541,12 @@ fun smartgen_first_order_scope () =
     length pair_modes = 4 andalso
     (* A plain predicate parameter is in scope: it gets the fully-input
        mode SmartGen can call as a decidable test. *)
-    length (SG.all_modes_for
-      ``zoo_sg_higher_order : (num -> bool) -> num -> bool``) = 2 andalso
+    length (SG.all_modes_for_type (Term.type_of
+      ``zoo_sg_higher_order : (num -> bool) -> num -> bool``)) = 2 andalso
     (* A non-predicate function parameter, and a parameter that is itself
        a predicate over predicates, both remain out of scope. *)
-    null (SG.all_modes_for nonpred) andalso
-    null (SG.all_modes_for pred_of_pred) andalso
+    null (SG.all_modes_for_type (Term.type_of nonpred)) andalso
+    null (SG.all_modes_for_type (Term.type_of pred_of_pred)) andalso
     (case SG.classify current [] ``~zoo_sg_linear (x : num)`` of
          SG.Sidecond _ => true
        | _ => false)
@@ -15010,6 +14996,53 @@ val _ = List.app range_guard_is_pinned
    ("bisim_depth", "values must be -1 or have a representable successor", fn () =>
       Refute.upd_bisim_depth [~2] Refute.default_config)]
 
+(* [upd_mf] replaces the whole record, so [change_mf]'s
+   [card_with_fallback] never runs on it; the validator has to demand the
+   [(NONE, _)] row that the scalar [upd_card] still constructs. *)
+fun mf_card_without_fallback_rejected () =
+  let
+    val cards = [(SOME ``:num``, [2])]
+    val mf = #mf Refute.default_config
+    val without_fallback =
+      { card = cards, card_mode = FixedBound, max = #max mf,
+        mono = #mono mf, wf = #wf mf, sat_solver = #sat_solver mf,
+        batch_size = #batch_size mf, falsify = #falsify mf,
+        user_axioms = #user_axioms mf,
+        destroy_constrs = #destroy_constrs mf,
+        total_consts = #total_consts mf,
+        peephole_optim = #peephole_optim mf,
+        datatype_sym_break = #datatype_sym_break mf,
+        kodkod_sym_break = #kodkod_sym_break mf,
+        max_potential = #max_potential mf,
+        max_genuine = #max_genuine mf, atoms = #atoms mf,
+        format = #format mf, show_types = #show_types mf,
+        show_skolems = #show_skolems mf, show_consts = #show_consts mf,
+        debug = #debug mf, overlord = #overlord mf,
+        max_threads = #max_threads mf, tac_timeout = #tac_timeout mf,
+        specialize = #specialize mf, box = #box mf,
+        binary_ints = #binary_ints mf, bits = #bits mf,
+        star_linear_preds = #star_linear_preds mf, iter = #iter mf,
+        bisim_depth = #bisim_depth mf, finitize = #finitize mf,
+        whack = #whack mf, need = #need mf,
+        merge_type_vars = #merge_type_vars mf }
+    val rejected =
+      (Refute.upd_mf without_fallback Refute.default_config; false)
+      handle HOL_ERR error =>
+        Feedback.top_function_of error = "validate_mf_config" andalso
+        Feedback.message_of error =
+          "card: must contain a (NONE, _) fallback row"
+    val constructed = #card (#mf (Refute.upd_card cards
+      Refute.default_config))
+  in
+    rejected andalso
+    List.exists (fn (key, _) => not (Option.isSome key)) constructed
+  end
+
+val _ = require_msg (check_result mf_card_without_fallback_rejected)
+  (fn () => "upd_mf installed a card table with no (NONE, _) fallback " ^
+    "row, or upd_card stopped constructing one")
+  (fn () => ()) ()
+
 val _ = tprint "Refute core backend registry"
 
 fun dummy_backend name weight : backend =
@@ -17589,11 +17622,13 @@ fun partial_plan_checks () =
     val stuck_bool = ``THE (NONE : bool option)``
     val bind = Bind
       (variable, stuck_num, SOME (Test boolSyntax.F), Test boolSyntax.T)
-    val guard = Guard (stuck_bool, Test boolSyntax.F)
+    fun plain_guard tm next =
+      Guard {condition = tm, smart = false, cont = next}
+    val guard = plain_guard stuck_bool (Test boolSyntax.F)
     val nested_guard =
-      Guard (boolSyntax.T, Guard (stuck_bool, Test boolSyntax.F))
+      plain_guard boolSyntax.T (plain_guard stuck_bool (Test boolSyntax.F))
     val guard_after_stuck =
-      Guard (stuck_bool, Guard (boolSyntax.T, Test boolSyntax.F))
+      plain_guard stuck_bool (plain_guard boolSyntax.T (Test boolSyntax.F))
     val test = Test stuck_bool
     val some_num = #1 (boolSyntax.strip_comb ``SOME (x : num)``)
     val split = Split (``THE (NONE : num option)``,
@@ -17681,7 +17716,8 @@ fun guard_scaling_checks () =
   let
     val flag = Term.mk_var ("guard_flag", ``:bool``)
     fun nest 0 = Test boolSyntax.F
-      | nest n = Guard (flag, nest (n - 1))
+      | nest n =
+          Guard {condition = flag, smart = false, cont = nest (n - 1)}
     val plan = Gen (flag, nest 12)
     fun occurrences text source =
       let
@@ -20140,7 +20176,7 @@ fun plan_is_single_split plan =
 
 fun plan_is_generic_guard plan =
   case plan of
-      Gen (_, Gen (_, Guard (_, Gen (_, Test _)))) => true
+      Gen (_, Gen (_, Guard {cont = Gen (_, Test _), ...})) => true
     | _ => false
 
 fun plan_is_fmap_lookup plan =
@@ -20161,7 +20197,7 @@ fun plan_is_naive goal plan =
 
 fun plan_has_abstract_guard plan =
   case plan of
-      Gen (_, Guard (_, Test _)) => true
+      Gen (_, Guard {cont = Test _, ...}) => true
     | _ => false
 
 val bind_goal = ``(x : num) = f (y : num) ==> r (x : num)``
@@ -20210,8 +20246,7 @@ fun contains_enum current =
         contains_enum next orelse Option.getOpt
           (Option.map contains_enum fallback, false)
     | Split (_, branches) => List.exists (contains_enum o #3) branches
-    | Guard (_, next) => contains_enum next
-    | NegGuard (_, next) => contains_enum next
+    | Guard {cont, ...} => contains_enum cont
     | SmartGuard {cont, ...} => contains_enum cont
     | _ => false
 
@@ -20226,7 +20261,8 @@ fun smartgen_plan_trigger () =
       smartgen_linear_goal
   in
     contains_enum enabled andalso not (contains_enum disabled) andalso
-    (case disabled of Gen (_, Guard (_, Test _)) => true | _ => false)
+    (case disabled of Gen (_, Guard {cont = Test _, ...}) => true
+       | _ => false)
   end
 
 val _ = require_msg (check_result smartgen_plan_trigger) (fn () =>
@@ -20339,7 +20375,8 @@ fun smartgen_mode_failure_falls_back () =
     val plan = compile_plan default_config goal
   in
     not (contains_enum plan) andalso
-    (case plan of Gen (_, Gen (_, Guard (_, Test _))) => true | _ => false)
+    (case plan of Gen (_, Gen (_, Guard {cont = Test _, ...})) => true
+       | _ => false)
   end
 
 val _ = require_msg (check_result smartgen_mode_failure_falls_back)
@@ -20624,7 +20661,7 @@ fun sorted_specialisation_modes plan =
           Option.getOpt (Option.map sorted_specialisation_modes fallback, [])
     | Split (_, branches) =>
         List.concat (map (sorted_specialisation_modes o #3) branches)
-    | Guard (_, next) => sorted_specialisation_modes next
+    | Guard {cont, ...} => sorted_specialisation_modes cont
     | SmartGuard {cont, ...} => sorted_specialisation_modes cont
     | _ => []
 
@@ -21236,7 +21273,6 @@ fun smartgen_payoff_result expected_substrate variable predicate outcome =
 fun contains_guard current =
   case current of
       Guard _ => true
-    | NegGuard _ => true
     | Gen (_, next) => contains_guard next
     | Bind (_, _, fallback, next) =>
         contains_guard next orelse Option.getOpt
@@ -21579,7 +21615,7 @@ val _ = require_msg
    [Enum] just fine.  This is what [compile_plan_with]'s
    [List.concat (map strip_conj assumptions)] re-flattening fixes; it is a
    pre-existing gap in the positive [Enum] path that predates this task's
-   negative-mode work and affects it identically ([NegGuard] premises are
+   negative-mode work and affects it identically (complement premises are
    classified by the same [compile] loop). *)
 fun smartgen_conjunctive_premise_gate_lifts () =
   refute
@@ -21608,20 +21644,22 @@ val _ = require_msg
    negated -- is syntactically gated; only [smart_gate_override] can lift
    it.  Its sole clause [!n. zoo_sg_duplicate n (n,n)] is a fully-input
    admitted mode (smartgen_negative_nonrecursive_available above), so a
-   negated call now compiles to [NegGuard] instead of falling back to an
-   unexecutable [Guard], and the gate lifts on all three substrates. *)
+   negated call now compiles to a [Guard] carrying the complement
+   ([smart] set) instead of falling back to an unexecutable ordinary
+   one, and the gate lifts on all three substrates. *)
 
-fun contains_negguard current =
+(* Discriminates on [smart], not on reaching a [Guard] at all: every
+   fallback plan below carries ordinary guards too. *)
+fun contains_complement current =
   case current of
-      NegGuard _ => true
-    | Gen (_, next) => contains_negguard next
+      Guard {smart, cont, ...} => smart orelse contains_complement cont
+    | Gen (_, next) => contains_complement next
     | Bind (_, _, fallback, next) =>
-        contains_negguard next orelse Option.getOpt
-          (Option.map contains_negguard fallback, false)
-    | Split (_, branches) => List.exists (contains_negguard o #3) branches
-    | Guard (_, next) => contains_negguard next
-    | SmartGuard {cont, ...} => contains_negguard cont
-    | Enum {cont, ...} => contains_negguard cont
+        contains_complement next orelse Option.getOpt
+          (Option.map contains_complement fallback, false)
+    | Split (_, branches) => List.exists (contains_complement o #3) branches
+    | SmartGuard {cont, ...} => contains_complement cont
+    | Enum {cont, ...} => contains_complement cont
     | _ => false
 
 (* [refute_problem] never hands [compile_plan_with] a raw goal: it first
@@ -21631,10 +21669,10 @@ fun contains_negguard current =
    [tm]: asserting on the raw term checks a plan no run executes, and the
    two do differ -- for [x <> T] the raw term yields [Bind x = T] with a
    [Test F] on both arms, while the normalized [~x] yields
-   [Gen x; NegGuard; Guard x; Test F].  The routes happen to agree on
-   [NegGuard] for every goal pinned here, so this is drift protection
-   rather than a live fix; that is why swapping a target back reddens
-   nothing. *)
+   [Gen x; complement Guard; Guard x; Test F].  The routes happen to
+   agree on the complement for every goal pinned here, so this is drift
+   protection rather than a live fix; that is why swapping a target back
+   reddens nothing. *)
 fun runtime_goal tm =
   Refute_Core.expand_quantifiers
     (Refute_Core.strip_outer_forall_body
@@ -21650,14 +21688,15 @@ fun smartgen_negation_plan_trigger () =
       (Refute.upd_smart_generators false default_config)
       smartgen_negation_goal
   in
-    contains_negguard enabled andalso not (contains_negguard disabled) andalso
+    contains_complement enabled andalso
+    not (contains_complement disabled) andalso
     plan_has_gen disabled andalso contains_guard disabled
   end
 
 val _ = tprint "Refute negated premise compiles to a complement Guard"
 val _ = require_msg (check_result smartgen_negation_plan_trigger) (fn () =>
-  "a negated premise with an available complement did not trigger " ^
-  "NegGuard, or flag-off changed the plain fallback")
+  "a negated premise with an available complement did not set a " ^
+  "[Guard]'s smart bit, or flag-off changed the plain fallback")
   (fn () => ()) ()
 
 (* [SmartGen.complement_available]'s two blocking reasons, each pinned so
@@ -21669,31 +21708,31 @@ val _ = require_msg (check_result smartgen_negation_plan_trigger) (fn () =>
 val negation_blocked_recursive_goal =
   ``~zoo_sg_linear (n : num) ==> n < 3``
 
-fun negation_blocked_recursive_no_negguard () =
-  not (contains_negguard (compile_plan default_config
+fun negation_blocked_recursive_no_complement () =
+  not (contains_complement (compile_plan default_config
     (runtime_goal negation_blocked_recursive_goal)))
 
-val _ = tprint
-  "Refute negated premise on a recursive relation never reaches NegGuard"
+val _ = tprint ("Refute negated premise on a recursive relation never " ^
+  "reaches a complement")
 val _ = require_msg
-  (check_result negation_blocked_recursive_no_negguard) (fn () =>
-  "a negated call to a recursive relation compiled to NegGuard despite " ^
-  "no available complement mode")
+  (check_result negation_blocked_recursive_no_complement) (fn () =>
+  "a negated call to a recursive relation compiled to a complement " ^
+  "despite no available complement mode")
   (fn () => ()) ()
 
 val negation_blocked_generator_goal =
   ``~zoo_sg_tied (n : num) ==> n < 3``
 
-fun negation_blocked_generator_no_negguard () =
-  not (contains_negguard (compile_plan default_config
+fun negation_blocked_generator_no_complement () =
+  not (contains_complement (compile_plan default_config
     (runtime_goal negation_blocked_generator_goal)))
 
-val _ = tprint
-  "Refute negated premise needing a generator never reaches NegGuard"
+val _ = tprint ("Refute negated premise needing a generator never " ^
+  "reaches a complement")
 val _ = require_msg
-  (check_result negation_blocked_generator_no_negguard) (fn () =>
-  "a negated call whose clause needs a generator compiled to NegGuard " ^
-  "despite no available complement mode")
+  (check_result negation_blocked_generator_no_complement) (fn () =>
+  "a negated call whose clause needs a generator compiled to a " ^
+  "complement despite no available complement mode")
   (fn () => ()) ()
 
 fun smartgen_negation_gate_lifts substrate =
@@ -21748,19 +21787,20 @@ val negation_complement_true_goal =
 val negation_complement_false_goal =
   ``~zoo_sg_bool_duplicate (x : bool) (y, z) ==> (y, z) = (x, x)``
 
-fun negation_complement_reaches_negguard () =
-  contains_negguard
+fun negation_complement_reaches_complement () =
+  contains_complement
     (compile_plan default_config
       (runtime_goal negation_complement_true_goal)) andalso
-  not (contains_negguard (compile_plan
+  not (contains_complement (compile_plan
     (Refute.upd_smart_generators false default_config)
     (runtime_goal negation_complement_true_goal)))
 
-val _ = tprint "Refute negated premise complement reaches NegGuard (bool twin)"
+val _ = tprint
+  "Refute negated premise reaches a complement Guard (bool twin)"
 val _ = require_msg
-  (check_result negation_complement_reaches_negguard) (fn () =>
-  "the bool complement twin's plan did not reach NegGuard, or firing did " ^
-  "not depend on smart_generators")
+  (check_result negation_complement_reaches_complement) (fn () =>
+  "the bool complement twin's plan reached no complement, or firing " ^
+  "did not depend on smart_generators")
   (fn () => ()) ()
 
 fun negation_complement_gate_required () =
@@ -21840,7 +21880,7 @@ val _ = require_msg
   (fn () => ()) ()
 
 (* ExpectNone twin: a ground output argument leaves nothing to
-   reconstruct, so the complement's [Gen x; NegGuard; Guard; Test F]
+   reconstruct, so the complement's [Gen x; complement; Guard; Test F]
    plan exhausts the whole of [:bool] (two candidates) and the search is
    genuinely total, not merely unattempted. *)
 val negation_complement_expectnone_goal =
@@ -21855,15 +21895,15 @@ val negation_complement_expectnone_config =
         (Refute.upd_search (Refute.Only [Refute.Exhaustive])
           default_config)))
 
-fun negation_complement_expectnone_reaches_negguard () =
-  contains_negguard (compile_plan default_config
+fun negation_complement_expectnone_reaches_complement () =
+  contains_complement (compile_plan default_config
     (runtime_goal negation_complement_expectnone_goal))
 
-val _ = tprint
-  "Refute negated premise complement ExpectNone twin reaches NegGuard"
+val _ = tprint ("Refute negated premise complement ExpectNone twin " ^
+  "reaches a complement Guard")
 val _ = require_msg
-  (check_result negation_complement_expectnone_reaches_negguard) (fn () =>
-  "the ExpectNone complement twin's plan did not reach NegGuard")
+  (check_result negation_complement_expectnone_reaches_complement) (fn () =>
+  "the ExpectNone complement twin's plan reached no complement")
   (fn () => ()) ()
 
 (* This twin alone only shows the complement can exhaust with zero
@@ -21889,7 +21929,7 @@ val _ = require_msg
 
 (* Soundness guard: [zoo_sg_bool_stuck]'s sole clause guards on
    [HD [] = x], and [HD] has no clause for [[]], so that guard is never
-   decided true or false -- only stuck.  A [NegGuard] built from it must
+   decided true or false -- only stuck.  A complement built from it must
    never be read as a decided [false]; the plan must stay [Unknown].
    [HD] is in [Refute_EvalCv.partial_names], so cv's [partial_constant]
    refuses the route entirely and never reaches its own stuck handling
@@ -21897,15 +21937,15 @@ val _ = require_msg
 val negation_complement_stuck_goal =
   ``~zoo_sg_bool_stuck (x : bool) (T, T) ==> x <> T``
 
-fun negation_complement_stuck_reaches_negguard () =
-  contains_negguard (compile_plan default_config
+fun negation_complement_stuck_reaches_complement () =
+  contains_complement (compile_plan default_config
     (runtime_goal negation_complement_stuck_goal))
 
-val _ = tprint
-  "Refute negated premise complement stuck guard reaches NegGuard"
+val _ = tprint ("Refute negated premise complement stuck guard reaches " ^
+  "a complement Guard")
 val _ = require_msg
-  (check_result negation_complement_stuck_reaches_negguard) (fn () =>
-  "the stuck complement twin's plan did not reach NegGuard")
+  (check_result negation_complement_stuck_reaches_complement) (fn () =>
+  "the stuck complement twin's plan reached no complement")
   (fn () => ()) ()
 
 fun negation_complement_stuck_is_unknown () =
@@ -21926,7 +21966,8 @@ val _ = tprint
   "Refute negated premise complement with a stuck guard stays Unknown"
 val _ = require_msg
   (check_result negation_complement_stuck_is_unknown) (fn () =>
-  "a NegGuard whose condition can never be decided was not left Unknown")
+  "a complement whose condition can never be decided was not left " ^
+  "Unknown")
   (fn () => ()) ()
 
 fun smartgen_ir_validation_and_theory_footprint () =
@@ -22013,7 +22054,9 @@ fun smartgen_validator_corpus () =
     val duplicate = Term.mk_var ("duplicate", ``:num``)
     val duplicate_split = Split
       (``0 : num``, [(``0 : num``, [duplicate, duplicate], Test boolSyntax.T)])
-    val guard_nonboolean = Guard (``0 : num``, Test boolSyntax.T)
+    val guard_nonboolean =
+      Guard {condition = ``0 : num``, smart = false,
+             cont = Test boolSyntax.T}
     val old = valid
     val _ = SG.clear_enumerator_cache ()
     val current = compile_plan default_config smartgen_linear_goal
@@ -22491,8 +22534,7 @@ fun contains_graph_enum current =
         contains_graph_enum next orelse Option.getOpt
           (Option.map contains_graph_enum fallback, false)
     | Split (_, branches) => List.exists (contains_graph_enum o #3) branches
-    | Guard (_, next) => contains_graph_enum next
-    | NegGuard (_, next) => contains_graph_enum next
+    | Guard {cont, ...} => contains_graph_enum cont
     | SmartGuard {cont, ...} => contains_graph_enum cont
     | Enum {cont, ...} => contains_graph_enum cont
     | _ => false
@@ -22508,8 +22550,7 @@ fun find_graph_enum current =
                           SOME alternative => find_graph_enum alternative
                         | NONE => NONE))
     | Split (_, branches) => Lib.get_first (find_graph_enum o #3) branches
-    | Guard (_, next) => find_graph_enum next
-    | NegGuard (_, next) => find_graph_enum next
+    | Guard {cont, ...} => find_graph_enum cont
     | SmartGuard {cont, ...} => find_graph_enum cont
     | _ => NONE
 
@@ -25657,6 +25698,11 @@ fun with_fnrec_floor_spec body =
        recursive = [map (fn _ => true) base_args, step_flags],
        min_size = [map (fn _ => 1) base_args,
                    map (fn _ => 1) step_args],
+       fun_recursive =
+         map (fn args =>
+               List.exists (Refute_Gen.recursive_under_function family)
+                 args)
+             [base_args, step_args],
        family = family}
     val saved = Refute_Gen.synchronized_registry
       (fn () => !Refute_Gen.spec_cache)
@@ -29502,13 +29548,13 @@ fun enum_conformance () =
       same_conformance_outcome (baseline, result)) results
   end
 
-(* The [NegGuard] sibling of [enum_conformance] above, and for the same
+(* The complement sibling of [enum_conformance] above, and for the same
    reason a standalone check rather than a [conformance_full_cases] row:
    [Refute_QC.strategy_run_body] forces [smart_generators false] for
    every random strategy, so no random plan can carry a smart node and
    the matrix's three random rows would only pin the gate refusal.
    [negation_complement_false_goal] is gated without the complement and
-   decides candidates false through the [NegGuard] arm on the way to a
+   decides candidates false through the complement arm on the way to a
    genuine counterexample, so [same_conformance_outcome] -- bindings
    plus [conformance_counter_keys] -- is what pins the arm's new
    [candidates_generated] increment across substrates.  cv publishes no
@@ -29517,7 +29563,7 @@ fun enum_conformance () =
    ambient compset holds no equation for it, which
    [negation_complement_false_sibling_certified] covers separately under
    a scoped compset. *)
-fun negguard_conformance () =
+fun complement_conformance () =
   let
     val base = conform_cex_config
       |> Refute.upd_expect Refute.NoExpectation
@@ -29529,7 +29575,7 @@ fun negguard_conformance () =
       not (null instances) andalso
       List.all (Option.isSome o #qc_gate) instances andalso
       List.all (fn (instance : instance) =>
-        contains_negguard (compile_plan base (#goal instance))) instances
+        contains_complement (compile_plan base (#goal instance))) instances
     fun outcome (choice, substrate) =
       (substrate, quiet_refute
         (Refute.upd_substrate (public_substrate choice) base)
@@ -29717,9 +29763,9 @@ val _ =
      require_msg (check_result enum_conformance) (fn () =>
        "Enum outcomes differed across substrates")
        (fn () => ()) ();
-     tprint "Refute NegGuard substrate conformance";
-     require_msg (check_result negguard_conformance) (fn () =>
-       "NegGuard outcomes or candidate counters differed across " ^
+     tprint "Refute complement Guard substrate conformance";
+     require_msg (check_result complement_conformance) (fn () =>
+       "complement outcomes or candidate counters differed across " ^
        "substrates")
        (fn () => ()) ();
      tprint "Refute full substrate conformance matrix";
@@ -36431,10 +36477,10 @@ val _ =
    graph-inversion row alone drives hundreds of thousands of candidates
    and carries a multi-second deadline, not level-1 cheap.
 
-   What each row adds beyond its twin: the negation row's [NegGuard]
+   What each row adds beyond its twin: the negation row's complement
    route conjunct and its [NoCounterexample] verdict are already
    pinned at level 1, by [negation_complement_expectnone_reaches_
-   negguard] and [negation_complement_expectnone_holds]; its net-new
+   complement] and [negation_complement_expectnone_holds]; its net-new
    contribution here is the [not (List.exists contains_enum plans)]
    route conjunct and [candidates_generated = SOME 2] in [looked] --
    and the next paragraph already concedes that count is blind to the
@@ -36488,20 +36534,20 @@ val _ =
        the generated domain was exhausted exactly -- what makes
        [NoCounterexample] decisive here.  What the row actually catches
        is an *over*-approximating complement: a wrongly admitted
-       [x = T] would pass the [NegGuard], reach [Test], and refute the
+       [x = T] would pass the complement, reach [Test], and refute the
        true goal, going red via [expect].  It cannot catch the opposite,
        *under*-approximating direction: a complement mutated to
-       constant [false] rejects both candidates at the [NegGuard],
+       constant [false] rejects both candidates at the complement,
        whereas the correct complement here rejects [x = T] at the
-       [NegGuard] and [x = F] at the grounding [Guard (x = T)] -- in
+       complement and [x = F] at the grounding guard [x = T] -- in
        whichever order premise reordering placed them -- only the
        count of rejected candidates coincides, so
        [candidates_generated] reads [2] either way -- the companion row
        below exists for that direction.  [route] requires [not
        (List.exists contains_enum plans)] *and* [List.exists
-       contains_negguard plans]: no plan may contain an [Enum], and some
-       plan must reach [NegGuard].  The [NegGuard] conjunct is what
-       distinguishes "the predicate compiler produced a decidable
+       contains_complement plans]: no plan may contain an [Enum], and
+       some plan must carry a complement.  The complement conjunct is
+       what distinguishes "the predicate compiler produced a decidable
        complement" from "the compiler declined and the plan degraded to
        plain [Gen]+[Guard]" -- the absence of an [Enum] alone cannot
        tell those apart, since a degraded fallback plan contains no
@@ -36511,11 +36557,11 @@ val _ =
        Test: the companion catching the under-approximating direction
        the row above cannot.  [negation_complement_exhausts_goal]'s
        complement, [(x,x) <> (T,F)], is true for both booleans, so a
-       correct complement drives both candidates past [NegGuard] into
-       [Test], where the relation-free conclusion holds for both;
+       correct complement drives both candidates past the complement
+       into [Test], where the relation-free conclusion holds for both;
        [looked] requires both [assumption_satisfied] and
        [conclusion_evaluated] to be [SOME 2].  A complement mutated to
-       constant [false] instead rejects both candidates at [NegGuard],
+       constant [false] instead rejects both candidates there,
        both statistics drop to [0], and the row goes red.  [route] is
        the same conjunction as above, for the same reason.
      relation called with a statically fixed predicate parameter.  The
@@ -36625,8 +36671,7 @@ fun contains_fixed_output_enum current =
         Option.getOpt (Option.map contains_fixed_output_enum fallback, false)
     | Split (_, branches) => List.exists (contains_fixed_output_enum o #3)
         branches
-    | Guard (_, next) => contains_fixed_output_enum next
-    | NegGuard (_, next) => contains_fixed_output_enum next
+    | Guard {cont, ...} => contains_fixed_output_enum cont
     | SmartGuard {cont, ...} => contains_fixed_output_enum cont
     | Enum {cont, ...} => contains_fixed_output_enum cont
     | _ => false
@@ -36649,7 +36694,7 @@ fun contains_fixed_output_enum current =
    [looked] instead aggregates [#last_stats] over the one [Plans plans]
    compile as a whole, not per plan.  With more than one instance,
    nothing ties the plan [route] found (e.g. the one carrying a
-   [NegGuard]) to which plan actually contributed the visits [looked]
+   complement) to which plan actually contributed the visits [looked]
    inspects -- they could be different plans in the list.  Every
    current row's [goal] elaborates to exactly one instance, so this
    never bites here, but it is a real gap for a future multi-instance
@@ -36671,11 +36716,11 @@ fun positive_stat name stats =
   case lookup_stat name stats of SOME n => n > 0 | NONE => false
 
 (* Route shared by the two negation rows: no plan may contain an [Enum],
-   and some plan must reach [NegGuard] -- see the corpus comment above
-   for why the [NegGuard] conjunct is required. *)
+   and some plan must carry a complement -- see the corpus comment above
+   for why the complement conjunct is required. *)
 val negation_route = fn plans =>
   not (List.exists contains_enum plans) andalso
-  List.exists contains_negguard plans
+  List.exists contains_complement plans
 
 (* [negation_complement_expectnone_config] is hoisted next to
    [negation_complement_expectnone_goal] above, shared with that level-1
@@ -36689,7 +36734,7 @@ val negation_route = fn plans =>
    occurrence has no executable route and the whole problem degrades to
    [Unknown ["not executable: zoo_sg_bool_duplicate"]] -- measured, by
    trying it.  Only the negated form compiles, via the complement, to a
-   [NegGuard].  The conclusion is therefore relation-free, and is a
+   complement.  The conclusion is therefore relation-free, and is a
    computation rather than a tautology: [x = x] or [MEM x [T; F]] risk
    being discharged by preprocessing before the evaluator runs, which
    would leave the row vacuous.  Vacuity here is self-detecting -- it
@@ -36838,11 +36883,14 @@ val _ = if selftest_level >= 2 then run_predcomp_soundness_corpus () else ()
    many witnesses), so that pin only checks the forced [n = 0] binding
    in both orders, not that the two orders report the same [p]. *)
 
-fun gens_to_negguard current =
+(* [NONE] for a plan with no complement: an ordinary [Guard] falls
+   through to the catch-all, exactly as before the two constructors
+   merged. *)
+fun gens_to_complement current =
   case current of
-      NegGuard _ => SOME 0
-    | Gen (_, next) => Option.map (fn n => n + 1) (gens_to_negguard next)
-    | Bind (_, _, _, next) => gens_to_negguard next
+      Guard {smart = true, ...} => SOME 0
+    | Gen (_, next) => Option.map (fn n => n + 1) (gens_to_complement next)
+    | Bind (_, _, _, next) => gens_to_complement next
     | _ => NONE
 
 val neg_reorder_goal =
@@ -36854,8 +36902,8 @@ fun neg_reorder_shape () =
     val source_order = compile_plan
       (Refute.upd_reorder_premises false default_config) neg_reorder_goal
   in
-    gens_to_negguard reordered = SOME 1 andalso
-    gens_to_negguard source_order = SOME 2
+    gens_to_complement reordered = SOME 1 andalso
+    gens_to_complement source_order = SOME 2
   end
 
 val _ = tprint "Refute negation complement reordering pin"

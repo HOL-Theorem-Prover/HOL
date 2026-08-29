@@ -934,8 +934,7 @@ structure Refute_EvalCv = struct
           | Refute_Eval.Split (_, branches) =>
               List.foldl (fn ((_, _, next), result) =>
                 collect next result) variables branches
-          | Refute_Eval.Guard (_, next) => collect next variables
-          | Refute_Eval.NegGuard (_, next) => collect next variables
+          | Refute_Eval.Guard {cont, ...} => collect cont variables
           | Refute_Eval.SmartGuard {cont, ...} => collect cont variables
           | Refute_Eval.Enum {outs, cont, ...} =>
               collect cont
@@ -962,8 +961,8 @@ structure Refute_EvalCv = struct
           | Refute_Eval.Split (tm, branches) =>
               List.foldl (fn ((_, _, next), result) =>
                 collect next result) (tm :: terms) branches
-          | Refute_Eval.Guard (tm, next) => collect next (tm :: terms)
-          | Refute_Eval.NegGuard (tm, next) => collect next (tm :: terms)
+          | Refute_Eval.Guard {condition, cont, ...} =>
+              collect cont (condition :: terms)
           | Refute_Eval.SmartGuard {predicate, cont, ...} =>
               collect cont (predicate :: terms)
           | Refute_Eval.Enum {ins, outs, cont, ...} =>
@@ -1049,7 +1048,10 @@ structure Refute_EvalCv = struct
     | SOME _ =>
         raise Precondition
           (case partial_constant
-             [List.foldr Refute_Eval.Guard Refute_Eval.Prune payloads] of
+             [List.foldr (fn (tm, next) =>
+                Refute_Eval.Guard
+                  {condition = tm, smart = false, cont = next})
+                Refute_Eval.Prune payloads] of
                SOME name => name
              | NONE => prefix)
 
@@ -1152,8 +1154,10 @@ structure Refute_EvalCv = struct
                     hit variables (numeral 0) env,
                     no_hit variables
                       (numSyntax.mk_minus (skip, numeral 1))))
-          | Refute_Eval.Guard (tm, next) => guard_step env skip tm next
-          | Refute_Eval.NegGuard (tm, next) => guard_step env skip tm next
+          | Refute_Eval.Guard {condition, cont, ...} =>
+              boolSyntax.mk_cond
+                (substitute env condition, build cont env skip,
+                 no_hit variables skip)
           | Refute_Eval.SmartGuard {predicate, cont, ...} =>
               boolSyntax.mk_cond
                 (substitute env predicate, build cont env skip,
@@ -1228,13 +1232,6 @@ structure Refute_EvalCv = struct
                    current_parameters @ [skip])
               end
 
-      (* Shared by [Guard] and [NegGuard]: both are a closed condition
-         gating the continuation, and only differ in what [tm] means
-         to the caller. *)
-      and guard_step env skip tm next =
-        boolSyntax.mk_cond
-          (substitute env tm, build next env skip, no_hit variables skip)
-
       val skip = named_variable (prefix ^ "skip") numSyntax.num
       val loop_var = named_variable (prefix ^ "loop")
         (function_type
@@ -1308,8 +1305,9 @@ structure Refute_EvalCv = struct
               boolSyntax.mk_cond
                 (substitute env tm, empty,
                  singleton (env_term variables env))
-          | Refute_Eval.Guard (tm, next) => guard_step env tm next
-          | Refute_Eval.NegGuard (tm, next) => guard_step env tm next
+          | Refute_Eval.Guard {condition, cont, ...} =>
+              boolSyntax.mk_cond
+                (substitute env condition, build cont env, empty)
           | Refute_Eval.SmartGuard {predicate, version, cont} =>
               boolSyntax.mk_cond
                 (listSyntax.mk_null
@@ -1351,12 +1349,6 @@ structure Refute_EvalCv = struct
                   (build next ((variable, variable) :: env))
               end
 
-      (* Shared by [Guard] and [NegGuard]: both are a closed condition
-         gating the continuation, and only differ in what [tm] means
-         to the caller. *)
-      and guard_step env tm next =
-        boolSyntax.mk_cond (substitute env tm, build next env, empty)
-
       val loop_var = named_variable (prefix ^ "loop")
         (function_type ([numSyntax.num], list_result_ty))
       val loop_definition = TotalDefn.Define
@@ -1397,16 +1389,18 @@ structure Refute_EvalCv = struct
               boolSyntax.mk_cond
                 (substitute env tm, no_hit variables state,
                  hit variables state env)
-          | Refute_Eval.Guard (tm, next) =>
-              boolSyntax.mk_cond
-                (substitute env tm, build next env state,
-                 no_hit variables state)
-          | Refute_Eval.NegGuard _ =>
+          | Refute_Eval.Guard {condition, smart, cont} =>
               (* [Refute_QC.strategy_run_body] forces smart_generators
                  false for every random strategy, and the exhaustive
                  gate override only ever selects [Exhaustive], so no
-                 random plan can carry a [NegGuard]. *)
-              raise Unsupported "Neg Guard reached random compilation"
+                 random plan can carry a complement. *)
+              if smart then
+                raise Unsupported
+                  "complement Guard reached random compilation"
+              else
+                boolSyntax.mk_cond
+                  (substitute env condition, build cont env state,
+                   no_hit variables state)
           | Refute_Eval.SmartGuard {predicate, cont, ...} =>
               boolSyntax.mk_cond
                 (substitute env predicate, build cont env state,

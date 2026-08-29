@@ -238,34 +238,35 @@ seed use a deterministic session stream which advances between runs.
 Smart generators are enabled by default.  A `Hol_reln` premise, or a
 Boolean function with exhaustive Horn-shaped equations, is mode-compiled to
 a positive CPS enumerator for exhaustive testing on all three substrates.  A
-*negated* such premise is instead mode-compiled to a `NegGuard` complement:
-the relation's Horn clauses are combined into a semantic complement
-predicate (`Refute_EvalEnum.negation_condition`) and used as a runtime
-guard, so a goal whose only obstacle was a negated relational premise no
-longer needs to fall back to opaque, unconstrained treatment of that
-relation.  This only fires for a mode every clause admits: fully-`Input`,
-no clause needs a `Generator` for a variable outside the head, and no
-clause calls another relation (a `Prem` premise).  That last condition
-excludes every recursive relation -- a self- or mutually-recursive
-relation's negated call still falls back to an opaque `Guard`; giving it a
-bounded complement with a downgraded verdict instead of wider admission is
-an open gap (see `Manual/Description/Refute.smd`).
-Unlike `Enum`, `NegGuard` needs no enumerator program and consumes no
+*negated* such premise is instead mode-compiled to a complement `Guard`
+(one whose `smart` bit is set): the relation's Horn clauses are combined
+into a semantic complement predicate
+(`Refute_EvalEnum.negation_condition`) and used as a runtime guard, so a
+goal whose only obstacle was a negated relational premise no longer needs
+to fall back to opaque, unconstrained treatment of that relation.  This
+only fires for a mode every clause admits: fully-`Input`, no clause needs
+a `Generator` for a variable outside the head, and no clause calls
+another relation (a `Prem` premise).  That last condition excludes every
+recursive relation -- a self- or mutually-recursive relation's negated
+call still falls back to an opaque `Guard`; giving it a bounded
+complement with a downgraded verdict instead of wider admission is an
+open gap (see `Manual/Description/Refute.smd`).
+Unlike `Enum`, a complement needs no enumerator program and consumes no
 fuel: its condition is a closed conjunction of guards over already-bound
 inputs, decided with the same three-valued discipline as an ordinary
-`Guard`, so reaching `NegGuard` does not by itself make a plan incomplete
--- a stuck evaluation there is still caught and reported at runtime,
-exactly as for `Guard`.  `upd_depth` sets the fixed per-plan fuel for
+`Guard`, so reaching one does not by itself make a plan incomplete -- a
+stuck evaluation there is still caught and reported at runtime, exactly
+as for an ordinary guard.  `upd_depth` sets the fixed per-plan fuel for
 `Enum` and `SmartGuard` (default 10); it does not add a schedule loop and
-has no effect on `NegGuard`.  Compute and cv define the same structurally
-recursive HOL list enumerators (cv then translates those definitions);
-native SML preserves the same clause and premise order.  Because fuel
-bounds every `Enum`- or `SmartGuard`-bearing enumeration, their terminal
-exhaustion is always reported as incomplete; `NegGuard` carries no such
-penalty.  Ignored counterexamples are matched by structural environment
-equality, not by stream position.  Setting `upd_smart_generators false`
-restores generate-and-guard planning, and `upd_reorder_premises` controls
-mode-analysis reordering.
+has no effect on a complement.  Compute and cv define the same
+structurally recursive HOL list enumerators (cv then translates those
+definitions); native SML preserves the same clause and premise order.
+Because fuel bounds every `Enum`- or `SmartGuard`-bearing enumeration,
+their terminal exhaustion is always reported as incomplete; a complement
+carries no such penalty.  Ignored counterexamples are matched by
+structural environment equality, not by stream position.  Setting
+`upd_smart_generators false` restores generate-and-guard planning, and
+`upd_reorder_premises` controls mode-analysis reordering.
 
 `upd_allow_function_inversion` (default `false`, Isabelle Quickcheck
 parity) gates function inversion: synthesising Horn clauses for an
@@ -1191,9 +1192,9 @@ follow-up, and unlike the item above it goes beyond Isabelle2025-2
 parity rather than falling short of it: Isabelle's narrowing needs GHC,
 while Refute's native host substrate is unconditionally present on the
 only platform Refute supports, so availability parity already holds
-without adding it.  Negative smart-generator modes already ship
-(see `NegGuard` above).  Higher-order mode inference feeds a static-
-parameter specialisation pass: a predicate argument applied to a
+without adding it.  Negative smart-generator modes already ship (see the
+complement `Guard` above).  Higher-order mode inference feeds a
+static-parameter specialisation pass: a predicate argument applied to a
 statically known closed value (a literal lambda, not a runtime-bound
 variable) is substituted through the relation's clauses before mode
 inference runs, so the substituted clauses are first order and the CPS

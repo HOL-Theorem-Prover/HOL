@@ -1848,12 +1848,6 @@ fun atom_from_int_expr
     (kk_rel_eq (bit_set_from_atom kk ty (KK.Var (1, ~1)))
       (KK.Bits integer))
 
-fun word_width ty =
-  case MFH.word_dimension ty of
-      SOME width => width
-    | NONE => raise Util.BAD
-        ("Refute_ModelFinder_Kodkod.word_width", "not a word type")
-
 (* Kodkod's integers are two's complement of a fixed width, so masking off
    the low bits reduces a word operation's result into its carrier however
    far the integer arithmetic overshot. *)
@@ -2195,7 +2189,7 @@ fun kodkod_formula_from_nut offsets
                     (KK.LE (KK.Num 0, KK.BitXor (second, result)))))
                 (SOME (fn left => fn right => KK.Add (left, right)))
             else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
-              let val width = word_width (#1 (Type.dom_rng ty))
+              let val width = MFH.word_width (#1 (Type.dom_rng ty))
               in
                 to_word_binary_op ty (MFNT.rep_of candidate)
                   (fn left => fn right =>
@@ -2222,7 +2216,7 @@ fun kodkod_formula_from_nut offsets
                     (KK.LT (KK.BitXor (second, result), KK.Num 0))))
                 (SOME (fn left => fn right => KK.Sub (left, right)))
             else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
-              let val width = word_width (#1 (Type.dom_rng ty))
+              let val width = MFH.word_width (#1 (Type.dom_rng ty))
               in
                 to_word_binary_op ty (MFNT.rep_of candidate)
                   (fn left => fn right =>
@@ -2258,7 +2252,7 @@ fun kodkod_formula_from_nut offsets
                   (SOME (fn left => fn right => KK.Mult (left, right)))
               end
             else if MFH.is_word_type (#1 (Type.dom_rng ty)) then
-              let val width = word_width (#1 (Type.dom_rng ty))
+              let val width = MFH.word_width (#1 (Type.dom_rng ty))
               in
                 to_word_binary_op ty (MFNT.rep_of candidate)
                   (fn left => fn right =>
@@ -2389,7 +2383,7 @@ fun kodkod_formula_from_nut offsets
               ("Refute_ModelFinder_Kodkod.to_r (IntToNat)", [candidate])
         | MFNT.Cst (MFNT.NatToWord, ty, representation) =>
             to_word_unary_op ty representation
-              (wrap_word (word_width (#2 (Type.dom_rng ty))))
+              (wrap_word (MFH.word_width (#2 (Type.dom_rng ty))))
         | MFNT.Cst (MFNT.WordToNat, ty, representation) =>
             (* A word value is already a [num] value; the pairs of words too
                large for the [num] carrier are simply absent, which is what
@@ -2415,7 +2409,7 @@ fun kodkod_formula_from_nut offsets
            shifts every bit out; Kodkod's shifts are taken modulo their own
            integer width, so the saturating cases are handled here. *)
         | MFNT.Cst (MFNT.WordShl, ty, representation) =>
-            let val width = word_width (#1 (Type.dom_rng ty))
+            let val width = MFH.word_width (#1 (Type.dom_rng ty))
             in
               to_word_binary_op ty representation
                 (fn value => fn count =>
@@ -2423,7 +2417,7 @@ fun kodkod_formula_from_nut offsets
                     wrap_word width (KK.SHL (value, count))))
             end
         | MFNT.Cst (MFNT.WordShr, ty, representation) =>
-            let val width = word_width (#1 (Type.dom_rng ty))
+            let val width = MFH.word_width (#1 (Type.dom_rng ty))
             in
               to_word_binary_op ty representation
                 (fn value => fn count =>
@@ -2434,7 +2428,7 @@ fun kodkod_formula_from_nut offsets
             (* An arithmetic shift fills with the sign bit, so a count at or
                beyond the width saturates to a full sign fill rather than to
                zero: shifting by [width - 1] is that fill. *)
-            let val width = word_width (#1 (Type.dom_rng ty))
+            let val width = MFH.word_width (#1 (Type.dom_rng ty))
             in
               to_word_binary_op ty representation
                 (fn value => fn count =>

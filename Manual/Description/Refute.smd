@@ -517,21 +517,21 @@ Equality premises can bind variables directly.  With
 `smart_generators = true`, a positive, first-order Horn premise recovered
 from `Hol_reln`, or from Horn-shaped Boolean function equations, can be
 mode-compiled to an `Enum` plan; a *negated* such premise can instead be
-mode-compiled to a `NegGuard` plan, testing against the relation's
+mode-compiled to a complement `Guard`, testing against the relation's
 semantic complement rather than falling back to opaque, unconstrained
-treatment of the relation.  `NegGuard` is only available for a mode every
-clause admits: fully-input, no clause needing a `Generator` for a
+treatment of the relation.  A complement is only available for a mode
+every clause admits: fully-input, no clause needing a `Generator` for a
 variable outside the head, and no clause calling another relation.  That
 last condition excludes every recursive relation, whose negated call
 still falls back to opaque, unconstrained treatment; see the known-gaps
-list below.  Unlike `Enum`, `NegGuard`
-needs no enumerator and consumes no fuel: its condition is a closed
-guard over already-bound inputs, decided the same way an ordinary guard
-is, so a plan reaching `NegGuard` can still be exhausted exactly.
-`depth` is the fixed fuel supplied to an `Enum` enumerator; it has no
-effect on `NegGuard`.  Premises may be reordered during mode analysis;
-`reorder_premises = false` disables that step.  If mode compilation is
-not possible, Refute safely falls back to generate-and-guard testing.
+list below.  Unlike `Enum`, a complement needs no enumerator and
+consumes no fuel: its condition is a closed guard over already-bound
+inputs, decided the same way an ordinary guard is, so a plan reaching one
+can still be exhausted exactly.  `depth` is the fixed fuel supplied to an
+`Enum` enumerator; it has no effect on a complement.  Premises may be
+reordered during mode analysis; `reorder_premises = false` disables that
+step.  If mode compilation is not possible, Refute safely falls back to
+generate-and-guard testing.
 
 The practical difference is visible at small bounds.  At `size = 1` and
 `depth = 8`, the Horn-function premise in the following example directly
@@ -1127,13 +1127,13 @@ particular:
   value stays bounded; Isabelle's version is lazy and pays only for
   points the test actually reaches;
 * smart generators support positive first-order modes, and negated
-  first-order modes whose relation SmartGen can classify (`NegGuard`,
-  via the relation's semantic complement).  Classification excludes
-  every recursive relation: a self- or mutually-recursive relation's
-  negated call falls back to an opaque guard, not a complement.  Giving
-  it a bounded complement with a downgraded verdict, instead of
-  admitting it outright, remains an open gap.  A higher-order relation
-  parameter applied to a statically known closed predicate is
+  first-order modes whose relation SmartGen can classify (a complement
+  `Guard`, via the relation's semantic complement).  Classification
+  excludes every recursive relation: a self- or mutually-recursive
+  relation's negated call falls back to an opaque guard, not a
+  complement.  Giving it a bounded complement with a downgraded verdict,
+  instead of admitting it outright, remains an open gap.  A higher-order
+  relation parameter applied to a statically known closed predicate is
   specialised -- substituted through the relation's clauses before mode
   inference -- and can then compile to a positive-mode enumerator like
   any first-order relation; the same parameter left as a runtime-bound
