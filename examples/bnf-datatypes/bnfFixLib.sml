@@ -1295,6 +1295,16 @@ type mutual = {
    algebra of BIMG and the lifted union; normalising both is how a driver
    sees that without running a tactic. *)
 val normRWs = setRWs @ [BIGUNION_IMAGE_UNION, BIGUNION_IMAGE_BIGUNION]
+fun normEqWith rws (t1,t2) =
+    let val cnv = QCONV (simpLib.SIMP_CONV set_ss (normRWs @ rws))
+        val (e1,e2) = (cnv t1, cnv t2)
+    in
+      if aconv (rhs (concl e1)) (rhs (concl e2)) then TRANS e1 (SYM e2)
+      else raise ERR "normEq"
+                 ("no common normal form: " ^ term_to_string (rhs (concl e1)) ^
+                  " and " ^ term_to_string (rhs (concl e2)))
+    end
+
 fun normEq (t1,t2) =
     let val cnv = QCONV (simpLib.SIMP_CONV set_ss normRWs)
         val (e1,e2) = (cnv t1, cnv t2)
@@ -3449,6 +3459,120 @@ fun transportBNF {abs, rep, absrep, repabs} (bnf : bnfLib.derived_bnfn)
          inhabits = List.map ((fn (t,th) => (cinst t, cthm th)) o inhOf)
                              (upto n)
        }}
+    end
+
+
+(* ----------------------------------------------------------------------
+    The collapsed family's map, one constructor at a time.
+
+    A collapsed member's map is defined through the bijection, so what it
+    does at a constructor is what the member's own map does at the
+    constructor underneath.  That is reached by unfolding — the
+    constructors, the bijection and the members' own equations — and what
+    the unfolding leaves is folded back by the definitions themselves,
+    normalised the same way, with the representation's own naturality to
+    put a member's map back together.
+
+    The set functions are not here yet: their two sides normalise to
+    different shapes, because the one that goes through the map pushes
+    the representation inside the sets and the other does not.  Closing
+    that wants the components' naturality in the set normaliser, which
+    is the same polish the pair's set equations are waiting for.
+   ---------------------------------------------------------------------- *)
+
+fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
+                  (ccs : {constructors : term list, defs : thm list} list) =
+    let
+      val n = length (#types coll)
+      (* the definitions, applied: a composition the definition made is
+         unfolded, and one the database keeps is left alone *)
+      val unfoldO = REWR_CONV combinTheory.o_THM
+      (* the definition's own compositions, and only those: a map or a
+         set function underneath may be a composition itself, and the
+         database keeps it that way *)
+      fun applied k th =
+          let val l = lhs (concl (SPEC_ALL th))
+              val x = mk_var ("x", #1 (dom_rng (type_of l)))
+              fun unfoldN 1 = unfoldO
+                | unfoldN m = unfoldO THENC RAND_CONV (unfoldN (m - 1))
+          in
+            CONV_RULE (RAND_CONV (unfoldN k)) (AP_THM (SPEC_ALL th) x)
+          end
+      fun pointwiseOf th =
+          let val l = lhs (concl th)
+              val (f, g) = (rand (rator l), rand l)
+              val x = mk_var ("r", #1 (dom_rng (type_of g)))
+          in
+            GEN x (TRANS (TRANS (SYM (ISPECL [f,g,x] combinTheory.o_THM))
+                                (AP_THM th x))
+                         (ISPEC x combinTheory.I_THM))
+          end
+      val consP = List.map (applied 2) (#cons_defs coll)
+      val mapP = List.map (applied 2 o #map_def) cbnfs
+      val setP = List.concat (List.map (List.map (applied 1) o #set_defs)
+                                       cbnfs)
+      val repabsP = List.map pointwiseOf (#repabs coll)
+      fun memberOf j =
+          case List.nth (#maps fam, j) of
+              SOME r => r
+            | NONE => raise ERR "collapsedEqns" "a member with nothing to map"
+      val memberEqns =
+          List.concat (List.map (fn j => #map_thm (memberOf j) ::
+                                         #set_thms (memberOf j))
+                                (upto n))
+      val unfoldRWs = List.concat (List.map #defs ccs) @ consP @ mapP @ setP @
+                      repabsP @ memberEqns
+      fun norm tm =
+          rhs (concl (QCONV (simpLib.SIMP_CONV set_ss
+                               (setRWs @ shapeRWs @ unfoldRWs))
+                            tm))
+      fun normth tm =
+          QCONV (simpLib.SIMP_CONV set_ss (setRWs @ shapeRWs @ unfoldRWs)) tm
+      (* what the representation does to a mapped value: this is what
+         puts a member's own map back together underneath a
+         constructor, and it cannot be in the unfolding — the map's
+         definition reads the other way *)
+      val absrepP = List.map pointwiseOf (#absrep coll)
+      fun natREP j =
+          let
+            val ap = List.nth (mapP, j)
+            val body = rhs (concl ap)
+            val absC = rator body
+            val (rC, tC) = dom_rng (type_of absC)
+            val repj = List.nth (#rep coll, j)
+            val repC = Term.inst (match_type (type_of repj) (tC --> rC)) repj
+            val step = AP_TERM repC ap
+            val red = PART_MATCH lhs (List.nth (repabsP, j))
+                                 (rhs (concl step))
+          in
+            GEN_ALL (SYM (TRANS step red))
+          end
+      (* the definitions themselves, normalised the same way: what
+         folds the result back up *)
+      val folds =
+          List.map (GSYM o normth)
+            (List.concat
+               (List.map (fn cs => List.map (lhs o #2 o strip_forall o concl)
+                                            (#defs cs))
+                         ccs) @
+             List.map (lhs o concl o SPEC_ALL) (mapP @ setP))
+      fun eqnsFor j =
+          let
+            val mapdef = #map_def (List.nth (cbnfs, j))
+            val mapapp = lhs (concl (SPEC_ALL mapdef))
+            val fvars = #1 (strip_forall (concl mapdef))
+            val defs = #defs (List.nth (ccs, j))
+            val backs = List.tabulate (n, natREP) @ absrepP @ folds
+            fun capp def = lhs (#2 (strip_forall (concl def)))
+            fun args def = #2 (strip_comb (capp def))
+            fun mapEqn def =
+                GENL (fvars @ args def)
+                     (REWRITE_RULE backs (normth (mk_comb (mapapp, capp def))))
+          in
+            LIST_CONJ (List.map mapEqn defs)
+          end
+    in
+      List.tabulate (n, eqnsFor)
     end
 
 end

@@ -586,62 +586,6 @@ val csetind = familySetInductionOf fam (#types coll, #cons coll)
                                    (#principle coll)
 val cinduction = familyInductionOf cdefs csetind
 val ccases = defineCases caxiom
-val ctyinfos = typeBaseInfo {axiom = caxiom, induction = cinduction,
-                             case_defs = ccases,
-                             rewrites = [[], [], []]}
-val _ = TypeBase.export ctyinfos
-
-val _ = tprint "the family's TypeBase entries"
-val _ =
-    if List.map TypeBasePure.ty_of ctyinfos = #types coll andalso
-       List.all (fn ty => isSome (TypeBase.read (dest_type ty |> #1 |>
-                                    (fn tyop => {Thy = current_theory(),
-                                                 Tyop = tyop}))))
-                (#types coll) andalso
-       aconv (concl (TypeBase.induction_of “:'b1 ct1”)) (concl cinduction)
-    then OK() else die "no entries"
-
-val _ = tprint "the family's members behave like datatypes"
-val _ =
-    let
-      val th1 = Q.prove (‘∀x:'b1 ct2. (∃t. x = CC t) ∨ ∃a u. x = CD a u’,
-                         Cases_on ‘x’ >> simp[])
-      val th2 = Q.prove (‘CA a ≠ CB t u ∧
-                          (CB t u = CB t' u' ⇔ t = t' ∧ u = u')’,
-                         simp[])
-      val th3 = Q.prove (‘(case CE x of CE t => T | CG u => F)’, simp[])
-    in
-      if List.all (null o hyp) [th1, th2, th3] then OK()
-      else die "not proved"
-    end
-
-(* and functions over the family are defined by its axiom and proved
-   about by its induction, which is the whole point of the entry *)
-(* the answers are type variables in the axiom; a definition picks them *)
-val caxiom_num =
-    INST_TYPE (List.map (fn ty => ty |-> numSyntax.num)
-                        (List.filter (fn ty => ty <> b1)
-                                     (type_vars_in_term (concl caxiom))))
-              caxiom
-
-val ct_size_def =
-    new_specification
-      ("ct_size_def", ["ct1SZ", "ct2SZ", "ct3SZ"],
-       CONV_RULE (DEPTH_CONV BETA_CONV)
-         (Q.SPECL [‘λa. 1n’, ‘λt u r s. 1 + r + s’, ‘λt r. 1 + r’,
-                   ‘λa u r. 1 + r’, ‘λt r. 1 + r’, ‘λu r. 1 + r’]
-                  caxiom_num))
-
-val _ = tprint "a function over the family, and induction over it"
-val _ =
-    let val th = Q.prove (‘(∀x:'p ct1. 0 < ct1SZ x) ∧
-                           (∀y:'p ct2. 0 < ct2SZ y) ∧
-                           ∀z:'p ct3. 0 < ct3SZ z’,
-                          ho_match_mp_tac cinduction >> simp[ct_size_def])
-    in
-      if null (hyp th) then OK() else die (thm_to_string th)
-    end
-
 (* ----------------------------------------------------------------------
     and the collapsed types as functors of their own.
 
@@ -698,4 +642,88 @@ val _ =
          null (free_vars (concl (#recursion fix))) andalso
          #newty fix = “:'b1 crose”
       then OK() else die (thm_to_string (#recursion fix))
+    end
+
+(* ----------------------------------------------------------------------
+    and what the collapsed maps do at the constructors, which is what a
+    user reads and what the entries' simplification set holds
+   ---------------------------------------------------------------------- *)
+
+val ceqns = collapsedEqns coll fam cbnfs ccs
+
+val _ = checkeqn "the collapsed family's maps, per constructor" (hd ceqns)
+   “(∀f a. ct1MAP f (CA a) = CA (f a)) ∧
+    (∀f t u. ct1MAP f (CB t u) = CB (ct1MAP f t) (ct2MAP f u))”
+
+val _ = checkeqn "and the members' maps are mutually recursive"
+   (List.nth (ceqns, 1))
+   “(∀f z. ct2MAP f (CC z) = CC (ct3MAP f z)) ∧
+    (∀f a t. ct2MAP f (CD a t) = CD (f a) (ct2MAP f t))”
+
+val ctyinfos = typeBaseInfo {axiom = caxiom, induction = cinduction,
+                             case_defs = ccases,
+                             rewrites = List.map (fn th => [th]) ceqns}
+val _ = TypeBase.export ctyinfos
+
+val _ = tprint "the family's TypeBase entries"
+val _ =
+    if List.map TypeBasePure.ty_of ctyinfos = #types coll andalso
+       List.all (fn ty => isSome (TypeBase.read (dest_type ty |> #1 |>
+                                    (fn tyop => {Thy = current_theory(),
+                                                 Tyop = tyop}))))
+                (#types coll) andalso
+       aconv (concl (TypeBase.induction_of “:'b1 ct1”)) (concl cinduction)
+    then OK() else die "no entries"
+
+val _ = tprint "the family's members behave like datatypes"
+val _ =
+    let
+      val th1 = Q.prove (‘∀x:'b1 ct2. (∃t. x = CC t) ∨ ∃a u. x = CD a u’,
+                         Cases_on ‘x’ >> simp[])
+      val th2 = Q.prove (‘CA a ≠ CB t u ∧
+                          (CB t u = CB t' u' ⇔ t = t' ∧ u = u')’,
+                         simp[])
+      val th3 = Q.prove (‘(case CE x of CE t => T | CG u => F)’, simp[])
+    in
+      if List.all (null o hyp) [th1, th2, th3] then OK()
+      else die "not proved"
+    end
+
+(* and functions over the family are defined by its axiom and proved
+   about by its induction, which is the whole point of the entry *)
+(* the answers are type variables in the axiom; a definition picks them *)
+val caxiom_num =
+    INST_TYPE (List.map (fn ty => ty |-> numSyntax.num)
+                        (List.filter (fn ty => ty <> b1)
+                                     (type_vars_in_term (concl caxiom))))
+              caxiom
+
+val ct_size_def =
+    new_specification
+      ("ct_size_def", ["ct1SZ", "ct2SZ", "ct3SZ"],
+       CONV_RULE (DEPTH_CONV BETA_CONV)
+         (Q.SPECL [‘λa. 1n’, ‘λt u r s. 1 + r + s’, ‘λt r. 1 + r’,
+                   ‘λa u r. 1 + r’, ‘λt r. 1 + r’, ‘λu r. 1 + r’]
+                  caxiom_num))
+
+val _ = tprint "a function over the family, and induction over it"
+val _ =
+    let val th = Q.prove (‘(∀x:'p ct1. 0 < ct1SZ x) ∧
+                           (∀y:'p ct2. 0 < ct2SZ y) ∧
+                           ∀z:'p ct3. 0 < ct3SZ z’,
+                          ho_match_mp_tac cinduction >> simp[ct_size_def])
+    in
+      if null (hyp th) then OK() else die (thm_to_string th)
+    end
+
+(* and the entries carry them: a proof by the family's induction closes
+   on the constructor equations alone *)
+val _ = tprint "the entries' simplification set"
+val _ =
+    let val th = Q.prove (‘(∀x:'p ct1. ct1MAP I x = x) ∧
+                           (∀y:'p ct2. ct2MAP I y = y) ∧
+                           ∀z:'p ct3. ct3MAP I z = z’,
+                          ho_match_mp_tac cinduction >> simp[])
+    in
+      if null (hyp th) then OK() else die (thm_to_string th)
     end

@@ -359,6 +359,12 @@ sig
       string list list -> collapsed ->
       {constructors : term list, defs : thm list} list
 
+  (* and its map one constructor at a time, which is what a TypeBase
+     entry's simplification set wants: one conjunction per member *)
+  val collapsedEqns :
+      collapsed -> family -> copied_bnf list ->
+      {constructors : term list, defs : thm list} list -> thm list
+
   (* ----------------------------------------------------------------------
       The TypeBase entries, one per type the axiom defines: the axiom,
       the induction principle and the case definitions are what
