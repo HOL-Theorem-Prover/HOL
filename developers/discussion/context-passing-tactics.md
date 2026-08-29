@@ -1115,9 +1115,25 @@ left-biased union of the slots discards a whole sibling's forms, so a
 round-trips one form from each registrant, and its theory has all three
 as ancestors, so a dropped registrant fails it.
 
-#### Threading the context into parsing: attempted, and what stopped it
+#### Threading the context into parsing: landed
 
-The shape that works, and the two things that stop it landing.
+The shape below is what is emitted now.  Both stoppers recorded here are
+resolved --- see each --- and the read this was chasing is gone:
+measured with the tripwire at level 2 and a positive control, a `“...”`
+quotation inside a tactic reports nothing, while the control still
+reports.  The core build, `src/basicProof/theory_tests`,
+`src/boss/theory_tests` and the 94-test LSP suite are all green.
+
+One addition to the shape as first written.  Rebinding the structure
+catches a qualified `Parse.Term`, which is what a doublequoted quotation
+expands to, but scripts also write the bare name --- listScript has
+``PAT_X_ASSUM (Term`x = y`)`` --- so a `val Term = Parse.Term` and a
+`val Type = Parse.Type`, both taken from the rebound structure, follow
+it.  That is what an `open Parse` would have reached, without shadowing
+anything else; `Type` is safe because SML keeps values and structures in
+separate namespaces, so `Type.hol_type` still names the kernel structure.
+`Parse` needs no availability guard, unlike BasicProvers: it is in scope
+wherever the `Theorem` syntax is.
 
 **The shape.**  Wrap each declaration in a scope that binds the context
 it is elaborated against, and rebind the entry points that would

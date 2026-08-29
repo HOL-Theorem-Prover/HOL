@@ -257,6 +257,25 @@ fun ctxtLocal {anchor, stop, kvs, body} = let
       NONE => snap
     | SOME f => App (App (mkIdent (stop, "BasicProvers.map_simpset"), f), snap)
   val bind = valPat stop (mkIdent (stop, ctxtName)) rhs
+  val ctxtId = mkIdent (stop, ctxtName)
+  fun shadow (nm, e) = valPat stop (mkIdent (stop, nm)) e
+  fun inCtxt f = App (mkIdent (stop, f), ctxtId)
+  (* Parse is available wherever the Theorem syntax is, so unlike the
+     BasicProvers rebind this needs no guard.  Term and Type are taken
+     from the rebound structure so a bare `Term q' is covered too --
+     listScript writes PAT_X_ASSUM (Term`x = y`) and the expansion of a
+     doublequoted quotation emits a qualified Parse.Term. *)
+  val parseRebind = [
+    DecStructure {structure_ = stop,
+      elems = {args = [{id = (stop, "Parse"), constraint = NONE,
+        bind = SOME {eq = stop, strexp = StrStruct {struct_ = stop,
+          strdec = [DecOpen {open_ = stop, elems = [(stop, "Parse")]},
+                    shadow ("Term", inCtxt "Parse.Term_in"),
+                    shadow ("Type", inCtxt "Parse.Type_in")],
+          end_ = SOME stop, stop = stop}}}],
+        seps = [], stop = stop}},
+    shadow ("Term", mkIdent (stop, "Parse.Term")),
+    shadow ("Type", mkIdent (stop, "Parse.Type"))]
   val bp = (stop, "BasicProvers")
   val rebind =
     if not (!srwShimOK) then []
@@ -275,9 +294,9 @@ fun ctxtLocal {anchor, stop, kvs, body} = let
             elems = {args = [{id = bp, constraint = NONE,
                               bind = SOME {eq = stop, strexp = strexp}}],
                      seps = [], stop = stop}},
-          valPat stop (mkIdent (stop, "srw_ss"))
-                      (mkIdent (stop, "BasicProvers.srw_ss"))] end
-  in DecLocal {local_ = anchor, dec1 = bind :: rebind, in_ = SOME stop,
+          shadow ("srw_ss", mkIdent (stop, "BasicProvers.srw_ss"))] end
+  in DecLocal {local_ = anchor, dec1 = bind :: parseRebind @ rebind,
+               in_ = SOME stop,
                dec2 = [body], end_ = SOME stop, stop = stop} end
 
 fun srwWrapTac (p, tac) =
