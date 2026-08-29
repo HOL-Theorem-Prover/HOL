@@ -234,3 +234,65 @@ val _ =
                  (∀a l. (∀y. y ∈ mylistSET l ⇒ P y) ⇒ P (RNode a l)) ⇒
                  ∀r. P r”
     then OK() else die (thm_to_string (#set_induction rcs))
+
+(* ----------------------------------------------------------------------
+    The case constant, and the TypeBase entry.
+
+    This is the whole way: from the axiom the package derived, a case
+    constant that `Prim_rec.define_case_constant` cannot build for a
+    nested type, and then the entry the rest of HOL reads — after which
+    the type's own tactics and the simplifier work as they do for a type
+    the old package defined.
+   ---------------------------------------------------------------------- *)
+
+val mylist_case = hd (defineCases mylist_axiom)
+
+(* each conjunct binds its own v and f, so nothing ties the two
+   together: the annotations do it *)
+val _ = checkthm "mylist's case constant" mylist_case
+   “(∀(v:'r) f. mylist_CASE (MyNil : 'b1 mylist) v f = v) ∧
+    (∀(a:'b1) l (v:'r) f. mylist_CASE (MyCons a l) v f = f a l)”
+
+val rose_case = hd (defineCases rose_axiom)
+
+val _ = tprint "define_case_constant cannot take the nested axiom"
+val _ = (ignore (Prim_rec.define_case_constant rose_axiom); die "accepted")
+        handle HOL_ERR _ => OK()
+
+val _ = checkthm "and the nested type's case constant is derived anyway"
+   rose_case
+   “(∀(v:'r) f. rose_CASE (RLeaf : 'b1 rose) v f = v) ∧
+    (∀(a:'b1) l (v:'r) f. rose_CASE (RNode a l) v f = f a l)”
+
+val mylist_tyinfo =
+    hd (typeBaseInfo {axiom = mylist_axiom, induction = mylist_induction,
+                      case_defs = [mylist_case],
+                      rewrites = [[mylistMAP_thm, mylistSET_thm]]})
+
+val _ = TypeBase.export [mylist_tyinfo]
+
+val _ = tprint "the type is in TypeBase"
+val _ =
+    if isSome (TypeBase.read {Thy = current_theory(), Tyop = "mylist"}) andalso
+       null (hyp (TypeBase.nchotomy_of “:'a mylist”)) andalso
+       aconv (TypeBase.case_const_of “:'a mylist”)
+             (repeat rator (lhs (#2 (strip_forall (hd (strip_conj
+                                       (concl mylist_case)))))))
+    then OK() else die "no entry"
+
+(* and what the entry is for: the type's own tactics, its case syntax,
+   and the map and set equations in the simplifier *)
+val _ = tprint "induction and the simplifier over the new type"
+val _ =
+    let val th = Q.prove (‘∀l. mylistMAP I l = l’, Induct_on ‘l’ >> simp[])
+    in
+      if null (hyp th) then OK() else die (thm_to_string th)
+    end
+
+val _ = tprint "case expressions over the new type"
+val _ =
+    let val th = Q.prove (‘(case MyCons a l of MyNil => F | MyCons _ _ => T)’,
+                          simp[])
+    in
+      if null (hyp th) then OK() else die (thm_to_string th)
+    end

@@ -348,10 +348,10 @@ val _ =
        same (concl fam_axiom)
             “∀f0 f1 f2 f3 f4 f5.
                ∃h0 h1 h2.
-                 ((∀a0. h0 (FA a0) = f0 a0) ∧
-                  ∀a0 a1. h0 (FB a0 a1) = f1 (h0 a0) (h1 a1)) ∧
-                 ((∀a0. h1 (FC a0) = f2 (h2 a0)) ∧
-                  ∀a0 a1. h1 (FD a0 a1) = f3 a0 (h1 a1)) ∧
+                 (∀a0. h0 (FA a0) = f0 a0) ∧
+                 (∀a0 a1. h0 (FB a0 a1) = f1 (h0 a0) (h1 a1)) ∧
+                 (∀a0. h1 (FC a0) = f2 (h2 a0)) ∧
+                 (∀a0 a1. h1 (FD a0 a1) = f3 a0 (h1 a1)) ∧
                  (∀a0. h2 (FE a0) = f4 (h0 a0)) ∧
                  ∀a0. h2 (FG a0) = f5 (h2 a0)”
     then OK() else die (thm_to_string fam_axiom)
@@ -367,10 +367,10 @@ val _ =
        same (concl fam_prim_axiom)
             “∀f0 f1 f2 f3 f4 f5.
                ∃h0 h1 h2.
-                 ((∀a0. h0 (FA a0) = f0 a0) ∧
-                  ∀a0 a1. h0 (FB a0 a1) = f1 a0 a1 (h0 a0) (h1 a1)) ∧
-                 ((∀a0. h1 (FC a0) = f2 a0 (h2 a0)) ∧
-                  ∀a0 a1. h1 (FD a0 a1) = f3 a0 a1 (h1 a1)) ∧
+                 (∀a0. h0 (FA a0) = f0 a0) ∧
+                 (∀a0 a1. h0 (FB a0 a1) = f1 a0 a1 (h0 a0) (h1 a1)) ∧
+                 (∀a0. h1 (FC a0) = f2 a0 (h2 a0)) ∧
+                 (∀a0 a1. h1 (FD a0 a1) = f3 a0 a1 (h1 a1)) ∧
                  (∀a0. h2 (FE a0) = f4 a0 (h0 a0)) ∧
                  ∀a0. h2 (FG a0) = f5 a0 (h2 a0)”
     then OK() else die (thm_to_string fam_prim_axiom)
@@ -457,9 +457,9 @@ val _ =
     if null (hyp fam_induction) andalso
        same (concl fam_induction)
             “∀P0 P1 P2.
-               ((∀a0. P0 (FA a0)) ∧ ∀a0 a1. P0 a0 ∧ P1 a1 ⇒ P0 (FB a0 a1)) ∧
-               ((∀a0. P2 a0 ⇒ P1 (FC a0)) ∧
-                ∀a0 a1. P1 a1 ⇒ P1 (FD a0 a1)) ∧
+               (∀a0. P0 (FA a0)) ∧ (∀a0 a1. P0 a0 ∧ P1 a1 ⇒ P0 (FB a0 a1)) ∧
+               (∀a0. P2 a0 ⇒ P1 (FC a0)) ∧
+               (∀a0 a1. P1 a1 ⇒ P1 (FD a0 a1)) ∧
                (∀a0. P0 a0 ⇒ P2 (FE a0)) ∧ (∀a0. P2 a0 ⇒ P2 (FG a0)) ⇒
                (∀x. P0 x) ∧ (∀x. P1 x) ∧ ∀x. P2 x”
     then OK() else die (thm_to_string fam_induction)
@@ -514,3 +514,25 @@ val _ = checkeqn "ft1's set function, per constructor"
 val _ = checkeqn "ft2's second set function, per constructor"
    (List.nth (#set_eqns (List.nth (fam_eqns, 1)), 1))
    “(ft2SET2 (FC z) = ft3SET z) ∧ (ft2SET2 (FD a t) = ft2SET2 t)”
+
+(* ----------------------------------------------------------------------
+    The case constants, which is the first thing a TypeBase entry needs.
+
+    A family's later members are *instances* — `:('b1, 'b1 ft1) ft2` —
+    rather than type operators over the specification's own variables,
+    which is what a TypeBase entry is keyed on and what a user who wrote
+    the specification expects.  Collapsing them onto fresh types is the
+    step that has to come before a family reaches TypeBase; a single
+    type needs none of it, and bnfRegisterScript takes that one all the
+    way.
+   ---------------------------------------------------------------------- *)
+
+val fam_cases = defineCases fam_prim_axiom
+
+val _ = checkeqn "the family's case constants" (hd fam_cases)
+   “(∀a f g. ft1_CASE (FA a) f g = f a) ∧
+    (∀t u f g. ft1_CASE (FB t u) f g = g t u)”
+
+val _ = checkeqn "and one per member" (List.nth (fam_cases, 2))
+   “(∀t f g. ft3_CASE (FE t) f g = f t) ∧
+    (∀t f g. ft3_CASE (FG t) f g = g t)”

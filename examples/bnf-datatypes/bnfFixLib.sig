@@ -295,4 +295,28 @@ sig
      form a proof is written against *)
   val familyInduction : constructors list -> family -> thm -> thm
 
+  (* ----------------------------------------------------------------------
+      The case constants, from an axiom one clause per constructor —
+      one per type the axiom defines, named and stated as the old
+      package's are.  Prim_rec's own version defines them by a recursive
+      definition, which a nested axiom cannot be; nothing about a case
+      constant is recursive, so this takes the axiom with every target
+      ignoring the results of the recursive calls.
+     ---------------------------------------------------------------------- *)
+  val defineCases : thm -> thm list
+
+  (* ----------------------------------------------------------------------
+      The TypeBase entries, one per type the axiom defines: the axiom,
+      the induction principle and the case definitions are what
+      TypeBasePure derives the rest from, and the map and set equations
+      per constructor are what the entry's simplification set wants —
+      one list of those per type, in the case definitions' order.
+
+      Registering the result is the caller's separate decision, as it is
+      with the BNF database: TypeBase.export writes it to the theory.
+     ---------------------------------------------------------------------- *)
+  val typeBaseInfo : {axiom : thm, induction : thm, case_defs : thm list,
+                      rewrites : thm list list} ->
+                     TypeBasePure.tyinfo list
+
 end

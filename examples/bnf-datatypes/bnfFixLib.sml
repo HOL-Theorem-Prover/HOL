@@ -2387,13 +2387,17 @@ fun familyAxiom (css : constructors list) (fam : family) recursion =
                     pairTheory.PAIR_MAP, pairTheory.FST, pairTheory.SND,
                     combinTheory.I_THM])
     in
-      GENL (List.concat (List.map #1 members))
-        (CONV_RULE
-           (STRIP_QUANT_CONV (renameBlocks defs))
-           (REWRITE_RULE (List.map GSYM (List.concat defs))
-              (CONV_RULE (STRIP_QUANT_CONV expand)
-                 (CONV_RULE (DEPTH_CONV BETA_CONV)
-                    (SPECL (List.map #2 members) recursion)))))
+      (* one clause per constructor, in one list: expanding a member's
+         equation leaves its own clauses nested inside the family's, and
+         what reads a datatype axiom expects them flat *)
+      PURE_REWRITE_RULE [GSYM CONJ_ASSOC]
+        (GENL (List.concat (List.map #1 members))
+          (CONV_RULE
+             (STRIP_QUANT_CONV (renameBlocks defs))
+             (REWRITE_RULE (List.map GSYM (List.concat defs))
+                (CONV_RULE (STRIP_QUANT_CONV expand)
+                   (CONV_RULE (DEPTH_CONV BETA_CONV)
+                      (SPECL (List.map #2 members) recursion))))))
     end
 
 
@@ -2574,9 +2578,170 @@ fun familyInduction (css : constructors list) (fam : family) induction =
                    (setRWs @ [sumTheory.FORALL_SUM, pairTheory.FORALL_PROD,
                               oneTheory.FORALL_ONE]))
     in
-      CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (renameBlocks defs)))
-        (REWRITE_RULE (List.map GSYM (List.concat defs))
-           (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV expand)) induction))
+      PURE_REWRITE_RULE [GSYM CONJ_ASSOC]
+        (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (renameBlocks defs)))
+           (REWRITE_RULE (List.map GSYM (List.concat defs))
+              (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV expand)) induction)))
+    end
+
+
+(* ----------------------------------------------------------------------
+    The case constants.
+
+    `Prim_rec.define_case_constant` builds these from a datatype axiom by
+    a recursive definition, which is a route a nested axiom cannot take —
+    `new_recursive_definition` rejects it.  Nothing about a case constant
+    is recursive, though: it is the axiom with every target ignoring the
+    results of the recursive calls, so the same equations come out of the
+    axiom directly.
+
+    The constants are named and stated exactly as the old package's are,
+    since that is what the rest of the system reads:
+
+      |- (!v f. bt_CASE Lf v f = v) /\
+         !a0 a1 a2 v f. bt_CASE (Nd a0 a1 a2) v f = f a0 a1 a2
+
+    An axiom over a family gives one per member.
+   ---------------------------------------------------------------------- *)
+
+fun defineCases ax0 =
+    let
+      (* uniqueness is no use here, and a family's axiom does not have it *)
+      val (fvars, body0) = strip_forall (concl ax0)
+      val ax = if is_exists1 body0 then
+                 GENL fvars (EXISTENCE (SPECL fvars ax0))
+               else ax0
+      val (hvars, body) = strip_exists (#2 (strip_forall (concl ax)))
+      (* one clause per constructor: what the function does to it, and
+         what the target is handed *)
+      fun clauseOf tm =
+          let val (args, eq) = strip_forall tm
+              val (h, capp) = dest_comb (lhs eq)
+              val (cons, cargs) = strip_comb capp
+              val (f, fargs) = strip_comb (rhs eq)
+          in
+            {h = h, cons = cons, cargs = cargs, f = f, fargs = fargs}
+          end
+      val clauses = List.map clauseOf (strip_conj body)
+      fun clausesOf h = List.filter (fn c => aconv (#h c) h) clauses
+      (* a branch takes the constructor's own arguments, in the order the
+         constructor takes them, and is named as the old package names it *)
+      fun branchesOf h =
+          let
+            val cs = clausesOf h
+            val rty = #2 (dom_rng (type_of h))
+            fun mk (c, (bs, away)) =
+                let val nm = if null (#cargs c) then "v" else "f"
+                    val ty = List.foldr (op -->) rty
+                                        (List.map type_of (#cargs c))
+                    val v = numvariant away (mk_var (nm, ty))
+                in (bs @ [v], v :: away) end
+          in
+            #1 (List.foldl mk ([], List.concat (List.map #cargs cs)) cs)
+          end
+      val branches = List.map branchesOf hvars
+      (* the target that ignores the recursive calls' results: what is
+         not one of the constructor's arguments is one of those *)
+      fun targetOf (c, b) =
+          let
+            fun freshen (t, (vs, away)) =
+                if is_var t andalso List.exists (aconv t) (#cargs c) then
+                  (vs @ [t], away)
+                else
+                  let val v = numvariant away (mk_var ("r", type_of t))
+                  in (vs @ [v], v :: away) end
+            val (vs, _) = List.foldl freshen
+                            ([], #cargs c @ free_varsl (#fargs c))
+                            (#fargs c)
+          in
+            (#f c, list_mk_abs (vs, list_mk_comb (b, #cargs c)))
+          end
+      val targets =
+          List.concat
+            (ListPair.mapEq
+               (fn (h,bs) => ListPair.mapEq targetOf (clausesOf h, bs))
+               (hvars, branches))
+      val solved =
+          let fun instOf f =
+                  case List.find (fn (g,_) => aconv g f) targets of
+                      SOME (_,t) => t
+                    | NONE => f
+          in
+            CONV_RULE (DEPTH_CONV BETA_CONV)
+                      (SPECL (List.map instOf fvars) ax)
+          end
+      (* the functions the equations are about *)
+      fun witnesses (ws, th) =
+          if is_exists (concl th) then
+            witnesses (ws @ [mk_select (dest_exists (concl th))],
+                       SELECT_RULE th)
+          else (ws, th)
+      val (sels, eqth) = witnesses ([], solved)
+      val eqs = CONJUNCTS eqth
+      fun defineOne (j, h) =
+          let
+            val bs = List.nth (branches, j)
+            val sel = List.nth (sels, j)
+            val (dty, rty) = dom_rng (type_of h)
+            val tyname = #1 (dest_type dty)
+            val x = numvariant (bs @ List.concat (List.map #cargs clauses))
+                               (mk_var ("x", dty))
+            val cname = Prim_rec.case_constant_name {type_name = tyname}
+            val casetm = list_mk_abs (x :: bs, mk_comb (sel, x))
+            val cvar = mk_var (cname, type_of casetm)
+            fun equation (c, eq) =
+                let val capp = list_mk_comb (#cons c, #cargs c)
+                    val app = list_mk_comb (casetm, capp :: bs)
+                in
+                  GENL (#cargs c @ bs)
+                       (TRANS (LIST_BETA_CONV app) (SPECL (#cargs c) eq))
+                end
+            val cs = clausesOf h
+            fun aboutSel eq =
+                aconv (rator (lhs (#2 (strip_forall (concl eq))))) sel
+            val jeqs = List.filter aboutSel eqs
+            val proved = LIST_CONJ (ListPair.mapEq equation (cs, jeqs))
+            val ex = mk_exists (cvar, subst [casetm |-> cvar] (concl proved))
+          in
+            new_specification
+              (Prim_rec.case_constant_defn_name {type_name = tyname},
+               [cname], EXISTS (ex, casetm) proved)
+          end
+    in
+      List.tabulate (length hvars, fn j => defineOne (j, List.nth (hvars, j)))
+    end
+
+
+(* ----------------------------------------------------------------------
+    The TypeBase entry.
+
+    `TypeBasePure.gen_datatype_info` derives the nchotomy, the case
+    congruences, distinctness and injectivity from the axiom, the
+    induction principle and the case definitions, and marks the members
+    of a family after the first as copies of the first's axiom and
+    induction — so what the package owes it is those three things, all
+    of which the steps above produce.
+
+    What it does not derive is the simplification set for the new
+    constants: a type built here comes with a map and a set function per
+    argument, whose constructor equations are exactly what a user wants
+    the simplifier to know.  They are passed in, one list per type, in
+    the order the case definitions come.
+   ---------------------------------------------------------------------- *)
+
+fun typeBaseInfo {axiom, induction, case_defs, rewrites} =
+    let
+      val tyinfos = TypeBasePure.gen_datatype_info
+                      {ax = axiom, ind = induction, case_defs = case_defs}
+      val _ = length rewrites = length tyinfos orelse
+              raise ERR "typeBaseInfo" "a rewrite list per type, please"
+      fun withRewrs (tyi, ths) =
+          let val {convs, rewrs} = TypeBasePure.simpls_of tyi
+          in
+            TypeBasePure.put_simpls {convs = convs, rewrs = rewrs @ ths} tyi
+          end
+    in
+      ListPair.mapEq withRewrs (tyinfos, rewrites)
     end
 
 end
