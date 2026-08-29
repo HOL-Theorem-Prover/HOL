@@ -62,7 +62,7 @@ fun pppdb_apply_add
 fun pppdb_apply_rm s {parse,print_upd,print_lookup} =
     let
       fun foldthis (p as (k, dds0)) tab0 =
-          let val dds = List.filter (fn DD d => #left d = s) dds0
+          let val dds = List.filter (fn DD d => #left d <> s) dds0
           in
             if null dds then tab0
             else Symtab.update (k,dds) tab0
@@ -77,18 +77,50 @@ fun pppdb_apply_rm s {parse,print_upd,print_lookup} =
 fun apply_delta (ADD dd) db = pppdb_apply_add dd db
   | apply_delta (RM s) db = pppdb_apply_rm s db
 
-val pppdata_info = {
-  tag = "dictppp", initial_values = [("min", empty_pppdb)],
-  apply_delta = apply_delta
-}
-val {DB, record_delta, get_global_value, update_global_value,...} =
-    AncestryData.fullmake {
-      adinfo = pppdata_info,
-      uptodate_delta = fn _ => true,
-      sexps = {dec = delta_dec, enc = delta_enc},
-      globinfo = {apply_to_global = apply_delta, thy_finaliser = NONE,
-                  initial_value = empty_pppdb}
+(* Two ancestors can each have added forms.  The tables are keyed by
+   bracket string and by term name, so their entries are disjoint except
+   where both added the same form. *)
+fun merge_pppdb (db1 : pppdb, db2 : pppdb) : pppdb =
+    let
+      fun ddunion (dds1, dds2) =
+          dds1 @ List.filter (fn d => not (List.exists (ddequal d) dds1)) dds2
+    in
+      {parse = Symtab.join (fn _ => fn (_,d2) => d2) (#parse db1, #parse db2),
+       print_upd = Symtab.join (fn _ => ddunion)
+                               (#print_upd db1, #print_upd db2),
+       print_lookup = Symtab.join (fn _ => ddunion)
+                                  (#print_lookup db1, #print_lookup db2)}
+    end
+
+(* Where the dictionary lives.  It extends what the parser and the
+   printers below do, so it belongs with the grammar they are handed
+   rather than in a process-global: each of them reads it out of the
+   grammar it already receives.  It used to be read with AncestryData's
+   get_global_value, which is an ambient read, and so fired the tripwire
+   whenever a quotation was parsed inside a proof.
+
+   Persistence rides the grammar's own delta stream, the same way the
+   printers and the postprocessor above are persisted: a grammar is
+   rebuilt on load by replaying its deltas over its merged parents, so
+   this is the only channel a loaded grammar reconstructs itself from. *)
+val dictppp_name = "combinpp.dictppp"
+
+val pppdb_key : pppdb term_grammar.state_key =
+    term_grammar.new_state_key {name = dictppp_name, init = empty_pppdb,
+                                merge = merge_pppdb}
+
+val _ = term_grammar.userSyntaxFns.register_stateDelta {
+      name = dictppp_name,
+      code = fn sexp => fn G =>
+                case delta_dec sexp of
+                    SOME d => term_grammar.upd_user_state pppdb_key
+                                                          (apply_delta d) G
+                  | NONE => raise Feedback.mk_HOL_ERR "combinpp" dictppp_name
+                                  "Bad encoding for dictionary delta"
     }
+
+fun record_delta d =
+    Parse.add_user_state_delta {codename = dictppp_name, delta = delta_enc d}
 
 fun ERR f l msg = Feedback.mk_HOL_ERRloc "combinpp" f l msg
 fun cAPP l (a1, a2) = Absyn.APP(l,a1,a2)
@@ -179,7 +211,8 @@ fun upd_processor0 (DB:pppdb) a =
              end)
       | _ => a
 
-fun upd_processor G a = upd_processor0 (get_global_value()) a
+fun upd_processor G a =
+    upd_processor0 (term_grammar.get_user_state pppdb_key G) a
 
 val _ = term_grammar.userSyntaxFns.register_absynPostProcessor
           {name = "combin.UPDATE",
@@ -200,7 +233,7 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm
             | _ => NONE
       val (updname, (k,v), next) =
           case oi_strip tm of SOME quad => quad | NONE => raise UserPP_Failed
-      val {print_upd,...} = get_global_value()
+      val {print_upd,...} = term_grammar.get_user_state pppdb_key tmg
 
       val candidate_dds =
           let val base = Symtab.lookup_list print_upd updname
@@ -280,7 +313,7 @@ fun seln_printer  (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
             | _ => NONE
       val (selname, f, k) =
           case oi_strip tm of SOME trip => trip | NONE => raise UserPP_Failed
-      val {print_lookup,...} = get_global_value()
+      val {print_lookup,...} = term_grammar.get_user_state pppdb_key tmg
 
       val candidate_dds =
           let val base = Symtab.lookup_list print_lookup selname
@@ -356,7 +389,6 @@ fun new_form r =
     in
       addlform left right;
       record_delta d;
-      update_global_value (apply_delta d);
       add_user_printer("combinpp.general_printer", updt);
       case lookup_term_name of
           NONE => ()

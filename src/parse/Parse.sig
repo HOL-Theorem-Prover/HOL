@@ -59,6 +59,16 @@ signature Parse = sig
       (string * term_grammar.absyn_postprocessor) -> unit
   val temp_remove_absyn_postprocessor :
       string -> term_grammar.absyn_postprocessor option
+  (* Update the state a registered parser/printer function keeps in the
+     grammar, by recording a delta the registrant knows how to decode
+     and apply (see term_grammar.userSyntaxFns.register_stateDelta).
+     Going through the grammar means the derived parser is rebuilt, so
+     the new value takes effect at once; and being an ordinary grammar
+     delta, it is replayed when a theory that recorded it is loaded. *)
+  val add_user_state_delta :
+      {codename : string, delta : ThyDataSexp.t} -> unit
+  val temp_add_user_state_delta :
+      {codename : string, delta : ThyDataSexp.t} -> unit
   val temp_add_preterm_processor :
       string * int -> term_grammar.preterm_processor -> unit
   val temp_remove_preterm_processor :

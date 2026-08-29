@@ -822,6 +822,11 @@ in
   upd_term_grammar (new_absyn_postprocessor x)
 end
 
+fun user_state_delta0 {codename,delta} =
+    [ADD_USER_STATE {codename = codename, delta = delta}]
+val temp_add_user_state_delta = mk_temp user_state_delta0
+val add_user_state_delta = mk_perm user_state_delta0
+
 val add_absyn_postprocessor =
   mk_perm (fn s => [ADD_ABSYN_POSTP {codename = s}])
 

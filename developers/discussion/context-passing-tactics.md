@@ -1074,11 +1074,46 @@ The culprit is `combinpp`'s dictionary-syntax database, read by
     fun upd_processor G a = upd_processor0 (get_global_value()) a
 
 which is registered as an *absyn postprocessor* and so runs on every
-parse.  It cannot be fixed where it stands: the postprocessor API is
-`grammar -> absyn -> absyn`, with no context to read from.  Fixing it
-means giving `TermParse.absyn` a context and passing it to the
-postprocessors --- which is the same threading the kernel signature
-needs.  Both fall to one change; neither is needed for Phase 3.
+parse.
+
+#### Resolved: the state belongs to the grammar, not to a context
+
+The expectation here --- that this needed `TermParse.absyn` to take a
+context, falling to the same change as the kernel signature reads ---
+was wrong, and wrong in a way worth recording.  The postprocessor is
+already handed the thing its dictionary extends: the `grammar`
+argument.  What it lacked was anywhere in that grammar to keep state.
+So `term_grammar` grew a `user_state` slot per registrant, claimed with
+`new_state_key`, and `upd_processor` now reads its dictionary out of
+the `G` it was always given.  The postprocessor API did not change, and
+the seventeen stateless registrants were not touched.
+
+The trap is persistence.  A grammar is not stored whole: it is itself
+an `AncestryData` value, rebuilt on load by replaying its recorded
+deltas over its merged parents.  That is why `ADD_ABSYN_POSTP` stores a
+*codename* to reinstall rather than a closure.  A first attempt
+installed the dictionary into the ambient grammar as the theory loaded,
+and relied on that install being seen; it is not, because a loaded
+grammar is reconstructed from its delta stream and knows nothing of the
+ambient one.  The whole core build passed regardless --- `src/bag` and
+`src/finite_maps` are in no build sequence, and `src/bag` was the first
+thing to parse `(| ... |)` inside a proof:
+
+    combinpp.upd_processor: No stored info for (|
+
+Persistence therefore rides the same stream the registration does.
+`ADD_USER_STATE {codename, delta}` carries the registrant's own encoded
+delta, and `add_delta` applies it through a registry entry the
+registrant supplies.  `combinpp`'s separate `AncestryData` instance is
+gone: one channel, not two.
+
+Merging matters, because `combin`, `list` and `finite_map` all extend
+the one dictionary under disjoint keys --- `(|`, `⦇`, `❲` and `⟨` for
+parsing, `UPDATE`, `fLUPDATE` and `fmupdate` for printing.  A
+left-biased union of the slots discards a whole sibling's forms, so a
+`state_key` carries the merge to use.  `src/finite_maps/selftest.sml`
+round-trips one form from each registrant, and its theory has all three
+as ancestors, so a dropped registrant fails it.
 
 #### Threading the context into parsing: attempted, and what stopped it
 
@@ -1185,12 +1220,17 @@ no earlier tactic in the chain can discharge:
 | `ASM_REWRITE_TAC`, `FILTER_ASM_*`                 | 0 | --- |
 | `EVAL_TAC`                                        | 0 | --- |
 | `Cases`, `Induct`, `DECIDE_TAC`, `ARITH_TAC`      | 0 | --- |
-| `Cases_on`, `Induct_on`, `PairCases_on`           | 1 | `dictppp` |
-| `Q.EXISTS_TAC`, `Q.ABBREV_TAC`                    | 1 | `dictppp` |
+| `Cases_on`, `Induct_on`, `PairCases_on`           | 0 | --- |
+| `Q.EXISTS_TAC`                                    | 0 | --- |
+| `Q.ABBREV_TAC`                                    | 1 | `parse.term_grammar` |
 
-Every tactic that takes a quotation reads once; every tactic that does
-not reads nothing.  The tactic-level state is done: what remains is one
-read per parse, in one place, with a known fix.
+The bottom two rows read `dictppp` once each when first measured.  They
+read nothing now: giving `combinpp` a slot in the grammar retired that
+read, so a tactic taking a quotation is no worse off than one that does
+not.  `Q.ABBREV_TAC`'s remaining read is a different site and a
+different slot --- `gen_variant Parse.is_constname` reaching for the
+ambient grammar, the `GEN_TAC` bug class this document opens with, and
+one of the three named just below.
 
 Three sites turned up along the way that were the *same* bug as the
 `GEN_TAC` one this document opens with --- `gen_variant
