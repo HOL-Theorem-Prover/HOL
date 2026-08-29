@@ -315,6 +315,21 @@ sig
       Registering the result is the caller's separate decision, as it is
       with the BNF database: TypeBase.export writes it to the theory.
      ---------------------------------------------------------------------- *)
+  (* ----------------------------------------------------------------------
+      A specification as written, through the parser and parse_bnf, to
+      what the construction takes: a functor per member with the
+      variable standing for each member in it, the specification's own
+      type variables, and the constructors' names.
+     ---------------------------------------------------------------------- *)
+  type spec = {
+    tynames : string list,
+    params : hol_type list,
+    functors : (hol_type * hol_type list) list,
+    constructors : string list list
+  }
+
+  val parseSpec : hol_type quotation -> spec
+
   val typeBaseInfo : {axiom : thm, induction : thm, case_defs : thm list,
                       rewrites : thm list list} ->
                      TypeBasePure.tyinfo list

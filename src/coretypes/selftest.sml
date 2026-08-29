@@ -382,8 +382,8 @@ fun bty1 ** bty2 = ftor({Thy="pair", Name="prod"}, [bty1,bty2])
 val _ = List.app testq2bnf [
       ("foo = C num | D", [("foo",constty “:num + unit”)]),
       ("foo = C num foo | D bool | E (foo list)",
-       [("foo", K “:num” ** the_arg ++ K “:bool” ++
-                ftor({Thy="scratch",Name="list"}, [the_arg]))]),
+       [("foo", K “:num” ** the_arg ++
+                (K “:bool” ++ ftor({Thy="scratch",Name="list"}, [the_arg])))]),
       ("foo = C num | D bar ; bar = barC (bool -> foo)",
        [("foo", K“:num” ++ mutrec_var "bar"),
         ("bar", ftor({Thy = "min", Name = "fun"},

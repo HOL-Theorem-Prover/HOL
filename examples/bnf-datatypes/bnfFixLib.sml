@@ -2744,4 +2744,41 @@ fun typeBaseInfo {axiom, induction, case_defs, rewrites} =
       ListPair.mapEq withRewrs (tyinfos, rewrites)
     end
 
+
+(* ----------------------------------------------------------------------
+    A specification, as written.
+
+    This is the front end's first half: the `Datatype:` syntax the old
+    package takes, through the parser and `parse_bnf`, to what the
+    construction wants — a functor per member with the variable standing
+    for each member in it, the specification's own type variables, and
+    the constructors' names.
+
+    What it does not do yet is any of the rest of what the syntax
+    promises: records become a single constructor of their fields, and
+    nothing here handles the attributes or the naming conventions the
+    old entry points carry.
+   ---------------------------------------------------------------------- *)
+
+type spec = {
+  tynames : string list,
+  params : hol_type list,
+  functors : (hol_type * hol_type list) list,
+  constructors : string list list
+}
+
+fun parseSpec q : spec =
+    let
+      val asts = ParseDatatype.hparse (Parse.type_grammar()) q
+      val {tynames, params, functors} =
+          bnfLib.specToFunctors (parse_bnf.parse2ftor asts)
+      fun namesOf (nm, form) =
+          case form of
+              ParseDatatype.Constructors cs => List.map #1 cs
+            | ParseDatatype.Record _ => [nm]
+    in
+      {tynames = tynames, params = params, functors = functors,
+       constructors = List.map namesOf asts}
+    end
+
 end

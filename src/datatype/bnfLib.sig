@@ -6,6 +6,15 @@ type info = thm bnfBase_dtype.info
 
 val specToFunctor : bnfBase.bnftor -> hol_type
 
+(* a whole specification: a functor per member, with the variable that
+   stands for each member in it (its own being the recursive argument),
+   and the specification's own type variables — what the construction of
+   a mutually recursive family takes *)
+val specToFunctors :
+    (string * bnfBase.bnftor) list ->
+    {tynames : string list, params : hol_type list,
+     functors : (hol_type * hol_type list) list}
+
 (* the composite functor's map and set terms, along with the BNFs that
    the composite is built from.  The map term has a free variable f of
    type α → β in it. *)

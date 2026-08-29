@@ -296,3 +296,54 @@ val _ =
     in
       if null (hyp th) then OK() else die (thm_to_string th)
     end
+
+(* ----------------------------------------------------------------------
+    And the whole way from a specification as written.
+
+    The steps are the ones above, with the specification supplying what
+    was written by hand there: the functor, the parameters and the
+    constructors' names.
+   ---------------------------------------------------------------------- *)
+
+val spec = parseSpec `expr = Var 'a | Lit num | Op expr num expr`
+
+val _ = tprint "a specification's functor"
+val _ =
+    if #tynames spec = ["expr"] andalso
+       #constructors spec = [["Var", "Lit", "Op"]] andalso
+       List.map #1 (#functors spec) = [“:'b1 + num + 'a # num # 'a”]
+    then OK()
+    else die (String.concatWith ", "
+                (List.map (type_to_string o #1) (#functors spec)))
+
+val ebnf = deriveBNFn (bnfBase.fullDB()) (alpha :: #params spec)
+                      (#1 (hd (#functors spec)))
+val efix = defineFixpoint {tyname = "expr", ABS = "expr_ABS",
+                           REP = "expr_REP"} ebnf
+val ecs = defineConstructors (hd (#constructors spec)) ebnf efix
+val eres = fixpointBNF ebnf efix
+val eeqns = constructorEqns ecs eres
+
+Theorem expr_axiom = #existential_axiom ecs
+Theorem exprMAP_thm[simp] = #map_eqns eeqns
+Theorem exprSET_thm[simp] = hd (#set_eqns eeqns)
+
+val _ = TypeBase.export
+          (typeBaseInfo {axiom = expr_axiom,
+                         induction = valOf (#induction ecs),
+                         case_defs = defineCases expr_axiom,
+                         rewrites = [[exprMAP_thm, exprSET_thm]]})
+
+val _ = tprint "a specified type behaves like a datatype"
+val _ =
+    let
+      val th1 = Q.prove (‘∀e. exprMAP I e = e’, Induct_on ‘e’ >> simp[])
+      val th2 = Q.prove (‘Var a ≠ Lit n ∧ (Op e1 n e2 = Op e3 n e4 ⇔
+                                           e1 = e3 ∧ e2 = e4)’, simp[])
+      val th3 = Q.prove (‘case Lit n of
+                            Var a => F | Lit m => T | Op _ _ _ => F’,
+                         simp[])
+    in
+      if List.all (null o hyp) [th1, th2, th3] then OK()
+      else die "not proved"
+    end
