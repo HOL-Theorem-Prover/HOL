@@ -55,6 +55,55 @@ type hover_context = {
 
 val hover: (hover_context * (int * int) -> hover list) ref
 
+(* Hover inside a HOL quotation.  server.ML calls this after the
+   default (SML) hover returns nothing and the cursor sits inside a
+   PQuote span.  `quote` is the raw quotation body (no backticks);
+   `quoteStart` is its file byte offset; `target` is the cursor's
+   file byte offset (inside the quote).  Default no-op; the LSP
+   runtime init installs a Preterm-based implementation. *)
+val hoverQuotation:
+  (hover_context *
+   {quote: string, quoteStart: int, target: int} -> hover list) ref
+
+(* Goal-state at cursor for `$/hol/goalState`.  Server locates the
+   enclosing `Theorem NAME: … Proof … QED` block by scanning the file
+   text and calls this hook with the raw statement quote and cursor
+   position; the hook parses the quote (against the live HOL Context)
+   and returns the goal-state to render.  Returns NONE if the cursor
+   isn't inside a proof body or the quote can't be parsed. *)
+type goal_state = {asms: string list, goal: string}
+type goal_state_response = {
+  theorem: string, step: int, goals: goal_state list,
+  (* Rendered form of the whole state — HOL's own `pp_goalstate`
+     pretty-print, matching the REPL's "N subgoals: … ⊨ …" layout
+     (no turnstile, blank-line-separated assumptions, `----`
+     separator).  Clients that just want to display the state
+     verbatim should prefer this; `goals` remains for clients that
+     want to render individual subgoals structurally. *)
+  pretty: string,
+  (* SOME msg when the walker gave up (e.g. wall-clock budget
+     exceeded) or halted at a failed tactic.  On timeout `goals`
+     and `pretty` are empty; on a failed tactic they hold the
+     pre-fail state so the client can render both the failure
+     signal and the state the walker halted at. *)
+  error: string option,
+  (* SOME (fileStart, fileEnd) when a specific leaf tactic
+     failed — the file byte range the client should surface as a
+     runtime diagnostic (LSP squiggle).  NONE when there is no
+     failure or the failure has no natural byte range (e.g. a
+     structural marker, or a timeout). *)
+  failedRange: (int * int) option}
+type theorem_context = {
+  name: string,           (* theorem name, e.g. "foo" *)
+  quote: string,          (* raw text of the theorem statement *)
+  quoteStart: int,        (* file byte offset of the quote's start *)
+  tacText: string,        (* raw text between `Proof` and `QED` *)
+  tacStart: int,          (* file byte offset of `tacText` start *)
+  cursor: int             (* cursor byte offset (file coords) *)
+}
+val goalStateAtPos:
+  (hover_context * theorem_context -> goal_state_response option) ref
+
 val fixupTheoremLink:
   ({start: int, stop: int, text: string, uri: string} ->
    {file: string, line: int} option) ref
@@ -74,5 +123,28 @@ val thmLookup: (string -> string option) ref
    constants / stale DB entries).  Default is a no-op; installed by
    the LSP runtime init in tools-poly/hol.ML. *)
 val resetForCompile: (unit -> unit) ref
+
+(* Called at the start of each LSP compile pass, alongside
+   `resetForCompile`.  The int-option argument is the buffer's
+   current `minEditOffset` — the minimum byte offset of any pending
+   edit — or NONE if no edit is pending.  Consumers use this to
+   invalidate downstream cached state without discarding entries
+   whose byte position is before the edit. *)
+val notifyCompileStart: (int option -> unit) ref
+
+(* Snapshot / restore of the per-compile state channels needed for
+   mid-file recompile resume: the HOL Context, the Poly/ML loaded-
+   modules set, and the LSP file-namespace layer (see
+   `lsp/lsp_namespace.ML`).  `captureCompileSnap ()` runs at a dec
+   boundary and returns a thunk that restores each channel and forces
+   `Parse.invalidate_caches` when applied.  `restoreCompileSnap` is
+   a small indirection so callers can apply it uniformly.  Defaults
+   are no-ops; installed by the LSP runtime init in tools-poly/hol.ML.
+   Concrete type is exposed (rather than opaque) because the runtime
+   wiring in `hol.ML` needs to construct one via `evalString`, which
+   sees the compilation-environment view of the sig. *)
+type compileSnap = unit -> unit
+val captureCompileSnap: (unit -> compileSnap) ref
+val restoreCompileSnap: (compileSnap -> unit) ref
 
 end;

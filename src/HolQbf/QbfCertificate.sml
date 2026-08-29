@@ -256,7 +256,8 @@ struct
          to the definition of an extension variable,
          plus the set of indexes that term depends on.
        If an extension is defined using an original existential variable v,
-       replace references to v by references to v's witness (extension) variable.
+       replace references to v by references to v's witness (extension)
+       variable.
        If v has no witness, replace references to v by references to T,
        but simplify as necessary.
        For example, if v has no witness:
@@ -300,11 +301,11 @@ struct
         dest_neg t handle Feedback.HOL_ERR _ => mk_neg t
     in
       fun extension_to_term (AND ls) =
-      (let
-            val (t,s) = List.foldl afold (NONE,empty) ls
-          in case t of NONE   => (T,s)
-                     | SOME t => (t,s)
-          end handle False => (F,empty))
+          (let
+             val (t,s) = List.foldl afold (NONE,empty) ls
+           in case t of NONE   => (T,s)
+                        | SOME t => (t,s)
+           end handle False => (F,empty))
         | extension_to_term (ITE(t,c,a)) =
           lit (t,empty)
               (fn t=> lit (if t then c else a,empty)
@@ -317,16 +318,19 @@ struct
                                          s))
                                  (fn(a,s)=>(if c then mk_disj(t,a)
                                                  else mk_conj(negate t,a),s)))
-                         (fn(c,s)=> lit (a,s)
-                                    (fn a=>((if a then mk_imp else mk_conj)(t,c),s))
-                                    (fn(a,s)=>(mk_cond(t,c,a),s))))
+                         (fn(c,s)=>
+                             lit (a,s)
+                                 (fn a =>
+                                     ((if a then mk_imp else mk_conj)(t,c),s))
+                                 (fn(a,s)=>(mk_cond(t,c,a),s))))
     end
 
     (* Compute the terms for each existential variable
        and add (e = tm) hypotheses onto the matrix.
        Fill in the rest of the vars map.
        Fill in the deps map by adding each extension variable
-       to the list belonging to each variable appearing in its definition term. *)
+       to the list belonging to each variable appearing in its
+       definition term. *)
     fun foldthis (i,ext) (t,vars,deps) = let
       val v = index_to_var i
       val (tm,ds) = extension_to_term ext
@@ -424,9 +428,10 @@ struct
             val (_, indices) =
                 case Inttab.lookup dict index of
                     SOME r => r
-                  | NONE => raise ERR "check"
-                              ("invalid certificate: no definition for clause ID "
-                               ^ Int.toString index)
+                  | NONE =>
+                    raise ERR "check"
+                          ("invalid certificate: no definition for clause ID "
+                           ^ Int.toString index)
             val _ = if List.null indices then
                 raise ERR "check"
                   ("invalid certificate: empty definition for clause ID " ^

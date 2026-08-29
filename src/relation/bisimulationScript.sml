@@ -89,41 +89,6 @@ Proof
   >> METIS_TAC[BISIM_INV, inv_DEF]
 QED
 
-Theorem BISIM_REL_strong_thm:
-  BISIM_REL ts p0 q0 <=> ∃R. R p0 q0 ∧
-    (∀p q. R p q ⇒
-      ∀l. (∀p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q')) ∧
-           (∀q'. ts q l q' ⇒ ∃p'. ts p l p' ∧ (R p' q' ∨ BISIM_REL ts p' q')))
-Proof
-  SRW_TAC[][EQ_IMP_THM]
-  >- (Q.EXISTS_TAC `BISIM_REL ts`
-      >> SRW_TAC[][BISIM_REL_def, BISIM_def]
-      >> METIS_TAC[])
-  >> SRW_TAC[][BISIM_REL_def, BISIM_def]
-  >> Q.EXISTS_TAC `λp q. R p q ∨ BISIM_REL ts p q`
-  >> METIS_TAC[BISIM_REL_def, BISIM_def]
-QED
-
-Theorem BISIM_REL_sym_thm:
-  BISIM_REL ts p0 q0 <=> ∃R. symmetric R ∧ R p0 q0 ∧
-    (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ R p' q')
-Proof
-  SRW_TAC[][EQ_IMP_THM, symmetric_def, BISIM_REL_def]
-  >| [Q.EXISTS_TAC `λp q. R p q ∨ R q p`, SRW_TAC[][]]
-  >> METIS_TAC[BISIM_INV, BISIM_def]
-QED
-
-Theorem BISIM_REL_sym_strong_thm:
-  BISIM_REL ts p0 q0 <=> ∃R. symmetric R ∧ R p0 q0 ∧
-    (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
-Proof
-  SRW_TAC[][EQ_IMP_THM]
-  >- METIS_TAC[BISIM_REL_sym_thm]
-  >> PURE_ONCE_REWRITE_TAC[BISIM_REL_strong_thm]
-  >> Q.EXISTS_TAC `λp q. R p q ∨ R q p`
-  >> METIS_TAC[symmetric_def, BISIM_REL_sym]
-QED
-
 Theorem BISIM_REL_IS_EQUIV_REL :
     !ts. equivalence (BISIM_REL ts)
 Proof
@@ -141,6 +106,93 @@ Proof
      METIS_TAC [O_DEF, BISIM_O])
 QED
 
+Theorem BISIM_REL_EQUIV_rules =
+  BISIM_REL_IS_EQUIV_REL
+  |> SIMP_RULE bool_ss
+     [equivalence_def, reflexive_def, symmetric_def, transitive_def];
+
+Theorem BISIM_REL_ts:
+  ∀ts.
+  (∀p q l p'. BISIM_REL ts p q ∧ ts p l p'
+    ==> ∃q'. ts q l q' ∧ BISIM_REL ts p' q') ∧
+  (∀p q l q'. BISIM_REL ts p q ∧ ts q l q'
+    ==> ∃p'. ts p l p' ∧ BISIM_REL ts p' q')
+Proof
+  SRW_TAC[][BISIM_REL_def]
+  >> METIS_TAC[BISIM_def]
+QED
+
+Theorem BISIM_REL_strong_thm:
+  ∀ts.
+  BISIM_REL ts p0 q0 <=> ∃R. R p0 q0 ∧
+    (∀p q. R p q ⇒
+      ∀l. (∀p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q')) ∧
+           (∀q'. ts q l q' ⇒ ∃p'. ts p l p' ∧ (R p' q' ∨ BISIM_REL ts p' q')))
+Proof
+  SRW_TAC[][EQ_IMP_THM]
+  >- (Q.EXISTS_TAC `BISIM_REL ts`
+      >> SRW_TAC[][BISIM_REL_def, BISIM_def]
+      >> METIS_TAC[])
+  >> SRW_TAC[][BISIM_REL_def, BISIM_def]
+  >> Q.EXISTS_TAC `λp q. R p q ∨ BISIM_REL ts p q`
+  >> METIS_TAC[BISIM_REL_def, BISIM_def]
+QED
+
+Theorem BISIM_REL_strong_coind:
+  ∀ts R.
+    (∀p q. R p q ⇒
+      ∀l. (∀p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q')) ∧
+           (∀q'. ts q l q' ⇒ ∃p'. ts p l p' ∧ (R p' q' ∨ BISIM_REL ts p' q')))
+  ==> ∀p0 q0. R p0 q0 ==> BISIM_REL ts p0 q0
+Proof
+  SRW_TAC[][EQ_IMP_THM] >> SRW_TAC[][Once BISIM_REL_strong_thm]
+  >> Q.EXISTS_TAC `R` >> SRW_TAC[][]
+  >> METIS_TAC[]
+QED
+
+Theorem BISIM_REL_sym_thm:
+  ∀ts R.
+  BISIM_REL ts p0 q0 <=> ∃R. symmetric R ∧ R p0 q0 ∧
+    (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ R p' q')
+Proof
+  SRW_TAC[][EQ_IMP_THM, symmetric_def, BISIM_REL_def]
+  >| [Q.EXISTS_TAC `λp q. R p q ∨ R q p`, SRW_TAC[][]]
+  >> METIS_TAC[BISIM_INV, BISIM_def]
+QED
+
+Theorem BISIM_REL_sym_coind:
+  ∀ts R. symmetric R ∧
+    (∀p q. R p q ⇒ ∀l p'. ts p l p' ⇒ ∃q'. ts q l q' ∧ R p' q')
+  ==> ∀p0 q0. R p0 q0 ==> BISIM_REL ts p0 q0
+Proof
+  SRW_TAC[][EQ_IMP_THM] >> SRW_TAC[][Once BISIM_REL_sym_thm]
+  >> Q.EXISTS_TAC `R` >> SRW_TAC[][]
+  >> METIS_TAC[]
+QED
+
+Theorem BISIM_REL_sym_strong_thm:
+  ∀ts R.
+  BISIM_REL ts p0 q0 <=> ∃R. symmetric R ∧ R p0 q0 ∧
+    (∀p q. R p q ⇒ ∀l p'. ts p l p'
+      ==> ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
+Proof
+  SRW_TAC[][EQ_IMP_THM]
+  >- METIS_TAC[BISIM_REL_sym_thm]
+  >> PURE_ONCE_REWRITE_TAC[BISIM_REL_strong_thm]
+  >> Q.EXISTS_TAC `λp q. R p q ∨ R q p`
+  >> METIS_TAC[symmetric_def, BISIM_REL_EQUIV_rules]
+QED
+
+Theorem BISIM_REL_sym_strong_coind:
+  ∀ts R. symmetric R ∧
+    (∀p q. R p q ==> ∀l p'. ts p l p'
+      ==> ∃q'. ts q l q' ∧ (R p' q' ∨ BISIM_REL ts p' q'))
+  ==> ∀p0 q0. R p0 q0 ==> BISIM_REL ts p0 q0
+Proof
+  SRW_TAC[][EQ_IMP_THM] >> SRW_TAC[][Once BISIM_REL_sym_strong_thm]
+  >> Q.EXISTS_TAC `R` >> SRW_TAC[][]
+  >> METIS_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (*  Weak bisimulation                                                        *)
@@ -208,6 +260,24 @@ Proof
  >> MATCH_MP_TAC (REWRITE_RULE [transitive_def] RTC_TRANSITIVE)
  >> Q.EXISTS_TAC `y`
  >> ASM_REWRITE_TAC []
+QED
+
+Theorem ETS_CASES:
+  ∀ts tau p p'. ETS ts tau p p' <=> p = p' ∨ ∃u. ts p tau u ∧ ETS ts tau u p'
+Proof
+  SRW_TAC[][ETS_def, Once RTC_CASES1]
+QED
+
+Theorem ETS_INDUCT[rule_induction]:
+  ∀ts tau P. (∀p. P p p) ∧ (
+    (∀p p' q. ts p tau p' ∧ P p' q ⇒ P p q) ∨
+    (∀p q' q. P p q' ∧ ts q' tau q ⇒ P p q)
+  ) ⇒ ∀p0 q0. ETS ts tau p0 q0 ⇒ P p0 q0
+Proof
+    STRIP_TAC >> STRIP_TAC >> GEN_TAC >> STRIP_TAC
+ >> REWRITE_TAC [ETS_def]
+ >| [HO_MATCH_MP_TAC RTC_INDUCT, HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1]
+ >> METIS_TAC []
 QED
 
 Theorem lemma1[local]:
@@ -387,6 +457,25 @@ Proof
       METIS_TAC [WBISIM_O, O_DEF])
 QED
 
+Theorem WBISIM_REL_EQUIV_rules =
+  WBISIM_REL_IS_EQUIV_REL
+  |> SIMP_RULE bool_ss
+     [equivalence_def, reflexive_def, symmetric_def, transitive_def];
+
+Theorem WBISIM_REL_ts:
+  ∀ts tau.
+  (∀p q l p'. WBISIM_REL ts tau p q ∧ ts p l p' ∧ l ≠ tau
+    ==> ∃q'. WTS ts tau q l q' ∧ WBISIM_REL ts tau p' q') ∧
+  (∀p q l q'. WBISIM_REL ts tau p q ∧ ts q l q' ∧ l ≠ tau
+    ==> ∃p'. WTS ts tau p l p' ∧ WBISIM_REL ts tau p' q') ∧
+  (∀p q p'. WBISIM_REL ts tau p q ∧ ts p tau p'
+    ==> ∃q'. ETS ts tau q q' ∧ WBISIM_REL ts tau p' q') ∧
+  (∀p q q'. WBISIM_REL ts tau p q ∧ ts q tau q'
+    ==> ∃p'. ETS ts tau p p' ∧ WBISIM_REL ts tau p' q')
+Proof
+  SRW_TAC[][WBISIM_REL_def]
+  >> METIS_TAC[WBISIM_def]
+QED
 
 (*---------------------------------------------------------------------------*)
 (*  Relations between strong and weak bisimulations                          *)
@@ -426,5 +515,3 @@ Theorem BISIM_REL_IMP_WBISIM_REL :
 Proof
     REWRITE_TAC [GSYM RSUBSET, BISIM_REL_RSUBSET_WBISIM_REL]
 QED
-
-

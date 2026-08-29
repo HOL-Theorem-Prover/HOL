@@ -3592,7 +3592,8 @@ let val x    = “x:bool”
       end
     val thmT3 = TRANS thmT1 (SYM thmT2)
     val thmF3 = TRANS thmF1 (SYM thmF2)
-    val tm = “(if x then t1 else t2) = v <=> (((x <=> T) /\ t1 = v) \/ ((x <=> F) /\ t2 = v))”
+    val tm = “(if x then t1 else t2) = v <=>
+              (((x <=> T) /\ t1 = v) \/ ((x <=> F) /\ t2 = v))”
     val thT4 = SUBST_CONV [x |-> ASSUME “x = T”] tm tm
     and thF4 = SUBST_CONV [x |-> ASSUME “x = F”] tm tm
     val thmT = EQ_MP (SYM thT4) thmT3
@@ -3618,7 +3619,7 @@ in
    GEN x (DISJ_CASES (SPEC x BOOL_CASES_AX) thmT thmF)
 end);
 (* ------------------------------------------------------------------------- *)
-(*    bool_case_CONST = |- !x b. bool_case x x b = x                            *)
+(*    bool_case_CONST = |- !x b. bool_case x x b = x                         *)
 (* ------------------------------------------------------------------------- *)
 
 val bool_case_CONST = thm (#(FILE), #(LINE))("bool_case_CONST", COND_ID)
@@ -4070,7 +4071,8 @@ val literal_case_RAND = thm (#(FILE), #(LINE))("literal_case_RAND",
      val P   = “P:'b ->'c”
      val literal_case_THM1 = RIGHT_BETA (SPEC tm2 (SPEC tm1
                     (Thm.INST_TYPE [beta |-> gamma] literal_case_THM)))
-     val literal_case_THM2 = AP_TERM P (RIGHT_BETA (SPEC tm2 (SPEC tm3 literal_case_THM)))
+     val literal_case_THM2 =
+       AP_TERM P (RIGHT_BETA (SPEC tm2 (SPEC tm3 literal_case_THM)))
  in TRANS literal_case_THM2 (SYM literal_case_THM1)
  end);
 
@@ -4084,8 +4086,12 @@ val literal_case_RATOR = thm (#(FILE), #(LINE))("literal_case_RATOR",
      val b = “b:'b”
      val tm1 = “\x:'a. N x:'b->'c”
      val tm2 = “\x:'a. N x ^b:'c”
-     val literal_case_THM1 = AP_THM (RIGHT_BETA (SPEC M (SPEC tm1
-                   (Thm.INST_TYPE [beta |-> (beta --> gamma)] literal_case_THM)))) b
+     val literal_case_THM1 =
+       AP_THM
+         (RIGHT_BETA
+          (SPEC M (SPEC tm1
+            (Thm.INST_TYPE [beta |-> (beta --> gamma)] literal_case_THM))))
+         b
      val literal_case_THM2 = RIGHT_BETA (SPEC M (SPEC tm2
                       (Thm.INST_TYPE [beta |-> gamma] literal_case_THM)))
  in TRANS literal_case_THM1 (SYM literal_case_THM2)

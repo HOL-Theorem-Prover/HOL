@@ -36,7 +36,9 @@ fun is_res (Res y) = true
 fun is_exn (Res y) = false
   | is_exn (Exn x) = true
 
-val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
+val attrib =
+    [Thread.InterruptState Thread.InterruptAsynch,
+     Thread.EnableBroadcastInterrupt true]
 
 (* -------------------------------------------------------------------------
    Simplest parmap (probably the same behavior as Parmap.parmap)

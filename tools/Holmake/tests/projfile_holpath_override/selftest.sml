@@ -57,25 +57,11 @@ fun strip s =
         val t = Substring.dropl Char.isSpace t
     in Substring.string t end
 
-(* getDir resolves symlinks (e.g. /var/tmp -> /private/var/tmp on
-   macOS), matching how Holmake's upward walk records project roots.
-   Without the roundtrip, comparisons against the tmpName-derived
-   string spuriously fail on platforms with symlinked tmp dirs. *)
-fun mk_root () =
-    let val tmpname = OS.FileSys.tmpName ()
-        val _ = OS.FileSys.remove tmpname handle OS.SysErr _ => ()
-        val _ = OS.FileSys.mkDir tmpname
-        val saved = OS.FileSys.getDir()
-        val _ = OS.FileSys.chDir tmpname
-        val resolved = OS.FileSys.getDir()
-        val _ = OS.FileSys.chDir saved
-    in resolved end
-
 (* ----------------------------------------------------------------------
    Sub-test 1: holpath overrides name.
    ---------------------------------------------------------------------- *)
 val _ = tprint "holpath key overrides name for holpathdb registration"
-val root1 = mk_root()
+val root1 = HMTestPaths.mk_root()
 val dir1 = root1 ++ "dirA"
 val _ = OS.FileSys.mkDir dir1
 val _ = write_file (root1 ++ "holproject.toml")
@@ -104,7 +90,7 @@ val _ = rm_rf root1
    Sub-test 2: holpath alone (no name) still registers.
    ---------------------------------------------------------------------- *)
 val _ = tprint "holpath alone (no name) registers vname"
-val root2 = mk_root()
+val root2 = HMTestPaths.mk_root()
 val dir2 = root2 ++ "dirA"
 val _ = OS.FileSys.mkDir dir2
 val _ = write_file (root2 ++ "holproject.toml")
@@ -132,7 +118,7 @@ val _ = rm_rf root2
    Sub-test 3: non-string holpath value is a fatal startup error.
    ---------------------------------------------------------------------- *)
 val _ = tprint "non-string holpath value rejected at startup"
-val root3 = mk_root()
+val root3 = HMTestPaths.mk_root()
 val dir3 = root3 ++ "dirA"
 val _ = OS.FileSys.mkDir dir3
 val _ = write_file (root3 ++ "holproject.toml")

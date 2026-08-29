@@ -10,7 +10,8 @@ struct
 
   fun name_toString {Thy,Name} = Thy ^ "$" ^ Name
   fun name_toMLString {Thy,Name} =
-    "{Thy=\"" ^ String.toString Thy ^ "\",Name=\"" ^ String.toString Name ^ "\"}"
+    "{Thy=\"" ^ String.toString Thy ^
+    "\",Name=\"" ^ String.toString Name ^ "\"}"
 
   type kernelid = {name : kernelname, epoch : int}
     (* name and epoch are immutable and together provide id_compare's

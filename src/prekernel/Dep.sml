@@ -123,7 +123,8 @@ fun pp_dep_aux ppstrm (did,thydl) =
     fun pp_scouple (s1,s2) = pp_couple (add_string,add_string) (s1,s2)
     fun pp_did (thy,n) = pp_scouple (Lib.quote thy, int_to_string n)
     fun pp_thyentry (thy,l) =
-      pp_couple (add_string o Lib.quote, pp_l add_string) (thy,map int_to_string l)
+      pp_couple (add_string o Lib.quote, pp_l add_string)
+                (thy,map int_to_string l)
     fun pp_thydepl l = pp_l pp_thyentry l
   in
     pp_couple (pp_did, pp_thydepl) (did,thydl)

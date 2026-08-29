@@ -1,6 +1,5 @@
-OPTIONS = NO_OVERLAY
 ifdef POLY
-CLINE_OPTIONS = --poly_not_hol
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 endif
 
 depchainloop-selftest.log: selftest.exe

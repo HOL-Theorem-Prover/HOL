@@ -501,8 +501,10 @@ fun print_explicit_monadic_lets b = (explicit_mlets := b);
 
 val _ = TexTokenMap.temp_TeX_notation
             {hol = "<-", TeX = ("\\HOLTokenLeftmap{}", 1)}
-val _ = TexTokenMap.temp_TeX_notation {hol = "do", TeX = ("\\HOLKeyword{do}", 2)}
-val _ = TexTokenMap.temp_TeX_notation {hol = "od", TeX = ("\\HOLKeyword{od}", 2)}
+val _ = TexTokenMap.temp_TeX_notation
+          {hol = "do", TeX = ("\\HOLKeyword{do}", 2)}
+val _ = TexTokenMap.temp_TeX_notation
+          {hol = "od", TeX = ("\\HOLKeyword{od}", 2)}
 
 val _ = predeclare (
       "option",

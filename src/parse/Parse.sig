@@ -86,6 +86,13 @@ signature Parse = sig
 
   val print_term_grammar : unit -> unit
 
+  (* Force the next parse/print call to rebuild its cached closures
+     from the current grammars.  Needed after out-of-band grammar
+     restore (e.g. `Context.restore`): the slot-backed grammars are
+     restored, but the closure caches don't rebuild until a grammar-
+     mutating call flips the internal changed-flags. *)
+  val invalidate_caches : unit -> unit
+
   (* the following functions modify the grammar, and do so in such a
      way that the exported theory will have the same grammar  *)
 

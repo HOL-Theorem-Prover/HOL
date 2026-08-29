@@ -43,6 +43,7 @@ PORTS = {
     None:                3002,  # unified site
     "Description":       3000,
     "Tutorial":          3001,
+    "Quick":             3007,
     "Reference":         3003,
     "Interaction-emacs": 3004,
     "Logic":             3005,
@@ -83,9 +84,9 @@ class Manual:
         self.mtimes = None            # last-seen {Path: mtime} of the sources
 
     def render(self, book_dir):
-        """Re-render this book and refresh its searchindex symlink."""
+        """Re-render this book and reinstall its search sidecars."""
         _run(["mdbook", "build"], cwd=self.src_dir)
-        refix_searchindex(book_dir / self.name)
+        install_sidecars(self.src_dir, book_dir / self.name)
 
 
 def _log(msg):
@@ -98,19 +99,26 @@ def _run(cmd, cwd):
                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
 
-def refix_searchindex(book_manual_dir):
-    """Recreate the stable searchindex.js -> searchindex-<hash>.js symlink.
+def install_sidecars(src_dir, book_manual_dir):
+    """Reinstall the search sidecars `mdbook build` just wiped out.
 
-    mdbook hashes the index filename on every build; the cross-book searcher
-    loads siblings from a fixed `../<M>/searchindex.js`, so resolve the hash
-    here (mirrors each per-manual Holmakefile's mdbook recipe)."""
+    Two of them, mirroring each per-manual Holmakefile's mdbook recipe:
+
+      - `searchindex.js`, a symlink to the hashed `searchindex-<hash>.js`
+        mdbook emits (the hash changes on every content change, and the
+        cross-book searcher loads siblings from a fixed
+        `../<M>/searchindex.js`);
+      - `identifiers.js`, the generated entry-name table, copied in from the
+        manual's source directory."""
     hits = sorted(book_manual_dir.glob("searchindex-*.js"))
-    if not hits:
-        return
-    link = book_manual_dir / "searchindex.js"
-    if link.is_symlink() or link.exists():
-        link.unlink()
-    link.symlink_to(hits[0].name)
+    if hits:
+        link = book_manual_dir / "searchindex.js"
+        if link.is_symlink() or link.exists():
+            link.unlink()
+        link.symlink_to(hits[0].name)
+    table = src_dir / "identifiers.js"
+    if table.exists():
+        shutil.copy(table, book_manual_dir / "identifiers.js")
 
 
 def read_manuals_mk(repo):
@@ -139,6 +147,7 @@ def build_manifest(repo, book_dir, manual_names):
     # self-contained entries, with the pre-commit `Holmake mdbook` as the
     # source of truth).  render() then re-renders the mirror.
     docfiles = repo / "help" / "Docfiles"
+    gendocs = repo / "help" / "generated-alias-docs"
     processed = manual_root / "build" / "Docfiles-processed"
     ref_dir = manual_root / "Reference"
     helpsrc = repo / "help" / "src-sml"
@@ -146,6 +155,14 @@ def build_manifest(repo, book_dir, manual_names):
 
     def reference_preprocess(changed, removed):
         processed.mkdir(parents=True, exist_ok=True)
+        # Alias stubs are generated from the canonicals' `aliases:`
+        # frontmatter.  Refresh them first; the generated directory is
+        # watched too, so anything AliasGen rewrites comes back round as
+        # a changed file on the next tick.
+        aliasgen = helpsrc / "AliasGen.exe"
+        if aliasgen.exists():
+            _run([str(aliasgen), "--regen", str(docfiles), str(gendocs)],
+                 cwd=helpsrc)
         # A changed file with no counterpart in the mirror is new; a removal
         # also alters the file set -- either way the sidebar must regenerate.
         fileset_changed = bool(removed) or any(
@@ -161,16 +178,25 @@ def build_manifest(repo, book_dir, manual_names):
                 for f in Path(tout).glob("*.smd"):
                     shutil.copy(f, processed / f.name)
         if fileset_changed:
+            # Both outputs are functions of the entry *set*, which is
+            # exactly this branch's condition: the sidebar and the
+            # searcher's entry-name table.
             with (processed / "SUMMARY.md").open("w") as fh:
                 subprocess.run([str(tools / "gen_reference_summary"),
                                 str(processed)],
+                               check=True, stdout=fh, stderr=subprocess.PIPE,
+                               text=True)
+            with (ref_dir / "identifiers.js").open("w") as fh:
+                subprocess.run([str(tools / "gen_reference_summary"),
+                                "--identifiers", str(processed)],
                                check=True, stdout=fh, stderr=subprocess.PIPE,
                                text=True)
 
     def make_manual(name):
         if name == "Reference":
             return Manual(name, src_dir=ref_dir,
-                          watch_globs=dir_globs(docfiles, "*.smd"),
+                          watch_globs=(dir_globs(docfiles, "*.smd") +
+                                       dir_globs(gendocs, "*.smd")),
                           preprocess=reference_preprocess)
         # Hand-authored .smd / .md manual: mdbook reads the dir directly, so
         # render() (mdbook build) is the whole rebuild.

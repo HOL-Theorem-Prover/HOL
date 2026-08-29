@@ -50,6 +50,7 @@ val mapTacExpr:
   'a tac_expr -> 'c tac_expr
 
 val printTacsAsE: string -> (int * int) tac_expr list -> string
+val printTacAsSML: string -> (int * int) tac_expr -> string option
 
 datatype tac_frag_open
   = FOpen
@@ -174,15 +175,33 @@ end
     (e.g. with type info or diagnostic markers) without rewriting its
     structure.
 
-    printTacsAsE renders a list of (int*int) tac_expr back to source
-    text, formatted as a sequence of `e(...)` calls suitable for
-    interactive replay.  It builds an intermediate tree (TAtom /
-    TOpaque / TInfix / TApp / TList / TTuple), then runs a peephole
-    pass (optTree) that folds canonical >>>-shaped patterns back into
-    surface sugar (>|, >-, >~, >>~, >>~-, by, suffices_by, reverse,
-    TRYALL) and drops trivial identity combinators (NO_TAC ORELSE _,
-    ALL_TAC >> _, ALL_LT >>> _).  Layout is precedence-driven, with a
-    running indent and parens added only when required.
+    printTacAsSML and printTacsAsE share one pipeline: an
+    intermediate tree (TAtom / TOpaque / TInfix / TApp / TList /
+    TTuple), then a peephole pass (optTree) that folds canonical
+    >>>-shaped patterns back into surface sugar (>|, >-, >~, >>~,
+    >>~-, by, suffices_by, reverse, TRYALL) and drops trivial
+    identity combinators (NO_TAC ORELSE _, ALL_TAC >> _,
+    ALL_LT >>> _), then a precedence-driven layout with a running
+    indent and parens only where required.
+
+    printTacAsSML renders a single (int*int) tac_expr against the
+    string its spans index into, returning NONE for an expression
+    that is a semantic no-op (ALL_TAC).  Every constructor has a
+    rendering, so it never fails -- including the ones whose span
+    covers only an operand (MapEvery, MapFirst, Rename) and the ones
+    carrying no span at all (First [], LFirst []).
+
+    Beware that "never fails" is not "always compiles".  The output
+    is surface syntax, so it assumes the opens a HOL script normally
+    has: `sg' comes from bossLib, `SELECT_GOAL_LT' and `RENAME_TAC'
+    from Q.  Worse, the sugar fold is shape-conditional, so a leaf
+    reached on its own can render an internal placeholder that is no
+    SML value at all -- `THEN1_LT' exists nowhere outside this
+    structure.  A caller that compiles the result needs its own
+    handling for those leaves.
+
+    printTacsAsE renders a list of (int*int) tac_expr as a sequence
+    of `e(...)` calls suitable for interactive replay.
 
     The linearised form (tac_frag) is the bridge to goalFrag.  An
     expression is decomposed into:

@@ -1,0 +1,76 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+---
+aliases:
+  - bossLib.qsuff_tac
+---
+## `suff`
+
+``` hol4
+bossLib.suff : term quotation -> tactic
+```
+
+------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`bossLib.qsuff_tac`](#bossLib.qsuff_tac).*
+
+<!-- END aliases-block -->
+
+Introduces an implicational subgoal.
+
+A call to `suff q` first parses the quotation `q` in the context of the
+current goal, using `parse_in_context`. If `q` parses to the term `qt`,
+and the current goal is `asl ?- g`, then two subgoals are produced:
+first `asl ?- qt ==> g`, and then `asl ?- qt`. At a high level, the
+user's claim is that `qt` suffices (hence the name) to prove the goal;
+the first subgoal is the check for this, and the second is to actually
+show `qt`.
+
+A call to `suff q` is equivalent to a call to `Q_TAC SUFF_TAC q`, the
+tactic also available under the name `qsuff_tac`.
+
+### Failure
+
+Fails if the provided quotation does not parse to a term of boolean type
+in the context of the current goal.
+
+### Example
+
+If the current goal is
+
+``` hol4
+   f n m = f m n
+   ------------------------------------
+     0.  m <= n
+     1.  n <= m
+```
+
+then the tactic `` suff `m = n` `` produces the two goals
+
+``` hol4
+   m = n ==> f n m = f m n
+   ------------------------------------
+     0.  m <= n
+     1.  n <= m
+
+
+   m = n
+   ------------------------------------
+     0.  m <= n
+     1.  n <= m
+```
+
+### Comments
+
+The tactic `q suffices_by tac` is `suff q` followed by an application of
+`tac` to the implicational subgoal, which `tac` is required to solve.
+Use `suff` when the implication needs more than a one-liner, or when it
+is more natural to prove the sufficient condition first.
+
+### See also
+
+[`bossLib.suffices_by`](#bossLib.suffices_by),
+[`bossLib.have`](#bossLib.have),
+[`Parse.parse_in_context`](#Parse.parse_in_context),
+[`Tactic.SUFF_TAC`](#Tactic.SUFF_TAC)

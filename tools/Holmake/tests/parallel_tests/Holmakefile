@@ -4,7 +4,14 @@ DIRNAMES = \
   altquote1 \
   brokenstrings \
   clinevars \
+  cross_dir_expansion \
   cross_dir_rule \
+  depchainloop \
+  dirs \
+  dupcommands \
+  projfile_nested \
+  varextension \
+  wildcard \
   holpathdb/proj2 \
   holpathdb/proj2/proj2A \
   depchain1/dir3 \
@@ -27,7 +34,9 @@ DIRNAMES = \
   projfile_holpath_override \
   projfile_open_resolution \
   projfile_name_clash \
+  projfile_undeclared_parent \
   projfile_synthetic \
+  pathsquash \
   patrule_parse \
   patrule_match \
   patrule_e2e \
@@ -56,6 +65,7 @@ DIRNAMES = \
 
 ifdef POLY
 DIRNAMES += cache_reflink \
+            dircolumn \
             cachefetch \
             cachekey_transitive_parent \
             cheatspotting \
@@ -71,6 +81,7 @@ DIRNAMES += cache_reflink \
             json-strings \
             local_parallelism_limit \
             projfile_module \
+            scan_order_staleness \
 	    target_times
 endif
 

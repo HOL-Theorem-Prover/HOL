@@ -53,11 +53,16 @@ mdbook: ../book/Logic/index.html
 
 ../book/Logic/index.html: ../Tools/smdpp SUMMARY.md \
         $(SMD_MDS) references.md cite-labels.tsv \
-        labels.tsv $(SIBLING_LABELS)
+        identifiers.js labels.tsv $(SIBLING_LABELS)
 	mdbook build
 	# See Manual/Description/Holmakefile for the rationale.
 	cd ../book/Logic && \
 	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	# `mdbook build` empties the build dir, so the entry-name
+	# sidecar is installed afterwards.  Copied rather than
+	# symlinked: a link pointing out of book/ wouldn't survive a
+	# deploy snapshot.
+	cp identifiers.js ../book/Logic/identifiers.js
 	../Tools/smdpp check-html ../book/Logic
 	../Tools/smdpp check-refs ../book/Logic
 	../Tools/smdpp check-links ../book/Logic
@@ -66,6 +71,15 @@ mdbook: ../book/Logic/index.html
 # See Manual/Description/Holmakefile for the rationale.
 labels.tsv: ../Tools/smdpp SUMMARY.md $(SMDS)
 	../Tools/smdpp dump-labels .
+
+# Entry-name table for the site's name-lookup layer.  It exists
+# because elasticlunr runs its trimmer / stop-word filter / stemmer
+# over the *query* as well as over the indexed text, so a section
+# whose name is a stop word or punctuation is unreachable through
+# searchindex.js no matter what the reader types.  Scan-only, like
+# labels.tsv above.  See Manual/Developers/manual-authoring.md.
+identifiers.js: ../Tools/smdpp SUMMARY.md $(SMDS)
+	../Tools/smdpp dump-identifiers .
 
 # Render the bibliography chapter + per-call-site cite label table
 # in one shot via pandoc citeproc.  See Manual/Description/Holmakefile
@@ -136,7 +150,7 @@ $(SMD_MDS): $(PS_STUFF)
 EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                logic.pdf SUMMARY.md chapters-include.tex \
                chapter-stems.mk book-title.tex \
-               references.md cite-labels.tsv labels.tsv \
+               references.md cite-labels.tsv labels.tsv identifiers.js \
                $(patsubst %,%.aux,$(TEX_CORES)) \
                logic.log logic.out logic.toc \
                logic.fls logic.idx logic.ilg logic.ind \

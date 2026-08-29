@@ -1256,7 +1256,8 @@ and check tm expected =
           else ();
           check bod er
         end
-      | _ => Type.compare(synth tm, expected) = EQUAL
+      | _ => if Type.compare(synth tm, expected) = EQUAL then ()
+             else raise ERR "Ill-typed"
 
 in
 

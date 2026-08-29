@@ -324,7 +324,12 @@ Maintainable and readable files require organised proofs - in particular, carefu
 : Creates a new subgoal from the given term, and solves it with the given tactic.
   The proved subgoal is added as an assumption for the rest of the proof.
 
-<code>qsuff_tac ‘<i>term</i>’</code>
+<code>have ‘<i>term</i>’</code>
+: Like `by` above, but leaves the new subgoal to be proved next rather than solving it immediately.
+  The term is added as an assumption of the other subgoal.
+  Also available as `subgoal` and `sg`.
+
+<code>suff ‘<i>term</i>’</code><br><code>qsuff_tac ‘<i>term</i>’</code>
 : In some ways a dual of `by` above: attempts a "suffices by" proof.
   Adds the supplied term as an implication to the current goal, and adds the term itself as a new subgoal.
 
@@ -460,6 +465,9 @@ The latter usually have a `"_x_"` in their names.
 <code>spose_not_then <i>thm_tactic</i></code>
 : Like `goal_assum`, but geared towards proof-by-contradiction: negates the goal **and** pushes the negation inwards, before applying the given theorem-tactic to the result.
   A common usage is `spose_not_then assume_tac`.
+
+`contr`
+: Shorthand for `spose_not_then strip_assume_tac`.
 
 <code>mk_asm "<i>label</i>" <i>theorem</i></code>
 : Found in `markerLib`.

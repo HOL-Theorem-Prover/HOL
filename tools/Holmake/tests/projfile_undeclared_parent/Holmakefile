@@ -1,0 +1,13 @@
+INCLUDES = ../testsupport
+
+ifdef POLY
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+endif
+
+projfile_undeclared_parent-selftest.log: selftest.exe
+	$(tee ./selftest.exe,$@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = projfile_undeclared_parent-selftest.log selftest.exe

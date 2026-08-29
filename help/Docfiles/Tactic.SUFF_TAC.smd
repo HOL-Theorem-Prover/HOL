@@ -22,4 +22,5 @@ Will fail if `t` is not of type `:bool`.
 ### See also
 
 [`Tactic.SUBGOAL_THEN`](#Tactic.SUBGOAL_THEN),
+[`bossLib.suff`](#bossLib.suff),
 [`bossLib.suffices_by`](#bossLib.suffices_by)

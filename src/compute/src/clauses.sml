@@ -193,14 +193,15 @@ fun partition_skip (SOME n) Args =
    width of their lhs.
 
    The compset type is functional at the outer level (no ref wrapping the dict),
-   but the per-constant entries are still refs to keep the treatment of recursive
-   equations straightforward.
+   but the per-constant entries are still refs to keep the treatment of
+   recursive equations straightforward.
 
    A compset can be "sealed" to prevent mutation of existing constant entries.
    This allows base compsets (like bool_compset) to be shared safely as values.
    Adding rules for NEW constants to a sealed compset works fine.
    Adding rules for EXISTING constants in a sealed compset raises an exception.
-   Use `copy` to create an unsealed copy if you need to extend existing constants.
+   Use `copy` to create an unsealed copy if you need to extend existing
+   constants.
 *)
 fun lex_string_comp ((s1, s2), (s3, s4)) =
   case String.compare (s1, s3) of
@@ -267,7 +268,8 @@ fun add_in_db (n,cst,act,EndDb) =
 fun add_in_db_upd compset (name,arity,hcst) action =
   let val _ = if is_sealed_existing compset name then
                 raise CL_ERR "add_in_db_upd"
-                  ("cannot add rules for existing constant " ^ #2 name ^ "$" ^ #1 name ^
+                  ("cannot add rules for existing constant " ^
+                   #2 name ^ "$" ^ #1 name ^
                    " in sealed compset; use copy to create an unsealed copy")
               else ()
       val (compset', rl) = assoc_clause compset name
@@ -279,7 +281,8 @@ fun add_in_db_upd compset (name,arity,hcst) action =
 fun set_skip compset p sk =
   let val _ = if is_sealed_existing compset p then
                 raise CL_ERR "set_skip"
-                  ("cannot modify skip for existing constant " ^ #2 p ^ "$" ^ #1 p ^
+                  ("cannot modify skip for existing constant " ^
+                   #2 p ^ "$" ^ #1 p ^
                    " in sealed compset; use copy to create an unsealed copy")
               else ()
       val (compset', rl) = assoc_clause compset p
@@ -404,12 +407,14 @@ fun enter_thm compset thm0 = let
       else
         add compset thm0
     else if is_neg conseq then
-      add compset (CONV_RULE (funpow (length ants) RAND_CONV eqf_intro_conv) thm0)
+      add compset
+          (CONV_RULE (funpow (length ants) RAND_CONV eqf_intro_conv) thm0)
     else if conseq ~~ T then
       (* Do not add a rewrite `T <=> T` which causes a loop when reducing. *)
       compset
     else
-      add compset (CONV_RULE (funpow (length ants) RAND_CONV eqt_intro_conv) thm0)
+      add compset
+          (CONV_RULE (funpow (length ants) RAND_CONV eqt_intro_conv) thm0)
   (* If `thm0` is an implication then add a rewrite of the implication itself to
   `T`. *)
 in

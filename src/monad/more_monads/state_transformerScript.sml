@@ -14,7 +14,8 @@ Type M[local] = “:'state -> 'a # 'state”
 Definition UNIT_DEF:   UNIT (x:'b) = \(s:'a). (x, s)
 End
 
-Definition BIND_DEF:   BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g
+Definition BIND_DEF:
+  BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g
 End
 
 Definition IGNORE_BIND_DEF:   IGNORE_BIND f g = BIND f (\x. g)

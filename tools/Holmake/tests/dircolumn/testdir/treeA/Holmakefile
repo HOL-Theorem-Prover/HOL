@@ -1,0 +1,7 @@
+# The rule below is what makes this a target-bearing directory; the
+# file also has to exist for the INCLUDES walk to look here for a
+# holproject.toml, which is what registers the $(dcTreeA) tree.
+dcA.out:
+	touch $@
+
+EXTRA_CLEANS = dcA.out

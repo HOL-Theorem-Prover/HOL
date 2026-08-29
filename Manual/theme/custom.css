@@ -164,6 +164,21 @@ body.hol-book-reference main .section-num {
   padding-top: 0;
 }
 
+/* Entry-name groups (rendered by formatIdentifierResult in
+   hol-searcher.js): literal matches against a book's generated
+   identifiers.js, shown above that book's full-text hits.  Same
+   header treatment as a book group, with a left accent rule to
+   say "these matched by name, not by content". */
+#mdbook-searchresults li.hol-ident-group {
+  border-left: 3px solid var(--searchresults-header-fg, var(--fg));
+  padding-left: 0.4em;
+}
+/* The anchor text of a name hit is the qualified name in <code>;
+   without this it renders a size larger than the teaser beneath. */
+#mdbook-searchresults li code {
+  font-size: 0.95em;
+}
+
 /* Bibliography entries on the References page.  pandoc citeproc
    emits each entry as <div class="csl-entry"> inside <div id="refs">,
    and chicago-author-date.csl sets `entry-spacing="0"` on the

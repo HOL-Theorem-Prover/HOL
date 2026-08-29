@@ -108,7 +108,8 @@ to pin the parser grammar to whatever theory the entry's
 When the same identifier is exported from several structures
 (e.g. `bossLib.Cases_on` re-exports `BasicProvers.Cases_on`), one
 `.smd` is designated the canonical home for the prose.  It carries
-YAML frontmatter listing every alias:
+YAML frontmatter listing every alias (after the polyscripter
+preamble, if any):
 
 ```
 ---
@@ -117,8 +118,10 @@ aliases:
 ---
 ```
 
-Alias entries themselves are tiny stubs that point back at the
-canonical and are marked auto-generated:
+That is the only place an alias is written down.  The alias entries
+themselves are build products: `AliasGen.exe` generates one stub per
+listed alias into `help/generated-alias-docs/`, a gitignored
+directory that is not edited by hand.
 
 ```
 ---
@@ -127,17 +130,28 @@ generated: true
 ---
 ```
 
-Stub bodies and the canonical's "Also exported as" line (between
+Each stub repeats the canonical's type signature under its own name
+and links back for the prose.  `AliasGen.exe` also maintains the
+canonical's "Also exported as" line (between the
 `<!-- BEGIN aliases-block -->` and `<!-- END aliases-block -->` HTML
-markers) are maintained by `AliasGen.exe`:
+markers) — the one thing it writes back into `Docfiles`.  Stubs
+whose alias has been dropped are deleted; an alias that collides
+with a hand-written entry is a fatal error.
 
 ```
-AliasGen.exe --check ../Docfiles    # CI: verify all aliases consistent
-AliasGen.exe --regen ../Docfiles    # rewrite stubs from canonicals
+AliasGen.exe --check ../Docfiles ../generated-alias-docs
+AliasGen.exe --regen ../Docfiles ../generated-alias-docs
 ```
 
-`build_help` runs `--check` as part of every `bin/build`; the build
-fails if alias entries are out of sync.
+`--regen` runs automatically, from the `../generated-alias-docs/.stamp`
+rule in this directory's `Holmakefile`, which hangs off `all`.  That
+covers both entry points: `bin/build` runs `Holmake all` here (see
+`build_help`), and `Manual/Reference` has this directory in its
+`INCLUDES`, so `Holmake mdbook` and `Holmake reference.pdf` pick it up
+too.  `process_docfiles` is then handed the generated directory via
+`--extra-src`, so alias entries reach the reference PDF, the mdbook,
+the per-entry `.txt` files and the help database on the same footing
+as hand-written ones.
 
 ## Provenance
 

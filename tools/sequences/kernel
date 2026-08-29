@@ -1,12 +1,6 @@
 [poly]tools/check-builds
-!tools/Holmake/tests/holdep
-!tools/Holmake/tests/depchainloop
 !tools/Holmake/tests/recursiveclean
-!tools/Holmake/tests/dirs
-!tools/Holmake/tests/wildcard
 !tools/Holmake/tests/dashn_works
-!tools/Holmake/tests/dupcommands
-!tools/Holmake/tests/varextension
 tools/set_mtime
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml

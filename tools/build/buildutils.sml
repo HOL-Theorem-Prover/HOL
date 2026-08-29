@@ -954,7 +954,8 @@ val ML_SYSNAME = Systeml.ML_SYSNAME
    of help tools: AliasGen.exe, makebase.exe under both, plus
    process_docfiles under poly (which needs bin/hol.state for
    polyscripter and is therefore declared inside an `ifdef POLY`
-   block in help/src-sml/Holmakefile). *)
+   block in help/src-sml/Holmakefile).  `all` also runs AliasGen, so
+   help/generated-alias-docs is populated on return. *)
 fun compile_help_tools () =
   if SYSTEML [HOLMAKE, "all"] then ()
   else die "Couldn't build help tools"
@@ -1062,11 +1063,16 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
 
      val process_docfiles = fullPath [dir, "process_docfiles"]
      val docpath          = fullPath [HOLDIR, "help", "Docfiles"]
+     val aliaspath        = fullPath [HOLDIR, "help", "generated-alias-docs"]
      val processed_dir    = fullPath [HOLDIR, "Manual", "build",
                                        "Docfiles-processed"]
      val htmlpath         = fullPath [docpath, "HTML"]
 
-     val cmd_alias        = [fullPath [dir, "AliasGen.exe"], "--check", docpath]
+     (* Alias stubs are build products, generated into aliaspath from
+        the `aliases:` frontmatter of the canonical entries.  The rule
+        lives in help/src-sml/Holmakefile and so has already run, as
+        part of compile_help_tools above; process_docfiles below picks
+        the results up as a second source directory. *)
 
      val poly = ML_SYSNAME = "poly"
      val mdbook_present = poly andalso
@@ -1178,27 +1184,19 @@ fun build_help {graph, no_mdbook, no_helpdocs} =
          end
      end
  in
-   if SYSTEML cmd_alias then ()
-   else die "AliasGen --check failed: alias entries are out of sync. \
-            \Run help/src-sml/AliasGen.exe --regen help/Docfiles to fix."
- ;
    if poly then (
      let
        val pdoc_args =
-           [process_docfiles, "--show-progress", docpath, processed_dir] @
+           [process_docfiles, "--show-progress",
+            "--extra-src=" ^ aliaspath, docpath, processed_dir] @
            (if use_html_fallback then [htmlpath] else [])
        val () = print "Polyscripting Docfiles and generating .txt outputs...\n"
      in
        if SYSTEML pdoc_args then
-         (* Touch the .stamp the Manual/Reference Holmakefile keys
-            its $(Processed) rule off, so the follow-up Holmake
-            mdbook pass sees a fresh tree. *)
-         let val stamp = fullPath [processed_dir, ".stamp"]
-             val ostrm = TextIO.openOut stamp
-                         handle IO.Io {cause, ...} =>
-                           die ("Couldn't write " ^ stamp ^ ": " ^
-                                General.exnMessage cause)
-         in TextIO.closeOut ostrm end
+         (* Touch the .stamp the Manual/Reference Holmakefile keys its
+            $(Processed) rule off, so the follow-up Holmake mdbook pass
+            sees a fresh tree. *)
+         write_lines (fullPath [processed_dir, ".stamp"], [])
        else die "process_docfiles failed.  If you're running a partial \
                 \build sequence and don't need up-to-date help \
                 \documentation, re-run with --no-helpdocs to skip the \

@@ -1,0 +1,5 @@
+# Under Poly the consumers compile against hol.state0, so this does
+# too: the units they link have to match theirs.
+ifdef POLY
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+endif

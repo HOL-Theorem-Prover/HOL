@@ -132,7 +132,8 @@ val _ = write_file (root3 ++ "holproject.toml")
 (* dirA depends on a product produced by dirC's Holmakefile, referenced
    by path.  With no INCLUDES line, the only way Holmake can locate
    dirC's rule is through external_includes putting dirC on the
-   known-dirs set at startup (mark_known project_active_dirs). *)
+   known-dirs set at registration (mark_known over the project's
+   active dirs). *)
 val _ = write_file (dirA3 ++ "Holmakefile")
   "ifdef POLY\nCLINE_OPTIONS = --poly_not_hol\nendif\n\
   \\n\

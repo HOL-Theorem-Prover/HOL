@@ -31,7 +31,18 @@ sig
      lightweight inheritance shim rather than a project root.  Under
      `holmake = false` the project-mode-only keys `exclude` and
      `[projects.<id>]` are skipped during parsing and listed in
-     `dead_keys` so the caller can warn the user. *)
+     `dead_keys` so the caller can warn the user.
+
+     `unknown_keys` has the same shape as `dead_keys` -- human-readable
+     key labels for the caller to warn about -- but a different cause:
+     these are keys no reader of `holproject.toml` understands at all.
+     A TOML lookup cannot tell a misspelled key from an absent one, so
+     without this a typo (`[project.cakeml]` for `[projects.cakeml]`)
+     is discarded in silence.  A label from `holproject.local.toml`
+     carries the same ` (local)` suffix `dead_keys` uses, and a key of
+     a `[projects.<id>]` sub-table is labelled `[projects.<id>].<key>`;
+     `recognised_keys_for` maps a label back to the keys that were
+     legal where it appeared. *)
   type config = {
     root : string,
     name : string option,
@@ -39,8 +50,17 @@ sig
     externals : external_project list,
     external_includes : string list,
     holmake : bool,
-    dead_keys : string list
+    dead_keys : string list,
+    unknown_keys : string list
   }
+
+  (* recognised_keys_for k - the keys that were legal where the
+     `unknown_keys` entry `k` appeared: a `[projects.<id>].` prefix
+     names an external's sub-table, a ` (local)` suffix names
+     `holproject.local.toml`, and anything else is a top-level key of
+     `holproject.toml`.  Callers warning about an unknown key use this
+     to name the set the typo missed. *)
+  val recognised_keys_for : string -> string list
 
   (* find_root {start} - walk upward from `start` looking for a
      `holproject.toml`.  Returns the directory holding it (absolute,
@@ -65,6 +85,17 @@ sig
      external's path.  Always skips dot-directories (.git, .hol,
      .claude, .svn).  Result is sorted for determinism. *)
   val discover_dirs : config -> string list
+
+  (* discover cfg - as `discover_dirs`, but also reporting the
+     directories the walk pruned because they carry their own
+     `holproject.toml`.  Those are the roots of *nested* projects:
+     they are not part of this project's directory set, and it is the
+     caller's job to decide whether to adopt them as projects in their
+     own right.  A nested root underneath an [exclude]d subtree is not
+     reported -- exclusion prunes before the subtree is examined.
+     Both lists are sorted and duplicate-free;
+     `discover_dirs cfg = #dirs (discover cfg)`. *)
+  val discover : config -> { dirs : string list, nested : string list }
 
   (* find_name_clashes dirs - within `dirs`, look for filenames Holdep
      might resolve (`.sml` and `.sig` files, including theory scripts)
@@ -91,6 +122,13 @@ sig
   val lookup_bool : TOML.table -> TOML.key -> bool option
   val lookup_int : TOML.table -> TOML.key -> int option
   val lookup_table : TOML.table -> TOML.key -> TOML.table option
+
+  (* is_path_under ancestor - a test for whether a path lies at or below
+     `ancestor`.  Both `ancestor` and the tested path must be absolute
+     and canonical.  Curried: a partial application computes the
+     separator-terminated prefix once, so testing one ancestor against
+     many paths costs one string concatenation, not one per path. *)
+  val is_path_under : string -> string -> bool
 
   (* tag_path pf f - run `f`; if it raises Fail, re-raise with `pf:` as
      a prefix so the message names the offending file.  Used to wrap

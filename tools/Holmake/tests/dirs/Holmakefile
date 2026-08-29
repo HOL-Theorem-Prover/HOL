@@ -1,13 +1,12 @@
-OPTIONS = NO_OVERLAY
 ifdef POLY
-CLINE_OPTIONS = --poly_not_hol
+HOLHEAP = $(HOLDIR)/bin/hol.state0
 endif
 
 dirs-selftest.log: selftest.exe
 	$(tee ./$<, $@)
 
 selftest.exe: selftest.uo
-	$(MOSMLC) -o $@ $<
+	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe dirs-selftest.log \
   $(patsubst %,testdir/sub1/A.%,uo ui) \

@@ -325,7 +325,9 @@ val _ = eSML "llist"
          MLSTRUCT "fun LCONS h t = seq.cons h t"::
          MLSTRUCT "val LNIL = seq.empty"::
          MLSTRUCT "fun :::(h,t) = LCONS h t"::
-         MLSTRUCT "fun LUNFOLD f x = seq.delay (fn () => case f x of NONE => LNIL | SOME (y,e) => LCONS e (LUNFOLD f y))" ::
+         MLSTRUCT "fun LUNFOLD f x = seq.delay (fn () => \
+                  \case f x of NONE => LNIL | \
+                  \SOME (y,e) => LCONS e (LUNFOLD f y))" ::
          map DEFN [
            LAPPEND_llcases, LMAP_llcases, LFILTER_llcases,
            LHD_llcases, LTL_llcases, LTAKE_thm,

@@ -1,6 +1,6 @@
 signature LSPServer =
 sig
-  val start : {diag: string -> unit} -> unit
+  val start : {diag: string -> unit, dbg: bool} -> unit
 end;
 
 (* load "JSONDecode"; *)
@@ -103,6 +103,61 @@ fun encHover ({markdown, range}: hover) print = (
     NONE => ()
   | SOME range => (print ",\"range\":"; encRange encPosition range print);
   print "}")
+
+fun encGoalState ({asms, goal}: goal_state) print = (
+  print "{\"asms\":"; encArray encString asms print;
+  print ",\"goal\":"; encString goal print;
+  print "}")
+
+fun encGoalStateResponse ({theorem, step, goals, pretty, error, failedRange}
+                          : goal_state_response) print = (
+  print "{\"theorem\":"; encString theorem print;
+  print ",\"step\":"; encInt step print;
+  print ",\"goals\":"; encArray encGoalState goals print;
+  print ",\"pretty\":"; encString pretty print;
+  print ",\"error\":"; encOrNull encString error print;
+  print "}")
+
+(* Given the buffer text and a cursor byte offset, return the enclosing
+   `Theorem NAME[attrs]: … Proof … QED` block (also `Triviality`) as a
+   `theorem_context`, or NONE if the cursor isn't inside one.
+
+   Drives HOLSourceParser over the current buffer text — same parser
+   the compile uses — so keyword matching, attribute brackets, strings
+   and comments are handled correctly.  parseDec streams decs one at a
+   time; we bail on the first matching HOLTheoremDecl. *)
+fun findEnclosingTheorem text cursor = let
+  val consumed = ref false
+  fun read _ = if !consumed then "" else (consumed := true; text)
+  fun errSink _ _ _ = ()  (* buffer may be mid-edit and mildly invalid *)
+  val {parseDec, ...} =
+    HOLSourceParser.parseSML "" read errSink HOLSourceParser.initialScope
+  fun loop () =
+    case parseDec () of
+      NONE => NONE
+    | SOME (HOLSourceAST.HOLTheoremDecl {
+              id = (_, name), colon, tac,
+              proof_ = SOME {proof_, ...}, qed_, stop, ...}) =>
+        (* An in-progress Proof-QED block has `qed_ = NONE`; treat the
+           dec's `stop` as the upper bound so the LSP can drive live
+           goal-state while the user is still typing the tactic body
+           (Slice G.1). *)
+        let val upperBound = case qed_ of SOME q => q | NONE => stop in
+        if proof_ <= cursor andalso cursor <= upperBound
+        then let val (tacStart, tacEnd) = HOLSourceAST.expSpan tac
+        in SOME {name = name,
+                 quote = String.substring (text, colon + 1,
+                                           Int.max (0, proof_ - colon - 1)),
+                 quoteStart = colon + 1,
+                 tacText = String.substring (text, tacStart,
+                                             Int.max (0, tacEnd - tacStart)),
+                 tacStart = tacStart,
+                 cursor = cursor}
+        end
+        else loop ()
+        end
+    | SOME _ => loop ()
+  in loop () end
 
 exception MalformedData
 
@@ -392,7 +447,45 @@ fun splitOn c s = let
       else loop i' j out
   in case String.size s of sz => loop sz sz [] end
 
-fun start {diag} = let
+(* `extend_path_with_includes` reads `getDir()`'s Holmakefile and
+   blindly appends its INCLUDES to `Meta.loadPath` with no dedup
+   against existing entries.  Cache each canonical dir we've
+   already walked so per-didOpen calls don't grow the load path
+   linearly in the number of opened files. *)
+val walkedDirs : string Binaryset.set ref =
+  ref (Binaryset.empty String.compare)
+
+fun walkIncludesFrom dir = let
+  val abs = OS.Path.mkAbsolute {path = dir, relativeTo = OS.FileSys.getDir()}
+             handle _ => dir
+in
+  if Binaryset.member (!walkedDirs, abs) then ()
+  else let
+    val saved = OS.FileSys.getDir()
+    fun restore () = OS.FileSys.chDir saved handle _ => ()
+  in
+    (OS.FileSys.chDir dir;
+     ReadHMF.extend_path_with_includes
+       {verbosity = 0, lpref = Meta.loadPath};
+     walkedDirs := Binaryset.add (!walkedDirs, abs);
+     restore ())
+    handle _ => restore ()
+  end
+end
+
+fun uriToPath uri =
+  if String.isPrefix "file://" uri
+  then SOME (String.extract (uri, 7, NONE)) else NONE
+
+(* `hol.ML` at boot preloads project_dirs / external_includes from
+   cwd's `holproject.toml`; this handler catches files whose
+   Holmakefile chain isn't reached that way -- HOL4 dev under a
+   `holmake = false` toml, or files opened outside any holproject. *)
+fun augmentLoadPathForUri uri = case uriToPath uri of
+    NONE => ()
+  | SOME path => walkIncludesFrom (OS.Path.dir path)
+
+fun start {diag, dbg} = let
   val _ = PolyML.print_depth 100
   val conn as {send, recv} = stdioConnection ()
   val _ (*clientCapabilities*) = initialize conn (concat [
@@ -464,24 +557,56 @@ fun start {diag} = let
   | Completed
   | Interrupted
 
+  (* Per-dec snapshot; see `parse_data.declSnapshots` below.  A resume
+     to `endByte` seeds the new compile with `builtTrees` and `plugins`
+     from this snapshot, restores HOL state via `compileSnap`, and
+     uses `diags` as the frozen prefix of the diagnostic list. *)
+  type declSnapshot = {
+    endByte     : int,
+    builtTrees  : HOL_IDE.built list,
+    diags       : report DArray.darray,
+    plugins     : plugin_data,
+    compileSnap : LSPExtension.compileSnap }
+
   type parse_data = {
     done: bool,
     pos: int,
     builtTrees: HOL_IDE.built list,
     diags: report DArray.darray,
-    plugins: plugin_data}
+    plugins: plugin_data,
+    (* Newest-first list of per-dec snapshots taken by the current /
+       last-completed compile.  Consulted by `startCompile` to resume
+       from the largest snapshot with `endByte <= minEditOffset`
+       instead of restarting from byte 0. *)
+    declSnapshots: declSnapshot list}
   fun emptyParseData n: parse_data = {
     done = false, pos = 0, builtTrees = [],
     diags = DArray.new (n, Completed),
-    plugins = emptyPluginData }
-  fun addBuiltTree t {done, pos, builtTrees, diags, plugins} =
-    {done = done, pos = pos, builtTrees = t :: builtTrees, diags = diags, plugins = plugins}
-  fun setParsePos pos {done, pos = _, builtTrees, diags, plugins} =
-    {done = done, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
-  fun setParseDone pos {done = _, pos = _, builtTrees, diags, plugins} =
-    {done = true, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
-  fun setPlugins plugins {done, pos, builtTrees, diags, plugins = _} =
-    {done = done, pos = pos, builtTrees = builtTrees, diags = diags, plugins = plugins}
+    plugins = emptyPluginData,
+    declSnapshots = [] }
+  (* Preserve `declSnapshots` from `p` but zero the rest.  Used by
+     `applyEdit` so a `didChange` doesn't discard the snapshots the
+     previous compile computed. *)
+  fun carryOverSnapshots ({declSnapshots, ...}:parse_data): parse_data = {
+    done = false, pos = 0, builtTrees = [],
+    diags = DArray.new (0, Completed),
+    plugins = emptyPluginData,
+    declSnapshots = declSnapshots }
+  fun addBuiltTree t {done, pos, builtTrees, diags, plugins, declSnapshots} =
+    {done = done, pos = pos, builtTrees = t :: builtTrees, diags = diags,
+     plugins = plugins, declSnapshots = declSnapshots}
+  fun setParsePos pos {done, pos = _, builtTrees, diags, plugins, declSnapshots} =
+    {done = done, pos = pos, builtTrees = builtTrees, diags = diags,
+     plugins = plugins, declSnapshots = declSnapshots}
+  fun setParseDone pos {done = _, pos = _, builtTrees, diags, plugins, declSnapshots} =
+    {done = true, pos = pos, builtTrees = builtTrees, diags = diags,
+     plugins = plugins, declSnapshots = declSnapshots}
+  fun setPlugins plugins {done, pos, builtTrees, diags, plugins = _, declSnapshots} =
+    {done = done, pos = pos, builtTrees = builtTrees, diags = diags,
+     plugins = plugins, declSnapshots = declSnapshots}
+  fun addDeclSnapshot snap {done, pos, builtTrees, diags, plugins, declSnapshots} =
+    {done = done, pos = pos, builtTrees = builtTrees, diags = diags,
+     plugins = plugins, declSnapshots = snap :: declSnapshots}
 
   type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data,
@@ -494,7 +619,22 @@ fun start {diag} = let
        only fires startCompile if its epoch still matches when it
        wakes up.  Rapid-fire edits fork many threads but only the
        last (whose epoch survives to wake time) actually compiles. *)
-    debounce: int ref}
+    debounce: int ref,
+    (* Rolling minimum edit offset across `applyEdit` batches since
+       the last successful compile.  `startCompile` picks the largest
+       snapshot in `lastTrees.parse.declSnapshots` with `endByte <=
+       !minEditOffset` (falling back to a full boot-restore if none).
+       `NONE` means no edit info is available (fresh file, or a
+       previous compile completed and cleared it) — treated as 0
+       (full restart). *)
+    minEditOffset: int option ref,
+    (* Runtime-diagnostic squiggles the walker has observed since
+       the last compile: keyed by theorem name, value is the
+       Error report for the failed leaf.  Fresh compiles clear
+       these; a successful walker query for a theorem removes its
+       entry so a user-fix removes the squiggle without waiting
+       for the next compile. *)
+    walkerDiags: (string, report) Binarymap.dict ref}
   local
     val mutex = Mutex.mutex ()
     val fileInfo = ref (Binarymap.mkDict String.compare: (string, file_data) Binarymap.dict)
@@ -510,7 +650,8 @@ fun start {diag} = let
   fun newFile text version = let
     val text = {text = text, version = version, lines = mkLineCounter text}
     in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text},
-        debounce = ref 0} end
+        debounce = ref 0, minEditOffset = ref NONE,
+        walkerDiags = ref (Binarymap.mkDict String.compare)} end
 
   (* Cooperative cancel: signal the flag, which the compile thread
      checks at each Progress event and raises Thread.Interrupt.  We
@@ -530,20 +671,34 @@ fun start {diag} = let
     NONE => ()
   | SOME {cancelled, ...} => (r := NONE; cancelled := true)
 
-  fun applyEdit ({compile, lastTrees, ...}:file_data) version changes = let
+  fun applyEdit ({compile, lastTrees, minEditOffset, ...}:file_data) version changes = let
     val _ = stopCompile compile
     fun getLines text NONE = mkLineCounter text
       | getLines _ (SOME lines) = lines
+    (* Push `off` into the rolling min-edit tracker; a later `startCompile`
+       consults this to decide whether to resume from a snapshot. *)
+    fun bumpMin off =
+      case !minEditOffset of
+        NONE => minEditOffset := SOME off
+      | SOME m => if off < m then minEditOffset := SOME off else ()
+    (* The old `parse` value is carried through the fold so we can
+       preserve its `declSnapshots` on each step (via
+       `carryOverSnapshots`).  On a full-text replace (`range = NONE`)
+       the snapshots become useless — their `endByte` offsets no
+       longer index anything meaningful in the new text — so we drop
+       them explicitly and push min-edit-offset to 0. *)
     fun applyText [] data = data
-      | applyText ({range = NONE, text}::cs) _ = applyText cs (emptyParseData 0, text, NONE)
-      | applyText ({range = SOME (from, to), text}::cs) (_, base, lines) = let
+      | applyText ({range = NONE, text}::cs) _ =
+        (bumpMin 0; applyText cs (emptyParseData 0, text, NONE))
+      | applyText ({range = SOME (from, to), text}::cs) (parse, base, lines) = let
         val lines = getLines base lines
         val (from, to) = (fromLineCol lines from, fromLineCol lines to)
         val text = Substring.concat [
           Substring.substring (base, 0, from),
           Substring.full text,
           Substring.substring (base, to, size base - to)]
-        in applyText cs (emptyParseData 0, text, NONE) end
+        val _ = bumpMin from
+        in applyText cs (carryOverSnapshots parse, text, NONE) end
     val {parse, text = {text, lines, version = _}} = !lastTrees
     val (parse, text, lines) = applyText changes (parse, text, SOME lines)
     val text = {text = text, lines = getLines text lines, version = version}
@@ -559,8 +714,15 @@ fun start {diag} = let
 
   fun exnToReport i e = Error {hard = true,
     pos = case PolyML.Exception.exceptionLocation e of
-      NONE => (i, i)
-    | SOME l => locToRange l,
+      (* A HOL kernel exception (raised from Theory.new_theory or
+         similar) carries a location inside the HOL source that
+         raised it — mapping its byte offset via the current file's
+         `lines` table produces a nonsense line.  Trust the
+         location only when its `file` field is empty (meaning
+         "the anonymous compile unit we're currently feeding to
+         PolyML.compiler"). *)
+      SOME (l as {file = "", ...}) => locToRange l
+    | _ => (i, i),
     msg = encPretty textWidth (exceptionMessage e)}
 
   fun mergeInto msg buf =
@@ -580,32 +742,140 @@ fun start {diag} = let
       handle _ => []
     end
 
-  fun compileForReport uri code lastPos builtTree report = let
+  fun compileForReport uri code startByte lastPos builtTree onDecCompleted report = let
     val _ = HOL_IDE.initialize {
       text = code,
       filename = uri,
-      parseError = fn pos => fn s => report (Error {hard = true, pos = pos, msg = encString s}),
+      (* `unclosed quotation` / `expected ...` almost always mean an
+         in-progress edit; surface those as Warning, not Error. *)
+      parseError = fn pos => fn s => let
+        val soft = String.isSubstring "unclosed quotation" s
+                   orelse String.isSubstring "expected" s
+      in report (Error {hard = not soft, pos = pos, msg = encString s}) end,
       compilerOut = fn s => report (CompilerOut (!lastPos, [s])),
       toplevelOut = fn s => report (ToplevelOut (!lastPos, [s])),
       progress = fn i => (lastPos := i; report (Progress i)),
       error = fn {hard, location, message, ...} => report (Error {
         hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
       runtimeExn = fn e => report (exnToReport (!lastPos) e),
-      builtTree = builtTree }
+      builtTree = builtTree,
+      onDecCompleted = onDecCompleted,
+      startByte = startByte }
     in lastPos := size code end
 
-  fun startCompile uri ({compile, lastTrees, debounce}:file_data) = (
+  (* Materialise an `encode` (`(string -> unit) -> unit`) into a plain
+     string.  Used to build dedup keys for Error reports whose `msg`
+     is a pretty-printer callback. *)
+  fun encodeToString enc = let
+    val buf = ref []
+    fun sink s = buf := s :: !buf
+    val () = enc sink
+    in String.concat (rev (!buf)) end
+
+  (* Drop later Error reports whose (pos, msg) matches an earlier one.
+     A single mis-typed dec often triggers multiple parser recovery
+     passes each emitting the same "expected 'QED'" / "expected an
+     expression" pair -- users don't need to see them twice.  Non-
+     Error reports pass through unchanged. *)
+  fun dedupReports d = let
+    val seen = ref (Binaryset.empty String.compare)
+    val out = DArray.new (DArray.size d, Completed)
+    fun step r = case r of
+        Error {pos = (s, e), msg, ...} =>
+          let val k = Int.toString s ^ ":" ^ Int.toString e ^ ":"
+                      ^ encodeToString msg
+          in if Binaryset.member (!seen, k) then ()
+             else (seen := Binaryset.add (!seen, k);
+                   DArray.push (out, r))
+          end
+      | _ => DArray.push (out, r)
+    val () = DArray.app step d
+    in out end
+
+  (* Emit publishDiagnostics for `uri` combining the last-completed
+     compile's diagnostics and any walker-observed runtime squiggles. *)
+  fun publishAllDiagnostics uri
+                            ({lastTrees, walkerDiags, ...}:file_data) = let
+    val {text, parse} = !lastTrees
+    val {lines, version, ...} = text
+    val compileDiags = #diags parse
+    val wd = !walkerDiags
+    val total = DArray.size compileDiags + Binarymap.numItems wd
+    val snapshot = DArray.clone (compileDiags, total)
+    val _ = Binarymap.app (fn (_, r) => DArray.push (snapshot, r)) wd
+    val snapshot = dedupReports snapshot
+    fun encDiag (Error {hard, pos, msg}) print = (
+        print "{\"range\":"; encRangeLC lines pos print;
+        print ",\"severity\":";
+        encInt (if hard then ErrorSeverity else WarnSeverity) print;
+        print ",\"message\":"; msg print; print "}")
+      | encDiag _ _ = raise Fail "unexpected report kind"
+  in
+    send (mkNotif "textDocument/publishDiagnostics" (fn print => (
+      print "{\"uri\":"; encString uri print;
+      print ",\"version\":"; encInt version print;
+      print ",\"diagnostics\":"; encDArray encDiag snapshot print;
+      print "}")))
+  end
+
+  fun startCompile uri ({compile, lastTrees, debounce, minEditOffset,
+                         walkerDiags}:file_data) = (
     (* Invalidate any pending scheduleCompile thread: their epoch
        check will see the new value and self-abort. *)
     debounce := !debounce + 1;
-    (* Restore the LSP-startup Context snapshot so this compile runs
-       against a clean HOL state (no residual theories / stale DB
-       entries from the previous compile of this or another file). *)
-    !LSPExtension.resetForCompile ();
-    if #done (#parse (!lastTrees)) then () else let
+    (* Runtime squiggles from the walker are always stale w.r.t. the
+       new compile -- clear them so a fix removes squiggles even
+       before the user visits the theorem to re-run the walker. *)
+    walkerDiags := Binarymap.mkDict String.compare;
+    if #done (#parse (!lastTrees)) then
+      (!LSPExtension.notifyCompileStart (!minEditOffset);
+       !LSPExtension.resetForCompile (); ())
+    else let
     val _ = stopCompile compile
-    val {text as {lines, ...}, parse = {diags = oldDiags, ...}} = !lastTrees
-    val trees = ref (emptyParseData 8)
+    val {text as {lines, ...}, parse = lastParse} = !lastTrees
+    val {declSnapshots = lastSnaps, diags = oldDiags, ...} = lastParse
+    (* Resume decision: pick the largest snapshot with `endByte <=
+       !minEditOffset`.  If none, do a full boot-restore starting at
+       byte 0. *)
+    val resumeSnap =
+      case !minEditOffset of
+        NONE => NONE
+      | SOME editOff =>
+        (* `declSnapshots` is newest-first, so the first match walking
+           the list is the largest `endByte <= editOff`. *)
+        List.find (fn (s:declSnapshot) => #endByte s <= editOff) lastSnaps
+    val (initialTrees, resumeStart, oldDiags) =
+      case resumeSnap of
+        NONE => (
+          !LSPExtension.notifyCompileStart (!minEditOffset);
+          !LSPExtension.resetForCompile ();
+          (emptyParseData 8, 0, oldDiags))
+      | SOME snap => let
+          val _ = !LSPExtension.notifyCompileStart (!minEditOffset)
+          val _ = !LSPExtension.restoreCompileSnap (#compileSnap snap)
+          val {endByte, builtTrees, diags = snapDiags, plugins,
+               ...} = snap
+          (* Seed `diags` with the frozen snapshot; leave `oldDiags`
+             empty so no post-`endByte` stale diagnostics from the
+             previous compile leak into the LSP publish stream. *)
+          val seededDiags = DArray.clone (snapDiags, DArray.size snapDiags)
+          val trees : parse_data = {
+            done = false, pos = endByte, builtTrees = builtTrees,
+            diags = seededDiags, plugins = plugins,
+            declSnapshots =
+              List.filter (fn (s':declSnapshot) => #endByte s' <= endByte)
+                          lastSnaps}
+          val emptyDiags = DArray.new (0, Completed)
+        in (trees, endByte, emptyDiags) end
+    val _ = minEditOffset := NONE
+    val _ = if dbg andalso resumeStart > 0 then
+              send (mkNotif "$/compileResumedAt" (fn print => (
+                print "{\"uri\":"; encString uri print;
+                print ",\"version\":"; encInt (#version text) print;
+                print ",\"pos\":"; encInt resumeStart print;
+                print "}")))
+            else ()
+    val trees = ref initialTrees
     val cancelled = ref false
 
     fun compileThread () = ((let
@@ -661,19 +931,29 @@ fun start {diag} = let
         in loop 0; DArray.replace (oldDiags, newDiags) end
 
       (* Only emit publishDiagnostics when the accumulated list has
-         actually changed size since the last emit.  Progress events
+         actually changed size since the last emit -- Progress events
          far past the point where an error was found still update
          `oldDiags` (by re-merging), but if the size didn't change,
-         re-sending is pure noise for the client's log. *)
+         re-sending is pure noise for the client's log.  Both compile
+         diagnostics AND walker-detected runtime squiggles contribute
+         to the size we compare against. *)
       val lastSentSize = ref ~1
       (* Snapshot oldDiags for the writer thread.  A live reference
          races updateDiags on the next Progress event: DArray.replace
          mid-encode makes encDArray raise Subscript, which kills the
          writer and jams every subsequent send. *)
-      fun sendDiags () = let val n = DArray.size oldDiags
-        in if n = !lastSentSize then () else (
-          lastSentSize := n;
-          let val snapshot = DArray.clone (oldDiags, n) in
+      fun sendDiags () = let
+        val n = DArray.size oldDiags
+        val wd = !walkerDiags
+        val ws = Binarymap.numItems wd
+        val total = n + ws
+        in if total = !lastSentSize then () else (
+          lastSentSize := total;
+          let val snapshot = DArray.clone (oldDiags, total)
+              val _ = Binarymap.app
+                        (fn (_, r) => DArray.push (snapshot, r)) wd
+              val snapshot = dedupReports snapshot
+          in
           send (mkNotif "textDocument/publishDiagnostics" (fn print => (
             print "{\"uri\":"; encString uri print;
             print ",\"version\":"; encInt (#version text) print;
@@ -717,9 +997,25 @@ fun start {diag} = let
           print ",\"value\":{\"kind\":\"end\"}}")))
 
       val ls = ref (beforeCompile ())
-      val lastPos = ref 0
+      val lastPos = ref resumeStart
+      (* Abort a doomed dec: if the file's `Libs` / `Ancestors`
+         `open`s fail (e.g., a dependency of an external HOL project
+         hasn't been built yet, so `open jrhUtils` fails at the top),
+         every subsequent name in the same dec-expansion produces a
+         "not declared" error.  The user experience is a slow trickle
+         of hundreds of diagnostics for what is really one broken
+         open.  Count hard errors between successive Progress events
+         (each Progress marks a completed outer dec).  If a single
+         dec fires `runOfErrorsLimit` hard errors without progressing,
+         the file's environment is broken — set the cancel flag and
+         raise Thread.Interrupt.  Real files with legitimate isolated
+         errors interleave them with progress and won't trigger. *)
+      val runOfErrorsLimit = 10
+      val runOfErrors = ref 0
+      val abortedByRunOfErrors = ref false
       fun process (Progress i) = (
           if !cancelled then raise Thread.Interrupt else ();
+          runOfErrors := 0;
           trees := setParsePos i (!trees);
           afterCompile (!lastPos before lastPos := i, i) (!ls);
           send (mkNotif "$/compileProgress" (fn print => (
@@ -734,10 +1030,62 @@ fun start {diag} = let
         | process (ToplevelOut (_, ss)) = logMessage (concat (rev ss))
         | process Completed = raise Bind
         | process Interrupted = raise Bind
+        | process (msg as Error {hard = true, ...}) = (
+            DArray.push (#diags (!trees), msg);
+            runOfErrors := !runOfErrors + 1;
+            if !runOfErrors >= runOfErrorsLimit then (
+              logMessage ("compile aborted after "
+                          ^ Int.toString (!runOfErrors)
+                          ^ " errors from a single dec: "
+                          ^ "likely a broken `open` in the header");
+              abortedByRunOfErrors := true;
+              cancelled := true;
+              raise Thread.Interrupt)
+            else ())
         | process (msg as Error _) = DArray.push (#diags (!trees), msg)
       fun processBuiltTree t = trees := addBuiltTree t (!trees)
+      (* After each outer dec finishes, freeze a snapshot for the LSP
+         to resume from on a later `didChange` with min-edit-offset >
+         endByte.  Cloning `diags` at capture time keeps the resume
+         seed independent of subsequent `updateDiags` mutations.
+
+         Skip if the cumulative `trees.diags' is non-empty at capture
+         time.  A partial-parse error early in the compile (e.g. a
+         `Theory foo` still being typed, whose expansion raises
+         `HOL_ERR "proposed theory name '' is not an identifier"' from
+         the trailing `Theory.new_theory ""') puts the file into a
+         "not yet valid" state whose subsequent decs' byte extents
+         will change once the user completes their edit.  Capturing
+         snapshots for the file's remaining decs would carry the
+         stale error forward across every subsequent didChange, since
+         resume-from-snapshot seeds `trees.diags' with the snapshot's
+         frozen contents.  Conservative: no snapshots until the
+         current compile has produced ZERO errors so far. *)
+      fun captureSnap endByte = let
+        val {builtTrees, plugins, diags, ...} = !trees
+        val n = DArray.size diags
+        in if n > 0 then ()
+           else let
+             val snap = {
+               endByte = endByte,
+               builtTrees = builtTrees,
+               diags = DArray.new (0, Completed),
+               plugins = plugins,
+               compileSnap = !LSPExtension.captureCompileSnap ()}
+             in trees := addDeclSnapshot snap (!trees)
+             end
+        end
+      (* Flush any diagnostics accumulated since the last Progress.
+         Progress events drive `updateDiags` + `sendDiags`, so errors
+         from a dec that has been INTERRUPTED before its next Progress
+         (typically a `runOfErrorsLimit'-triggered abort in the middle
+         of a syntactically-broken tail) are still sitting in
+         `trees.diags' and haven't been merged into `oldDiags`.
+         Force a merge past end-of-file so those errors reach the
+         client. *)
+      fun flushDiags () = (updateDiags (size (#text text)); sendDiags ())
       in (
-        compileForReport uri (#text text) lastPos processBuiltTree process;
+        compileForReport uri (#text text) resumeStart lastPos processBuiltTree captureSnap process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         (* stopCompile no longer waits for the thread to exit, so
            we might land here on a stale thread whose applyEdit has
@@ -745,6 +1093,7 @@ fun start {diag} = let
            completion events only if we're still current; otherwise
            the fresh compile that replaced us owns lastTrees. *)
         if !cancelled then () else (
+          flushDiags ();
           sendProgressEnd ();
           send (mkNotif "$/compileCompleted" (fn print => (
             print "{\"uri\":"; encString uri print; print "}")));
@@ -752,7 +1101,18 @@ fun start {diag} = let
                         parse = setParseDone (size (#text text)) (!trees)})
       ) handle Thread.Interrupt => (
         sendProgressEnd ();
-        send (mkNotif "$/compileInterrupted" (fn print => (
+        (* When the compile aborted because a single dec produced a
+           runaway cascade of errors, the diagnostics are complete
+           (up to the abort) and clients should treat the compile as
+           done, not interrupted.  A user-initiated cancel or a
+           didChange-driven stop remain compileInterrupted. *)
+        if !abortedByRunOfErrors then (
+          flushDiags ();
+          send (mkNotif "$/compileCompleted" (fn print => (
+            print "{\"uri\":"; encString uri print; print "}")));
+          lastTrees := {text = text,
+                        parse = setParseDone (size (#text text)) (!trees)})
+        else send (mkNotif "$/compileInterrupted" (fn print => (
           print "{\"uri\":"; encString uri print; print "}"))))
            | e => (
         logMessage ("compile aborted: " ^ exnMessage e);
@@ -857,7 +1217,12 @@ fun start {diag} = let
                 NONE => false
               | SOME (HOL_IDE.Built (_, declProps, _), _) => lookRefs declProps
           end
-        val value = if isGlobalId then #lookupVal PolyML.globalNameSpace id else NONE
+        (* Lookup via the LSP file layer, not `globalNameSpace`, so
+           hovers on a deleted `val foo = …` return NONE instead of
+           the retained Poly/ML binding.  The layer falls through to
+           `globalNameSpace` for bindings from the LSP-boot session
+           (bossLib etc.). *)
+        val value = if isGlobalId then #lookupVal LSPNameSpace.fileNS id else NONE
         in (SOME id, value, help) end
       open PolyML
       val ty = Option.map (fn ty =>
@@ -878,7 +1243,11 @@ fun start {diag} = let
         | SOME id => (!LSPExtension.thmLookup id handle _ => NONE)
       val out = case (id, ty, value, thmMd) of
           (_, NONE, NONE, _) => []
-        | (NONE, SOME ty, NONE, _) => [typeHover (loc, ty)]
+        (* Type without an identifier is the walked-up enclosing
+           expression's type (`Conv.conv`, `Thm.thm -> Thm.thm`, …).
+           Never informative — the user's cursor missed a specific
+           name and we've fallen up.  Return nothing. *)
+        | (NONE, SOME _, NONE, _) => []
         | (SOME id, SOME ty, _, SOME md) => let
           (* Theorem: "val id: thm\n\n<statement>" as one markdown block.
              ppToString may leave a trailing newline; strip it before
@@ -907,15 +1276,50 @@ fun start {diag} = let
              PrettyBreak(1, 0), value]))]
         | _ => []
       in thyHov @ help @ out end
+    fun crossesNewline (s, e) = let
+      val txt = #text text
+      fun loop i = i < e andalso
+                   (String.sub (txt, i) = #"\n" orelse loop (i + 1))
+      in loop s end
+    (* Suppress hover on any Built node whose span crosses a newline —
+       these are enclosing expressions (e.g. a whole `Proof … QED`
+       tactic body typing as `tactic`) whose SML type is uninformative.
+       Per-identifier / per-token nodes are single-line and unaffected. *)
     fun fromTree NONE = []
       | fromTree (pt as (SOME (HOL_IDE.Built ((s, e), props, _), _))) =
-        case process {startPosition = s, endPosition = e} props of
+        if crossesNewline (FixedInt.toInt s, FixedInt.toInt e) then []
+        else case process {startPosition = s, endPosition = e} props of
           [] => fromTree (HOL_IDE.builtMoveUp pt)
         | out => out
-    fun f () = let
-      val offset' = {startOffset = FixedInt.fromInt startOffset, endOffset = FixedInt.fromInt endOffset}
-      in fromTree (HOL_IDE.builtNavigateTo' builtTrees offset') end
-    val out = case out of [] => f () | _ => out
+    val offset' = {startOffset = FixedInt.fromInt startOffset,
+                   endOffset = FixedInt.fromInt endOffset}
+    val innermost = HOL_IDE.builtNavigateTo' builtTrees offset'
+    (* If the cursor sits on raw HOL-quotation text — the innermost
+       built-tree node has PQuote — the SML tree hover would walk up
+       to the enclosing expansion and return misleading info (e.g.
+       "string" for the QUOTE-wrapped body).  Dispatch to the
+       HOL-side Preterm hover instead; and if it can't produce a
+       hover, return nothing rather than bogus SML type info. *)
+    val inQuoteSpan =
+      case innermost of
+        SOME (HOL_IDE.Built (sp, props, _), _) =>
+          if List.exists (fn HOL_IDE.PQuote => true | _ => false) props
+          then SOME sp else NONE
+      | _ => NONE
+    fun fq (s, e) = let
+      val qs = FixedInt.toInt s
+      val qe = FixedInt.toInt e
+      val quote = String.substring (#text text, qs, qe - qs)
+      in !LSPExtension.hoverQuotation
+           ({uri = uri, lines = #lines text, plugins = plugins,
+             ppToString = ppToString},
+            {quote = quote, quoteStart = qs, target = startOffset}) end
+    fun f () = fromTree innermost
+    val out =
+      case (out, inQuoteSpan) of
+        (_::_, _)     => out
+      | ([], SOME sp) => fq sp
+      | ([], NONE)    => f ()
     val _ = case out of [] => raise Empty | _ => ()
     fun merge ({range = NONE, ...}, a) = a
       | merge ({range = a, ...}, NONE) = a
@@ -965,6 +1369,49 @@ fun start {diag} = let
     in case out of [] => f () | _ => out end
     handle Empty => []
 
+  (* Unlike `getState', goalStateAtPos doesn't gate on the compile
+     having reached the cursor -- the walker uses `declSnapshots'
+     (which survive `carryOverSnapshots') for Context and parses
+     the Proof body directly from the current buffer text.
+     Requiring `pos >= offset' would stall the auto-follow-cursor
+     pane for the ~300 ms debounce after every keystroke. *)
+  fun goalStateAtPos uri ({lastTrees, ...}:file_data) target = let
+    val {parse, text} = !lastTrees
+    val {plugins, declSnapshots, ...} = parse
+    val offset = fromLineCol (#lines text) target
+    fun ppToString pp = let
+      val mds = DArray.new (8, "")
+      val _ = PolyML.prettyPrint (fn s => DArray.push (mds, s), textWidth) pp
+      in concat (DArray.toList mds) end
+    val ctx = {uri = uri, lines = #lines text, plugins = plugins,
+               ppToString = ppToString}
+    (* Largest declSnapshot with endByte < theoremStart.  Restoring
+       this before invoking the walker means the walker's tactics
+       (in particular `simp[]` via `srw_ss()`) see the same Context
+       — including srw_ss extensions — that existed when the file
+       compile reached the theorem's dec.  Without this, later
+       `export_rewrites` in the same file skew simp's normal form
+       and slow tactics like METIS_TAC to a crawl. *)
+    fun snapBefore ts = List.foldl
+      (fn (s, best) =>
+        if #endByte s >= ts then best
+        else case best of
+               NONE => SOME s
+             | SOME b => if #endByte s > #endByte b then SOME s else best)
+      NONE declSnapshots
+    in case findEnclosingTheorem (#text text) offset of
+         NONE => NONE
+       | SOME (thm as {quoteStart, ...}) =>
+         let val restoreLater = !LSPExtension.captureCompileSnap ()
+             val () = case snapBefore quoteStart of
+               NONE => ()
+             | SOME s => !LSPExtension.restoreCompileSnap (#compileSnap s)
+             val r = !LSPExtension.goalStateAtPos (ctx, thm)
+                     handle e => (restoreLater (); raise e)
+             val () = restoreLater ()
+         in r end
+    end handle Empty => NONE
+
   fun eval id {uri, code, incr, holdep} = let
     val lines = mkLineCounter code
 
@@ -1006,7 +1453,7 @@ fun start {diag} = let
       | encReport Completed print = print "{\"kind\":\"compileCompleted\"}"
       | encReport Interrupted print = print "{\"kind\":\"interrupted\"}"
 
-    val compile = compileForReport uri code (ref 0) (fn _ => ())
+    val compile = compileForReport uri code 0 (ref 0) (fn _ => ()) (fn _ => ())
     in
       case incr of
         IncrNone => let
@@ -1074,6 +1521,38 @@ fun start {diag} = let
         send (mkResponse id (mkErr InvalidParams "json decode failed")))
     | Request {method = "$/eval", id, params} =>
       spawnJob id params evalParams (eval id)
+    | Request {method = "$/hol/goalState", id, params} =>
+      spawnJob id params textDocumentPositionParams (fn {uri, pos} => let
+        val (v_opt, resp) = case withFileInfo (fn fileInfo =>
+              (fileInfo, Binarymap.peek (fileInfo, uri))) of
+            NONE => (NONE, NONE)
+          | SOME v => (SOME v, goalStateAtPos uri v pos)
+        (* Fold the walker's failure/success into per-file walker
+           diagnostics keyed by theorem name so a user-fix removes
+           the squiggle without waiting for the next compile.  Emit
+           publishDiagnostics whenever the walker's slot changes. *)
+        val () = case (v_opt, resp) of
+            (SOME (v: file_data), SOME {theorem, failedRange, error, ...}) => let
+              val wd = !(#walkerDiags v)
+              val prev = Binarymap.peek (wd, theorem)
+              val next = case (failedRange, error) of
+                  (SOME (s, e), SOME msg) => SOME (Error {
+                    hard = true, pos = (s, e), msg = encString msg })
+                | _ => NONE
+              val changed = case (prev, next) of
+                  (NONE, NONE) => false
+                | (SOME _, NONE) => true
+                | (NONE, SOME _) => true
+                | _ => true  (* re-emit even if same theorem — text may differ *)
+              val () = case next of
+                  NONE => #walkerDiags v := Binarymap.foldl
+                    (fn (k, r, m) => if k = theorem then m
+                                     else Binarymap.insert (m, k, r))
+                    (Binarymap.mkDict String.compare) wd
+                | SOME r => #walkerDiags v := Binarymap.insert (wd, theorem, r)
+            in if changed then publishAllDiagnostics uri v else () end
+          | _ => ()
+        in Ok (encOrNull encGoalStateResponse resp) end)
     | Request {method, id, ...} =>
       send (mkResponse id (mkErr InvalidRequest ("unknown method: " ^ method)))
     | Notification {method = "$/cancelRequest", params} => let
@@ -1087,7 +1566,7 @@ fun start {diag} = let
         | NONE => let val v = newFile text version
                   in (Binarymap.insert (fileInfo, uri, v), (v, false)) end)
       val () = if existed then applyEdit v version [{range = NONE, text = text}]
-               else ()
+               else augmentLoadPathForUri uri
       in if !elabOnRef = ElabOnChange then startCompile uri v else () end
     | Notification {method = "textDocument/didChange", params} => let
       val {uri, version, changes} = JSONDecode.decode didChangeParams params

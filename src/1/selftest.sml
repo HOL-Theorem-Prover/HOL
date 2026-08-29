@@ -1546,6 +1546,22 @@ in
   } "%0$0@"
 end
 
+(* Test for #2041 *)
+val _ = let
+  val x = Term.mk_var ("x", Type.bool --> Type.bool)
+  val v = Vector.fromList [x, boolSyntax.implication, boolSyntax.F]
+in
+  (* Try to construct “\x:B. x x ==> F”
+   The experimental read_raw accepted the ill-typed subterm [x x]. *)
+  shouldfail {
+    checkexn = (fn HOL_ERR _ => true | _ => false),
+    printarg = K "Testing for #2041 malformed read_raw",
+    printresult = (fn t => "Malformed term"),
+    testfn = Term.read_raw v
+  }  "%0%1%0%0@@%2@|"
+end
+
+
 (* Restarting a segment fires Parse.clear_consts_from_grammar, which must
    drop the zapped segment's constants from the overload map even when the
    map holds a pattern overload.  Must stay last in the file: it retires

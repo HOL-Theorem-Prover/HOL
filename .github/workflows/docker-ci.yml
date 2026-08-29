@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "master"
+      - "mcandidate"
       - "develop"
 
 env:

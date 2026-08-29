@@ -140,41 +140,38 @@ fun pinfo_upd (tb', stat) ({os,tb,status,start_time,ignore_error}:procinfo) =
      ignore_error = ignore_error}
 
 
-fun prettydir dir =
-    let
-      (* input dir is already absolute *)
-      val hmdir = Holmake_tools.hmdir.fromPath {origin = "/", path = dir}
-      val dir = Holmake_tools.hmdir.pretty_dir hmdir
-      val dir = Holmake_tools.nice_dir dir
-      val {arcs,...} = OS.Path.fromString dir
-      val arcs = if hd arcs = "~" orelse String.sub(hd arcs, 0) = #"$" then
-                   tl arcs
-                 else arcs
-    in
-      String.concatWith "/" arcs
-    end
+(* A holpathdb registration ($(HOLDIR)/examples/lambda/basics) names
+   the tree a directory belongs to as well as its position in that
+   tree.  The tree half is dead weight when everything being built is
+   in the one tree, so keep_root is set only when the build spans more
+   than one of them; see multibuild's is_multitree. *)
+fun prettydir keep_root dir =
+    (* input dir is already absolute *)
+    case holpathdb.owning_var {path = OS.Path.mkCanonical dir} of
+        SOME {vname, rest} =>
+          if not keep_root then rest
+          else "$(" ^ vname ^ ")" ^ (if rest = "" then "" else "/" ^ rest)
+      | NONE =>
+        let
+          val dir = Holmake_tools.nice_dir dir
+        in
+          if keep_root then dir
+          else
+            let val {arcs,...} = OS.Path.fromString dir
+            in
+              String.concatWith
+                "/" (if hd arcs = "~" then tl arcs else arcs)
+            end
+        end
 
-(* right align, and put dots on left *)
-fun rlsquash_to wdth s =
+(* the dimmed column: squash_path's job, right-aligned to fill wdth so
+   the columns after it stay put, with one space kept to its left *)
+fun squash_to wdth s =
     if wdth <= 0 then ""
-    else if size s < wdth then
-      StringCvt.padLeft #" " wdth s
-    else if wdth <= 6 then
-      (*   1 <= wdth <= 6 /\ wdth <= size s ==>
-           size s + 1 - wdth IN [1..size s]
-         and String.extract(s, size s, NONE) returns empty string
-      *)
-      " " ^ String.extract(s, size s + 1 - wdth, NONE)
-    else
-      (*   6 < wdth <= size s ==>
-           size s + 4 - wdth IN [4..size s - 3]
-         4 is fine as size s > 6, and size s - 3 < size s
-      *)
-      " ..." ^ String.extract(s, size s + 4 - wdth, NONE)
+    else StringCvt.padLeft #" " wdth (squash_path (wdth - 1) s)
+val squash_to = nstr_subhandler squash_to "squash_to"
 
-val rlsquash_to = nstr_subhandler rlsquash_to "rlsquash_to"
-
-fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
+fun new {info,warn,genLogFile,time_limit,multidir,multitree,keep_going} =
   let
     val monitor_map =
         ref (Binarymap.mkDict jobkey_compare : (jobkey,procinfo)Binarymap.dict)
@@ -273,6 +270,9 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
           ((fn s => info ("Starting work on " ^ delsml_sfx s)), "",
            (fn () => ()),
            id, id, id, id, id, "")
+    (* the dimmed directory column's contents, empty when everything is
+       being built in the one directory *)
+    fun coldir dir = if multidir then prettydir multitree dir else ""
     fun stdhandle jkey f =
       case Binarymap.peek (!monitor_map, jkey) of
           NONE => (warn ("Lost monitor info for "^jobkey_toString jkey); NONE)
@@ -288,7 +288,8 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
              than dumping the whole path into the name. *)
           val {dir = tagdir, file = tagfile} = OS.Path.splitDirFile tag
           val tagstr = delsml_sfx tagfile
-          val dirstr = if tagdir <> "" then prettydir tagdir else dirstr
+          val dirstr = if tagdir <> "" then prettydir multitree tagdir
+                       else dirstr
           val tagsz = size tagstr
           val verdict_w = 7
           val knfield_w = 7  (* enough for "[dd/dd]" or "[↓ddddd]" *)
@@ -319,7 +320,7 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
           fun maybe_dim s = if size s <> 0 then dim s else s
         in
           info (infopfx ^ tagstr ^
-                maybe_dim (rlsquash_to (remspace - tagsz) dirstr) ^
+                maybe_dim (squash_to (remspace - tagsz) dirstr) ^
                 sfxstr ^ CLR_EOL)
         end
     fun lrpad (s1,s2) =
@@ -401,8 +402,7 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
                   val this_childs_time = Time.-(cutime, !last_child_cputime)
                   val _ = last_child_cputime := cutime
                   val utstr = compact_time 6 true "(" ")" this_childs_time
-                  val dirstr = if multidir then prettydir dir else ""
-                  val tinfo = taginfo td dirstr utstr marker
+                  val tinfo = taginfo td (coldir dir) utstr marker
                 in
                   if st = W_EXITED orelse ignore_error then
                     if seen cheat_string orelse seen used_cheat_string then
@@ -447,11 +447,10 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
             val this_childs_time = Time.-(cutime,!last_child_cputime)
             val _ = last_child_cputime := cutime
             val utstr = compact_time 6 true "(" ")" this_childs_time
-            val dirstr = if multidir then prettydir dir else ""
           in
             stdhandle jk
                (fn {os = strm,tb, status = stat,...} =>
-                   (taginfo td dirstr utstr NONE (dim, "killed");
+                   (taginfo td (coldir dir) utstr NONE (dim, "killed");
                     TextIO.closeOut strm;
                     monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
                     display_map();
@@ -472,8 +471,11 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
               List.app
                 (fn {tag,dir,status,log,fulllines,lastpartial} =>
                     let
+                      (* the failure report has a line to itself, so
+                         name the tree whether or not the build spans
+                         more than one *)
                       val dirpfx =
-                          if multidir then " in " ^ prettydir dir else ""
+                          if multidir then " in " ^ prettydir true dir else ""
                     in
                       info (red "*** " ^ bold (delsml_sfx tag) ^ dirpfx ^
                             " (status " ^ status ^ ")");
@@ -489,6 +491,7 @@ fun new {info,warn,genLogFile,time_limit,multidir,keep_going} =
      {coloured_info =
       (fn (s1,s2) => info (lrpad (infopfx ^ s1, s2 ^ " " ^ CLR_EOL))),
       red = red, green = green, bold = bold,
+      dirname = prettydir multitree,
       final_report = final_report})
   end
 

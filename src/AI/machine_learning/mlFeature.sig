@@ -9,7 +9,8 @@ sig
 
   val fea_compare : fea * fea -> order
 
-  (* set flag to false for constant features and to true for subterms features *)
+  (* set flag to false for constant features and to
+     true for subterms features *)
   val sfea_of_term : bool -> term -> string list
   val sfea_of_goal : bool -> goal -> string list
 

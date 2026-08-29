@@ -46,7 +46,18 @@ val initialize:
     progress: int -> unit,
     error: error -> unit,
     runtimeExn: exn -> unit,
-    builtTree: built -> unit
+    builtTree: built -> unit,
+    (* Called after each outer dec finishes compilation, with the byte
+       offset just past the dec's original-source span (from
+       `HOLSourceAST.decSpan`).  Used by the LSP to take mid-file
+       snapshots for incremental recompile. *)
+    onDecCompleted: int -> unit,
+    (* Skip `finish` / `emitBuilt` / `onDecCompleted` for decs whose
+       source span stops at or before this offset — they're presumed
+       already compiled and preserved via a snapshot restored before
+       this call.  The parser still walks every dec so its stateful
+       infix-scope tracking stays consistent. *)
+    startByte: int
   } -> unit
 
 val moveUp: subtree -> subtree
@@ -443,6 +454,10 @@ and annotateQuote (List {elems = {args, ...}, ...}) pt acc = let
           annotateExp NONE e (moveRight (moveDown pt)) :: acc
         | _ => acc)
     in go args (moveDown pt) acc end
+  | annotateQuote (ExpExpansion {result, ...}) pt acc =
+    (* expandQuote now wraps its returned List in an ExpExpansion
+       for quotation-hover.  Descend through it transparently. *)
+    annotateQuote result pt acc
   | annotateQuote _ _ acc = acc
 
 and annotateFunPat (App (f, x)) pt = let
@@ -646,7 +661,7 @@ end
 
 fun initialize {
   text, filename, parseError, compilerOut, toplevelOut, progress, error,
-  runtimeExn, builtTree
+  runtimeExn, builtTree, onDecCompleted, startByte
 } = let
   datatype chunk
     = Chunk of string
@@ -714,7 +729,12 @@ fun initialize {
   fun codeFn NONE () = ()
     | codeFn (SOME code) () = let
       val {fixes, values, structures, signatures, functors, types} = code ()
-      fun enter f = app (f PolyML.globalNameSpace)
+      (* Route compile-produced bindings through the interposed file
+         layer instead of `PolyML.globalNameSpace`.  See
+         `lsp_namespace.ML` — this lets us drop stale bindings on the
+         next `resetForCompile` when the user deletes a `val` from
+         the file. *)
+      fun enter f = app (f LSPNameSpace.fileNS)
       in enter #enterFix fixes; enter #enterType types; enter #enterSig signatures;
         enter #enterStruct structures; enter #enterFunct functors; enter #enterVal values end
   fun getOffset () =
@@ -734,6 +754,12 @@ fun initialize {
     CPLineNo getTokIdx,
     CPLineOffset getOffset,
     CPPrintInAlphabeticalOrder false,
+    (* The interposed file layer so the compiler resolves references
+       to file-local bindings via `LSPNameSpace.fileNS`, and future
+       compiles see whatever the current one entered until we clear.
+       Together with `codeFn`'s enter through the same layer, this
+       makes it possible to drop stale bindings between compiles. *)
+    CPNameSpace LSPNameSpace.fileNS,
     CPBindingSeq (fn () => (fn n => n before serial := n + 1) (!serial))];
   (* Optional stack-trace on runtime exceptions from the compiled unit.
      PolyML.Exception.exception_trace prints a backtrace to stdErr and
@@ -775,6 +801,19 @@ fun initialize {
     val startIdx = !idx
     val startTok = !curToken
     in
+      (* Advance `pos` to the current dec's start position before
+         reporting progress.  `toState` only updates `pos` on
+         PushSpan chunks, so a dec that begins with a leading Chunk
+         (e.g. filler newlines advancing to the dec's source line)
+         would leave `pos` at 0 — causing a runtime exception from
+         HOL kernel code (no `PolyML.Exception.exceptionLocation`
+         in the user file) to be pinned at byte 0 of the file
+         rather than at the dec it arose from. *)
+      (case !decsRef of
+         [] => ()
+       | dec :: _ =>
+         let val (s, _) = HOLSourceAST.decSpan dec
+         in if !pos < s then pos := s else () end);
       progress (!pos);
       case !curToken of
         (_, "") => ()
@@ -796,12 +835,27 @@ fun initialize {
          | _ => () (* annotation can fail if trees are out of sync *)
   fun loop () = (
     DArray.clear queue;
-    if fetchDec () then () else (
-      idx := 0; spans := []; curToken := toState ();
-      finish ();
-      emitBuilt ();
-      ptRef := [];
-      loop ()))
+    if fetchDec () then () else let
+      val stopByte =
+        case !decsRef of
+          [] => 0
+        | dec :: _ => #2 (HOLSourceAST.decSpan dec)
+    in
+      if stopByte <= startByte then
+        (* Skip compilation for pre-`startByte` decs — a resume
+           snapshot has already installed the state they'd produce.
+           Parser state (infix scope, etc.) was still updated by
+           `fetchDec` above, so downstream decs see a correct
+           context. *)
+        (ptRef := []; loop ())
+      else (
+        idx := 0; spans := []; curToken := toState ();
+        finish ();
+        emitBuilt ();
+        ptRef := [];
+        onDecCompleted stopByte;
+        loop ())
+    end)
   in loop () end;
 
 fun navigateTo NONE _ = NONE
@@ -845,17 +899,23 @@ fun builtMoveUp NONE = NONE
 fun builtNavigateTo NONE _ = NONE
   | builtNavigateTo (tree as SOME (Built (sp as (startPosition, endPosition), props, children), parents))
                (target as {startOffset, endOffset}) =
-    if startOffset >= startPosition andalso endOffset <= endPosition
+    (* Endpoint convention: nodes carry half-open [startPosition,
+       endPosition) spans (idStop = p + size s, mkLocPragma-driven
+       PolyML positions, etc.).  Use strict `<` on the endpoint so
+       a POINT cursor at the seam between two adjacent siblings
+       lands on the RIGHT sibling — otherwise a cursor exactly at
+       the start of a quote body gets claimed by the preceding
+       string arg. *)
+    if startOffset >= startPosition andalso endOffset < endPosition
     then (* It's this node or a child. *)
       case children of
         [] => tree (* No children. *)
       | first :: rest => let
-        (* See which child it is. *)
         fun findChild [] = NONE
           | findChild (c :: cs) = let
             val Built ((s, e), _, _) = c
             in
-              if startOffset >= s andalso endOffset <= e
+              if startOffset >= s andalso endOffset < e
               then SOME c
               else findChild cs
             end

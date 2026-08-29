@@ -51,6 +51,7 @@ and `SPOSE_NOT_THEN STRIP_ASSUME_TAC` results in
 
 ### See also
 
+[`bossLib.contr`](#bossLib.contr),
 [`Tactic.CCONTR_TAC`](#Tactic.CCONTR_TAC),
 [`Tactic.CONTR_TAC`](#Tactic.CONTR_TAC),
 [`Tactic.ASSUME_TAC`](#Tactic.ASSUME_TAC),

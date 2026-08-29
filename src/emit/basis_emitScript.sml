@@ -115,11 +115,11 @@ val _ = eSML "num"
       MLSIG "val ppHex  : num PP.pprinter",
       MLSIG "val pp_num : num PP.pprinter",
       MLSTRUCT "\n\
-\ (*---------------------------------------------------------------------------*)\n\
-\ (* Supplementary ML, not generated from HOL theorems, aimed at supporting    *)\n\
-\ (* parsing and pretty printing of numerals.                                  *)\n\
-\ (*---------------------------------------------------------------------------*)\n\
-\ \n\
+\ (* ----------------------------------------------------------------------\n\
+\     Supplementary ML, not generated from HOL theorems, aimed at\n\
+\     supporting parsing and pretty printing of numerals.\n\
+\    ---------------------------------------------------------------------- *)\
+\\n\n\
 \  val TWO = BIT2 ZERO;\n\
 \  val THREE = BIT1 (BIT1 ZERO);\n\
 \  val FOUR = BIT2 (BIT1 ZERO);\n\

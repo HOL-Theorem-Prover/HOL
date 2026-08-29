@@ -22,6 +22,7 @@ book-title.tex
 references.md
 cite-labels.tsv
 labels.tsv
+identifiers.js
 figs/*.svg
 figs/*.aux
 figs/*.log

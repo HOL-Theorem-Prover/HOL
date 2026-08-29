@@ -170,14 +170,40 @@ sig
     val toAbsPath : t -> string
     val getParent : t -> t (* loops/fixpoint at root *)
     val pretty_dir : t -> string (* uses holpathdb abbreviations *)
+    val tree_key : t -> string
+      (* The holpathdb variable naming the innermost registered
+         directory containing the argument, written "$(VNAME)"; the
+         empty string when no registered directory contains it.  Two
+         directories are in the same source tree exactly when their
+         tree_keys are equal.  This is the path-database registration,
+         not the owning holproject.toml project (Holmake's
+         owning_root): the two need not coincide, and it is the
+         registration that pretty_dir displays. *)
     val fromPath : {origin: string, path : string} -> t
     val sort : t list -> t list
     val curdir : unit -> t
+    val set_invocation_dir : t -> unit
+      (* Fix the directory that curdir's relpath is taken relative to.
+         Called once, early, from Holmake's startup; without it a
+         relpath means "relative to the cwd at the time curdir was
+         called", which does not survive a chdir.  Never call this from
+         code that gets saved into a poly state: this file is also
+         loaded into bin/hol, and a baked-in invocation directory would
+         be read back stale from elsewhere.  Left unset, curdir behaves
+         as it did before the setter existed. *)
     val compare : t * t -> order
     val eqdir : t -> t -> bool
     val chdir : t -> unit
   end
   val nice_dir : string -> string (* prints a dir with ~ when HOME is set *)
+  val squash_path : int -> string -> string
+      (* squash_path w s shortens the "/"-separated path s to at most w
+         characters by dropping whole interior arcs in favour of "...".
+         The leading arc (which names the tree, e.g. "$(HOLDIR)") is
+         kept as long as possible, then sacrificed to make room for
+         trailing arcs; when not even ".../<last arc>" fits, the last
+         arc is truncated on the left.  Returns "" when w is too small
+         for anything, or non-positive. *)
   type include_info = {includes : string list, preincludes : string list}
   val empty_incinfo : include_info
   type dirset = hmdir.t Binaryset.set

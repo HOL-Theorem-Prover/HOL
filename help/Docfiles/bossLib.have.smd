@@ -1,0 +1,49 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+---
+aliases:
+  - bossLib.subgoal
+  - bossLib.sg
+---
+## `have`
+
+``` hol4
+bossLib.have : term quotation -> tactic
+```
+
+------------------------------------------------------------------------
+
+<!-- BEGIN aliases-block -->
+
+*Also exported as [`bossLib.subgoal`](#bossLib.subgoal), [`bossLib.sg`](#bossLib.sg).*
+
+<!-- END aliases-block -->
+
+Produces a subgoal.
+
+A call to `have q` is equivalent to a call to
+`Q.SUBGOAL_THEN q STRIP_ASSUME_TAC`. If `q` parses to the term `qt`,
+then applying `have q` to the goal `asl ?- g` produces two subgoals:
+first `asl ?- qt`, where the new fact must be proved, and then
+`asl,qt ?- g`, where the original goal is continued with `qt` added to
+the assumptions. As with `by`, the new assumption is "stripped", i.e.,
+broken apart by eliminating existentials, conjunctions and disjunctions,
+which can lead to case splitting.
+
+### Failure
+
+Fails if the provided quotation does not parse to a term of boolean type
+in the context of the current goal.
+
+### Comments
+
+The `have` tactic is also available via the names `subgoal` and `sg`.
+
+Where `q by tac` proves the new fact with `tac` immediately, `have q`
+leaves it as a subgoal for the user to attack next.
+
+### See also
+
+[`bossLib.subgoal`](#bossLib.subgoal), [`bossLib.by`](#bossLib.by),
+[`bossLib.suff`](#bossLib.suff),
+[`Tactical.SUBGOAL_THEN`](#Tactical.SUBGOAL_THEN),
+[`Tactic.STRIP_ASSUME_TAC`](#Tactic.STRIP_ASSUME_TAC)

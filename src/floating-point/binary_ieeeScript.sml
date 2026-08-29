@@ -4657,7 +4657,8 @@ Proof
           simp[float_to_real_def] >> rw[] >>
           simp[ABS_MUL] >>
           map_every Cases_on [‘f0.Significand’, ‘f.Significand’] >>
-          gvs[dimword_def, word_lo_n2w, ABS_REFL', REAL_LE_ADD, word_add_n2w]) >>
+          gvs[dimword_def, word_lo_n2w, ABS_REFL', REAL_LE_ADD,
+              word_add_n2w]) >>
       fs[WORD_NOT_LOWER, WORD_LOWER_OR_EQ] >>
       ‘¬(f.Exponent ≤₊ (f0 with Significand := f0.Significand + 1w).Exponent)’
         by simp[WORD_NOT_LOWER_EQUAL] >>
@@ -4671,7 +4672,7 @@ Proof
                 map_every Cases_on [‘f0.Significand’, ‘f.Significand’] >>
                 gvs[dimword_def, word_lo_n2w, ABS_REFL', REAL_LE_ADD,
                     w2n_minus1]) >>
-          metis_tac[WORD_NOT_LOWER, WORD_LOWER_EQ_LOWER_TRANS, WORD_LO_word_T])>>
+          metis_tac[WORD_NOT_LOWER,WORD_LOWER_EQ_LOWER_TRANS,WORD_LO_word_T]) >>
       map_every Cases_on [‘f0.Exponent’, ‘f.Exponent’] >>
       gs[word_add_n2w, word_lo_n2w, word_ls_n2w, dimword_def, word_T_def,
          UINT_MAX_def, NOT_LESS] >>

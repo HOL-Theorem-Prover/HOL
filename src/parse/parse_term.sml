@@ -996,7 +996,25 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
             | ([], NONE) => List.rev als
             | ([], SOME al) => List.rev (al::als)
         val args_w_seglocs0 = seglocs rhs' [] NONE
-        fun CCOMB((x,locn),y) = (COMB(y,x),locn.between (#2 y) locn)
+        (* Locn of the FIRST STD_HOL_TOK in the reduction, if any —
+           the position of the operator token in the source (e.g.,
+           the actual `∧` symbol, not the LHS's start).  Used as the
+           Locn of the synthesised operator VAR below; without this,
+           `VAR s` inherits `llocn'` (start of LHS) and downstream
+           type-error messages / hover point at the LHS instead of
+           the operator.  Falls back to `llocn'` for rules that don't
+           have a leading token (e.g., FN_APP juxtaposition). *)
+        fun findOpLocn [] = llocn'
+          | findOpLocn (((Terminal (STD_HOL_TOK _), l), _) :: _) = l
+          | findOpLocn (_ :: rest) = findOpLocn rest
+        val op_locn = findOpLocn rhs'
+        (* Use `lrlocn'` (the whole reduction span) as the Locn of
+           every intermediate COMB.  With the between-cascade of the
+           old CCOMB, moving `VAR`'s locn to the operator token could
+           produce reversed spans (e.g. `Loc(∧.start, p.end)` when
+           `p` sits before ∧ in the source), which then propagate as
+           bad ranges into error messages. *)
+        fun CCOMB((x,_),y) = (COMB(y,x), lrlocn')
         fun process_lspinfos A i lspis args =
             (* let
                 fun pr (VAR s, _) = s
@@ -1047,7 +1065,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
                       raise Fail
                             "seglocs extraction: rule with more than one TM"
                     else #1 (hd (args_w_seglocs))
-                  else List.foldl CCOMB (VAR s,llocn') args_w_seglocs
+                  else List.foldl CCOMB (VAR s, op_locn) args_w_seglocs
             | CaseRule cs => let
                 fun mkcase1 ((t,loc),_) = (COMB((VAR cs, loc), (t,loc)), loc)
                 fun mkbar(((t,loc),_),acc) =

@@ -70,6 +70,23 @@ New features
     Genuine cycles within a single root's `INCLUDES` chain are
     still reported.
 
+-   The directory column in `Holmake`'s per-target completion lines
+    (Poly/ML, `-j n` with `n` greater than one) now names the source
+    tree a target came from when the build spans more than one of
+    them, writing the path with its `holpathdb` registration:
+    `$(CAKEMLDIR)/compiler/parsing` rather than just
+    `compiler/parsing`.  Builds confined to a single tree are
+    unchanged, the prefix being the same on every line there.
+    A path too long for the column now has whole interior components
+    replaced by `...` (`$(CAKEMLDIR)/.../parsing`) instead of being
+    truncated from the left, the tree name being the last part given
+    up; in a very narrow terminal the column is left blank rather
+    than displacing the time and verdict columns.
+    Relatedly, a directory that *is* a registered `holpathdb`
+    directory now abbreviates to a bare `$(NAME)` wherever `Holmake`
+    prints a directory, where it previously printed the unabbreviated
+    path.
+
 -   `Holmake` (under Poly/ML) understands a new per-directory
     `Holmakefile` variable, `LOCAL_PARALLELISM_LIMIT = n`, which
     caps the total number of concurrent jobs the parallel
@@ -121,12 +138,42 @@ New features
     `unicode_ok` toggle, an `exclude` list of skipped subdirectories,
     and a `[[h4pedant.dir]]` array of per-subdirectory overrides;
     `h4pedant` with no positional arguments walks up to find the
-    project root and scans the whole tree.  See the *Project
-    files* sub-section of *Maintaining HOL Formalizations with
-    Holmake* in the Description manual.
+    project root and scans the whole tree.  Projects nest: a
+    sub-directory carrying its own `holproject.toml` heads a
+    separate project, governed by its own file rather than the
+    enclosing one's, and `Holmake -r` and `--dirs` account for that.
+    Two diagnostics guard the nesting: a project that points into an
+    enclosing project it has not declared with `[projects.<id>]` is
+    warned about, with the stanza to add spelled out, and any key
+    `holproject.toml` does not recognise is reported rather than
+    quietly discarded — a `[project.<id>]` typo for
+    `[projects.<id>]` otherwise reads as correct and behaves as
+    absent.
+    See the *Project files* sub-section of *Maintaining HOL
+    Formalizations with Holmake* in the Description manual.
+
+-   `bossLib` provides three new short names for common tactics:
+    `have ‘t’` states an intermediate result, leaving it as the
+    first subgoal and adding it (stripped) to the assumptions of
+    the other; it is the tactic already available as `sg`.
+    `suff ‘t’` replaces the goal with a sufficient condition,
+    leaving `t ==> goal` as the first subgoal; it is already
+    available as `qsuff_tac`; `contr` starts a proof by
+    contradiction, and is an abbreviation for
+    `SPOSE_NOT_THEN STRIP_ASSUME_TAC`.
 
 Bugs fixed
 ----------
+
+-   `Holmake -r` now overrides `--no_prereqs`, as the documentation
+    has always said it does.  Previously the two fought: `-r` seeded
+    the targets of every `INCLUDES` directory and `--no_prereqs`
+    then demoted every node outside the current directory.
+
+-   Searching the manual site for an entry whose name is an English stop word (`by`, `THEN`, `EVERY`, `IF`, `I`, `all`, `can`, `for`, `say`) or punctuation (`&&`, `$`, `==`, `++`, `-->`) returned nothing, in every manual.
+    The search index's stop-word and stemming pipeline is applied to the query as well as to the indexed text, so those names were dropped on both sides and the query produced no terms at all.
+    Each book now emits a generated table of its entry names, which the site consults first: exact and prefix name matches are shown above the full-text results.
+    An exact entry-name match is thereby also prioritised — searching for `subgoal` puts `bossLib.subgoal` at the top rather than somewhere among the pages that merely mention it.
 
 -   Three kernel bugs (github issues [#1838](https://github.com/HOL-Theorem-Prover/HOL/issues/1838), [#1839](https://github.com/HOL-Theorem-Prover/HOL/issues/1839), and [#1840](https://github.com/HOL-Theorem-Prover/HOL/issues/1840)) in CV-compute were fixed.
     Thanks to Ramana Kumar for finding these!
@@ -195,13 +242,13 @@ Incompatibilities
     In particular, users are recommended to *not* directly open `realaxTheory` (an intermediate
     theory for constructing real numbers), in which all useful theorems should be also covered by
    `realTheory` (under same or different theorem names).
-  
+
 |  Old name       | New name           | Statements                                    |
 | --------------- | ------------------ | --------------------------------------------- |
 | `REAL_LE_SUP'`  | `REAL_LE_SUP2`     | `!s a b y. y IN s /\ a <= y /\ (!x. x IN s ==> x <= b) ==> a <= sup s` |
 | `REAL_LE_MUL'`  | `REAL_LE_MUL_NEG`  | `!x y. x <= 0 /\ y <= 0 ==> 0 <= x * y`       |
 | `REAL_LT_MUL'`  | `REAL_LT_MUL_NEG`  | `!x y. x < 0 /\ y < 0 ==> 0 < x * y`          |
-| `REAL_LT_LMUL'` | `REAL_LT_LMUL_NEG` | `!x y z. x < 0 ==> (x * y < x * z <=> z < y)` | 
+| `REAL_LT_LMUL'` | `REAL_LT_LMUL_NEG` | `!x y z. x < 0 ==> (x * y < x * z <=> z < y)` |
 | `REAL_LT_RMUL'` | `REAL_LT_RMUL_NEG` | `!x y z. z < 0 ==> (x * z < y * z <=> y < x)` |
 
 -   For better compatibility with HOL Light (making code-porting easier), arithmetic theory’s `GREATER_EQ` theorem (stating *m ≥ n ⇔ n ≤ m*) is now also available in that theory under the name `GE`.

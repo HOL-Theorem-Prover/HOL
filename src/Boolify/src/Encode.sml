@@ -209,7 +209,8 @@ fun define_encode ax db =
                  {name="encode_"^def_name^"_def",
                   rec_axiom=ax, def=pre_defn1}
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
-     val ctyl = op_mk_set (pair_eq aconv equal) (map cty (strip_conj (concl defn)))
+     val ctyl = op_mk_set (pair_eq aconv equal)
+                          (map cty (strip_conj (concl defn)))
      val const_tyl = filter (fn (c,ty) => mem ty dtys) ctyl
      val const_tyopl = map (fn (c,ty) => (c,tyconst_names ty)) const_tyl
  in

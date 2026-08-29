@@ -1,13 +1,17 @@
 (* process_docfiles.sml
 
-   Build-time driver: turns help/Docfiles/*.smd into
+   Build-time driver: turns *.smd from one or more source directories
+   (help/Docfiles, plus any --extra-src directory such as
+   help/generated-alias-docs) into
 
      (1)  Manual/build/Docfiles-processed/<base>.md
           (polyscripter-evaluated; consumed by mdbook, Md2TeX, and the
           .txt step below), and
 
-     (2)  help/Docfiles/<base>.txt
-          (consumed by makebase.exe -> the in-HOL `help` command).
+     (2)  <src-dir-of-that-entry>/<base>.txt
+          (consumed by makebase.exe -> the in-HOL `help` command;
+          makebase scans the directories named in
+          tools/documentation-directories).
 
    Optionally also produces help/Docfiles/HTML/<base>.html in a third
    step, for builds where mdbook isn't available to provide per-entry
@@ -92,7 +96,7 @@ fun sentinel base = sentinel_prefix ^ base ^ sentinel_suffix
      \r-overwritten line via Flash.initialise_spinner.  Intended for
      direct invocation (e.g. from bin/build), where one self-
      overwriting line is tidier than scrolling 1500+ filenames. *)
-fun polyscript_all {src_dir, processed_dir, bases, obuf, show_progress} =
+fun polyscript_all {entries, processed_dir, obuf, show_progress} =
   let
     val concatBuf = SimpleBuffer.mkBuffer()
     val pushConcat = #push concatBuf
@@ -100,14 +104,14 @@ fun polyscript_all {src_dir, processed_dir, bases, obuf, show_progress} =
     val (announce, finish_progress) =
         if show_progress then
           let val (tick, finish) =
-                  Flash.initialise_spinner ("", length bases)
+                  Flash.initialise_spinner ("", length entries)
           in (fn _ => tick (), finish) end
         else
           (fn entry =>
               (TextIO.output (TextIO.stdOut, "  " ^ entry ^ ".smd\n");
                TextIO.flushOut TextIO.stdOut),
            fn () => ())
-    fun do_one entry =
+    fun do_one (src_dir, entry) =
       let
         val () = announce entry
         val srcfile = OS.Path.joinBaseExt {base = pjoin (src_dir, entry),
@@ -145,7 +149,7 @@ fun polyscript_all {src_dir, processed_dir, bases, obuf, show_progress} =
         pushConcat ("\n\n" ^ sentinel entry ^ "\n\n")
       end
   in
-    List.app do_one bases;
+    List.app do_one entries;
     finish_progress ();
     #read concatBuf ()
   end
@@ -224,11 +228,17 @@ fun strip_outer_blanks s =
     string ss ^ "\n"
   end
 
-fun write_chunks {out_dir, ext, chunks, wrap} =
+(* out_dir_of maps an entry base to the directory its output belongs
+   in: for .txt that's the entry's own source directory (so makebase
+   finds it next to the .smd), for .html it's the single fallback
+   HTML directory.  out_dirs is the (small) set of directories it can
+   return, created once up front rather than per entry. *)
+fun write_chunks {out_dir_of, out_dirs, ext, chunks, wrap} =
   let
-    val () = mkdir_p out_dir
+    val () = List.app mkdir_p out_dirs
     fun do_one (base, chunk) =
       let
+        val out_dir = out_dir_of base
         val outfile = OS.Path.joinBaseExt {base = pjoin (out_dir, base),
                                            ext = SOME ext}
         val ostrm = TextIO.openOut outfile
@@ -256,22 +266,32 @@ fun html_wrap base body =
 fun txt_wrap _ body = strip_outer_blanks body
 
 (* Positional args:
-     <src-dir>        directory of .smd source files (help/Docfiles)
+     <src-dir>        primary directory of .smd source files
+                      (help/Docfiles); see also --extra-src
      <processed-dir>  where to write polyscripter-processed .md
                       (e.g. Manual/build/Docfiles-processed)
      <html-dir>       optional; when given, also produces per-entry
                       HTML pages there via a second pandoc pass *)
-datatype cline = CR of { show_progress : bool, help : bool }
-val cline_init = CR { show_progress = false, help = false }
-fun progress_upd b (CR {help, ...}) =
-  CR { show_progress = b, help = help }
-fun help_upd b (CR {show_progress, ...}) =
-  CR { show_progress = show_progress, help = b }
+datatype cline = CR of { show_progress : bool, help : bool,
+                         extra_src : string list }
+val cline_init = CR { show_progress = false, help = false, extra_src = [] }
+fun progress_upd b (CR {help, extra_src, ...}) =
+  CR { show_progress = b, help = help, extra_src = extra_src }
+fun help_upd b (CR {show_progress, extra_src, ...}) =
+  CR { show_progress = show_progress, help = b, extra_src = extra_src }
+fun extra_src_upd d (CR {show_progress, help, extra_src}) =
+  CR { show_progress = show_progress, help = help,
+       extra_src = extra_src @ [d] }
 
 val cline_options : (cline -> cline) GetOpt.opt_descr list = [
   {short = "h", long = ["help"],
    desc = GetOpt.NoArg (fn () => help_upd true),
    help = "Show this message"},
+  {short = "", long = ["extra-src"],
+   desc = GetOpt.ReqArg (extra_src_upd, "DIR"),
+   help = "Additional directory of .smd sources to process alongside \
+          \<src-dir>; may be repeated.  Each entry's .txt is written \
+          \back beside its own source."},
   {short = "", long = ["show-progress"],
    desc = GetOpt.NoArg (fn () => progress_upd true),
    help = "Animate a spinner + decreasing entry count on a single \
@@ -290,7 +310,7 @@ fun process_docfiles_main () =
                        options = cline_options,
                        errFn = warnLn}
                       (CommandLine.arguments ())
-    val CR {show_progress, help} =
+    val CR {show_progress, help, extra_src} =
         List.foldl (fn (f, a) => f a) cline_init upds
     val () = if help then
                (print (uinfo ^ "\n"); OS.Process.exit OS.Process.success)
@@ -311,22 +331,46 @@ fun process_docfiles_main () =
 
     val () = mkdir_p processed_dir
 
-    val bases = find_smd_bases src_dir
-                handle e => dieLn ("Couldn't enumerate " ^ src_dir ^
-                                   ": " ^ General.exnMessage e)
-    val () = if null bases then
-               (warnLn ("No .smd files in " ^ src_dir); OS.Process.exit OS.Process.success)
+    val src_dirs = src_dir :: extra_src
+    fun entries_of d =
+        map (fn b => (d, b))
+            (find_smd_bases d
+             handle e => dieLn ("Couldn't enumerate " ^ d ^ ": " ^
+                                General.exnMessage e))
+    (* An entry base must be unique across the source directories:
+       it names the processed file, the pandoc sentinel and the
+       mdbook page.  AliasGen enforces the same thing from its side;
+       check here too so a stray file can't silently shadow one. *)
+    val (entries, srcdir) =
+        let
+          fun add ((d, b), (acc, seen)) =
+              case Binarymap.peek (seen, b) of
+                  SOME d' => dieLn ("Entry " ^ b ^ ".smd appears in both " ^
+                                    d' ^ " and " ^ d)
+                | NONE => ((d, b) :: acc,
+                           Binarymap.insert (seen, b, d))
+          val (acc, seen) =
+              List.foldl add ([], Binarymap.mkDict String.compare)
+                         (List.concat (map entries_of src_dirs))
+        in (List.rev acc, seen) end
+    val bases = map #2 entries
+    (* The dedup map doubles as the base -> source-directory lookup. *)
+    fun srcdir_of b = Binarymap.find (srcdir, b)
+    val () = if null entries then
+               (warnLn ("No .smd files in " ^
+                        String.concatWith ", " src_dirs);
+                OS.Process.exit OS.Process.success)
              else ()
-    val () = print ("Processing " ^ Int.toString (length bases) ^
-                    " entries from " ^ src_dir ^ "\n")
+    val () = print ("Processing " ^ Int.toString (length entries) ^
+                    " entries from " ^ String.concatWith ", " src_dirs ^
+                    "\n")
 
     val () = elision_string1 := elision_string1_plain
     val obuf = setupPolyscripter ()
 
     val concat = polyscript_all
-                   {src_dir = src_dir, processed_dir = processed_dir,
-                    bases = bases, obuf = obuf,
-                    show_progress = show_progress}
+                   {entries = entries, processed_dir = processed_dir,
+                    obuf = obuf, show_progress = show_progress}
     val () = print ("...polyscripter pass done\n")
 
     val () =
@@ -340,10 +384,12 @@ fun process_docfiles_main () =
           let
             val txt_out = pandoc_once pdexe concat ["-t", "plain"]
             val txt_chunks = split_chunks bases txt_out
-            val () = write_chunks {out_dir = src_dir, ext = "txt",
+            val () = write_chunks {out_dir_of = srcdir_of,
+                                   out_dirs = src_dirs, ext = "txt",
                                    chunks = txt_chunks, wrap = txt_wrap}
             val () = print ("...wrote " ^ Int.toString (length txt_chunks) ^
-                            " .txt files to " ^ src_dir ^ "\n")
+                            " .txt files to " ^
+                            String.concatWith ", " src_dirs ^ "\n")
           in
             case html_opt of
                 NONE => ()
@@ -364,7 +410,8 @@ fun process_docfiles_main () =
                                    "--lua-filter=" ^ luaFilter]
                   val html_chunks = split_chunks bases html_out
                 in
-                  write_chunks {out_dir = html_dir, ext = "html",
+                  write_chunks {out_dir_of = (fn _ => html_dir),
+                                out_dirs = [html_dir], ext = "html",
                                 chunks = html_chunks, wrap = html_wrap};
                   print ("...wrote " ^ Int.toString (length html_chunks) ^
                          " .html files to " ^ html_dir ^ "\n")

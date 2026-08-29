@@ -1006,7 +1006,7 @@ fun pp_term (G : grammar) TyG backend = let
                 pr_vstruct bv >> add_break (1,0) >>
                 record_bvars (free_vars (bv2term bv)) (recurse rest)
         in
-          block INCONSISTENT 2 (recurse vsl)
+          block INCONSISTENT 0 (recurse vsl)
         end
 
     fun pr_vstrblock (tok, _, vsl0) =

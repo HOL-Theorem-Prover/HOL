@@ -4235,9 +4235,9 @@ type of a relation is an instance of
 $\alpha\to\alpha\to\konst{bool}$, but the extra generality
 doesn't hurt.)  The theory `relation` provides definitions of
 basic properties and operations on relations, defines various
-kinds of orders and closures, defines wellfoundedness and proves
-the wellfounded recursion theorem, and develops some basic
-results used in Term Rewriting.
+kinds of orders and closures, defines basic properties of relation transformers,
+defines wellfoundedness and proves the wellfounded recursion theorem, and
+develops some basic results used in Term Rewriting.
 
 **Basic properties.**
 The following basic properties of relations are defined.
@@ -4367,6 +4367,21 @@ applied to the transitive closure of the symmetric closure of
 ##thm RC_DEF
 ##thm SC_DEF
 ##thm EQC_DEF
+```
+
+These closures are an example of a relation transformer, which are of type
+$b:(\alpha\to\alpha\to\konst{bool})\to\alpha\to\alpha\to\konst{bool}$. A
+transformer is monotone (`rmonotone`) if it respects `RSUBSET`. A transformer
+preserves a property `P` (`rpreserves`) if relations with property `P` continue
+to have property `P` after being transformed. Finally, a transformer `b` is the
+closure of a property `P` when it maps all relations `R` to their `P`-closures.
+Theorems for these transformer properties involving the relation properties/closures
+above have been added to the simpset.
+
+```repl
+##thm rmonotone_def
+##thm rpreserves_def
+##thm is_closure_op_def
 ```
 
 **Wellfounded relations.**
@@ -4517,6 +4532,21 @@ in this way is actually equivalent to the original definition
 [^bisim-original]: Starting with the *original definition* it is
     not that easy to derive the coinduction principle, which is
     very useful in practice.
+
+There are additional theorems that provide basic enhanced coinduction theorems for
+BISIM_REL. When exhibiting a candidate relation, these principles allow for stepping into a
+larger relation for free. The strong theorem `BISIM_REL_strong_thm` adds the diagonal, which
+allows assuming equal things are related. The symmetry theorem `BISIM_REL_sym_thm` reduces the
+proof to just one side of simulation, provided the relation is symemtric. The combination of both
+(`BISIM_REL_sym_strong_thm`) is provided as well. These theorems all have `_coind` variants as
+`ho_match_mp_tac` can use them to infer the relation from the structure of the goal.
+
+```repl
+##thm BISIM_REL_strong_thm
+##thm BISIM_REL_sym_thm
+##thm BISIM_REL_sym_strong_thm
+##thm BISIM_REL_sym_strong_coind
+```
 
 The bisimulation and bisimulation relation considered so far are
 the *strong* ones, in the sense that all involved transitions

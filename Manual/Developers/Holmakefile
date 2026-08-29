@@ -38,11 +38,16 @@ mdbook: ../book/Developers/index.html
 
 ../book/Developers/index.html: ../Tools/smdpp SUMMARY.md \
         $(MDBOOK_CHAPTERS) \
-        labels.tsv $(SIBLING_LABELS)
+        identifiers.js labels.tsv $(SIBLING_LABELS)
 	mdbook build
 	# See Manual/Description/Holmakefile for the rationale.
 	cd ../book/Developers && \
 	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	# `mdbook build` empties the build dir, so the entry-name
+	# sidecar is installed afterwards.  Copied rather than
+	# symlinked: a link pointing out of book/ wouldn't survive a
+	# deploy snapshot.
+	cp identifiers.js ../book/Developers/identifiers.js
 	../Tools/smdpp check-html ../book/Developers
 	../Tools/smdpp check-refs ../book/Developers
 	../Tools/smdpp check-links ../book/Developers
@@ -51,4 +56,13 @@ mdbook: ../book/Developers/index.html
 labels.tsv: ../Tools/smdpp SUMMARY.md $(MDBOOK_CHAPTERS)
 	../Tools/smdpp dump-labels .
 
-EXTRA_CLEANS = $(TARGETS) labels.tsv ../book/Developers/
+# Entry-name table for the site's name-lookup layer.  It exists
+# because elasticlunr runs its trimmer / stop-word filter / stemmer
+# over the *query* as well as over the indexed text, so a section
+# whose name is a stop word or punctuation is unreachable through
+# searchindex.js no matter what the reader types.  Scan-only, like
+# labels.tsv above.  See Manual/Developers/manual-authoring.md.
+identifiers.js: ../Tools/smdpp SUMMARY.md $(MDBOOK_CHAPTERS)
+	../Tools/smdpp dump-identifiers .
+
+EXTRA_CLEANS = $(TARGETS) labels.tsv identifiers.js ../book/Developers/

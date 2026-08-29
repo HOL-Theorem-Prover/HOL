@@ -435,6 +435,58 @@ If neither `Holmakefile` provides a rule and `T` exists on disk,
 If neither provides a rule and `T` does not exist, `Holmake`
 reports `Don't know how to build necessary target(s)`.
 
+### Build progress output
+
+\index{Holmake@\holmake!progress output}
+Under Poly/ML, and when more than one job is allowed to run at a
+time, `Holmake` reports each target as it finishes on a line of the
+form
+
+```
+   lexer_implTheory              compiler/parsing  (30s)  [↓474]     OK
+```
+
+The target's name is on the left; the columns on the right are the
+processor time the job consumed, a progress marker counting theory
+files (`[built/total]`, or `[↓remaining]` once the total exceeds
+99), and the verdict.  Between them, dimmed, sits the directory the
+target was built in.
+
+That directory column is shown only when the build spans more than
+one directory, and it is abbreviated in two stages.  First, if the
+directory lies under a registered path-database directory (see
+Section \ref{sec:holproject-name} below), the registration is used:
+`$(HOLDIR)/examples/lambda/basics`.  Second, the leading
+`$(`*name*`)` is dropped again unless the directories being built
+span **more than one** registered tree -- within a single tree the
+prefix is the same on every line and only costs space, whereas
+across trees it is the only thing distinguishing, say, a
+`compiler/parsing` in one project from a `compiler/parsing` in
+another.  Directories under no registered directory count as one
+further tree between them.
+
+A directory's tree here is its path-database registration, which is
+what the column displays; it is not necessarily the project that
+owns the directory, since a registration can come from a
+`holproject.toml` that is not a project root.
+
+The column has only the space the target name and the fixed-width
+columns leave it, so a path that does not fit is shortened by
+dropping whole interior path components in favour of `...`:
+
+```
+   $(CAKEMLDIR)/compiler/backend/proofs
+   $(CAKEMLDIR)/.../backend/proofs
+   $(CAKEMLDIR)/.../proofs
+   .../backend/proofs
+   .../proofs
+```
+
+The tree name is kept while there is room for it and any trailing
+component, and given up before the trailing components are.  In a
+narrow terminal the column ends up blank rather than pushing the
+time and verdict columns out of alignment.
+
 ### Project files: `holproject.toml`
 
 \index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}}
@@ -518,6 +570,31 @@ can sit alongside `holproject.toml` and carry the same
 file override entries in the committed file, letting individual
 developers point externals at their own local paths.
 
+#### Unrecognised keys
+
+\index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!unrecognised keys}
+The keys recognised at the top level of `holproject.toml` are
+exactly `name`, `holpath`, `exclude`, `external_includes`,
+`holmake`, `projects` and `h4pedant`.  Inside a `[projects.<id>]`
+table they are `path` and `exclude`, and `holproject.local.toml`
+recognises `projects` alone.  A TOML lookup cannot tell a
+misspelled key from an absent one, so anything outside those sets
+would otherwise be discarded in silence -- `[project.cakeml]` for
+`[projects.cakeml]` reads as correct and behaves as if the external
+had never been declared.  `Holmake` therefore names what it did not
+understand, and what it would have accepted:
+
+```
+Holmake: holproject.toml at /home/me/dev/proj: unrecognised key `project`
+  (recognised: name, holpath, exclude, external_includes, holmake,
+   projects, h4pedant)
+```
+
+The contents of `[h4pedant]` are exempt: that section's schema is
+`h4pedant`'s own, and `Holmake` does not descend into it.  This is
+a warning and not an error, so that an older `Holmake` can still
+build a tree whose project file uses a key it has yet to learn.
+
 #### `[h4pedant]`: style-check configuration
 
 \index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!h4pedant section@\texttt{[h4pedant]} section}
@@ -573,6 +650,7 @@ turned off.
 
 #### `name` and the path database
 
+\label{sec:holproject-name}
 \index{Holmake@\holmake!holpathdb}
 The `name` key doubles as the project's `holpathdb` registration:
 during startup `Holmake` walks the directory hierarchy for
@@ -586,6 +664,10 @@ registration to print paths portably in dependency lists.
 `name` is otherwise optional: a `holproject.toml` that omits
 `name` still drives project mode (the directory-set widening
 described above), it just contributes no path-database entry.
+The optional `holpath` key overrides `name` for this purpose
+alone, letting a project keep a human-facing `name` (say
+`cakeml`) distinct from the variable that stands for it in paths
+(say `CAKEMLDIR`).
 
 Conflicting registrations are fatal: if two `holproject.toml`
 files reachable from the current build register the same name for
@@ -675,17 +757,129 @@ This is distinct from the `--no-project` command-line flag, which
 ignores the file entirely (no `external_includes`, no holpathdb
 registration from it).
 
+#### Nested projects
+
+\index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}!nested projects}
+A sub-directory of a project may carry a `holproject.toml` of its
+own.  When it does, that sub-directory heads a *separate* project:
+the enclosing project's discovery walk prunes it, so the nested
+tree is no part of the enclosing project's directory set, and the
+enclosing project's sources are invisible from inside it unless
+the nested project asks for them with `[projects.<id>]`.
+
+Which project governs a given directory is decided by path
+containment: a directory belongs to the **deepest** project root at
+or above it.  So with
+
+```
+cakeml/holproject.toml                       project "cakeml"
+cakeml/misc/                                 -> cakeml
+cakeml/examples/lpr_checker/holproject.toml  project "lpr_checker"
+cakeml/examples/lpr_checker/array/           -> lpr_checker
+```
+
+`cakeml/misc` gets cakeml's directory set as its implicit
+`INCLUDES`, and `.../lpr_checker/array` gets lpr_checker's.  If
+lpr_checker's project file declares `[projects.cakeml]` then
+cakeml's directories are part of lpr_checker's set too, and the
+arrow points only that way — cakeml never sees into lpr_checker.
+
+The source-name clash check is per project for the same reason: two
+directories in two projects that cannot see each other may carry
+the same `Foo.sml` without complaint, while a clash inside one
+project's own set is fatal as before.
+
+A nested project joins the build when either of the following
+holds, and is built by its own project file's rules when it does:
+
+  - some directory of the enclosing project refers into it — an
+    `INCLUDES` entry, or a rule target or prerequisite naming a
+    path inside the nested tree.  (This is what lets a project's
+    top-level `Holmakefile` write
+    `all: examples/compilation/x64/proofs/helloProofTheory.sig`
+    with no further ceremony.)
+
+  - `--recursive-build` (`-r`) is in force, in which case *every*
+    nested project below the scope of the build is drawn in,
+    referred to or not.
+
+Directories reached by an external declared with
+`[projects.<id>]` are likewise governed by that project's own file
+rather than by the consumer's.
+
+Adoption reaches downward only.  A nested project that needs the
+*enclosing* tree must declare it with `[projects.<id>]`; there is
+no upward adoption, and a directory no registered project owns
+gets no implicit `INCLUDES` at all.  Undeclared, the enclosing
+tree does not simply vanish -- a holpathdb variable such as
+`$(CAKEMLDIR)` resolves whether or not any project is registered,
+so an enclosing directory named in an explicit `INCLUDES` is still
+scanned -- but it is scanned with nothing on its include path
+beyond what its own `Holmakefile` spells out, and the directories
+reachable only through *its* implicit includes are not scanned at
+all.  The symptom is a compile error, or a "Don't know how to
+build", a long way from the project file that caused it, so
+`Holmake` reports the situation up front:
+
+```
+Holmake: project 'pseudo_bool' (/home/me/cakeml/examples/pseudo_bool)
+  refers into the project rooted at /home/me/cakeml, which this build
+  has not registered, so directories there get no implicit INCLUDES:
+    /home/me/cakeml/misc, /home/me/cakeml/semantics/proofs (+ 3 more)
+  Declare it in /home/me/cakeml/examples/pseudo_bool/holproject.toml:
+    [projects.cakeml]
+    path = "../.."
+```
+
+The condition is narrow: the warning fires only when a project
+lives inside another project and points into it.  A referenced
+directory that merely belongs to no project -- an unrelated tree
+elsewhere on disk, whose own `Holmakefile`s carry the `INCLUDES`
+they need -- is the classical arrangement and says nothing.  It is
+a warning rather than an error for the same reason: an
+enclosing-project directory whose `Holmakefile` is explicit about
+its include path builds correctly as it stands.
+
+#### `-r` and `--dirs` inside a project
+
+\index{Holmake@\holmake!recursive invocation}
+Run anywhere inside a project, `Holmake -r` builds everything that
+project owns: the targets of every one of its directories, plus
+those of every project nested beneath it.  It is the project root
+that scopes this, not `cwd`, so `-r` deep inside a project still
+means the whole project.  Directories of *externals* that live
+outside the project's own tree are dependencies rather than build
+targets, and are built only as far as those targets need.
+
+Without `-r`, an invocation inside a project builds `cwd`'s targets
+and whatever they depend on, exactly as a classical invocation
+would.
+
+A recursive *clean* (`-r clean` and friends) has the same reach:
+the project's own directories and those of the projects nested
+inside it.
+
+`--dirs d1 d2 ...` treats each named directory as a root governed
+by the project file at or above *it*.  Naming a sub-project's root
+therefore behaves as if `Holmake` had been invoked in it, whether
+the command is issued from the enclosing project or from a
+directory in no project at all.  Adding `-r` extends each named
+root to everything beneath it that a project owns.
+
 #### When project mode does **not** activate
 
-`Holmake` decides once, at startup, whether project mode is on,
-based on whether a `holproject.toml` file lies on the chain of
-ancestor directories above `cwd`.  Project mode does *not* fire
-when `Holmake` walks into a project's directory tree via classical
-`INCLUDES` from an aggregator like `src/parallel_builds/core`: the
-aggregator's invocation is from outside the project and there's no
-project file in its own ancestor chain.  In that case the
-project's directories behave classically; their `INCLUDES` lines
-drive build order in the usual way.
+`Holmake` decides at startup which project governs `cwd`, by
+walking the chain of ancestor directories above it.  Project mode
+does *not* fire when `Holmake` walks into a project's directory
+tree via classical `INCLUDES` from an aggregator like
+`src/parallel_builds/core`: the aggregator's invocation is from
+outside the project and there's no project file in its own ancestor
+chain.  In that case the project's directories behave classically;
+their `INCLUDES` lines drive build order in the usual way.  (This
+is the one place where a directory's project file is deliberately
+disregarded; the nested-project rules above apply to a build that
+started inside some project, or that named the directory to
+`--dirs`.)
 
 The `--no-project` command-line flag suppresses project-mode
 detection regardless of `holproject.toml`'s presence; useful for
@@ -764,9 +958,12 @@ ancestor chain, so mutual references between *sibling* roots no
 longer trip the `INCLUDES`-loop detector — but a genuine cycle
 within one root's `INCLUDES` chain is still reported.  Each
 directory reachable from any root is scanned and added to the
-unified graph exactly once.  Clean targets (`clean`,
-`cleanDeps`, `cleanAll`) are rejected as positional arguments
-when `--dirs` is given; supply at least one directory.
+unified graph exactly once.  Each root is governed by the
+`holproject.toml` at or above *it*, so a root that is a project's
+own top behaves as if `Holmake` had been invoked there — see
+*Project files* above.  Clean targets (`clean`, `cleanDeps`,
+`cleanAll`) are rejected as positional arguments when `--dirs` is
+given; supply at least one directory.
 
 **`-f <theory>`** Toggles whether or not a theory should be built
 in “fast” mode.  Fast building causes tactic proofs (invocations
@@ -884,6 +1081,10 @@ all “includes” directories (which is not done otherwise).  When
 building normally, all targets in “includes” directories are
 built; normally only dependencies of targets in the current
 directory are built.
+
+Inside a project (see *Project files* above) `-r` means the whole
+project: the targets of every one of its directories, and of every
+project nested beneath it.
 
 **`--rebuild_deps`** Forces `Holmake` to always rebuild the
 dependency information for files it examines, whether or not it

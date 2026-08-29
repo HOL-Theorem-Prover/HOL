@@ -37,20 +37,22 @@ because of the extra sub-goal where `u` must be proved.
 `SUBGOAL_THEN` will fail if an attempt is made to use a nonboolean term
 as a lemma.
 
+### Example
+
 When combined with `rotate`, `SUBGOAL_THEN` allows the user to defer
 some part of a proof and to continue with another part. `SUBGOAL_THEN`
 is most convenient when the tactic solves the original goal, leaving
 only the subgoal. For example, suppose the user wishes to prove the goal
 
 ``` hol4
-   {n = SUC m} ?- (0 = n) ==> t
+   {n = SUC m} ?- 0 = n ==> t
 ```
 
-Using `SUBGOAL_THEN` to focus on the case in which `~(n = 0)`, rewriting
-establishes it truth, leaving only the proof that `~(n = 0)`. That is,
+Using `SUBGOAL_THEN` to focus on the case in which `n ≠ 0`, rewriting
+establishes its truth, leaving only the proof that `n ≠ 0`. That is,
 
 ``` hol4
-   SUBGOAL_THEN (Term `~(0 = n)`) (fn th => REWRITE_TAC [th])
+   SUBGOAL_THEN “~(0 = n)” (fn th => REWRITE_TAC [th])
 ```
 
 generates the following subgoals:
@@ -64,3 +66,7 @@ generates the following subgoals:
 
 Some users may expect the generated tactic to be `f (A1 |- u)`, rather
 than `f (u |- u)`.
+
+### See also
+
+[`bossLib.have`](#bossLib.have), [`bossLib.suff`](#bossLib.suff).

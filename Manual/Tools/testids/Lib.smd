@@ -1,0 +1,4 @@
+# Lib
+
+Fixture for the `gen_reference_summary --identifiers` test; the
+generator reads filenames only, so the body is never looked at.

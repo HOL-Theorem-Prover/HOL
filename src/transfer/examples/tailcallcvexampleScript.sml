@@ -129,8 +129,9 @@ val newc = th6 |> concl |> strip_forall |> #2 |> rand |> rhs |> rator
 Definition aux'_def[nocompute]: aux' = ^newc
 End
 
-val th7 = (AP_THM aux'_def “(c,d):cv # cv”) |> ONCE_REWRITE_RULE [TAILREC_TAILCALL]
-                                            |> REWRITE_RULE[SYM aux'_def]
+val th7 = (AP_THM aux'_def “(c,d):cv # cv”)
+          |> ONCE_REWRITE_RULE [TAILREC_TAILCALL]
+          |> REWRITE_RULE[SYM aux'_def]
 
 val th3' = th3 |> Q.INST[‘f’ |-> ‘CURRY g’]
                |> REWRITE_RULE[pairTheory.UNCURRY_CURRY_THM]
@@ -148,7 +149,8 @@ QED
 val A_def = REWRITE_RULE[aux'_elim,pairTheory.CURRY_UNCURRY_THM,
                          pairTheory.UNCURRY_DEF] th8
 
-val almost_there = REWRITE_RULE[SYM aux'_def,aux'_elim, pairTheory.UNCURRY_DEF] th6
+val almost_there =
+  REWRITE_RULE[SYM aux'_def,aux'_elim, pairTheory.UNCURRY_DEF] th6
 
 Theorem BC_E:
   BC b c ==> (b <=> c = Num 1)

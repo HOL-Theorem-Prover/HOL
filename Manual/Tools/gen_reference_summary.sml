@@ -1,8 +1,15 @@
-(* gen_reference_summary DOCFILES_DIR
+(* gen_reference_summary [--identifiers] DOCFILES_DIR
 
    Walk DOCFILES_DIR for `*.smd` entries; group by the first
    dot-separated component of each filename; emit a SUMMARY.md
    on stdout suitable for mdbook.
+
+   With `--identifiers`, emit instead the entry-name table
+   `identifiers.js` consumed by Manual/theme/hol-searcher.js --
+   the same scan, in the same order, rendered as JS data rather
+   than as a sidebar.  See Manual/Developers/manual-authoring.md
+   for the format and for why the site needs a name lookup that
+   bypasses the search index altogether.
 
    Each group becomes a mdbook "part title" (`# Header` line)
    followed by a flat list of its entries.  Entries whose name
@@ -177,11 +184,71 @@ fun renderSummary groups =
     "# Summary\n\n" ^
     String.concat (List.map renderGroup groups)
 
+(* ===== --identifiers mode ===== *)
+
+(* Escape for a JS double-quoted string literal.  Only `\`, `"`
+   and the C0 controls need it: UTF-8 bytes pass through
+   untouched, as they do in mdbook's own searchindex.js, because
+   every page loading this file declares <meta charset="UTF-8">.
+   Defensive -- no entry name in help/Docfiles currently needs
+   escaping -- but a new one must not be able to break the file. *)
+fun jsEscape s =
+    let
+      val digits = "0123456789abcdef"
+      fun hex n =
+          String.implode [String.sub (digits, (n div 16) mod 16),
+                          String.sub (digits, n mod 16)]
+      fun esc c =
+          if c = #"\\" then "\\\\"
+          else if c = #"\"" then "\\\""
+          else if Char.ord c < 32 then "\\u00" ^ hex (Char.ord c)
+          else String.str c
+    in
+      String.translate esc s
+    end
+
+(* One `[qualified, short, page]` record.  `qualified` and `short`
+   are the *decoded* names a reader would type (splitName has
+   already undone any UC_ASCII_Encode'ing); `page` is the encoded
+   stem plus `.html`, i.e. the filename mdbook actually renders.
+   `short` is carried explicitly rather than recovered by splitting
+   `qualified` at its last dot, because a decoded HOL identifier
+   may itself contain a dot. *)
+fun renderIdentifier struct_ (func, filename) =
+    let
+      val short = entryLabel struct_ func
+      val qualified =
+          case func of
+              NONE => struct_
+            | SOME _ => struct_ ^ "." ^ short
+    in
+      "[\"" ^ jsEscape qualified ^ "\",\"" ^ jsEscape short ^
+      "\",\"" ^ jsEscape (dropExt filename) ^ ".html\"],\n"
+    end
+
+(* The whole scan as a JS data file.  One record per line, however
+   long the line comes out: this is generated data, like the
+   searchindex.js that sits beside it, not source to be read at 80
+   columns. *)
+fun renderIdentifiers groups =
+    "/* Generated -- do not edit.  Loaded by Manual/theme/\n\
+    \   hol-searcher.js; see Manual/Developers/manual-authoring.md.\n\
+    \   Long data lines are intentional. */\n\
+    \window.hol_identifiers = {entries: [\n" ^
+    String.concat
+      (List.map (fn (s, es) =>
+                    String.concat (List.map (renderIdentifier s) es))
+                groups) ^
+    "]};\n"
+
 fun main () =
     let
-      val dir = case CommandLine.arguments () of
-                    [d] => d
-                  | _ => die "usage: gen_reference_summary DOCFILES_DIR"
+      val (identifiers, dir) =
+          case CommandLine.arguments () of
+              [d] => (false, d)
+            | ["--identifiers", d] => (true, d)
+            | _ => die "usage: gen_reference_summary [--identifiers] \
+                       \DOCFILES_DIR"
       val files = listSmd dir
       val () =
         if List.null files
@@ -198,5 +265,9 @@ fun main () =
             (List.map (fn (s, es) =>
                           (s, sortBy entryCmp es)) grouped)
     in
-      emit (renderSummary groupsSorted)
+      (* Both modes render `groupsSorted`, so the sidebar and the
+         identifier table cannot disagree about which entries
+         exist or in what order. *)
+      emit (if identifiers then renderIdentifiers groupsSorted
+            else renderSummary groupsSorted)
     end

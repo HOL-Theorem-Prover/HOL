@@ -1,0 +1,5 @@
+# BasicProvers.&&
+
+Fixture: a UC_ASCII_Encode'd filename, exercising the decode path
+(`IYG` decodes to `&&`) and a name elasticlunr's trimmer strips
+entirely.

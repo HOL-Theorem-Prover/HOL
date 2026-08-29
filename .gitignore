@@ -75,6 +75,7 @@ tools/build-logs
 
 help/Docfiles/*.txt
 help/Docfiles/HTML/*
+help/generated-alias-docs/
 help/HOLindex.html
 help/HOL.Help
 help/HOL.LanderFragment.html

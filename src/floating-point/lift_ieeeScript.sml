@@ -1099,9 +1099,9 @@ Proof
   \\ gs[error_def] \\ COND_CASES_TAC
   \\ rpt strip_tac
   >- (
-    qexists_tac ‘float_to_real ((round roundTiesToEven x):('t,'w) float) - x’
+    qexists ‘float_to_real ((round roundTiesToEven x):('t,'w) float) - x’
     \\ gs[])
-  \\ qexists_tac ‘- (float_to_real ((round roundTiesToEven x):('t,'w) float) - x)’
+  \\ qexists ‘-(float_to_real ((round roundTiesToEven x):('t,'w) float) - x)’
   \\ gs[]
 QED
 
@@ -1578,15 +1578,15 @@ Proof
 QED
 
 Theorem float_add_relative_denorm:
-   !a b : ('t, 'w) float.
-      float_is_finite a /\ float_is_finite b /\
-      abs (float_to_real a + float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
-      abs (float_to_real a + float_to_real b) < threshold (:'t # 'w) /\
-      1 < bias (:'w) ==>
-      float_is_finite (SND (float_add roundTiesToEven a b)) /\
-      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
-          (float_to_real (SND (float_add roundTiesToEven a b)) =
-           (float_to_real a + float_to_real b) + e)
+  !a b : ('t, 'w) float.
+    float_is_finite a /\ float_is_finite b /\
+    abs (float_to_real a + float_to_real b) < 2 pow 1 / 2 pow (bias(:'w) - 1) /\
+    abs (float_to_real a + float_to_real b) < threshold (:'t # 'w) /\
+    1 < bias (:'w) ==>
+    float_is_finite (SND (float_add roundTiesToEven a b)) /\
+    ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+        (float_to_real (SND (float_add roundTiesToEven a b)) =
+         (float_to_real a + float_to_real b) + e)
 Proof
   denorm_relative_tac
 QED
@@ -1604,15 +1604,15 @@ Proof
 QED
 
 Theorem float_sub_relative_denorm:
-   !a b : ('t, 'w) float.
-      float_is_finite a /\ float_is_finite b /\
-      abs (float_to_real a - float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
-      abs (float_to_real a - float_to_real b) < threshold (:'t # 'w) /\
-      1 < bias (:'w) ==>
-      float_is_finite (SND (float_sub roundTiesToEven a b)) /\
-      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
-          (float_to_real (SND (float_sub roundTiesToEven a b)) =
-           (float_to_real a - float_to_real b) + e)
+  !a b : ('t, 'w) float.
+    float_is_finite a /\ float_is_finite b /\
+    abs (float_to_real a - float_to_real b) < 2 pow 1 / 2 pow (bias(:'w) - 1) /\
+    abs (float_to_real a - float_to_real b) < threshold (:'t # 'w) /\
+    1 < bias (:'w) ==>
+    float_is_finite (SND (float_sub roundTiesToEven a b)) /\
+    ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+        (float_to_real (SND (float_sub roundTiesToEven a b)) =
+         (float_to_real a - float_to_real b) + e)
 Proof
   denorm_relative_tac
 QED
@@ -1630,15 +1630,15 @@ Proof
 QED
 
 Theorem float_mul_relative_denorm:
-   !a b : ('t, 'w) float.
-      float_is_finite a /\ float_is_finite b /\
-      abs (float_to_real a * float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
-      abs (float_to_real a * float_to_real b) < threshold (:'t # 'w) /\
-      1 < bias (:'w) ==>
-      float_is_finite (SND (float_mul roundTiesToEven a b)) /\
-      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
-          (float_to_real (SND (float_mul roundTiesToEven a b)) =
-           (float_to_real a * float_to_real b) + e)
+  !a b : ('t, 'w) float.
+    float_is_finite a /\ float_is_finite b /\
+    abs (float_to_real a * float_to_real b) < 2 pow 1 / 2 pow (bias(:'w) - 1) ∧
+    abs (float_to_real a * float_to_real b) < threshold (:'t # 'w) /\
+    1 < bias (:'w) ==>
+    float_is_finite (SND (float_mul roundTiesToEven a b)) /\
+    ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+        (float_to_real (SND (float_mul roundTiesToEven a b)) =
+         (float_to_real a * float_to_real b) + e)
 Proof
   denorm_relative_tac
 QED
@@ -1657,12 +1657,12 @@ QED
 
 Theorem float_div_relative_denorm:
    !a b : ('t, 'w) float.
-      float_is_finite a /\ float_is_finite b /\ ~float_is_zero b /\
-      abs (float_to_real a / float_to_real b) < 2 pow 1 / 2 pow (bias (:'w) - 1) /\
-      abs (float_to_real a / float_to_real b) < threshold (:'t # 'w) /\
-      1 < bias (:'w) ==>
-      float_is_finite (SND (float_div roundTiesToEven a b)) /\
-      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) /\
+     float_is_finite a ∧ float_is_finite b ∧ ~float_is_zero b ∧
+     abs (float_to_real a / float_to_real b) < 2 pow 1 / 2 pow (bias(:'w) - 1) ∧
+     abs (float_to_real a / float_to_real b) < threshold (:'t # 'w) ∧
+     1 < bias (:'w) ==>
+      float_is_finite (SND (float_div roundTiesToEven a b)) ∧
+      ?e. abs e <= 1 / 2 pow (bias(:'w) + dimindex (:'t)) ∧
           (float_to_real (SND (float_div roundTiesToEven a b)) =
            (float_to_real a / float_to_real b) + e)
 Proof

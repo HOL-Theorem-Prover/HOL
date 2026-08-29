@@ -14,22 +14,12 @@ exclude = ["examples/l3-machine-code/arm8/asl-equiv/armv8.6-asl-snapshot/"]
 [[h4pedant.dir]]
 path = "src"
 unicode_ok = true
-linelen = 0
+linelen = 80
 
 [[h4pedant.dir]]
 path = "examples"
 unicode_ok = true
 linelen = 0
-
-[[h4pedant.dir]]
-path = "src/coretypes"
-unicode_ok = true
-linelen = 80
-
-[[h4pedant.dir]]
-path = "src/num"
-unicode_ok = true
-linelen = 80
 
 [[h4pedant.dir]]
 path = "examples/miller"
@@ -38,4 +28,130 @@ linelen = 80
 [[h4pedant.dir]]
 path = "examples/generic_graphs"
 linelen = 80
+
+[[h4pedant.dir]]
+# mostly generated
+path = "src/tactictoe/selftest"
+linelen = 0
+
+[[h4pedant.dir]]
+# generated
+path = "src/AI/sml_inspection/parallel"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/1"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/algebra/base"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/algebra/construction"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/bag"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/boss"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/coalgebras"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/datatype"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/finite_maps"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/float"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/HolSmt"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/integer"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/list/src"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/marker"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/metis"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/n-bit"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/opentheory"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/parse"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/pattern_matches"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/portableML"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/postkernel"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/pred_set/src"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/probability"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/proofman"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/quantHeuristics"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/quotient/src"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/rational"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/real"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/real/analysis"
+linelen = 0
+
+[[h4pedant.dir]]
+path = "src/simp/src"
+linelen = 0
 

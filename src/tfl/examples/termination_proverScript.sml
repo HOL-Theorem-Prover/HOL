@@ -230,10 +230,11 @@ Definition expr_bexpr_vars_def:
  expr_vars (ConstExpr _) = {} ∧
  expr_vars (MonopExpr _ e) = expr_vars e ∧
  expr_vars (BinopExpr _ (e1,e2)) = expr_vars e1 UNION expr_vars e2 ∧
- expr_vars (CondExpr b e1 e2) = bexpr_vars b UNION expr_vars e1 UNION expr_vars e2 ∧
+ expr_vars (CondExpr b e1 e2) =
+   bexpr_vars b UNION expr_vars e1 UNION expr_vars e2 ∧
  expr_vars (FncallExpr _ NONE) = {} ∧
- expr_vars (FncallExpr _ (SOME elist)) = FOLDR (λe s. expr_vars e UNION s) {} elist
- ∧
+ expr_vars (FncallExpr _ (SOME elist)) =
+   FOLDR (λe s. expr_vars e UNION s) {} elist ∧
  bexpr_vars (BoolVarExpr s) = {s} ∧
  bexpr_vars (BoolAndExpr (b1,b2)) = bexpr_vars b1 UNION bexpr_vars b2 ∧
  bexpr_vars (BoolOrExpr (b1,b2)) = bexpr_vars b1 UNION bexpr_vars b2 ∧
@@ -241,17 +242,18 @@ Definition expr_bexpr_vars_def:
  bexpr_vars (EqualExpr e1 e2) = expr_vars e1 UNION expr_vars e2
 End
 
-(*---------------------------------------------------------------------------*)
-(* Mutual recursion example pinched from
+(* ----------------------------------------------------------------------
+    Mutual recursion example pinched from
 
-  https://github.com/verifereum/verifereum/blob/main/util/contractABIScript.sml#L66
+    https://github.com/verifereum/verifereum/blob/main/util/
+            contractABIScript.sml
 
-  Modifications: IntV (int) --> IntV(num)
-               : byte --> word8
+    Modifications: IntV (int) --> IntV(num)
+                 : byte --> word8
 
-  Use of higher order constructs means that the definition no longer has to be
-  mutually recursive
-*)
+    Use of higher order constructs means that the definition no longer has
+    to be mutually recursive
+   ---------------------------------------------------------------------- *)
 
 Datatype:
   abi_type
@@ -305,9 +307,11 @@ Definition has_type_def:
   has_type (Int n)      (IntV i)    = (int_bits_bound i n ∧ valid_int_bound n) ∧
   has_type Address      (NumV v)    = (v < 2 ** 160) ∧
   has_type Bool         (NumV v)    = (v < 2) ∧
-  has_type (Fixed n m)  (IntV i)    = (int_bits_bound i m ∧ valid_fixed_bounds n m) ∧
+  has_type (Fixed n m)  (IntV i)    =
+    (int_bits_bound i m ∧ valid_fixed_bounds n m) ∧
   has_type (Ufixed n m) (NumV v)    = (v < 2 ** m ∧ valid_fixed_bounds n m) ∧
-  has_type (Bytes b)    (BytesV bs) = (valid_bytes_bound b ∧ valid_length b bs) ∧
+  has_type (Bytes b)    (BytesV bs) =
+    (valid_bytes_bound b ∧ valid_length b bs) ∧
   has_type String       (BytesV bs) = T ∧
   has_type (Array b t)  (ListV vs)  = EVERY (has_type t) vs ∧
   has_type (Tuple ts)   (ListV vs)  = LIST_REL has_type ts vs ∧

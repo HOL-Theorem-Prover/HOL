@@ -37,12 +37,17 @@ mdbook: ../book/Interaction-emacs/index.html
 
 ../book/Interaction-emacs/index.html: ../Tools/smdpp SUMMARY.md \
         $(SMD_MDS) \
-        labels.tsv $(SIBLING_LABELS)
+        identifiers.js labels.tsv $(SIBLING_LABELS)
 	mdbook build
 	# Stable searchindex.js symlink for the cross-book searcher;
 	# see Manual/Description/Holmakefile for the rationale.
 	cd ../book/Interaction-emacs && \
 	  ln -sf $$(ls searchindex-*.js | head -1) searchindex.js
+	# `mdbook build` empties the build dir, so the entry-name
+	# sidecar is installed afterwards.  Copied rather than
+	# symlinked: a link pointing out of book/ wouldn't survive a
+	# deploy snapshot.
+	cp identifiers.js ../book/Interaction-emacs/identifiers.js
 	../Tools/smdpp check-html ../book/Interaction-emacs
 	../Tools/smdpp check-refs ../book/Interaction-emacs
 	../Tools/smdpp check-links ../book/Interaction-emacs
@@ -50,6 +55,15 @@ mdbook: ../book/Interaction-emacs/index.html
 # Scan-only label dump for cross-book `\ref{Book:label}` resolution.
 labels.tsv: ../Tools/smdpp SUMMARY.md $(SMDS)
 	../Tools/smdpp dump-labels .
+
+# Entry-name table for the site's name-lookup layer.  It exists
+# because elasticlunr runs its trimmer / stop-word filter / stemmer
+# over the *query* as well as over the indexed text, so a section
+# whose name is a stop word or punctuation is unreachable through
+# searchindex.js no matter what the reader types.  Scan-only, like
+# labels.tsv above.  See Manual/Developers/manual-authoring.md.
+identifiers.js: ../Tools/smdpp SUMMARY.md $(SMDS)
+	../Tools/smdpp dump-identifiers .
 
 # SUMMARY.md generated from chapters.txt by gen_chap_lists; the H1
 # at the top of the sidebar uses the book title from book.toml.
@@ -90,5 +104,5 @@ EXTRA_CLEANS = $(SMD_MDS) $(patsubst %.smd,%.tex,$(SMDS)) \
                manual.aux manual.log manual.out manual.toc \
                manual.fls manual.fdb_latexmk manual.pdf \
                $(patsubst %.tex,%.aux,$(CHAPTER_TEXS)) \
-               SUMMARY.md labels.tsv \
+               SUMMARY.md labels.tsv identifiers.js \
                ../book/Interaction-emacs/

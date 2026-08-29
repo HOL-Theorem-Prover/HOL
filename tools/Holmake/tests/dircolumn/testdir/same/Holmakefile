@@ -1,0 +1,5 @@
+CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
+INCLUDES = d1 d2
+
+all: d1/dcC.out d2/dcD.out
+.PHONY: all

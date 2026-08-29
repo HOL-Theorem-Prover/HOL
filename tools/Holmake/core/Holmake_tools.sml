@@ -684,6 +684,67 @@ val nice_dir =
                            else s)
       | NONE => (fn s => s)
 
+(* ----------------------------------------------------------------------
+    squash_path
+
+    Shorten a "/"-separated path to fit in wdth characters, eliding
+    whole interior arcs with "...".  The candidates, in decreasing
+    order of informativeness, are
+
+       $(FOODIR)/compiler/backend/proofs     the path itself
+       $(FOODIR)/.../backend/proofs          leading arc + trailing arcs
+       $(FOODIR)/.../proofs
+       .../backend/proofs                    trailing arcs only
+       .../proofs
+
+    and the first that fits wins.  If not even ".../<last arc>" fits,
+    the last arc is truncated on the left ("...roofs"); with no room
+    for that either, the result is empty.
+   ---------------------------------------------------------------------- *)
+local
+  val dots = "..."
+  fun arcs_of s = String.tokens (fn c => c = #"/") s
+  (* the proper non-empty suffixes of a list, longest first *)
+  fun proper_sfxs [] = []
+    | proper_sfxs [_] = []
+    | proper_sfxs (_ :: t) = t :: proper_sfxs t
+  fun cand pfx sfx = String.concatWith "/" (pfx @ dots :: sfx)
+  fun candidates s arcs =
+    case arcs of
+        a0 :: (rest as _ :: _) =>
+        let
+          (* arcs_of drops the leading empty arc of an absolute path;
+             put the slash back so the tree the path names survives *)
+          val a0 = (if String.isPrefix "/" s then "/" else "") ^ a0
+          val sfxs = proper_sfxs rest
+        in
+          s :: map (cand [a0]) sfxs @ map (cand []) (rest :: sfxs)
+        end
+      | _ => [s]
+in
+fun squash_path wdth s =
+  if wdth <= 0 then ""
+  else
+    let
+      val arcs = arcs_of s
+    in
+      case List.find (fn c => size c <= wdth) (candidates s arcs) of
+          SOME c => c
+        | NONE =>
+          (* the candidates end with ".../<last arc>" (or, for a
+             single-arc path, the arc itself), so none of them fitting
+             gives size lastarc >= wdth - size dots, and the extract
+             below is in range *)
+          let val lastarc = case arcs of [] => s | _ => List.last arcs
+          in
+            if wdth > size dots then
+              dots ^ String.extract(lastarc,
+                                    size lastarc - (wdth - size dots), NONE)
+            else ""
+          end
+    end
+end (* local *)
+
 fun pushdir d f x =
     let
       val d0 = FileSys.getDir()
@@ -699,12 +760,63 @@ fun xterm_log s =
 structure hmdir =
 struct
 
+(* relpath, where present, is relative to the invocation directory (see
+   set_invocation_dir), which is what lets it be printed from anywhere.
+   curdir/extendp/getParent all preserve that; fromPath does not -- it
+   stores a path relative to its `origin' argument, so a value built
+   that way is only safe to print when origin is the invocation
+   directory. *)
 type t = {absdir : string, relpath : string option}
 
 fun op+ (d, e) = Path.mkCanonical (Path.concat(d, e))
 
-fun curdir () = {relpath = SOME (OS.Path.currentArc),
-                 absdir = FileSys.getDir()}
+(* The directory Holmake was invoked in.  A relpath is always relative
+   to this, so an hmdir.t can be rendered from anywhere without going
+   stale; curdir() used to claim relpath = ".", which was true only
+   while the process happened to be standing in that directory.  Set
+   once from Holmake's original_dir, after -C has taken effect; until
+   then curdir() behaves as it always did. *)
+val invocation_dir : string option ref = ref NONE
+val rel_memo : (string * string) option ref = ref NONE
+
+fun set_invocation_dir ({absdir,...} : t) =
+    (invocation_dir := SOME absdir; rel_memo := NONE)
+
+(* mkRelative yields Path.currentArc when the two coincide, so the
+   invocation directory needs no special case.  Unrelatable paths (a
+   differing Windows volume) fall back to the absolute form. *)
+fun relative_to base abs =
+    Path.mkRelative {path = abs, relativeTo = base}
+    handle Path.Path => abs
+
+(* curdir() is called once per target and per dependency, and mkRelative
+   is ~200x the cost of the guard below, so memoise.  One slot suffices:
+   getDir here is HOLFileSys.cached_getDir, which hands back the same
+   string until a chDir invalidates it, so a hit is a pointer compare
+   and a miss can only follow a chDir. *)
+fun relpath_for abs =
+    case !invocation_dir of
+        NONE => Path.currentArc
+      | SOME base =>
+        let
+          fun fresh () =
+              let
+                val r = relative_to base abs
+              in
+                rel_memo := SOME (abs, r); r
+              end
+        in
+          case !rel_memo of
+              SOME (a, r) => if a = abs then r else fresh ()
+            | NONE => fresh ()
+        end
+
+fun curdir () =
+    let
+      val abs = FileSys.getDir()
+    in
+      {relpath = SOME (relpath_for abs), absdir = abs}
+    end
 fun chdir ({absdir,...}: t) = FileSys.chDir absdir
 
 fun compare ({absdir = d1, ...} : t, {absdir = d2, ...} : t) =
@@ -731,24 +843,25 @@ fun pretty_dir d =
     if abs = abs' then toString d else abs'
   end
 
+fun tree_key d =
+  case holpathdb.owning_var {path = toAbsPath d} of
+      SOME {vname, ...} => "$(" ^ vname ^ ")"
+    | NONE => ""
+
 fun fromPath {origin,path} =
     if Path.isAbsolute path then
       {relpath = NONE, absdir = Path.mkCanonical path}
     else
       {relpath = SOME path, absdir = origin + path}
 
-fun extendp {base = {relpath, absdir}, extension} = let
-  val relpath_str = case relpath of NONE => "NONE"
-                                  | SOME s => "SOME("^s^")"
-in
-  if Path.isAbsolute extension then
-    {relpath = NONE, absdir = Path.mkCanonical extension}
-  else
+fun extendp {base = {relpath, absdir}, extension} =
+    if Path.isAbsolute extension then
+      {relpath = NONE, absdir = Path.mkCanonical extension}
+    else
       case relpath of
           NONE => {absdir = absdir + extension, relpath = NONE}
         | SOME p => {relpath = SOME (p + extension),
                      absdir = absdir + extension}
-end
 
 fun extend {base, extension} =
     extendp {base = base, extension = toString extension}

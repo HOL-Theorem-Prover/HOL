@@ -399,7 +399,8 @@ local
            if top_function_of herr = "EQT_ELIM" then
               mlibUseful.INR
                 (conj_assoc_rule
-                   (ties_to_even (boolSyntax.mk_conj (c, boolSyntax.mk_neg rx))))
+                   (ties_to_even
+                      (boolSyntax.mk_conj (c, boolSyntax.mk_neg rx))))
            else raise e
       end
    val lt_thm =

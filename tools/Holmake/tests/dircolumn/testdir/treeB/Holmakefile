@@ -1,0 +1,10 @@
+CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
+INCLUDES = ../treeA
+
+all: dcB.out ../treeA/dcA.out
+.PHONY: all
+
+dcB.out:
+	touch $@
+
+EXTRA_CLEANS = dcB.out
