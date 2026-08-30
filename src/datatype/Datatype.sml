@@ -777,10 +777,19 @@ fun Hol_datatype q =
     handle e as HOL_ERR _ =>
     render_exn (wrap_exn "Datatype" "Hol_datatype" e)
 
+(* A package that can build specifications this one cannot — one that
+   recurses under another type operator, say — registers itself here,
+   by being loaded.  Nothing is loaded on its account: a session that
+   never mentions such a package never has one. *)
+val fallback : (hol_type quotation -> unit) option ref = ref NONE
+
 fun Datatype q =
     astHol_datatype (ParseDatatype.hparse (type_grammar()) q)
     handle e as HOL_ERR _ =>
-    render_exn (wrap_exn "Datatype" "Datatype" e)
+    case !fallback of
+        SOME f => (f q handle HOL_ERR _ =>
+                     render_exn (wrap_exn "Datatype" "Datatype" e))
+      | NONE => render_exn (wrap_exn "Datatype" "Datatype" e)
 
 val _ = Parse.temp_set_grammars ambient_grammars
 

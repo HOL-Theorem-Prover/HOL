@@ -1,1 +1,5 @@
-INCLUDES = $(dprot $(HOLDIR)/src/datatype) $(dprot $(HOLDIR)/src/boss)
+ifdef POLY
+HOLHEAP = ../../num/termination/numheap
+endif
+
+INCLUDES = $(dprot $(HOLDIR)/src/datatype)

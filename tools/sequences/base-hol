@@ -46,6 +46,9 @@ src/pred_set/src
 src/datatype/record
 src/datatype
 !src/datatype/theory_tests
+# the BNF datatype package, which Datatype falls back on: before lists,
+# because that is what it defines
+src/datatype/bnf
 src/monad
 src/list/src
 src/quantHeuristics
@@ -59,8 +62,4 @@ src/boss
 # (Maybe unwind could be omitted).
 [poly]bin/hol
 
-# the BNF datatype package: the construction and its driver, which need
-# bossLib's tactics but are loaded on demand rather than baked into the
-# heap
-src/datatype/bnf
 

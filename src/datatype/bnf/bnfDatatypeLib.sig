@@ -25,6 +25,11 @@ sig
      ---------------------------------------------------------------------- *)
   val bnfDatatype : hol_type quotation -> unit
 
+  (* Loading this library registers it behind the old package, so that
+     `Datatype: ... End` in a script that names it takes specifications
+     the old package cannot build.  A script that does not name it is
+     unaffected. *)
+
   (* the same, handing back the entries it made, for a caller that wants
      to look at them rather than trust them *)
   val bnfDatatypeInfo : hol_type quotation -> TypeBasePure.tyinfo list

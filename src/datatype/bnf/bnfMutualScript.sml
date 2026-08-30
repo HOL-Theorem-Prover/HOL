@@ -1,8 +1,32 @@
-Theory bnfMutual
+Theory bnfMutual[bare]
 Ancestors
   bnfFixBNF pred_set
 Libs
-  HolKernel Parse boolLib bossLib
+  HolKernel Parse boolLib BasicProvers simpLib boolSimps metisLib numLib
+  pred_setLib pairLib QLib TotalDefn[qualified]
+
+(* ----------------------------------------------------------------------
+    bossLib is not built yet — the package has to be, so that Datatype
+    can use it, and so this is the part of bossLib's environment these
+    proofs need.  The same emulation cardinalScript uses.
+   ---------------------------------------------------------------------- *)
+
+fun simp ths = simpLib.ASM_SIMP_TAC (srw_ss()) ths
+fun csimp ths = simp (SF CONJ_ss :: ths)
+fun dsimp ths = simp (SF DNF_ss :: ths)
+fun gs ths = simpLib.global_simp_tac
+               {elimvars = false, strip = true, droptrues = true,
+                oldestfirst = true} (srw_ss()) ths
+fun gvs ths = simpLib.global_simp_tac
+                {elimvars = true, strip = true, droptrues = true,
+                 oldestfirst = true} (srw_ss()) ths
+fun rw ths = BasicProvers.SRW_TAC [] ths
+val metis_tac = metisLib.METIS_TAC
+fun SRULE ths th = SIMP_RULE (srw_ss()) ths th
+val qexists = Q.EXISTS_TAC
+val op >~ = Q.>~
+val op >>~ = Q.>>~
+
 
 (* ----------------------------------------------------------------------
     Mutual recursion, from nested recursion.

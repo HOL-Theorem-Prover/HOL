@@ -22,7 +22,11 @@ Libs
    assume that your predicate P holds of every subtree.
 *)
 
-val _ = bnfDatatype `fmaptree = FTNode 'value ('key |-> fmaptree)`
+(* this specification recurses under a finite map, which the old
+   construction cannot build; naming bnfDatatypeLib in the Libs above is
+   what puts the BNF package behind Datatype *)
+Datatype: fmaptree = FTNode 'value ('key |-> fmaptree)
+End
 
 (* what the declaration saved, under the names the package gives them *)
 fun saved s = DB.fetch "-" s
