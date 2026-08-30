@@ -111,7 +111,7 @@ fun print_error goal = let
 
 fun auto_prove proof_name (goal,tac) =
   if !skip_proofs then prove(goal,cheat) else let
-    val (rest,validation) = tac ([], goal)
+    val (rest,validation) = tac ([], goal) (Context.snapshot())
     in if length rest = 0 then validation []
        else (print_error goal;
              failwith("auto_prove failed for " ^ proof_name)) end
