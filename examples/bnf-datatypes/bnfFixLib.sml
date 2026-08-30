@@ -2715,6 +2715,284 @@ fun defineCases ax0 =
 
 
 (* ----------------------------------------------------------------------
+    Defining a function by the axiom.
+
+    This is `Prim_rec.new_recursive_definition` for an axiom whose
+    recursive calls arrive under a map: that one expects each recursive
+    occurrence to be the function applied to a variable, and refuses
+    anything else.  The clauses a caller writes here are the same
+    otherwise —
+
+        rsize RLeaf = 0 /\
+        rsize (RNode a l) = 1 + mylistSUM (mylistMAP rsize l)
+
+    — with the recursive call in whatever shape the axiom hands it over:
+    `f a` for a direct occurrence and `MAP f l` for one under a functor.
+    An axiom over a family takes clauses for each of its functions at
+    once.
+
+    What the caller writes has to be *that* shape.  A definition written
+    the way the old package's nested axioms take them — an auxiliary
+    function over the operator recursed under, with its own family of
+    clauses — is a different recursion, and this says so rather than
+    guessing: `Define` is the route for those, since it can look for a
+    well-founded relation.
+   ---------------------------------------------------------------------- *)
+
+fun defineRecursion {name, axiom, def} =
+    let
+      (* the axiom, as existence over the functions it defines *)
+      val (fvars, body0) = strip_forall (concl axiom)
+      val ax = if is_exists1 body0 then
+                 GENL fvars (EXISTENCE (SPECL fvars axiom))
+               else axiom
+      fun clauseOf tm =
+          let val (args, eq) = strip_forall tm
+              val (h, capp) = dest_comb (lhs eq)
+              val (cons, cargs) = strip_comb capp
+              val (f, fargs) = strip_comb (rhs eq)
+          in
+            {h = h, capp = capp, cons = cons, cargs = cargs,
+             f = f, fargs = fargs}
+          end
+      (* and the clauses the caller wrote, by the constructor they are
+         about *)
+      (* the function may take parameters before the argument it
+         recurses on, as a size function does *)
+      fun userClause tm =
+          let val (_, eq) = strip_forall tm
+              val (fn_, capp) = dest_comb (lhs eq)
+              val (cons, _) = strip_comb capp
+          in
+            (cons, (fn_, capp, rhs eq))
+          end
+      fun paramsOf tm = List.rev (List.tl (List.rev (#2 (strip_comb tm))))
+      val uclauses = List.map userClause (strip_conj def)
+      (* the caller's quotation has its own names for the type
+         variables; the axiom is read at those *)
+      val tyS =
+          let val (_, body1) = strip_exists (#2 (strip_forall (concl ax)))
+              val cs = List.map clauseOf (strip_conj body1)
+              fun tryOne c =
+                  case List.find (fn (cons,_) => same_const cons (#cons c))
+                                 uclauses of
+                      NONE => NONE
+                    | SOME (_, (_, ucapp, _)) =>
+                        SOME (#2 (match_term (#capp c) ucapp))
+          in
+            case List.mapPartial tryOne cs of
+                [] => raise ERR "defineRecursion"
+                            "no clause matches any of the axiom's"
+              | th :: _ => th
+          end
+      val ax = INST_TYPE tyS ax
+      val (fvars, body1) = strip_forall (concl ax)
+      val (hvars, body) = strip_exists body1
+      val axclauses = List.map clauseOf (strip_conj body)
+      val applied = Lib.op_mk_set aconv (List.map (#1 o #2) uclauses)
+      val params = paramsOf (lhs (#2 (strip_forall (hd (strip_conj def)))))
+      val fns = List.map (#1 o strip_comb) applied
+      val _ = length applied = length hvars orelse
+              raise ERR "defineRecursion"
+                    ("the axiom defines " ^ Int.toString (length hvars) ^
+                     " function(s) and these clauses define " ^
+                     Int.toString (length applied) ^
+                     ": a definition with a function of its own over the" ^
+                     " operator recursed under is a different recursion," ^
+                     " and Define is the route for it")
+      (* the target the axiom is instantiated at, for one constructor *)
+      fun targetOf (c : {h:term, capp:term, cons:term, cargs:term list,
+                         f:term, fargs:term list}) =
+          let
+            val (fn_, ucapp, urhs) =
+                case List.find (fn (cons,_) => same_const cons (#cons c))
+                               uclauses of
+                    SOME (_, x) => x
+                  | NONE => raise ERR "defineRecursion"
+                                  ("no clause for " ^
+                                   term_to_string (#cons c))
+            (* the caller's variables, in the axiom's places *)
+            val (tmS, tyS) = match_term (#capp c) ucapp
+            fun theirs tm = Term.subst tmS (Term.inst tyS tm)
+            (* the caller's names for the functions, at the parameters
+               they take: a clause may call any of them, not only its
+               own *)
+            val theirNames =
+                ListPair.mapEq (fn (v,g) => v |-> g) (hvars, applied)
+            fun atFn tm = Term.subst theirNames (theirs tm)
+            (* a recursive call arrives as whatever the axiom hands the
+               target: the function at an argument, or its map *)
+            val cargs' = List.map theirs (#cargs c)
+            fun freshen (t, (vs, away)) =
+                if is_var t andalso List.exists (aconv t) cargs' then
+                  (vs @ [t], away)
+                else
+                  let val v = numvariant away (mk_var ("r", type_of t))
+                  in (vs @ [v], v :: away) end
+            val results = List.map atFn (#fargs c)
+            val (vs, _) = List.foldl freshen ([], cargs' @ free_varsl results)
+                                     results
+            val body =
+                Term.subst (List.mapPartial
+                              (fn (t,v) => if aconv t v then NONE
+                                           else SOME (t |-> v))
+                              (ListPair.zipEq (results, vs)))
+                           urhs
+            val _ = List.all (fn f => not (free_in f body)) applied orelse
+                    raise ERR "defineRecursion"
+                          ("the clause for " ^ term_to_string (#cons c) ^
+                           " calls the function on something the axiom" ^
+                           " does not hand it: Define is the route for that")
+          in
+            (#f c, list_mk_abs (vs, body))
+          end
+      val targets = List.map targetOf axclauses
+      fun instOf f = case List.find (fn (g,_) => aconv g f) targets of
+                         SOME (_,t) => t
+                       | NONE => f
+      val solved = CONV_RULE (DEPTH_CONV BETA_CONV)
+                             (SPECL (List.map instOf fvars) ax)
+      (* a function with parameters is one function of them all *)
+      fun skolemAll 0 = ALL_CONV
+        | skolemAll m = skolemN (length params) THENC
+                        BINDER_CONV (skolemAll (m - 1))
+      val closed = if null params then solved
+                   else CONV_RULE (skolemAll (length hvars))
+                                  (GENL params solved)
+    in
+      new_specification (name, List.map (#1 o dest_var) fns, closed)
+    end
+
+
+(* ----------------------------------------------------------------------
+    The size function.
+
+    TypeBase is where a size belongs — it is what `Define` measures a
+    well-founded recursion with — so it is defined here, where the entry
+    is made, out of what the axiom says.  A constructor's size is one
+    plus what each of its arguments contributes, and what an argument
+    contributes is its own type's size: `TypeBasePure.type_size_pre`
+    builds that term, given the sizes of the type's parameters and of
+    the type itself.
+
+    The one difference from `Datatype`'s scheme is where a recursive
+    argument sits under another functor.  Its size there is a fold —
+    `list_size (rose_size f) l` — and the axiom hands the recursive
+    calls over as a *map*, so what is defined is
+
+        rose_size f (RNode a l) = 1 + f a + list_size I (MAP (rose_size f) l)
+
+    which says the same and is the shape the axiom can take.  A type
+    whose functor has an argument with no size — a function space, say —
+    gets no size at all, and TypeBase is content without one.
+   ---------------------------------------------------------------------- *)
+
+fun defineSize {tyname} axiom =
+    let
+      val (fvars0, body0) = strip_forall (concl axiom)
+      val ax = if is_exists1 body0 then
+                 GENL fvars0 (EXISTENCE (SPECL fvars0 axiom))
+               else axiom
+      val num = numSyntax.num
+      (* the answers a size gives are numbers *)
+      val ax =
+          let val (hs, _) = strip_exists (#2 (strip_forall (concl ax)))
+          in
+            INST_TYPE (List.map (fn h => #2 (dom_rng (type_of h)) |-> num) hs)
+                      ax
+          end
+      val (hvars, body) = strip_exists (#2 (strip_forall (concl ax)))
+      val tys = List.map (#1 o dom_rng o type_of) hvars
+      val targs = #Args (dest_thy_type (hd tys))
+      val _ = List.all (fn ty => #Args (dest_thy_type ty) = targs) tys orelse
+              raise ERR "defineSize"
+                    "the family's members take different arguments"
+      (* one size for each of the type's arguments, and one function per
+         member, which is what is being defined *)
+      val fs = List.tabulate
+                 (length targs,
+                  fn i => mk_var ("f" ^ Int.toString i,
+                                  List.nth (targs, i) --> num))
+      val sizes =
+          List.map (fn ty =>
+                       let val nm = #Tyop (dest_thy_type ty) ^ "_size"
+                       in
+                         mk_var (nm, List.foldr (op -->) (ty --> num)
+                                                (List.map type_of fs))
+                       end)
+                   tys
+      fun sizeApp i = list_mk_comb (List.nth (sizes, i), fs)
+      (* what a value of a given type contributes *)
+      fun theta ty =
+          case List.find (fn (t,_) => t = ty)
+                         (ListPair.zipEq (targs, fs)) of
+              SOME (_, f) => SOME f
+            | NONE =>
+              case List.find (fn (t,_) => t = ty)
+                             (ListPair.zipEq (tys, upto (length tys))) of
+                  SOME (_, i) => SOME (sizeApp i)
+                | NONE => NONE
+      fun sizeOf ty =
+          TypeBasePure.type_size_pre theta (TypeBase.theTypeBase()) ty
+      fun contribution tm = mk_comb (sizeOf (type_of tm), tm)
+      (* the clauses: one per constructor, with the recursive calls
+         where the axiom hands them over *)
+      fun clauseOf j tm =
+          let
+            val (args, eq) = strip_forall tm
+            val (h, capp) = dest_comb (lhs eq)
+            val (_, cargs) = strip_comb capp
+            val (_, fargs) = strip_comb (rhs eq)
+            val members = ListPair.zipEq (hvars, upto (length tys))
+            val i = case List.find (fn (v,_) => aconv v h) members of
+                        SOME (_, i) => i
+                      | NONE => raise ERR "defineSize" "clause of no member"
+            fun atSize tm = Term.subst (ListPair.mapEq
+                                          (fn (v,k) => v |-> sizeApp k)
+                                          (hvars, upto (length tys)))
+                                       tm
+            (* an argument the axiom hands a result for contributes
+               what that result's own type says of it, and any other
+               contributes what its own type says; what a type with no
+               size of its own says is nothing *)
+            fun beta tm = rhs (concl (QCONV (DEPTH_CONV BETA_CONV) tm))
+            fun pieceFor a =
+                case List.find (fn t => not (is_var t) andalso free_in a t)
+                               fargs of
+                    SOME r => beta (contribution (atSize r))
+                  | NONE => beta (contribution a)
+            val pieces =
+                List.filter (fn t => not (aconv t numSyntax.zero_tm))
+                            (List.map pieceFor cargs)
+            val body =
+                case pieces of
+                    [] => numSyntax.zero_tm
+                  | _ => List.foldl (fn (p,acc) => numSyntax.mk_plus (acc, p))
+                                    (numSyntax.term_of_int 1) pieces
+          in
+            list_mk_forall (cargs,
+                            mk_eq (mk_comb (sizeApp i, capp), body))
+          end
+      val clauses =
+          list_mk_conj (List.map (clauseOf 0) (strip_conj body))
+      val def = defineRecursion {name = tyname ^ "_size_def", axiom = ax,
+                                def = clauses}
+      (* what the entry keeps is the constant the definition made, not
+         the variable the clauses were written with *)
+      val consts =
+          List.map (#1 o strip_comb o lhs o #2 o strip_forall)
+                   (strip_conj (#2 (strip_forall (concl def))))
+      fun constFor v =
+          case List.find (fn c => #1 (dest_const c) = #1 (dest_var v))
+                         consts of
+              SOME c => c
+            | NONE => raise ERR "defineSize" "the definition made no constant"
+    in
+      SOME (List.map constFor sizes, def)
+    end
+
+
+(* ----------------------------------------------------------------------
     The TypeBase entry.
 
     `TypeBasePure.gen_datatype_info` derives the nchotomy, the case
@@ -2737,13 +3015,44 @@ fun typeBaseInfo {axiom, induction, case_defs, rewrites} =
                       {ax = axiom, ind = induction, case_defs = case_defs}
       val _ = length rewrites = length tyinfos orelse
               raise ERR "typeBaseInfo" "a rewrite list per type, please"
+      (* the size, which is what a well-founded recursion over the type
+         is measured with.  It is defined here because this is where the
+         sizes it is built out of are: a component's own, from its
+         entry. *)
+      val sized =
+          case tyinfos of
+              [] => NONE
+            | ti :: _ =>
+              case defineSize {tyname = #2 (TypeBasePure.ty_name_of ti)}
+                              axiom of
+                  NONE => NONE
+                | SOME (szs, def) =>
+                  SOME (szs, def, TypeBasePure.ty_name_of ti)
+      fun withSize (i, tyi) =
+          case sized of
+              NONE => tyi
+            | SOME (szs, def, orig) =>
+              let val {convs, rewrs} = TypeBasePure.simpls_of tyi
+              in
+                TypeBasePure.put_size
+                  (List.nth (szs, i),
+                   if i = 0 then TypeBasePure.ORIG def
+                   else TypeBasePure.COPY (orig, def))
+                  (* what add_std_simpls would have put there, had the
+                     size been known when the entry was made *)
+                  (TypeBasePure.put_simpls
+                     {convs = convs, rewrs = rewrs @ [def]} tyi)
+              end
       fun withRewrs (tyi, ths) =
           let val {convs, rewrs} = TypeBasePure.simpls_of tyi
           in
             TypeBasePure.put_simpls {convs = convs, rewrs = rewrs @ ths} tyi
           end
     in
-      ListPair.mapEq withRewrs (tyinfos, rewrites)
+      List.tabulate
+        (length tyinfos,
+         fn i => withSize (i, withRewrs (List.nth (tyinfos, i),
+                                         List.nth (rewrites, i))))
     end
 
 
@@ -3623,142 +3932,5 @@ fun collapsedEqns (coll : collapsed) (fam : family) (cbnfs : copied_bnf list)
       List.tabulate (n, eqnsFor)
     end
 
-
-(* ----------------------------------------------------------------------
-    Defining a function by the axiom.
-
-    This is `Prim_rec.new_recursive_definition` for an axiom whose
-    recursive calls arrive under a map: that one expects each recursive
-    occurrence to be the function applied to a variable, and refuses
-    anything else.  The clauses a caller writes here are the same
-    otherwise —
-
-        rsize RLeaf = 0 /\
-        rsize (RNode a l) = 1 + mylistSUM (mylistMAP rsize l)
-
-    — with the recursive call in whatever shape the axiom hands it over:
-    `f a` for a direct occurrence and `MAP f l` for one under a functor.
-    An axiom over a family takes clauses for each of its functions at
-    once.
-
-    What the caller writes has to be *that* shape.  A definition written
-    the way the old package's nested axioms take them — an auxiliary
-    function over the operator recursed under, with its own family of
-    clauses — is a different recursion, and this says so rather than
-    guessing: `Define` is the route for those, since it can look for a
-    well-founded relation.
-   ---------------------------------------------------------------------- *)
-
-fun defineRecursion {name, axiom, def} =
-    let
-      (* the axiom, as existence over the functions it defines *)
-      val (fvars, body0) = strip_forall (concl axiom)
-      val ax = if is_exists1 body0 then
-                 GENL fvars (EXISTENCE (SPECL fvars axiom))
-               else axiom
-      fun clauseOf tm =
-          let val (args, eq) = strip_forall tm
-              val (h, capp) = dest_comb (lhs eq)
-              val (cons, cargs) = strip_comb capp
-              val (f, fargs) = strip_comb (rhs eq)
-          in
-            {h = h, capp = capp, cons = cons, cargs = cargs,
-             f = f, fargs = fargs}
-          end
-      (* and the clauses the caller wrote, by the constructor they are
-         about *)
-      fun userClause tm =
-          let val (_, eq) = strip_forall tm
-              val (fn_, capp) = dest_comb (lhs eq)
-              val (cons, _) = strip_comb capp
-          in
-            (cons, (fn_, capp, rhs eq))
-          end
-      val uclauses = List.map userClause (strip_conj def)
-      (* the caller's quotation has its own names for the type
-         variables; the axiom is read at those *)
-      val tyS =
-          let val (_, body1) = strip_exists (#2 (strip_forall (concl ax)))
-              val cs = List.map clauseOf (strip_conj body1)
-              fun tryOne c =
-                  case List.find (fn (cons,_) => same_const cons (#cons c))
-                                 uclauses of
-                      NONE => NONE
-                    | SOME (_, (_, ucapp, _)) =>
-                        SOME (#2 (match_term (#capp c) ucapp))
-          in
-            case List.mapPartial tryOne cs of
-                [] => raise ERR "defineRecursion"
-                            "no clause matches any of the axiom's"
-              | th :: _ => th
-          end
-      val ax = INST_TYPE tyS ax
-      val (fvars, body1) = strip_forall (concl ax)
-      val (hvars, body) = strip_exists body1
-      val axclauses = List.map clauseOf (strip_conj body)
-      val fns = Lib.op_mk_set aconv (List.map (#1 o #2) uclauses)
-      val _ = length fns = length hvars orelse
-              raise ERR "defineRecursion"
-                    ("the axiom defines " ^ Int.toString (length hvars) ^
-                     " function(s) and these clauses define " ^
-                     Int.toString (length fns) ^
-                     ": a definition with a function of its own over the" ^
-                     " operator recursed under is a different recursion," ^
-                     " and Define is the route for it")
-      (* the target the axiom is instantiated at, for one constructor *)
-      fun targetOf (c : {h:term, capp:term, cons:term, cargs:term list,
-                         f:term, fargs:term list}) =
-          let
-            val (fn_, ucapp, urhs) =
-                case List.find (fn (cons,_) => same_const cons (#cons c))
-                               uclauses of
-                    SOME (_, x) => x
-                  | NONE => raise ERR "defineRecursion"
-                                  ("no clause for " ^
-                                   term_to_string (#cons c))
-            (* the caller's variables, in the axiom's places *)
-            val (tmS, tyS) = match_term (#capp c) ucapp
-            fun theirs tm = Term.subst tmS (Term.inst tyS tm)
-            (* the caller's name for the function this clause is about *)
-            val hj = case List.find (fn (v,_) => aconv v (#h c))
-                                    (ListPair.zipEq (hvars, fns)) of
-                         SOME (_, g) => g
-                       | NONE => fn_
-            fun atFn tm = Term.subst [#h c |-> hj] (theirs tm)
-            (* a recursive call arrives as whatever the axiom hands the
-               target: the function at an argument, or its map *)
-            val cargs' = List.map theirs (#cargs c)
-            fun freshen (t, (vs, away)) =
-                if is_var t andalso List.exists (aconv t) cargs' then
-                  (vs @ [t], away)
-                else
-                  let val v = numvariant away (mk_var ("r", type_of t))
-                  in (vs @ [v], v :: away) end
-            val results = List.map atFn (#fargs c)
-            val (vs, _) = List.foldl freshen ([], cargs' @ free_varsl results)
-                                     results
-            val body =
-                Term.subst (List.mapPartial
-                              (fn (t,v) => if aconv t v then NONE
-                                           else SOME (t |-> v))
-                              (ListPair.zipEq (results, vs)))
-                           urhs
-            val _ = List.all (fn f => not (free_in f body)) fns orelse
-                    raise ERR "defineRecursion"
-                          ("the clause for " ^ term_to_string (#cons c) ^
-                           " calls the function on something the axiom" ^
-                           " does not hand it: Define is the route for that")
-          in
-            (#f c, list_mk_abs (vs, body))
-          end
-      val targets = List.map targetOf axclauses
-      fun instOf f = case List.find (fn (g,_) => aconv g f) targets of
-                         SOME (_,t) => t
-                       | NONE => f
-      val solved = CONV_RULE (DEPTH_CONV BETA_CONV)
-                             (SPECL (List.map instOf fvars) ax)
-    in
-      new_specification (name, List.map (#1 o dest_var) fns, solved)
-    end
 
 end

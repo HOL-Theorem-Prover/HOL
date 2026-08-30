@@ -401,6 +401,11 @@ sig
      ---------------------------------------------------------------------- *)
   val defineRecursion : {name : string, axiom : thm, def : term} -> thm
 
+  (* the size function, out of what the axiom says: what a constructor
+     is worth is one plus what each argument's own type's size says of
+     it.  NONE when some argument has no size — a function space, say *)
+  val defineSize : {tyname : string} -> thm -> (term list * thm) option
+
   val typeBaseInfo : {axiom : thm, induction : thm, case_defs : thm list,
                       rewrites : thm list list} ->
                      TypeBasePure.tyinfo list

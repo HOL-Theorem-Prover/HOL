@@ -406,21 +406,26 @@ val _ =
 
 (* The other way round — a function of its own over the operator
    recursed under, which is how the old package's nested axioms take a
-   definition —
+   definition — is a well-founded recursion, and the measure it wants is
+   a size function, which the package does not define yet.
 
-       rsize4 RLeaf = 0 /\ rsize4 (RNode a l) = 1 + rsizel l /\
-       rsizel MyNil = 0 /\ rsizel (MyCons r rs) = rsize4 r + rsizel rs
+   `Define` itself cannot be called here: its wrapper hands the failure
+   to `Feedback.render_exn`, which in a script prints and exits rather
+   than raising.  One layer down raises the HOL_ERR it should. *)
 
-   is a well-founded recursion, and Define reports that it cannot find
-   the relation:
-
-       ?R. WF R /\ (!a l. R (INR l) (INL (RNode a l))) /\
-           (!rs r. R (INL r) (INR (MyCons r rs))) /\
-           !r rs. R (INR rs) (INR (MyCons r rs))
-
-   What it wants is a measure, and that is a size function, which the
-   package does not define yet.  It is not run here: the failure ends
-   the script rather than raising. *)
+(* before the connecting lemma below, that is *)
+val _ = tprint "a function of its own over the operator recursed under"
+val _ =
+    let val dfn = Defn.Hol_defn "rsize4_def"
+                    ‘rsize4 RLeaf = 0n ∧
+                     rsize4 (RNode a l) = 1 + rsizel l ∧
+                     rsizel MyNil = 0n ∧
+                     rsizel (MyCons r rs) = rsize4 r + rsizel rs’
+    in
+      case Lib.total TotalDefn.primDefine dfn of
+          NONE => OK()      (* the connecting lemma is not there yet *)
+        | SOME _ => die "accepted"
+    end
 
 val _ = tprint "defineRecursion says so rather than guessing"
 val _ =
@@ -435,3 +440,72 @@ val _ =
     handle HOL_ERR e =>
            if String.isSubstring "Define is the route" (Feedback.message_of e)
            then OK() else die (Feedback.message_of e)
+
+(* ----------------------------------------------------------------------
+    The lemma that connects the two shapes of a nested size.
+
+    A size of a nested argument is a fold — `mylist_size (rose_size f) l`
+    — and what the axiom hands over is a map, so the size defined above
+    reads `mylist_size (λx. x) (mylistMAP (rose_size f) l)`.  The two are
+    the same, and saying so as a *termination* simplification is what
+    lets TFL find the well-founded relation for a definition written the
+    old way: with that, `Define` takes one with a function of its own
+    over the operator recursed under, and needs no measure supplied.
+
+    This is the piece the package should prove and export for each type
+    it registers; here it is done by hand, over its own induction.
+   ---------------------------------------------------------------------- *)
+Theorem mylist_size_MAP[simp,tfl_termsimp]:
+  ∀f l. mylist_size (λx. x) (mylistMAP f l) = mylist_size f l
+Proof
+  Induct_on ‘l’ >> simp[]
+QED
+
+(* the inequality a measure over the two types turns on *)
+val _ = tprint "a sub-term is smaller, with the sizes as defined"
+val _ =
+    let val th = Q.prove (‘∀f a l. mylist_size (rose_size f) l <
+                                   rose_size f (RNode a l)’,
+                          simp[#2 (TypeBase.size_of “:'a rose”),
+                               #2 (TypeBase.size_of “:'a mylist”),
+                               mylist_size_MAP])
+    in
+      if null (hyp th) then OK() else die "not proved"
+    end
+
+val _ = tprint "and automatically, without a measure being supplied"
+val _ =
+    let val dfn = Defn.Hol_defn "rsize7_def"
+                    ‘rsize7 RLeaf = 0n ∧
+                     rsize7 (RNode a l) = 1 + rsizel7 l ∧
+                     rsizel7 MyNil = 0n ∧
+                     rsizel7 (MyCons r rs) = rsize7 r + rsizel7 rs’
+    in
+      case Lib.total TotalDefn.primDefine dfn of
+          NONE => die "not automatic"
+        | SOME _ => OK()
+    end
+
+(* ----------------------------------------------------------------------
+    and the sizes themselves, which the entry carries
+   ---------------------------------------------------------------------- *)
+
+val _ = tprint "the types' size functions"
+val _ =
+    let val (mtm, mth) = TypeBase.size_of “:'a mylist”
+        val (rtm, rth) = TypeBase.size_of “:'a rose”
+    in
+      if same (concl mth)
+              “∀f. mylist_size f MyNil = 0 ∧
+                   ∀a l. mylist_size f (MyCons a l) =
+                         1 + f a + mylist_size f l”
+         andalso
+         (* the nested argument's size is its own type's, at the map the
+            axiom hands over *)
+         same (concl rth)
+              “∀f. rose_size f RLeaf = 0 ∧
+                   ∀a l. rose_size f (RNode a l) =
+                         1 + f a +
+                         mylist_size (λx. x) (mylistMAP (rose_size f) l)”
+      then OK() else die (thm_to_string rth)
+    end
