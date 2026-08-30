@@ -222,14 +222,7 @@ local
   val lemma31 = blastLib.BBLAST_PROVE
     ``(((((31 >< 1) (w:word32)):31 word) @@ (0w:1 word)) : word32) =
       w && 0xFFFFFFFEw``
-  val fix_sub_word64 = prove(
-    ``(n2w n + w = if n < dimword (:'a) DIV 2 then n2w n + (w:'a word)
-                   else w - n2w (dimword (:'a) - n MOD dimword (:'a))) /\
-      (w + n2w n = if n < dimword (:'a) DIV 2 then w + n2w n
-                   else w - n2w (dimword (:'a) - n MOD dimword (:'a)))``,
-    simp [Once WORD_ADD_COMM] \\ rw []
-    \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [GSYM WORD_NEG_NEG]))
-    \\ rewrite_tac [WORD_EQ_NEG,word_2comp_n2w])
+  val fix_sub_word64 = derive_specsLibContextTheory.fix_sub_word64
     |> INST_TYPE [alpha|->``:64``]
     |> SIMP_RULE std_ss [EVAL ``dimword (:64)``]
   val riscv_mask_byte =

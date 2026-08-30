@@ -22,7 +22,7 @@ sig
     val prove_and_save_s : Hol_pp.term * string -> Theory.thm
     val prove_and_save_p : Hol_pp.term * string * Parse.term -> Theory.thm
     val prove_and_save_p_helper : Hol_pp.term * string -> Theory.thm
-    val MODE_MIX_TAC : Term.term ->  Abbrev.term list * Abbrev.term -> Abbrev.goal list * Abbrev.validation
-    val LITTLE_MODE_MIX_TAC : Term.term ->  Abbrev.term list * Abbrev.term -> Abbrev.goal list * Abbrev.validation
+    val MODE_MIX_TAC : Term.term -> Abbrev.tactic
+    val LITTLE_MODE_MIX_TAC : Term.term -> Abbrev.tactic
 end
 

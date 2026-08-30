@@ -18,9 +18,11 @@ val set_ss = (simpLib.++ (arith_ss, PRED_SET_ss));
 
 val list_string_ss = (simpLib.++ (list_ss, STRING_ss));
 
-fun TRY2_TAC t1 t2 state = let
- val (a1,f1) = t1 state handle HOL_ERR _ => ALL_TAC state
- in if length a1 = 0 then (a1,f1) else t2 state end;
+(* the handler has to span the context application too: `t1 state' alone
+   only builds the closure, so a failure inside the tactic would escape *)
+fun TRY2_TAC t1 t2 state ctxt = let
+ val (a1,f1) = t1 state ctxt handle HOL_ERR _ => ALL_TAC state ctxt
+ in if length a1 = 0 then (a1,f1) else t2 state ctxt end;
 
 
 Theorem lem1[local]:
